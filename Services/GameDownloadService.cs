@@ -33,6 +33,7 @@ public sealed class GameDownloadService : IDisposable
     private CancellationTokenSource? activeDownloadCts;
     private Task pauseTask = Task.CompletedTask;
     private TaskCompletionSource? pauseTcs;
+    private bool clearStateOnCancel;
     private bool disposed;
 
     public GameDownloadService(
@@ -71,11 +72,12 @@ public sealed class GameDownloadService : IDisposable
         return await RunAsync(snapshot, repair: true, progress, cancellationToken);
     }
 
-    public void Stop()
+    public void Stop(bool clearPersistedState = true)
     {
         CancellationTokenSource? cts;
         lock (activeDownloadLock)
         {
+            clearStateOnCancel = clearPersistedState;
             cts = activeDownloadCts;
         }
 
@@ -87,6 +89,33 @@ public sealed class GameDownloadService : IDisposable
             tcs = pauseTcs;
         }
         tcs?.TrySetResult();
+    }
+
+    public async Task<GameOperationResult?> ResumePersistedAsync(
+        LauncherStatusSnapshot snapshot,
+        Action<GameOperationProgress> progress,
+        CancellationToken cancellationToken = default)
+    {
+        var state = await downloadStateService.LoadAsync(cancellationToken);
+        if (state is null)
+        {
+            return null;
+        }
+
+        var gameConfig = snapshot.Remote.GameConfig;
+        var settingsPath = localGameStateService.NormalizeGamePath(snapshot.Settings.GamePath);
+        var statePath = localGameStateService.NormalizeGamePath(state.GamePath);
+        if (gameConfig is null
+            || !string.Equals(state.Version, gameConfig.GameLatestVersion, StringComparison.Ordinal)
+            || !string.Equals(state.Basis, gameConfig.GameLatestFilePath, StringComparison.Ordinal)
+            || !string.Equals(statePath, settingsPath, StringComparison.Ordinal)
+            || !string.Equals(state.PatchUrlGroup, snapshot.Settings.PatchUrlGroup, StringComparison.Ordinal))
+        {
+            downloadStateService.Clear();
+            return null;
+        }
+
+        return await RunAsync(snapshot, state.IsRepair, progress, cancellationToken);
     }
 
     public void Pause()
@@ -198,8 +227,9 @@ public sealed class GameDownloadService : IDisposable
                 Basis = gameConfig.GameLatestFilePath,
                 GamePath = gamePath,
                 IsRepair = repair,
+                PatchUrlGroup = settings.PatchUrlGroup,
                 StartedAt = DateTimeOffset.Now.ToString("O")
-            });
+            }, activeToken);
 
             progress(CreateProgress(operationKind, repair ? "repair-check" : "update-check", 0));
 
@@ -215,6 +245,7 @@ public sealed class GameDownloadService : IDisposable
 
             if (downloadPlan.NeedDownload.Count == 0 && downloadPlan.NeedDelete.Count == 0)
             {
+                downloadStateService.Clear();
                 return new GameOperationResult
                 {
                     Success = true,
@@ -287,6 +318,11 @@ public sealed class GameDownloadService : IDisposable
         }
         catch (OperationCanceledException) when (activeToken.IsCancellationRequested)
         {
+            if (clearStateOnCancel)
+            {
+                downloadStateService.Clear();
+            }
+
             progress(CreateProgress(operationKind, "stopped", 0));
             return Failed("Operation stopped.", "stopped");
         }
@@ -331,6 +367,7 @@ public sealed class GameDownloadService : IDisposable
                 pauseTcs = null;
                 pauseTask = Task.CompletedTask;
             }
+            clearStateOnCancel = false;
         }
     }
 
@@ -576,6 +613,7 @@ public sealed class GameDownloadService : IDisposable
                             TotalSize = totalSize,
                             IsRunning = true,
                             CanStop = true,
+                            CanPause = true,
                             IsPaused = IsPaused
                         });
                     },
@@ -990,7 +1028,8 @@ public sealed class GameDownloadService : IDisposable
             Stage = stage,
             Progress = value,
             IsRunning = true,
-            CanStop = kind is GameOperationKinds.Download or GameOperationKinds.Repair
+            CanStop = kind is GameOperationKinds.Download or GameOperationKinds.Repair,
+            CanPause = false
         };
     }
 

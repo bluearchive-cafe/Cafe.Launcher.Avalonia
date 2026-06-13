@@ -1,3 +1,4 @@
+using System;
 using System.Threading;
 using System.Threading.Tasks;
 using Cafe.Launcher.Avalonia.Models;
@@ -95,6 +96,10 @@ public sealed class LauncherCoreService : ILauncherCoreService
         try
         {
             return await read();
+        }
+        catch (OperationCanceledException)
+        {
+            throw;
         }
         catch
         {

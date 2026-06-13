@@ -95,6 +95,7 @@ public sealed partial class LocalizedStrings : ObservableObject
     [ObservableProperty] private string downloadSourceDescription = "";
     [ObservableProperty] private string downloadSourceOfficial = "";
     [ObservableProperty] private string downloadSourceCafe = "";
+    [ObservableProperty] private string downloadSourceChangedRepairPrompt = "";
     [ObservableProperty] private string pause = "";
     [ObservableProperty] private string resume = "";
     [ObservableProperty] private string paused = "";
@@ -206,6 +207,7 @@ public sealed partial class LocalizedStrings : ObservableObject
         DownloadSourceDescription = localizer.T("downloadSourceDescription");
         DownloadSourceOfficial = localizer.T("downloadSourceOfficial");
         DownloadSourceCafe = localizer.T("downloadSourceCafe");
+        DownloadSourceChangedRepairPrompt = localizer.T("downloadSourceChangedRepairPrompt");
         Pause = localizer.T("pause");
         Resume = localizer.T("resume");
         Paused = localizer.T("paused");
@@ -390,6 +392,7 @@ public sealed class LocalizationService
             ["downloadSourceDescription"] = "CDN server for game patch file downloads",
             ["downloadSourceOfficial"] = "Official",
             ["downloadSourceCafe"] = "Cafe",
+            ["downloadSourceChangedRepairPrompt"] = "Download source changed. Cafe and Official use different file manifests, so the installed game must be repaired against the selected source before launch checks are reliable.\n\nRun repair now?",
             ["closeBehaviorMinimize"] = "Minimize to Tray",
             ["closeBehaviorExit"] = "Exit",
             ["speedUnlimited"] = "Unlimited",
@@ -578,6 +581,7 @@ public sealed class LocalizationService
             ["downloadSourceDescription"] = "选择游戏补丁文件的下载服务器",
             ["downloadSourceOfficial"] = "官方",
             ["downloadSourceCafe"] = "Cafe",
+            ["downloadSourceChangedRepairPrompt"] = "下载线路已切换。Cafe 与官方线路使用的文件清单不同，因此需要按当前线路修复已安装的游戏后，启动校验结果才可靠。\n\n现在开始修复吗？",
             ["closeBehaviorMinimize"] = "最小化到托盘",
             ["closeBehaviorExit"] = "退出",
             ["speedUnlimited"] = "无限制",
@@ -766,6 +770,7 @@ public sealed class LocalizationService
             ["downloadSourceDescription"] = "ゲームパッチファイルのダウンロードに使用するCDNサーバーを選択します",
             ["downloadSourceOfficial"] = "公式",
             ["downloadSourceCafe"] = "Cafe",
+            ["downloadSourceChangedRepairPrompt"] = "ダウンロードソースを変更しました。Cafe と公式ではファイルマニフェストが異なるため、起動チェックを正しく行うには選択中のソースに合わせてインストール済みゲームを修復する必要があります。\n\n今すぐ修復しますか？",
             ["closeBehaviorMinimize"] = "トレイに最小化",
             ["closeBehaviorExit"] = "終了",
             ["speedUnlimited"] = "無制限",

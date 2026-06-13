@@ -1,6 +1,7 @@
 using System;
 using System.IO;
 using System.Text.Json;
+using System.Threading;
 using System.Threading.Tasks;
 using Cafe.Launcher.Avalonia.Constants;
 using Cafe.Launcher.Avalonia.Models;
@@ -23,21 +24,30 @@ public sealed class DownloadStateService
         stateFilePath = Path.Combine(folder, "download_state.json");
     }
 
-    public async Task SaveAsync(DownloadTaskState state)
+    internal DownloadStateService(string stateFilePath)
+    {
+        this.stateFilePath = stateFilePath;
+    }
+
+    public async Task SaveAsync(DownloadTaskState state, CancellationToken cancellationToken = default)
     {
         var json = JsonSerializer.Serialize(state, new JsonSerializerOptions { WriteIndented = true });
         Directory.CreateDirectory(Path.GetDirectoryName(stateFilePath)!);
-        await File.WriteAllTextAsync(stateFilePath, json);
+        await File.WriteAllTextAsync(stateFilePath, json, cancellationToken);
     }
 
-    public async Task<DownloadTaskState?> LoadAsync()
+    public async Task<DownloadTaskState?> LoadAsync(CancellationToken cancellationToken = default)
     {
         if (!File.Exists(stateFilePath))
             return null;
         try
         {
-            var json = await File.ReadAllTextAsync(stateFilePath);
+            var json = await File.ReadAllTextAsync(stateFilePath, cancellationToken);
             return JsonSerializer.Deserialize<DownloadTaskState>(json);
+        }
+        catch (OperationCanceledException)
+        {
+            throw;
         }
         catch
         {

@@ -20,6 +20,9 @@ public sealed class DownloadTaskState
     [JsonPropertyName("repair")]
     public bool IsRepair { get; set; }
 
+    [JsonPropertyName("patchUrlGroup")]
+    public string PatchUrlGroup { get; set; } = PatchUrlGroups.Official;
+
     [JsonPropertyName("startedAt")]
     public string StartedAt { get; set; } = "";
 }

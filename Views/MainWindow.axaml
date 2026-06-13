@@ -308,7 +308,8 @@
                             </Grid>
                         </StackPanel>
                         <StackPanel Grid.Column="1" Orientation="Horizontal" Spacing="8" VerticalAlignment="Center">
-                            <Button Classes="flat-action bottom-action" Command="{Binding PauseResumeCommand}" VerticalAlignment="Center">
+                            <Button Classes="flat-action bottom-action" Command="{Binding PauseResumeCommand}" VerticalAlignment="Center"
+                                    IsVisible="{Binding CanPauseOperation}">
                                 <StackPanel Classes="button-content">
                                     <materialIcons:MaterialIcon Kind="{Binding PauseResumeIcon}" Width="18" Height="18"/>
                                     <TextBlock Text="{Binding PauseResumeText}" VerticalAlignment="Center"/>

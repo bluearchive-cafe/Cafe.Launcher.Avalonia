@@ -226,6 +226,8 @@ public sealed class GameOperationProgress
 
     public bool CanStop { get; set; }
 
+    public bool CanPause { get; set; }
+
     public bool IsPaused { get; set; }
 }
 
