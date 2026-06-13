@@ -27,6 +27,7 @@ public partial class MainWindow : Window
     {
         viewModel.PickGameFolderAsync = PickGameFolderAsync;
         viewModel.PickBackgroundImageAsync = PickBackgroundImageAsync;
+        viewModel.PickBackgroundFolderAsync = PickBackgroundFolderAsync;
         viewModel.MinimizeWindow = () => WindowState = WindowState.Minimized;
         viewModel.CloseWindow = PerformClose;
         viewModel.RestoreWindow = ShowWindow;
@@ -81,6 +82,23 @@ public partial class MainWindow : Window
         });
 
         return files.FirstOrDefault()?.TryGetLocalPath();
+    }
+
+    private async Task<string?> PickBackgroundFolderAsync()
+    {
+        if (!StorageProvider.CanPickFolder)
+        {
+            return null;
+        }
+
+        var folderPickerTitle = (DataContext as MainWindowViewModel)?.BackgroundFolderPickerTitle ?? "Choose Background Folder";
+        var folders = await StorageProvider.OpenFolderPickerAsync(new FolderPickerOpenOptions
+        {
+            Title = folderPickerTitle,
+            AllowMultiple = false
+        });
+
+        return folders.FirstOrDefault()?.TryGetLocalPath();
     }
 
     private void OnPointerPressed(object? sender, PointerPressedEventArgs e)
