@@ -32,11 +32,8 @@ jobs:
       - name: Build (Debug)
         run: dotnet build $env:Project_Path -c Debug --no-restore
 
-      - name: Restore (Release)
-        run: dotnet restore $env:Project_Path -c Release
-
       - name: Build (Release)
-        run: dotnet build $env:Project_Path -c Release --no-restore
+        run: dotnet build $env:Project_Path -c Release
 
       - name: Publish (Release)
         run: dotnet publish $env:Project_Path -c Release -o publish

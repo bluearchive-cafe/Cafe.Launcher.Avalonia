@@ -25,11 +25,8 @@ jobs:
         with:
           dotnet-version: 10.0.x
 
-      - name: Restore (Release)
-        run: dotnet restore $env:Project_Path -c Release
-
       - name: Build (Release)
-        run: dotnet build $env:Project_Path -c Release --no-restore
+        run: dotnet build $env:Project_Path -c Release
 
       - name: Publish
         run: dotnet publish $env:Project_Path -c Release -o publish
