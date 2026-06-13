@@ -12,6 +12,7 @@
     <FileVersion>1.0.0.0</FileVersion>
     <Nullable>enable</Nullable>
     <ApplicationManifest>app.manifest</ApplicationManifest>
+    <ApplicationIcon>Assets\app-icon.ico</ApplicationIcon>
     <AvaloniaUseCompiledBindingsByDefault>true</AvaloniaUseCompiledBindingsByDefault>
   </PropertyGroup>
 
@@ -32,7 +33,7 @@
     <AvaloniaResource Include="Assets\**" />
     <Compile Remove="tests\**\*.cs" />
     <None Remove="tests\**" />
-    <None Update="Assets\avalonia-logo.ico">
+    <None Update="Assets\app-icon.ico">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </None>
   </ItemGroup>

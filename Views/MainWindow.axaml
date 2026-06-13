@@ -11,7 +11,7 @@
         x:Class="Cafe.Launcher.Avalonia.Views.MainWindow"
         x:Name="Root"
         x:DataType="vm:MainWindowViewModel"
-        Icon="/Assets/avalonia-logo.ico"
+        Icon="/Assets/app-icon.ico"
         Title="Cafe Launcher"
         Width="1300"
         Height="754"
