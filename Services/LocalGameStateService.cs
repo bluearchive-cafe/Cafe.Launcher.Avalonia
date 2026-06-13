@@ -1,0 +1,106 @@
+using System;
+using System.IO;
+using System.Text.Json;
+using System.Threading;
+using System.Threading.Tasks;
+using Cafe.Launcher.Avalonia.Constants;
+using Cafe.Launcher.Avalonia.Models;
+
+namespace Cafe.Launcher.Avalonia.Services;
+
+public sealed class LocalGameStateService
+{
+    private readonly JsonSerializerOptions jsonOptions = new()
+    {
+        PropertyNameCaseInsensitive = false
+    };
+
+    public string GetDefaultGamePath()
+    {
+        var appDir = AppContext.BaseDirectory;
+        var parent = Directory.GetParent(appDir)?.FullName ?? appDir;
+        return NormalizeGamePath(parent);
+    }
+
+    public string NormalizeGamePath(string path)
+    {
+        var normalized = Path.GetFullPath(path);
+        var segments = normalized.Split(
+            [Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar],
+            StringSplitOptions.RemoveEmptyEntries);
+
+        if (EndsWithSegments(segments, [LauncherConstants.RootFolderName, LauncherConstants.GameFolderName]))
+        {
+            return normalized;
+        }
+
+        if (EndsWithSegments(segments, [LauncherConstants.RootFolderName]))
+        {
+            return Path.Combine(normalized, LauncherConstants.GameFolderName);
+        }
+
+        return Path.Combine(normalized, LauncherConstants.RootFolderName, LauncherConstants.GameFolderName);
+    }
+
+    public async Task<LocalGameState> ReadAsync(string? gamePath = null, CancellationToken cancellationToken = default)
+    {
+        var normalizedGamePath = NormalizeGamePath(string.IsNullOrWhiteSpace(gamePath) ? GetDefaultGamePath() : gamePath);
+        var configPath = Path.Combine(normalizedGamePath, LauncherConstants.GameConfigFileName);
+        var manifestPath = Path.Combine(normalizedGamePath, LauncherConstants.ManifestFileName);
+
+        var state = new LocalGameState
+        {
+            GamePath = normalizedGamePath,
+            ConfigPath = configPath,
+            ManifestPath = manifestPath,
+            ConfigExists = File.Exists(configPath),
+            ManifestExists = File.Exists(manifestPath)
+        };
+
+        try
+        {
+            if (state.ConfigExists)
+            {
+                await using var configStream = File.OpenRead(configPath);
+                state.GameConfig = await JsonSerializer.DeserializeAsync<GameLauncherConfig>(
+                    configStream,
+                    jsonOptions,
+                    cancellationToken);
+            }
+
+            if (state.ManifestExists)
+            {
+                await using var manifestStream = File.OpenRead(manifestPath);
+                state.Manifest = await JsonSerializer.DeserializeAsync<LocalManifest>(
+                    manifestStream,
+                    jsonOptions,
+                    cancellationToken);
+            }
+        }
+        catch (Exception exception) when (exception is JsonException or IOException or UnauthorizedAccessException)
+        {
+            state.Error = exception.Message;
+        }
+
+        return state;
+    }
+
+    private static bool EndsWithSegments(string[] value, string[] suffix)
+    {
+        if (value.Length < suffix.Length)
+        {
+            return false;
+        }
+
+        var offset = value.Length - suffix.Length;
+        for (var i = 0; i < suffix.Length; i++)
+        {
+            if (!string.Equals(value[offset + i], suffix[i], StringComparison.Ordinal))
+            {
+                return false;
+            }
+        }
+
+        return true;
+    }
+}

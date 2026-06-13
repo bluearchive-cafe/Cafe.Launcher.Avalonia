@@ -1,0 +1,860 @@
+using System;
+using System.Collections.Generic;
+using System.Globalization;
+using Cafe.Launcher.Avalonia.Models;
+using CommunityToolkit.Mvvm.ComponentModel;
+
+namespace Cafe.Launcher.Avalonia.Services;
+
+public sealed partial class LocalizedStrings : ObservableObject
+{
+    [ObservableProperty] private string settings = "";
+    [ObservableProperty] private string settingsStatus = "";
+    [ObservableProperty] private string settingsGameFiles = "";
+    [ObservableProperty] private string settingsDownloadNetwork = "";
+    [ObservableProperty] private string settingsAppPreferences = "";
+    [ObservableProperty] private string minimize = "";
+    [ObservableProperty] private string close = "";
+    [ObservableProperty] private string version = "";
+    [ObservableProperty] private string executable = "";
+    [ObservableProperty] private string path = "";
+    [ObservableProperty] private string changePath = "";
+    [ObservableProperty] private string refresh = "";
+    [ObservableProperty] private string refreshTooltip = "";
+    [ObservableProperty] private string stop = "";
+    [ObservableProperty] private string officialSite = "";
+    [ObservableProperty] private string startGame = "";
+    [ObservableProperty] private string notice = "";
+    [ObservableProperty] private string banners = "";
+    [ObservableProperty] private string news = "";
+    [ObservableProperty] private string socialMedia = "";
+    [ObservableProperty] private string gamePath = "";
+    [ObservableProperty] private string choose = "";
+    [ObservableProperty] private string launchCheck = "";
+    [ObservableProperty] private string proxy = "";
+    [ObservableProperty] private string closeBehavior = "";
+    [ObservableProperty] private string language = "";
+    [ObservableProperty] private string theme = "";
+    [ObservableProperty] private string themeDescription = "";
+    [ObservableProperty] private string themeSystem = "";
+    [ObservableProperty] private string themeLight = "";
+    [ObservableProperty] private string themeDark = "";
+    [ObservableProperty] private string save = "";
+    [ObservableProperty] private string gameManagement = "";
+    [ObservableProperty] private string gameManagementDescription = "";
+    [ObservableProperty] private string repair = "";
+    [ObservableProperty] private string uninstall = "";
+    [ObservableProperty] private string about = "";
+    [ObservableProperty] private string aboutDescription = "";
+    [ObservableProperty] private string agreement = "";
+    [ObservableProperty] private string privacy = "";
+    [ObservableProperty] private string updateEndpoint = "";
+    [ObservableProperty] private string confirmUninstall = "";
+    [ObservableProperty] private string uninstallConfirmDescription = "";
+    [ObservableProperty] private string cancel = "";
+    [ObservableProperty] private string repairWarning = "";
+    [ObservableProperty] private string copyright = "";
+    [ObservableProperty] private string repairConfirm = "";
+    [ObservableProperty] private string repairConfirmDescription = "";
+    [ObservableProperty] private string noticeConfirm = "";
+    [ObservableProperty] private string noticeExit = "";
+    [ObservableProperty] private string showLauncher = "";
+    [ObservableProperty] private string exitLauncher = "";
+    [ObservableProperty] private string githubRepository = "";
+    [ObservableProperty] private string checkUpdates = "";
+    [ObservableProperty] private string checkUpdatesUnavailable = "";
+    [ObservableProperty] private string trayOpenLauncher = "";
+    [ObservableProperty] private string trayExitLauncher = "";
+    [ObservableProperty] private string aboutLinks = "";
+    [ObservableProperty] private string aboutCopyrightText = "";
+    [ObservableProperty] private string aboutDisclaimerText = "";
+    [ObservableProperty] private string customBackground = "";
+    [ObservableProperty] private string customBackgroundDescription = "";
+    [ObservableProperty] private string chooseImage = "";
+    [ObservableProperty] private string clearBackground = "";
+    [ObservableProperty] private string backgroundSet = "";
+    [ObservableProperty] private string backgroundCleared = "";
+    [ObservableProperty] private string backgroundSource = "";
+    [ObservableProperty] private string backgroundSourceDescription = "";
+    [ObservableProperty] private string backgroundSourceBundled = "";
+    [ObservableProperty] private string backgroundSourceRemote = "";
+    [ObservableProperty] private string backgroundSourceCustom = "";
+    [ObservableProperty] private string versionInfo = "";
+    [ObservableProperty] private string runtimeInfo = "";
+    [ObservableProperty] private string buildInfo = "";
+    [ObservableProperty] private string downloadSpeedLimit = "";
+    [ObservableProperty] private string downloadSpeedLimitDescription = "";
+    [ObservableProperty] private string notificationSettings = "";
+    [ObservableProperty] private string toastNotifications = "";
+    [ObservableProperty] private string remoteContentCard = "";
+    [ObservableProperty] private string showRemoteContentCard = "";
+    [ObservableProperty] private string launchCheckDescription = "";
+    [ObservableProperty] private string proxyDescription = "";
+    [ObservableProperty] private string downloadSource = "";
+    [ObservableProperty] private string downloadSourceDescription = "";
+    [ObservableProperty] private string downloadSourceOfficial = "";
+    [ObservableProperty] private string downloadSourceCafe = "";
+    [ObservableProperty] private string pause = "";
+    [ObservableProperty] private string resume = "";
+    [ObservableProperty] private string paused = "";
+    [ObservableProperty] private string confirmStop = "";
+    [ObservableProperty] private string stopDownloadConfirm = "";
+    [ObservableProperty] private string unsavedChanges = "";
+    [ObservableProperty] private string unsavedChangesMessage = "";
+    [ObservableProperty] private string discardChanges = "";
+    [ObservableProperty] private string keepEditing = "";
+    [ObservableProperty] private string chooseInstallFolder = "";
+    [ObservableProperty] private string chooseBackgroundImageTitle = "";
+    [ObservableProperty] private string carouselPage = "";
+    [ObservableProperty] private string pauseCarousel = "";
+    [ObservableProperty] private string resumeCarousel = "";
+    [ObservableProperty] private string bannerLoadingFailed = "";
+    [ObservableProperty] private string statusNetworkLoaded = "";
+    [ObservableProperty] private string statusLaunchCheckLocal = "";
+    [ObservableProperty] private string statusLaunchCheckRemote = "";
+    [ObservableProperty] private string statusLaunchCheckNone = "";
+    [ObservableProperty] private string gameLaunchedMinimized = "";
+
+    public void Apply(LocalizationService localizer)
+    {
+        Settings = localizer.T("settings");
+        SettingsStatus = localizer.T("settingsStatus");
+        SettingsGameFiles = localizer.T("settingsGameFiles");
+        SettingsDownloadNetwork = localizer.T("settingsDownloadNetwork");
+        SettingsAppPreferences = localizer.T("settingsAppPreferences");
+        Minimize = localizer.T("minimize");
+        Close = localizer.T("close");
+        Version = localizer.T("version");
+        Executable = localizer.T("executable");
+        Path = localizer.T("path");
+        ChangePath = localizer.T("changePath");
+        Refresh = localizer.T("refresh");
+        RefreshTooltip = localizer.T("refreshTooltip");
+        Stop = localizer.T("stop");
+        OfficialSite = localizer.T("officialSite");
+        StartGame = localizer.T("startGame");
+        Notice = localizer.T("notice");
+        Banners = localizer.T("banners");
+        News = localizer.T("news");
+        SocialMedia = localizer.T("socialMedia");
+        GamePath = localizer.T("gamePath");
+        Choose = localizer.T("choose");
+        LaunchCheck = localizer.T("launchCheck");
+        Proxy = localizer.T("proxy");
+        CloseBehavior = localizer.T("closeBehavior");
+        Language = localizer.T("language");
+        Theme = localizer.T("theme");
+        ThemeDescription = localizer.T("themeDescription");
+        ThemeSystem = localizer.T("themeSystem");
+        ThemeLight = localizer.T("themeLight");
+        ThemeDark = localizer.T("themeDark");
+        Save = localizer.T("save");
+        GameManagement = localizer.T("gameManagement");
+        GameManagementDescription = localizer.T("gameManagementDescription");
+        Repair = localizer.T("repair");
+        Uninstall = localizer.T("uninstall");
+        About = localizer.T("about");
+        AboutDescription = localizer.T("aboutDescription");
+        Agreement = localizer.T("agreement");
+        Privacy = localizer.T("privacy");
+        UpdateEndpoint = localizer.T("updateEndpoint");
+        ConfirmUninstall = localizer.T("confirmUninstall");
+        UninstallConfirmDescription = localizer.T("uninstallConfirmDescription");
+        Cancel = localizer.T("cancel");
+        RepairWarning = localizer.T("repairWarning");
+        Copyright = localizer.T("copyright");
+        RepairConfirm = localizer.T("repairConfirm");
+        RepairConfirmDescription = localizer.T("repairConfirmDescription");
+        NoticeConfirm = localizer.T("noticeConfirm");
+        NoticeExit = localizer.T("noticeExit");
+        ShowLauncher = localizer.T("showLauncher");
+        ExitLauncher = localizer.T("exitLauncher");
+        GithubRepository = localizer.T("githubRepository");
+        CheckUpdates = localizer.T("checkUpdates");
+        CheckUpdatesUnavailable = localizer.T("checkUpdatesUnavailable");
+        TrayOpenLauncher = localizer.T("trayOpenLauncher");
+        TrayExitLauncher = localizer.T("trayExitLauncher");
+        AboutLinks = localizer.T("aboutLinks");
+        AboutCopyrightText = localizer.T("aboutCopyrightText");
+        AboutDisclaimerText = localizer.T("aboutDisclaimerText");
+        CustomBackground = localizer.T("customBackground");
+        CustomBackgroundDescription = localizer.T("customBackgroundDescription");
+        ChooseImage = localizer.T("chooseImage");
+        ClearBackground = localizer.T("clearBackground");
+        BackgroundSet = localizer.T("backgroundSet");
+        BackgroundCleared = localizer.T("backgroundCleared");
+        BackgroundSource = localizer.T("backgroundSource");
+        BackgroundSourceDescription = localizer.T("backgroundSourceDescription");
+        BackgroundSourceBundled = localizer.T("backgroundSourceBundled");
+        BackgroundSourceRemote = localizer.T("backgroundSourceRemote");
+        BackgroundSourceCustom = localizer.T("backgroundSourceCustom");
+        VersionInfo = localizer.T("versionInfo");
+        RuntimeInfo = localizer.T("runtimeInfo");
+        BuildInfo = localizer.T("buildInfo");
+        DownloadSpeedLimit = localizer.T("downloadSpeedLimit");
+        DownloadSpeedLimitDescription = localizer.T("downloadSpeedLimitDescription");
+        NotificationSettings = localizer.T("notificationSettings");
+        ToastNotifications = localizer.T("toastNotifications");
+        RemoteContentCard = localizer.T("remoteContentCard");
+        ShowRemoteContentCard = localizer.T("showRemoteContentCard");
+        LaunchCheckDescription = localizer.T("launchCheckDescription");
+        ProxyDescription = localizer.T("proxyDescription");
+        DownloadSource = localizer.T("downloadSource");
+        DownloadSourceDescription = localizer.T("downloadSourceDescription");
+        DownloadSourceOfficial = localizer.T("downloadSourceOfficial");
+        DownloadSourceCafe = localizer.T("downloadSourceCafe");
+        Pause = localizer.T("pause");
+        Resume = localizer.T("resume");
+        Paused = localizer.T("paused");
+        ConfirmStop = localizer.T("confirmStop");
+        StopDownloadConfirm = localizer.T("stopDownloadConfirm");
+        UnsavedChanges = localizer.T("unsavedChanges");
+        UnsavedChangesMessage = localizer.T("unsavedChangesMessage");
+        DiscardChanges = localizer.T("discardChanges");
+        KeepEditing = localizer.T("keepEditing");
+        ChooseInstallFolder = localizer.T("chooseInstallFolder");
+        ChooseBackgroundImageTitle = localizer.T("chooseBackgroundImageTitle");
+        CarouselPage = localizer.T("carouselPage");
+        PauseCarousel = localizer.T("pauseCarousel");
+        ResumeCarousel = localizer.T("resumeCarousel");
+        BannerLoadingFailed = localizer.T("bannerLoadingFailed");
+        StatusNetworkLoaded = localizer.T("statusNetworkLoaded");
+        StatusLaunchCheckLocal = localizer.T("statusLaunchCheckLocal");
+        StatusLaunchCheckRemote = localizer.T("statusLaunchCheckRemote");
+        StatusLaunchCheckNone = localizer.T("statusLaunchCheckNone");
+        GameLaunchedMinimized = localizer.T("gameLaunchedMinimized");
+    }
+}
+
+public sealed class LocalizationService
+{
+    private static readonly Dictionary<string, Dictionary<string, string>> Resources = new(StringComparer.Ordinal)
+    {
+        [LauncherLanguages.English] = new Dictionary<string, string>(StringComparer.Ordinal)
+        {
+            ["settings"] = "Settings",
+            ["settingsStatus"] = "Status",
+            ["settingsGameFiles"] = "Game Files",
+            ["settingsDownloadNetwork"] = "Download & Network",
+            ["settingsAppPreferences"] = "App Preferences",
+            ["minimize"] = "Minimize",
+            ["close"] = "Close",
+            ["version"] = "Version",
+            ["executable"] = "Executable",
+            ["path"] = "Path",
+            ["changePath"] = "Change Path",
+            ["refresh"] = "Refresh",
+            ["refreshTooltip"] = "Reload launcher API data and game state",
+            ["stop"] = "Stop",
+            ["officialSite"] = "Official Site",
+            ["startGame"] = "Start Game",
+            ["notice"] = "Notice",
+            ["banners"] = "Banners",
+            ["news"] = "News",
+            ["socialMedia"] = "Social Media",
+            ["gamePath"] = "Game Install Path",
+            ["choose"] = "Choose",
+            ["launchCheck"] = "File Verification",
+            ["proxy"] = "Proxy",
+            ["closeBehavior"] = "Close Behavior",
+            ["language"] = "Language",
+            ["theme"] = "Theme",
+            ["themeDescription"] = "Follow system theme or set a fixed appearance",
+            ["themeSystem"] = "System",
+            ["themeLight"] = "Light",
+            ["themeDark"] = "Dark",
+            ["save"] = "Save",
+            ["gameManagement"] = "Game Management",
+            ["gameManagementDescription"] = "Repair: validates against remote manifest. Uninstall: removes tracked files only.",
+            ["repair"] = "Repair",
+            ["uninstall"] = "Uninstall",
+            ["about"] = "About",
+            ["aboutDescription"] = "Cafe Launcher — a unified, native, cross-platform Blue Archive game launcher with practical enhancements.",
+            ["agreement"] = "Agreement",
+            ["privacy"] = "Privacy",
+            ["updateEndpoint"] = "Update Endpoint",
+            ["confirmUninstall"] = "Confirm Uninstall",
+            ["uninstallConfirmDescription"] = "This action follows the manifest file list.",
+            ["cancel"] = "Cancel",
+            ["loadingTitle"] = "Loading launcher configuration",
+            ["loadingStatus"] = "Loading production API and local game state.",
+            ["pathLoading"] = "Loading",
+            ["versionLoading"] = "Version: loading",
+            ["networkLoading"] = "Network: loading",
+            ["launchCheckLoading"] = "Launch check: loading",
+            ["executableLoading"] = "Executable: loading",
+            ["diskSpaceEmpty"] = "Required -- / Available --",
+            ["operationTelemetryLocal"] = "Remote telemetry is excluded. Diagnostics stay local.",
+            ["launcherUpdateLoading"] = "Launcher update endpoint: loading",
+            ["remoteBackgroundLoading"] = "Remote background: loading",
+            ["installGame"] = "Install Game",
+            ["updateGame"] = "Update Game",
+            ["preparing"] = "Preparing",
+            ["connectingApi"] = "Connecting to production launcher API.",
+            ["networkUnavailableTitle"] = "Launcher configuration unavailable",
+            ["networkError"] = "Network error",
+            ["networkWithMessage"] = "Network: {0}",
+            ["versionUnavailable"] = "Version: unavailable",
+            ["apiFailedNoFileChange"] = "API failed. The launcher remains open and no game files were changed.",
+            ["folderPickerUnavailable"] = "Folder picker is not available.",
+            ["pathCanceled"] = "Game path selection was canceled.",
+            ["pathSaved"] = "Game path saved: {0}",
+            ["settingsSaved"] = "Launcher settings saved.",
+            ["busy"] = "Launcher is busy. Please wait for the current action to finish.",
+            ["stateNotLoaded"] = "Launcher state is not loaded.",
+            ["runningLaunchCheck"] = "Running launch check.",
+            ["launchCheckWithMessage"] = "Launch check: {0}",
+            ["gameLaunchFailed"] = "Game launch failed: {0}",
+            ["stopRequested"] = "Stop requested.",
+            ["uninstallConfirmText"] = "Path: {0}\nFiles from manifest: {1}\nOnly manifest-listed files, manifest.json, and game-launcher-config.json will be deleted.",
+            ["uninstalling"] = "Uninstalling",
+            ["deletingManifestFiles"] = "Deleting manifest-listed files.",
+            ["uninstallCanceled"] = "Uninstall canceled.",
+            ["buildingFileList"] = "Building file list.",
+            ["pathValue"] = "Path: {0}",
+            ["versionInstalled"] = "Local {0} / Latest {1}",
+            ["versionLatest"] = "Latest {0}",
+            ["unknown"] = "unknown",
+            ["networkLoaded"] = "Network: production API loaded",
+            ["executableValue"] = "Executable: {0}.exe",
+            ["settingsSummary"] = "Proxy: {0} | Close: {1} | Language: {2}",
+            ["settingsSummaryWithTheme"] = "Proxy: {0} | Close: {1} | Language: {2} | Theme: {3}",
+            ["launcherUpdate"] = "Launcher update: {0} | {1}",
+            ["notInstalled"] = "Game is not installed.",
+            ["updateRequired"] = "Update required before launch.",
+            ["updateAvailable"] = "A game update is available.",
+            ["ready"] = "Ready to start.",
+            ["localGameReadError"] = "Local game state read error: {0}",
+            ["choosePathInstall"] = "Choose an install path, then install the game.",
+            ["belowLowestVersion"] = "Local version is lower than game_lowest_version. Update is required.",
+            ["updateAvailableCanStart"] = "Update is available. Start remains available unless launch checks fail.",
+            ["backgroundBoth"] = "Remote background: launcher and installer images configured",
+            ["backgroundLauncher"] = "Remote background: launcher image configured",
+            ["backgroundInstaller"] = "Remote background: installer image configured",
+            ["backgroundBundled"] = "Remote background: using bundled image",
+            ["diskSpace"] = "Required {0} / Available {1}",
+            ["repairing"] = "Repairing",
+            ["downloading"] = "Downloading",
+            ["working"] = "Working",
+            ["banner"] = "Banner",
+            ["contactCustomerSupport"] = "Contact Support",
+            ["repairWarning"] = "Repair will check all game files and re-download any damaged or missing files. This may take a while.\n\nContinue?",
+            ["copyright"] = "Copyright",
+            ["repairConfirm"] = "Confirm Repair",
+            ["repairConfirmDescription"] = "This checks files against the latest manifest and repairs any issues.",
+            ["noticeConfirm"] = "OK",
+            ["noticeExit"] = "Exit Launcher",
+            ["showLauncher"] = "Show Launcher",
+            ["exitLauncher"] = "Exit Launcher",
+            ["githubRepository"] = "GitHub Repository",
+            ["checkUpdates"] = "Check for Updates",
+            ["checkUpdatesUnavailable"] = "Update checking is not yet available",
+            ["trayOpenLauncher"] = "Open the launcher window",
+            ["trayExitLauncher"] = "Close the launcher process",
+            ["aboutLinks"] = "Legal",
+            ["aboutCopyrightText"] = "Copyright © 2026 BlueArchive.Cafe. All rights reserved.",
+            ["aboutDisclaimerText"] = "\"Cafe Launcher\" is a third-party Blue Archive launcher developed by the \"BlueArchive.Cafe\" team. It is not officially affiliated with the game \"Blue Archive\" or its related companies.",
+            ["customBackground"] = "Custom Background",
+            ["customBackgroundDescription"] = "Choose a local image for the launcher background.",
+            ["chooseImage"] = "Choose Image",
+            ["clearBackground"] = "Clear",
+            ["backgroundSet"] = "Background updated.",
+            ["backgroundCleared"] = "Background reset to default.",
+            ["backgroundSource"] = "Background",
+            ["backgroundSourceDescription"] = "Launcher background image source.",
+            ["backgroundSourceBundled"] = "Bundled",
+            ["backgroundSourceRemote"] = "Remote",
+            ["backgroundSourceCustom"] = "Custom",
+            ["versionInfo"] = "Version Information",
+            ["runtimeInfo"] = "{0} | Avalonia {1}",
+            ["buildInfo"] = "{0} | {1}",
+            ["downloadSpeedLimit"] = "Download Speed Limit",
+            ["downloadSpeedLimitDescription"] = "Limit download speed to reduce network impact",
+            ["notificationSettings"] = "Notifications",
+            ["toastNotifications"] = "Desktop notifications",
+            ["remoteContentCard"] = "Remote Content Card",
+            ["showRemoteContentCard"] = "Show announcement, banner, news, and social media card",
+            ["launchCheckDescription"] = "Verify game file integrity before launching",
+            ["proxyDescription"] = "Network proxy for game downloads",
+            ["launchCheckLocalManifest"] = "Local Manifest",
+            ["launchCheckRemoteManifest"] = "Remote Manifest",
+            ["launchCheckNone"] = "None",
+            ["proxyDirect"] = "Direct",
+            ["proxySystem"] = "System Proxy",
+            ["downloadSource"] = "Download Source",
+            ["downloadSourceDescription"] = "CDN server for game patch file downloads",
+            ["downloadSourceOfficial"] = "Official",
+            ["downloadSourceCafe"] = "Cafe",
+            ["closeBehaviorMinimize"] = "Minimize to Tray",
+            ["closeBehaviorExit"] = "Exit",
+            ["speedUnlimited"] = "Unlimited",
+            ["speed1MBs"] = "1 MB/s",
+            ["speed5MBs"] = "5 MB/s",
+            ["speed10MBs"] = "10 MB/s",
+            ["speed25MBs"] = "25 MB/s",
+            ["speed50MBs"] = "50 MB/s",
+            ["pause"] = "Pause",
+            ["resume"] = "Resume",
+            ["paused"] = "Paused",
+            ["pauseRequested"] = "Download paused.",
+            ["resumeRequested"] = "Download resumed.",
+            ["confirmStop"] = "Stop Download",
+            ["stopDownloadConfirm"] = "Download progress will be lost. Are you sure you want to stop?",
+            ["unsavedChanges"] = "Unsaved Changes",
+            ["unsavedChangesMessage"] = "You have unsaved settings changes. Discard them?",
+            ["discardChanges"] = "Discard",
+            ["keepEditing"] = "Keep Editing",
+            ["chooseInstallFolder"] = "Choose install folder",
+            ["chooseBackgroundImageTitle"] = "Choose Background Image",
+            ["carouselPage"] = "Page {0} / {1}",
+            ["pauseCarousel"] = "Pause rotation",
+            ["resumeCarousel"] = "Resume rotation",
+            ["bannerLoadingFailed"] = "Image failed to load",
+            ["statusNetworkLoaded"] = "Connected to server",
+            ["statusLaunchCheckLocal"] = "Local file manifest",
+            ["statusLaunchCheckRemote"] = "Remote file manifest",
+            ["statusLaunchCheckNone"] = "Disabled",
+            ["gameLaunchedMinimized"] = "Game is launching — launcher minimized to tray."
+        },
+        [LauncherLanguages.SimplifiedChinese] = new Dictionary<string, string>(StringComparer.Ordinal)
+        {
+            ["settings"] = "设置",
+            ["settingsStatus"] = "状态",
+            ["settingsGameFiles"] = "游戏文件",
+            ["settingsDownloadNetwork"] = "下载与网络",
+            ["settingsAppPreferences"] = "应用偏好",
+            ["minimize"] = "最小化",
+            ["close"] = "关闭",
+            ["version"] = "版本",
+            ["executable"] = "启动程序",
+            ["path"] = "路径",
+            ["changePath"] = "更改路径",
+            ["refresh"] = "刷新",
+            ["refreshTooltip"] = "重新加载启动器 API 数据和游戏状态",
+            ["stop"] = "停止",
+            ["officialSite"] = "官方网站",
+            ["startGame"] = "开始游戏",
+            ["notice"] = "公告",
+            ["banners"] = "活动",
+            ["news"] = "新闻",
+            ["socialMedia"] = "社交媒体",
+            ["gamePath"] = "游戏安装路径",
+            ["choose"] = "选择",
+            ["launchCheck"] = "文件校验",
+            ["proxy"] = "代理",
+            ["closeBehavior"] = "关闭行为",
+            ["language"] = "语言",
+            ["theme"] = "主题",
+            ["themeDescription"] = "跟随系统，或固定为浅色/深色主题",
+            ["themeSystem"] = "跟随系统",
+            ["themeLight"] = "浅色",
+            ["themeDark"] = "深色",
+            ["save"] = "保存",
+            ["gameManagement"] = "游戏管理",
+            ["gameManagementDescription"] = "修复：依据远端清单校验文件。卸载：仅移除 tracked 文件。",
+            ["repair"] = "修复",
+            ["uninstall"] = "卸载",
+            ["about"] = "关于",
+            ["aboutDescription"] = "Cafe Launcher - 统一、原生、跨平台的 Blue Archive 游戏启动器，内置多项实用功能。",
+            ["agreement"] = "用户协议",
+            ["privacy"] = "隐私政策",
+            ["updateEndpoint"] = "更新地址",
+            ["confirmUninstall"] = "确认卸载",
+            ["uninstallConfirmDescription"] = "此操作按 manifest 文件列表执行。",
+            ["cancel"] = "取消",
+            ["loadingTitle"] = "正在加载启动器配置",
+            ["loadingStatus"] = "正在读取正式 API 和本地游戏状态。",
+            ["pathLoading"] = "加载中",
+            ["versionLoading"] = "版本：加载中",
+            ["networkLoading"] = "网络：加载中",
+            ["launchCheckLoading"] = "启动校验：加载中",
+            ["executableLoading"] = "启动程序：加载中",
+            ["diskSpaceEmpty"] = "所需 -- / 可用 --",
+            ["operationTelemetryLocal"] = "远程遥测已排除。诊断信息仅保存在本地。",
+            ["launcherUpdateLoading"] = "启动器更新地址：加载中",
+            ["remoteBackgroundLoading"] = "远端背景：加载中",
+            ["installGame"] = "安装游戏",
+            ["updateGame"] = "更新游戏",
+            ["preparing"] = "准备中",
+            ["connectingApi"] = "正在连接正式启动器 API。",
+            ["networkUnavailableTitle"] = "启动器配置不可用",
+            ["networkError"] = "网络错误",
+            ["networkWithMessage"] = "网络：{0}",
+            ["versionUnavailable"] = "版本：不可用",
+            ["apiFailedNoFileChange"] = "API 请求失败。启动器保持打开，且未修改游戏文件。",
+            ["folderPickerUnavailable"] = "文件夹选择器不可用。",
+            ["pathCanceled"] = "已取消选择游戏路径。",
+            ["pathSaved"] = "游戏路径已保存：{0}",
+            ["settingsSaved"] = "启动器设置已保存。",
+            ["busy"] = "启动器正在处理任务，请等待当前操作完成。",
+            ["stateNotLoaded"] = "启动器状态尚未加载。",
+            ["runningLaunchCheck"] = "正在执行启动校验。",
+            ["launchCheckWithMessage"] = "启动校验：{0}",
+            ["gameLaunchFailed"] = "游戏启动失败：{0}",
+            ["stopRequested"] = "已请求停止。",
+            ["uninstallConfirmText"] = "路径：{0}\nmanifest 文件数：{1}\n只会删除 manifest 列出的文件、manifest.json 和 game-launcher-config.json。",
+            ["uninstalling"] = "正在卸载",
+            ["deletingManifestFiles"] = "正在删除 manifest 列出的文件。",
+            ["uninstallCanceled"] = "已取消卸载。",
+            ["buildingFileList"] = "正在生成文件列表。",
+            ["pathValue"] = "路径：{0}",
+            ["versionInstalled"] = "本地 {0} / 最新 {1}",
+            ["versionLatest"] = "最新 {0}",
+            ["unknown"] = "未知",
+            ["networkLoaded"] = "网络：正式 API 已加载",
+            ["executableValue"] = "启动程序：{0}.exe",
+            ["settingsSummary"] = "代理：{0} | 关闭：{1} | 语言：{2}",
+            ["settingsSummaryWithTheme"] = "代理：{0} | 关闭：{1} | 语言：{2} | 主题：{3}",
+            ["launcherUpdate"] = "启动器更新：{0} | {1}",
+            ["notInstalled"] = "游戏未安装。",
+            ["updateRequired"] = "启动前必须更新。",
+            ["updateAvailable"] = "有可用的游戏更新。",
+            ["ready"] = "可以启动。",
+            ["localGameReadError"] = "读取本地游戏状态失败：{0}",
+            ["choosePathInstall"] = "请选择安装路径，然后安装游戏。",
+            ["belowLowestVersion"] = "本地版本低于 game_lowest_version，必须更新。",
+            ["updateAvailableCanStart"] = "有可用更新；只要启动校验通过，仍可启动。",
+            ["backgroundBoth"] = "远端背景：已配置启动器和安装器图片",
+            ["backgroundLauncher"] = "远端背景：已配置启动器图片",
+            ["backgroundInstaller"] = "远端背景：已配置安装器图片",
+            ["backgroundBundled"] = "远端背景：使用内置图片",
+            ["diskSpace"] = "所需 {0} / 可用 {1}",
+            ["repairing"] = "正在修复",
+            ["downloading"] = "正在下载",
+            ["working"] = "处理中",
+            ["banner"] = "活动",
+            ["contactCustomerSupport"] = "联系客服",
+            ["repairWarning"] = "修复将检查所有游戏文件并重新下载损坏或丢失的文件。这会耗费一段时间。\n\n是否继续？",
+            ["copyright"] = "版权信息",
+            ["repairConfirm"] = "确认修复",
+            ["repairConfirmDescription"] = "将根据最新清单检查文件并修复任何问题。",
+            ["noticeConfirm"] = "确定",
+            ["noticeExit"] = "退出启动器",
+            ["showLauncher"] = "显示启动器",
+            ["exitLauncher"] = "退出启动器",
+            ["githubRepository"] = "GitHub 仓库",
+            ["checkUpdates"] = "检查更新",
+            ["checkUpdatesUnavailable"] = "更新检查功能尚未推出",
+            ["trayOpenLauncher"] = "打开启动器窗口",
+            ["trayExitLauncher"] = "关闭启动器进程",
+            ["aboutLinks"] = "法律信息",
+            ["aboutCopyrightText"] = "Copyright © 2026 BlueArchive.Cafe. All rights reserved.",
+            ["aboutDisclaimerText"] = "\"Cafe Launcher\"是由\"蔚蓝咖啡厅\"开发组开发的第三方 Blue Archive 启动器，与游戏「ブルーアーカイブ（中文名'蔚蓝档案'）」及相关公司并无官方关联。",
+            ["customBackground"] = "自定义背景",
+            ["customBackgroundDescription"] = "选择本地图片作为启动器背景。",
+            ["chooseImage"] = "选择图片",
+            ["clearBackground"] = "清除",
+            ["backgroundSet"] = "背景已更新。",
+            ["backgroundCleared"] = "已恢复默认背景。",
+            ["backgroundSource"] = "背景",
+            ["backgroundSourceDescription"] = "启动器背景图片来源。",
+            ["backgroundSourceBundled"] = "内置默认",
+            ["backgroundSourceRemote"] = "远程",
+            ["backgroundSourceCustom"] = "自定义",
+            ["versionInfo"] = "版本信息",
+            ["runtimeInfo"] = "{0} | Avalonia {1}",
+            ["buildInfo"] = "{0} | {1}",
+            ["downloadSpeedLimit"] = "下载速度限制",
+            ["downloadSpeedLimitDescription"] = "限制下载速度，降低网络影响",
+            ["notificationSettings"] = "通知设置",
+            ["toastNotifications"] = "桌面通知",
+            ["remoteContentCard"] = "远端内容卡片",
+            ["showRemoteContentCard"] = "显示公告、活动、新闻和社交媒体整张卡片",
+            ["launchCheckDescription"] = "启动游戏前验证本地文件完整性",
+            ["proxyDescription"] = "游戏下载时使用的网络代理",
+            ["launchCheckLocalManifest"] = "本地清单",
+            ["launchCheckRemoteManifest"] = "远端清单",
+            ["launchCheckNone"] = "无",
+            ["proxyDirect"] = "直连",
+            ["proxySystem"] = "系统代理",
+            ["downloadSource"] = "下载线路",
+            ["downloadSourceDescription"] = "选择游戏补丁文件的下载服务器",
+            ["downloadSourceOfficial"] = "官方",
+            ["downloadSourceCafe"] = "Cafe",
+            ["closeBehaviorMinimize"] = "最小化到托盘",
+            ["closeBehaviorExit"] = "退出",
+            ["speedUnlimited"] = "无限制",
+            ["speed1MBs"] = "1 MB/s",
+            ["speed5MBs"] = "5 MB/s",
+            ["speed10MBs"] = "10 MB/s",
+            ["speed25MBs"] = "25 MB/s",
+            ["speed50MBs"] = "50 MB/s",
+            ["pause"] = "暂停",
+            ["resume"] = "继续",
+            ["paused"] = "已暂停",
+            ["pauseRequested"] = "下载已暂停。",
+            ["resumeRequested"] = "下载已恢复。",
+            ["confirmStop"] = "停止下载",
+            ["stopDownloadConfirm"] = "下载进度将会丢失。确定要停止吗？",
+            ["unsavedChanges"] = "未保存的更改",
+            ["unsavedChangesMessage"] = "您有未保存的设置更改。是否放弃？",
+            ["discardChanges"] = "放弃",
+            ["keepEditing"] = "继续编辑",
+            ["chooseInstallFolder"] = "选择安装目录",
+            ["chooseBackgroundImageTitle"] = "选择背景图片",
+            ["carouselPage"] = "第 {0} / {1} 页",
+            ["pauseCarousel"] = "暂停轮播",
+            ["resumeCarousel"] = "恢复轮播",
+            ["bannerLoadingFailed"] = "图片加载失败",
+            ["statusNetworkLoaded"] = "已连接到服务器",
+            ["statusLaunchCheckLocal"] = "本地文件清单",
+            ["statusLaunchCheckRemote"] = "远端文件清单",
+            ["statusLaunchCheckNone"] = "已禁用",
+            ["gameLaunchedMinimized"] = "游戏正在启动 — 启动器已最小化到托盘。"
+        },
+        [LauncherLanguages.Japanese] = new Dictionary<string, string>(StringComparer.Ordinal)
+        {
+            ["settings"] = "設定",
+            ["settingsStatus"] = "状態",
+            ["settingsGameFiles"] = "ゲームファイル",
+            ["settingsDownloadNetwork"] = "ダウンロードとネットワーク",
+            ["settingsAppPreferences"] = "アプリ設定",
+            ["minimize"] = "最小化",
+            ["close"] = "閉じる",
+            ["version"] = "バージョン",
+            ["executable"] = "実行ファイル",
+            ["path"] = "パス",
+            ["changePath"] = "パス変更",
+            ["refresh"] = "更新",
+            ["refreshTooltip"] = "ランチャー API データとゲーム状態を再読み込み",
+            ["stop"] = "停止",
+            ["officialSite"] = "公式サイト",
+            ["startGame"] = "ゲーム開始",
+            ["notice"] = "お知らせ",
+            ["banners"] = "バナー",
+            ["news"] = "ニュース",
+            ["socialMedia"] = "SNS",
+            ["gamePath"] = "ゲームインストールパス",
+            ["choose"] = "選択",
+            ["launchCheck"] = "ファイル検証",
+            ["proxy"] = "プロキシ",
+            ["closeBehavior"] = "閉じる動作",
+            ["language"] = "言語",
+            ["theme"] = "テーマ",
+            ["themeDescription"] = "システム設定に従うか、固定の外観を選択します",
+            ["themeSystem"] = "システム",
+            ["themeLight"] = "ライト",
+            ["themeDark"] = "ダーク",
+            ["save"] = "保存",
+            ["gameManagement"] = "ゲーム管理",
+            ["gameManagementDescription"] = "修復：リモートマニフェストで検証。アンインストール：管理対象ファイルのみ削除。",
+            ["repair"] = "修復",
+            ["uninstall"] = "アンインストール",
+            ["about"] = "情報",
+            ["aboutDescription"] = "Cafe Launcher — 統一されたネイティブなクロスプラットフォーム Blue Archive ランチャー。便利な機能を多数搭載しています。",
+            ["agreement"] = "利用規約",
+            ["privacy"] = "プライバシー",
+            ["updateEndpoint"] = "更新先",
+            ["confirmUninstall"] = "アンインストール確認",
+            ["uninstallConfirmDescription"] = "この操作は manifest のファイルリストに従います。",
+            ["cancel"] = "キャンセル",
+            ["loadingTitle"] = "ランチャー設定を読み込み中",
+            ["loadingStatus"] = "正式 API とローカルゲーム状態を読み込み中です。",
+            ["pathLoading"] = "読み込み中",
+            ["versionLoading"] = "バージョン：読み込み中",
+            ["networkLoading"] = "ネットワーク：読み込み中",
+            ["launchCheckLoading"] = "起動チェック：読み込み中",
+            ["executableLoading"] = "実行ファイル：読み込み中",
+            ["diskSpaceEmpty"] = "必要 -- / 空き --",
+            ["operationTelemetryLocal"] = "リモートテレメトリは除外されています。診断情報はローカルにのみ保存されます。",
+            ["launcherUpdateLoading"] = "ランチャー更新先：読み込み中",
+            ["remoteBackgroundLoading"] = "リモート背景：読み込み中",
+            ["installGame"] = "ゲームをインストール",
+            ["updateGame"] = "ゲームを更新",
+            ["preparing"] = "準備中",
+            ["connectingApi"] = "正式ランチャー API に接続中です。",
+            ["networkUnavailableTitle"] = "ランチャー設定を取得できません",
+            ["networkError"] = "ネットワークエラー",
+            ["networkWithMessage"] = "ネットワーク：{0}",
+            ["versionUnavailable"] = "バージョン：利用不可",
+            ["apiFailedNoFileChange"] = "API に失敗しました。ランチャーは開いたままで、ゲームファイルは変更されていません。",
+            ["folderPickerUnavailable"] = "フォルダー選択を使用できません。",
+            ["pathCanceled"] = "ゲームパスの選択をキャンセルしました。",
+            ["pathSaved"] = "ゲームパスを保存しました：{0}",
+            ["settingsSaved"] = "ランチャー設定を保存しました。",
+            ["busy"] = "ランチャーは処理中です。現在の操作が完了するまでお待ちください。",
+            ["stateNotLoaded"] = "ランチャー状態が読み込まれていません。",
+            ["runningLaunchCheck"] = "起動チェックを実行中です。",
+            ["launchCheckWithMessage"] = "起動チェック：{0}",
+            ["gameLaunchFailed"] = "ゲーム起動に失敗しました：{0}",
+            ["stopRequested"] = "停止を要求しました。",
+            ["uninstallConfirmText"] = "パス：{0}\nmanifest ファイル数：{1}\nmanifest に記載されたファイル、manifest.json、game-launcher-config.json のみ削除します。",
+            ["uninstalling"] = "アンインストール中",
+            ["deletingManifestFiles"] = "manifest に記載されたファイルを削除中です。",
+            ["uninstallCanceled"] = "アンインストールをキャンセルしました。",
+            ["buildingFileList"] = "ファイルリストを作成中です。",
+            ["pathValue"] = "パス：{0}",
+            ["versionInstalled"] = "ローカル {0} / 最新 {1}",
+            ["versionLatest"] = "最新 {0}",
+            ["unknown"] = "不明",
+            ["networkLoaded"] = "ネットワーク：正式 API 読み込み済み",
+            ["executableValue"] = "実行ファイル：{0}.exe",
+            ["settingsSummary"] = "プロキシ：{0} | 閉じる：{1} | 言語：{2}",
+            ["settingsSummaryWithTheme"] = "プロキシ：{0} | 閉じる：{1} | 言語：{2} | テーマ：{3}",
+            ["launcherUpdate"] = "ランチャー更新：{0} | {1}",
+            ["notInstalled"] = "ゲームはインストールされていません。",
+            ["updateRequired"] = "起動前に更新が必要です。",
+            ["updateAvailable"] = "ゲーム更新があります。",
+            ["ready"] = "起動できます。",
+            ["localGameReadError"] = "ローカルゲーム状態の読み込みエラー：{0}",
+            ["choosePathInstall"] = "インストール先を選択して、ゲームをインストールしてください。",
+            ["belowLowestVersion"] = "ローカルバージョンが game_lowest_version より低いため、更新が必要です。",
+            ["updateAvailableCanStart"] = "更新があります。起動チェックに成功すれば起動できます。",
+            ["backgroundBoth"] = "リモート背景：ランチャーとインストーラー画像が設定されています",
+            ["backgroundLauncher"] = "リモート背景：ランチャー画像が設定されています",
+            ["backgroundInstaller"] = "リモート背景：インストーラー画像が設定されています",
+            ["backgroundBundled"] = "リモート背景：内蔵画像を使用",
+            ["diskSpace"] = "必要 {0} / 空き {1}",
+            ["repairing"] = "修復中",
+            ["downloading"] = "ダウンロード中",
+            ["working"] = "処理中",
+            ["banner"] = "バナー",
+            ["contactCustomerSupport"] = "お問い合わせ",
+            ["repairWarning"] = "修復はすべてのゲームファイルをチェックし、破損または不足しているファイルを再ダウンロードします。これには時間がかかる場合があります。\n\n続行しますか？",
+            ["copyright"] = "著作権情報",
+            ["repairConfirm"] = "修復を確認",
+            ["repairConfirmDescription"] = "最新のマニフェストと照合してファイルをチェックし、問題を修復します。",
+            ["noticeConfirm"] = "OK",
+            ["noticeExit"] = "ランチャーを終了",
+            ["showLauncher"] = "ランチャーを表示",
+            ["exitLauncher"] = "ランチャーを終了",
+            ["githubRepository"] = "GitHub リポジトリ",
+            ["checkUpdates"] = "更新を確認",
+            ["checkUpdatesUnavailable"] = "更新チェック機能はまだ利用できません",
+            ["trayOpenLauncher"] = "ランチャーウィンドウを開く",
+            ["trayExitLauncher"] = "ランチャープロセスを終了",
+            ["aboutLinks"] = "法務情報",
+            ["aboutCopyrightText"] = "Copyright © 2026 BlueArchive.Cafe. All rights reserved.",
+            ["aboutDisclaimerText"] = "「Cafe Launcher」は「BlueArchive.Cafe」チームが開発したサードパーティ製 Blue Archive ランチャーであり、ゲーム「ブルーアーカイブ」および関連会社とは公式な提携関係はありません。",
+            ["customBackground"] = "カスタム背景",
+            ["customBackgroundDescription"] = "ローカル画像をランチャー背景に設定します。",
+            ["chooseImage"] = "画像を選択",
+            ["clearBackground"] = "クリア",
+            ["backgroundSet"] = "背景を更新しました。",
+            ["backgroundCleared"] = "デフォルト背景に戻しました。",
+            ["backgroundSource"] = "背景",
+            ["backgroundSourceDescription"] = "ランチャー背景画像のソース。",
+            ["backgroundSourceBundled"] = "デフォルト",
+            ["backgroundSourceRemote"] = "リモート",
+            ["backgroundSourceCustom"] = "カスタム",
+            ["versionInfo"] = "バージョン情報",
+            ["runtimeInfo"] = "{0} | Avalonia {1}",
+            ["buildInfo"] = "{0} | {1}",
+            ["downloadSpeedLimit"] = "ダウンロード速度制限",
+            ["downloadSpeedLimitDescription"] = "ダウンロード速度を制限してネットワーク負荷を軽減します",
+            ["notificationSettings"] = "通知設定",
+            ["toastNotifications"] = "デスクトップ通知",
+            ["remoteContentCard"] = "リモートコンテンツカード",
+            ["showRemoteContentCard"] = "お知らせ、バナー、ニュース、SNS のカード全体を表示",
+            ["launchCheckDescription"] = "ゲーム起動前にファイルの整合性を検証します",
+            ["proxyDescription"] = "ゲームダウンロード時のネットワークプロキシ",
+            ["launchCheckLocalManifest"] = "ローカルマニフェスト",
+            ["launchCheckRemoteManifest"] = "リモートマニフェスト",
+            ["launchCheckNone"] = "なし",
+            ["proxyDirect"] = "直接",
+            ["proxySystem"] = "システムプロキシ",
+            ["downloadSource"] = "ダウンロードソース",
+            ["downloadSourceDescription"] = "ゲームパッチファイルのダウンロードに使用するCDNサーバーを選択します",
+            ["downloadSourceOfficial"] = "公式",
+            ["downloadSourceCafe"] = "Cafe",
+            ["closeBehaviorMinimize"] = "トレイに最小化",
+            ["closeBehaviorExit"] = "終了",
+            ["speedUnlimited"] = "無制限",
+            ["speed1MBs"] = "1 MB/s",
+            ["speed5MBs"] = "5 MB/s",
+            ["speed10MBs"] = "10 MB/s",
+            ["speed25MBs"] = "25 MB/s",
+            ["speed50MBs"] = "50 MB/s",
+            ["pause"] = "一時停止",
+            ["resume"] = "再開",
+            ["paused"] = "一時停止中",
+            ["pauseRequested"] = "ダウンロードを一時停止しました。",
+            ["resumeRequested"] = "ダウンロードを再開しました。",
+            ["confirmStop"] = "ダウンロード停止",
+            ["stopDownloadConfirm"] = "ダウンロードの進行状況が失われます。停止してもよろしいですか？",
+            ["unsavedChanges"] = "未保存の変更",
+            ["unsavedChangesMessage"] = "保存されていない設定変更があります。破棄しますか？",
+            ["discardChanges"] = "破棄",
+            ["keepEditing"] = "編集を続ける",
+            ["chooseInstallFolder"] = "インストール先を選択",
+            ["chooseBackgroundImageTitle"] = "背景画像を選択",
+            ["carouselPage"] = "{0} / {1} ページ",
+            ["pauseCarousel"] = "ローテーションを一時停止",
+            ["resumeCarousel"] = "ローテーションを再開",
+            ["bannerLoadingFailed"] = "画像の読み込みに失敗しました",
+            ["statusNetworkLoaded"] = "サーバーに接続しました",
+            ["statusLaunchCheckLocal"] = "ローカルファイルマニフェスト",
+            ["statusLaunchCheckRemote"] = "リモートファイルマニフェスト",
+            ["statusLaunchCheckNone"] = "無効",
+            ["gameLaunchedMinimized"] = "ゲームを起動中 — ランチャーをトレイに最小化しました。"
+        }
+    };
+
+    public string CurrentLanguage { get; private set; } = LauncherLanguages.English;
+
+    public event EventHandler? LanguageChanged;
+
+    public string SetLanguage(string language)
+    {
+        CurrentLanguage = ResolveLanguage(language);
+        LanguageChanged?.Invoke(this, EventArgs.Empty);
+        return CurrentLanguage;
+    }
+
+    public string T(string key)
+    {
+        var language = Resources.TryGetValue(CurrentLanguage, out var current)
+            ? current
+            : Resources[LauncherLanguages.English];
+        if (language.TryGetValue(key, out var value))
+        {
+            return value;
+        }
+
+        return Resources[LauncherLanguages.English].TryGetValue(key, out var fallback) ? fallback : key;
+    }
+
+    public string F(string key, params object?[] args)
+    {
+        return string.Format(CultureInfo.CurrentCulture, T(key), args);
+    }
+
+    public static IReadOnlyList<LanguageOption> GetLanguageOptions()
+    {
+        return
+        [
+            new LanguageOption { Code = LauncherLanguages.Auto, DisplayName = "Auto" },
+            new LanguageOption { Code = LauncherLanguages.English, DisplayName = "English" },
+            new LanguageOption { Code = LauncherLanguages.SimplifiedChinese, DisplayName = "简体中文" },
+            new LanguageOption { Code = LauncherLanguages.Japanese, DisplayName = "日本語" }
+        ];
+    }
+
+    public static string ResolveLanguage(string? language)
+    {
+        return language switch
+        {
+            LauncherLanguages.English => LauncherLanguages.English,
+            LauncherLanguages.SimplifiedChinese => LauncherLanguages.SimplifiedChinese,
+            LauncherLanguages.Japanese => LauncherLanguages.Japanese,
+            LauncherLanguages.Auto => ResolveSystemLanguage(),
+            _ => ResolveSystemLanguage()
+        };
+    }
+
+    private static string ResolveSystemLanguage()
+    {
+        var name = CultureInfo.CurrentUICulture.Name;
+        if (name.StartsWith("zh", StringComparison.OrdinalIgnoreCase))
+        {
+            return LauncherLanguages.SimplifiedChinese;
+        }
+
+        if (name.StartsWith("ja", StringComparison.OrdinalIgnoreCase))
+        {
+            return LauncherLanguages.Japanese;
+        }
+
+        return LauncherLanguages.English;
+    }
+}
