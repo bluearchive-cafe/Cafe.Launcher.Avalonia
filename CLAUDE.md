@@ -11,13 +11,17 @@ dotnet build .\Cafe.Launcher.Avalonia.csproj -c Release --no-restore   # Release
 dotnet publish .\Cafe.Launcher.Avalonia.csproj -c Release -o publish   # Self-contained publish (win-x64)
 ```
 
-**Tests** (xUnit, under `tests/Cafe.Launcher.Avalonia.Tests/`):
+**Tests** (xUnit 2.9.3, under `tests/Cafe.Launcher.Avalonia.Tests/`, with coverlet 10.0.1):
 ```powershell
 dotnet test                                                    # Run all tests
 dotnet test --filter "FullyQualifiedName~VersionComparerTests" # Run a single test class
 ```
 
-CI is GitHub Actions (`.github/workflows/build.yml`) on `windows-latest`, .NET 10.0.x — restore, Debug build, Release build, and self-contained publish.
+Available test classes: `VersionComparerTests`, `LauncherApiClientTests`, `LauncherApplicationServicesTests`, `LauncherConstantsTests`, `LauncherSettingsServiceTests`, `LocalizationServiceTests`, `MainWindowViewModelTests`, `GameDownloadServiceTests`, `PatchUrlGroupServiceTests`.
+
+CI is GitHub Actions on `windows-latest`, .NET 10.0.x:
+- **build.yml** (push/PR to `main`): restore, Debug build, Release build, self-contained publish, upload artifact.
+- **release.yml** (push of `v*` tag): restore, Release build, publish, ZIP archive, auto-generated changelog from git log, GitHub Release via `softprops/action-gh-release@v2`. Pre-release if tag contains `-`.
 
 **Telemetry must be off during local builds** (already set in `build.ps1`):
 - `DOTNET_CLI_TELEMETRY_OPTOUT=1`
@@ -25,7 +29,7 @@ CI is GitHub Actions (`.github/workflows/build.yml`) on `windows-latest`, .NET 1
 
 ## Architecture
 
-**Tech stack**: .NET 10.0, Avalonia 12.0.4, CommunityToolkit.Mvvm 8.4.1 (source generators), Material.Icons.Avalonia, Fluent Theme. Compiled bindings enabled by default.
+**Tech stack**: .NET 10.0, Avalonia 12.0.4, CommunityToolkit.Mvvm 8.4.2 (source generators), Material.Icons.Avalonia, Fluent Theme. Compiled bindings enabled by default.
 
 **MVVM pattern** with `ViewLocator` convention: `FooViewModel` → `FooView` by string replacement. ViewModelBase extends `ObservableObject`.
 
@@ -63,7 +67,7 @@ One `MainWindow` (1300×754, non-resizable, borderless with custom chrome). The 
 | Service | Role |
 |---|---|
 | `LauncherApiClient` | HTTP to `api-launcher-jp.yo-star.com`, MD5-signed `Authorization` header, envelope unwrapping |
-| `LauncherCoreService` | Orchestrates API + local state into `LauncherStatusSnapshot` |
+| `LauncherCoreService` | Orchestrates API + local state into `LauncherStatusSnapshot`. Exposed as `ILauncherCoreService` in the DI container. |
 | `LauncherSettingsService` | Reads/writes `settings.json` at `%LOCALAPPDATA%\Cafe Launcher\`, normalizes enum values, handles legacy camelCase fields |
 | `LocalGameStateService` | Reads local `game-launcher-config.json` + `manifest.json`, normalizes paths to `YostarGames\BlueArchive_JP` |
 | `GameDownloadService` | Install/update/repair: manifest diff → parallel CDN download (10 concurrent, `.tmp` files, `Range` resume, CRC64 verify, rename on success). Supports download speed throttling, async pause/resume via `TaskCompletionSource`. Implements `IDisposable` — thread-safe CTS management via `activeDownloadLock`. |
@@ -88,7 +92,7 @@ One `MainWindow` (1300×754, non-resizable, borderless with custom chrome). The 
 
 ### Constants
 
-`LauncherConstants` holds: `ProductName`, `LauncherVersion` ("1.7.2"), `ApiBaseUrl`, `AuthorizationSalt`, `OfficialWebsiteUrl`, `UpdatePackageUrl`, path/filename conventions.
+`LauncherConstants` holds: `ProductName`, `LauncherVersion` (reads from `AssemblyInformationalVersionAttribute`, currently `"1.0.0"`), `YostarAuthorizationVersion` (`"1.7.2"` — the version sent in API auth headers to match the official launcher), `ApiBaseUrl`, `AuthorizationSalt`, `OfficialWebsiteUrl`, `UpdatePackageUrl`, path/filename conventions (`RootFolderName = "YostarGames"`, `GameFolderName = "BlueArchive_JP"`), and `AvaloniaVersion` (must be kept in sync with the `.csproj` `PackageReference` for Avalonia).
 
 ### Patch URL groups
 
@@ -98,11 +102,12 @@ Users can switch between `Official` (yo-star.com) and `Cafe` (bluearchive.cafe) 
 
 `UrlToBitmapConverter` (`Converters/`) — converts image URLs to `Bitmap?` for XAML binding, used for remote banner/avatar images.
 
-### Reference docs
+### Other directories
 
-- `docs/architecture.md` — current Avalonia rewrite behavior and implementation notes
-- `docs/report.md` — concise original Electron launcher analysis
-- `docs/bluearchive_jp_gamelauncher_analysis.md` — detailed decompiled launcher report
+- `Constants/` — `LauncherConstants` (see above)
+- `Helpers/` — `FileSizeFormatter`, `GamePathValidator`
+- `Services/Auth/` — `AuthorizationHeaderFactory` (MD5-signed API auth header)
+- `Services/Diagnostics/` — `LocalDiagnostics` (appends to `diagnostics.log`)
 
 ### Localization
 

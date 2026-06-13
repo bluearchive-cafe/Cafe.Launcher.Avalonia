@@ -1,0 +1,205 @@
+using Cafe.Launcher.Avalonia.Models;
+using Cafe.Launcher.Avalonia.Services;
+using Cafe.Launcher.Avalonia.Services.Diagnostics;
+using Cafe.Launcher.Avalonia.ViewModels;
+
+namespace Cafe.Launcher.Avalonia.Tests;
+
+public sealed class MainWindowViewModelTests : IDisposable
+{
+    private readonly string tempDir = Path.Combine(Path.GetTempPath(), Guid.NewGuid().ToString("N"));
+    private readonly LauncherApiClient apiClient = new();
+    private readonly ImageCacheService imageCacheService = new();
+
+    public MainWindowViewModelTests()
+    {
+        Directory.CreateDirectory(tempDir);
+    }
+
+    [Fact]
+    public void Constructor_DoesNotLoadLauncherState()
+    {
+        var coreService = new CountingCoreService(CreateSnapshot());
+        using var viewModel = CreateViewModel(coreService);
+
+        Assert.Equal(0, coreService.LoadCount);
+    }
+
+    [Fact]
+    public async Task InitializeAsync_WhenCalledTwice_LoadsLauncherStateOnce()
+    {
+        var coreService = new CountingCoreService(CreateSnapshot());
+        using var viewModel = CreateViewModel(coreService);
+
+        await viewModel.InitializeAsync();
+        await viewModel.InitializeAsync();
+
+        Assert.Equal(1, coreService.LoadCount);
+    }
+
+    [Fact]
+    public async Task InitializeAsync_WhenNewsAndNoticesExist_AddsBothToNewsItems()
+    {
+        var snapshot = CreateSnapshot();
+        snapshot.Remote.OperationsResource = CreateOperationsResource();
+        var coreService = new CountingCoreService(snapshot);
+        using var viewModel = CreateViewModel(coreService);
+
+        await viewModel.InitializeAsync();
+
+        Assert.Contains(viewModel.NewsItems, item => item.Title == "news title");
+        Assert.Contains(viewModel.NewsItems, item => item.Title == "notice title");
+    }
+
+    [Fact]
+    public async Task InitializeAsync_WhenShowRemoteContentCardIsFalse_HidesRemoteContentCard()
+    {
+        var snapshot = CreateSnapshot();
+        snapshot.Settings.ShowRemoteContentCard = false;
+        snapshot.Remote.OperationsResource = CreateOperationsResource();
+        var coreService = new CountingCoreService(snapshot);
+        using var viewModel = CreateViewModel(coreService);
+
+        await viewModel.InitializeAsync();
+
+        Assert.Contains(viewModel.NewsItems, item => item.Title == "news title");
+        Assert.Contains(viewModel.NewsItems, item => item.Title == "notice title");
+        Assert.True(viewModel.HasNewsItems);
+        Assert.False(viewModel.HasRemoteContent);
+    }
+
+    private MainWindowViewModel CreateViewModel(ILauncherCoreService coreService)
+    {
+        var settingsPath = Path.Combine(tempDir, Guid.NewGuid().ToString("N"), "settings.json");
+        var settingsService = new LauncherSettingsService(settingsPath);
+        var localGameStateService = new LocalGameStateService();
+        var diagnostics = new LocalDiagnostics();
+        var manifestValidationService = new ManifestValidationService(apiClient);
+        var gameLaunchService = new GameLaunchService(manifestValidationService, new ClickCodeService());
+        var downloadStateService = new DownloadStateService();
+        var gameDownloadService = new GameDownloadService(
+            apiClient,
+            localGameStateService,
+            settingsService,
+            new ProxySettingsService(),
+            new Crc64Service(),
+            new DiskSpaceService(),
+            diagnostics,
+            downloadStateService);
+
+        return new MainWindowViewModel(
+            coreService,
+            settingsService,
+            localGameStateService,
+            gameLaunchService,
+            gameDownloadService,
+            new GameUninstallService(localGameStateService, diagnostics),
+            new ExternalLinkService(),
+            new DiskSpaceService(),
+            new LocalizationService(),
+            new ToastService(),
+            diagnostics,
+            new NoticeStateService(Path.Combine(tempDir, Guid.NewGuid().ToString("N"), "shown_notices.json")),
+            imageCacheService);
+    }
+
+    private LauncherStatusSnapshot CreateSnapshot()
+    {
+        var gamePath = Path.Combine(tempDir, "YostarGames", "BlueArchive_JP");
+        return new LauncherStatusSnapshot
+        {
+            Settings = new LauncherSettings
+            {
+                GamePath = gamePath
+            },
+            LocalGame = new LocalGameState
+            {
+                GamePath = gamePath
+            },
+            Remote = new LauncherRemoteState
+            {
+                GameConfig = new GameConfigResponse
+                {
+                    GameLatestVersion = "1.0.0",
+                    GameStartExeName = "BlueArchive"
+                }
+            },
+            CheckedAt = DateTimeOffset.Now
+        };
+    }
+
+    private static OperationsResourceResponse CreateOperationsResource()
+    {
+        return new OperationsResourceResponse
+        {
+            OperationsResourceOpen = true,
+            NewsList = new NewsListEnvelope
+            {
+                Code = 0,
+                Data = new NewsListData
+                {
+                    News =
+                    [
+                        new NewsTypeItem
+                        {
+                            TypeLabel = "news",
+                            Rows =
+                            [
+                                new NewsRowItem
+                                {
+                                    Title = "news title",
+                                    PublishTime = 0,
+                                    Link = "https://example.invalid/news"
+                                }
+                            ]
+                        }
+                    ]
+                }
+            },
+            NoticeList =
+            [
+                new NoticeTypeItem
+                {
+                    NoticeType = "notice",
+                    NoticeDetailList =
+                    [
+                        new NoticeDetailItem
+                        {
+                            NoticeTitle = "notice title",
+                            NoticeTime = "2026-06-12",
+                            JumpUrl = "https://example.invalid/notice"
+                        }
+                    ]
+                }
+            ]
+        };
+    }
+
+    public void Dispose()
+    {
+        imageCacheService.Dispose();
+        apiClient.Dispose();
+        if (Directory.Exists(tempDir))
+        {
+            Directory.Delete(tempDir, recursive: true);
+        }
+    }
+
+    private sealed class CountingCoreService : ILauncherCoreService
+    {
+        private readonly LauncherStatusSnapshot snapshot;
+
+        public CountingCoreService(LauncherStatusSnapshot snapshot)
+        {
+            this.snapshot = snapshot;
+        }
+
+        public int LoadCount { get; private set; }
+
+        public Task<LauncherStatusSnapshot> LoadAsync(CancellationToken cancellationToken = default)
+        {
+            LoadCount++;
+            return Task.FromResult(snapshot);
+        }
+    }
+}
