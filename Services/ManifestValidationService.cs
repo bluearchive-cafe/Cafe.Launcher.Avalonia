@@ -5,6 +5,7 @@ using System.Net.Http;
 using System.Text.Json;
 using System.Threading;
 using System.Threading.Tasks;
+using Cafe.Launcher.Avalonia.Helpers;
 using Cafe.Launcher.Avalonia.Models;
 
 namespace Cafe.Launcher.Avalonia.Services;
@@ -118,9 +119,7 @@ public sealed class ManifestValidationService
 
         foreach (var fileItem in files)
         {
-            // Strip leading / — Path.Combine treats it as rooted path on Windows
-            var relativePath = fileItem.Path.TrimStart(Path.DirectorySeparatorChar, '/');
-            var filePath = Path.GetFullPath(Path.Combine(gamePath, relativePath));
+            var filePath = GamePathValidator.GetSafePath(gamePath, fileItem.Path);
             var fileInfo = new FileInfo(filePath);
             if (!fileInfo.Exists)
             {

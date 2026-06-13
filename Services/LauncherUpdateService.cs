@@ -41,7 +41,8 @@ public sealed class LauncherUpdateService : IDisposable
                 var trimmed = line.Trim();
                 if (trimmed.StartsWith("version:"))
                 {
-                    var latestVersion = trimmed["version:".Length..].Trim();
+                    // Strip quotes and whitespace — YAML values may be quoted or unquoted
+                    var latestVersion = trimmed["version:".Length..].Trim().Trim('"', '\'');
                     if (IsNewer(latestVersion, LauncherConstants.LauncherVersion))
                     {
                         return latestVersion;

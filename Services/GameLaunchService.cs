@@ -41,6 +41,12 @@ public sealed class GameLaunchService
             return Failed("Game executable name is empty.");
         }
 
+        // Defense-in-depth: reject executable names containing path separators
+        if (gameConfig.Name.Contains('/') || gameConfig.Name.Contains('\\'))
+        {
+            return Failed("Game executable name contains invalid characters.");
+        }
+
         var exePath = Path.Combine(localGame.GamePath, $"{gameConfig.Name}.exe");
         if (!File.Exists(exePath))
         {
@@ -79,7 +85,7 @@ public sealed class GameLaunchService
         // Write clickCode attribution to game directory before launch
         clickCodeService.WriteClickCodeToGamePath(localGame.GamePath);
 
-        var process = Process.Start(startInfo);
+        using var process = Process.Start(startInfo);
         return process is null
             ? Failed("Game process did not start.")
             : new GameLaunchResult

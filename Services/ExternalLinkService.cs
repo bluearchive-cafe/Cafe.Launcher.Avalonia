@@ -1,5 +1,6 @@
 using System;
 using System.Diagnostics;
+using System.Threading.Tasks;
 using Cafe.Launcher.Avalonia.Services.Diagnostics;
 
 namespace Cafe.Launcher.Avalonia.Services;
@@ -33,9 +34,7 @@ public sealed class ExternalLinkService
         if (!Uri.TryCreate(url, UriKind.Absolute, out var uri)
             || (uri.Scheme != "http" && uri.Scheme != "https"))
         {
-            diagnostics?.MessageAsync(
-                "External link blocked by scheme validation",
-                $"url: {url}").ContinueWith(_ => { });
+            _ = LogDiagnosticsAsync("External link blocked by scheme validation", $"url: {url}");
             return;
         }
 
@@ -49,9 +48,20 @@ public sealed class ExternalLinkService
         }
         catch (Exception ex)
         {
-            diagnostics?.MessageAsync(
-                "External link failed to open",
-                $"url: {uri.AbsoluteUri}\nexception: {ex.Message}").ContinueWith(_ => { });
+            _ = LogDiagnosticsAsync("External link failed to open", $"url: {uri.AbsoluteUri}\nexception: {ex.Message}");
+        }
+    }
+
+    private async Task LogDiagnosticsAsync(string message, string details)
+    {
+        try
+        {
+            if (diagnostics is not null)
+                await diagnostics.MessageAsync(message, details);
+        }
+        catch
+        {
+            // Best-effort diagnostics — must not throw.
         }
     }
 }

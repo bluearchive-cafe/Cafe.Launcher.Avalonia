@@ -32,6 +32,9 @@ jobs:
       - name: Build (Debug)
         run: dotnet build $env:Project_Path -c Debug --no-restore
 
+      - name: Test
+        run: dotnet test tests/Cafe.Launcher.Avalonia.Tests/Cafe.Launcher.Avalonia.Tests.csproj -c Debug --no-restore
+
       - name: Build (Release)
         run: dotnet build $env:Project_Path -c Release
 

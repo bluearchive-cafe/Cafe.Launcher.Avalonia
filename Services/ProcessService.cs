@@ -22,7 +22,7 @@ public static class ProcessService
                 FileName = "tasklist",
                 UseShellExecute = false,
                 RedirectStandardOutput = true,
-                RedirectStandardError = true
+                RedirectStandardError = false
             };
             startInfo.ArgumentList.Add("/FO");
             startInfo.ArgumentList.Add("CSV");
