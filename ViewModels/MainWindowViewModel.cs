@@ -41,6 +41,7 @@ public partial class MainWindowViewModel : ViewModelBase, IDisposable
     private readonly CancellationTokenSource lifetimeCts = new();
     private int initialized;
     private bool disposed;
+    private bool skipNextPersistedResume;
     private LauncherStatusSnapshot? currentSnapshot;
 
     private static readonly string FrameworkVersion = RuntimeInformation.FrameworkDescription;
@@ -281,6 +282,9 @@ public partial class MainWindowViewModel : ViewModelBase, IDisposable
     private bool isPaused;
 
     [ObservableProperty]
+    private bool canPauseOperation;
+
+    [ObservableProperty]
     private string pauseResumeText = "";
 
     [ObservableProperty]
@@ -440,6 +444,14 @@ public partial class MainWindowViewModel : ViewModelBase, IDisposable
         {
             IsBusy = false;
         }
+
+        if (skipNextPersistedResume)
+        {
+            skipNextPersistedResume = false;
+            return;
+        }
+
+        await ResumePersistedDownloadAsync(cancellationToken);
     }
 
     [RelayCommand]
@@ -690,6 +702,9 @@ public partial class MainWindowViewModel : ViewModelBase, IDisposable
     private async Task SaveSettingsAsync()
     {
         var settings = await settingsService.ReadAsync();
+        var previousPatchUrlGroup = settings.PatchUrlGroup;
+        var shouldPromptRepairAfterSourceChange = currentSnapshot?.IsInstalled == true
+            && !string.Equals(previousPatchUrlGroup, SelectedPatchUrlGroup, StringComparison.Ordinal);
         settings.GamePath = SelectedGamePath;
         settings.LaunchCheckMode = SelectedLaunchCheckMode;
         settings.ProxyMode = SelectedProxyMode;
@@ -709,6 +724,11 @@ public partial class MainWindowViewModel : ViewModelBase, IDisposable
         OperationNote = localizer.T("settingsSaved");
         toastService.ShowSuccess(localizer.T("settingsSaved"));
         await RefreshAsync();
+        if (shouldPromptRepairAfterSourceChange)
+        {
+            RepairConfirmText = localizer.T("downloadSourceChangedRepairPrompt");
+            IsRepairConfirmVisible = true;
+        }
     }
 
     [RelayCommand]
@@ -927,6 +947,11 @@ public partial class MainWindowViewModel : ViewModelBase, IDisposable
     [RelayCommand]
     private void PauseResume()
     {
+        if (!CanPauseOperation)
+        {
+            return;
+        }
+
         if (gameDownloadService.IsPaused)
         {
             gameDownloadService.Resume();
@@ -1089,6 +1114,11 @@ public partial class MainWindowViewModel : ViewModelBase, IDisposable
                 var bytes = await imageCacheService.GetImageBytesAsync(item.ImageUrl, lifetimeCts.Token);
                 await Dispatcher.UIThread.InvokeAsync(() =>
                 {
+                    if (!BannerItems.Contains(item))
+                    {
+                        return;
+                    }
+
                     // Dispose previous bitmap to avoid leaking unmanaged resources
                     // when banner images are preloaded multiple times (e.g. after ApplyRemoteContent)
                     item.BannerBitmap?.Dispose();
@@ -1301,6 +1331,7 @@ public partial class MainWindowViewModel : ViewModelBase, IDisposable
         ProgressSize = "";
         ProgressEstimated = "";
         IsPaused = false;
+        CanPauseOperation = false;
         PauseResumeText = localizer.T("pause");
         PauseResumeIcon = "Pause";
         return true;
@@ -1329,8 +1360,48 @@ public partial class MainWindowViewModel : ViewModelBase, IDisposable
             ? $"ETA {progress.Estimated}"
             : "";
         IsPaused = progress.IsPaused;
+        CanPauseOperation = progress.CanPause;
         PauseResumeText = progress.IsPaused ? localizer.T("resume") : localizer.T("pause");
         PauseResumeIcon = progress.IsPaused ? "Play" : "Pause";
+    }
+
+    private async Task ResumePersistedDownloadAsync(CancellationToken cancellationToken)
+    {
+        if (currentSnapshot is null || IsBusy)
+        {
+            return;
+        }
+
+        try
+        {
+            IsBusy = true;
+            var result = await gameDownloadService.ResumePersistedAsync(currentSnapshot, ApplyProgress, cancellationToken);
+            if (result is null)
+            {
+                return;
+            }
+
+            OperationNote = result.Message;
+            if (result.Success)
+                toastService.ShowSuccess(result.Message);
+            else
+                toastService.ShowError(result.Message);
+            skipNextPersistedResume = true;
+            await RefreshAsync(cancellationToken);
+        }
+        catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
+        {
+        }
+        catch (Exception exception)
+        {
+            OperationNote = localizer.F("networkWithMessage", exception.Message);
+            await TryLogErrorAsync("Persisted game download resume failed.", exception);
+        }
+        finally
+        {
+            IsBusy = false;
+            CanPauseOperation = false;
+        }
     }
 
     private async Task ApplySnapshotAsync(LauncherStatusSnapshot snapshot)
@@ -1385,6 +1456,7 @@ public partial class MainWindowViewModel : ViewModelBase, IDisposable
 
     private void ApplyRemoteContent(LauncherRemoteState remote)
     {
+        DisposeBannerBitmaps();
         BannerItems.Clear();
         NewsItems.Clear();
         SocialMediaItems.Clear();
@@ -1576,6 +1648,7 @@ public partial class MainWindowViewModel : ViewModelBase, IDisposable
     private void SetIdlePanels()
     {
         IsProgressPanelVisible = false;
+        CanPauseOperation = false;
         IsControlPanelVisible = currentSnapshot?.IsInstalled == true && currentSnapshot.BelowLowestVersion == false;
         IsInstallPanelVisible = !IsControlPanelVisible;
     }
@@ -1947,8 +2020,18 @@ public partial class MainWindowViewModel : ViewModelBase, IDisposable
         StopCarouselTimer();
         carouselDelayCts?.Cancel();
         carouselDelayCts?.Dispose();
-        gameDownloadService.Stop();
+        DisposeBannerBitmaps();
+        gameDownloadService.Stop(clearPersistedState: false);
         lifetimeCts.Cancel();
         lifetimeCts.Dispose();
+    }
+
+    private void DisposeBannerBitmaps()
+    {
+        foreach (var item in BannerItems)
+        {
+            item.BannerBitmap?.Dispose();
+            item.BannerBitmap = null;
+        }
     }
 }

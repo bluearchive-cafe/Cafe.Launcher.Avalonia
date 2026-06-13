@@ -2,6 +2,7 @@ using Cafe.Launcher.Avalonia.Models;
 using Cafe.Launcher.Avalonia.Services;
 using Cafe.Launcher.Avalonia.Services.Diagnostics;
 using Cafe.Launcher.Avalonia.ViewModels;
+using System.Reflection;
 
 namespace Cafe.Launcher.Avalonia.Tests;
 
@@ -106,15 +107,80 @@ public sealed class MainWindowViewModelTests : IDisposable
         Assert.Null(resolved);
     }
 
-    private MainWindowViewModel CreateViewModel(ILauncherCoreService coreService)
+    [Fact]
+    public void ApplyProgress_WhenProgressCannotPause_HidesPauseResume()
     {
+        var coreService = new CountingCoreService(CreateSnapshot());
+        using var viewModel = CreateViewModel(coreService);
+
+        ApplyProgress(viewModel, new GameOperationProgress
+        {
+            OperationKind = GameOperationKinds.Uninstall,
+            Stage = "uninstall",
+            Progress = 50,
+            CanPause = false
+        });
+
+        Assert.False(viewModel.CanPauseOperation);
+    }
+
+    [Fact]
+    public void ApplyProgress_WhenProgressCanPause_ShowsPauseResume()
+    {
+        var coreService = new CountingCoreService(CreateSnapshot());
+        using var viewModel = CreateViewModel(coreService);
+
+        ApplyProgress(viewModel, new GameOperationProgress
+        {
+            OperationKind = GameOperationKinds.Download,
+            Stage = "download",
+            Progress = 50,
+            CanPause = true
+        });
+
+        Assert.True(viewModel.CanPauseOperation);
+    }
+
+    [Fact]
+    public async Task SaveSettingsAsync_WhenPatchUrlGroupChangesForInstalledGame_ShowsRepairPrompt()
+    {
+        var snapshot = CreateSnapshot();
+        snapshot.IsInstalled = true;
+        snapshot.Settings.PatchUrlGroup = PatchUrlGroups.Official;
+        snapshot.LocalGame.GameConfig = new GameLauncherConfig
+        {
+            Name = "BlueArchive",
+            Version = "1.0.0"
+        };
         var settingsPath = Path.Combine(tempDir, Guid.NewGuid().ToString("N"), "settings.json");
         var settingsService = new LauncherSettingsService(settingsPath);
+        await settingsService.SaveAsync(new LauncherSettings
+        {
+            GamePath = snapshot.Settings.GamePath,
+            PatchUrlGroup = PatchUrlGroups.Official
+        });
+        var coreService = new CountingCoreService(snapshot);
+        using var viewModel = CreateViewModel(coreService, settingsService);
+        await viewModel.InitializeAsync();
+
+        viewModel.SelectedPatchUrlGroup = PatchUrlGroups.Cafe;
+        await SaveSettingsAsync(viewModel);
+
+        Assert.True(viewModel.IsRepairConfirmVisible);
+        Assert.False(string.IsNullOrWhiteSpace(viewModel.RepairConfirmText));
+    }
+
+    private MainWindowViewModel CreateViewModel(
+        ILauncherCoreService coreService,
+        LauncherSettingsService? settingsService = null)
+    {
+        settingsService ??= new LauncherSettingsService(
+            Path.Combine(tempDir, Guid.NewGuid().ToString("N"), "settings.json"));
         var localGameStateService = new LocalGameStateService();
         var diagnostics = new LocalDiagnostics();
         var manifestValidationService = new ManifestValidationService(apiClient);
         var gameLaunchService = new GameLaunchService(manifestValidationService, new ClickCodeService());
-        var downloadStateService = new DownloadStateService();
+        var downloadStateService = new DownloadStateService(Path.Combine(tempDir, Guid.NewGuid().ToString("N"), "download_state.json"));
         var gameDownloadService = new GameDownloadService(
             apiClient,
             localGameStateService,
@@ -218,6 +284,26 @@ public sealed class MainWindowViewModelTests : IDisposable
         var bytes = Convert.FromBase64String(
             "iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAwMCAO+/p9sAAAAASUVORK5CYII=");
         return File.WriteAllBytesAsync(path, bytes);
+    }
+
+    private static void ApplyProgress(MainWindowViewModel viewModel, GameOperationProgress progress)
+    {
+        var method = typeof(MainWindowViewModel).GetMethod(
+            "ApplyProgress",
+            BindingFlags.Instance | BindingFlags.NonPublic);
+        Assert.NotNull(method);
+        method.Invoke(viewModel, [progress]);
+    }
+
+    private static async Task SaveSettingsAsync(MainWindowViewModel viewModel)
+    {
+        var method = typeof(MainWindowViewModel).GetMethod(
+            "SaveSettingsAsync",
+            BindingFlags.Instance | BindingFlags.NonPublic);
+        Assert.NotNull(method);
+        var task = (Task?)method.Invoke(viewModel, []);
+        Assert.NotNull(task);
+        await task;
     }
 
     public void Dispose()
