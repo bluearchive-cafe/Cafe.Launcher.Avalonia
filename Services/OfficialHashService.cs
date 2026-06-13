@@ -1,0 +1,37 @@
+using System;
+using System.Collections.Generic;
+using System.Security.Cryptography;
+using System.Text;
+using Cafe.Launcher.Avalonia.Models;
+
+namespace Cafe.Launcher.Avalonia.Services;
+
+public static class OfficialHashService
+{
+    public static string GetManifestInfoHash(string name, string version, string basis)
+    {
+        return GetObjectHash([name, version, basis]);
+    }
+
+    public static string GetManifestFileHash(ManifestFile file)
+    {
+        return GetObjectHash([file.Path, file.Size, file.Hash]);
+    }
+
+    public static string GetGameConfigHash(GameLauncherConfig config)
+    {
+        return GetObjectHash([
+            config.Tag ?? "",
+            config.Name ?? "",
+            string.Join(",", config.Params),
+            config.Version ?? ""
+        ]);
+    }
+
+    private static string GetObjectHash(IReadOnlyList<string> values)
+    {
+        var text = string.Join(";", values);
+        var hash = MD5.HashData(Encoding.UTF8.GetBytes(text));
+        return Convert.ToBase64String(hash);
+    }
+}
