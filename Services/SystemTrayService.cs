@@ -35,7 +35,7 @@ public sealed class SystemTrayService : IDisposable
         {
             // Load the icon from embedded Avalonia resource via AssetLoader (replaces removed AvaloniaLocator.Current)
             using var iconStream = AssetLoader.Open(
-                new Uri("avares://Cafe.Launcher.Avalonia/Assets/avalonia-logo.ico"));
+                new Uri("avares://Cafe.Launcher.Avalonia/Assets/app-icon.ico"));
             menuIcon = LoadMenuIcon();
             var menu = CreateMenu();
 
