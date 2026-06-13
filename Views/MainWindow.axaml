@@ -1,0 +1,358 @@
+<Window xmlns="https://github.com/avaloniaui"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:vm="using:Cafe.Launcher.Avalonia.ViewModels"
+        xmlns:models="using:Cafe.Launcher.Avalonia.Models"
+        xmlns:services="using:Cafe.Launcher.Avalonia.Services"
+        xmlns:views="using:Cafe.Launcher.Avalonia.Views"
+        xmlns:materialIcons="clr-namespace:Material.Icons.Avalonia;assembly=Material.Icons.Avalonia"
+        xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+        xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+        mc:Ignorable="d" d:DesignWidth="1300" d:DesignHeight="754"
+        x:Class="Cafe.Launcher.Avalonia.Views.MainWindow"
+        x:Name="Root"
+        x:DataType="vm:MainWindowViewModel"
+        Icon="/Assets/avalonia-logo.ico"
+        Title="Cafe Launcher"
+        Width="1300"
+        Height="754"
+        MinWidth="1024"
+        MinHeight="640"
+        MaxWidth="1300"
+        MaxHeight="754"
+        CanResize="False"
+        WindowDecorations="BorderOnly"
+        ExtendClientAreaToDecorationsHint="True"
+        ExtendClientAreaTitleBarHeightHint="0"
+        Background="#000000">
+
+
+    <Window.Styles>
+        <StyleInclude Source="avares://Cafe.Launcher.Avalonia/Views/MainWindow.Styles.axaml"/>
+    </Window.Styles>
+
+    <Grid>
+        <Image Source="{Binding BackgroundImageSource}" Stretch="UniformToFill"/>
+
+        <Grid RowDefinitions="Auto,*">
+            <Grid ColumnDefinitions="*,Auto" Height="48">
+                <Grid.Background>
+                    <LinearGradientBrush StartPoint="0%,0%" EndPoint="0%,100%">
+                        <GradientStop Color="#52000000" Offset="0"/>
+                        <GradientStop Color="#00000000" Offset="1"/>
+                    </LinearGradientBrush>
+                </Grid.Background>
+                <!-- W3: Right-click context menu on title bar -->
+                <Grid.ContextMenu>
+                    <ContextMenu>
+                        <MenuItem Header="{Binding I18n.ShowLauncher}" Command="{Binding ExecuteRestoreWindowCommand}"/>
+                        <MenuItem Header="{Binding I18n.Settings}" Command="{Binding ShowSettingsCommand}"/>
+                        <Separator/>
+                        <MenuItem Header="{Binding I18n.Close}" Command="{Binding CloseCommand}"/>
+                    </ContextMenu>
+                </Grid.ContextMenu>
+                <StackPanel Orientation="Horizontal" Margin="20,0,0,0" VerticalAlignment="Center">
+                    <TextBlock Text="{Binding ProductName}" Classes="titlebar-brand"/>
+                </StackPanel>
+                <StackPanel Grid.Column="1" Orientation="Horizontal" Margin="0,0,8,0">
+                    <Button Classes="chrome settings" Command="{Binding ShowSettingsCommand}" ToolTip.Tip="{Binding I18n.Settings}">
+                        <materialIcons:MaterialIcon Kind="CogOutline" Width="18" Height="18" Foreground="{DynamicResource LauncherOnChromeBrush}"/>
+                    </Button>
+                    <Button Classes="chrome" Command="{Binding MinimizeCommand}" ToolTip.Tip="{Binding I18n.Minimize}">
+                        <materialIcons:MaterialIcon Kind="Minus" Width="18" Height="18" Foreground="{DynamicResource LauncherOnChromeBrush}"/>
+                    </Button>
+                    <Button Classes="chrome close" Command="{Binding CloseCommand}" ToolTip.Tip="{Binding I18n.Close}">
+                        <materialIcons:MaterialIcon Kind="Close" Width="18" Height="18" Foreground="{DynamicResource LauncherOnChromeBrush}"/>
+                    </Button>
+                </StackPanel>
+            </Grid>
+
+            <Grid Grid.Row="1">
+                <Border HorizontalAlignment="Left"
+                        VerticalAlignment="Top"
+                        Margin="44,64,0,0"
+                        Width="500"
+                        MaxHeight="480"
+                        Classes="surface"
+                        IsVisible="{Binding HasRemoteContent}">
+                    <ScrollViewer Padding="0,0,6,0">
+                        <StackPanel Spacing="14">
+                            <Border IsVisible="{Binding HasNotice}" Background="{DynamicResource LauncherNoticeBackgroundBrush}" CornerRadius="4" Padding="12" MaxHeight="160">
+                                <StackPanel Spacing="4">
+                                    <TextBlock Text="{Binding I18n.Notice}" Classes="panel-title"/>
+                                    <ScrollViewer MaxHeight="110" Padding="0,0,6,0">
+                                        <TextBlock Text="{Binding NoticeText}" Classes="body" TextWrapping="Wrap"/>
+                                    </ScrollViewer>
+                                </StackPanel>
+                            </Border>
+
+                            <StackPanel Spacing="8" IsVisible="{Binding HasBannerItems}">
+                                <!-- L5/A3: Banner header with title, page indicator, and pause button -->
+                                <Grid ColumnDefinitions="Auto,*,Auto,Auto" ColumnSpacing="8">
+                                    <TextBlock Text="{Binding I18n.Banners}" Classes="panel-title" VerticalAlignment="Center"/>
+                                    <TextBlock Grid.Column="2" Text="{Binding CarouselPageText}" Classes="caption" VerticalAlignment="Center"/>
+                                    <Button Grid.Column="3" Width="24" Height="24" Padding="0"
+                                            Background="Transparent" BorderThickness="0" Cursor="Hand"
+                                            Command="{Binding ToggleCarouselLoopCommand}"
+                                            ToolTip.Tip="{Binding CarouselPauseTooltip}">
+                                        <materialIcons:MaterialIcon Kind="{Binding CarouselPauseIcon}" Width="16" Height="16"
+                                                                    Foreground="{DynamicResource LauncherTextSecondaryBrush}"/>
+                                    </Button>
+                                </Grid>
+                                <!-- Banner Carousel with crossfade transition -->
+                                <Carousel ItemsSource="{Binding BannerItems}"
+                                          SelectedIndex="{Binding CarouselSelectedIndex, Mode=TwoWay}"
+                                          Height="220"
+                                          CornerRadius="4" ClipToBounds="True">
+                                    <Carousel.PageTransition>
+                                        <CrossFade Duration="0:0:0.35"/>
+                                    </Carousel.PageTransition>
+                                    <Carousel.ItemTemplate>
+                                        <DataTemplate x:DataType="models:RemoteContentItem">
+                                            <Button Background="Transparent"
+                                                    BorderThickness="0"
+                                                    Padding="0"
+                                                    Cursor="Hand"
+                                                    Command="{Binding DataContext.OpenExternalUrlCommand, ElementName=Root}"
+                                                    CommandParameter="{Binding Url}">
+                                                <Grid Height="220">
+                                                    <!-- C3: Placeholder with text when banner fails to load -->
+                                                    <Border Background="#2A3A5C" CornerRadius="4">
+                                                        <TextBlock Text="{Binding DataContext.I18n.BannerLoadingFailed, ElementName=Root}"
+                                                                   Foreground="#88FFFFFF" FontSize="13"
+                                                                   HorizontalAlignment="Center" VerticalAlignment="Center"
+                                                                   IsVisible="{Binding BannerBitmap, Converter={x:Static ObjectConverters.IsNull}}"/>
+                                                    </Border>
+                                                    <Image Source="{Binding BannerBitmap}"
+                                                           Stretch="UniformToFill"/>
+                                                </Grid>
+                                            </Button>
+                                        </DataTemplate>
+                                    </Carousel.ItemTemplate>
+                                </Carousel>
+                                <!-- L5: Carousel indicator dots + left/right arrows -->
+                                <Grid ColumnDefinitions="Auto,*,Auto">
+                                    <Button Grid.Column="0" Width="24" Height="24" Padding="0"
+                                            Background="Transparent" BorderThickness="0" Cursor="Hand"
+                                            Command="{Binding SelectPreviousBannerCommand}"
+                                            IsVisible="{Binding HasMultipleBanners}">
+                                        <materialIcons:MaterialIcon Kind="ChevronLeft" Width="18" Height="18"
+                                                                    Foreground="{DynamicResource LauncherTextSecondaryBrush}"/>
+                                    </Button>
+                                    <ItemsControl Grid.Column="1" ItemsSource="{Binding BannerDots}" HorizontalAlignment="Center">
+                                        <ItemsControl.ItemsPanel>
+                                            <ItemsPanelTemplate>
+                                                <StackPanel Orientation="Horizontal" Spacing="8"/>
+                                            </ItemsPanelTemplate>
+                                        </ItemsControl.ItemsPanel>
+                                        <ItemsControl.ItemTemplate>
+                                            <DataTemplate x:DataType="models:BannerDot">
+                                                <Button Width="20" Height="20" Padding="0"
+                                                        Background="Transparent" BorderThickness="0"
+                                                        Cursor="Hand"
+                                                        Command="{Binding DataContext.SelectBannerCommand, ElementName=Root}"
+                                                        CommandParameter="{Binding Index}">
+                                                    <Border Width="8" Height="8" CornerRadius="4"
+                                                            Background="{Binding DotBrush}"/>
+                                                </Button>
+                                            </DataTemplate>
+                                        </ItemsControl.ItemTemplate>
+                                    </ItemsControl>
+                                    <Button Grid.Column="2" Width="24" Height="24" Padding="0"
+                                            Background="Transparent" BorderThickness="0" Cursor="Hand"
+                                            Command="{Binding SelectNextBannerCommand}"
+                                            IsVisible="{Binding HasMultipleBanners}">
+                                        <materialIcons:MaterialIcon Kind="ChevronRight" Width="18" Height="18"
+                                                                    Foreground="{DynamicResource LauncherTextSecondaryBrush}"/>
+                                    </Button>
+                                </Grid>
+                            </StackPanel>
+
+                            <StackPanel Spacing="8" IsVisible="{Binding HasNewsItems}">
+                                <TextBlock Text="{Binding I18n.News}" Classes="panel-title"/>
+                                <!-- Category tabs -->
+                                <ScrollViewer HorizontalScrollBarVisibility="Auto" VerticalScrollBarVisibility="Disabled">
+                                    <StackPanel Orientation="Horizontal" Spacing="4">
+                                        <ItemsControl ItemsSource="{Binding NewsCategories}">
+                                            <ItemsControl.ItemsPanel>
+                                                <ItemsPanelTemplate>
+                                                    <StackPanel Orientation="Horizontal" Spacing="4"/>
+                                                </ItemsPanelTemplate>
+                                            </ItemsControl.ItemsPanel>
+                                            <ItemsControl.ItemTemplate>
+                                                <DataTemplate x:DataType="models:NewsCategory">
+                                                    <Button Padding="12,4" BorderThickness="0" CornerRadius="4"
+                                                            Cursor="Hand"
+                                                            Classes="news-tab"
+                                                            Classes.active="{Binding IsActive}"
+                                                            Command="{Binding DataContext.SelectNewsCategoryCommand, ElementName=Root}"
+                                                            CommandParameter="{Binding .}">
+                                                        <TextBlock Text="{Binding Label}" VerticalAlignment="Center"/>
+                                                    </Button>
+                                                </DataTemplate>
+                                            </ItemsControl.ItemTemplate>
+                                        </ItemsControl>
+                                    </StackPanel>
+                                </ScrollViewer>
+                                <!-- Filtered news items -->
+                                <ItemsControl ItemsSource="{Binding SelectedNewsCategory.Items}"
+                                              IsVisible="{Binding SelectedNewsCategory, Converter={x:Static ObjectConverters.IsNotNull}}">
+                                    <ItemsControl.ItemTemplate>
+                                        <DataTemplate x:DataType="models:RemoteContentItem">
+                                            <Button Classes="content-link"
+                                                    Command="{Binding DataContext.OpenExternalUrlCommand, ElementName=Root}"
+                                                    CommandParameter="{Binding Url}">
+                                                <Border Classes="content-row">
+                                                    <Grid ColumnDefinitions="*,Auto" ColumnSpacing="16">
+                                                        <TextBlock Text="{Binding Title}" Classes="value" TextTrimming="CharacterEllipsis"/>
+                                                        <TextBlock Grid.Column="1" Text="{Binding Subtitle}" Width="80" TextAlignment="Right" TextTrimming="CharacterEllipsis" Classes="caption"/>
+                                                    </Grid>
+                                                </Border>
+                                            </Button>
+                                        </DataTemplate>
+                                    </ItemsControl.ItemTemplate>
+                                </ItemsControl>
+                            </StackPanel>
+
+                            <StackPanel Spacing="8" IsVisible="{Binding HasSocialMediaItems}">
+                                <TextBlock Text="{Binding I18n.SocialMedia}" Classes="panel-title"/>
+                                <ItemsControl ItemsSource="{Binding SocialMediaItems}">
+                                    <ItemsControl.ItemsPanel>
+                                        <ItemsPanelTemplate>
+                                            <WrapPanel/>
+                                        </ItemsPanelTemplate>
+                                    </ItemsControl.ItemsPanel>
+                                    <ItemsControl.ItemTemplate>
+                                        <DataTemplate x:DataType="models:RemoteContentItem">
+                                            <Button Classes="social-chip"
+                                                    Margin="0,0,6,6"
+                                                    Command="{Binding DataContext.OpenExternalUrlCommand, ElementName=Root}"
+                                                    CommandParameter="{Binding Url}">
+                                                <StackPanel Orientation="Horizontal" Spacing="6">
+                                                    <materialIcons:MaterialIcon Kind="{Binding SocialIconKind}" Width="14" Height="14"
+                                                                                Foreground="{DynamicResource LauncherTextSecondaryBrush}"/>
+                                                    <TextBlock Text="{Binding Title}" VerticalAlignment="Center"/>
+                                                </StackPanel>
+                                            </Button>
+                                        </DataTemplate>
+                                    </ItemsControl.ItemTemplate>
+                                </ItemsControl>
+                            </StackPanel>
+                        </StackPanel>
+                    </ScrollViewer>
+                </Border>
+
+                <Border IsVisible="{Binding IsInstallPanelVisible}"
+                        Classes="bottom-panel">
+                    <Grid ColumnDefinitions="*,Auto" RowDefinitions="*,Auto" ColumnSpacing="20">
+                        <StackPanel VerticalAlignment="Center" Spacing="7">
+                            <StackPanel Orientation="Horizontal" Spacing="16">
+                                <TextBlock Classes="caption" Text="{Binding VersionText}"/>
+                                <TextBlock Classes="caption" Text="{Binding DiskSpaceText}"/>
+                            </StackPanel>
+                            <Border Classes="path-field">
+                                <Grid ColumnDefinitions="Auto,*,Auto" ColumnSpacing="8">
+                                    <TextBlock Text="{Binding I18n.Path}" Classes="value" VerticalAlignment="Center"/>
+                                    <TextBlock Grid.Column="1" Text="{Binding PathText}" Classes="caption" VerticalAlignment="Center" TextTrimming="CharacterEllipsis"/>
+                                    <Button Grid.Column="2" Classes="icon-link" Command="{Binding ChooseGamePathCommand}" VerticalAlignment="Center"
+                                            IsEnabled="{Binding IsBusy, Converter={x:Static BoolConverters.Not}}">
+                                        <StackPanel Classes="button-content">
+                                            <materialIcons:MaterialIcon Kind="FolderOpen" Width="16" Height="16"/>
+                                            <TextBlock Text="{Binding I18n.ChangePath}" VerticalAlignment="Center"/>
+                                        </StackPanel>
+                                    </Button>
+                                </Grid>
+                            </Border>
+                        </StackPanel>
+                        <StackPanel Grid.Column="1" Orientation="Horizontal" Spacing="12" VerticalAlignment="Center">
+                            <Button Classes="flat-action bottom-action" Command="{Binding RefreshCommand}" ToolTip.Tip="{Binding I18n.RefreshTooltip}"
+                                    IsEnabled="{Binding IsBusy, Converter={x:Static BoolConverters.Not}}">
+                                <StackPanel Classes="button-content">
+                                    <materialIcons:MaterialIcon Kind="Refresh" Width="18" Height="18"/>
+                                    <TextBlock Text="{Binding I18n.Refresh}" VerticalAlignment="Center"/>
+                                </StackPanel>
+                            </Button>
+                            <Button Classes="primary-action bottom-action" Command="{Binding InstallOrUpdateCommand}" ToolTip.Tip="{Binding InstallButtonText}"
+                                    IsEnabled="{Binding IsBusy, Converter={x:Static BoolConverters.Not}}">
+                                <StackPanel Classes="button-content">
+                                    <materialIcons:MaterialIcon Kind="Download" Width="21" Height="21" Foreground="{DynamicResource LauncherOnAccentBrush}"/>
+                                    <TextBlock Text="{Binding InstallButtonText}" VerticalAlignment="Center"/>
+                                </StackPanel>
+                            </Button>
+                        </StackPanel>
+                    </Grid>
+                </Border>
+
+                <Border IsVisible="{Binding IsProgressPanelVisible}"
+                        Classes="bottom-panel">
+                    <Grid ColumnDefinitions="*,Auto" ColumnSpacing="20" VerticalAlignment="Center">
+                        <StackPanel Spacing="7" VerticalAlignment="Center">
+                            <!-- Title + percentage -->
+                            <Grid ColumnDefinitions="Auto,*,Auto">
+                                <TextBlock Text="{Binding ProgressTitle}" Classes="progress-title" VerticalAlignment="Center"/>
+                                <TextBlock Grid.Column="2" Text="{Binding ProgressValue, StringFormat={}{0}%}"
+                                           Classes="progress-title" VerticalAlignment="Center"
+                                           Foreground="{DynamicResource LauncherAccentBrush}"/>
+                            </Grid>
+                            <!-- Progress bar -->
+                            <ProgressBar Value="{Binding ProgressValue}" Minimum="0" Maximum="100" Height="8"/>
+                            <!-- Stage | Speed | Size | ETA -->
+                            <Grid ColumnDefinitions="Auto,*,Auto,Auto,Auto" ColumnSpacing="14">
+                                <TextBlock Text="{Binding ProgressDetail}" Classes="caption"/>
+                                <TextBlock Grid.Column="2" Text="{Binding ProgressSpeed}" Classes="caption"
+                                           IsVisible="{Binding ProgressSpeed, Converter={x:Static StringConverters.IsNotNullOrEmpty}}"/>
+                                <TextBlock Grid.Column="3" Text="{Binding ProgressSize}" Classes="caption"
+                                           IsVisible="{Binding ProgressSize, Converter={x:Static StringConverters.IsNotNullOrEmpty}}"/>
+                                <TextBlock Grid.Column="4" Text="{Binding ProgressEstimated}" Classes="caption"
+                                           Foreground="{DynamicResource LauncherAccentBrush}"
+                                           IsVisible="{Binding ProgressEstimated, Converter={x:Static StringConverters.IsNotNullOrEmpty}}"/>
+                            </Grid>
+                        </StackPanel>
+                        <StackPanel Grid.Column="1" Orientation="Horizontal" Spacing="8" VerticalAlignment="Center">
+                            <Button Classes="flat-action bottom-action" Command="{Binding PauseResumeCommand}" VerticalAlignment="Center">
+                                <StackPanel Classes="button-content">
+                                    <materialIcons:MaterialIcon Kind="{Binding PauseResumeIcon}" Width="18" Height="18"/>
+                                    <TextBlock Text="{Binding PauseResumeText}" VerticalAlignment="Center"/>
+                                </StackPanel>
+                            </Button>
+                            <Button Classes="flat-action bottom-action" Command="{Binding StopOperationCommand}" VerticalAlignment="Center">
+                                <StackPanel Classes="button-content">
+                                    <materialIcons:MaterialIcon Kind="Stop" Width="18" Height="18"/>
+                                    <TextBlock Text="{Binding I18n.Stop}" VerticalAlignment="Center"/>
+                                </StackPanel>
+                            </Button>
+                        </StackPanel>
+                    </Grid>
+                </Border>
+
+                <Border IsVisible="{Binding IsControlPanelVisible}"
+                        Classes="control-panel">
+                    <Grid ColumnDefinitions="*,Auto" RowDefinitions="*,Auto" ColumnSpacing="24">
+                        <StackPanel Grid.Column="1" Orientation="Horizontal" Spacing="16" VerticalAlignment="Center">
+                            <Button Classes="launcher-control site" Command="{Binding OpenOfficialSiteCommand}" ToolTip.Tip="{Binding I18n.OfficialSite}">
+                                <StackPanel Classes="button-content">
+                                    <materialIcons:MaterialIcon Kind="Web" Width="22" Height="22"/>
+                                    <TextBlock Text="{Binding I18n.OfficialSite}" VerticalAlignment="Center"/>
+                                </StackPanel>
+                            </Button>
+                            <Button Classes="launcher-control start" Command="{Binding StartGameCommand}" ToolTip.Tip="{Binding I18n.StartGame}"
+                                    IsEnabled="{Binding IsBusy, Converter={x:Static BoolConverters.Not}}">
+                                <StackPanel Classes="button-content">
+                                    <materialIcons:MaterialIcon Kind="PlayCircle" Width="24" Height="24" Foreground="{DynamicResource LauncherOnAccentBrush}"/>
+                                    <TextBlock Text="{Binding I18n.StartGame}" VerticalAlignment="Center"/>
+                                </StackPanel>
+                            </Button>
+                        </StackPanel>
+                        <StackPanel Grid.Row="1" Grid.ColumnSpan="2" Orientation="Horizontal" HorizontalAlignment="Right" Spacing="16">
+                            <TextBlock Text="{Binding VersionText}" Classes="on-dark-caption"/>
+                            <TextBlock Text="{Binding LaunchCheckText}" Classes="on-dark-caption"/>
+                        </StackPanel>
+                    </Grid>
+                </Border>
+            </Grid>
+        </Grid>
+
+        <views:MainWindowSettingsOverlay/>
+        <views:MainWindowDialogsOverlay/>
+        <views:MainWindowToastOverlay/>
+    </Grid>
+</Window>
