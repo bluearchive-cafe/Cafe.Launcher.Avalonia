@@ -47,6 +47,8 @@ public sealed class DownloadStateService
 
     public void Clear()
     {
+        // File.Delete is intentionally synchronous here — the file is small and the
+        // operation completes in microseconds on modern storage.
         if (File.Exists(stateFilePath))
             File.Delete(stateFilePath);
     }

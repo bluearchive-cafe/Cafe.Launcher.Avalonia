@@ -29,6 +29,7 @@ public sealed class GameDownloadService : IDisposable
     private readonly LocalDiagnostics diagnostics;
     private readonly DownloadStateService downloadStateService;
     private readonly object activeDownloadLock = new();
+    private readonly object pauseLock = new();
     private CancellationTokenSource? activeDownloadCts;
     private Task pauseTask = Task.CompletedTask;
     private TaskCompletionSource? pauseTcs;
@@ -80,26 +81,58 @@ public sealed class GameDownloadService : IDisposable
 
         cts?.Cancel();
         // Release any paused awaits so they can observe the cancellation
-        pauseTcs?.TrySetResult();
+        TaskCompletionSource? tcs;
+        lock (pauseLock)
+        {
+            tcs = pauseTcs;
+        }
+        tcs?.TrySetResult();
     }
 
     public void Pause()
     {
-        if (pauseTcs is null)
+        lock (pauseLock)
         {
-            pauseTcs = new TaskCompletionSource();
-            pauseTask = pauseTcs.Task;
+            if (pauseTcs is null)
+            {
+                pauseTcs = new TaskCompletionSource();
+                pauseTask = pauseTcs.Task;
+            }
         }
     }
 
     public void Resume()
     {
-        pauseTcs?.TrySetResult();
-        pauseTcs = null;
-        pauseTask = Task.CompletedTask;
+        lock (pauseLock)
+        {
+            pauseTcs?.TrySetResult();
+            pauseTcs = null;
+            pauseTask = Task.CompletedTask;
+        }
     }
 
-    public bool IsPaused => pauseTcs is not null;
+    public bool IsPaused
+    {
+        get
+        {
+            lock (pauseLock)
+            {
+                return pauseTcs is not null;
+            }
+        }
+    }
+
+    /// <summary>
+    /// Returns a snapshot of the current pause task under lock,
+    /// so download threads always await a consistent reference.
+    /// </summary>
+    private Task GetPauseTaskSnapshot()
+    {
+        lock (pauseLock)
+        {
+            return pauseTask;
+        }
+    }
 
     /// <summary>
     /// Whether a download/repair/uninstall operation is currently active.
@@ -293,8 +326,11 @@ public sealed class GameDownloadService : IDisposable
             }
 
             pauseTcs?.TrySetResult();
-            pauseTcs = null;
-            pauseTask = Task.CompletedTask;
+            lock (pauseLock)
+            {
+                pauseTcs = null;
+                pauseTask = Task.CompletedTask;
+            }
         }
     }
 
@@ -356,8 +392,11 @@ public sealed class GameDownloadService : IDisposable
         cts?.Cancel();
         cts?.Dispose();
         pauseTcs?.TrySetResult();
-        pauseTcs = null;
-        pauseTask = Task.CompletedTask;
+        lock (pauseLock)
+        {
+            pauseTcs = null;
+            pauseTask = Task.CompletedTask;
+        }
     }
 
     private async Task<DownloadPlan> BuildInstallOrUpdatePlanAsync(
@@ -607,7 +646,7 @@ public sealed class GameDownloadService : IDisposable
                 while (true)
                 {
                     // Async pause — yields the thread instead of blocking it
-                    await pauseTask;
+                    await GetPauseTaskSnapshot();
                     cancellationToken.ThrowIfCancellationRequested();
 
                     var read = await responseStream.ReadAsync(buffer, cancellationToken);

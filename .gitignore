@@ -55,3 +55,13 @@ CodeCoverage/
 *.VisualState.xml
 TestResult.xml
 nunit-*.xml
+
+# Visual Studio / Rider
+.vs/
+*.user
+*.DotSettings.user
+.idea/
+_ReSharper.*/
+
+# Windows
+Thumbs.db

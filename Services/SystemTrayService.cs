@@ -72,13 +72,13 @@ public sealed class SystemTrayService : IDisposable
         menu.Add(new NativeMenuItemSeparator());
 
         showItem = new NativeMenuItem();
-        showItem.Click += (_, _) => ShowWindow();
+        showItem.Click += OnShowClicked;
         menu.Add(showItem);
 
         menu.Add(new NativeMenuItemSeparator());
 
         exitItem = new NativeMenuItem();
-        exitItem.Click += (_, _) => ExitApplication();
+        exitItem.Click += OnExitClicked;
         menu.Add(exitItem);
 
         return menu;
@@ -134,6 +134,10 @@ public sealed class SystemTrayService : IDisposable
         }
     }
 
+    private void OnShowClicked(object? sender, EventArgs e) => ShowWindow();
+
+    private void OnExitClicked(object? sender, EventArgs e) => ExitApplication();
+
     public void ShowWindow()
     {
         mainWindow.Show();
@@ -158,10 +162,18 @@ public sealed class SystemTrayService : IDisposable
 
     public void Dispose()
     {
+        if (disposed)
+            return;
+        disposed = true;
+
         localizer.LanguageChanged -= OnLanguageChanged;
+        if (showItem is not null) showItem.Click -= OnShowClicked;
+        if (exitItem is not null) exitItem.Click -= OnExitClicked;
         trayIcon?.Dispose();
         trayIcon = null;
         menuIcon?.Dispose();
         menuIcon = null;
     }
+
+    private bool disposed;
 }

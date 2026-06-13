@@ -16,6 +16,7 @@ public sealed class ImageCacheService : IDisposable
     private readonly string cacheDir;
     private readonly SocketsHttpHandler handler;
     private readonly HttpClient httpClient;
+    private bool disposed;
 
     public ImageCacheService()
     {
@@ -23,7 +24,15 @@ public sealed class ImageCacheService : IDisposable
             Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData),
             LauncherConstants.ProductName,
             "image-cache");
-        Directory.CreateDirectory(cacheDir);
+        try
+        {
+            Directory.CreateDirectory(cacheDir);
+        }
+        catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
+        {
+            // Cache directory is non-critical — log and continue without caching
+            System.Diagnostics.Debug.WriteLine($"ImageCacheService: failed to create cache directory: {ex.Message}");
+        }
 
         handler = new SocketsHttpHandler
         {
@@ -39,6 +48,9 @@ public sealed class ImageCacheService : IDisposable
     {
         if (string.IsNullOrWhiteSpace(crc64Hash))
             return null;
+        // Defense-in-depth: reject hashes containing path separators or traversal sequences
+        if (crc64Hash.Contains('/') || crc64Hash.Contains('\\') || crc64Hash.Contains(".."))
+            return null;
         var cachePath = Path.Combine(cacheDir, $"{crc64Hash}.cache");
         return File.Exists(cachePath) ? cachePath : null;
     }
@@ -49,6 +61,10 @@ public sealed class ImageCacheService : IDisposable
     /// </summary>
     public async Task<string> CacheImageAsync(string url, string crc64Hash, CancellationToken ct = default)
     {
+        // Defense-in-depth: reject hashes containing path separators or traversal sequences
+        if (crc64Hash.Contains('/') || crc64Hash.Contains('\\') || crc64Hash.Contains(".."))
+            throw new ArgumentException("CRC64 hash contains invalid characters.", nameof(crc64Hash));
+
         var cachePath = Path.Combine(cacheDir, $"{crc64Hash}.cache");
         var bytes = await httpClient.GetByteArrayAsync(url, ct);
         await File.WriteAllBytesAsync(cachePath, bytes, ct);
@@ -62,6 +78,10 @@ public sealed class ImageCacheService : IDisposable
 
     public void Dispose()
     {
+        if (disposed)
+            return;
+        disposed = true;
+
         httpClient.Dispose();
         handler.Dispose();
     }

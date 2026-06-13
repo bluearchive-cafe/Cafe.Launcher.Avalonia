@@ -17,21 +17,6 @@ public sealed class Crc64Service
     private const ulong XorOut = 0xFFFFFFFFFFFFFFFF;
     private static readonly ulong[] Table = BuildTable();
 
-    /// <summary>
-    /// Self-test: CRC64 of "123456789" with this variant.
-    /// </summary>
-    public static string SelfTest()
-    {
-        var test = "123456789"u8;
-        ulong crc = XorOut;
-        foreach (var b in test)
-            crc = Table[(byte)(crc ^ b)] ^ (crc >> 8);
-        crc ^= XorOut;
-        return $"CRC64('123456789') = {crc} (0x{crc:X16})  " +
-               $"Table[1]=0x{Table[1]:X16}  Table[2]=0x{Table[2]:X16}  " +
-               $"expected ref=0x995DC9BBDF1939FA  expected T[1]=0xB32E4CBE03A75F6F";
-    }
-
     public async Task<string> ComputeFileAsync(
         string filePath,
         Action<int>? progress = null,

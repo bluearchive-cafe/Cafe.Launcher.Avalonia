@@ -72,7 +72,7 @@ public sealed class NoticeStateService
 
             var tempPath = $"{path}.tmp";
             await File.WriteAllTextAsync(tempPath, JsonSerializer.Serialize(shown), cancellationToken);
-            File.Move(tempPath, path, overwrite: true);
+            await Task.Run(() => File.Move(tempPath, path, overwrite: true), cancellationToken);
         }
         catch (Exception exception) when (exception is JsonException or IOException or UnauthorizedAccessException)
         {

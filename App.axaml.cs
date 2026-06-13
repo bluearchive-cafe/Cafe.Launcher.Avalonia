@@ -167,7 +167,9 @@ public partial class App : Application
 
             try
             {
-                listenerTask.Wait(TimeSpan.FromSeconds(1));
+                // The listener polls every 250ms; after cancellation it exits within ~250ms.
+                // Using a matching timeout avoids needlessly blocking the cleanup thread.
+                listenerTask.Wait(TimeSpan.FromMilliseconds(300));
             }
             catch
             {

@@ -41,9 +41,13 @@ public sealed class GameUninstallService
             {
                 cancellationToken.ThrowIfCancellationRequested();
                 var filePath = GamePathValidator.GetSafePath(gamePath, files[i].Path);
-                if (File.Exists(filePath))
+                try
                 {
                     File.Delete(filePath);
+                }
+                catch (FileNotFoundException)
+                {
+                    // Already gone — not an error
                 }
 
                 progress(new GameOperationProgress
@@ -153,9 +157,13 @@ public sealed class GameUninstallService
 
     private static void DeleteIfExists(string filePath)
     {
-        if (File.Exists(filePath))
+        try
         {
             File.Delete(filePath);
+        }
+        catch (FileNotFoundException)
+        {
+            // Already gone — not an error
         }
     }
 

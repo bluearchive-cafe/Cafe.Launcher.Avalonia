@@ -563,7 +563,9 @@ public partial class MainWindowViewModel : ViewModelBase, IDisposable
     {
         var old = BackgroundImageSource as IDisposable;
         BackgroundImageSource = bitmap;
-        old?.Dispose();
+        // Defer disposal to next frame to avoid disposing a bitmap the renderer may still be using
+        if (old is not null)
+            Dispatcher.UIThread.Post(() => old.Dispose(), DispatcherPriority.Background);
     }
 
     private static Bitmap? LoadBundledBackground()
@@ -984,6 +986,9 @@ public partial class MainWindowViewModel : ViewModelBase, IDisposable
                 var bytes = await imageCacheService.GetImageBytesAsync(item.ImageUrl, lifetimeCts.Token);
                 await Dispatcher.UIThread.InvokeAsync(() =>
                 {
+                    // Dispose previous bitmap to avoid leaking unmanaged resources
+                    // when banner images are preloaded multiple times (e.g. after ApplyRemoteContent)
+                    item.BannerBitmap?.Dispose();
                     item.BannerBitmap = new global::Avalonia.Media.Imaging.Bitmap(
                         new System.IO.MemoryStream(bytes));
                 });
@@ -1038,12 +1043,12 @@ public partial class MainWindowViewModel : ViewModelBase, IDisposable
             CarouselSelectedIndex = index;
             // I6: Pause auto-advance briefly on manual navigation, then resume
             StopCarouselTimer();
-            ScheduleCarouselResumeAfterDelay();
+            _ = ScheduleCarouselResumeAfterDelayAsync();
         }
     }
 
     // I6: Resume carousel auto-advance after a delay following manual navigation
-    private async void ScheduleCarouselResumeAfterDelay()
+    private async Task ScheduleCarouselResumeAfterDelayAsync()
     {
         carouselDelayCts?.Cancel();
         carouselDelayCts = new CancellationTokenSource();
