@@ -108,6 +108,7 @@ public sealed class LauncherSettingsServiceTests : IDisposable
             ToastNotificationsEnabled = false,
             ShowRemoteContentCard = false,
             PatchUrlGroup = PatchUrlGroups.Cafe,
+            CustomBackgroundPath = tempDir,
             BackgroundSource = BackgroundSources.Remote
         };
 
@@ -115,6 +116,9 @@ public sealed class LauncherSettingsServiceTests : IDisposable
 
         using var document = JsonDocument.Parse(await File.ReadAllTextAsync(settingsPath));
         var root = document.RootElement;
+        var propertyNames = root.EnumerateObject()
+            .Select(property => property.Name)
+            .ToHashSet(StringComparer.Ordinal);
         Assert.True(root.TryGetProperty("gamePath", out _));
         Assert.True(root.TryGetProperty("launchCheckMode", out _));
         Assert.True(root.TryGetProperty("proxyMode", out _));
@@ -125,7 +129,25 @@ public sealed class LauncherSettingsServiceTests : IDisposable
         Assert.True(root.TryGetProperty("toastNotificationsEnabled", out _));
         Assert.True(root.TryGetProperty("showRemoteContentCard", out _));
         Assert.True(root.TryGetProperty("patchUrlGroup", out _));
+        Assert.True(root.TryGetProperty("customBackgroundPath", out var customBackgroundPath));
+        Assert.Equal(tempDir, customBackgroundPath.GetString());
         Assert.True(root.TryGetProperty("backgroundSource", out _));
+        var expectedPropertyNames = new HashSet<string>(StringComparer.Ordinal)
+        {
+            "gamePath",
+            "launchCheckMode",
+            "proxyMode",
+            "closeBehavior",
+            "language",
+            "themeMode",
+            "downloadSpeedLimit",
+            "toastNotificationsEnabled",
+            "showRemoteContentCard",
+            "patchUrlGroup",
+            "customBackgroundPath",
+            "backgroundSource"
+        };
+        Assert.True(expectedPropertyNames.SetEquals(propertyNames));
         Assert.False(File.Exists($"{settingsPath}.tmp"));
     }
 

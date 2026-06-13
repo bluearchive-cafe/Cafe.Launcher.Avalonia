@@ -289,6 +289,8 @@ public partial class MainWindowViewModel : ViewModelBase, IDisposable
     public Func<string, Task<string?>>? PickGameFolderAsync { get; set; }
     public Func<Task<string?>>? PickBackgroundImageAsync { get; set; }
 
+    public Func<Task<string?>>? PickBackgroundFolderAsync { get; set; }
+
     public Action? MinimizeWindow { get; set; }
 
     public Action? CloseWindow { get; set; }
@@ -298,6 +300,8 @@ public partial class MainWindowViewModel : ViewModelBase, IDisposable
     // I5: Localized native dialog titles
     public string GameFolderPickerTitle { get; private set; } = "Choose install folder";
     public string BackgroundImagePickerTitle { get; private set; } = "Choose Background Image";
+
+    public string BackgroundFolderPickerTitle { get; private set; } = "Choose Background Folder";
 
     public ObservableCollection<RemoteContentItem> BannerItems { get; } = [];
 
@@ -490,7 +494,30 @@ public partial class MainWindowViewModel : ViewModelBase, IDisposable
         IsCustomBackground = true;
         SelectedBackgroundSource = BackgroundSources.Custom;
         IsCustomBackgroundSelected = true;
-        await UpdateBackgroundImageAsync();
+        await SaveSettingsAsync();
+        OperationNote = localizer.T("backgroundSet");
+        toastService.ShowSuccess(localizer.T("backgroundSet"));
+    }
+
+    [RelayCommand]
+    private async Task ChooseBackgroundFolderAsync()
+    {
+        if (PickBackgroundFolderAsync is null)
+        {
+            OperationNote = localizer.T("folderPickerUnavailable");
+            return;
+        }
+
+        var pickedPath = await PickBackgroundFolderAsync();
+        if (string.IsNullOrWhiteSpace(pickedPath))
+        {
+            return;
+        }
+
+        CustomBackgroundPath = pickedPath;
+        IsCustomBackground = true;
+        SelectedBackgroundSource = BackgroundSources.Custom;
+        IsCustomBackgroundSelected = true;
         await SaveSettingsAsync();
         OperationNote = localizer.T("backgroundSet");
         toastService.ShowSuccess(localizer.T("backgroundSet"));
@@ -537,26 +564,102 @@ public partial class MainWindowViewModel : ViewModelBase, IDisposable
                 break;
 
             case BackgroundSources.Custom:
-                if (!string.IsNullOrWhiteSpace(CustomBackgroundPath) && File.Exists(CustomBackgroundPath))
+                if (!string.IsNullOrWhiteSpace(CustomBackgroundPath))
                 {
-                    try
+                    var customBitmap = await LoadCustomBackgroundAsync(CustomBackgroundPath);
+                    if (customBitmap is not null)
                     {
-                        SetBackgroundImage(new Bitmap(CustomBackgroundPath));
+                        SetBackgroundImage(customBitmap);
                         return;
-                    }
-                    catch (Exception ex)
-                    {
-                        _ = diagnostics.MessageAsync(
-                            "Custom background image load failed",
-                            $"path: {CustomBackgroundPath}\nexception: {ex.Message}");
-                        CustomBackgroundPath = "";
-                        IsCustomBackground = false;
                     }
                 }
                 break;
         }
 
         SetBackgroundImage(LoadBundledBackground());
+    }
+
+    private async Task<Bitmap?> LoadCustomBackgroundAsync(string path)
+    {
+        if (File.Exists(path))
+        {
+            try
+            {
+                return new Bitmap(path);
+            }
+            catch (Exception ex)
+            {
+                await diagnostics.MessageAsync(
+                    "Custom background image load failed",
+                    $"path: {path}\nexception: {ex.Message}");
+                CustomBackgroundPath = "";
+                IsCustomBackground = false;
+                return null;
+            }
+        }
+
+        if (Directory.Exists(path))
+        {
+            string? imagePath;
+            try
+            {
+                imagePath = ResolveRandomBackgroundImage(path);
+            }
+            catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
+            {
+                await diagnostics.MessageAsync(
+                    "Custom background folder scan failed",
+                    $"path: {path}\nexception: {ex.Message}");
+                return null;
+            }
+
+            if (imagePath is null)
+            {
+                await diagnostics.MessageAsync(
+                    "Custom background folder contains no supported images",
+                    $"path: {path}");
+                return null;
+            }
+
+            try
+            {
+                return new Bitmap(imagePath);
+            }
+            catch (Exception ex)
+            {
+                await diagnostics.MessageAsync(
+                    "Custom background folder image load failed",
+                    $"folder: {path}\npath: {imagePath}\nexception: {ex.Message}");
+                return null;
+            }
+        }
+
+        await diagnostics.MessageAsync(
+            "Custom background path does not exist",
+            $"path: {path}");
+        return null;
+    }
+
+    internal static string? ResolveRandomBackgroundImage(string folderPath)
+    {
+        var imagePaths = Directory
+            .EnumerateFiles(folderPath)
+            .Where(IsSupportedBackgroundImage)
+            .ToArray();
+
+        return imagePaths.Length == 0
+            ? null
+            : imagePaths[Random.Shared.Next(imagePaths.Length)];
+    }
+
+    internal static bool IsSupportedBackgroundImage(string path)
+    {
+        var extension = Path.GetExtension(path);
+        return extension.Equals(".png", StringComparison.OrdinalIgnoreCase)
+            || extension.Equals(".jpg", StringComparison.OrdinalIgnoreCase)
+            || extension.Equals(".jpeg", StringComparison.OrdinalIgnoreCase)
+            || extension.Equals(".bmp", StringComparison.OrdinalIgnoreCase)
+            || extension.Equals(".webp", StringComparison.OrdinalIgnoreCase);
     }
 
     private void SetBackgroundImage(Bitmap? bitmap)
@@ -1495,6 +1598,7 @@ public partial class MainWindowViewModel : ViewModelBase, IDisposable
         // I5: Localized native dialog titles
         GameFolderPickerTitle = localizer.T("chooseInstallFolder");
         BackgroundImagePickerTitle = localizer.T("chooseBackgroundImageTitle");
+        BackgroundFolderPickerTitle = localizer.T("chooseBackgroundFolderTitle");
         // A3: Carousel pause tooltip
         CarouselPauseTooltip = localizer.T("pauseCarousel");
         if (currentSnapshot is null)

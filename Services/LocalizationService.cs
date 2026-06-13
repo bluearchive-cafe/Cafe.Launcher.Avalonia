@@ -71,6 +71,7 @@ public sealed partial class LocalizedStrings : ObservableObject
     [ObservableProperty] private string customBackground = "";
     [ObservableProperty] private string customBackgroundDescription = "";
     [ObservableProperty] private string chooseImage = "";
+    [ObservableProperty] private string chooseFolder = "";
     [ObservableProperty] private string clearBackground = "";
     [ObservableProperty] private string backgroundSet = "";
     [ObservableProperty] private string backgroundCleared = "";
@@ -105,6 +106,7 @@ public sealed partial class LocalizedStrings : ObservableObject
     [ObservableProperty] private string keepEditing = "";
     [ObservableProperty] private string chooseInstallFolder = "";
     [ObservableProperty] private string chooseBackgroundImageTitle = "";
+    [ObservableProperty] private string chooseBackgroundFolderTitle = "";
     [ObservableProperty] private string carouselPage = "";
     [ObservableProperty] private string pauseCarousel = "";
     [ObservableProperty] private string resumeCarousel = "";
@@ -180,6 +182,7 @@ public sealed partial class LocalizedStrings : ObservableObject
         CustomBackground = localizer.T("customBackground");
         CustomBackgroundDescription = localizer.T("customBackgroundDescription");
         ChooseImage = localizer.T("chooseImage");
+        ChooseFolder = localizer.T("chooseFolder");
         ClearBackground = localizer.T("clearBackground");
         BackgroundSet = localizer.T("backgroundSet");
         BackgroundCleared = localizer.T("backgroundCleared");
@@ -214,6 +217,7 @@ public sealed partial class LocalizedStrings : ObservableObject
         KeepEditing = localizer.T("keepEditing");
         ChooseInstallFolder = localizer.T("chooseInstallFolder");
         ChooseBackgroundImageTitle = localizer.T("chooseBackgroundImageTitle");
+        ChooseBackgroundFolderTitle = localizer.T("chooseBackgroundFolderTitle");
         CarouselPage = localizer.T("carouselPage");
         PauseCarousel = localizer.T("pauseCarousel");
         ResumeCarousel = localizer.T("resumeCarousel");
@@ -355,8 +359,9 @@ public sealed class LocalizationService
             ["aboutCopyrightText"] = "Copyright © 2026 BlueArchive.Cafe. All rights reserved.",
             ["aboutDisclaimerText"] = "\"Cafe Launcher\" is a third-party Blue Archive launcher developed by the \"BlueArchive.Cafe\" team. It is not officially affiliated with the game \"Blue Archive\" or its related companies.",
             ["customBackground"] = "Custom Background",
-            ["customBackgroundDescription"] = "Choose a local image for the launcher background.",
+            ["customBackgroundDescription"] = "Choose a local image or folder for the launcher background.",
             ["chooseImage"] = "Choose Image",
+            ["chooseFolder"] = "Choose Folder",
             ["clearBackground"] = "Clear",
             ["backgroundSet"] = "Background updated.",
             ["backgroundCleared"] = "Background reset to default.",
@@ -406,6 +411,7 @@ public sealed class LocalizationService
             ["keepEditing"] = "Keep Editing",
             ["chooseInstallFolder"] = "Choose install folder",
             ["chooseBackgroundImageTitle"] = "Choose Background Image",
+            ["chooseBackgroundFolderTitle"] = "Choose Background Folder",
             ["carouselPage"] = "Page {0} / {1}",
             ["pauseCarousel"] = "Pause rotation",
             ["resumeCarousel"] = "Resume rotation",
@@ -541,8 +547,9 @@ public sealed class LocalizationService
             ["aboutCopyrightText"] = "Copyright © 2026 BlueArchive.Cafe. All rights reserved.",
             ["aboutDisclaimerText"] = "\"Cafe Launcher\"是由\"蔚蓝咖啡厅\"开发组开发的第三方 Blue Archive 启动器，与游戏「ブルーアーカイブ（中文名'蔚蓝档案'）」及相关公司并无官方关联。",
             ["customBackground"] = "自定义背景",
-            ["customBackgroundDescription"] = "选择本地图片作为启动器背景。",
+            ["customBackgroundDescription"] = "选择本地图片或文件夹作为启动器背景。",
             ["chooseImage"] = "选择图片",
+            ["chooseFolder"] = "选择文件夹",
             ["clearBackground"] = "清除",
             ["backgroundSet"] = "背景已更新。",
             ["backgroundCleared"] = "已恢复默认背景。",
@@ -592,6 +599,7 @@ public sealed class LocalizationService
             ["keepEditing"] = "继续编辑",
             ["chooseInstallFolder"] = "选择安装目录",
             ["chooseBackgroundImageTitle"] = "选择背景图片",
+            ["chooseBackgroundFolderTitle"] = "选择背景文件夹",
             ["carouselPage"] = "第 {0} / {1} 页",
             ["pauseCarousel"] = "暂停轮播",
             ["resumeCarousel"] = "恢复轮播",
@@ -727,8 +735,9 @@ public sealed class LocalizationService
             ["aboutCopyrightText"] = "Copyright © 2026 BlueArchive.Cafe. All rights reserved.",
             ["aboutDisclaimerText"] = "「Cafe Launcher」は「BlueArchive.Cafe」チームが開発したサードパーティ製 Blue Archive ランチャーであり、ゲーム「ブルーアーカイブ」および関連会社とは公式な提携関係はありません。",
             ["customBackground"] = "カスタム背景",
-            ["customBackgroundDescription"] = "ローカル画像をランチャー背景に設定します。",
+            ["customBackgroundDescription"] = "ローカル画像またはフォルダーをランチャー背景に設定します。",
             ["chooseImage"] = "画像を選択",
+            ["chooseFolder"] = "フォルダーを選択",
             ["clearBackground"] = "クリア",
             ["backgroundSet"] = "背景を更新しました。",
             ["backgroundCleared"] = "デフォルト背景に戻しました。",
@@ -778,6 +787,7 @@ public sealed class LocalizationService
             ["keepEditing"] = "編集を続ける",
             ["chooseInstallFolder"] = "インストール先を選択",
             ["chooseBackgroundImageTitle"] = "背景画像を選択",
+            ["chooseBackgroundFolderTitle"] = "背景フォルダーを選択",
             ["carouselPage"] = "{0} / {1} ページ",
             ["pauseCarousel"] = "ローテーションを一時停止",
             ["resumeCarousel"] = "ローテーションを再開",
