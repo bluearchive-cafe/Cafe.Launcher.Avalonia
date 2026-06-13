@@ -1,0 +1,107 @@
+<Application xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             x:Class="Cafe.Launcher.Avalonia.App"
+             xmlns:local="using:Cafe.Launcher.Avalonia"
+             xmlns:materialIcons="clr-namespace:Material.Icons.Avalonia;assembly=Material.Icons.Avalonia"
+             RequestedThemeVariant="Default">
+             <!-- "Default" ThemeVariant follows system theme variant. "Dark" or "Light" are other available options. -->
+
+    <Application.Resources>
+        <ResourceDictionary>
+            <SolidColorBrush x:Key="LauncherAccentBrush" Color="{DynamicResource SystemAccentColor}"/>
+            <SolidColorBrush x:Key="LauncherAccentHoverBrush" Color="{DynamicResource SystemAccentColorLight1}"/>
+            <SolidColorBrush x:Key="LauncherAccentPressedBrush" Color="{DynamicResource SystemAccentColorDark1}"/>
+            <SolidColorBrush x:Key="LauncherOnAccentBrush" Color="#FFFFFFFF"/>
+            <SolidColorBrush x:Key="LauncherOnChromeBrush" Color="#FFFFFFFF"/>
+            <SolidColorBrush x:Key="LauncherOnChromeMutedBrush" Color="#CCFFFFFF"/>
+            <SolidColorBrush x:Key="LauncherOnDarkMutedBrush" Color="#B3FFFFFF"/>
+            <SolidColorBrush x:Key="LauncherTransparentBrush" Color="#00000000"/>
+            <SolidColorBrush x:Key="LauncherChromeHoverBrush" Color="#22FFFFFF"/>
+            <SolidColorBrush x:Key="LauncherChromePressedBrush" Color="#33FFFFFF"/>
+            <SolidColorBrush x:Key="LauncherDangerBrush" Color="#FFE5484D"/>
+            <SolidColorBrush x:Key="LauncherDangerHoverBrush" Color="#FFF15B60"/>
+            <SolidColorBrush x:Key="LauncherDangerPressedBrush" Color="#FFC9353A"/>
+            <SolidColorBrush x:Key="LauncherOverlayBrush" Color="#99000000"/>
+            <SolidColorBrush x:Key="LauncherFocusRingBrush" Color="#993A9CFF"/>
+            <SolidColorBrush x:Key="LauncherCarouselDotActiveBrush" Color="#FF2E7DF6"/>
+            <SolidColorBrush x:Key="LauncherCarouselDotInactiveBrush" Color="#FFD0D4DA"/>
+            <SolidColorBrush x:Key="LauncherToastSuccessBrush" Color="#FF22C55E"/>
+            <SolidColorBrush x:Key="LauncherToastWarningBrush" Color="#FFF59E0B"/>
+            <SolidColorBrush x:Key="LauncherToastErrorBrush" Color="#FFE5484D"/>
+            <SolidColorBrush x:Key="LauncherToastInfoBrush" Color="#FF2E7DF6"/>
+
+            <ResourceDictionary.ThemeDictionaries>
+                <ResourceDictionary x:Key="Light">
+                    <SolidColorBrush x:Key="LauncherTextPrimaryBrush" Color="#FF232A31"/>
+                    <SolidColorBrush x:Key="LauncherTextSecondaryBrush" Color="#FF68717D"/>
+                    <SolidColorBrush x:Key="LauncherTextBodyBrush" Color="#FF3F4954"/>
+                    <SolidColorBrush x:Key="LauncherTextLinkBrush" Color="#FF313233"/>
+                    <SolidColorBrush x:Key="LauncherPanelBackgroundBrush" Color="#EAF6FAFE"/>
+                    <SolidColorBrush x:Key="LauncherBottomPanelBackgroundBrush" Color="#F2F8FBFF"/>
+                    <SolidColorBrush x:Key="LauncherCardBackgroundBrush" Color="#FFFAFCFF"/>
+                    <SolidColorBrush x:Key="LauncherCardBorderBrush" Color="#FFD6E2EE"/>
+                    <SolidColorBrush x:Key="LauncherDialogBackgroundBrush" Color="#FFFFFFFF"/>
+                    <SolidColorBrush x:Key="LauncherDialogHeaderBrush" Color="#FFF4F8FD"/>
+                    <SolidColorBrush x:Key="LauncherDialogFooterBrush" Color="#FFFFFFFF"/>
+                    <SolidColorBrush x:Key="LauncherDialogCloseHoverBrush" Color="#FFEDF2F7"/>
+                    <SolidColorBrush x:Key="LauncherDialogClosePressedBrush" Color="#FFDDE6F0"/>
+                    <SolidColorBrush x:Key="LauncherFieldBackgroundBrush" Color="#FFF0F6FD"/>
+                    <SolidColorBrush x:Key="LauncherFieldBorderBrush" Color="#FFB8CADB"/>
+                    <SolidColorBrush x:Key="LauncherInfoBackgroundBrush" Color="#FFE8F3FF"/>
+                    <SolidColorBrush x:Key="LauncherNoticeBackgroundBrush" Color="#FFFFF6D8"/>
+                    <SolidColorBrush x:Key="LauncherWarningBackgroundBrush" Color="#FFFFF2C2"/>
+                    <SolidColorBrush x:Key="LauncherDangerSoftBrush" Color="#FFFFECEE"/>
+                    <SolidColorBrush x:Key="LauncherContentRowBrush" Color="#FFF1F5F9"/>
+                    <SolidColorBrush x:Key="LauncherContentRowHoverBrush" Color="#0A000000"/>
+                    <SolidColorBrush x:Key="LauncherButtonBorderBrush" Color="#FFC8D2DE"/>
+                    <SolidColorBrush x:Key="LauncherFlatHoverBrush" Color="#FFEEF6FF"/>
+                    <SolidColorBrush x:Key="LauncherFlatPressedBrush" Color="#FFDCEFFF"/>
+                    <SolidColorBrush x:Key="LauncherSiteButtonBackgroundBrush" Color="#FFFFFFFF"/>
+                    <SolidColorBrush x:Key="LauncherSiteButtonBorderBrush" Color="#FFD5E3F3"/>
+                    <SolidColorBrush x:Key="LauncherToastBackgroundBrush" Color="#FFFFFFFF"/>
+                    <SolidColorBrush x:Key="LauncherInfoTextBrush" Color="#FF24415E"/>
+                </ResourceDictionary>
+                <ResourceDictionary x:Key="Dark">
+                    <SolidColorBrush x:Key="LauncherCarouselDotInactiveBrush" Color="#FF5A6270"/>
+                    <SolidColorBrush x:Key="LauncherTextPrimaryBrush" Color="#FFE8EEF6"/>
+                    <SolidColorBrush x:Key="LauncherTextSecondaryBrush" Color="#FFA8B3C2"/>
+                    <SolidColorBrush x:Key="LauncherTextBodyBrush" Color="#FFC8D2DF"/>
+                    <SolidColorBrush x:Key="LauncherTextLinkBrush" Color="#FFDDE7F3"/>
+                    <SolidColorBrush x:Key="LauncherPanelBackgroundBrush" Color="#E819202A"/>
+                    <SolidColorBrush x:Key="LauncherBottomPanelBackgroundBrush" Color="#F219202A"/>
+                    <SolidColorBrush x:Key="LauncherCardBackgroundBrush" Color="#FF202733"/>
+                    <SolidColorBrush x:Key="LauncherCardBorderBrush" Color="#FF344150"/>
+                    <SolidColorBrush x:Key="LauncherDialogBackgroundBrush" Color="#FF161C26"/>
+                    <SolidColorBrush x:Key="LauncherDialogHeaderBrush" Color="#FF1B2430"/>
+                    <SolidColorBrush x:Key="LauncherDialogFooterBrush" Color="#FF161C26"/>
+                    <SolidColorBrush x:Key="LauncherDialogCloseHoverBrush" Color="#FF2A3547"/>
+                    <SolidColorBrush x:Key="LauncherDialogClosePressedBrush" Color="#FF344156"/>
+                    <SolidColorBrush x:Key="LauncherFieldBackgroundBrush" Color="#FF1E2834"/>
+                    <SolidColorBrush x:Key="LauncherFieldBorderBrush" Color="#FF40516A"/>
+                    <SolidColorBrush x:Key="LauncherInfoBackgroundBrush" Color="#FF19324D"/>
+                    <SolidColorBrush x:Key="LauncherNoticeBackgroundBrush" Color="#FF352D17"/>
+                    <SolidColorBrush x:Key="LauncherWarningBackgroundBrush" Color="#FF463817"/>
+                    <SolidColorBrush x:Key="LauncherDangerSoftBrush" Color="#FF3A1D22"/>
+                    <SolidColorBrush x:Key="LauncherContentRowBrush" Color="#FF202833"/>
+                    <SolidColorBrush x:Key="LauncherContentRowHoverBrush" Color="#18FFFFFF"/>
+                    <SolidColorBrush x:Key="LauncherButtonBorderBrush" Color="#FF4A5B73"/>
+                    <SolidColorBrush x:Key="LauncherFlatHoverBrush" Color="#FF243653"/>
+                    <SolidColorBrush x:Key="LauncherFlatPressedBrush" Color="#FF1D426C"/>
+                    <SolidColorBrush x:Key="LauncherSiteButtonBackgroundBrush" Color="#FF192232"/>
+                    <SolidColorBrush x:Key="LauncherSiteButtonBorderBrush" Color="#FF3D5B80"/>
+                    <SolidColorBrush x:Key="LauncherToastBackgroundBrush" Color="#FF1C2533"/>
+                    <SolidColorBrush x:Key="LauncherInfoTextBrush" Color="#FFD6E8FF"/>
+                </ResourceDictionary>
+            </ResourceDictionary.ThemeDictionaries>
+        </ResourceDictionary>
+    </Application.Resources>
+
+    <Application.DataTemplates>
+        <local:ViewLocator/>
+    </Application.DataTemplates>
+  
+    <Application.Styles>
+        <FluentTheme />
+        <materialIcons:MaterialIconStyles />
+    </Application.Styles>
+</Application>
