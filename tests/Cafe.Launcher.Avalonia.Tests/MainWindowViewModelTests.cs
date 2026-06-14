@@ -1,5 +1,6 @@
 using Cafe.Launcher.Avalonia.Models;
 using Cafe.Launcher.Avalonia.Services;
+using Cafe.Launcher.Avalonia.Services.Auth;
 using Cafe.Launcher.Avalonia.Services.Diagnostics;
 using Cafe.Launcher.Avalonia.ViewModels;
 using Avalonia.Media;
@@ -12,8 +13,13 @@ namespace Cafe.Launcher.Avalonia.Tests;
 public sealed class MainWindowViewModelTests : IDisposable
 {
     private readonly string tempDir = Path.Combine(Path.GetTempPath(), Guid.NewGuid().ToString("N"));
-    private readonly LauncherApiClient apiClient = new();
-    private readonly ImageCacheService imageCacheService = new();
+    private readonly LauncherApiClient apiClient = new(
+        new AuthorizationHeaderFactory(),
+        new PatchUrlGroupService(),
+        new ProxySettingsService());
+    private readonly ImageCacheService imageCacheService = new(
+        new ProxySettingsService(),
+        new Crc64Service());
 
     public MainWindowViewModelTests()
     {
@@ -425,6 +431,17 @@ public sealed class MainWindowViewModelTests : IDisposable
             Path.Combine(tempDir, "missing-resource-panel-cookie"));
         resourcePanelApiClient ??= new ResourcePanelApiClient(new ResourcePanelHandler());
 
+        var localizationService = new LocalizationService();
+        var toastService = new ToastService();
+        var diskSpaceService = new DiskSpaceService();
+        var externalLinkService = new ExternalLinkService();
+        var settingsViewModel = new SettingsViewModel(
+            settingsService, localizationService, toastService,
+            imageCacheService, externalLinkService, diskSpaceService);
+        var resourcePanelViewModel = new ResourcePanelViewModel(
+            resourcePanelUidService, resourcePanelApiClient, localizationService,
+            toastService, new LocalDiagnostics());
+
         return new MainWindowViewModel(
             coreService,
             settingsService,
@@ -432,15 +449,15 @@ public sealed class MainWindowViewModelTests : IDisposable
             gameLaunchService,
             gameDownloadService,
             new GameUninstallService(localGameStateService, diagnostics),
-            new ExternalLinkService(),
-            new DiskSpaceService(),
-            new LocalizationService(),
-            new ToastService(),
+            externalLinkService,
+            diskSpaceService,
+            localizationService,
+            toastService,
             diagnostics,
             new NoticeStateService(Path.Combine(tempDir, Guid.NewGuid().ToString("N"), "shown_notices.json")),
             imageCacheService,
-            resourcePanelUidService,
-            resourcePanelApiClient);
+            settingsViewModel,
+            resourcePanelViewModel);
     }
 
     private LauncherStatusSnapshot CreateSnapshot()

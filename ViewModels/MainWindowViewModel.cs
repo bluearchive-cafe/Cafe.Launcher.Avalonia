@@ -282,8 +282,8 @@ public partial class MainWindowViewModel : ViewModelBase, IDisposable
         LocalDiagnostics diagnostics,
         NoticeStateService noticeStateService,
         ImageCacheService imageCacheService,
-        ResourcePanelUidService resourcePanelUidService,
-        ResourcePanelApiClient resourcePanelApiClient)
+        SettingsViewModel settingsViewModel,
+        ResourcePanelViewModel resourcePanelViewModel)
     {
         this.launcherCoreService = launcherCoreService;
         this.settingsService = settingsService;
@@ -298,9 +298,8 @@ public partial class MainWindowViewModel : ViewModelBase, IDisposable
         this.diagnostics = diagnostics;
         this.noticeStateService = noticeStateService;
         this.imageCacheService = imageCacheService;
-        Settings = new SettingsViewModel(
-            settingsService, localizer, toastService, imageCacheService,
-            externalLinkService, diskSpaceService);
+
+        Settings = settingsViewModel;
         Settings.GetSnapshot = () => currentSnapshot;
         Settings.GetBackgroundBitmap = () => BackgroundImageSource as Bitmap;
         Settings.PickGameFolderAsync = PickGameFolderAsync;
@@ -314,10 +313,10 @@ public partial class MainWindowViewModel : ViewModelBase, IDisposable
         };
         Settings.SettingsSaved += HandleSettingsSavedAsync;
         Settings.CloseRequested += () => IsSettingsVisible = false;
-        ResourcePanel = new ResourcePanelViewModel(
-            resourcePanelUidService, resourcePanelApiClient, localizer,
-            toastService, diagnostics);
+
+        ResourcePanel = resourcePanelViewModel;
         ResourcePanel.GetProxyMode = () => currentSnapshot?.Settings.ProxyMode ?? ProxyModes.Direct;
+
         toastService.ToastRaised += OnToastRaised;
         ApplyLanguage(LauncherLanguages.Auto);
         backgroundImageSource = LoadBundledBackground();

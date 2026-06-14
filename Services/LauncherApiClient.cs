@@ -23,8 +23,11 @@ public sealed class LauncherApiClient : IDisposable
         PropertyNameCaseInsensitive = false
     };
 
-    /// <summary>Production constructor — creates its own SocketsHttpHandler and HttpClient.</summary>
-    public LauncherApiClient()
+    /// <summary>Production constructor — accepts dependencies from DI.</summary>
+    public LauncherApiClient(
+        AuthorizationHeaderFactory authorizationHeaderFactory,
+        PatchUrlGroupService patchUrlGroupService,
+        ProxySettingsService proxySettingsService)
     {
         ownedHandler = new SocketsHttpHandler
         {
@@ -36,9 +39,9 @@ public sealed class LauncherApiClient : IDisposable
             BaseAddress = new Uri(LauncherConstants.ApiBaseUrl),
             Timeout = TimeSpan.FromSeconds(30)
         };
-        authorizationHeaderFactory = new AuthorizationHeaderFactory();
-        patchUrlGroupService = new PatchUrlGroupService();
-        proxySettingsService = new ProxySettingsService();
+        this.authorizationHeaderFactory = authorizationHeaderFactory;
+        this.patchUrlGroupService = patchUrlGroupService;
+        this.proxySettingsService = proxySettingsService;
     }
 
     /// <summary>

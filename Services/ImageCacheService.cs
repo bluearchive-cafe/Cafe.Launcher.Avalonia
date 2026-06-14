@@ -23,10 +23,10 @@ public sealed class ImageCacheService : IDisposable
     private readonly Crc64Service crc64Service;
     private bool disposed;
 
-    public ImageCacheService()
+    public ImageCacheService(ProxySettingsService proxySettingsService, Crc64Service crc64Service)
     {
-        proxySettingsService = new ProxySettingsService();
-        crc64Service = new Crc64Service();
+        this.proxySettingsService = proxySettingsService;
+        this.crc64Service = crc64Service;
         cacheDir = Path.Combine(
             Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData),
             LauncherConstants.ProductName,

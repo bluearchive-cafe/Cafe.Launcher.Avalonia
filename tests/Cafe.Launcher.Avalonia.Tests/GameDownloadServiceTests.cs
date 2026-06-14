@@ -35,7 +35,7 @@ public sealed class GameDownloadServiceTests
     [Fact]
     public void Dispose_WhenCalledTwice_DoesNotThrow()
     {
-        using var apiClient = new LauncherApiClient();
+        using var apiClient = new LauncherApiClient(new AuthorizationHeaderFactory(), new PatchUrlGroupService(), new ProxySettingsService());
         var service = CreateService(apiClient);
 
         service.Dispose();
@@ -45,7 +45,7 @@ public sealed class GameDownloadServiceTests
     [Fact]
     public void Dispose_AfterStop_DoesNotThrow()
     {
-        using var apiClient = new LauncherApiClient();
+        using var apiClient = new LauncherApiClient(new AuthorizationHeaderFactory(), new PatchUrlGroupService(), new ProxySettingsService());
         var service = CreateService(apiClient);
 
         service.Stop();

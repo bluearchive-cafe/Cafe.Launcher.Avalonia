@@ -1,14 +1,12 @@
 using Avalonia;
 using Avalonia.Controls.ApplicationLifetimes;
-using Avalonia.Data.Core;
-using Avalonia.Data.Core.Plugins;
+using Avalonia.Markup.Xaml;
 using Avalonia.Threading;
 using System;
 using System.Diagnostics;
-using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
-using Avalonia.Markup.Xaml;
+using Microsoft.Extensions.DependencyInjection;
 using Cafe.Launcher.Avalonia.Services;
 using Cafe.Launcher.Avalonia.ViewModels;
 using Cafe.Launcher.Avalonia.Views;
@@ -19,7 +17,7 @@ public partial class App : Application
 {
     private const string SignalName = @"Global\Cafe_Launcher_SI_Show";
     private readonly CancellationTokenSource shutdownCts = new();
-    private LauncherApplicationServices? services;
+    private ServiceProvider? serviceProvider;
     private SystemTrayService? trayService;
     private ShowWindowSignalListener? showWindowListener;
 
@@ -32,36 +30,39 @@ public partial class App : Application
     {
         if (ApplicationLifetime is IClassicDesktopStyleApplicationLifetime desktop)
         {
-            services = new LauncherApplicationServices();
+            // Build DI container
+            var serviceCollection = new ServiceCollection();
+            serviceCollection.AddLauncherServices();
+            serviceProvider = serviceCollection.BuildServiceProvider();
 
             // Track install attribution (non-critical, best-effort)
             try
             {
-                services.ClickCodeService.SaveClickCode();
+                var clickCodeService = serviceProvider.GetRequiredService<ClickCodeService>();
+                clickCodeService.SaveClickCode();
             }
             catch (Exception ex)
             {
-                // Non-critical — continue without click code
                 Debug.WriteLine($"ClickCodeService.SaveClickCode failed: {ex.Message}");
             }
 
-            var viewModel = services.CreateMainWindowViewModel();
+            var viewModel = serviceProvider.GetRequiredService<MainWindowViewModel>();
             var mainWindow = new MainWindow
             {
                 DataContext = viewModel,
             };
             mainWindow.ConfigureViewModel(viewModel);
 
-            // Initialize system tray (non-critical, best-effort)
+            // Initialize system tray (depends on Window — kept outside DI)
             try
             {
-                trayService = new SystemTrayService(mainWindow, services.LocalizationService);
+                var localizationService = serviceProvider.GetRequiredService<LocalizationService>();
+                trayService = new SystemTrayService(mainWindow, localizationService);
                 trayService.Initialize();
                 mainWindow.SetSystemTray(trayService);
             }
             catch (Exception ex)
             {
-                // Non-critical — continue without system tray
                 Debug.WriteLine($"SystemTrayService init failed: {ex.Message}");
             }
 
@@ -72,7 +73,7 @@ public partial class App : Application
                 shutdownCts.Cancel();
                 viewModel.Dispose();
                 trayService?.Dispose();
-                services?.Dispose();
+                serviceProvider?.Dispose();
                 shutdownCts.Dispose();
             };
 

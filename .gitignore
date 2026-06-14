@@ -65,3 +65,4 @@ _ReSharper.*/
 
 # Windows
 Thumbs.db
+.claude/
