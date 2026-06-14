@@ -1,8 +1,10 @@
 using System;
+using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using System.ComponentModel;
 using System.Runtime.CompilerServices;
 using System.Text.Json.Serialization;
+using Cafe.Launcher.Avalonia.Constants;
 
 namespace Cafe.Launcher.Avalonia.Models;
 
@@ -57,6 +59,14 @@ public static class ThemeModes
     public const string System = "system";
     public const string Light = "light";
     public const string Dark = "dark";
+}
+
+public static class ThemeColorModes
+{
+    public const string Default = "default";
+    public const string System = "system";
+    public const string Wallpaper = "wallpaper";
+    public const string Custom = "custom";
 }
 
 public static class DownloadSpeedLimits
@@ -118,6 +128,18 @@ public sealed class LauncherSettings
 
     [JsonPropertyName("themeMode")]
     public string ThemeMode { get; set; } = ThemeModes.System;
+
+    [JsonPropertyName("themeColorMode")]
+    public string ThemeColorMode { get; set; } = ThemeColorModes.Default;
+
+    [JsonPropertyName("customThemeColor")]
+    public string CustomThemeColor { get; set; } = LauncherConstants.DefaultThemeColor;
+
+    [JsonPropertyName("themeColorPalette")]
+    public List<string> ThemeColorPalette { get; set; } = [];
+
+    [JsonPropertyName("selectedThemeColorPaletteIndex")]
+    public int SelectedThemeColorPaletteIndex { get; set; }
 
     [JsonPropertyName("downloadSpeedLimit")]
     public string DownloadSpeedLimit { get; set; } = DownloadSpeedLimits.Unlimited;

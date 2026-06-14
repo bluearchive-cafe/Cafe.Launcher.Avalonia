@@ -23,6 +23,7 @@ public static class LauncherConstants
     public const bool UpdateUseMultipleRangeRequest = false;
     public const string UpdatePackageUrl = "https://launcher-pkg-ba-jp.yo-star.com/install_pkg/game_launcher/BlueArchive_JP/";
     public const string UpdaterCacheDirName = "cafe_launcher-updater";
+    public const string DefaultThemeColor = "#FF2E7DF6";
 
     // Keep in sync with .csproj PackageReference for Avalonia
     public const string AvaloniaVersion = "12.0.4";

@@ -206,7 +206,7 @@ public sealed class GameDownloadServiceTests
         var gameConfig = new GameLauncherConfig
         {
             Tag = "BlueArchive_JP",
-            Name = "BlueArchive",
+            Name = "CafeLauncherAvaloniaTestGame",
             Version = "1.0.0"
         };
         var manifest = new LocalManifest
