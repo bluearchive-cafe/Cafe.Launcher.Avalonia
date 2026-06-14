@@ -251,7 +251,7 @@
                                     </StackPanel>
                                 </Grid>
 
-                                <Grid Classes="settings-row" ColumnDefinitions="Auto,*,Auto" ColumnSpacing="12"
+                                <Grid Classes="settings-row" ColumnDefinitions="Auto,*,190" ColumnSpacing="12"
                                       IsVisible="{Binding Settings.IsWallpaperThemeColorSelected}">
                                     <Border Classes="settings-icon">
                                         <materialIcons:MaterialIcon Kind="PaletteSwatchOutline" Width="18" Height="18" Foreground="{DynamicResource LauncherAccentBrush}" HorizontalAlignment="Center" VerticalAlignment="Center"/>
@@ -260,8 +260,8 @@
                                         <TextBlock Text="{Binding Shell.I18n.ThemeColorPalette}" Classes="section-title"/>
                                         <TextBlock Text="{Binding Shell.I18n.ThemeColorPaletteDescription}" Classes="caption" TextWrapping="Wrap"/>
                                     </StackPanel>
-                                    <StackPanel Grid.Column="2" Orientation="Horizontal" Spacing="8" VerticalAlignment="Center">
-                                        <ListBox Width="182"
+                                    <StackPanel Grid.Column="2" Spacing="8" VerticalAlignment="Center">
+                                        <ListBox Width="190"
                                                  Background="Transparent"
                                                  BorderThickness="0"
                                                  Padding="0"
@@ -287,8 +287,10 @@
                                                 </DataTemplate>
                                             </ListBox.ItemTemplate>
                                         </ListBox>
-                                        <Button Classes="flat-action" Command="{Binding Settings.RefreshThemeColorPaletteCommand}">
-                                            <StackPanel Classes="button-content">
+                                        <Button Classes="flat-action"
+                                                Command="{Binding Settings.RefreshThemeColorPaletteCommand}"
+                                                HorizontalAlignment="Stretch">
+                                            <StackPanel Classes="button-content" HorizontalAlignment="Center">
                                                 <materialIcons:MaterialIcon Kind="Refresh" Width="16" Height="16"/>
                                                 <TextBlock Text="{Binding Shell.I18n.RefreshThemeColorPalette}" VerticalAlignment="Center"/>
                                             </StackPanel>
