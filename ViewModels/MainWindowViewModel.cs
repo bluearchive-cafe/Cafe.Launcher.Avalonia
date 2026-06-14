@@ -1,6 +1,7 @@
 using System;
 using System.Collections.ObjectModel;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.IO;
 using System.Linq;
 using System.Runtime.InteropServices;
@@ -632,8 +633,9 @@ public partial class MainWindowViewModel : ViewModelBase, IDisposable
                 {
                     try
                     {
-                        var cachedPath = imageCacheService.GetCachedPath(crc64)
-                            ?? await imageCacheService.CacheImageAsync(bgImg, crc64);
+                        var proxyMode = snapshot?.Settings.ProxyMode ?? ProxyModes.Direct;
+                        var cachedPath = await imageCacheService.GetCachedPathAsync(crc64)
+                            ?? await imageCacheService.CacheImageAsync(bgImg, crc64, proxyMode, lifetimeCts.Token);
                         SetBackgroundImage(new Bitmap(cachedPath));
                         return;
                     }
@@ -768,9 +770,10 @@ public partial class MainWindowViewModel : ViewModelBase, IDisposable
             using var stream = AssetLoader.Open(uri);
             return new Bitmap(stream);
         }
-        catch
+        catch (Exception ex)
         {
             // Bundled background should always load — if this fails the install is corrupted
+            Debug.WriteLine($"Failed to load bundled background image: {ex.Message}");
             return null;
         }
     }
@@ -1198,7 +1201,8 @@ public partial class MainWindowViewModel : ViewModelBase, IDisposable
 
             try
             {
-                var bytes = await imageCacheService.GetImageBytesAsync(item.ImageUrl, lifetimeCts.Token);
+                var proxyMode = currentSnapshot?.Settings.ProxyMode ?? ProxyModes.Direct;
+                var bytes = await imageCacheService.GetImageBytesAsync(item.ImageUrl, proxyMode, lifetimeCts.Token);
                 await Dispatcher.UIThread.InvokeAsync(() =>
                 {
                     if (!BannerItems.Contains(item))
@@ -1517,6 +1521,23 @@ public partial class MainWindowViewModel : ViewModelBase, IDisposable
     }
 
     private void ApplyProgress(GameOperationProgress progress)
+    {
+        if (!Dispatcher.UIThread.CheckAccess())
+        {
+            if (Application.Current is null)
+            {
+                ApplyProgressCore(progress);
+                return;
+            }
+
+            Dispatcher.UIThread.Post(() => ApplyProgress(progress));
+            return;
+        }
+
+        ApplyProgressCore(progress);
+    }
+
+    private void ApplyProgressCore(GameOperationProgress progress)
     {
         IsProgressPanelVisible = true;
         IsInstallPanelVisible = false;
@@ -2365,6 +2386,7 @@ public partial class MainWindowViewModel : ViewModelBase, IDisposable
     {
         ResourcePanelMessage = localizer.T("resourcePanelLoading");
         SetResourcePanelStatusText(localizer.T("resourcePanelLoading"));
+        resourcePanelApiClient.SetProxyMode(currentSnapshot?.Settings.ProxyMode ?? ProxyModes.Direct);
         var statusTask = resourcePanelApiClient.GetStatusAsync(cancellationToken);
         var configTask = resourcePanelApiClient.GetConfigAsync(uid, cancellationToken);
         await Task.WhenAll(statusTask, configTask);

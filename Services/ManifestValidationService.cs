@@ -127,18 +127,13 @@ public sealed class ManifestValidationService
                 continue;
             }
 
-            if (fileInfo.Length != ParseSize(fileItem.Size))
+            if (fileInfo.Length != FileSizeFormatter.ParseSize(fileItem.Size))
             {
                 sizeMismatchFileCount++;
             }
         }
 
         return (missingFileCount, sizeMismatchFileCount);
-    }
-
-    private static long ParseSize(string value)
-    {
-        return long.TryParse(value, out var size) ? size : 0;
     }
 
     private static ManifestValidationResult Failed(string message)

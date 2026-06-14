@@ -21,6 +21,7 @@ public partial class MainWindow : Window
     {
         InitializeComponent();
         PointerPressed += OnPointerPressed;
+        KeyDown += OnKeyDown;
     }
 
     public void ConfigureViewModel(MainWindowViewModel viewModel)
@@ -111,6 +112,65 @@ public partial class MainWindow : Window
         if (e.GetCurrentPoint(this).Properties.IsLeftButtonPressed)
         {
             BeginMoveDrag(e);
+        }
+    }
+
+    private void OnKeyDown(object? sender, KeyEventArgs e)
+    {
+        if (e.Key != Key.Escape || DataContext is not MainWindowViewModel vm)
+        {
+            return;
+        }
+
+        // Close dialogs in priority order — most-nested first.
+        // Confirmation dialogs
+        if (vm.IsStopConfirmVisible)
+        {
+            vm.CancelStopCommand.Execute(null);
+            e.Handled = true;
+            return;
+        }
+
+        if (vm.IsUnsavedChangesVisible)
+        {
+            vm.KeepEditingSettingsCommand.Execute(null);
+            e.Handled = true;
+            return;
+        }
+
+        if (vm.IsRepairConfirmVisible)
+        {
+            vm.CancelRepairCommand.Execute(null);
+            e.Handled = true;
+            return;
+        }
+
+        if (vm.IsUninstallConfirmVisible)
+        {
+            vm.CancelUninstallCommand.Execute(null);
+            e.Handled = true;
+            return;
+        }
+
+        if (vm.IsNoticeDialogVisible)
+        {
+            vm.DismissNoticeCommand.Execute(null);
+            e.Handled = true;
+            return;
+        }
+
+        // Overlay panels — only close if not dirty (avoids accidental data loss)
+        if (vm.IsSettingsVisible && !vm.IsSettingsDirty)
+        {
+            vm.ShowSettingsCommand.Execute(null);
+            e.Handled = true;
+            return;
+        }
+
+        if (vm.IsResourcePanelVisible)
+        {
+            vm.CloseResourcePanelCommand.Execute(null);
+            e.Handled = true;
         }
     }
 

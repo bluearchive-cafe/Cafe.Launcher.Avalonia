@@ -437,13 +437,13 @@
     </Style>
     <Style Selector="Border.bottom-panel">
         <Setter Property="VerticalAlignment" Value="Bottom"/>
-        <Setter Property="Height" Value="132"/>
+        <Setter Property="MinHeight" Value="132"/>
         <Setter Property="Background" Value="{DynamicResource LauncherBottomPanelBackgroundBrush}"/>
         <Setter Property="Padding" Value="40,18,40,18"/>
     </Style>
     <Style Selector="Border.control-panel">
         <Setter Property="VerticalAlignment" Value="Bottom"/>
-        <Setter Property="Height" Value="156"/>
+        <Setter Property="MinHeight" Value="156"/>
         <Setter Property="Padding" Value="40,24,40,18"/>
         <Setter Property="Background">
             <LinearGradientBrush StartPoint="0%,0%" EndPoint="0%,100%">
@@ -511,7 +511,8 @@
         <Setter Property="Padding" Value="20,12"/>
     </Style>
     <Style Selector="Border.confirm-panel">
-        <Setter Property="Width" Value="540"/>
+        <Setter Property="MaxWidth" Value="540"/>
+        <Setter Property="Margin" Value="24"/>
         <Setter Property="HorizontalAlignment" Value="Center"/>
         <Setter Property="VerticalAlignment" Value="Center"/>
     </Style>

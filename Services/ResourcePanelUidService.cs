@@ -3,11 +3,16 @@ using System.IO;
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
+using Cafe.Launcher.Avalonia.Models;
 
 namespace Cafe.Launcher.Avalonia.Services;
 
 public sealed class ResourcePanelUidService
 {
+    private const string ResourcePanelCookieName = "uid";
+    private const string ResourcePanelCookieDomain = "bluearchive.cafe";
+    private const string ResourcePanelCookiePath = "/";
+
     private readonly BestHttpCookieLibraryService cookieLibraryService;
     private readonly LauncherSettingsService settingsService;
     private readonly string cookieLibraryPath;
@@ -60,13 +65,20 @@ public sealed class ResourcePanelUidService
             }
 
             var library = cookieLibraryService.Read(cookieLibraryPath);
-            return library.Cookies.FirstOrDefault(cookie => cookie.Name == "uid"
-                && !string.IsNullOrWhiteSpace(cookie.Value))?.Value ?? "";
+            return library.Cookies.FirstOrDefault(IsResourcePanelUidCookie)?.Value ?? "";
         }
         catch
         {
             return "";
         }
+    }
+
+    private static bool IsResourcePanelUidCookie(BestHttpCookie cookie)
+    {
+        return cookie.Name == ResourcePanelCookieName
+            && cookie.Domain == ResourcePanelCookieDomain
+            && cookie.Path == ResourcePanelCookiePath
+            && !string.IsNullOrWhiteSpace(cookie.Value);
     }
 
     private static string GetDefaultCookieLibraryPath()

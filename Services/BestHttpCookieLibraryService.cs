@@ -23,9 +23,10 @@ public sealed class BestHttpCookieLibraryService
         using var reader = new BinaryReader(stream, Encoding.UTF8, leaveOpen: true);
         var version = reader.ReadInt32();
         var count = reader.ReadInt32();
-        if (count < 0)
+        if (count is < 0 or > 10_000)
         {
-            throw new InvalidDataException("BestHTTP cookie library count is negative.");
+            throw new InvalidDataException(
+                $"BestHTTP cookie library count is out of range: {count} (expected 0–10,000).");
         }
 
         var cookies = new List<BestHttpCookie>(count);

@@ -4,6 +4,7 @@ using Avalonia.Data.Core;
 using Avalonia.Data.Core.Plugins;
 using Avalonia.Threading;
 using System;
+using System.Diagnostics;
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
@@ -38,9 +39,10 @@ public partial class App : Application
             {
                 services.ClickCodeService.SaveClickCode();
             }
-            catch
+            catch (Exception ex)
             {
                 // Non-critical — continue without click code
+                Debug.WriteLine($"ClickCodeService.SaveClickCode failed: {ex.Message}");
             }
 
             var viewModel = services.CreateMainWindowViewModel();
@@ -57,9 +59,10 @@ public partial class App : Application
                 trayService.Initialize();
                 mainWindow.SetSystemTray(trayService);
             }
-            catch
+            catch (Exception ex)
             {
                 // Non-critical — continue without system tray
+                Debug.WriteLine($"SystemTrayService init failed: {ex.Message}");
             }
 
             // Destroy tray icon on app exit
@@ -142,16 +145,18 @@ public partial class App : Application
                             else
                                 mainWindow.ShowWindow();
                         }
-                        catch
+                        catch (Exception ex)
                         {
                             // Restore is best-effort.
+                            Debug.WriteLine($"Window restore dispatch failed: {ex.Message}");
                         }
                     });
                 }
             }
-            catch
+            catch (Exception ex)
             {
                 // Listener stopped — non-critical.
+                Debug.WriteLine($"ShowWindowSignalListener loop exited: {ex.Message}");
             }
         }
 
