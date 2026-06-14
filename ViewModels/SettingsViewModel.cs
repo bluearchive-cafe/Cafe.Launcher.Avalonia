@@ -404,6 +404,17 @@ public partial class SettingsViewModel : ViewModelBase
         }
     }
 
+    [RelayCommand]
+    private void SelectThemeColorPalette(int index)
+    {
+        if (ThemeColorPaletteItems.Count == 0)
+        {
+            return;
+        }
+
+        SelectedThemeColorPaletteIndex = Math.Clamp(index, 0, ThemeColorPaletteItems.Count - 1);
+    }
+
     // ── Dirty tracking ────────────────────────────────────────────────────
 
     private void MarkSettingsDirtyIfVisible()

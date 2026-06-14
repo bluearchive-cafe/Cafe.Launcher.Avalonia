@@ -123,6 +123,8 @@ public sealed partial class LocalizedStrings : ObservableObject
     [ObservableProperty] private string toastNotifications = "";
     [ObservableProperty] private string remoteContentCard = "";
     [ObservableProperty] private string showRemoteContentCard = "";
+    [ObservableProperty] private string toggleOn = "";
+    [ObservableProperty] private string toggleOff = "";
     [ObservableProperty] private string launchCheckDescription = "";
     [ObservableProperty] private string proxyDescription = "";
     [ObservableProperty] private string downloadSource = "";
@@ -267,6 +269,8 @@ public sealed partial class LocalizedStrings : ObservableObject
         ToastNotifications = localizer.T("toastNotifications");
         RemoteContentCard = localizer.T("remoteContentCard");
         ShowRemoteContentCard = localizer.T("showRemoteContentCard");
+        ToggleOn = localizer.T("toggleOn");
+        ToggleOff = localizer.T("toggleOff");
         LaunchCheckDescription = localizer.T("launchCheckDescription");
         ProxyDescription = localizer.T("proxyDescription");
         DownloadSource = localizer.T("downloadSource");

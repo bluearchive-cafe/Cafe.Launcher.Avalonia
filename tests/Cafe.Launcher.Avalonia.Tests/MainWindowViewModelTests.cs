@@ -422,10 +422,9 @@ public sealed class MainWindowViewModelTests : IDisposable
 
         await viewModel.ResourcePanel.SaveResourcePanelCommand.ExecuteAsync(null);
 
-        Assert.Equal("POST", handler.LastRequestMethod);
-        Assert.Equal("/config/set", handler.LastRequestPathAndQuery);
-        Assert.NotNull(handler.LastRequestBody);
-        Assert.Contains("\"uid\":\"UID123\"", handler.LastRequestBody);
+        Assert.Equal("GET", handler.LastRequestMethod);
+        Assert.Equal("/config/set?uid=UID123&text=cn&voice=jp&media=cn", handler.LastRequestPathAndQuery);
+        Assert.Null(handler.LastRequestBody);
         Assert.Equal(1, handler.ConfigSetCount);
     }
 
@@ -752,7 +751,7 @@ public sealed class MainWindowViewModelTests : IDisposable
                 }
                 """;
             }
-            else if (path == "/config/set")
+            else if (request.RequestUri?.PathAndQuery == "/config/set?uid=UID123&text=cn&voice=jp&media=cn")
             {
                 ConfigSetCount++;
             }

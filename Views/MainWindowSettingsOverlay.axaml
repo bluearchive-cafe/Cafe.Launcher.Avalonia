@@ -4,6 +4,7 @@
              xmlns:models="using:Cafe.Launcher.Avalonia.Models"
              xmlns:materialIcons="clr-namespace:Material.Icons.Avalonia;assembly=Material.Icons.Avalonia"
              x:Class="Cafe.Launcher.Avalonia.Views.MainWindowSettingsOverlay"
+             x:Name="SettingsRoot"
              x:DataType="vm:MainWindowViewModel">
     <Grid IsVisible="{Binding WindowChrome.IsSettingsVisible}" Background="{DynamicResource LauncherOverlayBrush}">
         <Border MaxWidth="760"
@@ -251,7 +252,7 @@
                                     </StackPanel>
                                 </Grid>
 
-                                <Grid Classes="settings-row" ColumnDefinitions="Auto,*,190" ColumnSpacing="12"
+                                <Grid Classes="settings-row" ColumnDefinitions="Auto,*,Auto" ColumnSpacing="12"
                                       IsVisible="{Binding Settings.IsWallpaperThemeColorSelected}">
                                     <Border Classes="settings-icon">
                                         <materialIcons:MaterialIcon Kind="PaletteSwatchOutline" Width="18" Height="18" Foreground="{DynamicResource LauncherAccentBrush}" HorizontalAlignment="Center" VerticalAlignment="Center"/>
@@ -260,40 +261,37 @@
                                         <TextBlock Text="{Binding Shell.I18n.ThemeColorPalette}" Classes="section-title"/>
                                         <TextBlock Text="{Binding Shell.I18n.ThemeColorPaletteDescription}" Classes="caption" TextWrapping="Wrap"/>
                                     </StackPanel>
-                                    <StackPanel Grid.Column="2" Spacing="8" VerticalAlignment="Center">
-                                        <ListBox Width="190"
-                                                 Background="Transparent"
-                                                 BorderThickness="0"
-                                                 Padding="0"
-                                                 ItemsSource="{Binding Settings.ThemeColorPaletteItems}"
-                                                 SelectedIndex="{Binding Settings.SelectedThemeColorPaletteIndex, Mode=TwoWay}">
-                                            <ListBox.ItemsPanel>
+                                    <StackPanel Grid.Column="2" Orientation="Horizontal" Spacing="8" VerticalAlignment="Center">
+                                        <ItemsControl Width="136"
+                                                      ItemsSource="{Binding Settings.ThemeColorPaletteItems}">
+                                            <ItemsControl.ItemsPanel>
                                                 <ItemsPanelTemplate>
                                                     <StackPanel Orientation="Horizontal" Spacing="8"/>
                                                 </ItemsPanelTemplate>
-                                            </ListBox.ItemsPanel>
-                                            <ListBox.ItemTemplate>
+                                            </ItemsControl.ItemsPanel>
+                                            <ItemsControl.ItemTemplate>
                                                 <DataTemplate x:DataType="models:ThemeColorPaletteItem">
-                                                    <Border Classes="color-swatch"
-                                                            Background="{Binding Brush}">
-                                                        <materialIcons:MaterialIcon Kind="Check"
-                                                                                    Width="16"
-                                                                                    Height="16"
-                                                                                    HorizontalAlignment="Center"
-                                                                                    VerticalAlignment="Center"
-                                                                                    Foreground="{DynamicResource LauncherOnAccentBrush}"
-                                                                                    IsVisible="{Binding IsSelected}"/>
-                                                    </Border>
+                                                    <Button Classes="color-swatch-button"
+                                                            Command="{Binding DataContext.Settings.SelectThemeColorPaletteCommand, ElementName=SettingsRoot}"
+                                                            CommandParameter="{Binding Index}">
+                                                        <Border Classes="color-swatch"
+                                                                Background="{Binding Brush}">
+                                                            <materialIcons:MaterialIcon Kind="Check"
+                                                                                        Width="16"
+                                                                                        Height="16"
+                                                                                        HorizontalAlignment="Center"
+                                                                                        VerticalAlignment="Center"
+                                                                                        Foreground="{DynamicResource LauncherOnAccentBrush}"
+                                                                                        IsVisible="{Binding IsSelected}"/>
+                                                        </Border>
+                                                    </Button>
                                                 </DataTemplate>
-                                            </ListBox.ItemTemplate>
-                                        </ListBox>
-                                        <Button Classes="flat-action"
+                                            </ItemsControl.ItemTemplate>
+                                        </ItemsControl>
+                                        <Button Classes="flat-action icon-only"
                                                 Command="{Binding Settings.RefreshThemeColorPaletteCommand}"
-                                                HorizontalAlignment="Stretch">
-                                            <StackPanel Classes="button-content" HorizontalAlignment="Center">
-                                                <materialIcons:MaterialIcon Kind="Refresh" Width="16" Height="16"/>
-                                                <TextBlock Text="{Binding Shell.I18n.RefreshThemeColorPalette}" VerticalAlignment="Center"/>
-                                            </StackPanel>
+                                                ToolTip.Tip="{Binding Shell.I18n.RefreshThemeColorPalette}">
+                                            <materialIcons:MaterialIcon Kind="Refresh" Width="16" Height="16"/>
                                         </Button>
                                     </StackPanel>
                                 </Grid>
@@ -404,6 +402,8 @@
                                     </StackPanel>
                                     <ToggleSwitch Grid.Column="2"
                                                   IsChecked="{Binding Settings.ToastNotificationsEnabled, Mode=TwoWay}"
+                                                  OnContent="{Binding Shell.I18n.ToggleOn}"
+                                                  OffContent="{Binding Shell.I18n.ToggleOff}"
                                                   VerticalAlignment="Center"/>
                                 </Grid>
 
@@ -417,6 +417,8 @@
                                     </StackPanel>
                                     <ToggleSwitch Grid.Column="2"
                                                   IsChecked="{Binding Settings.ShowRemoteContentCard, Mode=TwoWay}"
+                                                  OnContent="{Binding Shell.I18n.ToggleOn}"
+                                                  OffContent="{Binding Shell.I18n.ToggleOff}"
                                                   VerticalAlignment="Center"/>
                                 </Grid>
                             </StackPanel>

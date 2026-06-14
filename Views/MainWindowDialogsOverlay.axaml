@@ -68,6 +68,8 @@
                                                 </StackPanel>
                                                 <ToggleSwitch Grid.Column="1"
                                                               IsChecked="{Binding IsEnabled, Mode=TwoWay}"
+                                                              OnContent="{Binding DataContext.Shell.I18n.ToggleOn, ElementName=DialogsRoot}"
+                                                              OffContent="{Binding DataContext.Shell.I18n.ToggleOff, ElementName=DialogsRoot}"
                                                               VerticalAlignment="Center"/>
                                                 <Grid Grid.Row="1" Grid.ColumnSpan="2" ColumnDefinitions="Auto,*,Auto,*" ColumnSpacing="8">
                                                     <TextBlock Text="{Binding DataContext.Shell.I18n.ResourcePanelOfficialVersion, ElementName=DialogsRoot}" Classes="caption"/>
