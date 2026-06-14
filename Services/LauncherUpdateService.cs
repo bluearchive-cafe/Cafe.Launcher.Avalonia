@@ -3,6 +3,7 @@ using System.Net.Http;
 using System.Threading;
 using System.Threading.Tasks;
 using Cafe.Launcher.Avalonia.Constants;
+using Cafe.Launcher.Avalonia.Models;
 
 namespace Cafe.Launcher.Avalonia.Services;
 
@@ -14,14 +15,22 @@ public sealed class LauncherUpdateService : IDisposable
 {
     private readonly SocketsHttpHandler handler;
     private readonly HttpClient httpClient;
+    private readonly ProxySettingsService proxySettingsService = new();
+    private string proxyMode = ProxyModes.Direct;
 
     public LauncherUpdateService()
     {
         handler = new SocketsHttpHandler
         {
+            UseProxy = false,
             PooledConnectionLifetime = TimeSpan.FromMinutes(15)
         };
         httpClient = new HttpClient(handler) { Timeout = TimeSpan.FromSeconds(15) };
+    }
+
+    public void SetProxyMode(string value)
+    {
+        proxyMode = value == ProxyModes.System ? ProxyModes.System : ProxyModes.Direct;
     }
 
     /// <summary>
@@ -33,7 +42,8 @@ public sealed class LauncherUpdateService : IDisposable
         try
         {
             var versionUrl = $"{LauncherConstants.UpdatePackageUrl}latest.yml";
-            var response = await httpClient.GetStringAsync(versionUrl, ct);
+            using var lease = await CreateRequestClientAsync(ct);
+            var response = await lease.Client.GetStringAsync(versionUrl, ct);
 
             // Parse the version from the latest.yml file
             foreach (var line in response.Split('\n'))
@@ -72,5 +82,49 @@ public sealed class LauncherUpdateService : IDisposable
     {
         httpClient.Dispose();
         handler.Dispose();
+    }
+
+    private async Task<RequestHttpClientLease> CreateRequestClientAsync(CancellationToken ct)
+    {
+        if (proxyMode != ProxyModes.System)
+        {
+            return new RequestHttpClientLease(httpClient);
+        }
+
+        var requestHandler = await proxySettingsService.CreateHttpHandlerAsync(proxyMode, ct);
+        var client = new HttpClient(requestHandler)
+        {
+            Timeout = httpClient.Timeout
+        };
+        return new RequestHttpClientLease(client, requestHandler);
+    }
+
+    private sealed class RequestHttpClientLease : IDisposable
+    {
+        private readonly SocketsHttpHandler? handler;
+        private readonly bool ownsClient;
+
+        public RequestHttpClientLease(HttpClient client)
+        {
+            Client = client;
+        }
+
+        public RequestHttpClientLease(HttpClient client, SocketsHttpHandler handler)
+        {
+            Client = client;
+            this.handler = handler;
+            ownsClient = true;
+        }
+
+        public HttpClient Client { get; }
+
+        public void Dispose()
+        {
+            if (ownsClient)
+            {
+                Client.Dispose();
+                handler?.Dispose();
+            }
+        }
     }
 }

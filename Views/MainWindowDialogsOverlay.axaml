@@ -9,8 +9,9 @@
     <Grid>
         <!-- Resource control panel -->
         <Grid IsVisible="{Binding IsResourcePanelVisible}" Background="{DynamicResource LauncherOverlayBrush}">
-            <Border Width="720"
+            <Border MaxWidth="720"
                     MaxHeight="620"
+                    Margin="24"
                     HorizontalAlignment="Center"
                     VerticalAlignment="Center"
                     Classes="dialog">
@@ -103,8 +104,9 @@
         </Grid>
         <!-- Notice popup dialog -->
         <Grid IsVisible="{Binding IsNoticeDialogVisible}" Background="{DynamicResource LauncherOverlayBrush}">
-            <Border Width="540"
+            <Border MaxWidth="540"
                     MaxHeight="480"
+                    Margin="24"
                     HorizontalAlignment="Center"
                     VerticalAlignment="Center"
                     Classes="dialog">

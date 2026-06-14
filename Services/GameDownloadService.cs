@@ -206,6 +206,7 @@ public sealed class GameDownloadService : IDisposable
             }
 
             var settings = await settingsService.ReadAsync(activeToken);
+            apiClient.SetProxyMode(settings.ProxyMode);
             var speedLimitBytesPerSec = DownloadSpeedLimits.ToBytesPerSecond(settings.DownloadSpeedLimit);
             if (string.IsNullOrWhiteSpace(settings.GamePath))
                 return Failed("Game install path is not configured. Open Settings to choose a path.", "no-path");
@@ -524,6 +525,10 @@ public sealed class GameDownloadService : IDisposable
 
             var manifest = await apiClient.GetRemoteManifestAsync(manifestUrl.Url, cancellationToken);
             return manifest.File;
+        }
+        catch (OperationCanceledException)
+        {
+            throw;
         }
         catch
         {

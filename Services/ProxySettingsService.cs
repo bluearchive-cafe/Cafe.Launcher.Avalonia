@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Net;
+using System.Net.Http;
 using System.Threading;
 using System.Threading.Tasks;
 using Cafe.Launcher.Avalonia.Models;
@@ -28,6 +29,19 @@ public sealed class ProxySettingsService
         {
             BypassList = settings.NoProxy.ToArray()
         });
+    }
+
+    public async Task<SocketsHttpHandler> CreateHttpHandlerAsync(
+        string proxyMode,
+        CancellationToken cancellationToken = default)
+    {
+        var proxy = await CreateProxyAsync(proxyMode, cancellationToken);
+        return new SocketsHttpHandler
+        {
+            UseProxy = proxyMode == ProxyModes.System,
+            Proxy = proxy,
+            PooledConnectionLifetime = TimeSpan.FromMinutes(15)
+        };
     }
 
     /// <summary>
