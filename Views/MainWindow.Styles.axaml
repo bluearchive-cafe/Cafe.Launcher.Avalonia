@@ -248,6 +248,12 @@
         <Setter Property="Foreground" Value="{DynamicResource LauncherTextSecondaryBrush}"/>
         <Setter Property="BorderBrush" Value="{DynamicResource LauncherCardBorderBrush}"/>
     </Style>
+    <Style Selector="Button.flat-action.icon-only">
+        <Setter Property="Width" Value="36"/>
+        <Setter Property="Height" Value="36"/>
+        <Setter Property="MinWidth" Value="36"/>
+        <Setter Property="Padding" Value="0"/>
+    </Style>
     <Style Selector="Button.bottom-action">
         <Setter Property="Height" Value="48"/>
         <Setter Property="MinWidth" Value="156"/>
@@ -636,6 +642,16 @@
         <Setter Property="CornerRadius" Value="4"/>
         <Setter Property="BorderBrush" Value="{DynamicResource LauncherCardBorderBrush}"/>
         <Setter Property="BorderThickness" Value="1"/>
+    </Style>
+    <Style Selector="Button.color-swatch-button">
+        <Setter Property="Background" Value="{DynamicResource LauncherTransparentBrush}"/>
+        <Setter Property="BorderThickness" Value="0"/>
+        <Setter Property="Width" Value="28"/>
+        <Setter Property="Height" Value="28"/>
+        <Setter Property="Padding" Value="0"/>
+        <Setter Property="CornerRadius" Value="4"/>
+        <Setter Property="HorizontalContentAlignment" Value="Stretch"/>
+        <Setter Property="VerticalContentAlignment" Value="Stretch"/>
     </Style>
     <Style Selector="Button.wrap-action">
         <Setter Property="Margin" Value="0,0,8,8"/>

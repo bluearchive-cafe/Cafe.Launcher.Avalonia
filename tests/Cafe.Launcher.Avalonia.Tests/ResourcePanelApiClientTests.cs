@@ -58,7 +58,7 @@ public sealed class ResourcePanelApiClientTests
     }
 
     [Fact]
-    public async Task SaveConfigAsync_SendsExactJsonBody()
+    public async Task SaveConfigAsync_SendsExactQueryString()
     {
         var handler = new JsonHandler("{}");
         using var client = new ResourcePanelApiClient(handler);
@@ -69,14 +69,10 @@ public sealed class ResourcePanelApiClientTests
             ResourcePanelResourceModes.Japanese,
             ResourcePanelResourceModes.Chinese);
 
-        Assert.Equal("POST", handler.LastRequestMethod);
-        Assert.Equal("/config/set", handler.LastRequestPathAndQuery);
-        Assert.NotNull(handler.LastRequestBody);
-        Assert.Contains("\"uid\":\"UID123\"", handler.LastRequestBody);
-        Assert.Contains("\"text\":\"cn\"", handler.LastRequestBody);
-        Assert.Contains("\"voice\":\"jp\"", handler.LastRequestBody);
-        Assert.Contains("\"media\":\"cn\"", handler.LastRequestBody);
-        Assert.Contains("application/json", handler.LastRequestContentType);
+        Assert.Equal("GET", handler.LastRequestMethod);
+        Assert.Equal("/config/set?uid=UID123&text=cn&voice=jp&media=cn", handler.LastRequestPathAndQuery);
+        Assert.Null(handler.LastRequestBody);
+        Assert.Null(handler.LastRequestContentType);
     }
 
     private sealed class JsonHandler : HttpMessageHandler

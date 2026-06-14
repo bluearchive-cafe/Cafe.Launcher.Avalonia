@@ -63,17 +63,13 @@ public sealed class ResourcePanelApiClient : IDisposable
         string media,
         CancellationToken cancellationToken = default)
     {
-        var payload = new
-        {
-            uid,
-            text,
-            voice,
-            media
-        };
-        var json = JsonSerializer.Serialize(payload);
+        var path = "/config/set"
+            + $"?uid={Uri.EscapeDataString(uid)}"
+            + $"&text={Uri.EscapeDataString(text)}"
+            + $"&voice={Uri.EscapeDataString(voice)}"
+            + $"&media={Uri.EscapeDataString(media)}";
         using var lease = await CreateRequestClientAsync(cancellationToken);
-        using var content = new StringContent(json, System.Text.Encoding.UTF8, "application/json");
-        using var response = await lease.Client.PostAsync("/config/set", content, cancellationToken);
+        using var response = await lease.Client.GetAsync(path, cancellationToken);
         response.EnsureSuccessStatusCode();
     }
 
@@ -126,4 +122,3 @@ public sealed class ResourcePanelApiClient : IDisposable
         }
     }
 }
-

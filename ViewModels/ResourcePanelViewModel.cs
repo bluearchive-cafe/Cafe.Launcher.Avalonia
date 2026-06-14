@@ -161,8 +161,9 @@ public partial class ResourcePanelViewModel : ViewModelBase
         }
         catch (Exception exception)
         {
-            ResourcePanelMessage = localizer.F("resourcePanelSaveFailed", exception.Message);
-            toastService.ShowError(exception.Message);
+            var message = localizer.F("resourcePanelSaveFailed", exception.Message);
+            ResourcePanelMessage = message;
+            toastService.ShowError(message);
             await TryLogErrorAsync("Resource panel save failed.", exception);
         }
         finally
