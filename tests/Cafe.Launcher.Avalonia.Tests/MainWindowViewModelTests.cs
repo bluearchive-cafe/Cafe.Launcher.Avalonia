@@ -4,6 +4,8 @@ using Cafe.Launcher.Avalonia.Services.Diagnostics;
 using Cafe.Launcher.Avalonia.ViewModels;
 using Avalonia.Media;
 using System.Reflection;
+using System.Net;
+using System.Text;
 
 namespace Cafe.Launcher.Avalonia.Tests;
 
@@ -321,9 +323,85 @@ public sealed class MainWindowViewModelTests : IDisposable
         Assert.Equal(1, settings.SelectedThemeColorPaletteIndex);
     }
 
+    [Fact]
+    public async Task OpenResourcePanelAsync_WhenCookieUidExists_LoadsStatusAndConfig()
+    {
+        var cookiePath = Path.Combine(tempDir, "Library");
+        await WriteResourcePanelCookieLibraryAsync(cookiePath, "UID123");
+        var settingsService = new LauncherSettingsService(Path.Combine(tempDir, Guid.NewGuid().ToString("N"), "settings.json"));
+        var uidService = new ResourcePanelUidService(new BestHttpCookieLibraryService(), settingsService, cookiePath);
+        var handler = new ResourcePanelHandler();
+        using var apiClient = new ResourcePanelApiClient(handler);
+        var coreService = new CountingCoreService(CreateSnapshot());
+        using var viewModel = CreateViewModel(coreService, settingsService, uidService, apiClient);
+
+        await viewModel.OpenResourcePanelCommand.ExecuteAsync(null);
+
+        Assert.True(viewModel.IsResourcePanelVisible);
+        Assert.False(viewModel.IsResourcePanelUidMissing);
+        Assert.Equal("UID123", viewModel.ResourcePanelUid);
+        Assert.Equal(1, handler.StatusListCount);
+        Assert.Equal(1, handler.ConfigGetCount);
+        var text = viewModel.ResourcePanelItems.First(item => item.Code == ResourcePanelResourceCodes.Text);
+        var voice = viewModel.ResourcePanelItems.First(item => item.Code == ResourcePanelResourceCodes.Voice);
+        Assert.Equal(viewModel.I18n.ResourcePanelReady, text.StatusText);
+        Assert.True(text.IsEnabled);
+        Assert.Equal(viewModel.I18n.ResourcePanelWaiting, voice.StatusText);
+        Assert.False(voice.IsEnabled);
+    }
+
+    [Fact]
+    public async Task SaveResourcePanelAsync_SendsCnForEnabledAndJpForDisabled()
+    {
+        var settingsService = new LauncherSettingsService(Path.Combine(tempDir, Guid.NewGuid().ToString("N"), "settings.json"));
+        await settingsService.SaveAsync(new LauncherSettings { ResourcePanelUid = "UID123" });
+        var uidService = new ResourcePanelUidService(
+            new BestHttpCookieLibraryService(),
+            settingsService,
+            Path.Combine(tempDir, "missing"));
+        var handler = new ResourcePanelHandler();
+        using var apiClient = new ResourcePanelApiClient(handler);
+        var coreService = new CountingCoreService(CreateSnapshot());
+        using var viewModel = CreateViewModel(coreService, settingsService, uidService, apiClient);
+        await viewModel.OpenResourcePanelCommand.ExecuteAsync(null);
+        viewModel.ResourcePanelItems.First(item => item.Code == ResourcePanelResourceCodes.Text).IsEnabled = true;
+        viewModel.ResourcePanelItems.First(item => item.Code == ResourcePanelResourceCodes.Voice).IsEnabled = false;
+        viewModel.ResourcePanelItems.First(item => item.Code == ResourcePanelResourceCodes.Media).IsEnabled = true;
+
+        await viewModel.SaveResourcePanelCommand.ExecuteAsync(null);
+
+        Assert.Equal("/config/set?uid=UID123&text=cn&voice=jp&media=cn", handler.LastRequestPathAndQuery);
+        Assert.Equal(1, handler.ConfigSetCount);
+    }
+
+    [Fact]
+    public async Task OpenResourcePanelAsync_WhenUidMissing_ShowsManualInputAndSkipsApiCalls()
+    {
+        var settingsService = new LauncherSettingsService(Path.Combine(tempDir, Guid.NewGuid().ToString("N"), "settings.json"));
+        var uidService = new ResourcePanelUidService(
+            new BestHttpCookieLibraryService(),
+            settingsService,
+            Path.Combine(tempDir, "missing"));
+        var handler = new ResourcePanelHandler();
+        using var apiClient = new ResourcePanelApiClient(handler);
+        var coreService = new CountingCoreService(CreateSnapshot());
+        using var viewModel = CreateViewModel(coreService, settingsService, uidService, apiClient);
+
+        await viewModel.OpenResourcePanelCommand.ExecuteAsync(null);
+
+        Assert.True(viewModel.IsResourcePanelVisible);
+        Assert.True(viewModel.IsResourcePanelUidMissing);
+        Assert.Equal("", viewModel.ResourcePanelUid);
+        Assert.Equal(0, handler.StatusListCount);
+        Assert.Equal(0, handler.ConfigGetCount);
+        Assert.Equal(0, handler.ConfigSetCount);
+    }
+
     private MainWindowViewModel CreateViewModel(
         ILauncherCoreService coreService,
-        LauncherSettingsService? settingsService = null)
+        LauncherSettingsService? settingsService = null,
+        ResourcePanelUidService? resourcePanelUidService = null,
+        ResourcePanelApiClient? resourcePanelApiClient = null)
     {
         settingsService ??= new LauncherSettingsService(
             Path.Combine(tempDir, Guid.NewGuid().ToString("N"), "settings.json"));
@@ -341,6 +419,11 @@ public sealed class MainWindowViewModelTests : IDisposable
             new DiskSpaceService(),
             diagnostics,
             downloadStateService);
+        resourcePanelUidService ??= new ResourcePanelUidService(
+            new BestHttpCookieLibraryService(),
+            settingsService,
+            Path.Combine(tempDir, "missing-resource-panel-cookie"));
+        resourcePanelApiClient ??= new ResourcePanelApiClient(new ResourcePanelHandler());
 
         return new MainWindowViewModel(
             coreService,
@@ -355,7 +438,9 @@ public sealed class MainWindowViewModelTests : IDisposable
             new ToastService(),
             diagnostics,
             new NoticeStateService(Path.Combine(tempDir, Guid.NewGuid().ToString("N"), "shown_notices.json")),
-            imageCacheService);
+            imageCacheService,
+            resourcePanelUidService,
+            resourcePanelApiClient);
     }
 
     private LauncherStatusSnapshot CreateSnapshot()
@@ -435,6 +520,27 @@ public sealed class MainWindowViewModelTests : IDisposable
         var bytes = Convert.FromBase64String(
             "iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAwMCAO+/p9sAAAAASUVORK5CYII=");
         return File.WriteAllBytesAsync(path, bytes);
+    }
+
+    private static async Task WriteResourcePanelCookieLibraryAsync(string path, string uid)
+    {
+        await using var stream = File.Create(path);
+        using var writer = new BinaryWriter(stream, Encoding.UTF8, leaveOpen: true);
+        writer.Write(1);
+        writer.Write(1);
+        writer.Write(1);
+        writer.Write("uid");
+        writer.Write(uid);
+        writer.Write(DateTime.UtcNow.ToBinary());
+        writer.Write(DateTime.UtcNow.ToBinary());
+        writer.Write(DateTime.FromBinary(0).ToBinary());
+        writer.Write(2147483647L);
+        writer.Write(false);
+        writer.Write("bluearchive.cafe");
+        writer.Write("/");
+        writer.Write(false);
+        writer.Write(false);
+        writer.Flush();
     }
 
     private static void ApplyProgress(MainWindowViewModel viewModel, GameOperationProgress progress)
@@ -523,6 +629,61 @@ public sealed class MainWindowViewModelTests : IDisposable
         {
             LoadCount++;
             return Task.FromResult(snapshot);
+        }
+    }
+
+    private sealed class ResourcePanelHandler : HttpMessageHandler
+    {
+        public int StatusListCount { get; private set; }
+        public int ConfigGetCount { get; private set; }
+        public int ConfigSetCount { get; private set; }
+        public string LastRequestPathAndQuery { get; private set; } = "";
+
+        protected override Task<HttpResponseMessage> SendAsync(HttpRequestMessage request, CancellationToken cancellationToken)
+        {
+            LastRequestPathAndQuery = request.RequestUri?.PathAndQuery ?? "";
+            var path = request.RequestUri?.AbsolutePath ?? "";
+            var json = "{}";
+            if (path == "/status/list")
+            {
+                StatusListCount++;
+                json = """
+                {
+                  "text": {
+                    "official": { "version": "1.0.0" },
+                    "localized": { "version": "1.0.0" }
+                  },
+                  "voice": {
+                    "official": { "version": "2.0.0" },
+                    "localized": { "version": "2.1.0" }
+                  },
+                  "media": {
+                    "official": { "version": "3.0.0" },
+                    "localized": { "version": "3.0.0" }
+                  }
+                }
+                """;
+            }
+            else if (path == "/config/get")
+            {
+                ConfigGetCount++;
+                json = """
+                {
+                  "text": "cn",
+                  "voice": "jp",
+                  "media": "cn"
+                }
+                """;
+            }
+            else if (path == "/config/set")
+            {
+                ConfigSetCount++;
+            }
+
+            return Task.FromResult(new HttpResponseMessage(HttpStatusCode.OK)
+            {
+                Content = new StringContent(json, Encoding.UTF8, "application/json")
+            });
         }
     }
 }

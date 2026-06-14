@@ -28,6 +28,9 @@ public sealed class LauncherApplicationServices : IDisposable
         DownloadStateService = new DownloadStateService();
         ImageCacheService = new ImageCacheService();
         NoticeStateService = new NoticeStateService();
+        BestHttpCookieLibraryService = new BestHttpCookieLibraryService();
+        ResourcePanelUidService = new ResourcePanelUidService(BestHttpCookieLibraryService, SettingsService);
+        ResourcePanelApiClient = new ResourcePanelApiClient();
         GameDownloadService = new GameDownloadService(
             ApiClient,
             LocalGameStateService,
@@ -57,6 +60,9 @@ public sealed class LauncherApplicationServices : IDisposable
     public DownloadStateService DownloadStateService { get; }
     public ImageCacheService ImageCacheService { get; }
     public NoticeStateService NoticeStateService { get; }
+    public BestHttpCookieLibraryService BestHttpCookieLibraryService { get; }
+    public ResourcePanelUidService ResourcePanelUidService { get; }
+    public ResourcePanelApiClient ResourcePanelApiClient { get; }
     public GameDownloadService GameDownloadService { get; }
 
     public MainWindowViewModel CreateMainWindowViewModel()
@@ -74,7 +80,9 @@ public sealed class LauncherApplicationServices : IDisposable
             ToastService,
             Diagnostics,
             NoticeStateService,
-            ImageCacheService);
+            ImageCacheService,
+            ResourcePanelUidService,
+            ResourcePanelApiClient);
     }
 
     public void Dispose()
@@ -87,6 +95,7 @@ public sealed class LauncherApplicationServices : IDisposable
         disposed = true;
         GameDownloadService.Dispose();
         ImageCacheService.Dispose();
+        ResourcePanelApiClient.Dispose();
         ApiClient.Dispose();
     }
 }
