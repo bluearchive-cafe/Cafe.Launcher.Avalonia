@@ -17,7 +17,7 @@ dotnet test                                                    # Run all tests
 dotnet test --filter "FullyQualifiedName~VersionComparerTests" # Run a single test class
 ```
 
-Available test classes: `VersionComparerTests`, `LauncherApiClientTests`, `LauncherConstantsTests`, `LauncherSettingsServiceTests`, `LocalizationServiceTests`, `MainWindowViewModelTests`, `GameDownloadServiceTests`, `PatchUrlGroupServiceTests`.
+Available test classes: `VersionComparerTests`, `LauncherApiClientTests`, `LauncherConstantsTests`, `LauncherSettingsServiceTests`, `LocalizationServiceTests`, `MainWindowViewModelTests`, `GameDownloadServiceTests`, `PatchUrlGroupServiceTests`, `BestHttpCookieLibraryServiceTests`, `ResourcePanelUidServiceTests`, `ExternalLinkServiceTests`, `ResourcePanelApiClientTests`.
 
 CI is GitHub Actions on `windows-latest`, .NET 10.0.x:
 - **build.yml** (push/PR to `main`): restore, Debug build, Release build, self-contained publish, upload artifact.
@@ -27,6 +27,17 @@ CI is GitHub Actions on `windows-latest`, .NET 10.0.x:
 - `DOTNET_CLI_TELEMETRY_OPTOUT=1`
 - `AVALONIA_TELEMETRY_OPTOUT=1`
 
+## Release workflow
+
+```powershell
+.\release.ps1 patch                  # Bump patch version, generate changelog, commit, tag, push
+.\release.ps1 minor -DryRun          # Preview minor bump without modifying files
+.\release.ps1 2.0.0-beta.1          # Explicit version (prerelease if tag contains -)
+.\release.ps1 patch -SkipPush        # Commit + tag locally, don't push to origin
+```
+
+`release.ps1` reads `<VersionPrefix>` from the `.csproj`, bumps it, generates `CHANGELOG_RELEASE.md` from git log since last tag (grouped by conventional commit prefix: feat/fix/refactor/perf), updates `AssemblyVersion`/`FileVersion`, commits, creates an annotated tag, and pushes. The actual build + GitHub Release is handled by `release.yml` CI on tag push.
+
 ## Architecture
 
 **Tech stack**: .NET 10.0, Avalonia 12.0.4, CommunityToolkit.Mvvm 8.4.2 (source generators), Material.Icons.Avalonia, Fluent Theme. Compiled bindings enabled by default.
@@ -35,7 +46,19 @@ CI is GitHub Actions on `windows-latest`, .NET 10.0.x:
 
 ### Single-window desktop app
 
-One `MainWindow` (1300×754, non-resizable with MinWidth 1024/MinHeight 640, borderless with custom chrome). The ViewModel drives panel visibility through boolean flags (`IsInstallPanelVisible`, `IsControlPanelVisible`, `IsProgressPanelVisible`, `IsSettingsVisible`).
+One `MainWindow` (1300×754, non-resizable with MinWidth 1024/MinHeight 640, borderless with custom chrome). The ViewModel is split into composed sub-ViewModels, each owning a distinct concern:
+
+| Sub-ViewModel | Concern |
+|---|---|
+| `ShellViewModel` | Product name, version, runtime info, status text, game path display |
+| `BackgroundViewModel` | Wallpaper (bundled / remote / custom), theme-color extraction |
+| `RemoteContentViewModel` | Announcements, banners, news, social media from API |
+| `DialogsViewModel` | Notice popup, repair/uninstall confirmation dialogs |
+| `GameOperationsViewModel` | Install / update / repair / launch / uninstall commands and progress |
+| `ToastHostViewModel` | Transient toast notification queue |
+| `WindowChromeViewModel` | Title bar, minimize/close buttons, window drag state |
+| `SettingsViewModel` | Settings panel: language, theme, download source, launch check, speed limit, close behavior, proxy, background, game path |
+| `ResourcePanelViewModel` | Resource panel (UID-based game resource display) |
 
 **View files** (XAML split by concern, all under `Views/`):
 - `MainWindow.axaml` — window shell, title bar, remote content panel, bottom install/progress/control panels
@@ -49,7 +72,11 @@ One `MainWindow` (1300×754, non-resizable with MinWidth 1024/MinHeight 640, bor
 2. **App.axaml.cs** — On framework init: builds DI container via `ServiceConfiguration.AddLauncherServices()`, resolves `MainWindowViewModel`, creates `MainWindow`, wires `ClickCodeService`, `SystemTrayService`. Starts a background thread listening for `EventWaitHandle` signals to restore window from tray.
 3. **App.axaml** — Light/Dark `ThemeDictionaries` with custom `Launcher*` brushes, `ViewLocator` data template, FluentTheme + MaterialIconStyles.
 
-**Composition root**: `ServiceConfiguration.AddLauncherServices()` is the DI configuration — it registers all services with `Microsoft.Extensions.DependencyInjection`. The container is built in `App.axaml.cs` via `ServiceCollection.BuildServiceProvider()`. Services are registered as singletons by default; ViewModels are transient. Thread-safe disposal order for IDisposable services is defined by reverse registration order.
+**Composition root**: `ServiceConfiguration.AddLauncherServices()` is the DI configuration — it registers all services with `Microsoft.Extensions.DependencyInjection`. The container is built in `App.axaml.cs` via `ServiceCollection.BuildServiceProvider()`. Services are registered as singletons by default; ViewModels are transient. Thread-safe disposal order for IDisposable services is defined by reverse registration order (see disposal order section below).
+
+**ViewModel coordination**: Sub-ViewModels communicate with `MainWindowViewModel` through two mechanisms:
+- **Delegates** — `MainWindowViewModel.ConfigureViewModel()` sets `Func<>` / `Func<Task>` delegates on children (e.g. `SettingsViewModel.PickGameFolderAsync`, `SettingsViewModel.GetSnapshot`). These let children call back into parent capabilities (folder pickers, state queries).
+- **Events** — Children expose `event Func<Task>?` / `event Action?` that the parent subscribes to (e.g. `SettingsViewModel.SettingsSaved`, `SettingsViewModel.CloseRequested`). This decouples child-triggered actions from parent handling.
 
 **View code-behind** (`MainWindow.axaml.cs`): handles native folder-picker dialog (via `StorageProvider`), window drag-to-move (borderless chrome), and close-behavior routing (minimize-to-tray vs exit). The ViewModel receives `PickGameFolderAsync`, `MinimizeWindow`, and `CloseWindow` delegates via `ConfigureViewModel()`.
 
@@ -66,7 +93,7 @@ One `MainWindow` (1300×754, non-resizable with MinWidth 1024/MinHeight 640, bor
 
 | Service | Role |
 |---|---|
-| `LauncherApiClient` | HTTP to `api-launcher-jp.yo-star.com`, MD5-signed `Authorization` header, envelope unwrapping |
+| `LauncherApiClient` | HTTP to `api-launcher-jp.yo-star.com`, MD5-signed `Authorization` header, envelope unwrapping. Implements `IDisposable`. |
 | `LauncherCoreService` | Orchestrates API + local state into `LauncherStatusSnapshot`. Exposed as `ILauncherCoreService` in the DI container. |
 | `LauncherSettingsService` | Reads/writes `settings.json` at `%LOCALAPPDATA%\Cafe Launcher\`, normalizes enum values, handles legacy camelCase fields |
 | `LocalGameStateService` | Reads local `game-launcher-config.json` + `manifest.json`, normalizes paths to `YostarGames\BlueArchive_JP` |
@@ -79,7 +106,28 @@ One `MainWindow` (1300×754, non-resizable with MinWidth 1024/MinHeight 640, bor
 | `LocalDiagnostics` | Appends to `diagnostics.log` in the settings folder |
 | `PatchUrlGroupService` | URL rewriting between Official and Cafe CDN hosts for manifest + CDN config URLs |
 | `NoticeStateService` | Tracks which notice IDs have been shown (persisted to `shown_notices.json`) |
-| `Crc64Service`, `OfficialHashService`, `ProxySettingsService`, `DiskSpaceService`, `ProcessService`, `VersionComparer`, `ClickCodeService`, `DownloadStateService`, `ImageCacheService`, `ExternalLinkService`, `ManifestValidationService`, `LauncherUpdateService` | Supporting services |
+| `HttpClientFactory` | Centralized factory for pre-configured `HttpClient` instances with shared `SocketsHttpHandler` pooling (15-min connection lifetime). Proxy-aware lease creation via `CreateLeaseAsync()`. Registered as singleton; implements `IDisposable`. |
+| `ProxySettingsService` | Creates proxy-aware `SocketsHttpHandler` instances for `HttpClientFactory` |
+| `ResourcePanelApiClient` | HTTP client for resource panel data. Implements `IDisposable`. |
+| `ResourcePanelUidService` | Manages resource panel UID state |
+| `BestHttpCookieLibraryService` | Cookie handling for HTTP requests |
+| `ThemeColorExtractionService` | Extracts dominant colors from wallpaper images for UI theming |
+| `ImageCacheService` | Caches downloaded images (banners, avatars). Implements `IDisposable`. |
+| `ManifestValidationService` | Validates local game files against manifest |
+| `LauncherUpdateService` | Checks for and downloads launcher updates |
+| `ExternalLinkService` | Opens external URLs in the default browser |
+| `DownloadStateService` | Serializes/resumes download state to `download_state.json` |
+| `Crc64Service`, `OfficialHashService`, `DiskSpaceService`, `ProcessService`, `VersionComparer`, `ClickCodeService` | Supporting services |
+
+**HttpClient lifecycle**: `HttpClientFactory` owns a single shared `SocketsHttpHandler` (pooled, 15-min connection lifetime). Callers get `HttpClient` instances that share this handler and must NOT dispose them. For proxy-aware requests, `CreateLeaseAsync()` returns an `HttpClientLease` that conditionally owns its handler — callers dispose the lease, not the client. `HttpClientLease.Dispose()` only disposes the handler when it was created per-request (proxy mode); for direct connections, disposal is a no-op since the handler is shared.
+
+**IDisposable service disposal order** (reverse registration = forward dispose):
+1. `LauncherApiClient` — disposed first
+2. `ResourcePanelApiClient`
+3. `ImageCacheService`
+4. `GameDownloadService` — disposed last
+
+The DI container calls `Dispose()` on these in reverse registration order when the service provider is disposed.
 
 ### Key models (`Models/`)
 
@@ -89,6 +137,9 @@ One `MainWindow` (1300×754, non-resizable with MinWidth 1024/MinHeight 640, bor
 - `PatchUrlGroupDefinition.cs` — Code + host-from/to tuples for CDN URL rewriting
 - `DownloadTaskState.cs` — Serializable download resume state
 - `BannerDot.cs` — Observable carousel dot indicator
+- `ThemeColorPaletteItem.cs` — Extracted color data from wallpaper images
+- `BestHttpCookieModels.cs` — Cookie-related models for HTTP
+- `ResourcePanelModels.cs` — Resource panel data models
 
 ### Constants
 
@@ -105,7 +156,7 @@ Users can switch between `Official` (yo-star.com) and `Cafe` (bluearchive.cafe) 
 ### Other directories
 
 - `Constants/` — `LauncherConstants` (see above)
-- `Helpers/` — `FileSizeFormatter`, `GamePathValidator`
+- `Helpers/` — `FileSizeFormatter`, `GamePathValidator`, `HttpClientLease`
 - `Services/Auth/` — `AuthorizationHeaderFactory` (MD5-signed API auth header)
 - `Services/Diagnostics/` — `LocalDiagnostics` (appends to `diagnostics.log`)
 
@@ -127,6 +178,8 @@ All UI strings go through `LocalizationService.T(key)` and `LocalizationService.
 
 Light/Dark themes defined as `ThemeDictionaries` in `App.axaml` with custom `Launcher*` brush keys. `ThemeModes.System` → `ThemeVariant.Default` (follows OS), `Light`/`Dark` → explicit. Applied via `Application.Current.RequestedThemeVariant`.
 
+Wallpaper color extraction (`ThemeColorExtractionService`) analyzes the current background image and produces a palette that tints UI elements to match.
+
 ### Single-instance pattern
 
 `Program.cs` uses a named global `Mutex`. Second instances signal the first via `EventWaitHandle`, which triggers `Dispatcher.UIThread.InvokeAsync` to restore the window from tray/minimized state. Windows-only (`EventWaitHandle` is not supported on Linux — see commit `19db5a3`).
@@ -144,3 +197,4 @@ Light/Dark themes defined as `ThemeDictionaries` in `App.axaml` with custom `Lau
 - **Spacing**: UI spacing follows a 4px grid (0, 4, 8, 12, 16, 20, 24, …). Left panel margin and bottom panel horizontal padding are both 40px for visual symmetry.
 - **Version comparison**: `VersionComparer.Compare()` returns -1/0/1 for old/equal/new.
 - **XAML extraction**: Large XAML blocks (styles, overlays) are extracted into separate `.axaml` files under `Views/` and referenced via `<StyleInclude>` or `Classes` attributes. The main `MainWindow.axaml` keeps only the window shell and content grid.
+- **Conventional commits**: Release changelog generation groups commits by `feat:`/`fix:`/`refactor:`/`perf:` prefixes. Use these prefixes for commit messages to get clean changelogs.
