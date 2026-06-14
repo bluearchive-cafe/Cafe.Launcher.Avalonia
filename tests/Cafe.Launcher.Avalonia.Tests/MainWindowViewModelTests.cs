@@ -13,17 +13,19 @@ namespace Cafe.Launcher.Avalonia.Tests;
 public sealed class MainWindowViewModelTests : IDisposable
 {
     private readonly string tempDir = Path.Combine(Path.GetTempPath(), Guid.NewGuid().ToString("N"));
+    private readonly ProxySettingsService proxySettings = new();
+    private readonly HttpClientFactory httpClientFactory;
     private readonly LauncherApiClient apiClient = new(
         new AuthorizationHeaderFactory(),
         new PatchUrlGroupService(),
         new ProxySettingsService());
-    private readonly ImageCacheService imageCacheService = new(
-        new ProxySettingsService(),
-        new Crc64Service());
+    private readonly ImageCacheService imageCacheService;
 
     public MainWindowViewModelTests()
     {
         Directory.CreateDirectory(tempDir);
+        httpClientFactory = new HttpClientFactory(proxySettings);
+        imageCacheService = new ImageCacheService(httpClientFactory, new Crc64Service());
     }
 
     [Fact]
@@ -376,7 +378,10 @@ public sealed class MainWindowViewModelTests : IDisposable
 
         await viewModel.ResourcePanel.SaveResourcePanelCommand.ExecuteAsync(null);
 
-        Assert.Equal("/config/set?uid=UID123&text=cn&voice=jp&media=cn", handler.LastRequestPathAndQuery);
+        Assert.Equal("POST", handler.LastRequestMethod);
+        Assert.Equal("/config/set", handler.LastRequestPathAndQuery);
+        Assert.NotNull(handler.LastRequestBody);
+        Assert.Contains("\"uid\":\"UID123\"", handler.LastRequestBody);
         Assert.Equal(1, handler.ConfigSetCount);
     }
 
@@ -625,6 +630,7 @@ public sealed class MainWindowViewModelTests : IDisposable
     {
         imageCacheService.Dispose();
         apiClient.Dispose();
+        httpClientFactory.Dispose();
         if (Directory.Exists(tempDir))
         {
             Directory.Delete(tempDir, recursive: true);
@@ -654,11 +660,15 @@ public sealed class MainWindowViewModelTests : IDisposable
         public int StatusListCount { get; private set; }
         public int ConfigGetCount { get; private set; }
         public int ConfigSetCount { get; private set; }
+        public string LastRequestMethod { get; private set; } = "";
         public string LastRequestPathAndQuery { get; private set; } = "";
+        public string? LastRequestBody { get; private set; }
 
-        protected override Task<HttpResponseMessage> SendAsync(HttpRequestMessage request, CancellationToken cancellationToken)
+        protected override async Task<HttpResponseMessage> SendAsync(HttpRequestMessage request, CancellationToken cancellationToken)
         {
+            LastRequestMethod = request.Method.Method;
             LastRequestPathAndQuery = request.RequestUri?.PathAndQuery ?? "";
+            LastRequestBody = request.Content is not null ? await request.Content.ReadAsStringAsync(cancellationToken) : null;
             var path = request.RequestUri?.AbsolutePath ?? "";
             var json = "{}";
             if (path == "/status/list")
@@ -697,10 +707,10 @@ public sealed class MainWindowViewModelTests : IDisposable
                 ConfigSetCount++;
             }
 
-            return Task.FromResult(new HttpResponseMessage(HttpStatusCode.OK)
+            return new HttpResponseMessage(HttpStatusCode.OK)
             {
                 Content = new StringContent(json, Encoding.UTF8, "application/json")
-            });
+            };
         }
     }
 }

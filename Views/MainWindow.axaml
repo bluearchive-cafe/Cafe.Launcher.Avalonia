@@ -17,7 +17,7 @@
         Height="754"
         MinWidth="1024"
         MinHeight="640"
-        CanResize="True"
+        CanResize="False"
         WindowDecorations="BorderOnly"
         ExtendClientAreaToDecorationsHint="True"
         ExtendClientAreaTitleBarHeightHint="0"

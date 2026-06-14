@@ -203,6 +203,42 @@
                 </Grid>
             </Border>
         </Grid>
+        <!-- I9: Download running close confirmation dialog -->
+        <Grid IsVisible="{Binding IsDownloadRunningCloseConfirmVisible}" Background="{DynamicResource LauncherOverlayBrush}">
+            <Border Classes="dialog confirm-panel">
+                <Grid RowDefinitions="Auto,Auto,Auto" Classes="confirm-layout">
+                    <Grid ColumnDefinitions="Auto,*,Auto" ColumnSpacing="12">
+                        <Border Classes="dialog-icon" VerticalAlignment="Center">
+                            <materialIcons:MaterialIcon Kind="Stop" Width="22" Height="22" Foreground="{DynamicResource LauncherAccentBrush}" HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                        </Border>
+                        <StackPanel Grid.Column="1" Spacing="2" VerticalAlignment="Center">
+                            <TextBlock Text="{Binding I18n.ConfirmStop}" Classes="dialog-title"/>
+                            <TextBlock Text="{Binding I18n.StopDownloadConfirm}" Classes="caption"/>
+                        </StackPanel>
+                        <Button Grid.Column="2" Classes="dialog-close" Command="{Binding CancelCloseWhileDownloadingCommand}" ToolTip.Tip="{Binding I18n.Close}">
+                            <materialIcons:MaterialIcon Kind="Close" Width="18" Height="18"/>
+                        </Button>
+                    </Grid>
+                    <Border Grid.Row="1" Classes="confirm-message" Background="{DynamicResource LauncherWarningBackgroundBrush}">
+                        <TextBlock Text="{Binding DownloadRunningCloseConfirmText}" Classes="confirm-message-text"/>
+                    </Border>
+                    <StackPanel Grid.Row="2" Classes="confirm-actions">
+                        <Button Classes="flat-action dialog-action" Command="{Binding CancelCloseWhileDownloadingCommand}">
+                            <StackPanel Classes="button-content">
+                                <materialIcons:MaterialIcon Kind="CloseCircle" Width="17" Height="17"/>
+                                <TextBlock Text="{Binding I18n.Cancel}" VerticalAlignment="Center"/>
+                            </StackPanel>
+                        </Button>
+                        <Button Classes="danger-action dialog-action" Command="{Binding ConfirmCloseWhileDownloadingCommand}">
+                            <StackPanel Classes="button-content">
+                                <materialIcons:MaterialIcon Kind="Stop" Width="18" Height="18" Foreground="{DynamicResource LauncherOnAccentBrush}"/>
+                                <TextBlock Text="{Binding I18n.Stop}" VerticalAlignment="Center" Foreground="{DynamicResource LauncherOnAccentBrush}"/>
+                            </StackPanel>
+                        </Button>
+                    </StackPanel>
+                </Grid>
+            </Border>
+        </Grid>
         <Grid IsVisible="{Binding IsUninstallConfirmVisible}" Background="{DynamicResource LauncherOverlayBrush}">
             <Border Classes="dialog confirm-panel">
                 <Grid RowDefinitions="Auto,Auto,Auto" Classes="confirm-layout">

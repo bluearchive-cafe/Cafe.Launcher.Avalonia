@@ -124,6 +124,13 @@ public partial class MainWindow : Window
 
         // Close dialogs in priority order — most-nested first.
         // Confirmation dialogs
+        if (vm.IsDownloadRunningCloseConfirmVisible)
+        {
+            vm.CancelCloseWhileDownloadingCommand.Execute(null);
+            e.Handled = true;
+            return;
+        }
+
         if (vm.IsStopConfirmVisible)
         {
             vm.CancelStopCommand.Execute(null);

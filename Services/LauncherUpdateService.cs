@@ -14,19 +14,16 @@ namespace Cafe.Launcher.Avalonia.Services;
 /// </summary>
 public sealed class LauncherUpdateService : IDisposable
 {
-    private readonly SocketsHttpHandler handler;
     private readonly HttpClient httpClient;
-    private readonly ProxySettingsService proxySettingsService = new();
+    private readonly HttpClientFactory httpClientFactory;
     private string proxyMode = ProxyModes.Direct;
+    private bool ownsHttpClient;
 
-    public LauncherUpdateService()
+    public LauncherUpdateService(HttpClientFactory httpClientFactory)
     {
-        handler = new SocketsHttpHandler
-        {
-            UseProxy = false,
-            PooledConnectionLifetime = TimeSpan.FromMinutes(15)
-        };
-        httpClient = new HttpClient(handler) { Timeout = TimeSpan.FromSeconds(15) };
+        this.httpClientFactory = httpClientFactory;
+        httpClient = httpClientFactory.CreateClient(TimeSpan.FromSeconds(15));
+        ownsHttpClient = false;
     }
 
     public void SetProxyMode(string value)
@@ -81,23 +78,18 @@ public sealed class LauncherUpdateService : IDisposable
 
     public void Dispose()
     {
-        httpClient.Dispose();
-        handler.Dispose();
+        if (ownsHttpClient)
+        {
+            httpClient.Dispose();
+        }
     }
 
     private async Task<HttpClientLease> CreateRequestClientAsync(CancellationToken ct)
     {
-        if (proxyMode != ProxyModes.System)
-        {
-            return new HttpClientLease(httpClient);
-        }
-
-        var requestHandler = await proxySettingsService.CreateHttpHandlerAsync(proxyMode, ct);
-        var client = new HttpClient(requestHandler)
-        {
-            Timeout = httpClient.Timeout
-        };
-        return new HttpClientLease(client, requestHandler);
+        return await httpClientFactory.CreateLeaseAsync(
+            proxyMode,
+            timeout: httpClient.Timeout,
+            cancellationToken: ct);
     }
 }
 

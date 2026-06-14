@@ -11,28 +11,22 @@ namespace Cafe.Launcher.Avalonia.Services;
 public sealed class ResourcePanelApiClient : IDisposable
 {
     private const string ApiBaseUrl = "https://api.bluearchive.cafe";
-    private readonly SocketsHttpHandler? ownedHandler;
     private readonly HttpClient httpClient;
-    private readonly ProxySettingsService? proxySettingsService;
+    private readonly HttpClientFactory httpClientFactory;
+    private readonly bool ownsHttpClient;
     private string proxyMode = ProxyModes.Direct;
     private readonly JsonSerializerOptions jsonOptions = new()
     {
         PropertyNameCaseInsensitive = false
     };
 
-    public ResourcePanelApiClient()
+    public ResourcePanelApiClient(HttpClientFactory httpClientFactory)
     {
-        ownedHandler = new SocketsHttpHandler
-        {
-            UseProxy = false,
-            PooledConnectionLifetime = TimeSpan.FromMinutes(15)
-        };
-        httpClient = new HttpClient(ownedHandler)
-        {
-            BaseAddress = new Uri(ApiBaseUrl),
-            Timeout = TimeSpan.FromSeconds(30)
-        };
-        proxySettingsService = new ProxySettingsService();
+        this.httpClientFactory = httpClientFactory;
+        httpClient = httpClientFactory.CreateClient(
+            ApiBaseUrl,
+            TimeSpan.FromSeconds(30));
+        ownsHttpClient = false;
     }
 
     internal ResourcePanelApiClient(HttpMessageHandler handler)
@@ -42,6 +36,8 @@ public sealed class ResourcePanelApiClient : IDisposable
             BaseAddress = new Uri(ApiBaseUrl),
             Timeout = TimeSpan.FromSeconds(30)
         };
+        httpClientFactory = null!; // Not used in test path
+        ownsHttpClient = true;
     }
 
     public void SetProxyMode(string value)
@@ -67,13 +63,17 @@ public sealed class ResourcePanelApiClient : IDisposable
         string media,
         CancellationToken cancellationToken = default)
     {
-        var path = "/config/set"
-            + $"?uid={Uri.EscapeDataString(uid)}"
-            + $"&text={Uri.EscapeDataString(text)}"
-            + $"&voice={Uri.EscapeDataString(voice)}"
-            + $"&media={Uri.EscapeDataString(media)}";
+        var payload = new
+        {
+            uid,
+            text,
+            voice,
+            media
+        };
+        var json = JsonSerializer.Serialize(payload);
         using var lease = await CreateRequestClientAsync(cancellationToken);
-        using var response = await lease.Client.GetAsync(path, cancellationToken);
+        using var content = new StringContent(json, System.Text.Encoding.UTF8, "application/json");
+        using var response = await lease.Client.PostAsync("/config/set", content, cancellationToken);
         response.EnsureSuccessStatusCode();
     }
 
@@ -89,12 +89,27 @@ public sealed class ResourcePanelApiClient : IDisposable
 
     private async Task<HttpClientLease> CreateRequestClientAsync(CancellationToken cancellationToken)
     {
-        if (proxySettingsService is null || proxyMode != ProxyModes.System)
+        if (httpClientFactory is not null)
+        {
+            return await httpClientFactory.CreateLeaseAsync(
+                proxyMode,
+                httpClient.BaseAddress,
+                httpClient.Timeout,
+                cancellationToken);
+        }
+
+        // Fallback for test constructor
+        if (proxyMode != ProxyModes.System)
         {
             return new HttpClientLease(httpClient);
         }
 
-        var handler = await proxySettingsService.CreateHttpHandlerAsync(proxyMode, cancellationToken);
+        var handler = new SocketsHttpHandler
+        {
+            UseProxy = true,
+            Proxy = System.Net.WebRequest.GetSystemWebProxy(),
+            PooledConnectionLifetime = TimeSpan.FromMinutes(15)
+        };
         var client = new HttpClient(handler)
         {
             BaseAddress = httpClient.BaseAddress,
@@ -105,8 +120,10 @@ public sealed class ResourcePanelApiClient : IDisposable
 
     public void Dispose()
     {
-        httpClient.Dispose();
-        ownedHandler?.Dispose();
+        if (ownsHttpClient)
+        {
+            httpClient.Dispose();
+        }
     }
 }
 

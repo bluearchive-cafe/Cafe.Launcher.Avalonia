@@ -12,11 +12,12 @@ namespace Cafe.Launcher.Avalonia.Services;
 
 public sealed class LauncherApiClient : IDisposable
 {
-    private readonly SocketsHttpHandler? ownedHandler;
     private readonly HttpClient httpClient;
+    private readonly HttpClientFactory? httpClientFactory;
     private readonly AuthorizationHeaderFactory authorizationHeaderFactory;
     private readonly PatchUrlGroupService patchUrlGroupService;
     private readonly ProxySettingsService? proxySettingsService;
+    private readonly bool ownsHttpClient;
     private string proxyMode = ProxyModes.Direct;
     private readonly JsonSerializerOptions jsonOptions = new()
     {
@@ -25,23 +26,19 @@ public sealed class LauncherApiClient : IDisposable
 
     /// <summary>Production constructor — accepts dependencies from DI.</summary>
     public LauncherApiClient(
+        HttpClientFactory httpClientFactory,
         AuthorizationHeaderFactory authorizationHeaderFactory,
         PatchUrlGroupService patchUrlGroupService,
         ProxySettingsService proxySettingsService)
     {
-        ownedHandler = new SocketsHttpHandler
-        {
-            UseProxy = false,
-            PooledConnectionLifetime = TimeSpan.FromMinutes(15)
-        };
-        httpClient = new HttpClient(ownedHandler)
-        {
-            BaseAddress = new Uri(LauncherConstants.ApiBaseUrl),
-            Timeout = TimeSpan.FromSeconds(30)
-        };
+        this.httpClientFactory = httpClientFactory;
+        httpClient = httpClientFactory.CreateClient(
+            LauncherConstants.ApiBaseUrl,
+            TimeSpan.FromSeconds(30));
         this.authorizationHeaderFactory = authorizationHeaderFactory;
         this.patchUrlGroupService = patchUrlGroupService;
         this.proxySettingsService = proxySettingsService;
+        ownsHttpClient = false; // Factory owns the pool
     }
 
     /// <summary>
@@ -60,6 +57,31 @@ public sealed class LauncherApiClient : IDisposable
         };
         this.authorizationHeaderFactory = authorizationHeaderFactory;
         this.patchUrlGroupService = patchUrlGroupService;
+        ownsHttpClient = true; // Test path — own the client
+    }
+
+    /// <summary>
+    /// Test compatibility constructor — accepts direct dependencies without HttpClientFactory.
+    /// Creates its own HttpClient. Disposed on Dispose().
+    /// </summary>
+    internal LauncherApiClient(
+        AuthorizationHeaderFactory authorizationHeaderFactory,
+        PatchUrlGroupService patchUrlGroupService,
+        ProxySettingsService proxySettingsService)
+    {
+        this.authorizationHeaderFactory = authorizationHeaderFactory;
+        this.patchUrlGroupService = patchUrlGroupService;
+        this.proxySettingsService = proxySettingsService;
+        httpClient = new HttpClient(new SocketsHttpHandler
+        {
+            UseProxy = false,
+            PooledConnectionLifetime = TimeSpan.FromMinutes(15)
+        })
+        {
+            BaseAddress = new Uri(LauncherConstants.ApiBaseUrl),
+            Timeout = TimeSpan.FromSeconds(30)
+        };
+        ownsHttpClient = true;
     }
 
     public void SetProxyMode(string value)
@@ -168,6 +190,16 @@ public sealed class LauncherApiClient : IDisposable
 
     private async Task<HttpClientLease> CreateRequestClientAsync(CancellationToken cancellationToken)
     {
+        if (httpClientFactory is not null)
+        {
+            return await httpClientFactory.CreateLeaseAsync(
+                proxyMode,
+                httpClient.BaseAddress,
+                httpClient.Timeout,
+                cancellationToken);
+        }
+
+        // Fallback for test constructor (no HttpClientFactory)
         if (proxySettingsService is null || proxyMode != ProxyModes.System)
         {
             return new HttpClientLease(httpClient);
@@ -184,8 +216,11 @@ public sealed class LauncherApiClient : IDisposable
 
     public void Dispose()
     {
-        httpClient.Dispose();
-        ownedHandler?.Dispose();
+        if (ownsHttpClient)
+        {
+            httpClient.Dispose();
+        }
+        // Production path: httpClient is owned by HttpClientFactory — do not dispose
     }
 }
 

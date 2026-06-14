@@ -136,6 +136,13 @@ public partial class MainWindowViewModel : ViewModelBase, IDisposable
     [ObservableProperty]
     private string stopConfirmText = "";
 
+    // I9: Download running close confirmation dialog
+    [ObservableProperty]
+    private bool isDownloadRunningCloseConfirmVisible;
+
+    [ObservableProperty]
+    private string downloadRunningCloseConfirmText = "";
+
     [ObservableProperty]
     private bool isInstallPanelVisible = true;
 
@@ -372,6 +379,8 @@ public partial class MainWindowViewModel : ViewModelBase, IDisposable
             IsBusy = false;
         }
 
+        toastService.ShowSuccess(localizer.T("statusNetworkLoaded"));
+
         if (skipNextPersistedResume)
         {
             skipNextPersistedResume = false;
@@ -533,7 +542,9 @@ public partial class MainWindowViewModel : ViewModelBase, IDisposable
         catch (Exception ex)
         {
             // Bundled background should always load — if this fails the install is corrupted
-            Debug.WriteLine($"Failed to load bundled background image: {ex.Message}");
+            LocalDiagnostics.LogSync(
+                "LoadBundledBackground",
+                $"Failed to load bundled background image: {ex.Message}");
             return null;
         }
     }
@@ -1065,8 +1076,20 @@ public partial class MainWindowViewModel : ViewModelBase, IDisposable
     }
 
     [RelayCommand]
+    private void Minimize()
+    {
+        StopCarouselTimer();
+        MinimizeWindow?.Invoke();
+    }
+
+    [RelayCommand]
     private void ExecuteRestoreWindow()
     {
+        if (HasBannerItems)
+        {
+            StartCarouselTimer();
+        }
+
         RestoreWindow?.Invoke();
     }
 
@@ -1089,15 +1112,30 @@ public partial class MainWindowViewModel : ViewModelBase, IDisposable
     }
 
     [RelayCommand]
-    private void Minimize()
+    private void Close()
     {
-        MinimizeWindow?.Invoke();
+        if (gameDownloadService.IsRunning)
+        {
+            DownloadRunningCloseConfirmText = localizer.T("stopDownloadConfirm");
+            IsDownloadRunningCloseConfirmVisible = true;
+            return;
+        }
+
+        CloseWindow?.Invoke();
     }
 
     [RelayCommand]
-    private void Close()
+    private void ConfirmCloseWhileDownloading()
     {
+        IsDownloadRunningCloseConfirmVisible = false;
+        gameDownloadService.Stop();
         CloseWindow?.Invoke();
+    }
+
+    [RelayCommand]
+    private void CancelCloseWhileDownloading()
+    {
+        IsDownloadRunningCloseConfirmVisible = false;
     }
 
     private bool PrepareOperation()

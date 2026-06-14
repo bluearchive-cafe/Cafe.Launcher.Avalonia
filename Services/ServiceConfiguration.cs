@@ -21,6 +21,9 @@ public static class ServiceConfiguration
         services.AddSingleton<AuthorizationHeaderFactory>();
         services.AddSingleton<PatchUrlGroupService>();
 
+        // ── HttpClient factory (shared pool, proxy-aware) ────────────────
+        services.AddSingleton<HttpClientFactory>();
+
         // ── Services with dependencies ────────────────────────────────────
         services.AddSingleton<ProxySettingsService>();
         services.AddSingleton<ManifestValidationService>();
@@ -31,6 +34,7 @@ public static class ServiceConfiguration
         services.AddSingleton<LauncherSettingsService>();
         services.AddSingleton<GameLaunchService>();
         services.AddSingleton<GameUninstallService>();
+        services.AddSingleton<LauncherUpdateService>();
         services.AddSingleton<ILauncherCoreService, LauncherCoreService>();
 
         // ── IDisposable services (register in reverse-dispose order) ─────

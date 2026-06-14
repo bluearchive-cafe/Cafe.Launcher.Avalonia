@@ -1,4 +1,5 @@
 using System;
+using System.Diagnostics;
 using System.IO;
 using System.Linq;
 using System.Text.Json;
@@ -6,12 +7,14 @@ using System.Threading;
 using System.Threading.Tasks;
 using Cafe.Launcher.Avalonia.Constants;
 using Cafe.Launcher.Avalonia.Models;
+using Cafe.Launcher.Avalonia.Services.Diagnostics;
 
 namespace Cafe.Launcher.Avalonia.Services;
 
 public sealed class LauncherSettingsService
 {
     private readonly string? settingsPath;
+    private readonly LocalDiagnostics? diagnostics;
     private readonly JsonSerializerOptions jsonOptions = new()
     {
         WriteIndented = true
@@ -19,6 +22,11 @@ public sealed class LauncherSettingsService
 
     public LauncherSettingsService()
     {
+    }
+
+    public LauncherSettingsService(LocalDiagnostics diagnostics)
+    {
+        this.diagnostics = diagnostics;
     }
 
     public LauncherSettingsService(string settingsPath)
@@ -58,6 +66,13 @@ public sealed class LauncherSettingsService
         }
         catch (Exception exception) when (exception is JsonException or IOException or UnauthorizedAccessException)
         {
+            var message = $"LauncherSettingsService.ReadAsync: failed to read settings from {SettingsPath}: {exception.Message}";
+            Debug.WriteLine(message);
+            if (diagnostics is not null)
+            {
+                await diagnostics.ErrorAsync("Settings read failed", exception, CancellationToken.None);
+            }
+
             return new LauncherSettings();
         }
     }

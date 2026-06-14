@@ -1,3 +1,4 @@
+using System.Collections.Generic;
 using Cafe.Launcher.Avalonia.Models;
 using Cafe.Launcher.Avalonia.Services;
 
@@ -5,6 +6,34 @@ namespace Cafe.Launcher.Avalonia.Tests;
 
 public sealed class LocalizationServiceTests
 {
+    static LocalizationServiceTests()
+    {
+        LocalizationService.InitializeForTesting(new Dictionary<string, Dictionary<string, string>>
+        {
+            [LauncherLanguages.English] = new()
+            {
+                ["trayOpenLauncher"] = "Open the launcher window",
+                ["trayExitLauncher"] = "Close the launcher process",
+                ["githubRepository"] = "GitHub Repository",
+                ["checkUpdates"] = "Check for Updates",
+            },
+            [LauncherLanguages.SimplifiedChinese] = new()
+            {
+                ["trayOpenLauncher"] = "打开启动器窗口",
+                ["trayExitLauncher"] = "关闭启动器进程",
+                ["githubRepository"] = "GitHub 仓库",
+                ["checkUpdates"] = "检查更新",
+            },
+            [LauncherLanguages.Japanese] = new()
+            {
+                ["trayOpenLauncher"] = "ランチャーウィンドウを開く",
+                ["trayExitLauncher"] = "ランチャープロセスを終了",
+                ["githubRepository"] = "GitHub リポジトリ",
+                ["checkUpdates"] = "更新を確認",
+            },
+        });
+    }
+
     [Fact]
     public void SetLanguage_RaisesLanguageChanged()
     {

@@ -991,11 +991,8 @@ public sealed class GameDownloadService : IDisposable
         var pathItems = source
             .Split('/', StringSplitOptions.RemoveEmptyEntries)
             .Concat(filePath.Split('/', StringSplitOptions.RemoveEmptyEntries))
+            .Select(Uri.EscapeDataString)
             .ToList();
-        if (pathItems.Count > 0)
-        {
-            pathItems[^1] = Uri.EscapeDataString(pathItems[^1]);
-        }
 
         var builder = new UriBuilder(uri)
         {
