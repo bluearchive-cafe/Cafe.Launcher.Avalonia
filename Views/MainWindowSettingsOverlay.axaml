@@ -228,6 +228,108 @@
 
                                 <Grid Classes="settings-row" ColumnDefinitions="Auto,*,Auto" ColumnSpacing="12">
                                     <Border Classes="settings-icon">
+                                        <materialIcons:MaterialIcon Kind="PaletteOutline" Width="18" Height="18" Foreground="{DynamicResource LauncherAccentBrush}" HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                                    </Border>
+                                    <StackPanel Grid.Column="1" Spacing="2" VerticalAlignment="Center">
+                                        <TextBlock Text="{Binding I18n.ThemeColor}" Classes="section-title"/>
+                                        <TextBlock Text="{Binding I18n.ThemeColorDescription}" Classes="caption" TextWrapping="Wrap"/>
+                                    </StackPanel>
+                                    <StackPanel Grid.Column="2" Orientation="Horizontal" Spacing="10" VerticalAlignment="Center">
+                                        <Border Width="28" Height="28" CornerRadius="4"
+                                                BorderBrush="{DynamicResource LauncherCardBorderBrush}"
+                                                BorderThickness="1"
+                                                Background="{Binding ThemeColorPreviewBrush}"/>
+                                        <ComboBox Width="190"
+                                                  ItemsSource="{Binding ThemeColorOptions}"
+                                                  SelectedValue="{Binding SelectedThemeColorMode, Mode=TwoWay}"
+                                                  SelectedValueBinding="{Binding Code}">
+                                            <ComboBox.ItemTemplate>
+                                                <DataTemplate x:DataType="models:SettingOption">
+                                                    <TextBlock Text="{Binding DisplayName}"/>
+                                                </DataTemplate>
+                                            </ComboBox.ItemTemplate>
+                                        </ComboBox>
+                                    </StackPanel>
+                                </Grid>
+
+                                <Grid Classes="settings-row" ColumnDefinitions="Auto,*,Auto" ColumnSpacing="12"
+                                      IsVisible="{Binding IsWallpaperThemeColorSelected}">
+                                    <Border Classes="settings-icon">
+                                        <materialIcons:MaterialIcon Kind="PaletteSwatchOutline" Width="18" Height="18" Foreground="{DynamicResource LauncherAccentBrush}" HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                                    </Border>
+                                    <StackPanel Grid.Column="1" Spacing="2" VerticalAlignment="Center">
+                                        <TextBlock Text="{Binding I18n.ThemeColorPalette}" Classes="section-title"/>
+                                        <TextBlock Text="{Binding I18n.ThemeColorPaletteDescription}" Classes="caption" TextWrapping="Wrap"/>
+                                    </StackPanel>
+                                    <StackPanel Grid.Column="2" Orientation="Horizontal" Spacing="8" VerticalAlignment="Center">
+                                        <ListBox Width="182"
+                                                 Background="Transparent"
+                                                 BorderThickness="0"
+                                                 Padding="0"
+                                                 ItemsSource="{Binding ThemeColorPaletteItems}"
+                                                 SelectedIndex="{Binding SelectedThemeColorPaletteIndex, Mode=TwoWay}">
+                                            <ListBox.ItemsPanel>
+                                                <ItemsPanelTemplate>
+                                                    <StackPanel Orientation="Horizontal" Spacing="8"/>
+                                                </ItemsPanelTemplate>
+                                            </ListBox.ItemsPanel>
+                                            <ListBox.ItemTemplate>
+                                                <DataTemplate x:DataType="models:ThemeColorPaletteItem">
+                                                    <Border Width="28"
+                                                            Height="28"
+                                                            CornerRadius="4"
+                                                            BorderBrush="{DynamicResource LauncherCardBorderBrush}"
+                                                            BorderThickness="1"
+                                                            Background="{Binding Brush}">
+                                                        <materialIcons:MaterialIcon Kind="Check"
+                                                                                    Width="16"
+                                                                                    Height="16"
+                                                                                    HorizontalAlignment="Center"
+                                                                                    VerticalAlignment="Center"
+                                                                                    Foreground="{DynamicResource LauncherOnAccentBrush}"
+                                                                                    IsVisible="{Binding IsSelected}"/>
+                                                    </Border>
+                                                </DataTemplate>
+                                            </ListBox.ItemTemplate>
+                                        </ListBox>
+                                        <Button Classes="flat-action" Command="{Binding RefreshThemeColorPaletteCommand}">
+                                            <StackPanel Classes="button-content">
+                                                <materialIcons:MaterialIcon Kind="Refresh" Width="16" Height="16"/>
+                                                <TextBlock Text="{Binding I18n.RefreshThemeColorPalette}" VerticalAlignment="Center"/>
+                                            </StackPanel>
+                                        </Button>
+                                    </StackPanel>
+                                </Grid>
+
+                                <Grid Classes="settings-row" ColumnDefinitions="Auto,*,Auto" ColumnSpacing="12"
+                                      IsVisible="{Binding IsCustomThemeColorSelected}">
+                                    <Border Classes="settings-icon">
+                                        <materialIcons:MaterialIcon Kind="FormatColorFill" Width="18" Height="18" Foreground="{DynamicResource LauncherAccentBrush}" HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                                    </Border>
+                                    <StackPanel Grid.Column="1" Spacing="2" VerticalAlignment="Center">
+                                        <TextBlock Text="{Binding I18n.ThemeColorCustom}" Classes="section-title"/>
+                                        <TextBlock Text="{Binding I18n.ThemeColorDescription}" Classes="caption" TextWrapping="Wrap"/>
+                                    </StackPanel>
+                                    <ColorPicker Grid.Column="2"
+                                                 Width="190"
+                                                 Color="{Binding SelectedCustomThemeColor, Mode=TwoWay}"
+                                                 HorizontalContentAlignment="Center"
+                                                 VerticalContentAlignment="Center">
+                                        <StackPanel Classes="button-content">
+                                            <Border Width="16"
+                                                    Height="16"
+                                                    CornerRadius="3"
+                                                    BorderBrush="{DynamicResource LauncherCardBorderBrush}"
+                                                    BorderThickness="1"
+                                                    Background="{Binding ThemeColorPreviewBrush}"/>
+                                            <materialIcons:MaterialIcon Kind="PaletteOutline" Width="16" Height="16"/>
+                                            <TextBlock Text="{Binding I18n.OpenColorPalette}" VerticalAlignment="Center"/>
+                                        </StackPanel>
+                                    </ColorPicker>
+                                </Grid>
+
+                                <Grid Classes="settings-row" ColumnDefinitions="Auto,*,Auto" ColumnSpacing="12">
+                                    <Border Classes="settings-icon">
                                         <materialIcons:MaterialIcon Kind="ImageOutline" Width="18" Height="18" Foreground="{DynamicResource LauncherAccentBrush}" HorizontalAlignment="Center" VerticalAlignment="Center"/>
                                     </Border>
                                     <StackPanel Grid.Column="1" Spacing="2" VerticalAlignment="Center">

@@ -42,6 +42,7 @@ public partial class MainWindowViewModel : ViewModelBase, IDisposable
     private int initialized;
     private bool disposed;
     private bool skipNextPersistedResume;
+    private bool suppressSettingsDirty;
     private LauncherStatusSnapshot? currentSnapshot;
 
     private static readonly string FrameworkVersion = RuntimeInformation.FrameworkDescription;
@@ -82,11 +83,39 @@ public partial class MainWindowViewModel : ViewModelBase, IDisposable
     [ObservableProperty]
     private bool isCustomBackgroundSelected;
 
+    [ObservableProperty]
+    private string selectedThemeColorMode = ThemeColorModes.Default;
+
+    [ObservableProperty]
+    private Color selectedCustomThemeColor = Color.Parse(LauncherConstants.DefaultThemeColor);
+
+    [ObservableProperty]
+    private IBrush themeColorPreviewBrush = new SolidColorBrush(Color.Parse(LauncherConstants.DefaultThemeColor));
+
+    [ObservableProperty]
+    private bool isCustomThemeColorSelected;
+
+    [ObservableProperty]
+    private bool isWallpaperThemeColorSelected;
+
+    [ObservableProperty]
+    private int selectedThemeColorPaletteIndex;
+
+    public ObservableCollection<ThemeColorPaletteItem> ThemeColorPaletteItems { get; } = [];
+
     public ObservableCollection<SettingOption> BackgroundSourceOptions { get; } =
     [
         new SettingOption { Code = Models.BackgroundSources.Bundled },
         new SettingOption { Code = Models.BackgroundSources.Remote },
         new SettingOption { Code = Models.BackgroundSources.Custom }
+    ];
+
+    public ObservableCollection<SettingOption> ThemeColorOptions { get; } =
+    [
+        new SettingOption { Code = ThemeColorModes.Default },
+        new SettingOption { Code = ThemeColorModes.System },
+        new SettingOption { Code = ThemeColorModes.Wallpaper },
+        new SettingOption { Code = ThemeColorModes.Custom }
     ];
 
     [ObservableProperty]
@@ -416,7 +445,9 @@ public partial class MainWindowViewModel : ViewModelBase, IDisposable
             var settingsForLanguage = await settingsService.ReadAsync(cancellationToken);
             ApplyLanguage(settingsForLanguage.Language);
             SelectedThemeMode = settingsForLanguage.ThemeMode;
+            LoadThemeColorState(settingsForLanguage);
             ApplyTheme(settingsForLanguage.ThemeMode);
+            ApplyThemeColor(settingsForLanguage.ThemeColorMode, ParseColorOrDefault(settingsForLanguage.CustomThemeColor));
             CurrentViewTitle = localizer.T("loadingTitle");
             StatusText = localizer.T("connectingApi");
             OperationNote = localizer.T("loadingStatus");
@@ -479,9 +510,14 @@ public partial class MainWindowViewModel : ViewModelBase, IDisposable
         settings.CloseBehavior = SelectedCloseBehavior;
         settings.Language = SelectedLanguage;
         settings.ThemeMode = SelectedThemeMode;
+        settings.ThemeColorMode = SelectedThemeColorMode;
+        settings.CustomThemeColor = ToColorHex(SelectedCustomThemeColor);
+        settings.ThemeColorPalette = GetThemeColorPaletteHexes();
+        settings.SelectedThemeColorPaletteIndex = SelectedThemeColorPaletteIndex;
         await settingsService.SaveAsync(settings);
         ApplyLanguage(settings.Language);
         ApplyTheme(settings.ThemeMode);
+        ApplyThemeColor(settings.ThemeColorMode, ParseColorOrDefault(settings.CustomThemeColor));
         OperationNote = localizer.F("pathSaved", normalizedPath);
         toastService.ShowSuccess(localizer.F("pathSaved", normalizedPath));
         await RefreshAsync();
@@ -506,6 +542,7 @@ public partial class MainWindowViewModel : ViewModelBase, IDisposable
         IsCustomBackground = true;
         SelectedBackgroundSource = BackgroundSources.Custom;
         IsCustomBackgroundSelected = true;
+        await UpdateBackgroundImageAsync();
         await SaveSettingsAsync();
         OperationNote = localizer.T("backgroundSet");
         toastService.ShowSuccess(localizer.T("backgroundSet"));
@@ -530,6 +567,7 @@ public partial class MainWindowViewModel : ViewModelBase, IDisposable
         IsCustomBackground = true;
         SelectedBackgroundSource = BackgroundSources.Custom;
         IsCustomBackgroundSelected = true;
+        await UpdateBackgroundImageAsync();
         await SaveSettingsAsync();
         OperationNote = localizer.T("backgroundSet");
         toastService.ShowSuccess(localizer.T("backgroundSet"));
@@ -678,6 +716,11 @@ public partial class MainWindowViewModel : ViewModelBase, IDisposable
     {
         var old = BackgroundImageSource as IDisposable;
         BackgroundImageSource = bitmap;
+        if (SelectedThemeColorMode == ThemeColorModes.Wallpaper)
+        {
+            RefreshThemeColorPaletteFromCurrentBackground(markDirty: false);
+            ApplyThemeColor(SelectedThemeColorMode, SelectedCustomThemeColor);
+        }
         // Defer disposal to next frame to avoid disposing a bitmap the renderer may still be using
         if (old is not null)
             Dispatcher.UIThread.Post(() => old.Dispose(), DispatcherPriority.Background);
@@ -701,6 +744,11 @@ public partial class MainWindowViewModel : ViewModelBase, IDisposable
     [RelayCommand]
     private async Task SaveSettingsAsync()
     {
+        if (SelectedThemeColorMode == ThemeColorModes.Wallpaper && ThemeColorPaletteItems.Count == 0)
+        {
+            RefreshThemeColorPaletteFromCurrentBackground(markDirty: false);
+        }
+
         var settings = await settingsService.ReadAsync();
         var previousPatchUrlGroup = settings.PatchUrlGroup;
         var shouldPromptRepairAfterSourceChange = currentSnapshot?.IsInstalled == true
@@ -712,6 +760,10 @@ public partial class MainWindowViewModel : ViewModelBase, IDisposable
         settings.CloseBehavior = SelectedCloseBehavior;
         settings.Language = SelectedLanguage;
         settings.ThemeMode = SelectedThemeMode;
+        settings.ThemeColorMode = SelectedThemeColorMode;
+        settings.CustomThemeColor = ToColorHex(SelectedCustomThemeColor);
+        settings.ThemeColorPalette = GetThemeColorPaletteHexes();
+        settings.SelectedThemeColorPaletteIndex = SelectedThemeColorPaletteIndex;
         settings.DownloadSpeedLimit = SelectedDownloadSpeedLimit;
         settings.ToastNotificationsEnabled = ToastNotificationsEnabled;
         settings.ShowRemoteContentCard = ShowRemoteContentCard;
@@ -720,6 +772,7 @@ public partial class MainWindowViewModel : ViewModelBase, IDisposable
         await settingsService.SaveAsync(settings);
         ApplyLanguage(settings.Language);
         ApplyTheme(settings.ThemeMode);
+        ApplyThemeColor(settings.ThemeColorMode, ParseColorOrDefault(settings.CustomThemeColor));
         IsSettingsDirty = false;
         OperationNote = localizer.T("settingsSaved");
         toastService.ShowSuccess(localizer.T("settingsSaved"));
@@ -1223,6 +1276,7 @@ public partial class MainWindowViewModel : ViewModelBase, IDisposable
             SelectedCloseBehavior = s.Settings.CloseBehavior;
             SelectedLanguage = s.Settings.Language;
             SelectedThemeMode = s.Settings.ThemeMode;
+            LoadThemeColorState(s.Settings);
             SelectedDownloadSpeedLimit = s.Settings.DownloadSpeedLimit;
             ToastNotificationsEnabled = s.Settings.ToastNotificationsEnabled;
             ShowRemoteContentCard = s.Settings.ShowRemoteContentCard;
@@ -1253,6 +1307,7 @@ public partial class MainWindowViewModel : ViewModelBase, IDisposable
             SelectedCloseBehavior = s.Settings.CloseBehavior;
             SelectedLanguage = s.Settings.Language;
             SelectedThemeMode = s.Settings.ThemeMode;
+            LoadThemeColorState(s.Settings);
             SelectedDownloadSpeedLimit = s.Settings.DownloadSpeedLimit;
             ToastNotificationsEnabled = s.Settings.ToastNotificationsEnabled;
             ShowRemoteContentCard = s.Settings.ShowRemoteContentCard;
@@ -1418,6 +1473,7 @@ public partial class MainWindowViewModel : ViewModelBase, IDisposable
         SelectedCloseBehavior = snapshot.Settings.CloseBehavior;
         SelectedLanguage = snapshot.Settings.Language;
         SelectedThemeMode = snapshot.Settings.ThemeMode;
+        LoadThemeColorState(snapshot.Settings);
         SelectedDownloadSpeedLimit = snapshot.Settings.DownloadSpeedLimit;
         ToastNotificationsEnabled = snapshot.Settings.ToastNotificationsEnabled;
         ShowRemoteContentCard = snapshot.Settings.ShowRemoteContentCard;
@@ -1428,6 +1484,7 @@ public partial class MainWindowViewModel : ViewModelBase, IDisposable
         ApplyLanguage(snapshot.Settings.Language);
         ApplyTheme(snapshot.Settings.ThemeMode);
         await UpdateBackgroundImageAsync();
+        ApplyThemeColor(snapshot.Settings.ThemeColorMode, ParseColorOrDefault(snapshot.Settings.CustomThemeColor));
 
         CurrentViewTitle = ResolveStatusText(snapshot);
         StatusText = ResolveStatusText(snapshot);
@@ -1660,6 +1717,7 @@ public partial class MainWindowViewModel : ViewModelBase, IDisposable
         RuntimeInfoText = localizer.F("runtimeInfo", FrameworkVersion, LauncherConstants.AvaloniaVersion);
         BuildInfoText = localizer.F("buildInfo", PlatformName, LauncherConstants.BuildConfiguration);
         RefreshThemeOptions();
+        RefreshThemeColorOptions();
         RefreshLaunchCheckModeOptions();
         RefreshProxyModeOptions();
         RefreshPatchUrlGroupOptions();
@@ -1710,6 +1768,9 @@ public partial class MainWindowViewModel : ViewModelBase, IDisposable
     // I1: Settings dirty tracking — mark dirty when settings panel is open and a setting changes
     private void MarkSettingsDirtyIfVisible()
     {
+        if (suppressSettingsDirty)
+            return;
+
         if (IsSettingsVisible && !IsSettingsDirty)
             IsSettingsDirty = true;
     }
@@ -1726,6 +1787,37 @@ public partial class MainWindowViewModel : ViewModelBase, IDisposable
 
     partial void OnSelectedThemeModeChanged(string value)
     {
+        MarkSettingsDirtyIfVisible();
+    }
+
+    partial void OnSelectedThemeColorModeChanged(string value)
+    {
+        IsCustomThemeColorSelected = value == ThemeColorModes.Custom;
+        IsWallpaperThemeColorSelected = value == ThemeColorModes.Wallpaper;
+        if (IsWallpaperThemeColorSelected && ThemeColorPaletteItems.Count == 0)
+        {
+            RefreshThemeColorPaletteFromCurrentBackground(markDirty: false);
+        }
+
+        UpdateThemeColorPreview();
+        MarkSettingsDirtyIfVisible();
+    }
+
+    partial void OnSelectedCustomThemeColorChanged(Color value)
+    {
+        UpdateThemeColorPreview();
+        MarkSettingsDirtyIfVisible();
+    }
+
+    partial void OnSelectedThemeColorPaletteIndexChanged(int value)
+    {
+        UpdateThemeColorPaletteSelection();
+        UpdateThemeColorPreview();
+        if (SelectedThemeColorMode == ThemeColorModes.Wallpaper)
+        {
+            ApplyThemeColor(SelectedThemeColorMode, SelectedCustomThemeColor);
+        }
+
         MarkSettingsDirtyIfVisible();
     }
 
@@ -1746,6 +1838,113 @@ public partial class MainWindowViewModel : ViewModelBase, IDisposable
             && (HasNotice || HasBannerItems || HasNewsItems || HasSocialMediaItems);
     }
 
+    private void UpdateThemeColorPreview()
+    {
+        var color = ResolveThemeColor(SelectedThemeColorMode, SelectedCustomThemeColor);
+        ThemeColorPreviewBrush = new SolidColorBrush(color);
+    }
+
+    [RelayCommand]
+    private void RefreshThemeColorPalette()
+    {
+        RefreshThemeColorPaletteFromCurrentBackground(markDirty: true);
+        if (SelectedThemeColorMode == ThemeColorModes.Wallpaper)
+        {
+            ApplyThemeColor(SelectedThemeColorMode, SelectedCustomThemeColor);
+        }
+    }
+
+    private void LoadThemeColorState(LauncherSettings settings)
+    {
+        var oldSuppressSettingsDirty = suppressSettingsDirty;
+        suppressSettingsDirty = true;
+        try
+        {
+            SelectedThemeColorMode = settings.ThemeColorMode;
+            SelectedCustomThemeColor = ParseColorOrDefault(settings.CustomThemeColor);
+            IsCustomThemeColorSelected = settings.ThemeColorMode == ThemeColorModes.Custom;
+            IsWallpaperThemeColorSelected = settings.ThemeColorMode == ThemeColorModes.Wallpaper;
+            ReplaceThemeColorPalette(settings.ThemeColorPalette, settings.SelectedThemeColorPaletteIndex, markDirty: false);
+        }
+        finally
+        {
+            suppressSettingsDirty = oldSuppressSettingsDirty;
+        }
+    }
+
+    private void RefreshThemeColorPaletteFromCurrentBackground(bool markDirty)
+    {
+        if (BackgroundImageSource is not Bitmap bitmap)
+        {
+            ReplaceThemeColorPalette([], 0, markDirty);
+            return;
+        }
+
+        var colors = ThemeColorExtractionService.ExtractPalette(bitmap)
+            .Select(ThemeColorExtractionService.ToColorHex)
+            .ToArray();
+        var selectedIndex = SelectedThemeColorPaletteIndex < colors.Length
+            ? SelectedThemeColorPaletteIndex
+            : 0;
+        ReplaceThemeColorPalette(colors, selectedIndex, markDirty);
+    }
+
+    private void ReplaceThemeColorPalette(IEnumerable<string> colors, int selectedIndex, bool markDirty)
+    {
+        var normalizedColors = colors
+            .Select(ParseThemeColorPaletteColor)
+            .OfType<Color>()
+            .Select(ThemeColorExtractionService.ToColorHex)
+            .Distinct(StringComparer.Ordinal)
+            .ToArray();
+        var oldColors = ThemeColorPaletteItems.Select(item => item.ColorHex).ToArray();
+        var oldSelectedIndex = SelectedThemeColorPaletteIndex;
+        var oldSuppressSettingsDirty = suppressSettingsDirty;
+        suppressSettingsDirty = true;
+        try
+        {
+            ThemeColorPaletteItems.Clear();
+            for (var i = 0; i < normalizedColors.Length; i++)
+            {
+                var color = ParseColorOrDefault(normalizedColors[i]);
+                ThemeColorPaletteItems.Add(new ThemeColorPaletteItem
+                {
+                    Index = i,
+                    ColorHex = normalizedColors[i],
+                    Brush = new SolidColorBrush(color)
+                });
+            }
+
+            SelectedThemeColorPaletteIndex = normalizedColors.Length == 0
+                ? 0
+                : Math.Clamp(selectedIndex, 0, normalizedColors.Length - 1);
+            UpdateThemeColorPaletteSelection();
+        }
+        finally
+        {
+            suppressSettingsDirty = oldSuppressSettingsDirty;
+        }
+
+        UpdateThemeColorPreview();
+        if (markDirty
+            && (!oldColors.SequenceEqual(normalizedColors, StringComparer.Ordinal)
+                || oldSelectedIndex != SelectedThemeColorPaletteIndex))
+        {
+            MarkSettingsDirtyIfVisible();
+        }
+    }
+
+    private void UpdateThemeColorPaletteSelection()
+    {
+        for (var i = 0; i < ThemeColorPaletteItems.Count; i++)
+        {
+            ThemeColorPaletteItems[i].IsSelected = i == SelectedThemeColorPaletteIndex;
+        }
+    }
+
+    private List<string> GetThemeColorPaletteHexes() =>
+        ThemeColorPaletteItems.Select(item => item.ColorHex).ToList();
+
     private static void ApplyTheme(string themeMode)
     {
         var themeVariant = themeMode switch
@@ -1760,6 +1959,107 @@ public partial class MainWindowViewModel : ViewModelBase, IDisposable
             application.RequestedThemeVariant = themeVariant;
         }
     }
+
+    private void ApplyThemeColor(string themeColorMode, Color customColor)
+    {
+        if (themeColorMode == ThemeColorModes.Wallpaper && ThemeColorPaletteItems.Count == 0)
+        {
+            RefreshThemeColorPaletteFromCurrentBackground(markDirty: false);
+        }
+
+        var color = ResolveThemeColor(themeColorMode, customColor);
+        ThemeColorPreviewBrush = new SolidColorBrush(color);
+        ApplyAccentBrushes(color);
+    }
+
+    private Color ResolveThemeColor(string themeColorMode, Color customColor)
+    {
+        return themeColorMode switch
+        {
+            ThemeColorModes.System => GetSystemAccentColor(),
+            ThemeColorModes.Custom => customColor,
+            ThemeColorModes.Wallpaper => ResolveThemeColorFromPalette() ?? Color.Parse(LauncherConstants.DefaultThemeColor),
+            _ => Color.Parse(LauncherConstants.DefaultThemeColor)
+        };
+    }
+
+    private Color? ResolveThemeColorFromPalette()
+    {
+        if (ThemeColorPaletteItems.Count == 0)
+        {
+            return null;
+        }
+
+        var selectedIndex = Math.Clamp(SelectedThemeColorPaletteIndex, 0, ThemeColorPaletteItems.Count - 1);
+        return ParseThemeColorPaletteColor(ThemeColorPaletteItems[selectedIndex].ColorHex);
+    }
+
+    private static Color GetSystemAccentColor()
+    {
+        if (Application.Current?.TryGetResource("SystemAccentColor", ThemeVariant.Default, out var value) == true
+            && value is Color color)
+        {
+            return color;
+        }
+
+        return Color.Parse(LauncherConstants.DefaultThemeColor);
+    }
+
+    private static void ApplyAccentBrushes(Color color)
+    {
+        if (Application.Current is not { } application)
+        {
+            return;
+        }
+
+        SetBrush(application, "LauncherAccentBrush", color);
+        SetBrush(application, "LauncherAccentHoverBrush", AdjustColor(color, 1.15));
+        SetBrush(application, "LauncherAccentPressedBrush", AdjustColor(color, 0.85));
+        SetBrush(application, "LauncherFocusRingBrush", Color.FromArgb(0x99, color.R, color.G, color.B));
+        SetBrush(application, "LauncherCarouselDotActiveBrush", color);
+        SetBrush(application, "LauncherToastInfoBrush", color);
+        SetBrush(application, "LauncherOnAccentBrush", GetReadableOnAccentColor(color));
+    }
+
+    private static void SetBrush(Application application, string key, Color color)
+    {
+        if (application.Resources.TryGetResource(key, ThemeVariant.Default, out var value)
+            && value is SolidColorBrush brush)
+        {
+            brush.Color = color;
+            return;
+        }
+
+        application.Resources[key] = new SolidColorBrush(color);
+    }
+
+    private static Color AdjustColor(Color color, double factor)
+    {
+        static byte Adjust(byte value, double factor) =>
+            (byte)Math.Clamp((int)Math.Round(value * factor), 0, 255);
+
+        return Color.FromArgb(color.A, Adjust(color.R, factor), Adjust(color.G, factor), Adjust(color.B, factor));
+    }
+
+    private static Color GetReadableOnAccentColor(Color color)
+    {
+        var luminance = (0.2126 * SrgbToLinear(color.R / 255d))
+            + (0.7152 * SrgbToLinear(color.G / 255d))
+            + (0.0722 * SrgbToLinear(color.B / 255d));
+        return luminance > 0.45 ? Color.FromRgb(0x12, 0x18, 0x20) : Colors.White;
+    }
+
+    private static double SrgbToLinear(double value) =>
+        value <= 0.04045 ? value / 12.92 : Math.Pow((value + 0.055) / 1.055, 2.4);
+
+    private static string ToColorHex(Color color) =>
+        ThemeColorExtractionService.ToColorHex(color);
+
+    private static Color ParseColorOrDefault(string? value) =>
+        Color.TryParse(value, out var color) ? color : Color.Parse(LauncherConstants.DefaultThemeColor);
+
+    private static Color? ParseThemeColorPaletteColor(string? value) =>
+        Color.TryParse(value, out var color) ? Color.FromArgb(0xFF, color.R, color.G, color.B) : null;
 
     private void RefreshThemeOptions()
     {
@@ -2032,6 +2332,20 @@ public partial class MainWindowViewModel : ViewModelBase, IDisposable
         {
             item.BannerBitmap?.Dispose();
             item.BannerBitmap = null;
+        }
+    }
+
+    private void RefreshThemeColorOptions()
+    {
+        foreach (var option in ThemeColorOptions)
+        {
+            option.DisplayName = option.Code switch
+            {
+                ThemeColorModes.System => localizer.T("themeColorSystem"),
+                ThemeColorModes.Wallpaper => localizer.T("themeColorWallpaper"),
+                ThemeColorModes.Custom => localizer.T("themeColorCustom"),
+                _ => localizer.T("themeColorDefault")
+            };
         }
     }
 }

@@ -1,5 +1,6 @@
 using System;
 using System.IO;
+using System.Linq;
 using System.Text.Json;
 using System.Threading;
 using System.Threading.Tasks;
@@ -110,6 +111,26 @@ public sealed class LauncherSettingsService
             settings.ThemeMode = ThemeModes.System;
         }
 
+        if (settings.ThemeColorMode is not ThemeColorModes.Default
+            and not ThemeColorModes.System
+            and not ThemeColorModes.Wallpaper
+            and not ThemeColorModes.Custom)
+        {
+            settings.ThemeColorMode = ThemeColorModes.Default;
+        }
+
+        settings.CustomThemeColor = NormalizeColor(settings.CustomThemeColor);
+        settings.ThemeColorPalette = (settings.ThemeColorPalette ?? [])
+            .Select(TryNormalizeColor)
+            .OfType<string>()
+            .Distinct(StringComparer.Ordinal)
+            .ToList();
+        if (settings.SelectedThemeColorPaletteIndex < 0
+            || settings.SelectedThemeColorPaletteIndex >= settings.ThemeColorPalette.Count)
+        {
+            settings.SelectedThemeColorPaletteIndex = 0;
+        }
+
         if (settings.DownloadSpeedLimit is not DownloadSpeedLimits.Unlimited
             and not DownloadSpeedLimits._1MBs
             and not DownloadSpeedLimits._5MBs
@@ -134,6 +155,47 @@ public sealed class LauncherSettingsService
 
         settings.GamePath ??= "";
         return settings;
+    }
+
+    private static string NormalizeColor(string? value)
+    {
+        return TryNormalizeColor(value) ?? LauncherConstants.DefaultThemeColor;
+    }
+
+    private static string? TryNormalizeColor(string? value)
+    {
+        if (string.IsNullOrWhiteSpace(value))
+        {
+            return null;
+        }
+
+        var text = value.Trim();
+        if (text.Length == 7 && text[0] == '#'
+            && IsHex(text.AsSpan(1)))
+        {
+            return $"#FF{text[1..].ToUpperInvariant()}";
+        }
+
+        if (text.Length == 9 && text[0] == '#'
+            && IsHex(text.AsSpan(1)))
+        {
+            return $"#{text[1..].ToUpperInvariant()}";
+        }
+
+        return null;
+    }
+
+    private static bool IsHex(ReadOnlySpan<char> value)
+    {
+        foreach (var ch in value)
+        {
+            if (!Uri.IsHexDigit(ch))
+            {
+                return false;
+            }
+        }
+
+        return true;
     }
 
     private static void ApplyLegacyFields(LauncherSettings settings, string json)

@@ -1,4 +1,5 @@
 using System.Text.Json;
+using Cafe.Launcher.Avalonia.Constants;
 using Cafe.Launcher.Avalonia.Models;
 using Cafe.Launcher.Avalonia.Services;
 
@@ -28,6 +29,10 @@ public sealed class LauncherSettingsServiceTests : IDisposable
         Assert.Equal(CloseBehaviors.Minimize, settings.CloseBehavior);
         Assert.Equal(LauncherLanguages.Auto, settings.Language);
         Assert.Equal(ThemeModes.System, settings.ThemeMode);
+        Assert.Equal(ThemeColorModes.Default, settings.ThemeColorMode);
+        Assert.Equal(LauncherConstants.DefaultThemeColor, settings.CustomThemeColor);
+        Assert.Empty(settings.ThemeColorPalette);
+        Assert.Equal(0, settings.SelectedThemeColorPaletteIndex);
         Assert.Equal(DownloadSpeedLimits.Unlimited, settings.DownloadSpeedLimit);
         Assert.True(settings.ToastNotificationsEnabled);
         Assert.True(settings.ShowRemoteContentCard);
@@ -68,6 +73,10 @@ public sealed class LauncherSettingsServiceTests : IDisposable
               "closeBehavior": "invalid",
               "language": "invalid",
               "themeMode": "invalid",
+              "themeColorMode": "invalid",
+              "customThemeColor": "invalid",
+              "themeColorPalette": ["#ff112233", "invalid", "#445566"],
+              "selectedThemeColorPaletteIndex": 99,
               "downloadSpeedLimit": "invalid",
               "toastNotificationsEnabled": false,
               "showRemoteContentCard": false,
@@ -85,6 +94,10 @@ public sealed class LauncherSettingsServiceTests : IDisposable
         Assert.Equal(CloseBehaviors.Minimize, settings.CloseBehavior);
         Assert.Equal(LauncherLanguages.Auto, settings.Language);
         Assert.Equal(ThemeModes.System, settings.ThemeMode);
+        Assert.Equal(ThemeColorModes.Default, settings.ThemeColorMode);
+        Assert.Equal(LauncherConstants.DefaultThemeColor, settings.CustomThemeColor);
+        Assert.Equal(["#FF112233", "#FF445566"], settings.ThemeColorPalette);
+        Assert.Equal(0, settings.SelectedThemeColorPaletteIndex);
         Assert.Equal(DownloadSpeedLimits.Unlimited, settings.DownloadSpeedLimit);
         Assert.False(settings.ToastNotificationsEnabled);
         Assert.False(settings.ShowRemoteContentCard);
@@ -104,6 +117,10 @@ public sealed class LauncherSettingsServiceTests : IDisposable
             CloseBehavior = CloseBehaviors.Exit,
             Language = LauncherLanguages.Japanese,
             ThemeMode = ThemeModes.Dark,
+            ThemeColorMode = ThemeColorModes.Custom,
+            CustomThemeColor = "#FF336699",
+            ThemeColorPalette = ["#FF112233", "#FF445566"],
+            SelectedThemeColorPaletteIndex = 1,
             DownloadSpeedLimit = DownloadSpeedLimits._10MBs,
             ToastNotificationsEnabled = false,
             ShowRemoteContentCard = false,
@@ -125,6 +142,14 @@ public sealed class LauncherSettingsServiceTests : IDisposable
         Assert.True(root.TryGetProperty("closeBehavior", out _));
         Assert.True(root.TryGetProperty("language", out _));
         Assert.True(root.TryGetProperty("themeMode", out _));
+        Assert.True(root.TryGetProperty("themeColorMode", out var themeColorMode));
+        Assert.Equal(ThemeColorModes.Custom, themeColorMode.GetString());
+        Assert.True(root.TryGetProperty("customThemeColor", out var customThemeColor));
+        Assert.Equal("#FF336699", customThemeColor.GetString());
+        Assert.True(root.TryGetProperty("themeColorPalette", out var themeColorPalette));
+        Assert.Equal(["#FF112233", "#FF445566"], themeColorPalette.EnumerateArray().Select(item => item.GetString()));
+        Assert.True(root.TryGetProperty("selectedThemeColorPaletteIndex", out var selectedThemeColorPaletteIndex));
+        Assert.Equal(1, selectedThemeColorPaletteIndex.GetInt32());
         Assert.True(root.TryGetProperty("downloadSpeedLimit", out _));
         Assert.True(root.TryGetProperty("toastNotificationsEnabled", out _));
         Assert.True(root.TryGetProperty("showRemoteContentCard", out _));
@@ -140,6 +165,10 @@ public sealed class LauncherSettingsServiceTests : IDisposable
             "closeBehavior",
             "language",
             "themeMode",
+            "themeColorMode",
+            "customThemeColor",
+            "themeColorPalette",
+            "selectedThemeColorPaletteIndex",
             "downloadSpeedLimit",
             "toastNotificationsEnabled",
             "showRemoteContentCard",
