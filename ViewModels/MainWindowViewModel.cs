@@ -2144,9 +2144,12 @@ public partial class MainWindowViewModel : ViewModelBase, IDisposable
         SetBrush(application, "LauncherAccentBrush", color);
         SetBrush(application, "LauncherAccentHoverBrush", AdjustColor(color, 1.15));
         SetBrush(application, "LauncherAccentPressedBrush", AdjustColor(color, 0.85));
+        SetBrush(application, "LauncherAccentSoftBrush", Color.FromArgb(0x24, color.R, color.G, color.B));
+        SetBrush(application, "LauncherAccentBorderBrush", Color.FromArgb(0x80, color.R, color.G, color.B));
         SetBrush(application, "LauncherFocusRingBrush", Color.FromArgb(0x99, color.R, color.G, color.B));
         SetBrush(application, "LauncherCarouselDotActiveBrush", color);
         SetBrush(application, "LauncherToastInfoBrush", color);
+        SetBrush(application, "LauncherInfoTextBrush", color);
         SetBrush(application, "LauncherOnAccentBrush", GetReadableOnAccentColor(color));
     }
 

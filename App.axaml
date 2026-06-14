@@ -11,6 +11,8 @@
             <SolidColorBrush x:Key="LauncherAccentBrush" Color="{DynamicResource SystemAccentColor}"/>
             <SolidColorBrush x:Key="LauncherAccentHoverBrush" Color="{DynamicResource SystemAccentColorLight1}"/>
             <SolidColorBrush x:Key="LauncherAccentPressedBrush" Color="{DynamicResource SystemAccentColorDark1}"/>
+            <SolidColorBrush x:Key="LauncherAccentSoftBrush" Color="#1A2E7DF6"/>
+            <SolidColorBrush x:Key="LauncherAccentBorderBrush" Color="#662E7DF6"/>
             <SolidColorBrush x:Key="LauncherOnAccentBrush" Color="#FFFFFFFF"/>
             <SolidColorBrush x:Key="LauncherOnChromeBrush" Color="#FFFFFFFF"/>
             <SolidColorBrush x:Key="LauncherOnChromeMutedBrush" Color="#CCFFFFFF"/>
@@ -29,6 +31,8 @@
             <SolidColorBrush x:Key="LauncherToastWarningBrush" Color="#FFF59E0B"/>
             <SolidColorBrush x:Key="LauncherToastErrorBrush" Color="#FFE5484D"/>
             <SolidColorBrush x:Key="LauncherToastInfoBrush" Color="#FF2E7DF6"/>
+            <SolidColorBrush x:Key="LauncherMediaPlaceholderBrush" Color="#FF2A3A5C"/>
+            <SolidColorBrush x:Key="LauncherMediaPlaceholderTextBrush" Color="#88FFFFFF"/>
 
             <ResourceDictionary.ThemeDictionaries>
                 <ResourceDictionary x:Key="Light">
