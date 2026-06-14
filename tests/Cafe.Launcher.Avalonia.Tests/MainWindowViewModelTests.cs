@@ -1,9 +1,9 @@
 using Cafe.Launcher.Avalonia.Models;
 using Cafe.Launcher.Avalonia.Services;
+using Cafe.Launcher.Avalonia.Services.Auth;
 using Cafe.Launcher.Avalonia.Services.Diagnostics;
 using Cafe.Launcher.Avalonia.ViewModels;
 using Avalonia.Media;
-using System.Reflection;
 using System.Net;
 using System.Text;
 
@@ -12,12 +12,19 @@ namespace Cafe.Launcher.Avalonia.Tests;
 public sealed class MainWindowViewModelTests : IDisposable
 {
     private readonly string tempDir = Path.Combine(Path.GetTempPath(), Guid.NewGuid().ToString("N"));
-    private readonly LauncherApiClient apiClient = new();
-    private readonly ImageCacheService imageCacheService = new();
+    private readonly ProxySettingsService proxySettings = new();
+    private readonly HttpClientFactory httpClientFactory;
+    private readonly LauncherApiClient apiClient = new(
+        new AuthorizationHeaderFactory(),
+        new PatchUrlGroupService(),
+        new ProxySettingsService());
+    private readonly ImageCacheService imageCacheService;
 
     public MainWindowViewModelTests()
     {
         Directory.CreateDirectory(tempDir);
+        httpClientFactory = new HttpClientFactory(proxySettings);
+        imageCacheService = new ImageCacheService(httpClientFactory, new Crc64Service());
     }
 
     [Fact]
@@ -51,8 +58,8 @@ public sealed class MainWindowViewModelTests : IDisposable
 
         await viewModel.InitializeAsync();
 
-        Assert.Contains(viewModel.NewsItems, item => item.Title == "news title");
-        Assert.Contains(viewModel.NewsItems, item => item.Title == "notice title");
+        Assert.Contains(viewModel.RemoteContent.NewsItems, item => item.Title == "news title");
+        Assert.Contains(viewModel.RemoteContent.NewsItems, item => item.Title == "notice title");
     }
 
     [Fact]
@@ -66,10 +73,55 @@ public sealed class MainWindowViewModelTests : IDisposable
 
         await viewModel.InitializeAsync();
 
-        Assert.Contains(viewModel.NewsItems, item => item.Title == "news title");
-        Assert.Contains(viewModel.NewsItems, item => item.Title == "notice title");
-        Assert.True(viewModel.HasNewsItems);
-        Assert.False(viewModel.HasRemoteContent);
+        Assert.Contains(viewModel.RemoteContent.NewsItems, item => item.Title == "news title");
+        Assert.Contains(viewModel.RemoteContent.NewsItems, item => item.Title == "notice title");
+        Assert.True(viewModel.RemoteContent.HasNewsItems);
+        Assert.False(viewModel.RemoteContent.HasRemoteContent);
+    }
+
+    [Fact]
+    public async Task InitializeAsync_WhenCoreLoadFails_DoesNotShowNetworkLoadedToast()
+    {
+        var coreService = new ThrowingCoreService();
+        var successToasts = new List<string>();
+        var toastService = new ToastService();
+        using var viewModel = CreateViewModel(coreService, toastService: toastService);
+        toastService.ToastRaised += notification =>
+        {
+            if (notification.Severity == ToastSeverity.Success)
+            {
+                successToasts.Add(notification.Message);
+            }
+        };
+
+        await viewModel.InitializeAsync();
+
+        Assert.DoesNotContain(viewModel.Shell.I18n.StatusNetworkLoaded, successToasts);
+    }
+
+    [Fact]
+    public async Task InitializeAsync_WhenSocialChannelIsPixiv_UsesPaletteIcon()
+    {
+        var snapshot = CreateSnapshot();
+        snapshot.Remote.SocialMediaResource = new SocialMediaResourceResponse
+        {
+            SocialMediaResourceOpen = true,
+            SocialMediaResourceList =
+            [
+                new SocialMediaResourceItem
+                {
+                    SocialMediaChannel = "pixiv",
+                    JumpUrl = "https://example.invalid/pixiv"
+                }
+            ]
+        };
+        var coreService = new CountingCoreService(snapshot);
+        using var viewModel = CreateViewModel(coreService);
+
+        await viewModel.InitializeAsync();
+
+        var item = Assert.Single(viewModel.RemoteContent.SocialMediaItems);
+        Assert.Equal("Palette", item.SocialIconKind);
     }
 
     [Fact]
@@ -80,7 +132,7 @@ public sealed class MainWindowViewModelTests : IDisposable
         var imagePath = Path.Combine(folderPath, "wallpaper.PNG");
         await WriteTestPngAsync(imagePath);
 
-        var resolved = MainWindowViewModel.ResolveRandomBackgroundImage(folderPath);
+        var resolved = BackgroundViewModel.ResolveRandomBackgroundImage(folderPath);
 
         Assert.Equal(imagePath, resolved);
     }
@@ -94,7 +146,7 @@ public sealed class MainWindowViewModelTests : IDisposable
         Directory.CreateDirectory(nestedFolderPath);
         await WriteTestPngAsync(Path.Combine(nestedFolderPath, "wallpaper.png"));
 
-        var resolved = MainWindowViewModel.ResolveRandomBackgroundImage(folderPath);
+        var resolved = BackgroundViewModel.ResolveRandomBackgroundImage(folderPath);
 
         Assert.Null(resolved);
     }
@@ -105,7 +157,7 @@ public sealed class MainWindowViewModelTests : IDisposable
         var folderPath = Path.Combine(tempDir, "empty-wallpapers");
         Directory.CreateDirectory(folderPath);
 
-        var resolved = MainWindowViewModel.ResolveRandomBackgroundImage(folderPath);
+        var resolved = BackgroundViewModel.ResolveRandomBackgroundImage(folderPath);
 
         Assert.Null(resolved);
     }
@@ -124,7 +176,7 @@ public sealed class MainWindowViewModelTests : IDisposable
             CanPause = false
         });
 
-        Assert.False(viewModel.CanPauseOperation);
+        Assert.False(viewModel.Operations.CanPauseOperation);
     }
 
     [Fact]
@@ -141,7 +193,7 @@ public sealed class MainWindowViewModelTests : IDisposable
             CanPause = true
         });
 
-        Assert.True(viewModel.CanPauseOperation);
+        Assert.True(viewModel.Operations.CanPauseOperation);
     }
 
     [Fact]
@@ -166,11 +218,11 @@ public sealed class MainWindowViewModelTests : IDisposable
         using var viewModel = CreateViewModel(coreService, settingsService);
         await viewModel.InitializeAsync();
 
-        viewModel.SelectedPatchUrlGroup = PatchUrlGroups.Cafe;
+        viewModel.Settings.SelectedPatchUrlGroup = PatchUrlGroups.Cafe;
         await SaveSettingsAsync(viewModel);
 
-        Assert.True(viewModel.IsRepairConfirmVisible);
-        Assert.False(string.IsNullOrWhiteSpace(viewModel.RepairConfirmText));
+        Assert.True(viewModel.Dialogs.IsRepairConfirmVisible);
+        Assert.False(string.IsNullOrWhiteSpace(viewModel.Dialogs.RepairConfirmText));
     }
 
     [Fact]
@@ -178,12 +230,12 @@ public sealed class MainWindowViewModelTests : IDisposable
     {
         var coreService = new CountingCoreService(CreateSnapshot());
         using var viewModel = CreateViewModel(coreService);
-        viewModel.IsSettingsVisible = true;
-        viewModel.IsSettingsDirty = false;
+        viewModel.WindowChrome.IsSettingsVisible = true;
+        viewModel.Settings.IsSettingsDirty = false;
 
-        viewModel.SelectedThemeColorMode = ThemeColorModes.System;
+        viewModel.Settings.SelectedThemeColorMode = ThemeColorModes.System;
 
-        Assert.True(viewModel.IsSettingsDirty);
+        Assert.True(viewModel.Settings.IsSettingsDirty);
     }
 
     [Fact]
@@ -195,8 +247,8 @@ public sealed class MainWindowViewModelTests : IDisposable
         var coreService = new CountingCoreService(CreateSnapshot());
         using var viewModel = CreateViewModel(coreService, settingsService);
 
-        viewModel.SelectedThemeColorMode = ThemeColorModes.Custom;
-        viewModel.SelectedCustomThemeColor = Color.FromArgb(0xFF, 0x33, 0x66, 0x99);
+        viewModel.Settings.SelectedThemeColorMode = ThemeColorModes.Custom;
+        viewModel.Settings.SelectedCustomThemeColor = Color.FromArgb(0xFF, 0x33, 0x66, 0x99);
         await SaveSettingsAsync(viewModel);
 
         var settings = await settingsService.ReadAsync();
@@ -267,28 +319,28 @@ public sealed class MainWindowViewModelTests : IDisposable
     {
         var coreService = new CountingCoreService(CreateSnapshot());
         using var viewModel = CreateViewModel(coreService);
-        viewModel.ThemeColorPaletteItems.Add(new ThemeColorPaletteItem
+        viewModel.Settings.ThemeColorPaletteItems.Add(new ThemeColorPaletteItem
         {
             Index = 0,
             ColorHex = "#FFD82038",
             Brush = new SolidColorBrush(Color.FromRgb(0xD8, 0x20, 0x38))
         });
-        viewModel.ThemeColorPaletteItems.Add(new ThemeColorPaletteItem
+        viewModel.Settings.ThemeColorPaletteItems.Add(new ThemeColorPaletteItem
         {
             Index = 1,
             ColorHex = "#FF2050D8",
             Brush = new SolidColorBrush(Color.FromRgb(0x20, 0x50, 0xD8))
         });
-        viewModel.SelectedThemeColorMode = ThemeColorModes.Wallpaper;
-        viewModel.IsSettingsVisible = true;
-        viewModel.IsSettingsDirty = false;
+        viewModel.Settings.SelectedThemeColorMode = ThemeColorModes.Wallpaper;
+        viewModel.WindowChrome.IsSettingsVisible = true;
+        viewModel.Settings.IsSettingsDirty = false;
 
-        viewModel.SelectedThemeColorPaletteIndex = 1;
+        viewModel.Settings.SelectedThemeColorPaletteIndex = 1;
 
-        Assert.True(viewModel.IsSettingsDirty);
-        Assert.False(viewModel.ThemeColorPaletteItems[0].IsSelected);
-        Assert.True(viewModel.ThemeColorPaletteItems[1].IsSelected);
-        var preview = Assert.IsType<SolidColorBrush>(viewModel.ThemeColorPreviewBrush);
+        Assert.True(viewModel.Settings.IsSettingsDirty);
+        Assert.False(viewModel.Settings.ThemeColorPaletteItems[0].IsSelected);
+        Assert.True(viewModel.Settings.ThemeColorPaletteItems[1].IsSelected);
+        var preview = Assert.IsType<SolidColorBrush>(viewModel.Settings.ThemeColorPreviewBrush);
         Assert.Equal(Color.FromArgb(0xFF, 0x20, 0x50, 0xD8), preview.Color);
     }
 
@@ -300,20 +352,20 @@ public sealed class MainWindowViewModelTests : IDisposable
         await settingsService.SaveAsync(new LauncherSettings());
         var coreService = new CountingCoreService(CreateSnapshot());
         using var viewModel = CreateViewModel(coreService, settingsService);
-        viewModel.SelectedThemeColorMode = ThemeColorModes.Wallpaper;
-        viewModel.ThemeColorPaletteItems.Add(new ThemeColorPaletteItem
+        viewModel.Settings.SelectedThemeColorMode = ThemeColorModes.Wallpaper;
+        viewModel.Settings.ThemeColorPaletteItems.Add(new ThemeColorPaletteItem
         {
             Index = 0,
             ColorHex = "#FFD82038",
             Brush = new SolidColorBrush(Color.FromRgb(0xD8, 0x20, 0x38))
         });
-        viewModel.ThemeColorPaletteItems.Add(new ThemeColorPaletteItem
+        viewModel.Settings.ThemeColorPaletteItems.Add(new ThemeColorPaletteItem
         {
             Index = 1,
             ColorHex = "#FF2050D8",
             Brush = new SolidColorBrush(Color.FromRgb(0x20, 0x50, 0xD8))
         });
-        viewModel.SelectedThemeColorPaletteIndex = 1;
+        viewModel.Settings.SelectedThemeColorPaletteIndex = 1;
 
         await SaveSettingsAsync(viewModel);
 
@@ -335,18 +387,18 @@ public sealed class MainWindowViewModelTests : IDisposable
         var coreService = new CountingCoreService(CreateSnapshot());
         using var viewModel = CreateViewModel(coreService, settingsService, uidService, apiClient);
 
-        await viewModel.OpenResourcePanelCommand.ExecuteAsync(null);
+        await viewModel.ResourcePanel.OpenResourcePanelCommand.ExecuteAsync(null);
 
-        Assert.True(viewModel.IsResourcePanelVisible);
-        Assert.False(viewModel.IsResourcePanelUidMissing);
-        Assert.Equal("UID123", viewModel.ResourcePanelUid);
+        Assert.True(viewModel.ResourcePanel.IsResourcePanelVisible);
+        Assert.False(viewModel.ResourcePanel.IsResourcePanelUidMissing);
+        Assert.Equal("UID123", viewModel.ResourcePanel.ResourcePanelUid);
         Assert.Equal(1, handler.StatusListCount);
         Assert.Equal(1, handler.ConfigGetCount);
-        var text = viewModel.ResourcePanelItems.First(item => item.Code == ResourcePanelResourceCodes.Text);
-        var voice = viewModel.ResourcePanelItems.First(item => item.Code == ResourcePanelResourceCodes.Voice);
-        Assert.Equal(viewModel.I18n.ResourcePanelReady, text.StatusText);
+        var text = viewModel.ResourcePanel.ResourcePanelItems.First(item => item.Code == ResourcePanelResourceCodes.Text);
+        var voice = viewModel.ResourcePanel.ResourcePanelItems.First(item => item.Code == ResourcePanelResourceCodes.Voice);
+        Assert.Equal(viewModel.Shell.I18n.ResourcePanelReady, text.StatusText);
         Assert.True(text.IsEnabled);
-        Assert.Equal(viewModel.I18n.ResourcePanelWaiting, voice.StatusText);
+        Assert.Equal(viewModel.Shell.I18n.ResourcePanelWaiting, voice.StatusText);
         Assert.False(voice.IsEnabled);
     }
 
@@ -363,14 +415,17 @@ public sealed class MainWindowViewModelTests : IDisposable
         using var apiClient = new ResourcePanelApiClient(handler);
         var coreService = new CountingCoreService(CreateSnapshot());
         using var viewModel = CreateViewModel(coreService, settingsService, uidService, apiClient);
-        await viewModel.OpenResourcePanelCommand.ExecuteAsync(null);
-        viewModel.ResourcePanelItems.First(item => item.Code == ResourcePanelResourceCodes.Text).IsEnabled = true;
-        viewModel.ResourcePanelItems.First(item => item.Code == ResourcePanelResourceCodes.Voice).IsEnabled = false;
-        viewModel.ResourcePanelItems.First(item => item.Code == ResourcePanelResourceCodes.Media).IsEnabled = true;
+        await viewModel.ResourcePanel.OpenResourcePanelCommand.ExecuteAsync(null);
+        viewModel.ResourcePanel.ResourcePanelItems.First(item => item.Code == ResourcePanelResourceCodes.Text).IsEnabled = true;
+        viewModel.ResourcePanel.ResourcePanelItems.First(item => item.Code == ResourcePanelResourceCodes.Voice).IsEnabled = false;
+        viewModel.ResourcePanel.ResourcePanelItems.First(item => item.Code == ResourcePanelResourceCodes.Media).IsEnabled = true;
 
-        await viewModel.SaveResourcePanelCommand.ExecuteAsync(null);
+        await viewModel.ResourcePanel.SaveResourcePanelCommand.ExecuteAsync(null);
 
-        Assert.Equal("/config/set?uid=UID123&text=cn&voice=jp&media=cn", handler.LastRequestPathAndQuery);
+        Assert.Equal("POST", handler.LastRequestMethod);
+        Assert.Equal("/config/set", handler.LastRequestPathAndQuery);
+        Assert.NotNull(handler.LastRequestBody);
+        Assert.Contains("\"uid\":\"UID123\"", handler.LastRequestBody);
         Assert.Equal(1, handler.ConfigSetCount);
     }
 
@@ -387,11 +442,11 @@ public sealed class MainWindowViewModelTests : IDisposable
         var coreService = new CountingCoreService(CreateSnapshot());
         using var viewModel = CreateViewModel(coreService, settingsService, uidService, apiClient);
 
-        await viewModel.OpenResourcePanelCommand.ExecuteAsync(null);
+        await viewModel.ResourcePanel.OpenResourcePanelCommand.ExecuteAsync(null);
 
-        Assert.True(viewModel.IsResourcePanelVisible);
-        Assert.True(viewModel.IsResourcePanelUidMissing);
-        Assert.Equal("", viewModel.ResourcePanelUid);
+        Assert.True(viewModel.ResourcePanel.IsResourcePanelVisible);
+        Assert.True(viewModel.ResourcePanel.IsResourcePanelUidMissing);
+        Assert.Equal("", viewModel.ResourcePanel.ResourcePanelUid);
         Assert.Equal(0, handler.StatusListCount);
         Assert.Equal(0, handler.ConfigGetCount);
         Assert.Equal(0, handler.ConfigSetCount);
@@ -401,7 +456,8 @@ public sealed class MainWindowViewModelTests : IDisposable
         ILauncherCoreService coreService,
         LauncherSettingsService? settingsService = null,
         ResourcePanelUidService? resourcePanelUidService = null,
-        ResourcePanelApiClient? resourcePanelApiClient = null)
+        ResourcePanelApiClient? resourcePanelApiClient = null,
+        ToastService? toastService = null)
     {
         settingsService ??= new LauncherSettingsService(
             Path.Combine(tempDir, Guid.NewGuid().ToString("N"), "settings.json"));
@@ -425,22 +481,40 @@ public sealed class MainWindowViewModelTests : IDisposable
             Path.Combine(tempDir, "missing-resource-panel-cookie"));
         resourcePanelApiClient ??= new ResourcePanelApiClient(new ResourcePanelHandler());
 
+        var localizationService = new LocalizationService();
+        toastService ??= new ToastService();
+        var diskSpaceService = new DiskSpaceService();
+        var externalLinkService = new ExternalLinkService();
+        var settingsViewModel = new SettingsViewModel(
+            settingsService, localizationService, toastService,
+            imageCacheService, externalLinkService, diskSpaceService);
+        var resourcePanelViewModel = new ResourcePanelViewModel(
+            resourcePanelUidService, resourcePanelApiClient, localizationService,
+            toastService, diagnostics);
+        var noticeStateService = new NoticeStateService(Path.Combine(tempDir, Guid.NewGuid().ToString("N"), "shown_notices.json"));
+        var gameUninstallService = new GameUninstallService(localGameStateService, diagnostics);
+
         return new MainWindowViewModel(
             coreService,
             settingsService,
-            localGameStateService,
-            gameLaunchService,
-            gameDownloadService,
-            new GameUninstallService(localGameStateService, diagnostics),
-            new ExternalLinkService(),
-            new DiskSpaceService(),
-            new LocalizationService(),
-            new ToastService(),
+            localizationService,
+            toastService,
             diagnostics,
-            new NoticeStateService(Path.Combine(tempDir, Guid.NewGuid().ToString("N"), "shown_notices.json")),
-            imageCacheService,
-            resourcePanelUidService,
-            resourcePanelApiClient);
+            new ShellViewModel(localizationService),
+            new BackgroundViewModel(imageCacheService, diagnostics),
+            new RemoteContentViewModel(localizationService, imageCacheService),
+            new DialogsViewModel(localizationService, noticeStateService),
+            new GameOperationsViewModel(
+                gameLaunchService,
+                gameDownloadService,
+                gameUninstallService,
+                localizationService,
+                toastService,
+                diagnostics),
+            new ToastHostViewModel(toastService),
+            new WindowChromeViewModel(externalLinkService),
+            settingsViewModel,
+            resourcePanelViewModel);
     }
 
     private LauncherStatusSnapshot CreateSnapshot()
@@ -545,11 +619,7 @@ public sealed class MainWindowViewModelTests : IDisposable
 
     private static void ApplyProgress(MainWindowViewModel viewModel, GameOperationProgress progress)
     {
-        var method = typeof(MainWindowViewModel).GetMethod(
-            "ApplyProgress",
-            BindingFlags.Instance | BindingFlags.NonPublic);
-        Assert.NotNull(method);
-        method.Invoke(viewModel, [progress]);
+        viewModel.Operations.ApplyProgress(progress);
     }
 
     private static byte[] CreateSolidBgraBuffer(byte r, byte g, byte b, int width, int height, byte alpha)
@@ -595,19 +665,14 @@ public sealed class MainWindowViewModelTests : IDisposable
 
     private static async Task SaveSettingsAsync(MainWindowViewModel viewModel)
     {
-        var method = typeof(MainWindowViewModel).GetMethod(
-            "SaveSettingsAsync",
-            BindingFlags.Instance | BindingFlags.NonPublic);
-        Assert.NotNull(method);
-        var task = (Task?)method.Invoke(viewModel, []);
-        Assert.NotNull(task);
-        await task;
+        await viewModel.Settings.SaveSettingsCommand.ExecuteAsync(null);
     }
 
     public void Dispose()
     {
         imageCacheService.Dispose();
         apiClient.Dispose();
+        httpClientFactory.Dispose();
         if (Directory.Exists(tempDir))
         {
             Directory.Delete(tempDir, recursive: true);
@@ -632,16 +697,28 @@ public sealed class MainWindowViewModelTests : IDisposable
         }
     }
 
+    private sealed class ThrowingCoreService : ILauncherCoreService
+    {
+        public Task<LauncherStatusSnapshot> LoadAsync(CancellationToken cancellationToken = default)
+        {
+            throw new InvalidOperationException("load failed");
+        }
+    }
+
     private sealed class ResourcePanelHandler : HttpMessageHandler
     {
         public int StatusListCount { get; private set; }
         public int ConfigGetCount { get; private set; }
         public int ConfigSetCount { get; private set; }
+        public string LastRequestMethod { get; private set; } = "";
         public string LastRequestPathAndQuery { get; private set; } = "";
+        public string? LastRequestBody { get; private set; }
 
-        protected override Task<HttpResponseMessage> SendAsync(HttpRequestMessage request, CancellationToken cancellationToken)
+        protected override async Task<HttpResponseMessage> SendAsync(HttpRequestMessage request, CancellationToken cancellationToken)
         {
+            LastRequestMethod = request.Method.Method;
             LastRequestPathAndQuery = request.RequestUri?.PathAndQuery ?? "";
+            LastRequestBody = request.Content is not null ? await request.Content.ReadAsStringAsync(cancellationToken) : null;
             var path = request.RequestUri?.AbsolutePath ?? "";
             var json = "{}";
             if (path == "/status/list")
@@ -680,10 +757,10 @@ public sealed class MainWindowViewModelTests : IDisposable
                 ConfigSetCount++;
             }
 
-            return Task.FromResult(new HttpResponseMessage(HttpStatusCode.OK)
+            return new HttpResponseMessage(HttpStatusCode.OK)
             {
                 Content = new StringContent(json, Encoding.UTF8, "application/json")
-            });
+            };
         }
     }
 }

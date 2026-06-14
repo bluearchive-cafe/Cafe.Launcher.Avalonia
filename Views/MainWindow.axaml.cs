@@ -26,12 +26,15 @@ public partial class MainWindow : Window
 
     public void ConfigureViewModel(MainWindowViewModel viewModel)
     {
-        viewModel.PickGameFolderAsync = PickGameFolderAsync;
-        viewModel.PickBackgroundImageAsync = PickBackgroundImageAsync;
-        viewModel.PickBackgroundFolderAsync = PickBackgroundFolderAsync;
-        viewModel.MinimizeWindow = () => WindowState = WindowState.Minimized;
-        viewModel.CloseWindow = PerformClose;
-        viewModel.RestoreWindow = ShowWindow;
+        viewModel.Settings.PickGameFolderAsync = PickGameFolderAsync;
+        viewModel.Settings.PickBackgroundImageAsync = PickBackgroundImageAsync;
+        viewModel.Settings.PickBackgroundFolderAsync = PickBackgroundFolderAsync;
+        viewModel.Background.PickBackgroundImageAsync = PickBackgroundImageAsync;
+        viewModel.Background.PickBackgroundFolderAsync = PickBackgroundFolderAsync;
+        viewModel.Operations.MinimizeWindow = () => WindowState = WindowState.Minimized;
+        viewModel.WindowChrome.MinimizeWindow = () => WindowState = WindowState.Minimized;
+        viewModel.WindowChrome.CloseWindow = PerformClose;
+        viewModel.WindowChrome.RestoreWindow = ShowWindow;
     }
 
     public void SetSystemTray(SystemTrayService trayService)
@@ -50,7 +53,7 @@ public partial class MainWindow : Window
             ? null
             : await StorageProvider.TryGetFolderFromPathAsync(currentPath);
 
-        var pickerTitle = (DataContext as MainWindowViewModel)?.GameFolderPickerTitle ?? "Choose install folder";
+        var pickerTitle = (DataContext as MainWindowViewModel)?.Shell.GameFolderPickerTitle ?? "Choose install folder";
         var folders = await StorageProvider.OpenFolderPickerAsync(new FolderPickerOpenOptions
         {
             Title = pickerTitle,
@@ -68,7 +71,7 @@ public partial class MainWindow : Window
             return null;
         }
 
-        var imagePickerTitle = (DataContext as MainWindowViewModel)?.BackgroundImagePickerTitle ?? "Choose Background Image";
+        var imagePickerTitle = (DataContext as MainWindowViewModel)?.Background.BackgroundImagePickerTitle ?? "Choose Background Image";
         var files = await StorageProvider.OpenFilePickerAsync(new FilePickerOpenOptions
         {
             Title = imagePickerTitle,
@@ -92,7 +95,7 @@ public partial class MainWindow : Window
             return null;
         }
 
-        var folderPickerTitle = (DataContext as MainWindowViewModel)?.BackgroundFolderPickerTitle ?? "Choose Background Folder";
+        var folderPickerTitle = (DataContext as MainWindowViewModel)?.Background.BackgroundFolderPickerTitle ?? "Choose Background Folder";
         var folders = await StorageProvider.OpenFolderPickerAsync(new FolderPickerOpenOptions
         {
             Title = folderPickerTitle,
@@ -124,52 +127,59 @@ public partial class MainWindow : Window
 
         // Close dialogs in priority order — most-nested first.
         // Confirmation dialogs
-        if (vm.IsStopConfirmVisible)
+        if (vm.Dialogs.IsDownloadRunningCloseConfirmVisible)
         {
-            vm.CancelStopCommand.Execute(null);
+            vm.Dialogs.CancelCloseWhileDownloadingCommand.Execute(null);
             e.Handled = true;
             return;
         }
 
-        if (vm.IsUnsavedChangesVisible)
+        if (vm.Dialogs.IsStopConfirmVisible)
         {
-            vm.KeepEditingSettingsCommand.Execute(null);
+            vm.Dialogs.CancelStopCommand.Execute(null);
             e.Handled = true;
             return;
         }
 
-        if (vm.IsRepairConfirmVisible)
+        if (vm.Settings.IsUnsavedChangesVisible)
         {
-            vm.CancelRepairCommand.Execute(null);
+            vm.WindowChrome.KeepEditingSettingsCommand.Execute(null);
             e.Handled = true;
             return;
         }
 
-        if (vm.IsUninstallConfirmVisible)
+        if (vm.Dialogs.IsRepairConfirmVisible)
         {
-            vm.CancelUninstallCommand.Execute(null);
+            vm.Dialogs.CancelRepairCommand.Execute(null);
             e.Handled = true;
             return;
         }
 
-        if (vm.IsNoticeDialogVisible)
+        if (vm.Dialogs.IsUninstallConfirmVisible)
         {
-            vm.DismissNoticeCommand.Execute(null);
+            vm.Dialogs.CancelUninstallCommand.Execute(null);
+            e.Handled = true;
+            return;
+        }
+
+        if (vm.Dialogs.IsNoticeDialogVisible)
+        {
+            vm.Dialogs.DismissNoticeCommand.Execute(null);
             e.Handled = true;
             return;
         }
 
         // Overlay panels — only close if not dirty (avoids accidental data loss)
-        if (vm.IsSettingsVisible && !vm.IsSettingsDirty)
+        if (vm.WindowChrome.IsSettingsVisible && !vm.Settings.IsSettingsDirty)
         {
-            vm.ShowSettingsCommand.Execute(null);
+            vm.WindowChrome.ShowSettingsCommand.Execute(null);
             e.Handled = true;
             return;
         }
 
-        if (vm.IsResourcePanelVisible)
+        if (vm.ResourcePanel.IsResourcePanelVisible)
         {
-            vm.CloseResourcePanelCommand.Execute(null);
+            vm.ResourcePanel.CloseResourcePanelCommand.Execute(null);
             e.Handled = true;
         }
     }
@@ -192,7 +202,7 @@ public partial class MainWindow : Window
     private void PerformClose()
     {
         if (DataContext is MainWindowViewModel vm
-            && vm.SelectedCloseBehavior == Models.CloseBehaviors.Minimize)
+            && vm.Settings.SelectedCloseBehavior == Models.CloseBehaviors.Minimize)
         {
             if (systemTray is not null)
             {

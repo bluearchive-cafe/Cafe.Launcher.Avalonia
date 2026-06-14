@@ -35,7 +35,7 @@ public sealed class GameDownloadServiceTests
     [Fact]
     public void Dispose_WhenCalledTwice_DoesNotThrow()
     {
-        using var apiClient = new LauncherApiClient();
+        using var apiClient = new LauncherApiClient(new AuthorizationHeaderFactory(), new PatchUrlGroupService(), new ProxySettingsService());
         var service = CreateService(apiClient);
 
         service.Dispose();
@@ -45,7 +45,7 @@ public sealed class GameDownloadServiceTests
     [Fact]
     public void Dispose_AfterStop_DoesNotThrow()
     {
-        using var apiClient = new LauncherApiClient();
+        using var apiClient = new LauncherApiClient(new AuthorizationHeaderFactory(), new PatchUrlGroupService(), new ProxySettingsService());
         var service = CreateService(apiClient);
 
         service.Stop();
@@ -56,6 +56,34 @@ public sealed class GameDownloadServiceTests
     public void RetryDomainOrder_MatchesCafeLauncherOld()
     {
         Assert.Equal([1, 1, 1, 1, 0, 0, 0, 1, 1, 1], GameDownloadService.RetryDomainOrder);
+    }
+
+    [Fact]
+    public void ResolveRetryDomain_WhenRetryTypeIsOne_UsesBackupCdn()
+    {
+        var cdnConfig = new CdnConfigResponse
+        {
+            PrimaryCdn = "https://primary.example.invalid",
+            BackUpCdn = "https://backup.example.invalid"
+        };
+
+        var result = GameDownloadService.ResolveRetryDomain(cdnConfig, GameDownloadService.RetryDomainOrder[0]);
+
+        Assert.Equal("https://backup.example.invalid", result);
+    }
+
+    [Fact]
+    public void ResolveRetryDomain_WhenRetryTypeIsZero_UsesPrimaryCdn()
+    {
+        var cdnConfig = new CdnConfigResponse
+        {
+            PrimaryCdn = "https://primary.example.invalid",
+            BackUpCdn = "https://backup.example.invalid"
+        };
+
+        var result = GameDownloadService.ResolveRetryDomain(cdnConfig, 0);
+
+        Assert.Equal("https://primary.example.invalid", result);
     }
 
     [Fact]

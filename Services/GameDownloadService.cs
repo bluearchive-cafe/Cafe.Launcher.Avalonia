@@ -214,8 +214,8 @@ public sealed class GameDownloadService : IDisposable
             if (string.IsNullOrWhiteSpace(settings.GamePath))
                 return Failed("Game install path is not configured. Open Settings to choose a path.", "no-path");
             var gamePath = localGameStateService.NormalizeGamePath(settings.GamePath);
-            Directory.CreateDirectory(gamePath);
             EnsureGamePath(gamePath);
+            Directory.CreateDirectory(gamePath);
 
             var localGame = await localGameStateService.ReadAsync(gamePath, activeToken);
             if (localGame.GameConfig?.Name is { Length: > 0 }
@@ -664,10 +664,7 @@ public sealed class GameDownloadService : IDisposable
             var retryType = retryList[0];
             retryList.RemoveAt(0);
 
-            var downloadUrl = BuildDownloadUrl(
-                retryType == 1 ? cdnConfig.PrimaryCdn : cdnConfig.BackUpCdn,
-                source,
-                file.Path);
+            var downloadUrl = BuildDownloadUrl(ResolveRetryDomain(cdnConfig, retryType), source, file.Path);
 
             try
             {
@@ -991,17 +988,19 @@ public sealed class GameDownloadService : IDisposable
         var pathItems = source
             .Split('/', StringSplitOptions.RemoveEmptyEntries)
             .Concat(filePath.Split('/', StringSplitOptions.RemoveEmptyEntries))
+            .Select(Uri.EscapeDataString)
             .ToList();
-        if (pathItems.Count > 0)
-        {
-            pathItems[^1] = Uri.EscapeDataString(pathItems[^1]);
-        }
 
         var builder = new UriBuilder(uri)
         {
             Path = string.Join("/", pathItems)
         };
         return builder.Uri.AbsoluteUri;
+    }
+
+    internal static string? ResolveRetryDomain(CdnConfigResponse cdnConfig, int retryType)
+    {
+        return retryType == 0 ? cdnConfig.PrimaryCdn : cdnConfig.BackUpCdn;
     }
 
     private static void EnsureGamePath(string gamePath)

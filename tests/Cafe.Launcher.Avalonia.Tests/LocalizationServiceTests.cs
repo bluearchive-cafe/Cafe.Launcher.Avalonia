@@ -1,3 +1,5 @@
+using System.Collections.Generic;
+using System.Text.Json;
 using Cafe.Launcher.Avalonia.Models;
 using Cafe.Launcher.Avalonia.Services;
 
@@ -5,6 +7,34 @@ namespace Cafe.Launcher.Avalonia.Tests;
 
 public sealed class LocalizationServiceTests
 {
+    static LocalizationServiceTests()
+    {
+        LocalizationService.InitializeForTesting(new Dictionary<string, Dictionary<string, string>>
+        {
+            [LauncherLanguages.English] = new()
+            {
+                ["trayOpenLauncher"] = "Open the launcher window",
+                ["trayExitLauncher"] = "Close the launcher process",
+                ["githubRepository"] = "GitHub Repository",
+                ["checkUpdates"] = "Check for Updates",
+            },
+            [LauncherLanguages.SimplifiedChinese] = new()
+            {
+                ["trayOpenLauncher"] = "打开启动器窗口",
+                ["trayExitLauncher"] = "关闭启动器进程",
+                ["githubRepository"] = "GitHub 仓库",
+                ["checkUpdates"] = "检查更新",
+            },
+            [LauncherLanguages.Japanese] = new()
+            {
+                ["trayOpenLauncher"] = "ランチャーウィンドウを開く",
+                ["trayExitLauncher"] = "ランチャープロセスを終了",
+                ["githubRepository"] = "GitHub リポジトリ",
+                ["checkUpdates"] = "更新を確認",
+            },
+        });
+    }
+
     [Fact]
     public void SetLanguage_RaisesLanguageChanged()
     {
@@ -48,5 +78,38 @@ public sealed class LocalizationServiceTests
 
         Assert.Equal(expectedRepositoryText, service.T("githubRepository"));
         Assert.Equal(expectedCheckUpdatesText, service.T("checkUpdates"));
+    }
+
+    [Fact]
+    public void ZhHansLocale_WhenLegalInfoRequested_UsesChineseCopy()
+    {
+        var json = File.ReadAllText(Path.Combine(FindProjectRoot(), "Assets", "Locales", "zh-Hans.json"));
+        var values = JsonSerializer.Deserialize<Dictionary<string, string>>(json);
+        Assert.NotNull(values);
+
+        var copyright = values["aboutCopyrightText"];
+        var disclaimer = values["aboutDisclaimerText"];
+
+        Assert.Contains("版权所有", copyright);
+        Assert.DoesNotContain("All rights reserved", copyright);
+        Assert.Contains("“Cafe Launcher”", disclaimer);
+        Assert.Contains("中文名“蔚蓝档案”", disclaimer);
+        Assert.DoesNotContain("中文名'蔚蓝档案'", disclaimer);
+    }
+
+    private static string FindProjectRoot()
+    {
+        var directory = new DirectoryInfo(AppContext.BaseDirectory);
+        while (directory is not null)
+        {
+            if (File.Exists(Path.Combine(directory.FullName, "Cafe.Launcher.Avalonia.csproj")))
+            {
+                return directory.FullName;
+            }
+
+            directory = directory.Parent;
+        }
+
+        throw new DirectoryNotFoundException("Cafe.Launcher.Avalonia.csproj was not found.");
     }
 }

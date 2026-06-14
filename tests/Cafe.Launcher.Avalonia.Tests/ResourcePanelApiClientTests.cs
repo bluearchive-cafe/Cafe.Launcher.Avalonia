@@ -58,7 +58,7 @@ public sealed class ResourcePanelApiClientTests
     }
 
     [Fact]
-    public async Task SaveConfigAsync_SendsExactQueryParameters()
+    public async Task SaveConfigAsync_SendsExactJsonBody()
     {
         var handler = new JsonHandler("{}");
         using var client = new ResourcePanelApiClient(handler);
@@ -69,7 +69,14 @@ public sealed class ResourcePanelApiClientTests
             ResourcePanelResourceModes.Japanese,
             ResourcePanelResourceModes.Chinese);
 
-        Assert.Equal("/config/set?uid=UID123&text=cn&voice=jp&media=cn", handler.LastRequestPathAndQuery);
+        Assert.Equal("POST", handler.LastRequestMethod);
+        Assert.Equal("/config/set", handler.LastRequestPathAndQuery);
+        Assert.NotNull(handler.LastRequestBody);
+        Assert.Contains("\"uid\":\"UID123\"", handler.LastRequestBody);
+        Assert.Contains("\"text\":\"cn\"", handler.LastRequestBody);
+        Assert.Contains("\"voice\":\"jp\"", handler.LastRequestBody);
+        Assert.Contains("\"media\":\"cn\"", handler.LastRequestBody);
+        Assert.Contains("application/json", handler.LastRequestContentType);
     }
 
     private sealed class JsonHandler : HttpMessageHandler
@@ -81,15 +88,21 @@ public sealed class ResourcePanelApiClientTests
             this.json = json;
         }
 
+        public string LastRequestMethod { get; private set; } = "";
         public string LastRequestPathAndQuery { get; private set; } = "";
+        public string? LastRequestBody { get; private set; }
+        public string? LastRequestContentType { get; private set; }
 
-        protected override Task<HttpResponseMessage> SendAsync(HttpRequestMessage request, CancellationToken cancellationToken)
+        protected override async Task<HttpResponseMessage> SendAsync(HttpRequestMessage request, CancellationToken cancellationToken)
         {
+            LastRequestMethod = request.Method.Method;
             LastRequestPathAndQuery = request.RequestUri?.PathAndQuery ?? "";
-            return Task.FromResult(new HttpResponseMessage(HttpStatusCode.OK)
+            LastRequestContentType = request.Content?.Headers.ContentType?.ToString();
+            LastRequestBody = request.Content is not null ? await request.Content.ReadAsStringAsync(cancellationToken) : null;
+            return new HttpResponseMessage(HttpStatusCode.OK)
             {
                 Content = new StringContent(json, Encoding.UTF8, "application/json")
-            });
+            };
         }
     }
 }

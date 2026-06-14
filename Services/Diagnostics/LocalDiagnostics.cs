@@ -42,4 +42,30 @@ public sealed class LocalDiagnostics
         Directory.CreateDirectory(Path.GetDirectoryName(logPath)!);
         await File.AppendAllTextAsync(logPath, builder.ToString(), Encoding.UTF8, cancellationToken);
     }
+
+    /// <summary>
+    /// Synchronous log write for use in synchronous contexts (e.g. constructors, static methods).
+    /// </summary>
+    public static void LogSync(string title, string message)
+    {
+        try
+        {
+            var folder = Path.Combine(
+                Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData),
+                LauncherConstants.ProductName);
+            var logPath = Path.Combine(folder, "diagnostics.log");
+            var builder = new StringBuilder();
+            builder.AppendLine(DateTimeOffset.Now.ToString("O"));
+            builder.AppendLine(title);
+            builder.AppendLine(message);
+            builder.AppendLine();
+
+            Directory.CreateDirectory(Path.GetDirectoryName(logPath)!);
+            File.AppendAllText(logPath, builder.ToString(), Encoding.UTF8);
+        }
+        catch
+        {
+            // Best-effort — diagnostic logging must never crash the app
+        }
+    }
 }
