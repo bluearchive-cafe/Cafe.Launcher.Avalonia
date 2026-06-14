@@ -198,6 +198,10 @@ public partial class SettingsViewModel : ViewModelBase
     /// <summary>Called by parent when settings panel opens or discards changes.</summary>
     public void LoadFromSnapshot(LauncherSettings settings)
     {
+        var currentWallpaperPalette = settings.ThemeColorMode == ThemeColorModes.Wallpaper
+            ? GetThemeColorPaletteHexes()
+            : [];
+        var currentWallpaperPaletteIndex = SelectedThemeColorPaletteIndex;
         SelectedGamePath = settings.GamePath;
         SelectedLaunchCheckMode = settings.LaunchCheckMode;
         SelectedProxyMode = settings.ProxyMode;
@@ -213,6 +217,17 @@ public partial class SettingsViewModel : ViewModelBase
         IsCustomBackground = !string.IsNullOrWhiteSpace(settings.CustomBackgroundPath);
         SelectedBackgroundSource = settings.BackgroundSource;
         IsCustomBackgroundSelected = settings.BackgroundSource == BackgroundSources.Custom;
+        if (SelectedThemeColorMode == ThemeColorModes.Wallpaper)
+        {
+            if (currentWallpaperPalette.Count > 0)
+            {
+                ReplaceThemeColorPalette(currentWallpaperPalette, currentWallpaperPaletteIndex, markDirty: false);
+            }
+            else
+            {
+                RefreshThemeColorPaletteFromCurrentBackground(markDirty: false);
+            }
+        }
     }
 
     /// <summary>Called by parent ApplyLanguage to refresh display names.</summary>

@@ -376,6 +376,35 @@ public sealed class MainWindowViewModelTests : IDisposable
     }
 
     [Fact]
+    public async Task ShowSettingsAsync_WhenWallpaperPaletteWasRefreshed_KeepsCurrentPalette()
+    {
+        var snapshot = CreateSnapshot();
+        snapshot.Settings.ThemeColorMode = ThemeColorModes.Wallpaper;
+        snapshot.Settings.ThemeColorPalette = ["#FF2050D8"];
+        var coreService = new CountingCoreService(snapshot);
+        using var viewModel = CreateViewModel(coreService);
+
+        await viewModel.InitializeAsync();
+        viewModel.Settings.ThemeColorPaletteItems.Clear();
+        viewModel.Settings.ThemeColorPaletteItems.Add(new ThemeColorPaletteItem
+        {
+            Index = 0,
+            ColorHex = "#FFD82038",
+            Brush = new SolidColorBrush(Color.FromRgb(0xD8, 0x20, 0x38)),
+            IsSelected = true
+        });
+        viewModel.Settings.SelectedThemeColorPaletteIndex = 0;
+        viewModel.Settings.IsSettingsDirty = false;
+        Assert.Equal("#FFD82038", Assert.Single(viewModel.Settings.ThemeColorPaletteItems).ColorHex);
+
+        viewModel.WindowChrome.ShowSettingsCommand.Execute(null);
+
+        Assert.True(viewModel.WindowChrome.IsSettingsVisible);
+        Assert.Equal("#FFD82038", Assert.Single(viewModel.Settings.ThemeColorPaletteItems).ColorHex);
+        Assert.False(viewModel.Settings.IsSettingsDirty);
+    }
+
+    [Fact]
     public async Task OpenResourcePanelAsync_WhenCookieUidExists_LoadsStatusAndConfig()
     {
         var cookiePath = Path.Combine(tempDir, "Library");
