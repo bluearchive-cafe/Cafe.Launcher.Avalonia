@@ -4,7 +4,6 @@ using Cafe.Launcher.Avalonia.Services.Auth;
 using Cafe.Launcher.Avalonia.Services.Diagnostics;
 using Cafe.Launcher.Avalonia.ViewModels;
 using Avalonia.Media;
-using System.Reflection;
 using System.Net;
 using System.Text;
 
@@ -59,8 +58,8 @@ public sealed class MainWindowViewModelTests : IDisposable
 
         await viewModel.InitializeAsync();
 
-        Assert.Contains(viewModel.NewsItems, item => item.Title == "news title");
-        Assert.Contains(viewModel.NewsItems, item => item.Title == "notice title");
+        Assert.Contains(viewModel.RemoteContent.NewsItems, item => item.Title == "news title");
+        Assert.Contains(viewModel.RemoteContent.NewsItems, item => item.Title == "notice title");
     }
 
     [Fact]
@@ -74,19 +73,19 @@ public sealed class MainWindowViewModelTests : IDisposable
 
         await viewModel.InitializeAsync();
 
-        Assert.Contains(viewModel.NewsItems, item => item.Title == "news title");
-        Assert.Contains(viewModel.NewsItems, item => item.Title == "notice title");
-        Assert.True(viewModel.HasNewsItems);
-        Assert.False(viewModel.HasRemoteContent);
+        Assert.Contains(viewModel.RemoteContent.NewsItems, item => item.Title == "news title");
+        Assert.Contains(viewModel.RemoteContent.NewsItems, item => item.Title == "notice title");
+        Assert.True(viewModel.RemoteContent.HasNewsItems);
+        Assert.False(viewModel.RemoteContent.HasRemoteContent);
     }
 
     [Fact]
     public async Task InitializeAsync_WhenCoreLoadFails_DoesNotShowNetworkLoadedToast()
     {
         var coreService = new ThrowingCoreService();
-        using var viewModel = CreateViewModel(coreService);
         var successToasts = new List<string>();
-        var toastService = GetToastService(viewModel);
+        var toastService = new ToastService();
+        using var viewModel = CreateViewModel(coreService, toastService: toastService);
         toastService.ToastRaised += notification =>
         {
             if (notification.Severity == ToastSeverity.Success)
@@ -97,7 +96,7 @@ public sealed class MainWindowViewModelTests : IDisposable
 
         await viewModel.InitializeAsync();
 
-        Assert.DoesNotContain(viewModel.I18n.StatusNetworkLoaded, successToasts);
+        Assert.DoesNotContain(viewModel.Shell.I18n.StatusNetworkLoaded, successToasts);
     }
 
     [Fact]
@@ -121,7 +120,7 @@ public sealed class MainWindowViewModelTests : IDisposable
 
         await viewModel.InitializeAsync();
 
-        var item = Assert.Single(viewModel.SocialMediaItems);
+        var item = Assert.Single(viewModel.RemoteContent.SocialMediaItems);
         Assert.Equal("Palette", item.SocialIconKind);
     }
 
@@ -133,7 +132,7 @@ public sealed class MainWindowViewModelTests : IDisposable
         var imagePath = Path.Combine(folderPath, "wallpaper.PNG");
         await WriteTestPngAsync(imagePath);
 
-        var resolved = MainWindowViewModel.ResolveRandomBackgroundImage(folderPath);
+        var resolved = BackgroundViewModel.ResolveRandomBackgroundImage(folderPath);
 
         Assert.Equal(imagePath, resolved);
     }
@@ -147,7 +146,7 @@ public sealed class MainWindowViewModelTests : IDisposable
         Directory.CreateDirectory(nestedFolderPath);
         await WriteTestPngAsync(Path.Combine(nestedFolderPath, "wallpaper.png"));
 
-        var resolved = MainWindowViewModel.ResolveRandomBackgroundImage(folderPath);
+        var resolved = BackgroundViewModel.ResolveRandomBackgroundImage(folderPath);
 
         Assert.Null(resolved);
     }
@@ -158,7 +157,7 @@ public sealed class MainWindowViewModelTests : IDisposable
         var folderPath = Path.Combine(tempDir, "empty-wallpapers");
         Directory.CreateDirectory(folderPath);
 
-        var resolved = MainWindowViewModel.ResolveRandomBackgroundImage(folderPath);
+        var resolved = BackgroundViewModel.ResolveRandomBackgroundImage(folderPath);
 
         Assert.Null(resolved);
     }
@@ -177,7 +176,7 @@ public sealed class MainWindowViewModelTests : IDisposable
             CanPause = false
         });
 
-        Assert.False(viewModel.CanPauseOperation);
+        Assert.False(viewModel.Operations.CanPauseOperation);
     }
 
     [Fact]
@@ -194,7 +193,7 @@ public sealed class MainWindowViewModelTests : IDisposable
             CanPause = true
         });
 
-        Assert.True(viewModel.CanPauseOperation);
+        Assert.True(viewModel.Operations.CanPauseOperation);
     }
 
     [Fact]
@@ -222,8 +221,8 @@ public sealed class MainWindowViewModelTests : IDisposable
         viewModel.Settings.SelectedPatchUrlGroup = PatchUrlGroups.Cafe;
         await SaveSettingsAsync(viewModel);
 
-        Assert.True(viewModel.IsRepairConfirmVisible);
-        Assert.False(string.IsNullOrWhiteSpace(viewModel.RepairConfirmText));
+        Assert.True(viewModel.Dialogs.IsRepairConfirmVisible);
+        Assert.False(string.IsNullOrWhiteSpace(viewModel.Dialogs.RepairConfirmText));
     }
 
     [Fact]
@@ -231,7 +230,7 @@ public sealed class MainWindowViewModelTests : IDisposable
     {
         var coreService = new CountingCoreService(CreateSnapshot());
         using var viewModel = CreateViewModel(coreService);
-        viewModel.IsSettingsVisible = true;
+        viewModel.WindowChrome.IsSettingsVisible = true;
         viewModel.Settings.IsSettingsDirty = false;
 
         viewModel.Settings.SelectedThemeColorMode = ThemeColorModes.System;
@@ -333,7 +332,7 @@ public sealed class MainWindowViewModelTests : IDisposable
             Brush = new SolidColorBrush(Color.FromRgb(0x20, 0x50, 0xD8))
         });
         viewModel.Settings.SelectedThemeColorMode = ThemeColorModes.Wallpaper;
-        viewModel.IsSettingsVisible = true;
+        viewModel.WindowChrome.IsSettingsVisible = true;
         viewModel.Settings.IsSettingsDirty = false;
 
         viewModel.Settings.SelectedThemeColorPaletteIndex = 1;
@@ -397,9 +396,9 @@ public sealed class MainWindowViewModelTests : IDisposable
         Assert.Equal(1, handler.ConfigGetCount);
         var text = viewModel.ResourcePanel.ResourcePanelItems.First(item => item.Code == ResourcePanelResourceCodes.Text);
         var voice = viewModel.ResourcePanel.ResourcePanelItems.First(item => item.Code == ResourcePanelResourceCodes.Voice);
-        Assert.Equal(viewModel.I18n.ResourcePanelReady, text.StatusText);
+        Assert.Equal(viewModel.Shell.I18n.ResourcePanelReady, text.StatusText);
         Assert.True(text.IsEnabled);
-        Assert.Equal(viewModel.I18n.ResourcePanelWaiting, voice.StatusText);
+        Assert.Equal(viewModel.Shell.I18n.ResourcePanelWaiting, voice.StatusText);
         Assert.False(voice.IsEnabled);
     }
 
@@ -491,33 +490,31 @@ public sealed class MainWindowViewModelTests : IDisposable
             imageCacheService, externalLinkService, diskSpaceService);
         var resourcePanelViewModel = new ResourcePanelViewModel(
             resourcePanelUidService, resourcePanelApiClient, localizationService,
-            toastService, new LocalDiagnostics());
+            toastService, diagnostics);
+        var noticeStateService = new NoticeStateService(Path.Combine(tempDir, Guid.NewGuid().ToString("N"), "shown_notices.json"));
+        var gameUninstallService = new GameUninstallService(localGameStateService, diagnostics);
 
         return new MainWindowViewModel(
             coreService,
             settingsService,
-            localGameStateService,
-            gameLaunchService,
-            gameDownloadService,
-            new GameUninstallService(localGameStateService, diagnostics),
-            externalLinkService,
-            diskSpaceService,
             localizationService,
             toastService,
             diagnostics,
-            new NoticeStateService(Path.Combine(tempDir, Guid.NewGuid().ToString("N"), "shown_notices.json")),
-            imageCacheService,
+            new ShellViewModel(localizationService),
+            new BackgroundViewModel(imageCacheService, diagnostics),
+            new RemoteContentViewModel(localizationService, imageCacheService),
+            new DialogsViewModel(localizationService, noticeStateService),
+            new GameOperationsViewModel(
+                gameLaunchService,
+                gameDownloadService,
+                gameUninstallService,
+                localizationService,
+                toastService,
+                diagnostics),
+            new ToastHostViewModel(toastService),
+            new WindowChromeViewModel(externalLinkService),
             settingsViewModel,
             resourcePanelViewModel);
-    }
-
-    private static ToastService GetToastService(MainWindowViewModel viewModel)
-    {
-        var field = typeof(MainWindowViewModel).GetField(
-            "toastService",
-            BindingFlags.Instance | BindingFlags.NonPublic);
-        Assert.NotNull(field);
-        return Assert.IsType<ToastService>(field.GetValue(viewModel));
     }
 
     private LauncherStatusSnapshot CreateSnapshot()
@@ -622,11 +619,7 @@ public sealed class MainWindowViewModelTests : IDisposable
 
     private static void ApplyProgress(MainWindowViewModel viewModel, GameOperationProgress progress)
     {
-        var method = typeof(MainWindowViewModel).GetMethod(
-            "ApplyProgress",
-            BindingFlags.Instance | BindingFlags.NonPublic);
-        Assert.NotNull(method);
-        method.Invoke(viewModel, [progress]);
+        viewModel.Operations.ApplyProgress(progress);
     }
 
     private static byte[] CreateSolidBgraBuffer(byte r, byte g, byte b, int width, int height, byte alpha)
@@ -672,13 +665,7 @@ public sealed class MainWindowViewModelTests : IDisposable
 
     private static async Task SaveSettingsAsync(MainWindowViewModel viewModel)
     {
-        var method = typeof(SettingsViewModel).GetMethod(
-            "SaveSettingsAsync",
-            BindingFlags.Instance | BindingFlags.NonPublic);
-        Assert.NotNull(method);
-        var task = (Task?)method.Invoke(viewModel.Settings, []);
-        Assert.NotNull(task);
-        await task;
+        await viewModel.Settings.SaveSettingsCommand.ExecuteAsync(null);
     }
 
     public void Dispose()

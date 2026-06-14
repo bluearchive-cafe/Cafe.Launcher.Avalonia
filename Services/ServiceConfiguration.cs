@@ -49,6 +49,13 @@ public static class ServiceConfiguration
         // ── ViewModels (Transient ─ each resolution creates a fresh instance) ─
         services.AddTransient<SettingsViewModel>();
         services.AddTransient<ResourcePanelViewModel>();
+        services.AddTransient<ShellViewModel>();
+        services.AddTransient<BackgroundViewModel>();
+        services.AddTransient<RemoteContentViewModel>();
+        services.AddTransient<DialogsViewModel>();
+        services.AddTransient<GameOperationsViewModel>();
+        services.AddTransient<ToastHostViewModel>();
+        services.AddTransient<WindowChromeViewModel>();
         services.AddTransient<MainWindowViewModel>();
 
         return services;

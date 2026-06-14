@@ -7,7 +7,7 @@
              x:DataType="vm:MainWindowViewModel">
         <!-- Toast notification overlay -->
         <Grid IsHitTestVisible="False" Margin="0,56,16,0" VerticalAlignment="Top" HorizontalAlignment="Right" ZIndex="1000">
-            <ItemsControl ItemsSource="{Binding ActiveToasts}">
+            <ItemsControl ItemsSource="{Binding Toasts.ActiveToasts}">
                 <ItemsControl.ItemsPanel>
                     <ItemsPanelTemplate>
                         <StackPanel Spacing="8" HorizontalAlignment="Right"/>

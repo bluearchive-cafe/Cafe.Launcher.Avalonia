@@ -5,7 +5,7 @@
              xmlns:materialIcons="clr-namespace:Material.Icons.Avalonia;assembly=Material.Icons.Avalonia"
              x:Class="Cafe.Launcher.Avalonia.Views.MainWindowSettingsOverlay"
              x:DataType="vm:MainWindowViewModel">
-    <Grid IsVisible="{Binding IsSettingsVisible}" Background="{DynamicResource LauncherOverlayBrush}">
+    <Grid IsVisible="{Binding WindowChrome.IsSettingsVisible}" Background="{DynamicResource LauncherOverlayBrush}">
         <Border MaxWidth="760"
                 MaxHeight="650"
                 Margin="24"
@@ -18,10 +18,10 @@
                         <Border Classes="dialog-icon">
                             <materialIcons:MaterialIcon Kind="CogOutline" Width="19" Height="19" Foreground="{DynamicResource LauncherAccentBrush}" HorizontalAlignment="Center" VerticalAlignment="Center"/>
                         </Border>
-                        <TextBlock Text="{Binding I18n.Settings}" Classes="dialog-title" VerticalAlignment="Center"/>
+                        <TextBlock Text="{Binding Shell.I18n.Settings}" Classes="dialog-title" VerticalAlignment="Center"/>
                     </StackPanel>
-                    <Button Grid.Column="1" Classes="dialog-close" Command="{Binding ShowSettingsCommand}"
-                            VerticalAlignment="Center" Margin="0,0,16,0" ToolTip.Tip="{Binding I18n.Close}">
+                    <Button Grid.Column="1" Classes="dialog-close" Command="{Binding WindowChrome.ShowSettingsCommand}"
+                            VerticalAlignment="Center" Margin="0,0,16,0" ToolTip.Tip="{Binding Shell.I18n.Close}">
                         <materialIcons:MaterialIcon Kind="Close" Width="18" Height="18"/>
                     </Button>
                 </Grid>
@@ -30,42 +30,42 @@
                     <StackPanel Spacing="12">
                         <Border Classes="settings-section">
                             <StackPanel Spacing="8">
-                                <TextBlock Text="{Binding I18n.SettingsStatus}" Classes="group-title"/>
+                                <TextBlock Text="{Binding Shell.I18n.SettingsStatus}" Classes="group-title"/>
                                 <StackPanel Classes="card-heading">
                                     <materialIcons:MaterialIcon Kind="ViewDashboardOutline" Width="20" Height="20" Foreground="{DynamicResource LauncherAccentBrush}"/>
-                                    <TextBlock Text="{Binding ProductName}" Classes="kicker"/>
+                                    <TextBlock Text="{Binding Shell.ProductName}" Classes="kicker"/>
                                 </StackPanel>
-                                <TextBlock Text="{Binding CurrentViewTitle}" Classes="section-title" TextWrapping="Wrap"/>
-                                <TextBlock Text="{Binding StatusText}" Classes="body"/>
+                                <TextBlock Text="{Binding Shell.CurrentViewTitle}" Classes="section-title" TextWrapping="Wrap"/>
+                                <TextBlock Text="{Binding Shell.StatusText}" Classes="body"/>
                                 <Grid ColumnDefinitions="Auto,*" RowDefinitions="Auto,Auto" ColumnSpacing="8" RowSpacing="4">
-                                    <TextBlock Text="{Binding I18n.Version}" Classes="caption"/>
-                                    <TextBlock Grid.Column="1" Text="{Binding VersionText}" Classes="value" TextTrimming="CharacterEllipsis"/>
-                                    <TextBlock Grid.Row="1" Text="{Binding I18n.Executable}" Classes="caption"/>
-                                    <TextBlock Grid.Row="1" Grid.Column="1" Text="{Binding ExecutableText}" Classes="value" TextTrimming="CharacterEllipsis"/>
+                                    <TextBlock Text="{Binding Shell.I18n.Version}" Classes="caption"/>
+                                    <TextBlock Grid.Column="1" Text="{Binding Shell.VersionText}" Classes="value" TextTrimming="CharacterEllipsis"/>
+                                    <TextBlock Grid.Row="1" Text="{Binding Shell.I18n.Executable}" Classes="caption"/>
+                                    <TextBlock Grid.Row="1" Grid.Column="1" Text="{Binding Shell.ExecutableText}" Classes="value" TextTrimming="CharacterEllipsis"/>
                                 </Grid>
                                 <Border Classes="info-strip">
-                                    <TextBlock Text="{Binding OperationNote}" Foreground="{DynamicResource LauncherInfoTextBrush}" FontSize="13" TextWrapping="Wrap"/>
+                                    <TextBlock Text="{Binding Shell.OperationNote}" Foreground="{DynamicResource LauncherInfoTextBrush}" FontSize="13" TextWrapping="Wrap"/>
                                 </Border>
                             </StackPanel>
                         </Border>
 
                         <Border Classes="settings-section">
                             <StackPanel>
-                                <TextBlock Text="{Binding I18n.SettingsGameFiles}" Classes="group-title"/>
+                                <TextBlock Text="{Binding Shell.I18n.SettingsGameFiles}" Classes="group-title"/>
 
                                 <Grid Classes="settings-row" ColumnDefinitions="Auto,*,Auto" ColumnSpacing="12">
                                     <Border Classes="settings-icon">
                                         <materialIcons:MaterialIcon Kind="FolderOpen" Width="18" Height="18" Foreground="{DynamicResource LauncherAccentBrush}" HorizontalAlignment="Center" VerticalAlignment="Center"/>
                                     </Border>
                                     <StackPanel Grid.Column="1" VerticalAlignment="Center">
-                                        <TextBlock Text="{Binding I18n.GamePath}" Classes="section-title"/>
-                                        <TextBlock Text="{Binding PathText}" Classes="caption" TextWrapping="Wrap" TextTrimming="CharacterEllipsis"/>
+                                        <TextBlock Text="{Binding Shell.I18n.GamePath}" Classes="section-title"/>
+                                        <TextBlock Text="{Binding Shell.PathText}" Classes="caption" TextWrapping="Wrap" TextTrimming="CharacterEllipsis"/>
                                     </StackPanel>
                                     <Button Grid.Column="2" Classes="flat-action" Command="{Binding Settings.ChooseGamePathCommand}"
-                                            IsEnabled="{Binding IsBusy, Converter={x:Static BoolConverters.Not}}">
+                                            IsEnabled="{Binding Shell.IsBusy, Converter={x:Static BoolConverters.Not}}">
                                         <StackPanel Classes="button-content">
                                             <materialIcons:MaterialIcon Kind="FolderOpen" Width="16" Height="16"/>
-                                            <TextBlock Text="{Binding I18n.Choose}" VerticalAlignment="Center"/>
+                                            <TextBlock Text="{Binding Shell.I18n.Choose}" VerticalAlignment="Center"/>
                                         </StackPanel>
                                     </Button>
                                 </Grid>
@@ -75,8 +75,8 @@
                                         <materialIcons:MaterialIcon Kind="PlaylistCheck" Width="18" Height="18" Foreground="{DynamicResource LauncherAccentBrush}" HorizontalAlignment="Center" VerticalAlignment="Center"/>
                                     </Border>
                                     <StackPanel Grid.Column="1" Spacing="2" VerticalAlignment="Center">
-                                        <TextBlock Text="{Binding I18n.LaunchCheck}" Classes="section-title"/>
-                                        <TextBlock Text="{Binding I18n.LaunchCheckDescription}" Classes="caption" TextWrapping="Wrap"/>
+                                        <TextBlock Text="{Binding Shell.I18n.LaunchCheck}" Classes="section-title"/>
+                                        <TextBlock Text="{Binding Shell.I18n.LaunchCheckDescription}" Classes="caption" TextWrapping="Wrap"/>
                                     </StackPanel>
                                     <ComboBox Grid.Column="2" Classes="setting-control"
                                               ItemsSource="{Binding Settings.LaunchCheckModeOptions}"
@@ -95,22 +95,22 @@
                                         <materialIcons:MaterialIcon Kind="GamepadSquareOutline" Width="18" Height="18" Foreground="{DynamicResource LauncherAccentBrush}" HorizontalAlignment="Center" VerticalAlignment="Center"/>
                                     </Border>
                                     <StackPanel Grid.Column="1" Spacing="2" VerticalAlignment="Center">
-                                        <TextBlock Text="{Binding I18n.GameManagement}" Classes="section-title"/>
-                                        <TextBlock Text="{Binding I18n.GameManagementDescription}" Classes="caption" TextWrapping="Wrap"/>
+                                        <TextBlock Text="{Binding Shell.I18n.GameManagement}" Classes="section-title"/>
+                                        <TextBlock Text="{Binding Shell.I18n.GameManagementDescription}" Classes="caption" TextWrapping="Wrap"/>
                                     </StackPanel>
                                     <StackPanel Grid.Column="2" Orientation="Horizontal" Spacing="8" VerticalAlignment="Center">
-                                        <Button Classes="flat-action" Command="{Binding RequestRepairCommand}"
-                                                IsEnabled="{Binding IsBusy, Converter={x:Static BoolConverters.Not}}">
+                                        <Button Classes="flat-action" Command="{Binding Operations.RequestRepairCommand}"
+                                                IsEnabled="{Binding Shell.IsBusy, Converter={x:Static BoolConverters.Not}}">
                                             <StackPanel Classes="button-content">
                                                 <materialIcons:MaterialIcon Kind="Tools" Width="16" Height="16"/>
-                                                <TextBlock Text="{Binding I18n.Repair}" VerticalAlignment="Center"/>
+                                                <TextBlock Text="{Binding Shell.I18n.Repair}" VerticalAlignment="Center"/>
                                             </StackPanel>
                                         </Button>
-                                        <Button Classes="flat-action" Command="{Binding RequestUninstallCommand}"
-                                                IsEnabled="{Binding IsBusy, Converter={x:Static BoolConverters.Not}}">
+                                        <Button Classes="flat-action" Command="{Binding Operations.RequestUninstallCommand}"
+                                                IsEnabled="{Binding Shell.IsBusy, Converter={x:Static BoolConverters.Not}}">
                                             <StackPanel Classes="button-content">
                                                 <materialIcons:MaterialIcon Kind="TrashCanOutline" Width="16" Height="16" Foreground="{DynamicResource LauncherDangerBrush}"/>
-                                                <TextBlock Text="{Binding I18n.Uninstall}" VerticalAlignment="Center" Foreground="{DynamicResource LauncherDangerBrush}"/>
+                                                <TextBlock Text="{Binding Shell.I18n.Uninstall}" VerticalAlignment="Center" Foreground="{DynamicResource LauncherDangerBrush}"/>
                                             </StackPanel>
                                         </Button>
                                     </StackPanel>
@@ -120,15 +120,15 @@
 
                         <Border Classes="settings-section">
                             <StackPanel>
-                                <TextBlock Text="{Binding I18n.SettingsDownloadNetwork}" Classes="group-title"/>
+                                <TextBlock Text="{Binding Shell.I18n.SettingsDownloadNetwork}" Classes="group-title"/>
 
                                 <Grid Classes="settings-row" ColumnDefinitions="Auto,*,Auto" ColumnSpacing="12">
                                     <Border Classes="settings-icon">
                                         <materialIcons:MaterialIcon Kind="ShieldCheck" Width="18" Height="18" Foreground="{DynamicResource LauncherAccentBrush}" HorizontalAlignment="Center" VerticalAlignment="Center"/>
                                     </Border>
                                     <StackPanel Grid.Column="1" Spacing="2" VerticalAlignment="Center">
-                                        <TextBlock Text="{Binding I18n.Proxy}" Classes="section-title"/>
-                                        <TextBlock Text="{Binding I18n.ProxyDescription}" Classes="caption" TextWrapping="Wrap"/>
+                                        <TextBlock Text="{Binding Shell.I18n.Proxy}" Classes="section-title"/>
+                                        <TextBlock Text="{Binding Shell.I18n.ProxyDescription}" Classes="caption" TextWrapping="Wrap"/>
                                     </StackPanel>
                                     <ComboBox Grid.Column="2" Classes="setting-control"
                                               ItemsSource="{Binding Settings.ProxyModeOptions}"
@@ -147,8 +147,8 @@
                                         <materialIcons:MaterialIcon Kind="Web" Width="18" Height="18" Foreground="{DynamicResource LauncherAccentBrush}" HorizontalAlignment="Center" VerticalAlignment="Center"/>
                                     </Border>
                                     <StackPanel Grid.Column="1" Spacing="2" VerticalAlignment="Center">
-                                        <TextBlock Text="{Binding I18n.DownloadSource}" Classes="section-title"/>
-                                        <TextBlock Text="{Binding I18n.DownloadSourceDescription}" Classes="caption" TextWrapping="Wrap"/>
+                                        <TextBlock Text="{Binding Shell.I18n.DownloadSource}" Classes="section-title"/>
+                                        <TextBlock Text="{Binding Shell.I18n.DownloadSourceDescription}" Classes="caption" TextWrapping="Wrap"/>
                                     </StackPanel>
                                     <ComboBox Grid.Column="2" Classes="setting-control"
                                               ItemsSource="{Binding Settings.PatchUrlGroupOptions}"
@@ -167,8 +167,8 @@
                                         <materialIcons:MaterialIcon Kind="Speedometer" Width="18" Height="18" Foreground="{DynamicResource LauncherAccentBrush}" HorizontalAlignment="Center" VerticalAlignment="Center"/>
                                     </Border>
                                     <StackPanel Grid.Column="1" Spacing="2" VerticalAlignment="Center">
-                                        <TextBlock Text="{Binding I18n.DownloadSpeedLimit}" Classes="section-title"/>
-                                        <TextBlock Text="{Binding I18n.DownloadSpeedLimitDescription}" Classes="caption" TextWrapping="Wrap"/>
+                                        <TextBlock Text="{Binding Shell.I18n.DownloadSpeedLimit}" Classes="section-title"/>
+                                        <TextBlock Text="{Binding Shell.I18n.DownloadSpeedLimitDescription}" Classes="caption" TextWrapping="Wrap"/>
                                     </StackPanel>
                                     <ComboBox Grid.Column="2" Classes="setting-control"
                                               ItemsSource="{Binding Settings.DownloadSpeedLimitOptions}"
@@ -186,14 +186,14 @@
 
                         <Border Classes="settings-section">
                             <StackPanel>
-                                <TextBlock Text="{Binding I18n.SettingsAppPreferences}" Classes="group-title"/>
+                                <TextBlock Text="{Binding Shell.I18n.SettingsAppPreferences}" Classes="group-title"/>
 
                                 <Grid Classes="settings-row" ColumnDefinitions="Auto,*,Auto" ColumnSpacing="12">
                                     <Border Classes="settings-icon">
                                         <materialIcons:MaterialIcon Kind="Translate" Width="18" Height="18" Foreground="{DynamicResource LauncherAccentBrush}" HorizontalAlignment="Center" VerticalAlignment="Center"/>
                                     </Border>
                                     <StackPanel Grid.Column="1" VerticalAlignment="Center">
-                                        <TextBlock Text="{Binding I18n.Language}" Classes="section-title"/>
+                                        <TextBlock Text="{Binding Shell.I18n.Language}" Classes="section-title"/>
                                     </StackPanel>
                                     <ComboBox Grid.Column="2" Classes="setting-control"
                                               ItemsSource="{Binding Settings.LanguageOptions}"
@@ -212,8 +212,8 @@
                                         <materialIcons:MaterialIcon Kind="ThemeLightDark" Width="18" Height="18" Foreground="{DynamicResource LauncherAccentBrush}" HorizontalAlignment="Center" VerticalAlignment="Center"/>
                                     </Border>
                                     <StackPanel Grid.Column="1" Spacing="2" VerticalAlignment="Center">
-                                        <TextBlock Text="{Binding I18n.Theme}" Classes="section-title"/>
-                                        <TextBlock Text="{Binding I18n.ThemeDescription}" Classes="caption" TextWrapping="Wrap"/>
+                                        <TextBlock Text="{Binding Shell.I18n.Theme}" Classes="section-title"/>
+                                        <TextBlock Text="{Binding Shell.I18n.ThemeDescription}" Classes="caption" TextWrapping="Wrap"/>
                                     </StackPanel>
                                     <ComboBox Grid.Column="2" Classes="setting-control"
                                               ItemsSource="{Binding Settings.ThemeOptions}"
@@ -232,8 +232,8 @@
                                         <materialIcons:MaterialIcon Kind="PaletteOutline" Width="18" Height="18" Foreground="{DynamicResource LauncherAccentBrush}" HorizontalAlignment="Center" VerticalAlignment="Center"/>
                                     </Border>
                                     <StackPanel Grid.Column="1" Spacing="2" VerticalAlignment="Center">
-                                        <TextBlock Text="{Binding I18n.ThemeColor}" Classes="section-title"/>
-                                        <TextBlock Text="{Binding I18n.ThemeColorDescription}" Classes="caption" TextWrapping="Wrap"/>
+                                        <TextBlock Text="{Binding Shell.I18n.ThemeColor}" Classes="section-title"/>
+                                        <TextBlock Text="{Binding Shell.I18n.ThemeColorDescription}" Classes="caption" TextWrapping="Wrap"/>
                                     </StackPanel>
                                     <StackPanel Grid.Column="2" Orientation="Horizontal" Spacing="10" VerticalAlignment="Center">
                                         <Border Classes="color-swatch"
@@ -257,8 +257,8 @@
                                         <materialIcons:MaterialIcon Kind="PaletteSwatchOutline" Width="18" Height="18" Foreground="{DynamicResource LauncherAccentBrush}" HorizontalAlignment="Center" VerticalAlignment="Center"/>
                                     </Border>
                                     <StackPanel Grid.Column="1" Spacing="2" VerticalAlignment="Center">
-                                        <TextBlock Text="{Binding I18n.ThemeColorPalette}" Classes="section-title"/>
-                                        <TextBlock Text="{Binding I18n.ThemeColorPaletteDescription}" Classes="caption" TextWrapping="Wrap"/>
+                                        <TextBlock Text="{Binding Shell.I18n.ThemeColorPalette}" Classes="section-title"/>
+                                        <TextBlock Text="{Binding Shell.I18n.ThemeColorPaletteDescription}" Classes="caption" TextWrapping="Wrap"/>
                                     </StackPanel>
                                     <StackPanel Grid.Column="2" Orientation="Horizontal" Spacing="8" VerticalAlignment="Center">
                                         <ListBox Width="182"
@@ -290,7 +290,7 @@
                                         <Button Classes="flat-action" Command="{Binding Settings.RefreshThemeColorPaletteCommand}">
                                             <StackPanel Classes="button-content">
                                                 <materialIcons:MaterialIcon Kind="Refresh" Width="16" Height="16"/>
-                                                <TextBlock Text="{Binding I18n.RefreshThemeColorPalette}" VerticalAlignment="Center"/>
+                                                <TextBlock Text="{Binding Shell.I18n.RefreshThemeColorPalette}" VerticalAlignment="Center"/>
                                             </StackPanel>
                                         </Button>
                                     </StackPanel>
@@ -302,8 +302,8 @@
                                         <materialIcons:MaterialIcon Kind="FormatColorFill" Width="18" Height="18" Foreground="{DynamicResource LauncherAccentBrush}" HorizontalAlignment="Center" VerticalAlignment="Center"/>
                                     </Border>
                                     <StackPanel Grid.Column="1" Spacing="2" VerticalAlignment="Center">
-                                        <TextBlock Text="{Binding I18n.ThemeColorCustom}" Classes="section-title"/>
-                                        <TextBlock Text="{Binding I18n.ThemeColorDescription}" Classes="caption" TextWrapping="Wrap"/>
+                                        <TextBlock Text="{Binding Shell.I18n.ThemeColorCustom}" Classes="section-title"/>
+                                        <TextBlock Text="{Binding Shell.I18n.ThemeColorDescription}" Classes="caption" TextWrapping="Wrap"/>
                                     </StackPanel>
                                     <ColorPicker Grid.Column="2"
                                                  Classes="setting-control"
@@ -316,7 +316,7 @@
                                                     BorderThickness="1"
                                                     Background="{Binding Settings.ThemeColorPreviewBrush}"/>
                                             <materialIcons:MaterialIcon Kind="PaletteOutline" Width="16" Height="16"/>
-                                            <TextBlock Text="{Binding I18n.OpenColorPalette}" VerticalAlignment="Center"/>
+                                            <TextBlock Text="{Binding Shell.I18n.OpenColorPalette}" VerticalAlignment="Center"/>
                                         </StackPanel>
                                     </ColorPicker>
                                 </Grid>
@@ -326,8 +326,8 @@
                                         <materialIcons:MaterialIcon Kind="ImageOutline" Width="18" Height="18" Foreground="{DynamicResource LauncherAccentBrush}" HorizontalAlignment="Center" VerticalAlignment="Center"/>
                                     </Border>
                                     <StackPanel Grid.Column="1" Spacing="2" VerticalAlignment="Center">
-                                        <TextBlock Text="{Binding I18n.BackgroundSource}" Classes="section-title"/>
-                                        <TextBlock Text="{Binding I18n.BackgroundSourceDescription}" Classes="caption" TextWrapping="Wrap"/>
+                                        <TextBlock Text="{Binding Shell.I18n.BackgroundSource}" Classes="section-title"/>
+                                        <TextBlock Text="{Binding Shell.I18n.BackgroundSourceDescription}" Classes="caption" TextWrapping="Wrap"/>
                                     </StackPanel>
                                     <ComboBox Grid.Column="2" Classes="setting-control"
                                               ItemsSource="{Binding Settings.BackgroundSourceOptions}"
@@ -347,27 +347,27 @@
                                         <materialIcons:MaterialIcon Kind="ImageEditOutline" Width="18" Height="18" Foreground="{DynamicResource LauncherAccentBrush}" HorizontalAlignment="Center" VerticalAlignment="Center"/>
                                     </Border>
                                     <StackPanel Grid.Column="1" Spacing="2" VerticalAlignment="Center">
-                                        <TextBlock Text="{Binding I18n.CustomBackground}" Classes="section-title"/>
-                                        <TextBlock Text="{Binding I18n.CustomBackgroundDescription}" Classes="caption" TextWrapping="Wrap"/>
+                                        <TextBlock Text="{Binding Shell.I18n.CustomBackground}" Classes="section-title"/>
+                                        <TextBlock Text="{Binding Shell.I18n.CustomBackgroundDescription}" Classes="caption" TextWrapping="Wrap"/>
                                     </StackPanel>
                                     <StackPanel Grid.Column="2" Orientation="Horizontal" Spacing="8" VerticalAlignment="Center">
                                         <Button Classes="flat-action" Command="{Binding Settings.ChooseBackgroundImageCommand}">
                                             <StackPanel Classes="button-content">
                                                 <materialIcons:MaterialIcon Kind="ImageOutline" Width="16" Height="16"/>
-                                                <TextBlock Text="{Binding I18n.ChooseImage}" VerticalAlignment="Center"/>
+                                                <TextBlock Text="{Binding Shell.I18n.ChooseImage}" VerticalAlignment="Center"/>
                                             </StackPanel>
                                         </Button>
                                         <Button Classes="flat-action" Command="{Binding Settings.ChooseBackgroundFolderCommand}">
                                             <StackPanel Classes="button-content">
                                                 <materialIcons:MaterialIcon Kind="FolderOpen" Width="16" Height="16"/>
-                                                <TextBlock Text="{Binding I18n.ChooseFolder}" VerticalAlignment="Center"/>
+                                                <TextBlock Text="{Binding Shell.I18n.ChooseFolder}" VerticalAlignment="Center"/>
                                             </StackPanel>
                                         </Button>
                                         <Button Classes="flat-action" Command="{Binding Settings.ClearBackgroundCommand}"
                                                 IsVisible="{Binding Settings.IsCustomBackground}">
                                             <StackPanel Classes="button-content">
                                                 <materialIcons:MaterialIcon Kind="DeleteOutline" Width="16" Height="16"/>
-                                                <TextBlock Text="{Binding I18n.ClearBackground}" VerticalAlignment="Center"/>
+                                                <TextBlock Text="{Binding Shell.I18n.ClearBackground}" VerticalAlignment="Center"/>
                                             </StackPanel>
                                         </Button>
                                     </StackPanel>
@@ -378,7 +378,7 @@
                                         <materialIcons:MaterialIcon Kind="ProgressClose" Width="18" Height="18" Foreground="{DynamicResource LauncherAccentBrush}" HorizontalAlignment="Center" VerticalAlignment="Center"/>
                                     </Border>
                                     <StackPanel Grid.Column="1" VerticalAlignment="Center">
-                                        <TextBlock Text="{Binding I18n.CloseBehavior}" Classes="section-title"/>
+                                        <TextBlock Text="{Binding Shell.I18n.CloseBehavior}" Classes="section-title"/>
                                     </StackPanel>
                                     <ComboBox Grid.Column="2" Classes="setting-control"
                                               ItemsSource="{Binding Settings.CloseBehaviorOptions}"
@@ -397,8 +397,8 @@
                                         <materialIcons:MaterialIcon Kind="BellOutline" Width="18" Height="18" Foreground="{DynamicResource LauncherAccentBrush}" HorizontalAlignment="Center" VerticalAlignment="Center"/>
                                     </Border>
                                     <StackPanel Grid.Column="1" Spacing="2" VerticalAlignment="Center">
-                                        <TextBlock Text="{Binding I18n.NotificationSettings}" Classes="section-title"/>
-                                        <TextBlock Text="{Binding I18n.ToastNotifications}" Classes="caption"/>
+                                        <TextBlock Text="{Binding Shell.I18n.NotificationSettings}" Classes="section-title"/>
+                                        <TextBlock Text="{Binding Shell.I18n.ToastNotifications}" Classes="caption"/>
                                     </StackPanel>
                                     <ToggleSwitch Grid.Column="2"
                                                   IsChecked="{Binding Settings.ToastNotificationsEnabled, Mode=TwoWay}"
@@ -410,8 +410,8 @@
                                         <materialIcons:MaterialIcon Kind="ViewDashboardOutline" Width="18" Height="18" Foreground="{DynamicResource LauncherAccentBrush}" HorizontalAlignment="Center" VerticalAlignment="Center"/>
                                     </Border>
                                     <StackPanel Grid.Column="1" Spacing="2" VerticalAlignment="Center">
-                                        <TextBlock Text="{Binding I18n.RemoteContentCard}" Classes="section-title"/>
-                                        <TextBlock Text="{Binding I18n.ShowRemoteContentCard}" Classes="caption"/>
+                                        <TextBlock Text="{Binding Shell.I18n.RemoteContentCard}" Classes="section-title"/>
+                                        <TextBlock Text="{Binding Shell.I18n.ShowRemoteContentCard}" Classes="caption"/>
                                     </StackPanel>
                                     <ToggleSwitch Grid.Column="2"
                                                   IsChecked="{Binding Settings.ShowRemoteContentCard, Mode=TwoWay}"
@@ -422,56 +422,56 @@
 
                         <Border Classes="settings-section">
                             <StackPanel Spacing="8">
-                                <TextBlock Text="{Binding I18n.About}" Classes="group-title"/>
+                                <TextBlock Text="{Binding Shell.I18n.About}" Classes="group-title"/>
                                 <StackPanel Classes="card-heading">
                                     <materialIcons:MaterialIcon Kind="InformationOutline" Width="20" Height="20" Foreground="{DynamicResource LauncherAccentBrush}"/>
                                     <StackPanel>
-                                        <TextBlock Text="{Binding ProductName}" Classes="section-title"/>
-                                        <TextBlock Text="{Binding I18n.AboutDescription}" Classes="caption" TextWrapping="Wrap"/>
+                                        <TextBlock Text="{Binding Shell.ProductName}" Classes="section-title"/>
+                                        <TextBlock Text="{Binding Shell.I18n.AboutDescription}" Classes="caption" TextWrapping="Wrap"/>
                                     </StackPanel>
                                 </StackPanel>
                                 <StackPanel Spacing="10">
-                                    <TextBlock Text="{Binding I18n.VersionInfo}" Classes="section-title"/>
+                                    <TextBlock Text="{Binding Shell.I18n.VersionInfo}" Classes="section-title"/>
                                     <WrapPanel>
                                         <Border Classes="version-chip">
-                                            <TextBlock Text="{Binding LauncherVersionText}" Classes="chip-text"/>
+                                            <TextBlock Text="{Binding Shell.LauncherVersionText}" Classes="chip-text"/>
                                         </Border>
                                         <Border Classes="version-chip">
-                                            <TextBlock Text="{Binding RuntimeInfoText}" Classes="chip-text"/>
+                                            <TextBlock Text="{Binding Shell.RuntimeInfoText}" Classes="chip-text"/>
                                         </Border>
                                         <Border Classes="version-chip">
-                                            <TextBlock Text="{Binding BuildInfoText}" Classes="chip-text"/>
+                                            <TextBlock Text="{Binding Shell.BuildInfoText}" Classes="chip-text"/>
                                         </Border>
                                     </WrapPanel>
                                 </StackPanel>
                                 <WrapPanel>
-                                    <Button Classes="flat-action wrap-action" Command="{Binding OpenOfficialSiteCommand}">
+                                    <Button Classes="flat-action wrap-action" Command="{Binding WindowChrome.OpenOfficialSiteCommand}">
                                         <StackPanel Classes="button-content">
                                             <materialIcons:MaterialIcon Kind="Web" Width="16" Height="16"/>
-                                            <TextBlock Text="{Binding I18n.OfficialSite}" VerticalAlignment="Center"/>
+                                            <TextBlock Text="{Binding Shell.I18n.OfficialSite}" VerticalAlignment="Center"/>
                                         </StackPanel>
                                     </Button>
-                                    <Button Classes="flat-action wrap-action" Command="{Binding OpenGitHubRepositoryCommand}">
+                                    <Button Classes="flat-action wrap-action" Command="{Binding WindowChrome.OpenGitHubRepositoryCommand}">
                                         <StackPanel Classes="button-content">
                                             <materialIcons:MaterialIcon Kind="Github" Width="16" Height="16"/>
-                                            <TextBlock Text="{Binding I18n.GithubRepository}" VerticalAlignment="Center"/>
+                                            <TextBlock Text="{Binding Shell.I18n.GithubRepository}" VerticalAlignment="Center"/>
                                         </StackPanel>
                                     </Button>
                                     <!-- "Check for Updates" is hidden until the feature is implemented.
                                          Re-enable by removing IsVisible="False" and wiring up the command. -->
                                     <Button Classes="flat-action wrap-action"
                                             IsVisible="False"
-                                            ToolTip.Tip="{Binding I18n.CheckUpdatesUnavailable}">
+                                            ToolTip.Tip="{Binding Shell.I18n.CheckUpdatesUnavailable}">
                                         <StackPanel Classes="button-content">
                                             <materialIcons:MaterialIcon Kind="Update" Width="16" Height="16"/>
-                                            <TextBlock Text="{Binding I18n.CheckUpdates}" VerticalAlignment="Center"/>
+                                            <TextBlock Text="{Binding Shell.I18n.CheckUpdates}" VerticalAlignment="Center"/>
                                         </StackPanel>
                                     </Button>
                                 </WrapPanel>
                                 <StackPanel Spacing="4">
-                                    <TextBlock Text="{Binding I18n.AboutLinks}" Classes="section-title"/>
-                                    <TextBlock Text="{Binding I18n.AboutCopyrightText}" Classes="caption" TextWrapping="Wrap"/>
-                                    <TextBlock Text="{Binding I18n.AboutDisclaimerText}" Classes="caption" TextWrapping="Wrap"/>
+                                    <TextBlock Text="{Binding Shell.I18n.AboutLinks}" Classes="section-title"/>
+                                    <TextBlock Text="{Binding Shell.I18n.AboutCopyrightText}" Classes="caption" TextWrapping="Wrap"/>
+                                    <TextBlock Text="{Binding Shell.I18n.AboutDisclaimerText}" Classes="caption" TextWrapping="Wrap"/>
                                 </StackPanel>
                             </StackPanel>
                         </Border>
@@ -482,7 +482,7 @@
                     <Button Classes="primary-action" Command="{Binding Settings.SaveSettingsCommand}" HorizontalAlignment="Stretch">
                         <StackPanel Classes="button-content" HorizontalAlignment="Center">
                             <materialIcons:MaterialIcon Kind="ContentSave" Width="18" Height="18" Foreground="{DynamicResource LauncherOnAccentBrush}"/>
-                            <TextBlock Text="{Binding I18n.Save}" VerticalAlignment="Center"/>
+                            <TextBlock Text="{Binding Shell.I18n.Save}" VerticalAlignment="Center"/>
                         </StackPanel>
                     </Button>
                 </Border>
