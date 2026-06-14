@@ -154,6 +154,7 @@ public sealed class LauncherSettingsService
         }
 
         settings.GamePath ??= "";
+        settings.ResourcePanelUid = settings.ResourcePanelUid?.Trim() ?? "";
         return settings;
     }
 

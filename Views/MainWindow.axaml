@@ -54,6 +54,9 @@
                     <TextBlock Text="{Binding ProductName}" Classes="titlebar-brand"/>
                 </StackPanel>
                 <StackPanel Grid.Column="1" Orientation="Horizontal" Margin="0,0,8,0">
+                    <Button Classes="chrome" Command="{Binding OpenResourcePanelCommand}" ToolTip.Tip="{Binding I18n.ResourcePanel}">
+                        <materialIcons:MaterialIcon Kind="Web" Width="18" Height="18" Foreground="{DynamicResource LauncherOnChromeBrush}"/>
+                    </Button>
                     <Button Classes="chrome settings" Command="{Binding ShowSettingsCommand}" ToolTip.Tip="{Binding I18n.Settings}">
                         <materialIcons:MaterialIcon Kind="CogOutline" Width="18" Height="18" Foreground="{DynamicResource LauncherOnChromeBrush}"/>
                     </Button>

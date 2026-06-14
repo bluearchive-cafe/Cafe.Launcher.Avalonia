@@ -158,6 +158,9 @@ public sealed class LauncherSettings
 
     [JsonPropertyName("backgroundSource")]
     public string BackgroundSource { get; set; } = BackgroundSources.Bundled;
+
+    [JsonPropertyName("resourcePanelUid")]
+    public string ResourcePanelUid { get; set; } = "";
 }
 
 /// <summary>

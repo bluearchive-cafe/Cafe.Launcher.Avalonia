@@ -39,6 +39,7 @@ public sealed class LauncherSettingsServiceTests : IDisposable
         Assert.Equal(PatchUrlGroups.Official, settings.PatchUrlGroup);
         Assert.Equal("", settings.CustomBackgroundPath);
         Assert.Equal(BackgroundSources.Bundled, settings.BackgroundSource);
+        Assert.Equal("", settings.ResourcePanelUid);
     }
 
     [Fact]
@@ -81,7 +82,8 @@ public sealed class LauncherSettingsServiceTests : IDisposable
               "toastNotificationsEnabled": false,
               "showRemoteContentCard": false,
               "patchUrlGroup": "invalid",
-              "backgroundSource": "invalid"
+              "backgroundSource": "invalid",
+              "resourcePanelUid": "  UID123  "
             }
             """);
         var service = new LauncherSettingsService(settingsPath);
@@ -103,6 +105,7 @@ public sealed class LauncherSettingsServiceTests : IDisposable
         Assert.False(settings.ShowRemoteContentCard);
         Assert.Equal(PatchUrlGroups.Official, settings.PatchUrlGroup);
         Assert.Equal(BackgroundSources.Bundled, settings.BackgroundSource);
+        Assert.Equal("UID123", settings.ResourcePanelUid);
     }
 
     [Fact]
@@ -126,7 +129,8 @@ public sealed class LauncherSettingsServiceTests : IDisposable
             ShowRemoteContentCard = false,
             PatchUrlGroup = PatchUrlGroups.Cafe,
             CustomBackgroundPath = tempDir,
-            BackgroundSource = BackgroundSources.Remote
+            BackgroundSource = BackgroundSources.Remote,
+            ResourcePanelUid = "UID123"
         };
 
         await service.SaveAsync(settings);
@@ -157,6 +161,8 @@ public sealed class LauncherSettingsServiceTests : IDisposable
         Assert.True(root.TryGetProperty("customBackgroundPath", out var customBackgroundPath));
         Assert.Equal(tempDir, customBackgroundPath.GetString());
         Assert.True(root.TryGetProperty("backgroundSource", out _));
+        Assert.True(root.TryGetProperty("resourcePanelUid", out var resourcePanelUid));
+        Assert.Equal("UID123", resourcePanelUid.GetString());
         var expectedPropertyNames = new HashSet<string>(StringComparer.Ordinal)
         {
             "gamePath",
@@ -174,7 +180,8 @@ public sealed class LauncherSettingsServiceTests : IDisposable
             "showRemoteContentCard",
             "patchUrlGroup",
             "customBackgroundPath",
-            "backgroundSource"
+            "backgroundSource",
+            "resourcePanelUid"
         };
         Assert.True(expectedPropertyNames.SetEquals(propertyNames));
         Assert.False(File.Exists($"{settingsPath}.tmp"));
