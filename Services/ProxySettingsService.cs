@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.Linq;
 using System.Net;
 using System.Net.Http;
@@ -84,8 +85,9 @@ public sealed class ProxySettingsService
                 NoProxy = noProxy
             };
         }
-        catch
+        catch (Exception ex)
         {
+            Debug.WriteLine($"Failed to read system proxy settings from registry: {ex.Message}");
             return null;
         }
     }

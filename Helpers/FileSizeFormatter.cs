@@ -25,4 +25,13 @@ public static class FileSizeFormatter
         var value = bytes / Math.Pow(1024, unit);
         return $"{value:0.##}{Units[unit]}";
     }
+
+    /// <summary>
+    /// Parses a file size string from a manifest <c>Size</c> field (bytes, integer).
+    /// Returns 0 for any non-parseable input.
+    /// </summary>
+    public static long ParseSize(string value)
+    {
+        return long.TryParse(value, out var size) ? size : 0;
+    }
 }

@@ -3,6 +3,7 @@ using System.Net.Http;
 using System.Text.Json;
 using System.Threading;
 using System.Threading.Tasks;
+using Cafe.Launcher.Avalonia.Helpers;
 using Cafe.Launcher.Avalonia.Models;
 
 namespace Cafe.Launcher.Avalonia.Services;
@@ -86,11 +87,11 @@ public sealed class ResourcePanelApiClient : IDisposable
         return await JsonSerializer.DeserializeAsync<T>(stream, jsonOptions, cancellationToken) ?? new T();
     }
 
-    private async Task<RequestHttpClientLease> CreateRequestClientAsync(CancellationToken cancellationToken)
+    private async Task<HttpClientLease> CreateRequestClientAsync(CancellationToken cancellationToken)
     {
         if (proxySettingsService is null || proxyMode != ProxyModes.System)
         {
-            return new RequestHttpClientLease(httpClient);
+            return new HttpClientLease(httpClient);
         }
 
         var handler = await proxySettingsService.CreateHttpHandlerAsync(proxyMode, cancellationToken);
@@ -99,7 +100,7 @@ public sealed class ResourcePanelApiClient : IDisposable
             BaseAddress = httpClient.BaseAddress,
             Timeout = httpClient.Timeout
         };
-        return new RequestHttpClientLease(client, handler);
+        return new HttpClientLease(client, handler);
     }
 
     public void Dispose()
@@ -107,33 +108,5 @@ public sealed class ResourcePanelApiClient : IDisposable
         httpClient.Dispose();
         ownedHandler?.Dispose();
     }
-
-    private sealed class RequestHttpClientLease : IDisposable
-    {
-        private readonly SocketsHttpHandler? handler;
-        private readonly bool ownsClient;
-
-        public RequestHttpClientLease(HttpClient client)
-        {
-            Client = client;
-        }
-
-        public RequestHttpClientLease(HttpClient client, SocketsHttpHandler handler)
-        {
-            Client = client;
-            this.handler = handler;
-            ownsClient = true;
-        }
-
-        public HttpClient Client { get; }
-
-        public void Dispose()
-        {
-            if (ownsClient)
-            {
-                Client.Dispose();
-                handler?.Dispose();
-            }
-        }
-    }
 }
+

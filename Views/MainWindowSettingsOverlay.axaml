@@ -457,7 +457,10 @@
                                             <TextBlock Text="{Binding I18n.GithubRepository}" VerticalAlignment="Center"/>
                                         </StackPanel>
                                     </Button>
-                                    <Button Classes="flat-action wrap-action" IsEnabled="False"
+                                    <!-- "Check for Updates" is hidden until the feature is implemented.
+                                         Re-enable by removing IsVisible="False" and wiring up the command. -->
+                                    <Button Classes="flat-action wrap-action"
+                                            IsVisible="False"
                                             ToolTip.Tip="{Binding I18n.CheckUpdatesUnavailable}">
                                         <StackPanel Classes="button-content">
                                             <materialIcons:MaterialIcon Kind="Update" Width="16" Height="16"/>

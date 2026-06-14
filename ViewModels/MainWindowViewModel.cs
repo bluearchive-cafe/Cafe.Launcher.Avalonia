@@ -1,6 +1,7 @@
 using System;
 using System.Collections.ObjectModel;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.IO;
 using System.Linq;
 using System.Runtime.InteropServices;
@@ -769,9 +770,10 @@ public partial class MainWindowViewModel : ViewModelBase, IDisposable
             using var stream = AssetLoader.Open(uri);
             return new Bitmap(stream);
         }
-        catch
+        catch (Exception ex)
         {
             // Bundled background should always load — if this fails the install is corrupted
+            Debug.WriteLine($"Failed to load bundled background image: {ex.Message}");
             return null;
         }
     }

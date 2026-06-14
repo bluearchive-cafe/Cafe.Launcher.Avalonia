@@ -16,6 +16,9 @@ namespace Cafe.Launcher.Avalonia.Services;
 
 public sealed class GameDownloadService : IDisposable
 {
+    // Retry domain order: 0 = primary CDN, 1 = backup CDN.
+    // The first 4 attempts use the backup, then 3 on primary, then 3 on backup.
+    // The original launcher prioritises the backup CDN for initial attempts.
     internal static readonly int[] RetryDomainOrder = [1, 1, 1, 1, 0, 0, 0, 1, 1, 1];
     private const int MaxParallelDownloads = 10;
     private const int MaxInstallVerificationRetry = 3;
@@ -256,7 +259,7 @@ public sealed class GameDownloadService : IDisposable
 
             var currentDownloadList = downloadPlan.NeedDownload;
             var affectedCount = currentDownloadList.Count + downloadPlan.NeedDelete.Count;
-            var requiredBytes = currentDownloadList.Sum(item => ParseSize(item.Size));
+            var requiredBytes = currentDownloadList.Sum(item => FileSizeFormatter.ParseSize(item.Size));
             if (!diskSpaceService.HasEnoughSpace(gamePath, requiredBytes))
             {
                 await diagnostics.MessageAsync(
@@ -490,7 +493,7 @@ public sealed class GameDownloadService : IDisposable
             Stage = "repair-confirm",
             Progress = -1,
             AffectedFileCount = actual.NeedDownload.Count + actual.NeedDelete.Count,
-            DownloadedSize = actual.NeedDownload.Sum(f => ParseSize(f.Size)),
+            DownloadedSize = actual.NeedDownload.Sum(f => FileSizeFormatter.ParseSize(f.Size)),
             IsRunning = true,
             CanStop = false
         });
@@ -581,7 +584,7 @@ public sealed class GameDownloadService : IDisposable
         };
         using var semaphore = new SemaphoreSlim(MaxParallelDownloads, MaxParallelDownloads);
         var downloadedSize = 0L;
-        var totalSize = fileList.Sum(item => ParseSize(item.Size));
+        var totalSize = fileList.Sum(item => FileSizeFormatter.ParseSize(item.Size));
         var startedAt = DateTimeOffset.Now;
         var throttleState = speedLimitBytesPerSec > 0
             ? new ThrottleState { BytesPerSec = speedLimitBytesPerSec }
@@ -670,7 +673,7 @@ public sealed class GameDownloadService : IDisposable
             {
                 var fi = new FileInfo(targetPath);
                 var existingLength = fi.Exists ? fi.Length : 0;
-                if (existingLength >= ParseSize(file.Size) && ParseSize(file.Size) > 0)
+                if (existingLength >= FileSizeFormatter.ParseSize(file.Size) && FileSizeFormatter.ParseSize(file.Size) > 0)
                 {
                     return;
                 }
@@ -923,7 +926,7 @@ public sealed class GameDownloadService : IDisposable
             var file = files[i];
             var filePath = GamePathValidator.GetSafePath(gamePath, file.Path);
             var fileInfo = new FileInfo(filePath);
-            if (!fileInfo.Exists || fileInfo.Length != ParseSize(file.Size))
+            if (!fileInfo.Exists || fileInfo.Length != FileSizeFormatter.ParseSize(file.Size))
             {
                 diff.Add(file);
             }
@@ -1018,11 +1021,6 @@ public sealed class GameDownloadService : IDisposable
     private static string GetOriginName(string name)
     {
         return name.EndsWith(".tmp", StringComparison.Ordinal) ? name[..^4] : name;
-    }
-
-    private static long ParseSize(string value)
-    {
-        return long.TryParse(value, out var size) ? size : 0;
     }
 
     private static GameOperationProgress CreateProgress(string kind, string stage, int value)

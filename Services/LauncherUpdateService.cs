@@ -3,6 +3,7 @@ using System.Net.Http;
 using System.Threading;
 using System.Threading.Tasks;
 using Cafe.Launcher.Avalonia.Constants;
+using Cafe.Launcher.Avalonia.Helpers;
 using Cafe.Launcher.Avalonia.Models;
 
 namespace Cafe.Launcher.Avalonia.Services;
@@ -84,11 +85,11 @@ public sealed class LauncherUpdateService : IDisposable
         handler.Dispose();
     }
 
-    private async Task<RequestHttpClientLease> CreateRequestClientAsync(CancellationToken ct)
+    private async Task<HttpClientLease> CreateRequestClientAsync(CancellationToken ct)
     {
         if (proxyMode != ProxyModes.System)
         {
-            return new RequestHttpClientLease(httpClient);
+            return new HttpClientLease(httpClient);
         }
 
         var requestHandler = await proxySettingsService.CreateHttpHandlerAsync(proxyMode, ct);
@@ -96,35 +97,7 @@ public sealed class LauncherUpdateService : IDisposable
         {
             Timeout = httpClient.Timeout
         };
-        return new RequestHttpClientLease(client, requestHandler);
-    }
-
-    private sealed class RequestHttpClientLease : IDisposable
-    {
-        private readonly SocketsHttpHandler? handler;
-        private readonly bool ownsClient;
-
-        public RequestHttpClientLease(HttpClient client)
-        {
-            Client = client;
-        }
-
-        public RequestHttpClientLease(HttpClient client, SocketsHttpHandler handler)
-        {
-            Client = client;
-            this.handler = handler;
-            ownsClient = true;
-        }
-
-        public HttpClient Client { get; }
-
-        public void Dispose()
-        {
-            if (ownsClient)
-            {
-                Client.Dispose();
-                handler?.Dispose();
-            }
-        }
+        return new HttpClientLease(client, requestHandler);
     }
 }
+
