@@ -81,6 +81,51 @@ public sealed class MainWindowViewModelTests : IDisposable
     }
 
     [Fact]
+    public async Task InitializeAsync_WhenCoreLoadFails_DoesNotShowNetworkLoadedToast()
+    {
+        var coreService = new ThrowingCoreService();
+        using var viewModel = CreateViewModel(coreService);
+        var successToasts = new List<string>();
+        var toastService = GetToastService(viewModel);
+        toastService.ToastRaised += notification =>
+        {
+            if (notification.Severity == ToastSeverity.Success)
+            {
+                successToasts.Add(notification.Message);
+            }
+        };
+
+        await viewModel.InitializeAsync();
+
+        Assert.DoesNotContain(viewModel.I18n.StatusNetworkLoaded, successToasts);
+    }
+
+    [Fact]
+    public async Task InitializeAsync_WhenSocialChannelIsPixiv_UsesPaletteIcon()
+    {
+        var snapshot = CreateSnapshot();
+        snapshot.Remote.SocialMediaResource = new SocialMediaResourceResponse
+        {
+            SocialMediaResourceOpen = true,
+            SocialMediaResourceList =
+            [
+                new SocialMediaResourceItem
+                {
+                    SocialMediaChannel = "pixiv",
+                    JumpUrl = "https://example.invalid/pixiv"
+                }
+            ]
+        };
+        var coreService = new CountingCoreService(snapshot);
+        using var viewModel = CreateViewModel(coreService);
+
+        await viewModel.InitializeAsync();
+
+        var item = Assert.Single(viewModel.SocialMediaItems);
+        Assert.Equal("Palette", item.SocialIconKind);
+    }
+
+    [Fact]
     public async Task ResolveRandomBackgroundImage_WhenFolderHasSupportedImage_ReturnsImageFromFolder()
     {
         var folderPath = Path.Combine(tempDir, "wallpapers");
@@ -412,7 +457,8 @@ public sealed class MainWindowViewModelTests : IDisposable
         ILauncherCoreService coreService,
         LauncherSettingsService? settingsService = null,
         ResourcePanelUidService? resourcePanelUidService = null,
-        ResourcePanelApiClient? resourcePanelApiClient = null)
+        ResourcePanelApiClient? resourcePanelApiClient = null,
+        ToastService? toastService = null)
     {
         settingsService ??= new LauncherSettingsService(
             Path.Combine(tempDir, Guid.NewGuid().ToString("N"), "settings.json"));
@@ -437,7 +483,7 @@ public sealed class MainWindowViewModelTests : IDisposable
         resourcePanelApiClient ??= new ResourcePanelApiClient(new ResourcePanelHandler());
 
         var localizationService = new LocalizationService();
-        var toastService = new ToastService();
+        toastService ??= new ToastService();
         var diskSpaceService = new DiskSpaceService();
         var externalLinkService = new ExternalLinkService();
         var settingsViewModel = new SettingsViewModel(
@@ -463,6 +509,15 @@ public sealed class MainWindowViewModelTests : IDisposable
             imageCacheService,
             settingsViewModel,
             resourcePanelViewModel);
+    }
+
+    private static ToastService GetToastService(MainWindowViewModel viewModel)
+    {
+        var field = typeof(MainWindowViewModel).GetField(
+            "toastService",
+            BindingFlags.Instance | BindingFlags.NonPublic);
+        Assert.NotNull(field);
+        return Assert.IsType<ToastService>(field.GetValue(viewModel));
     }
 
     private LauncherStatusSnapshot CreateSnapshot()
@@ -652,6 +707,14 @@ public sealed class MainWindowViewModelTests : IDisposable
         {
             LoadCount++;
             return Task.FromResult(snapshot);
+        }
+    }
+
+    private sealed class ThrowingCoreService : ILauncherCoreService
+    {
+        public Task<LauncherStatusSnapshot> LoadAsync(CancellationToken cancellationToken = default)
+        {
+            throw new InvalidOperationException("load failed");
         }
     }
 

@@ -343,6 +343,7 @@ public partial class MainWindowViewModel : ViewModelBase, IDisposable
     private async Task RefreshAsync(CancellationToken cancellationToken = default)
     {
         IsBusy = true;
+        var loaded = false;
         try
         {
             var settingsForLanguage = await settingsService.ReadAsync(cancellationToken);
@@ -357,6 +358,7 @@ public partial class MainWindowViewModel : ViewModelBase, IDisposable
             var snapshot = await launcherCoreService.LoadAsync(cancellationToken);
             currentSnapshot = snapshot;
             await ApplySnapshotAsync(snapshot);
+            loaded = true;
         }
         catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
         {
@@ -377,6 +379,11 @@ public partial class MainWindowViewModel : ViewModelBase, IDisposable
         finally
         {
             IsBusy = false;
+        }
+
+        if (!loaded)
+        {
+            return;
         }
 
         toastService.ShowSuccess(localizer.T("statusNetworkLoaded"));
@@ -1637,7 +1644,7 @@ public partial class MainWindowViewModel : ViewModelBase, IDisposable
             return "Link";
 
         var name = channelName.ToLowerInvariant();
-        if (name.Contains("twitter") || name.Contains("x")) return "Twitter";
+        if (name.Contains("twitter") || string.Equals(name, "x", StringComparison.Ordinal)) return "Twitter";
         if (name.Contains("youtube")) return "Youtube";
         if (name.Contains("discord")) return "Discord";
         if (name.Contains("line")) return "Chat";

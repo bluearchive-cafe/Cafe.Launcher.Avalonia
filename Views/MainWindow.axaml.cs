@@ -29,6 +29,9 @@ public partial class MainWindow : Window
         viewModel.PickGameFolderAsync = PickGameFolderAsync;
         viewModel.PickBackgroundImageAsync = PickBackgroundImageAsync;
         viewModel.PickBackgroundFolderAsync = PickBackgroundFolderAsync;
+        viewModel.Settings.PickGameFolderAsync = PickGameFolderAsync;
+        viewModel.Settings.PickBackgroundImageAsync = PickBackgroundImageAsync;
+        viewModel.Settings.PickBackgroundFolderAsync = PickBackgroundFolderAsync;
         viewModel.MinimizeWindow = () => WindowState = WindowState.Minimized;
         viewModel.CloseWindow = PerformClose;
         viewModel.RestoreWindow = ShowWindow;

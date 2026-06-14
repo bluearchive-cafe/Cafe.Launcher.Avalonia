@@ -59,6 +59,34 @@ public sealed class GameDownloadServiceTests
     }
 
     [Fact]
+    public void ResolveRetryDomain_WhenRetryTypeIsOne_UsesBackupCdn()
+    {
+        var cdnConfig = new CdnConfigResponse
+        {
+            PrimaryCdn = "https://primary.example.invalid",
+            BackUpCdn = "https://backup.example.invalid"
+        };
+
+        var result = GameDownloadService.ResolveRetryDomain(cdnConfig, GameDownloadService.RetryDomainOrder[0]);
+
+        Assert.Equal("https://backup.example.invalid", result);
+    }
+
+    [Fact]
+    public void ResolveRetryDomain_WhenRetryTypeIsZero_UsesPrimaryCdn()
+    {
+        var cdnConfig = new CdnConfigResponse
+        {
+            PrimaryCdn = "https://primary.example.invalid",
+            BackUpCdn = "https://backup.example.invalid"
+        };
+
+        var result = GameDownloadService.ResolveRetryDomain(cdnConfig, 0);
+
+        Assert.Equal("https://primary.example.invalid", result);
+    }
+
+    [Fact]
     public void BuildDownloadUrl_WhenCafeGroupCdnConfigIsUsed_UsesCafePackageHost()
     {
         var patchUrlGroupService = new PatchUrlGroupService();
