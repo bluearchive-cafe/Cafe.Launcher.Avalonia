@@ -166,7 +166,7 @@ public sealed class MainWindowViewModelTests : IDisposable
         using var viewModel = CreateViewModel(coreService, settingsService);
         await viewModel.InitializeAsync();
 
-        viewModel.SelectedPatchUrlGroup = PatchUrlGroups.Cafe;
+        viewModel.Settings.SelectedPatchUrlGroup = PatchUrlGroups.Cafe;
         await SaveSettingsAsync(viewModel);
 
         Assert.True(viewModel.IsRepairConfirmVisible);
@@ -179,11 +179,11 @@ public sealed class MainWindowViewModelTests : IDisposable
         var coreService = new CountingCoreService(CreateSnapshot());
         using var viewModel = CreateViewModel(coreService);
         viewModel.IsSettingsVisible = true;
-        viewModel.IsSettingsDirty = false;
+        viewModel.Settings.IsSettingsDirty = false;
 
-        viewModel.SelectedThemeColorMode = ThemeColorModes.System;
+        viewModel.Settings.SelectedThemeColorMode = ThemeColorModes.System;
 
-        Assert.True(viewModel.IsSettingsDirty);
+        Assert.True(viewModel.Settings.IsSettingsDirty);
     }
 
     [Fact]
@@ -195,8 +195,8 @@ public sealed class MainWindowViewModelTests : IDisposable
         var coreService = new CountingCoreService(CreateSnapshot());
         using var viewModel = CreateViewModel(coreService, settingsService);
 
-        viewModel.SelectedThemeColorMode = ThemeColorModes.Custom;
-        viewModel.SelectedCustomThemeColor = Color.FromArgb(0xFF, 0x33, 0x66, 0x99);
+        viewModel.Settings.SelectedThemeColorMode = ThemeColorModes.Custom;
+        viewModel.Settings.SelectedCustomThemeColor = Color.FromArgb(0xFF, 0x33, 0x66, 0x99);
         await SaveSettingsAsync(viewModel);
 
         var settings = await settingsService.ReadAsync();
@@ -267,28 +267,28 @@ public sealed class MainWindowViewModelTests : IDisposable
     {
         var coreService = new CountingCoreService(CreateSnapshot());
         using var viewModel = CreateViewModel(coreService);
-        viewModel.ThemeColorPaletteItems.Add(new ThemeColorPaletteItem
+        viewModel.Settings.ThemeColorPaletteItems.Add(new ThemeColorPaletteItem
         {
             Index = 0,
             ColorHex = "#FFD82038",
             Brush = new SolidColorBrush(Color.FromRgb(0xD8, 0x20, 0x38))
         });
-        viewModel.ThemeColorPaletteItems.Add(new ThemeColorPaletteItem
+        viewModel.Settings.ThemeColorPaletteItems.Add(new ThemeColorPaletteItem
         {
             Index = 1,
             ColorHex = "#FF2050D8",
             Brush = new SolidColorBrush(Color.FromRgb(0x20, 0x50, 0xD8))
         });
-        viewModel.SelectedThemeColorMode = ThemeColorModes.Wallpaper;
+        viewModel.Settings.SelectedThemeColorMode = ThemeColorModes.Wallpaper;
         viewModel.IsSettingsVisible = true;
-        viewModel.IsSettingsDirty = false;
+        viewModel.Settings.IsSettingsDirty = false;
 
-        viewModel.SelectedThemeColorPaletteIndex = 1;
+        viewModel.Settings.SelectedThemeColorPaletteIndex = 1;
 
-        Assert.True(viewModel.IsSettingsDirty);
-        Assert.False(viewModel.ThemeColorPaletteItems[0].IsSelected);
-        Assert.True(viewModel.ThemeColorPaletteItems[1].IsSelected);
-        var preview = Assert.IsType<SolidColorBrush>(viewModel.ThemeColorPreviewBrush);
+        Assert.True(viewModel.Settings.IsSettingsDirty);
+        Assert.False(viewModel.Settings.ThemeColorPaletteItems[0].IsSelected);
+        Assert.True(viewModel.Settings.ThemeColorPaletteItems[1].IsSelected);
+        var preview = Assert.IsType<SolidColorBrush>(viewModel.Settings.ThemeColorPreviewBrush);
         Assert.Equal(Color.FromArgb(0xFF, 0x20, 0x50, 0xD8), preview.Color);
     }
 
@@ -300,20 +300,20 @@ public sealed class MainWindowViewModelTests : IDisposable
         await settingsService.SaveAsync(new LauncherSettings());
         var coreService = new CountingCoreService(CreateSnapshot());
         using var viewModel = CreateViewModel(coreService, settingsService);
-        viewModel.SelectedThemeColorMode = ThemeColorModes.Wallpaper;
-        viewModel.ThemeColorPaletteItems.Add(new ThemeColorPaletteItem
+        viewModel.Settings.SelectedThemeColorMode = ThemeColorModes.Wallpaper;
+        viewModel.Settings.ThemeColorPaletteItems.Add(new ThemeColorPaletteItem
         {
             Index = 0,
             ColorHex = "#FFD82038",
             Brush = new SolidColorBrush(Color.FromRgb(0xD8, 0x20, 0x38))
         });
-        viewModel.ThemeColorPaletteItems.Add(new ThemeColorPaletteItem
+        viewModel.Settings.ThemeColorPaletteItems.Add(new ThemeColorPaletteItem
         {
             Index = 1,
             ColorHex = "#FF2050D8",
             Brush = new SolidColorBrush(Color.FromRgb(0x20, 0x50, 0xD8))
         });
-        viewModel.SelectedThemeColorPaletteIndex = 1;
+        viewModel.Settings.SelectedThemeColorPaletteIndex = 1;
 
         await SaveSettingsAsync(viewModel);
 
@@ -335,15 +335,15 @@ public sealed class MainWindowViewModelTests : IDisposable
         var coreService = new CountingCoreService(CreateSnapshot());
         using var viewModel = CreateViewModel(coreService, settingsService, uidService, apiClient);
 
-        await viewModel.OpenResourcePanelCommand.ExecuteAsync(null);
+        await viewModel.ResourcePanel.OpenResourcePanelCommand.ExecuteAsync(null);
 
-        Assert.True(viewModel.IsResourcePanelVisible);
-        Assert.False(viewModel.IsResourcePanelUidMissing);
-        Assert.Equal("UID123", viewModel.ResourcePanelUid);
+        Assert.True(viewModel.ResourcePanel.IsResourcePanelVisible);
+        Assert.False(viewModel.ResourcePanel.IsResourcePanelUidMissing);
+        Assert.Equal("UID123", viewModel.ResourcePanel.ResourcePanelUid);
         Assert.Equal(1, handler.StatusListCount);
         Assert.Equal(1, handler.ConfigGetCount);
-        var text = viewModel.ResourcePanelItems.First(item => item.Code == ResourcePanelResourceCodes.Text);
-        var voice = viewModel.ResourcePanelItems.First(item => item.Code == ResourcePanelResourceCodes.Voice);
+        var text = viewModel.ResourcePanel.ResourcePanelItems.First(item => item.Code == ResourcePanelResourceCodes.Text);
+        var voice = viewModel.ResourcePanel.ResourcePanelItems.First(item => item.Code == ResourcePanelResourceCodes.Voice);
         Assert.Equal(viewModel.I18n.ResourcePanelReady, text.StatusText);
         Assert.True(text.IsEnabled);
         Assert.Equal(viewModel.I18n.ResourcePanelWaiting, voice.StatusText);
@@ -363,12 +363,12 @@ public sealed class MainWindowViewModelTests : IDisposable
         using var apiClient = new ResourcePanelApiClient(handler);
         var coreService = new CountingCoreService(CreateSnapshot());
         using var viewModel = CreateViewModel(coreService, settingsService, uidService, apiClient);
-        await viewModel.OpenResourcePanelCommand.ExecuteAsync(null);
-        viewModel.ResourcePanelItems.First(item => item.Code == ResourcePanelResourceCodes.Text).IsEnabled = true;
-        viewModel.ResourcePanelItems.First(item => item.Code == ResourcePanelResourceCodes.Voice).IsEnabled = false;
-        viewModel.ResourcePanelItems.First(item => item.Code == ResourcePanelResourceCodes.Media).IsEnabled = true;
+        await viewModel.ResourcePanel.OpenResourcePanelCommand.ExecuteAsync(null);
+        viewModel.ResourcePanel.ResourcePanelItems.First(item => item.Code == ResourcePanelResourceCodes.Text).IsEnabled = true;
+        viewModel.ResourcePanel.ResourcePanelItems.First(item => item.Code == ResourcePanelResourceCodes.Voice).IsEnabled = false;
+        viewModel.ResourcePanel.ResourcePanelItems.First(item => item.Code == ResourcePanelResourceCodes.Media).IsEnabled = true;
 
-        await viewModel.SaveResourcePanelCommand.ExecuteAsync(null);
+        await viewModel.ResourcePanel.SaveResourcePanelCommand.ExecuteAsync(null);
 
         Assert.Equal("/config/set?uid=UID123&text=cn&voice=jp&media=cn", handler.LastRequestPathAndQuery);
         Assert.Equal(1, handler.ConfigSetCount);
@@ -387,11 +387,11 @@ public sealed class MainWindowViewModelTests : IDisposable
         var coreService = new CountingCoreService(CreateSnapshot());
         using var viewModel = CreateViewModel(coreService, settingsService, uidService, apiClient);
 
-        await viewModel.OpenResourcePanelCommand.ExecuteAsync(null);
+        await viewModel.ResourcePanel.OpenResourcePanelCommand.ExecuteAsync(null);
 
-        Assert.True(viewModel.IsResourcePanelVisible);
-        Assert.True(viewModel.IsResourcePanelUidMissing);
-        Assert.Equal("", viewModel.ResourcePanelUid);
+        Assert.True(viewModel.ResourcePanel.IsResourcePanelVisible);
+        Assert.True(viewModel.ResourcePanel.IsResourcePanelUidMissing);
+        Assert.Equal("", viewModel.ResourcePanel.ResourcePanelUid);
         Assert.Equal(0, handler.StatusListCount);
         Assert.Equal(0, handler.ConfigGetCount);
         Assert.Equal(0, handler.ConfigSetCount);
@@ -595,11 +595,11 @@ public sealed class MainWindowViewModelTests : IDisposable
 
     private static async Task SaveSettingsAsync(MainWindowViewModel viewModel)
     {
-        var method = typeof(MainWindowViewModel).GetMethod(
+        var method = typeof(SettingsViewModel).GetMethod(
             "SaveSettingsAsync",
             BindingFlags.Instance | BindingFlags.NonPublic);
         Assert.NotNull(method);
-        var task = (Task?)method.Invoke(viewModel, []);
+        var task = (Task?)method.Invoke(viewModel.Settings, []);
         Assert.NotNull(task);
         await task;
     }

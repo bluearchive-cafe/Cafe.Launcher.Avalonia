@@ -131,7 +131,7 @@ public partial class MainWindow : Window
             return;
         }
 
-        if (vm.IsUnsavedChangesVisible)
+        if (vm.Settings.IsUnsavedChangesVisible)
         {
             vm.KeepEditingSettingsCommand.Execute(null);
             e.Handled = true;
@@ -160,16 +160,16 @@ public partial class MainWindow : Window
         }
 
         // Overlay panels — only close if not dirty (avoids accidental data loss)
-        if (vm.IsSettingsVisible && !vm.IsSettingsDirty)
+        if (vm.IsSettingsVisible && !vm.Settings.IsSettingsDirty)
         {
             vm.ShowSettingsCommand.Execute(null);
             e.Handled = true;
             return;
         }
 
-        if (vm.IsResourcePanelVisible)
+        if (vm.ResourcePanel.IsResourcePanelVisible)
         {
-            vm.CloseResourcePanelCommand.Execute(null);
+            vm.ResourcePanel.CloseResourcePanelCommand.Execute(null);
             e.Handled = true;
         }
     }
@@ -192,7 +192,7 @@ public partial class MainWindow : Window
     private void PerformClose()
     {
         if (DataContext is MainWindowViewModel vm
-            && vm.SelectedCloseBehavior == Models.CloseBehaviors.Minimize)
+            && vm.Settings.SelectedCloseBehavior == Models.CloseBehaviors.Minimize)
         {
             if (systemTray is not null)
             {

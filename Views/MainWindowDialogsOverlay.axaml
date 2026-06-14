@@ -8,7 +8,7 @@
              x:DataType="vm:MainWindowViewModel">
     <Grid>
         <!-- Resource control panel -->
-        <Grid IsVisible="{Binding IsResourcePanelVisible}" Background="{DynamicResource LauncherOverlayBrush}">
+        <Grid IsVisible="{Binding ResourcePanel.IsResourcePanelVisible}" Background="{DynamicResource LauncherOverlayBrush}">
             <Border MaxWidth="720"
                     MaxHeight="620"
                     Margin="24"
@@ -24,7 +24,7 @@
                             <TextBlock Text="{Binding I18n.ResourcePanel}" Classes="dialog-title"/>
                             <TextBlock Text="{Binding I18n.ResourcePanelDescription}" Classes="caption"/>
                         </StackPanel>
-                        <Button Grid.Column="2" Classes="dialog-close" Command="{Binding CloseResourcePanelCommand}" ToolTip.Tip="{Binding I18n.Close}">
+                        <Button Grid.Column="2" Classes="dialog-close" Command="{Binding ResourcePanel.CloseResourcePanelCommand}" ToolTip.Tip="{Binding I18n.Close}">
                             <materialIcons:MaterialIcon Kind="Close" Width="18" Height="18"/>
                         </Button>
                     </Grid>
@@ -33,22 +33,22 @@
                         <StackPanel Spacing="12">
                             <Border Classes="info-strip">
                                 <StackPanel Spacing="6">
-                                    <TextBlock Text="{Binding ResourcePanelUidText}" Classes="body"
-                                               IsVisible="{Binding ResourcePanelUidText, Converter={x:Static StringConverters.IsNotNullOrEmpty}}"/>
-                                    <TextBlock Text="{Binding ResourcePanelMessage}" Classes="body"/>
+                                    <TextBlock Text="{Binding ResourcePanel.ResourcePanelUidText}" Classes="body"
+                                               IsVisible="{Binding ResourcePanel.ResourcePanelUidText, Converter={x:Static StringConverters.IsNotNullOrEmpty}}"/>
+                                    <TextBlock Text="{Binding ResourcePanel.ResourcePanelMessage}" Classes="body"/>
                                 </StackPanel>
                             </Border>
 
-                            <Border Classes="dialog-card" IsVisible="{Binding IsResourcePanelUidMissing}">
+                            <Border Classes="dialog-card" IsVisible="{Binding ResourcePanel.IsResourcePanelUidMissing}">
                                 <Grid RowDefinitions="Auto,Auto" ColumnDefinitions="*,Auto" ColumnSpacing="12" RowSpacing="10">
                                     <TextBlock Grid.ColumnSpan="2" Text="{Binding I18n.ResourcePanelManualUid}" Classes="group-title"/>
                                     <TextBox Grid.Row="1"
-                                             Text="{Binding ManualResourcePanelUid, Mode=TwoWay}"
+                                             Text="{Binding ResourcePanel.ManualResourcePanelUid, Mode=TwoWay}"
                                              PlaceholderText="{Binding I18n.ResourcePanelUid}"
                                              MinHeight="38"/>
                                     <Button Grid.Row="1" Grid.Column="1" Classes="primary-action dialog-action"
-                                            Command="{Binding SaveManualResourcePanelUidCommand}"
-                                            IsEnabled="{Binding IsResourcePanelBusy, Converter={x:Static BoolConverters.Not}}">
+                                            Command="{Binding ResourcePanel.SaveManualResourcePanelUidCommand}"
+                                            IsEnabled="{Binding ResourcePanel.IsResourcePanelBusy, Converter={x:Static BoolConverters.Not}}">
                                         <StackPanel Classes="button-content">
                                             <materialIcons:MaterialIcon Kind="ContentSave" Width="17" Height="17" Foreground="{DynamicResource LauncherOnAccentBrush}"/>
                                             <TextBlock Text="{Binding I18n.ResourcePanelSaveUid}" VerticalAlignment="Center" Foreground="{DynamicResource LauncherOnAccentBrush}"/>
@@ -57,7 +57,7 @@
                                 </Grid>
                             </Border>
 
-                            <ItemsControl ItemsSource="{Binding ResourcePanelItems}">
+                            <ItemsControl ItemsSource="{Binding ResourcePanel.ResourcePanelItems}">
                                 <ItemsControl.ItemTemplate>
                                     <DataTemplate x:DataType="models:ResourcePanelItem">
                                         <Border Classes="dialog-card" Margin="0,0,0,8">
@@ -84,15 +84,15 @@
                     </ScrollViewer>
 
                     <StackPanel Grid.Row="2" Classes="confirm-actions">
-                        <Button Classes="flat-action dialog-action" Command="{Binding RefreshResourcePanelCommand}"
-                                IsEnabled="{Binding IsResourcePanelBusy, Converter={x:Static BoolConverters.Not}}">
+                        <Button Classes="flat-action dialog-action" Command="{Binding ResourcePanel.RefreshResourcePanelCommand}"
+                                IsEnabled="{Binding ResourcePanel.IsResourcePanelBusy, Converter={x:Static BoolConverters.Not}}">
                             <StackPanel Classes="button-content">
                                 <materialIcons:MaterialIcon Kind="Refresh" Width="17" Height="17"/>
                                 <TextBlock Text="{Binding I18n.ResourcePanelRefresh}" VerticalAlignment="Center"/>
                             </StackPanel>
                         </Button>
-                        <Button Classes="primary-action dialog-action" Command="{Binding SaveResourcePanelCommand}"
-                                IsEnabled="{Binding IsResourcePanelBusy, Converter={x:Static BoolConverters.Not}}">
+                        <Button Classes="primary-action dialog-action" Command="{Binding ResourcePanel.SaveResourcePanelCommand}"
+                                IsEnabled="{Binding ResourcePanel.IsResourcePanelBusy, Converter={x:Static BoolConverters.Not}}">
                             <StackPanel Classes="button-content">
                                 <materialIcons:MaterialIcon Kind="ContentSave" Width="18" Height="18" Foreground="{DynamicResource LauncherOnAccentBrush}"/>
                                 <TextBlock Text="{Binding I18n.ResourcePanelSave}" VerticalAlignment="Center" Foreground="{DynamicResource LauncherOnAccentBrush}"/>
@@ -239,7 +239,7 @@
             </Border>
         </Grid>
         <!-- M4: Unsaved changes confirmation dialog -->
-        <Grid IsVisible="{Binding IsUnsavedChangesVisible}" Background="{DynamicResource LauncherOverlayBrush}">
+        <Grid IsVisible="{Binding Settings.IsUnsavedChangesVisible}" Background="{DynamicResource LauncherOverlayBrush}">
             <Border Classes="dialog confirm-panel">
                 <Grid RowDefinitions="Auto,Auto,Auto" Classes="confirm-layout">
                     <Grid ColumnDefinitions="Auto,*,Auto" ColumnSpacing="12">

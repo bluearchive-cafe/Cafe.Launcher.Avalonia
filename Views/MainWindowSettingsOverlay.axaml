@@ -61,7 +61,7 @@
                                         <TextBlock Text="{Binding I18n.GamePath}" Classes="section-title"/>
                                         <TextBlock Text="{Binding PathText}" Classes="caption" TextWrapping="Wrap" TextTrimming="CharacterEllipsis"/>
                                     </StackPanel>
-                                    <Button Grid.Column="2" Classes="flat-action" Command="{Binding ChooseGamePathCommand}"
+                                    <Button Grid.Column="2" Classes="flat-action" Command="{Binding Settings.ChooseGamePathCommand}"
                                             IsEnabled="{Binding IsBusy, Converter={x:Static BoolConverters.Not}}">
                                         <StackPanel Classes="button-content">
                                             <materialIcons:MaterialIcon Kind="FolderOpen" Width="16" Height="16"/>
@@ -79,8 +79,8 @@
                                         <TextBlock Text="{Binding I18n.LaunchCheckDescription}" Classes="caption" TextWrapping="Wrap"/>
                                     </StackPanel>
                                     <ComboBox Grid.Column="2" Classes="setting-control"
-                                              ItemsSource="{Binding LaunchCheckModeOptions}"
-                                              SelectedValue="{Binding SelectedLaunchCheckMode, Mode=TwoWay}"
+                                              ItemsSource="{Binding Settings.LaunchCheckModeOptions}"
+                                              SelectedValue="{Binding Settings.SelectedLaunchCheckMode, Mode=TwoWay}"
                                               SelectedValueBinding="{Binding Code}">
                                         <ComboBox.ItemTemplate>
                                             <DataTemplate x:DataType="models:SettingOption">
@@ -131,8 +131,8 @@
                                         <TextBlock Text="{Binding I18n.ProxyDescription}" Classes="caption" TextWrapping="Wrap"/>
                                     </StackPanel>
                                     <ComboBox Grid.Column="2" Classes="setting-control"
-                                              ItemsSource="{Binding ProxyModeOptions}"
-                                              SelectedValue="{Binding SelectedProxyMode, Mode=TwoWay}"
+                                              ItemsSource="{Binding Settings.ProxyModeOptions}"
+                                              SelectedValue="{Binding Settings.SelectedProxyMode, Mode=TwoWay}"
                                               SelectedValueBinding="{Binding Code}">
                                         <ComboBox.ItemTemplate>
                                             <DataTemplate x:DataType="models:SettingOption">
@@ -151,8 +151,8 @@
                                         <TextBlock Text="{Binding I18n.DownloadSourceDescription}" Classes="caption" TextWrapping="Wrap"/>
                                     </StackPanel>
                                     <ComboBox Grid.Column="2" Classes="setting-control"
-                                              ItemsSource="{Binding PatchUrlGroupOptions}"
-                                              SelectedValue="{Binding SelectedPatchUrlGroup, Mode=TwoWay}"
+                                              ItemsSource="{Binding Settings.PatchUrlGroupOptions}"
+                                              SelectedValue="{Binding Settings.SelectedPatchUrlGroup, Mode=TwoWay}"
                                               SelectedValueBinding="{Binding Code}">
                                         <ComboBox.ItemTemplate>
                                             <DataTemplate x:DataType="models:SettingOption">
@@ -171,8 +171,8 @@
                                         <TextBlock Text="{Binding I18n.DownloadSpeedLimitDescription}" Classes="caption" TextWrapping="Wrap"/>
                                     </StackPanel>
                                     <ComboBox Grid.Column="2" Classes="setting-control"
-                                              ItemsSource="{Binding DownloadSpeedLimitOptions}"
-                                              SelectedValue="{Binding SelectedDownloadSpeedLimit, Mode=TwoWay}"
+                                              ItemsSource="{Binding Settings.DownloadSpeedLimitOptions}"
+                                              SelectedValue="{Binding Settings.SelectedDownloadSpeedLimit, Mode=TwoWay}"
                                               SelectedValueBinding="{Binding Code}">
                                         <ComboBox.ItemTemplate>
                                             <DataTemplate x:DataType="models:SettingOption">
@@ -196,8 +196,8 @@
                                         <TextBlock Text="{Binding I18n.Language}" Classes="section-title"/>
                                     </StackPanel>
                                     <ComboBox Grid.Column="2" Classes="setting-control"
-                                              ItemsSource="{Binding LanguageOptions}"
-                                              SelectedValue="{Binding SelectedLanguage, Mode=TwoWay}"
+                                              ItemsSource="{Binding Settings.LanguageOptions}"
+                                              SelectedValue="{Binding Settings.SelectedLanguage, Mode=TwoWay}"
                                               SelectedValueBinding="{Binding Code}">
                                         <ComboBox.ItemTemplate>
                                             <DataTemplate x:DataType="models:LanguageOption">
@@ -216,8 +216,8 @@
                                         <TextBlock Text="{Binding I18n.ThemeDescription}" Classes="caption" TextWrapping="Wrap"/>
                                     </StackPanel>
                                     <ComboBox Grid.Column="2" Classes="setting-control"
-                                              ItemsSource="{Binding ThemeOptions}"
-                                              SelectedValue="{Binding SelectedThemeMode, Mode=TwoWay}"
+                                              ItemsSource="{Binding Settings.ThemeOptions}"
+                                              SelectedValue="{Binding Settings.SelectedThemeMode, Mode=TwoWay}"
                                               SelectedValueBinding="{Binding Code}">
                                         <ComboBox.ItemTemplate>
                                             <DataTemplate x:DataType="models:ThemeOption">
@@ -237,10 +237,10 @@
                                     </StackPanel>
                                     <StackPanel Grid.Column="2" Orientation="Horizontal" Spacing="10" VerticalAlignment="Center">
                                         <Border Classes="color-swatch"
-                                                Background="{Binding ThemeColorPreviewBrush}"/>
+                                                Background="{Binding Settings.ThemeColorPreviewBrush}"/>
                                         <ComboBox Classes="setting-control"
-                                                  ItemsSource="{Binding ThemeColorOptions}"
-                                                  SelectedValue="{Binding SelectedThemeColorMode, Mode=TwoWay}"
+                                                  ItemsSource="{Binding Settings.ThemeColorOptions}"
+                                                  SelectedValue="{Binding Settings.SelectedThemeColorMode, Mode=TwoWay}"
                                                   SelectedValueBinding="{Binding Code}">
                                             <ComboBox.ItemTemplate>
                                                 <DataTemplate x:DataType="models:SettingOption">
@@ -252,7 +252,7 @@
                                 </Grid>
 
                                 <Grid Classes="settings-row" ColumnDefinitions="Auto,*,Auto" ColumnSpacing="12"
-                                      IsVisible="{Binding IsWallpaperThemeColorSelected}">
+                                      IsVisible="{Binding Settings.IsWallpaperThemeColorSelected}">
                                     <Border Classes="settings-icon">
                                         <materialIcons:MaterialIcon Kind="PaletteSwatchOutline" Width="18" Height="18" Foreground="{DynamicResource LauncherAccentBrush}" HorizontalAlignment="Center" VerticalAlignment="Center"/>
                                     </Border>
@@ -265,8 +265,8 @@
                                                  Background="Transparent"
                                                  BorderThickness="0"
                                                  Padding="0"
-                                                 ItemsSource="{Binding ThemeColorPaletteItems}"
-                                                 SelectedIndex="{Binding SelectedThemeColorPaletteIndex, Mode=TwoWay}">
+                                                 ItemsSource="{Binding Settings.ThemeColorPaletteItems}"
+                                                 SelectedIndex="{Binding Settings.SelectedThemeColorPaletteIndex, Mode=TwoWay}">
                                             <ListBox.ItemsPanel>
                                                 <ItemsPanelTemplate>
                                                     <StackPanel Orientation="Horizontal" Spacing="8"/>
@@ -287,7 +287,7 @@
                                                 </DataTemplate>
                                             </ListBox.ItemTemplate>
                                         </ListBox>
-                                        <Button Classes="flat-action" Command="{Binding RefreshThemeColorPaletteCommand}">
+                                        <Button Classes="flat-action" Command="{Binding Settings.RefreshThemeColorPaletteCommand}">
                                             <StackPanel Classes="button-content">
                                                 <materialIcons:MaterialIcon Kind="Refresh" Width="16" Height="16"/>
                                                 <TextBlock Text="{Binding I18n.RefreshThemeColorPalette}" VerticalAlignment="Center"/>
@@ -297,7 +297,7 @@
                                 </Grid>
 
                                 <Grid Classes="settings-row" ColumnDefinitions="Auto,*,Auto" ColumnSpacing="12"
-                                      IsVisible="{Binding IsCustomThemeColorSelected}">
+                                      IsVisible="{Binding Settings.IsCustomThemeColorSelected}">
                                     <Border Classes="settings-icon">
                                         <materialIcons:MaterialIcon Kind="FormatColorFill" Width="18" Height="18" Foreground="{DynamicResource LauncherAccentBrush}" HorizontalAlignment="Center" VerticalAlignment="Center"/>
                                     </Border>
@@ -307,14 +307,14 @@
                                     </StackPanel>
                                     <ColorPicker Grid.Column="2"
                                                  Classes="setting-control"
-                                                 Color="{Binding SelectedCustomThemeColor, Mode=TwoWay}">
+                                                 Color="{Binding Settings.SelectedCustomThemeColor, Mode=TwoWay}">
                                         <StackPanel Classes="button-content">
                                             <Border Width="16"
                                                     Height="16"
                                                     CornerRadius="3"
                                                     BorderBrush="{DynamicResource LauncherCardBorderBrush}"
                                                     BorderThickness="1"
-                                                    Background="{Binding ThemeColorPreviewBrush}"/>
+                                                    Background="{Binding Settings.ThemeColorPreviewBrush}"/>
                                             <materialIcons:MaterialIcon Kind="PaletteOutline" Width="16" Height="16"/>
                                             <TextBlock Text="{Binding I18n.OpenColorPalette}" VerticalAlignment="Center"/>
                                         </StackPanel>
@@ -330,8 +330,8 @@
                                         <TextBlock Text="{Binding I18n.BackgroundSourceDescription}" Classes="caption" TextWrapping="Wrap"/>
                                     </StackPanel>
                                     <ComboBox Grid.Column="2" Classes="setting-control"
-                                              ItemsSource="{Binding BackgroundSourceOptions}"
-                                              SelectedValue="{Binding SelectedBackgroundSource, Mode=TwoWay}"
+                                              ItemsSource="{Binding Settings.BackgroundSourceOptions}"
+                                              SelectedValue="{Binding Settings.SelectedBackgroundSource, Mode=TwoWay}"
                                               SelectedValueBinding="{Binding Code}">
                                         <ComboBox.ItemTemplate>
                                             <DataTemplate x:DataType="models:SettingOption">
@@ -342,7 +342,7 @@
                                 </Grid>
 
                                 <Grid Classes="settings-row" ColumnDefinitions="Auto,*,Auto" ColumnSpacing="12"
-                                      IsVisible="{Binding IsCustomBackgroundSelected}">
+                                      IsVisible="{Binding Settings.IsCustomBackgroundSelected}">
                                     <Border Classes="settings-icon">
                                         <materialIcons:MaterialIcon Kind="ImageEditOutline" Width="18" Height="18" Foreground="{DynamicResource LauncherAccentBrush}" HorizontalAlignment="Center" VerticalAlignment="Center"/>
                                     </Border>
@@ -351,20 +351,20 @@
                                         <TextBlock Text="{Binding I18n.CustomBackgroundDescription}" Classes="caption" TextWrapping="Wrap"/>
                                     </StackPanel>
                                     <StackPanel Grid.Column="2" Orientation="Horizontal" Spacing="8" VerticalAlignment="Center">
-                                        <Button Classes="flat-action" Command="{Binding ChooseBackgroundImageCommand}">
+                                        <Button Classes="flat-action" Command="{Binding Settings.ChooseBackgroundImageCommand}">
                                             <StackPanel Classes="button-content">
                                                 <materialIcons:MaterialIcon Kind="ImageOutline" Width="16" Height="16"/>
                                                 <TextBlock Text="{Binding I18n.ChooseImage}" VerticalAlignment="Center"/>
                                             </StackPanel>
                                         </Button>
-                                        <Button Classes="flat-action" Command="{Binding ChooseBackgroundFolderCommand}">
+                                        <Button Classes="flat-action" Command="{Binding Settings.ChooseBackgroundFolderCommand}">
                                             <StackPanel Classes="button-content">
                                                 <materialIcons:MaterialIcon Kind="FolderOpen" Width="16" Height="16"/>
                                                 <TextBlock Text="{Binding I18n.ChooseFolder}" VerticalAlignment="Center"/>
                                             </StackPanel>
                                         </Button>
-                                        <Button Classes="flat-action" Command="{Binding ClearBackgroundCommand}"
-                                                IsVisible="{Binding IsCustomBackground}">
+                                        <Button Classes="flat-action" Command="{Binding Settings.ClearBackgroundCommand}"
+                                                IsVisible="{Binding Settings.IsCustomBackground}">
                                             <StackPanel Classes="button-content">
                                                 <materialIcons:MaterialIcon Kind="DeleteOutline" Width="16" Height="16"/>
                                                 <TextBlock Text="{Binding I18n.ClearBackground}" VerticalAlignment="Center"/>
@@ -381,8 +381,8 @@
                                         <TextBlock Text="{Binding I18n.CloseBehavior}" Classes="section-title"/>
                                     </StackPanel>
                                     <ComboBox Grid.Column="2" Classes="setting-control"
-                                              ItemsSource="{Binding CloseBehaviorOptions}"
-                                              SelectedValue="{Binding SelectedCloseBehavior, Mode=TwoWay}"
+                                              ItemsSource="{Binding Settings.CloseBehaviorOptions}"
+                                              SelectedValue="{Binding Settings.SelectedCloseBehavior, Mode=TwoWay}"
                                               SelectedValueBinding="{Binding Code}">
                                         <ComboBox.ItemTemplate>
                                             <DataTemplate x:DataType="models:SettingOption">
@@ -401,7 +401,7 @@
                                         <TextBlock Text="{Binding I18n.ToastNotifications}" Classes="caption"/>
                                     </StackPanel>
                                     <ToggleSwitch Grid.Column="2"
-                                                  IsChecked="{Binding ToastNotificationsEnabled, Mode=TwoWay}"
+                                                  IsChecked="{Binding Settings.ToastNotificationsEnabled, Mode=TwoWay}"
                                                   VerticalAlignment="Center"/>
                                 </Grid>
 
@@ -414,7 +414,7 @@
                                         <TextBlock Text="{Binding I18n.ShowRemoteContentCard}" Classes="caption"/>
                                     </StackPanel>
                                     <ToggleSwitch Grid.Column="2"
-                                                  IsChecked="{Binding ShowRemoteContentCard, Mode=TwoWay}"
+                                                  IsChecked="{Binding Settings.ShowRemoteContentCard, Mode=TwoWay}"
                                                   VerticalAlignment="Center"/>
                                 </Grid>
                             </StackPanel>
@@ -479,7 +479,7 @@
                 </ScrollViewer>
 
                 <Border Grid.Row="2" Classes="dialog-footer">
-                    <Button Classes="primary-action" Command="{Binding SaveSettingsCommand}" HorizontalAlignment="Stretch">
+                    <Button Classes="primary-action" Command="{Binding Settings.SaveSettingsCommand}" HorizontalAlignment="Stretch">
                         <StackPanel Classes="button-content" HorizontalAlignment="Center">
                             <materialIcons:MaterialIcon Kind="ContentSave" Width="18" Height="18" Foreground="{DynamicResource LauncherOnAccentBrush}"/>
                             <TextBlock Text="{Binding I18n.Save}" VerticalAlignment="Center"/>
