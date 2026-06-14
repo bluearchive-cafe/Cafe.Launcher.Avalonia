@@ -14,7 +14,7 @@
                     HorizontalAlignment="Center"
                     VerticalAlignment="Center"
                     Classes="dialog">
-                <Grid RowDefinitions="Auto,*,Auto" Margin="22" RowSpacing="16">
+                <Grid RowDefinitions="Auto,*,Auto" Classes="confirm-layout">
                     <Grid ColumnDefinitions="Auto,*,Auto" ColumnSpacing="12">
                         <Border Classes="dialog-icon" VerticalAlignment="Center">
                             <materialIcons:MaterialIcon Kind="Web" Width="22" Height="22" Foreground="{DynamicResource LauncherAccentBrush}" HorizontalAlignment="Center" VerticalAlignment="Center"/>
@@ -108,20 +108,20 @@
                     HorizontalAlignment="Center"
                     VerticalAlignment="Center"
                     Classes="dialog">
-                <Grid RowDefinitions="Auto,*,Auto" Margin="22">
+                <Grid RowDefinitions="Auto,*,Auto" Classes="confirm-layout">
                     <StackPanel Orientation="Horizontal" Spacing="12">
                         <Border Classes="dialog-icon">
                             <materialIcons:MaterialIcon Kind="InformationOutline" Width="22" Height="22" Foreground="{DynamicResource LauncherAccentBrush}" HorizontalAlignment="Center" VerticalAlignment="Center"/>
                         </Border>
                         <TextBlock Text="{Binding I18n.Notice}" Classes="dialog-title" VerticalAlignment="Center"/>
                     </StackPanel>
-                    <ScrollViewer Grid.Row="1" MaxHeight="300" Margin="0,16,0,0" Padding="0,0,6,0">
+                    <ScrollViewer Grid.Row="1" MaxHeight="300" Padding="0,0,6,0">
                         <Border Classes="info-strip">
                             <TextBlock Text="{Binding NoticeDialogContent}" TextWrapping="Wrap" Foreground="{DynamicResource LauncherInfoTextBrush}" FontSize="13"/>
                         </Border>
                     </ScrollViewer>
                     <Button Grid.Row="2" Classes="primary-action" Command="{Binding DismissNoticeCommand}"
-                            HorizontalAlignment="Center" Margin="0,16,0,0" Width="120">
+                            HorizontalAlignment="Center" Width="120">
                         <StackPanel Classes="button-content" HorizontalAlignment="Center">
                             <TextBlock Text="{Binding NoticeDialogConfirmText}" VerticalAlignment="Center" Foreground="{DynamicResource LauncherOnAccentBrush}"/>
                         </StackPanel>

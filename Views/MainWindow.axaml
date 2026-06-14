@@ -72,14 +72,14 @@
             <Grid Grid.Row="1">
                 <Border HorizontalAlignment="Left"
                         VerticalAlignment="Top"
-                        Margin="44,64,0,0"
+                        Margin="40,64,0,0"
                         Width="500"
                         MaxHeight="480"
                         Classes="surface"
                         IsVisible="{Binding HasRemoteContent}">
                     <ScrollViewer Padding="0,0,6,0">
                         <StackPanel Spacing="14">
-                            <Border IsVisible="{Binding HasNotice}" Background="{DynamicResource LauncherNoticeBackgroundBrush}" CornerRadius="4" Padding="12" MaxHeight="160">
+                            <Border IsVisible="{Binding HasNotice}" Classes="notice-card">
                                 <StackPanel Spacing="4">
                                     <TextBlock Text="{Binding I18n.Notice}" Classes="panel-title"/>
                                     <ScrollViewer MaxHeight="110" Padding="0,0,6,0">
@@ -93,8 +93,7 @@
                                 <Grid ColumnDefinitions="Auto,*,Auto,Auto" ColumnSpacing="8">
                                     <TextBlock Text="{Binding I18n.Banners}" Classes="panel-title" VerticalAlignment="Center"/>
                                     <TextBlock Grid.Column="2" Text="{Binding CarouselPageText}" Classes="caption" VerticalAlignment="Center"/>
-                                    <Button Grid.Column="3" Width="24" Height="24" Padding="0"
-                                            Background="Transparent" BorderThickness="0" Cursor="Hand"
+                                    <Button Grid.Column="3" Classes="icon-button compact" Cursor="Hand"
                                             Command="{Binding ToggleCarouselLoopCommand}"
                                             ToolTip.Tip="{Binding CarouselPauseTooltip}">
                                         <materialIcons:MaterialIcon Kind="{Binding CarouselPauseIcon}" Width="16" Height="16"
@@ -119,10 +118,9 @@
                                                     CommandParameter="{Binding Url}">
                                                 <Grid Height="220">
                                                     <!-- C3: Placeholder with text when banner fails to load -->
-                                                    <Border Background="#2A3A5C" CornerRadius="4">
+                                                    <Border Classes="media-placeholder">
                                                         <TextBlock Text="{Binding DataContext.I18n.BannerLoadingFailed, ElementName=Root}"
-                                                                   Foreground="#88FFFFFF" FontSize="13"
-                                                                   HorizontalAlignment="Center" VerticalAlignment="Center"
+                                                                   Classes="media-placeholder-text"
                                                                    IsVisible="{Binding BannerBitmap, Converter={x:Static ObjectConverters.IsNull}}"/>
                                                     </Border>
                                                     <Image Source="{Binding BannerBitmap}"
@@ -134,8 +132,7 @@
                                 </Carousel>
                                 <!-- L5: Carousel indicator dots + left/right arrows -->
                                 <Grid ColumnDefinitions="Auto,*,Auto">
-                                    <Button Grid.Column="0" Width="24" Height="24" Padding="0"
-                                            Background="Transparent" BorderThickness="0" Cursor="Hand"
+                                    <Button Grid.Column="0" Classes="icon-button compact" Cursor="Hand"
                                             Command="{Binding SelectPreviousBannerCommand}"
                                             IsVisible="{Binding HasMultipleBanners}">
                                         <materialIcons:MaterialIcon Kind="ChevronLeft" Width="18" Height="18"
@@ -149,8 +146,7 @@
                                         </ItemsControl.ItemsPanel>
                                         <ItemsControl.ItemTemplate>
                                             <DataTemplate x:DataType="models:BannerDot">
-                                                <Button Width="20" Height="20" Padding="0"
-                                                        Background="Transparent" BorderThickness="0"
+                                                <Button Classes="icon-button dot"
                                                         Cursor="Hand"
                                                         Command="{Binding DataContext.SelectBannerCommand, ElementName=Root}"
                                                         CommandParameter="{Binding Index}">
@@ -160,8 +156,7 @@
                                             </DataTemplate>
                                         </ItemsControl.ItemTemplate>
                                     </ItemsControl>
-                                    <Button Grid.Column="2" Width="24" Height="24" Padding="0"
-                                            Background="Transparent" BorderThickness="0" Cursor="Hand"
+                                    <Button Grid.Column="2" Classes="icon-button compact" Cursor="Hand"
                                             Command="{Binding SelectNextBannerCommand}"
                                             IsVisible="{Binding HasMultipleBanners}">
                                         <materialIcons:MaterialIcon Kind="ChevronRight" Width="18" Height="18"
@@ -183,8 +178,7 @@
                                             </ItemsControl.ItemsPanel>
                                             <ItemsControl.ItemTemplate>
                                                 <DataTemplate x:DataType="models:NewsCategory">
-                                                    <Button Padding="12,4" BorderThickness="0" CornerRadius="4"
-                                                            Cursor="Hand"
+                                                    <Button Cursor="Hand"
                                                             Classes="news-tab"
                                                             Classes.active="{Binding IsActive}"
                                                             Command="{Binding DataContext.SelectNewsCategoryCommand, ElementName=Root}"

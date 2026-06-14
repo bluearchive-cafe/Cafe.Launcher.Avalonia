@@ -12,8 +12,8 @@
                 VerticalAlignment="Center"
                 Classes="dialog">
             <Grid RowDefinitions="Auto,*,Auto">
-                <Grid ColumnDefinitions="*,Auto" Background="{DynamicResource LauncherDialogHeaderBrush}" Height="56" ClipToBounds="True">
-                    <StackPanel Orientation="Horizontal" Spacing="12" Margin="20,0,0,0" VerticalAlignment="Center">
+                <Grid ColumnDefinitions="*,Auto" Classes="dialog-header">
+                    <StackPanel Classes="dialog-title-row">
                         <Border Classes="dialog-icon">
                             <materialIcons:MaterialIcon Kind="CogOutline" Width="19" Height="19" Foreground="{DynamicResource LauncherAccentBrush}" HorizontalAlignment="Center" VerticalAlignment="Center"/>
                         </Border>
@@ -25,7 +25,7 @@
                     </Button>
                 </Grid>
 
-                <ScrollViewer Grid.Row="1" Margin="20,14,14,14" Padding="0,0,6,0">
+                <ScrollViewer Grid.Row="1" Classes="dialog-scroll">
                     <StackPanel Spacing="12">
                         <Border Classes="settings-section">
                             <StackPanel Spacing="8">
@@ -77,7 +77,7 @@
                                         <TextBlock Text="{Binding I18n.LaunchCheck}" Classes="section-title"/>
                                         <TextBlock Text="{Binding I18n.LaunchCheckDescription}" Classes="caption" TextWrapping="Wrap"/>
                                     </StackPanel>
-                                    <ComboBox Grid.Column="2" Width="190"
+                                    <ComboBox Grid.Column="2" Classes="setting-control"
                                               ItemsSource="{Binding LaunchCheckModeOptions}"
                                               SelectedValue="{Binding SelectedLaunchCheckMode, Mode=TwoWay}"
                                               SelectedValueBinding="{Binding Code}">
@@ -129,7 +129,7 @@
                                         <TextBlock Text="{Binding I18n.Proxy}" Classes="section-title"/>
                                         <TextBlock Text="{Binding I18n.ProxyDescription}" Classes="caption" TextWrapping="Wrap"/>
                                     </StackPanel>
-                                    <ComboBox Grid.Column="2" Width="190"
+                                    <ComboBox Grid.Column="2" Classes="setting-control"
                                               ItemsSource="{Binding ProxyModeOptions}"
                                               SelectedValue="{Binding SelectedProxyMode, Mode=TwoWay}"
                                               SelectedValueBinding="{Binding Code}">
@@ -149,7 +149,7 @@
                                         <TextBlock Text="{Binding I18n.DownloadSource}" Classes="section-title"/>
                                         <TextBlock Text="{Binding I18n.DownloadSourceDescription}" Classes="caption" TextWrapping="Wrap"/>
                                     </StackPanel>
-                                    <ComboBox Grid.Column="2" Width="190"
+                                    <ComboBox Grid.Column="2" Classes="setting-control"
                                               ItemsSource="{Binding PatchUrlGroupOptions}"
                                               SelectedValue="{Binding SelectedPatchUrlGroup, Mode=TwoWay}"
                                               SelectedValueBinding="{Binding Code}">
@@ -169,7 +169,7 @@
                                         <TextBlock Text="{Binding I18n.DownloadSpeedLimit}" Classes="section-title"/>
                                         <TextBlock Text="{Binding I18n.DownloadSpeedLimitDescription}" Classes="caption" TextWrapping="Wrap"/>
                                     </StackPanel>
-                                    <ComboBox Grid.Column="2" Width="190"
+                                    <ComboBox Grid.Column="2" Classes="setting-control"
                                               ItemsSource="{Binding DownloadSpeedLimitOptions}"
                                               SelectedValue="{Binding SelectedDownloadSpeedLimit, Mode=TwoWay}"
                                               SelectedValueBinding="{Binding Code}">
@@ -194,7 +194,7 @@
                                     <StackPanel Grid.Column="1" VerticalAlignment="Center">
                                         <TextBlock Text="{Binding I18n.Language}" Classes="section-title"/>
                                     </StackPanel>
-                                    <ComboBox Grid.Column="2" Width="190"
+                                    <ComboBox Grid.Column="2" Classes="setting-control"
                                               ItemsSource="{Binding LanguageOptions}"
                                               SelectedValue="{Binding SelectedLanguage, Mode=TwoWay}"
                                               SelectedValueBinding="{Binding Code}">
@@ -214,7 +214,7 @@
                                         <TextBlock Text="{Binding I18n.Theme}" Classes="section-title"/>
                                         <TextBlock Text="{Binding I18n.ThemeDescription}" Classes="caption" TextWrapping="Wrap"/>
                                     </StackPanel>
-                                    <ComboBox Grid.Column="2" Width="190"
+                                    <ComboBox Grid.Column="2" Classes="setting-control"
                                               ItemsSource="{Binding ThemeOptions}"
                                               SelectedValue="{Binding SelectedThemeMode, Mode=TwoWay}"
                                               SelectedValueBinding="{Binding Code}">
@@ -235,11 +235,9 @@
                                         <TextBlock Text="{Binding I18n.ThemeColorDescription}" Classes="caption" TextWrapping="Wrap"/>
                                     </StackPanel>
                                     <StackPanel Grid.Column="2" Orientation="Horizontal" Spacing="10" VerticalAlignment="Center">
-                                        <Border Width="28" Height="28" CornerRadius="4"
-                                                BorderBrush="{DynamicResource LauncherCardBorderBrush}"
-                                                BorderThickness="1"
+                                        <Border Classes="color-swatch"
                                                 Background="{Binding ThemeColorPreviewBrush}"/>
-                                        <ComboBox Width="190"
+                                        <ComboBox Classes="setting-control"
                                                   ItemsSource="{Binding ThemeColorOptions}"
                                                   SelectedValue="{Binding SelectedThemeColorMode, Mode=TwoWay}"
                                                   SelectedValueBinding="{Binding Code}">
@@ -275,11 +273,7 @@
                                             </ListBox.ItemsPanel>
                                             <ListBox.ItemTemplate>
                                                 <DataTemplate x:DataType="models:ThemeColorPaletteItem">
-                                                    <Border Width="28"
-                                                            Height="28"
-                                                            CornerRadius="4"
-                                                            BorderBrush="{DynamicResource LauncherCardBorderBrush}"
-                                                            BorderThickness="1"
+                                                    <Border Classes="color-swatch"
                                                             Background="{Binding Brush}">
                                                         <materialIcons:MaterialIcon Kind="Check"
                                                                                     Width="16"
@@ -311,10 +305,8 @@
                                         <TextBlock Text="{Binding I18n.ThemeColorDescription}" Classes="caption" TextWrapping="Wrap"/>
                                     </StackPanel>
                                     <ColorPicker Grid.Column="2"
-                                                 Width="190"
-                                                 Color="{Binding SelectedCustomThemeColor, Mode=TwoWay}"
-                                                 HorizontalContentAlignment="Center"
-                                                 VerticalContentAlignment="Center">
+                                                 Classes="setting-control"
+                                                 Color="{Binding SelectedCustomThemeColor, Mode=TwoWay}">
                                         <StackPanel Classes="button-content">
                                             <Border Width="16"
                                                     Height="16"
@@ -336,7 +328,7 @@
                                         <TextBlock Text="{Binding I18n.BackgroundSource}" Classes="section-title"/>
                                         <TextBlock Text="{Binding I18n.BackgroundSourceDescription}" Classes="caption" TextWrapping="Wrap"/>
                                     </StackPanel>
-                                    <ComboBox Grid.Column="2" Width="190"
+                                    <ComboBox Grid.Column="2" Classes="setting-control"
                                               ItemsSource="{Binding BackgroundSourceOptions}"
                                               SelectedValue="{Binding SelectedBackgroundSource, Mode=TwoWay}"
                                               SelectedValueBinding="{Binding Code}">
@@ -387,7 +379,7 @@
                                     <StackPanel Grid.Column="1" VerticalAlignment="Center">
                                         <TextBlock Text="{Binding I18n.CloseBehavior}" Classes="section-title"/>
                                     </StackPanel>
-                                    <ComboBox Grid.Column="2" Width="190"
+                                    <ComboBox Grid.Column="2" Classes="setting-control"
                                               ItemsSource="{Binding CloseBehaviorOptions}"
                                               SelectedValue="{Binding SelectedCloseBehavior, Mode=TwoWay}"
                                               SelectedValueBinding="{Binding Code}">
@@ -452,19 +444,19 @@
                                     </WrapPanel>
                                 </StackPanel>
                                 <WrapPanel>
-                                    <Button Classes="flat-action" Margin="0,0,8,8" Command="{Binding OpenOfficialSiteCommand}">
+                                    <Button Classes="flat-action wrap-action" Command="{Binding OpenOfficialSiteCommand}">
                                         <StackPanel Classes="button-content">
                                             <materialIcons:MaterialIcon Kind="Web" Width="16" Height="16"/>
                                             <TextBlock Text="{Binding I18n.OfficialSite}" VerticalAlignment="Center"/>
                                         </StackPanel>
                                     </Button>
-                                    <Button Classes="flat-action" Margin="0,0,8,8" Command="{Binding OpenGitHubRepositoryCommand}">
+                                    <Button Classes="flat-action wrap-action" Command="{Binding OpenGitHubRepositoryCommand}">
                                         <StackPanel Classes="button-content">
                                             <materialIcons:MaterialIcon Kind="Github" Width="16" Height="16"/>
                                             <TextBlock Text="{Binding I18n.GithubRepository}" VerticalAlignment="Center"/>
                                         </StackPanel>
                                     </Button>
-                                    <Button Classes="flat-action" Margin="0,0,8,8" IsEnabled="False"
+                                    <Button Classes="flat-action wrap-action" IsEnabled="False"
                                             ToolTip.Tip="{Binding I18n.CheckUpdatesUnavailable}">
                                         <StackPanel Classes="button-content">
                                             <materialIcons:MaterialIcon Kind="Update" Width="16" Height="16"/>
@@ -482,8 +474,7 @@
                     </StackPanel>
                 </ScrollViewer>
 
-                <Border Grid.Row="2" Background="{DynamicResource LauncherDialogFooterBrush}" BorderBrush="{DynamicResource LauncherCardBorderBrush}" BorderThickness="0,1,0,0"
-                        Padding="20,12">
+                <Border Grid.Row="2" Classes="dialog-footer">
                     <Button Classes="primary-action" Command="{Binding SaveSettingsCommand}" HorizontalAlignment="Stretch">
                         <StackPanel Classes="button-content" HorizontalAlignment="Center">
                             <materialIcons:MaterialIcon Kind="ContentSave" Width="18" Height="18" Foreground="{DynamicResource LauncherOnAccentBrush}"/>
