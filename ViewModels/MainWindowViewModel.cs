@@ -147,7 +147,12 @@ public partial class MainWindowViewModel : ViewModelBase, IDisposable
         {
             ApplyLanguage(s.Language);
             SettingsViewModel.ApplyTheme(s.ThemeMode);
-            await Background.UpdateBackgroundImageAsync(currentSnapshot, lifetimeCts.Token);
+            // Background is intentionally NOT updated here.
+            // Both callers (SaveSettingsAsync, ChooseGamePathAsync) fire SettingsSaved
+            // immediately after, which triggers RefreshAsync → ApplySnapshotAsync →
+            // Background.UpdateBackgroundImageAsync. Updating it here too would cause
+            // a double-update; for folder-based (random) backgrounds each update picks a
+            // different image, so the wallpaper visibly flickers between two random picks.
             Settings.ApplyThemeColor(s.ThemeColorMode, SettingsViewModel.ParseColorOrDefault(s.CustomThemeColor));
         };
         Settings.SettingsSaved += HandleSettingsSavedAsync;
