@@ -53,14 +53,6 @@ public sealed class ToastNotification
         _ => "InformationOutline"
     };
 
-    public string IconColor => Severity switch
-    {
-        ToastSeverity.Success => "#22C55E",
-        ToastSeverity.Warning => "#F59E0B",
-        ToastSeverity.Error => "#E5484D",
-        _ => "#2E7DF6"
-    };
-
     public string SeverityLabel => Severity switch
     {
         ToastSeverity.Success => "Success",
@@ -69,21 +61,26 @@ public sealed class ToastNotification
         _ => "Info"
     };
 
-    // Static brushes with colors that are visible on both light and dark backgrounds.
-    // Theme-aware resource lookup would be ideal but Avalonia 12 Application-level
-    // resource resolution does not expose a public TryFindResource API directly.
-    private static readonly global::Avalonia.Media.SolidColorBrush InfoBrush = new(0xFF2E7DF6);
-    private static readonly global::Avalonia.Media.SolidColorBrush SuccessBrush = new(0xFF22C55E);
-    private static readonly global::Avalonia.Media.SolidColorBrush WarningBrush = new(0xFFF59E0B);
-    private static readonly global::Avalonia.Media.SolidColorBrush ErrorBrush = new(0xFFE5484D);
+    /// <summary>Whether the toast is currently playing its exit animation.</summary>
+    public bool IsExiting { get; set; }
 
-    public global::Avalonia.Media.IBrush IconBrush => Severity switch
-    {
-        ToastSeverity.Success => SuccessBrush,
-        ToastSeverity.Warning => WarningBrush,
-        ToastSeverity.Error => ErrorBrush,
-        _ => InfoBrush
-    };
+    /// <summary>
+    /// Resolves a theme-aware brush for the severity icon colour by looking up the
+    /// <c>LauncherToast{Severity}Brush</c> dynamic resource defined in App.axaml.
+    /// Falls back to null when <see cref="Avalonia.Application.Current"/> is unavailable
+    /// (e.g. headless / unit-test contexts) — the icon will render with its default colour.
+    /// </summary>
+    public global::Avalonia.Media.IBrush? IconBrush =>
+        global::Avalonia.Application.Current?.TryGetResource(Severity switch
+        {
+            ToastSeverity.Success => "LauncherToastSuccessBrush",
+            ToastSeverity.Warning => "LauncherToastWarningBrush",
+            ToastSeverity.Error => "LauncherToastErrorBrush",
+            _ => "LauncherToastInfoBrush"
+        }, global::Avalonia.Styling.ThemeVariant.Default, out var value) == true
+        && value is global::Avalonia.Media.IBrush brush
+            ? brush
+            : null;
 }
 
 public enum ToastSeverity

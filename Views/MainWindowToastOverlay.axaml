@@ -4,6 +4,7 @@
              xmlns:services="using:Cafe.Launcher.Avalonia.Services"
              xmlns:materialIcons="clr-namespace:Material.Icons.Avalonia;assembly=Material.Icons.Avalonia"
              x:Class="Cafe.Launcher.Avalonia.Views.MainWindowToastOverlay"
+             x:Name="ToastOverlayRoot"
              x:DataType="vm:MainWindowViewModel">
         <!-- Toast notification overlay -->
         <Grid IsHitTestVisible="False" Margin="0,56,16,0" VerticalAlignment="Top" HorizontalAlignment="Right" ZIndex="1000">
@@ -17,10 +18,11 @@
                     <DataTemplate DataType="{x:Type services:ToastNotification}">
                         <Border Classes="toast-card"
                                 IsHitTestVisible="True">
-                            <Grid ColumnDefinitions="Auto,*" ColumnSpacing="8">
-                                <!-- A5: Severity label for screen readers -->
+                            <Grid ColumnDefinitions="Auto,*,Auto" ColumnSpacing="10">
                                 <materialIcons:MaterialIcon Kind="{Binding IconKind}" Width="18" Height="18"
-                                                            Foreground="{Binding IconBrush}" VerticalAlignment="Top" Margin="0,4,0,0"/>
+                                                            Foreground="{Binding IconBrush}"
+                                                            VerticalAlignment="Top" Margin="0,4,0,0"
+                                                            AutomationProperties.Name="{Binding SeverityLabel}"/>
                                 <StackPanel Grid.Column="1" Spacing="2">
                                     <TextBlock Text="{Binding SeverityLabel}" FontSize="11" FontWeight="SemiBold"
                                                Foreground="{Binding IconBrush}"/>
@@ -28,6 +30,14 @@
                                                VerticalAlignment="Center"
                                                Classes="toast-message"/>
                                 </StackPanel>
+                                <Button Grid.Column="2"
+                                        Classes="toast-close"
+                                        Command="{Binding DataContext.Toasts.DismissToastCommand, ElementName=ToastOverlayRoot}"
+                                        CommandParameter="{Binding Id}"
+                                        VerticalAlignment="Top" Margin="0,2,0,0"
+                                        AutomationProperties.Name="{Binding DataContext.Shell.I18n.Close, ElementName=ToastOverlayRoot}">
+                                    <materialIcons:MaterialIcon Kind="Close" Width="14" Height="14"/>
+                                </Button>
                             </Grid>
                         </Border>
                     </DataTemplate>
