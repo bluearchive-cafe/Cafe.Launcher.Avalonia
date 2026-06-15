@@ -132,6 +132,10 @@ public sealed partial class LocalizedStrings : ObservableObject
     [ObservableProperty] private string downloadSourceOfficial = "";
     [ObservableProperty] private string downloadSourceCafe = "";
     [ObservableProperty] private string downloadSourceChangedRepairPrompt = "";
+    [ObservableProperty] private string resourcePanelCafeOnlyTitle = "";
+    [ObservableProperty] private string resourcePanelCafeOnlyDescription = "";
+    [ObservableProperty] private string resourcePanelCafeOnlyMessage = "";
+    [ObservableProperty] private string resourcePanelCafeOnlySwitch = "";
     [ObservableProperty] private string pause = "";
     [ObservableProperty] private string resume = "";
     [ObservableProperty] private string paused = "";
@@ -278,6 +282,10 @@ public sealed partial class LocalizedStrings : ObservableObject
         DownloadSourceOfficial = localizer.T("downloadSourceOfficial");
         DownloadSourceCafe = localizer.T("downloadSourceCafe");
         DownloadSourceChangedRepairPrompt = localizer.T("downloadSourceChangedRepairPrompt");
+        ResourcePanelCafeOnlyTitle = localizer.T("resourcePanelCafeOnlyTitle");
+        ResourcePanelCafeOnlyDescription = localizer.T("resourcePanelCafeOnlyDescription");
+        ResourcePanelCafeOnlyMessage = localizer.T("resourcePanelCafeOnlyMessage");
+        ResourcePanelCafeOnlySwitch = localizer.T("resourcePanelCafeOnlySwitch");
         Pause = localizer.T("pause");
         Resume = localizer.T("resume");
         Paused = localizer.T("paused");

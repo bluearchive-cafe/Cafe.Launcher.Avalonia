@@ -621,6 +621,25 @@
         <Setter Property="HorizontalContentAlignment" Value="Center"/>
         <Setter Property="VerticalContentAlignment" Value="Center"/>
     </Style>
+    <Style Selector="TextBox.uid-input">
+        <Setter Property="Background" Value="{DynamicResource LauncherFieldBackgroundBrush}"/>
+        <Setter Property="BorderBrush" Value="{DynamicResource LauncherFieldBorderBrush}"/>
+        <Setter Property="BorderThickness" Value="1"/>
+        <Setter Property="CornerRadius" Value="6"/>
+        <Setter Property="Padding" Value="12,9"/>
+        <Setter Property="FontSize" Value="14"/>
+        <Setter Property="Foreground" Value="{DynamicResource LauncherTextPrimaryBrush}"/>
+        <Setter Property="MinWidth" Value="160"/>
+        <Setter Property="MinHeight" Value="38"/>
+        <Setter Property="VerticalContentAlignment" Value="Center"/>
+        <Setter Property="CaretBrush" Value="{DynamicResource LauncherAccentBrush}"/>
+    </Style>
+    <Style Selector="TextBox.uid-input:focus">
+        <Setter Property="BorderBrush" Value="{DynamicResource LauncherAccentBrush}"/>
+    </Style>
+    <Style Selector="TextBox.uid-input:pointerover">
+        <Setter Property="BorderBrush" Value="{DynamicResource LauncherAccentHoverBrush}"/>
+    </Style>
     <Style Selector="ToggleSwitch:checked /template/ Border#SwitchKnobBounds">
         <Setter Property="Background" Value="{DynamicResource LauncherAccentBrush}"/>
         <Setter Property="BorderBrush" Value="{DynamicResource LauncherAccentBrush}"/>

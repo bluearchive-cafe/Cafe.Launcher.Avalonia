@@ -243,6 +243,7 @@
                             <StackPanel Orientation="Horizontal" Spacing="16">
                                 <TextBlock Classes="caption" Text="{Binding Shell.VersionText}"/>
                                 <TextBlock Classes="caption" Text="{Binding Shell.DiskSpaceText}"/>
+                                <TextBlock Classes="caption" Text="{Binding Shell.NetworkText}"/>
                             </StackPanel>
                             <Border Classes="path-field">
                                 <Grid ColumnDefinitions="Auto,*,Auto" ColumnSpacing="8">
@@ -341,6 +342,7 @@
                         <StackPanel Grid.Row="1" Grid.ColumnSpan="2" Orientation="Horizontal" HorizontalAlignment="Right" Spacing="16">
                             <TextBlock Text="{Binding Shell.VersionText}" Classes="on-dark-caption"/>
                             <TextBlock Text="{Binding Shell.LaunchCheckText}" Classes="on-dark-caption"/>
+                            <TextBlock Text="{Binding Shell.NetworkText}" Classes="on-dark-caption"/>
                         </StackPanel>
                     </Grid>
                 </Border>

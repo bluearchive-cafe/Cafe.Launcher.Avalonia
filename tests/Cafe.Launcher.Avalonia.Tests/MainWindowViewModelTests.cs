@@ -418,6 +418,7 @@ public sealed class MainWindowViewModelTests : IDisposable
         using var apiClient = new ResourcePanelApiClient(handler);
         var coreService = new CountingCoreService(CreateSnapshot());
         using var viewModel = CreateViewModel(coreService, settingsService, uidService, apiClient);
+        viewModel.ResourcePanel.GetPatchUrlGroup = () => PatchUrlGroups.Cafe;
 
         await viewModel.ResourcePanel.OpenResourcePanelCommand.ExecuteAsync(null);
 
@@ -447,6 +448,7 @@ public sealed class MainWindowViewModelTests : IDisposable
         using var apiClient = new ResourcePanelApiClient(handler);
         var coreService = new CountingCoreService(CreateSnapshot());
         using var viewModel = CreateViewModel(coreService, settingsService, uidService, apiClient);
+        viewModel.ResourcePanel.GetPatchUrlGroup = () => PatchUrlGroups.Cafe;
         await viewModel.ResourcePanel.OpenResourcePanelCommand.ExecuteAsync(null);
         viewModel.ResourcePanel.ResourcePanelItems.First(item => item.Code == ResourcePanelResourceCodes.Text).IsEnabled = true;
         viewModel.ResourcePanel.ResourcePanelItems.First(item => item.Code == ResourcePanelResourceCodes.Voice).IsEnabled = false;
@@ -472,6 +474,7 @@ public sealed class MainWindowViewModelTests : IDisposable
         using var apiClient = new ResourcePanelApiClient(handler);
         var coreService = new CountingCoreService(CreateSnapshot());
         using var viewModel = CreateViewModel(coreService, settingsService, uidService, apiClient);
+        viewModel.ResourcePanel.GetPatchUrlGroup = () => PatchUrlGroups.Cafe;
 
         await viewModel.ResourcePanel.OpenResourcePanelCommand.ExecuteAsync(null);
 

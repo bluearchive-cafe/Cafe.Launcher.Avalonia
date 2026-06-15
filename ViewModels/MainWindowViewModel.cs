@@ -128,8 +128,6 @@ public partial class MainWindowViewModel : ViewModelBase, IDisposable
             return;
         }
 
-        toastService.ShowSuccess(localizer.T("statusNetworkLoaded"));
-
         if (skipNextPersistedResume)
         {
             skipNextPersistedResume = false;
@@ -162,6 +160,9 @@ public partial class MainWindowViewModel : ViewModelBase, IDisposable
         Settings.CloseRequested += () => WindowChrome.IsSettingsVisible = false;
 
         ResourcePanel.GetProxyMode = () => currentSnapshot?.Settings.ProxyMode ?? ProxyModes.Direct;
+        ResourcePanel.GetPatchUrlGroup = () => currentSnapshot?.Settings.PatchUrlGroup ?? PatchUrlGroups.Official;
+        ResourcePanel.ResourcePanelSourceConfirmRequested += ShowResourcePanelSourceConfirmDialog;
+        Dialogs.ConfirmResourcePanelSourceSwitchRequested += SwitchToCafeAndOpenResourcePanel;
 
         Operations.Configure(Shell, Dialogs);
         Operations.GetSnapshot = () => currentSnapshot;
@@ -183,6 +184,27 @@ public partial class MainWindowViewModel : ViewModelBase, IDisposable
 
         WindowChrome.Configure(Settings, RemoteContent, Dialogs, Operations);
         WindowChrome.GetSnapshot = () => currentSnapshot;
+    }
+
+    private void ShowResourcePanelSourceConfirmDialog()
+    {
+        Dialogs.ShowResourcePanelSourceConfirm(localizer.T("resourcePanelCafeOnlyMessage"));
+    }
+
+    private void SwitchToCafeAndOpenResourcePanel()
+    {
+        _ = SwitchSourceThenOpenPanelAsync();
+    }
+
+    private async Task SwitchSourceThenOpenPanelAsync()
+    {
+        var settings = await settingsService.ReadAsync();
+        settings.PatchUrlGroup = PatchUrlGroups.Cafe;
+        await settingsService.SaveAsync(settings);
+        Settings.SelectedPatchUrlGroup = PatchUrlGroups.Cafe;
+
+        await HandleSettingsSavedAsync();
+        await ResourcePanel.OpenPanelDirectly();
     }
 
     private async Task HandleSettingsSavedAsync()
@@ -246,6 +268,8 @@ public partial class MainWindowViewModel : ViewModelBase, IDisposable
         }
 
         disposed = true;
+        ResourcePanel.ResourcePanelSourceConfirmRequested -= ShowResourcePanelSourceConfirmDialog;
+        Dialogs.ConfirmResourcePanelSourceSwitchRequested -= SwitchToCafeAndOpenResourcePanel;
         Dialogs.ConfirmRepairRequested -= Operations.RepairAsync;
         Dialogs.ConfirmUninstallRequested -= Operations.ConfirmUninstallAsync;
         Dialogs.ConfirmStopRequested -= Operations.PerformStop;
