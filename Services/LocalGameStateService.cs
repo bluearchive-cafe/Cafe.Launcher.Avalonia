@@ -1,5 +1,6 @@
 using System;
 using System.IO;
+using System.Linq;
 using System.Text.Json;
 using System.Threading;
 using System.Threading.Tasks;
@@ -66,6 +67,10 @@ public sealed class LocalGameStateService
                     configStream,
                     jsonOptions,
                     cancellationToken);
+                if (state.GameConfig is not null && !OfficialHashService.IsGameConfigHashValid(state.GameConfig))
+                {
+                    state.GameConfig = null;
+                }
             }
 
             if (state.ManifestExists)
@@ -75,6 +80,10 @@ public sealed class LocalGameStateService
                     manifestStream,
                     jsonOptions,
                     cancellationToken);
+                if (state.Manifest is not null)
+                {
+                    NormalizeManifestByOfficialHash(state.Manifest);
+                }
             }
         }
         catch (Exception exception) when (exception is JsonException or IOException or UnauthorizedAccessException)
@@ -83,6 +92,20 @@ public sealed class LocalGameStateService
         }
 
         return state;
+    }
+
+    private static void NormalizeManifestByOfficialHash(LocalManifest manifest)
+    {
+        if (!OfficialHashService.IsManifestInfoHashValid(manifest))
+        {
+            manifest.Name = "";
+            manifest.Version = "";
+            manifest.Basis = "";
+        }
+
+        manifest.Files = (manifest.Files ?? [])
+            .Where(OfficialHashService.IsManifestFileHashValid)
+            .ToList();
     }
 
     private static bool EndsWithSegments(string[] value, string[] suffix)

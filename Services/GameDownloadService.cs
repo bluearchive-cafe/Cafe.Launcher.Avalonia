@@ -16,9 +16,8 @@ namespace Cafe.Launcher.Avalonia.Services;
 
 public sealed class GameDownloadService : IDisposable
 {
-    // Retry domain order: 0 = primary CDN, 1 = backup CDN.
-    // The first 4 attempts use the backup, then 3 on primary, then 3 on backup.
-    // The original launcher prioritises the backup CDN for initial attempts.
+    // Retry domain order: 0 = backup CDN, 1 = primary CDN (matching the original Electron launcher).
+    // The first 4 attempts use the primary CDN, then 3 on backup, then 3 on primary.
     internal static readonly int[] RetryDomainOrder = [1, 1, 1, 1, 0, 0, 0, 1, 1, 1];
     private const int MaxParallelDownloads = 10;
     private const int MaxInstallVerificationRetry = 3;
@@ -712,7 +711,6 @@ public sealed class GameDownloadService : IDisposable
                 var crc64 = await crc64Service.ComputeFileAsync(targetPath, null, cancellationToken);
                 if (crc64 == file.Hash) return;
 
-                // CRC64 mismatch — different CDN won't help, content is the same
                 await diagnostics.MessageAsync(
                     "CRC64 mismatch after download",
                     $"file: {file.Path}{Environment.NewLine}" +
@@ -722,7 +720,10 @@ public sealed class GameDownloadService : IDisposable
                     CancellationToken.None);
 
                 File.Delete(targetPath);
-                return; // Don't retry — mark as done (file deleted, will be caught by install verification)
+                if (retryList.Count == 0)
+                {
+                    return;
+                }
             }
             catch (Exception ex) when (ex is not OperationCanceledException)
             {
@@ -1000,7 +1001,7 @@ public sealed class GameDownloadService : IDisposable
 
     internal static string? ResolveRetryDomain(CdnConfigResponse cdnConfig, int retryType)
     {
-        return retryType == 0 ? cdnConfig.PrimaryCdn : cdnConfig.BackUpCdn;
+        return retryType == 0 ? cdnConfig.BackUpCdn : cdnConfig.PrimaryCdn;
     }
 
     private static void EnsureGamePath(string gamePath)
