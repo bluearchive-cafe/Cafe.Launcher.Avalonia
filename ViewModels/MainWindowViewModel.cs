@@ -103,6 +103,17 @@ public partial class MainWindowViewModel : ViewModelBase, IDisposable
             Settings.ApplyThemeColor(settingsForLanguage.ThemeColorMode, SettingsViewModel.ParseColorOrDefault(settingsForLanguage.CustomThemeColor));
             Shell.SetLoading();
 
+            // Migrate game path from original Yostar launcher on first run
+            if (string.IsNullOrWhiteSpace(settingsForLanguage.GamePath))
+            {
+                var migratedPath = OriginalLauncherMigrationService.TryGetGamePath();
+                if (migratedPath is not null)
+                {
+                    settingsForLanguage.GamePath = migratedPath;
+                    await settingsService.SaveAsync(settingsForLanguage, cancellationToken);
+                }
+            }
+
             var snapshot = await launcherCoreService.LoadAsync(cancellationToken);
             currentSnapshot = snapshot;
             await ApplySnapshotAsync(snapshot);
