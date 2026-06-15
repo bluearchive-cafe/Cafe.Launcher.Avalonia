@@ -19,7 +19,8 @@ public static class GamePathValidator
 
         // Strip leading directory separators — Path.Combine treats them as rooted paths
         var sanitized = relativePath.Replace('/', Path.DirectorySeparatorChar)
-                                     .TrimStart(Path.DirectorySeparatorChar, '/');
+                                     .Replace('\\', Path.DirectorySeparatorChar)
+                                     .TrimStart(Path.DirectorySeparatorChar, '/', '\\');
 
         var target = Path.GetFullPath(Path.Combine(root, sanitized));
         if (!target.StartsWith(root + Path.DirectorySeparatorChar, StringComparison.OrdinalIgnoreCase)

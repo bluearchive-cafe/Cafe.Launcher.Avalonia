@@ -28,6 +28,24 @@ public static class OfficialHashService
         ]);
     }
 
+    public static bool IsManifestInfoHashValid(LocalManifest manifest)
+    {
+        return string.Equals(
+            manifest.Vc,
+            GetManifestInfoHash(manifest.Name ?? "", manifest.Version ?? "", manifest.Basis ?? ""),
+            StringComparison.Ordinal);
+    }
+
+    public static bool IsManifestFileHashValid(ManifestFile file)
+    {
+        return string.Equals(file.Vc, GetManifestFileHash(file), StringComparison.Ordinal);
+    }
+
+    public static bool IsGameConfigHashValid(GameLauncherConfig config)
+    {
+        return string.Equals(config.Vc, GetGameConfigHash(config), StringComparison.Ordinal);
+    }
+
     private static string GetObjectHash(IReadOnlyList<string> values)
     {
         var text = string.Join(";", values);

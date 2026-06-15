@@ -59,7 +59,7 @@ public sealed class GameDownloadServiceTests
     }
 
     [Fact]
-    public void ResolveRetryDomain_WhenRetryTypeIsOne_UsesBackupCdn()
+    public void ResolveRetryDomain_WhenRetryTypeIsOne_UsesPrimaryCdn()
     {
         var cdnConfig = new CdnConfigResponse
         {
@@ -69,11 +69,11 @@ public sealed class GameDownloadServiceTests
 
         var result = GameDownloadService.ResolveRetryDomain(cdnConfig, GameDownloadService.RetryDomainOrder[0]);
 
-        Assert.Equal("https://backup.example.invalid", result);
+        Assert.Equal("https://primary.example.invalid", result);
     }
 
     [Fact]
-    public void ResolveRetryDomain_WhenRetryTypeIsZero_UsesPrimaryCdn()
+    public void ResolveRetryDomain_WhenRetryTypeIsZero_UsesBackupCdn()
     {
         var cdnConfig = new CdnConfigResponse
         {
@@ -83,7 +83,7 @@ public sealed class GameDownloadServiceTests
 
         var result = GameDownloadService.ResolveRetryDomain(cdnConfig, 0);
 
-        Assert.Equal("https://primary.example.invalid", result);
+        Assert.Equal("https://backup.example.invalid", result);
     }
 
     [Fact]
@@ -104,6 +104,47 @@ public sealed class GameDownloadServiceTests
             "/data/file name.bin");
 
         Assert.Equal("https://launcher-pkg-ba-jp.bluearchive.cafe/source/root/data/file%20name.bin", url);
+    }
+
+    [Fact]
+    public async Task DownloadFileAsync_WhenDownloadedHashMismatches_TriesNextRetryDomain()
+    {
+        var tempDir = Path.Combine(Path.GetTempPath(), Guid.NewGuid().ToString("N"));
+        var gamePath = Path.Combine(tempDir, "YostarGames", "BlueArchive_JP");
+        Directory.CreateDirectory(gamePath);
+        var expectedBytes = Encoding.UTF8.GetBytes("correct-content");
+        var hashPath = Path.Combine(tempDir, "hash-source.bin");
+        await File.WriteAllBytesAsync(hashPath, expectedBytes);
+        var expectedHash = await new Crc64Service().ComputeFileAsync(hashPath);
+        using var apiClient = new LauncherApiClient(new AuthorizationHeaderFactory(), new PatchUrlGroupService(), new ProxySettingsService());
+        using var service = CreateService(apiClient);
+        var handler = new RetryContentHandler(expectedBytes);
+        using var client = new HttpClient(handler);
+        var file = new ManifestFile
+        {
+            Path = "data/file.bin",
+            Size = expectedBytes.Length.ToString(),
+            Hash = expectedHash
+        };
+        var cdnConfig = new CdnConfigResponse
+        {
+            PrimaryCdn = "https://primary.example.invalid",
+            BackUpCdn = "https://backup.example.invalid"
+        };
+
+        await InvokeDownloadFileAsync(service, gamePath, cdnConfig, "/source", file, client);
+
+        Assert.Equal(
+            [
+                "primary.example.invalid",
+                "primary.example.invalid",
+                "primary.example.invalid",
+                "primary.example.invalid",
+                "backup.example.invalid"
+            ],
+            handler.RequestHosts);
+        Assert.Equal(expectedBytes, await File.ReadAllBytesAsync(Path.Combine(gamePath, "data", "file.bin.tmp")));
+        Directory.Delete(tempDir, recursive: true);
     }
 
     [Fact]
@@ -256,6 +297,34 @@ public sealed class GameDownloadServiceTests
             new PatchUrlGroupService());
     }
 
+    private static async Task InvokeDownloadFileAsync(
+        GameDownloadService service,
+        string gamePath,
+        CdnConfigResponse cdnConfig,
+        string source,
+        ManifestFile file,
+        HttpClient client)
+    {
+        var method = typeof(GameDownloadService).GetMethod(
+            "DownloadFileAsync",
+            System.Reflection.BindingFlags.Instance | System.Reflection.BindingFlags.NonPublic);
+        Assert.NotNull(method);
+        var task = (Task?)method.Invoke(
+            service,
+            [
+                gamePath,
+                cdnConfig,
+                source,
+                file,
+                client,
+                null,
+                new Action<long>(_ => { }),
+                CancellationToken.None
+            ]);
+        Assert.NotNull(task);
+        await task;
+    }
+
     private sealed class ManifestHandler : HttpMessageHandler
     {
         protected override Task<HttpResponseMessage> SendAsync(HttpRequestMessage request, CancellationToken cancellationToken)
@@ -267,6 +336,31 @@ public sealed class GameDownloadServiceTests
             return Task.FromResult(new HttpResponseMessage(HttpStatusCode.OK)
             {
                 Content = new StringContent(json, Encoding.UTF8, "application/json")
+            });
+        }
+    }
+
+    private sealed class RetryContentHandler : HttpMessageHandler
+    {
+        private readonly byte[] expectedBytes;
+
+        public RetryContentHandler(byte[] expectedBytes)
+        {
+            this.expectedBytes = expectedBytes;
+        }
+
+        public List<string> RequestHosts { get; } = [];
+
+        protected override Task<HttpResponseMessage> SendAsync(HttpRequestMessage request, CancellationToken cancellationToken)
+        {
+            var host = request.RequestUri?.Host ?? "";
+            RequestHosts.Add(host);
+            var content = host == "primary.example.invalid"
+                ? Encoding.UTF8.GetBytes("wrong-content")
+                : expectedBytes;
+            return Task.FromResult(new HttpResponseMessage(HttpStatusCode.OK)
+            {
+                Content = new ByteArrayContent(content)
             });
         }
     }
