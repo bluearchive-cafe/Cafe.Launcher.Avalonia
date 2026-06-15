@@ -94,8 +94,11 @@ public partial class MainWindowViewModel : ViewModelBase, IDisposable
         {
             var settingsForLanguage = await settingsService.ReadAsync(cancellationToken);
             ApplyLanguage(settingsForLanguage.Language);
-            Settings.SelectedThemeMode = settingsForLanguage.ThemeMode;
-            Settings.LoadThemeColorState(settingsForLanguage);
+            Settings.BulkUpdate(s =>
+            {
+                s.SelectedThemeMode = settingsForLanguage.ThemeMode;
+                s.LoadThemeColorState(settingsForLanguage);
+            });
             SettingsViewModel.ApplyTheme(settingsForLanguage.ThemeMode);
             Settings.ApplyThemeColor(settingsForLanguage.ThemeColorMode, SettingsViewModel.ParseColorOrDefault(settingsForLanguage.CustomThemeColor));
             Shell.SetLoading();
@@ -210,21 +213,7 @@ public partial class MainWindowViewModel : ViewModelBase, IDisposable
 
     private void ApplySettingsSnapshot(LauncherSettings settings, string localGamePath)
     {
-        Settings.SelectedGamePath = localGamePath;
-        Settings.SelectedLaunchCheckMode = settings.LaunchCheckMode;
-        Settings.SelectedProxyMode = settings.ProxyMode;
-        Settings.SelectedPatchUrlGroup = settings.PatchUrlGroup;
-        Settings.SelectedCloseBehavior = settings.CloseBehavior;
-        Settings.SelectedLanguage = settings.Language;
-        Settings.SelectedThemeMode = settings.ThemeMode;
-        Settings.LoadThemeColorState(settings);
-        Settings.SelectedDownloadSpeedLimit = settings.DownloadSpeedLimit;
-        Settings.ToastNotificationsEnabled = settings.ToastNotificationsEnabled;
-        Settings.ShowRemoteContentCard = settings.ShowRemoteContentCard;
-        Settings.CustomBackgroundPath = settings.CustomBackgroundPath;
-        Settings.IsCustomBackground = !string.IsNullOrWhiteSpace(settings.CustomBackgroundPath);
-        Settings.SelectedBackgroundSource = settings.BackgroundSource;
-        Settings.IsCustomBackgroundSelected = Settings.SelectedBackgroundSource == BackgroundSources.Custom;
+        Settings.ApplyLauncherSettings(settings, localGamePath);
     }
 
     private void ApplyLanguage(string language)

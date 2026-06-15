@@ -394,6 +394,9 @@ public sealed class MainWindowViewModelTests : IDisposable
             IsSelected = true
         });
         viewModel.Settings.SelectedThemeColorPaletteIndex = 0;
+        // The direct property set above fires On*Changed -> MarkSettingsDirtyIfVisible().
+        // In production, ReplaceThemeColorPalette suppresses dirty internally, and
+        // LoadFromSnapshot resets it at the end. Reset here to match that behaviour.
         viewModel.Settings.IsSettingsDirty = false;
         Assert.Equal("#FFD82038", Assert.Single(viewModel.Settings.ThemeColorPaletteItems).ColorHex);
 

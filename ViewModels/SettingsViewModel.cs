@@ -198,36 +198,47 @@ public partial class SettingsViewModel : ViewModelBase
     /// <summary>Called by parent when settings panel opens or discards changes.</summary>
     public void LoadFromSnapshot(LauncherSettings settings)
     {
-        var currentWallpaperPalette = settings.ThemeColorMode == ThemeColorModes.Wallpaper
-            ? GetThemeColorPaletteHexes()
-            : [];
-        var currentWallpaperPaletteIndex = SelectedThemeColorPaletteIndex;
-        SelectedGamePath = settings.GamePath;
-        SelectedLaunchCheckMode = settings.LaunchCheckMode;
-        SelectedProxyMode = settings.ProxyMode;
-        SelectedPatchUrlGroup = settings.PatchUrlGroup;
-        SelectedCloseBehavior = settings.CloseBehavior;
-        SelectedLanguage = settings.Language;
-        SelectedThemeMode = settings.ThemeMode;
-        LoadThemeColorState(settings);
-        SelectedDownloadSpeedLimit = settings.DownloadSpeedLimit;
-        ToastNotificationsEnabled = settings.ToastNotificationsEnabled;
-        ShowRemoteContentCard = settings.ShowRemoteContentCard;
-        CustomBackgroundPath = settings.CustomBackgroundPath;
-        IsCustomBackground = !string.IsNullOrWhiteSpace(settings.CustomBackgroundPath);
-        SelectedBackgroundSource = settings.BackgroundSource;
-        IsCustomBackgroundSelected = settings.BackgroundSource == BackgroundSources.Custom;
-        if (SelectedThemeColorMode == ThemeColorModes.Wallpaper)
+        var oldSuppress = suppressSettingsDirty;
+        suppressSettingsDirty = true;
+        try
         {
-            if (currentWallpaperPalette.Count > 0)
+            var currentWallpaperPalette = settings.ThemeColorMode == ThemeColorModes.Wallpaper
+                ? GetThemeColorPaletteHexes()
+                : [];
+            var currentWallpaperPaletteIndex = SelectedThemeColorPaletteIndex;
+            SelectedGamePath = settings.GamePath;
+            SelectedLaunchCheckMode = settings.LaunchCheckMode;
+            SelectedProxyMode = settings.ProxyMode;
+            SelectedPatchUrlGroup = settings.PatchUrlGroup;
+            SelectedCloseBehavior = settings.CloseBehavior;
+            SelectedLanguage = settings.Language;
+            SelectedThemeMode = settings.ThemeMode;
+            LoadThemeColorState(settings);
+            SelectedDownloadSpeedLimit = settings.DownloadSpeedLimit;
+            ToastNotificationsEnabled = settings.ToastNotificationsEnabled;
+            ShowRemoteContentCard = settings.ShowRemoteContentCard;
+            CustomBackgroundPath = settings.CustomBackgroundPath;
+            IsCustomBackground = !string.IsNullOrWhiteSpace(settings.CustomBackgroundPath);
+            SelectedBackgroundSource = settings.BackgroundSource;
+            IsCustomBackgroundSelected = settings.BackgroundSource == BackgroundSources.Custom;
+            if (SelectedThemeColorMode == ThemeColorModes.Wallpaper)
             {
-                ReplaceThemeColorPalette(currentWallpaperPalette, currentWallpaperPaletteIndex, markDirty: false);
-            }
-            else
-            {
-                RefreshThemeColorPaletteFromCurrentBackground(markDirty: false);
+                if (currentWallpaperPalette.Count > 0)
+                {
+                    ReplaceThemeColorPalette(currentWallpaperPalette, currentWallpaperPaletteIndex, markDirty: false);
+                }
+                else
+                {
+                    RefreshThemeColorPaletteFromCurrentBackground(markDirty: false);
+                }
             }
         }
+        finally
+        {
+            suppressSettingsDirty = oldSuppress;
+        }
+
+        IsSettingsDirty = false;
     }
 
     /// <summary>Called by parent ApplyLanguage to refresh display names.</summary>
@@ -248,6 +259,53 @@ public partial class SettingsViewModel : ViewModelBase
     {
         ApplyTheme(settings.ThemeMode);
         ApplyThemeColor(settings.ThemeColorMode, ParseColorOrDefault(settings.CustomThemeColor));
+    }
+
+    // ── Bulk update ─────────────────────────────────────────────────────
+
+    /// <summary>
+    /// Wraps programmatic bulk property updates so they don't trigger dirty
+    /// tracking. Follows the same save/restore pattern as
+    /// <see cref="LoadThemeColorState"/> and <see cref="ReplaceThemeColorPalette"/>.
+    /// </summary>
+    public void BulkUpdate(Action<SettingsViewModel> update)
+    {
+        var previous = suppressSettingsDirty;
+        suppressSettingsDirty = true;
+        try
+        {
+            update(this);
+        }
+        finally
+        {
+            suppressSettingsDirty = previous;
+        }
+    }
+
+    /// <summary>
+    /// Applies launcher settings from a snapshot — always programmatic,
+    /// should never mark dirty.
+    /// </summary>
+    public void ApplyLauncherSettings(LauncherSettings settings, string localGamePath)
+    {
+        BulkUpdate(s =>
+        {
+            s.SelectedGamePath = localGamePath;
+            s.SelectedLaunchCheckMode = settings.LaunchCheckMode;
+            s.SelectedProxyMode = settings.ProxyMode;
+            s.SelectedPatchUrlGroup = settings.PatchUrlGroup;
+            s.SelectedCloseBehavior = settings.CloseBehavior;
+            s.SelectedLanguage = settings.Language;
+            s.SelectedThemeMode = settings.ThemeMode;
+            s.LoadThemeColorState(settings);
+            s.SelectedDownloadSpeedLimit = settings.DownloadSpeedLimit;
+            s.ToastNotificationsEnabled = settings.ToastNotificationsEnabled;
+            s.ShowRemoteContentCard = settings.ShowRemoteContentCard;
+            s.CustomBackgroundPath = settings.CustomBackgroundPath;
+            s.IsCustomBackground = !string.IsNullOrWhiteSpace(settings.CustomBackgroundPath);
+            s.SelectedBackgroundSource = settings.BackgroundSource;
+            s.IsCustomBackgroundSelected = settings.BackgroundSource == BackgroundSources.Custom;
+        });
     }
 
     // ── Commands ──────────────────────────────────────────────────────────
