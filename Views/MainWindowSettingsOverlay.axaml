@@ -441,10 +441,16 @@
                                             <TextBlock Text="{Binding Shell.LauncherVersionText}" Classes="chip-text"/>
                                         </Border>
                                         <Border Classes="version-chip">
-                                            <TextBlock Text="{Binding Shell.RuntimeInfoText}" Classes="chip-text"/>
+                                            <TextBlock Text="{Binding Shell.FrameworkVersionText}" Classes="chip-text"/>
                                         </Border>
                                         <Border Classes="version-chip">
-                                            <TextBlock Text="{Binding Shell.BuildInfoText}" Classes="chip-text"/>
+                                            <TextBlock Text="{Binding Shell.AvaloniaVersionText}" Classes="chip-text"/>
+                                        </Border>
+                                        <Border Classes="version-chip">
+                                            <TextBlock Text="{Binding Shell.PlatformText}" Classes="chip-text"/>
+                                        </Border>
+                                        <Border Classes="version-chip">
+                                            <TextBlock Text="{Binding Shell.BuildConfigText}" Classes="chip-text"/>
                                         </Border>
                                     </WrapPanel>
                                 </StackPanel>
