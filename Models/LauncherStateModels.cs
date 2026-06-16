@@ -101,6 +101,13 @@ public static class BackgroundSources
     public const string Custom = "custom";
 }
 
+public static class BackgroundFits
+{
+    public const string Fill = "fill";
+    public const string Uniform = "uniform";
+    public const string UniformToFill = "uniformToFill";
+}
+
 public static class GameOperationKinds
 {
     public const string Idle = "idle";
@@ -158,6 +165,12 @@ public sealed class LauncherSettings
 
     [JsonPropertyName("backgroundSource")]
     public string BackgroundSource { get; set; } = BackgroundSources.Bundled;
+
+    [JsonPropertyName("backgroundFit")]
+    public string BackgroundFit { get; set; } = BackgroundFits.UniformToFill;
+
+    [JsonPropertyName("backgroundFillColor")]
+    public string BackgroundFillColor { get; set; } = "#FF000000";
 
     [JsonPropertyName("resourcePanelUid")]
     public string ResourcePanelUid { get; set; } = "";

@@ -130,6 +130,8 @@ public sealed class LauncherSettingsServiceTests : IDisposable
             PatchUrlGroup = PatchUrlGroups.Cafe,
             CustomBackgroundPath = tempDir,
             BackgroundSource = BackgroundSources.Remote,
+            BackgroundFit = BackgroundFits.Fill,
+            BackgroundFillColor = "#FF112233",
             ResourcePanelUid = "UID123"
         };
 
@@ -161,6 +163,10 @@ public sealed class LauncherSettingsServiceTests : IDisposable
         Assert.True(root.TryGetProperty("customBackgroundPath", out var customBackgroundPath));
         Assert.Equal(tempDir, customBackgroundPath.GetString());
         Assert.True(root.TryGetProperty("backgroundSource", out _));
+        Assert.True(root.TryGetProperty("backgroundFit", out var backgroundFit));
+        Assert.Equal(BackgroundFits.Fill, backgroundFit.GetString());
+        Assert.True(root.TryGetProperty("backgroundFillColor", out var backgroundFillColor));
+        Assert.Equal("#FF112233", backgroundFillColor.GetString());
         Assert.True(root.TryGetProperty("resourcePanelUid", out var resourcePanelUid));
         Assert.Equal("UID123", resourcePanelUid.GetString());
         var expectedPropertyNames = new HashSet<string>(StringComparer.Ordinal)
@@ -181,6 +187,8 @@ public sealed class LauncherSettingsServiceTests : IDisposable
             "patchUrlGroup",
             "customBackgroundPath",
             "backgroundSource",
+            "backgroundFit",
+            "backgroundFillColor",
             "resourcePanelUid"
         };
         Assert.True(expectedPropertyNames.SetEquals(propertyNames));

@@ -29,7 +29,8 @@
     </Window.Styles>
 
     <Grid>
-        <Image Source="{Binding Background.BackgroundImageSource}" Stretch="UniformToFill"/>
+        <Rectangle Fill="{Binding Background.BackgroundFillBrush}"/>
+        <Image Source="{Binding Background.BackgroundImageSource}" Stretch="{Binding Background.BackgroundStretch}"/>
 
         <Grid RowDefinitions="Auto,*">
             <Grid ColumnDefinitions="*,Auto" Height="48">

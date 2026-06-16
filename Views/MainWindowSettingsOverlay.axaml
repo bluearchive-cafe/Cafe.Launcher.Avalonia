@@ -341,6 +341,48 @@
                                     </ComboBox>
                                 </Grid>
 
+                                <Grid Classes="settings-row" ColumnDefinitions="Auto,*,Auto" ColumnSpacing="12">
+                                    <Border Classes="settings-icon">
+                                        <materialIcons:MaterialIcon Kind="ImageAspectRatio" Width="18" Height="18" Foreground="{DynamicResource LauncherAccentBrush}" HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                                    </Border>
+                                    <StackPanel Grid.Column="1" Spacing="2" VerticalAlignment="Center">
+                                        <TextBlock Text="{Binding Shell.I18n.BackgroundFit}" Classes="section-title"/>
+                                        <TextBlock Text="{Binding Shell.I18n.BackgroundFitDescription}" Classes="caption" TextWrapping="Wrap"/>
+                                    </StackPanel>
+                                    <ComboBox Grid.Column="2" Classes="setting-control"
+                                              ItemsSource="{Binding Settings.BackgroundFitOptions}"
+                                              SelectedValue="{Binding Settings.SelectedBackgroundFit, Mode=TwoWay}"
+                                              SelectedValueBinding="{Binding Code}">
+                                        <ComboBox.ItemTemplate>
+                                            <DataTemplate x:DataType="models:SettingOption">
+                                                <TextBlock Text="{Binding DisplayName}"/>
+                                            </DataTemplate>
+                                        </ComboBox.ItemTemplate>
+                                    </ComboBox>
+                                </Grid>
+
+                                <Grid Classes="settings-row" ColumnDefinitions="Auto,*,Auto" ColumnSpacing="12"
+                                      IsVisible="{Binding Settings.IsBackgroundFitSelected}">
+                                    <Border Classes="settings-icon">
+                                        <materialIcons:MaterialIcon Kind="FormatColorFill" Width="18" Height="18" Foreground="{DynamicResource LauncherAccentBrush}" HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                                    </Border>
+                                    <StackPanel Grid.Column="1" Spacing="2" VerticalAlignment="Center">
+                                        <TextBlock Text="{Binding Shell.I18n.BackgroundFillColor}" Classes="section-title"/>
+                                        <TextBlock Text="{Binding Shell.I18n.BackgroundFillColorDescription}" Classes="caption" TextWrapping="Wrap"/>
+                                    </StackPanel>
+                                    <ColorPicker Grid.Column="2" Classes="setting-control"
+                                                 Color="{Binding Settings.SelectedBackgroundFillColor, Mode=TwoWay}">
+                                        <StackPanel Classes="button-content">
+                                            <Border Width="16" Height="16" CornerRadius="3"
+                                                    BorderBrush="{DynamicResource LauncherCardBorderBrush}"
+                                                    BorderThickness="1"
+                                                    Background="{Binding Settings.BackgroundFillColorPreviewBrush}"/>
+                                            <materialIcons:MaterialIcon Kind="PaletteOutline" Width="16" Height="16"/>
+                                            <TextBlock Text="{Binding Shell.I18n.OpenColorPalette}" VerticalAlignment="Center"/>
+                                        </StackPanel>
+                                    </ColorPicker>
+                                </Grid>
+
                                 <Grid Classes="settings-row" ColumnDefinitions="Auto,*,Auto" ColumnSpacing="12"
                                       IsVisible="{Binding Settings.IsCustomBackgroundSelected}">
                                     <Border Classes="settings-icon">

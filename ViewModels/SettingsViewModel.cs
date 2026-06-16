@@ -108,7 +108,19 @@ public partial class SettingsViewModel : ViewModelBase
     private string selectedBackgroundSource = BackgroundSources.Bundled;
 
     [ObservableProperty]
+    private string selectedBackgroundFit = BackgroundFits.UniformToFill;
+
+    [ObservableProperty]
+    private Color selectedBackgroundFillColor = Colors.Black;
+
+    [ObservableProperty]
+    private IBrush backgroundFillColorPreviewBrush = new SolidColorBrush(Colors.Black);
+
+    [ObservableProperty]
     private bool isCustomBackgroundSelected;
+
+    [ObservableProperty]
+    private bool isBackgroundFitSelected;
 
     // ── Theme colour state (7) ────────────────────────────────────────────
 
@@ -137,6 +149,13 @@ public partial class SettingsViewModel : ViewModelBase
         new() { Code = BackgroundSources.Bundled },
         new() { Code = BackgroundSources.Remote },
         new() { Code = BackgroundSources.Custom }
+    ];
+
+    public ObservableCollection<SettingOption> BackgroundFitOptions { get; } =
+    [
+        new() { Code = BackgroundFits.Fill },
+        new() { Code = BackgroundFits.Uniform },
+        new() { Code = BackgroundFits.UniformToFill }
     ];
 
     public ObservableCollection<SettingOption> ThemeColorOptions { get; } =
@@ -220,6 +239,9 @@ public partial class SettingsViewModel : ViewModelBase
             CustomBackgroundPath = settings.CustomBackgroundPath;
             IsCustomBackground = !string.IsNullOrWhiteSpace(settings.CustomBackgroundPath);
             SelectedBackgroundSource = settings.BackgroundSource;
+            SelectedBackgroundFit = settings.BackgroundFit;
+            IsBackgroundFitSelected = settings.BackgroundFit == BackgroundFits.Uniform;
+            SelectedBackgroundFillColor = ParseColorOrDefault(settings.BackgroundFillColor);
             IsCustomBackgroundSelected = settings.BackgroundSource == BackgroundSources.Custom;
             if (SelectedThemeColorMode == ThemeColorModes.Wallpaper)
             {
@@ -252,6 +274,7 @@ public partial class SettingsViewModel : ViewModelBase
         RefreshCloseBehaviorOptions();
         RefreshDownloadSpeedLimitOptions();
         RefreshBackgroundSourceOptions();
+        RefreshBackgroundFitOptions();
     }
 
     /// <summary>Called by parent to re-apply theme/colour after language change.</summary>
@@ -304,6 +327,9 @@ public partial class SettingsViewModel : ViewModelBase
             s.CustomBackgroundPath = settings.CustomBackgroundPath;
             s.IsCustomBackground = !string.IsNullOrWhiteSpace(settings.CustomBackgroundPath);
             s.SelectedBackgroundSource = settings.BackgroundSource;
+            s.SelectedBackgroundFit = settings.BackgroundFit;
+            s.IsBackgroundFitSelected = settings.BackgroundFit == BackgroundFits.Uniform;
+            s.SelectedBackgroundFillColor = ParseColorOrDefault(settings.BackgroundFillColor);
             s.IsCustomBackgroundSelected = settings.BackgroundSource == BackgroundSources.Custom;
         });
     }
@@ -339,6 +365,8 @@ public partial class SettingsViewModel : ViewModelBase
         settings.ShowRemoteContentCard = ShowRemoteContentCard;
         settings.CustomBackgroundPath = CustomBackgroundPath;
         settings.BackgroundSource = SelectedBackgroundSource;
+        settings.BackgroundFit = SelectedBackgroundFit;
+        settings.BackgroundFillColor = ToColorHex(SelectedBackgroundFillColor);
         await settingsService.SaveAsync(settings);
 
         if (ApplyLanguageAndTheme is not null)
@@ -547,6 +575,18 @@ public partial class SettingsViewModel : ViewModelBase
     partial void OnSelectedBackgroundSourceChanged(string value)
     {
         IsCustomBackgroundSelected = value == BackgroundSources.Custom;
+        MarkSettingsDirtyIfVisible();
+    }
+
+    partial void OnSelectedBackgroundFitChanged(string value)
+    {
+        IsBackgroundFitSelected = value == BackgroundFits.Uniform;
+        MarkSettingsDirtyIfVisible();
+    }
+
+    partial void OnSelectedBackgroundFillColorChanged(Color value)
+    {
+        BackgroundFillColorPreviewBrush = new SolidColorBrush(value);
         MarkSettingsDirtyIfVisible();
     }
 
@@ -905,6 +945,19 @@ public partial class SettingsViewModel : ViewModelBase
                 BackgroundSources.Remote => localizer.T("backgroundSourceRemote"),
                 BackgroundSources.Custom => localizer.T("backgroundSourceCustom"),
                 _ => localizer.T("backgroundSourceBundled")
+            };
+        }
+    }
+
+    private void RefreshBackgroundFitOptions()
+    {
+        foreach (var option in BackgroundFitOptions)
+        {
+            option.DisplayName = option.Code switch
+            {
+                BackgroundFits.Fill => localizer.T("backgroundFitFill"),
+                BackgroundFits.Uniform => localizer.T("backgroundFitUniform"),
+                _ => localizer.T("backgroundFitUniformToFill")
             };
         }
     }

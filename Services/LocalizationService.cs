@@ -114,6 +114,13 @@ public sealed partial class LocalizedStrings : ObservableObject
     [ObservableProperty] private string backgroundSourceBundled = "";
     [ObservableProperty] private string backgroundSourceRemote = "";
     [ObservableProperty] private string backgroundSourceCustom = "";
+    [ObservableProperty] private string backgroundFit = "";
+    [ObservableProperty] private string backgroundFitDescription = "";
+    [ObservableProperty] private string backgroundFitFill = "";
+    [ObservableProperty] private string backgroundFitUniform = "";
+    [ObservableProperty] private string backgroundFitUniformToFill = "";
+    [ObservableProperty] private string backgroundFillColor = "";
+    [ObservableProperty] private string backgroundFillColorDescription = "";
     [ObservableProperty] private string versionInfo = "";
     [ObservableProperty] private string runtimeInfo = "";
     [ObservableProperty] private string buildInfo = "";
@@ -264,6 +271,13 @@ public sealed partial class LocalizedStrings : ObservableObject
         BackgroundSourceBundled = localizer.T("backgroundSourceBundled");
         BackgroundSourceRemote = localizer.T("backgroundSourceRemote");
         BackgroundSourceCustom = localizer.T("backgroundSourceCustom");
+        BackgroundFit = localizer.T("backgroundFit");
+        BackgroundFitDescription = localizer.T("backgroundFitDescription");
+        BackgroundFitFill = localizer.T("backgroundFitFill");
+        BackgroundFitUniform = localizer.T("backgroundFitUniform");
+        BackgroundFitUniformToFill = localizer.T("backgroundFitUniformToFill");
+        BackgroundFillColor = localizer.T("backgroundFillColor");
+        BackgroundFillColorDescription = localizer.T("backgroundFillColorDescription");
         VersionInfo = localizer.T("versionInfo");
         RuntimeInfo = localizer.T("runtimeInfo");
         BuildInfo = localizer.T("buildInfo");

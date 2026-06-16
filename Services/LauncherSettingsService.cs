@@ -168,6 +168,15 @@ public sealed class LauncherSettingsService
             settings.BackgroundSource = BackgroundSources.Bundled;
         }
 
+        if (settings.BackgroundFit is not BackgroundFits.Fill
+            and not BackgroundFits.Uniform
+            and not BackgroundFits.UniformToFill)
+        {
+            settings.BackgroundFit = BackgroundFits.UniformToFill;
+        }
+
+        settings.BackgroundFillColor = NormalizeColor(settings.BackgroundFillColor);
+
         settings.GamePath ??= "";
         settings.ResourcePanelUid = settings.ResourcePanelUid?.Trim() ?? "";
         return settings;
