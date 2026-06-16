@@ -155,6 +155,8 @@ Persisted fields in `settings.json` and their valid values:
 | Close behavior | `closeBehavior` | `minimize`, `exit` |
 | Proxy | `proxyMode` | `direct`, `system` |
 | Background | `backgroundSource` | `bundled`, `remote`, `custom` |
+| Wallpaper fit | `backgroundFit` | `fill`, `uniform`, `uniformToFill` |
+| Wallpaper fill color | `backgroundFillColor` | Hex color string (e.g. `#FF000000`) |
 | Game path | `gamePath` | Absolute directory path |
 | Custom background | `customBackgroundPath` | Absolute file path |
 | Toast notifications | `toastNotificationsEnabled` | `true`/`false` |
@@ -163,7 +165,7 @@ Persisted fields in `settings.json` and their valid values:
 ### Key models (`Models/`)
 
 - `LauncherApiContracts.cs` — All API response DTOs
-- `LauncherStateModels.cs` — String constants for modes/behaviors (`LaunchCheckModes`, `ProxyModes`, `CloseBehaviors`, `LauncherLanguages`, `ThemeModes`, `DownloadSpeedLimits`, `PatchUrlGroups`), plus runtime state objects (`LauncherStatusSnapshot`, `LauncherRemoteState`, `LocalGameState`, `LauncherSettings`, `GameOperationProgress`, `GameOperationResult`), and option types (`SettingOption`, `LanguageOption`, `ThemeOption`) for localized dropdown binding
+- `LauncherStateModels.cs` — String constants for modes/behaviors (`LaunchCheckModes`, `ProxyModes`, `CloseBehaviors`, `LauncherLanguages`, `ThemeModes`, `ThemeColorModes`, `DownloadSpeedLimits`, `PatchUrlGroups`, `BackgroundSources`, `BackgroundFits`), plus runtime state objects (`LauncherStatusSnapshot`, `LauncherRemoteState`, `LocalGameState`, `LauncherSettings`, `GameOperationProgress`, `GameOperationResult`), and option types (`SettingOption`, `LanguageOption`, `ThemeOption`) for localized dropdown binding
 - `LocalGameContracts.cs` — `LocalManifest`, `RemoteManifest`, `ManifestFile`, `GameLauncherConfig`
 - `PatchUrlGroupDefinition.cs` — Code + host-from/to tuples for CDN URL rewriting
 - `DownloadTaskState.cs` — Serializable download resume state
