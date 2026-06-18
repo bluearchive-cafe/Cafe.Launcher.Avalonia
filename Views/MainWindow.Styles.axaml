@@ -443,6 +443,8 @@
         <Setter Property="Height" Value="38"/>
         <Setter Property="Padding" Value="14,0"/>
     </Style>
+    <!-- bottom-panel and control-panel share left/right/bottom padding (40,*,40,18).
+         Top padding differs intentionally: 18 (bottom-panel, tighter) vs 24 (control-panel, more breathing room). -->
     <Style Selector="Border.bottom-panel">
         <Setter Property="VerticalAlignment" Value="Bottom"/>
         <Setter Property="MinHeight" Value="132"/>
@@ -453,6 +455,7 @@
         <Setter Property="VerticalAlignment" Value="Bottom"/>
         <Setter Property="MinHeight" Value="156"/>
         <Setter Property="Padding" Value="40,24,40,18"/>
+        <!-- Dark gradient overlay on top of wallpaper — intentionally theme-invariant (black transparency). -->
         <Setter Property="Background">
             <LinearGradientBrush StartPoint="0%,0%" EndPoint="0%,100%">
                 <GradientStop Color="#00000000" Offset="0"/>
@@ -495,6 +498,7 @@
     <Style Selector="Border.dialog">
         <Setter Property="Background" Value="{DynamicResource LauncherDialogBackgroundBrush}"/>
         <Setter Property="CornerRadius" Value="8"/>
+        <Setter Property="ClipToBounds" Value="True"/>
         <Setter Property="BoxShadow" Value="0 22 55 0 #66000000"/>
     </Style>
     <Style Selector="Grid.dialog-header">
@@ -505,18 +509,17 @@
     <Style Selector="StackPanel.dialog-title-row">
         <Setter Property="Orientation" Value="Horizontal"/>
         <Setter Property="Spacing" Value="12"/>
-        <Setter Property="Margin" Value="20,0,0,0"/>
+        <Setter Property="Margin" Value="16,0,0,0"/>
         <Setter Property="VerticalAlignment" Value="Center"/>
     </Style>
     <Style Selector="ScrollViewer.dialog-scroll">
-        <Setter Property="Margin" Value="20,14,14,14"/>
-        <Setter Property="Padding" Value="0,0,6,0"/>
+        <Setter Property="Margin" Value="16"/>
     </Style>
     <Style Selector="Border.dialog-footer">
         <Setter Property="Background" Value="{DynamicResource LauncherDialogFooterBrush}"/>
         <Setter Property="BorderBrush" Value="{DynamicResource LauncherCardBorderBrush}"/>
         <Setter Property="BorderThickness" Value="0,1,0,0"/>
-        <Setter Property="Padding" Value="20,12"/>
+        <Setter Property="Padding" Value="16"/>
     </Style>
     <Style Selector="Border.confirm-panel">
         <Setter Property="MaxWidth" Value="540"/>
@@ -525,7 +528,7 @@
         <Setter Property="VerticalAlignment" Value="Center"/>
     </Style>
     <Style Selector="Grid.confirm-layout">
-        <Setter Property="Margin" Value="22"/>
+        <Setter Property="Margin" Value="16"/>
         <Setter Property="RowSpacing" Value="16"/>
     </Style>
     <Style Selector="Border.confirm-message">
@@ -542,7 +545,7 @@
         <Setter Property="BorderBrush" Value="{DynamicResource LauncherCardBorderBrush}"/>
         <Setter Property="BorderThickness" Value="1"/>
         <Setter Property="CornerRadius" Value="4"/>
-        <Setter Property="Padding" Value="14"/>
+        <Setter Property="Padding" Value="16"/>
     </Style>
     <Style Selector="Border.dialog-icon">
         <Setter Property="Width" Value="34"/>
@@ -587,7 +590,7 @@
         <Setter Property="BorderBrush" Value="{DynamicResource LauncherCardBorderBrush}"/>
         <Setter Property="BorderThickness" Value="1"/>
         <Setter Property="CornerRadius" Value="6"/>
-        <Setter Property="Padding" Value="14"/>
+        <Setter Property="Padding" Value="16"/>
     </Style>
     <Style Selector="Border.settings-icon">
         <Setter Property="Width" Value="30"/>
@@ -676,6 +679,12 @@
         <Setter Property="HorizontalContentAlignment" Value="Stretch"/>
         <Setter Property="VerticalContentAlignment" Value="Stretch"/>
     </Style>
+    <Style Selector="Border.banner-dot">
+        <Setter Property="Background" Value="{DynamicResource LauncherCarouselDotInactiveBrush}"/>
+    </Style>
+    <Style Selector="Border.banner-dot.active">
+        <Setter Property="Background" Value="{DynamicResource LauncherCarouselDotActiveBrush}"/>
+    </Style>
     <Style Selector="Button.wrap-action">
         <Setter Property="Margin" Value="0,0,8,8"/>
     </Style>
@@ -753,5 +762,21 @@
     <Style Selector="Button.news-tab.active">
         <Setter Property="Background" Value="{DynamicResource LauncherAccentBrush}"/>
         <Setter Property="Foreground" Value="{DynamicResource LauncherOnAccentBrush}"/>
+    </Style>
+
+    <!-- Shared utility styles for repeated inline patterns -->
+    <Style Selector="ScrollViewer.scroll-pad">
+        <Setter Property="Padding" Value="0,0,6,0"/>
+    </Style>
+    <Style Selector="Border.color-swatch-preview">
+        <Setter Property="Width" Value="16"/>
+        <Setter Property="Height" Value="16"/>
+        <Setter Property="CornerRadius" Value="4"/>
+        <Setter Property="BorderBrush" Value="{DynamicResource LauncherCardBorderBrush}"/>
+        <Setter Property="BorderThickness" Value="1"/>
+    </Style>
+    <Style Selector="TextBlock.toast-severity">
+        <Setter Property="FontSize" Value="11"/>
+        <Setter Property="FontWeight" Value="SemiBold"/>
     </Style>
 </Styles>

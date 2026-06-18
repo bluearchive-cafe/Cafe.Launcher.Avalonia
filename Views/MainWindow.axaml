@@ -35,10 +35,7 @@
         <Grid RowDefinitions="Auto,*">
             <Grid ColumnDefinitions="*,Auto" Height="48">
                 <Grid.Background>
-                    <LinearGradientBrush StartPoint="0%,0%" EndPoint="0%,100%">
-                        <GradientStop Color="#52000000" Offset="0"/>
-                        <GradientStop Color="#00000000" Offset="1"/>
-                    </LinearGradientBrush>
+                    <StaticResource ResourceKey="LauncherTitleBarGradient"/>
                 </Grid.Background>
                 <!-- W3: Right-click context menu on title bar -->
                 <Grid.ContextMenu>
@@ -76,12 +73,12 @@
                         MaxHeight="480"
                         Classes="surface"
                         IsVisible="{Binding RemoteContent.HasRemoteContent}">
-                    <ScrollViewer Padding="0,0,6,0">
-                        <StackPanel Spacing="14">
+                    <ScrollViewer Classes="scroll-pad">
+                        <StackPanel Spacing="12">
                             <Border IsVisible="{Binding RemoteContent.HasNotice}" Classes="notice-card">
                                 <StackPanel Spacing="4">
                                     <TextBlock Text="{Binding Shell.I18n.Notice}" Classes="panel-title"/>
-                                    <ScrollViewer MaxHeight="110" Padding="0,0,6,0">
+                                    <ScrollViewer MaxHeight="110" Classes="scroll-pad">
                                         <TextBlock Text="{Binding RemoteContent.NoticeText}" Classes="body" TextWrapping="Wrap"/>
                                     </ScrollViewer>
                                 </StackPanel>
@@ -163,7 +160,8 @@
                                                         Command="{Binding DataContext.RemoteContent.SelectBannerCommand, ElementName=Root}"
                                                         CommandParameter="{Binding Index}">
                                                     <Border Width="8" Height="8" CornerRadius="4"
-                                                            Background="{Binding DotBrush}"/>
+                                                            Classes="banner-dot"
+                                                            Classes.active="{Binding IsActive}"/>
                                                 </Button>
                                             </DataTemplate>
                                         </ItemsControl.ItemTemplate>
@@ -233,11 +231,11 @@
                                     <ItemsControl.ItemTemplate>
                                         <DataTemplate x:DataType="models:RemoteContentItem">
                                             <Button Classes="social-chip"
-                                                    Margin="0,0,6,6"
+                                                    Margin="0,0,8,8"
                                                     Command="{Binding DataContext.RemoteContent.OpenExternalUrlCommand, ElementName=Root}"
                                                     CommandParameter="{Binding Url}">
-                                                <StackPanel Orientation="Horizontal" Spacing="6">
-                                                    <materialIcons:MaterialIcon Kind="{Binding SocialIconKind}" Width="14" Height="14"
+                                                <StackPanel Orientation="Horizontal" Spacing="8">
+                                                    <materialIcons:MaterialIcon Kind="{Binding SocialIconKind}" Width="16" Height="16"
                                                                                 Foreground="{DynamicResource LauncherTextSecondaryBrush}"/>
                                                     <TextBlock Text="{Binding Title}" VerticalAlignment="Center"/>
                                                 </StackPanel>
@@ -253,7 +251,7 @@
                 <Border IsVisible="{Binding Operations.IsInstallPanelVisible}"
                         Classes="bottom-panel">
                     <Grid ColumnDefinitions="*,Auto" RowDefinitions="*,Auto" ColumnSpacing="20">
-                        <StackPanel VerticalAlignment="Center" Spacing="7">
+                        <StackPanel VerticalAlignment="Center" Spacing="8">
                             <StackPanel Orientation="Horizontal" Spacing="16">
                                 <TextBlock Classes="caption" Text="{Binding Shell.VersionText}"/>
                                 <TextBlock Classes="caption" Text="{Binding Shell.DiskSpaceText}"/>
@@ -284,7 +282,7 @@
                             <Button Classes="primary-action bottom-action" Command="{Binding Operations.InstallOrUpdateCommand}" ToolTip.Tip="{Binding Operations.InstallButtonText}"
                                     IsEnabled="{Binding Shell.IsBusy, Converter={x:Static BoolConverters.Not}}">
                                 <StackPanel Classes="button-content">
-                                    <materialIcons:MaterialIcon Kind="Download" Width="21" Height="21" Foreground="{DynamicResource LauncherOnAccentBrush}"/>
+                                    <materialIcons:MaterialIcon Kind="Download" Width="22" Height="22" Foreground="{DynamicResource LauncherOnAccentBrush}"/>
                                     <TextBlock Text="{Binding Operations.InstallButtonText}" VerticalAlignment="Center"/>
                                 </StackPanel>
                             </Button>
@@ -295,7 +293,7 @@
                 <Border IsVisible="{Binding Operations.IsProgressPanelVisible}"
                         Classes="bottom-panel">
                     <Grid ColumnDefinitions="*,Auto" ColumnSpacing="20" VerticalAlignment="Center">
-                        <StackPanel Spacing="7" VerticalAlignment="Center">
+                        <StackPanel Spacing="8" VerticalAlignment="Center">
                             <!-- Title + percentage -->
                             <Grid ColumnDefinitions="Auto,*,Auto">
                                 <TextBlock Text="{Binding Operations.ProgressTitle}" Classes="progress-title" VerticalAlignment="Center"/>
@@ -306,7 +304,7 @@
                             <!-- Progress bar -->
                             <ProgressBar Value="{Binding Operations.ProgressValue}" Minimum="0" Maximum="100" Height="8"/>
                             <!-- Stage | Speed | Size | ETA -->
-                            <Grid ColumnDefinitions="Auto,*,Auto,Auto,Auto" ColumnSpacing="14">
+                            <Grid ColumnDefinitions="Auto,*,Auto,Auto,Auto" ColumnSpacing="12">
                                 <TextBlock Text="{Binding Operations.ProgressDetail}" Classes="caption"/>
                                 <TextBlock Grid.Column="2" Text="{Binding Operations.ProgressSpeed}" Classes="caption"
                                            IsVisible="{Binding Operations.ProgressSpeed, Converter={x:Static StringConverters.IsNotNullOrEmpty}}"/>

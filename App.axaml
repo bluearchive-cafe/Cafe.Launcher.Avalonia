@@ -8,6 +8,21 @@
 
     <Application.Resources>
         <ResourceDictionary>
+            <!-- Design Tokens — see CLAUDE.md § Design Tokens for usage reference -->
+            <x:Double x:Key="LauncherSpacingXs">4</x:Double>
+            <x:Double x:Key="LauncherSpacingSm">8</x:Double>
+            <x:Double x:Key="LauncherSpacingMd">12</x:Double>
+            <x:Double x:Key="LauncherSpacingLg">16</x:Double>
+            <x:Double x:Key="LauncherSpacingXl">20</x:Double>
+            <x:Double x:Key="LauncherSpacingXxl">24</x:Double>
+            <x:Double x:Key="LauncherRadiusSm">4</x:Double>
+            <x:Double x:Key="LauncherRadiusMd">6</x:Double>
+            <x:Double x:Key="LauncherRadiusLg">8</x:Double>
+            <x:Double x:Key="LauncherIconSm">16</x:Double>
+            <x:Double x:Key="LauncherIconMd">18</x:Double>
+            <x:Double x:Key="LauncherIconLg">20</x:Double>
+            <x:Double x:Key="LauncherIconXl">22</x:Double>
+            <x:Double x:Key="LauncherIconXxl">24</x:Double>
             <SolidColorBrush x:Key="LauncherAccentBrush" Color="{DynamicResource SystemAccentColor}"/>
             <SolidColorBrush x:Key="LauncherAccentHoverBrush" Color="{DynamicResource SystemAccentColorLight1}"/>
             <SolidColorBrush x:Key="LauncherAccentPressedBrush" Color="{DynamicResource SystemAccentColorDark1}"/>
@@ -31,6 +46,11 @@
             <SolidColorBrush x:Key="LauncherToastWarningBrush" Color="#FFF59E0B"/>
             <SolidColorBrush x:Key="LauncherToastErrorBrush" Color="#FFE5484D"/>
             <SolidColorBrush x:Key="LauncherToastInfoBrush" Color="#FF2E7DF6"/>
+            <SolidColorBrush x:Key="LauncherSuccessBrush" Color="#FF22C55E"/>
+            <LinearGradientBrush x:Key="LauncherTitleBarGradient" StartPoint="0%,0%" EndPoint="0%,100%">
+                <GradientStop Color="#52000000" Offset="0"/>
+                <GradientStop Color="#00000000" Offset="1"/>
+            </LinearGradientBrush>
             <SolidColorBrush x:Key="LauncherMediaPlaceholderBrush" Color="#FF2A3A5C"/>
             <SolidColorBrush x:Key="LauncherMediaPlaceholderTextBrush" Color="#88FFFFFF"/>
 

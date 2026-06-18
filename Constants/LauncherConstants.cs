@@ -36,4 +36,10 @@ public static class LauncherConstants
 #else
     public const string BuildConfiguration = "Release";
 #endif
+
+    /// <summary>
+    /// Z-index used by the toast notification overlay (MainWindowToastOverlay.axaml).
+    /// Toast renders above all other UI layers: base content, settings, and dialogs.
+    /// </summary>
+    public const int ZIndexToast = 1000;
 }

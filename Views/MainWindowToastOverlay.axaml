@@ -18,13 +18,13 @@
                     <DataTemplate DataType="{x:Type services:ToastNotification}">
                         <Border Classes="toast-card"
                                 IsHitTestVisible="True">
-                            <Grid ColumnDefinitions="Auto,*,Auto" ColumnSpacing="10">
+                            <Grid ColumnDefinitions="Auto,*,Auto" ColumnSpacing="8">
                                 <materialIcons:MaterialIcon Kind="{Binding IconKind}" Width="18" Height="18"
                                                             Foreground="{Binding IconBrush}"
                                                             VerticalAlignment="Top" Margin="0,4,0,0"
                                                             AutomationProperties.Name="{Binding SeverityLabel}"/>
-                                <StackPanel Grid.Column="1" Spacing="2">
-                                    <TextBlock Text="{Binding SeverityLabel}" FontSize="11" FontWeight="SemiBold"
+                                <StackPanel Grid.Column="1" Spacing="4">
+                                    <TextBlock Text="{Binding SeverityLabel}" Classes="toast-severity"
                                                Foreground="{Binding IconBrush}"/>
                                     <TextBlock Text="{Binding Message}"
                                                VerticalAlignment="Center"
@@ -34,9 +34,9 @@
                                         Classes="toast-close"
                                         Command="{Binding DataContext.Toasts.DismissToastCommand, ElementName=ToastOverlayRoot}"
                                         CommandParameter="{Binding Id}"
-                                        VerticalAlignment="Top" Margin="0,2,0,0"
+                                        VerticalAlignment="Top" Margin="0,4,0,0"
                                         AutomationProperties.Name="{Binding DataContext.Shell.I18n.Close, ElementName=ToastOverlayRoot}">
-                                    <materialIcons:MaterialIcon Kind="Close" Width="14" Height="14"/>
+                                    <materialIcons:MaterialIcon Kind="Close" Width="16" Height="16"/>
                                 </Button>
                             </Grid>
                         </Border>

@@ -234,6 +234,46 @@ Light/Dark themes defined as `ThemeDictionaries` in `App.axaml` with custom `Lau
 
 The selected mode, custom color, and palette are persisted in `settings.json` (`themeColorMode`, `customThemeColor`, `themeColorPalette`, `selectedThemeColorPaletteIndex`). Theme color is applied independently of light/dark theme mode.
 
+### Design Tokens
+
+All numeric design values use `StaticResource` keys defined in `App.axaml`:
+
+**Spacing tokens** (4px grid: 0, 4, 8, 12, 16, 20, 24, 40):
+
+| Token | Value | Typical usage |
+|---|---|---|
+| `LauncherSpacingXs` | 4 | Tight spacing (label stack gaps, dot gaps) |
+| `LauncherSpacingSm` | 8 | Standard spacing (button-content, chips, card groups) |
+| `LauncherSpacingMd` | 12 | Section spacing (dialog content, settings rows) |
+| `LauncherSpacingLg` | 16 | Panel spacing (control groups, info rows) |
+| `LauncherSpacingXl` | 20 | Wide spacing (title bar, dialog title, panel margins) |
+| `LauncherSpacingXxl` | 24 | Container spacing (dialog margins, control panels) |
+| `LauncherSpacingSection` | 40 | Left panel / horizontal section padding |
+
+**Corner radius tokens:**
+
+| Token | Value | Usage |
+|---|---|---|
+| `LauncherRadiusSm` | 4 | Buttons, cards, badges, icons, fields, color swatches |
+| `LauncherRadiusMd` | 6 | Panel surfaces, settings sections, chips, toasts |
+| `LauncherRadiusLg` | 8 | Top-level dialog containers |
+
+**Icon size tokens** (Material.Icons.Avalonia `Width`/`Height`):
+
+| Token | Value | Usage |
+|---|---|---|
+| `LauncherIconSm` | 16 | Small inline icons (button-content, chips, color swatches) |
+| `LauncherIconMd` | 18 | Standalone control icons (title bar, dialog close, settings icons) |
+| `LauncherIconLg` | 20 | Section heading icons |
+| `LauncherIconXl` | 22 | Dialog area / large action icons |
+| `LauncherIconXxl` | 24 | Primary action launch icons |
+
+**Gradient brushes**: Title bar gradient (`LauncherTitleBarGradient` in `App.axaml`) and control panel gradient (inline in `MainWindow.Styles.axaml`) use fixed black-transparency values that are intentionally theme-invariant — they overlay the wallpaper/background image.
+
+**Style class hierarchy for corners**: `4` for individual controls, `6` for grouped panels/surfaces, `8` for top-level dialogs.
+
+**Toast Z-index**: `1000` (defined as `LauncherConstants.ZIndexToast`). Renders above base content, settings overlay, and dialog overlay.
+
 ### Single-instance pattern
 
 `Program.cs` uses a named global `Mutex`. Second instances signal the first via `EventWaitHandle`, which triggers `Dispatcher.UIThread.InvokeAsync` to restore the window from tray/minimized state. Windows-only (`EventWaitHandle` is not supported on Linux — see commit `19db5a3`).

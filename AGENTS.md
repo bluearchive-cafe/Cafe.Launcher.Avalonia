@@ -124,6 +124,15 @@ All UI strings go through `LocalizationService.T(key)` and `LocalizationService.
 
 Light/Dark themes defined as `ThemeDictionaries` in `App.axaml` with custom `Launcher*` brush keys. `ThemeModes.System` → `ThemeVariant.Default` (follows OS), `Light`/`Dark` → explicit. Applied via `Application.Current.RequestedThemeVariant`.
 
+### Design Tokens
+
+Numeric design tokens are defined as `StaticResource` keys in `App.axaml`. See CLAUDE.md § Design Tokens for the full reference table. Key values:
+
+- **Spacing**: 4px grid — `LauncherSpacingXs`(4) through `LauncherSpacingXxl`(24) + `LauncherSpacingSection`(40)
+- **Corner radius**: `LauncherRadiusSm`(4) for controls, `LauncherRadiusMd`(6) for panels, `LauncherRadiusLg`(8) for dialogs
+- **Icons**: `LauncherIconSm`(16), `LauncherIconMd`(18), `LauncherIconLg`(20), `LauncherIconXl`(22), `LauncherIconXxl`(24)
+- **Z-index**: Toast renders at Z=1000 above all other layers
+
 ### Single-instance pattern
 
 `Program.cs` uses a named global `Mutex`. Second instances signal the first via `EventWaitHandle`, which triggers `Dispatcher.UIThread.InvokeAsync` to restore the window from tray/minimized state. Windows-only (`EventWaitHandle` is not supported on Linux — see commit `19db5a3`).
