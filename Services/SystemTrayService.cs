@@ -22,6 +22,7 @@ public sealed class SystemTrayService : IDisposable
     private Bitmap? menuIcon;
     private readonly Window mainWindow;
     private readonly LocalizationService localizer;
+    private bool disposed;
 
     public SystemTrayService(Window mainWindow, LocalizationService localizer)
     {
@@ -174,6 +175,4 @@ public sealed class SystemTrayService : IDisposable
         menuIcon?.Dispose();
         menuIcon = null;
     }
-
-    private bool disposed;
 }

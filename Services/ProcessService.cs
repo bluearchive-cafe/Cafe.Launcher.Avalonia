@@ -15,8 +15,17 @@ public static class ProcessService
             return Task.FromResult(false);
         }
 
-        var nameWithoutExtension = Path.GetFileNameWithoutExtension(exeName);
-        var isRunning = Process.GetProcessesByName(nameWithoutExtension).Length > 0;
-        return Task.FromResult(isRunning);
+        cancellationToken.ThrowIfCancellationRequested();
+
+        try
+        {
+            var nameWithoutExtension = Path.GetFileNameWithoutExtension(exeName);
+            var isRunning = Process.GetProcessesByName(nameWithoutExtension).Length > 0;
+            return Task.FromResult(isRunning);
+        }
+        catch (Exception ex) when (ex is InvalidOperationException or System.ComponentModel.Win32Exception)
+        {
+            return Task.FromResult(false);
+        }
     }
 }

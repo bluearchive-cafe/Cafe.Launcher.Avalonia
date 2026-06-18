@@ -21,6 +21,7 @@ public partial class MainWindowViewModel : ViewModelBase, IDisposable
     private bool disposed;
     private bool skipNextPersistedResume;
     private LauncherStatusSnapshot? currentSnapshot;
+    private Action? closeRequestedHandler;
 
     public ShellViewModel Shell { get; }
 
@@ -192,7 +193,8 @@ public partial class MainWindowViewModel : ViewModelBase, IDisposable
             Settings.ApplyThemeColor(s.ThemeColorMode, SettingsViewModel.ParseColorOrDefault(s.CustomThemeColor));
         };
         Settings.SettingsSaved += HandleSettingsSavedAsync;
-        Settings.CloseRequested += () => WindowChrome.IsSettingsVisible = false;
+        closeRequestedHandler = () => WindowChrome.IsSettingsVisible = false;
+        Settings.CloseRequested += closeRequestedHandler;
 
         ResourcePanel.GetProxyMode = () => currentSnapshot?.Settings.ProxyMode ?? ProxyModes.Direct;
         ResourcePanel.GetPatchUrlGroup = () => currentSnapshot?.Settings.PatchUrlGroup ?? PatchUrlGroups.Official;
@@ -322,6 +324,11 @@ public partial class MainWindowViewModel : ViewModelBase, IDisposable
         }
 
         disposed = true;
+        Settings.SettingsSaved -= HandleSettingsSavedAsync;
+        if (closeRequestedHandler is not null)
+            Settings.CloseRequested -= closeRequestedHandler;
+        MigrationWizard.MigrationApplied -= HandleMigrationAppliedAsync;
+        MigrationWizard.MigrationSkipped -= HandleMigrationSkippedAsync;
         ResourcePanel.ResourcePanelSourceConfirmRequested -= ShowResourcePanelSourceConfirmDialog;
         Dialogs.ConfirmResourcePanelSourceSwitchRequested -= SwitchToCafeAndOpenResourcePanel;
         Dialogs.ConfirmRepairRequested -= Operations.RepairAsync;
@@ -332,6 +339,7 @@ public partial class MainWindowViewModel : ViewModelBase, IDisposable
         RemoteContent.Dispose();
         Background.Dispose();
         Toasts.Dispose();
+        ResourcePanel.Dispose();
         lifetimeCts.Cancel();
         lifetimeCts.Dispose();
     }

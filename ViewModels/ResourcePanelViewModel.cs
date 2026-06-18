@@ -11,7 +11,7 @@ using Cafe.Launcher.Avalonia.Services.Diagnostics;
 
 namespace Cafe.Launcher.Avalonia.ViewModels;
 
-public partial class ResourcePanelViewModel : ViewModelBase
+public partial class ResourcePanelViewModel : ViewModelBase, IDisposable
 {
     private readonly ResourcePanelUidService resourcePanelUidService;
     private readonly ResourcePanelApiClient resourcePanelApiClient;
@@ -19,6 +19,7 @@ public partial class ResourcePanelViewModel : ViewModelBase
     private readonly ToastService toastService;
     private readonly LocalDiagnostics diagnostics;
     private readonly CancellationTokenSource lifetimeCts = new();
+    private bool disposed;
 
     // Delegate for proxy mode resolution (set by parent).
     public Func<string>? GetProxyMode { get; set; }
@@ -256,10 +257,12 @@ public partial class ResourcePanelViewModel : ViewModelBase
 
     private void ApplyResourcePanelStatus(ResourcePanelItem item, ResourcePanelStatusGroup status)
     {
-        item.OfficialVersion = string.IsNullOrWhiteSpace(status.Official.Version)
-            ? "--" : status.Official.Version;
-        item.LocalizedVersion = string.IsNullOrWhiteSpace(status.Localized.Version)
-            ? "--" : status.Localized.Version;
+        var officialVersion = status.Official?.Version;
+        var localizedVersion = status.Localized?.Version;
+        item.OfficialVersion = string.IsNullOrWhiteSpace(officialVersion)
+            ? "--" : officialVersion;
+        item.LocalizedVersion = string.IsNullOrWhiteSpace(localizedVersion)
+            ? "--" : localizedVersion;
         item.StatusText = string.Equals(item.OfficialVersion, item.LocalizedVersion, StringComparison.Ordinal)
             ? localizer.T("resourcePanelReady") : localizer.T("resourcePanelWaiting");
     }
@@ -286,7 +289,8 @@ public partial class ResourcePanelViewModel : ViewModelBase
 
     private ResourcePanelItem GetResourcePanelItem(string code)
     {
-        return ResourcePanelItems.First(item => item.Code == code);
+        return ResourcePanelItems.FirstOrDefault(item => item.Code == code)
+            ?? throw new InvalidOperationException($"Resource panel item not found: {code}");
     }
 
     private static string ToResourcePanelMode(bool enabled)
@@ -304,5 +308,17 @@ public partial class ResourcePanelViewModel : ViewModelBase
         {
             // Best-effort logging
         }
+    }
+
+    public void Dispose()
+    {
+        if (disposed)
+        {
+            return;
+        }
+
+        disposed = true;
+        lifetimeCts.Cancel();
+        lifetimeCts.Dispose();
     }
 }

@@ -45,18 +45,25 @@ public sealed class BestHttpCookieLibraryService
 
     private static BestHttpCookie ReadCookie(BinaryReader reader)
     {
-        return new BestHttpCookie(
-            reader.ReadInt32(),
-            reader.ReadString(),
-            reader.ReadString(),
-            DateTime.FromBinary(reader.ReadInt64()),
-            DateTime.FromBinary(reader.ReadInt64()),
-            DateTime.FromBinary(reader.ReadInt64()),
-            reader.ReadInt64(),
-            reader.ReadBoolean(),
-            reader.ReadString(),
-            reader.ReadString(),
-            reader.ReadBoolean(),
-            reader.ReadBoolean());
+        try
+        {
+            return new BestHttpCookie(
+                reader.ReadInt32(),
+                reader.ReadString(),
+                reader.ReadString(),
+                DateTime.FromBinary(reader.ReadInt64()),
+                DateTime.FromBinary(reader.ReadInt64()),
+                DateTime.FromBinary(reader.ReadInt64()),
+                reader.ReadInt64(),
+                reader.ReadBoolean(),
+                reader.ReadString(),
+                reader.ReadString(),
+                reader.ReadBoolean(),
+                reader.ReadBoolean());
+        }
+        catch (ArgumentException ex)
+        {
+            throw new InvalidDataException("Corrupted BestHTTP cookie data.", ex);
+        }
     }
 }

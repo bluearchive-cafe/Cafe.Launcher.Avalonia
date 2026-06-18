@@ -11,6 +11,7 @@ namespace Cafe.Launcher.Avalonia.Services;
 public sealed class NoticeStateService
 {
     private readonly string? statePath;
+    private readonly SemaphoreSlim writeLock = new(1, 1);
 
     public NoticeStateService()
     {
@@ -58,6 +59,7 @@ public sealed class NoticeStateService
 
     public async Task SaveShownNoticeAsync(string noticeHash, CancellationToken cancellationToken = default)
     {
+        await writeLock.WaitAsync(cancellationToken);
         try
         {
             var shown = await ReadShownNoticesAsync(cancellationToken);
@@ -77,6 +79,10 @@ public sealed class NoticeStateService
         catch (Exception exception) when (exception is JsonException or IOException or UnauthorizedAccessException)
         {
             // Notice state is best-effort and must not block launcher startup.
+        }
+        finally
+        {
+            writeLock.Release();
         }
     }
 }

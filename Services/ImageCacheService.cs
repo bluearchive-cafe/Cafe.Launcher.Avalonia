@@ -16,8 +16,8 @@ namespace Cafe.Launcher.Avalonia.Services;
 public sealed class ImageCacheService : IDisposable
 {
     private const int MaxImageBytes = 25 * 1024 * 1024;
+    private static readonly TimeSpan RequestTimeout = TimeSpan.FromSeconds(30);
     private readonly string cacheDir;
-    private readonly HttpClient httpClient;
     private readonly HttpClientFactory httpClientFactory;
     private readonly Crc64Service crc64Service;
     private bool disposed;
@@ -39,8 +39,6 @@ public sealed class ImageCacheService : IDisposable
             // Cache directory is non-critical — log and continue without caching
             System.Diagnostics.Debug.WriteLine($"ImageCacheService: failed to create cache directory: {ex.Message}");
         }
-
-        httpClient = httpClientFactory.CreateClient(TimeSpan.FromSeconds(30));
     }
 
     /// <summary>
@@ -106,7 +104,7 @@ public sealed class ImageCacheService : IDisposable
             throw new InvalidDataException($"Image CRC64 mismatch. Expected {crc64Hash}, actual {actual}.");
         }
 
-        File.Move(tempPath, cachePath, overwrite: true);
+        await Task.Run(() => File.Move(tempPath, cachePath, overwrite: true), ct);
         return cachePath;
     }
 
@@ -154,7 +152,7 @@ public sealed class ImageCacheService : IDisposable
     {
         return await httpClientFactory.CreateLeaseAsync(
             proxyMode,
-            timeout: httpClient.Timeout,
+            timeout: RequestTimeout,
             cancellationToken: ct);
     }
 
@@ -174,8 +172,6 @@ public sealed class ImageCacheService : IDisposable
         if (disposed)
             return;
         disposed = true;
-
-        // httpClient is owned by HttpClientFactory — do not dispose
     }
 }
 

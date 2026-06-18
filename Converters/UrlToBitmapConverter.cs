@@ -41,7 +41,11 @@ public sealed class UrlToBitmapConverter : IValueConverter
         try
         {
             var bytes = await HttpClient.GetByteArrayAsync(url);
-            return await Dispatcher.UIThread.InvokeAsync(() => new Bitmap(new System.IO.MemoryStream(bytes)));
+            return await Dispatcher.UIThread.InvokeAsync(() =>
+            {
+                using var ms = new System.IO.MemoryStream(bytes);
+                return new Bitmap(ms);
+            });
         }
         catch
         {

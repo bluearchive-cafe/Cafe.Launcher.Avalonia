@@ -195,9 +195,12 @@ public sealed class GameDownloadService : IDisposable
         {
             ReplaceActiveDownloadCts(operationCts);
             operationRegistered = true;
-            pauseTcs?.TrySetResult();
-            pauseTcs = null;
-            pauseTask = Task.CompletedTask;
+            lock (pauseLock)
+            {
+                pauseTcs?.TrySetResult();
+                pauseTcs = null;
+                pauseTask = Task.CompletedTask;
+            }
 
             var gameConfig = snapshot.Remote.GameConfig ?? await apiClient.GetGameConfigAsync(activeToken);
             if (string.IsNullOrWhiteSpace(gameConfig.GameLatestVersion)
@@ -364,9 +367,9 @@ public sealed class GameDownloadService : IDisposable
                 operationCts.Dispose();
             }
 
-            pauseTcs?.TrySetResult();
             lock (pauseLock)
             {
+                pauseTcs?.TrySetResult();
                 pauseTcs = null;
                 pauseTask = Task.CompletedTask;
             }
@@ -431,9 +434,9 @@ public sealed class GameDownloadService : IDisposable
 
         cts?.Cancel();
         cts?.Dispose();
-        pauseTcs?.TrySetResult();
         lock (pauseLock)
         {
+            pauseTcs?.TrySetResult();
             pauseTcs = null;
             pauseTask = Task.CompletedTask;
         }
@@ -577,7 +580,7 @@ public sealed class GameDownloadService : IDisposable
             Proxy = proxy,
             PooledConnectionLifetime = TimeSpan.FromMinutes(15)
         };
-        using var client = new HttpClient(handler)
+        using var client = new HttpClient(handler, disposeHandler: false)
         {
             Timeout = TimeSpan.FromMinutes(10)
         };
@@ -655,13 +658,11 @@ public sealed class GameDownloadService : IDisposable
             Directory.CreateDirectory(targetDirectory);
         }
 
-        var retryList = RetryDomainOrder.ToList();
         Exception? lastError = null;
-        while (retryList.Count > 0)
+        for (var retryIndex = 0; retryIndex < RetryDomainOrder.Length; retryIndex++)
         {
             cancellationToken.ThrowIfCancellationRequested();
-            var retryType = retryList[0];
-            retryList.RemoveAt(0);
+            var retryType = RetryDomainOrder[retryIndex];
 
             var downloadUrl = BuildDownloadUrl(ResolveRetryDomain(cdnConfig, retryType), source, file.Path);
 
@@ -730,7 +731,7 @@ public sealed class GameDownloadService : IDisposable
                     $"size: {new FileInfo(targetPath).Length} / expected: {file.Size}",
                     CancellationToken.None);
 
-                if (retryList.Count == 0)
+                if (retryIndex >= RetryDomainOrder.Length - 1)
                 {
                     return;
                 }
@@ -743,7 +744,7 @@ public sealed class GameDownloadService : IDisposable
                 try { File.Delete(targetPath); } catch { /* best-effort */ }
                 lastError = ex;
                 // Network error — retry with next domain if available
-                if (retryList.Count == 0) throw;
+                if (retryIndex >= RetryDomainOrder.Length - 1) throw;
             }
         }
 

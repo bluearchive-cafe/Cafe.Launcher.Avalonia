@@ -390,6 +390,11 @@ public partial class RemoteContentViewModel : ViewModelBase, IDisposable
             try
             {
                 var bytes = await imageCacheService.GetImageBytesAsync(item.ImageUrl, proxyMode, cancellationToken);
+                if (bytes is null)
+                {
+                    continue;
+                }
+
                 await Dispatcher.UIThread.InvokeAsync(() =>
                 {
                     if (!BannerItems.Contains(item))
