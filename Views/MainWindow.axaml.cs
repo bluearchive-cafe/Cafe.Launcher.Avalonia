@@ -35,6 +35,7 @@ public partial class MainWindow : Window
         viewModel.WindowChrome.MinimizeWindow = () => WindowState = WindowState.Minimized;
         viewModel.WindowChrome.CloseWindow = PerformClose;
         viewModel.WindowChrome.RestoreWindow = ShowWindow;
+        viewModel.MigrationWizard.BrowseGamePathAsync = () => PickGameFolderAsync(viewModel.MigrationWizard.DetectedGamePath);
     }
 
     public void SetSystemTray(SystemTrayService trayService)
@@ -126,6 +127,14 @@ public partial class MainWindow : Window
         }
 
         // Close dialogs in priority order — most-nested first.
+        // Migration wizard (first-launch)
+        if (vm.MigrationWizard.IsVisible)
+        {
+            vm.MigrationWizard.SkipMigrationCommand.Execute(null);
+            e.Handled = true;
+            return;
+        }
+
         // Confirmation dialogs
         if (vm.Dialogs.IsDownloadRunningCloseConfirmVisible)
         {
@@ -151,6 +160,13 @@ public partial class MainWindow : Window
         if (vm.Dialogs.IsRepairConfirmVisible)
         {
             vm.Dialogs.CancelRepairCommand.Execute(null);
+            e.Handled = true;
+            return;
+        }
+
+        if (vm.Dialogs.IsResourcePanelSourceConfirmVisible)
+        {
+            vm.Dialogs.CancelResourcePanelSourceSwitchCommand.Execute(null);
             e.Handled = true;
             return;
         }

@@ -21,13 +21,19 @@ public partial class ShellViewModel : ViewModelBase
     private string productName = LauncherConstants.ProductName;
 
     [ObservableProperty]
-    private string launcherVersionText = LauncherConstants.LauncherVersion;
+    private string launcherVersionText = $"Version {LauncherConstants.LauncherVersion}";
 
     [ObservableProperty]
-    private string runtimeInfoText = "";
+    private string frameworkVersionText = "";
 
     [ObservableProperty]
-    private string buildInfoText = "";
+    private string avaloniaVersionText = "";
+
+    [ObservableProperty]
+    private string platformText = "";
+
+    [ObservableProperty]
+    private string buildConfigText = "";
 
     [ObservableProperty]
     private string currentViewTitle = "Loading launcher configuration";
@@ -79,8 +85,10 @@ public partial class ShellViewModel : ViewModelBase
     {
         localizer.SetLanguage(language);
         I18n.Apply(localizer);
-        RuntimeInfoText = localizer.F("runtimeInfo", FrameworkVersion, LauncherConstants.AvaloniaVersion);
-        BuildInfoText = localizer.F("buildInfo", PlatformName, LauncherConstants.BuildConfiguration);
+        FrameworkVersionText = FrameworkVersion;
+        AvaloniaVersionText = $"Avalonia {LauncherConstants.AvaloniaVersion}";
+        PlatformText = $"OS {PlatformName}";
+        BuildConfigText = $"Build {LauncherConstants.BuildConfiguration}";
         settings.RefreshOptionDisplayNames();
         resourcePanel.RefreshDisplayNames();
         if (!string.IsNullOrWhiteSpace(resourcePanel.ResourcePanelUid))

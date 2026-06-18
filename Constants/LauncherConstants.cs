@@ -25,6 +25,8 @@ public static class LauncherConstants
     public const string UpdaterCacheDirName = "cafe_launcher-updater";
     public const string DefaultThemeColor = "#FF2E7DF6";
 
+    public const string OldLauncherAppName = "BlueArchive_JP_Gamelauncher";
+
     // Keep in sync with .csproj PackageReference for Avalonia
     public const string AvaloniaVersion = "12.0.4";
 

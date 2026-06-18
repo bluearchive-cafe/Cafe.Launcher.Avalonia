@@ -9,6 +9,7 @@ public sealed class LocalizationServiceTests
 {
     static LocalizationServiceTests()
     {
+        // Keys shared with MigrationWizardViewModelTests — both must be supersets.
         LocalizationService.InitializeForTesting(new Dictionary<string, Dictionary<string, string>>
         {
             [LauncherLanguages.English] = new()
@@ -17,6 +18,14 @@ public sealed class LocalizationServiceTests
                 ["trayExitLauncher"] = "Close the launcher process",
                 ["githubRepository"] = "GitHub Repository",
                 ["checkUpdates"] = "Check for Updates",
+                ["proxyDirect"] = "Direct",
+                ["proxySystem"] = "System",
+                ["closeBehaviorMinimize"] = "Minimize to tray",
+                ["closeBehaviorExit"] = "Exit",
+                ["migrationWizardTitle"] = "Configuration Migration",
+                ["migrationGamePathLabel"] = "Game Path",
+                ["migrationSkip"] = "Skip",
+                ["migrationApply"] = "Apply",
             },
             [LauncherLanguages.SimplifiedChinese] = new()
             {
@@ -24,6 +33,14 @@ public sealed class LocalizationServiceTests
                 ["trayExitLauncher"] = "关闭启动器进程",
                 ["githubRepository"] = "GitHub 仓库",
                 ["checkUpdates"] = "检查更新",
+                ["proxyDirect"] = "直接连接",
+                ["proxySystem"] = "系统代理",
+                ["closeBehaviorMinimize"] = "最小化到托盘",
+                ["closeBehaviorExit"] = "退出",
+                ["migrationWizardTitle"] = "配置迁移",
+                ["migrationGamePathLabel"] = "游戏路径",
+                ["migrationSkip"] = "跳过",
+                ["migrationApply"] = "应用",
             },
             [LauncherLanguages.Japanese] = new()
             {
@@ -31,6 +48,14 @@ public sealed class LocalizationServiceTests
                 ["trayExitLauncher"] = "ランチャープロセスを終了",
                 ["githubRepository"] = "GitHub リポジトリ",
                 ["checkUpdates"] = "更新を確認",
+                ["proxyDirect"] = "直接接続",
+                ["proxySystem"] = "システムプロキシ",
+                ["closeBehaviorMinimize"] = "最小化",
+                ["closeBehaviorExit"] = "終了",
+                ["migrationWizardTitle"] = "設定の移行",
+                ["migrationGamePathLabel"] = "ゲームパス",
+                ["migrationSkip"] = "スキップ",
+                ["migrationApply"] = "適用",
             },
         });
     }

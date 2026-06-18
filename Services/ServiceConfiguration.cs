@@ -46,6 +46,9 @@ public static class ServiceConfiguration
         services.AddSingleton<ImageCacheService>();           // IDisposable — disposes 3rd
         services.AddSingleton<GameDownloadService>();         // IDisposable — disposes 4th (last)
 
+        // ── Migration services ────────────────────────────────────────────
+        services.AddSingleton<OldLauncherDetectionService>();
+
         // ── ViewModels (Transient ─ each resolution creates a fresh instance) ─
         services.AddTransient<SettingsViewModel>();
         services.AddTransient<ResourcePanelViewModel>();
@@ -56,6 +59,7 @@ public static class ServiceConfiguration
         services.AddTransient<GameOperationsViewModel>();
         services.AddTransient<ToastHostViewModel>();
         services.AddTransient<WindowChromeViewModel>();
+        services.AddTransient<MigrationWizardViewModel>();
         services.AddTransient<MainWindowViewModel>();
 
         return services;

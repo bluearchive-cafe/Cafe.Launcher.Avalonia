@@ -24,6 +24,12 @@ public partial class BackgroundViewModel : ViewModelBase, IDisposable
     [ObservableProperty]
     private IImage? backgroundImageSource;
 
+    [ObservableProperty]
+    private Stretch backgroundStretch = Stretch.UniformToFill;
+
+    [ObservableProperty]
+    private IBrush? backgroundFillBrush;
+
     public Func<Task<string?>>? PickBackgroundImageAsync { get; set; }
 
     public Func<Task<string?>>? PickBackgroundFolderAsync { get; set; }
@@ -53,6 +59,11 @@ public partial class BackgroundViewModel : ViewModelBase, IDisposable
             SetBackgroundImage(LoadBundledBackground());
             return;
         }
+
+        BackgroundStretch = ToStretch(settings.SelectedBackgroundFit);
+        BackgroundFillBrush = settings.SelectedBackgroundFit == BackgroundFits.Uniform
+            ? new SolidColorBrush(settings.SelectedBackgroundFillColor)
+            : null;
 
         switch (settings.SelectedBackgroundSource)
         {
@@ -217,6 +228,13 @@ public partial class BackgroundViewModel : ViewModelBase, IDisposable
             return null;
         }
     }
+
+    public static Stretch ToStretch(string fit) => fit switch
+    {
+        BackgroundFits.Fill => Stretch.Fill,
+        BackgroundFits.Uniform => Stretch.Uniform,
+        _ => Stretch.UniformToFill
+    };
 
     public void Dispose()
     {

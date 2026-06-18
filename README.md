@@ -12,7 +12,7 @@ Blue Archive 日服桌面启动器，使用 .NET 10 和 Avalonia 12 编写，替
 - **多语言**: 支持 `auto`、`en`、`zh-Hans`、`ja`，`auto` 跟随系统 UI 语言。
 - **原生 UI**: 基于 Avalonia Fluent Theme，支持系统、浅色、深色主题，支持系统托盘和关闭时最小化到托盘。
 - **远端内容**: 显示公告、活动 Banner、新闻和社交媒体入口。
-- **背景设置**: 支持内置背景、远端背景和自定义背景。
+- **背景设置**: 支持内置背景、远端背景和自定义背景；可配置壁纸契合度（填充/适应/覆盖）和适应模式下的留白颜色。
 - **离线诊断**: 崩溃日志写入 `%LOCALAPPDATA%\Cafe Launcher\crash.log`，运行诊断写入 `%LOCALAPPDATA%\Cafe Launcher\diagnostics.log`。
 - **无远端遥测**: 不包含远端遥测上报路径。
 
@@ -66,13 +66,17 @@ dotnet test --filter "FullyQualifiedName~VersionComparerTests"
 
 - `VersionComparerTests`
 - `LauncherApiClientTests`
-- `LauncherApplicationServicesTests`
 - `LauncherConstantsTests`
 - `LauncherSettingsServiceTests`
 - `LocalizationServiceTests`
 - `MainWindowViewModelTests`
 - `GameDownloadServiceTests`
 - `PatchUrlGroupServiceTests`
+- `LocalGameStateServiceTests`
+- `BestHttpCookieLibraryServiceTests`
+- `ResourcePanelUidServiceTests`
+- `ExternalLinkServiceTests`
+- `ResourcePanelApiClientTests`
 
 ## 配置和本地文件
 
@@ -95,12 +99,19 @@ dotnet test --filter "FullyQualifiedName~VersionComparerTests"
 - `closeBehavior`
 - `language`
 - `themeMode`
+- `themeColorMode`
+- `customThemeColor`
+- `themeColorPalette`
+- `selectedThemeColorPaletteIndex`
 - `downloadSpeedLimit`
 - `toastNotificationsEnabled`
 - `showRemoteContentCard`
 - `patchUrlGroup`
 - `customBackgroundPath`
 - `backgroundSource`
+- `backgroundFit`
+- `backgroundFillColor`
+- `resourcePanelUid`
 
 游戏目录会被规范化为 `YostarGames\BlueArchive_JP`。本地游戏状态读取：
 
@@ -119,6 +130,8 @@ dotnet test --filter "FullyQualifiedName~VersionComparerTests"
 | 关闭行为 | `minimize` / `exit` |
 | 代理 | `direct` / `system` |
 | 背景 | `bundled` / `remote` / `custom` |
+| 壁纸契合度 | `fill` / `uniform` / `uniformToFill` |
+| 壁纸背景色 | 十六进制颜色（如 `#FF000000`） |
 
 ## 项目结构
 
@@ -141,8 +154,8 @@ dotnet test --filter "FullyQualifiedName~VersionComparerTests"
 关键入口：
 
 - `Program.cs`: 进程互斥、单实例信号、崩溃日志、Avalonia 启动。
-- `App.axaml.cs`: 创建 `LauncherApplicationServices`，初始化主窗口、系统托盘和单实例窗口恢复监听。
-- `LauncherApplicationServices`: 手写组合根，负责创建服务并构造 `MainWindowViewModel`。
+- `App.axaml.cs`: 通过 `ServiceConfiguration.AddLauncherServices()` 构建 DI 容器，初始化主窗口、系统托盘和单实例窗口恢复监听。
+- `ServiceConfiguration`: DI 组合根，注册全部服务（Singleton）和 ViewModel（Transient），构造 `MainWindowViewModel`。
 - `LauncherCoreService`: 读取设置、并行请求远端配置、读取本地游戏状态，生成 `LauncherStatusSnapshot`。
 - `MainWindowViewModel`: 驱动主窗口状态、设置面板、安装/更新/修复/卸载/启动命令、远端内容和本地化。
 

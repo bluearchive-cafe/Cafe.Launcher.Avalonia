@@ -23,6 +23,12 @@ public partial class ResourcePanelViewModel : ViewModelBase
     // Delegate for proxy mode resolution (set by parent).
     public Func<string>? GetProxyMode { get; set; }
 
+    // Delegate for patch URL group check (set by parent).
+    public Func<string>? GetPatchUrlGroup { get; set; }
+
+    /// <summary>Fired when the user tries to open the panel from a non-Cafe download source.</summary>
+    public event Action? ResourcePanelSourceConfirmRequested;
+
     public ResourcePanelViewModel(
         ResourcePanelUidService resourcePanelUidService,
         ResourcePanelApiClient resourcePanelApiClient,
@@ -83,6 +89,18 @@ public partial class ResourcePanelViewModel : ViewModelBase
 
     [RelayCommand]
     private async Task OpenResourcePanelAsync()
+    {
+        var patchUrlGroup = GetPatchUrlGroup?.Invoke();
+        if (!string.Equals(patchUrlGroup, PatchUrlGroups.Cafe, StringComparison.Ordinal))
+        {
+            ResourcePanelSourceConfirmRequested?.Invoke();
+            return;
+        }
+
+        await OpenPanelDirectly();
+    }
+
+    public async Task OpenPanelDirectly()
     {
         IsResourcePanelVisible = true;
         await LoadResourcePanelAsync(lifetimeCts.Token);

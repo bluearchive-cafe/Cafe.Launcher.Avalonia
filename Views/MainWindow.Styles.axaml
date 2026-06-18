@@ -426,6 +426,8 @@
     <Style Selector="Border.media-placeholder">
         <Setter Property="Background" Value="{DynamicResource LauncherMediaPlaceholderBrush}"/>
         <Setter Property="CornerRadius" Value="4"/>
+        <Setter Property="HorizontalAlignment" Value="Stretch"/>
+        <Setter Property="VerticalAlignment" Value="Stretch"/>
     </Style>
     <Style Selector="TextBlock.media-placeholder-text">
         <Setter Property="Foreground" Value="{DynamicResource LauncherMediaPlaceholderTextBrush}"/>
@@ -621,6 +623,25 @@
         <Setter Property="HorizontalContentAlignment" Value="Center"/>
         <Setter Property="VerticalContentAlignment" Value="Center"/>
     </Style>
+    <Style Selector="TextBox.uid-input">
+        <Setter Property="Background" Value="{DynamicResource LauncherFieldBackgroundBrush}"/>
+        <Setter Property="BorderBrush" Value="{DynamicResource LauncherFieldBorderBrush}"/>
+        <Setter Property="BorderThickness" Value="1"/>
+        <Setter Property="CornerRadius" Value="6"/>
+        <Setter Property="Padding" Value="12,9"/>
+        <Setter Property="FontSize" Value="14"/>
+        <Setter Property="Foreground" Value="{DynamicResource LauncherTextPrimaryBrush}"/>
+        <Setter Property="MinWidth" Value="160"/>
+        <Setter Property="MinHeight" Value="38"/>
+        <Setter Property="VerticalContentAlignment" Value="Center"/>
+        <Setter Property="CaretBrush" Value="{DynamicResource LauncherAccentBrush}"/>
+    </Style>
+    <Style Selector="TextBox.uid-input:focus">
+        <Setter Property="BorderBrush" Value="{DynamicResource LauncherAccentBrush}"/>
+    </Style>
+    <Style Selector="TextBox.uid-input:pointerover">
+        <Setter Property="BorderBrush" Value="{DynamicResource LauncherAccentHoverBrush}"/>
+    </Style>
     <Style Selector="ToggleSwitch:checked /template/ Border#SwitchKnobBounds">
         <Setter Property="Background" Value="{DynamicResource LauncherAccentBrush}"/>
         <Setter Property="BorderBrush" Value="{DynamicResource LauncherAccentBrush}"/>
@@ -676,12 +697,43 @@
         <Setter Property="BoxShadow" Value="0 8 24 0 #3A000000"/>
         <Setter Property="Padding" Value="11,10"/>
         <Setter Property="MaxWidth" Value="340"/>
+        <Style.Animations>
+            <Animation Duration="0:0:0.35" FillMode="Forward">
+                <KeyFrame Cue="0%">
+                    <Setter Property="Opacity" Value="0"/>
+                </KeyFrame>
+                <KeyFrame Cue="100%">
+                    <Setter Property="Opacity" Value="1"/>
+                </KeyFrame>
+            </Animation>
+        </Style.Animations>
     </Style>
     <Style Selector="TextBlock.toast-message">
         <Setter Property="FontSize" Value="13"/>
-        <Setter Property="Foreground" Value="{DynamicResource LauncherTextLinkBrush}"/>
+        <Setter Property="Foreground" Value="{DynamicResource LauncherTextBodyBrush}"/>
         <Setter Property="TextWrapping" Value="Wrap"/>
         <Setter Property="MaxWidth" Value="282"/>
+    </Style>
+    <Style Selector="Button.toast-close">
+        <Setter Property="Background" Value="Transparent"/>
+        <Setter Property="BorderThickness" Value="0"/>
+        <Setter Property="Foreground" Value="{DynamicResource LauncherTextSecondaryBrush}"/>
+        <Setter Property="Width" Value="22"/>
+        <Setter Property="Height" Value="22"/>
+        <Setter Property="Padding" Value="0"/>
+        <Setter Property="CornerRadius" Value="4"/>
+        <Setter Property="HorizontalContentAlignment" Value="Center"/>
+        <Setter Property="VerticalContentAlignment" Value="Center"/>
+        <Setter Property="Opacity" Value="0.5"/>
+    </Style>
+    <Style Selector="Button.toast-close:pointerover">
+        <Setter Property="Opacity" Value="1"/>
+        <Setter Property="Background" Value="{DynamicResource LauncherFlatHoverBrush}"/>
+        <Setter Property="Foreground" Value="{DynamicResource LauncherTextPrimaryBrush}"/>
+    </Style>
+    <Style Selector="Button.toast-close:pressed">
+        <Setter Property="Background" Value="{DynamicResource LauncherFlatPressedBrush}"/>
+        <Setter Property="Foreground" Value="{DynamicResource LauncherTextPrimaryBrush}"/>
     </Style>
 
     <!-- News category tab buttons -->

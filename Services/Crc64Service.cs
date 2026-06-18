@@ -30,7 +30,7 @@ public sealed class Crc64Service
         var buffer = new byte[1024 * 1024];
         long readTotal = 0;
 
-        await using var stream = File.OpenRead(filePath);
+        await using var stream = new FileStream(filePath, FileMode.Open, FileAccess.Read, FileShare.ReadWrite);
         while (true)
         {
             var read = await stream.ReadAsync(buffer, cancellationToken);

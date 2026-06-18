@@ -682,34 +682,45 @@ public sealed class GameDownloadService : IDisposable
 
                 using var response = await client.SendAsync(request, HttpCompletionOption.ResponseHeadersRead, cancellationToken);
                 response.EnsureSuccessStatusCode();
-                await using var responseStream = await response.Content.ReadAsStreamAsync(cancellationToken);
-                await using var output = new FileStream(targetPath, FileMode.Append, FileAccess.Write, FileShare.Read);
-                var buffer = new byte[1024 * 256];
-                while (true)
+
+                string crc64;
                 {
-                    // Async pause — yields the thread instead of blocking it
-                    await GetPauseTaskSnapshot();
-                    cancellationToken.ThrowIfCancellationRequested();
-
-                    var read = await responseStream.ReadAsync(buffer, cancellationToken);
-                    if (read == 0) break;
-                    await output.WriteAsync(buffer.AsMemory(0, read), cancellationToken);
-                    onBytes(read);
-
-                    // Global rate limiting across all concurrent streams
-                    if (throttleState is not null)
+                    // Nested scope — both streams must be closed before File.Delete below.
+                    await using var responseStream = await response.Content.ReadAsStreamAsync(cancellationToken);
+                    await using var output = new FileStream(targetPath, FileMode.Append, FileAccess.Write, FileShare.Read);
+                    var buffer = new byte[1024 * 256];
+                    while (true)
                     {
-                        var total = Interlocked.Add(ref throttleState.TotalBytes, read);
-                        var targetMs = total * 1000L / throttleState.BytesPerSec;
-                        var elapsedMs = throttleState.Watch.ElapsedMilliseconds;
-                        if (elapsedMs < targetMs)
-                            await Task.Delay((int)(targetMs - elapsedMs), cancellationToken);
+                        // Async pause — yields the thread instead of blocking it
+                        await GetPauseTaskSnapshot();
+                        cancellationToken.ThrowIfCancellationRequested();
+
+                        var read = await responseStream.ReadAsync(buffer, cancellationToken);
+                        if (read == 0) break;
+                        await output.WriteAsync(buffer.AsMemory(0, read), cancellationToken);
+                        onBytes(read);
+
+                        // Global rate limiting across all concurrent streams
+                        if (throttleState is not null)
+                        {
+                            var total = Interlocked.Add(ref throttleState.TotalBytes, read);
+                            var targetMs = total * 1000L / throttleState.BytesPerSec;
+                            var elapsedMs = throttleState.Watch.ElapsedMilliseconds;
+                            if (elapsedMs < targetMs)
+                                await Task.Delay((int)(targetMs - elapsedMs), cancellationToken);
+                        }
                     }
+
+                    await output.FlushAsync(cancellationToken);
+                    crc64 = await crc64Service.ComputeFileAsync(targetPath, null, cancellationToken);
                 }
 
-                await output.FlushAsync(cancellationToken);
-                var crc64 = await crc64Service.ComputeFileAsync(targetPath, null, cancellationToken);
                 if (crc64 == file.Hash) return;
+
+                // Delete the file BEFORE diagnostics — the diagnostic write is best-effort
+                // and must never prevent cleanup; a stale file on disk would cause the
+                // size-guard above (existingLength >= fileSize) to skip retries.
+                File.Delete(targetPath);
 
                 await diagnostics.MessageAsync(
                     "CRC64 mismatch after download",
@@ -719,7 +730,6 @@ public sealed class GameDownloadService : IDisposable
                     $"size: {new FileInfo(targetPath).Length} / expected: {file.Size}",
                     CancellationToken.None);
 
-                File.Delete(targetPath);
                 if (retryList.Count == 0)
                 {
                     return;
@@ -727,6 +737,10 @@ public sealed class GameDownloadService : IDisposable
             }
             catch (Exception ex) when (ex is not OperationCanceledException)
             {
+                // If the download or verification threw (e.g. sharing violation from
+                // anti-virus), clean up the temp file so the next retry starts fresh
+                // instead of appending to a stale partial download.
+                try { File.Delete(targetPath); } catch { /* best-effort */ }
                 lastError = ex;
                 // Network error — retry with next domain if available
                 if (retryList.Count == 0) throw;

@@ -15,6 +15,7 @@ public partial class MainWindowViewModel : ViewModelBase, IDisposable
     private readonly LocalizationService localizer;
     private readonly ToastService toastService;
     private readonly LocalDiagnostics diagnostics;
+    private readonly OldLauncherDetectionService oldLauncherService;
     private readonly CancellationTokenSource lifetimeCts = new();
     private int initialized;
     private bool disposed;
@@ -39,12 +40,15 @@ public partial class MainWindowViewModel : ViewModelBase, IDisposable
 
     public ResourcePanelViewModel ResourcePanel { get; }
 
+    public MigrationWizardViewModel MigrationWizard { get; }
+
     public MainWindowViewModel(
         ILauncherCoreService launcherCoreService,
         LauncherSettingsService settingsService,
         LocalizationService localizer,
         ToastService toastService,
         LocalDiagnostics diagnostics,
+        OldLauncherDetectionService oldLauncherService,
         ShellViewModel shell,
         BackgroundViewModel background,
         RemoteContentViewModel remoteContent,
@@ -53,13 +57,15 @@ public partial class MainWindowViewModel : ViewModelBase, IDisposable
         ToastHostViewModel toasts,
         WindowChromeViewModel windowChrome,
         SettingsViewModel settingsViewModel,
-        ResourcePanelViewModel resourcePanelViewModel)
+        ResourcePanelViewModel resourcePanelViewModel,
+        MigrationWizardViewModel migrationWizard)
     {
         this.launcherCoreService = launcherCoreService;
         this.settingsService = settingsService;
         this.localizer = localizer;
         this.toastService = toastService;
         this.diagnostics = diagnostics;
+        this.oldLauncherService = oldLauncherService;
 
         Shell = shell;
         Background = background;
@@ -70,6 +76,7 @@ public partial class MainWindowViewModel : ViewModelBase, IDisposable
         WindowChrome = windowChrome;
         Settings = settingsViewModel;
         ResourcePanel = resourcePanelViewModel;
+        MigrationWizard = migrationWizard;
 
         WireChildren();
         ApplyLanguage(LauncherLanguages.Auto);
@@ -80,6 +87,23 @@ public partial class MainWindowViewModel : ViewModelBase, IDisposable
         if (Interlocked.Exchange(ref initialized, 1) == 1)
         {
             return;
+        }
+
+        // Check for first-launch migration from old launcher
+        var settings = await settingsService.ReadAsync(cancellationToken);
+        if (!settings.HasCompletedFirstLaunchWizard)
+        {
+            var detection = oldLauncherService.Detect();
+            if (detection is not null)
+            {
+                MigrationWizard.Load(detection);
+                MigrationWizard.IsVisible = true;
+                return; // Wait for user to complete or skip wizard
+            }
+
+            // No old launcher found — mark complete, never show again
+            settings.HasCompletedFirstLaunchWizard = true;
+            await settingsService.SaveAsync(settings, cancellationToken);
         }
 
         await RefreshAsync(cancellationToken);
@@ -94,11 +118,25 @@ public partial class MainWindowViewModel : ViewModelBase, IDisposable
         {
             var settingsForLanguage = await settingsService.ReadAsync(cancellationToken);
             ApplyLanguage(settingsForLanguage.Language);
-            Settings.SelectedThemeMode = settingsForLanguage.ThemeMode;
-            Settings.LoadThemeColorState(settingsForLanguage);
+            Settings.BulkUpdate(s =>
+            {
+                s.SelectedThemeMode = settingsForLanguage.ThemeMode;
+                s.LoadThemeColorState(settingsForLanguage);
+            });
             SettingsViewModel.ApplyTheme(settingsForLanguage.ThemeMode);
             Settings.ApplyThemeColor(settingsForLanguage.ThemeColorMode, SettingsViewModel.ParseColorOrDefault(settingsForLanguage.CustomThemeColor));
             Shell.SetLoading();
+
+            // Migrate game path from original Yostar launcher on first run
+            if (string.IsNullOrWhiteSpace(settingsForLanguage.GamePath))
+            {
+                var migratedPath = OriginalLauncherMigrationService.TryGetGamePath();
+                if (migratedPath is not null)
+                {
+                    settingsForLanguage.GamePath = migratedPath;
+                    await settingsService.SaveAsync(settingsForLanguage, cancellationToken);
+                }
+            }
 
             var snapshot = await launcherCoreService.LoadAsync(cancellationToken);
             currentSnapshot = snapshot;
@@ -124,8 +162,6 @@ public partial class MainWindowViewModel : ViewModelBase, IDisposable
         {
             return;
         }
-
-        toastService.ShowSuccess(localizer.T("statusNetworkLoaded"));
 
         if (skipNextPersistedResume)
         {
@@ -159,6 +195,9 @@ public partial class MainWindowViewModel : ViewModelBase, IDisposable
         Settings.CloseRequested += () => WindowChrome.IsSettingsVisible = false;
 
         ResourcePanel.GetProxyMode = () => currentSnapshot?.Settings.ProxyMode ?? ProxyModes.Direct;
+        ResourcePanel.GetPatchUrlGroup = () => currentSnapshot?.Settings.PatchUrlGroup ?? PatchUrlGroups.Official;
+        ResourcePanel.ResourcePanelSourceConfirmRequested += ShowResourcePanelSourceConfirmDialog;
+        Dialogs.ConfirmResourcePanelSourceSwitchRequested += SwitchToCafeAndOpenResourcePanel;
 
         Operations.Configure(Shell, Dialogs);
         Operations.GetSnapshot = () => currentSnapshot;
@@ -180,6 +219,30 @@ public partial class MainWindowViewModel : ViewModelBase, IDisposable
 
         WindowChrome.Configure(Settings, RemoteContent, Dialogs, Operations);
         WindowChrome.GetSnapshot = () => currentSnapshot;
+
+        MigrationWizard.MigrationApplied += HandleMigrationAppliedAsync;
+        MigrationWizard.MigrationSkipped += HandleMigrationSkippedAsync;
+    }
+
+    private void ShowResourcePanelSourceConfirmDialog()
+    {
+        Dialogs.ShowResourcePanelSourceConfirm(localizer.T("resourcePanelCafeOnlyMessage"));
+    }
+
+    private void SwitchToCafeAndOpenResourcePanel()
+    {
+        _ = SwitchSourceThenOpenPanelAsync();
+    }
+
+    private async Task SwitchSourceThenOpenPanelAsync()
+    {
+        var settings = await settingsService.ReadAsync();
+        settings.PatchUrlGroup = PatchUrlGroups.Cafe;
+        await settingsService.SaveAsync(settings);
+        Settings.SelectedPatchUrlGroup = PatchUrlGroups.Cafe;
+
+        await HandleSettingsSavedAsync();
+        await ResourcePanel.OpenPanelDirectly();
     }
 
     private async Task HandleSettingsSavedAsync()
@@ -192,6 +255,22 @@ public partial class MainWindowViewModel : ViewModelBase, IDisposable
         {
             Dialogs.ShowRepairConfirm(localizer.T("downloadSourceChangedRepairPrompt"));
         }
+    }
+
+    private async Task HandleMigrationAppliedAsync(LauncherSettings migratedSettings)
+    {
+        migratedSettings.HasCompletedFirstLaunchWizard = true;
+        await settingsService.SaveAsync(migratedSettings, CancellationToken.None);
+        MigrationWizard.IsVisible = false;
+        await RefreshAsync(CancellationToken.None);
+    }
+
+    private async Task HandleMigrationSkippedAsync()
+    {
+        var settings = new LauncherSettings { HasCompletedFirstLaunchWizard = true };
+        await settingsService.SaveAsync(settings, CancellationToken.None);
+        MigrationWizard.IsVisible = false;
+        await RefreshAsync(CancellationToken.None);
     }
 
     private async Task ApplySnapshotAsync(LauncherStatusSnapshot snapshot)
@@ -210,21 +289,7 @@ public partial class MainWindowViewModel : ViewModelBase, IDisposable
 
     private void ApplySettingsSnapshot(LauncherSettings settings, string localGamePath)
     {
-        Settings.SelectedGamePath = localGamePath;
-        Settings.SelectedLaunchCheckMode = settings.LaunchCheckMode;
-        Settings.SelectedProxyMode = settings.ProxyMode;
-        Settings.SelectedPatchUrlGroup = settings.PatchUrlGroup;
-        Settings.SelectedCloseBehavior = settings.CloseBehavior;
-        Settings.SelectedLanguage = settings.Language;
-        Settings.SelectedThemeMode = settings.ThemeMode;
-        Settings.LoadThemeColorState(settings);
-        Settings.SelectedDownloadSpeedLimit = settings.DownloadSpeedLimit;
-        Settings.ToastNotificationsEnabled = settings.ToastNotificationsEnabled;
-        Settings.ShowRemoteContentCard = settings.ShowRemoteContentCard;
-        Settings.CustomBackgroundPath = settings.CustomBackgroundPath;
-        Settings.IsCustomBackground = !string.IsNullOrWhiteSpace(settings.CustomBackgroundPath);
-        Settings.SelectedBackgroundSource = settings.BackgroundSource;
-        Settings.IsCustomBackgroundSelected = Settings.SelectedBackgroundSource == BackgroundSources.Custom;
+        Settings.ApplyLauncherSettings(settings, localGamePath);
     }
 
     private void ApplyLanguage(string language)
@@ -257,6 +322,8 @@ public partial class MainWindowViewModel : ViewModelBase, IDisposable
         }
 
         disposed = true;
+        ResourcePanel.ResourcePanelSourceConfirmRequested -= ShowResourcePanelSourceConfirmDialog;
+        Dialogs.ConfirmResourcePanelSourceSwitchRequested -= SwitchToCafeAndOpenResourcePanel;
         Dialogs.ConfirmRepairRequested -= Operations.RepairAsync;
         Dialogs.ConfirmUninstallRequested -= Operations.ConfirmUninstallAsync;
         Dialogs.ConfirmStopRequested -= Operations.PerformStop;

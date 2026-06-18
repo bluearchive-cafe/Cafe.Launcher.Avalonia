@@ -114,6 +114,13 @@ public sealed partial class LocalizedStrings : ObservableObject
     [ObservableProperty] private string backgroundSourceBundled = "";
     [ObservableProperty] private string backgroundSourceRemote = "";
     [ObservableProperty] private string backgroundSourceCustom = "";
+    [ObservableProperty] private string backgroundFit = "";
+    [ObservableProperty] private string backgroundFitDescription = "";
+    [ObservableProperty] private string backgroundFitFill = "";
+    [ObservableProperty] private string backgroundFitUniform = "";
+    [ObservableProperty] private string backgroundFitUniformToFill = "";
+    [ObservableProperty] private string backgroundFillColor = "";
+    [ObservableProperty] private string backgroundFillColorDescription = "";
     [ObservableProperty] private string versionInfo = "";
     [ObservableProperty] private string runtimeInfo = "";
     [ObservableProperty] private string buildInfo = "";
@@ -132,6 +139,10 @@ public sealed partial class LocalizedStrings : ObservableObject
     [ObservableProperty] private string downloadSourceOfficial = "";
     [ObservableProperty] private string downloadSourceCafe = "";
     [ObservableProperty] private string downloadSourceChangedRepairPrompt = "";
+    [ObservableProperty] private string resourcePanelCafeOnlyTitle = "";
+    [ObservableProperty] private string resourcePanelCafeOnlyDescription = "";
+    [ObservableProperty] private string resourcePanelCafeOnlyMessage = "";
+    [ObservableProperty] private string resourcePanelCafeOnlySwitch = "";
     [ObservableProperty] private string pause = "";
     [ObservableProperty] private string resume = "";
     [ObservableProperty] private string paused = "";
@@ -153,6 +164,19 @@ public sealed partial class LocalizedStrings : ObservableObject
     [ObservableProperty] private string statusLaunchCheckRemote = "";
     [ObservableProperty] private string statusLaunchCheckNone = "";
     [ObservableProperty] private string gameLaunchedMinimized = "";
+    [ObservableProperty] private string migrationWizardTitle = "";
+    [ObservableProperty] private string migrationWizardDescription = "";
+    [ObservableProperty] private string migrationGamePathLabel = "";
+    [ObservableProperty] private string migrationGamePathBrowse = "";
+    [ObservableProperty] private string migrationProxyLabel = "";
+    [ObservableProperty] private string migrationCloseBehaviorLabel = "";
+    [ObservableProperty] private string migrationClickCodeFound = "";
+    [ObservableProperty] private string migrationLevelDbFailed = "";
+    [ObservableProperty] private string migrationGamePathNotFound = "";
+    [ObservableProperty] private string migrationSkip = "";
+    [ObservableProperty] private string migrationApply = "";
+    [ObservableProperty] private string migrationApplied = "";
+    [ObservableProperty] private string migrationNoOldLauncher = "";
 
     public void Apply(LocalizationService localizer)
     {
@@ -260,6 +284,13 @@ public sealed partial class LocalizedStrings : ObservableObject
         BackgroundSourceBundled = localizer.T("backgroundSourceBundled");
         BackgroundSourceRemote = localizer.T("backgroundSourceRemote");
         BackgroundSourceCustom = localizer.T("backgroundSourceCustom");
+        BackgroundFit = localizer.T("backgroundFit");
+        BackgroundFitDescription = localizer.T("backgroundFitDescription");
+        BackgroundFitFill = localizer.T("backgroundFitFill");
+        BackgroundFitUniform = localizer.T("backgroundFitUniform");
+        BackgroundFitUniformToFill = localizer.T("backgroundFitUniformToFill");
+        BackgroundFillColor = localizer.T("backgroundFillColor");
+        BackgroundFillColorDescription = localizer.T("backgroundFillColorDescription");
         VersionInfo = localizer.T("versionInfo");
         RuntimeInfo = localizer.T("runtimeInfo");
         BuildInfo = localizer.T("buildInfo");
@@ -278,6 +309,10 @@ public sealed partial class LocalizedStrings : ObservableObject
         DownloadSourceOfficial = localizer.T("downloadSourceOfficial");
         DownloadSourceCafe = localizer.T("downloadSourceCafe");
         DownloadSourceChangedRepairPrompt = localizer.T("downloadSourceChangedRepairPrompt");
+        ResourcePanelCafeOnlyTitle = localizer.T("resourcePanelCafeOnlyTitle");
+        ResourcePanelCafeOnlyDescription = localizer.T("resourcePanelCafeOnlyDescription");
+        ResourcePanelCafeOnlyMessage = localizer.T("resourcePanelCafeOnlyMessage");
+        ResourcePanelCafeOnlySwitch = localizer.T("resourcePanelCafeOnlySwitch");
         Pause = localizer.T("pause");
         Resume = localizer.T("resume");
         Paused = localizer.T("paused");
@@ -299,6 +334,19 @@ public sealed partial class LocalizedStrings : ObservableObject
         StatusLaunchCheckRemote = localizer.T("statusLaunchCheckRemote");
         StatusLaunchCheckNone = localizer.T("statusLaunchCheckNone");
         GameLaunchedMinimized = localizer.T("gameLaunchedMinimized");
+        MigrationWizardTitle = localizer.T("migrationWizardTitle");
+        MigrationWizardDescription = localizer.T("migrationWizardDescription");
+        MigrationGamePathLabel = localizer.T("migrationGamePathLabel");
+        MigrationGamePathBrowse = localizer.T("migrationGamePathBrowse");
+        MigrationProxyLabel = localizer.T("migrationProxyLabel");
+        MigrationCloseBehaviorLabel = localizer.T("migrationCloseBehaviorLabel");
+        MigrationClickCodeFound = localizer.T("migrationClickCodeFound");
+        MigrationLevelDbFailed = localizer.T("migrationLevelDbFailed");
+        MigrationGamePathNotFound = localizer.T("migrationGamePathNotFound");
+        MigrationSkip = localizer.T("migrationSkip");
+        MigrationApply = localizer.T("migrationApply");
+        MigrationApplied = localizer.T("migrationApplied");
+        MigrationNoOldLauncher = localizer.T("migrationNoOldLauncher");
     }
 }
 

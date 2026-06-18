@@ -41,6 +41,12 @@ public partial class DialogsViewModel : ViewModelBase
     private string repairConfirmText = "";
 
     [ObservableProperty]
+    private bool isResourcePanelSourceConfirmVisible;
+
+    [ObservableProperty]
+    private string resourcePanelSourceConfirmText = "";
+
+    [ObservableProperty]
     private bool isNoticeDialogVisible;
 
     [ObservableProperty]
@@ -50,6 +56,8 @@ public partial class DialogsViewModel : ViewModelBase
     private string noticeDialogConfirmText = "";
 
     public event Func<Task>? ConfirmRepairRequested;
+
+    public event Action? ConfirmResourcePanelSourceSwitchRequested;
 
     public event Func<Task>? ConfirmUninstallRequested;
 
@@ -116,6 +124,25 @@ public partial class DialogsViewModel : ViewModelBase
         {
             await ConfirmRepairRequested.Invoke();
         }
+    }
+
+    public void ShowResourcePanelSourceConfirm(string text)
+    {
+        ResourcePanelSourceConfirmText = text;
+        IsResourcePanelSourceConfirmVisible = true;
+    }
+
+    [RelayCommand]
+    private void CancelResourcePanelSourceSwitch()
+    {
+        IsResourcePanelSourceConfirmVisible = false;
+    }
+
+    [RelayCommand]
+    private void ConfirmResourcePanelSourceSwitch()
+    {
+        IsResourcePanelSourceConfirmVisible = false;
+        ConfirmResourcePanelSourceSwitchRequested?.Invoke();
     }
 
     [RelayCommand]
