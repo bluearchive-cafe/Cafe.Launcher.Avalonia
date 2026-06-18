@@ -15,14 +15,19 @@
             <x:Double x:Key="LauncherSpacingLg">16</x:Double>
             <x:Double x:Key="LauncherSpacingXl">20</x:Double>
             <x:Double x:Key="LauncherSpacingXxl">24</x:Double>
-            <x:Double x:Key="LauncherRadiusSm">4</x:Double>
-            <x:Double x:Key="LauncherRadiusMd">6</x:Double>
-            <x:Double x:Key="LauncherRadiusLg">8</x:Double>
+            <x:Double x:Key="LauncherSpacingSection">40</x:Double>
+            <CornerRadius x:Key="LauncherRadiusSm">4</CornerRadius>
+            <CornerRadius x:Key="LauncherRadiusMd">6</CornerRadius>
+            <CornerRadius x:Key="LauncherRadiusLg">8</CornerRadius>
             <x:Double x:Key="LauncherIconSm">16</x:Double>
             <x:Double x:Key="LauncherIconMd">18</x:Double>
             <x:Double x:Key="LauncherIconLg">20</x:Double>
             <x:Double x:Key="LauncherIconXl">22</x:Double>
             <x:Double x:Key="LauncherIconXxl">24</x:Double>
+            <x:Double x:Key="LauncherControlHeightSetting">36</x:Double>
+            <x:Double x:Key="LauncherControlHeightDialog">42</x:Double>
+            <x:Double x:Key="LauncherControlHeightBottom">48</x:Double>
+            <x:Double x:Key="LauncherControlHeightLaunch">58</x:Double>
             <SolidColorBrush x:Key="LauncherAccentBrush" Color="{DynamicResource SystemAccentColor}"/>
             <SolidColorBrush x:Key="LauncherAccentHoverBrush" Color="{DynamicResource SystemAccentColorLight1}"/>
             <SolidColorBrush x:Key="LauncherAccentPressedBrush" Color="{DynamicResource SystemAccentColorDark1}"/>

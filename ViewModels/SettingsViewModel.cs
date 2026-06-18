@@ -766,7 +766,6 @@ public partial class SettingsViewModel : ViewModelBase
         SetBrush(application, "LauncherFocusRingBrush", Color.FromArgb(0x99, color.R, color.G, color.B));
         SetBrush(application, "LauncherCarouselDotActiveBrush", color);
         SetBrush(application, "LauncherToastInfoBrush", color);
-        SetBrush(application, "LauncherInfoTextBrush", color);
         SetBrush(application, "LauncherOnAccentBrush", GetReadableOnAccentColor(color));
     }
 

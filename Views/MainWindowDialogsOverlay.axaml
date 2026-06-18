@@ -8,31 +8,28 @@
              x:DataType="vm:MainWindowViewModel">
     <Grid>
         <!-- Resource control panel -->
-        <Grid IsVisible="{Binding ResourcePanel.IsResourcePanelVisible}" Background="{DynamicResource LauncherOverlayBrush}">
+        <Grid IsVisible="{Binding ResourcePanel.IsResourcePanelVisible}" Classes="dialog-overlay">
             <Border MaxWidth="720"
                     MaxHeight="620"
-                    Margin="24"
-                    HorizontalAlignment="Center"
-                    VerticalAlignment="Center"
-                    Classes="dialog">
+                    Classes="dialog overlay-dialog">
                 <Grid RowDefinitions="Auto,*,Auto" Classes="confirm-layout">
-                    <Grid ColumnDefinitions="Auto,*,Auto" ColumnSpacing="12">
+                    <Grid Classes="dialog-heading" ColumnDefinitions="Auto,*,Auto">
                         <Border Classes="dialog-icon" VerticalAlignment="Center">
-                            <materialIcons:MaterialIcon Kind="Web" Width="22" Height="22" Foreground="{DynamicResource LauncherAccentBrush}" HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                            <materialIcons:MaterialIcon Kind="Web" Width="{StaticResource LauncherIconXl}" Height="{StaticResource LauncherIconXl}" Foreground="{DynamicResource LauncherAccentBrush}" HorizontalAlignment="Center" VerticalAlignment="Center"/>
                         </Border>
-                        <StackPanel Grid.Column="1" Spacing="4" VerticalAlignment="Center">
+                        <StackPanel Grid.Column="1" Classes="dialog-heading-copy">
                             <TextBlock Text="{Binding Shell.I18n.ResourcePanel}" Classes="dialog-title"/>
                             <TextBlock Text="{Binding Shell.I18n.ResourcePanelDescription}" Classes="caption"/>
                         </StackPanel>
                         <Button Grid.Column="2" Classes="dialog-close" Command="{Binding ResourcePanel.CloseResourcePanelCommand}" ToolTip.Tip="{Binding Shell.I18n.Close}">
-                            <materialIcons:MaterialIcon Kind="Close" Width="18" Height="18"/>
+                            <materialIcons:MaterialIcon Kind="Close" Width="{StaticResource LauncherIconMd}" Height="{StaticResource LauncherIconMd}"/>
                         </Button>
                     </Grid>
 
                     <ScrollViewer Grid.Row="1" Classes="scroll-pad">
-                        <StackPanel Spacing="12">
+                        <StackPanel Spacing="{StaticResource LauncherSpacingMd}">
                             <Border Classes="info-strip">
-                                <StackPanel Spacing="8">
+                                <StackPanel Spacing="{StaticResource LauncherSpacingSm}">
                                     <TextBlock Text="{Binding ResourcePanel.ResourcePanelUidText}" Classes="body"
                                                IsVisible="{Binding ResourcePanel.ResourcePanelUidText, Converter={x:Static StringConverters.IsNotNullOrEmpty}}"/>
                                     <TextBlock Text="{Binding ResourcePanel.ResourcePanelMessage}" Classes="body"/>
@@ -40,7 +37,7 @@
                             </Border>
 
                             <Border Classes="dialog-card" IsVisible="{Binding ResourcePanel.IsResourcePanelUidMissing}">
-                                <Grid RowDefinitions="Auto,Auto" ColumnDefinitions="*,Auto" ColumnSpacing="12" RowSpacing="8">
+                                <Grid RowDefinitions="Auto,Auto" ColumnDefinitions="*,Auto" ColumnSpacing="{StaticResource LauncherSpacingMd}" RowSpacing="{StaticResource LauncherSpacingSm}">
                                     <TextBlock Grid.ColumnSpan="2" Text="{Binding Shell.I18n.ResourcePanelManualUid}" Classes="group-title"/>
                                     <TextBox Grid.Row="1"
                                              Classes="uid-input"
@@ -50,7 +47,7 @@
                                             Command="{Binding ResourcePanel.SaveManualResourcePanelUidCommand}"
                                             IsEnabled="{Binding ResourcePanel.IsResourcePanelBusy, Converter={x:Static BoolConverters.Not}}">
                                         <StackPanel Classes="button-content">
-                                            <materialIcons:MaterialIcon Kind="ContentSave" Width="16" Height="16" Foreground="{DynamicResource LauncherOnAccentBrush}"/>
+                                            <materialIcons:MaterialIcon Kind="ContentSave" Width="{StaticResource LauncherIconSm}" Height="{StaticResource LauncherIconSm}" Foreground="{DynamicResource LauncherOnAccentBrush}"/>
                                             <TextBlock Text="{Binding Shell.I18n.ResourcePanelSaveUid}" VerticalAlignment="Center" Foreground="{DynamicResource LauncherOnAccentBrush}"/>
                                         </StackPanel>
                                     </Button>
@@ -61,8 +58,8 @@
                                 <ItemsControl.ItemTemplate>
                                     <DataTemplate x:DataType="models:ResourcePanelItem">
                                         <Border Classes="dialog-card" Margin="0,0,0,8">
-                                            <Grid ColumnDefinitions="*,Auto" RowDefinitions="Auto,Auto,Auto" RowSpacing="8" ColumnSpacing="16">
-                                                <StackPanel Spacing="4">
+                                            <Grid ColumnDefinitions="*,Auto" RowDefinitions="Auto,Auto,Auto" RowSpacing="{StaticResource LauncherSpacingSm}" ColumnSpacing="{StaticResource LauncherSpacingLg}">
+                                                <StackPanel Spacing="{StaticResource LauncherSpacingXs}">
                                                     <TextBlock Text="{Binding DisplayName}" Classes="section-title"/>
                                                     <TextBlock Text="{Binding StatusText}" Classes="caption"/>
                                                 </StackPanel>
@@ -71,7 +68,7 @@
                                                               OnContent="{Binding DataContext.Shell.I18n.ToggleOn, ElementName=DialogsRoot}"
                                                               OffContent="{Binding DataContext.Shell.I18n.ToggleOff, ElementName=DialogsRoot}"
                                                               VerticalAlignment="Center"/>
-                                                <Grid Grid.Row="1" Grid.ColumnSpan="2" ColumnDefinitions="Auto,*,Auto,*" ColumnSpacing="8">
+                                                <Grid Grid.Row="1" Grid.ColumnSpan="2" ColumnDefinitions="Auto,*,Auto,*" ColumnSpacing="{StaticResource LauncherSpacingSm}">
                                                     <TextBlock Text="{Binding DataContext.Shell.I18n.ResourcePanelOfficialVersion, ElementName=DialogsRoot}" Classes="caption"/>
                                                     <TextBlock Grid.Column="1" Text="{Binding OfficialVersion}" Classes="value"/>
                                                     <TextBlock Grid.Column="2" Text="{Binding DataContext.Shell.I18n.ResourcePanelLocalizedVersion, ElementName=DialogsRoot}" Classes="caption"/>
@@ -89,14 +86,14 @@
                         <Button Classes="flat-action dialog-action" Command="{Binding ResourcePanel.RefreshResourcePanelCommand}"
                                 IsEnabled="{Binding ResourcePanel.IsResourcePanelBusy, Converter={x:Static BoolConverters.Not}}">
                             <StackPanel Classes="button-content">
-                                <materialIcons:MaterialIcon Kind="Refresh" Width="16" Height="16"/>
+                                <materialIcons:MaterialIcon Kind="Refresh" Width="{StaticResource LauncherIconSm}" Height="{StaticResource LauncherIconSm}"/>
                                 <TextBlock Text="{Binding Shell.I18n.ResourcePanelRefresh}" VerticalAlignment="Center"/>
                             </StackPanel>
                         </Button>
                         <Button Classes="primary-action dialog-action" Command="{Binding ResourcePanel.SaveResourcePanelCommand}"
                                 IsEnabled="{Binding ResourcePanel.IsResourcePanelBusy, Converter={x:Static BoolConverters.Not}}">
                             <StackPanel Classes="button-content">
-                                <materialIcons:MaterialIcon Kind="ContentSave" Width="18" Height="18" Foreground="{DynamicResource LauncherOnAccentBrush}"/>
+                                <materialIcons:MaterialIcon Kind="ContentSave" Width="{StaticResource LauncherIconMd}" Height="{StaticResource LauncherIconMd}" Foreground="{DynamicResource LauncherOnAccentBrush}"/>
                                 <TextBlock Text="{Binding Shell.I18n.ResourcePanelSave}" VerticalAlignment="Center" Foreground="{DynamicResource LauncherOnAccentBrush}"/>
                             </StackPanel>
                         </Button>
@@ -105,17 +102,14 @@
             </Border>
         </Grid>
         <!-- Notice popup dialog -->
-        <Grid IsVisible="{Binding Dialogs.IsNoticeDialogVisible}" Background="{DynamicResource LauncherOverlayBrush}">
+        <Grid IsVisible="{Binding Dialogs.IsNoticeDialogVisible}" Classes="dialog-overlay">
             <Border MaxWidth="540"
                     MaxHeight="480"
-                    Margin="24"
-                    HorizontalAlignment="Center"
-                    VerticalAlignment="Center"
-                    Classes="dialog">
+                    Classes="dialog overlay-dialog">
                 <Grid RowDefinitions="Auto,*,Auto" Classes="confirm-layout">
-                    <StackPanel Orientation="Horizontal" Spacing="12">
+                    <StackPanel Orientation="Horizontal" Spacing="{StaticResource LauncherSpacingMd}">
                         <Border Classes="dialog-icon">
-                            <materialIcons:MaterialIcon Kind="InformationOutline" Width="22" Height="22" Foreground="{DynamicResource LauncherAccentBrush}" HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                            <materialIcons:MaterialIcon Kind="InformationOutline" Width="{StaticResource LauncherIconXl}" Height="{StaticResource LauncherIconXl}" Foreground="{DynamicResource LauncherAccentBrush}" HorizontalAlignment="Center" VerticalAlignment="Center"/>
                         </Border>
                         <TextBlock Text="{Binding Shell.I18n.Notice}" Classes="dialog-title" VerticalAlignment="Center"/>
                     </StackPanel>
@@ -134,19 +128,19 @@
             </Border>
         </Grid>
         <!-- Repair confirmation dialog -->
-        <Grid IsVisible="{Binding Dialogs.IsRepairConfirmVisible}" Background="{DynamicResource LauncherOverlayBrush}">
+        <Grid IsVisible="{Binding Dialogs.IsRepairConfirmVisible}" Classes="dialog-overlay">
             <Border Classes="dialog confirm-panel">
                 <Grid RowDefinitions="Auto,Auto,Auto" Classes="confirm-layout">
-                    <Grid ColumnDefinitions="Auto,*,Auto" ColumnSpacing="12">
+                    <Grid Classes="dialog-heading" ColumnDefinitions="Auto,*,Auto">
                         <Border Classes="dialog-icon" VerticalAlignment="Center">
-                            <materialIcons:MaterialIcon Kind="Tools" Width="22" Height="22" Foreground="{DynamicResource LauncherAccentBrush}" HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                            <materialIcons:MaterialIcon Kind="Tools" Width="{StaticResource LauncherIconXl}" Height="{StaticResource LauncherIconXl}" Foreground="{DynamicResource LauncherAccentBrush}" HorizontalAlignment="Center" VerticalAlignment="Center"/>
                         </Border>
-                        <StackPanel Grid.Column="1" Spacing="4" VerticalAlignment="Center">
+                        <StackPanel Grid.Column="1" Classes="dialog-heading-copy">
                             <TextBlock Text="{Binding Shell.I18n.RepairConfirm}" Classes="dialog-title"/>
                             <TextBlock Text="{Binding Shell.I18n.RepairConfirmDescription}" Classes="caption"/>
                         </StackPanel>
                         <Button Grid.Column="2" Classes="dialog-close" Command="{Binding Dialogs.CancelRepairCommand}" ToolTip.Tip="{Binding Shell.I18n.Close}">
-                            <materialIcons:MaterialIcon Kind="Close" Width="18" Height="18"/>
+                            <materialIcons:MaterialIcon Kind="Close" Width="{StaticResource LauncherIconMd}" Height="{StaticResource LauncherIconMd}"/>
                         </Button>
                     </Grid>
                     <Border Grid.Row="1" Classes="confirm-message" Background="{DynamicResource LauncherWarningBackgroundBrush}">
@@ -155,13 +149,13 @@
                     <StackPanel Grid.Row="2" Classes="confirm-actions">
                         <Button Classes="flat-action dialog-action" Command="{Binding Dialogs.CancelRepairCommand}">
                             <StackPanel Classes="button-content">
-                                <materialIcons:MaterialIcon Kind="CloseCircle" Width="16" Height="16"/>
+                                <materialIcons:MaterialIcon Kind="CloseCircle" Width="{StaticResource LauncherIconSm}" Height="{StaticResource LauncherIconSm}"/>
                                 <TextBlock Text="{Binding Shell.I18n.Cancel}" VerticalAlignment="Center"/>
                             </StackPanel>
                         </Button>
                         <Button Classes="primary-action dialog-action" Command="{Binding Dialogs.ConfirmRepairCommand}">
                             <StackPanel Classes="button-content">
-                                <materialIcons:MaterialIcon Kind="Tools" Width="18" Height="18" Foreground="{DynamicResource LauncherOnAccentBrush}"/>
+                                <materialIcons:MaterialIcon Kind="Tools" Width="{StaticResource LauncherIconMd}" Height="{StaticResource LauncherIconMd}" Foreground="{DynamicResource LauncherOnAccentBrush}"/>
                                 <TextBlock Text="{Binding Shell.I18n.Repair}" VerticalAlignment="Center" Foreground="{DynamicResource LauncherOnAccentBrush}"/>
                             </StackPanel>
                         </Button>
@@ -170,19 +164,19 @@
             </Border>
         </Grid>
         <!-- Resource Panel source confirmation dialog -->
-        <Grid IsVisible="{Binding Dialogs.IsResourcePanelSourceConfirmVisible}" Background="{DynamicResource LauncherOverlayBrush}">
+        <Grid IsVisible="{Binding Dialogs.IsResourcePanelSourceConfirmVisible}" Classes="dialog-overlay">
             <Border Classes="dialog confirm-panel">
                 <Grid RowDefinitions="Auto,Auto,Auto" Classes="confirm-layout">
-                    <Grid ColumnDefinitions="Auto,*,Auto" ColumnSpacing="12">
+                    <Grid Classes="dialog-heading" ColumnDefinitions="Auto,*,Auto">
                         <Border Classes="dialog-icon" VerticalAlignment="Center">
-                            <materialIcons:MaterialIcon Kind="Web" Width="22" Height="22" Foreground="{DynamicResource LauncherAccentBrush}" HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                            <materialIcons:MaterialIcon Kind="Web" Width="{StaticResource LauncherIconXl}" Height="{StaticResource LauncherIconXl}" Foreground="{DynamicResource LauncherAccentBrush}" HorizontalAlignment="Center" VerticalAlignment="Center"/>
                         </Border>
-                        <StackPanel Grid.Column="1" Spacing="4" VerticalAlignment="Center">
+                        <StackPanel Grid.Column="1" Classes="dialog-heading-copy">
                             <TextBlock Text="{Binding Shell.I18n.ResourcePanelCafeOnlyTitle}" Classes="dialog-title"/>
                             <TextBlock Text="{Binding Shell.I18n.ResourcePanelCafeOnlyDescription}" Classes="caption"/>
                         </StackPanel>
                         <Button Grid.Column="2" Classes="dialog-close" Command="{Binding Dialogs.CancelResourcePanelSourceSwitchCommand}" ToolTip.Tip="{Binding Shell.I18n.Close}">
-                            <materialIcons:MaterialIcon Kind="Close" Width="18" Height="18"/>
+                            <materialIcons:MaterialIcon Kind="Close" Width="{StaticResource LauncherIconMd}" Height="{StaticResource LauncherIconMd}"/>
                         </Button>
                     </Grid>
                     <Border Grid.Row="1" Classes="confirm-message" Background="{DynamicResource LauncherWarningBackgroundBrush}">
@@ -191,13 +185,13 @@
                     <StackPanel Grid.Row="2" Classes="confirm-actions">
                         <Button Classes="flat-action dialog-action" Command="{Binding Dialogs.CancelResourcePanelSourceSwitchCommand}">
                             <StackPanel Classes="button-content">
-                                <materialIcons:MaterialIcon Kind="CloseCircle" Width="16" Height="16"/>
+                                <materialIcons:MaterialIcon Kind="CloseCircle" Width="{StaticResource LauncherIconSm}" Height="{StaticResource LauncherIconSm}"/>
                                 <TextBlock Text="{Binding Shell.I18n.Cancel}" VerticalAlignment="Center"/>
                             </StackPanel>
                         </Button>
                         <Button Classes="primary-action dialog-action" Command="{Binding Dialogs.ConfirmResourcePanelSourceSwitchCommand}">
                             <StackPanel Classes="button-content">
-                                <materialIcons:MaterialIcon Kind="SwapHorizontal" Width="18" Height="18" Foreground="{DynamicResource LauncherOnAccentBrush}"/>
+                                <materialIcons:MaterialIcon Kind="SwapHorizontal" Width="{StaticResource LauncherIconMd}" Height="{StaticResource LauncherIconMd}" Foreground="{DynamicResource LauncherOnAccentBrush}"/>
                                 <TextBlock Text="{Binding Shell.I18n.ResourcePanelCafeOnlySwitch}" VerticalAlignment="Center" Foreground="{DynamicResource LauncherOnAccentBrush}"/>
                             </StackPanel>
                         </Button>
@@ -206,19 +200,19 @@
             </Border>
         </Grid>
         <!-- I4: Stop download confirmation dialog -->
-        <Grid IsVisible="{Binding Dialogs.IsStopConfirmVisible}" Background="{DynamicResource LauncherOverlayBrush}">
+        <Grid IsVisible="{Binding Dialogs.IsStopConfirmVisible}" Classes="dialog-overlay">
             <Border Classes="dialog confirm-panel">
                 <Grid RowDefinitions="Auto,Auto,Auto" Classes="confirm-layout">
-                    <Grid ColumnDefinitions="Auto,*,Auto" ColumnSpacing="12">
+                    <Grid Classes="dialog-heading" ColumnDefinitions="Auto,*,Auto">
                         <Border Classes="dialog-icon" VerticalAlignment="Center">
-                            <materialIcons:MaterialIcon Kind="Stop" Width="22" Height="22" Foreground="{DynamicResource LauncherAccentBrush}" HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                            <materialIcons:MaterialIcon Kind="Stop" Width="{StaticResource LauncherIconXl}" Height="{StaticResource LauncherIconXl}" Foreground="{DynamicResource LauncherAccentBrush}" HorizontalAlignment="Center" VerticalAlignment="Center"/>
                         </Border>
-                        <StackPanel Grid.Column="1" Spacing="4" VerticalAlignment="Center">
+                        <StackPanel Grid.Column="1" Classes="dialog-heading-copy">
                             <TextBlock Text="{Binding Shell.I18n.ConfirmStop}" Classes="dialog-title"/>
                             <TextBlock Text="{Binding Shell.I18n.StopDownloadConfirm}" Classes="caption"/>
                         </StackPanel>
                         <Button Grid.Column="2" Classes="dialog-close" Command="{Binding Dialogs.CancelStopCommand}" ToolTip.Tip="{Binding Shell.I18n.Close}">
-                            <materialIcons:MaterialIcon Kind="Close" Width="18" Height="18"/>
+                            <materialIcons:MaterialIcon Kind="Close" Width="{StaticResource LauncherIconMd}" Height="{StaticResource LauncherIconMd}"/>
                         </Button>
                     </Grid>
                     <Border Grid.Row="1" Classes="confirm-message" Background="{DynamicResource LauncherWarningBackgroundBrush}">
@@ -227,13 +221,13 @@
                     <StackPanel Grid.Row="2" Classes="confirm-actions">
                         <Button Classes="flat-action dialog-action" Command="{Binding Dialogs.CancelStopCommand}">
                             <StackPanel Classes="button-content">
-                                <materialIcons:MaterialIcon Kind="CloseCircle" Width="16" Height="16"/>
+                                <materialIcons:MaterialIcon Kind="CloseCircle" Width="{StaticResource LauncherIconSm}" Height="{StaticResource LauncherIconSm}"/>
                                 <TextBlock Text="{Binding Shell.I18n.Cancel}" VerticalAlignment="Center"/>
                             </StackPanel>
                         </Button>
                         <Button Classes="danger-action dialog-action" Command="{Binding Dialogs.ConfirmStopCommand}">
                             <StackPanel Classes="button-content">
-                                <materialIcons:MaterialIcon Kind="Stop" Width="18" Height="18" Foreground="{DynamicResource LauncherOnAccentBrush}"/>
+                                <materialIcons:MaterialIcon Kind="Stop" Width="{StaticResource LauncherIconMd}" Height="{StaticResource LauncherIconMd}" Foreground="{DynamicResource LauncherOnAccentBrush}"/>
                                 <TextBlock Text="{Binding Shell.I18n.Stop}" VerticalAlignment="Center" Foreground="{DynamicResource LauncherOnAccentBrush}"/>
                             </StackPanel>
                         </Button>
@@ -242,19 +236,19 @@
             </Border>
         </Grid>
         <!-- I9: Download running close confirmation dialog -->
-        <Grid IsVisible="{Binding Dialogs.IsDownloadRunningCloseConfirmVisible}" Background="{DynamicResource LauncherOverlayBrush}">
+        <Grid IsVisible="{Binding Dialogs.IsDownloadRunningCloseConfirmVisible}" Classes="dialog-overlay">
             <Border Classes="dialog confirm-panel">
                 <Grid RowDefinitions="Auto,Auto,Auto" Classes="confirm-layout">
-                    <Grid ColumnDefinitions="Auto,*,Auto" ColumnSpacing="12">
+                    <Grid Classes="dialog-heading" ColumnDefinitions="Auto,*,Auto">
                         <Border Classes="dialog-icon" VerticalAlignment="Center">
-                            <materialIcons:MaterialIcon Kind="Stop" Width="22" Height="22" Foreground="{DynamicResource LauncherAccentBrush}" HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                            <materialIcons:MaterialIcon Kind="Stop" Width="{StaticResource LauncherIconXl}" Height="{StaticResource LauncherIconXl}" Foreground="{DynamicResource LauncherAccentBrush}" HorizontalAlignment="Center" VerticalAlignment="Center"/>
                         </Border>
-                        <StackPanel Grid.Column="1" Spacing="4" VerticalAlignment="Center">
+                        <StackPanel Grid.Column="1" Classes="dialog-heading-copy">
                             <TextBlock Text="{Binding Shell.I18n.ConfirmStop}" Classes="dialog-title"/>
                             <TextBlock Text="{Binding Shell.I18n.StopDownloadConfirm}" Classes="caption"/>
                         </StackPanel>
                         <Button Grid.Column="2" Classes="dialog-close" Command="{Binding Dialogs.CancelCloseWhileDownloadingCommand}" ToolTip.Tip="{Binding Shell.I18n.Close}">
-                            <materialIcons:MaterialIcon Kind="Close" Width="18" Height="18"/>
+                            <materialIcons:MaterialIcon Kind="Close" Width="{StaticResource LauncherIconMd}" Height="{StaticResource LauncherIconMd}"/>
                         </Button>
                     </Grid>
                     <Border Grid.Row="1" Classes="confirm-message" Background="{DynamicResource LauncherWarningBackgroundBrush}">
@@ -263,13 +257,13 @@
                     <StackPanel Grid.Row="2" Classes="confirm-actions">
                         <Button Classes="flat-action dialog-action" Command="{Binding Dialogs.CancelCloseWhileDownloadingCommand}">
                             <StackPanel Classes="button-content">
-                                <materialIcons:MaterialIcon Kind="CloseCircle" Width="16" Height="16"/>
+                                <materialIcons:MaterialIcon Kind="CloseCircle" Width="{StaticResource LauncherIconSm}" Height="{StaticResource LauncherIconSm}"/>
                                 <TextBlock Text="{Binding Shell.I18n.Cancel}" VerticalAlignment="Center"/>
                             </StackPanel>
                         </Button>
                         <Button Classes="danger-action dialog-action" Command="{Binding Dialogs.ConfirmCloseWhileDownloadingCommand}">
                             <StackPanel Classes="button-content">
-                                <materialIcons:MaterialIcon Kind="Stop" Width="18" Height="18" Foreground="{DynamicResource LauncherOnAccentBrush}"/>
+                                <materialIcons:MaterialIcon Kind="Stop" Width="{StaticResource LauncherIconMd}" Height="{StaticResource LauncherIconMd}" Foreground="{DynamicResource LauncherOnAccentBrush}"/>
                                 <TextBlock Text="{Binding Shell.I18n.Stop}" VerticalAlignment="Center" Foreground="{DynamicResource LauncherOnAccentBrush}"/>
                             </StackPanel>
                         </Button>
@@ -277,19 +271,19 @@
                 </Grid>
             </Border>
         </Grid>
-        <Grid IsVisible="{Binding Dialogs.IsUninstallConfirmVisible}" Background="{DynamicResource LauncherOverlayBrush}">
+        <Grid IsVisible="{Binding Dialogs.IsUninstallConfirmVisible}" Classes="dialog-overlay">
             <Border Classes="dialog confirm-panel">
                 <Grid RowDefinitions="Auto,Auto,Auto" Classes="confirm-layout">
-                    <Grid ColumnDefinitions="Auto,*,Auto" ColumnSpacing="12">
+                    <Grid Classes="dialog-heading" ColumnDefinitions="Auto,*,Auto">
                         <Border Classes="dialog-icon danger" VerticalAlignment="Center">
-                            <materialIcons:MaterialIcon Kind="AlertCircle" Width="22" Height="22" Foreground="{DynamicResource LauncherDangerBrush}" HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                            <materialIcons:MaterialIcon Kind="AlertCircle" Width="{StaticResource LauncherIconXl}" Height="{StaticResource LauncherIconXl}" Foreground="{DynamicResource LauncherDangerBrush}" HorizontalAlignment="Center" VerticalAlignment="Center"/>
                         </Border>
-                        <StackPanel Grid.Column="1" Spacing="4" VerticalAlignment="Center">
+                        <StackPanel Grid.Column="1" Classes="dialog-heading-copy">
                             <TextBlock Text="{Binding Shell.I18n.ConfirmUninstall}" Classes="dialog-title"/>
                             <TextBlock Text="{Binding Shell.I18n.UninstallConfirmDescription}" Classes="caption"/>
                         </StackPanel>
                         <Button Grid.Column="2" Classes="dialog-close" Command="{Binding Dialogs.CancelUninstallCommand}" ToolTip.Tip="{Binding Shell.I18n.Close}">
-                            <materialIcons:MaterialIcon Kind="Close" Width="18" Height="18"/>
+                            <materialIcons:MaterialIcon Kind="Close" Width="{StaticResource LauncherIconMd}" Height="{StaticResource LauncherIconMd}"/>
                         </Button>
                     </Grid>
                     <Border Grid.Row="1" Classes="confirm-message" Background="{DynamicResource LauncherDangerSoftBrush}">
@@ -298,13 +292,13 @@
                     <StackPanel Grid.Row="2" Classes="confirm-actions">
                         <Button Classes="flat-action dialog-action" Command="{Binding Dialogs.CancelUninstallCommand}">
                             <StackPanel Classes="button-content">
-                                <materialIcons:MaterialIcon Kind="CloseCircle" Width="16" Height="16"/>
+                                <materialIcons:MaterialIcon Kind="CloseCircle" Width="{StaticResource LauncherIconSm}" Height="{StaticResource LauncherIconSm}"/>
                                 <TextBlock Text="{Binding Shell.I18n.Cancel}" VerticalAlignment="Center"/>
                             </StackPanel>
                         </Button>
                         <Button Classes="danger-action dialog-action" Command="{Binding Dialogs.ConfirmUninstallCommand}">
                             <StackPanel Classes="button-content">
-                                <materialIcons:MaterialIcon Kind="TrashCanOutline" Width="18" Height="18" Foreground="{DynamicResource LauncherOnAccentBrush}"/>
+                                <materialIcons:MaterialIcon Kind="TrashCanOutline" Width="{StaticResource LauncherIconMd}" Height="{StaticResource LauncherIconMd}" Foreground="{DynamicResource LauncherOnAccentBrush}"/>
                                 <TextBlock Text="{Binding Shell.I18n.Uninstall}" VerticalAlignment="Center"/>
                             </StackPanel>
                         </Button>
@@ -313,19 +307,19 @@
             </Border>
         </Grid>
         <!-- M4: Unsaved changes confirmation dialog -->
-        <Grid IsVisible="{Binding Settings.IsUnsavedChangesVisible}" Background="{DynamicResource LauncherOverlayBrush}">
+        <Grid IsVisible="{Binding Settings.IsUnsavedChangesVisible}" Classes="dialog-overlay">
             <Border Classes="dialog confirm-panel">
                 <Grid RowDefinitions="Auto,Auto,Auto" Classes="confirm-layout">
-                    <Grid ColumnDefinitions="Auto,*,Auto" ColumnSpacing="12">
+                    <Grid Classes="dialog-heading" ColumnDefinitions="Auto,*,Auto">
                         <Border Classes="dialog-icon" VerticalAlignment="Center">
-                            <materialIcons:MaterialIcon Kind="AlertCircle" Width="22" Height="22" Foreground="{DynamicResource LauncherAccentBrush}" HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                            <materialIcons:MaterialIcon Kind="AlertCircle" Width="{StaticResource LauncherIconXl}" Height="{StaticResource LauncherIconXl}" Foreground="{DynamicResource LauncherAccentBrush}" HorizontalAlignment="Center" VerticalAlignment="Center"/>
                         </Border>
-                        <StackPanel Grid.Column="1" Spacing="4" VerticalAlignment="Center">
+                        <StackPanel Grid.Column="1" Classes="dialog-heading-copy">
                             <TextBlock Text="{Binding Shell.I18n.UnsavedChanges}" Classes="dialog-title"/>
                             <TextBlock Text="{Binding Shell.I18n.UnsavedChangesMessage}" Classes="caption"/>
                         </StackPanel>
                         <Button Grid.Column="2" Classes="dialog-close" Command="{Binding WindowChrome.KeepEditingSettingsCommand}" ToolTip.Tip="{Binding Shell.I18n.Close}">
-                            <materialIcons:MaterialIcon Kind="Close" Width="18" Height="18"/>
+                            <materialIcons:MaterialIcon Kind="Close" Width="{StaticResource LauncherIconMd}" Height="{StaticResource LauncherIconMd}"/>
                         </Button>
                     </Grid>
                     <Border Grid.Row="1" Classes="confirm-message" Background="{DynamicResource LauncherWarningBackgroundBrush}">
@@ -334,13 +328,13 @@
                     <StackPanel Grid.Row="2" Classes="confirm-actions">
                         <Button Classes="flat-action dialog-action" Command="{Binding WindowChrome.KeepEditingSettingsCommand}">
                             <StackPanel Classes="button-content">
-                                <materialIcons:MaterialIcon Kind="Pencil" Width="16" Height="16"/>
+                                <materialIcons:MaterialIcon Kind="Pencil" Width="{StaticResource LauncherIconSm}" Height="{StaticResource LauncherIconSm}"/>
                                 <TextBlock Text="{Binding Shell.I18n.KeepEditing}" VerticalAlignment="Center"/>
                             </StackPanel>
                         </Button>
                         <Button Classes="danger-action dialog-action" Command="{Binding WindowChrome.DiscardSettingsChangesCommand}">
                             <StackPanel Classes="button-content">
-                                <materialIcons:MaterialIcon Kind="DeleteOutline" Width="18" Height="18" Foreground="{DynamicResource LauncherOnAccentBrush}"/>
+                                <materialIcons:MaterialIcon Kind="DeleteOutline" Width="{StaticResource LauncherIconMd}" Height="{StaticResource LauncherIconMd}" Foreground="{DynamicResource LauncherOnAccentBrush}"/>
                                 <TextBlock Text="{Binding Shell.I18n.DiscardChanges}" VerticalAlignment="Center" Foreground="{DynamicResource LauncherOnAccentBrush}"/>
                             </StackPanel>
                         </Button>
@@ -349,42 +343,41 @@
             </Border>
         </Grid>
         <!-- Migration wizard dialog -->
-        <Grid IsVisible="{Binding MigrationWizard.IsVisible}" Background="{DynamicResource LauncherOverlayBrush}">
-            <Border Classes="dialog" MaxWidth="620" MaxHeight="560" Margin="24"
-                    HorizontalAlignment="Center" VerticalAlignment="Center">
-                <Grid RowDefinitions="Auto,*,Auto" RowSpacing="16" Classes="confirm-layout">
+        <Grid IsVisible="{Binding MigrationWizard.IsVisible}" Classes="dialog-overlay">
+            <Border Classes="dialog overlay-dialog" MaxWidth="620" MaxHeight="560">
+                <Grid RowDefinitions="Auto,*,Auto" RowSpacing="{StaticResource LauncherSpacingLg}" Classes="confirm-layout">
                     <!-- Header -->
-                    <Grid ColumnDefinitions="Auto,*,Auto" ColumnSpacing="12">
+                    <Grid Classes="dialog-heading" ColumnDefinitions="Auto,*,Auto">
                         <Border Classes="dialog-icon" VerticalAlignment="Center">
-                            <materialIcons:MaterialIcon Kind="SwapHorizontal" Width="22" Height="22"
+                            <materialIcons:MaterialIcon Kind="SwapHorizontal" Width="{StaticResource LauncherIconXl}" Height="{StaticResource LauncherIconXl}"
                                                        Foreground="{DynamicResource LauncherAccentBrush}"
                                                        HorizontalAlignment="Center" VerticalAlignment="Center"/>
                         </Border>
-                        <StackPanel Grid.Column="1" Spacing="4" VerticalAlignment="Center">
+                        <StackPanel Grid.Column="1" Classes="dialog-heading-copy">
                             <TextBlock Text="{Binding Shell.I18n.MigrationWizardTitle}" Classes="dialog-title"/>
                             <TextBlock Text="{Binding Shell.I18n.MigrationWizardDescription}" Classes="caption" TextWrapping="Wrap"/>
                         </StackPanel>
                         <Button Grid.Column="2" Classes="dialog-close" Command="{Binding MigrationWizard.SkipMigrationCommand}"
                                 ToolTip.Tip="{Binding Shell.I18n.Close}">
-                            <materialIcons:MaterialIcon Kind="Close" Width="18" Height="18"/>
+                            <materialIcons:MaterialIcon Kind="Close" Width="{StaticResource LauncherIconMd}" Height="{StaticResource LauncherIconMd}"/>
                         </Button>
                     </Grid>
 
                     <!-- Content -->
                     <ScrollViewer Grid.Row="1" Classes="scroll-pad">
-                        <StackPanel Spacing="16">
+                        <StackPanel Spacing="{StaticResource LauncherSpacingLg}">
                             <!-- Game path section -->
-                            <Border Classes="dialog-card" Background="{DynamicResource LauncherCardBackgroundBrush}">
-                                <Grid RowDefinitions="Auto,Auto" RowSpacing="8">
+                            <Border Classes="dialog-card">
+                                <Grid RowDefinitions="Auto,Auto" RowSpacing="{StaticResource LauncherSpacingSm}">
                                     <TextBlock Text="{Binding Shell.I18n.MigrationGamePathLabel}" Classes="section-title"/>
-                                    <Grid Grid.Row="1" ColumnDefinitions="*,Auto" ColumnSpacing="8">
+                                    <Grid Grid.Row="1" ColumnDefinitions="*,Auto" ColumnSpacing="{StaticResource LauncherSpacingSm}">
                                         <TextBox Text="{Binding MigrationWizard.DetectedGamePath, Mode=TwoWay}"
-                                                 MinHeight="42" VerticalContentAlignment="Center"
+                                                 MinHeight="{StaticResource LauncherControlHeightDialog}" VerticalContentAlignment="Center"
                                                  PlaceholderText="{Binding Shell.I18n.MigrationGamePathNotFound}"/>
-                                        <Button Grid.Column="1" Classes="flat-action dialog-action" Height="42"
+                                        <Button Grid.Column="1" Classes="flat-action dialog-action"
                                                 Command="{Binding MigrationWizard.BrowseGamePathCommand}">
-                                            <StackPanel Classes="button-content" Orientation="Horizontal" Spacing="8">
-                                                <materialIcons:MaterialIcon Kind="FolderOpen" Width="16" Height="16"/>
+                                            <StackPanel Classes="button-content">
+                                                <materialIcons:MaterialIcon Kind="FolderOpen" Width="{StaticResource LauncherIconSm}" Height="{StaticResource LauncherIconSm}"/>
                                                 <TextBlock Text="{Binding Shell.I18n.MigrationGamePathBrowse}" VerticalAlignment="Center"/>
                                             </StackPanel>
                                         </Button>
@@ -393,8 +386,8 @@
                             </Border>
 
                             <!-- Proxy mode -->
-                            <Border Classes="dialog-card" Background="{DynamicResource LauncherCardBackgroundBrush}">
-                                <Grid ColumnDefinitions="*,Auto" ColumnSpacing="16">
+                            <Border Classes="dialog-card">
+                                <Grid ColumnDefinitions="*,Auto" ColumnSpacing="{StaticResource LauncherSpacingLg}">
                                     <TextBlock Text="{Binding Shell.I18n.MigrationProxyLabel}"
                                                VerticalAlignment="Center" Classes="section-title" MinWidth="120"/>
                                     <ComboBox Grid.Column="1" Classes="setting-control" MinWidth="140"
@@ -410,8 +403,8 @@
                             </Border>
 
                             <!-- Close behavior -->
-                            <Border Classes="dialog-card" Background="{DynamicResource LauncherCardBackgroundBrush}">
-                                <Grid ColumnDefinitions="*,Auto" ColumnSpacing="16">
+                            <Border Classes="dialog-card">
+                                <Grid ColumnDefinitions="*,Auto" ColumnSpacing="{StaticResource LauncherSpacingLg}">
                                     <TextBlock Text="{Binding Shell.I18n.MigrationCloseBehaviorLabel}"
                                                VerticalAlignment="Center" Classes="section-title" MinWidth="120"/>
                                     <ComboBox Grid.Column="1" Classes="setting-control" MinWidth="140"
@@ -428,8 +421,8 @@
 
                             <!-- Info strips -->
                             <Border Classes="info-strip" IsVisible="{Binding MigrationWizard.ClickCodeFound}">
-                                <StackPanel Spacing="4" Orientation="Horizontal">
-                                    <materialIcons:MaterialIcon Kind="CheckCircle" Width="16" Height="16"
+                                <StackPanel Spacing="{StaticResource LauncherSpacingXs}" Orientation="Horizontal">
+                                    <materialIcons:MaterialIcon Kind="CheckCircle" Width="{StaticResource LauncherIconSm}" Height="{StaticResource LauncherIconSm}"
                                                                Foreground="{DynamicResource LauncherSuccessBrush}"
                                                                VerticalAlignment="Center"/>
                                     <TextBlock Text="{Binding Shell.I18n.MigrationClickCodeFound}" Classes="caption" VerticalAlignment="Center"/>
@@ -437,8 +430,8 @@
                             </Border>
 
                             <Border Classes="info-strip" IsVisible="{Binding MigrationWizard.LevelDbReadSuccess, Converter={x:Static BoolConverters.Not}}">
-                                <StackPanel Spacing="4" Orientation="Horizontal">
-                                    <materialIcons:MaterialIcon Kind="InformationOutline" Width="16" Height="16"
+                                <StackPanel Spacing="{StaticResource LauncherSpacingXs}" Orientation="Horizontal">
+                                    <materialIcons:MaterialIcon Kind="InformationOutline" Width="{StaticResource LauncherIconSm}" Height="{StaticResource LauncherIconSm}"
                                                                Foreground="{DynamicResource LauncherAccentBrush}"
                                                                VerticalAlignment="Center"/>
                                     <TextBlock Text="{Binding Shell.I18n.MigrationLevelDbFailed}" Classes="caption" VerticalAlignment="Center" TextWrapping="Wrap"/>
@@ -451,13 +444,13 @@
                     <StackPanel Grid.Row="2" Classes="confirm-actions">
                         <Button Classes="flat-action dialog-action" Command="{Binding MigrationWizard.SkipMigrationCommand}">
                             <StackPanel Classes="button-content">
-                                <materialIcons:MaterialIcon Kind="SkipNextOutline" Width="16" Height="16"/>
+                                <materialIcons:MaterialIcon Kind="SkipNextOutline" Width="{StaticResource LauncherIconSm}" Height="{StaticResource LauncherIconSm}"/>
                                 <TextBlock Text="{Binding Shell.I18n.MigrationSkip}" VerticalAlignment="Center"/>
                             </StackPanel>
                         </Button>
                         <Button Classes="primary-action dialog-action" Command="{Binding MigrationWizard.ApplyMigrationCommand}">
                             <StackPanel Classes="button-content">
-                                <materialIcons:MaterialIcon Kind="Check" Width="18" Height="18" Foreground="{DynamicResource LauncherOnAccentBrush}"/>
+                                <materialIcons:MaterialIcon Kind="Check" Width="{StaticResource LauncherIconMd}" Height="{StaticResource LauncherIconMd}" Foreground="{DynamicResource LauncherOnAccentBrush}"/>
                                 <TextBlock Text="{Binding Shell.I18n.MigrationApply}" VerticalAlignment="Center" Foreground="{DynamicResource LauncherOnAccentBrush}"/>
                             </StackPanel>
                         </Button>

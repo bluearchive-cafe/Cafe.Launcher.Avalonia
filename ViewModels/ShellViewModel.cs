@@ -24,6 +24,9 @@ public partial class ShellViewModel : ViewModelBase
     private string launcherVersionText = $"Version {LauncherConstants.LauncherVersion}";
 
     [ObservableProperty]
+    private string commitShaText = $"Commit {LauncherConstants.CommitSha}";
+
+    [ObservableProperty]
     private string frameworkVersionText = "";
 
     [ObservableProperty]
@@ -37,6 +40,9 @@ public partial class ShellViewModel : ViewModelBase
 
     [ObservableProperty]
     private string currentViewTitle = "Loading launcher configuration";
+
+    [ObservableProperty]
+    private string statusIconKind = "HelpCircleOutline";
 
     [ObservableProperty]
     private string statusText = "Loading production API and local game state.";
@@ -55,6 +61,15 @@ public partial class ShellViewModel : ViewModelBase
 
     [ObservableProperty]
     private string executableText = "Executable: loading";
+
+    [ObservableProperty]
+    private string executableNameText = "Loading";
+
+    [ObservableProperty]
+    private string networkStatusValueText = "Loading";
+
+    [ObservableProperty]
+    private string launchCheckValueText = "Loading";
 
     [ObservableProperty]
     private string diskSpaceText = "Required -- / Available --";
@@ -102,6 +117,7 @@ public partial class ShellViewModel : ViewModelBase
 
         if (!hasSnapshot)
         {
+            StatusIconKind = "HelpCircleOutline";
             CurrentViewTitle = localizer.T("loadingTitle");
             StatusText = localizer.T("loadingStatus");
             PathText = localizer.T("pathLoading");
@@ -109,6 +125,9 @@ public partial class ShellViewModel : ViewModelBase
             NetworkText = localizer.T("networkLoading");
             LaunchCheckText = localizer.T("launchCheckLoading");
             ExecutableText = localizer.T("executableLoading");
+            ExecutableNameText = localizer.T("loadingValue");
+            NetworkStatusValueText = localizer.T("loadingValue");
+            LaunchCheckValueText = localizer.T("loadingValue");
             SettingsSummary = localizer.T("settings");
             OperationNote = localizer.T("operationTelemetryLocal");
         }
@@ -116,20 +135,28 @@ public partial class ShellViewModel : ViewModelBase
 
     public void SetLoading()
     {
+        StatusIconKind = "HelpCircleOutline";
         CurrentViewTitle = localizer.T("loadingTitle");
         StatusText = localizer.T("connectingApi");
+        ExecutableNameText = localizer.T("loadingValue");
+        NetworkStatusValueText = localizer.T("loadingValue");
+        LaunchCheckValueText = localizer.T("loadingValue");
         OperationNote = localizer.T("loadingStatus");
     }
 
     public void SetRefreshError(Exception exception)
     {
+        StatusIconKind = "Alert";
         CurrentViewTitle = localizer.T("networkUnavailableTitle");
         StatusText = localizer.T("networkError");
         NetworkText = localizer.F("networkWithMessage", exception.Message);
+        NetworkStatusValueText = exception.Message;
         VersionText = localizer.T("versionUnavailable");
         OperationNote = localizer.T("apiFailedNoFileChange");
         PathText = localizer.T("pathLoading");
         ExecutableText = localizer.T("executableLoading");
+        ExecutableNameText = localizer.T("loadingValue");
+        LaunchCheckValueText = localizer.T("loadingValue");
     }
 
     public void ApplySnapshot(LauncherStatusSnapshot snapshot, SettingsViewModel settings)
@@ -140,6 +167,7 @@ public partial class ShellViewModel : ViewModelBase
         var localConfig = localGame.GameConfig;
         var status = ResolveStatusText(snapshot);
 
+        StatusIconKind = ResolveStatusIconKind(snapshot);
         CurrentViewTitle = status;
         StatusText = status;
         PathText = localGame.GamePath;
@@ -147,10 +175,14 @@ public partial class ShellViewModel : ViewModelBase
             ? localizer.F("versionInstalled", localConfig?.Version, gameConfig?.GameLatestVersion ?? localizer.T("unknown"))
             : localizer.F("versionLatest", gameConfig?.GameLatestVersion ?? localizer.T("unknown"));
         NetworkText = localizer.T("statusNetworkLoaded");
-        LaunchCheckText = localizer.F("launchCheckWithMessage", settings.ResolveLaunchCheckDisplayName(snapshot.Settings.LaunchCheckMode));
-        ExecutableText = string.IsNullOrWhiteSpace(localConfig?.Name)
-            ? localizer.F("executableValue", gameConfig?.GameStartExeName ?? localizer.T("unknown"))
-            : localizer.F("executableValue", localConfig.Name);
+        NetworkStatusValueText = localizer.T("statusNetworkLoaded");
+        var launchCheckValue = settings.ResolveLaunchCheckDisplayName(snapshot.Settings.LaunchCheckMode);
+        SetLaunchCheckResult(launchCheckValue);
+        var executableName = string.IsNullOrWhiteSpace(localConfig?.Name)
+            ? gameConfig?.GameStartExeName ?? localizer.T("unknown")
+            : localConfig.Name;
+        ExecutableText = localizer.F("executableValue", executableName);
+        ExecutableNameText = localizer.F("executableNameValue", executableName);
         DiskSpaceText = settings.ResolveDiskSpaceText(localGame.GamePath, gameConfig?.DecompressionSize);
         SettingsSummary = localizer.F(
             "settingsSummaryWithTheme",
@@ -159,6 +191,12 @@ public partial class ShellViewModel : ViewModelBase
             settings.ResolveLanguageDisplayName(snapshot.Settings.Language),
             settings.ResolveThemeDisplayName(snapshot.Settings.ThemeMode));
         OperationNote = ResolveOperationNote(snapshot, localGame, baseConfig);
+    }
+
+    public void SetLaunchCheckResult(string value)
+    {
+        LaunchCheckText = localizer.F("launchCheckWithMessage", value);
+        LaunchCheckValueText = value;
     }
 
     private string ResolveStatusText(LauncherStatusSnapshot snapshot)
@@ -179,6 +217,26 @@ public partial class ShellViewModel : ViewModelBase
         }
 
         return localizer.T("ready");
+    }
+
+    internal static string ResolveStatusIconKind(LauncherStatusSnapshot snapshot)
+    {
+        if (!snapshot.IsInstalled)
+        {
+            return "HelpCircleOutline";
+        }
+
+        if (snapshot.BelowLowestVersion)
+        {
+            return "Alert";
+        }
+
+        if (snapshot.NeedsUpdate)
+        {
+            return "AlertCircle";
+        }
+
+        return "CheckAll";
     }
 
     private string ResolveOperationNote(

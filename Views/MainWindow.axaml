@@ -21,7 +21,7 @@
         WindowDecorations="BorderOnly"
         ExtendClientAreaToDecorationsHint="True"
         ExtendClientAreaTitleBarHeightHint="0"
-        Background="#000000">
+        Background="{DynamicResource LauncherMediaPlaceholderBrush}">
 
 
     <Window.Styles>
@@ -46,37 +46,32 @@
                         <MenuItem Header="{Binding Shell.I18n.Close}" Command="{Binding WindowChrome.CloseCommand}"/>
                     </ContextMenu>
                 </Grid.ContextMenu>
-                <StackPanel Orientation="Horizontal" Margin="20,0,0,0" VerticalAlignment="Center">
+                <StackPanel Classes="titlebar-brand-row">
                     <TextBlock Text="{Binding Shell.ProductName}" Classes="titlebar-brand"/>
                 </StackPanel>
-                <StackPanel Grid.Column="1" Orientation="Horizontal" Margin="0,0,8,0">
+                <StackPanel Grid.Column="1" Classes="titlebar-actions">
                     <Button Classes="chrome" Command="{Binding ResourcePanel.OpenResourcePanelCommand}" ToolTip.Tip="{Binding Shell.I18n.ResourcePanel}">
-                        <materialIcons:MaterialIcon Kind="Web" Width="18" Height="18" Foreground="{DynamicResource LauncherOnChromeBrush}"/>
+                        <materialIcons:MaterialIcon Kind="Web" Width="{StaticResource LauncherIconMd}" Height="{StaticResource LauncherIconMd}" Foreground="{DynamicResource LauncherOnChromeBrush}"/>
                     </Button>
                     <Button Classes="chrome settings" Command="{Binding WindowChrome.ShowSettingsCommand}" ToolTip.Tip="{Binding Shell.I18n.Settings}">
-                        <materialIcons:MaterialIcon Kind="CogOutline" Width="18" Height="18" Foreground="{DynamicResource LauncherOnChromeBrush}"/>
+                        <materialIcons:MaterialIcon Kind="CogOutline" Width="{StaticResource LauncherIconMd}" Height="{StaticResource LauncherIconMd}" Foreground="{DynamicResource LauncherOnChromeBrush}"/>
                     </Button>
                     <Button Classes="chrome" Command="{Binding WindowChrome.MinimizeCommand}" ToolTip.Tip="{Binding Shell.I18n.Minimize}">
-                        <materialIcons:MaterialIcon Kind="Minus" Width="18" Height="18" Foreground="{DynamicResource LauncherOnChromeBrush}"/>
+                        <materialIcons:MaterialIcon Kind="Minus" Width="{StaticResource LauncherIconMd}" Height="{StaticResource LauncherIconMd}" Foreground="{DynamicResource LauncherOnChromeBrush}"/>
                     </Button>
                     <Button Classes="chrome close" Command="{Binding WindowChrome.CloseCommand}" ToolTip.Tip="{Binding Shell.I18n.Close}">
-                        <materialIcons:MaterialIcon Kind="Close" Width="18" Height="18" Foreground="{DynamicResource LauncherOnChromeBrush}"/>
+                        <materialIcons:MaterialIcon Kind="Close" Width="{StaticResource LauncherIconMd}" Height="{StaticResource LauncherIconMd}" Foreground="{DynamicResource LauncherOnChromeBrush}"/>
                     </Button>
                 </StackPanel>
             </Grid>
 
             <Grid Grid.Row="1">
-                <Border HorizontalAlignment="Left"
-                        VerticalAlignment="Top"
-                        Margin="40,64,0,0"
-                        Width="500"
-                        MaxHeight="480"
-                        Classes="surface"
+                <Border Classes="surface remote-surface"
                         IsVisible="{Binding RemoteContent.HasRemoteContent}">
                     <ScrollViewer Classes="scroll-pad">
-                        <StackPanel Spacing="12">
+                        <StackPanel Spacing="{StaticResource LauncherSpacingMd}">
                             <Border IsVisible="{Binding RemoteContent.HasNotice}" Classes="notice-card">
-                                <StackPanel Spacing="4">
+                                <StackPanel Spacing="{StaticResource LauncherSpacingXs}">
                                     <TextBlock Text="{Binding Shell.I18n.Notice}" Classes="panel-title"/>
                                     <ScrollViewer MaxHeight="110" Classes="scroll-pad">
                                         <TextBlock Text="{Binding RemoteContent.NoticeText}" Classes="body" TextWrapping="Wrap"/>
@@ -84,15 +79,15 @@
                                 </StackPanel>
                             </Border>
 
-                            <StackPanel Spacing="8" IsVisible="{Binding RemoteContent.HasBannerItems}">
+                            <StackPanel Spacing="{StaticResource LauncherSpacingSm}" IsVisible="{Binding RemoteContent.HasBannerItems}">
                                 <!-- L5/A3: Banner header with title, page indicator, and pause button -->
-                                <Grid ColumnDefinitions="Auto,*,Auto,Auto" ColumnSpacing="8">
+                                <Grid ColumnDefinitions="Auto,*,Auto,Auto" ColumnSpacing="{StaticResource LauncherSpacingSm}">
                                     <TextBlock Text="{Binding Shell.I18n.Banners}" Classes="panel-title" VerticalAlignment="Center"/>
                                     <TextBlock Grid.Column="2" Text="{Binding RemoteContent.CarouselPageText}" Classes="caption" VerticalAlignment="Center"/>
                                     <Button Grid.Column="3" Classes="icon-button compact" Cursor="Hand"
                                             Command="{Binding RemoteContent.ToggleCarouselLoopCommand}"
                                             ToolTip.Tip="{Binding RemoteContent.CarouselPauseTooltip}">
-                                        <materialIcons:MaterialIcon Kind="{Binding RemoteContent.CarouselPauseIcon}" Width="16" Height="16"
+                                        <materialIcons:MaterialIcon Kind="{Binding RemoteContent.CarouselPauseIcon}" Width="{StaticResource LauncherIconSm}" Height="{StaticResource LauncherIconSm}"
                                                                     Foreground="{DynamicResource LauncherTextSecondaryBrush}"/>
                                     </Button>
                                 </Grid>
@@ -101,7 +96,7 @@
                                           ItemsSource="{Binding RemoteContent.BannerItems}"
                                           SelectedIndex="{Binding RemoteContent.CarouselSelectedIndex, Mode=TwoWay}"
                                           Height="220"
-                                          CornerRadius="4" ClipToBounds="True">
+                                          CornerRadius="{StaticResource LauncherRadiusSm}" ClipToBounds="True">
                                     <Carousel.Styles>
                                         <Style Selector="ContentControl">
                                             <Setter Property="HorizontalContentAlignment" Value="Stretch"/>
@@ -113,13 +108,7 @@
                                     </Carousel.PageTransition>
                                     <Carousel.ItemTemplate>
                                         <DataTemplate x:DataType="models:RemoteContentItem">
-                                            <Button Background="Transparent"
-                                                    BorderThickness="0"
-                                                    Padding="0"
-                                                    HorizontalAlignment="Stretch"
-                                                    VerticalAlignment="Stretch"
-                                                    HorizontalContentAlignment="Stretch"
-                                                    VerticalContentAlignment="Stretch"
+                                            <Button Classes="banner-link"
                                                     Cursor="Hand"
                                                     Width="{Binding #BannerCarousel.Bounds.Width}"
                                                     Height="{Binding #BannerCarousel.Bounds.Height}"
@@ -144,13 +133,13 @@
                                     <Button Grid.Column="0" Classes="icon-button compact" Cursor="Hand"
                                             Command="{Binding RemoteContent.SelectPreviousBannerCommand}"
                                             IsVisible="{Binding RemoteContent.HasMultipleBanners}">
-                                        <materialIcons:MaterialIcon Kind="ChevronLeft" Width="18" Height="18"
+                                        <materialIcons:MaterialIcon Kind="ChevronLeft" Width="{StaticResource LauncherIconMd}" Height="{StaticResource LauncherIconMd}"
                                                                     Foreground="{DynamicResource LauncherTextSecondaryBrush}"/>
                                     </Button>
                                     <ItemsControl Grid.Column="1" ItemsSource="{Binding RemoteContent.BannerDots}" HorizontalAlignment="Center">
                                         <ItemsControl.ItemsPanel>
                                             <ItemsPanelTemplate>
-                                                <StackPanel Orientation="Horizontal" Spacing="8"/>
+                                                <StackPanel Orientation="Horizontal" Spacing="{StaticResource LauncherSpacingSm}"/>
                                             </ItemsPanelTemplate>
                                         </ItemsControl.ItemsPanel>
                                         <ItemsControl.ItemTemplate>
@@ -159,8 +148,7 @@
                                                         Cursor="Hand"
                                                         Command="{Binding DataContext.RemoteContent.SelectBannerCommand, ElementName=Root}"
                                                         CommandParameter="{Binding Index}">
-                                                    <Border Width="8" Height="8" CornerRadius="4"
-                                                            Classes="banner-dot"
+                                                    <Border Classes="banner-dot"
                                                             Classes.active="{Binding IsActive}"/>
                                                 </Button>
                                             </DataTemplate>
@@ -169,21 +157,21 @@
                                     <Button Grid.Column="2" Classes="icon-button compact" Cursor="Hand"
                                             Command="{Binding RemoteContent.SelectNextBannerCommand}"
                                             IsVisible="{Binding RemoteContent.HasMultipleBanners}">
-                                        <materialIcons:MaterialIcon Kind="ChevronRight" Width="18" Height="18"
+                                        <materialIcons:MaterialIcon Kind="ChevronRight" Width="{StaticResource LauncherIconMd}" Height="{StaticResource LauncherIconMd}"
                                                                     Foreground="{DynamicResource LauncherTextSecondaryBrush}"/>
                                     </Button>
                                 </Grid>
                             </StackPanel>
 
-                            <StackPanel Spacing="8" IsVisible="{Binding RemoteContent.HasNewsItems}">
+                            <StackPanel Spacing="{StaticResource LauncherSpacingSm}" IsVisible="{Binding RemoteContent.HasNewsItems}">
                                 <TextBlock Text="{Binding Shell.I18n.News}" Classes="panel-title"/>
                                 <!-- Category tabs -->
                                 <ScrollViewer HorizontalScrollBarVisibility="Auto" VerticalScrollBarVisibility="Disabled">
-                                    <StackPanel Orientation="Horizontal" Spacing="4">
+                                    <StackPanel Orientation="Horizontal" Spacing="{StaticResource LauncherSpacingXs}">
                                         <ItemsControl ItemsSource="{Binding RemoteContent.NewsCategories}">
                                             <ItemsControl.ItemsPanel>
                                                 <ItemsPanelTemplate>
-                                                    <StackPanel Orientation="Horizontal" Spacing="4"/>
+                                                    <StackPanel Orientation="Horizontal" Spacing="{StaticResource LauncherSpacingXs}"/>
                                                 </ItemsPanelTemplate>
                                             </ItemsControl.ItemsPanel>
                                             <ItemsControl.ItemTemplate>
@@ -209,7 +197,7 @@
                                                     Command="{Binding DataContext.RemoteContent.OpenExternalUrlCommand, ElementName=Root}"
                                                     CommandParameter="{Binding Url}">
                                                 <Border Classes="content-row">
-                                                    <Grid ColumnDefinitions="*,Auto" ColumnSpacing="16">
+                                                    <Grid ColumnDefinitions="*,Auto" ColumnSpacing="{StaticResource LauncherSpacingLg}">
                                                         <TextBlock Text="{Binding Title}" Classes="value" TextTrimming="CharacterEllipsis"/>
                                                         <TextBlock Grid.Column="1" Text="{Binding Subtitle}" Width="80" TextAlignment="Right" TextTrimming="CharacterEllipsis" Classes="caption"/>
                                                     </Grid>
@@ -220,7 +208,7 @@
                                 </ItemsControl>
                             </StackPanel>
 
-                            <StackPanel Spacing="8" IsVisible="{Binding RemoteContent.HasSocialMediaItems}">
+                            <StackPanel Spacing="{StaticResource LauncherSpacingSm}" IsVisible="{Binding RemoteContent.HasSocialMediaItems}">
                                 <TextBlock Text="{Binding Shell.I18n.SocialMedia}" Classes="panel-title"/>
                                 <ItemsControl ItemsSource="{Binding RemoteContent.SocialMediaItems}">
                                     <ItemsControl.ItemsPanel>
@@ -231,11 +219,10 @@
                                     <ItemsControl.ItemTemplate>
                                         <DataTemplate x:DataType="models:RemoteContentItem">
                                             <Button Classes="social-chip"
-                                                    Margin="0,0,8,8"
                                                     Command="{Binding DataContext.RemoteContent.OpenExternalUrlCommand, ElementName=Root}"
                                                     CommandParameter="{Binding Url}">
-                                                <StackPanel Orientation="Horizontal" Spacing="8">
-                                                    <materialIcons:MaterialIcon Kind="{Binding SocialIconKind}" Width="16" Height="16"
+                                                <StackPanel Classes="button-content">
+                                                    <materialIcons:MaterialIcon Kind="{Binding SocialIconKind}" Width="{StaticResource LauncherIconSm}" Height="{StaticResource LauncherIconSm}"
                                                                                 Foreground="{DynamicResource LauncherTextSecondaryBrush}"/>
                                                     <TextBlock Text="{Binding Title}" VerticalAlignment="Center"/>
                                                 </StackPanel>
@@ -250,39 +237,39 @@
 
                 <Border IsVisible="{Binding Operations.IsInstallPanelVisible}"
                         Classes="bottom-panel">
-                    <Grid ColumnDefinitions="*,Auto" RowDefinitions="*,Auto" ColumnSpacing="20">
-                        <StackPanel VerticalAlignment="Center" Spacing="8">
-                            <StackPanel Orientation="Horizontal" Spacing="16">
+                    <Grid ColumnDefinitions="*,Auto" RowDefinitions="*,Auto" ColumnSpacing="{StaticResource LauncherSpacingXl}">
+                        <StackPanel VerticalAlignment="Center" Spacing="{StaticResource LauncherSpacingSm}">
+                            <StackPanel Orientation="Horizontal" Spacing="{StaticResource LauncherSpacingLg}">
                                 <TextBlock Classes="caption" Text="{Binding Shell.VersionText}"/>
                                 <TextBlock Classes="caption" Text="{Binding Shell.DiskSpaceText}"/>
                                 <TextBlock Classes="caption" Text="{Binding Shell.NetworkText}"/>
                             </StackPanel>
                             <Border Classes="path-field">
-                                <Grid ColumnDefinitions="Auto,*,Auto" ColumnSpacing="8">
+                                <Grid ColumnDefinitions="Auto,*,Auto" ColumnSpacing="{StaticResource LauncherSpacingSm}">
                                     <TextBlock Text="{Binding Shell.I18n.Path}" Classes="value" VerticalAlignment="Center"/>
                                     <TextBlock Grid.Column="1" Text="{Binding Shell.PathText}" Classes="caption" VerticalAlignment="Center" TextTrimming="CharacterEllipsis"/>
                                     <Button Grid.Column="2" Classes="icon-link" Command="{Binding Settings.ChooseGamePathCommand}" VerticalAlignment="Center"
                                             IsEnabled="{Binding Shell.IsBusy, Converter={x:Static BoolConverters.Not}}">
                                         <StackPanel Classes="button-content">
-                                            <materialIcons:MaterialIcon Kind="FolderOpen" Width="16" Height="16"/>
+                                            <materialIcons:MaterialIcon Kind="FolderOpen" Width="{StaticResource LauncherIconSm}" Height="{StaticResource LauncherIconSm}"/>
                                             <TextBlock Text="{Binding Shell.I18n.ChangePath}" VerticalAlignment="Center"/>
                                         </StackPanel>
                                     </Button>
                                 </Grid>
                             </Border>
                         </StackPanel>
-                        <StackPanel Grid.Column="1" Orientation="Horizontal" Spacing="12" VerticalAlignment="Center">
+                        <StackPanel Grid.Column="1" Orientation="Horizontal" Spacing="{StaticResource LauncherSpacingMd}" VerticalAlignment="Center">
                             <Button Classes="flat-action bottom-action" Command="{Binding RefreshCommand}" ToolTip.Tip="{Binding Shell.I18n.RefreshTooltip}"
                                     IsEnabled="{Binding Shell.IsBusy, Converter={x:Static BoolConverters.Not}}">
                                 <StackPanel Classes="button-content">
-                                    <materialIcons:MaterialIcon Kind="Refresh" Width="18" Height="18"/>
+                                    <materialIcons:MaterialIcon Kind="Refresh" Width="{StaticResource LauncherIconMd}" Height="{StaticResource LauncherIconMd}"/>
                                     <TextBlock Text="{Binding Shell.I18n.Refresh}" VerticalAlignment="Center"/>
                                 </StackPanel>
                             </Button>
                             <Button Classes="primary-action bottom-action" Command="{Binding Operations.InstallOrUpdateCommand}" ToolTip.Tip="{Binding Operations.InstallButtonText}"
                                     IsEnabled="{Binding Shell.IsBusy, Converter={x:Static BoolConverters.Not}}">
                                 <StackPanel Classes="button-content">
-                                    <materialIcons:MaterialIcon Kind="Download" Width="22" Height="22" Foreground="{DynamicResource LauncherOnAccentBrush}"/>
+                                    <materialIcons:MaterialIcon Kind="Download" Width="{StaticResource LauncherIconXl}" Height="{StaticResource LauncherIconXl}" Foreground="{DynamicResource LauncherOnAccentBrush}"/>
                                     <TextBlock Text="{Binding Operations.InstallButtonText}" VerticalAlignment="Center"/>
                                 </StackPanel>
                             </Button>
@@ -292,8 +279,8 @@
 
                 <Border IsVisible="{Binding Operations.IsProgressPanelVisible}"
                         Classes="bottom-panel">
-                    <Grid ColumnDefinitions="*,Auto" ColumnSpacing="20" VerticalAlignment="Center">
-                        <StackPanel Spacing="8" VerticalAlignment="Center">
+                    <Grid ColumnDefinitions="*,Auto" ColumnSpacing="{StaticResource LauncherSpacingXl}" VerticalAlignment="Center">
+                        <StackPanel Spacing="{StaticResource LauncherSpacingSm}" VerticalAlignment="Center">
                             <!-- Title + percentage -->
                             <Grid ColumnDefinitions="Auto,*,Auto">
                                 <TextBlock Text="{Binding Operations.ProgressTitle}" Classes="progress-title" VerticalAlignment="Center"/>
@@ -304,7 +291,7 @@
                             <!-- Progress bar -->
                             <ProgressBar Value="{Binding Operations.ProgressValue}" Minimum="0" Maximum="100" Height="8"/>
                             <!-- Stage | Speed | Size | ETA -->
-                            <Grid ColumnDefinitions="Auto,*,Auto,Auto,Auto" ColumnSpacing="12">
+                            <Grid ColumnDefinitions="Auto,*,Auto,Auto,Auto" ColumnSpacing="{StaticResource LauncherSpacingMd}">
                                 <TextBlock Text="{Binding Operations.ProgressDetail}" Classes="caption"/>
                                 <TextBlock Grid.Column="2" Text="{Binding Operations.ProgressSpeed}" Classes="caption"
                                            IsVisible="{Binding Operations.ProgressSpeed, Converter={x:Static StringConverters.IsNotNullOrEmpty}}"/>
@@ -315,17 +302,17 @@
                                            IsVisible="{Binding Operations.ProgressEstimated, Converter={x:Static StringConverters.IsNotNullOrEmpty}}"/>
                             </Grid>
                         </StackPanel>
-                        <StackPanel Grid.Column="1" Orientation="Horizontal" Spacing="8" VerticalAlignment="Center">
+                        <StackPanel Grid.Column="1" Orientation="Horizontal" Spacing="{StaticResource LauncherSpacingSm}" VerticalAlignment="Center">
                             <Button Classes="flat-action bottom-action" Command="{Binding Operations.PauseResumeCommand}" VerticalAlignment="Center"
                                     IsVisible="{Binding Operations.CanPauseOperation}">
                                 <StackPanel Classes="button-content">
-                                    <materialIcons:MaterialIcon Kind="{Binding Operations.PauseResumeIcon}" Width="18" Height="18"/>
+                                    <materialIcons:MaterialIcon Kind="{Binding Operations.PauseResumeIcon}" Width="{StaticResource LauncherIconMd}" Height="{StaticResource LauncherIconMd}"/>
                                     <TextBlock Text="{Binding Operations.PauseResumeText}" VerticalAlignment="Center"/>
                                 </StackPanel>
                             </Button>
                             <Button Classes="flat-action bottom-action" Command="{Binding Operations.StopOperationCommand}" VerticalAlignment="Center">
                                 <StackPanel Classes="button-content">
-                                    <materialIcons:MaterialIcon Kind="Stop" Width="18" Height="18"/>
+                                    <materialIcons:MaterialIcon Kind="Stop" Width="{StaticResource LauncherIconMd}" Height="{StaticResource LauncherIconMd}"/>
                                     <TextBlock Text="{Binding Shell.I18n.Stop}" VerticalAlignment="Center"/>
                                 </StackPanel>
                             </Button>
@@ -335,23 +322,23 @@
 
                 <Border IsVisible="{Binding Operations.IsControlPanelVisible}"
                         Classes="control-panel">
-                    <Grid ColumnDefinitions="*,Auto" RowDefinitions="*,Auto" ColumnSpacing="24">
-                        <StackPanel Grid.Column="1" Orientation="Horizontal" Spacing="16" VerticalAlignment="Center">
+                    <Grid ColumnDefinitions="*,Auto" RowDefinitions="*,Auto" ColumnSpacing="{StaticResource LauncherSpacingXxl}">
+                        <StackPanel Grid.Column="1" Orientation="Horizontal" Spacing="{StaticResource LauncherSpacingLg}" VerticalAlignment="Center">
                             <Button Classes="launcher-control site" Command="{Binding WindowChrome.OpenOfficialSiteCommand}" ToolTip.Tip="{Binding Shell.I18n.OfficialSite}">
                                 <StackPanel Classes="button-content">
-                                    <materialIcons:MaterialIcon Kind="Web" Width="22" Height="22"/>
+                                    <materialIcons:MaterialIcon Kind="Web" Width="{StaticResource LauncherIconXl}" Height="{StaticResource LauncherIconXl}"/>
                                     <TextBlock Text="{Binding Shell.I18n.OfficialSite}" VerticalAlignment="Center"/>
                                 </StackPanel>
                             </Button>
                             <Button Classes="launcher-control start" Command="{Binding Operations.StartGameCommand}" ToolTip.Tip="{Binding Shell.I18n.StartGame}"
                                     IsEnabled="{Binding Shell.IsBusy, Converter={x:Static BoolConverters.Not}}">
                                 <StackPanel Classes="button-content">
-                                    <materialIcons:MaterialIcon Kind="PlayCircle" Width="24" Height="24" Foreground="{DynamicResource LauncherOnAccentBrush}"/>
+                                    <materialIcons:MaterialIcon Kind="PlayCircle" Width="{StaticResource LauncherIconXxl}" Height="{StaticResource LauncherIconXxl}" Foreground="{DynamicResource LauncherOnAccentBrush}"/>
                                     <TextBlock Text="{Binding Shell.I18n.StartGame}" VerticalAlignment="Center"/>
                                 </StackPanel>
                             </Button>
                         </StackPanel>
-                        <StackPanel Grid.Row="1" Grid.ColumnSpan="2" Orientation="Horizontal" HorizontalAlignment="Right" Spacing="16">
+                        <StackPanel Grid.Row="1" Grid.ColumnSpan="2" Orientation="Horizontal" HorizontalAlignment="Right" Spacing="{StaticResource LauncherSpacingLg}">
                             <TextBlock Text="{Binding Shell.VersionText}" Classes="on-dark-caption"/>
                             <TextBlock Text="{Binding Shell.LaunchCheckText}" Classes="on-dark-caption"/>
                             <TextBlock Text="{Binding Shell.NetworkText}" Classes="on-dark-caption"/>

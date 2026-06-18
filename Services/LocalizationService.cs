@@ -19,6 +19,8 @@ public sealed partial class LocalizedStrings : ObservableObject
     [ObservableProperty] private string close = "";
     [ObservableProperty] private string version = "";
     [ObservableProperty] private string executable = "";
+    [ObservableProperty] private string network = "";
+    [ObservableProperty] private string diskSpaceLabel = "";
     [ObservableProperty] private string path = "";
     [ObservableProperty] private string changePath = "";
     [ObservableProperty] private string refresh = "";
@@ -193,6 +195,8 @@ public sealed partial class LocalizedStrings : ObservableObject
         Close = localizer.T("close");
         Version = localizer.T("version");
         Executable = localizer.T("executable");
+        Network = localizer.T("network");
+        DiskSpaceLabel = localizer.T("diskSpaceLabel");
         Path = localizer.T("path");
         ChangePath = localizer.T("changePath");
         Refresh = localizer.T("refresh");

@@ -47,14 +47,23 @@
         <Setter Property="Foreground" Value="{DynamicResource LauncherOnDarkMutedBrush}"/>
         <Setter Property="FontSize" Value="14"/>
     </Style>
+    <Style Selector="StackPanel.titlebar-brand-row">
+        <Setter Property="Orientation" Value="Horizontal"/>
+        <Setter Property="Margin" Value="20,0,0,0"/>
+        <Setter Property="VerticalAlignment" Value="Center"/>
+    </Style>
+    <Style Selector="StackPanel.titlebar-actions">
+        <Setter Property="Orientation" Value="Horizontal"/>
+        <Setter Property="Margin" Value="0,0,8,0"/>
+    </Style>
     <Style Selector="Button.chrome">
         <Setter Property="Background" Value="{DynamicResource LauncherTransparentBrush}"/>
         <Setter Property="BorderThickness" Value="0"/>
         <Setter Property="Foreground" Value="{DynamicResource LauncherOnChromeBrush}"/>
-        <Setter Property="Width" Value="34"/>
-        <Setter Property="Height" Value="34"/>
+        <Setter Property="Width" Value="{StaticResource LauncherControlHeightSetting}"/>
+        <Setter Property="Height" Value="{StaticResource LauncherControlHeightSetting}"/>
         <Setter Property="Padding" Value="0"/>
-        <Setter Property="CornerRadius" Value="4"/>
+        <Setter Property="CornerRadius" Value="{StaticResource LauncherRadiusSm}"/>
         <Setter Property="HorizontalContentAlignment" Value="Center"/>
         <Setter Property="VerticalContentAlignment" Value="Center"/>
         <Setter Property="Template">
@@ -115,8 +124,8 @@
         <Setter Property="Background" Value="{DynamicResource LauncherTransparentBrush}"/>
         <Setter Property="BorderThickness" Value="0"/>
         <Setter Property="Foreground" Value="{DynamicResource LauncherAccentBrush}"/>
-        <Setter Property="Padding" Value="8,5"/>
-        <Setter Property="CornerRadius" Value="4"/>
+        <Setter Property="Padding" Value="8,4"/>
+        <Setter Property="CornerRadius" Value="{StaticResource LauncherRadiusSm}"/>
         <Setter Property="FontSize" Value="14"/>
         <Setter Property="HorizontalContentAlignment" Value="Center"/>
         <Setter Property="VerticalContentAlignment" Value="Center"/>
@@ -150,7 +159,7 @@
         <Setter Property="Width" Value="28"/>
         <Setter Property="Height" Value="28"/>
         <Setter Property="Padding" Value="0"/>
-        <Setter Property="CornerRadius" Value="4"/>
+        <Setter Property="CornerRadius" Value="{StaticResource LauncherRadiusSm}"/>
         <Setter Property="HorizontalContentAlignment" Value="Center"/>
         <Setter Property="VerticalContentAlignment" Value="Center"/>
     </Style>
@@ -176,9 +185,9 @@
         <Setter Property="FontSize" Value="16"/>
         <Setter Property="FontWeight" Value="SemiBold"/>
         <Setter Property="MinWidth" Value="150"/>
-        <Setter Property="Height" Value="48"/>
-        <Setter Property="Padding" Value="20,10"/>
-        <Setter Property="CornerRadius" Value="4"/>
+        <Setter Property="Height" Value="{StaticResource LauncherControlHeightBottom}"/>
+        <Setter Property="Padding" Value="20,12"/>
+        <Setter Property="CornerRadius" Value="{StaticResource LauncherRadiusSm}"/>
         <Setter Property="HorizontalContentAlignment" Value="Center"/>
         <Setter Property="VerticalContentAlignment" Value="Center"/>
         <Setter Property="Template">
@@ -213,9 +222,9 @@
         <Setter Property="BorderBrush" Value="{DynamicResource LauncherButtonBorderBrush}"/>
         <Setter Property="BorderThickness" Value="1"/>
         <Setter Property="Foreground" Value="{DynamicResource LauncherTextPrimaryBrush}"/>
-        <Setter Property="Padding" Value="13,8"/>
-        <Setter Property="CornerRadius" Value="4"/>
-        <Setter Property="MinHeight" Value="36"/>
+        <Setter Property="Padding" Value="12,8"/>
+        <Setter Property="CornerRadius" Value="{StaticResource LauncherRadiusSm}"/>
+        <Setter Property="MinHeight" Value="{StaticResource LauncherControlHeightSetting}"/>
         <Setter Property="HorizontalContentAlignment" Value="Center"/>
         <Setter Property="VerticalContentAlignment" Value="Center"/>
         <Setter Property="Template">
@@ -249,20 +258,20 @@
         <Setter Property="BorderBrush" Value="{DynamicResource LauncherCardBorderBrush}"/>
     </Style>
     <Style Selector="Button.flat-action.icon-only">
-        <Setter Property="Width" Value="36"/>
-        <Setter Property="Height" Value="36"/>
-        <Setter Property="MinWidth" Value="36"/>
+        <Setter Property="Width" Value="{StaticResource LauncherControlHeightSetting}"/>
+        <Setter Property="Height" Value="{StaticResource LauncherControlHeightSetting}"/>
+        <Setter Property="MinWidth" Value="{StaticResource LauncherControlHeightSetting}"/>
         <Setter Property="Padding" Value="0"/>
     </Style>
     <Style Selector="Button.bottom-action">
-        <Setter Property="Height" Value="48"/>
+        <Setter Property="Height" Value="{StaticResource LauncherControlHeightBottom}"/>
         <Setter Property="MinWidth" Value="156"/>
-        <Setter Property="Padding" Value="18,10"/>
+        <Setter Property="Padding" Value="20,12"/>
         <Setter Property="FontSize" Value="15"/>
         <Setter Property="FontWeight" Value="SemiBold"/>
     </Style>
     <Style Selector="Button.dialog-action">
-        <Setter Property="Height" Value="42"/>
+        <Setter Property="Height" Value="{StaticResource LauncherControlHeightDialog}"/>
         <Setter Property="MinWidth" Value="108"/>
         <Setter Property="Padding" Value="16,0"/>
         <Setter Property="FontSize" Value="14"/>
@@ -270,16 +279,16 @@
     <Style Selector="StackPanel.confirm-actions">
         <Setter Property="Orientation" Value="Horizontal"/>
         <Setter Property="HorizontalAlignment" Value="Right"/>
-        <Setter Property="Spacing" Value="12"/>
+        <Setter Property="Spacing" Value="{StaticResource LauncherSpacingMd}"/>
     </Style>
     <Style Selector="Button.danger-action">
         <Setter Property="Background" Value="{DynamicResource LauncherDangerBrush}"/>
         <Setter Property="Foreground" Value="{DynamicResource LauncherOnAccentBrush}"/>
         <Setter Property="BorderThickness" Value="0"/>
         <Setter Property="FontWeight" Value="SemiBold"/>
-        <Setter Property="MinHeight" Value="42"/>
-        <Setter Property="Padding" Value="18,10"/>
-        <Setter Property="CornerRadius" Value="4"/>
+        <Setter Property="MinHeight" Value="{StaticResource LauncherControlHeightDialog}"/>
+        <Setter Property="Padding" Value="20,12"/>
+        <Setter Property="CornerRadius" Value="{StaticResource LauncherRadiusSm}"/>
         <Setter Property="HorizontalContentAlignment" Value="Center"/>
         <Setter Property="VerticalContentAlignment" Value="Center"/>
         <Setter Property="Template">
@@ -309,10 +318,10 @@
         <Setter Property="Background" Value="{DynamicResource LauncherTransparentBrush}"/>
         <Setter Property="BorderThickness" Value="0"/>
         <Setter Property="Foreground" Value="{DynamicResource LauncherTextSecondaryBrush}"/>
-        <Setter Property="Width" Value="34"/>
-        <Setter Property="Height" Value="34"/>
+        <Setter Property="Width" Value="{StaticResource LauncherControlHeightSetting}"/>
+        <Setter Property="Height" Value="{StaticResource LauncherControlHeightSetting}"/>
         <Setter Property="Padding" Value="0"/>
-        <Setter Property="CornerRadius" Value="4"/>
+        <Setter Property="CornerRadius" Value="{StaticResource LauncherRadiusSm}"/>
         <Setter Property="HorizontalContentAlignment" Value="Center"/>
         <Setter Property="VerticalContentAlignment" Value="Center"/>
         <Setter Property="Template">
@@ -340,9 +349,9 @@
     </Style>
     <Style Selector="Button.launcher-control">
         <Setter Property="Width" Value="220"/>
-        <Setter Property="Height" Value="58"/>
+        <Setter Property="Height" Value="{StaticResource LauncherControlHeightLaunch}"/>
         <Setter Property="Padding" Value="20,0"/>
-        <Setter Property="CornerRadius" Value="6"/>
+        <Setter Property="CornerRadius" Value="{StaticResource LauncherRadiusMd}"/>
         <Setter Property="FontSize" Value="17"/>
         <Setter Property="FontWeight" Value="SemiBold"/>
         <Setter Property="Opacity" Value="1"/>
@@ -408,24 +417,31 @@
     </Style>
     <Style Selector="Border.surface">
         <Setter Property="Background" Value="{DynamicResource LauncherPanelBackgroundBrush}"/>
-        <Setter Property="CornerRadius" Value="6"/>
+        <Setter Property="CornerRadius" Value="{StaticResource LauncherRadiusMd}"/>
         <Setter Property="Padding" Value="16"/>
         <Setter Property="BoxShadow" Value="0 12 32 0 #33000000"/>
     </Style>
+    <Style Selector="Border.remote-surface">
+        <Setter Property="HorizontalAlignment" Value="Left"/>
+        <Setter Property="VerticalAlignment" Value="Top"/>
+        <Setter Property="Margin" Value="40,64,0,0"/>
+        <Setter Property="Width" Value="500"/>
+        <Setter Property="MaxHeight" Value="480"/>
+    </Style>
     <Style Selector="Border.info-strip">
         <Setter Property="Background" Value="{DynamicResource LauncherAccentSoftBrush}"/>
-        <Setter Property="CornerRadius" Value="4"/>
-        <Setter Property="Padding" Value="10"/>
+        <Setter Property="CornerRadius" Value="{StaticResource LauncherRadiusSm}"/>
+        <Setter Property="Padding" Value="12"/>
     </Style>
     <Style Selector="Border.notice-card">
         <Setter Property="Background" Value="{DynamicResource LauncherNoticeBackgroundBrush}"/>
-        <Setter Property="CornerRadius" Value="4"/>
+        <Setter Property="CornerRadius" Value="{StaticResource LauncherRadiusSm}"/>
         <Setter Property="Padding" Value="12"/>
         <Setter Property="MaxHeight" Value="160"/>
     </Style>
     <Style Selector="Border.media-placeholder">
         <Setter Property="Background" Value="{DynamicResource LauncherMediaPlaceholderBrush}"/>
-        <Setter Property="CornerRadius" Value="4"/>
+        <Setter Property="CornerRadius" Value="{StaticResource LauncherRadiusSm}"/>
         <Setter Property="HorizontalAlignment" Value="Stretch"/>
         <Setter Property="VerticalAlignment" Value="Stretch"/>
     </Style>
@@ -439,22 +455,22 @@
         <Setter Property="Background" Value="{DynamicResource LauncherFieldBackgroundBrush}"/>
         <Setter Property="BorderBrush" Value="{DynamicResource LauncherFieldBorderBrush}"/>
         <Setter Property="BorderThickness" Value="1"/>
-        <Setter Property="CornerRadius" Value="4"/>
-        <Setter Property="Height" Value="38"/>
-        <Setter Property="Padding" Value="14,0"/>
+        <Setter Property="CornerRadius" Value="{StaticResource LauncherRadiusSm}"/>
+        <Setter Property="Height" Value="40"/>
+        <Setter Property="Padding" Value="16,0"/>
     </Style>
-    <!-- bottom-panel and control-panel share left/right/bottom padding (40,*,40,18).
-         Top padding differs intentionally: 18 (bottom-panel, tighter) vs 24 (control-panel, more breathing room). -->
+    <!-- Bottom panels share 40px horizontal alignment with the remote surface.
+         The control panel keeps a larger 24px top inset for visual separation. -->
     <Style Selector="Border.bottom-panel">
         <Setter Property="VerticalAlignment" Value="Bottom"/>
         <Setter Property="MinHeight" Value="132"/>
         <Setter Property="Background" Value="{DynamicResource LauncherBottomPanelBackgroundBrush}"/>
-        <Setter Property="Padding" Value="40,18,40,18"/>
+        <Setter Property="Padding" Value="40,20,40,20"/>
     </Style>
     <Style Selector="Border.control-panel">
         <Setter Property="VerticalAlignment" Value="Bottom"/>
         <Setter Property="MinHeight" Value="156"/>
-        <Setter Property="Padding" Value="40,24,40,18"/>
+        <Setter Property="Padding" Value="40,24,40,20"/>
         <!-- Dark gradient overlay on top of wallpaper — intentionally theme-invariant (black transparency). -->
         <Setter Property="Background">
             <LinearGradientBrush StartPoint="0%,0%" EndPoint="0%,100%">
@@ -466,8 +482,8 @@
     </Style>
     <Style Selector="Border.content-row">
         <Setter Property="Background" Value="{DynamicResource LauncherContentRowBrush}"/>
-        <Setter Property="CornerRadius" Value="4"/>
-        <Setter Property="Padding" Value="8,7"/>
+        <Setter Property="CornerRadius" Value="{StaticResource LauncherRadiusSm}"/>
+        <Setter Property="Padding" Value="8"/>
         <Setter Property="Margin" Value="0,0,0,4"/>
     </Style>
     <Style Selector="Button.content-link">
@@ -495,11 +511,33 @@
     <Style Selector="Button.content-link:pointerover">
         <Setter Property="Background" Value="{DynamicResource LauncherContentRowHoverBrush}"/>
     </Style>
+    <Style Selector="Button.banner-link">
+        <Setter Property="Background" Value="{DynamicResource LauncherTransparentBrush}"/>
+        <Setter Property="BorderThickness" Value="0"/>
+        <Setter Property="Padding" Value="0"/>
+        <Setter Property="HorizontalAlignment" Value="Stretch"/>
+        <Setter Property="VerticalAlignment" Value="Stretch"/>
+        <Setter Property="HorizontalContentAlignment" Value="Stretch"/>
+        <Setter Property="VerticalContentAlignment" Value="Stretch"/>
+    </Style>
+    <Style Selector="Grid.settings-overlay">
+        <Setter Property="Background" Value="{DynamicResource LauncherOverlayBrush}"/>
+        <Setter Property="ZIndex" Value="100"/>
+    </Style>
+    <Style Selector="Grid.dialog-overlay">
+        <Setter Property="Background" Value="{DynamicResource LauncherOverlayBrush}"/>
+        <Setter Property="ZIndex" Value="200"/>
+    </Style>
     <Style Selector="Border.dialog">
         <Setter Property="Background" Value="{DynamicResource LauncherDialogBackgroundBrush}"/>
-        <Setter Property="CornerRadius" Value="8"/>
+        <Setter Property="CornerRadius" Value="{StaticResource LauncherRadiusLg}"/>
         <Setter Property="ClipToBounds" Value="True"/>
         <Setter Property="BoxShadow" Value="0 22 55 0 #66000000"/>
+    </Style>
+    <Style Selector="Border.overlay-dialog">
+        <Setter Property="Margin" Value="24"/>
+        <Setter Property="HorizontalAlignment" Value="Center"/>
+        <Setter Property="VerticalAlignment" Value="Center"/>
     </Style>
     <Style Selector="Grid.dialog-header">
         <Setter Property="Background" Value="{DynamicResource LauncherDialogHeaderBrush}"/>
@@ -508,7 +546,7 @@
     </Style>
     <Style Selector="StackPanel.dialog-title-row">
         <Setter Property="Orientation" Value="Horizontal"/>
-        <Setter Property="Spacing" Value="12"/>
+        <Setter Property="Spacing" Value="{StaticResource LauncherSpacingMd}"/>
         <Setter Property="Margin" Value="16,0,0,0"/>
         <Setter Property="VerticalAlignment" Value="Center"/>
     </Style>
@@ -527,12 +565,19 @@
         <Setter Property="HorizontalAlignment" Value="Center"/>
         <Setter Property="VerticalAlignment" Value="Center"/>
     </Style>
+    <Style Selector="Grid.dialog-heading">
+        <Setter Property="ColumnSpacing" Value="{StaticResource LauncherSpacingMd}"/>
+    </Style>
+    <Style Selector="StackPanel.dialog-heading-copy">
+        <Setter Property="Spacing" Value="{StaticResource LauncherSpacingXs}"/>
+        <Setter Property="VerticalAlignment" Value="Center"/>
+    </Style>
     <Style Selector="Grid.confirm-layout">
         <Setter Property="Margin" Value="16"/>
-        <Setter Property="RowSpacing" Value="16"/>
+        <Setter Property="RowSpacing" Value="{StaticResource LauncherSpacingLg}"/>
     </Style>
     <Style Selector="Border.confirm-message">
-        <Setter Property="CornerRadius" Value="4"/>
+        <Setter Property="CornerRadius" Value="{StaticResource LauncherRadiusSm}"/>
         <Setter Property="Padding" Value="12"/>
         <Setter Property="MinHeight" Value="74"/>
     </Style>
@@ -544,20 +589,18 @@
         <Setter Property="Background" Value="{DynamicResource LauncherCardBackgroundBrush}"/>
         <Setter Property="BorderBrush" Value="{DynamicResource LauncherCardBorderBrush}"/>
         <Setter Property="BorderThickness" Value="1"/>
-        <Setter Property="CornerRadius" Value="4"/>
+        <Setter Property="CornerRadius" Value="{StaticResource LauncherRadiusSm}"/>
         <Setter Property="Padding" Value="16"/>
     </Style>
     <Style Selector="Border.dialog-icon">
-        <Setter Property="Width" Value="34"/>
-        <Setter Property="Height" Value="34"/>
-        <Setter Property="CornerRadius" Value="4"/>
+        <Setter Property="Width" Value="{StaticResource LauncherControlHeightSetting}"/>
+        <Setter Property="Height" Value="{StaticResource LauncherControlHeightSetting}"/>
+        <Setter Property="CornerRadius" Value="{StaticResource LauncherRadiusSm}"/>
         <Setter Property="Background" Value="{DynamicResource LauncherAccentSoftBrush}"/>
         <Setter Property="BorderBrush" Value="{DynamicResource LauncherAccentBorderBrush}"/>
         <Setter Property="BorderThickness" Value="1"/>
     </Style>
     <Style Selector="Border.dialog-icon.danger">
-        <Setter Property="Width" Value="38"/>
-        <Setter Property="Height" Value="38"/>
         <Setter Property="Background" Value="{DynamicResource LauncherDangerSoftBrush}"/>
         <Setter Property="BorderBrush" Value="{DynamicResource LauncherDangerBrush}"/>
     </Style>
@@ -579,23 +622,44 @@
     </Style>
     <Style Selector="StackPanel.button-content">
         <Setter Property="Orientation" Value="Horizontal"/>
-        <Setter Property="Spacing" Value="8"/>
+        <Setter Property="Spacing" Value="{StaticResource LauncherSpacingSm}"/>
     </Style>
     <Style Selector="StackPanel.card-heading">
         <Setter Property="Orientation" Value="Horizontal"/>
-        <Setter Property="Spacing" Value="10"/>
+        <Setter Property="Spacing" Value="{StaticResource LauncherSpacingSm}"/>
+    </Style>
+    <Style Selector="StackPanel.status-panel">
+        <Setter Property="Spacing" Value="{StaticResource LauncherSpacingMd}"/>
+    </Style>
+    <Style Selector="Grid.status-summary">
+        <Setter Property="ColumnSpacing" Value="{StaticResource LauncherSpacingMd}"/>
+    </Style>
+    <Style Selector="TextBlock.status-summary-title">
+        <Setter Property="FontSize" Value="15"/>
+        <Setter Property="FontWeight" Value="SemiBold"/>
+        <Setter Property="Foreground" Value="{DynamicResource LauncherTextPrimaryBrush}"/>
+    </Style>
+    <Style Selector="Grid.status-details">
+        <Setter Property="ColumnSpacing" Value="{StaticResource LauncherSpacingSm}"/>
+        <Setter Property="RowSpacing" Value="{StaticResource LauncherSpacingSm}"/>
+    </Style>
+    <Style Selector="Border.status-detail">
+        <Setter Property="Background" Value="{DynamicResource LauncherContentRowBrush}"/>
+        <Setter Property="CornerRadius" Value="{StaticResource LauncherRadiusSm}"/>
+        <Setter Property="Padding" Value="12"/>
+        <Setter Property="MinWidth" Value="0"/>
     </Style>
     <Style Selector="Border.settings-section">
         <Setter Property="Background" Value="{DynamicResource LauncherCardBackgroundBrush}"/>
         <Setter Property="BorderBrush" Value="{DynamicResource LauncherCardBorderBrush}"/>
         <Setter Property="BorderThickness" Value="1"/>
-        <Setter Property="CornerRadius" Value="6"/>
+        <Setter Property="CornerRadius" Value="{StaticResource LauncherRadiusMd}"/>
         <Setter Property="Padding" Value="16"/>
     </Style>
     <Style Selector="Border.settings-icon">
-        <Setter Property="Width" Value="30"/>
-        <Setter Property="Height" Value="30"/>
-        <Setter Property="CornerRadius" Value="4"/>
+        <Setter Property="Width" Value="32"/>
+        <Setter Property="Height" Value="32"/>
+        <Setter Property="CornerRadius" Value="{StaticResource LauncherRadiusSm}"/>
         <Setter Property="Background" Value="{DynamicResource LauncherAccentSoftBrush}"/>
         <Setter Property="BorderBrush" Value="{DynamicResource LauncherAccentBorderBrush}"/>
         <Setter Property="BorderThickness" Value="1"/>
@@ -607,23 +671,24 @@
     <Style Selector="Border.version-chip">
         <Setter Property="Background" Value="{DynamicResource LauncherAccentSoftBrush}"/>
         <Setter Property="BorderThickness" Value="0"/>
-        <Setter Property="CornerRadius" Value="6"/>
-        <Setter Property="Padding" Value="11,6"/>
-        <Setter Property="MinHeight" Value="30"/>
+        <Setter Property="CornerRadius" Value="{StaticResource LauncherRadiusMd}"/>
+        <Setter Property="Padding" Value="12,8"/>
+        <Setter Property="MinHeight" Value="32"/>
         <Setter Property="Margin" Value="0,0,8,8"/>
     </Style>
     <Style Selector="Grid.settings-row">
         <Setter Property="MinHeight" Value="44"/>
         <Setter Property="Margin" Value="0,8,0,0"/>
+        <Setter Property="ColumnSpacing" Value="{StaticResource LauncherSpacingMd}"/>
     </Style>
     <Style Selector="ComboBox.setting-control">
         <Setter Property="Width" Value="190"/>
-        <Setter Property="MinHeight" Value="36"/>
+        <Setter Property="MinHeight" Value="{StaticResource LauncherControlHeightSetting}"/>
         <Setter Property="VerticalAlignment" Value="Center"/>
     </Style>
     <Style Selector="ColorPicker.setting-control">
         <Setter Property="Width" Value="190"/>
-        <Setter Property="MinHeight" Value="36"/>
+        <Setter Property="MinHeight" Value="{StaticResource LauncherControlHeightSetting}"/>
         <Setter Property="HorizontalContentAlignment" Value="Center"/>
         <Setter Property="VerticalContentAlignment" Value="Center"/>
         <Setter Property="VerticalAlignment" Value="Center"/>
@@ -632,12 +697,12 @@
         <Setter Property="Background" Value="{DynamicResource LauncherFieldBackgroundBrush}"/>
         <Setter Property="BorderBrush" Value="{DynamicResource LauncherFieldBorderBrush}"/>
         <Setter Property="BorderThickness" Value="1"/>
-        <Setter Property="CornerRadius" Value="6"/>
-        <Setter Property="Padding" Value="12,9"/>
+        <Setter Property="CornerRadius" Value="{StaticResource LauncherRadiusMd}"/>
+        <Setter Property="Padding" Value="12,8"/>
         <Setter Property="FontSize" Value="14"/>
         <Setter Property="Foreground" Value="{DynamicResource LauncherTextPrimaryBrush}"/>
         <Setter Property="MinWidth" Value="160"/>
-        <Setter Property="MinHeight" Value="38"/>
+        <Setter Property="MinHeight" Value="40"/>
         <Setter Property="VerticalContentAlignment" Value="Center"/>
         <Setter Property="CaretBrush" Value="{DynamicResource LauncherAccentBrush}"/>
     </Style>
@@ -665,7 +730,7 @@
     <Style Selector="Border.color-swatch">
         <Setter Property="Width" Value="28"/>
         <Setter Property="Height" Value="28"/>
-        <Setter Property="CornerRadius" Value="4"/>
+        <Setter Property="CornerRadius" Value="{StaticResource LauncherRadiusSm}"/>
         <Setter Property="BorderBrush" Value="{DynamicResource LauncherCardBorderBrush}"/>
         <Setter Property="BorderThickness" Value="1"/>
     </Style>
@@ -675,12 +740,15 @@
         <Setter Property="Width" Value="28"/>
         <Setter Property="Height" Value="28"/>
         <Setter Property="Padding" Value="0"/>
-        <Setter Property="CornerRadius" Value="4"/>
+        <Setter Property="CornerRadius" Value="{StaticResource LauncherRadiusSm}"/>
         <Setter Property="HorizontalContentAlignment" Value="Stretch"/>
         <Setter Property="VerticalContentAlignment" Value="Stretch"/>
     </Style>
     <Style Selector="Border.banner-dot">
         <Setter Property="Background" Value="{DynamicResource LauncherCarouselDotInactiveBrush}"/>
+        <Setter Property="Width" Value="{StaticResource LauncherSpacingSm}"/>
+        <Setter Property="Height" Value="{StaticResource LauncherSpacingSm}"/>
+        <Setter Property="CornerRadius" Value="{StaticResource LauncherRadiusSm}"/>
     </Style>
     <Style Selector="Border.banner-dot.active">
         <Setter Property="Background" Value="{DynamicResource LauncherCarouselDotActiveBrush}"/>
@@ -693,9 +761,10 @@
         <Setter Property="BorderBrush" Value="{DynamicResource LauncherButtonBorderBrush}"/>
         <Setter Property="BorderThickness" Value="1"/>
         <Setter Property="Foreground" Value="{DynamicResource LauncherTextPrimaryBrush}"/>
-        <Setter Property="Padding" Value="10,6"/>
-        <Setter Property="MinHeight" Value="30"/>
-        <Setter Property="CornerRadius" Value="4"/>
+        <Setter Property="Padding" Value="12,8"/>
+        <Setter Property="MinHeight" Value="32"/>
+        <Setter Property="CornerRadius" Value="{StaticResource LauncherRadiusSm}"/>
+        <Setter Property="Margin" Value="0,0,8,8"/>
     </Style>
     <Style Selector="Button.social-chip:pointerover">
         <Setter Property="Background" Value="{DynamicResource LauncherFlatHoverBrush}"/>
@@ -704,9 +773,9 @@
     </Style>
     <Style Selector="Border.toast-card">
         <Setter Property="Background" Value="{DynamicResource LauncherToastBackgroundBrush}"/>
-        <Setter Property="CornerRadius" Value="6"/>
+        <Setter Property="CornerRadius" Value="{StaticResource LauncherRadiusMd}"/>
         <Setter Property="BoxShadow" Value="0 8 24 0 #3A000000"/>
-        <Setter Property="Padding" Value="11,10"/>
+        <Setter Property="Padding" Value="12"/>
         <Setter Property="MaxWidth" Value="340"/>
         <Style.Animations>
             <Animation Duration="0:0:0.35" FillMode="Forward">
@@ -719,6 +788,22 @@
             </Animation>
         </Style.Animations>
     </Style>
+    <Style Selector="Grid.toast-host">
+        <Setter Property="IsHitTestVisible" Value="False"/>
+        <Setter Property="Margin" Value="0,56,16,0"/>
+        <Setter Property="VerticalAlignment" Value="Top"/>
+        <Setter Property="HorizontalAlignment" Value="Right"/>
+    </Style>
+    <Style Selector="StackPanel.toast-list">
+        <Setter Property="Spacing" Value="{StaticResource LauncherSpacingSm}"/>
+        <Setter Property="HorizontalAlignment" Value="Right"/>
+    </Style>
+    <Style Selector="Grid.toast-layout">
+        <Setter Property="ColumnSpacing" Value="{StaticResource LauncherSpacingSm}"/>
+    </Style>
+    <Style Selector="StackPanel.toast-copy">
+        <Setter Property="Spacing" Value="{StaticResource LauncherSpacingXs}"/>
+    </Style>
     <Style Selector="TextBlock.toast-message">
         <Setter Property="FontSize" Value="13"/>
         <Setter Property="Foreground" Value="{DynamicResource LauncherTextBodyBrush}"/>
@@ -726,16 +811,18 @@
         <Setter Property="MaxWidth" Value="282"/>
     </Style>
     <Style Selector="Button.toast-close">
-        <Setter Property="Background" Value="Transparent"/>
+        <Setter Property="Background" Value="{DynamicResource LauncherTransparentBrush}"/>
         <Setter Property="BorderThickness" Value="0"/>
         <Setter Property="Foreground" Value="{DynamicResource LauncherTextSecondaryBrush}"/>
         <Setter Property="Width" Value="22"/>
         <Setter Property="Height" Value="22"/>
         <Setter Property="Padding" Value="0"/>
-        <Setter Property="CornerRadius" Value="4"/>
+        <Setter Property="CornerRadius" Value="{StaticResource LauncherRadiusSm}"/>
         <Setter Property="HorizontalContentAlignment" Value="Center"/>
         <Setter Property="VerticalContentAlignment" Value="Center"/>
         <Setter Property="Opacity" Value="0.5"/>
+        <Setter Property="VerticalAlignment" Value="Top"/>
+        <Setter Property="Margin" Value="0,4,0,0"/>
     </Style>
     <Style Selector="Button.toast-close:pointerover">
         <Setter Property="Opacity" Value="1"/>
@@ -766,12 +853,12 @@
 
     <!-- Shared utility styles for repeated inline patterns -->
     <Style Selector="ScrollViewer.scroll-pad">
-        <Setter Property="Padding" Value="0,0,6,0"/>
+        <Setter Property="Padding" Value="0,0,8,0"/>
     </Style>
     <Style Selector="Border.color-swatch-preview">
         <Setter Property="Width" Value="16"/>
         <Setter Property="Height" Value="16"/>
-        <Setter Property="CornerRadius" Value="4"/>
+        <Setter Property="CornerRadius" Value="{StaticResource LauncherRadiusSm}"/>
         <Setter Property="BorderBrush" Value="{DynamicResource LauncherCardBorderBrush}"/>
         <Setter Property="BorderThickness" Value="1"/>
     </Style>
