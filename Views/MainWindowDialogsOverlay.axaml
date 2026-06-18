@@ -348,5 +348,122 @@
                 </Grid>
             </Border>
         </Grid>
+        <!-- Migration wizard dialog -->
+        <Grid IsVisible="{Binding MigrationWizard.IsVisible}" Background="{DynamicResource LauncherOverlayBrush}">
+            <Border Classes="dialog" MaxWidth="620" MaxHeight="560" Margin="24"
+                    HorizontalAlignment="Center" VerticalAlignment="Center">
+                <Grid RowDefinitions="Auto,*,Auto" RowSpacing="16" Classes="confirm-layout">
+                    <!-- Header -->
+                    <Grid ColumnDefinitions="Auto,*,Auto" ColumnSpacing="12">
+                        <Border Classes="dialog-icon" VerticalAlignment="Center">
+                            <materialIcons:MaterialIcon Kind="SwapHorizontal" Width="22" Height="22"
+                                                       Foreground="{DynamicResource LauncherAccentBrush}"
+                                                       HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                        </Border>
+                        <StackPanel Grid.Column="1" Spacing="4" VerticalAlignment="Center">
+                            <TextBlock Text="{Binding Shell.I18n.MigrationWizardTitle}" Classes="dialog-title"/>
+                            <TextBlock Text="{Binding Shell.I18n.MigrationWizardDescription}" Classes="caption" TextWrapping="Wrap"/>
+                        </StackPanel>
+                        <Button Grid.Column="2" Classes="dialog-close" Command="{Binding MigrationWizard.SkipMigrationCommand}"
+                                ToolTip.Tip="{Binding Shell.I18n.Close}">
+                            <materialIcons:MaterialIcon Kind="Close" Width="18" Height="18"/>
+                        </Button>
+                    </Grid>
+
+                    <!-- Content -->
+                    <ScrollViewer Grid.Row="1" Padding="0,0,6,0">
+                        <StackPanel Spacing="16">
+                            <!-- Game path section -->
+                            <Border Classes="dialog-card" Padding="14" Background="{DynamicResource LauncherCardBackgroundBrush}">
+                                <Grid RowDefinitions="Auto,Auto" RowSpacing="10">
+                                    <TextBlock Text="{Binding Shell.I18n.MigrationGamePathLabel}" Classes="section-title"/>
+                                    <Grid Grid.Row="1" ColumnDefinitions="*,Auto" ColumnSpacing="8">
+                                        <TextBox Text="{Binding MigrationWizard.DetectedGamePath, Mode=TwoWay}"
+                                                 MinHeight="42" VerticalContentAlignment="Center"
+                                                 PlaceholderText="{Binding Shell.I18n.MigrationGamePathNotFound}"/>
+                                        <Button Grid.Column="1" Classes="flat-action dialog-action" Height="42"
+                                                Command="{Binding MigrationWizard.BrowseGamePathCommand}">
+                                            <StackPanel Classes="button-content" Orientation="Horizontal" Spacing="6">
+                                                <materialIcons:MaterialIcon Kind="FolderOpen" Width="17" Height="17"/>
+                                                <TextBlock Text="{Binding Shell.I18n.MigrationGamePathBrowse}" VerticalAlignment="Center"/>
+                                            </StackPanel>
+                                        </Button>
+                                    </Grid>
+                                </Grid>
+                            </Border>
+
+                            <!-- Proxy mode -->
+                            <Border Classes="dialog-card" Padding="14" Background="{DynamicResource LauncherCardBackgroundBrush}">
+                                <Grid ColumnDefinitions="*,Auto" ColumnSpacing="16">
+                                    <TextBlock Text="{Binding Shell.I18n.MigrationProxyLabel}"
+                                               VerticalAlignment="Center" Classes="section-title" MinWidth="120"/>
+                                    <ComboBox Grid.Column="1" Classes="setting-control" MinWidth="140"
+                                              ItemsSource="{Binding MigrationWizard.ProxyModeOptions}"
+                                              SelectedIndex="{Binding MigrationWizard.SelectedProxyModeIndex, Mode=TwoWay}">
+                                        <ComboBox.ItemTemplate>
+                                            <DataTemplate>
+                                                <TextBlock Text="{Binding DisplayName}"/>
+                                            </DataTemplate>
+                                        </ComboBox.ItemTemplate>
+                                    </ComboBox>
+                                </Grid>
+                            </Border>
+
+                            <!-- Close behavior -->
+                            <Border Classes="dialog-card" Padding="14" Background="{DynamicResource LauncherCardBackgroundBrush}">
+                                <Grid ColumnDefinitions="*,Auto" ColumnSpacing="16">
+                                    <TextBlock Text="{Binding Shell.I18n.MigrationCloseBehaviorLabel}"
+                                               VerticalAlignment="Center" Classes="section-title" MinWidth="120"/>
+                                    <ComboBox Grid.Column="1" Classes="setting-control" MinWidth="140"
+                                              ItemsSource="{Binding MigrationWizard.CloseBehaviorOptions}"
+                                              SelectedIndex="{Binding MigrationWizard.SelectedCloseBehaviorIndex, Mode=TwoWay}">
+                                        <ComboBox.ItemTemplate>
+                                            <DataTemplate>
+                                                <TextBlock Text="{Binding DisplayName}"/>
+                                            </DataTemplate>
+                                        </ComboBox.ItemTemplate>
+                                    </ComboBox>
+                                </Grid>
+                            </Border>
+
+                            <!-- Info strips -->
+                            <Border Classes="info-strip" IsVisible="{Binding MigrationWizard.ClickCodeFound}">
+                                <StackPanel Spacing="4" Orientation="Horizontal">
+                                    <materialIcons:MaterialIcon Kind="CheckCircle" Width="16" Height="16"
+                                                               Foreground="{DynamicResource LauncherSuccessBrush}"
+                                                               VerticalAlignment="Center"/>
+                                    <TextBlock Text="{Binding Shell.I18n.MigrationClickCodeFound}" Classes="caption" VerticalAlignment="Center"/>
+                                </StackPanel>
+                            </Border>
+
+                            <Border Classes="info-strip" IsVisible="{Binding MigrationWizard.LevelDbReadSuccess, Converter={x:Static BoolConverters.Not}}">
+                                <StackPanel Spacing="4" Orientation="Horizontal">
+                                    <materialIcons:MaterialIcon Kind="InformationOutline" Width="16" Height="16"
+                                                               Foreground="{DynamicResource LauncherAccentBrush}"
+                                                               VerticalAlignment="Center"/>
+                                    <TextBlock Text="{Binding Shell.I18n.MigrationLevelDbFailed}" Classes="caption" VerticalAlignment="Center" TextWrapping="Wrap"/>
+                                </StackPanel>
+                            </Border>
+                        </StackPanel>
+                    </ScrollViewer>
+
+                    <!-- Footer actions -->
+                    <StackPanel Grid.Row="2" Classes="confirm-actions">
+                        <Button Classes="flat-action dialog-action" Command="{Binding MigrationWizard.SkipMigrationCommand}">
+                            <StackPanel Classes="button-content">
+                                <materialIcons:MaterialIcon Kind="SkipNextOutline" Width="17" Height="17"/>
+                                <TextBlock Text="{Binding Shell.I18n.MigrationSkip}" VerticalAlignment="Center"/>
+                            </StackPanel>
+                        </Button>
+                        <Button Classes="primary-action dialog-action" Command="{Binding MigrationWizard.ApplyMigrationCommand}">
+                            <StackPanel Classes="button-content">
+                                <materialIcons:MaterialIcon Kind="Check" Width="18" Height="18" Foreground="{DynamicResource LauncherOnAccentBrush}"/>
+                                <TextBlock Text="{Binding Shell.I18n.MigrationApply}" VerticalAlignment="Center" Foreground="{DynamicResource LauncherOnAccentBrush}"/>
+                            </StackPanel>
+                        </Button>
+                    </StackPanel>
+                </Grid>
+            </Border>
+        </Grid>
     </Grid>
 </UserControl>

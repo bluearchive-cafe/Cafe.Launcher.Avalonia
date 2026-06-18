@@ -230,5 +230,18 @@
   "versionLatest": "最新 {0}",
   "versionLoading": "バージョン：読み込み中",
   "versionUnavailable": "バージョン：利用不可",
-  "working": "処理中"
+  "working": "処理中",
+  "migrationWizardTitle": "設定の移行",
+  "migrationWizardDescription": "公式ランチャー（BlueArchive JP Gamelauncher）の設定が見つかりました。ゲームパス、プロキシ、閉じる動作の設定を確認して移行できます。",
+  "migrationGamePathLabel": "ゲームインストールパス",
+  "migrationGamePathBrowse": "参照",
+  "migrationProxyLabel": "プロキシ",
+  "migrationCloseBehaviorLabel": "閉じる動作",
+  "migrationClickCodeFound": "インストール属性コードが見つかりました。コピーされます。",
+  "migrationLevelDbFailed": "公式ランチャーの一部の設定を読み取れませんでした。検出できなかった設定はデフォルト値が使用されます。",
+  "migrationGamePathNotFound": "ゲームインストールパスが検出されませんでした。インストールフォルダを選択してください。",
+  "migrationSkip": "スキップ",
+  "migrationApply": "設定を適用",
+  "migrationApplied": "設定の移行が完了しました。",
+  "migrationNoOldLauncher": "公式ランチャーの設定は見つかりませんでした。"
 }

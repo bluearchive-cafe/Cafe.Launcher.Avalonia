@@ -189,7 +189,8 @@ public sealed class LauncherSettingsServiceTests : IDisposable
             "backgroundSource",
             "backgroundFit",
             "backgroundFillColor",
-            "resourcePanelUid"
+            "resourcePanelUid",
+            "hasCompletedFirstLaunchWizard"
         };
         Assert.True(expectedPropertyNames.SetEquals(propertyNames));
         Assert.False(File.Exists($"{settingsPath}.tmp"));
