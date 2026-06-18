@@ -234,6 +234,57 @@ Light/Dark themes defined as `ThemeDictionaries` in `App.axaml` with custom `Lau
 
 The selected mode, custom color, and palette are persisted in `settings.json` (`themeColorMode`, `customThemeColor`, `themeColorPalette`, `selectedThemeColorPaletteIndex`). Theme color is applied independently of light/dark theme mode.
 
+### Design Tokens
+
+All numeric design values use `StaticResource` keys defined in `App.axaml`:
+
+**Spacing tokens** (4px grid: 0, 4, 8, 12, 16, 20, 24, 40):
+
+| Token | Value | Typical usage |
+|---|---|---|
+| `LauncherSpacingXs` | 4 | Tight spacing (label stack gaps, dot gaps) |
+| `LauncherSpacingSm` | 8 | Standard spacing (button-content, chips, card groups) |
+| `LauncherSpacingMd` | 12 | Section spacing (dialog content, settings rows) |
+| `LauncherSpacingLg` | 16 | Panel spacing (control groups, info rows) |
+| `LauncherSpacingXl` | 20 | Wide spacing (title bar, dialog title, panel margins) |
+| `LauncherSpacingXxl` | 24 | Container spacing (dialog margins, control panels) |
+| `LauncherSpacingSection` | 40 | Left panel / horizontal section padding |
+
+**Corner radius tokens:**
+
+| Token | Value | Usage |
+|---|---|---|
+| `LauncherRadiusSm` | 4 | Buttons, cards, badges, icons, fields, color swatches |
+| `LauncherRadiusMd` | 6 | Panel surfaces, settings sections, chips, toasts |
+| `LauncherRadiusLg` | 8 | Top-level dialog containers |
+
+**Icon size tokens** (Material.Icons.Avalonia `Width`/`Height`):
+
+| Token | Value | Usage |
+|---|---|---|
+| `LauncherIconSm` | 16 | Small inline icons (button-content, chips, color swatches) |
+| `LauncherIconMd` | 18 | Standalone control icons (title bar, dialog close, settings icons) |
+| `LauncherIconLg` | 20 | Section heading icons |
+| `LauncherIconXl` | 22 | Dialog area / large action icons |
+| `LauncherIconXxl` | 24 | Primary action launch icons |
+
+**Control height tokens:**
+
+| Token | Value | Usage |
+|---|---:|---|
+| `LauncherControlHeightSetting` | 36 | Settings controls and compact actions |
+| `LauncherControlHeightDialog` | 42 | Dialog actions and dialog text inputs |
+| `LauncherControlHeightBottom` | 48 | Install/update actions |
+| `LauncherControlHeightLaunch` | 58 | Primary launcher controls |
+
+**Gradient brushes**: Title bar gradient (`LauncherTitleBarGradient` in `App.axaml`) and control panel gradient (inline in `MainWindow.Styles.axaml`) use fixed black-transparency values that are intentionally theme-invariant — they overlay the wallpaper/background image.
+
+**Style class hierarchy for corners**: `4` for individual controls, `6` for grouped panels/surfaces, `8` for top-level dialogs.
+
+**Layer hierarchy**: base content → settings overlay (`100`) → dialog overlay (`200`) → toast (`LauncherConstants.ZIndexToast`, `1000`). Overlay backgrounds and positioning are defined by semantic classes in `MainWindow.Styles.axaml`.
+
+**Hardcoded visual values**: view XAML must not contain direct hexadecimal colors, `Transparent`, raw icon sizes, or raw `4`/`6`/`8` corner radii. Theme-invariant wallpaper gradients and the three shadow definitions are allowed only in `App.axaml` or `MainWindow.Styles.axaml`. Component-specific dimensions such as window, dialog, banner, and content widths/heights remain local to the owning view or style.
+
 ### Single-instance pattern
 
 `Program.cs` uses a named global `Mutex`. Second instances signal the first via `EventWaitHandle`, which triggers `Dispatcher.UIThread.InvokeAsync` to restore the window from tray/minimized state. Windows-only (`EventWaitHandle` is not supported on Linux — see commit `19db5a3`).
@@ -248,7 +299,7 @@ The selected mode, custom color, and palette are persisted in `settings.json` (`
 - **Path safety**: `GamePathValidator.GetSafePath()` (static helper in `Helpers/GamePathValidator.cs`, used by `GameDownloadService`, `GameUninstallService`, and `ManifestValidationService`) validates that all file operations stay within the game directory — path traversal is rejected.
 - **Download resilience**: CRC64 verification after download, rename `.tmp` → final only on success, up to 3 install-verification retries, CDN failover (primary → backup with retry order).
 - **Async pause**: `GameDownloadService` uses `TaskCompletionSource`-based pause (never blocks threads). `Pause()` creates a pending `TaskCompletionSource`, download loops `await` it, `Resume()` completes it. `Stop()` also completes the TCS to unblock paused awaits before cancellation.
-- **Spacing**: UI spacing follows a 4px grid (0, 4, 8, 12, 16, 20, 24, …). Left panel margin and bottom panel horizontal padding are both 40px for visual symmetry.
+- **Spacing**: UI spacing follows a 4px grid (0, 4, 8, 12, 16, 20, 24, …). Repeated scalar spacing uses `LauncherSpacing*` resources; left panel margin and bottom panel horizontal padding are both 40px for visual symmetry.
 - **Version comparison**: `VersionComparer.Compare()` returns -1/0/1 for old/equal/new.
 - **XAML extraction**: Large XAML blocks (styles, overlays) are extracted into separate `.axaml` files under `Views/` and referenced via `<StyleInclude>` or `Classes` attributes. The main `MainWindow.axaml` keeps only the window shell and content grid.
 - **Conventional commits**: Release changelog generation groups commits by `feat:`/`fix:`/`refactor:`/`perf:` prefixes. Use these prefixes for commit messages to get clean changelogs.

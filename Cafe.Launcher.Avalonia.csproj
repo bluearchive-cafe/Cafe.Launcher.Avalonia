@@ -52,4 +52,20 @@
     <PackageReference Include="Material.Icons.Avalonia" Version="3.0.2" />
     <PackageReference Include="Microsoft.Extensions.DependencyInjection" Version="9.0.0" />
   </ItemGroup>
+
+  <Target Name="AddGitCommitMetadata" BeforeTargets="GetAssemblyAttributes">
+    <Exec Command="git rev-parse --short=7 HEAD"
+          WorkingDirectory="$(MSBuildProjectDirectory)"
+          ConsoleToMSBuild="true"
+          IgnoreExitCode="true"
+          StandardOutputImportance="Low">
+      <Output TaskParameter="ConsoleOutput" PropertyName="GitCommitSha" />
+    </Exec>
+    <PropertyGroup>
+      <GitCommitSha Condition="'$(GitCommitSha)' == ''">unknown</GitCommitSha>
+    </PropertyGroup>
+    <ItemGroup>
+      <AssemblyMetadata Include="CommitSha" Value="$(GitCommitSha)" />
+    </ItemGroup>
+  </Target>
 </Project>

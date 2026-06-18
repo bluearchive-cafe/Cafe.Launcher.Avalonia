@@ -124,6 +124,17 @@ All UI strings go through `LocalizationService.T(key)` and `LocalizationService.
 
 Light/Dark themes defined as `ThemeDictionaries` in `App.axaml` with custom `Launcher*` brush keys. `ThemeModes.System` → `ThemeVariant.Default` (follows OS), `Light`/`Dark` → explicit. Applied via `Application.Current.RequestedThemeVariant`.
 
+### Design Tokens
+
+Numeric design tokens are defined as `StaticResource` keys in `App.axaml`. See CLAUDE.md § Design Tokens for the full reference table. Key values:
+
+- **Spacing**: 4px grid — `LauncherSpacingXs`(4) through `LauncherSpacingXxl`(24) + `LauncherSpacingSection`(40)
+- **Corner radius**: `LauncherRadiusSm`(4) for controls, `LauncherRadiusMd`(6) for panels, `LauncherRadiusLg`(8) for dialogs
+- **Icons**: `LauncherIconSm`(16), `LauncherIconMd`(18), `LauncherIconLg`(20), `LauncherIconXl`(22), `LauncherIconXxl`(24)
+- **Control heights**: `LauncherControlHeightSetting`(36), `LauncherControlHeightDialog`(42), `LauncherControlHeightBottom`(48), `LauncherControlHeightLaunch`(58)
+- **Z-index**: base content → settings overlay (100) → dialog overlay (200) → toast (`LauncherConstants.ZIndexToast`, 1000)
+- **Visual value rules**: view XAML uses semantic brushes and tokenized icon/radius values. Direct colors, `Transparent`, raw icon sizes, and raw 4/6/8 corner radii are forbidden outside `App.axaml` and `MainWindow.Styles.axaml`. Theme-invariant wallpaper gradients and the three shadows remain centralized in those resource/style files.
+
 ### Single-instance pattern
 
 `Program.cs` uses a named global `Mutex`. Second instances signal the first via `EventWaitHandle`, which triggers `Dispatcher.UIThread.InvokeAsync` to restore the window from tray/minimized state. Windows-only (`EventWaitHandle` is not supported on Linux — see commit `19db5a3`).

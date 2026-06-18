@@ -135,7 +135,7 @@ public partial class GameOperationsViewModel : ViewModelBase
         try
         {
             var launchResult = await gameLaunchService.StartAsync(snapshot!);
-            shell.LaunchCheckText = localizer.F("launchCheckWithMessage", launchResult.Validation.Message);
+            shell.SetLaunchCheckResult(launchResult.Validation.Message);
             shell.OperationNote = launchResult.Message;
 
             if (launchResult.Success)

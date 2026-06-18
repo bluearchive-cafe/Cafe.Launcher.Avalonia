@@ -49,6 +49,55 @@ public sealed class MainWindowViewModelTests : IDisposable
     }
 
     [Fact]
+    public void ShellSetLoading_UsesPureLoadingValuesForStatusDetails()
+    {
+        var coreService = new CountingCoreService(CreateSnapshot());
+        using var viewModel = CreateViewModel(coreService);
+
+        viewModel.Shell.SetLoading();
+
+        Assert.Equal("HelpCircleOutline", viewModel.Shell.StatusIconKind);
+        Assert.Equal(viewModel.Shell.ExecutableNameText, viewModel.Shell.NetworkStatusValueText);
+        Assert.Equal(viewModel.Shell.ExecutableNameText, viewModel.Shell.LaunchCheckValueText);
+        Assert.DoesNotContain(':', viewModel.Shell.ExecutableNameText);
+        Assert.DoesNotContain('：', viewModel.Shell.ExecutableNameText);
+    }
+
+    [Fact]
+    public void ShellSetLaunchCheckResult_UpdatesPureStatusDetailValue()
+    {
+        var coreService = new CountingCoreService(CreateSnapshot());
+        using var viewModel = CreateViewModel(coreService);
+
+        viewModel.Shell.SetLaunchCheckResult("manifest verified");
+
+        Assert.Equal("manifest verified", viewModel.Shell.LaunchCheckValueText);
+        Assert.DoesNotContain("Launch check:", viewModel.Shell.LaunchCheckValueText, StringComparison.OrdinalIgnoreCase);
+        Assert.DoesNotContain("启动校验：", viewModel.Shell.LaunchCheckValueText, StringComparison.Ordinal);
+        Assert.DoesNotContain("起動チェック：", viewModel.Shell.LaunchCheckValueText, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public async Task InitializeAsync_WhenSnapshotLoads_PopulatesPureStatusDetailValues()
+    {
+        var snapshot = CreateSnapshot();
+        var coreService = new CountingCoreService(snapshot);
+        using var viewModel = CreateViewModel(coreService);
+
+        await viewModel.InitializeAsync();
+
+        Assert.Equal("HelpCircleOutline", viewModel.Shell.StatusIconKind);
+        Assert.Equal("BlueArchive.exe", viewModel.Shell.ExecutableNameText);
+        Assert.Equal(viewModel.Shell.I18n.StatusNetworkLoaded, viewModel.Shell.NetworkStatusValueText);
+        Assert.Equal(
+            viewModel.Settings.ResolveLaunchCheckDisplayName(snapshot.Settings.LaunchCheckMode),
+            viewModel.Shell.LaunchCheckValueText);
+        Assert.DoesNotContain("Executable", viewModel.Shell.ExecutableNameText, StringComparison.OrdinalIgnoreCase);
+        Assert.DoesNotContain("启动程序", viewModel.Shell.ExecutableNameText, StringComparison.Ordinal);
+        Assert.DoesNotContain("実行ファイル", viewModel.Shell.ExecutableNameText, StringComparison.Ordinal);
+    }
+
+    [Fact]
     public async Task InitializeAsync_WhenNewsAndNoticesExist_AddsBothToNewsItems()
     {
         var snapshot = CreateSnapshot();
@@ -97,6 +146,27 @@ public sealed class MainWindowViewModelTests : IDisposable
         await viewModel.InitializeAsync();
 
         Assert.DoesNotContain(viewModel.Shell.I18n.StatusNetworkLoaded, successToasts);
+        Assert.Equal("Alert", viewModel.Shell.StatusIconKind);
+        Assert.Equal("load failed", viewModel.Shell.NetworkStatusValueText);
+    }
+
+    [Theory]
+    [InlineData(false, false, false, "HelpCircleOutline")]
+    [InlineData(true, true, true, "Alert")]
+    [InlineData(true, true, false, "AlertCircle")]
+    [InlineData(true, false, false, "CheckAll")]
+    public void ResolveStatusIconKind_MapsLauncherState(
+        bool isInstalled,
+        bool needsUpdate,
+        bool belowLowestVersion,
+        string expectedIcon)
+    {
+        var snapshot = CreateSnapshot();
+        snapshot.IsInstalled = isInstalled;
+        snapshot.NeedsUpdate = needsUpdate;
+        snapshot.BelowLowestVersion = belowLowestVersion;
+
+        Assert.Equal(expectedIcon, ShellViewModel.ResolveStatusIconKind(snapshot));
     }
 
     [Fact]

@@ -1,3 +1,4 @@
+using System.Linq;
 using System.Reflection;
 
 namespace Cafe.Launcher.Avalonia.Constants;
@@ -8,6 +9,12 @@ public static class LauncherConstants
     public static readonly string LauncherVersion =
         typeof(LauncherConstants).Assembly.GetCustomAttribute<AssemblyInformationalVersionAttribute>()?.InformationalVersion
         ?? "1.0.0";
+    public static readonly string CommitSha =
+        typeof(LauncherConstants).Assembly
+            .GetCustomAttributes<AssemblyMetadataAttribute>()
+            .SingleOrDefault(attribute => attribute.Key == "CommitSha")
+            ?.Value
+        ?? "unknown";
     public const string YostarAuthorizationVersion = "1.7.2";
     public const string GameTag = "BlueArchive_JP";
     public const string RootFolderName = "YostarGames";
@@ -36,4 +43,10 @@ public static class LauncherConstants
 #else
     public const string BuildConfiguration = "Release";
 #endif
+
+    /// <summary>
+    /// Z-index used by the toast notification overlay (MainWindowToastOverlay.axaml).
+    /// Toast renders above all other UI layers: base content, settings, and dialogs.
+    /// </summary>
+    public const int ZIndexToast = 1000;
 }
