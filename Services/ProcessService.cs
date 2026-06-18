@@ -8,39 +8,15 @@ namespace Cafe.Launcher.Avalonia.Services;
 
 public static class ProcessService
 {
-    public static async Task<bool> IsExeRunningAsync(string exeName, CancellationToken cancellationToken = default)
+    public static Task<bool> IsExeRunningAsync(string exeName, CancellationToken cancellationToken = default)
     {
         if (string.IsNullOrWhiteSpace(exeName))
         {
-            return false;
+            return Task.FromResult(false);
         }
 
-        if (OperatingSystem.IsWindows())
-        {
-            var startInfo = new ProcessStartInfo
-            {
-                FileName = "tasklist",
-                UseShellExecute = false,
-                RedirectStandardOutput = true,
-                RedirectStandardError = false
-            };
-            startInfo.ArgumentList.Add("/FO");
-            startInfo.ArgumentList.Add("CSV");
-            startInfo.ArgumentList.Add("/NH");
-            startInfo.ArgumentList.Add("/FI");
-            startInfo.ArgumentList.Add($"IMAGENAME eq {exeName}");
-
-            using var process = Process.Start(startInfo);
-            if (process is null)
-            {
-                return false;
-            }
-
-            var output = await process.StandardOutput.ReadToEndAsync(cancellationToken);
-            await process.WaitForExitAsync(cancellationToken);
-            return output.Contains(exeName, StringComparison.OrdinalIgnoreCase);
-        }
-
-        return Process.GetProcessesByName(Path.GetFileNameWithoutExtension(exeName)).Length > 0;
+        var nameWithoutExtension = Path.GetFileNameWithoutExtension(exeName);
+        var isRunning = Process.GetProcessesByName(nameWithoutExtension).Length > 0;
+        return Task.FromResult(isRunning);
     }
 }
