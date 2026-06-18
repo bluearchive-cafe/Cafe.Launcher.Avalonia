@@ -94,6 +94,15 @@ public sealed class LauncherSettingsService
 
     private static LauncherSettings Normalize(LauncherSettings settings)
     {
+        // Migrate legacy PascalCase launch check mode values
+        settings.LaunchCheckMode = settings.LaunchCheckMode switch
+        {
+            "LocalManifest" => LaunchCheckModes.LocalManifest,
+            "RemoteManifest" => LaunchCheckModes.RemoteManifest,
+            "None" => LaunchCheckModes.None,
+            _ => settings.LaunchCheckMode
+        };
+
         if (settings.LaunchCheckMode is not LaunchCheckModes.LocalManifest
             and not LaunchCheckModes.RemoteManifest
             and not LaunchCheckModes.None)
@@ -147,11 +156,11 @@ public sealed class LauncherSettingsService
         }
 
         if (settings.DownloadSpeedLimit is not DownloadSpeedLimits.Unlimited
-            and not DownloadSpeedLimits._1MBs
-            and not DownloadSpeedLimits._5MBs
-            and not DownloadSpeedLimits._10MBs
-            and not DownloadSpeedLimits._25MBs
-            and not DownloadSpeedLimits._50MBs)
+            and not DownloadSpeedLimits.Speed1MBs
+            and not DownloadSpeedLimits.Speed5MBs
+            and not DownloadSpeedLimits.Speed10MBs
+            and not DownloadSpeedLimits.Speed25MBs
+            and not DownloadSpeedLimits.Speed50MBs)
         {
             settings.DownloadSpeedLimit = DownloadSpeedLimits.Unlimited;
         }

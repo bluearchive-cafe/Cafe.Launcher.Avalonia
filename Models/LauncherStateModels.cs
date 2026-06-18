@@ -29,9 +29,9 @@ public sealed class LocalGameState
 
 public static class LaunchCheckModes
 {
-    public const string LocalManifest = "LocalManifest";
-    public const string RemoteManifest = "RemoteManifest";
-    public const string None = "None";
+    public const string LocalManifest = "localManifest";
+    public const string RemoteManifest = "remoteManifest";
+    public const string None = "none";
 }
 
 public static class ProxyModes
@@ -72,18 +72,18 @@ public static class ThemeColorModes
 public static class DownloadSpeedLimits
 {
     public const string Unlimited = "unlimited";
-    public const string _1MBs = "1MB/s";
-    public const string _5MBs = "5MB/s";
-    public const string _10MBs = "10MB/s";
-    public const string _25MBs = "25MB/s";
-    public const string _50MBs = "50MB/s";
+    public const string Speed1MBs = "1MB/s";
+    public const string Speed5MBs = "5MB/s";
+    public const string Speed10MBs = "10MB/s";
+    public const string Speed25MBs = "25MB/s";
+    public const string Speed50MBs = "50MB/s";
     public static int ToBytesPerSecond(string limit) => limit switch
     {
-        _1MBs => 1024 * 1024,
-        _5MBs => 5 * 1024 * 1024,
-        _10MBs => 10 * 1024 * 1024,
-        _25MBs => 25 * 1024 * 1024,
-        _50MBs => 50 * 1024 * 1024,
+        Speed1MBs => 1024 * 1024,
+        Speed5MBs => 5 * 1024 * 1024,
+        Speed10MBs => 10 * 1024 * 1024,
+        Speed25MBs => 25 * 1024 * 1024,
+        Speed50MBs => 50 * 1024 * 1024,
         _ => 0
     };
 }

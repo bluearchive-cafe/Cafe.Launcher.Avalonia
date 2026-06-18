@@ -81,7 +81,7 @@
   "gameManagement": "Game Management",
   "gameManagementDescription": "Repair: validates against remote manifest. Uninstall: removes tracked files only.",
   "gamePath": "Game Install Path",
-  "githubRepository": "GitHub Repository",
+  "gitHubRepository": "GitHub Repository",
   "installGame": "Install Game",
   "keepEditing": "Keep Editing",
   "language": "Language",
@@ -243,5 +243,9 @@
   "migrationSkip": "Skip",
   "migrationApply": "Apply Settings",
   "migrationApplied": "Settings migrated successfully.",
-  "migrationNoOldLauncher": "No official launcher settings were found."
+  "migrationNoOldLauncher": "No official launcher settings were found.",
+  "toastSuccess": "Success",
+  "toastWarning": "Warning",
+  "toastError": "Error",
+  "toastInfo": "Info"
 }

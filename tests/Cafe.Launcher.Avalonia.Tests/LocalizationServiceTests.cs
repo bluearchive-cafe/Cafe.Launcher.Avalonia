@@ -106,7 +106,7 @@ public sealed class LocalizationServiceTests
     }
 
     [Fact]
-    public void ZhHansLocale_WhenLegalInfoRequested_UsesChineseCopy()
+    public void T_WhenLegalInfoRequested_ReturnsChineseCopy()
     {
         var json = File.ReadAllText(Path.Combine(FindProjectRoot(), "Assets", "Locales", "zh-Hans.json"));
         var values = JsonSerializer.Deserialize<Dictionary<string, string>>(json);

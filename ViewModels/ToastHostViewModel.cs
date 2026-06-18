@@ -12,15 +12,17 @@ namespace Cafe.Launcher.Avalonia.ViewModels;
 public partial class ToastHostViewModel : ViewModelBase, IDisposable
 {
     private readonly ToastService toastService;
+    private readonly LocalizationService localizer;
     private SettingsViewModel? settings;
     private readonly CancellationTokenSource lifetimeCts = new();
     private bool disposed;
 
     public ObservableCollection<ToastNotification> ActiveToasts { get; } = [];
 
-    public ToastHostViewModel(ToastService toastService)
+    public ToastHostViewModel(ToastService toastService, LocalizationService localizer)
     {
         this.toastService = toastService;
+        this.localizer = localizer;
         toastService.ToastRaised += OnToastRaised;
     }
 
@@ -41,6 +43,13 @@ public partial class ToastHostViewModel : ViewModelBase, IDisposable
 
     private void OnToastRaised(ToastNotification notification)
     {
+        notification.SeverityLabel = notification.Severity switch
+        {
+            ToastSeverity.Success => localizer.T("toastSuccess"),
+            ToastSeverity.Warning => localizer.T("toastWarning"),
+            ToastSeverity.Error => localizer.T("toastError"),
+            _ => localizer.T("toastInfo")
+        };
         _ = ShowToastAsync(notification, lifetimeCts.Token);
     }
 

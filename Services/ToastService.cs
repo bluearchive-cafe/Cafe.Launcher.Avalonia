@@ -53,13 +53,7 @@ public sealed class ToastNotification
         _ => "InformationOutline"
     };
 
-    public string SeverityLabel => Severity switch
-    {
-        ToastSeverity.Success => "Success",
-        ToastSeverity.Warning => "Warning",
-        ToastSeverity.Error => "Error",
-        _ => "Info"
-    };
+    public string SeverityLabel { get; set; } = "";
 
     /// <summary>Whether the toast is currently playing its exit animation.</summary>
     public bool IsExiting { get; set; }
