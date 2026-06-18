@@ -181,7 +181,8 @@ public sealed class LauncherSettingsServiceTests : IDisposable
             "patchUrlGroup",
             "customBackgroundPath",
             "backgroundSource",
-            "resourcePanelUid"
+            "resourcePanelUid",
+            "hasCompletedFirstLaunchWizard"
         };
         Assert.True(expectedPropertyNames.SetEquals(propertyNames));
         Assert.False(File.Exists($"{settingsPath}.tmp"));

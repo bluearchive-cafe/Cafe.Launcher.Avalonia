@@ -153,6 +153,19 @@ public sealed partial class LocalizedStrings : ObservableObject
     [ObservableProperty] private string statusLaunchCheckRemote = "";
     [ObservableProperty] private string statusLaunchCheckNone = "";
     [ObservableProperty] private string gameLaunchedMinimized = "";
+    [ObservableProperty] private string migrationWizardTitle = "";
+    [ObservableProperty] private string migrationWizardDescription = "";
+    [ObservableProperty] private string migrationGamePathLabel = "";
+    [ObservableProperty] private string migrationGamePathBrowse = "";
+    [ObservableProperty] private string migrationProxyLabel = "";
+    [ObservableProperty] private string migrationCloseBehaviorLabel = "";
+    [ObservableProperty] private string migrationClickCodeFound = "";
+    [ObservableProperty] private string migrationLevelDbFailed = "";
+    [ObservableProperty] private string migrationGamePathNotFound = "";
+    [ObservableProperty] private string migrationSkip = "";
+    [ObservableProperty] private string migrationApply = "";
+    [ObservableProperty] private string migrationApplied = "";
+    [ObservableProperty] private string migrationNoOldLauncher = "";
 
     public void Apply(LocalizationService localizer)
     {
@@ -299,6 +312,19 @@ public sealed partial class LocalizedStrings : ObservableObject
         StatusLaunchCheckRemote = localizer.T("statusLaunchCheckRemote");
         StatusLaunchCheckNone = localizer.T("statusLaunchCheckNone");
         GameLaunchedMinimized = localizer.T("gameLaunchedMinimized");
+        MigrationWizardTitle = localizer.T("migrationWizardTitle");
+        MigrationWizardDescription = localizer.T("migrationWizardDescription");
+        MigrationGamePathLabel = localizer.T("migrationGamePathLabel");
+        MigrationGamePathBrowse = localizer.T("migrationGamePathBrowse");
+        MigrationProxyLabel = localizer.T("migrationProxyLabel");
+        MigrationCloseBehaviorLabel = localizer.T("migrationCloseBehaviorLabel");
+        MigrationClickCodeFound = localizer.T("migrationClickCodeFound");
+        MigrationLevelDbFailed = localizer.T("migrationLevelDbFailed");
+        MigrationGamePathNotFound = localizer.T("migrationGamePathNotFound");
+        MigrationSkip = localizer.T("migrationSkip");
+        MigrationApply = localizer.T("migrationApply");
+        MigrationApplied = localizer.T("migrationApplied");
+        MigrationNoOldLauncher = localizer.T("migrationNoOldLauncher");
     }
 }
 

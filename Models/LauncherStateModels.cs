@@ -161,6 +161,9 @@ public sealed class LauncherSettings
 
     [JsonPropertyName("resourcePanelUid")]
     public string ResourcePanelUid { get; set; } = "";
+
+    [JsonPropertyName("hasCompletedFirstLaunchWizard")]
+    public bool HasCompletedFirstLaunchWizard { get; set; }
 }
 
 /// <summary>

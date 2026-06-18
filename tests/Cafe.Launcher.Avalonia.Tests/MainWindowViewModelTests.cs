@@ -528,6 +528,7 @@ public sealed class MainWindowViewModelTests : IDisposable
             localizationService,
             toastService,
             diagnostics,
+            new OldLauncherDetectionService(),
             new ShellViewModel(localizationService),
             new BackgroundViewModel(imageCacheService, diagnostics),
             new RemoteContentViewModel(localizationService, imageCacheService),
@@ -542,7 +543,8 @@ public sealed class MainWindowViewModelTests : IDisposable
             new ToastHostViewModel(toastService),
             new WindowChromeViewModel(externalLinkService),
             settingsViewModel,
-            resourcePanelViewModel);
+            resourcePanelViewModel,
+            new MigrationWizardViewModel(localizationService));
     }
 
     private LauncherStatusSnapshot CreateSnapshot()

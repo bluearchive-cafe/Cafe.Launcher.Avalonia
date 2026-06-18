@@ -15,6 +15,7 @@ public partial class MainWindowViewModel : ViewModelBase, IDisposable
     private readonly LocalizationService localizer;
     private readonly ToastService toastService;
     private readonly LocalDiagnostics diagnostics;
+    private readonly OldLauncherDetectionService oldLauncherService;
     private readonly CancellationTokenSource lifetimeCts = new();
     private int initialized;
     private bool disposed;
@@ -39,12 +40,15 @@ public partial class MainWindowViewModel : ViewModelBase, IDisposable
 
     public ResourcePanelViewModel ResourcePanel { get; }
 
+    public MigrationWizardViewModel MigrationWizard { get; }
+
     public MainWindowViewModel(
         ILauncherCoreService launcherCoreService,
         LauncherSettingsService settingsService,
         LocalizationService localizer,
         ToastService toastService,
         LocalDiagnostics diagnostics,
+        OldLauncherDetectionService oldLauncherService,
         ShellViewModel shell,
         BackgroundViewModel background,
         RemoteContentViewModel remoteContent,
@@ -53,13 +57,15 @@ public partial class MainWindowViewModel : ViewModelBase, IDisposable
         ToastHostViewModel toasts,
         WindowChromeViewModel windowChrome,
         SettingsViewModel settingsViewModel,
-        ResourcePanelViewModel resourcePanelViewModel)
+        ResourcePanelViewModel resourcePanelViewModel,
+        MigrationWizardViewModel migrationWizard)
     {
         this.launcherCoreService = launcherCoreService;
         this.settingsService = settingsService;
         this.localizer = localizer;
         this.toastService = toastService;
         this.diagnostics = diagnostics;
+        this.oldLauncherService = oldLauncherService;
 
         Shell = shell;
         Background = background;
@@ -70,6 +76,7 @@ public partial class MainWindowViewModel : ViewModelBase, IDisposable
         WindowChrome = windowChrome;
         Settings = settingsViewModel;
         ResourcePanel = resourcePanelViewModel;
+        MigrationWizard = migrationWizard;
 
         WireChildren();
         ApplyLanguage(LauncherLanguages.Auto);
@@ -80,6 +87,23 @@ public partial class MainWindowViewModel : ViewModelBase, IDisposable
         if (Interlocked.Exchange(ref initialized, 1) == 1)
         {
             return;
+        }
+
+        // Check for first-launch migration from old launcher
+        var settings = await settingsService.ReadAsync(cancellationToken);
+        if (!settings.HasCompletedFirstLaunchWizard)
+        {
+            var detection = oldLauncherService.Detect();
+            if (detection is not null)
+            {
+                MigrationWizard.Load(detection);
+                MigrationWizard.IsVisible = true;
+                return; // Wait for user to complete or skip wizard
+            }
+
+            // No old launcher found — mark complete, never show again
+            settings.HasCompletedFirstLaunchWizard = true;
+            await settingsService.SaveAsync(settings, cancellationToken);
         }
 
         await RefreshAsync(cancellationToken);
@@ -180,6 +204,9 @@ public partial class MainWindowViewModel : ViewModelBase, IDisposable
 
         WindowChrome.Configure(Settings, RemoteContent, Dialogs, Operations);
         WindowChrome.GetSnapshot = () => currentSnapshot;
+
+        MigrationWizard.MigrationApplied += HandleMigrationAppliedAsync;
+        MigrationWizard.MigrationSkipped += HandleMigrationSkippedAsync;
     }
 
     private async Task HandleSettingsSavedAsync()
@@ -192,6 +219,22 @@ public partial class MainWindowViewModel : ViewModelBase, IDisposable
         {
             Dialogs.ShowRepairConfirm(localizer.T("downloadSourceChangedRepairPrompt"));
         }
+    }
+
+    private async Task HandleMigrationAppliedAsync(LauncherSettings migratedSettings)
+    {
+        migratedSettings.HasCompletedFirstLaunchWizard = true;
+        await settingsService.SaveAsync(migratedSettings, CancellationToken.None);
+        MigrationWizard.IsVisible = false;
+        await RefreshAsync(CancellationToken.None);
+    }
+
+    private async Task HandleMigrationSkippedAsync()
+    {
+        var settings = new LauncherSettings { HasCompletedFirstLaunchWizard = true };
+        await settingsService.SaveAsync(settings, CancellationToken.None);
+        MigrationWizard.IsVisible = false;
+        await RefreshAsync(CancellationToken.None);
     }
 
     private async Task ApplySnapshotAsync(LauncherStatusSnapshot snapshot)
