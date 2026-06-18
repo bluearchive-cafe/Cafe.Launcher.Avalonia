@@ -72,7 +72,7 @@ One `MainWindow` (1300×754, non-resizable with MinWidth 1024/MinHeight 640, bor
 2. **App.axaml.cs** — On framework init: builds DI container via `ServiceConfiguration.AddLauncherServices()`, resolves `MainWindowViewModel`, creates `MainWindow`, wires `ClickCodeService`, `SystemTrayService`. Starts a background thread listening for `EventWaitHandle` signals to restore window from tray.
 3. **App.axaml** — Light/Dark `ThemeDictionaries` with custom `Launcher*` brushes, `ViewLocator` data template, FluentTheme + MaterialIconStyles.
 
-**Composition root**: `ServiceConfiguration.AddLauncherServices()` is the DI configuration — it registers all services with `Microsoft.Extensions.DependencyInjection`. The container is built in `App.axaml.cs` via `ServiceCollection.BuildServiceProvider()`. Services are registered as singletons by default; ViewModels are transient. Thread-safe disposal order for IDisposable services is defined by reverse registration order (see disposal order section below).
+**Composition root**: `ServiceConfiguration.AddLauncherServices()` is the DI configuration — it registers all services with `Microsoft.Extensions.DependencyInjection`. The container is built in `App.axaml.cs` via `ServiceCollection.BuildServiceProvider()`. Every service is registered as `AddSingleton`; every ViewModel is registered as `AddTransient` (fresh instance per resolution). Thread-safe disposal order for IDisposable services is defined by reverse registration order (see disposal order section below).
 
 **ViewModel coordination**: Sub-ViewModels communicate with `MainWindowViewModel` through two mechanisms:
 - **Delegates** — `MainWindowViewModel.ConfigureViewModel()` sets `Func<>` / `Func<Task>` delegates on children (e.g. `SettingsViewModel.PickGameFolderAsync`, `SettingsViewModel.GetSnapshot`). These let children call back into parent capabilities (folder pickers, state queries).
@@ -117,6 +117,7 @@ One `MainWindow` (1300×754, non-resizable with MinWidth 1024/MinHeight 640, bor
 | `LauncherUpdateService` | Checks for and downloads launcher updates |
 | `ExternalLinkService` | Opens external URLs in the default browser |
 | `DownloadStateService` | Serializes/resumes download state to `download_state.json` |
+| `OriginalLauncherMigrationService` | Migrates game installation path from the original Electron launcher on first run |
 | `Crc64Service`, `OfficialHashService`, `DiskSpaceService`, `ProcessService`, `VersionComparer`, `ClickCodeService` | Supporting services |
 
 **HttpClient lifecycle**: `HttpClientFactory` owns a single shared `SocketsHttpHandler` (pooled, 15-min connection lifetime). Callers get `HttpClient` instances that share this handler and must NOT dispose them. For proxy-aware requests, `CreateLeaseAsync()` returns an `HttpClientLease` that conditionally owns its handler — callers dispose the lease, not the client. `HttpClientLease.Dispose()` only disposes the handler when it was created per-request (proxy mode); for direct connections, disposal is a no-op since the handler is shared.
@@ -129,10 +130,42 @@ One `MainWindow` (1300×754, non-resizable with MinWidth 1024/MinHeight 640, bor
 
 The DI container calls `Dispose()` on these in reverse registration order when the service provider is disposed.
 
+### Local files (`%LOCALAPPDATA%\Cafe Launcher\`)
+
+| File | Purpose |
+|---|---|
+| `settings.json` | Launcher settings (see Settings reference below) |
+| `diagnostics.log` | Runtime diagnostics appended by `LocalDiagnostics` |
+| `crash.log` | Global unhandled exception log (written by `Program.cs`) |
+| `download_state.json` | Serializable download resume state (`DownloadStateService`) |
+| `shown_notices.json` | Tracked shown notice IDs (`NoticeStateService`) |
+| `clickCode` | Install attribution code (`ClickCodeService`) |
+
+### Settings reference
+
+Persisted fields in `settings.json` and their valid values:
+
+| Setting | JSON key | Valid codes |
+|---|---|---|
+| Language | `language` | `auto`, `en`, `zh-Hans`, `ja` |
+| Theme | `themeMode` | `system`, `light`, `dark` |
+| Patch URL group | `patchUrlGroup` | `official`, `cafe` |
+| Launch check | `launchCheckMode` | `LocalManifest`, `RemoteManifest`, `None` |
+| Download speed limit | `downloadSpeedLimit` | `unlimited`, `1MB/s`, `5MB/s`, `10MB/s`, `25MB/s`, `50MB/s` |
+| Close behavior | `closeBehavior` | `minimize`, `exit` |
+| Proxy | `proxyMode` | `direct`, `system` |
+| Background | `backgroundSource` | `bundled`, `remote`, `custom` |
+| Wallpaper fit | `backgroundFit` | `fill`, `uniform`, `uniformToFill` |
+| Wallpaper fill color | `backgroundFillColor` | Hex color string (e.g. `#FF000000`) |
+| Game path | `gamePath` | Absolute directory path |
+| Custom background | `customBackgroundPath` | Absolute file path |
+| Toast notifications | `toastNotificationsEnabled` | `true`/`false` |
+| Remote content card | `showRemoteContentCard` | `true`/`false` |
+
 ### Key models (`Models/`)
 
 - `LauncherApiContracts.cs` — All API response DTOs
-- `LauncherStateModels.cs` — String constants for modes/behaviors (`LaunchCheckModes`, `ProxyModes`, `CloseBehaviors`, `LauncherLanguages`, `ThemeModes`, `ThemeColorModes`, `DownloadSpeedLimits`, `PatchUrlGroups`, `BackgroundSources`), plus runtime state objects (`LauncherStatusSnapshot`, `LauncherRemoteState`, `LocalGameState`, `LauncherSettings`, `GameOperationProgress`, `GameOperationResult`), and option types (`SettingOption`, `LanguageOption`, `ThemeOption`) for localized dropdown binding
+- `LauncherStateModels.cs` — String constants for modes/behaviors (`LaunchCheckModes`, `ProxyModes`, `CloseBehaviors`, `LauncherLanguages`, `ThemeModes`, `ThemeColorModes`, `DownloadSpeedLimits`, `PatchUrlGroups`, `BackgroundSources`, `BackgroundFits`), plus runtime state objects (`LauncherStatusSnapshot`, `LauncherRemoteState`, `LocalGameState`, `LauncherSettings`, `GameOperationProgress`, `GameOperationResult`), and option types (`SettingOption`, `LanguageOption`, `ThemeOption`) for localized dropdown binding
 - `LocalGameContracts.cs` — `LocalManifest`, `RemoteManifest`, `ManifestFile`, `GameLauncherConfig`
 - `PatchUrlGroupDefinition.cs` — Code + host-from/to tuples for CDN URL rewriting
 - `DownloadTaskState.cs` — Serializable download resume state
@@ -191,7 +224,7 @@ Wallpaper color extraction (`ThemeColorExtractionService`) analyzes the current 
 ## Important patterns
 
 - **No remote telemetry**: The original Electron launcher sent logs to Aliyun SLS. This rewrite explicitly excludes those paths (`/api/launcher/advanced/config`, `/api/open/api/config`). Always keep diagnostics local.
-- **Path safety**: `GameDownloadService.GetSafePath()` validates that all file operations stay within the game directory — path traversal is rejected.
+- **Path safety**: `GamePathValidator.GetSafePath()` (static helper in `Helpers/GamePathValidator.cs`, used by `GameDownloadService`, `GameUninstallService`, and `ManifestValidationService`) validates that all file operations stay within the game directory — path traversal is rejected.
 - **Download resilience**: CRC64 verification after download, rename `.tmp` → final only on success, up to 3 install-verification retries, CDN failover (primary → backup with retry order).
 - **Async pause**: `GameDownloadService` uses `TaskCompletionSource`-based pause (never blocks threads). `Pause()` creates a pending `TaskCompletionSource`, download loops `await` it, `Resume()` completes it. `Stop()` also completes the TCS to unblock paused awaits before cancellation.
 - **Spacing**: UI spacing follows a 4px grid (0, 4, 8, 12, 16, 20, 24, …). Left panel margin and bottom panel horizontal padding are both 40px for visual symmetry.

@@ -394,6 +394,9 @@ public sealed class MainWindowViewModelTests : IDisposable
             IsSelected = true
         });
         viewModel.Settings.SelectedThemeColorPaletteIndex = 0;
+        // The direct property set above fires On*Changed -> MarkSettingsDirtyIfVisible().
+        // In production, ReplaceThemeColorPalette suppresses dirty internally, and
+        // LoadFromSnapshot resets it at the end. Reset here to match that behaviour.
         viewModel.Settings.IsSettingsDirty = false;
         Assert.Equal("#FFD82038", Assert.Single(viewModel.Settings.ThemeColorPaletteItems).ColorHex);
 
@@ -415,6 +418,7 @@ public sealed class MainWindowViewModelTests : IDisposable
         using var apiClient = new ResourcePanelApiClient(handler);
         var coreService = new CountingCoreService(CreateSnapshot());
         using var viewModel = CreateViewModel(coreService, settingsService, uidService, apiClient);
+        viewModel.ResourcePanel.GetPatchUrlGroup = () => PatchUrlGroups.Cafe;
 
         await viewModel.ResourcePanel.OpenResourcePanelCommand.ExecuteAsync(null);
 
@@ -444,6 +448,7 @@ public sealed class MainWindowViewModelTests : IDisposable
         using var apiClient = new ResourcePanelApiClient(handler);
         var coreService = new CountingCoreService(CreateSnapshot());
         using var viewModel = CreateViewModel(coreService, settingsService, uidService, apiClient);
+        viewModel.ResourcePanel.GetPatchUrlGroup = () => PatchUrlGroups.Cafe;
         await viewModel.ResourcePanel.OpenResourcePanelCommand.ExecuteAsync(null);
         viewModel.ResourcePanel.ResourcePanelItems.First(item => item.Code == ResourcePanelResourceCodes.Text).IsEnabled = true;
         viewModel.ResourcePanel.ResourcePanelItems.First(item => item.Code == ResourcePanelResourceCodes.Voice).IsEnabled = false;
@@ -469,6 +474,7 @@ public sealed class MainWindowViewModelTests : IDisposable
         using var apiClient = new ResourcePanelApiClient(handler);
         var coreService = new CountingCoreService(CreateSnapshot());
         using var viewModel = CreateViewModel(coreService, settingsService, uidService, apiClient);
+        viewModel.ResourcePanel.GetPatchUrlGroup = () => PatchUrlGroups.Cafe;
 
         await viewModel.ResourcePanel.OpenResourcePanelCommand.ExecuteAsync(null);
 

@@ -43,9 +43,9 @@
                                 <Grid RowDefinitions="Auto,Auto" ColumnDefinitions="*,Auto" ColumnSpacing="12" RowSpacing="10">
                                     <TextBlock Grid.ColumnSpan="2" Text="{Binding Shell.I18n.ResourcePanelManualUid}" Classes="group-title"/>
                                     <TextBox Grid.Row="1"
+                                             Classes="uid-input"
                                              Text="{Binding ResourcePanel.ManualResourcePanelUid, Mode=TwoWay}"
-                                             PlaceholderText="{Binding Shell.I18n.ResourcePanelUid}"
-                                             MinHeight="38"/>
+                                             PlaceholderText="{Binding Shell.I18n.ResourcePanelUid}"/>
                                     <Button Grid.Row="1" Grid.Column="1" Classes="primary-action dialog-action"
                                             Command="{Binding ResourcePanel.SaveManualResourcePanelUidCommand}"
                                             IsEnabled="{Binding ResourcePanel.IsResourcePanelBusy, Converter={x:Static BoolConverters.Not}}">
@@ -163,6 +163,42 @@
                             <StackPanel Classes="button-content">
                                 <materialIcons:MaterialIcon Kind="Tools" Width="18" Height="18" Foreground="{DynamicResource LauncherOnAccentBrush}"/>
                                 <TextBlock Text="{Binding Shell.I18n.Repair}" VerticalAlignment="Center" Foreground="{DynamicResource LauncherOnAccentBrush}"/>
+                            </StackPanel>
+                        </Button>
+                    </StackPanel>
+                </Grid>
+            </Border>
+        </Grid>
+        <!-- Resource Panel source confirmation dialog -->
+        <Grid IsVisible="{Binding Dialogs.IsResourcePanelSourceConfirmVisible}" Background="{DynamicResource LauncherOverlayBrush}">
+            <Border Classes="dialog confirm-panel">
+                <Grid RowDefinitions="Auto,Auto,Auto" Classes="confirm-layout">
+                    <Grid ColumnDefinitions="Auto,*,Auto" ColumnSpacing="12">
+                        <Border Classes="dialog-icon" VerticalAlignment="Center">
+                            <materialIcons:MaterialIcon Kind="Web" Width="22" Height="22" Foreground="{DynamicResource LauncherAccentBrush}" HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                        </Border>
+                        <StackPanel Grid.Column="1" Spacing="2" VerticalAlignment="Center">
+                            <TextBlock Text="{Binding Shell.I18n.ResourcePanelCafeOnlyTitle}" Classes="dialog-title"/>
+                            <TextBlock Text="{Binding Shell.I18n.ResourcePanelCafeOnlyDescription}" Classes="caption"/>
+                        </StackPanel>
+                        <Button Grid.Column="2" Classes="dialog-close" Command="{Binding Dialogs.CancelResourcePanelSourceSwitchCommand}" ToolTip.Tip="{Binding Shell.I18n.Close}">
+                            <materialIcons:MaterialIcon Kind="Close" Width="18" Height="18"/>
+                        </Button>
+                    </Grid>
+                    <Border Grid.Row="1" Classes="confirm-message" Background="{DynamicResource LauncherWarningBackgroundBrush}">
+                        <TextBlock Text="{Binding Dialogs.ResourcePanelSourceConfirmText}" Classes="confirm-message-text"/>
+                    </Border>
+                    <StackPanel Grid.Row="2" Classes="confirm-actions">
+                        <Button Classes="flat-action dialog-action" Command="{Binding Dialogs.CancelResourcePanelSourceSwitchCommand}">
+                            <StackPanel Classes="button-content">
+                                <materialIcons:MaterialIcon Kind="CloseCircle" Width="17" Height="17"/>
+                                <TextBlock Text="{Binding Shell.I18n.Cancel}" VerticalAlignment="Center"/>
+                            </StackPanel>
+                        </Button>
+                        <Button Classes="primary-action dialog-action" Command="{Binding Dialogs.ConfirmResourcePanelSourceSwitchCommand}">
+                            <StackPanel Classes="button-content">
+                                <materialIcons:MaterialIcon Kind="SwapHorizontal" Width="18" Height="18" Foreground="{DynamicResource LauncherOnAccentBrush}"/>
+                                <TextBlock Text="{Binding Shell.I18n.ResourcePanelCafeOnlySwitch}" VerticalAlignment="Center" Foreground="{DynamicResource LauncherOnAccentBrush}"/>
                             </StackPanel>
                         </Button>
                     </StackPanel>

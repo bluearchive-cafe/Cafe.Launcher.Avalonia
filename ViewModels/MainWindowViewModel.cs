@@ -118,11 +118,25 @@ public partial class MainWindowViewModel : ViewModelBase, IDisposable
         {
             var settingsForLanguage = await settingsService.ReadAsync(cancellationToken);
             ApplyLanguage(settingsForLanguage.Language);
-            Settings.SelectedThemeMode = settingsForLanguage.ThemeMode;
-            Settings.LoadThemeColorState(settingsForLanguage);
+            Settings.BulkUpdate(s =>
+            {
+                s.SelectedThemeMode = settingsForLanguage.ThemeMode;
+                s.LoadThemeColorState(settingsForLanguage);
+            });
             SettingsViewModel.ApplyTheme(settingsForLanguage.ThemeMode);
             Settings.ApplyThemeColor(settingsForLanguage.ThemeColorMode, SettingsViewModel.ParseColorOrDefault(settingsForLanguage.CustomThemeColor));
             Shell.SetLoading();
+
+            // Migrate game path from original Yostar launcher on first run
+            if (string.IsNullOrWhiteSpace(settingsForLanguage.GamePath))
+            {
+                var migratedPath = OriginalLauncherMigrationService.TryGetGamePath();
+                if (migratedPath is not null)
+                {
+                    settingsForLanguage.GamePath = migratedPath;
+                    await settingsService.SaveAsync(settingsForLanguage, cancellationToken);
+                }
+            }
 
             var snapshot = await launcherCoreService.LoadAsync(cancellationToken);
             currentSnapshot = snapshot;
@@ -148,8 +162,6 @@ public partial class MainWindowViewModel : ViewModelBase, IDisposable
         {
             return;
         }
-
-        toastService.ShowSuccess(localizer.T("statusNetworkLoaded"));
 
         if (skipNextPersistedResume)
         {
@@ -183,6 +195,9 @@ public partial class MainWindowViewModel : ViewModelBase, IDisposable
         Settings.CloseRequested += () => WindowChrome.IsSettingsVisible = false;
 
         ResourcePanel.GetProxyMode = () => currentSnapshot?.Settings.ProxyMode ?? ProxyModes.Direct;
+        ResourcePanel.GetPatchUrlGroup = () => currentSnapshot?.Settings.PatchUrlGroup ?? PatchUrlGroups.Official;
+        ResourcePanel.ResourcePanelSourceConfirmRequested += ShowResourcePanelSourceConfirmDialog;
+        Dialogs.ConfirmResourcePanelSourceSwitchRequested += SwitchToCafeAndOpenResourcePanel;
 
         Operations.Configure(Shell, Dialogs);
         Operations.GetSnapshot = () => currentSnapshot;
@@ -207,6 +222,27 @@ public partial class MainWindowViewModel : ViewModelBase, IDisposable
 
         MigrationWizard.MigrationApplied += HandleMigrationAppliedAsync;
         MigrationWizard.MigrationSkipped += HandleMigrationSkippedAsync;
+    }
+
+    private void ShowResourcePanelSourceConfirmDialog()
+    {
+        Dialogs.ShowResourcePanelSourceConfirm(localizer.T("resourcePanelCafeOnlyMessage"));
+    }
+
+    private void SwitchToCafeAndOpenResourcePanel()
+    {
+        _ = SwitchSourceThenOpenPanelAsync();
+    }
+
+    private async Task SwitchSourceThenOpenPanelAsync()
+    {
+        var settings = await settingsService.ReadAsync();
+        settings.PatchUrlGroup = PatchUrlGroups.Cafe;
+        await settingsService.SaveAsync(settings);
+        Settings.SelectedPatchUrlGroup = PatchUrlGroups.Cafe;
+
+        await HandleSettingsSavedAsync();
+        await ResourcePanel.OpenPanelDirectly();
     }
 
     private async Task HandleSettingsSavedAsync()
@@ -253,21 +289,7 @@ public partial class MainWindowViewModel : ViewModelBase, IDisposable
 
     private void ApplySettingsSnapshot(LauncherSettings settings, string localGamePath)
     {
-        Settings.SelectedGamePath = localGamePath;
-        Settings.SelectedLaunchCheckMode = settings.LaunchCheckMode;
-        Settings.SelectedProxyMode = settings.ProxyMode;
-        Settings.SelectedPatchUrlGroup = settings.PatchUrlGroup;
-        Settings.SelectedCloseBehavior = settings.CloseBehavior;
-        Settings.SelectedLanguage = settings.Language;
-        Settings.SelectedThemeMode = settings.ThemeMode;
-        Settings.LoadThemeColorState(settings);
-        Settings.SelectedDownloadSpeedLimit = settings.DownloadSpeedLimit;
-        Settings.ToastNotificationsEnabled = settings.ToastNotificationsEnabled;
-        Settings.ShowRemoteContentCard = settings.ShowRemoteContentCard;
-        Settings.CustomBackgroundPath = settings.CustomBackgroundPath;
-        Settings.IsCustomBackground = !string.IsNullOrWhiteSpace(settings.CustomBackgroundPath);
-        Settings.SelectedBackgroundSource = settings.BackgroundSource;
-        Settings.IsCustomBackgroundSelected = Settings.SelectedBackgroundSource == BackgroundSources.Custom;
+        Settings.ApplyLauncherSettings(settings, localGamePath);
     }
 
     private void ApplyLanguage(string language)
@@ -300,6 +322,8 @@ public partial class MainWindowViewModel : ViewModelBase, IDisposable
         }
 
         disposed = true;
+        ResourcePanel.ResourcePanelSourceConfirmRequested -= ShowResourcePanelSourceConfirmDialog;
+        Dialogs.ConfirmResourcePanelSourceSwitchRequested -= SwitchToCafeAndOpenResourcePanel;
         Dialogs.ConfirmRepairRequested -= Operations.RepairAsync;
         Dialogs.ConfirmUninstallRequested -= Operations.ConfirmUninstallAsync;
         Dialogs.ConfirmStopRequested -= Operations.PerformStop;

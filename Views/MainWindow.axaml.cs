@@ -164,6 +164,13 @@ public partial class MainWindow : Window
             return;
         }
 
+        if (vm.Dialogs.IsResourcePanelSourceConfirmVisible)
+        {
+            vm.Dialogs.CancelResourcePanelSourceSwitchCommand.Execute(null);
+            e.Handled = true;
+            return;
+        }
+
         if (vm.Dialogs.IsUninstallConfirmVisible)
         {
             vm.Dialogs.CancelUninstallCommand.Execute(null);

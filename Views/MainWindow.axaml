@@ -29,7 +29,8 @@
     </Window.Styles>
 
     <Grid>
-        <Image Source="{Binding Background.BackgroundImageSource}" Stretch="UniformToFill"/>
+        <Rectangle Fill="{Binding Background.BackgroundFillBrush}"/>
+        <Image Source="{Binding Background.BackgroundImageSource}" Stretch="{Binding Background.BackgroundStretch}"/>
 
         <Grid RowDefinitions="Auto,*">
             <Grid ColumnDefinitions="*,Auto" Height="48">
@@ -99,10 +100,17 @@
                                     </Button>
                                 </Grid>
                                 <!-- Banner Carousel with crossfade transition -->
-                                <Carousel ItemsSource="{Binding RemoteContent.BannerItems}"
+                                <Carousel x:Name="BannerCarousel"
+                                          ItemsSource="{Binding RemoteContent.BannerItems}"
                                           SelectedIndex="{Binding RemoteContent.CarouselSelectedIndex, Mode=TwoWay}"
                                           Height="220"
                                           CornerRadius="4" ClipToBounds="True">
+                                    <Carousel.Styles>
+                                        <Style Selector="ContentControl">
+                                            <Setter Property="HorizontalContentAlignment" Value="Stretch"/>
+                                            <Setter Property="VerticalContentAlignment" Value="Stretch"/>
+                                        </Style>
+                                    </Carousel.Styles>
                                     <Carousel.PageTransition>
                                         <CrossFade Duration="0:0:0.35"/>
                                     </Carousel.PageTransition>
@@ -111,10 +119,16 @@
                                             <Button Background="Transparent"
                                                     BorderThickness="0"
                                                     Padding="0"
+                                                    HorizontalAlignment="Stretch"
+                                                    VerticalAlignment="Stretch"
+                                                    HorizontalContentAlignment="Stretch"
+                                                    VerticalContentAlignment="Stretch"
                                                     Cursor="Hand"
+                                                    Width="{Binding #BannerCarousel.Bounds.Width}"
+                                                    Height="{Binding #BannerCarousel.Bounds.Height}"
                                                     Command="{Binding DataContext.RemoteContent.OpenExternalUrlCommand, ElementName=Root}"
                                                     CommandParameter="{Binding Url}">
-                                                <Grid Height="220">
+                                                <Panel>
                                                     <!-- C3: Placeholder with text when banner fails to load -->
                                                     <Border Classes="media-placeholder">
                                                         <TextBlock Text="{Binding DataContext.Shell.I18n.BannerLoadingFailed, ElementName=Root}"
@@ -123,7 +137,7 @@
                                                     </Border>
                                                     <Image Source="{Binding BannerBitmap}"
                                                            Stretch="UniformToFill"/>
-                                                </Grid>
+                                                </Panel>
                                             </Button>
                                         </DataTemplate>
                                     </Carousel.ItemTemplate>
@@ -243,6 +257,7 @@
                             <StackPanel Orientation="Horizontal" Spacing="16">
                                 <TextBlock Classes="caption" Text="{Binding Shell.VersionText}"/>
                                 <TextBlock Classes="caption" Text="{Binding Shell.DiskSpaceText}"/>
+                                <TextBlock Classes="caption" Text="{Binding Shell.NetworkText}"/>
                             </StackPanel>
                             <Border Classes="path-field">
                                 <Grid ColumnDefinitions="Auto,*,Auto" ColumnSpacing="8">
@@ -341,6 +356,7 @@
                         <StackPanel Grid.Row="1" Grid.ColumnSpan="2" Orientation="Horizontal" HorizontalAlignment="Right" Spacing="16">
                             <TextBlock Text="{Binding Shell.VersionText}" Classes="on-dark-caption"/>
                             <TextBlock Text="{Binding Shell.LaunchCheckText}" Classes="on-dark-caption"/>
+                            <TextBlock Text="{Binding Shell.NetworkText}" Classes="on-dark-caption"/>
                         </StackPanel>
                     </Grid>
                 </Border>
