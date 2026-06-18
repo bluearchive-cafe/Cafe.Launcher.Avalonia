@@ -22,10 +22,6 @@ public sealed class Crc64Service
         Action<int>? progress = null,
         CancellationToken cancellationToken = default)
     {
-        var fileInfo = new FileInfo(filePath);
-        if (!fileInfo.Exists)
-            throw new FileNotFoundException("File does not exist.", filePath);
-
         ulong crc = XorOut;
         var buffer = new byte[1024 * 1024];
         long readTotal = 0;
@@ -39,8 +35,8 @@ public sealed class Crc64Service
             crc = Update(crc, buffer.AsSpan(0, read));
             readTotal += read;
 
-            if (fileInfo.Length > 0)
-                progress?.Invoke((int)Math.Round(readTotal * 100d / fileInfo.Length));
+            if (stream.Length > 0)
+                progress?.Invoke((int)Math.Round(readTotal * 100d / stream.Length));
         }
 
         progress?.Invoke(100);

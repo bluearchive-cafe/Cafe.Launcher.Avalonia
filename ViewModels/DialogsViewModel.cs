@@ -222,7 +222,7 @@ public partial class DialogsViewModel : ViewModelBase
                 closeOnNoticeDismiss = baseConfig.ExitLauncherOpen;
                 IsNoticeDialogVisible = true;
             });
-            await noticeStateService.SaveShownNoticeAsync(noticeHash, cancellationToken);
+            await noticeStateService.SaveShownNoticeAsync(noticeHash, CancellationToken.None);
         }
         catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
         {

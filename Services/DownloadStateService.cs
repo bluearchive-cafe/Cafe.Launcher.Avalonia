@@ -32,7 +32,7 @@ public sealed class DownloadStateService
     public async Task SaveAsync(DownloadTaskState state, CancellationToken cancellationToken = default)
     {
         var json = JsonSerializer.Serialize(state, new JsonSerializerOptions { WriteIndented = true });
-        Directory.CreateDirectory(Path.GetDirectoryName(stateFilePath)!);
+        Directory.CreateDirectory(Path.GetDirectoryName(stateFilePath) ?? ".");
         await File.WriteAllTextAsync(stateFilePath, json, cancellationToken);
     }
 

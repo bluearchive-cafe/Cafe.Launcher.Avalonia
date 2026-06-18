@@ -26,7 +26,7 @@ public sealed class GameUninstallService
         Action<GameOperationProgress> progress,
         CancellationToken cancellationToken = default)
     {
-        var gamePath = localGameStateService.NormalizeGamePath(snapshot.LocalGame.GamePath);
+        var gamePath = localGameStateService.NormalizeGamePath(snapshot.LocalGame.GamePath ?? "");
         try
         {
             var validation = await ValidateAsync(gamePath, cancellationToken);

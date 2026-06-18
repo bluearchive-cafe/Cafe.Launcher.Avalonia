@@ -69,6 +69,7 @@ public sealed class ClickCodeService
         try
         {
             var targetPath = Path.Combine(gamePath, ClickCodeFileName);
+            Directory.CreateDirectory(gamePath);
             File.WriteAllText(targetPath, File.ReadAllText(sourcePath).Trim());
         }
         catch

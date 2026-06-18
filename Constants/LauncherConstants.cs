@@ -16,6 +16,7 @@ public static class LauncherConstants
     public const string GameConfigFileName = "game-launcher-config.json";
     public const string LauncherSettingsFileName = "settings.json";
     public const string ApiBaseUrl = "https://api-launcher-jp.yo-star.com";
+    public const string ResourcePanelApiBaseUrl = "https://api.bluearchive.cafe";
     public const string OfficialWebsiteUrl = "https://bluearchive.cafe/";
     public const string GitHubRepositoryUrl = "https://github.com/bluearchive-cafe/Cafe.Launcher.Avalonia_Release";
     public const string AuthorizationSalt = "DE7108E9B2842FD460F4777702727869";

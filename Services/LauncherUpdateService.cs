@@ -12,18 +12,14 @@ namespace Cafe.Launcher.Avalonia.Services;
 /// Checks for launcher self-updates using a simple check-and-notify approach.
 /// Mirrors the original Electron launcher's electron-updater behavior (check only, not auto-install).
 /// </summary>
-public sealed class LauncherUpdateService : IDisposable
+public sealed class LauncherUpdateService
 {
-    private readonly HttpClient httpClient;
     private readonly HttpClientFactory httpClientFactory;
     private string proxyMode = ProxyModes.Direct;
-    private bool ownsHttpClient;
 
     public LauncherUpdateService(HttpClientFactory httpClientFactory)
     {
         this.httpClientFactory = httpClientFactory;
-        httpClient = httpClientFactory.CreateClient(TimeSpan.FromSeconds(15));
-        ownsHttpClient = false;
     }
 
     public void SetProxyMode(string value)
@@ -47,6 +43,8 @@ public sealed class LauncherUpdateService : IDisposable
             foreach (var line in response.Split('\n'))
             {
                 var trimmed = line.Trim();
+                if (trimmed.Length == 0 || trimmed.StartsWith('#'))
+                    continue;
                 if (trimmed.StartsWith("version:"))
                 {
                     // Strip quotes and whitespace — YAML values may be quoted or unquoted
@@ -76,19 +74,11 @@ public sealed class LauncherUpdateService : IDisposable
         return comparison > 0;
     }
 
-    public void Dispose()
-    {
-        if (ownsHttpClient)
-        {
-            httpClient.Dispose();
-        }
-    }
-
     private async Task<HttpClientLease> CreateRequestClientAsync(CancellationToken ct)
     {
         return await httpClientFactory.CreateLeaseAsync(
             proxyMode,
-            timeout: httpClient.Timeout,
+            timeout: TimeSpan.FromSeconds(15),
             cancellationToken: ct);
     }
 }

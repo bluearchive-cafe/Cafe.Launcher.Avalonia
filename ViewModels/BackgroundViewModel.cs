@@ -176,6 +176,9 @@ public partial class BackgroundViewModel : ViewModelBase, IDisposable
 
     public static string? ResolveRandomBackgroundImage(string folderPath)
     {
+        if (!Directory.Exists(folderPath))
+            return null;
+
         var imagePaths = Directory
             .EnumerateFiles(folderPath)
             .Where(IsSupportedBackgroundImage)

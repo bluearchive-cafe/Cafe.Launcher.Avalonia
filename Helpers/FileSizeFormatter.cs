@@ -13,7 +13,7 @@ public static class FileSizeFormatter
     {
         if (bytes <= 0)
         {
-            return "0KB";
+            return "0B";
         }
 
         var unit = (int)Math.Floor(Math.Log(bytes) / Math.Log(1024));

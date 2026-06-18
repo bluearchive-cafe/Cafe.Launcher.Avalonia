@@ -28,7 +28,7 @@ public sealed class HttpClientFactory : IDisposable
             UseProxy = false,
             PooledConnectionLifetime = TimeSpan.FromMinutes(15)
         };
-        defaultClient = new HttpClient(defaultHandler);
+        defaultClient = new HttpClient(defaultHandler, disposeHandler: false);
     }
 
     /// <summary>
@@ -38,7 +38,7 @@ public sealed class HttpClientFactory : IDisposable
     public HttpClient CreateClient(string baseAddress, TimeSpan timeout)
     {
         ThrowIfDisposed();
-        return new HttpClient(defaultHandler)
+        return new HttpClient(defaultHandler, disposeHandler: false)
         {
             BaseAddress = new Uri(baseAddress),
             Timeout = timeout
@@ -52,7 +52,7 @@ public sealed class HttpClientFactory : IDisposable
     public HttpClient CreateClient(TimeSpan timeout)
     {
         ThrowIfDisposed();
-        return new HttpClient(defaultHandler)
+        return new HttpClient(defaultHandler, disposeHandler: false)
         {
             Timeout = timeout
         };
@@ -73,14 +73,14 @@ public sealed class HttpClientFactory : IDisposable
         if (proxyMode != ProxyModes.System)
         {
             // Borrow the shared default client (caller does NOT own it)
-            var client = new HttpClient(defaultHandler);
+            var client = new HttpClient(defaultHandler, disposeHandler: false);
             if (baseAddress is not null) client.BaseAddress = baseAddress;
             if (timeout.HasValue) client.Timeout = timeout.Value;
             return new HttpClientLease(client);
         }
 
         var handler = await proxySettingsService.CreateHttpHandlerAsync(proxyMode, cancellationToken);
-        var proxyClient = new HttpClient(handler);
+        var proxyClient = new HttpClient(handler, disposeHandler: false);
         if (baseAddress is not null) proxyClient.BaseAddress = baseAddress;
         if (timeout.HasValue) proxyClient.Timeout = timeout.Value;
         return new HttpClientLease(proxyClient, handler);

@@ -206,7 +206,7 @@ public sealed class LauncherApiClient : IDisposable
         }
 
         var handler = await proxySettingsService.CreateHttpHandlerAsync(proxyMode, cancellationToken);
-        var client = new HttpClient(handler)
+        var client = new HttpClient(handler, disposeHandler: false)
         {
             BaseAddress = httpClient.BaseAddress,
             Timeout = httpClient.Timeout

@@ -3,6 +3,7 @@ using System.Net.Http;
 using System.Text.Json;
 using System.Threading;
 using System.Threading.Tasks;
+using Cafe.Launcher.Avalonia.Constants;
 using Cafe.Launcher.Avalonia.Helpers;
 using Cafe.Launcher.Avalonia.Models;
 
@@ -10,7 +11,7 @@ namespace Cafe.Launcher.Avalonia.Services;
 
 public sealed class ResourcePanelApiClient : IDisposable
 {
-    private const string ApiBaseUrl = "https://api.bluearchive.cafe";
+    private static readonly string ApiBaseUrl = LauncherConstants.ResourcePanelApiBaseUrl;
     private readonly HttpClient httpClient;
     private readonly HttpClientFactory httpClientFactory;
     private readonly bool ownsHttpClient;

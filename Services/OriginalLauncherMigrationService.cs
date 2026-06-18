@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 using System.IO;
 
 namespace Cafe.Launcher.Avalonia.Services;
@@ -25,7 +26,7 @@ public static class OriginalLauncherMigrationService
 
         try
         {
-            var values = LevelDbReader.TryReadValues(levelDbPath);
+            var values = LevelDbReader.TryReadValues(levelDbPath) ?? new Dictionary<string, string>();
             if (values.TryGetValue("downloadPath", out var gamePath)
                 && !string.IsNullOrWhiteSpace(gamePath)
                 && Directory.Exists(gamePath))

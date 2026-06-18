@@ -172,7 +172,14 @@ public partial class GameOperationsViewModel : ViewModelBase
 
         try
         {
-            var result = await gameDownloadService.InstallOrUpdateAsync(GetSnapshot!.Invoke()!, ApplyProgress);
+            var snapshot = GetSnapshot?.Invoke();
+            if (snapshot is null)
+            {
+                shell!.OperationNote = localizer.T("stateNotLoaded");
+                return;
+            }
+
+            var result = await gameDownloadService.InstallOrUpdateAsync(snapshot, ApplyProgress);
             shell!.OperationNote = result.Message;
             if (result.Success)
                 toastService.ShowSuccess(result.Message);
@@ -224,7 +231,14 @@ public partial class GameOperationsViewModel : ViewModelBase
 
         try
         {
-            var result = await gameDownloadService.RepairAsync(GetSnapshot!.Invoke()!, ApplyProgress);
+            var snapshot = GetSnapshot?.Invoke();
+            if (snapshot is null)
+            {
+                shell!.OperationNote = localizer.T("stateNotLoaded");
+                return;
+            }
+
+            var result = await gameDownloadService.RepairAsync(snapshot, ApplyProgress);
             shell!.OperationNote = result.Message;
             if (result.Success)
                 toastService.ShowSuccess(result.Message);

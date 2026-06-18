@@ -362,7 +362,7 @@ public sealed class LocalizationService
 {
     private static readonly Dictionary<string, Dictionary<string, string>> Resources = new(StringComparer.Ordinal);
     private static readonly string[] SupportedLocales = [LauncherLanguages.English, LauncherLanguages.SimplifiedChinese, LauncherLanguages.Japanese];
-    private static bool resourcesLoaded;
+    private static volatile bool resourcesLoaded;
     private static readonly object LoadLock = new();
 
     /// <summary>
