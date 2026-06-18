@@ -506,7 +506,7 @@
                                     <Button Classes="flat-action wrap-action" Command="{Binding WindowChrome.OpenGitHubRepositoryCommand}">
                                         <StackPanel Classes="button-content">
                                             <materialIcons:MaterialIcon Kind="Github" Width="16" Height="16"/>
-                                            <TextBlock Text="{Binding Shell.I18n.GithubRepository}" VerticalAlignment="Center"/>
+                                            <TextBlock Text="{Binding Shell.I18n.GitHubRepository}" VerticalAlignment="Center"/>
                                         </StackPanel>
                                     </Button>
                                     <!-- "Check for Updates" is hidden until the feature is implemented.

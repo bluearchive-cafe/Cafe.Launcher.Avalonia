@@ -124,7 +124,7 @@ public sealed class LauncherSettingsServiceTests : IDisposable
             CustomThemeColor = "#FF336699",
             ThemeColorPalette = ["#FF112233", "#FF445566"],
             SelectedThemeColorPaletteIndex = 1,
-            DownloadSpeedLimit = DownloadSpeedLimits._10MBs,
+            DownloadSpeedLimit = DownloadSpeedLimits.Speed10MBs,
             ToastNotificationsEnabled = false,
             ShowRemoteContentCard = false,
             PatchUrlGroup = PatchUrlGroups.Cafe,

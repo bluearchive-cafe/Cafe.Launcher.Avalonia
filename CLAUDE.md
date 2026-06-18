@@ -17,7 +17,7 @@ dotnet test                                                    # Run all tests
 dotnet test --filter "FullyQualifiedName~VersionComparerTests" # Run a single test class
 ```
 
-Available test classes: `VersionComparerTests`, `LauncherApiClientTests`, `LauncherConstantsTests`, `LauncherSettingsServiceTests`, `LocalGameStateServiceTests`, `LocalizationServiceTests`, `MainWindowViewModelTests`, `GameDownloadServiceTests`, `PatchUrlGroupServiceTests`, `BestHttpCookieLibraryServiceTests`, `ResourcePanelUidServiceTests`, `ExternalLinkServiceTests`, `ResourcePanelApiClientTests`.
+Available test classes: `VersionComparerTests`, `LauncherApiClientTests`, `LauncherConstantsTests`, `LauncherSettingsServiceTests`, `LocalGameStateServiceTests`, `LocalizationServiceTests`, `MainWindowViewModelTests`, `GameDownloadServiceTests`, `PatchUrlGroupServiceTests`, `BestHttpCookieLibraryServiceTests`, `ResourcePanelUidServiceTests`, `ExternalLinkServiceTests`, `ResourcePanelApiClientTests`, `MigrationWizardViewModelTests`, `LevelDbReaderTests`, `OldLauncherDetectionServiceTests`.
 
 CI is GitHub Actions on `windows-latest`, .NET 10.0.x:
 - **build.yml** (push/PR to `main`): restore, Debug build, Release build, self-contained publish, upload artifact.
@@ -40,7 +40,7 @@ CI is GitHub Actions on `windows-latest`, .NET 10.0.x:
 
 ## Architecture
 
-**Tech stack**: .NET 10.0, Avalonia 12.0.4, CommunityToolkit.Mvvm 8.4.2 (source generators), Material.Icons.Avalonia, Fluent Theme. Compiled bindings enabled by default.
+**Tech stack**: .NET 10.0, Avalonia 12.0.4, CommunityToolkit.Mvvm 8.4.2 (source generators), Material.Icons.Avalonia, Fluent Theme. Compiled bindings enabled by default. Nullable reference types enabled project-wide (`<Nullable>enable</Nullable>` in the `.csproj`).
 
 **MVVM pattern** with `ViewLocator` convention: `FooViewModel` → `FooView` by string replacement. ViewModelBase extends `ObservableObject`.
 
@@ -59,6 +59,7 @@ One `MainWindow` (1300×754, non-resizable with MinWidth 1024/MinHeight 640, bor
 | `WindowChromeViewModel` | Title bar, minimize/close buttons, window drag state |
 | `SettingsViewModel` | Settings panel: language, theme, download source, launch check, speed limit, close behavior, proxy, background, game path |
 | `ResourcePanelViewModel` | Resource panel (UID-based game resource display) |
+| `MigrationWizardViewModel` | First-launch migration wizard (settings from old Electron launcher) |
 
 **View files** (XAML split by concern, all under `Views/`):
 - `MainWindow.axaml` — window shell, title bar, remote content panel, bottom install/progress/control panels
@@ -117,8 +118,11 @@ One `MainWindow` (1300×754, non-resizable with MinWidth 1024/MinHeight 640, bor
 | `LauncherUpdateService` | Checks for and downloads launcher updates |
 | `ExternalLinkService` | Opens external URLs in the default browser |
 | `DownloadStateService` | Serializes/resumes download state to `download_state.json` |
-| `OriginalLauncherMigrationService` | Migrates game installation path from the original Electron launcher on first run |
 | `Crc64Service`, `OfficialHashService`, `DiskSpaceService`, `ProcessService`, `VersionComparer`, `ClickCodeService` | Supporting services |
+| `OldLauncherDetectionService` | Detects old Electron launcher install + reads its localStorage (LevelDB) for migration |
+| `OriginalLauncherMigrationService` | Reads game installation path from old Yostar launcher on first run (non-interactive) |
+| `LevelDbReader` | Best-effort byte-level scanner for Chrome localStorage LevelDB files (.ldb/.log) |
+| `ServiceConfiguration` | DI container — registers all services (singleton) and ViewModels (transient) via `AddLauncherServices()` |
 
 **HttpClient lifecycle**: `HttpClientFactory` owns a single shared `SocketsHttpHandler` (pooled, 15-min connection lifetime). Callers get `HttpClient` instances that share this handler and must NOT dispose them. For proxy-aware requests, `CreateLeaseAsync()` returns an `HttpClientLease` that conditionally owns its handler — callers dispose the lease, not the client. `HttpClientLease.Dispose()` only disposes the handler when it was created per-request (proxy mode); for direct connections, disposal is a no-op since the handler is shared.
 
@@ -129,6 +133,10 @@ One `MainWindow` (1300×754, non-resizable with MinWidth 1024/MinHeight 640, bor
 4. `GameDownloadService` — disposed last
 
 The DI container calls `Dispose()` on these in reverse registration order when the service provider is disposed.
+
+### First-launch migration
+
+On first launch, `MainWindowViewModel` uses `OldLauncherDetectionService` to check for a previous Electron launcher (`BlueArchive_JP_Gamelauncher`). If detected, it reads settings (game path, proxy mode, close behavior, clickCode) from the old launcher's Chromium localStorage via `LevelDbReader`, which performs a byte-level scan of `.ldb` and `.log` files. The `MigrationWizardViewModel` presents a dialog (rendered in `MainWindowDialogsOverlay.axaml`) letting the user review and adjust detected settings before applying them. After completion, `hasCompletedFirstLaunchWizard` is persisted to `true` to prevent re-running. `OriginalLauncherMigrationService` provides a simpler, non-interactive path for programmatic use.
 
 ### Local files (`%LOCALAPPDATA%\Cafe Launcher\`)
 
@@ -150,7 +158,7 @@ Persisted fields in `settings.json` and their valid values:
 | Language | `language` | `auto`, `en`, `zh-Hans`, `ja` |
 | Theme | `themeMode` | `system`, `light`, `dark` |
 | Patch URL group | `patchUrlGroup` | `official`, `cafe` |
-| Launch check | `launchCheckMode` | `LocalManifest`, `RemoteManifest`, `None` |
+| Launch check | `launchCheckMode` | `localManifest`, `remoteManifest`, `none` |
 | Download speed limit | `downloadSpeedLimit` | `unlimited`, `1MB/s`, `5MB/s`, `10MB/s`, `25MB/s`, `50MB/s` |
 | Close behavior | `closeBehavior` | `minimize`, `exit` |
 | Proxy | `proxyMode` | `direct`, `system` |
@@ -161,11 +169,17 @@ Persisted fields in `settings.json` and their valid values:
 | Custom background | `customBackgroundPath` | Absolute file path |
 | Toast notifications | `toastNotificationsEnabled` | `true`/`false` |
 | Remote content card | `showRemoteContentCard` | `true`/`false` |
+| Theme color mode | `themeColorMode` | `default`, `system`, `wallpaper`, `custom` |
+| Custom theme color | `customThemeColor` | Hex color string (e.g. `#FF2E7DF6`) |
+| Theme color palette | `themeColorPalette` | JSON array of hex strings (extracted from wallpaper) |
+| Selected palette index | `selectedThemeColorPaletteIndex` | Integer index into `themeColorPalette` |
+| Resource panel UID | `resourcePanelUid` | Player UID string |
+| First launch wizard | `hasCompletedFirstLaunchWizard` | `true`/`false` |
 
 ### Key models (`Models/`)
 
 - `LauncherApiContracts.cs` — All API response DTOs
-- `LauncherStateModels.cs` — String constants for modes/behaviors (`LaunchCheckModes`, `ProxyModes`, `CloseBehaviors`, `LauncherLanguages`, `ThemeModes`, `ThemeColorModes`, `DownloadSpeedLimits`, `PatchUrlGroups`, `BackgroundSources`, `BackgroundFits`), plus runtime state objects (`LauncherStatusSnapshot`, `LauncherRemoteState`, `LocalGameState`, `LauncherSettings`, `GameOperationProgress`, `GameOperationResult`), and option types (`SettingOption`, `LanguageOption`, `ThemeOption`) for localized dropdown binding
+- `LauncherStateModels.cs` — String constants for modes/behaviors (`LaunchCheckModes`, `ProxyModes`, `CloseBehaviors`, `LauncherLanguages`, `ThemeModes`, `ThemeColorModes`, `DownloadSpeedLimits`, `PatchUrlGroups`, `BackgroundSources`, `BackgroundFits`, `GameOperationKinds`), plus runtime state objects (`LauncherStatusSnapshot`, `LauncherRemoteState`, `LocalGameState`, `LauncherSettings`, `GameOperationProgress`, `GameOperationResult`, `ManifestValidationResult`, `GameLaunchResult`), and option types (`SettingOption`, `LanguageOption`, `ThemeOption`) for localized dropdown binding
 - `LocalGameContracts.cs` — `LocalManifest`, `RemoteManifest`, `ManifestFile`, `GameLauncherConfig`
 - `PatchUrlGroupDefinition.cs` — Code + host-from/to tuples for CDN URL rewriting
 - `DownloadTaskState.cs` — Serializable download resume state
@@ -192,6 +206,7 @@ Users can switch between `Official` (yo-star.com) and `Cafe` (bluearchive.cafe) 
 - `Helpers/` — `FileSizeFormatter`, `GamePathValidator`, `HttpClientLease`
 - `Services/Auth/` — `AuthorizationHeaderFactory` (MD5-signed API auth header)
 - `Services/Diagnostics/` — `LocalDiagnostics` (appends to `diagnostics.log`)
+- `Services/ServiceConfiguration.cs` — DI registration; all services as `AddSingleton`, all ViewModels as `AddTransient`
 
 ### Localization
 
@@ -211,7 +226,13 @@ All UI strings go through `LocalizationService.T(key)` and `LocalizationService.
 
 Light/Dark themes defined as `ThemeDictionaries` in `App.axaml` with custom `Launcher*` brush keys. `ThemeModes.System` → `ThemeVariant.Default` (follows OS), `Light`/`Dark` → explicit. Applied via `Application.Current.RequestedThemeVariant`.
 
-Wallpaper color extraction (`ThemeColorExtractionService`) analyzes the current background image and produces a palette that tints UI elements to match.
+**Theme color** controls the accent color tinting UI elements (buttons, progress bars, links). `ThemeColorModes` has 4 variants:
+- `default` — uses `LauncherConstants.DefaultThemeColor` (`#FF2E7DF6`)
+- `system` — follows the OS accent color
+- `wallpaper` — extracts a palette from the current wallpaper via `ThemeColorExtractionService`; the user picks one from the extracted `ThemeColorPalette` list
+- `custom` — user picks any color via `ColorPicker`
+
+The selected mode, custom color, and palette are persisted in `settings.json` (`themeColorMode`, `customThemeColor`, `themeColorPalette`, `selectedThemeColorPaletteIndex`). Theme color is applied independently of light/dark theme mode.
 
 ### Single-instance pattern
 

@@ -15,11 +15,11 @@ namespace Cafe.Launcher.Avalonia.Converters;
 public sealed class UrlToBitmapConverter : IValueConverter
 {
     public static readonly UrlToBitmapConverter Instance = new();
-    private static readonly SocketsHttpHandler httpHandler = new()
+    private static readonly SocketsHttpHandler HttpHandler = new()
     {
         PooledConnectionLifetime = TimeSpan.FromMinutes(15)
     };
-    private static readonly HttpClient httpClient = new(httpHandler) { Timeout = TimeSpan.FromSeconds(30) };
+    private static readonly HttpClient HttpClient = new(HttpHandler) { Timeout = TimeSpan.FromSeconds(30) };
 
     public object? Convert(object? value, Type targetType, object? parameter, CultureInfo culture)
     {
@@ -40,7 +40,7 @@ public sealed class UrlToBitmapConverter : IValueConverter
     {
         try
         {
-            var bytes = await httpClient.GetByteArrayAsync(url);
+            var bytes = await HttpClient.GetByteArrayAsync(url);
             return await Dispatcher.UIThread.InvokeAsync(() => new Bitmap(new System.IO.MemoryStream(bytes)));
         }
         catch

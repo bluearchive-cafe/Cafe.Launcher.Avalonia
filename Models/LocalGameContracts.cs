@@ -33,16 +33,16 @@ public sealed class RemoteManifest
 public sealed class ManifestFile
 {
     [JsonPropertyName("path")]
-    public string Path { get => _path ??= ""; set => _path = value ?? ""; }
-    private string? _path = "";
+    public string Path { get => path ??= ""; set => path = value ?? ""; }
+    private string? path = "";
 
     [JsonPropertyName("size")]
-    public string Size { get => _size ??= "0"; set => _size = value ?? "0"; }
-    private string? _size = "0";
+    public string Size { get => size ??= "0"; set => size = value ?? "0"; }
+    private string? size = "0";
 
     [JsonPropertyName("hash")]
-    public string Hash { get => _hash ??= ""; set => _hash = value ?? ""; }
-    private string? _hash = "";
+    public string Hash { get => hash ??= ""; set => hash = value ?? ""; }
+    private string? hash = "";
 
     [JsonPropertyName("vc")]
     public string? Vc { get; set; }
@@ -57,8 +57,8 @@ public sealed class GameLauncherConfig
     public string? Name { get; set; }
 
     [JsonPropertyName("params")]
-    public string[] Params { get => _params ??= []; set => _params = value ?? []; }
-    private string[] _params = [];
+    public string[] Params { get => parameters ??= []; set => parameters = value ?? []; }
+    private string[] parameters = [];
 
     [JsonPropertyName("version")]
     public string? Version { get; set; }

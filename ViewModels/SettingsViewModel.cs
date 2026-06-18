@@ -188,11 +188,11 @@ public partial class SettingsViewModel : ViewModelBase
     public ObservableCollection<SettingOption> DownloadSpeedLimitOptions { get; } =
     [
         new() { Code = DownloadSpeedLimits.Unlimited },
-        new() { Code = DownloadSpeedLimits._1MBs },
-        new() { Code = DownloadSpeedLimits._5MBs },
-        new() { Code = DownloadSpeedLimits._10MBs },
-        new() { Code = DownloadSpeedLimits._25MBs },
-        new() { Code = DownloadSpeedLimits._50MBs }
+        new() { Code = DownloadSpeedLimits.Speed1MBs },
+        new() { Code = DownloadSpeedLimits.Speed5MBs },
+        new() { Code = DownloadSpeedLimits.Speed10MBs },
+        new() { Code = DownloadSpeedLimits.Speed25MBs },
+        new() { Code = DownloadSpeedLimits.Speed50MBs }
     ];
 
     public ObservableCollection<SettingOption> CloseBehaviorOptions { get; } =
@@ -926,11 +926,11 @@ public partial class SettingsViewModel : ViewModelBase
         {
             option.DisplayName = option.Code switch
             {
-                DownloadSpeedLimits._1MBs => localizer.T("speed1MBs"),
-                DownloadSpeedLimits._5MBs => localizer.T("speed5MBs"),
-                DownloadSpeedLimits._10MBs => localizer.T("speed10MBs"),
-                DownloadSpeedLimits._25MBs => localizer.T("speed25MBs"),
-                DownloadSpeedLimits._50MBs => localizer.T("speed50MBs"),
+                DownloadSpeedLimits.Speed1MBs => localizer.T("speed1MBs"),
+                DownloadSpeedLimits.Speed5MBs => localizer.T("speed5MBs"),
+                DownloadSpeedLimits.Speed10MBs => localizer.T("speed10MBs"),
+                DownloadSpeedLimits.Speed25MBs => localizer.T("speed25MBs"),
+                DownloadSpeedLimits.Speed50MBs => localizer.T("speed50MBs"),
                 _ => localizer.T("speedUnlimited")
             };
         }

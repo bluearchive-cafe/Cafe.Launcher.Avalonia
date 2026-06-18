@@ -81,7 +81,7 @@
   "gameManagement": "ゲーム管理",
   "gameManagementDescription": "修復：リモートマニフェストで検証。アンインストール：管理対象ファイルのみ削除。",
   "gamePath": "ゲームインストールパス",
-  "githubRepository": "GitHub リポジトリ",
+  "gitHubRepository": "GitHub リポジトリ",
   "installGame": "ゲームをインストール",
   "keepEditing": "編集を続ける",
   "language": "言語",
@@ -243,5 +243,9 @@
   "migrationSkip": "スキップ",
   "migrationApply": "設定を適用",
   "migrationApplied": "設定の移行が完了しました。",
-  "migrationNoOldLauncher": "公式ランチャーの設定は見つかりませんでした。"
+  "migrationNoOldLauncher": "公式ランチャーの設定は見つかりませんでした。",
+  "toastSuccess": "成功",
+  "toastWarning": "警告",
+  "toastError": "エラー",
+  "toastInfo": "情報"
 }

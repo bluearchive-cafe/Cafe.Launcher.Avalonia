@@ -546,7 +546,7 @@ public sealed class MainWindowViewModelTests : IDisposable
                 localizationService,
                 toastService,
                 diagnostics),
-            new ToastHostViewModel(toastService),
+            new ToastHostViewModel(toastService, localizationService),
             new WindowChromeViewModel(externalLinkService),
             settingsViewModel,
             resourcePanelViewModel,

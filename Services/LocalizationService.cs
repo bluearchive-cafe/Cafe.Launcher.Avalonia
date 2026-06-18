@@ -94,7 +94,7 @@ public sealed partial class LocalizedStrings : ObservableObject
     [ObservableProperty] private string noticeExit = "";
     [ObservableProperty] private string showLauncher = "";
     [ObservableProperty] private string exitLauncher = "";
-    [ObservableProperty] private string githubRepository = "";
+    [ObservableProperty] private string gitHubRepository = "";
     [ObservableProperty] private string checkUpdates = "";
     [ObservableProperty] private string checkUpdatesUnavailable = "";
     [ObservableProperty] private string trayOpenLauncher = "";
@@ -132,6 +132,10 @@ public sealed partial class LocalizedStrings : ObservableObject
     [ObservableProperty] private string showRemoteContentCard = "";
     [ObservableProperty] private string toggleOn = "";
     [ObservableProperty] private string toggleOff = "";
+    [ObservableProperty] private string toastSuccess = "";
+    [ObservableProperty] private string toastWarning = "";
+    [ObservableProperty] private string toastError = "";
+    [ObservableProperty] private string toastInfo = "";
     [ObservableProperty] private string launchCheckDescription = "";
     [ObservableProperty] private string proxyDescription = "";
     [ObservableProperty] private string downloadSource = "";
@@ -264,7 +268,7 @@ public sealed partial class LocalizedStrings : ObservableObject
         NoticeExit = localizer.T("noticeExit");
         ShowLauncher = localizer.T("showLauncher");
         ExitLauncher = localizer.T("exitLauncher");
-        GithubRepository = localizer.T("githubRepository");
+        GitHubRepository = localizer.T("gitHubRepository");
         CheckUpdates = localizer.T("checkUpdates");
         CheckUpdatesUnavailable = localizer.T("checkUpdatesUnavailable");
         TrayOpenLauncher = localizer.T("trayOpenLauncher");
@@ -302,6 +306,10 @@ public sealed partial class LocalizedStrings : ObservableObject
         ShowRemoteContentCard = localizer.T("showRemoteContentCard");
         ToggleOn = localizer.T("toggleOn");
         ToggleOff = localizer.T("toggleOff");
+        ToastSuccess = localizer.T("toastSuccess");
+        ToastWarning = localizer.T("toastWarning");
+        ToastError = localizer.T("toastError");
+        ToastInfo = localizer.T("toastInfo");
         LaunchCheckDescription = localizer.T("launchCheckDescription");
         ProxyDescription = localizer.T("proxyDescription");
         DownloadSource = localizer.T("downloadSource");

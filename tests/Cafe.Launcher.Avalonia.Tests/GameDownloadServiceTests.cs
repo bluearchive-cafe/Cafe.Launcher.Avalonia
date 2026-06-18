@@ -53,7 +53,7 @@ public sealed class GameDownloadServiceTests
     }
 
     [Fact]
-    public void RetryDomainOrder_MatchesCafeLauncherOld()
+    public void RetryDomainOrder_ReturnsExpectedSequence()
     {
         Assert.Equal([1, 1, 1, 1, 0, 0, 0, 1, 1, 1], GameDownloadService.RetryDomainOrder);
     }

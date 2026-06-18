@@ -66,7 +66,7 @@ public partial class MigrationWizardViewModel : ViewModelBase
 
     // ── Coordination delegates — set by parent ──────────────────────────────
 
-    public Func<Task<string?>>? BrowseGamePathAsync { get; set; }
+    public Func<Task<string?>>? PickGameFolderAsync { get; set; }
 
     // ── Events — parent subscribes ──────────────────────────────────────────
 
@@ -141,12 +141,12 @@ public partial class MigrationWizardViewModel : ViewModelBase
     // ── Commands ────────────────────────────────────────────────────────────
 
     [RelayCommand]
-    private async Task BrowseGamePath()
+    private async Task BrowseGamePathAsync()
     {
-        if (BrowseGamePathAsync is null)
+        if (PickGameFolderAsync is null)
             return;
 
-        var path = await BrowseGamePathAsync();
+        var path = await PickGameFolderAsync();
         if (!string.IsNullOrWhiteSpace(path))
         {
             DetectedGamePath = path;
@@ -190,7 +190,7 @@ public partial class MigrationWizardViewModel : ViewModelBase
     }
 
     [RelayCommand]
-    private async Task SkipMigration()
+    private async Task SkipMigrationAsync()
     {
         if (MigrationSkipped is not null)
             await MigrationSkipped.Invoke();

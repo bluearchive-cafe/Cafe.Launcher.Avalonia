@@ -35,7 +35,7 @@ public partial class MainWindow : Window
         viewModel.WindowChrome.MinimizeWindow = () => WindowState = WindowState.Minimized;
         viewModel.WindowChrome.CloseWindow = PerformClose;
         viewModel.WindowChrome.RestoreWindow = ShowWindow;
-        viewModel.MigrationWizard.BrowseGamePathAsync = () => PickGameFolderAsync(viewModel.MigrationWizard.DetectedGamePath);
+        viewModel.MigrationWizard.PickGameFolderAsync = () => PickGameFolderAsync(viewModel.MigrationWizard.DetectedGamePath);
     }
 
     public void SetSystemTray(SystemTrayService trayService)

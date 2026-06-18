@@ -81,7 +81,7 @@
   "gameManagement": "游戏管理",
   "gameManagementDescription": "修复：依据远端清单校验文件。卸载：仅移除 tracked 文件。",
   "gamePath": "游戏安装路径",
-  "githubRepository": "GitHub 仓库",
+  "gitHubRepository": "GitHub 仓库",
   "installGame": "安装游戏",
   "keepEditing": "继续编辑",
   "language": "语言",
@@ -243,5 +243,9 @@
   "migrationSkip": "跳过",
   "migrationApply": "应用设置",
   "migrationApplied": "设置迁移成功。",
-  "migrationNoOldLauncher": "未找到官方启动器设置。"
+  "migrationNoOldLauncher": "未找到官方启动器设置。",
+  "toastSuccess": "成功",
+  "toastWarning": "警告",
+  "toastError": "错误",
+  "toastInfo": "信息"
 }
