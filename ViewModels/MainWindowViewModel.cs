@@ -119,13 +119,11 @@ public partial class MainWindowViewModel : ViewModelBase, IDisposable
         {
             var settingsForLanguage = await settingsService.ReadAsync(cancellationToken);
             ApplyLanguage(settingsForLanguage.Language);
-            Settings.BulkUpdate(s =>
-            {
-                s.SelectedThemeMode = settingsForLanguage.ThemeMode;
-                s.LoadThemeColorState(settingsForLanguage);
-            });
-            SettingsViewModel.ApplyTheme(settingsForLanguage.ThemeMode);
-            Settings.ApplyThemeColor(settingsForLanguage.ThemeColorMode, SettingsViewModel.ParseColorOrDefault(settingsForLanguage.CustomThemeColor));
+            Settings.Appearance.Load(settingsForLanguage);
+            SettingsAppearanceViewModel.ApplyTheme(settingsForLanguage.ThemeMode);
+            Settings.Appearance.ApplyThemeColor(
+                settingsForLanguage.ThemeColorMode,
+                SettingsAppearanceViewModel.ParseColorOrDefault(settingsForLanguage.CustomThemeColor));
             Shell.SetLoading();
 
             // Migrate game path from original Yostar launcher on first run
@@ -175,22 +173,21 @@ public partial class MainWindowViewModel : ViewModelBase, IDisposable
 
     private void WireChildren()
     {
-        Background.Configure(Settings);
-        Toasts.Configure(Settings);
-
         Settings.GetSnapshot = () => currentSnapshot;
-        Settings.GetBackgroundBitmap = Background.GetBackgroundBitmap;
+        Settings.Appearance.GetBackgroundBitmap = Background.GetBackgroundBitmap;
         Settings.ApplyLanguageAndTheme = async s =>
         {
             ApplyLanguage(s.Language);
-            SettingsViewModel.ApplyTheme(s.ThemeMode);
+            SettingsAppearanceViewModel.ApplyTheme(s.ThemeMode);
             // Background is intentionally NOT updated here.
             // Both callers (SaveSettingsAsync, ChooseGamePathAsync) fire SettingsSaved
             // immediately after, which triggers RefreshAsync → ApplySnapshotAsync →
             // Background.UpdateBackgroundImageAsync. Updating it here too would cause
             // a double-update; for folder-based (random) backgrounds each update picks a
             // different image, so the wallpaper visibly flickers between two random picks.
-            Settings.ApplyThemeColor(s.ThemeColorMode, SettingsViewModel.ParseColorOrDefault(s.CustomThemeColor));
+            Settings.Appearance.ApplyThemeColor(
+                s.ThemeColorMode,
+                SettingsAppearanceViewModel.ParseColorOrDefault(s.CustomThemeColor));
         };
         Settings.SettingsSaved += HandleSettingsSavedAsync;
         closeRequestedHandler = () => WindowChrome.IsSettingsVisible = false;
@@ -201,7 +198,6 @@ public partial class MainWindowViewModel : ViewModelBase, IDisposable
         ResourcePanel.ResourcePanelSourceConfirmRequested += ShowResourcePanelSourceConfirmDialog;
         Dialogs.ConfirmResourcePanelSourceSwitchRequested += SwitchToCafeAndOpenResourcePanel;
 
-        Operations.Configure(Shell, Dialogs);
         Operations.GetSnapshot = () => currentSnapshot;
         Operations.RequestRefreshAsync = async () => await RefreshAsync();
         Operations.RequestRefreshAfterPersistedResumeAsync = async () =>
@@ -219,7 +215,6 @@ public partial class MainWindowViewModel : ViewModelBase, IDisposable
 
         RemoteContent.OpenExternalUrlRequested = WindowChrome.OpenExternalUrl;
 
-        WindowChrome.Configure(Settings, RemoteContent, Dialogs, Operations);
         WindowChrome.GetSnapshot = () => currentSnapshot;
 
         MigrationWizard.MigrationApplied += HandleMigrationAppliedAsync;
@@ -241,7 +236,7 @@ public partial class MainWindowViewModel : ViewModelBase, IDisposable
         var settings = await settingsService.ReadAsync();
         settings.PatchUrlGroup = PatchUrlGroups.Cafe;
         await settingsService.SaveAsync(settings);
-        Settings.SelectedPatchUrlGroup = PatchUrlGroups.Cafe;
+        Settings.Editor.Current.PatchUrlGroup = PatchUrlGroups.Cafe;
 
         await HandleSettingsSavedAsync();
         await ResourcePanel.OpenPanelDirectly();
@@ -250,7 +245,7 @@ public partial class MainWindowViewModel : ViewModelBase, IDisposable
     private async Task HandleSettingsSavedAsync()
     {
         var previousPatchUrlGroup = currentSnapshot?.Settings.PatchUrlGroup;
-        var savedPatchUrlGroup = Settings.SelectedPatchUrlGroup;
+        var savedPatchUrlGroup = Settings.Editor.Current.PatchUrlGroup;
         await RefreshAsync();
         if (currentSnapshot?.IsInstalled == true
             && !string.Equals(previousPatchUrlGroup, savedPatchUrlGroup, StringComparison.Ordinal))
@@ -279,9 +274,11 @@ public partial class MainWindowViewModel : ViewModelBase, IDisposable
     {
         ApplySettingsSnapshot(snapshot.Settings, snapshot.LocalGame.GamePath);
         ApplyLanguage(snapshot.Settings.Language);
-        SettingsViewModel.ApplyTheme(snapshot.Settings.ThemeMode);
+        SettingsAppearanceViewModel.ApplyTheme(snapshot.Settings.ThemeMode);
         await Background.UpdateBackgroundImageAsync(snapshot, lifetimeCts.Token);
-        Settings.ApplyThemeColor(snapshot.Settings.ThemeColorMode, SettingsViewModel.ParseColorOrDefault(snapshot.Settings.CustomThemeColor));
+        Settings.Appearance.ApplyThemeColor(
+            snapshot.Settings.ThemeColorMode,
+            SettingsAppearanceViewModel.ParseColorOrDefault(snapshot.Settings.CustomThemeColor));
 
         Shell.ApplySnapshot(snapshot, Settings);
         Operations.ApplySnapshot(snapshot);
@@ -336,6 +333,7 @@ public partial class MainWindowViewModel : ViewModelBase, IDisposable
         Dialogs.ConfirmStopRequested -= Operations.PerformStop;
         Dialogs.CloseAfterStoppingDownloadRequested -= WindowChrome.CloseAfterStoppingDownload;
         Operations.StopDownload(clearPersistedState: false);
+        Settings.Dispose();
         RemoteContent.Dispose();
         Background.Dispose();
         Toasts.Dispose();

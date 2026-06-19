@@ -1,5 +1,4 @@
 using System;
-using System.Collections.ObjectModel;
 using System.Threading.Tasks;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
@@ -15,7 +14,7 @@ namespace Cafe.Launcher.Avalonia.ViewModels;
 /// </summary>
 public partial class MigrationWizardViewModel : ViewModelBase
 {
-    private readonly LocalizationService localizer;
+    private readonly ISettingsEditor editor;
     private OldLauncherDetectionResult? detectionResult;
 
     // ── Visibility ──────────────────────────────────────────────────────────
@@ -26,35 +25,8 @@ public partial class MigrationWizardViewModel : ViewModelBase
     [ObservableProperty]
     private bool isApplying;
 
-    // ── Detected game path ──────────────────────────────────────────────────
-
-    [ObservableProperty]
-    private string detectedGamePath = "";
-
-    [ObservableProperty]
-    private bool gamePathFound;
-
-    // ── Proxy mode selection ────────────────────────────────────────────────
-
-    [ObservableProperty]
-    private int selectedProxyModeIndex;
-
-    public ObservableCollection<SettingOption> ProxyModeOptions { get; } =
-    [
-        new() { Code = ProxyModes.Direct },
-        new() { Code = ProxyModes.System }
-    ];
-
-    // ── Close behavior selection ────────────────────────────────────────────
-
-    [ObservableProperty]
-    private int selectedCloseBehaviorIndex;
-
-    public ObservableCollection<SettingOption> CloseBehaviorOptions { get; } =
-    [
-        new() { Code = CloseBehaviors.Minimize },
-        new() { Code = CloseBehaviors.Exit }
-    ];
+    public ISettingsEditor Editor => editor;
+    public SettingsOptionsViewModel Options { get; }
 
     // ── Status flags ────────────────────────────────────────────────────────
 
@@ -73,9 +45,12 @@ public partial class MigrationWizardViewModel : ViewModelBase
     public event Func<LauncherSettings, Task>? MigrationApplied;
     public event Func<Task>? MigrationSkipped;
 
-    public MigrationWizardViewModel(LocalizationService localizer)
+    public MigrationWizardViewModel(
+        ISettingsEditor editor,
+        SettingsOptionsViewModel options)
     {
-        this.localizer = localizer;
+        this.editor = editor;
+        Options = options;
     }
 
     // ── Lifecycle ───────────────────────────────────────────────────────────
@@ -86,26 +61,13 @@ public partial class MigrationWizardViewModel : ViewModelBase
     public void Load(OldLauncherDetectionResult result)
     {
         detectionResult = result;
-
-        if (!string.IsNullOrWhiteSpace(result.GamePath))
+        var settings = new LauncherSettings
         {
-            DetectedGamePath = result.GamePath;
-            GamePathFound = true;
-        }
-
-        // Map proxy mode to combo box index
-        SelectedProxyModeIndex = result.ProxyMode switch
-        {
-            ProxyModes.System => 1,
-            _ => 0
+            GamePath = result.GamePath ?? "",
+            ProxyMode = result.ProxyMode ?? ProxyModes.Direct,
+            CloseBehavior = result.CloseBehavior ?? CloseBehaviors.Minimize
         };
-
-        // Map close behavior to combo box index
-        SelectedCloseBehaviorIndex = result.CloseBehavior switch
-        {
-            CloseBehaviors.Exit => 1,
-            _ => 0
-        };
+        editor.ApplySnapshot(settings);
 
         ClickCodeFound = result.ClickCodeFound;
         LevelDbReadSuccess = result.LevelDbReadSuccess;
@@ -119,23 +81,7 @@ public partial class MigrationWizardViewModel : ViewModelBase
     /// </summary>
     public void RefreshDisplayNames()
     {
-        foreach (var option in ProxyModeOptions)
-        {
-            option.DisplayName = option.Code switch
-            {
-                ProxyModes.System => localizer.T("proxySystem"),
-                _ => localizer.T("proxyDirect")
-            };
-        }
-
-        foreach (var option in CloseBehaviorOptions)
-        {
-            option.DisplayName = option.Code switch
-            {
-                CloseBehaviors.Exit => localizer.T("closeBehaviorExit"),
-                _ => localizer.T("closeBehaviorMinimize")
-            };
-        }
+        Options.RefreshDisplayNames();
     }
 
     // ── Commands ────────────────────────────────────────────────────────────
@@ -149,8 +95,7 @@ public partial class MigrationWizardViewModel : ViewModelBase
         var path = await PickGameFolderAsync();
         if (!string.IsNullOrWhiteSpace(path))
         {
-            DetectedGamePath = path;
-            GamePathFound = true;
+            editor.Current.GamePath = path;
         }
     }
 
@@ -163,18 +108,7 @@ public partial class MigrationWizardViewModel : ViewModelBase
         IsApplying = true;
         try
         {
-            var settings = new LauncherSettings
-            {
-                GamePath = DetectedGamePath
-            };
-
-            // Apply proxy mode from combo box
-            if (SelectedProxyModeIndex >= 0 && SelectedProxyModeIndex < ProxyModeOptions.Count)
-                settings.ProxyMode = ProxyModeOptions[SelectedProxyModeIndex].Code;
-
-            // Apply close behavior from combo box
-            if (SelectedCloseBehaviorIndex >= 0 && SelectedCloseBehaviorIndex < CloseBehaviorOptions.Count)
-                settings.CloseBehavior = CloseBehaviorOptions[SelectedCloseBehaviorIndex].Code;
+            var settings = editor.GetSnapshot();
 
             // Copy clickCode from old launcher if found
             if (ClickCodeFound && detectionResult is not null)

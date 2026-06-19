@@ -21,10 +21,10 @@ public partial class ShellViewModel : ViewModelBase
     private string productName = LauncherConstants.ProductName;
 
     [ObservableProperty]
-    private string launcherVersionText = $"Version {LauncherConstants.LauncherVersion}";
+    private string launcherVersionText = $"Version {BuildInfo.LauncherVersion}";
 
     [ObservableProperty]
-    private string commitShaText = $"Commit {LauncherConstants.CommitSha}";
+    private string commitShaText = $"Commit {BuildInfo.CommitSha}";
 
     [ObservableProperty]
     private string frameworkVersionText = "";
@@ -101,9 +101,9 @@ public partial class ShellViewModel : ViewModelBase
         localizer.SetLanguage(language);
         I18n.Apply(localizer);
         FrameworkVersionText = FrameworkVersion;
-        AvaloniaVersionText = $"Avalonia {LauncherConstants.AvaloniaVersion}";
+        AvaloniaVersionText = $"Avalonia {BuildInfo.AvaloniaVersion}";
         PlatformText = $"OS {PlatformName}";
-        BuildConfigText = $"Build {LauncherConstants.BuildConfiguration}";
+        BuildConfigText = $"Build {BuildInfo.BuildConfiguration}";
         settings.RefreshOptionDisplayNames();
         resourcePanel.RefreshDisplayNames();
         if (!string.IsNullOrWhiteSpace(resourcePanel.ResourcePanelUid))
@@ -111,7 +111,7 @@ public partial class ShellViewModel : ViewModelBase
             resourcePanel.ResourcePanelUidText = localizer.F("resourcePanelCurrentUid", resourcePanel.ResourcePanelUid);
         }
 
-        settings.SelectedLanguage = language;
+        settings.Editor.Current.Language = language;
         DiskSpaceText = localizer.T("diskSpaceEmpty");
         GameFolderPickerTitle = localizer.T("chooseInstallFolder");
 
@@ -176,20 +176,20 @@ public partial class ShellViewModel : ViewModelBase
             : localizer.F("versionLatest", gameConfig?.GameLatestVersion ?? localizer.T("unknown"));
         NetworkText = localizer.T("statusNetworkLoaded");
         NetworkStatusValueText = localizer.T("statusNetworkLoaded");
-        var launchCheckValue = settings.ResolveLaunchCheckDisplayName(snapshot.Settings.LaunchCheckMode);
+        var launchCheckValue = settings.Options.ResolveLaunchCheckDisplayName(snapshot.Settings.LaunchCheckMode);
         SetLaunchCheckResult(launchCheckValue);
         var executableName = string.IsNullOrWhiteSpace(localConfig?.Name)
             ? gameConfig?.GameStartExeName ?? localizer.T("unknown")
             : localConfig.Name;
         ExecutableText = localizer.F("executableValue", executableName);
         ExecutableNameText = localizer.F("executableNameValue", executableName);
-        DiskSpaceText = settings.ResolveDiskSpaceText(localGame.GamePath, gameConfig?.DecompressionSize);
+        DiskSpaceText = settings.Options.ResolveDiskSpaceText(localGame.GamePath, gameConfig?.DecompressionSize);
         SettingsSummary = localizer.F(
             "settingsSummaryWithTheme",
             snapshot.Settings.ProxyMode,
             snapshot.Settings.CloseBehavior,
-            settings.ResolveLanguageDisplayName(snapshot.Settings.Language),
-            settings.ResolveThemeDisplayName(snapshot.Settings.ThemeMode));
+            settings.Options.ResolveLanguageDisplayName(snapshot.Settings.Language),
+            settings.Options.ResolveThemeDisplayName(snapshot.Settings.ThemeMode));
         OperationNote = ResolveOperationNote(snapshot, localGame, baseConfig);
     }
 

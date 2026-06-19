@@ -12,13 +12,9 @@ namespace Cafe.Launcher.Avalonia.Services;
 
 public sealed class LauncherApiClient : IDisposable
 {
-    private readonly HttpClient httpClient;
-    private readonly HttpClientFactory? httpClientFactory;
+    private readonly IHttpClientLeaseSource leaseSource;
     private readonly AuthorizationHeaderFactory authorizationHeaderFactory;
     private readonly PatchUrlGroupService patchUrlGroupService;
-    private readonly ProxySettingsService? proxySettingsService;
-    private readonly bool ownsHttpClient;
-    private string proxyMode = ProxyModes.Direct;
     private readonly JsonSerializerOptions jsonOptions = new()
     {
         PropertyNameCaseInsensitive = false
@@ -28,17 +24,14 @@ public sealed class LauncherApiClient : IDisposable
     public LauncherApiClient(
         HttpClientFactory httpClientFactory,
         AuthorizationHeaderFactory authorizationHeaderFactory,
-        PatchUrlGroupService patchUrlGroupService,
-        ProxySettingsService proxySettingsService)
+        PatchUrlGroupService patchUrlGroupService)
     {
-        this.httpClientFactory = httpClientFactory;
-        httpClient = httpClientFactory.CreateClient(
-            LauncherConstants.ApiBaseUrl,
+        leaseSource = new ProxyAwareHttpClientLeaseSource(
+            httpClientFactory,
+            new Uri(ApiConfig.ApiBaseUrl),
             TimeSpan.FromSeconds(30));
         this.authorizationHeaderFactory = authorizationHeaderFactory;
         this.patchUrlGroupService = patchUrlGroupService;
-        this.proxySettingsService = proxySettingsService;
-        ownsHttpClient = true;
     }
 
     /// <summary>
@@ -50,90 +43,108 @@ public sealed class LauncherApiClient : IDisposable
         AuthorizationHeaderFactory authorizationHeaderFactory,
         PatchUrlGroupService patchUrlGroupService)
     {
-        httpClient = new HttpClient(handler)
-        {
-            BaseAddress = new Uri(LauncherConstants.ApiBaseUrl),
-            Timeout = TimeSpan.FromSeconds(30)
-        };
+        leaseSource = new FixedHttpClientLeaseSource(
+            handler,
+            new Uri(ApiConfig.ApiBaseUrl),
+            TimeSpan.FromSeconds(30));
         this.authorizationHeaderFactory = authorizationHeaderFactory;
         this.patchUrlGroupService = patchUrlGroupService;
-        ownsHttpClient = true; // Test path — own the client
     }
 
-    /// <summary>
-    /// Test compatibility constructor — accepts direct dependencies without HttpClientFactory.
-    /// Creates its own HttpClient. Disposed on Dispose().
-    /// </summary>
-    internal LauncherApiClient(
-        AuthorizationHeaderFactory authorizationHeaderFactory,
-        PatchUrlGroupService patchUrlGroupService,
-        ProxySettingsService proxySettingsService)
+    public Task<GameConfigResponse> GetGameConfigAsync(
+        string proxyMode,
+        CancellationToken cancellationToken = default)
     {
-        this.authorizationHeaderFactory = authorizationHeaderFactory;
-        this.patchUrlGroupService = patchUrlGroupService;
-        this.proxySettingsService = proxySettingsService;
-        httpClient = new HttpClient(new SocketsHttpHandler
-        {
-            UseProxy = false,
-            PooledConnectionLifetime = TimeSpan.FromMinutes(15)
-        })
-        {
-            BaseAddress = new Uri(LauncherConstants.ApiBaseUrl),
-            Timeout = TimeSpan.FromSeconds(30)
-        };
-        ownsHttpClient = true;
+        return GetEnvelopeDataAsync<GameConfigResponse>(
+            "/api/launcher/game/config",
+            proxyMode,
+            cancellationToken);
     }
 
-    public void SetProxyMode(string value)
+    public Task<BaseConfigResponse> GetBaseConfigAsync(
+        string proxyMode,
+        CancellationToken cancellationToken = default)
     {
-        proxyMode = value == ProxyModes.System ? ProxyModes.System : ProxyModes.Direct;
+        return GetEnvelopeDataAsync<BaseConfigResponse>(
+            "/api/launcher/base/config",
+            proxyMode,
+            cancellationToken);
     }
 
-    public Task<GameConfigResponse> GetGameConfigAsync(CancellationToken cancellationToken = default)
+    private Task<CdnConfigResponse> GetCdnConfigAsync(
+        string proxyMode,
+        CancellationToken cancellationToken)
     {
-        return GetEnvelopeDataAsync<GameConfigResponse>("/api/launcher/game/config", cancellationToken);
+        return GetEnvelopeDataAsync<CdnConfigResponse>(
+            "/api/launcher/advanced/game/download/cdn",
+            proxyMode,
+            cancellationToken);
     }
 
-    public Task<BaseConfigResponse> GetBaseConfigAsync(CancellationToken cancellationToken = default)
+    public async Task<CdnConfigResponse> GetCdnConfigAsync(
+        string patchUrlGroup,
+        string proxyMode,
+        CancellationToken cancellationToken = default)
     {
-        return GetEnvelopeDataAsync<BaseConfigResponse>("/api/launcher/base/config", cancellationToken);
-    }
-
-    public Task<CdnConfigResponse> GetCdnConfigAsync(CancellationToken cancellationToken = default)
-    {
-        return GetEnvelopeDataAsync<CdnConfigResponse>("/api/launcher/advanced/game/download/cdn", cancellationToken);
-    }
-
-    public async Task<CdnConfigResponse> GetCdnConfigAsync(string patchUrlGroup, CancellationToken cancellationToken = default)
-    {
-        var response = await GetCdnConfigAsync(cancellationToken);
+        var response = await GetCdnConfigAsync(proxyMode, cancellationToken);
         return RewriteCdnConfig(response, patchUrlGroup);
     }
 
-    public Task<OperationsResourceResponse> GetOperationsResourceAsync(CancellationToken cancellationToken = default)
+    public Task<OperationsResourceResponse> GetOperationsResourceAsync(
+        string proxyMode,
+        CancellationToken cancellationToken = default)
     {
-        return GetEnvelopeDataAsync<OperationsResourceResponse>("/api/launcher/operations/resource", cancellationToken);
+        return GetEnvelopeDataAsync<OperationsResourceResponse>(
+            "/api/launcher/operations/resource",
+            proxyMode,
+            cancellationToken);
     }
 
-    public Task<SocialMediaResourceResponse> GetSocialMediaResourceAsync(CancellationToken cancellationToken = default)
+    public Task<SocialMediaResourceResponse> GetSocialMediaResourceAsync(
+        string proxyMode,
+        CancellationToken cancellationToken = default)
     {
-        return GetEnvelopeDataAsync<SocialMediaResourceResponse>("/api/launcher/social/media/resource", cancellationToken);
+        return GetEnvelopeDataAsync<SocialMediaResourceResponse>(
+            "/api/launcher/social/media/resource",
+            proxyMode,
+            cancellationToken);
     }
 
-    public Task<InstallationConfigResponse> GetInstallationConfigAsync(CancellationToken cancellationToken = default)
+    public Task<InstallationConfigResponse> GetInstallationConfigAsync(
+        string proxyMode,
+        CancellationToken cancellationToken = default)
     {
-        return GetEnvelopeDataAsync<InstallationConfigResponse>("/api/launcher/installation/config", cancellationToken);
+        return GetEnvelopeDataAsync<InstallationConfigResponse>(
+            "/api/launcher/installation/config",
+            proxyMode,
+            cancellationToken);
     }
 
-    public Task<ManifestUrlResponse> GetManifestUrlAsync(string version, string filePath, CancellationToken cancellationToken = default)
+    private Task<ManifestUrlResponse> GetManifestUrlAsync(
+        string version,
+        string filePath,
+        string proxyMode,
+        CancellationToken cancellationToken)
     {
         var requestPath = $"/api/launcher/game/config/json?version={Uri.EscapeDataString(version)}&file_path={Uri.EscapeDataString(filePath)}";
-        return GetEnvelopeDataAsync<ManifestUrlResponse>(requestPath, cancellationToken);
+        return GetEnvelopeDataAsync<ManifestUrlResponse>(
+            requestPath,
+            proxyMode,
+            cancellationToken);
     }
 
-    public async Task<ManifestUrlResponse> GetManifestUrlAsync(string version, string filePath, string patchUrlGroup, CancellationToken cancellationToken = default)
+    public async Task<ManifestUrlResponse> GetManifestUrlAsync(
+        string version,
+        string filePath,
+        string patchUrlGroup,
+        string proxyMode,
+        CancellationToken cancellationToken = default)
     {
-        var response = await GetManifestUrlAsync(version, filePath, cancellationToken);
+        var response = await GetManifestUrlAsync(
+            version,
+            filePath,
+            proxyMode,
+            cancellationToken);
         return RewriteManifestUrl(response, patchUrlGroup);
     }
 
@@ -147,21 +158,27 @@ public sealed class LauncherApiClient : IDisposable
         return patchUrlGroupService.RewriteCdnConfig(response, patchUrlGroup);
     }
 
-    public async Task<RemoteManifest> GetRemoteManifestAsync(string url, CancellationToken cancellationToken = default)
+    public async Task<RemoteManifest> GetRemoteManifestAsync(
+        string url,
+        string proxyMode,
+        CancellationToken cancellationToken = default)
     {
-        using var lease = await CreateRequestClientAsync(cancellationToken);
+        using var lease = await leaseSource.CreateLeaseAsync(proxyMode, cancellationToken);
         await using var stream = await lease.Client.GetStreamAsync(url, cancellationToken);
         var manifest = await JsonSerializer.DeserializeAsync<RemoteManifest>(stream, jsonOptions, cancellationToken);
         return manifest ?? new RemoteManifest();
     }
 
-    private async Task<T> GetEnvelopeDataAsync<T>(string path, CancellationToken cancellationToken)
+    private async Task<T> GetEnvelopeDataAsync<T>(
+        string path,
+        string proxyMode,
+        CancellationToken cancellationToken)
     {
-        using var lease = await CreateRequestClientAsync(cancellationToken);
+        using var lease = await leaseSource.CreateLeaseAsync(proxyMode, cancellationToken);
         using var request = new HttpRequestMessage(HttpMethod.Get, path);
         request.Headers.TryAddWithoutValidation(
             "Authorization",
-            authorizationHeaderFactory.Create("", LauncherConstants.YostarAuthorizationVersion));
+            authorizationHeaderFactory.Create("", ApiConfig.YostarAuthorizationVersion));
 
         using var response = await lease.Client.SendAsync(request, cancellationToken);
         response.EnsureSuccessStatusCode();
@@ -188,38 +205,8 @@ public sealed class LauncherApiClient : IDisposable
         return envelope.Data;
     }
 
-    private async Task<HttpClientLease> CreateRequestClientAsync(CancellationToken cancellationToken)
-    {
-        if (httpClientFactory is not null)
-        {
-            return await httpClientFactory.CreateLeaseAsync(
-                proxyMode,
-                httpClient.BaseAddress,
-                httpClient.Timeout,
-                cancellationToken);
-        }
-
-        // Fallback for test constructor (no HttpClientFactory)
-        if (proxySettingsService is null || proxyMode != ProxyModes.System)
-        {
-            return new HttpClientLease(httpClient);
-        }
-
-        var handler = await proxySettingsService.CreateHttpHandlerAsync(proxyMode, cancellationToken);
-        var client = new HttpClient(handler, disposeHandler: false)
-        {
-            BaseAddress = httpClient.BaseAddress,
-            Timeout = httpClient.Timeout
-        };
-        return new HttpClientLease(client, handler);
-    }
-
     public void Dispose()
     {
-        if (ownsHttpClient)
-        {
-            httpClient.Dispose();
-        }
+        leaseSource.Dispose();
     }
 }
-

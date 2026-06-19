@@ -2,6 +2,7 @@
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
              xmlns:vm="using:Cafe.Launcher.Avalonia.ViewModels"
              xmlns:services="using:Cafe.Launcher.Avalonia.Services"
+             xmlns:converters="using:Cafe.Launcher.Avalonia.Converters"
              xmlns:constants="using:Cafe.Launcher.Avalonia.Constants"
              xmlns:materialIcons="clr-namespace:Material.Icons.Avalonia;assembly=Material.Icons.Avalonia"
              x:Class="Cafe.Launcher.Avalonia.Views.MainWindowToastOverlay"
@@ -21,12 +22,12 @@
                                 IsHitTestVisible="True">
                             <Grid Classes="toast-layout" ColumnDefinitions="Auto,*,Auto">
                                 <materialIcons:MaterialIcon Kind="{Binding IconKind}" Width="{StaticResource LauncherIconMd}" Height="{StaticResource LauncherIconMd}"
-                                                            Foreground="{Binding IconBrush}"
+                                                            Foreground="{Binding Severity, Converter={x:Static converters:ToastSeverityToBrushConverter.Instance}}"
                                                             VerticalAlignment="Top" Margin="0,4,0,0"
                                                             AutomationProperties.Name="{Binding SeverityLabel}"/>
                                 <StackPanel Grid.Column="1" Classes="toast-copy">
                                     <TextBlock Text="{Binding SeverityLabel}" Classes="toast-severity"
-                                               Foreground="{Binding IconBrush}"/>
+                                               Foreground="{Binding Severity, Converter={x:Static converters:ToastSeverityToBrushConverter.Instance}}"/>
                                     <TextBlock Text="{Binding Message}"
                                                VerticalAlignment="Center"
                                                Classes="toast-message"/>

@@ -24,7 +24,7 @@ public sealed class LauncherUpdateServiceTests
             """);
         using var service = new LauncherUpdateService(handler);
 
-        var result = await service.CheckForUpdateAsync(UpdateChannels.Beta);
+        var result = await service.CheckForUpdateAsync(UpdateChannels.Beta, ProxyModes.Direct);
 
         Assert.True(result.IsSuccessful);
         Assert.True(result.IsUpdateAvailable);
@@ -32,7 +32,7 @@ public sealed class LauncherUpdateServiceTests
         Assert.Equal(
             "https://github.com/bluearchive-cafe/Cafe.Launcher.Avalonia_Release/releases/tag/v1.2.0",
             result.ReleaseUrl);
-        Assert.Equal(LauncherConstants.GitHubReleasesPath, handler.RequestPath);
+        Assert.Equal(ApiConfig.GitHubReleasesPath, handler.RequestPath);
         Assert.Equal("application/vnd.github+json", handler.AcceptMediaType);
         Assert.Equal("2022-11-28", handler.ApiVersion);
     }
@@ -45,7 +45,7 @@ public sealed class LauncherUpdateServiceTests
             $$"""
             [
               {
-                "tag_name": "v{{LauncherConstants.LauncherVersion}}",
+                "tag_name": "v{{BuildInfo.LauncherVersion}}",
                 "html_url": "https://github.com/bluearchive-cafe/Cafe.Launcher.Avalonia_Release/releases/latest",
                 "prerelease": true
               }
@@ -53,11 +53,11 @@ public sealed class LauncherUpdateServiceTests
             """);
         using var service = new LauncherUpdateService(handler);
 
-        var result = await service.CheckForUpdateAsync(UpdateChannels.Beta);
+        var result = await service.CheckForUpdateAsync(UpdateChannels.Beta, ProxyModes.Direct);
 
         Assert.True(result.IsSuccessful);
         Assert.False(result.IsUpdateAvailable);
-        Assert.Equal(LauncherConstants.LauncherVersion, result.LatestVersion);
+        Assert.Equal(BuildInfo.LauncherVersion, result.LatestVersion);
     }
 
     [Fact]
@@ -66,7 +66,7 @@ public sealed class LauncherUpdateServiceTests
         using var service = new LauncherUpdateService(
             new GitHubReleaseHandler(HttpStatusCode.NotFound, """{"message":"Not Found"}"""));
 
-        var result = await service.CheckForUpdateAsync(UpdateChannels.Stable);
+        var result = await service.CheckForUpdateAsync(UpdateChannels.Stable, ProxyModes.Direct);
 
         Assert.False(result.IsSuccessful);
         Assert.False(result.IsUpdateAvailable);
@@ -78,7 +78,7 @@ public sealed class LauncherUpdateServiceTests
         using var service = new LauncherUpdateService(
             new GitHubReleaseHandler(HttpStatusCode.OK, """[{"tag_name":"v1.2.0"}]"""));
 
-        var result = await service.CheckForUpdateAsync(UpdateChannels.Beta);
+        var result = await service.CheckForUpdateAsync(UpdateChannels.Beta, ProxyModes.Direct);
 
         Assert.False(result.IsSuccessful);
     }
@@ -98,7 +98,7 @@ public sealed class LauncherUpdateServiceTests
                 ]
                 """));
 
-        var result = await service.CheckForUpdateAsync(UpdateChannels.Beta);
+        var result = await service.CheckForUpdateAsync(UpdateChannels.Beta, ProxyModes.Direct);
 
         Assert.False(result.IsSuccessful);
     }
@@ -145,7 +145,7 @@ public sealed class LauncherUpdateServiceTests
         // Current version "1.0.0-beta.1" (prerelease) from LauncherVersion
         using var service = new LauncherUpdateService(handler);
 
-        var result = await service.CheckForUpdateAsync(UpdateChannels.Beta);
+        var result = await service.CheckForUpdateAsync(UpdateChannels.Beta, ProxyModes.Direct);
 
         Assert.True(result.IsSuccessful);
         Assert.True(result.IsUpdateAvailable);
@@ -175,7 +175,7 @@ public sealed class LauncherUpdateServiceTests
             handler,
             currentVersionOverride: "1.0.0");
 
-        var result = await service.CheckForUpdateAsync(UpdateChannels.Stable);
+        var result = await service.CheckForUpdateAsync(UpdateChannels.Stable, ProxyModes.Direct);
 
         Assert.True(result.IsSuccessful);
         Assert.True(result.IsUpdateAvailable);
@@ -200,7 +200,7 @@ public sealed class LauncherUpdateServiceTests
             handler,
             currentVersionOverride: "1.0.0");
 
-        var result = await service.CheckForUpdateAsync(UpdateChannels.Stable);
+        var result = await service.CheckForUpdateAsync(UpdateChannels.Stable, ProxyModes.Direct);
 
         Assert.True(result.IsSuccessful);
         Assert.False(result.IsUpdateAvailable);
@@ -223,7 +223,7 @@ public sealed class LauncherUpdateServiceTests
             handler,
             gitHubTokenOverride: "ghp_test_token");
 
-        var result = await service.CheckForUpdateAsync(UpdateChannels.Beta);
+        var result = await service.CheckForUpdateAsync(UpdateChannels.Beta, ProxyModes.Direct);
 
         Assert.True(result.IsSuccessful);
         Assert.Equal("Bearer ghp_test_token", handler.AuthorizationHeader);

@@ -20,6 +20,7 @@ public static class ServiceConfiguration
         services.AddSingleton<LocalDiagnostics>();
         services.AddSingleton<AuthorizationHeaderFactory>();
         services.AddSingleton<PatchUrlGroupService>();
+        services.AddSingleton<SettingsNormalizer>();
 
         // ── HttpClient factory (shared pool, proxy-aware) ────────────────
         services.AddSingleton<HttpClientFactory>();
@@ -27,11 +28,12 @@ public static class ServiceConfiguration
         // ── Services with dependencies ────────────────────────────────────
         services.AddSingleton<ProxySettingsService>();
         services.AddSingleton<ManifestValidationService>();
-        services.AddSingleton<ExternalLinkService>();
         services.AddSingleton<NoticeStateService>();
-        services.AddSingleton<DownloadStateService>();
         services.AddSingleton<ResourcePanelUidService>();
         services.AddSingleton<LauncherSettingsService>();
+        services.AddTransient<ISettingsEditor, SettingsEditor>();
+        services.AddTransient<SettingsOptionsViewModel>();
+        services.AddTransient<SettingsAppearanceViewModel>();
         services.AddSingleton<GameLaunchService>();
         services.AddSingleton<GameUninstallService>();
         services.AddSingleton<LauncherUpdateService>();

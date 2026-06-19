@@ -1,12 +1,13 @@
+using System.Globalization;
+using System.Net;
+using System.Net.Http;
+using System.Text;
+using System.Text.Json;
 using Cafe.Launcher.Avalonia.Helpers;
 using Cafe.Launcher.Avalonia.Services;
 using Cafe.Launcher.Avalonia.Services.Diagnostics;
 using Cafe.Launcher.Avalonia.Models;
 using Cafe.Launcher.Avalonia.Services.Auth;
-using System.Globalization;
-using System.Net;
-using System.Text;
-using System.Text.Json;
 
 namespace Cafe.Launcher.Avalonia.Tests;
 
@@ -36,7 +37,7 @@ public sealed class GameDownloadServiceTests
     [Fact]
     public void Dispose_WhenCalledTwice_DoesNotThrow()
     {
-        using var apiClient = new LauncherApiClient(new AuthorizationHeaderFactory(), new PatchUrlGroupService(), new ProxySettingsService());
+        using var apiClient = new LauncherApiClient(new HttpClientHandler(), new AuthorizationHeaderFactory(), new PatchUrlGroupService());
         var service = CreateService(apiClient);
 
         service.Dispose();
@@ -46,7 +47,7 @@ public sealed class GameDownloadServiceTests
     [Fact]
     public void Dispose_AfterStop_DoesNotThrow()
     {
-        using var apiClient = new LauncherApiClient(new AuthorizationHeaderFactory(), new PatchUrlGroupService(), new ProxySettingsService());
+        using var apiClient = new LauncherApiClient(new HttpClientHandler(), new AuthorizationHeaderFactory(), new PatchUrlGroupService());
         var service = CreateService(apiClient);
 
         service.Stop();
@@ -117,7 +118,7 @@ public sealed class GameDownloadServiceTests
         var hashPath = Path.Combine(tempDir, "hash-source.bin");
         await File.WriteAllBytesAsync(hashPath, expectedBytes);
         var expectedHash = await new Crc64Service().ComputeFileAsync(hashPath);
-        using var apiClient = new LauncherApiClient(new AuthorizationHeaderFactory(), new PatchUrlGroupService(), new ProxySettingsService());
+        using var apiClient = new LauncherApiClient(new HttpClientHandler(), new AuthorizationHeaderFactory(), new PatchUrlGroupService());
         using var service = CreateService(apiClient);
         var handler = new RetryContentHandler(expectedBytes);
         using var client = new HttpClient(handler);
@@ -158,7 +159,7 @@ public sealed class GameDownloadServiceTests
         var hashPath = Path.Combine(tempDir, "hash-source.bin");
         await File.WriteAllBytesAsync(hashPath, expectedBytes);
         var expectedHash = await new Crc64Service().ComputeFileAsync(hashPath);
-        using var apiClient = new LauncherApiClient(new AuthorizationHeaderFactory(), new PatchUrlGroupService(), new ProxySettingsService());
+        using var apiClient = new LauncherApiClient(new HttpClientHandler(), new AuthorizationHeaderFactory(), new PatchUrlGroupService());
         using var service = CreateService(apiClient);
         var handler = new AlwaysWrongContentHandler();
         using var client = new HttpClient(handler);
@@ -193,9 +194,8 @@ public sealed class GameDownloadServiceTests
         var settingsService = new LauncherSettingsService(settingsPath);
         await settingsService.SaveAsync(new LauncherSettings { GamePath = gamePath });
         await WriteLocalGameFilesAsync(gamePath);
-        var downloadStateService = new DownloadStateService(statePath);
         using var apiClient = CreateManifestApiClient();
-        var service = CreateService(apiClient, settingsService, downloadStateService);
+        var service = CreateService(apiClient, settingsService, statePath);
 
         var result = await service.InstallOrUpdateAsync(CreateSnapshot(gamePath), _ => { });
 
@@ -210,16 +210,15 @@ public sealed class GameDownloadServiceTests
         var tempDir = Path.Combine(Path.GetTempPath(), Guid.NewGuid().ToString("N"));
         Directory.CreateDirectory(tempDir);
         var statePath = Path.Combine(tempDir, "download_state.json");
-        var downloadStateService = new DownloadStateService(statePath);
-        await downloadStateService.SaveAsync(new DownloadTaskState
+        await File.WriteAllTextAsync(statePath, JsonSerializer.Serialize(new DownloadTaskState
         {
             Version = "0.9.0",
             Basis = "manifest.json",
             GamePath = Path.Combine(tempDir, "YostarGames", "BlueArchive_JP")
-        });
+        }));
         using var apiClient = CreateManifestApiClient();
         var settingsService = new LauncherSettingsService(Path.Combine(tempDir, "settings.json"));
-        var service = CreateService(apiClient, settingsService, downloadStateService);
+        var service = CreateService(apiClient, settingsService, statePath);
 
         var result = await service.ResumePersistedAsync(CreateSnapshot(Path.Combine(tempDir, "YostarGames", "BlueArchive_JP")), _ => { });
 
@@ -235,17 +234,16 @@ public sealed class GameDownloadServiceTests
         Directory.CreateDirectory(tempDir);
         var gamePath = Path.Combine(tempDir, "YostarGames", "BlueArchive_JP");
         var statePath = Path.Combine(tempDir, "download_state.json");
-        var downloadStateService = new DownloadStateService(statePath);
-        await downloadStateService.SaveAsync(new DownloadTaskState
+        await File.WriteAllTextAsync(statePath, JsonSerializer.Serialize(new DownloadTaskState
         {
             Version = "1.0.0",
             Basis = "manifest.json",
             GamePath = gamePath,
             PatchUrlGroup = PatchUrlGroups.Official
-        });
+        }));
         using var apiClient = CreateManifestApiClient();
         var settingsService = new LauncherSettingsService(Path.Combine(tempDir, "settings.json"));
-        var service = CreateService(apiClient, settingsService, downloadStateService);
+        var service = CreateService(apiClient, settingsService, statePath);
         var snapshot = CreateSnapshot(gamePath);
         snapshot.Settings.PatchUrlGroup = PatchUrlGroups.Cafe;
 
@@ -261,13 +259,13 @@ public sealed class GameDownloadServiceTests
         return CreateService(
             apiClient,
             new LauncherSettingsService(Path.Combine(Path.GetTempPath(), Guid.NewGuid().ToString("N"), "settings.json")),
-            new DownloadStateService(Path.Combine(Path.GetTempPath(), Guid.NewGuid().ToString("N"), "download_state.json")));
+            Path.Combine(Path.GetTempPath(), Guid.NewGuid().ToString("N"), "download_state.json"));
     }
 
     private static GameDownloadService CreateService(
         LauncherApiClient apiClient,
         LauncherSettingsService settingsService,
-        DownloadStateService downloadStateService)
+        string downloadStateFilePath)
     {
         var localGameStateService = new LocalGameStateService();
         var diagnostics = new LocalDiagnostics();
@@ -279,7 +277,7 @@ public sealed class GameDownloadServiceTests
             new Crc64Service(),
             new DiskSpaceService(),
             diagnostics,
-            downloadStateService);
+            downloadStateFilePath);
     }
 
     private static LauncherStatusSnapshot CreateSnapshot(string gamePath)

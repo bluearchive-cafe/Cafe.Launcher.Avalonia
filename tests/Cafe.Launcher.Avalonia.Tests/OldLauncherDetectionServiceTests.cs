@@ -22,13 +22,13 @@ public sealed class OldLauncherDetectionServiceTests : IDisposable
         {
             Assert.NotNull(path);
             Assert.Contains(".config", path);
-            Assert.Contains(LauncherConstants.OldLauncherAppName, path);
+            Assert.Contains(GamePaths.OldLauncherAppName, path);
         }
         else if (OperatingSystem.IsWindows())
         {
             Assert.NotNull(path);
             Assert.Contains("AppData", path);
-            Assert.Contains(LauncherConstants.OldLauncherAppName, path);
+            Assert.Contains(GamePaths.OldLauncherAppName, path);
         }
     }
 

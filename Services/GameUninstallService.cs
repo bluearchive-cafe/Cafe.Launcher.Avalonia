@@ -59,8 +59,8 @@ public sealed class GameUninstallService
                 });
             }
 
-            DeleteIfExists(Path.Combine(gamePath, LauncherConstants.ManifestFileName));
-            DeleteIfExists(Path.Combine(gamePath, LauncherConstants.GameConfigFileName));
+            DeleteIfExists(Path.Combine(gamePath, GamePaths.ManifestFileName));
+            DeleteIfExists(Path.Combine(gamePath, GamePaths.GameConfigFileName));
 
             await diagnostics.MessageAsync(
                 "Game uninstall completed.",
@@ -100,15 +100,15 @@ public sealed class GameUninstallService
             return Failed($"Game path is protected: {gamePath}", "uninstall-error");
         }
 
-        if (!string.Equals(Path.GetFileName(Path.GetFullPath(gamePath)), LauncherConstants.GameFolderName, StringComparison.Ordinal))
+        if (!string.Equals(Path.GetFileName(Path.GetFullPath(gamePath)), GamePaths.GameFolderName, StringComparison.Ordinal))
         {
-            return Failed($"Game directory name must be {LauncherConstants.GameFolderName}.", "uninstall-error");
+            return Failed($"Game directory name must be {GamePaths.GameFolderName}.", "uninstall-error");
         }
 
         var localGame = await localGameStateService.ReadAsync(gamePath, cancellationToken);
         if (string.IsNullOrWhiteSpace(localGame.GameConfig?.Version) || string.IsNullOrWhiteSpace(localGame.GameConfig?.Name))
         {
-            return Failed($"{LauncherConstants.GameConfigFileName} does not contain version or name.", "uninstall-error");
+            return Failed($"{GamePaths.GameConfigFileName} does not contain version or name.", "uninstall-error");
         }
 
         if (await ProcessService.IsExeRunningAsync($"{localGame.GameConfig.Name}.exe", cancellationToken))

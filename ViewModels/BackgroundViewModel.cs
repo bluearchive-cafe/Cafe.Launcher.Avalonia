@@ -18,7 +18,7 @@ public partial class BackgroundViewModel : ViewModelBase, IDisposable
 {
     private readonly ImageCacheService imageCacheService;
     private readonly LocalDiagnostics diagnostics;
-    private SettingsViewModel? settings;
+    private readonly SettingsViewModel settings;
     private bool disposed;
 
     [ObservableProperty]
@@ -40,32 +40,23 @@ public partial class BackgroundViewModel : ViewModelBase, IDisposable
 
     public BackgroundViewModel(
         ImageCacheService imageCacheService,
-        LocalDiagnostics diagnostics)
+        LocalDiagnostics diagnostics,
+        SettingsViewModel settings)
     {
         this.imageCacheService = imageCacheService;
         this.diagnostics = diagnostics;
-        backgroundImageSource = LoadBundledBackground();
-    }
-
-    public void Configure(SettingsViewModel settings)
-    {
         this.settings = settings;
+        backgroundImageSource = LoadBundledBackground();
     }
 
     public async Task UpdateBackgroundImageAsync(LauncherStatusSnapshot? snapshot, CancellationToken cancellationToken)
     {
-        if (settings is null)
-        {
-            SetBackgroundImage(LoadBundledBackground());
-            return;
-        }
-
-        BackgroundStretch = ToStretch(settings.SelectedBackgroundFit);
-        BackgroundFillBrush = settings.SelectedBackgroundFit == BackgroundFits.Uniform
-            ? new SolidColorBrush(settings.SelectedBackgroundFillColor)
+        BackgroundStretch = ToStretch(settings.Editor.Current.BackgroundFit);
+        BackgroundFillBrush = settings.Editor.Current.BackgroundFit == BackgroundFits.Uniform
+            ? new SolidColorBrush(settings.Appearance.SelectedBackgroundFillColor)
             : null;
 
-        switch (settings.SelectedBackgroundSource)
+        switch (settings.Editor.Current.BackgroundSource)
         {
             case BackgroundSources.Remote:
                 var bgImg = snapshot?.Remote.BaseConfig?.LauncherBackgroundImg;
@@ -91,9 +82,9 @@ public partial class BackgroundViewModel : ViewModelBase, IDisposable
                 break;
 
             case BackgroundSources.Custom:
-                if (!string.IsNullOrWhiteSpace(settings.CustomBackgroundPath))
+                if (!string.IsNullOrWhiteSpace(settings.Editor.Current.CustomBackgroundPath))
                 {
-                    var customBitmap = await LoadCustomBackgroundAsync(settings.CustomBackgroundPath);
+                    var customBitmap = await LoadCustomBackgroundAsync(settings.Editor.Current.CustomBackgroundPath);
                     if (customBitmap is not null)
                     {
                         SetBackgroundImage(customBitmap);
@@ -124,11 +115,7 @@ public partial class BackgroundViewModel : ViewModelBase, IDisposable
                 await diagnostics.MessageAsync(
                     "Custom background image load failed",
                     $"path: {path}\nexception: {ex.Message}");
-                if (settings is not null)
-                {
-                    settings.CustomBackgroundPath = "";
-                    settings.IsCustomBackground = false;
-                }
+                settings.Editor.Current.CustomBackgroundPath = "";
                 return null;
             }
         }
@@ -204,10 +191,12 @@ public partial class BackgroundViewModel : ViewModelBase, IDisposable
     {
         var old = BackgroundImageSource as IDisposable;
         BackgroundImageSource = bitmap;
-        if (settings?.SelectedThemeColorMode == ThemeColorModes.Wallpaper)
+        if (settings.Editor.Current.ThemeColorMode == ThemeColorModes.Wallpaper)
         {
-            settings.RefreshThemeColorPaletteFromCurrentBackground(markDirty: false);
-            settings.ApplyThemeColor(settings.SelectedThemeColorMode, settings.SelectedCustomThemeColor);
+            settings.Appearance.RefreshThemeColorPaletteFromCurrentBackground(markDirty: false);
+            settings.Appearance.ApplyThemeColor(
+                settings.Editor.Current.ThemeColorMode,
+                settings.Appearance.SelectedCustomThemeColor);
         }
 
         if (old is not null)

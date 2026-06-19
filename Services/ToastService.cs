@@ -58,23 +58,6 @@ public sealed class ToastNotification
     /// <summary>Whether the toast is currently playing its exit animation.</summary>
     public bool IsExiting { get; set; }
 
-    /// <summary>
-    /// Resolves a theme-aware brush for the severity icon colour by looking up the
-    /// <c>LauncherToast{Severity}Brush</c> dynamic resource defined in App.axaml.
-    /// Falls back to null when <see cref="Avalonia.Application.Current"/> is unavailable
-    /// (e.g. headless / unit-test contexts) — the icon will render with its default colour.
-    /// </summary>
-    public global::Avalonia.Media.IBrush? IconBrush =>
-        global::Avalonia.Application.Current?.TryGetResource(Severity switch
-        {
-            ToastSeverity.Success => "LauncherToastSuccessBrush",
-            ToastSeverity.Warning => "LauncherToastWarningBrush",
-            ToastSeverity.Error => "LauncherToastErrorBrush",
-            _ => "LauncherToastInfoBrush"
-        }, global::Avalonia.Styling.ThemeVariant.Default, out var value) == true
-        && value is global::Avalonia.Media.IBrush brush
-            ? brush
-            : null;
 }
 
 public enum ToastSeverity

@@ -12,18 +12,18 @@ public sealed class LauncherConstantsTests
             .GetCustomAttribute<AssemblyInformationalVersionAttribute>()
             ?.InformationalVersion;
         Assert.NotNull(expected);
-        Assert.Equal(expected, LauncherConstants.LauncherVersion);
+        Assert.Equal(expected, BuildInfo.LauncherVersion);
     }
 
     [Fact]
     public void CommitSha_UsesSevenCharacterLowercaseGitHash()
     {
-        Assert.Matches("^[0-9a-f]{7}$", LauncherConstants.CommitSha);
+        Assert.Matches("^[0-9a-f]{7}$", BuildInfo.CommitSha);
     }
 
     [Fact]
     public void YostarAuthorizationVersion_MatchesOfficialLauncherVersion()
     {
-        Assert.Equal("1.7.2", LauncherConstants.YostarAuthorizationVersion);
+        Assert.Equal("1.7.2", ApiConfig.YostarAuthorizationVersion);
     }
 }

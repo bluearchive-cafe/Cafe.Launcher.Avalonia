@@ -20,8 +20,8 @@ public partial class GameOperationsViewModel : ViewModelBase
     private readonly LocalizationService localizer;
     private readonly ToastService toastService;
     private readonly LocalDiagnostics diagnostics;
-    private ShellViewModel? shell;
-    private DialogsViewModel? dialogs;
+    private readonly ShellViewModel shell;
+    private readonly DialogsViewModel dialogs;
 
     [ObservableProperty]
     private bool isInstallPanelVisible = true;
@@ -81,7 +81,9 @@ public partial class GameOperationsViewModel : ViewModelBase
         GameUninstallService gameUninstallService,
         LocalizationService localizer,
         ToastService toastService,
-        LocalDiagnostics diagnostics)
+        LocalDiagnostics diagnostics,
+        ShellViewModel shell,
+        DialogsViewModel dialogs)
     {
         this.gameLaunchService = gameLaunchService;
         this.gameDownloadService = gameDownloadService;
@@ -89,10 +91,6 @@ public partial class GameOperationsViewModel : ViewModelBase
         this.localizer = localizer;
         this.toastService = toastService;
         this.diagnostics = diagnostics;
-    }
-
-    public void Configure(ShellViewModel shell, DialogsViewModel dialogs)
-    {
         this.shell = shell;
         this.dialogs = dialogs;
     }
@@ -129,7 +127,7 @@ public partial class GameOperationsViewModel : ViewModelBase
             return;
         }
 
-        shell!.IsBusy = true;
+        shell.IsBusy = true;
         shell.OperationNote = localizer.T("runningLaunchCheck");
 
         try
@@ -175,12 +173,12 @@ public partial class GameOperationsViewModel : ViewModelBase
             var snapshot = GetSnapshot?.Invoke();
             if (snapshot is null)
             {
-                shell!.OperationNote = localizer.T("stateNotLoaded");
+                shell.OperationNote = localizer.T("stateNotLoaded");
                 return;
             }
 
             var result = await gameDownloadService.InstallOrUpdateAsync(snapshot, ApplyProgress);
-            shell!.OperationNote = result.Message;
+            shell.OperationNote = result.Message;
             if (result.Success)
                 toastService.ShowSuccess(result.Message);
             else
@@ -193,13 +191,13 @@ public partial class GameOperationsViewModel : ViewModelBase
         }
         catch (Exception exception)
         {
-            shell!.OperationNote = localizer.F("networkWithMessage", exception.Message);
+            shell.OperationNote = localizer.F("networkWithMessage", exception.Message);
             toastService.ShowError(exception.Message);
             await TryLogErrorAsync("Game install/update failed.", exception);
         }
         finally
         {
-            shell!.IsBusy = false;
+            shell.IsBusy = false;
             var snapshot = GetSnapshot?.Invoke();
             if (snapshot is not null && ApplySnapshotAsync is not null)
             {
@@ -214,11 +212,11 @@ public partial class GameOperationsViewModel : ViewModelBase
         var snapshot = GetSnapshot?.Invoke();
         if (snapshot is null)
         {
-            shell!.OperationNote = localizer.T("stateNotLoaded");
+            shell.OperationNote = localizer.T("stateNotLoaded");
             return;
         }
 
-        dialogs!.ShowRepairConfirm(localizer.T("repairWarning"));
+        dialogs.ShowRepairConfirm(localizer.T("repairWarning"));
         await Task.CompletedTask;
     }
 
@@ -234,12 +232,12 @@ public partial class GameOperationsViewModel : ViewModelBase
             var snapshot = GetSnapshot?.Invoke();
             if (snapshot is null)
             {
-                shell!.OperationNote = localizer.T("stateNotLoaded");
+                shell.OperationNote = localizer.T("stateNotLoaded");
                 return;
             }
 
             var result = await gameDownloadService.RepairAsync(snapshot, ApplyProgress);
-            shell!.OperationNote = result.Message;
+            shell.OperationNote = result.Message;
             if (result.Success)
                 toastService.ShowSuccess(result.Message);
             else
@@ -251,13 +249,13 @@ public partial class GameOperationsViewModel : ViewModelBase
         }
         catch (Exception exception)
         {
-            shell!.OperationNote = localizer.F("networkWithMessage", exception.Message);
+            shell.OperationNote = localizer.F("networkWithMessage", exception.Message);
             toastService.ShowError(exception.Message);
             await TryLogErrorAsync("Game repair failed.", exception);
         }
         finally
         {
-            shell!.IsBusy = false;
+            shell.IsBusy = false;
             var snapshot = GetSnapshot?.Invoke();
             if (snapshot is not null && ApplySnapshotAsync is not null)
             {
@@ -271,7 +269,7 @@ public partial class GameOperationsViewModel : ViewModelBase
     {
         if (gameDownloadService.IsRunning)
         {
-            dialogs!.ShowStopConfirm();
+            dialogs.ShowStopConfirm();
             return;
         }
 
@@ -281,7 +279,7 @@ public partial class GameOperationsViewModel : ViewModelBase
     public void PerformStop()
     {
         gameDownloadService.Stop();
-        shell!.OperationNote = localizer.T("stopRequested");
+        shell.OperationNote = localizer.T("stopRequested");
         try { toastService.ShowWarning(localizer.T("stopRequested")); } catch { }
     }
 
@@ -300,7 +298,7 @@ public partial class GameOperationsViewModel : ViewModelBase
             PauseResumeText = localizer.T("pause");
             PauseResumeIcon = "Pause";
             ProgressDetail = localizer.T("downloading");
-            shell!.OperationNote = localizer.T("resumeRequested");
+            shell.OperationNote = localizer.T("resumeRequested");
         }
         else
         {
@@ -311,7 +309,7 @@ public partial class GameOperationsViewModel : ViewModelBase
             ProgressDetail = localizer.T("paused");
             ProgressSpeed = "";
             ProgressEstimated = "";
-            shell!.OperationNote = localizer.T("pauseRequested");
+            shell.OperationNote = localizer.T("pauseRequested");
         }
     }
 
@@ -321,18 +319,18 @@ public partial class GameOperationsViewModel : ViewModelBase
         var snapshot = GetSnapshot?.Invoke();
         if (snapshot is null)
         {
-            shell!.OperationNote = localizer.T("stateNotLoaded");
+            shell.OperationNote = localizer.T("stateNotLoaded");
             return;
         }
 
         var validation = await gameUninstallService.ValidateAsync(snapshot.LocalGame.GamePath);
         if (!validation.Success)
         {
-            shell!.OperationNote = validation.Message;
+            shell.OperationNote = validation.Message;
             return;
         }
 
-        dialogs!.ShowUninstallConfirm(localizer.F(
+        dialogs.ShowUninstallConfirm(localizer.F(
             "uninstallConfirmText",
             snapshot.LocalGame.GamePath,
             Math.Max(0, validation.AffectedFileCount - 2)));
@@ -343,12 +341,12 @@ public partial class GameOperationsViewModel : ViewModelBase
         var snapshot = GetSnapshot?.Invoke();
         if (snapshot is null)
         {
-            shell!.OperationNote = localizer.T("stateNotLoaded");
+            shell.OperationNote = localizer.T("stateNotLoaded");
             return;
         }
 
-        dialogs!.IsUninstallConfirmVisible = false;
-        shell!.IsBusy = true;
+        dialogs.IsUninstallConfirmVisible = false;
+        shell.IsBusy = true;
         IsProgressPanelVisible = true;
         IsInstallPanelVisible = false;
         IsControlPanelVisible = false;
@@ -378,7 +376,7 @@ public partial class GameOperationsViewModel : ViewModelBase
     public async Task ResumePersistedDownloadAsync(CancellationToken cancellationToken)
     {
         var snapshot = GetSnapshot?.Invoke();
-        if (snapshot is null || shell!.IsBusy)
+        if (snapshot is null || shell.IsBusy)
         {
             return;
         }
@@ -426,7 +424,7 @@ public partial class GameOperationsViewModel : ViewModelBase
 
     private bool PrepareShellOnly(LauncherStatusSnapshot? snapshot)
     {
-        if (shell!.IsBusy)
+        if (shell.IsBusy)
         {
             shell.OperationNote = localizer.T("busy");
             return false;
@@ -449,7 +447,7 @@ public partial class GameOperationsViewModel : ViewModelBase
             return false;
         }
 
-        shell!.IsBusy = true;
+        shell.IsBusy = true;
         IsProgressPanelVisible = true;
         IsInstallPanelVisible = false;
         IsControlPanelVisible = false;
@@ -530,7 +528,7 @@ public partial class GameOperationsViewModel : ViewModelBase
         }
         catch
         {
-            shell!.OperationNote = $"{shell.OperationNote} Local diagnostics log write failed.";
+            shell.OperationNote = $"{shell.OperationNote} Local diagnostics log write failed.";
         }
     }
 }
