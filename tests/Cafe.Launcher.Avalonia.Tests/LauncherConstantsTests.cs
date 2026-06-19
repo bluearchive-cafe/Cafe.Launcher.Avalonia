@@ -1,3 +1,4 @@
+using System.Reflection;
 using Cafe.Launcher.Avalonia.Constants;
 
 namespace Cafe.Launcher.Avalonia.Tests;
@@ -7,7 +8,11 @@ public sealed class LauncherConstantsTests
     [Fact]
     public void LauncherVersion_UsesApplicationSemVer()
     {
-        Assert.Equal("1.0.0", LauncherConstants.LauncherVersion);
+        var expected = typeof(LauncherConstants).Assembly
+            .GetCustomAttribute<AssemblyInformationalVersionAttribute>()
+            ?.InformationalVersion;
+        Assert.NotNull(expected);
+        Assert.Equal(expected, LauncherConstants.LauncherVersion);
     }
 
     [Fact]
