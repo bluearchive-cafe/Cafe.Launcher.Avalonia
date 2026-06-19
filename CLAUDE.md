@@ -22,7 +22,7 @@ Available test classes: `VersionComparerTests`, `LauncherApiClientTests`, `Launc
 
 CI is GitHub Actions on `windows-latest`, .NET 10.0.x:
 - **build.yml** (push/PR to `main`): restore, Debug build, Release build, self-contained publish, upload artifact.
-- **release.yml** (push of `v*` tag): restore, Release build, publish, ZIP archive, auto-generated changelog from git log, then create matching GitHub Releases in both the source repository and `bluearchive-cafe/Cafe.Launcher.Avalonia_Release`. The distribution repository uses the `RELEASE_REPOSITORY_TOKEN` Actions secret. Pre-release if tag contains `-`.
+- **release.yml** (push of `v*` tag): restore, Release build, publish, ZIP archive, generate the grouped changelog through `scripts/New-ReleaseChangelog.ps1`, then create matching GitHub Releases in both the source repository and `bluearchive-cafe/Cafe.Launcher.Avalonia_Release`. The local release script uses the same changelog generator. The distribution repository uses the `RELEASE_REPOSITORY_TOKEN` Actions secret. Pre-release if tag contains `-`.
 
 **Telemetry must be off during local builds** (already set in `build.ps1`):
 - `DOTNET_CLI_TELEMETRY_OPTOUT=1`
@@ -37,7 +37,7 @@ CI is GitHub Actions on `windows-latest`, .NET 10.0.x:
 .\release.ps1 patch -SkipPush        # Commit + tag locally, don't push to origin
 ```
 
-`release.ps1` reads `<VersionPrefix>` from the `.csproj`, bumps it, generates `CHANGELOG_RELEASE.md` from git log since last tag (grouped by conventional commit prefix: feat/fix/refactor/perf), updates `AssemblyVersion`/`FileVersion`, commits, creates an annotated tag, and pushes. The actual build and matching GitHub Releases in the source and distribution repositories are handled by `release.yml` CI on tag push.
+`release.ps1` reads `<VersionPrefix>` from the `.csproj`, bumps it, invokes `scripts/New-ReleaseChangelog.ps1` to generate `CHANGELOG_RELEASE.md` from git log since the last tag (grouped by conventional commit prefix: feat/fix/refactor/perf), updates `AssemblyVersion`/`FileVersion`, commits, creates an annotated tag, and pushes. `release.yml` invokes the same changelog generator before creating matching GitHub Releases in the source and distribution repositories.
 
 ## Architecture
 

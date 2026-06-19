@@ -208,7 +208,7 @@ CI 位于 `.github/workflows/`：
 .\release.ps1 patch -SkipPush
 ```
 
-脚本会读取并更新 `Cafe.Launcher.Avalonia.csproj` 中的 `<VersionPrefix>`，生成 `CHANGELOG_RELEASE.md`，提交版本变更，创建 annotated tag，并按参数推送到 `origin`。
+脚本会读取并更新 `Cafe.Launcher.Avalonia.csproj` 中的 `<VersionPrefix>`，通过 `scripts/New-ReleaseChangelog.ps1` 生成 `CHANGELOG_RELEASE.md`，提交版本变更，创建 annotated tag，并按参数推送到 `origin`。GitHub Actions 使用同一脚本生成 Release 正文，确保本地预览与两个仓库的 Release 日志格式一致。
 
 ## 相关链接
 

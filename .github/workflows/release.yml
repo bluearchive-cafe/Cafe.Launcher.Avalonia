@@ -49,33 +49,17 @@ jobs:
         shell: pwsh
         run: |
           $lastTag = git describe --tags --abbrev=0 ${{ github.ref }}^ 2>$null
+          $parameters = @{
+            CurrentRef = "${{ github.ref }}^"
+            OutputPath = "changelog.md"
+          }
           if ($lastTag) {
             Write-Host "Last tag: $lastTag"
-            $log = git log "$lastTag..${{ github.ref }}" --oneline --no-decorate
+            $parameters.PreviousTag = $lastTag
           } else {
             Write-Host "No previous tag — using all commits"
-            $log = git log --oneline --no-decorate ${{ github.ref }}
           }
-
-          $body = @()
-          $body += "## What's Changed"
-          $body += ""
-
-          if (-not $log) {
-            $body += "Initial release."
-          } else {
-            foreach ($line in ($log -split "`n" | Where-Object { $_ -match '\S' })) {
-              $line = $line.Trim()
-              if ($line -match '^[a-f0-9]+\s+(.+)$') {
-                $message = $Matches[1]
-                # Strip conventional commit prefix for cleaner display
-                $message = $message -replace '^(feat|feature|fix|refactor|perf|docs|chore|ci|test|build|style)(\(.+?\))?!?:\s*', ''
-                $body += "- $message"
-              }
-            }
-          }
-
-          $body -join "`n" | Out-File -FilePath changelog.md -Encoding utf8
+          .\scripts\New-ReleaseChangelog.ps1 @parameters
           Write-Host "Changelog generated"
 
       - name: Create source repository release

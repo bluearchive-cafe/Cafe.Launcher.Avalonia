@@ -70,6 +70,7 @@ $ScriptDir   = Split-Path -Parent $MyInvocation.MyCommand.Path
 $CsprojPath  = Join-Path $ScriptDir "Cafe.Launcher.Avalonia.csproj"
 $CsprojName  = "Cafe.Launcher.Avalonia.csproj"
 $ChangelogFile = Join-Path $ScriptDir "CHANGELOG_RELEASE.md"
+$ChangelogScript = Join-Path $ScriptDir "scripts\New-ReleaseChangelog.ps1"
 
 # ── Helpers ─────────────────────────────────────────────────────────────────
 function Write-Step([string]$message) {
@@ -121,6 +122,12 @@ if (-not (Test-Path $CsprojPath)) {
     exit 1
 }
 Write-OK "$CsprojName found"
+
+if (-not (Test-Path $ChangelogScript)) {
+    Write-Fail "Shared changelog generator not found at $ChangelogScript"
+    exit 1
+}
+Write-OK "Shared changelog generator found"
 
 # Working tree check — only flag modifications to tracked files, not untracked (??) or ignored (!!)
 if (-not $Force) {
@@ -206,89 +213,25 @@ if ($LASTEXITCODE -ne 0) {
     $lastTag = $null
 }
 
-$remoteUrl = git -C $ScriptDir remote get-url origin 2>$null
-if ($remoteUrl -match 'github\.com[:/](.+?)(?:\.git)?$') {
-    $repoSlug = $Matches[1] -replace '\.git$', ''
-} else {
-    $repoSlug = ""
-}
-
-$commitUrlPrefix = if ($repoSlug) { "https://github.com/$repoSlug/commit/" } else { "" }
-
 if ($lastTag) {
     Write-OK "Last tag: $lastTag"
-    $commitLog = git -C $ScriptDir log "$lastTag..HEAD" --oneline --no-decorate 2>&1
 } else {
     Write-OK "No previous tag found — using all commits"
-    $commitLog = git -C $ScriptDir log --oneline --no-decorate 2>&1
 }
 
-if (-not $commitLog -or $commitLog -notmatch '\S') {
-    Write-Warn "No commits since last tag. Changelog will be empty."
-    $changelog = "No changes since previous release."
+$changelogParameters = @{
+    CurrentRef = "HEAD"
+    PassThru = $true
 }
-else {
-    # Group commits by conventional commit prefix
-    $groups = @{
-        "Features"     = @()
-        "Bug Fixes"    = @()
-        "Refactoring"  = @()
-        "Performance"  = @()
-        "Other"        = @()
-    }
-
-    foreach ($line in ($commitLog -split "`n" | Where-Object { $_ -match '\S' })) {
-        $line = $line.Trim()
-        if ($line -match '^[a-f0-9]{7,}\s+(.+)$') {
-            $hash = ($line -split '\s+')[0]
-            $message = $line.Substring($hash.Length).Trim()
-            $shortHash = $hash.Substring(0, [Math]::Min(7, $hash.Length))
-            $linkedHash = if ($commitUrlPrefix) { "[$shortHash]($commitUrlPrefix$hash)" } else { $shortHash }
-
-            $stripped = $message -replace '^(feat|feature|fix|refactor|perf|docs|chore|ci|test|build|style)(\(.+?\))?!?:\s*', ''
-            # Capitalize first letter
-            if ($stripped.Length -gt 0) {
-                $stripped = $stripped.Substring(0, 1).ToUpperInvariant() + $stripped.Substring(1)
-            }
-
-            $entry = "- $stripped ($linkedHash)"
-
-            if ($message -match '^feat') {
-                $groups["Features"] += $entry
-            } elseif ($message -match '^fix') {
-                $groups["Bug Fixes"] += $entry
-            } elseif ($message -match '^refactor') {
-                $groups["Refactoring"] += $entry
-            } elseif ($message -match '^perf') {
-                $groups["Performance"] += $entry
-            } else {
-                $groups["Other"] += $entry
-            }
-        } else {
-            $groups["Other"] += "- $line"
-        }
-    }
-
-    $sb = [System.Text.StringBuilder]::new()
-    [void]$sb.AppendLine("## What's Changed")
-    [void]$sb.AppendLine("")
-
-    foreach ($groupName in @("Features", "Bug Fixes", "Refactoring", "Performance", "Other")) {
-        $items = $groups[$groupName]
-        if ($items.Count -gt 0) {
-            [void]$sb.AppendLine("### $groupName")
-            foreach ($item in $items) {
-                [void]$sb.AppendLine($item)
-            }
-            [void]$sb.AppendLine("")
-        }
-    }
-
-    $changelog = $sb.ToString().TrimEnd()
+if ($lastTag) {
+    $changelogParameters.PreviousTag = $lastTag
 }
+if (-not $DryRun) {
+    $changelogParameters.OutputPath = $ChangelogFile
+}
+$changelog = & $ChangelogScript @changelogParameters
 
 if (-not $DryRun) {
-    $changelog | Set-Content $ChangelogFile -Encoding UTF8
     Write-OK "Changelog written to $ChangelogFile"
 } else {
     Write-Host ""
@@ -378,5 +321,9 @@ if ($SkipPush) {
 }
 Write-Host ""
 Write-Host "  Next: CI (release.yml) will build and create both GitHub Releases."
-Write-Host "  Watch:   https://github.com/$repoSlug/actions"
+$remoteUrl = git -C $ScriptDir remote get-url origin 2>$null
+if ($remoteUrl -match 'github\.com[:/](.+?)(?:\.git)?$') {
+    $repoSlug = $Matches[1] -replace '\.git$', ''
+    Write-Host "  Watch:   https://github.com/$repoSlug/actions"
+}
 Write-Host "═══════════════════════════════════════════" -ForegroundColor Green

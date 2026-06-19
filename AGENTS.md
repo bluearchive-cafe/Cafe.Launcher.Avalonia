@@ -22,7 +22,7 @@ Available test classes: `VersionComparerTests`, `LauncherApiClientTests`, `Launc
 
 CI is GitHub Actions on `windows-latest`, .NET 10.0.x:
 - **build.yml** (push/PR to `main`): restore, Debug build, Release build, self-contained publish, upload artifact.
-- **release.yml** (push of `v*` tag): restore, Release build, publish, ZIP archive, auto-generated changelog from git log, then create matching GitHub Releases in both the source repository and `bluearchive-cafe/Cafe.Launcher.Avalonia_Release`. The distribution repository uses the `RELEASE_REPOSITORY_TOKEN` Actions secret. Pre-release if tag contains `-`.
+- **release.yml** (push of `v*` tag): restore, Release build, publish, ZIP archive, generate the grouped changelog through `scripts/New-ReleaseChangelog.ps1`, then create matching GitHub Releases in both the source repository and `bluearchive-cafe/Cafe.Launcher.Avalonia_Release`. The local release script uses the same changelog generator. The distribution repository uses the `RELEASE_REPOSITORY_TOKEN` Actions secret. Pre-release if tag contains `-`.
 
 **Telemetry must be off during local builds** (already set in `build.ps1`):
 - `DOTNET_CLI_TELEMETRY_OPTOUT=1`
