@@ -18,7 +18,7 @@ dotnet test                                                    # Run all tests
 dotnet test --filter "FullyQualifiedName~VersionComparerTests" # Run a single test class
 ```
 
-Available test classes: `VersionComparerTests`, `LauncherApiClientTests`, `LauncherConstantsTests`, `LauncherSettingsServiceTests`, `LocalGameStateServiceTests`, `LocalizationServiceTests`, `MainWindowViewModelTests`, `GameDownloadServiceTests`, `PatchUrlGroupServiceTests`, `BestHttpCookieLibraryServiceTests`, `ResourcePanelUidServiceTests`, `ExternalLinkServiceTests`, `ResourcePanelApiClientTests`, `MigrationWizardViewModelTests`, `LevelDbReaderTests`, `OldLauncherDetectionServiceTests`, `LauncherUpdateServiceTests`, `HttpClientFactoryTests`, `UiStyleContractTests`.
+Available test classes include `VersionComparerTests`, `LauncherApiClientTests`, `LauncherConstantsTests`, `LauncherSettingsServiceTests`, `SettingsNormalizerTests`, `ToastServiceTests`, `LocalGameStateServiceTests`, `LocalizationServiceTests`, `MainWindowViewModelTests`, `GameDownloadServiceTests`, `PatchUrlGroupServiceTests`, `BestHttpCookieLibraryServiceTests`, `ResourcePanelUidServiceTests`, `ExternalLinkServiceTests`, `ResourcePanelApiClientTests`, `MigrationWizardViewModelTests`, `LevelDbReaderTests`, `OldLauncherDetectionServiceTests`, `LauncherUpdateServiceTests`, `HttpClientFactoryTests`, and `UiStyleContractTests`.
 
 `UiStyleContractTests` enforces design token contracts: no raw colors in view XAML, proper use of `LauncherSpacing*` tokens, correct overlay Z-index ordering, toast layer using `LauncherConstants.ZIndexToast`, and dynamic accent brushes not replacing theme-specific brushes. Run this whenever touching XAML styles or overlays.
 
@@ -112,14 +112,15 @@ One `MainWindow` (1300×754, non-resizable with MinWidth 1024/MinHeight 640, bor
 |---|---|
 | `LauncherApiClient` | HTTP to `api-launcher-jp.yo-star.com`, MD5-signed `Authorization` header, envelope unwrapping. Implements `IDisposable`. |
 | `LauncherCoreService` | Orchestrates API + local state into `LauncherStatusSnapshot`. Exposed as `ILauncherCoreService` in the DI container. |
-| `LauncherSettingsService` | Reads/writes `settings.json` at `%LOCALAPPDATA%\Cafe Launcher\`, normalizes enum values, handles legacy camelCase fields |
+| `LauncherSettingsService` | Reads/writes `settings.json` at `%LOCALAPPDATA%\Cafe Launcher\` and handles exact legacy JSON field names |
+| `SettingsNormalizer` | Pure settings-value normalization: enum guards, legacy launch-check values, colors, palette, indexes, paths, and UID trimming |
 | `LocalGameStateService` | Reads local `game-launcher-config.json` + `manifest.json`, normalizes paths to `YostarGames\BlueArchive_JP` |
 | `GameDownloadService` | Install/update/repair: manifest diff → parallel CDN download (10 concurrent, `.tmp` files, `Range` resume, CRC64 verify, rename on success). Supports download speed throttling, async pause/resume via `TaskCompletionSource`. Implements `IDisposable` — thread-safe CTS management via `activeDownloadLock`. |
 | `GameLaunchService` | Manifest validation + process launch |
 | `GameUninstallService` | Guarded uninstall (checks path safety, exe not running, deletes only manifest-listed files) |
 | `LocalizationService` | Inline dictionaries for `en`/`zh-Hans`/`ja`; `auto` resolves via `CultureInfo.CurrentUICulture` |
 | `SystemTrayService` | Avalonia 12 `TrayIcon` + `NativeMenu` for minimize-to-tray |
-| `ToastService` | Event-based transient notifications. `ToastNotification` model carries `Id`, `Message`, `Severity` (Info/Success/Warning/Error), `DurationMs`, `IconKind`, and a theme-aware `IconBrush` resolved from `LauncherToast{Severity}Brush` dynamic resources |
+| `ToastService` | Event-based transient notifications. `ToastNotification` is pure data (`Id`, `Message`, `Severity`, `DurationMs`, `IconKind`); view brush resolution stays in the toast XAML converter |
 | `LocalDiagnostics` | Appends to `diagnostics.log` in the settings folder |
 | `PatchUrlGroupService` | URL rewriting between Official and Cafe CDN hosts for manifest + CDN config URLs |
 | `NoticeStateService` | Tracks which notice IDs have been shown (persisted to `shown_notices.json`) |
@@ -225,7 +226,8 @@ Users can switch between `Official` (yo-star.com) and `Cafe` (bluearchive.cafe) 
 
 ### Converters
 
-`UrlToBitmapConverter` (`Converters/`) — converts image URLs to `Bitmap?` for XAML binding via `TaskCompletionSourceNotifying<T>` + `INotifyTaskCompletion<T>`. Owns its own **static** `HttpClient` instance (separate from the DI-managed `HttpClientFactory`), used for remote banner/avatar images.
+- `UrlToBitmapConverter` — converts image URLs to `Bitmap?` for XAML binding via `TaskCompletionSourceNotifying<T>` + `INotifyTaskCompletion<T>`. Owns its own **static** `HttpClient` instance (separate from the DI-managed `HttpClientFactory`), used for remote banner/avatar images.
+- `ToastSeverityToBrushConverter` — resolves `ToastSeverity` to the exact `LauncherToast{Severity}Brush` view resource; keeps `ToastNotification` independent of Avalonia.
 
 ### Other directories
 

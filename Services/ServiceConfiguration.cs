@@ -20,6 +20,7 @@ public static class ServiceConfiguration
         services.AddSingleton<LocalDiagnostics>();
         services.AddSingleton<AuthorizationHeaderFactory>();
         services.AddSingleton<PatchUrlGroupService>();
+        services.AddSingleton<SettingsNormalizer>();
 
         // ── HttpClient factory (shared pool, proxy-aware) ────────────────
         services.AddSingleton<HttpClientFactory>();
