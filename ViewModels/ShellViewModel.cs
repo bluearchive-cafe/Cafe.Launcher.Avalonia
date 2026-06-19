@@ -176,20 +176,20 @@ public partial class ShellViewModel : ViewModelBase
             : localizer.F("versionLatest", gameConfig?.GameLatestVersion ?? localizer.T("unknown"));
         NetworkText = localizer.T("statusNetworkLoaded");
         NetworkStatusValueText = localizer.T("statusNetworkLoaded");
-        var launchCheckValue = settings.ResolveLaunchCheckDisplayName(snapshot.Settings.LaunchCheckMode);
+        var launchCheckValue = settings.Options.ResolveLaunchCheckDisplayName(snapshot.Settings.LaunchCheckMode);
         SetLaunchCheckResult(launchCheckValue);
         var executableName = string.IsNullOrWhiteSpace(localConfig?.Name)
             ? gameConfig?.GameStartExeName ?? localizer.T("unknown")
             : localConfig.Name;
         ExecutableText = localizer.F("executableValue", executableName);
         ExecutableNameText = localizer.F("executableNameValue", executableName);
-        DiskSpaceText = settings.ResolveDiskSpaceText(localGame.GamePath, gameConfig?.DecompressionSize);
+        DiskSpaceText = settings.Options.ResolveDiskSpaceText(localGame.GamePath, gameConfig?.DecompressionSize);
         SettingsSummary = localizer.F(
             "settingsSummaryWithTheme",
             snapshot.Settings.ProxyMode,
             snapshot.Settings.CloseBehavior,
-            settings.ResolveLanguageDisplayName(snapshot.Settings.Language),
-            settings.ResolveThemeDisplayName(snapshot.Settings.ThemeMode));
+            settings.Options.ResolveLanguageDisplayName(snapshot.Settings.Language),
+            settings.Options.ResolveThemeDisplayName(snapshot.Settings.ThemeMode));
         OperationNote = ResolveOperationNote(snapshot, localGame, baseConfig);
     }
 

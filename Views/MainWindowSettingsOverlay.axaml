@@ -114,7 +114,7 @@
                                         <TextBlock Text="{Binding Shell.I18n.LaunchCheckDescription}" Classes="caption" TextWrapping="Wrap"/>
                                     </StackPanel>
                                     <ComboBox Grid.Column="2" Classes="setting-control"
-                                              ItemsSource="{Binding Settings.LaunchCheckModeOptions}"
+                                              ItemsSource="{Binding Settings.Options.LaunchCheckMode}"
                                               SelectedValue="{Binding Settings.Editor.Current.LaunchCheckMode, Mode=TwoWay}"
                                               SelectedValueBinding="{Binding Code}">
                                         <ComboBox.ItemTemplate>
@@ -166,7 +166,7 @@
                                         <TextBlock Text="{Binding Shell.I18n.ProxyDescription}" Classes="caption" TextWrapping="Wrap"/>
                                     </StackPanel>
                                     <ComboBox Grid.Column="2" Classes="setting-control"
-                                              ItemsSource="{Binding Settings.ProxyModeOptions}"
+                                              ItemsSource="{Binding Settings.Options.ProxyMode}"
                                               SelectedValue="{Binding Settings.Editor.Current.ProxyMode, Mode=TwoWay}"
                                               SelectedValueBinding="{Binding Code}">
                                         <ComboBox.ItemTemplate>
@@ -186,7 +186,7 @@
                                         <TextBlock Text="{Binding Shell.I18n.DownloadSourceDescription}" Classes="caption" TextWrapping="Wrap"/>
                                     </StackPanel>
                                     <ComboBox Grid.Column="2" Classes="setting-control"
-                                              ItemsSource="{Binding Settings.PatchUrlGroupOptions}"
+                                              ItemsSource="{Binding Settings.Options.PatchUrlGroup}"
                                               SelectedValue="{Binding Settings.Editor.Current.PatchUrlGroup, Mode=TwoWay}"
                                               SelectedValueBinding="{Binding Code}">
                                         <ComboBox.ItemTemplate>
@@ -206,7 +206,7 @@
                                         <TextBlock Text="{Binding Shell.I18n.DownloadSpeedLimitDescription}" Classes="caption" TextWrapping="Wrap"/>
                                     </StackPanel>
                                     <ComboBox Grid.Column="2" Classes="setting-control"
-                                              ItemsSource="{Binding Settings.DownloadSpeedLimitOptions}"
+                                              ItemsSource="{Binding Settings.Options.DownloadSpeedLimit}"
                                               SelectedValue="{Binding Settings.Editor.Current.DownloadSpeedLimit, Mode=TwoWay}"
                                               SelectedValueBinding="{Binding Code}">
                                         <ComboBox.ItemTemplate>
@@ -225,7 +225,7 @@
                                         <TextBlock Text="{Binding Shell.I18n.UpdateChannel}" Classes="section-title"/>
                                     </StackPanel>
                                     <ComboBox Grid.Column="2" Classes="setting-control"
-                                              ItemsSource="{Binding Settings.UpdateChannelOptions}"
+                                              ItemsSource="{Binding Settings.Options.UpdateChannel}"
                                               SelectedValue="{Binding Settings.Editor.Current.UpdateChannel, Mode=TwoWay}"
                                               SelectedValueBinding="{Binding Code}">
                                         <ComboBox.ItemTemplate>
@@ -250,7 +250,7 @@
                                         <TextBlock Text="{Binding Shell.I18n.Language}" Classes="section-title"/>
                                     </StackPanel>
                                     <ComboBox Grid.Column="2" Classes="setting-control"
-                                              ItemsSource="{Binding Settings.LanguageOptions}"
+                                              ItemsSource="{Binding Settings.Options.Language}"
                                               SelectedValue="{Binding Settings.Editor.Current.Language, Mode=TwoWay}"
                                               SelectedValueBinding="{Binding Code}">
                                         <ComboBox.ItemTemplate>
@@ -270,7 +270,7 @@
                                         <TextBlock Text="{Binding Shell.I18n.ThemeDescription}" Classes="caption" TextWrapping="Wrap"/>
                                     </StackPanel>
                                     <ComboBox Grid.Column="2" Classes="setting-control"
-                                              ItemsSource="{Binding Settings.ThemeOptions}"
+                                              ItemsSource="{Binding Settings.Options.Theme}"
                                               SelectedValue="{Binding Settings.Editor.Current.ThemeMode, Mode=TwoWay}"
                                               SelectedValueBinding="{Binding Code}">
                                         <ComboBox.ItemTemplate>
@@ -291,9 +291,9 @@
                                     </StackPanel>
                                     <StackPanel Grid.Column="2" Orientation="Horizontal" Spacing="{StaticResource LauncherSpacingSm}" VerticalAlignment="Center">
                                         <Border Classes="color-swatch"
-                                                Background="{Binding Settings.ThemeColorPreviewBrush}"/>
+                                                Background="{Binding Settings.Appearance.ThemeColorPreviewBrush}"/>
                                         <ComboBox Classes="setting-control"
-                                                  ItemsSource="{Binding Settings.ThemeColorOptions}"
+                                                  ItemsSource="{Binding Settings.Options.ThemeColor}"
                                                   SelectedValue="{Binding Settings.Editor.Current.ThemeColorMode, Mode=TwoWay}"
                                                   SelectedValueBinding="{Binding Code}">
                                             <ComboBox.ItemTemplate>
@@ -306,7 +306,7 @@
                                 </Grid>
 
                                 <Grid Classes="settings-row" ColumnDefinitions="Auto,*,Auto"
-                                      IsVisible="{Binding Settings.IsWallpaperThemeColorSelected}">
+                                      IsVisible="{Binding Settings.Appearance.IsWallpaperThemeColorSelected}">
                                     <Border Classes="settings-icon">
                                         <materialIcons:MaterialIcon Kind="PaletteSwatchOutline" Width="{StaticResource LauncherIconMd}" Height="{StaticResource LauncherIconMd}" Foreground="{DynamicResource LauncherAccentBrush}" HorizontalAlignment="Center" VerticalAlignment="Center"/>
                                     </Border>
@@ -316,7 +316,7 @@
                                     </StackPanel>
                                     <StackPanel Grid.Column="2" Orientation="Horizontal" Spacing="{StaticResource LauncherSpacingSm}" VerticalAlignment="Center">
                                         <ItemsControl Width="136"
-                                                      ItemsSource="{Binding Settings.ThemeColorPaletteItems}">
+                                                      ItemsSource="{Binding Settings.Appearance.ThemeColorPaletteItems}">
                                             <ItemsControl.ItemsPanel>
                                                 <ItemsPanelTemplate>
                                                     <StackPanel Orientation="Horizontal" Spacing="{StaticResource LauncherSpacingSm}"/>
@@ -325,7 +325,7 @@
                                             <ItemsControl.ItemTemplate>
                                                 <DataTemplate x:DataType="models:ThemeColorPaletteItem">
                                                     <Button Classes="color-swatch-button"
-                                                            Command="{Binding DataContext.Settings.SelectThemeColorPaletteCommand, ElementName=SettingsRoot}"
+                                                            Command="{Binding DataContext.Settings.Appearance.SelectThemeColorPaletteCommand, ElementName=SettingsRoot}"
                                                             CommandParameter="{Binding Index}">
                                                         <Border Classes="color-swatch"
                                                                 Background="{Binding Brush}">
@@ -342,7 +342,7 @@
                                             </ItemsControl.ItemTemplate>
                                         </ItemsControl>
                                         <Button Classes="flat-action icon-only"
-                                                Command="{Binding Settings.RefreshThemeColorPaletteCommand}"
+                                                Command="{Binding Settings.Appearance.RefreshThemeColorPaletteCommand}"
                                                 ToolTip.Tip="{Binding Shell.I18n.RefreshThemeColorPalette}">
                                             <materialIcons:MaterialIcon Kind="Refresh" Width="{StaticResource LauncherIconSm}" Height="{StaticResource LauncherIconSm}"/>
                                         </Button>
@@ -350,7 +350,7 @@
                                 </Grid>
 
                                 <Grid Classes="settings-row" ColumnDefinitions="Auto,*,Auto"
-                                      IsVisible="{Binding Settings.IsCustomThemeColorSelected}">
+                                      IsVisible="{Binding Settings.Appearance.IsCustomThemeColorSelected}">
                                     <Border Classes="settings-icon">
                                         <materialIcons:MaterialIcon Kind="FormatColorFill" Width="{StaticResource LauncherIconMd}" Height="{StaticResource LauncherIconMd}" Foreground="{DynamicResource LauncherAccentBrush}" HorizontalAlignment="Center" VerticalAlignment="Center"/>
                                     </Border>
@@ -360,10 +360,10 @@
                                     </StackPanel>
                                     <ColorPicker Grid.Column="2"
                                                  Classes="setting-control"
-                                                 Color="{Binding Settings.SelectedCustomThemeColor, Mode=TwoWay}">
+                                                 Color="{Binding Settings.Appearance.SelectedCustomThemeColor, Mode=TwoWay}">
                                         <StackPanel Classes="button-content">
                                             <Border Classes="color-swatch-preview"
-                                                    Background="{Binding Settings.ThemeColorPreviewBrush}"/>
+                                                    Background="{Binding Settings.Appearance.ThemeColorPreviewBrush}"/>
                                             <materialIcons:MaterialIcon Kind="PaletteOutline" Width="{StaticResource LauncherIconSm}" Height="{StaticResource LauncherIconSm}"/>
                                             <TextBlock Text="{Binding Shell.I18n.OpenColorPalette}" VerticalAlignment="Center"/>
                                         </StackPanel>
@@ -379,7 +379,7 @@
                                         <TextBlock Text="{Binding Shell.I18n.BackgroundSourceDescription}" Classes="caption" TextWrapping="Wrap"/>
                                     </StackPanel>
                                     <ComboBox Grid.Column="2" Classes="setting-control"
-                                              ItemsSource="{Binding Settings.BackgroundSourceOptions}"
+                                              ItemsSource="{Binding Settings.Options.BackgroundSource}"
                                               SelectedValue="{Binding Settings.Editor.Current.BackgroundSource, Mode=TwoWay}"
                                               SelectedValueBinding="{Binding Code}">
                                         <ComboBox.ItemTemplate>
@@ -399,7 +399,7 @@
                                         <TextBlock Text="{Binding Shell.I18n.BackgroundFitDescription}" Classes="caption" TextWrapping="Wrap"/>
                                     </StackPanel>
                                     <ComboBox Grid.Column="2" Classes="setting-control"
-                                              ItemsSource="{Binding Settings.BackgroundFitOptions}"
+                                              ItemsSource="{Binding Settings.Options.BackgroundFit}"
                                               SelectedValue="{Binding Settings.Editor.Current.BackgroundFit, Mode=TwoWay}"
                                               SelectedValueBinding="{Binding Code}">
                                         <ComboBox.ItemTemplate>
@@ -411,7 +411,7 @@
                                 </Grid>
 
                                 <Grid Classes="settings-row" ColumnDefinitions="Auto,*,Auto"
-                                      IsVisible="{Binding Settings.IsBackgroundFitSelected}">
+                                      IsVisible="{Binding Settings.Appearance.IsBackgroundFitSelected}">
                                     <Border Classes="settings-icon">
                                         <materialIcons:MaterialIcon Kind="FormatColorFill" Width="{StaticResource LauncherIconMd}" Height="{StaticResource LauncherIconMd}" Foreground="{DynamicResource LauncherAccentBrush}" HorizontalAlignment="Center" VerticalAlignment="Center"/>
                                     </Border>
@@ -420,10 +420,10 @@
                                         <TextBlock Text="{Binding Shell.I18n.BackgroundFillColorDescription}" Classes="caption" TextWrapping="Wrap"/>
                                     </StackPanel>
                                     <ColorPicker Grid.Column="2" Classes="setting-control"
-                                                 Color="{Binding Settings.SelectedBackgroundFillColor, Mode=TwoWay}">
+                                                 Color="{Binding Settings.Appearance.SelectedBackgroundFillColor, Mode=TwoWay}">
                                         <StackPanel Classes="button-content">
                                             <Border Classes="color-swatch-preview"
-                                                    Background="{Binding Settings.BackgroundFillColorPreviewBrush}"/>
+                                                    Background="{Binding Settings.Appearance.BackgroundFillColorPreviewBrush}"/>
                                             <materialIcons:MaterialIcon Kind="PaletteOutline" Width="{StaticResource LauncherIconSm}" Height="{StaticResource LauncherIconSm}"/>
                                             <TextBlock Text="{Binding Shell.I18n.OpenColorPalette}" VerticalAlignment="Center"/>
                                         </StackPanel>
@@ -431,7 +431,7 @@
                                 </Grid>
 
                                 <Grid Classes="settings-row" ColumnDefinitions="Auto,*,Auto"
-                                      IsVisible="{Binding Settings.IsCustomBackgroundSelected}">
+                                      IsVisible="{Binding Settings.Appearance.IsCustomBackgroundSelected}">
                                     <Border Classes="settings-icon">
                                         <materialIcons:MaterialIcon Kind="ImageEditOutline" Width="{StaticResource LauncherIconMd}" Height="{StaticResource LauncherIconMd}" Foreground="{DynamicResource LauncherAccentBrush}" HorizontalAlignment="Center" VerticalAlignment="Center"/>
                                     </Border>
@@ -453,7 +453,7 @@
                                             </StackPanel>
                                         </Button>
                                         <Button Classes="flat-action" Command="{Binding Settings.ClearBackgroundCommand}"
-                                                IsVisible="{Binding Settings.IsCustomBackground}">
+                                                IsVisible="{Binding Settings.Appearance.IsCustomBackground}">
                                             <StackPanel Classes="button-content">
                                                 <materialIcons:MaterialIcon Kind="DeleteOutline" Width="{StaticResource LauncherIconSm}" Height="{StaticResource LauncherIconSm}"/>
                                                 <TextBlock Text="{Binding Shell.I18n.ClearBackground}" VerticalAlignment="Center"/>
@@ -470,7 +470,7 @@
                                         <TextBlock Text="{Binding Shell.I18n.CloseBehavior}" Classes="section-title"/>
                                     </StackPanel>
                                     <ComboBox Grid.Column="2" Classes="setting-control"
-                                              ItemsSource="{Binding Settings.CloseBehaviorOptions}"
+                                              ItemsSource="{Binding Settings.Options.CloseBehavior}"
                                               SelectedValue="{Binding Settings.Editor.Current.CloseBehavior, Mode=TwoWay}"
                                               SelectedValueBinding="{Binding Code}">
                                         <ComboBox.ItemTemplate>

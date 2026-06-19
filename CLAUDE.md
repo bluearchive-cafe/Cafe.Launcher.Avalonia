@@ -71,9 +71,11 @@ One `MainWindow` (1300×754, non-resizable with MinWidth 1024/MinHeight 640, bor
 | `GameOperationsViewModel` | Install / update / repair / launch / uninstall commands and progress |
 | `ToastHostViewModel` | Transient toast notification queue |
 | `WindowChromeViewModel` | Title bar, minimize/close buttons, window drag state |
-| `SettingsViewModel` | Settings panel: language, theme, download source, launch check, speed limit, close behavior, proxy, background, game path |
+| `SettingsViewModel` | Settings command coordination, persistence, folder pickers, update checks, save/discard lifecycle |
+| `SettingsAppearanceViewModel` | Theme-color and background UI projections, palette extraction, Avalonia theme resources |
+| `SettingsOptionsViewModel` | Localized setting option collections and settings-summary display resolvers |
 | `ResourcePanelViewModel` | Resource panel (UID-based game resource display) |
-| `MigrationWizardViewModel` | First-launch migration wizard (settings from old Electron launcher) |
+| `MigrationWizardViewModel` | First-launch migration wizard; edits migration values through its own `ISettingsEditor` |
 
 **View files** (XAML split by concern, all under `Views/`):
 - `MainWindow.axaml` — window shell, title bar, remote content panel, bottom install/progress/control panels

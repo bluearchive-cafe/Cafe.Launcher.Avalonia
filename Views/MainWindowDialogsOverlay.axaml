@@ -371,7 +371,7 @@
                                 <Grid RowDefinitions="Auto,Auto" RowSpacing="{StaticResource LauncherSpacingSm}">
                                     <TextBlock Text="{Binding Shell.I18n.MigrationGamePathLabel}" Classes="section-title"/>
                                     <Grid Grid.Row="1" ColumnDefinitions="*,Auto" ColumnSpacing="{StaticResource LauncherSpacingSm}">
-                                        <TextBox Text="{Binding MigrationWizard.DetectedGamePath, Mode=TwoWay}"
+                                        <TextBox Text="{Binding MigrationWizard.Editor.Current.GamePath, Mode=TwoWay}"
                                                  MinHeight="{StaticResource LauncherControlHeightDialog}" VerticalContentAlignment="Center"
                                                  PlaceholderText="{Binding Shell.I18n.MigrationGamePathNotFound}"/>
                                         <Button Grid.Column="1" Classes="flat-action dialog-action"
@@ -391,8 +391,9 @@
                                     <TextBlock Text="{Binding Shell.I18n.MigrationProxyLabel}"
                                                VerticalAlignment="Center" Classes="section-title" MinWidth="120"/>
                                     <ComboBox Grid.Column="1" Classes="setting-control" MinWidth="140"
-                                              ItemsSource="{Binding MigrationWizard.ProxyModeOptions}"
-                                              SelectedIndex="{Binding MigrationWizard.SelectedProxyModeIndex, Mode=TwoWay}">
+                                              ItemsSource="{Binding MigrationWizard.Options.ProxyMode}"
+                                              SelectedValue="{Binding MigrationWizard.Editor.Current.ProxyMode, Mode=TwoWay}"
+                                              SelectedValueBinding="{Binding Code}">
                                         <ComboBox.ItemTemplate>
                                             <DataTemplate x:DataType="models:SettingOption">
                                                 <TextBlock Text="{Binding DisplayName}"/>
@@ -408,8 +409,9 @@
                                     <TextBlock Text="{Binding Shell.I18n.MigrationCloseBehaviorLabel}"
                                                VerticalAlignment="Center" Classes="section-title" MinWidth="120"/>
                                     <ComboBox Grid.Column="1" Classes="setting-control" MinWidth="140"
-                                              ItemsSource="{Binding MigrationWizard.CloseBehaviorOptions}"
-                                              SelectedIndex="{Binding MigrationWizard.SelectedCloseBehaviorIndex, Mode=TwoWay}">
+                                              ItemsSource="{Binding MigrationWizard.Options.CloseBehavior}"
+                                              SelectedValue="{Binding MigrationWizard.Editor.Current.CloseBehavior, Mode=TwoWay}"
+                                              SelectedValueBinding="{Binding Code}">
                                         <ComboBox.ItemTemplate>
                                             <DataTemplate x:DataType="models:SettingOption">
                                                 <TextBlock Text="{Binding DisplayName}"/>

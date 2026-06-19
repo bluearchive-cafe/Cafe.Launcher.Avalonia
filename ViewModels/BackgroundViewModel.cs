@@ -62,7 +62,7 @@ public partial class BackgroundViewModel : ViewModelBase, IDisposable
 
         BackgroundStretch = ToStretch(settings.Editor.Current.BackgroundFit);
         BackgroundFillBrush = settings.Editor.Current.BackgroundFit == BackgroundFits.Uniform
-            ? new SolidColorBrush(settings.SelectedBackgroundFillColor)
+            ? new SolidColorBrush(settings.Appearance.SelectedBackgroundFillColor)
             : null;
 
         switch (settings.Editor.Current.BackgroundSource)
@@ -127,7 +127,6 @@ public partial class BackgroundViewModel : ViewModelBase, IDisposable
                 if (settings is not null)
                 {
                     settings.Editor.Current.CustomBackgroundPath = "";
-                    settings.IsCustomBackground = false;
                 }
                 return null;
             }
@@ -206,8 +205,10 @@ public partial class BackgroundViewModel : ViewModelBase, IDisposable
         BackgroundImageSource = bitmap;
         if (settings?.Editor.Current.ThemeColorMode == ThemeColorModes.Wallpaper)
         {
-            settings.RefreshThemeColorPaletteFromCurrentBackground(markDirty: false);
-            settings.ApplyThemeColor(settings.Editor.Current.ThemeColorMode, settings.SelectedCustomThemeColor);
+            settings.Appearance.RefreshThemeColorPaletteFromCurrentBackground(markDirty: false);
+            settings.Appearance.ApplyThemeColor(
+                settings.Editor.Current.ThemeColorMode,
+                settings.Appearance.SelectedCustomThemeColor);
         }
 
         if (old is not null)

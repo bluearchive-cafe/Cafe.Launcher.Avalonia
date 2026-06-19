@@ -119,9 +119,11 @@ public partial class MainWindowViewModel : ViewModelBase, IDisposable
         {
             var settingsForLanguage = await settingsService.ReadAsync(cancellationToken);
             ApplyLanguage(settingsForLanguage.Language);
-            Settings.LoadThemeColorState(settingsForLanguage);
-            SettingsViewModel.ApplyTheme(settingsForLanguage.ThemeMode);
-            Settings.ApplyThemeColor(settingsForLanguage.ThemeColorMode, SettingsViewModel.ParseColorOrDefault(settingsForLanguage.CustomThemeColor));
+            Settings.Appearance.Load(settingsForLanguage);
+            SettingsAppearanceViewModel.ApplyTheme(settingsForLanguage.ThemeMode);
+            Settings.Appearance.ApplyThemeColor(
+                settingsForLanguage.ThemeColorMode,
+                SettingsAppearanceViewModel.ParseColorOrDefault(settingsForLanguage.CustomThemeColor));
             Shell.SetLoading();
 
             // Migrate game path from original Yostar launcher on first run
@@ -175,18 +177,20 @@ public partial class MainWindowViewModel : ViewModelBase, IDisposable
         Toasts.Configure(Settings);
 
         Settings.GetSnapshot = () => currentSnapshot;
-        Settings.GetBackgroundBitmap = Background.GetBackgroundBitmap;
+        Settings.Appearance.GetBackgroundBitmap = Background.GetBackgroundBitmap;
         Settings.ApplyLanguageAndTheme = async s =>
         {
             ApplyLanguage(s.Language);
-            SettingsViewModel.ApplyTheme(s.ThemeMode);
+            SettingsAppearanceViewModel.ApplyTheme(s.ThemeMode);
             // Background is intentionally NOT updated here.
             // Both callers (SaveSettingsAsync, ChooseGamePathAsync) fire SettingsSaved
             // immediately after, which triggers RefreshAsync → ApplySnapshotAsync →
             // Background.UpdateBackgroundImageAsync. Updating it here too would cause
             // a double-update; for folder-based (random) backgrounds each update picks a
             // different image, so the wallpaper visibly flickers between two random picks.
-            Settings.ApplyThemeColor(s.ThemeColorMode, SettingsViewModel.ParseColorOrDefault(s.CustomThemeColor));
+            Settings.Appearance.ApplyThemeColor(
+                s.ThemeColorMode,
+                SettingsAppearanceViewModel.ParseColorOrDefault(s.CustomThemeColor));
         };
         Settings.SettingsSaved += HandleSettingsSavedAsync;
         closeRequestedHandler = () => WindowChrome.IsSettingsVisible = false;
@@ -275,9 +279,11 @@ public partial class MainWindowViewModel : ViewModelBase, IDisposable
     {
         ApplySettingsSnapshot(snapshot.Settings, snapshot.LocalGame.GamePath);
         ApplyLanguage(snapshot.Settings.Language);
-        SettingsViewModel.ApplyTheme(snapshot.Settings.ThemeMode);
+        SettingsAppearanceViewModel.ApplyTheme(snapshot.Settings.ThemeMode);
         await Background.UpdateBackgroundImageAsync(snapshot, lifetimeCts.Token);
-        Settings.ApplyThemeColor(snapshot.Settings.ThemeColorMode, SettingsViewModel.ParseColorOrDefault(snapshot.Settings.CustomThemeColor));
+        Settings.Appearance.ApplyThemeColor(
+            snapshot.Settings.ThemeColorMode,
+            SettingsAppearanceViewModel.ParseColorOrDefault(snapshot.Settings.CustomThemeColor));
 
         Shell.ApplySnapshot(snapshot, Settings);
         Operations.ApplySnapshot(snapshot);

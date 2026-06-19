@@ -117,7 +117,7 @@ public sealed class MainWindowViewModelTests : IDisposable
         Assert.Equal("BlueArchive.exe", viewModel.Shell.ExecutableNameText);
         Assert.Equal(viewModel.Shell.I18n.StatusNetworkLoaded, viewModel.Shell.NetworkStatusValueText);
         Assert.Equal(
-            viewModel.Settings.ResolveLaunchCheckDisplayName(snapshot.Settings.LaunchCheckMode),
+            viewModel.Settings.Options.ResolveLaunchCheckDisplayName(snapshot.Settings.LaunchCheckMode),
             viewModel.Shell.LaunchCheckValueText);
         Assert.DoesNotContain("Executable", viewModel.Shell.ExecutableNameText, StringComparison.OrdinalIgnoreCase);
         Assert.DoesNotContain("启动程序", viewModel.Shell.ExecutableNameText, StringComparison.Ordinal);
@@ -371,7 +371,8 @@ public sealed class MainWindowViewModelTests : IDisposable
         using var viewModel = CreateViewModel(coreService, settingsService);
 
         viewModel.Settings.Editor.Current.ThemeColorMode = ThemeColorModes.Custom;
-        viewModel.Settings.SelectedCustomThemeColor = Color.FromArgb(0xFF, 0x33, 0x66, 0x99);
+        viewModel.Settings.Appearance.SelectedCustomThemeColor =
+            Color.FromArgb(0xFF, 0x33, 0x66, 0x99);
         await SaveSettingsAsync(viewModel);
 
         var settings = await settingsService.ReadAsync();
@@ -442,13 +443,13 @@ public sealed class MainWindowViewModelTests : IDisposable
     {
         var coreService = new CountingCoreService(CreateSnapshot());
         using var viewModel = CreateViewModel(coreService);
-        viewModel.Settings.ThemeColorPaletteItems.Add(new ThemeColorPaletteItem
+        viewModel.Settings.Appearance.ThemeColorPaletteItems.Add(new ThemeColorPaletteItem
         {
             Index = 0,
             ColorHex = "#FFD82038",
             Brush = new SolidColorBrush(Color.FromRgb(0xD8, 0x20, 0x38))
         });
-        viewModel.Settings.ThemeColorPaletteItems.Add(new ThemeColorPaletteItem
+        viewModel.Settings.Appearance.ThemeColorPaletteItems.Add(new ThemeColorPaletteItem
         {
             Index = 1,
             ColorHex = "#FF2050D8",
@@ -458,12 +459,13 @@ public sealed class MainWindowViewModelTests : IDisposable
         viewModel.WindowChrome.IsSettingsVisible = true;
         viewModel.Settings.Editor.ApplySnapshot(viewModel.Settings.Editor.Current);
 
-        viewModel.Settings.SelectedThemeColorPaletteIndex = 1;
+        viewModel.Settings.Appearance.SelectedThemeColorPaletteIndex = 1;
 
         Assert.True(viewModel.Settings.IsSettingsDirty);
-        Assert.False(viewModel.Settings.ThemeColorPaletteItems[0].IsSelected);
-        Assert.True(viewModel.Settings.ThemeColorPaletteItems[1].IsSelected);
-        var preview = Assert.IsType<SolidColorBrush>(viewModel.Settings.ThemeColorPreviewBrush);
+        Assert.False(viewModel.Settings.Appearance.ThemeColorPaletteItems[0].IsSelected);
+        Assert.True(viewModel.Settings.Appearance.ThemeColorPaletteItems[1].IsSelected);
+        var preview = Assert.IsType<SolidColorBrush>(
+            viewModel.Settings.Appearance.ThemeColorPreviewBrush);
         Assert.Equal(Color.FromArgb(0xFF, 0x20, 0x50, 0xD8), preview.Color);
     }
 
@@ -476,19 +478,19 @@ public sealed class MainWindowViewModelTests : IDisposable
         var coreService = new CountingCoreService(CreateSnapshot());
         using var viewModel = CreateViewModel(coreService, settingsService);
         viewModel.Settings.Editor.Current.ThemeColorMode = ThemeColorModes.Wallpaper;
-        viewModel.Settings.ThemeColorPaletteItems.Add(new ThemeColorPaletteItem
+        viewModel.Settings.Appearance.ThemeColorPaletteItems.Add(new ThemeColorPaletteItem
         {
             Index = 0,
             ColorHex = "#FFD82038",
             Brush = new SolidColorBrush(Color.FromRgb(0xD8, 0x20, 0x38))
         });
-        viewModel.Settings.ThemeColorPaletteItems.Add(new ThemeColorPaletteItem
+        viewModel.Settings.Appearance.ThemeColorPaletteItems.Add(new ThemeColorPaletteItem
         {
             Index = 1,
             ColorHex = "#FF2050D8",
             Brush = new SolidColorBrush(Color.FromRgb(0x20, 0x50, 0xD8))
         });
-        viewModel.Settings.SelectedThemeColorPaletteIndex = 1;
+        viewModel.Settings.Appearance.SelectedThemeColorPaletteIndex = 1;
 
         await SaveSettingsAsync(viewModel);
 
@@ -508,22 +510,26 @@ public sealed class MainWindowViewModelTests : IDisposable
         using var viewModel = CreateViewModel(coreService);
 
         await viewModel.InitializeAsync();
-        viewModel.Settings.ThemeColorPaletteItems.Clear();
-        viewModel.Settings.ThemeColorPaletteItems.Add(new ThemeColorPaletteItem
+        viewModel.Settings.Appearance.ThemeColorPaletteItems.Clear();
+        viewModel.Settings.Appearance.ThemeColorPaletteItems.Add(new ThemeColorPaletteItem
         {
             Index = 0,
             ColorHex = "#FFD82038",
             Brush = new SolidColorBrush(Color.FromRgb(0xD8, 0x20, 0x38)),
             IsSelected = true
         });
-        viewModel.Settings.SelectedThemeColorPaletteIndex = 0;
+        viewModel.Settings.Appearance.SelectedThemeColorPaletteIndex = 0;
         viewModel.Settings.Editor.ApplySnapshot(viewModel.Settings.Editor.Current);
-        Assert.Equal("#FFD82038", Assert.Single(viewModel.Settings.ThemeColorPaletteItems).ColorHex);
+        Assert.Equal(
+            "#FFD82038",
+            Assert.Single(viewModel.Settings.Appearance.ThemeColorPaletteItems).ColorHex);
 
         viewModel.WindowChrome.ShowSettingsCommand.Execute(null);
 
         Assert.True(viewModel.WindowChrome.IsSettingsVisible);
-        Assert.Equal("#FFD82038", Assert.Single(viewModel.Settings.ThemeColorPaletteItems).ColorHex);
+        Assert.Equal(
+            "#FFD82038",
+            Assert.Single(viewModel.Settings.Appearance.ThemeColorPaletteItems).ColorHex);
         Assert.False(viewModel.Settings.IsSettingsDirty);
     }
 
@@ -641,10 +647,12 @@ public sealed class MainWindowViewModelTests : IDisposable
         var externalLinkService = new ExternalLinkService();
         var launcherUpdateService = new LauncherUpdateService(new LauncherUpdateHandler());
         var settingsEditor = new SettingsEditor();
+        var settingsOptions = new SettingsOptionsViewModel(localizationService, diskSpaceService);
+        var settingsAppearance = new SettingsAppearanceViewModel(settingsEditor);
         var settingsViewModel = new SettingsViewModel(
             settingsService, localizationService, toastService,
-            imageCacheService, externalLinkService, diskSpaceService, launcherUpdateService,
-            settingsEditor);
+            imageCacheService, externalLinkService, launcherUpdateService,
+            settingsOptions, settingsAppearance);
         var resourcePanelViewModel = new ResourcePanelViewModel(
             resourcePanelUidService, resourcePanelApiClient, localizationService,
             toastService, diagnostics);
@@ -673,7 +681,9 @@ public sealed class MainWindowViewModelTests : IDisposable
             new WindowChromeViewModel(externalLinkService),
             settingsViewModel,
             resourcePanelViewModel,
-            new MigrationWizardViewModel(localizationService));
+            new MigrationWizardViewModel(
+                new SettingsEditor(),
+                new SettingsOptionsViewModel(localizationService, diskSpaceService)));
     }
 
     private LauncherStatusSnapshot CreateSnapshot()
