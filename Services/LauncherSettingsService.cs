@@ -55,7 +55,7 @@ public sealed class LauncherSettingsService
     {
         if (!File.Exists(SettingsPath))
         {
-            return new LauncherSettings();
+            return CreateDefaultSettings();
         }
 
         try
@@ -74,8 +74,21 @@ public sealed class LauncherSettingsService
                 await diagnostics.ErrorAsync("Settings read failed", exception, CancellationToken.None);
             }
 
-            return new LauncherSettings();
+            return CreateDefaultSettings();
         }
+    }
+
+    private static LauncherSettings CreateDefaultSettings()
+    {
+        var settings = new LauncherSettings();
+
+        // Pre-release builds default to the beta update channel.
+        if (LauncherConstants.LauncherVersion.Contains('-'))
+        {
+            settings.UpdateChannel = UpdateChannels.Beta;
+        }
+
+        return settings;
     }
 
     public async Task SaveAsync(LauncherSettings settings, CancellationToken cancellationToken = default)
@@ -204,6 +217,11 @@ public sealed class LauncherSettingsService
         }
 
         settings.BackgroundFillColor = NormalizeColor(settings.BackgroundFillColor);
+
+        if (settings.UpdateChannel is not UpdateChannels.Stable and not UpdateChannels.Beta)
+        {
+            settings.UpdateChannel = UpdateChannels.Stable;
+        }
 
         settings.GamePath ??= "";
         settings.ResourcePanelUid = settings.ResourcePanelUid?.Trim() ?? "";

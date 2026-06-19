@@ -78,7 +78,6 @@ jobs:
           repository: bluearchive-cafe/Cafe.Launcher.Avalonia_Release
           token: ${{ secrets.RELEASE_REPOSITORY_TOKEN }}
           tag_name: ${{ github.ref_name }}
-          target_commitish: main
           name: ${{ github.ref_name }}
           body_path: changelog.md
           files: ${{ env.zip_name }}

@@ -94,7 +94,7 @@ One `MainWindow` (1300×754, non-resizable, borderless with custom chrome). The 
 
 ### Constants
 
-`LauncherConstants` holds: `ProductName`, `LauncherVersion` (reads from `AssemblyInformationalVersionAttribute`, currently `"1.0.0"`), `YostarAuthorizationVersion` (`"1.7.2"` — the version sent in API auth headers to match the official launcher), `ApiBaseUrl`, `AuthorizationSalt`, `OfficialWebsiteUrl`, `GitHubReleaseRepositorySlug`, `GitHubReleaseRepositoryUrl`, `GitHubApiBaseUrl`, `GitHubLatestReleasePath` (release/distribution repository and API paths), path/filename conventions (`RootFolderName = "YostarGames"`, `GameFolderName = "BlueArchive_JP"`), and `AvaloniaVersion` (must be kept in sync with the `.csproj` `PackageReference` for Avalonia).
+`LauncherConstants` holds: `ProductName`, `LauncherVersion` (reads from `AssemblyInformationalVersionAttribute`, currently `"1.0.0-beta.1"`), `YostarAuthorizationVersion` (`"1.7.2"` — the version sent in API auth headers to match the official launcher), `ApiBaseUrl`, `AuthorizationSalt`, `OfficialWebsiteUrl`, `GitHubReleaseRepositorySlug`, `GitHubReleaseRepositoryUrl`, `GitHubApiBaseUrl`, `GitHubReleasesPath` (release/distribution repository and API paths, uses the `/releases` endpoint to support both stable and pre-release channels), `GitHubToken` (optional fine-grained PAT for higher API rate limits), path/filename conventions (`RootFolderName = "YostarGames"`, `GameFolderName = "BlueArchive_JP"`), and `AvaloniaVersion` (must be kept in sync with the `.csproj` `PackageReference` for Avalonia).
 
 ### Patch URL groups
 

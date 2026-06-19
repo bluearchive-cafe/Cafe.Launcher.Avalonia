@@ -182,6 +182,9 @@ public sealed partial class LocalizedStrings : ObservableObject
     [ObservableProperty] private string migrationApply = "";
     [ObservableProperty] private string migrationApplied = "";
     [ObservableProperty] private string migrationNoOldLauncher = "";
+    [ObservableProperty] private string updateChannel = "";
+    [ObservableProperty] private string updateChannelStable = "";
+    [ObservableProperty] private string updateChannelBeta = "";
 
     public void Apply(LocalizationService localizer)
     {
@@ -357,6 +360,9 @@ public sealed partial class LocalizedStrings : ObservableObject
         MigrationApply = localizer.T("migrationApply");
         MigrationApplied = localizer.T("migrationApplied");
         MigrationNoOldLauncher = localizer.T("migrationNoOldLauncher");
+        UpdateChannel = localizer.T("updateChannel");
+        UpdateChannelStable = localizer.T("updateChannelStable");
+        UpdateChannelBeta = localizer.T("updateChannelBeta");
     }
 }
 

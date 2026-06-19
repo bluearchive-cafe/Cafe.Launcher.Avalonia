@@ -216,6 +216,25 @@
                                         </ComboBox.ItemTemplate>
                                     </ComboBox>
                                 </Grid>
+
+                                <Grid Classes="settings-row" ColumnDefinitions="Auto,*,Auto">
+                                    <Border Classes="settings-icon">
+                                        <materialIcons:MaterialIcon Kind="Update" Width="{StaticResource LauncherIconMd}" Height="{StaticResource LauncherIconMd}" Foreground="{DynamicResource LauncherAccentBrush}" HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                                    </Border>
+                                    <StackPanel Grid.Column="1" VerticalAlignment="Center">
+                                        <TextBlock Text="{Binding Shell.I18n.UpdateChannel}" Classes="section-title"/>
+                                    </StackPanel>
+                                    <ComboBox Grid.Column="2" Classes="setting-control"
+                                              ItemsSource="{Binding Settings.UpdateChannelOptions}"
+                                              SelectedValue="{Binding Settings.SelectedUpdateChannel, Mode=TwoWay}"
+                                              SelectedValueBinding="{Binding Code}">
+                                        <ComboBox.ItemTemplate>
+                                            <DataTemplate x:DataType="models:SettingOption">
+                                                <TextBlock Text="{Binding DisplayName}"/>
+                                            </DataTemplate>
+                                        </ComboBox.ItemTemplate>
+                                    </ComboBox>
+                                </Grid>
                             </StackPanel>
                         </Border>
 

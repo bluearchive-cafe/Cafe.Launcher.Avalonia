@@ -89,6 +89,9 @@ public partial class SettingsViewModel : ViewModelBase
     [ObservableProperty]
     private bool showRemoteContentCard = true;
 
+    [ObservableProperty]
+    private string selectedUpdateChannel = UpdateChannels.Stable;
+
     // ── Settings UI state (2) ────────────────────────────────────────────
 
     // I1: Dirty tracking for unsaved settings changes
@@ -206,6 +209,12 @@ public partial class SettingsViewModel : ViewModelBase
 
     public IReadOnlyList<LanguageOption> LanguageOptions { get; } = LocalizationService.GetLanguageOptions();
 
+    public ObservableCollection<SettingOption> UpdateChannelOptions { get; } =
+    [
+        new() { Code = UpdateChannels.Stable },
+        new() { Code = UpdateChannels.Beta }
+    ];
+
     public ObservableCollection<ThemeOption> ThemeOptions { get; } =
     [
         new() { Code = ThemeModes.System },
@@ -239,6 +248,7 @@ public partial class SettingsViewModel : ViewModelBase
             SelectedDownloadSpeedLimit = settings.DownloadSpeedLimit;
             ToastNotificationsEnabled = settings.ToastNotificationsEnabled;
             ShowRemoteContentCard = settings.ShowRemoteContentCard;
+            SelectedUpdateChannel = settings.UpdateChannel;
             CustomBackgroundPath = settings.CustomBackgroundPath;
             IsCustomBackground = !string.IsNullOrWhiteSpace(settings.CustomBackgroundPath);
             SelectedBackgroundSource = settings.BackgroundSource;
@@ -278,6 +288,7 @@ public partial class SettingsViewModel : ViewModelBase
         RefreshDownloadSpeedLimitOptions();
         RefreshBackgroundSourceOptions();
         RefreshBackgroundFitOptions();
+        RefreshUpdateChannelOptions();
     }
 
     /// <summary>Called by parent to re-apply theme/colour after language change.</summary>
@@ -327,6 +338,7 @@ public partial class SettingsViewModel : ViewModelBase
             s.SelectedDownloadSpeedLimit = settings.DownloadSpeedLimit;
             s.ToastNotificationsEnabled = settings.ToastNotificationsEnabled;
             s.ShowRemoteContentCard = settings.ShowRemoteContentCard;
+            s.SelectedUpdateChannel = settings.UpdateChannel;
             s.CustomBackgroundPath = settings.CustomBackgroundPath;
             s.IsCustomBackground = !string.IsNullOrWhiteSpace(settings.CustomBackgroundPath);
             s.SelectedBackgroundSource = settings.BackgroundSource;
@@ -343,7 +355,7 @@ public partial class SettingsViewModel : ViewModelBase
     private async Task CheckForUpdatesAsync()
     {
         launcherUpdateService.SetProxyMode(SelectedProxyMode);
-        var result = await launcherUpdateService.CheckForUpdateAsync();
+        var result = await launcherUpdateService.CheckForUpdateAsync(SelectedUpdateChannel);
 
         if (!result.IsSuccessful)
         {
@@ -388,6 +400,7 @@ public partial class SettingsViewModel : ViewModelBase
         settings.DownloadSpeedLimit = SelectedDownloadSpeedLimit;
         settings.ToastNotificationsEnabled = ToastNotificationsEnabled;
         settings.ShowRemoteContentCard = ShowRemoteContentCard;
+        settings.UpdateChannel = SelectedUpdateChannel;
         settings.CustomBackgroundPath = CustomBackgroundPath;
         settings.BackgroundSource = SelectedBackgroundSource;
         settings.BackgroundFit = SelectedBackgroundFit;
@@ -617,6 +630,11 @@ public partial class SettingsViewModel : ViewModelBase
     }
 
     partial void OnShowRemoteContentCardChanged(bool value)
+    {
+        MarkSettingsDirtyIfVisible();
+    }
+
+    partial void OnSelectedUpdateChannelChanged(string value)
     {
         MarkSettingsDirtyIfVisible();
     }
@@ -983,6 +1001,18 @@ public partial class SettingsViewModel : ViewModelBase
                 BackgroundFits.Fill => localizer.T("backgroundFitFill"),
                 BackgroundFits.Uniform => localizer.T("backgroundFitUniform"),
                 _ => localizer.T("backgroundFitUniformToFill")
+            };
+        }
+    }
+
+    private void RefreshUpdateChannelOptions()
+    {
+        foreach (var option in UpdateChannelOptions)
+        {
+            option.DisplayName = option.Code switch
+            {
+                UpdateChannels.Beta => localizer.T("updateChannelBeta"),
+                _ => localizer.T("updateChannelStable")
             };
         }
     }
