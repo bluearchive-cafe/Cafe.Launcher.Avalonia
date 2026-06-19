@@ -615,9 +615,10 @@ public sealed class MainWindowViewModelTests : IDisposable
         toastService ??= new ToastService();
         var diskSpaceService = new DiskSpaceService();
         var externalLinkService = new ExternalLinkService();
+        var launcherUpdateService = new LauncherUpdateService(new LauncherUpdateHandler());
         var settingsViewModel = new SettingsViewModel(
             settingsService, localizationService, toastService,
-            imageCacheService, externalLinkService, diskSpaceService);
+            imageCacheService, externalLinkService, diskSpaceService, launcherUpdateService);
         var resourcePanelViewModel = new ResourcePanelViewModel(
             resourcePanelUidService, resourcePanelApiClient, localizationService,
             toastService, diagnostics);
@@ -893,6 +894,16 @@ public sealed class MainWindowViewModelTests : IDisposable
             {
                 Content = new StringContent(json, Encoding.UTF8, "application/json")
             };
+        }
+    }
+
+    private sealed class LauncherUpdateHandler : HttpMessageHandler
+    {
+        protected override Task<HttpResponseMessage> SendAsync(
+            HttpRequestMessage request,
+            CancellationToken cancellationToken)
+        {
+            return Task.FromResult(new HttpResponseMessage(HttpStatusCode.NotFound));
         }
     }
 }

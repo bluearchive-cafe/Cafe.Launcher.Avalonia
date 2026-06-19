@@ -98,7 +98,6 @@ public sealed partial class LocalizedStrings : ObservableObject
     [ObservableProperty] private string exitLauncher = "";
     [ObservableProperty] private string gitHubRepository = "";
     [ObservableProperty] private string checkUpdates = "";
-    [ObservableProperty] private string checkUpdatesUnavailable = "";
     [ObservableProperty] private string trayOpenLauncher = "";
     [ObservableProperty] private string trayExitLauncher = "";
     [ObservableProperty] private string aboutLinks = "";
@@ -274,7 +273,6 @@ public sealed partial class LocalizedStrings : ObservableObject
         ExitLauncher = localizer.T("exitLauncher");
         GitHubRepository = localizer.T("gitHubRepository");
         CheckUpdates = localizer.T("checkUpdates");
-        CheckUpdatesUnavailable = localizer.T("checkUpdatesUnavailable");
         TrayOpenLauncher = localizer.T("trayOpenLauncher");
         TrayExitLauncher = localizer.T("trayExitLauncher");
         AboutLinks = localizer.T("aboutLinks");

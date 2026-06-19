@@ -1,7 +1,8 @@
 <#
 .SYNOPSIS
     Prepare a release: bump version, generate changelog, create tag, and push.
-    The actual build and GitHub Release creation is handled by CI (release.yml).
+    The actual build and GitHub Release creation in both the source and
+    distribution repositories is handled by CI (release.yml).
 
 .DESCRIPTION
     This script automates the local portion of the release workflow:
@@ -14,7 +15,8 @@
     7. Pushes the commit and tag to origin
 
     Once the tag is pushed, .github/workflows/release.yml triggers automatically
-    to build the project and create the GitHub Release with the artifact.
+    to build the project and create matching GitHub Releases with the artifact in
+    the source repository and bluearchive-cafe/Cafe.Launcher.Avalonia_Release.
 
 .PARAMETER VersionBump
     How to bump the version:
@@ -375,6 +377,6 @@ if ($SkipPush) {
     Write-Host "  Push:       done"
 }
 Write-Host ""
-Write-Host "  Next: CI (release.yml) will build and create the GitHub Release."
+Write-Host "  Next: CI (release.yml) will build and create both GitHub Releases."
 Write-Host "  Watch:   https://github.com/$repoSlug/actions"
 Write-Host "═══════════════════════════════════════════" -ForegroundColor Green

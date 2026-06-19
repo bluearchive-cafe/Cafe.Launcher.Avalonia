@@ -5,6 +5,9 @@ on:
     tags:
       - 'v*'
 
+permissions:
+  contents: write
+
 jobs:
   release:
     runs-on: windows-latest
@@ -75,7 +78,7 @@ jobs:
           $body -join "`n" | Out-File -FilePath changelog.md -Encoding utf8
           Write-Host "Changelog generated"
 
-      - name: Create GitHub Release
+      - name: Create source repository release
         uses: softprops/action-gh-release@v2
         with:
           name: ${{ github.ref_name }}
@@ -83,5 +86,16 @@ jobs:
           files: ${{ env.zip_name }}
           prerelease: ${{ contains(github.ref_name, '-') }}
           fail_on_unmatched_files: true
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Create distribution repository release
+        uses: softprops/action-gh-release@v2
+        with:
+          repository: bluearchive-cafe/Cafe.Launcher.Avalonia_Release
+          token: ${{ secrets.RELEASE_REPOSITORY_TOKEN }}
+          tag_name: ${{ github.ref_name }}
+          target_commitish: main
+          name: ${{ github.ref_name }}
+          body_path: changelog.md
+          files: ${{ env.zip_name }}
+          prerelease: ${{ contains(github.ref_name, '-') }}
+          fail_on_unmatched_files: true

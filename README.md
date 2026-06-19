@@ -197,7 +197,7 @@ dotnet test --filter "FullyQualifiedName~VersionComparerTests"
 CI 位于 `.github/workflows/`：
 
 - `build.yml`: push 或 pull request 到 `main` 时执行 restore、Debug build、测试、Release build、Release publish，并上传 `publish\`。
-- `release.yml`: push `v*` tag 时执行 Release 测试、构建、发布、压缩 ZIP、生成 changelog，并通过 `softprops/action-gh-release@v2` 创建 GitHub Release。
+- `release.yml`: push `v*` tag 时执行 Release 测试、构建、发布、压缩 ZIP、生成 changelog，并通过 `softprops/action-gh-release@v2` 在源码仓库和 `bluearchive-cafe/Cafe.Launcher.Avalonia_Release` 同时创建 GitHub Release。分发仓库使用源码仓库 Actions Secret `RELEASE_REPOSITORY_TOKEN`。
 
 本地发布准备脚本：
 

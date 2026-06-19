@@ -26,11 +26,9 @@ public static class LauncherConstants
     public const string ResourcePanelApiBaseUrl = "https://api.bluearchive.cafe";
     public const string OfficialWebsiteUrl = "https://bluearchive.cafe/";
     public const string GitHubRepositoryUrl = "https://github.com/bluearchive-cafe/Cafe.Launcher.Avalonia_Release";
+    public const string GitHubApiBaseUrl = "https://api.github.com";
+    public const string GitHubLatestReleasePath = "/repos/bluearchive-cafe/Cafe.Launcher.Avalonia_Release/releases/latest";
     public const string AuthorizationSalt = "DE7108E9B2842FD460F4777702727869";
-    public const string UpdateProvider = "generic";
-    public const bool UpdateUseMultipleRangeRequest = false;
-    public const string UpdatePackageUrl = "https://launcher-pkg-ba-jp.yo-star.com/install_pkg/game_launcher/BlueArchive_JP/";
-    public const string UpdaterCacheDirName = "cafe_launcher-updater";
     public const string DefaultThemeColor = "#FF2E7DF6";
 
     public const string OldLauncherAppName = "BlueArchive_JP_Gamelauncher";

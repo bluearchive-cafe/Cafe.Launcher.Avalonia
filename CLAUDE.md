@@ -18,11 +18,11 @@ dotnet test                                                    # Run all tests
 dotnet test --filter "FullyQualifiedName~VersionComparerTests" # Run a single test class
 ```
 
-Available test classes: `VersionComparerTests`, `LauncherApiClientTests`, `LauncherConstantsTests`, `LauncherSettingsServiceTests`, `LocalGameStateServiceTests`, `LocalizationServiceTests`, `MainWindowViewModelTests`, `GameDownloadServiceTests`, `PatchUrlGroupServiceTests`, `BestHttpCookieLibraryServiceTests`, `ResourcePanelUidServiceTests`, `ExternalLinkServiceTests`, `ResourcePanelApiClientTests`, `MigrationWizardViewModelTests`, `LevelDbReaderTests`, `OldLauncherDetectionServiceTests`.
+Available test classes: `VersionComparerTests`, `LauncherApiClientTests`, `LauncherConstantsTests`, `LauncherSettingsServiceTests`, `LocalGameStateServiceTests`, `LocalizationServiceTests`, `MainWindowViewModelTests`, `GameDownloadServiceTests`, `PatchUrlGroupServiceTests`, `BestHttpCookieLibraryServiceTests`, `ResourcePanelUidServiceTests`, `ExternalLinkServiceTests`, `ResourcePanelApiClientTests`, `MigrationWizardViewModelTests`, `LevelDbReaderTests`, `OldLauncherDetectionServiceTests`, `LauncherUpdateServiceTests`.
 
 CI is GitHub Actions on `windows-latest`, .NET 10.0.x:
 - **build.yml** (push/PR to `main`): restore, Debug build, Release build, self-contained publish, upload artifact.
-- **release.yml** (push of `v*` tag): restore, Release build, publish, ZIP archive, auto-generated changelog from git log, GitHub Release via `softprops/action-gh-release@v2`. Pre-release if tag contains `-`.
+- **release.yml** (push of `v*` tag): restore, Release build, publish, ZIP archive, auto-generated changelog from git log, then create matching GitHub Releases in both the source repository and `bluearchive-cafe/Cafe.Launcher.Avalonia_Release`. The distribution repository uses the `RELEASE_REPOSITORY_TOKEN` Actions secret. Pre-release if tag contains `-`.
 
 **Telemetry must be off during local builds** (already set in `build.ps1`):
 - `DOTNET_CLI_TELEMETRY_OPTOUT=1`
@@ -37,7 +37,7 @@ CI is GitHub Actions on `windows-latest`, .NET 10.0.x:
 .\release.ps1 patch -SkipPush        # Commit + tag locally, don't push to origin
 ```
 
-`release.ps1` reads `<VersionPrefix>` from the `.csproj`, bumps it, generates `CHANGELOG_RELEASE.md` from git log since last tag (grouped by conventional commit prefix: feat/fix/refactor/perf), updates `AssemblyVersion`/`FileVersion`, commits, creates an annotated tag, and pushes. The actual build + GitHub Release is handled by `release.yml` CI on tag push.
+`release.ps1` reads `<VersionPrefix>` from the `.csproj`, bumps it, generates `CHANGELOG_RELEASE.md` from git log since last tag (grouped by conventional commit prefix: feat/fix/refactor/perf), updates `AssemblyVersion`/`FileVersion`, commits, creates an annotated tag, and pushes. The actual build and matching GitHub Releases in the source and distribution repositories are handled by `release.yml` CI on tag push.
 
 ## Architecture
 
@@ -116,7 +116,7 @@ One `MainWindow` (1300×754, non-resizable with MinWidth 1024/MinHeight 640, bor
 | `ThemeColorExtractionService` | Extracts dominant colors from wallpaper images for UI theming |
 | `ImageCacheService` | Caches downloaded images (banners, avatars). Implements `IDisposable`. |
 | `ManifestValidationService` | Validates local game files against manifest |
-| `LauncherUpdateService` | Checks for and downloads launcher updates |
+| `LauncherUpdateService` | Checks the latest stable release through the GitHub Releases API |
 | `ExternalLinkService` | Opens external URLs in the default browser |
 | `DownloadStateService` | Serializes/resumes download state to `download_state.json` |
 | `Crc64Service`, `OfficialHashService`, `DiskSpaceService`, `ProcessService`, `VersionComparer`, `ClickCodeService` | Supporting services |
@@ -191,7 +191,7 @@ Persisted fields in `settings.json` and their valid values:
 
 ### Constants
 
-`LauncherConstants` holds: `ProductName`, `LauncherVersion` (reads from `AssemblyInformationalVersionAttribute`, currently `"1.0.0"`), `YostarAuthorizationVersion` (`"1.7.2"` — the version sent in API auth headers to match the official launcher), `ApiBaseUrl`, `AuthorizationSalt`, `OfficialWebsiteUrl`, `UpdatePackageUrl`, path/filename conventions (`RootFolderName = "YostarGames"`, `GameFolderName = "BlueArchive_JP"`), and `AvaloniaVersion` (must be kept in sync with the `.csproj` `PackageReference` for Avalonia).
+`LauncherConstants` holds: `ProductName`, `LauncherVersion` (reads from `AssemblyInformationalVersionAttribute`, currently `"1.0.0"`), `YostarAuthorizationVersion` (`"1.7.2"` — the version sent in API auth headers to match the official launcher), `ApiBaseUrl`, `AuthorizationSalt`, `OfficialWebsiteUrl`, GitHub release repository/API paths, path/filename conventions (`RootFolderName = "YostarGames"`, `GameFolderName = "BlueArchive_JP"`), and `AvaloniaVersion` (must be kept in sync with the `.csproj` `PackageReference` for Avalonia).
 
 ### Patch URL groups
 

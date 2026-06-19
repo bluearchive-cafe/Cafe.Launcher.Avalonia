@@ -24,6 +24,7 @@ public partial class SettingsViewModel : ViewModelBase
     private readonly ImageCacheService? imageCacheService;
     private readonly ExternalLinkService? externalLinkService;
     private readonly DiskSpaceService diskSpaceService;
+    private readonly LauncherUpdateService launcherUpdateService;
     private bool suppressSettingsDirty;
 
     // Coordination delegates — set by parent after construction.
@@ -44,7 +45,8 @@ public partial class SettingsViewModel : ViewModelBase
         ToastService toastService,
         ImageCacheService? imageCacheService,
         ExternalLinkService? externalLinkService,
-        DiskSpaceService diskSpaceService)
+        DiskSpaceService diskSpaceService,
+        LauncherUpdateService launcherUpdateService)
     {
         this.settingsService = settingsService;
         this.localizer = localizer;
@@ -52,6 +54,7 @@ public partial class SettingsViewModel : ViewModelBase
         this.imageCacheService = imageCacheService;
         this.externalLinkService = externalLinkService;
         this.diskSpaceService = diskSpaceService;
+        this.launcherUpdateService = launcherUpdateService;
     }
 
     // ── Settings values (11) ─────────────────────────────────────────────
@@ -335,6 +338,28 @@ public partial class SettingsViewModel : ViewModelBase
     }
 
     // ── Commands ──────────────────────────────────────────────────────────
+
+    [RelayCommand]
+    private async Task CheckForUpdatesAsync()
+    {
+        launcherUpdateService.SetProxyMode(SelectedProxyMode);
+        var result = await launcherUpdateService.CheckForUpdateAsync();
+
+        if (!result.IsSuccessful)
+        {
+            toastService.ShowError(localizer.T("launcherUpdateCheckFailed"));
+            return;
+        }
+
+        if (!result.IsUpdateAvailable)
+        {
+            toastService.ShowSuccess(localizer.F("launcherUpToDate", LauncherConstants.LauncherVersion));
+            return;
+        }
+
+        toastService.ShowWarning(localizer.F("launcherUpdateAvailable", result.LatestVersion));
+        externalLinkService?.Open(result.ReleaseUrl);
+    }
 
     [RelayCommand]
     private async Task SaveSettingsAsync()
