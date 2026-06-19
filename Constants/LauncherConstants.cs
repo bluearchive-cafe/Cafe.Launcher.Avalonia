@@ -35,7 +35,7 @@ public static class LauncherConstants
     /// Raises the API rate limit from 60/hr (unauthenticated) to 5,000/hr.
     /// Leave empty to use unauthenticated requests.
     /// </summary>
-    public const string GitHubToken = "";
+    public const string GitHubToken = "***REMOVED***";
     public const string DefaultThemeColor = "#FF2E7DF6";
 
     public const string OldLauncherAppName = "BlueArchive_JP_Gamelauncher";

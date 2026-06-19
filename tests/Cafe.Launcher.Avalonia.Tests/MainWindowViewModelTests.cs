@@ -11,6 +11,11 @@ namespace Cafe.Launcher.Avalonia.Tests;
 
 public sealed class MainWindowViewModelTests : IDisposable
 {
+    static MainWindowViewModelTests()
+    {
+        TestLocalizationHelper.Initialize();
+    }
+
     private readonly string tempDir = Path.Combine(Path.GetTempPath(), Guid.NewGuid().ToString("N"));
     private readonly ProxySettingsService proxySettings = new();
     private readonly HttpClientFactory httpClientFactory;
