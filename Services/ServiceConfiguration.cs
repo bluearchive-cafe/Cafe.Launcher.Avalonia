@@ -32,6 +32,7 @@ public static class ServiceConfiguration
         services.AddSingleton<DownloadStateService>();
         services.AddSingleton<ResourcePanelUidService>();
         services.AddSingleton<LauncherSettingsService>();
+        services.AddTransient<ISettingsEditor, SettingsEditor>();
         services.AddSingleton<GameLaunchService>();
         services.AddSingleton<GameUninstallService>();
         services.AddSingleton<LauncherUpdateService>();

@@ -115,7 +115,7 @@
                                     </StackPanel>
                                     <ComboBox Grid.Column="2" Classes="setting-control"
                                               ItemsSource="{Binding Settings.LaunchCheckModeOptions}"
-                                              SelectedValue="{Binding Settings.SelectedLaunchCheckMode, Mode=TwoWay}"
+                                              SelectedValue="{Binding Settings.Editor.Current.LaunchCheckMode, Mode=TwoWay}"
                                               SelectedValueBinding="{Binding Code}">
                                         <ComboBox.ItemTemplate>
                                             <DataTemplate x:DataType="models:SettingOption">
@@ -167,7 +167,7 @@
                                     </StackPanel>
                                     <ComboBox Grid.Column="2" Classes="setting-control"
                                               ItemsSource="{Binding Settings.ProxyModeOptions}"
-                                              SelectedValue="{Binding Settings.SelectedProxyMode, Mode=TwoWay}"
+                                              SelectedValue="{Binding Settings.Editor.Current.ProxyMode, Mode=TwoWay}"
                                               SelectedValueBinding="{Binding Code}">
                                         <ComboBox.ItemTemplate>
                                             <DataTemplate x:DataType="models:SettingOption">
@@ -187,7 +187,7 @@
                                     </StackPanel>
                                     <ComboBox Grid.Column="2" Classes="setting-control"
                                               ItemsSource="{Binding Settings.PatchUrlGroupOptions}"
-                                              SelectedValue="{Binding Settings.SelectedPatchUrlGroup, Mode=TwoWay}"
+                                              SelectedValue="{Binding Settings.Editor.Current.PatchUrlGroup, Mode=TwoWay}"
                                               SelectedValueBinding="{Binding Code}">
                                         <ComboBox.ItemTemplate>
                                             <DataTemplate x:DataType="models:SettingOption">
@@ -207,7 +207,7 @@
                                     </StackPanel>
                                     <ComboBox Grid.Column="2" Classes="setting-control"
                                               ItemsSource="{Binding Settings.DownloadSpeedLimitOptions}"
-                                              SelectedValue="{Binding Settings.SelectedDownloadSpeedLimit, Mode=TwoWay}"
+                                              SelectedValue="{Binding Settings.Editor.Current.DownloadSpeedLimit, Mode=TwoWay}"
                                               SelectedValueBinding="{Binding Code}">
                                         <ComboBox.ItemTemplate>
                                             <DataTemplate x:DataType="models:SettingOption">
@@ -226,7 +226,7 @@
                                     </StackPanel>
                                     <ComboBox Grid.Column="2" Classes="setting-control"
                                               ItemsSource="{Binding Settings.UpdateChannelOptions}"
-                                              SelectedValue="{Binding Settings.SelectedUpdateChannel, Mode=TwoWay}"
+                                              SelectedValue="{Binding Settings.Editor.Current.UpdateChannel, Mode=TwoWay}"
                                               SelectedValueBinding="{Binding Code}">
                                         <ComboBox.ItemTemplate>
                                             <DataTemplate x:DataType="models:SettingOption">
@@ -251,7 +251,7 @@
                                     </StackPanel>
                                     <ComboBox Grid.Column="2" Classes="setting-control"
                                               ItemsSource="{Binding Settings.LanguageOptions}"
-                                              SelectedValue="{Binding Settings.SelectedLanguage, Mode=TwoWay}"
+                                              SelectedValue="{Binding Settings.Editor.Current.Language, Mode=TwoWay}"
                                               SelectedValueBinding="{Binding Code}">
                                         <ComboBox.ItemTemplate>
                                             <DataTemplate x:DataType="models:LanguageOption">
@@ -271,7 +271,7 @@
                                     </StackPanel>
                                     <ComboBox Grid.Column="2" Classes="setting-control"
                                               ItemsSource="{Binding Settings.ThemeOptions}"
-                                              SelectedValue="{Binding Settings.SelectedThemeMode, Mode=TwoWay}"
+                                              SelectedValue="{Binding Settings.Editor.Current.ThemeMode, Mode=TwoWay}"
                                               SelectedValueBinding="{Binding Code}">
                                         <ComboBox.ItemTemplate>
                                             <DataTemplate x:DataType="models:ThemeOption">
@@ -294,7 +294,7 @@
                                                 Background="{Binding Settings.ThemeColorPreviewBrush}"/>
                                         <ComboBox Classes="setting-control"
                                                   ItemsSource="{Binding Settings.ThemeColorOptions}"
-                                                  SelectedValue="{Binding Settings.SelectedThemeColorMode, Mode=TwoWay}"
+                                                  SelectedValue="{Binding Settings.Editor.Current.ThemeColorMode, Mode=TwoWay}"
                                                   SelectedValueBinding="{Binding Code}">
                                             <ComboBox.ItemTemplate>
                                                 <DataTemplate x:DataType="models:SettingOption">
@@ -380,7 +380,7 @@
                                     </StackPanel>
                                     <ComboBox Grid.Column="2" Classes="setting-control"
                                               ItemsSource="{Binding Settings.BackgroundSourceOptions}"
-                                              SelectedValue="{Binding Settings.SelectedBackgroundSource, Mode=TwoWay}"
+                                              SelectedValue="{Binding Settings.Editor.Current.BackgroundSource, Mode=TwoWay}"
                                               SelectedValueBinding="{Binding Code}">
                                         <ComboBox.ItemTemplate>
                                             <DataTemplate x:DataType="models:SettingOption">
@@ -400,7 +400,7 @@
                                     </StackPanel>
                                     <ComboBox Grid.Column="2" Classes="setting-control"
                                               ItemsSource="{Binding Settings.BackgroundFitOptions}"
-                                              SelectedValue="{Binding Settings.SelectedBackgroundFit, Mode=TwoWay}"
+                                              SelectedValue="{Binding Settings.Editor.Current.BackgroundFit, Mode=TwoWay}"
                                               SelectedValueBinding="{Binding Code}">
                                         <ComboBox.ItemTemplate>
                                             <DataTemplate x:DataType="models:SettingOption">
@@ -471,7 +471,7 @@
                                     </StackPanel>
                                     <ComboBox Grid.Column="2" Classes="setting-control"
                                               ItemsSource="{Binding Settings.CloseBehaviorOptions}"
-                                              SelectedValue="{Binding Settings.SelectedCloseBehavior, Mode=TwoWay}"
+                                              SelectedValue="{Binding Settings.Editor.Current.CloseBehavior, Mode=TwoWay}"
                                               SelectedValueBinding="{Binding Code}">
                                         <ComboBox.ItemTemplate>
                                             <DataTemplate x:DataType="models:SettingOption">
@@ -490,7 +490,7 @@
                                         <TextBlock Text="{Binding Shell.I18n.ToastNotifications}" Classes="caption"/>
                                     </StackPanel>
                                     <ToggleSwitch Grid.Column="2"
-                                                  IsChecked="{Binding Settings.ToastNotificationsEnabled, Mode=TwoWay}"
+                                                  IsChecked="{Binding Settings.Editor.Current.ToastNotificationsEnabled, Mode=TwoWay}"
                                                   OnContent="{Binding Shell.I18n.ToggleOn}"
                                                   OffContent="{Binding Shell.I18n.ToggleOff}"
                                                   VerticalAlignment="Center"/>
@@ -505,7 +505,7 @@
                                         <TextBlock Text="{Binding Shell.I18n.ShowRemoteContentCard}" Classes="caption"/>
                                     </StackPanel>
                                     <ToggleSwitch Grid.Column="2"
-                                                  IsChecked="{Binding Settings.ShowRemoteContentCard, Mode=TwoWay}"
+                                                  IsChecked="{Binding Settings.Editor.Current.ShowRemoteContentCard, Mode=TwoWay}"
                                                   OnContent="{Binding Shell.I18n.ToggleOn}"
                                                   OffContent="{Binding Shell.I18n.ToggleOff}"
                                                   VerticalAlignment="Center"/>

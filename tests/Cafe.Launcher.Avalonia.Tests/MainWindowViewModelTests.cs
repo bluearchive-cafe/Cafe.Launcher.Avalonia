@@ -293,7 +293,7 @@ public sealed class MainWindowViewModelTests : IDisposable
         using var viewModel = CreateViewModel(coreService, settingsService);
         await viewModel.InitializeAsync();
 
-        viewModel.Settings.SelectedPatchUrlGroup = PatchUrlGroups.Cafe;
+        viewModel.Settings.Editor.Commit(s => s.PatchUrlGroup = PatchUrlGroups.Cafe);
         await SaveSettingsAsync(viewModel);
 
         Assert.True(viewModel.Dialogs.IsRepairConfirmVisible);
@@ -621,9 +621,11 @@ public sealed class MainWindowViewModelTests : IDisposable
         var diskSpaceService = new DiskSpaceService();
         var externalLinkService = new ExternalLinkService();
         var launcherUpdateService = new LauncherUpdateService(new LauncherUpdateHandler());
+        var settingsEditor = new SettingsEditor();
         var settingsViewModel = new SettingsViewModel(
             settingsService, localizationService, toastService,
-            imageCacheService, externalLinkService, diskSpaceService, launcherUpdateService);
+            imageCacheService, externalLinkService, diskSpaceService, launcherUpdateService,
+            settingsEditor);
         var resourcePanelViewModel = new ResourcePanelViewModel(
             resourcePanelUidService, resourcePanelApiClient, localizationService,
             toastService, diagnostics);

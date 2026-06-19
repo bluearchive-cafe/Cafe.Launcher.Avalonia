@@ -119,11 +119,8 @@ public partial class MainWindowViewModel : ViewModelBase, IDisposable
         {
             var settingsForLanguage = await settingsService.ReadAsync(cancellationToken);
             ApplyLanguage(settingsForLanguage.Language);
-            Settings.BulkUpdate(s =>
-            {
-                s.SelectedThemeMode = settingsForLanguage.ThemeMode;
-                s.LoadThemeColorState(settingsForLanguage);
-            });
+            Settings.Editor.Commit(s => s.ThemeMode = settingsForLanguage.ThemeMode);
+            Settings.LoadThemeColorState(settingsForLanguage);
             SettingsViewModel.ApplyTheme(settingsForLanguage.ThemeMode);
             Settings.ApplyThemeColor(settingsForLanguage.ThemeColorMode, SettingsViewModel.ParseColorOrDefault(settingsForLanguage.CustomThemeColor));
             Shell.SetLoading();
@@ -241,7 +238,7 @@ public partial class MainWindowViewModel : ViewModelBase, IDisposable
         var settings = await settingsService.ReadAsync();
         settings.PatchUrlGroup = PatchUrlGroups.Cafe;
         await settingsService.SaveAsync(settings);
-        Settings.SelectedPatchUrlGroup = PatchUrlGroups.Cafe;
+        Settings.Editor.Commit(s => s.PatchUrlGroup = PatchUrlGroups.Cafe);
 
         await HandleSettingsSavedAsync();
         await ResourcePanel.OpenPanelDirectly();
@@ -250,7 +247,7 @@ public partial class MainWindowViewModel : ViewModelBase, IDisposable
     private async Task HandleSettingsSavedAsync()
     {
         var previousPatchUrlGroup = currentSnapshot?.Settings.PatchUrlGroup;
-        var savedPatchUrlGroup = Settings.SelectedPatchUrlGroup;
+        var savedPatchUrlGroup = Settings.Editor.Current.PatchUrlGroup;
         await RefreshAsync();
         if (currentSnapshot?.IsInstalled == true
             && !string.Equals(previousPatchUrlGroup, savedPatchUrlGroup, StringComparison.Ordinal))
