@@ -197,7 +197,7 @@ dotnet test --filter "FullyQualifiedName~VersionComparerTests"
 CI 位于 `.github/workflows/`：
 
 - `build.yml`: push 或 pull request 到 `main` 时执行 restore、Debug build、测试、Release build、Release publish，并上传 `publish\`。
-- `release.yml`: push `v*` tag 时执行 Release 测试、构建、发布、压缩 ZIP、生成 changelog，并通过 `softprops/action-gh-release@v2` 创建 GitHub Release。
+- `release.yml`: push `v*` tag 时执行 Release 测试、构建、发布、压缩 ZIP、生成 changelog，并通过 `softprops/action-gh-release@v2` 在源码仓库和分发仓库（`bluearchive-cafe/Cafe.Launcher.Avalonia_Release`，对应常量 `GitHubReleaseRepositorySlug`）同时创建 GitHub Release。分发仓库使用源码仓库 Actions Secret `RELEASE_REPOSITORY_TOKEN`。
 
 本地发布准备脚本：
 
@@ -208,7 +208,7 @@ CI 位于 `.github/workflows/`：
 .\release.ps1 patch -SkipPush
 ```
 
-脚本会读取并更新 `Cafe.Launcher.Avalonia.csproj` 中的 `<VersionPrefix>`，生成 `CHANGELOG_RELEASE.md`，提交版本变更，创建 annotated tag，并按参数推送到 `origin`。
+脚本会读取并更新 `Cafe.Launcher.Avalonia.csproj` 中的 `<VersionPrefix>`，通过 `scripts/New-ReleaseChangelog.ps1` 生成 `CHANGELOG_RELEASE.md`，提交版本变更，创建 annotated tag，并按参数推送到 `origin`。GitHub Actions 使用同一脚本生成 Release 正文，确保本地预览与两个仓库的 Release 日志格式一致。
 
 ## 相关链接
 

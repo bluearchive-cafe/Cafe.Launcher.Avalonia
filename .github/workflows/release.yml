@@ -5,6 +5,9 @@ on:
     tags:
       - 'v*'
 
+permissions:
+  contents: write
+
 jobs:
   release:
     runs-on: windows-latest
@@ -46,36 +49,20 @@ jobs:
         shell: pwsh
         run: |
           $lastTag = git describe --tags --abbrev=0 ${{ github.ref }}^ 2>$null
+          $parameters = @{
+            CurrentRef = "${{ github.ref }}^"
+            OutputPath = "changelog.md"
+          }
           if ($lastTag) {
             Write-Host "Last tag: $lastTag"
-            $log = git log "$lastTag..${{ github.ref }}" --oneline --no-decorate
+            $parameters.PreviousTag = $lastTag
           } else {
             Write-Host "No previous tag — using all commits"
-            $log = git log --oneline --no-decorate ${{ github.ref }}
           }
-
-          $body = @()
-          $body += "## What's Changed"
-          $body += ""
-
-          if (-not $log) {
-            $body += "Initial release."
-          } else {
-            foreach ($line in ($log -split "`n" | Where-Object { $_ -match '\S' })) {
-              $line = $line.Trim()
-              if ($line -match '^[a-f0-9]+\s+(.+)$') {
-                $message = $Matches[1]
-                # Strip conventional commit prefix for cleaner display
-                $message = $message -replace '^(feat|feature|fix|refactor|perf|docs|chore|ci|test|build|style)(\(.+?\))?!?:\s*', ''
-                $body += "- $message"
-              }
-            }
-          }
-
-          $body -join "`n" | Out-File -FilePath changelog.md -Encoding utf8
+          .\scripts\New-ReleaseChangelog.ps1 @parameters
           Write-Host "Changelog generated"
 
-      - name: Create GitHub Release
+      - name: Create source repository release
         uses: softprops/action-gh-release@v2
         with:
           name: ${{ github.ref_name }}
@@ -83,5 +70,16 @@ jobs:
           files: ${{ env.zip_name }}
           prerelease: ${{ contains(github.ref_name, '-') }}
           fail_on_unmatched_files: true
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Create distribution repository release
+        uses: softprops/action-gh-release@v2
+        with:
+          # Keep in sync with LauncherConstants.GitHubReleaseRepositorySlug
+          repository: bluearchive-cafe/Cafe.Launcher.Avalonia_Release
+          token: ${{ secrets.RELEASE_REPOSITORY_TOKEN }}
+          tag_name: ${{ github.ref_name }}
+          name: ${{ github.ref_name }}
+          body_path: changelog.md
+          files: ${{ env.zip_name }}
+          prerelease: ${{ contains(github.ref_name, '-') }}
+          fail_on_unmatched_files: true

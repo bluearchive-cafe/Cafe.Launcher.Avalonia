@@ -24,6 +24,7 @@ public partial class SettingsViewModel : ViewModelBase
     private readonly ImageCacheService? imageCacheService;
     private readonly ExternalLinkService? externalLinkService;
     private readonly DiskSpaceService diskSpaceService;
+    private readonly LauncherUpdateService launcherUpdateService;
     private bool suppressSettingsDirty;
 
     // Coordination delegates — set by parent after construction.
@@ -44,7 +45,8 @@ public partial class SettingsViewModel : ViewModelBase
         ToastService toastService,
         ImageCacheService? imageCacheService,
         ExternalLinkService? externalLinkService,
-        DiskSpaceService diskSpaceService)
+        DiskSpaceService diskSpaceService,
+        LauncherUpdateService launcherUpdateService)
     {
         this.settingsService = settingsService;
         this.localizer = localizer;
@@ -52,6 +54,7 @@ public partial class SettingsViewModel : ViewModelBase
         this.imageCacheService = imageCacheService;
         this.externalLinkService = externalLinkService;
         this.diskSpaceService = diskSpaceService;
+        this.launcherUpdateService = launcherUpdateService;
     }
 
     // ── Settings values (11) ─────────────────────────────────────────────
@@ -85,6 +88,9 @@ public partial class SettingsViewModel : ViewModelBase
 
     [ObservableProperty]
     private bool showRemoteContentCard = true;
+
+    [ObservableProperty]
+    private string selectedUpdateChannel = UpdateChannels.Stable;
 
     // ── Settings UI state (2) ────────────────────────────────────────────
 
@@ -203,6 +209,12 @@ public partial class SettingsViewModel : ViewModelBase
 
     public IReadOnlyList<LanguageOption> LanguageOptions { get; } = LocalizationService.GetLanguageOptions();
 
+    public ObservableCollection<SettingOption> UpdateChannelOptions { get; } =
+    [
+        new() { Code = UpdateChannels.Stable },
+        new() { Code = UpdateChannels.Beta }
+    ];
+
     public ObservableCollection<ThemeOption> ThemeOptions { get; } =
     [
         new() { Code = ThemeModes.System },
@@ -236,6 +248,7 @@ public partial class SettingsViewModel : ViewModelBase
             SelectedDownloadSpeedLimit = settings.DownloadSpeedLimit;
             ToastNotificationsEnabled = settings.ToastNotificationsEnabled;
             ShowRemoteContentCard = settings.ShowRemoteContentCard;
+            SelectedUpdateChannel = settings.UpdateChannel;
             CustomBackgroundPath = settings.CustomBackgroundPath;
             IsCustomBackground = !string.IsNullOrWhiteSpace(settings.CustomBackgroundPath);
             SelectedBackgroundSource = settings.BackgroundSource;
@@ -275,6 +288,7 @@ public partial class SettingsViewModel : ViewModelBase
         RefreshDownloadSpeedLimitOptions();
         RefreshBackgroundSourceOptions();
         RefreshBackgroundFitOptions();
+        RefreshUpdateChannelOptions();
     }
 
     /// <summary>Called by parent to re-apply theme/colour after language change.</summary>
@@ -324,6 +338,7 @@ public partial class SettingsViewModel : ViewModelBase
             s.SelectedDownloadSpeedLimit = settings.DownloadSpeedLimit;
             s.ToastNotificationsEnabled = settings.ToastNotificationsEnabled;
             s.ShowRemoteContentCard = settings.ShowRemoteContentCard;
+            s.SelectedUpdateChannel = settings.UpdateChannel;
             s.CustomBackgroundPath = settings.CustomBackgroundPath;
             s.IsCustomBackground = !string.IsNullOrWhiteSpace(settings.CustomBackgroundPath);
             s.SelectedBackgroundSource = settings.BackgroundSource;
@@ -335,6 +350,28 @@ public partial class SettingsViewModel : ViewModelBase
     }
 
     // ── Commands ──────────────────────────────────────────────────────────
+
+    [RelayCommand]
+    private async Task CheckForUpdatesAsync()
+    {
+        launcherUpdateService.SetProxyMode(SelectedProxyMode);
+        var result = await launcherUpdateService.CheckForUpdateAsync(SelectedUpdateChannel);
+
+        if (!result.IsSuccessful)
+        {
+            toastService.ShowError(localizer.T("launcherUpdateCheckFailed"));
+            return;
+        }
+
+        if (!result.IsUpdateAvailable)
+        {
+            toastService.ShowSuccess(localizer.F("launcherUpToDate", LauncherConstants.LauncherVersion));
+            return;
+        }
+
+        toastService.ShowWarning(localizer.F("launcherUpdateAvailable", result.LatestVersion));
+        externalLinkService?.Open(result.ReleaseUrl);
+    }
 
     [RelayCommand]
     private async Task SaveSettingsAsync()
@@ -363,6 +400,7 @@ public partial class SettingsViewModel : ViewModelBase
         settings.DownloadSpeedLimit = SelectedDownloadSpeedLimit;
         settings.ToastNotificationsEnabled = ToastNotificationsEnabled;
         settings.ShowRemoteContentCard = ShowRemoteContentCard;
+        settings.UpdateChannel = SelectedUpdateChannel;
         settings.CustomBackgroundPath = CustomBackgroundPath;
         settings.BackgroundSource = SelectedBackgroundSource;
         settings.BackgroundFit = SelectedBackgroundFit;
@@ -592,6 +630,11 @@ public partial class SettingsViewModel : ViewModelBase
     }
 
     partial void OnShowRemoteContentCardChanged(bool value)
+    {
+        MarkSettingsDirtyIfVisible();
+    }
+
+    partial void OnSelectedUpdateChannelChanged(string value)
     {
         MarkSettingsDirtyIfVisible();
     }
@@ -958,6 +1001,18 @@ public partial class SettingsViewModel : ViewModelBase
                 BackgroundFits.Fill => localizer.T("backgroundFitFill"),
                 BackgroundFits.Uniform => localizer.T("backgroundFitUniform"),
                 _ => localizer.T("backgroundFitUniformToFill")
+            };
+        }
+    }
+
+    private void RefreshUpdateChannelOptions()
+    {
+        foreach (var option in UpdateChannelOptions)
+        {
+            option.DisplayName = option.Code switch
+            {
+                UpdateChannels.Beta => localizer.T("updateChannelBeta"),
+                _ => localizer.T("updateChannelStable")
             };
         }
     }

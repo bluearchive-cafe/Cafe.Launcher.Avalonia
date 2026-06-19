@@ -1,4 +1,3 @@
-using System.Collections.Generic;
 using Cafe.Launcher.Avalonia.Models;
 using Cafe.Launcher.Avalonia.Services;
 using Cafe.Launcher.Avalonia.ViewModels;
@@ -9,84 +8,7 @@ public sealed class MigrationWizardViewModelTests
 {
     static MigrationWizardViewModelTests()
     {
-        // Combine all keys used by any test class in the assembly.
-        // Static constructors run in non-deterministic order, so each must be a superset.
-        LocalizationService.InitializeForTesting(new Dictionary<string, Dictionary<string, string>>
-        {
-            [LauncherLanguages.English] = new()
-            {
-                ["trayOpenLauncher"] = "Open the launcher window",
-                ["trayExitLauncher"] = "Close the launcher process",
-                ["githubRepository"] = "GitHub Repository",
-                ["checkUpdates"] = "Check for Updates",
-                ["network"] = "Network",
-                ["diskSpaceLabel"] = "Disk Space",
-                ["loadingValue"] = "Loading",
-                ["executableNameValue"] = "{0}.exe",
-                ["proxyDirect"] = "Direct",
-                ["proxySystem"] = "System",
-                ["closeBehaviorMinimize"] = "Minimize to tray",
-                ["closeBehaviorExit"] = "Exit",
-                ["migrationWizardTitle"] = "Configuration Migration",
-                ["migrationWizardDescription"] = "Settings found.",
-                ["migrationGamePathLabel"] = "Game Path",
-                ["migrationGamePathBrowse"] = "Browse",
-                ["migrationProxyLabel"] = "Proxy",
-                ["migrationCloseBehaviorLabel"] = "Close Behavior",
-                ["migrationClickCodeFound"] = "Click code found.",
-                ["migrationLevelDbFailed"] = "Could not read all settings.",
-                ["migrationGamePathNotFound"] = "No game path detected.",
-                ["migrationSkip"] = "Skip",
-                ["migrationApply"] = "Apply",
-                ["migrationApplied"] = "Settings migrated.",
-                ["migrationNoOldLauncher"] = "No old settings found.",
-                ["language"] = "Language",
-                ["theme"] = "Theme",
-                ["settings"] = "Settings"
-            },
-            [LauncherLanguages.SimplifiedChinese] = new()
-            {
-                ["trayOpenLauncher"] = "打开启动器窗口",
-                ["trayExitLauncher"] = "关闭启动器进程",
-                ["githubRepository"] = "GitHub 仓库",
-                ["checkUpdates"] = "检查更新",
-                ["network"] = "网络",
-                ["diskSpaceLabel"] = "磁盘空间",
-                ["loadingValue"] = "加载中",
-                ["executableNameValue"] = "{0}.exe",
-                ["proxyDirect"] = "直接连接",
-                ["proxySystem"] = "系统代理",
-                ["closeBehaviorMinimize"] = "最小化到托盘",
-                ["closeBehaviorExit"] = "退出",
-                ["migrationWizardTitle"] = "配置迁移",
-                ["migrationWizardDescription"] = "检测到设置。",
-                ["migrationGamePathLabel"] = "游戏路径",
-                ["migrationGamePathBrowse"] = "浏览",
-                ["migrationProxyLabel"] = "代理",
-                ["migrationCloseBehaviorLabel"] = "关闭行为"
-            },
-            [LauncherLanguages.Japanese] = new()
-            {
-                ["trayOpenLauncher"] = "ランチャーウィンドウを開く",
-                ["trayExitLauncher"] = "ランチャープロセスを終了",
-                ["githubRepository"] = "GitHub リポジトリ",
-                ["checkUpdates"] = "更新を確認",
-                ["network"] = "ネットワーク",
-                ["diskSpaceLabel"] = "ディスク容量",
-                ["loadingValue"] = "読み込み中",
-                ["executableNameValue"] = "{0}.exe",
-                ["proxyDirect"] = "直接接続",
-                ["proxySystem"] = "システムプロキシ",
-                ["closeBehaviorMinimize"] = "最小化",
-                ["closeBehaviorExit"] = "終了",
-                ["migrationWizardTitle"] = "設定の移行",
-                ["migrationWizardDescription"] = "設定が見つかりました。",
-                ["migrationGamePathLabel"] = "ゲームパス",
-                ["migrationGamePathBrowse"] = "参照",
-                ["migrationProxyLabel"] = "プロキシ",
-                ["migrationCloseBehaviorLabel"] = "閉じる動作"
-            }
-        });
+        TestLocalizationHelper.Initialize();
     }
 
     [Fact]
@@ -250,8 +172,8 @@ public sealed class MigrationWizardViewModelTests
         vm.RefreshDisplayNames();
 
         Assert.Equal("Direct", vm.ProxyModeOptions[0].DisplayName);
-        Assert.Equal("System", vm.ProxyModeOptions[1].DisplayName);
-        Assert.Equal("Minimize to tray", vm.CloseBehaviorOptions[0].DisplayName);
+        Assert.Equal("System Proxy", vm.ProxyModeOptions[1].DisplayName);
+        Assert.Equal("Minimize to Tray", vm.CloseBehaviorOptions[0].DisplayName);
         Assert.Equal("Exit", vm.CloseBehaviorOptions[1].DisplayName);
     }
 

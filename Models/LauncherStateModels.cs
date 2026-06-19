@@ -108,6 +108,12 @@ public static class BackgroundFits
     public const string UniformToFill = "uniformToFill";
 }
 
+public static class UpdateChannels
+{
+    public const string Stable = "stable";
+    public const string Beta = "beta";
+}
+
 public static class GameOperationKinds
 {
     public const string Idle = "idle";
@@ -177,6 +183,9 @@ public sealed class LauncherSettings
 
     [JsonPropertyName("hasCompletedFirstLaunchWizard")]
     public bool HasCompletedFirstLaunchWizard { get; set; }
+
+    [JsonPropertyName("updateChannel")]
+    public string UpdateChannel { get; set; } = UpdateChannels.Stable;
 }
 
 /// <summary>

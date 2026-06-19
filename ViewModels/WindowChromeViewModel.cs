@@ -103,7 +103,7 @@ public partial class WindowChromeViewModel : ViewModelBase
     [RelayCommand]
     private void OpenGitHubRepository()
     {
-        externalLinkService.Open(LauncherConstants.GitHubRepositoryUrl);
+        externalLinkService.Open(LauncherConstants.GitHubReleaseRepositoryUrl);
     }
 
     public void OpenExternalUrl(string? url)

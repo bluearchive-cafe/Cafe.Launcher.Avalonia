@@ -11,6 +11,11 @@ namespace Cafe.Launcher.Avalonia.Tests;
 
 public sealed class MainWindowViewModelTests : IDisposable
 {
+    static MainWindowViewModelTests()
+    {
+        TestLocalizationHelper.Initialize();
+    }
+
     private readonly string tempDir = Path.Combine(Path.GetTempPath(), Guid.NewGuid().ToString("N"));
     private readonly ProxySettingsService proxySettings = new();
     private readonly HttpClientFactory httpClientFactory;
@@ -615,9 +620,10 @@ public sealed class MainWindowViewModelTests : IDisposable
         toastService ??= new ToastService();
         var diskSpaceService = new DiskSpaceService();
         var externalLinkService = new ExternalLinkService();
+        var launcherUpdateService = new LauncherUpdateService(new LauncherUpdateHandler());
         var settingsViewModel = new SettingsViewModel(
             settingsService, localizationService, toastService,
-            imageCacheService, externalLinkService, diskSpaceService);
+            imageCacheService, externalLinkService, diskSpaceService, launcherUpdateService);
         var resourcePanelViewModel = new ResourcePanelViewModel(
             resourcePanelUidService, resourcePanelApiClient, localizationService,
             toastService, diagnostics);
@@ -893,6 +899,16 @@ public sealed class MainWindowViewModelTests : IDisposable
             {
                 Content = new StringContent(json, Encoding.UTF8, "application/json")
             };
+        }
+    }
+
+    private sealed class LauncherUpdateHandler : HttpMessageHandler
+    {
+        protected override Task<HttpResponseMessage> SendAsync(
+            HttpRequestMessage request,
+            CancellationToken cancellationToken)
+        {
+            return Task.FromResult(new HttpResponseMessage(HttpStatusCode.NotFound));
         }
     }
 }

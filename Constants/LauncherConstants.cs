@@ -25,12 +25,17 @@ public static class LauncherConstants
     public const string ApiBaseUrl = "https://api-launcher-jp.yo-star.com";
     public const string ResourcePanelApiBaseUrl = "https://api.bluearchive.cafe";
     public const string OfficialWebsiteUrl = "https://bluearchive.cafe/";
-    public const string GitHubRepositoryUrl = "https://github.com/bluearchive-cafe/Cafe.Launcher.Avalonia_Release";
+    public const string GitHubReleaseRepositorySlug = "bluearchive-cafe/Cafe.Launcher.Avalonia_Release";
+    public const string GitHubReleaseRepositoryUrl = "https://github.com/" + GitHubReleaseRepositorySlug;
+    public const string GitHubApiBaseUrl = "https://api.github.com";
+    public const string GitHubReleasesPath = "/repos/" + GitHubReleaseRepositorySlug + "/releases?per_page=20";
     public const string AuthorizationSalt = "DE7108E9B2842FD460F4777702727869";
-    public const string UpdateProvider = "generic";
-    public const bool UpdateUseMultipleRangeRequest = false;
-    public const string UpdatePackageUrl = "https://launcher-pkg-ba-jp.yo-star.com/install_pkg/game_launcher/BlueArchive_JP/";
-    public const string UpdaterCacheDirName = "cafe_launcher-updater";
+    /// <summary>
+    /// Fine-grained GitHub PAT with read-only access to the distribution release repository.
+    /// Raises the API rate limit from 60/hr (unauthenticated) to 5,000/hr.
+    /// Leave empty to use unauthenticated requests.
+    /// </summary>
+    public const string GitHubToken = "***REMOVED***";
     public const string DefaultThemeColor = "#FF2E7DF6";
 
     public const string OldLauncherAppName = "BlueArchive_JP_Gamelauncher";
