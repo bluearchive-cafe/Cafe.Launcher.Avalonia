@@ -296,6 +296,32 @@ public sealed class MainWindowViewModelTests : IDisposable
     }
 
     [Fact]
+    public async Task ChooseGamePathAsync_WhenPathIsAutoSaved_ClosingSettingsDoesNotShowUnsavedDialog()
+    {
+        var pickedPath = Path.Combine(tempDir, "installed-game");
+        Directory.CreateDirectory(pickedPath);
+        var settingsPath = Path.Combine(tempDir, Guid.NewGuid().ToString("N"), "settings.json");
+        var settingsService = new LauncherSettingsService(settingsPath);
+        await settingsService.SaveAsync(new LauncherSettings());
+        var snapshot = CreateSnapshot();
+        snapshot.Settings.GamePath = "";
+        snapshot.LocalGame.GamePath = "";
+        var coreService = new CountingCoreService(snapshot);
+        using var viewModel = CreateViewModel(coreService, settingsService);
+        await viewModel.InitializeAsync();
+        viewModel.WindowChrome.IsSettingsVisible = true;
+        viewModel.Settings.PickGameFolderAsync = _ => Task.FromResult<string?>(pickedPath);
+
+        await viewModel.Settings.ChooseGamePathCommand.ExecuteAsync(null);
+        viewModel.WindowChrome.ShowSettingsCommand.Execute(null);
+
+        Assert.False(viewModel.Settings.IsSettingsDirty);
+        Assert.False(viewModel.Settings.IsUnsavedChangesVisible);
+        Assert.False(viewModel.WindowChrome.IsSettingsVisible);
+        Assert.Equal(pickedPath, (await settingsService.ReadAsync()).GamePath);
+    }
+
+    [Fact]
     public void SelectedThemeColorMode_WhenSettingsVisible_MarksSettingsDirty()
     {
         var coreService = new CountingCoreService(CreateSnapshot());
