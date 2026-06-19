@@ -23,17 +23,17 @@ public sealed partial class LauncherUpdateService : IDisposable
     {
         PropertyNameCaseInsensitive = false
     };
-    private readonly HttpClientFactory? httpClientFactory;
-    private readonly HttpClient httpClient;
+    private readonly IHttpClientLeaseSource leaseSource;
     private readonly string currentVersion;
     private readonly string gitHubToken;
     public string ProxyMode { get; set; } = ProxyModes.Direct;
 
     public LauncherUpdateService(HttpClientFactory httpClientFactory)
     {
-        this.httpClientFactory = httpClientFactory;
-        httpClient = httpClientFactory.CreateClient(
-            LauncherConstants.GitHubApiBaseUrl,
+        leaseSource = new ProxyAwareHttpClientLeaseSource(
+            httpClientFactory,
+            () => ProxyMode,
+            new Uri(LauncherConstants.GitHubApiBaseUrl),
             TimeSpan.FromSeconds(15));
         currentVersion = LauncherConstants.LauncherVersion;
         gitHubToken = LauncherConstants.GitHubToken;
@@ -44,11 +44,10 @@ public sealed partial class LauncherUpdateService : IDisposable
         string? currentVersionOverride = null,
         string? gitHubTokenOverride = null)
     {
-        httpClient = new HttpClient(handler)
-        {
-            BaseAddress = new Uri(LauncherConstants.GitHubApiBaseUrl),
-            Timeout = TimeSpan.FromSeconds(15)
-        };
+        leaseSource = new FixedHttpClientLeaseSource(
+            handler,
+            new Uri(LauncherConstants.GitHubApiBaseUrl),
+            TimeSpan.FromSeconds(15));
         currentVersion = currentVersionOverride ?? LauncherConstants.LauncherVersion;
         gitHubToken = gitHubTokenOverride ?? LauncherConstants.GitHubToken;
     }
@@ -164,7 +163,7 @@ public sealed partial class LauncherUpdateService : IDisposable
         bool useAuth,
         CancellationToken cancellationToken)
     {
-        using var lease = await CreateLeaseAsync(cancellationToken);
+        using var lease = await leaseSource.CreateLeaseAsync(cancellationToken);
         using var request = new HttpRequestMessage(
             HttpMethod.Get,
             LauncherConstants.GitHubReleasesPath);
@@ -283,14 +282,9 @@ public sealed partial class LauncherUpdateService : IDisposable
         return true;
     }
 
-    private Task<HttpClientLease> CreateLeaseAsync(CancellationToken ct) =>
-        httpClientFactory is not null
-            ? httpClientFactory.CreateLeaseAsync(ProxyMode, httpClient.BaseAddress, httpClient.Timeout, ct)
-            : Task.FromResult(new HttpClientLease(httpClient));
-
     public void Dispose()
     {
-        httpClient.Dispose();
+        leaseSource.Dispose();
     }
 
     private sealed class GitHubReleaseResponse

@@ -60,12 +60,12 @@ public partial class BackgroundViewModel : ViewModelBase, IDisposable
             return;
         }
 
-        BackgroundStretch = ToStretch(settings.SelectedBackgroundFit);
-        BackgroundFillBrush = settings.SelectedBackgroundFit == BackgroundFits.Uniform
+        BackgroundStretch = ToStretch(settings.Editor.Current.BackgroundFit);
+        BackgroundFillBrush = settings.Editor.Current.BackgroundFit == BackgroundFits.Uniform
             ? new SolidColorBrush(settings.SelectedBackgroundFillColor)
             : null;
 
-        switch (settings.SelectedBackgroundSource)
+        switch (settings.Editor.Current.BackgroundSource)
         {
             case BackgroundSources.Remote:
                 var bgImg = snapshot?.Remote.BaseConfig?.LauncherBackgroundImg;
@@ -91,9 +91,9 @@ public partial class BackgroundViewModel : ViewModelBase, IDisposable
                 break;
 
             case BackgroundSources.Custom:
-                if (!string.IsNullOrWhiteSpace(settings.CustomBackgroundPath))
+                if (!string.IsNullOrWhiteSpace(settings.Editor.Current.CustomBackgroundPath))
                 {
-                    var customBitmap = await LoadCustomBackgroundAsync(settings.CustomBackgroundPath);
+                    var customBitmap = await LoadCustomBackgroundAsync(settings.Editor.Current.CustomBackgroundPath);
                     if (customBitmap is not null)
                     {
                         SetBackgroundImage(customBitmap);
@@ -126,7 +126,7 @@ public partial class BackgroundViewModel : ViewModelBase, IDisposable
                     $"path: {path}\nexception: {ex.Message}");
                 if (settings is not null)
                 {
-                    settings.CustomBackgroundPath = "";
+                    settings.Editor.Current.CustomBackgroundPath = "";
                     settings.IsCustomBackground = false;
                 }
                 return null;
@@ -204,10 +204,10 @@ public partial class BackgroundViewModel : ViewModelBase, IDisposable
     {
         var old = BackgroundImageSource as IDisposable;
         BackgroundImageSource = bitmap;
-        if (settings?.SelectedThemeColorMode == ThemeColorModes.Wallpaper)
+        if (settings?.Editor.Current.ThemeColorMode == ThemeColorModes.Wallpaper)
         {
             settings.RefreshThemeColorPaletteFromCurrentBackground(markDirty: false);
-            settings.ApplyThemeColor(settings.SelectedThemeColorMode, settings.SelectedCustomThemeColor);
+            settings.ApplyThemeColor(settings.Editor.Current.ThemeColorMode, settings.SelectedCustomThemeColor);
         }
 
         if (old is not null)

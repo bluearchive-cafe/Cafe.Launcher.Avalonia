@@ -294,7 +294,7 @@ public sealed class MainWindowViewModelTests : IDisposable
         using var viewModel = CreateViewModel(coreService, settingsService);
         await viewModel.InitializeAsync();
 
-        viewModel.Settings.SelectedPatchUrlGroup = PatchUrlGroups.Cafe;
+        viewModel.Settings.Editor.Current.PatchUrlGroup = PatchUrlGroups.Cafe;
         await SaveSettingsAsync(viewModel);
 
         Assert.True(viewModel.Dialogs.IsRepairConfirmVisible);
@@ -333,9 +333,9 @@ public sealed class MainWindowViewModelTests : IDisposable
         var coreService = new CountingCoreService(CreateSnapshot());
         using var viewModel = CreateViewModel(coreService);
         viewModel.WindowChrome.IsSettingsVisible = true;
-        viewModel.Settings.IsSettingsDirty = false;
+        viewModel.Settings.Editor.ApplySnapshot(viewModel.Settings.Editor.Current);
 
-        viewModel.Settings.SelectedThemeColorMode = ThemeColorModes.System;
+        viewModel.Settings.Editor.Current.ThemeColorMode = ThemeColorModes.System;
 
         Assert.True(viewModel.Settings.IsSettingsDirty);
     }
@@ -349,7 +349,7 @@ public sealed class MainWindowViewModelTests : IDisposable
         var coreService = new CountingCoreService(CreateSnapshot());
         using var viewModel = CreateViewModel(coreService, settingsService);
 
-        viewModel.Settings.SelectedThemeColorMode = ThemeColorModes.Custom;
+        viewModel.Settings.Editor.Current.ThemeColorMode = ThemeColorModes.Custom;
         viewModel.Settings.SelectedCustomThemeColor = Color.FromArgb(0xFF, 0x33, 0x66, 0x99);
         await SaveSettingsAsync(viewModel);
 
@@ -433,9 +433,9 @@ public sealed class MainWindowViewModelTests : IDisposable
             ColorHex = "#FF2050D8",
             Brush = new SolidColorBrush(Color.FromRgb(0x20, 0x50, 0xD8))
         });
-        viewModel.Settings.SelectedThemeColorMode = ThemeColorModes.Wallpaper;
+        viewModel.Settings.Editor.Current.ThemeColorMode = ThemeColorModes.Wallpaper;
         viewModel.WindowChrome.IsSettingsVisible = true;
-        viewModel.Settings.IsSettingsDirty = false;
+        viewModel.Settings.Editor.ApplySnapshot(viewModel.Settings.Editor.Current);
 
         viewModel.Settings.SelectedThemeColorPaletteIndex = 1;
 
@@ -454,7 +454,7 @@ public sealed class MainWindowViewModelTests : IDisposable
         await settingsService.SaveAsync(new LauncherSettings());
         var coreService = new CountingCoreService(CreateSnapshot());
         using var viewModel = CreateViewModel(coreService, settingsService);
-        viewModel.Settings.SelectedThemeColorMode = ThemeColorModes.Wallpaper;
+        viewModel.Settings.Editor.Current.ThemeColorMode = ThemeColorModes.Wallpaper;
         viewModel.Settings.ThemeColorPaletteItems.Add(new ThemeColorPaletteItem
         {
             Index = 0,
@@ -496,10 +496,7 @@ public sealed class MainWindowViewModelTests : IDisposable
             IsSelected = true
         });
         viewModel.Settings.SelectedThemeColorPaletteIndex = 0;
-        // The direct property set above fires On*Changed -> MarkSettingsDirtyIfVisible().
-        // In production, ReplaceThemeColorPalette suppresses dirty internally, and
-        // LoadFromSnapshot resets it at the end. Reset here to match that behaviour.
-        viewModel.Settings.IsSettingsDirty = false;
+        viewModel.Settings.Editor.ApplySnapshot(viewModel.Settings.Editor.Current);
         Assert.Equal("#FFD82038", Assert.Single(viewModel.Settings.ThemeColorPaletteItems).ColorHex);
 
         viewModel.WindowChrome.ShowSettingsCommand.Execute(null);

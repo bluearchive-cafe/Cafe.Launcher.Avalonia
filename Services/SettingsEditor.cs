@@ -12,6 +12,8 @@ public interface ISettingsEditor : INotifyPropertyChanged
 {
     LauncherSettings Current { get; }
     bool IsDirty { get; }
+    event PropertyChangedEventHandler? CurrentPropertyChanged;
+    LauncherSettings GetSnapshot();
     void ApplySnapshot(LauncherSettings settings);
     void Commit(Action<LauncherSettings> apply);
     void Discard();
@@ -33,6 +35,7 @@ public sealed class SettingsEditor : ISettingsEditor
         var defaults = CreateDefaults();
         current = defaults;
         snapshot = DeepClone(defaults);
+        current.PropertyChanged += OnCurrentPropertyChanged;
     }
 
     public LauncherSettings Current => current;
@@ -40,10 +43,15 @@ public sealed class SettingsEditor : ISettingsEditor
     public bool IsDirty => isDirty;
 
     public event PropertyChangedEventHandler? PropertyChanged;
+    public event PropertyChangedEventHandler? CurrentPropertyChanged;
+
+    public LauncherSettings GetSnapshot() => DeepClone(current);
 
     public void ApplySnapshot(LauncherSettings settings)
     {
+        current.PropertyChanged -= OnCurrentPropertyChanged;
         current = DeepClone(settings);
+        current.PropertyChanged += OnCurrentPropertyChanged;
         snapshot = DeepClone(settings);
         isDirty = false;
         OnPropertyChanged(nameof(Current));
@@ -53,12 +61,6 @@ public sealed class SettingsEditor : ISettingsEditor
     public void Commit(Action<LauncherSettings> apply)
     {
         apply(current);
-        isDirty = true;
-        // Replace Current with a clone so XAML binding sees a new object reference
-        // and re-evaluates all bound paths.
-        current = DeepClone(current);
-        OnPropertyChanged(nameof(Current));
-        OnPropertyChanged(nameof(IsDirty));
     }
 
     public void Discard()
@@ -68,7 +70,9 @@ public sealed class SettingsEditor : ISettingsEditor
             return;
         }
 
+        current.PropertyChanged -= OnCurrentPropertyChanged;
         current = DeepClone(snapshot);
+        current.PropertyChanged += OnCurrentPropertyChanged;
         isDirty = false;
         OnPropertyChanged(nameof(Current));
         OnPropertyChanged(nameof(IsDirty));
@@ -97,5 +101,16 @@ public sealed class SettingsEditor : ISettingsEditor
     private void OnPropertyChanged(string propertyName)
     {
         PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(propertyName));
+    }
+
+    private void OnCurrentPropertyChanged(object? sender, PropertyChangedEventArgs e)
+    {
+        CurrentPropertyChanged?.Invoke(this, e);
+        OnPropertyChanged(nameof(Current));
+        if (!isDirty)
+        {
+            isDirty = true;
+            OnPropertyChanged(nameof(IsDirty));
+        }
     }
 }

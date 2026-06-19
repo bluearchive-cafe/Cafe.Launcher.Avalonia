@@ -5,6 +5,7 @@ using System.ComponentModel;
 using System.Runtime.CompilerServices;
 using System.Text.Json.Serialization;
 using Cafe.Launcher.Avalonia.Constants;
+using CommunityToolkit.Mvvm.ComponentModel;
 
 namespace Cafe.Launcher.Avalonia.Models;
 
@@ -122,70 +123,91 @@ public static class GameOperationKinds
     public const string Uninstall = "uninstall";
 }
 
-public sealed class LauncherSettings
+public sealed partial class LauncherSettings : ObservableObject
 {
-    [JsonPropertyName("gamePath")]
-    public string GamePath { get; set; } = "";
+    [ObservableProperty]
+    [property: JsonPropertyName("gamePath")]
+    private string gamePath = "";
 
-    [JsonPropertyName("launchCheckMode")]
-    public string LaunchCheckMode { get; set; } = LaunchCheckModes.LocalManifest;
+    [ObservableProperty]
+    [property: JsonPropertyName("launchCheckMode")]
+    private string launchCheckMode = LaunchCheckModes.LocalManifest;
 
-    [JsonPropertyName("proxyMode")]
-    public string ProxyMode { get; set; } = ProxyModes.Direct;
+    [ObservableProperty]
+    [property: JsonPropertyName("proxyMode")]
+    private string proxyMode = ProxyModes.Direct;
 
-    [JsonPropertyName("closeBehavior")]
-    public string CloseBehavior { get; set; } = CloseBehaviors.Minimize;
+    [ObservableProperty]
+    [property: JsonPropertyName("closeBehavior")]
+    private string closeBehavior = CloseBehaviors.Minimize;
 
-    [JsonPropertyName("language")]
-    public string Language { get; set; } = LauncherLanguages.Auto;
+    [ObservableProperty]
+    [property: JsonPropertyName("language")]
+    private string language = LauncherLanguages.Auto;
 
-    [JsonPropertyName("themeMode")]
-    public string ThemeMode { get; set; } = ThemeModes.System;
+    [ObservableProperty]
+    [property: JsonPropertyName("themeMode")]
+    private string themeMode = ThemeModes.System;
 
-    [JsonPropertyName("themeColorMode")]
-    public string ThemeColorMode { get; set; } = ThemeColorModes.Default;
+    [ObservableProperty]
+    [property: JsonPropertyName("themeColorMode")]
+    private string themeColorMode = ThemeColorModes.Default;
 
-    [JsonPropertyName("customThemeColor")]
-    public string CustomThemeColor { get; set; } = LauncherConstants.DefaultThemeColor;
+    [ObservableProperty]
+    [property: JsonPropertyName("customThemeColor")]
+    private string customThemeColor = LauncherConstants.DefaultThemeColor;
 
-    [JsonPropertyName("themeColorPalette")]
-    public List<string> ThemeColorPalette { get; set; } = [];
+    [ObservableProperty]
+    [property: JsonPropertyName("themeColorPalette")]
+    private List<string> themeColorPalette = [];
 
-    [JsonPropertyName("selectedThemeColorPaletteIndex")]
-    public int SelectedThemeColorPaletteIndex { get; set; }
+    [ObservableProperty]
+    [property: JsonPropertyName("selectedThemeColorPaletteIndex")]
+    private int selectedThemeColorPaletteIndex;
 
-    [JsonPropertyName("downloadSpeedLimit")]
-    public string DownloadSpeedLimit { get; set; } = DownloadSpeedLimits.Unlimited;
+    [ObservableProperty]
+    [property: JsonPropertyName("downloadSpeedLimit")]
+    private string downloadSpeedLimit = DownloadSpeedLimits.Unlimited;
 
-    [JsonPropertyName("toastNotificationsEnabled")]
-    public bool ToastNotificationsEnabled { get; set; } = true;
+    [ObservableProperty]
+    [property: JsonPropertyName("toastNotificationsEnabled")]
+    private bool toastNotificationsEnabled = true;
 
-    [JsonPropertyName("showRemoteContentCard")]
-    public bool ShowRemoteContentCard { get; set; } = true;
+    [ObservableProperty]
+    [property: JsonPropertyName("showRemoteContentCard")]
+    private bool showRemoteContentCard = true;
 
-    [JsonPropertyName("patchUrlGroup")]
-    public string PatchUrlGroup { get; set; } = PatchUrlGroups.Official;
+    [ObservableProperty]
+    [property: JsonPropertyName("patchUrlGroup")]
+    private string patchUrlGroup = PatchUrlGroups.Official;
 
-    [JsonPropertyName("customBackgroundPath")]
-    public string CustomBackgroundPath { get; set; } = "";
+    [ObservableProperty]
+    [property: JsonPropertyName("customBackgroundPath")]
+    private string customBackgroundPath = "";
 
-    [JsonPropertyName("backgroundSource")]
-    public string BackgroundSource { get; set; } = BackgroundSources.Bundled;
+    [ObservableProperty]
+    [property: JsonPropertyName("backgroundSource")]
+    private string backgroundSource = BackgroundSources.Bundled;
 
-    [JsonPropertyName("backgroundFit")]
-    public string BackgroundFit { get; set; } = BackgroundFits.UniformToFill;
+    [ObservableProperty]
+    [property: JsonPropertyName("backgroundFit")]
+    private string backgroundFit = BackgroundFits.UniformToFill;
 
-    [JsonPropertyName("backgroundFillColor")]
-    public string BackgroundFillColor { get; set; } = "#FF000000";
+    [ObservableProperty]
+    [property: JsonPropertyName("backgroundFillColor")]
+    private string backgroundFillColor = "#FF000000";
 
-    [JsonPropertyName("resourcePanelUid")]
-    public string ResourcePanelUid { get; set; } = "";
+    [ObservableProperty]
+    [property: JsonPropertyName("resourcePanelUid")]
+    private string resourcePanelUid = "";
 
-    [JsonPropertyName("hasCompletedFirstLaunchWizard")]
-    public bool HasCompletedFirstLaunchWizard { get; set; }
+    [ObservableProperty]
+    [property: JsonPropertyName("hasCompletedFirstLaunchWizard")]
+    private bool hasCompletedFirstLaunchWizard;
 
-    [JsonPropertyName("updateChannel")]
-    public string UpdateChannel { get; set; } = UpdateChannels.Stable;
+    [ObservableProperty]
+    [property: JsonPropertyName("updateChannel")]
+    private string updateChannel = UpdateChannels.Stable;
 }
 
 /// <summary>

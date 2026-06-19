@@ -12,11 +12,9 @@ namespace Cafe.Launcher.Avalonia.Services;
 
 public sealed class LauncherApiClient : IDisposable
 {
-    private readonly HttpClient httpClient;
-    private readonly HttpClientFactory? httpClientFactory;
+    private readonly IHttpClientLeaseSource leaseSource;
     private readonly AuthorizationHeaderFactory authorizationHeaderFactory;
     private readonly PatchUrlGroupService patchUrlGroupService;
-    private readonly bool ownsHttpClient;
     public string ProxyMode { get; set; } = ProxyModes.Direct;
     private readonly JsonSerializerOptions jsonOptions = new()
     {
@@ -29,13 +27,13 @@ public sealed class LauncherApiClient : IDisposable
         AuthorizationHeaderFactory authorizationHeaderFactory,
         PatchUrlGroupService patchUrlGroupService)
     {
-        this.httpClientFactory = httpClientFactory;
-        httpClient = httpClientFactory.CreateClient(
-            LauncherConstants.ApiBaseUrl,
+        leaseSource = new ProxyAwareHttpClientLeaseSource(
+            httpClientFactory,
+            () => ProxyMode,
+            new Uri(LauncherConstants.ApiBaseUrl),
             TimeSpan.FromSeconds(30));
         this.authorizationHeaderFactory = authorizationHeaderFactory;
         this.patchUrlGroupService = patchUrlGroupService;
-        ownsHttpClient = true;
     }
 
     /// <summary>
@@ -47,14 +45,12 @@ public sealed class LauncherApiClient : IDisposable
         AuthorizationHeaderFactory authorizationHeaderFactory,
         PatchUrlGroupService patchUrlGroupService)
     {
-        httpClient = new HttpClient(handler)
-        {
-            BaseAddress = new Uri(LauncherConstants.ApiBaseUrl),
-            Timeout = TimeSpan.FromSeconds(30)
-        };
+        leaseSource = new FixedHttpClientLeaseSource(
+            handler,
+            new Uri(LauncherConstants.ApiBaseUrl),
+            TimeSpan.FromSeconds(30));
         this.authorizationHeaderFactory = authorizationHeaderFactory;
         this.patchUrlGroupService = patchUrlGroupService;
-        ownsHttpClient = true; // Test path — own the client
     }
 
     public Task<GameConfigResponse> GetGameConfigAsync(CancellationToken cancellationToken = default)
@@ -117,7 +113,7 @@ public sealed class LauncherApiClient : IDisposable
 
     public async Task<RemoteManifest> GetRemoteManifestAsync(string url, CancellationToken cancellationToken = default)
     {
-        using var lease = await CreateLeaseAsync(cancellationToken);
+        using var lease = await leaseSource.CreateLeaseAsync(cancellationToken);
         await using var stream = await lease.Client.GetStreamAsync(url, cancellationToken);
         var manifest = await JsonSerializer.DeserializeAsync<RemoteManifest>(stream, jsonOptions, cancellationToken);
         return manifest ?? new RemoteManifest();
@@ -125,7 +121,7 @@ public sealed class LauncherApiClient : IDisposable
 
     private async Task<T> GetEnvelopeDataAsync<T>(string path, CancellationToken cancellationToken)
     {
-        using var lease = await CreateLeaseAsync(cancellationToken);
+        using var lease = await leaseSource.CreateLeaseAsync(cancellationToken);
         using var request = new HttpRequestMessage(HttpMethod.Get, path);
         request.Headers.TryAddWithoutValidation(
             "Authorization",
@@ -156,16 +152,8 @@ public sealed class LauncherApiClient : IDisposable
         return envelope.Data;
     }
 
-    private Task<HttpClientLease> CreateLeaseAsync(CancellationToken ct) =>
-        httpClientFactory is not null
-            ? httpClientFactory.CreateLeaseAsync(ProxyMode, httpClient.BaseAddress, httpClient.Timeout, ct)
-            : Task.FromResult(new HttpClientLease(httpClient));
-
     public void Dispose()
     {
-        if (ownsHttpClient)
-        {
-            httpClient.Dispose();
-        }
+        leaseSource.Dispose();
     }
 }

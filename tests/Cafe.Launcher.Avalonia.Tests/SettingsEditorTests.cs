@@ -8,6 +8,23 @@ namespace Cafe.Launcher.Avalonia.Tests;
 public sealed class SettingsEditorTests
 {
     [Fact]
+    public void CurrentPropertyChange_MarksDirtyAndDiscardRestoresSnapshot()
+    {
+        var editor = new SettingsEditor();
+        editor.ApplySnapshot(new LauncherSettings { Language = LauncherLanguages.Auto });
+
+        editor.Current.Language = LauncherLanguages.Japanese;
+
+        Assert.True(editor.IsDirty);
+        Assert.Equal(LauncherLanguages.Japanese, editor.Current.Language);
+
+        editor.Discard();
+
+        Assert.False(editor.IsDirty);
+        Assert.Equal(LauncherLanguages.Auto, editor.Current.Language);
+    }
+
+    [Fact]
     public void ApplySnapshot_LoadsAllFields()
     {
         var editor = new SettingsEditor();
@@ -147,9 +164,11 @@ public sealed class SettingsEditorTests
             ProxyMode = ProxyModes.Direct
         });
 
-        var snapshot = editor.Current;
+        var snapshot = editor.GetSnapshot();
+        snapshot.Language = LauncherLanguages.Japanese;
 
-        Assert.Equal(LauncherLanguages.English, snapshot.Language);
+        Assert.Equal(LauncherLanguages.Japanese, snapshot.Language);
+        Assert.Equal(LauncherLanguages.English, editor.Current.Language);
         Assert.Equal(ThemeModes.Light, snapshot.ThemeMode);
         Assert.Equal(ProxyModes.Direct, snapshot.ProxyMode);
         // Verify all default-valued fields are present (not null/missing)

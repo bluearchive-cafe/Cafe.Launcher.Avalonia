@@ -218,7 +218,7 @@ public partial class MainWindow : Window
     private void PerformClose()
     {
         if (DataContext is MainWindowViewModel vm
-            && vm.Settings.SelectedCloseBehavior == Models.CloseBehaviors.Minimize)
+            && vm.Settings.Editor.Current.CloseBehavior == Models.CloseBehaviors.Minimize)
         {
             if (systemTray is not null)
             {

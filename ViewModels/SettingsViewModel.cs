@@ -64,64 +64,27 @@ public partial class SettingsViewModel : ViewModelBase
         this.diskSpaceService = diskSpaceService;
         this.launcherUpdateService = launcherUpdateService;
         this.editor = editor;
+        editor.PropertyChanged += (_, e) =>
+        {
+            if (e.PropertyName == nameof(ISettingsEditor.IsDirty))
+            {
+                OnPropertyChanged(nameof(IsSettingsDirty));
+            }
+        };
+        editor.CurrentPropertyChanged += OnCurrentSettingChanged;
     }
 
-    // ── Settings values (11) — XAML binding surface, delegates to Editor ───
+    // ── Settings UI state ────────────────────────────────────────────────
 
-    [ObservableProperty]
-    private string selectedGamePath = "";
-
-    [ObservableProperty]
-    private string selectedLaunchCheckMode = LaunchCheckModes.LocalManifest;
-
-    [ObservableProperty]
-    private string selectedProxyMode = ProxyModes.Direct;
-
-    [ObservableProperty]
-    private string selectedPatchUrlGroup = PatchUrlGroups.Official;
-
-    [ObservableProperty]
-    private string selectedCloseBehavior = CloseBehaviors.Minimize;
-
-    [ObservableProperty]
-    private string selectedLanguage = LauncherLanguages.Auto;
-
-    [ObservableProperty]
-    private string selectedThemeMode = ThemeModes.System;
-
-    [ObservableProperty]
-    private string selectedDownloadSpeedLimit = DownloadSpeedLimits.Unlimited;
-
-    [ObservableProperty]
-    private bool toastNotificationsEnabled = true;
-
-    [ObservableProperty]
-    private bool showRemoteContentCard = true;
-
-    [ObservableProperty]
-    private string selectedUpdateChannel = UpdateChannels.Stable;
-
-    // ── Settings UI state (2) ────────────────────────────────────────────
-
-    [ObservableProperty]
-    private bool isSettingsDirty;
+    public bool IsSettingsDirty => editor.IsDirty;
 
     [ObservableProperty]
     private bool isUnsavedChangesVisible;
 
-    // ── Background (4) ────────────────────────────────────────────────────
-
-    [ObservableProperty]
-    private string customBackgroundPath = "";
+    // ── Background UI projections ────────────────────────────────────────
 
     [ObservableProperty]
     private bool isCustomBackground;
-
-    [ObservableProperty]
-    private string selectedBackgroundSource = BackgroundSources.Bundled;
-
-    [ObservableProperty]
-    private string selectedBackgroundFit = BackgroundFits.UniformToFill;
 
     [ObservableProperty]
     private Color selectedBackgroundFillColor = Colors.Black;
@@ -135,10 +98,7 @@ public partial class SettingsViewModel : ViewModelBase
     [ObservableProperty]
     private bool isBackgroundFitSelected;
 
-    // ── Theme colour state (7) ────────────────────────────────────────────
-
-    [ObservableProperty]
-    private string selectedThemeColorMode = ThemeColorModes.Default;
+    // ── Theme colour UI projections ──────────────────────────────────────
 
     [ObservableProperty]
     private Color selectedCustomThemeColor = Color.Parse(LauncherConstants.DefaultThemeColor);
@@ -239,12 +199,12 @@ public partial class SettingsViewModel : ViewModelBase
         var currentWallpaperPalette = settings.ThemeColorMode == ThemeColorModes.Wallpaper
             ? GetThemeColorPaletteHexes()
             : [];
-        var currentWallpaperPaletteIndex = SelectedThemeColorPaletteIndex;
+        var currentWallpaperPaletteIndex = editor.Current.SelectedThemeColorPaletteIndex;
 
         editor.ApplySnapshot(settings);
-        SyncPropertiesFromEditor();
+        RefreshUiProjections();
 
-        if (SelectedThemeColorMode == ThemeColorModes.Wallpaper)
+        if (editor.Current.ThemeColorMode == ThemeColorModes.Wallpaper)
         {
             if (currentWallpaperPalette.Count > 0)
             {
@@ -256,7 +216,6 @@ public partial class SettingsViewModel : ViewModelBase
             }
         }
 
-        IsSettingsDirty = false;
     }
 
     /// <summary>Called by parent ApplyLanguage to refresh display names.</summary>
@@ -289,33 +248,18 @@ public partial class SettingsViewModel : ViewModelBase
     /// <see cref="ISettingsEditor.ApplySnapshot"/> to keep the legacy property surface
     /// in sync for XAML bindings. Supresses dirty tracking during the sync.
     /// </summary>
-    private void SyncPropertiesFromEditor()
+    private void RefreshUiProjections()
     {
         var previous = suppressDirtyTracking;
         suppressDirtyTracking = true;
         try
         {
             var s = editor.Current;
-            SelectedGamePath = s.GamePath;
-            SelectedLaunchCheckMode = s.LaunchCheckMode;
-            SelectedProxyMode = s.ProxyMode;
-            SelectedPatchUrlGroup = s.PatchUrlGroup;
-            SelectedCloseBehavior = s.CloseBehavior;
-            SelectedLanguage = s.Language;
-            SelectedThemeMode = s.ThemeMode;
-            SelectedThemeColorMode = s.ThemeColorMode;
             SelectedCustomThemeColor = ParseColorOrDefault(s.CustomThemeColor);
             IsCustomThemeColorSelected = s.ThemeColorMode == ThemeColorModes.Custom;
             IsWallpaperThemeColorSelected = s.ThemeColorMode == ThemeColorModes.Wallpaper;
             SelectedThemeColorPaletteIndex = s.SelectedThemeColorPaletteIndex;
-            SelectedDownloadSpeedLimit = s.DownloadSpeedLimit;
-            ToastNotificationsEnabled = s.ToastNotificationsEnabled;
-            ShowRemoteContentCard = s.ShowRemoteContentCard;
-            SelectedUpdateChannel = s.UpdateChannel;
-            CustomBackgroundPath = s.CustomBackgroundPath;
             IsCustomBackground = !string.IsNullOrWhiteSpace(s.CustomBackgroundPath);
-            SelectedBackgroundSource = s.BackgroundSource;
-            SelectedBackgroundFit = s.BackgroundFit;
             IsBackgroundFitSelected = s.BackgroundFit == BackgroundFits.Uniform;
             SelectedBackgroundFillColor = ParseColorOrDefault(s.BackgroundFillColor);
             IsCustomBackgroundSelected = s.BackgroundSource == BackgroundSources.Custom;
@@ -327,38 +271,13 @@ public partial class SettingsViewModel : ViewModelBase
         }
     }
 
-    private static LauncherSettings DeepCloneSettings(LauncherSettings source)
-    {
-        var json = System.Text.Json.JsonSerializer.Serialize(source);
-        return System.Text.Json.JsonSerializer.Deserialize<LauncherSettings>(json) ?? new LauncherSettings();
-    }
-
-    /// <summary>
-    /// Applies launcher settings from a snapshot — always programmatic,
-    /// should never mark dirty.
-    /// </summary>
-    // ── Bulk update ─────────────────────────────────────────────────────
-
-    public void BulkUpdate(Action<SettingsViewModel> update)
-    {
-        var previous = suppressDirtyTracking;
-        suppressDirtyTracking = true;
-        try
-        {
-            update(this);
-        }
-        finally
-        {
-            suppressDirtyTracking = previous;
-        }
-    }
-
     public void ApplyLauncherSettings(LauncherSettings settings, string localGamePath)
     {
-        var snapshot = DeepCloneSettings(settings);
+        editor.ApplySnapshot(settings);
+        var snapshot = editor.GetSnapshot();
         snapshot.GamePath = localGamePath;
         editor.ApplySnapshot(snapshot);
-        SyncPropertiesFromEditor();
+        RefreshUiProjections();
     }
 
     // ── Commands ──────────────────────────────────────────────────────────
@@ -388,7 +307,7 @@ public partial class SettingsViewModel : ViewModelBase
     [RelayCommand]
     private async Task SaveSettingsAsync()
     {
-        if (SelectedThemeColorMode == ThemeColorModes.Wallpaper && ThemeColorPaletteItems.Count == 0)
+        if (editor.Current.ThemeColorMode == ThemeColorModes.Wallpaper && ThemeColorPaletteItems.Count == 0)
         {
             RefreshThemeColorPaletteFromCurrentBackground(markDirty: false);
         }
@@ -408,7 +327,7 @@ public partial class SettingsViewModel : ViewModelBase
         });
 
         // Assemble the settings to save from the editor's current state.
-        var settings = DeepCloneSettings(editor.Current);
+        var settings = editor.GetSnapshot();
         await settingsService.SaveAsync(settings);
 
         if (ApplyLanguageAndTheme is not null)
@@ -417,7 +336,6 @@ public partial class SettingsViewModel : ViewModelBase
             ApplyThemeColor(settings.ThemeColorMode, ParseColorOrDefault(settings.CustomThemeColor));
 
         editor.ApplySnapshot(settings);
-        IsSettingsDirty = false;
         toastService.ShowSuccess(localizer.T("settingsSaved"));
 
         // Fire event so parent can refresh and show repair prompt if needed.
@@ -447,7 +365,7 @@ public partial class SettingsViewModel : ViewModelBase
         }
 
         // Assemble from editor state (single source of truth).
-        var settings = DeepCloneSettings(editor.Current);
+        var settings = editor.GetSnapshot();
         settings.GamePath = pickedPath;
         await settingsService.SaveAsync(settings);
 
@@ -457,8 +375,7 @@ public partial class SettingsViewModel : ViewModelBase
             ApplyThemeColor(settings.ThemeColorMode, ParseColorOrDefault(settings.CustomThemeColor));
 
         editor.ApplySnapshot(settings);
-        SyncPropertiesFromEditor();
-        IsSettingsDirty = false;
+        RefreshUiProjections();
         toastService.ShowSuccess(localizer.F("pathSaved", pickedPath));
         if (SettingsSaved is not null)
             await SettingsSaved.Invoke();
@@ -474,9 +391,9 @@ public partial class SettingsViewModel : ViewModelBase
         if (string.IsNullOrWhiteSpace(pickedPath))
             return;
 
-        CustomBackgroundPath = pickedPath;
+        editor.Current.CustomBackgroundPath = pickedPath;
         IsCustomBackground = true;
-        SelectedBackgroundSource = BackgroundSources.Custom;
+        editor.Current.BackgroundSource = BackgroundSources.Custom;
         IsCustomBackgroundSelected = true;
         await SaveSettingsAsync();
         toastService.ShowSuccess(localizer.T("backgroundSet"));
@@ -492,9 +409,9 @@ public partial class SettingsViewModel : ViewModelBase
         if (string.IsNullOrWhiteSpace(pickedPath))
             return;
 
-        CustomBackgroundPath = pickedPath;
+        editor.Current.CustomBackgroundPath = pickedPath;
         IsCustomBackground = true;
-        SelectedBackgroundSource = BackgroundSources.Custom;
+        editor.Current.BackgroundSource = BackgroundSources.Custom;
         IsCustomBackgroundSelected = true;
         await SaveSettingsAsync();
         toastService.ShowSuccess(localizer.T("backgroundSet"));
@@ -503,9 +420,9 @@ public partial class SettingsViewModel : ViewModelBase
     [RelayCommand]
     private async Task ClearBackgroundAsync()
     {
-        CustomBackgroundPath = "";
+        editor.Current.CustomBackgroundPath = "";
         IsCustomBackground = false;
-        SelectedBackgroundSource = BackgroundSources.Bundled;
+        editor.Current.BackgroundSource = BackgroundSources.Bundled;
         IsCustomBackgroundSelected = false;
         await SaveSettingsAsync();
         toastService.ShowSuccess(localizer.T("backgroundCleared"));
@@ -516,8 +433,7 @@ public partial class SettingsViewModel : ViewModelBase
     {
         IsUnsavedChangesVisible = false;
         editor.Discard();
-        SyncPropertiesFromEditor();
-        IsSettingsDirty = editor.IsDirty;
+        RefreshUiProjections();
         CloseRequested?.Invoke();
     }
 
@@ -531,9 +447,9 @@ public partial class SettingsViewModel : ViewModelBase
     private void RefreshThemeColorPalette()
     {
         RefreshThemeColorPaletteFromCurrentBackground(markDirty: true);
-        if (SelectedThemeColorMode == ThemeColorModes.Wallpaper)
+        if (editor.Current.ThemeColorMode == ThemeColorModes.Wallpaper)
         {
-            ApplyThemeColor(SelectedThemeColorMode, SelectedCustomThemeColor);
+            ApplyThemeColor(editor.Current.ThemeColorMode, SelectedCustomThemeColor);
         }
     }
 
@@ -556,34 +472,34 @@ public partial class SettingsViewModel : ViewModelBase
             return;
 
         editor.Commit(apply);
-        IsSettingsDirty = editor.IsDirty;
     }
 
-    partial void OnSelectedLaunchCheckModeChanged(string value) => PushToEditor(s => s.LaunchCheckMode = value);
-    partial void OnSelectedProxyModeChanged(string value) => PushToEditor(s => s.ProxyMode = value);
-    partial void OnSelectedPatchUrlGroupChanged(string value) => PushToEditor(s => s.PatchUrlGroup = value);
-    partial void OnSelectedCloseBehaviorChanged(string value) => PushToEditor(s => s.CloseBehavior = value);
-    partial void OnSelectedLanguageChanged(string value) => PushToEditor(s => s.Language = value);
-    partial void OnSelectedDownloadSpeedLimitChanged(string value) => PushToEditor(s => s.DownloadSpeedLimit = value);
-    partial void OnSelectedGamePathChanged(string value) => PushToEditor(s => s.GamePath = value);
-    partial void OnToastNotificationsEnabledChanged(bool value) => PushToEditor(s => s.ToastNotificationsEnabled = value);
-
-    partial void OnSelectedThemeModeChanged(string value)
+    private void OnCurrentSettingChanged(object? sender, System.ComponentModel.PropertyChangedEventArgs e)
     {
-        PushToEditor(s => s.ThemeMode = value);
-    }
-
-    partial void OnSelectedThemeColorModeChanged(string value)
-    {
-        PushToEditor(s => s.ThemeColorMode = value);
-        IsCustomThemeColorSelected = value == ThemeColorModes.Custom;
-        IsWallpaperThemeColorSelected = value == ThemeColorModes.Wallpaper;
-        if (IsWallpaperThemeColorSelected && ThemeColorPaletteItems.Count == 0)
+        if (e.PropertyName == nameof(LauncherSettings.ThemeColorMode))
         {
-            RefreshThemeColorPaletteFromCurrentBackground(markDirty: false);
+            var value = editor.Current.ThemeColorMode;
+            IsCustomThemeColorSelected = value == ThemeColorModes.Custom;
+            IsWallpaperThemeColorSelected = value == ThemeColorModes.Wallpaper;
+            if (IsWallpaperThemeColorSelected && ThemeColorPaletteItems.Count == 0)
+            {
+                RefreshThemeColorPaletteFromCurrentBackground(markDirty: false);
+            }
+
+            UpdateThemeColorPreview();
+            return;
         }
 
-        UpdateThemeColorPreview();
+        if (e.PropertyName == nameof(LauncherSettings.BackgroundSource))
+        {
+            IsCustomBackgroundSelected = editor.Current.BackgroundSource == BackgroundSources.Custom;
+            return;
+        }
+
+        if (e.PropertyName == nameof(LauncherSettings.BackgroundFit))
+        {
+            IsBackgroundFitSelected = editor.Current.BackgroundFit == BackgroundFits.Uniform;
+        }
     }
 
     partial void OnSelectedCustomThemeColorChanged(Color value)
@@ -597,22 +513,10 @@ public partial class SettingsViewModel : ViewModelBase
         PushToEditor(s => s.SelectedThemeColorPaletteIndex = value);
         UpdateThemeColorPaletteSelection();
         UpdateThemeColorPreview();
-        if (SelectedThemeColorMode == ThemeColorModes.Wallpaper)
+        if (editor.Current.ThemeColorMode == ThemeColorModes.Wallpaper)
         {
-            ApplyThemeColor(SelectedThemeColorMode, SelectedCustomThemeColor);
+            ApplyThemeColor(editor.Current.ThemeColorMode, SelectedCustomThemeColor);
         }
-    }
-
-    partial void OnSelectedBackgroundSourceChanged(string value)
-    {
-        PushToEditor(s => s.BackgroundSource = value);
-        IsCustomBackgroundSelected = value == BackgroundSources.Custom;
-    }
-
-    partial void OnSelectedBackgroundFitChanged(string value)
-    {
-        PushToEditor(s => s.BackgroundFit = value);
-        IsBackgroundFitSelected = value == BackgroundFits.Uniform;
     }
 
     partial void OnSelectedBackgroundFillColorChanged(Color value)
@@ -620,9 +524,6 @@ public partial class SettingsViewModel : ViewModelBase
         PushToEditor(s => s.BackgroundFillColor = ToColorHex(value));
         BackgroundFillColorPreviewBrush = new SolidColorBrush(value);
     }
-
-    partial void OnShowRemoteContentCardChanged(bool value) => PushToEditor(s => s.ShowRemoteContentCard = value);
-    partial void OnSelectedUpdateChannelChanged(string value) => PushToEditor(s => s.UpdateChannel = value);
 
     // ── Theme colour helpers ──────────────────────────────────────────────
 
@@ -633,7 +534,6 @@ public partial class SettingsViewModel : ViewModelBase
         try
         {
             var color = ParseColorOrDefault(settings.CustomThemeColor);
-            SelectedThemeColorMode = settings.ThemeColorMode;
             SelectedCustomThemeColor = color;
             IsCustomThemeColorSelected = settings.ThemeColorMode == ThemeColorModes.Custom;
             IsWallpaperThemeColorSelected = settings.ThemeColorMode == ThemeColorModes.Wallpaper;
@@ -721,7 +621,7 @@ public partial class SettingsViewModel : ViewModelBase
 
     private void UpdateThemeColorPreview()
     {
-        var color = ResolveThemeColor(SelectedThemeColorMode, SelectedCustomThemeColor);
+        var color = ResolveThemeColor(editor.Current.ThemeColorMode, SelectedCustomThemeColor);
         ThemeColorPreviewBrush = new SolidColorBrush(color);
     }
 
