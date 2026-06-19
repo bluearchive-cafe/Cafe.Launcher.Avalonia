@@ -32,7 +32,7 @@ public sealed class LauncherUpdateServiceTests
         Assert.Equal(
             "https://github.com/bluearchive-cafe/Cafe.Launcher.Avalonia_Release/releases/tag/v1.2.0",
             result.ReleaseUrl);
-        Assert.Equal(LauncherConstants.GitHubReleasesPath, handler.RequestPath);
+        Assert.Equal(ApiConfig.GitHubReleasesPath, handler.RequestPath);
         Assert.Equal("application/vnd.github+json", handler.AcceptMediaType);
         Assert.Equal("2022-11-28", handler.ApiVersion);
     }
@@ -45,7 +45,7 @@ public sealed class LauncherUpdateServiceTests
             $$"""
             [
               {
-                "tag_name": "v{{LauncherConstants.LauncherVersion}}",
+                "tag_name": "v{{BuildInfo.LauncherVersion}}",
                 "html_url": "https://github.com/bluearchive-cafe/Cafe.Launcher.Avalonia_Release/releases/latest",
                 "prerelease": true
               }
@@ -57,7 +57,7 @@ public sealed class LauncherUpdateServiceTests
 
         Assert.True(result.IsSuccessful);
         Assert.False(result.IsUpdateAvailable);
-        Assert.Equal(LauncherConstants.LauncherVersion, result.LatestVersion);
+        Assert.Equal(BuildInfo.LauncherVersion, result.LatestVersion);
     }
 
     [Fact]

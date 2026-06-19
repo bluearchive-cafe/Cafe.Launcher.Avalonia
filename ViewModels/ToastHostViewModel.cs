@@ -13,22 +13,18 @@ public partial class ToastHostViewModel : ViewModelBase, IDisposable
 {
     private readonly ToastService toastService;
     private readonly LocalizationService localizer;
-    private SettingsViewModel? settings;
+    private readonly SettingsViewModel settings;
     private readonly CancellationTokenSource lifetimeCts = new();
     private bool disposed;
 
     public ObservableCollection<ToastNotification> ActiveToasts { get; } = [];
 
-    public ToastHostViewModel(ToastService toastService, LocalizationService localizer)
+    public ToastHostViewModel(ToastService toastService, LocalizationService localizer, SettingsViewModel settings)
     {
         this.toastService = toastService;
         this.localizer = localizer;
-        toastService.ToastRaised += OnToastRaised;
-    }
-
-    public void Configure(SettingsViewModel settings)
-    {
         this.settings = settings;
+        toastService.ToastRaised += OnToastRaised;
     }
 
     [RelayCommand]
@@ -55,7 +51,7 @@ public partial class ToastHostViewModel : ViewModelBase, IDisposable
 
     private async Task ShowToastAsync(ToastNotification notification, CancellationToken cancellationToken)
     {
-        if (settings is not null && !settings.Editor.Current.ToastNotificationsEnabled)
+        if (!settings.Editor.Current.ToastNotificationsEnabled)
         {
             return;
         }

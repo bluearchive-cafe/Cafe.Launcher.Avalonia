@@ -15,7 +15,7 @@ public sealed class OldLauncherDetectionService
         Path.Combine(
             Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData),
             "Programs",
-            LauncherConstants.OldLauncherAppName)
+            GamePaths.OldLauncherAppName)
     ];
 
     private static readonly string[] LinuxLauncherPaths =
@@ -76,14 +76,14 @@ public sealed class OldLauncherDetectionService
         if (OperatingSystem.IsWindows())
         {
             var appData = Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData);
-            return Path.Combine(appData, LauncherConstants.OldLauncherAppName);
+            return Path.Combine(appData, GamePaths.OldLauncherAppName);
         }
 
         if (OperatingSystem.IsLinux() || OperatingSystem.IsMacOS())
         {
             var home = Environment.GetFolderPath(Environment.SpecialFolder.UserProfile);
             if (!string.IsNullOrWhiteSpace(home))
-                return Path.Combine(home, ".config", LauncherConstants.OldLauncherAppName);
+                return Path.Combine(home, ".config", GamePaths.OldLauncherAppName);
         }
 
         return null;
@@ -129,11 +129,11 @@ public sealed class OldLauncherDetectionService
             return path;
 
         // Try normalizing to the expected game folder structure
-        var normalized = Path.Combine(path, LauncherConstants.GameFolderName);
+        var normalized = Path.Combine(path, GamePaths.GameFolderName);
         if (Directory.Exists(normalized))
             return normalized;
 
-        normalized = Path.Combine(path, LauncherConstants.RootFolderName, LauncherConstants.GameFolderName);
+        normalized = Path.Combine(path, GamePaths.RootFolderName, GamePaths.GameFolderName);
         if (Directory.Exists(normalized))
             return normalized;
 
@@ -159,7 +159,7 @@ public sealed class OldLauncherDetectionService
             if (string.IsNullOrWhiteSpace(parentDir))
                 continue;
 
-            var gamePath = Path.Combine(parentDir, LauncherConstants.RootFolderName, LauncherConstants.GameFolderName);
+            var gamePath = Path.Combine(parentDir, GamePaths.RootFolderName, GamePaths.GameFolderName);
             if (Directory.Exists(gamePath))
                 return gamePath;
 
@@ -167,7 +167,7 @@ public sealed class OldLauncherDetectionService
             parentDir = Path.GetDirectoryName(parentDir);
             if (!string.IsNullOrWhiteSpace(parentDir))
             {
-                gamePath = Path.Combine(parentDir, LauncherConstants.RootFolderName, LauncherConstants.GameFolderName);
+                gamePath = Path.Combine(parentDir, GamePaths.RootFolderName, GamePaths.GameFolderName);
                 if (Directory.Exists(gamePath))
                     return gamePath;
             }

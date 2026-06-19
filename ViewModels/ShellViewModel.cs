@@ -21,10 +21,10 @@ public partial class ShellViewModel : ViewModelBase
     private string productName = LauncherConstants.ProductName;
 
     [ObservableProperty]
-    private string launcherVersionText = $"Version {LauncherConstants.LauncherVersion}";
+    private string launcherVersionText = $"Version {BuildInfo.LauncherVersion}";
 
     [ObservableProperty]
-    private string commitShaText = $"Commit {LauncherConstants.CommitSha}";
+    private string commitShaText = $"Commit {BuildInfo.CommitSha}";
 
     [ObservableProperty]
     private string frameworkVersionText = "";
@@ -101,9 +101,9 @@ public partial class ShellViewModel : ViewModelBase
         localizer.SetLanguage(language);
         I18n.Apply(localizer);
         FrameworkVersionText = FrameworkVersion;
-        AvaloniaVersionText = $"Avalonia {LauncherConstants.AvaloniaVersion}";
+        AvaloniaVersionText = $"Avalonia {BuildInfo.AvaloniaVersion}";
         PlatformText = $"OS {PlatformName}";
-        BuildConfigText = $"Build {LauncherConstants.BuildConfiguration}";
+        BuildConfigText = $"Build {BuildInfo.BuildConfiguration}";
         settings.RefreshOptionDisplayNames();
         resourcePanel.RefreshDisplayNames();
         if (!string.IsNullOrWhiteSpace(resourcePanel.ResourcePanelUid))

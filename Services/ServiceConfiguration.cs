@@ -28,9 +28,7 @@ public static class ServiceConfiguration
         // ── Services with dependencies ────────────────────────────────────
         services.AddSingleton<ProxySettingsService>();
         services.AddSingleton<ManifestValidationService>();
-        services.AddSingleton<ExternalLinkService>();
         services.AddSingleton<NoticeStateService>();
-        services.AddSingleton<DownloadStateService>();
         services.AddSingleton<ResourcePanelUidService>();
         services.AddSingleton<LauncherSettingsService>();
         services.AddTransient<ISettingsEditor, SettingsEditor>();

@@ -28,7 +28,7 @@ public sealed class LauncherApiClient : IDisposable
     {
         leaseSource = new ProxyAwareHttpClientLeaseSource(
             httpClientFactory,
-            new Uri(LauncherConstants.ApiBaseUrl),
+            new Uri(ApiConfig.ApiBaseUrl),
             TimeSpan.FromSeconds(30));
         this.authorizationHeaderFactory = authorizationHeaderFactory;
         this.patchUrlGroupService = patchUrlGroupService;
@@ -45,7 +45,7 @@ public sealed class LauncherApiClient : IDisposable
     {
         leaseSource = new FixedHttpClientLeaseSource(
             handler,
-            new Uri(LauncherConstants.ApiBaseUrl),
+            new Uri(ApiConfig.ApiBaseUrl),
             TimeSpan.FromSeconds(30));
         this.authorizationHeaderFactory = authorizationHeaderFactory;
         this.patchUrlGroupService = patchUrlGroupService;
@@ -178,7 +178,7 @@ public sealed class LauncherApiClient : IDisposable
         using var request = new HttpRequestMessage(HttpMethod.Get, path);
         request.Headers.TryAddWithoutValidation(
             "Authorization",
-            authorizationHeaderFactory.Create("", LauncherConstants.YostarAuthorizationVersion));
+            authorizationHeaderFactory.Create("", ApiConfig.YostarAuthorizationVersion));
 
         using var response = await lease.Client.SendAsync(request, cancellationToken);
         response.EnsureSuccessStatusCode();

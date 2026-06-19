@@ -625,7 +625,6 @@ public sealed class MainWindowViewModelTests : IDisposable
         var diagnostics = new LocalDiagnostics();
         var manifestValidationService = new ManifestValidationService(apiClient);
         var gameLaunchService = new GameLaunchService(manifestValidationService, new ClickCodeService());
-        var downloadStateService = new DownloadStateService(Path.Combine(tempDir, Guid.NewGuid().ToString("N"), "download_state.json"));
         var gameDownloadService = new GameDownloadService(
             apiClient,
             localGameStateService,
@@ -634,7 +633,7 @@ public sealed class MainWindowViewModelTests : IDisposable
             new Crc64Service(),
             new DiskSpaceService(),
             diagnostics,
-            downloadStateService);
+            Path.Combine(tempDir, Guid.NewGuid().ToString("N"), "download_state.json"));
         resourcePanelUidService ??= new ResourcePanelUidService(
             new BestHttpCookieLibraryService(),
             settingsService,
@@ -644,20 +643,36 @@ public sealed class MainWindowViewModelTests : IDisposable
         var localizationService = new LocalizationService();
         toastService ??= new ToastService();
         var diskSpaceService = new DiskSpaceService();
-        var externalLinkService = new ExternalLinkService();
         var launcherUpdateService = new LauncherUpdateService(new LauncherUpdateHandler());
         var settingsEditor = new SettingsEditor();
         var settingsOptions = new SettingsOptionsViewModel(localizationService, diskSpaceService);
         var settingsAppearance = new SettingsAppearanceViewModel(settingsEditor);
         var settingsViewModel = new SettingsViewModel(
             settingsService, localizationService, toastService,
-            imageCacheService, externalLinkService, launcherUpdateService,
+            imageCacheService, launcherUpdateService,
             settingsOptions, settingsAppearance);
         var resourcePanelViewModel = new ResourcePanelViewModel(
             resourcePanelUidService, resourcePanelApiClient, localizationService,
             toastService, diagnostics);
         var noticeStateService = new NoticeStateService(Path.Combine(tempDir, Guid.NewGuid().ToString("N"), "shown_notices.json"));
         var gameUninstallService = new GameUninstallService(localGameStateService, diagnostics);
+
+        var shellViewModel = new ShellViewModel(localizationService);
+        var dialogsViewModel = new DialogsViewModel(localizationService, noticeStateService);
+        var remoteContentViewModel = new RemoteContentViewModel(localizationService, imageCacheService);
+        var backgroundViewModel = new BackgroundViewModel(imageCacheService, diagnostics, settingsViewModel);
+        var gameOperationsViewModel = new GameOperationsViewModel(
+            gameLaunchService,
+            gameDownloadService,
+            gameUninstallService,
+            localizationService,
+            toastService,
+            diagnostics,
+            shellViewModel,
+            dialogsViewModel);
+        var toastHostViewModel = new ToastHostViewModel(toastService, localizationService, settingsViewModel);
+        var windowChromeViewModel = new WindowChromeViewModel(
+            settingsViewModel, remoteContentViewModel, dialogsViewModel, gameOperationsViewModel);
 
         return new MainWindowViewModel(
             coreService,
@@ -666,19 +681,13 @@ public sealed class MainWindowViewModelTests : IDisposable
             toastService,
             diagnostics,
             new OldLauncherDetectionService(),
-            new ShellViewModel(localizationService),
-            new BackgroundViewModel(imageCacheService, diagnostics),
-            new RemoteContentViewModel(localizationService, imageCacheService),
-            new DialogsViewModel(localizationService, noticeStateService),
-            new GameOperationsViewModel(
-                gameLaunchService,
-                gameDownloadService,
-                gameUninstallService,
-                localizationService,
-                toastService,
-                diagnostics),
-            new ToastHostViewModel(toastService, localizationService),
-            new WindowChromeViewModel(externalLinkService),
+            shellViewModel,
+            backgroundViewModel,
+            remoteContentViewModel,
+            dialogsViewModel,
+            gameOperationsViewModel,
+            toastHostViewModel,
+            windowChromeViewModel,
             settingsViewModel,
             resourcePanelViewModel,
             new MigrationWizardViewModel(

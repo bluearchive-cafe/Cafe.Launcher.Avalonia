@@ -58,7 +58,7 @@ public sealed class LauncherSettingsService
             var folder = Path.Combine(
                 Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData),
                 LauncherConstants.ProductName);
-            return Path.Combine(folder, LauncherConstants.LauncherSettingsFileName);
+            return Path.Combine(folder, GamePaths.LauncherSettingsFileName);
         }
     }
 
@@ -94,7 +94,7 @@ public sealed class LauncherSettingsService
         var settings = new LauncherSettings();
 
         // Pre-release builds default to the beta update channel.
-        if (LauncherConstants.LauncherVersion.Contains('-'))
+        if (BuildInfo.LauncherVersion.Contains('-'))
         {
             settings.UpdateChannel = UpdateChannels.Beta;
         }

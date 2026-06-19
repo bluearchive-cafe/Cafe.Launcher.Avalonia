@@ -11,7 +11,7 @@ namespace Cafe.Launcher.Avalonia.Services;
 
 public sealed class ResourcePanelApiClient : IDisposable
 {
-    private static readonly string ApiBaseUrl = LauncherConstants.ResourcePanelApiBaseUrl;
+    private static readonly string ApiBaseUrl = ApiConfig.ResourcePanelApiBaseUrl;
     private readonly IHttpClientLeaseSource leaseSource;
     private readonly JsonSerializerOptions jsonOptions = new()
     {

@@ -82,7 +82,7 @@ public sealed class SettingsEditor : ISettingsEditor
     {
         var settings = new LauncherSettings();
 
-        if (LauncherConstants.LauncherVersion.Contains('-'))
+        if (BuildInfo.LauncherVersion.Contains('-'))
         {
             settings.UpdateChannel = UpdateChannels.Beta;
         }

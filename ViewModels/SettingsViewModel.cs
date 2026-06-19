@@ -14,7 +14,6 @@ public partial class SettingsViewModel : ViewModelBase, IDisposable
     private readonly LocalizationService localizer;
     private readonly ToastService toastService;
     private readonly ImageCacheService? imageCacheService;
-    private readonly ExternalLinkService? externalLinkService;
     private readonly LauncherUpdateService launcherUpdateService;
     private readonly ISettingsEditor editor;
     private bool disposed;
@@ -43,7 +42,6 @@ public partial class SettingsViewModel : ViewModelBase, IDisposable
         LocalizationService localizer,
         ToastService toastService,
         ImageCacheService? imageCacheService,
-        ExternalLinkService? externalLinkService,
         LauncherUpdateService launcherUpdateService,
         SettingsOptionsViewModel options,
         SettingsAppearanceViewModel appearance)
@@ -52,7 +50,6 @@ public partial class SettingsViewModel : ViewModelBase, IDisposable
         this.localizer = localizer;
         this.toastService = toastService;
         this.imageCacheService = imageCacheService;
-        this.externalLinkService = externalLinkService;
         this.launcherUpdateService = launcherUpdateService;
         editor = appearance.Editor;
         Options = options;
@@ -137,12 +134,12 @@ public partial class SettingsViewModel : ViewModelBase, IDisposable
 
         if (!result.IsUpdateAvailable)
         {
-            toastService.ShowSuccess(localizer.F("launcherUpToDate", LauncherConstants.LauncherVersion));
+            toastService.ShowSuccess(localizer.F("launcherUpToDate", BuildInfo.LauncherVersion));
             return;
         }
 
         toastService.ShowWarning(localizer.F("launcherUpdateAvailable", result.LatestVersion));
-        externalLinkService?.Open(result.ReleaseUrl);
+        ExternalLinkService.Open(result.ReleaseUrl);
     }
 
     [RelayCommand]

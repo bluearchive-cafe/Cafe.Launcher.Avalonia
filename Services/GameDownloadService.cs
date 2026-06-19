@@ -30,7 +30,11 @@ public sealed class GameDownloadService : IDisposable
     private readonly Crc64Service crc64Service;
     private readonly DiskSpaceService diskSpaceService;
     private readonly LocalDiagnostics diagnostics;
-    private readonly DownloadStateService downloadStateService;
+    private readonly string downloadStateFilePath;
+    private static readonly JsonSerializerOptions DownloadStateJsonOptions = new()
+    {
+        WriteIndented = true
+    };
     private readonly object activeDownloadLock = new();
     private readonly object pauseLock = new();
     private ActiveDownloadOperation? activeDownload;
@@ -45,8 +49,7 @@ public sealed class GameDownloadService : IDisposable
         ProxySettingsService proxySettingsService,
         Crc64Service crc64Service,
         DiskSpaceService diskSpaceService,
-        LocalDiagnostics diagnostics,
-        DownloadStateService downloadStateService)
+        LocalDiagnostics diagnostics)
     {
         this.apiClient = apiClient;
         this.localGameStateService = localGameStateService;
@@ -55,7 +58,10 @@ public sealed class GameDownloadService : IDisposable
         this.crc64Service = crc64Service;
         this.diskSpaceService = diskSpaceService;
         this.diagnostics = diagnostics;
-        this.downloadStateService = downloadStateService;
+        downloadStateFilePath = Path.Combine(
+            Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData),
+            LauncherConstants.ProductName,
+            "download_state.json");
     }
 
     public async Task<GameOperationResult> InstallOrUpdateAsync(
@@ -101,7 +107,7 @@ public sealed class GameDownloadService : IDisposable
         Action<GameOperationProgress> progress,
         CancellationToken cancellationToken = default)
     {
-        var state = await downloadStateService.LoadAsync(cancellationToken);
+        var state = await LoadDownloadStateAsync(cancellationToken);
         if (state is null)
         {
             return null;
@@ -116,7 +122,7 @@ public sealed class GameDownloadService : IDisposable
             || !string.Equals(statePath, settingsPath, StringComparison.Ordinal)
             || !string.Equals(state.PatchUrlGroup, snapshot.Settings.PatchUrlGroup, StringComparison.Ordinal))
         {
-            downloadStateService.Clear();
+            ClearDownloadState();
             return null;
         }
 
@@ -233,7 +239,7 @@ public sealed class GameDownloadService : IDisposable
             }
 
             // Persist download state for potential resume after restart
-            await downloadStateService.SaveAsync(new Models.DownloadTaskState
+            await SaveDownloadStateAsync(new Models.DownloadTaskState
             {
                 Version = gameConfig.GameLatestVersion,
                 Basis = gameConfig.GameLatestFilePath,
@@ -274,7 +280,7 @@ public sealed class GameDownloadService : IDisposable
 
             if (downloadPlan.NeedDownload.Count == 0 && downloadPlan.NeedDelete.Count == 0)
             {
-                downloadStateService.Clear();
+                ClearDownloadState();
                 return new GameOperationResult
                 {
                     Success = true,
@@ -321,7 +327,7 @@ public sealed class GameDownloadService : IDisposable
 
                 if (failedFiles.Count == 0)
                 {
-                    downloadStateService.Clear();
+                    ClearDownloadState();
                     progress(CreateProgress(operationKind, repair ? "repair-done" : "download-done", 100));
                     await diagnostics.MessageAsync(
                         repair ? "Game repair completed." : "Game install or update completed.",
@@ -349,7 +355,7 @@ public sealed class GameDownloadService : IDisposable
         {
             if (operation.ShouldClearPersistedStateOnCancel)
             {
-                downloadStateService.Clear();
+                ClearDownloadState();
             }
 
             progress(CreateProgress(operationKind, "stopped", 0));
@@ -452,6 +458,58 @@ public sealed class GameDownloadService : IDisposable
             pauseTcs = null;
             pauseTask = Task.CompletedTask;
         }
+    }
+
+    internal GameDownloadService(
+        LauncherApiClient apiClient,
+        LocalGameStateService localGameStateService,
+        LauncherSettingsService settingsService,
+        ProxySettingsService proxySettingsService,
+        Crc64Service crc64Service,
+        DiskSpaceService diskSpaceService,
+        LocalDiagnostics diagnostics,
+        string downloadStateFilePath)
+    {
+        this.apiClient = apiClient;
+        this.localGameStateService = localGameStateService;
+        this.settingsService = settingsService;
+        this.proxySettingsService = proxySettingsService;
+        this.crc64Service = crc64Service;
+        this.diskSpaceService = diskSpaceService;
+        this.diagnostics = diagnostics;
+        this.downloadStateFilePath = downloadStateFilePath;
+    }
+
+    private async Task<DownloadTaskState?> LoadDownloadStateAsync(CancellationToken cancellationToken = default)
+    {
+        if (!File.Exists(downloadStateFilePath))
+            return null;
+        try
+        {
+            var json = await File.ReadAllTextAsync(downloadStateFilePath, cancellationToken);
+            return JsonSerializer.Deserialize<DownloadTaskState>(json);
+        }
+        catch (OperationCanceledException)
+        {
+            throw;
+        }
+        catch
+        {
+            return null;
+        }
+    }
+
+    private async Task SaveDownloadStateAsync(DownloadTaskState state, CancellationToken cancellationToken = default)
+    {
+        var json = JsonSerializer.Serialize(state, DownloadStateJsonOptions);
+        Directory.CreateDirectory(Path.GetDirectoryName(downloadStateFilePath) ?? ".");
+        await File.WriteAllTextAsync(downloadStateFilePath, json, cancellationToken);
+    }
+
+    private void ClearDownloadState()
+    {
+        if (File.Exists(downloadStateFilePath))
+            File.Delete(downloadStateFilePath);
     }
 
     private async Task<DownloadPlan> BuildInstallOrUpdatePlanAsync(
@@ -829,7 +887,7 @@ public sealed class GameDownloadService : IDisposable
 
         var manifest = new LocalManifest
         {
-            Name = LauncherConstants.GameTag,
+            Name = GamePaths.GameTag,
             Version = gameConfig.GameLatestVersion,
             Basis = gameConfig.GameLatestFilePath,
             Files = manifestFiles
@@ -841,7 +899,7 @@ public sealed class GameDownloadService : IDisposable
 
         var config = new GameLauncherConfig
         {
-            Tag = LauncherConstants.GameTag,
+            Tag = GamePaths.GameTag,
             Name = gameConfig.GameStartExeName,
             Params = gameConfig.GameStartParams ?? [],
             Version = gameConfig.GameLatestVersion
@@ -850,11 +908,11 @@ public sealed class GameDownloadService : IDisposable
 
         var jsonOptions = new JsonSerializerOptions { WriteIndented = true };
         await File.WriteAllTextAsync(
-            GetTempName(Path.Combine(gamePath, LauncherConstants.ManifestFileName)),
+            GetTempName(Path.Combine(gamePath, GamePaths.ManifestFileName)),
             JsonSerializer.Serialize(manifest, jsonOptions),
             cancellationToken);
         await File.WriteAllTextAsync(
-            GetTempName(Path.Combine(gamePath, LauncherConstants.GameConfigFileName)),
+            GetTempName(Path.Combine(gamePath, GamePaths.GameConfigFileName)),
             JsonSerializer.Serialize(config, jsonOptions),
             cancellationToken);
     }
@@ -927,12 +985,12 @@ public sealed class GameDownloadService : IDisposable
             return failedFiles;
 
         File.Move(
-            GetTempName(Path.Combine(gamePath, LauncherConstants.ManifestFileName)),
-            Path.Combine(gamePath, LauncherConstants.ManifestFileName),
+            GetTempName(Path.Combine(gamePath, GamePaths.ManifestFileName)),
+            Path.Combine(gamePath, GamePaths.ManifestFileName),
             overwrite: true);
         File.Move(
-            GetTempName(Path.Combine(gamePath, LauncherConstants.GameConfigFileName)),
-            Path.Combine(gamePath, LauncherConstants.GameConfigFileName),
+            GetTempName(Path.Combine(gamePath, GamePaths.GameConfigFileName)),
+            Path.Combine(gamePath, GamePaths.GameConfigFileName),
             overwrite: true);
 
         return failedFiles;
@@ -1080,9 +1138,9 @@ public sealed class GameDownloadService : IDisposable
     private static void EnsureGamePath(string gamePath)
     {
         var fullPath = Path.GetFullPath(gamePath);
-        if (!string.Equals(Path.GetFileName(fullPath), LauncherConstants.GameFolderName, StringComparison.Ordinal))
+        if (!string.Equals(Path.GetFileName(fullPath), GamePaths.GameFolderName, StringComparison.Ordinal))
         {
-            throw new InvalidOperationException($"Game directory name must be {LauncherConstants.GameFolderName}.");
+            throw new InvalidOperationException($"Game directory name must be {GamePaths.GameFolderName}.");
         }
     }
 

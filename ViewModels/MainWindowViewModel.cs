@@ -173,9 +173,6 @@ public partial class MainWindowViewModel : ViewModelBase, IDisposable
 
     private void WireChildren()
     {
-        Background.Configure(Settings);
-        Toasts.Configure(Settings);
-
         Settings.GetSnapshot = () => currentSnapshot;
         Settings.Appearance.GetBackgroundBitmap = Background.GetBackgroundBitmap;
         Settings.ApplyLanguageAndTheme = async s =>
@@ -201,7 +198,6 @@ public partial class MainWindowViewModel : ViewModelBase, IDisposable
         ResourcePanel.ResourcePanelSourceConfirmRequested += ShowResourcePanelSourceConfirmDialog;
         Dialogs.ConfirmResourcePanelSourceSwitchRequested += SwitchToCafeAndOpenResourcePanel;
 
-        Operations.Configure(Shell, Dialogs);
         Operations.GetSnapshot = () => currentSnapshot;
         Operations.RequestRefreshAsync = async () => await RefreshAsync();
         Operations.RequestRefreshAfterPersistedResumeAsync = async () =>
@@ -219,7 +215,6 @@ public partial class MainWindowViewModel : ViewModelBase, IDisposable
 
         RemoteContent.OpenExternalUrlRequested = WindowChrome.OpenExternalUrl;
 
-        WindowChrome.Configure(Settings, RemoteContent, Dialogs, Operations);
         WindowChrome.GetSnapshot = () => currentSnapshot;
 
         MigrationWizard.MigrationApplied += HandleMigrationAppliedAsync;

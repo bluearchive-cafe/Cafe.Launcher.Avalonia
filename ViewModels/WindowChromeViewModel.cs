@@ -9,11 +9,10 @@ namespace Cafe.Launcher.Avalonia.ViewModels;
 
 public partial class WindowChromeViewModel : ViewModelBase
 {
-    private readonly ExternalLinkService externalLinkService;
-    private SettingsViewModel? settings;
-    private RemoteContentViewModel? remoteContent;
-    private DialogsViewModel? dialogs;
-    private GameOperationsViewModel? operations;
+    private readonly SettingsViewModel settings;
+    private readonly RemoteContentViewModel remoteContent;
+    private readonly DialogsViewModel dialogs;
+    private readonly GameOperationsViewModel operations;
 
     [ObservableProperty]
     private bool isSettingsVisible;
@@ -26,12 +25,7 @@ public partial class WindowChromeViewModel : ViewModelBase
 
     public Action? RestoreWindow { get; set; }
 
-    public WindowChromeViewModel(ExternalLinkService externalLinkService)
-    {
-        this.externalLinkService = externalLinkService;
-    }
-
-    public void Configure(
+    public WindowChromeViewModel(
         SettingsViewModel settings,
         RemoteContentViewModel remoteContent,
         DialogsViewModel dialogs,
@@ -46,7 +40,7 @@ public partial class WindowChromeViewModel : ViewModelBase
     [RelayCommand]
     private void ShowSettings()
     {
-        if (IsSettingsVisible && settings!.IsSettingsDirty)
+        if (IsSettingsVisible && settings.IsSettingsDirty)
         {
             settings.IsUnsavedChangesVisible = true;
             return;
@@ -55,14 +49,14 @@ public partial class WindowChromeViewModel : ViewModelBase
         IsSettingsVisible = !IsSettingsVisible;
         if (IsSettingsVisible && GetSnapshot?.Invoke() is { } snapshot)
         {
-            settings!.LoadFromSnapshot(snapshot.Settings);
+            settings.LoadFromSnapshot(snapshot.Settings);
         }
     }
 
     [RelayCommand]
     private void DiscardSettingsChanges()
     {
-        settings!.IsUnsavedChangesVisible = false;
+        settings.IsUnsavedChangesVisible = false;
         IsSettingsVisible = false;
         if (GetSnapshot?.Invoke() is { } snapshot)
         {
@@ -73,20 +67,20 @@ public partial class WindowChromeViewModel : ViewModelBase
     [RelayCommand]
     private void KeepEditingSettings()
     {
-        settings!.IsUnsavedChangesVisible = false;
+        settings.IsUnsavedChangesVisible = false;
     }
 
     [RelayCommand]
     private void Minimize()
     {
-        remoteContent!.StopCarouselTimer();
+        remoteContent.StopCarouselTimer();
         MinimizeWindow?.Invoke();
     }
 
     [RelayCommand]
     private void ExecuteRestoreWindow()
     {
-        if (remoteContent!.HasBannerItems)
+        if (remoteContent.HasBannerItems)
         {
             remoteContent.StartCarouselTimer();
         }
@@ -97,26 +91,26 @@ public partial class WindowChromeViewModel : ViewModelBase
     [RelayCommand]
     private void OpenOfficialSite()
     {
-        externalLinkService.Open(LauncherConstants.OfficialWebsiteUrl);
+        ExternalLinkService.Open(LauncherConstants.OfficialWebsiteUrl);
     }
 
     [RelayCommand]
     private void OpenGitHubRepository()
     {
-        externalLinkService.Open(LauncherConstants.GitHubReleaseRepositoryUrl);
+        ExternalLinkService.Open(LauncherConstants.GitHubReleaseRepositoryUrl);
     }
 
     public void OpenExternalUrl(string? url)
     {
-        externalLinkService.Open(url);
+        ExternalLinkService.Open(url);
     }
 
     [RelayCommand]
     private void Close()
     {
-        if (operations!.IsDownloadRunning)
+        if (operations.IsDownloadRunning)
         {
-            dialogs!.ShowDownloadRunningCloseConfirm();
+            dialogs.ShowDownloadRunningCloseConfirm();
             return;
         }
 
@@ -125,7 +119,7 @@ public partial class WindowChromeViewModel : ViewModelBase
 
     public void CloseAfterStoppingDownload()
     {
-        operations!.StopDownload(clearPersistedState: true);
+        operations.StopDownload(clearPersistedState: true);
         CloseWindow?.Invoke();
     }
 }

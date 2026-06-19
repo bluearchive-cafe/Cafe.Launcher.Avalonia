@@ -18,7 +18,7 @@ public partial class BackgroundViewModel : ViewModelBase, IDisposable
 {
     private readonly ImageCacheService imageCacheService;
     private readonly LocalDiagnostics diagnostics;
-    private SettingsViewModel? settings;
+    private readonly SettingsViewModel settings;
     private bool disposed;
 
     [ObservableProperty]
@@ -40,26 +40,17 @@ public partial class BackgroundViewModel : ViewModelBase, IDisposable
 
     public BackgroundViewModel(
         ImageCacheService imageCacheService,
-        LocalDiagnostics diagnostics)
+        LocalDiagnostics diagnostics,
+        SettingsViewModel settings)
     {
         this.imageCacheService = imageCacheService;
         this.diagnostics = diagnostics;
-        backgroundImageSource = LoadBundledBackground();
-    }
-
-    public void Configure(SettingsViewModel settings)
-    {
         this.settings = settings;
+        backgroundImageSource = LoadBundledBackground();
     }
 
     public async Task UpdateBackgroundImageAsync(LauncherStatusSnapshot? snapshot, CancellationToken cancellationToken)
     {
-        if (settings is null)
-        {
-            SetBackgroundImage(LoadBundledBackground());
-            return;
-        }
-
         BackgroundStretch = ToStretch(settings.Editor.Current.BackgroundFit);
         BackgroundFillBrush = settings.Editor.Current.BackgroundFit == BackgroundFits.Uniform
             ? new SolidColorBrush(settings.Appearance.SelectedBackgroundFillColor)
@@ -124,10 +115,7 @@ public partial class BackgroundViewModel : ViewModelBase, IDisposable
                 await diagnostics.MessageAsync(
                     "Custom background image load failed",
                     $"path: {path}\nexception: {ex.Message}");
-                if (settings is not null)
-                {
-                    settings.Editor.Current.CustomBackgroundPath = "";
-                }
+                settings.Editor.Current.CustomBackgroundPath = "";
                 return null;
             }
         }
@@ -203,7 +191,7 @@ public partial class BackgroundViewModel : ViewModelBase, IDisposable
     {
         var old = BackgroundImageSource as IDisposable;
         BackgroundImageSource = bitmap;
-        if (settings?.Editor.Current.ThemeColorMode == ThemeColorModes.Wallpaper)
+        if (settings.Editor.Current.ThemeColorMode == ThemeColorModes.Wallpaper)
         {
             settings.Appearance.RefreshThemeColorPaletteFromCurrentBackground(markDirty: false);
             settings.Appearance.ApplyThemeColor(

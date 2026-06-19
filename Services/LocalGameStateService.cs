@@ -30,24 +30,24 @@ public sealed class LocalGameStateService
             [Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar],
             StringSplitOptions.RemoveEmptyEntries);
 
-        if (EndsWithSegments(segments, [LauncherConstants.RootFolderName, LauncherConstants.GameFolderName]))
+        if (EndsWithSegments(segments, [GamePaths.RootFolderName, GamePaths.GameFolderName]))
         {
             return normalized;
         }
 
-        if (EndsWithSegments(segments, [LauncherConstants.RootFolderName]))
+        if (EndsWithSegments(segments, [GamePaths.RootFolderName]))
         {
-            return Path.Combine(normalized, LauncherConstants.GameFolderName);
+            return Path.Combine(normalized, GamePaths.GameFolderName);
         }
 
-        return Path.Combine(normalized, LauncherConstants.RootFolderName, LauncherConstants.GameFolderName);
+        return Path.Combine(normalized, GamePaths.RootFolderName, GamePaths.GameFolderName);
     }
 
     public async Task<LocalGameState> ReadAsync(string? gamePath = null, CancellationToken cancellationToken = default)
     {
         var normalizedGamePath = NormalizeGamePath(string.IsNullOrWhiteSpace(gamePath) ? GetDefaultGamePath() : gamePath);
-        var configPath = Path.Combine(normalizedGamePath, LauncherConstants.GameConfigFileName);
-        var manifestPath = Path.Combine(normalizedGamePath, LauncherConstants.ManifestFileName);
+        var configPath = Path.Combine(normalizedGamePath, GamePaths.GameConfigFileName);
+        var manifestPath = Path.Combine(normalizedGamePath, GamePaths.ManifestFileName);
 
         var state = new LocalGameState
         {

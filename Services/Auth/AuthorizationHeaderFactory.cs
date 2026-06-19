@@ -13,13 +13,13 @@ public sealed class AuthorizationHeaderFactory
     {
         var head = new AuthorizationHead
         {
-            GameTag = LauncherConstants.GameTag,
+            GameTag = GamePaths.GameTag,
             Time = DateTimeOffset.UtcNow.ToUnixTimeSeconds(),
             Version = version
         };
 
         var headJson = JsonSerializer.Serialize(head);
-        var signSource = $"{headJson}{data ?? ""}{LauncherConstants.AuthorizationSalt}";
+        var signSource = $"{headJson}{data ?? ""}{ApiConfig.AuthorizationSalt}";
         var sign = Convert.ToHexString(MD5.HashData(Encoding.UTF8.GetBytes(signSource))).ToLowerInvariant();
 
         return JsonSerializer.Serialize(new AuthorizationHeader

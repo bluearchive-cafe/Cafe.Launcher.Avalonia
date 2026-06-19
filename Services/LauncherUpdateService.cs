@@ -31,10 +31,10 @@ public sealed partial class LauncherUpdateService : IDisposable
     {
         leaseSource = new ProxyAwareHttpClientLeaseSource(
             httpClientFactory,
-            new Uri(LauncherConstants.GitHubApiBaseUrl),
+            new Uri(ApiConfig.GitHubApiBaseUrl),
             TimeSpan.FromSeconds(15));
-        currentVersion = LauncherConstants.LauncherVersion;
-        gitHubToken = LauncherConstants.GitHubToken;
+        currentVersion = BuildInfo.LauncherVersion;
+        gitHubToken = Environment.GetEnvironmentVariable("CAFE_LAUNCHER_GITHUB_TOKEN") ?? "";
     }
 
     internal LauncherUpdateService(
@@ -44,10 +44,10 @@ public sealed partial class LauncherUpdateService : IDisposable
     {
         leaseSource = new FixedHttpClientLeaseSource(
             handler,
-            new Uri(LauncherConstants.GitHubApiBaseUrl),
+            new Uri(ApiConfig.GitHubApiBaseUrl),
             TimeSpan.FromSeconds(15));
-        currentVersion = currentVersionOverride ?? LauncherConstants.LauncherVersion;
-        gitHubToken = gitHubTokenOverride ?? LauncherConstants.GitHubToken;
+        currentVersion = currentVersionOverride ?? BuildInfo.LauncherVersion;
+        gitHubToken = gitHubTokenOverride ?? Environment.GetEnvironmentVariable("CAFE_LAUNCHER_GITHUB_TOKEN") ?? "";
     }
 
     /// <summary>
@@ -173,7 +173,7 @@ public sealed partial class LauncherUpdateService : IDisposable
         using var lease = await leaseSource.CreateLeaseAsync(proxyMode, cancellationToken);
         using var request = new HttpRequestMessage(
             HttpMethod.Get,
-            LauncherConstants.GitHubReleasesPath);
+            ApiConfig.GitHubReleasesPath);
         request.Headers.Accept.Add(new MediaTypeWithQualityHeaderValue("application/vnd.github+json"));
         request.Headers.UserAgent.ParseAdd($"{LauncherConstants.ProductName.Replace(" ", "-", StringComparison.Ordinal)}/{currentVersion}");
         request.Headers.Add("X-GitHub-Api-Version", "2022-11-28");
