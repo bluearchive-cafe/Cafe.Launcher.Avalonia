@@ -81,10 +81,49 @@ public partial class App : Application
             showWindowListener = ShowWindowSignalListener.Start(mainWindow, trayService, SignalName);
 
             desktop.MainWindow = mainWindow;
-            _ = viewModel.InitializeAsync(shutdownCts.Token);
+            _ = InitializeViewModelAsync(viewModel, serviceProvider, shutdownCts.Token);
         }
 
         base.OnFrameworkInitializationCompleted();
+    }
+
+    private static async Task InitializeViewModelAsync(
+        MainWindowViewModel viewModel,
+        ServiceProvider serviceProvider,
+        CancellationToken cancellationToken)
+    {
+        try
+        {
+            await viewModel.InitializeAsync(cancellationToken);
+        }
+        catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
+        {
+        }
+        catch (Exception exception)
+        {
+            Debug.WriteLine($"MainWindowViewModel initialization failed: {exception}");
+            try
+            {
+                await serviceProvider
+                    .GetRequiredService<Services.Diagnostics.LocalDiagnostics>()
+                    .ErrorAsync("Launcher initialization failed.", exception, CancellationToken.None);
+            }
+            catch (Exception diagnosticsException)
+            {
+                Debug.WriteLine($"Initialization diagnostics failed: {diagnosticsException.Message}");
+            }
+
+            try
+            {
+                serviceProvider
+                    .GetRequiredService<ToastService>()
+                    .ShowError(exception.Message);
+            }
+            catch (Exception toastException)
+            {
+                Debug.WriteLine($"Initialization toast failed: {toastException.Message}");
+            }
+        }
     }
 
     private sealed class ShowWindowSignalListener : IDisposable

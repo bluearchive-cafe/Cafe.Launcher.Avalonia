@@ -13,6 +13,7 @@ namespace Cafe.Launcher.Avalonia.Services;
 
 public sealed class LauncherSettingsService
 {
+    private readonly SemaphoreSlim writeLock = new(1, 1);
     private readonly string? settingsPath;
     private readonly LocalDiagnostics? diagnostics;
     private readonly JsonSerializerOptions jsonOptions = new()
@@ -79,17 +80,35 @@ public sealed class LauncherSettingsService
 
     public async Task SaveAsync(LauncherSettings settings, CancellationToken cancellationToken = default)
     {
-        var normalized = Normalize(settings);
-        var path = SettingsPath;
-        Directory.CreateDirectory(Path.GetDirectoryName(path)!);
-        var tempPath = $"{path}.tmp";
-        await using (var stream = File.Create(tempPath))
+        await writeLock.WaitAsync(cancellationToken);
+        try
         {
-            await JsonSerializer.SerializeAsync(stream, normalized, jsonOptions, cancellationToken);
-            await stream.FlushAsync(cancellationToken);
-        }
+            var normalized = Normalize(settings);
+            var path = SettingsPath;
+            Directory.CreateDirectory(Path.GetDirectoryName(path)!);
+            var tempPath = $"{path}.{Guid.NewGuid():N}.tmp";
+            try
+            {
+                await using (var stream = File.Create(tempPath))
+                {
+                    await JsonSerializer.SerializeAsync(stream, normalized, jsonOptions, cancellationToken);
+                    await stream.FlushAsync(cancellationToken);
+                }
 
-        File.Move(tempPath, path, overwrite: true);
+                File.Move(tempPath, path, overwrite: true);
+            }
+            finally
+            {
+                if (File.Exists(tempPath))
+                {
+                    File.Delete(tempPath);
+                }
+            }
+        }
+        finally
+        {
+            writeLock.Release();
+        }
     }
 
     private static LauncherSettings Normalize(LauncherSettings settings)

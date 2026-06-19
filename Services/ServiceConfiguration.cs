@@ -37,14 +37,13 @@ public static class ServiceConfiguration
         services.AddSingleton<LauncherUpdateService>();
         services.AddSingleton<ILauncherCoreService, LauncherCoreService>();
 
-        // ── IDisposable services (register in reverse-dispose order) ─────
-        // Dispose order (1st → 4th): GameDownloadService, ImageCacheService,
-        //   ResourcePanelApiClient, LauncherApiClient
-        // Register in reverse so LauncherApiClient is disposed first:
-        services.AddSingleton<LauncherApiClient>();          // IDisposable — disposes 1st
-        services.AddSingleton<ResourcePanelApiClient>();      // IDisposable — disposes 2nd
-        services.AddSingleton<ImageCacheService>();           // IDisposable — disposes 3rd
-        services.AddSingleton<GameDownloadService>();         // IDisposable — disposes 4th (last)
+        // ── IDisposable services ─────────────────────────────────────────
+        // The container disposes created services in reverse order. This keeps
+        // HttpClientFactory alive until all clients and download services are gone.
+        services.AddSingleton<LauncherApiClient>();
+        services.AddSingleton<ResourcePanelApiClient>();
+        services.AddSingleton<ImageCacheService>();
+        services.AddSingleton<GameDownloadService>();
 
         // ── Migration services ────────────────────────────────────────────
         services.AddSingleton<OldLauncherDetectionService>();

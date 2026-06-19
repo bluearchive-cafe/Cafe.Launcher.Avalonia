@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Concurrent;
 using System.IO;
 using System.Net.Http;
 using System.Threading;
@@ -20,6 +21,8 @@ public sealed class ImageCacheService : IDisposable
     private readonly string cacheDir;
     private readonly HttpClientFactory httpClientFactory;
     private readonly Crc64Service crc64Service;
+    private readonly ConcurrentDictionary<string, SemaphoreSlim> cacheLocks =
+        new(StringComparer.Ordinal);
     private bool disposed;
 
     public ImageCacheService(HttpClientFactory httpClientFactory, Crc64Service crc64Service)
@@ -93,19 +96,39 @@ public sealed class ImageCacheService : IDisposable
             throw new ArgumentException("CRC64 hash contains invalid characters.", nameof(crc64Hash));
 
         var cachePath = Path.Combine(cacheDir, $"{crc64Hash}.cache");
-        var tempPath = $"{cachePath}.tmp";
-        var bytes = await GetImageBytesAsync(url, proxyMode, ct);
-        await File.WriteAllBytesAsync(tempPath, bytes, ct);
-
-        var actual = await crc64Service.ComputeFileAsync(tempPath, null, ct);
-        if (!string.Equals(actual, crc64Hash, StringComparison.OrdinalIgnoreCase))
+        var cacheLock = cacheLocks.GetOrAdd(crc64Hash, static _ => new SemaphoreSlim(1, 1));
+        await cacheLock.WaitAsync(ct);
+        try
         {
-            TryDelete(tempPath);
-            throw new InvalidDataException($"Image CRC64 mismatch. Expected {crc64Hash}, actual {actual}.");
-        }
+            if (File.Exists(cachePath))
+            {
+                return cachePath;
+            }
 
-        await Task.Run(() => File.Move(tempPath, cachePath, overwrite: true), ct);
-        return cachePath;
+            var tempPath = $"{cachePath}.{Guid.NewGuid():N}.tmp";
+            try
+            {
+                var bytes = await GetImageBytesAsync(url, proxyMode, ct);
+                await File.WriteAllBytesAsync(tempPath, bytes, ct);
+
+                var actual = await crc64Service.ComputeFileAsync(tempPath, null, ct);
+                if (!string.Equals(actual, crc64Hash, StringComparison.OrdinalIgnoreCase))
+                {
+                    throw new InvalidDataException($"Image CRC64 mismatch. Expected {crc64Hash}, actual {actual}.");
+                }
+
+                File.Move(tempPath, cachePath, overwrite: true);
+                return cachePath;
+            }
+            finally
+            {
+                TryDelete(tempPath);
+            }
+        }
+        finally
+        {
+            cacheLock.Release();
+        }
     }
 
     public Task<byte[]> GetImageBytesAsync(string url, CancellationToken ct = default)

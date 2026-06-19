@@ -196,6 +196,29 @@ public sealed class LauncherSettingsServiceTests : IDisposable
         Assert.False(File.Exists($"{settingsPath}.tmp"));
     }
 
+    [Fact]
+    public async Task SaveAsync_WhenCalledConcurrently_LeavesOneCompleteSettingsDocument()
+    {
+        var service = new LauncherSettingsService(settingsPath);
+        var writes = Enumerable.Range(0, 32)
+            .Select(index => service.SaveAsync(new LauncherSettings
+            {
+                GamePath = $@"D:\Games\{index}",
+                ResourcePanelUid = $"UID{index}"
+            }));
+
+        await Task.WhenAll(writes);
+
+        using var document = JsonDocument.Parse(await File.ReadAllTextAsync(settingsPath));
+        var root = document.RootElement;
+        var gamePath = root.GetProperty("gamePath").GetString();
+        var resourcePanelUid = root.GetProperty("resourcePanelUid").GetString();
+        Assert.NotNull(gamePath);
+        Assert.NotNull(resourcePanelUid);
+        Assert.Equal(gamePath!["D:\\Games\\".Length..], resourcePanelUid!["UID".Length..]);
+        Assert.Empty(Directory.EnumerateFiles(tempDir, "*.tmp"));
+    }
+
     public void Dispose()
     {
         if (Directory.Exists(tempDir))

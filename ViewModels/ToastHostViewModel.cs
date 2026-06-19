@@ -75,7 +75,8 @@ public partial class ToastHostViewModel : ViewModelBase, IDisposable
                     try { ActiveToasts.Remove(notification); }
                     catch (InvalidOperationException) { }
                 },
-                DispatcherPriority.Background);
+                DispatcherPriority.Background,
+                cancellationToken);
         }
         catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
         {

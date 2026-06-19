@@ -1,5 +1,6 @@
 using System;
 using System.IO;
+using System.Globalization;
 using System.Threading;
 using System.Threading.Tasks;
 
@@ -40,7 +41,7 @@ public sealed class Crc64Service
         }
 
         progress?.Invoke(100);
-        return (crc ^ XorOut).ToString();
+        return (crc ^ XorOut).ToString(CultureInfo.InvariantCulture);
     }
 
     /// <summary>Reflected (right-shifting) CRC64 update.</summary>

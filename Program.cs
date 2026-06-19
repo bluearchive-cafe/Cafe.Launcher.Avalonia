@@ -23,37 +23,22 @@ sealed class Program
         }
 
         SetupCrashLogging();
-        BuildAvaloniaApp().StartWithClassicDesktopLifetime(args);
+        try
+        {
+            BuildAvaloniaApp().StartWithClassicDesktopLifetime(args);
+        }
+        catch (Exception exception)
+        {
+            WriteCrashLog("Main", exception);
+            throw;
+        }
     }
 
     private static void SetupCrashLogging()
     {
-        var crashLogDir = Path.Combine(
-            Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData),
-            "Cafe Launcher");
-        var crashLogPath = Path.Combine(crashLogDir, "crash.log");
-
         void WriteCrash(string source, Exception? ex)
         {
-            try
-            {
-                Directory.CreateDirectory(crashLogDir);
-                var sb = new StringBuilder();
-                sb.AppendLine($"{DateTimeOffset.Now:O} [{source}]");
-                if (ex != null)
-                {
-                    sb.AppendLine($"Exception: {ex.GetType().FullName}: {ex.Message}");
-                    sb.AppendLine(ex.StackTrace ?? "(no stack trace)");
-                    if (ex is AggregateException agg)
-                    {
-                        foreach (var inner in agg.Flatten().InnerExceptions)
-                            sb.AppendLine($"  Inner: {inner.GetType().Name}: {inner.Message}");
-                    }
-                }
-                sb.AppendLine();
-                File.AppendAllText(crashLogPath, sb.ToString());
-            }
-            catch { /* Last resort — can't log the crash */ }
+            WriteCrashLog(source, ex);
         }
 
         AppDomain.CurrentDomain.UnhandledException += (_, e) =>
@@ -64,6 +49,41 @@ sealed class Program
             WriteCrash("TaskScheduler.UnobservedTaskException", e.Exception);
             e.SetObserved();
         };
+    }
+
+    private static void WriteCrashLog(string source, Exception? exception)
+    {
+        try
+        {
+            var crashLogDir = Path.Combine(
+                Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData),
+                "Cafe Launcher");
+            var crashLogPath = Path.Combine(crashLogDir, "crash.log");
+            Directory.CreateDirectory(crashLogDir);
+            var builder = new StringBuilder();
+            builder.AppendLine(FormattableString.Invariant($"{DateTimeOffset.Now:O} [{source}]"));
+            if (exception is not null)
+            {
+                builder.AppendLine(FormattableString.Invariant(
+                    $"Exception: {exception.GetType().FullName}: {exception.Message}"));
+                builder.AppendLine(exception.StackTrace ?? "(no stack trace)");
+                if (exception is AggregateException aggregateException)
+                {
+                    foreach (var inner in aggregateException.Flatten().InnerExceptions)
+                    {
+                        builder.AppendLine(FormattableString.Invariant(
+                            $"  Inner: {inner.GetType().Name}: {inner.Message}"));
+                    }
+                }
+            }
+
+            builder.AppendLine();
+            File.AppendAllText(crashLogPath, builder.ToString());
+        }
+        catch
+        {
+            // Last resort — the process is already failing and no additional sink exists.
+        }
     }
 
     private static void SignalFirstInstance()

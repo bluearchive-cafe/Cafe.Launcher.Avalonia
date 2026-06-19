@@ -520,6 +520,10 @@
         <Setter Property="HorizontalContentAlignment" Value="Stretch"/>
         <Setter Property="VerticalContentAlignment" Value="Stretch"/>
     </Style>
+    <Style Selector="Border.banner-media">
+        <Setter Property="CornerRadius" Value="{StaticResource LauncherRadiusSm}"/>
+        <Setter Property="ClipToBounds" Value="True"/>
+    </Style>
     <Style Selector="Grid.settings-overlay">
         <Setter Property="Background" Value="{DynamicResource LauncherOverlayBrush}"/>
         <Setter Property="ZIndex" Value="100"/>

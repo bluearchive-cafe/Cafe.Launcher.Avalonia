@@ -422,7 +422,8 @@ public partial class SettingsViewModel : ViewModelBase
         else
             ApplyThemeColor(settings.ThemeColorMode, ParseColorOrDefault(settings.CustomThemeColor));
 
-        SelectedGamePath = pickedPath;
+        BulkUpdate(s => s.SelectedGamePath = pickedPath);
+        IsSettingsDirty = false;
         toastService.ShowSuccess(localizer.F("pathSaved", pickedPath));
         if (SettingsSaved is not null)
             await SettingsSaved.Invoke();

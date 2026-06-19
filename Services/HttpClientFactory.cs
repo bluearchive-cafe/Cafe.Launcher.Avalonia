@@ -16,7 +16,6 @@ namespace Cafe.Launcher.Avalonia.Services;
 public sealed class HttpClientFactory : IDisposable
 {
     private readonly SocketsHttpHandler defaultHandler;
-    private readonly HttpClient defaultClient;
     private readonly ProxySettingsService proxySettingsService;
     private bool disposed;
 
@@ -28,12 +27,11 @@ public sealed class HttpClientFactory : IDisposable
             UseProxy = false,
             PooledConnectionLifetime = TimeSpan.FromMinutes(15)
         };
-        defaultClient = new HttpClient(defaultHandler, disposeHandler: false);
     }
 
     /// <summary>
     /// Creates an HttpClient with a BaseAddress and timeout (direct connection, no proxy).
-    /// The returned client shares the pooled handler and must NOT be disposed by the caller.
+    /// The returned client shares the pooled handler and must be disposed by the caller.
     /// </summary>
     public HttpClient CreateClient(string baseAddress, TimeSpan timeout)
     {
@@ -47,7 +45,7 @@ public sealed class HttpClientFactory : IDisposable
 
     /// <summary>
     /// Creates an HttpClient with a timeout and no base address (direct connection, no proxy).
-    /// The returned client shares the pooled handler and must NOT be disposed by the caller.
+    /// The returned client shares the pooled handler and must be disposed by the caller.
     /// </summary>
     public HttpClient CreateClient(TimeSpan timeout)
     {
@@ -60,8 +58,8 @@ public sealed class HttpClientFactory : IDisposable
 
     /// <summary>
     /// Returns a lease to a proxy-aware HttpClient. When proxyMode is System,
-    /// creates a per-request handler+client. Otherwise returns a lease wrapping
-    /// the shared default client.
+    /// creates a per-request handler+client. Direct clients share the long-lived handler,
+    /// while each lease disposes its own HttpClient instance.
     /// </summary>
     public async Task<HttpClientLease> CreateLeaseAsync(
         string proxyMode,
@@ -72,11 +70,10 @@ public sealed class HttpClientFactory : IDisposable
         ThrowIfDisposed();
         if (proxyMode != ProxyModes.System)
         {
-            // Borrow the shared default client (caller does NOT own it)
             var client = new HttpClient(defaultHandler, disposeHandler: false);
             if (baseAddress is not null) client.BaseAddress = baseAddress;
             if (timeout.HasValue) client.Timeout = timeout.Value;
-            return new HttpClientLease(client);
+            return new HttpClientLease(client, ownsClient: true);
         }
 
         var handler = await proxySettingsService.CreateHttpHandlerAsync(proxyMode, cancellationToken);
@@ -88,15 +85,13 @@ public sealed class HttpClientFactory : IDisposable
 
     private void ThrowIfDisposed()
     {
-        if (disposed)
-            throw new ObjectDisposedException(nameof(HttpClientFactory));
+        ObjectDisposedException.ThrowIf(disposed, this);
     }
 
     public void Dispose()
     {
         if (disposed) return;
         disposed = true;
-        defaultClient.Dispose();
         defaultHandler.Dispose();
     }
 }

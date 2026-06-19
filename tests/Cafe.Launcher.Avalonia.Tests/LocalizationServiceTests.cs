@@ -134,6 +134,21 @@ public sealed class LocalizationServiceTests
         Assert.DoesNotContain("中文名'蔚蓝档案'", disclaimer);
     }
 
+    [Fact]
+    public void T_WhenEnglishDisclaimerRequested_ReturnsQuotesWithoutEscapeCharacters()
+    {
+        var json = File.ReadAllText(Path.Combine(FindProjectRoot(), "Assets", "Locales", "en.json"));
+        var values = JsonSerializer.Deserialize<Dictionary<string, string>>(json);
+        Assert.NotNull(values);
+
+        var disclaimer = values["aboutDisclaimerText"];
+
+        Assert.Contains("\"Cafe Launcher\"", disclaimer, StringComparison.Ordinal);
+        Assert.Contains("\"BlueArchive.Cafe\"", disclaimer, StringComparison.Ordinal);
+        Assert.Contains("\"Blue Archive\"", disclaimer, StringComparison.Ordinal);
+        Assert.DoesNotContain("\\\"", disclaimer, StringComparison.Ordinal);
+    }
+
     private static string FindProjectRoot()
     {
         var directory = new DirectoryInfo(AppContext.BaseDirectory);

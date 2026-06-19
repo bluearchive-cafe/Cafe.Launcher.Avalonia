@@ -87,14 +87,18 @@ function Write-Fail([string]$message) {
     Write-Host "   [X] $message" -ForegroundColor Red
 }
 
-function Invoke-External([string]$command, [string]$description) {
+function Invoke-External(
+    [string]$filePath,
+    [string[]]$arguments,
+    [string]$description
+) {
     if ($DryRun) {
         Write-Host "   [dry-run] $description" -ForegroundColor DarkGray
         return $true
     }
     Write-Host "   $description" -ForegroundColor DarkGray
     $global:LASTEXITCODE = 0
-    Invoke-Expression $command *>&1 | ForEach-Object { "   $_" }
+    & $filePath @arguments *>&1 | ForEach-Object { "   $_" }
     if ($LASTEXITCODE -ne 0) {
         throw "$description failed (exit code: $LASTEXITCODE)"
     }
@@ -145,30 +149,32 @@ Write-OK "Current version: $currentVersion"
 Write-Step "Computing new version"
 
 $newVersion = $null
+$semVerPattern = '^(0|[1-9]\d*)\.(0|[1-9]\d*)\.(0|[1-9]\d*)(?:-[0-9A-Za-z-]+(?:\.[0-9A-Za-z-]+)*)?(?:\+[0-9A-Za-z-]+(?:\.[0-9A-Za-z-]+)*)?$'
 
-if ($VersionBump -match '^\d+\.\d+\.\d+') {
+if ($VersionBump -match $semVerPattern) {
     # Explicit version
     $newVersion = $VersionBump
     Write-OK "Explicit version: $newVersion"
 }
 else {
-    $parts = $currentVersion -split '\.'
-    if ($parts.Length -lt 3) {
+    if ($VersionBump -notin @("major", "minor", "patch")) {
+        Write-Fail "Unknown bump type '$VersionBump'. Use major, minor, patch, or an exact SemVer value."
+        exit 1
+    }
+
+    if ($currentVersion -notmatch $semVerPattern) {
         Write-Fail "Could not parse current version '$currentVersion' as major.minor.patch"
         exit 1
     }
-    $major = [int]$parts[0]
-    $minor = [int]$parts[1]
-    $patch = [int]$parts[2]
+
+    $major = [int]$Matches[1]
+    $minor = [int]$Matches[2]
+    $patch = [int]$Matches[3]
 
     switch ($VersionBump) {
         "major" { $major++; $minor = 0; $patch = 0 }
         "minor" { $minor++; $patch = 0 }
         "patch" { $patch++ }
-        default {
-            Write-Fail "Unknown bump type '$VersionBump'. Use major, minor, patch, or an explicit version like 1.2.3."
-            exit 1
-        }
     }
     $newVersion = "$major.$minor.$patch"
     Write-OK "Bump $VersionBump : $currentVersion → $newVersion"
@@ -310,8 +316,11 @@ Write-Step "Writing new version to $CsprojName"
 $csprojContent = Get-Content $CsprojPath -Raw
 $csprojContent = $csprojContent -replace '<VersionPrefix>[^<]+</VersionPrefix>', "<VersionPrefix>$newVersion</VersionPrefix>"
 
-# Also update AssemblyVersion and FileVersion (major.minor.patch.0)
-$assemblyVersion = "$newVersion.0"
+# Also update AssemblyVersion and FileVersion (numeric major.minor.patch.0)
+if ($newVersion -notmatch $semVerPattern) {
+    throw "Validated version no longer matches SemVer: $newVersion"
+}
+$assemblyVersion = "$($Matches[1]).$($Matches[2]).$($Matches[3]).0"
 if ($csprojContent -match '<AssemblyVersion>[^<]+</AssemblyVersion>') {
     $csprojContent = $csprojContent -replace '<AssemblyVersion>[^<]+</AssemblyVersion>', "<AssemblyVersion>$assemblyVersion</AssemblyVersion>"
 }
@@ -326,8 +335,8 @@ Write-OK "VersionPrefix updated: $currentVersion → $newVersion"
 Write-Step "Committing version bump"
 
 $commitMsg = "chore: bump version to $tagName"
-Invoke-External "git -C `"$ScriptDir`" add `"$CsprojName`"" "git add $CsprojName" | Out-Null
-Invoke-External "git -C `"$ScriptDir`" commit -m `"$commitMsg`"" "git commit" | Out-Null
+Invoke-External "git" @("-C", $ScriptDir, "add", $CsprojName) "git add $CsprojName" | Out-Null
+Invoke-External "git" @("-C", $ScriptDir, "commit", "-m", $commitMsg) "git commit" | Out-Null
 Write-OK "Committed: $commitMsg"
 
 # ── Tag ─────────────────────────────────────────────────────────────────────
@@ -337,7 +346,7 @@ $tagMsg = "$tagName"
 if ($isPrerelease) {
     $tagMsg = "$tagName (prerelease)"
 }
-Invoke-External "git -C `"$ScriptDir`" tag -a `"$tagName`" -m `"$tagMsg`"" "git tag $tagName" | Out-Null
+Invoke-External "git" @("-C", $ScriptDir, "tag", "-a", $tagName, "-m", $tagMsg) "git tag $tagName" | Out-Null
 Write-OK "Tagged: $tagName"
 
 # ── Push ────────────────────────────────────────────────────────────────────
@@ -346,8 +355,8 @@ if ($SkipPush) {
     Write-Host "  To push manually: git push origin HEAD && git push origin $tagName"
 } else {
     Write-Step "Pushing to origin"
-    Invoke-External "git -C `"$ScriptDir`" push origin HEAD" "git push HEAD" | Out-Null
-    Invoke-External "git -C `"$ScriptDir`" push origin `"$tagName`"" "git push $tagName" | Out-Null
+    Invoke-External "git" @("-C", $ScriptDir, "push", "origin", "HEAD") "git push HEAD" | Out-Null
+    Invoke-External "git" @("-C", $ScriptDir, "push", "origin", $tagName) "git push $tagName" | Out-Null
     Write-OK "Pushed commit and tag to origin"
 }
 

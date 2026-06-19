@@ -14,6 +14,11 @@ namespace Cafe.Launcher.Avalonia.Services;
 /// </summary>
 public sealed class DownloadStateService
 {
+    private static readonly JsonSerializerOptions JsonOptions = new()
+    {
+        WriteIndented = true
+    };
+
     private readonly string stateFilePath;
 
     public DownloadStateService()
@@ -31,7 +36,7 @@ public sealed class DownloadStateService
 
     public async Task SaveAsync(DownloadTaskState state, CancellationToken cancellationToken = default)
     {
-        var json = JsonSerializer.Serialize(state, new JsonSerializerOptions { WriteIndented = true });
+        var json = JsonSerializer.Serialize(state, JsonOptions);
         Directory.CreateDirectory(Path.GetDirectoryName(stateFilePath) ?? ".");
         await File.WriteAllTextAsync(stateFilePath, json, cancellationToken);
     }
