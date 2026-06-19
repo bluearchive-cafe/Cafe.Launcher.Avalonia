@@ -27,7 +27,7 @@ public sealed partial class LauncherUpdateService : IDisposable
     private readonly HttpClient httpClient;
     private readonly string currentVersion;
     private readonly string gitHubToken;
-    private string proxyMode = ProxyModes.Direct;
+    public string ProxyMode { get; set; } = ProxyModes.Direct;
 
     public LauncherUpdateService(HttpClientFactory httpClientFactory)
     {
@@ -53,11 +53,6 @@ public sealed partial class LauncherUpdateService : IDisposable
         gitHubToken = gitHubTokenOverride ?? LauncherConstants.GitHubToken;
     }
 
-    public void SetProxyMode(string value)
-    {
-        proxyMode = value == ProxyModes.System ? ProxyModes.System : ProxyModes.Direct;
-    }
-
     /// <summary>
     /// Checks the GitHub Releases API for launcher self-updates.
     /// The <paramref name="updateChannel"/> controls whether pre-releases are considered:
@@ -69,30 +64,7 @@ public sealed partial class LauncherUpdateService : IDisposable
     {
         try
         {
-            using var lease = await CreateRequestClientAsync(cancellationToken);
-            using var request = new HttpRequestMessage(
-                HttpMethod.Get,
-                LauncherConstants.GitHubReleasesPath);
-            request.Headers.Accept.Add(new MediaTypeWithQualityHeaderValue("application/vnd.github+json"));
-            request.Headers.UserAgent.ParseAdd($"{LauncherConstants.ProductName.Replace(" ", "-", StringComparison.Ordinal)}/{currentVersion}");
-            request.Headers.Add("X-GitHub-Api-Version", "2022-11-28");
-
-            if (!string.IsNullOrEmpty(gitHubToken))
-            {
-                request.Headers.Authorization = new AuthenticationHeaderValue("Bearer", gitHubToken);
-            }
-
-            using var response = await lease.Client.SendAsync(
-                request,
-                HttpCompletionOption.ResponseHeadersRead,
-                cancellationToken);
-            response.EnsureSuccessStatusCode();
-
-            await using var stream = await response.Content.ReadAsStreamAsync(cancellationToken);
-            var releases = await JsonSerializer.DeserializeAsync<List<GitHubReleaseResponse>>(
-                stream,
-                JsonOptions,
-                cancellationToken);
+            var releases = await FetchReleasesAsync(useAuth: !string.IsNullOrEmpty(gitHubToken), cancellationToken);
 
             if (releases is null || releases.Count == 0)
             {
@@ -104,6 +76,23 @@ public sealed partial class LauncherUpdateService : IDisposable
                 return LauncherUpdateCheckResult.Failed();
             }
 
+            // Sort by semantic version descending so the latest by version is first,
+            // not merely the most recently created release.
+            releases.Sort((a, b) =>
+            {
+                var versionA = NormalizeReleaseTag(a.TagName);
+                var versionB = NormalizeReleaseTag(b.TagName);
+                if (!TryParseSemanticVersion(versionA, out _)
+                    || !TryParseSemanticVersion(versionB, out _))
+                {
+                    return 0;
+                }
+
+                if (IsNewerVersion(versionA, versionB)) return -1;
+                if (IsNewerVersion(versionB, versionA)) return 1;
+                return 0;
+            });
+
             // Filter: beta channel sees all releases; stable channel skips pre-releases.
             var targetRelease = updateChannel == UpdateChannels.Beta
                 ? releases[0]
@@ -111,7 +100,6 @@ public sealed partial class LauncherUpdateService : IDisposable
 
             if (targetRelease is null)
             {
-                // No compatible release found (e.g., stable channel with only pre-releases).
                 return LauncherUpdateCheckResult.Succeeded(
                     currentVersion,
                     "",
@@ -151,6 +139,55 @@ public sealed partial class LauncherUpdateService : IDisposable
         {
             return LauncherUpdateCheckResult.Failed();
         }
+    }
+
+    private async Task<List<GitHubReleaseResponse>?> FetchReleasesAsync(
+        bool useAuth,
+        CancellationToken cancellationToken)
+    {
+        try
+        {
+            return await FetchReleasesWithAuthAsync(useAuth, cancellationToken);
+        }
+        catch (HttpRequestException ex) when (useAuth && IsAuthenticationFailure(ex))
+        {
+            // Token is invalid or expired — fall back to unauthenticated.
+            return await FetchReleasesWithAuthAsync(useAuth: false, cancellationToken);
+        }
+    }
+
+    private static bool IsAuthenticationFailure(HttpRequestException ex) =>
+        ex.StatusCode is System.Net.HttpStatusCode.Unauthorized
+            or System.Net.HttpStatusCode.Forbidden;
+
+    private async Task<List<GitHubReleaseResponse>?> FetchReleasesWithAuthAsync(
+        bool useAuth,
+        CancellationToken cancellationToken)
+    {
+        using var lease = await CreateLeaseAsync(cancellationToken);
+        using var request = new HttpRequestMessage(
+            HttpMethod.Get,
+            LauncherConstants.GitHubReleasesPath);
+        request.Headers.Accept.Add(new MediaTypeWithQualityHeaderValue("application/vnd.github+json"));
+        request.Headers.UserAgent.ParseAdd($"{LauncherConstants.ProductName.Replace(" ", "-", StringComparison.Ordinal)}/{currentVersion}");
+        request.Headers.Add("X-GitHub-Api-Version", "2022-11-28");
+
+        if (useAuth)
+        {
+            request.Headers.Authorization = new AuthenticationHeaderValue("Bearer", gitHubToken);
+        }
+
+        using var response = await lease.Client.SendAsync(
+            request,
+            HttpCompletionOption.ResponseHeadersRead,
+            cancellationToken);
+        response.EnsureSuccessStatusCode();
+
+        await using var stream = await response.Content.ReadAsStreamAsync(cancellationToken);
+        return await JsonSerializer.DeserializeAsync<List<GitHubReleaseResponse>>(
+            stream,
+            JsonOptions,
+            cancellationToken);
     }
 
     private static string NormalizeReleaseTag(string tagName)
@@ -246,19 +283,10 @@ public sealed partial class LauncherUpdateService : IDisposable
         return true;
     }
 
-    private async Task<HttpClientLease> CreateRequestClientAsync(CancellationToken cancellationToken)
-    {
-        if (httpClientFactory is not null)
-        {
-            return await httpClientFactory.CreateLeaseAsync(
-                proxyMode,
-                httpClient.BaseAddress,
-                httpClient.Timeout,
-                cancellationToken);
-        }
-
-        return new HttpClientLease(httpClient);
-    }
+    private Task<HttpClientLease> CreateLeaseAsync(CancellationToken ct) =>
+        httpClientFactory is not null
+            ? httpClientFactory.CreateLeaseAsync(ProxyMode, httpClient.BaseAddress, httpClient.Timeout, ct)
+            : Task.FromResult(new HttpClientLease(httpClient));
 
     public void Dispose()
     {

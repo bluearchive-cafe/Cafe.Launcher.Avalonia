@@ -1,3 +1,4 @@
+using System;
 using System.Linq;
 using System.Reflection;
 
@@ -34,8 +35,10 @@ public static class LauncherConstants
     /// Fine-grained GitHub PAT with read-only access to the distribution release repository.
     /// Raises the API rate limit from 60/hr (unauthenticated) to 5,000/hr.
     /// Leave empty to use unauthenticated requests.
+    /// Set via CAFE_LAUNCHER_GITHUB_TOKEN environment variable; do NOT hardcode tokens.
     /// </summary>
-    public const string GitHubToken = "***REMOVED***";
+    public static readonly string GitHubToken =
+        Environment.GetEnvironmentVariable("CAFE_LAUNCHER_GITHUB_TOKEN") ?? "";
     public const string DefaultThemeColor = "#FF2E7DF6";
 
     public const string OldLauncherAppName = "BlueArchive_JP_Gamelauncher";

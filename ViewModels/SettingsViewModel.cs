@@ -66,13 +66,46 @@ public partial class SettingsViewModel : ViewModelBase
         this.editor = editor;
     }
 
-    // ── Settings values kept for type conversion / side effects (7) ────────
+    // ── Settings values (11) — XAML binding surface, delegates to Editor ───
 
-    // I1: Dirty tracking for unsaved settings changes
+    [ObservableProperty]
+    private string selectedGamePath = "";
+
+    [ObservableProperty]
+    private string selectedLaunchCheckMode = LaunchCheckModes.LocalManifest;
+
+    [ObservableProperty]
+    private string selectedProxyMode = ProxyModes.Direct;
+
+    [ObservableProperty]
+    private string selectedPatchUrlGroup = PatchUrlGroups.Official;
+
+    [ObservableProperty]
+    private string selectedCloseBehavior = CloseBehaviors.Minimize;
+
+    [ObservableProperty]
+    private string selectedLanguage = LauncherLanguages.Auto;
+
+    [ObservableProperty]
+    private string selectedThemeMode = ThemeModes.System;
+
+    [ObservableProperty]
+    private string selectedDownloadSpeedLimit = DownloadSpeedLimits.Unlimited;
+
+    [ObservableProperty]
+    private bool toastNotificationsEnabled = true;
+
+    [ObservableProperty]
+    private bool showRemoteContentCard = true;
+
+    [ObservableProperty]
+    private string selectedUpdateChannel = UpdateChannels.Stable;
+
+    // ── Settings UI state (2) ────────────────────────────────────────────
+
     [ObservableProperty]
     private bool isSettingsDirty;
 
-    // M4: Unsaved changes confirmation dialog
     [ObservableProperty]
     private bool isUnsavedChangesVisible;
 
@@ -203,8 +236,26 @@ public partial class SettingsViewModel : ViewModelBase
     /// <summary>Called by parent when settings panel opens or discards changes.</summary>
     public void LoadFromSnapshot(LauncherSettings settings)
     {
+        var currentWallpaperPalette = settings.ThemeColorMode == ThemeColorModes.Wallpaper
+            ? GetThemeColorPaletteHexes()
+            : [];
+        var currentWallpaperPaletteIndex = SelectedThemeColorPaletteIndex;
+
         editor.ApplySnapshot(settings);
         SyncPropertiesFromEditor();
+
+        if (SelectedThemeColorMode == ThemeColorModes.Wallpaper)
+        {
+            if (currentWallpaperPalette.Count > 0)
+            {
+                ReplaceThemeColorPalette(currentWallpaperPalette, currentWallpaperPaletteIndex);
+            }
+            else
+            {
+                RefreshThemeColorPaletteFromCurrentBackground(markDirty: false);
+            }
+        }
+
         IsSettingsDirty = false;
     }
 
@@ -245,11 +296,22 @@ public partial class SettingsViewModel : ViewModelBase
         try
         {
             var s = editor.Current;
+            SelectedGamePath = s.GamePath;
+            SelectedLaunchCheckMode = s.LaunchCheckMode;
+            SelectedProxyMode = s.ProxyMode;
+            SelectedPatchUrlGroup = s.PatchUrlGroup;
+            SelectedCloseBehavior = s.CloseBehavior;
+            SelectedLanguage = s.Language;
+            SelectedThemeMode = s.ThemeMode;
             SelectedThemeColorMode = s.ThemeColorMode;
             SelectedCustomThemeColor = ParseColorOrDefault(s.CustomThemeColor);
             IsCustomThemeColorSelected = s.ThemeColorMode == ThemeColorModes.Custom;
             IsWallpaperThemeColorSelected = s.ThemeColorMode == ThemeColorModes.Wallpaper;
             SelectedThemeColorPaletteIndex = s.SelectedThemeColorPaletteIndex;
+            SelectedDownloadSpeedLimit = s.DownloadSpeedLimit;
+            ToastNotificationsEnabled = s.ToastNotificationsEnabled;
+            ShowRemoteContentCard = s.ShowRemoteContentCard;
+            SelectedUpdateChannel = s.UpdateChannel;
             CustomBackgroundPath = s.CustomBackgroundPath;
             IsCustomBackground = !string.IsNullOrWhiteSpace(s.CustomBackgroundPath);
             SelectedBackgroundSource = s.BackgroundSource;
@@ -275,6 +337,22 @@ public partial class SettingsViewModel : ViewModelBase
     /// Applies launcher settings from a snapshot — always programmatic,
     /// should never mark dirty.
     /// </summary>
+    // ── Bulk update ─────────────────────────────────────────────────────
+
+    public void BulkUpdate(Action<SettingsViewModel> update)
+    {
+        var previous = suppressDirtyTracking;
+        suppressDirtyTracking = true;
+        try
+        {
+            update(this);
+        }
+        finally
+        {
+            suppressDirtyTracking = previous;
+        }
+    }
+
     public void ApplyLauncherSettings(LauncherSettings settings, string localGamePath)
     {
         var snapshot = DeepCloneSettings(settings);
@@ -288,7 +366,7 @@ public partial class SettingsViewModel : ViewModelBase
     [RelayCommand]
     private async Task CheckForUpdatesAsync()
     {
-        launcherUpdateService.SetProxyMode(editor.Current.ProxyMode);
+        launcherUpdateService.ProxyMode = editor.Current.ProxyMode;
         var result = await launcherUpdateService.CheckForUpdateAsync(editor.Current.UpdateChannel);
 
         if (!result.IsSuccessful)
@@ -320,6 +398,14 @@ public partial class SettingsViewModel : ViewModelBase
         var previousPatchUrlGroup = previousSettings.PatchUrlGroup;
         var shouldPromptRepairAfterSourceChange = snapshot?.IsInstalled == true
             && !string.Equals(previousPatchUrlGroup, editor.Current.PatchUrlGroup, StringComparison.Ordinal);
+
+        // Sync palette state (held in ViewModel's ObservableCollection) to the editor
+        // before building the save snapshot.
+        editor.Commit(s =>
+        {
+            s.ThemeColorPalette = GetThemeColorPaletteHexes();
+            s.SelectedThemeColorPaletteIndex = SelectedThemeColorPaletteIndex;
+        });
 
         // Assemble the settings to save from the editor's current state.
         var settings = DeepCloneSettings(editor.Current);
@@ -473,6 +559,20 @@ public partial class SettingsViewModel : ViewModelBase
         IsSettingsDirty = editor.IsDirty;
     }
 
+    partial void OnSelectedLaunchCheckModeChanged(string value) => PushToEditor(s => s.LaunchCheckMode = value);
+    partial void OnSelectedProxyModeChanged(string value) => PushToEditor(s => s.ProxyMode = value);
+    partial void OnSelectedPatchUrlGroupChanged(string value) => PushToEditor(s => s.PatchUrlGroup = value);
+    partial void OnSelectedCloseBehaviorChanged(string value) => PushToEditor(s => s.CloseBehavior = value);
+    partial void OnSelectedLanguageChanged(string value) => PushToEditor(s => s.Language = value);
+    partial void OnSelectedDownloadSpeedLimitChanged(string value) => PushToEditor(s => s.DownloadSpeedLimit = value);
+    partial void OnSelectedGamePathChanged(string value) => PushToEditor(s => s.GamePath = value);
+    partial void OnToastNotificationsEnabledChanged(bool value) => PushToEditor(s => s.ToastNotificationsEnabled = value);
+
+    partial void OnSelectedThemeModeChanged(string value)
+    {
+        PushToEditor(s => s.ThemeMode = value);
+    }
+
     partial void OnSelectedThemeColorModeChanged(string value)
     {
         PushToEditor(s => s.ThemeColorMode = value);
@@ -520,6 +620,9 @@ public partial class SettingsViewModel : ViewModelBase
         PushToEditor(s => s.BackgroundFillColor = ToColorHex(value));
         BackgroundFillColorPreviewBrush = new SolidColorBrush(value);
     }
+
+    partial void OnShowRemoteContentCardChanged(bool value) => PushToEditor(s => s.ShowRemoteContentCard = value);
+    partial void OnSelectedUpdateChannelChanged(string value) => PushToEditor(s => s.UpdateChannel = value);
 
     // ── Theme colour helpers ──────────────────────────────────────────────
 

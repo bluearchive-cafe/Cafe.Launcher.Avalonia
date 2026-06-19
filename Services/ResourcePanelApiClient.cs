@@ -13,9 +13,9 @@ public sealed class ResourcePanelApiClient : IDisposable
 {
     private static readonly string ApiBaseUrl = LauncherConstants.ResourcePanelApiBaseUrl;
     private readonly HttpClient httpClient;
-    private readonly HttpClientFactory httpClientFactory;
+    private readonly HttpClientFactory? httpClientFactory;
     private readonly bool ownsHttpClient;
-    private string proxyMode = ProxyModes.Direct;
+    public string ProxyMode { get; set; } = ProxyModes.Direct;
     private readonly JsonSerializerOptions jsonOptions = new()
     {
         PropertyNameCaseInsensitive = false
@@ -37,13 +37,8 @@ public sealed class ResourcePanelApiClient : IDisposable
             BaseAddress = new Uri(ApiBaseUrl),
             Timeout = TimeSpan.FromSeconds(30)
         };
-        httpClientFactory = null!; // Not used in test path
+        // httpClientFactory stays null — test path uses simple lease
         ownsHttpClient = true;
-    }
-
-    public void SetProxyMode(string value)
-    {
-        proxyMode = value == ProxyModes.System ? ProxyModes.System : ProxyModes.Direct;
     }
 
     public Task<ResourcePanelStatusResponse> GetStatusAsync(CancellationToken cancellationToken = default)
@@ -69,7 +64,7 @@ public sealed class ResourcePanelApiClient : IDisposable
             + $"&text={Uri.EscapeDataString(text)}"
             + $"&voice={Uri.EscapeDataString(voice)}"
             + $"&media={Uri.EscapeDataString(media)}";
-        using var lease = await CreateRequestClientAsync(cancellationToken);
+        using var lease = await CreateLeaseAsync(cancellationToken);
         using var response = await lease.Client.GetAsync(path, cancellationToken);
         response.EnsureSuccessStatusCode();
     }
@@ -77,43 +72,17 @@ public sealed class ResourcePanelApiClient : IDisposable
     private async Task<T> GetJsonAsync<T>(string path, CancellationToken cancellationToken)
         where T : new()
     {
-        using var lease = await CreateRequestClientAsync(cancellationToken);
+        using var lease = await CreateLeaseAsync(cancellationToken);
         using var response = await lease.Client.GetAsync(path, cancellationToken);
         response.EnsureSuccessStatusCode();
         await using var stream = await response.Content.ReadAsStreamAsync(cancellationToken);
         return await JsonSerializer.DeserializeAsync<T>(stream, jsonOptions, cancellationToken) ?? new T();
     }
 
-    private async Task<HttpClientLease> CreateRequestClientAsync(CancellationToken cancellationToken)
-    {
-        if (httpClientFactory is not null)
-        {
-            return await httpClientFactory.CreateLeaseAsync(
-                proxyMode,
-                httpClient.BaseAddress,
-                httpClient.Timeout,
-                cancellationToken);
-        }
-
-        // Fallback for test constructor
-        if (proxyMode != ProxyModes.System)
-        {
-            return new HttpClientLease(httpClient);
-        }
-
-        var handler = new SocketsHttpHandler
-        {
-            UseProxy = true,
-            Proxy = System.Net.WebRequest.GetSystemWebProxy(),
-            PooledConnectionLifetime = TimeSpan.FromMinutes(15)
-        };
-        var client = new HttpClient(handler)
-        {
-            BaseAddress = httpClient.BaseAddress,
-            Timeout = httpClient.Timeout
-        };
-        return new HttpClientLease(client, handler);
-    }
+    private Task<HttpClientLease> CreateLeaseAsync(CancellationToken ct) =>
+        httpClientFactory is not null
+            ? httpClientFactory.CreateLeaseAsync(ProxyMode, httpClient.BaseAddress, httpClient.Timeout, ct)
+            : Task.FromResult(new HttpClientLease(httpClient));
 
     public void Dispose()
     {

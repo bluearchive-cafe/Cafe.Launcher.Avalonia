@@ -18,11 +18,15 @@ dotnet test                                                    # Run all tests
 dotnet test --filter "FullyQualifiedName~VersionComparerTests" # Run a single test class
 ```
 
-Available test classes: `VersionComparerTests`, `LauncherApiClientTests`, `LauncherConstantsTests`, `LauncherSettingsServiceTests`, `LocalGameStateServiceTests`, `LocalizationServiceTests`, `MainWindowViewModelTests`, `GameDownloadServiceTests`, `PatchUrlGroupServiceTests`, `BestHttpCookieLibraryServiceTests`, `ResourcePanelUidServiceTests`, `ExternalLinkServiceTests`, `ResourcePanelApiClientTests`, `MigrationWizardViewModelTests`, `LevelDbReaderTests`, `OldLauncherDetectionServiceTests`, `LauncherUpdateServiceTests`.
+Available test classes: `VersionComparerTests`, `LauncherApiClientTests`, `LauncherConstantsTests`, `LauncherSettingsServiceTests`, `LocalGameStateServiceTests`, `LocalizationServiceTests`, `MainWindowViewModelTests`, `GameDownloadServiceTests`, `PatchUrlGroupServiceTests`, `BestHttpCookieLibraryServiceTests`, `ResourcePanelUidServiceTests`, `ExternalLinkServiceTests`, `ResourcePanelApiClientTests`, `MigrationWizardViewModelTests`, `LevelDbReaderTests`, `OldLauncherDetectionServiceTests`, `LauncherUpdateServiceTests`, `HttpClientFactoryTests`, `UiStyleContractTests`.
+
+`UiStyleContractTests` enforces design token contracts: no raw colors in view XAML, proper use of `LauncherSpacing*` tokens, correct overlay Z-index ordering, toast layer using `LauncherConstants.ZIndexToast`, and dynamic accent brushes not replacing theme-specific brushes. Run this whenever touching XAML styles or overlays.
+
+**Testing infrastructure**: No mocking framework (Moq/NSubstitute) is used. Tests hand-craft `HttpMessageHandler` subclasses (e.g., `GitHubReleaseHandler`) and manual stubs. The source project exposes internals to tests via `[assembly: InternalsVisibleTo("Cafe.Launcher.Avalonia.Tests")]` in `Properties/AssemblyInfo.cs`.
 
 CI is GitHub Actions on `windows-latest`, .NET 10.0.x:
-- **build.yml** (push/PR to `main`): restore, Debug build, Release build, self-contained publish, upload artifact.
-- **release.yml** (push of `v*` tag): restore, Release build, publish, ZIP archive, generate the grouped changelog through `scripts/New-ReleaseChangelog.ps1`, then create matching GitHub Releases in both the source repository and the distribution repository (`bluearchive-cafe/Cafe.Launcher.Avalonia_Release`, defined as `GitHubReleaseRepositorySlug` in constants). The local release script uses the same changelog generator. The distribution repository uses the `RELEASE_REPOSITORY_TOKEN` Actions secret. Pre-release if tag contains `-`.
+- **build.yml** (push/PR to `main`): restore, Debug build, test, Release build, self-contained publish, upload artifact.
+- **release.yml** (push of `v*` tag): test, Release build, publish, ZIP archive, generate the grouped changelog through `scripts/New-ReleaseChangelog.ps1`, then create matching GitHub Releases in both the source repository and the distribution repository (`bluearchive-cafe/Cafe.Launcher.Avalonia_Release`, defined as `GitHubReleaseRepositorySlug` in constants). The local release script uses the same changelog generator. The distribution repository uses the `RELEASE_REPOSITORY_TOKEN` Actions secret. Pre-release if tag contains `-`.
 
 **Telemetry must be off during local builds** (already set in `build.ps1`):
 - `DOTNET_CLI_TELEMETRY_OPTOUT=1`
@@ -43,6 +47,15 @@ CI is GitHub Actions on `windows-latest`, .NET 10.0.x:
 
 **Tech stack**: .NET 10.0, Avalonia 12.0.4, CommunityToolkit.Mvvm 8.4.2 (source generators), Material.Icons.Avalonia, Fluent Theme. Compiled bindings enabled by default. Nullable reference types enabled project-wide (`<Nullable>enable</Nullable>` in the `.csproj`).
 
+**Build configuration**: `TreatWarningsAsErrors` + `EnforceCodeStyleInBuild` are enabled project-wide (0 warnings is the norm, not aspirational). Analysis level is `latest-recommended` with `Minimum` mode. Release builds are self-contained `win-x64` with aggressive trimming (`DebuggerSupport=false`, `EventSourceSupport=false`, `HttpActivityPropagationSupport=false`, `MetadataUpdaterSupport=false`, `DebugType=none`). An `AddGitCommitMetadata` MSBuild target embeds `git rev-parse --short=7 HEAD` as `[AssemblyMetadata("CommitSha")]`, surfaced via `LauncherConstants.CommitSha`. The `AvaloniaUI.DiagnosticsSupport` package is Debug-only (conditionally excluded in Release). The Windows `app.manifest` declares DPI awareness (`PerMonitorV2`) and Windows 10/11 support.
+
+**`.editorconfig` key diagnostics**:
+- `CA5351` (MD5) → `none` — MD5 is required by the official launcher wire protocol and local compatibility hashes
+- `CA1822` (can be static) → `suggestion` — existing service APIs intentionally use instance methods for DI consistency
+- `CA1001`/`CA1816` (disposable ownership) → `suggestion` — app-lifetime ownership handled by Avalonia and the DI container
+- `CA1707` (identifiers contain underscore) → `none` for tests — test names use `Method_State_ExpectedResult` convention
+- `CA1826`/`CA1859`/`CA1861` → `suggestion`
+
 **MVVM pattern** with explicit XAML composition. `ViewModelBase` extends `ObservableObject`; the app does not use a reflection-based `ViewLocator`.
 
 ### Single-window desktop app
@@ -51,7 +64,7 @@ One `MainWindow` (1300×754, non-resizable with MinWidth 1024/MinHeight 640, bor
 
 | Sub-ViewModel | Concern |
 |---|---|
-| `ShellViewModel` | Product name, version, runtime info, status text, game path display |
+| `ShellViewModel` | Product name, version, runtime info (`FrameworkVersion` from `RuntimeInformation.FrameworkDescription`, `PlatformName` from OS detection, Avalonia version, build config), status text, game path display |
 | `BackgroundViewModel` | Wallpaper (bundled / remote / custom), theme-color extraction |
 | `RemoteContentViewModel` | Announcements, banners, news, social media from API |
 | `DialogsViewModel` | Notice popup, repair/uninstall confirmation dialogs |
@@ -104,7 +117,7 @@ One `MainWindow` (1300×754, non-resizable with MinWidth 1024/MinHeight 640, bor
 | `GameUninstallService` | Guarded uninstall (checks path safety, exe not running, deletes only manifest-listed files) |
 | `LocalizationService` | Inline dictionaries for `en`/`zh-Hans`/`ja`; `auto` resolves via `CultureInfo.CurrentUICulture` |
 | `SystemTrayService` | Avalonia 12 `TrayIcon` + `NativeMenu` for minimize-to-tray |
-| `ToastService` | Event-based transient notifications (info/success/warning/error) |
+| `ToastService` | Event-based transient notifications. `ToastNotification` model carries `Id`, `Message`, `Severity` (Info/Success/Warning/Error), `DurationMs`, `IconKind`, and a theme-aware `IconBrush` resolved from `LauncherToast{Severity}Brush` dynamic resources |
 | `LocalDiagnostics` | Appends to `diagnostics.log` in the settings folder |
 | `PatchUrlGroupService` | URL rewriting between Official and Cafe CDN hosts for manifest + CDN config URLs |
 | `NoticeStateService` | Tracks which notice IDs have been shown (persisted to `shown_notices.json`) |
@@ -119,13 +132,21 @@ One `MainWindow` (1300×754, non-resizable with MinWidth 1024/MinHeight 640, bor
 | `LauncherUpdateService` | Checks the latest stable release through the GitHub Releases API on the distribution repository |
 | `ExternalLinkService` | Opens external URLs in the default browser |
 | `DownloadStateService` | Serializes/resumes download state to `download_state.json` |
-| `Crc64Service`, `OfficialHashService`, `DiskSpaceService`, `ProcessService`, `VersionComparer`, `ClickCodeService` | Supporting services |
+| `Crc64Service` | CRC64 hash computation for downloaded file verification |
+| `OfficialHashService` | Official launcher hash algorithm for file verification |
+| `DiskSpaceService` | Checks available disk space before download/install |
+| `ProcessService` | Checks if game processes are running via `Process.GetProcessesByName` |
+| `VersionComparer` | Semantic version comparison: returns -1/0/1 for old/equal/new |
+| `ClickCodeService` | Saves install attribution code (`clickCode`) on first launch |
 | `OldLauncherDetectionService` | Detects old Electron launcher install + reads its localStorage (LevelDB) for migration |
-| `OriginalLauncherMigrationService` | Reads game installation path from old Yostar launcher on first run (non-interactive) |
 | `LevelDbReader` | Best-effort byte-level scanner for Chrome localStorage LevelDB files (.ldb/.log) |
+| `GamePathValidator` | Validates file operations stay within the game directory (path traversal rejection) |
 | `ServiceConfiguration` | DI container — registers all services (singleton) and ViewModels (transient) via `AddLauncherServices()` |
 
-**HttpClient lifecycle**: `HttpClientFactory` owns a single shared `SocketsHttpHandler` (pooled, 15-min connection lifetime). Callers get `HttpClient` instances that share this handler and must NOT dispose them. For proxy-aware requests, `CreateLeaseAsync()` returns an `HttpClientLease` that conditionally owns its handler — callers dispose the lease, not the client. `HttpClientLease.Dispose()` only disposes the handler when it was created per-request (proxy mode); for direct connections, disposal is a no-op since the handler is shared.
+**HttpClient lifecycle**: `HttpClientFactory` owns a single shared `SocketsHttpHandler` (pooled, 15-min connection lifetime). Two patterns:
+
+1. **`CreateClient(baseAddress, timeout)` / `CreateClient(timeout)`** — Returns an `HttpClient` sharing the pooled handler (`disposeHandler: false`). Caller MUST dispose the `HttpClient` instance (the handler survives). Used for direct (non-proxy) connections.
+2. **`CreateLeaseAsync(proxyMode, ...)`** — Returns an `HttpClientLease` wrapping a proxy-aware client. When `proxyMode` is System, creates a per-request handler; otherwise shares the default handler. Callers dispose the **lease** (which disposes the client and, if proxy-mode, the handler). `HttpClientLease.Dispose()` is a no-op for the shared handler in direct mode.
 
 **IDisposable service disposal order** (reverse registration = forward dispose):
 1. `LauncherApiClient` — disposed first
@@ -137,7 +158,9 @@ The DI container calls `Dispose()` on these in reverse registration order when t
 
 ### First-launch migration
 
-On first launch, `MainWindowViewModel` uses `OldLauncherDetectionService` to check for a previous Electron launcher (`BlueArchive_JP_Gamelauncher`). If detected, it reads settings (game path, proxy mode, close behavior, clickCode) from the old launcher's Chromium localStorage via `LevelDbReader`, which performs a byte-level scan of `.ldb` and `.log` files. The `MigrationWizardViewModel` presents a dialog (rendered in `MainWindowDialogsOverlay.axaml`) letting the user review and adjust detected settings before applying them. After completion, `hasCompletedFirstLaunchWizard` is persisted to `true` to prevent re-running. `OriginalLauncherMigrationService` provides a simpler, non-interactive path for programmatic use.
+On first launch, `MainWindowViewModel` uses `OldLauncherDetectionService` to check for a previous Electron launcher (`BlueArchive_JP_Gamelauncher`). If detected, it reads settings (game path, proxy mode, close behavior, clickCode) from the old launcher's Chromium localStorage via `LevelDbReader`, which performs a byte-level scan of `.ldb` and `.log` files. The `MigrationWizardViewModel` presents a dialog (rendered in `MainWindowDialogsOverlay.axaml`) letting the user review and adjust detected settings before applying them. After completion, `hasCompletedFirstLaunchWizard` is persisted to `true` to prevent re-running.
+
+`OriginalLauncherMigrationService` is a **static helper** (not a DI service) — `TryGetGamePath()` reads the game path from the old Yostar launcher's localStorage for non-interactive first-run migration. Called directly by `MainWindowViewModel.InitializeAsync()`, bypassing the wizard UI.
 
 ### Local files (`%LOCALAPPDATA%\Cafe Launcher\`)
 
@@ -192,7 +215,7 @@ Persisted fields in `settings.json` and their valid values:
 
 ### Constants
 
-`LauncherConstants` holds: `ProductName`, `LauncherVersion` (reads from `AssemblyInformationalVersionAttribute`, currently `"1.0.0-beta.1"`), `YostarAuthorizationVersion` (`"1.7.2"` — the version sent in API auth headers to match the official launcher), `ApiBaseUrl`, `AuthorizationSalt`, `OfficialWebsiteUrl`, `GitHubReleaseRepositorySlug`, `GitHubReleaseRepositoryUrl`, `GitHubApiBaseUrl`, `GitHubReleasesPath` (release/distribution repository and API paths, uses the `/releases` endpoint to support both stable and pre-release channels), `GitHubToken` (optional fine-grained PAT for higher API rate limits), path/filename conventions (`RootFolderName = "YostarGames"`, `GameFolderName = "BlueArchive_JP"`), and `AvaloniaVersion` (must be kept in sync with the `.csproj` `PackageReference` for Avalonia).
+`LauncherConstants` holds: `ProductName`, `LauncherVersion` (reads from `AssemblyInformationalVersionAttribute`, matches `<VersionPrefix>` in the `.csproj`), `YostarAuthorizationVersion` (`"1.7.2"` — the version sent in API auth headers to match the official launcher), `ApiBaseUrl`, `ResourcePanelApiBaseUrl` (`https://api.bluearchive.cafe`), `AuthorizationSalt`, `OfficialWebsiteUrl`, `GitHubReleaseRepositorySlug`, `GitHubReleaseRepositoryUrl`, `GitHubApiBaseUrl`, `GitHubReleasesPath` (release/distribution repository and API paths, uses the `/releases` endpoint to support both stable and pre-release channels), `GitHubToken` (reads from `CAFE_LAUNCHER_GITHUB_TOKEN` environment variable — do NOT hardcode tokens; raises GitHub API rate limit from 60/hr to 5,000/hr), path/filename conventions (`RootFolderName = "YostarGames"`, `GameFolderName = "BlueArchive_JP"`, `ManifestFileName`, `GameConfigFileName`, `LauncherSettingsFileName`), `GameTag` (`"BlueArchive_JP"`), `OldLauncherAppName` (`"BlueArchive_JP_Gamelauncher"`), `CommitSha` (reads from `AssemblyMetadataAttribute`, embedded by the `AddGitCommitMetadata` MSBuild target), `BuildConfiguration` (compile-time `#if DEBUG`, displayed in ShellViewModel), `DefaultThemeColor` (`#FF2E7DF6`), `ZIndexToast` (`1000`), and `AvaloniaVersion` (must be kept in sync with the `.csproj` `PackageReference` for Avalonia).
 
 ### Patch URL groups
 
@@ -200,7 +223,7 @@ Users can switch between `Official` (yo-star.com) and `Cafe` (bluearchive.cafe) 
 
 ### Converters
 
-`UrlToBitmapConverter` (`Converters/`) — converts image URLs to `Bitmap?` for XAML binding, used for remote banner/avatar images.
+`UrlToBitmapConverter` (`Converters/`) — converts image URLs to `Bitmap?` for XAML binding via `TaskCompletionSourceNotifying<T>` + `INotifyTaskCompletion<T>`. Owns its own **static** `HttpClient` instance (separate from the DI-managed `HttpClientFactory`), used for remote banner/avatar images.
 
 ### Other directories
 
@@ -297,7 +320,7 @@ All numeric design values use `StaticResource` keys defined in `App.axaml`:
 
 ## Important patterns
 
-- **No remote telemetry**: The original Electron launcher sent logs to Aliyun SLS. This rewrite explicitly excludes those paths (`/api/launcher/advanced/config`, `/api/open/api/config`). Always keep diagnostics local.
+- **No remote telemetry**: The original Electron launcher sent logs to Aliyun SLS (Simple Log Service). This rewrite explicitly excludes those paths (`/api/launcher/advanced/config`, `/api/open/api/config`). Always keep diagnostics local.
 - **Path safety**: `GamePathValidator.GetSafePath()` (static helper in `Helpers/GamePathValidator.cs`, used by `GameDownloadService`, `GameUninstallService`, and `ManifestValidationService`) validates that all file operations stay within the game directory — path traversal is rejected.
 - **Download resilience**: CRC64 verification after download, rename `.tmp` → final only on success, up to 3 install-verification retries, CDN failover (primary → backup with retry order).
 - **Async pause**: `GameDownloadService` uses `TaskCompletionSource`-based pause (never blocks threads). `Pause()` creates a pending `TaskCompletionSource`, download loops `await` it, `Resume()` completes it. `Stop()` also completes the TCS to unblock paused awaits before cancellation.
@@ -305,4 +328,50 @@ All numeric design values use `StaticResource` keys defined in `App.axaml`:
 - **Version comparison**: `VersionComparer.Compare()` returns -1/0/1 for old/equal/new.
 - **XAML extraction**: Large XAML blocks (styles, overlays) are extracted into separate `.axaml` files under `Views/` and referenced via `<StyleInclude>` or `Classes` attributes. The main `MainWindow.axaml` keeps only the window shell and content grid.
 - **Conventional commits**: Release changelog generation groups commits by `feat:`/`fix:`/`refactor:`/`perf:` prefixes. Use these prefixes for commit messages to get clean changelogs.
-- **AGENTS.md**: A parallel instruction file for Codex exists at the repo root. It covers the same architecture and should be kept in sync when significant structural changes are made.
+- **AGENTS.md**: A parallel instruction file for Codex exists at the repo root. It covers the same architecture and should be kept in sync when significant structural changes are made. (Currently lags behind CLAUDE.md — test class list and service details need updating.)
+- *****REMOVED***.md**: Analysis report comparing this launcher to the original Electron launcher, covering migration decisions and intentionally excluded features.
+- **VSCode**: `.vscode/launch.json` has `build`/`publish`/`watch` tasks and `.NET Core Launch`/`Attach` configurations.
+
+<!-- superpowers-zh:begin (do not edit between these markers) -->
+# Superpowers-ZH 中文增强版
+
+本项目已安装 superpowers-zh 技能框架（20 个 skills）。
+
+## 核心规则
+
+1. **收到任务时，先检查是否有匹配的 skill** — 哪怕只有 1% 的可能性也要检查
+2. **设计先于编码** — 收到功能需求时，先用 brainstorming skill 做需求分析
+3. **测试先于实现** — 写代码前先写测试（TDD）
+4. **验证先于完成** — 声称完成前必须运行验证命令
+
+## 可用 Skills
+
+Skills 位于 `.claude/skills/` 目录，每个 skill 有独立的 `SKILL.md` 文件。
+
+- **brainstorming**: 在任何创造性工作之前必须使用此技能——创建功能、构建组件、添加功能或修改行为。在实现之前先探索用户意图、需求和设计。
+- **chinese-code-review**: 中文 review 沟通参考——话术模板、分级标注（必须修复/建议修改/仅供参考）、国内团队常见反模式应对。仅在用户显式 /chinese-code-review 时调用，不要根据上下文自动触发。
+- **chinese-commit-conventions**: 中文 commit 与 changelog 配置参考——Conventional Commits 中文适配、commitlint/husky/commitizen 中文模板、conventional-changelog 中文配置。仅在用户显式 /chinese-commit-conventions 时调用，不要根据上下文自动触发。
+- **chinese-documentation**: 中文文档排版参考——中英文空格、全半角标点、术语保留、链接格式、中文文案排版指北约定。仅在用户显式 /chinese-documentation 时调用，不要根据上下文自动触发。
+- **chinese-git-workflow**: 国内 Git 平台配置参考——Gitee、Coding.net、极狐 GitLab、CNB 的 SSH/HTTPS/凭据/CI 接入差异与镜像同步配置。仅在用户显式 /chinese-git-workflow 时调用，不要根据上下文自动触发。
+- **dispatching-parallel-agents**: 当面对 2 个以上可以独立进行、无共享状态或顺序依赖的任务时使用
+- **executing-plans**: 当你有一份书面实现计划需要在单独的会话中执行，并设有审查检查点时使用
+- **finishing-a-development-branch**: 当实现完成、所有测试通过、需要决定如何集成工作时使用——通过提供合并、PR 或清理等结构化选项来引导开发工作的收尾
+- **mcp-builder**: MCP 服务器构建方法论 — 系统化构建生产级 MCP 工具，让 AI 助手连接外部能力
+- **receiving-code-review**: 收到代码审查反馈后、实施建议之前使用，尤其当反馈不明确或技术上有疑问时——需要技术严谨性和验证，而非敷衍附和或盲目执行
+- **requesting-code-review**: 完成任务、实现重要功能或合并前使用，用于验证工作成果是否符合要求
+- **subagent-driven-development**: 当在当前会话中执行包含独立任务的实现计划时使用
+- **systematic-debugging**: 遇到任何 bug、测试失败或异常行为时使用，在提出修复方案之前执行
+- **test-driven-development**: 在实现任何功能或修复 bug 时使用，在编写实现代码之前
+- **using-git-worktrees**: 当需要开始与当前工作区隔离的功能开发，或在执行实现计划之前使用——通过原生工具或 git worktree 回退机制确保隔离工作区存在
+- **using-superpowers**: 在开始任何对话时使用——确立如何查找和使用技能，要求在任何响应（包括澄清性问题）之前调用 Skill 工具
+- **verification-before-completion**: 在宣称工作完成、已修复或测试通过之前使用，在提交或创建 PR 之前——必须运行验证命令并确认输出后才能声称成功；始终用证据支撑断言
+- **workflow-runner**: 在 Claude Code / OpenClaw / Cursor 中直接运行 agency-orchestrator YAML 工作流——无需 API key，使用当前会话的 LLM 作为执行引擎。当用户提供 .yaml 工作流文件或要求多角色协作完成任务时触发。
+- **writing-plans**: 当你有规格说明或需求用于多步骤任务时使用，在动手写代码之前
+- **writing-skills**: 当创建新技能、编辑现有技能或在部署前验证技能是否有效时使用
+
+## 如何使用
+
+当任务匹配某个 skill 时，使用 `Skill` 工具加载对应 skill 并严格遵循其流程。绝不要用 Read 工具读取 SKILL.md 文件。
+
+如果你认为哪怕只有 1% 的可能性某个 skill 适用于你正在做的事情，你必须调用该 skill 检查。
+<!-- superpowers-zh:end -->

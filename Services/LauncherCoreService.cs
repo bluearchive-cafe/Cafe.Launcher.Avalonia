@@ -29,7 +29,7 @@ public sealed class LauncherCoreService : ILauncherCoreService
     public async Task<LauncherStatusSnapshot> LoadAsync(CancellationToken cancellationToken = default)
     {
         var settings = await settingsService.ReadAsync(cancellationToken);
-        apiClient.SetProxyMode(settings.ProxyMode);
+        apiClient.ProxyMode = settings.ProxyMode;
         var gameConfigTask = apiClient.GetGameConfigAsync(cancellationToken);
         var baseConfigTask = apiClient.GetBaseConfigAsync(cancellationToken);
         var cdnConfigTask = apiClient.GetCdnConfigAsync(settings.PatchUrlGroup, cancellationToken);

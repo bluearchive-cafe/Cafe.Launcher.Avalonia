@@ -1,12 +1,13 @@
+using System.Globalization;
+using System.Net;
+using System.Net.Http;
+using System.Text;
+using System.Text.Json;
 using Cafe.Launcher.Avalonia.Helpers;
 using Cafe.Launcher.Avalonia.Services;
 using Cafe.Launcher.Avalonia.Services.Diagnostics;
 using Cafe.Launcher.Avalonia.Models;
 using Cafe.Launcher.Avalonia.Services.Auth;
-using System.Globalization;
-using System.Net;
-using System.Text;
-using System.Text.Json;
 
 namespace Cafe.Launcher.Avalonia.Tests;
 
@@ -36,7 +37,7 @@ public sealed class GameDownloadServiceTests
     [Fact]
     public void Dispose_WhenCalledTwice_DoesNotThrow()
     {
-        using var apiClient = new LauncherApiClient(new AuthorizationHeaderFactory(), new PatchUrlGroupService(), new ProxySettingsService());
+        using var apiClient = new LauncherApiClient(new HttpClientHandler(), new AuthorizationHeaderFactory(), new PatchUrlGroupService());
         var service = CreateService(apiClient);
 
         service.Dispose();
@@ -46,7 +47,7 @@ public sealed class GameDownloadServiceTests
     [Fact]
     public void Dispose_AfterStop_DoesNotThrow()
     {
-        using var apiClient = new LauncherApiClient(new AuthorizationHeaderFactory(), new PatchUrlGroupService(), new ProxySettingsService());
+        using var apiClient = new LauncherApiClient(new HttpClientHandler(), new AuthorizationHeaderFactory(), new PatchUrlGroupService());
         var service = CreateService(apiClient);
 
         service.Stop();
@@ -117,7 +118,7 @@ public sealed class GameDownloadServiceTests
         var hashPath = Path.Combine(tempDir, "hash-source.bin");
         await File.WriteAllBytesAsync(hashPath, expectedBytes);
         var expectedHash = await new Crc64Service().ComputeFileAsync(hashPath);
-        using var apiClient = new LauncherApiClient(new AuthorizationHeaderFactory(), new PatchUrlGroupService(), new ProxySettingsService());
+        using var apiClient = new LauncherApiClient(new HttpClientHandler(), new AuthorizationHeaderFactory(), new PatchUrlGroupService());
         using var service = CreateService(apiClient);
         var handler = new RetryContentHandler(expectedBytes);
         using var client = new HttpClient(handler);
@@ -158,7 +159,7 @@ public sealed class GameDownloadServiceTests
         var hashPath = Path.Combine(tempDir, "hash-source.bin");
         await File.WriteAllBytesAsync(hashPath, expectedBytes);
         var expectedHash = await new Crc64Service().ComputeFileAsync(hashPath);
-        using var apiClient = new LauncherApiClient(new AuthorizationHeaderFactory(), new PatchUrlGroupService(), new ProxySettingsService());
+        using var apiClient = new LauncherApiClient(new HttpClientHandler(), new AuthorizationHeaderFactory(), new PatchUrlGroupService());
         using var service = CreateService(apiClient);
         var handler = new AlwaysWrongContentHandler();
         using var client = new HttpClient(handler);

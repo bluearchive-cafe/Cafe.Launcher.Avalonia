@@ -16,9 +16,8 @@ public sealed class LauncherApiClient : IDisposable
     private readonly HttpClientFactory? httpClientFactory;
     private readonly AuthorizationHeaderFactory authorizationHeaderFactory;
     private readonly PatchUrlGroupService patchUrlGroupService;
-    private readonly ProxySettingsService? proxySettingsService;
     private readonly bool ownsHttpClient;
-    private string proxyMode = ProxyModes.Direct;
+    public string ProxyMode { get; set; } = ProxyModes.Direct;
     private readonly JsonSerializerOptions jsonOptions = new()
     {
         PropertyNameCaseInsensitive = false
@@ -28,8 +27,7 @@ public sealed class LauncherApiClient : IDisposable
     public LauncherApiClient(
         HttpClientFactory httpClientFactory,
         AuthorizationHeaderFactory authorizationHeaderFactory,
-        PatchUrlGroupService patchUrlGroupService,
-        ProxySettingsService proxySettingsService)
+        PatchUrlGroupService patchUrlGroupService)
     {
         this.httpClientFactory = httpClientFactory;
         httpClient = httpClientFactory.CreateClient(
@@ -37,7 +35,6 @@ public sealed class LauncherApiClient : IDisposable
             TimeSpan.FromSeconds(30));
         this.authorizationHeaderFactory = authorizationHeaderFactory;
         this.patchUrlGroupService = patchUrlGroupService;
-        this.proxySettingsService = proxySettingsService;
         ownsHttpClient = true;
     }
 
@@ -58,35 +55,6 @@ public sealed class LauncherApiClient : IDisposable
         this.authorizationHeaderFactory = authorizationHeaderFactory;
         this.patchUrlGroupService = patchUrlGroupService;
         ownsHttpClient = true; // Test path — own the client
-    }
-
-    /// <summary>
-    /// Test compatibility constructor — accepts direct dependencies without HttpClientFactory.
-    /// Creates its own HttpClient. Disposed on Dispose().
-    /// </summary>
-    internal LauncherApiClient(
-        AuthorizationHeaderFactory authorizationHeaderFactory,
-        PatchUrlGroupService patchUrlGroupService,
-        ProxySettingsService proxySettingsService)
-    {
-        this.authorizationHeaderFactory = authorizationHeaderFactory;
-        this.patchUrlGroupService = patchUrlGroupService;
-        this.proxySettingsService = proxySettingsService;
-        httpClient = new HttpClient(new SocketsHttpHandler
-        {
-            UseProxy = false,
-            PooledConnectionLifetime = TimeSpan.FromMinutes(15)
-        })
-        {
-            BaseAddress = new Uri(LauncherConstants.ApiBaseUrl),
-            Timeout = TimeSpan.FromSeconds(30)
-        };
-        ownsHttpClient = true;
-    }
-
-    public void SetProxyMode(string value)
-    {
-        proxyMode = value == ProxyModes.System ? ProxyModes.System : ProxyModes.Direct;
     }
 
     public Task<GameConfigResponse> GetGameConfigAsync(CancellationToken cancellationToken = default)
@@ -149,7 +117,7 @@ public sealed class LauncherApiClient : IDisposable
 
     public async Task<RemoteManifest> GetRemoteManifestAsync(string url, CancellationToken cancellationToken = default)
     {
-        using var lease = await CreateRequestClientAsync(cancellationToken);
+        using var lease = await CreateLeaseAsync(cancellationToken);
         await using var stream = await lease.Client.GetStreamAsync(url, cancellationToken);
         var manifest = await JsonSerializer.DeserializeAsync<RemoteManifest>(stream, jsonOptions, cancellationToken);
         return manifest ?? new RemoteManifest();
@@ -157,7 +125,7 @@ public sealed class LauncherApiClient : IDisposable
 
     private async Task<T> GetEnvelopeDataAsync<T>(string path, CancellationToken cancellationToken)
     {
-        using var lease = await CreateRequestClientAsync(cancellationToken);
+        using var lease = await CreateLeaseAsync(cancellationToken);
         using var request = new HttpRequestMessage(HttpMethod.Get, path);
         request.Headers.TryAddWithoutValidation(
             "Authorization",
@@ -188,31 +156,10 @@ public sealed class LauncherApiClient : IDisposable
         return envelope.Data;
     }
 
-    private async Task<HttpClientLease> CreateRequestClientAsync(CancellationToken cancellationToken)
-    {
-        if (httpClientFactory is not null)
-        {
-            return await httpClientFactory.CreateLeaseAsync(
-                proxyMode,
-                httpClient.BaseAddress,
-                httpClient.Timeout,
-                cancellationToken);
-        }
-
-        // Fallback for test constructor (no HttpClientFactory)
-        if (proxySettingsService is null || proxyMode != ProxyModes.System)
-        {
-            return new HttpClientLease(httpClient);
-        }
-
-        var handler = await proxySettingsService.CreateHttpHandlerAsync(proxyMode, cancellationToken);
-        var client = new HttpClient(handler, disposeHandler: false)
-        {
-            BaseAddress = httpClient.BaseAddress,
-            Timeout = httpClient.Timeout
-        };
-        return new HttpClientLease(client, handler);
-    }
+    private Task<HttpClientLease> CreateLeaseAsync(CancellationToken ct) =>
+        httpClientFactory is not null
+            ? httpClientFactory.CreateLeaseAsync(ProxyMode, httpClient.BaseAddress, httpClient.Timeout, ct)
+            : Task.FromResult(new HttpClientLease(httpClient));
 
     public void Dispose()
     {
@@ -222,4 +169,3 @@ public sealed class LauncherApiClient : IDisposable
         }
     }
 }
-

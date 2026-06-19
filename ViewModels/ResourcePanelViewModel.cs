@@ -236,7 +236,7 @@ public partial class ResourcePanelViewModel : ViewModelBase, IDisposable
     {
         ResourcePanelMessage = localizer.T("resourcePanelLoading");
         SetResourcePanelStatusText(localizer.T("resourcePanelLoading"));
-        resourcePanelApiClient.SetProxyMode(GetProxyMode?.Invoke() ?? ProxyModes.Direct);
+        resourcePanelApiClient.ProxyMode = GetProxyMode?.Invoke() ?? ProxyModes.Direct;
         var statusTask = resourcePanelApiClient.GetStatusAsync(cancellationToken);
         var configTask = resourcePanelApiClient.GetConfigAsync(uid, cancellationToken);
         await Task.WhenAll(statusTask, configTask);

@@ -1,3 +1,4 @@
+using System.Net.Http;
 using Cafe.Launcher.Avalonia.Models;
 using Cafe.Launcher.Avalonia.Services;
 using Cafe.Launcher.Avalonia.Services.Auth;
@@ -9,7 +10,7 @@ public sealed class LauncherApiClientTests
     [Fact]
     public void RewriteManifestUrl_WhenCafe_RewritesPackageHost()
     {
-        using var client = new LauncherApiClient(new AuthorizationHeaderFactory(), new PatchUrlGroupService(), new ProxySettingsService());
+        using var client = new LauncherApiClient(new HttpClientHandler(), new AuthorizationHeaderFactory(), new PatchUrlGroupService());
         var response = new ManifestUrlResponse
         {
             Url = "https://launcher-pkg-ba-jp.yo-star.com/zip_online_config_json/test.json"
@@ -23,7 +24,7 @@ public sealed class LauncherApiClientTests
     [Fact]
     public void RewriteCdnConfig_WhenCafe_RewritesPackageHosts()
     {
-        using var client = new LauncherApiClient(new AuthorizationHeaderFactory(), new PatchUrlGroupService(), new ProxySettingsService());
+        using var client = new LauncherApiClient(new HttpClientHandler(), new AuthorizationHeaderFactory(), new PatchUrlGroupService());
         var response = new CdnConfigResponse
         {
             PrimaryCdn = "https://launcher-pkg-ba-jp.yo-star.com",

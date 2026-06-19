@@ -111,7 +111,7 @@ public partial class ShellViewModel : ViewModelBase
             resourcePanel.ResourcePanelUidText = localizer.F("resourcePanelCurrentUid", resourcePanel.ResourcePanelUid);
         }
 
-        settings.Editor.Commit(s => s.Language = language);
+        settings.SelectedLanguage = language;
         DiskSpaceText = localizer.T("diskSpaceEmpty");
         GameFolderPickerTitle = localizer.T("chooseInstallFolder");
 

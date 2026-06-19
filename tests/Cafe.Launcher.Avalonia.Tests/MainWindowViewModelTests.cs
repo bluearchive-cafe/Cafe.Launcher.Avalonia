@@ -5,6 +5,7 @@ using Cafe.Launcher.Avalonia.Services.Diagnostics;
 using Cafe.Launcher.Avalonia.ViewModels;
 using Avalonia.Media;
 using System.Net;
+using System.Net.Http;
 using System.Text;
 
 namespace Cafe.Launcher.Avalonia.Tests;
@@ -20,9 +21,9 @@ public sealed class MainWindowViewModelTests : IDisposable
     private readonly ProxySettingsService proxySettings = new();
     private readonly HttpClientFactory httpClientFactory;
     private readonly LauncherApiClient apiClient = new(
+        new HttpClientHandler(),
         new AuthorizationHeaderFactory(),
-        new PatchUrlGroupService(),
-        new ProxySettingsService());
+        new PatchUrlGroupService());
     private readonly ImageCacheService imageCacheService;
 
     public MainWindowViewModelTests()
@@ -293,7 +294,7 @@ public sealed class MainWindowViewModelTests : IDisposable
         using var viewModel = CreateViewModel(coreService, settingsService);
         await viewModel.InitializeAsync();
 
-        viewModel.Settings.Editor.Commit(s => s.PatchUrlGroup = PatchUrlGroups.Cafe);
+        viewModel.Settings.SelectedPatchUrlGroup = PatchUrlGroups.Cafe;
         await SaveSettingsAsync(viewModel);
 
         Assert.True(viewModel.Dialogs.IsRepairConfirmVisible);
