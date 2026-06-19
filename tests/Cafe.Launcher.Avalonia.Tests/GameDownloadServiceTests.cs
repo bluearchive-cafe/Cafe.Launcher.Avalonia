@@ -3,6 +3,7 @@ using Cafe.Launcher.Avalonia.Services;
 using Cafe.Launcher.Avalonia.Services.Diagnostics;
 using Cafe.Launcher.Avalonia.Models;
 using Cafe.Launcher.Avalonia.Services.Auth;
+using System.Globalization;
 using System.Net;
 using System.Text;
 using System.Text.Json;
@@ -123,7 +124,7 @@ public sealed class GameDownloadServiceTests
         var file = new ManifestFile
         {
             Path = "data/file.bin",
-            Size = expectedBytes.Length.ToString(),
+            Size = expectedBytes.Length.ToString(CultureInfo.InvariantCulture),
             Hash = expectedHash
         };
         var cdnConfig = new CdnConfigResponse
@@ -144,6 +145,40 @@ public sealed class GameDownloadServiceTests
             ],
             handler.RequestHosts);
         Assert.Equal(expectedBytes, await File.ReadAllBytesAsync(Path.Combine(gamePath, "data", "file.bin.tmp")));
+        Directory.Delete(tempDir, recursive: true);
+    }
+
+    [Fact]
+    public async Task DownloadFileAsync_WhenEveryHashMismatches_ThrowsAndRemovesTemporaryFile()
+    {
+        var tempDir = Path.Combine(Path.GetTempPath(), Guid.NewGuid().ToString("N"));
+        var gamePath = Path.Combine(tempDir, "YostarGames", "BlueArchive_JP");
+        Directory.CreateDirectory(gamePath);
+        var expectedBytes = Encoding.UTF8.GetBytes("correct-content");
+        var hashPath = Path.Combine(tempDir, "hash-source.bin");
+        await File.WriteAllBytesAsync(hashPath, expectedBytes);
+        var expectedHash = await new Crc64Service().ComputeFileAsync(hashPath);
+        using var apiClient = new LauncherApiClient(new AuthorizationHeaderFactory(), new PatchUrlGroupService(), new ProxySettingsService());
+        using var service = CreateService(apiClient);
+        var handler = new AlwaysWrongContentHandler();
+        using var client = new HttpClient(handler);
+        var file = new ManifestFile
+        {
+            Path = "data/file.bin",
+            Size = expectedBytes.Length.ToString(CultureInfo.InvariantCulture),
+            Hash = expectedHash
+        };
+        var cdnConfig = new CdnConfigResponse
+        {
+            PrimaryCdn = "https://primary.example.invalid",
+            BackUpCdn = "https://backup.example.invalid"
+        };
+
+        await Assert.ThrowsAsync<InvalidDataException>(
+            () => InvokeDownloadFileAsync(service, gamePath, cdnConfig, "/source", file, client));
+
+        Assert.Equal(GameDownloadService.RetryDomainOrder.Length, handler.RequestCount);
+        Assert.False(File.Exists(Path.Combine(gamePath, "data", "file.bin.tmp")));
         Directory.Delete(tempDir, recursive: true);
     }
 
@@ -361,6 +396,22 @@ public sealed class GameDownloadServiceTests
             return Task.FromResult(new HttpResponseMessage(HttpStatusCode.OK)
             {
                 Content = new ByteArrayContent(content)
+            });
+        }
+    }
+
+    private sealed class AlwaysWrongContentHandler : HttpMessageHandler
+    {
+        public int RequestCount { get; private set; }
+
+        protected override Task<HttpResponseMessage> SendAsync(
+            HttpRequestMessage request,
+            CancellationToken cancellationToken)
+        {
+            RequestCount++;
+            return Task.FromResult(new HttpResponseMessage(HttpStatusCode.OK)
+            {
+                Content = new ByteArrayContent(Encoding.UTF8.GetBytes("wrong-content"))
             });
         }
     }

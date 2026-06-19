@@ -22,6 +22,15 @@ public sealed class HttpClientLease : IDisposable
     }
 
     /// <summary>
+    /// Wraps a client that owns only its own managed resources while its handler is shared.
+    /// </summary>
+    public HttpClientLease(HttpClient client, bool ownsClient)
+    {
+        Client = client;
+        this.ownsClient = ownsClient;
+    }
+
+    /// <summary>
     /// Wraps a per-request client with its own handler. The lease owns both
     /// and will dispose them on <see cref="Dispose"/>.
     /// </summary>

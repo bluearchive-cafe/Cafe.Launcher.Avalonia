@@ -38,7 +38,7 @@ public sealed class LauncherApiClient : IDisposable
         this.authorizationHeaderFactory = authorizationHeaderFactory;
         this.patchUrlGroupService = patchUrlGroupService;
         this.proxySettingsService = proxySettingsService;
-        ownsHttpClient = false; // Factory owns the pool
+        ownsHttpClient = true;
     }
 
     /// <summary>
@@ -220,7 +220,6 @@ public sealed class LauncherApiClient : IDisposable
         {
             httpClient.Dispose();
         }
-        // Production path: httpClient is owned by HttpClientFactory — do not dispose
     }
 }
 

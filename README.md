@@ -51,6 +51,7 @@ $env:AVALONIA_TELEMETRY_OPTOUT = '1'
 ```powershell
 .\build.ps1
 dotnet build .\Cafe.Launcher.Avalonia.csproj -c Debug --no-restore
+dotnet restore .\Cafe.Launcher.Avalonia.csproj -r win-x64
 dotnet build .\Cafe.Launcher.Avalonia.csproj -c Release --no-restore
 dotnet publish .\Cafe.Launcher.Avalonia.csproj -c Release -o publish
 ```
@@ -161,7 +162,7 @@ dotnet test --filter "FullyQualifiedName~VersionComparerTests"
 
 ## 架构说明
 
-项目使用 MVVM。`ViewLocator` 按 `FooViewModel` 到 `FooView` 的命名约定解析视图，`ViewModelBase` 继承 `ObservableObject`，XAML 默认启用编译绑定。
+项目使用 MVVM。`ViewModelBase` 继承 `ObservableObject`，XAML 默认启用编译绑定。主窗口及覆盖层使用显式 XAML 组合，不依赖反射式 ViewLocator。
 
 主窗口是一个 1300 x 754 的不可调整大小、无系统边框窗口。窗口内容按职责拆分：
 

@@ -27,7 +27,7 @@ public sealed class ResourcePanelApiClient : IDisposable
         httpClient = httpClientFactory.CreateClient(
             ApiBaseUrl,
             TimeSpan.FromSeconds(30));
-        ownsHttpClient = false;
+        ownsHttpClient = true;
     }
 
     internal ResourcePanelApiClient(HttpMessageHandler handler)

@@ -75,7 +75,7 @@ public partial class BackgroundViewModel : ViewModelBase, IDisposable
                     try
                     {
                         var proxyMode = snapshot?.Settings.ProxyMode ?? ProxyModes.Direct;
-                        var cachedPath = await imageCacheService.GetCachedPathAsync(crc64)
+                        var cachedPath = await imageCacheService.GetCachedPathAsync(crc64, cancellationToken)
                             ?? await imageCacheService.CacheImageAsync(bgImg, crc64, proxyMode, cancellationToken);
                         SetBackgroundImage(new Bitmap(cachedPath));
                         return;
@@ -84,7 +84,8 @@ public partial class BackgroundViewModel : ViewModelBase, IDisposable
                     {
                         _ = diagnostics.MessageAsync(
                             "Remote background image download failed",
-                            $"url: {bgImg}\ncrc64: {crc64}\nexception: {ex.Message}");
+                            $"url: {bgImg}\ncrc64: {crc64}\nexception: {ex.Message}",
+                            CancellationToken.None);
                     }
                 }
                 break;

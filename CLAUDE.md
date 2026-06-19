@@ -7,6 +7,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 ```powershell
 .\build.ps1                              # Debug build (expect 0 warnings, 0 errors)
 dotnet build .\Cafe.Launcher.Avalonia.csproj -c Debug --no-restore
+dotnet restore .\Cafe.Launcher.Avalonia.csproj -r win-x64
 dotnet build .\Cafe.Launcher.Avalonia.csproj -c Release --no-restore   # Release build
 dotnet publish .\Cafe.Launcher.Avalonia.csproj -c Release -o publish   # Self-contained publish (win-x64)
 ```
@@ -42,7 +43,7 @@ CI is GitHub Actions on `windows-latest`, .NET 10.0.x:
 
 **Tech stack**: .NET 10.0, Avalonia 12.0.4, CommunityToolkit.Mvvm 8.4.2 (source generators), Material.Icons.Avalonia, Fluent Theme. Compiled bindings enabled by default. Nullable reference types enabled project-wide (`<Nullable>enable</Nullable>` in the `.csproj`).
 
-**MVVM pattern** with `ViewLocator` convention: `FooViewModel` → `FooView` by string replacement. ViewModelBase extends `ObservableObject`.
+**MVVM pattern** with explicit XAML composition. `ViewModelBase` extends `ObservableObject`; the app does not use a reflection-based `ViewLocator`.
 
 ### Single-window desktop app
 
@@ -71,7 +72,7 @@ One `MainWindow` (1300×754, non-resizable with MinWidth 1024/MinHeight 640, bor
 **Entries:**
 1. **Program.cs** — Process mutex (`Global\Cafe_Launcher_SI`), single-instance enforcement via `EventWaitHandle` signal, global crash logging to `%LOCALAPPDATA%\Cafe Launcher\crash.log`.
 2. **App.axaml.cs** — On framework init: builds DI container via `ServiceConfiguration.AddLauncherServices()`, resolves `MainWindowViewModel`, creates `MainWindow`, wires `ClickCodeService`, `SystemTrayService`. Starts a background thread listening for `EventWaitHandle` signals to restore window from tray.
-3. **App.axaml** — Light/Dark `ThemeDictionaries` with custom `Launcher*` brushes, `ViewLocator` data template, FluentTheme + MaterialIconStyles.
+3. **App.axaml** — Light/Dark `ThemeDictionaries` with custom `Launcher*` brushes, FluentTheme + MaterialIconStyles.
 
 **Composition root**: `ServiceConfiguration.AddLauncherServices()` is the DI configuration — it registers all services with `Microsoft.Extensions.DependencyInjection`. The container is built in `App.axaml.cs` via `ServiceCollection.BuildServiceProvider()`. Every service is registered as `AddSingleton`; every ViewModel is registered as `AddTransient` (fresh instance per resolution). Thread-safe disposal order for IDisposable services is defined by reverse registration order (see disposal order section below).
 

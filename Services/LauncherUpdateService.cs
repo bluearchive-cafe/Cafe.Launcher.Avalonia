@@ -45,7 +45,7 @@ public sealed class LauncherUpdateService
                 var trimmed = line.Trim();
                 if (trimmed.Length == 0 || trimmed.StartsWith('#'))
                     continue;
-                if (trimmed.StartsWith("version:"))
+                if (trimmed.StartsWith("version:", StringComparison.Ordinal))
                 {
                     // Strip quotes and whitespace — YAML values may be quoted or unquoted
                     var latestVersion = trimmed["version:".Length..].Trim().Trim('"', '\'');

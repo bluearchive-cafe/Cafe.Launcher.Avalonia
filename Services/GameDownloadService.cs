@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
+using System.Globalization;
 using System.Net;
 using System.Net.Http;
 using System.Text.Json;
@@ -32,10 +33,9 @@ public sealed class GameDownloadService : IDisposable
     private readonly DownloadStateService downloadStateService;
     private readonly object activeDownloadLock = new();
     private readonly object pauseLock = new();
-    private CancellationTokenSource? activeDownloadCts;
+    private ActiveDownloadOperation? activeDownload;
     private Task pauseTask = Task.CompletedTask;
     private TaskCompletionSource? pauseTcs;
-    private bool clearStateOnCancel;
     private bool disposed;
 
     public GameDownloadService(
@@ -76,14 +76,17 @@ public sealed class GameDownloadService : IDisposable
 
     public void Stop(bool clearPersistedState = true)
     {
-        CancellationTokenSource? cts;
+        ActiveDownloadOperation? operation;
         lock (activeDownloadLock)
         {
-            clearStateOnCancel = clearPersistedState;
-            cts = activeDownloadCts;
+            operation = activeDownload;
+            if (operation is not null)
+            {
+                operation.ClearPersistedStateOnCancel = clearPersistedState;
+            }
         }
 
-        cts?.Cancel();
+        operation?.CancellationTokenSource.Cancel();
         // Release any paused awaits so they can observe the cancellation
         TaskCompletionSource? tcs;
         lock (pauseLock)
@@ -174,7 +177,8 @@ public sealed class GameDownloadService : IDisposable
         {
             lock (activeDownloadLock)
             {
-                return activeDownloadCts is not null && !activeDownloadCts.IsCancellationRequested;
+                return activeDownload is not null
+                    && !activeDownload.CancellationTokenSource.IsCancellationRequested;
             }
         }
     }
@@ -186,14 +190,16 @@ public sealed class GameDownloadService : IDisposable
         CancellationToken cancellationToken)
     {
         ThrowIfDisposed();
-        var operationCts = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
+        var operation = new ActiveDownloadOperation(
+            CancellationTokenSource.CreateLinkedTokenSource(cancellationToken));
+        var operationCts = operation.CancellationTokenSource;
         var activeToken = operationCts.Token;
         var operationRegistered = false;
         var operationKind = repair ? GameOperationKinds.Repair : GameOperationKinds.Download;
 
         try
         {
-            ReplaceActiveDownloadCts(operationCts);
+            ReplaceActiveDownload(operation);
             operationRegistered = true;
             lock (pauseLock)
             {
@@ -324,7 +330,7 @@ public sealed class GameDownloadService : IDisposable
         }
         catch (OperationCanceledException) when (activeToken.IsCancellationRequested)
         {
-            if (clearStateOnCancel)
+            if (operation.ShouldClearPersistedStateOnCancel)
             {
                 downloadStateService.Clear();
             }
@@ -360,7 +366,7 @@ public sealed class GameDownloadService : IDisposable
         {
             if (operationRegistered)
             {
-                ClearActiveDownloadCts(operationCts);
+                ClearActiveDownload(operation);
             }
             else
             {
@@ -373,53 +379,43 @@ public sealed class GameDownloadService : IDisposable
                 pauseTcs = null;
                 pauseTask = Task.CompletedTask;
             }
-            clearStateOnCancel = false;
         }
     }
 
-    private void ReplaceActiveDownloadCts(CancellationTokenSource operationCts)
+    private void ReplaceActiveDownload(ActiveDownloadOperation operation)
     {
-        CancellationTokenSource? previous;
+        ActiveDownloadOperation? previous;
         lock (activeDownloadLock)
         {
             ThrowIfDisposed();
-            previous = activeDownloadCts;
-            activeDownloadCts = operationCts;
+            previous = activeDownload;
+            activeDownload = operation;
         }
 
-        previous?.Cancel();
-        previous?.Dispose();
+        previous?.CancellationTokenSource.Cancel();
     }
 
-    private void ClearActiveDownloadCts(CancellationTokenSource operationCts)
+    private void ClearActiveDownload(ActiveDownloadOperation operation)
     {
-        var shouldDispose = false;
         lock (activeDownloadLock)
         {
-            if (ReferenceEquals(activeDownloadCts, operationCts))
+            if (ReferenceEquals(activeDownload, operation))
             {
-                activeDownloadCts = null;
-                shouldDispose = true;
+                activeDownload = null;
             }
         }
 
-        if (shouldDispose)
-        {
-            operationCts.Dispose();
-        }
+        operation.CancellationTokenSource.Dispose();
     }
 
     private void ThrowIfDisposed()
     {
-        if (disposed)
-        {
-            throw new ObjectDisposedException(nameof(GameDownloadService));
-        }
+        ObjectDisposedException.ThrowIf(disposed, this);
     }
 
     public void Dispose()
     {
-        CancellationTokenSource? cts;
+        ActiveDownloadOperation? operation;
         lock (activeDownloadLock)
         {
             if (disposed)
@@ -428,12 +424,11 @@ public sealed class GameDownloadService : IDisposable
             }
 
             disposed = true;
-            cts = activeDownloadCts;
-            activeDownloadCts = null;
+            operation = activeDownload;
+            activeDownload = null;
         }
 
-        cts?.Cancel();
-        cts?.Dispose();
+        operation?.CancellationTokenSource.Cancel();
         lock (pauseLock)
         {
             pauseTcs?.TrySetResult();
@@ -618,7 +613,10 @@ public sealed class GameDownloadService : IDisposable
                             Stage = IsPaused ? "paused" : "download",
                             Progress = totalSize > 0 ? (int)Math.Round(total * 100d / totalSize) : 0,
                             Speed = IsPaused ? "" : $"{FileSizeFormatter.Format(speed)}/S",
-                            Estimated = IsPaused ? "" : TimeSpan.FromSeconds(Math.Max(0, estimated)).ToString(@"hh\:mm\:ss"),
+                            Estimated = IsPaused
+                                ? ""
+                                : TimeSpan.FromSeconds(Math.Max(0, estimated))
+                                    .ToString(@"hh\:mm\:ss", CultureInfo.InvariantCulture),
                             DownloadedSize = total,
                             TotalSize = totalSize,
                             IsRunning = true,
@@ -721,6 +719,7 @@ public sealed class GameDownloadService : IDisposable
                 // Delete the file BEFORE diagnostics — the diagnostic write is best-effort
                 // and must never prevent cleanup; a stale file on disk would cause the
                 // size-guard above (existingLength >= fileSize) to skip retries.
+                var downloadedLength = new FileInfo(targetPath).Length;
                 File.Delete(targetPath);
 
                 await diagnostics.MessageAsync(
@@ -728,12 +727,13 @@ public sealed class GameDownloadService : IDisposable
                     $"file: {file.Path}{Environment.NewLine}" +
                     $"expected: {file.Hash}{Environment.NewLine}" +
                     $"actual:   {crc64}{Environment.NewLine}" +
-                    $"size: {new FileInfo(targetPath).Length} / expected: {file.Size}",
+                    $"size: {downloadedLength} / expected: {file.Size}",
                     CancellationToken.None);
 
                 if (retryIndex >= RetryDomainOrder.Length - 1)
                 {
-                    return;
+                    throw new InvalidDataException(
+                        $"CRC64 mismatch after all retries: {file.Path}.");
                 }
             }
             catch (Exception ex) when (ex is not OperationCanceledException)
@@ -1067,6 +1067,26 @@ public sealed class GameDownloadService : IDisposable
         public int BytesPerSec;
         public long TotalBytes;
         public System.Diagnostics.Stopwatch Watch = System.Diagnostics.Stopwatch.StartNew();
+    }
+
+    private sealed class ActiveDownloadOperation
+    {
+        public ActiveDownloadOperation(CancellationTokenSource cancellationTokenSource)
+        {
+            CancellationTokenSource = cancellationTokenSource;
+        }
+
+        public CancellationTokenSource CancellationTokenSource { get; }
+
+        private int clearPersistedStateOnCancel;
+
+        public bool ClearPersistedStateOnCancel
+        {
+            set => Volatile.Write(ref clearPersistedStateOnCancel, value ? 1 : 0);
+        }
+
+        public bool ShouldClearPersistedStateOnCancel =>
+            Volatile.Read(ref clearPersistedStateOnCancel) == 1;
     }
 
     private sealed class DownloadPlan
