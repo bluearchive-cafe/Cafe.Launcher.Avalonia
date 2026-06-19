@@ -8,31 +8,32 @@ namespace Cafe.Launcher.Avalonia.Services;
 
 internal interface IHttpClientLeaseSource : IDisposable
 {
-    Task<HttpClientLease> CreateLeaseAsync(CancellationToken cancellationToken = default);
+    Task<HttpClientLease> CreateLeaseAsync(
+        string proxyMode,
+        CancellationToken cancellationToken = default);
 }
 
 internal sealed class ProxyAwareHttpClientLeaseSource : IHttpClientLeaseSource
 {
     private readonly HttpClientFactory httpClientFactory;
-    private readonly Func<string> getProxyMode;
     private readonly Uri? baseAddress;
     private readonly TimeSpan? timeout;
 
     public ProxyAwareHttpClientLeaseSource(
         HttpClientFactory httpClientFactory,
-        Func<string> getProxyMode,
         Uri? baseAddress,
         TimeSpan? timeout)
     {
         this.httpClientFactory = httpClientFactory;
-        this.getProxyMode = getProxyMode;
         this.baseAddress = baseAddress;
         this.timeout = timeout;
     }
 
-    public Task<HttpClientLease> CreateLeaseAsync(CancellationToken cancellationToken = default) =>
+    public Task<HttpClientLease> CreateLeaseAsync(
+        string proxyMode,
+        CancellationToken cancellationToken = default) =>
         httpClientFactory.CreateLeaseAsync(
-            getProxyMode(),
+            proxyMode,
             baseAddress,
             timeout,
             cancellationToken);
@@ -58,7 +59,9 @@ internal sealed class FixedHttpClientLeaseSource : IHttpClientLeaseSource
         };
     }
 
-    public Task<HttpClientLease> CreateLeaseAsync(CancellationToken cancellationToken = default) =>
+    public Task<HttpClientLease> CreateLeaseAsync(
+        string proxyMode,
+        CancellationToken cancellationToken = default) =>
         Task.FromResult(new HttpClientLease(httpClient));
 
     public void Dispose()

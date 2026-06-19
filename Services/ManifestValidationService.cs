@@ -24,6 +24,7 @@ public sealed class ManifestValidationService
         LocalGameState localGame,
         string launchCheckMode,
         string patchUrlGroup,
+        string proxyMode,
         CancellationToken cancellationToken = default)
     {
         if (launchCheckMode == LaunchCheckModes.None)
@@ -37,7 +38,11 @@ public sealed class ManifestValidationService
 
         if (launchCheckMode == LaunchCheckModes.RemoteManifest)
         {
-            var remoteManifestResult = await GetRemoteManifestFilesAsync(localGame, patchUrlGroup, cancellationToken);
+            var remoteManifestResult = await GetRemoteManifestFilesAsync(
+                localGame,
+                patchUrlGroup,
+                proxyMode,
+                cancellationToken);
             return remoteManifestResult.Files is null
                 ? Failed(remoteManifestResult.Message)
                 : ValidateFiles(gamePath, remoteManifestResult.Files);
@@ -75,6 +80,7 @@ public sealed class ManifestValidationService
     private async Task<(IReadOnlyList<ManifestFile>? Files, string Message)> GetRemoteManifestFilesAsync(
         LocalGameState localGame,
         string patchUrlGroup,
+        string proxyMode,
         CancellationToken cancellationToken)
     {
         var version = localGame.Manifest?.Version;
@@ -87,7 +93,12 @@ public sealed class ManifestValidationService
         ManifestUrlResponse manifestUrl;
         try
         {
-            manifestUrl = await apiClient.GetManifestUrlAsync(version, basis, patchUrlGroup, cancellationToken);
+            manifestUrl = await apiClient.GetManifestUrlAsync(
+                version,
+                basis,
+                patchUrlGroup,
+                proxyMode,
+                cancellationToken);
         }
         catch (Exception exception) when (exception is HttpRequestException or TaskCanceledException or InvalidOperationException)
         {
@@ -101,7 +112,10 @@ public sealed class ManifestValidationService
 
         try
         {
-            var remoteManifest = await apiClient.GetRemoteManifestAsync(manifestUrl.Url, cancellationToken);
+            var remoteManifest = await apiClient.GetRemoteManifestAsync(
+                manifestUrl.Url,
+                proxyMode,
+                cancellationToken);
             return (remoteManifest.File, "");
         }
         catch (Exception exception) when (exception is HttpRequestException or TaskCanceledException or JsonException or IOException)

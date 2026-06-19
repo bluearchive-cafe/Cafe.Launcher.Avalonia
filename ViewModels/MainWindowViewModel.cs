@@ -332,6 +332,7 @@ public partial class MainWindowViewModel : ViewModelBase, IDisposable
         Dialogs.ConfirmStopRequested -= Operations.PerformStop;
         Dialogs.CloseAfterStoppingDownloadRequested -= WindowChrome.CloseAfterStoppingDownload;
         Operations.StopDownload(clearPersistedState: false);
+        Settings.Dispose();
         RemoteContent.Dispose();
         Background.Dispose();
         Toasts.Dispose();

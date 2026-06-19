@@ -15,7 +15,6 @@ public sealed class LauncherApiClient : IDisposable
     private readonly IHttpClientLeaseSource leaseSource;
     private readonly AuthorizationHeaderFactory authorizationHeaderFactory;
     private readonly PatchUrlGroupService patchUrlGroupService;
-    public string ProxyMode { get; set; } = ProxyModes.Direct;
     private readonly JsonSerializerOptions jsonOptions = new()
     {
         PropertyNameCaseInsensitive = false
@@ -29,7 +28,6 @@ public sealed class LauncherApiClient : IDisposable
     {
         leaseSource = new ProxyAwareHttpClientLeaseSource(
             httpClientFactory,
-            () => ProxyMode,
             new Uri(LauncherConstants.ApiBaseUrl),
             TimeSpan.FromSeconds(30));
         this.authorizationHeaderFactory = authorizationHeaderFactory;
@@ -53,51 +51,100 @@ public sealed class LauncherApiClient : IDisposable
         this.patchUrlGroupService = patchUrlGroupService;
     }
 
-    public Task<GameConfigResponse> GetGameConfigAsync(CancellationToken cancellationToken = default)
+    public Task<GameConfigResponse> GetGameConfigAsync(
+        string proxyMode,
+        CancellationToken cancellationToken = default)
     {
-        return GetEnvelopeDataAsync<GameConfigResponse>("/api/launcher/game/config", cancellationToken);
+        return GetEnvelopeDataAsync<GameConfigResponse>(
+            "/api/launcher/game/config",
+            proxyMode,
+            cancellationToken);
     }
 
-    public Task<BaseConfigResponse> GetBaseConfigAsync(CancellationToken cancellationToken = default)
+    public Task<BaseConfigResponse> GetBaseConfigAsync(
+        string proxyMode,
+        CancellationToken cancellationToken = default)
     {
-        return GetEnvelopeDataAsync<BaseConfigResponse>("/api/launcher/base/config", cancellationToken);
+        return GetEnvelopeDataAsync<BaseConfigResponse>(
+            "/api/launcher/base/config",
+            proxyMode,
+            cancellationToken);
     }
 
-    public Task<CdnConfigResponse> GetCdnConfigAsync(CancellationToken cancellationToken = default)
+    private Task<CdnConfigResponse> GetCdnConfigAsync(
+        string proxyMode,
+        CancellationToken cancellationToken)
     {
-        return GetEnvelopeDataAsync<CdnConfigResponse>("/api/launcher/advanced/game/download/cdn", cancellationToken);
+        return GetEnvelopeDataAsync<CdnConfigResponse>(
+            "/api/launcher/advanced/game/download/cdn",
+            proxyMode,
+            cancellationToken);
     }
 
-    public async Task<CdnConfigResponse> GetCdnConfigAsync(string patchUrlGroup, CancellationToken cancellationToken = default)
+    public async Task<CdnConfigResponse> GetCdnConfigAsync(
+        string patchUrlGroup,
+        string proxyMode,
+        CancellationToken cancellationToken = default)
     {
-        var response = await GetCdnConfigAsync(cancellationToken);
+        var response = await GetCdnConfigAsync(proxyMode, cancellationToken);
         return RewriteCdnConfig(response, patchUrlGroup);
     }
 
-    public Task<OperationsResourceResponse> GetOperationsResourceAsync(CancellationToken cancellationToken = default)
+    public Task<OperationsResourceResponse> GetOperationsResourceAsync(
+        string proxyMode,
+        CancellationToken cancellationToken = default)
     {
-        return GetEnvelopeDataAsync<OperationsResourceResponse>("/api/launcher/operations/resource", cancellationToken);
+        return GetEnvelopeDataAsync<OperationsResourceResponse>(
+            "/api/launcher/operations/resource",
+            proxyMode,
+            cancellationToken);
     }
 
-    public Task<SocialMediaResourceResponse> GetSocialMediaResourceAsync(CancellationToken cancellationToken = default)
+    public Task<SocialMediaResourceResponse> GetSocialMediaResourceAsync(
+        string proxyMode,
+        CancellationToken cancellationToken = default)
     {
-        return GetEnvelopeDataAsync<SocialMediaResourceResponse>("/api/launcher/social/media/resource", cancellationToken);
+        return GetEnvelopeDataAsync<SocialMediaResourceResponse>(
+            "/api/launcher/social/media/resource",
+            proxyMode,
+            cancellationToken);
     }
 
-    public Task<InstallationConfigResponse> GetInstallationConfigAsync(CancellationToken cancellationToken = default)
+    public Task<InstallationConfigResponse> GetInstallationConfigAsync(
+        string proxyMode,
+        CancellationToken cancellationToken = default)
     {
-        return GetEnvelopeDataAsync<InstallationConfigResponse>("/api/launcher/installation/config", cancellationToken);
+        return GetEnvelopeDataAsync<InstallationConfigResponse>(
+            "/api/launcher/installation/config",
+            proxyMode,
+            cancellationToken);
     }
 
-    public Task<ManifestUrlResponse> GetManifestUrlAsync(string version, string filePath, CancellationToken cancellationToken = default)
+    private Task<ManifestUrlResponse> GetManifestUrlAsync(
+        string version,
+        string filePath,
+        string proxyMode,
+        CancellationToken cancellationToken)
     {
         var requestPath = $"/api/launcher/game/config/json?version={Uri.EscapeDataString(version)}&file_path={Uri.EscapeDataString(filePath)}";
-        return GetEnvelopeDataAsync<ManifestUrlResponse>(requestPath, cancellationToken);
+        return GetEnvelopeDataAsync<ManifestUrlResponse>(
+            requestPath,
+            proxyMode,
+            cancellationToken);
     }
 
-    public async Task<ManifestUrlResponse> GetManifestUrlAsync(string version, string filePath, string patchUrlGroup, CancellationToken cancellationToken = default)
+    public async Task<ManifestUrlResponse> GetManifestUrlAsync(
+        string version,
+        string filePath,
+        string patchUrlGroup,
+        string proxyMode,
+        CancellationToken cancellationToken = default)
     {
-        var response = await GetManifestUrlAsync(version, filePath, cancellationToken);
+        var response = await GetManifestUrlAsync(
+            version,
+            filePath,
+            proxyMode,
+            cancellationToken);
         return RewriteManifestUrl(response, patchUrlGroup);
     }
 
@@ -111,17 +158,23 @@ public sealed class LauncherApiClient : IDisposable
         return patchUrlGroupService.RewriteCdnConfig(response, patchUrlGroup);
     }
 
-    public async Task<RemoteManifest> GetRemoteManifestAsync(string url, CancellationToken cancellationToken = default)
+    public async Task<RemoteManifest> GetRemoteManifestAsync(
+        string url,
+        string proxyMode,
+        CancellationToken cancellationToken = default)
     {
-        using var lease = await leaseSource.CreateLeaseAsync(cancellationToken);
+        using var lease = await leaseSource.CreateLeaseAsync(proxyMode, cancellationToken);
         await using var stream = await lease.Client.GetStreamAsync(url, cancellationToken);
         var manifest = await JsonSerializer.DeserializeAsync<RemoteManifest>(stream, jsonOptions, cancellationToken);
         return manifest ?? new RemoteManifest();
     }
 
-    private async Task<T> GetEnvelopeDataAsync<T>(string path, CancellationToken cancellationToken)
+    private async Task<T> GetEnvelopeDataAsync<T>(
+        string path,
+        string proxyMode,
+        CancellationToken cancellationToken)
     {
-        using var lease = await leaseSource.CreateLeaseAsync(cancellationToken);
+        using var lease = await leaseSource.CreateLeaseAsync(proxyMode, cancellationToken);
         using var request = new HttpRequestMessage(HttpMethod.Get, path);
         request.Headers.TryAddWithoutValidation(
             "Authorization",

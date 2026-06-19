@@ -171,6 +171,7 @@ public partial class ResourcePanelViewModel : ViewModelBase, IDisposable
                 ToResourcePanelMode(GetResourcePanelItem(ResourcePanelResourceCodes.Text).IsEnabled),
                 ToResourcePanelMode(GetResourcePanelItem(ResourcePanelResourceCodes.Voice).IsEnabled),
                 ToResourcePanelMode(GetResourcePanelItem(ResourcePanelResourceCodes.Media).IsEnabled),
+                GetProxyMode?.Invoke() ?? ProxyModes.Direct,
                 lifetimeCts.Token);
             ResourcePanelMessage = localizer.T("resourcePanelSaved");
             toastService.ShowSuccess(localizer.T("resourcePanelSaved"));
@@ -236,9 +237,9 @@ public partial class ResourcePanelViewModel : ViewModelBase, IDisposable
     {
         ResourcePanelMessage = localizer.T("resourcePanelLoading");
         SetResourcePanelStatusText(localizer.T("resourcePanelLoading"));
-        resourcePanelApiClient.ProxyMode = GetProxyMode?.Invoke() ?? ProxyModes.Direct;
-        var statusTask = resourcePanelApiClient.GetStatusAsync(cancellationToken);
-        var configTask = resourcePanelApiClient.GetConfigAsync(uid, cancellationToken);
+        var proxyMode = GetProxyMode?.Invoke() ?? ProxyModes.Direct;
+        var statusTask = resourcePanelApiClient.GetStatusAsync(proxyMode, cancellationToken);
+        var configTask = resourcePanelApiClient.GetConfigAsync(uid, proxyMode, cancellationToken);
         await Task.WhenAll(statusTask, configTask);
         ApplyResourcePanelStatus(await statusTask);
         ApplyResourcePanelConfig(await configTask);

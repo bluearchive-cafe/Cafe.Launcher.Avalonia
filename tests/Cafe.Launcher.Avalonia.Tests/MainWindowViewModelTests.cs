@@ -12,6 +12,27 @@ namespace Cafe.Launcher.Avalonia.Tests;
 
 public sealed class MainWindowViewModelTests : IDisposable
 {
+    [Fact]
+    public void Dispose_UnsubscribesSettingsEditorNotifications()
+    {
+        var coreService = new CountingCoreService(CreateSnapshot());
+        var viewModel = CreateViewModel(coreService);
+        viewModel.Settings.Editor.ApplySnapshot(new LauncherSettings());
+        var notificationCount = 0;
+        viewModel.Settings.PropertyChanged += (_, e) =>
+        {
+            if (e.PropertyName == nameof(SettingsViewModel.IsSettingsDirty))
+            {
+                notificationCount++;
+            }
+        };
+
+        viewModel.Dispose();
+        viewModel.Settings.Editor.Current.Language = LauncherLanguages.Japanese;
+
+        Assert.Equal(0, notificationCount);
+    }
+
     static MainWindowViewModelTests()
     {
         TestLocalizationHelper.Initialize();

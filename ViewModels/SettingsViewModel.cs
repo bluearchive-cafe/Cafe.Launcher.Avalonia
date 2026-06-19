@@ -16,7 +16,7 @@ using Cafe.Launcher.Avalonia.Services;
 
 namespace Cafe.Launcher.Avalonia.ViewModels;
 
-public partial class SettingsViewModel : ViewModelBase
+public partial class SettingsViewModel : ViewModelBase, IDisposable
 {
     private readonly LauncherSettingsService settingsService;
     private readonly LocalizationService localizer;
@@ -27,6 +27,7 @@ public partial class SettingsViewModel : ViewModelBase
     private readonly LauncherUpdateService launcherUpdateService;
     private readonly ISettingsEditor editor;
     private bool suppressDirtyTracking;
+    private bool disposed;
 
     // Coordination delegates — set by parent after construction.
     public Func<LauncherStatusSnapshot?>? GetSnapshot { get; set; }
@@ -64,14 +65,16 @@ public partial class SettingsViewModel : ViewModelBase
         this.diskSpaceService = diskSpaceService;
         this.launcherUpdateService = launcherUpdateService;
         this.editor = editor;
-        editor.PropertyChanged += (_, e) =>
-        {
-            if (e.PropertyName == nameof(ISettingsEditor.IsDirty))
-            {
-                OnPropertyChanged(nameof(IsSettingsDirty));
-            }
-        };
+        editor.PropertyChanged += OnEditorPropertyChanged;
         editor.CurrentPropertyChanged += OnCurrentSettingChanged;
+    }
+
+    private void OnEditorPropertyChanged(object? sender, System.ComponentModel.PropertyChangedEventArgs e)
+    {
+        if (e.PropertyName == nameof(ISettingsEditor.IsDirty))
+        {
+            OnPropertyChanged(nameof(IsSettingsDirty));
+        }
     }
 
     // ── Settings UI state ────────────────────────────────────────────────
@@ -285,8 +288,9 @@ public partial class SettingsViewModel : ViewModelBase
     [RelayCommand]
     private async Task CheckForUpdatesAsync()
     {
-        launcherUpdateService.ProxyMode = editor.Current.ProxyMode;
-        var result = await launcherUpdateService.CheckForUpdateAsync(editor.Current.UpdateChannel);
+        var result = await launcherUpdateService.CheckForUpdateAsync(
+            editor.Current.UpdateChannel,
+            editor.Current.ProxyMode);
 
         if (!result.IsSuccessful)
         {
@@ -900,5 +904,17 @@ public partial class SettingsViewModel : ViewModelBase
                 _ => localizer.T("updateChannelStable")
             };
         }
+    }
+
+    public void Dispose()
+    {
+        if (disposed)
+        {
+            return;
+        }
+
+        disposed = true;
+        editor.PropertyChanged -= OnEditorPropertyChanged;
+        editor.CurrentPropertyChanged -= OnCurrentSettingChanged;
     }
 }

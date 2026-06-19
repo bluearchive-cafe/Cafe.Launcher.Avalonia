@@ -26,13 +26,11 @@ public sealed partial class LauncherUpdateService : IDisposable
     private readonly IHttpClientLeaseSource leaseSource;
     private readonly string currentVersion;
     private readonly string gitHubToken;
-    public string ProxyMode { get; set; } = ProxyModes.Direct;
 
     public LauncherUpdateService(HttpClientFactory httpClientFactory)
     {
         leaseSource = new ProxyAwareHttpClientLeaseSource(
             httpClientFactory,
-            () => ProxyMode,
             new Uri(LauncherConstants.GitHubApiBaseUrl),
             TimeSpan.FromSeconds(15));
         currentVersion = LauncherConstants.LauncherVersion;
@@ -59,11 +57,15 @@ public sealed partial class LauncherUpdateService : IDisposable
     /// </summary>
     public async Task<LauncherUpdateCheckResult> CheckForUpdateAsync(
         string updateChannel,
+        string proxyMode,
         CancellationToken cancellationToken = default)
     {
         try
         {
-            var releases = await FetchReleasesAsync(useAuth: !string.IsNullOrEmpty(gitHubToken), cancellationToken);
+            var releases = await FetchReleasesAsync(
+                useAuth: !string.IsNullOrEmpty(gitHubToken),
+                proxyMode,
+                cancellationToken);
 
             if (releases is null || releases.Count == 0)
             {
@@ -142,16 +144,20 @@ public sealed partial class LauncherUpdateService : IDisposable
 
     private async Task<List<GitHubReleaseResponse>?> FetchReleasesAsync(
         bool useAuth,
+        string proxyMode,
         CancellationToken cancellationToken)
     {
         try
         {
-            return await FetchReleasesWithAuthAsync(useAuth, cancellationToken);
+            return await FetchReleasesWithAuthAsync(useAuth, proxyMode, cancellationToken);
         }
         catch (HttpRequestException ex) when (useAuth && IsAuthenticationFailure(ex))
         {
             // Token is invalid or expired — fall back to unauthenticated.
-            return await FetchReleasesWithAuthAsync(useAuth: false, cancellationToken);
+            return await FetchReleasesWithAuthAsync(
+                useAuth: false,
+                proxyMode,
+                cancellationToken);
         }
     }
 
@@ -161,9 +167,10 @@ public sealed partial class LauncherUpdateService : IDisposable
 
     private async Task<List<GitHubReleaseResponse>?> FetchReleasesWithAuthAsync(
         bool useAuth,
+        string proxyMode,
         CancellationToken cancellationToken)
     {
-        using var lease = await leaseSource.CreateLeaseAsync(cancellationToken);
+        using var lease = await leaseSource.CreateLeaseAsync(proxyMode, cancellationToken);
         using var request = new HttpRequestMessage(
             HttpMethod.Get,
             LauncherConstants.GitHubReleasesPath);

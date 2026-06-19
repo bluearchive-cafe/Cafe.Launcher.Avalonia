@@ -29,16 +29,18 @@ public sealed class LauncherCoreService : ILauncherCoreService
     public async Task<LauncherStatusSnapshot> LoadAsync(CancellationToken cancellationToken = default)
     {
         var settings = await settingsService.ReadAsync(cancellationToken);
-        apiClient.ProxyMode = settings.ProxyMode;
-        var gameConfigTask = apiClient.GetGameConfigAsync(cancellationToken);
-        var baseConfigTask = apiClient.GetBaseConfigAsync(cancellationToken);
-        var cdnConfigTask = apiClient.GetCdnConfigAsync(settings.PatchUrlGroup, cancellationToken);
+        var gameConfigTask = apiClient.GetGameConfigAsync(settings.ProxyMode, cancellationToken);
+        var baseConfigTask = apiClient.GetBaseConfigAsync(settings.ProxyMode, cancellationToken);
+        var cdnConfigTask = apiClient.GetCdnConfigAsync(
+            settings.PatchUrlGroup,
+            settings.ProxyMode,
+            cancellationToken);
         var operationsResourceTask = ReadOptionalAsync(
-            () => apiClient.GetOperationsResourceAsync(cancellationToken));
+            () => apiClient.GetOperationsResourceAsync(settings.ProxyMode, cancellationToken));
         var socialMediaResourceTask = ReadOptionalAsync(
-            () => apiClient.GetSocialMediaResourceAsync(cancellationToken));
+            () => apiClient.GetSocialMediaResourceAsync(settings.ProxyMode, cancellationToken));
         var installationConfigTask = ReadOptionalAsync(
-            () => apiClient.GetInstallationConfigAsync(cancellationToken));
+            () => apiClient.GetInstallationConfigAsync(settings.ProxyMode, cancellationToken));
         var localGameTask = localGameStateService.ReadAsync(settings.GamePath, cancellationToken);
 
         await Task.WhenAll(gameConfigTask, baseConfigTask, cdnConfigTask, localGameTask);

@@ -28,7 +28,7 @@ public sealed class ResourcePanelApiClientTests
             }
             """));
 
-        var status = await client.GetStatusAsync();
+        var status = await client.GetStatusAsync(ProxyModes.Direct);
 
         Assert.Equal("1.0.0", status.Text.Official.Version);
         Assert.Equal("1.0.0", status.Text.Localized.Version);
@@ -50,7 +50,7 @@ public sealed class ResourcePanelApiClientTests
             }
             """));
 
-        var config = await client.GetConfigAsync("UID123");
+        var config = await client.GetConfigAsync("UID123", ProxyModes.Direct);
 
         Assert.Equal(ResourcePanelResourceModes.Chinese, config.Text);
         Assert.Equal(ResourcePanelResourceModes.Japanese, config.Voice);
@@ -67,7 +67,8 @@ public sealed class ResourcePanelApiClientTests
             "UID123",
             ResourcePanelResourceModes.Chinese,
             ResourcePanelResourceModes.Japanese,
-            ResourcePanelResourceModes.Chinese);
+            ResourcePanelResourceModes.Chinese,
+            ProxyModes.Direct);
 
         Assert.Equal("GET", handler.LastRequestMethod);
         Assert.Equal("/config/set?uid=UID123&text=cn&voice=jp&media=cn", handler.LastRequestPathAndQuery);

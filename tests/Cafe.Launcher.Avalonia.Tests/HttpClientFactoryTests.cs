@@ -14,7 +14,7 @@ public sealed class HttpClientFactoryTests
             new Uri("https://example.test/"),
             TimeSpan.FromSeconds(5));
 
-        using var lease = await source.CreateLeaseAsync();
+        using var lease = await source.CreateLeaseAsync(ProxyModes.System);
         using var response = await lease.Client.GetAsync("status");
 
         response.EnsureSuccessStatusCode();
