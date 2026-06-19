@@ -29,6 +29,11 @@ param(
 
 $ErrorActionPreference = 'Stop'
 
+# Ensure git's UTF-8 output (especially Chinese commit messages) is decoded correctly,
+# regardless of the system's active code page.
+$OutputEncoding = [Console]::OutputEncoding
+[Console]::OutputEncoding = [System.Text.Encoding]::UTF8
+
 $ScriptDir = Split-Path -Parent $MyInvocation.MyCommand.Path
 $RepositoryRoot = Split-Path -Parent $ScriptDir
 
@@ -127,9 +132,13 @@ if (-not [string]::IsNullOrWhiteSpace($OutputPath)) {
     } else {
         Join-Path $RepositoryRoot $OutputPath
     }
-    $changelog | Set-Content $resolvedOutputPath -Encoding UTF8
+    # Write UTF-8 without BOM so GitHub Release body renders correctly.
+    [System.IO.File]::WriteAllText($resolvedOutputPath, $changelog, (New-Object System.Text.UTF8Encoding $false))
 }
 
 if ($PassThru) {
     Write-Output $changelog
 }
+
+# Restore the original console output encoding.
+[Console]::OutputEncoding = $OutputEncoding

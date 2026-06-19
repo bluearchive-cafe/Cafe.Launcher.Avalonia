@@ -22,7 +22,7 @@ Available test classes: `VersionComparerTests`, `LauncherApiClientTests`, `Launc
 
 CI is GitHub Actions on `windows-latest`, .NET 10.0.x:
 - **build.yml** (push/PR to `main`): restore, Debug build, Release build, self-contained publish, upload artifact.
-- **release.yml** (push of `v*` tag): restore, Release build, publish, ZIP archive, generate the grouped changelog through `scripts/New-ReleaseChangelog.ps1`, then create matching GitHub Releases in both the source repository and `bluearchive-cafe/Cafe.Launcher.Avalonia_Release`. The local release script uses the same changelog generator. The distribution repository uses the `RELEASE_REPOSITORY_TOKEN` Actions secret. Pre-release if tag contains `-`.
+- **release.yml** (push of `v*` tag): restore, Release build, publish, ZIP archive, generate the grouped changelog through `scripts/New-ReleaseChangelog.ps1`, then create matching GitHub Releases in both the source repository and the distribution repository (`bluearchive-cafe/Cafe.Launcher.Avalonia_Release`, defined as `GitHubReleaseRepositorySlug` in constants). The local release script uses the same changelog generator. The distribution repository uses the `RELEASE_REPOSITORY_TOKEN` Actions secret. Pre-release if tag contains `-`.
 
 **Telemetry must be off during local builds** (already set in `build.ps1`):
 - `DOTNET_CLI_TELEMETRY_OPTOUT=1`
@@ -80,7 +80,7 @@ One `MainWindow` (1300×754, non-resizable, borderless with custom chrome). The 
 | `LocalDiagnostics` | Appends to `diagnostics.log` in the settings folder |
 | `PatchUrlGroupService` | URL rewriting between Official and Cafe CDN hosts for manifest + CDN config URLs |
 | `NoticeStateService` | Tracks which notice IDs have been shown (persisted to `shown_notices.json`) |
-| `LauncherUpdateService` | Checks the latest stable release through the GitHub Releases API |
+| `LauncherUpdateService` | Checks the latest stable release through the GitHub Releases API on the distribution repository |
 | `Crc64Service`, `OfficialHashService`, `ProxySettingsService`, `DiskSpaceService`, `ProcessService`, `VersionComparer`, `ClickCodeService`, `DownloadStateService`, `ImageCacheService`, `ExternalLinkService`, `ManifestValidationService` | Supporting services |
 
 ### Key models (`Models/`)
@@ -94,7 +94,7 @@ One `MainWindow` (1300×754, non-resizable, borderless with custom chrome). The 
 
 ### Constants
 
-`LauncherConstants` holds: `ProductName`, `LauncherVersion` (reads from `AssemblyInformationalVersionAttribute`, currently `"1.0.0"`), `YostarAuthorizationVersion` (`"1.7.2"` — the version sent in API auth headers to match the official launcher), `ApiBaseUrl`, `AuthorizationSalt`, `OfficialWebsiteUrl`, GitHub release repository/API paths, path/filename conventions (`RootFolderName = "YostarGames"`, `GameFolderName = "BlueArchive_JP"`), and `AvaloniaVersion` (must be kept in sync with the `.csproj` `PackageReference` for Avalonia).
+`LauncherConstants` holds: `ProductName`, `LauncherVersion` (reads from `AssemblyInformationalVersionAttribute`, currently `"1.0.0"`), `YostarAuthorizationVersion` (`"1.7.2"` — the version sent in API auth headers to match the official launcher), `ApiBaseUrl`, `AuthorizationSalt`, `OfficialWebsiteUrl`, `GitHubReleaseRepositorySlug`, `GitHubReleaseRepositoryUrl`, `GitHubApiBaseUrl`, `GitHubLatestReleasePath` (release/distribution repository and API paths), path/filename conventions (`RootFolderName = "YostarGames"`, `GameFolderName = "BlueArchive_JP"`), and `AvaloniaVersion` (must be kept in sync with the `.csproj` `PackageReference` for Avalonia).
 
 ### Patch URL groups
 
