@@ -236,7 +236,6 @@
   "updateAvailableMessage": "Cafe Launcher {0} 已发布，是否立即下载？",
   "updateSelectFile": "请选择要下载的发布文件。",
   "updateFileSize": "大小",
-  "updateNoFileSelected": "请先选择一个文件。",
   "updateDownload": "下载",
   "updateLater": "稍后",
   "version": "版本",

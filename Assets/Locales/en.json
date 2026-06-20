@@ -236,7 +236,6 @@
   "updateAvailableMessage": "Cafe Launcher {0} is available. Download now?",
   "updateSelectFile": "Select a release file to download.",
   "updateFileSize": "Size",
-  "updateNoFileSelected": "Select a file before downloading.",
   "updateDownload": "Download",
   "updateLater": "Later",
   "version": "Version",

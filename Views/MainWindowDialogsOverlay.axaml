@@ -216,40 +216,65 @@
                         </Button>
                     </Grid>
                     <StackPanel Grid.Row="1" Spacing="{StaticResource LauncherSpacingMd}">
-                        <TextBlock Text="{Binding Shell.I18n.UpdateSelectFile}" Classes="confirm-message-text"/>
+                        <StackPanel Classes="card-heading">
+                            <materialIcons:MaterialIcon Kind="InformationOutline"
+                                                       Width="{StaticResource LauncherIconSm}"
+                                                       Height="{StaticResource LauncherIconSm}"
+                                                       Foreground="{DynamicResource LauncherAccentBrush}"
+                                                       VerticalAlignment="Center"/>
+                            <TextBlock Text="{Binding Shell.I18n.UpdateSelectFile}"
+                                       Classes="confirm-message-text"
+                                       VerticalAlignment="Center"/>
+                        </StackPanel>
                         <ListBox ItemsSource="{Binding Dialogs.UpdateAvailableFiles}"
                                  SelectedItem="{Binding Dialogs.SelectedUpdateFile, Mode=TwoWay}"
+                                 Classes="update-file-list"
                                  MaxHeight="240">
                             <ListBox.ItemTemplate>
                                 <DataTemplate x:DataType="models:ReleaseFile">
-                                    <Grid ColumnDefinitions="*,Auto"
-                                          ColumnSpacing="{StaticResource LauncherSpacingMd}"
-                                          Margin="0,4">
-                                        <TextBlock Text="{Binding Name}"
-                                                   TextWrapping="Wrap"
-                                                   Foreground="{DynamicResource LauncherTextPrimaryBrush}"
-                                                   VerticalAlignment="Center"/>
+                                    <Grid ColumnDefinitions="Auto,*,Auto"
+                                          ColumnSpacing="{StaticResource LauncherSpacingMd}">
+                                        <Border Classes="update-file-icon">
+                                            <materialIcons:MaterialIcon Kind="Download"
+                                                                       Width="{StaticResource LauncherIconLg}"
+                                                                       Height="{StaticResource LauncherIconLg}"
+                                                                       Foreground="{DynamicResource LauncherAccentBrush}"
+                                                                       HorizontalAlignment="Center"
+                                                                       VerticalAlignment="Center"/>
+                                        </Border>
                                         <StackPanel Grid.Column="1"
-                                                    Orientation="Horizontal"
                                                     Spacing="{StaticResource LauncherSpacingXs}"
                                                     VerticalAlignment="Center">
-                                            <TextBlock Text="{Binding $parent[UserControl].DataContext.Shell.I18n.UpdateFileSize}"
-                                                       Classes="caption"/>
-                                            <TextBlock Text="{Binding DisplaySize}" Classes="caption"/>
+                                            <TextBlock Text="{Binding Name}"
+                                                       TextWrapping="Wrap"
+                                                       FontWeight="SemiBold"
+                                                       Foreground="{DynamicResource LauncherTextPrimaryBrush}"/>
+                                            <TextBlock Text="{Binding Url}"
+                                                       Classes="caption"
+                                                       TextTrimming="CharacterEllipsis"
+                                                       MaxLines="1"/>
                                         </StackPanel>
+                                        <Border Grid.Column="2"
+                                                Classes="update-file-size"
+                                                VerticalAlignment="Center">
+                                            <StackPanel Orientation="Horizontal"
+                                                        Spacing="{StaticResource LauncherSpacingXs}">
+                                                <TextBlock Text="{Binding $parent[UserControl].DataContext.Shell.I18n.UpdateFileSize}"
+                                                           Classes="caption"/>
+                                                <TextBlock Text="{Binding DisplaySize}"
+                                                           Classes="caption"
+                                                           FontWeight="SemiBold"/>
+                                            </StackPanel>
+                                        </Border>
                                     </Grid>
                                 </DataTemplate>
                             </ListBox.ItemTemplate>
                         </ListBox>
-                        <TextBlock Text="{Binding Shell.I18n.UpdateNoFileSelected}"
-                                   Classes="caption"
-                                   Foreground="{DynamicResource LauncherWarningBrush}"
-                                   IsVisible="{Binding Dialogs.HasSelectedUpdateFile, Converter={x:Static BoolConverters.Not}}"/>
                     </StackPanel>
                     <StackPanel Grid.Row="2" Classes="confirm-actions">
                         <Button Classes="flat-action dialog-action" Command="{Binding Dialogs.CancelUpdateAvailableCommand}">
                             <StackPanel Classes="button-content">
-                                <materialIcons:MaterialIcon Kind="CloseCircle" Width="{StaticResource LauncherIconSm}" Height="{StaticResource LauncherIconSm}"/>
+                                <materialIcons:MaterialIcon Kind="ClockOutline" Width="{StaticResource LauncherIconSm}" Height="{StaticResource LauncherIconSm}"/>
                                 <TextBlock Text="{Binding Shell.I18n.UpdateLater}" VerticalAlignment="Center"/>
                             </StackPanel>
                         </Button>

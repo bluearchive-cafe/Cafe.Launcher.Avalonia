@@ -189,7 +189,6 @@ public sealed partial class LocalizedStrings : ObservableObject
     [ObservableProperty] private string updateAvailableMessage = "";
     [ObservableProperty] private string updateSelectFile = "";
     [ObservableProperty] private string updateFileSize = "";
-    [ObservableProperty] private string updateNoFileSelected = "";
     [ObservableProperty] private string updateDownload = "";
     [ObservableProperty] private string updateLater = "";
 
@@ -374,7 +373,6 @@ public sealed partial class LocalizedStrings : ObservableObject
         UpdateAvailableMessage = localizer.T("updateAvailableMessage");
         UpdateSelectFile = localizer.T("updateSelectFile");
         UpdateFileSize = localizer.T("updateFileSize");
-        UpdateNoFileSelected = localizer.T("updateNoFileSelected");
         UpdateDownload = localizer.T("updateDownload");
         UpdateLater = localizer.T("updateLater");
     }

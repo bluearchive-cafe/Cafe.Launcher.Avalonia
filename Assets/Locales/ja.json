@@ -236,7 +236,6 @@
   "updateAvailableMessage": "Cafe Launcher {0} が利用可能です。ダウンロードしますか？",
   "updateSelectFile": "ダウンロードするリリースファイルを選択してください。",
   "updateFileSize": "サイズ",
-  "updateNoFileSelected": "先にファイルを選択してください。",
   "updateDownload": "ダウンロード",
   "updateLater": "後で",
   "version": "バージョン",
