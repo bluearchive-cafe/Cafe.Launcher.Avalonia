@@ -88,6 +88,45 @@ public sealed partial class UiStyleContractTests
     }
 
     [Fact]
+    public void UpdateFileList_HoverAndSelectionKeepReadableItemColors()
+    {
+        var document = XDocument.Load(ProjectFile("Views/MainWindow.Styles.axaml"));
+        var styles = document
+            .Descendants()
+            .Where(element => element.Name.LocalName == "Style")
+            .ToDictionary(
+                element => element.Attribute("Selector")?.Value ?? "",
+                element => element,
+                StringComparer.Ordinal);
+
+        foreach (var selector in new[]
+                 {
+                     "ListBox.update-file-list > ListBoxItem:pointerover /template/ ContentPresenter#PART_ContentPresenter",
+                     "ListBox.update-file-list > ListBoxItem:pressed /template/ ContentPresenter#PART_ContentPresenter",
+                     "ListBox.update-file-list > ListBoxItem:selected /template/ ContentPresenter#PART_ContentPresenter",
+                     "ListBox.update-file-list > ListBoxItem:selected:not(:focus) /template/ ContentPresenter#PART_ContentPresenter",
+                     "ListBox.update-file-list > ListBoxItem:selected:pointerover /template/ ContentPresenter#PART_ContentPresenter",
+                     "ListBox.update-file-list > ListBoxItem:selected:pressed /template/ ContentPresenter#PART_ContentPresenter"
+                 })
+        {
+            var setters = styles[selector]
+                .Elements()
+                .Where(element => element.Name.LocalName == "Setter")
+                .ToDictionary(
+                    element => element.Attribute("Property")?.Value ?? "",
+                    element => element.Attribute("Value")?.Value ?? "",
+                    StringComparer.Ordinal);
+
+            Assert.Equal(
+                "{DynamicResource LauncherCardBackgroundBrush}",
+                setters["Background"]);
+            Assert.Equal(
+                "{DynamicResource LauncherTextPrimaryBrush}",
+                setters["Foreground"]);
+        }
+    }
+
+    [Fact]
     public void CornerRadii_UseTheThreeDeclaredHierarchyTokens()
     {
         var allowedTokens = new HashSet<string>(StringComparer.Ordinal)

@@ -15,6 +15,7 @@ public partial class SettingsViewModel : ViewModelBase, IDisposable
     private readonly ToastService toastService;
     private readonly ImageCacheService? imageCacheService;
     private readonly LauncherUpdateService launcherUpdateService;
+    private readonly DialogsViewModel dialogs;
     private readonly ISettingsEditor editor;
     private bool disposed;
 
@@ -43,6 +44,7 @@ public partial class SettingsViewModel : ViewModelBase, IDisposable
         ToastService toastService,
         ImageCacheService? imageCacheService,
         LauncherUpdateService launcherUpdateService,
+        DialogsViewModel dialogs,
         SettingsOptionsViewModel options,
         SettingsAppearanceViewModel appearance)
     {
@@ -51,6 +53,7 @@ public partial class SettingsViewModel : ViewModelBase, IDisposable
         this.toastService = toastService;
         this.imageCacheService = imageCacheService;
         this.launcherUpdateService = launcherUpdateService;
+        this.dialogs = dialogs;
         editor = appearance.Editor;
         Options = options;
         Appearance = appearance;
@@ -138,8 +141,7 @@ public partial class SettingsViewModel : ViewModelBase, IDisposable
             return;
         }
 
-        toastService.ShowWarning(localizer.F("launcherUpdateAvailable", result.LatestVersion));
-        ExternalLinkService.Open(result.ReleaseUrl);
+        dialogs.ShowUpdateAvailable(result.LatestVersion, result.Files);
     }
 
     [RelayCommand]

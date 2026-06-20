@@ -185,6 +185,12 @@ public sealed partial class LocalizedStrings : ObservableObject
     [ObservableProperty] private string updateChannel = "";
     [ObservableProperty] private string updateChannelStable = "";
     [ObservableProperty] private string updateChannelBeta = "";
+    [ObservableProperty] private string updateAvailableTitle = "";
+    [ObservableProperty] private string updateAvailableMessage = "";
+    [ObservableProperty] private string updateSelectFile = "";
+    [ObservableProperty] private string updateFileSize = "";
+    [ObservableProperty] private string updateDownload = "";
+    [ObservableProperty] private string updateLater = "";
 
     public void Apply(LocalizationService localizer)
     {
@@ -363,6 +369,12 @@ public sealed partial class LocalizedStrings : ObservableObject
         UpdateChannel = localizer.T("updateChannel");
         UpdateChannelStable = localizer.T("updateChannelStable");
         UpdateChannelBeta = localizer.T("updateChannelBeta");
+        UpdateAvailableTitle = localizer.T("updateAvailableTitle");
+        UpdateAvailableMessage = localizer.T("updateAvailableMessage");
+        UpdateSelectFile = localizer.T("updateSelectFile");
+        UpdateFileSize = localizer.T("updateFileSize");
+        UpdateDownload = localizer.T("updateDownload");
+        UpdateLater = localizer.T("updateLater");
     }
 }
 

@@ -596,6 +596,64 @@
         <Setter Property="CornerRadius" Value="{StaticResource LauncherRadiusSm}"/>
         <Setter Property="Padding" Value="16"/>
     </Style>
+    <Style Selector="ListBox.update-file-list">
+        <Setter Property="Background" Value="{DynamicResource LauncherTransparentBrush}"/>
+        <Setter Property="BorderThickness" Value="0"/>
+        <Setter Property="Padding" Value="0"/>
+    </Style>
+    <Style Selector="ListBox.update-file-list > ListBoxItem">
+        <Setter Property="Background" Value="{DynamicResource LauncherCardBackgroundBrush}"/>
+        <Setter Property="BorderBrush" Value="{DynamicResource LauncherCardBorderBrush}"/>
+        <Setter Property="BorderThickness" Value="1"/>
+        <Setter Property="CornerRadius" Value="{StaticResource LauncherRadiusMd}"/>
+        <Setter Property="Foreground" Value="{DynamicResource LauncherTextPrimaryBrush}"/>
+        <Setter Property="Padding" Value="12"/>
+        <Setter Property="Margin" Value="0,0,0,8"/>
+        <Setter Property="HorizontalContentAlignment" Value="Stretch"/>
+    </Style>
+    <Style Selector="ListBox.update-file-list > ListBoxItem:pointerover">
+        <Setter Property="BorderBrush" Value="{DynamicResource LauncherAccentHoverBrush}"/>
+    </Style>
+    <Style Selector="ListBox.update-file-list > ListBoxItem:selected">
+        <Setter Property="BorderBrush" Value="{DynamicResource LauncherAccentBrush}"/>
+        <Setter Property="BorderThickness" Value="2"/>
+        <Setter Property="Padding" Value="11"/>
+    </Style>
+    <Style Selector="ListBox.update-file-list > ListBoxItem:pointerover /template/ ContentPresenter#PART_ContentPresenter">
+        <Setter Property="Background" Value="{DynamicResource LauncherCardBackgroundBrush}"/>
+        <Setter Property="Foreground" Value="{DynamicResource LauncherTextPrimaryBrush}"/>
+    </Style>
+    <Style Selector="ListBox.update-file-list > ListBoxItem:pressed /template/ ContentPresenter#PART_ContentPresenter">
+        <Setter Property="Background" Value="{DynamicResource LauncherCardBackgroundBrush}"/>
+        <Setter Property="Foreground" Value="{DynamicResource LauncherTextPrimaryBrush}"/>
+    </Style>
+    <Style Selector="ListBox.update-file-list > ListBoxItem:selected /template/ ContentPresenter#PART_ContentPresenter">
+        <Setter Property="Background" Value="{DynamicResource LauncherCardBackgroundBrush}"/>
+        <Setter Property="Foreground" Value="{DynamicResource LauncherTextPrimaryBrush}"/>
+    </Style>
+    <Style Selector="ListBox.update-file-list > ListBoxItem:selected:not(:focus) /template/ ContentPresenter#PART_ContentPresenter">
+        <Setter Property="Background" Value="{DynamicResource LauncherCardBackgroundBrush}"/>
+        <Setter Property="Foreground" Value="{DynamicResource LauncherTextPrimaryBrush}"/>
+    </Style>
+    <Style Selector="ListBox.update-file-list > ListBoxItem:selected:pointerover /template/ ContentPresenter#PART_ContentPresenter">
+        <Setter Property="Background" Value="{DynamicResource LauncherCardBackgroundBrush}"/>
+        <Setter Property="Foreground" Value="{DynamicResource LauncherTextPrimaryBrush}"/>
+    </Style>
+    <Style Selector="ListBox.update-file-list > ListBoxItem:selected:pressed /template/ ContentPresenter#PART_ContentPresenter">
+        <Setter Property="Background" Value="{DynamicResource LauncherCardBackgroundBrush}"/>
+        <Setter Property="Foreground" Value="{DynamicResource LauncherTextPrimaryBrush}"/>
+    </Style>
+    <Style Selector="Border.update-file-icon">
+        <Setter Property="Width" Value="{StaticResource LauncherControlHeightSetting}"/>
+        <Setter Property="Height" Value="{StaticResource LauncherControlHeightSetting}"/>
+        <Setter Property="CornerRadius" Value="{StaticResource LauncherRadiusSm}"/>
+        <Setter Property="Background" Value="{DynamicResource LauncherAccentSoftBrush}"/>
+    </Style>
+    <Style Selector="Border.update-file-size">
+        <Setter Property="Background" Value="{DynamicResource LauncherContentRowBrush}"/>
+        <Setter Property="CornerRadius" Value="{StaticResource LauncherRadiusSm}"/>
+        <Setter Property="Padding" Value="8,4"/>
+    </Style>
     <Style Selector="Border.dialog-icon">
         <Setter Property="Width" Value="{StaticResource LauncherControlHeightSetting}"/>
         <Setter Property="Height" Value="{StaticResource LauncherControlHeightSetting}"/>
