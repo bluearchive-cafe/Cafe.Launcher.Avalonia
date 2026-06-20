@@ -1,4 +1,6 @@
 using System;
+using System.Collections.Generic;
+using System.Collections.ObjectModel;
 using System.Security.Cryptography;
 using System.Threading;
 using System.Threading.Tasks;
@@ -55,6 +57,22 @@ public partial class DialogsViewModel : ViewModelBase
     [ObservableProperty]
     private string noticeDialogConfirmText = "";
 
+    [ObservableProperty]
+    private bool isUpdateAvailableVisible;
+
+    [ObservableProperty]
+    private string updateAvailableVersion = "";
+
+    [ObservableProperty]
+    private string updateAvailableText = "";
+
+    [ObservableProperty]
+    private ReleaseFile? selectedUpdateFile;
+
+    public ObservableCollection<ReleaseFile> UpdateAvailableFiles { get; } = [];
+
+    public bool HasSelectedUpdateFile => SelectedUpdateFile is not null;
+
     public event Func<Task>? ConfirmRepairRequested;
 
     public event Action? ConfirmResourcePanelSourceSwitchRequested;
@@ -66,6 +84,8 @@ public partial class DialogsViewModel : ViewModelBase
     public event Action? CloseAfterStoppingDownloadRequested;
 
     public event Action? CloseRequested;
+
+    public event Action<string>? ConfirmUpdateAvailableRequested;
 
     public DialogsViewModel(LocalizationService localizer, NoticeStateService noticeStateService)
     {
@@ -83,6 +103,11 @@ public partial class DialogsViewModel : ViewModelBase
         if (IsDownloadRunningCloseConfirmVisible)
         {
             DownloadRunningCloseConfirmText = localizer.T("stopDownloadConfirm");
+        }
+
+        if (IsUpdateAvailableVisible)
+        {
+            UpdateAvailableText = localizer.F("updateAvailableMessage", UpdateAvailableVersion);
         }
     }
 
@@ -184,6 +209,48 @@ public partial class DialogsViewModel : ViewModelBase
     private void CancelCloseWhileDownloading()
     {
         IsDownloadRunningCloseConfirmVisible = false;
+    }
+
+    public void ShowUpdateAvailable(string version, IReadOnlyList<ReleaseFile> files)
+    {
+        UpdateAvailableVersion = version;
+        UpdateAvailableText = localizer.F("updateAvailableMessage", version);
+        SelectedUpdateFile = null;
+        UpdateAvailableFiles.Clear();
+        foreach (var file in files)
+        {
+            UpdateAvailableFiles.Add(file);
+        }
+
+        IsUpdateAvailableVisible = true;
+    }
+
+    [RelayCommand]
+    private void CancelUpdateAvailable()
+    {
+        IsUpdateAvailableVisible = false;
+        SelectedUpdateFile = null;
+        UpdateAvailableFiles.Clear();
+    }
+
+    [RelayCommand]
+    private void ConfirmUpdateAvailable()
+    {
+        if (SelectedUpdateFile is null)
+        {
+            return;
+        }
+
+        var downloadUrl = SelectedUpdateFile.Url;
+        IsUpdateAvailableVisible = false;
+        SelectedUpdateFile = null;
+        UpdateAvailableFiles.Clear();
+        ConfirmUpdateAvailableRequested?.Invoke(downloadUrl);
+    }
+
+    partial void OnSelectedUpdateFileChanged(ReleaseFile? value)
+    {
+        OnPropertyChanged(nameof(HasSelectedUpdateFile));
     }
 
     [RelayCommand]

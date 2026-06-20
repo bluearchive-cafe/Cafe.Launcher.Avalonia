@@ -647,18 +647,18 @@ public sealed class MainWindowViewModelTests : IDisposable
         var settingsEditor = new SettingsEditor();
         var settingsOptions = new SettingsOptionsViewModel(localizationService, diskSpaceService);
         var settingsAppearance = new SettingsAppearanceViewModel(settingsEditor);
+        var noticeStateService = new NoticeStateService(Path.Combine(tempDir, Guid.NewGuid().ToString("N"), "shown_notices.json"));
+        var dialogsViewModel = new DialogsViewModel(localizationService, noticeStateService);
         var settingsViewModel = new SettingsViewModel(
             settingsService, localizationService, toastService,
-            imageCacheService, launcherUpdateService,
+            imageCacheService, launcherUpdateService, dialogsViewModel,
             settingsOptions, settingsAppearance);
         var resourcePanelViewModel = new ResourcePanelViewModel(
             resourcePanelUidService, resourcePanelApiClient, localizationService,
             toastService, diagnostics);
-        var noticeStateService = new NoticeStateService(Path.Combine(tempDir, Guid.NewGuid().ToString("N"), "shown_notices.json"));
         var gameUninstallService = new GameUninstallService(localGameStateService, diagnostics);
 
         var shellViewModel = new ShellViewModel(localizationService);
-        var dialogsViewModel = new DialogsViewModel(localizationService, noticeStateService);
         var remoteContentViewModel = new RemoteContentViewModel(localizationService, imageCacheService);
         var backgroundViewModel = new BackgroundViewModel(imageCacheService, diagnostics, settingsViewModel);
         var gameOperationsViewModel = new GameOperationsViewModel(

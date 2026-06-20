@@ -18,7 +18,7 @@ dotnet test                                                    # Run all tests
 dotnet test --filter "FullyQualifiedName~VersionComparerTests" # Run a single test class
 ```
 
-Available test classes: `VersionComparerTests`, `LauncherApiClientTests`, `LauncherConstantsTests`, `LauncherSettingsServiceTests`, `LocalizationServiceTests`, `MainWindowViewModelTests`, `GameDownloadServiceTests`, `PatchUrlGroupServiceTests`, `LauncherUpdateServiceTests`.
+Available test classes include `VersionComparerTests`, `LauncherApiClientTests`, `LauncherConstantsTests`, `LauncherSettingsServiceTests`, `LocalizationServiceTests`, `MainWindowViewModelTests`, `DialogsViewModelTests`, `GameDownloadServiceTests`, `PatchUrlGroupServiceTests`, and `LauncherUpdateServiceTests`.
 
 CI is GitHub Actions on `windows-latest`, .NET 10.0.x:
 - **build.yml** (push/PR to `main`): restore, Debug build, Release build, self-contained publish, upload artifact.
@@ -50,7 +50,7 @@ One `MainWindow` (1300×754, non-resizable, borderless with custom chrome). The 
 2. **App.axaml.cs** — On framework init: builds DI container via `ServiceConfiguration.AddLauncherServices()`, resolves `MainWindowViewModel`, creates `MainWindow`, wires `ClickCodeService`, `SystemTrayService`. Starts a background thread listening for `EventWaitHandle` signals to restore window from tray.
 3. **App.axaml** — Light/Dark `ThemeDictionaries` with custom `Launcher*` brushes, FluentTheme + MaterialIconStyles.
 
-**Composition root**: `ServiceConfiguration.AddLauncherServices()` is the DI configuration — it registers all services with `Microsoft.Extensions.DependencyInjection`. The container is built in `App.axaml.cs` via `ServiceCollection.BuildServiceProvider()`. Services are registered as singletons by default; ViewModels are transient. Thread-safe disposal order for IDisposable services is defined by reverse registration order.
+**Composition root**: `ServiceConfiguration.AddLauncherServices()` is the DI configuration — it registers all services with `Microsoft.Extensions.DependencyInjection`. The container is built in `App.axaml.cs` via `ServiceCollection.BuildServiceProvider()`. Services are registered as singletons by default, except `ISettingsEditor`/`SettingsEditor`, which is transient. ViewModels are transient except `DialogsViewModel`, which is singleton so settings and the main window share the same dialog state. Thread-safe disposal order for IDisposable services is defined by reverse registration order.
 
 **View code-behind** (`MainWindow.axaml.cs`): handles native folder-picker dialog (via `StorageProvider`), window drag-to-move (borderless chrome), and close-behavior routing (minimize-to-tray vs exit). The ViewModel receives `PickGameFolderAsync`, `MinimizeWindow`, and `CloseWindow` delegates via `ConfigureViewModel()`.
 
@@ -80,7 +80,7 @@ One `MainWindow` (1300×754, non-resizable, borderless with custom chrome). The 
 | `LocalDiagnostics` | Appends to `diagnostics.log` in the settings folder |
 | `PatchUrlGroupService` | URL rewriting between Official and Cafe CDN hosts for manifest + CDN config URLs |
 | `NoticeStateService` | Tracks which notice IDs have been shown (persisted to `shown_notices.json`) |
-| `LauncherUpdateService` | Checks the latest stable release through the GitHub Releases API on the distribution repository |
+| `LauncherUpdateService` | Checks stable and beta launcher releases through the server proxy endpoint and returns every validated release file in API order |
 | `Crc64Service`, `OfficialHashService`, `ProxySettingsService`, `DiskSpaceService`, `ProcessService`, `VersionComparer`, `ClickCodeService`, `DownloadStateService`, `ImageCacheService`, `ExternalLinkService`, `ManifestValidationService` | Supporting services |
 
 ### Key models (`Models/`)
@@ -91,10 +91,11 @@ One `MainWindow` (1300×754, non-resizable, borderless with custom chrome). The 
 - `PatchUrlGroupDefinition.cs` — Code + host-from/to tuples for CDN URL rewriting
 - `DownloadTaskState.cs` — Serializable download resume state
 - `BannerDot.cs` — Observable carousel dot indicator
+- `LauncherReleaseResponse.cs` — Launcher release data returned by the server proxy: version, release date, and file entries containing name, URL, SHA-512, size, and formatted display size. The update dialog requires explicit file selection.
 
 ### Constants
 
-`LauncherConstants` holds: `ProductName`, `LauncherVersion` (reads from `AssemblyInformationalVersionAttribute`, currently `"1.0.0-beta.1"`), `YostarAuthorizationVersion` (`"1.7.2"` — the version sent in API auth headers to match the official launcher), `ApiBaseUrl`, `AuthorizationSalt`, `OfficialWebsiteUrl`, `GitHubReleaseRepositorySlug`, `GitHubReleaseRepositoryUrl`, `GitHubApiBaseUrl`, `GitHubReleasesPath` (release/distribution repository and API paths, uses the `/releases` endpoint to support both stable and pre-release channels), `GitHubToken` (optional fine-grained PAT for higher API rate limits), path/filename conventions (`RootFolderName = "YostarGames"`, `GameFolderName = "BlueArchive_JP"`), and `AvaloniaVersion` (must be kept in sync with the `.csproj` `PackageReference` for Avalonia).
+Constants are split across `LauncherConstants`, `ApiConfig`, `BuildInfo`, and `GamePaths`. Launcher self-update requests use the exact `ApiConfig.LauncherApiBaseUrl` and `ApiConfig.LauncherReleasesPath` values. `BuildInfo.LauncherVersion` reads `AssemblyInformationalVersionAttribute` and must match the `.csproj` `VersionPrefix`.
 
 ### Patch URL groups
 
@@ -106,7 +107,7 @@ Users can switch between `Official` (yo-star.com) and `Cafe` (bluearchive.cafe) 
 
 ### Other directories
 
-- `Constants/` — `LauncherConstants` (see above)
+- `Constants/` — `LauncherConstants`, `ApiConfig`, `BuildInfo`, and `GamePaths`
 - `Helpers/` — `FileSizeFormatter`, `GamePathValidator`
 - `Services/Auth/` — `AuthorizationHeaderFactory` (MD5-signed API auth header)
 - `Services/Diagnostics/` — `LocalDiagnostics` (appends to `diagnostics.log`)

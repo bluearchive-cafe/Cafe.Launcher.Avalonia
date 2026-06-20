@@ -199,6 +199,72 @@
                 </Grid>
             </Border>
         </Grid>
+        <!-- Update available dialog -->
+        <Grid IsVisible="{Binding Dialogs.IsUpdateAvailableVisible}" Classes="dialog-overlay">
+            <Border Classes="dialog confirm-panel" MaxWidth="620">
+                <Grid RowDefinitions="Auto,*,Auto" Classes="confirm-layout">
+                    <Grid Classes="dialog-heading" ColumnDefinitions="Auto,*,Auto">
+                        <Border Classes="dialog-icon" VerticalAlignment="Center">
+                            <materialIcons:MaterialIcon Kind="Update" Width="{StaticResource LauncherIconXl}" Height="{StaticResource LauncherIconXl}" Foreground="{DynamicResource LauncherAccentBrush}" HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                        </Border>
+                        <StackPanel Grid.Column="1" Classes="dialog-heading-copy">
+                            <TextBlock Text="{Binding Shell.I18n.UpdateAvailableTitle}" Classes="dialog-title"/>
+                            <TextBlock Text="{Binding Dialogs.UpdateAvailableText}" Classes="caption"/>
+                        </StackPanel>
+                        <Button Grid.Column="2" Classes="dialog-close" Command="{Binding Dialogs.CancelUpdateAvailableCommand}" ToolTip.Tip="{Binding Shell.I18n.Close}">
+                            <materialIcons:MaterialIcon Kind="Close" Width="{StaticResource LauncherIconMd}" Height="{StaticResource LauncherIconMd}"/>
+                        </Button>
+                    </Grid>
+                    <StackPanel Grid.Row="1" Spacing="{StaticResource LauncherSpacingMd}">
+                        <TextBlock Text="{Binding Shell.I18n.UpdateSelectFile}" Classes="confirm-message-text"/>
+                        <ListBox ItemsSource="{Binding Dialogs.UpdateAvailableFiles}"
+                                 SelectedItem="{Binding Dialogs.SelectedUpdateFile, Mode=TwoWay}"
+                                 MaxHeight="240">
+                            <ListBox.ItemTemplate>
+                                <DataTemplate x:DataType="models:ReleaseFile">
+                                    <Grid ColumnDefinitions="*,Auto"
+                                          ColumnSpacing="{StaticResource LauncherSpacingMd}"
+                                          Margin="0,4">
+                                        <TextBlock Text="{Binding Name}"
+                                                   TextWrapping="Wrap"
+                                                   Foreground="{DynamicResource LauncherTextPrimaryBrush}"
+                                                   VerticalAlignment="Center"/>
+                                        <StackPanel Grid.Column="1"
+                                                    Orientation="Horizontal"
+                                                    Spacing="{StaticResource LauncherSpacingXs}"
+                                                    VerticalAlignment="Center">
+                                            <TextBlock Text="{Binding $parent[UserControl].DataContext.Shell.I18n.UpdateFileSize}"
+                                                       Classes="caption"/>
+                                            <TextBlock Text="{Binding DisplaySize}" Classes="caption"/>
+                                        </StackPanel>
+                                    </Grid>
+                                </DataTemplate>
+                            </ListBox.ItemTemplate>
+                        </ListBox>
+                        <TextBlock Text="{Binding Shell.I18n.UpdateNoFileSelected}"
+                                   Classes="caption"
+                                   Foreground="{DynamicResource LauncherWarningBrush}"
+                                   IsVisible="{Binding Dialogs.HasSelectedUpdateFile, Converter={x:Static BoolConverters.Not}}"/>
+                    </StackPanel>
+                    <StackPanel Grid.Row="2" Classes="confirm-actions">
+                        <Button Classes="flat-action dialog-action" Command="{Binding Dialogs.CancelUpdateAvailableCommand}">
+                            <StackPanel Classes="button-content">
+                                <materialIcons:MaterialIcon Kind="CloseCircle" Width="{StaticResource LauncherIconSm}" Height="{StaticResource LauncherIconSm}"/>
+                                <TextBlock Text="{Binding Shell.I18n.UpdateLater}" VerticalAlignment="Center"/>
+                            </StackPanel>
+                        </Button>
+                        <Button Classes="primary-action dialog-action"
+                                Command="{Binding Dialogs.ConfirmUpdateAvailableCommand}"
+                                IsEnabled="{Binding Dialogs.HasSelectedUpdateFile}">
+                            <StackPanel Classes="button-content">
+                                <materialIcons:MaterialIcon Kind="Download" Width="{StaticResource LauncherIconMd}" Height="{StaticResource LauncherIconMd}" Foreground="{DynamicResource LauncherOnAccentBrush}"/>
+                                <TextBlock Text="{Binding Shell.I18n.UpdateDownload}" VerticalAlignment="Center" Foreground="{DynamicResource LauncherOnAccentBrush}"/>
+                            </StackPanel>
+                        </Button>
+                    </StackPanel>
+                </Grid>
+            </Border>
+        </Grid>
         <!-- I4: Stop download confirmation dialog -->
         <Grid IsVisible="{Binding Dialogs.IsStopConfirmVisible}" Classes="dialog-overlay">
             <Border Classes="dialog confirm-panel">

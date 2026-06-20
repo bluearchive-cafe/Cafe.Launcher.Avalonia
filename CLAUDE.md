@@ -18,7 +18,7 @@ dotnet test                                                    # Run all tests
 dotnet test --filter "FullyQualifiedName~VersionComparerTests" # Run a single test class
 ```
 
-Available test classes include `VersionComparerTests`, `LauncherApiClientTests`, `LauncherConstantsTests`, `LauncherSettingsServiceTests`, `SettingsNormalizerTests`, `ToastServiceTests`, `LocalGameStateServiceTests`, `LocalizationServiceTests`, `MainWindowViewModelTests`, `GameDownloadServiceTests`, `PatchUrlGroupServiceTests`, `BestHttpCookieLibraryServiceTests`, `ResourcePanelUidServiceTests`, `ExternalLinkServiceTests`, `ResourcePanelApiClientTests`, `MigrationWizardViewModelTests`, `LevelDbReaderTests`, `OldLauncherDetectionServiceTests`, `LauncherUpdateServiceTests`, `HttpClientFactoryTests`, and `UiStyleContractTests`.
+Available test classes include `VersionComparerTests`, `LauncherApiClientTests`, `LauncherConstantsTests`, `LauncherSettingsServiceTests`, `SettingsNormalizerTests`, `SettingsEditorTests`, `ToastServiceTests`, `LocalGameStateServiceTests`, `LocalizationServiceTests`, `MainWindowViewModelTests`, `DialogsViewModelTests`, `GameDownloadServiceTests`, `PatchUrlGroupServiceTests`, `BestHttpCookieLibraryServiceTests`, `ResourcePanelUidServiceTests`, `ExternalLinkServiceTests`, `ResourcePanelApiClientTests`, `MigrationWizardViewModelTests`, `LevelDbReaderTests`, `OldLauncherDetectionServiceTests`, `LauncherUpdateServiceTests`, `HttpClientFactoryTests`, and `UiStyleContractTests`.
 
 `UiStyleContractTests` enforces design token contracts: no raw colors in view XAML, proper use of `LauncherSpacing*` tokens, correct overlay Z-index ordering, toast layer using `LauncherConstants.ZIndexToast`, and dynamic accent brushes not replacing theme-specific brushes. Run this whenever touching XAML styles or overlays.
 
@@ -89,7 +89,7 @@ One `MainWindow` (1300×754, non-resizable with MinWidth 1024/MinHeight 640, bor
 2. **App.axaml.cs** — On framework init: builds DI container via `ServiceConfiguration.AddLauncherServices()`, resolves `MainWindowViewModel`, creates `MainWindow`, wires `ClickCodeService`, `SystemTrayService`. Starts a background thread listening for `EventWaitHandle` signals to restore window from tray.
 3. **App.axaml** — Light/Dark `ThemeDictionaries` with custom `Launcher*` brushes, FluentTheme + MaterialIconStyles.
 
-**Composition root**: `ServiceConfiguration.AddLauncherServices()` is the DI configuration — it registers all services with `Microsoft.Extensions.DependencyInjection`. The container is built in `App.axaml.cs` via `ServiceCollection.BuildServiceProvider()`. Every service is registered as `AddSingleton`; every ViewModel is registered as `AddTransient` (fresh instance per resolution). Thread-safe disposal order for IDisposable services is defined by reverse registration order (see disposal order section below).
+**Composition root**: `ServiceConfiguration.AddLauncherServices()` is the DI configuration — it registers all services with `Microsoft.Extensions.DependencyInjection`. The container is built in `App.axaml.cs` via `ServiceCollection.BuildServiceProvider()`. Most services are registered as `AddSingleton`; `ISettingsEditor`/`SettingsEditor` is registered as `AddTransient` (each resolution provides a fresh snapshot). Every ViewModel is registered as `AddTransient` (fresh instance per resolution), except `DialogsViewModel` which is `AddSingleton`. Thread-safe disposal order for IDisposable services is defined by reverse registration order (see disposal order section below).
 
 **ViewModel coordination**: Sub-ViewModels communicate with `MainWindowViewModel` through two mechanisms:
 - **Delegates** — `MainWindowViewModel.ConfigureViewModel()` sets `Func<>` / `Func<Task>` delegates on children (e.g. `SettingsViewModel.PickGameFolderAsync`, `SettingsViewModel.GetSnapshot`). These let children call back into parent capabilities (folder pickers, state queries).
@@ -114,6 +114,7 @@ One `MainWindow` (1300×754, non-resizable with MinWidth 1024/MinHeight 640, bor
 | `LauncherCoreService` | Orchestrates API + local state into `LauncherStatusSnapshot`. Exposed as `ILauncherCoreService` in the DI container. |
 | `LauncherSettingsService` | Reads/writes `settings.json` at `%LOCALAPPDATA%\Cafe Launcher\` and handles exact legacy JSON field names |
 | `SettingsNormalizer` | Pure settings-value normalization: enum guards, legacy launch-check values, colors, palette, indexes, paths, and UID trimming |
+| `SettingsEditor` | Snapshot/dirty/discard editing of `LauncherSettings` via `ISettingsEditor`. Uses JSON round-trip deep cloning. Registered as **Transient** (fresh snapshot per resolution). |
 | `LocalGameStateService` | Reads local `game-launcher-config.json` + `manifest.json`, normalizes paths to `YostarGames\BlueArchive_JP` |
 | `GameDownloadService` | Install/update/repair: manifest diff → parallel CDN download (10 concurrent, `.tmp` files, `Range` resume, CRC64 verify, rename on success). Supports download speed throttling, async pause/resume via `TaskCompletionSource`. Implements `IDisposable` — thread-safe CTS management via `activeDownloadLock`. |
 | `GameLaunchService` | Manifest validation + process launch |
@@ -132,7 +133,7 @@ One `MainWindow` (1300×754, non-resizable with MinWidth 1024/MinHeight 640, bor
 | `ThemeColorExtractionService` | Extracts dominant colors from wallpaper images for UI theming |
 | `ImageCacheService` | Caches downloaded images (banners, avatars). Implements `IDisposable`. |
 | `ManifestValidationService` | Validates local game files against manifest |
-| `LauncherUpdateService` | Checks the latest stable release through the GitHub Releases API on the distribution repository |
+| `LauncherUpdateService` | Checks for launcher self-updates via the server proxy endpoint (`ApiConfig.LauncherApiBaseUrl`), supporting stable/beta channels and returning every validated release file in API order. Every file must have a non-empty name, an absolute HTTP/HTTPS URL, and a positive size. |
 | `ExternalLinkService` | Opens external URLs in the default browser |
 | `DownloadStateService` | Serializes/resumes download state to `download_state.json` |
 | `Crc64Service` | CRC64 hash computation for downloaded file verification |
@@ -144,7 +145,7 @@ One `MainWindow` (1300×754, non-resizable with MinWidth 1024/MinHeight 640, bor
 | `OldLauncherDetectionService` | Detects old Electron launcher install + reads its localStorage (LevelDB) for migration |
 | `LevelDbReader` | Best-effort byte-level scanner for Chrome localStorage LevelDB files (.ldb/.log) |
 | `GamePathValidator` | Validates file operations stay within the game directory (path traversal rejection) |
-| `ServiceConfiguration` | DI container — registers all services (singleton) and ViewModels (transient) via `AddLauncherServices()` |
+| `ServiceConfiguration` | DI container — registers all services and ViewModels via `AddLauncherServices()`. Services mostly singleton; `ISettingsEditor` transient; ViewModels mostly transient; `DialogsViewModel` singleton. |
 
 **HttpClient lifecycle**: `HttpClientFactory` owns a single shared `SocketsHttpHandler` (pooled, 15-min connection lifetime). Two patterns:
 
@@ -215,10 +216,16 @@ Persisted fields in `settings.json` and their valid values:
 - `ThemeColorPaletteItem.cs` — Extracted color data from wallpaper images
 - `BestHttpCookieModels.cs` — Cookie-related models for HTTP
 - `ResourcePanelModels.cs` — Resource panel data models
+- `LauncherReleaseResponse.cs` — Release information from the launcher update server proxy. Includes `LauncherReleaseResponse` (version, release date, files list) and `ReleaseFile` (name, URL, SHA-512, size, formatted display size). The update dialog requires explicit user selection and never infers file purpose from name, extension, or list order.
 
 ### Constants
 
-`LauncherConstants` holds: `ProductName`, `LauncherVersion` (reads from `AssemblyInformationalVersionAttribute`, matches `<VersionPrefix>` in the `.csproj`), `YostarAuthorizationVersion` (`"1.7.2"` — the version sent in API auth headers to match the official launcher), `ApiBaseUrl`, `ResourcePanelApiBaseUrl` (`https://api.bluearchive.cafe`), `AuthorizationSalt`, `OfficialWebsiteUrl`, `GitHubReleaseRepositorySlug`, `GitHubReleaseRepositoryUrl`, `GitHubApiBaseUrl`, `GitHubReleasesPath` (release/distribution repository and API paths, uses the `/releases` endpoint to support both stable and pre-release channels), `GitHubToken` (reads from `CAFE_LAUNCHER_GITHUB_TOKEN` environment variable — do NOT hardcode tokens; raises GitHub API rate limit from 60/hr to 5,000/hr), path/filename conventions (`RootFolderName = "YostarGames"`, `GameFolderName = "BlueArchive_JP"`, `ManifestFileName`, `GameConfigFileName`, `LauncherSettingsFileName`), `GameTag` (`"BlueArchive_JP"`), `OldLauncherAppName` (`"BlueArchive_JP_Gamelauncher"`), `CommitSha` (reads from `AssemblyMetadataAttribute`, embedded by the `AddGitCommitMetadata` MSBuild target), `BuildConfiguration` (compile-time `#if DEBUG`, displayed in ShellViewModel), `DefaultThemeColor` (`#FF2E7DF6`), `ZIndexToast` (`1000`), and `AvaloniaVersion` (must be kept in sync with the `.csproj` `PackageReference` for Avalonia).
+Constants are split into 4 focused files under `Constants/`:
+
+- **`LauncherConstants`** — Cross-cutting UI/product constants: `ProductName`, `DefaultThemeColor` (`#FF2E7DF6`), `ZIndexToast` (`1000`), `OfficialWebsiteUrl`, `GitHubReleaseRepositoryUrl`.
+- **`ApiConfig`** — API endpoints, authentication, and release repository metadata: `ApiBaseUrl` (`https://api-launcher-jp.yo-star.com`), `ResourcePanelApiBaseUrl` (`https://api.bluearchive.cafe`), `AuthorizationSalt`, `YostarAuthorizationVersion` (`"1.7.2"` — the version sent in API auth headers to match the official launcher), `GitHubReleaseRepositorySlug` (`bluearchive-cafe/Cafe.Launcher.Avalonia_Release`), `GitHubReleaseRepositoryUrl`, `LauncherApiBaseUrl` (server proxy for launcher self-updates: `https://api-cafe-launcher.saibamidori.com/`), `LauncherReleasesPath` (`/api/launcher/releases`).
+- **`BuildInfo`** — Build-time metadata: `LauncherVersion` (reads from `AssemblyInformationalVersionAttribute`, matches `<VersionPrefix>` in the `.csproj`), `CommitSha` (reads from `AssemblyMetadataAttribute`, embedded by the `AddGitCommitMetadata` MSBuild target), `BuildConfiguration` (compile-time `#if DEBUG`), `AvaloniaVersion` (must be kept in sync with the `.csproj` `PackageReference` for Avalonia).
+- **`GamePaths`** — Path/filename conventions: `GameTag` (`"BlueArchive_JP"`), `RootFolderName` (`"YostarGames"`), `GameFolderName` (`"BlueArchive_JP"`), `ManifestFileName`, `GameConfigFileName`, `LauncherSettingsFileName`, `OldLauncherAppName` (`"BlueArchive_JP_Gamelauncher"`).
 
 ### Patch URL groups
 
@@ -231,11 +238,12 @@ Users can switch between `Official` (yo-star.com) and `Cafe` (bluearchive.cafe) 
 
 ### Other directories
 
-- `Constants/` — `LauncherConstants` (see above)
+- `Constants/` — `LauncherConstants`, `ApiConfig`, `BuildInfo`, `GamePaths` (see Constants section above)
 - `Helpers/` — `FileSizeFormatter`, `GamePathValidator`, `HttpClientLease`
 - `Services/Auth/` — `AuthorizationHeaderFactory` (MD5-signed API auth header)
 - `Services/Diagnostics/` — `LocalDiagnostics` (appends to `diagnostics.log`)
-- `Services/ServiceConfiguration.cs` — DI registration; all services as `AddSingleton`, all ViewModels as `AddTransient`
+- `Services/HttpClientLeaseSource.cs` — Internal `IHttpClientLeaseSource` abstraction over `HttpClientFactory.CreateLeaseAsync()`. Two implementations: `ProxyAwareHttpClientLeaseSource` (production, delegates to `HttpClientFactory`) and `FixedHttpClientLeaseSource` (testing, wraps a fixed `HttpMessageHandler`). Used by services like `LauncherUpdateService` that need proxy-aware HTTP with lease lifetime management.
+- `Services/ServiceConfiguration.cs` — DI registration; services as `AddSingleton` (except `ISettingsEditor` transient), ViewModels as `AddTransient` (except `DialogsViewModel` singleton)
 
 ### Localization
 

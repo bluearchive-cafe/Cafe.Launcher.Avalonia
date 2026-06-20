@@ -2,20 +2,19 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Net.Http;
-using System.Net.Http.Headers;
 using System.Text.Json;
-using System.Text.Json.Serialization;
 using System.Text.RegularExpressions;
 using System.Threading;
 using System.Threading.Tasks;
 using Cafe.Launcher.Avalonia.Constants;
 using Cafe.Launcher.Avalonia.Helpers;
 using Cafe.Launcher.Avalonia.Models;
+using Cafe.Launcher.Avalonia.Services.Diagnostics;
 
 namespace Cafe.Launcher.Avalonia.Services;
 
 /// <summary>
-/// Checks the public GitHub Releases API for launcher self-updates.
+/// Checks for launcher self-updates via the server proxy endpoint.
 /// </summary>
 public sealed partial class LauncherUpdateService : IDisposable
 {
@@ -25,33 +24,33 @@ public sealed partial class LauncherUpdateService : IDisposable
     };
     private readonly IHttpClientLeaseSource leaseSource;
     private readonly string currentVersion;
-    private readonly string gitHubToken;
+    private readonly LocalDiagnostics? diagnostics;
 
-    public LauncherUpdateService(HttpClientFactory httpClientFactory)
+    public LauncherUpdateService(HttpClientFactory httpClientFactory, LocalDiagnostics diagnostics)
     {
         leaseSource = new ProxyAwareHttpClientLeaseSource(
             httpClientFactory,
-            new Uri(ApiConfig.GitHubApiBaseUrl),
+            new Uri(ApiConfig.LauncherApiBaseUrl),
             TimeSpan.FromSeconds(15));
         currentVersion = BuildInfo.LauncherVersion;
-        gitHubToken = Environment.GetEnvironmentVariable("CAFE_LAUNCHER_GITHUB_TOKEN") ?? "";
+        this.diagnostics = diagnostics;
     }
 
     internal LauncherUpdateService(
         HttpMessageHandler handler,
         string? currentVersionOverride = null,
-        string? gitHubTokenOverride = null)
+        LocalDiagnostics? diagnosticsOverride = null)
     {
         leaseSource = new FixedHttpClientLeaseSource(
             handler,
-            new Uri(ApiConfig.GitHubApiBaseUrl),
+            new Uri(ApiConfig.LauncherApiBaseUrl),
             TimeSpan.FromSeconds(15));
         currentVersion = currentVersionOverride ?? BuildInfo.LauncherVersion;
-        gitHubToken = gitHubTokenOverride ?? Environment.GetEnvironmentVariable("CAFE_LAUNCHER_GITHUB_TOKEN") ?? "";
+        diagnostics = diagnosticsOverride;
     }
 
     /// <summary>
-    /// Checks the GitHub Releases API for launcher self-updates.
+    /// Checks for launcher self-updates via the server proxy endpoint.
     /// The <paramref name="updateChannel"/> controls whether pre-releases are considered:
     /// <see cref="UpdateChannels.Beta"/> includes pre-releases, <see cref="UpdateChannels.Stable"/> skips them.
     /// </summary>
@@ -62,10 +61,7 @@ public sealed partial class LauncherUpdateService : IDisposable
     {
         try
         {
-            var releases = await FetchReleasesAsync(
-                useAuth: !string.IsNullOrEmpty(gitHubToken),
-                proxyMode,
-                cancellationToken);
+            var releases = await FetchReleasesAsync(proxyMode, cancellationToken);
 
             if (releases is null || releases.Count == 0)
             {
@@ -77,129 +73,146 @@ public sealed partial class LauncherUpdateService : IDisposable
                 return LauncherUpdateCheckResult.Failed();
             }
 
-            // Sort by semantic version descending so the latest by version is first,
-            // not merely the most recently created release.
-            releases.Sort((a, b) =>
+            var validReleases = releases
+                .Where(release => TryParseSemanticVersion(release.Version, out _))
+                .ToList();
+            if (validReleases.Count == 0)
             {
-                var versionA = NormalizeReleaseTag(a.TagName);
-                var versionB = NormalizeReleaseTag(b.TagName);
-                if (!TryParseSemanticVersion(versionA, out _)
-                    || !TryParseSemanticVersion(versionB, out _))
-                {
-                    return 0;
-                }
+                return LauncherUpdateCheckResult.Failed();
+            }
 
-                if (IsNewerVersion(versionA, versionB)) return -1;
-                if (IsNewerVersion(versionB, versionA)) return 1;
+            // Sort by semantic version descending so the latest by version is first.
+            validReleases.Sort((a, b) =>
+            {
+                if (IsNewerVersion(a.Version, b.Version)) return -1;
+                if (IsNewerVersion(b.Version, a.Version)) return 1;
                 return 0;
             });
 
             // Filter: beta channel sees all releases; stable channel skips pre-releases.
             var targetRelease = updateChannel == UpdateChannels.Beta
-                ? releases[0]
-                : releases.FirstOrDefault(r => !r.Prerelease);
+                ? validReleases[0]
+                : validReleases.FirstOrDefault(r => !IsPrereleaseVersion(r.Version));
 
             if (targetRelease is null)
             {
                 return LauncherUpdateCheckResult.Succeeded(
                     currentVersion,
-                    "",
+                    [],
                     isUpdateAvailable: false);
             }
 
-            if (string.IsNullOrWhiteSpace(targetRelease.TagName)
-                || string.IsNullOrWhiteSpace(targetRelease.HtmlUrl))
+            if (!TryValidateReleaseFiles(targetRelease.Files, out var validationError))
             {
-                return LauncherUpdateCheckResult.Failed();
-            }
+                if (diagnostics is not null)
+                {
+                    await diagnostics.MessageAsync(
+                        "Launcher update check failed — invalid release file data",
+                        $"version: {targetRelease.Version}{Environment.NewLine}{validationError}",
+                        CancellationToken.None);
+                }
 
-            var latestVersion = NormalizeReleaseTag(targetRelease.TagName);
-            if (!TryParseSemanticVersion(latestVersion, out _))
-            {
                 return LauncherUpdateCheckResult.Failed();
             }
 
             return LauncherUpdateCheckResult.Succeeded(
-                latestVersion,
-                targetRelease.HtmlUrl,
-                IsNewerVersion(latestVersion, currentVersion));
+                targetRelease.Version,
+                Array.AsReadOnly(targetRelease.Files.ToArray()),
+                IsNewerVersion(targetRelease.Version, currentVersion));
         }
         catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
         {
             throw;
         }
-        catch (HttpRequestException)
+        catch (HttpRequestException ex)
         {
+            if (diagnostics is not null)
+                await diagnostics.ErrorAsync(
+                    "Launcher update check failed — HTTP request error",
+                    ex,
+                    CancellationToken.None);
             return LauncherUpdateCheckResult.Failed();
         }
-        catch (JsonException)
+        catch (JsonException ex)
         {
+            if (diagnostics is not null)
+                await diagnostics.ErrorAsync(
+                    "Launcher update check failed — JSON deserialization error",
+                    ex,
+                    CancellationToken.None);
             return LauncherUpdateCheckResult.Failed();
         }
-        catch (TaskCanceledException)
+        catch (TaskCanceledException ex)
         {
+            if (diagnostics is not null)
+                await diagnostics.ErrorAsync(
+                    "Launcher update check failed — request timeout",
+                    ex,
+                    CancellationToken.None);
             return LauncherUpdateCheckResult.Failed();
         }
     }
 
-    private async Task<List<GitHubReleaseResponse>?> FetchReleasesAsync(
-        bool useAuth,
-        string proxyMode,
-        CancellationToken cancellationToken)
-    {
-        try
-        {
-            return await FetchReleasesWithAuthAsync(useAuth, proxyMode, cancellationToken);
-        }
-        catch (HttpRequestException ex) when (useAuth && IsAuthenticationFailure(ex))
-        {
-            // Token is invalid or expired — fall back to unauthenticated.
-            return await FetchReleasesWithAuthAsync(
-                useAuth: false,
-                proxyMode,
-                cancellationToken);
-        }
-    }
-
-    private static bool IsAuthenticationFailure(HttpRequestException ex) =>
-        ex.StatusCode is System.Net.HttpStatusCode.Unauthorized
-            or System.Net.HttpStatusCode.Forbidden;
-
-    private async Task<List<GitHubReleaseResponse>?> FetchReleasesWithAuthAsync(
-        bool useAuth,
+    private async Task<List<LauncherReleaseResponse>?> FetchReleasesAsync(
         string proxyMode,
         CancellationToken cancellationToken)
     {
         using var lease = await leaseSource.CreateLeaseAsync(proxyMode, cancellationToken);
-        using var request = new HttpRequestMessage(
-            HttpMethod.Get,
-            ApiConfig.GitHubReleasesPath);
-        request.Headers.Accept.Add(new MediaTypeWithQualityHeaderValue("application/vnd.github+json"));
-        request.Headers.UserAgent.ParseAdd($"{LauncherConstants.ProductName.Replace(" ", "-", StringComparison.Ordinal)}/{currentVersion}");
-        request.Headers.Add("X-GitHub-Api-Version", "2022-11-28");
-
-        if (useAuth)
-        {
-            request.Headers.Authorization = new AuthenticationHeaderValue("Bearer", gitHubToken);
-        }
-
-        using var response = await lease.Client.SendAsync(
-            request,
+        using var response = await lease.Client.GetAsync(
+            ApiConfig.LauncherReleasesPath,
             HttpCompletionOption.ResponseHeadersRead,
             cancellationToken);
         response.EnsureSuccessStatusCode();
 
         await using var stream = await response.Content.ReadAsStreamAsync(cancellationToken);
-        return await JsonSerializer.DeserializeAsync<List<GitHubReleaseResponse>>(
+        return await JsonSerializer.DeserializeAsync<List<LauncherReleaseResponse>>(
             stream,
             JsonOptions,
             cancellationToken);
     }
 
-    private static string NormalizeReleaseTag(string tagName)
+    /// <summary>
+    /// Detects whether a version string represents a pre-release by checking for a hyphen suffix
+    /// (e.g. "1.0.0-beta.1"). Consistent with <see cref="LauncherSettings"/> channel auto-detection.
+    /// </summary>
+    private static bool IsPrereleaseVersion(string version) =>
+        version.Contains('-');
+
+    private static bool TryValidateReleaseFiles(
+        IReadOnlyList<ReleaseFile>? files,
+        out string validationError)
     {
-        var trimmed = tagName.Trim();
-        return trimmed.StartsWith('v') ? trimmed[1..] : trimmed;
+        if (files is null || files.Count == 0)
+        {
+            validationError = "files must contain at least one entry";
+            return false;
+        }
+
+        for (var index = 0; index < files.Count; index++)
+        {
+            var file = files[index];
+            if (string.IsNullOrWhiteSpace(file.Name))
+            {
+                validationError = $"files[{index}].name must not be empty";
+                return false;
+            }
+
+            if (!ExternalLinkService.TryCreateAllowedUri(file.Url, out var downloadUri)
+                || downloadUri.Scheme is not ("http" or "https"))
+            {
+                validationError = $"files[{index}].url must be an absolute HTTP or HTTPS URL";
+                return false;
+            }
+
+            if (file.Size <= 0)
+            {
+                validationError = $"files[{index}].size must be greater than zero";
+                return false;
+            }
+        }
+
+        validationError = "";
+        return true;
     }
 
     internal static bool IsNewerVersion(string latestVersion, string currentVersion)
@@ -294,18 +307,6 @@ public sealed partial class LauncherUpdateService : IDisposable
         leaseSource.Dispose();
     }
 
-    private sealed class GitHubReleaseResponse
-    {
-        [JsonPropertyName("tag_name")]
-        public string TagName { get; set; } = "";
-
-        [JsonPropertyName("html_url")]
-        public string HtmlUrl { get; set; } = "";
-
-        [JsonPropertyName("prerelease")]
-        public bool Prerelease { get; set; }
-    }
-
     private readonly record struct SemanticVersion(string CoreVersion, bool IsPrerelease, string PrereleaseLabel);
 
     [GeneratedRegex(
@@ -320,29 +321,30 @@ public sealed class LauncherUpdateCheckResult
         bool isSuccessful,
         bool isUpdateAvailable,
         string latestVersion,
-        string releaseUrl)
+        IReadOnlyList<ReleaseFile> files)
     {
         IsSuccessful = isSuccessful;
         IsUpdateAvailable = isUpdateAvailable;
         LatestVersion = latestVersion;
-        ReleaseUrl = releaseUrl;
+        Files = files;
     }
 
     public bool IsSuccessful { get; }
     public bool IsUpdateAvailable { get; }
     public string LatestVersion { get; }
-    public string ReleaseUrl { get; }
+
+    public IReadOnlyList<ReleaseFile> Files { get; }
 
     internal static LauncherUpdateCheckResult Succeeded(
         string latestVersion,
-        string releaseUrl,
+        IReadOnlyList<ReleaseFile> files,
         bool isUpdateAvailable)
     {
         return new LauncherUpdateCheckResult(
             isSuccessful: true,
             isUpdateAvailable,
             latestVersion,
-            releaseUrl);
+            files);
     }
 
     internal static LauncherUpdateCheckResult Failed()
@@ -351,7 +353,6 @@ public sealed class LauncherUpdateCheckResult
             isSuccessful: false,
             isUpdateAvailable: false,
             latestVersion: "",
-            releaseUrl: "");
+            files: []);
     }
 }
-

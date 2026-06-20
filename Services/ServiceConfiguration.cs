@@ -50,13 +50,13 @@ public static class ServiceConfiguration
         // ── Migration services ────────────────────────────────────────────
         services.AddSingleton<OldLauncherDetectionService>();
 
-        // ── ViewModels (Transient ─ each resolution creates a fresh instance) ─
+        // ── ViewModels (transient unless explicitly registered otherwise) ─
         services.AddTransient<SettingsViewModel>();
         services.AddTransient<ResourcePanelViewModel>();
         services.AddTransient<ShellViewModel>();
         services.AddTransient<BackgroundViewModel>();
         services.AddTransient<RemoteContentViewModel>();
-        services.AddTransient<DialogsViewModel>();
+        services.AddSingleton<DialogsViewModel>();
         services.AddTransient<GameOperationsViewModel>();
         services.AddTransient<ToastHostViewModel>();
         services.AddTransient<WindowChromeViewModel>();

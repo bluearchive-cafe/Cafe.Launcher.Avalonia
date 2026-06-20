@@ -212,6 +212,7 @@ public partial class MainWindowViewModel : ViewModelBase, IDisposable
         Dialogs.ConfirmStopRequested += Operations.PerformStop;
         Dialogs.CloseAfterStoppingDownloadRequested += WindowChrome.CloseAfterStoppingDownload;
         Dialogs.CloseRequested += () => WindowChrome.CloseWindow?.Invoke();
+        Dialogs.ConfirmUpdateAvailableRequested += url => ExternalLinkService.Open(url);
 
         RemoteContent.OpenExternalUrlRequested = WindowChrome.OpenExternalUrl;
 

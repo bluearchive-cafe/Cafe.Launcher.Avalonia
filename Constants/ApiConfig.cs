@@ -12,6 +12,6 @@ public static class ApiConfig
 
     public const string GitHubReleaseRepositorySlug = "bluearchive-cafe/Cafe.Launcher.Avalonia_Release";
     public const string GitHubReleaseRepositoryUrl = "https://github.com/" + GitHubReleaseRepositorySlug;
-    public const string GitHubApiBaseUrl = "https://api.github.com";
-    public const string GitHubReleasesPath = "/repos/" + GitHubReleaseRepositorySlug + "/releases?per_page=20";
+    public const string LauncherApiBaseUrl = "https://api-cafe-launcher.saibamidori.com/";
+    public const string LauncherReleasesPath = "/api/launcher/releases";
 }
