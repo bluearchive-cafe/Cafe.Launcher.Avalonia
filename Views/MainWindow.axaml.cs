@@ -55,7 +55,7 @@ public partial class MainWindow : Window
             ? null
             : await StorageProvider.TryGetFolderFromPathAsync(currentPath);
 
-        var pickerTitle = (DataContext as MainWindowViewModel)?.Shell.GameFolderPickerTitle ?? "Choose install folder";
+        var pickerTitle = (DataContext as MainWindowViewModel)?.Shell.GameFolderPickerTitle ?? "";
         var folders = await StorageProvider.OpenFolderPickerAsync(new FolderPickerOpenOptions
         {
             Title = pickerTitle,
@@ -73,7 +73,7 @@ public partial class MainWindow : Window
             return null;
         }
 
-        var imagePickerTitle = (DataContext as MainWindowViewModel)?.Background.BackgroundImagePickerTitle ?? "Choose Background Image";
+        var imagePickerTitle = (DataContext as MainWindowViewModel)?.Background.BackgroundImagePickerTitle ?? "";
         var files = await StorageProvider.OpenFilePickerAsync(new FilePickerOpenOptions
         {
             Title = imagePickerTitle,
@@ -97,7 +97,7 @@ public partial class MainWindow : Window
             return null;
         }
 
-        var folderPickerTitle = (DataContext as MainWindowViewModel)?.Background.BackgroundFolderPickerTitle ?? "Choose Background Folder";
+        var folderPickerTitle = (DataContext as MainWindowViewModel)?.Background.BackgroundFolderPickerTitle ?? "";
         var folders = await StorageProvider.OpenFolderPickerAsync(new FolderPickerOpenOptions
         {
             Title = folderPickerTitle,

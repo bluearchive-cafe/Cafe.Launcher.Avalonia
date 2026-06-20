@@ -30,6 +30,7 @@ public sealed class GameDownloadService : IDisposable
     private readonly Crc64Service crc64Service;
     private readonly DiskSpaceService diskSpaceService;
     private readonly LocalDiagnostics diagnostics;
+    private readonly LocalizationService localizer;
     private readonly string downloadStateFilePath;
     private static readonly JsonSerializerOptions DownloadStateJsonOptions = new()
     {
@@ -49,7 +50,8 @@ public sealed class GameDownloadService : IDisposable
         ProxySettingsService proxySettingsService,
         Crc64Service crc64Service,
         DiskSpaceService diskSpaceService,
-        LocalDiagnostics diagnostics)
+        LocalDiagnostics diagnostics,
+        LocalizationService localizer)
     {
         this.apiClient = apiClient;
         this.localGameStateService = localGameStateService;
@@ -58,6 +60,7 @@ public sealed class GameDownloadService : IDisposable
         this.crc64Service = crc64Service;
         this.diskSpaceService = diskSpaceService;
         this.diagnostics = diagnostics;
+        this.localizer = localizer;
         downloadStateFilePath = Path.Combine(
             Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData),
             LauncherConstants.ProductName,
@@ -107,6 +110,11 @@ public sealed class GameDownloadService : IDisposable
         Action<GameOperationProgress> progress,
         CancellationToken cancellationToken = default)
     {
+        if (IsRunning)
+        {
+            return null;
+        }
+
         var state = await LoadDownloadStateAsync(cancellationToken);
         if (state is null)
         {
@@ -221,12 +229,12 @@ public sealed class GameDownloadService : IDisposable
                 || string.IsNullOrWhiteSpace(gameConfig.GameLatestFilePath)
                 || string.IsNullOrWhiteSpace(gameConfig.GameStartExeName))
             {
-                return Failed("Remote game config is incomplete.", "remote-config");
+                return Failed(localizer.T("downloadRemoteConfigIncomplete"), "remote-config");
             }
 
             var speedLimitBytesPerSec = DownloadSpeedLimits.ToBytesPerSecond(settings.DownloadSpeedLimit);
             if (string.IsNullOrWhiteSpace(settings.GamePath))
-                return Failed("Game install path is not configured. Open Settings to choose a path.", "no-path");
+                return Failed(localizer.T("installPathNotConfigured"), "no-path");
             var gamePath = localGameStateService.NormalizeGamePath(settings.GamePath);
             EnsureGamePath(gamePath);
             Directory.CreateDirectory(gamePath);
@@ -235,7 +243,7 @@ public sealed class GameDownloadService : IDisposable
             if (localGame.GameConfig?.Name is { Length: > 0 }
                 && await ProcessService.IsExeRunningAsync($"{localGame.GameConfig.Name}.exe", activeToken))
             {
-                return Failed("Game executable is running. Close the game before changing files.", "game-running");
+                return Failed(localizer.T("gameExecutableRunning"), "game-running");
             }
 
             // Persist download state for potential resume after restart
@@ -258,7 +266,7 @@ public sealed class GameDownloadService : IDisposable
                     activeToken);
             if (string.IsNullOrWhiteSpace(cdnConfig.PrimaryCdn) || string.IsNullOrWhiteSpace(cdnConfig.BackUpCdn))
             {
-                return Failed("CDN config is incomplete.", "cdn-config");
+                return Failed(localizer.T("cdnConfigIncomplete"), "cdn-config");
             }
 
             var downloadPlan = repair
@@ -284,7 +292,9 @@ public sealed class GameDownloadService : IDisposable
                 return new GameOperationResult
                 {
                     Success = true,
-                    Message = repair ? "Repair check passed. No file needs repair." : "Game files are already current."
+                    Message = repair
+                        ? localizer.T("repairNoChanges")
+                        : localizer.T("gameAlreadyCurrent")
                 };
             }
 
@@ -297,7 +307,7 @@ public sealed class GameDownloadService : IDisposable
                     "Game download blocked by disk space.",
                     $"path: {gamePath}{Environment.NewLine}required: {FileSizeFormatter.Format(requiredBytes)}",
                     activeToken);
-                return Failed("Disk space insufficient.", "game-download-error-no-space", affectedCount);
+                return Failed(localizer.T("diskSpaceInsufficient"), "game-download-error-no-space", affectedCount);
             }
 
             for (var retry = 0; retry <= MaxInstallVerificationRetry; retry++)
@@ -336,7 +346,9 @@ public sealed class GameDownloadService : IDisposable
                     return new GameOperationResult
                     {
                         Success = true,
-                        Message = repair ? "Repair completed." : "Install / Update completed.",
+                        Message = repair
+                            ? localizer.T("repairCompleted")
+                            : localizer.T("installUpdateCompleted"),
                         AffectedFileCount = affectedCount
                     };
                 }
@@ -349,7 +361,7 @@ public sealed class GameDownloadService : IDisposable
                 }).ToList();
             }
 
-            return Failed("Download verification failed after retries.", "game-download-error-network-down", affectedCount);
+            return Failed(localizer.T("downloadVerificationFailed"), "game-download-error-network-down", affectedCount);
         }
         catch (OperationCanceledException) when (activeToken.IsCancellationRequested)
         {
@@ -359,22 +371,22 @@ public sealed class GameDownloadService : IDisposable
             }
 
             progress(CreateProgress(operationKind, "stopped", 0));
-            return Failed("Operation stopped.", "stopped");
+            return Failed(localizer.T("operationStopped"), "stopped");
         }
         catch (IOException exception) when (exception.HResult == unchecked((int)0x80070070))
         {
             await diagnostics.ErrorAsync("Game download disk space error.", exception, CancellationToken.None);
-            return Failed("Disk space insufficient.", "game-download-error-no-space");
+            return Failed(localizer.T("diskSpaceInsufficient"), "game-download-error-no-space");
         }
         catch (Exception exception) when (exception is IOException or UnauthorizedAccessException)
         {
             await diagnostics.ErrorAsync("Game file operation failed.", exception, CancellationToken.None);
-            return Failed($"File operation failed: {exception.Message}", "error-system");
+            return Failed(localizer.F("fileOperationFailed", exception.Message), "error-system");
         }
         catch (Exception exception) when (exception is HttpRequestException or TaskCanceledException or JsonException)
         {
             await diagnostics.ErrorAsync("Game download network failed.", exception, CancellationToken.None);
-            return Failed($"Network error: {exception.Message}", "game-download-error-network-down");
+            return Failed(localizer.F("networkErrorDetail", exception.Message), "game-download-error-network-down");
         }
         catch (Exception exception)
         {
@@ -383,7 +395,7 @@ public sealed class GameDownloadService : IDisposable
                 $"Game download unexpected error (operation: {operationKind})",
                 exception,
                 CancellationToken.None);
-            return Failed($"Unexpected error: {exception.Message}", "error-system");
+            return Failed(localizer.F("unexpectedError", exception.Message), "error-system");
         }
         finally
         {
@@ -468,6 +480,7 @@ public sealed class GameDownloadService : IDisposable
         Crc64Service crc64Service,
         DiskSpaceService diskSpaceService,
         LocalDiagnostics diagnostics,
+        LocalizationService localizer,
         string downloadStateFilePath)
     {
         this.apiClient = apiClient;
@@ -477,6 +490,7 @@ public sealed class GameDownloadService : IDisposable
         this.crc64Service = crc64Service;
         this.diskSpaceService = diskSpaceService;
         this.diagnostics = diagnostics;
+        this.localizer = localizer;
         this.downloadStateFilePath = downloadStateFilePath;
     }
 

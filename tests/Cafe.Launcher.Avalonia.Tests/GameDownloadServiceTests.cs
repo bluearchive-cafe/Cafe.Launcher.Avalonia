@@ -13,6 +13,11 @@ namespace Cafe.Launcher.Avalonia.Tests;
 
 public sealed class GameDownloadServiceTests
 {
+    static GameDownloadServiceTests()
+    {
+        TestLocalizationHelper.Initialize();
+    }
+
     [Fact]
     public void GetSafePath_WhenPathIsRelative_ReturnsPathInsideGameDirectory()
     {
@@ -254,6 +259,44 @@ public sealed class GameDownloadServiceTests
         Directory.Delete(tempDir, recursive: true);
     }
 
+    [Fact]
+    public async Task ResumePersistedAsync_WhenOperationIsRunning_DoesNotReplaceActiveOperation()
+    {
+        var tempDir = Path.Combine(Path.GetTempPath(), Guid.NewGuid().ToString("N"));
+        var gamePath = Path.Combine(tempDir, "YostarGames", "BlueArchive_JP");
+        Directory.CreateDirectory(gamePath);
+        await WriteLocalGameFilesAsync(gamePath);
+        var settingsService = new LauncherSettingsService(Path.Combine(tempDir, "settings.json"));
+        await settingsService.SaveAsync(new LauncherSettings { GamePath = gamePath });
+        var statePath = Path.Combine(tempDir, "download_state.json");
+        var handler = new BlockingManifestHandler();
+        using var apiClient = new LauncherApiClient(
+            handler,
+            new AuthorizationHeaderFactory(),
+            new PatchUrlGroupService());
+        using var service = CreateService(apiClient, settingsService, statePath);
+        var snapshot = CreateSnapshot(gamePath);
+        var repairTask = service.RepairAsync(snapshot, _ => { });
+
+        await handler.RequestStarted.Task.WaitAsync(TimeSpan.FromSeconds(2));
+        var resumeTask = service.ResumePersistedAsync(snapshot, _ => { });
+
+        try
+        {
+            var completed = await Task.WhenAny(resumeTask, Task.Delay(TimeSpan.FromMilliseconds(250)));
+            Assert.Same(resumeTask, completed);
+            Assert.Null(await resumeTask);
+            Assert.False(repairTask.IsCompleted);
+        }
+        finally
+        {
+            handler.Release.TrySetResult();
+            service.Stop();
+            await repairTask;
+            Directory.Delete(tempDir, recursive: true);
+        }
+    }
+
     private static GameDownloadService CreateService(LauncherApiClient apiClient)
     {
         return CreateService(
@@ -277,6 +320,7 @@ public sealed class GameDownloadServiceTests
             new Crc64Service(),
             new DiskSpaceService(),
             diagnostics,
+            new LocalizationService(),
             downloadStateFilePath);
     }
 
@@ -370,6 +414,31 @@ public sealed class GameDownloadServiceTests
             {
                 Content = new StringContent(json, Encoding.UTF8, "application/json")
             });
+        }
+    }
+
+    private sealed class BlockingManifestHandler : HttpMessageHandler
+    {
+        public TaskCompletionSource RequestStarted { get; } =
+            new(TaskCreationOptions.RunContinuationsAsynchronously);
+
+        public TaskCompletionSource Release { get; } =
+            new(TaskCreationOptions.RunContinuationsAsynchronously);
+
+        protected override async Task<HttpResponseMessage> SendAsync(
+            HttpRequestMessage request,
+            CancellationToken cancellationToken)
+        {
+            RequestStarted.TrySetResult();
+            await Release.Task.WaitAsync(cancellationToken);
+            var requestUri = request.RequestUri?.ToString() ?? "";
+            var json = requestUri.Contains("/api/launcher/game/config/json", StringComparison.Ordinal)
+                ? "{\"code\":200,\"data\":{\"url\":\"https://manifest.example.invalid/manifest.json\"}}"
+                : "{\"source\":\"\",\"file\":[]}";
+            return new HttpResponseMessage(HttpStatusCode.OK)
+            {
+                Content = new StringContent(json, Encoding.UTF8, "application/json")
+            };
         }
     }
 

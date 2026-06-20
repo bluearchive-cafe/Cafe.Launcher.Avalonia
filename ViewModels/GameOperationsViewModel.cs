@@ -33,10 +33,10 @@ public partial class GameOperationsViewModel : ViewModelBase
     private bool isProgressPanelVisible;
 
     [ObservableProperty]
-    private string installButtonText = "Install Game";
+    private string installButtonText = "";
 
     [ObservableProperty]
-    private string progressTitle = "Preparing";
+    private string progressTitle = "";
 
     [ObservableProperty]
     private int progressValue;
@@ -98,7 +98,7 @@ public partial class GameOperationsViewModel : ViewModelBase
     public void ApplyLanguage()
     {
         PauseResumeText = IsPaused ? localizer.T("resume") : localizer.T("pause");
-        if (string.IsNullOrWhiteSpace(ProgressTitle) || ProgressTitle == "Preparing")
+        if (string.IsNullOrWhiteSpace(ProgressTitle))
         {
             ProgressTitle = localizer.T("preparing");
         }
@@ -179,10 +179,7 @@ public partial class GameOperationsViewModel : ViewModelBase
 
             var result = await gameDownloadService.InstallOrUpdateAsync(snapshot, ApplyProgress);
             shell.OperationNote = result.Message;
-            if (result.Success)
-                toastService.ShowSuccess(result.Message);
-            else
-                toastService.ShowError(result.Message);
+            ShowOperationResult(result);
             var refresh = RequestRefreshAfterPersistedResumeAsync ?? RequestRefreshAsync;
             if (refresh is not null)
             {
@@ -238,10 +235,7 @@ public partial class GameOperationsViewModel : ViewModelBase
 
             var result = await gameDownloadService.RepairAsync(snapshot, ApplyProgress);
             shell.OperationNote = result.Message;
-            if (result.Success)
-                toastService.ShowSuccess(result.Message);
-            else
-                toastService.ShowError(result.Message);
+            ShowOperationResult(result);
             if (RequestRefreshAsync is not null)
             {
                 await RequestRefreshAsync.Invoke();
@@ -391,10 +385,7 @@ public partial class GameOperationsViewModel : ViewModelBase
             }
 
             shell.OperationNote = result.Message;
-            if (result.Success)
-                toastService.ShowSuccess(result.Message);
-            else
-                toastService.ShowError(result.Message);
+            ShowOperationResult(result);
             if (RequestRefreshAsync is not null)
             {
                 await RequestRefreshAsync.Invoke();
@@ -421,6 +412,22 @@ public partial class GameOperationsViewModel : ViewModelBase
     }
 
     public bool IsDownloadRunning => gameDownloadService.IsRunning;
+
+    private void ShowOperationResult(GameOperationResult result)
+    {
+        if (result.Success)
+        {
+            toastService.ShowSuccess(result.Message);
+        }
+        else if (result.ErrorType == "stopped")
+        {
+            toastService.ShowWarning(result.Message);
+        }
+        else
+        {
+            toastService.ShowError(result.Message);
+        }
+    }
 
     private bool PrepareShellOnly(LauncherStatusSnapshot? snapshot)
     {
@@ -491,17 +498,27 @@ public partial class GameOperationsViewModel : ViewModelBase
         ProgressDetail = progress.Stage switch
         {
             "repair-confirm" => progress.AffectedFileCount > 0
-                ? $"{progress.AffectedFileCount} files need repair ({FileSizeFormatter.Format(progress.DownloadedSize)})"
-                : "No files need repair",
+                ? localizer.F(
+                    "repairFilesNeeded",
+                    progress.AffectedFileCount,
+                    FileSizeFormatter.Format(progress.DownloadedSize))
+                : localizer.T("repairNoFilesNeeded"),
             "paused" => localizer.T("paused"),
-            _ => progress.Stage
+            "repair-check" => localizer.T("repairCheckingFiles"),
+            "update-check" => localizer.T("updateCheckingFiles"),
+            "check-file" => localizer.T("verifyingDownloadedFiles"),
+            "repair-done" => localizer.T("repairCompleted"),
+            "download-done" => localizer.T("installUpdateCompleted"),
+            "stopped" => localizer.T("operationStopped"),
+            "download" => localizer.T("downloading"),
+            _ => localizer.T("working")
         };
         ProgressSpeed = progress.Stage == "repair-confirm" || progress.Stage == "paused" ? "" : progress.Speed;
         ProgressSize = progress.TotalSize > 0 && progress.Stage != "repair-confirm" && progress.Stage != "paused"
             ? $"{FileSizeFormatter.Format(progress.DownloadedSize)} / {FileSizeFormatter.Format(progress.TotalSize)}"
             : "";
         ProgressEstimated = progress.TotalSize > 0 && progress.Stage == "download" && !string.IsNullOrWhiteSpace(progress.Estimated)
-            ? $"ETA {progress.Estimated}"
+            ? localizer.F("estimatedTimeRemaining", progress.Estimated)
             : "";
         IsPaused = progress.IsPaused;
         CanPauseOperation = progress.CanPause;
@@ -528,7 +545,7 @@ public partial class GameOperationsViewModel : ViewModelBase
         }
         catch
         {
-            shell.OperationNote = $"{shell.OperationNote} Local diagnostics log write failed.";
+            shell.OperationNote = localizer.F("diagnosticsWriteFailed", shell.OperationNote);
         }
     }
 }

@@ -13,10 +13,12 @@ namespace Cafe.Launcher.Avalonia.Services;
 public sealed class ManifestValidationService
 {
     private readonly LauncherApiClient apiClient;
+    private readonly LocalizationService localizer;
 
-    public ManifestValidationService(LauncherApiClient apiClient)
+    public ManifestValidationService(LauncherApiClient apiClient, LocalizationService localizer)
     {
         this.apiClient = apiClient;
+        this.localizer = localizer;
     }
 
     public async Task<ManifestValidationResult> ValidateAsync(
@@ -32,7 +34,7 @@ public sealed class ManifestValidationService
             return new ManifestValidationResult
             {
                 Success = true,
-                Message = "Launch check skipped."
+                Message = localizer.T("launchCheckSkipped")
             };
         }
 
@@ -50,18 +52,18 @@ public sealed class ManifestValidationService
 
         if (!localGame.ManifestExists)
         {
-            return Failed($"Local manifest.json does not exist: {localGame.ManifestPath}");
+            return Failed(localizer.F("localManifestMissing", localGame.ManifestPath));
         }
 
         if (localGame.Manifest is null)
         {
-            return Failed($"Local manifest.json could not be read: {localGame.ManifestPath}");
+            return Failed(localizer.F("localManifestUnreadable", localGame.ManifestPath));
         }
 
         return ValidateFiles(gamePath, localGame.Manifest.Files);
     }
 
-    private static ManifestValidationResult ValidateFiles(string gamePath, IReadOnlyList<ManifestFile> files)
+    private ManifestValidationResult ValidateFiles(string gamePath, IReadOnlyList<ManifestFile> files)
     {
         var fileCounts = CountDamagedFiles(gamePath, files);
         var damagedCount = fileCounts.MissingFileCount + fileCounts.SizeMismatchFileCount;
@@ -72,8 +74,11 @@ public sealed class ManifestValidationService
             MissingFileCount = fileCounts.MissingFileCount,
             SizeMismatchFileCount = fileCounts.SizeMismatchFileCount,
             Message = damagedCount == 0
-                ? "Manifest validation passed."
-                : $"Manifest validation failed. Missing files: {fileCounts.MissingFileCount}. Size mismatches: {fileCounts.SizeMismatchFileCount}."
+                ? localizer.T("manifestValidationPassed")
+                : localizer.F(
+                    "manifestValidationFailed",
+                    fileCounts.MissingFileCount,
+                    fileCounts.SizeMismatchFileCount)
         };
     }
 
@@ -87,7 +92,7 @@ public sealed class ManifestValidationService
         var basis = localGame.Manifest?.Basis;
         if (string.IsNullOrWhiteSpace(version) || string.IsNullOrWhiteSpace(basis))
         {
-            return (null, "Local manifest.json does not contain version or basis.");
+            return (null, localizer.T("localManifestMetadataMissing"));
         }
 
         ManifestUrlResponse manifestUrl;
@@ -102,12 +107,12 @@ public sealed class ManifestValidationService
         }
         catch (Exception exception) when (exception is HttpRequestException or TaskCanceledException or InvalidOperationException)
         {
-            return (null, $"Remote manifest URL request failed: {exception.Message}");
+            return (null, localizer.F("remoteManifestUrlRequestFailed", exception.Message));
         }
 
         if (string.IsNullOrWhiteSpace(manifestUrl.Url))
         {
-            return (null, "Remote manifest URL is empty.");
+            return (null, localizer.T("remoteManifestUrlEmpty"));
         }
 
         try
@@ -120,7 +125,7 @@ public sealed class ManifestValidationService
         }
         catch (Exception exception) when (exception is HttpRequestException or TaskCanceledException or JsonException or IOException)
         {
-            return (null, $"Remote manifest download failed: {exception.Message}");
+            return (null, localizer.F("remoteManifestDownloadFailed", exception.Message));
         }
     }
 

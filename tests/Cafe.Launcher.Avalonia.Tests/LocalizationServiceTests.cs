@@ -89,6 +89,45 @@ public sealed class LocalizationServiceTests
         Assert.DoesNotContain("\\\"", disclaimer, StringComparison.Ordinal);
     }
 
+    [Fact]
+    public void LocaleFiles_HaveMatchingKeys()
+    {
+        var localeDirectory = Path.Combine(FindProjectRoot(), "Assets", "Locales");
+        var english = ReadLocale(localeDirectory, "en.json");
+        var simplifiedChinese = ReadLocale(localeDirectory, "zh-Hans.json");
+        var japanese = ReadLocale(localeDirectory, "ja.json");
+
+        Assert.Equal(
+            english.Keys.OrderBy(key => key, StringComparer.Ordinal),
+            simplifiedChinese.Keys.OrderBy(key => key, StringComparer.Ordinal));
+        Assert.Equal(
+            english.Keys.OrderBy(key => key, StringComparer.Ordinal),
+            japanese.Keys.OrderBy(key => key, StringComparer.Ordinal));
+    }
+
+    [Theory]
+    [InlineData(LauncherLanguages.English, "3 files need repair (12 MB)", "ETA 1 minute")]
+    [InlineData(LauncherLanguages.SimplifiedChinese, "需要修复 3 个文件（12 MB）", "预计剩余时间 1 minute")]
+    [InlineData(LauncherLanguages.Japanese, "3 個のファイルを修復する必要があります（12 MB）", "残り時間 1 minute")]
+    public void F_WhenOperationProgressRequested_ReturnsLocalizedText(
+        string language,
+        string expectedRepairText,
+        string expectedEstimatedText)
+    {
+        var service = new LocalizationService();
+        service.SetLanguage(language);
+
+        Assert.Equal(expectedRepairText, service.F("repairFilesNeeded", 3, "12 MB"));
+        Assert.Equal(expectedEstimatedText, service.F("estimatedTimeRemaining", "1 minute"));
+    }
+
+    private static Dictionary<string, string> ReadLocale(string localeDirectory, string fileName)
+    {
+        var json = File.ReadAllText(Path.Combine(localeDirectory, fileName));
+        return JsonSerializer.Deserialize<Dictionary<string, string>>(json)
+            ?? throw new InvalidDataException($"{fileName} is not a localization dictionary.");
+    }
+
     private static string FindProjectRoot()
     {
         var directory = new DirectoryInfo(AppContext.BaseDirectory);

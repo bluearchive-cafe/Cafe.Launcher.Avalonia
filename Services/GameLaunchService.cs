@@ -11,13 +11,16 @@ public sealed class GameLaunchService
 {
     private readonly ManifestValidationService manifestValidationService;
     private readonly ClickCodeService clickCodeService;
+    private readonly LocalizationService localizer;
 
     public GameLaunchService(
         ManifestValidationService manifestValidationService,
-        ClickCodeService clickCodeService)
+        ClickCodeService clickCodeService,
+        LocalizationService localizer)
     {
         this.manifestValidationService = manifestValidationService;
         this.clickCodeService = clickCodeService;
+        this.localizer = localizer;
     }
 
     public async Task<GameLaunchResult> StartAsync(
@@ -26,31 +29,31 @@ public sealed class GameLaunchService
     {
         if (!snapshot.IsInstalled)
         {
-            return Failed("Game is not installed.");
+            return Failed(localizer.T("gameNotInstalled"));
         }
 
         if (snapshot.BelowLowestVersion)
         {
-            return Failed("Game version is below the required lowest version.");
+            return Failed(localizer.T("gameBelowLowestVersion"));
         }
 
         var localGame = snapshot.LocalGame;
         var gameConfig = localGame.GameConfig;
         if (string.IsNullOrWhiteSpace(gameConfig?.Name))
         {
-            return Failed("Game executable name is empty.");
+            return Failed(localizer.T("gameExecutableNameEmpty"));
         }
 
         // Defense-in-depth: reject executable names containing path separators
         if (gameConfig.Name.Contains('/') || gameConfig.Name.Contains('\\'))
         {
-            return Failed("Game executable name contains invalid characters.");
+            return Failed(localizer.T("gameExecutableNameInvalid"));
         }
 
         var exePath = Path.Combine(localGame.GamePath, $"{gameConfig.Name}.exe");
         if (!File.Exists(exePath))
         {
-            return Failed($"Game executable does not exist: {exePath}");
+            return Failed(localizer.F("gameExecutableMissing", exePath));
         }
 
         var validation = await manifestValidationService.ValidateAsync(
@@ -88,11 +91,11 @@ public sealed class GameLaunchService
 
         using var process = Process.Start(startInfo);
         return process is null
-            ? Failed("Game process did not start.")
+            ? Failed(localizer.T("gameProcessStartFailed"))
             : new GameLaunchResult
             {
                 Success = true,
-                Message = "Game process started.",
+                Message = localizer.T("gameProcessStarted"),
                 Validation = validation
             };
     }

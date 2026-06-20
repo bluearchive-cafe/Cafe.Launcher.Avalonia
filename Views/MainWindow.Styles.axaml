@@ -835,8 +835,9 @@
     </Style>
     <Style Selector="Border.toast-card">
         <Setter Property="Background" Value="{DynamicResource LauncherToastBackgroundBrush}"/>
+        <Setter Property="BorderBrush" Value="{DynamicResource LauncherCardBorderBrush}"/>
+        <Setter Property="BorderThickness" Value="1"/>
         <Setter Property="CornerRadius" Value="{StaticResource LauncherRadiusMd}"/>
-        <Setter Property="BoxShadow" Value="0 8 24 0 #3A000000"/>
         <Setter Property="Padding" Value="12"/>
         <Setter Property="MaxWidth" Value="340"/>
         <Style.Animations>

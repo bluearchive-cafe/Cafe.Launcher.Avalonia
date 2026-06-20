@@ -14,11 +14,16 @@ public sealed class GameUninstallService
 {
     private readonly LocalGameStateService localGameStateService;
     private readonly LocalDiagnostics diagnostics;
+    private readonly LocalizationService localizer;
 
-    public GameUninstallService(LocalGameStateService localGameStateService, LocalDiagnostics diagnostics)
+    public GameUninstallService(
+        LocalGameStateService localGameStateService,
+        LocalDiagnostics diagnostics,
+        LocalizationService localizer)
     {
         this.localGameStateService = localGameStateService;
         this.diagnostics = diagnostics;
+        this.localizer = localizer;
     }
 
     public async Task<GameOperationResult> UninstallAsync(
@@ -70,7 +75,7 @@ public sealed class GameUninstallService
             return new GameOperationResult
             {
                 Success = true,
-                Message = "Uninstall completed.",
+                Message = localizer.T("uninstallCompleted"),
                 AffectedFileCount = files.Count + 2
             };
         }
@@ -80,7 +85,7 @@ public sealed class GameUninstallService
             return new GameOperationResult
             {
                 Success = false,
-                Message = $"Uninstall failed: {exception.Message}",
+                Message = localizer.F("uninstallFailed", exception.Message),
                 ErrorType = "error-system"
             };
         }
@@ -92,34 +97,34 @@ public sealed class GameUninstallService
     {
         if (!Directory.Exists(gamePath))
         {
-            return Failed($"Game path does not exist: {gamePath}", "uninstall-error");
+            return Failed(localizer.F("gamePathMissing", gamePath), "uninstall-error");
         }
 
         if (IsSystemProtectPath(gamePath))
         {
-            return Failed($"Game path is protected: {gamePath}", "uninstall-error");
+            return Failed(localizer.F("gamePathProtected", gamePath), "uninstall-error");
         }
 
         if (!string.Equals(Path.GetFileName(Path.GetFullPath(gamePath)), GamePaths.GameFolderName, StringComparison.Ordinal))
         {
-            return Failed($"Game directory name must be {GamePaths.GameFolderName}.", "uninstall-error");
+            return Failed(localizer.F("gameDirectoryNameInvalid", GamePaths.GameFolderName), "uninstall-error");
         }
 
         var localGame = await localGameStateService.ReadAsync(gamePath, cancellationToken);
         if (string.IsNullOrWhiteSpace(localGame.GameConfig?.Version) || string.IsNullOrWhiteSpace(localGame.GameConfig?.Name))
         {
-            return Failed($"{GamePaths.GameConfigFileName} does not contain version or name.", "uninstall-error");
+            return Failed(localizer.F("gameConfigMetadataMissing", GamePaths.GameConfigFileName), "uninstall-error");
         }
 
         if (await ProcessService.IsExeRunningAsync($"{localGame.GameConfig.Name}.exe", cancellationToken))
         {
-            return Failed($"Game is running: {localGame.GameConfig.Name}.exe", "uninstall-error-running");
+            return Failed(localizer.F("gameIsRunning", $"{localGame.GameConfig.Name}.exe"), "uninstall-error-running");
         }
 
         return new GameOperationResult
         {
             Success = true,
-            Message = $"Ready to uninstall {localGame.Manifest?.Files.Count ?? 0} files.",
+            Message = localizer.F("readyToUninstall", localGame.Manifest?.Files.Count ?? 0),
             AffectedFileCount = (localGame.Manifest?.Files.Count ?? 0) + 2
         };
     }

@@ -34,9 +34,9 @@ public partial class BackgroundViewModel : ViewModelBase, IDisposable
 
     public Func<Task<string?>>? PickBackgroundFolderAsync { get; set; }
 
-    public string BackgroundImagePickerTitle { get; set; } = "Choose Background Image";
+    public string BackgroundImagePickerTitle { get; set; } = "";
 
-    public string BackgroundFolderPickerTitle { get; set; } = "Choose Background Folder";
+    public string BackgroundFolderPickerTitle { get; set; } = "";
 
     public BackgroundViewModel(
         ImageCacheService imageCacheService,
