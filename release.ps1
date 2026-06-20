@@ -281,8 +281,25 @@ Write-Step "Committing version bump"
 
 $commitMsg = "chore: bump version to $tagName"
 Invoke-External "git" @("-C", $ScriptDir, "add", $CsprojName) "git add $CsprojName" | Out-Null
-Invoke-External "git" @("-C", $ScriptDir, "commit", "-m", $commitMsg) "git commit" | Out-Null
-Write-OK "Committed: $commitMsg"
+
+$global:LASTEXITCODE = 0
+& git -C $ScriptDir diff --cached --quiet -- $CsprojName
+$stagedDiffExitCode = $LASTEXITCODE
+if ($stagedDiffExitCode -eq 1) {
+    Invoke-External "git" @("-C", $ScriptDir, "commit", "-m", $commitMsg) "git commit" | Out-Null
+    Write-OK "Committed: $commitMsg"
+}
+elseif ($stagedDiffExitCode -eq 0) {
+    $currentCommit = git -C $ScriptDir rev-parse --short HEAD
+    if ($LASTEXITCODE -ne 0) {
+        throw "Could not resolve current HEAD"
+    }
+
+    Write-OK "Version already committed; using HEAD $currentCommit"
+}
+else {
+    throw "Could not inspect staged version changes (exit code: $stagedDiffExitCode)"
+}
 
 # ── Tag ─────────────────────────────────────────────────────────────────────
 Write-Step "Creating tag $tagName"
@@ -327,3 +344,4 @@ if ($remoteUrl -match 'github\.com[:/](.+?)(?:\.git)?$') {
     Write-Host "  Watch:   https://github.com/$repoSlug/actions"
 }
 Write-Host "═══════════════════════════════════════════" -ForegroundColor Green
+exit 0

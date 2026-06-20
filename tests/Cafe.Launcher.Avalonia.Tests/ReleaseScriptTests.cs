@@ -1,0 +1,43 @@
+namespace Cafe.Launcher.Avalonia.Tests;
+
+public sealed class ReleaseScriptTests
+{
+    [Fact]
+    public void ReleaseScript_SkipsVersionCommitWhenProjectVersionIsAlreadyCommitted()
+    {
+        var script = File.ReadAllText(ProjectFile("release.ps1"));
+
+        Assert.Contains(
+            "git -C $ScriptDir diff --cached --quiet -- $CsprojName",
+            script,
+            StringComparison.Ordinal);
+        Assert.Contains(
+            "Version already committed; using HEAD",
+            script,
+            StringComparison.Ordinal);
+        Assert.Contains(
+            "if ($stagedDiffExitCode -eq 1)",
+            script,
+            StringComparison.Ordinal);
+        Assert.EndsWith("exit 0", script.TrimEnd(), StringComparison.Ordinal);
+    }
+
+    private static string ProjectFile(string relativePath) =>
+        Path.Combine(FindProjectRoot(), relativePath);
+
+    private static string FindProjectRoot()
+    {
+        var directory = new DirectoryInfo(AppContext.BaseDirectory);
+        while (directory is not null)
+        {
+            if (File.Exists(Path.Combine(directory.FullName, "Cafe.Launcher.Avalonia.csproj")))
+            {
+                return directory.FullName;
+            }
+
+            directory = directory.Parent;
+        }
+
+        throw new DirectoryNotFoundException("Cafe.Launcher.Avalonia.csproj was not found.");
+    }
+}
