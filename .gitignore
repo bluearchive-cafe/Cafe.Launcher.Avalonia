@@ -66,8 +66,5 @@ _ReSharper.*/
 # Windows
 Thumbs.db
 
-# Release artifacts
-CHANGELOG_RELEASE.md
-
 .claude/
 .agents/

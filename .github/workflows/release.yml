@@ -45,22 +45,27 @@ jobs:
           Write-Host "Created $zipName"
           "zip_name=$zipName" >> $env:GITHUB_ENV
 
-      - name: Generate changelog
+      - name: Prepare changelog
         shell: pwsh
         run: |
-          $lastTag = git describe --tags --abbrev=0 ${{ github.ref }}^ 2>$null
-          $parameters = @{
-            CurrentRef = "${{ github.ref }}^"
-            OutputPath = "changelog.md"
-          }
-          if ($lastTag) {
-            Write-Host "Last tag: $lastTag"
-            $parameters.PreviousTag = $lastTag
+          if (Test-Path "CHANGELOG_RELEASE.md") {
+            Copy-Item "CHANGELOG_RELEASE.md" "changelog.md"
+            Write-Host "Using maintained CHANGELOG_RELEASE.md"
           } else {
-            Write-Host "No previous tag — using all commits"
+            $lastTag = git describe --tags --abbrev=0 ${{ github.ref }}^ 2>$null
+            $parameters = @{
+              CurrentRef = "${{ github.ref }}^"
+              OutputPath = "changelog.md"
+            }
+            if ($lastTag) {
+              Write-Host "Last tag: $lastTag"
+              $parameters.PreviousTag = $lastTag
+            } else {
+              Write-Host "No previous tag — using all commits"
+            }
+            .\scripts\New-ReleaseChangelog.ps1 @parameters
+            Write-Host "Fallback changelog generated"
           }
-          .\scripts\New-ReleaseChangelog.ps1 @parameters
-          Write-Host "Changelog generated"
 
       - name: Create source repository release
         uses: softprops/action-gh-release@v2
