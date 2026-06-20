@@ -91,8 +91,13 @@ public partial class WindowChromeViewModel : ViewModelBase
     [RelayCommand]
     private void OpenOfficialSite()
     {
-        ExternalLinkService.Open(LauncherConstants.OfficialWebsiteUrl);
+        ExternalLinkService.Open(ResolveOfficialSiteUrl(settings.Editor.Current.PatchUrlGroup));
     }
+
+    internal static string ResolveOfficialSiteUrl(string patchUrlGroup) =>
+        patchUrlGroup == PatchUrlGroups.Cafe
+            ? LauncherConstants.CafeWebsiteUrl
+            : LauncherConstants.OfficialGameWebsiteUrl;
 
     [RelayCommand]
     private void OpenGitHubRepository()

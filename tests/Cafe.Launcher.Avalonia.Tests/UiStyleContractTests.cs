@@ -178,6 +178,23 @@ public sealed partial class UiStyleContractTests
     }
 
     [Fact]
+    public void ToastCards_DoNotUseOverlappingBoxShadows()
+    {
+        var document = XDocument.Load(ProjectFile("Views/MainWindow.Styles.axaml"));
+        var toastCardStyle = document
+            .Descendants()
+            .Single(element =>
+                element.Name.LocalName == "Style"
+                && element.Attribute("Selector")?.Value == "Border.toast-card");
+
+        Assert.DoesNotContain(
+            toastCardStyle.Elements(),
+            element =>
+                element.Name.LocalName == "Setter"
+                && element.Attribute("Property")?.Value == "BoxShadow");
+    }
+
+    [Fact]
     public void OverlayStyles_DefineSettingsAndDialogLayerOrder()
     {
         var styles = File.ReadAllText(ProjectFile("Views/MainWindow.Styles.axaml"));

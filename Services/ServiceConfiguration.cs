@@ -31,9 +31,9 @@ public static class ServiceConfiguration
         services.AddSingleton<NoticeStateService>();
         services.AddSingleton<ResourcePanelUidService>();
         services.AddSingleton<LauncherSettingsService>();
-        services.AddTransient<ISettingsEditor, SettingsEditor>();
-        services.AddTransient<SettingsOptionsViewModel>();
-        services.AddTransient<SettingsAppearanceViewModel>();
+        services.AddSingleton<ISettingsEditor, SettingsEditor>();
+        services.AddSingleton<SettingsOptionsViewModel>();
+        services.AddSingleton<SettingsAppearanceViewModel>();
         services.AddSingleton<GameLaunchService>();
         services.AddSingleton<GameUninstallService>();
         services.AddSingleton<LauncherUpdateService>();
@@ -51,13 +51,13 @@ public static class ServiceConfiguration
         services.AddSingleton<OldLauncherDetectionService>();
 
         // ── ViewModels (transient unless explicitly registered otherwise) ─
-        services.AddTransient<SettingsViewModel>();
+        services.AddSingleton<SettingsViewModel>();
         services.AddTransient<ResourcePanelViewModel>();
-        services.AddTransient<ShellViewModel>();
+        services.AddSingleton<ShellViewModel>();
         services.AddTransient<BackgroundViewModel>();
-        services.AddTransient<RemoteContentViewModel>();
+        services.AddSingleton<RemoteContentViewModel>();
         services.AddSingleton<DialogsViewModel>();
-        services.AddTransient<GameOperationsViewModel>();
+        services.AddSingleton<GameOperationsViewModel>();
         services.AddTransient<ToastHostViewModel>();
         services.AddTransient<WindowChromeViewModel>();
         services.AddTransient<MigrationWizardViewModel>();

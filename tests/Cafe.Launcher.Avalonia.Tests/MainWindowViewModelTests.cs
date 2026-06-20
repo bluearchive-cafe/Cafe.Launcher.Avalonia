@@ -623,8 +623,12 @@ public sealed class MainWindowViewModelTests : IDisposable
             Path.Combine(tempDir, Guid.NewGuid().ToString("N"), "settings.json"));
         var localGameStateService = new LocalGameStateService();
         var diagnostics = new LocalDiagnostics();
-        var manifestValidationService = new ManifestValidationService(apiClient);
-        var gameLaunchService = new GameLaunchService(manifestValidationService, new ClickCodeService());
+        var localizationService = new LocalizationService();
+        var manifestValidationService = new ManifestValidationService(apiClient, localizationService);
+        var gameLaunchService = new GameLaunchService(
+            manifestValidationService,
+            new ClickCodeService(),
+            localizationService);
         var gameDownloadService = new GameDownloadService(
             apiClient,
             localGameStateService,
@@ -633,6 +637,7 @@ public sealed class MainWindowViewModelTests : IDisposable
             new Crc64Service(),
             new DiskSpaceService(),
             diagnostics,
+            localizationService,
             Path.Combine(tempDir, Guid.NewGuid().ToString("N"), "download_state.json"));
         resourcePanelUidService ??= new ResourcePanelUidService(
             new BestHttpCookieLibraryService(),
@@ -640,7 +645,6 @@ public sealed class MainWindowViewModelTests : IDisposable
             Path.Combine(tempDir, "missing-resource-panel-cookie"));
         resourcePanelApiClient ??= new ResourcePanelApiClient(new ResourcePanelHandler());
 
-        var localizationService = new LocalizationService();
         toastService ??= new ToastService();
         var diskSpaceService = new DiskSpaceService();
         var launcherUpdateService = new LauncherUpdateService(new LauncherUpdateHandler());
@@ -656,7 +660,10 @@ public sealed class MainWindowViewModelTests : IDisposable
         var resourcePanelViewModel = new ResourcePanelViewModel(
             resourcePanelUidService, resourcePanelApiClient, localizationService,
             toastService, diagnostics);
-        var gameUninstallService = new GameUninstallService(localGameStateService, diagnostics);
+        var gameUninstallService = new GameUninstallService(
+            localGameStateService,
+            diagnostics,
+            localizationService);
 
         var shellViewModel = new ShellViewModel(localizationService);
         var remoteContentViewModel = new RemoteContentViewModel(localizationService, imageCacheService);

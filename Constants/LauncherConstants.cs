@@ -17,6 +17,7 @@ public static class LauncherConstants
     /// </summary>
     public const int ZIndexToast = 1000;
 
-    public const string OfficialWebsiteUrl = "https://bluearchive.cafe/";
+    public const string OfficialGameWebsiteUrl = "https://bluearchive.jp/";
+    public const string CafeWebsiteUrl = "https://bluearchive.cafe/";
     public const string GitHubReleaseRepositoryUrl = "https://github.com/bluearchive-cafe/Cafe.Launcher.Avalonia_Release";
 }

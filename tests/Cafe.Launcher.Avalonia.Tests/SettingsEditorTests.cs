@@ -201,7 +201,11 @@ public sealed class SettingsEditorTests
         Assert.Equal(BackgroundFits.UniformToFill, current.BackgroundFit);
         Assert.Equal("#FF000000", current.BackgroundFillColor);
         Assert.Equal("", current.ResourcePanelUid);
-        Assert.Equal(UpdateChannels.Stable, current.UpdateChannel);
+        Assert.Equal(
+            BuildInfo.LauncherVersion.Contains('-', StringComparison.Ordinal)
+                ? UpdateChannels.Beta
+                : UpdateChannels.Stable,
+            current.UpdateChannel);
         Assert.False(current.HasCompletedFirstLaunchWizard);
     }
 

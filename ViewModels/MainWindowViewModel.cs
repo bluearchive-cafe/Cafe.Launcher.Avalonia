@@ -247,6 +247,16 @@ public partial class MainWindowViewModel : ViewModelBase, IDisposable
     {
         var previousPatchUrlGroup = currentSnapshot?.Settings.PatchUrlGroup;
         var savedPatchUrlGroup = Settings.Editor.Current.PatchUrlGroup;
+        if (Operations.IsDownloadRunning)
+        {
+            if (currentSnapshot is not null)
+            {
+                currentSnapshot.Settings = await settingsService.ReadAsync();
+            }
+
+            return;
+        }
+
         await RefreshAsync();
         if (currentSnapshot?.IsInstalled == true
             && !string.Equals(previousPatchUrlGroup, savedPatchUrlGroup, StringComparison.Ordinal))
@@ -310,7 +320,7 @@ public partial class MainWindowViewModel : ViewModelBase, IDisposable
         }
         catch
         {
-            Shell.OperationNote = $"{Shell.OperationNote} Local diagnostics log write failed.";
+            Shell.OperationNote = localizer.F("diagnosticsWriteFailed", Shell.OperationNote);
         }
     }
 

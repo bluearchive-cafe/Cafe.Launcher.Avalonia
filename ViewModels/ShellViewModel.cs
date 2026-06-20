@@ -21,10 +21,10 @@ public partial class ShellViewModel : ViewModelBase
     private string productName = LauncherConstants.ProductName;
 
     [ObservableProperty]
-    private string launcherVersionText = $"Version {BuildInfo.LauncherVersion}";
+    private string launcherVersionText = "";
 
     [ObservableProperty]
-    private string commitShaText = $"Commit {BuildInfo.CommitSha}";
+    private string commitShaText = "";
 
     [ObservableProperty]
     private string frameworkVersionText = "";
@@ -39,53 +39,53 @@ public partial class ShellViewModel : ViewModelBase
     private string buildConfigText = "";
 
     [ObservableProperty]
-    private string currentViewTitle = "Loading launcher configuration";
+    private string currentViewTitle = "";
 
     [ObservableProperty]
     private string statusIconKind = "HelpCircleOutline";
 
     [ObservableProperty]
-    private string statusText = "Loading production API and local game state.";
+    private string statusText = "";
 
     [ObservableProperty]
-    private string pathText = "Game path: loading";
+    private string pathText = "";
 
     [ObservableProperty]
-    private string versionText = "Version: loading";
+    private string versionText = "";
 
     [ObservableProperty]
-    private string networkText = "Network: loading";
+    private string networkText = "";
 
     [ObservableProperty]
-    private string launchCheckText = "Launch check: loading";
+    private string launchCheckText = "";
 
     [ObservableProperty]
-    private string executableText = "Executable: loading";
+    private string executableText = "";
 
     [ObservableProperty]
-    private string executableNameText = "Loading";
+    private string executableNameText = "";
 
     [ObservableProperty]
-    private string networkStatusValueText = "Loading";
+    private string networkStatusValueText = "";
 
     [ObservableProperty]
-    private string launchCheckValueText = "Loading";
+    private string launchCheckValueText = "";
 
     [ObservableProperty]
-    private string diskSpaceText = "Required -- / Available --";
+    private string diskSpaceText = "";
 
     [ObservableProperty]
-    private string settingsSummary = "Settings";
+    private string settingsSummary = "";
 
     [ObservableProperty]
-    private string operationNote = "Remote telemetry is excluded. Diagnostics stay local.";
+    private string operationNote = "";
 
     [ObservableProperty]
     private bool isBusy = true;
 
     public LocalizedStrings I18n { get; } = new();
 
-    public string GameFolderPickerTitle { get; private set; } = "Choose install folder";
+    public string GameFolderPickerTitle { get; private set; } = "";
 
     public ShellViewModel(LocalizationService localizer)
     {
@@ -100,10 +100,12 @@ public partial class ShellViewModel : ViewModelBase
     {
         localizer.SetLanguage(language);
         I18n.Apply(localizer);
+        LauncherVersionText = localizer.F("launcherVersionLabel", BuildInfo.LauncherVersion);
+        CommitShaText = localizer.F("commitLabel", BuildInfo.CommitSha);
         FrameworkVersionText = FrameworkVersion;
         AvaloniaVersionText = $"Avalonia {BuildInfo.AvaloniaVersion}";
-        PlatformText = $"OS {PlatformName}";
-        BuildConfigText = $"Build {BuildInfo.BuildConfiguration}";
+        PlatformText = localizer.F("platformLabel", PlatformName);
+        BuildConfigText = localizer.F("buildConfigurationLabel", BuildInfo.BuildConfiguration);
         settings.RefreshOptionDisplayNames();
         resourcePanel.RefreshDisplayNames();
         if (!string.IsNullOrWhiteSpace(resourcePanel.ResourcePanelUid))
