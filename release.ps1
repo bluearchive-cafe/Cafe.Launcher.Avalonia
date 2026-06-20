@@ -202,8 +202,8 @@ if (-not $Force) {
 }
 Write-OK "Tag $tagName is available"
 
-# ── Generate changelog ──────────────────────────────────────────────────────
-Write-Step "Generating changelog"
+# ── Prepare changelog ───────────────────────────────────────────────────────
+Write-Step "Preparing changelog"
 
 # Determine prerelease status (tag name contains hyphen = prerelease)
 $isPrerelease = $tagName -match '-'
@@ -219,21 +219,37 @@ if ($lastTag) {
     Write-OK "No previous tag found — using all commits"
 }
 
-$changelogParameters = @{
-    CurrentRef = "HEAD"
-    PassThru = $true
-}
-if ($lastTag) {
-    $changelogParameters.PreviousTag = $lastTag
-}
-if (-not $DryRun) {
-    $changelogParameters.OutputPath = $ChangelogFile
-}
-$changelog = & $ChangelogScript @changelogParameters
+$expectedChangelogHeading = "## v$newVersion"
+if (Test-Path $ChangelogFile) {
+    $changelog = Get-Content $ChangelogFile -Raw
+    if ([string]::IsNullOrWhiteSpace($changelog)) {
+        throw "$ChangelogFile is empty"
+    }
 
-if (-not $DryRun) {
-    Write-OK "Changelog written to $ChangelogFile"
+    if ($changelog -notmatch "(?m)^\s*$([regex]::Escape($expectedChangelogHeading))\s*$") {
+        throw "$ChangelogFile does not contain the expected heading '$expectedChangelogHeading'. Update the release notes or remove the file to use automatic generation."
+    }
+
+    Write-OK "Using existing changelog without modifying it: $ChangelogFile"
 } else {
+    $changelogParameters = @{
+        CurrentRef = "HEAD"
+        PassThru = $true
+    }
+    if ($lastTag) {
+        $changelogParameters.PreviousTag = $lastTag
+    }
+    if (-not $DryRun) {
+        $changelogParameters.OutputPath = $ChangelogFile
+    }
+    $changelog = & $ChangelogScript @changelogParameters
+
+    if (-not $DryRun) {
+        Write-OK "No maintained changelog found; generated $ChangelogFile"
+    }
+}
+
+if ($DryRun) {
     Write-Host ""
     Write-Host "─── Changelog Preview ────────────────────────────────────────" -ForegroundColor DarkGray
     Write-Host $changelog

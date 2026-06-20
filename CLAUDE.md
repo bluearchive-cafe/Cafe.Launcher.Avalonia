@@ -41,7 +41,7 @@ CI is GitHub Actions on `windows-latest`, .NET 10.0.x:
 .\release.ps1 patch -SkipPush        # Commit + tag locally, don't push to origin
 ```
 
-`release.ps1` reads `<VersionPrefix>` from the `.csproj`, bumps it, invokes `scripts/New-ReleaseChangelog.ps1` to generate `CHANGELOG_RELEASE.md` from git log since the last tag (grouped by conventional commit prefix: feat/fix/refactor/perf), updates `AssemblyVersion`/`FileVersion`, commits, creates an annotated tag, and pushes. `release.yml` invokes the same changelog generator before creating matching GitHub Releases in the source and distribution repositories.
+`release.ps1` reads `<VersionPrefix>` from the `.csproj`, bumps it, preserves and reuses the maintained `CHANGELOG_RELEASE.md`, updates `AssemblyVersion`/`FileVersion`, commits, creates an annotated tag, and pushes. If the maintained release notes are missing, it falls back to `scripts/New-ReleaseChangelog.ps1`. `release.yml` follows the same maintained-file-first policy for matching GitHub Releases in the source and distribution repositories.
 
 ## Architecture
 
