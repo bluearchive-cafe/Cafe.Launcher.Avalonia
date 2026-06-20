@@ -19,12 +19,15 @@
                         <TextBlock Text="{Binding Shell.I18n.Settings}" Classes="dialog-title" VerticalAlignment="Center"/>
                     </StackPanel>
                     <Button Grid.Column="1" Classes="dialog-close" Command="{Binding WindowChrome.ShowSettingsCommand}"
+                            IsEnabled="{Binding Settings.IsSaving, Converter={x:Static BoolConverters.Not}}"
                             VerticalAlignment="Center" Margin="0,0,16,0" ToolTip.Tip="{Binding Shell.I18n.Close}">
                         <materialIcons:MaterialIcon Kind="Close" Width="{StaticResource LauncherIconMd}" Height="{StaticResource LauncherIconMd}"/>
                     </Button>
                 </Grid>
 
-                <ScrollViewer Grid.Row="1" Classes="dialog-scroll">
+                <ScrollViewer Grid.Row="1"
+                              Classes="dialog-scroll"
+                              IsEnabled="{Binding Settings.IsSaving, Converter={x:Static BoolConverters.Not}}">
                     <StackPanel Spacing="{StaticResource LauncherSpacingMd}">
                         <Border Classes="settings-section">
                             <StackPanel Classes="status-panel">
@@ -94,7 +97,7 @@
                                     </Border>
                                     <StackPanel Grid.Column="1" VerticalAlignment="Center">
                                         <TextBlock Text="{Binding Shell.I18n.GamePath}" Classes="section-title"/>
-                                        <TextBlock Text="{Binding Shell.PathText}" Classes="caption" TextWrapping="Wrap" TextTrimming="CharacterEllipsis"/>
+                                        <TextBlock Text="{Binding Settings.Editor.Current.GamePath}" Classes="caption" TextWrapping="Wrap" TextTrimming="CharacterEllipsis"/>
                                     </StackPanel>
                                     <Button Grid.Column="2" Classes="flat-action" Command="{Binding Settings.ChooseGamePathCommand}"
                                             IsEnabled="{Binding Shell.IsBusy, Converter={x:Static BoolConverters.Not}}">
@@ -578,12 +581,27 @@
                 </ScrollViewer>
 
                 <Border Grid.Row="2" Classes="dialog-footer">
-                    <Button Classes="primary-action" Command="{Binding Settings.SaveSettingsCommand}" HorizontalAlignment="Stretch">
-                        <StackPanel Classes="button-content" HorizontalAlignment="Center">
-                            <materialIcons:MaterialIcon Kind="ContentSave" Width="{StaticResource LauncherIconMd}" Height="{StaticResource LauncherIconMd}" Foreground="{DynamicResource LauncherOnAccentBrush}"/>
-                            <TextBlock Text="{Binding Shell.I18n.Save}" VerticalAlignment="Center"/>
-                        </StackPanel>
-                    </Button>
+                    <Grid ColumnDefinitions="*,*" ColumnSpacing="{StaticResource LauncherSpacingSm}">
+                        <Button Classes="flat-action"
+                                Command="{Binding WindowChrome.ShowSettingsCommand}"
+                                IsEnabled="{Binding Settings.IsSaving, Converter={x:Static BoolConverters.Not}}"
+                                HorizontalAlignment="Stretch">
+                            <StackPanel Classes="button-content" HorizontalAlignment="Center">
+                                <materialIcons:MaterialIcon Kind="CloseCircleOutline" Width="{StaticResource LauncherIconMd}" Height="{StaticResource LauncherIconMd}"/>
+                                <TextBlock Text="{Binding Shell.I18n.Cancel}" VerticalAlignment="Center"/>
+                            </StackPanel>
+                        </Button>
+                        <Button Grid.Column="1"
+                                Classes="primary-action"
+                                Command="{Binding Settings.SaveSettingsCommand}"
+                                IsEnabled="{Binding Settings.CanSaveSettings}"
+                                HorizontalAlignment="Stretch">
+                            <StackPanel Classes="button-content" HorizontalAlignment="Center">
+                                <materialIcons:MaterialIcon Kind="ContentSave" Width="{StaticResource LauncherIconMd}" Height="{StaticResource LauncherIconMd}" Foreground="{DynamicResource LauncherOnAccentBrush}"/>
+                                <TextBlock Text="{Binding Shell.I18n.Save}" VerticalAlignment="Center"/>
+                            </StackPanel>
+                        </Button>
+                    </Grid>
                 </Border>
             </Grid>
         </Border>

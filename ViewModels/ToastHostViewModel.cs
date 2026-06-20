@@ -51,7 +51,7 @@ public partial class ToastHostViewModel : ViewModelBase, IDisposable
 
     private async Task ShowToastAsync(ToastNotification notification, CancellationToken cancellationToken)
     {
-        if (!settings.Editor.Current.ToastNotificationsEnabled)
+        if (!settings.Editor.GetSavedSnapshot().ToastNotificationsEnabled)
         {
             return;
         }

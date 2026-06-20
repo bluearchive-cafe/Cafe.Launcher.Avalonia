@@ -8,6 +8,25 @@ namespace Cafe.Launcher.Avalonia.Tests;
 public sealed class SettingsEditorTests
 {
     [Fact]
+    public void GetSavedSnapshot_WhenCurrentHasUnsavedChanges_ReturnsAppliedSnapshot()
+    {
+        var editor = new SettingsEditor();
+        editor.ApplySnapshot(new LauncherSettings
+        {
+            PatchUrlGroup = PatchUrlGroups.Official,
+            ToastNotificationsEnabled = true
+        });
+
+        editor.Current.PatchUrlGroup = PatchUrlGroups.Cafe;
+        editor.Current.ToastNotificationsEnabled = false;
+
+        var saved = editor.GetSavedSnapshot();
+
+        Assert.Equal(PatchUrlGroups.Official, saved.PatchUrlGroup);
+        Assert.True(saved.ToastNotificationsEnabled);
+    }
+
+    [Fact]
     public void CurrentPropertyChange_MarksDirtyAndDiscardRestoresSnapshot()
     {
         var editor = new SettingsEditor();

@@ -186,8 +186,8 @@ public partial class MainWindow : Window
             return;
         }
 
-        // Overlay panels — only close if not dirty (avoids accidental data loss)
-        if (vm.WindowChrome.IsSettingsVisible && !vm.Settings.IsSettingsDirty)
+        // Overlay panels
+        if (vm.WindowChrome.IsSettingsVisible)
         {
             vm.WindowChrome.ShowSettingsCommand.Execute(null);
             e.Handled = true;
@@ -219,7 +219,7 @@ public partial class MainWindow : Window
     private void PerformClose()
     {
         if (DataContext is MainWindowViewModel vm
-            && vm.Settings.Editor.Current.CloseBehavior == Models.CloseBehaviors.Minimize)
+            && vm.Settings.Editor.GetSavedSnapshot().CloseBehavior == Models.CloseBehaviors.Minimize)
         {
             if (systemTray is not null)
             {

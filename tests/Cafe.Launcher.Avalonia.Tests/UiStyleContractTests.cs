@@ -178,6 +178,76 @@ public sealed partial class UiStyleContractTests
     }
 
     [Fact]
+    public void BannerImage_UsesDistinctLoadingAndFailureStates()
+    {
+        var mainWindow = File.ReadAllText(ProjectFile("Views/MainWindow.axaml"));
+
+        Assert.Contains(
+            "IsVisible=\"{Binding IsImageLoading}\"",
+            mainWindow,
+            StringComparison.Ordinal);
+        Assert.Contains(
+            "IsVisible=\"{Binding IsImageLoadFailed}\"",
+            mainWindow,
+            StringComparison.Ordinal);
+        Assert.Contains(
+            "Shell.I18n.BannerLoading",
+            mainWindow,
+            StringComparison.Ordinal);
+        Assert.DoesNotContain(
+            "BannerBitmap, Converter={x:Static ObjectConverters.IsNull}",
+            mainWindow,
+            StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public void RemoteContentPanel_UsesExplicitLoadingState()
+    {
+        var mainWindow = File.ReadAllText(ProjectFile("Views/MainWindow.axaml"));
+
+        Assert.Contains(
+            "IsVisible=\"{Binding RemoteContent.IsPanelVisible}\"",
+            mainWindow,
+            StringComparison.Ordinal);
+        Assert.Contains(
+            "IsVisible=\"{Binding RemoteContent.IsLoading}\"",
+            mainWindow,
+            StringComparison.Ordinal);
+        Assert.Contains(
+            "Shell.I18n.RemoteContentLoading",
+            mainWindow,
+            StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public void SettingsPanel_UsesTransactionalSaveAndCancelActions()
+    {
+        var settingsOverlay = File.ReadAllText(ProjectFile("Views/MainWindowSettingsOverlay.axaml"));
+        var mainWindowCodeBehind = File.ReadAllText(ProjectFile("Views/MainWindow.axaml.cs"));
+
+        Assert.Contains(
+            "Text=\"{Binding Settings.Editor.Current.GamePath}\"",
+            settingsOverlay,
+            StringComparison.Ordinal);
+        Assert.Contains(
+            "Command=\"{Binding WindowChrome.ShowSettingsCommand}\"",
+            settingsOverlay,
+            StringComparison.Ordinal);
+        Assert.Contains(
+            "IsEnabled=\"{Binding Settings.CanSaveSettings}\"",
+            settingsOverlay,
+            StringComparison.Ordinal);
+        Assert.Contains(
+            "if (vm.WindowChrome.IsSettingsVisible)",
+            mainWindowCodeBehind,
+            StringComparison.Ordinal);
+        Assert.DoesNotContain(
+            "vm.WindowChrome.IsSettingsVisible && !vm.Settings.IsSettingsDirty",
+            mainWindowCodeBehind,
+            StringComparison.Ordinal);
+    }
+
+    [Fact]
     public void ToastCards_DoNotUseOverlappingBoxShadows()
     {
         var document = XDocument.Load(ProjectFile("Views/MainWindow.Styles.axaml"));

@@ -14,6 +14,7 @@ public interface ISettingsEditor : INotifyPropertyChanged
     bool IsDirty { get; }
     event PropertyChangedEventHandler? CurrentPropertyChanged;
     LauncherSettings GetSnapshot();
+    LauncherSettings GetSavedSnapshot();
     void ApplySnapshot(LauncherSettings settings);
     void Commit(Action<LauncherSettings> apply);
     void Discard();
@@ -46,6 +47,8 @@ public sealed class SettingsEditor : ISettingsEditor
     public event PropertyChangedEventHandler? CurrentPropertyChanged;
 
     public LauncherSettings GetSnapshot() => DeepClone(current);
+
+    public LauncherSettings GetSavedSnapshot() => DeepClone(snapshot);
 
     public void ApplySnapshot(LauncherSettings settings)
     {

@@ -445,6 +445,15 @@
         <Setter Property="HorizontalAlignment" Value="Stretch"/>
         <Setter Property="VerticalAlignment" Value="Stretch"/>
     </Style>
+    <Style Selector="Border.loading-overlay">
+        <Setter Property="Background" Value="{DynamicResource LauncherOverlayBrush}"/>
+        <Setter Property="CornerRadius" Value="{StaticResource LauncherRadiusSm}"/>
+        <Setter Property="HorizontalAlignment" Value="Stretch"/>
+        <Setter Property="VerticalAlignment" Value="Stretch"/>
+    </Style>
+    <Style Selector="Border.remote-content-loading-overlay">
+        <Setter Property="MinHeight" Value="120"/>
+    </Style>
     <Style Selector="TextBlock.media-placeholder-text">
         <Setter Property="Foreground" Value="{DynamicResource LauncherMediaPlaceholderTextBrush}"/>
         <Setter Property="FontSize" Value="13"/>

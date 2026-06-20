@@ -1,4 +1,5 @@
 using System;
+using System.Threading.Tasks;
 using Cafe.Launcher.Avalonia.Constants;
 using Cafe.Launcher.Avalonia.Models;
 using Cafe.Launcher.Avalonia.Services;
@@ -40,6 +41,11 @@ public partial class WindowChromeViewModel : ViewModelBase
     [RelayCommand]
     private void ShowSettings()
     {
+        if (settings.IsSaving)
+        {
+            return;
+        }
+
         if (IsSettingsVisible && settings.IsSettingsDirty)
         {
             settings.IsUnsavedChangesVisible = true;
@@ -54,20 +60,16 @@ public partial class WindowChromeViewModel : ViewModelBase
     }
 
     [RelayCommand]
-    private void DiscardSettingsChanges()
+    private async Task DiscardSettingsChangesAsync()
     {
-        settings.IsUnsavedChangesVisible = false;
+        await settings.DiscardChangesAsync();
         IsSettingsVisible = false;
-        if (GetSnapshot?.Invoke() is { } snapshot)
-        {
-            settings.LoadFromSnapshot(snapshot.Settings);
-        }
     }
 
     [RelayCommand]
     private void KeepEditingSettings()
     {
-        settings.IsUnsavedChangesVisible = false;
+        settings.KeepEditing();
     }
 
     [RelayCommand]
@@ -91,7 +93,8 @@ public partial class WindowChromeViewModel : ViewModelBase
     [RelayCommand]
     private void OpenOfficialSite()
     {
-        ExternalLinkService.Open(ResolveOfficialSiteUrl(settings.Editor.Current.PatchUrlGroup));
+        ExternalLinkService.Open(
+            ResolveOfficialSiteUrl(settings.Editor.GetSavedSnapshot().PatchUrlGroup));
     }
 
     internal static string ResolveOfficialSiteUrl(string patchUrlGroup) =>

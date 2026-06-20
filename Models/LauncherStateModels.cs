@@ -356,6 +356,8 @@ public sealed class RemoteContentItem : INotifyPropertyChanged
     private string imageUrl = "";
     private string socialIconKind = "Link";
     private global::Avalonia.Media.Imaging.Bitmap? bannerBitmap;
+    private bool isImageLoading = true;
+    private bool isImageLoadFailed;
 
     public event PropertyChangedEventHandler? PropertyChanged;
 
@@ -369,6 +371,50 @@ public sealed class RemoteContentItem : INotifyPropertyChanged
     {
         get => bannerBitmap;
         set { if (bannerBitmap != value) { bannerBitmap = value; Notify(nameof(BannerBitmap)); } }
+    }
+
+    public bool IsImageLoading
+    {
+        get => isImageLoading;
+        private set
+        {
+            if (isImageLoading != value)
+            {
+                isImageLoading = value;
+                Notify(nameof(IsImageLoading));
+            }
+        }
+    }
+
+    public bool IsImageLoadFailed
+    {
+        get => isImageLoadFailed;
+        private set
+        {
+            if (isImageLoadFailed != value)
+            {
+                isImageLoadFailed = value;
+                Notify(nameof(IsImageLoadFailed));
+            }
+        }
+    }
+
+    public void MarkImageLoading()
+    {
+        IsImageLoading = true;
+        IsImageLoadFailed = false;
+    }
+
+    public void MarkImageLoaded()
+    {
+        IsImageLoading = false;
+        IsImageLoadFailed = false;
+    }
+
+    public void MarkImageLoadFailed()
+    {
+        IsImageLoading = false;
+        IsImageLoadFailed = true;
     }
 
     private void Notify(string propertyName) =>

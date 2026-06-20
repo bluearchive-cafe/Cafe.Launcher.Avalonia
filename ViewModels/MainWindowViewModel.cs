@@ -21,7 +21,6 @@ public partial class MainWindowViewModel : ViewModelBase, IDisposable
     private bool disposed;
     private bool skipNextPersistedResume;
     private LauncherStatusSnapshot? currentSnapshot;
-    private Action? closeRequestedHandler;
 
     public ShellViewModel Shell { get; }
 
@@ -125,6 +124,7 @@ public partial class MainWindowViewModel : ViewModelBase, IDisposable
                 settingsForLanguage.ThemeColorMode,
                 SettingsAppearanceViewModel.ParseColorOrDefault(settingsForLanguage.CustomThemeColor));
             Shell.SetLoading();
+            RemoteContent.BeginLoading(settingsForLanguage.ShowRemoteContentCard);
 
             // Migrate game path from original Yostar launcher on first run
             if (string.IsNullOrWhiteSpace(settingsForLanguage.GamePath))
@@ -154,6 +154,7 @@ public partial class MainWindowViewModel : ViewModelBase, IDisposable
         }
         finally
         {
+            RemoteContent.EndLoading();
             Shell.IsBusy = false;
         }
 
@@ -173,8 +174,25 @@ public partial class MainWindowViewModel : ViewModelBase, IDisposable
 
     private void WireChildren()
     {
-        Settings.GetSnapshot = () => currentSnapshot;
         Settings.Appearance.GetBackgroundBitmap = Background.GetBackgroundBitmap;
+        Settings.PreviewAppearanceAsync = async (settings, propertyName, cancellationToken) =>
+        {
+            SettingsAppearanceViewModel.ApplyTheme(settings.ThemeMode);
+            Settings.Appearance.ApplyThemeColor(
+                settings.ThemeColorMode,
+                SettingsAppearanceViewModel.ParseColorOrDefault(settings.CustomThemeColor));
+            Background.ApplyBackgroundPresentation(settings);
+
+            if (propertyName is null
+                or nameof(LauncherSettings.BackgroundSource)
+                or nameof(LauncherSettings.CustomBackgroundPath))
+            {
+                await Background.UpdateBackgroundImageAsync(
+                    settings,
+                    currentSnapshot,
+                    cancellationToken);
+            }
+        };
         Settings.ApplyLanguageAndTheme = async s =>
         {
             ApplyLanguage(s.Language);
@@ -190,8 +208,6 @@ public partial class MainWindowViewModel : ViewModelBase, IDisposable
                 SettingsAppearanceViewModel.ParseColorOrDefault(s.CustomThemeColor));
         };
         Settings.SettingsSaved += HandleSettingsSavedAsync;
-        closeRequestedHandler = () => WindowChrome.IsSettingsVisible = false;
-        Settings.CloseRequested += closeRequestedHandler;
 
         ResourcePanel.GetProxyMode = () => currentSnapshot?.Settings.ProxyMode ?? ProxyModes.Direct;
         ResourcePanel.GetPatchUrlGroup = () => currentSnapshot?.Settings.PatchUrlGroup ?? PatchUrlGroups.Official;
@@ -247,6 +263,9 @@ public partial class MainWindowViewModel : ViewModelBase, IDisposable
     {
         var previousPatchUrlGroup = currentSnapshot?.Settings.PatchUrlGroup;
         var savedPatchUrlGroup = Settings.Editor.Current.PatchUrlGroup;
+        RemoteContent.UpdateRemoteContentVisibility(
+            Settings.Editor.Current.ShowRemoteContentCard);
+
         if (Operations.IsDownloadRunning)
         {
             if (currentSnapshot is not null)
@@ -286,7 +305,10 @@ public partial class MainWindowViewModel : ViewModelBase, IDisposable
         ApplySettingsSnapshot(snapshot.Settings, snapshot.LocalGame.GamePath);
         ApplyLanguage(snapshot.Settings.Language);
         SettingsAppearanceViewModel.ApplyTheme(snapshot.Settings.ThemeMode);
-        await Background.UpdateBackgroundImageAsync(snapshot, lifetimeCts.Token);
+        await Background.UpdateBackgroundImageAsync(
+            snapshot.Settings,
+            snapshot,
+            lifetimeCts.Token);
         Settings.Appearance.ApplyThemeColor(
             snapshot.Settings.ThemeColorMode,
             SettingsAppearanceViewModel.ParseColorOrDefault(snapshot.Settings.CustomThemeColor));
@@ -333,8 +355,6 @@ public partial class MainWindowViewModel : ViewModelBase, IDisposable
 
         disposed = true;
         Settings.SettingsSaved -= HandleSettingsSavedAsync;
-        if (closeRequestedHandler is not null)
-            Settings.CloseRequested -= closeRequestedHandler;
         MigrationWizard.MigrationApplied -= HandleMigrationAppliedAsync;
         MigrationWizard.MigrationSkipped -= HandleMigrationSkippedAsync;
         ResourcePanel.ResourcePanelSourceConfirmRequested -= ShowResourcePanelSourceConfirmDialog;

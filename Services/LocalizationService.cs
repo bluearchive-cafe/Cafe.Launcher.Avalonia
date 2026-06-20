@@ -130,6 +130,7 @@ public sealed partial class LocalizedStrings : ObservableObject
     [ObservableProperty] private string notificationSettings = "";
     [ObservableProperty] private string toastNotifications = "";
     [ObservableProperty] private string remoteContentCard = "";
+    [ObservableProperty] private string remoteContentLoading = "";
     [ObservableProperty] private string showRemoteContentCard = "";
     [ObservableProperty] private string toggleOn = "";
     [ObservableProperty] private string toggleOff = "";
@@ -164,6 +165,7 @@ public sealed partial class LocalizedStrings : ObservableObject
     [ObservableProperty] private string pauseCarousel = "";
     [ObservableProperty] private string resumeCarousel = "";
     [ObservableProperty] private string bannerLoadingFailed = "";
+    [ObservableProperty] private string bannerLoading = "";
     [ObservableProperty] private string statusNetworkLoaded = "";
     [ObservableProperty] private string statusLaunchCheckLocal = "";
     [ObservableProperty] private string statusLaunchCheckRemote = "";
@@ -314,6 +316,7 @@ public sealed partial class LocalizedStrings : ObservableObject
         NotificationSettings = localizer.T("notificationSettings");
         ToastNotifications = localizer.T("toastNotifications");
         RemoteContentCard = localizer.T("remoteContentCard");
+        RemoteContentLoading = localizer.T("remoteContentLoading");
         ShowRemoteContentCard = localizer.T("showRemoteContentCard");
         ToggleOn = localizer.T("toggleOn");
         ToggleOff = localizer.T("toggleOff");
@@ -348,6 +351,7 @@ public sealed partial class LocalizedStrings : ObservableObject
         PauseCarousel = localizer.T("pauseCarousel");
         ResumeCarousel = localizer.T("resumeCarousel");
         BannerLoadingFailed = localizer.T("bannerLoadingFailed");
+        BannerLoading = localizer.T("bannerLoading");
         StatusNetworkLoaded = localizer.T("statusNetworkLoaded");
         StatusLaunchCheckLocal = localizer.T("statusLaunchCheckLocal");
         StatusLaunchCheckRemote = localizer.T("statusLaunchCheckRemote");

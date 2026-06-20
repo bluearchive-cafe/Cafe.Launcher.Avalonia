@@ -67,9 +67,10 @@
 
             <Grid Grid.Row="1">
                 <Border Classes="surface remote-surface"
-                        IsVisible="{Binding RemoteContent.HasRemoteContent}">
-                    <ScrollViewer Classes="scroll-pad">
-                        <StackPanel Spacing="{StaticResource LauncherSpacingMd}">
+                        IsVisible="{Binding RemoteContent.IsPanelVisible}">
+                    <Panel>
+                        <ScrollViewer Classes="scroll-pad">
+                            <StackPanel Spacing="{StaticResource LauncherSpacingMd}">
                             <Border IsVisible="{Binding RemoteContent.HasNotice}" Classes="notice-card">
                                 <StackPanel Spacing="{StaticResource LauncherSpacingXs}">
                                     <TextBlock Text="{Binding Shell.I18n.Notice}" Classes="panel-title"/>
@@ -116,14 +117,25 @@
                                                     CommandParameter="{Binding Url}">
                                                 <Border Classes="banner-media">
                                                     <Panel>
-                                                        <!-- C3: Placeholder with text when banner fails to load -->
-                                                        <Border Classes="media-placeholder">
+                                                        <Border Classes="media-placeholder"
+                                                                IsVisible="{Binding IsImageLoadFailed}">
                                                             <TextBlock Text="{Binding DataContext.Shell.I18n.BannerLoadingFailed, ElementName=Root}"
-                                                                       Classes="media-placeholder-text"
-                                                                       IsVisible="{Binding BannerBitmap, Converter={x:Static ObjectConverters.IsNull}}"/>
+                                                                       Classes="media-placeholder-text"/>
                                                         </Border>
                                                         <Image Source="{Binding BannerBitmap}"
                                                                Stretch="UniformToFill"/>
+                                                        <Border Classes="loading-overlay"
+                                                                IsVisible="{Binding IsImageLoading}">
+                                                            <StackPanel Spacing="{StaticResource LauncherSpacingSm}"
+                                                                        HorizontalAlignment="Center"
+                                                                        VerticalAlignment="Center">
+                                                                <ProgressBar IsIndeterminate="True"
+                                                                             Width="120"
+                                                                             Height="4"/>
+                                                                <TextBlock Text="{Binding DataContext.Shell.I18n.BannerLoading, ElementName=Root}"
+                                                                           Classes="media-placeholder-text"/>
+                                                            </StackPanel>
+                                                        </Border>
                                                     </Panel>
                                                 </Border>
                                             </Button>
@@ -233,8 +245,21 @@
                                     </ItemsControl.ItemTemplate>
                                 </ItemsControl>
                             </StackPanel>
-                        </StackPanel>
-                    </ScrollViewer>
+                            </StackPanel>
+                        </ScrollViewer>
+                        <Border Classes="loading-overlay remote-content-loading-overlay"
+                                IsVisible="{Binding RemoteContent.IsLoading}">
+                            <StackPanel Spacing="{StaticResource LauncherSpacingSm}"
+                                        HorizontalAlignment="Center"
+                                        VerticalAlignment="Center">
+                                <ProgressBar IsIndeterminate="True"
+                                             Width="120"
+                                             Height="4"/>
+                                <TextBlock Text="{Binding Shell.I18n.RemoteContentLoading}"
+                                           Classes="media-placeholder-text"/>
+                            </StackPanel>
+                        </Border>
+                    </Panel>
                 </Border>
 
                 <Border IsVisible="{Binding Operations.IsInstallPanelVisible}"

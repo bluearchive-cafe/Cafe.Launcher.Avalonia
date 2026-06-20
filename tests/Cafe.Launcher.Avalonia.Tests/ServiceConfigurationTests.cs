@@ -15,21 +15,22 @@ public sealed class ServiceConfigurationTests : IDisposable
     }
 
     [Fact]
-    public async Task MainWindowViewModel_BackgroundAndSettingsShareTheSameSettingsState()
+    public async Task MainWindowViewModel_BackgroundUpdateUsesExplicitSettings()
     {
-        var imagePath = Path.Combine(tempDir, "custom-background.png");
-        await File.WriteAllTextAsync(imagePath, "not an image");
-
         var services = new ServiceCollection();
         services.AddLauncherServices();
         await using var provider = services.BuildServiceProvider();
         using var viewModel = provider.GetRequiredService<MainWindowViewModel>();
-        viewModel.Settings.Editor.Current.BackgroundSource = BackgroundSources.Custom;
-        viewModel.Settings.Editor.Current.CustomBackgroundPath = imagePath;
+        var previewSettings = viewModel.Settings.Editor.GetSnapshot();
+        previewSettings.BackgroundSource = BackgroundSources.Bundled;
+        previewSettings.BackgroundFit = BackgroundFits.Fill;
 
-        await viewModel.Background.UpdateBackgroundImageAsync(null, CancellationToken.None);
+        await viewModel.Background.UpdateBackgroundImageAsync(
+            previewSettings,
+            null,
+            CancellationToken.None);
 
-        Assert.Equal("", viewModel.Settings.Editor.Current.CustomBackgroundPath);
+        Assert.Equal(global::Avalonia.Media.Stretch.Fill, viewModel.Background.BackgroundStretch);
     }
 
     [Fact]

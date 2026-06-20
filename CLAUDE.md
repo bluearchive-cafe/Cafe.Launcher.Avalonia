@@ -92,8 +92,8 @@ One `MainWindow` (1300×754, non-resizable with MinWidth 1024/MinHeight 640, bor
 **Composition root**: `ServiceConfiguration.AddLauncherServices()` is the DI configuration — it registers all services with `Microsoft.Extensions.DependencyInjection`. The container is built in `App.axaml.cs` via `ServiceCollection.BuildServiceProvider()`. Most services are registered as `AddSingleton`; `ISettingsEditor`/`SettingsEditor` is registered as `AddTransient` (each resolution provides a fresh snapshot). Every ViewModel is registered as `AddTransient` (fresh instance per resolution), except `DialogsViewModel` which is `AddSingleton`. Thread-safe disposal order for IDisposable services is defined by reverse registration order (see disposal order section below).
 
 **ViewModel coordination**: Sub-ViewModels communicate with `MainWindowViewModel` through two mechanisms:
-- **Delegates** — `MainWindowViewModel.ConfigureViewModel()` sets `Func<>` / `Func<Task>` delegates on children (e.g. `SettingsViewModel.PickGameFolderAsync`, `SettingsViewModel.GetSnapshot`). These let children call back into parent capabilities (folder pickers, state queries).
-- **Events** — Children expose `event Func<Task>?` / `event Action?` that the parent subscribes to (e.g. `SettingsViewModel.SettingsSaved`, `SettingsViewModel.CloseRequested`). This decouples child-triggered actions from parent handling.
+- **Delegates** — `MainWindowViewModel.ConfigureViewModel()` sets `Func<>` / `Func<Task>` delegates on children (e.g. `SettingsViewModel.PickGameFolderAsync`, `SettingsViewModel.PreviewAppearanceAsync`). These let children call back into parent capabilities such as native pickers and appearance previews.
+- **Events** — Children expose `event Func<Task>?` / `event Action?` that the parent subscribes to (e.g. `SettingsViewModel.SettingsSaved`). This decouples child-triggered actions from parent handling.
 
 **View code-behind** (`MainWindow.axaml.cs`): handles native folder-picker dialog (via `StorageProvider`), window drag-to-move (borderless chrome), and close-behavior routing (minimize-to-tray vs exit). The ViewModel receives `PickGameFolderAsync`, `MinimizeWindow`, and `CloseWindow` delegates via `ConfigureViewModel()`.
 
@@ -114,7 +114,7 @@ One `MainWindow` (1300×754, non-resizable with MinWidth 1024/MinHeight 640, bor
 | `LauncherCoreService` | Orchestrates API + local state into `LauncherStatusSnapshot`. Exposed as `ILauncherCoreService` in the DI container. |
 | `LauncherSettingsService` | Reads/writes `settings.json` at `%LOCALAPPDATA%\Cafe Launcher\` and handles exact legacy JSON field names |
 | `SettingsNormalizer` | Pure settings-value normalization: enum guards, legacy launch-check values, colors, palette, indexes, paths, and UID trimming |
-| `SettingsEditor` | Snapshot/dirty/discard editing of `LauncherSettings` via `ISettingsEditor`. Uses JSON round-trip deep cloning. Registered as **Transient** (fresh snapshot per resolution). |
+| `SettingsEditor` | Snapshot/dirty/discard editing of `LauncherSettings` via `ISettingsEditor`, with separate current and saved snapshots for transactional settings behavior. Uses JSON round-trip deep cloning. Registered as **Transient** (fresh snapshot per resolution). |
 | `LocalGameStateService` | Reads local `game-launcher-config.json` + `manifest.json`, normalizes paths to `YostarGames\BlueArchive_JP` |
 | `GameDownloadService` | Install/update/repair: manifest diff → parallel CDN download (10 concurrent, `.tmp` files, `Range` resume, CRC64 verify, rename on success). Supports download speed throttling, async pause/resume via `TaskCompletionSource`. Implements `IDisposable` — thread-safe CTS management via `activeDownloadLock`. |
 | `GameLaunchService` | Manifest validation + process launch |
