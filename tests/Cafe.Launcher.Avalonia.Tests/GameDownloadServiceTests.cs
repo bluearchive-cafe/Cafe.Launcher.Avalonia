@@ -276,6 +276,7 @@ public sealed class GameDownloadServiceTests
             new PatchUrlGroupService());
         using var service = CreateService(apiClient, settingsService, statePath);
         var snapshot = CreateSnapshot(gamePath);
+        snapshot.RuntimeState = LauncherRuntimeState.Corrupted;
         var repairTask = service.RepairAsync(snapshot, _ => { });
 
         await handler.RequestStarted.Task.WaitAsync(TimeSpan.FromSeconds(2));

@@ -86,6 +86,31 @@ public sealed class InstallationOperationStateTests : IDisposable
         Assert.Equal(LocalInstallationStateKind.NotInstalled, state.Kind);
     }
 
+    [Fact]
+    public async Task RepairAsync_WhenRuntimeStateDoesNotAllowRepair_ReturnsInvalidState()
+    {
+        using var apiClient = new LauncherApiClient(
+            new HttpClientHandler(),
+            new AuthorizationHeaderFactory(),
+            new PatchUrlGroupService());
+        using var service = new GameDownloadService(
+            apiClient,
+            new LocalInstallationStateStore(),
+            new LauncherSettingsService(Path.Combine(tempDir, "settings.json")),
+            new ProxySettingsService(),
+            new Crc64Service(),
+            new DiskSpaceService(),
+            new LocalDiagnostics(),
+            new LocalizationService());
+
+        var result = await service.RepairAsync(
+            new LauncherStatusSnapshot { RuntimeState = LauncherRuntimeState.NotInstalled },
+            _ => { });
+
+        Assert.False(result.Success);
+        Assert.Equal("invalid-state", result.ErrorType);
+    }
+
     public void Dispose()
     {
         if (Directory.Exists(tempDir))

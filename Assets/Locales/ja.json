@@ -104,6 +104,7 @@
   "corruptedInstallationState": "ローカルインストール状態が破損しています。修復が必要です。",
   "installationStateReadFailed": "ローカルインストール状態を読み取れません。更新して再試行してください。",
   "remoteStateUnavailable": "リモートランチャー状態を取得できません。更新して再試行してください。",
+  "operationUnavailableForCurrentState": "現在のランチャー状態ではこの操作を実行できません。",
   "minimize": "最小化",
   "networkError": "ネットワークエラー",
   "network": "ネットワーク",

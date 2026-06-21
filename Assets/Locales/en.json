@@ -104,6 +104,7 @@
   "corruptedInstallationState": "The local installation state is damaged. Repair is required.",
   "installationStateReadFailed": "The local installation state could not be read. Refresh to retry.",
   "remoteStateUnavailable": "Remote launcher state is unavailable. Refresh to retry.",
+  "operationUnavailableForCurrentState": "This operation is unavailable for the current launcher state.",
   "minimize": "Minimize",
   "networkError": "Network error",
   "network": "Network",

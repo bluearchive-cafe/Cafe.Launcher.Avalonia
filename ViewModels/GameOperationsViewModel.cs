@@ -199,6 +199,12 @@ public partial class GameOperationsViewModel : ViewModelBase
                 return;
             }
 
+            if (snapshot.RuntimeState == LauncherRuntimeState.Ready)
+            {
+                shell.OperationNote = localizer.T("operationUnavailableForCurrentState");
+                return;
+            }
+
             var result = await gameDownloadService.InstallOrUpdateAsync(snapshot, ApplyProgress);
             shell.OperationNote = result.Message;
             ShowOperationResult(result);
@@ -217,10 +223,10 @@ public partial class GameOperationsViewModel : ViewModelBase
         finally
         {
             shell.IsBusy = false;
-            var snapshot = GetSnapshot?.Invoke();
-            if (snapshot is not null && ApplySnapshotAsync is not null)
+            var currentSnapshot = GetSnapshot?.Invoke();
+            if (currentSnapshot is not null && ApplySnapshotAsync is not null)
             {
-                await ApplySnapshotAsync.Invoke(snapshot);
+                await ApplySnapshotAsync.Invoke(currentSnapshot);
             }
         }
     }
@@ -235,12 +241,31 @@ public partial class GameOperationsViewModel : ViewModelBase
             return;
         }
 
+        if (snapshot.RuntimeState is not (LauncherRuntimeState.Corrupted or LauncherRuntimeState.Ready))
+        {
+            shell.OperationNote = localizer.T("operationUnavailableForCurrentState");
+            return;
+        }
+
         dialogs.ShowRepairConfirm(localizer.T("repairWarning"));
         await Task.CompletedTask;
     }
 
     public async Task RepairAsync()
     {
+        var snapshot = GetSnapshot?.Invoke();
+        if (snapshot is null)
+        {
+            shell.OperationNote = localizer.T("stateNotLoaded");
+            return;
+        }
+
+        if (snapshot.RuntimeState is not (LauncherRuntimeState.Corrupted or LauncherRuntimeState.Ready))
+        {
+            shell.OperationNote = localizer.T("operationUnavailableForCurrentState");
+            return;
+        }
+
         if (!PrepareOperation())
         {
             return;
@@ -248,13 +273,6 @@ public partial class GameOperationsViewModel : ViewModelBase
 
         try
         {
-            var snapshot = GetSnapshot?.Invoke();
-            if (snapshot is null)
-            {
-                shell.OperationNote = localizer.T("stateNotLoaded");
-                return;
-            }
-
             var result = await gameDownloadService.RepairAsync(snapshot, ApplyProgress);
             shell.OperationNote = result.Message;
             ShowOperationResult(result);
@@ -272,10 +290,10 @@ public partial class GameOperationsViewModel : ViewModelBase
         finally
         {
             shell.IsBusy = false;
-            var snapshot = GetSnapshot?.Invoke();
-            if (snapshot is not null && ApplySnapshotAsync is not null)
+            var currentSnapshot = GetSnapshot?.Invoke();
+            if (currentSnapshot is not null && ApplySnapshotAsync is not null)
             {
-                await ApplySnapshotAsync.Invoke(snapshot);
+                await ApplySnapshotAsync.Invoke(currentSnapshot);
             }
         }
     }
@@ -339,6 +357,12 @@ public partial class GameOperationsViewModel : ViewModelBase
             return;
         }
 
+        if (snapshot.RuntimeState != LauncherRuntimeState.Ready)
+        {
+            shell.OperationNote = localizer.T("operationUnavailableForCurrentState");
+            return;
+        }
+
         var validation = await gameUninstallService.ValidateAsync(snapshot.LocalGame.GamePath);
         if (!validation.Success)
         {
@@ -358,6 +382,12 @@ public partial class GameOperationsViewModel : ViewModelBase
         if (snapshot is null)
         {
             shell.OperationNote = localizer.T("stateNotLoaded");
+            return;
+        }
+
+        if (snapshot.RuntimeState != LauncherRuntimeState.Ready)
+        {
+            shell.OperationNote = localizer.T("operationUnavailableForCurrentState");
             return;
         }
 

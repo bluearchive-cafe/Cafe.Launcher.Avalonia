@@ -75,6 +75,14 @@ public sealed class GameDownloadService : IDisposable
         Action<GameOperationProgress> progress,
         CancellationToken cancellationToken = default)
     {
+        if (snapshot.RuntimeState is not (
+            LauncherRuntimeState.NotInstalled or
+            LauncherRuntimeState.BelowLowestVersion or
+            LauncherRuntimeState.UpdateAvailable))
+        {
+            return Failed(localizer.T("operationUnavailableForCurrentState"), "invalid-state");
+        }
+
         return await RunAsync(snapshot, repair: false, progress, cancellationToken).ConfigureAwait(false);
     }
 
@@ -83,6 +91,13 @@ public sealed class GameDownloadService : IDisposable
         Action<GameOperationProgress> progress,
         CancellationToken cancellationToken = default)
     {
+        if (snapshot.RuntimeState is not (
+            LauncherRuntimeState.Corrupted or
+            LauncherRuntimeState.Ready))
+        {
+            return Failed(localizer.T("operationUnavailableForCurrentState"), "invalid-state");
+        }
+
         return await RunAsync(snapshot, repair: true, progress, cancellationToken).ConfigureAwait(false);
     }
 

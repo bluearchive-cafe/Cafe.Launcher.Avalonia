@@ -104,6 +104,7 @@
   "corruptedInstallationState": "本地安装状态已损坏，必须修复。",
   "installationStateReadFailed": "无法读取本地安装状态，请刷新重试。",
   "remoteStateUnavailable": "远端启动器状态不可用，请刷新重试。",
+  "operationUnavailableForCurrentState": "当前启动器状态不允许执行此操作。",
   "minimize": "最小化",
   "networkError": "网络错误",
   "network": "网络",
