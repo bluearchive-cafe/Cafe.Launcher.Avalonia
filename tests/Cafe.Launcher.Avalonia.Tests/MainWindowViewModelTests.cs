@@ -1010,9 +1010,10 @@ public sealed class MainWindowViewModelTests : IDisposable
             settingsService, localizationService, toastService,
             launcherUpdateService, dialogsViewModel,
             settingsOptions, settingsAppearance);
+        var resourcePanelService = new ResourcePanelService(
+            resourcePanelUidService, resourcePanelApiClient, diagnostics);
         var resourcePanelViewModel = new ResourcePanelViewModel(
-            resourcePanelUidService, resourcePanelApiClient, localizationService,
-            toastService, diagnostics);
+            resourcePanelService, localizationService, toastService);
         var gameUninstallService = new GameUninstallService(
             localInstallationStateStore,
             diagnostics,

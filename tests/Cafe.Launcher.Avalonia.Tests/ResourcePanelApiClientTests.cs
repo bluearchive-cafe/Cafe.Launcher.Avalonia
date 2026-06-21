@@ -76,6 +76,19 @@ public sealed class ResourcePanelApiClientTests
         Assert.Null(handler.LastRequestContentType);
     }
 
+    [Fact]
+    public async Task GetConfigAsync_WhenNotFound_ReturnsEmptyConfig()
+    {
+        using var client = new ResourcePanelApiClient(new NotFoundHandler());
+
+        var config = await client.GetConfigAsync("UID_NOT_FOUND", ProxyModes.Direct);
+
+        Assert.NotNull(config);
+        Assert.Null(config.Text);
+        Assert.Null(config.Voice);
+        Assert.Null(config.Media);
+    }
+
     private sealed class JsonHandler : HttpMessageHandler
     {
         private readonly string json;
@@ -100,6 +113,14 @@ public sealed class ResourcePanelApiClientTests
             {
                 Content = new StringContent(json, Encoding.UTF8, "application/json")
             };
+        }
+    }
+
+    private sealed class NotFoundHandler : HttpMessageHandler
+    {
+        protected override Task<HttpResponseMessage> SendAsync(HttpRequestMessage request, CancellationToken cancellationToken)
+        {
+            return Task.FromResult(new HttpResponseMessage(HttpStatusCode.NotFound));
         }
     }
 }
