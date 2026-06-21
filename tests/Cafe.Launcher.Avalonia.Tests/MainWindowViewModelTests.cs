@@ -233,21 +233,52 @@ public sealed class MainWindowViewModelTests : IDisposable
         Assert.False(viewModel.RemoteContent.IsLoading);
     }
 
+    [Fact]
+    public async Task InitializeAsync_WhenInstallationStateIsCorrupted_OffersRepairInsteadOfLaunch()
+    {
+        var snapshot = CreateSnapshot();
+        snapshot.RuntimeState = LauncherRuntimeState.Corrupted;
+        var coreService = new CountingCoreService(snapshot);
+        using var viewModel = CreateViewModel(coreService);
+
+        await viewModel.InitializeAsync();
+        await viewModel.Operations.InstallOrUpdateCommand.ExecuteAsync(null);
+
+        Assert.Equal(viewModel.Shell.I18n.Repair, viewModel.Operations.InstallButtonText);
+        Assert.True(viewModel.Operations.IsInstallPanelVisible);
+        Assert.False(viewModel.Operations.IsControlPanelVisible);
+        Assert.True(viewModel.Dialogs.IsRepairConfirmVisible);
+    }
+
+    [Fact]
+    public async Task InstallOrUpdateAsync_WhenRemoteStateIsUnavailable_ReloadsState()
+    {
+        var snapshot = CreateSnapshot();
+        snapshot.RuntimeState = LauncherRuntimeState.RemoteUnavailable;
+        var coreService = new CountingCoreService(snapshot);
+        using var viewModel = CreateViewModel(coreService);
+        await viewModel.InitializeAsync();
+
+        await viewModel.Operations.InstallOrUpdateCommand.ExecuteAsync(null);
+
+        Assert.Equal(2, coreService.LoadCount);
+        Assert.Equal(viewModel.Shell.I18n.Refresh, viewModel.Operations.InstallButtonText);
+    }
+
     [Theory]
-    [InlineData(false, false, false, "HelpCircleOutline")]
-    [InlineData(true, true, true, "Alert")]
-    [InlineData(true, true, false, "AlertCircle")]
-    [InlineData(true, false, false, "CheckAll")]
+    [InlineData(LauncherRuntimeState.NotInstalled, "HelpCircleOutline")]
+    [InlineData(LauncherRuntimeState.Corrupted, "Alert")]
+    [InlineData(LauncherRuntimeState.IoFailure, "Alert")]
+    [InlineData(LauncherRuntimeState.RemoteUnavailable, "Alert")]
+    [InlineData(LauncherRuntimeState.BelowLowestVersion, "Alert")]
+    [InlineData(LauncherRuntimeState.UpdateAvailable, "AlertCircle")]
+    [InlineData(LauncherRuntimeState.Ready, "CheckAll")]
     public void ResolveStatusIconKind_MapsLauncherState(
-        bool isInstalled,
-        bool needsUpdate,
-        bool belowLowestVersion,
+        LauncherRuntimeState runtimeState,
         string expectedIcon)
     {
         var snapshot = CreateSnapshot();
-        snapshot.IsInstalled = isInstalled;
-        snapshot.NeedsUpdate = needsUpdate;
-        snapshot.BelowLowestVersion = belowLowestVersion;
+        snapshot.RuntimeState = runtimeState;
 
         Assert.Equal(expectedIcon, ShellViewModel.ResolveStatusIconKind(snapshot));
     }
@@ -377,12 +408,17 @@ public sealed class MainWindowViewModelTests : IDisposable
     public async Task SaveSettingsAsync_WhenPatchUrlGroupChangesForInstalledGame_ShowsRepairPrompt()
     {
         var snapshot = CreateSnapshot();
-        snapshot.IsInstalled = true;
+        snapshot.RuntimeState = LauncherRuntimeState.Ready;
         snapshot.Settings.PatchUrlGroup = PatchUrlGroups.Official;
-        snapshot.LocalGame.GameConfig = new GameLauncherConfig
+        snapshot.LocalGame = new LocalInstallationState
         {
-            Name = "BlueArchive",
-            Version = "1.0.0"
+            Kind = LocalInstallationStateKind.Valid,
+            GamePath = snapshot.LocalGame.GamePath,
+            GameConfig = new GameLauncherConfig
+            {
+                Name = "BlueArchive",
+                Version = "1.0.0"
+            }
         };
         var settingsPath = Path.Combine(tempDir, Guid.NewGuid().ToString("N"), "settings.json");
         var settingsService = new LauncherSettingsService(settingsPath);
@@ -412,7 +448,7 @@ public sealed class MainWindowViewModelTests : IDisposable
         await settingsService.SaveAsync(new LauncherSettings());
         var snapshot = CreateSnapshot();
         snapshot.Settings.GamePath = "";
-        snapshot.LocalGame.GamePath = "";
+        snapshot.LocalGame = new LocalInstallationState();
         var coreService = new CountingCoreService(snapshot);
         using var viewModel = CreateViewModel(coreService, settingsService);
         await viewModel.InitializeAsync();
@@ -937,7 +973,7 @@ public sealed class MainWindowViewModelTests : IDisposable
         var testSettings = settingsService.ReadAsync().GetAwaiter().GetResult();
         testSettings.HasCompletedFirstLaunchWizard = true;
         settingsService.SaveAsync(testSettings).GetAwaiter().GetResult();
-        var localGameStateService = new LocalGameStateService();
+        var localInstallationStateStore = new LocalInstallationStateStore();
         var diagnostics = new LocalDiagnostics();
         var localizationService = new LocalizationService();
         var manifestValidationService = new ManifestValidationService(apiClient, localizationService);
@@ -947,14 +983,15 @@ public sealed class MainWindowViewModelTests : IDisposable
             localizationService);
         var gameDownloadService = new GameDownloadService(
             apiClient,
-            localGameStateService,
+            localInstallationStateStore,
             settingsService,
             new ProxySettingsService(),
             new Crc64Service(),
             new DiskSpaceService(),
             diagnostics,
             localizationService,
-            Path.Combine(tempDir, Guid.NewGuid().ToString("N"), "download_state.json"));
+            Path.Combine(tempDir, Guid.NewGuid().ToString("N"), "download_state.json"),
+            new GameInstallationPath());
         resourcePanelUidService ??= new ResourcePanelUidService(
             new BestHttpCookieLibraryService(),
             settingsService,
@@ -977,9 +1014,10 @@ public sealed class MainWindowViewModelTests : IDisposable
             resourcePanelUidService, resourcePanelApiClient, localizationService,
             toastService, diagnostics);
         var gameUninstallService = new GameUninstallService(
-            localGameStateService,
+            localInstallationStateStore,
             diagnostics,
-            localizationService);
+            localizationService,
+            new GameInstallationPath());
 
         var shellViewModel = new ShellViewModel(localizationService);
         var remoteContentViewModel = new RemoteContentViewModel(localizationService, imageCacheService);
@@ -1027,7 +1065,7 @@ public sealed class MainWindowViewModelTests : IDisposable
             {
                 GamePath = gamePath
             },
-            LocalGame = new LocalGameState
+            LocalGame = new LocalInstallationState
             {
                 GamePath = gamePath
             },

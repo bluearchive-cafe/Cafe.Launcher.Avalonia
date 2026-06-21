@@ -42,8 +42,7 @@ public sealed class ServiceConfigurationTests : IDisposable
         using var viewModel = provider.GetRequiredService<MainWindowViewModel>();
         viewModel.Operations.GetSnapshot = () => new LauncherStatusSnapshot
         {
-            IsInstalled = true,
-            BelowLowestVersion = false
+            RuntimeState = LauncherRuntimeState.Ready
         };
 
         await viewModel.Operations.RequestRepairCommand.ExecuteAsync(null);
@@ -61,8 +60,7 @@ public sealed class ServiceConfigurationTests : IDisposable
         using var viewModel = provider.GetRequiredService<MainWindowViewModel>();
         viewModel.Operations.GetSnapshot = () => new LauncherStatusSnapshot
         {
-            IsInstalled = true,
-            BelowLowestVersion = false,
+            RuntimeState = LauncherRuntimeState.Ready,
             Remote = new LauncherRemoteState
             {
                 GameConfig = new GameConfigResponse()

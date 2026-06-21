@@ -285,7 +285,7 @@ public partial class MainWindowViewModel : ViewModelBase, IDisposable
         }
 
         await RefreshAsync();
-        if (currentSnapshot?.IsInstalled == true
+        if (currentSnapshot?.RuntimeState is LauncherRuntimeState.Ready or LauncherRuntimeState.UpdateAvailable
             && !string.Equals(previousPatchUrlGroup, savedPatchUrlGroup, StringComparison.Ordinal))
         {
             Dialogs.ShowRepairConfirm(localizer.T("downloadSourceChangedRepairPrompt"));

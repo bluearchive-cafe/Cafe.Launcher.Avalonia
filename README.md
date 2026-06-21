@@ -73,7 +73,10 @@ dotnet test --filter "FullyQualifiedName~VersionComparerTests"
 - `MainWindowViewModelTests`
 - `GameDownloadServiceTests`
 - `PatchUrlGroupServiceTests`
-- `LocalGameStateServiceTests`
+- `GameInstallationPathTests`
+- `LocalInstallationStateStoreTests`
+- `LauncherCoreServiceTests`
+- `InstallationOperationStateTests`
 - `BestHttpCookieLibraryServiceTests`
 - `ResourcePanelUidServiceTests`
 - `ExternalLinkServiceTests`

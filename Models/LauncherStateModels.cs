@@ -9,25 +9,6 @@ using CommunityToolkit.Mvvm.ComponentModel;
 
 namespace Cafe.Launcher.Avalonia.Models;
 
-public sealed class LocalGameState
-{
-    public string GamePath { get; set; } = "";
-
-    public string ConfigPath { get; set; } = "";
-
-    public string ManifestPath { get; set; } = "";
-
-    public bool ConfigExists { get; set; }
-
-    public bool ManifestExists { get; set; }
-
-    public GameLauncherConfig? GameConfig { get; set; }
-
-    public LocalManifest? Manifest { get; set; }
-
-    public string? Error { get; set; }
-}
-
 public static class LaunchCheckModes
 {
     public const string LocalManifest = "localManifest";
@@ -361,21 +342,26 @@ public sealed class LauncherRemoteState
     public InstallationConfigResponse? InstallationConfig { get; set; }
 }
 
+public enum LauncherRuntimeState
+{
+    NotInstalled,
+    Corrupted,
+    IoFailure,
+    RemoteUnavailable,
+    BelowLowestVersion,
+    UpdateAvailable,
+    Ready
+}
+
 public sealed class LauncherStatusSnapshot
 {
     public LauncherSettings Settings { get; set; } = new();
 
-    public LocalGameState LocalGame { get; set; } = new();
+    public LocalInstallationState LocalGame { get; set; } = new();
 
     public LauncherRemoteState Remote { get; set; } = new();
 
-    public bool IsInstalled { get; set; }
-
-    public bool NeedsUpdate { get; set; }
-
-    public bool BelowLowestVersion { get; set; }
-
-    public string UserStatus { get; set; } = "";
+    public LauncherRuntimeState RuntimeState { get; set; }
 
     public DateTimeOffset CheckedAt { get; set; }
 }

@@ -27,14 +27,26 @@ public sealed class GameLaunchService
         LauncherStatusSnapshot snapshot,
         CancellationToken cancellationToken = default)
     {
-        if (!snapshot.IsInstalled)
+        if (snapshot.RuntimeState == LauncherRuntimeState.NotInstalled)
         {
             return Failed(localizer.T("gameNotInstalled"));
         }
 
-        if (snapshot.BelowLowestVersion)
+        if (snapshot.RuntimeState == LauncherRuntimeState.BelowLowestVersion)
         {
             return Failed(localizer.T("gameBelowLowestVersion"));
+        }
+
+        if (snapshot.RuntimeState != LauncherRuntimeState.Ready)
+        {
+            return Failed(snapshot.RuntimeState switch
+            {
+                LauncherRuntimeState.Corrupted => localizer.T("corruptedInstallationState"),
+                LauncherRuntimeState.IoFailure => localizer.T("installationStateReadFailed"),
+                LauncherRuntimeState.RemoteUnavailable => localizer.T("remoteStateUnavailable"),
+                LauncherRuntimeState.UpdateAvailable => localizer.T("updateAvailable"),
+                _ => localizer.T("gameNotInstalled")
+            });
         }
 
         var localGame = snapshot.LocalGame;
