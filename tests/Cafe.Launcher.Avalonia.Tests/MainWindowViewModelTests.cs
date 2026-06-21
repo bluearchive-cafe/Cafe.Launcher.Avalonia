@@ -976,13 +976,18 @@ public sealed class MainWindowViewModelTests : IDisposable
         var localInstallationStateStore = new LocalInstallationStateStore();
         var diagnostics = new LocalDiagnostics();
         var localizationService = new LocalizationService();
-        var manifestValidationService = new ManifestValidationService(apiClient, localizationService);
+        var remoteManifestService = new RemoteManifestService(apiClient);
+        var diagnosticsVal = new LocalDiagnostics();
+        var fileDownloadService = new FileDownloadService(new Crc64Service(), diagnosticsVal);
+        var manifestValidationService = new ManifestValidationService(apiClient, remoteManifestService, localizationService);
         var gameLaunchService = new GameLaunchService(
             manifestValidationService,
             new ClickCodeService(),
             localizationService);
         var gameDownloadService = new GameDownloadService(
             apiClient,
+            remoteManifestService,
+            fileDownloadService,
             localInstallationStateStore,
             settingsService,
             new ProxySettingsService(),
