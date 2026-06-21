@@ -6,48 +6,30 @@ using System.Threading.Tasks;
 namespace Cafe.Launcher.Avalonia.Services.Diagnostics;
 
 /// <summary>
-/// Detects whether the previous session ended cleanly by scanning
-/// the unified log for a <c>[SESSION_END]</c> marker after the last <c>[SESSION_START]</c>.
+/// Tracks whether the previous process session ended cleanly through a dedicated
+/// active-session marker that is independent from log rotation.
 /// </summary>
 public sealed class CrashRecoveryService
 {
     private readonly UnifiedLogger logger;
+    private readonly string activeSessionPath;
 
     public CrashRecoveryService(UnifiedLogger logger)
     {
         this.logger = logger;
+        activeSessionPath = Path.Combine(
+            Path.GetDirectoryName(logger.LogFilePath)!,
+            "session.active");
     }
 
     /// <summary>
-    /// Returns <see langword="true"/> when the unified log exists, contains a
-    /// <c>[SESSION_START]</c> marker, but no matching <c>[SESSION_END]</c> — meaning
-    /// the previous session crashed or was killed.
+    /// Returns <see langword="true"/> when the previous process left its
+    /// active-session marker behind.
     /// </summary>
-    public async Task<bool> DetectCrashAsync(CancellationToken ct = default)
+    public Task<bool> DetectCrashAsync(CancellationToken ct = default)
     {
-        var logPath = logger.LogFilePath;
-        try
-        {
-            if (!File.Exists(logPath))
-                return false;
-
-            bool? lastMarkerWasStart = null;
-            await using var stream = new FileStream(logPath, FileMode.Open, FileAccess.Read, FileShare.ReadWrite);
-            using var reader = new StreamReader(stream);
-            while (await reader.ReadLineAsync(ct).ConfigureAwait(false) is { } line)
-            {
-                if (line.EndsWith("[SESSION_START]", StringComparison.Ordinal))
-                    lastMarkerWasStart = true;
-                else if (line.EndsWith("[SESSION_END]", StringComparison.Ordinal))
-                    lastMarkerWasStart = false;
-            }
-
-            return lastMarkerWasStart == true;
-        }
-        catch
-        {
-            return false;
-        }
+        ct.ThrowIfCancellationRequested();
+        return Task.FromResult(File.Exists(activeSessionPath));
     }
 
     /// <summary>
@@ -56,8 +38,43 @@ public sealed class CrashRecoveryService
     /// </summary>
     public async Task<bool> BeginSessionAsync(CancellationToken ct = default)
     {
-        var crashed = await DetectCrashAsync(ct).ConfigureAwait(false);
+        var crashed = false;
+        try
+        {
+            crashed = await DetectCrashAsync(ct).ConfigureAwait(false);
+            Directory.CreateDirectory(Path.GetDirectoryName(activeSessionPath)!);
+            await File.WriteAllTextAsync(
+                activeSessionPath,
+                DateTimeOffset.Now.ToString("O", System.Globalization.CultureInfo.InvariantCulture),
+                ct).ConfigureAwait(false);
+        }
+        catch (OperationCanceledException) when (ct.IsCancellationRequested)
+        {
+            throw;
+        }
+        catch
+        {
+            // Session tracking is diagnostic and must not prevent startup.
+        }
+
         await logger.WriteSessionStartAsync(ct).ConfigureAwait(false);
         return crashed;
+    }
+
+    /// <summary>
+    /// Marks the current session as cleanly completed and writes the diagnostic
+    /// session-end entry.
+    /// </summary>
+    public async Task CompleteSessionAsync(CancellationToken ct = default)
+    {
+        await logger.WriteSessionEndAsync(ct).ConfigureAwait(false);
+        try
+        {
+            File.Delete(activeSessionPath);
+        }
+        catch
+        {
+            // Session tracking is best-effort during process shutdown.
+        }
     }
 }

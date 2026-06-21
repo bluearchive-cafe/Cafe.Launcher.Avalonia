@@ -12,11 +12,11 @@ public sealed class DiagnosticsServicesTests : IDisposable
     }
 
     [Fact]
-    public async Task DetectCrashAsync_WhenLastSessionExceedsTailBuffer_ReturnsTrue()
+    public async Task DetectCrashAsync_WhenLogGrowsAfterSessionStart_ReturnsTrue()
     {
         using var logger = new UnifiedLogger(tempDir);
         var service = new CrashRecoveryService(logger);
-        await logger.WriteSessionStartAsync();
+        await service.BeginSessionAsync();
         await logger.LogAsync(LogEntrySeverity.Error, "Large failure", new string('x', 8192));
 
         var crashed = await service.DetectCrashAsync();
@@ -29,14 +29,72 @@ public sealed class DiagnosticsServicesTests : IDisposable
     {
         using var logger = new UnifiedLogger(tempDir);
         var service = new CrashRecoveryService(logger);
-        await logger.WriteSessionStartAsync();
+        var firstSessionCrashed = await service.BeginSessionAsync();
 
         var crashed = await service.BeginSessionAsync();
 
+        Assert.False(firstSessionCrashed);
         Assert.True(crashed);
         Assert.Equal(
             2,
             File.ReadLines(logger.LogFilePath).Count(line => line.Contains("[SESSION_START]", StringComparison.Ordinal)));
+    }
+
+    [Fact]
+    public async Task DetectCrashAsync_WhenSessionStartWasRotated_ReturnsTrue()
+    {
+        using var logger = new UnifiedLogger(tempDir, new LogRotationManager());
+        var service = new CrashRecoveryService(logger);
+        await service.BeginSessionAsync();
+        await logger.LogAsync(
+            LogEntrySeverity.Error,
+            "Large failure",
+            new string('x', checked((int)LogRotationManager.MaxFileSize)));
+
+        var crashed = await service.DetectCrashAsync();
+
+        Assert.True(crashed);
+    }
+
+    [Fact]
+    public async Task CompleteSessionAsync_RemovesActiveSessionMarker()
+    {
+        using var logger = new UnifiedLogger(tempDir);
+        var service = new CrashRecoveryService(logger);
+        await service.BeginSessionAsync();
+
+        await service.CompleteSessionAsync();
+
+        Assert.False(await service.DetectCrashAsync());
+        Assert.Contains(
+            "[SESSION_END]",
+            File.ReadAllText(logger.LogFilePath),
+            StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public async Task RunSession_WhenApplicationReturns_CompletesSession()
+    {
+        using var logger = new UnifiedLogger(tempDir);
+        var service = new CrashRecoveryService(logger);
+
+        Program.RunSession(service, () => { });
+
+        Assert.False(await service.DetectCrashAsync());
+    }
+
+    [Fact]
+    public async Task RunSession_WhenApplicationThrows_LeavesActiveSessionMarker()
+    {
+        using var logger = new UnifiedLogger(tempDir);
+        var service = new CrashRecoveryService(logger);
+
+        Assert.Throws<InvalidOperationException>(
+            () => Program.RunSession(
+                service,
+                () => throw new InvalidOperationException("fatal")));
+
+        Assert.True(await service.DetectCrashAsync());
     }
 
     [Fact]

@@ -11,6 +11,8 @@ sealed class Program
     private const string MutexName = @"Local\Cafe_Launcher_SI";
     private const string SignalName = @"Local\Cafe_Launcher_SI_Show";
 
+    internal static bool PreviousSessionCrashed { get; private set; }
+
     [STAThread]
     public static void Main(string[] args)
     {
@@ -21,14 +23,16 @@ sealed class Program
             return;
         }
 
-        // Create a standalone logger for crash reporting before DI is available.
-        // The DI container will create its own UnifiedLogger singleton later;
-        // this early instance only serves the unhandled-exception handlers.
+        // Create standalone diagnostics before DI is available. This instance
+        // owns process-session tracking and the unhandled-exception handlers.
         var crashLogger = new UnifiedLogger();
+        var crashRecovery = new CrashRecoveryService(crashLogger);
         SetupCrashLogging(crashLogger);
         try
         {
-            BuildAvaloniaApp().StartWithClassicDesktopLifetime(args);
+            RunSession(
+                crashRecovery,
+                () => BuildAvaloniaApp().StartWithClassicDesktopLifetime(args));
         }
         catch (Exception exception)
         {
@@ -37,12 +41,21 @@ sealed class Program
         }
     }
 
+    internal static void RunSession(CrashRecoveryService crashRecovery, Action runApplication)
+    {
+        PreviousSessionCrashed = crashRecovery.BeginSessionAsync().GetAwaiter().GetResult();
+        runApplication();
+        crashRecovery.CompleteSessionAsync().GetAwaiter().GetResult();
+    }
+
     private static void SetupCrashLogging(UnifiedLogger logger)
     {
         void WriteCrash(string source, Exception? ex) => LogCrash(logger, source, ex);
 
         AppDomain.CurrentDomain.UnhandledException += (_, e) =>
+        {
             WriteCrash("AppDomain.UnhandledException", e.ExceptionObject as Exception);
+        };
 
         TaskScheduler.UnobservedTaskException += (_, e) =>
         {

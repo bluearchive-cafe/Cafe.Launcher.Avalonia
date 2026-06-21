@@ -385,6 +385,45 @@ public sealed partial class UiStyleContractTests
     }
 
     [Fact]
+    public void SettingsAboutActionsAndVersionChips_UsePurposeBasedOrder()
+    {
+        var text = File.ReadAllText(ProjectFile("Views/MainWindowSettingsOverlay.axaml"));
+
+        AssertOrdered(
+            text,
+            "Shell.LauncherVersionText",
+            "Shell.BuildTimeText",
+            "Shell.CommitShaText",
+            "Shell.BuildConfigText",
+            "Shell.FrameworkVersionText",
+            "Shell.AvaloniaVersionText",
+            "Shell.PlatformText");
+        AssertOrdered(
+            text,
+            "Settings.CheckForUpdatesCommand",
+            "WindowChrome.OpenOfficialSiteCommand",
+            "WindowChrome.OpenGitHubRepositoryCommand",
+            "LogViewer.OpenCommand",
+            "LogViewer.ExportCommand",
+            "WindowChrome.OpenDataDirectoryCommand");
+
+        var document = XDocument.Parse(text);
+        var footerButtons = document
+            .Descendants()
+            .Where(element =>
+                element.Name.LocalName == "Button"
+                && HasClass(element, "settings-footer-action"))
+            .ToList();
+        Assert.Equal(2, footerButtons.Count);
+        Assert.Equal(
+            "{Binding Settings.SaveSettingsCommand}",
+            footerButtons[0].Attribute("Command")?.Value);
+        Assert.Equal(
+            "{Binding WindowChrome.ShowSettingsCommand}",
+            footerButtons[1].Attribute("Command")?.Value);
+    }
+
+    [Fact]
     public void ToastCards_DoNotUseOverlappingBoxShadows()
     {
         var document = XDocument.Load(ProjectFile("Views/MainWindow.Styles.axaml"));
@@ -453,6 +492,17 @@ public sealed partial class UiStyleContractTests
         element.Attribute("Classes")?.Value
             .Split(' ', StringSplitOptions.RemoveEmptyEntries)
             .Contains(className, StringComparer.Ordinal) == true;
+
+    private static void AssertOrdered(string text, params string[] values)
+    {
+        var previousIndex = -1;
+        foreach (var value in values)
+        {
+            var index = text.IndexOf(value, StringComparison.Ordinal);
+            Assert.True(index > previousIndex, $"{value} must appear after the previous item.");
+            previousIndex = index;
+        }
+    }
 
     private static string ProjectFile(string relativePath) =>
         Path.Combine(FindProjectRoot(), relativePath.Replace('/', Path.DirectorySeparatorChar));

@@ -532,8 +532,15 @@
                                         <Border Classes="version-chip">
                                             <TextBlock Text="{Binding Shell.LauncherVersionText}" Classes="chip-text"/>
                                         </Border>
+                                        <Border Classes="version-chip"
+                                                IsVisible="{Binding Shell.BuildTimeText, Converter={x:Static StringConverters.IsNotNullOrEmpty}}">
+                                            <TextBlock Text="{Binding Shell.BuildTimeText}" Classes="chip-text"/>
+                                        </Border>
                                         <Border Classes="version-chip">
                                             <TextBlock Text="{Binding Shell.CommitShaText}" Classes="chip-text"/>
+                                        </Border>
+                                        <Border Classes="version-chip">
+                                            <TextBlock Text="{Binding Shell.BuildConfigText}" Classes="chip-text"/>
                                         </Border>
                                         <Border Classes="version-chip">
                                             <TextBlock Text="{Binding Shell.FrameworkVersionText}" Classes="chip-text"/>
@@ -544,16 +551,16 @@
                                         <Border Classes="version-chip">
                                             <TextBlock Text="{Binding Shell.PlatformText}" Classes="chip-text"/>
                                         </Border>
-                                        <Border Classes="version-chip">
-                                            <TextBlock Text="{Binding Shell.BuildConfigText}" Classes="chip-text"/>
-                                        </Border>
-                                        <Border Classes="version-chip"
-                                                IsVisible="{Binding Shell.BuildTimeText, Converter={x:Static StringConverters.IsNotNullOrEmpty}}">
-                                            <TextBlock Text="{Binding Shell.BuildTimeText}" Classes="chip-text"/>
-                                        </Border>
                                     </WrapPanel>
                                 </StackPanel>
                                 <WrapPanel>
+                                    <Button Classes="flat-action wrap-action"
+                                            Command="{Binding Settings.CheckForUpdatesCommand}">
+                                        <StackPanel Classes="button-content">
+                                            <materialIcons:MaterialIcon Kind="Update" Width="{StaticResource LauncherIconSm}" Height="{StaticResource LauncherIconSm}"/>
+                                            <TextBlock Text="{Binding Shell.I18n.CheckUpdates}" VerticalAlignment="Center"/>
+                                        </StackPanel>
+                                    </Button>
                                     <Button Classes="flat-action wrap-action" Command="{Binding WindowChrome.OpenOfficialSiteCommand}">
                                         <StackPanel Classes="button-content">
                                             <materialIcons:MaterialIcon Kind="Web" Width="{StaticResource LauncherIconSm}" Height="{StaticResource LauncherIconSm}"/>
@@ -564,13 +571,6 @@
                                         <StackPanel Classes="button-content">
                                             <materialIcons:MaterialIcon Kind="Github" Width="{StaticResource LauncherIconSm}" Height="{StaticResource LauncherIconSm}"/>
                                             <TextBlock Text="{Binding Shell.I18n.GitHubRepository}" VerticalAlignment="Center"/>
-                                        </StackPanel>
-                                    </Button>
-                                    <Button Classes="flat-action wrap-action"
-                                            Command="{Binding Settings.CheckForUpdatesCommand}">
-                                        <StackPanel Classes="button-content">
-                                            <materialIcons:MaterialIcon Kind="Update" Width="{StaticResource LauncherIconSm}" Height="{StaticResource LauncherIconSm}"/>
-                                            <TextBlock Text="{Binding Shell.I18n.CheckUpdates}" VerticalAlignment="Center"/>
                                         </StackPanel>
                                     </Button>
                                     <Button Classes="flat-action wrap-action"
@@ -607,23 +607,23 @@
 
                 <Border Grid.Row="2" Classes="dialog-footer">
                     <Grid ColumnDefinitions="*,*" ColumnSpacing="{StaticResource LauncherSpacingSm}">
-                        <Button Classes="flat-action settings-footer-action"
-                                Command="{Binding WindowChrome.ShowSettingsCommand}"
-                                IsEnabled="{Binding Settings.IsSaving, Converter={x:Static BoolConverters.Not}}"
-                                HorizontalAlignment="Stretch">
-                            <StackPanel Classes="button-content" HorizontalAlignment="Center">
-                                <materialIcons:MaterialIcon Kind="CloseCircleOutline" Width="{StaticResource LauncherIconMd}" Height="{StaticResource LauncherIconMd}"/>
-                                <TextBlock Text="{Binding Shell.I18n.Cancel}" VerticalAlignment="Center"/>
-                            </StackPanel>
-                        </Button>
-                        <Button Grid.Column="1"
-                                Classes="primary-action settings-footer-action"
+                        <Button Classes="primary-action settings-footer-action"
                                 Command="{Binding Settings.SaveSettingsCommand}"
                                 IsEnabled="{Binding Settings.CanSaveSettings}"
                                 HorizontalAlignment="Stretch">
                             <StackPanel Classes="button-content" HorizontalAlignment="Center">
                                 <materialIcons:MaterialIcon Kind="ContentSave" Width="{StaticResource LauncherIconMd}" Height="{StaticResource LauncherIconMd}"/>
                                 <TextBlock Text="{Binding Shell.I18n.Save}" VerticalAlignment="Center"/>
+                            </StackPanel>
+                        </Button>
+                        <Button Grid.Column="1"
+                                Classes="flat-action settings-footer-action"
+                                Command="{Binding WindowChrome.ShowSettingsCommand}"
+                                IsEnabled="{Binding Settings.IsSaving, Converter={x:Static BoolConverters.Not}}"
+                                HorizontalAlignment="Stretch">
+                            <StackPanel Classes="button-content" HorizontalAlignment="Center">
+                                <materialIcons:MaterialIcon Kind="CloseCircleOutline" Width="{StaticResource LauncherIconMd}" Height="{StaticResource LauncherIconMd}"/>
+                                <TextBlock Text="{Binding Shell.I18n.Cancel}" VerticalAlignment="Center"/>
                             </StackPanel>
                         </Button>
                     </Grid>

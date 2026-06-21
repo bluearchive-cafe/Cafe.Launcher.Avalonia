@@ -85,11 +85,11 @@ One `MainWindow` (1300×754, non-resizable with MinWidth 1024/MinHeight 640, bor
 - `MainWindowToastOverlay.axaml` — toast notification overlay
 
 **Entries:**
-1. **Program.cs** — Process mutex (`Global\Cafe_Launcher_SI`), single-instance enforcement via `EventWaitHandle` signal, global crash logging to `%LOCALAPPDATA%\Cafe Launcher\crash.log`.
+1. **Program.cs** — Process mutex (`Local\Cafe_Launcher_SI`), single-instance enforcement via `EventWaitHandle` signal. Creates `UnifiedLogger` + `CrashRecoveryService` on startup before the DI container is available. Tracks `PreviousSessionCrashed` via a `session.active` marker file. Sets up unhandled-exception handlers (`AppDomain.UnhandledException`, `TaskScheduler.UnobservedTaskException`).
 2. **App.axaml.cs** — On framework init: builds DI container via `ServiceConfiguration.AddLauncherServices()`, resolves `MainWindowViewModel`, creates `MainWindow`, wires `ClickCodeService`, `SystemTrayService`. Starts a background thread listening for `EventWaitHandle` signals to restore window from tray.
 3. **App.axaml** — Light/Dark `ThemeDictionaries` with custom `Launcher*` brushes, FluentTheme + MaterialIconStyles.
 
-**Composition root**: `ServiceConfiguration.AddLauncherServices()` is the DI configuration — it registers all services with `Microsoft.Extensions.DependencyInjection`. The container is built in `App.axaml.cs` via `ServiceCollection.BuildServiceProvider()`. Most services are registered as `AddSingleton`; `ISettingsEditor`/`SettingsEditor` is registered as `AddSingleton` (the single-window app has one editor state). Every ViewModel is registered as `AddTransient` (fresh instance per resolution), except `DialogsViewModel` which is `AddSingleton`. Thread-safe disposal order for IDisposable services is defined by reverse registration order (see disposal order section below).
+**Composition root**: `ServiceConfiguration.AddLauncherServices()` is the DI configuration — it registers all services with `Microsoft.Extensions.DependencyInjection`. The container is built in `App.axaml.cs` via `ServiceCollection.BuildServiceProvider()`. Services are registered as `AddSingleton`; ViewModels are a mix: `SettingsViewModel`, `ShellViewModel`, `RemoteContentViewModel`, `DialogsViewModel`, and `GameOperationsViewModel` are `AddSingleton` (shared state), while `ResourcePanelViewModel`, `BackgroundViewModel`, `ToastHostViewModel`, `WindowChromeViewModel`, `MigrationWizardViewModel`, `MainWindowViewModel`, and `LogViewerDialogViewModel` are `AddTransient` (fresh instance per resolution). Thread-safe disposal order for IDisposable services is defined by reverse registration order (see disposal order section below).
 
 **ViewModel coordination**: Sub-ViewModels communicate with `MainWindowViewModel` through two mechanisms:
 - **Delegates** — `MainWindowViewModel.ConfigureViewModel()` sets `Func<>` / `Func<Task>` delegates on children (e.g. `SettingsViewModel.PickGameFolderAsync`, `SettingsViewModel.PreviewAppearanceAsync`). These let children call back into parent capabilities such as native pickers and appearance previews.
@@ -117,13 +117,20 @@ One `MainWindow` (1300×754, non-resizable with MinWidth 1024/MinHeight 640, bor
 | `SettingsEditor` | Snapshot/dirty/discard editing of `LauncherSettings` via `ISettingsEditor`, with separate current and saved snapshots for transactional settings behavior. Uses JSON round-trip deep cloning. Registered as **Singleton** (single-window app, shared editor state). |
 | `GameInstallationPath` | Computes the default game path and normalizes paths to `YostarGames\BlueArchive_JP` |
 | `LocalInstallationStateStore` | Strictly reads, validates, commits, and deletes local `game-launcher-config.json` + `manifest.json` as one installation state |
-| `GameDownloadService` | Install/update/repair: manifest diff → parallel CDN download (10 concurrent, `.tmp` files, `Range` resume, CRC64 verify, rename on success). Supports download speed throttling, async pause/resume via `TaskCompletionSource`. Implements `IDisposable` — thread-safe CTS management via `activeDownloadLock`. |
+| `GameDownloadService` | Install/update/repair: manifest diff → parallel CDN download (10 concurrent, `.tmp` files, `Range` resume, CRC64 verify, rename on success). Supports download speed throttling, async pause/resume via `TaskCompletionSource`. Implements `IDisposable` — thread-safe CTS management via `activeDownloadLock`. Constructor takes a `GameDownloadService.Dependencies` record grouping all dependencies. |
+| `RemoteManifestService` | Retrieves and caches remote manifest data from CDN, used by `GameDownloadService` |
+| `IFileDownloadService` / `FileDownloadService` | File download abstraction with retry, range support, and progress reporting; used by `GameDownloadService` |
+| `ResourcePanelService` | Service layer for resource panel data operations |
 | `GameLaunchService` | Manifest validation + process launch |
 | `GameUninstallService` | Guarded uninstall (checks path safety, exe not running, deletes only manifest-listed files) |
 | `LocalizationService` | Inline dictionaries for `en`/`zh-Hans`/`ja`; `auto` resolves via `CultureInfo.CurrentUICulture` |
 | `SystemTrayService` | Avalonia 12 `TrayIcon` + `NativeMenu` for minimize-to-tray |
 | `ToastService` | Event-based transient notifications. `ToastNotification` is pure data (`Id`, `Message`, `Severity`, `DurationMs`, `IconKind`); view brush resolution stays in the toast XAML converter |
-| `LocalDiagnostics` | Appends to `diagnostics.log` in the settings folder |
+| `UnifiedLogger` | Unified logging with severity levels (`LogEntrySeverity`), async file writing, and session start/end markers. Owned by `Program.cs` at startup before DI is available; also registered in DI. |
+| `LogRotationManager` | Log file rotation management — archives logs above a size threshold with timestamped filenames |
+| `LogExportService` | Exports collected log entries for display/download |
+| `CrashRecoveryService` | Session crash detection via a `session.active` marker file in the settings folder. `PreviousSessionCrashed` is exposed via `Program.PreviousSessionCrashed`. |
+| `LocalDiagnostics` | Appends diagnostic entries to `diagnostics.log` via `UnifiedLogger` |
 | `PatchUrlGroupService` | URL rewriting between Official and Cafe CDN hosts for manifest + CDN config URLs |
 | `NoticeStateService` | Tracks which notice IDs have been shown (persisted to `shown_notices.json`) |
 | `HttpClientFactory` | Centralized factory for pre-configured `HttpClient` instances with shared `SocketsHttpHandler` pooling (15-min connection lifetime). Proxy-aware lease creation via `CreateLeaseAsync()`. Registered as singleton; implements `IDisposable`. |
@@ -156,9 +163,9 @@ One `MainWindow` (1300×754, non-resizable with MinWidth 1024/MinHeight 640, bor
 1. `LauncherApiClient` — disposed first
 2. `ResourcePanelApiClient`
 3. `ImageCacheService`
-4. `GameDownloadService` — disposed last
+4. `GameDownloadService` — disposed last (after all HTTP clients)
 
-The DI container calls `Dispose()` on these in reverse registration order when the service provider is disposed.
+The DI container calls `Dispose()` on these in reverse registration order when the service provider is disposed. `UnifiedLogger` is created in `Program.cs` before the DI container and disposed independently.
 
 ### First-launch migration
 
@@ -171,8 +178,9 @@ On first launch, `MainWindowViewModel` uses `OldLauncherDetectionService` to che
 | File | Purpose |
 |---|---|
 | `settings.json` | Launcher settings (see Settings reference below) |
-| `diagnostics.log` | Runtime diagnostics appended by `LocalDiagnostics` |
-| `crash.log` | Global unhandled exception log (written by `Program.cs`) |
+| `session.active` | Active-session marker written by `CrashRecoveryService`; presence on startup indicates previous session crashed |
+| `diagnostics.log` | Runtime diagnostics appended by `LocalDiagnostics` via `UnifiedLogger` |
+| `crash.log` | Global unhandled exception log (written by `UnifiedLogger` in `Program.cs`) |
 | `download_state.json` | Serializable download resume state (managed by `GameDownloadService`) |
 | `shown_notices.json` | Tracked shown notice IDs (`NoticeStateService`) |
 | `clickCode` | Install attribution code (`ClickCodeService`) |
@@ -242,9 +250,9 @@ Users can switch between `Official` (yo-star.com) and `Cafe` (bluearchive.cafe) 
 - `Constants/` — `LauncherConstants`, `ApiConfig`, `BuildInfo`, `GamePaths` (see Constants section above)
 - `Helpers/` — `FileSizeFormatter`, `GamePathValidator`, `HttpClientLease`
 - `Services/Auth/` — `AuthorizationHeaderFactory` (MD5-signed API auth header)
-- `Services/Diagnostics/` — `LocalDiagnostics` (appends to `diagnostics.log`)
+- `Services/Diagnostics/` — `LocalDiagnostics` (appends to `diagnostics.log`), `UnifiedLogger` (unified async logging with severity levels and session tracking), `LogRotationManager` (log file rotation), `LogExportService` (log export), `CrashRecoveryService` (session crash detection), `LogEntry` / `LogEntrySeverity` (log entry model)
 - `Services/HttpClientLeaseSource.cs` — Internal `IHttpClientLeaseSource` abstraction over `HttpClientFactory.CreateLeaseAsync()`. Two implementations: `ProxyAwareHttpClientLeaseSource` (production, delegates to `HttpClientFactory`) and `FixedHttpClientLeaseSource` (testing, wraps a fixed `HttpMessageHandler`). Used by services like `LauncherUpdateService` that need proxy-aware HTTP with lease lifetime management.
-- `Services/ServiceConfiguration.cs` — DI registration; services as `AddSingleton` (except `ISettingsEditor` transient), ViewModels as `AddTransient` (except `DialogsViewModel` singleton)
+- `Services/ServiceConfiguration.cs` — DI registration; services as `AddSingleton`, ViewModels as a mix of singleton (shared state: `SettingsViewModel`, `ShellViewModel`, `RemoteContentViewModel`, `DialogsViewModel`, `GameOperationsViewModel`) and transient (fresh per resolution)
 
 ### Localization
 
@@ -341,7 +349,7 @@ All numeric design values use `StaticResource` keys defined in `App.axaml`:
 - **Version comparison**: `VersionComparer.Compare()` returns -1/0/1 for old/equal/new.
 - **XAML extraction**: Large XAML blocks (styles, overlays) are extracted into separate `.axaml` files under `Views/` and referenced via `<StyleInclude>` or `Classes` attributes. The main `MainWindow.axaml` keeps only the window shell and content grid.
 - **Conventional commits**: Release changelog generation groups commits by `feat:`/`fix:`/`refactor:`/`perf:` prefixes. Use these prefixes for commit messages to get clean changelogs.
-- **AGENTS.md**: A parallel instruction file for Codex exists at the repo root. It covers the same architecture and should be kept in sync when significant structural changes are made. (Currently lags behind CLAUDE.md — test class list and service details need updating.)
+- **AGENTS.md**: A parallel instruction file for Codex exists at the repo root. It covers the same architecture and should be kept in sync when significant structural changes are made.
 - *****REMOVED***.md**: Analysis report comparing this launcher to the original Electron launcher, covering migration decisions and intentionally excluded features.
 - **VSCode**: `.vscode/launch.json` has `build`/`publish`/`watch` tasks and `.NET Core Launch`/`Attach` configurations.
 
