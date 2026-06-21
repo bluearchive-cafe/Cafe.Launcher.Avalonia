@@ -256,12 +256,17 @@ public sealed partial class UiStyleContractTests
             "Kind=\"ContentSave\" Width=\"{StaticResource LauncherIconMd}\" Height=\"{StaticResource LauncherIconMd}\" Foreground=",
             settingsOverlay,
             StringComparison.Ordinal);
+        var mainWindowViewModel = File.ReadAllText(ProjectFile("ViewModels/MainWindowViewModel.cs"));
         Assert.Contains(
-            "if (vm.WindowChrome.IsSettingsVisible)",
-            mainWindowCodeBehind,
+            "WindowEscapeAction.ToggleSettings",
+            mainWindowViewModel,
+            StringComparison.Ordinal);
+        Assert.Contains(
+            "WindowChrome.ShowSettingsCommand.Execute(null)",
+            mainWindowViewModel,
             StringComparison.Ordinal);
         Assert.DoesNotContain(
-            "vm.WindowChrome.IsSettingsVisible && !vm.Settings.IsSettingsDirty",
+            "vm.WindowChrome.IsSettingsVisible",
             mainWindowCodeBehind,
             StringComparison.Ordinal);
     }
