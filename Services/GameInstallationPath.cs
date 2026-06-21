@@ -15,7 +15,7 @@ public sealed class GameInstallationPath
 
     public string NormalizeGamePath(string path)
     {
-        var normalized = Path.GetFullPath(path);
+        var normalized = Path.TrimEndingDirectorySeparator(Path.GetFullPath(path));
         var segments = normalized.Split(
             [Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar],
             StringSplitOptions.RemoveEmptyEntries);

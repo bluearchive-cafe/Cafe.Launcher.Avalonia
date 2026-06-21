@@ -47,4 +47,18 @@ public sealed class GameInstallationPathTests
 
         Assert.Equal(Path.GetFullPath(input), result);
     }
+
+    [Fact]
+    public void NormalizeGamePath_WhenGameFolderHasTrailingSeparator_RemovesTrailingSeparator()
+    {
+        var input = Path.Combine(
+            Path.GetTempPath(),
+            Guid.NewGuid().ToString("N"),
+            GamePaths.RootFolderName,
+            GamePaths.GameFolderName) + Path.DirectorySeparatorChar;
+
+        var result = installationPath.NormalizeGamePath(input);
+
+        Assert.Equal(Path.TrimEndingDirectorySeparator(Path.GetFullPath(input)), result);
+    }
 }

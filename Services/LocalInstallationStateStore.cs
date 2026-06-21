@@ -39,7 +39,7 @@ public sealed class LocalInstallationStateStore
         string gamePath,
         CancellationToken cancellationToken = default)
     {
-        var normalizedGamePath = Path.GetFullPath(gamePath);
+        var normalizedGamePath = NormalizePath(gamePath);
         await using var pathLock = await AcquirePathLockAsync(
             normalizedGamePath,
             cancellationToken).ConfigureAwait(false);
@@ -56,7 +56,7 @@ public sealed class LocalInstallationStateStore
         CancellationToken cancellationToken = default)
     {
         ArgumentNullException.ThrowIfNull(commit);
-        var normalizedGamePath = Path.GetFullPath(gamePath);
+        var normalizedGamePath = NormalizePath(gamePath);
         var copiedCommit = ValidateAndCopyCommit(normalizedGamePath, commit);
         await using var pathLock = await AcquirePathLockAsync(
             normalizedGamePath,
@@ -155,7 +155,7 @@ public sealed class LocalInstallationStateStore
         string gamePath,
         CancellationToken cancellationToken = default)
     {
-        var normalizedGamePath = Path.GetFullPath(gamePath);
+        var normalizedGamePath = NormalizePath(gamePath);
         await using var pathLock = await AcquirePathLockAsync(
             normalizedGamePath,
             cancellationToken).ConfigureAwait(false);
@@ -525,6 +525,11 @@ public sealed class LocalInstallationStateStore
             ManifestPath = manifestPath,
             Error = error
         };
+    }
+
+    private static string NormalizePath(string path)
+    {
+        return Path.TrimEndingDirectorySeparator(Path.GetFullPath(path));
     }
 
     private sealed class PathLockEntry
