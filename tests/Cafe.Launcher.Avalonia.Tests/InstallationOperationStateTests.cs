@@ -46,7 +46,8 @@ public sealed class InstallationOperationStateTests : IDisposable
         var service = new GameUninstallService(
             new LocalInstallationStateStore(),
             new LocalDiagnostics(),
-            new LocalizationService());
+            new LocalizationService(),
+            new GameInstallationPath());
 
         var result = await service.ValidateAsync(gamePath);
 
@@ -72,7 +73,8 @@ public sealed class InstallationOperationStateTests : IDisposable
         var service = new GameUninstallService(
             store,
             new LocalDiagnostics(),
-            new LocalizationService());
+            new LocalizationService(),
+            new GameInstallationPath());
         var snapshot = new LauncherStatusSnapshot
         {
             RuntimeState = LauncherRuntimeState.Ready,
@@ -101,7 +103,8 @@ public sealed class InstallationOperationStateTests : IDisposable
             new Crc64Service(),
             new DiskSpaceService(),
             new LocalDiagnostics(),
-            new LocalizationService());
+            new LocalizationService(),
+            new GameInstallationPath());
 
         var result = await service.RepairAsync(
             new LauncherStatusSnapshot { RuntimeState = LauncherRuntimeState.NotInstalled },
@@ -117,7 +120,8 @@ public sealed class InstallationOperationStateTests : IDisposable
         var service = new GameUninstallService(
             new LocalInstallationStateStore(),
             new LocalDiagnostics(),
-            new LocalizationService());
+            new LocalizationService(),
+            new GameInstallationPath());
 
         var result = await service.UninstallAsync(
             new LauncherStatusSnapshot

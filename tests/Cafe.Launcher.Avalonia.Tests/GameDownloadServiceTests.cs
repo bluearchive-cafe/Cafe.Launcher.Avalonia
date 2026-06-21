@@ -355,7 +355,8 @@ public sealed class GameDownloadServiceTests
             new DiskSpaceService(),
             diagnostics,
             new LocalizationService(),
-            downloadStateFilePath);
+            downloadStateFilePath,
+            new GameInstallationPath());
     }
 
     private static LauncherStatusSnapshot CreateSnapshot(string gamePath)

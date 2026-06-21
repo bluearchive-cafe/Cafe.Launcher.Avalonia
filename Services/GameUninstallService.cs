@@ -21,10 +21,10 @@ public sealed class GameUninstallService
         LocalInstallationStateStore localInstallationStateStore,
         LocalDiagnostics diagnostics,
         LocalizationService localizer,
-        GameInstallationPath? installationPath = null)
+        GameInstallationPath installationPath)
     {
         this.localInstallationStateStore = localInstallationStateStore;
-        this.installationPath = installationPath ?? new GameInstallationPath();
+        this.installationPath = installationPath;
         this.diagnostics = diagnostics;
         this.localizer = localizer;
     }

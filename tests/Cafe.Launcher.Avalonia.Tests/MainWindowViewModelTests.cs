@@ -990,7 +990,8 @@ public sealed class MainWindowViewModelTests : IDisposable
             new DiskSpaceService(),
             diagnostics,
             localizationService,
-            Path.Combine(tempDir, Guid.NewGuid().ToString("N"), "download_state.json"));
+            Path.Combine(tempDir, Guid.NewGuid().ToString("N"), "download_state.json"),
+            new GameInstallationPath());
         resourcePanelUidService ??= new ResourcePanelUidService(
             new BestHttpCookieLibraryService(),
             settingsService,
@@ -1015,7 +1016,8 @@ public sealed class MainWindowViewModelTests : IDisposable
         var gameUninstallService = new GameUninstallService(
             localInstallationStateStore,
             diagnostics,
-            localizationService);
+            localizationService,
+            new GameInstallationPath());
 
         var shellViewModel = new ShellViewModel(localizationService);
         var remoteContentViewModel = new RemoteContentViewModel(localizationService, imageCacheService);

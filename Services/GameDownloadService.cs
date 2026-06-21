@@ -53,11 +53,11 @@ public sealed class GameDownloadService : IDisposable
         DiskSpaceService diskSpaceService,
         LocalDiagnostics diagnostics,
         LocalizationService localizer,
-        GameInstallationPath? installationPath = null)
+        GameInstallationPath installationPath)
     {
         this.apiClient = apiClient;
         this.localInstallationStateStore = localInstallationStateStore;
-        this.installationPath = installationPath ?? new GameInstallationPath();
+        this.installationPath = installationPath;
         this.settingsService = settingsService;
         this.proxySettingsService = proxySettingsService;
         this.crc64Service = crc64Service;
@@ -509,11 +509,11 @@ public sealed class GameDownloadService : IDisposable
         LocalDiagnostics diagnostics,
         LocalizationService localizer,
         string downloadStateFilePath,
-        GameInstallationPath? installationPath = null)
+        GameInstallationPath installationPath)
     {
         this.apiClient = apiClient;
         this.localInstallationStateStore = localInstallationStateStore;
-        this.installationPath = installationPath ?? new GameInstallationPath();
+        this.installationPath = installationPath;
         this.settingsService = settingsService;
         this.proxySettingsService = proxySettingsService;
         this.crc64Service = crc64Service;
