@@ -220,6 +220,9 @@ public sealed partial class LocalizedStrings : ObservableObject
     [ObservableProperty] private string logLevelWarning = "";
     [ObservableProperty] private string logLevelError = "";
     [ObservableProperty] private string logLevelFatal = "";
+    [ObservableProperty] private string selectInstalledGame = "";
+    [ObservableProperty] private string gamePathUpdated = "";
+    [ObservableProperty] private string gamePathUpdateFailed = "";
 
     public void Apply(LocalizationService localizer)
     {
@@ -433,6 +436,9 @@ public sealed partial class LocalizedStrings : ObservableObject
         LogLevelWarning = localizer.T("logLevelWarning");
         LogLevelError = localizer.T("logLevelError");
         LogLevelFatal = localizer.T("logLevelFatal");
+        SelectInstalledGame = localizer.T("selectInstalledGame");
+        GamePathUpdated = localizer.T("gamePathUpdated");
+        GamePathUpdateFailed = localizer.T("gamePathUpdateFailed");
     }
 }
 
