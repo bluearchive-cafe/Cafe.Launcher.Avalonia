@@ -18,6 +18,11 @@ public static class ServiceConfiguration
         services.AddSingleton<ClickCodeService>();
         services.AddSingleton<ToastService>();
         services.AddSingleton<BestHttpCookieLibraryService>();
+        services.AddSingleton<LogRotationManager>();
+        services.AddSingleton<UnifiedLogger>();
+        services.AddSingleton<CrashRecoveryService>();
+        services.AddSingleton<LogExportService>();
+        services.AddTransient<LogViewerDialogViewModel>();
         services.AddSingleton<LocalDiagnostics>();
         services.AddSingleton<AuthorizationHeaderFactory>();
         services.AddSingleton<PatchUrlGroupService>();

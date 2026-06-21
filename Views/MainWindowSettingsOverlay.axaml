@@ -547,6 +547,10 @@
                                         <Border Classes="version-chip">
                                             <TextBlock Text="{Binding Shell.BuildConfigText}" Classes="chip-text"/>
                                         </Border>
+                                        <Border Classes="version-chip"
+                                                IsVisible="{Binding Shell.BuildTimeText, Converter={x:Static StringConverters.IsNotNullOrEmpty}}">
+                                            <TextBlock Text="{Binding Shell.BuildTimeText}" Classes="chip-text"/>
+                                        </Border>
                                     </WrapPanel>
                                 </StackPanel>
                                 <WrapPanel>
@@ -567,6 +571,27 @@
                                         <StackPanel Classes="button-content">
                                             <materialIcons:MaterialIcon Kind="Update" Width="{StaticResource LauncherIconSm}" Height="{StaticResource LauncherIconSm}"/>
                                             <TextBlock Text="{Binding Shell.I18n.CheckUpdates}" VerticalAlignment="Center"/>
+                                        </StackPanel>
+                                    </Button>
+                                    <Button Classes="flat-action wrap-action"
+                                            Command="{Binding LogViewer.OpenCommand}">
+                                        <StackPanel Classes="button-content">
+                                            <materialIcons:MaterialIcon Kind="TextBoxOutline" Width="{StaticResource LauncherIconSm}" Height="{StaticResource LauncherIconSm}"/>
+                                            <TextBlock Text="{Binding Shell.I18n.ViewLog}" VerticalAlignment="Center"/>
+                                        </StackPanel>
+                                    </Button>
+                                    <Button Classes="flat-action wrap-action"
+                                            Command="{Binding LogViewer.ExportCommand}">
+                                        <StackPanel Classes="button-content">
+                                            <materialIcons:MaterialIcon Kind="Export" Width="{StaticResource LauncherIconSm}" Height="{StaticResource LauncherIconSm}"/>
+                                            <TextBlock Text="{Binding Shell.I18n.ExportLogs}" VerticalAlignment="Center"/>
+                                        </StackPanel>
+                                    </Button>
+                                    <Button Classes="flat-action wrap-action"
+                                            Command="{Binding WindowChrome.OpenDataDirectoryCommand}">
+                                        <StackPanel Classes="button-content">
+                                            <materialIcons:MaterialIcon Kind="FolderOpen" Width="{StaticResource LauncherIconSm}" Height="{StaticResource LauncherIconSm}"/>
+                                            <TextBlock Text="{Binding Shell.I18n.OpenDataDirectory}" VerticalAlignment="Center"/>
                                         </StackPanel>
                                     </Button>
                                 </WrapPanel>

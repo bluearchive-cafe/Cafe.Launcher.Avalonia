@@ -8,6 +8,8 @@ using Cafe.Launcher.Avalonia.Services;
 using Cafe.Launcher.Avalonia.ViewModels;
 using System;
 using System.Collections.Generic;
+using System.Diagnostics;
+using System.IO;
 using System.Linq;
 using System.Threading.Tasks;
 
@@ -31,6 +33,8 @@ public partial class MainWindow : Window
         viewModel.Settings.PickBackgroundFolderAsync = PickBackgroundFolderAsync;
         viewModel.Background.PickBackgroundImageAsync = PickBackgroundImageAsync;
         viewModel.Background.PickBackgroundFolderAsync = PickBackgroundFolderAsync;
+        viewModel.LogViewer.PickExportDirectoryAsync = PickLogExportDirectoryAsync;
+        viewModel.LogViewer.OpenExportDirectory = OpenDirectory;
         viewModel.Operations.MinimizeWindow = () => WindowState = WindowState.Minimized;
         viewModel.WindowChrome.MinimizeWindow = () => WindowState = WindowState.Minimized;
         viewModel.WindowChrome.CloseWindow = PerformClose;
@@ -105,6 +109,35 @@ public partial class MainWindow : Window
         });
 
         return folders.FirstOrDefault()?.TryGetLocalPath();
+    }
+
+    private async Task<string?> PickLogExportDirectoryAsync(string defaultPath)
+    {
+        Directory.CreateDirectory(defaultPath);
+        if (!StorageProvider.CanPickFolder)
+        {
+            return defaultPath;
+        }
+
+        var startLocation = await StorageProvider.TryGetFolderFromPathAsync(defaultPath);
+        var pickerTitle = (DataContext as MainWindowViewModel)?.Shell.I18n.LogExportFolderPickerTitle ?? "";
+        var folders = await StorageProvider.OpenFolderPickerAsync(new FolderPickerOpenOptions
+        {
+            Title = pickerTitle,
+            AllowMultiple = false,
+            SuggestedStartLocation = startLocation
+        });
+
+        return folders.FirstOrDefault()?.TryGetLocalPath();
+    }
+
+    private static void OpenDirectory(string path)
+    {
+        Process.Start(new ProcessStartInfo
+        {
+            FileName = path,
+            UseShellExecute = true
+        });
     }
 
     private void OnPointerPressed(object? sender, PointerPressedEventArgs e)

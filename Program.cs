@@ -1,9 +1,8 @@
 using Avalonia;
 using System;
-using System.IO;
-using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
+using Cafe.Launcher.Avalonia.Services.Diagnostics;
 
 namespace Cafe.Launcher.Avalonia;
 
@@ -22,24 +21,25 @@ sealed class Program
             return;
         }
 
-        SetupCrashLogging();
+        // Create a standalone logger for crash reporting before DI is available.
+        // The DI container will create its own UnifiedLogger singleton later;
+        // this early instance only serves the unhandled-exception handlers.
+        var crashLogger = new UnifiedLogger();
+        SetupCrashLogging(crashLogger);
         try
         {
             BuildAvaloniaApp().StartWithClassicDesktopLifetime(args);
         }
         catch (Exception exception)
         {
-            WriteCrashLog("Main", exception);
+            LogCrash(crashLogger, "Main", exception);
             throw;
         }
     }
 
-    private static void SetupCrashLogging()
+    private static void SetupCrashLogging(UnifiedLogger logger)
     {
-        void WriteCrash(string source, Exception? ex)
-        {
-            WriteCrashLog(source, ex);
-        }
+        void WriteCrash(string source, Exception? ex) => LogCrash(logger, source, ex);
 
         AppDomain.CurrentDomain.UnhandledException += (_, e) =>
             WriteCrash("AppDomain.UnhandledException", e.ExceptionObject as Exception);
@@ -51,34 +51,14 @@ sealed class Program
         };
     }
 
-    private static void WriteCrashLog(string source, Exception? exception)
+    private static void LogCrash(UnifiedLogger logger, string source, Exception? exception)
     {
         try
         {
-            var crashLogDir = Path.Combine(
-                Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData),
-                "Cafe Launcher");
-            var crashLogPath = Path.Combine(crashLogDir, "crash.log");
-            Directory.CreateDirectory(crashLogDir);
-            var builder = new StringBuilder();
-            builder.AppendLine(FormattableString.Invariant($"{DateTimeOffset.Now:O} [{source}]"));
-            if (exception is not null)
-            {
-                builder.AppendLine(FormattableString.Invariant(
-                    $"Exception: {exception.GetType().FullName}: {exception.Message}"));
-                builder.AppendLine(exception.StackTrace ?? "(no stack trace)");
-                if (exception is AggregateException aggregateException)
-                {
-                    foreach (var inner in aggregateException.Flatten().InnerExceptions)
-                    {
-                        builder.AppendLine(FormattableString.Invariant(
-                            $"  Inner: {inner.GetType().Name}: {inner.Message}"));
-                    }
-                }
-            }
-
-            builder.AppendLine();
-            File.AppendAllText(crashLogPath, builder.ToString());
+            logger.LogAsync(LogEntrySeverity.Error, source,
+                exception: exception,
+                cancellationToken: CancellationToken.None)
+                .GetAwaiter().GetResult();
         }
         catch
         {

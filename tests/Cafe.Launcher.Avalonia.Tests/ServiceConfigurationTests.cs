@@ -1,5 +1,6 @@
 using Cafe.Launcher.Avalonia.Models;
 using Cafe.Launcher.Avalonia.Services;
+using Cafe.Launcher.Avalonia.Services.Diagnostics;
 using Cafe.Launcher.Avalonia.ViewModels;
 using Microsoft.Extensions.DependencyInjection;
 
@@ -17,8 +18,7 @@ public sealed class ServiceConfigurationTests : IDisposable
     [Fact]
     public async Task MainWindowViewModel_BackgroundUpdateUsesExplicitSettings()
     {
-        var services = new ServiceCollection();
-        services.AddLauncherServices();
+        var services = CreateServices();
         await using var provider = services.BuildServiceProvider();
         using var viewModel = provider.GetRequiredService<MainWindowViewModel>();
         var previewSettings = viewModel.Settings.Editor.GetSnapshot();
@@ -36,8 +36,7 @@ public sealed class ServiceConfigurationTests : IDisposable
     [Fact]
     public async Task MainWindowViewModel_RequestRepairOpensItsRepairDialog()
     {
-        var services = new ServiceCollection();
-        services.AddLauncherServices();
+        var services = CreateServices();
         await using var provider = services.BuildServiceProvider();
         using var viewModel = provider.GetRequiredService<MainWindowViewModel>();
         viewModel.Operations.GetSnapshot = () => new LauncherStatusSnapshot
@@ -54,8 +53,7 @@ public sealed class ServiceConfigurationTests : IDisposable
     [Fact]
     public async Task MainWindowViewModel_ConfirmRepairStartsRepairOperation()
     {
-        var services = new ServiceCollection();
-        services.AddLauncherServices();
+        var services = CreateServices();
         await using var provider = services.BuildServiceProvider();
         using var viewModel = provider.GetRequiredService<MainWindowViewModel>();
         viewModel.Operations.GetSnapshot = () => new LauncherStatusSnapshot
@@ -82,8 +80,7 @@ public sealed class ServiceConfigurationTests : IDisposable
     [Fact]
     public async Task MainWindowViewModel_UsesSharedSingleWindowStateViewModels()
     {
-        var services = new ServiceCollection();
-        services.AddLauncherServices();
+        var services = CreateServices();
         await using var provider = services.BuildServiceProvider();
         using var viewModel = provider.GetRequiredService<MainWindowViewModel>();
 
@@ -98,5 +95,13 @@ public sealed class ServiceConfigurationTests : IDisposable
         {
             Directory.Delete(tempDir, recursive: true);
         }
+    }
+
+    private ServiceCollection CreateServices()
+    {
+        var services = new ServiceCollection();
+        services.AddLauncherServices();
+        services.AddSingleton(new UnifiedLogger(Path.Combine(tempDir, "logs")));
+        return services;
     }
 }

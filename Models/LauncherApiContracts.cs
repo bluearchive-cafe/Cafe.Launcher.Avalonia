@@ -1,5 +1,6 @@
 using System.Text.Json.Serialization;
 using System.Collections.Generic;
+using Cafe.Launcher.Avalonia.Helpers;
 
 namespace Cafe.Launcher.Avalonia.Models;
 
@@ -225,5 +226,6 @@ public sealed class AiHelpCustomerComplaint
     public string? AihelpAppKey { get; set; }
 
     [JsonPropertyName("initial_interface")]
+    [JsonConverter(typeof(FlexibleBoolConverter))]
     public bool InitialInterface { get; set; }
 }

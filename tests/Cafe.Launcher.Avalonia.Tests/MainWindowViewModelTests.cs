@@ -961,6 +961,43 @@ public sealed class MainWindowViewModelTests : IDisposable
         Assert.Equal(0, handler.ConfigSetCount);
     }
 
+    [Fact]
+    public async Task ResetSettingsAfterCrashCommand_PersistsDefaults()
+    {
+        var settingsPath = Path.Combine(tempDir, Guid.NewGuid().ToString("N"), "settings.json");
+        var settingsService = new LauncherSettingsService(settingsPath);
+        var modified = LauncherSettings.CreateDefaults();
+        modified.GamePath = Path.Combine(tempDir, "custom-game");
+        modified.ThemeMode = ThemeModes.Dark;
+        modified.HasCompletedFirstLaunchWizard = true;
+        await settingsService.SaveAsync(modified);
+        using var viewModel = await CreateViewModelAsync(
+            new CountingCoreService(CreateSnapshot()),
+            settingsService);
+
+        viewModel.Dialogs.ShowCrashRecovery();
+        await viewModel.Dialogs.ResetSettingsAfterCrashCommand.ExecuteAsync(null);
+
+        var persisted = await settingsService.ReadAsync();
+        var defaults = LauncherSettings.CreateDefaults();
+        Assert.Equal(defaults.GamePath, persisted.GamePath);
+        Assert.Equal(defaults.ThemeMode, persisted.ThemeMode);
+        Assert.Equal(defaults.HasCompletedFirstLaunchWizard, persisted.HasCompletedFirstLaunchWizard);
+        Assert.False(viewModel.Dialogs.IsCrashRecoveryVisible);
+    }
+
+    [Fact]
+    public async Task ViewCrashLogCommand_OpensLogViewer()
+    {
+        using var viewModel = await CreateViewModelAsync(new CountingCoreService(CreateSnapshot()));
+        viewModel.Dialogs.ShowCrashRecovery();
+
+        viewModel.Dialogs.ViewCrashLogCommand.Execute(null);
+
+        Assert.True(viewModel.LogViewer.IsVisible);
+        Assert.False(viewModel.Dialogs.IsCrashRecoveryVisible);
+    }
+
     private async Task<MainWindowViewModel> CreateViewModelAsync(
         ILauncherCoreService coreService,
         LauncherSettingsService? settingsService = null,

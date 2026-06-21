@@ -39,6 +39,9 @@ public partial class ShellViewModel : ViewModelBase
     private string buildConfigText = "";
 
     [ObservableProperty]
+    private string buildTimeText = "";
+
+    [ObservableProperty]
     private string currentViewTitle = "";
 
     [ObservableProperty]
@@ -106,6 +109,7 @@ public partial class ShellViewModel : ViewModelBase
         AvaloniaVersionText = $"Avalonia {BuildInfo.AvaloniaVersion}";
         PlatformText = localizer.F("platformLabel", PlatformName);
         BuildConfigText = localizer.F("buildConfigurationLabel", BuildInfo.BuildConfiguration);
+        BuildTimeText = localizer.F("buildTimeLabel", BuildInfo.BuildTime);
         settings.RefreshOptionDisplayNames();
         resourcePanel.RefreshDisplayNames();
         if (!string.IsNullOrWhiteSpace(resourcePanel.ResourcePanelUid))

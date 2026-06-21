@@ -1,4 +1,6 @@
 using System;
+using System.Diagnostics;
+using System.IO;
 using System.Threading.Tasks;
 using Cafe.Launcher.Avalonia.Constants;
 using Cafe.Launcher.Avalonia.Models;
@@ -106,6 +108,19 @@ public partial class WindowChromeViewModel : ViewModelBase
     private void OpenGitHubRepository()
     {
         ExternalLinkService.Open(LauncherConstants.GitHubReleaseRepositoryUrl);
+    }
+
+    [RelayCommand]
+    private void OpenDataDirectory()
+    {
+        var path = Path.Combine(
+            Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData),
+            LauncherConstants.ProductName);
+        Process.Start(new ProcessStartInfo
+        {
+            FileName = path,
+            UseShellExecute = true
+        });
     }
 
     public void OpenExternalUrl(string? url)

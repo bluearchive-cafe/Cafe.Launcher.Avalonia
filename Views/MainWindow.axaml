@@ -376,6 +376,7 @@
         </Grid>
 
         <views:MainWindowSettingsOverlay/>
+        <views:MainWindowLogViewerOverlay/>
         <views:MainWindowDialogsOverlay/>
         <views:MainWindowToastOverlay/>
     </Grid>

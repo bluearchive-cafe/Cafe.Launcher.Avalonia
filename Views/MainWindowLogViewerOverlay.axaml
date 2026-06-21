@@ -1,0 +1,103 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:vm="using:Cafe.Launcher.Avalonia.ViewModels"
+             xmlns:materialIcons="clr-namespace:Material.Icons.Avalonia;assembly=Material.Icons.Avalonia"
+             x:Class="Cafe.Launcher.Avalonia.Views.MainWindowLogViewerOverlay"
+             x:Name="LogViewerRoot"
+             x:DataType="vm:MainWindowViewModel"
+             x:CompileBindings="True">
+    <Grid IsVisible="{Binding LogViewer.IsVisible}" Classes="dialog-overlay">
+        <Border Width="{StaticResource LauncherLogViewerWidth}"
+                Height="{StaticResource LauncherLogViewerHeight}"
+                Classes="dialog overlay-dialog">
+            <Grid RowDefinitions="Auto,Auto,*,Auto">
+                <!-- Header -->
+                <Grid ColumnDefinitions="*,Auto" Classes="dialog-header">
+                    <StackPanel Classes="dialog-title-row">
+                        <Border Classes="dialog-icon">
+                            <materialIcons:MaterialIcon Kind="TextBoxOutline" Width="{StaticResource LauncherIconMd}" Height="{StaticResource LauncherIconMd}"
+                                                       Foreground="{DynamicResource LauncherAccentBrush}"
+                                                       HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                        </Border>
+                        <TextBlock Text="{Binding Shell.I18n.LogViewerTitle}" Classes="dialog-title" VerticalAlignment="Center"/>
+                    </StackPanel>
+                    <Button Grid.Column="1" Classes="dialog-close" Command="{Binding LogViewer.CloseCommand}"
+                            Margin="0,0,16,0" ToolTip.Tip="{Binding Shell.I18n.Close}">
+                        <materialIcons:MaterialIcon Kind="Close" Width="{StaticResource LauncherIconMd}" Height="{StaticResource LauncherIconMd}"/>
+                    </Button>
+                </Grid>
+
+                <!-- Filter bar -->
+                <StackPanel Grid.Row="1" Orientation="Horizontal" Spacing="{StaticResource LauncherSpacingSm}" Classes="log-filter-bar">
+                    <Button Classes="news-tab" Classes.active="{Binding LogViewer.IsFilterAllActive}"
+                            Command="{Binding LogViewer.SetFilterAllCommand}">
+                        <TextBlock Text="{Binding Shell.I18n.LogFilterAll}"/>
+                    </Button>
+                    <Button Classes="news-tab" Classes.active="{Binding LogViewer.IsFilterErrorActive}"
+                            Command="{Binding LogViewer.SetFilterErrorCommand}">
+                        <TextBlock Text="{Binding Shell.I18n.LogFilterError}"/>
+                    </Button>
+                    <Button Classes="news-tab" Classes.active="{Binding LogViewer.IsFilterWarnActive}"
+                            Command="{Binding LogViewer.SetFilterWarnCommand}">
+                        <TextBlock Text="{Binding Shell.I18n.LogFilterWarn}"/>
+                    </Button>
+                    <Button Classes="news-tab" Classes.active="{Binding LogViewer.IsFilterInfoActive}"
+                            Command="{Binding LogViewer.SetFilterInfoCommand}">
+                        <TextBlock Text="{Binding Shell.I18n.LogFilterInfo}"/>
+                    </Button>
+                    <TextBox Text="{Binding LogViewer.FilterText, Mode=TwoWay}" PlaceholderText="{Binding Shell.I18n.LogSearchPlaceholder}"
+                             Classes="uid-input" MinWidth="160" MinHeight="{StaticResource LauncherControlHeightSetting}" VerticalAlignment="Center"/>
+                </StackPanel>
+
+                <!-- Log entries list -->
+                <Grid Grid.Row="2"
+                      Classes="log-content">
+                    <ListBox ItemsSource="{Binding LogViewer.FilteredEntries}"
+                             Classes="log-entry-list"
+                             IsVisible="{Binding LogViewer.HasFilteredEntries}">
+                        <ListBox.ItemTemplate>
+                            <DataTemplate x:DataType="vm:LogEntryDisplay">
+                                <Border Classes="dialog-card">
+                                    <StackPanel Spacing="{StaticResource LauncherSpacingXs}">
+                                        <StackPanel Orientation="Horizontal" Spacing="{StaticResource LauncherSpacingSm}">
+                                            <TextBlock Text="{Binding TimestampText}" Classes="caption" VerticalAlignment="Center"/>
+                                            <TextBlock Text="{Binding SeverityLabel}" Classes="chip-text" VerticalAlignment="Center"
+                                                       Foreground="{DynamicResource LauncherAccentBrush}"/>
+                                        </StackPanel>
+                                        <TextBlock Text="{Binding Title}" Classes="section-title" TextWrapping="Wrap"/>
+                                        <TextBlock Text="{Binding Details}" Classes="caption" TextWrapping="Wrap"
+                                                   IsVisible="{Binding Details, Converter={x:Static StringConverters.IsNotNullOrEmpty}}"
+                                                   FontFamily="Consolas" MaxHeight="120"/>
+                                    </StackPanel>
+                                </Border>
+                            </DataTemplate>
+                        </ListBox.ItemTemplate>
+                    </ListBox>
+                    <Border Classes="log-empty-state"
+                            IsVisible="{Binding LogViewer.IsEmpty}">
+                        <TextBlock Text="{Binding Shell.I18n.LogNoMatchingEntries}"
+                                   Classes="media-placeholder-text"/>
+                    </Border>
+                </Grid>
+
+                <!-- Footer -->
+                <Border Grid.Row="3" Classes="dialog-footer">
+                    <StackPanel Classes="confirm-actions">
+                        <Button Classes="flat-action dialog-action" Command="{Binding LogViewer.ExportCommand}">
+                            <StackPanel Classes="button-content">
+                                <materialIcons:MaterialIcon Kind="Export" Width="{StaticResource LauncherIconSm}" Height="{StaticResource LauncherIconSm}"/>
+                                <TextBlock Text="{Binding Shell.I18n.ExportLogs}" VerticalAlignment="Center"/>
+                            </StackPanel>
+                        </Button>
+                        <Button Classes="flat-action dialog-action" Command="{Binding LogViewer.CloseCommand}">
+                            <StackPanel Classes="button-content">
+                                <materialIcons:MaterialIcon Kind="CloseCircleOutline" Width="{StaticResource LauncherIconSm}" Height="{StaticResource LauncherIconSm}"/>
+                                <TextBlock Text="{Binding Shell.I18n.Close}" VerticalAlignment="Center"/>
+                            </StackPanel>
+                        </Button>
+                    </StackPanel>
+                </Border>
+            </Grid>
+        </Border>
+    </Grid>
+</UserControl>

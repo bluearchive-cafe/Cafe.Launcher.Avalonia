@@ -1,4 +1,5 @@
 using System;
+using System.Globalization;
 using System.Linq;
 using System.Reflection;
 
@@ -18,6 +19,24 @@ public static class BuildInfo
             .SingleOrDefault(attribute => attribute.Key == "CommitSha")
             ?.Value
         ?? "unknown";
+
+    public static readonly string BuildTime = ResolveBuildTime();
+
+    private static string ResolveBuildTime()
+    {
+        var raw = typeof(BuildInfo).Assembly
+            .GetCustomAttributes<AssemblyMetadataAttribute>()
+            .SingleOrDefault(attribute => attribute.Key == "BuildTime")
+            ?.Value;
+        if (string.IsNullOrWhiteSpace(raw)) return "";
+
+        // The .csproj embeds BuildTime as UTC (yyyy-MM-dd HH:mm).
+        // Parse as UTC then convert to local time for display.
+        if (DateTime.TryParse(raw, null, out var utcTime))
+            return DateTime.SpecifyKind(utcTime, DateTimeKind.Utc).ToLocalTime().ToString("yyyy-MM-dd HH:mm", CultureInfo.InvariantCulture);
+
+        return raw;
+    }
 
 #if DEBUG
     public const string BuildConfiguration = "Debug";

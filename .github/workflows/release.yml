@@ -28,14 +28,17 @@ jobs:
         with:
           dotnet-version: 10.0.x
 
+      - name: Restore
+        run: dotnet restore tests/Cafe.Launcher.Avalonia.Tests/Cafe.Launcher.Avalonia.Tests.csproj -r win-x64
+
       - name: Test
-        run: dotnet test tests/Cafe.Launcher.Avalonia.Tests/Cafe.Launcher.Avalonia.Tests.csproj -c Release
+        run: dotnet test tests/Cafe.Launcher.Avalonia.Tests/Cafe.Launcher.Avalonia.Tests.csproj -c Release -r win-x64 --no-restore
 
       - name: Build (Release)
-        run: dotnet build $env:Project_Path -c Release
+        run: dotnet build $env:Project_Path -c Release -r win-x64 --no-restore
 
       - name: Publish
-        run: dotnet publish $env:Project_Path -c Release -o publish
+        run: dotnet publish $env:Project_Path -c Release -r win-x64 -o publish --no-restore
 
       - name: Create ZIP archive
         run: |

@@ -9,6 +9,7 @@ namespace Cafe.Launcher.Avalonia.Constants;
 public static class LauncherConstants
 {
     public const string ProductName = "Cafe Launcher";
+    public const string LogExportFolderName = "log-exports";
     public const string DefaultThemeColor = "#FF2E7DF6";
 
     /// <summary>

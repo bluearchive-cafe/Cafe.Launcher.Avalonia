@@ -35,6 +35,10 @@ public partial class App : Application
             serviceCollection.AddLauncherServices();
             serviceProvider = serviceCollection.BuildServiceProvider();
 
+            var logger = serviceProvider.GetRequiredService<Services.Diagnostics.UnifiedLogger>();
+            var crashRecovery = serviceProvider.GetRequiredService<Services.Diagnostics.CrashRecoveryService>();
+            var previousSessionCrashed = crashRecovery.BeginSessionAsync().GetAwaiter().GetResult();
+
             // Track install attribution (non-critical, best-effort)
             try
             {
@@ -52,6 +56,8 @@ public partial class App : Application
                 DataContext = viewModel,
             };
             mainWindow.ConfigureViewModel(viewModel);
+            if (previousSessionCrashed)
+                viewModel.Dialogs.ShowCrashRecovery();
 
             // Initialize system tray (depends on Window — kept outside DI)
             try
@@ -69,6 +75,8 @@ public partial class App : Application
             // Destroy tray icon on app exit
             desktop.Exit += (_, _) =>
             {
+                // Write session-end marker synchronously — best-effort during shutdown.
+                try { logger.WriteSessionEndAsync().GetAwaiter().GetResult(); } catch { }
                 showWindowListener?.Dispose();
                 shutdownCts.Cancel();
                 viewModel.Dispose();
