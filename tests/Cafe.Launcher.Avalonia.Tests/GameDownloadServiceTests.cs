@@ -62,7 +62,7 @@ public sealed class GameDownloadServiceTests
     [Fact]
     public void RetryDomainOrder_ReturnsExpectedSequence()
     {
-        Assert.Equal([1, 1, 1, 1, 0, 0, 0, 1, 1, 1], GameDownloadService.RetryDomainOrder);
+        Assert.Equal([1, 1, 1, 1, 0, 0, 0, 1, 1, 1], FileDownloadService.RetryDomainOrder);
     }
 
     [Fact]
@@ -74,7 +74,7 @@ public sealed class GameDownloadServiceTests
             BackUpCdn = "https://backup.example.invalid"
         };
 
-        var result = GameDownloadService.ResolveRetryDomain(cdnConfig, GameDownloadService.RetryDomainOrder[0]);
+        var result = FileDownloadService.ResolveRetryDomain(cdnConfig, FileDownloadService.RetryDomainOrder[0]);
 
         Assert.Equal("https://primary.example.invalid", result);
     }
@@ -88,7 +88,7 @@ public sealed class GameDownloadServiceTests
             BackUpCdn = "https://backup.example.invalid"
         };
 
-        var result = GameDownloadService.ResolveRetryDomain(cdnConfig, 0);
+        var result = FileDownloadService.ResolveRetryDomain(cdnConfig, 0);
 
         Assert.Equal("https://backup.example.invalid", result);
     }
@@ -105,7 +105,7 @@ public sealed class GameDownloadServiceTests
             },
             PatchUrlGroups.Cafe);
 
-        var url = GameDownloadService.BuildDownloadUrl(
+        var url = FileDownloadService.BuildDownloadUrl(
             cdnConfig.PrimaryCdn,
             "/source/root",
             "/data/file name.bin");
@@ -183,7 +183,7 @@ public sealed class GameDownloadServiceTests
         await Assert.ThrowsAsync<InvalidDataException>(
             () => InvokeDownloadFileAsync(service, gamePath, cdnConfig, "/source", file, client));
 
-        Assert.Equal(GameDownloadService.RetryDomainOrder.Length, handler.RequestCount);
+        Assert.Equal(FileDownloadService.RetryDomainOrder.Length, handler.RequestCount);
         Assert.False(File.Exists(Path.Combine(gamePath, "data", "file.bin.tmp")));
         Directory.Delete(tempDir, recursive: true);
     }
@@ -347,9 +347,11 @@ public sealed class GameDownloadServiceTests
         var localInstallationStateStore = new LocalInstallationStateStore();
         var diagnostics = new LocalDiagnostics();
         var remoteManifestService = new RemoteManifestService(apiClient);
+        var fileDownloadService = new FileDownloadService(new Crc64Service(), diagnostics);
         return new GameDownloadService(
             apiClient,
             remoteManifestService,
+            fileDownloadService,
             localInstallationStateStore,
             settingsService,
             new ProxySettingsService(),
@@ -419,24 +421,26 @@ public sealed class GameDownloadServiceTests
         ManifestFile file,
         HttpClient client)
     {
-        var method = typeof(GameDownloadService).GetMethod(
-            "DownloadFileAsync",
-            System.Reflection.BindingFlags.Instance | System.Reflection.BindingFlags.NonPublic);
-        Assert.NotNull(method);
-        var task = (Task?)method.Invoke(
-            service,
-            [
-                gamePath,
-                cdnConfig,
-                source,
-                file,
-                client,
-                null,
-                new Action<long>(_ => { }),
-                CancellationToken.None
-            ]);
-        Assert.NotNull(task);
-        await task;
+        var targetPath = Path.Combine(gamePath, GetTempNameInternal(file.Path));
+        var crc64Service = new Crc64Service();
+        var diagnostics = new LocalDiagnostics();
+        var downloader = new FileDownloadService(crc64Service, diagnostics);
+        await downloader.DownloadAsync(
+            targetPath,
+            cdnConfig,
+            source,
+            long.Parse(file.Size, CultureInfo.InvariantCulture),
+            file.Hash,
+            file.Path,
+            client,
+            () => Task.CompletedTask,
+            (_, _) => Task.CompletedTask,
+            CancellationToken.None);
+    }
+
+    private static string GetTempNameInternal(string name)
+    {
+        return $"{name}.tmp";
     }
 
     private sealed class ManifestHandler : HttpMessageHandler

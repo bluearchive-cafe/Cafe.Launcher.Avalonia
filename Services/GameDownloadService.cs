@@ -19,12 +19,12 @@ public sealed class GameDownloadService : IDisposable
 {
     // Retry domain order: 0 = backup CDN, 1 = primary CDN (matching the original Electron launcher).
     // The first 4 attempts use the primary CDN, then 3 on backup, then 3 on primary.
-    internal static readonly int[] RetryDomainOrder = [1, 1, 1, 1, 0, 0, 0, 1, 1, 1];
     private const int MaxParallelDownloads = 10;
     private const int MaxInstallVerificationRetry = 3;
 
     private readonly LauncherApiClient apiClient;
     private readonly RemoteManifestService remoteManifestService;
+    private readonly IFileDownloadService fileDownloadService;
     private readonly LocalInstallationStateStore localInstallationStateStore;
     private readonly GameInstallationPath installationPath;
     private readonly LauncherSettingsService settingsService;
@@ -48,6 +48,7 @@ public sealed class GameDownloadService : IDisposable
     public GameDownloadService(
         LauncherApiClient apiClient,
         RemoteManifestService remoteManifestService,
+        IFileDownloadService fileDownloadService,
         LocalInstallationStateStore localInstallationStateStore,
         LauncherSettingsService settingsService,
         ProxySettingsService proxySettingsService,
@@ -59,6 +60,7 @@ public sealed class GameDownloadService : IDisposable
     {
         this.apiClient = apiClient;
         this.remoteManifestService = remoteManifestService;
+        this.fileDownloadService = fileDownloadService;
         this.localInstallationStateStore = localInstallationStateStore;
         this.installationPath = installationPath;
         this.settingsService = settingsService;
@@ -505,6 +507,7 @@ public sealed class GameDownloadService : IDisposable
     internal GameDownloadService(
         LauncherApiClient apiClient,
         RemoteManifestService remoteManifestService,
+        IFileDownloadService fileDownloadService,
         LocalInstallationStateStore localInstallationStateStore,
         LauncherSettingsService settingsService,
         ProxySettingsService proxySettingsService,
@@ -517,6 +520,7 @@ public sealed class GameDownloadService : IDisposable
     {
         this.apiClient = apiClient;
         this.remoteManifestService = remoteManifestService;
+        this.fileDownloadService = fileDownloadService;
         this.localInstallationStateStore = localInstallationStateStore;
         this.installationPath = installationPath;
         this.settingsService = settingsService;
@@ -697,31 +701,44 @@ public sealed class GameDownloadService : IDisposable
             {
                 await semaphore.WaitAsync(cancellationToken).ConfigureAwait(false);
                 acquired = true;
-                await DownloadFileAsync(
-                    gamePath,
+                var targetPath = GetTempName(GamePathValidator.GetSafePath(gamePath, file.Path));
+                await fileDownloadService.DownloadAsync(
+                    targetPath,
                     cdnConfig,
                     source,
-                    file,
+                    FileSizeFormatter.ParseSize(file.Size),
+                    file.Hash,
+                    file.Path,
                     client,
-                    throttleState,
-                    bytes =>
+                    GetPauseTaskSnapshot,
+                    async (bytes, ct) =>
                     {
-                        var total = Interlocked.Add(ref downloadedSize, bytes);
+                        if (throttleState is not null)
+                        {
+                            var throttledTotal = Interlocked.Add(ref throttleState.TotalBytes, bytes);
+                            var targetMs = throttledTotal * 1000L / throttleState.BytesPerSec;
+                            var elapsedMs = throttleState.Watch.ElapsedMilliseconds;
+                            if (elapsedMs < targetMs)
+                                await Task.Delay((int)(targetMs - elapsedMs), ct).ConfigureAwait(false);
+                        }
+
+                        var totalSizeVal = totalSize;
+                        var totalBytes = Interlocked.Add(ref downloadedSize, bytes);
                         var elapsed = Math.Max(1, (DateTimeOffset.Now - startedAt).TotalSeconds);
-                        var speed = (long)(total / elapsed);
-                        var estimated = speed > 0 ? (totalSize - total) / speed : 0;
+                        var speed = (long)(totalBytes / elapsed);
+                        var estimated = speed > 0 ? (totalSizeVal - totalBytes) / speed : 0;
                         progress(new GameOperationProgress
                         {
                             OperationKind = operationKind,
                             Stage = IsPaused ? "paused" : "download",
-                            Progress = totalSize > 0 ? (int)Math.Round(total * 100d / totalSize) : 0,
+                            Progress = totalSizeVal > 0 ? (int)Math.Round(totalBytes * 100d / totalSizeVal) : 0,
                             Speed = IsPaused ? "" : $"{FileSizeFormatter.Format(speed)}/S",
                             Estimated = IsPaused
                                 ? ""
                                 : TimeSpan.FromSeconds(Math.Max(0, estimated))
                                     .ToString(@"hh\:mm\:ss", CultureInfo.InvariantCulture),
-                            DownloadedSize = total,
-                            TotalSize = totalSize,
+                            DownloadedSize = totalBytes,
+                            TotalSize = totalSizeVal,
                             IsRunning = true,
                             CanStop = true,
                             CanPause = true,
@@ -740,118 +757,6 @@ public sealed class GameDownloadService : IDisposable
         });
 
         await Task.WhenAll(tasks).ConfigureAwait(false);
-    }
-
-    private async Task DownloadFileAsync(
-        string gamePath,
-        CdnConfigResponse cdnConfig,
-        string source,
-        ManifestFile file,
-        HttpClient client,
-        ThrottleState? throttleState,
-        Action<long> onBytes,
-        CancellationToken cancellationToken)
-    {
-        var targetPath = GetTempName(GamePathValidator.GetSafePath(gamePath, file.Path));
-        var targetDirectory = Path.GetDirectoryName(targetPath);
-        if (!string.IsNullOrWhiteSpace(targetDirectory))
-        {
-            Directory.CreateDirectory(targetDirectory);
-        }
-
-        Exception? lastError = null;
-        for (var retryIndex = 0; retryIndex < RetryDomainOrder.Length; retryIndex++)
-        {
-            cancellationToken.ThrowIfCancellationRequested();
-            var retryType = RetryDomainOrder[retryIndex];
-
-            var downloadUrl = BuildDownloadUrl(ResolveRetryDomain(cdnConfig, retryType), source, file.Path);
-
-            try
-            {
-                var fi = new FileInfo(targetPath);
-                var existingLength = fi.Exists ? fi.Length : 0;
-                if (existingLength >= FileSizeFormatter.ParseSize(file.Size) && FileSizeFormatter.ParseSize(file.Size) > 0)
-                {
-                    return;
-                }
-
-                using var request = new HttpRequestMessage(HttpMethod.Get, downloadUrl);
-                if (existingLength > 0)
-                {
-                    request.Headers.Range = new System.Net.Http.Headers.RangeHeaderValue(existingLength, null);
-                }
-
-                using var response = await client.SendAsync(request, HttpCompletionOption.ResponseHeadersRead, cancellationToken).ConfigureAwait(false);
-                response.EnsureSuccessStatusCode();
-
-                string crc64;
-                {
-                    // Nested scope — both streams must be closed before File.Delete below.
-                    await using var responseStream = await response.Content.ReadAsStreamAsync(cancellationToken).ConfigureAwait(false);
-                    await using var output = new FileStream(targetPath, FileMode.Append, FileAccess.Write, FileShare.Read);
-                    var buffer = new byte[1024 * 256];
-                    while (true)
-                    {
-                        // Async pause — yields the thread instead of blocking it
-                        await GetPauseTaskSnapshot().ConfigureAwait(false);
-                        cancellationToken.ThrowIfCancellationRequested();
-
-                        var read = await responseStream.ReadAsync(buffer, cancellationToken).ConfigureAwait(false);
-                        if (read == 0) break;
-                        await output.WriteAsync(buffer.AsMemory(0, read), cancellationToken).ConfigureAwait(false);
-                        onBytes(read);
-
-                        // Global rate limiting across all concurrent streams
-                        if (throttleState is not null)
-                        {
-                            var total = Interlocked.Add(ref throttleState.TotalBytes, read);
-                            var targetMs = total * 1000L / throttleState.BytesPerSec;
-                            var elapsedMs = throttleState.Watch.ElapsedMilliseconds;
-                            if (elapsedMs < targetMs)
-                                await Task.Delay((int)(targetMs - elapsedMs), cancellationToken).ConfigureAwait(false);
-                        }
-                    }
-
-                    await output.FlushAsync(cancellationToken).ConfigureAwait(false);
-                    crc64 = await crc64Service.ComputeFileAsync(targetPath, null, cancellationToken).ConfigureAwait(false);
-                }
-
-                if (crc64 == file.Hash) return;
-
-                // Delete the file BEFORE diagnostics — the diagnostic write is best-effort
-                // and must never prevent cleanup; a stale file on disk would cause the
-                // size-guard above (existingLength >= fileSize) to skip retries.
-                var downloadedLength = new FileInfo(targetPath).Length;
-                File.Delete(targetPath);
-
-                await diagnostics.MessageAsync(
-                    "CRC64 mismatch after download",
-                    $"file: {file.Path}{Environment.NewLine}" +
-                    $"expected: {file.Hash}{Environment.NewLine}" +
-                    $"actual:   {crc64}{Environment.NewLine}" +
-                    $"size: {downloadedLength} / expected: {file.Size}",
-                    CancellationToken.None);
-
-                if (retryIndex >= RetryDomainOrder.Length - 1)
-                {
-                    throw new InvalidDataException(
-                        $"CRC64 mismatch after all retries: {file.Path}.");
-                }
-            }
-            catch (Exception ex) when (ex is not OperationCanceledException)
-            {
-                // If the download or verification threw (e.g. sharing violation from
-                // anti-virus), clean up the temp file so the next retry starts fresh
-                // instead of appending to a stale partial download.
-                try { File.Delete(targetPath); } catch { /* best-effort */ }
-                lastError = ex;
-                // Network error — retry with next domain if available
-                if (retryIndex >= RetryDomainOrder.Length - 1) throw;
-            }
-        }
-
-        throw new HttpRequestException($"Download failed: {file.Path}", lastError);
     }
 
     private async Task CommitInstallationStateAsync(
@@ -1060,27 +965,6 @@ public sealed class GameDownloadService : IDisposable
 
             progress?.Invoke((int)Math.Round((i + 1) * 100d / files.Count));
         }
-    }
-
-    internal static string BuildDownloadUrl(string? domain, string source, string filePath)
-    {
-        if (string.IsNullOrWhiteSpace(domain))
-        {
-            throw new InvalidOperationException("CDN domain is empty.");
-        }
-
-        var uri = new Uri(domain);
-        var pathItems = source
-            .Split('/', StringSplitOptions.RemoveEmptyEntries)
-            .Concat(filePath.Split('/', StringSplitOptions.RemoveEmptyEntries))
-            .Select(Uri.EscapeDataString)
-            .ToList();
-
-        var builder = new UriBuilder(uri)
-        {
-            Path = string.Join("/", pathItems)
-        };
-        return builder.Uri.AbsoluteUri;
     }
 
     internal static string? ResolveRetryDomain(CdnConfigResponse cdnConfig, int retryType)

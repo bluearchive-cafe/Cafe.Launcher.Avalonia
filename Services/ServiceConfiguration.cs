@@ -23,6 +23,7 @@ public static class ServiceConfiguration
         services.AddSingleton<PatchUrlGroupService>();
         services.AddSingleton<SettingsNormalizer>();
         services.AddSingleton<RemoteManifestService>();
+        services.AddSingleton<IFileDownloadService, FileDownloadService>();
         services.AddSingleton<ResourcePanelService>();
 
         // ── HttpClient factory (shared pool, proxy-aware) ────────────────

@@ -98,6 +98,7 @@ public sealed class InstallationOperationStateTests : IDisposable
         using var service = new GameDownloadService(
             apiClient,
             new RemoteManifestService(apiClient),
+            new FileDownloadService(new Crc64Service(), new LocalDiagnostics()),
             new LocalInstallationStateStore(),
             new LauncherSettingsService(Path.Combine(tempDir, "settings.json")),
             new ProxySettingsService(),
