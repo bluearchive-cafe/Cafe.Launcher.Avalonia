@@ -12,6 +12,7 @@ jobs:
 
     env:
       Project_Path: Cafe.Launcher.Avalonia.csproj
+      NUGET_PACKAGES: ${{ github.workspace }}\.nuget\packages
       DOTNET_CLI_TELEMETRY_OPTOUT: 1
       AVALONIA_TELEMETRY_OPTOUT: 1
 
@@ -25,6 +26,14 @@ jobs:
         uses: actions/setup-dotnet@v5
         with:
           dotnet-version: 10.0.x
+
+      - name: Cache NuGet packages
+        uses: actions/cache@v5
+        with:
+          path: ${{ env.NUGET_PACKAGES }}
+          key: ${{ runner.os }}-nuget-${{ hashFiles('**/*.csproj') }}
+          restore-keys: |
+            ${{ runner.os }}-nuget-
 
       - name: Restore (Debug)
         run: dotnet restore $env:Project_Path
@@ -40,9 +49,3 @@ jobs:
 
       - name: Publish (Release)
         run: dotnet publish $env:Project_Path -c Release -o publish
-
-      - name: Upload artifact
-        uses: actions/upload-artifact@v7
-        with:
-          name: Cafe.Launcher.Avalonia
-          path: publish\
