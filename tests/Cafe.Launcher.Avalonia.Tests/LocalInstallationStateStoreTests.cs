@@ -244,6 +244,35 @@ public sealed class LocalInstallationStateStoreTests : IDisposable
         Assert.False(File.Exists(Path.Combine(gamePath, "game-launcher-config.json.tmp")));
     }
 
+    [Fact]
+    public async Task Operations_SerializePerPathWithoutBlockingDifferentPaths()
+    {
+        Directory.CreateDirectory(gamePath);
+        var tempFilesWritten = new TaskCompletionSource(
+            TaskCreationOptions.RunContinuationsAsynchronously);
+        var releaseCommit = new TaskCompletionSource(
+            TaskCreationOptions.RunContinuationsAsynchronously);
+        var blockingStore = new LocalInstallationStateStore(
+            async (_, cancellationToken) =>
+            {
+                tempFilesWritten.TrySetResult();
+                await releaseCommit.Task.WaitAsync(cancellationToken);
+            });
+        var commitTask = blockingStore.CommitAsync(gamePath, CreateCommit("1.2.3"));
+        await tempFilesWritten.Task.WaitAsync(TimeSpan.FromSeconds(2));
+
+        var samePathRead = blockingStore.ReadAsync(gamePath);
+        var otherPathRead = blockingStore.ReadAsync(Path.Combine(tempDir, "other"));
+        var otherState = await otherPathRead.WaitAsync(TimeSpan.FromSeconds(2));
+
+        Assert.False(samePathRead.IsCompleted);
+        Assert.Equal(LocalInstallationStateKind.NotInstalled, otherState.Kind);
+
+        releaseCommit.TrySetResult();
+        Assert.Equal(LocalInstallationStateKind.Valid, (await commitTask).Kind);
+        Assert.Equal(LocalInstallationStateKind.Valid, (await samePathRead).Kind);
+    }
+
     private Task<LocalInstallationState> CommitValidStateAsync()
     {
         Directory.CreateDirectory(gamePath);
