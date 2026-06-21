@@ -28,7 +28,7 @@ public sealed class LauncherCoreService : ILauncherCoreService
 
     public async Task<LauncherStatusSnapshot> LoadAsync(CancellationToken cancellationToken = default)
     {
-        var settings = await settingsService.ReadAsync(cancellationToken);
+        var settings = await settingsService.ReadAsync(cancellationToken).ConfigureAwait(false);
         var gameConfigTask = apiClient.GetGameConfigAsync(settings.ProxyMode, cancellationToken);
         var baseConfigTask = apiClient.GetBaseConfigAsync(settings.ProxyMode, cancellationToken);
         var cdnConfigTask = apiClient.GetCdnConfigAsync(
@@ -43,11 +43,11 @@ public sealed class LauncherCoreService : ILauncherCoreService
             () => apiClient.GetInstallationConfigAsync(settings.ProxyMode, cancellationToken));
         var localGameTask = localGameStateService.ReadAsync(settings.GamePath, cancellationToken);
 
-        await Task.WhenAll(gameConfigTask, baseConfigTask, cdnConfigTask, localGameTask);
-        await Task.WhenAll(operationsResourceTask, socialMediaResourceTask, installationConfigTask);
+        await Task.WhenAll(gameConfigTask, baseConfigTask, cdnConfigTask, localGameTask).ConfigureAwait(false);
+        await Task.WhenAll(operationsResourceTask, socialMediaResourceTask, installationConfigTask).ConfigureAwait(false);
 
-        var localGame = await localGameTask;
-        var gameConfig = await gameConfigTask;
+        var localGame = await localGameTask.ConfigureAwait(false);
+        var gameConfig = await gameConfigTask.ConfigureAwait(false);
         var localVersion = localGame.GameConfig?.Version;
         var isInstalled = !string.IsNullOrWhiteSpace(localVersion);
         var needsUpdate = isInstalled && VersionComparer.Compare(localVersion, gameConfig.GameLatestVersion) == -1;
@@ -98,7 +98,7 @@ public sealed class LauncherCoreService : ILauncherCoreService
     {
         try
         {
-            return await read();
+            return await read().ConfigureAwait(false);
         }
         catch (OperationCanceledException)
         {

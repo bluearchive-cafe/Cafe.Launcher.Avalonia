@@ -23,7 +23,14 @@ public static class GamePathValidator
                                      .TrimStart(Path.DirectorySeparatorChar, '/', '\\');
 
         var target = Path.GetFullPath(Path.Combine(root, sanitized));
-        if (!target.StartsWith(root + Path.DirectorySeparatorChar, StringComparison.OrdinalIgnoreCase)
+
+        // Normalize root to a single trailing separator.
+        // Without TrimEnd, a drive-root path like "C:\" produces "C:\\" after appending
+        // Path.DirectorySeparatorChar, which won't match Path.GetFullPath output like
+        // "C:\data\file.bin" (single backslash).
+        var rootWithSep = root.TrimEnd(Path.DirectorySeparatorChar) + Path.DirectorySeparatorChar;
+
+        if (!target.StartsWith(rootWithSep, StringComparison.OrdinalIgnoreCase)
             && !string.Equals(target, root, StringComparison.OrdinalIgnoreCase))
         {
             throw new InvalidOperationException($"Path escapes game directory: {relativePath}");

@@ -76,7 +76,7 @@ public sealed class HttpClientFactory : IDisposable
             return new HttpClientLease(client, ownsClient: true);
         }
 
-        var handler = await proxySettingsService.CreateHttpHandlerAsync(proxyMode, cancellationToken);
+        var handler = await proxySettingsService.CreateHttpHandlerAsync(proxyMode, cancellationToken).ConfigureAwait(false);
         var proxyClient = new HttpClient(handler, disposeHandler: false);
         if (baseAddress is not null) proxyClient.BaseAddress = baseAddress;
         if (timeout.HasValue) proxyClient.Timeout = timeout.Value;

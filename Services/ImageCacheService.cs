@@ -66,7 +66,7 @@ public sealed class ImageCacheService : IDisposable
             return null;
         }
 
-        var actual = await crc64Service.ComputeFileAsync(cachePath, null, ct);
+        var actual = await crc64Service.ComputeFileAsync(cachePath, null, ct).ConfigureAwait(false);
         if (string.Equals(actual, crc64Hash, StringComparison.OrdinalIgnoreCase))
         {
             return cachePath;
@@ -97,7 +97,7 @@ public sealed class ImageCacheService : IDisposable
 
         var cachePath = Path.Combine(cacheDir, $"{crc64Hash}.cache");
         var cacheLock = cacheLocks.GetOrAdd(crc64Hash, static _ => new SemaphoreSlim(1, 1));
-        await cacheLock.WaitAsync(ct);
+        await cacheLock.WaitAsync(ct).ConfigureAwait(false);
         try
         {
             if (File.Exists(cachePath))
@@ -108,10 +108,10 @@ public sealed class ImageCacheService : IDisposable
             var tempPath = $"{cachePath}.{Guid.NewGuid():N}.tmp";
             try
             {
-                var bytes = await GetImageBytesAsync(url, proxyMode, ct);
-                await File.WriteAllBytesAsync(tempPath, bytes, ct);
+                var bytes = await GetImageBytesAsync(url, proxyMode, ct).ConfigureAwait(false);
+                await File.WriteAllBytesAsync(tempPath, bytes, ct).ConfigureAwait(false);
 
-                var actual = await crc64Service.ComputeFileAsync(tempPath, null, ct);
+                var actual = await crc64Service.ComputeFileAsync(tempPath, null, ct).ConfigureAwait(false);
                 if (!string.Equals(actual, crc64Hash, StringComparison.OrdinalIgnoreCase))
                 {
                     throw new InvalidDataException($"Image CRC64 mismatch. Expected {crc64Hash}, actual {actual}.");
@@ -141,20 +141,20 @@ public sealed class ImageCacheService : IDisposable
         string proxyMode,
         CancellationToken ct = default)
     {
-        using var lease = await CreateRequestClientAsync(proxyMode, ct);
-        using var response = await lease.Client.GetAsync(url, HttpCompletionOption.ResponseHeadersRead, ct);
+        using var lease = await CreateRequestClientAsync(proxyMode, ct).ConfigureAwait(false);
+        using var response = await lease.Client.GetAsync(url, HttpCompletionOption.ResponseHeadersRead, ct).ConfigureAwait(false);
         response.EnsureSuccessStatusCode();
         if (response.Content.Headers.ContentLength is > MaxImageBytes)
         {
             throw new InvalidDataException("Image response is too large.");
         }
 
-        await using var input = await response.Content.ReadAsStreamAsync(ct);
+        await using var input = await response.Content.ReadAsStreamAsync(ct).ConfigureAwait(false);
         using var output = new MemoryStream();
         var buffer = new byte[64 * 1024];
         while (true)
         {
-            var read = await input.ReadAsync(buffer, ct);
+            var read = await input.ReadAsync(buffer, ct).ConfigureAwait(false);
             if (read == 0)
             {
                 break;
@@ -176,7 +176,7 @@ public sealed class ImageCacheService : IDisposable
         return await httpClientFactory.CreateLeaseAsync(
             proxyMode,
             timeout: RequestTimeout,
-            cancellationToken: ct);
+            cancellationToken: ct).ConfigureAwait(false);
     }
 
     private static void TryDelete(string path)
@@ -195,6 +195,13 @@ public sealed class ImageCacheService : IDisposable
         if (disposed)
             return;
         disposed = true;
+
+        foreach (var semaphore in cacheLocks.Values)
+        {
+            semaphore.Dispose();
+        }
+
+        cacheLocks.Clear();
     }
 }
 

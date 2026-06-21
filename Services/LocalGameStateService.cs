@@ -66,7 +66,7 @@ public sealed class LocalGameStateService
                 state.GameConfig = await JsonSerializer.DeserializeAsync<GameLauncherConfig>(
                     configStream,
                     jsonOptions,
-                    cancellationToken);
+                    cancellationToken).ConfigureAwait(false);
                 if (state.GameConfig is not null && !OfficialHashService.IsGameConfigHashValid(state.GameConfig))
                 {
                     state.GameConfig = null;
@@ -79,7 +79,7 @@ public sealed class LocalGameStateService
                 state.Manifest = await JsonSerializer.DeserializeAsync<LocalManifest>(
                     manifestStream,
                     jsonOptions,
-                    cancellationToken);
+                    cancellationToken).ConfigureAwait(false);
                 if (state.Manifest is not null)
                 {
                     NormalizeManifestByOfficialHash(state.Manifest);

@@ -7,6 +7,12 @@ using Cafe.Launcher.Avalonia.Constants;
 
 namespace Cafe.Launcher.Avalonia.Services.Auth;
 
+/// <summary>
+/// Builds the MD5-signed authorization header required by the official launcher API.
+/// MD5 is mandated by the wire protocol, not a design choice. For request-integrity
+/// signing (not password storage or certificate verification) this is acceptable.
+/// The server should additionally enforce timeliness via the `time` field.
+/// </summary>
 public sealed class AuthorizationHeaderFactory
 {
     public string Create(string data, string version)

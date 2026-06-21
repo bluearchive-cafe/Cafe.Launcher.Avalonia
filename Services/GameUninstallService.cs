@@ -34,13 +34,13 @@ public sealed class GameUninstallService
         var gamePath = localGameStateService.NormalizeGamePath(snapshot.LocalGame.GamePath ?? "");
         try
         {
-            var validation = await ValidateAsync(gamePath, cancellationToken);
+            var validation = await ValidateAsync(gamePath, cancellationToken).ConfigureAwait(false);
             if (!validation.Success)
             {
                 return validation;
             }
 
-            var localGame = await localGameStateService.ReadAsync(gamePath, cancellationToken);
+            var localGame = await localGameStateService.ReadAsync(gamePath, cancellationToken).ConfigureAwait(false);
             var files = localGame.Manifest?.Files ?? [];
             for (var i = 0; i < files.Count; i++)
             {
@@ -81,7 +81,7 @@ public sealed class GameUninstallService
         }
         catch (Exception exception) when (exception is IOException or UnauthorizedAccessException)
         {
-            await diagnostics.ErrorAsync("Game uninstall failed.", exception, CancellationToken.None);
+            await diagnostics.ErrorAsync("Game uninstall failed.", exception, CancellationToken.None).ConfigureAwait(false);
             return new GameOperationResult
             {
                 Success = false,
@@ -110,7 +110,7 @@ public sealed class GameUninstallService
             return Failed(localizer.F("gameDirectoryNameInvalid", GamePaths.GameFolderName), "uninstall-error");
         }
 
-        var localGame = await localGameStateService.ReadAsync(gamePath, cancellationToken);
+        var localGame = await localGameStateService.ReadAsync(gamePath, cancellationToken).ConfigureAwait(false);
         if (string.IsNullOrWhiteSpace(localGame.GameConfig?.Version) || string.IsNullOrWhiteSpace(localGame.GameConfig?.Name))
         {
             return Failed(localizer.F("gameConfigMetadataMissing", GamePaths.GameConfigFileName), "uninstall-error");

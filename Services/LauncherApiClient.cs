@@ -86,7 +86,7 @@ public sealed class LauncherApiClient : IDisposable
         string proxyMode,
         CancellationToken cancellationToken = default)
     {
-        var response = await GetCdnConfigAsync(proxyMode, cancellationToken);
+        var response = await GetCdnConfigAsync(proxyMode, cancellationToken).ConfigureAwait(false);
         return RewriteCdnConfig(response, patchUrlGroup);
     }
 
@@ -144,7 +144,7 @@ public sealed class LauncherApiClient : IDisposable
             version,
             filePath,
             proxyMode,
-            cancellationToken);
+            cancellationToken).ConfigureAwait(false);
         return RewriteManifestUrl(response, patchUrlGroup);
     }
 
@@ -163,9 +163,9 @@ public sealed class LauncherApiClient : IDisposable
         string proxyMode,
         CancellationToken cancellationToken = default)
     {
-        using var lease = await leaseSource.CreateLeaseAsync(proxyMode, cancellationToken);
-        await using var stream = await lease.Client.GetStreamAsync(url, cancellationToken);
-        var manifest = await JsonSerializer.DeserializeAsync<RemoteManifest>(stream, jsonOptions, cancellationToken);
+        using var lease = await leaseSource.CreateLeaseAsync(proxyMode, cancellationToken).ConfigureAwait(false);
+        await using var stream = await lease.Client.GetStreamAsync(url, cancellationToken).ConfigureAwait(false);
+        var manifest = await JsonSerializer.DeserializeAsync<RemoteManifest>(stream, jsonOptions, cancellationToken).ConfigureAwait(false);
         return manifest ?? new RemoteManifest();
     }
 
@@ -174,17 +174,17 @@ public sealed class LauncherApiClient : IDisposable
         string proxyMode,
         CancellationToken cancellationToken)
     {
-        using var lease = await leaseSource.CreateLeaseAsync(proxyMode, cancellationToken);
+        using var lease = await leaseSource.CreateLeaseAsync(proxyMode, cancellationToken).ConfigureAwait(false);
         using var request = new HttpRequestMessage(HttpMethod.Get, path);
         request.Headers.TryAddWithoutValidation(
             "Authorization",
             authorizationHeaderFactory.Create("", ApiConfig.YostarAuthorizationVersion));
 
-        using var response = await lease.Client.SendAsync(request, cancellationToken);
+        using var response = await lease.Client.SendAsync(request, cancellationToken).ConfigureAwait(false);
         response.EnsureSuccessStatusCode();
 
-        await using var stream = await response.Content.ReadAsStreamAsync(cancellationToken);
-        var envelope = await JsonSerializer.DeserializeAsync<LauncherApiEnvelope<T>>(stream, jsonOptions, cancellationToken);
+        await using var stream = await response.Content.ReadAsStreamAsync(cancellationToken).ConfigureAwait(false);
+        var envelope = await JsonSerializer.DeserializeAsync<LauncherApiEnvelope<T>>(stream, jsonOptions, cancellationToken).ConfigureAwait(false);
 
         if (envelope is null)
         {

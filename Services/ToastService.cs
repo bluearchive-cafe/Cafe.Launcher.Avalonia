@@ -54,10 +54,6 @@ public sealed class ToastNotification
     };
 
     public string SeverityLabel { get; set; } = "";
-
-    /// <summary>Whether the toast is currently playing its exit animation.</summary>
-    public bool IsExiting { get; set; }
-
 }
 
 public enum ToastSeverity

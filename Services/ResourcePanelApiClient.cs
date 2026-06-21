@@ -69,8 +69,8 @@ public sealed class ResourcePanelApiClient : IDisposable
             + $"&text={Uri.EscapeDataString(text)}"
             + $"&voice={Uri.EscapeDataString(voice)}"
             + $"&media={Uri.EscapeDataString(media)}";
-        using var lease = await leaseSource.CreateLeaseAsync(proxyMode, cancellationToken);
-        using var response = await lease.Client.GetAsync(path, cancellationToken);
+        using var lease = await leaseSource.CreateLeaseAsync(proxyMode, cancellationToken).ConfigureAwait(false);
+        using var response = await lease.Client.GetAsync(path, cancellationToken).ConfigureAwait(false);
         response.EnsureSuccessStatusCode();
     }
 
@@ -80,11 +80,11 @@ public sealed class ResourcePanelApiClient : IDisposable
         CancellationToken cancellationToken)
         where T : new()
     {
-        using var lease = await leaseSource.CreateLeaseAsync(proxyMode, cancellationToken);
-        using var response = await lease.Client.GetAsync(path, cancellationToken);
+        using var lease = await leaseSource.CreateLeaseAsync(proxyMode, cancellationToken).ConfigureAwait(false);
+        using var response = await lease.Client.GetAsync(path, cancellationToken).ConfigureAwait(false);
         response.EnsureSuccessStatusCode();
-        await using var stream = await response.Content.ReadAsStreamAsync(cancellationToken);
-        return await JsonSerializer.DeserializeAsync<T>(stream, jsonOptions, cancellationToken) ?? new T();
+        await using var stream = await response.Content.ReadAsStreamAsync(cancellationToken).ConfigureAwait(false);
+        return await JsonSerializer.DeserializeAsync<T>(stream, jsonOptions, cancellationToken).ConfigureAwait(false) ?? new T();
     }
 
     public void Dispose()

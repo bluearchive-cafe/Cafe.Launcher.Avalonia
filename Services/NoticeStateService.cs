@@ -48,7 +48,7 @@ public sealed class NoticeStateService
                 return [];
             }
 
-            var json = await File.ReadAllTextAsync(path, cancellationToken);
+            var json = await File.ReadAllTextAsync(path, cancellationToken).ConfigureAwait(false);
             return JsonSerializer.Deserialize<HashSet<string>>(json) ?? [];
         }
         catch (Exception exception) when (exception is JsonException or IOException or UnauthorizedAccessException)
@@ -59,10 +59,10 @@ public sealed class NoticeStateService
 
     public async Task SaveShownNoticeAsync(string noticeHash, CancellationToken cancellationToken = default)
     {
-        await writeLock.WaitAsync(cancellationToken);
+        await writeLock.WaitAsync(cancellationToken).ConfigureAwait(false);
         try
         {
-            var shown = await ReadShownNoticesAsync(cancellationToken);
+            var shown = await ReadShownNoticesAsync(cancellationToken).ConfigureAwait(false);
             shown.Add(noticeHash);
 
             var path = StatePath;
@@ -73,8 +73,8 @@ public sealed class NoticeStateService
             }
 
             var tempPath = $"{path}.tmp";
-            await File.WriteAllTextAsync(tempPath, JsonSerializer.Serialize(shown), cancellationToken);
-            await Task.Run(() => File.Move(tempPath, path, overwrite: true), cancellationToken);
+            await File.WriteAllTextAsync(tempPath, JsonSerializer.Serialize(shown), cancellationToken).ConfigureAwait(false);
+            await Task.Run(() => File.Move(tempPath, path, overwrite: true), cancellationToken).ConfigureAwait(false);
         }
         catch (Exception exception) when (exception is JsonException or IOException or UnauthorizedAccessException)
         {

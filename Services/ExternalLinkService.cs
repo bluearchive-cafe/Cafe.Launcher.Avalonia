@@ -1,6 +1,5 @@
 using System;
 using System.Diagnostics;
-using System.Threading.Tasks;
 using Cafe.Launcher.Avalonia.Services.Diagnostics;
 
 namespace Cafe.Launcher.Avalonia.Services;
@@ -15,14 +14,14 @@ public static class ExternalLinkService
     /// <summary>
     /// Opens a URL in the system browser. Only http, https, and mailto schemes are allowed.
     /// </summary>
-    public static void Open(string? url, LocalDiagnostics? diagnostics = null)
+    public static void Open(string? url)
     {
         if (string.IsNullOrWhiteSpace(url))
             return;
 
         if (!TryCreateAllowedUri(url, out var uri))
         {
-            _ = LogDiagnosticsAsync(diagnostics, "External link blocked by scheme validation", $"url: {url}");
+            LocalDiagnostics.LogSync("External link blocked by scheme validation", $"url: {url}");
             return;
         }
 
@@ -36,7 +35,7 @@ public static class ExternalLinkService
         }
         catch (Exception ex)
         {
-            _ = LogDiagnosticsAsync(diagnostics, "External link failed to open", $"url: {uri.AbsoluteUri}\nexception: {ex.Message}");
+            LocalDiagnostics.LogSync("External link failed to open", $"url: {uri.AbsoluteUri}\nexception: {ex.Message}");
         }
     }
 
@@ -48,18 +47,5 @@ public static class ExternalLinkService
         }
 
         return uri.Scheme is "http" or "https" or "mailto";
-    }
-
-    private static async Task LogDiagnosticsAsync(LocalDiagnostics? diagnostics, string message, string details)
-    {
-        try
-        {
-            if (diagnostics is not null)
-                await diagnostics.MessageAsync(message, details);
-        }
-        catch
-        {
-            // Best-effort diagnostics — must not throw.
-        }
     }
 }

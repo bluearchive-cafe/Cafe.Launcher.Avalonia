@@ -208,6 +208,38 @@ public sealed partial class LauncherSettings : ObservableObject
     [ObservableProperty]
     [property: JsonPropertyName("updateChannel")]
     private string updateChannel = UpdateChannels.Stable;
+
+    /// <summary>
+    /// Deep-clones this settings object via JSON round-trip.
+    /// Shared by <see cref="Services.SettingsNormalizer"/> and <see cref="Services.SettingsEditor"/>.
+    /// </summary>
+    public LauncherSettings DeepClone()
+    {
+        var json = System.Text.Json.JsonSerializer.Serialize(this, CloneJsonOptions);
+        return System.Text.Json.JsonSerializer.Deserialize<LauncherSettings>(json, CloneJsonOptions)
+            ?? new LauncherSettings();
+    }
+
+    /// <summary>
+    /// Creates default settings with pre-release builds defaulting to the beta update channel.
+    /// Shared by <see cref="Services.LauncherSettingsService"/> and <see cref="Services.SettingsEditor"/>.
+    /// </summary>
+    public static LauncherSettings CreateDefaults()
+    {
+        var settings = new LauncherSettings();
+
+        if (Constants.BuildInfo.LauncherVersion.Contains('-'))
+        {
+            settings.UpdateChannel = UpdateChannels.Beta;
+        }
+
+        return settings;
+    }
+
+    private static readonly System.Text.Json.JsonSerializerOptions CloneJsonOptions = new()
+    {
+        PropertyNameCaseInsensitive = false
+    };
 }
 
 /// <summary>

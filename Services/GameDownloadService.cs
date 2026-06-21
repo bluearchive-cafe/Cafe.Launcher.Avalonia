@@ -72,7 +72,7 @@ public sealed class GameDownloadService : IDisposable
         Action<GameOperationProgress> progress,
         CancellationToken cancellationToken = default)
     {
-        return await RunAsync(snapshot, repair: false, progress, cancellationToken);
+        return await RunAsync(snapshot, repair: false, progress, cancellationToken).ConfigureAwait(false);
     }
 
     public async Task<GameOperationResult> RepairAsync(
@@ -80,7 +80,7 @@ public sealed class GameDownloadService : IDisposable
         Action<GameOperationProgress> progress,
         CancellationToken cancellationToken = default)
     {
-        return await RunAsync(snapshot, repair: true, progress, cancellationToken);
+        return await RunAsync(snapshot, repair: true, progress, cancellationToken).ConfigureAwait(false);
     }
 
     public void Stop(bool clearPersistedState = true)
@@ -115,7 +115,7 @@ public sealed class GameDownloadService : IDisposable
             return null;
         }
 
-        var state = await LoadDownloadStateAsync(cancellationToken);
+        var state = await LoadDownloadStateAsync(cancellationToken).ConfigureAwait(false);
         if (state is null)
         {
             return null;
@@ -134,7 +134,7 @@ public sealed class GameDownloadService : IDisposable
             return null;
         }
 
-        return await RunAsync(snapshot, state.IsRepair, progress, cancellationToken);
+        return await RunAsync(snapshot, state.IsRepair, progress, cancellationToken).ConfigureAwait(false);
     }
 
     public void Pause()
@@ -222,9 +222,9 @@ public sealed class GameDownloadService : IDisposable
                 pauseTask = Task.CompletedTask;
             }
 
-            var settings = await settingsService.ReadAsync(activeToken);
+            var settings = await settingsService.ReadAsync(activeToken).ConfigureAwait(false);
             var gameConfig = snapshot.Remote.GameConfig
-                ?? await apiClient.GetGameConfigAsync(settings.ProxyMode, activeToken);
+                ?? await apiClient.GetGameConfigAsync(settings.ProxyMode, activeToken).ConfigureAwait(false);
             if (string.IsNullOrWhiteSpace(gameConfig.GameLatestVersion)
                 || string.IsNullOrWhiteSpace(gameConfig.GameLatestFilePath)
                 || string.IsNullOrWhiteSpace(gameConfig.GameStartExeName))
@@ -239,7 +239,7 @@ public sealed class GameDownloadService : IDisposable
             EnsureGamePath(gamePath);
             Directory.CreateDirectory(gamePath);
 
-            var localGame = await localGameStateService.ReadAsync(gamePath, activeToken);
+            var localGame = await localGameStateService.ReadAsync(gamePath, activeToken).ConfigureAwait(false);
             if (localGame.GameConfig?.Name is { Length: > 0 }
                 && await ProcessService.IsExeRunningAsync($"{localGame.GameConfig.Name}.exe", activeToken))
             {
@@ -263,7 +263,7 @@ public sealed class GameDownloadService : IDisposable
                 ?? await apiClient.GetCdnConfigAsync(
                     settings.PatchUrlGroup,
                     settings.ProxyMode,
-                    activeToken);
+                    activeToken).ConfigureAwait(false);
             if (string.IsNullOrWhiteSpace(cdnConfig.PrimaryCdn) || string.IsNullOrWhiteSpace(cdnConfig.BackUpCdn))
             {
                 return Failed(localizer.T("cdnConfigIncomplete"), "cdn-config");
@@ -284,7 +284,7 @@ public sealed class GameDownloadService : IDisposable
                     settings.PatchUrlGroup,
                     settings.ProxyMode,
                     progress,
-                    activeToken);
+                    activeToken).ConfigureAwait(false);
 
             if (downloadPlan.NeedDownload.Count == 0 && downloadPlan.NeedDelete.Count == 0)
             {
@@ -322,9 +322,9 @@ public sealed class GameDownloadService : IDisposable
                     speedLimitBytesPerSec,
                     operationKind,
                     progress,
-                    activeToken);
+                    activeToken).ConfigureAwait(false);
 
-                await WriteTempConfigAsync(gamePath, gameConfig, downloadPlan.ManifestFiles, activeToken);
+                await WriteTempConfigAsync(gamePath, gameConfig, downloadPlan.ManifestFiles, activeToken).ConfigureAwait(false);
                 RemoveFiles(gamePath, downloadPlan.NeedDelete, null);
 
                 progress(CreateProgress(operationKind, "check-file", 0));
@@ -333,7 +333,7 @@ public sealed class GameDownloadService : IDisposable
                     downloadPlan.ManifestFiles,
                     currentDownloadList,
                     value => progress(CreateProgress(operationKind, "check-file", value)),
-                    activeToken);
+                    activeToken).ConfigureAwait(false);
 
                 if (failedFiles.Count == 0)
                 {
@@ -375,17 +375,17 @@ public sealed class GameDownloadService : IDisposable
         }
         catch (IOException exception) when (exception.HResult == unchecked((int)0x80070070))
         {
-            await diagnostics.ErrorAsync("Game download disk space error.", exception, CancellationToken.None);
+            await diagnostics.ErrorAsync("Game download disk space error.", exception, CancellationToken.None).ConfigureAwait(false);
             return Failed(localizer.T("diskSpaceInsufficient"), "game-download-error-no-space");
         }
         catch (Exception exception) when (exception is IOException or UnauthorizedAccessException)
         {
-            await diagnostics.ErrorAsync("Game file operation failed.", exception, CancellationToken.None);
+            await diagnostics.ErrorAsync("Game file operation failed.", exception, CancellationToken.None).ConfigureAwait(false);
             return Failed(localizer.F("fileOperationFailed", exception.Message), "error-system");
         }
         catch (Exception exception) when (exception is HttpRequestException or TaskCanceledException or JsonException)
         {
-            await diagnostics.ErrorAsync("Game download network failed.", exception, CancellationToken.None);
+            await diagnostics.ErrorAsync("Game download network failed.", exception, CancellationToken.None).ConfigureAwait(false);
             return Failed(localizer.F("networkErrorDetail", exception.Message), "game-download-error-network-down");
         }
         catch (Exception exception)
@@ -500,7 +500,7 @@ public sealed class GameDownloadService : IDisposable
             return null;
         try
         {
-            var json = await File.ReadAllTextAsync(downloadStateFilePath, cancellationToken);
+            var json = await File.ReadAllTextAsync(downloadStateFilePath, cancellationToken).ConfigureAwait(false);
             return JsonSerializer.Deserialize<DownloadTaskState>(json);
         }
         catch (OperationCanceledException)
@@ -517,7 +517,7 @@ public sealed class GameDownloadService : IDisposable
     {
         var json = JsonSerializer.Serialize(state, DownloadStateJsonOptions);
         Directory.CreateDirectory(Path.GetDirectoryName(downloadStateFilePath) ?? ".");
-        await File.WriteAllTextAsync(downloadStateFilePath, json, cancellationToken);
+        await File.WriteAllTextAsync(downloadStateFilePath, json, cancellationToken).ConfigureAwait(false);
     }
 
     private void ClearDownloadState()
@@ -540,12 +540,12 @@ public sealed class GameDownloadService : IDisposable
             localGame,
             patchUrlGroup,
             proxyMode,
-            cancellationToken);
+            cancellationToken).ConfigureAwait(false);
         var latestManifest = await GetLatestManifestAsync(
             gameConfig,
             patchUrlGroup,
             proxyMode,
-            cancellationToken);
+            cancellationToken).ConfigureAwait(false);
         var statDiff = CheckStat(currentFiles, gamePath, value => progress(CreateProgress(GameOperationKinds.Download, "update-check", value)));
         var expected = GameManifestDiff(currentFiles, latestManifest.Manifest.File);
         var actual = GameResultMerge(expected, new DownloadPlan { NeedDownload = statDiff });
@@ -563,7 +563,7 @@ public sealed class GameDownloadService : IDisposable
         Action<GameOperationProgress> progress,
         CancellationToken cancellationToken)
     {
-        var localGame = await localGameStateService.ReadAsync(gamePath, cancellationToken);
+        var localGame = await localGameStateService.ReadAsync(gamePath, cancellationToken).ConfigureAwait(false);
 
         // Fetch current and latest manifests in parallel (matches original's Promise.all)
         var currentTask = GetCurrentManifestFilesAsync(
@@ -577,15 +577,15 @@ public sealed class GameDownloadService : IDisposable
             patchUrlGroup,
             proxyMode,
             cancellationToken);
-        await Task.WhenAll(currentTask, latestTask);
-        var currentFiles = await currentTask;
-        var latestManifest = await latestTask;
+        await Task.WhenAll(currentTask, latestTask).ConfigureAwait(false);
+        var currentFiles = await currentTask.ConfigureAwait(false);
+        var latestManifest = await latestTask.ConfigureAwait(false);
 
         var hashDiff = await CheckHashAsync(
             latestManifest.Manifest.File,
             gamePath,
             value => progress(CreateProgress(GameOperationKinds.Repair, "repair-check", value)),
-            cancellationToken);
+            cancellationToken).ConfigureAwait(false);
         var expected = GameManifestDiff(currentFiles, latestManifest.Manifest.File);
         var actual = GameResultMerge(new DownloadPlan { NeedDownload = [], NeedDelete = expected.NeedDelete }, new DownloadPlan { NeedDownload = hashDiff });
 
@@ -632,7 +632,7 @@ public sealed class GameDownloadService : IDisposable
                 localGame.Manifest.Basis,
                 patchUrlGroup,
                 proxyMode,
-                cancellationToken);
+                cancellationToken).ConfigureAwait(false);
             if (string.IsNullOrWhiteSpace(manifestUrl.Url))
             {
                 return localGame.Manifest.Files;
@@ -641,7 +641,7 @@ public sealed class GameDownloadService : IDisposable
             var manifest = await apiClient.GetRemoteManifestAsync(
                 manifestUrl.Url,
                 proxyMode,
-                cancellationToken);
+                cancellationToken).ConfigureAwait(false);
             return manifest.File;
         }
         catch (OperationCanceledException)
@@ -667,7 +667,7 @@ public sealed class GameDownloadService : IDisposable
             basis,
             patchUrlGroup,
             proxyMode,
-            cancellationToken);
+            cancellationToken).ConfigureAwait(false);
         if (string.IsNullOrWhiteSpace(manifestUrl.Url))
         {
             throw new InvalidOperationException("Remote manifest URL is empty.");
@@ -677,7 +677,7 @@ public sealed class GameDownloadService : IDisposable
             await apiClient.GetRemoteManifestAsync(
                 manifestUrl.Url,
                 proxyMode,
-                cancellationToken),
+                cancellationToken).ConfigureAwait(false),
             version,
             basis);
     }
@@ -698,7 +698,7 @@ public sealed class GameDownloadService : IDisposable
             return;
         }
 
-        var proxy = await proxySettingsService.CreateProxyAsync(proxyMode, cancellationToken);
+        var proxy = await proxySettingsService.CreateProxyAsync(proxyMode, cancellationToken).ConfigureAwait(false);
         using var handler = new SocketsHttpHandler
         {
             UseProxy = proxyMode == ProxyModes.System,
@@ -722,7 +722,7 @@ public sealed class GameDownloadService : IDisposable
             var acquired = false;
             try
             {
-                await semaphore.WaitAsync(cancellationToken);
+                await semaphore.WaitAsync(cancellationToken).ConfigureAwait(false);
                 acquired = true;
                 await DownloadFileAsync(
                     gamePath,
@@ -766,7 +766,7 @@ public sealed class GameDownloadService : IDisposable
             }
         });
 
-        await Task.WhenAll(tasks);
+        await Task.WhenAll(tasks).ConfigureAwait(false);
     }
 
     private async Task DownloadFileAsync(
@@ -809,24 +809,24 @@ public sealed class GameDownloadService : IDisposable
                     request.Headers.Range = new System.Net.Http.Headers.RangeHeaderValue(existingLength, null);
                 }
 
-                using var response = await client.SendAsync(request, HttpCompletionOption.ResponseHeadersRead, cancellationToken);
+                using var response = await client.SendAsync(request, HttpCompletionOption.ResponseHeadersRead, cancellationToken).ConfigureAwait(false);
                 response.EnsureSuccessStatusCode();
 
                 string crc64;
                 {
                     // Nested scope — both streams must be closed before File.Delete below.
-                    await using var responseStream = await response.Content.ReadAsStreamAsync(cancellationToken);
+                    await using var responseStream = await response.Content.ReadAsStreamAsync(cancellationToken).ConfigureAwait(false);
                     await using var output = new FileStream(targetPath, FileMode.Append, FileAccess.Write, FileShare.Read);
                     var buffer = new byte[1024 * 256];
                     while (true)
                     {
                         // Async pause — yields the thread instead of blocking it
-                        await GetPauseTaskSnapshot();
+                        await GetPauseTaskSnapshot().ConfigureAwait(false);
                         cancellationToken.ThrowIfCancellationRequested();
 
-                        var read = await responseStream.ReadAsync(buffer, cancellationToken);
+                        var read = await responseStream.ReadAsync(buffer, cancellationToken).ConfigureAwait(false);
                         if (read == 0) break;
-                        await output.WriteAsync(buffer.AsMemory(0, read), cancellationToken);
+                        await output.WriteAsync(buffer.AsMemory(0, read), cancellationToken).ConfigureAwait(false);
                         onBytes(read);
 
                         // Global rate limiting across all concurrent streams
@@ -836,12 +836,12 @@ public sealed class GameDownloadService : IDisposable
                             var targetMs = total * 1000L / throttleState.BytesPerSec;
                             var elapsedMs = throttleState.Watch.ElapsedMilliseconds;
                             if (elapsedMs < targetMs)
-                                await Task.Delay((int)(targetMs - elapsedMs), cancellationToken);
+                                await Task.Delay((int)(targetMs - elapsedMs), cancellationToken).ConfigureAwait(false);
                         }
                     }
 
-                    await output.FlushAsync(cancellationToken);
-                    crc64 = await crc64Service.ComputeFileAsync(targetPath, null, cancellationToken);
+                    await output.FlushAsync(cancellationToken).ConfigureAwait(false);
+                    crc64 = await crc64Service.ComputeFileAsync(targetPath, null, cancellationToken).ConfigureAwait(false);
                 }
 
                 if (crc64 == file.Hash) return;
@@ -924,11 +924,11 @@ public sealed class GameDownloadService : IDisposable
         await File.WriteAllTextAsync(
             GetTempName(Path.Combine(gamePath, GamePaths.ManifestFileName)),
             JsonSerializer.Serialize(manifest, jsonOptions),
-            cancellationToken);
+            cancellationToken).ConfigureAwait(false);
         await File.WriteAllTextAsync(
             GetTempName(Path.Combine(gamePath, GamePaths.GameConfigFileName)),
             JsonSerializer.Serialize(config, jsonOptions),
-            cancellationToken);
+            cancellationToken).ConfigureAwait(false);
     }
 
     private async Task<IReadOnlyList<ManifestFile>> InstallDownloadedFilesAsync(
@@ -955,7 +955,7 @@ public sealed class GameDownloadService : IDisposable
             }
             else
             {
-                var crc64 = await crc64Service.ComputeFileAsync(checkPath, null, cancellationToken);
+                var crc64 = await crc64Service.ComputeFileAsync(checkPath, null, cancellationToken).ConfigureAwait(false);
                 if (crc64 != file.Hash)
                 {
                     await diagnostics.MessageAsync(
@@ -1097,7 +1097,7 @@ public sealed class GameDownloadService : IDisposable
                 continue;
             }
 
-            var crc64 = await crc64Service.ComputeFileAsync(filePath, null, cancellationToken);
+            var crc64 = await crc64Service.ComputeFileAsync(filePath, null, cancellationToken).ConfigureAwait(false);
             if (crc64 != file.Hash)
             {
                 diff.Add(file);

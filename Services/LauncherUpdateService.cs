@@ -61,7 +61,7 @@ public sealed partial class LauncherUpdateService : IDisposable
     {
         try
         {
-            var releases = await FetchReleasesAsync(proxyMode, cancellationToken);
+            var releases = await FetchReleasesAsync(proxyMode, cancellationToken).ConfigureAwait(false);
 
             if (releases is null || releases.Count == 0)
             {
@@ -130,7 +130,7 @@ public sealed partial class LauncherUpdateService : IDisposable
                 await diagnostics.ErrorAsync(
                     "Launcher update check failed — HTTP request error",
                     ex,
-                    CancellationToken.None);
+                    CancellationToken.None).ConfigureAwait(false);
             return LauncherUpdateCheckResult.Failed();
         }
         catch (JsonException ex)
@@ -139,7 +139,7 @@ public sealed partial class LauncherUpdateService : IDisposable
                 await diagnostics.ErrorAsync(
                     "Launcher update check failed — JSON deserialization error",
                     ex,
-                    CancellationToken.None);
+                    CancellationToken.None).ConfigureAwait(false);
             return LauncherUpdateCheckResult.Failed();
         }
         catch (TaskCanceledException ex)
@@ -148,7 +148,7 @@ public sealed partial class LauncherUpdateService : IDisposable
                 await diagnostics.ErrorAsync(
                     "Launcher update check failed — request timeout",
                     ex,
-                    CancellationToken.None);
+                    CancellationToken.None).ConfigureAwait(false);
             return LauncherUpdateCheckResult.Failed();
         }
     }
@@ -157,18 +157,18 @@ public sealed partial class LauncherUpdateService : IDisposable
         string proxyMode,
         CancellationToken cancellationToken)
     {
-        using var lease = await leaseSource.CreateLeaseAsync(proxyMode, cancellationToken);
+        using var lease = await leaseSource.CreateLeaseAsync(proxyMode, cancellationToken).ConfigureAwait(false);
         using var response = await lease.Client.GetAsync(
             ApiConfig.LauncherReleasesPath,
             HttpCompletionOption.ResponseHeadersRead,
-            cancellationToken);
+            cancellationToken).ConfigureAwait(false);
         response.EnsureSuccessStatusCode();
 
-        await using var stream = await response.Content.ReadAsStreamAsync(cancellationToken);
+        await using var stream = await response.Content.ReadAsStreamAsync(cancellationToken).ConfigureAwait(false);
         return await JsonSerializer.DeserializeAsync<List<LauncherReleaseResponse>>(
             stream,
             JsonOptions,
-            cancellationToken);
+            cancellationToken).ConfigureAwait(false);
     }
 
     /// <summary>

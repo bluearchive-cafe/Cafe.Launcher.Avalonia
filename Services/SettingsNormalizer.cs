@@ -1,6 +1,5 @@
 using System;
 using System.Linq;
-using System.Text.Json;
 using Cafe.Launcher.Avalonia.Constants;
 using Cafe.Launcher.Avalonia.Models;
 
@@ -8,14 +7,9 @@ namespace Cafe.Launcher.Avalonia.Services;
 
 public sealed class SettingsNormalizer
 {
-    private static readonly JsonSerializerOptions CloneOptions = new()
-    {
-        PropertyNameCaseInsensitive = false
-    };
-
     public LauncherSettings Normalize(LauncherSettings settings)
     {
-        settings = Clone(settings);
+        settings = settings.DeepClone();
         settings.LaunchCheckMode = settings.LaunchCheckMode switch
         {
             "LocalManifest" => LaunchCheckModes.LocalManifest,
@@ -115,13 +109,6 @@ public sealed class SettingsNormalizer
         settings.GamePath ??= "";
         settings.ResourcePanelUid = settings.ResourcePanelUid?.Trim() ?? "";
         return settings;
-    }
-
-    private static LauncherSettings Clone(LauncherSettings settings)
-    {
-        var json = JsonSerializer.Serialize(settings, CloneOptions);
-        return JsonSerializer.Deserialize<LauncherSettings>(json, CloneOptions)
-            ?? new LauncherSettings();
     }
 
     private static string NormalizeColor(string? value) =>

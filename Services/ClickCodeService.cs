@@ -2,6 +2,7 @@ using System;
 using System.IO;
 using System.Text.RegularExpressions;
 using Cafe.Launcher.Avalonia.Constants;
+using Cafe.Launcher.Avalonia.Helpers;
 
 namespace Cafe.Launcher.Avalonia.Services;
 
@@ -68,7 +69,10 @@ public sealed class ClickCodeService
 
         try
         {
-            var targetPath = Path.Combine(gamePath, ClickCodeFileName);
+            // Defense-in-depth: validate that the target stays within the game directory
+            var targetPath = GamePathValidator.GetSafePath(
+                Path.GetFullPath(gamePath),
+                ClickCodeFileName);
             Directory.CreateDirectory(gamePath);
             File.WriteAllText(targetPath, File.ReadAllText(sourcePath).Trim());
         }

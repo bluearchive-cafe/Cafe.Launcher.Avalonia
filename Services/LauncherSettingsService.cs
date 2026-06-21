@@ -71,7 +71,7 @@ public sealed class LauncherSettingsService
 
         try
         {
-            var json = await File.ReadAllTextAsync(SettingsPath, cancellationToken);
+            var json = await File.ReadAllTextAsync(SettingsPath, cancellationToken).ConfigureAwait(false);
             var settings = JsonSerializer.Deserialize<LauncherSettings>(json, jsonOptions) ?? new LauncherSettings();
             ApplyLegacyFields(settings, json);
             return normalizer.Normalize(settings);
@@ -82,7 +82,7 @@ public sealed class LauncherSettingsService
             Debug.WriteLine(message);
             if (diagnostics is not null)
             {
-                await diagnostics.ErrorAsync("Settings read failed", exception, CancellationToken.None);
+                await diagnostics.ErrorAsync("Settings read failed", exception, CancellationToken.None).ConfigureAwait(false);
             }
 
             return CreateDefaultSettings();
@@ -91,20 +91,12 @@ public sealed class LauncherSettingsService
 
     private static LauncherSettings CreateDefaultSettings()
     {
-        var settings = new LauncherSettings();
-
-        // Pre-release builds default to the beta update channel.
-        if (BuildInfo.LauncherVersion.Contains('-'))
-        {
-            settings.UpdateChannel = UpdateChannels.Beta;
-        }
-
-        return settings;
+        return LauncherSettings.CreateDefaults();
     }
 
     public async Task SaveAsync(LauncherSettings settings, CancellationToken cancellationToken = default)
     {
-        await writeLock.WaitAsync(cancellationToken);
+        await writeLock.WaitAsync(cancellationToken).ConfigureAwait(false);
         try
         {
             var normalized = normalizer.Normalize(settings);
@@ -115,8 +107,8 @@ public sealed class LauncherSettingsService
             {
                 await using (var stream = File.Create(tempPath))
                 {
-                    await JsonSerializer.SerializeAsync(stream, normalized, jsonOptions, cancellationToken);
-                    await stream.FlushAsync(cancellationToken);
+                    await JsonSerializer.SerializeAsync(stream, normalized, jsonOptions, cancellationToken).ConfigureAwait(false);
+                    await stream.FlushAsync(cancellationToken).ConfigureAwait(false);
                 }
 
                 File.Move(tempPath, path, overwrite: true);

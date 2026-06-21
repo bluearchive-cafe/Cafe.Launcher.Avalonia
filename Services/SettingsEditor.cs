@@ -1,9 +1,5 @@
 using System;
-using System.Collections.Generic;
 using System.ComponentModel;
-using System.Linq;
-using System.Text.Json;
-using Cafe.Launcher.Avalonia.Constants;
 using Cafe.Launcher.Avalonia.Models;
 
 namespace Cafe.Launcher.Avalonia.Services;
@@ -12,7 +8,15 @@ public interface ISettingsEditor : INotifyPropertyChanged
 {
     LauncherSettings Current { get; }
     bool IsDirty { get; }
+
+    /// <summary>
+    /// Fires for per-field changes on the <see cref="Current"/> settings object.
+    /// Distinct from <see cref="INotifyPropertyChanged.PropertyChanged"/>, which fires
+    /// for editor-level state changes (<see cref="Current"/> reference replacement,
+    /// <see cref="IsDirty"/> transitions).
+    /// </summary>
     event PropertyChangedEventHandler? CurrentPropertyChanged;
+
     LauncherSettings GetSnapshot();
     LauncherSettings GetSavedSnapshot();
     void ApplySnapshot(LauncherSettings settings);
@@ -22,20 +26,15 @@ public interface ISettingsEditor : INotifyPropertyChanged
 
 public sealed class SettingsEditor : ISettingsEditor
 {
-    private static readonly JsonSerializerOptions CloneOptions = new()
-    {
-        PropertyNameCaseInsensitive = false
-    };
-
     private LauncherSettings current;
     private LauncherSettings snapshot;
     private bool isDirty;
 
     public SettingsEditor()
     {
-        var defaults = CreateDefaults();
+        var defaults = LauncherSettings.CreateDefaults();
         current = defaults;
-        snapshot = DeepClone(defaults);
+        snapshot = defaults.DeepClone();
         current.PropertyChanged += OnCurrentPropertyChanged;
     }
 
@@ -46,16 +45,16 @@ public sealed class SettingsEditor : ISettingsEditor
     public event PropertyChangedEventHandler? PropertyChanged;
     public event PropertyChangedEventHandler? CurrentPropertyChanged;
 
-    public LauncherSettings GetSnapshot() => DeepClone(current);
+    public LauncherSettings GetSnapshot() => current.DeepClone();
 
-    public LauncherSettings GetSavedSnapshot() => DeepClone(snapshot);
+    public LauncherSettings GetSavedSnapshot() => snapshot.DeepClone();
 
     public void ApplySnapshot(LauncherSettings settings)
     {
         current.PropertyChanged -= OnCurrentPropertyChanged;
-        current = DeepClone(settings);
+        current = settings.DeepClone();
         current.PropertyChanged += OnCurrentPropertyChanged;
-        snapshot = DeepClone(settings);
+        snapshot = settings.DeepClone();
         isDirty = false;
         OnPropertyChanged(nameof(Current));
         OnPropertyChanged(nameof(IsDirty));
@@ -74,31 +73,11 @@ public sealed class SettingsEditor : ISettingsEditor
         }
 
         current.PropertyChanged -= OnCurrentPropertyChanged;
-        current = DeepClone(snapshot);
+        current = snapshot.DeepClone();
         current.PropertyChanged += OnCurrentPropertyChanged;
         isDirty = false;
         OnPropertyChanged(nameof(Current));
         OnPropertyChanged(nameof(IsDirty));
-    }
-
-    private static LauncherSettings CreateDefaults()
-    {
-        var settings = new LauncherSettings();
-
-        if (BuildInfo.LauncherVersion.Contains('-'))
-        {
-            settings.UpdateChannel = UpdateChannels.Beta;
-        }
-
-        return settings;
-    }
-
-    private static LauncherSettings DeepClone(LauncherSettings source)
-    {
-        // Via JSON round-trip — simple, correct, and fast enough for a settings object
-        // (~20 fields, <1KB). Avoids hand-maintained copy constructors.
-        var json = JsonSerializer.Serialize(source, CloneOptions);
-        return JsonSerializer.Deserialize<LauncherSettings>(json, CloneOptions) ?? new LauncherSettings();
     }
 
     private void OnPropertyChanged(string propertyName)

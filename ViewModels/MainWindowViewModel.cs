@@ -150,7 +150,7 @@ public partial class MainWindowViewModel : ViewModelBase, IDisposable
             Shell.SetRefreshError(exception);
             Operations.SetIdlePanels(currentSnapshot);
             toastService.ShowError(localizer.F("networkWithMessage", exception.Message));
-            await TryLogErrorAsync("Launcher core refresh failed.", exception);
+            await diagnostics.ErrorAsync("Launcher core refresh failed.", exception, CancellationToken.None);
         }
         finally
         {
@@ -250,13 +250,21 @@ public partial class MainWindowViewModel : ViewModelBase, IDisposable
 
     private async Task SwitchSourceThenOpenPanelAsync()
     {
-        var settings = await settingsService.ReadAsync();
-        settings.PatchUrlGroup = PatchUrlGroups.Cafe;
-        await settingsService.SaveAsync(settings);
-        Settings.Editor.Current.PatchUrlGroup = PatchUrlGroups.Cafe;
+        try
+        {
+            var settings = await settingsService.ReadAsync();
+            settings.PatchUrlGroup = PatchUrlGroups.Cafe;
+            await settingsService.SaveAsync(settings);
+            Settings.Editor.Current.PatchUrlGroup = PatchUrlGroups.Cafe;
 
-        await HandleSettingsSavedAsync();
-        await ResourcePanel.OpenPanelDirectly();
+            await HandleSettingsSavedAsync();
+            await ResourcePanel.OpenPanelDirectly();
+        }
+        catch (Exception exception)
+        {
+            toastService.ShowError(localizer.F("resourcePanelLoadFailed", exception.Message));
+            await diagnostics.ErrorAsync("Resource panel source switch failed.", exception);
+        }
     }
 
     private async Task HandleSettingsSavedAsync()
@@ -332,18 +340,6 @@ public partial class MainWindowViewModel : ViewModelBase, IDisposable
         RemoteContent.ApplyLanguage();
         Dialogs.ApplyLanguage();
         Operations.ApplyLanguage();
-    }
-
-    private async Task TryLogErrorAsync(string title, Exception exception)
-    {
-        try
-        {
-            await diagnostics.ErrorAsync(title, exception);
-        }
-        catch
-        {
-            Shell.OperationNote = localizer.F("diagnosticsWriteFailed", Shell.OperationNote);
-        }
     }
 
     public void Dispose()

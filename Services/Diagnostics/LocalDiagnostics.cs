@@ -11,36 +11,55 @@ public sealed class LocalDiagnostics
 {
     private readonly string logPath;
 
-    public LocalDiagnostics()
+    private static string GetLogPath()
     {
         var folder = Path.Combine(
             Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData),
             LauncherConstants.ProductName);
-        logPath = Path.Combine(folder, "diagnostics.log");
+        return Path.Combine(folder, "diagnostics.log");
+    }
+
+    public LocalDiagnostics()
+    {
+        logPath = GetLogPath();
     }
 
     public async Task ErrorAsync(string title, Exception exception, CancellationToken cancellationToken = default)
     {
-        var builder = new StringBuilder();
-        builder.AppendLine(DateTimeOffset.Now.ToString("O"));
-        builder.AppendLine(title);
-        builder.AppendLine(exception.ToString());
-        builder.AppendLine();
+        try
+        {
+            var builder = new StringBuilder();
+            builder.AppendLine(DateTimeOffset.Now.ToString("O"));
+            builder.AppendLine(title);
+            builder.AppendLine(exception.ToString());
+            builder.AppendLine();
 
-        Directory.CreateDirectory(Path.GetDirectoryName(logPath)!);
-        await File.AppendAllTextAsync(logPath, builder.ToString(), Encoding.UTF8, cancellationToken);
+            Directory.CreateDirectory(Path.GetDirectoryName(logPath)!);
+            await File.AppendAllTextAsync(logPath, builder.ToString(), Encoding.UTF8, cancellationToken).ConfigureAwait(false);
+        }
+        catch
+        {
+            // Best-effort — diagnostic logging must never crash the app
+        }
     }
 
     public async Task MessageAsync(string title, string message, CancellationToken cancellationToken = default)
     {
-        var builder = new StringBuilder();
-        builder.AppendLine(DateTimeOffset.Now.ToString("O"));
-        builder.AppendLine(title);
-        builder.AppendLine(message);
-        builder.AppendLine();
+        try
+        {
+            var builder = new StringBuilder();
+            builder.AppendLine(DateTimeOffset.Now.ToString("O"));
+            builder.AppendLine(title);
+            builder.AppendLine(message);
+            builder.AppendLine();
 
-        Directory.CreateDirectory(Path.GetDirectoryName(logPath)!);
-        await File.AppendAllTextAsync(logPath, builder.ToString(), Encoding.UTF8, cancellationToken);
+            Directory.CreateDirectory(Path.GetDirectoryName(logPath)!);
+            await File.AppendAllTextAsync(logPath, builder.ToString(), Encoding.UTF8, cancellationToken).ConfigureAwait(false);
+        }
+        catch
+        {
+            // Best-effort — diagnostic logging must never crash the app
+        }
     }
 
     /// <summary>
@@ -50,10 +69,7 @@ public sealed class LocalDiagnostics
     {
         try
         {
-            var folder = Path.Combine(
-                Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData),
-                LauncherConstants.ProductName);
-            var logPath = Path.Combine(folder, "diagnostics.log");
+            var logPath = GetLogPath();
             var builder = new StringBuilder();
             builder.AppendLine(DateTimeOffset.Now.ToString("O"));
             builder.AppendLine(title);

@@ -6,6 +6,13 @@ using Cafe.Launcher.Avalonia.Models;
 
 namespace Cafe.Launcher.Avalonia.Services;
 
+/// <summary>
+/// Computes integrity hashes matching the official launcher's wire protocol.
+/// Uses MD5 for local tamper-evidence checks (manifest/config Vc fields), not
+/// for cryptographic authentication. An attacker who can modify the manifest
+/// can also recompute its Vc, so these hashes guard only against accidental
+/// corruption. This matches the original launcher's check-summing scheme.
+/// </summary>
 public static class OfficialHashService
 {
     public static string GetManifestInfoHash(string name, string version, string basis)
