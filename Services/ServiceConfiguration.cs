@@ -21,7 +21,6 @@ public static class ServiceConfiguration
         services.AddSingleton<LocalDiagnostics>();
         services.AddSingleton<AuthorizationHeaderFactory>();
         services.AddSingleton<PatchUrlGroupService>();
-        services.AddSingleton<SettingsNormalizer>();
         services.AddSingleton<RemoteManifestService>();
         services.AddSingleton<IFileDownloadService, FileDownloadService>();
         services.AddSingleton<ResourcePanelService>();
@@ -49,7 +48,19 @@ public static class ServiceConfiguration
         services.AddSingleton<LauncherApiClient>();
         services.AddSingleton<ResourcePanelApiClient>();
         services.AddSingleton<ImageCacheService>();
-        services.AddSingleton<GameDownloadService>();
+        services.AddSingleton(sp => new GameDownloadService(
+            new GameDownloadService.Dependencies(
+                sp.GetRequiredService<LauncherApiClient>(),
+                sp.GetRequiredService<RemoteManifestService>(),
+                sp.GetRequiredService<IFileDownloadService>(),
+                sp.GetRequiredService<LocalInstallationStateStore>(),
+                sp.GetRequiredService<LauncherSettingsService>(),
+                sp.GetRequiredService<ProxySettingsService>(),
+                sp.GetRequiredService<Crc64Service>(),
+                sp.GetRequiredService<DiskSpaceService>(),
+                sp.GetRequiredService<LocalDiagnostics>(),
+                sp.GetRequiredService<LocalizationService>(),
+                sp.GetRequiredService<GameInstallationPath>())));
 
         // ── Migration services ────────────────────────────────────────────
         services.AddSingleton<OldLauncherDetectionService>();

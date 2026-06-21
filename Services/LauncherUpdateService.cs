@@ -18,10 +18,7 @@ namespace Cafe.Launcher.Avalonia.Services;
 /// </summary>
 public sealed partial class LauncherUpdateService : IDisposable
 {
-    private static readonly JsonSerializerOptions JsonOptions = new()
-    {
-        PropertyNameCaseInsensitive = false
-    };
+    private static readonly JsonSerializerOptions JsonOptions = JsonDefaults.Strict;
     private readonly IHttpClientLeaseSource leaseSource;
     private readonly string currentVersion;
     private readonly LocalDiagnostics? diagnostics;
@@ -109,7 +106,7 @@ public sealed partial class LauncherUpdateService : IDisposable
                     await diagnostics.MessageAsync(
                         "Launcher update check failed — invalid release file data",
                         $"version: {targetRelease.Version}{Environment.NewLine}{validationError}",
-                        CancellationToken.None);
+                        CancellationToken.None).ConfigureAwait(false);
                 }
 
                 return LauncherUpdateCheckResult.Failed();

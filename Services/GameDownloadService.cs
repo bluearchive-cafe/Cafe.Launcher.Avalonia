@@ -17,6 +17,20 @@ namespace Cafe.Launcher.Avalonia.Services;
 
 public sealed class GameDownloadService : IDisposable
 {
+    /// <summary>Parameter object grouping all constructor dependencies.</summary>
+    public sealed record Dependencies(
+        LauncherApiClient ApiClient,
+        RemoteManifestService RemoteManifestService,
+        IFileDownloadService FileDownloadService,
+        LocalInstallationStateStore LocalInstallationStateStore,
+        LauncherSettingsService SettingsService,
+        ProxySettingsService ProxySettingsService,
+        Crc64Service Crc64Service,
+        DiskSpaceService DiskSpaceService,
+        LocalDiagnostics Diagnostics,
+        LocalizationService Localizer,
+        GameInstallationPath InstallationPath);
+
     // Retry domain order: 0 = backup CDN, 1 = primary CDN (matching the original Electron launcher).
     // The first 4 attempts use the primary CDN, then 3 on backup, then 3 on primary.
     private const int MaxParallelDownloads = 10;
@@ -34,10 +48,7 @@ public sealed class GameDownloadService : IDisposable
     private readonly LocalDiagnostics diagnostics;
     private readonly LocalizationService localizer;
     private readonly string downloadStateFilePath;
-    private static readonly JsonSerializerOptions DownloadStateJsonOptions = new()
-    {
-        WriteIndented = true
-    };
+    private static readonly JsonSerializerOptions DownloadStateJsonOptions = JsonDefaults.Indented;
     private readonly object activeDownloadLock = new();
     private readonly object pauseLock = new();
     private ActiveDownloadOperation? activeDownload;
@@ -45,34 +56,29 @@ public sealed class GameDownloadService : IDisposable
     private TaskCompletionSource? pauseTcs;
     private bool disposed;
 
-    public GameDownloadService(
-        LauncherApiClient apiClient,
-        RemoteManifestService remoteManifestService,
-        IFileDownloadService fileDownloadService,
-        LocalInstallationStateStore localInstallationStateStore,
-        LauncherSettingsService settingsService,
-        ProxySettingsService proxySettingsService,
-        Crc64Service crc64Service,
-        DiskSpaceService diskSpaceService,
-        LocalDiagnostics diagnostics,
-        LocalizationService localizer,
-        GameInstallationPath installationPath)
+    public GameDownloadService(Dependencies deps)
     {
-        this.apiClient = apiClient;
-        this.remoteManifestService = remoteManifestService;
-        this.fileDownloadService = fileDownloadService;
-        this.localInstallationStateStore = localInstallationStateStore;
-        this.installationPath = installationPath;
-        this.settingsService = settingsService;
-        this.proxySettingsService = proxySettingsService;
-        this.crc64Service = crc64Service;
-        this.diskSpaceService = diskSpaceService;
-        this.diagnostics = diagnostics;
-        this.localizer = localizer;
+        apiClient = deps.ApiClient;
+        remoteManifestService = deps.RemoteManifestService;
+        fileDownloadService = deps.FileDownloadService;
+        localInstallationStateStore = deps.LocalInstallationStateStore;
+        installationPath = deps.InstallationPath;
+        settingsService = deps.SettingsService;
+        proxySettingsService = deps.ProxySettingsService;
+        crc64Service = deps.Crc64Service;
+        diskSpaceService = deps.DiskSpaceService;
+        diagnostics = deps.Diagnostics;
+        localizer = deps.Localizer;
         downloadStateFilePath = Path.Combine(
             Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData),
             LauncherConstants.ProductName,
             "download_state.json");
+    }
+
+    internal GameDownloadService(Dependencies deps, string downloadStateFilePath)
+        : this(deps)
+    {
+        this.downloadStateFilePath = downloadStateFilePath;
     }
 
     public async Task<GameOperationResult> InstallOrUpdateAsync(
@@ -502,34 +508,6 @@ public sealed class GameDownloadService : IDisposable
             pauseTcs = null;
             pauseTask = Task.CompletedTask;
         }
-    }
-
-    internal GameDownloadService(
-        LauncherApiClient apiClient,
-        RemoteManifestService remoteManifestService,
-        IFileDownloadService fileDownloadService,
-        LocalInstallationStateStore localInstallationStateStore,
-        LauncherSettingsService settingsService,
-        ProxySettingsService proxySettingsService,
-        Crc64Service crc64Service,
-        DiskSpaceService diskSpaceService,
-        LocalDiagnostics diagnostics,
-        LocalizationService localizer,
-        string downloadStateFilePath,
-        GameInstallationPath installationPath)
-    {
-        this.apiClient = apiClient;
-        this.remoteManifestService = remoteManifestService;
-        this.fileDownloadService = fileDownloadService;
-        this.localInstallationStateStore = localInstallationStateStore;
-        this.installationPath = installationPath;
-        this.settingsService = settingsService;
-        this.proxySettingsService = proxySettingsService;
-        this.crc64Service = crc64Service;
-        this.diskSpaceService = diskSpaceService;
-        this.diagnostics = diagnostics;
-        this.localizer = localizer;
-        this.downloadStateFilePath = downloadStateFilePath;
     }
 
     private async Task<DownloadTaskState?> LoadDownloadStateAsync(CancellationToken cancellationToken = default)

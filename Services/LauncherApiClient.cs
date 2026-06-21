@@ -15,10 +15,7 @@ public sealed class LauncherApiClient : IDisposable
     private readonly IHttpClientLeaseSource leaseSource;
     private readonly AuthorizationHeaderFactory authorizationHeaderFactory;
     private readonly PatchUrlGroupService patchUrlGroupService;
-    private readonly JsonSerializerOptions jsonOptions = new()
-    {
-        PropertyNameCaseInsensitive = false
-    };
+    private readonly JsonSerializerOptions jsonOptions = JsonDefaults.Strict;
 
     /// <summary>Production constructor — accepts dependencies from DI.</summary>
     public LauncherApiClient(

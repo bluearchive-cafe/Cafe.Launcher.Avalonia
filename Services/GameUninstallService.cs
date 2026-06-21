@@ -83,7 +83,7 @@ public sealed class GameUninstallService
             await diagnostics.MessageAsync(
                 "Game uninstall completed.",
                 $"path: {gamePath}{Environment.NewLine}files: {files.Count}",
-                cancellationToken);
+                cancellationToken).ConfigureAwait(false);
 
             return new GameOperationResult
             {

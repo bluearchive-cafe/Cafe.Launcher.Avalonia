@@ -349,18 +349,19 @@ public sealed class GameDownloadServiceTests
         var remoteManifestService = new RemoteManifestService(apiClient);
         var fileDownloadService = new FileDownloadService(new Crc64Service(), diagnostics);
         return new GameDownloadService(
-            apiClient,
-            remoteManifestService,
-            fileDownloadService,
-            localInstallationStateStore,
-            settingsService,
-            new ProxySettingsService(),
-            new Crc64Service(),
-            new DiskSpaceService(),
-            diagnostics,
-            new LocalizationService(),
-            downloadStateFilePath,
-            new GameInstallationPath());
+            new GameDownloadService.Dependencies(
+                apiClient,
+                remoteManifestService,
+                fileDownloadService,
+                localInstallationStateStore,
+                settingsService,
+                new ProxySettingsService(),
+                new Crc64Service(),
+                new DiskSpaceService(),
+                diagnostics,
+                new LocalizationService(),
+                new GameInstallationPath()),
+            downloadStateFilePath);
     }
 
     private static LauncherStatusSnapshot CreateSnapshot(string gamePath)
