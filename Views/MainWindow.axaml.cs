@@ -127,76 +127,8 @@ public partial class MainWindow : Window
             return;
         }
 
-        // Close dialogs in priority order — most-nested first.
-        // Migration wizard (first-launch)
-        if (vm.MigrationWizard.IsVisible)
+        if (vm.TryHandleEscape())
         {
-            vm.MigrationWizard.SkipMigrationCommand.Execute(null);
-            e.Handled = true;
-            return;
-        }
-
-        // Confirmation dialogs
-        if (vm.Dialogs.IsDownloadRunningCloseConfirmVisible)
-        {
-            vm.Dialogs.CancelCloseWhileDownloadingCommand.Execute(null);
-            e.Handled = true;
-            return;
-        }
-
-        if (vm.Dialogs.IsStopConfirmVisible)
-        {
-            vm.Dialogs.CancelStopCommand.Execute(null);
-            e.Handled = true;
-            return;
-        }
-
-        if (vm.Settings.IsUnsavedChangesVisible)
-        {
-            vm.WindowChrome.KeepEditingSettingsCommand.Execute(null);
-            e.Handled = true;
-            return;
-        }
-
-        if (vm.Dialogs.IsRepairConfirmVisible)
-        {
-            vm.Dialogs.CancelRepairCommand.Execute(null);
-            e.Handled = true;
-            return;
-        }
-
-        if (vm.Dialogs.IsResourcePanelSourceConfirmVisible)
-        {
-            vm.Dialogs.CancelResourcePanelSourceSwitchCommand.Execute(null);
-            e.Handled = true;
-            return;
-        }
-
-        if (vm.Dialogs.IsUninstallConfirmVisible)
-        {
-            vm.Dialogs.CancelUninstallCommand.Execute(null);
-            e.Handled = true;
-            return;
-        }
-
-        if (vm.Dialogs.IsNoticeDialogVisible)
-        {
-            vm.Dialogs.DismissNoticeCommand.Execute(null);
-            e.Handled = true;
-            return;
-        }
-
-        // Overlay panels
-        if (vm.WindowChrome.IsSettingsVisible)
-        {
-            vm.WindowChrome.ShowSettingsCommand.Execute(null);
-            e.Handled = true;
-            return;
-        }
-
-        if (vm.ResourcePanel.IsResourcePanelVisible)
-        {
-            vm.ResourcePanel.CloseResourcePanelCommand.Execute(null);
             e.Handled = true;
         }
     }

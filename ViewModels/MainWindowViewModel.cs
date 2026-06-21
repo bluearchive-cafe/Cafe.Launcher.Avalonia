@@ -342,6 +342,81 @@ public partial class MainWindowViewModel : ViewModelBase, IDisposable
         Operations.ApplyLanguage();
     }
 
+    // ── Window interaction (Escape key resolution) ──────────────────────
+
+    /// <summary>
+    /// Build the current UI state snapshot for Escape key resolution.
+    /// </summary>
+    public WindowInteractionState BuildEscapeState() => new()
+    {
+        IsMigrationVisible = MigrationWizard.IsVisible,
+        IsDownloadRunningCloseConfirmVisible = Dialogs.IsDownloadRunningCloseConfirmVisible,
+        IsStopConfirmVisible = Dialogs.IsStopConfirmVisible,
+        IsUnsavedChangesVisible = Settings.IsUnsavedChangesVisible,
+        IsRepairConfirmVisible = Dialogs.IsRepairConfirmVisible,
+        IsResourcePanelSourceConfirmVisible = Dialogs.IsResourcePanelSourceConfirmVisible,
+        IsUninstallConfirmVisible = Dialogs.IsUninstallConfirmVisible,
+        IsNoticeDialogVisible = Dialogs.IsNoticeDialogVisible,
+        IsSettingsVisible = WindowChrome.IsSettingsVisible,
+        IsResourcePanelVisible = ResourcePanel.IsResourcePanelVisible,
+    };
+
+    /// <summary>
+    /// Execute the command corresponding to the given Escape action.
+    /// </summary>
+    private void ExecuteEscapeAction(WindowEscapeAction action)
+    {
+        switch (action)
+        {
+            case WindowEscapeAction.SkipMigration:
+                MigrationWizard.SkipMigrationCommand.Execute(null);
+                break;
+            case WindowEscapeAction.CancelCloseWhileDownloading:
+                Dialogs.CancelCloseWhileDownloadingCommand.Execute(null);
+                break;
+            case WindowEscapeAction.CancelStop:
+                Dialogs.CancelStopCommand.Execute(null);
+                break;
+            case WindowEscapeAction.KeepEditingSettings:
+                WindowChrome.KeepEditingSettingsCommand.Execute(null);
+                break;
+            case WindowEscapeAction.CancelRepair:
+                Dialogs.CancelRepairCommand.Execute(null);
+                break;
+            case WindowEscapeAction.CancelResourcePanelSourceSwitch:
+                Dialogs.CancelResourcePanelSourceSwitchCommand.Execute(null);
+                break;
+            case WindowEscapeAction.CancelUninstall:
+                Dialogs.CancelUninstallCommand.Execute(null);
+                break;
+            case WindowEscapeAction.DismissNotice:
+                Dialogs.DismissNoticeCommand.Execute(null);
+                break;
+            case WindowEscapeAction.ToggleSettings:
+                WindowChrome.ShowSettingsCommand.Execute(null);
+                break;
+            case WindowEscapeAction.CloseResourcePanel:
+                ResourcePanel.CloseResourcePanelCommand.Execute(null);
+                break;
+        }
+    }
+
+    /// <summary>
+    /// Attempt to handle the Escape key press.
+    /// Returns true if a visible overlay/dialog was dismissed, false if no action was needed.
+    /// </summary>
+    public bool TryHandleEscape()
+    {
+        var action = WindowEscapeStrategy.ResolveEscape(BuildEscapeState());
+        if (action is null)
+        {
+            return false;
+        }
+
+        ExecuteEscapeAction(action.Value);
+        return true;
+    }
+
     public void Dispose()
     {
         if (disposed)
