@@ -274,7 +274,7 @@
                             <Border Classes="path-field">
                                 <Grid ColumnDefinitions="Auto,*,Auto" ColumnSpacing="{StaticResource LauncherSpacingSm}">
                                     <TextBlock Text="{Binding Shell.I18n.Path}" Classes="value" VerticalAlignment="Center"/>
-                                    <TextBlock Grid.Column="1" Text="{Binding Shell.PathText}" Classes="caption" VerticalAlignment="Center" TextTrimming="CharacterEllipsis"/>
+                                    <TextBlock Grid.Column="1" Text="{Binding Settings.Editor.Current.GamePath}" Classes="caption" VerticalAlignment="Center" TextTrimming="CharacterEllipsis"/>
                                     <Button Grid.Column="2" Classes="icon-link" Command="{Binding Settings.ChooseGamePathCommand}" VerticalAlignment="Center"
                                             IsEnabled="{Binding Shell.IsBusy, Converter={x:Static BoolConverters.Not}}">
                                         <StackPanel Classes="button-content">
