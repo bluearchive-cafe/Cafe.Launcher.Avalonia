@@ -21,6 +21,7 @@ public partial class SettingsViewModel : ViewModelBase, IDisposable
     private readonly DialogsViewModel dialogs;
     private readonly ISettingsEditor editor;
     private readonly UnifiedLogger unifiedLogger;
+    private readonly GameInstallationPath gameInstallationPath;
     private CancellationTokenSource? appearancePreviewCts;
     private Task appearancePreviewTask = Task.CompletedTask;
     private bool disposed;
@@ -50,6 +51,7 @@ public partial class SettingsViewModel : ViewModelBase, IDisposable
         LauncherUpdateService launcherUpdateService,
         DialogsViewModel dialogs,
         UnifiedLogger unifiedLogger,
+        GameInstallationPath gameInstallationPath,
         SettingsOptionsViewModel options,
         SettingsAppearanceViewModel appearance)
     {
@@ -59,6 +61,7 @@ public partial class SettingsViewModel : ViewModelBase, IDisposable
         this.launcherUpdateService = launcherUpdateService;
         this.dialogs = dialogs;
         this.unifiedLogger = unifiedLogger;
+        this.gameInstallationPath = gameInstallationPath;
         editor = appearance.Editor;
         Options = options;
         Appearance = appearance;
@@ -232,7 +235,52 @@ public partial class SettingsViewModel : ViewModelBase, IDisposable
             return;
         }
 
+        // Normalise: append YostarGames/BlueArchive_JP subdirectory if missing,
+        // matching the original Yostar launcher behaviour.
+        editor.Current.GamePath = gameInstallationPath.NormalizeGamePath(pickedPath);
+    }
+
+    [RelayCommand]
+    private async Task SelectInstalledGameAsync()
+    {
+        if (PickGameFolderAsync is null)
+        {
+            toastService.ShowWarning(localizer.T("folderPickerUnavailable"));
+            return;
+        }
+
+        // Default the folder picker to the original launcher's game path
+        // so users can quickly locate an existing installation.
+        var startPath = OriginalLauncherMigrationService.TryGetGamePath()
+            ?? Environment.GetFolderPath(Environment.SpecialFolder.UserProfile);
+
+        var pickedPath = await PickGameFolderAsync(startPath);
+        if (string.IsNullOrWhiteSpace(pickedPath))
+        {
+            return;
+        }
+
+        // Normalise: append YostarGames/BlueArchive_JP if missing.
+        pickedPath = gameInstallationPath.NormalizeGamePath(pickedPath);
+
         editor.Current.GamePath = pickedPath;
+
+        // Persist immediately and trigger a full state refresh so the game
+        // is detected without requiring the user to open settings and save.
+        try
+        {
+            var settings = editor.GetSnapshot();
+            await settingsService.SaveAsync(settings);
+            editor.ApplySnapshot(settings);
+            toastService.ShowSuccess(localizer.T("gamePathUpdated"));
+
+            if (SettingsSaved is not null)
+                await SettingsSaved.Invoke();
+        }
+        catch (Exception exception)
+        {
+            toastService.ShowError(localizer.F("gamePathUpdateFailed", exception.Message));
+        }
     }
 
     [RelayCommand]

@@ -443,6 +443,8 @@ public sealed class MainWindowViewModelTests : IDisposable
     {
         var pickedPath = Path.Combine(tempDir, "installed-game");
         Directory.CreateDirectory(pickedPath);
+        // GameInstallationPath.NormalizeGamePath appends YostarGames/BlueArchive_JP
+        var expectedPath = Path.Combine(pickedPath, "YostarGames", "BlueArchive_JP");
         var settingsPath = Path.Combine(tempDir, Guid.NewGuid().ToString("N"), "settings.json");
         var settingsService = new LauncherSettingsService(settingsPath);
         await settingsService.SaveAsync(new LauncherSettings());
@@ -458,14 +460,14 @@ public sealed class MainWindowViewModelTests : IDisposable
         await viewModel.Settings.ChooseGamePathCommand.ExecuteAsync(null);
 
         Assert.True(viewModel.Settings.IsSettingsDirty);
-        Assert.Equal(pickedPath, viewModel.Settings.Editor.Current.GamePath);
+        Assert.Equal(expectedPath, viewModel.Settings.Editor.Current.GamePath);
         Assert.Equal("", (await settingsService.ReadAsync()).GamePath);
 
         await SaveSettingsAsync(viewModel);
 
         Assert.False(viewModel.Settings.IsSettingsDirty);
         Assert.True(viewModel.WindowChrome.IsSettingsVisible);
-        Assert.Equal(pickedPath, (await settingsService.ReadAsync()).GamePath);
+        Assert.Equal(expectedPath, (await settingsService.ReadAsync()).GamePath);
     }
 
     [Fact]
@@ -679,6 +681,7 @@ public sealed class MainWindowViewModelTests : IDisposable
             new LauncherUpdateService(new LauncherUpdateHandler()),
             dialogs,
             testLogger,
+            new GameInstallationPath(),
             new SettingsOptionsViewModel(localizer, new DiskSpaceService()),
             appearance);
         ToastNotification? errorToast = null;
@@ -1056,6 +1059,7 @@ public sealed class MainWindowViewModelTests : IDisposable
             settingsService, localizationService, toastService,
             launcherUpdateService, dialogsViewModel,
             settingsLogger,
+            new GameInstallationPath(),
             settingsOptions, settingsAppearance);
         var resourcePanelService = new ResourcePanelService(
             resourcePanelUidService, resourcePanelApiClient, diagnostics);
