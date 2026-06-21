@@ -8,7 +8,7 @@
              x:DataType="vm:MainWindowViewModel">
     <Grid IsVisible="{Binding WindowChrome.IsSettingsVisible}" Classes="settings-overlay">
         <Border MaxWidth="760"
-                MaxHeight="650"
+                MaxHeight="592"
                 Classes="dialog overlay-dialog">
             <Grid RowDefinitions="Auto,*,Auto">
                 <Grid ColumnDefinitions="*,Auto" Classes="dialog-header">
@@ -582,7 +582,7 @@
 
                 <Border Grid.Row="2" Classes="dialog-footer">
                     <Grid ColumnDefinitions="*,*" ColumnSpacing="{StaticResource LauncherSpacingSm}">
-                        <Button Classes="flat-action"
+                        <Button Classes="flat-action settings-footer-action"
                                 Command="{Binding WindowChrome.ShowSettingsCommand}"
                                 IsEnabled="{Binding Settings.IsSaving, Converter={x:Static BoolConverters.Not}}"
                                 HorizontalAlignment="Stretch">
@@ -592,12 +592,12 @@
                             </StackPanel>
                         </Button>
                         <Button Grid.Column="1"
-                                Classes="primary-action"
+                                Classes="primary-action settings-footer-action"
                                 Command="{Binding Settings.SaveSettingsCommand}"
                                 IsEnabled="{Binding Settings.CanSaveSettings}"
                                 HorizontalAlignment="Stretch">
                             <StackPanel Classes="button-content" HorizontalAlignment="Center">
-                                <materialIcons:MaterialIcon Kind="ContentSave" Width="{StaticResource LauncherIconMd}" Height="{StaticResource LauncherIconMd}" Foreground="{DynamicResource LauncherOnAccentBrush}"/>
+                                <materialIcons:MaterialIcon Kind="ContentSave" Width="{StaticResource LauncherIconMd}" Height="{StaticResource LauncherIconMd}"/>
                                 <TextBlock Text="{Binding Shell.I18n.Save}" VerticalAlignment="Center"/>
                             </StackPanel>
                         </Button>

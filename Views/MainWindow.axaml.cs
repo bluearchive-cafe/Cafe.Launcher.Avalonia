@@ -227,9 +227,11 @@ public partial class MainWindow : Window
             }
             else
             {
+                // No tray available — minimize to taskbar instead of calling Hide(),
+                // which would make the window unrecoverable without a tray icon.
                 WindowState = WindowState.Minimized;
-                Hide();
             }
+
             return;
         }
 

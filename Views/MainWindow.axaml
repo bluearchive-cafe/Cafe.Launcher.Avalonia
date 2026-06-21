@@ -28,7 +28,7 @@
         <StyleInclude Source="avares://Cafe.Launcher.Avalonia/Views/MainWindow.Styles.axaml"/>
     </Window.Styles>
 
-    <Grid>
+    <Grid KeyboardNavigation.TabNavigation="Cycle">
         <Rectangle Fill="{Binding Background.BackgroundFillBrush}"/>
         <Image Source="{Binding Background.BackgroundImageSource}" Stretch="{Binding Background.BackgroundStretch}"/>
 

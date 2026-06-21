@@ -223,6 +223,7 @@ public sealed partial class UiStyleContractTests
     public void SettingsPanel_UsesTransactionalSaveAndCancelActions()
     {
         var settingsOverlay = File.ReadAllText(ProjectFile("Views/MainWindowSettingsOverlay.axaml"));
+        var styles = File.ReadAllText(ProjectFile("Views/MainWindow.Styles.axaml"));
         var mainWindowCodeBehind = File.ReadAllText(ProjectFile("Views/MainWindow.axaml.cs"));
 
         Assert.Contains(
@@ -235,6 +236,24 @@ public sealed partial class UiStyleContractTests
             StringComparison.Ordinal);
         Assert.Contains(
             "IsEnabled=\"{Binding Settings.CanSaveSettings}\"",
+            settingsOverlay,
+            StringComparison.Ordinal);
+        Assert.Equal(
+            2,
+            Regex.Count(
+                settingsOverlay,
+                "settings-footer-action",
+                RegexOptions.CultureInvariant));
+        Assert.Contains(
+            "Button.settings-footer-action",
+            styles,
+            StringComparison.Ordinal);
+        Assert.Contains(
+            "Height\" Value=\"{StaticResource LauncherControlHeightBottom}",
+            styles,
+            StringComparison.Ordinal);
+        Assert.DoesNotContain(
+            "Kind=\"ContentSave\" Width=\"{StaticResource LauncherIconMd}\" Height=\"{StaticResource LauncherIconMd}\" Foreground=",
             settingsOverlay,
             StringComparison.Ordinal);
         Assert.Contains(
