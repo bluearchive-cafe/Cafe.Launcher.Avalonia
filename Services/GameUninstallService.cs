@@ -34,6 +34,11 @@ public sealed class GameUninstallService
         Action<GameOperationProgress> progress,
         CancellationToken cancellationToken = default)
     {
+        if (snapshot.RuntimeState != LauncherRuntimeState.Ready)
+        {
+            return Failed(localizer.T("operationUnavailableForCurrentState"), "invalid-state");
+        }
+
         var gamePath = installationPath.NormalizeGamePath(snapshot.LocalGame.GamePath ?? "");
         try
         {

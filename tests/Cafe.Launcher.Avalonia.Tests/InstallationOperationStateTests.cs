@@ -111,6 +111,25 @@ public sealed class InstallationOperationStateTests : IDisposable
         Assert.Equal("invalid-state", result.ErrorType);
     }
 
+    [Fact]
+    public async Task UninstallAsync_WhenRuntimeStateIsNotReady_ReturnsInvalidState()
+    {
+        var service = new GameUninstallService(
+            new LocalInstallationStateStore(),
+            new LocalDiagnostics(),
+            new LocalizationService());
+
+        var result = await service.UninstallAsync(
+            new LauncherStatusSnapshot
+            {
+                RuntimeState = LauncherRuntimeState.RemoteUnavailable
+            },
+            _ => { });
+
+        Assert.False(result.Success);
+        Assert.Equal("invalid-state", result.ErrorType);
+    }
+
     public void Dispose()
     {
         if (Directory.Exists(tempDir))
