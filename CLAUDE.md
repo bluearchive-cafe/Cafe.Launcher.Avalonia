@@ -89,7 +89,7 @@ One `MainWindow` (1300×754, non-resizable with MinWidth 1024/MinHeight 640, bor
 2. **App.axaml.cs** — On framework init: builds DI container via `ServiceConfiguration.AddLauncherServices()`, resolves `MainWindowViewModel`, creates `MainWindow`, wires `ClickCodeService`, `SystemTrayService`. Starts a background thread listening for `EventWaitHandle` signals to restore window from tray.
 3. **App.axaml** — Light/Dark `ThemeDictionaries` with custom `Launcher*` brushes, FluentTheme + MaterialIconStyles.
 
-**Composition root**: `ServiceConfiguration.AddLauncherServices()` is the DI configuration — it registers all services with `Microsoft.Extensions.DependencyInjection`. The container is built in `App.axaml.cs` via `ServiceCollection.BuildServiceProvider()`. Most services are registered as `AddSingleton`; `ISettingsEditor`/`SettingsEditor` is registered as `AddTransient` (each resolution provides a fresh snapshot). Every ViewModel is registered as `AddTransient` (fresh instance per resolution), except `DialogsViewModel` which is `AddSingleton`. Thread-safe disposal order for IDisposable services is defined by reverse registration order (see disposal order section below).
+**Composition root**: `ServiceConfiguration.AddLauncherServices()` is the DI configuration — it registers all services with `Microsoft.Extensions.DependencyInjection`. The container is built in `App.axaml.cs` via `ServiceCollection.BuildServiceProvider()`. Most services are registered as `AddSingleton`; `ISettingsEditor`/`SettingsEditor` is registered as `AddSingleton` (the single-window app has one editor state). Every ViewModel is registered as `AddTransient` (fresh instance per resolution), except `DialogsViewModel` which is `AddSingleton`. Thread-safe disposal order for IDisposable services is defined by reverse registration order (see disposal order section below).
 
 **ViewModel coordination**: Sub-ViewModels communicate with `MainWindowViewModel` through two mechanisms:
 - **Delegates** — `MainWindowViewModel.ConfigureViewModel()` sets `Func<>` / `Func<Task>` delegates on children (e.g. `SettingsViewModel.PickGameFolderAsync`, `SettingsViewModel.PreviewAppearanceAsync`). These let children call back into parent capabilities such as native pickers and appearance previews.
@@ -114,7 +114,7 @@ One `MainWindow` (1300×754, non-resizable with MinWidth 1024/MinHeight 640, bor
 | `LauncherCoreService` | Orchestrates API + local state into `LauncherStatusSnapshot`. Exposed as `ILauncherCoreService` in the DI container. |
 | `LauncherSettingsService` | Reads/writes `settings.json` at `%LOCALAPPDATA%\Cafe Launcher\` and handles exact legacy JSON field names |
 | `SettingsNormalizer` | Pure settings-value normalization: enum guards, legacy launch-check values, colors, palette, indexes, paths, and UID trimming |
-| `SettingsEditor` | Snapshot/dirty/discard editing of `LauncherSettings` via `ISettingsEditor`, with separate current and saved snapshots for transactional settings behavior. Uses JSON round-trip deep cloning. Registered as **Transient** (fresh snapshot per resolution). |
+| `SettingsEditor` | Snapshot/dirty/discard editing of `LauncherSettings` via `ISettingsEditor`, with separate current and saved snapshots for transactional settings behavior. Uses JSON round-trip deep cloning. Registered as **Singleton** (single-window app, shared editor state). |
 | `LocalGameStateService` | Reads local `game-launcher-config.json` + `manifest.json`, normalizes paths to `YostarGames\BlueArchive_JP` |
 | `GameDownloadService` | Install/update/repair: manifest diff → parallel CDN download (10 concurrent, `.tmp` files, `Range` resume, CRC64 verify, rename on success). Supports download speed throttling, async pause/resume via `TaskCompletionSource`. Implements `IDisposable` — thread-safe CTS management via `activeDownloadLock`. |
 | `GameLaunchService` | Manifest validation + process launch |
@@ -135,17 +135,16 @@ One `MainWindow` (1300×754, non-resizable with MinWidth 1024/MinHeight 640, bor
 | `ManifestValidationService` | Validates local game files against manifest |
 | `LauncherUpdateService` | Checks for launcher self-updates via the server proxy endpoint (`ApiConfig.LauncherApiBaseUrl`), supporting stable/beta channels and returning every validated release file in API order. Every file must have a non-empty name, an absolute HTTP/HTTPS URL, and a positive size. |
 | `ExternalLinkService` | Opens external URLs in the default browser |
-| `DownloadStateService` | Serializes/resumes download state to `download_state.json` |
 | `Crc64Service` | CRC64 hash computation for downloaded file verification |
 | `OfficialHashService` | Official launcher hash algorithm for file verification |
 | `DiskSpaceService` | Checks available disk space before download/install |
 | `ProcessService` | Checks if game processes are running via `Process.GetProcessesByName` |
-| `VersionComparer` | Semantic version comparison: returns -1/0/1 for old/equal/new |
+| `VersionComparer` | Static utility — semantic version comparison: returns -1/0/1 for old/equal/new. Not DI-registered; used inline. |
 | `ClickCodeService` | Saves install attribution code (`clickCode`) on first launch |
 | `OldLauncherDetectionService` | Detects old Electron launcher install + reads its localStorage (LevelDB) for migration |
 | `LevelDbReader` | Best-effort byte-level scanner for Chrome localStorage LevelDB files (.ldb/.log) |
 | `GamePathValidator` | Validates file operations stay within the game directory (path traversal rejection) |
-| `ServiceConfiguration` | DI container — registers all services and ViewModels via `AddLauncherServices()`. Services mostly singleton; `ISettingsEditor` transient; ViewModels mostly transient; `DialogsViewModel` singleton. |
+| `ServiceConfiguration` | DI container — registers all services and ViewModels via `AddLauncherServices()`. Services mostly singleton; `ISettingsEditor` singleton; ViewModels mostly transient; `DialogsViewModel` singleton. |
 
 **HttpClient lifecycle**: `HttpClientFactory` owns a single shared `SocketsHttpHandler` (pooled, 15-min connection lifetime). Two patterns:
 
@@ -173,7 +172,7 @@ On first launch, `MainWindowViewModel` uses `OldLauncherDetectionService` to che
 | `settings.json` | Launcher settings (see Settings reference below) |
 | `diagnostics.log` | Runtime diagnostics appended by `LocalDiagnostics` |
 | `crash.log` | Global unhandled exception log (written by `Program.cs`) |
-| `download_state.json` | Serializable download resume state (`DownloadStateService`) |
+| `download_state.json` | Serializable download resume state (managed by `GameDownloadService`) |
 | `shown_notices.json` | Tracked shown notice IDs (`NoticeStateService`) |
 | `clickCode` | Install attribution code (`ClickCodeService`) |
 

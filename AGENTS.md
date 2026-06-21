@@ -18,11 +18,11 @@ dotnet test                                                    # Run all tests
 dotnet test --filter "FullyQualifiedName~VersionComparerTests" # Run a single test class
 ```
 
-Available test classes include `VersionComparerTests`, `LauncherApiClientTests`, `LauncherConstantsTests`, `LauncherSettingsServiceTests`, `LocalizationServiceTests`, `MainWindowViewModelTests`, `DialogsViewModelTests`, `GameDownloadServiceTests`, `PatchUrlGroupServiceTests`, and `LauncherUpdateServiceTests`.
+Available test classes include `VersionComparerTests`, `LauncherApiClientTests`, `LauncherConstantsTests`, `LauncherSettingsServiceTests`, `SettingsNormalizerTests`, `SettingsEditorTests`, `LocalizationServiceTests`, `MainWindowViewModelTests`, `DialogsViewModelTests`, `GameDownloadServiceTests`, `PatchUrlGroupServiceTests`, `BestHttpCookieLibraryServiceTests`, `ResourcePanelUidServiceTests`, `ExternalLinkServiceTests`, `ResourcePanelApiClientTests`, `MigrationWizardViewModelTests`, `LevelDbReaderTests`, `OldLauncherDetectionServiceTests`, `LauncherUpdateServiceTests`, `HttpClientFactoryTests`, `ToastServiceTests`, `LocalGameStateServiceTests`, and `UiStyleContractTests`.
 
 CI is GitHub Actions on `windows-latest`, .NET 10.0.x:
-- **build.yml** (push/PR to `main`): restore, Debug build, Release build, self-contained publish, upload artifact.
-- **release.yml** (push of `v*` tag): restore, Release build, publish, ZIP archive, prefer the maintained `CHANGELOG_RELEASE.md` and fall back to `scripts/New-ReleaseChangelog.ps1` when it is absent, then create matching GitHub Releases in both the source repository and the distribution repository (`bluearchive-cafe/Cafe.Launcher.Avalonia_Release`, defined as `GitHubReleaseRepositorySlug` in constants). The local release script follows the same maintained-file-first policy. The distribution repository uses the `RELEASE_REPOSITORY_TOKEN` Actions secret. Pre-release if tag contains `-`.
+- **build.yml** (push/PR to `main`): restore, Debug build, test, Release build, self-contained publish, upload artifact.
+- **release.yml** (push of `v*` tag): test, Release build, publish, ZIP archive, generate the grouped changelog through `scripts/New-ReleaseChangelog.ps1`, then create matching GitHub Releases in both the source repository and the distribution repository (`bluearchive-cafe/Cafe.Launcher.Avalonia_Release`, defined as `GitHubReleaseRepositorySlug` in constants). The local release script uses the same changelog generator. The distribution repository uses the `RELEASE_REPOSITORY_TOKEN` Actions secret. Pre-release if tag contains `-`.
 
 **Telemetry must be off during local builds** (already set in `build.ps1`):
 - `DOTNET_CLI_TELEMETRY_OPTOUT=1`
@@ -50,7 +50,7 @@ One `MainWindow` (1300×754, non-resizable, borderless with custom chrome). The 
 2. **App.axaml.cs** — On framework init: builds DI container via `ServiceConfiguration.AddLauncherServices()`, resolves `MainWindowViewModel`, creates `MainWindow`, wires `ClickCodeService`, `SystemTrayService`. Starts a background thread listening for `EventWaitHandle` signals to restore window from tray.
 3. **App.axaml** — Light/Dark `ThemeDictionaries` with custom `Launcher*` brushes, FluentTheme + MaterialIconStyles.
 
-**Composition root**: `ServiceConfiguration.AddLauncherServices()` is the DI configuration — it registers all services with `Microsoft.Extensions.DependencyInjection`. The container is built in `App.axaml.cs` via `ServiceCollection.BuildServiceProvider()`. Services are registered as singletons by default, except `ISettingsEditor`/`SettingsEditor`, which is transient. ViewModels are transient except `DialogsViewModel`, which is singleton so settings and the main window share the same dialog state. Thread-safe disposal order for IDisposable services is defined by reverse registration order.
+**Composition root**: `ServiceConfiguration.AddLauncherServices()` is the DI configuration — it registers all services with `Microsoft.Extensions.DependencyInjection`. The container is built in `App.axaml.cs` via `ServiceCollection.BuildServiceProvider()`. All services are registered as `AddSingleton`; ViewModels are mostly `AddTransient` (fresh instance per resolution), except `DialogsViewModel` which is `AddSingleton`. Thread-safe disposal order for IDisposable services is defined by reverse registration order (see disposal order section below).
 
 **View code-behind** (`MainWindow.axaml.cs`): handles native folder-picker dialog (via `StorageProvider`), window drag-to-move (borderless chrome), and close-behavior routing (minimize-to-tray vs exit). The ViewModel receives `PickGameFolderAsync`, `MinimizeWindow`, and `CloseWindow` delegates via `ConfigureViewModel()`.
 
@@ -81,7 +81,21 @@ One `MainWindow` (1300×754, non-resizable, borderless with custom chrome). The 
 | `PatchUrlGroupService` | URL rewriting between Official and Cafe CDN hosts for manifest + CDN config URLs |
 | `NoticeStateService` | Tracks which notice IDs have been shown (persisted to `shown_notices.json`) |
 | `LauncherUpdateService` | Checks stable and beta launcher releases through the server proxy endpoint and returns every validated release file in API order |
-| `Crc64Service`, `OfficialHashService`, `ProxySettingsService`, `DiskSpaceService`, `ProcessService`, `VersionComparer`, `ClickCodeService`, `DownloadStateService`, `ImageCacheService`, `ExternalLinkService`, `ManifestValidationService` | Supporting services |
+| `Crc64Service` | CRC64 hash computation for downloaded file verification |
+| `OfficialHashService` | Official launcher hash algorithm for local file integrity checks |
+| `ProxySettingsService` | Creates proxy-aware `SocketsHttpHandler` instances for `HttpClientFactory` |
+| `DiskSpaceService` | Checks available disk space before download/install |
+| `ProcessService` | Checks if game processes are running via `Process.GetProcessesByName` |
+| `VersionComparer` | Static utility — semantic version comparison: returns -1/0/1 for old/equal/new |
+| `ClickCodeService` | Saves install attribution code (`clickCode`) on first launch |
+| `ImageCacheService` | Caches downloaded images (banners, avatars). Implements `IDisposable`. |
+| `ExternalLinkService` | Static utility — opens external URLs in the default browser (http/https/mailto only) |
+| `ManifestValidationService` | Validates local game files against manifest |
+| `ResourcePanelApiClient` | HTTP client for resource panel data. Implements `IDisposable`. |
+| `ResourcePanelUidService` | Manages resource panel UID state |
+| `BestHttpCookieLibraryService` | Cookie handling for HTTP requests |
+| `GamePathValidator` | Static utility — validates file operations stay within the game directory |
+| `ThemeColorExtractionService` | Extracts dominant colors from wallpaper images for UI theming |
 
 ### Key models (`Models/`)
 
