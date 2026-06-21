@@ -106,7 +106,13 @@ public partial class GameOperationsViewModel : ViewModelBase
 
     public void ApplySnapshot(LauncherStatusSnapshot snapshot)
     {
-        InstallButtonText = snapshot.IsInstalled ? localizer.T("updateGame") : localizer.T("installGame");
+        InstallButtonText = snapshot.RuntimeState switch
+        {
+            LauncherRuntimeState.NotInstalled => localizer.T("installGame"),
+            LauncherRuntimeState.Corrupted => localizer.T("repair"),
+            LauncherRuntimeState.IoFailure or LauncherRuntimeState.RemoteUnavailable => localizer.T("refresh"),
+            _ => localizer.T("updateGame")
+        };
         SetIdlePanels(snapshot);
     }
 
@@ -114,7 +120,7 @@ public partial class GameOperationsViewModel : ViewModelBase
     {
         IsProgressPanelVisible = false;
         CanPauseOperation = false;
-        IsControlPanelVisible = snapshot?.IsInstalled == true && snapshot.BelowLowestVersion == false;
+        IsControlPanelVisible = snapshot?.RuntimeState == LauncherRuntimeState.Ready;
         IsInstallPanelVisible = !IsControlPanelVisible;
     }
 
@@ -174,6 +180,22 @@ public partial class GameOperationsViewModel : ViewModelBase
             if (snapshot is null)
             {
                 shell.OperationNote = localizer.T("stateNotLoaded");
+                return;
+            }
+
+            if (snapshot.RuntimeState == LauncherRuntimeState.Corrupted)
+            {
+                dialogs.ShowRepairConfirm(localizer.T("repairWarning"));
+                return;
+            }
+
+            if (snapshot.RuntimeState is LauncherRuntimeState.IoFailure or LauncherRuntimeState.RemoteUnavailable)
+            {
+                if (RequestRefreshAsync is not null)
+                {
+                    await RequestRefreshAsync.Invoke();
+                }
+
                 return;
             }
 

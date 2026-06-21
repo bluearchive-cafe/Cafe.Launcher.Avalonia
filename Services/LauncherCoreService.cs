@@ -2,6 +2,7 @@ using System;
 using System.Threading;
 using System.Threading.Tasks;
 using Cafe.Launcher.Avalonia.Models;
+using Cafe.Launcher.Avalonia.Services.Diagnostics;
 
 namespace Cafe.Launcher.Avalonia.Services;
 
@@ -16,34 +17,52 @@ public sealed class LauncherCoreService : ILauncherCoreService
     private readonly LocalInstallationStateStore localInstallationStateStore;
     private readonly GameInstallationPath installationPath;
     private readonly LauncherSettingsService settingsService;
+    private readonly LocalDiagnostics diagnostics;
 
     public LauncherCoreService(
         LauncherApiClient apiClient,
         LocalInstallationStateStore localInstallationStateStore,
         GameInstallationPath installationPath,
-        LauncherSettingsService settingsService)
+        LauncherSettingsService settingsService,
+        LocalDiagnostics diagnostics)
     {
         this.apiClient = apiClient;
         this.localInstallationStateStore = localInstallationStateStore;
         this.installationPath = installationPath;
         this.settingsService = settingsService;
+        this.diagnostics = diagnostics;
     }
 
     public async Task<LauncherStatusSnapshot> LoadAsync(CancellationToken cancellationToken = default)
     {
         var settings = await settingsService.ReadAsync(cancellationToken).ConfigureAwait(false);
-        var gameConfigTask = apiClient.GetGameConfigAsync(settings.ProxyMode, cancellationToken);
-        var baseConfigTask = apiClient.GetBaseConfigAsync(settings.ProxyMode, cancellationToken);
-        var cdnConfigTask = apiClient.GetCdnConfigAsync(
-            settings.PatchUrlGroup,
-            settings.ProxyMode,
+        var gameConfigTask = ReadRemoteAsync(
+            "game-config",
+            () => apiClient.GetGameConfigAsync(settings.ProxyMode, cancellationToken),
             cancellationToken);
-        var operationsResourceTask = ReadOptionalAsync(
-            () => apiClient.GetOperationsResourceAsync(settings.ProxyMode, cancellationToken));
-        var socialMediaResourceTask = ReadOptionalAsync(
-            () => apiClient.GetSocialMediaResourceAsync(settings.ProxyMode, cancellationToken));
-        var installationConfigTask = ReadOptionalAsync(
-            () => apiClient.GetInstallationConfigAsync(settings.ProxyMode, cancellationToken));
+        var baseConfigTask = ReadRemoteAsync(
+            "base-config",
+            () => apiClient.GetBaseConfigAsync(settings.ProxyMode, cancellationToken),
+            cancellationToken);
+        var cdnConfigTask = ReadRemoteAsync(
+            "cdn-config",
+            () => apiClient.GetCdnConfigAsync(
+                settings.PatchUrlGroup,
+                settings.ProxyMode,
+                cancellationToken),
+            cancellationToken);
+        var operationsResourceTask = ReadRemoteAsync(
+            "operations-resource",
+            () => apiClient.GetOperationsResourceAsync(settings.ProxyMode, cancellationToken),
+            cancellationToken);
+        var socialMediaResourceTask = ReadRemoteAsync(
+            "social-media-resource",
+            () => apiClient.GetSocialMediaResourceAsync(settings.ProxyMode, cancellationToken),
+            cancellationToken);
+        var installationConfigTask = ReadRemoteAsync(
+            "installation-config",
+            () => apiClient.GetInstallationConfigAsync(settings.ProxyMode, cancellationToken),
+            cancellationToken);
         var configuredPath = string.IsNullOrWhiteSpace(settings.GamePath)
             ? installationPath.GetDefaultGamePath()
             : settings.GamePath;
@@ -51,15 +70,18 @@ public sealed class LauncherCoreService : ILauncherCoreService
             installationPath.NormalizeGamePath(configuredPath),
             cancellationToken);
 
-        await Task.WhenAll(gameConfigTask, baseConfigTask, cdnConfigTask, localGameTask).ConfigureAwait(false);
-        await Task.WhenAll(operationsResourceTask, socialMediaResourceTask, installationConfigTask).ConfigureAwait(false);
+        await Task.WhenAll(
+            gameConfigTask,
+            baseConfigTask,
+            cdnConfigTask,
+            operationsResourceTask,
+            socialMediaResourceTask,
+            installationConfigTask,
+            localGameTask).ConfigureAwait(false);
 
         var localGame = await localGameTask.ConfigureAwait(false);
         var gameConfig = await gameConfigTask.ConfigureAwait(false);
-        var localVersion = localGame.GameConfig?.Version;
-        var isInstalled = !string.IsNullOrWhiteSpace(localVersion);
-        var needsUpdate = isInstalled && VersionComparer.Compare(localVersion, gameConfig.GameLatestVersion) == -1;
-        var belowLowestVersion = isInstalled && VersionComparer.Compare(localVersion, gameConfig.GameLowestVersion) == -1;
+        var runtimeState = ResolveRuntimeState(localGame, gameConfig);
 
         return new LauncherStatusSnapshot
         {
@@ -74,46 +96,68 @@ public sealed class LauncherCoreService : ILauncherCoreService
                 SocialMediaResource = await socialMediaResourceTask,
                 InstallationConfig = await installationConfigTask
             },
-            IsInstalled = isInstalled,
-            NeedsUpdate = needsUpdate,
-            BelowLowestVersion = belowLowestVersion,
-            UserStatus = ResolveUserStatus(isInstalled, needsUpdate, belowLowestVersion),
+            RuntimeState = runtimeState,
             CheckedAt = System.DateTimeOffset.Now
         };
     }
 
-    private static string ResolveUserStatus(bool isInstalled, bool needsUpdate, bool belowLowestVersion)
+    internal static LauncherRuntimeState ResolveRuntimeState(
+        LocalInstallationState localGame,
+        GameConfigResponse? gameConfig)
     {
-        if (!isInstalled)
+        if (localGame.Kind != LocalInstallationStateKind.Valid)
         {
-            return "Game is not installed.";
+            return localGame.Kind switch
+            {
+                LocalInstallationStateKind.NotInstalled => LauncherRuntimeState.NotInstalled,
+                LocalInstallationStateKind.Corrupted => LauncherRuntimeState.Corrupted,
+                LocalInstallationStateKind.IoFailure => LauncherRuntimeState.IoFailure,
+                _ => LauncherRuntimeState.IoFailure
+            };
         }
 
-        if (belowLowestVersion)
+        if (gameConfig is null
+            || string.IsNullOrWhiteSpace(gameConfig.GameLatestVersion)
+            || string.IsNullOrWhiteSpace(gameConfig.GameLowestVersion))
         {
-            return "Game version is below the required lowest version.";
+            return LauncherRuntimeState.RemoteUnavailable;
         }
 
-        if (needsUpdate)
+        var localVersion = localGame.GameConfig?.Version;
+        if (string.IsNullOrWhiteSpace(localVersion))
         {
-            return "Game update is available.";
+            return LauncherRuntimeState.Corrupted;
         }
 
-        return "Game is ready.";
+        if (VersionComparer.Compare(localVersion, gameConfig.GameLowestVersion) == -1)
+        {
+            return LauncherRuntimeState.BelowLowestVersion;
+        }
+
+        return VersionComparer.Compare(localVersion, gameConfig.GameLatestVersion) == -1
+            ? LauncherRuntimeState.UpdateAvailable
+            : LauncherRuntimeState.Ready;
     }
 
-    private static async Task<T?> ReadOptionalAsync<T>(System.Func<Task<T>> read)
+    private async Task<T?> ReadRemoteAsync<T>(
+        string operation,
+        System.Func<Task<T>> read,
+        CancellationToken cancellationToken = default)
     {
         try
         {
             return await read().ConfigureAwait(false);
         }
-        catch (OperationCanceledException)
+        catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
         {
             throw;
         }
-        catch
+        catch (Exception exception)
         {
+            await diagnostics.ErrorAsync(
+                $"Launcher remote state read failed: {operation}.",
+                exception,
+                CancellationToken.None).ConfigureAwait(false);
             return default;
         }
     }

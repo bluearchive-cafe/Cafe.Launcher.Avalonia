@@ -173,11 +173,14 @@ public partial class ShellViewModel : ViewModelBase
         CurrentViewTitle = status;
         StatusText = status;
         PathText = localGame.GamePath;
-        VersionText = snapshot.IsInstalled
+        VersionText = snapshot.RuntimeState != LauncherRuntimeState.NotInstalled
             ? localizer.F("versionInstalled", localConfig?.Version, gameConfig?.GameLatestVersion ?? localizer.T("unknown"))
             : localizer.F("versionLatest", gameConfig?.GameLatestVersion ?? localizer.T("unknown"));
-        NetworkText = localizer.T("statusNetworkLoaded");
-        NetworkStatusValueText = localizer.T("statusNetworkLoaded");
+        var networkStatus = snapshot.RuntimeState == LauncherRuntimeState.RemoteUnavailable
+            ? localizer.T("remoteStateUnavailable")
+            : localizer.T("statusNetworkLoaded");
+        NetworkText = networkStatus;
+        NetworkStatusValueText = networkStatus;
         var launchCheckValue = settings.Options.ResolveLaunchCheckDisplayName(snapshot.Settings.LaunchCheckMode);
         SetLaunchCheckResult(launchCheckValue);
         var executableName = string.IsNullOrWhiteSpace(localConfig?.Name)
@@ -203,42 +206,32 @@ public partial class ShellViewModel : ViewModelBase
 
     private string ResolveStatusText(LauncherStatusSnapshot snapshot)
     {
-        if (!snapshot.IsInstalled)
+        return snapshot.RuntimeState switch
         {
-            return localizer.T("notInstalled");
-        }
-
-        if (snapshot.BelowLowestVersion)
-        {
-            return localizer.T("updateRequired");
-        }
-
-        if (snapshot.NeedsUpdate)
-        {
-            return localizer.T("updateAvailable");
-        }
-
-        return localizer.T("ready");
+            LauncherRuntimeState.NotInstalled => localizer.T("notInstalled"),
+            LauncherRuntimeState.Corrupted => localizer.T("corruptedInstallationState"),
+            LauncherRuntimeState.IoFailure => localizer.T("installationStateReadFailed"),
+            LauncherRuntimeState.RemoteUnavailable => localizer.T("remoteStateUnavailable"),
+            LauncherRuntimeState.BelowLowestVersion => localizer.T("updateRequired"),
+            LauncherRuntimeState.UpdateAvailable => localizer.T("updateAvailable"),
+            LauncherRuntimeState.Ready => localizer.T("ready"),
+            _ => localizer.T("installationStateReadFailed")
+        };
     }
 
     internal static string ResolveStatusIconKind(LauncherStatusSnapshot snapshot)
     {
-        if (!snapshot.IsInstalled)
+        return snapshot.RuntimeState switch
         {
-            return "HelpCircleOutline";
-        }
-
-        if (snapshot.BelowLowestVersion)
-        {
-            return "Alert";
-        }
-
-        if (snapshot.NeedsUpdate)
-        {
-            return "AlertCircle";
-        }
-
-        return "CheckAll";
+            LauncherRuntimeState.NotInstalled => "HelpCircleOutline",
+            LauncherRuntimeState.Corrupted or
+                LauncherRuntimeState.IoFailure or
+                LauncherRuntimeState.RemoteUnavailable or
+                LauncherRuntimeState.BelowLowestVersion => "Alert",
+            LauncherRuntimeState.UpdateAvailable => "AlertCircle",
+            LauncherRuntimeState.Ready => "CheckAll",
+            _ => "Alert"
+        };
     }
 
     private string ResolveOperationNote(
@@ -246,7 +239,8 @@ public partial class ShellViewModel : ViewModelBase
         LocalInstallationState localGame,
         BaseConfigResponse? baseConfig)
     {
-        if (!string.IsNullOrWhiteSpace(localGame.Error))
+        if (snapshot.RuntimeState == LauncherRuntimeState.IoFailure
+            && !string.IsNullOrWhiteSpace(localGame.Error))
         {
             return localizer.F("localGameReadError", localGame.Error);
         }
@@ -256,21 +250,16 @@ public partial class ShellViewModel : ViewModelBase
             return baseConfig.NoticeContent;
         }
 
-        if (!snapshot.IsInstalled)
+        return snapshot.RuntimeState switch
         {
-            return localizer.T("choosePathInstall");
-        }
-
-        if (snapshot.BelowLowestVersion)
-        {
-            return localizer.T("belowLowestVersion");
-        }
-
-        if (snapshot.NeedsUpdate)
-        {
-            return localizer.T("updateAvailableCanStart");
-        }
-
-        return localizer.T("operationTelemetryLocal");
+            LauncherRuntimeState.NotInstalled => localizer.T("choosePathInstall"),
+            LauncherRuntimeState.Corrupted => localizer.T("corruptedInstallationState"),
+            LauncherRuntimeState.IoFailure => localizer.T("installationStateReadFailed"),
+            LauncherRuntimeState.RemoteUnavailable => localizer.T("remoteStateUnavailable"),
+            LauncherRuntimeState.BelowLowestVersion => localizer.T("belowLowestVersion"),
+            LauncherRuntimeState.UpdateAvailable => localizer.T("updateAvailable"),
+            LauncherRuntimeState.Ready => localizer.T("operationTelemetryLocal"),
+            _ => localizer.T("installationStateReadFailed")
+        };
     }
 }

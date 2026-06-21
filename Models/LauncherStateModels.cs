@@ -342,6 +342,17 @@ public sealed class LauncherRemoteState
     public InstallationConfigResponse? InstallationConfig { get; set; }
 }
 
+public enum LauncherRuntimeState
+{
+    NotInstalled,
+    Corrupted,
+    IoFailure,
+    RemoteUnavailable,
+    BelowLowestVersion,
+    UpdateAvailable,
+    Ready
+}
+
 public sealed class LauncherStatusSnapshot
 {
     public LauncherSettings Settings { get; set; } = new();
@@ -350,13 +361,7 @@ public sealed class LauncherStatusSnapshot
 
     public LauncherRemoteState Remote { get; set; } = new();
 
-    public bool IsInstalled { get; set; }
-
-    public bool NeedsUpdate { get; set; }
-
-    public bool BelowLowestVersion { get; set; }
-
-    public string UserStatus { get; set; } = "";
+    public LauncherRuntimeState RuntimeState { get; set; }
 
     public DateTimeOffset CheckedAt { get; set; }
 }

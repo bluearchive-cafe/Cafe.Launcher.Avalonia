@@ -233,21 +233,52 @@ public sealed class MainWindowViewModelTests : IDisposable
         Assert.False(viewModel.RemoteContent.IsLoading);
     }
 
+    [Fact]
+    public async Task InitializeAsync_WhenInstallationStateIsCorrupted_OffersRepairInsteadOfLaunch()
+    {
+        var snapshot = CreateSnapshot();
+        snapshot.RuntimeState = LauncherRuntimeState.Corrupted;
+        var coreService = new CountingCoreService(snapshot);
+        using var viewModel = CreateViewModel(coreService);
+
+        await viewModel.InitializeAsync();
+        await viewModel.Operations.InstallOrUpdateCommand.ExecuteAsync(null);
+
+        Assert.Equal(viewModel.Shell.I18n.Repair, viewModel.Operations.InstallButtonText);
+        Assert.True(viewModel.Operations.IsInstallPanelVisible);
+        Assert.False(viewModel.Operations.IsControlPanelVisible);
+        Assert.True(viewModel.Dialogs.IsRepairConfirmVisible);
+    }
+
+    [Fact]
+    public async Task InstallOrUpdateAsync_WhenRemoteStateIsUnavailable_ReloadsState()
+    {
+        var snapshot = CreateSnapshot();
+        snapshot.RuntimeState = LauncherRuntimeState.RemoteUnavailable;
+        var coreService = new CountingCoreService(snapshot);
+        using var viewModel = CreateViewModel(coreService);
+        await viewModel.InitializeAsync();
+
+        await viewModel.Operations.InstallOrUpdateCommand.ExecuteAsync(null);
+
+        Assert.Equal(2, coreService.LoadCount);
+        Assert.Equal(viewModel.Shell.I18n.Refresh, viewModel.Operations.InstallButtonText);
+    }
+
     [Theory]
-    [InlineData(false, false, false, "HelpCircleOutline")]
-    [InlineData(true, true, true, "Alert")]
-    [InlineData(true, true, false, "AlertCircle")]
-    [InlineData(true, false, false, "CheckAll")]
+    [InlineData(LauncherRuntimeState.NotInstalled, "HelpCircleOutline")]
+    [InlineData(LauncherRuntimeState.Corrupted, "Alert")]
+    [InlineData(LauncherRuntimeState.IoFailure, "Alert")]
+    [InlineData(LauncherRuntimeState.RemoteUnavailable, "Alert")]
+    [InlineData(LauncherRuntimeState.BelowLowestVersion, "Alert")]
+    [InlineData(LauncherRuntimeState.UpdateAvailable, "AlertCircle")]
+    [InlineData(LauncherRuntimeState.Ready, "CheckAll")]
     public void ResolveStatusIconKind_MapsLauncherState(
-        bool isInstalled,
-        bool needsUpdate,
-        bool belowLowestVersion,
+        LauncherRuntimeState runtimeState,
         string expectedIcon)
     {
         var snapshot = CreateSnapshot();
-        snapshot.IsInstalled = isInstalled;
-        snapshot.NeedsUpdate = needsUpdate;
-        snapshot.BelowLowestVersion = belowLowestVersion;
+        snapshot.RuntimeState = runtimeState;
 
         Assert.Equal(expectedIcon, ShellViewModel.ResolveStatusIconKind(snapshot));
     }
@@ -377,7 +408,7 @@ public sealed class MainWindowViewModelTests : IDisposable
     public async Task SaveSettingsAsync_WhenPatchUrlGroupChangesForInstalledGame_ShowsRepairPrompt()
     {
         var snapshot = CreateSnapshot();
-        snapshot.IsInstalled = true;
+        snapshot.RuntimeState = LauncherRuntimeState.Ready;
         snapshot.Settings.PatchUrlGroup = PatchUrlGroups.Official;
         snapshot.LocalGame = new LocalInstallationState
         {
