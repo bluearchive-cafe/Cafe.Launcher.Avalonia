@@ -96,17 +96,18 @@ public sealed class InstallationOperationStateTests : IDisposable
             new AuthorizationHeaderFactory(),
             new PatchUrlGroupService());
         using var service = new GameDownloadService(
-            apiClient,
-            new RemoteManifestService(apiClient),
-            new FileDownloadService(new Crc64Service(), new LocalDiagnostics()),
-            new LocalInstallationStateStore(),
-            new LauncherSettingsService(Path.Combine(tempDir, "settings.json")),
-            new ProxySettingsService(),
-            new Crc64Service(),
-            new DiskSpaceService(),
-            new LocalDiagnostics(),
-            new LocalizationService(),
-            new GameInstallationPath());
+            new GameDownloadService.Dependencies(
+                apiClient,
+                new RemoteManifestService(apiClient),
+                new FileDownloadService(new Crc64Service(), new LocalDiagnostics()),
+                new LocalInstallationStateStore(),
+                new LauncherSettingsService(Path.Combine(tempDir, "settings.json")),
+                new ProxySettingsService(),
+                new Crc64Service(),
+                new DiskSpaceService(),
+                new LocalDiagnostics(),
+                new LocalizationService(),
+                new GameInstallationPath()));
 
         var result = await service.RepairAsync(
             new LauncherStatusSnapshot { RuntimeState = LauncherRuntimeState.NotInstalled },

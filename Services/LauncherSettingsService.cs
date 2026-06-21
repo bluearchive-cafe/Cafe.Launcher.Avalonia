@@ -6,6 +6,7 @@ using System.Text.Json;
 using System.Threading;
 using System.Threading.Tasks;
 using Cafe.Launcher.Avalonia.Constants;
+using Cafe.Launcher.Avalonia.Helpers;
 using Cafe.Launcher.Avalonia.Models;
 using Cafe.Launcher.Avalonia.Services.Diagnostics;
 
@@ -16,22 +17,23 @@ public sealed class LauncherSettingsService
     private readonly SemaphoreSlim writeLock = new(1, 1);
     private readonly string? settingsPath;
     private readonly LocalDiagnostics? diagnostics;
-    private readonly JsonSerializerOptions jsonOptions = new()
-    {
-        WriteIndented = true
-    };
+    private static readonly JsonSerializerOptions jsonOptions = JsonDefaults.Indented;
 
-    public LauncherSettingsService()
+    public LauncherSettingsService() : this(null, null)
     {
     }
 
-    public LauncherSettingsService(LocalDiagnostics diagnostics)
+    public LauncherSettingsService(LocalDiagnostics diagnostics) : this(diagnostics, null)
+    {
+    }
+
+    public LauncherSettingsService(string settingsPath) : this(null, settingsPath)
+    {
+    }
+
+    private LauncherSettingsService(LocalDiagnostics? diagnostics, string? settingsPath)
     {
         this.diagnostics = diagnostics;
-    }
-
-    public LauncherSettingsService(string settingsPath)
-    {
         this.settingsPath = settingsPath;
     }
 

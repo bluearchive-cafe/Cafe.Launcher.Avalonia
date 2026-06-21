@@ -15,11 +15,7 @@ namespace Cafe.Launcher.Avalonia.Services;
 
 public sealed class LocalInstallationStateStore
 {
-    private static readonly JsonSerializerOptions JsonOptions = new()
-    {
-        PropertyNameCaseInsensitive = false,
-        WriteIndented = true
-    };
+    private static readonly JsonSerializerOptions JsonOptions = JsonDefaults.Indented;
 
     private readonly ConcurrentDictionary<string, PathLockEntry> pathLocks =
         new(StringComparer.OrdinalIgnoreCase);

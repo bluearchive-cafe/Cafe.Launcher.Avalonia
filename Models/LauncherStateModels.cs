@@ -5,6 +5,7 @@ using System.ComponentModel;
 using System.Runtime.CompilerServices;
 using System.Text.Json.Serialization;
 using Cafe.Launcher.Avalonia.Constants;
+using Cafe.Launcher.Avalonia.Helpers;
 using CommunityToolkit.Mvvm.ComponentModel;
 
 namespace Cafe.Launcher.Avalonia.Models;
@@ -192,7 +193,7 @@ public sealed partial class LauncherSettings : ObservableObject
 
     /// <summary>
     /// Deep-clones this settings object via JSON round-trip.
-    /// Shared by <see cref="Services.SettingsNormalizer"/> and <see cref="Services.SettingsEditor"/>.
+    /// Shared by <c>LauncherSettingsService.NormalizeSettings</c> and <see cref="Services.SettingsEditor"/>.
     /// </summary>
     public LauncherSettings DeepClone()
     {
@@ -217,10 +218,7 @@ public sealed partial class LauncherSettings : ObservableObject
         return settings;
     }
 
-    private static readonly System.Text.Json.JsonSerializerOptions CloneJsonOptions = new()
-    {
-        PropertyNameCaseInsensitive = false
-    };
+    private static readonly System.Text.Json.JsonSerializerOptions CloneJsonOptions = JsonDefaults.Strict;
 }
 
 /// <summary>

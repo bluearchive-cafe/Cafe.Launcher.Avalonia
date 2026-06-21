@@ -18,10 +18,7 @@ namespace Cafe.Launcher.Avalonia.Services;
 /// </summary>
 public sealed partial class LauncherUpdateService : IDisposable
 {
-    private static readonly JsonSerializerOptions JsonOptions = new()
-    {
-        PropertyNameCaseInsensitive = false
-    };
+    private static readonly JsonSerializerOptions JsonOptions = JsonDefaults.Strict;
     private readonly IHttpClientLeaseSource leaseSource;
     private readonly string currentVersion;
     private readonly LocalDiagnostics? diagnostics;

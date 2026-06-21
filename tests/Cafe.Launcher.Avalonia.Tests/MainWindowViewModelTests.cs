@@ -985,18 +985,19 @@ public sealed class MainWindowViewModelTests : IDisposable
             new ClickCodeService(),
             localizationService);
         var gameDownloadService = new GameDownloadService(
-            apiClient,
-            remoteManifestService,
-            fileDownloadService,
-            localInstallationStateStore,
-            settingsService,
-            new ProxySettingsService(),
-            new Crc64Service(),
-            new DiskSpaceService(),
-            diagnostics,
-            localizationService,
-            Path.Combine(tempDir, Guid.NewGuid().ToString("N"), "download_state.json"),
-            new GameInstallationPath());
+            new GameDownloadService.Dependencies(
+                apiClient,
+                remoteManifestService,
+                fileDownloadService,
+                localInstallationStateStore,
+                settingsService,
+                new ProxySettingsService(),
+                new Crc64Service(),
+                new DiskSpaceService(),
+                diagnostics,
+                localizationService,
+                new GameInstallationPath()),
+            Path.Combine(tempDir, Guid.NewGuid().ToString("N"), "download_state.json"));
         resourcePanelUidService ??= new ResourcePanelUidService(
             new BestHttpCookieLibraryService(),
             settingsService,

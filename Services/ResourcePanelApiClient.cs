@@ -14,10 +14,7 @@ public sealed class ResourcePanelApiClient : IDisposable
 {
     private static readonly string ApiBaseUrl = ApiConfig.ResourcePanelApiBaseUrl;
     private readonly IHttpClientLeaseSource leaseSource;
-    private readonly JsonSerializerOptions jsonOptions = new()
-    {
-        PropertyNameCaseInsensitive = false
-    };
+    private readonly JsonSerializerOptions jsonOptions = JsonDefaults.Strict;
 
     public ResourcePanelApiClient(HttpClientFactory httpClientFactory)
     {

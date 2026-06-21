@@ -13,11 +13,7 @@ public sealed class NoticeStateService
     private readonly string? statePath;
     private readonly SemaphoreSlim writeLock = new(1, 1);
 
-    public NoticeStateService()
-    {
-    }
-
-    public NoticeStateService(string statePath)
+    public NoticeStateService(string? statePath = null)
     {
         this.statePath = statePath;
     }
