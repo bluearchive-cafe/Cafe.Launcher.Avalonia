@@ -79,6 +79,16 @@ public sealed class LauncherCoreServiceTests : IDisposable
         Assert.NotNull(snapshot.Remote.SocialMediaResource);
     }
 
+    [Fact]
+    public async Task LoadAsync_WhenCancellationIsRequested_PropagatesCancellation()
+    {
+        var service = await CreateServiceAsync(new CancellationHandler());
+        using var cancellation = new CancellationTokenSource(TimeSpan.FromMilliseconds(100));
+
+        await Assert.ThrowsAnyAsync<OperationCanceledException>(
+            () => service.LoadAsync(cancellation.Token));
+    }
+
     private async Task<LauncherCoreService> CreateServiceAsync(HttpMessageHandler handler)
     {
         var gamePath = Path.Combine(tempDir, "YostarGames", "BlueArchive_JP");
@@ -164,6 +174,17 @@ public sealed class LauncherCoreServiceTests : IDisposable
                     Encoding.UTF8,
                     "application/json")
             });
+        }
+    }
+
+    private sealed class CancellationHandler : HttpMessageHandler
+    {
+        protected override async Task<HttpResponseMessage> SendAsync(
+            HttpRequestMessage request,
+            CancellationToken cancellationToken)
+        {
+            await Task.Delay(Timeout.InfiniteTimeSpan, cancellationToken);
+            throw new InvalidOperationException("Unreachable.");
         }
     }
 }
