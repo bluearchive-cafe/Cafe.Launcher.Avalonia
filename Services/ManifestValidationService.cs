@@ -13,11 +13,16 @@ namespace Cafe.Launcher.Avalonia.Services;
 public sealed class ManifestValidationService
 {
     private readonly LauncherApiClient apiClient;
+    private readonly RemoteManifestService remoteManifestService;
     private readonly LocalizationService localizer;
 
-    public ManifestValidationService(LauncherApiClient apiClient, LocalizationService localizer)
+    public ManifestValidationService(
+        LauncherApiClient apiClient,
+        RemoteManifestService remoteManifestService,
+        LocalizationService localizer)
     {
         this.apiClient = apiClient;
+        this.remoteManifestService = remoteManifestService;
         this.localizer = localizer;
     }
 
@@ -40,14 +45,27 @@ public sealed class ManifestValidationService
 
         if (launchCheckMode == LaunchCheckModes.RemoteManifest)
         {
-            var remoteManifestResult = await GetRemoteManifestFilesAsync(
-                localGame,
-                patchUrlGroup,
-                proxyMode,
-                cancellationToken).ConfigureAwait(false);
-            return remoteManifestResult.Files is null
-                ? Failed(remoteManifestResult.Message)
-                : ValidateFiles(gamePath, remoteManifestResult.Files);
+            var version = localGame.Manifest?.Version;
+            var basis = localGame.Manifest?.Basis;
+            if (string.IsNullOrWhiteSpace(version) || string.IsNullOrWhiteSpace(basis))
+            {
+                return Failed(localizer.T("localManifestMetadataMissing"));
+            }
+
+            try
+            {
+                var remoteManifest = await remoteManifestService.GetRequiredManifestAsync(
+                    version, basis, patchUrlGroup, proxyMode, cancellationToken).ConfigureAwait(false);
+                return ValidateFiles(gamePath, remoteManifest.File);
+            }
+            catch (InvalidOperationException)
+            {
+                return Failed(localizer.T("remoteManifestUrlEmpty"));
+            }
+            catch (Exception exception) when (exception is HttpRequestException or TaskCanceledException)
+            {
+                return Failed(localizer.F("remoteManifestDownloadFailed", exception.Message));
+            }
         }
 
         if (localGame.Kind == LocalInstallationStateKind.NotInstalled)
@@ -80,53 +98,6 @@ public sealed class ManifestValidationService
                     fileCounts.MissingFileCount,
                     fileCounts.SizeMismatchFileCount)
         };
-    }
-
-    private async Task<(IReadOnlyList<ManifestFile>? Files, string Message)> GetRemoteManifestFilesAsync(
-        LocalInstallationState localGame,
-        string patchUrlGroup,
-        string proxyMode,
-        CancellationToken cancellationToken)
-    {
-        var version = localGame.Manifest?.Version;
-        var basis = localGame.Manifest?.Basis;
-        if (string.IsNullOrWhiteSpace(version) || string.IsNullOrWhiteSpace(basis))
-        {
-            return (null, localizer.T("localManifestMetadataMissing"));
-        }
-
-        ManifestUrlResponse manifestUrl;
-        try
-        {
-            manifestUrl = await apiClient.GetManifestUrlAsync(
-                version,
-                basis,
-                patchUrlGroup,
-                proxyMode,
-                cancellationToken).ConfigureAwait(false);
-        }
-        catch (Exception exception) when (exception is HttpRequestException or TaskCanceledException or InvalidOperationException)
-        {
-            return (null, localizer.F("remoteManifestUrlRequestFailed", exception.Message));
-        }
-
-        if (string.IsNullOrWhiteSpace(manifestUrl.Url))
-        {
-            return (null, localizer.T("remoteManifestUrlEmpty"));
-        }
-
-        try
-        {
-            var remoteManifest = await apiClient.GetRemoteManifestAsync(
-                manifestUrl.Url,
-                proxyMode,
-                cancellationToken).ConfigureAwait(false);
-            return (remoteManifest.File, "");
-        }
-        catch (Exception exception) when (exception is HttpRequestException or TaskCanceledException or JsonException or IOException)
-        {
-            return (null, localizer.F("remoteManifestDownloadFailed", exception.Message));
-        }
     }
 
     private static (int MissingFileCount, int SizeMismatchFileCount) CountDamagedFiles(

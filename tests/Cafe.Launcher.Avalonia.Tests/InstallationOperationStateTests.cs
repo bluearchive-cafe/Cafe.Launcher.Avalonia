@@ -24,7 +24,7 @@ public sealed class InstallationOperationStateTests : IDisposable
             new PatchUrlGroupService());
         var localizer = new LocalizationService();
         var service = new GameLaunchService(
-            new ManifestValidationService(apiClient, localizer),
+            new ManifestValidationService(apiClient, new RemoteManifestService(apiClient), localizer),
             new ClickCodeService(),
             localizer);
 
@@ -97,6 +97,7 @@ public sealed class InstallationOperationStateTests : IDisposable
             new PatchUrlGroupService());
         using var service = new GameDownloadService(
             apiClient,
+            new RemoteManifestService(apiClient),
             new LocalInstallationStateStore(),
             new LauncherSettingsService(Path.Combine(tempDir, "settings.json")),
             new ProxySettingsService(),

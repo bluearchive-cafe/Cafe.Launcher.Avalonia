@@ -24,6 +24,7 @@ public sealed class GameDownloadService : IDisposable
     private const int MaxInstallVerificationRetry = 3;
 
     private readonly LauncherApiClient apiClient;
+    private readonly RemoteManifestService remoteManifestService;
     private readonly LocalInstallationStateStore localInstallationStateStore;
     private readonly GameInstallationPath installationPath;
     private readonly LauncherSettingsService settingsService;
@@ -46,6 +47,7 @@ public sealed class GameDownloadService : IDisposable
 
     public GameDownloadService(
         LauncherApiClient apiClient,
+        RemoteManifestService remoteManifestService,
         LocalInstallationStateStore localInstallationStateStore,
         LauncherSettingsService settingsService,
         ProxySettingsService proxySettingsService,
@@ -56,6 +58,7 @@ public sealed class GameDownloadService : IDisposable
         GameInstallationPath installationPath)
     {
         this.apiClient = apiClient;
+        this.remoteManifestService = remoteManifestService;
         this.localInstallationStateStore = localInstallationStateStore;
         this.installationPath = installationPath;
         this.settingsService = settingsService;
@@ -501,6 +504,7 @@ public sealed class GameDownloadService : IDisposable
 
     internal GameDownloadService(
         LauncherApiClient apiClient,
+        RemoteManifestService remoteManifestService,
         LocalInstallationStateStore localInstallationStateStore,
         LauncherSettingsService settingsService,
         ProxySettingsService proxySettingsService,
@@ -512,6 +516,7 @@ public sealed class GameDownloadService : IDisposable
         GameInstallationPath installationPath)
     {
         this.apiClient = apiClient;
+        this.remoteManifestService = remoteManifestService;
         this.localInstallationStateStore = localInstallationStateStore;
         this.installationPath = installationPath;
         this.settingsService = settingsService;
@@ -564,23 +569,39 @@ public sealed class GameDownloadService : IDisposable
         Action<GameOperationProgress> progress,
         CancellationToken cancellationToken)
     {
-        var currentFiles = await GetCurrentManifestFilesAsync(
-            gamePath,
-            localGame,
-            patchUrlGroup,
-            proxyMode,
-            cancellationToken).ConfigureAwait(false);
-        var latestManifest = await GetLatestManifestAsync(
-            gameConfig,
+        // Current files: best-effort remote fetch matching the local version, fall back to local manifest.
+        var currentFiles = localGame.Manifest?.Files ?? [];
+        if (localGame.Manifest is not null
+            && !string.IsNullOrWhiteSpace(localGame.Manifest.Version)
+            && !string.IsNullOrWhiteSpace(localGame.Manifest.Basis))
+        {
+            var currentManifest = await remoteManifestService.GetOptionalManifestAsync(
+                localGame.Manifest.Version,
+                localGame.Manifest.Basis,
+                patchUrlGroup,
+                proxyMode,
+                cancellationToken).ConfigureAwait(false);
+            if (currentManifest is not null)
+            {
+                currentFiles = currentManifest.File;
+            }
+        }
+
+        // Latest manifest: required for diff computation.
+        var version = gameConfig.GameLatestVersion ?? "";
+        var basis = gameConfig.GameLatestFilePath ?? "";
+        var latestManifest = await remoteManifestService.GetRequiredManifestAsync(
+            version,
+            basis,
             patchUrlGroup,
             proxyMode,
             cancellationToken).ConfigureAwait(false);
         var statDiff = CheckStat(currentFiles, gamePath, value => progress(CreateProgress(GameOperationKinds.Download, "update-check", value)));
-        var expected = GameManifestDiff(currentFiles, latestManifest.Manifest.File);
+        var expected = GameManifestDiff(currentFiles, latestManifest.File);
         var actual = GameResultMerge(expected, new DownloadPlan { NeedDownload = statDiff });
 
-        actual.Source = latestManifest.Manifest.Source ?? "";
-        actual.ManifestFiles = latestManifest.Manifest.File;
+        actual.Source = latestManifest.Source ?? "";
+        actual.ManifestFiles = latestManifest.File;
         return actual;
     }
 
@@ -593,19 +614,22 @@ public sealed class GameDownloadService : IDisposable
         CancellationToken cancellationToken)
     {
         var localGame = await localInstallationStateStore.ReadAsync(gamePath, cancellationToken).ConfigureAwait(false);
-        var latestManifest = await GetLatestManifestAsync(
-            gameConfig,
+        var version = gameConfig.GameLatestVersion ?? "";
+        var basis = gameConfig.GameLatestFilePath ?? "";
+        var latestManifest = await remoteManifestService.GetRequiredManifestAsync(
+            version,
+            basis,
             patchUrlGroup,
             proxyMode,
             cancellationToken).ConfigureAwait(false);
 
         var hashDiff = await CheckHashAsync(
-            latestManifest.Manifest.File,
+            latestManifest.File,
             gamePath,
             value => progress(CreateProgress(GameOperationKinds.Repair, "repair-check", value)),
             cancellationToken).ConfigureAwait(false);
         var needDelete = localGame.Kind == LocalInstallationStateKind.Valid
-            ? GameManifestDiff(localGame.Manifest?.Files ?? [], latestManifest.Manifest.File).NeedDelete
+            ? GameManifestDiff(localGame.Manifest?.Files ?? [], latestManifest.File).NeedDelete
             : [];
         var actual = new DownloadPlan
         {
@@ -613,8 +637,8 @@ public sealed class GameDownloadService : IDisposable
             NeedDelete = needDelete
         };
 
-        actual.Source = latestManifest.Manifest.Source ?? "";
-        actual.ManifestFiles = latestManifest.Manifest.File;
+        actual.Source = latestManifest.Source ?? "";
+        actual.ManifestFiles = latestManifest.File;
 
         // Report repair-confirm with diff summary (matches original's repair-confirm progress = -1)
         progress(new GameOperationProgress
@@ -629,81 +653,6 @@ public sealed class GameDownloadService : IDisposable
         });
 
         return actual;
-    }
-
-    private async Task<IReadOnlyList<ManifestFile>> GetCurrentManifestFilesAsync(
-        string gamePath,
-        LocalInstallationState localGame,
-        string patchUrlGroup,
-        string proxyMode,
-        CancellationToken cancellationToken)
-    {
-        if (localGame.Manifest is null)
-        {
-            return [];
-        }
-
-        if (string.IsNullOrWhiteSpace(localGame.Manifest.Version)
-            || string.IsNullOrWhiteSpace(localGame.Manifest.Basis))
-        {
-            return localGame.Manifest.Files;
-        }
-
-        try
-        {
-            var manifestUrl = await apiClient.GetManifestUrlAsync(
-                localGame.Manifest.Version,
-                localGame.Manifest.Basis,
-                patchUrlGroup,
-                proxyMode,
-                cancellationToken).ConfigureAwait(false);
-            if (string.IsNullOrWhiteSpace(manifestUrl.Url))
-            {
-                return localGame.Manifest.Files;
-            }
-
-            var manifest = await apiClient.GetRemoteManifestAsync(
-                manifestUrl.Url,
-                proxyMode,
-                cancellationToken).ConfigureAwait(false);
-            return manifest.File;
-        }
-        catch (OperationCanceledException)
-        {
-            throw;
-        }
-        catch
-        {
-            return localGame.Manifest.Files;
-        }
-    }
-
-    private async Task<(RemoteManifest Manifest, string Version, string Basis)> GetLatestManifestAsync(
-        GameConfigResponse gameConfig,
-        string patchUrlGroup,
-        string proxyMode,
-        CancellationToken cancellationToken)
-    {
-        var version = gameConfig.GameLatestVersion ?? "";
-        var basis = gameConfig.GameLatestFilePath ?? "";
-        var manifestUrl = await apiClient.GetManifestUrlAsync(
-            version,
-            basis,
-            patchUrlGroup,
-            proxyMode,
-            cancellationToken).ConfigureAwait(false);
-        if (string.IsNullOrWhiteSpace(manifestUrl.Url))
-        {
-            throw new InvalidOperationException("Remote manifest URL is empty.");
-        }
-
-        return (
-            await apiClient.GetRemoteManifestAsync(
-                manifestUrl.Url,
-                proxyMode,
-                cancellationToken).ConfigureAwait(false),
-            version,
-            basis);
     }
 
     private async Task DownloadFilesAsync(

@@ -346,8 +346,10 @@ public sealed class GameDownloadServiceTests
     {
         var localInstallationStateStore = new LocalInstallationStateStore();
         var diagnostics = new LocalDiagnostics();
+        var remoteManifestService = new RemoteManifestService(apiClient);
         return new GameDownloadService(
             apiClient,
+            remoteManifestService,
             localInstallationStateStore,
             settingsService,
             new ProxySettingsService(),
