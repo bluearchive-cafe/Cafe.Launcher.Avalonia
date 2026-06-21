@@ -86,6 +86,30 @@ public sealed class LogViewerDialogViewModelTests : IDisposable
     }
 
     [Fact]
+    public async Task OpenCommand_WhenTextLogIsOpenForWriting_ShowsEntry()
+    {
+        await File.WriteAllLinesAsync(
+            logger.LogFilePath,
+            [
+                "2026-06-22T00:27:57.4750472+08:00 [ERR] Launcher failed",
+                "text failure"
+            ]);
+        using var activeWriter = new FileStream(
+            logger.LogFilePath,
+            FileMode.Open,
+            FileAccess.Write,
+            FileShare.ReadWrite);
+        var viewModel = CreateViewModel();
+
+        await viewModel.OpenCommand.ExecuteAsync(null);
+
+        var entry = Assert.Single(viewModel.FilteredEntries);
+        Assert.Equal("Launcher failed", entry.Title);
+        Assert.Equal("text failure", entry.Details);
+        Assert.Equal(LogEntrySeverity.Error, entry.Severity);
+    }
+
+    [Fact]
     public void SetFilterAll_ResetsSeverityFilter()
     {
         var viewModel = CreateViewModel();
