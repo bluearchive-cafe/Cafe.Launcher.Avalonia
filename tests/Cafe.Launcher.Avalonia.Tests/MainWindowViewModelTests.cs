@@ -1087,6 +1087,7 @@ public sealed class MainWindowViewModelTests : IDisposable
         var windowChromeViewModel = new WindowChromeViewModel(
             settingsViewModel, remoteContentViewModel, dialogsViewModel, gameOperationsViewModel);
 
+        using var testLogger = new UnifiedLogger(tempDir);
         return new MainWindowViewModel(
             coreService,
             settingsService,
@@ -1094,6 +1095,7 @@ public sealed class MainWindowViewModelTests : IDisposable
             toastService,
             diagnostics,
             new OldLauncherDetectionService(),
+            testLogger,
             shellViewModel,
             backgroundViewModel,
             remoteContentViewModel,

@@ -195,9 +195,15 @@ public sealed partial class LogViewerDialogViewModel : ViewModelBase
     private IReadOnlyList<LogEntryDisplay> ReadEntries()
     {
         var logPath = logger.LogFilePath;
-        return File.Exists(logPath)
-            ? ParseEntries(File.ReadLines(logPath, Encoding.UTF8))
-            : [];
+        if (!File.Exists(logPath))
+            return [];
+
+        using var reader = OpenLogReader(logPath);
+        var lines = new List<string>();
+        while (reader.ReadLine() is { } line)
+            lines.Add(line);
+
+        return ParseEntries(lines);
     }
 
     private async Task<IReadOnlyList<LogEntryDisplay>> LoadEntriesAsync(CancellationToken cancellationToken)
@@ -206,9 +212,22 @@ public sealed partial class LogViewerDialogViewModel : ViewModelBase
         if (!File.Exists(logPath))
             return [];
 
-        var lines = await File.ReadAllLinesAsync(logPath, Encoding.UTF8, cancellationToken)
-            .ConfigureAwait(false);
+        using var reader = OpenLogReader(logPath);
+        var lines = new List<string>();
+        while (await reader.ReadLineAsync(cancellationToken).ConfigureAwait(false) is { } line)
+            lines.Add(line);
+
         return ParseEntries(lines);
+    }
+
+    private static StreamReader OpenLogReader(string logPath)
+    {
+        var stream = new FileStream(
+            logPath,
+            FileMode.Open,
+            FileAccess.Read,
+            FileShare.ReadWrite | FileShare.Delete);
+        return new StreamReader(stream, Encoding.UTF8, detectEncodingFromByteOrderMarks: true);
     }
 
     private static readonly Regex EntryLineRegex = new(
