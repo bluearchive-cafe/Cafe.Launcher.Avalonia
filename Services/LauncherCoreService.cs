@@ -13,16 +13,19 @@ public interface ILauncherCoreService
 public sealed class LauncherCoreService : ILauncherCoreService
 {
     private readonly LauncherApiClient apiClient;
-    private readonly LocalGameStateService localGameStateService;
+    private readonly LocalInstallationStateStore localInstallationStateStore;
+    private readonly GameInstallationPath installationPath;
     private readonly LauncherSettingsService settingsService;
 
     public LauncherCoreService(
         LauncherApiClient apiClient,
-        LocalGameStateService localGameStateService,
+        LocalInstallationStateStore localInstallationStateStore,
+        GameInstallationPath installationPath,
         LauncherSettingsService settingsService)
     {
         this.apiClient = apiClient;
-        this.localGameStateService = localGameStateService;
+        this.localInstallationStateStore = localInstallationStateStore;
+        this.installationPath = installationPath;
         this.settingsService = settingsService;
     }
 
@@ -41,7 +44,12 @@ public sealed class LauncherCoreService : ILauncherCoreService
             () => apiClient.GetSocialMediaResourceAsync(settings.ProxyMode, cancellationToken));
         var installationConfigTask = ReadOptionalAsync(
             () => apiClient.GetInstallationConfigAsync(settings.ProxyMode, cancellationToken));
-        var localGameTask = localGameStateService.ReadAsync(settings.GamePath, cancellationToken);
+        var configuredPath = string.IsNullOrWhiteSpace(settings.GamePath)
+            ? installationPath.GetDefaultGamePath()
+            : settings.GamePath;
+        var localGameTask = localInstallationStateStore.ReadAsync(
+            installationPath.NormalizeGamePath(configuredPath),
+            cancellationToken);
 
         await Task.WhenAll(gameConfigTask, baseConfigTask, cdnConfigTask, localGameTask).ConfigureAwait(false);
         await Task.WhenAll(operationsResourceTask, socialMediaResourceTask, installationConfigTask).ConfigureAwait(false);

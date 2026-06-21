@@ -243,7 +243,7 @@ public partial class ShellViewModel : ViewModelBase
 
     private string ResolveOperationNote(
         LauncherStatusSnapshot snapshot,
-        LocalGameState localGame,
+        LocalInstallationState localGame,
         BaseConfigResponse? baseConfig)
     {
         if (!string.IsNullOrWhiteSpace(localGame.Error))

@@ -379,10 +379,15 @@ public sealed class MainWindowViewModelTests : IDisposable
         var snapshot = CreateSnapshot();
         snapshot.IsInstalled = true;
         snapshot.Settings.PatchUrlGroup = PatchUrlGroups.Official;
-        snapshot.LocalGame.GameConfig = new GameLauncherConfig
+        snapshot.LocalGame = new LocalInstallationState
         {
-            Name = "BlueArchive",
-            Version = "1.0.0"
+            Kind = LocalInstallationStateKind.Valid,
+            GamePath = snapshot.LocalGame.GamePath,
+            GameConfig = new GameLauncherConfig
+            {
+                Name = "BlueArchive",
+                Version = "1.0.0"
+            }
         };
         var settingsPath = Path.Combine(tempDir, Guid.NewGuid().ToString("N"), "settings.json");
         var settingsService = new LauncherSettingsService(settingsPath);
@@ -412,7 +417,7 @@ public sealed class MainWindowViewModelTests : IDisposable
         await settingsService.SaveAsync(new LauncherSettings());
         var snapshot = CreateSnapshot();
         snapshot.Settings.GamePath = "";
-        snapshot.LocalGame.GamePath = "";
+        snapshot.LocalGame = new LocalInstallationState();
         var coreService = new CountingCoreService(snapshot);
         using var viewModel = CreateViewModel(coreService, settingsService);
         await viewModel.InitializeAsync();
@@ -937,7 +942,7 @@ public sealed class MainWindowViewModelTests : IDisposable
         var testSettings = settingsService.ReadAsync().GetAwaiter().GetResult();
         testSettings.HasCompletedFirstLaunchWizard = true;
         settingsService.SaveAsync(testSettings).GetAwaiter().GetResult();
-        var localGameStateService = new LocalGameStateService();
+        var localInstallationStateStore = new LocalInstallationStateStore();
         var diagnostics = new LocalDiagnostics();
         var localizationService = new LocalizationService();
         var manifestValidationService = new ManifestValidationService(apiClient, localizationService);
@@ -947,7 +952,7 @@ public sealed class MainWindowViewModelTests : IDisposable
             localizationService);
         var gameDownloadService = new GameDownloadService(
             apiClient,
-            localGameStateService,
+            localInstallationStateStore,
             settingsService,
             new ProxySettingsService(),
             new Crc64Service(),
@@ -977,7 +982,7 @@ public sealed class MainWindowViewModelTests : IDisposable
             resourcePanelUidService, resourcePanelApiClient, localizationService,
             toastService, diagnostics);
         var gameUninstallService = new GameUninstallService(
-            localGameStateService,
+            localInstallationStateStore,
             diagnostics,
             localizationService);
 
@@ -1027,7 +1032,7 @@ public sealed class MainWindowViewModelTests : IDisposable
             {
                 GamePath = gamePath
             },
-            LocalGame = new LocalGameState
+            LocalGame = new LocalInstallationState
             {
                 GamePath = gamePath
             },

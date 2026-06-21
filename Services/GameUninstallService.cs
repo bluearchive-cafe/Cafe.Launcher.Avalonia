@@ -12,18 +12,18 @@ namespace Cafe.Launcher.Avalonia.Services;
 
 public sealed class GameUninstallService
 {
-    private readonly LocalGameStateService localGameStateService;
+    private readonly LocalInstallationStateStore localInstallationStateStore;
     private readonly GameInstallationPath installationPath;
     private readonly LocalDiagnostics diagnostics;
     private readonly LocalizationService localizer;
 
     public GameUninstallService(
-        LocalGameStateService localGameStateService,
+        LocalInstallationStateStore localInstallationStateStore,
         LocalDiagnostics diagnostics,
         LocalizationService localizer,
         GameInstallationPath? installationPath = null)
     {
-        this.localGameStateService = localGameStateService;
+        this.localInstallationStateStore = localInstallationStateStore;
         this.installationPath = installationPath ?? new GameInstallationPath();
         this.diagnostics = diagnostics;
         this.localizer = localizer;
@@ -43,7 +43,7 @@ public sealed class GameUninstallService
                 return validation;
             }
 
-            var localGame = await localGameStateService.ReadAsync(gamePath, cancellationToken).ConfigureAwait(false);
+            var localGame = await localInstallationStateStore.ReadAsync(gamePath, cancellationToken).ConfigureAwait(false);
             var files = localGame.Manifest?.Files ?? [];
             for (var i = 0; i < files.Count; i++)
             {
@@ -67,8 +67,13 @@ public sealed class GameUninstallService
                 });
             }
 
-            DeleteIfExists(Path.Combine(gamePath, GamePaths.ManifestFileName));
-            DeleteIfExists(Path.Combine(gamePath, GamePaths.GameConfigFileName));
+            var deletedState = await localInstallationStateStore.DeleteAsync(
+                gamePath,
+                cancellationToken).ConfigureAwait(false);
+            if (deletedState.Kind == LocalInstallationStateKind.IoFailure)
+            {
+                throw new IOException(deletedState.Error);
+            }
 
             await diagnostics.MessageAsync(
                 "Game uninstall completed.",
@@ -113,7 +118,12 @@ public sealed class GameUninstallService
             return Failed(localizer.F("gameDirectoryNameInvalid", GamePaths.GameFolderName), "uninstall-error");
         }
 
-        var localGame = await localGameStateService.ReadAsync(gamePath, cancellationToken).ConfigureAwait(false);
+        var localGame = await localInstallationStateStore.ReadAsync(gamePath, cancellationToken).ConfigureAwait(false);
+        if (localGame.Kind != LocalInstallationStateKind.Valid)
+        {
+            return Failed(localizer.F("gameConfigMetadataMissing", GamePaths.GameConfigFileName), "uninstall-error");
+        }
+
         if (string.IsNullOrWhiteSpace(localGame.GameConfig?.Version) || string.IsNullOrWhiteSpace(localGame.GameConfig?.Name))
         {
             return Failed(localizer.F("gameConfigMetadataMissing", GamePaths.GameConfigFileName), "uninstall-error");
@@ -162,19 +172,6 @@ public sealed class GameUninstallService
             .Select(item => Path.GetFullPath(item).TrimEnd(Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar))
             .Any(item => string.Equals(fullPath, item, StringComparison.OrdinalIgnoreCase));
     }
-
-    private static void DeleteIfExists(string filePath)
-    {
-        try
-        {
-            File.Delete(filePath);
-        }
-        catch (FileNotFoundException)
-        {
-            // Already gone — not an error
-        }
-    }
-
     private static GameOperationResult Failed(string message, string errorType)
     {
         return new GameOperationResult

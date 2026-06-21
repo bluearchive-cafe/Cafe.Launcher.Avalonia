@@ -310,11 +310,11 @@ public sealed class GameDownloadServiceTests
         LauncherSettingsService settingsService,
         string downloadStateFilePath)
     {
-        var localGameStateService = new LocalGameStateService();
+        var localInstallationStateStore = new LocalInstallationStateStore();
         var diagnostics = new LocalDiagnostics();
         return new GameDownloadService(
             apiClient,
-            localGameStateService,
+            localInstallationStateStore,
             settingsService,
             new ProxySettingsService(),
             new Crc64Service(),
@@ -329,7 +329,7 @@ public sealed class GameDownloadServiceTests
         return new LauncherStatusSnapshot
         {
             Settings = new LauncherSettings { GamePath = gamePath },
-            LocalGame = new LocalGameState { GamePath = gamePath },
+            LocalGame = new LocalInstallationState { GamePath = gamePath },
             Remote = new LauncherRemoteState
             {
                 GameConfig = new GameConfigResponse

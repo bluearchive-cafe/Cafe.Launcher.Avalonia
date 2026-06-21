@@ -11,7 +11,7 @@ public static class ServiceConfiguration
     {
         // ── Leaf services (parameterless constructors, no deps) ──────────
         services.AddSingleton<GameInstallationPath>();
-        services.AddSingleton<LocalGameStateService>();
+        services.AddSingleton<LocalInstallationStateStore>();
         services.AddSingleton<Crc64Service>();
         services.AddSingleton<DiskSpaceService>();
         services.AddSingleton<LocalizationService>();

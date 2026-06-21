@@ -24,7 +24,7 @@ public sealed class GameDownloadService : IDisposable
     private const int MaxInstallVerificationRetry = 3;
 
     private readonly LauncherApiClient apiClient;
-    private readonly LocalGameStateService localGameStateService;
+    private readonly LocalInstallationStateStore localInstallationStateStore;
     private readonly GameInstallationPath installationPath;
     private readonly LauncherSettingsService settingsService;
     private readonly ProxySettingsService proxySettingsService;
@@ -46,7 +46,7 @@ public sealed class GameDownloadService : IDisposable
 
     public GameDownloadService(
         LauncherApiClient apiClient,
-        LocalGameStateService localGameStateService,
+        LocalInstallationStateStore localInstallationStateStore,
         LauncherSettingsService settingsService,
         ProxySettingsService proxySettingsService,
         Crc64Service crc64Service,
@@ -56,7 +56,7 @@ public sealed class GameDownloadService : IDisposable
         GameInstallationPath? installationPath = null)
     {
         this.apiClient = apiClient;
-        this.localGameStateService = localGameStateService;
+        this.localInstallationStateStore = localInstallationStateStore;
         this.installationPath = installationPath ?? new GameInstallationPath();
         this.settingsService = settingsService;
         this.proxySettingsService = proxySettingsService;
@@ -242,7 +242,7 @@ public sealed class GameDownloadService : IDisposable
             EnsureGamePath(gamePath);
             Directory.CreateDirectory(gamePath);
 
-            var localGame = await localGameStateService.ReadAsync(gamePath, activeToken).ConfigureAwait(false);
+            var localGame = await localInstallationStateStore.ReadAsync(gamePath, activeToken).ConfigureAwait(false);
             if (localGame.GameConfig?.Name is { Length: > 0 }
                 && await ProcessService.IsExeRunningAsync($"{localGame.GameConfig.Name}.exe", activeToken))
             {
@@ -291,6 +291,11 @@ public sealed class GameDownloadService : IDisposable
 
             if (downloadPlan.NeedDownload.Count == 0 && downloadPlan.NeedDelete.Count == 0)
             {
+                await CommitInstallationStateAsync(
+                    gamePath,
+                    gameConfig,
+                    downloadPlan.ManifestFiles,
+                    activeToken).ConfigureAwait(false);
                 ClearDownloadState();
                 return new GameOperationResult
                 {
@@ -327,7 +332,6 @@ public sealed class GameDownloadService : IDisposable
                     progress,
                     activeToken).ConfigureAwait(false);
 
-                await WriteTempConfigAsync(gamePath, gameConfig, downloadPlan.ManifestFiles, activeToken).ConfigureAwait(false);
                 RemoveFiles(gamePath, downloadPlan.NeedDelete, null);
 
                 progress(CreateProgress(operationKind, "check-file", 0));
@@ -340,6 +344,11 @@ public sealed class GameDownloadService : IDisposable
 
                 if (failedFiles.Count == 0)
                 {
+                    await CommitInstallationStateAsync(
+                        gamePath,
+                        gameConfig,
+                        downloadPlan.ManifestFiles,
+                        activeToken).ConfigureAwait(false);
                     ClearDownloadState();
                     progress(CreateProgress(operationKind, repair ? "repair-done" : "download-done", 100));
                     await diagnostics.MessageAsync(
@@ -477,7 +486,7 @@ public sealed class GameDownloadService : IDisposable
 
     internal GameDownloadService(
         LauncherApiClient apiClient,
-        LocalGameStateService localGameStateService,
+        LocalInstallationStateStore localInstallationStateStore,
         LauncherSettingsService settingsService,
         ProxySettingsService proxySettingsService,
         Crc64Service crc64Service,
@@ -488,7 +497,7 @@ public sealed class GameDownloadService : IDisposable
         GameInstallationPath? installationPath = null)
     {
         this.apiClient = apiClient;
-        this.localGameStateService = localGameStateService;
+        this.localInstallationStateStore = localInstallationStateStore;
         this.installationPath = installationPath ?? new GameInstallationPath();
         this.settingsService = settingsService;
         this.proxySettingsService = proxySettingsService;
@@ -533,7 +542,7 @@ public sealed class GameDownloadService : IDisposable
 
     private async Task<DownloadPlan> BuildInstallOrUpdatePlanAsync(
         string gamePath,
-        LocalGameState localGame,
+        LocalInstallationState localGame,
         GameConfigResponse gameConfig,
         string patchUrlGroup,
         string proxyMode,
@@ -568,7 +577,7 @@ public sealed class GameDownloadService : IDisposable
         Action<GameOperationProgress> progress,
         CancellationToken cancellationToken)
     {
-        var localGame = await localGameStateService.ReadAsync(gamePath, cancellationToken).ConfigureAwait(false);
+        var localGame = await localInstallationStateStore.ReadAsync(gamePath, cancellationToken).ConfigureAwait(false);
 
         // Fetch current and latest manifests in parallel (matches original's Promise.all)
         var currentTask = GetCurrentManifestFilesAsync(
@@ -614,7 +623,7 @@ public sealed class GameDownloadService : IDisposable
 
     private async Task<IReadOnlyList<ManifestFile>> GetCurrentManifestFilesAsync(
         string gamePath,
-        LocalGameState localGame,
+        LocalInstallationState localGame,
         string patchUrlGroup,
         string proxyMode,
         CancellationToken cancellationToken)
@@ -886,54 +895,29 @@ public sealed class GameDownloadService : IDisposable
         throw new HttpRequestException($"Download failed: {file.Path}", lastError);
     }
 
-    private async Task WriteTempConfigAsync(
+    private async Task CommitInstallationStateAsync(
         string gamePath,
         GameConfigResponse gameConfig,
         IReadOnlyList<ManifestFile> files,
         CancellationToken cancellationToken)
     {
-        var manifestFiles = files.Select(file =>
-        {
-            var item = new ManifestFile
-            {
-                Path = file.Path,
-                Size = file.Size,
-                Hash = file.Hash
-            };
-            item.Vc = OfficialHashService.GetManifestFileHash(item);
-            return item;
-        }).ToList();
-
-        var manifest = new LocalManifest
-        {
-            Name = GamePaths.GameTag,
-            Version = gameConfig.GameLatestVersion,
-            Basis = gameConfig.GameLatestFilePath,
-            Files = manifestFiles
-        };
-        manifest.Vc = OfficialHashService.GetManifestInfoHash(
-            manifest.Name ?? "",
-            manifest.Version ?? "",
-            manifest.Basis ?? "");
-
-        var config = new GameLauncherConfig
-        {
-            Tag = GamePaths.GameTag,
-            Name = gameConfig.GameStartExeName,
-            Params = gameConfig.GameStartParams ?? [],
-            Version = gameConfig.GameLatestVersion
-        };
-        config.Vc = OfficialHashService.GetGameConfigHash(config);
-
-        var jsonOptions = new JsonSerializerOptions { WriteIndented = true };
-        await File.WriteAllTextAsync(
-            GetTempName(Path.Combine(gamePath, GamePaths.ManifestFileName)),
-            JsonSerializer.Serialize(manifest, jsonOptions),
+        var commit = new LocalInstallationStateCommit(
+            gameConfig.GameLatestVersion ?? "",
+            gameConfig.GameLatestFilePath ?? "",
+            gameConfig.GameStartExeName ?? "",
+            gameConfig.GameStartParams ?? [],
+            files.Select(file => new LocalInstallationFile(
+                file.Path,
+                long.Parse(file.Size, NumberStyles.None, CultureInfo.InvariantCulture),
+                ulong.Parse(file.Hash, NumberStyles.None, CultureInfo.InvariantCulture))).ToArray());
+        var state = await localInstallationStateStore.CommitAsync(
+            gamePath,
+            commit,
             cancellationToken).ConfigureAwait(false);
-        await File.WriteAllTextAsync(
-            GetTempName(Path.Combine(gamePath, GamePaths.GameConfigFileName)),
-            JsonSerializer.Serialize(config, jsonOptions),
-            cancellationToken).ConfigureAwait(false);
+        if (state.Kind != LocalInstallationStateKind.Valid)
+        {
+            throw new IOException(state.Error ?? $"Local installation state commit failed: {state.Kind}.");
+        }
     }
 
     private async Task<IReadOnlyList<ManifestFile>> InstallDownloadedFilesAsync(
@@ -1002,15 +986,6 @@ public sealed class GameDownloadService : IDisposable
 
         if (failedFiles.Count > 0)
             return failedFiles;
-
-        File.Move(
-            GetTempName(Path.Combine(gamePath, GamePaths.ManifestFileName)),
-            Path.Combine(gamePath, GamePaths.ManifestFileName),
-            overwrite: true);
-        File.Move(
-            GetTempName(Path.Combine(gamePath, GamePaths.GameConfigFileName)),
-            Path.Combine(gamePath, GamePaths.GameConfigFileName),
-            overwrite: true);
 
         return failedFiles;
     }

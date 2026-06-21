@@ -23,7 +23,7 @@ public sealed class ManifestValidationService
 
     public async Task<ManifestValidationResult> ValidateAsync(
         string gamePath,
-        LocalGameState localGame,
+        LocalInstallationState localGame,
         string launchCheckMode,
         string patchUrlGroup,
         string proxyMode,
@@ -50,7 +50,7 @@ public sealed class ManifestValidationService
                 : ValidateFiles(gamePath, remoteManifestResult.Files);
         }
 
-        if (!localGame.ManifestExists)
+        if (localGame.Kind == LocalInstallationStateKind.NotInstalled)
         {
             return Failed(localizer.F("localManifestMissing", localGame.ManifestPath));
         }
@@ -83,7 +83,7 @@ public sealed class ManifestValidationService
     }
 
     private async Task<(IReadOnlyList<ManifestFile>? Files, string Message)> GetRemoteManifestFilesAsync(
-        LocalGameState localGame,
+        LocalInstallationState localGame,
         string patchUrlGroup,
         string proxyMode,
         CancellationToken cancellationToken)
