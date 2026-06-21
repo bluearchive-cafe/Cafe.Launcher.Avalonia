@@ -20,6 +20,7 @@ public sealed class LogExportServiceTests : IDisposable
         var exportDirectory = Path.Combine(tempDir, "selected");
         using var logger = new UnifiedLogger(logDirectory);
         await logger.LogAsync(LogEntrySeverity.Info, "Test log");
+        logger.Dispose(); // flush async sink to disk before reading
         var service = new LogExportService(logger);
 
         var zipPath = await service.ExportAsync(exportDirectory);

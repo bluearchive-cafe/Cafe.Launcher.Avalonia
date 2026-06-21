@@ -46,7 +46,7 @@ One `MainWindow` (1300×754, non-resizable, borderless with custom chrome). The 
 - `MainWindowToastOverlay.axaml` — toast notification overlay
 
 **Entries:**
-1. **Program.cs** — Process mutex (`Local\Cafe_Launcher_SI`), single-instance enforcement via `EventWaitHandle` signal. Creates `UnifiedLogger` + `CrashRecoveryService` before DI is available. Tracks `PreviousSessionCrashed` via a `session.active` marker file.
+1. **Program.cs** — Process mutex (`Local\Cafe_Launcher_SI`), single-instance enforcement via `EventWaitHandle` signal. Creates `UnifiedLogger` + `CrashRecoveryService` before DI is available; exposes the logger via `PreDiLogger` so the DI container reuses the same instance. Tracks `PreviousSessionCrashed` via a `session.active` marker file. `RunSession` orchestrates session lifecycle with proper crash-marker preservation.
 2. **App.axaml.cs** — On framework init: builds DI container via `ServiceConfiguration.AddLauncherServices()`, resolves `MainWindowViewModel`, creates `MainWindow`, wires `ClickCodeService`, `SystemTrayService`. Starts a background thread listening for `EventWaitHandle` signals to restore window from tray.
 3. **App.axaml** — Light/Dark `ThemeDictionaries` with custom `Launcher*` brushes, FluentTheme + MaterialIconStyles.
 
@@ -78,7 +78,7 @@ One `MainWindow` (1300×754, non-resizable, borderless with custom chrome). The 
 | `LocalizationService` | Inline dictionaries for `en`/`zh-Hans`/`ja`; `auto` resolves via `CultureInfo.CurrentUICulture` |
 | `SystemTrayService` | Avalonia 12 `TrayIcon` + `NativeMenu` for minimize-to-tray |
 | `ToastService` | Event-based transient notifications (info/success/warning/error) |
-| `LocalDiagnostics` | Appends to `diagnostics.log` in the settings folder |
+| `LocalDiagnostics` | Public facade over `UnifiedLogger`; wraps `LogAsync` as `ErrorAsync`/`MessageAsync`/`LogSync`. All logs go to `unified.log` via the shared `UnifiedLogger` instance. |
 | `PatchUrlGroupService` | URL rewriting between Official and Cafe CDN hosts for manifest + CDN config URLs |
 | `NoticeStateService` | Tracks which notice IDs have been shown (persisted to `shown_notices.json`) |
 | `LauncherUpdateService` | Checks stable and beta launcher releases through the server proxy endpoint and returns every validated release file in API order |
@@ -126,7 +126,7 @@ Users can switch between `Official` (yo-star.com) and `Cafe` (bluearchive.cafe) 
 - `Constants/` — `LauncherConstants`, `ApiConfig`, `BuildInfo`, and `GamePaths`
 - `Helpers/` — `FileSizeFormatter`, `GamePathValidator`
 - `Services/Auth/` — `AuthorizationHeaderFactory` (MD5-signed API auth header)
-- `Services/Diagnostics/` — `UnifiedLogger` (Serilog-backed engine), `LocalDiagnostics` (facade), `LogExportService`, `CrashRecoveryService`
+- `Services/Diagnostics/` — `UnifiedLogger` (Serilog-backed engine with async sink, enrichers, LoggingLevelSwitch), `LocalDiagnostics` (facade), `LogExportService`, `CrashRecoveryService`. All diagnostics and crash logs go to a single `unified.log`.
 
 ### Localization
 

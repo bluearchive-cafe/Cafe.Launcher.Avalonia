@@ -7,7 +7,9 @@ namespace Cafe.Launcher.Avalonia.Services;
 
 public static class ServiceConfiguration
 {
-    public static IServiceCollection AddLauncherServices(this IServiceCollection services)
+    public static IServiceCollection AddLauncherServices(
+        this IServiceCollection services,
+        UnifiedLogger? existingLogger = null)
     {
         // ── Leaf services (parameterless constructors, no deps) ──────────
         services.AddSingleton<GameInstallationPath>();
@@ -18,7 +20,13 @@ public static class ServiceConfiguration
         services.AddSingleton<ClickCodeService>();
         services.AddSingleton<ToastService>();
         services.AddSingleton<BestHttpCookieLibraryService>();
-        services.AddSingleton<UnifiedLogger>();
+
+        // Reuse the pre-DI logger when provided so there is a single Serilog
+        // pipeline for the entire process (crash handling + application logging).
+        if (existingLogger is not null)
+            services.AddSingleton(existingLogger);
+        else
+            services.AddSingleton<UnifiedLogger>();
         services.AddSingleton<LogExportService>();
         services.AddTransient<LogViewerDialogViewModel>();
         services.AddSingleton<LocalDiagnostics>();

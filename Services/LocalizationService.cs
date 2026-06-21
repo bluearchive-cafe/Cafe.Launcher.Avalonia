@@ -213,6 +213,13 @@ public sealed partial class LocalizedStrings : ObservableObject
     [ObservableProperty] private string logExportFolderPickerTitle = "";
     [ObservableProperty] private string logExportSucceeded = "";
     [ObservableProperty] private string logExportFailed = "";
+    [ObservableProperty] private string logLevel = "";
+    [ObservableProperty] private string logLevelVerbose = "";
+    [ObservableProperty] private string logLevelDebug = "";
+    [ObservableProperty] private string logLevelInformation = "";
+    [ObservableProperty] private string logLevelWarning = "";
+    [ObservableProperty] private string logLevelError = "";
+    [ObservableProperty] private string logLevelFatal = "";
 
     public void Apply(LocalizationService localizer)
     {
@@ -419,6 +426,13 @@ public sealed partial class LocalizedStrings : ObservableObject
         LogExportFolderPickerTitle = localizer.T("logExportFolderPickerTitle");
         LogExportSucceeded = localizer.T("logExportSucceeded");
         LogExportFailed = localizer.T("logExportFailed");
+        LogLevel = localizer.T("logLevel");
+        LogLevelVerbose = localizer.T("logLevelVerbose");
+        LogLevelDebug = localizer.T("logLevelDebug");
+        LogLevelInformation = localizer.T("logLevelInformation");
+        LogLevelWarning = localizer.T("logLevelWarning");
+        LogLevelError = localizer.T("logLevelError");
+        LogLevelFatal = localizer.T("logLevelFatal");
     }
 }
 

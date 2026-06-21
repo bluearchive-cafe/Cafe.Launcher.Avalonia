@@ -338,5 +338,12 @@
   "openDataDirectory": "打开数据目录",
   "logExportFolderPickerTitle": "选择导出日志的保存位置",
   "logExportSucceeded": "日志已导出到 {0}",
-  "logExportFailed": "导出日志失败：{0}"
+  "logExportFailed": "导出日志失败：{0}",
+  "logLevel": "日志级别",
+  "logLevelVerbose": "详细",
+  "logLevelDebug": "调试",
+  "logLevelInformation": "信息",
+  "logLevelWarning": "警告",
+  "logLevelError": "错误",
+  "logLevelFatal": "严重"
 }

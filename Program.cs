@@ -2,6 +2,7 @@ using Avalonia;
 using System;
 using System.Threading;
 using System.Threading.Tasks;
+using Microsoft.Extensions.DependencyInjection;
 using Cafe.Launcher.Avalonia.Services.Diagnostics;
 
 namespace Cafe.Launcher.Avalonia;
@@ -12,6 +13,20 @@ sealed class Program
     private const string SignalName = @"Local\Cafe_Launcher_SI_Show";
 
     internal static bool PreviousSessionCrashed { get; private set; }
+
+    /// <summary>
+    /// The pre-DI <see cref="UnifiedLogger"/> created before the DI container
+    /// exists. <see cref="App"/> consumes this so a single logger instance
+    /// serves both crash handling and application logging.
+    /// </summary>
+    internal static UnifiedLogger? PreDiLogger { get; private set; }
+
+    /// <summary>
+    /// Set by <see cref="App"/> once the DI container is built so that
+    /// <see cref="RunSession"/> can dispose it after the session-end entry
+    /// has been written.
+    /// </summary>
+    internal static ServiceProvider? ServiceProvider { get; set; }
 
     [STAThread]
     public static void Main(string[] args)
@@ -24,8 +39,10 @@ sealed class Program
         }
 
         // Create standalone diagnostics before DI is available. This instance
-        // owns process-session tracking and the unhandled-exception handlers.
+        // is shared with the DI container so there is a single Serilog pipeline
+        // for the entire process.
         var crashLogger = new UnifiedLogger();
+        PreDiLogger = crashLogger;
         var crashRecovery = new CrashRecoveryService(crashLogger);
         SetupCrashLogging(crashLogger);
         try
@@ -44,8 +61,30 @@ sealed class Program
     internal static void RunSession(CrashRecoveryService crashRecovery, Action runApplication)
     {
         PreviousSessionCrashed = crashRecovery.BeginSessionAsync().GetAwaiter().GetResult();
-        runApplication();
-        crashRecovery.CompleteSessionAsync().GetAwaiter().GetResult();
+        try
+        {
+            runApplication();
+            // Normal exit — finalise the session cleanly.
+            crashRecovery.CompleteSessionAsync().GetAwaiter().GetResult();
+        }
+        catch (Exception ex)
+        {
+            // Log the crash before the logger is disposed, and intentionally
+            // skip CompleteSessionAsync so the crash marker survives for the
+            // next launch to detect. Main's catch block serves as a fallback
+            // for pre-DI-container crashes (ServiceProvider is null).
+            LogCrash(PreDiLogger!, "Main", ex);
+            throw;
+        }
+        finally
+        {
+            // Dispose the DI container last, after all log writes complete.
+            // MS.DI does not dispose externally-provided singleton instances,
+            // so the shared UnifiedLogger must be disposed explicitly to flush
+            // the async sink buffer.
+            ServiceProvider?.Dispose();
+            PreDiLogger?.Dispose();
+        }
     }
 
     private static void SetupCrashLogging(UnifiedLogger logger)

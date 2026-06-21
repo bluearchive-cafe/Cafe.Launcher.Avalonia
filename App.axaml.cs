@@ -30,10 +30,12 @@ public partial class App : Application
     {
         if (ApplicationLifetime is IClassicDesktopStyleApplicationLifetime desktop)
         {
-            // Build DI container
+            // Build DI container, reusing the pre-DI UnifiedLogger so there is
+            // a single Serilog pipeline for the entire process.
             var serviceCollection = new ServiceCollection();
-            serviceCollection.AddLauncherServices();
+            serviceCollection.AddLauncherServices(existingLogger: Program.PreDiLogger);
             serviceProvider = serviceCollection.BuildServiceProvider();
+            Program.ServiceProvider = serviceProvider;
 
             // Track install attribution (non-critical, best-effort)
             try
@@ -68,14 +70,16 @@ public partial class App : Application
                 Debug.WriteLine($"SystemTrayService init failed: {ex.Message}");
             }
 
-            // Destroy tray icon on app exit
+            // Clean up on app exit. The service provider is disposed by
+            // Program.RunSession after the session-end entry is written
+            // so the logger stays alive through CompleteSessionAsync.
             desktop.Exit += (_, _) =>
             {
                 showWindowListener?.Dispose();
                 shutdownCts.Cancel();
                 viewModel.Dispose();
                 trayService?.Dispose();
-                serviceProvider?.Dispose();
+                // serviceProvider is disposed by Program.RunSession
                 shutdownCts.Dispose();
             };
 

@@ -338,5 +338,12 @@
   "openDataDirectory": "Open Data Directory",
   "logExportFolderPickerTitle": "Choose where to save exported logs",
   "logExportSucceeded": "Logs exported to {0}",
-  "logExportFailed": "Failed to export logs: {0}"
+  "logExportFailed": "Failed to export logs: {0}",
+  "logLevel": "Log Level",
+  "logLevelVerbose": "Verbose",
+  "logLevelDebug": "Debug",
+  "logLevelInformation": "Information",
+  "logLevelWarning": "Warning",
+  "logLevelError": "Error",
+  "logLevelFatal": "Fatal"
 }

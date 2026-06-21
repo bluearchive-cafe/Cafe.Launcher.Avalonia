@@ -7,6 +7,8 @@ using CommunityToolkit.Mvvm.Input;
 using Cafe.Launcher.Avalonia.Constants;
 using Cafe.Launcher.Avalonia.Models;
 using Cafe.Launcher.Avalonia.Services;
+using Cafe.Launcher.Avalonia.Services.Diagnostics;
+using Serilog.Events;
 
 namespace Cafe.Launcher.Avalonia.ViewModels;
 
@@ -18,6 +20,7 @@ public partial class SettingsViewModel : ViewModelBase, IDisposable
     private readonly LauncherUpdateService launcherUpdateService;
     private readonly DialogsViewModel dialogs;
     private readonly ISettingsEditor editor;
+    private readonly UnifiedLogger unifiedLogger;
     private CancellationTokenSource? appearancePreviewCts;
     private Task appearancePreviewTask = Task.CompletedTask;
     private bool disposed;
@@ -46,6 +49,7 @@ public partial class SettingsViewModel : ViewModelBase, IDisposable
         ToastService toastService,
         LauncherUpdateService launcherUpdateService,
         DialogsViewModel dialogs,
+        UnifiedLogger unifiedLogger,
         SettingsOptionsViewModel options,
         SettingsAppearanceViewModel appearance)
     {
@@ -54,6 +58,7 @@ public partial class SettingsViewModel : ViewModelBase, IDisposable
         this.toastService = toastService;
         this.launcherUpdateService = launcherUpdateService;
         this.dialogs = dialogs;
+        this.unifiedLogger = unifiedLogger;
         editor = appearance.Editor;
         Options = options;
         Appearance = appearance;
@@ -138,6 +143,7 @@ public partial class SettingsViewModel : ViewModelBase, IDisposable
         snapshot.GamePath = localGamePath;
         editor.ApplySnapshot(snapshot);
         Appearance.Load(snapshot);
+        ApplyLogLevel(snapshot.LogLevel);
     }
 
     // ── Commands ──────────────────────────────────────────────────────────
@@ -186,6 +192,7 @@ public partial class SettingsViewModel : ViewModelBase, IDisposable
 
             var settings = editor.GetSnapshot();
             await settingsService.SaveAsync(settings);
+            ApplyLogLevel(settings.LogLevel);
 
             if (ApplyLanguageAndTheme is not null)
                 await ApplyLanguageAndTheme(settings);
@@ -330,6 +337,27 @@ public partial class SettingsViewModel : ViewModelBase, IDisposable
     {
         OnPropertyChanged(nameof(CanSaveSettings));
         SaveSettingsCommand.NotifyCanExecuteChanged();
+    }
+
+    private void ApplyLogLevel(string logLevelCode)
+    {
+        try
+        {
+            var level = logLevelCode switch
+            {
+                LogLevels.Verbose => LogEventLevel.Verbose,
+                LogLevels.Debug => LogEventLevel.Debug,
+                LogLevels.Warning => LogEventLevel.Warning,
+                LogLevels.Error => LogEventLevel.Error,
+                LogLevels.Fatal => LogEventLevel.Fatal,
+                _ => LogEventLevel.Information
+            };
+            unifiedLogger.SetMinimumLevel(level);
+        }
+        catch
+        {
+            // Best-effort — log level application must never disrupt settings flow.
+        }
     }
 
     public void Dispose()

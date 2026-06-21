@@ -1,4 +1,5 @@
 using System;
+using System.Diagnostics;
 using System.Globalization;
 using System.IO;
 using System.Runtime.InteropServices;
@@ -7,6 +8,7 @@ using System.Threading;
 using System.Threading.Tasks;
 using Cafe.Launcher.Avalonia.Constants;
 using Serilog;
+using Serilog.Core;
 using Serilog.Events;
 
 namespace Cafe.Launcher.Avalonia.Services.Diagnostics;
@@ -14,11 +16,12 @@ namespace Cafe.Launcher.Avalonia.Services.Diagnostics;
 /// <summary>
 /// Centralised logging engine. All error, warning, and informational messages
 /// flow through this singleton and are persisted to a single rotating log file
-/// (backed by Serilog).
+/// (backed by Serilog with an async sink wrapper).
 /// </summary>
 public sealed class UnifiedLogger : IDisposable
 {
-    private readonly Serilog.Core.Logger serilogLogger;
+    private readonly Logger serilogLogger;
+    private readonly LoggingLevelSwitch levelSwitch;
     private readonly string logFilePath;
     private bool disposed;
 
@@ -31,17 +34,36 @@ public sealed class UnifiedLogger : IDisposable
             LauncherConstants.ProductName);
         logFilePath = Path.Combine(dir, "unified.log");
 
+        // Verbose in Debug builds so developers see everything; Information in
+        // Release so production logs stay lean. The switch can be adjusted at
+        // runtime via SetMinimumLevel().
+        levelSwitch = new LoggingLevelSwitch(
+#if DEBUG
+            LogEventLevel.Verbose
+#else
+            LogEventLevel.Information
+#endif
+        );
+
         serilogLogger = new LoggerConfiguration()
-            .MinimumLevel.Verbose()
-            .WriteTo.File(
+            .MinimumLevel.ControlledBy(levelSwitch)
+            .Enrich.FromLogContext()
+            .Enrich.WithProperty("AppVersion", BuildInfo.LauncherVersion)
+            .Enrich.WithProperty("CommitSha", BuildInfo.CommitSha)
+            .WriteTo.Async(a => a.File(
                 logFilePath,
                 formatProvider: CultureInfo.InvariantCulture,
                 fileSizeLimitBytes: 5L * 1024 * 1024,     // 5 MB
                 rollOnFileSizeLimit: true,
                 retainedFileCountLimit: 4,                  // current + 3 rotated
                 rollingInterval: RollingInterval.Infinite,
-                outputTemplate: "{Timestamp:O} [{Level:u3}] {Message:l}{NewLine}{Exception}")
+                outputTemplate: "{Timestamp:O} [{Level:u3}] {Message:l}{NewLine}{Exception}"),
+                bufferSize: 10000)
             .CreateLogger();
+
+        // Route Serilog's own diagnostics to Debug output so sink failures
+        // (e.g. disk full) are visible during development and debugging.
+        Serilog.Debugging.SelfLog.Enable(msg => Debug.WriteLine($"[Serilog.SelfLog] {msg}"));
     }
 
     // ── diagnostics / testing ──────────────────────────────────────────
@@ -49,6 +71,20 @@ public sealed class UnifiedLogger : IDisposable
     internal string LogFilePath => logFilePath;
 
     // ── public API ──────────────────────────────────────────────────────
+
+    /// <summary>
+    /// Adjusts the minimum log level at runtime without restarting the process.
+    /// </summary>
+    public void SetMinimumLevel(LogEventLevel level)
+    {
+        levelSwitch.MinimumLevel = level;
+    }
+
+    /// <summary>
+    /// Returns the current minimum log level so callers (e.g. settings UI)
+    /// can display it or persist it.
+    /// </summary>
+    public LogEventLevel MinimumLevel => levelSwitch.MinimumLevel;
 
     public async Task LogAsync(
         LogEntrySeverity severity,
@@ -71,8 +107,12 @@ public sealed class UnifiedLogger : IDisposable
             if (!string.IsNullOrEmpty(message))
                 msg += "\n" + message;
 
-            serilogLogger.Write(level, exception, msg);
-            await Task.CompletedTask;
+            // Attach structured properties for searchability without changing
+            // the human-readable log line.
+            serilogLogger
+                .ForContext("LogTitle", title)
+                .ForContext("LogMessage", message)
+                .Write(level, exception, msg);
         }
         catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
         {
@@ -88,17 +128,27 @@ public sealed class UnifiedLogger : IDisposable
     {
         try
         {
-            var builder = new StringBuilder();
-            builder.Append(DateTimeOffset.Now.ToString("O", CultureInfo.InvariantCulture));
-            builder.Append(" [SESSION_START]").AppendLine();
-            builder.Append("Version: ").Append(BuildInfo.LauncherVersion)
-                   .Append("  CommitSha: ").Append(BuildInfo.CommitSha).AppendLine();
-            builder.Append("OS: ").Append(Environment.OSVersion.ToString())
-                   .Append("  Framework: ").Append(RuntimeInformation.FrameworkDescription).AppendLine();
-            builder.Append("BuildConfig: ").Append(BuildInfo.BuildConfiguration).AppendLine();
+            var version = BuildInfo.LauncherVersion;
+            var commitSha = BuildInfo.CommitSha;
+            var os = Environment.OSVersion.ToString();
+            var framework = RuntimeInformation.FrameworkDescription;
+            var buildConfig = BuildInfo.BuildConfiguration;
 
-            serilogLogger.Information("Session started\n" + builder);
-            await Task.CompletedTask;
+            var message = new StringBuilder();
+            message.AppendLine("Session started");
+            message.Append("Version: ").Append(version)
+                   .Append("  CommitSha: ").Append(commitSha).AppendLine();
+            message.Append("OS: ").Append(os)
+                   .Append("  Framework: ").Append(framework).AppendLine();
+            message.Append("BuildConfig: ").Append(buildConfig).AppendLine();
+
+            serilogLogger
+                .ForContext("SessionVersion", version)
+                .ForContext("SessionCommitSha", commitSha)
+                .ForContext("SessionOS", os)
+                .ForContext("SessionFramework", framework)
+                .ForContext("SessionBuildConfig", buildConfig)
+                .Information(message.ToString());
         }
         catch
         {
@@ -111,7 +161,6 @@ public sealed class UnifiedLogger : IDisposable
         try
         {
             serilogLogger.Information("Session ended");
-            await Task.CompletedTask;
         }
         catch
         {

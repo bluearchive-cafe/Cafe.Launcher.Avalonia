@@ -85,7 +85,7 @@ One `MainWindow` (1300×754, non-resizable with MinWidth 1024/MinHeight 640, bor
 - `MainWindowToastOverlay.axaml` — toast notification overlay
 
 **Entries:**
-1. **Program.cs** — Process mutex (`Local\Cafe_Launcher_SI`), single-instance enforcement via `EventWaitHandle` signal. Creates `UnifiedLogger` + `CrashRecoveryService` on startup before the DI container is available. Tracks `PreviousSessionCrashed` via a `session.active` marker file. Sets up unhandled-exception handlers (`AppDomain.UnhandledException`, `TaskScheduler.UnobservedTaskException`).
+1. **Program.cs** — Process mutex (`Local\Cafe_Launcher_SI`), single-instance enforcement via `EventWaitHandle` signal. Creates `UnifiedLogger` + `CrashRecoveryService` on startup before the DI container is available; exposes the logger via `PreDiLogger` so the DI container reuses the same instance (single Serilog pipeline for the entire process). Tracks `PreviousSessionCrashed` via a `session.active` marker file. Sets up unhandled-exception handlers (`AppDomain.UnhandledException`, `TaskScheduler.UnobservedTaskException`). `RunSession` orchestrates the session lifecycle: begin → run app → complete/cleanup, with proper crash-marker preservation. The `ServiceProvider` is disposed in `RunSession`'s finally block after the session-end log entry is written.
 2. **App.axaml.cs** — On framework init: builds DI container via `ServiceConfiguration.AddLauncherServices()`, resolves `MainWindowViewModel`, creates `MainWindow`, wires `ClickCodeService`, `SystemTrayService`. Starts a background thread listening for `EventWaitHandle` signals to restore window from tray.
 3. **App.axaml** — Light/Dark `ThemeDictionaries` with custom `Launcher*` brushes, FluentTheme + MaterialIconStyles.
 
@@ -126,7 +126,7 @@ One `MainWindow` (1300×754, non-resizable with MinWidth 1024/MinHeight 640, bor
 | `LocalizationService` | Inline dictionaries for `en`/`zh-Hans`/`ja`; `auto` resolves via `CultureInfo.CurrentUICulture` |
 | `SystemTrayService` | Avalonia 12 `TrayIcon` + `NativeMenu` for minimize-to-tray |
 | `ToastService` | Event-based transient notifications. `ToastNotification` is pure data (`Id`, `Message`, `Severity`, `DurationMs`, `IconKind`); view brush resolution stays in the toast XAML converter |
-| `UnifiedLogger` | Serilog-backed central logging engine. Writes `unified.log` with size-based rolling (5 MB, 3 retained files). Output template: `{Timestamp:O} [{Level:u3}] {Message:l}{NewLine}{Exception}`. Created standalone in `Program.cs` before DI is available; also registered in DI. Implements `IDisposable`. |
+| `UnifiedLogger` | Serilog-backed central logging engine with async sink wrapper (`Serilog.Sinks.Async`, 10k-event buffer). Writes `unified.log` with size-based rolling (5 MB, 3 retained files). Enriches events with `AppVersion`/`CommitSha` globally; uses `LoggingLevelSwitch` (Verbose in Debug, Information in Release, runtime-adjustable via `SetMinimumLevel()`). Output template: `{Timestamp:O} [{Level:u3}] {Message:l}{NewLine}{Exception}`. `LogAsync` attaches `LogTitle`/`LogMessage` as structured properties. `SelfLog` routes Serilog diagnostics to `Debug.WriteLine`. Created in `Program.cs` and shared with the DI container (single pipeline). Implements `IDisposable`. |
 | `LocalDiagnostics` | Public facade over `UnifiedLogger`; wraps `LogAsync` as `ErrorAsync`/`MessageAsync`/`LogSync` for simpler consumption |
 | `PatchUrlGroupService` | URL rewriting between Official and Cafe CDN hosts for manifest + CDN config URLs |
 | `NoticeStateService` | Tracks which notice IDs have been shown (persisted to `shown_notices.json`) |
@@ -160,9 +160,10 @@ One `MainWindow` (1300×754, non-resizable with MinWidth 1024/MinHeight 640, bor
 1. `LauncherApiClient` — disposed first
 2. `ResourcePanelApiClient`
 3. `ImageCacheService`
-4. `GameDownloadService` — disposed last (after all HTTP clients)
+4. `UnifiedLogger` — disposed last (after all services that log)
+5. `GameDownloadService` — disposed last
 
-The DI container calls `Dispose()` on these in reverse registration order when the service provider is disposed. `UnifiedLogger` is created in `Program.cs` before the DI container and disposed independently by `CrashRecoveryService`.
+The DI container calls `Dispose()` on these in reverse registration order when `ServiceProvider.Dispose()` is called in `Program.RunSession`'s finally block. The same `UnifiedLogger` instance serves both crash handling and application logging (shared via `Program.PreDiLogger`).
 
 ### First-launch migration
 
@@ -176,8 +177,7 @@ On first launch, `MainWindowViewModel` uses `OldLauncherDetectionService` to che
 |---|---|
 | `settings.json` | Launcher settings (see Settings reference below) |
 | `session.active` | Active-session marker written by `CrashRecoveryService`; presence on startup indicates previous session crashed |
-| `diagnostics.log` | Runtime diagnostics appended by `LocalDiagnostics` via `UnifiedLogger` |
-| `crash.log` | Global unhandled exception log (written by `UnifiedLogger` in `Program.cs`) |
+| `unified.log` | All runtime diagnostics, session lifecycle, and crash logs written by `UnifiedLogger` (size-based rotation: 5 MB, 3 retained files) |
 | `download_state.json` | Serializable download resume state (managed by `GameDownloadService`) |
 | `shown_notices.json` | Tracked shown notice IDs (`NoticeStateService`) |
 | `clickCode` | Install attribution code (`ClickCodeService`) |
@@ -209,11 +209,12 @@ Persisted fields in `settings.json` and their valid values:
 | Resource panel UID | `resourcePanelUid` | Player UID string |
 | First launch wizard | `hasCompletedFirstLaunchWizard` | `true`/`false` |
 | Update channel | `updateChannel` | `stable`, `beta` |
+| Log level | `logLevel` | `verbose`, `debug`, `information`, `warning`, `error`, `fatal` |
 
 ### Key models (`Models/`)
 
 - `LauncherApiContracts.cs` — All API response DTOs
-- `LauncherStateModels.cs` — String constants for modes/behaviors (`LaunchCheckModes`, `ProxyModes`, `CloseBehaviors`, `LauncherLanguages`, `ThemeModes`, `ThemeColorModes`, `DownloadSpeedLimits`, `PatchUrlGroups`, `UpdateChannels`, `BackgroundSources`, `BackgroundFits`, `GameOperationKinds`), plus runtime state objects (`LauncherStatusSnapshot`, `LauncherRemoteState`, `LauncherRuntimeState`, `LauncherSettings`, `GameOperationProgress`, `GameOperationResult`, `ManifestValidationResult`, `GameLaunchResult`), and option types (`SettingOption`, `LanguageOption`, `ThemeOption`) for localized dropdown binding
+- `LauncherStateModels.cs` — String constants for modes/behaviors (`LaunchCheckModes`, `ProxyModes`, `CloseBehaviors`, `LauncherLanguages`, `ThemeModes`, `ThemeColorModes`, `DownloadSpeedLimits`, `PatchUrlGroups`, `UpdateChannels`, `LogLevels`, `BackgroundSources`, `BackgroundFits`, `GameOperationKinds`), plus runtime state objects (`LauncherStatusSnapshot`, `LauncherRemoteState`, `LauncherRuntimeState`, `LauncherSettings`, `GameOperationProgress`, `GameOperationResult`, `ManifestValidationResult`, `GameLaunchResult`), and option types (`SettingOption`, `LanguageOption`, `ThemeOption`) for localized dropdown binding
 - `LocalInstallationStateModels.cs` — Local installation classifications, immutable state snapshots, and commit input records
 - `LocalGameContracts.cs` — `LocalManifest`, `RemoteManifest`, `ManifestFile`, `GameLauncherConfig`
 - `PatchUrlGroupDefinition.cs` — Code + host-from/to tuples for CDN URL rewriting
@@ -247,9 +248,9 @@ Users can switch between `Official` (yo-star.com) and `Cafe` (bluearchive.cafe) 
 - `Constants/` — `LauncherConstants`, `ApiConfig`, `BuildInfo`, `GamePaths` (see Constants section above)
 - `Helpers/` — `FileSizeFormatter`, `GamePathValidator`, `HttpClientLease`
 - `Services/Auth/` — `AuthorizationHeaderFactory` (MD5-signed API auth header)
-- `Services/Diagnostics/` — `UnifiedLogger` (Serilog-backed central logging engine, writes `unified.log`), `LocalDiagnostics` (public facade over `UnifiedLogger`), `LogExportService` (ZIP log export), `CrashRecoveryService` (session crash detection via `session.active`), `LogEntrySeverity` enum (Error/Warn/Info). Log rotation is handled by Serilog's file sink (5 MB threshold, 3 retained files).
+- `Services/Diagnostics/` — `UnifiedLogger` (Serilog-backed central logging with async sink, global enrichers, and `LoggingLevelSwitch`), `LocalDiagnostics` (public facade over `UnifiedLogger`), `LogExportService` (ZIP log export), `CrashRecoveryService` (session crash detection via `session.active` marker), `LogEntrySeverity` enum (Error/Warn/Info). Log rotation is handled by Serilog's file sink (5 MB threshold, 3 retained files). All diagnostics and crash logs go to a single `unified.log`.
 - `Services/HttpClientLeaseSource.cs` — Internal `IHttpClientLeaseSource` abstraction over `HttpClientFactory.CreateLeaseAsync()`. Two implementations: `ProxyAwareHttpClientLeaseSource` (production, delegates to `HttpClientFactory`) and `FixedHttpClientLeaseSource` (testing, wraps a fixed `HttpMessageHandler`). Used by services like `LauncherUpdateService` that need proxy-aware HTTP with lease lifetime management.
-- `Services/ServiceConfiguration.cs` — DI registration; services as `AddSingleton`, ViewModels as a mix of singleton (shared state: `SettingsViewModel`, `ShellViewModel`, `RemoteContentViewModel`, `DialogsViewModel`, `GameOperationsViewModel`) and transient (fresh per resolution)
+- `Services/ServiceConfiguration.cs` — DI registration; services as `AddSingleton`, ViewModels as a mix of singleton (shared state: `SettingsViewModel`, `ShellViewModel`, `RemoteContentViewModel`, `DialogsViewModel`, `GameOperationsViewModel`) and transient (fresh per resolution). `AddLauncherServices(existingLogger?)` accepts an optional pre-created `UnifiedLogger` to reuse across crash handling and application logging.
 
 ### Localization
 

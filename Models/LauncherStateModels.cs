@@ -97,6 +97,16 @@ public static class UpdateChannels
     public const string Beta = "beta";
 }
 
+public static class LogLevels
+{
+    public const string Verbose = "verbose";
+    public const string Debug = "debug";
+    public const string Information = "information";
+    public const string Warning = "warning";
+    public const string Error = "error";
+    public const string Fatal = "fatal";
+}
+
 public static class GameOperationKinds
 {
     public const string Idle = "idle";
@@ -190,6 +200,10 @@ public sealed partial class LauncherSettings : ObservableObject
     [ObservableProperty]
     [property: JsonPropertyName("updateChannel")]
     private string updateChannel = UpdateChannels.Stable;
+
+    [ObservableProperty]
+    [property: JsonPropertyName("logLevel")]
+    private string logLevel = LogLevels.Information;
 
     /// <summary>
     /// Deep-clones this settings object via JSON round-trip.

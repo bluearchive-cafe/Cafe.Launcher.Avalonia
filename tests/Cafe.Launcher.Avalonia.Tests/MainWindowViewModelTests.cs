@@ -671,12 +671,14 @@ public sealed class MainWindowViewModelTests : IDisposable
         var dialogs = new DialogsViewModel(
             localizer,
             new NoticeStateService(Path.Combine(tempDir, "save-failure-notices.json")));
+        using var testLogger = new UnifiedLogger(tempDir);
         using var settings = new SettingsViewModel(
             settingsService,
             localizer,
             toastService,
             new LauncherUpdateService(new LauncherUpdateHandler()),
             dialogs,
+            testLogger,
             new SettingsOptionsViewModel(localizer, new DiskSpaceService()),
             appearance);
         ToastNotification? errorToast = null;
@@ -1049,9 +1051,11 @@ public sealed class MainWindowViewModelTests : IDisposable
         var settingsAppearance = new SettingsAppearanceViewModel(settingsEditor);
         var noticeStateService = new NoticeStateService(Path.Combine(tempDir, Guid.NewGuid().ToString("N"), "shown_notices.json"));
         var dialogsViewModel = new DialogsViewModel(localizationService, noticeStateService);
+        using var settingsLogger = new UnifiedLogger(Path.Combine(tempDir, Guid.NewGuid().ToString("N")));
         var settingsViewModel = new SettingsViewModel(
             settingsService, localizationService, toastService,
             launcherUpdateService, dialogsViewModel,
+            settingsLogger,
             settingsOptions, settingsAppearance);
         var resourcePanelService = new ResourcePanelService(
             resourcePanelUidService, resourcePanelApiClient, diagnostics);

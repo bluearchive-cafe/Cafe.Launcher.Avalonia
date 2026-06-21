@@ -338,5 +338,12 @@
   "openDataDirectory": "データフォルダーを開く",
   "logExportFolderPickerTitle": "エクスポートしたログの保存先を選択",
   "logExportSucceeded": "ログを {0} にエクスポートしました",
-  "logExportFailed": "ログのエクスポートに失敗しました: {0}"
+  "logExportFailed": "ログのエクスポートに失敗しました: {0}",
+  "logLevel": "ログレベル",
+  "logLevelVerbose": "詳細",
+  "logLevelDebug": "デバッグ",
+  "logLevelInformation": "情報",
+  "logLevelWarning": "警告",
+  "logLevelError": "エラー",
+  "logLevelFatal": "致命的"
 }
