@@ -9,12 +9,3 @@ public enum LogEntrySeverity
     Warn,
     Info
 }
-
-/// <summary>Immutable structured log entry used internally by the logging pipeline.</summary>
-internal readonly record struct LogEntry(
-    DateTimeOffset Timestamp,
-    LogEntrySeverity Severity,
-    int SequenceNumber,
-    string Title,
-    string? Message,
-    string? ExceptionString);

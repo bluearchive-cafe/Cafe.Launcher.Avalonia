@@ -101,7 +101,7 @@ public sealed class ServiceConfigurationTests : IDisposable
     {
         var services = new ServiceCollection();
         services.AddLauncherServices();
-        services.AddSingleton(new UnifiedLogger(Path.Combine(tempDir, "logs")));
+        services.AddSingleton(_ => new UnifiedLogger(Path.Combine(tempDir, "logs")));
         return services;
     }
 }

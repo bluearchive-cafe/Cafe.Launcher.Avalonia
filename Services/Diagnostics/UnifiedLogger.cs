@@ -6,39 +6,47 @@ using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
 using Cafe.Launcher.Avalonia.Constants;
+using Serilog;
+using Serilog.Events;
 
 namespace Cafe.Launcher.Avalonia.Services.Diagnostics;
 
 /// <summary>
 /// Centralised logging engine. All error, warning, and informational messages
-/// flow through this singleton and are persisted to a single rotating log file.
+/// flow through this singleton and are persisted to a single rotating log file
+/// (backed by Serilog).
 /// </summary>
 public sealed class UnifiedLogger : IDisposable
 {
-    private readonly string logDirectory;
+    private readonly Serilog.Core.Logger serilogLogger;
     private readonly string logFilePath;
-    private readonly LogRotationManager? rotationManager;
-    private readonly SemaphoreSlim writeLock = new(1, 1);
-    private int sequenceNumber;
     private bool disposed;
 
-    public UnifiedLogger() : this(null, null) { }
+    public UnifiedLogger() : this(null) { }
 
-    public UnifiedLogger(LogRotationManager rotationManager) : this(null, rotationManager) { }
-
-    internal UnifiedLogger(string? logDirectory, LogRotationManager? rotationManager = null)
+    internal UnifiedLogger(string? logDirectory)
     {
-        this.rotationManager = rotationManager;
-        this.logDirectory = logDirectory ?? Path.Combine(
+        var dir = logDirectory ?? Path.Combine(
             Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData),
             LauncherConstants.ProductName);
-        logFilePath = Path.Combine(this.logDirectory, "unified.log");
+        logFilePath = Path.Combine(dir, "unified.log");
+
+        serilogLogger = new LoggerConfiguration()
+            .MinimumLevel.Verbose()
+            .WriteTo.File(
+                logFilePath,
+                formatProvider: CultureInfo.InvariantCulture,
+                fileSizeLimitBytes: 5L * 1024 * 1024,     // 5 MB
+                rollOnFileSizeLimit: true,
+                retainedFileCountLimit: 4,                  // current + 3 rotated
+                rollingInterval: RollingInterval.Infinite,
+                outputTemplate: "{Timestamp:O} [{Level:u3}] {Message:l}{NewLine}{Exception}")
+            .CreateLogger();
     }
 
     // ── diagnostics / testing ──────────────────────────────────────────
 
     internal string LogFilePath => logFilePath;
-    internal int CurrentSequenceNumber => Volatile.Read(ref sequenceNumber);
 
     // ── public API ──────────────────────────────────────────────────────
 
@@ -49,14 +57,26 @@ public sealed class UnifiedLogger : IDisposable
         Exception? exception = null,
         CancellationToken cancellationToken = default)
     {
+        cancellationToken.ThrowIfCancellationRequested();
         try
         {
-            var seq = Interlocked.Increment(ref sequenceNumber);
-            var entry = new LogEntry(
-                DateTimeOffset.Now, severity, seq, title, message,
-                exception?.ToString());
+            var level = severity switch
+            {
+                LogEntrySeverity.Error => LogEventLevel.Error,
+                LogEntrySeverity.Warn => LogEventLevel.Warning,
+                _ => LogEventLevel.Information
+            };
 
-            await WriteEntryAsync(entry, cancellationToken).ConfigureAwait(false);
+            var msg = title;
+            if (!string.IsNullOrEmpty(message))
+                msg += "\n" + message;
+
+            serilogLogger.Write(level, exception, msg);
+            await Task.CompletedTask;
+        }
+        catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
+        {
+            throw;
         }
         catch
         {
@@ -76,9 +96,9 @@ public sealed class UnifiedLogger : IDisposable
             builder.Append("OS: ").Append(Environment.OSVersion.ToString())
                    .Append("  Framework: ").Append(RuntimeInformation.FrameworkDescription).AppendLine();
             builder.Append("BuildConfig: ").Append(BuildInfo.BuildConfiguration).AppendLine();
-            builder.AppendLine(Separator);
 
-            await WriteTextAsync(builder.ToString(), cancellationToken).ConfigureAwait(false);
+            serilogLogger.Information("Session started\n" + builder);
+            await Task.CompletedTask;
         }
         catch
         {
@@ -90,12 +110,8 @@ public sealed class UnifiedLogger : IDisposable
     {
         try
         {
-            var builder = new StringBuilder();
-            builder.Append(DateTimeOffset.Now.ToString("O", CultureInfo.InvariantCulture));
-            builder.Append(" [SESSION_END]").AppendLine();
-            builder.AppendLine(Separator);
-
-            await WriteTextAsync(builder.ToString(), cancellationToken).ConfigureAwait(false);
+            serilogLogger.Information("Session ended");
+            await Task.CompletedTask;
         }
         catch
         {
@@ -103,55 +119,12 @@ public sealed class UnifiedLogger : IDisposable
         }
     }
 
-    // ── internals ───────────────────────────────────────────────────────
-
-    private const string Separator = "---";
-
-    private async Task WriteEntryAsync(LogEntry entry, CancellationToken ct)
-    {
-        var builder = new StringBuilder();
-        var severityLabel = entry.Severity switch
-        {
-            LogEntrySeverity.Error => "ERROR",
-            LogEntrySeverity.Warn => "WARN",
-            LogEntrySeverity.Info => "INFO",
-            _ => "???"
-        };
-
-        builder.Append(entry.Timestamp.ToString("O", CultureInfo.InvariantCulture))
-               .Append(' ').Append('[').Append(severityLabel).Append(']').Append(" #")
-               .Append(entry.SequenceNumber.ToString("D3", CultureInfo.InvariantCulture))
-               .Append(' ').Append(entry.Title).AppendLine();
-        if (entry.Message is not null)
-            builder.AppendLine(entry.Message);
-        if (entry.ExceptionString is not null)
-            builder.AppendLine(entry.ExceptionString);
-        builder.AppendLine(Separator);
-
-        await WriteTextAsync(builder.ToString(), ct).ConfigureAwait(false);
-    }
-
-    private async Task WriteTextAsync(string text, CancellationToken ct)
-    {
-        await writeLock.WaitAsync(ct).ConfigureAwait(false);
-        try
-        {
-            Directory.CreateDirectory(logDirectory);
-            await File.AppendAllTextAsync(logFilePath, text, Encoding.UTF8, ct).ConfigureAwait(false);
-
-            if (rotationManager is not null)
-                await rotationManager.RotateIfNeededAsync(logFilePath, ct).ConfigureAwait(false);
-        }
-        finally
-        {
-            writeLock.Release();
-        }
-    }
+    // ── IDisposable ────────────────────────────────────────────────────
 
     public void Dispose()
     {
         if (disposed) return;
         disposed = true;
-        writeLock.Dispose();
+        serilogLogger.Dispose();
     }
 }

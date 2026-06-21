@@ -126,11 +126,8 @@ One `MainWindow` (1300×754, non-resizable with MinWidth 1024/MinHeight 640, bor
 | `LocalizationService` | Inline dictionaries for `en`/`zh-Hans`/`ja`; `auto` resolves via `CultureInfo.CurrentUICulture` |
 | `SystemTrayService` | Avalonia 12 `TrayIcon` + `NativeMenu` for minimize-to-tray |
 | `ToastService` | Event-based transient notifications. `ToastNotification` is pure data (`Id`, `Message`, `Severity`, `DurationMs`, `IconKind`); view brush resolution stays in the toast XAML converter |
-| `UnifiedLogger` | Unified logging with severity levels (`LogEntrySeverity`), async file writing, and session start/end markers. Owned by `Program.cs` at startup before DI is available; also registered in DI. |
-| `LogRotationManager` | Log file rotation management — archives logs above a size threshold with timestamped filenames |
-| `LogExportService` | Exports collected log entries for display/download |
-| `CrashRecoveryService` | Session crash detection via a `session.active` marker file in the settings folder. `PreviousSessionCrashed` is exposed via `Program.PreviousSessionCrashed`. |
-| `LocalDiagnostics` | Appends diagnostic entries to `diagnostics.log` via `UnifiedLogger` |
+| `UnifiedLogger` | Serilog-backed central logging engine. Writes `unified.log` with size-based rolling (5 MB, 3 retained files). Output template: `{Timestamp:O} [{Level:u3}] {Message:l}{NewLine}{Exception}`. Created standalone in `Program.cs` before DI is available; also registered in DI. Implements `IDisposable`. |
+| `LocalDiagnostics` | Public facade over `UnifiedLogger`; wraps `LogAsync` as `ErrorAsync`/`MessageAsync`/`LogSync` for simpler consumption |
 | `PatchUrlGroupService` | URL rewriting between Official and Cafe CDN hosts for manifest + CDN config URLs |
 | `NoticeStateService` | Tracks which notice IDs have been shown (persisted to `shown_notices.json`) |
 | `HttpClientFactory` | Centralized factory for pre-configured `HttpClient` instances with shared `SocketsHttpHandler` pooling (15-min connection lifetime). Proxy-aware lease creation via `CreateLeaseAsync()`. Registered as singleton; implements `IDisposable`. |
@@ -165,7 +162,7 @@ One `MainWindow` (1300×754, non-resizable with MinWidth 1024/MinHeight 640, bor
 3. `ImageCacheService`
 4. `GameDownloadService` — disposed last (after all HTTP clients)
 
-The DI container calls `Dispose()` on these in reverse registration order when the service provider is disposed. `UnifiedLogger` is created in `Program.cs` before the DI container and disposed independently.
+The DI container calls `Dispose()` on these in reverse registration order when the service provider is disposed. `UnifiedLogger` is created in `Program.cs` before the DI container and disposed independently by `CrashRecoveryService`.
 
 ### First-launch migration
 
@@ -250,7 +247,7 @@ Users can switch between `Official` (yo-star.com) and `Cafe` (bluearchive.cafe) 
 - `Constants/` — `LauncherConstants`, `ApiConfig`, `BuildInfo`, `GamePaths` (see Constants section above)
 - `Helpers/` — `FileSizeFormatter`, `GamePathValidator`, `HttpClientLease`
 - `Services/Auth/` — `AuthorizationHeaderFactory` (MD5-signed API auth header)
-- `Services/Diagnostics/` — `LocalDiagnostics` (appends to `diagnostics.log`), `UnifiedLogger` (unified async logging with severity levels and session tracking), `LogRotationManager` (log file rotation), `LogExportService` (log export), `CrashRecoveryService` (session crash detection), `LogEntry` / `LogEntrySeverity` (log entry model)
+- `Services/Diagnostics/` — `UnifiedLogger` (Serilog-backed central logging engine, writes `unified.log`), `LocalDiagnostics` (public facade over `UnifiedLogger`), `LogExportService` (ZIP log export), `CrashRecoveryService` (session crash detection via `session.active`), `LogEntrySeverity` enum (Error/Warn/Info). Log rotation is handled by Serilog's file sink (5 MB threshold, 3 retained files).
 - `Services/HttpClientLeaseSource.cs` — Internal `IHttpClientLeaseSource` abstraction over `HttpClientFactory.CreateLeaseAsync()`. Two implementations: `ProxyAwareHttpClientLeaseSource` (production, delegates to `HttpClientFactory`) and `FixedHttpClientLeaseSource` (testing, wraps a fixed `HttpMessageHandler`). Used by services like `LauncherUpdateService` that need proxy-aware HTTP with lease lifetime management.
 - `Services/ServiceConfiguration.cs` — DI registration; services as `AddSingleton`, ViewModels as a mix of singleton (shared state: `SettingsViewModel`, `ShellViewModel`, `RemoteContentViewModel`, `DialogsViewModel`, `GameOperationsViewModel`) and transient (fresh per resolution)
 

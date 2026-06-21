@@ -35,21 +35,22 @@ public sealed class DiagnosticsServicesTests : IDisposable
 
         Assert.False(firstSessionCrashed);
         Assert.True(crashed);
+        logger.Dispose(); // release Serilog file handle before reading
         Assert.Equal(
             2,
-            File.ReadLines(logger.LogFilePath).Count(line => line.Contains("[SESSION_START]", StringComparison.Ordinal)));
+            File.ReadLines(logger.LogFilePath).Count(line => line.Contains("Session started", StringComparison.Ordinal)));
     }
 
     [Fact]
     public async Task DetectCrashAsync_WhenSessionStartWasRotated_ReturnsTrue()
     {
-        using var logger = new UnifiedLogger(tempDir, new LogRotationManager());
+        using var logger = new UnifiedLogger(tempDir);
         var service = new CrashRecoveryService(logger);
         await service.BeginSessionAsync();
         await logger.LogAsync(
             LogEntrySeverity.Error,
             "Large failure",
-            new string('x', checked((int)LogRotationManager.MaxFileSize)));
+            new string('x', 5 * 1024 * 1024));
 
         var crashed = await service.DetectCrashAsync();
 
@@ -66,8 +67,9 @@ public sealed class DiagnosticsServicesTests : IDisposable
         await service.CompleteSessionAsync();
 
         Assert.False(await service.DetectCrashAsync());
+        logger.Dispose(); // release Serilog file handle before reading
         Assert.Contains(
-            "[SESSION_END]",
+            "Session ended",
             File.ReadAllText(logger.LogFilePath),
             StringComparison.Ordinal);
     }

@@ -59,6 +59,8 @@ public sealed class LogExportService
         return zipPath;
     }
 
+    private const int MaxRetainedLogFiles = 3;
+
     private void CreateZip(string zipPath)
     {
         var logDir = Path.GetDirectoryName(logger.LogFilePath)!;
@@ -67,12 +69,12 @@ public sealed class LogExportService
         // Add current log file
         AddFileToZip(zip, logger.LogFilePath, "unified.log", required: true);
 
-        // Add rotated log files
-        for (var i = 1; i <= LogRotationManager.MaxRotatedFiles; i++)
+        // Add rotated log files (Serilog naming: unified_001.log, unified_002.log, …)
+        for (var i = 1; i <= MaxRetainedLogFiles; i++)
         {
-            var rotatedPath = $"{logger.LogFilePath}.{i}";
+            var rotatedPath = Path.Combine(logDir, $"unified_{i:D3}.log");
             if (File.Exists(rotatedPath))
-                AddFileToZip(zip, rotatedPath, $"unified.log.{i}", required: false);
+                AddFileToZip(zip, rotatedPath, $"unified_{i:D3}.log", required: false);
         }
 
         // Add system-info summary

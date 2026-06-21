@@ -126,7 +126,7 @@ Users can switch between `Official` (yo-star.com) and `Cafe` (bluearchive.cafe) 
 - `Constants/` — `LauncherConstants`, `ApiConfig`, `BuildInfo`, and `GamePaths`
 - `Helpers/` — `FileSizeFormatter`, `GamePathValidator`
 - `Services/Auth/` — `AuthorizationHeaderFactory` (MD5-signed API auth header)
-- `Services/Diagnostics/` — `LocalDiagnostics` (appends to `diagnostics.log`)
+- `Services/Diagnostics/` — `UnifiedLogger` (Serilog-backed engine), `LocalDiagnostics` (facade), `LogExportService`, `CrashRecoveryService`
 
 ### Localization
 

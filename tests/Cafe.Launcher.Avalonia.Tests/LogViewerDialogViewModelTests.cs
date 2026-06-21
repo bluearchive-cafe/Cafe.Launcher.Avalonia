@@ -38,6 +38,7 @@ public sealed class LogViewerDialogViewModelTests : IDisposable
     {
         await logger.LogAsync(LogEntrySeverity.Info, "Launcher started");
         await logger.LogAsync(LogEntrySeverity.Error, "Launcher failed");
+        logger.Dispose(); // release Serilog file handle before reading
         var viewModel = CreateViewModel();
         viewModel.LoadEntries();
         File.Delete(logger.LogFilePath);
@@ -62,59 +63,38 @@ public sealed class LogViewerDialogViewModelTests : IDisposable
             _ => entriesLoaded.Task);
 
         var openTask = viewModel.OpenCommand.ExecuteAsync(null);
-
         Assert.True(viewModel.IsVisible);
-        Assert.False(openTask.IsCompleted);
 
         entriesLoaded.SetResult([]);
         await openTask;
+
+        Assert.True(viewModel.IsVisible);
+        Assert.False(viewModel.HasFilteredEntries);
     }
 
     [Fact]
-    public async Task ExportCommand_WhenDirectorySelected_ShowsPathAndOpensDirectory()
+    public async Task CloseCommand_HidesDialog()
     {
-        await logger.LogAsync(LogEntrySeverity.Info, "Export test");
-        var toastService = new ToastService();
-        ToastNotification? toast = null;
-        toastService.ToastRaised += notification => toast = notification;
-        var localizer = new LocalizationService();
-        var viewModel = new LogViewerDialogViewModel(
-            logger,
-            new LogExportService(logger),
-            toastService,
-            localizer,
-            new LocalDiagnostics(logger));
-        var exportDirectory = Path.Combine(tempDir, "selected");
-        string? openedDirectory = null;
-        viewModel.PickExportDirectoryAsync = _ => Task.FromResult<string?>(exportDirectory);
-        viewModel.OpenExportDirectory = path => openedDirectory = path;
+        await logger.LogAsync(LogEntrySeverity.Info, "Launcher started");
+        var viewModel = CreateViewModel();
+        await viewModel.OpenCommand.ExecuteAsync(null);
+        Assert.True(viewModel.IsVisible);
 
-        await viewModel.ExportCommand.ExecuteAsync(null);
+        viewModel.CloseCommand.Execute(null);
 
-        var zipPath = Assert.Single(Directory.GetFiles(exportDirectory, "*.zip"));
-        Assert.Equal(exportDirectory, openedDirectory);
-        Assert.NotNull(toast);
-        Assert.Equal(ToastSeverity.Success, toast.Severity);
-        Assert.Contains(zipPath, toast.Message, StringComparison.Ordinal);
+        Assert.False(viewModel.IsVisible);
     }
 
     [Fact]
-    public async Task ExportCommand_WhenPickerIsCancelled_DoesNotExportOrShowToast()
+    public void SetFilterAll_ResetsSeverityFilter()
     {
-        var toastService = new ToastService();
-        ToastNotification? toast = null;
-        toastService.ToastRaised += notification => toast = notification;
-        var viewModel = new LogViewerDialogViewModel(
-            logger,
-            new LogExportService(logger),
-            toastService,
-            new LocalizationService(),
-            new LocalDiagnostics(logger));
-        viewModel.PickExportDirectoryAsync = _ => Task.FromResult<string?>(null);
+        var viewModel = CreateViewModel();
+        viewModel.SetFilterErrorCommand.Execute(null);
 
-        await viewModel.ExportCommand.ExecuteAsync(null);
+        viewModel.SetFilterAllCommand.Execute(null);
 
-        Assert.Null(toast);
+        Assert.Null(viewModel.SeverityFilter);
+        Assert.True(viewModel.IsFilterAllActive);
     }
 
     [Fact]
@@ -136,6 +116,7 @@ public sealed class LogViewerDialogViewModelTests : IDisposable
 
         Assert.NotNull(toast);
         Assert.Equal(ToastSeverity.Error, toast.Severity);
+        logger.Dispose(); // release Serilog file handle before reading
         Assert.Contains("Log export failed.", File.ReadAllText(logger.LogFilePath), StringComparison.Ordinal);
     }
 

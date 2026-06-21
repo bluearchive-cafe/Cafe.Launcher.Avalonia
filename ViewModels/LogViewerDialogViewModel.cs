@@ -4,6 +4,7 @@ using System.Collections.ObjectModel;
 using System.IO;
 using System.Linq;
 using System.Text;
+using System.Text.RegularExpressions;
 using System.Threading;
 using System.Threading.Tasks;
 using CommunityToolkit.Mvvm.ComponentModel;
@@ -210,6 +211,10 @@ public sealed partial class LogViewerDialogViewModel : ViewModelBase
         return ParseEntries(lines);
     }
 
+    private static readonly Regex EntryLineRegex = new(
+        @"^(\d{4}-\d{2}-\d{2}T[\d:.+-]+) \[(ERR|WRN|INF|VRB|DBG|FTL)\] (.+)",
+        RegexOptions.CultureInvariant);
+
     private static IReadOnlyList<LogEntryDisplay> ParseEntries(IEnumerable<string> lines)
     {
         var entries = new List<LogEntryDisplay>();
@@ -217,53 +222,46 @@ public sealed partial class LogViewerDialogViewModel : ViewModelBase
 
         foreach (var line in lines)
         {
-            if (line == "---")
+            var match = EntryLineRegex.Match(line);
+            if (match.Success)
             {
+                // Commit previous entry
                 if (current is not null)
                     entries.Add(current);
-                current = null;
-                continue;
-            }
 
-            var severityIndex = line.IndexOf(" [ERROR]", StringComparison.Ordinal);
-            if (severityIndex < 0)
-                severityIndex = line.IndexOf(" [WARN]", StringComparison.Ordinal);
-            if (severityIndex < 0)
-                severityIndex = line.IndexOf(" [INFO]", StringComparison.Ordinal);
-            if (line.Contains("[SESSION_START]", StringComparison.Ordinal)
-                || line.Contains("[SESSION_END]", StringComparison.Ordinal))
-            {
-                continue;
-            }
+                var severityLabel = match.Groups[2].Value;
+                var title = match.Groups[3].Value;
 
-            if (severityIndex > 0)
-            {
-                var timestampPart = line[..19];
-                var rest = line[(severityIndex + 1)..];
-                var closeBracket = rest.IndexOf(']');
-                var severityLabel = rest[1..closeBracket];
-                var titleStart = rest.IndexOf(' ', closeBracket + 2);
-                var title = titleStart > 0
-                    ? rest[(titleStart + 1)..]
-                    : rest[(closeBracket + 1)..];
-                var severity = severityLabel switch
+                // Skip session-boundary entries (shown in toast / crash-recovery UI)
+                if (title == "Session started" || title == "Session ended")
                 {
-                    "ERROR" => LogEntrySeverity.Error,
-                    "WARN" => LogEntrySeverity.Warn,
-                    _ => LogEntrySeverity.Info
-                };
+                    current = null;
+                    continue;
+                }
 
                 current = new LogEntryDisplay
                 {
-                    TimestampText = timestampPart,
-                    SeverityLabel = severityLabel,
+                    TimestampText = match.Groups[1].Value,
+                    SeverityLabel = severityLabel switch
+                    {
+                        "ERR" => "ERROR",
+                        "WRN" => "WARN",
+                        "INF" => "INFO",
+                        _ => severityLabel
+                    },
                     Title = title,
                     Details = "",
-                    Severity = severity
+                    Severity = severityLabel switch
+                    {
+                        "ERR" => LogEntrySeverity.Error,
+                        "WRN" => LogEntrySeverity.Warn,
+                        _ => LogEntrySeverity.Info
+                    }
                 };
             }
             else if (current is not null)
             {
+                // Continuation line (message body or exception stack trace)
                 current.Details += (current.Details.Length > 0 ? "\n" : "") + line;
             }
         }
