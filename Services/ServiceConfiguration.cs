@@ -21,7 +21,6 @@ public static class ServiceConfiguration
         services.AddSingleton<LocalDiagnostics>();
         services.AddSingleton<AuthorizationHeaderFactory>();
         services.AddSingleton<PatchUrlGroupService>();
-        services.AddSingleton<SettingsNormalizer>();
         services.AddSingleton<RemoteManifestService>();
         services.AddSingleton<IFileDownloadService, FileDownloadService>();
         services.AddSingleton<ResourcePanelService>();
