@@ -51,6 +51,7 @@ public partial class MainWindowViewModel : ViewModelBase, IDisposable
         ToastService toastService,
         LocalDiagnostics diagnostics,
         OldLauncherDetectionService oldLauncherService,
+        UnifiedLogger unifiedLogger,
         ShellViewModel shell,
         BackgroundViewModel background,
         RemoteContentViewModel remoteContent,
@@ -81,7 +82,7 @@ public partial class MainWindowViewModel : ViewModelBase, IDisposable
         ResourcePanel = resourcePanelViewModel;
         MigrationWizard = migrationWizard;
         LogViewer = logViewer ?? new LogViewerDialogViewModel(
-            new Services.Diagnostics.UnifiedLogger(),
+            unifiedLogger,
             null,
             null,
             null,

@@ -57,7 +57,8 @@ public sealed class UnifiedLogger : IDisposable
                 rollOnFileSizeLimit: true,
                 retainedFileCountLimit: 4,                  // current + 3 rotated
                 rollingInterval: RollingInterval.Infinite,
-                outputTemplate: "{Timestamp:O} [{Level:u3}] {Message:l}{NewLine}{Exception}"),
+                shared: true,                               // allow log viewer to read while writing
+                outputTemplate: "{Timestamp:O} [{Level:u3}] {Message}{NewLine}{Exception}"),
                 bufferSize: 10000)
             .CreateLogger();
 
