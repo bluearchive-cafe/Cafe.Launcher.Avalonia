@@ -10,6 +10,7 @@ public static class ServiceConfiguration
     public static IServiceCollection AddLauncherServices(this IServiceCollection services)
     {
         // ── Leaf services (parameterless constructors, no deps) ──────────
+        services.AddSingleton<GameInstallationPath>();
         services.AddSingleton<LocalGameStateService>();
         services.AddSingleton<Crc64Service>();
         services.AddSingleton<DiskSpaceService>();

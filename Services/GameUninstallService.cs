@@ -13,15 +13,18 @@ namespace Cafe.Launcher.Avalonia.Services;
 public sealed class GameUninstallService
 {
     private readonly LocalGameStateService localGameStateService;
+    private readonly GameInstallationPath installationPath;
     private readonly LocalDiagnostics diagnostics;
     private readonly LocalizationService localizer;
 
     public GameUninstallService(
         LocalGameStateService localGameStateService,
         LocalDiagnostics diagnostics,
-        LocalizationService localizer)
+        LocalizationService localizer,
+        GameInstallationPath? installationPath = null)
     {
         this.localGameStateService = localGameStateService;
+        this.installationPath = installationPath ?? new GameInstallationPath();
         this.diagnostics = diagnostics;
         this.localizer = localizer;
     }
@@ -31,7 +34,7 @@ public sealed class GameUninstallService
         Action<GameOperationProgress> progress,
         CancellationToken cancellationToken = default)
     {
-        var gamePath = localGameStateService.NormalizeGamePath(snapshot.LocalGame.GamePath ?? "");
+        var gamePath = installationPath.NormalizeGamePath(snapshot.LocalGame.GamePath ?? "");
         try
         {
             var validation = await ValidateAsync(gamePath, cancellationToken).ConfigureAwait(false);

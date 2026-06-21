@@ -25,6 +25,7 @@ public sealed class GameDownloadService : IDisposable
 
     private readonly LauncherApiClient apiClient;
     private readonly LocalGameStateService localGameStateService;
+    private readonly GameInstallationPath installationPath;
     private readonly LauncherSettingsService settingsService;
     private readonly ProxySettingsService proxySettingsService;
     private readonly Crc64Service crc64Service;
@@ -51,10 +52,12 @@ public sealed class GameDownloadService : IDisposable
         Crc64Service crc64Service,
         DiskSpaceService diskSpaceService,
         LocalDiagnostics diagnostics,
-        LocalizationService localizer)
+        LocalizationService localizer,
+        GameInstallationPath? installationPath = null)
     {
         this.apiClient = apiClient;
         this.localGameStateService = localGameStateService;
+        this.installationPath = installationPath ?? new GameInstallationPath();
         this.settingsService = settingsService;
         this.proxySettingsService = proxySettingsService;
         this.crc64Service = crc64Service;
@@ -122,8 +125,8 @@ public sealed class GameDownloadService : IDisposable
         }
 
         var gameConfig = snapshot.Remote.GameConfig;
-        var settingsPath = localGameStateService.NormalizeGamePath(snapshot.Settings.GamePath);
-        var statePath = localGameStateService.NormalizeGamePath(state.GamePath);
+        var settingsPath = installationPath.NormalizeGamePath(snapshot.Settings.GamePath);
+        var statePath = installationPath.NormalizeGamePath(state.GamePath);
         if (gameConfig is null
             || !string.Equals(state.Version, gameConfig.GameLatestVersion, StringComparison.Ordinal)
             || !string.Equals(state.Basis, gameConfig.GameLatestFilePath, StringComparison.Ordinal)
@@ -235,7 +238,7 @@ public sealed class GameDownloadService : IDisposable
             var speedLimitBytesPerSec = DownloadSpeedLimits.ToBytesPerSecond(settings.DownloadSpeedLimit);
             if (string.IsNullOrWhiteSpace(settings.GamePath))
                 return Failed(localizer.T("installPathNotConfigured"), "no-path");
-            var gamePath = localGameStateService.NormalizeGamePath(settings.GamePath);
+            var gamePath = installationPath.NormalizeGamePath(settings.GamePath);
             EnsureGamePath(gamePath);
             Directory.CreateDirectory(gamePath);
 
@@ -481,10 +484,12 @@ public sealed class GameDownloadService : IDisposable
         DiskSpaceService diskSpaceService,
         LocalDiagnostics diagnostics,
         LocalizationService localizer,
-        string downloadStateFilePath)
+        string downloadStateFilePath,
+        GameInstallationPath? installationPath = null)
     {
         this.apiClient = apiClient;
         this.localGameStateService = localGameStateService;
+        this.installationPath = installationPath ?? new GameInstallationPath();
         this.settingsService = settingsService;
         this.proxySettingsService = proxySettingsService;
         this.crc64Service = crc64Service;
