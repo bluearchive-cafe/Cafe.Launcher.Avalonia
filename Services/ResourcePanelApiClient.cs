@@ -1,4 +1,5 @@
 using System;
+using System.Net;
 using System.Net.Http;
 using System.Text.Json;
 using System.Threading;
@@ -44,16 +45,22 @@ public sealed class ResourcePanelApiClient : IDisposable
             cancellationToken);
     }
 
-    public Task<ResourcePanelConfigResponse> GetConfigAsync(
+    public async Task<ResourcePanelConfigResponse> GetConfigAsync(
         string uid,
         string proxyMode,
         CancellationToken cancellationToken = default)
     {
         var path = $"/config/get?uid={Uri.EscapeDataString(uid)}";
-        return GetJsonAsync<ResourcePanelConfigResponse>(
-            path,
-            proxyMode,
-            cancellationToken);
+        using var lease = await leaseSource.CreateLeaseAsync(proxyMode, cancellationToken).ConfigureAwait(false);
+        using var response = await lease.Client.GetAsync(path, cancellationToken).ConfigureAwait(false);
+        if (response.StatusCode == HttpStatusCode.NotFound)
+        {
+            return new ResourcePanelConfigResponse();
+        }
+        response.EnsureSuccessStatusCode();
+        await using var stream = await response.Content.ReadAsStreamAsync(cancellationToken).ConfigureAwait(false);
+        return await JsonSerializer.DeserializeAsync<ResourcePanelConfigResponse>(stream, jsonOptions, cancellationToken).ConfigureAwait(false)
+            ?? new ResourcePanelConfigResponse();
     }
 
     public async Task SaveConfigAsync(

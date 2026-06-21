@@ -7,17 +7,19 @@ using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 using Cafe.Launcher.Avalonia.Models;
 using Cafe.Launcher.Avalonia.Services;
-using Cafe.Launcher.Avalonia.Services.Diagnostics;
 
 namespace Cafe.Launcher.Avalonia.ViewModels;
 
+/// <summary>
+/// ViewModel for the resource panel. Owns only observable state, commands, and localization.
+/// The resource panel workflow (UID resolution, parallel API reads, mode mapping, save
+/// serialization) is delegated to <see cref="ResourcePanelService"/>.
+/// </summary>
 public partial class ResourcePanelViewModel : ViewModelBase, IDisposable
 {
-    private readonly ResourcePanelUidService resourcePanelUidService;
-    private readonly ResourcePanelApiClient resourcePanelApiClient;
+    private readonly ResourcePanelService resourcePanelService;
     private readonly LocalizationService localizer;
     private readonly ToastService toastService;
-    private readonly LocalDiagnostics diagnostics;
     private readonly CancellationTokenSource lifetimeCts = new();
     private bool disposed;
 
@@ -31,17 +33,13 @@ public partial class ResourcePanelViewModel : ViewModelBase, IDisposable
     public event Action? ResourcePanelSourceConfirmRequested;
 
     public ResourcePanelViewModel(
-        ResourcePanelUidService resourcePanelUidService,
-        ResourcePanelApiClient resourcePanelApiClient,
+        ResourcePanelService resourcePanelService,
         LocalizationService localizer,
-        ToastService toastService,
-        LocalDiagnostics diagnostics)
+        ToastService toastService)
     {
-        this.resourcePanelUidService = resourcePanelUidService;
-        this.resourcePanelApiClient = resourcePanelApiClient;
+        this.resourcePanelService = resourcePanelService;
         this.localizer = localizer;
         this.toastService = toastService;
-        this.diagnostics = diagnostics;
     }
 
     [ObservableProperty]
@@ -101,6 +99,7 @@ public partial class ResourcePanelViewModel : ViewModelBase, IDisposable
         await OpenPanelDirectly();
     }
 
+    /// <summary>Open the panel directly without Cafe-source check. Called by parent after switching source.</summary>
     public async Task OpenPanelDirectly()
     {
         IsResourcePanelVisible = true;
@@ -132,7 +131,7 @@ public partial class ResourcePanelViewModel : ViewModelBase, IDisposable
         IsResourcePanelBusy = true;
         try
         {
-            await resourcePanelUidService.SaveManualUidAsync(uid, lifetimeCts.Token);
+            await resourcePanelService.SaveManualUidAsync(uid, lifetimeCts.Token);
             ResourcePanelUid = uid;
             ResourcePanelUidText = localizer.F("resourcePanelCurrentUid", uid);
             IsResourcePanelUidMissing = false;
@@ -145,7 +144,7 @@ public partial class ResourcePanelViewModel : ViewModelBase, IDisposable
         catch (Exception exception)
         {
             ResourcePanelMessage = localizer.F("resourcePanelLoadFailed", exception.Message);
-            await diagnostics.ErrorAsync("Resource panel manual UID save failed.", exception);
+            await resourcePanelService.LogErrorAsync("Resource panel manual UID save failed.", exception);
         }
         finally
         {
@@ -159,18 +158,18 @@ public partial class ResourcePanelViewModel : ViewModelBase, IDisposable
         if (string.IsNullOrWhiteSpace(ResourcePanelUid))
         {
             IsResourcePanelUidMissing = true;
-            ResourcePanelMessage = localizer.F("resourcePanelUidMissing", resourcePanelUidService.CookieLibraryPath);
+            ResourcePanelMessage = localizer.F("resourcePanelUidMissing", resourcePanelService.CookieLibraryPath);
             return;
         }
 
         IsResourcePanelBusy = true;
         try
         {
-            await resourcePanelApiClient.SaveConfigAsync(
+            await resourcePanelService.SaveConfigAsync(
                 ResourcePanelUid,
-                ToResourcePanelMode(GetResourcePanelItem(ResourcePanelResourceCodes.Text).IsEnabled),
-                ToResourcePanelMode(GetResourcePanelItem(ResourcePanelResourceCodes.Voice).IsEnabled),
-                ToResourcePanelMode(GetResourcePanelItem(ResourcePanelResourceCodes.Media).IsEnabled),
+                GetResourcePanelItem(ResourcePanelResourceCodes.Text).IsEnabled,
+                GetResourcePanelItem(ResourcePanelResourceCodes.Voice).IsEnabled,
+                GetResourcePanelItem(ResourcePanelResourceCodes.Media).IsEnabled,
                 GetProxyMode?.Invoke() ?? ProxyModes.Direct,
                 lifetimeCts.Token);
             ResourcePanelMessage = localizer.T("resourcePanelSaved");
@@ -184,7 +183,7 @@ public partial class ResourcePanelViewModel : ViewModelBase, IDisposable
             var message = localizer.F("resourcePanelSaveFailed", exception.Message);
             ResourcePanelMessage = message;
             toastService.ShowError(message);
-            await diagnostics.ErrorAsync("Resource panel save failed.", exception);
+            await resourcePanelService.LogErrorAsync("Resource panel save failed.", exception);
         }
         finally
         {
@@ -201,7 +200,7 @@ public partial class ResourcePanelViewModel : ViewModelBase, IDisposable
         SetResourcePanelStatusText(localizer.T("resourcePanelLoading"));
         try
         {
-            var uid = await resourcePanelUidService.ResolveUidAsync(cancellationToken);
+            var uid = await resourcePanelService.ResolveUidAsync(cancellationToken);
             ResourcePanelUid = uid;
             ResourcePanelUidText = string.IsNullOrWhiteSpace(uid)
                 ? ""
@@ -210,7 +209,7 @@ public partial class ResourcePanelViewModel : ViewModelBase, IDisposable
             if (string.IsNullOrWhiteSpace(uid))
             {
                 IsResourcePanelUidMissing = true;
-                ResourcePanelMessage = localizer.F("resourcePanelUidMissing", resourcePanelUidService.CookieLibraryPath);
+                ResourcePanelMessage = localizer.F("resourcePanelUidMissing", resourcePanelService.CookieLibraryPath);
                 SetResourcePanelStatusText(localizer.T("resourcePanelFailed"));
                 return;
             }
@@ -225,7 +224,7 @@ public partial class ResourcePanelViewModel : ViewModelBase, IDisposable
         {
             ResourcePanelMessage = localizer.F("resourcePanelLoadFailed", exception.Message);
             SetResourcePanelStatusText(localizer.T("resourcePanelFailed"));
-            await diagnostics.ErrorAsync("Resource panel load failed.", exception, CancellationToken.None);
+            await resourcePanelService.LogErrorAsync("Resource panel load failed.", exception);
         }
         finally
         {
@@ -238,44 +237,26 @@ public partial class ResourcePanelViewModel : ViewModelBase, IDisposable
         ResourcePanelMessage = localizer.T("resourcePanelLoading");
         SetResourcePanelStatusText(localizer.T("resourcePanelLoading"));
         var proxyMode = GetProxyMode?.Invoke() ?? ProxyModes.Direct;
-        var statusTask = resourcePanelApiClient.GetStatusAsync(proxyMode, cancellationToken);
-        var configTask = resourcePanelApiClient.GetConfigAsync(uid, proxyMode, cancellationToken);
-        await Task.WhenAll(statusTask, configTask);
-        ApplyResourcePanelStatus(await statusTask);
-        ApplyResourcePanelConfig(await configTask);
+        var result = await resourcePanelService.LoadDataAsync(uid, proxyMode, cancellationToken);
+        ApplyResult(result);
         ResourcePanelMessage = localizer.T("statusNetworkLoaded");
     }
 
-    private void ApplyResourcePanelStatus(ResourcePanelStatusResponse status)
+    private void ApplyResult(ResourcePanelLoadResult result)
     {
-        ApplyResourcePanelStatus(
-            GetResourcePanelItem(ResourcePanelResourceCodes.Text), status.Text);
-        ApplyResourcePanelStatus(
-            GetResourcePanelItem(ResourcePanelResourceCodes.Voice), status.Voice);
-        ApplyResourcePanelStatus(
-            GetResourcePanelItem(ResourcePanelResourceCodes.Media), status.Media);
+        ApplyItem(GetResourcePanelItem(ResourcePanelResourceCodes.Text), result.Text);
+        ApplyItem(GetResourcePanelItem(ResourcePanelResourceCodes.Voice), result.Voice);
+        ApplyItem(GetResourcePanelItem(ResourcePanelResourceCodes.Media), result.Media);
     }
 
-    private void ApplyResourcePanelStatus(ResourcePanelItem item, ResourcePanelStatusGroup status)
+    private void ApplyItem(ResourcePanelItem item, ResourcePanelItemData data)
     {
-        var officialVersion = status.Official?.Version;
-        var localizedVersion = status.Localized?.Version;
-        item.OfficialVersion = string.IsNullOrWhiteSpace(officialVersion)
-            ? "--" : officialVersion;
-        item.LocalizedVersion = string.IsNullOrWhiteSpace(localizedVersion)
-            ? "--" : localizedVersion;
-        item.StatusText = string.Equals(item.OfficialVersion, item.LocalizedVersion, StringComparison.Ordinal)
-            ? localizer.T("resourcePanelReady") : localizer.T("resourcePanelWaiting");
-    }
-
-    private void ApplyResourcePanelConfig(ResourcePanelConfigResponse config)
-    {
-        GetResourcePanelItem(ResourcePanelResourceCodes.Text).IsEnabled =
-            config.Text == ResourcePanelResourceModes.Chinese;
-        GetResourcePanelItem(ResourcePanelResourceCodes.Voice).IsEnabled =
-            config.Voice == ResourcePanelResourceModes.Chinese;
-        GetResourcePanelItem(ResourcePanelResourceCodes.Media).IsEnabled =
-            config.Media == ResourcePanelResourceModes.Chinese;
+        item.OfficialVersion = data.OfficialVersion;
+        item.LocalizedVersion = data.LocalizedVersion;
+        item.IsEnabled = data.IsEnabled;
+        item.StatusText = data.IsReady
+            ? localizer.T("resourcePanelReady")
+            : localizer.T("resourcePanelWaiting");
     }
 
     private void SetResourcePanelStatusText(string statusText)
@@ -292,11 +273,6 @@ public partial class ResourcePanelViewModel : ViewModelBase, IDisposable
     {
         return ResourcePanelItems.FirstOrDefault(item => item.Code == code)
             ?? throw new InvalidOperationException($"Resource panel item not found: {code}");
-    }
-
-    private static string ToResourcePanelMode(bool enabled)
-    {
-        return enabled ? ResourcePanelResourceModes.Chinese : ResourcePanelResourceModes.Japanese;
     }
 
     public void Dispose()
