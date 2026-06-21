@@ -153,6 +153,61 @@ public sealed class MainWindowViewModelTests : IDisposable
         Assert.Contains(viewModel.RemoteContent.NewsItems, item => item.Title == "notice title");
         Assert.True(viewModel.RemoteContent.HasNewsItems);
         Assert.False(viewModel.RemoteContent.HasRemoteContent);
+        Assert.False(viewModel.RemoteContent.IsPanelVisible);
+    }
+
+    [Fact]
+    public async Task RefreshAsync_WhileCoreLoadIsPending_ShowsRemoteContentLoadingState()
+    {
+        var snapshot = CreateSnapshot();
+        snapshot.Settings.ShowRemoteContentCard = true;
+        snapshot.Remote.OperationsResource = CreateOperationsResource();
+        var coreService = new BlockingSecondLoadCoreService(snapshot);
+        using var viewModel = CreateViewModel(coreService);
+        await viewModel.InitializeAsync();
+
+        var refreshTask = viewModel.RefreshCommand.ExecuteAsync(null);
+        await coreService.SecondLoadStarted.Task.WaitAsync(TimeSpan.FromSeconds(2));
+
+        try
+        {
+            Assert.True(viewModel.RemoteContent.IsLoading);
+            Assert.True(viewModel.RemoteContent.IsPanelVisible);
+        }
+        finally
+        {
+            coreService.ReleaseSecondLoad.TrySetResult();
+            await refreshTask;
+        }
+
+        Assert.False(viewModel.RemoteContent.IsLoading);
+        Assert.True(viewModel.RemoteContent.IsPanelVisible);
+    }
+
+    [Fact]
+    public async Task SaveSettingsAsync_WhenRemoteContentVisibilityChanges_AppliesBeforeRefreshCompletes()
+    {
+        var snapshot = CreateSnapshot();
+        snapshot.Settings.ShowRemoteContentCard = true;
+        snapshot.Remote.OperationsResource = CreateOperationsResource();
+        var coreService = new BlockingSecondLoadCoreService(snapshot);
+        using var viewModel = CreateViewModel(coreService);
+        await viewModel.InitializeAsync();
+        Assert.True(viewModel.RemoteContent.HasRemoteContent);
+        viewModel.Settings.Editor.Current.ShowRemoteContentCard = false;
+
+        var saveTask = SaveSettingsAsync(viewModel);
+        await coreService.SecondLoadStarted.Task.WaitAsync(TimeSpan.FromSeconds(2));
+
+        try
+        {
+            Assert.False(viewModel.RemoteContent.HasRemoteContent);
+        }
+        finally
+        {
+            coreService.ReleaseSecondLoad.TrySetResult();
+            await saveTask;
+        }
     }
 
     [Fact]
@@ -175,6 +230,7 @@ public sealed class MainWindowViewModelTests : IDisposable
         Assert.DoesNotContain(viewModel.Shell.I18n.StatusNetworkLoaded, successToasts);
         Assert.Equal("Alert", viewModel.Shell.StatusIconKind);
         Assert.Equal("load failed", viewModel.Shell.NetworkStatusValueText);
+        Assert.False(viewModel.RemoteContent.IsLoading);
     }
 
     [Theory]
@@ -219,6 +275,30 @@ public sealed class MainWindowViewModelTests : IDisposable
 
         var item = Assert.Single(viewModel.RemoteContent.SocialMediaItems);
         Assert.Equal("Palette", item.SocialIconKind);
+    }
+
+    [Fact]
+    public void RemoteContentItem_ImageStateTransitionsSeparateLoadingAndFailure()
+    {
+        var item = new RemoteContentItem();
+
+        Assert.True(item.IsImageLoading);
+        Assert.False(item.IsImageLoadFailed);
+
+        item.MarkImageLoadFailed();
+
+        Assert.False(item.IsImageLoading);
+        Assert.True(item.IsImageLoadFailed);
+
+        item.MarkImageLoading();
+
+        Assert.True(item.IsImageLoading);
+        Assert.False(item.IsImageLoadFailed);
+
+        item.MarkImageLoaded();
+
+        Assert.False(item.IsImageLoading);
+        Assert.False(item.IsImageLoadFailed);
     }
 
     [Fact]
@@ -323,7 +403,7 @@ public sealed class MainWindowViewModelTests : IDisposable
     }
 
     [Fact]
-    public async Task ChooseGamePathAsync_WhenPathIsAutoSaved_ClosingSettingsDoesNotShowUnsavedDialog()
+    public async Task ChooseGamePathAsync_UpdatesEditorWithoutPersistingUntilSave()
     {
         var pickedPath = Path.Combine(tempDir, "installed-game");
         Directory.CreateDirectory(pickedPath);
@@ -340,12 +420,245 @@ public sealed class MainWindowViewModelTests : IDisposable
         viewModel.Settings.PickGameFolderAsync = _ => Task.FromResult<string?>(pickedPath);
 
         await viewModel.Settings.ChooseGamePathCommand.ExecuteAsync(null);
-        viewModel.WindowChrome.ShowSettingsCommand.Execute(null);
+
+        Assert.True(viewModel.Settings.IsSettingsDirty);
+        Assert.Equal(pickedPath, viewModel.Settings.Editor.Current.GamePath);
+        Assert.Equal("", (await settingsService.ReadAsync()).GamePath);
+
+        await SaveSettingsAsync(viewModel);
 
         Assert.False(viewModel.Settings.IsSettingsDirty);
-        Assert.False(viewModel.Settings.IsUnsavedChangesVisible);
-        Assert.False(viewModel.WindowChrome.IsSettingsVisible);
+        Assert.True(viewModel.WindowChrome.IsSettingsVisible);
         Assert.Equal(pickedPath, (await settingsService.ReadAsync()).GamePath);
+    }
+
+    [Fact]
+    public async Task ChooseBackgroundImageAsync_UpdatesEditorWithoutPersistingUntilSave()
+    {
+        var pickedPath = Path.Combine(tempDir, "background.png");
+        await File.WriteAllBytesAsync(pickedPath, []);
+        var settingsPath = Path.Combine(tempDir, Guid.NewGuid().ToString("N"), "settings.json");
+        var settingsService = new LauncherSettingsService(settingsPath);
+        await settingsService.SaveAsync(new LauncherSettings());
+        var coreService = new CountingCoreService(CreateSnapshot());
+        using var viewModel = CreateViewModel(coreService, settingsService);
+        await viewModel.InitializeAsync();
+        viewModel.Settings.PickBackgroundImageAsync = () => Task.FromResult<string?>(pickedPath);
+
+        await viewModel.Settings.ChooseBackgroundImageCommand.ExecuteAsync(null);
+
+        var persistedBeforeSave = await settingsService.ReadAsync();
+        Assert.True(viewModel.Settings.IsSettingsDirty);
+        Assert.Equal(pickedPath, viewModel.Settings.Editor.Current.CustomBackgroundPath);
+        Assert.Equal(BackgroundSources.Custom, viewModel.Settings.Editor.Current.BackgroundSource);
+        Assert.Equal("", persistedBeforeSave.CustomBackgroundPath);
+        Assert.Equal(BackgroundSources.Bundled, persistedBeforeSave.BackgroundSource);
+
+        await SaveSettingsAsync(viewModel);
+
+        var persistedAfterSave = await settingsService.ReadAsync();
+        Assert.False(viewModel.Settings.IsSettingsDirty);
+        Assert.Equal(pickedPath, persistedAfterSave.CustomBackgroundPath);
+        Assert.Equal(BackgroundSources.Custom, persistedAfterSave.BackgroundSource);
+    }
+
+    [Fact]
+    public async Task AppearancePreview_WhenSettingChangesAgain_CancelsPreviousPreview()
+    {
+        var coreService = new CountingCoreService(CreateSnapshot());
+        using var viewModel = CreateViewModel(coreService);
+        var firstPreviewStarted = new TaskCompletionSource(
+            TaskCreationOptions.RunContinuationsAsynchronously);
+        var firstPreviewCanceled = new TaskCompletionSource(
+            TaskCreationOptions.RunContinuationsAsynchronously);
+        string? appliedPath = null;
+        viewModel.Settings.PreviewAppearanceAsync = async (settings, propertyName, cancellationToken) =>
+        {
+            if (propertyName != nameof(LauncherSettings.CustomBackgroundPath))
+            {
+                return;
+            }
+
+            if (settings.CustomBackgroundPath == "first")
+            {
+                firstPreviewStarted.TrySetResult();
+                try
+                {
+                    await Task.Delay(Timeout.InfiniteTimeSpan, cancellationToken);
+                }
+                catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
+                {
+                    firstPreviewCanceled.TrySetResult();
+                    throw;
+                }
+            }
+
+            appliedPath = settings.CustomBackgroundPath;
+        };
+
+        viewModel.Settings.Editor.Current.CustomBackgroundPath = "first";
+        await firstPreviewStarted.Task.WaitAsync(TimeSpan.FromSeconds(2));
+        viewModel.Settings.Editor.Current.CustomBackgroundPath = "second";
+        await viewModel.Settings.PendingAppearancePreview;
+
+        await firstPreviewCanceled.Task.WaitAsync(TimeSpan.FromSeconds(2));
+        Assert.Equal("second", appliedPath);
+    }
+
+    [Fact]
+    public async Task BackgroundFolderAndClearCommands_DoNotPersistUntilSave()
+    {
+        var savedPath = Path.Combine(tempDir, "saved-background.png");
+        var pickedFolder = Path.Combine(tempDir, "backgrounds");
+        Directory.CreateDirectory(pickedFolder);
+        var settingsPath = Path.Combine(tempDir, Guid.NewGuid().ToString("N"), "settings.json");
+        var settingsService = new LauncherSettingsService(settingsPath);
+        var persistedSettings = new LauncherSettings
+        {
+            BackgroundSource = BackgroundSources.Custom,
+            CustomBackgroundPath = savedPath
+        };
+        await settingsService.SaveAsync(persistedSettings);
+        var coreService = new CountingCoreService(CreateSnapshot());
+        using var viewModel = CreateViewModel(coreService, settingsService);
+        await viewModel.InitializeAsync();
+        viewModel.Settings.Editor.ApplySnapshot(persistedSettings);
+        viewModel.Settings.Appearance.Load(persistedSettings);
+        viewModel.Settings.PickBackgroundFolderAsync = () => Task.FromResult<string?>(pickedFolder);
+
+        await viewModel.Settings.ChooseBackgroundFolderCommand.ExecuteAsync(null);
+
+        Assert.True(viewModel.Settings.IsSettingsDirty);
+        Assert.Equal(pickedFolder, viewModel.Settings.Editor.Current.CustomBackgroundPath);
+        Assert.Equal(savedPath, (await settingsService.ReadAsync()).CustomBackgroundPath);
+
+        viewModel.Settings.ClearBackgroundCommand.Execute(null);
+
+        Assert.Equal("", viewModel.Settings.Editor.Current.CustomBackgroundPath);
+        Assert.Equal(BackgroundSources.Bundled, viewModel.Settings.Editor.Current.BackgroundSource);
+        Assert.Equal(savedPath, (await settingsService.ReadAsync()).CustomBackgroundPath);
+
+        await SaveSettingsAsync(viewModel);
+
+        var saved = await settingsService.ReadAsync();
+        Assert.Equal("", saved.CustomBackgroundPath);
+        Assert.Equal(BackgroundSources.Bundled, saved.BackgroundSource);
+    }
+
+    [Fact]
+    public async Task BackgroundPresentationSettings_ArePreviewedBeforeSave()
+    {
+        var coreService = new CountingCoreService(CreateSnapshot());
+        using var viewModel = CreateViewModel(coreService);
+        viewModel.Settings.Editor.ApplySnapshot(new LauncherSettings());
+
+        viewModel.Settings.Editor.Current.BackgroundFit = BackgroundFits.Uniform;
+        viewModel.Settings.Appearance.SelectedBackgroundFillColor =
+            Color.FromArgb(0xFF, 0x12, 0x34, 0x56);
+        await viewModel.Settings.PendingAppearancePreview;
+
+        Assert.Equal(Stretch.Uniform, viewModel.Background.BackgroundStretch);
+        var fill = Assert.IsType<SolidColorBrush>(viewModel.Background.BackgroundFillBrush);
+        Assert.Equal(Color.FromArgb(0xFF, 0x12, 0x34, 0x56), fill.Color);
+        Assert.True(viewModel.Settings.IsSettingsDirty);
+    }
+
+    [Fact]
+    public async Task DiscardSettingsChangesAsync_RestoresSnapshotAndClosesSettings()
+    {
+        var snapshot = CreateSnapshot();
+        snapshot.Settings.ThemeMode = ThemeModes.Light;
+        var coreService = new CountingCoreService(snapshot);
+        using var viewModel = CreateViewModel(coreService);
+        await viewModel.InitializeAsync();
+        viewModel.Settings.Editor.ApplySnapshot(snapshot.Settings);
+        viewModel.Settings.Appearance.Load(snapshot.Settings);
+        viewModel.WindowChrome.IsSettingsVisible = true;
+        LauncherSettings? lastPreview = null;
+        viewModel.Settings.PreviewAppearanceAsync = (settings, _, _) =>
+        {
+            lastPreview = settings;
+            return Task.CompletedTask;
+        };
+        viewModel.Settings.Editor.Current.ThemeMode = ThemeModes.Dark;
+        viewModel.WindowChrome.ShowSettingsCommand.Execute(null);
+
+        Assert.True(viewModel.Settings.IsUnsavedChangesVisible);
+
+        await viewModel.WindowChrome.DiscardSettingsChangesCommand.ExecuteAsync(null);
+
+        Assert.False(viewModel.WindowChrome.IsSettingsVisible);
+        Assert.False(viewModel.Settings.IsUnsavedChangesVisible);
+        Assert.False(viewModel.Settings.IsSettingsDirty);
+        Assert.Equal(ThemeModes.Light, viewModel.Settings.Editor.Current.ThemeMode);
+        Assert.Equal(ThemeModes.Light, Assert.IsType<LauncherSettings>(lastPreview).ThemeMode);
+    }
+
+    [Fact]
+    public void ShowSettingsCommand_WhenNoChanges_ClosesWithoutConfirmation()
+    {
+        var coreService = new CountingCoreService(CreateSnapshot());
+        using var viewModel = CreateViewModel(coreService);
+        viewModel.Settings.Editor.ApplySnapshot(new LauncherSettings());
+        viewModel.WindowChrome.IsSettingsVisible = true;
+
+        viewModel.WindowChrome.ShowSettingsCommand.Execute(null);
+
+        Assert.False(viewModel.WindowChrome.IsSettingsVisible);
+        Assert.False(viewModel.Settings.IsUnsavedChangesVisible);
+    }
+
+    [Fact]
+    public void SaveSettingsCommand_IsEnabledOnlyWhenSettingsAreDirty()
+    {
+        var coreService = new CountingCoreService(CreateSnapshot());
+        using var viewModel = CreateViewModel(coreService);
+        viewModel.Settings.Editor.ApplySnapshot(new LauncherSettings());
+
+        Assert.False(viewModel.Settings.CanSaveSettings);
+        Assert.False(viewModel.Settings.SaveSettingsCommand.CanExecute(null));
+
+        viewModel.Settings.Editor.Current.Language = LauncherLanguages.Japanese;
+
+        Assert.True(viewModel.Settings.CanSaveSettings);
+        Assert.True(viewModel.Settings.SaveSettingsCommand.CanExecute(null));
+    }
+
+    [Fact]
+    public async Task SaveSettingsAsync_WhenPersistenceFails_KeepsDirtyState()
+    {
+        var settingsService = new LauncherSettingsService(tempDir);
+        var localizer = new LocalizationService();
+        var toastService = new ToastService();
+        var editor = new SettingsEditor();
+        var appearance = new SettingsAppearanceViewModel(editor);
+        var dialogs = new DialogsViewModel(
+            localizer,
+            new NoticeStateService(Path.Combine(tempDir, "save-failure-notices.json")));
+        using var settings = new SettingsViewModel(
+            settingsService,
+            localizer,
+            toastService,
+            new LauncherUpdateService(new LauncherUpdateHandler()),
+            dialogs,
+            new SettingsOptionsViewModel(localizer, new DiskSpaceService()),
+            appearance);
+        ToastNotification? errorToast = null;
+        toastService.ToastRaised += notification =>
+        {
+            if (notification.Severity == ToastSeverity.Error)
+            {
+                errorToast = notification;
+            }
+        };
+        editor.ApplySnapshot(new LauncherSettings());
+        editor.Current.Language = LauncherLanguages.Japanese;
+
+        await settings.SaveSettingsCommand.ExecuteAsync(null);
+
+        Assert.True(settings.IsSettingsDirty);
+        Assert.True(settings.CanSaveSettings);
+        Assert.NotNull(errorToast);
     }
 
     [Fact]
@@ -621,6 +934,9 @@ public sealed class MainWindowViewModelTests : IDisposable
     {
         settingsService ??= new LauncherSettingsService(
             Path.Combine(tempDir, Guid.NewGuid().ToString("N"), "settings.json"));
+        var testSettings = settingsService.ReadAsync().GetAwaiter().GetResult();
+        testSettings.HasCompletedFirstLaunchWizard = true;
+        settingsService.SaveAsync(testSettings).GetAwaiter().GetResult();
         var localGameStateService = new LocalGameStateService();
         var diagnostics = new LocalDiagnostics();
         var localizationService = new LocalizationService();
@@ -655,7 +971,7 @@ public sealed class MainWindowViewModelTests : IDisposable
         var dialogsViewModel = new DialogsViewModel(localizationService, noticeStateService);
         var settingsViewModel = new SettingsViewModel(
             settingsService, localizationService, toastService,
-            imageCacheService, launcherUpdateService, dialogsViewModel,
+            launcherUpdateService, dialogsViewModel,
             settingsOptions, settingsAppearance);
         var resourcePanelViewModel = new ResourcePanelViewModel(
             resourcePanelUidService, resourcePanelApiClient, localizationService,
@@ -887,6 +1203,34 @@ public sealed class MainWindowViewModelTests : IDisposable
         public Task<LauncherStatusSnapshot> LoadAsync(CancellationToken cancellationToken = default)
         {
             throw new InvalidOperationException("load failed");
+        }
+    }
+
+    private sealed class BlockingSecondLoadCoreService : ILauncherCoreService
+    {
+        private readonly LauncherStatusSnapshot snapshot;
+        private int loadCount;
+
+        public BlockingSecondLoadCoreService(LauncherStatusSnapshot snapshot)
+        {
+            this.snapshot = snapshot;
+        }
+
+        public TaskCompletionSource SecondLoadStarted { get; } =
+            new(TaskCreationOptions.RunContinuationsAsynchronously);
+
+        public TaskCompletionSource ReleaseSecondLoad { get; } =
+            new(TaskCreationOptions.RunContinuationsAsynchronously);
+
+        public async Task<LauncherStatusSnapshot> LoadAsync(CancellationToken cancellationToken = default)
+        {
+            if (Interlocked.Increment(ref loadCount) == 2)
+            {
+                SecondLoadStarted.TrySetResult();
+                await ReleaseSecondLoad.Task.WaitAsync(cancellationToken);
+            }
+
+            return snapshot;
         }
     }
 

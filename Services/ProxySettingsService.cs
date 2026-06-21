@@ -36,7 +36,7 @@ public sealed class ProxySettingsService
         string proxyMode,
         CancellationToken cancellationToken = default)
     {
-        var proxy = await CreateProxyAsync(proxyMode, cancellationToken);
+        var proxy = await CreateProxyAsync(proxyMode, cancellationToken).ConfigureAwait(false);
         return new SocketsHttpHandler
         {
             UseProxy = proxyMode == ProxyModes.System,

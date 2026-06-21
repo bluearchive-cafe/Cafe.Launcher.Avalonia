@@ -10,7 +10,7 @@
         <!-- Resource control panel -->
         <Grid IsVisible="{Binding ResourcePanel.IsResourcePanelVisible}" Classes="dialog-overlay">
             <Border MaxWidth="720"
-                    MaxHeight="620"
+                    MaxHeight="592"
                     Classes="dialog overlay-dialog">
                 <Grid RowDefinitions="Auto,*,Auto" Classes="confirm-layout">
                     <Grid Classes="dialog-heading" ColumnDefinitions="Auto,*,Auto">

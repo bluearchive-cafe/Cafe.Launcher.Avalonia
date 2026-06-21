@@ -49,14 +49,14 @@ public partial class BackgroundViewModel : ViewModelBase, IDisposable
         backgroundImageSource = LoadBundledBackground();
     }
 
-    public async Task UpdateBackgroundImageAsync(LauncherStatusSnapshot? snapshot, CancellationToken cancellationToken)
+    public async Task UpdateBackgroundImageAsync(
+        LauncherSettings settings,
+        LauncherStatusSnapshot? snapshot,
+        CancellationToken cancellationToken)
     {
-        BackgroundStretch = ToStretch(settings.Editor.Current.BackgroundFit);
-        BackgroundFillBrush = settings.Editor.Current.BackgroundFit == BackgroundFits.Uniform
-            ? new SolidColorBrush(settings.Appearance.SelectedBackgroundFillColor)
-            : null;
+        ApplyBackgroundPresentation(settings);
 
-        switch (settings.Editor.Current.BackgroundSource)
+        switch (settings.BackgroundSource)
         {
             case BackgroundSources.Remote:
                 var bgImg = snapshot?.Remote.BaseConfig?.LauncherBackgroundImg;
@@ -68,8 +68,13 @@ public partial class BackgroundViewModel : ViewModelBase, IDisposable
                         var proxyMode = snapshot?.Settings.ProxyMode ?? ProxyModes.Direct;
                         var cachedPath = await imageCacheService.GetCachedPathAsync(crc64, cancellationToken)
                             ?? await imageCacheService.CacheImageAsync(bgImg, crc64, proxyMode, cancellationToken);
-                        SetBackgroundImage(new Bitmap(cachedPath));
+                        cancellationToken.ThrowIfCancellationRequested();
+                        SetBackgroundImage(new Bitmap(cachedPath), settings);
                         return;
+                    }
+                    catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
+                    {
+                        throw;
                     }
                     catch (Exception ex)
                     {
@@ -82,19 +87,31 @@ public partial class BackgroundViewModel : ViewModelBase, IDisposable
                 break;
 
             case BackgroundSources.Custom:
-                if (!string.IsNullOrWhiteSpace(settings.Editor.Current.CustomBackgroundPath))
+                if (!string.IsNullOrWhiteSpace(settings.CustomBackgroundPath))
                 {
-                    var customBitmap = await LoadCustomBackgroundAsync(settings.Editor.Current.CustomBackgroundPath);
+                    var customBitmap = await LoadCustomBackgroundAsync(
+                        settings.CustomBackgroundPath,
+                        cancellationToken);
                     if (customBitmap is not null)
                     {
-                        SetBackgroundImage(customBitmap);
+                        cancellationToken.ThrowIfCancellationRequested();
+                        SetBackgroundImage(customBitmap, settings);
                         return;
                     }
                 }
                 break;
         }
 
-        SetBackgroundImage(LoadBundledBackground());
+        cancellationToken.ThrowIfCancellationRequested();
+        SetBackgroundImage(LoadBundledBackground(), settings);
+    }
+
+    public void ApplyBackgroundPresentation(LauncherSettings settings)
+    {
+        BackgroundStretch = ToStretch(settings.BackgroundFit);
+        BackgroundFillBrush = settings.BackgroundFit == BackgroundFits.Uniform
+            ? new SolidColorBrush(SettingsAppearanceViewModel.ParseColorOrDefault(settings.BackgroundFillColor))
+            : null;
     }
 
     public Bitmap? GetBackgroundBitmap()
@@ -102,20 +119,34 @@ public partial class BackgroundViewModel : ViewModelBase, IDisposable
         return BackgroundImageSource as Bitmap;
     }
 
-    public async Task<Bitmap?> LoadCustomBackgroundAsync(string path)
+    public async Task<Bitmap?> LoadCustomBackgroundAsync(
+        string path,
+        CancellationToken cancellationToken = default)
     {
+        cancellationToken.ThrowIfCancellationRequested();
         if (File.Exists(path))
         {
             try
             {
-                return new Bitmap(path);
+                var bitmap = new Bitmap(path);
+                if (cancellationToken.IsCancellationRequested)
+                {
+                    bitmap.Dispose();
+                    cancellationToken.ThrowIfCancellationRequested();
+                }
+
+                return bitmap;
+            }
+            catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
+            {
+                throw;
             }
             catch (Exception ex)
             {
                 await diagnostics.MessageAsync(
                     "Custom background image load failed",
-                    $"path: {path}\nexception: {ex.Message}");
-                settings.Editor.Current.CustomBackgroundPath = "";
+                    $"path: {path}\nexception: {ex.Message}",
+                    CancellationToken.None);
                 return null;
             }
         }
@@ -126,12 +157,14 @@ public partial class BackgroundViewModel : ViewModelBase, IDisposable
             try
             {
                 imagePath = ResolveRandomBackgroundImage(path);
+                cancellationToken.ThrowIfCancellationRequested();
             }
             catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
             {
                 await diagnostics.MessageAsync(
                     "Custom background folder scan failed",
-                    $"path: {path}\nexception: {ex.Message}");
+                    $"path: {path}\nexception: {ex.Message}",
+                    CancellationToken.None);
                 return null;
             }
 
@@ -139,26 +172,40 @@ public partial class BackgroundViewModel : ViewModelBase, IDisposable
             {
                 await diagnostics.MessageAsync(
                     "Custom background folder contains no supported images",
-                    $"path: {path}");
+                    $"path: {path}",
+                    CancellationToken.None);
                 return null;
             }
 
             try
             {
-                return new Bitmap(imagePath);
+                var bitmap = new Bitmap(imagePath);
+                if (cancellationToken.IsCancellationRequested)
+                {
+                    bitmap.Dispose();
+                    cancellationToken.ThrowIfCancellationRequested();
+                }
+
+                return bitmap;
+            }
+            catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
+            {
+                throw;
             }
             catch (Exception ex)
             {
                 await diagnostics.MessageAsync(
                     "Custom background folder image load failed",
-                    $"folder: {path}\npath: {imagePath}\nexception: {ex.Message}");
+                    $"folder: {path}\npath: {imagePath}\nexception: {ex.Message}",
+                    CancellationToken.None);
                 return null;
             }
         }
 
         await diagnostics.MessageAsync(
             "Custom background path does not exist",
-            $"path: {path}");
+            $"path: {path}",
+            CancellationToken.None);
         return null;
     }
 
@@ -187,15 +234,15 @@ public partial class BackgroundViewModel : ViewModelBase, IDisposable
             || extension.Equals(".webp", StringComparison.OrdinalIgnoreCase);
     }
 
-    private void SetBackgroundImage(Bitmap? bitmap)
+    private void SetBackgroundImage(Bitmap? bitmap, LauncherSettings previewSettings)
     {
         var old = BackgroundImageSource as IDisposable;
         BackgroundImageSource = bitmap;
-        if (settings.Editor.Current.ThemeColorMode == ThemeColorModes.Wallpaper)
+        if (previewSettings.ThemeColorMode == ThemeColorModes.Wallpaper)
         {
             settings.Appearance.RefreshThemeColorPaletteFromCurrentBackground(markDirty: false);
             settings.Appearance.ApplyThemeColor(
-                settings.Editor.Current.ThemeColorMode,
+                previewSettings.ThemeColorMode,
                 settings.Appearance.SelectedCustomThemeColor);
         }
 

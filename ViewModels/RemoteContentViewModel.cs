@@ -21,6 +21,7 @@ public partial class RemoteContentViewModel : ViewModelBase, IDisposable
     private DispatcherTimer? carouselTimer;
     private CancellationTokenSource? carouselDelayCts;
     private string proxyMode = ProxyModes.Direct;
+    private bool showRemoteContentCard = true;
 
     [ObservableProperty]
     private string noticeText = "";
@@ -39,6 +40,12 @@ public partial class RemoteContentViewModel : ViewModelBase, IDisposable
 
     [ObservableProperty]
     private bool hasRemoteContent;
+
+    [ObservableProperty]
+    private bool isPanelVisible;
+
+    [ObservableProperty]
+    private bool isLoading;
 
     [ObservableProperty]
     private int carouselSelectedIndex;
@@ -230,6 +237,7 @@ public partial class RemoteContentViewModel : ViewModelBase, IDisposable
         HasBannerItems = BannerItems.Count > 0;
         HasNewsItems = NewsCategories.Count > 0;
         HasSocialMediaItems = SocialMediaItems.Count > 0;
+        IsLoading = false;
         UpdateRemoteContentVisibility(settings.ShowRemoteContentCard);
 
         if (HasBannerItems)
@@ -240,8 +248,22 @@ public partial class RemoteContentViewModel : ViewModelBase, IDisposable
 
     public void UpdateRemoteContentVisibility(bool showRemoteContentCard)
     {
-        HasRemoteContent = showRemoteContentCard
-            && (HasNotice || HasBannerItems || HasNewsItems || HasSocialMediaItems);
+        this.showRemoteContentCard = showRemoteContentCard;
+        var hasContent = HasNotice || HasBannerItems || HasNewsItems || HasSocialMediaItems;
+        HasRemoteContent = showRemoteContentCard && hasContent;
+        IsPanelVisible = showRemoteContentCard && (IsLoading || hasContent);
+    }
+
+    public void BeginLoading(bool showRemoteContentCard)
+    {
+        IsLoading = showRemoteContentCard;
+        UpdateRemoteContentVisibility(showRemoteContentCard);
+    }
+
+    public void EndLoading()
+    {
+        IsLoading = false;
+        UpdateRemoteContentVisibility(showRemoteContentCard);
     }
 
     public void StopCarouselTimer()
@@ -384,14 +406,17 @@ public partial class RemoteContentViewModel : ViewModelBase, IDisposable
         {
             if (string.IsNullOrWhiteSpace(item.ImageUrl))
             {
+                item.MarkImageLoadFailed();
                 continue;
             }
 
+            item.MarkImageLoading();
             try
             {
                 var bytes = await imageCacheService.GetImageBytesAsync(item.ImageUrl, proxyMode, cancellationToken);
                 if (bytes is null)
                 {
+                    await Dispatcher.UIThread.InvokeAsync(item.MarkImageLoadFailed);
                     continue;
                 }
 
@@ -404,10 +429,16 @@ public partial class RemoteContentViewModel : ViewModelBase, IDisposable
 
                     item.BannerBitmap?.Dispose();
                     item.BannerBitmap = new Bitmap(new MemoryStream(bytes));
+                    item.MarkImageLoaded();
                 });
+            }
+            catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
+            {
+                return;
             }
             catch
             {
+                await Dispatcher.UIThread.InvokeAsync(item.MarkImageLoadFailed);
             }
         }
     }

@@ -208,6 +208,38 @@ public sealed partial class LauncherSettings : ObservableObject
     [ObservableProperty]
     [property: JsonPropertyName("updateChannel")]
     private string updateChannel = UpdateChannels.Stable;
+
+    /// <summary>
+    /// Deep-clones this settings object via JSON round-trip.
+    /// Shared by <see cref="Services.SettingsNormalizer"/> and <see cref="Services.SettingsEditor"/>.
+    /// </summary>
+    public LauncherSettings DeepClone()
+    {
+        var json = System.Text.Json.JsonSerializer.Serialize(this, CloneJsonOptions);
+        return System.Text.Json.JsonSerializer.Deserialize<LauncherSettings>(json, CloneJsonOptions)
+            ?? new LauncherSettings();
+    }
+
+    /// <summary>
+    /// Creates default settings with pre-release builds defaulting to the beta update channel.
+    /// Shared by <see cref="Services.LauncherSettingsService"/> and <see cref="Services.SettingsEditor"/>.
+    /// </summary>
+    public static LauncherSettings CreateDefaults()
+    {
+        var settings = new LauncherSettings();
+
+        if (Constants.BuildInfo.LauncherVersion.Contains('-'))
+        {
+            settings.UpdateChannel = UpdateChannels.Beta;
+        }
+
+        return settings;
+    }
+
+    private static readonly System.Text.Json.JsonSerializerOptions CloneJsonOptions = new()
+    {
+        PropertyNameCaseInsensitive = false
+    };
 }
 
 /// <summary>
@@ -356,6 +388,8 @@ public sealed class RemoteContentItem : INotifyPropertyChanged
     private string imageUrl = "";
     private string socialIconKind = "Link";
     private global::Avalonia.Media.Imaging.Bitmap? bannerBitmap;
+    private bool isImageLoading = true;
+    private bool isImageLoadFailed;
 
     public event PropertyChangedEventHandler? PropertyChanged;
 
@@ -369,6 +403,50 @@ public sealed class RemoteContentItem : INotifyPropertyChanged
     {
         get => bannerBitmap;
         set { if (bannerBitmap != value) { bannerBitmap = value; Notify(nameof(BannerBitmap)); } }
+    }
+
+    public bool IsImageLoading
+    {
+        get => isImageLoading;
+        private set
+        {
+            if (isImageLoading != value)
+            {
+                isImageLoading = value;
+                Notify(nameof(IsImageLoading));
+            }
+        }
+    }
+
+    public bool IsImageLoadFailed
+    {
+        get => isImageLoadFailed;
+        private set
+        {
+            if (isImageLoadFailed != value)
+            {
+                isImageLoadFailed = value;
+                Notify(nameof(IsImageLoadFailed));
+            }
+        }
+    }
+
+    public void MarkImageLoading()
+    {
+        IsImageLoading = true;
+        IsImageLoadFailed = false;
+    }
+
+    public void MarkImageLoaded()
+    {
+        IsImageLoading = false;
+        IsImageLoadFailed = false;
+    }
+
+    public void MarkImageLoadFailed()
+    {
+        IsImageLoading = false;
+        IsImageLoadFailed = true;
     }
 
     private void Notify(string propertyName) =>

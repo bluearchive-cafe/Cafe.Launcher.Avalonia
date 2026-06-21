@@ -44,7 +44,7 @@ public sealed class ManifestValidationService
                 localGame,
                 patchUrlGroup,
                 proxyMode,
-                cancellationToken);
+                cancellationToken).ConfigureAwait(false);
             return remoteManifestResult.Files is null
                 ? Failed(remoteManifestResult.Message)
                 : ValidateFiles(gamePath, remoteManifestResult.Files);
@@ -103,7 +103,7 @@ public sealed class ManifestValidationService
                 basis,
                 patchUrlGroup,
                 proxyMode,
-                cancellationToken);
+                cancellationToken).ConfigureAwait(false);
         }
         catch (Exception exception) when (exception is HttpRequestException or TaskCanceledException or InvalidOperationException)
         {
@@ -120,7 +120,7 @@ public sealed class ManifestValidationService
             var remoteManifest = await apiClient.GetRemoteManifestAsync(
                 manifestUrl.Url,
                 proxyMode,
-                cancellationToken);
+                cancellationToken).ConfigureAwait(false);
             return (remoteManifest.File, "");
         }
         catch (Exception exception) when (exception is HttpRequestException or TaskCanceledException or JsonException or IOException)

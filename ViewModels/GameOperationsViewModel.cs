@@ -152,7 +152,7 @@ public partial class GameOperationsViewModel : ViewModelBase
         {
             shell.OperationNote = localizer.F("gameLaunchFailed", exception.Message);
             toastService.ShowError(exception.Message);
-            await TryLogErrorAsync("Game launch failed.", exception);
+            await diagnostics.ErrorAsync("Game launch failed.", exception);
         }
         finally
         {
@@ -190,7 +190,7 @@ public partial class GameOperationsViewModel : ViewModelBase
         {
             shell.OperationNote = localizer.F("networkWithMessage", exception.Message);
             toastService.ShowError(exception.Message);
-            await TryLogErrorAsync("Game install/update failed.", exception);
+            await diagnostics.ErrorAsync("Game install/update failed.", exception);
         }
         finally
         {
@@ -245,7 +245,7 @@ public partial class GameOperationsViewModel : ViewModelBase
         {
             shell.OperationNote = localizer.F("networkWithMessage", exception.Message);
             toastService.ShowError(exception.Message);
-            await TryLogErrorAsync("Game repair failed.", exception);
+            await diagnostics.ErrorAsync("Game repair failed.", exception);
         }
         finally
         {
@@ -359,7 +359,7 @@ public partial class GameOperationsViewModel : ViewModelBase
         catch (Exception exception)
         {
             shell.OperationNote = localizer.F("networkWithMessage", exception.Message);
-            await TryLogErrorAsync("Game uninstall failed.", exception);
+            await diagnostics.ErrorAsync("Game uninstall failed.", exception);
         }
         finally
         {
@@ -397,7 +397,7 @@ public partial class GameOperationsViewModel : ViewModelBase
         catch (Exception exception)
         {
             shell.OperationNote = localizer.F("networkWithMessage", exception.Message);
-            await TryLogErrorAsync("Persisted game download resume failed.", exception);
+            await diagnostics.ErrorAsync("Persisted game download resume failed.", exception, CancellationToken.None);
         }
         finally
         {
@@ -537,15 +537,4 @@ public partial class GameOperationsViewModel : ViewModelBase
         };
     }
 
-    private async Task TryLogErrorAsync(string title, Exception exception)
-    {
-        try
-        {
-            await diagnostics.ErrorAsync(title, exception);
-        }
-        catch
-        {
-            shell.OperationNote = localizer.F("diagnosticsWriteFailed", shell.OperationNote);
-        }
-    }
 }

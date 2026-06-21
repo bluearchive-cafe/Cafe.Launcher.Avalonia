@@ -145,7 +145,7 @@ public partial class ResourcePanelViewModel : ViewModelBase, IDisposable
         catch (Exception exception)
         {
             ResourcePanelMessage = localizer.F("resourcePanelLoadFailed", exception.Message);
-            await TryLogErrorAsync("Resource panel manual UID save failed.", exception);
+            await diagnostics.ErrorAsync("Resource panel manual UID save failed.", exception);
         }
         finally
         {
@@ -184,7 +184,7 @@ public partial class ResourcePanelViewModel : ViewModelBase, IDisposable
             var message = localizer.F("resourcePanelSaveFailed", exception.Message);
             ResourcePanelMessage = message;
             toastService.ShowError(message);
-            await TryLogErrorAsync("Resource panel save failed.", exception);
+            await diagnostics.ErrorAsync("Resource panel save failed.", exception);
         }
         finally
         {
@@ -225,7 +225,7 @@ public partial class ResourcePanelViewModel : ViewModelBase, IDisposable
         {
             ResourcePanelMessage = localizer.F("resourcePanelLoadFailed", exception.Message);
             SetResourcePanelStatusText(localizer.T("resourcePanelFailed"));
-            await TryLogErrorAsync("Resource panel load failed.", exception);
+            await diagnostics.ErrorAsync("Resource panel load failed.", exception, CancellationToken.None);
         }
         finally
         {
@@ -297,18 +297,6 @@ public partial class ResourcePanelViewModel : ViewModelBase, IDisposable
     private static string ToResourcePanelMode(bool enabled)
     {
         return enabled ? ResourcePanelResourceModes.Chinese : ResourcePanelResourceModes.Japanese;
-    }
-
-    private async Task TryLogErrorAsync(string title, Exception exception)
-    {
-        try
-        {
-            await diagnostics.ErrorAsync(title, exception);
-        }
-        catch
-        {
-            // Best-effort logging
-        }
     }
 
     public void Dispose()

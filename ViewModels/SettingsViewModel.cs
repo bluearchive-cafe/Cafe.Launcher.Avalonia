@@ -1,4 +1,6 @@
 using System;
+using System.ComponentModel;
+using System.Threading;
 using System.Threading.Tasks;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
@@ -13,22 +15,22 @@ public partial class SettingsViewModel : ViewModelBase, IDisposable
     private readonly LauncherSettingsService settingsService;
     private readonly LocalizationService localizer;
     private readonly ToastService toastService;
-    private readonly ImageCacheService? imageCacheService;
     private readonly LauncherUpdateService launcherUpdateService;
     private readonly DialogsViewModel dialogs;
     private readonly ISettingsEditor editor;
+    private CancellationTokenSource? appearancePreviewCts;
+    private Task appearancePreviewTask = Task.CompletedTask;
     private bool disposed;
 
     // Coordination delegates — set by parent after construction.
-    public Func<LauncherStatusSnapshot?>? GetSnapshot { get; set; }
     public Func<string, Task<string?>>? PickGameFolderAsync { get; set; }
     public Func<Task<string?>>? PickBackgroundImageAsync { get; set; }
     public Func<Task<string?>>? PickBackgroundFolderAsync { get; set; }
     public Func<LauncherSettings, Task>? ApplyLanguageAndTheme { get; set; }
+    public Func<LauncherSettings, string?, CancellationToken, Task>? PreviewAppearanceAsync { get; set; }
 
     // Events — parent subscribes to these.
     public event Func<Task>? SettingsSaved;
-    public event Action? CloseRequested;
 
     /// <summary>
     /// The settings state editor. XAML binds to <c>Editor.Current.*</c> for
@@ -42,7 +44,6 @@ public partial class SettingsViewModel : ViewModelBase, IDisposable
         LauncherSettingsService settingsService,
         LocalizationService localizer,
         ToastService toastService,
-        ImageCacheService? imageCacheService,
         LauncherUpdateService launcherUpdateService,
         DialogsViewModel dialogs,
         SettingsOptionsViewModel options,
@@ -51,29 +52,48 @@ public partial class SettingsViewModel : ViewModelBase, IDisposable
         this.settingsService = settingsService;
         this.localizer = localizer;
         this.toastService = toastService;
-        this.imageCacheService = imageCacheService;
         this.launcherUpdateService = launcherUpdateService;
         this.dialogs = dialogs;
         editor = appearance.Editor;
         Options = options;
         Appearance = appearance;
         editor.PropertyChanged += OnEditorPropertyChanged;
+        editor.CurrentPropertyChanged += OnCurrentSettingChanged;
     }
 
-    private void OnEditorPropertyChanged(object? sender, System.ComponentModel.PropertyChangedEventArgs e)
+    private void OnEditorPropertyChanged(object? sender, PropertyChangedEventArgs e)
     {
         if (e.PropertyName == nameof(ISettingsEditor.IsDirty))
         {
             OnPropertyChanged(nameof(IsSettingsDirty));
+            OnPropertyChanged(nameof(CanSaveSettings));
+            SaveSettingsCommand.NotifyCanExecuteChanged();
         }
+    }
+
+    private void OnCurrentSettingChanged(object? sender, PropertyChangedEventArgs e)
+    {
+        if (!IsAppearanceSetting(e.PropertyName))
+        {
+            return;
+        }
+
+        RequestAppearancePreview(e.PropertyName);
     }
 
     // ── Settings UI state ────────────────────────────────────────────────
 
     public bool IsSettingsDirty => editor.IsDirty;
 
+    public bool CanSaveSettings => IsSettingsDirty && !IsSaving;
+
     [ObservableProperty]
     private bool isUnsavedChangesVisible;
+
+    [ObservableProperty]
+    private bool isSaving;
+
+    internal Task PendingAppearancePreview => appearancePreviewTask;
 
     // ── Public API for parent VM ──────────────────────────────────────────
 
@@ -125,9 +145,10 @@ public partial class SettingsViewModel : ViewModelBase, IDisposable
     [RelayCommand]
     private async Task CheckForUpdatesAsync()
     {
+        var savedSettings = editor.GetSavedSnapshot();
         var result = await launcherUpdateService.CheckForUpdateAsync(
-            editor.Current.UpdateChannel,
-            editor.Current.ProxyMode);
+            savedSettings.UpdateChannel,
+            savedSettings.ProxyMode);
 
         if (!result.IsSuccessful)
         {
@@ -144,51 +165,48 @@ public partial class SettingsViewModel : ViewModelBase, IDisposable
         dialogs.ShowUpdateAvailable(result.LatestVersion, result.Files);
     }
 
-    [RelayCommand]
+    [RelayCommand(CanExecute = nameof(CanSaveSettings))]
     private async Task SaveSettingsAsync()
     {
-        if (editor.Current.ThemeColorMode == ThemeColorModes.Wallpaper
-            && Appearance.ThemeColorPaletteItems.Count == 0)
+        CancelAppearancePreview();
+        IsSaving = true;
+        try
         {
-            Appearance.RefreshThemeColorPaletteFromCurrentBackground(markDirty: false);
+            if (editor.Current.ThemeColorMode == ThemeColorModes.Wallpaper
+                && Appearance.ThemeColorPaletteItems.Count == 0)
+            {
+                Appearance.RefreshThemeColorPaletteFromCurrentBackground(markDirty: false);
+            }
+
+            editor.Commit(s =>
+            {
+                s.ThemeColorPalette = Appearance.GetThemeColorPaletteHexes();
+                s.SelectedThemeColorPaletteIndex = Appearance.SelectedThemeColorPaletteIndex;
+            });
+
+            var settings = editor.GetSnapshot();
+            await settingsService.SaveAsync(settings);
+
+            if (ApplyLanguageAndTheme is not null)
+                await ApplyLanguageAndTheme(settings);
+            else
+                Appearance.ApplyThemeColor(
+                    settings.ThemeColorMode,
+                    SettingsAppearanceViewModel.ParseColorOrDefault(settings.CustomThemeColor));
+
+            editor.ApplySnapshot(settings);
+            toastService.ShowSuccess(localizer.T("settingsSaved"));
+
+            if (SettingsSaved is not null)
+                await SettingsSaved.Invoke();
         }
-
-        var previousSettings = await settingsService.ReadAsync();
-        var snapshot = GetSnapshot?.Invoke();
-        var previousPatchUrlGroup = previousSettings.PatchUrlGroup;
-        var shouldPromptRepairAfterSourceChange = snapshot?.IsInstalled == true
-            && !string.Equals(previousPatchUrlGroup, editor.Current.PatchUrlGroup, StringComparison.Ordinal);
-
-        // Sync palette state (held in ViewModel's ObservableCollection) to the editor
-        // before building the save snapshot.
-        editor.Commit(s =>
+        catch (Exception exception)
         {
-            s.ThemeColorPalette = Appearance.GetThemeColorPaletteHexes();
-            s.SelectedThemeColorPaletteIndex = Appearance.SelectedThemeColorPaletteIndex;
-        });
-
-        // Assemble the settings to save from the editor's current state.
-        var settings = editor.GetSnapshot();
-        await settingsService.SaveAsync(settings);
-
-        if (ApplyLanguageAndTheme is not null)
-            await ApplyLanguageAndTheme(settings);
-        else
-            Appearance.ApplyThemeColor(
-                settings.ThemeColorMode,
-                SettingsAppearanceViewModel.ParseColorOrDefault(settings.CustomThemeColor));
-
-        editor.ApplySnapshot(settings);
-        toastService.ShowSuccess(localizer.T("settingsSaved"));
-
-        // Fire event so parent can refresh and show repair prompt if needed.
-        if (SettingsSaved is not null)
-            await SettingsSaved.Invoke();
-
-        if (shouldPromptRepairAfterSourceChange)
+            toastService.ShowError(localizer.F("settingsSaveFailed", exception.Message));
+        }
+        finally
         {
-            // The repair prompt is shown by the parent VM; we just fire SettingsSaved
-            // and let RefreshAsync handle it.
+            IsSaving = false;
         }
     }
 
@@ -207,23 +225,7 @@ public partial class SettingsViewModel : ViewModelBase, IDisposable
             return;
         }
 
-        // Assemble from editor state (single source of truth).
-        var settings = editor.GetSnapshot();
-        settings.GamePath = pickedPath;
-        await settingsService.SaveAsync(settings);
-
-        if (ApplyLanguageAndTheme is not null)
-            await ApplyLanguageAndTheme(settings);
-        else
-            Appearance.ApplyThemeColor(
-                settings.ThemeColorMode,
-                SettingsAppearanceViewModel.ParseColorOrDefault(settings.CustomThemeColor));
-
-        editor.ApplySnapshot(settings);
-        Appearance.Load(settings);
-        toastService.ShowSuccess(localizer.F("pathSaved", pickedPath));
-        if (SettingsSaved is not null)
-            await SettingsSaved.Invoke();
+        editor.Current.GamePath = pickedPath;
     }
 
     [RelayCommand]
@@ -238,8 +240,6 @@ public partial class SettingsViewModel : ViewModelBase, IDisposable
 
         editor.Current.CustomBackgroundPath = pickedPath;
         editor.Current.BackgroundSource = BackgroundSources.Custom;
-        await SaveSettingsAsync();
-        toastService.ShowSuccess(localizer.T("backgroundSet"));
     }
 
     [RelayCommand]
@@ -254,32 +254,82 @@ public partial class SettingsViewModel : ViewModelBase, IDisposable
 
         editor.Current.CustomBackgroundPath = pickedPath;
         editor.Current.BackgroundSource = BackgroundSources.Custom;
-        await SaveSettingsAsync();
-        toastService.ShowSuccess(localizer.T("backgroundSet"));
     }
 
     [RelayCommand]
-    private async Task ClearBackgroundAsync()
+    private void ClearBackground()
     {
         editor.Current.CustomBackgroundPath = "";
         editor.Current.BackgroundSource = BackgroundSources.Bundled;
-        await SaveSettingsAsync();
-        toastService.ShowSuccess(localizer.T("backgroundCleared"));
     }
 
-    [RelayCommand]
-    private void DiscardSettingsChanges()
+    public async Task DiscardChangesAsync()
     {
         IsUnsavedChangesVisible = false;
+        CancelAppearancePreview();
         editor.Discard();
         Appearance.Load(editor.Current);
-        CloseRequested?.Invoke();
+        appearancePreviewCts = new CancellationTokenSource();
+        appearancePreviewTask = PreviewCurrentAppearanceAsync(null, appearancePreviewCts.Token);
+        await appearancePreviewTask;
     }
 
-    [RelayCommand]
-    private void KeepEditingSettings()
+    public void KeepEditing()
     {
         IsUnsavedChangesVisible = false;
+    }
+
+    private void RequestAppearancePreview(string? propertyName)
+    {
+        CancelAppearancePreview();
+        appearancePreviewCts = new CancellationTokenSource();
+        appearancePreviewTask = PreviewCurrentAppearanceAsync(propertyName, appearancePreviewCts.Token);
+    }
+
+    private void CancelAppearancePreview()
+    {
+        appearancePreviewCts?.Cancel();
+        appearancePreviewCts?.Dispose();
+        appearancePreviewCts = null;
+    }
+
+    private async Task PreviewCurrentAppearanceAsync(
+        string? propertyName,
+        CancellationToken cancellationToken)
+    {
+        if (PreviewAppearanceAsync is null)
+        {
+            return;
+        }
+
+        try
+        {
+            await PreviewAppearanceAsync(editor.GetSnapshot(), propertyName, cancellationToken);
+        }
+        catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
+        {
+        }
+        catch (Exception exception)
+        {
+            toastService.ShowError(localizer.F("appearancePreviewFailed", exception.Message));
+        }
+    }
+
+    private static bool IsAppearanceSetting(string? propertyName) =>
+        propertyName is nameof(LauncherSettings.ThemeMode)
+            or nameof(LauncherSettings.ThemeColorMode)
+            or nameof(LauncherSettings.CustomThemeColor)
+            or nameof(LauncherSettings.ThemeColorPalette)
+            or nameof(LauncherSettings.SelectedThemeColorPaletteIndex)
+            or nameof(LauncherSettings.BackgroundSource)
+            or nameof(LauncherSettings.CustomBackgroundPath)
+            or nameof(LauncherSettings.BackgroundFit)
+            or nameof(LauncherSettings.BackgroundFillColor);
+
+    partial void OnIsSavingChanged(bool value)
+    {
+        OnPropertyChanged(nameof(CanSaveSettings));
+        SaveSettingsCommand.NotifyCanExecuteChanged();
     }
 
     public void Dispose()
@@ -290,7 +340,9 @@ public partial class SettingsViewModel : ViewModelBase, IDisposable
         }
 
         disposed = true;
+        CancelAppearancePreview();
         editor.PropertyChanged -= OnEditorPropertyChanged;
+        editor.CurrentPropertyChanged -= OnCurrentSettingChanged;
         Appearance.Dispose();
     }
 }

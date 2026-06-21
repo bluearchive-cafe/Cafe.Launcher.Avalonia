@@ -44,15 +44,15 @@ public sealed class ResourcePanelUidService
             return cookieUid;
         }
 
-        var settings = await settingsService.ReadAsync(cancellationToken);
+        var settings = await settingsService.ReadAsync(cancellationToken).ConfigureAwait(false);
         return settings.ResourcePanelUid.Trim();
     }
 
     public async Task SaveManualUidAsync(string uid, CancellationToken cancellationToken = default)
     {
-        var settings = await settingsService.ReadAsync(cancellationToken);
+        var settings = await settingsService.ReadAsync(cancellationToken).ConfigureAwait(false);
         settings.ResourcePanelUid = uid.Trim();
-        await settingsService.SaveAsync(settings, cancellationToken);
+        await settingsService.SaveAsync(settings, cancellationToken).ConfigureAwait(false);
     }
 
     private string TryReadCookieUid()

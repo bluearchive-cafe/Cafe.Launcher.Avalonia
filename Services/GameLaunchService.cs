@@ -62,7 +62,7 @@ public sealed class GameLaunchService
             snapshot.Settings.LaunchCheckMode,
             snapshot.Settings.PatchUrlGroup,
             snapshot.Settings.ProxyMode,
-            cancellationToken);
+            cancellationToken).ConfigureAwait(false);
 
         if (!validation.Success)
         {
