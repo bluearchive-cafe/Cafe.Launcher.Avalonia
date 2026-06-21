@@ -314,7 +314,8 @@ public partial class GameOperationsViewModel : ViewModelBase
     {
         gameDownloadService.Stop();
         shell.OperationNote = localizer.T("stopRequested");
-        try { toastService.ShowWarning(localizer.T("stopRequested")); } catch { }
+        try { toastService.ShowWarning(localizer.T("stopRequested")); }
+        catch (Exception ex) { System.Diagnostics.Debug.WriteLine($"Failed to show stop toast: {ex.Message}"); }
     }
 
     [RelayCommand]

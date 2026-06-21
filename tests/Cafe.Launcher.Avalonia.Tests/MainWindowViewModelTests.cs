@@ -13,10 +13,10 @@ namespace Cafe.Launcher.Avalonia.Tests;
 public sealed class MainWindowViewModelTests : IDisposable
 {
     [Fact]
-    public void Dispose_UnsubscribesSettingsEditorNotifications()
+    public async Task Dispose_UnsubscribesSettingsEditorNotifications()
     {
         var coreService = new CountingCoreService(CreateSnapshot());
-        var viewModel = CreateViewModel(coreService);
+        var viewModel = await CreateViewModelAsync(coreService);
         viewModel.Settings.Editor.ApplySnapshot(new LauncherSettings());
         var notificationCount = 0;
         viewModel.Settings.PropertyChanged += (_, e) =>
@@ -55,10 +55,10 @@ public sealed class MainWindowViewModelTests : IDisposable
     }
 
     [Fact]
-    public void Constructor_DoesNotLoadLauncherState()
+    public async Task Constructor_DoesNotLoadLauncherState()
     {
         var coreService = new CountingCoreService(CreateSnapshot());
-        using var viewModel = CreateViewModel(coreService);
+        using var viewModel = await CreateViewModelAsync(coreService);
 
         Assert.Equal(0, coreService.LoadCount);
     }
@@ -67,7 +67,7 @@ public sealed class MainWindowViewModelTests : IDisposable
     public async Task InitializeAsync_WhenCalledTwice_LoadsLauncherStateOnce()
     {
         var coreService = new CountingCoreService(CreateSnapshot());
-        using var viewModel = CreateViewModel(coreService);
+        using var viewModel = await CreateViewModelAsync(coreService);
 
         await viewModel.InitializeAsync();
         await viewModel.InitializeAsync();
@@ -76,10 +76,10 @@ public sealed class MainWindowViewModelTests : IDisposable
     }
 
     [Fact]
-    public void ShellSetLoading_UsesPureLoadingValuesForStatusDetails()
+    public async Task ShellSetLoading_UsesPureLoadingValuesForStatusDetails()
     {
         var coreService = new CountingCoreService(CreateSnapshot());
-        using var viewModel = CreateViewModel(coreService);
+        using var viewModel = await CreateViewModelAsync(coreService);
 
         viewModel.Shell.SetLoading();
 
@@ -91,10 +91,10 @@ public sealed class MainWindowViewModelTests : IDisposable
     }
 
     [Fact]
-    public void ShellSetLaunchCheckResult_UpdatesPureStatusDetailValue()
+    public async Task ShellSetLaunchCheckResult_UpdatesPureStatusDetailValue()
     {
         var coreService = new CountingCoreService(CreateSnapshot());
-        using var viewModel = CreateViewModel(coreService);
+        using var viewModel = await CreateViewModelAsync(coreService);
 
         viewModel.Shell.SetLaunchCheckResult("manifest verified");
 
@@ -109,7 +109,7 @@ public sealed class MainWindowViewModelTests : IDisposable
     {
         var snapshot = CreateSnapshot();
         var coreService = new CountingCoreService(snapshot);
-        using var viewModel = CreateViewModel(coreService);
+        using var viewModel = await CreateViewModelAsync(coreService);
 
         await viewModel.InitializeAsync();
 
@@ -130,7 +130,7 @@ public sealed class MainWindowViewModelTests : IDisposable
         var snapshot = CreateSnapshot();
         snapshot.Remote.OperationsResource = CreateOperationsResource();
         var coreService = new CountingCoreService(snapshot);
-        using var viewModel = CreateViewModel(coreService);
+        using var viewModel = await CreateViewModelAsync(coreService);
 
         await viewModel.InitializeAsync();
 
@@ -145,7 +145,7 @@ public sealed class MainWindowViewModelTests : IDisposable
         snapshot.Settings.ShowRemoteContentCard = false;
         snapshot.Remote.OperationsResource = CreateOperationsResource();
         var coreService = new CountingCoreService(snapshot);
-        using var viewModel = CreateViewModel(coreService);
+        using var viewModel = await CreateViewModelAsync(coreService);
 
         await viewModel.InitializeAsync();
 
@@ -163,7 +163,7 @@ public sealed class MainWindowViewModelTests : IDisposable
         snapshot.Settings.ShowRemoteContentCard = true;
         snapshot.Remote.OperationsResource = CreateOperationsResource();
         var coreService = new BlockingSecondLoadCoreService(snapshot);
-        using var viewModel = CreateViewModel(coreService);
+        using var viewModel = await CreateViewModelAsync(coreService);
         await viewModel.InitializeAsync();
 
         var refreshTask = viewModel.RefreshCommand.ExecuteAsync(null);
@@ -191,7 +191,7 @@ public sealed class MainWindowViewModelTests : IDisposable
         snapshot.Settings.ShowRemoteContentCard = true;
         snapshot.Remote.OperationsResource = CreateOperationsResource();
         var coreService = new BlockingSecondLoadCoreService(snapshot);
-        using var viewModel = CreateViewModel(coreService);
+        using var viewModel = await CreateViewModelAsync(coreService);
         await viewModel.InitializeAsync();
         Assert.True(viewModel.RemoteContent.HasRemoteContent);
         viewModel.Settings.Editor.Current.ShowRemoteContentCard = false;
@@ -216,7 +216,7 @@ public sealed class MainWindowViewModelTests : IDisposable
         var coreService = new ThrowingCoreService();
         var successToasts = new List<string>();
         var toastService = new ToastService();
-        using var viewModel = CreateViewModel(coreService, toastService: toastService);
+        using var viewModel = await CreateViewModelAsync(coreService, toastService: toastService);
         toastService.ToastRaised += notification =>
         {
             if (notification.Severity == ToastSeverity.Success)
@@ -239,7 +239,7 @@ public sealed class MainWindowViewModelTests : IDisposable
         var snapshot = CreateSnapshot();
         snapshot.RuntimeState = LauncherRuntimeState.Corrupted;
         var coreService = new CountingCoreService(snapshot);
-        using var viewModel = CreateViewModel(coreService);
+        using var viewModel = await CreateViewModelAsync(coreService);
 
         await viewModel.InitializeAsync();
         await viewModel.Operations.InstallOrUpdateCommand.ExecuteAsync(null);
@@ -256,7 +256,7 @@ public sealed class MainWindowViewModelTests : IDisposable
         var snapshot = CreateSnapshot();
         snapshot.RuntimeState = LauncherRuntimeState.RemoteUnavailable;
         var coreService = new CountingCoreService(snapshot);
-        using var viewModel = CreateViewModel(coreService);
+        using var viewModel = await CreateViewModelAsync(coreService);
         await viewModel.InitializeAsync();
 
         await viewModel.Operations.InstallOrUpdateCommand.ExecuteAsync(null);
@@ -300,7 +300,7 @@ public sealed class MainWindowViewModelTests : IDisposable
             ]
         };
         var coreService = new CountingCoreService(snapshot);
-        using var viewModel = CreateViewModel(coreService);
+        using var viewModel = await CreateViewModelAsync(coreService);
 
         await viewModel.InitializeAsync();
 
@@ -371,10 +371,10 @@ public sealed class MainWindowViewModelTests : IDisposable
     }
 
     [Fact]
-    public void ApplyProgress_WhenProgressCannotPause_HidesPauseResume()
+    public async Task ApplyProgress_WhenProgressCannotPause_HidesPauseResume()
     {
         var coreService = new CountingCoreService(CreateSnapshot());
-        using var viewModel = CreateViewModel(coreService);
+        using var viewModel = await CreateViewModelAsync(coreService);
 
         ApplyProgress(viewModel, new GameOperationProgress
         {
@@ -388,10 +388,10 @@ public sealed class MainWindowViewModelTests : IDisposable
     }
 
     [Fact]
-    public void ApplyProgress_WhenProgressCanPause_ShowsPauseResume()
+    public async Task ApplyProgress_WhenProgressCanPause_ShowsPauseResume()
     {
         var coreService = new CountingCoreService(CreateSnapshot());
-        using var viewModel = CreateViewModel(coreService);
+        using var viewModel = await CreateViewModelAsync(coreService);
 
         ApplyProgress(viewModel, new GameOperationProgress
         {
@@ -428,7 +428,7 @@ public sealed class MainWindowViewModelTests : IDisposable
             PatchUrlGroup = PatchUrlGroups.Official
         });
         var coreService = new CountingCoreService(snapshot);
-        using var viewModel = CreateViewModel(coreService, settingsService);
+        using var viewModel = await CreateViewModelAsync(coreService, settingsService);
         await viewModel.InitializeAsync();
 
         viewModel.Settings.Editor.Current.PatchUrlGroup = PatchUrlGroups.Cafe;
@@ -450,7 +450,7 @@ public sealed class MainWindowViewModelTests : IDisposable
         snapshot.Settings.GamePath = "";
         snapshot.LocalGame = new LocalInstallationState();
         var coreService = new CountingCoreService(snapshot);
-        using var viewModel = CreateViewModel(coreService, settingsService);
+        using var viewModel = await CreateViewModelAsync(coreService, settingsService);
         await viewModel.InitializeAsync();
         viewModel.WindowChrome.IsSettingsVisible = true;
         viewModel.Settings.PickGameFolderAsync = _ => Task.FromResult<string?>(pickedPath);
@@ -477,7 +477,7 @@ public sealed class MainWindowViewModelTests : IDisposable
         var settingsService = new LauncherSettingsService(settingsPath);
         await settingsService.SaveAsync(new LauncherSettings());
         var coreService = new CountingCoreService(CreateSnapshot());
-        using var viewModel = CreateViewModel(coreService, settingsService);
+        using var viewModel = await CreateViewModelAsync(coreService, settingsService);
         await viewModel.InitializeAsync();
         viewModel.Settings.PickBackgroundImageAsync = () => Task.FromResult<string?>(pickedPath);
 
@@ -502,7 +502,7 @@ public sealed class MainWindowViewModelTests : IDisposable
     public async Task AppearancePreview_WhenSettingChangesAgain_CancelsPreviousPreview()
     {
         var coreService = new CountingCoreService(CreateSnapshot());
-        using var viewModel = CreateViewModel(coreService);
+        using var viewModel = await CreateViewModelAsync(coreService);
         var firstPreviewStarted = new TaskCompletionSource(
             TaskCreationOptions.RunContinuationsAsynchronously);
         var firstPreviewCanceled = new TaskCompletionSource(
@@ -556,7 +556,7 @@ public sealed class MainWindowViewModelTests : IDisposable
         };
         await settingsService.SaveAsync(persistedSettings);
         var coreService = new CountingCoreService(CreateSnapshot());
-        using var viewModel = CreateViewModel(coreService, settingsService);
+        using var viewModel = await CreateViewModelAsync(coreService, settingsService);
         await viewModel.InitializeAsync();
         viewModel.Settings.Editor.ApplySnapshot(persistedSettings);
         viewModel.Settings.Appearance.Load(persistedSettings);
@@ -585,7 +585,7 @@ public sealed class MainWindowViewModelTests : IDisposable
     public async Task BackgroundPresentationSettings_ArePreviewedBeforeSave()
     {
         var coreService = new CountingCoreService(CreateSnapshot());
-        using var viewModel = CreateViewModel(coreService);
+        using var viewModel = await CreateViewModelAsync(coreService);
         viewModel.Settings.Editor.ApplySnapshot(new LauncherSettings());
 
         viewModel.Settings.Editor.Current.BackgroundFit = BackgroundFits.Uniform;
@@ -605,7 +605,7 @@ public sealed class MainWindowViewModelTests : IDisposable
         var snapshot = CreateSnapshot();
         snapshot.Settings.ThemeMode = ThemeModes.Light;
         var coreService = new CountingCoreService(snapshot);
-        using var viewModel = CreateViewModel(coreService);
+        using var viewModel = await CreateViewModelAsync(coreService);
         await viewModel.InitializeAsync();
         viewModel.Settings.Editor.ApplySnapshot(snapshot.Settings);
         viewModel.Settings.Appearance.Load(snapshot.Settings);
@@ -631,10 +631,10 @@ public sealed class MainWindowViewModelTests : IDisposable
     }
 
     [Fact]
-    public void ShowSettingsCommand_WhenNoChanges_ClosesWithoutConfirmation()
+    public async Task ShowSettingsCommand_WhenNoChanges_ClosesWithoutConfirmation()
     {
         var coreService = new CountingCoreService(CreateSnapshot());
-        using var viewModel = CreateViewModel(coreService);
+        using var viewModel = await CreateViewModelAsync(coreService);
         viewModel.Settings.Editor.ApplySnapshot(new LauncherSettings());
         viewModel.WindowChrome.IsSettingsVisible = true;
 
@@ -645,10 +645,10 @@ public sealed class MainWindowViewModelTests : IDisposable
     }
 
     [Fact]
-    public void SaveSettingsCommand_IsEnabledOnlyWhenSettingsAreDirty()
+    public async Task SaveSettingsCommand_IsEnabledOnlyWhenSettingsAreDirty()
     {
         var coreService = new CountingCoreService(CreateSnapshot());
-        using var viewModel = CreateViewModel(coreService);
+        using var viewModel = await CreateViewModelAsync(coreService);
         viewModel.Settings.Editor.ApplySnapshot(new LauncherSettings());
 
         Assert.False(viewModel.Settings.CanSaveSettings);
@@ -698,10 +698,10 @@ public sealed class MainWindowViewModelTests : IDisposable
     }
 
     [Fact]
-    public void SelectedThemeColorMode_WhenSettingsVisible_MarksSettingsDirty()
+    public async Task SelectedThemeColorMode_WhenSettingsVisible_MarksSettingsDirty()
     {
         var coreService = new CountingCoreService(CreateSnapshot());
-        using var viewModel = CreateViewModel(coreService);
+        using var viewModel = await CreateViewModelAsync(coreService);
         viewModel.WindowChrome.IsSettingsVisible = true;
         viewModel.Settings.Editor.ApplySnapshot(viewModel.Settings.Editor.Current);
 
@@ -717,7 +717,7 @@ public sealed class MainWindowViewModelTests : IDisposable
         var settingsService = new LauncherSettingsService(settingsPath);
         await settingsService.SaveAsync(new LauncherSettings());
         var coreService = new CountingCoreService(CreateSnapshot());
-        using var viewModel = CreateViewModel(coreService, settingsService);
+        using var viewModel = await CreateViewModelAsync(coreService, settingsService);
 
         viewModel.Settings.Editor.Current.ThemeColorMode = ThemeColorModes.Custom;
         viewModel.Settings.Appearance.SelectedCustomThemeColor =
@@ -788,10 +788,10 @@ public sealed class MainWindowViewModelTests : IDisposable
     }
 
     [Fact]
-    public void SelectedThemeColorPaletteIndex_WhenSettingsVisible_MarksSettingsDirtyAndUpdatesSelection()
+    public async Task SelectedThemeColorPaletteIndex_WhenSettingsVisible_MarksSettingsDirtyAndUpdatesSelection()
     {
         var coreService = new CountingCoreService(CreateSnapshot());
-        using var viewModel = CreateViewModel(coreService);
+        using var viewModel = await CreateViewModelAsync(coreService);
         viewModel.Settings.Appearance.ThemeColorPaletteItems.Add(new ThemeColorPaletteItem
         {
             Index = 0,
@@ -825,7 +825,7 @@ public sealed class MainWindowViewModelTests : IDisposable
         var settingsService = new LauncherSettingsService(settingsPath);
         await settingsService.SaveAsync(new LauncherSettings());
         var coreService = new CountingCoreService(CreateSnapshot());
-        using var viewModel = CreateViewModel(coreService, settingsService);
+        using var viewModel = await CreateViewModelAsync(coreService, settingsService);
         viewModel.Settings.Editor.Current.ThemeColorMode = ThemeColorModes.Wallpaper;
         viewModel.Settings.Appearance.ThemeColorPaletteItems.Add(new ThemeColorPaletteItem
         {
@@ -856,7 +856,7 @@ public sealed class MainWindowViewModelTests : IDisposable
         snapshot.Settings.ThemeColorMode = ThemeColorModes.Wallpaper;
         snapshot.Settings.ThemeColorPalette = ["#FF2050D8"];
         var coreService = new CountingCoreService(snapshot);
-        using var viewModel = CreateViewModel(coreService);
+        using var viewModel = await CreateViewModelAsync(coreService);
 
         await viewModel.InitializeAsync();
         viewModel.Settings.Appearance.ThemeColorPaletteItems.Clear();
@@ -892,7 +892,7 @@ public sealed class MainWindowViewModelTests : IDisposable
         var handler = new ResourcePanelHandler();
         using var apiClient = new ResourcePanelApiClient(handler);
         var coreService = new CountingCoreService(CreateSnapshot());
-        using var viewModel = CreateViewModel(coreService, settingsService, uidService, apiClient);
+        using var viewModel = await CreateViewModelAsync(coreService, settingsService, uidService, apiClient);
         viewModel.ResourcePanel.GetPatchUrlGroup = () => PatchUrlGroups.Cafe;
 
         await viewModel.ResourcePanel.OpenResourcePanelCommand.ExecuteAsync(null);
@@ -922,7 +922,7 @@ public sealed class MainWindowViewModelTests : IDisposable
         var handler = new ResourcePanelHandler();
         using var apiClient = new ResourcePanelApiClient(handler);
         var coreService = new CountingCoreService(CreateSnapshot());
-        using var viewModel = CreateViewModel(coreService, settingsService, uidService, apiClient);
+        using var viewModel = await CreateViewModelAsync(coreService, settingsService, uidService, apiClient);
         viewModel.ResourcePanel.GetPatchUrlGroup = () => PatchUrlGroups.Cafe;
         await viewModel.ResourcePanel.OpenResourcePanelCommand.ExecuteAsync(null);
         viewModel.ResourcePanel.ResourcePanelItems.First(item => item.Code == ResourcePanelResourceCodes.Text).IsEnabled = true;
@@ -948,7 +948,7 @@ public sealed class MainWindowViewModelTests : IDisposable
         var handler = new ResourcePanelHandler();
         using var apiClient = new ResourcePanelApiClient(handler);
         var coreService = new CountingCoreService(CreateSnapshot());
-        using var viewModel = CreateViewModel(coreService, settingsService, uidService, apiClient);
+        using var viewModel = await CreateViewModelAsync(coreService, settingsService, uidService, apiClient);
         viewModel.ResourcePanel.GetPatchUrlGroup = () => PatchUrlGroups.Cafe;
 
         await viewModel.ResourcePanel.OpenResourcePanelCommand.ExecuteAsync(null);
@@ -961,7 +961,7 @@ public sealed class MainWindowViewModelTests : IDisposable
         Assert.Equal(0, handler.ConfigSetCount);
     }
 
-    private MainWindowViewModel CreateViewModel(
+    private async Task<MainWindowViewModel> CreateViewModelAsync(
         ILauncherCoreService coreService,
         LauncherSettingsService? settingsService = null,
         ResourcePanelUidService? resourcePanelUidService = null,
@@ -970,9 +970,9 @@ public sealed class MainWindowViewModelTests : IDisposable
     {
         settingsService ??= new LauncherSettingsService(
             Path.Combine(tempDir, Guid.NewGuid().ToString("N"), "settings.json"));
-        var testSettings = settingsService.ReadAsync().GetAwaiter().GetResult();
+        var testSettings = await settingsService.ReadAsync();
         testSettings.HasCompletedFirstLaunchWizard = true;
-        settingsService.SaveAsync(testSettings).GetAwaiter().GetResult();
+        await settingsService.SaveAsync(testSettings);
         var localInstallationStateStore = new LocalInstallationStateStore();
         var diagnostics = new LocalDiagnostics();
         var localizationService = new LocalizationService();

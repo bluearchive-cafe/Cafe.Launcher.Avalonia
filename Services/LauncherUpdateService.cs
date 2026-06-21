@@ -106,7 +106,7 @@ public sealed partial class LauncherUpdateService : IDisposable
                     await diagnostics.MessageAsync(
                         "Launcher update check failed — invalid release file data",
                         $"version: {targetRelease.Version}{Environment.NewLine}{validationError}",
-                        CancellationToken.None);
+                        CancellationToken.None).ConfigureAwait(false);
                 }
 
                 return LauncherUpdateCheckResult.Failed();
