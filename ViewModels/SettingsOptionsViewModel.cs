@@ -85,6 +85,16 @@ public sealed class SettingsOptionsViewModel
         new() { Code = UpdateChannels.Beta }
     ];
 
+    public ObservableCollection<SettingOption> LogLevel { get; } =
+    [
+        new() { Code = LogLevels.Verbose },
+        new() { Code = LogLevels.Debug },
+        new() { Code = LogLevels.Information },
+        new() { Code = LogLevels.Warning },
+        new() { Code = LogLevels.Error },
+        new() { Code = LogLevels.Fatal }
+    ];
+
     public ObservableCollection<ThemeOption> Theme { get; } =
     [
         new() { Code = ThemeModes.System },
@@ -191,6 +201,19 @@ public sealed class SettingsOptionsViewModel
             {
                 UpdateChannels.Beta => localizer.T("updateChannelBeta"),
                 _ => localizer.T("updateChannelStable")
+            };
+        }
+
+        foreach (var option in LogLevel)
+        {
+            option.DisplayName = option.Code switch
+            {
+                LogLevels.Verbose => localizer.T("logLevelVerbose"),
+                LogLevels.Debug => localizer.T("logLevelDebug"),
+                LogLevels.Warning => localizer.T("logLevelWarning"),
+                LogLevels.Error => localizer.T("logLevelError"),
+                LogLevels.Fatal => localizer.T("logLevelFatal"),
+                _ => localizer.T("logLevelInformation")
             };
         }
     }

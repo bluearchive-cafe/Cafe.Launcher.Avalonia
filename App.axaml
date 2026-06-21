@@ -27,6 +27,8 @@
             <x:Double x:Key="LauncherControlHeightDialog">42</x:Double>
             <x:Double x:Key="LauncherControlHeightBottom">48</x:Double>
             <x:Double x:Key="LauncherControlHeightLaunch">58</x:Double>
+            <x:Double x:Key="LauncherLogViewerWidth">720</x:Double>
+            <x:Double x:Key="LauncherLogViewerHeight">592</x:Double>
             <SolidColorBrush x:Key="LauncherAccentBrush" Color="{DynamicResource SystemAccentColor}"/>
             <SolidColorBrush x:Key="LauncherAccentHoverBrush" Color="{DynamicResource SystemAccentColorLight1}"/>
             <SolidColorBrush x:Key="LauncherAccentPressedBrush" Color="{DynamicResource SystemAccentColorDark1}"/>

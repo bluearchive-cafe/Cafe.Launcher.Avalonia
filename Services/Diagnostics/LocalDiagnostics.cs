@@ -1,45 +1,44 @@
 using System;
+using System.Globalization;
 using System.IO;
-using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
-using Cafe.Launcher.Avalonia.Constants;
 
 namespace Cafe.Launcher.Avalonia.Services.Diagnostics;
 
+/// <summary>
+/// Thin compatibility wrapper around <see cref="UnifiedLogger"/>.
+/// All public signatures are preserved so existing call sites compile unchanged.
+/// </summary>
 public sealed class LocalDiagnostics
 {
-    private readonly string logPath;
+    private readonly UnifiedLogger logger;
 
-    private static string GetLogPath()
+    public LocalDiagnostics() : this(new UnifiedLogger(Path.Combine(
+        Path.GetTempPath(),
+        "Cafe.Launcher.Avalonia.Tests",
+        Environment.ProcessId.ToString(CultureInfo.InvariantCulture))))
     {
-        var folder = Path.Combine(
-            Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData),
-            LauncherConstants.ProductName);
-        return Path.Combine(folder, "diagnostics.log");
     }
 
-    public LocalDiagnostics()
+    public LocalDiagnostics(UnifiedLogger logger)
     {
-        logPath = GetLogPath();
+        this.logger = logger;
+        StaticLoggerHolder.Instance = logger;
     }
+
+    internal string LogFilePath => logger.LogFilePath;
 
     public async Task ErrorAsync(string title, Exception exception, CancellationToken cancellationToken = default)
     {
         try
         {
-            var builder = new StringBuilder();
-            builder.AppendLine(DateTimeOffset.Now.ToString("O"));
-            builder.AppendLine(title);
-            builder.AppendLine(exception.ToString());
-            builder.AppendLine();
-
-            Directory.CreateDirectory(Path.GetDirectoryName(logPath)!);
-            await File.AppendAllTextAsync(logPath, builder.ToString(), Encoding.UTF8, cancellationToken).ConfigureAwait(false);
+            await logger.LogAsync(LogEntrySeverity.Error, title, exception: exception,
+                cancellationToken: cancellationToken).ConfigureAwait(false);
         }
         catch
         {
-            // Best-effort — diagnostic logging must never crash the app
+            // Best-effort — diagnostic logging must never crash the app.
         }
     }
 
@@ -47,41 +46,34 @@ public sealed class LocalDiagnostics
     {
         try
         {
-            var builder = new StringBuilder();
-            builder.AppendLine(DateTimeOffset.Now.ToString("O"));
-            builder.AppendLine(title);
-            builder.AppendLine(message);
-            builder.AppendLine();
-
-            Directory.CreateDirectory(Path.GetDirectoryName(logPath)!);
-            await File.AppendAllTextAsync(logPath, builder.ToString(), Encoding.UTF8, cancellationToken).ConfigureAwait(false);
+            await logger.LogAsync(LogEntrySeverity.Info, title, message: message,
+                cancellationToken: cancellationToken).ConfigureAwait(false);
         }
         catch
         {
-            // Best-effort — diagnostic logging must never crash the app
+            // Best-effort — diagnostic logging must never crash the app.
         }
     }
 
     /// <summary>
-    /// Synchronous log write for use in synchronous contexts (e.g. constructors, static methods).
+    /// Synchronous log write for use in synchronous contexts (e.g. static methods).
     /// </summary>
     public static void LogSync(string title, string message)
     {
         try
         {
-            var logPath = GetLogPath();
-            var builder = new StringBuilder();
-            builder.AppendLine(DateTimeOffset.Now.ToString("O"));
-            builder.AppendLine(title);
-            builder.AppendLine(message);
-            builder.AppendLine();
-
-            Directory.CreateDirectory(Path.GetDirectoryName(logPath)!);
-            File.AppendAllText(logPath, builder.ToString(), Encoding.UTF8);
+            StaticLoggerHolder.Instance.LogAsync(LogEntrySeverity.Info, title, message: message)
+                .GetAwaiter().GetResult();
         }
         catch
         {
-            // Best-effort — diagnostic logging must never crash the app
+            // Best-effort — diagnostic logging must never crash the app.
         }
     }
+}
+
+/// <summary>Bridge for static LogSync to reach the DI-resolved <see cref="UnifiedLogger"/> singleton.</summary>
+internal static class StaticLoggerHolder
+{
+    public static UnifiedLogger Instance { get; set; } = null!;
 }

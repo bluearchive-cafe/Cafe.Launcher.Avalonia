@@ -40,6 +40,8 @@ public partial class MainWindowViewModel : ViewModelBase, IDisposable
 
     public ResourcePanelViewModel ResourcePanel { get; }
 
+    public LogViewerDialogViewModel LogViewer { get; }
+
     public MigrationWizardViewModel MigrationWizard { get; }
 
     public MainWindowViewModel(
@@ -58,7 +60,8 @@ public partial class MainWindowViewModel : ViewModelBase, IDisposable
         WindowChromeViewModel windowChrome,
         SettingsViewModel settingsViewModel,
         ResourcePanelViewModel resourcePanelViewModel,
-        MigrationWizardViewModel migrationWizard)
+        MigrationWizardViewModel migrationWizard,
+        LogViewerDialogViewModel? logViewer = null)
     {
         this.launcherCoreService = launcherCoreService;
         this.settingsService = settingsService;
@@ -77,6 +80,13 @@ public partial class MainWindowViewModel : ViewModelBase, IDisposable
         Settings = settingsViewModel;
         ResourcePanel = resourcePanelViewModel;
         MigrationWizard = migrationWizard;
+        LogViewer = logViewer ?? new LogViewerDialogViewModel(
+            new Services.Diagnostics.UnifiedLogger(),
+            null,
+            null,
+            null,
+            null,
+            null);
 
         WireChildren();
         ApplyLanguage(LauncherLanguages.Auto);
@@ -229,6 +239,8 @@ public partial class MainWindowViewModel : ViewModelBase, IDisposable
         Dialogs.CloseAfterStoppingDownloadRequested += WindowChrome.CloseAfterStoppingDownload;
         Dialogs.CloseRequested += () => WindowChrome.CloseWindow?.Invoke();
         Dialogs.ConfirmUpdateAvailableRequested += url => ExternalLinkService.Open(url);
+        Dialogs.CrashRecoveryResetSettingsRequested += ResetSettingsAfterCrashAsync;
+        Dialogs.CrashRecoveryViewLogRequested += OpenCrashLog;
 
         RemoteContent.OpenExternalUrlRequested = WindowChrome.OpenExternalUrl;
 
@@ -236,6 +248,17 @@ public partial class MainWindowViewModel : ViewModelBase, IDisposable
 
         MigrationWizard.MigrationApplied += HandleMigrationAppliedAsync;
         MigrationWizard.MigrationSkipped += HandleMigrationSkippedAsync;
+    }
+
+    private async Task ResetSettingsAfterCrashAsync()
+    {
+        await settingsService.SaveAsync(LauncherSettings.CreateDefaults());
+        await RefreshAsync();
+    }
+
+    private void OpenCrashLog()
+    {
+        LogViewer.OpenCommand.Execute(null);
     }
 
     private void ShowResourcePanelSourceConfirmDialog()
@@ -434,6 +457,8 @@ public partial class MainWindowViewModel : ViewModelBase, IDisposable
         Dialogs.ConfirmUninstallRequested -= Operations.ConfirmUninstallAsync;
         Dialogs.ConfirmStopRequested -= Operations.PerformStop;
         Dialogs.CloseAfterStoppingDownloadRequested -= WindowChrome.CloseAfterStoppingDownload;
+        Dialogs.CrashRecoveryResetSettingsRequested -= ResetSettingsAfterCrashAsync;
+        Dialogs.CrashRecoveryViewLogRequested -= OpenCrashLog;
         Operations.StopDownload(clearPersistedState: false);
         Settings.Dispose();
         RemoteContent.Dispose();

@@ -1,9 +1,9 @@
 using Avalonia;
 using System;
-using System.IO;
-using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
+using Microsoft.Extensions.DependencyInjection;
+using Cafe.Launcher.Avalonia.Services.Diagnostics;
 
 namespace Cafe.Launcher.Avalonia;
 
@@ -11,6 +11,22 @@ sealed class Program
 {
     private const string MutexName = @"Local\Cafe_Launcher_SI";
     private const string SignalName = @"Local\Cafe_Launcher_SI_Show";
+
+    internal static bool PreviousSessionCrashed { get; private set; }
+
+    /// <summary>
+    /// The pre-DI <see cref="UnifiedLogger"/> created before the DI container
+    /// exists. <see cref="App"/> consumes this so a single logger instance
+    /// serves both crash handling and application logging.
+    /// </summary>
+    internal static UnifiedLogger? PreDiLogger { get; private set; }
+
+    /// <summary>
+    /// Set by <see cref="App"/> once the DI container is built so that
+    /// <see cref="RunSession"/> can dispose it after the session-end entry
+    /// has been written.
+    /// </summary>
+    internal static ServiceProvider? ServiceProvider { get; set; }
 
     [STAThread]
     public static void Main(string[] args)
@@ -22,27 +38,63 @@ sealed class Program
             return;
         }
 
-        SetupCrashLogging();
+        // Create standalone diagnostics before DI is available. This instance
+        // is shared with the DI container so there is a single Serilog pipeline
+        // for the entire process.
+        var crashLogger = new UnifiedLogger();
+        PreDiLogger = crashLogger;
+        var crashRecovery = new CrashRecoveryService(crashLogger);
+        SetupCrashLogging(crashLogger);
         try
         {
-            BuildAvaloniaApp().StartWithClassicDesktopLifetime(args);
+            RunSession(
+                crashRecovery,
+                () => BuildAvaloniaApp().StartWithClassicDesktopLifetime(args));
         }
         catch (Exception exception)
         {
-            WriteCrashLog("Main", exception);
+            LogCrash(crashLogger, "Main", exception);
             throw;
         }
     }
 
-    private static void SetupCrashLogging()
+    internal static void RunSession(CrashRecoveryService crashRecovery, Action runApplication)
     {
-        void WriteCrash(string source, Exception? ex)
+        PreviousSessionCrashed = crashRecovery.BeginSessionAsync().GetAwaiter().GetResult();
+        try
         {
-            WriteCrashLog(source, ex);
+            runApplication();
+            // Normal exit — finalise the session cleanly.
+            crashRecovery.CompleteSessionAsync().GetAwaiter().GetResult();
         }
+        catch (Exception ex)
+        {
+            // Log the crash before the logger is disposed, and intentionally
+            // skip CompleteSessionAsync so the crash marker survives for the
+            // next launch to detect. Main's catch block serves as a fallback
+            // for pre-DI-container crashes (ServiceProvider is null).
+            LogCrash(PreDiLogger!, "Main", ex);
+            throw;
+        }
+        finally
+        {
+            // Dispose the DI container last, after all log writes complete.
+            // MS.DI does not dispose externally-provided singleton instances,
+            // so the shared UnifiedLogger must be disposed explicitly to flush
+            // the async sink buffer.
+            ServiceProvider?.Dispose();
+            PreDiLogger?.Dispose();
+        }
+    }
+
+    private static void SetupCrashLogging(UnifiedLogger logger)
+    {
+        void WriteCrash(string source, Exception? ex) => LogCrash(logger, source, ex);
 
         AppDomain.CurrentDomain.UnhandledException += (_, e) =>
+        {
             WriteCrash("AppDomain.UnhandledException", e.ExceptionObject as Exception);
+        };
 
         TaskScheduler.UnobservedTaskException += (_, e) =>
         {
@@ -51,34 +103,14 @@ sealed class Program
         };
     }
 
-    private static void WriteCrashLog(string source, Exception? exception)
+    private static void LogCrash(UnifiedLogger logger, string source, Exception? exception)
     {
         try
         {
-            var crashLogDir = Path.Combine(
-                Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData),
-                "Cafe Launcher");
-            var crashLogPath = Path.Combine(crashLogDir, "crash.log");
-            Directory.CreateDirectory(crashLogDir);
-            var builder = new StringBuilder();
-            builder.AppendLine(FormattableString.Invariant($"{DateTimeOffset.Now:O} [{source}]"));
-            if (exception is not null)
-            {
-                builder.AppendLine(FormattableString.Invariant(
-                    $"Exception: {exception.GetType().FullName}: {exception.Message}"));
-                builder.AppendLine(exception.StackTrace ?? "(no stack trace)");
-                if (exception is AggregateException aggregateException)
-                {
-                    foreach (var inner in aggregateException.Flatten().InnerExceptions)
-                    {
-                        builder.AppendLine(FormattableString.Invariant(
-                            $"  Inner: {inner.GetType().Name}: {inner.Message}"));
-                    }
-                }
-            }
-
-            builder.AppendLine();
-            File.AppendAllText(crashLogPath, builder.ToString());
+            logger.LogAsync(LogEntrySeverity.Error, source,
+                exception: exception,
+                cancellationToken: CancellationToken.None)
+                .GetAwaiter().GetResult();
         }
         catch
         {

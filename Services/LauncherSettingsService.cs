@@ -243,6 +243,16 @@ public sealed class LauncherSettingsService
             settings.UpdateChannel = UpdateChannels.Stable;
         }
 
+        if (settings.LogLevel is not LogLevels.Verbose
+            and not LogLevels.Debug
+            and not LogLevels.Information
+            and not LogLevels.Warning
+            and not LogLevels.Error
+            and not LogLevels.Fatal)
+        {
+            settings.LogLevel = LogLevels.Information;
+        }
+
         settings.GamePath ??= "";
         settings.ResourcePanelUid = settings.ResourcePanelUid?.Trim() ?? "";
         return settings;

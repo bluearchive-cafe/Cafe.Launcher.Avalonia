@@ -193,6 +193,33 @@ public sealed partial class LocalizedStrings : ObservableObject
     [ObservableProperty] private string updateFileSize = "";
     [ObservableProperty] private string updateDownload = "";
     [ObservableProperty] private string updateLater = "";
+    [ObservableProperty] private string crashRecoveryTitle = "";
+    [ObservableProperty] private string crashRecoveryDescription = "";
+    [ObservableProperty] private string crashRecoveryMessage = "";
+    [ObservableProperty] private string crashRecoveryContinue = "";
+    [ObservableProperty] private string crashRecoveryResetSettings = "";
+    [ObservableProperty] private string crashRecoveryViewLog = "";
+    [ObservableProperty] private string buildTimeLabel = "";
+    [ObservableProperty] private string logViewerTitle = "";
+    [ObservableProperty] private string logFilterAll = "";
+    [ObservableProperty] private string logFilterError = "";
+    [ObservableProperty] private string logFilterWarn = "";
+    [ObservableProperty] private string logFilterInfo = "";
+    [ObservableProperty] private string logSearchPlaceholder = "";
+    [ObservableProperty] private string logNoMatchingEntries = "";
+    [ObservableProperty] private string exportLogs = "";
+    [ObservableProperty] private string viewLog = "";
+    [ObservableProperty] private string openDataDirectory = "";
+    [ObservableProperty] private string logExportFolderPickerTitle = "";
+    [ObservableProperty] private string logExportSucceeded = "";
+    [ObservableProperty] private string logExportFailed = "";
+    [ObservableProperty] private string logLevel = "";
+    [ObservableProperty] private string logLevelVerbose = "";
+    [ObservableProperty] private string logLevelDebug = "";
+    [ObservableProperty] private string logLevelInformation = "";
+    [ObservableProperty] private string logLevelWarning = "";
+    [ObservableProperty] private string logLevelError = "";
+    [ObservableProperty] private string logLevelFatal = "";
 
     public void Apply(LocalizationService localizer)
     {
@@ -379,6 +406,33 @@ public sealed partial class LocalizedStrings : ObservableObject
         UpdateFileSize = localizer.T("updateFileSize");
         UpdateDownload = localizer.T("updateDownload");
         UpdateLater = localizer.T("updateLater");
+        CrashRecoveryTitle = localizer.T("crashRecoveryTitle");
+        CrashRecoveryDescription = localizer.T("crashRecoveryDescription");
+        CrashRecoveryMessage = localizer.T("crashRecoveryMessage");
+        CrashRecoveryContinue = localizer.T("crashRecoveryContinue");
+        CrashRecoveryResetSettings = localizer.T("crashRecoveryResetSettings");
+        CrashRecoveryViewLog = localizer.T("crashRecoveryViewLog");
+        BuildTimeLabel = localizer.T("buildTimeLabel");
+        LogViewerTitle = localizer.T("logViewerTitle");
+        LogFilterAll = localizer.T("logFilterAll");
+        LogFilterError = localizer.T("logFilterError");
+        LogFilterWarn = localizer.T("logFilterWarn");
+        LogFilterInfo = localizer.T("logFilterInfo");
+        LogSearchPlaceholder = localizer.T("logSearchPlaceholder");
+        LogNoMatchingEntries = localizer.T("logNoMatchingEntries");
+        ExportLogs = localizer.T("exportLogs");
+        ViewLog = localizer.T("viewLog");
+        OpenDataDirectory = localizer.T("openDataDirectory");
+        LogExportFolderPickerTitle = localizer.T("logExportFolderPickerTitle");
+        LogExportSucceeded = localizer.T("logExportSucceeded");
+        LogExportFailed = localizer.T("logExportFailed");
+        LogLevel = localizer.T("logLevel");
+        LogLevelVerbose = localizer.T("logLevelVerbose");
+        LogLevelDebug = localizer.T("logLevelDebug");
+        LogLevelInformation = localizer.T("logLevelInformation");
+        LogLevelWarning = localizer.T("logLevelWarning");
+        LogLevelError = localizer.T("logLevelError");
+        LogLevelFatal = localizer.T("logLevelFatal");
     }
 }
 

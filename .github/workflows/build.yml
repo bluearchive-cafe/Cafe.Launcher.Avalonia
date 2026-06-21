@@ -44,8 +44,11 @@ jobs:
       - name: Test
         run: dotnet test tests/Cafe.Launcher.Avalonia.Tests/Cafe.Launcher.Avalonia.Tests.csproj -c Debug --no-restore
 
+      - name: Restore (Release)
+        run: dotnet restore $env:Project_Path -r win-x64
+
       - name: Build (Release)
-        run: dotnet build $env:Project_Path -c Release
+        run: dotnet build $env:Project_Path -c Release --no-restore
 
       - name: Publish (Release)
-        run: dotnet publish $env:Project_Path -c Release -o publish
+        run: dotnet publish $env:Project_Path -c Release -o publish --no-restore

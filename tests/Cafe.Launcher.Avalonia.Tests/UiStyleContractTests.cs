@@ -10,6 +10,7 @@ public sealed partial class UiStyleContractTests
         "Views/MainWindow.axaml",
         "Views/MainWindowSettingsOverlay.axaml",
         "Views/MainWindowDialogsOverlay.axaml",
+        "Views/MainWindowLogViewerOverlay.axaml",
         "Views/MainWindowToastOverlay.axaml"
     ];
 
@@ -157,12 +158,124 @@ public sealed partial class UiStyleContractTests
     {
         var mainWindow = File.ReadAllText(ProjectFile("Views/MainWindow.axaml"));
         var settingsIndex = mainWindow.IndexOf("<views:MainWindowSettingsOverlay/>", StringComparison.Ordinal);
+        var logViewerIndex = mainWindow.IndexOf("<views:MainWindowLogViewerOverlay/>", StringComparison.Ordinal);
         var dialogsIndex = mainWindow.IndexOf("<views:MainWindowDialogsOverlay/>", StringComparison.Ordinal);
         var toastIndex = mainWindow.IndexOf("<views:MainWindowToastOverlay/>", StringComparison.Ordinal);
 
         Assert.True(settingsIndex >= 0);
-        Assert.True(dialogsIndex > settingsIndex);
+        Assert.True(logViewerIndex > settingsIndex);
+        Assert.True(dialogsIndex > logViewerIndex);
         Assert.True(toastIndex > dialogsIndex);
+    }
+
+    [Fact]
+    public void DialogOverlays_UseSharedDialogLayerWithoutExplicitZIndex()
+    {
+        foreach (var relativePath in new[]
+                 {
+                     "Views/MainWindowDialogsOverlay.axaml",
+                     "Views/MainWindowLogViewerOverlay.axaml"
+                 })
+        {
+            var text = File.ReadAllText(ProjectFile(relativePath));
+            Assert.DoesNotContain("ZIndex=\"500\"", text, StringComparison.Ordinal);
+            Assert.DoesNotContain("ZIndex=\"1001\"", text, StringComparison.Ordinal);
+        }
+    }
+
+    [Fact]
+    public void LogViewer_UserFacingTextUsesLocalizationBindings()
+    {
+        var logViewer = File.ReadAllText(ProjectFile("Views/MainWindowLogViewerOverlay.axaml"));
+        var settings = File.ReadAllText(ProjectFile("Views/MainWindowSettingsOverlay.axaml"));
+
+        foreach (var literal in new[]
+                 {
+                     "Log Viewer",
+                     "Search...",
+                     "No matching log entries.",
+                     "Export Logs",
+                     "View Log",
+                     "Open Data Directory"
+                 })
+        {
+            Assert.DoesNotContain($"Text=\"{literal}\"", logViewer, StringComparison.Ordinal);
+            Assert.DoesNotContain($"Text=\"{literal}\"", settings, StringComparison.Ordinal);
+            Assert.DoesNotContain($"PlaceholderText=\"{literal}\"", logViewer, StringComparison.Ordinal);
+        }
+    }
+
+    [Fact]
+    public void LogViewer_EmptyStateUsesExplicitViewModelStateAndContainer()
+    {
+        var document = XDocument.Load(ProjectFile("Views/MainWindowLogViewerOverlay.axaml"));
+        var emptyState = document
+            .Descendants()
+            .Single(element =>
+                element.Name.LocalName == "Border"
+                && HasClass(element, "log-empty-state"));
+
+        Assert.Equal(
+            "{Binding LogViewer.IsEmpty}",
+            emptyState.Attribute("IsVisible")?.Value);
+        Assert.Contains(
+            emptyState.Descendants(),
+            element =>
+                element.Name.LocalName == "TextBlock"
+                && element.Attribute("Text")?.Value == "{Binding Shell.I18n.LogNoMatchingEntries}");
+
+        var styles = XDocument.Load(ProjectFile("Views/MainWindow.Styles.axaml"));
+        var emptyStateTextStyle = styles
+            .Descendants()
+            .Single(element =>
+                element.Name.LocalName == "Style"
+                && element.Attribute("Selector")?.Value
+                    == "Border.log-empty-state TextBlock.media-placeholder-text");
+        Assert.Contains(
+            emptyStateTextStyle.Elements(),
+            element =>
+                element.Name.LocalName == "Setter"
+                && element.Attribute("Property")?.Value == "Foreground"
+                && element.Attribute("Value")?.Value
+                    == "{DynamicResource LauncherTextSecondaryBrush}");
+    }
+
+    [Fact]
+    public void LogViewer_UsesFixedDialogDimensions()
+    {
+        var document = XDocument.Load(ProjectFile("Views/MainWindowLogViewerOverlay.axaml"));
+        var dialog = document
+            .Descendants()
+            .Single(element =>
+                element.Name.LocalName == "Border"
+                && HasClass(element, "overlay-dialog"));
+
+        Assert.Equal(
+            "{StaticResource LauncherLogViewerWidth}",
+            dialog.Attribute("Width")?.Value);
+        Assert.Equal(
+            "{StaticResource LauncherLogViewerHeight}",
+            dialog.Attribute("Height")?.Value);
+        Assert.Null(dialog.Attribute("MaxWidth"));
+        Assert.Null(dialog.Attribute("MaxHeight"));
+    }
+
+    [Fact]
+    public void LogViewer_UsesVirtualizedListBox()
+    {
+        var document = XDocument.Load(ProjectFile("Views/MainWindowLogViewerOverlay.axaml"));
+        var list = document
+            .Descendants()
+            .Single(element =>
+                element.Name.LocalName == "ListBox"
+                && HasClass(element, "log-entry-list"));
+
+        Assert.Equal(
+            "{Binding LogViewer.FilteredEntries}",
+            list.Attribute("ItemsSource")?.Value);
+        Assert.DoesNotContain(
+            list.Elements(),
+            element => element.Name.LocalName == "ListBox.ItemsPanel");
     }
 
     [Fact]
@@ -272,6 +385,45 @@ public sealed partial class UiStyleContractTests
     }
 
     [Fact]
+    public void SettingsAboutActionsAndVersionChips_UsePurposeBasedOrder()
+    {
+        var text = File.ReadAllText(ProjectFile("Views/MainWindowSettingsOverlay.axaml"));
+
+        AssertOrdered(
+            text,
+            "Shell.LauncherVersionText",
+            "Shell.BuildTimeText",
+            "Shell.CommitShaText",
+            "Shell.BuildConfigText",
+            "Shell.FrameworkVersionText",
+            "Shell.AvaloniaVersionText",
+            "Shell.PlatformText");
+        AssertOrdered(
+            text,
+            "Settings.CheckForUpdatesCommand",
+            "WindowChrome.OpenOfficialSiteCommand",
+            "WindowChrome.OpenGitHubRepositoryCommand",
+            "LogViewer.OpenCommand",
+            "LogViewer.ExportCommand",
+            "WindowChrome.OpenDataDirectoryCommand");
+
+        var document = XDocument.Parse(text);
+        var footerButtons = document
+            .Descendants()
+            .Where(element =>
+                element.Name.LocalName == "Button"
+                && HasClass(element, "settings-footer-action"))
+            .ToList();
+        Assert.Equal(2, footerButtons.Count);
+        Assert.Equal(
+            "{Binding Settings.SaveSettingsCommand}",
+            footerButtons[0].Attribute("Command")?.Value);
+        Assert.Equal(
+            "{Binding WindowChrome.ShowSettingsCommand}",
+            footerButtons[1].Attribute("Command")?.Value);
+    }
+
+    [Fact]
     public void ToastCards_DoNotUseOverlappingBoxShadows()
     {
         var document = XDocument.Load(ProjectFile("Views/MainWindow.Styles.axaml"));
@@ -340,6 +492,17 @@ public sealed partial class UiStyleContractTests
         element.Attribute("Classes")?.Value
             .Split(' ', StringSplitOptions.RemoveEmptyEntries)
             .Contains(className, StringComparer.Ordinal) == true;
+
+    private static void AssertOrdered(string text, params string[] values)
+    {
+        var previousIndex = -1;
+        foreach (var value in values)
+        {
+            var index = text.IndexOf(value, StringComparison.Ordinal);
+            Assert.True(index > previousIndex, $"{value} must appear after the previous item.");
+            previousIndex = index;
+        }
+    }
 
     private static string ProjectFile(string relativePath) =>
         Path.Combine(FindProjectRoot(), relativePath.Replace('/', Path.DirectorySeparatorChar));

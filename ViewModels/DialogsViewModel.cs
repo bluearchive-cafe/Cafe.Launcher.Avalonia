@@ -48,6 +48,49 @@ public partial class DialogsViewModel : ViewModelBase
     [ObservableProperty]
     private string resourcePanelSourceConfirmText = "";
 
+    // ── Crash recovery ─────────────────────────────────────────────────
+
+    [ObservableProperty]
+    private bool isCrashRecoveryVisible;
+
+    [ObservableProperty]
+    private string crashRecoveryText = "";
+
+    public event Action? CrashRecoveryContinueRequested;
+    public event Func<Task>? CrashRecoveryResetSettingsRequested;
+    public event Action? CrashRecoveryViewLogRequested;
+
+    public void ShowCrashRecovery()
+    {
+        CrashRecoveryText = localizer.T("crashRecoveryMessage");
+        IsCrashRecoveryVisible = true;
+    }
+
+    [RelayCommand]
+    private void ContinueAfterCrash()
+    {
+        IsCrashRecoveryVisible = false;
+        CrashRecoveryContinueRequested?.Invoke();
+    }
+
+    [RelayCommand]
+    private async Task ResetSettingsAfterCrashAsync()
+    {
+        var handler = CrashRecoveryResetSettingsRequested;
+        if (handler is not null)
+            await handler();
+        IsCrashRecoveryVisible = false;
+    }
+
+    [RelayCommand]
+    private void ViewCrashLog()
+    {
+        IsCrashRecoveryVisible = false;
+        CrashRecoveryViewLogRequested?.Invoke();
+    }
+
+    // ── Notice ─────────────────────────────────────────────────────────
+
     [ObservableProperty]
     private bool isNoticeDialogVisible;
 
