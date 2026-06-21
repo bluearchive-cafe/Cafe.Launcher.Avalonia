@@ -578,30 +578,25 @@ public sealed class GameDownloadService : IDisposable
         CancellationToken cancellationToken)
     {
         var localGame = await localInstallationStateStore.ReadAsync(gamePath, cancellationToken).ConfigureAwait(false);
-
-        // Fetch current and latest manifests in parallel (matches original's Promise.all)
-        var currentTask = GetCurrentManifestFilesAsync(
-            gamePath,
-            localGame,
-            patchUrlGroup,
-            proxyMode,
-            cancellationToken);
-        var latestTask = GetLatestManifestAsync(
+        var latestManifest = await GetLatestManifestAsync(
             gameConfig,
             patchUrlGroup,
             proxyMode,
-            cancellationToken);
-        await Task.WhenAll(currentTask, latestTask).ConfigureAwait(false);
-        var currentFiles = await currentTask.ConfigureAwait(false);
-        var latestManifest = await latestTask.ConfigureAwait(false);
+            cancellationToken).ConfigureAwait(false);
 
         var hashDiff = await CheckHashAsync(
             latestManifest.Manifest.File,
             gamePath,
             value => progress(CreateProgress(GameOperationKinds.Repair, "repair-check", value)),
             cancellationToken).ConfigureAwait(false);
-        var expected = GameManifestDiff(currentFiles, latestManifest.Manifest.File);
-        var actual = GameResultMerge(new DownloadPlan { NeedDownload = [], NeedDelete = expected.NeedDelete }, new DownloadPlan { NeedDownload = hashDiff });
+        var needDelete = localGame.Kind == LocalInstallationStateKind.Valid
+            ? GameManifestDiff(localGame.Manifest?.Files ?? [], latestManifest.Manifest.File).NeedDelete
+            : [];
+        var actual = new DownloadPlan
+        {
+            NeedDownload = hashDiff,
+            NeedDelete = needDelete
+        };
 
         actual.Source = latestManifest.Manifest.Source ?? "";
         actual.ManifestFiles = latestManifest.Manifest.File;
@@ -909,7 +904,7 @@ public sealed class GameDownloadService : IDisposable
             files.Select(file => new LocalInstallationFile(
                 file.Path,
                 long.Parse(file.Size, NumberStyles.None, CultureInfo.InvariantCulture),
-                ulong.Parse(file.Hash, NumberStyles.None, CultureInfo.InvariantCulture))).ToArray());
+                file.Hash)).ToArray());
         var state = await localInstallationStateStore.CommitAsync(
             gamePath,
             commit,

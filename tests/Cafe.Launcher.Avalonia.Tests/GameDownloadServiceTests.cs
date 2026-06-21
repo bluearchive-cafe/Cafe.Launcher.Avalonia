@@ -297,6 +297,39 @@ public sealed class GameDownloadServiceTests
         }
     }
 
+    [Fact]
+    public async Task RepairAsync_WhenInstallationStateIsCorrupted_UsesOnlyLatestManifestAndKeepsUnknownFiles()
+    {
+        var tempDir = Path.Combine(Path.GetTempPath(), Guid.NewGuid().ToString("N"));
+        var gamePath = Path.Combine(tempDir, "YostarGames", "BlueArchive_JP");
+        Directory.CreateDirectory(gamePath);
+        await File.WriteAllTextAsync(Path.Combine(gamePath, "manifest.json"), "{}");
+        await File.WriteAllTextAsync(Path.Combine(gamePath, "unknown.bin"), "keep");
+        var settingsService = new LauncherSettingsService(Path.Combine(tempDir, "settings.json"));
+        await settingsService.SaveAsync(new LauncherSettings { GamePath = gamePath });
+        var handler = new LatestManifestOnlyHandler();
+        using var apiClient = new LauncherApiClient(
+            handler,
+            new AuthorizationHeaderFactory(),
+            new PatchUrlGroupService());
+        using var service = CreateService(
+            apiClient,
+            settingsService,
+            Path.Combine(tempDir, "download_state.json"));
+        var snapshot = CreateSnapshot(gamePath);
+        snapshot.RuntimeState = LauncherRuntimeState.Corrupted;
+
+        var result = await service.RepairAsync(snapshot, _ => { });
+        var state = await new LocalInstallationStateStore().ReadAsync(gamePath);
+
+        Assert.True(result.Success);
+        Assert.Equal(1, handler.ManifestUrlRequestCount);
+        Assert.Equal(LocalInstallationStateKind.Valid, state.Kind);
+        Assert.Equal("1.0.0", state.Manifest?.Version);
+        Assert.True(File.Exists(Path.Combine(gamePath, "unknown.bin")));
+        Directory.Delete(tempDir, recursive: true);
+    }
+
     private static GameDownloadService CreateService(LauncherApiClient apiClient)
     {
         return CreateService(
@@ -439,6 +472,33 @@ public sealed class GameDownloadServiceTests
             {
                 Content = new StringContent(json, Encoding.UTF8, "application/json")
             };
+        }
+    }
+
+    private sealed class LatestManifestOnlyHandler : HttpMessageHandler
+    {
+        public int ManifestUrlRequestCount { get; private set; }
+
+        protected override Task<HttpResponseMessage> SendAsync(
+            HttpRequestMessage request,
+            CancellationToken cancellationToken)
+        {
+            var requestUri = request.RequestUri?.ToString() ?? "";
+            string json;
+            if (requestUri.Contains("/api/launcher/game/config/json", StringComparison.Ordinal))
+            {
+                ManifestUrlRequestCount++;
+                json = "{\"code\":200,\"data\":{\"url\":\"https://manifest.example.invalid/manifest.json\"}}";
+            }
+            else
+            {
+                json = "{\"source\":\"\",\"file\":[]}";
+            }
+
+            return Task.FromResult(new HttpResponseMessage(HttpStatusCode.OK)
+            {
+                Content = new StringContent(json, Encoding.UTF8, "application/json")
+            });
         }
     }
 

@@ -82,7 +82,7 @@ public sealed class LocalInstallationStateStore
                     {
                         Path = file.Path,
                         Size = file.Size.ToString(CultureInfo.InvariantCulture),
-                        Hash = file.Crc64.ToString(CultureInfo.InvariantCulture)
+                        Hash = file.Crc64
                     };
                     manifestFile.Vc = OfficialHashService.GetManifestFileHash(manifestFile);
                     return manifestFile;
@@ -416,6 +416,18 @@ public sealed class LocalInstallationStateStore
             if (file.Size < 0)
             {
                 throw new ArgumentException("File size cannot be negative.", nameof(commit));
+            }
+
+            if (string.IsNullOrEmpty(file.Crc64)
+                || !ulong.TryParse(
+                    file.Crc64,
+                    NumberStyles.None,
+                    CultureInfo.InvariantCulture,
+                    out _))
+            {
+                throw new ArgumentException(
+                    "File CRC64 must be an unsigned decimal string.",
+                    nameof(commit));
             }
 
             string fullPath;

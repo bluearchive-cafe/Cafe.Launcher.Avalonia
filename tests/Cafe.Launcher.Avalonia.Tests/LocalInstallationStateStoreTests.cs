@@ -35,7 +35,7 @@ public sealed class LocalInstallationStateStoreTests : IDisposable
             "manifest.json",
             "BlueArchive",
             ["--test"],
-            [new LocalInstallationFile("BlueArchive.exe", 4, 1234)]);
+            [new LocalInstallationFile("BlueArchive.exe", 4, "1234")]);
 
         var committed = await store.CommitAsync(gamePath, commit);
         var state = await store.ReadAsync(gamePath);
@@ -67,6 +67,18 @@ public sealed class LocalInstallationStateStoreTests : IDisposable
         Assert.Equal(LocalInstallationStateKind.Corrupted, state.Kind);
         Assert.Null(state.GameConfig);
         Assert.Null(state.Manifest);
+    }
+
+    [Fact]
+    public async Task ReadAsync_WhenOnlyTempDocumentsExist_ReturnsNotInstalled()
+    {
+        Directory.CreateDirectory(gamePath);
+        await File.WriteAllTextAsync(Path.Combine(gamePath, "manifest.json.tmp"), "{}");
+        await File.WriteAllTextAsync(Path.Combine(gamePath, "game-launcher-config.json.tmp"), "{}");
+
+        var state = await store.ReadAsync(gamePath);
+
+        Assert.Equal(LocalInstallationStateKind.NotInstalled, state.Kind);
     }
 
     [Fact]
@@ -190,6 +202,48 @@ public sealed class LocalInstallationStateStoreTests : IDisposable
         Assert.False(File.Exists(Path.Combine(gamePath, "game-launcher-config.json")));
     }
 
+    [Theory]
+    [InlineData("")]
+    [InlineData("-1")]
+    [InlineData("+1")]
+    [InlineData(" 1")]
+    [InlineData("1 ")]
+    [InlineData("18446744073709551616")]
+    public async Task CommitAsync_WhenCrc64IsNotUnsignedDecimal_ThrowsWithoutWritingState(string crc64)
+    {
+        Directory.CreateDirectory(gamePath);
+        var commit = CreateCommit("1.2.3") with
+        {
+            Files = [new LocalInstallationFile("BlueArchive.exe", 4, crc64)]
+        };
+
+        await Assert.ThrowsAsync<ArgumentException>(() => store.CommitAsync(gamePath, commit));
+
+        Assert.False(File.Exists(Path.Combine(gamePath, "manifest.json")));
+        Assert.False(File.Exists(Path.Combine(gamePath, "game-launcher-config.json")));
+        Assert.False(File.Exists(Path.Combine(gamePath, "manifest.json.tmp")));
+        Assert.False(File.Exists(Path.Combine(gamePath, "game-launcher-config.json.tmp")));
+    }
+
+    [Fact]
+    public async Task CommitAsync_WhenResolvedPathsRepeat_ThrowsWithoutWritingState()
+    {
+        Directory.CreateDirectory(gamePath);
+        var commit = CreateCommit("1.2.3") with
+        {
+            Files =
+            [
+                new LocalInstallationFile("Data/file.bin", 4, "1"),
+                new LocalInstallationFile("data/FILE.bin", 4, "2")
+            ]
+        };
+
+        await Assert.ThrowsAsync<ArgumentException>(() => store.CommitAsync(gamePath, commit));
+
+        Assert.False(File.Exists(Path.Combine(gamePath, "manifest.json.tmp")));
+        Assert.False(File.Exists(Path.Combine(gamePath, "game-launcher-config.json.tmp")));
+    }
+
     private Task<LocalInstallationState> CommitValidStateAsync()
     {
         Directory.CreateDirectory(gamePath);
@@ -203,7 +257,7 @@ public sealed class LocalInstallationStateStoreTests : IDisposable
             "manifest.json",
             "BlueArchive",
             ["--test"],
-            [new LocalInstallationFile("BlueArchive.exe", 4, 1234)]);
+            [new LocalInstallationFile("BlueArchive.exe", 4, "1234")]);
     }
 
     public void Dispose()

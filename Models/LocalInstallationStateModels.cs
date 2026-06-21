@@ -27,7 +27,7 @@ public sealed class LocalInstallationState
     public string? Error { get; init; }
 }
 
-public sealed record LocalInstallationFile(string Path, long Size, ulong Crc64);
+public sealed record LocalInstallationFile(string Path, long Size, string Crc64);
 
 public sealed record LocalInstallationStateCommit(
     string Version,
