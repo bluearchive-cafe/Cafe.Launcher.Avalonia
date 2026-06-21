@@ -15,7 +15,7 @@ namespace Cafe.Launcher.Avalonia;
 
 public partial class App : Application
 {
-    private const string SignalName = @"Global\Cafe_Launcher_SI_Show";
+    private const string SignalName = @"Local\Cafe_Launcher_SI_Show";
     private readonly CancellationTokenSource shutdownCts = new();
     private ServiceProvider? serviceProvider;
     private SystemTrayService? trayService;

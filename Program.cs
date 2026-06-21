@@ -9,8 +9,8 @@ namespace Cafe.Launcher.Avalonia;
 
 sealed class Program
 {
-    private const string MutexName = @"Global\Cafe_Launcher_SI";
-    private const string SignalName = @"Global\Cafe_Launcher_SI_Show";
+    private const string MutexName = @"Local\Cafe_Launcher_SI";
+    private const string SignalName = @"Local\Cafe_Launcher_SI_Show";
 
     [STAThread]
     public static void Main(string[] args)
