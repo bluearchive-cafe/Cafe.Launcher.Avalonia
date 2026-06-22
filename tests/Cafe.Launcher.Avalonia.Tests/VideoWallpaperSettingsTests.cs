@@ -40,7 +40,7 @@ public sealed class VideoWallpaperSettingsTests
     }
 
     [Fact]
-    public void Normalize_KeepsVideoBackgroundSource()
+    public void NormalizeForTesting_WhenVideoSource_KeepsVideoSource()
     {
         var result = LauncherSettingsService
             .NormalizeForTesting(new LauncherSettings { BackgroundSource = BackgroundSources.Video });
@@ -52,7 +52,7 @@ public sealed class VideoWallpaperSettingsTests
     [InlineData(-10, 0)]
     [InlineData(150, 100)]
     [InlineData(60, 60)]
-    public void Normalize_ClampsVideoVolume(int input, int expected)
+    public void NormalizeForTesting_WhenVolumeOutOfRange_ClampsToValidRange(int input, int expected)
     {
         var result = LauncherSettingsService
             .NormalizeForTesting(new LauncherSettings { VideoBackgroundVolume = input });
@@ -61,7 +61,7 @@ public sealed class VideoWallpaperSettingsTests
     }
 
     [Fact]
-    public void Normalize_TrimsVideoPath()
+    public void NormalizeForTesting_WhenPathHasWhitespace_TrimsPath()
     {
         var result = LauncherSettingsService
             .NormalizeForTesting(new LauncherSettings { VideoBackgroundPath = "  C:\\v.mp4  " });
