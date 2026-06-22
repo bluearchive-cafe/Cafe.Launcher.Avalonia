@@ -809,6 +809,10 @@
         <Setter Property="VerticalContentAlignment" Value="Center"/>
         <Setter Property="VerticalAlignment" Value="Center"/>
     </Style>
+    <Style Selector="Slider.setting-control">
+        <Setter Property="Width" Value="190"/>
+        <Setter Property="VerticalAlignment" Value="Center"/>
+    </Style>
     <Style Selector="TextBox.uid-input">
         <Setter Property="Background" Value="{DynamicResource LauncherFieldBackgroundBrush}"/>
         <Setter Property="BorderBrush" Value="{DynamicResource LauncherFieldBorderBrush}"/>

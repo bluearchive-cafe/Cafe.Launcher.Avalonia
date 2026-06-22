@@ -510,7 +510,6 @@
                                     <Slider Grid.Column="2" Classes="setting-control"
                                             Minimum="0" Maximum="100"
                                             Value="{Binding Settings.Appearance.VideoVolume, Mode=TwoWay}"
-                                            IsEnabled="{Binding !Settings.Appearance.IsVideoMuted}"
                                             VerticalAlignment="Center"/>
                                 </Grid>
 
