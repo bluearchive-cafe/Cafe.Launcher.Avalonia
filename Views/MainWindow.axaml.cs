@@ -209,10 +209,14 @@ public partial class MainWindow : Window
     protected override void OnPropertyChanged(AvaloniaPropertyChangedEventArgs change)
     {
         base.OnPropertyChanged(change);
-        if (change.Property == WindowStateProperty
+        // Pause the video wallpaper whenever the window is not actually visible to the user: minimized
+        // to the taskbar (WindowState) or hidden to the tray (IsVisible, set by Window.Hide()/Show()).
+        // Driving this off the resulting state — rather than each individual hide/restore call site —
+        // covers every path, including SystemTrayService.ShowWindow which bypasses MainWindow.ShowWindow.
+        if ((change.Property == WindowStateProperty || change.Property == IsVisibleProperty)
             && DataContext is MainWindowViewModel vm)
         {
-            var active = (WindowState)change.NewValue! != WindowState.Minimized;
+            var active = IsVisible && WindowState != WindowState.Minimized;
             vm.Background.SetPlaybackActive(active);
         }
     }
@@ -224,8 +228,8 @@ public partial class MainWindow : Window
         {
             if (systemTray is not null)
             {
+                // Hide() flips IsVisible, which OnPropertyChanged turns into a playback pause.
                 systemTray.HideWindow();
-                (DataContext as MainWindowViewModel)?.Background.SetPlaybackActive(false);
             }
             else
             {
@@ -248,9 +252,10 @@ public partial class MainWindow : Window
 
     public void ShowWindow()
     {
+        // Show()/WindowState changes flip IsVisible/WindowState, which OnPropertyChanged turns into a
+        // playback resume — so this covers SystemTrayService.ShowWindow's path too.
         Show();
         WindowState = WindowState.Normal;
         Activate();
-        (DataContext as MainWindowViewModel)?.Background.SetPlaybackActive(true);
     }
 }
