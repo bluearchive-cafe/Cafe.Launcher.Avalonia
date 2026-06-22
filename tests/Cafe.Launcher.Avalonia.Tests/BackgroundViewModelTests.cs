@@ -1,6 +1,5 @@
 using System.Net;
 using System.Net.Http;
-using System.Runtime.CompilerServices;
 using Avalonia;
 using Avalonia.Media;
 using Avalonia.Media.Imaging;
@@ -11,26 +10,6 @@ using Cafe.Launcher.Avalonia.Services.VideoWallpaper;
 using Cafe.Launcher.Avalonia.ViewModels;
 
 namespace Cafe.Launcher.Avalonia.Tests;
-
-internal static class BackgroundViewModelTestsPlatformInitializer
-{
-    // The regular (non-headless) test project has no Avalonia render platform, so constructing the
-    // WriteableBitmap inside FakeVideoWallpaperEngine.LoadAsync would throw "Unable to locate
-    // IPlatformRenderInterface". Registering Skia's render interface is enough for off-screen bitmap
-    // allocation and keeps these tests in this project (no headless windowing required).
-    [ModuleInitializer]
-    public static void Initialize()
-    {
-        try
-        {
-            global::Avalonia.Skia.SkiaPlatform.Initialize();
-        }
-        catch (InvalidOperationException)
-        {
-            // Already initialized by another test in the same process; safe to ignore.
-        }
-    }
-}
 
 public sealed class BackgroundViewModelTests : IDisposable
 {

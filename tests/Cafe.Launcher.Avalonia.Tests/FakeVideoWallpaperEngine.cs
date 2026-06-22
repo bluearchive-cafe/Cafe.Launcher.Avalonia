@@ -2,8 +2,8 @@ using System;
 using System.Threading;
 using System.Threading.Tasks;
 using Avalonia;
+using Avalonia.Media;
 using Avalonia.Media.Imaging;
-using Avalonia.Platform;
 using Cafe.Launcher.Avalonia.Services.VideoWallpaper;
 
 namespace Cafe.Launcher.Avalonia.Tests;
@@ -19,7 +19,7 @@ internal sealed class FakeVideoWallpaperEngine : IVideoWallpaperEngine
     public bool? LastMuted { get; private set; }
     public bool Disposed { get; private set; }
 
-    public WriteableBitmap? CurrentFrame { get; private set; }
+    public IImage? CurrentFrame { get; private set; }
 
     public event Action? FrameReady;
 
@@ -28,8 +28,9 @@ internal sealed class FakeVideoWallpaperEngine : IVideoWallpaperEngine
         LoadedPath = path;
         if (LoadResult)
         {
-            CurrentFrame = new WriteableBitmap(
-                new PixelSize(2, 2), new Vector(96, 96), PixelFormat.Bgra8888, AlphaFormat.Premul);
+            // A platform-free stand-in frame: the real engine yields a WriteableBitmap, but these
+            // unit tests must not require an Avalonia render platform.
+            CurrentFrame = new StubFrame();
         }
         return Task.FromResult(LoadResult);
     }
@@ -42,7 +43,17 @@ internal sealed class FakeVideoWallpaperEngine : IVideoWallpaperEngine
     public void SetVolume(int volume) => LastVolume = volume;
     public void SetMuted(bool muted) => LastMuted = muted;
 
-    public Bitmap? CaptureFrame() => CurrentFrame;
+    // The fake's frame is not a real Bitmap; theme-color capture is exercised in engine-level tests.
+    public Bitmap? CaptureFrame() => null;
 
     public void Dispose() => Disposed = true;
+
+    private sealed class StubFrame : IImage
+    {
+        public Size Size => new(2, 2);
+
+        public void Draw(DrawingContext context, Rect sourceRect, Rect destRect)
+        {
+        }
+    }
 }

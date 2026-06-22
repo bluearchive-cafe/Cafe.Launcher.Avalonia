@@ -1,6 +1,7 @@
 using System;
 using System.Threading;
 using System.Threading.Tasks;
+using Avalonia.Media;
 using Avalonia.Media.Imaging;
 
 namespace Cafe.Launcher.Avalonia.Services.VideoWallpaper;
@@ -11,7 +12,7 @@ namespace Cafe.Launcher.Avalonia.Services.VideoWallpaper;
 /// </summary>
 internal sealed class NullVideoWallpaperEngine : IVideoWallpaperEngine
 {
-    public WriteableBitmap? CurrentFrame => null;
+    public IImage? CurrentFrame => null;
 
     public event Action? FrameReady { add { } remove { } }
 
