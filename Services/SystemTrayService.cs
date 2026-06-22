@@ -30,7 +30,7 @@ public sealed class SystemTrayService : IDisposable
         this.localizer = localizer;
     }
 
-    public void Initialize()
+    public bool Initialize()
     {
         try
         {
@@ -51,11 +51,14 @@ public sealed class SystemTrayService : IDisposable
             trayIcon.Clicked += (_, _) => ShowWindow();
             localizer.LanguageChanged += OnLanguageChanged;
             UpdateMenuText();
+            return true;
         }
         catch (Exception ex)
         {
             // Tray icon is non-critical — log and continue without it
             System.Diagnostics.Debug.WriteLine($"SystemTrayService initialization failed: {ex.Message}");
+            Dispose();
+            return false;
         }
     }
 
