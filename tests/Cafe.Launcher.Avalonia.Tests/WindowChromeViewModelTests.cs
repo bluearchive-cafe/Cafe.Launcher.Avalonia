@@ -1,11 +1,21 @@
 using Cafe.Launcher.Avalonia.Constants;
 using Cafe.Launcher.Avalonia.Models;
+using Cafe.Launcher.Avalonia.Services;
+using Cafe.Launcher.Avalonia.Services.Diagnostics;
 using Cafe.Launcher.Avalonia.ViewModels;
+using Microsoft.Extensions.DependencyInjection;
 
 namespace Cafe.Launcher.Avalonia.Tests;
 
-public sealed class WindowChromeViewModelTests
+public sealed class WindowChromeViewModelTests : IDisposable
 {
+    private readonly string tempDir = Path.Combine(Path.GetTempPath(), Guid.NewGuid().ToString("N"));
+
+    static WindowChromeViewModelTests()
+    {
+        TestLocalizationHelper.Initialize();
+    }
+
     [Theory]
     [InlineData(PatchUrlGroups.Official, LauncherConstants.OfficialGameWebsiteUrl)]
     [InlineData(PatchUrlGroups.Cafe, LauncherConstants.CafeWebsiteUrl)]
@@ -14,5 +24,283 @@ public sealed class WindowChromeViewModelTests
         string expectedUrl)
     {
         Assert.Equal(expectedUrl, WindowChromeViewModel.ResolveOfficialSiteUrl(patchUrlGroup));
+    }
+
+    [Fact]
+    public void ShowSettingsCommand_OpensSettingsAndLoadsSnapshot()
+    {
+        using var context = CreateContext();
+        context.ViewModel.GetSnapshot = () => new LauncherStatusSnapshot
+        {
+            Settings = new LauncherSettings { Language = LauncherLanguages.Japanese }
+        };
+
+        context.ViewModel.ShowSettingsCommand.Execute(null);
+
+        Assert.True(context.ViewModel.IsSettingsVisible);
+        Assert.Equal(
+            LauncherLanguages.Japanese,
+            context.Settings.Editor.Current.Language);
+    }
+
+    [Fact]
+    public void ShowSettingsCommand_WhenDirty_ShowsUnsavedChangesInsteadOfClosing()
+    {
+        using var context = CreateContext();
+        context.ViewModel.GetSnapshot = () => new LauncherStatusSnapshot
+        {
+            Settings = new LauncherSettings()
+        };
+        context.ViewModel.ShowSettingsCommand.Execute(null);
+        context.Settings.Editor.Current.Language = LauncherLanguages.Japanese;
+
+        context.ViewModel.ShowSettingsCommand.Execute(null);
+
+        Assert.True(context.ViewModel.IsSettingsVisible);
+        Assert.True(context.Settings.IsUnsavedChangesVisible);
+    }
+
+    [Fact]
+    public async Task DiscardSettingsChangesCommand_DiscardsAndClosesSettings()
+    {
+        using var context = CreateContext();
+        context.ViewModel.GetSnapshot = () => new LauncherStatusSnapshot
+        {
+            Settings = new LauncherSettings()
+        };
+        context.ViewModel.ShowSettingsCommand.Execute(null);
+        context.Settings.Editor.Current.Language = LauncherLanguages.Japanese;
+
+        await context.ViewModel.DiscardSettingsChangesCommand.ExecuteAsync(null);
+
+        Assert.False(context.ViewModel.IsSettingsVisible);
+        Assert.False(context.Settings.IsSettingsDirty);
+    }
+
+    [Fact]
+    public void MinimizeAndRestoreCommands_ControlCarouselAndWindowDelegates()
+    {
+        using var context = CreateContext();
+        var minimized = false;
+        var restored = false;
+        context.RemoteContent.Apply(
+            new LauncherRemoteState
+            {
+                OperationsResource = new OperationsResourceResponse
+                {
+                    OperationsResourceOpen = true,
+                    BannerLoop = true,
+                    OperationsBannerList =
+                    [
+                        new OperationsBannerItem(),
+                        new OperationsBannerItem()
+                    ]
+                }
+            },
+            new LauncherSettings(),
+            CancellationToken.None);
+        context.ViewModel.MinimizeWindow = () => minimized = true;
+        context.ViewModel.RestoreWindow = () => restored = true;
+
+        context.ViewModel.MinimizeCommand.Execute(null);
+
+        Assert.True(minimized);
+        Assert.False(context.RemoteContent.IsCarouselTimerRunning);
+
+        context.ViewModel.ExecuteRestoreWindowCommand.Execute(null);
+
+        Assert.True(restored);
+        Assert.True(context.RemoteContent.IsCarouselTimerRunning);
+    }
+
+    [Fact]
+    public void CloseCommand_WhenDownloadIsRunning_ShowsConfirmation()
+    {
+        using var context = CreateContext();
+        context.Backend.IsDownloadRunning = true;
+        var closed = false;
+        context.ViewModel.CloseWindow = () => closed = true;
+
+        context.ViewModel.CloseCommand.Execute(null);
+
+        Assert.True(context.Dialogs.IsDownloadRunningCloseConfirmVisible);
+        Assert.False(closed);
+    }
+
+    [Fact]
+    public void CloseCommand_WhenNoDownloadIsRunning_ClosesWindow()
+    {
+        using var context = CreateContext();
+        var closed = false;
+        context.ViewModel.CloseWindow = () => closed = true;
+
+        context.ViewModel.CloseCommand.Execute(null);
+
+        Assert.True(closed);
+    }
+
+    [Fact]
+    public void CloseAfterStoppingDownload_ClearsPersistedStateAndClosesWindow()
+    {
+        using var context = CreateContext();
+        var closed = false;
+        context.ViewModel.CloseWindow = () => closed = true;
+
+        context.ViewModel.CloseAfterStoppingDownload();
+
+        Assert.True(context.Backend.LastClearPersistedState);
+        Assert.True(closed);
+    }
+
+    [Fact]
+    public void ShowSettingsCommand_WhenSettingsAreSaving_DoesNothing()
+    {
+        using var context = CreateContext();
+        context.Settings.IsSaving = true;
+
+        context.ViewModel.ShowSettingsCommand.Execute(null);
+
+        Assert.False(context.ViewModel.IsSettingsVisible);
+    }
+
+    [Fact]
+    public void KeepEditingSettingsCommand_HidesUnsavedChangesPrompt()
+    {
+        using var context = CreateContext();
+        context.Settings.IsUnsavedChangesVisible = true;
+
+        context.ViewModel.KeepEditingSettingsCommand.Execute(null);
+
+        Assert.False(context.Settings.IsUnsavedChangesVisible);
+    }
+
+    [Fact]
+    public void ExternalActionCommands_ForwardExactTargets()
+    {
+        using var context = CreateContext();
+        var openedUrls = new List<string?>();
+        string? openedDirectory = null;
+        var viewModel = new WindowChromeViewModel(
+            context.Settings,
+            context.RemoteContent,
+            context.Dialogs,
+            context.Operations,
+            openedUrls.Add,
+            path => openedDirectory = path);
+        context.Settings.Editor.ApplySnapshot(new LauncherSettings
+        {
+            PatchUrlGroup = PatchUrlGroups.Cafe
+        });
+
+        viewModel.OpenOfficialSiteCommand.Execute(null);
+        viewModel.OpenGitHubRepositoryCommand.Execute(null);
+        viewModel.OpenExternalUrl("mailto:support@example.invalid");
+        viewModel.OpenDataDirectoryCommand.Execute(null);
+
+        Assert.Equal(LauncherConstants.CafeWebsiteUrl, openedUrls[0]);
+        Assert.Equal(LauncherConstants.GitHubReleaseRepositoryUrl, openedUrls[1]);
+        Assert.Equal("mailto:support@example.invalid", openedUrls[2]);
+        Assert.Equal(
+            Path.Combine(
+                Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData),
+                LauncherConstants.ProductName),
+            openedDirectory);
+    }
+
+    private TestContext CreateContext()
+    {
+        Directory.CreateDirectory(tempDir);
+        var services = new ServiceCollection();
+        services.AddLauncherServices(new UnifiedLogger(Path.Combine(tempDir, "logs")));
+        var provider = services.BuildServiceProvider();
+        var settings = provider.GetRequiredService<SettingsViewModel>();
+        var remoteContent = provider.GetRequiredService<RemoteContentViewModel>();
+        var dialogs = provider.GetRequiredService<DialogsViewModel>();
+        var backend = new TestBackend();
+        var operations = new GameOperationsViewModel(
+            backend,
+            provider.GetRequiredService<LocalizationService>(),
+            provider.GetRequiredService<ToastService>(),
+            provider.GetRequiredService<LocalDiagnostics>(),
+            provider.GetRequiredService<ShellViewModel>(),
+            dialogs,
+            _ => Task.CompletedTask);
+        var viewModel = new WindowChromeViewModel(
+            settings,
+            remoteContent,
+            dialogs,
+            operations);
+        return new TestContext(
+            viewModel,
+            settings,
+            remoteContent,
+            dialogs,
+            operations,
+            backend,
+            provider);
+    }
+
+    public void Dispose()
+    {
+        if (Directory.Exists(tempDir))
+        {
+            Directory.Delete(tempDir, recursive: true);
+        }
+    }
+
+    private sealed record TestContext(
+        WindowChromeViewModel ViewModel,
+        SettingsViewModel Settings,
+        RemoteContentViewModel RemoteContent,
+        DialogsViewModel Dialogs,
+        GameOperationsViewModel Operations,
+        TestBackend Backend,
+        ServiceProvider Provider) : IDisposable
+    {
+        public void Dispose() => Provider.Dispose();
+    }
+
+    private sealed class TestBackend : IGameOperationsBackend
+    {
+        public bool IsDownloadRunning { get; set; }
+        public bool IsPaused { get; private set; }
+        public bool LastClearPersistedState { get; private set; }
+
+        public Task<GameLaunchResult> StartGameAsync(LauncherStatusSnapshot snapshot) =>
+            Task.FromResult(new GameLaunchResult());
+
+        public Task<GameOperationResult> InstallOrUpdateAsync(
+            LauncherStatusSnapshot snapshot,
+            Action<GameOperationProgress> progress) =>
+            Task.FromResult(new GameOperationResult());
+
+        public Task<GameOperationResult> RepairAsync(
+            LauncherStatusSnapshot snapshot,
+            Action<GameOperationProgress> progress) =>
+            Task.FromResult(new GameOperationResult());
+
+        public Task<GameOperationResult> ValidateUninstallAsync(string gamePath) =>
+            Task.FromResult(new GameOperationResult());
+
+        public Task<GameOperationResult> UninstallAsync(
+            LauncherStatusSnapshot snapshot,
+            Action<GameOperationProgress> progress) =>
+            Task.FromResult(new GameOperationResult());
+
+        public Task<GameOperationResult?> ResumePersistedAsync(
+            LauncherStatusSnapshot snapshot,
+            Action<GameOperationProgress> progress,
+            CancellationToken cancellationToken) =>
+            Task.FromResult<GameOperationResult?>(null);
+
+        public void Stop(bool clearPersistedState)
+        {
+            LastClearPersistedState = clearPersistedState;
+            IsDownloadRunning = false;
+        }
+
+        public void Pause() => IsPaused = true;
+
+        public void Resume() => IsPaused = false;
     }
 }

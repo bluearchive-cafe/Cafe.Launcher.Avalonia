@@ -18,7 +18,9 @@ public partial class BackgroundViewModel : ViewModelBase, IDisposable
 {
     private readonly ImageCacheService imageCacheService;
     private readonly LocalDiagnostics diagnostics;
-    private readonly SettingsViewModel settings;
+    private readonly Action<LauncherSettings> wallpaperChanged;
+    private readonly Func<string, IImage?> imageLoader;
+    private readonly Func<IImage?> bundledImageLoader;
     private bool disposed;
 
     [ObservableProperty]
@@ -42,11 +44,45 @@ public partial class BackgroundViewModel : ViewModelBase, IDisposable
         ImageCacheService imageCacheService,
         LocalDiagnostics diagnostics,
         SettingsViewModel settings)
+        : this(
+            imageCacheService,
+            diagnostics,
+            previewSettings =>
+            {
+                settings.Appearance.RefreshThemeColorPaletteFromCurrentBackground(markDirty: false);
+                settings.Appearance.ApplyThemeColor(
+                    previewSettings.ThemeColorMode,
+                    settings.Appearance.SelectedCustomThemeColor);
+            })
+    {
+    }
+
+    internal BackgroundViewModel(
+        ImageCacheService imageCacheService,
+        LocalDiagnostics diagnostics,
+        Action<LauncherSettings> wallpaperChanged)
+        : this(
+            imageCacheService,
+            diagnostics,
+            wallpaperChanged,
+            static path => new Bitmap(path),
+            LoadBundledBackground)
+    {
+    }
+
+    internal BackgroundViewModel(
+        ImageCacheService imageCacheService,
+        LocalDiagnostics diagnostics,
+        Action<LauncherSettings> wallpaperChanged,
+        Func<string, IImage?> imageLoader,
+        Func<IImage?> bundledImageLoader)
     {
         this.imageCacheService = imageCacheService;
         this.diagnostics = diagnostics;
-        this.settings = settings;
-        backgroundImageSource = LoadBundledBackground();
+        this.wallpaperChanged = wallpaperChanged;
+        this.imageLoader = imageLoader;
+        this.bundledImageLoader = bundledImageLoader;
+        backgroundImageSource = bundledImageLoader();
     }
 
     public async Task UpdateBackgroundImageAsync(
@@ -69,7 +105,7 @@ public partial class BackgroundViewModel : ViewModelBase, IDisposable
                         var cachedPath = await imageCacheService.GetCachedPathAsync(crc64, cancellationToken)
                             ?? await imageCacheService.CacheImageAsync(bgImg, crc64, proxyMode, cancellationToken);
                         cancellationToken.ThrowIfCancellationRequested();
-                        SetBackgroundImage(new Bitmap(cachedPath), settings);
+                        SetBackgroundImage(imageLoader(cachedPath), settings);
                         return;
                     }
                     catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
@@ -89,7 +125,7 @@ public partial class BackgroundViewModel : ViewModelBase, IDisposable
             case BackgroundSources.Custom:
                 if (!string.IsNullOrWhiteSpace(settings.CustomBackgroundPath))
                 {
-                    var customBitmap = await LoadCustomBackgroundAsync(
+                    var customBitmap = await LoadCustomBackgroundImageAsync(
                         settings.CustomBackgroundPath,
                         cancellationToken);
                     if (customBitmap is not null)
@@ -103,7 +139,7 @@ public partial class BackgroundViewModel : ViewModelBase, IDisposable
         }
 
         cancellationToken.ThrowIfCancellationRequested();
-        SetBackgroundImage(LoadBundledBackground(), settings);
+        SetBackgroundImage(bundledImageLoader(), settings);
     }
 
     public void ApplyBackgroundPresentation(LauncherSettings settings)
@@ -121,6 +157,11 @@ public partial class BackgroundViewModel : ViewModelBase, IDisposable
 
     public async Task<Bitmap?> LoadCustomBackgroundAsync(
         string path,
+        CancellationToken cancellationToken = default) =>
+        await LoadCustomBackgroundImageAsync(path, cancellationToken) as Bitmap;
+
+    private async Task<IImage?> LoadCustomBackgroundImageAsync(
+        string path,
         CancellationToken cancellationToken = default)
     {
         cancellationToken.ThrowIfCancellationRequested();
@@ -128,10 +169,14 @@ public partial class BackgroundViewModel : ViewModelBase, IDisposable
         {
             try
             {
-                var bitmap = new Bitmap(path);
+                var bitmap = imageLoader(path);
+                if (bitmap is null)
+                {
+                    return null;
+                }
                 if (cancellationToken.IsCancellationRequested)
                 {
-                    bitmap.Dispose();
+                    (bitmap as IDisposable)?.Dispose();
                     cancellationToken.ThrowIfCancellationRequested();
                 }
 
@@ -179,10 +224,14 @@ public partial class BackgroundViewModel : ViewModelBase, IDisposable
 
             try
             {
-                var bitmap = new Bitmap(imagePath);
+                var bitmap = imageLoader(imagePath);
+                if (bitmap is null)
+                {
+                    return null;
+                }
                 if (cancellationToken.IsCancellationRequested)
                 {
-                    bitmap.Dispose();
+                    (bitmap as IDisposable)?.Dispose();
                     cancellationToken.ThrowIfCancellationRequested();
                 }
 
@@ -234,16 +283,13 @@ public partial class BackgroundViewModel : ViewModelBase, IDisposable
             || extension.Equals(".webp", StringComparison.OrdinalIgnoreCase);
     }
 
-    private void SetBackgroundImage(Bitmap? bitmap, LauncherSettings previewSettings)
+    private void SetBackgroundImage(IImage? bitmap, LauncherSettings previewSettings)
     {
         var old = BackgroundImageSource as IDisposable;
         BackgroundImageSource = bitmap;
         if (previewSettings.ThemeColorMode == ThemeColorModes.Wallpaper)
         {
-            settings.Appearance.RefreshThemeColorPaletteFromCurrentBackground(markDirty: false);
-            settings.Appearance.ApplyThemeColor(
-                previewSettings.ThemeColorMode,
-                settings.Appearance.SelectedCustomThemeColor);
+            wallpaperChanged(previewSettings);
         }
 
         if (old is not null)

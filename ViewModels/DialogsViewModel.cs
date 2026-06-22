@@ -16,6 +16,7 @@ public partial class DialogsViewModel : ViewModelBase
 {
     private readonly LocalizationService localizer;
     private readonly NoticeStateService noticeStateService;
+    private readonly Func<Action, Task> invokeOnUiAsync;
     private bool closeOnNoticeDismiss;
 
     [ObservableProperty]
@@ -131,9 +132,21 @@ public partial class DialogsViewModel : ViewModelBase
     public event Action<string>? ConfirmUpdateAvailableRequested;
 
     public DialogsViewModel(LocalizationService localizer, NoticeStateService noticeStateService)
+        : this(
+            localizer,
+            noticeStateService,
+            async action => await Dispatcher.UIThread.InvokeAsync(action))
+    {
+    }
+
+    internal DialogsViewModel(
+        LocalizationService localizer,
+        NoticeStateService noticeStateService,
+        Func<Action, Task> invokeOnUiAsync)
     {
         this.localizer = localizer;
         this.noticeStateService = noticeStateService;
+        this.invokeOnUiAsync = invokeOnUiAsync;
     }
 
     public void ApplyLanguage()
@@ -323,7 +336,7 @@ public partial class DialogsViewModel : ViewModelBase
                 return;
             }
 
-            await Dispatcher.UIThread.InvokeAsync(() =>
+            await invokeOnUiAsync(() =>
             {
                 NoticeDialogContent = baseConfig.NoticeContent;
                 NoticeDialogConfirmText = baseConfig.ExitLauncherOpen

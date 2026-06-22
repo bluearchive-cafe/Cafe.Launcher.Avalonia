@@ -16,6 +16,8 @@ public partial class WindowChromeViewModel : ViewModelBase
     private readonly RemoteContentViewModel remoteContent;
     private readonly DialogsViewModel dialogs;
     private readonly GameOperationsViewModel operations;
+    private readonly Action<string?> openExternalUrl;
+    private readonly Action<string> openDirectory;
 
     [ObservableProperty]
     private bool isSettingsVisible;
@@ -33,11 +35,34 @@ public partial class WindowChromeViewModel : ViewModelBase
         RemoteContentViewModel remoteContent,
         DialogsViewModel dialogs,
         GameOperationsViewModel operations)
+        : this(
+            settings,
+            remoteContent,
+            dialogs,
+            operations,
+            ExternalLinkService.Open,
+            static path => Process.Start(new ProcessStartInfo
+            {
+                FileName = path,
+                UseShellExecute = true
+            }))
+    {
+    }
+
+    internal WindowChromeViewModel(
+        SettingsViewModel settings,
+        RemoteContentViewModel remoteContent,
+        DialogsViewModel dialogs,
+        GameOperationsViewModel operations,
+        Action<string?> openExternalUrl,
+        Action<string> openDirectory)
     {
         this.settings = settings;
         this.remoteContent = remoteContent;
         this.dialogs = dialogs;
         this.operations = operations;
+        this.openExternalUrl = openExternalUrl;
+        this.openDirectory = openDirectory;
     }
 
     [RelayCommand]
@@ -95,7 +120,7 @@ public partial class WindowChromeViewModel : ViewModelBase
     [RelayCommand]
     private void OpenOfficialSite()
     {
-        ExternalLinkService.Open(
+        openExternalUrl(
             ResolveOfficialSiteUrl(settings.Editor.GetSavedSnapshot().PatchUrlGroup));
     }
 
@@ -107,7 +132,7 @@ public partial class WindowChromeViewModel : ViewModelBase
     [RelayCommand]
     private void OpenGitHubRepository()
     {
-        ExternalLinkService.Open(LauncherConstants.GitHubReleaseRepositoryUrl);
+        openExternalUrl(LauncherConstants.GitHubReleaseRepositoryUrl);
     }
 
     [RelayCommand]
@@ -116,16 +141,12 @@ public partial class WindowChromeViewModel : ViewModelBase
         var path = Path.Combine(
             Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData),
             LauncherConstants.ProductName);
-        Process.Start(new ProcessStartInfo
-        {
-            FileName = path,
-            UseShellExecute = true
-        });
+        openDirectory(path);
     }
 
     public void OpenExternalUrl(string? url)
     {
-        ExternalLinkService.Open(url);
+        openExternalUrl(url);
     }
 
     [RelayCommand]
