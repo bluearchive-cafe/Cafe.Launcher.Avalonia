@@ -28,6 +28,12 @@ public partial class BackgroundViewModel : ViewModelBase, IDisposable
     private bool playbackActive = true;
     private bool disposed;
 
+    // Replaced background images are disposed off the UI thread (Background priority) so an in-flight
+    // render of the old frame completes first. Test seam: overridden to dispose synchronously without
+    // an Avalonia dispatcher.
+    internal Action<IDisposable> ImageDisposeScheduler { get; set; } =
+        image => Dispatcher.UIThread.Post(image.Dispose, DispatcherPriority.Background);
+
     [ObservableProperty]
     private IImage? backgroundImageSource;
 
@@ -343,6 +349,12 @@ public partial class BackgroundViewModel : ViewModelBase, IDisposable
 
             videoEngine = engine;
             activeVideoSettings = settings;
+
+            // The current image is a non-video, VM-owned bitmap (or null after a video→video StopVideo).
+            // Capture it now and dispose it once the first engine frame replaces it below; later frames
+            // are engine-owned and must not be disposed here.
+            var previousImage = BackgroundImageSource as IDisposable;
+
             engine.SetVolume(settings.VideoBackgroundVolume);
             engine.SetMuted(settings.VideoBackgroundMuted);
             engine.FrameReady += OnVideoFrameReady;
@@ -352,6 +364,12 @@ public partial class BackgroundViewModel : ViewModelBase, IDisposable
             }
 
             OnVideoFrameReady();
+
+            if (previousImage is not null)
+            {
+                ImageDisposeScheduler(previousImage);
+            }
+
             return true;
         }
         catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
@@ -426,7 +444,7 @@ public partial class BackgroundViewModel : ViewModelBase, IDisposable
 
         if (old is not null)
         {
-            Dispatcher.UIThread.Post(() => old.Dispose(), DispatcherPriority.Background);
+            ImageDisposeScheduler(old);
         }
     }
 

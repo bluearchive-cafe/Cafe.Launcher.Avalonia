@@ -352,6 +352,40 @@ public sealed class BackgroundViewModelTests : IDisposable
         Assert.Same(fake.CurrentFrame, vm.BackgroundImageSource);
     }
 
+    [Fact]
+    public async Task UpdateBackgroundImageAsync_WhenSwitchingFromImageToVideo_DisposesPreviousImage()
+    {
+        var customImage = new TestImage();
+        var fake = new FakeVideoWallpaperEngine();
+        using var cache = CreateCache(new ImageHandler(PngBytes));
+        using var vm = new BackgroundViewModel(
+            cache,
+            new LocalDiagnostics(),
+            _ => { },
+            _ => customImage,
+            () => new TestImage(),
+            () => fake)
+        {
+            ImageDisposeScheduler = image => image.Dispose(),
+        };
+        var customPath = Path.Combine(tempDir, "wallpaper.png");
+        await File.WriteAllBytesAsync(customPath, PngBytes);
+
+        await vm.UpdateBackgroundImageAsync(
+            new LauncherSettings { BackgroundSource = BackgroundSources.Custom, CustomBackgroundPath = customPath },
+            null,
+            CancellationToken.None);
+        Assert.Same(customImage, vm.BackgroundImageSource);
+
+        await vm.UpdateBackgroundImageAsync(
+            new LauncherSettings { BackgroundSource = BackgroundSources.Video, VideoBackgroundPath = @"C:\v.mp4" },
+            null,
+            CancellationToken.None);
+
+        Assert.Same(fake.CurrentFrame, vm.BackgroundImageSource);
+        Assert.True(customImage.Disposed);
+    }
+
     private BackgroundViewModel CreateViewModelWithEngine(Func<IVideoWallpaperEngine> engineFactory)
     {
         return new BackgroundViewModel(
@@ -431,14 +465,14 @@ public sealed class BackgroundViewModelTests : IDisposable
 
     private sealed class TestImage : IImage, IDisposable
     {
+        public bool Disposed { get; private set; }
+
         public Size Size => new(1, 1);
 
         public void Draw(DrawingContext context, Rect sourceRect, Rect destRect)
         {
         }
 
-        public void Dispose()
-        {
-        }
+        public void Dispose() => Disposed = true;
     }
 }
