@@ -82,6 +82,7 @@ public static class BackgroundSources
     public const string Bundled = "bundled";
     public const string Remote = "remote";
     public const string Custom = "custom";
+    public const string Video = "video";
 }
 
 public static class BackgroundFits
@@ -188,6 +189,18 @@ public sealed partial class LauncherSettings : ObservableObject
     [ObservableProperty]
     [property: JsonPropertyName("backgroundFillColor")]
     private string backgroundFillColor = "#FF000000";
+
+    [ObservableProperty]
+    [property: JsonPropertyName("videoBackgroundPath")]
+    private string videoBackgroundPath = "";
+
+    [ObservableProperty]
+    [property: JsonPropertyName("videoBackgroundMuted")]
+    private bool videoBackgroundMuted = true;
+
+    [ObservableProperty]
+    [property: JsonPropertyName("videoBackgroundVolume")]
+    private int videoBackgroundVolume = 50;
 
     [ObservableProperty]
     [property: JsonPropertyName("resourcePanelUid")]
