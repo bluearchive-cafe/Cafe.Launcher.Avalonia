@@ -51,6 +51,70 @@ public sealed class RemoteHttpUrlValidatorTests
         Assert.Equal(1, handler.RequestCount);
     }
 
+    [Fact]
+    public async Task SendAsync_WhenRedirectIsRelative_FollowsRedirect()
+    {
+        var handler = new RelativeRedirectHandler();
+        using var client = new HttpClient(handler);
+
+        using var response = await RemoteHttpRequestService.SendAsync(
+            client,
+            new Uri("https://example.test/start"),
+            static uri => new HttpRequestMessage(HttpMethod.Get, uri),
+            RemoteHttpUrlValidator.CreateForTesting(),
+            CancellationToken.None);
+
+        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+        Assert.Equal(
+            ["https://example.test/start", "https://example.test/final"],
+            handler.RequestUris);
+    }
+
+    [Fact]
+    public async Task SendAsync_WhenRedirectHasNoLocation_Throws()
+    {
+        using var client = new HttpClient(new MissingLocationHandler());
+
+        await Assert.ThrowsAsync<HttpRequestException>(
+            () => RemoteHttpRequestService.SendAsync(
+                client,
+                new Uri("https://example.test/start"),
+                static uri => new HttpRequestMessage(HttpMethod.Get, uri),
+                RemoteHttpUrlValidator.CreateForTesting(),
+                CancellationToken.None));
+    }
+
+    [Fact]
+    public async Task SendAsync_WhenRedirectDowngradesHttpsToHttp_Throws()
+    {
+        using var client = new HttpClient(new DowngradeRedirectHandler());
+
+        await Assert.ThrowsAsync<HttpRequestException>(
+            () => RemoteHttpRequestService.SendAsync(
+                client,
+                new Uri("https://example.test/start"),
+                static uri => new HttpRequestMessage(HttpMethod.Get, uri),
+                RemoteHttpUrlValidator.CreateForTesting(),
+                CancellationToken.None));
+    }
+
+    [Fact]
+    public async Task SendAsync_WhenRedirectLimitIsExceeded_ThrowsAfterSixRequests()
+    {
+        var handler = new EndlessRedirectHandler();
+        using var client = new HttpClient(handler);
+
+        await Assert.ThrowsAsync<HttpRequestException>(
+            () => RemoteHttpRequestService.SendAsync(
+                client,
+                new Uri("https://example.test/start"),
+                static uri => new HttpRequestMessage(HttpMethod.Get, uri),
+                RemoteHttpUrlValidator.CreateForTesting(),
+                CancellationToken.None));
+
+        Assert.Equal(6, handler.RequestCount);
+    }
+
     private sealed class RedirectHandler : HttpMessageHandler
     {
         public int RequestCount { get; private set; }
@@ -65,6 +129,65 @@ public sealed class RemoteHttpUrlValidatorTests
                 Headers =
                 {
                     Location = new Uri("http://localhost/private")
+                }
+            });
+        }
+    }
+
+    private sealed class RelativeRedirectHandler : HttpMessageHandler
+    {
+        public List<string> RequestUris { get; } = [];
+
+        protected override Task<HttpResponseMessage> SendAsync(
+            HttpRequestMessage request,
+            CancellationToken cancellationToken)
+        {
+            RequestUris.Add(request.RequestUri?.AbsoluteUri ?? "");
+            return Task.FromResult(RequestUris.Count == 1
+                ? new HttpResponseMessage(HttpStatusCode.Redirect)
+                {
+                    Headers = { Location = new Uri("/final", UriKind.Relative) }
+                }
+                : new HttpResponseMessage(HttpStatusCode.OK));
+        }
+    }
+
+    private sealed class MissingLocationHandler : HttpMessageHandler
+    {
+        protected override Task<HttpResponseMessage> SendAsync(
+            HttpRequestMessage request,
+            CancellationToken cancellationToken) =>
+            Task.FromResult(new HttpResponseMessage(HttpStatusCode.Redirect));
+    }
+
+    private sealed class DowngradeRedirectHandler : HttpMessageHandler
+    {
+        protected override Task<HttpResponseMessage> SendAsync(
+            HttpRequestMessage request,
+            CancellationToken cancellationToken) =>
+            Task.FromResult(new HttpResponseMessage(HttpStatusCode.Redirect)
+            {
+                Headers =
+                {
+                    Location = new Uri("http://example.test/final")
+                }
+            });
+    }
+
+    private sealed class EndlessRedirectHandler : HttpMessageHandler
+    {
+        public int RequestCount { get; private set; }
+
+        protected override Task<HttpResponseMessage> SendAsync(
+            HttpRequestMessage request,
+            CancellationToken cancellationToken)
+        {
+            RequestCount++;
+            return Task.FromResult(new HttpResponseMessage(HttpStatusCode.Redirect)
+            {
+                Headers =
+                {
+                    Location = new Uri($"/redirect-{RequestCount}", UriKind.Relative)
                 }
             });
         }

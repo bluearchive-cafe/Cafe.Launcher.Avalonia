@@ -288,6 +288,295 @@ public sealed class GameDownloadServiceTests
     }
 
     [Fact]
+    public async Task InstallOrUpdateAsync_WhenFileIsRequired_InstallsFileAndCommitsInstallationState()
+    {
+        var tempDir = Path.Combine(Path.GetTempPath(), Guid.NewGuid().ToString("N"));
+        var gamePath = Path.Combine(tempDir, "YostarGames", "BlueArchive_JP");
+        var settingsService = new LauncherSettingsService(Path.Combine(tempDir, "settings.json"));
+        await settingsService.SaveAsync(new LauncherSettings { GamePath = gamePath });
+        var statePath = Path.Combine(tempDir, "download_state.json");
+        var fileBytes = Encoding.UTF8.GetBytes("installed-content");
+        var hashPath = Path.Combine(tempDir, "hash-source.bin");
+        Directory.CreateDirectory(tempDir);
+        await File.WriteAllBytesAsync(hashPath, fileBytes);
+        var expectedHash = await new Crc64Service().ComputeFileAsync(hashPath);
+        using var apiClient = CreateManifestApiClient(
+            new ManifestFile
+            {
+                Path = "data/file.bin",
+                Size = fileBytes.Length.ToString(CultureInfo.InvariantCulture),
+                Hash = expectedHash
+            });
+        var downloader = new WritingFileDownloadService(fileBytes);
+        using var service = CreateService(apiClient, settingsService, statePath, downloader);
+        var progress = new List<GameOperationProgress>();
+        var snapshot = CreateSnapshot(gamePath);
+        snapshot.RuntimeState = LauncherRuntimeState.NotInstalled;
+
+        var result = await service.InstallOrUpdateAsync(snapshot, progress.Add);
+        var installationState = await new LocalInstallationStateStore().ReadAsync(gamePath);
+
+        Assert.True(result.Success);
+        Assert.Equal(1, result.AffectedFileCount);
+        Assert.Equal(fileBytes, await File.ReadAllBytesAsync(Path.Combine(gamePath, "data", "file.bin")));
+        Assert.Equal(LocalInstallationStateKind.Valid, installationState.Kind);
+        Assert.Equal("1.0.0", installationState.Manifest?.Version);
+        Assert.Contains(
+            installationState.Manifest?.Files ?? [],
+            file => file.Path == "data/file.bin" && file.Hash == expectedHash);
+        Assert.Contains(progress, item => item.Stage == "download-done" && item.Progress == 100);
+        Assert.False(File.Exists(statePath));
+        Directory.Delete(tempDir, recursive: true);
+    }
+
+    [Fact]
+    public async Task InstallOrUpdateAsync_WhenPaused_WaitsUntilResumeBeforeCompleting()
+    {
+        var tempDir = Path.Combine(Path.GetTempPath(), Guid.NewGuid().ToString("N"));
+        var gamePath = Path.Combine(tempDir, "YostarGames", "BlueArchive_JP");
+        var settingsService = new LauncherSettingsService(Path.Combine(tempDir, "settings.json"));
+        await settingsService.SaveAsync(new LauncherSettings { GamePath = gamePath });
+        var fileBytes = Encoding.UTF8.GetBytes("pause-resume-content");
+        var manifestFile = await CreateManifestFileAsync(tempDir, "data/file.bin", fileBytes);
+        using var apiClient = CreateManifestApiClient(manifestFile);
+        var downloader = new ControlledFileDownloadService(fileBytes);
+        using var service = CreateService(
+            apiClient,
+            settingsService,
+            Path.Combine(tempDir, "download_state.json"),
+            downloader);
+        var snapshot = CreateSnapshot(gamePath);
+        snapshot.RuntimeState = LauncherRuntimeState.NotInstalled;
+
+        var operation = service.InstallOrUpdateAsync(snapshot, _ => { });
+        await downloader.DownloadStarted.Task.WaitAsync(TimeSpan.FromSeconds(2));
+        service.Pause();
+        downloader.AllowPauseCheck.TrySetResult();
+        await downloader.PauseCheckStarted.Task.WaitAsync(TimeSpan.FromSeconds(2));
+
+        Assert.True(service.IsPaused);
+        Assert.False(operation.IsCompleted);
+
+        service.Resume();
+        var result = await operation.WaitAsync(TimeSpan.FromSeconds(2));
+
+        Assert.True(result.Success);
+        Assert.False(service.IsPaused);
+        Assert.Equal(fileBytes, await File.ReadAllBytesAsync(Path.Combine(gamePath, "data", "file.bin")));
+        Directory.Delete(tempDir, recursive: true);
+    }
+
+    [Theory]
+    [InlineData(true, false)]
+    [InlineData(false, true)]
+    public async Task Stop_WhenOperationIsPaused_StopsOperationAndAppliesPersistedStateChoice(
+        bool clearPersistedState,
+        bool expectedStateFileExists)
+    {
+        var tempDir = Path.Combine(Path.GetTempPath(), Guid.NewGuid().ToString("N"));
+        var gamePath = Path.Combine(tempDir, "YostarGames", "BlueArchive_JP");
+        var settingsService = new LauncherSettingsService(Path.Combine(tempDir, "settings.json"));
+        await settingsService.SaveAsync(new LauncherSettings { GamePath = gamePath });
+        var statePath = Path.Combine(tempDir, "download_state.json");
+        var fileBytes = Encoding.UTF8.GetBytes("stopped-content");
+        var manifestFile = await CreateManifestFileAsync(tempDir, "data/file.bin", fileBytes);
+        using var apiClient = CreateManifestApiClient(manifestFile);
+        var downloader = new ControlledFileDownloadService(fileBytes);
+        using var service = CreateService(apiClient, settingsService, statePath, downloader);
+        var progress = new List<GameOperationProgress>();
+        var snapshot = CreateSnapshot(gamePath);
+        snapshot.RuntimeState = LauncherRuntimeState.NotInstalled;
+
+        var operation = service.InstallOrUpdateAsync(snapshot, progress.Add);
+        await downloader.DownloadStarted.Task.WaitAsync(TimeSpan.FromSeconds(2));
+        service.Pause();
+        downloader.AllowPauseCheck.TrySetResult();
+        await downloader.PauseCheckStarted.Task.WaitAsync(TimeSpan.FromSeconds(2));
+
+        service.Stop(clearPersistedState);
+        var result = await operation.WaitAsync(TimeSpan.FromSeconds(2));
+
+        Assert.False(result.Success);
+        Assert.Equal("stopped", result.ErrorType);
+        Assert.False(service.IsRunning);
+        Assert.False(service.IsPaused);
+        Assert.Contains(progress, item => item.Stage == "stopped");
+        Assert.Equal(expectedStateFileExists, File.Exists(statePath));
+        Directory.Delete(tempDir, recursive: true);
+    }
+
+    [Fact]
+    public async Task InstallOrUpdateAsync_WhenDiskSpaceIsInsufficient_DoesNotStartDownloads()
+    {
+        var tempDir = Path.Combine(Path.GetTempPath(), Guid.NewGuid().ToString("N"));
+        var gamePath = Path.Combine(tempDir, "YostarGames", "BlueArchive_JP");
+        var settingsService = new LauncherSettingsService(Path.Combine(tempDir, "settings.json"));
+        await settingsService.SaveAsync(new LauncherSettings { GamePath = gamePath });
+        var manifestFile = new ManifestFile
+        {
+            Path = "data/huge.bin",
+            Size = long.MaxValue.ToString(CultureInfo.InvariantCulture),
+            Hash = "0"
+        };
+        using var apiClient = CreateManifestApiClient(manifestFile);
+        var downloader = new RecordingFileDownloadService();
+        using var service = CreateService(
+            apiClient,
+            settingsService,
+            Path.Combine(tempDir, "download_state.json"),
+            downloader);
+        var snapshot = CreateSnapshot(gamePath);
+        snapshot.RuntimeState = LauncherRuntimeState.NotInstalled;
+
+        var result = await service.InstallOrUpdateAsync(snapshot, _ => { });
+
+        Assert.False(result.Success);
+        Assert.Equal("game-download-error-no-space", result.ErrorType);
+        Assert.Equal(1, result.AffectedFileCount);
+        Assert.Equal(0, downloader.InvocationCount);
+        Directory.Delete(tempDir, recursive: true);
+    }
+
+    [Fact]
+    public async Task InstallOrUpdateAsync_WhenMoreThanTenFilesAreRequired_LimitsParallelDownloadsToTen()
+    {
+        var tempDir = Path.Combine(Path.GetTempPath(), Guid.NewGuid().ToString("N"));
+        var gamePath = Path.Combine(tempDir, "YostarGames", "BlueArchive_JP");
+        var settingsService = new LauncherSettingsService(Path.Combine(tempDir, "settings.json"));
+        await settingsService.SaveAsync(new LauncherSettings { GamePath = gamePath });
+        var fileBytes = Encoding.UTF8.GetBytes("parallel-content");
+        var hashFile = await CreateManifestFileAsync(tempDir, "unused.bin", fileBytes);
+        var manifestFiles = Enumerable.Range(0, 12)
+            .Select(index => new ManifestFile
+            {
+                Path = $"data/file-{index}.bin",
+                Size = fileBytes.Length.ToString(CultureInfo.InvariantCulture),
+                Hash = hashFile.Hash
+            })
+            .ToArray();
+        using var apiClient = CreateManifestApiClient(manifestFiles);
+        var downloader = new ParallelTrackingFileDownloadService(fileBytes, expectedBlockedCount: 10);
+        using var service = CreateService(
+            apiClient,
+            settingsService,
+            Path.Combine(tempDir, "download_state.json"),
+            downloader);
+        var snapshot = CreateSnapshot(gamePath);
+        snapshot.RuntimeState = LauncherRuntimeState.NotInstalled;
+
+        var operation = service.InstallOrUpdateAsync(snapshot, _ => { });
+        await downloader.ExpectedBlockedCountReached.Task.WaitAsync(TimeSpan.FromSeconds(2));
+
+        Assert.Equal(10, downloader.StartedCount);
+        Assert.Equal(10, downloader.MaximumConcurrency);
+
+        downloader.Release.TrySetResult();
+        var result = await operation.WaitAsync(TimeSpan.FromSeconds(2));
+
+        Assert.True(result.Success);
+        Assert.Equal(12, downloader.StartedCount);
+        Assert.Equal(10, downloader.MaximumConcurrency);
+        Assert.All(
+            manifestFiles,
+            file => Assert.True(File.Exists(Path.Combine(gamePath, file.Path.Replace('/', Path.DirectorySeparatorChar)))));
+        Directory.Delete(tempDir, recursive: true);
+    }
+
+    [Fact]
+    public async Task InstallOrUpdateAsync_WhenInstallVerificationFails_RedownloadsFailedFile()
+    {
+        var tempDir = Path.Combine(Path.GetTempPath(), Guid.NewGuid().ToString("N"));
+        var gamePath = Path.Combine(tempDir, "YostarGames", "BlueArchive_JP");
+        var settingsService = new LauncherSettingsService(Path.Combine(tempDir, "settings.json"));
+        await settingsService.SaveAsync(new LauncherSettings { GamePath = gamePath });
+        var expectedBytes = Encoding.UTF8.GetBytes("verified-content");
+        var manifestFile = await CreateManifestFileAsync(tempDir, "data/file.bin", expectedBytes);
+        using var apiClient = CreateManifestApiClient(manifestFile);
+        var downloader = new VerificationRetryFileDownloadService(
+            Encoding.UTF8.GetBytes("invalid-content"),
+            expectedBytes);
+        using var service = CreateService(
+            apiClient,
+            settingsService,
+            Path.Combine(tempDir, "download_state.json"),
+            downloader);
+        var snapshot = CreateSnapshot(gamePath);
+        snapshot.RuntimeState = LauncherRuntimeState.NotInstalled;
+
+        var result = await service.InstallOrUpdateAsync(snapshot, _ => { });
+
+        Assert.True(result.Success);
+        Assert.Equal(2, downloader.InvocationCount);
+        Assert.Equal(expectedBytes, await File.ReadAllBytesAsync(Path.Combine(gamePath, "data", "file.bin")));
+        Directory.Delete(tempDir, recursive: true);
+    }
+
+    [Fact]
+    public async Task InstallOrUpdateAsync_WhenSpeedLimitIsOneMegabytePerSecond_ThrottlesReportedBytes()
+    {
+        var tempDir = Path.Combine(Path.GetTempPath(), Guid.NewGuid().ToString("N"));
+        var gamePath = Path.Combine(tempDir, "YostarGames", "BlueArchive_JP");
+        var settingsService = new LauncherSettingsService(Path.Combine(tempDir, "settings.json"));
+        await settingsService.SaveAsync(new LauncherSettings
+        {
+            GamePath = gamePath,
+            DownloadSpeedLimit = DownloadSpeedLimits.Speed1MBs
+        });
+        var fileBytes = new byte[1024 * 1024];
+        Random.Shared.NextBytes(fileBytes);
+        var manifestFile = await CreateManifestFileAsync(tempDir, "data/file.bin", fileBytes);
+        using var apiClient = CreateManifestApiClient(manifestFile);
+        using var service = CreateService(
+            apiClient,
+            settingsService,
+            Path.Combine(tempDir, "download_state.json"),
+            new WritingFileDownloadService(fileBytes));
+        var snapshot = CreateSnapshot(gamePath);
+        snapshot.RuntimeState = LauncherRuntimeState.NotInstalled;
+        var watch = System.Diagnostics.Stopwatch.StartNew();
+
+        var result = await service.InstallOrUpdateAsync(snapshot, _ => { });
+        watch.Stop();
+
+        Assert.True(result.Success);
+        Assert.True(
+            watch.Elapsed >= TimeSpan.FromMilliseconds(800),
+            $"Expected throttled install to take at least 800 ms, actual: {watch.Elapsed}.");
+        Directory.Delete(tempDir, recursive: true);
+    }
+
+    [Fact]
+    public async Task InstallOrUpdateAsync_WhenInstallVerificationAlwaysFails_StopsAfterThreeRetries()
+    {
+        var tempDir = Path.Combine(Path.GetTempPath(), Guid.NewGuid().ToString("N"));
+        var gamePath = Path.Combine(tempDir, "YostarGames", "BlueArchive_JP");
+        var settingsService = new LauncherSettingsService(Path.Combine(tempDir, "settings.json"));
+        await settingsService.SaveAsync(new LauncherSettings { GamePath = gamePath });
+        var expectedBytes = Encoding.UTF8.GetBytes("expected-content");
+        var manifestFile = await CreateManifestFileAsync(tempDir, "data/file.bin", expectedBytes);
+        using var apiClient = CreateManifestApiClient(manifestFile);
+        var downloader = new VerificationRetryFileDownloadService(
+            Encoding.UTF8.GetBytes("invalid-content"),
+            Encoding.UTF8.GetBytes("invalid-content"));
+        using var service = CreateService(
+            apiClient,
+            settingsService,
+            Path.Combine(tempDir, "download_state.json"),
+            downloader);
+        var snapshot = CreateSnapshot(gamePath);
+        snapshot.RuntimeState = LauncherRuntimeState.NotInstalled;
+
+        var result = await service.InstallOrUpdateAsync(snapshot, _ => { });
+
+        Assert.False(result.Success);
+        Assert.Equal("game-download-error-network-down", result.ErrorType);
+        Assert.Equal(4, downloader.InvocationCount);
+        Assert.False(File.Exists(Path.Combine(gamePath, "data", "file.bin.tmp")));
+        Assert.False(File.Exists(Path.Combine(gamePath, "data", "file.bin")));
+        Directory.Delete(tempDir, recursive: true);
+    }
+
+    [Fact]
     public async Task ResumePersistedAsync_WhenStateDoesNotMatchCurrentVersion_ClearsDownloadState()
     {
         var tempDir = Path.Combine(Path.GetTempPath(), Guid.NewGuid().ToString("N"));
@@ -420,12 +709,13 @@ public sealed class GameDownloadServiceTests
     private static GameDownloadService CreateService(
         LauncherApiClient apiClient,
         LauncherSettingsService settingsService,
-        string downloadStateFilePath)
+        string downloadStateFilePath,
+        IFileDownloadService? fileDownloadService = null)
     {
         var localInstallationStateStore = new LocalInstallationStateStore();
         var diagnostics = new LocalDiagnostics();
         var remoteManifestService = new RemoteManifestService(apiClient);
-        var fileDownloadService = new FileDownloadService(
+        fileDownloadService ??= new FileDownloadService(
             new Crc64Service(),
             diagnostics,
             RemoteHttpUrlValidator.CreateForTesting());
@@ -487,10 +777,34 @@ public sealed class GameDownloadServiceTests
         await File.WriteAllTextAsync(Path.Combine(gamePath, "manifest.json"), JsonSerializer.Serialize(manifest));
     }
 
+    private static async Task<ManifestFile> CreateManifestFileAsync(
+        string tempDir,
+        string path,
+        byte[] content)
+    {
+        Directory.CreateDirectory(tempDir);
+        var hashPath = Path.Combine(tempDir, $"{Guid.NewGuid():N}.bin");
+        await File.WriteAllBytesAsync(hashPath, content);
+        return new ManifestFile
+        {
+            Path = path,
+            Size = content.Length.ToString(CultureInfo.InvariantCulture),
+            Hash = await new Crc64Service().ComputeFileAsync(hashPath)
+        };
+    }
+
     private static LauncherApiClient CreateManifestApiClient()
     {
         return new LauncherApiClient(
             new ManifestHandler(),
+            new AuthorizationHeaderFactory(),
+            new PatchUrlGroupService());
+    }
+
+    private static LauncherApiClient CreateManifestApiClient(params ManifestFile[] files)
+    {
+        return new LauncherApiClient(
+            new ManifestHandler(files),
             new AuthorizationHeaderFactory(),
             new PatchUrlGroupService());
     }
@@ -528,18 +842,191 @@ public sealed class GameDownloadServiceTests
         return $"{name}.tmp";
     }
 
-    private sealed class ManifestHandler : HttpMessageHandler
+    private sealed class ManifestHandler(params ManifestFile[] files) : HttpMessageHandler
     {
         protected override Task<HttpResponseMessage> SendAsync(HttpRequestMessage request, CancellationToken cancellationToken)
         {
             var requestUri = request.RequestUri?.ToString() ?? "";
             var json = requestUri.Contains("/api/launcher/game/config/json", StringComparison.Ordinal)
                 ? "{\"code\":200,\"data\":{\"url\":\"https://manifest.example.invalid/manifest.json\"}}"
-                : "{\"source\":\"\",\"file\":[]}";
+                : JsonSerializer.Serialize(new RemoteManifest
+                {
+                    Source = "source",
+                    File = files.ToList()
+                });
             return Task.FromResult(new HttpResponseMessage(HttpStatusCode.OK)
             {
                 Content = new StringContent(json, Encoding.UTF8, "application/json")
             });
+        }
+    }
+
+    private sealed class WritingFileDownloadService(byte[] content) : IFileDownloadService
+    {
+        public async Task DownloadAsync(
+            string targetTempPath,
+            CdnConfigResponse cdnConfig,
+            string source,
+            long expectedSize,
+            string expectedHash,
+            string filePath,
+            HttpClient httpClient,
+            Func<Task> pauseAwaiter,
+            Func<long, CancellationToken, Task> onProgressAsync,
+            CancellationToken cancellationToken)
+        {
+            await pauseAwaiter();
+            cancellationToken.ThrowIfCancellationRequested();
+            Directory.CreateDirectory(Path.GetDirectoryName(targetTempPath)!);
+            await File.WriteAllBytesAsync(targetTempPath, content, cancellationToken);
+            await onProgressAsync(content.Length, cancellationToken);
+        }
+    }
+
+    private sealed class ControlledFileDownloadService(byte[] content) : IFileDownloadService
+    {
+        public TaskCompletionSource DownloadStarted { get; } =
+            new(TaskCreationOptions.RunContinuationsAsynchronously);
+
+        public TaskCompletionSource AllowPauseCheck { get; } =
+            new(TaskCreationOptions.RunContinuationsAsynchronously);
+
+        public TaskCompletionSource PauseCheckStarted { get; } =
+            new(TaskCreationOptions.RunContinuationsAsynchronously);
+
+        public async Task DownloadAsync(
+            string targetTempPath,
+            CdnConfigResponse cdnConfig,
+            string source,
+            long expectedSize,
+            string expectedHash,
+            string filePath,
+            HttpClient httpClient,
+            Func<Task> pauseAwaiter,
+            Func<long, CancellationToken, Task> onProgressAsync,
+            CancellationToken cancellationToken)
+        {
+            DownloadStarted.TrySetResult();
+            await AllowPauseCheck.Task.WaitAsync(cancellationToken);
+            PauseCheckStarted.TrySetResult();
+            await pauseAwaiter();
+            cancellationToken.ThrowIfCancellationRequested();
+            Directory.CreateDirectory(Path.GetDirectoryName(targetTempPath)!);
+            await File.WriteAllBytesAsync(targetTempPath, content, cancellationToken);
+            await onProgressAsync(content.Length, cancellationToken);
+        }
+    }
+
+    private sealed class RecordingFileDownloadService : IFileDownloadService
+    {
+        public int InvocationCount { get; private set; }
+
+        public Task DownloadAsync(
+            string targetTempPath,
+            CdnConfigResponse cdnConfig,
+            string source,
+            long expectedSize,
+            string expectedHash,
+            string filePath,
+            HttpClient httpClient,
+            Func<Task> pauseAwaiter,
+            Func<long, CancellationToken, Task> onProgressAsync,
+            CancellationToken cancellationToken)
+        {
+            InvocationCount++;
+            return Task.CompletedTask;
+        }
+    }
+
+    private sealed class ParallelTrackingFileDownloadService(
+        byte[] content,
+        int expectedBlockedCount) : IFileDownloadService
+    {
+        private int startedCount;
+        private int currentConcurrency;
+        private int maximumConcurrency;
+
+        public int StartedCount => Volatile.Read(ref startedCount);
+
+        public int MaximumConcurrency => Volatile.Read(ref maximumConcurrency);
+
+        public TaskCompletionSource ExpectedBlockedCountReached { get; } =
+            new(TaskCreationOptions.RunContinuationsAsynchronously);
+
+        public TaskCompletionSource Release { get; } =
+            new(TaskCreationOptions.RunContinuationsAsynchronously);
+
+        public async Task DownloadAsync(
+            string targetTempPath,
+            CdnConfigResponse cdnConfig,
+            string source,
+            long expectedSize,
+            string expectedHash,
+            string filePath,
+            HttpClient httpClient,
+            Func<Task> pauseAwaiter,
+            Func<long, CancellationToken, Task> onProgressAsync,
+            CancellationToken cancellationToken)
+        {
+            var started = Interlocked.Increment(ref startedCount);
+            var current = Interlocked.Increment(ref currentConcurrency);
+            UpdateMaximum(current);
+            if (started == expectedBlockedCount)
+            {
+                ExpectedBlockedCountReached.TrySetResult();
+            }
+
+            try
+            {
+                await Release.Task.WaitAsync(cancellationToken);
+                await pauseAwaiter();
+                Directory.CreateDirectory(Path.GetDirectoryName(targetTempPath)!);
+                await File.WriteAllBytesAsync(targetTempPath, content, cancellationToken);
+                await onProgressAsync(content.Length, cancellationToken);
+            }
+            finally
+            {
+                Interlocked.Decrement(ref currentConcurrency);
+            }
+        }
+
+        private void UpdateMaximum(int value)
+        {
+            while (true)
+            {
+                var currentMaximum = Volatile.Read(ref maximumConcurrency);
+                if (currentMaximum >= value
+                    || Interlocked.CompareExchange(ref maximumConcurrency, value, currentMaximum) == currentMaximum)
+                {
+                    return;
+                }
+            }
+        }
+    }
+
+    private sealed class VerificationRetryFileDownloadService(
+        byte[] firstContent,
+        byte[] retryContent) : IFileDownloadService
+    {
+        public int InvocationCount { get; private set; }
+
+        public async Task DownloadAsync(
+            string targetTempPath,
+            CdnConfigResponse cdnConfig,
+            string source,
+            long expectedSize,
+            string expectedHash,
+            string filePath,
+            HttpClient httpClient,
+            Func<Task> pauseAwaiter,
+            Func<long, CancellationToken, Task> onProgressAsync,
+            CancellationToken cancellationToken)
+        {
+            InvocationCount++;
+            var content = InvocationCount == 1 ? firstContent : retryContent;
+            Directory.CreateDirectory(Path.GetDirectoryName(targetTempPath)!);
+            await File.WriteAllBytesAsync(targetTempPath, content, cancellationToken);
+            await onProgressAsync(content.Length, cancellationToken);
         }
     }
 

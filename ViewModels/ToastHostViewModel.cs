@@ -14,16 +14,35 @@ public partial class ToastHostViewModel : ViewModelBase, IDisposable
     private readonly ToastService toastService;
     private readonly LocalizationService localizer;
     private readonly SettingsViewModel settings;
+    private readonly Func<Action, Task> invokeOnUiAsync;
+    private readonly Func<TimeSpan, CancellationToken, Task> delayAsync;
     private readonly CancellationTokenSource lifetimeCts = new();
     private bool disposed;
 
     public ObservableCollection<ToastNotification> ActiveToasts { get; } = [];
 
     public ToastHostViewModel(ToastService toastService, LocalizationService localizer, SettingsViewModel settings)
+        : this(
+            toastService,
+            localizer,
+            settings,
+            async action => await Dispatcher.UIThread.InvokeAsync(action),
+            static (delay, cancellationToken) => Task.Delay(delay, cancellationToken))
+    {
+    }
+
+    internal ToastHostViewModel(
+        ToastService toastService,
+        LocalizationService localizer,
+        SettingsViewModel settings,
+        Func<Action, Task> invokeOnUiAsync,
+        Func<TimeSpan, CancellationToken, Task> delayAsync)
     {
         this.toastService = toastService;
         this.localizer = localizer;
         this.settings = settings;
+        this.invokeOnUiAsync = invokeOnUiAsync;
+        this.delayAsync = delayAsync;
         toastService.ToastRaised += OnToastRaised;
     }
 
@@ -63,16 +82,14 @@ public partial class ToastHostViewModel : ViewModelBase, IDisposable
                 return;
             }
 
-            await Dispatcher.UIThread.InvokeAsync(() => ActiveToasts.Add(notification));
-            await Task.Delay(notification.DurationMs, cancellationToken);
-            await Dispatcher.UIThread.InvokeAsync(
+            await invokeOnUiAsync(() => ActiveToasts.Add(notification));
+            await delayAsync(TimeSpan.FromMilliseconds(notification.DurationMs), cancellationToken);
+            await invokeOnUiAsync(
                 () =>
                 {
                     try { ActiveToasts.Remove(notification); }
                     catch (InvalidOperationException) { }
-                },
-                DispatcherPriority.Background,
-                cancellationToken);
+                });
         }
         catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
         {

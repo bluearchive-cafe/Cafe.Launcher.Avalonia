@@ -29,10 +29,14 @@ jobs:
           dotnet-version: 10.0.x
 
       - name: Restore
-        run: dotnet restore tests/Cafe.Launcher.Avalonia.Tests/Cafe.Launcher.Avalonia.Tests.csproj -r win-x64
+        run: |
+          dotnet restore tests/Cafe.Launcher.Avalonia.Tests/Cafe.Launcher.Avalonia.Tests.csproj -r win-x64
+          dotnet restore tests/Cafe.Launcher.Avalonia.HeadlessTests/Cafe.Launcher.Avalonia.HeadlessTests.csproj -r win-x64
 
       - name: Test
-        run: dotnet test tests/Cafe.Launcher.Avalonia.Tests/Cafe.Launcher.Avalonia.Tests.csproj -c Release -r win-x64 --no-restore
+        run: |
+          dotnet test tests/Cafe.Launcher.Avalonia.Tests/Cafe.Launcher.Avalonia.Tests.csproj -c Release -r win-x64 --no-restore
+          dotnet test tests/Cafe.Launcher.Avalonia.HeadlessTests/Cafe.Launcher.Avalonia.HeadlessTests.csproj -c Release -r win-x64 --no-restore
 
       - name: Build (Release)
         run: dotnet build $env:Project_Path -c Release -r win-x64 --no-restore
