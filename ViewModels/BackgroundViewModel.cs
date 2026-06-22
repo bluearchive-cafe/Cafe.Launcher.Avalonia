@@ -45,6 +45,8 @@ public partial class BackgroundViewModel : ViewModelBase, IDisposable
 
     public string BackgroundFolderPickerTitle { get; set; } = "";
 
+    public string BackgroundVideoPickerTitle { get; set; } = "";
+
     public BackgroundViewModel(
         ImageCacheService imageCacheService,
         LocalDiagnostics diagnostics,

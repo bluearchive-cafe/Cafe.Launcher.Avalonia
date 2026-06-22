@@ -31,6 +31,7 @@ public partial class MainWindow : Window
         viewModel.Settings.PickGameFolderAsync = PickGameFolderAsync;
         viewModel.Settings.PickBackgroundImageAsync = PickBackgroundImageAsync;
         viewModel.Settings.PickBackgroundFolderAsync = PickBackgroundFolderAsync;
+        viewModel.Settings.PickBackgroundVideoAsync = PickBackgroundVideoAsync;
         viewModel.Background.PickBackgroundImageAsync = PickBackgroundImageAsync;
         viewModel.Background.PickBackgroundFolderAsync = PickBackgroundFolderAsync;
         viewModel.LogViewer.PickExportDirectoryAsync = PickLogExportDirectoryAsync;
@@ -109,6 +110,30 @@ public partial class MainWindow : Window
         });
 
         return folders.FirstOrDefault()?.TryGetLocalPath();
+    }
+
+    private async Task<string?> PickBackgroundVideoAsync()
+    {
+        if (!StorageProvider.CanOpen)
+        {
+            return null;
+        }
+
+        var videoPickerTitle = (DataContext as MainWindowViewModel)?.Background.BackgroundVideoPickerTitle ?? "";
+        var files = await StorageProvider.OpenFilePickerAsync(new FilePickerOpenOptions
+        {
+            Title = videoPickerTitle,
+            AllowMultiple = false,
+            FileTypeFilter = new List<FilePickerFileType>
+            {
+                new("Video")
+                {
+                    Patterns = new[] { "*.mp4", "*.webm", "*.mkv", "*.mov" },
+                }
+            }
+        });
+
+        return files.FirstOrDefault()?.TryGetLocalPath();
     }
 
     private async Task<string?> PickLogExportDirectoryAsync(string defaultPath)

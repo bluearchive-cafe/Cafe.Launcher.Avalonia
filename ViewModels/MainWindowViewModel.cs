@@ -361,6 +361,7 @@ public partial class MainWindowViewModel : ViewModelBase, IDisposable
         Shell.ApplyLanguage(language, Settings, ResourcePanel, currentSnapshot is not null);
         Background.BackgroundImagePickerTitle = localizer.T("chooseBackgroundImageTitle");
         Background.BackgroundFolderPickerTitle = localizer.T("chooseBackgroundFolderTitle");
+        Background.BackgroundVideoPickerTitle = localizer.T("chooseBackgroundVideoTitle");
         RemoteContent.ApplyLanguage();
         Dialogs.ApplyLanguage();
         Operations.ApplyLanguage();

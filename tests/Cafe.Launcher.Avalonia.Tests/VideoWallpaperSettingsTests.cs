@@ -1,5 +1,12 @@
+using System;
+using System.IO;
+using System.Net;
+using System.Net.Http;
+using System.Threading;
+using System.Threading.Tasks;
 using Cafe.Launcher.Avalonia.Models;
 using Cafe.Launcher.Avalonia.Services;
+using Cafe.Launcher.Avalonia.Services.Diagnostics;
 using Cafe.Launcher.Avalonia.ViewModels;
 using Xunit;
 
@@ -169,5 +176,56 @@ public sealed class VideoWallpaperSettingsTests
         vm.IsVideoMuted = false;
 
         Assert.False(editor.Current.VideoBackgroundMuted);
+    }
+
+    [Fact]
+    public async Task ChooseBackgroundVideo_WhenPicked_SetsPathAndVideoSource()
+    {
+        var tempDir = Path.Combine(Path.GetTempPath(), Guid.NewGuid().ToString("N"));
+        Directory.CreateDirectory(tempDir);
+        try
+        {
+            var settingsService = new LauncherSettingsService(tempDir);
+            var localizer = new LocalizationService();
+            var toastService = new ToastService();
+            var editor = new SettingsEditor();
+            var appearance = new SettingsAppearanceViewModel(editor);
+            var dialogs = new DialogsViewModel(
+                localizer,
+                new NoticeStateService(Path.Combine(tempDir, "notices.json")));
+            using var testLogger = new UnifiedLogger(tempDir);
+            using var vm = new SettingsViewModel(
+                settingsService,
+                localizer,
+                toastService,
+                new LauncherUpdateService(new NotFoundHttpHandler()),
+                dialogs,
+                testLogger,
+                new GameInstallationPath(),
+                new SettingsOptionsViewModel(localizer, new DiskSpaceService()),
+                appearance);
+
+            editor.ApplySnapshot(new LauncherSettings());
+            vm.PickBackgroundVideoAsync = () => Task.FromResult<string?>(@"C:\v.mp4");
+
+            await vm.ChooseBackgroundVideoCommand.ExecuteAsync(null);
+
+            Assert.Equal(@"C:\v.mp4", vm.Editor.Current.VideoBackgroundPath);
+            Assert.Equal(BackgroundSources.Video, vm.Editor.Current.BackgroundSource);
+        }
+        finally
+        {
+            Directory.Delete(tempDir, recursive: true);
+        }
+    }
+
+    private sealed class NotFoundHttpHandler : HttpMessageHandler
+    {
+        protected override Task<HttpResponseMessage> SendAsync(
+            HttpRequestMessage request,
+            CancellationToken cancellationToken)
+        {
+            return Task.FromResult(new HttpResponseMessage(HttpStatusCode.NotFound));
+        }
     }
 }

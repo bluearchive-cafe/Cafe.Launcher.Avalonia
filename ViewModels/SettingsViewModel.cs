@@ -30,6 +30,7 @@ public partial class SettingsViewModel : ViewModelBase, IDisposable
     public Func<string, Task<string?>>? PickGameFolderAsync { get; set; }
     public Func<Task<string?>>? PickBackgroundImageAsync { get; set; }
     public Func<Task<string?>>? PickBackgroundFolderAsync { get; set; }
+    public Func<Task<string?>>? PickBackgroundVideoAsync { get; set; }
     public Func<LauncherSettings, Task>? ApplyLanguageAndTheme { get; set; }
     public Func<LauncherSettings, string?, CancellationToken, Task>? PreviewAppearanceAsync { get; set; }
 
@@ -295,6 +296,20 @@ public partial class SettingsViewModel : ViewModelBase, IDisposable
 
         editor.Current.CustomBackgroundPath = pickedPath;
         editor.Current.BackgroundSource = BackgroundSources.Custom;
+    }
+
+    [RelayCommand]
+    private async Task ChooseBackgroundVideoAsync()
+    {
+        if (PickBackgroundVideoAsync is null)
+            return;
+
+        var pickedPath = await PickBackgroundVideoAsync();
+        if (string.IsNullOrWhiteSpace(pickedPath))
+            return;
+
+        editor.Current.VideoBackgroundPath = pickedPath;
+        editor.Current.BackgroundSource = BackgroundSources.Video;
     }
 
     [RelayCommand]
