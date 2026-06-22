@@ -99,7 +99,10 @@ public sealed class InstallationOperationStateTests : IDisposable
             new GameDownloadService.Dependencies(
                 apiClient,
                 new RemoteManifestService(apiClient),
-                new FileDownloadService(new Crc64Service(), new LocalDiagnostics()),
+                new FileDownloadService(
+                    new Crc64Service(),
+                    new LocalDiagnostics(),
+                    RemoteHttpUrlValidator.CreateForTesting()),
                 new LocalInstallationStateStore(),
                 new LauncherSettingsService(Path.Combine(tempDir, "settings.json")),
                 new ProxySettingsService(),

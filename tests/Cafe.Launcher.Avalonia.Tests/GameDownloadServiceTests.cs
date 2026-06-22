@@ -189,6 +189,84 @@ public sealed class GameDownloadServiceTests
     }
 
     [Fact]
+    public async Task DownloadFileAsync_WhenRangeIsIgnored_ReplacesTemporaryFile()
+    {
+        var tempDir = Path.Combine(Path.GetTempPath(), Guid.NewGuid().ToString("N"));
+        Directory.CreateDirectory(tempDir);
+        var targetPath = Path.Combine(tempDir, "file.bin.tmp");
+        var expectedBytes = Encoding.UTF8.GetBytes("complete-content");
+        await File.WriteAllBytesAsync(targetPath, expectedBytes[..4]);
+        var hashPath = Path.Combine(tempDir, "hash-source.bin");
+        await File.WriteAllBytesAsync(hashPath, expectedBytes);
+        var expectedHash = await new Crc64Service().ComputeFileAsync(hashPath);
+        var handler = new RangeIgnoredHandler(expectedBytes);
+        using var client = new HttpClient(handler);
+        var downloader = new FileDownloadService(
+            new Crc64Service(),
+            new LocalDiagnostics(),
+            RemoteHttpUrlValidator.CreateForTesting());
+
+        await downloader.DownloadAsync(
+            targetPath,
+            new CdnConfigResponse
+            {
+                PrimaryCdn = "https://primary.example.invalid",
+                BackUpCdn = "https://backup.example.invalid"
+            },
+            "source",
+            expectedBytes.Length,
+            expectedHash,
+            "file.bin",
+            client,
+            () => Task.CompletedTask,
+            (_, _) => Task.CompletedTask,
+            CancellationToken.None);
+
+        Assert.True(handler.RangeWasRequested);
+        Assert.Equal(expectedBytes, await File.ReadAllBytesAsync(targetPath));
+        Directory.Delete(tempDir, recursive: true);
+    }
+
+    [Fact]
+    public async Task DownloadFileAsync_WhenContentRangeStartsAtWrongOffset_RetriesWithoutCorruptingFile()
+    {
+        var tempDir = Path.Combine(Path.GetTempPath(), Guid.NewGuid().ToString("N"));
+        Directory.CreateDirectory(tempDir);
+        var targetPath = Path.Combine(tempDir, "file.bin.tmp");
+        var expectedBytes = Encoding.UTF8.GetBytes("complete-content");
+        await File.WriteAllBytesAsync(targetPath, expectedBytes[..4]);
+        var hashPath = Path.Combine(tempDir, "hash-source.bin");
+        await File.WriteAllBytesAsync(hashPath, expectedBytes);
+        var expectedHash = await new Crc64Service().ComputeFileAsync(hashPath);
+        var handler = new InvalidRangeThenCompleteHandler(expectedBytes);
+        using var client = new HttpClient(handler);
+        var downloader = new FileDownloadService(
+            new Crc64Service(),
+            new LocalDiagnostics(),
+            RemoteHttpUrlValidator.CreateForTesting());
+
+        await downloader.DownloadAsync(
+            targetPath,
+            new CdnConfigResponse
+            {
+                PrimaryCdn = "https://primary.example.invalid",
+                BackUpCdn = "https://backup.example.invalid"
+            },
+            "source",
+            expectedBytes.Length,
+            expectedHash,
+            "file.bin",
+            client,
+            () => Task.CompletedTask,
+            (_, _) => Task.CompletedTask,
+            CancellationToken.None);
+
+        Assert.Equal(2, handler.RequestCount);
+        Assert.Equal(expectedBytes, await File.ReadAllBytesAsync(targetPath));
+        Directory.Delete(tempDir, recursive: true);
+    }
+
+    [Fact]
     public async Task InstallOrUpdateAsync_WhenNoFilesNeedChanges_ClearsDownloadState()
     {
         var tempDir = Path.Combine(Path.GetTempPath(), Guid.NewGuid().ToString("N"));
@@ -347,7 +425,10 @@ public sealed class GameDownloadServiceTests
         var localInstallationStateStore = new LocalInstallationStateStore();
         var diagnostics = new LocalDiagnostics();
         var remoteManifestService = new RemoteManifestService(apiClient);
-        var fileDownloadService = new FileDownloadService(new Crc64Service(), diagnostics);
+        var fileDownloadService = new FileDownloadService(
+            new Crc64Service(),
+            diagnostics,
+            RemoteHttpUrlValidator.CreateForTesting());
         return new GameDownloadService(
             new GameDownloadService.Dependencies(
                 apiClient,
@@ -425,7 +506,10 @@ public sealed class GameDownloadServiceTests
         var targetPath = Path.Combine(gamePath, GetTempNameInternal(file.Path));
         var crc64Service = new Crc64Service();
         var diagnostics = new LocalDiagnostics();
-        var downloader = new FileDownloadService(crc64Service, diagnostics);
+        var downloader = new FileDownloadService(
+            crc64Service,
+            diagnostics,
+            RemoteHttpUrlValidator.CreateForTesting());
         await downloader.DownloadAsync(
             targetPath,
             cdnConfig,
@@ -548,6 +632,49 @@ public sealed class GameDownloadServiceTests
             return Task.FromResult(new HttpResponseMessage(HttpStatusCode.OK)
             {
                 Content = new ByteArrayContent(Encoding.UTF8.GetBytes("wrong-content"))
+            });
+        }
+    }
+
+    private sealed class RangeIgnoredHandler(byte[] content) : HttpMessageHandler
+    {
+        public bool RangeWasRequested { get; private set; }
+
+        protected override Task<HttpResponseMessage> SendAsync(
+            HttpRequestMessage request,
+            CancellationToken cancellationToken)
+        {
+            RangeWasRequested = request.Headers.Range is not null;
+            return Task.FromResult(new HttpResponseMessage(HttpStatusCode.OK)
+            {
+                Content = new ByteArrayContent(content)
+            });
+        }
+    }
+
+    private sealed class InvalidRangeThenCompleteHandler(byte[] content) : HttpMessageHandler
+    {
+        public int RequestCount { get; private set; }
+
+        protected override Task<HttpResponseMessage> SendAsync(
+            HttpRequestMessage request,
+            CancellationToken cancellationToken)
+        {
+            RequestCount++;
+            if (RequestCount == 1)
+            {
+                var partialContent = new ByteArrayContent(content[4..]);
+                partialContent.Headers.ContentRange =
+                    new System.Net.Http.Headers.ContentRangeHeaderValue(3, content.Length - 1, content.Length);
+                return Task.FromResult(new HttpResponseMessage(HttpStatusCode.PartialContent)
+                {
+                    Content = partialContent
+                });
+            }
+
+            return Task.FromResult(new HttpResponseMessage(HttpStatusCode.OK)
+            {
+                Content = new ByteArrayContent(content)
             });
         }
     }

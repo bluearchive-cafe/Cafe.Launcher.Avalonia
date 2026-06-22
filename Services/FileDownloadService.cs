@@ -59,11 +59,16 @@ public sealed class FileDownloadService : IFileDownloadService
 
     private readonly Crc64Service crc64Service;
     private readonly LocalDiagnostics diagnostics;
+    private readonly RemoteHttpUrlValidator urlValidator;
 
-    public FileDownloadService(Crc64Service crc64Service, LocalDiagnostics diagnostics)
+    public FileDownloadService(
+        Crc64Service crc64Service,
+        LocalDiagnostics diagnostics,
+        RemoteHttpUrlValidator urlValidator)
     {
         this.crc64Service = crc64Service;
         this.diagnostics = diagnostics;
+        this.urlValidator = urlValidator;
     }
 
     public async Task DownloadAsync(
@@ -95,24 +100,55 @@ public sealed class FileDownloadService : IFileDownloadService
             {
                 var fi = new FileInfo(targetTempPath);
                 var existingLength = fi.Exists ? fi.Length : 0;
-                if (existingLength >= expectedSize && expectedSize > 0)
+                if (existingLength == expectedSize && expectedSize > 0)
                 {
                     return;
                 }
 
-                using var request = new HttpRequestMessage(HttpMethod.Get, downloadUrl);
-                if (existingLength > 0)
+                if (existingLength > expectedSize && expectedSize > 0)
                 {
-                    request.Headers.Range = new RangeHeaderValue(existingLength, null);
+                    File.Delete(targetTempPath);
+                    existingLength = 0;
                 }
 
-                using var response = await httpClient.SendAsync(request, HttpCompletionOption.ResponseHeadersRead, cancellationToken).ConfigureAwait(false);
+                var initialUri = new Uri(downloadUrl);
+                using var response = await RemoteHttpRequestService.SendAsync(
+                    httpClient,
+                    initialUri,
+                    uri =>
+                    {
+                        var request = new HttpRequestMessage(HttpMethod.Get, uri);
+                        if (existingLength > 0)
+                        {
+                            request.Headers.Range = new RangeHeaderValue(existingLength, null);
+                        }
+
+                        return request;
+                    },
+                    urlValidator,
+                    cancellationToken).ConfigureAwait(false);
                 response.EnsureSuccessStatusCode();
+
+                var fileMode = FileMode.Create;
+                if (existingLength > 0 && response.StatusCode == System.Net.HttpStatusCode.PartialContent)
+                {
+                    var contentRange = response.Content.Headers.ContentRange;
+                    if (contentRange?.Unit != "bytes"
+                        || contentRange.From != existingLength
+                        || contentRange.Length is { } contentLength
+                        && contentLength != expectedSize)
+                    {
+                        throw new InvalidDataException(
+                            $"Invalid Content-Range for resumed download: {filePath}.");
+                    }
+
+                    fileMode = FileMode.Append;
+                }
 
                 string crc64;
                 {
                     await using var responseStream = await response.Content.ReadAsStreamAsync(cancellationToken).ConfigureAwait(false);
-                    await using var output = new FileStream(targetTempPath, FileMode.Append, FileAccess.Write, FileShare.Read);
+                    await using var output = new FileStream(targetTempPath, fileMode, FileAccess.Write, FileShare.Read);
                     var buffer = new byte[1024 * 256];
                     while (true)
                     {

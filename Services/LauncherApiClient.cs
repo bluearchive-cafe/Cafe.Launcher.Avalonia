@@ -15,13 +15,15 @@ public sealed class LauncherApiClient : IDisposable
     private readonly IHttpClientLeaseSource leaseSource;
     private readonly AuthorizationHeaderFactory authorizationHeaderFactory;
     private readonly PatchUrlGroupService patchUrlGroupService;
+    private readonly RemoteHttpUrlValidator urlValidator;
     private readonly JsonSerializerOptions jsonOptions = JsonDefaults.Strict;
 
     /// <summary>Production constructor — accepts dependencies from DI.</summary>
     public LauncherApiClient(
         HttpClientFactory httpClientFactory,
         AuthorizationHeaderFactory authorizationHeaderFactory,
-        PatchUrlGroupService patchUrlGroupService)
+        PatchUrlGroupService patchUrlGroupService,
+        RemoteHttpUrlValidator urlValidator)
     {
         leaseSource = new ProxyAwareHttpClientLeaseSource(
             httpClientFactory,
@@ -29,6 +31,7 @@ public sealed class LauncherApiClient : IDisposable
             TimeSpan.FromSeconds(30));
         this.authorizationHeaderFactory = authorizationHeaderFactory;
         this.patchUrlGroupService = patchUrlGroupService;
+        this.urlValidator = urlValidator;
     }
 
     /// <summary>
@@ -46,6 +49,7 @@ public sealed class LauncherApiClient : IDisposable
             TimeSpan.FromSeconds(30));
         this.authorizationHeaderFactory = authorizationHeaderFactory;
         this.patchUrlGroupService = patchUrlGroupService;
+        urlValidator = RemoteHttpUrlValidator.CreateForTesting();
     }
 
     public Task<GameConfigResponse> GetGameConfigAsync(
@@ -161,7 +165,14 @@ public sealed class LauncherApiClient : IDisposable
         CancellationToken cancellationToken = default)
     {
         using var lease = await leaseSource.CreateLeaseAsync(proxyMode, cancellationToken).ConfigureAwait(false);
-        await using var stream = await lease.Client.GetStreamAsync(url, cancellationToken).ConfigureAwait(false);
+        using var response = await RemoteHttpRequestService.SendAsync(
+            lease.Client,
+            new Uri(url),
+            static uri => new HttpRequestMessage(HttpMethod.Get, uri),
+            urlValidator,
+            cancellationToken).ConfigureAwait(false);
+        response.EnsureSuccessStatusCode();
+        await using var stream = await response.Content.ReadAsStreamAsync(cancellationToken).ConfigureAwait(false);
         var manifest = await JsonSerializer.DeserializeAsync<RemoteManifest>(stream, jsonOptions, cancellationToken).ConfigureAwait(false);
         return manifest ?? new RemoteManifest();
     }

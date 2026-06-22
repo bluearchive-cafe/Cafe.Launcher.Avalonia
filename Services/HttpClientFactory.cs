@@ -24,6 +24,7 @@ public sealed class HttpClientFactory : IDisposable
         this.proxySettingsService = proxySettingsService;
         defaultHandler = new SocketsHttpHandler
         {
+            AllowAutoRedirect = false,
             UseProxy = false,
             PooledConnectionLifetime = TimeSpan.FromMinutes(15)
         };
