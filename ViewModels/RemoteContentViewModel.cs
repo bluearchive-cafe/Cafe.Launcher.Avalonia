@@ -86,6 +86,8 @@ public partial class RemoteContentViewModel : ViewModelBase, IDisposable
 
     public Action<string?>? OpenExternalUrlRequested { get; set; }
 
+    internal bool IsCarouselTimerRunning => carouselTimer?.IsEnabled == true;
+
     public RemoteContentViewModel(LocalizationService localizer, ImageCacheService imageCacheService)
     {
         this.localizer = localizer;
@@ -103,6 +105,8 @@ public partial class RemoteContentViewModel : ViewModelBase, IDisposable
     public void Apply(LauncherRemoteState remote, LauncherSettings settings, CancellationToken cancellationToken)
     {
         proxyMode = settings.ProxyMode;
+        StopCarouselTimer();
+        carouselDelayCts?.Cancel();
         DisposeBannerBitmaps();
         BannerItems.Clear();
         NewsItems.Clear();

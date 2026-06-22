@@ -1,5 +1,6 @@
 <Styles xmlns="https://github.com/avaloniaui"
-        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:views="using:Cafe.Launcher.Avalonia.Views">
     <Style Selector="TextBlock.caption">
         <Setter Property="FontSize" Value="13"/>
         <Setter Property="Foreground" Value="{DynamicResource LauncherTextSecondaryBrush}"/>
@@ -549,10 +550,14 @@
     <Style Selector="Grid.settings-overlay">
         <Setter Property="Background" Value="{DynamicResource LauncherOverlayBrush}"/>
         <Setter Property="ZIndex" Value="100"/>
+        <Setter Property="KeyboardNavigation.TabNavigation" Value="Cycle"/>
+        <Setter Property="views:OverlayFocusBehavior.IsEnabled" Value="True"/>
     </Style>
     <Style Selector="Grid.dialog-overlay">
         <Setter Property="Background" Value="{DynamicResource LauncherOverlayBrush}"/>
         <Setter Property="ZIndex" Value="200"/>
+        <Setter Property="KeyboardNavigation.TabNavigation" Value="Cycle"/>
+        <Setter Property="views:OverlayFocusBehavior.IsEnabled" Value="True"/>
     </Style>
     <Style Selector="Border.dialog">
         <Setter Property="Background" Value="{DynamicResource LauncherDialogBackgroundBrush}"/>

@@ -164,6 +164,8 @@ public sealed partial class LocalizedStrings : ObservableObject
     [ObservableProperty] private string carouselPage = "";
     [ObservableProperty] private string pauseCarousel = "";
     [ObservableProperty] private string resumeCarousel = "";
+    [ObservableProperty] private string previousBanner = "";
+    [ObservableProperty] private string nextBanner = "";
     [ObservableProperty] private string bannerLoadingFailed = "";
     [ObservableProperty] private string bannerLoading = "";
     [ObservableProperty] private string statusNetworkLoaded = "";
@@ -380,6 +382,8 @@ public sealed partial class LocalizedStrings : ObservableObject
         CarouselPage = localizer.T("carouselPage");
         PauseCarousel = localizer.T("pauseCarousel");
         ResumeCarousel = localizer.T("resumeCarousel");
+        PreviousBanner = localizer.T("previousBanner");
+        NextBanner = localizer.T("nextBanner");
         BannerLoadingFailed = localizer.T("bannerLoadingFailed");
         BannerLoading = localizer.T("bannerLoading");
         StatusNetworkLoaded = localizer.T("statusNetworkLoaded");
