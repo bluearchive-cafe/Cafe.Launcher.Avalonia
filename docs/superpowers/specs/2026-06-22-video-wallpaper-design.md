@@ -135,6 +135,7 @@ internal interface IVideoWallpaperEngine : IDisposable
 - Debug 构建 0 警告、0 错误。
 - 全部测试通过；缺少 libvlc 能力的用例显示为 Skip。
 - 用户可在设置中选择视频文件并实时预览；浮层（设置/对话框/Toast）不被遮挡。
+- 视频遵循壁纸契合度（fill / uniform / uniformToFill）与填充色设置，与图片背景行为一致。
 - 窗口最小化/隐藏到托盘时视频暂停，恢复时续播。
 - 静音/音量开关生效并持久化。
 - 加载失败时回退 bundled 图片且不崩溃。
