@@ -43,6 +43,15 @@ public partial class SettingsAppearanceViewModel : ViewModelBase, IDisposable
     private bool isCustomBackgroundSelected;
 
     [ObservableProperty]
+    private bool isVideoBackgroundSelected;
+
+    [ObservableProperty]
+    private int videoVolume = 50;
+
+    [ObservableProperty]
+    private bool isVideoMuted = true;
+
+    [ObservableProperty]
     private bool isBackgroundFitSelected;
 
     [ObservableProperty]
@@ -76,6 +85,9 @@ public partial class SettingsAppearanceViewModel : ViewModelBase, IDisposable
             IsBackgroundFitSelected = settings.BackgroundFit == BackgroundFits.Uniform;
             SelectedBackgroundFillColor = ParseColorOrDefault(settings.BackgroundFillColor);
             IsCustomBackgroundSelected = settings.BackgroundSource == BackgroundSources.Custom;
+            IsVideoBackgroundSelected = settings.BackgroundSource == BackgroundSources.Video;
+            VideoVolume = settings.VideoBackgroundVolume;
+            IsVideoMuted = settings.VideoBackgroundMuted;
             ReplaceThemeColorPalette(
                 settings.ThemeColorPalette,
                 settings.SelectedThemeColorPaletteIndex);
@@ -171,6 +183,8 @@ public partial class SettingsAppearanceViewModel : ViewModelBase, IDisposable
         {
             IsCustomBackgroundSelected =
                 editor.Current.BackgroundSource == BackgroundSources.Custom;
+            IsVideoBackgroundSelected =
+                editor.Current.BackgroundSource == BackgroundSources.Video;
             IsCustomBackground =
                 !string.IsNullOrWhiteSpace(editor.Current.CustomBackgroundPath);
             return;
@@ -211,6 +225,12 @@ public partial class SettingsAppearanceViewModel : ViewModelBase, IDisposable
         PushToEditor(settings => settings.BackgroundFillColor = ToColorHex(value));
         BackgroundFillColorPreviewBrush = new SolidColorBrush(value);
     }
+
+    partial void OnVideoVolumeChanged(int value) =>
+        PushToEditor(settings => settings.VideoBackgroundVolume = value);
+
+    partial void OnIsVideoMutedChanged(bool value) =>
+        PushToEditor(settings => settings.VideoBackgroundMuted = value);
 
     private void PushToEditor(Action<LauncherSettings> apply)
     {

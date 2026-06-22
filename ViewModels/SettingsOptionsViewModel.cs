@@ -24,7 +24,8 @@ public sealed class SettingsOptionsViewModel
     [
         new() { Code = BackgroundSources.Bundled },
         new() { Code = BackgroundSources.Remote },
-        new() { Code = BackgroundSources.Custom }
+        new() { Code = BackgroundSources.Custom },
+        new() { Code = BackgroundSources.Video }
     ];
 
     public ObservableCollection<SettingOption> BackgroundFit { get; } =
@@ -181,6 +182,7 @@ public sealed class SettingsOptionsViewModel
             {
                 BackgroundSources.Remote => localizer.T("backgroundSourceRemote"),
                 BackgroundSources.Custom => localizer.T("backgroundSourceCustom"),
+                BackgroundSources.Video => localizer.T("backgroundSourceVideo"),
                 _ => localizer.T("backgroundSourceBundled")
             };
         }
