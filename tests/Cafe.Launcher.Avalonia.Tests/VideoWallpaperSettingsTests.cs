@@ -3,7 +3,7 @@ using Xunit;
 
 namespace Cafe.Launcher.Avalonia.Tests;
 
-public class VideoWallpaperSettingsTests
+public sealed class VideoWallpaperSettingsTests
 {
     [Fact]
     public void BackgroundSources_Video_HasExpectedCode()
