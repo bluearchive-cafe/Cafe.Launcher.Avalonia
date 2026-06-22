@@ -28,6 +28,18 @@ public partial class App : Application
 
     public override void OnFrameworkInitializationCompleted()
     {
+        // Initialize the native libvlc core for video wallpaper support.
+        // Failure is non-fatal — the engine factory falls back when libvlc is unavailable.
+        try
+        {
+            LibVLCSharp.Shared.Core.Initialize();
+        }
+        catch (Exception ex)
+        {
+            Cafe.Launcher.Avalonia.Services.Diagnostics.LocalDiagnostics.LogSync(
+                "LibVLC", $"Core.Initialize failed; video wallpaper disabled: {ex.Message}");
+        }
+
         if (ApplicationLifetime is IClassicDesktopStyleApplicationLifetime desktop)
         {
             // Build DI container, reusing the pre-DI UnifiedLogger so there is
