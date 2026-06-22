@@ -18,7 +18,7 @@ dotnet test                                                    # Run all tests
 dotnet test --filter "FullyQualifiedName~VersionComparerTests" # Run a single test class
 ```
 
-Available test classes include `VersionComparerTests`, `LauncherApiClientTests`, `LauncherConstantsTests`, `LauncherSettingsServiceTests`, `SettingsNormalizerTests`, `SettingsEditorTests`, `ToastServiceTests`, `GameInstallationPathTests`, `LocalInstallationStateStoreTests`, `LauncherCoreServiceTests`, `InstallationOperationStateTests`, `LocalizationServiceTests`, `MainWindowViewModelTests`, `DialogsViewModelTests`, `GameDownloadServiceTests`, `PatchUrlGroupServiceTests`, `BestHttpCookieLibraryServiceTests`, `ResourcePanelUidServiceTests`, `ExternalLinkServiceTests`, `ResourcePanelApiClientTests`, `MigrationWizardViewModelTests`, `LevelDbReaderTests`, `OldLauncherDetectionServiceTests`, `LauncherUpdateServiceTests`, `HttpClientFactoryTests`, and `UiStyleContractTests`.
+Available test classes include `VersionComparerTests`, `LauncherApiClientTests`, `LauncherConstantsTests`, `LauncherSettingsServiceTests`, `SettingsNormalizerTests`, `SettingsEditorTests`, `ToastServiceTests`, `GameInstallationPathTests`, `LocalInstallationStateStoreTests`, `LauncherCoreServiceTests`, `InstallationOperationStateTests`, `LocalizationServiceTests`, `MainWindowViewModelTests`, `DialogsViewModelTests`, `GameDownloadServiceTests`, `PatchUrlGroupServiceTests`, `BestHttpCookieLibraryServiceTests`, `ResourcePanelUidServiceTests`, `ExternalLinkServiceTests`, `ResourcePanelApiClientTests`, `MigrationWizardViewModelTests`, `LevelDbReaderTests`, `OldLauncherDetectionServiceTests`, `LauncherUpdateServiceTests`, `HttpClientFactoryTests`, `UiStyleContractTests`, `VideoWallpaperSettingsTests`, and `VideoWallpaperEngineSmokeTests`.
 
 `UiStyleContractTests` enforces design token contracts: no raw colors in view XAML, proper use of `LauncherSpacing*` tokens, correct overlay Z-index ordering, toast layer using `LauncherConstants.ZIndexToast`, and dynamic accent brushes not replacing theme-specific brushes. Run this whenever touching XAML styles or overlays.
 
@@ -45,7 +45,7 @@ CI is GitHub Actions on `windows-latest`, .NET 10.0.x:
 
 ## Architecture
 
-**Tech stack**: .NET 10.0, Avalonia 12.0.4, CommunityToolkit.Mvvm 8.4.2 (source generators), Material.Icons.Avalonia, Fluent Theme. Compiled bindings enabled by default. Nullable reference types enabled project-wide (`<Nullable>enable</Nullable>` in the `.csproj`).
+**Tech stack**: .NET 10.0, Avalonia 12.0.4, CommunityToolkit.Mvvm 8.4.2 (source generators), Material.Icons.Avalonia, Fluent Theme, LibVLCSharp 3.9.4 + VideoLAN.LibVLC.Windows 3.0.21 (video wallpaper). Compiled bindings enabled by default. Nullable reference types enabled project-wide (`<Nullable>enable</Nullable>` in the `.csproj`). `AllowUnsafeBlocks` is enabled (used only in `VideoWallpaperEngine` for frame-buffer copy). The native libvlc binaries are included in the self-contained win-x64 publish output, adding approximately 40 MB to the package size.
 
 **Build configuration**: `TreatWarningsAsErrors` + `EnforceCodeStyleInBuild` are enabled project-wide (0 warnings is the norm, not aspirational). Analysis level is `latest-recommended` with `Minimum` mode. Release builds are self-contained `win-x64` with aggressive trimming (`DebuggerSupport=false`, `EventSourceSupport=false`, `HttpActivityPropagationSupport=false`, `MetadataUpdaterSupport=false`, `DebugType=none`). An `AddGitCommitMetadata` MSBuild target embeds `git rev-parse --short=7 HEAD` as `[AssemblyMetadata("CommitSha")]`, surfaced via `LauncherConstants.CommitSha`. The `AvaloniaUI.DiagnosticsSupport` package is Debug-only (conditionally excluded in Release). The Windows `app.manifest` declares DPI awareness (`PerMonitorV2`) and Windows 10/11 support.
 
@@ -65,7 +65,7 @@ One `MainWindow` (1300×754, non-resizable with MinWidth 1024/MinHeight 640, bor
 | Sub-ViewModel | Concern |
 |---|---|
 | `ShellViewModel` | Product name, version, runtime info (`FrameworkVersion` from `RuntimeInformation.FrameworkDescription`, `PlatformName` from OS detection, Avalonia version, build config), status text, game path display |
-| `BackgroundViewModel` | Wallpaper (bundled / remote / custom), theme-color extraction |
+| `BackgroundViewModel` | Wallpaper (bundled / remote / custom / video), theme-color extraction, video playback lifecycle (`SetPlaybackActive`) |
 | `RemoteContentViewModel` | Announcements, banners, news, social media from API |
 | `DialogsViewModel` | Notice popup, repair/uninstall confirmation dialogs |
 | `GameOperationsViewModel` | Install / update / repair / launch / uninstall commands and progress |
@@ -86,7 +86,7 @@ One `MainWindow` (1300×754, non-resizable with MinWidth 1024/MinHeight 640, bor
 
 **Entries:**
 1. **Program.cs** — Process mutex (`Local\Cafe_Launcher_SI`), single-instance enforcement via `EventWaitHandle` signal. Creates `UnifiedLogger` + `CrashRecoveryService` on startup before the DI container is available; exposes the logger via `PreDiLogger` so the DI container reuses the same instance (single Serilog pipeline for the entire process). Tracks `PreviousSessionCrashed` via a `session.active` marker file. Sets up unhandled-exception handlers (`AppDomain.UnhandledException`, `TaskScheduler.UnobservedTaskException`). `RunSession` orchestrates the session lifecycle: begin → run app → complete/cleanup, with proper crash-marker preservation. The `ServiceProvider` is disposed in `RunSession`'s finally block after the session-end log entry is written.
-2. **App.axaml.cs** — On framework init: builds DI container via `ServiceConfiguration.AddLauncherServices()`, resolves `MainWindowViewModel`, creates `MainWindow`, wires `ClickCodeService`, `SystemTrayService`. Starts a background thread listening for `EventWaitHandle` signals to restore window from tray.
+2. **App.axaml.cs** — On framework init: calls `LibVLCSharp.Shared.Core.Initialize()` (video wallpaper runtime), builds DI container via `ServiceConfiguration.AddLauncherServices()`, resolves `MainWindowViewModel`, creates `MainWindow`, wires `ClickCodeService`, `SystemTrayService`. Starts a background thread listening for `EventWaitHandle` signals to restore window from tray.
 3. **App.axaml** — Light/Dark `ThemeDictionaries` with custom `Launcher*` brushes, FluentTheme + MaterialIconStyles.
 
 **Composition root**: `ServiceConfiguration.AddLauncherServices()` is the DI configuration — it registers all services with `Microsoft.Extensions.DependencyInjection`. The container is built in `App.axaml.cs` via `ServiceCollection.BuildServiceProvider()`. Services are registered as `AddSingleton`; ViewModels are a mix: `SettingsViewModel`, `ShellViewModel`, `RemoteContentViewModel`, `DialogsViewModel`, and `GameOperationsViewModel` are `AddSingleton` (shared state), while `ResourcePanelViewModel`, `BackgroundViewModel`, `ToastHostViewModel`, `WindowChromeViewModel`, `MigrationWizardViewModel`, `MainWindowViewModel`, and `LogViewerDialogViewModel` are `AddTransient` (fresh instance per resolution). Thread-safe disposal order for IDisposable services is defined by reverse registration order (see disposal order section below).
@@ -95,7 +95,7 @@ One `MainWindow` (1300×754, non-resizable with MinWidth 1024/MinHeight 640, bor
 - **Delegates** — `MainWindowViewModel.ConfigureViewModel()` sets `Func<>` / `Func<Task>` delegates on children (e.g. `SettingsViewModel.PickGameFolderAsync`, `SettingsViewModel.PreviewAppearanceAsync`). These let children call back into parent capabilities such as native pickers and appearance previews.
 - **Events** — Children expose `event Func<Task>?` / `event Action?` that the parent subscribes to (e.g. `SettingsViewModel.SettingsSaved`). This decouples child-triggered actions from parent handling.
 
-**View code-behind** (`MainWindow.axaml.cs`): handles native folder-picker dialog (via `StorageProvider`), window drag-to-move (borderless chrome), and close-behavior routing (minimize-to-tray vs exit). The ViewModel receives `PickGameFolderAsync`, `MinimizeWindow`, and `CloseWindow` delegates via `ConfigureViewModel()`.
+**View code-behind** (`MainWindow.axaml.cs`): handles native folder-picker dialog (via `StorageProvider`), window drag-to-move (borderless chrome), and close-behavior routing (minimize-to-tray vs exit). The ViewModel receives `PickGameFolderAsync`, `MinimizeWindow`, and `CloseWindow` delegates via `ConfigureViewModel()`. `OnPropertyChanged` monitors `IsVisible` and `WindowState` to call `BackgroundViewModel.SetPlaybackActive(bool)`, pausing video playback when the window is minimized or hidden to the tray and resuming when it becomes visible again.
 
 ### Core data flow
 
@@ -136,6 +136,7 @@ One `MainWindow` (1300×754, non-resizable with MinWidth 1024/MinHeight 640, bor
 | `ResourcePanelUidService` | Manages resource panel UID state |
 | `BestHttpCookieLibraryService` | Cookie handling for HTTP requests |
 | `ThemeColorExtractionService` | Extracts dominant colors from wallpaper images for UI theming |
+| `VideoWallpaperEngine` / `IVideoWallpaperEngine` | LibVLCSharp memory-rendering engine: decodes video frames into a double-buffered `WriteableBitmap` and raises `FrameReady` on the UI thread. `NullVideoWallpaperEngine` is the no-op fallback when libvlc is unavailable. `VideoWallpaperEngineFactory` selects the real engine or the fallback. Instances are created/disposed by `BackgroundViewModel` per playback lifecycle — **not** DI-registered. |
 | `ImageCacheService` | Caches downloaded images (banners, avatars). Implements `IDisposable`. |
 | `ManifestValidationService` | Validates local game files against manifest |
 | `LauncherUpdateService` | Checks for launcher self-updates via the server proxy endpoint (`ApiConfig.LauncherApiBaseUrl`), supporting stable/beta channels and returning every validated release file in API order. Every file must have a non-empty name, an absolute HTTP/HTTPS URL, and a positive size. |
@@ -195,11 +196,14 @@ Persisted fields in `settings.json` and their valid values:
 | Download speed limit | `downloadSpeedLimit` | `unlimited`, `1MB/s`, `5MB/s`, `10MB/s`, `25MB/s`, `50MB/s` |
 | Close behavior | `closeBehavior` | `minimize`, `exit` |
 | Proxy | `proxyMode` | `direct`, `system` |
-| Background | `backgroundSource` | `bundled`, `remote`, `custom` |
+| Background | `backgroundSource` | `bundled`, `remote`, `custom`, `video` |
 | Wallpaper fit | `backgroundFit` | `fill`, `uniform`, `uniformToFill` |
 | Wallpaper fill color | `backgroundFillColor` | Hex color string (e.g. `#FF000000`) |
 | Game path | `gamePath` | Absolute directory path |
 | Custom background | `customBackgroundPath` | Absolute file path |
+| Video background | `videoBackgroundPath` | Absolute file path (mp4/webm/mkv/mov); empty string if unset |
+| Video muted | `videoBackgroundMuted` | `true`/`false` (default `true`) |
+| Video volume | `videoBackgroundVolume` | Integer 0–100 (default `50`; clamped by `SettingsNormalizer`) |
 | Toast notifications | `toastNotificationsEnabled` | `true`/`false` |
 | Remote content card | `showRemoteContentCard` | `true`/`false` |
 | Theme color mode | `themeColorMode` | `default`, `system`, `wallpaper`, `custom` |
@@ -214,7 +218,7 @@ Persisted fields in `settings.json` and their valid values:
 ### Key models (`Models/`)
 
 - `LauncherApiContracts.cs` — All API response DTOs
-- `LauncherStateModels.cs` — String constants for modes/behaviors (`LaunchCheckModes`, `ProxyModes`, `CloseBehaviors`, `LauncherLanguages`, `ThemeModes`, `ThemeColorModes`, `DownloadSpeedLimits`, `PatchUrlGroups`, `UpdateChannels`, `LogLevels`, `BackgroundSources`, `BackgroundFits`, `GameOperationKinds`), plus runtime state objects (`LauncherStatusSnapshot`, `LauncherRemoteState`, `LauncherRuntimeState`, `LauncherSettings`, `GameOperationProgress`, `GameOperationResult`, `ManifestValidationResult`, `GameLaunchResult`), and option types (`SettingOption`, `LanguageOption`, `ThemeOption`) for localized dropdown binding
+- `LauncherStateModels.cs` — String constants for modes/behaviors (`LaunchCheckModes`, `ProxyModes`, `CloseBehaviors`, `LauncherLanguages`, `ThemeModes`, `ThemeColorModes`, `DownloadSpeedLimits`, `PatchUrlGroups`, `UpdateChannels`, `LogLevels`, `BackgroundSources` (includes `video`), `BackgroundFits`, `GameOperationKinds`), plus runtime state objects (`LauncherStatusSnapshot`, `LauncherRemoteState`, `LauncherRuntimeState`, `LauncherSettings`, `GameOperationProgress`, `GameOperationResult`, `ManifestValidationResult`, `GameLaunchResult`), and option types (`SettingOption`, `LanguageOption`, `ThemeOption`) for localized dropdown binding
 - `LocalInstallationStateModels.cs` — Local installation classifications, immutable state snapshots, and commit input records
 - `LocalGameContracts.cs` — `LocalManifest`, `RemoteManifest`, `ManifestFile`, `GameLauncherConfig`
 - `PatchUrlGroupDefinition.cs` — Code + host-from/to tuples for CDN URL rewriting
@@ -250,6 +254,7 @@ Users can switch between `Official` (yo-star.com) and `Cafe` (bluearchive.cafe) 
 - `Services/Auth/` — `AuthorizationHeaderFactory` (MD5-signed API auth header)
 - `Services/Diagnostics/` — `UnifiedLogger` (Serilog-backed central logging with async sink, global enrichers, and `LoggingLevelSwitch`), `LocalDiagnostics` (public facade over `UnifiedLogger`), `LogExportService` (ZIP log export), `CrashRecoveryService` (session crash detection via `session.active` marker), `LogEntrySeverity` enum (Error/Warn/Info). Log rotation is handled by Serilog's file sink (5 MB threshold, 3 retained files). All diagnostics and crash logs go to a single `unified.log`.
 - `Services/HttpClientLeaseSource.cs` — Internal `IHttpClientLeaseSource` abstraction over `HttpClientFactory.CreateLeaseAsync()`. Two implementations: `ProxyAwareHttpClientLeaseSource` (production, delegates to `HttpClientFactory`) and `FixedHttpClientLeaseSource` (testing, wraps a fixed `HttpMessageHandler`). Used by services like `LauncherUpdateService` that need proxy-aware HTTP with lease lifetime management.
+- `Services/VideoWallpaper/` — `IVideoWallpaperEngine` (interface: frame type `IImage?`, event `FrameReady` raised on the UI thread), `VideoWallpaperEngine` (LibVLCSharp memory-rendering implementation — no VideoView/native HWND; overlays compose normally), `NullVideoWallpaperEngine` (no-op fallback when libvlc is unavailable), `VideoWallpaperEngineFactory` (selects real or fallback engine). Engines are **not** DI-registered; `BackgroundViewModel` holds and disposes them per playback lifecycle via a `Func<IVideoWallpaperEngine>` factory.
 - `Services/ServiceConfiguration.cs` — DI registration; services as `AddSingleton`, ViewModels as a mix of singleton (shared state: `SettingsViewModel`, `ShellViewModel`, `RemoteContentViewModel`, `DialogsViewModel`, `GameOperationsViewModel`) and transient (fresh per resolution). `AddLauncherServices(existingLogger?)` accepts an optional pre-created `UnifiedLogger` to reuse across crash handling and application logging.
 
 ### Localization

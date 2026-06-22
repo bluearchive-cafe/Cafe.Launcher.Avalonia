@@ -18,7 +18,7 @@ dotnet test                                                    # Run all tests
 dotnet test --filter "FullyQualifiedName~VersionComparerTests" # Run a single test class
 ```
 
-Available test classes include `VersionComparerTests`, `LauncherApiClientTests`, `LauncherConstantsTests`, `LauncherSettingsServiceTests`, `SettingsNormalizerTests`, `SettingsEditorTests`, `LocalizationServiceTests`, `MainWindowViewModelTests`, `DialogsViewModelTests`, `GameDownloadServiceTests`, `GameInstallationPathTests`, `LocalInstallationStateStoreTests`, `LauncherCoreServiceTests`, `InstallationOperationStateTests`, `PatchUrlGroupServiceTests`, `BestHttpCookieLibraryServiceTests`, `ResourcePanelUidServiceTests`, `ExternalLinkServiceTests`, `ResourcePanelApiClientTests`, `MigrationWizardViewModelTests`, `LevelDbReaderTests`, `OldLauncherDetectionServiceTests`, `LauncherUpdateServiceTests`, `HttpClientFactoryTests`, `ToastServiceTests`, and `UiStyleContractTests`.
+Available test classes include `VersionComparerTests`, `LauncherApiClientTests`, `LauncherConstantsTests`, `LauncherSettingsServiceTests`, `SettingsNormalizerTests`, `SettingsEditorTests`, `LocalizationServiceTests`, `MainWindowViewModelTests`, `DialogsViewModelTests`, `GameDownloadServiceTests`, `GameInstallationPathTests`, `LocalInstallationStateStoreTests`, `LauncherCoreServiceTests`, `InstallationOperationStateTests`, `PatchUrlGroupServiceTests`, `BestHttpCookieLibraryServiceTests`, `ResourcePanelUidServiceTests`, `ExternalLinkServiceTests`, `ResourcePanelApiClientTests`, `MigrationWizardViewModelTests`, `LevelDbReaderTests`, `OldLauncherDetectionServiceTests`, `LauncherUpdateServiceTests`, `HttpClientFactoryTests`, `ToastServiceTests`, `UiStyleContractTests`, `VideoWallpaperSettingsTests`, and `VideoWallpaperEngineSmokeTests`.
 
 CI is GitHub Actions on `windows-latest`, .NET 10.0.x:
 - **build.yml** (push/PR to `main`): restore, Debug build, test, Release build, self-contained publish, upload artifact.
@@ -30,7 +30,7 @@ CI is GitHub Actions on `windows-latest`, .NET 10.0.x:
 
 ## Architecture
 
-**Tech stack**: .NET 10.0, Avalonia 12.0.4, CommunityToolkit.Mvvm 8.4.2 (source generators), Material.Icons.Avalonia, Fluent Theme. Compiled bindings enabled by default.
+**Tech stack**: .NET 10.0, Avalonia 12.0.4, CommunityToolkit.Mvvm 8.4.2 (source generators), Material.Icons.Avalonia, Fluent Theme, LibVLCSharp 3.9.4 + VideoLAN.LibVLC.Windows 3.0.21 (video wallpaper). Compiled bindings enabled by default. `AllowUnsafeBlocks` is enabled (used only in `VideoWallpaperEngine` for frame-buffer copy). The native libvlc binaries are included in the self-contained win-x64 publish output, adding approximately 40 MB to the package size.
 
 **MVVM pattern** with explicit XAML composition. `ViewModelBase` extends `ObservableObject`; the app does not use a reflection-based `ViewLocator`.
 
@@ -47,7 +47,7 @@ One `MainWindow` (1300×754, non-resizable, borderless with custom chrome). The 
 
 **Entries:**
 1. **Program.cs** — Process mutex (`Local\Cafe_Launcher_SI`), single-instance enforcement via `EventWaitHandle` signal. Creates `UnifiedLogger` + `CrashRecoveryService` before DI is available; exposes the logger via `PreDiLogger` so the DI container reuses the same instance. Tracks `PreviousSessionCrashed` via a `session.active` marker file. `RunSession` orchestrates session lifecycle with proper crash-marker preservation.
-2. **App.axaml.cs** — On framework init: builds DI container via `ServiceConfiguration.AddLauncherServices()`, resolves `MainWindowViewModel`, creates `MainWindow`, wires `ClickCodeService`, `SystemTrayService`. Starts a background thread listening for `EventWaitHandle` signals to restore window from tray.
+2. **App.axaml.cs** — On framework init: calls `LibVLCSharp.Shared.Core.Initialize()` (video wallpaper runtime), builds DI container via `ServiceConfiguration.AddLauncherServices()`, resolves `MainWindowViewModel`, creates `MainWindow`, wires `ClickCodeService`, `SystemTrayService`. Starts a background thread listening for `EventWaitHandle` signals to restore window from tray.
 3. **App.axaml** — Light/Dark `ThemeDictionaries` with custom `Launcher*` brushes, FluentTheme + MaterialIconStyles.
 
 **Composition root**: `ServiceConfiguration.AddLauncherServices()` is the DI configuration — it registers all services with `Microsoft.Extensions.DependencyInjection`. The container is built in `App.axaml.cs` via `ServiceCollection.BuildServiceProvider()`. All services are registered as `AddSingleton`; ViewModels are a mix of singleton (shared state: `SettingsViewModel`, `ShellViewModel`, `RemoteContentViewModel`, `DialogsViewModel`, `GameOperationsViewModel`) and transient (fresh per resolution). Thread-safe disposal order for IDisposable services is defined by reverse registration order.
@@ -97,11 +97,12 @@ One `MainWindow` (1300×754, non-resizable, borderless with custom chrome). The 
 | `BestHttpCookieLibraryService` | Cookie handling for HTTP requests |
 | `GamePathValidator` | Static utility — validates file operations stay within the game directory |
 | `ThemeColorExtractionService` | Extracts dominant colors from wallpaper images for UI theming |
+| `VideoWallpaperEngine` / `IVideoWallpaperEngine` | LibVLCSharp memory-rendering engine: decodes video frames into a double-buffered `WriteableBitmap`, raises `FrameReady` on the UI thread. `NullVideoWallpaperEngine` is the no-op fallback when libvlc is unavailable. `VideoWallpaperEngineFactory` selects the real engine or the fallback. Not DI-registered; `BackgroundViewModel` creates and disposes instances per playback lifecycle. |
 
 ### Key models (`Models/`)
 
 - `LauncherApiContracts.cs` — All API response DTOs
-- `LauncherStateModels.cs` — String constants for modes/behaviors (`LaunchCheckModes`, `ProxyModes`, `CloseBehaviors`, `LauncherLanguages`, `ThemeModes`, `DownloadSpeedLimits`, `PatchUrlGroups`), plus runtime state objects (`LauncherStatusSnapshot`, `LauncherRemoteState`, `LauncherRuntimeState`, `LauncherSettings`, `GameOperationProgress`, `GameOperationResult`), and option types (`SettingOption`, `LanguageOption`, `ThemeOption`) for localized dropdown binding
+- `LauncherStateModels.cs` — String constants for modes/behaviors (`LaunchCheckModes`, `ProxyModes`, `CloseBehaviors`, `LauncherLanguages`, `ThemeModes`, `DownloadSpeedLimits`, `PatchUrlGroups`, `BackgroundSources` (includes `video`)), plus runtime state objects (`LauncherStatusSnapshot`, `LauncherRemoteState`, `LauncherRuntimeState`, `LauncherSettings`, `GameOperationProgress`, `GameOperationResult`), and option types (`SettingOption`, `LanguageOption`, `ThemeOption`) for localized dropdown binding
 - `LocalInstallationStateModels.cs` — Local installation classifications, immutable state snapshots, and commit input records
 - `LocalGameContracts.cs` — `LocalManifest`, `RemoteManifest`, `ManifestFile`, `GameLauncherConfig`
 - `PatchUrlGroupDefinition.cs` — Code + host-from/to tuples for CDN URL rewriting
@@ -112,6 +113,18 @@ One `MainWindow` (1300×754, non-resizable, borderless with custom chrome). The 
 ### Constants
 
 Constants are split across `LauncherConstants`, `ApiConfig`, `BuildInfo`, and `GamePaths`. Launcher self-update requests use the exact `ApiConfig.LauncherApiBaseUrl` and `ApiConfig.LauncherReleasesPath` values. `BuildInfo.LauncherVersion` reads `AssemblyInformationalVersionAttribute` and must match the `.csproj` `VersionPrefix`.
+
+### Video wallpaper settings
+
+Three new `settings.json` fields support the video wallpaper source (`backgroundSource` = `"video"`):
+
+| Setting | JSON key | Valid values |
+|---|---|---|
+| Video background path | `videoBackgroundPath` | Absolute file path (mp4/webm/mkv/mov); empty string if unset |
+| Video muted | `videoBackgroundMuted` | `true`/`false` (default `true`) |
+| Video volume | `videoBackgroundVolume` | Integer 0–100 (default `50`; clamped by `SettingsNormalizer`) |
+
+`BackgroundViewModel` drives playback; `MainWindow.axaml.cs` calls `SetPlaybackActive(bool)` based on `IsVisible`/`WindowState` to pause when the window is hidden or minimized.
 
 ### Patch URL groups
 
@@ -127,6 +140,7 @@ Users can switch between `Official` (yo-star.com) and `Cafe` (bluearchive.cafe) 
 - `Helpers/` — `FileSizeFormatter`, `GamePathValidator`
 - `Services/Auth/` — `AuthorizationHeaderFactory` (MD5-signed API auth header)
 - `Services/Diagnostics/` — `UnifiedLogger` (Serilog-backed engine with async sink, enrichers, LoggingLevelSwitch), `LocalDiagnostics` (facade), `LogExportService`, `CrashRecoveryService`. All diagnostics and crash logs go to a single `unified.log`.
+- `Services/VideoWallpaper/` — `IVideoWallpaperEngine` (interface: `IImage?` frame type, `FrameReady` event on the UI thread), `VideoWallpaperEngine` (LibVLCSharp memory-rendering — no VideoView/native HWND; overlays compose normally), `NullVideoWallpaperEngine` (no-op fallback when libvlc is unavailable), `VideoWallpaperEngineFactory` (selects real or fallback engine). Engines are not DI-registered; `BackgroundViewModel` holds and disposes them per playback lifecycle.
 
 ### Localization
 
