@@ -1,4 +1,5 @@
 using System;
+using System.Threading.Tasks;
 using Cafe.Launcher.Avalonia.Services.VideoWallpaper;
 
 namespace Cafe.Launcher.Avalonia.Tests;
@@ -19,7 +20,7 @@ public sealed class VideoWallpaperEngineSmokeTests
     }
 
     [SkippableFact]
-    public void Factory_Create_ReturnsUsableEngine_WhenLibVlcAvailable()
+    public async Task Create_WhenLibVlcAvailable_ReturnsUsableEngine()
     {
         Skip.IfNot(LibVlcAvailable(), "libvlc native libraries not available in this environment.");
 
@@ -28,8 +29,7 @@ public sealed class VideoWallpaperEngineSmokeTests
         Assert.NotNull(engine);
 
         // 加载不存在的文件应安全失败而非抛出
-        var ok = engine.LoadAsync("C:\\__nonexistent_video__.mp4", default)
-            .GetAwaiter().GetResult();
+        var ok = await engine.LoadAsync("C:\\__nonexistent_video__.mp4", default);
         Assert.False(ok);
     }
 }
