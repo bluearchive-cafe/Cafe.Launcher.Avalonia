@@ -1,18 +1,29 @@
 using System;
 using System.Collections.Generic;
-using System.Diagnostics;
 using System.Linq;
 using System.Net;
 using System.Net.Http;
 using System.Threading;
 using System.Threading.Tasks;
 using Cafe.Launcher.Avalonia.Models;
-using Microsoft.Win32;
 
 namespace Cafe.Launcher.Avalonia.Services;
 
+internal sealed record SystemProxySettings(string ProxyUrl, IReadOnlyList<string> NoProxy);
+
 public sealed class ProxySettingsService
 {
+    private readonly Func<SystemProxySettings?> systemProxySettingsProvider;
+
+    public ProxySettingsService() : this(WindowsRegistrySystemProxySettingsProvider.GetSettings)
+    {
+    }
+
+    internal ProxySettingsService(Func<SystemProxySettings?> systemProxySettingsProvider)
+    {
+        this.systemProxySettingsProvider = systemProxySettingsProvider;
+    }
+
     public Task<IWebProxy?> CreateProxyAsync(string proxyMode, CancellationToken cancellationToken = default)
     {
         if (proxyMode != ProxyModes.System)
@@ -20,7 +31,7 @@ public sealed class ProxySettingsService
             return Task.FromResult<IWebProxy?>(null);
         }
 
-        var settings = GetWindowsSystemProxy();
+        var settings = systemProxySettingsProvider();
         if (settings is null || string.IsNullOrWhiteSpace(settings.ProxyUrl))
         {
             return Task.FromResult<IWebProxy?>(WebRequest.GetSystemWebProxy());
@@ -46,54 +57,7 @@ public sealed class ProxySettingsService
         };
     }
 
-    /// <summary>
-    /// Reads Windows Internet Settings proxy configuration directly from the registry
-    /// instead of shelling out to reg.exe (avoids PATH-hijacking risk and is faster).
-    /// </summary>
-    private static WindowsProxySettings? GetWindowsSystemProxy()
-    {
-        if (!OperatingSystem.IsWindows())
-        {
-            return null;
-        }
-
-        try
-        {
-            using var internetSettings = Registry.CurrentUser.OpenSubKey(
-                @"Software\Microsoft\Windows\CurrentVersion\Internet Settings");
-
-            var proxyEnable = internetSettings?.GetValue("ProxyEnable") as int?;
-            if (proxyEnable != 1)
-            {
-                return null;
-            }
-
-            var proxyServer = internetSettings?.GetValue("ProxyServer") as string;
-            if (string.IsNullOrWhiteSpace(proxyServer))
-            {
-                return null;
-            }
-
-            var proxyOverride = internetSettings?.GetValue("ProxyOverride") as string;
-            var noProxy = string.IsNullOrWhiteSpace(proxyOverride)
-                ? new List<string>()
-                : proxyOverride.Split(';', StringSplitOptions.RemoveEmptyEntries).ToList();
-            noProxy.AddRange(["localhost", "127.0.0.1", "::1"]);
-
-            return new WindowsProxySettings
-            {
-                ProxyUrl = ResolveProxyUrl(proxyServer),
-                NoProxy = noProxy
-            };
-        }
-        catch (Exception ex)
-        {
-            Debug.WriteLine($"Failed to read system proxy settings from registry: {ex.Message}");
-            return null;
-        }
-    }
-
-    private static string ResolveProxyUrl(string value)
+    internal static string ResolveProxyUrl(string value)
     {
         if (value.StartsWith("http://", StringComparison.OrdinalIgnoreCase)
             || value.StartsWith("https://", StringComparison.OrdinalIgnoreCase)
@@ -127,12 +91,5 @@ public sealed class ProxySettingsService
         }
 
         return $"http://{value}";
-    }
-
-    private sealed class WindowsProxySettings
-    {
-        public string ProxyUrl { get; set; } = "";
-
-        public List<string> NoProxy { get; set; } = [];
     }
 }

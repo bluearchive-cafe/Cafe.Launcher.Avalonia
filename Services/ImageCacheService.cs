@@ -19,7 +19,7 @@ public sealed class ImageCacheService : IDisposable
     private const int MaxImageBytes = 25 * 1024 * 1024;
     private static readonly TimeSpan RequestTimeout = TimeSpan.FromSeconds(30);
     private readonly string cacheDir;
-    private readonly HttpClientFactory httpClientFactory;
+    private readonly IHttpClientLeaseSource httpClientLeaseSource;
     private readonly Crc64Service crc64Service;
     private readonly RemoteHttpUrlValidator urlValidator;
     private readonly ConcurrentDictionary<string, SemaphoreSlim> cacheLocks =
@@ -30,14 +30,30 @@ public sealed class ImageCacheService : IDisposable
         HttpClientFactory httpClientFactory,
         Crc64Service crc64Service,
         RemoteHttpUrlValidator urlValidator)
+        : this(
+            new ProxyAwareHttpClientLeaseSource(
+                httpClientFactory,
+                baseAddress: null,
+                timeout: RequestTimeout),
+            crc64Service,
+            urlValidator,
+            Path.Combine(
+                Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData),
+                LauncherConstants.ProductName,
+                "image-cache"))
     {
-        this.httpClientFactory = httpClientFactory;
+    }
+
+    internal ImageCacheService(
+        IHttpClientLeaseSource httpClientLeaseSource,
+        Crc64Service crc64Service,
+        RemoteHttpUrlValidator urlValidator,
+        string cacheDir)
+    {
+        this.httpClientLeaseSource = httpClientLeaseSource;
         this.crc64Service = crc64Service;
         this.urlValidator = urlValidator;
-        cacheDir = Path.Combine(
-            Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData),
-            LauncherConstants.ProductName,
-            "image-cache");
+        this.cacheDir = cacheDir;
         try
         {
             Directory.CreateDirectory(cacheDir);
@@ -183,10 +199,9 @@ public sealed class ImageCacheService : IDisposable
 
     private async Task<HttpClientLease> CreateRequestClientAsync(string proxyMode, CancellationToken ct)
     {
-        return await httpClientFactory.CreateLeaseAsync(
-            proxyMode,
-            timeout: RequestTimeout,
-            cancellationToken: ct).ConfigureAwait(false);
+        return await httpClientLeaseSource
+            .CreateLeaseAsync(proxyMode, ct)
+            .ConfigureAwait(false);
     }
 
     private static void TryDelete(string path)
@@ -212,5 +227,6 @@ public sealed class ImageCacheService : IDisposable
         }
 
         cacheLocks.Clear();
+        httpClientLeaseSource.Dispose();
     }
 }
