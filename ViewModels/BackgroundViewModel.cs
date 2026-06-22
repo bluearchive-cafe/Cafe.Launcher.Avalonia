@@ -72,7 +72,7 @@ public partial class BackgroundViewModel : ViewModelBase, IDisposable
             wallpaperChanged,
             static path => new Bitmap(path),
             LoadBundledBackground,
-            static () => new NullVideoWallpaperEngine())
+            static () => VideoWallpaperEngineFactory.Create())
     {
     }
 
@@ -88,7 +88,7 @@ public partial class BackgroundViewModel : ViewModelBase, IDisposable
             wallpaperChanged,
             imageLoader,
             bundledImageLoader,
-            static () => new NullVideoWallpaperEngine())
+            static () => VideoWallpaperEngineFactory.Create())
     {
     }
 
