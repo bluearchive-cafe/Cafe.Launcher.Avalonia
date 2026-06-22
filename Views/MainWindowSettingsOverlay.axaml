@@ -467,6 +467,53 @@
                                     </StackPanel>
                                 </Grid>
 
+                                <Grid Classes="settings-row" ColumnDefinitions="Auto,*,Auto"
+                                      IsVisible="{Binding Settings.Appearance.IsVideoBackgroundSelected}">
+                                    <Border Classes="settings-icon">
+                                        <materialIcons:MaterialIcon Kind="MovieOpenOutline" Width="{StaticResource LauncherIconMd}" Height="{StaticResource LauncherIconMd}" Foreground="{DynamicResource LauncherAccentBrush}" HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                                    </Border>
+                                    <StackPanel Grid.Column="1" Classes="dialog-heading-copy">
+                                        <TextBlock Text="{Binding Shell.I18n.VideoBackground}" Classes="section-title"/>
+                                        <TextBlock Text="{Binding Shell.I18n.VideoBackgroundDescription}" Classes="caption" TextWrapping="Wrap"/>
+                                    </StackPanel>
+                                    <Button Grid.Column="2" Classes="flat-action" Command="{Binding Settings.ChooseBackgroundVideoCommand}">
+                                        <StackPanel Classes="button-content">
+                                            <materialIcons:MaterialIcon Kind="MovieOutline" Width="{StaticResource LauncherIconSm}" Height="{StaticResource LauncherIconSm}"/>
+                                            <TextBlock Text="{Binding Shell.I18n.ChooseVideo}" VerticalAlignment="Center"/>
+                                        </StackPanel>
+                                    </Button>
+                                </Grid>
+
+                                <Grid Classes="settings-row" ColumnDefinitions="Auto,*,Auto"
+                                      IsVisible="{Binding Settings.Appearance.IsVideoBackgroundSelected}">
+                                    <Border Classes="settings-icon">
+                                        <materialIcons:MaterialIcon Kind="VolumeOff" Width="{StaticResource LauncherIconMd}" Height="{StaticResource LauncherIconMd}" Foreground="{DynamicResource LauncherAccentBrush}" HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                                    </Border>
+                                    <StackPanel Grid.Column="1" VerticalAlignment="Center">
+                                        <TextBlock Text="{Binding Shell.I18n.VideoMute}" Classes="section-title"/>
+                                    </StackPanel>
+                                    <ToggleSwitch Grid.Column="2"
+                                                  IsChecked="{Binding Settings.Appearance.IsVideoMuted, Mode=TwoWay}"
+                                                  OnContent="{Binding Shell.I18n.ToggleOn}"
+                                                  OffContent="{Binding Shell.I18n.ToggleOff}"
+                                                  VerticalAlignment="Center"/>
+                                </Grid>
+
+                                <Grid Classes="settings-row" ColumnDefinitions="Auto,*,Auto"
+                                      IsVisible="{Binding Settings.Appearance.IsVideoBackgroundSelected}">
+                                    <Border Classes="settings-icon">
+                                        <materialIcons:MaterialIcon Kind="VolumeHigh" Width="{StaticResource LauncherIconMd}" Height="{StaticResource LauncherIconMd}" Foreground="{DynamicResource LauncherAccentBrush}" HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                                    </Border>
+                                    <StackPanel Grid.Column="1" VerticalAlignment="Center">
+                                        <TextBlock Text="{Binding Shell.I18n.VideoVolume}" Classes="section-title"/>
+                                    </StackPanel>
+                                    <Slider Grid.Column="2" Classes="setting-control"
+                                            Minimum="0" Maximum="100"
+                                            Value="{Binding Settings.Appearance.VideoVolume, Mode=TwoWay}"
+                                            IsEnabled="{Binding !Settings.Appearance.IsVideoMuted}"
+                                            VerticalAlignment="Center"/>
+                                </Grid>
+
                                 <Grid Classes="settings-row" ColumnDefinitions="Auto,*,Auto">
                                     <Border Classes="settings-icon">
                                         <materialIcons:MaterialIcon Kind="ProgressClose" Width="{StaticResource LauncherIconMd}" Height="{StaticResource LauncherIconMd}" Foreground="{DynamicResource LauncherAccentBrush}" HorizontalAlignment="Center" VerticalAlignment="Center"/>

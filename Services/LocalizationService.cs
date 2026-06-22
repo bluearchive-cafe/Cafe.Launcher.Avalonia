@@ -122,6 +122,11 @@ public sealed partial class LocalizedStrings : ObservableObject
     [ObservableProperty] private string backgroundFitUniformToFill = "";
     [ObservableProperty] private string backgroundFillColor = "";
     [ObservableProperty] private string backgroundFillColorDescription = "";
+    [ObservableProperty] private string videoBackground = "";
+    [ObservableProperty] private string videoBackgroundDescription = "";
+    [ObservableProperty] private string chooseVideo = "";
+    [ObservableProperty] private string videoVolume = "";
+    [ObservableProperty] private string videoMute = "";
     [ObservableProperty] private string versionInfo = "";
     [ObservableProperty] private string runtimeInfo = "";
     [ObservableProperty] private string buildInfo = "";
@@ -340,6 +345,11 @@ public sealed partial class LocalizedStrings : ObservableObject
         BackgroundFitUniformToFill = localizer.T("backgroundFitUniformToFill");
         BackgroundFillColor = localizer.T("backgroundFillColor");
         BackgroundFillColorDescription = localizer.T("backgroundFillColorDescription");
+        VideoBackground = localizer.T("videoBackground");
+        VideoBackgroundDescription = localizer.T("videoBackgroundDescription");
+        ChooseVideo = localizer.T("chooseVideo");
+        VideoVolume = localizer.T("videoVolume");
+        VideoMute = localizer.T("videoMute");
         VersionInfo = localizer.T("versionInfo");
         RuntimeInfo = localizer.T("runtimeInfo");
         BuildInfo = localizer.T("buildInfo");
