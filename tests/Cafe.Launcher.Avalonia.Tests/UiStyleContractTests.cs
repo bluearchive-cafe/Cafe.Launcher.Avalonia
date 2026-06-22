@@ -333,6 +333,18 @@ public sealed partial class UiStyleContractTests
     }
 
     [Fact]
+    public void MainWindow_AllowsResizeWithoutMinimumViewportConstraints()
+    {
+        var document = XDocument.Load(ProjectFile("Views/MainWindow.axaml"));
+        var window = document.Root;
+
+        Assert.NotNull(window);
+        Assert.Equal("True", window.Attribute("CanResize")?.Value);
+        Assert.Null(window.Attribute("MinWidth"));
+        Assert.Null(window.Attribute("MinHeight"));
+    }
+
+    [Fact]
     public void SettingsPanel_UsesTransactionalSaveAndCancelActions()
     {
         var settingsOverlay = File.ReadAllText(ProjectFile("Views/MainWindowSettingsOverlay.axaml"));
@@ -451,6 +463,52 @@ public sealed partial class UiStyleContractTests
         Assert.Matches(
             """(?s)<Style Selector="Grid\.dialog-overlay">.*?<Setter Property="ZIndex" Value="200"/>.*?</Style>""",
             styles);
+    }
+
+    [Fact]
+    public void OverlayStyles_TrapAndRestoreKeyboardFocus()
+    {
+        var styles = File.ReadAllText(ProjectFile("Views/MainWindow.Styles.axaml"));
+        var behavior = File.ReadAllText(ProjectFile("Views/OverlayFocusBehavior.cs"));
+
+        Assert.Equal(
+            2,
+            Regex.Count(
+                styles,
+                "KeyboardNavigation.TabNavigation\" Value=\"Cycle",
+                RegexOptions.CultureInvariant));
+        Assert.Equal(
+            2,
+            Regex.Count(
+                styles,
+                "OverlayFocusBehavior.IsEnabled\" Value=\"True",
+                RegexOptions.CultureInvariant));
+        Assert.Contains("previousFocus = focusManager.GetFocusedElement()", behavior, StringComparison.Ordinal);
+        Assert.Contains("focus?.Focus(NavigationMethod.Tab)", behavior, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public void IconOnlyButtons_ExposeAutomationNames()
+    {
+        foreach (var relativePath in ViewFiles)
+        {
+            var document = XDocument.Load(ProjectFile(relativePath));
+            var iconOnlyButtons = document
+                .Descendants()
+                .Where(element => element.Name.LocalName == "Button")
+                .Where(element =>
+                {
+                    var children = element.Elements().ToList();
+                    return children.Count == 1
+                        && children[0].Name.LocalName == "MaterialIcon";
+                });
+
+            Assert.All(
+                iconOnlyButtons,
+                button => Assert.Contains(
+                    button.Attributes(),
+                    attribute => attribute.Name.LocalName == "AutomationProperties.Name"));
+        }
     }
 
     [Fact]

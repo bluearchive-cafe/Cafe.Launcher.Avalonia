@@ -21,7 +21,8 @@
                             <TextBlock Text="{Binding Shell.I18n.ResourcePanel}" Classes="dialog-title"/>
                             <TextBlock Text="{Binding Shell.I18n.ResourcePanelDescription}" Classes="caption"/>
                         </StackPanel>
-                        <Button Grid.Column="2" Classes="dialog-close" Command="{Binding ResourcePanel.CloseResourcePanelCommand}" ToolTip.Tip="{Binding Shell.I18n.Close}">
+                        <Button Grid.Column="2" Classes="dialog-close" Command="{Binding ResourcePanel.CloseResourcePanelCommand}" ToolTip.Tip="{Binding Shell.I18n.Close}"
+                                AutomationProperties.Name="{Binding Shell.I18n.Close}">
                             <materialIcons:MaterialIcon Kind="Close" Width="{StaticResource LauncherIconMd}" Height="{StaticResource LauncherIconMd}"/>
                         </Button>
                     </Grid>
@@ -139,7 +140,8 @@
                             <TextBlock Text="{Binding Shell.I18n.RepairConfirm}" Classes="dialog-title"/>
                             <TextBlock Text="{Binding Shell.I18n.RepairConfirmDescription}" Classes="caption"/>
                         </StackPanel>
-                        <Button Grid.Column="2" Classes="dialog-close" Command="{Binding Dialogs.CancelRepairCommand}" ToolTip.Tip="{Binding Shell.I18n.Close}">
+                        <Button Grid.Column="2" Classes="dialog-close" Command="{Binding Dialogs.CancelRepairCommand}" ToolTip.Tip="{Binding Shell.I18n.Close}"
+                                AutomationProperties.Name="{Binding Shell.I18n.Close}">
                             <materialIcons:MaterialIcon Kind="Close" Width="{StaticResource LauncherIconMd}" Height="{StaticResource LauncherIconMd}"/>
                         </Button>
                     </Grid>
@@ -175,7 +177,8 @@
                             <TextBlock Text="{Binding Shell.I18n.ResourcePanelCafeOnlyTitle}" Classes="dialog-title"/>
                             <TextBlock Text="{Binding Shell.I18n.ResourcePanelCafeOnlyDescription}" Classes="caption"/>
                         </StackPanel>
-                        <Button Grid.Column="2" Classes="dialog-close" Command="{Binding Dialogs.CancelResourcePanelSourceSwitchCommand}" ToolTip.Tip="{Binding Shell.I18n.Close}">
+                        <Button Grid.Column="2" Classes="dialog-close" Command="{Binding Dialogs.CancelResourcePanelSourceSwitchCommand}" ToolTip.Tip="{Binding Shell.I18n.Close}"
+                                AutomationProperties.Name="{Binding Shell.I18n.Close}">
                             <materialIcons:MaterialIcon Kind="Close" Width="{StaticResource LauncherIconMd}" Height="{StaticResource LauncherIconMd}"/>
                         </Button>
                     </Grid>
@@ -211,7 +214,8 @@
                             <TextBlock Text="{Binding Shell.I18n.UpdateAvailableTitle}" Classes="dialog-title"/>
                             <TextBlock Text="{Binding Dialogs.UpdateAvailableText}" Classes="caption"/>
                         </StackPanel>
-                        <Button Grid.Column="2" Classes="dialog-close" Command="{Binding Dialogs.CancelUpdateAvailableCommand}" ToolTip.Tip="{Binding Shell.I18n.Close}">
+                        <Button Grid.Column="2" Classes="dialog-close" Command="{Binding Dialogs.CancelUpdateAvailableCommand}" ToolTip.Tip="{Binding Shell.I18n.Close}"
+                                AutomationProperties.Name="{Binding Shell.I18n.Close}">
                             <materialIcons:MaterialIcon Kind="Close" Width="{StaticResource LauncherIconMd}" Height="{StaticResource LauncherIconMd}"/>
                         </Button>
                     </Grid>
@@ -302,7 +306,8 @@
                             <TextBlock Text="{Binding Shell.I18n.ConfirmStop}" Classes="dialog-title"/>
                             <TextBlock Text="{Binding Shell.I18n.StopDownloadConfirm}" Classes="caption"/>
                         </StackPanel>
-                        <Button Grid.Column="2" Classes="dialog-close" Command="{Binding Dialogs.CancelStopCommand}" ToolTip.Tip="{Binding Shell.I18n.Close}">
+                        <Button Grid.Column="2" Classes="dialog-close" Command="{Binding Dialogs.CancelStopCommand}" ToolTip.Tip="{Binding Shell.I18n.Close}"
+                                AutomationProperties.Name="{Binding Shell.I18n.Close}">
                             <materialIcons:MaterialIcon Kind="Close" Width="{StaticResource LauncherIconMd}" Height="{StaticResource LauncherIconMd}"/>
                         </Button>
                     </Grid>
@@ -338,7 +343,8 @@
                             <TextBlock Text="{Binding Shell.I18n.ConfirmStop}" Classes="dialog-title"/>
                             <TextBlock Text="{Binding Shell.I18n.StopDownloadConfirm}" Classes="caption"/>
                         </StackPanel>
-                        <Button Grid.Column="2" Classes="dialog-close" Command="{Binding Dialogs.CancelCloseWhileDownloadingCommand}" ToolTip.Tip="{Binding Shell.I18n.Close}">
+                        <Button Grid.Column="2" Classes="dialog-close" Command="{Binding Dialogs.CancelCloseWhileDownloadingCommand}" ToolTip.Tip="{Binding Shell.I18n.Close}"
+                                AutomationProperties.Name="{Binding Shell.I18n.Close}">
                             <materialIcons:MaterialIcon Kind="Close" Width="{StaticResource LauncherIconMd}" Height="{StaticResource LauncherIconMd}"/>
                         </Button>
                     </Grid>
@@ -373,7 +379,8 @@
                             <TextBlock Text="{Binding Shell.I18n.ConfirmUninstall}" Classes="dialog-title"/>
                             <TextBlock Text="{Binding Shell.I18n.UninstallConfirmDescription}" Classes="caption"/>
                         </StackPanel>
-                        <Button Grid.Column="2" Classes="dialog-close" Command="{Binding Dialogs.CancelUninstallCommand}" ToolTip.Tip="{Binding Shell.I18n.Close}">
+                        <Button Grid.Column="2" Classes="dialog-close" Command="{Binding Dialogs.CancelUninstallCommand}" ToolTip.Tip="{Binding Shell.I18n.Close}"
+                                AutomationProperties.Name="{Binding Shell.I18n.Close}">
                             <materialIcons:MaterialIcon Kind="Close" Width="{StaticResource LauncherIconMd}" Height="{StaticResource LauncherIconMd}"/>
                         </Button>
                     </Grid>
@@ -409,7 +416,8 @@
                             <TextBlock Text="{Binding Shell.I18n.UnsavedChanges}" Classes="dialog-title"/>
                             <TextBlock Text="{Binding Shell.I18n.UnsavedChangesMessage}" Classes="caption"/>
                         </StackPanel>
-                        <Button Grid.Column="2" Classes="dialog-close" Command="{Binding WindowChrome.KeepEditingSettingsCommand}" ToolTip.Tip="{Binding Shell.I18n.Close}">
+                        <Button Grid.Column="2" Classes="dialog-close" Command="{Binding WindowChrome.KeepEditingSettingsCommand}" ToolTip.Tip="{Binding Shell.I18n.Close}"
+                                AutomationProperties.Name="{Binding Shell.I18n.Close}">
                             <materialIcons:MaterialIcon Kind="Close" Width="{StaticResource LauncherIconMd}" Height="{StaticResource LauncherIconMd}"/>
                         </Button>
                     </Grid>
@@ -449,7 +457,8 @@
                             <TextBlock Text="{Binding Shell.I18n.MigrationWizardDescription}" Classes="caption" TextWrapping="Wrap"/>
                         </StackPanel>
                         <Button Grid.Column="2" Classes="dialog-close" Command="{Binding MigrationWizard.SkipMigrationCommand}"
-                                ToolTip.Tip="{Binding Shell.I18n.Close}">
+                                ToolTip.Tip="{Binding Shell.I18n.Close}"
+                                AutomationProperties.Name="{Binding Shell.I18n.Close}">
                             <materialIcons:MaterialIcon Kind="Close" Width="{StaticResource LauncherIconMd}" Height="{StaticResource LauncherIconMd}"/>
                         </Button>
                     </Grid>

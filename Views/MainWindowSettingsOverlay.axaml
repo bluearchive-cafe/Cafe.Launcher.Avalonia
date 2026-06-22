@@ -20,7 +20,8 @@
                     </StackPanel>
                     <Button Grid.Column="1" Classes="dialog-close" Command="{Binding WindowChrome.ShowSettingsCommand}"
                             IsEnabled="{Binding Settings.IsSaving, Converter={x:Static BoolConverters.Not}}"
-                            VerticalAlignment="Center" Margin="0,0,16,0" ToolTip.Tip="{Binding Shell.I18n.Close}">
+                            VerticalAlignment="Center" Margin="0,0,16,0" ToolTip.Tip="{Binding Shell.I18n.Close}"
+                            AutomationProperties.Name="{Binding Shell.I18n.Close}">
                         <materialIcons:MaterialIcon Kind="Close" Width="{StaticResource LauncherIconMd}" Height="{StaticResource LauncherIconMd}"/>
                     </Button>
                 </Grid>
@@ -346,7 +347,8 @@
                                         </ItemsControl>
                                         <Button Classes="flat-action icon-only"
                                                 Command="{Binding Settings.Appearance.RefreshThemeColorPaletteCommand}"
-                                                ToolTip.Tip="{Binding Shell.I18n.RefreshThemeColorPalette}">
+                                                ToolTip.Tip="{Binding Shell.I18n.RefreshThemeColorPalette}"
+                                                AutomationProperties.Name="{Binding Shell.I18n.RefreshThemeColorPalette}">
                                             <materialIcons:MaterialIcon Kind="Refresh" Width="{StaticResource LauncherIconSm}" Height="{StaticResource LauncherIconSm}"/>
                                         </Button>
                                     </StackPanel>

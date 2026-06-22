@@ -15,9 +15,7 @@
         Title="Cafe Launcher"
         Width="1300"
         Height="754"
-        MinWidth="1024"
-        MinHeight="640"
-        CanResize="False"
+        CanResize="True"
         WindowDecorations="BorderOnly"
         ExtendClientAreaToDecorationsHint="True"
         ExtendClientAreaTitleBarHeightHint="0"
@@ -50,16 +48,20 @@
                     <TextBlock Text="{Binding Shell.ProductName}" Classes="titlebar-brand"/>
                 </StackPanel>
                 <StackPanel Grid.Column="1" Classes="titlebar-actions">
-                    <Button Classes="chrome" Command="{Binding ResourcePanel.OpenResourcePanelCommand}" ToolTip.Tip="{Binding Shell.I18n.ResourcePanel}">
+                    <Button Classes="chrome" Command="{Binding ResourcePanel.OpenResourcePanelCommand}" ToolTip.Tip="{Binding Shell.I18n.ResourcePanel}"
+                            AutomationProperties.Name="{Binding Shell.I18n.ResourcePanel}">
                         <materialIcons:MaterialIcon Kind="Web" Width="{StaticResource LauncherIconMd}" Height="{StaticResource LauncherIconMd}" Foreground="{DynamicResource LauncherOnChromeBrush}"/>
                     </Button>
-                    <Button Classes="chrome settings" Command="{Binding WindowChrome.ShowSettingsCommand}" ToolTip.Tip="{Binding Shell.I18n.Settings}">
+                    <Button Classes="chrome settings" Command="{Binding WindowChrome.ShowSettingsCommand}" ToolTip.Tip="{Binding Shell.I18n.Settings}"
+                            AutomationProperties.Name="{Binding Shell.I18n.Settings}">
                         <materialIcons:MaterialIcon Kind="CogOutline" Width="{StaticResource LauncherIconMd}" Height="{StaticResource LauncherIconMd}" Foreground="{DynamicResource LauncherOnChromeBrush}"/>
                     </Button>
-                    <Button Classes="chrome" Command="{Binding WindowChrome.MinimizeCommand}" ToolTip.Tip="{Binding Shell.I18n.Minimize}">
+                    <Button Classes="chrome" Command="{Binding WindowChrome.MinimizeCommand}" ToolTip.Tip="{Binding Shell.I18n.Minimize}"
+                            AutomationProperties.Name="{Binding Shell.I18n.Minimize}">
                         <materialIcons:MaterialIcon Kind="Minus" Width="{StaticResource LauncherIconMd}" Height="{StaticResource LauncherIconMd}" Foreground="{DynamicResource LauncherOnChromeBrush}"/>
                     </Button>
-                    <Button Classes="chrome close" Command="{Binding WindowChrome.CloseCommand}" ToolTip.Tip="{Binding Shell.I18n.Close}">
+                    <Button Classes="chrome close" Command="{Binding WindowChrome.CloseCommand}" ToolTip.Tip="{Binding Shell.I18n.Close}"
+                            AutomationProperties.Name="{Binding Shell.I18n.Close}">
                         <materialIcons:MaterialIcon Kind="Close" Width="{StaticResource LauncherIconMd}" Height="{StaticResource LauncherIconMd}" Foreground="{DynamicResource LauncherOnChromeBrush}"/>
                     </Button>
                 </StackPanel>
@@ -87,7 +89,8 @@
                                     <TextBlock Grid.Column="2" Text="{Binding RemoteContent.CarouselPageText}" Classes="caption" VerticalAlignment="Center"/>
                                     <Button Grid.Column="3" Classes="icon-button compact" Cursor="Hand"
                                             Command="{Binding RemoteContent.ToggleCarouselLoopCommand}"
-                                            ToolTip.Tip="{Binding RemoteContent.CarouselPauseTooltip}">
+                                            ToolTip.Tip="{Binding RemoteContent.CarouselPauseTooltip}"
+                                            AutomationProperties.Name="{Binding RemoteContent.CarouselPauseTooltip}">
                                         <materialIcons:MaterialIcon Kind="{Binding RemoteContent.CarouselPauseIcon}" Width="{StaticResource LauncherIconSm}" Height="{StaticResource LauncherIconSm}"
                                                                     Foreground="{DynamicResource LauncherTextSecondaryBrush}"/>
                                     </Button>
@@ -146,7 +149,9 @@
                                 <Grid ColumnDefinitions="Auto,*,Auto">
                                     <Button Grid.Column="0" Classes="icon-button compact" Cursor="Hand"
                                             Command="{Binding RemoteContent.SelectPreviousBannerCommand}"
-                                            IsVisible="{Binding RemoteContent.HasMultipleBanners}">
+                                            IsVisible="{Binding RemoteContent.HasMultipleBanners}"
+                                            ToolTip.Tip="{Binding Shell.I18n.PreviousBanner}"
+                                            AutomationProperties.Name="{Binding Shell.I18n.PreviousBanner}">
                                         <materialIcons:MaterialIcon Kind="ChevronLeft" Width="{StaticResource LauncherIconMd}" Height="{StaticResource LauncherIconMd}"
                                                                     Foreground="{DynamicResource LauncherTextSecondaryBrush}"/>
                                     </Button>
@@ -170,7 +175,9 @@
                                     </ItemsControl>
                                     <Button Grid.Column="2" Classes="icon-button compact" Cursor="Hand"
                                             Command="{Binding RemoteContent.SelectNextBannerCommand}"
-                                            IsVisible="{Binding RemoteContent.HasMultipleBanners}">
+                                            IsVisible="{Binding RemoteContent.HasMultipleBanners}"
+                                            ToolTip.Tip="{Binding Shell.I18n.NextBanner}"
+                                            AutomationProperties.Name="{Binding Shell.I18n.NextBanner}">
                                         <materialIcons:MaterialIcon Kind="ChevronRight" Width="{StaticResource LauncherIconMd}" Height="{StaticResource LauncherIconMd}"
                                                                     Foreground="{DynamicResource LauncherTextSecondaryBrush}"/>
                                     </Button>
