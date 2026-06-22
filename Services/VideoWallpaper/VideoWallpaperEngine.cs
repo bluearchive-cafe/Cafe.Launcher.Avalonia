@@ -125,9 +125,17 @@ internal sealed class VideoWallpaperEngine : IVideoWallpaperEngine
 
         Dispatcher.UIThread.Post(() =>
         {
-            CopyAndSwap();
-            Volatile.Write(ref frameInFlight, 0);
-            FrameReady?.Invoke();
+            try
+            {
+                CopyAndSwap();
+                FrameReady?.Invoke();
+            }
+            finally
+            {
+                // Always release the slot, even if the copy/raise throws — otherwise frameInFlight
+                // would stay claimed and every subsequent frame would be dropped (frozen video).
+                Volatile.Write(ref frameInFlight, 0);
+            }
         }, DispatcherPriority.Render);
     }
 
