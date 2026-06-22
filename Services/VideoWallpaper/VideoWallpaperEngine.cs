@@ -31,7 +31,7 @@ internal sealed class VideoWallpaperEngine : IVideoWallpaperEngine
     private uint stride;
     private WriteableBitmap? frontBuffer;
     private WriteableBitmap? backBuffer;
-    private volatile bool frameDirty;
+    private int frameInFlight; // 0 = idle, 1 = a CopyAndSwap is queued/running (guarded via Interlocked)
     private bool disposed;
 
     public VideoWallpaperEngine()
@@ -48,7 +48,7 @@ internal sealed class VideoWallpaperEngine : IVideoWallpaperEngine
     {
         try
         {
-            if (!File.Exists(path))
+            if (cancellationToken.IsCancellationRequested || !File.Exists(path))
             {
                 return Task.FromResult(false);
             }
@@ -116,20 +116,24 @@ internal sealed class VideoWallpaperEngine : IVideoWallpaperEngine
 
     private void OnDisplay(IntPtr opaque, IntPtr picture)
     {
-        if (frameDirty)
+        // Atomically claim the in-flight slot. If a previous frame is still queued/copying, drop this
+        // one — VLC's display callback may fire from a decode thread, so the check-and-set must be atomic.
+        if (Interlocked.CompareExchange(ref frameInFlight, 1, 0) != 0)
         {
-            return; // drop frame: the previous one has not yet been consumed by the UI
+            return;
         }
 
-        frameDirty = true;
         Dispatcher.UIThread.Post(() =>
         {
             CopyAndSwap();
-            frameDirty = false;
+            Volatile.Write(ref frameInFlight, 0);
             FrameReady?.Invoke();
         }, DispatcherPriority.Render);
     }
 
+    // Single shared native buffer: VLC may begin writing the next frame while this copy runs, so an
+    // occasional torn frame is possible. That is acceptable for a cosmetic, frame-dropping wallpaper;
+    // we deliberately avoid the extra allocation/locking a tear-free path would require.
     private unsafe void CopyAndSwap()
     {
         if (backBuffer is null || nativeBuffer == IntPtr.Zero)

@@ -18,6 +18,8 @@
     <ApplicationManifest>app.manifest</ApplicationManifest>
     <ApplicationIcon>Assets\app-icon.ico</ApplicationIcon>
     <AvaloniaUseCompiledBindingsByDefault>true</AvaloniaUseCompiledBindingsByDefault>
+    <!-- Required by VideoWallpaperEngine.CopyAndSwap, which blits decoded libvlc frames into a
+         WriteableBitmap via pointer copy. The only unsafe code in the project. -->
     <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
   </PropertyGroup>
 
