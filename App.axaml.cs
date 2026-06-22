@@ -62,8 +62,14 @@ public partial class App : Application
             {
                 var localizationService = serviceProvider.GetRequiredService<LocalizationService>();
                 trayService = new SystemTrayService(mainWindow, localizationService);
-                trayService.Initialize();
-                mainWindow.SetSystemTray(trayService);
+                if (trayService.Initialize())
+                {
+                    mainWindow.SetSystemTray(trayService);
+                }
+                else
+                {
+                    trayService = null;
+                }
             }
             catch (Exception ex)
             {
