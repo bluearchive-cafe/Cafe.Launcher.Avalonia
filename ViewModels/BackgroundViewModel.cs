@@ -10,6 +10,7 @@ using Avalonia.Threading;
 using Cafe.Launcher.Avalonia.Models;
 using Cafe.Launcher.Avalonia.Services;
 using Cafe.Launcher.Avalonia.Services.Diagnostics;
+using Cafe.Launcher.Avalonia.Services.VideoWallpaper;
 using CommunityToolkit.Mvvm.ComponentModel;
 
 namespace Cafe.Launcher.Avalonia.ViewModels;
@@ -21,6 +22,10 @@ public partial class BackgroundViewModel : ViewModelBase, IDisposable
     private readonly Action<LauncherSettings> wallpaperChanged;
     private readonly Func<string, IImage?> imageLoader;
     private readonly Func<IImage?> bundledImageLoader;
+    private readonly Func<IVideoWallpaperEngine> engineFactory;
+    private IVideoWallpaperEngine? videoEngine;
+    private LauncherSettings? activeVideoSettings;
+    private bool playbackActive = true;
     private bool disposed;
 
     [ObservableProperty]
@@ -66,7 +71,8 @@ public partial class BackgroundViewModel : ViewModelBase, IDisposable
             diagnostics,
             wallpaperChanged,
             static path => new Bitmap(path),
-            LoadBundledBackground)
+            LoadBundledBackground,
+            static () => new NullVideoWallpaperEngine())
     {
     }
 
@@ -76,12 +82,30 @@ public partial class BackgroundViewModel : ViewModelBase, IDisposable
         Action<LauncherSettings> wallpaperChanged,
         Func<string, IImage?> imageLoader,
         Func<IImage?> bundledImageLoader)
+        : this(
+            imageCacheService,
+            diagnostics,
+            wallpaperChanged,
+            imageLoader,
+            bundledImageLoader,
+            static () => new NullVideoWallpaperEngine())
+    {
+    }
+
+    internal BackgroundViewModel(
+        ImageCacheService imageCacheService,
+        LocalDiagnostics diagnostics,
+        Action<LauncherSettings> wallpaperChanged,
+        Func<string, IImage?> imageLoader,
+        Func<IImage?> bundledImageLoader,
+        Func<IVideoWallpaperEngine> engineFactory)
     {
         this.imageCacheService = imageCacheService;
         this.diagnostics = diagnostics;
         this.wallpaperChanged = wallpaperChanged;
         this.imageLoader = imageLoader;
         this.bundledImageLoader = bundledImageLoader;
+        this.engineFactory = engineFactory;
         backgroundImageSource = bundledImageLoader();
     }
 
@@ -92,8 +116,24 @@ public partial class BackgroundViewModel : ViewModelBase, IDisposable
     {
         ApplyBackgroundPresentation(settings);
 
+        if (settings.BackgroundSource != BackgroundSources.Video)
+        {
+            StopVideo();
+        }
+
         switch (settings.BackgroundSource)
         {
+            case BackgroundSources.Video:
+                if (!string.IsNullOrWhiteSpace(settings.VideoBackgroundPath))
+                {
+                    if (await TryStartVideoAsync(settings, cancellationToken))
+                    {
+                        return;
+                    }
+                }
+                StopVideo();
+                break;
+
             case BackgroundSources.Remote:
                 var bgImg = snapshot?.Remote.BaseConfig?.LauncherBackgroundImg;
                 var crc64 = snapshot?.Remote.BaseConfig?.LauncherBackgroundImgCrc64;
@@ -152,7 +192,7 @@ public partial class BackgroundViewModel : ViewModelBase, IDisposable
 
     public Bitmap? GetBackgroundBitmap()
     {
-        return BackgroundImageSource as Bitmap;
+        return videoEngine?.CaptureFrame() ?? BackgroundImageSource as Bitmap;
     }
 
     public async Task<Bitmap?> LoadCustomBackgroundAsync(
@@ -283,6 +323,96 @@ public partial class BackgroundViewModel : ViewModelBase, IDisposable
             || extension.Equals(".webp", StringComparison.OrdinalIgnoreCase);
     }
 
+    private async Task<bool> TryStartVideoAsync(
+        LauncherSettings settings,
+        CancellationToken cancellationToken)
+    {
+        try
+        {
+            StopVideo();
+            var engine = engineFactory();
+            var ok = await engine.LoadAsync(settings.VideoBackgroundPath, cancellationToken);
+            cancellationToken.ThrowIfCancellationRequested();
+            if (!ok)
+            {
+                engine.Dispose();
+                return false;
+            }
+
+            videoEngine = engine;
+            activeVideoSettings = settings;
+            engine.SetVolume(settings.VideoBackgroundVolume);
+            engine.SetMuted(settings.VideoBackgroundMuted);
+            engine.FrameReady += OnVideoFrameReady;
+            if (playbackActive)
+            {
+                engine.Play();
+            }
+
+            OnVideoFrameReady();
+            return true;
+        }
+        catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
+        {
+            throw;
+        }
+        catch (Exception ex)
+        {
+            _ = diagnostics.MessageAsync(
+                "Video wallpaper load failed",
+                $"path: {settings.VideoBackgroundPath}\nexception: {ex.Message}",
+                CancellationToken.None);
+            return false;
+        }
+    }
+
+    private void OnVideoFrameReady()
+    {
+        var frame = videoEngine?.CurrentFrame;
+        if (frame is not null && activeVideoSettings is not null)
+        {
+            // 直接赋值，不走 SetBackgroundImage（后者会 Dispose 旧帧）；视频帧由引擎双缓冲拥有。
+            BackgroundImageSource = frame;
+            if (activeVideoSettings.ThemeColorMode == ThemeColorModes.Wallpaper)
+            {
+                wallpaperChanged(activeVideoSettings);
+            }
+        }
+    }
+
+    private void StopVideo()
+    {
+        if (videoEngine is null)
+        {
+            return;
+        }
+
+        videoEngine.FrameReady -= OnVideoFrameReady;
+        videoEngine.Stop();
+        videoEngine.Dispose();
+        videoEngine = null;
+        activeVideoSettings = null;
+        BackgroundImageSource = null;
+    }
+
+    public void SetPlaybackActive(bool active)
+    {
+        playbackActive = active;
+        if (videoEngine is null)
+        {
+            return;
+        }
+
+        if (active)
+        {
+            videoEngine.Play();
+        }
+        else
+        {
+            videoEngine.Pause();
+        }
+    }
+
     private void SetBackgroundImage(IImage? bitmap, LauncherSettings previewSettings)
     {
         var old = BackgroundImageSource as IDisposable;
@@ -330,6 +460,7 @@ public partial class BackgroundViewModel : ViewModelBase, IDisposable
         }
 
         disposed = true;
+        StopVideo();
         (BackgroundImageSource as IDisposable)?.Dispose();
     }
 }

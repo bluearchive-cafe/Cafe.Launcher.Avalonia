@@ -1,14 +1,36 @@
 using System.Net;
 using System.Net.Http;
+using System.Runtime.CompilerServices;
 using Avalonia;
 using Avalonia.Media;
 using Avalonia.Media.Imaging;
 using Cafe.Launcher.Avalonia.Models;
 using Cafe.Launcher.Avalonia.Services;
 using Cafe.Launcher.Avalonia.Services.Diagnostics;
+using Cafe.Launcher.Avalonia.Services.VideoWallpaper;
 using Cafe.Launcher.Avalonia.ViewModels;
 
 namespace Cafe.Launcher.Avalonia.Tests;
+
+internal static class BackgroundViewModelTestsPlatformInitializer
+{
+    // The regular (non-headless) test project has no Avalonia render platform, so constructing the
+    // WriteableBitmap inside FakeVideoWallpaperEngine.LoadAsync would throw "Unable to locate
+    // IPlatformRenderInterface". Registering Skia's render interface is enough for off-screen bitmap
+    // allocation and keeps these tests in this project (no headless windowing required).
+    [ModuleInitializer]
+    public static void Initialize()
+    {
+        try
+        {
+            global::Avalonia.Skia.SkiaPlatform.Initialize();
+        }
+        catch (InvalidOperationException)
+        {
+            // Already initialized by another test in the same process; safe to ignore.
+        }
+    }
+}
 
 public sealed class BackgroundViewModelTests : IDisposable
 {
@@ -261,6 +283,90 @@ public sealed class BackgroundViewModelTests : IDisposable
     public void ToStretch_MapsFitCodes(string fit, Stretch expected)
     {
         Assert.Equal(expected, BackgroundViewModel.ToStretch(fit));
+    }
+
+    [Fact]
+    public async Task UpdateBackgroundImageAsync_WhenVideoSource_LoadsPlaysAndShowsFrame()
+    {
+        var fake = new FakeVideoWallpaperEngine();
+        using var vm = CreateViewModelWithEngine(() => fake);
+        var settings = new LauncherSettings
+        {
+            BackgroundSource = BackgroundSources.Video,
+            VideoBackgroundPath = @"C:\v.mp4",
+            VideoBackgroundVolume = 70,
+            VideoBackgroundMuted = false,
+        };
+
+        await vm.UpdateBackgroundImageAsync(settings, null, CancellationToken.None);
+        fake.RaiseFrameReady();
+
+        Assert.Equal(@"C:\v.mp4", fake.LoadedPath);
+        Assert.Equal(1, fake.PlayCount);
+        Assert.Equal(70, fake.LastVolume);
+        Assert.False(fake.LastMuted);
+        Assert.Same(fake.CurrentFrame, vm.BackgroundImageSource);
+    }
+
+    [Fact]
+    public async Task UpdateBackgroundImageAsync_WhenVideoLoadFails_FallsBackToBundled()
+    {
+        var fake = new FakeVideoWallpaperEngine { LoadResult = false };
+        using var vm = CreateViewModelWithEngine(() => fake);
+        var settings = new LauncherSettings
+        {
+            BackgroundSource = BackgroundSources.Video,
+            VideoBackgroundPath = @"C:\missing.mp4",
+        };
+
+        await vm.UpdateBackgroundImageAsync(settings, null, CancellationToken.None);
+
+        Assert.NotNull(vm.BackgroundImageSource);
+        Assert.NotSame(fake.CurrentFrame, vm.BackgroundImageSource);
+    }
+
+    [Fact]
+    public async Task UpdateBackgroundImageAsync_WhenSwitchingAwayFromVideo_DisposesEngine()
+    {
+        var fake = new FakeVideoWallpaperEngine();
+        using var vm = CreateViewModelWithEngine(() => fake);
+        await vm.UpdateBackgroundImageAsync(
+            new LauncherSettings { BackgroundSource = BackgroundSources.Video, VideoBackgroundPath = @"C:\v.mp4" },
+            null, CancellationToken.None);
+
+        await vm.UpdateBackgroundImageAsync(
+            new LauncherSettings { BackgroundSource = BackgroundSources.Bundled },
+            null, CancellationToken.None);
+
+        Assert.True(fake.Disposed);
+        Assert.Equal(1, fake.StopCount);
+    }
+
+    [Fact]
+    public async Task SetPlaybackActive_WhenToggled_PausesAndResumesVideo()
+    {
+        var fake = new FakeVideoWallpaperEngine();
+        using var vm = CreateViewModelWithEngine(() => fake);
+        await vm.UpdateBackgroundImageAsync(
+            new LauncherSettings { BackgroundSource = BackgroundSources.Video, VideoBackgroundPath = @"C:\v.mp4" },
+            null, CancellationToken.None);
+
+        vm.SetPlaybackActive(false);
+        vm.SetPlaybackActive(true);
+
+        Assert.Equal(1, fake.PauseCount);
+        Assert.Equal(2, fake.PlayCount);
+    }
+
+    private BackgroundViewModel CreateViewModelWithEngine(Func<IVideoWallpaperEngine> engineFactory)
+    {
+        return new BackgroundViewModel(
+            CreateCache(new ImageHandler(PngBytes)),
+            new LocalDiagnostics(),
+            _ => { },
+            _ => new TestImage(),
+            () => new TestImage(),
+            engineFactory);
     }
 
     private LauncherStatusSnapshot CreateRemoteSnapshot(string hash) =>
