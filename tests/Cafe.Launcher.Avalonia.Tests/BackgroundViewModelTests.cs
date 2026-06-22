@@ -337,6 +337,21 @@ public sealed class BackgroundViewModelTests : IDisposable
         Assert.Equal(2, fake.PlayCount);
     }
 
+    [Fact]
+    public async Task UpdateBackgroundImageAsync_WhenPlaybackInactive_DoesNotPlayOnLoad()
+    {
+        var fake = new FakeVideoWallpaperEngine();
+        using var vm = CreateViewModelWithEngine(() => fake);
+        vm.SetPlaybackActive(false);
+
+        await vm.UpdateBackgroundImageAsync(
+            new LauncherSettings { BackgroundSource = BackgroundSources.Video, VideoBackgroundPath = @"C:\v.mp4" },
+            null, CancellationToken.None);
+
+        Assert.Equal(0, fake.PlayCount);
+        Assert.Same(fake.CurrentFrame, vm.BackgroundImageSource);
+    }
+
     private BackgroundViewModel CreateViewModelWithEngine(Func<IVideoWallpaperEngine> engineFactory)
     {
         return new BackgroundViewModel(
