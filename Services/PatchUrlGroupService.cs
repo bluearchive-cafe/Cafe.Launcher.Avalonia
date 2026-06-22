@@ -27,9 +27,21 @@ public sealed class PatchUrlGroupService
     {
         var text = value ?? "";
         var definition = Resolve(group);
-        return string.IsNullOrWhiteSpace(definition.PackageHostFrom)
+        if (string.IsNullOrWhiteSpace(definition.PackageHostFrom)
+            || !Uri.TryCreate(text, UriKind.Absolute, out var uri)
+            || !string.Equals(uri.Host, definition.PackageHostFrom, StringComparison.OrdinalIgnoreCase))
+        {
+            return text;
+        }
+
+        var authority = uri.GetLeftPart(UriPartial.Authority);
+        var hostIndex = authority.IndexOf(uri.Host, StringComparison.OrdinalIgnoreCase);
+        return hostIndex < 0
             ? text
-            : text.Replace(definition.PackageHostFrom, definition.PackageHostTo, StringComparison.Ordinal);
+            : string.Concat(
+                text.AsSpan(0, hostIndex),
+                definition.PackageHostTo,
+                text.AsSpan(hostIndex + uri.Host.Length));
     }
 
     public ManifestUrlResponse RewriteManifestUrl(ManifestUrlResponse response, string? group)

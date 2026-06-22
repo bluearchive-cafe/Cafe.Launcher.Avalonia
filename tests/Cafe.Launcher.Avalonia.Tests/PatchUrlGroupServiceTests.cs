@@ -54,6 +54,19 @@ public sealed class PatchUrlGroupServiceTests
         Assert.Equal(url, result);
     }
 
+    [Theory]
+    [InlineData("https://example.invalid/launcher-pkg-ba-jp.yo-star.com/file.bin")]
+    [InlineData("https://example.invalid/file.bin?host=launcher-pkg-ba-jp.yo-star.com")]
+    [InlineData("https://launcher-pkg-ba-jp.yo-star.com.example.invalid/file.bin")]
+    public void RewritePackageUrl_WhenPackageHostAppearsOutsideExactHost_ReturnsOriginalUrl(string url)
+    {
+        var service = new PatchUrlGroupService();
+
+        var result = service.RewritePackageUrl(url, PatchUrlGroups.Cafe);
+
+        Assert.Equal(url, result);
+    }
+
     /// <summary>
     /// Sentinel: ensures the URL rewriting scope is strictly limited to the package download
     /// host. If future changes add serverinfo, SDK netloc, or status/list rewriting, this test
