@@ -2,103 +2,71 @@ using System;
 using Avalonia;
 using Avalonia.Controls;
 using Avalonia.Controls.ApplicationLifetimes;
-using Avalonia.Media.Imaging;
-using Avalonia.Platform;
 using Avalonia.Threading;
 using Cafe.Launcher.Avalonia.Constants;
 
 namespace Cafe.Launcher.Avalonia.Services;
 
 /// <summary>
-/// Manages the system tray icon for minimize-to-tray behavior.
-/// Uses Avalonia 12 built-in TrayIcon and NativeMenu APIs.
+/// Manages minimize-to-tray behavior while delegating native tray construction
+/// to an internal platform adapter.
 /// </summary>
 public sealed class SystemTrayService : IDisposable
 {
-    private TrayIcon? trayIcon;
-    private NativeMenuItem? titleItem;
-    private NativeMenuItem? showItem;
-    private NativeMenuItem? exitItem;
-    private Bitmap? menuIcon;
     private readonly Window mainWindow;
     private readonly LocalizationService localizer;
+    private readonly ISystemTrayPlatform platform;
+    private bool initialized;
     private bool disposed;
 
     public SystemTrayService(Window mainWindow, LocalizationService localizer)
+        : this(mainWindow, localizer, new AvaloniaSystemTrayPlatform())
+    {
+    }
+
+    internal SystemTrayService(
+        Window mainWindow,
+        LocalizationService localizer,
+        ISystemTrayPlatform platform)
     {
         this.mainWindow = mainWindow;
         this.localizer = localizer;
+        this.platform = platform;
     }
 
     public bool Initialize()
     {
+        if (disposed)
+        {
+            return false;
+        }
+
+        if (initialized)
+        {
+            return true;
+        }
+
         try
         {
-            // Load the icon from embedded Avalonia resource via AssetLoader (replaces removed AvaloniaLocator.Current)
-            using var iconStream = AssetLoader.Open(
-                new Uri("avares://Cafe.Launcher.Avalonia/Assets/app-icon.ico"));
-            menuIcon = LoadMenuIcon();
-            var menu = CreateMenu();
-
-            trayIcon = new TrayIcon
+            initialized = platform.Initialize(
+                CreateMenuText(),
+                ShowWindow,
+                ExitApplication);
+            if (!initialized)
             {
-                Icon = new WindowIcon(iconStream),
-                ToolTipText = LauncherConstants.ProductName,
-                Menu = menu,
-                IsVisible = true
-            };
+                Dispose();
+                return false;
+            }
 
-            trayIcon.Clicked += (_, _) => ShowWindow();
             localizer.LanguageChanged += OnLanguageChanged;
-            UpdateMenuText();
             return true;
         }
         catch (Exception ex)
         {
-            // Tray icon is non-critical — log and continue without it
-            System.Diagnostics.Debug.WriteLine($"SystemTrayService initialization failed: {ex.Message}");
+            System.Diagnostics.Debug.WriteLine(
+                $"SystemTrayService initialization failed: {ex.Message}");
             Dispose();
             return false;
-        }
-    }
-
-    private NativeMenu CreateMenu()
-    {
-        var menu = new NativeMenu();
-
-        titleItem = new NativeMenuItem(LauncherConstants.ProductName)
-        {
-            Icon = menuIcon,
-            IsEnabled = false
-        };
-        menu.Add(titleItem);
-
-        menu.Add(new NativeMenuItemSeparator());
-
-        showItem = new NativeMenuItem();
-        showItem.Click += OnShowClicked;
-        menu.Add(showItem);
-
-        menu.Add(new NativeMenuItemSeparator());
-
-        exitItem = new NativeMenuItem();
-        exitItem.Click += OnExitClicked;
-        menu.Add(exitItem);
-
-        return menu;
-    }
-
-    private static Bitmap? LoadMenuIcon()
-    {
-        try
-        {
-            using var stream = AssetLoader.Open(
-                new Uri("avares://Cafe.Launcher.Avalonia/Assets/notification-8be8201c.png"));
-            return new Bitmap(stream);
-        }
-        catch
-        {
-            return null;
         }
     }
 
@@ -106,41 +74,20 @@ public sealed class SystemTrayService : IDisposable
     {
         if (Dispatcher.UIThread.CheckAccess())
         {
-            UpdateMenuText();
+            platform.UpdateText(CreateMenuText());
             return;
         }
 
-        Dispatcher.UIThread.Post(UpdateMenuText);
+        Dispatcher.UIThread.Post(() => platform.UpdateText(CreateMenuText()));
     }
 
-    private void UpdateMenuText()
-    {
-        if (titleItem is not null)
-        {
-            titleItem.Header = LauncherConstants.ProductName;
-        }
-
-        if (showItem is not null)
-        {
-            showItem.Header = localizer.T("showLauncher");
-            showItem.ToolTip = localizer.T("trayOpenLauncher");
-        }
-
-        if (exitItem is not null)
-        {
-            exitItem.Header = localizer.T("exitLauncher");
-            exitItem.ToolTip = localizer.T("trayExitLauncher");
-        }
-
-        if (trayIcon is not null)
-        {
-            trayIcon.ToolTipText = LauncherConstants.ProductName;
-        }
-    }
-
-    private void OnShowClicked(object? sender, EventArgs e) => ShowWindow();
-
-    private void OnExitClicked(object? sender, EventArgs e) => ExitApplication();
+    private SystemTrayMenuText CreateMenuText() =>
+        new(
+            LauncherConstants.ProductName,
+            localizer.T("showLauncher"),
+            localizer.T("trayOpenLauncher"),
+            localizer.T("exitLauncher"),
+            localizer.T("trayExitLauncher"));
 
     public void ShowWindow()
     {
@@ -167,15 +114,16 @@ public sealed class SystemTrayService : IDisposable
     public void Dispose()
     {
         if (disposed)
+        {
             return;
-        disposed = true;
+        }
 
-        localizer.LanguageChanged -= OnLanguageChanged;
-        if (showItem is not null) showItem.Click -= OnShowClicked;
-        if (exitItem is not null) exitItem.Click -= OnExitClicked;
-        trayIcon?.Dispose();
-        trayIcon = null;
-        menuIcon?.Dispose();
-        menuIcon = null;
+        disposed = true;
+        if (initialized)
+        {
+            localizer.LanguageChanged -= OnLanguageChanged;
+        }
+
+        platform.Dispose();
     }
 }

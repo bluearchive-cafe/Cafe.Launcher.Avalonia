@@ -211,7 +211,8 @@ public sealed class WindowChromeViewModelTests : IDisposable
     {
         Directory.CreateDirectory(tempDir);
         var services = new ServiceCollection();
-        services.AddLauncherServices(new UnifiedLogger(Path.Combine(tempDir, "logs")));
+        var logger = new UnifiedLogger(Path.Combine(tempDir, "logs"));
+        services.AddLauncherServices(logger);
         var provider = services.BuildServiceProvider();
         var settings = provider.GetRequiredService<SettingsViewModel>();
         var remoteContent = provider.GetRequiredService<RemoteContentViewModel>();
@@ -237,7 +238,8 @@ public sealed class WindowChromeViewModelTests : IDisposable
             dialogs,
             operations,
             backend,
-            provider);
+            provider,
+            logger);
     }
 
     public void Dispose()
@@ -255,9 +257,14 @@ public sealed class WindowChromeViewModelTests : IDisposable
         DialogsViewModel Dialogs,
         GameOperationsViewModel Operations,
         TestBackend Backend,
-        ServiceProvider Provider) : IDisposable
+        ServiceProvider Provider,
+        UnifiedLogger Logger) : IDisposable
     {
-        public void Dispose() => Provider.Dispose();
+        public void Dispose()
+        {
+            Provider.Dispose();
+            Logger.Dispose();
+        }
     }
 
     private sealed class TestBackend : IGameOperationsBackend

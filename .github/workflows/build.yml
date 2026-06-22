@@ -38,11 +38,18 @@ jobs:
       - name: Restore (Debug)
         run: dotnet restore $env:Project_Path
 
+      - name: Restore tests
+        run: |
+          dotnet restore tests/Cafe.Launcher.Avalonia.Tests/Cafe.Launcher.Avalonia.Tests.csproj
+          dotnet restore tests/Cafe.Launcher.Avalonia.HeadlessTests/Cafe.Launcher.Avalonia.HeadlessTests.csproj
+
       - name: Build (Debug)
         run: dotnet build $env:Project_Path -c Debug --no-restore
 
       - name: Test
-        run: dotnet test tests/Cafe.Launcher.Avalonia.Tests/Cafe.Launcher.Avalonia.Tests.csproj -c Debug --no-restore
+        run: |
+          dotnet test tests/Cafe.Launcher.Avalonia.Tests/Cafe.Launcher.Avalonia.Tests.csproj -c Debug --no-restore
+          dotnet test tests/Cafe.Launcher.Avalonia.HeadlessTests/Cafe.Launcher.Avalonia.HeadlessTests.csproj -c Debug --no-restore
 
       - name: Restore (Release)
         run: dotnet restore $env:Project_Path -r win-x64
