@@ -140,6 +140,9 @@ public sealed class LauncherSettingsService
         }
     }
 
+    internal static LauncherSettings NormalizeForTesting(LauncherSettings settings) =>
+        NormalizeSettings(settings);
+
     /// <summary>
     /// Normalize all setting values to valid codes, apply defaults for invalid values,
     /// normalize colors, trim UIDs, and return a deep-cloned copy.
@@ -224,7 +227,8 @@ public sealed class LauncherSettingsService
 
         if (settings.BackgroundSource is not BackgroundSources.Bundled
             and not BackgroundSources.Remote
-            and not BackgroundSources.Custom)
+            and not BackgroundSources.Custom
+            and not BackgroundSources.Video)
         {
             settings.BackgroundSource = BackgroundSources.Bundled;
         }
@@ -237,6 +241,8 @@ public sealed class LauncherSettingsService
         }
 
         settings.BackgroundFillColor = NormalizeColor(settings.BackgroundFillColor);
+        settings.VideoBackgroundVolume = Math.Clamp(settings.VideoBackgroundVolume, 0, 100);
+        settings.VideoBackgroundPath = settings.VideoBackgroundPath?.Trim() ?? "";
 
         if (settings.UpdateChannel is not UpdateChannels.Stable and not UpdateChannels.Beta)
         {
