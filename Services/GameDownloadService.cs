@@ -656,6 +656,7 @@ public sealed class GameDownloadService : IDisposable
         var proxy = await proxySettingsService.CreateProxyAsync(proxyMode, cancellationToken).ConfigureAwait(false);
         using var handler = new SocketsHttpHandler
         {
+            AllowAutoRedirect = false,
             UseProxy = proxyMode == ProxyModes.System,
             Proxy = proxy,
             PooledConnectionLifetime = TimeSpan.FromMinutes(15)

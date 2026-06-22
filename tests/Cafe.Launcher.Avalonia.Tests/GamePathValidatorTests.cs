@@ -50,4 +50,62 @@ public sealed class GamePathValidatorTests
 
         Assert.StartsWith(driveRoot.TrimEnd(Path.DirectorySeparatorChar), result);
     }
+
+    [Fact]
+    public void GetSafePath_WhenExistingDirectoryIsSymbolicLink_ThrowsInvalidOperation()
+    {
+        var tempDir = Path.Combine(Path.GetTempPath(), Guid.NewGuid().ToString("N"));
+        var gamePath = Path.Combine(tempDir, "GameDir");
+        var outsidePath = Path.Combine(tempDir, "Outside");
+        var linkPath = Path.Combine(gamePath, "linked");
+        Directory.CreateDirectory(gamePath);
+        Directory.CreateDirectory(outsidePath);
+
+        try
+        {
+            Directory.CreateSymbolicLink(linkPath, outsidePath);
+
+            var exception = Assert.Throws<InvalidOperationException>(
+                () => GamePathValidator.GetSafePath(gamePath, "linked/file.bin"));
+
+            Assert.Contains("reparse point", exception.Message, StringComparison.Ordinal);
+        }
+        finally
+        {
+            if (Directory.Exists(linkPath))
+            {
+                Directory.Delete(linkPath);
+            }
+
+            Directory.Delete(tempDir, recursive: true);
+        }
+    }
+
+    [Fact]
+    public void GetSafePath_WhenGameRootIsSymbolicLink_ThrowsInvalidOperation()
+    {
+        var tempDir = Path.Combine(Path.GetTempPath(), Guid.NewGuid().ToString("N"));
+        var actualGamePath = Path.Combine(tempDir, "ActualGameDir");
+        var linkedGamePath = Path.Combine(tempDir, "LinkedGameDir");
+        Directory.CreateDirectory(actualGamePath);
+
+        try
+        {
+            Directory.CreateSymbolicLink(linkedGamePath, actualGamePath);
+
+            var exception = Assert.Throws<InvalidOperationException>(
+                () => GamePathValidator.GetSafePath(linkedGamePath, "data/file.bin"));
+
+            Assert.Contains("reparse point", exception.Message, StringComparison.Ordinal);
+        }
+        finally
+        {
+            if (Directory.Exists(linkedGamePath))
+            {
+                Directory.Delete(linkedGamePath);
+            }
+
+            Directory.Delete(tempDir, recursive: true);
+        }
+    }
 }

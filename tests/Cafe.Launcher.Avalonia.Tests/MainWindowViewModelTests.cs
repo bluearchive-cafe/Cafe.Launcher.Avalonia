@@ -51,7 +51,10 @@ public sealed class MainWindowViewModelTests : IDisposable
     {
         Directory.CreateDirectory(tempDir);
         httpClientFactory = new HttpClientFactory(proxySettings);
-        imageCacheService = new ImageCacheService(httpClientFactory, new Crc64Service());
+        imageCacheService = new ImageCacheService(
+            httpClientFactory,
+            new Crc64Service(),
+            RemoteHttpUrlValidator.CreateForTesting());
     }
 
     [Fact]
@@ -1020,7 +1023,10 @@ public sealed class MainWindowViewModelTests : IDisposable
         var localizationService = new LocalizationService();
         var remoteManifestService = new RemoteManifestService(apiClient);
         var diagnosticsVal = new LocalDiagnostics();
-        var fileDownloadService = new FileDownloadService(new Crc64Service(), diagnosticsVal);
+        var fileDownloadService = new FileDownloadService(
+            new Crc64Service(),
+            diagnosticsVal,
+            RemoteHttpUrlValidator.CreateForTesting());
         var manifestValidationService = new ManifestValidationService(apiClient, remoteManifestService, localizationService);
         var gameLaunchService = new GameLaunchService(
             manifestValidationService,

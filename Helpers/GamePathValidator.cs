@@ -36,6 +36,49 @@ public static class GamePathValidator
             throw new InvalidOperationException($"Path escapes game directory: {relativePath}");
         }
 
+        EnsureExistingPathComponentsAreNotReparsePoints(root, target, relativePath);
         return target;
+    }
+
+    private static void EnsureExistingPathComponentsAreNotReparsePoints(
+        string root,
+        string target,
+        string relativePath)
+    {
+        ThrowIfReparsePoint(root, relativePath);
+
+        var relativeTarget = Path.GetRelativePath(root, target);
+        if (relativeTarget == ".")
+        {
+            return;
+        }
+
+        var current = root;
+        foreach (var segment in relativeTarget.Split(
+                     [Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar],
+                     StringSplitOptions.RemoveEmptyEntries))
+        {
+            current = Path.Combine(current, segment);
+            if (!File.Exists(current) && !Directory.Exists(current))
+            {
+                break;
+            }
+
+            ThrowIfReparsePoint(current, relativePath);
+        }
+    }
+
+    private static void ThrowIfReparsePoint(string path, string relativePath)
+    {
+        if (!File.Exists(path) && !Directory.Exists(path))
+        {
+            return;
+        }
+
+        if ((File.GetAttributes(path) & FileAttributes.ReparsePoint) != 0)
+        {
+            throw new InvalidOperationException(
+                $"Path contains a reparse point and is not safe for game file operations: {relativePath}");
+        }
     }
 }

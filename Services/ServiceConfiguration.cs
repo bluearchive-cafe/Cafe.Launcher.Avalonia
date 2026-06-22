@@ -31,6 +31,7 @@ public static class ServiceConfiguration
         services.AddTransient<LogViewerDialogViewModel>();
         services.AddSingleton<LocalDiagnostics>();
         services.AddSingleton<AuthorizationHeaderFactory>();
+        services.AddSingleton<RemoteHttpUrlValidator>();
         services.AddSingleton<PatchUrlGroupService>();
         services.AddSingleton<RemoteManifestService>();
         services.AddSingleton<IFileDownloadService, FileDownloadService>();

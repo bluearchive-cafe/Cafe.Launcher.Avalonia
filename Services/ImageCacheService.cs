@@ -21,14 +21,19 @@ public sealed class ImageCacheService : IDisposable
     private readonly string cacheDir;
     private readonly HttpClientFactory httpClientFactory;
     private readonly Crc64Service crc64Service;
+    private readonly RemoteHttpUrlValidator urlValidator;
     private readonly ConcurrentDictionary<string, SemaphoreSlim> cacheLocks =
         new(StringComparer.Ordinal);
     private bool disposed;
 
-    public ImageCacheService(HttpClientFactory httpClientFactory, Crc64Service crc64Service)
+    public ImageCacheService(
+        HttpClientFactory httpClientFactory,
+        Crc64Service crc64Service,
+        RemoteHttpUrlValidator urlValidator)
     {
         this.httpClientFactory = httpClientFactory;
         this.crc64Service = crc64Service;
+        this.urlValidator = urlValidator;
         cacheDir = Path.Combine(
             Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData),
             LauncherConstants.ProductName,
@@ -142,7 +147,12 @@ public sealed class ImageCacheService : IDisposable
         CancellationToken ct = default)
     {
         using var lease = await CreateRequestClientAsync(proxyMode, ct).ConfigureAwait(false);
-        using var response = await lease.Client.GetAsync(url, HttpCompletionOption.ResponseHeadersRead, ct).ConfigureAwait(false);
+        using var response = await RemoteHttpRequestService.SendAsync(
+            lease.Client,
+            new Uri(url),
+            static uri => new HttpRequestMessage(HttpMethod.Get, uri),
+            urlValidator,
+            ct).ConfigureAwait(false);
         response.EnsureSuccessStatusCode();
         if (response.Content.Headers.ContentLength is > MaxImageBytes)
         {
@@ -204,4 +214,3 @@ public sealed class ImageCacheService : IDisposable
         cacheLocks.Clear();
     }
 }
-

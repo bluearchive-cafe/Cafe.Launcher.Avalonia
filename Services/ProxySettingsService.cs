@@ -39,6 +39,7 @@ public sealed class ProxySettingsService
         var proxy = await CreateProxyAsync(proxyMode, cancellationToken).ConfigureAwait(false);
         return new SocketsHttpHandler
         {
+            AllowAutoRedirect = false,
             UseProxy = proxyMode == ProxyModes.System,
             Proxy = proxy,
             PooledConnectionLifetime = TimeSpan.FromMinutes(15)
