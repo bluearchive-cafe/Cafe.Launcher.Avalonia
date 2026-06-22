@@ -206,6 +206,17 @@ public partial class MainWindow : Window
         return false;
     }
 
+    protected override void OnPropertyChanged(AvaloniaPropertyChangedEventArgs change)
+    {
+        base.OnPropertyChanged(change);
+        if (change.Property == WindowStateProperty
+            && DataContext is MainWindowViewModel vm)
+        {
+            var active = (WindowState)change.NewValue! != WindowState.Minimized;
+            vm.Background.SetPlaybackActive(active);
+        }
+    }
+
     private void PerformClose()
     {
         if (DataContext is MainWindowViewModel vm
@@ -214,6 +225,7 @@ public partial class MainWindow : Window
             if (systemTray is not null)
             {
                 systemTray.HideWindow();
+                (DataContext as MainWindowViewModel)?.Background.SetPlaybackActive(false);
             }
             else
             {
@@ -239,5 +251,6 @@ public partial class MainWindow : Window
         Show();
         WindowState = WindowState.Normal;
         Activate();
+        (DataContext as MainWindowViewModel)?.Background.SetPlaybackActive(true);
     }
 }
