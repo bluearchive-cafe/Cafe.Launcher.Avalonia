@@ -26,6 +26,7 @@ public partial class BackgroundViewModel : ViewModelBase, IDisposable
     private IVideoWallpaperEngine? videoEngine;
     private LauncherSettings? activeVideoSettings;
     private bool playbackActive = true;
+    private bool videoPaletteExtracted;
     private bool disposed;
 
     // Replaced background images are disposed off the UI thread (Background priority) so an in-flight
@@ -358,19 +359,13 @@ public partial class BackgroundViewModel : ViewModelBase, IDisposable
             engine.SetVolume(settings.VideoBackgroundVolume);
             engine.SetMuted(settings.VideoBackgroundMuted);
             engine.FrameReady += OnVideoFrameReady;
+            videoPaletteExtracted = false;
             if (playbackActive)
             {
                 engine.Play();
             }
 
             OnVideoFrameReady();
-
-            // Extract palette from the first video frame once; static wallpaper triggers the
-            // same path via SetBackgroundImage, which is also called only on walllpaper change.
-            if (activeVideoSettings.ThemeColorMode == ThemeColorModes.Wallpaper)
-            {
-                wallpaperChanged(activeVideoSettings);
-            }
 
             if (previousImage is not null)
             {
@@ -400,6 +395,11 @@ public partial class BackgroundViewModel : ViewModelBase, IDisposable
         {
             // 直接赋值，不走 SetBackgroundImage（后者会 Dispose 旧帧）；视频帧由引擎双缓冲拥有。
             BackgroundImageSource = frame;
+            if (!videoPaletteExtracted && activeVideoSettings.ThemeColorMode == ThemeColorModes.Wallpaper)
+            {
+                videoPaletteExtracted = true;
+                wallpaperChanged(activeVideoSettings);
+            }
         }
     }
 
