@@ -175,10 +175,10 @@ internal sealed class VideoWallpaperEngine : IVideoWallpaperEngine
 
         disposed = true;
         try { mediaPlayer.Stop(); } catch (Exception) { /* ignore */ }
-        mediaPlayer.Dispose();
-        libVlc.Dispose();
+        try { mediaPlayer.Dispose(); } catch (Exception) { /* ignore */ }
+        try { libVlc.Dispose(); } catch (Exception) { /* ignore */ }
         FreeNativeBuffer();
-        frontBuffer?.Dispose();
-        backBuffer?.Dispose();
+        try { frontBuffer?.Dispose(); } catch (Exception) { /* ignore */ }
+        try { backBuffer?.Dispose(); } catch (Exception) { /* ignore */ }
     }
 }

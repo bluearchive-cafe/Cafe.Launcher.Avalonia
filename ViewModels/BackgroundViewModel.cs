@@ -411,10 +411,11 @@ public partial class BackgroundViewModel : ViewModelBase, IDisposable
         }
 
         videoEngine.FrameReady -= OnVideoFrameReady;
-        videoEngine.Stop();
-        videoEngine.Dispose();
+        try { videoEngine.Stop(); } catch (Exception) { /* release regardless */ }
+        try { videoEngine.Dispose(); } catch (Exception) { /* release regardless */ }
         videoEngine = null;
         activeVideoSettings = null;
+        videoPaletteExtracted = false;
         BackgroundImageSource = null;
     }
 
