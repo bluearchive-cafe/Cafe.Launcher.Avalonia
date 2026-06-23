@@ -31,6 +31,14 @@ public static class ThemeColorExtractionService
         var targetSize = new PixelSize(
             Math.Max(1, (int)Math.Round(sourceSize.Width * scale)),
             Math.Max(1, (int)Math.Round(sourceSize.Height * scale)));
+
+        // WriteableBitmap (e.g. LibVLCSharp video frames) cannot be resized via CreateScaledBitmap
+        // on some Skia backends (Linux/X11). Lock it and read raw pixels instead, then subsample.
+        if (bitmap is WriteableBitmap wb)
+        {
+            return ExtractPaletteFromWriteableBitmap(wb, sourceSize, targetSize, scale);
+        }
+
         using var scaled = bitmap.CreateScaledBitmap(targetSize, BitmapInterpolationMode.LowQuality);
         using var copy = new WriteableBitmap(targetSize, new Vector(96, 96), PixelFormat.Bgra8888, AlphaFormat.Premul);
         using var frameBuffer = copy.Lock();
@@ -40,6 +48,46 @@ public static class ThemeColorExtractionService
         Marshal.Copy(frameBuffer.Address, buffer, 0, buffer.Length);
 
         return ExtractPaletteFromBgraBuffer(buffer, frameBuffer.Size.Width, frameBuffer.Size.Height, frameBuffer.RowBytes);
+    }
+
+    private static IReadOnlyList<Color> ExtractPaletteFromWriteableBitmap(
+        WriteableBitmap bitmap, PixelSize sourceSize, PixelSize targetSize, double scale)
+    {
+        // Read all source pixels into a managed buffer, then nearest-neighbour subsample into the
+        // target buffer. We copy the whole source once (Lock + Marshal.Copy) rather than
+        // reading individual pixels from the IntPtr, which would require repeated Marshal calls.
+        byte[] sourceBuffer;
+        int sourceStride;
+        using (var fb = bitmap.Lock())
+        {
+            sourceStride = fb.RowBytes;
+            sourceBuffer = new byte[sourceStride * fb.Size.Height];
+            Marshal.Copy(fb.Address, sourceBuffer, 0, sourceBuffer.Length);
+        }
+
+        var targetWidth = targetSize.Width;
+        var targetHeight = targetSize.Height;
+        var targetStride = targetWidth * 4;
+        var targetBuffer = new byte[targetHeight * targetStride];
+
+        for (var y = 0; y < targetHeight; y++)
+        {
+            var srcY = Math.Min((int)(y / scale), sourceSize.Height - 1);
+            var srcRowOffset = srcY * sourceStride;
+            var dstRowOffset = y * targetStride;
+            for (var x = 0; x < targetWidth; x++)
+            {
+                var srcX = Math.Min((int)(x / scale), sourceSize.Width - 1);
+                var srcOffset = srcRowOffset + srcX * 4;
+                var dstOffset = dstRowOffset + x * 4;
+                targetBuffer[dstOffset] = sourceBuffer[srcOffset];
+                targetBuffer[dstOffset + 1] = sourceBuffer[srcOffset + 1];
+                targetBuffer[dstOffset + 2] = sourceBuffer[srcOffset + 2];
+                targetBuffer[dstOffset + 3] = sourceBuffer[srcOffset + 3];
+            }
+        }
+
+        return ExtractPaletteFromBgraBuffer(targetBuffer, targetWidth, targetHeight, targetStride);
     }
 
     public static IReadOnlyList<Color> ExtractPaletteFromBgraBuffer(byte[] buffer, int width, int height, int rowBytes)
