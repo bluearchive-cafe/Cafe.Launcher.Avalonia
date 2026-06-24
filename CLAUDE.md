@@ -18,7 +18,7 @@ dotnet test                                                    # Run all tests
 dotnet test --filter "FullyQualifiedName~VersionComparerTests" # Run a single test class
 ```
 
-Available test classes include `VersionComparerTests`, `LauncherApiClientTests`, `LauncherConstantsTests`, `LauncherSettingsServiceTests`, `SettingsNormalizerTests`, `SettingsEditorTests`, `ToastServiceTests`, `GameInstallationPathTests`, `LocalInstallationStateStoreTests`, `LauncherCoreServiceTests`, `InstallationOperationStateTests`, `LocalizationServiceTests`, `MainWindowViewModelTests`, `DialogsViewModelTests`, `GameDownloadServiceTests`, `PatchUrlGroupServiceTests`, `BestHttpCookieLibraryServiceTests`, `ResourcePanelUidServiceTests`, `ExternalLinkServiceTests`, `ResourcePanelApiClientTests`, `MigrationWizardViewModelTests`, `LevelDbReaderTests`, `OldLauncherDetectionServiceTests`, `LauncherUpdateServiceTests`, `HttpClientFactoryTests`, and `UiStyleContractTests`.
+Available test classes include `VersionComparerTests`, `LauncherApiClientTests`, `LauncherConstantsTests`, `LauncherSettingsServiceTests`, `SettingsNormalizerTests`, `SettingsEditorTests`, `ToastServiceTests`, `GameInstallationPathTests`, `LocalInstallationStateStoreTests`, `LauncherCoreServiceTests`, `InstallationOperationStateTests`, `LocalizationServiceTests`, `MainWindowViewModelTests`, `DialogsViewModelTests`, `GameDownloadServiceTests`, `PatchUrlGroupServiceTests`, `BestHttpCookieLibraryServiceTests`, `ResourcePanelUidServiceTests`, `ExternalLinkServiceTests`, `ResourcePanelApiClientTests`, `MigrationWizardViewModelTests`, `LevelDbReaderTests`, `OldLauncherDetectionServiceTests`, `LauncherUpdateServiceTests`, `HttpClientFactoryTests`, `OfficialHashServiceTests`, and `UiStyleContractTests`.
 
 `UiStyleContractTests` enforces design token contracts: no raw colors in view XAML, proper use of `LauncherSpacing*` tokens, correct overlay Z-index ordering, toast layer using `LauncherConstants.ZIndexToast`, and dynamic accent brushes not replacing theme-specific brushes. Run this whenever touching XAML styles or overlays.
 
@@ -115,13 +115,13 @@ One `MainWindow` (1300×754, non-resizable with MinWidth 1024/MinHeight 640, bor
 | `LauncherSettingsService` | Reads/writes `settings.json` at `%LOCALAPPDATA%\Cafe Launcher\` and handles exact legacy JSON field names |
 | `SettingsNormalizer` | Pure settings-value normalization: enum guards, legacy launch-check values, colors, palette, indexes, paths, and UID trimming |
 | `SettingsEditor` | Snapshot/dirty/discard editing of `LauncherSettings` via `ISettingsEditor`, with separate current and saved snapshots for transactional settings behavior. Uses JSON round-trip deep cloning. Registered as **Singleton** (single-window app, shared editor state). |
-| `GameInstallationPath` | Computes the default game path and normalizes paths to `YostarGames\BlueArchive_JP` |
+| `GameInstallationPath` | Computes the default game path and normalizes paths to `YostarGames\BlueArchive_JP`. Default path is the launcher's own directory (`AppContext.BaseDirectory`) + `YostarGames\BlueArchive_JP`, matching the official launcher's `dirname(exe)` default so both launchers resolve the same location |
 | `LocalInstallationStateStore` | Strictly reads, validates, commits, and deletes local `game-launcher-config.json` + `manifest.json` as one installation state |
 | `GameDownloadService` | Install/update/repair: manifest diff → parallel CDN download (10 concurrent, `.tmp` files, `Range` resume, CRC64 verify, rename on success). Supports download speed throttling, async pause/resume via `TaskCompletionSource`. Implements `IDisposable` — thread-safe CTS management via `activeDownloadLock`. Constructor takes a `GameDownloadService.Dependencies` record grouping all dependencies. |
 | `RemoteManifestService` | Retrieves and caches remote manifest data from CDN, used by `GameDownloadService` |
 | `IFileDownloadService` / `FileDownloadService` | File download abstraction with retry, range support, and progress reporting; used by `GameDownloadService` |
 | `ResourcePanelService` | Service layer for resource panel data operations |
-| `GameLaunchService` | Manifest validation + process launch |
+| `GameLaunchService` | Manifest validation + process launch; gated to `Ready` state |
 | `GameUninstallService` | Guarded uninstall (checks path safety, exe not running, deletes only manifest-listed files) |
 | `LocalizationService` | Inline dictionaries for `en`/`zh-Hans`/`ja`; `auto` resolves via `CultureInfo.CurrentUICulture` |
 | `SystemTrayService` | Avalonia 12 `TrayIcon` + `NativeMenu` for minimize-to-tray |
@@ -137,11 +137,11 @@ One `MainWindow` (1300×754, non-resizable with MinWidth 1024/MinHeight 640, bor
 | `BestHttpCookieLibraryService` | Cookie handling for HTTP requests |
 | `ThemeColorExtractionService` | Extracts dominant colors from wallpaper images for UI theming |
 | `ImageCacheService` | Caches downloaded images (banners, avatars). Implements `IDisposable`. |
-| `ManifestValidationService` | Validates local game files against manifest |
+| `ManifestValidationService` | Validates local game files against manifest by **file size**. `remoteManifest` mode fetches the manifest at the **local** `version`/`basis` and **fails open** (allows launch) when that manifest can't be obtained — matching the official launcher, and avoiding a launch-blocked/nothing-to-repair deadlock |
 | `LauncherUpdateService` | Checks for launcher self-updates via the server proxy endpoint (`ApiConfig.LauncherApiBaseUrl`), supporting stable/beta channels and returning every validated release file in API order. Every file must have a non-empty name, an absolute HTTP/HTTPS URL, and a positive size. |
 | `ExternalLinkService` | Opens external URLs in the default browser |
 | `Crc64Service` | CRC64 hash computation for downloaded file verification |
-| `OfficialHashService` | Official launcher hash algorithm for file verification |
+| `OfficialHashService` | Official launcher `vc` integrity hash (`MD5(values.join(";"))` → Base64). **Field order must match the official manifest's JSON key order**: manifest file = `path, hash, size`; manifest info = `name, version, basis`; game config = `tag, name, params, version`. Guarded by `OfficialHashServiceTests` against real official values |
 | `DiskSpaceService` | Checks available disk space before download/install |
 | `ProcessService` | Checks if game processes are running via `Process.GetProcessesByName` |
 | `VersionComparer` | Static utility — semantic version comparison: returns -1/0/1 for old/equal/new. Not DI-registered; used inline. |
@@ -216,7 +216,7 @@ Persisted fields in `settings.json` and their valid values:
 - `LauncherApiContracts.cs` — All API response DTOs
 - `LauncherStateModels.cs` — String constants for modes/behaviors (`LaunchCheckModes`, `ProxyModes`, `CloseBehaviors`, `LauncherLanguages`, `ThemeModes`, `ThemeColorModes`, `DownloadSpeedLimits`, `PatchUrlGroups`, `UpdateChannels`, `LogLevels`, `BackgroundSources`, `BackgroundFits`, `GameOperationKinds`), plus runtime state objects (`LauncherStatusSnapshot`, `LauncherRemoteState`, `LauncherRuntimeState`, `LauncherSettings`, `GameOperationProgress`, `GameOperationResult`, `ManifestValidationResult`, `GameLaunchResult`), and option types (`SettingOption`, `LanguageOption`, `ThemeOption`) for localized dropdown binding
 - `LocalInstallationStateModels.cs` — Local installation classifications, immutable state snapshots, and commit input records
-- `LocalGameContracts.cs` — `LocalManifest`, `RemoteManifest`, `ManifestFile`, `GameLauncherConfig`
+- `LocalGameContracts.cs` — `LocalManifest`, `RemoteManifest`, `ManifestFile`, `GameLauncherConfig`. **`ManifestFile` property order (`path, hash, size, vc`) is a wire contract**: it defines the serialized JSON key order, and the `vc` integrity hash is computed over those values in the same order (see `OfficialHashService`). Do not reorder — it must match the official launcher's manifest or both launchers reject each other's `manifest.json` as corrupted
 - `PatchUrlGroupDefinition.cs` — Code + host-from/to tuples for CDN URL rewriting
 - `DownloadTaskState.cs` — Serializable download resume state
 - `BannerDot.cs` — Observable carousel dot indicator
@@ -340,6 +340,7 @@ All numeric design values use `StaticResource` keys defined in `App.axaml`:
 ## Important patterns
 
 - **No remote telemetry**: The original Electron launcher sent logs to Aliyun SLS (Simple Log Service). This rewrite explicitly excludes those paths (`/api/launcher/advanced/config`, `/api/open/api/config`). Always keep diagnostics local.
+- **Official launcher coexistence**: This launcher shares the game directory and the `manifest.json` / `game-launcher-config.json` files with the official launcher, so their on-disk formats must stay byte-compatible. Two coupled contracts enforce this and are easy to break accidentally: (1) the `vc` integrity hash field order in `OfficialHashService` / `ManifestFile` (manifest file = `path, hash, size`) — a mismatch makes each launcher flag the other's manifest as corrupted; (2) launch validation **fails open** when the remote manifest can't be fetched (`ManifestValidationService`), matching the official launcher and preventing a launch-blocked/nothing-to-repair loop. Both are guarded by tests (`OfficialHashServiceTests`, `ManifestValidationServiceTests`). Note launch validation checks **size** while repair checks **CRC64** — this asymmetry is inherited from the official launcher.
 - **Path safety**: `GamePathValidator.GetSafePath()` (static helper in `Helpers/GamePathValidator.cs`, used by `GameDownloadService`, `GameUninstallService`, and `ManifestValidationService`) validates that all file operations stay within the game directory — path traversal is rejected.
 - **Download resilience**: CRC64 verification after download, rename `.tmp` → final only on success, up to 3 install-verification retries, CDN failover (primary → backup with retry order).
 - **Async pause**: `GameDownloadService` uses `TaskCompletionSource`-based pause (never blocks threads). `Pause()` creates a pending `TaskCompletionSource`, download loops `await` it, `Resume()` completes it. `Stop()` also completes the TCS to unblock paused awaits before cancellation.
