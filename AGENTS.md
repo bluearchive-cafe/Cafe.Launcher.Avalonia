@@ -36,7 +36,7 @@ CI is GitHub Actions on `windows-latest`, .NET 10.0.x:
 
 ### Single-window desktop app
 
-One `MainWindow` (1300×754, non-resizable, borderless with custom chrome). The ViewModel drives panel visibility through boolean flags (`IsInstallPanelVisible`, `IsControlPanelVisible`, `IsProgressPanelVisible`, `IsSettingsVisible`).
+One `MainWindow` (1300×754 initial size, resizable with MinWidth 1024/MinHeight 640, borderless with custom chrome). Window size/position is not persisted across sessions. The ViewModel drives panel visibility through boolean flags (`IsInstallPanelVisible`, `IsControlPanelVisible`, `IsProgressPanelVisible`, `IsSettingsVisible`).
 
 **View files** (XAML split by concern, all under `Views/`):
 - `MainWindow.axaml` — window shell, title bar, remote content panel, bottom install/progress/control panels

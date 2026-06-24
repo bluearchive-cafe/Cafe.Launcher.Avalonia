@@ -333,15 +333,15 @@ public sealed partial class UiStyleContractTests
     }
 
     [Fact]
-    public void MainWindow_AllowsResizeWithoutMinimumViewportConstraints()
+    public void MainWindow_IsResizableWithMinimumViewportConstraints()
     {
         var document = XDocument.Load(ProjectFile("Views/MainWindow.axaml"));
         var window = document.Root;
 
         Assert.NotNull(window);
         Assert.Equal("True", window.Attribute("CanResize")?.Value);
-        Assert.Null(window.Attribute("MinWidth"));
-        Assert.Null(window.Attribute("MinHeight"));
+        Assert.Equal("1024", window.Attribute("MinWidth")?.Value);
+        Assert.Equal("640", window.Attribute("MinHeight")?.Value);
     }
 
     [Fact]

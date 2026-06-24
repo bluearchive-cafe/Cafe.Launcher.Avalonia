@@ -60,7 +60,7 @@ CI is GitHub Actions on `windows-latest`, .NET 10.0.x:
 
 ### Single-window desktop app
 
-One `MainWindow` (1300×754, non-resizable with MinWidth 1024/MinHeight 640, borderless with custom chrome). The ViewModel is split into composed sub-ViewModels, each owning a distinct concern:
+One `MainWindow` (1300×754 initial size, resizable with MinWidth 1024/MinHeight 640, borderless with custom chrome). Resize support and the minimum-size constraint are pinned by `UiStyleContractTests.MainWindow_IsResizableWithMinimumViewportConstraints`. Window size/position is not persisted across sessions. The ViewModel is split into composed sub-ViewModels, each owning a distinct concern:
 
 | Sub-ViewModel | Concern |
 |---|---|
