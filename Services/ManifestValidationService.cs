@@ -58,13 +58,23 @@ public sealed class ManifestValidationService
                     version, basis, patchUrlGroup, proxyMode, cancellationToken).ConfigureAwait(false);
                 return ValidateFiles(gamePath, remoteManifest.File);
             }
-            catch (InvalidOperationException)
+            catch (Exception exception)
+                when (exception is InvalidOperationException
+                    or HttpRequestException
+                    or TaskCanceledException)
             {
-                return Failed(localizer.T("remoteManifestUrlEmpty"));
-            }
-            catch (Exception exception) when (exception is HttpRequestException or TaskCanceledException)
-            {
-                return Failed(localizer.F("remoteManifestDownloadFailed", exception.Message));
+                // Fail open, matching the official launcher (its getCurrentManifestFiles
+                // returns [] on error, so checkStat passes). When the remote manifest for
+                // the locally recorded version/basis can't be obtained — empty URL, network
+                // failure, or the build was de-listed after a server re-pack — allow the
+                // launch instead of blocking it. Blocking here would otherwise produce an
+                // unfixable "launch blocked / nothing to repair" loop, because repair targets
+                // the latest manifest while this check targets the local-basis manifest.
+                return new ManifestValidationResult
+                {
+                    Success = true,
+                    Message = localizer.T("launchCheckSkipped")
+                };
             }
         }
 
