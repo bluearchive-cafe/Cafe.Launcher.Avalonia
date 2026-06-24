@@ -251,13 +251,6 @@ public sealed partial class LogViewerDialogViewModel : ViewModelBase
                 var severityLabel = match.Groups[2].Value;
                 var title = match.Groups[3].Value;
 
-                // Skip session-boundary entries (shown in toast / crash-recovery UI)
-                if (title == "Session started" || title == "Session ended")
-                {
-                    current = null;
-                    continue;
-                }
-
                 current = new LogEntryDisplay
                 {
                     TimestampText = match.Groups[1].Value,

@@ -168,7 +168,8 @@ public sealed class ImageCacheService : IDisposable
             new Uri(url),
             static uri => new HttpRequestMessage(HttpMethod.Get, uri),
             urlValidator,
-            ct).ConfigureAwait(false);
+            ct,
+            connectionUsesProxy: proxyMode == ProxyModes.System).ConfigureAwait(false);
         response.EnsureSuccessStatusCode();
         if (response.Content.Headers.ContentLength is > MaxImageBytes)
         {

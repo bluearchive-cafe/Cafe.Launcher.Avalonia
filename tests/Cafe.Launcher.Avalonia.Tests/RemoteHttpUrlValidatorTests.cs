@@ -34,6 +34,36 @@ public sealed class RemoteHttpUrlValidatorTests
     }
 
     [Fact]
+    public async Task ValidateAsync_WhenConnectionUsesProxy_BypassesLocalDnsResolution()
+    {
+        // Local DNS for the target host is blocked/poisoned (would resolve to a private
+        // address or fail). A proxy connection must not depend on local resolution.
+        var validator = new RemoteHttpUrlValidator(
+            static (_, _) => throw new InvalidOperationException(
+                "Local DNS must not be resolved when the connection egresses through a proxy."));
+
+        var uri = await validator.ValidateAsync(
+            new Uri("https://api-launcher-jp.yo-star.com/path"),
+            connectionUsesProxy: true);
+
+        Assert.Equal("api-launcher-jp.yo-star.com", uri.Host);
+    }
+
+    [Theory]
+    [InlineData("http://127.0.0.1/file")]
+    [InlineData("http://10.0.0.1/file")]
+    [InlineData("http://192.168.1.1/file")]
+    [InlineData("http://localhost/file")]
+    public async Task ValidateAsync_WhenConnectionUsesProxyAndHostIsLiteralLocalOrPrivate_StillThrows(string url)
+    {
+        var validator = new RemoteHttpUrlValidator(
+            static (_, _) => throw new InvalidOperationException("DNS must not be resolved."));
+
+        await Assert.ThrowsAsync<InvalidOperationException>(
+            () => validator.ValidateAsync(new Uri(url), connectionUsesProxy: true));
+    }
+
+    [Fact]
     public async Task SendAsync_WhenRedirectTargetsLocalhost_BlocksBeforeSecondRequest()
     {
         var handler = new RedirectHandler();

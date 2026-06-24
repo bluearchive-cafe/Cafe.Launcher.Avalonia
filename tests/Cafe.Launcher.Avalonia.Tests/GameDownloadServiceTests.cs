@@ -220,6 +220,7 @@ public sealed class GameDownloadServiceTests
             client,
             () => Task.CompletedTask,
             (_, _) => Task.CompletedTask,
+            false,
             CancellationToken.None);
 
         Assert.True(handler.RangeWasRequested);
@@ -259,6 +260,7 @@ public sealed class GameDownloadServiceTests
             client,
             () => Task.CompletedTask,
             (_, _) => Task.CompletedTask,
+            false,
             CancellationToken.None);
 
         Assert.Equal(2, handler.RequestCount);
@@ -834,6 +836,7 @@ public sealed class GameDownloadServiceTests
             client,
             () => Task.CompletedTask,
             (_, _) => Task.CompletedTask,
+            false,
             CancellationToken.None);
     }
 
@@ -873,6 +876,7 @@ public sealed class GameDownloadServiceTests
             HttpClient httpClient,
             Func<Task> pauseAwaiter,
             Func<long, CancellationToken, Task> onProgressAsync,
+            bool connectionUsesProxy,
             CancellationToken cancellationToken)
         {
             await pauseAwaiter();
@@ -904,6 +908,7 @@ public sealed class GameDownloadServiceTests
             HttpClient httpClient,
             Func<Task> pauseAwaiter,
             Func<long, CancellationToken, Task> onProgressAsync,
+            bool connectionUsesProxy,
             CancellationToken cancellationToken)
         {
             DownloadStarted.TrySetResult();
@@ -931,6 +936,7 @@ public sealed class GameDownloadServiceTests
             HttpClient httpClient,
             Func<Task> pauseAwaiter,
             Func<long, CancellationToken, Task> onProgressAsync,
+            bool connectionUsesProxy,
             CancellationToken cancellationToken)
         {
             InvocationCount++;
@@ -966,6 +972,7 @@ public sealed class GameDownloadServiceTests
             HttpClient httpClient,
             Func<Task> pauseAwaiter,
             Func<long, CancellationToken, Task> onProgressAsync,
+            bool connectionUsesProxy,
             CancellationToken cancellationToken)
         {
             var started = Interlocked.Increment(ref startedCount);
@@ -1020,6 +1027,7 @@ public sealed class GameDownloadServiceTests
             HttpClient httpClient,
             Func<Task> pauseAwaiter,
             Func<long, CancellationToken, Task> onProgressAsync,
+            bool connectionUsesProxy,
             CancellationToken cancellationToken)
         {
             InvocationCount++;

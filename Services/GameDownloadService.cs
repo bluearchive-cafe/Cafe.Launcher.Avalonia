@@ -724,6 +724,7 @@ public sealed class GameDownloadService : IDisposable
                             IsPaused = IsPaused
                         });
                     },
+                    proxyMode == ProxyModes.System,
                     cancellationToken);
             }
             finally

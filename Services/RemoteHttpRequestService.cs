@@ -15,13 +15,14 @@ internal static class RemoteHttpRequestService
         Uri initialUri,
         Func<Uri, HttpRequestMessage> createRequest,
         RemoteHttpUrlValidator urlValidator,
-        CancellationToken cancellationToken)
+        CancellationToken cancellationToken,
+        bool connectionUsesProxy = false)
     {
         var currentUri = initialUri;
         for (var redirectCount = 0; ; redirectCount++)
         {
             currentUri = await urlValidator
-                .ValidateAsync(currentUri, cancellationToken)
+                .ValidateAsync(currentUri, connectionUsesProxy, cancellationToken)
                 .ConfigureAwait(false);
 
             using var request = createRequest(currentUri);

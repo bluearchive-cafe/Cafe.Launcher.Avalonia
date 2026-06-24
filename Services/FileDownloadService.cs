@@ -32,6 +32,8 @@ public interface IFileDownloadService
     /// <param name="pauseAwaiter">Cooperative pause: awaited inside the download loop.</param>
     /// <param name="onProgressAsync">Async progress callback, called with byte count per read.
     /// Throttling/speed limiting can be applied here since it runs inside the download loop.</param>
+    /// <param name="connectionUsesProxy">True when the supplied <paramref name="httpClient"/> egresses
+    /// through a proxy, so SSRF URL validation must delegate DNS resolution to the proxy.</param>
     /// <param name="cancellationToken">Propagates cancellation.</param>
     Task DownloadAsync(
         string targetTempPath,
@@ -43,6 +45,7 @@ public interface IFileDownloadService
         HttpClient httpClient,
         Func<Task> pauseAwaiter,
         Func<long, CancellationToken, Task> onProgressAsync,
+        bool connectionUsesProxy,
         CancellationToken cancellationToken);
 }
 
@@ -81,6 +84,7 @@ public sealed class FileDownloadService : IFileDownloadService
         HttpClient httpClient,
         Func<Task> pauseAwaiter,
         Func<long, CancellationToken, Task> onProgressAsync,
+        bool connectionUsesProxy,
         CancellationToken cancellationToken)
     {
         var targetDirectory = Path.GetDirectoryName(targetTempPath);
@@ -126,7 +130,8 @@ public sealed class FileDownloadService : IFileDownloadService
                         return request;
                     },
                     urlValidator,
-                    cancellationToken).ConfigureAwait(false);
+                    cancellationToken,
+                    connectionUsesProxy).ConfigureAwait(false);
                 response.EnsureSuccessStatusCode();
 
                 var fileMode = FileMode.Create;
