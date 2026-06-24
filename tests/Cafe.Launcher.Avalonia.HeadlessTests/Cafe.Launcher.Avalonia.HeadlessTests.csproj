@@ -11,6 +11,14 @@
     <EnforceCodeStyleInBuild>true</EnforceCodeStyleInBuild>
     <TreatWarningsAsErrors>true</TreatWarningsAsErrors>
     <IsPackable>false</IsPackable>
+    <!--
+      xunit.v3 builds this test project as an executable (Microsoft.Testing.Platform host).
+      When the CI release build adds a RID (-r win-x64), referencing the self-contained main
+      app trips NETSDK1151 (non-self-contained exe references self-contained exe). The test
+      host only needs the app's managed assemblies, not its bundled runtime, so allow the
+      mismatch. (The xunit 2.x Tests project is a library and is unaffected.)
+    -->
+    <ValidateExecutableReferencesMatchSelfContained>false</ValidateExecutableReferencesMatchSelfContained>
   </PropertyGroup>
 
   <ItemGroup>
