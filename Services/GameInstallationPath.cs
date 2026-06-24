@@ -8,9 +8,10 @@ public sealed class GameInstallationPath
 {
     public string GetDefaultGamePath()
     {
-        var appDir = AppContext.BaseDirectory;
-        var parent = Directory.GetParent(appDir)?.FullName ?? appDir;
-        return NormalizeGamePath(parent);
+        // Match the official launcher (path.dirname(app.getPath("exe"))): default the game
+        // location to the launcher's own directory so both launchers resolve the same path
+        // and don't install the game twice in different places.
+        return NormalizeGamePath(AppContext.BaseDirectory);
     }
 
     public string NormalizeGamePath(string path)
