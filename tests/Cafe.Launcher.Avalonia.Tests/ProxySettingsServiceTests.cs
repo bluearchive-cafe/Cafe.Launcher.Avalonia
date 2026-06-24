@@ -32,6 +32,39 @@ public sealed class ProxySettingsServiceTests
         Assert.True(result.IsBypassed(new Uri("http://localhost")));
     }
 
+    [Fact]
+    public async Task CreateProxyAsync_WhenBypassListContainsWildcards_DoesNotThrowAndBypassesMatches()
+    {
+        var service = new ProxySettingsService(() => new SystemProxySettings(
+            "http://proxy.example.invalid:8080",
+            ["*zhihu.com", "*.bilibili.com", "192.168.*", "<local>", "<-loopback>"]));
+
+        var proxy = Assert.IsType<WebProxy>(await service.CreateProxyAsync(ProxyModes.System));
+
+        // IsBypassed forces WebProxy.UpdateRegexList(), which previously threw
+        // RegexParseException on the raw "*zhihu.com" wildcard.
+        Assert.True(proxy.IsBypassed(new Uri("https://www.zhihu.com")));
+        Assert.True(proxy.IsBypassed(new Uri("https://api.bilibili.com")));
+        Assert.True(proxy.IsBypassed(new Uri("http://192.168.1.1")));
+        Assert.Equal(
+            new Uri("http://proxy.example.invalid:8080"),
+            proxy.GetProxy(new Uri("https://api-launcher-jp.yo-star.com")));
+    }
+
+    [Theory]
+    [InlineData("*zhihu.com", ".*zhihu\\.com")]
+    [InlineData("*.bilibili.com", ".*\\.bilibili\\.com")]
+    [InlineData("192.168.*", "192\\.168\\..*")]
+    [InlineData("host?.example", "host.\\.example")]
+    [InlineData("plain.example.com", "plain\\.example\\.com")]
+    [InlineData("<local>", null)]
+    [InlineData("<-loopback>", null)]
+    [InlineData("   ", null)]
+    public void ConvertBypassEntryToRegex_TranslatesShellWildcards(string entry, string? expected)
+    {
+        Assert.Equal(expected, ProxySettingsService.ConvertBypassEntryToRegex(entry));
+    }
+
     [Theory]
     [InlineData("proxy.example.invalid:8080", "http://proxy.example.invalid:8080")]
     [InlineData("https://proxy.example.invalid:8443", "https://proxy.example.invalid:8443")]

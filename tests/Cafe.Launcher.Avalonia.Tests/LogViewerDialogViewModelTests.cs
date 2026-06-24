@@ -110,6 +110,29 @@ public sealed class LogViewerDialogViewModelTests : IDisposable
     }
 
     [Fact]
+    public async Task OpenCommand_WithInfoEntries_ShowsThemIncludingSessionBoundaries()
+    {
+        await File.WriteAllLinesAsync(
+            logger.LogFilePath,
+            [
+                "2026-06-22T00:27:57.4750472+08:00 [INF] Session started",
+                "Version: 1.0.0  CommitSha: abc1234",
+                "2026-06-22T00:28:00.0000000+08:00 [INF] Wallpaper applied",
+                "2026-06-22T00:29:00.0000000+08:00 [INF] Session ended"
+            ]);
+        var viewModel = CreateViewModel();
+
+        await viewModel.OpenCommand.ExecuteAsync(null);
+        viewModel.SetFilterInfoCommand.Execute(null);
+
+        Assert.Equal(3, viewModel.FilteredEntries.Count);
+        Assert.All(viewModel.FilteredEntries, e => Assert.Equal(LogEntrySeverity.Info, e.Severity));
+        Assert.Contains(viewModel.FilteredEntries, e => e.Title == "Session started");
+        Assert.Contains(viewModel.FilteredEntries, e => e.Title == "Wallpaper applied");
+        Assert.Contains(viewModel.FilteredEntries, e => e.Title == "Session ended");
+    }
+
+    [Fact]
     public void SetFilterAll_ResetsSeverityFilter()
     {
         var viewModel = CreateViewModel();

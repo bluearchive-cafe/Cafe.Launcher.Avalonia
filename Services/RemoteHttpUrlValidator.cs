@@ -22,7 +22,7 @@ public sealed class RemoteHttpUrlValidator
         this.resolveHostAsync = resolveHostAsync;
     }
 
-    public async Task<Uri> ValidateAsync(
+    public Task<Uri> ValidateAsync(
         string url,
         CancellationToken cancellationToken = default)
     {
@@ -31,11 +31,17 @@ public sealed class RemoteHttpUrlValidator
             throw new InvalidOperationException("Remote URL must be absolute.");
         }
 
-        return await ValidateAsync(uri, cancellationToken).ConfigureAwait(false);
+        return ValidateAsync(uri, cancellationToken);
     }
+
+    public Task<Uri> ValidateAsync(
+        Uri uri,
+        CancellationToken cancellationToken = default) =>
+        ValidateAsync(uri, connectionUsesProxy: false, cancellationToken);
 
     public async Task<Uri> ValidateAsync(
         Uri uri,
+        bool connectionUsesProxy,
         CancellationToken cancellationToken = default)
     {
         if (uri.Scheme is not ("http" or "https"))
@@ -59,16 +65,28 @@ public sealed class RemoteHttpUrlValidator
             throw new InvalidOperationException("Remote URL resolves to a blocked host.");
         }
 
-        IPAddress[] addresses;
         if (IPAddress.TryParse(uri.Host, out var literalAddress))
         {
-            addresses = [literalAddress];
-        }
-        else
-        {
-            addresses = await resolveHostAsync(uri.IdnHost, cancellationToken).ConfigureAwait(false);
+            if (!IsPublicAddress(literalAddress))
+            {
+                throw new InvalidOperationException("Remote URL resolves to a blocked network address.");
+            }
+
+            return uri;
         }
 
+        // When the request egresses through a user-configured proxy, the launcher never opens a
+        // socket to a locally-resolved address — the proxy performs DNS resolution and makes the
+        // connection. Resolving DNS locally here would be meaningless (we never dial that IP) and
+        // actively harmful: a proxy is enabled precisely in networks where local DNS for the
+        // target host is blocked or poisoned, so this SSRF guard would reject requests the proxy
+        // can service. The scheme/port/userinfo/localhost-name/literal-IP checks above still apply.
+        if (connectionUsesProxy)
+        {
+            return uri;
+        }
+
+        var addresses = await resolveHostAsync(uri.IdnHost, cancellationToken).ConfigureAwait(false);
         if (addresses.Length == 0 || addresses.Any(address => !IsPublicAddress(address)))
         {
             throw new InvalidOperationException("Remote URL resolves to a blocked network address.");
