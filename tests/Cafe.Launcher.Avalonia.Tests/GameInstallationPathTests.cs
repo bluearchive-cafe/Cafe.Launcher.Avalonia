@@ -8,6 +8,21 @@ public sealed class GameInstallationPathTests
     private readonly GameInstallationPath installationPath = new();
 
     [Fact]
+    public void GetDefaultGamePath_UsesLauncherDirectory_MatchingOfficialLauncher()
+    {
+        // Official launcher defaults to dirname(exe)\YostarGames\BlueArchive_JP. The rewrite
+        // must resolve the same location so both launchers don't install the game twice.
+        var expected = Path.GetFullPath(Path.Combine(
+            Path.TrimEndingDirectorySeparator(AppContext.BaseDirectory),
+            GamePaths.RootFolderName,
+            GamePaths.GameFolderName));
+
+        var result = installationPath.GetDefaultGamePath();
+
+        Assert.Equal(expected, result);
+    }
+
+    [Fact]
     public void NormalizeGamePath_WhenParentPathProvided_AppendsLauncherFolders()
     {
         var input = Path.Combine(Path.GetTempPath(), Guid.NewGuid().ToString("N"));

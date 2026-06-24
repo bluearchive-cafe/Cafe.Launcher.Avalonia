@@ -80,6 +80,11 @@ public sealed class GameUninstallService
                 throw new IOException(deletedState.Error);
             }
 
+            // The download resume marker lives in LOCALAPPDATA and is not under the game
+            // directory, so the manifest-driven file deletion above never touches it. Remove
+            // it best-effort so a finished uninstall leaves no stale resume state behind.
+            TryDeleteDownloadState();
+
             await diagnostics.MessageAsync(
                 "Game uninstall completed.",
                 $"path: {gamePath}{Environment.NewLine}files: {files.Count}",
@@ -145,6 +150,25 @@ public sealed class GameUninstallService
             Message = localizer.F("readyToUninstall", localGame.Manifest?.Files.Count ?? 0),
             AffectedFileCount = (localGame.Manifest?.Files.Count ?? 0) + 2
         };
+    }
+
+    private static void TryDeleteDownloadState()
+    {
+        try
+        {
+            var path = Path.Combine(
+                Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData),
+                LauncherConstants.ProductName,
+                GamePaths.DownloadStateFileName);
+            if (File.Exists(path))
+            {
+                File.Delete(path);
+            }
+        }
+        catch (Exception exception) when (exception is IOException or UnauthorizedAccessException)
+        {
+            // Best-effort cleanup of the resume marker; ignore failures.
+        }
     }
 
     private static bool IsSystemProtectPath(string path)

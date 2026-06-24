@@ -72,7 +72,7 @@ public sealed class GameDownloadService : IDisposable
         downloadStateFilePath = Path.Combine(
             Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData),
             LauncherConstants.ProductName,
-            "download_state.json");
+            GamePaths.DownloadStateFileName);
     }
 
     internal GameDownloadService(Dependencies deps, string downloadStateFilePath)

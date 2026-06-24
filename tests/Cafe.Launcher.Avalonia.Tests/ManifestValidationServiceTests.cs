@@ -154,8 +154,10 @@ public sealed class ManifestValidationServiceTests : IDisposable
     }
 
     [Fact]
-    public async Task ValidateAsync_WhenRemoteManifestUrlIsEmpty_ReturnsFailure()
+    public async Task ValidateAsync_WhenRemoteManifestUrlIsEmpty_AllowsLaunch()
     {
+        // Fail open like the official launcher: an unobtainable remote manifest must not
+        // block launch, otherwise it deadlocks against a repair that targets the latest.
         using var apiClient = CreateApiClient(new RemoteManifestHandler("", "{}"));
         var service = CreateService(apiClient);
 
@@ -166,12 +168,13 @@ public sealed class ManifestValidationServiceTests : IDisposable
             PatchUrlGroups.Official,
             ProxyModes.Direct);
 
-        Assert.False(result.Success);
+        Assert.True(result.Success);
     }
 
     [Fact]
-    public async Task ValidateAsync_WhenRemoteRequestFails_ReturnsFailure()
+    public async Task ValidateAsync_WhenRemoteRequestFails_AllowsLaunch()
     {
+        // Network failure (or a de-listed local-basis build) must fail open, not block launch.
         using var apiClient = CreateApiClient(new ThrowingHandler());
         var service = CreateService(apiClient);
 
@@ -182,7 +185,7 @@ public sealed class ManifestValidationServiceTests : IDisposable
             PatchUrlGroups.Official,
             ProxyModes.Direct);
 
-        Assert.False(result.Success);
+        Assert.True(result.Success);
     }
 
     private static LocalInstallationState CreateLocalState(params ManifestFile[] files) =>

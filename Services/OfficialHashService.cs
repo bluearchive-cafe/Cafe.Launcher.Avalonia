@@ -22,7 +22,13 @@ public static class OfficialHashService
 
     public static string GetManifestFileHash(ManifestFile file)
     {
-        return GetObjectHash([file.Path, file.Size, file.Hash]);
+        // Field order MUST match the official manifest's JSON key order (path, hash, size).
+        // The official launcher computes vc = MD5(Object.values(file).join(";")) over the
+        // remote file object, whose keys are emitted in path/hash/size order. The Vc field
+        // order in the serialized ManifestFile (see Models/LocalGameContracts.cs) must stay
+        // in lockstep so both launchers read each other's manifest.json without flagging it
+        // corrupted.
+        return GetObjectHash([file.Path, file.Hash, file.Size]);
     }
 
     public static string GetGameConfigHash(GameLauncherConfig config)

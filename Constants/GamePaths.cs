@@ -12,5 +12,6 @@ public static class GamePaths
     public const string ManifestFileName = "manifest.json";
     public const string GameConfigFileName = "game-launcher-config.json";
     public const string LauncherSettingsFileName = "settings.json";
+    public const string DownloadStateFileName = "download_state.json";
     public const string OldLauncherAppName = "BlueArchive_JP_Gamelauncher";
 }
