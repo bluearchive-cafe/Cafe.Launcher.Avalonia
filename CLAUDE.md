@@ -18,7 +18,7 @@ dotnet test                                                    # Run all tests
 dotnet test --filter "FullyQualifiedName~VersionComparerTests" # Run a single test class
 ```
 
-Available test classes include `VersionComparerTests`, `LauncherApiClientTests`, `LauncherConstantsTests`, `LauncherSettingsServiceTests`, `SettingsNormalizerTests`, `SettingsEditorTests`, `ToastServiceTests`, `GameInstallationPathTests`, `LocalInstallationStateStoreTests`, `LauncherCoreServiceTests`, `InstallationOperationStateTests`, `LocalizationServiceTests`, `MainWindowViewModelTests`, `DialogsViewModelTests`, `GameDownloadServiceTests`, `PatchUrlGroupServiceTests`, `BestHttpCookieLibraryServiceTests`, `ResourcePanelUidServiceTests`, `ExternalLinkServiceTests`, `ResourcePanelApiClientTests`, `MigrationWizardViewModelTests`, `LevelDbReaderTests`, `OldLauncherDetectionServiceTests`, `LauncherUpdateServiceTests`, `HttpClientFactoryTests`, `OfficialHashServiceTests`, and `UiStyleContractTests`.
+Available test classes include `VersionComparerTests`, `LauncherApiClientTests`, `LauncherConstantsTests`, `LauncherSettingsServiceTests`, `SettingsNormalizerTests`, `SettingsEditorTests`, `ToastServiceTests`, `GameInstallationPathTests`, `LocalInstallationStateStoreTests`, `LauncherCoreServiceTests`, `InstallationOperationStateTests`, `LocalizationServiceTests`, `MainWindowViewModelTests`, `DialogsViewModelTests`, `GameDownloadServiceTests`, `PatchUrlGroupServiceTests`, `BestHttpCookieLibraryServiceTests`, `ResourcePanelUidServiceTests`, `ExternalLinkServiceTests`, `ResourcePanelApiClientTests`, `LauncherUpdateServiceTests`, `HttpClientFactoryTests`, `OfficialHashServiceTests`, and `UiStyleContractTests`.
 
 `UiStyleContractTests` enforces design token contracts: no raw colors in view XAML, proper use of `LauncherSpacing*` tokens, correct overlay Z-index ordering, toast layer using `LauncherConstants.ZIndexToast`, and dynamic accent brushes not replacing theme-specific brushes. Run this whenever touching XAML styles or overlays.
 
@@ -75,7 +75,6 @@ One `MainWindow` (1300×754 initial size, resizable with MinWidth 1024/MinHeight
 | `SettingsAppearanceViewModel` | Theme-color and background UI projections, palette extraction, Avalonia theme resources |
 | `SettingsOptionsViewModel` | Localized setting option collections and settings-summary display resolvers |
 | `ResourcePanelViewModel` | Resource panel (UID-based game resource display) |
-| `MigrationWizardViewModel` | First-launch migration wizard; edits migration values through its own `ISettingsEditor` |
 
 **View files** (XAML split by concern, all under `Views/`):
 - `MainWindow.axaml` — window shell, title bar, remote content panel, bottom install/progress/control panels
@@ -89,7 +88,7 @@ One `MainWindow` (1300×754 initial size, resizable with MinWidth 1024/MinHeight
 2. **App.axaml.cs** — On framework init: builds DI container via `ServiceConfiguration.AddLauncherServices()`, resolves `MainWindowViewModel`, creates `MainWindow`, wires `ClickCodeService`, `SystemTrayService`. Starts a background thread listening for `EventWaitHandle` signals to restore window from tray.
 3. **App.axaml** — Light/Dark `ThemeDictionaries` with custom `Launcher*` brushes, FluentTheme + MaterialIconStyles.
 
-**Composition root**: `ServiceConfiguration.AddLauncherServices()` is the DI configuration — it registers all services with `Microsoft.Extensions.DependencyInjection`. The container is built in `App.axaml.cs` via `ServiceCollection.BuildServiceProvider()`. Services are registered as `AddSingleton`; ViewModels are a mix: `SettingsViewModel`, `ShellViewModel`, `RemoteContentViewModel`, `DialogsViewModel`, and `GameOperationsViewModel` are `AddSingleton` (shared state), while `ResourcePanelViewModel`, `BackgroundViewModel`, `ToastHostViewModel`, `WindowChromeViewModel`, `MigrationWizardViewModel`, `MainWindowViewModel`, and `LogViewerDialogViewModel` are `AddTransient` (fresh instance per resolution). Thread-safe disposal order for IDisposable services is defined by reverse registration order (see disposal order section below).
+**Composition root**: `ServiceConfiguration.AddLauncherServices()` is the DI configuration — it registers all services with `Microsoft.Extensions.DependencyInjection`. The container is built in `App.axaml.cs` via `ServiceCollection.BuildServiceProvider()`. Services are registered as `AddSingleton`; ViewModels are a mix: `SettingsViewModel`, `ShellViewModel`, `RemoteContentViewModel`, `DialogsViewModel`, and `GameOperationsViewModel` are `AddSingleton` (shared state), while `ResourcePanelViewModel`, `BackgroundViewModel`, `ToastHostViewModel`, `WindowChromeViewModel`, `MainWindowViewModel`, and `LogViewerDialogViewModel` are `AddTransient` (fresh instance per resolution). Thread-safe disposal order for IDisposable services is defined by reverse registration order (see disposal order section below).
 
 **ViewModel coordination**: Sub-ViewModels communicate with `MainWindowViewModel` through two mechanisms:
 - **Delegates** — `MainWindowViewModel.ConfigureViewModel()` sets `Func<>` / `Func<Task>` delegates on children (e.g. `SettingsViewModel.PickGameFolderAsync`, `SettingsViewModel.PreviewAppearanceAsync`). These let children call back into parent capabilities such as native pickers and appearance previews.
@@ -146,8 +145,6 @@ One `MainWindow` (1300×754 initial size, resizable with MinWidth 1024/MinHeight
 | `ProcessService` | Checks if game processes are running via `Process.GetProcessesByName` |
 | `VersionComparer` | Static utility — semantic version comparison: returns -1/0/1 for old/equal/new. Not DI-registered; used inline. |
 | `ClickCodeService` | Saves install attribution code (`clickCode`) on first launch |
-| `OldLauncherDetectionService` | Detects old Electron launcher install + reads its localStorage (LevelDB) for migration |
-| `LevelDbReader` | Best-effort byte-level scanner for Chrome localStorage LevelDB files (.ldb/.log) |
 | `GamePathValidator` | Validates file operations stay within the game directory (path traversal rejection) |
 | `ServiceConfiguration` | DI container — registers all services and ViewModels via `AddLauncherServices()`. Services mostly singleton; `ISettingsEditor` singleton; ViewModels mostly transient; `DialogsViewModel` singleton. |
 
@@ -164,12 +161,6 @@ One `MainWindow` (1300×754 initial size, resizable with MinWidth 1024/MinHeight
 5. `GameDownloadService` — disposed last
 
 The DI container calls `Dispose()` on these in reverse registration order when `ServiceProvider.Dispose()` is called in `Program.RunSession`'s finally block. The same `UnifiedLogger` instance serves both crash handling and application logging (shared via `Program.PreDiLogger`).
-
-### First-launch migration
-
-On first launch, `MainWindowViewModel` uses `OldLauncherDetectionService` to check for a previous Electron launcher (`BlueArchive_JP_Gamelauncher`). If detected, it reads settings (game path, proxy mode, close behavior, clickCode) from the old launcher's Chromium localStorage via `LevelDbReader`, which performs a byte-level scan of `.ldb` and `.log` files. The `MigrationWizardViewModel` presents a dialog (rendered in `MainWindowDialogsOverlay.axaml`) letting the user review and adjust detected settings before applying them. After completion, `hasCompletedFirstLaunchWizard` is persisted to `true` to prevent re-running.
-
-`OriginalLauncherMigrationService` is a **static helper** (not a DI service) — `TryGetGamePath()` reads the game path from the old Yostar launcher's localStorage for non-interactive first-run migration. Called directly by `MainWindowViewModel.InitializeAsync()`, bypassing the wizard UI.
 
 ### Local files (`%LOCALAPPDATA%\Cafe Launcher\`)
 
@@ -207,7 +198,6 @@ Persisted fields in `settings.json` and their valid values:
 | Theme color palette | `themeColorPalette` | JSON array of hex strings (extracted from wallpaper) |
 | Selected palette index | `selectedThemeColorPaletteIndex` | Integer index into `themeColorPalette` |
 | Resource panel UID | `resourcePanelUid` | Player UID string |
-| First launch wizard | `hasCompletedFirstLaunchWizard` | `true`/`false` |
 | Update channel | `updateChannel` | `stable`, `beta` |
 | Log level | `logLevel` | `verbose`, `debug`, `information`, `warning`, `error`, `fatal` |
 
@@ -232,7 +222,7 @@ Constants are split into 4 focused files under `Constants/`:
 - **`LauncherConstants`** — Cross-cutting UI/product constants: `ProductName`, `DefaultThemeColor` (`#FF2E7DF6`), `ZIndexToast` (`1000`), `OfficialWebsiteUrl`, `GitHubReleaseRepositoryUrl`.
 - **`ApiConfig`** — API endpoints, authentication, and release repository metadata: `ApiBaseUrl` (`https://api-launcher-jp.yo-star.com`), `ResourcePanelApiBaseUrl` (`https://api.bluearchive.cafe`), `AuthorizationSalt`, `YostarAuthorizationVersion` (`"1.7.2"` — the version sent in API auth headers to match the official launcher), `GitHubReleaseRepositorySlug` (`bluearchive-cafe/Cafe.Launcher.Avalonia_Release`), `GitHubReleaseRepositoryUrl`, `LauncherApiBaseUrl` (server proxy for launcher self-updates: `https://api-cafe-launcher.saibamidori.com/`), `LauncherReleasesPath` (`/api/launcher/releases`).
 - **`BuildInfo`** — Build-time metadata: `LauncherVersion` (reads from `AssemblyInformationalVersionAttribute`, matches `<VersionPrefix>` in the `.csproj`), `CommitSha` (reads from `AssemblyMetadataAttribute`, embedded by the `AddGitCommitMetadata` MSBuild target), `BuildConfiguration` (compile-time `#if DEBUG`), `AvaloniaVersion` (must be kept in sync with the `.csproj` `PackageReference` for Avalonia).
-- **`GamePaths`** — Path/filename conventions: `GameTag` (`"BlueArchive_JP"`), `RootFolderName` (`"YostarGames"`), `GameFolderName` (`"BlueArchive_JP"`), `ManifestFileName`, `GameConfigFileName`, `LauncherSettingsFileName`, `OldLauncherAppName` (`"BlueArchive_JP_Gamelauncher"`).
+- **`GamePaths`** — Path/filename conventions: `GameTag` (`"BlueArchive_JP"`), `RootFolderName` (`"YostarGames"`), `GameFolderName` (`"BlueArchive_JP"`), `ManifestFileName`, `GameConfigFileName`, `LauncherSettingsFileName`.
 
 ### Patch URL groups
 
@@ -350,7 +340,7 @@ All numeric design values use `StaticResource` keys defined in `App.axaml`:
 - **XAML extraction**: Large XAML blocks (styles, overlays) are extracted into separate `.axaml` files under `Views/` and referenced via `<StyleInclude>` or `Classes` attributes. The main `MainWindow.axaml` keeps only the window shell and content grid.
 - **Conventional commits**: Release changelog generation groups commits by `feat:`/`fix:`/`refactor:`/`perf:` prefixes. Use these prefixes for commit messages to get clean changelogs.
 - **AGENTS.md**: A parallel instruction file for Codex exists at the repo root. It covers the same architecture and should be kept in sync when significant structural changes are made.
-- *****REMOVED***.md**: Analysis report comparing this launcher to the original Electron launcher, covering migration decisions and intentionally excluded features.
+- *****REMOVED***.md**: Analysis report comparing this launcher to the original Electron launcher, covering implementation differences and intentionally excluded features.
 - **VSCode**: `.vscode/launch.json` has `build`/`publish`/`watch` tasks and `.NET Core Launch`/`Attach` configurations.
 
 <!-- superpowers-zh:begin (do not edit between these markers) -->

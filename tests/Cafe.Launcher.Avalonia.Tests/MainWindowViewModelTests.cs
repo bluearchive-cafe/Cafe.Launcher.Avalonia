@@ -977,7 +977,6 @@ public sealed class MainWindowViewModelTests : IDisposable
         var modified = LauncherSettings.CreateDefaults();
         modified.GamePath = Path.Combine(tempDir, "custom-game");
         modified.ThemeMode = ThemeModes.Dark;
-        modified.HasCompletedFirstLaunchWizard = true;
         await settingsService.SaveAsync(modified);
         using var viewModel = await CreateViewModelAsync(
             new CountingCoreService(CreateSnapshot()),
@@ -990,7 +989,6 @@ public sealed class MainWindowViewModelTests : IDisposable
         var defaults = LauncherSettings.CreateDefaults();
         Assert.Equal(defaults.GamePath, persisted.GamePath);
         Assert.Equal(defaults.ThemeMode, persisted.ThemeMode);
-        Assert.Equal(defaults.HasCompletedFirstLaunchWizard, persisted.HasCompletedFirstLaunchWizard);
         Assert.False(viewModel.Dialogs.IsCrashRecoveryVisible);
     }
 
@@ -1015,9 +1013,6 @@ public sealed class MainWindowViewModelTests : IDisposable
     {
         settingsService ??= new LauncherSettingsService(
             Path.Combine(tempDir, Guid.NewGuid().ToString("N"), "settings.json"));
-        var testSettings = await settingsService.ReadAsync();
-        testSettings.HasCompletedFirstLaunchWizard = true;
-        await settingsService.SaveAsync(testSettings);
         var localInstallationStateStore = new LocalInstallationStateStore();
         var diagnostics = new LocalDiagnostics();
         var localizationService = new LocalizationService();
@@ -1100,7 +1095,6 @@ public sealed class MainWindowViewModelTests : IDisposable
             localizationService,
             toastService,
             diagnostics,
-            new OldLauncherDetectionService(),
             testLogger,
             shellViewModel,
             backgroundViewModel,
@@ -1110,10 +1104,7 @@ public sealed class MainWindowViewModelTests : IDisposable
             toastHostViewModel,
             windowChromeViewModel,
             settingsViewModel,
-            resourcePanelViewModel,
-            new MigrationWizardViewModel(
-                new SettingsEditor(),
-                new SettingsOptionsViewModel(localizationService, diskSpaceService)));
+            resourcePanelViewModel);
     }
 
     private LauncherStatusSnapshot CreateSnapshot()

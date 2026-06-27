@@ -194,10 +194,6 @@ public sealed partial class LauncherSettings : ObservableObject
     private string resourcePanelUid = "";
 
     [ObservableProperty]
-    [property: JsonPropertyName("hasCompletedFirstLaunchWizard")]
-    private bool hasCompletedFirstLaunchWizard;
-
-    [ObservableProperty]
     [property: JsonPropertyName("updateChannel")]
     private string updateChannel = UpdateChannels.Stable;
 

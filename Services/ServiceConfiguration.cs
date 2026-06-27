@@ -74,9 +74,6 @@ public static class ServiceConfiguration
                 sp.GetRequiredService<LocalizationService>(),
                 sp.GetRequiredService<GameInstallationPath>())));
 
-        // ── Migration services ────────────────────────────────────────────
-        services.AddSingleton<OldLauncherDetectionService>();
-
         // ── ViewModels (transient unless explicitly registered otherwise) ─
         services.AddSingleton<SettingsViewModel>();
         services.AddTransient<ResourcePanelViewModel>();
@@ -87,7 +84,6 @@ public static class ServiceConfiguration
         services.AddSingleton<GameOperationsViewModel>();
         services.AddTransient<ToastHostViewModel>();
         services.AddTransient<WindowChromeViewModel>();
-        services.AddTransient<MigrationWizardViewModel>();
         services.AddTransient<MainWindowViewModel>();
 
         return services;

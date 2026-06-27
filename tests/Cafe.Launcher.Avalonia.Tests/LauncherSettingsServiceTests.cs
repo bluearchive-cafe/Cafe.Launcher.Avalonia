@@ -62,6 +62,29 @@ public sealed class LauncherSettingsServiceTests : IDisposable
     }
 
     [Fact]
+    public async Task ReadAsync_WhenRemovedFirstLaunchWizardFieldExists_IgnoresUnknownField()
+    {
+        await File.WriteAllTextAsync(
+            settingsPath,
+            """
+            {
+              "hasCompletedFirstLaunchWizard": true,
+              "resourcePanelUid": "LEGACY-COMPAT-UID"
+            }
+            """);
+        var service = new LauncherSettingsService(settingsPath);
+
+        var exception = await Record.ExceptionAsync(async () =>
+        {
+            LauncherSettings settings = await service.ReadAsync();
+            Assert.NotNull(settings);
+            Assert.Equal("LEGACY-COMPAT-UID", settings.ResourcePanelUid);
+        });
+
+        Assert.Null(exception);
+    }
+
+    [Fact]
     public async Task ReadAsync_WhenValuesInvalid_NormalizesToDefaults()
     {
         await File.WriteAllTextAsync(
@@ -190,7 +213,6 @@ public sealed class LauncherSettingsServiceTests : IDisposable
             "backgroundFit",
             "backgroundFillColor",
             "resourcePanelUid",
-            "hasCompletedFirstLaunchWizard",
             "updateChannel",
             "logLevel"
         };
