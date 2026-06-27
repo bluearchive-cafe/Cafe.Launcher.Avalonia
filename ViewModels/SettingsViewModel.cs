@@ -249,10 +249,8 @@ public partial class SettingsViewModel : ViewModelBase, IDisposable
             return;
         }
 
-        // Default the folder picker to the original launcher's game path
-        // so users can quickly locate an existing installation.
-        var startPath = OriginalLauncherMigrationService.TryGetGamePath()
-            ?? Environment.GetFolderPath(Environment.SpecialFolder.UserProfile);
+        // Open the folder picker from the user's home directory.
+        var startPath = Environment.GetFolderPath(Environment.SpecialFolder.UserProfile);
 
         var pickedPath = await PickGameFolderAsync(startPath);
         if (string.IsNullOrWhiteSpace(pickedPath))

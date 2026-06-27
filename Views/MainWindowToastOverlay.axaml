@@ -23,7 +23,7 @@
                             <Grid Classes="toast-layout" ColumnDefinitions="Auto,*,Auto">
                                 <materialIcons:MaterialIcon Kind="{Binding IconKind}" Width="{StaticResource LauncherIconMd}" Height="{StaticResource LauncherIconMd}"
                                                             Foreground="{Binding Severity, Converter={x:Static converters:ToastSeverityToBrushConverter.Instance}}"
-                                                            VerticalAlignment="Top" Margin="0,4,0,0"
+                                                            Classes="toast-icon"
                                                             AutomationProperties.Name="{Binding SeverityLabel}"/>
                                 <StackPanel Grid.Column="1" Classes="toast-copy">
                                     <TextBlock Text="{Binding SeverityLabel}" Classes="toast-severity"

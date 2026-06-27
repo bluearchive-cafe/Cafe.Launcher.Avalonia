@@ -6,7 +6,6 @@ namespace Cafe.Launcher.Avalonia.Services;
 /// </summary>
 public enum WindowEscapeAction
 {
-    SkipMigration,
     CancelCloseWhileDownloading,
     CancelStop,
     KeepEditingSettings,
@@ -23,7 +22,6 @@ public enum WindowEscapeAction
 /// </summary>
 public sealed class WindowInteractionState
 {
-    public bool IsMigrationVisible { get; init; }
     public bool IsDownloadRunningCloseConfirmVisible { get; init; }
     public bool IsStopConfirmVisible { get; init; }
     public bool IsUnsavedChangesVisible { get; init; }
@@ -45,13 +43,12 @@ public static class WindowEscapeStrategy
 {
     /// <summary>
     /// Resolve what action Escape should trigger based on the current UI state.
-    /// Priority: migration wizard → confirmation dialogs → settings overlay → resource panel.
+    /// Priority: confirmation dialogs → settings overlay → resource panel.
     /// Returns null when no modal or panel is visible (Escape has no effect).
     /// </summary>
     public static WindowEscapeAction? ResolveEscape(WindowInteractionState state)
     {
         // Priority order — most-nested (highest Z-index) first.
-        if (state.IsMigrationVisible) return WindowEscapeAction.SkipMigration;
         if (state.IsDownloadRunningCloseConfirmVisible) return WindowEscapeAction.CancelCloseWhileDownloading;
         if (state.IsStopConfirmVisible) return WindowEscapeAction.CancelStop;
         if (state.IsUnsavedChangesVisible) return WindowEscapeAction.KeepEditingSettings;

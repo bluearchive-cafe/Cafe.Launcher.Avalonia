@@ -74,7 +74,7 @@
                         IsVisible="{Binding RemoteContent.IsPanelVisible}">
                     <Panel>
                         <ScrollViewer Classes="scroll-pad">
-                            <StackPanel Spacing="{StaticResource LauncherSpacingMd}">
+                            <StackPanel Spacing="{StaticResource LauncherSpacingXxl}">
                             <Border IsVisible="{Binding RemoteContent.HasNotice}" Classes="notice-card">
                                 <StackPanel Spacing="{StaticResource LauncherSpacingXs}">
                                     <TextBlock Text="{Binding Shell.I18n.Notice}" Classes="panel-title"/>
@@ -84,7 +84,7 @@
                                 </StackPanel>
                             </Border>
 
-                            <StackPanel Spacing="{StaticResource LauncherSpacingSm}" IsVisible="{Binding RemoteContent.HasBannerItems}">
+                            <StackPanel Spacing="{StaticResource LauncherSpacingLg}" IsVisible="{Binding RemoteContent.HasBannerItems}">
                                 <!-- L5/A3: Banner header with title, page indicator, and pause button -->
                                 <Grid ColumnDefinitions="Auto,*,Auto,Auto" ColumnSpacing="{StaticResource LauncherSpacingSm}">
                                     <TextBlock Text="{Binding Shell.I18n.Banners}" Classes="panel-title" VerticalAlignment="Center"/>
@@ -186,7 +186,7 @@
                                 </Grid>
                             </StackPanel>
 
-                            <StackPanel Spacing="{StaticResource LauncherSpacingSm}" IsVisible="{Binding RemoteContent.HasNewsItems}">
+                            <StackPanel Spacing="{StaticResource LauncherSpacingLg}" IsVisible="{Binding RemoteContent.HasNewsItems}">
                                 <TextBlock Text="{Binding Shell.I18n.News}" Classes="panel-title"/>
                                 <!-- Category tabs -->
                                 <ScrollViewer HorizontalScrollBarVisibility="Auto" VerticalScrollBarVisibility="Disabled">
@@ -231,7 +231,7 @@
                                 </ItemsControl>
                             </StackPanel>
 
-                            <StackPanel Spacing="{StaticResource LauncherSpacingSm}" IsVisible="{Binding RemoteContent.HasSocialMediaItems}">
+                            <StackPanel Spacing="{StaticResource LauncherSpacingLg}" IsVisible="{Binding RemoteContent.HasSocialMediaItems}">
                                 <TextBlock Text="{Binding Shell.I18n.SocialMedia}" Classes="panel-title"/>
                                 <ItemsControl ItemsSource="{Binding RemoteContent.SocialMediaItems}">
                                     <ItemsControl.ItemsPanel>

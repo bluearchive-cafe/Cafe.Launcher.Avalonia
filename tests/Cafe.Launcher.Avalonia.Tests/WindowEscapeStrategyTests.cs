@@ -13,26 +13,13 @@ public sealed class WindowEscapeStrategyTests
         Assert.Equal(expected, WindowEscapeStrategy.ResolveEscape(state));
     }
 
-    [Fact]
-    public void ResolveEscape_WhenMultipleLayersAreVisible_UsesDeclaredPriority()
+    [Theory]
+    [MemberData(nameof(StatesWithAllLowerPriorityLayersVisible))]
+    public void ResolveEscape_WhenLayerAndAllLowerPriorityLayersAreVisible_UsesDeclaredPriority(
+        WindowInteractionState state,
+        WindowEscapeAction expected)
     {
-        var state = new WindowInteractionState
-        {
-            IsMigrationVisible = true,
-            IsDownloadRunningCloseConfirmVisible = true,
-            IsStopConfirmVisible = true,
-            IsUnsavedChangesVisible = true,
-            IsRepairConfirmVisible = true,
-            IsResourcePanelSourceConfirmVisible = true,
-            IsUninstallConfirmVisible = true,
-            IsNoticeDialogVisible = true,
-            IsSettingsVisible = true,
-            IsResourcePanelVisible = true
-        };
-
-        Assert.Equal(
-            WindowEscapeAction.SkipMigration,
-            WindowEscapeStrategy.ResolveEscape(state));
+        Assert.Equal(expected, WindowEscapeStrategy.ResolveEscape(state));
     }
 
     [Fact]
@@ -44,10 +31,6 @@ public sealed class WindowEscapeStrategyTests
     public static TheoryData<WindowInteractionState, WindowEscapeAction> SingleVisibleStates =>
         new()
         {
-            {
-                new WindowInteractionState { IsMigrationVisible = true },
-                WindowEscapeAction.SkipMigration
-            },
             {
                 new WindowInteractionState { IsDownloadRunningCloseConfirmVisible = true },
                 WindowEscapeAction.CancelCloseWhileDownloading
@@ -78,6 +61,107 @@ public sealed class WindowEscapeStrategyTests
             },
             {
                 new WindowInteractionState { IsSettingsVisible = true },
+                WindowEscapeAction.ToggleSettings
+            },
+            {
+                new WindowInteractionState { IsResourcePanelVisible = true },
+                WindowEscapeAction.CloseResourcePanel
+            }
+        };
+
+    public static TheoryData<WindowInteractionState, WindowEscapeAction> StatesWithAllLowerPriorityLayersVisible =>
+        new()
+        {
+            {
+                new WindowInteractionState
+                {
+                    IsDownloadRunningCloseConfirmVisible = true,
+                    IsStopConfirmVisible = true,
+                    IsUnsavedChangesVisible = true,
+                    IsRepairConfirmVisible = true,
+                    IsResourcePanelSourceConfirmVisible = true,
+                    IsUninstallConfirmVisible = true,
+                    IsNoticeDialogVisible = true,
+                    IsSettingsVisible = true,
+                    IsResourcePanelVisible = true
+                },
+                WindowEscapeAction.CancelCloseWhileDownloading
+            },
+            {
+                new WindowInteractionState
+                {
+                    IsStopConfirmVisible = true,
+                    IsUnsavedChangesVisible = true,
+                    IsRepairConfirmVisible = true,
+                    IsResourcePanelSourceConfirmVisible = true,
+                    IsUninstallConfirmVisible = true,
+                    IsNoticeDialogVisible = true,
+                    IsSettingsVisible = true,
+                    IsResourcePanelVisible = true
+                },
+                WindowEscapeAction.CancelStop
+            },
+            {
+                new WindowInteractionState
+                {
+                    IsUnsavedChangesVisible = true,
+                    IsRepairConfirmVisible = true,
+                    IsResourcePanelSourceConfirmVisible = true,
+                    IsUninstallConfirmVisible = true,
+                    IsNoticeDialogVisible = true,
+                    IsSettingsVisible = true,
+                    IsResourcePanelVisible = true
+                },
+                WindowEscapeAction.KeepEditingSettings
+            },
+            {
+                new WindowInteractionState
+                {
+                    IsRepairConfirmVisible = true,
+                    IsResourcePanelSourceConfirmVisible = true,
+                    IsUninstallConfirmVisible = true,
+                    IsNoticeDialogVisible = true,
+                    IsSettingsVisible = true,
+                    IsResourcePanelVisible = true
+                },
+                WindowEscapeAction.CancelRepair
+            },
+            {
+                new WindowInteractionState
+                {
+                    IsResourcePanelSourceConfirmVisible = true,
+                    IsUninstallConfirmVisible = true,
+                    IsNoticeDialogVisible = true,
+                    IsSettingsVisible = true,
+                    IsResourcePanelVisible = true
+                },
+                WindowEscapeAction.CancelResourcePanelSourceSwitch
+            },
+            {
+                new WindowInteractionState
+                {
+                    IsUninstallConfirmVisible = true,
+                    IsNoticeDialogVisible = true,
+                    IsSettingsVisible = true,
+                    IsResourcePanelVisible = true
+                },
+                WindowEscapeAction.CancelUninstall
+            },
+            {
+                new WindowInteractionState
+                {
+                    IsNoticeDialogVisible = true,
+                    IsSettingsVisible = true,
+                    IsResourcePanelVisible = true
+                },
+                WindowEscapeAction.DismissNotice
+            },
+            {
+                new WindowInteractionState
+                {
+                    IsSettingsVisible = true,
+                    IsResourcePanelVisible = true
+                },
                 WindowEscapeAction.ToggleSettings
             },
             {

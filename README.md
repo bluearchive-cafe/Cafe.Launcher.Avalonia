@@ -15,7 +15,6 @@ Blue Archive 日服桌面启动器，基于 .NET 10 与 Avalonia 12 重写，替
 - **远端内容** — 公告、活动 Banner、新闻、社交媒体入口
 - **背景定制** — 内置 / 远端 / 自定义壁纸，三档契合度（`fill` / `uniform` / `uniformToFill`），染色主题色提取
 - **主题色** — 四种模式：默认（`#FF2E7DF6`） / 跟随系统 / 壁纸提取 / 自定义取色
-- **首次迁移** — 自动检测旧 Electron 启动器，读取游戏路径、代理、关闭行为等设置，通过向导确认后迁移
 - **自更新** — 通过服务端代理检查 launcher 自身更新，支持 `stable` / `beta` 频道
 - **本地诊断** — 运行诊断写入 `diagnostics.log`，支持日志轮转与导出
 - **无远端遥测** — 显式排除原启动器的 Aliyun SLS 遥测上报路径
@@ -71,7 +70,7 @@ dotnet test --filter "FullyQualifiedName~VersionComparerTests"           # 运�
 
 测试工程位于 `tests/Cafe.Launcher.Avalonia.Tests/`，不引入 Moq/NSubstitute 等模拟框架——所有测试通过手写 `HttpMessageHandler` 子类和手动桩实现。源码项目通过 `InternalsVisibleTo` 向测试暴露 `internal` 成员。
 
-当前测试类覆盖：`VersionComparerTests` / `LauncherApiClientTests` / `LauncherConstantsTests` / `LauncherSettingsServiceTests` / `SettingsNormalizerTests` / `SettingsEditorTests` / `ToastServiceTests` / `GameInstallationPathTests` / `LocalInstallationStateStoreTests` / `LauncherCoreServiceTests` / `InstallationOperationStateTests` / `LocalizationServiceTests` / `MainWindowViewModelTests` / `DialogsViewModelTests` / `GameDownloadServiceTests` / `PatchUrlGroupServiceTests` / `BestHttpCookieLibraryServiceTests` / `ResourcePanelUidServiceTests` / `ExternalLinkServiceTests` / `ResourcePanelApiClientTests` / `MigrationWizardViewModelTests` / `LevelDbReaderTests` / `OldLauncherDetectionServiceTests` / `LauncherUpdateServiceTests` / `HttpClientFactoryTests` / `UiStyleContractTests`。
+当前测试类覆盖：`VersionComparerTests` / `LauncherApiClientTests` / `LauncherConstantsTests` / `LauncherSettingsServiceTests` / `SettingsNormalizerTests` / `SettingsEditorTests` / `ToastServiceTests` / `GameInstallationPathTests` / `LocalInstallationStateStoreTests` / `LauncherCoreServiceTests` / `InstallationOperationStateTests` / `LocalizationServiceTests` / `MainWindowViewModelTests` / `DialogsViewModelTests` / `GameDownloadServiceTests` / `PatchUrlGroupServiceTests` / `BestHttpCookieLibraryServiceTests` / `ResourcePanelUidServiceTests` / `ExternalLinkServiceTests` / `ResourcePanelApiClientTests` / `LauncherUpdateServiceTests` / `HttpClientFactoryTests` / `UiStyleContractTests`。
 
 `UiStyleContractTests` 强制执行设计标记契约：禁止视图 XAML 中出现裸色值，强制使用 `LauncherSpacing*` 标记，验证 Z-Index 分层顺序，确保动态主题色笔刷不替代主题字典笔刷。修改 XAML 或样式时务必运行此测试。
 
@@ -112,7 +111,6 @@ dotnet test --filter "FullyQualifiedName~VersionComparerTests"           # 运�
 | Toast 通知 | `toastNotificationsEnabled` | `true` / `false` |
 | 远端内容卡片 | `showRemoteContentCard` | `true` / `false` |
 | 更新频道 | `updateChannel` | `stable` / `beta` |
-| 首次启动向导 | `hasCompletedFirstLaunchWizard` | `true` / `false` |
 | 资源面板 UID | `resourcePanelUid` | 玩家 UID 字符串 |
 
 游戏目录规范化为 `YostarGames\BlueArchive_JP`，本地游戏状态从 `game-launcher-config.json` 和 `manifest.json` 读取。
@@ -158,7 +156,6 @@ Program.Main()
             ├─ 注册 ClickCodeService / SystemTrayService / 单实例信号监听
             └─ MainWindowViewModel.InitializeAsync()
                  ├─ LauncherCoreService.LoadAsync() → 并行 API + 本地状态
-                 ├─ 首次启动检测 → OldLauncherDetectionService → MigrationWizard
                  └─ 更新 UI 状态
 ```
 
@@ -191,7 +188,6 @@ Program.Main()
 | `SettingsAppearanceViewModel` | 主题色与背景 UI 投影 |
 | `SettingsOptionsViewModel` | 本地化选项集合与摘要显示 |
 | `ResourcePanelViewModel` | 资源面板（基于 UID） |
-| `MigrationWizardViewModel` | 首次启动迁移向导 |
 
 子 ViewModel 通过两种机制与父 `MainWindowViewModel` 通信：
 - **委托** — 父级向子级注入 `Func<>` / `Func<Task>`（如 `PickGameFolderAsync`）

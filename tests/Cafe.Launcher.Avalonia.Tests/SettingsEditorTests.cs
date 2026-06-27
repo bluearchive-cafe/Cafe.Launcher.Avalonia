@@ -66,8 +66,7 @@ public sealed class SettingsEditorTests
             BackgroundFit = BackgroundFits.Fill,
             BackgroundFillColor = "#FF112233",
             ResourcePanelUid = "12345",
-            UpdateChannel = UpdateChannels.Beta,
-            HasCompletedFirstLaunchWizard = true
+            UpdateChannel = UpdateChannels.Beta
         };
 
         editor.ApplySnapshot(settings);
@@ -91,7 +90,6 @@ public sealed class SettingsEditorTests
         Assert.Equal("#FF112233", current.BackgroundFillColor);
         Assert.Equal("12345", current.ResourcePanelUid);
         Assert.Equal(UpdateChannels.Beta, current.UpdateChannel);
-        Assert.True(current.HasCompletedFirstLaunchWizard);
         Assert.False(editor.IsDirty);
     }
 
@@ -225,7 +223,6 @@ public sealed class SettingsEditorTests
                 ? UpdateChannels.Beta
                 : UpdateChannels.Stable,
             current.UpdateChannel);
-        Assert.False(current.HasCompletedFirstLaunchWizard);
     }
 
     [Fact]

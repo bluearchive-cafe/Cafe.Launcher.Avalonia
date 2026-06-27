@@ -54,6 +54,43 @@ public sealed partial class UiStyleContractTests
     }
 
     [Fact]
+    public void SemanticComponents_UseBalancedDensityTokens()
+    {
+        var document = XDocument.Load(ProjectFile("Views/MainWindow.Styles.axaml"));
+
+        var settingsSection = GetStyleSetters(document, "Border.settings-section");
+        Assert.Equal("16", settingsSection["Padding"]);
+        Assert.Equal("{StaticResource LauncherRadiusMd}", settingsSection["CornerRadius"]);
+
+        var contentRow = GetStyleSetters(document, "Border.content-row");
+        Assert.Equal("12", contentRow["Padding"]);
+        Assert.Equal("{StaticResource LauncherRadiusSm}", contentRow["CornerRadius"]);
+
+        var dialog = GetStyleSetters(document, "Border.dialog");
+        Assert.Equal("{StaticResource LauncherRadiusLg}", dialog["CornerRadius"]);
+
+        var settingControl = GetStyleSetters(document, "ComboBox.setting-control");
+        Assert.Equal(
+            "{StaticResource LauncherControlHeightSetting}",
+            settingControl["MinHeight"]);
+
+        var dialogAction = GetStyleSetters(document, "Button.dialog-action");
+        Assert.Equal(
+            "{StaticResource LauncherControlHeightDialog}",
+            dialogAction["MinHeight"]);
+
+        var bottomAction = GetStyleSetters(document, "Button.bottom-action");
+        Assert.Equal(
+            "{StaticResource LauncherControlHeightBottom}",
+            bottomAction["MinHeight"]);
+
+        var launchAction = GetStyleSetters(document, "Button.launcher-control.start");
+        Assert.Equal(
+            "{StaticResource LauncherControlHeightLaunch}",
+            launchAction["MinHeight"]);
+    }
+
+    [Fact]
     public void Views_UseSemanticColorsAndTokenizedMaterialIconSizes()
     {
         foreach (var relativePath in ViewFiles)
@@ -124,6 +161,31 @@ public sealed partial class UiStyleContractTests
             Assert.Equal(
                 "{DynamicResource LauncherTextPrimaryBrush}",
                 setters["Foreground"]);
+        }
+    }
+
+    [Fact]
+    public void Views_DoNotInlineReusableTypographyPaddingOrHeaderOffsets()
+    {
+        foreach (var relativePath in ViewFiles)
+        {
+            var document = XDocument.Load(ProjectFile(relativePath));
+            var attributes = document
+                .Descendants()
+                .SelectMany(element => element.Attributes())
+                .ToArray();
+
+            Assert.DoesNotContain(
+                attributes,
+                attribute => attribute.Name.LocalName is "FontSize" or "FontWeight");
+            Assert.DoesNotContain(
+                attributes,
+                attribute => attribute.Name.LocalName == "Padding");
+            Assert.DoesNotContain(
+                attributes,
+                attribute =>
+                    attribute.Name.LocalName == "Margin"
+                    && attribute.Value is "0,0,16,0" or "0,4,0,0");
         }
     }
 
@@ -583,4 +645,23 @@ public sealed partial class UiStyleContractTests
 
     [GeneratedRegex("#[0-9A-Fa-f]{6,8}", RegexOptions.CultureInvariant)]
     private static partial Regex DirectColorRegex();
+
+    private static IReadOnlyDictionary<string, string> GetStyleSetters(
+        XDocument document,
+        string selector)
+    {
+        return document
+            .Descendants()
+            .Single(element =>
+                element.Name.LocalName == "Style"
+                && element.Attribute("Selector")?.Value == selector)
+            .Elements()
+            .Where(element => element.Name.LocalName == "Setter")
+            .ToDictionary(
+                element => element.Attribute("Property")?.Value
+                    ?? throw new InvalidOperationException($"Setter in {selector} has no Property."),
+                element => element.Attribute("Value")?.Value
+                    ?? throw new InvalidOperationException($"Setter in {selector} has no Value."),
+                StringComparer.Ordinal);
+    }
 }

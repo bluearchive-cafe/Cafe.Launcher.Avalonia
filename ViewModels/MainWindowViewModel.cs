@@ -15,7 +15,6 @@ public partial class MainWindowViewModel : ViewModelBase, IDisposable
     private readonly LocalizationService localizer;
     private readonly ToastService toastService;
     private readonly LocalDiagnostics diagnostics;
-    private readonly OldLauncherDetectionService oldLauncherService;
     private readonly CancellationTokenSource lifetimeCts = new();
     private int initialized;
     private bool disposed;
@@ -42,15 +41,12 @@ public partial class MainWindowViewModel : ViewModelBase, IDisposable
 
     public LogViewerDialogViewModel LogViewer { get; }
 
-    public MigrationWizardViewModel MigrationWizard { get; }
-
     public MainWindowViewModel(
         ILauncherCoreService launcherCoreService,
         LauncherSettingsService settingsService,
         LocalizationService localizer,
         ToastService toastService,
         LocalDiagnostics diagnostics,
-        OldLauncherDetectionService oldLauncherService,
         UnifiedLogger unifiedLogger,
         ShellViewModel shell,
         BackgroundViewModel background,
@@ -61,7 +57,6 @@ public partial class MainWindowViewModel : ViewModelBase, IDisposable
         WindowChromeViewModel windowChrome,
         SettingsViewModel settingsViewModel,
         ResourcePanelViewModel resourcePanelViewModel,
-        MigrationWizardViewModel migrationWizard,
         LogViewerDialogViewModel? logViewer = null)
     {
         this.launcherCoreService = launcherCoreService;
@@ -69,7 +64,6 @@ public partial class MainWindowViewModel : ViewModelBase, IDisposable
         this.localizer = localizer;
         this.toastService = toastService;
         this.diagnostics = diagnostics;
-        this.oldLauncherService = oldLauncherService;
 
         Shell = shell;
         Background = background;
@@ -80,7 +74,6 @@ public partial class MainWindowViewModel : ViewModelBase, IDisposable
         WindowChrome = windowChrome;
         Settings = settingsViewModel;
         ResourcePanel = resourcePanelViewModel;
-        MigrationWizard = migrationWizard;
         LogViewer = logViewer ?? new LogViewerDialogViewModel(
             unifiedLogger,
             null,
@@ -98,23 +91,6 @@ public partial class MainWindowViewModel : ViewModelBase, IDisposable
         if (Interlocked.Exchange(ref initialized, 1) == 1)
         {
             return;
-        }
-
-        // Check for first-launch migration from old launcher
-        var settings = await settingsService.ReadAsync(cancellationToken);
-        if (!settings.HasCompletedFirstLaunchWizard)
-        {
-            var detection = oldLauncherService.Detect();
-            if (detection is not null)
-            {
-                MigrationWizard.Load(detection);
-                MigrationWizard.IsVisible = true;
-                return; // Wait for user to complete or skip wizard
-            }
-
-            // No old launcher found — mark complete, never show again
-            settings.HasCompletedFirstLaunchWizard = true;
-            await settingsService.SaveAsync(settings, cancellationToken);
         }
 
         await RefreshAsync(cancellationToken);
@@ -136,17 +112,6 @@ public partial class MainWindowViewModel : ViewModelBase, IDisposable
                 SettingsAppearanceViewModel.ParseColorOrDefault(settingsForLanguage.CustomThemeColor));
             Shell.SetLoading();
             RemoteContent.BeginLoading(settingsForLanguage.ShowRemoteContentCard);
-
-            // Migrate game path from original Yostar launcher on first run
-            if (string.IsNullOrWhiteSpace(settingsForLanguage.GamePath))
-            {
-                var migratedPath = OriginalLauncherMigrationService.TryGetGamePath();
-                if (migratedPath is not null)
-                {
-                    settingsForLanguage.GamePath = migratedPath;
-                    await settingsService.SaveAsync(settingsForLanguage, cancellationToken);
-                }
-            }
 
             var snapshot = await launcherCoreService.LoadAsync(cancellationToken);
             currentSnapshot = snapshot;
@@ -246,9 +211,6 @@ public partial class MainWindowViewModel : ViewModelBase, IDisposable
         RemoteContent.OpenExternalUrlRequested = WindowChrome.OpenExternalUrl;
 
         WindowChrome.GetSnapshot = () => currentSnapshot;
-
-        MigrationWizard.MigrationApplied += HandleMigrationAppliedAsync;
-        MigrationWizard.MigrationSkipped += HandleMigrationSkippedAsync;
     }
 
     private async Task ResetSettingsAfterCrashAsync()
@@ -316,22 +278,6 @@ public partial class MainWindowViewModel : ViewModelBase, IDisposable
         }
     }
 
-    private async Task HandleMigrationAppliedAsync(LauncherSettings migratedSettings)
-    {
-        migratedSettings.HasCompletedFirstLaunchWizard = true;
-        await settingsService.SaveAsync(migratedSettings, CancellationToken.None);
-        MigrationWizard.IsVisible = false;
-        await RefreshAsync(CancellationToken.None);
-    }
-
-    private async Task HandleMigrationSkippedAsync()
-    {
-        var settings = new LauncherSettings { HasCompletedFirstLaunchWizard = true };
-        await settingsService.SaveAsync(settings, CancellationToken.None);
-        MigrationWizard.IsVisible = false;
-        await RefreshAsync(CancellationToken.None);
-    }
-
     private async Task ApplySnapshotAsync(LauncherStatusSnapshot snapshot)
     {
         ApplySettingsSnapshot(snapshot.Settings, snapshot.LocalGame.GamePath);
@@ -373,7 +319,6 @@ public partial class MainWindowViewModel : ViewModelBase, IDisposable
     /// </summary>
     public WindowInteractionState BuildEscapeState() => new()
     {
-        IsMigrationVisible = MigrationWizard.IsVisible,
         IsDownloadRunningCloseConfirmVisible = Dialogs.IsDownloadRunningCloseConfirmVisible,
         IsStopConfirmVisible = Dialogs.IsStopConfirmVisible,
         IsUnsavedChangesVisible = Settings.IsUnsavedChangesVisible,
@@ -392,9 +337,6 @@ public partial class MainWindowViewModel : ViewModelBase, IDisposable
     {
         switch (action)
         {
-            case WindowEscapeAction.SkipMigration:
-                MigrationWizard.SkipMigrationCommand.Execute(null);
-                break;
             case WindowEscapeAction.CancelCloseWhileDownloading:
                 Dialogs.CancelCloseWhileDownloadingCommand.Execute(null);
                 break;
@@ -450,8 +392,6 @@ public partial class MainWindowViewModel : ViewModelBase, IDisposable
 
         disposed = true;
         Settings.SettingsSaved -= HandleSettingsSavedAsync;
-        MigrationWizard.MigrationApplied -= HandleMigrationAppliedAsync;
-        MigrationWizard.MigrationSkipped -= HandleMigrationSkippedAsync;
         ResourcePanel.ResourcePanelSourceConfirmRequested -= ShowResourcePanelSourceConfirmDialog;
         Dialogs.ConfirmResourcePanelSourceSwitchRequested -= SwitchToCafeAndOpenResourcePanel;
         Dialogs.ConfirmRepairRequested -= Operations.RepairAsync;

@@ -105,7 +105,6 @@ public sealed class MainWindowHeadlessTests
     {
         using var context = CreateContext();
         context.Window.Show();
-        context.ViewModel.MigrationWizard.IsVisible = false;
         context.ViewModel.Dialogs.IsDownloadRunningCloseConfirmVisible = false;
         context.ViewModel.Dialogs.IsStopConfirmVisible = false;
         context.ViewModel.Settings.IsUnsavedChangesVisible = false;

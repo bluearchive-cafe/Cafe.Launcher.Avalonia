@@ -1,6 +1,7 @@
 <Styles xmlns="https://github.com/avaloniaui"
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
-        xmlns:views="using:Cafe.Launcher.Avalonia.Views">
+        xmlns:views="using:Cafe.Launcher.Avalonia.Views"
+        xmlns:materialIcons="clr-namespace:Material.Icons.Avalonia;assembly=Material.Icons.Avalonia">
     <Style Selector="TextBlock.caption">
         <Setter Property="FontSize" Value="13"/>
         <Setter Property="Foreground" Value="{DynamicResource LauncherTextSecondaryBrush}"/>
@@ -265,14 +266,14 @@
         <Setter Property="Padding" Value="0"/>
     </Style>
     <Style Selector="Button.bottom-action">
-        <Setter Property="Height" Value="{StaticResource LauncherControlHeightBottom}"/>
+        <Setter Property="MinHeight" Value="{StaticResource LauncherControlHeightBottom}"/>
         <Setter Property="MinWidth" Value="156"/>
         <Setter Property="Padding" Value="20,12"/>
         <Setter Property="FontSize" Value="15"/>
         <Setter Property="FontWeight" Value="SemiBold"/>
     </Style>
     <Style Selector="Button.dialog-action">
-        <Setter Property="Height" Value="{StaticResource LauncherControlHeightDialog}"/>
+        <Setter Property="MinHeight" Value="{StaticResource LauncherControlHeightDialog}"/>
         <Setter Property="MinWidth" Value="108"/>
         <Setter Property="Padding" Value="16,0"/>
         <Setter Property="FontSize" Value="14"/>
@@ -361,8 +362,12 @@
         <Setter Property="Background" Value="{DynamicResource LauncherDialogClosePressedBrush}"/>
         <Setter Property="Foreground" Value="{DynamicResource LauncherTextPrimaryBrush}"/>
     </Style>
+    <Style Selector="Button.dialog-close.header-action">
+        <Setter Property="Margin" Value="0,0,16,0"/>
+    </Style>
     <Style Selector="Button.launcher-control">
         <Setter Property="Width" Value="220"/>
+        <Setter Property="MinHeight" Value="{StaticResource LauncherControlHeightLaunch}"/>
         <Setter Property="Height" Value="{StaticResource LauncherControlHeightLaunch}"/>
         <Setter Property="Padding" Value="20,0"/>
         <Setter Property="CornerRadius" Value="{StaticResource LauncherRadiusMd}"/>
@@ -410,6 +415,7 @@
         <Setter Property="BorderBrush" Value="{DynamicResource LauncherAccentBrush}"/>
         <Setter Property="BorderThickness" Value="1"/>
         <Setter Property="Foreground" Value="{DynamicResource LauncherOnAccentBrush}"/>
+        <Setter Property="MinHeight" Value="{StaticResource LauncherControlHeightLaunch}"/>
         <Setter Property="Opacity" Value="1"/>
     </Style>
     <Style Selector="Button.launcher-control.start:pointerover">
@@ -506,7 +512,7 @@
     <Style Selector="Border.content-row">
         <Setter Property="Background" Value="{DynamicResource LauncherContentRowBrush}"/>
         <Setter Property="CornerRadius" Value="{StaticResource LauncherRadiusSm}"/>
-        <Setter Property="Padding" Value="8"/>
+        <Setter Property="Padding" Value="12"/>
         <Setter Property="Margin" Value="0,0,0,4"/>
     </Style>
     <Style Selector="Button.content-link">
@@ -707,6 +713,16 @@
         <Setter Property="Background" Value="{DynamicResource LauncherContentRowBrush}"/>
         <Setter Property="CornerRadius" Value="{StaticResource LauncherRadiusSm}"/>
         <Setter Property="Padding" Value="8,4"/>
+    </Style>
+    <Style Selector="TextBlock.update-file-name">
+        <Setter Property="FontSize" Value="13"/>
+        <Setter Property="FontWeight" Value="SemiBold"/>
+        <Setter Property="Foreground" Value="{DynamicResource LauncherTextPrimaryBrush}"/>
+    </Style>
+    <Style Selector="TextBlock.update-file-size-text">
+        <Setter Property="FontSize" Value="12"/>
+        <Setter Property="FontWeight" Value="SemiBold"/>
+        <Setter Property="Foreground" Value="{DynamicResource LauncherTextSecondaryBrush}"/>
     </Style>
     <Style Selector="Border.dialog-icon">
         <Setter Property="Width" Value="{StaticResource LauncherControlHeightSetting}"/>
@@ -982,5 +998,9 @@
     <Style Selector="TextBlock.toast-severity">
         <Setter Property="FontSize" Value="11"/>
         <Setter Property="FontWeight" Value="SemiBold"/>
+    </Style>
+    <Style Selector="materialIcons|MaterialIcon.toast-icon">
+        <Setter Property="VerticalAlignment" Value="Top"/>
+        <Setter Property="Margin" Value="0,4,0,0"/>
     </Style>
 </Styles>
