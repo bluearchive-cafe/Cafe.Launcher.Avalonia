@@ -22,12 +22,8 @@ public partial class ResourcePanelViewModel : ViewModelBase, IDisposable
     private readonly ToastService toastService;
     private readonly CancellationTokenSource lifetimeCts = new();
     private bool disposed;
-
-    // Delegate for proxy mode resolution (set by parent).
-    public Func<string>? GetProxyMode { get; set; }
-
-    // Delegate for patch URL group check (set by parent).
-    public Func<string>? GetPatchUrlGroup { get; set; }
+    private string proxyMode = ProxyModes.Direct;
+    private string patchUrlGroup = PatchUrlGroups.Official;
 
     /// <summary>Fired when the user tries to open the panel from a non-Cafe download source.</summary>
     public event Action? ResourcePanelSourceConfirmRequested;
@@ -84,12 +80,17 @@ public partial class ResourcePanelViewModel : ViewModelBase, IDisposable
         }
     }
 
+    public void ApplySettings(LauncherSettings settings)
+    {
+        proxyMode = settings.ProxyMode;
+        patchUrlGroup = settings.PatchUrlGroup;
+    }
+
     // ── Commands ──────────────────────────────────────────────────────────
 
     [RelayCommand]
     private async Task OpenResourcePanelAsync()
     {
-        var patchUrlGroup = GetPatchUrlGroup?.Invoke();
         if (!string.Equals(patchUrlGroup, PatchUrlGroups.Cafe, StringComparison.Ordinal))
         {
             ResourcePanelSourceConfirmRequested?.Invoke();
@@ -170,7 +171,7 @@ public partial class ResourcePanelViewModel : ViewModelBase, IDisposable
                 GetResourcePanelItem(ResourcePanelResourceCodes.Text).IsEnabled,
                 GetResourcePanelItem(ResourcePanelResourceCodes.Voice).IsEnabled,
                 GetResourcePanelItem(ResourcePanelResourceCodes.Media).IsEnabled,
-                GetProxyMode?.Invoke() ?? ProxyModes.Direct,
+                proxyMode,
                 lifetimeCts.Token);
             ResourcePanelMessage = localizer.T("resourcePanelSaved");
             toastService.ShowSuccess(localizer.T("resourcePanelSaved"));
@@ -236,7 +237,6 @@ public partial class ResourcePanelViewModel : ViewModelBase, IDisposable
     {
         ResourcePanelMessage = localizer.T("resourcePanelLoading");
         SetResourcePanelStatusText(localizer.T("resourcePanelLoading"));
-        var proxyMode = GetProxyMode?.Invoke() ?? ProxyModes.Direct;
         var result = await resourcePanelService.LoadDataAsync(uid, proxyMode, cancellationToken);
         ApplyResult(result);
         ResourcePanelMessage = localizer.T("statusNetworkLoaded");

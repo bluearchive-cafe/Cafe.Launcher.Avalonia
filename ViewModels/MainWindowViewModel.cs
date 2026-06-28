@@ -185,32 +185,32 @@ public partial class MainWindowViewModel : ViewModelBase, IDisposable
         };
         Settings.SettingsSaved += HandleSettingsSavedAsync;
 
-        ResourcePanel.GetProxyMode = () => currentSnapshot?.Settings.ProxyMode ?? ProxyModes.Direct;
-        ResourcePanel.GetPatchUrlGroup = () => currentSnapshot?.Settings.PatchUrlGroup ?? PatchUrlGroups.Official;
         ResourcePanel.ResourcePanelSourceConfirmRequested += ShowResourcePanelSourceConfirmDialog;
         Dialogs.ConfirmResourcePanelSourceSwitchRequested += SwitchToCafeAndOpenResourcePanel;
 
-        Operations.GetSnapshot = () => currentSnapshot;
-        Operations.RequestRefreshAsync = async () => await RefreshAsync();
-        Operations.RequestRefreshAfterPersistedResumeAsync = async () =>
-        {
-            skipNextPersistedResume = true;
-            await RefreshAsync();
-        };
-        Operations.ApplySnapshotAsync = ApplySnapshotAsync;
+        Operations.RefreshRequested += HandleOperationsRefreshRequestedAsync;
 
         Dialogs.ConfirmRepairRequested += Operations.RepairAsync;
         Dialogs.ConfirmUninstallRequested += Operations.ConfirmUninstallAsync;
         Dialogs.ConfirmStopRequested += Operations.PerformStop;
         Dialogs.CloseAfterStoppingDownloadRequested += WindowChrome.CloseAfterStoppingDownload;
-        Dialogs.CloseRequested += () => WindowChrome.CloseWindow?.Invoke();
+        Dialogs.CloseRequested += WindowChrome.RequestClose;
         Dialogs.ConfirmUpdateAvailableRequested += url => ExternalLinkService.Open(url);
         Dialogs.CrashRecoveryResetSettingsRequested += ResetSettingsAfterCrashAsync;
         Dialogs.CrashRecoveryViewLogRequested += OpenCrashLog;
 
         RemoteContent.OpenExternalUrlRequested = WindowChrome.OpenExternalUrl;
 
-        WindowChrome.GetSnapshot = () => currentSnapshot;
+    }
+
+    internal async Task HandleOperationsRefreshRequestedAsync(GameOperationsRefreshMode mode)
+    {
+        if (mode == GameOperationsRefreshMode.SkipPersistedResume)
+        {
+            skipNextPersistedResume = true;
+        }
+
+        await RefreshAsync();
     }
 
     private async Task ResetSettingsAfterCrashAsync()
@@ -300,6 +300,7 @@ public partial class MainWindowViewModel : ViewModelBase, IDisposable
     private void ApplySettingsSnapshot(LauncherSettings settings, string localGamePath)
     {
         Settings.ApplyLauncherSettings(settings, localGamePath);
+        ResourcePanel.ApplySettings(settings);
     }
 
     private void ApplyLanguage(string language)
@@ -392,12 +393,14 @@ public partial class MainWindowViewModel : ViewModelBase, IDisposable
 
         disposed = true;
         Settings.SettingsSaved -= HandleSettingsSavedAsync;
+        Operations.RefreshRequested -= HandleOperationsRefreshRequestedAsync;
         ResourcePanel.ResourcePanelSourceConfirmRequested -= ShowResourcePanelSourceConfirmDialog;
         Dialogs.ConfirmResourcePanelSourceSwitchRequested -= SwitchToCafeAndOpenResourcePanel;
         Dialogs.ConfirmRepairRequested -= Operations.RepairAsync;
         Dialogs.ConfirmUninstallRequested -= Operations.ConfirmUninstallAsync;
         Dialogs.ConfirmStopRequested -= Operations.PerformStop;
         Dialogs.CloseAfterStoppingDownloadRequested -= WindowChrome.CloseAfterStoppingDownload;
+        Dialogs.CloseRequested -= WindowChrome.RequestClose;
         Dialogs.CrashRecoveryResetSettingsRequested -= ResetSettingsAfterCrashAsync;
         Dialogs.CrashRecoveryViewLogRequested -= OpenCrashLog;
         Operations.StopDownload(clearPersistedState: false);

@@ -141,6 +141,21 @@ public sealed class MainWindowHeadlessTests
         Assert.Equal(WindowState.Minimized, context.Window.WindowState);
     }
 
+    [AvaloniaFact]
+    public void ConfigureViewModel_WhenCalledAgain_UnsubscribesPreviousViewModel()
+    {
+        using var first = CreateContext();
+        using var second = CreateContext();
+        first.Window.ConfigureViewModel(second.ViewModel);
+        first.Window.WindowState = WindowState.Normal;
+
+        first.ViewModel.WindowChrome.MinimizeCommand.Execute(null);
+        Assert.Equal(WindowState.Normal, first.Window.WindowState);
+
+        second.ViewModel.WindowChrome.MinimizeCommand.Execute(null);
+        Assert.Equal(WindowState.Minimized, first.Window.WindowState);
+    }
+
     private static TestContext CreateContext()
     {
         var tempDir = Path.Combine(Path.GetTempPath(), Guid.NewGuid().ToString("N"));

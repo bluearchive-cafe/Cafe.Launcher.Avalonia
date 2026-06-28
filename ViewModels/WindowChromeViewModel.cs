@@ -22,13 +22,9 @@ public partial class WindowChromeViewModel : ViewModelBase
     [ObservableProperty]
     private bool isSettingsVisible;
 
-    public Func<LauncherStatusSnapshot?>? GetSnapshot { get; set; }
-
-    public Action? MinimizeWindow { get; set; }
-
-    public Action? CloseWindow { get; set; }
-
-    public Action? RestoreWindow { get; set; }
+    public event Action? MinimizeRequested;
+    public event Action? CloseRequested;
+    public event Action? RestoreRequested;
 
     public WindowChromeViewModel(
         SettingsViewModel settings,
@@ -80,9 +76,9 @@ public partial class WindowChromeViewModel : ViewModelBase
         }
 
         IsSettingsVisible = !IsSettingsVisible;
-        if (IsSettingsVisible && GetSnapshot?.Invoke() is { } snapshot)
+        if (IsSettingsVisible)
         {
-            settings.LoadFromSnapshot(snapshot.Settings);
+            settings.LoadFromSnapshot(settings.Editor.GetSavedSnapshot());
         }
     }
 
@@ -103,7 +99,7 @@ public partial class WindowChromeViewModel : ViewModelBase
     private void Minimize()
     {
         remoteContent.StopCarouselTimer();
-        MinimizeWindow?.Invoke();
+        MinimizeRequested?.Invoke();
     }
 
     [RelayCommand]
@@ -114,7 +110,7 @@ public partial class WindowChromeViewModel : ViewModelBase
             remoteContent.StartCarouselTimer();
         }
 
-        RestoreWindow?.Invoke();
+        RestoreRequested?.Invoke();
     }
 
     [RelayCommand]
@@ -158,12 +154,14 @@ public partial class WindowChromeViewModel : ViewModelBase
             return;
         }
 
-        CloseWindow?.Invoke();
+        CloseRequested?.Invoke();
     }
 
     public void CloseAfterStoppingDownload()
     {
         operations.StopDownload(clearPersistedState: true);
-        CloseWindow?.Invoke();
+        CloseRequested?.Invoke();
     }
+
+    public void RequestClose() => CloseRequested?.Invoke();
 }

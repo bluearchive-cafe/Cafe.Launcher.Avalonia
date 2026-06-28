@@ -39,10 +39,10 @@ public sealed class ServiceConfigurationTests : IDisposable
         var services = CreateServices();
         await using var provider = services.BuildServiceProvider();
         using var viewModel = provider.GetRequiredService<MainWindowViewModel>();
-        viewModel.Operations.GetSnapshot = () => new LauncherStatusSnapshot
+        viewModel.Operations.ApplySnapshot(new LauncherStatusSnapshot
         {
             RuntimeState = LauncherRuntimeState.Ready
-        };
+        });
 
         await viewModel.Operations.RequestRepairCommand.ExecuteAsync(null);
 
@@ -56,16 +56,16 @@ public sealed class ServiceConfigurationTests : IDisposable
         var services = CreateServices();
         await using var provider = services.BuildServiceProvider();
         using var viewModel = provider.GetRequiredService<MainWindowViewModel>();
-        viewModel.Operations.GetSnapshot = () => new LauncherStatusSnapshot
+        viewModel.Operations.ApplySnapshot(new LauncherStatusSnapshot
         {
             RuntimeState = LauncherRuntimeState.Ready,
             Remote = new LauncherRemoteState
             {
                 GameConfig = new GameConfigResponse()
             }
-        };
-        viewModel.Operations.RequestRefreshAsync = null;
-        viewModel.Operations.ApplySnapshotAsync = null;
+        });
+        viewModel.Dispose();
+        viewModel.Dialogs.ConfirmRepairRequested += viewModel.Operations.RepairAsync;
         viewModel.Shell.IsBusy = false;
         viewModel.Dialogs.ShowRepairConfirm("repair");
 
