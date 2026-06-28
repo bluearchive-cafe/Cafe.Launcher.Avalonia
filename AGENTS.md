@@ -5,6 +5,7 @@ This file provides guidance to Codex (Codex.ai/code) when working with code in t
 ## Build & Run
 
 ```powershell
+.\verify.ps1                           # Complete verification: Debug build, both test projects, Release build
 .\build.ps1                              # Debug build (expect 0 warnings, 0 errors)
 dotnet build .\Cafe.Launcher.Avalonia.csproj -c Debug --no-restore
 dotnet restore .\Cafe.Launcher.Avalonia.csproj -r win-x64
@@ -14,8 +15,9 @@ dotnet publish .\Cafe.Launcher.Avalonia.csproj -c Release -o publish   # Self-co
 
 **Tests** (xUnit 2.9.3, under `tests/Cafe.Launcher.Avalonia.Tests/`, with coverlet 10.0.1):
 ```powershell
-dotnet test                                                    # Run all tests
-dotnet test --filter "FullyQualifiedName~VersionComparerTests" # Run a single test class
+dotnet test .\tests\Cafe.Launcher.Avalonia.Tests\Cafe.Launcher.Avalonia.Tests.csproj -c Debug --no-restore                 # Run unit tests
+dotnet test .\tests\Cafe.Launcher.Avalonia.HeadlessTests\Cafe.Launcher.Avalonia.HeadlessTests.csproj -c Debug --no-restore # Run headless tests
+dotnet test .\tests\Cafe.Launcher.Avalonia.Tests\Cafe.Launcher.Avalonia.Tests.csproj --filter "FullyQualifiedName~VersionComparerTests" # Run a single test class
 ```
 
 Available test classes include `VersionComparerTests`, `LauncherApiClientTests`, `LauncherConstantsTests`, `LauncherSettingsServiceTests`, `SettingsNormalizerTests`, `SettingsEditorTests`, `LocalizationServiceTests`, `MainWindowViewModelTests`, `DialogsViewModelTests`, `GameDownloadServiceTests`, `GameInstallationPathTests`, `LocalInstallationStateStoreTests`, `LauncherCoreServiceTests`, `InstallationOperationStateTests`, `PatchUrlGroupServiceTests`, `BestHttpCookieLibraryServiceTests`, `ResourcePanelUidServiceTests`, `ExternalLinkServiceTests`, `ResourcePanelApiClientTests`, `LauncherUpdateServiceTests`, `HttpClientFactoryTests`, `ToastServiceTests`, `OfficialHashServiceTests`, and `UiStyleContractTests`.

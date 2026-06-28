@@ -53,6 +53,7 @@ $env:AVALONIA_TELEMETRY_OPTOUT = '1'
 ## 构建
 
 ```powershell
+.\verify.ps1                                                             # 完整验证（Debug 构建、两个测试工程、Release 构建）
 .\build.ps1                                                              # Debug 构建（0 警告 0 错误）
 dotnet build .\Cafe.Launcher.Avalonia.csproj -c Debug --no-restore       # Debug 构建（跳过还原）
 dotnet build .\Cafe.Launcher.Avalonia.csproj -c Release --no-restore     # Release 构建
@@ -64,8 +65,9 @@ dotnet publish .\Cafe.Launcher.Avalonia.csproj -c Release -o publish     # 自�
 ## 测试
 
 ```powershell
-dotnet test                                                              # 运行全部测试
-dotnet test --filter "FullyQualifiedName~VersionComparerTests"           # 运行单个测试类
+dotnet test .\tests\Cafe.Launcher.Avalonia.Tests\Cafe.Launcher.Avalonia.Tests.csproj -c Debug --no-restore                 # 运行单元测试
+dotnet test .\tests\Cafe.Launcher.Avalonia.HeadlessTests\Cafe.Launcher.Avalonia.HeadlessTests.csproj -c Debug --no-restore # 运行无头测试
+dotnet test .\tests\Cafe.Launcher.Avalonia.Tests\Cafe.Launcher.Avalonia.Tests.csproj --filter "FullyQualifiedName~VersionComparerTests" # 运行单个测试类
 ```
 
 测试工程位于 `tests/Cafe.Launcher.Avalonia.Tests/`，不引入 Moq/NSubstitute 等模拟框架——所有测试通过手写 `HttpMessageHandler` 子类和手动桩实现。源码项目通过 `InternalsVisibleTo` 向测试暴露 `internal` 成员。
