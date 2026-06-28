@@ -21,6 +21,7 @@ public partial class GameOperationsViewModel : ViewModelBase
     private readonly LocalDiagnostics diagnostics;
     private readonly ShellViewModel shell;
     private readonly DialogsViewModel dialogs;
+    private LauncherStatusSnapshot? currentSnapshot;
 
     [ObservableProperty]
     private bool isInstallPanelVisible = true;
@@ -64,15 +65,8 @@ public partial class GameOperationsViewModel : ViewModelBase
     [ObservableProperty]
     private string pauseResumeIcon = "Pause";
 
-    public Func<LauncherStatusSnapshot?>? GetSnapshot { get; set; }
-
-    public Func<Task>? RequestRefreshAsync { get; set; }
-
-    public Func<Task>? RequestRefreshAfterPersistedResumeAsync { get; set; }
-
-    public Func<LauncherStatusSnapshot, Task>? ApplySnapshotAsync { get; set; }
-
-    public Action? MinimizeWindow { get; set; }
+    public event Func<GameOperationsRefreshMode, Task>? RefreshRequested;
+    public event Action? MinimizeRequested;
 
     public GameOperationsViewModel(
         GameLaunchService gameLaunchService,
@@ -126,6 +120,7 @@ public partial class GameOperationsViewModel : ViewModelBase
 
     public void ApplySnapshot(LauncherStatusSnapshot snapshot)
     {
+        currentSnapshot = snapshot;
         InstallButtonText = snapshot.RuntimeState switch
         {
             LauncherRuntimeState.NotInstalled => localizer.T("installGame"),
@@ -147,7 +142,7 @@ public partial class GameOperationsViewModel : ViewModelBase
     [RelayCommand]
     private async Task StartGameAsync()
     {
-        var snapshot = GetSnapshot?.Invoke();
+        var snapshot = currentSnapshot;
         if (!PrepareShellOnly(snapshot))
         {
             return;
@@ -166,7 +161,7 @@ public partial class GameOperationsViewModel : ViewModelBase
             {
                 toastService.ShowSuccess(localizer.T("gameLaunchedMinimized"));
                 await delayAsync(TimeSpan.FromMilliseconds(600));
-                MinimizeWindow?.Invoke();
+                MinimizeRequested?.Invoke();
             }
             else
             {
@@ -196,7 +191,7 @@ public partial class GameOperationsViewModel : ViewModelBase
 
         try
         {
-            var snapshot = GetSnapshot?.Invoke();
+            var snapshot = currentSnapshot;
             if (snapshot is null)
             {
                 shell.OperationNote = localizer.T("stateNotLoaded");
@@ -211,10 +206,7 @@ public partial class GameOperationsViewModel : ViewModelBase
 
             if (snapshot.RuntimeState is LauncherRuntimeState.IoFailure or LauncherRuntimeState.RemoteUnavailable)
             {
-                if (RequestRefreshAsync is not null)
-                {
-                    await RequestRefreshAsync.Invoke();
-                }
+                await RequestRefresh(GameOperationsRefreshMode.Normal);
 
                 return;
             }
@@ -228,11 +220,7 @@ public partial class GameOperationsViewModel : ViewModelBase
             var result = await backend.InstallOrUpdateAsync(snapshot, ApplyProgress);
             shell.OperationNote = result.Message;
             ShowOperationResult(result);
-            var refresh = RequestRefreshAfterPersistedResumeAsync ?? RequestRefreshAsync;
-            if (refresh is not null)
-            {
-                await refresh.Invoke();
-            }
+            await RequestRefresh(GameOperationsRefreshMode.SkipPersistedResume);
         }
         catch (Exception exception)
         {
@@ -243,10 +231,9 @@ public partial class GameOperationsViewModel : ViewModelBase
         finally
         {
             shell.IsBusy = false;
-            var currentSnapshot = GetSnapshot?.Invoke();
-            if (currentSnapshot is not null && ApplySnapshotAsync is not null)
+            if (currentSnapshot is not null)
             {
-                await ApplySnapshotAsync.Invoke(currentSnapshot);
+                ApplySnapshot(currentSnapshot);
             }
         }
     }
@@ -254,7 +241,7 @@ public partial class GameOperationsViewModel : ViewModelBase
     [RelayCommand]
     private async Task RequestRepairAsync()
     {
-        var snapshot = GetSnapshot?.Invoke();
+        var snapshot = currentSnapshot;
         if (snapshot is null)
         {
             shell.OperationNote = localizer.T("stateNotLoaded");
@@ -273,7 +260,7 @@ public partial class GameOperationsViewModel : ViewModelBase
 
     public async Task RepairAsync()
     {
-        var snapshot = GetSnapshot?.Invoke();
+        var snapshot = currentSnapshot;
         if (snapshot is null)
         {
             shell.OperationNote = localizer.T("stateNotLoaded");
@@ -296,10 +283,7 @@ public partial class GameOperationsViewModel : ViewModelBase
             var result = await backend.RepairAsync(snapshot, ApplyProgress);
             shell.OperationNote = result.Message;
             ShowOperationResult(result);
-            if (RequestRefreshAsync is not null)
-            {
-                await RequestRefreshAsync.Invoke();
-            }
+            await RequestRefresh(GameOperationsRefreshMode.Normal);
         }
         catch (Exception exception)
         {
@@ -310,10 +294,9 @@ public partial class GameOperationsViewModel : ViewModelBase
         finally
         {
             shell.IsBusy = false;
-            var currentSnapshot = GetSnapshot?.Invoke();
-            if (currentSnapshot is not null && ApplySnapshotAsync is not null)
+            if (currentSnapshot is not null)
             {
-                await ApplySnapshotAsync.Invoke(currentSnapshot);
+                ApplySnapshot(currentSnapshot);
             }
         }
     }
@@ -371,7 +354,7 @@ public partial class GameOperationsViewModel : ViewModelBase
     [RelayCommand]
     private async Task RequestUninstallAsync()
     {
-        var snapshot = GetSnapshot?.Invoke();
+        var snapshot = currentSnapshot;
         if (snapshot is null)
         {
             shell.OperationNote = localizer.T("stateNotLoaded");
@@ -399,7 +382,7 @@ public partial class GameOperationsViewModel : ViewModelBase
 
     public async Task ConfirmUninstallAsync()
     {
-        var snapshot = GetSnapshot?.Invoke();
+        var snapshot = currentSnapshot;
         if (snapshot is null)
         {
             shell.OperationNote = localizer.T("stateNotLoaded");
@@ -424,10 +407,7 @@ public partial class GameOperationsViewModel : ViewModelBase
         {
             var result = await backend.UninstallAsync(snapshot, ApplyProgress);
             shell.OperationNote = result.Message;
-            if (RequestRefreshAsync is not null)
-            {
-                await RequestRefreshAsync.Invoke();
-            }
+            await RequestRefresh(GameOperationsRefreshMode.Normal);
         }
         catch (Exception exception)
         {
@@ -442,7 +422,7 @@ public partial class GameOperationsViewModel : ViewModelBase
 
     public async Task ResumePersistedDownloadAsync(CancellationToken cancellationToken)
     {
-        var snapshot = GetSnapshot?.Invoke();
+        var snapshot = currentSnapshot;
         if (snapshot is null || shell.IsBusy)
         {
             return;
@@ -459,10 +439,7 @@ public partial class GameOperationsViewModel : ViewModelBase
 
             shell.OperationNote = result.Message;
             ShowOperationResult(result);
-            if (RequestRefreshAsync is not null)
-            {
-                await RequestRefreshAsync.Invoke();
-            }
+            await RequestRefresh(GameOperationsRefreshMode.Normal);
         }
         catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
         {
@@ -521,7 +498,7 @@ public partial class GameOperationsViewModel : ViewModelBase
 
     private bool PrepareOperation()
     {
-        var snapshot = GetSnapshot?.Invoke();
+        var snapshot = currentSnapshot;
         if (!PrepareShellOnly(snapshot))
         {
             return false;
@@ -611,6 +588,19 @@ public partial class GameOperationsViewModel : ViewModelBase
         CanPauseOperation = progress.CanPause;
         PauseResumeText = progress.IsPaused ? localizer.T("resume") : localizer.T("pause");
         PauseResumeIcon = progress.IsPaused ? "Play" : "Pause";
+    }
+
+    private async Task RequestRefresh(GameOperationsRefreshMode mode)
+    {
+        if (RefreshRequested is null)
+        {
+            return;
+        }
+
+        foreach (Func<GameOperationsRefreshMode, Task> subscriber in RefreshRequested.GetInvocationList())
+        {
+            await subscriber(mode);
+        }
     }
 
     private string ResolveProgressTitle(GameOperationProgress progress)

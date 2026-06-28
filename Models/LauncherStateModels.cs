@@ -10,6 +10,12 @@ using CommunityToolkit.Mvvm.ComponentModel;
 
 namespace Cafe.Launcher.Avalonia.Models;
 
+public enum GameOperationsRefreshMode
+{
+    Normal,
+    SkipPersistedResume
+}
+
 public static class LaunchCheckModes
 {
     public const string LocalManifest = "localManifest";

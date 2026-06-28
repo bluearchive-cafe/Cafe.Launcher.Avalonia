@@ -12,6 +12,54 @@ public sealed class GameOperationsViewModelTests
         TestLocalizationHelper.Initialize();
     }
 
+    [Fact]
+    public void LegacyDelegateProperties_AreRemoved()
+    {
+        var propertyNames = typeof(GameOperationsViewModel)
+            .GetProperties(System.Reflection.BindingFlags.Instance |
+                System.Reflection.BindingFlags.Public |
+                System.Reflection.BindingFlags.NonPublic)
+            .Select(property => property.Name);
+
+        Assert.DoesNotContain("GetSnapshot", propertyNames);
+        Assert.DoesNotContain("RequestRefreshAsync", propertyNames);
+        Assert.DoesNotContain("RequestRefreshAfterPersistedResumeAsync", propertyNames);
+        Assert.DoesNotContain("ApplySnapshotAsync", propertyNames);
+        Assert.DoesNotContain("MinimizeWindow", propertyNames);
+    }
+
+    [Fact]
+    public async Task RefreshRequested_AwaitsSubscribersStrictlyInRegistrationOrder()
+    {
+        var context = CreateContext();
+        var sequence = new List<string>();
+        var firstSubscriberRelease = new TaskCompletionSource(
+            TaskCreationOptions.RunContinuationsAsynchronously);
+        context.ViewModel.ApplySnapshot(new LauncherStatusSnapshot
+        {
+            RuntimeState = LauncherRuntimeState.RemoteUnavailable
+        });
+        context.ViewModel.RefreshRequested += async _ =>
+        {
+            sequence.Add("first-start");
+            await firstSubscriberRelease.Task;
+            sequence.Add("first-end");
+        };
+        context.ViewModel.RefreshRequested += _ =>
+        {
+            sequence.Add("second");
+            return Task.CompletedTask;
+        };
+
+        var commandTask = context.ViewModel.InstallOrUpdateCommand.ExecuteAsync(null);
+        await Task.Yield();
+
+        Assert.Equal(["first-start"], sequence);
+        firstSubscriberRelease.SetResult();
+        await commandTask;
+        Assert.Equal(["first-start", "first-end", "second"], sequence);
+    }
+
     [Theory]
     [InlineData(LauncherRuntimeState.NotInstalled, true, false)]
     [InlineData(LauncherRuntimeState.Ready, false, true)]
@@ -48,8 +96,8 @@ public sealed class GameOperationsViewModelTests
                 Message = "validated"
             }
         };
-        context.ViewModel.GetSnapshot = () => ReadySnapshot();
-        context.ViewModel.MinimizeWindow = () => minimized = true;
+        context.ViewModel.ApplySnapshot(ReadySnapshot());
+        context.ViewModel.MinimizeRequested += () => minimized = true;
 
         await context.ViewModel.StartGameCommand.ExecuteAsync(null);
 
@@ -63,10 +111,10 @@ public sealed class GameOperationsViewModelTests
     public async Task InstallOrUpdateCommand_WhenInstallationStateIsCorrupted_ShowsRepairDialog()
     {
         var context = CreateContext();
-        context.ViewModel.GetSnapshot = () => new LauncherStatusSnapshot
+        context.ViewModel.ApplySnapshot(new LauncherStatusSnapshot
         {
             RuntimeState = LauncherRuntimeState.Corrupted
-        };
+        });
 
         await context.ViewModel.InstallOrUpdateCommand.ExecuteAsync(null);
 
@@ -79,20 +127,20 @@ public sealed class GameOperationsViewModelTests
     public async Task InstallOrUpdateCommand_WhenRemoteStateIsUnavailable_RefreshesWithoutDownloading()
     {
         var context = CreateContext();
-        var refreshCount = 0;
-        context.ViewModel.GetSnapshot = () => new LauncherStatusSnapshot
+        GameOperationsRefreshMode? refreshMode = null;
+        context.ViewModel.ApplySnapshot(new LauncherStatusSnapshot
         {
             RuntimeState = LauncherRuntimeState.RemoteUnavailable
-        };
-        context.ViewModel.RequestRefreshAsync = () =>
+        });
+        context.ViewModel.RefreshRequested += mode =>
         {
-            refreshCount++;
+            refreshMode = mode;
             return Task.CompletedTask;
         };
 
         await context.ViewModel.InstallOrUpdateCommand.ExecuteAsync(null);
 
-        Assert.Equal(1, refreshCount);
+        Assert.Equal(GameOperationsRefreshMode.Normal, refreshMode);
         Assert.Equal(0, context.Backend.InstallInvocationCount);
     }
 
@@ -104,30 +152,24 @@ public sealed class GameOperationsViewModelTests
         {
             RuntimeState = LauncherRuntimeState.NotInstalled
         };
-        var refreshCount = 0;
-        var applyCount = 0;
-        context.ViewModel.GetSnapshot = () => snapshot;
+        GameOperationsRefreshMode? refreshMode = null;
+        context.ViewModel.ApplySnapshot(snapshot);
         context.Backend.InstallResult = new GameOperationResult
         {
             Success = true,
             Message = "installed"
         };
-        context.ViewModel.RequestRefreshAsync = () =>
+        context.ViewModel.RefreshRequested += mode =>
         {
-            refreshCount++;
-            return Task.CompletedTask;
-        };
-        context.ViewModel.ApplySnapshotAsync = _ =>
-        {
-            applyCount++;
+            refreshMode = mode;
             return Task.CompletedTask;
         };
 
         await context.ViewModel.InstallOrUpdateCommand.ExecuteAsync(null);
 
         Assert.Equal(1, context.Backend.InstallInvocationCount);
-        Assert.Equal(1, refreshCount);
-        Assert.Equal(1, applyCount);
+        Assert.Equal(GameOperationsRefreshMode.SkipPersistedResume, refreshMode);
+        Assert.False(context.ViewModel.IsProgressPanelVisible);
         Assert.Equal("installed", context.Shell.OperationNote);
         Assert.False(context.Shell.IsBusy);
     }
@@ -136,7 +178,7 @@ public sealed class GameOperationsViewModelTests
     public async Task RequestRepairCommand_WhenStateAllowsRepair_ShowsConfirmation()
     {
         var context = CreateContext();
-        context.ViewModel.GetSnapshot = () => ReadySnapshot();
+        context.ViewModel.ApplySnapshot(ReadySnapshot());
 
         await context.ViewModel.RequestRepairCommand.ExecuteAsync(null);
 
@@ -148,13 +190,13 @@ public sealed class GameOperationsViewModelTests
     {
         var context = CreateContext();
         var refreshCount = 0;
-        context.ViewModel.GetSnapshot = () => ReadySnapshot();
+        context.ViewModel.ApplySnapshot(ReadySnapshot());
         context.Backend.RepairResult = new GameOperationResult
         {
             Success = true,
             Message = "repaired"
         };
-        context.ViewModel.RequestRefreshAsync = () =>
+        context.ViewModel.RefreshRequested += _ =>
         {
             refreshCount++;
             return Task.CompletedTask;
@@ -207,7 +249,7 @@ public sealed class GameOperationsViewModelTests
     public async Task RequestUninstallCommand_WhenValidationSucceeds_ShowsConfirmation()
     {
         var context = CreateContext();
-        context.ViewModel.GetSnapshot = () => ReadySnapshot("C:\\Game");
+        context.ViewModel.ApplySnapshot(ReadySnapshot("C:\\Game"));
         context.Backend.ValidateUninstallResult = new GameOperationResult
         {
             Success = true,
@@ -225,13 +267,13 @@ public sealed class GameOperationsViewModelTests
     {
         var context = CreateContext();
         var refreshCount = 0;
-        context.ViewModel.GetSnapshot = () => ReadySnapshot("C:\\Game");
+        context.ViewModel.ApplySnapshot(ReadySnapshot("C:\\Game"));
         context.Backend.UninstallResult = new GameOperationResult
         {
             Success = true,
             Message = "uninstalled"
         };
-        context.ViewModel.RequestRefreshAsync = () =>
+        context.ViewModel.RefreshRequested += _ =>
         {
             refreshCount++;
             return Task.CompletedTask;
@@ -249,14 +291,14 @@ public sealed class GameOperationsViewModelTests
     {
         var context = CreateContext();
         var refreshCount = 0;
-        context.ViewModel.GetSnapshot = () => ReadySnapshot();
+        context.ViewModel.ApplySnapshot(ReadySnapshot());
         context.Backend.ResumeResult = new GameOperationResult
         {
             Success = false,
             ErrorType = "stopped",
             Message = "stopped"
         };
-        context.ViewModel.RequestRefreshAsync = () =>
+        context.ViewModel.RefreshRequested += _ =>
         {
             refreshCount++;
             return Task.CompletedTask;
@@ -353,17 +395,16 @@ public sealed class GameOperationsViewModelTests
     {
         var context = CreateContext();
         context.Shell.IsBusy = true;
-        context.ViewModel.GetSnapshot = () => ReadySnapshot();
+        context.ViewModel.ApplySnapshot(ReadySnapshot());
 
         await context.ViewModel.StartGameCommand.ExecuteAsync(null);
 
         Assert.Equal(0, context.Backend.LaunchInvocationCount);
 
-        context.Shell.IsBusy = false;
-        context.ViewModel.GetSnapshot = () => null;
-        await context.ViewModel.StartGameCommand.ExecuteAsync(null);
+        var missingStateContext = CreateContext();
+        await missingStateContext.ViewModel.StartGameCommand.ExecuteAsync(null);
 
-        Assert.Equal(0, context.Backend.LaunchInvocationCount);
+        Assert.Equal(0, missingStateContext.Backend.LaunchInvocationCount);
     }
 
     [Fact]
@@ -372,7 +413,7 @@ public sealed class GameOperationsViewModelTests
         var context = CreateContext();
         var notifications = new List<ToastNotification>();
         context.ToastService.ToastRaised += notifications.Add;
-        context.ViewModel.GetSnapshot = () => ReadySnapshot();
+        context.ViewModel.ApplySnapshot(ReadySnapshot());
         context.Backend.LaunchResult = new GameLaunchResult
         {
             Success = false,
@@ -394,7 +435,7 @@ public sealed class GameOperationsViewModelTests
     public async Task InstallOrUpdateCommand_WhenStateIsReady_ReturnsUnavailable()
     {
         var context = CreateContext();
-        context.ViewModel.GetSnapshot = () => ReadySnapshot();
+        context.ViewModel.ApplySnapshot(ReadySnapshot());
 
         await context.ViewModel.InstallOrUpdateCommand.ExecuteAsync(null);
 
@@ -406,10 +447,10 @@ public sealed class GameOperationsViewModelTests
     public async Task RequestRepairAndRepair_WhenStateIsInvalid_DoNotCallBackend()
     {
         var context = CreateContext();
-        context.ViewModel.GetSnapshot = () => new LauncherStatusSnapshot
+        context.ViewModel.ApplySnapshot(new LauncherStatusSnapshot
         {
             RuntimeState = LauncherRuntimeState.NotInstalled
-        };
+        });
 
         await context.ViewModel.RequestRepairCommand.ExecuteAsync(null);
         await context.ViewModel.RepairAsync();
@@ -443,7 +484,7 @@ public sealed class GameOperationsViewModelTests
     public async Task RequestUninstallCommand_WhenValidationFails_DoesNotShowConfirmation()
     {
         var context = CreateContext();
-        context.ViewModel.GetSnapshot = () => ReadySnapshot("C:\\Game");
+        context.ViewModel.ApplySnapshot(ReadySnapshot("C:\\Game"));
         context.Backend.ValidateUninstallResult = new GameOperationResult
         {
             Success = false,
@@ -461,9 +502,9 @@ public sealed class GameOperationsViewModelTests
     {
         var context = CreateContext();
         var refreshCount = 0;
-        context.ViewModel.GetSnapshot = () => ReadySnapshot();
+        context.ViewModel.ApplySnapshot(ReadySnapshot());
         context.Backend.ResumeResult = null;
-        context.ViewModel.RequestRefreshAsync = () =>
+        context.ViewModel.RefreshRequested += _ =>
         {
             refreshCount++;
             return Task.CompletedTask;
@@ -479,10 +520,10 @@ public sealed class GameOperationsViewModelTests
     public async Task BackendExceptions_AreConvertedToOperationNotes()
     {
         var context = CreateContext();
-        context.ViewModel.GetSnapshot = () => new LauncherStatusSnapshot
+        context.ViewModel.ApplySnapshot(new LauncherStatusSnapshot
         {
             RuntimeState = LauncherRuntimeState.NotInstalled
-        };
+        });
         context.Backend.InstallException = new InvalidOperationException("install failed");
 
         await context.ViewModel.InstallOrUpdateCommand.ExecuteAsync(null);

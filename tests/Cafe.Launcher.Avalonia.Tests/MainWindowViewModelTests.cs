@@ -79,6 +79,24 @@ public sealed class MainWindowViewModelTests : IDisposable
     }
 
     [Fact]
+    public async Task HandleOperationsRefreshRequestedAsync_ConsumesSkipPersistedResumeOnce()
+    {
+        var coreService = new CountingCoreService(CreateSnapshot());
+        var backend = new CountingGameOperationsBackend();
+        using var viewModel = await CreateViewModelAsync(coreService, gameOperationsBackend: backend);
+
+        await viewModel.HandleOperationsRefreshRequestedAsync(GameOperationsRefreshMode.Normal);
+        Assert.Equal(1, backend.ResumeInvocationCount);
+
+        await viewModel.HandleOperationsRefreshRequestedAsync(GameOperationsRefreshMode.SkipPersistedResume);
+        Assert.Equal(1, backend.ResumeInvocationCount);
+
+        await viewModel.HandleOperationsRefreshRequestedAsync(GameOperationsRefreshMode.Normal);
+        Assert.Equal(2, backend.ResumeInvocationCount);
+        Assert.Equal(3, coreService.LoadCount);
+    }
+
+    [Fact]
     public async Task ShellSetLoading_UsesPureLoadingValuesForStatusDetails()
     {
         var coreService = new CountingCoreService(CreateSnapshot());
@@ -901,7 +919,7 @@ public sealed class MainWindowViewModelTests : IDisposable
         using var apiClient = new ResourcePanelApiClient(handler);
         var coreService = new CountingCoreService(CreateSnapshot());
         using var viewModel = await CreateViewModelAsync(coreService, settingsService, uidService, apiClient);
-        viewModel.ResourcePanel.GetPatchUrlGroup = () => PatchUrlGroups.Cafe;
+        viewModel.ResourcePanel.ApplySettings(new LauncherSettings { PatchUrlGroup = PatchUrlGroups.Cafe });
 
         await viewModel.ResourcePanel.OpenResourcePanelCommand.ExecuteAsync(null);
 
@@ -919,6 +937,46 @@ public sealed class MainWindowViewModelTests : IDisposable
     }
 
     [Fact]
+    public async Task ResourcePanelApplySettings_UsesCafeSourceAndSystemProxyWhenOpeningPanel()
+    {
+        using var listener = new System.Net.Sockets.TcpListener(IPAddress.Loopback, 0);
+        listener.Start();
+        var proxyEndpoint = (IPEndPoint)listener.LocalEndpoint;
+        var proxySettings = new ProxySettingsService(() => new SystemProxySettings(
+            $"http://127.0.0.1:{proxyEndpoint.Port}",
+            []));
+        using var clientFactory = new HttpClientFactory(proxySettings);
+        using var apiClient = new ResourcePanelApiClient(clientFactory);
+        var settingsService = new LauncherSettingsService(
+            Path.Combine(tempDir, Guid.NewGuid().ToString("N"), "settings.json"));
+        await settingsService.SaveAsync(new LauncherSettings { ResourcePanelUid = "UID123" });
+        var uidService = new ResourcePanelUidService(
+            new BestHttpCookieLibraryService(),
+            settingsService,
+            Path.Combine(tempDir, "missing"));
+        using var viewModel = await CreateViewModelAsync(
+            new CountingCoreService(CreateSnapshot()),
+            settingsService,
+            uidService,
+            apiClient);
+        viewModel.ResourcePanel.ApplySettings(new LauncherSettings
+        {
+            ProxyMode = ProxyModes.System,
+            PatchUrlGroup = PatchUrlGroups.Cafe
+        });
+        var proxyConnection = listener.AcceptTcpClientAsync();
+
+        var openTask = viewModel.ResourcePanel.OpenResourcePanelCommand.ExecuteAsync(null);
+        using var acceptedClient = await proxyConnection.WaitAsync(TimeSpan.FromSeconds(5));
+        acceptedClient.Close();
+        listener.Stop();
+        await openTask;
+
+        Assert.True(viewModel.ResourcePanel.IsResourcePanelVisible);
+        Assert.False(viewModel.Dialogs.IsResourcePanelSourceConfirmVisible);
+    }
+
+    [Fact]
     public async Task SaveResourcePanelAsync_SendsCnForEnabledAndJpForDisabled()
     {
         var settingsService = new LauncherSettingsService(Path.Combine(tempDir, Guid.NewGuid().ToString("N"), "settings.json"));
@@ -931,7 +989,7 @@ public sealed class MainWindowViewModelTests : IDisposable
         using var apiClient = new ResourcePanelApiClient(handler);
         var coreService = new CountingCoreService(CreateSnapshot());
         using var viewModel = await CreateViewModelAsync(coreService, settingsService, uidService, apiClient);
-        viewModel.ResourcePanel.GetPatchUrlGroup = () => PatchUrlGroups.Cafe;
+        viewModel.ResourcePanel.ApplySettings(new LauncherSettings { PatchUrlGroup = PatchUrlGroups.Cafe });
         await viewModel.ResourcePanel.OpenResourcePanelCommand.ExecuteAsync(null);
         viewModel.ResourcePanel.ResourcePanelItems.First(item => item.Code == ResourcePanelResourceCodes.Text).IsEnabled = true;
         viewModel.ResourcePanel.ResourcePanelItems.First(item => item.Code == ResourcePanelResourceCodes.Voice).IsEnabled = false;
@@ -957,7 +1015,7 @@ public sealed class MainWindowViewModelTests : IDisposable
         using var apiClient = new ResourcePanelApiClient(handler);
         var coreService = new CountingCoreService(CreateSnapshot());
         using var viewModel = await CreateViewModelAsync(coreService, settingsService, uidService, apiClient);
-        viewModel.ResourcePanel.GetPatchUrlGroup = () => PatchUrlGroups.Cafe;
+        viewModel.ResourcePanel.ApplySettings(new LauncherSettings { PatchUrlGroup = PatchUrlGroups.Cafe });
 
         await viewModel.ResourcePanel.OpenResourcePanelCommand.ExecuteAsync(null);
 
@@ -1009,7 +1067,8 @@ public sealed class MainWindowViewModelTests : IDisposable
         LauncherSettingsService? settingsService = null,
         ResourcePanelUidService? resourcePanelUidService = null,
         ResourcePanelApiClient? resourcePanelApiClient = null,
-        ToastService? toastService = null)
+        ToastService? toastService = null,
+        IGameOperationsBackend? gameOperationsBackend = null)
     {
         settingsService ??= new LauncherSettingsService(
             Path.Combine(tempDir, Guid.NewGuid().ToString("N"), "settings.json"));
@@ -1075,15 +1134,24 @@ public sealed class MainWindowViewModelTests : IDisposable
         var shellViewModel = new ShellViewModel(localizationService);
         var remoteContentViewModel = new RemoteContentViewModel(localizationService, imageCacheService);
         var backgroundViewModel = new BackgroundViewModel(imageCacheService, diagnostics, settingsViewModel);
-        var gameOperationsViewModel = new GameOperationsViewModel(
-            gameLaunchService,
-            gameDownloadService,
-            gameUninstallService,
-            localizationService,
-            toastService,
-            diagnostics,
-            shellViewModel,
-            dialogsViewModel);
+        var gameOperationsViewModel = gameOperationsBackend is null
+            ? new GameOperationsViewModel(
+                gameLaunchService,
+                gameDownloadService,
+                gameUninstallService,
+                localizationService,
+                toastService,
+                diagnostics,
+                shellViewModel,
+                dialogsViewModel)
+            : new GameOperationsViewModel(
+                gameOperationsBackend,
+                localizationService,
+                toastService,
+                diagnostics,
+                shellViewModel,
+                dialogsViewModel,
+                _ => Task.CompletedTask);
         var toastHostViewModel = new ToastHostViewModel(toastService, localizationService, settingsViewModel);
         var windowChromeViewModel = new WindowChromeViewModel(
             settingsViewModel, remoteContentViewModel, dialogsViewModel, gameOperationsViewModel);
@@ -1284,6 +1352,55 @@ public sealed class MainWindowViewModelTests : IDisposable
         {
             LoadCount++;
             return Task.FromResult(snapshot);
+        }
+    }
+
+    private sealed class CountingGameOperationsBackend : IGameOperationsBackend
+    {
+        public int ResumeInvocationCount { get; private set; }
+        public bool IsDownloadRunning => false;
+        public bool IsPaused => false;
+
+        public Task<GameLaunchResult> StartGameAsync(LauncherStatusSnapshot snapshot) =>
+            throw new NotSupportedException();
+
+        public Task<GameOperationResult> InstallOrUpdateAsync(
+            LauncherStatusSnapshot snapshot,
+            Action<GameOperationProgress> progress) =>
+            throw new NotSupportedException();
+
+        public Task<GameOperationResult> RepairAsync(
+            LauncherStatusSnapshot snapshot,
+            Action<GameOperationProgress> progress) =>
+            throw new NotSupportedException();
+
+        public Task<GameOperationResult> ValidateUninstallAsync(string gamePath) =>
+            throw new NotSupportedException();
+
+        public Task<GameOperationResult> UninstallAsync(
+            LauncherStatusSnapshot snapshot,
+            Action<GameOperationProgress> progress) =>
+            throw new NotSupportedException();
+
+        public Task<GameOperationResult?> ResumePersistedAsync(
+            LauncherStatusSnapshot snapshot,
+            Action<GameOperationProgress> progress,
+            CancellationToken cancellationToken)
+        {
+            ResumeInvocationCount++;
+            return Task.FromResult<GameOperationResult?>(null);
+        }
+
+        public void Stop(bool clearPersistedState)
+        {
+        }
+
+        public void Pause()
+        {
+        }
+
+        public void Resume()
+        {
         }
     }
 

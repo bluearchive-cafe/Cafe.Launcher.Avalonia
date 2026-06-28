@@ -16,6 +16,21 @@ public sealed class WindowChromeViewModelTests : IDisposable
         TestLocalizationHelper.Initialize();
     }
 
+    [Fact]
+    public void LegacyWindowDelegateProperties_AreRemoved()
+    {
+        var propertyNames = typeof(WindowChromeViewModel)
+            .GetProperties(System.Reflection.BindingFlags.Instance |
+                System.Reflection.BindingFlags.Public |
+                System.Reflection.BindingFlags.NonPublic)
+            .Select(property => property.Name);
+
+        Assert.DoesNotContain("GetSnapshot", propertyNames);
+        Assert.DoesNotContain("MinimizeWindow", propertyNames);
+        Assert.DoesNotContain("CloseWindow", propertyNames);
+        Assert.DoesNotContain("RestoreWindow", propertyNames);
+    }
+
     [Theory]
     [InlineData(PatchUrlGroups.Official, LauncherConstants.OfficialGameWebsiteUrl)]
     [InlineData(PatchUrlGroups.Cafe, LauncherConstants.CafeWebsiteUrl)]
@@ -30,10 +45,9 @@ public sealed class WindowChromeViewModelTests : IDisposable
     public void ShowSettingsCommand_OpensSettingsAndLoadsSnapshot()
     {
         using var context = CreateContext();
-        context.ViewModel.GetSnapshot = () => new LauncherStatusSnapshot
-        {
-            Settings = new LauncherSettings { Language = LauncherLanguages.Japanese }
-        };
+        context.Settings.ApplyLauncherSettings(
+            new LauncherSettings { Language = LauncherLanguages.Japanese },
+            "");
 
         context.ViewModel.ShowSettingsCommand.Execute(null);
 
@@ -47,10 +61,7 @@ public sealed class WindowChromeViewModelTests : IDisposable
     public void ShowSettingsCommand_WhenDirty_ShowsUnsavedChangesInsteadOfClosing()
     {
         using var context = CreateContext();
-        context.ViewModel.GetSnapshot = () => new LauncherStatusSnapshot
-        {
-            Settings = new LauncherSettings()
-        };
+        context.Settings.ApplyLauncherSettings(new LauncherSettings(), "");
         context.ViewModel.ShowSettingsCommand.Execute(null);
         context.Settings.Editor.Current.Language = LauncherLanguages.Japanese;
 
@@ -64,10 +75,7 @@ public sealed class WindowChromeViewModelTests : IDisposable
     public async Task DiscardSettingsChangesCommand_DiscardsAndClosesSettings()
     {
         using var context = CreateContext();
-        context.ViewModel.GetSnapshot = () => new LauncherStatusSnapshot
-        {
-            Settings = new LauncherSettings()
-        };
+        context.Settings.ApplyLauncherSettings(new LauncherSettings(), "");
         context.ViewModel.ShowSettingsCommand.Execute(null);
         context.Settings.Editor.Current.Language = LauncherLanguages.Japanese;
 
@@ -99,8 +107,8 @@ public sealed class WindowChromeViewModelTests : IDisposable
             },
             new LauncherSettings(),
             CancellationToken.None);
-        context.ViewModel.MinimizeWindow = () => minimized = true;
-        context.ViewModel.RestoreWindow = () => restored = true;
+        context.ViewModel.MinimizeRequested += () => minimized = true;
+        context.ViewModel.RestoreRequested += () => restored = true;
 
         context.ViewModel.MinimizeCommand.Execute(null);
 
@@ -119,7 +127,7 @@ public sealed class WindowChromeViewModelTests : IDisposable
         using var context = CreateContext();
         context.Backend.IsDownloadRunning = true;
         var closed = false;
-        context.ViewModel.CloseWindow = () => closed = true;
+        context.ViewModel.CloseRequested += () => closed = true;
 
         context.ViewModel.CloseCommand.Execute(null);
 
@@ -132,7 +140,7 @@ public sealed class WindowChromeViewModelTests : IDisposable
     {
         using var context = CreateContext();
         var closed = false;
-        context.ViewModel.CloseWindow = () => closed = true;
+        context.ViewModel.CloseRequested += () => closed = true;
 
         context.ViewModel.CloseCommand.Execute(null);
 
@@ -144,7 +152,7 @@ public sealed class WindowChromeViewModelTests : IDisposable
     {
         using var context = CreateContext();
         var closed = false;
-        context.ViewModel.CloseWindow = () => closed = true;
+        context.ViewModel.CloseRequested += () => closed = true;
 
         context.ViewModel.CloseAfterStoppingDownload();
 
