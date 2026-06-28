@@ -1062,13 +1062,47 @@ public sealed class MainWindowViewModelTests : IDisposable
         Assert.False(viewModel.Dialogs.IsCrashRecoveryVisible);
     }
 
+    [Fact]
+    public async Task InitializeAsync_WithReducedMotion_AppliesMotionPreference()
+    {
+        var snapshot = CreateSnapshot();
+        snapshot.Settings.MotionMode = MotionModes.Reduced;
+        using var viewModel = await CreateViewModelAsync(
+            new CountingCoreService(snapshot),
+            windowsAnimationSettingsProvider: new WindowsAnimationSettingsProvider(() => (true, true)));
+
+        await viewModel.InitializeAsync();
+
+        Assert.True(viewModel.IsMotionReduced);
+        Assert.False(viewModel.IsMotionEnabled);
+    }
+
+    [Fact]
+    public async Task SaveSettingsAsync_WithFullMotion_AppliesMotionPreferenceImmediately()
+    {
+        var snapshot = CreateSnapshot();
+        snapshot.Settings.MotionMode = MotionModes.Reduced;
+        using var viewModel = await CreateViewModelAsync(
+            new CountingCoreService(snapshot),
+            gameOperationsBackend: new CountingGameOperationsBackend(isDownloadRunning: true),
+            windowsAnimationSettingsProvider: new WindowsAnimationSettingsProvider(() => (true, false)));
+        await viewModel.InitializeAsync();
+        viewModel.Settings.Editor.Current.MotionMode = MotionModes.Full;
+
+        await SaveSettingsAsync(viewModel);
+
+        Assert.False(viewModel.IsMotionReduced);
+        Assert.True(viewModel.IsMotionEnabled);
+    }
+
     private async Task<MainWindowViewModel> CreateViewModelAsync(
         ILauncherCoreService coreService,
         LauncherSettingsService? settingsService = null,
         ResourcePanelUidService? resourcePanelUidService = null,
         ResourcePanelApiClient? resourcePanelApiClient = null,
         ToastService? toastService = null,
-        IGameOperationsBackend? gameOperationsBackend = null)
+        IGameOperationsBackend? gameOperationsBackend = null,
+        WindowsAnimationSettingsProvider? windowsAnimationSettingsProvider = null)
     {
         settingsService ??= new LauncherSettingsService(
             Path.Combine(tempDir, Guid.NewGuid().ToString("N"), "settings.json"));
@@ -1172,7 +1206,8 @@ public sealed class MainWindowViewModelTests : IDisposable
             toastHostViewModel,
             windowChromeViewModel,
             settingsViewModel,
-            resourcePanelViewModel);
+            resourcePanelViewModel,
+            windowsAnimationSettingsProvider: windowsAnimationSettingsProvider);
     }
 
     private LauncherStatusSnapshot CreateSnapshot()
@@ -1357,8 +1392,15 @@ public sealed class MainWindowViewModelTests : IDisposable
 
     private sealed class CountingGameOperationsBackend : IGameOperationsBackend
     {
+        private readonly bool isDownloadRunning;
+
+        public CountingGameOperationsBackend(bool isDownloadRunning = false)
+        {
+            this.isDownloadRunning = isDownloadRunning;
+        }
+
         public int ResumeInvocationCount { get; private set; }
-        public bool IsDownloadRunning => false;
+        public bool IsDownloadRunning => isDownloadRunning;
         public bool IsPaused => false;
 
         public Task<GameLaunchResult> StartGameAsync(LauncherStatusSnapshot snapshot) =>

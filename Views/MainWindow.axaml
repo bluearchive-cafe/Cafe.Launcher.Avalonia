@@ -110,7 +110,7 @@
                                         </Style>
                                     </Carousel.Styles>
                                     <Carousel.PageTransition>
-                                        <CrossFade Duration="0:0:0.35"/>
+                                        <Binding Path="RemoteContent.CarouselTransition"/>
                                     </Carousel.PageTransition>
                                     <Carousel.ItemTemplate>
                                         <DataTemplate x:DataType="models:RemoteContentItem">

@@ -5,6 +5,7 @@ using Cafe.Launcher.Avalonia.Models;
 using Cafe.Launcher.Avalonia.Services;
 using Cafe.Launcher.Avalonia.Services.Diagnostics;
 using CommunityToolkit.Mvvm.Input;
+using CommunityToolkit.Mvvm.ComponentModel;
 
 namespace Cafe.Launcher.Avalonia.ViewModels;
 
@@ -20,6 +21,13 @@ public partial class MainWindowViewModel : ViewModelBase, IDisposable
     private bool disposed;
     private bool skipNextPersistedResume;
     private LauncherStatusSnapshot? currentSnapshot;
+    private readonly WindowsAnimationSettingsProvider windowsAnimationSettingsProvider;
+
+    [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(IsMotionEnabled))]
+    private bool isMotionReduced = true;
+
+    public bool IsMotionEnabled => !IsMotionReduced;
 
     public ShellViewModel Shell { get; }
 
@@ -57,13 +65,15 @@ public partial class MainWindowViewModel : ViewModelBase, IDisposable
         WindowChromeViewModel windowChrome,
         SettingsViewModel settingsViewModel,
         ResourcePanelViewModel resourcePanelViewModel,
-        LogViewerDialogViewModel? logViewer = null)
+        LogViewerDialogViewModel? logViewer = null,
+        WindowsAnimationSettingsProvider? windowsAnimationSettingsProvider = null)
     {
         this.launcherCoreService = launcherCoreService;
         this.settingsService = settingsService;
         this.localizer = localizer;
         this.toastService = toastService;
         this.diagnostics = diagnostics;
+        this.windowsAnimationSettingsProvider = windowsAnimationSettingsProvider ?? new WindowsAnimationSettingsProvider();
 
         Shell = shell;
         Background = background;
@@ -104,6 +114,7 @@ public partial class MainWindowViewModel : ViewModelBase, IDisposable
         try
         {
             var settingsForLanguage = await settingsService.ReadAsync(cancellationToken);
+            ApplyMotionSettings(settingsForLanguage);
             ApplyLanguage(settingsForLanguage.Language);
             Settings.Appearance.Load(settingsForLanguage);
             SettingsAppearanceViewModel.ApplyTheme(settingsForLanguage.ThemeMode);
@@ -259,6 +270,7 @@ public partial class MainWindowViewModel : ViewModelBase, IDisposable
         var savedPatchUrlGroup = Settings.Editor.Current.PatchUrlGroup;
         RemoteContent.UpdateRemoteContentVisibility(
             Settings.Editor.Current.ShowRemoteContentCard);
+        ApplyMotionSettings(Settings.Editor.Current);
 
         if (Operations.IsDownloadRunning)
         {
@@ -301,6 +313,15 @@ public partial class MainWindowViewModel : ViewModelBase, IDisposable
     {
         Settings.ApplyLauncherSettings(settings, localGamePath);
         ResourcePanel.ApplySettings(settings);
+        ApplyMotionSettings(settings);
+    }
+
+    private void ApplyMotionSettings(LauncherSettings settings)
+    {
+        IsMotionReduced = MotionSettingsResolver.ShouldReduceMotion(
+            settings.MotionMode,
+            windowsAnimationSettingsProvider.GetWindowsAnimationsEnabled());
+        RemoteContent.ApplyMotionPreference(IsMotionReduced);
     }
 
     private void ApplyLanguage(string language)

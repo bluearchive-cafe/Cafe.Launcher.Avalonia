@@ -5,6 +5,7 @@ using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
 using Avalonia.Media.Imaging;
+using Avalonia.Animation;
 using Avalonia.Threading;
 using Cafe.Launcher.Avalonia.Models;
 using Cafe.Launcher.Avalonia.Services;
@@ -22,6 +23,7 @@ public partial class RemoteContentViewModel : ViewModelBase, IDisposable
     private CancellationTokenSource? carouselDelayCts;
     private string proxyMode = ProxyModes.Direct;
     private bool showRemoteContentCard = true;
+    private bool isMotionReduced;
 
     [ObservableProperty]
     private string noticeText = "";
@@ -72,6 +74,9 @@ public partial class RemoteContentViewModel : ViewModelBase, IDisposable
     private int bannerIntervalMs = 5000;
 
     [ObservableProperty]
+    private IPageTransition carouselTransition = new CrossFade(TimeSpan.FromMilliseconds(350));
+
+    [ObservableProperty]
     private NewsCategory? selectedNewsCategory;
 
     public ObservableCollection<BannerDot> BannerDots { get; } = [];
@@ -100,6 +105,22 @@ public partial class RemoteContentViewModel : ViewModelBase, IDisposable
             ? localizer.T("resumeCarousel")
             : localizer.T("pauseCarousel");
         UpdateCarouselPageText();
+    }
+
+    public void ApplyMotionPreference(bool reduceMotion)
+    {
+        isMotionReduced = reduceMotion;
+        CarouselTransition = new CrossFade(
+            reduceMotion ? TimeSpan.Zero : TimeSpan.FromMilliseconds(350));
+        if (reduceMotion)
+        {
+            carouselDelayCts?.Cancel();
+            StopCarouselTimer();
+        }
+        else
+        {
+            StartCarouselTimer();
+        }
     }
 
     public void Apply(LauncherRemoteState remote, LauncherSettings settings, CancellationToken cancellationToken)
@@ -279,7 +300,7 @@ public partial class RemoteContentViewModel : ViewModelBase, IDisposable
     public void StartCarouselTimer()
     {
         StopCarouselTimer();
-        if (!BannerIsLooping || BannerItems.Count <= 1 || IsCarouselPaused)
+        if (isMotionReduced || !BannerIsLooping || BannerItems.Count <= 1 || IsCarouselPaused)
         {
             return;
         }
@@ -455,7 +476,7 @@ public partial class RemoteContentViewModel : ViewModelBase, IDisposable
         try
         {
             await Task.Delay(ManualNavResumeDelayMs, token);
-            if (!IsCarouselPaused && BannerIsLooping && BannerItems.Count > 1)
+            if (!isMotionReduced && !IsCarouselPaused && BannerIsLooping && BannerItems.Count > 1)
             {
                 StartCarouselTimer();
             }

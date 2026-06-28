@@ -187,6 +187,13 @@ public sealed class LauncherSettingsService
             settings.ThemeMode = ThemeModes.System;
         }
 
+        if (settings.MotionMode is not MotionModes.System
+            and not MotionModes.Full
+            and not MotionModes.Reduced)
+        {
+            settings.MotionMode = MotionModes.System;
+        }
+
         if (settings.ThemeColorMode is not ThemeColorModes.Default
             and not ThemeColorModes.System
             and not ThemeColorModes.Wallpaper

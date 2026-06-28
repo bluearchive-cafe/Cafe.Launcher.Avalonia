@@ -19,6 +19,7 @@
                 <ItemsControl.ItemTemplate>
                     <DataTemplate DataType="{x:Type services:ToastNotification}">
                         <Border Classes="toast-card"
+                                Classes.motion-enabled="{Binding DataContext.IsMotionEnabled, ElementName=ToastOverlayRoot}"
                                 IsHitTestVisible="True">
                             <Grid Classes="toast-layout" ColumnDefinitions="Auto,*,Auto">
                                 <materialIcons:MaterialIcon Kind="{Binding IconKind}" Width="{StaticResource LauncherIconMd}" Height="{StaticResource LauncherIconMd}"

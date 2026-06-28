@@ -111,6 +111,26 @@
 
                                 <Grid Classes="settings-row" ColumnDefinitions="Auto,*,Auto">
                                     <Border Classes="settings-icon">
+                                        <materialIcons:MaterialIcon Kind="AnimationPlayOutline" Width="{StaticResource LauncherIconMd}" Height="{StaticResource LauncherIconMd}" Foreground="{DynamicResource LauncherAccentBrush}" HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                                    </Border>
+                                    <StackPanel Grid.Column="1" Classes="dialog-heading-copy">
+                                        <TextBlock Text="{Binding Shell.I18n.MotionMode}" Classes="section-title"/>
+                                        <TextBlock Text="{Binding Shell.I18n.MotionModeDescription}" Classes="caption" TextWrapping="Wrap"/>
+                                    </StackPanel>
+                                    <ComboBox Grid.Column="2" Classes="setting-control"
+                                              ItemsSource="{Binding Settings.Options.MotionMode}"
+                                              SelectedValue="{Binding Settings.Editor.Current.MotionMode, Mode=TwoWay}"
+                                              SelectedValueBinding="{Binding Code}">
+                                        <ComboBox.ItemTemplate>
+                                            <DataTemplate x:DataType="models:SettingOption">
+                                                <TextBlock Text="{Binding DisplayName}"/>
+                                            </DataTemplate>
+                                        </ComboBox.ItemTemplate>
+                                    </ComboBox>
+                                </Grid>
+
+                                <Grid Classes="settings-row" ColumnDefinitions="Auto,*,Auto">
+                                    <Border Classes="settings-icon">
                                         <materialIcons:MaterialIcon Kind="PlaylistCheck" Width="{StaticResource LauncherIconMd}" Height="{StaticResource LauncherIconMd}" Foreground="{DynamicResource LauncherAccentBrush}" HorizontalAlignment="Center" VerticalAlignment="Center"/>
                                     </Border>
                                     <StackPanel Grid.Column="1" Classes="dialog-heading-copy">

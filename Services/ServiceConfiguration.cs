@@ -46,6 +46,7 @@ public static class ServiceConfiguration
         services.AddSingleton<NoticeStateService>();
         services.AddSingleton<ResourcePanelUidService>();
         services.AddSingleton<LauncherSettingsService>();
+        services.AddSingleton<WindowsAnimationSettingsProvider>();
         services.AddSingleton<ISettingsEditor, SettingsEditor>();
         services.AddSingleton<SettingsOptionsViewModel>();
         services.AddSingleton<SettingsAppearanceViewModel>();

@@ -515,6 +515,39 @@ public sealed partial class UiStyleContractTests
     }
 
     [Fact]
+    public void ToastMotionAnimation_IsEnabledOnlyByRootMotionPreference()
+    {
+        var overlay = File.ReadAllText(ProjectFile("Views/MainWindowToastOverlay.axaml"));
+        Assert.Contains(
+            "Classes.motion-enabled=\"{Binding DataContext.IsMotionEnabled, ElementName=ToastOverlayRoot}\"",
+            overlay,
+            StringComparison.Ordinal);
+
+        var document = XDocument.Load(ProjectFile("Views/MainWindow.Styles.axaml"));
+        var toastStyles = document
+            .Descendants()
+            .Where(element =>
+                element.Name.LocalName == "Style"
+                && element.Attribute("Selector")?.Value?.StartsWith(
+                    "Border.toast-card",
+                    StringComparison.Ordinal) == true)
+            .ToList();
+        var baseStyle = Assert.Single(
+            toastStyles,
+            style => style.Attribute("Selector")?.Value == "Border.toast-card");
+        var motionStyle = Assert.Single(
+            toastStyles,
+            style => style.Attribute("Selector")?.Value == "Border.toast-card.motion-enabled");
+
+        Assert.DoesNotContain(
+            baseStyle.Elements(),
+            element => element.Name.LocalName == "Style.Animations");
+        Assert.Contains(
+            motionStyle.Elements(),
+            element => element.Name.LocalName == "Style.Animations");
+    }
+
+    [Fact]
     public void OverlayStyles_DefineSettingsAndDialogLayerOrder()
     {
         var styles = File.ReadAllText(ProjectFile("Views/MainWindow.Styles.axaml"));
