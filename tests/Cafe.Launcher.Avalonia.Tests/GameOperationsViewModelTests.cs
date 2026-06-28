@@ -307,6 +307,47 @@ public sealed class GameOperationsViewModelTests
         Assert.True(context.ViewModel.CanPauseOperation);
     }
 
+    [Theory]
+    [InlineData("disk-check", 10L, 20L, 0, 0, 0, "10B", "20B")]
+    [InlineData("verification-retry", 0, null, 2, 1, 3, "2", "1/3")]
+    [InlineData("verification-failed", 0, null, 2, 0, 0, "2", null)]
+    public void ApplyProgress_MapsPreflightAndVerificationStagesAndClearsDownloadMetrics(
+        string stage,
+        long requiredBytes,
+        long? availableBytes,
+        int failedFileCount,
+        int retryAttempt,
+        int retryLimit,
+        string expectedText,
+        string? secondExpectedText)
+    {
+        var context = CreateContext();
+
+        context.ViewModel.ApplyProgress(new GameOperationProgress
+        {
+            OperationKind = GameOperationKinds.Download,
+            Stage = stage,
+            RequiredDiskBytes = requiredBytes,
+            AvailableDiskBytes = availableBytes,
+            FailedFileCount = failedFileCount,
+            RetryAttempt = retryAttempt,
+            RetryLimit = retryLimit,
+            Speed = "old-speed",
+            DownloadedSize = 10,
+            TotalSize = 20,
+            Estimated = "old-eta"
+        });
+
+        Assert.Contains(expectedText, context.ViewModel.ProgressDetail, StringComparison.Ordinal);
+        if (secondExpectedText is not null)
+        {
+            Assert.Contains(secondExpectedText, context.ViewModel.ProgressDetail, StringComparison.Ordinal);
+        }
+        Assert.Empty(context.ViewModel.ProgressSpeed);
+        Assert.Empty(context.ViewModel.ProgressSize);
+        Assert.Empty(context.ViewModel.ProgressEstimated);
+    }
+
     [Fact]
     public async Task StartGameCommand_WhenBusyOrStateMissing_DoesNotStartGame()
     {

@@ -335,13 +335,29 @@ public sealed class GameDownloadService : IDisposable
             var currentDownloadList = downloadPlan.NeedDownload;
             var affectedCount = currentDownloadList.Count + downloadPlan.NeedDelete.Count;
             var requiredBytes = currentDownloadList.Sum(item => FileSizeFormatter.ParseSize(item.Size));
-            if (!diskSpaceService.HasEnoughSpace(gamePath, requiredBytes))
+            var availableBytes = diskSpaceService.GetAvailableBytes(gamePath);
+            progress(new GameOperationProgress
+            {
+                OperationKind = operationKind,
+                Stage = "disk-check",
+                RequiredDiskBytes = requiredBytes,
+                AvailableDiskBytes = availableBytes,
+                IsRunning = true,
+                CanStop = true
+            });
+            if (!availableBytes.HasValue || availableBytes.Value < requiredBytes)
             {
                 await diagnostics.MessageAsync(
                     "Game download blocked by disk space.",
                     $"path: {gamePath}{Environment.NewLine}required: {FileSizeFormatter.Format(requiredBytes)}",
                     activeToken);
-                return Failed(localizer.T("diskSpaceInsufficient"), "game-download-error-no-space", affectedCount);
+                return Failed(
+                    localizer.F(
+                        "diskSpaceInsufficientDetail",
+                        FileSizeFormatter.Format(requiredBytes),
+                        availableBytes.HasValue ? FileSizeFormatter.Format(availableBytes.Value) : "--"),
+                    "game-download-error-no-space",
+                    affectedCount);
             }
 
             for (var retry = 0; retry <= MaxInstallVerificationRetry; retry++)
@@ -391,6 +407,20 @@ public sealed class GameDownloadService : IDisposable
                     };
                 }
 
+                if (retry < MaxInstallVerificationRetry)
+                {
+                    progress(new GameOperationProgress
+                    {
+                        OperationKind = operationKind,
+                        Stage = "verification-retry",
+                        FailedFileCount = failedFiles.Count,
+                        RetryAttempt = retry + 1,
+                        RetryLimit = MaxInstallVerificationRetry,
+                        IsRunning = true,
+                        CanStop = true
+                    });
+                }
+
                 currentDownloadList = failedFiles.Select(file => new ManifestFile
                 {
                     Path = GetOriginName(file.Path),
@@ -399,7 +429,19 @@ public sealed class GameDownloadService : IDisposable
                 }).ToList();
             }
 
-            return Failed(localizer.T("downloadVerificationFailed"), "game-download-error-network-down", affectedCount);
+            progress(new GameOperationProgress
+            {
+                OperationKind = operationKind,
+                Stage = "verification-failed",
+                FailedFileCount = currentDownloadList.Count,
+                IsRunning = true,
+                CanStop = true
+            });
+            return Failed(
+                localizer.F("verificationFailed", currentDownloadList.Count),
+                "game-download-error-network-down",
+                affectedCount,
+                currentDownloadList.Count);
         }
         catch (OperationCanceledException) when (activeToken.IsCancellationRequested)
         {
@@ -984,14 +1026,19 @@ public sealed class GameDownloadService : IDisposable
         };
     }
 
-    private static GameOperationResult Failed(string message, string errorType, int affectedFileCount = 0)
+    private static GameOperationResult Failed(
+        string message,
+        string errorType,
+        int affectedFileCount = 0,
+        int failedFileCount = 0)
     {
         return new GameOperationResult
         {
             Success = false,
             Message = message,
             ErrorType = errorType,
-            AffectedFileCount = affectedFileCount
+            AffectedFileCount = affectedFileCount,
+            FailedFileCount = failedFileCount
         };
     }
 

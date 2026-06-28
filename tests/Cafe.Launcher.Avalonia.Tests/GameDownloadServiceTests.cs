@@ -269,6 +269,52 @@ public sealed class GameDownloadServiceTests
     }
 
     [Fact]
+    public async Task DownloadFileAsync_WhenTransferFails_ResumesFromWrittenBytes()
+    {
+        var tempDir = Path.Combine(Path.GetTempPath(), Guid.NewGuid().ToString("N"));
+        Directory.CreateDirectory(tempDir);
+        try
+        {
+            var targetPath = Path.Combine(tempDir, "file.bin.tmp");
+            var expectedBytes = Encoding.UTF8.GetBytes("complete-content");
+            var hashPath = Path.Combine(tempDir, "hash-source.bin");
+            await File.WriteAllBytesAsync(hashPath, expectedBytes);
+            var expectedHash = await new Crc64Service().ComputeFileAsync(hashPath);
+            var handler = new InterruptedTransferHandler(expectedBytes);
+            using var client = new HttpClient(handler);
+            var downloader = new FileDownloadService(
+                new Crc64Service(),
+                new LocalDiagnostics(),
+                RemoteHttpUrlValidator.CreateForTesting());
+
+            await downloader.DownloadAsync(
+                targetPath,
+                new CdnConfigResponse
+                {
+                    PrimaryCdn = "https://primary.example.invalid",
+                    BackUpCdn = "https://backup.example.invalid"
+                },
+                "source",
+                expectedBytes.Length,
+                expectedHash,
+                "file.bin",
+                client,
+                () => Task.CompletedTask,
+                (_, _) => Task.CompletedTask,
+                false,
+                CancellationToken.None);
+
+            Assert.Equal(4, handler.SecondRequestRangeStart);
+            Assert.Equal(2, handler.RequestCount);
+            Assert.Equal(expectedBytes, await File.ReadAllBytesAsync(targetPath));
+        }
+        finally
+        {
+            Directory.Delete(tempDir, recursive: true);
+        }
+    }
+
+    [Fact]
     public async Task InstallOrUpdateAsync_WhenNoFilesNeedChanges_ClearsDownloadState()
     {
         var tempDir = Path.Combine(Path.GetTempPath(), Guid.NewGuid().ToString("N"));
@@ -439,6 +485,59 @@ public sealed class GameDownloadServiceTests
         Directory.Delete(tempDir, recursive: true);
     }
 
+    [Theory]
+    [InlineData(null, false)]
+    [InlineData(9L, false)]
+    [InlineData(10L, true)]
+    public async Task InstallOrUpdateAsync_ReadsAvailableDiskSpaceOnceAndReportsDiskCheck(
+        long? availableBytes,
+        bool expectedSuccess)
+    {
+        var tempDir = Path.Combine(Path.GetTempPath(), Guid.NewGuid().ToString("N"));
+        var gamePath = Path.Combine(tempDir, "YostarGames", "BlueArchive_JP");
+        var settingsService = new LauncherSettingsService(Path.Combine(tempDir, "settings.json"));
+        await settingsService.SaveAsync(new LauncherSettings { GamePath = gamePath });
+        var fileBytes = new byte[10];
+        var manifestFile = await CreateManifestFileAsync(tempDir, "data/file.bin", fileBytes);
+        using var apiClient = CreateManifestApiClient(manifestFile);
+        var readCount = 0;
+        var diskSpaceService = new DiskSpaceService
+        {
+            GetAvailableBytesOverride = _ =>
+            {
+                readCount++;
+                return availableBytes;
+            }
+        };
+        using var service = CreateService(
+            apiClient,
+            settingsService,
+            Path.Combine(tempDir, "download_state.json"),
+            new WritingFileDownloadService(fileBytes),
+            diskSpaceService);
+        var progress = new List<GameOperationProgress>();
+        var snapshot = CreateSnapshot(gamePath);
+        snapshot.RuntimeState = LauncherRuntimeState.NotInstalled;
+
+        var result = await service.InstallOrUpdateAsync(snapshot, progress.Add);
+
+        Assert.Equal(expectedSuccess, result.Success);
+        Assert.Equal(1, readCount);
+        Assert.Contains(progress, item =>
+            item.Stage == "disk-check"
+            && item.RequiredDiskBytes == 10
+            && item.AvailableDiskBytes == availableBytes);
+        if (!expectedSuccess)
+        {
+            Assert.Contains(FileSizeFormatter.Format(10), result.Message, StringComparison.Ordinal);
+            Assert.Contains(
+                availableBytes.HasValue ? FileSizeFormatter.Format(availableBytes.Value) : "--",
+                result.Message,
+                StringComparison.Ordinal);
+        }
+        Directory.Delete(tempDir, recursive: true);
+    }
+
     [Fact]
     public async Task InstallOrUpdateAsync_WhenMoreThanTenFilesAreRequired_LimitsParallelDownloadsToTen()
     {
@@ -568,11 +667,22 @@ public sealed class GameDownloadServiceTests
         var snapshot = CreateSnapshot(gamePath);
         snapshot.RuntimeState = LauncherRuntimeState.NotInstalled;
 
-        var result = await service.InstallOrUpdateAsync(snapshot, _ => { });
+        var progress = new List<GameOperationProgress>();
+        var result = await service.InstallOrUpdateAsync(snapshot, progress.Add);
 
         Assert.False(result.Success);
         Assert.Equal("game-download-error-network-down", result.ErrorType);
+        Assert.Equal(1, result.FailedFileCount);
         Assert.Equal(4, downloader.InvocationCount);
+        Assert.Equal(
+            [(1, 3, 1), (2, 3, 1), (3, 3, 1)],
+            progress
+                .Where(item => item.Stage == "verification-retry")
+                .Select(item => (item.RetryAttempt, item.RetryLimit, item.FailedFileCount))
+                .ToArray());
+        Assert.Contains(progress, item =>
+            item.Stage == "verification-failed"
+            && item.FailedFileCount == 1);
         Assert.False(File.Exists(Path.Combine(gamePath, "data", "file.bin.tmp")));
         Assert.False(File.Exists(Path.Combine(gamePath, "data", "file.bin")));
         Directory.Delete(tempDir, recursive: true);
@@ -712,7 +822,8 @@ public sealed class GameDownloadServiceTests
         LauncherApiClient apiClient,
         LauncherSettingsService settingsService,
         string downloadStateFilePath,
-        IFileDownloadService? fileDownloadService = null)
+        IFileDownloadService? fileDownloadService = null,
+        DiskSpaceService? diskSpaceService = null)
     {
         var localInstallationStateStore = new LocalInstallationStateStore();
         var diagnostics = new LocalDiagnostics();
@@ -730,7 +841,7 @@ public sealed class GameDownloadServiceTests
                 settingsService,
                 new ProxySettingsService(),
                 new Crc64Service(),
-                new DiskSpaceService(),
+                diskSpaceService ?? new DiskSpaceService(),
                 diagnostics,
                 new LocalizationService(),
                 new GameInstallationPath()),
@@ -1172,5 +1283,101 @@ public sealed class GameDownloadServiceTests
                 Content = new ByteArrayContent(content)
             });
         }
+    }
+
+    private sealed class InterruptedTransferHandler(byte[] content) : HttpMessageHandler
+    {
+        public int RequestCount { get; private set; }
+
+        public long? SecondRequestRangeStart { get; private set; }
+
+        protected override Task<HttpResponseMessage> SendAsync(
+            HttpRequestMessage request,
+            CancellationToken cancellationToken)
+        {
+            RequestCount++;
+            if (RequestCount == 1)
+            {
+                return Task.FromResult(new HttpResponseMessage(HttpStatusCode.OK)
+                {
+                    Content = new StreamContent(new InterruptedReadStream(content, bytesBeforeFailure: 4))
+                });
+            }
+
+            if (RequestCount == 2)
+            {
+                SecondRequestRangeStart = request.Headers.Range?.Ranges.Single().From;
+                var partialContent = new ByteArrayContent(content[4..]);
+                partialContent.Headers.ContentRange =
+                    new System.Net.Http.Headers.ContentRangeHeaderValue(4, content.Length - 1, content.Length);
+                return Task.FromResult(new HttpResponseMessage(HttpStatusCode.PartialContent)
+                {
+                    Content = partialContent
+                });
+            }
+
+            return Task.FromResult(new HttpResponseMessage(HttpStatusCode.OK)
+            {
+                Content = new ByteArrayContent(content)
+            });
+        }
+    }
+
+    private sealed class InterruptedReadStream(byte[] content, int bytesBeforeFailure) : Stream
+    {
+        private int position;
+
+        public override bool CanRead => true;
+
+        public override bool CanSeek => false;
+
+        public override bool CanWrite => false;
+
+        public override long Length => content.Length;
+
+        public override long Position
+        {
+            get => position;
+            set => throw new NotSupportedException();
+        }
+
+        public override int Read(byte[] buffer, int offset, int count)
+        {
+            if (position >= bytesBeforeFailure)
+            {
+                throw new IOException("Simulated interrupted transfer.");
+            }
+
+            var bytesToCopy = Math.Min(count, bytesBeforeFailure - position);
+            Array.Copy(content, position, buffer, offset, bytesToCopy);
+            position += bytesToCopy;
+            return bytesToCopy;
+        }
+
+        public override ValueTask<int> ReadAsync(
+            Memory<byte> buffer,
+            CancellationToken cancellationToken = default)
+        {
+            cancellationToken.ThrowIfCancellationRequested();
+            if (position >= bytesBeforeFailure)
+            {
+                return ValueTask.FromException<int>(new IOException("Simulated interrupted transfer."));
+            }
+
+            var bytesToCopy = Math.Min(buffer.Length, bytesBeforeFailure - position);
+            content.AsMemory(position, bytesToCopy).CopyTo(buffer);
+            position += bytesToCopy;
+            return ValueTask.FromResult(bytesToCopy);
+        }
+
+        public override void Flush()
+        {
+        }
+
+        public override long Seek(long offset, SeekOrigin origin) => throw new NotSupportedException();
+
+        public override void SetLength(long value) => throw new NotSupportedException();
+
+        public override void Write(byte[] buffer, int offset, int count) => throw new NotSupportedException();
     }
 }

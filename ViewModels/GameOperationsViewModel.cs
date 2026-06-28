@@ -580,14 +580,28 @@ public partial class GameOperationsViewModel : ViewModelBase
             "repair-check" => localizer.T("repairCheckingFiles"),
             "update-check" => localizer.T("updateCheckingFiles"),
             "check-file" => localizer.T("verifyingDownloadedFiles"),
+            "disk-check" => localizer.F(
+                "diskSpaceCheck",
+                FileSizeFormatter.Format(progress.RequiredDiskBytes),
+                progress.AvailableDiskBytes.HasValue
+                    ? FileSizeFormatter.Format(progress.AvailableDiskBytes.Value)
+                    : "--"),
+            "verification-retry" => localizer.F(
+                "verificationRetry",
+                progress.FailedFileCount,
+                progress.RetryAttempt,
+                progress.RetryLimit),
+            "verification-failed" => localizer.F("verificationFailed", progress.FailedFileCount),
             "repair-done" => localizer.T("repairCompleted"),
             "download-done" => localizer.T("installUpdateCompleted"),
             "stopped" => localizer.T("operationStopped"),
             "download" => localizer.T("downloading"),
             _ => localizer.T("working")
         };
-        ProgressSpeed = progress.Stage == "repair-confirm" || progress.Stage == "paused" ? "" : progress.Speed;
-        ProgressSize = progress.TotalSize > 0 && progress.Stage != "repair-confirm" && progress.Stage != "paused"
+        var clearsDownloadMetrics = progress.Stage is
+            "repair-confirm" or "paused" or "disk-check" or "verification-retry" or "verification-failed";
+        ProgressSpeed = clearsDownloadMetrics ? "" : progress.Speed;
+        ProgressSize = progress.TotalSize > 0 && !clearsDownloadMetrics
             ? $"{FileSizeFormatter.Format(progress.DownloadedSize)} / {FileSizeFormatter.Format(progress.TotalSize)}"
             : "";
         ProgressEstimated = progress.TotalSize > 0 && progress.Stage == "download" && !string.IsNullOrWhiteSpace(progress.Estimated)

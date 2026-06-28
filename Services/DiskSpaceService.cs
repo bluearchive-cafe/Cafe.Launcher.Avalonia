@@ -5,8 +5,15 @@ namespace Cafe.Launcher.Avalonia.Services;
 
 public sealed class DiskSpaceService
 {
+    internal Func<string, long?>? GetAvailableBytesOverride { get; set; }
+
     public long? GetAvailableBytes(string path)
     {
+        if (GetAvailableBytesOverride is not null)
+        {
+            return GetAvailableBytesOverride(path);
+        }
+
         var existingPath = FindExistingDirectory(path);
         if (string.IsNullOrWhiteSpace(existingPath))
         {

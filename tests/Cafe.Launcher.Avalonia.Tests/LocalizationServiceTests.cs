@@ -57,6 +57,25 @@ public sealed class LocalizationServiceTests
         Assert.Equal(expectedCheckUpdatesText, service.T("checkUpdates"));
     }
 
+    [Theory]
+    [InlineData(LauncherLanguages.English)]
+    [InlineData(LauncherLanguages.SimplifiedChinese)]
+    [InlineData(LauncherLanguages.Japanese)]
+    public void T_WhenPreflightAndVerificationKeysRequested_ReturnsLocalizedFormattedText(string language)
+    {
+        var service = new LocalizationService();
+        service.SetLanguage(language);
+
+        Assert.NotEqual("diskSpaceCheck", service.F("diskSpaceCheck", "10B", "20B"));
+        Assert.NotEqual("diskSpaceInsufficientDetail", service.F("diskSpaceInsufficientDetail", "10B", "--"));
+        Assert.NotEqual("verificationRetry", service.F("verificationRetry", 2, 1, 3));
+        Assert.NotEqual("verificationFailed", service.F("verificationFailed", 2));
+        var strings = new LocalizedStrings();
+        strings.Apply(service);
+        Assert.Equal(service.T("diskSpaceCheck"), strings.DiskSpaceCheck);
+        Assert.Equal(service.T("verificationFailed"), strings.VerificationFailed);
+    }
+
     [Fact]
     public void T_WhenLegalInfoRequested_ReturnsChineseCopy()
     {
