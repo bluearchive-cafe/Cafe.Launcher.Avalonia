@@ -21,6 +21,10 @@ public sealed partial class LocalizedStrings : ObservableObject
     [ObservableProperty] private string executable = "";
     [ObservableProperty] private string network = "";
     [ObservableProperty] private string diskSpaceLabel = "";
+    [ObservableProperty] private string diskSpaceCheck = "";
+    [ObservableProperty] private string diskSpaceInsufficientDetail = "";
+    [ObservableProperty] private string verificationRetry = "";
+    [ObservableProperty] private string verificationFailed = "";
     [ObservableProperty] private string path = "";
     [ObservableProperty] private string changePath = "";
     [ObservableProperty] private string refresh = "";
@@ -226,6 +230,10 @@ public sealed partial class LocalizedStrings : ObservableObject
         Executable = localizer.T("executable");
         Network = localizer.T("network");
         DiskSpaceLabel = localizer.T("diskSpaceLabel");
+        DiskSpaceCheck = localizer.T("diskSpaceCheck");
+        DiskSpaceInsufficientDetail = localizer.T("diskSpaceInsufficientDetail");
+        VerificationRetry = localizer.T("verificationRetry");
+        VerificationFailed = localizer.T("verificationFailed");
         Path = localizer.T("path");
         ChangePath = localizer.T("changePath");
         Refresh = localizer.T("refresh");

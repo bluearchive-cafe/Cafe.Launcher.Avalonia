@@ -191,7 +191,11 @@ public sealed class FileDownloadService : IFileDownloadService
             }
             catch (Exception ex) when (ex is not OperationCanceledException)
             {
-                try { File.Delete(targetTempPath); } catch { /* best-effort */ }
+                if (ex is InvalidDataException || ex is not (HttpRequestException or IOException))
+                {
+                    try { File.Delete(targetTempPath); } catch { /* best-effort */ }
+                }
+
                 lastError = ex;
                 if (retryIndex >= RetryDomainOrder.Length - 1) throw;
             }

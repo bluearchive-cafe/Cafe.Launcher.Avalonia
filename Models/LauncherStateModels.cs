@@ -315,6 +315,16 @@ public sealed class GameOperationProgress
 
     public int AffectedFileCount { get; set; }
 
+    public long RequiredDiskBytes { get; set; }
+
+    public long? AvailableDiskBytes { get; set; }
+
+    public int FailedFileCount { get; set; }
+
+    public int RetryAttempt { get; set; }
+
+    public int RetryLimit { get; set; }
+
     public bool IsRunning { get; set; }
 
     public bool CanStop { get; set; }
@@ -333,6 +343,8 @@ public sealed class GameOperationResult
     public string ErrorType { get; set; } = "";
 
     public int AffectedFileCount { get; set; }
+
+    public int FailedFileCount { get; set; }
 }
 
 public sealed class LauncherRemoteState
