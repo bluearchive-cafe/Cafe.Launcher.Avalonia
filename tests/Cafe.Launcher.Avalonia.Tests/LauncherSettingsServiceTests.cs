@@ -7,6 +7,22 @@ namespace Cafe.Launcher.Avalonia.Tests;
 
 public sealed class LauncherSettingsServiceTests : IDisposable
 {
+    [Fact]
+    public void LauncherSettings_DefaultMotionModeIsSystem()
+    {
+        Assert.Equal(MotionModes.System, new LauncherSettings().MotionMode);
+    }
+
+    [Fact]
+    public async Task MotionMode_RoundTripsAndInvalidValueFallsBackToSystem()
+    {
+        var service = new LauncherSettingsService(settingsPath);
+        await service.SaveAsync(new LauncherSettings { MotionMode = MotionModes.Reduced });
+        Assert.Equal(MotionModes.Reduced, (await service.ReadAsync()).MotionMode);
+
+        await File.WriteAllTextAsync(settingsPath, """{"motionMode":"invalid"}""");
+        Assert.Equal(MotionModes.System, (await service.ReadAsync()).MotionMode);
+    }
     private readonly string tempDir = Path.Combine(Path.GetTempPath(), Guid.NewGuid().ToString("N"));
     private readonly string settingsPath;
 
@@ -29,6 +45,7 @@ public sealed class LauncherSettingsServiceTests : IDisposable
         Assert.Equal(CloseBehaviors.Minimize, settings.CloseBehavior);
         Assert.Equal(LauncherLanguages.Auto, settings.Language);
         Assert.Equal(ThemeModes.System, settings.ThemeMode);
+        Assert.Equal(MotionModes.System, settings.MotionMode);
         Assert.Equal(ThemeColorModes.Default, settings.ThemeColorMode);
         Assert.Equal(LauncherConstants.DefaultThemeColor, settings.CustomThemeColor);
         Assert.Empty(settings.ThemeColorPalette);
@@ -40,6 +57,16 @@ public sealed class LauncherSettingsServiceTests : IDisposable
         Assert.Equal("", settings.CustomBackgroundPath);
         Assert.Equal(BackgroundSources.Bundled, settings.BackgroundSource);
         Assert.Equal("", settings.ResourcePanelUid);
+    }
+
+    [Fact]
+    public async Task ReadAsync_WhenMotionModeMissing_UsesSystem()
+    {
+        await File.WriteAllTextAsync(settingsPath, """{"language":"ja"}""");
+
+        var settings = await new LauncherSettingsService(settingsPath).ReadAsync();
+
+        Assert.Equal(MotionModes.System, settings.MotionMode);
     }
 
     [Fact]
@@ -171,6 +198,7 @@ public sealed class LauncherSettingsServiceTests : IDisposable
         Assert.True(root.TryGetProperty("closeBehavior", out _));
         Assert.True(root.TryGetProperty("language", out _));
         Assert.True(root.TryGetProperty("themeMode", out _));
+        Assert.True(root.TryGetProperty("motionMode", out _));
         Assert.True(root.TryGetProperty("themeColorMode", out var themeColorMode));
         Assert.Equal(ThemeColorModes.Custom, themeColorMode.GetString());
         Assert.True(root.TryGetProperty("customThemeColor", out var customThemeColor));
@@ -200,6 +228,7 @@ public sealed class LauncherSettingsServiceTests : IDisposable
             "closeBehavior",
             "language",
             "themeMode",
+            "motionMode",
             "themeColorMode",
             "customThemeColor",
             "themeColorPalette",

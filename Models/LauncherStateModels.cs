@@ -50,6 +50,13 @@ public static class ThemeModes
     public const string Dark = "dark";
 }
 
+public static class MotionModes
+{
+    public const string System = "system";
+    public const string Full = "full";
+    public const string Reduced = "reduced";
+}
+
 public static class ThemeColorModes
 {
     public const string Default = "default";
@@ -146,6 +153,10 @@ public sealed partial class LauncherSettings : ObservableObject
     [ObservableProperty]
     [property: JsonPropertyName("themeMode")]
     private string themeMode = ThemeModes.System;
+
+    [ObservableProperty]
+    [property: JsonPropertyName("motionMode")]
+    private string motionMode = MotionModes.System;
 
     [ObservableProperty]
     [property: JsonPropertyName("themeColorMode")]

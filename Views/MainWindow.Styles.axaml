@@ -910,6 +910,8 @@
         <Setter Property="CornerRadius" Value="{StaticResource LauncherRadiusMd}"/>
         <Setter Property="Padding" Value="12"/>
         <Setter Property="MaxWidth" Value="340"/>
+    </Style>
+    <Style Selector="Border.toast-card.motion-enabled">
         <Style.Animations>
             <Animation Duration="0:0:0.35" FillMode="Forward">
                 <KeyFrame Cue="0%">

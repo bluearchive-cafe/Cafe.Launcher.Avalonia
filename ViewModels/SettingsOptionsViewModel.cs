@@ -102,6 +102,13 @@ public sealed class SettingsOptionsViewModel
         new() { Code = ThemeModes.Dark }
     ];
 
+    public ObservableCollection<SettingOption> MotionMode { get; } =
+    [
+        new() { Code = MotionModes.System },
+        new() { Code = MotionModes.Full },
+        new() { Code = MotionModes.Reduced }
+    ];
+
     public void RefreshDisplayNames()
     {
         foreach (var option in Theme)
@@ -111,6 +118,16 @@ public sealed class SettingsOptionsViewModel
                 ThemeModes.Light => localizer.T("themeLight"),
                 ThemeModes.Dark => localizer.T("themeDark"),
                 _ => localizer.T("themeSystem")
+            };
+        }
+
+        foreach (var option in MotionMode)
+        {
+            option.DisplayName = option.Code switch
+            {
+                MotionModes.Full => localizer.T("motionModeFull"),
+                MotionModes.Reduced => localizer.T("motionModeReduced"),
+                _ => localizer.T("motionModeSystem")
             };
         }
 

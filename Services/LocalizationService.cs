@@ -69,6 +69,11 @@ public sealed partial class LocalizedStrings : ObservableObject
     [ObservableProperty] private string themeSystem = "";
     [ObservableProperty] private string themeLight = "";
     [ObservableProperty] private string themeDark = "";
+    [ObservableProperty] private string motionMode = "";
+    [ObservableProperty] private string motionModeDescription = "";
+    [ObservableProperty] private string motionModeSystem = "";
+    [ObservableProperty] private string motionModeFull = "";
+    [ObservableProperty] private string motionModeReduced = "";
     [ObservableProperty] private string themeColor = "";
     [ObservableProperty] private string themeColorDescription = "";
     [ObservableProperty] private string themeColorDefault = "";
@@ -278,6 +283,11 @@ public sealed partial class LocalizedStrings : ObservableObject
         ThemeSystem = localizer.T("themeSystem");
         ThemeLight = localizer.T("themeLight");
         ThemeDark = localizer.T("themeDark");
+        MotionMode = localizer.T("motionMode");
+        MotionModeDescription = localizer.T("motionModeDescription");
+        MotionModeSystem = localizer.T("motionModeSystem");
+        MotionModeFull = localizer.T("motionModeFull");
+        MotionModeReduced = localizer.T("motionModeReduced");
         ThemeColor = localizer.T("themeColor");
         ThemeColorDescription = localizer.T("themeColorDescription");
         ThemeColorDefault = localizer.T("themeColorDefault");

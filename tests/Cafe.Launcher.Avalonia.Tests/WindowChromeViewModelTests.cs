@@ -215,6 +215,29 @@ public sealed class WindowChromeViewModelTests : IDisposable
             openedDirectory);
     }
 
+    [Fact]
+    public void ExecuteRestoreWindow_WhenMotionReduced_DoesNotStartCarousel()
+    {
+        using var context = CreateContext();
+        context.RemoteContent.Apply(
+            new LauncherRemoteState
+            {
+                OperationsResource = new OperationsResourceResponse
+                {
+                    OperationsResourceOpen = true,
+                    BannerLoop = true,
+                    OperationsBannerList = [new(), new()]
+                }
+            },
+            new LauncherSettings(),
+            CancellationToken.None);
+        context.RemoteContent.ApplyMotionPreference(true);
+
+        context.ViewModel.ExecuteRestoreWindowCommand.Execute(null);
+
+        Assert.False(context.RemoteContent.IsCarouselTimerRunning);
+    }
+
     private TestContext CreateContext()
     {
         Directory.CreateDirectory(tempDir);

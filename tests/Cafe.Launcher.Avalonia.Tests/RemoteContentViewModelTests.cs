@@ -220,6 +220,51 @@ public sealed class RemoteContentViewModelTests
     }
 
     [Fact]
+    public void ApplyMotionPreference_ReducedStopsAutomaticCarouselButKeepsManualNavigation()
+    {
+        using var context = CreateContext();
+        context.ViewModel.Apply(
+            CreateBannerState(2, loop: true),
+            new LauncherSettings(),
+            CancellationToken.None);
+
+        context.ViewModel.ApplyMotionPreference(true);
+        Assert.False(context.ViewModel.IsCarouselTimerRunning);
+        Assert.Equal(TimeSpan.Zero, Assert.IsType<global::Avalonia.Animation.CrossFade>(
+            context.ViewModel.CarouselTransition).Duration);
+
+        context.ViewModel.SelectNextBannerCommand.Execute(null);
+        Assert.Equal(1, context.ViewModel.CarouselSelectedIndex);
+
+        context.ViewModel.StartCarouselTimer();
+        Assert.False(context.ViewModel.IsCarouselTimerRunning);
+    }
+
+    [Theory]
+    [InlineData(MotionModes.Full, false)]
+    [InlineData(MotionModes.System, true)]
+    public void ApplyMotionPreference_FullOrSystemEffectiveStateRestoresTransitionAndAutomaticCarousel(
+        string motionMode,
+        bool windowsAnimationsEnabled)
+    {
+        using var context = CreateContext();
+        context.ViewModel.Apply(
+            CreateBannerState(2, loop: true),
+            new LauncherSettings(),
+            CancellationToken.None);
+        context.ViewModel.ApplyMotionPreference(true);
+
+        context.ViewModel.ApplyMotionPreference(
+            MotionSettingsResolver.ShouldReduceMotion(motionMode, windowsAnimationsEnabled));
+
+        Assert.True(context.ViewModel.IsCarouselTimerRunning);
+        Assert.Equal(
+            TimeSpan.FromMilliseconds(350),
+            Assert.IsType<global::Avalonia.Animation.CrossFade>(
+                context.ViewModel.CarouselTransition).Duration);
+    }
+
+    [Fact]
     public void SelectNewsCategoryCommand_UpdatesActiveCategory()
     {
         using var context = CreateContext();
