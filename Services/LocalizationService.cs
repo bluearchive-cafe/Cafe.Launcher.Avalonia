@@ -15,6 +15,23 @@ public sealed partial class LocalizedStrings : ObservableObject
     [ObservableProperty] private string settingsGameFiles = "";
     [ObservableProperty] private string settingsDownloadNetwork = "";
     [ObservableProperty] private string settingsAppPreferences = "";
+    [ObservableProperty] private string settingsAboutActions = "";
+    [ObservableProperty] private string settingsBackgroundGroup = "";
+    [ObservableProperty] private string settingsThemeColorGroup = "";
+    [ObservableProperty] private string settingsCategoryGeneral = "";
+    [ObservableProperty] private string settingsCategoryGeneralDescription = "";
+    [ObservableProperty] private string settingsCategoryGame = "";
+    [ObservableProperty] private string settingsCategoryGameDescription = "";
+    [ObservableProperty] private string settingsCategoryDownloadNetwork = "";
+    [ObservableProperty] private string settingsCategoryDownloadNetworkDescription = "";
+    [ObservableProperty] private string settingsCategoryAppearance = "";
+    [ObservableProperty] private string settingsCategoryAppearanceDescription = "";
+    [ObservableProperty] private string settingsCategoryNotificationsContent = "";
+    [ObservableProperty] private string settingsCategoryNotificationsContentDescription = "";
+    [ObservableProperty] private string settingsCategoryAdvanced = "";
+    [ObservableProperty] private string settingsCategoryAdvancedDescription = "";
+    [ObservableProperty] private string settingsCategoryAbout = "";
+    [ObservableProperty] private string settingsCategoryAboutDescription = "";
     [ObservableProperty] private string minimize = "";
     [ObservableProperty] private string close = "";
     [ObservableProperty] private string version = "";
@@ -221,6 +238,15 @@ public sealed partial class LocalizedStrings : ObservableObject
     [ObservableProperty] private string selectInstalledGame = "";
     [ObservableProperty] private string gamePathUpdated = "";
     [ObservableProperty] private string gamePathUpdateFailed = "";
+    [ObservableProperty] private string settingsGroupConnection = "";
+    [ObservableProperty] private string settingsGroupDisplay = "";
+    [ObservableProperty] private string settingsGroupDiagnostics = "";
+    [ObservableProperty] private string languageDescription = "";
+    [ObservableProperty] private string closeBehaviorDescription = "";
+    [ObservableProperty] private string updateChannelDescription = "";
+    [ObservableProperty] private string logLevelDescription = "";
+    [ObservableProperty] private string toastNotificationsDescription = "";
+    [ObservableProperty] private string remoteContentCardDescription = "";
 
     public void Apply(LocalizationService localizer)
     {
@@ -229,6 +255,23 @@ public sealed partial class LocalizedStrings : ObservableObject
         SettingsGameFiles = localizer.T("settingsGameFiles");
         SettingsDownloadNetwork = localizer.T("settingsDownloadNetwork");
         SettingsAppPreferences = localizer.T("settingsAppPreferences");
+        SettingsAboutActions = localizer.T("settingsAboutActions");
+        SettingsBackgroundGroup = localizer.T("settingsBackgroundGroup");
+        SettingsThemeColorGroup = localizer.T("settingsThemeColorGroup");
+        SettingsCategoryGeneral = localizer.T("settingsCategoryGeneral");
+        SettingsCategoryGeneralDescription = localizer.T("settingsCategoryGeneralDescription");
+        SettingsCategoryGame = localizer.T("settingsCategoryGame");
+        SettingsCategoryGameDescription = localizer.T("settingsCategoryGameDescription");
+        SettingsCategoryDownloadNetwork = localizer.T("settingsCategoryDownloadNetwork");
+        SettingsCategoryDownloadNetworkDescription = localizer.T("settingsCategoryDownloadNetworkDescription");
+        SettingsCategoryAppearance = localizer.T("settingsCategoryAppearance");
+        SettingsCategoryAppearanceDescription = localizer.T("settingsCategoryAppearanceDescription");
+        SettingsCategoryNotificationsContent = localizer.T("settingsCategoryNotificationsContent");
+        SettingsCategoryNotificationsContentDescription = localizer.T("settingsCategoryNotificationsContentDescription");
+        SettingsCategoryAdvanced = localizer.T("settingsCategoryAdvanced");
+        SettingsCategoryAdvancedDescription = localizer.T("settingsCategoryAdvancedDescription");
+        SettingsCategoryAbout = localizer.T("settingsCategoryAbout");
+        SettingsCategoryAboutDescription = localizer.T("settingsCategoryAboutDescription");
         Minimize = localizer.T("minimize");
         Close = localizer.T("close");
         Version = localizer.T("version");
@@ -435,6 +478,15 @@ public sealed partial class LocalizedStrings : ObservableObject
         SelectInstalledGame = localizer.T("selectInstalledGame");
         GamePathUpdated = localizer.T("gamePathUpdated");
         GamePathUpdateFailed = localizer.T("gamePathUpdateFailed");
+        SettingsGroupConnection = localizer.T("settingsGroupConnection");
+        SettingsGroupDisplay = localizer.T("settingsGroupDisplay");
+        SettingsGroupDiagnostics = localizer.T("settingsGroupDiagnostics");
+        LanguageDescription = localizer.T("languageDescription");
+        CloseBehaviorDescription = localizer.T("closeBehaviorDescription");
+        UpdateChannelDescription = localizer.T("updateChannelDescription");
+        LogLevelDescription = localizer.T("logLevelDescription");
+        ToastNotificationsDescription = localizer.T("toastNotificationsDescription");
+        RemoteContentCardDescription = localizer.T("remoteContentCardDescription");
     }
 }
 

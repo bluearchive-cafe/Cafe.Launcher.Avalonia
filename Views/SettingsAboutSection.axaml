@@ -1,0 +1,92 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:vm="using:Cafe.Launcher.Avalonia.ViewModels"
+             xmlns:models="using:Cafe.Launcher.Avalonia.Models"
+             xmlns:materialIcons="clr-namespace:Material.Icons.Avalonia;assembly=Material.Icons.Avalonia"
+             x:Class="Cafe.Launcher.Avalonia.Views.SettingsAboutSection"
+             x:Name="SettingsRoot"
+             x:DataType="vm:MainWindowViewModel"><StackPanel Classes="settings-group" Spacing="{StaticResource LauncherSpacingSm}">
+        <StackPanel Classes="card-heading">
+            <materialIcons:MaterialIcon Kind="InformationOutline" Width="{StaticResource LauncherIconLg}" Height="{StaticResource LauncherIconLg}" Foreground="{DynamicResource LauncherAccentBrush}"/>
+            <StackPanel>
+                <TextBlock Text="{Binding Shell.ProductName}" Classes="section-title"/>
+                <TextBlock Text="{Binding Shell.I18n.AboutDescription}" Classes="caption" TextWrapping="Wrap"/>
+            </StackPanel>
+        </StackPanel>
+        <StackPanel Spacing="{StaticResource LauncherSpacingSm}">
+            <TextBlock Text="{Binding Shell.I18n.VersionInfo}" Classes="group-title"/>
+            <WrapPanel>
+                <Border Classes="version-chip">
+                    <TextBlock Text="{Binding Shell.LauncherVersionText}" Classes="chip-text"/>
+                </Border>
+                <Border Classes="version-chip"
+                        IsVisible="{Binding Shell.BuildTimeText, Converter={x:Static StringConverters.IsNotNullOrEmpty}}">
+                    <TextBlock Text="{Binding Shell.BuildTimeText}" Classes="chip-text"/>
+                </Border>
+                <Border Classes="version-chip">
+                    <TextBlock Text="{Binding Shell.CommitShaText}" Classes="chip-text"/>
+                </Border>
+                <Border Classes="version-chip">
+                    <TextBlock Text="{Binding Shell.BuildConfigText}" Classes="chip-text"/>
+                </Border>
+                <Border Classes="version-chip">
+                    <TextBlock Text="{Binding Shell.FrameworkVersionText}" Classes="chip-text"/>
+                </Border>
+                <Border Classes="version-chip">
+                    <TextBlock Text="{Binding Shell.AvaloniaVersionText}" Classes="chip-text"/>
+                </Border>
+                <Border Classes="version-chip">
+                    <TextBlock Text="{Binding Shell.PlatformText}" Classes="chip-text"/>
+                </Border>
+            </WrapPanel>
+        </StackPanel>
+        <TextBlock Text="{Binding Shell.I18n.SettingsAboutActions}" Classes="group-title"/>
+        <WrapPanel>
+            <Button Classes="flat-action wrap-action"
+                    Command="{Binding Settings.CheckForUpdatesCommand}">
+                <StackPanel Classes="button-content">
+                    <materialIcons:MaterialIcon Kind="Update" Width="{StaticResource LauncherIconSm}" Height="{StaticResource LauncherIconSm}"/>
+                    <TextBlock Text="{Binding Shell.I18n.CheckUpdates}" VerticalAlignment="Center"/>
+                </StackPanel>
+            </Button>
+            <Button Classes="flat-action wrap-action" Command="{Binding WindowChrome.OpenOfficialSiteCommand}">
+                <StackPanel Classes="button-content">
+                    <materialIcons:MaterialIcon Kind="Web" Width="{StaticResource LauncherIconSm}" Height="{StaticResource LauncherIconSm}"/>
+                    <TextBlock Text="{Binding Shell.I18n.OfficialSite}" VerticalAlignment="Center"/>
+                </StackPanel>
+            </Button>
+            <Button Classes="flat-action wrap-action" Command="{Binding WindowChrome.OpenGitHubRepositoryCommand}">
+                <StackPanel Classes="button-content">
+                    <materialIcons:MaterialIcon Kind="Github" Width="{StaticResource LauncherIconSm}" Height="{StaticResource LauncherIconSm}"/>
+                    <TextBlock Text="{Binding Shell.I18n.GitHubRepository}" VerticalAlignment="Center"/>
+                </StackPanel>
+            </Button>
+            <Button Classes="flat-action wrap-action"
+                    Command="{Binding LogViewer.OpenCommand}">
+                <StackPanel Classes="button-content">
+                    <materialIcons:MaterialIcon Kind="TextBoxOutline" Width="{StaticResource LauncherIconSm}" Height="{StaticResource LauncherIconSm}"/>
+                    <TextBlock Text="{Binding Shell.I18n.ViewLog}" VerticalAlignment="Center"/>
+                </StackPanel>
+            </Button>
+            <Button Classes="flat-action wrap-action"
+                    Command="{Binding LogViewer.ExportCommand}">
+                <StackPanel Classes="button-content">
+                    <materialIcons:MaterialIcon Kind="Export" Width="{StaticResource LauncherIconSm}" Height="{StaticResource LauncherIconSm}"/>
+                    <TextBlock Text="{Binding Shell.I18n.ExportLogs}" VerticalAlignment="Center"/>
+                </StackPanel>
+            </Button>
+            <Button Classes="flat-action wrap-action"
+                    Command="{Binding WindowChrome.OpenDataDirectoryCommand}">
+                <StackPanel Classes="button-content">
+                    <materialIcons:MaterialIcon Kind="FolderOpen" Width="{StaticResource LauncherIconSm}" Height="{StaticResource LauncherIconSm}"/>
+                    <TextBlock Text="{Binding Shell.I18n.OpenDataDirectory}" VerticalAlignment="Center"/>
+                </StackPanel>
+            </Button>
+        </WrapPanel>
+        <StackPanel Spacing="{StaticResource LauncherSpacingXs}">
+            <TextBlock Text="{Binding Shell.I18n.AboutLinks}" Classes="group-title"/>
+            <TextBlock Text="{Binding Shell.I18n.AboutCopyrightText}" Classes="caption" TextWrapping="Wrap"/>
+            <TextBlock Text="{Binding Shell.I18n.AboutDisclaimerText}" Classes="caption" TextWrapping="Wrap"/>
+        </StackPanel>
+    </StackPanel>
+</UserControl>

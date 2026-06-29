@@ -814,6 +814,28 @@ public sealed class MainWindowViewModelTests : IDisposable
     }
 
     [Fact]
+    public void NormalizeAccentColorForUi_WhenColorIsPaleAndLowSaturation_IncreasesContrast()
+    {
+        var source = Color.FromRgb(0xC9, 0xCD, 0xD8);
+
+        var normalized = SettingsAppearanceViewModel.NormalizeAccentColorForUi(source);
+
+        Assert.NotEqual(source, normalized);
+        Assert.True(GetPerceivedSaturation(normalized) >= 0.22d);
+        Assert.True(GetRelativeLuminance(normalized) < GetRelativeLuminance(source));
+    }
+
+    [Fact]
+    public void NormalizeAccentColorForUi_WhenColorAlreadyHasStrongContrast_KeepsOriginalColor()
+    {
+        var source = Color.FromRgb(0x20, 0x50, 0xD8);
+
+        var normalized = SettingsAppearanceViewModel.NormalizeAccentColorForUi(source);
+
+        Assert.Equal(source, normalized);
+    }
+
+    [Fact]
     public async Task SelectedThemeColorPaletteIndex_WhenSettingsVisible_MarksSettingsDirtyAndUpdatesSelection()
     {
         var coreService = new CountingCoreService(CreateSnapshot());
@@ -1093,6 +1115,52 @@ public sealed class MainWindowViewModelTests : IDisposable
 
         Assert.False(viewModel.IsMotionReduced);
         Assert.True(viewModel.IsMotionEnabled);
+    }
+
+    [Fact]
+    public async Task InitializeAsync_WithReducedMotionAndBanners_DoesNotStartBannerCarousel()
+    {
+        var snapshot = CreateSnapshot();
+        snapshot.Settings.MotionMode = MotionModes.Reduced;
+        snapshot.Remote.OperationsResource = new OperationsResourceResponse
+        {
+            OperationsResourceOpen = true,
+            BannerLoop = true,
+            OperationsBannerList = [new(), new()]
+        };
+        using var viewModel = await CreateViewModelAsync(
+            new CountingCoreService(snapshot),
+            windowsAnimationSettingsProvider: new WindowsAnimationSettingsProvider(() => (true, true)));
+
+        await viewModel.InitializeAsync();
+
+        Assert.True(viewModel.IsMotionReduced);
+        Assert.False(viewModel.RemoteContent.IsCarouselTimerRunning);
+    }
+
+    [Fact]
+    public async Task SaveSettingsAsync_WithReducedMotionAndBanners_StopsBannerCarouselImmediately()
+    {
+        var snapshot = CreateSnapshot();
+        snapshot.Settings.MotionMode = MotionModes.Full;
+        snapshot.Remote.OperationsResource = new OperationsResourceResponse
+        {
+            OperationsResourceOpen = true,
+            BannerLoop = true,
+            OperationsBannerList = [new(), new()]
+        };
+        using var viewModel = await CreateViewModelAsync(
+            new CountingCoreService(snapshot),
+            gameOperationsBackend: new CountingGameOperationsBackend(isDownloadRunning: true),
+            windowsAnimationSettingsProvider: new WindowsAnimationSettingsProvider(() => (true, true)));
+        await viewModel.InitializeAsync();
+        Assert.True(viewModel.RemoteContent.IsCarouselTimerRunning);
+
+        viewModel.Settings.Editor.Current.MotionMode = MotionModes.Reduced;
+        await SaveSettingsAsync(viewModel);
+
+        Assert.True(viewModel.IsMotionReduced);
+        Assert.False(viewModel.RemoteContent.IsCarouselTimerRunning);
     }
 
     private async Task<MainWindowViewModel> CreateViewModelAsync(
@@ -1549,5 +1617,27 @@ public sealed class MainWindowViewModelTests : IDisposable
         {
             return Task.FromResult(new HttpResponseMessage(HttpStatusCode.NotFound));
         }
+    }
+
+    private static double GetPerceivedSaturation(Color color)
+    {
+        var max = Math.Max(color.R, Math.Max(color.G, color.B));
+        var min = Math.Min(color.R, Math.Min(color.G, color.B));
+        return max == 0 ? 0 : 1d - (min / (double)max);
+    }
+
+    private static double GetRelativeLuminance(Color color)
+    {
+        static double ToLinear(byte channel)
+        {
+            var value = channel / 255d;
+            return value <= 0.04045
+                ? value / 12.92
+                : Math.Pow((value + 0.055) / 1.055, 2.4);
+        }
+
+        return (0.2126 * ToLinear(color.R))
+            + (0.7152 * ToLinear(color.G))
+            + (0.0722 * ToLinear(color.B));
     }
 }

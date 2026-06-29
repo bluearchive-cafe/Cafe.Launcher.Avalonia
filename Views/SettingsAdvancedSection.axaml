@@ -1,0 +1,30 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:vm="using:Cafe.Launcher.Avalonia.ViewModels"
+             xmlns:models="using:Cafe.Launcher.Avalonia.Models"
+             xmlns:materialIcons="clr-namespace:Material.Icons.Avalonia;assembly=Material.Icons.Avalonia"
+             x:Class="Cafe.Launcher.Avalonia.Views.SettingsAdvancedSection"
+             x:Name="SettingsRoot"
+             x:DataType="vm:MainWindowViewModel"><StackPanel Classes="settings-group">
+        <TextBlock Text="{Binding Shell.I18n.SettingsGroupDiagnostics}" Classes="group-title"/>
+    <Grid Classes="settings-row" ColumnDefinitions="Auto,*,Auto">
+        <Border Classes="settings-icon">
+            <materialIcons:MaterialIcon Kind="Bug" Width="{StaticResource LauncherIconMd}" Height="{StaticResource LauncherIconMd}" Foreground="{DynamicResource LauncherAccentBrush}" HorizontalAlignment="Center" VerticalAlignment="Center"/>
+        </Border>
+        <StackPanel Grid.Column="1" Classes="dialog-heading-copy">
+            <TextBlock Text="{Binding Shell.I18n.LogLevel}" Classes="section-title"/>
+            <TextBlock Text="{Binding Shell.I18n.LogLevelDescription}" Classes="caption" TextWrapping="Wrap"/>
+        </StackPanel>
+        <ComboBox Grid.Column="2" Classes="setting-control"
+                  ItemsSource="{Binding Settings.Options.LogLevel}"
+                  SelectedValue="{Binding Settings.Editor.Current.LogLevel, Mode=TwoWay}"
+                  SelectedValueBinding="{Binding Code}">
+            <ComboBox.ItemTemplate>
+                <DataTemplate x:DataType="models:SettingOption">
+                    <TextBlock Text="{Binding DisplayName}"/>
+                </DataTemplate>
+            </ComboBox.ItemTemplate>
+        </ComboBox>
+    </Grid>
+        </StackPanel>
+    </UserControl>

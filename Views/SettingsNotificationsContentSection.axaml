@@ -1,0 +1,40 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:vm="using:Cafe.Launcher.Avalonia.ViewModels"
+             xmlns:models="using:Cafe.Launcher.Avalonia.Models"
+             xmlns:materialIcons="clr-namespace:Material.Icons.Avalonia;assembly=Material.Icons.Avalonia"
+             x:Class="Cafe.Launcher.Avalonia.Views.SettingsNotificationsContentSection"
+             x:Name="SettingsRoot"
+             x:DataType="vm:MainWindowViewModel"><StackPanel Classes="settings-group">
+        <TextBlock Text="{Binding Shell.I18n.SettingsGroupDisplay}" Classes="group-title"/>
+    <Grid Classes="settings-row" ColumnDefinitions="Auto,*,Auto">
+        <Border Classes="settings-icon">
+            <materialIcons:MaterialIcon Kind="BellOutline" Width="{StaticResource LauncherIconMd}" Height="{StaticResource LauncherIconMd}" Foreground="{DynamicResource LauncherAccentBrush}" HorizontalAlignment="Center" VerticalAlignment="Center"/>
+        </Border>
+        <StackPanel Grid.Column="1" Classes="dialog-heading-copy">
+            <TextBlock Text="{Binding Shell.I18n.NotificationSettings}" Classes="section-title"/>
+            <TextBlock Text="{Binding Shell.I18n.ToastNotificationsDescription}" Classes="caption"/>
+        </StackPanel>
+        <ToggleSwitch Grid.Column="2"
+                      IsChecked="{Binding Settings.Editor.Current.ToastNotificationsEnabled, Mode=TwoWay}"
+                      OnContent="{Binding Shell.I18n.ToggleOn}"
+                      OffContent="{Binding Shell.I18n.ToggleOff}"
+                      VerticalAlignment="Center"/>
+    </Grid>
+
+    <Grid Classes="settings-row" ColumnDefinitions="Auto,*,Auto">
+        <Border Classes="settings-icon">
+            <materialIcons:MaterialIcon Kind="ViewDashboardOutline" Width="{StaticResource LauncherIconMd}" Height="{StaticResource LauncherIconMd}" Foreground="{DynamicResource LauncherAccentBrush}" HorizontalAlignment="Center" VerticalAlignment="Center"/>
+        </Border>
+        <StackPanel Grid.Column="1" Classes="dialog-heading-copy">
+            <TextBlock Text="{Binding Shell.I18n.RemoteContentCard}" Classes="section-title"/>
+            <TextBlock Text="{Binding Shell.I18n.RemoteContentCardDescription}" Classes="caption"/>
+        </StackPanel>
+        <ToggleSwitch Grid.Column="2"
+                      IsChecked="{Binding Settings.Editor.Current.ShowRemoteContentCard, Mode=TwoWay}"
+                      OnContent="{Binding Shell.I18n.ToggleOn}"
+                      OffContent="{Binding Shell.I18n.ToggleOff}"
+                      VerticalAlignment="Center"/>
+    </Grid>
+        </StackPanel>
+    </UserControl>

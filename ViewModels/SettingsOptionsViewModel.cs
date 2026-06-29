@@ -109,8 +109,19 @@ public sealed class SettingsOptionsViewModel
         new() { Code = MotionModes.Reduced }
     ];
 
+    public ObservableCollection<SettingOption> SettingsCategories { get; } = [];
+
     public void RefreshDisplayNames()
     {
+        EnsureSettingCategories();
+        UpdateSettingCategoryDisplayName(SettingsCategoryCodes.General, localizer.T("settingsCategoryGeneral"));
+        UpdateSettingCategoryDisplayName(SettingsCategoryCodes.Game, localizer.T("settingsCategoryGame"));
+        UpdateSettingCategoryDisplayName(SettingsCategoryCodes.DownloadNetwork, localizer.T("settingsCategoryDownloadNetwork"));
+        UpdateSettingCategoryDisplayName(SettingsCategoryCodes.Appearance, localizer.T("settingsCategoryAppearance"));
+        UpdateSettingCategoryDisplayName(SettingsCategoryCodes.NotificationsContent, localizer.T("settingsCategoryNotificationsContent"));
+        UpdateSettingCategoryDisplayName(SettingsCategoryCodes.Advanced, localizer.T("settingsCategoryAdvanced"));
+        UpdateSettingCategoryDisplayName(SettingsCategoryCodes.About, localizer.T("settingsCategoryAbout"));
+
         foreach (var option in Theme)
         {
             option.DisplayName = option.Code switch
@@ -233,6 +244,28 @@ public sealed class SettingsOptionsViewModel
                 _ => localizer.T("logLevelInformation")
             };
         }
+    }
+
+    private void EnsureSettingCategories()
+    {
+        if (SettingsCategories.Count > 0)
+        {
+            return;
+        }
+
+        SettingsCategories.Add(new() { Code = SettingsCategoryCodes.General });
+        SettingsCategories.Add(new() { Code = SettingsCategoryCodes.Game });
+        SettingsCategories.Add(new() { Code = SettingsCategoryCodes.DownloadNetwork });
+        SettingsCategories.Add(new() { Code = SettingsCategoryCodes.Appearance });
+        SettingsCategories.Add(new() { Code = SettingsCategoryCodes.NotificationsContent });
+        SettingsCategories.Add(new() { Code = SettingsCategoryCodes.Advanced });
+        SettingsCategories.Add(new() { Code = SettingsCategoryCodes.About });
+    }
+
+    private void UpdateSettingCategoryDisplayName(string code, string displayName)
+    {
+        var option = SettingsCategories.First(option => option.Code == code);
+        option.DisplayName = displayName;
     }
 
     public string ResolveLanguageDisplayName(string language) =>

@@ -3,12 +3,13 @@
              xmlns:vm="using:Cafe.Launcher.Avalonia.ViewModels"
              xmlns:models="using:Cafe.Launcher.Avalonia.Models"
              xmlns:materialIcons="clr-namespace:Material.Icons.Avalonia;assembly=Material.Icons.Avalonia"
+             xmlns:views="using:Cafe.Launcher.Avalonia.Views"
              x:Class="Cafe.Launcher.Avalonia.Views.MainWindowSettingsOverlay"
              x:Name="SettingsRoot"
              x:DataType="vm:MainWindowViewModel">
     <Grid IsVisible="{Binding WindowChrome.IsSettingsVisible}" Classes="settings-overlay">
-        <Border MaxWidth="760"
-                MaxHeight="592"
+        <Border Width="960"
+                Height="620"
                 Classes="dialog overlay-dialog">
             <Grid RowDefinitions="Auto,*,Auto">
                 <Grid ColumnDefinitions="*,Auto" Classes="dialog-header">
@@ -26,648 +27,116 @@
                     </Button>
                 </Grid>
 
-                <ScrollViewer Grid.Row="1"
-                              Classes="dialog-scroll"
-                              IsEnabled="{Binding Settings.IsSaving, Converter={x:Static BoolConverters.Not}}">
-                    <StackPanel Spacing="{StaticResource LauncherSpacingMd}">
-                        <Border Classes="settings-section">
-                            <StackPanel Classes="status-panel">
-                                <TextBlock Text="{Binding Shell.I18n.SettingsStatus}" Classes="group-title"/>
-                                <Grid Classes="status-summary" ColumnDefinitions="Auto,*">
-                                    <Border Classes="settings-icon">
-                                        <materialIcons:MaterialIcon Kind="{Binding Shell.StatusIconKind}"
-                                                                    Width="{StaticResource LauncherIconLg}"
-                                                                    Height="{StaticResource LauncherIconLg}"
-                                                                    Foreground="{DynamicResource LauncherAccentBrush}"
-                                                                    HorizontalAlignment="Center"
-                                                                    VerticalAlignment="Center"/>
-                                    </Border>
-                                    <TextBlock Grid.Column="1"
-                                               Text="{Binding Shell.CurrentViewTitle}"
-                                               Classes="status-summary-title"
-                                               TextWrapping="Wrap"
-                                               VerticalAlignment="Center"/>
-                                </Grid>
-                                <Grid Classes="status-details"
-                                      ColumnDefinitions="*,*"
-                                      RowDefinitions="Auto,Auto,Auto">
+                <Grid Grid.Row="1" Classes="settings-workspace" ColumnDefinitions="184,*">
+                    <ListBox Classes="settings-navigation"
+                             x:Name="SettingsNavigation"
+                             AutomationProperties.AutomationId="SettingsNavigation"
+                             Focusable="True"
+                             ItemsSource="{Binding Settings.Options.SettingsCategories}"
+                             SelectedValue="{Binding Settings.SelectedCategory, Mode=TwoWay}"
+                             SelectedValueBinding="{Binding Code}"
+                             IsEnabled="{Binding Settings.IsSaving, Converter={x:Static BoolConverters.Not}}">
+                        <ListBox.ItemTemplate>
+                            <DataTemplate x:DataType="models:SettingOption">
+                                <TextBlock Text="{Binding DisplayName}"
+                                           Classes="settings-navigation-item"
+                                           AutomationProperties.Name="{Binding DisplayName}"/>
+                            </DataTemplate>
+                        </ListBox.ItemTemplate>
+                    </ListBox>
+
+                    <Border Grid.Column="1" Classes="settings-content-divider">
+                      <Border Classes="settings-content-padding">
+                        <Grid Classes="settings-content" RowDefinitions="Auto,*">
+                        <Border Classes="status-summary settings-status-summary">
+                            <Grid ColumnDefinitions="Auto,*,Auto" RowDefinitions="Auto,Auto">
+                                <Border Classes="settings-icon">
+                                    <materialIcons:MaterialIcon Kind="{Binding Shell.StatusIconKind}"
+                                                                Width="{StaticResource LauncherIconMd}"
+                                                                Height="{StaticResource LauncherIconMd}"
+                                                                Foreground="{DynamicResource LauncherAccentBrush}"
+                                                                HorizontalAlignment="Center"
+                                                                VerticalAlignment="Center"/>
+                                </Border>
+                                <StackPanel Grid.Column="1" VerticalAlignment="Center" Margin="8,0,0,0">
+                                    <TextBlock Text="{Binding Shell.CurrentViewTitle}" Classes="status-summary-title"/>
+                                    <TextBlock Text="{Binding Shell.VersionText}" Classes="caption"/>
+                                </StackPanel>
+                                <Grid Grid.Column="2"
+                                      Classes="status-details"
+                                      ColumnDefinitions="Auto,Auto"
+                                      RowDefinitions="Auto"
+                                      HorizontalAlignment="Right"
+                                      VerticalAlignment="Center">
                                     <Border Classes="status-detail">
-                                        <StackPanel Spacing="{StaticResource LauncherSpacingXs}">
-                                            <TextBlock Text="{Binding Shell.I18n.Version}" Classes="caption"/>
-                                            <TextBlock Text="{Binding Shell.VersionText}" Classes="value" TextTrimming="CharacterEllipsis"/>
-                                        </StackPanel>
+                                        <TextBlock Text="{Binding Shell.NetworkStatusValueText}"
+                                                   Classes="caption"
+                                                   VerticalAlignment="Center"/>
                                     </Border>
                                     <Border Grid.Column="1" Classes="status-detail">
-                                        <StackPanel Spacing="{StaticResource LauncherSpacingXs}">
-                                            <TextBlock Text="{Binding Shell.I18n.Executable}" Classes="caption"/>
-                                            <TextBlock Text="{Binding Shell.ExecutableNameText}" Classes="value" TextTrimming="CharacterEllipsis"/>
-                                        </StackPanel>
-                                    </Border>
-                                    <Border Grid.Row="1" Classes="status-detail">
-                                        <StackPanel Spacing="{StaticResource LauncherSpacingXs}">
-                                            <TextBlock Text="{Binding Shell.I18n.Network}" Classes="caption"/>
-                                            <TextBlock Text="{Binding Shell.NetworkStatusValueText}" Classes="value" TextTrimming="CharacterEllipsis"/>
-                                        </StackPanel>
-                                    </Border>
-                                    <Border Grid.Row="1" Grid.Column="1" Classes="status-detail">
-                                        <StackPanel Spacing="{StaticResource LauncherSpacingXs}">
-                                            <TextBlock Text="{Binding Shell.I18n.LaunchCheck}" Classes="caption"/>
-                                            <TextBlock Text="{Binding Shell.LaunchCheckValueText}" Classes="value" TextTrimming="CharacterEllipsis"/>
-                                        </StackPanel>
-                                    </Border>
-                                    <Border Grid.Row="2" Grid.ColumnSpan="2" Classes="status-detail">
-                                        <StackPanel Spacing="{StaticResource LauncherSpacingXs}">
-                                            <TextBlock Text="{Binding Shell.I18n.DiskSpaceLabel}" Classes="caption"/>
-                                            <TextBlock Text="{Binding Shell.DiskSpaceText}" Classes="value" TextTrimming="CharacterEllipsis"/>
-                                        </StackPanel>
+                                        <TextBlock Text="{Binding Shell.DiskSpaceText}"
+                                                   Classes="caption"
+                                                   VerticalAlignment="Center"/>
                                     </Border>
                                 </Grid>
-                                <Border Classes="info-strip status-note">
-                                    <TextBlock Text="{Binding Shell.OperationNote}" Foreground="{DynamicResource LauncherInfoTextBrush}" Classes="caption" TextWrapping="Wrap"/>
+                                <Border Grid.Row="1" Grid.ColumnSpan="3" Classes="status-detail status-note">
+                                    <TextBlock Text="{Binding Shell.OperationNote}"
+                                               Classes="caption"
+                                               VerticalAlignment="Center"
+                                               TextWrapping="Wrap"/>
                                 </Border>
-                            </StackPanel>
+                            </Grid>
                         </Border>
 
-                        <Border Classes="settings-section">
-                            <StackPanel>
-                                <TextBlock Text="{Binding Shell.I18n.SettingsGameFiles}" Classes="group-title"/>
-
-                                <Grid Classes="settings-row" ColumnDefinitions="Auto,*,Auto">
-                                    <Border Classes="settings-icon">
-                                        <materialIcons:MaterialIcon Kind="FolderOpen" Width="{StaticResource LauncherIconMd}" Height="{StaticResource LauncherIconMd}" Foreground="{DynamicResource LauncherAccentBrush}" HorizontalAlignment="Center" VerticalAlignment="Center"/>
-                                    </Border>
-                                    <StackPanel Grid.Column="1" VerticalAlignment="Center">
-                                        <TextBlock Text="{Binding Shell.I18n.GamePath}" Classes="section-title"/>
-                                        <TextBlock Text="{Binding Settings.Editor.Current.GamePath}" Classes="caption" TextWrapping="Wrap" TextTrimming="CharacterEllipsis"/>
-                                    </StackPanel>
-                                    <Button Grid.Column="2" Classes="flat-action" Command="{Binding Settings.ChooseGamePathCommand}"
-                                            IsEnabled="{Binding Shell.IsBusy, Converter={x:Static BoolConverters.Not}}">
-                                        <StackPanel Classes="button-content">
-                                            <materialIcons:MaterialIcon Kind="FolderOpen" Width="{StaticResource LauncherIconSm}" Height="{StaticResource LauncherIconSm}"/>
-                                            <TextBlock Text="{Binding Shell.I18n.Choose}" VerticalAlignment="Center"/>
-                                        </StackPanel>
-                                    </Button>
-                                </Grid>
-
-                                <Grid Classes="settings-row" ColumnDefinitions="Auto,*,Auto">
-                                    <Border Classes="settings-icon">
-                                        <materialIcons:MaterialIcon Kind="AnimationPlayOutline" Width="{StaticResource LauncherIconMd}" Height="{StaticResource LauncherIconMd}" Foreground="{DynamicResource LauncherAccentBrush}" HorizontalAlignment="Center" VerticalAlignment="Center"/>
-                                    </Border>
-                                    <StackPanel Grid.Column="1" Classes="dialog-heading-copy">
-                                        <TextBlock Text="{Binding Shell.I18n.MotionMode}" Classes="section-title"/>
-                                        <TextBlock Text="{Binding Shell.I18n.MotionModeDescription}" Classes="caption" TextWrapping="Wrap"/>
-                                    </StackPanel>
-                                    <ComboBox Grid.Column="2" Classes="setting-control"
-                                              ItemsSource="{Binding Settings.Options.MotionMode}"
-                                              SelectedValue="{Binding Settings.Editor.Current.MotionMode, Mode=TwoWay}"
-                                              SelectedValueBinding="{Binding Code}">
-                                        <ComboBox.ItemTemplate>
-                                            <DataTemplate x:DataType="models:SettingOption">
-                                                <TextBlock Text="{Binding DisplayName}"/>
-                                            </DataTemplate>
-                                        </ComboBox.ItemTemplate>
-                                    </ComboBox>
-                                </Grid>
-
-                                <Grid Classes="settings-row" ColumnDefinitions="Auto,*,Auto">
-                                    <Border Classes="settings-icon">
-                                        <materialIcons:MaterialIcon Kind="PlaylistCheck" Width="{StaticResource LauncherIconMd}" Height="{StaticResource LauncherIconMd}" Foreground="{DynamicResource LauncherAccentBrush}" HorizontalAlignment="Center" VerticalAlignment="Center"/>
-                                    </Border>
-                                    <StackPanel Grid.Column="1" Classes="dialog-heading-copy">
-                                        <TextBlock Text="{Binding Shell.I18n.LaunchCheck}" Classes="section-title"/>
-                                        <TextBlock Text="{Binding Shell.I18n.LaunchCheckDescription}" Classes="caption" TextWrapping="Wrap"/>
-                                    </StackPanel>
-                                    <ComboBox Grid.Column="2" Classes="setting-control"
-                                              ItemsSource="{Binding Settings.Options.LaunchCheckMode}"
-                                              SelectedValue="{Binding Settings.Editor.Current.LaunchCheckMode, Mode=TwoWay}"
-                                              SelectedValueBinding="{Binding Code}">
-                                        <ComboBox.ItemTemplate>
-                                            <DataTemplate x:DataType="models:SettingOption">
-                                                <TextBlock Text="{Binding DisplayName}"/>
-                                            </DataTemplate>
-                                        </ComboBox.ItemTemplate>
-                                    </ComboBox>
-                                </Grid>
-
-                                <Grid Classes="settings-row" ColumnDefinitions="Auto,*,Auto">
-                                    <Border Classes="settings-icon">
-                                        <materialIcons:MaterialIcon Kind="GamepadSquareOutline" Width="{StaticResource LauncherIconMd}" Height="{StaticResource LauncherIconMd}" Foreground="{DynamicResource LauncherAccentBrush}" HorizontalAlignment="Center" VerticalAlignment="Center"/>
-                                    </Border>
-                                    <StackPanel Grid.Column="1" Classes="dialog-heading-copy">
-                                        <TextBlock Text="{Binding Shell.I18n.GameManagement}" Classes="section-title"/>
-                                        <TextBlock Text="{Binding Shell.I18n.GameManagementDescription}" Classes="caption" TextWrapping="Wrap"/>
-                                    </StackPanel>
-                                    <StackPanel Grid.Column="2" Orientation="Horizontal" Spacing="{StaticResource LauncherSpacingSm}" VerticalAlignment="Center">
-                                        <Button Classes="flat-action" Command="{Binding Operations.RequestRepairCommand}"
-                                                IsEnabled="{Binding Shell.IsBusy, Converter={x:Static BoolConverters.Not}}">
-                                            <StackPanel Classes="button-content">
-                                                <materialIcons:MaterialIcon Kind="Tools" Width="{StaticResource LauncherIconSm}" Height="{StaticResource LauncherIconSm}"/>
-                                                <TextBlock Text="{Binding Shell.I18n.Repair}" VerticalAlignment="Center"/>
-                                            </StackPanel>
-                                        </Button>
-                                        <Button Classes="flat-action" Command="{Binding Operations.RequestUninstallCommand}"
-                                                IsEnabled="{Binding Shell.IsBusy, Converter={x:Static BoolConverters.Not}}">
-                                            <StackPanel Classes="button-content">
-                                                <materialIcons:MaterialIcon Kind="TrashCanOutline" Width="{StaticResource LauncherIconSm}" Height="{StaticResource LauncherIconSm}" Foreground="{DynamicResource LauncherDangerBrush}"/>
-                                                <TextBlock Text="{Binding Shell.I18n.Uninstall}" VerticalAlignment="Center" Foreground="{DynamicResource LauncherDangerBrush}"/>
-                                            </StackPanel>
-                                        </Button>
-                                    </StackPanel>
-                                </Grid>
+                        <ScrollViewer Grid.Row="1"
+                                      Classes="dialog-scroll"
+                                      VerticalScrollBarVisibility="Auto"
+                                      HorizontalScrollBarVisibility="Disabled"
+                                      IsEnabled="{Binding Settings.IsSaving, Converter={x:Static BoolConverters.Not}}">
+                            <StackPanel Classes="category-header settings-category-header">
+                                <TextBlock Classes="category-title"
+                                           DataContext="{Binding SelectedItem, ElementName=SettingsNavigation}"
+                                           x:DataType="models:SettingOption"
+                                           Text="{Binding DisplayName}"
+                                           AutomationProperties.Name="{Binding DisplayName}"/>
+                                <views:SettingsGeneralSection IsVisible="{Binding Settings.IsGeneralCategorySelected}"/>
+                                <views:SettingsGameSection IsVisible="{Binding Settings.IsGameCategorySelected}"/>
+                                <views:SettingsDownloadNetworkSection IsVisible="{Binding Settings.IsDownloadNetworkCategorySelected}"/>
+                                <views:SettingsAppearanceSection IsVisible="{Binding Settings.IsAppearanceCategorySelected}"/>
+                                <views:SettingsNotificationsContentSection IsVisible="{Binding Settings.IsNotificationsContentCategorySelected}"/>
+                                <views:SettingsAdvancedSection IsVisible="{Binding Settings.IsAdvancedCategorySelected}"/>
+                                <views:SettingsAboutSection IsVisible="{Binding Settings.IsAboutCategorySelected}"/>
                             </StackPanel>
-                        </Border>
-
-                        <Border Classes="settings-section">
-                            <StackPanel>
-                                <TextBlock Text="{Binding Shell.I18n.SettingsDownloadNetwork}" Classes="group-title"/>
-
-                                <Grid Classes="settings-row" ColumnDefinitions="Auto,*,Auto">
-                                    <Border Classes="settings-icon">
-                                        <materialIcons:MaterialIcon Kind="ShieldCheck" Width="{StaticResource LauncherIconMd}" Height="{StaticResource LauncherIconMd}" Foreground="{DynamicResource LauncherAccentBrush}" HorizontalAlignment="Center" VerticalAlignment="Center"/>
-                                    </Border>
-                                    <StackPanel Grid.Column="1" Classes="dialog-heading-copy">
-                                        <TextBlock Text="{Binding Shell.I18n.Proxy}" Classes="section-title"/>
-                                        <TextBlock Text="{Binding Shell.I18n.ProxyDescription}" Classes="caption" TextWrapping="Wrap"/>
-                                    </StackPanel>
-                                    <ComboBox Grid.Column="2" Classes="setting-control"
-                                              ItemsSource="{Binding Settings.Options.ProxyMode}"
-                                              SelectedValue="{Binding Settings.Editor.Current.ProxyMode, Mode=TwoWay}"
-                                              SelectedValueBinding="{Binding Code}">
-                                        <ComboBox.ItemTemplate>
-                                            <DataTemplate x:DataType="models:SettingOption">
-                                                <TextBlock Text="{Binding DisplayName}"/>
-                                            </DataTemplate>
-                                        </ComboBox.ItemTemplate>
-                                    </ComboBox>
-                                </Grid>
-
-                                <Grid Classes="settings-row" ColumnDefinitions="Auto,*,Auto">
-                                    <Border Classes="settings-icon">
-                                        <materialIcons:MaterialIcon Kind="Web" Width="{StaticResource LauncherIconMd}" Height="{StaticResource LauncherIconMd}" Foreground="{DynamicResource LauncherAccentBrush}" HorizontalAlignment="Center" VerticalAlignment="Center"/>
-                                    </Border>
-                                    <StackPanel Grid.Column="1" Classes="dialog-heading-copy">
-                                        <TextBlock Text="{Binding Shell.I18n.DownloadSource}" Classes="section-title"/>
-                                        <TextBlock Text="{Binding Shell.I18n.DownloadSourceDescription}" Classes="caption" TextWrapping="Wrap"/>
-                                    </StackPanel>
-                                    <ComboBox Grid.Column="2" Classes="setting-control"
-                                              ItemsSource="{Binding Settings.Options.PatchUrlGroup}"
-                                              SelectedValue="{Binding Settings.Editor.Current.PatchUrlGroup, Mode=TwoWay}"
-                                              SelectedValueBinding="{Binding Code}">
-                                        <ComboBox.ItemTemplate>
-                                            <DataTemplate x:DataType="models:SettingOption">
-                                                <TextBlock Text="{Binding DisplayName}"/>
-                                            </DataTemplate>
-                                        </ComboBox.ItemTemplate>
-                                    </ComboBox>
-                                </Grid>
-
-                                <Grid Classes="settings-row" ColumnDefinitions="Auto,*,Auto">
-                                    <Border Classes="settings-icon">
-                                        <materialIcons:MaterialIcon Kind="Speedometer" Width="{StaticResource LauncherIconMd}" Height="{StaticResource LauncherIconMd}" Foreground="{DynamicResource LauncherAccentBrush}" HorizontalAlignment="Center" VerticalAlignment="Center"/>
-                                    </Border>
-                                    <StackPanel Grid.Column="1" Classes="dialog-heading-copy">
-                                        <TextBlock Text="{Binding Shell.I18n.DownloadSpeedLimit}" Classes="section-title"/>
-                                        <TextBlock Text="{Binding Shell.I18n.DownloadSpeedLimitDescription}" Classes="caption" TextWrapping="Wrap"/>
-                                    </StackPanel>
-                                    <ComboBox Grid.Column="2" Classes="setting-control"
-                                              ItemsSource="{Binding Settings.Options.DownloadSpeedLimit}"
-                                              SelectedValue="{Binding Settings.Editor.Current.DownloadSpeedLimit, Mode=TwoWay}"
-                                              SelectedValueBinding="{Binding Code}">
-                                        <ComboBox.ItemTemplate>
-                                            <DataTemplate x:DataType="models:SettingOption">
-                                                <TextBlock Text="{Binding DisplayName}"/>
-                                            </DataTemplate>
-                                        </ComboBox.ItemTemplate>
-                                    </ComboBox>
-                                </Grid>
-
-                                <Grid Classes="settings-row" ColumnDefinitions="Auto,*,Auto">
-                                    <Border Classes="settings-icon">
-                                        <materialIcons:MaterialIcon Kind="Update" Width="{StaticResource LauncherIconMd}" Height="{StaticResource LauncherIconMd}" Foreground="{DynamicResource LauncherAccentBrush}" HorizontalAlignment="Center" VerticalAlignment="Center"/>
-                                    </Border>
-                                    <StackPanel Grid.Column="1" VerticalAlignment="Center">
-                                        <TextBlock Text="{Binding Shell.I18n.UpdateChannel}" Classes="section-title"/>
-                                    </StackPanel>
-                                    <ComboBox Grid.Column="2" Classes="setting-control"
-                                              ItemsSource="{Binding Settings.Options.UpdateChannel}"
-                                              SelectedValue="{Binding Settings.Editor.Current.UpdateChannel, Mode=TwoWay}"
-                                              SelectedValueBinding="{Binding Code}">
-                                        <ComboBox.ItemTemplate>
-                                            <DataTemplate x:DataType="models:SettingOption">
-                                                <TextBlock Text="{Binding DisplayName}"/>
-                                            </DataTemplate>
-                                        </ComboBox.ItemTemplate>
-                                    </ComboBox>
-                                </Grid>
-                            </StackPanel>
-                        </Border>
-
-                        <Border Classes="settings-section">
-                            <StackPanel>
-                                <TextBlock Text="{Binding Shell.I18n.SettingsAppPreferences}" Classes="group-title"/>
-
-                                <Grid Classes="settings-row" ColumnDefinitions="Auto,*,Auto">
-                                    <Border Classes="settings-icon">
-                                        <materialIcons:MaterialIcon Kind="Translate" Width="{StaticResource LauncherIconMd}" Height="{StaticResource LauncherIconMd}" Foreground="{DynamicResource LauncherAccentBrush}" HorizontalAlignment="Center" VerticalAlignment="Center"/>
-                                    </Border>
-                                    <StackPanel Grid.Column="1" VerticalAlignment="Center">
-                                        <TextBlock Text="{Binding Shell.I18n.Language}" Classes="section-title"/>
-                                    </StackPanel>
-                                    <ComboBox Grid.Column="2" Classes="setting-control"
-                                              ItemsSource="{Binding Settings.Options.Language}"
-                                              SelectedValue="{Binding Settings.Editor.Current.Language, Mode=TwoWay}"
-                                              SelectedValueBinding="{Binding Code}">
-                                        <ComboBox.ItemTemplate>
-                                            <DataTemplate x:DataType="models:LanguageOption">
-                                                <TextBlock Text="{Binding DisplayName}"/>
-                                            </DataTemplate>
-                                        </ComboBox.ItemTemplate>
-                                    </ComboBox>
-                                </Grid>
-
-                                <Grid Classes="settings-row" ColumnDefinitions="Auto,*,Auto">
-                                    <Border Classes="settings-icon">
-                                        <materialIcons:MaterialIcon Kind="ThemeLightDark" Width="{StaticResource LauncherIconMd}" Height="{StaticResource LauncherIconMd}" Foreground="{DynamicResource LauncherAccentBrush}" HorizontalAlignment="Center" VerticalAlignment="Center"/>
-                                    </Border>
-                                    <StackPanel Grid.Column="1" Classes="dialog-heading-copy">
-                                        <TextBlock Text="{Binding Shell.I18n.Theme}" Classes="section-title"/>
-                                        <TextBlock Text="{Binding Shell.I18n.ThemeDescription}" Classes="caption" TextWrapping="Wrap"/>
-                                    </StackPanel>
-                                    <ComboBox Grid.Column="2" Classes="setting-control"
-                                              ItemsSource="{Binding Settings.Options.Theme}"
-                                              SelectedValue="{Binding Settings.Editor.Current.ThemeMode, Mode=TwoWay}"
-                                              SelectedValueBinding="{Binding Code}">
-                                        <ComboBox.ItemTemplate>
-                                            <DataTemplate x:DataType="models:ThemeOption">
-                                                <TextBlock Text="{Binding DisplayName}"/>
-                                            </DataTemplate>
-                                        </ComboBox.ItemTemplate>
-                                    </ComboBox>
-                                </Grid>
-
-                                <Grid Classes="settings-row" ColumnDefinitions="Auto,*,Auto">
-                                    <Border Classes="settings-icon">
-                                        <materialIcons:MaterialIcon Kind="PaletteOutline" Width="{StaticResource LauncherIconMd}" Height="{StaticResource LauncherIconMd}" Foreground="{DynamicResource LauncherAccentBrush}" HorizontalAlignment="Center" VerticalAlignment="Center"/>
-                                    </Border>
-                                    <StackPanel Grid.Column="1" Classes="dialog-heading-copy">
-                                        <TextBlock Text="{Binding Shell.I18n.ThemeColor}" Classes="section-title"/>
-                                        <TextBlock Text="{Binding Shell.I18n.ThemeColorDescription}" Classes="caption" TextWrapping="Wrap"/>
-                                    </StackPanel>
-                                    <StackPanel Grid.Column="2" Orientation="Horizontal" Spacing="{StaticResource LauncherSpacingSm}" VerticalAlignment="Center">
-                                        <Border Classes="color-swatch"
-                                                Background="{Binding Settings.Appearance.ThemeColorPreviewBrush}"/>
-                                        <ComboBox Classes="setting-control"
-                                                  ItemsSource="{Binding Settings.Options.ThemeColor}"
-                                                  SelectedValue="{Binding Settings.Editor.Current.ThemeColorMode, Mode=TwoWay}"
-                                                  SelectedValueBinding="{Binding Code}">
-                                            <ComboBox.ItemTemplate>
-                                                <DataTemplate x:DataType="models:SettingOption">
-                                                    <TextBlock Text="{Binding DisplayName}"/>
-                                                </DataTemplate>
-                                            </ComboBox.ItemTemplate>
-                                        </ComboBox>
-                                    </StackPanel>
-                                </Grid>
-
-                                <Grid Classes="settings-row" ColumnDefinitions="Auto,*,Auto"
-                                      IsVisible="{Binding Settings.Appearance.IsWallpaperThemeColorSelected}">
-                                    <Border Classes="settings-icon">
-                                        <materialIcons:MaterialIcon Kind="PaletteSwatchOutline" Width="{StaticResource LauncherIconMd}" Height="{StaticResource LauncherIconMd}" Foreground="{DynamicResource LauncherAccentBrush}" HorizontalAlignment="Center" VerticalAlignment="Center"/>
-                                    </Border>
-                                    <StackPanel Grid.Column="1" Classes="dialog-heading-copy">
-                                        <TextBlock Text="{Binding Shell.I18n.ThemeColorPalette}" Classes="section-title"/>
-                                        <TextBlock Text="{Binding Shell.I18n.ThemeColorPaletteDescription}" Classes="caption" TextWrapping="Wrap"/>
-                                    </StackPanel>
-                                    <StackPanel Grid.Column="2" Orientation="Horizontal" Spacing="{StaticResource LauncherSpacingSm}" VerticalAlignment="Center">
-                                        <ItemsControl Width="136"
-                                                      ItemsSource="{Binding Settings.Appearance.ThemeColorPaletteItems}">
-                                            <ItemsControl.ItemsPanel>
-                                                <ItemsPanelTemplate>
-                                                    <StackPanel Orientation="Horizontal" Spacing="{StaticResource LauncherSpacingSm}"/>
-                                                </ItemsPanelTemplate>
-                                            </ItemsControl.ItemsPanel>
-                                            <ItemsControl.ItemTemplate>
-                                                <DataTemplate x:DataType="models:ThemeColorPaletteItem">
-                                                    <Button Classes="color-swatch-button"
-                                                            Command="{Binding DataContext.Settings.Appearance.SelectThemeColorPaletteCommand, ElementName=SettingsRoot}"
-                                                            CommandParameter="{Binding Index}">
-                                                        <Border Classes="color-swatch"
-                                                                Background="{Binding Brush}">
-                                                            <materialIcons:MaterialIcon Kind="Check"
-                                                                                        Width="{StaticResource LauncherIconSm}"
-                                                                                        Height="{StaticResource LauncherIconSm}"
-                                                                                        HorizontalAlignment="Center"
-                                                                                        VerticalAlignment="Center"
-                                                                                        Foreground="{DynamicResource LauncherOnAccentBrush}"
-                                                                                        IsVisible="{Binding IsSelected}"/>
-                                                        </Border>
-                                                    </Button>
-                                                </DataTemplate>
-                                            </ItemsControl.ItemTemplate>
-                                        </ItemsControl>
-                                        <Button Classes="flat-action icon-only"
-                                                Command="{Binding Settings.Appearance.RefreshThemeColorPaletteCommand}"
-                                                ToolTip.Tip="{Binding Shell.I18n.RefreshThemeColorPalette}"
-                                                AutomationProperties.Name="{Binding Shell.I18n.RefreshThemeColorPalette}">
-                                            <materialIcons:MaterialIcon Kind="Refresh" Width="{StaticResource LauncherIconSm}" Height="{StaticResource LauncherIconSm}"/>
-                                        </Button>
-                                    </StackPanel>
-                                </Grid>
-
-                                <Grid Classes="settings-row" ColumnDefinitions="Auto,*,Auto"
-                                      IsVisible="{Binding Settings.Appearance.IsCustomThemeColorSelected}">
-                                    <Border Classes="settings-icon">
-                                        <materialIcons:MaterialIcon Kind="FormatColorFill" Width="{StaticResource LauncherIconMd}" Height="{StaticResource LauncherIconMd}" Foreground="{DynamicResource LauncherAccentBrush}" HorizontalAlignment="Center" VerticalAlignment="Center"/>
-                                    </Border>
-                                    <StackPanel Grid.Column="1" Classes="dialog-heading-copy">
-                                        <TextBlock Text="{Binding Shell.I18n.ThemeColorCustom}" Classes="section-title"/>
-                                        <TextBlock Text="{Binding Shell.I18n.ThemeColorDescription}" Classes="caption" TextWrapping="Wrap"/>
-                                    </StackPanel>
-                                    <ColorPicker Grid.Column="2"
-                                                 Classes="setting-control"
-                                                 Color="{Binding Settings.Appearance.SelectedCustomThemeColor, Mode=TwoWay}">
-                                        <StackPanel Classes="button-content">
-                                            <Border Classes="color-swatch-preview"
-                                                    Background="{Binding Settings.Appearance.ThemeColorPreviewBrush}"/>
-                                            <materialIcons:MaterialIcon Kind="PaletteOutline" Width="{StaticResource LauncherIconSm}" Height="{StaticResource LauncherIconSm}"/>
-                                            <TextBlock Text="{Binding Shell.I18n.OpenColorPalette}" VerticalAlignment="Center"/>
-                                        </StackPanel>
-                                    </ColorPicker>
-                                </Grid>
-
-                                <Grid Classes="settings-row" ColumnDefinitions="Auto,*,Auto">
-                                    <Border Classes="settings-icon">
-                                        <materialIcons:MaterialIcon Kind="ImageOutline" Width="{StaticResource LauncherIconMd}" Height="{StaticResource LauncherIconMd}" Foreground="{DynamicResource LauncherAccentBrush}" HorizontalAlignment="Center" VerticalAlignment="Center"/>
-                                    </Border>
-                                    <StackPanel Grid.Column="1" Classes="dialog-heading-copy">
-                                        <TextBlock Text="{Binding Shell.I18n.BackgroundSource}" Classes="section-title"/>
-                                        <TextBlock Text="{Binding Shell.I18n.BackgroundSourceDescription}" Classes="caption" TextWrapping="Wrap"/>
-                                    </StackPanel>
-                                    <ComboBox Grid.Column="2" Classes="setting-control"
-                                              ItemsSource="{Binding Settings.Options.BackgroundSource}"
-                                              SelectedValue="{Binding Settings.Editor.Current.BackgroundSource, Mode=TwoWay}"
-                                              SelectedValueBinding="{Binding Code}">
-                                        <ComboBox.ItemTemplate>
-                                            <DataTemplate x:DataType="models:SettingOption">
-                                                <TextBlock Text="{Binding DisplayName}"/>
-                                            </DataTemplate>
-                                        </ComboBox.ItemTemplate>
-                                    </ComboBox>
-                                </Grid>
-
-                                <Grid Classes="settings-row" ColumnDefinitions="Auto,*,Auto">
-                                    <Border Classes="settings-icon">
-                                        <materialIcons:MaterialIcon Kind="ImageAspectRatio" Width="{StaticResource LauncherIconMd}" Height="{StaticResource LauncherIconMd}" Foreground="{DynamicResource LauncherAccentBrush}" HorizontalAlignment="Center" VerticalAlignment="Center"/>
-                                    </Border>
-                                    <StackPanel Grid.Column="1" Classes="dialog-heading-copy">
-                                        <TextBlock Text="{Binding Shell.I18n.BackgroundFit}" Classes="section-title"/>
-                                        <TextBlock Text="{Binding Shell.I18n.BackgroundFitDescription}" Classes="caption" TextWrapping="Wrap"/>
-                                    </StackPanel>
-                                    <ComboBox Grid.Column="2" Classes="setting-control"
-                                              ItemsSource="{Binding Settings.Options.BackgroundFit}"
-                                              SelectedValue="{Binding Settings.Editor.Current.BackgroundFit, Mode=TwoWay}"
-                                              SelectedValueBinding="{Binding Code}">
-                                        <ComboBox.ItemTemplate>
-                                            <DataTemplate x:DataType="models:SettingOption">
-                                                <TextBlock Text="{Binding DisplayName}"/>
-                                            </DataTemplate>
-                                        </ComboBox.ItemTemplate>
-                                    </ComboBox>
-                                </Grid>
-
-                                <Grid Classes="settings-row" ColumnDefinitions="Auto,*,Auto"
-                                      IsVisible="{Binding Settings.Appearance.IsBackgroundFitSelected}">
-                                    <Border Classes="settings-icon">
-                                        <materialIcons:MaterialIcon Kind="FormatColorFill" Width="{StaticResource LauncherIconMd}" Height="{StaticResource LauncherIconMd}" Foreground="{DynamicResource LauncherAccentBrush}" HorizontalAlignment="Center" VerticalAlignment="Center"/>
-                                    </Border>
-                                    <StackPanel Grid.Column="1" Classes="dialog-heading-copy">
-                                        <TextBlock Text="{Binding Shell.I18n.BackgroundFillColor}" Classes="section-title"/>
-                                        <TextBlock Text="{Binding Shell.I18n.BackgroundFillColorDescription}" Classes="caption" TextWrapping="Wrap"/>
-                                    </StackPanel>
-                                    <ColorPicker Grid.Column="2" Classes="setting-control"
-                                                 Color="{Binding Settings.Appearance.SelectedBackgroundFillColor, Mode=TwoWay}">
-                                        <StackPanel Classes="button-content">
-                                            <Border Classes="color-swatch-preview"
-                                                    Background="{Binding Settings.Appearance.BackgroundFillColorPreviewBrush}"/>
-                                            <materialIcons:MaterialIcon Kind="PaletteOutline" Width="{StaticResource LauncherIconSm}" Height="{StaticResource LauncherIconSm}"/>
-                                            <TextBlock Text="{Binding Shell.I18n.OpenColorPalette}" VerticalAlignment="Center"/>
-                                        </StackPanel>
-                                    </ColorPicker>
-                                </Grid>
-
-                                <Grid Classes="settings-row" ColumnDefinitions="Auto,*,Auto"
-                                      IsVisible="{Binding Settings.Appearance.IsCustomBackgroundSelected}">
-                                    <Border Classes="settings-icon">
-                                        <materialIcons:MaterialIcon Kind="ImageEditOutline" Width="{StaticResource LauncherIconMd}" Height="{StaticResource LauncherIconMd}" Foreground="{DynamicResource LauncherAccentBrush}" HorizontalAlignment="Center" VerticalAlignment="Center"/>
-                                    </Border>
-                                    <StackPanel Grid.Column="1" Classes="dialog-heading-copy">
-                                        <TextBlock Text="{Binding Shell.I18n.CustomBackground}" Classes="section-title"/>
-                                        <TextBlock Text="{Binding Shell.I18n.CustomBackgroundDescription}" Classes="caption" TextWrapping="Wrap"/>
-                                    </StackPanel>
-                                    <StackPanel Grid.Column="2" Orientation="Horizontal" Spacing="{StaticResource LauncherSpacingSm}" VerticalAlignment="Center">
-                                        <Button Classes="flat-action" Command="{Binding Settings.ChooseBackgroundImageCommand}">
-                                            <StackPanel Classes="button-content">
-                                                <materialIcons:MaterialIcon Kind="ImageOutline" Width="{StaticResource LauncherIconSm}" Height="{StaticResource LauncherIconSm}"/>
-                                                <TextBlock Text="{Binding Shell.I18n.ChooseImage}" VerticalAlignment="Center"/>
-                                            </StackPanel>
-                                        </Button>
-                                        <Button Classes="flat-action" Command="{Binding Settings.ChooseBackgroundFolderCommand}">
-                                            <StackPanel Classes="button-content">
-                                                <materialIcons:MaterialIcon Kind="FolderOpen" Width="{StaticResource LauncherIconSm}" Height="{StaticResource LauncherIconSm}"/>
-                                                <TextBlock Text="{Binding Shell.I18n.ChooseFolder}" VerticalAlignment="Center"/>
-                                            </StackPanel>
-                                        </Button>
-                                        <Button Classes="flat-action" Command="{Binding Settings.ClearBackgroundCommand}"
-                                                IsVisible="{Binding Settings.Appearance.IsCustomBackground}">
-                                            <StackPanel Classes="button-content">
-                                                <materialIcons:MaterialIcon Kind="DeleteOutline" Width="{StaticResource LauncherIconSm}" Height="{StaticResource LauncherIconSm}"/>
-                                                <TextBlock Text="{Binding Shell.I18n.ClearBackground}" VerticalAlignment="Center"/>
-                                            </StackPanel>
-                                        </Button>
-                                    </StackPanel>
-                                </Grid>
-
-                                <Grid Classes="settings-row" ColumnDefinitions="Auto,*,Auto">
-                                    <Border Classes="settings-icon">
-                                        <materialIcons:MaterialIcon Kind="ProgressClose" Width="{StaticResource LauncherIconMd}" Height="{StaticResource LauncherIconMd}" Foreground="{DynamicResource LauncherAccentBrush}" HorizontalAlignment="Center" VerticalAlignment="Center"/>
-                                    </Border>
-                                    <StackPanel Grid.Column="1" VerticalAlignment="Center">
-                                        <TextBlock Text="{Binding Shell.I18n.CloseBehavior}" Classes="section-title"/>
-                                    </StackPanel>
-                                    <ComboBox Grid.Column="2" Classes="setting-control"
-                                              ItemsSource="{Binding Settings.Options.CloseBehavior}"
-                                              SelectedValue="{Binding Settings.Editor.Current.CloseBehavior, Mode=TwoWay}"
-                                              SelectedValueBinding="{Binding Code}">
-                                        <ComboBox.ItemTemplate>
-                                            <DataTemplate x:DataType="models:SettingOption">
-                                                <TextBlock Text="{Binding DisplayName}"/>
-                                            </DataTemplate>
-                                        </ComboBox.ItemTemplate>
-                                    </ComboBox>
-                                </Grid>
-
-                                <Grid Classes="settings-row" ColumnDefinitions="Auto,*,Auto">
-                                    <Border Classes="settings-icon">
-                                        <materialIcons:MaterialIcon Kind="BellOutline" Width="{StaticResource LauncherIconMd}" Height="{StaticResource LauncherIconMd}" Foreground="{DynamicResource LauncherAccentBrush}" HorizontalAlignment="Center" VerticalAlignment="Center"/>
-                                    </Border>
-                                    <StackPanel Grid.Column="1" Classes="dialog-heading-copy">
-                                        <TextBlock Text="{Binding Shell.I18n.NotificationSettings}" Classes="section-title"/>
-                                        <TextBlock Text="{Binding Shell.I18n.ToastNotifications}" Classes="caption"/>
-                                    </StackPanel>
-                                    <ToggleSwitch Grid.Column="2"
-                                                  IsChecked="{Binding Settings.Editor.Current.ToastNotificationsEnabled, Mode=TwoWay}"
-                                                  OnContent="{Binding Shell.I18n.ToggleOn}"
-                                                  OffContent="{Binding Shell.I18n.ToggleOff}"
-                                                  VerticalAlignment="Center"/>
-                                </Grid>
-
-                                <Grid Classes="settings-row" ColumnDefinitions="Auto,*,Auto">
-                                    <Border Classes="settings-icon">
-                                        <materialIcons:MaterialIcon Kind="ViewDashboardOutline" Width="{StaticResource LauncherIconMd}" Height="{StaticResource LauncherIconMd}" Foreground="{DynamicResource LauncherAccentBrush}" HorizontalAlignment="Center" VerticalAlignment="Center"/>
-                                    </Border>
-                                    <StackPanel Grid.Column="1" Classes="dialog-heading-copy">
-                                        <TextBlock Text="{Binding Shell.I18n.RemoteContentCard}" Classes="section-title"/>
-                                        <TextBlock Text="{Binding Shell.I18n.ShowRemoteContentCard}" Classes="caption"/>
-                                    </StackPanel>
-                                    <ToggleSwitch Grid.Column="2"
-                                                  IsChecked="{Binding Settings.Editor.Current.ShowRemoteContentCard, Mode=TwoWay}"
-                                                  OnContent="{Binding Shell.I18n.ToggleOn}"
-                                                  OffContent="{Binding Shell.I18n.ToggleOff}"
-                                                  VerticalAlignment="Center"/>
-                                </Grid>
-
-                                <Grid Classes="settings-row" ColumnDefinitions="Auto,*,Auto">
-                                    <Border Classes="settings-icon">
-                                        <materialIcons:MaterialIcon Kind="Bug" Width="{StaticResource LauncherIconMd}" Height="{StaticResource LauncherIconMd}" Foreground="{DynamicResource LauncherAccentBrush}" HorizontalAlignment="Center" VerticalAlignment="Center"/>
-                                    </Border>
-                                    <StackPanel Grid.Column="1" VerticalAlignment="Center">
-                                        <TextBlock Text="{Binding Shell.I18n.LogLevel}" Classes="section-title"/>
-                                    </StackPanel>
-                                    <ComboBox Grid.Column="2" Classes="setting-control"
-                                              ItemsSource="{Binding Settings.Options.LogLevel}"
-                                              SelectedValue="{Binding Settings.Editor.Current.LogLevel, Mode=TwoWay}"
-                                              SelectedValueBinding="{Binding Code}">
-                                        <ComboBox.ItemTemplate>
-                                            <DataTemplate x:DataType="models:SettingOption">
-                                                <TextBlock Text="{Binding DisplayName}"/>
-                                            </DataTemplate>
-                                        </ComboBox.ItemTemplate>
-                                    </ComboBox>
-                                </Grid>
-                            </StackPanel>
-                        </Border>
-
-                        <Border Classes="settings-section">
-                            <StackPanel Spacing="{StaticResource LauncherSpacingSm}">
-                                <TextBlock Text="{Binding Shell.I18n.About}" Classes="group-title"/>
-                                <StackPanel Classes="card-heading">
-                                    <materialIcons:MaterialIcon Kind="InformationOutline" Width="{StaticResource LauncherIconLg}" Height="{StaticResource LauncherIconLg}" Foreground="{DynamicResource LauncherAccentBrush}"/>
-                                    <StackPanel>
-                                        <TextBlock Text="{Binding Shell.ProductName}" Classes="section-title"/>
-                                        <TextBlock Text="{Binding Shell.I18n.AboutDescription}" Classes="caption" TextWrapping="Wrap"/>
-                                    </StackPanel>
-                                </StackPanel>
-                                <StackPanel Spacing="{StaticResource LauncherSpacingSm}">
-                                    <TextBlock Text="{Binding Shell.I18n.VersionInfo}" Classes="section-title"/>
-                                    <WrapPanel>
-                                        <Border Classes="version-chip">
-                                            <TextBlock Text="{Binding Shell.LauncherVersionText}" Classes="chip-text"/>
-                                        </Border>
-                                        <Border Classes="version-chip"
-                                                IsVisible="{Binding Shell.BuildTimeText, Converter={x:Static StringConverters.IsNotNullOrEmpty}}">
-                                            <TextBlock Text="{Binding Shell.BuildTimeText}" Classes="chip-text"/>
-                                        </Border>
-                                        <Border Classes="version-chip">
-                                            <TextBlock Text="{Binding Shell.CommitShaText}" Classes="chip-text"/>
-                                        </Border>
-                                        <Border Classes="version-chip">
-                                            <TextBlock Text="{Binding Shell.BuildConfigText}" Classes="chip-text"/>
-                                        </Border>
-                                        <Border Classes="version-chip">
-                                            <TextBlock Text="{Binding Shell.FrameworkVersionText}" Classes="chip-text"/>
-                                        </Border>
-                                        <Border Classes="version-chip">
-                                            <TextBlock Text="{Binding Shell.AvaloniaVersionText}" Classes="chip-text"/>
-                                        </Border>
-                                        <Border Classes="version-chip">
-                                            <TextBlock Text="{Binding Shell.PlatformText}" Classes="chip-text"/>
-                                        </Border>
-                                    </WrapPanel>
-                                </StackPanel>
-                                <WrapPanel>
-                                    <Button Classes="flat-action wrap-action"
-                                            Command="{Binding Settings.CheckForUpdatesCommand}">
-                                        <StackPanel Classes="button-content">
-                                            <materialIcons:MaterialIcon Kind="Update" Width="{StaticResource LauncherIconSm}" Height="{StaticResource LauncherIconSm}"/>
-                                            <TextBlock Text="{Binding Shell.I18n.CheckUpdates}" VerticalAlignment="Center"/>
-                                        </StackPanel>
-                                    </Button>
-                                    <Button Classes="flat-action wrap-action" Command="{Binding WindowChrome.OpenOfficialSiteCommand}">
-                                        <StackPanel Classes="button-content">
-                                            <materialIcons:MaterialIcon Kind="Web" Width="{StaticResource LauncherIconSm}" Height="{StaticResource LauncherIconSm}"/>
-                                            <TextBlock Text="{Binding Shell.I18n.OfficialSite}" VerticalAlignment="Center"/>
-                                        </StackPanel>
-                                    </Button>
-                                    <Button Classes="flat-action wrap-action" Command="{Binding WindowChrome.OpenGitHubRepositoryCommand}">
-                                        <StackPanel Classes="button-content">
-                                            <materialIcons:MaterialIcon Kind="Github" Width="{StaticResource LauncherIconSm}" Height="{StaticResource LauncherIconSm}"/>
-                                            <TextBlock Text="{Binding Shell.I18n.GitHubRepository}" VerticalAlignment="Center"/>
-                                        </StackPanel>
-                                    </Button>
-                                    <Button Classes="flat-action wrap-action"
-                                            Command="{Binding LogViewer.OpenCommand}">
-                                        <StackPanel Classes="button-content">
-                                            <materialIcons:MaterialIcon Kind="TextBoxOutline" Width="{StaticResource LauncherIconSm}" Height="{StaticResource LauncherIconSm}"/>
-                                            <TextBlock Text="{Binding Shell.I18n.ViewLog}" VerticalAlignment="Center"/>
-                                        </StackPanel>
-                                    </Button>
-                                    <Button Classes="flat-action wrap-action"
-                                            Command="{Binding LogViewer.ExportCommand}">
-                                        <StackPanel Classes="button-content">
-                                            <materialIcons:MaterialIcon Kind="Export" Width="{StaticResource LauncherIconSm}" Height="{StaticResource LauncherIconSm}"/>
-                                            <TextBlock Text="{Binding Shell.I18n.ExportLogs}" VerticalAlignment="Center"/>
-                                        </StackPanel>
-                                    </Button>
-                                    <Button Classes="flat-action wrap-action"
-                                            Command="{Binding WindowChrome.OpenDataDirectoryCommand}">
-                                        <StackPanel Classes="button-content">
-                                            <materialIcons:MaterialIcon Kind="FolderOpen" Width="{StaticResource LauncherIconSm}" Height="{StaticResource LauncherIconSm}"/>
-                                            <TextBlock Text="{Binding Shell.I18n.OpenDataDirectory}" VerticalAlignment="Center"/>
-                                        </StackPanel>
-                                    </Button>
-                                </WrapPanel>
-                                <StackPanel Spacing="{StaticResource LauncherSpacingXs}">
-                                    <TextBlock Text="{Binding Shell.I18n.AboutLinks}" Classes="section-title"/>
-                                    <TextBlock Text="{Binding Shell.I18n.AboutCopyrightText}" Classes="caption" TextWrapping="Wrap"/>
-                                    <TextBlock Text="{Binding Shell.I18n.AboutDisclaimerText}" Classes="caption" TextWrapping="Wrap"/>
-                                </StackPanel>
-                            </StackPanel>
-                        </Border>
-                    </StackPanel>
-                </ScrollViewer>
+                        </ScrollViewer>
+                      </Grid>
+                    </Border>
+                    </Border>
+                </Grid>
 
                 <Border Grid.Row="2" Classes="dialog-footer">
-                    <Grid ColumnDefinitions="*,*" ColumnSpacing="{StaticResource LauncherSpacingSm}">
-                        <Button Classes="primary-action settings-footer-action"
-                                Command="{Binding Settings.SaveSettingsCommand}"
-                                IsEnabled="{Binding Settings.CanSaveSettings}"
-                                HorizontalAlignment="Stretch">
-                            <StackPanel Classes="button-content" HorizontalAlignment="Center">
-                                <materialIcons:MaterialIcon Kind="ContentSave" Width="{StaticResource LauncherIconMd}" Height="{StaticResource LauncherIconMd}"/>
-                                <TextBlock Text="{Binding Shell.I18n.Save}" VerticalAlignment="Center"/>
-                            </StackPanel>
-                        </Button>
-                        <Button Grid.Column="1"
-                                Classes="flat-action settings-footer-action"
+                    <StackPanel Orientation="Horizontal"
+                                Spacing="{StaticResource LauncherSpacingSm}"
+                                HorizontalAlignment="Right"
+                                VerticalAlignment="Center">
+                        <Button Classes="flat-action settings-footer-action"
                                 Command="{Binding WindowChrome.ShowSettingsCommand}"
-                                IsEnabled="{Binding Settings.IsSaving, Converter={x:Static BoolConverters.Not}}"
-                                HorizontalAlignment="Stretch">
+                                IsEnabled="{Binding Settings.IsSaving, Converter={x:Static BoolConverters.Not}}">
                             <StackPanel Classes="button-content" HorizontalAlignment="Center">
-                                <materialIcons:MaterialIcon Kind="CloseCircleOutline" Width="{StaticResource LauncherIconMd}" Height="{StaticResource LauncherIconMd}"/>
+                                <materialIcons:MaterialIcon Kind="CloseCircleOutline"
+                                    Width="{StaticResource LauncherIconMd}" Height="{StaticResource LauncherIconMd}"/>
                                 <TextBlock Text="{Binding Shell.I18n.Cancel}" VerticalAlignment="Center"/>
                             </StackPanel>
                         </Button>
-                    </Grid>
+                        <Button Classes="primary-action settings-footer-action"
+                                Command="{Binding Settings.SaveSettingsCommand}"
+                                IsEnabled="{Binding Settings.CanSaveSettings}">
+                            <StackPanel Classes="button-content" HorizontalAlignment="Center">
+                                <materialIcons:MaterialIcon Kind="ContentSave"
+                                    Width="{StaticResource LauncherIconMd}" Height="{StaticResource LauncherIconMd}"/>
+                                <TextBlock Text="{Binding Shell.I18n.Save}" VerticalAlignment="Center"/>
+                            </StackPanel>
+                        </Button>
+                    </StackPanel>
                 </Border>
             </Grid>
         </Border>

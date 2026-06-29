@@ -43,7 +43,8 @@ One `MainWindow` (1300×754 initial size, resizable with MinWidth 1024/MinHeight
 **View files** (XAML split by concern, all under `Views/`):
 - `MainWindow.axaml` — window shell, title bar, remote content panel, bottom install/progress/control panels
 - `MainWindow.Styles.axaml` — all `Window.Styles` extracted via `<StyleInclude Source="avares://..."/>`
-- `MainWindowSettingsOverlay.axaml` — settings dialog overlay
+- `MainWindowSettingsOverlay.axaml` — settings dialog overlay shell: category navigation, runtime status summary, section host, and transactional footer
+- `SettingsGeneralSection.axaml`, `SettingsGameSection.axaml`, `SettingsDownloadNetworkSection.axaml`, `SettingsAppearanceSection.axaml`, `SettingsNotificationsContentSection.axaml`, `SettingsAdvancedSection.axaml`, `SettingsAboutSection.axaml` — the seven settings sections; all share the owning `MainWindowViewModel` data context
 - `MainWindowDialogsOverlay.axaml` — notice popup, repair/uninstall confirmation dialogs
 - `MainWindowToastOverlay.axaml` — toast notification overlay
 
@@ -140,6 +141,8 @@ All UI strings go through `LocalizationService.T(key)` and `LocalizationService.
 3. Wire it in `LocalizedStrings.Apply()`
 
 **Localized dropdown values** follow the same pattern as `ThemeOption`: create `SettingOption` instances with `Code` (the persisted value) and `DisplayName` (set from `localizer.T()` in a `Refresh*Options()` method called from `ApplyLanguage()`). Bind the ComboBox with `SelectedValue="{Binding SelectedX}"` + `SelectedValueBinding="{Binding Code}"` + an `ItemTemplate` showing `{Binding DisplayName}`.
+
+Settings category selection is session UI state owned by `SettingsViewModel`: closing and reopening settings on the same `MainWindowViewModel` preserves the category, while a new `MainWindowViewModel` starts at `general`. Every new setting belongs to exactly one of the seven category sections; navigation must not save, discard, or recreate the shared settings draft.
 
 ### Theme
 

@@ -1,0 +1,217 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:vm="using:Cafe.Launcher.Avalonia.ViewModels"
+             xmlns:models="using:Cafe.Launcher.Avalonia.Models"
+             xmlns:materialIcons="clr-namespace:Material.Icons.Avalonia;assembly=Material.Icons.Avalonia"
+             x:Class="Cafe.Launcher.Avalonia.Views.SettingsAppearanceSection"
+             x:Name="SettingsRoot"
+             x:DataType="vm:MainWindowViewModel"><StackPanel>
+        <StackPanel Classes="settings-group">
+        <TextBlock Text="{Binding Shell.I18n.SettingsThemeColorGroup}" Classes="group-title"/>
+    <Grid Classes="settings-row" ColumnDefinitions="Auto,*,Auto">
+        <Border Classes="settings-icon">
+            <materialIcons:MaterialIcon Kind="ThemeLightDark" Width="{StaticResource LauncherIconMd}" Height="{StaticResource LauncherIconMd}" Foreground="{DynamicResource LauncherAccentBrush}" HorizontalAlignment="Center" VerticalAlignment="Center"/>
+        </Border>
+        <StackPanel Grid.Column="1" Classes="dialog-heading-copy">
+            <TextBlock Text="{Binding Shell.I18n.Theme}" Classes="section-title"/>
+            <TextBlock Text="{Binding Shell.I18n.ThemeDescription}" Classes="caption" TextWrapping="Wrap"/>
+        </StackPanel>
+        <ComboBox Grid.Column="2" Classes="setting-control"
+                  ItemsSource="{Binding Settings.Options.Theme}"
+                  SelectedValue="{Binding Settings.Editor.Current.ThemeMode, Mode=TwoWay}"
+                  SelectedValueBinding="{Binding Code}">
+            <ComboBox.ItemTemplate>
+                <DataTemplate x:DataType="models:ThemeOption">
+                    <TextBlock Text="{Binding DisplayName}"/>
+                </DataTemplate>
+            </ComboBox.ItemTemplate>
+        </ComboBox>
+    </Grid>
+
+    <Grid Classes="settings-row" ColumnDefinitions="Auto,*,Auto">
+        <Border Classes="settings-icon">
+            <materialIcons:MaterialIcon Kind="PaletteOutline" Width="{StaticResource LauncherIconMd}" Height="{StaticResource LauncherIconMd}" Foreground="{DynamicResource LauncherAccentBrush}" HorizontalAlignment="Center" VerticalAlignment="Center"/>
+        </Border>
+        <StackPanel Grid.Column="1" Classes="dialog-heading-copy">
+            <TextBlock Text="{Binding Shell.I18n.ThemeColor}" Classes="section-title"/>
+            <TextBlock Text="{Binding Shell.I18n.ThemeColorDescription}" Classes="caption" TextWrapping="Wrap"/>
+        </StackPanel>
+        <StackPanel Grid.Column="2" Orientation="Horizontal" Spacing="{StaticResource LauncherSpacingSm}" VerticalAlignment="Center">
+            <Border Classes="color-swatch"
+                    Background="{Binding Settings.Appearance.ThemeColorPreviewBrush}"/>
+            <ComboBox Classes="setting-control"
+                      ItemsSource="{Binding Settings.Options.ThemeColor}"
+                      SelectedValue="{Binding Settings.Editor.Current.ThemeColorMode, Mode=TwoWay}"
+                      SelectedValueBinding="{Binding Code}">
+                <ComboBox.ItemTemplate>
+                    <DataTemplate x:DataType="models:SettingOption">
+                        <TextBlock Text="{Binding DisplayName}"/>
+                    </DataTemplate>
+                </ComboBox.ItemTemplate>
+            </ComboBox>
+        </StackPanel>
+    </Grid>
+
+    <Grid Classes="settings-row" ColumnDefinitions="Auto,*,Auto"
+          IsVisible="{Binding Settings.Appearance.IsWallpaperThemeColorSelected}">
+        <Border Classes="settings-icon">
+            <materialIcons:MaterialIcon Kind="PaletteSwatchOutline" Width="{StaticResource LauncherIconMd}" Height="{StaticResource LauncherIconMd}" Foreground="{DynamicResource LauncherAccentBrush}" HorizontalAlignment="Center" VerticalAlignment="Center"/>
+        </Border>
+        <StackPanel Grid.Column="1" Classes="dialog-heading-copy">
+            <TextBlock Text="{Binding Shell.I18n.ThemeColorPalette}" Classes="section-title"/>
+            <TextBlock Text="{Binding Shell.I18n.ThemeColorPaletteDescription}" Classes="caption" TextWrapping="Wrap"/>
+        </StackPanel>
+        <StackPanel Grid.Column="2" Orientation="Horizontal" Spacing="{StaticResource LauncherSpacingSm}" VerticalAlignment="Center">
+            <ItemsControl Width="136"
+                          ItemsSource="{Binding Settings.Appearance.ThemeColorPaletteItems}">
+                <ItemsControl.ItemsPanel>
+                    <ItemsPanelTemplate>
+                        <StackPanel Orientation="Horizontal" Spacing="{StaticResource LauncherSpacingSm}"/>
+                    </ItemsPanelTemplate>
+                </ItemsControl.ItemsPanel>
+                <ItemsControl.ItemTemplate>
+                    <DataTemplate x:DataType="models:ThemeColorPaletteItem">
+                        <Button Classes="color-swatch-button"
+                                Command="{Binding DataContext.Settings.Appearance.SelectThemeColorPaletteCommand, ElementName=SettingsRoot}"
+                                CommandParameter="{Binding Index}">
+                            <Border Classes="color-swatch"
+                                    Background="{Binding Brush}">
+                                <materialIcons:MaterialIcon Kind="Check"
+                                                            Width="{StaticResource LauncherIconSm}"
+                                                            Height="{StaticResource LauncherIconSm}"
+                                                            HorizontalAlignment="Center"
+                                                            VerticalAlignment="Center"
+                                                            Foreground="{DynamicResource LauncherOnAccentBrush}"
+                                                            IsVisible="{Binding IsSelected}"/>
+                            </Border>
+                        </Button>
+                    </DataTemplate>
+                </ItemsControl.ItemTemplate>
+            </ItemsControl>
+            <Button Classes="flat-action icon-only"
+                    Command="{Binding Settings.Appearance.RefreshThemeColorPaletteCommand}"
+                    ToolTip.Tip="{Binding Shell.I18n.RefreshThemeColorPalette}"
+                    AutomationProperties.Name="{Binding Shell.I18n.RefreshThemeColorPalette}">
+                <materialIcons:MaterialIcon Kind="Refresh" Width="{StaticResource LauncherIconSm}" Height="{StaticResource LauncherIconSm}"/>
+            </Button>
+        </StackPanel>
+    </Grid>
+
+    <Grid Classes="settings-row" ColumnDefinitions="Auto,*,Auto"
+          IsVisible="{Binding Settings.Appearance.IsCustomThemeColorSelected}">
+        <Border Classes="settings-icon">
+            <materialIcons:MaterialIcon Kind="FormatColorFill" Width="{StaticResource LauncherIconMd}" Height="{StaticResource LauncherIconMd}" Foreground="{DynamicResource LauncherAccentBrush}" HorizontalAlignment="Center" VerticalAlignment="Center"/>
+        </Border>
+        <StackPanel Grid.Column="1" Classes="dialog-heading-copy">
+            <TextBlock Text="{Binding Shell.I18n.ThemeColorCustom}" Classes="section-title"/>
+            <TextBlock Text="{Binding Shell.I18n.ThemeColorDescription}" Classes="caption" TextWrapping="Wrap"/>
+        </StackPanel>
+        <ColorPicker Grid.Column="2"
+                     Classes="setting-control"
+                     Color="{Binding Settings.Appearance.SelectedCustomThemeColor, Mode=TwoWay}">
+            <StackPanel Classes="button-content">
+                <Border Classes="color-swatch-preview"
+                        Background="{Binding Settings.Appearance.ThemeColorPreviewBrush}"/>
+                <materialIcons:MaterialIcon Kind="PaletteOutline" Width="{StaticResource LauncherIconSm}" Height="{StaticResource LauncherIconSm}"/>
+                <TextBlock Text="{Binding Shell.I18n.OpenColorPalette}" VerticalAlignment="Center"/>
+            </StackPanel>
+        </ColorPicker>
+    </Grid>
+        </StackPanel>
+        <StackPanel Classes="settings-group">
+    <TextBlock Text="{Binding Shell.I18n.SettingsBackgroundGroup}" Classes="group-title"/>
+
+    <Grid Classes="settings-row" ColumnDefinitions="Auto,*,Auto">
+        <Border Classes="settings-icon">
+            <materialIcons:MaterialIcon Kind="ImageOutline" Width="{StaticResource LauncherIconMd}" Height="{StaticResource LauncherIconMd}" Foreground="{DynamicResource LauncherAccentBrush}" HorizontalAlignment="Center" VerticalAlignment="Center"/>
+        </Border>
+        <StackPanel Grid.Column="1" Classes="dialog-heading-copy">
+            <TextBlock Text="{Binding Shell.I18n.BackgroundSource}" Classes="section-title"/>
+            <TextBlock Text="{Binding Shell.I18n.BackgroundSourceDescription}" Classes="caption" TextWrapping="Wrap"/>
+        </StackPanel>
+        <ComboBox Grid.Column="2" Classes="setting-control"
+                  ItemsSource="{Binding Settings.Options.BackgroundSource}"
+                  SelectedValue="{Binding Settings.Editor.Current.BackgroundSource, Mode=TwoWay}"
+                  SelectedValueBinding="{Binding Code}">
+            <ComboBox.ItemTemplate>
+                <DataTemplate x:DataType="models:SettingOption">
+                    <TextBlock Text="{Binding DisplayName}"/>
+                </DataTemplate>
+            </ComboBox.ItemTemplate>
+        </ComboBox>
+    </Grid>
+
+    <Grid Classes="settings-row" ColumnDefinitions="Auto,*,Auto">
+        <Border Classes="settings-icon">
+            <materialIcons:MaterialIcon Kind="ImageAspectRatio" Width="{StaticResource LauncherIconMd}" Height="{StaticResource LauncherIconMd}" Foreground="{DynamicResource LauncherAccentBrush}" HorizontalAlignment="Center" VerticalAlignment="Center"/>
+        </Border>
+        <StackPanel Grid.Column="1" Classes="dialog-heading-copy">
+            <TextBlock Text="{Binding Shell.I18n.BackgroundFit}" Classes="section-title"/>
+            <TextBlock Text="{Binding Shell.I18n.BackgroundFitDescription}" Classes="caption" TextWrapping="Wrap"/>
+        </StackPanel>
+        <ComboBox Grid.Column="2" Classes="setting-control"
+                  ItemsSource="{Binding Settings.Options.BackgroundFit}"
+                  SelectedValue="{Binding Settings.Editor.Current.BackgroundFit, Mode=TwoWay}"
+                  SelectedValueBinding="{Binding Code}">
+            <ComboBox.ItemTemplate>
+                <DataTemplate x:DataType="models:SettingOption">
+                    <TextBlock Text="{Binding DisplayName}"/>
+                </DataTemplate>
+            </ComboBox.ItemTemplate>
+        </ComboBox>
+    </Grid>
+
+    <Grid Classes="settings-row" ColumnDefinitions="Auto,*,Auto"
+          IsVisible="{Binding Settings.Appearance.IsBackgroundFitSelected}">
+        <Border Classes="settings-icon">
+            <materialIcons:MaterialIcon Kind="FormatColorFill" Width="{StaticResource LauncherIconMd}" Height="{StaticResource LauncherIconMd}" Foreground="{DynamicResource LauncherAccentBrush}" HorizontalAlignment="Center" VerticalAlignment="Center"/>
+        </Border>
+        <StackPanel Grid.Column="1" Classes="dialog-heading-copy">
+            <TextBlock Text="{Binding Shell.I18n.BackgroundFillColor}" Classes="section-title"/>
+            <TextBlock Text="{Binding Shell.I18n.BackgroundFillColorDescription}" Classes="caption" TextWrapping="Wrap"/>
+        </StackPanel>
+        <ColorPicker Grid.Column="2" Classes="setting-control"
+                     Color="{Binding Settings.Appearance.SelectedBackgroundFillColor, Mode=TwoWay}">
+            <StackPanel Classes="button-content">
+                <Border Classes="color-swatch-preview"
+                        Background="{Binding Settings.Appearance.BackgroundFillColorPreviewBrush}"/>
+                <materialIcons:MaterialIcon Kind="PaletteOutline" Width="{StaticResource LauncherIconSm}" Height="{StaticResource LauncherIconSm}"/>
+                <TextBlock Text="{Binding Shell.I18n.OpenColorPalette}" VerticalAlignment="Center"/>
+            </StackPanel>
+        </ColorPicker>
+    </Grid>
+
+    <Grid Classes="settings-row" ColumnDefinitions="Auto,*,Auto"
+          IsVisible="{Binding Settings.Appearance.IsCustomBackgroundSelected}">
+        <Border Classes="settings-icon">
+            <materialIcons:MaterialIcon Kind="ImageEditOutline" Width="{StaticResource LauncherIconMd}" Height="{StaticResource LauncherIconMd}" Foreground="{DynamicResource LauncherAccentBrush}" HorizontalAlignment="Center" VerticalAlignment="Center"/>
+        </Border>
+        <StackPanel Grid.Column="1" Classes="dialog-heading-copy">
+            <TextBlock Text="{Binding Shell.I18n.CustomBackground}" Classes="section-title"/>
+            <TextBlock Text="{Binding Shell.I18n.CustomBackgroundDescription}" Classes="caption" TextWrapping="Wrap"/>
+        </StackPanel>
+        <StackPanel Grid.Column="2" Orientation="Horizontal" Spacing="{StaticResource LauncherSpacingSm}" VerticalAlignment="Center">
+            <Button Classes="flat-action" Command="{Binding Settings.ChooseBackgroundImageCommand}">
+                <StackPanel Classes="button-content">
+                    <materialIcons:MaterialIcon Kind="ImageOutline" Width="{StaticResource LauncherIconSm}" Height="{StaticResource LauncherIconSm}"/>
+                    <TextBlock Text="{Binding Shell.I18n.ChooseImage}" VerticalAlignment="Center"/>
+                </StackPanel>
+            </Button>
+            <Button Classes="flat-action" Command="{Binding Settings.ChooseBackgroundFolderCommand}">
+                <StackPanel Classes="button-content">
+                    <materialIcons:MaterialIcon Kind="FolderOpen" Width="{StaticResource LauncherIconSm}" Height="{StaticResource LauncherIconSm}"/>
+                    <TextBlock Text="{Binding Shell.I18n.ChooseFolder}" VerticalAlignment="Center"/>
+                </StackPanel>
+            </Button>
+            <Button Classes="flat-action" Command="{Binding Settings.ClearBackgroundCommand}"
+                    IsVisible="{Binding Settings.Appearance.IsCustomBackground}">
+                <StackPanel Classes="button-content">
+                    <materialIcons:MaterialIcon Kind="DeleteOutline" Width="{StaticResource LauncherIconSm}" Height="{StaticResource LauncherIconSm}"/>
+                    <TextBlock Text="{Binding Shell.I18n.ClearBackground}" VerticalAlignment="Center"/>
+                </StackPanel>
+            </Button>
+        </StackPanel>
+    </Grid>
+        </StackPanel>
+        </StackPanel>
+    </UserControl>
