@@ -41,18 +41,20 @@ jobs:
       - name: Restore (Debug, win-x64)
         run: dotnet restore $env:Project_Path -r win-x64
 
-      - name: Restore tests
-        run: |
-          dotnet restore tests/Cafe.Launcher.Avalonia.Tests/Cafe.Launcher.Avalonia.Tests.csproj -r win-x64
-          dotnet restore tests/Cafe.Launcher.Avalonia.HeadlessTests/Cafe.Launcher.Avalonia.HeadlessTests.csproj -r win-x64
+      - name: Restore unit tests (win-x64)
+        run: dotnet restore tests/Cafe.Launcher.Avalonia.Tests/Cafe.Launcher.Avalonia.Tests.csproj -r win-x64
+
+      - name: Restore headless tests (native)
+        run: dotnet restore tests/Cafe.Launcher.Avalonia.HeadlessTests/Cafe.Launcher.Avalonia.HeadlessTests.csproj
 
       - name: Build (Debug)
         run: dotnet build $env:Project_Path -c Debug --no-restore
 
-      - name: Test
-        run: |
-          dotnet test tests/Cafe.Launcher.Avalonia.Tests/Cafe.Launcher.Avalonia.Tests.csproj -c Debug -r win-x64 --no-restore
-          dotnet test tests/Cafe.Launcher.Avalonia.HeadlessTests/Cafe.Launcher.Avalonia.HeadlessTests.csproj -c Debug -r win-x64 --no-restore
+      - name: Run unit tests
+        run: dotnet test tests/Cafe.Launcher.Avalonia.Tests/Cafe.Launcher.Avalonia.Tests.csproj -c Debug -r win-x64 --no-restore
+
+      - name: Run headless tests (Linux native)
+        run: dotnet test tests/Cafe.Launcher.Avalonia.HeadlessTests/Cafe.Launcher.Avalonia.HeadlessTests.csproj -c Debug --no-restore
 
       - name: Restore (Release, win-x64)
         run: dotnet restore $env:Project_Path -r win-x64
