@@ -10,7 +10,11 @@ permissions:
 
 jobs:
   release:
-    runs-on: windows-latest
+    runs-on: ubuntu-latest
+
+    defaults:
+      run:
+        shell: pwsh
 
     env:
       Project_Path: Cafe.Launcher.Avalonia.csproj
@@ -28,32 +32,34 @@ jobs:
         with:
           dotnet-version: 10.0.x
 
-      - name: Restore
+      - name: Restore tests
         run: |
-          dotnet restore tests/Cafe.Launcher.Avalonia.Tests/Cafe.Launcher.Avalonia.Tests.csproj -r win-x64
-          dotnet restore tests/Cafe.Launcher.Avalonia.HeadlessTests/Cafe.Launcher.Avalonia.HeadlessTests.csproj -r win-x64
+          dotnet restore tests/Cafe.Launcher.Avalonia.Tests/Cafe.Launcher.Avalonia.Tests.csproj
+          dotnet restore tests/Cafe.Launcher.Avalonia.HeadlessTests/Cafe.Launcher.Avalonia.HeadlessTests.csproj
 
       - name: Test
         run: |
-          dotnet test tests/Cafe.Launcher.Avalonia.Tests/Cafe.Launcher.Avalonia.Tests.csproj -c Release -r win-x64 --no-restore
-          dotnet test tests/Cafe.Launcher.Avalonia.HeadlessTests/Cafe.Launcher.Avalonia.HeadlessTests.csproj -c Release -r win-x64 --no-restore
+          dotnet test tests/Cafe.Launcher.Avalonia.Tests/Cafe.Launcher.Avalonia.Tests.csproj -c Release --no-restore
+          dotnet test tests/Cafe.Launcher.Avalonia.HeadlessTests/Cafe.Launcher.Avalonia.HeadlessTests.csproj -c Release --no-restore
 
-      - name: Build (Release)
+      - name: Restore (Release, win-x64)
+        run: dotnet restore $env:Project_Path -r win-x64
+
+      - name: Build (Release, win-x64)
         run: dotnet build $env:Project_Path -c Release -r win-x64 --no-restore
 
-      - name: Publish
+      - name: Publish (Release, win-x64)
         run: dotnet publish $env:Project_Path -c Release -r win-x64 -o publish --no-restore
 
       - name: Create ZIP archive
         run: |
           $tag = "${{ github.ref_name }}"
           $zipName = "Cafe.Launcher.Avalonia_$tag.zip"
-          Compress-Archive -Path publish\* -DestinationPath $zipName
+          Compress-Archive -Path publish/* -DestinationPath $zipName
           Write-Host "Created $zipName"
           "zip_name=$zipName" >> $env:GITHUB_ENV
 
       - name: Prepare changelog
-        shell: pwsh
         run: |
           if (Test-Path "CHANGELOG_RELEASE.md") {
             Copy-Item "CHANGELOG_RELEASE.md" "changelog.md"
