@@ -85,7 +85,7 @@ public static class ServiceConfiguration
         services.AddSingleton<GameOperationsViewModel>();
         services.AddTransient<ToastHostViewModel>();
         services.AddTransient<WindowChromeViewModel>();
-        services.AddTransient<MainWindowViewModel>();
+        services.AddSingleton<MainWindowViewModel>();
 
         return services;
     }
