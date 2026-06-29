@@ -1,0 +1,90 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:vm="using:Cafe.Launcher.Avalonia.ViewModels"
+             xmlns:models="using:Cafe.Launcher.Avalonia.Models"
+             xmlns:materialIcons="clr-namespace:Material.Icons.Avalonia;assembly=Material.Icons.Avalonia"
+             x:Class="Cafe.Launcher.Avalonia.Views.SettingsDownloadNetworkSection"
+             x:Name="SettingsRoot"
+             x:DataType="vm:MainWindowViewModel"><StackPanel Classes="settings-group">
+            <TextBlock Text="{Binding Shell.I18n.SettingsGroupConnection}" Classes="group-title"/>
+        <Grid Classes="settings-row" ColumnDefinitions="Auto,*,Auto">
+            <Border Classes="settings-icon">
+                <materialIcons:MaterialIcon Kind="ShieldCheck" Width="{StaticResource LauncherIconMd}" Height="{StaticResource LauncherIconMd}" Foreground="{DynamicResource LauncherAccentBrush}" HorizontalAlignment="Center" VerticalAlignment="Center"/>
+            </Border>
+            <StackPanel Grid.Column="1" Classes="dialog-heading-copy">
+                <TextBlock Text="{Binding Shell.I18n.Proxy}" Classes="section-title"/>
+                <TextBlock Text="{Binding Shell.I18n.ProxyDescription}" Classes="caption" TextWrapping="Wrap"/>
+            </StackPanel>
+            <ComboBox Grid.Column="2" Classes="setting-control"
+                      ItemsSource="{Binding Settings.Options.ProxyMode}"
+                      SelectedValue="{Binding Settings.Editor.Current.ProxyMode, Mode=TwoWay}"
+                      SelectedValueBinding="{Binding Code}">
+                <ComboBox.ItemTemplate>
+                    <DataTemplate x:DataType="models:SettingOption">
+                        <TextBlock Text="{Binding DisplayName}"/>
+                    </DataTemplate>
+                </ComboBox.ItemTemplate>
+            </ComboBox>
+        </Grid>
+
+        <Grid Classes="settings-row" ColumnDefinitions="Auto,*,Auto">
+            <Border Classes="settings-icon">
+                <materialIcons:MaterialIcon Kind="Web" Width="{StaticResource LauncherIconMd}" Height="{StaticResource LauncherIconMd}" Foreground="{DynamicResource LauncherAccentBrush}" HorizontalAlignment="Center" VerticalAlignment="Center"/>
+            </Border>
+            <StackPanel Grid.Column="1" Classes="dialog-heading-copy">
+                <TextBlock Text="{Binding Shell.I18n.DownloadSource}" Classes="section-title"/>
+                <TextBlock Text="{Binding Shell.I18n.DownloadSourceDescription}" Classes="caption" TextWrapping="Wrap"/>
+            </StackPanel>
+            <ComboBox Grid.Column="2" Classes="setting-control"
+                      ItemsSource="{Binding Settings.Options.PatchUrlGroup}"
+                      SelectedValue="{Binding Settings.Editor.Current.PatchUrlGroup, Mode=TwoWay}"
+                      SelectedValueBinding="{Binding Code}">
+                <ComboBox.ItemTemplate>
+                    <DataTemplate x:DataType="models:SettingOption">
+                        <TextBlock Text="{Binding DisplayName}"/>
+                    </DataTemplate>
+                </ComboBox.ItemTemplate>
+            </ComboBox>
+        </Grid>
+
+        <Grid Classes="settings-row" ColumnDefinitions="Auto,*,Auto">
+            <Border Classes="settings-icon">
+                <materialIcons:MaterialIcon Kind="Speedometer" Width="{StaticResource LauncherIconMd}" Height="{StaticResource LauncherIconMd}" Foreground="{DynamicResource LauncherAccentBrush}" HorizontalAlignment="Center" VerticalAlignment="Center"/>
+            </Border>
+            <StackPanel Grid.Column="1" Classes="dialog-heading-copy">
+                <TextBlock Text="{Binding Shell.I18n.DownloadSpeedLimit}" Classes="section-title"/>
+                <TextBlock Text="{Binding Shell.I18n.DownloadSpeedLimitDescription}" Classes="caption" TextWrapping="Wrap"/>
+            </StackPanel>
+            <ComboBox Grid.Column="2" Classes="setting-control"
+                      ItemsSource="{Binding Settings.Options.DownloadSpeedLimit}"
+                      SelectedValue="{Binding Settings.Editor.Current.DownloadSpeedLimit, Mode=TwoWay}"
+                      SelectedValueBinding="{Binding Code}">
+                <ComboBox.ItemTemplate>
+                    <DataTemplate x:DataType="models:SettingOption">
+                        <TextBlock Text="{Binding DisplayName}"/>
+                    </DataTemplate>
+                </ComboBox.ItemTemplate>
+            </ComboBox>
+        </Grid>
+
+        <Grid Classes="settings-row" ColumnDefinitions="Auto,*,Auto">
+            <Border Classes="settings-icon">
+                <materialIcons:MaterialIcon Kind="Update" Width="{StaticResource LauncherIconMd}" Height="{StaticResource LauncherIconMd}" Foreground="{DynamicResource LauncherAccentBrush}" HorizontalAlignment="Center" VerticalAlignment="Center"/>
+            </Border>
+            <StackPanel Grid.Column="1" Classes="dialog-heading-copy">
+                <TextBlock Text="{Binding Shell.I18n.UpdateChannel}" Classes="section-title"/>
+                <TextBlock Text="{Binding Shell.I18n.UpdateChannelDescription}" Classes="caption" TextWrapping="Wrap"/>
+            </StackPanel>
+            <ComboBox Grid.Column="2" Classes="setting-control"
+                      ItemsSource="{Binding Settings.Options.UpdateChannel}"
+                      SelectedValue="{Binding Settings.Editor.Current.UpdateChannel, Mode=TwoWay}"
+                      SelectedValueBinding="{Binding Code}">
+                <ComboBox.ItemTemplate>
+                    <DataTemplate x:DataType="models:SettingOption">
+                        <TextBlock Text="{Binding DisplayName}"/>
+                    </DataTemplate>
+                </ComboBox.ItemTemplate>
+            </ComboBox>
+        </Grid>
+    </StackPanel>
+</UserControl>

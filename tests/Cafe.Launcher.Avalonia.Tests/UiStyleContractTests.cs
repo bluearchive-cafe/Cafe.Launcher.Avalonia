@@ -9,10 +9,323 @@ public sealed partial class UiStyleContractTests
     [
         "Views/MainWindow.axaml",
         "Views/MainWindowSettingsOverlay.axaml",
+        "Views/SettingsGeneralSection.axaml",
+        "Views/SettingsGameSection.axaml",
+        "Views/SettingsDownloadNetworkSection.axaml",
+        "Views/SettingsAppearanceSection.axaml",
+        "Views/SettingsNotificationsContentSection.axaml",
+        "Views/SettingsAdvancedSection.axaml",
+        "Views/SettingsAboutSection.axaml",
         "Views/MainWindowDialogsOverlay.axaml",
         "Views/MainWindowLogViewerOverlay.axaml",
         "Views/MainWindowToastOverlay.axaml"
     ];
+
+    [Fact]
+    public void SettingsSections_OwnEachBindingExactlyOnceAndUseCompiledBindings()
+    {
+        Dictionary<string, string[]> expectedBindings = new(StringComparer.Ordinal)
+        {
+            ["SettingsGeneralSection"] =
+            [
+                "Settings.Editor.Current.Language",
+                "Settings.Editor.Current.CloseBehavior",
+                "Settings.Editor.Current.MotionMode"
+            ],
+            ["SettingsGameSection"] =
+            [
+                "Settings.Editor.Current.GamePath",
+                "Settings.Editor.Current.LaunchCheckMode",
+                "Operations.RequestRepairCommand",
+                "Operations.RequestUninstallCommand"
+            ],
+            ["SettingsDownloadNetworkSection"] =
+            [
+                "Settings.Editor.Current.ProxyMode",
+                "Settings.Editor.Current.PatchUrlGroup",
+                "Settings.Editor.Current.DownloadSpeedLimit",
+                "Settings.Editor.Current.UpdateChannel"
+            ],
+            ["SettingsAppearanceSection"] =
+            [
+                "Settings.Editor.Current.ThemeMode",
+                "Settings.Editor.Current.ThemeColorMode",
+                "Settings.Editor.Current.BackgroundSource",
+                "Settings.Editor.Current.BackgroundFit",
+                "Settings.Appearance.ThemeColorPaletteItems",
+                "Settings.Appearance.SelectedCustomThemeColor",
+                "Settings.Appearance.SelectedBackgroundFillColor",
+                "Settings.ChooseBackgroundImageCommand",
+                "Settings.ChooseBackgroundFolderCommand",
+                "Settings.ClearBackgroundCommand",
+                "Settings.Appearance.IsWallpaperThemeColorSelected",
+                "Settings.Appearance.IsCustomThemeColorSelected",
+                "Settings.Appearance.IsBackgroundFitSelected",
+                "Settings.Appearance.IsCustomBackgroundSelected"
+            ],
+            ["SettingsNotificationsContentSection"] =
+            [
+                "Settings.Editor.Current.ToastNotificationsEnabled",
+                "Settings.Editor.Current.ShowRemoteContentCard"
+            ],
+            ["SettingsAdvancedSection"] =
+            [
+                "Settings.Editor.Current.LogLevel"
+            ],
+            ["SettingsAboutSection"] =
+            [
+                "Settings.CheckForUpdatesCommand",
+                "WindowChrome.OpenOfficialSiteCommand",
+                "WindowChrome.OpenGitHubRepositoryCommand",
+                "LogViewer.OpenCommand",
+                "LogViewer.ExportCommand",
+                "WindowChrome.OpenDataDirectoryCommand"
+            ]
+        };
+
+        var allSectionText = string.Join(
+            Environment.NewLine,
+            expectedBindings.Keys.Select(name => File.ReadAllText(ProjectFile($"Views/{name}.axaml"))));
+
+        foreach (var (sectionName, bindings) in expectedBindings)
+        {
+            var text = File.ReadAllText(ProjectFile($"Views/{sectionName}.axaml"));
+            Assert.Contains("x:DataType=\"vm:MainWindowViewModel\"", text, StringComparison.Ordinal);
+
+            foreach (var binding in bindings)
+            {
+                Assert.Contains(binding, text, StringComparison.Ordinal);
+                Assert.Equal(
+                    1,
+                    Regex.Count(allSectionText, Regex.Escape(binding), RegexOptions.CultureInvariant));
+            }
+        }
+    }
+
+    [Fact]
+    public void SettingsOverlay_ReferencesSevenCategorySectionsWithoutOwningSettingsRows()
+    {
+        var overlay = File.ReadAllText(ProjectFile("Views/MainWindowSettingsOverlay.axaml"));
+        Dictionary<string, string> sectionVisibility = new(StringComparer.Ordinal)
+        {
+            ["SettingsGeneralSection"] = "Settings.IsGeneralCategorySelected",
+            ["SettingsGameSection"] = "Settings.IsGameCategorySelected",
+            ["SettingsDownloadNetworkSection"] = "Settings.IsDownloadNetworkCategorySelected",
+            ["SettingsAppearanceSection"] = "Settings.IsAppearanceCategorySelected",
+            ["SettingsNotificationsContentSection"] = "Settings.IsNotificationsContentCategorySelected",
+            ["SettingsAdvancedSection"] = "Settings.IsAdvancedCategorySelected",
+            ["SettingsAboutSection"] = "Settings.IsAboutCategorySelected"
+        };
+
+        foreach (var (sectionName, visibility) in sectionVisibility)
+        {
+            Assert.Equal(
+                1,
+                Regex.Count(overlay, $"<views:{sectionName} IsVisible=\"{{Binding {Regex.Escape(visibility)}}}\"/>"));
+        }
+
+        Assert.DoesNotContain("Settings.Editor.Current", overlay, StringComparison.Ordinal);
+        Assert.DoesNotContain("settings-row", overlay, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public void SettingsOverlay_UsesFixedTwoColumnCategoryWorkspace()
+    {
+        var document = XDocument.Load(ProjectFile("Views/MainWindowSettingsOverlay.axaml"));
+        var dialog = document
+            .Descendants()
+            .Single(element =>
+                element.Name.LocalName == "Border"
+                && HasClass(element, "overlay-dialog"));
+        Assert.Equal("960", dialog.Attribute("Width")?.Value);
+        Assert.Equal("620", dialog.Attribute("Height")?.Value);
+        var dialogLayout = dialog.Elements().Single(element => element.Name.LocalName == "Grid");
+        Assert.Equal("Auto,*,Auto", dialogLayout.Attribute("RowDefinitions")?.Value);
+
+        var workspace = document
+            .Descendants()
+            .Single(element =>
+                element.Name.LocalName == "Grid"
+                && HasClass(element, "settings-workspace"));
+        Assert.Equal("184,*", workspace.Attribute("ColumnDefinitions")?.Value);
+
+        var navigation = workspace
+            .Descendants()
+            .Single(element =>
+                element.Name.LocalName == "ListBox"
+                && HasClass(element, "settings-navigation"));
+        Assert.Equal(
+            "{Binding Settings.Options.SettingsCategories}",
+            navigation.Attribute("ItemsSource")?.Value);
+        Assert.Equal(
+            "{Binding Settings.SelectedCategory, Mode=TwoWay}",
+            navigation.Attribute("SelectedValue")?.Value);
+        Assert.Equal(
+            "{Binding Code}",
+            navigation.Attribute("SelectedValueBinding")?.Value);
+        Assert.Equal(
+            "{Binding Settings.IsSaving, Converter={x:Static BoolConverters.Not}}",
+            navigation.Attribute("IsEnabled")?.Value);
+
+        var itemTemplate = navigation
+            .Descendants()
+            .Single(element => element.Name.LocalName == "DataTemplate");
+        var categoryName = itemTemplate
+            .Descendants()
+            .Single(element => element.Name.LocalName == "TextBlock");
+        Assert.Equal("{Binding DisplayName}", categoryName.Attribute("Text")?.Value);
+        Assert.Equal(
+            "{Binding DisplayName}",
+            categoryName.Attributes()
+                .Single(attribute => attribute.Name.LocalName == "AutomationProperties.Name")
+                .Value);
+
+        var content = workspace
+            .Descendants()
+            .Single(element =>
+                element.Name.LocalName == "Grid"
+                && HasClass(element, "settings-content"));
+        var categoryTitle = content
+            .Descendants()
+            .Single(element =>
+                element.Name.LocalName == "TextBlock"
+                && HasClass(element, "category-title"));
+        Assert.Equal(
+            "{Binding SelectedItem, ElementName=SettingsNavigation}",
+            categoryTitle.Attribute("DataContext")?.Value);
+        Assert.Equal(
+            "models:SettingOption",
+            categoryTitle.Attributes()
+                .Single(attribute => attribute.Name.LocalName == "DataType")
+                .Value);
+        Assert.Equal(
+            "{Binding DisplayName}",
+            categoryTitle.Attribute("Text")?.Value);
+        Assert.Equal(
+            "{Binding DisplayName}",
+            categoryTitle.Attributes()
+                .Single(attribute => attribute.Name.LocalName == "AutomationProperties.Name")
+                .Value);
+        Assert.Single(
+            content.Descendants(),
+            element => element.Name.LocalName == "ScrollViewer");
+        Assert.Single(
+            content.Descendants(),
+            element =>
+                element.Name.LocalName == "Border"
+                && HasClass(element, "status-summary"));
+    }
+
+    [Fact]
+    public void SettingsWorkspaceStyles_UseSemanticBrushesAndDesignTokens()
+    {
+        var document = XDocument.Load(ProjectFile("Views/MainWindow.Styles.axaml"));
+
+        Assert.Equal(
+            "0",
+            GetStyleSetters(document, "Grid.settings-workspace")["ColumnSpacing"]);
+        Assert.Equal(
+            "0",
+            GetStyleSetters(document, "Grid.settings-workspace")["Margin"]);
+        Assert.Equal(
+            "{DynamicResource LauncherContentRowBrush}",
+            GetStyleSetters(document, "ListBox.settings-navigation")["Background"]);
+        Assert.Equal(
+            "0",
+            GetStyleSetters(document, "ListBox.settings-navigation")["BorderThickness"]);
+        Assert.Equal(
+            "16,8,8,16",
+            GetStyleSetters(document, "ListBox.settings-navigation")["Padding"]);
+        Assert.Equal(
+            "0",
+            GetStyleSetters(document, "ListBox.settings-navigation > ListBoxItem")["BorderThickness"]);
+        Assert.Equal(
+            "{DynamicResource LauncherTransparentBrush}",
+            GetStyleSetters(document, "ListBox.settings-navigation > ListBoxItem")["BorderBrush"]);
+        Assert.Equal(
+            "0",
+            GetStyleSetters(document, "ListBox.settings-navigation > ListBoxItem")["CornerRadius"]);
+        Assert.Equal(
+            "8,12,12,12",
+            GetStyleSetters(document, "ListBox.settings-navigation > ListBoxItem")["Padding"]);
+        Assert.Equal(
+            "3,0,0,0",
+            GetStyleSetters(document, "ListBox.settings-navigation > ListBoxItem:selected")["BorderThickness"]);
+        Assert.Equal(
+            "{DynamicResource LauncherAccentBrush}",
+            GetStyleSetters(document, "ListBox.settings-navigation > ListBoxItem:selected")["BorderBrush"]);
+        Assert.Equal(
+            "{DynamicResource LauncherAccentSoftBrush}",
+            GetStyleSetters(document, "ListBox.settings-navigation > ListBoxItem:selected:not(:focus)")["Background"]);
+        Assert.Equal(
+            "{DynamicResource LauncherTextPrimaryBrush}",
+            GetStyleSetters(document, "ListBox.settings-navigation > ListBoxItem:selected:not(:focus)")["Foreground"]);
+        Assert.Equal(
+            "{DynamicResource LauncherAccentBrush}",
+            GetStyleSetters(document, "ListBox.settings-navigation > ListBoxItem:selected:not(:focus)")["BorderBrush"]);
+        Assert.Equal(
+            "3,0,0,0",
+            GetStyleSetters(document, "ListBox.settings-navigation > ListBoxItem:selected:not(:focus)")["BorderThickness"]);
+        Assert.Equal(
+            "{StaticResource LauncherSpacingMd}",
+            GetStyleSetters(document, "Grid.settings-content")["RowSpacing"]);
+        Assert.Equal(
+            "0",
+            GetStyleSetters(document, "StackPanel.settings-category-header")["Spacing"]);
+        Assert.Equal(
+            "0,0,0,8",
+            GetStyleSetters(document, "Border.settings-status-summary")["Padding"]);
+        Assert.Equal(
+            "14",
+            GetStyleSetters(document, "TextBlock.group-title")["FontSize"]);
+        Assert.Equal(
+            "0,12,0,0",
+            GetStyleSetters(document, "Grid.settings-row")["Margin"]);
+
+        var overlayDocument = XDocument.Load(ProjectFile("Views/MainWindowSettingsOverlay.axaml"));
+        var scrollViewer = overlayDocument
+            .Descendants()
+            .Single(element => element.Name.LocalName == "ScrollViewer");
+        Assert.Equal("Auto", scrollViewer.Attribute("VerticalScrollBarVisibility")?.Value);
+        Assert.Equal("Disabled", scrollViewer.Attribute("HorizontalScrollBarVisibility")?.Value);
+    }
+
+    [Fact]
+    public void AppearanceSection_UsesTwoSettingsGroupsForConsistentVerticalRhythm()
+    {
+        var document = XDocument.Load(ProjectFile("Views/SettingsAppearanceSection.axaml"));
+        var groups = document
+            .Descendants()
+            .Where(element =>
+                element.Name.LocalName == "StackPanel"
+                && HasClass(element, "settings-group"))
+            .ToList();
+
+        Assert.Equal(2, groups.Count);
+
+        Assert.Equal(
+            "{Binding Shell.I18n.SettingsThemeColorGroup}",
+            groups[0]
+                .Elements()
+                .First(element => element.Name.LocalName == "TextBlock")
+                .Attribute("Text")?.Value);
+        Assert.Equal(
+            "{Binding Shell.I18n.SettingsBackgroundGroup}",
+            groups[1]
+                .Elements()
+                .First(element => element.Name.LocalName == "TextBlock")
+                .Attribute("Text")?.Value);
+    }
+
+    [Fact]
+    public void AboutSection_UsesSettingsGroupForTopLevelRhythm()
+    {
+        var document = XDocument.Load(ProjectFile("Views/SettingsAboutSection.axaml"));
+        var root = document.Root?.Elements().Single(element => element.Name.LocalName == "StackPanel");
+
+        Assert.NotNull(root);
+        Assert.True(HasClass(root!, "settings-group"));
+    }
 
     private static readonly HashSet<string> IconTokens =
     [
@@ -39,6 +352,19 @@ public sealed partial class UiStyleContractTests
                 StringComparer.Ordinal);
 
         Assert.Equal("40", resources["LauncherSpacingSection"]);
+        Assert.Equal("8", resources["LauncherThicknessSm"]);
+        Assert.Equal("12", resources["LauncherThicknessMd"]);
+        Assert.Equal("16", resources["LauncherThicknessLg"]);
+        Assert.All(
+            document
+                .Descendants()
+                .Where(element =>
+                    element.Attributes().Any(attribute =>
+                        attribute.Name.LocalName == "Key"
+                        && (attribute.Value == "LauncherThicknessSm"
+                            || attribute.Value == "LauncherThicknessMd"
+                            || attribute.Value == "LauncherThicknessLg"))),
+            element => Assert.Equal("Thickness", element.Name.LocalName));
         Assert.Equal("4", resources["LauncherRadiusSm"]);
         Assert.Equal("6", resources["LauncherRadiusMd"]);
         Assert.Equal("8", resources["LauncherRadiusLg"]);
@@ -59,7 +385,7 @@ public sealed partial class UiStyleContractTests
         var document = XDocument.Load(ProjectFile("Views/MainWindow.Styles.axaml"));
 
         var settingsSection = GetStyleSetters(document, "Border.settings-section");
-        Assert.Equal("16", settingsSection["Padding"]);
+        Assert.Equal("{StaticResource LauncherThicknessLg}", settingsSection["Padding"]);
         Assert.Equal("{StaticResource LauncherRadiusMd}", settingsSection["CornerRadius"]);
 
         var contentRow = GetStyleSetters(document, "Border.content-row");
@@ -70,9 +396,19 @@ public sealed partial class UiStyleContractTests
         Assert.Equal("{StaticResource LauncherRadiusLg}", dialog["CornerRadius"]);
 
         var settingControl = GetStyleSetters(document, "ComboBox.setting-control");
+        Assert.False(settingControl.ContainsKey("Width"));
+        Assert.Equal("220", settingControl["MinWidth"]);
         Assert.Equal(
             "{StaticResource LauncherControlHeightSetting}",
             settingControl["MinHeight"]);
+        Assert.Equal("Center", settingControl["VerticalAlignment"]);
+
+        var colorPickerControl = GetStyleSetters(document, "ColorPicker.setting-control");
+        Assert.False(colorPickerControl.ContainsKey("Width"));
+        Assert.Equal("220", colorPickerControl["MinWidth"]);
+        Assert.Equal(
+            "{StaticResource LauncherControlHeightSetting}",
+            colorPickerControl["MinHeight"]);
 
         var dialogAction = GetStyleSetters(document, "Button.dialog-action");
         Assert.Equal(
@@ -165,6 +501,80 @@ public sealed partial class UiStyleContractTests
     }
 
     [Fact]
+    public void SettingsNavigation_HoverAndSelectionOverrideFluentDefaultColors()
+    {
+        var document = XDocument.Load(ProjectFile("Views/MainWindow.Styles.axaml"));
+        var styles = document
+            .Descendants()
+            .Where(element => element.Name.LocalName == "Style")
+            .ToDictionary(
+                element => element.Attribute("Selector")?.Value ?? "",
+                element => element,
+                StringComparer.Ordinal);
+
+        foreach (var selector in new[]
+                 {
+                     "ListBox.settings-navigation > ListBoxItem:pointerover /template/ ContentPresenter#PART_ContentPresenter",
+                     "ListBox.settings-navigation > ListBoxItem:pressed /template/ ContentPresenter#PART_ContentPresenter",
+                     "ListBox.settings-navigation > ListBoxItem:selected /template/ ContentPresenter#PART_ContentPresenter",
+                     "ListBox.settings-navigation > ListBoxItem:selected:not(:focus) /template/ ContentPresenter#PART_ContentPresenter",
+                     "ListBox.settings-navigation > ListBoxItem:selected:pointerover /template/ ContentPresenter#PART_ContentPresenter",
+                     "ListBox.settings-navigation > ListBoxItem:selected:pressed /template/ ContentPresenter#PART_ContentPresenter"
+                 })
+        {
+            var setters = styles[selector]
+                .Elements()
+                .Where(element => element.Name.LocalName == "Setter")
+                .ToDictionary(
+                    element => element.Attribute("Property")?.Value ?? "",
+                    element => element.Attribute("Value")?.Value ?? "",
+                    StringComparer.Ordinal);
+
+            Assert.Contains("Background", setters.Keys);
+            Assert.Contains("Foreground", setters.Keys);
+        }
+
+        var hoverSetters = styles["ListBox.settings-navigation > ListBoxItem:pointerover /template/ ContentPresenter#PART_ContentPresenter"]
+            .Elements()
+            .Where(element => element.Name.LocalName == "Setter")
+            .ToDictionary(
+                element => element.Attribute("Property")?.Value ?? "",
+                element => element.Attribute("Value")?.Value ?? "",
+                StringComparer.Ordinal);
+        Assert.Equal(
+            "{DynamicResource LauncherTransparentBrush}",
+            hoverSetters["Background"]);
+        Assert.Equal(
+            "{DynamicResource LauncherAccentBrush}",
+            hoverSetters["Foreground"]);
+
+        foreach (var selector in new[]
+                 {
+                     "ListBox.settings-navigation > ListBoxItem:pressed /template/ ContentPresenter#PART_ContentPresenter",
+                     "ListBox.settings-navigation > ListBoxItem:selected /template/ ContentPresenter#PART_ContentPresenter",
+                     "ListBox.settings-navigation > ListBoxItem:selected:not(:focus) /template/ ContentPresenter#PART_ContentPresenter",
+                     "ListBox.settings-navigation > ListBoxItem:selected:pointerover /template/ ContentPresenter#PART_ContentPresenter",
+                     "ListBox.settings-navigation > ListBoxItem:selected:pressed /template/ ContentPresenter#PART_ContentPresenter"
+                 })
+        {
+            var setters = styles[selector]
+                .Elements()
+                .Where(element => element.Name.LocalName == "Setter")
+                .ToDictionary(
+                    element => element.Attribute("Property")?.Value ?? "",
+                    element => element.Attribute("Value")?.Value ?? "",
+                    StringComparer.Ordinal);
+
+            Assert.Equal(
+                "{DynamicResource LauncherAccentSoftBrush}",
+                setters["Background"]);
+            Assert.Equal(
+                "{DynamicResource LauncherTextPrimaryBrush}",
+                setters["Foreground"]);
+        }
+    }
+
+    [Fact]
     public void Views_DoNotInlineReusableTypographyPaddingOrHeaderOffsets()
     {
         foreach (var relativePath in ViewFiles)
@@ -194,6 +604,7 @@ public sealed partial class UiStyleContractTests
     {
         var allowedTokens = new HashSet<string>(StringComparer.Ordinal)
         {
+            "0",
             "{StaticResource LauncherRadiusSm}",
             "{StaticResource LauncherRadiusMd}",
             "{StaticResource LauncherRadiusLg}",
@@ -353,6 +764,16 @@ public sealed partial class UiStyleContractTests
     }
 
     [Fact]
+    public void ToastHost_AllowsHitTestingSoDismissButtonCanReceiveClicks()
+    {
+        var document = XDocument.Load(ProjectFile("Views/MainWindow.Styles.axaml"));
+
+        Assert.Equal(
+            "True",
+            GetStyleSetters(document, "Grid.toast-host")["IsHitTestVisible"]);
+    }
+
+    [Fact]
     public void BannerImage_UsesDistinctLoadingAndFailureStates()
     {
         var mainWindow = File.ReadAllText(ProjectFile("Views/MainWindow.axaml"));
@@ -410,12 +831,13 @@ public sealed partial class UiStyleContractTests
     public void SettingsPanel_UsesTransactionalSaveAndCancelActions()
     {
         var settingsOverlay = File.ReadAllText(ProjectFile("Views/MainWindowSettingsOverlay.axaml"));
+        var gameSection = File.ReadAllText(ProjectFile("Views/SettingsGameSection.axaml"));
         var styles = File.ReadAllText(ProjectFile("Views/MainWindow.Styles.axaml"));
         var mainWindowCodeBehind = File.ReadAllText(ProjectFile("Views/MainWindow.axaml.cs"));
 
         Assert.Contains(
             "Text=\"{Binding Settings.Editor.Current.GamePath}\"",
-            settingsOverlay,
+            gameSection,
             StringComparison.Ordinal);
         Assert.Contains(
             "Command=\"{Binding WindowChrome.ShowSettingsCommand}\"",
@@ -461,7 +883,8 @@ public sealed partial class UiStyleContractTests
     [Fact]
     public void SettingsAboutActionsAndVersionChips_UsePurposeBasedOrder()
     {
-        var text = File.ReadAllText(ProjectFile("Views/MainWindowSettingsOverlay.axaml"));
+        var text = File.ReadAllText(ProjectFile("Views/SettingsAboutSection.axaml"));
+        var overlay = File.ReadAllText(ProjectFile("Views/MainWindowSettingsOverlay.axaml"));
 
         AssertOrdered(
             text,
@@ -481,7 +904,7 @@ public sealed partial class UiStyleContractTests
             "LogViewer.ExportCommand",
             "WindowChrome.OpenDataDirectoryCommand");
 
-        var document = XDocument.Parse(text);
+        var document = XDocument.Parse(overlay);
         var footerButtons = document
             .Descendants()
             .Where(element =>
@@ -490,10 +913,10 @@ public sealed partial class UiStyleContractTests
             .ToList();
         Assert.Equal(2, footerButtons.Count);
         Assert.Equal(
-            "{Binding Settings.SaveSettingsCommand}",
+            "{Binding WindowChrome.ShowSettingsCommand}",
             footerButtons[0].Attribute("Command")?.Value);
         Assert.Equal(
-            "{Binding WindowChrome.ShowSettingsCommand}",
+            "{Binding Settings.SaveSettingsCommand}",
             footerButtons[1].Attribute("Command")?.Value);
     }
 
@@ -613,21 +1036,41 @@ public sealed partial class UiStyleContractTests
         var statusPanel = document
             .Descendants()
             .First(element =>
-                element.Name.LocalName == "StackPanel"
-                && HasClass(element, "status-panel"));
+                element.Name.LocalName == "Border"
+                && HasClass(element, "settings-status-summary"));
         var markup = statusPanel.ToString(SaveOptions.DisableFormatting);
+        var detailsGrid = statusPanel
+            .Descendants()
+            .Single(element =>
+                element.Name.LocalName == "Grid"
+                && HasClass(element, "status-details"));
+        var detailCards = statusPanel
+            .Descendants()
+            .Where(element =>
+                element.Name.LocalName == "Border"
+                && HasClass(element, "status-detail"))
+            .ToList();
+        var statusNote = statusPanel
+            .Descendants()
+            .Single(element =>
+                element.Name.LocalName == "Border"
+                && HasClass(element, "status-note"));
 
         Assert.Contains("Shell.CurrentViewTitle", markup, StringComparison.Ordinal);
         Assert.Contains("Shell.VersionText", markup, StringComparison.Ordinal);
-        Assert.Contains("Shell.ExecutableNameText", markup, StringComparison.Ordinal);
         Assert.Contains("Shell.NetworkStatusValueText", markup, StringComparison.Ordinal);
-        Assert.Contains("Shell.LaunchCheckValueText", markup, StringComparison.Ordinal);
         Assert.Contains("Shell.DiskSpaceText", markup, StringComparison.Ordinal);
         Assert.Contains("Shell.OperationNote", markup, StringComparison.Ordinal);
         Assert.Contains("Kind=\"{Binding Shell.StatusIconKind}\"", markup, StringComparison.Ordinal);
         Assert.DoesNotContain("Shell.ExecutableText", markup, StringComparison.Ordinal);
         Assert.DoesNotContain("Shell.StatusText", markup, StringComparison.Ordinal);
         Assert.DoesNotContain("Shell.ProductName", markup, StringComparison.Ordinal);
+        Assert.Equal("Auto,Auto", detailsGrid.Attribute("ColumnDefinitions")?.Value);
+        Assert.Equal("Auto", detailsGrid.Attribute("RowDefinitions")?.Value);
+        Assert.Equal(3, detailCards.Count);
+        Assert.Contains("Grid.Row=\"1\"", statusNote.ToString(SaveOptions.DisableFormatting), StringComparison.Ordinal);
+        Assert.Contains("Grid.ColumnSpan=\"3\"", statusNote.ToString(SaveOptions.DisableFormatting), StringComparison.Ordinal);
+        Assert.DoesNotContain("MaxWidth=\"160\"", markup, StringComparison.Ordinal);
     }
 
     [Fact]

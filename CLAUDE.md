@@ -5,27 +5,40 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 ## Build & Run
 
 ```powershell
-.\build.ps1                              # Debug build (expect 0 warnings, 0 errors)
-dotnet build .\Cafe.Launcher.Avalonia.csproj -c Debug --no-restore
+.\verify.ps1                              # Full verification: Debug build → unit tests → headless tests → Release build
+.\build.ps1                               # Debug build (expect 0 warnings, 0 errors)
 dotnet restore .\Cafe.Launcher.Avalonia.csproj -r win-x64
+dotnet build .\Cafe.Launcher.Avalonia.csproj -c Debug --no-restore
 dotnet build .\Cafe.Launcher.Avalonia.csproj -c Release --no-restore   # Release build
 dotnet publish .\Cafe.Launcher.Avalonia.csproj -c Release -o publish   # Self-contained publish (win-x64)
+dotnet run --project .\Cafe.Launcher.Avalonia.csproj                   # Run locally
 ```
 
-**Tests** (xUnit 2.9.3, under `tests/Cafe.Launcher.Avalonia.Tests/`, with coverlet 10.0.1):
+**Tests** — two test projects under `tests/`:
+
 ```powershell
-dotnet test                                                    # Run all tests
-dotnet test --filter "FullyQualifiedName~VersionComparerTests" # Run a single test class
+# Unit tests (xUnit 2.9.3, coverlet 10.0.1)
+dotnet test .\tests\Cafe.Launcher.Avalonia.Tests\Cafe.Launcher.Avalonia.Tests.csproj -c Debug --no-restore
+dotnet test .\tests\Cafe.Launcher.Avalonia.Tests\Cafe.Launcher.Avalonia.Tests.csproj --filter "FullyQualifiedName~VersionComparerTests"
+
+# Headless Avalonia UI tests (xUnit v3 3.2.2, Avalonia.Headless.XUnit 12.0.4)
+dotnet test .\tests\Cafe.Launcher.Avalonia.HeadlessTests\Cafe.Launcher.Avalonia.HeadlessTests.csproj -c Debug --no-restore
+dotnet test .\tests\Cafe.Launcher.Avalonia.HeadlessTests\Cafe.Launcher.Avalonia.HeadlessTests.csproj --filter "FullyQualifiedName~SystemTrayServiceTests"
+
+# Run all tests in both projects
+dotnet test
 ```
 
-Available test classes include `VersionComparerTests`, `LauncherApiClientTests`, `LauncherConstantsTests`, `LauncherSettingsServiceTests`, `SettingsNormalizerTests`, `SettingsEditorTests`, `ToastServiceTests`, `GameInstallationPathTests`, `LocalInstallationStateStoreTests`, `LauncherCoreServiceTests`, `InstallationOperationStateTests`, `LocalizationServiceTests`, `MainWindowViewModelTests`, `DialogsViewModelTests`, `GameDownloadServiceTests`, `PatchUrlGroupServiceTests`, `BestHttpCookieLibraryServiceTests`, `ResourcePanelUidServiceTests`, `ExternalLinkServiceTests`, `ResourcePanelApiClientTests`, `LauncherUpdateServiceTests`, `HttpClientFactoryTests`, `OfficialHashServiceTests`, and `UiStyleContractTests`.
+Available unit test classes include `VersionComparerTests`, `LauncherApiClientTests`, `LauncherConstantsTests`, `LauncherSettingsServiceTests`, `SettingsNormalizerTests`, `SettingsEditorTests`, `ToastServiceTests`, `GameInstallationPathTests`, `LocalInstallationStateStoreTests`, `LauncherCoreServiceTests`, `InstallationOperationStateTests`, `LocalizationServiceTests`, `MainWindowViewModelTests`, `DialogsViewModelTests`, `GameDownloadServiceTests`, `PatchUrlGroupServiceTests`, `BestHttpCookieLibraryServiceTests`, `ResourcePanelUidServiceTests`, `ExternalLinkServiceTests`, `ResourcePanelApiClientTests`, `LauncherUpdateServiceTests`, `HttpClientFactoryTests`, `OfficialHashServiceTests`, `UiStyleContractTests`, `BackgroundViewModelTests`, `Crc64ServiceTests`, `DiagnosticsServicesTests`, `FileSizeFormatterTests`, `FlexibleBoolConverterTests`, `GameOperationsViewModelTests`, `GamePathValidatorTests`, `ImageCacheServiceTests`, `LogExportServiceTests`, `LogViewerDialogViewModelTests`, `ManifestValidationServiceTests`, `MotionSettingsResolverTests`, `NoticeStateServiceTests`, `ProxySettingsServiceTests`, `ReleaseScriptTests`, `RemoteContentViewModelTests`, `RemoteHttpUrlValidatorTests`, `RemoteManifestServiceTests`, `ServiceConfigurationTests`, `SettingsCategoryTests`, `ToastHostViewModelTests`, `WindowChromeViewModelTests`, `WindowsAnimationSettingsProviderTests`, and `WindowEscapeStrategyTests`.
+
+Headless test classes: `SystemTrayServiceTests`, `MainWindowHeadlessTests`, `HeadlessSmokeTests`, `OverlayFocusBehaviorTests`, and `ConverterHeadlessTests`.
 
 `UiStyleContractTests` enforces design token contracts: no raw colors in view XAML, proper use of `LauncherSpacing*` tokens, correct overlay Z-index ordering, toast layer using `LauncherConstants.ZIndexToast`, and dynamic accent brushes not replacing theme-specific brushes. Run this whenever touching XAML styles or overlays.
 
-**Testing infrastructure**: No mocking framework (Moq/NSubstitute) is used. Tests hand-craft `HttpMessageHandler` subclasses (e.g., `GitHubReleaseHandler`) and manual stubs. The source project exposes internals to tests via `[assembly: InternalsVisibleTo("Cafe.Launcher.Avalonia.Tests")]` in `Properties/AssemblyInfo.cs`.
+**Testing infrastructure**: No mocking framework (Moq/NSubstitute) is used. Tests hand-craft `HttpMessageHandler` subclasses (e.g., `GitHubReleaseHandler`) and manual stubs. The source project exposes internals to tests via `[assembly: InternalsVisibleTo("Cafe.Launcher.Avalonia.Tests")]` in `Properties/AssemblyInfo.cs`. Headless tests use `Avalonia.Headless.XUnit` for UI component testing without a display server.
 
 CI is GitHub Actions on `windows-latest`, .NET 10.0.x:
-- **build.yml** (push/PR to `main`): restore, Debug build, test, Release build, self-contained publish, upload artifact.
+- **build.yml** (push/PR to `main`): restore, Debug build, test (both projects), Release build, self-contained publish, upload artifact.
 - **release.yml** (push of `v*` tag): test, Release build, publish, ZIP archive, generate the grouped changelog through `scripts/New-ReleaseChangelog.ps1`, then create matching GitHub Releases in both the source repository and the distribution repository (`bluearchive-cafe/Cafe.Launcher.Avalonia_Release`, defined as `GitHubReleaseRepositorySlug` in constants). The local release script uses the same changelog generator. The distribution repository uses the `RELEASE_REPOSITORY_TOKEN` Actions secret. Pre-release if tag contains `-`.
 
 **Telemetry must be off during local builds** (already set in `build.ps1`):
@@ -68,9 +81,11 @@ One `MainWindow` (1300×754 initial size, resizable with MinWidth 1024/MinHeight
 | `BackgroundViewModel` | Wallpaper (bundled / remote / custom), theme-color extraction |
 | `RemoteContentViewModel` | Announcements, banners, news, social media from API |
 | `DialogsViewModel` | Notice popup, repair/uninstall confirmation dialogs |
-| `GameOperationsViewModel` | Install / update / repair / launch / uninstall commands and progress |
+| `GameOperationsViewModel` | Install / update / repair / launch / uninstall commands and progress — delegates to `IGameOperationsBackend` |
+| `GameOperationsBackend` | Internal interface + implementation for download/launch/uninstall operations with pause/resume/stop |
 | `ToastHostViewModel` | Transient toast notification queue |
 | `WindowChromeViewModel` | Title bar, minimize/close buttons, window drag state |
+| `LogViewerDialogViewModel` | In-app log viewer with filter, search, copy, and export |
 | `SettingsViewModel` | Settings command coordination, persistence, folder pickers, update checks, save/discard lifecycle |
 | `SettingsAppearanceViewModel` | Theme-color and background UI projections, palette extraction, Avalonia theme resources |
 | `SettingsOptionsViewModel` | Localized setting option collections and settings-summary display resolvers |
@@ -79,16 +94,25 @@ One `MainWindow` (1300×754 initial size, resizable with MinWidth 1024/MinHeight
 **View files** (XAML split by concern, all under `Views/`):
 - `MainWindow.axaml` — window shell, title bar, remote content panel, bottom install/progress/control panels
 - `MainWindow.Styles.axaml` — all `Window.Styles` extracted via `<StyleInclude Source="avares://..."/>`
-- `MainWindowSettingsOverlay.axaml` — settings dialog overlay
+- `MainWindowSettingsOverlay.axaml` — settings dialog overlay with category navigation, runtime status, section host, and transactional footer
+- `SettingsGeneralSection.axaml` — language, theme mode settings
+- `SettingsGameSection.axaml` — game path, launch check settings
+- `SettingsDownloadNetworkSection.axaml` — download speed, CDN, proxy settings
+- `SettingsAppearanceSection.axaml` — background, theme color, wallpaper settings
+- `SettingsNotificationsContentSection.axaml` — toast, remote content, update channel settings
+- `SettingsAdvancedSection.axaml` — log level, resource panel settings
+- `SettingsAboutSection.axaml` — version info, licenses, release notes
 - `MainWindowDialogsOverlay.axaml` — notice popup, repair/uninstall confirmation dialogs
 - `MainWindowToastOverlay.axaml` — toast notification overlay
+
+All settings sections share the owning `MainWindowViewModel` data context. Settings are organized by category code (see `SettingsCategoryCodes` model: `general`, `game`, `download-network`, `appearance`, `notifications-content`, `advanced`, `about`).
 
 **Entries:**
 1. **Program.cs** — Process mutex (`Local\Cafe_Launcher_SI`), single-instance enforcement via `EventWaitHandle` signal. Creates `UnifiedLogger` + `CrashRecoveryService` on startup before the DI container is available; exposes the logger via `PreDiLogger` so the DI container reuses the same instance (single Serilog pipeline for the entire process). Tracks `PreviousSessionCrashed` via a `session.active` marker file. Sets up unhandled-exception handlers (`AppDomain.UnhandledException`, `TaskScheduler.UnobservedTaskException`). `RunSession` orchestrates the session lifecycle: begin → run app → complete/cleanup, with proper crash-marker preservation. The `ServiceProvider` is disposed in `RunSession`'s finally block after the session-end log entry is written.
 2. **App.axaml.cs** — On framework init: builds DI container via `ServiceConfiguration.AddLauncherServices()`, resolves `MainWindowViewModel`, creates `MainWindow`, wires `ClickCodeService`, `SystemTrayService`. Starts a background thread listening for `EventWaitHandle` signals to restore window from tray.
 3. **App.axaml** — Light/Dark `ThemeDictionaries` with custom `Launcher*` brushes, FluentTheme + MaterialIconStyles.
 
-**Composition root**: `ServiceConfiguration.AddLauncherServices()` is the DI configuration — it registers all services with `Microsoft.Extensions.DependencyInjection`. The container is built in `App.axaml.cs` via `ServiceCollection.BuildServiceProvider()`. Services are registered as `AddSingleton`; ViewModels are a mix: `SettingsViewModel`, `ShellViewModel`, `RemoteContentViewModel`, `DialogsViewModel`, and `GameOperationsViewModel` are `AddSingleton` (shared state), while `ResourcePanelViewModel`, `BackgroundViewModel`, `ToastHostViewModel`, `WindowChromeViewModel`, `MainWindowViewModel`, and `LogViewerDialogViewModel` are `AddTransient` (fresh instance per resolution). Thread-safe disposal order for IDisposable services is defined by reverse registration order (see disposal order section below).
+**Composition root**: `ServiceConfiguration.AddLauncherServices()` is the DI configuration — it registers all services with `Microsoft.Extensions.DependencyInjection`. The container is built in `App.axaml.cs` via `ServiceCollection.BuildServiceProvider()`. Services are registered as `AddSingleton`; ViewModels are a mix: `SettingsViewModel`, `ShellViewModel`, `RemoteContentViewModel`, `DialogsViewModel`, `GameOperationsViewModel`, and `MainWindowViewModel` are `AddSingleton` (shared state), while `ResourcePanelViewModel`, `BackgroundViewModel`, `ToastHostViewModel`, `WindowChromeViewModel`, and `LogViewerDialogViewModel` are `AddTransient` (fresh instance per resolution). Thread-safe disposal order for IDisposable services is defined by reverse registration order (see disposal order section below).
 
 **ViewModel coordination**: Sub-ViewModels communicate with `MainWindowViewModel` through two mechanisms:
 - **Delegates** — `MainWindowViewModel.ConfigureViewModel()` sets `Func<>` / `Func<Task>` delegates on children (e.g. `SettingsViewModel.PickGameFolderAsync`, `SettingsViewModel.PreviewAppearanceAsync`). These let children call back into parent capabilities such as native pickers and appearance previews.
@@ -207,6 +231,7 @@ Persisted fields in `settings.json` and their valid values:
 - `LauncherStateModels.cs` — String constants for modes/behaviors (`LaunchCheckModes`, `ProxyModes`, `CloseBehaviors`, `LauncherLanguages`, `ThemeModes`, `ThemeColorModes`, `DownloadSpeedLimits`, `PatchUrlGroups`, `UpdateChannels`, `LogLevels`, `BackgroundSources`, `BackgroundFits`, `GameOperationKinds`), plus runtime state objects (`LauncherStatusSnapshot`, `LauncherRemoteState`, `LauncherRuntimeState`, `LauncherSettings`, `GameOperationProgress`, `GameOperationResult`, `ManifestValidationResult`, `GameLaunchResult`), and option types (`SettingOption`, `LanguageOption`, `ThemeOption`) for localized dropdown binding
 - `LocalInstallationStateModels.cs` — Local installation classifications, immutable state snapshots, and commit input records
 - `LocalGameContracts.cs` — `LocalManifest`, `RemoteManifest`, `ManifestFile`, `GameLauncherConfig`. **`ManifestFile` property order (`path, hash, size, vc`) is a wire contract**: it defines the serialized JSON key order, and the `vc` integrity hash is computed over those values in the same order (see `OfficialHashService`). Do not reorder — it must match the official launcher's manifest or both launchers reject each other's `manifest.json` as corrupted
+- `SettingsCategoryCodes.cs` — Settings section category code constants (`general`, `game`, `download-network`, `appearance`, `notifications-content`, `advanced`, `about`) with `Normalize()` fallback
 - `PatchUrlGroupDefinition.cs` — Code + host-from/to tuples for CDN URL rewriting
 - `DownloadTaskState.cs` — Serializable download resume state
 - `BannerDot.cs` — Observable carousel dot indicator
@@ -230,13 +255,13 @@ Users can switch between `Official` (yo-star.com) and `Cafe` (bluearchive.cafe) 
 
 ### Converters
 
-- `UrlToBitmapConverter` — converts image URLs to `Bitmap?` for XAML binding via `TaskCompletionSourceNotifying<T>` + `INotifyTaskCompletion<T>`. Owns its own **static** `HttpClient` instance (separate from the DI-managed `HttpClientFactory`), used for remote banner/avatar images.
-- `ToastSeverityToBrushConverter` — resolves `ToastSeverity` to the exact `LauncherToast{Severity}Brush` view resource; keeps `ToastNotification` independent of Avalonia.
+- `FlexibleBoolConverter` (in `Helpers/`) — JSON converter that reads both booleans (`true`/`false`) and numbers (`0`/non-zero) as `bool`. Used for API fields that represent booleans as integers.
+- `ToastSeverityToBrushConverter` (in `Converters/`) — resolves `ToastSeverity` to the exact `LauncherToast{Severity}Brush` view resource; keeps `ToastNotification` independent of Avalonia.
 
 ### Other directories
 
 - `Constants/` — `LauncherConstants`, `ApiConfig`, `BuildInfo`, `GamePaths` (see Constants section above)
-- `Helpers/` — `FileSizeFormatter`, `GamePathValidator`, `HttpClientLease`
+- `Helpers/` — `FileSizeFormatter`, `GamePathValidator`, `HttpClientLease`, `FlexibleBoolConverter`
 - `Services/Auth/` — `AuthorizationHeaderFactory` (MD5-signed API auth header)
 - `Services/Diagnostics/` — `UnifiedLogger` (Serilog-backed central logging with async sink, global enrichers, and `LoggingLevelSwitch`), `LocalDiagnostics` (public facade over `UnifiedLogger`), `LogExportService` (ZIP log export), `CrashRecoveryService` (session crash detection via `session.active` marker), `LogEntrySeverity` enum (Error/Warn/Info). Log rotation is handled by Serilog's file sink (5 MB threshold, 3 retained files). All diagnostics and crash logs go to a single `unified.log`.
 - `Services/HttpClientLeaseSource.cs` — Internal `IHttpClientLeaseSource` abstraction over `HttpClientFactory.CreateLeaseAsync()`. Two implementations: `ProxyAwareHttpClientLeaseSource` (production, delegates to `HttpClientFactory`) and `FixedHttpClientLeaseSource` (testing, wraps a fixed `HttpMessageHandler`). Used by services like `LauncherUpdateService` that need proxy-aware HTTP with lease lifetime management.
@@ -305,7 +330,7 @@ All numeric design values use `StaticResource` keys defined in `App.axaml`:
 **Control height tokens:**
 
 | Token | Value | Usage |
-|---|---:|---|
+|---|---|---:|---|
 | `LauncherControlHeightSetting` | 36 | Settings controls and compact actions |
 | `LauncherControlHeightDialog` | 42 | Dialog actions and dialog text inputs |
 | `LauncherControlHeightBottom` | 48 | Install/update actions |

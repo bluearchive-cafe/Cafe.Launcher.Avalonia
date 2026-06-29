@@ -101,6 +101,36 @@ public partial class SettingsViewModel : ViewModelBase, IDisposable
     [ObservableProperty]
     private bool isSaving;
 
+    private string selectedCategory = SettingsCategoryCodes.General;
+
+    public string SelectedCategory
+    {
+        get => selectedCategory;
+        set
+        {
+            if (!SetProperty(ref selectedCategory, SettingsCategoryCodes.Normalize(value)))
+            {
+                return;
+            }
+
+            OnPropertyChanged(nameof(IsGeneralCategorySelected));
+            OnPropertyChanged(nameof(IsGameCategorySelected));
+            OnPropertyChanged(nameof(IsDownloadNetworkCategorySelected));
+            OnPropertyChanged(nameof(IsAppearanceCategorySelected));
+            OnPropertyChanged(nameof(IsNotificationsContentCategorySelected));
+            OnPropertyChanged(nameof(IsAdvancedCategorySelected));
+            OnPropertyChanged(nameof(IsAboutCategorySelected));
+        }
+    }
+
+    public bool IsGeneralCategorySelected => SelectedCategory == SettingsCategoryCodes.General;
+    public bool IsGameCategorySelected => SelectedCategory == SettingsCategoryCodes.Game;
+    public bool IsDownloadNetworkCategorySelected => SelectedCategory == SettingsCategoryCodes.DownloadNetwork;
+    public bool IsAppearanceCategorySelected => SelectedCategory == SettingsCategoryCodes.Appearance;
+    public bool IsNotificationsContentCategorySelected => SelectedCategory == SettingsCategoryCodes.NotificationsContent;
+    public bool IsAdvancedCategorySelected => SelectedCategory == SettingsCategoryCodes.Advanced;
+    public bool IsAboutCategorySelected => SelectedCategory == SettingsCategoryCodes.About;
+
     internal Task PendingAppearancePreview => appearancePreviewTask;
 
     // ── Public API for parent VM ──────────────────────────────────────────

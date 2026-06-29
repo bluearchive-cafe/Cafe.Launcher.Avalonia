@@ -11,5 +11,7 @@ if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
 dotnet test .\tests\Cafe.Launcher.Avalonia.HeadlessTests\Cafe.Launcher.Avalonia.HeadlessTests.csproj -c Debug --no-restore
 if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
 
+dotnet restore .\Cafe.Launcher.Avalonia.csproj -r win-x64
+if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
 dotnet build .\Cafe.Launcher.Avalonia.csproj -c Release --no-restore
 if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
