@@ -220,7 +220,7 @@ public sealed class RemoteContentViewModelTests
     }
 
     [Fact]
-    public void ApplyMotionPreference_ReducedStopsAutomaticCarouselButKeepsManualNavigation()
+    public void ApplyMotionPreference_ReducedPausesAutomaticCarouselAndRemovesTransition()
     {
         using var context = CreateContext();
         context.ViewModel.Apply(
@@ -230,20 +230,56 @@ public sealed class RemoteContentViewModelTests
 
         context.ViewModel.ApplyMotionPreference(true);
         Assert.False(context.ViewModel.IsCarouselTimerRunning);
+        Assert.True(context.ViewModel.IsCarouselPaused);
+        Assert.Equal("Play", context.ViewModel.CarouselPauseIcon);
         Assert.Equal(TimeSpan.Zero, Assert.IsType<global::Avalonia.Animation.CrossFade>(
             context.ViewModel.CarouselTransition).Duration);
 
         context.ViewModel.SelectNextBannerCommand.Execute(null);
         Assert.Equal(1, context.ViewModel.CarouselSelectedIndex);
+    }
 
-        context.ViewModel.StartCarouselTimer();
+    [Fact]
+    public void ToggleCarouselLoopCommand_WhenReduced_AllowsManualPlaybackWithoutTransition()
+    {
+        using var context = CreateContext();
+        context.ViewModel.Apply(
+            CreateBannerState(2, loop: true),
+            new LauncherSettings(),
+            CancellationToken.None);
+        context.ViewModel.ApplyMotionPreference(true);
+
+        context.ViewModel.ToggleCarouselLoopCommand.Execute(null);
+
+        Assert.False(context.ViewModel.IsCarouselPaused);
+        Assert.True(context.ViewModel.IsCarouselTimerRunning);
+        Assert.Equal("Pause", context.ViewModel.CarouselPauseIcon);
+        Assert.Equal(TimeSpan.Zero, Assert.IsType<global::Avalonia.Animation.CrossFade>(
+            context.ViewModel.CarouselTransition).Duration);
+    }
+
+    [Fact]
+    public void ApplyMotionPreference_FullAfterReduced_KeepsCarouselPausedUntilUserResumes()
+    {
+        using var context = CreateContext();
+        context.ViewModel.Apply(
+            CreateBannerState(2, loop: true),
+            new LauncherSettings(),
+            CancellationToken.None);
+        context.ViewModel.ApplyMotionPreference(true);
+
+        context.ViewModel.ApplyMotionPreference(false);
+
+        Assert.True(context.ViewModel.IsCarouselPaused);
         Assert.False(context.ViewModel.IsCarouselTimerRunning);
+        Assert.Equal(TimeSpan.FromMilliseconds(350), Assert.IsType<global::Avalonia.Animation.CrossFade>(
+            context.ViewModel.CarouselTransition).Duration);
     }
 
     [Theory]
     [InlineData(MotionModes.Full, false)]
     [InlineData(MotionModes.System, true)]
-    public void ApplyMotionPreference_FullOrSystemEffectiveStateRestoresTransitionAndAutomaticCarousel(
+    public void ApplyMotionPreference_FullOrSystemEffectiveStateRestoresTransitionWithoutAutoResumingCarousel(
         string motionMode,
         bool windowsAnimationsEnabled)
     {
@@ -257,7 +293,8 @@ public sealed class RemoteContentViewModelTests
         context.ViewModel.ApplyMotionPreference(
             MotionSettingsResolver.ShouldReduceMotion(motionMode, windowsAnimationsEnabled));
 
-        Assert.True(context.ViewModel.IsCarouselTimerRunning);
+        Assert.True(context.ViewModel.IsCarouselPaused);
+        Assert.False(context.ViewModel.IsCarouselTimerRunning);
         Assert.Equal(
             TimeSpan.FromMilliseconds(350),
             Assert.IsType<global::Avalonia.Animation.CrossFade>(

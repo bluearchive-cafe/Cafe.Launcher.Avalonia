@@ -116,10 +116,7 @@ public partial class RemoteContentViewModel : ViewModelBase, IDisposable
         {
             carouselDelayCts?.Cancel();
             StopCarouselTimer();
-        }
-        else
-        {
-            StartCarouselTimer();
+            SetCarouselPausedState(true);
         }
     }
 
@@ -160,9 +157,7 @@ public partial class RemoteContentViewModel : ViewModelBase, IDisposable
             CarouselSelectedIndex = 0;
             HasMultipleBanners = BannerItems.Count > 1;
             UpdateCarouselPageText();
-            IsCarouselPaused = false;
-            CarouselPauseIcon = "Pause";
-            CarouselPauseTooltip = localizer.T("pauseCarousel");
+            SetCarouselPausedState(isMotionReduced);
             _ = PreloadBannerImagesAsync(cancellationToken);
         }
         else
@@ -300,7 +295,7 @@ public partial class RemoteContentViewModel : ViewModelBase, IDisposable
     public void StartCarouselTimer()
     {
         StopCarouselTimer();
-        if (isMotionReduced || !BannerIsLooping || BannerItems.Count <= 1 || IsCarouselPaused)
+        if (!BannerIsLooping || BannerItems.Count <= 1 || IsCarouselPaused)
         {
             return;
         }
@@ -325,18 +320,14 @@ public partial class RemoteContentViewModel : ViewModelBase, IDisposable
     [RelayCommand]
     private void ToggleCarouselLoop()
     {
-        IsCarouselPaused = !IsCarouselPaused;
+        SetCarouselPausedState(!IsCarouselPaused);
         if (IsCarouselPaused)
         {
             StopCarouselTimer();
-            CarouselPauseIcon = "Play";
-            CarouselPauseTooltip = localizer.T("resumeCarousel");
         }
         else
         {
             StartCarouselTimer();
-            CarouselPauseIcon = "Pause";
-            CarouselPauseTooltip = localizer.T("pauseCarousel");
         }
     }
 
@@ -476,7 +467,7 @@ public partial class RemoteContentViewModel : ViewModelBase, IDisposable
         try
         {
             await Task.Delay(ManualNavResumeDelayMs, token);
-            if (!isMotionReduced && !IsCarouselPaused && BannerIsLooping && BannerItems.Count > 1)
+            if (!IsCarouselPaused && BannerIsLooping && BannerItems.Count > 1)
             {
                 StartCarouselTimer();
             }
@@ -565,5 +556,14 @@ public partial class RemoteContentViewModel : ViewModelBase, IDisposable
             item.BannerBitmap?.Dispose();
             item.BannerBitmap = null;
         }
+    }
+
+    private void SetCarouselPausedState(bool paused)
+    {
+        IsCarouselPaused = paused;
+        CarouselPauseIcon = paused ? "Play" : "Pause";
+        CarouselPauseTooltip = paused
+            ? localizer.T("resumeCarousel")
+            : localizer.T("pauseCarousel");
     }
 }
