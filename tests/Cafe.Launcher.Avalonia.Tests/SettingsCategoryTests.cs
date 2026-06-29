@@ -11,8 +11,21 @@ namespace Cafe.Launcher.Avalonia.Tests;
 [Collection("Settings category localization")]
 public sealed class SettingsCategoryTests
 {
-    private static readonly string LocaleDirectory = Path.GetFullPath(
-        Path.Combine(AppContext.BaseDirectory, @"..\..\..\..\..\Assets\Locales"));
+    private static readonly string LocaleDirectory = FindLocaleDirectory()
+        ?? throw new InvalidOperationException("Could not locate Assets/Locales directory.");
+
+    private static string? FindLocaleDirectory()
+    {
+        var dir = new DirectoryInfo(AppContext.BaseDirectory);
+        while (dir is not null)
+        {
+            var candidate = Path.Combine(dir.FullName, "Assets", "Locales");
+            if (Directory.Exists(candidate))
+                return candidate;
+            dir = dir.Parent;
+        }
+        return null;
+    }
 
     private static readonly string[] CategoryCodes =
     [

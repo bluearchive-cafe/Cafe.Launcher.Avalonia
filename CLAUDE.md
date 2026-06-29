@@ -37,9 +37,9 @@ Headless test classes: `SystemTrayServiceTests`, `MainWindowHeadlessTests`, `Hea
 
 **Testing infrastructure**: No mocking framework (Moq/NSubstitute) is used. Tests hand-craft `HttpMessageHandler` subclasses (e.g., `GitHubReleaseHandler`) and manual stubs. The source project exposes internals to tests via `[assembly: InternalsVisibleTo("Cafe.Launcher.Avalonia.Tests")]` in `Properties/AssemblyInfo.cs`. Headless tests use `Avalonia.Headless.XUnit` for UI component testing without a display server.
 
-CI is GitHub Actions on `windows-latest`, .NET 10.0.x:
-- **build.yml** (push/PR to `main`): restore, Debug build, test (both projects), Release build, self-contained publish, upload artifact.
-- **release.yml** (push of `v*` tag): test, Release build, publish, ZIP archive, generate the grouped changelog through `scripts/New-ReleaseChangelog.ps1`, then create matching GitHub Releases in both the source repository and the distribution repository (`bluearchive-cafe/Cafe.Launcher.Avalonia_Release`, defined as `GitHubReleaseRepositorySlug` in constants). The local release script uses the same changelog generator. The distribution repository uses the `RELEASE_REPOSITORY_TOKEN` Actions secret. Pre-release if tag contains `-`.
+CI is GitHub Actions on **Linux** (`ubuntu-latest`), .NET 10.0.x. Release builds cross-compile to `win-x64`:
+- **build.yml** (push/PR to `main`): restore, Debug build, test (both projects), Release build (`-r win-x64`), self-contained publish (`-r win-x64`), upload artifact.
+- **release.yml** (push of `v*` tag): test, Release build (`-r win-x64`), publish (`-r win-x64`), ZIP archive via PowerShell Core `Compress-Archive`, generate the grouped changelog through `scripts/New-ReleaseChangelog.ps1`, then create matching GitHub Releases in both the source repository and the distribution repository (`bluearchive-cafe/Cafe.Launcher.Avalonia_Release`, defined as `GitHubReleaseRepositorySlug` in constants). The local release script uses the same changelog generator. The distribution repository uses the `RELEASE_REPOSITORY_TOKEN` Actions secret. Pre-release if tag contains `-`.
 
 **Telemetry must be off during local builds** (already set in `build.ps1`):
 - `DOTNET_CLI_TELEMETRY_OPTOUT=1`

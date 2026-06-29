@@ -37,9 +37,11 @@ public sealed class InstallationOperationStateTests : IDisposable
         Assert.Equal(localizer.T("corruptedInstallationState"), result.Message);
     }
 
-    [Fact]
+    [SkippableFact]
     public async Task StartAsync_WhenInstallationIsReady_StartsConfiguredExecutable()
     {
+        Skip.IfNot(OperatingSystem.IsWindows(), "ComSpec (cmd.exe) is only available on Windows.");
+
         var gamePath = Path.Combine(tempDir, "YostarGames", "BlueArchive_JP");
         Directory.CreateDirectory(gamePath);
         const string executableName = "CafeLauncherProcessTest";
