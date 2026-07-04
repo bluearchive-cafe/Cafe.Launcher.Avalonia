@@ -93,9 +93,12 @@ public partial class ToastHostViewModel : ViewModelBase, IDisposable
         }
         catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
         {
+            // Toast lifecycle was cancelled — nothing to do.
         }
-        catch
+        catch (Exception ex)
         {
+            System.Diagnostics.Debug.WriteLine(
+                $"ToastHost: toast notification lifecycle failed: {ex.Message}");
         }
     }
 
