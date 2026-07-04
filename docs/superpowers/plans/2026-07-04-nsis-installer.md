@@ -93,12 +93,12 @@
 - [x] Baseline `verify.ps1`.
 - [x] Contract tests.
 - [x] NSIS 3.12 compilation.
-- [ ] Clean install in a disposable Windows environment.
-- [ ] Interactive and silent process-blocking checks.
+- [x] Clean install in a disposable Windows environment.
+- [x] Interactive and silent process-blocking checks.
 - [ ] Upgrade cleanup and unrelated-file preservation.
-- [ ] Interactive uninstall with application data preserved.
-- [ ] Interactive uninstall with current-user application data deleted.
+- [x] Interactive uninstall with application data preserved.
+- [x] Interactive uninstall with current-user application data deleted.
 - [ ] Silent uninstall with application data preserved.
-- [ ] Final `verify.ps1`.
+- [x] Final `verify.ps1`.
 
 System-level install, upgrade, and uninstall checks require a disposable Windows environment with UAC. They must not be simulated by modifying `Program Files` directly.
