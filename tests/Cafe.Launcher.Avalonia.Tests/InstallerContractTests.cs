@@ -74,6 +74,18 @@ public sealed class InstallerContractTests
     }
 
     [Fact]
+    public void NsisInstaller_CleansStaleRegistrationWhenOldUninstallerIsMissing()
+    {
+        var script = ReadProjectFile("installer/Cafe.Launcher.Avalonia.nsi");
+
+        Assert.Contains("IfFileExists \"$2\" 0 staleRegistration", script, StringComparison.Ordinal);
+        Assert.Contains("staleRegistration:", script, StringComparison.Ordinal);
+        Assert.Contains("DeleteRegKey HKLM \"${UNINSTALL_KEY}\"", script, StringComparison.Ordinal);
+        Assert.DoesNotContain("IfFileExists \"$2\" 0 failed", script, StringComparison.Ordinal);
+        Assert.Contains("IntCmp $1 0 cleanup failed failed", script, StringComparison.Ordinal);
+    }
+
+    [Fact]
     public void DistributionScript_UsesConfirmedArtifactNamesAndGeneratesUninstallList()
     {
         var script = ReadProjectFile("scripts/Build-Distribution.ps1");
