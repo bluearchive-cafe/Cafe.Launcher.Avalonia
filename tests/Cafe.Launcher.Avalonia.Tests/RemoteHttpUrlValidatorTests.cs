@@ -60,14 +60,10 @@ public sealed class RemoteHttpUrlValidatorTests
     [Theory]
     [InlineData("http://127.0.0.1/file")]
     [InlineData("http://10.0.0.1/file")]
-    [InlineData("http://100.64.0.1/file")]
     [InlineData("http://169.254.1.1/file")]
     [InlineData("http://172.16.0.1/file")]
     [InlineData("http://192.0.0.1/file")]
     [InlineData("http://192.168.1.1/file")]
-    [InlineData("http://198.18.0.1/file")]
-    [InlineData("http://198.51.100.1/file")]
-    [InlineData("http://203.0.113.1/file")]
     [InlineData("http://224.0.0.1/file")]
     [InlineData("http://[::1]/file")]
     [InlineData("http://[::]/file")]
@@ -113,6 +109,18 @@ public sealed class RemoteHttpUrlValidatorTests
         var uri = await validator.ValidateAsync("https://93.184.216.34/file");
 
         Assert.Equal("93.184.216.34", uri.Host);
+    }
+
+    [Fact]
+    public async Task ValidateAsync_WhenLiteralAddressIsCarrierGradeNat_ReturnsUri()
+    {
+        // RFC 6598 100.64.0.0/10 is ISP-side Shared Address Space.
+        // CDN edge nodes commonly use addresses in this range.
+        var validator = RemoteHttpUrlValidator.CreateForTesting();
+
+        var uri = await validator.ValidateAsync("https://100.64.0.1/file");
+
+        Assert.Equal("100.64.0.1", uri.Host);
     }
 
     [Fact]
