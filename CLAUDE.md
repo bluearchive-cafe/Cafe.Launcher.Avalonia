@@ -97,7 +97,7 @@ One `MainWindow` (1300×754 initial size, resizable with MinWidth 1024/MinHeight
 | `DialogsViewModel` | Notice popup, repair/uninstall confirmation dialogs |
 | `GameOperationsViewModel` | Install / update / repair / launch / uninstall commands and progress — delegates to `IGameOperationsBackend` |
 | `GameOperationsBackend` | Internal interface + implementation for download/launch/uninstall operations with pause/resume/stop |
-| `ToastHostViewModel` | Transient toast notification queue |
+| `ToastHostViewModel` | Transient toast notification queue (resolves as singleton per DI config) |
 | `WindowChromeViewModel` | Title bar, minimize/close buttons, window drag state |
 | `LogViewerDialogViewModel` | In-app log viewer with filter, search, copy, and export |
 | `SettingsViewModel` | Settings command coordination, persistence, folder pickers, update checks, save/discard lifecycle |
@@ -279,7 +279,7 @@ Users can switch between `Official` (yo-star.com) and `Cafe` (bluearchive.cafe) 
 - `Services/Auth/` — `AuthorizationHeaderFactory` (MD5-signed API auth header)
 - `Services/Diagnostics/` — `UnifiedLogger` (Serilog-backed central logging with async sink, global enrichers, and `LoggingLevelSwitch`), `LocalDiagnostics` (public facade over `UnifiedLogger`), `LogExportService` (ZIP log export), `CrashRecoveryService` (session crash detection via `session.active` marker), `LogEntrySeverity` enum (Error/Warn/Info). Log rotation is handled by Serilog's file sink (5 MB threshold, 3 retained files). All diagnostics and crash logs go to a single `unified.log`.
 - `Services/HttpClientLeaseSource.cs` — Internal `IHttpClientLeaseSource` abstraction over `HttpClientFactory.CreateLeaseAsync()`. Two implementations: `ProxyAwareHttpClientLeaseSource` (production, delegates to `HttpClientFactory`) and `FixedHttpClientLeaseSource` (testing, wraps a fixed `HttpMessageHandler`). Used by services like `LauncherUpdateService` that need proxy-aware HTTP with lease lifetime management.
-- `Services/ServiceConfiguration.cs` — DI registration; services as `AddSingleton`, ViewModels as a mix of singleton (shared state: `SettingsViewModel`, `ShellViewModel`, `RemoteContentViewModel`, `DialogsViewModel`, `GameOperationsViewModel`) and transient (fresh per resolution). `AddLauncherServices(existingLogger?)` accepts an optional pre-created `UnifiedLogger` to reuse across crash handling and application logging.
+- `Services/ServiceConfiguration.cs` — DI registration; all services and ViewModels registered as `AddSingleton` (single-window desktop app, no scoped request boundaries). `AddLauncherServices(existingLogger?)` accepts an optional pre-created `UnifiedLogger` to reuse across crash handling and application logging.
 - `installer/` — NSIS installer script (`Cafe.Launcher.Avalonia.nsi`) for building the Windows setup EXE
 - `docs/adr/` — Architecture Decision Records (e.g., `0001-local-installation-state-module.md`)
 - `docs/superpowers/plans/` + `docs/superpowers/specs/` — Implementation plans and design specs for past feature work
@@ -352,6 +352,10 @@ All numeric design values use `StaticResource` keys defined in `App.axaml`:
 | `LauncherControlHeightDialog` | 42 | Dialog actions and dialog text inputs |
 | `LauncherControlHeightBottom` | 48 | Install/update actions |
 | `LauncherControlHeightLaunch` | 58 | Primary launcher controls |
+| `LauncherSwatchSize` | 28 | Color swatches and icon buttons |
+| `LauncherChipHeight` | 32 | Settings icons, version chips, social chips |
+| `LauncherFieldHeight` | 40 | Path fields and UID inputs |
+| `LauncherDialogTitleHeight` | 56 | Dialog header height |
 
 **Gradient brushes**: Title bar gradient (`LauncherTitleBarGradient` in `App.axaml`) and control panel gradient (inline in `MainWindow.Styles.axaml`) use fixed black-transparency values that are intentionally theme-invariant — they overlay the wallpaper/background image.
 

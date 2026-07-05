@@ -46,40 +46,40 @@
                     Command="{Binding Settings.CheckForUpdatesCommand}">
                 <StackPanel Classes="button-content">
                     <materialIcons:MaterialIcon Kind="Update" Width="{StaticResource LauncherIconSm}" Height="{StaticResource LauncherIconSm}"/>
-                    <TextBlock Text="{Binding Shell.I18n.CheckUpdates}" VerticalAlignment="Center"/>
+                    <TextBlock Text="{Binding Shell.I18n.CheckUpdates}"/>
                 </StackPanel>
             </Button>
             <Button Classes="flat-action wrap-action" Command="{Binding WindowChrome.OpenOfficialSiteCommand}">
                 <StackPanel Classes="button-content">
                     <materialIcons:MaterialIcon Kind="Web" Width="{StaticResource LauncherIconSm}" Height="{StaticResource LauncherIconSm}"/>
-                    <TextBlock Text="{Binding Shell.I18n.OfficialSite}" VerticalAlignment="Center"/>
+                    <TextBlock Text="{Binding Shell.I18n.OfficialSite}"/>
                 </StackPanel>
             </Button>
             <Button Classes="flat-action wrap-action" Command="{Binding WindowChrome.OpenGitHubRepositoryCommand}">
                 <StackPanel Classes="button-content">
                     <materialIcons:MaterialIcon Kind="Github" Width="{StaticResource LauncherIconSm}" Height="{StaticResource LauncherIconSm}"/>
-                    <TextBlock Text="{Binding Shell.I18n.GitHubRepository}" VerticalAlignment="Center"/>
+                    <TextBlock Text="{Binding Shell.I18n.GitHubRepository}"/>
                 </StackPanel>
             </Button>
             <Button Classes="flat-action wrap-action"
                     Command="{Binding LogViewer.OpenCommand}">
                 <StackPanel Classes="button-content">
                     <materialIcons:MaterialIcon Kind="TextBoxOutline" Width="{StaticResource LauncherIconSm}" Height="{StaticResource LauncherIconSm}"/>
-                    <TextBlock Text="{Binding Shell.I18n.ViewLog}" VerticalAlignment="Center"/>
+                    <TextBlock Text="{Binding Shell.I18n.ViewLog}"/>
                 </StackPanel>
             </Button>
             <Button Classes="flat-action wrap-action"
                     Command="{Binding LogViewer.ExportCommand}">
                 <StackPanel Classes="button-content">
                     <materialIcons:MaterialIcon Kind="Export" Width="{StaticResource LauncherIconSm}" Height="{StaticResource LauncherIconSm}"/>
-                    <TextBlock Text="{Binding Shell.I18n.ExportLogs}" VerticalAlignment="Center"/>
+                    <TextBlock Text="{Binding Shell.I18n.ExportLogs}"/>
                 </StackPanel>
             </Button>
             <Button Classes="flat-action wrap-action"
                     Command="{Binding WindowChrome.OpenDataDirectoryCommand}">
                 <StackPanel Classes="button-content">
                     <materialIcons:MaterialIcon Kind="FolderOpen" Width="{StaticResource LauncherIconSm}" Height="{StaticResource LauncherIconSm}"/>
-                    <TextBlock Text="{Binding Shell.I18n.OpenDataDirectory}" VerticalAlignment="Center"/>
+                    <TextBlock Text="{Binding Shell.I18n.OpenDataDirectory}"/>
                 </StackPanel>
             </Button>
         </WrapPanel>

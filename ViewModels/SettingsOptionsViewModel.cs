@@ -122,127 +122,107 @@ public sealed class SettingsOptionsViewModel
         UpdateSettingCategory(SettingsCategoryCodes.Advanced, localizer.T("settingsCategoryAdvanced"), localizer.T("settingsCategoryAdvancedDescription"));
         UpdateSettingCategory(SettingsCategoryCodes.About, localizer.T("settingsCategoryAbout"), localizer.T("settingsCategoryAboutDescription"));
 
-        foreach (var option in Theme)
+        RefreshOptions(Theme, code => code switch
         {
-            option.DisplayName = option.Code switch
-            {
-                ThemeModes.Light => localizer.T("themeLight"),
-                ThemeModes.Dark => localizer.T("themeDark"),
-                _ => localizer.T("themeSystem")
-            };
-        }
+            ThemeModes.Light => localizer.T("themeLight"),
+            ThemeModes.Dark => localizer.T("themeDark"),
+            _ => localizer.T("themeSystem")
+        });
 
-        foreach (var option in MotionMode)
+        RefreshOptions(MotionMode, code => code switch
         {
-            option.DisplayName = option.Code switch
-            {
-                MotionModes.Full => localizer.T("motionModeFull"),
-                MotionModes.Reduced => localizer.T("motionModeReduced"),
-                _ => localizer.T("motionModeSystem")
-            };
-        }
+            MotionModes.Full => localizer.T("motionModeFull"),
+            MotionModes.Reduced => localizer.T("motionModeReduced"),
+            _ => localizer.T("motionModeSystem")
+        });
 
-        foreach (var option in ThemeColor)
+        RefreshOptions(ThemeColor, code => code switch
         {
-            option.DisplayName = option.Code switch
-            {
-                ThemeColorModes.System => localizer.T("themeColorSystem"),
-                ThemeColorModes.Wallpaper => localizer.T("themeColorWallpaper"),
-                ThemeColorModes.Custom => localizer.T("themeColorCustom"),
-                _ => localizer.T("themeColorDefault")
-            };
-        }
+            ThemeColorModes.System => localizer.T("themeColorSystem"),
+            ThemeColorModes.Wallpaper => localizer.T("themeColorWallpaper"),
+            ThemeColorModes.Custom => localizer.T("themeColorCustom"),
+            _ => localizer.T("themeColorDefault")
+        });
 
-        foreach (var option in LaunchCheckMode)
+        RefreshOptions(LaunchCheckMode, code => code switch
         {
-            option.DisplayName = option.Code switch
-            {
-                LaunchCheckModes.RemoteManifest => localizer.T("launchCheckRemoteManifest"),
-                LaunchCheckModes.None => localizer.T("launchCheckNone"),
-                _ => localizer.T("launchCheckLocalManifest")
-            };
-        }
+            LaunchCheckModes.RemoteManifest => localizer.T("launchCheckRemoteManifest"),
+            LaunchCheckModes.None => localizer.T("launchCheckNone"),
+            _ => localizer.T("launchCheckLocalManifest")
+        });
 
-        foreach (var option in ProxyMode)
+        RefreshOptions(ProxyMode, code => code switch
         {
-            option.DisplayName = option.Code switch
-            {
-                ProxyModes.System => localizer.T("proxySystem"),
-                _ => localizer.T("proxyDirect")
-            };
-        }
+            ProxyModes.System => localizer.T("proxySystem"),
+            _ => localizer.T("proxyDirect")
+        });
 
-        foreach (var option in PatchUrlGroup)
+        RefreshOptions(PatchUrlGroup, code => code switch
         {
-            option.DisplayName = option.Code switch
-            {
-                PatchUrlGroups.Cafe => localizer.T("downloadSourceCafe"),
-                _ => localizer.T("downloadSourceOfficial")
-            };
-        }
+            PatchUrlGroups.Cafe => localizer.T("downloadSourceCafe"),
+            _ => localizer.T("downloadSourceOfficial")
+        });
 
-        foreach (var option in CloseBehavior)
+        RefreshOptions(CloseBehavior, code => code switch
         {
-            option.DisplayName = option.Code switch
-            {
-                CloseBehaviors.Exit => localizer.T("closeBehaviorExit"),
-                _ => localizer.T("closeBehaviorMinimize")
-            };
-        }
+            CloseBehaviors.Exit => localizer.T("closeBehaviorExit"),
+            _ => localizer.T("closeBehaviorMinimize")
+        });
 
-        foreach (var option in DownloadSpeedLimit)
+        RefreshOptions(DownloadSpeedLimit, code => code switch
         {
-            option.DisplayName = option.Code switch
-            {
-                DownloadSpeedLimits.Speed1MBs => localizer.T("speed1MBs"),
-                DownloadSpeedLimits.Speed5MBs => localizer.T("speed5MBs"),
-                DownloadSpeedLimits.Speed10MBs => localizer.T("speed10MBs"),
-                DownloadSpeedLimits.Speed25MBs => localizer.T("speed25MBs"),
-                DownloadSpeedLimits.Speed50MBs => localizer.T("speed50MBs"),
-                _ => localizer.T("speedUnlimited")
-            };
-        }
+            DownloadSpeedLimits.Speed1MBs => localizer.T("speed1MBs"),
+            DownloadSpeedLimits.Speed5MBs => localizer.T("speed5MBs"),
+            DownloadSpeedLimits.Speed10MBs => localizer.T("speed10MBs"),
+            DownloadSpeedLimits.Speed25MBs => localizer.T("speed25MBs"),
+            DownloadSpeedLimits.Speed50MBs => localizer.T("speed50MBs"),
+            _ => localizer.T("speedUnlimited")
+        });
 
-        foreach (var option in BackgroundSource)
+        RefreshOptions(BackgroundSource, code => code switch
         {
-            option.DisplayName = option.Code switch
-            {
-                BackgroundSources.Remote => localizer.T("backgroundSourceRemote"),
-                BackgroundSources.Custom => localizer.T("backgroundSourceCustom"),
-                _ => localizer.T("backgroundSourceBundled")
-            };
-        }
+            BackgroundSources.Remote => localizer.T("backgroundSourceRemote"),
+            BackgroundSources.Custom => localizer.T("backgroundSourceCustom"),
+            _ => localizer.T("backgroundSourceBundled")
+        });
 
-        foreach (var option in BackgroundFit)
+        RefreshOptions(BackgroundFit, code => code switch
         {
-            option.DisplayName = option.Code switch
-            {
-                BackgroundFits.Fill => localizer.T("backgroundFitFill"),
-                BackgroundFits.Uniform => localizer.T("backgroundFitUniform"),
-                _ => localizer.T("backgroundFitUniformToFill")
-            };
-        }
+            BackgroundFits.Fill => localizer.T("backgroundFitFill"),
+            BackgroundFits.Uniform => localizer.T("backgroundFitUniform"),
+            _ => localizer.T("backgroundFitUniformToFill")
+        });
 
-        foreach (var option in UpdateChannel)
+        RefreshOptions(UpdateChannel, code => code switch
         {
-            option.DisplayName = option.Code switch
-            {
-                UpdateChannels.Beta => localizer.T("launcherUpdateChannelBeta"),
-                _ => localizer.T("launcherUpdateChannelStable")
-            };
-        }
+            UpdateChannels.Beta => localizer.T("launcherUpdateChannelBeta"),
+            _ => localizer.T("launcherUpdateChannelStable")
+        });
 
-        foreach (var option in LogLevel)
+        RefreshOptions(LogLevel, code => code switch
         {
-            option.DisplayName = option.Code switch
-            {
-                LogLevels.Verbose => localizer.T("logLevelVerbose"),
-                LogLevels.Debug => localizer.T("logLevelDebug"),
-                LogLevels.Warning => localizer.T("logLevelWarning"),
-                LogLevels.Error => localizer.T("logLevelError"),
-                LogLevels.Fatal => localizer.T("logLevelFatal"),
-                _ => localizer.T("logLevelInformation")
-            };
+            LogLevels.Verbose => localizer.T("logLevelVerbose"),
+            LogLevels.Debug => localizer.T("logLevelDebug"),
+            LogLevels.Warning => localizer.T("logLevelWarning"),
+            LogLevels.Error => localizer.T("logLevelError"),
+            LogLevels.Fatal => localizer.T("logLevelFatal"),
+            _ => localizer.T("logLevelInformation")
+        });
+    }
+
+    private void RefreshOptions(ObservableCollection<SettingOption> options, System.Func<string, string> resolveDisplayName)
+    {
+        foreach (var option in options)
+        {
+            option.DisplayName = resolveDisplayName(option.Code);
+        }
+    }
+
+    private void RefreshOptions(ObservableCollection<ThemeOption> options, System.Func<string, string> resolveDisplayName)
+    {
+        foreach (var option in options)
+        {
+            option.DisplayName = resolveDisplayName(option.Code);
         }
     }
 

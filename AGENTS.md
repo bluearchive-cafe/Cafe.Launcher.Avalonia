@@ -40,20 +40,23 @@ CI is GitHub Actions on `windows-latest`, .NET 10.0.x:
 
 One `MainWindow` (1300×754 initial size, resizable with MinWidth 1024/MinHeight 640, borderless with custom chrome). Window size/position is not persisted across sessions. The ViewModel drives panel visibility through boolean flags (`IsInstallPanelVisible`, `IsControlPanelVisible`, `IsProgressPanelVisible`, `IsSettingsVisible`).
 
-**View files** (XAML split by concern, all under `Views/`):
+**View files** (XAML split by concern, all under `Views/` or `Controls/`):
 - `MainWindow.axaml` — window shell, title bar, remote content panel, bottom install/progress/control panels
 - `MainWindow.Styles.axaml` — all `Window.Styles` extracted via `<StyleInclude Source="avares://..."/>`
 - `MainWindowSettingsOverlay.axaml` — settings dialog overlay shell: category navigation, runtime status summary, section host, and transactional footer
-- `SettingsGeneralSection.axaml`, `SettingsGameSection.axaml`, `SettingsDownloadNetworkSection.axaml`, `SettingsAppearanceSection.axaml`, `SettingsNotificationsContentSection.axaml`, `SettingsAdvancedSection.axaml`, `SettingsAboutSection.axaml` — the seven settings sections; all share the owning `MainWindowViewModel` data context
-- `MainWindowDialogsOverlay.axaml` — notice popup, repair/uninstall confirmation dialogs
+- `SettingsGeneralSection.axaml`, `SettingsGameSection.axaml`, `SettingsDownloadNetworkSection.axaml`, `SettingsAppearanceSection.axaml`, `SettingsNotificationsContentSection.axaml`, `SettingsAdvancedSection.axaml`, `SettingsAboutSection.axaml` — the seven settings sections; all share the owning `MainWindowViewModel` data context and use the shared `SettingRow` control for consistent row layout
+- `MainWindowDialogsOverlay.axaml` — notice popup, resource panel, update dialog, crash recovery; the six pure confirm dialogs (repair, RP-source, stop, close-while-downloading, uninstall, unsaved) use the shared `ConfirmDialog` control
 - `MainWindowToastOverlay.axaml` — toast notification overlay
+- `Controls/SettingRow.axaml` — reusable settings row (icon + title + description + action slot) used by all settings sections
+- `Controls/ConfirmDialog.axaml` — reusable confirmation dialog (title, description, icon, message, cancel/confirm actions) used by the six pure confirm dialogs
+- `Controls/LoadingOverlay.axaml` — reusable loading overlay (indeterminate progress bar + label) used by banner and remote content loading states
 
 **Entries:**
 1. **Program.cs** — Process mutex (`Local\Cafe_Launcher_SI`), single-instance enforcement via `EventWaitHandle` signal. Creates `UnifiedLogger` + `CrashRecoveryService` before DI is available; exposes the logger via `PreDiLogger` so the DI container reuses the same instance. Tracks `PreviousSessionCrashed` via a `session.active` marker file. `RunSession` orchestrates session lifecycle with proper crash-marker preservation.
 2. **App.axaml.cs** — On framework init: builds DI container via `ServiceConfiguration.AddLauncherServices()`, resolves `MainWindowViewModel`, creates `MainWindow`, wires `ClickCodeService`, `SystemTrayService`. Starts a background thread listening for `EventWaitHandle` signals to restore window from tray.
 3. **App.axaml** — Light/Dark `ThemeDictionaries` with custom `Launcher*` brushes, FluentTheme + MaterialIconStyles.
 
-**Composition root**: `ServiceConfiguration.AddLauncherServices()` is the DI configuration — it registers all services with `Microsoft.Extensions.DependencyInjection`. The container is built in `App.axaml.cs` via `ServiceCollection.BuildServiceProvider()`. All services are registered as `AddSingleton`; ViewModels are a mix of singleton (shared state: `SettingsViewModel`, `ShellViewModel`, `RemoteContentViewModel`, `DialogsViewModel`, `GameOperationsViewModel`) and transient (fresh per resolution). Thread-safe disposal order for IDisposable services is defined by reverse registration order.
+**Composition root**: `ServiceConfiguration.AddLauncherServices()` is the DI configuration — it registers all services with `Microsoft.Extensions.DependencyInjection`. The container is built in `App.axaml.cs` via `ServiceCollection.BuildServiceProvider()`. All services and ViewModels are registered as `AddSingleton` (single-window desktop app, no scoped boundaries). Thread-safe disposal order for IDisposable services is defined by reverse registration order.
 
 **View code-behind** (`MainWindow.axaml.cs`): handles native folder-picker dialog (via `StorageProvider`), window drag-to-move (borderless chrome), and close-behavior routing (minimize-to-tray vs exit). The ViewModel receives `PickGameFolderAsync`, `MinimizeWindow`, and `CloseWindow` delegates via `ConfigureViewModel()`.
 
@@ -122,7 +125,7 @@ Users can switch between `Official` (yo-star.com) and `Cafe` (bluearchive.cafe) 
 
 ### Converters
 
-`UrlToBitmapConverter` (`Converters/`) — converts image URLs to `Bitmap?` for XAML binding, used for remote banner/avatar images.
+`ToastSeverityToBrushConverter` (`Converters/`) — maps toast severity to a brush for toast icons/labels. Banner images bind directly to a pre-decoded `BannerBitmap` property on the model.
 
 ### Other directories
 
@@ -155,7 +158,7 @@ Numeric design tokens are defined as `StaticResource` keys in `App.axaml`. See C
 - **Spacing**: 4px grid — `LauncherSpacingXs`(4) through `LauncherSpacingXxl`(24) + `LauncherSpacingSection`(40)
 - **Corner radius**: `LauncherRadiusSm`(4) for controls, `LauncherRadiusMd`(6) for panels, `LauncherRadiusLg`(8) for dialogs
 - **Icons**: `LauncherIconSm`(16), `LauncherIconMd`(18), `LauncherIconLg`(20), `LauncherIconXl`(22), `LauncherIconXxl`(24)
-- **Control heights**: `LauncherControlHeightSetting`(36), `LauncherControlHeightDialog`(42), `LauncherControlHeightBottom`(48), `LauncherControlHeightLaunch`(58)
+- **Control heights**: `LauncherControlHeightSetting`(36), `LauncherControlHeightDialog`(42), `LauncherControlHeightBottom`(48), `LauncherControlHeightLaunch`(58), `LauncherSwatchSize`(28), `LauncherChipHeight`(32), `LauncherFieldHeight`(40), `LauncherDialogTitleHeight`(56)
 - **Z-index**: base content → settings overlay (100) → dialog overlay (200) → toast (`LauncherConstants.ZIndexToast`, 1000)
 - **Visual value rules**: view XAML uses semantic brushes and tokenized icon/radius values. Direct colors, `Transparent`, raw icon sizes, and raw 4/6/8 corner radii are forbidden outside `App.axaml` and `MainWindow.Styles.axaml`. Theme-invariant wallpaper gradients and the three shadows remain centralized in those resource/style files.
 

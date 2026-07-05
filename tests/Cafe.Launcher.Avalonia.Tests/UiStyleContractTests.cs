@@ -856,7 +856,7 @@ public sealed partial class UiStyleContractTests
         var mainWindowCodeBehind = File.ReadAllText(ProjectFile("Views/MainWindow.axaml.cs"));
 
         Assert.Contains(
-            "Text=\"{Binding Settings.Editor.Current.GamePath}\"",
+            "Description=\"{Binding Settings.Editor.Current.GamePath}\"",
             gameSection,
             StringComparison.Ordinal);
         Assert.Contains(

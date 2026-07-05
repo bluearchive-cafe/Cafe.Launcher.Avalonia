@@ -3,69 +3,55 @@
              xmlns:vm="using:Cafe.Launcher.Avalonia.ViewModels"
              xmlns:models="using:Cafe.Launcher.Avalonia.Models"
              xmlns:materialIcons="clr-namespace:Material.Icons.Avalonia;assembly=Material.Icons.Avalonia"
+             xmlns:controls="using:Cafe.Launcher.Avalonia.Controls"
              x:Class="Cafe.Launcher.Avalonia.Views.SettingsGeneralSection"
              x:Name="SettingsRoot"
-             x:DataType="vm:MainWindowViewModel"><StackPanel Classes="settings-group">
-            <TextBlock Text="{Binding Shell.I18n.SettingsGroupAppPreferences}" Classes="group-title"/>
+             x:DataType="vm:MainWindowViewModel">
+    <UserControl.Resources>
+        <DataTemplate x:Key="SettingOptionTemplate" x:DataType="models:SettingOption">
+            <TextBlock Text="{Binding DisplayName}"/>
+        </DataTemplate>
+        <DataTemplate x:Key="LanguageOptionTemplate" x:DataType="models:LanguageOption">
+            <TextBlock Text="{Binding DisplayName}"/>
+        </DataTemplate>
+    </UserControl.Resources>
+    <StackPanel Classes="settings-group">
+        <TextBlock Text="{Binding Shell.I18n.SettingsGroupAppPreferences}" Classes="group-title"/>
 
-    <Grid Classes="settings-row" ColumnDefinitions="Auto,*,Auto">
-        <Border Classes="settings-icon">
-            <materialIcons:MaterialIcon Kind="Translate" Width="{StaticResource LauncherIconMd}" Height="{StaticResource LauncherIconMd}" Foreground="{DynamicResource LauncherAccentBrush}" HorizontalAlignment="Center" VerticalAlignment="Center"/>
-        </Border>
-        <StackPanel Grid.Column="1" Classes="dialog-heading-copy">
-            <TextBlock Text="{Binding Shell.I18n.Language}" Classes="section-title"/>
-            <TextBlock Text="{Binding Shell.I18n.LanguageDescription}" Classes="caption" TextWrapping="Wrap"/>
-        </StackPanel>
-        <ComboBox Grid.Column="2" Classes="setting-control"
-                  ItemsSource="{Binding Settings.Options.Language}"
-                  SelectedValue="{Binding Settings.Editor.Current.Language, Mode=TwoWay}"
-                  SelectedValueBinding="{Binding Code}">
-            <ComboBox.ItemTemplate>
-                <DataTemplate x:DataType="models:LanguageOption">
-                    <TextBlock Text="{Binding DisplayName}"/>
-                </DataTemplate>
-            </ComboBox.ItemTemplate>
-        </ComboBox>
-    </Grid>
+        <controls:SettingRow IconKind="Translate"
+                             Title="{Binding Shell.I18n.Language}"
+                             Description="{Binding Shell.I18n.LanguageDescription}">
+            <controls:SettingRow.Action>
+                <ComboBox Classes="setting-control"
+                          ItemsSource="{Binding Settings.Options.Language}"
+                          SelectedValue="{Binding Settings.Editor.Current.Language, Mode=TwoWay}"
+                          SelectedValueBinding="{Binding Code}"
+                          ItemTemplate="{StaticResource LanguageOptionTemplate}"/>
+            </controls:SettingRow.Action>
+        </controls:SettingRow>
 
-    <Grid Classes="settings-row" ColumnDefinitions="Auto,*,Auto">
-        <Border Classes="settings-icon">
-            <materialIcons:MaterialIcon Kind="ProgressClose" Width="{StaticResource LauncherIconMd}" Height="{StaticResource LauncherIconMd}" Foreground="{DynamicResource LauncherAccentBrush}" HorizontalAlignment="Center" VerticalAlignment="Center"/>
-        </Border>
-        <StackPanel Grid.Column="1" Classes="dialog-heading-copy">
-            <TextBlock Text="{Binding Shell.I18n.CloseBehavior}" Classes="section-title"/>
-            <TextBlock Text="{Binding Shell.I18n.CloseBehaviorDescription}" Classes="caption" TextWrapping="Wrap"/>
-        </StackPanel>
-        <ComboBox Grid.Column="2" Classes="setting-control"
-                  ItemsSource="{Binding Settings.Options.CloseBehavior}"
-                  SelectedValue="{Binding Settings.Editor.Current.CloseBehavior, Mode=TwoWay}"
-                  SelectedValueBinding="{Binding Code}">
-            <ComboBox.ItemTemplate>
-                <DataTemplate x:DataType="models:SettingOption">
-                    <TextBlock Text="{Binding DisplayName}"/>
-                </DataTemplate>
-            </ComboBox.ItemTemplate>
-        </ComboBox>
-    </Grid>
+        <controls:SettingRow IconKind="ProgressClose"
+                             Title="{Binding Shell.I18n.CloseBehavior}"
+                             Description="{Binding Shell.I18n.CloseBehaviorDescription}">
+            <controls:SettingRow.Action>
+                <ComboBox Classes="setting-control"
+                          ItemsSource="{Binding Settings.Options.CloseBehavior}"
+                          SelectedValue="{Binding Settings.Editor.Current.CloseBehavior, Mode=TwoWay}"
+                          SelectedValueBinding="{Binding Code}"
+                          ItemTemplate="{StaticResource SettingOptionTemplate}"/>
+            </controls:SettingRow.Action>
+        </controls:SettingRow>
 
-    <Grid Classes="settings-row" ColumnDefinitions="Auto,*,Auto">
-        <Border Classes="settings-icon">
-            <materialIcons:MaterialIcon Kind="AnimationPlayOutline" Width="{StaticResource LauncherIconMd}" Height="{StaticResource LauncherIconMd}" Foreground="{DynamicResource LauncherAccentBrush}" HorizontalAlignment="Center" VerticalAlignment="Center"/>
-        </Border>
-        <StackPanel Grid.Column="1" Classes="dialog-heading-copy">
-            <TextBlock Text="{Binding Shell.I18n.MotionMode}" Classes="section-title"/>
-            <TextBlock Text="{Binding Shell.I18n.MotionModeDescription}" Classes="caption" TextWrapping="Wrap"/>
-        </StackPanel>
-        <ComboBox Grid.Column="2" Classes="setting-control"
-                  ItemsSource="{Binding Settings.Options.MotionMode}"
-                  SelectedValue="{Binding Settings.Editor.Current.MotionMode, Mode=TwoWay}"
-                  SelectedValueBinding="{Binding Code}">
-            <ComboBox.ItemTemplate>
-                <DataTemplate x:DataType="models:SettingOption">
-                    <TextBlock Text="{Binding DisplayName}"/>
-                </DataTemplate>
-            </ComboBox.ItemTemplate>
-        </ComboBox>
-    </Grid>
-        </StackPanel>
-    </UserControl>
+        <controls:SettingRow IconKind="AnimationPlayOutline"
+                             Title="{Binding Shell.I18n.MotionMode}"
+                             Description="{Binding Shell.I18n.MotionModeDescription}">
+            <controls:SettingRow.Action>
+                <ComboBox Classes="setting-control"
+                          ItemsSource="{Binding Settings.Options.MotionMode}"
+                          SelectedValue="{Binding Settings.Editor.Current.MotionMode, Mode=TwoWay}"
+                          SelectedValueBinding="{Binding Code}"
+                          ItemTemplate="{StaticResource SettingOptionTemplate}"/>
+            </controls:SettingRow.Action>
+        </controls:SettingRow>
+    </StackPanel>
+</UserControl>

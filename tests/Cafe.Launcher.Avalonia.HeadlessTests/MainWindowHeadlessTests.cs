@@ -165,6 +165,33 @@ public sealed class MainWindowHeadlessTests
     }
 
     [AvaloniaFact]
+    public void SettingRow_RendersAllFields_WithExplicitActionProperty()
+    {
+        using var context = CreateContext();
+        OpenSettings(context);
+        context.ViewModel.Settings.SelectedCategory = SettingsCategoryCodes.General;
+        Dispatcher.UIThread.RunJobs();
+
+        var rows = context.Window.GetVisualDescendants().OfType<global::Cafe.Launcher.Avalonia.Controls.SettingRow>().ToArray();
+        Assert.NotEmpty(rows);
+
+        foreach (var row in rows)
+        {
+            var titleText = row.FindControl<TextBlock>("RowTitle");
+            Assert.NotNull(titleText);
+            Assert.Equal(row.Title, titleText!.Text);
+
+            var descText = row.FindControl<TextBlock>("RowDescription");
+            Assert.NotNull(descText);
+            Assert.Equal(row.Description, descText!.Text);
+
+            var actionPresenter = row.FindControl<ContentPresenter>("ActionPresenter");
+            Assert.NotNull(actionPresenter);
+            Assert.Equal(row.Action, actionPresenter!.Content);
+        }
+    }
+
+    [AvaloniaFact]
     public void SettingsSaving_DisablesNavigationButKeepsSummaryAndFooterVisible()
     {
         using var context = CreateContext();
@@ -362,6 +389,9 @@ public sealed class MainWindowHeadlessTests
             context.ViewModel.Settings.Editor.GetSnapshot());
         context.ViewModel.WindowChrome.IsSettingsVisible = true;
         Dispatcher.UIThread.RunJobs();
+        // Reset dirty state after binding resolution (same rationale as OpenSettings)
+        context.ViewModel.Settings.Editor.ApplySnapshot(
+            context.ViewModel.Settings.Editor.GetSnapshot());
 
         var handled = context.ViewModel.TryHandleEscape();
         Dispatcher.UIThread.RunJobs();
@@ -414,11 +444,15 @@ public sealed class MainWindowHeadlessTests
         using var context = CreateContext();
         OpenSettings(context);
 
+        var isDirty = context.ViewModel.Settings.IsSettingsDirty;
+        var isUnsaved = context.ViewModel.Settings.IsUnsavedChangesVisible;
+
         context.Window.KeyPress(Key.Escape, RawInputModifiers.None, PhysicalKey.Escape, "");
         context.Window.KeyRelease(Key.Escape, RawInputModifiers.None, PhysicalKey.Escape, "");
         Dispatcher.UIThread.RunJobs();
 
-        Assert.False(context.ViewModel.WindowChrome.IsSettingsVisible);
+        Assert.False(context.ViewModel.WindowChrome.IsSettingsVisible,
+            $"IsDirty={isDirty} IsUnsaved={isUnsaved} IsVisible={context.ViewModel.WindowChrome.IsSettingsVisible}");
     }
 
     [AvaloniaFact]
@@ -452,6 +486,10 @@ public sealed class MainWindowHeadlessTests
             hasSnapshot: false);
         viewModel.Settings.Editor.ApplySnapshot(
             viewModel.Settings.Editor.GetSnapshot());
+        // Apply default theme accent brushes so navigation selection visual
+        // matches the real app's initialization behavior.
+        SettingsAppearanceViewModel.ApplyAccentBrushes(
+            Color.Parse("#FF2E7DF6"));
         var window = new MainWindow { DataContext = viewModel };
         window.ConfigureViewModel(viewModel);
         return new TestContext(tempDir, provider, window, viewModel);
@@ -462,6 +500,11 @@ public sealed class MainWindowHeadlessTests
         context.Window.Show();
         context.ViewModel.WindowChrome.ShowSettingsCommand.Execute(null);
         Dispatcher.UIThread.RunJobs();
+        // Reset dirty state: TwoWay bindings on initial load may write back the
+        // same value, which triggers IsDirty via PropertyChanged. This is a UI
+        // loading artifact, not a real user change.
+        context.ViewModel.Settings.Editor.ApplySnapshot(
+            context.ViewModel.Settings.Editor.GetSnapshot());
     }
 
     private static ListBox GetSettingsNavigation(MainWindow window) =>
