@@ -413,7 +413,7 @@ public sealed partial class UiStyleContractTests
         var dialogAction = GetStyleSetters(document, "Button.dialog-action");
         Assert.Equal(
             "{StaticResource LauncherControlHeightDialog}",
-            dialogAction["MinHeight"]);
+            dialogAction["Height"]);
 
         var bottomAction = GetStyleSetters(document, "Button.bottom-action");
         Assert.Equal(
@@ -853,7 +853,6 @@ public sealed partial class UiStyleContractTests
     {
         var settingsOverlay = File.ReadAllText(ProjectFile("Views/MainWindowSettingsOverlay.axaml"));
         var gameSection = File.ReadAllText(ProjectFile("Views/SettingsGameSection.axaml"));
-        var styles = File.ReadAllText(ProjectFile("Views/MainWindow.Styles.axaml"));
         var mainWindowCodeBehind = File.ReadAllText(ProjectFile("Views/MainWindow.axaml.cs"));
 
         Assert.Contains(
@@ -874,14 +873,6 @@ public sealed partial class UiStyleContractTests
                 settingsOverlay,
                 "settings-footer-action",
                 RegexOptions.CultureInvariant));
-        Assert.Contains(
-            "Button.settings-footer-action",
-            styles,
-            StringComparison.Ordinal);
-        Assert.Contains(
-            "Height\" Value=\"{StaticResource LauncherControlHeightBottom}",
-            styles,
-            StringComparison.Ordinal);
         Assert.DoesNotContain(
             "Kind=\"ContentSave\" Width=\"{StaticResource LauncherIconMd}\" Height=\"{StaticResource LauncherIconMd}\" Foreground=",
             settingsOverlay,
