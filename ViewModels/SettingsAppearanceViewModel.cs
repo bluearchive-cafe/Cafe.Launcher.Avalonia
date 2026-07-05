@@ -354,6 +354,18 @@ public partial class SettingsAppearanceViewModel : ViewModelBase, IDisposable
         SetBrush(application, "LauncherCarouselDotActiveBrush", accentColor);
         SetBrush(application, "LauncherToastInfoBrush", accentColor);
         SetBrush(application, "LauncherOnAccentBrush", GetReadableOnAccentColor(accentColor));
+        SetBrush(
+            application,
+            "LauncherFlatHoverBrush",
+            Color.FromArgb(0x14, accentColor.R, accentColor.G, accentColor.B));
+        SetBrush(
+            application,
+            "LauncherFlatPressedBrush",
+            Color.FromArgb(0x30, accentColor.R, accentColor.G, accentColor.B));
+        SetBrush(
+            application,
+            "LauncherInfoBackgroundBrush",
+            Color.FromArgb(0x24, accentColor.R, accentColor.G, accentColor.B));
     }
 
     private static void SetBrush(Application application, string key, Color color)
