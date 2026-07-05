@@ -118,21 +118,21 @@
                                 Spacing="{StaticResource LauncherSpacingSm}"
                                 HorizontalAlignment="Right"
                                 VerticalAlignment="Center">
-                        <Button Classes="flat-action settings-footer-action"
+                        <Button Classes="flat-action dialog-action"
                                 Command="{Binding WindowChrome.ShowSettingsCommand}"
                                 IsEnabled="{Binding Settings.IsSaving, Converter={x:Static BoolConverters.Not}}">
                             <StackPanel Classes="button-content" HorizontalAlignment="Center">
                                 <materialIcons:MaterialIcon Kind="CloseCircleOutline"
-                                    Width="{StaticResource LauncherIconMd}" Height="{StaticResource LauncherIconMd}"/>
+                                    Width="{StaticResource LauncherIconSm}" Height="{StaticResource LauncherIconSm}"/>
                                 <TextBlock Text="{Binding Shell.I18n.Cancel}" VerticalAlignment="Center"/>
                             </StackPanel>
                         </Button>
-                        <Button Classes="primary-action settings-footer-action"
+                        <Button Classes="primary-action dialog-action"
                                 Command="{Binding Settings.SaveSettingsCommand}"
                                 IsEnabled="{Binding Settings.CanSaveSettings}">
                             <StackPanel Classes="button-content" HorizontalAlignment="Center">
                                 <materialIcons:MaterialIcon Kind="ContentSave"
-                                    Width="{StaticResource LauncherIconMd}" Height="{StaticResource LauncherIconMd}"/>
+                                    Width="{StaticResource LauncherIconSm}" Height="{StaticResource LauncherIconSm}"/>
                                 <TextBlock Text="{Binding Shell.I18n.Save}" VerticalAlignment="Center"/>
                             </StackPanel>
                         </Button>
