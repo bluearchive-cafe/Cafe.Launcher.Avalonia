@@ -97,7 +97,7 @@ One `MainWindow` (1300×754 initial size, resizable with MinWidth 1024/MinHeight
 | `DialogsViewModel` | Notice popup, repair/uninstall confirmation dialogs |
 | `GameOperationsViewModel` | Install / update / repair / launch / uninstall commands and progress — delegates to `IGameOperationsBackend` |
 | `GameOperationsBackend` | Internal interface + implementation for download/launch/uninstall operations with pause/resume/stop |
-| `ToastHostViewModel` | Transient toast notification queue (resolves as singleton per DI config) |
+| `ToastHostViewModel` | Toast notification queue |
 | `WindowChromeViewModel` | Title bar, minimize/close buttons, window drag state |
 | `LogViewerDialogViewModel` | In-app log viewer with filter, search, copy, and export |
 | `SettingsViewModel` | Settings command coordination, persistence, folder pickers, update checks, save/discard lifecycle |
@@ -105,28 +105,31 @@ One `MainWindow` (1300×754 initial size, resizable with MinWidth 1024/MinHeight
 | `SettingsOptionsViewModel` | Localized setting option collections and settings-summary display resolvers |
 | `ResourcePanelViewModel` | Resource panel (UID-based game resource display) |
 
-**View files** (XAML split by concern, all under `Views/`):
+**View files** (XAML split by concern, under `Views/` and `Controls/`):
 - `MainWindow.axaml` — window shell, title bar, remote content panel, bottom install/progress/control panels
 - `MainWindow.Styles.axaml` — all `Window.Styles` extracted via `<StyleInclude Source="avares://..."/>`
 - `MainWindowSettingsOverlay.axaml` — settings dialog overlay with category navigation, runtime status, section host, and transactional footer
-- `SettingsGeneralSection.axaml` — language, theme mode settings
-- `SettingsGameSection.axaml` — game path, launch check settings
-- `SettingsDownloadNetworkSection.axaml` — download speed, CDN, proxy settings
+- `SettingsGeneralSection.axaml` — language, theme mode, motion mode settings
+- `SettingsGameSection.axaml` — game path, launch check, repair/uninstall settings
+- `SettingsDownloadNetworkSection.axaml` — download speed, CDN, proxy, update channel settings
 - `SettingsAppearanceSection.axaml` — background, theme color, wallpaper settings
-- `SettingsNotificationsContentSection.axaml` — toast, remote content, update channel settings
+- `SettingsNotificationsContentSection.axaml` — toast, remote content card settings
 - `SettingsAdvancedSection.axaml` — log level, resource panel settings
 - `SettingsAboutSection.axaml` — version info, licenses, release notes
-- `MainWindowDialogsOverlay.axaml` — notice popup, repair/uninstall confirmation dialogs
+- `MainWindowDialogsOverlay.axaml` — notice popup, repair/uninstall/stop/close confirmations, update dialog, crash recovery
 - `MainWindowToastOverlay.axaml` — toast notification overlay
+- `Controls/SettingRow.axaml` — reusable settings row (icon + title + description + action slot)
+- `Controls/ConfirmDialog.axaml` — reusable confirmation dialog (StyledProperty-driven)
+- `Controls/LoadingOverlay.axaml` — reusable loading overlay (indeterminate progress + label)
 
-All settings sections share the owning `MainWindowViewModel` data context. Settings are organized by category code (see `SettingsCategoryCodes` model: `general`, `game`, `download-network`, `appearance`, `notifications-content`, `advanced`, `about`).
+All settings sections and Controls share the owning `MainWindowViewModel` data context. Settings are organized by category code (see `SettingsCategoryCodes` model: `general`, `game`, `download-network`, `appearance`, `notifications-content`, `advanced`, `about`).
 
 **Entries:**
 1. **Program.cs** — Process mutex (`Local\Cafe_Launcher_SI`), single-instance enforcement via `EventWaitHandle` signal. Creates `UnifiedLogger` + `CrashRecoveryService` on startup before the DI container is available; exposes the logger via `PreDiLogger` so the DI container reuses the same instance (single Serilog pipeline for the entire process). Tracks `PreviousSessionCrashed` via a `session.active` marker file. Sets up unhandled-exception handlers (`AppDomain.UnhandledException`, `TaskScheduler.UnobservedTaskException`). `RunSession` orchestrates the session lifecycle: begin → run app → complete/cleanup, with proper crash-marker preservation. The `ServiceProvider` is disposed in `RunSession`'s finally block after the session-end log entry is written.
 2. **App.axaml.cs** — On framework init: builds DI container via `ServiceConfiguration.AddLauncherServices()`, resolves `MainWindowViewModel`, creates `MainWindow`, wires `ClickCodeService`, `SystemTrayService`. Starts a background thread listening for `EventWaitHandle` signals to restore window from tray.
 3. **App.axaml** — Light/Dark `ThemeDictionaries` with custom `Launcher*` brushes, FluentTheme + MaterialIconStyles.
 
-**Composition root**: `ServiceConfiguration.AddLauncherServices()` is the DI configuration — it registers all services with `Microsoft.Extensions.DependencyInjection`. The container is built in `App.axaml.cs` via `ServiceCollection.BuildServiceProvider()`. Services are registered as `AddSingleton`; ViewModels are a mix: `SettingsViewModel`, `ShellViewModel`, `RemoteContentViewModel`, `DialogsViewModel`, `GameOperationsViewModel`, and `MainWindowViewModel` are `AddSingleton` (shared state), while `ResourcePanelViewModel`, `BackgroundViewModel`, `ToastHostViewModel`, `WindowChromeViewModel`, and `LogViewerDialogViewModel` are `AddTransient` (fresh instance per resolution). Thread-safe disposal order for IDisposable services is defined by reverse registration order (see disposal order section below).
+**Composition root**: `ServiceConfiguration.AddLauncherServices()` is the DI configuration — it registers all services with `Microsoft.Extensions.DependencyInjection`. The container is built in `App.axaml.cs` via `ServiceCollection.BuildServiceProvider()`. All services and ViewModels are registered as `AddSingleton` (single-window desktop app, no scoped request boundaries). Thread-safe disposal order for IDisposable services is defined by reverse registration order (see disposal order section below).
 
 **ViewModel coordination**: Sub-ViewModels communicate with `MainWindowViewModel` through two mechanisms:
 - **Delegates** — `MainWindowViewModel.ConfigureViewModel()` sets `Func<>` / `Func<Task>` delegates on children (e.g. `SettingsViewModel.PickGameFolderAsync`, `SettingsViewModel.PreviewAppearanceAsync`). These let children call back into parent capabilities such as native pickers and appearance previews.
@@ -276,6 +279,7 @@ Users can switch between `Official` (yo-star.com) and `Cafe` (bluearchive.cafe) 
 
 - `Constants/` — `LauncherConstants`, `ApiConfig`, `BuildInfo`, `GamePaths` (see Constants section above)
 - `Helpers/` — `FileSizeFormatter`, `GamePathValidator`, `HttpClientLease`, `FlexibleBoolConverter`
+- `Controls/` — reusable UI controls: `SettingRow` (icon + title + description + action slot, used by all settings sections), `ConfirmDialog` (StyledProperty-driven confirmation dialog for repair/stop/close/uninstall/unsaved/RP-source), `LoadingOverlay` (indeterminate progress bar + label, used by banner and remote content loading states)
 - `Services/Auth/` — `AuthorizationHeaderFactory` (MD5-signed API auth header)
 - `Services/Diagnostics/` — `UnifiedLogger` (Serilog-backed central logging with async sink, global enrichers, and `LoggingLevelSwitch`), `LocalDiagnostics` (public facade over `UnifiedLogger`), `LogExportService` (ZIP log export), `CrashRecoveryService` (session crash detection via `session.active` marker), `LogEntrySeverity` enum (Error/Warn/Info). Log rotation is handled by Serilog's file sink (5 MB threshold, 3 retained files). All diagnostics and crash logs go to a single `unified.log`.
 - `Services/HttpClientLeaseSource.cs` — Internal `IHttpClientLeaseSource` abstraction over `HttpClientFactory.CreateLeaseAsync()`. Two implementations: `ProxyAwareHttpClientLeaseSource` (production, delegates to `HttpClientFactory`) and `FixedHttpClientLeaseSource` (testing, wraps a fixed `HttpMessageHandler`). Used by services like `LauncherUpdateService` that need proxy-aware HTTP with lease lifetime management.
