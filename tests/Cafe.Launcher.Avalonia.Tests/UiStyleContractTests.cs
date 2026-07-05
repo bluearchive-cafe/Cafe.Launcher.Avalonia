@@ -867,12 +867,17 @@ public sealed partial class UiStyleContractTests
             "IsEnabled=\"{Binding Settings.CanSaveSettings}\"",
             settingsOverlay,
             StringComparison.Ordinal);
-        Assert.Equal(
-            2,
-            Regex.Count(
-                settingsOverlay,
-                "settings-footer-action",
-                RegexOptions.CultureInvariant));
+        var settingsDocument = XDocument.Parse(settingsOverlay);
+        var settingsFooterButtons = settingsDocument
+            .Descendants()
+            .Where(element =>
+                element.Name.LocalName == "Button"
+                && HasClass(element, "dialog-action")
+                && element.Attribute("Command")?.Value
+                    is "{Binding WindowChrome.ShowSettingsCommand}"
+                    or "{Binding Settings.SaveSettingsCommand}")
+            .ToList();
+        Assert.Equal(2, settingsFooterButtons.Count);
         Assert.DoesNotContain(
             "Kind=\"ContentSave\" Width=\"{StaticResource LauncherIconMd}\" Height=\"{StaticResource LauncherIconMd}\" Foreground=",
             settingsOverlay,
@@ -921,7 +926,7 @@ public sealed partial class UiStyleContractTests
             .Descendants()
             .Where(element =>
                 element.Name.LocalName == "Button"
-                && HasClass(element, "settings-footer-action"))
+                && HasClass(element, "dialog-action"))
             .ToList();
         Assert.Equal(2, footerButtons.Count);
         Assert.Equal(

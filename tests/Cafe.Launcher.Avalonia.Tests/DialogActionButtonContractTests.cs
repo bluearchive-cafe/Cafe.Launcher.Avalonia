@@ -25,38 +25,75 @@ public sealed class DialogActionButtonContractTests
     }
 
     [Fact]
-    public void DialogActionConsumers_UseSharedHeight()
+    public void SettingsFooterActions_UseDialogActionClass()
     {
         var settingsDocument = XDocument.Load(ProjectFile("Views/MainWindowSettingsOverlay.axaml"));
         var settingsButtons = settingsDocument
             .Descendants()
             .Where(element =>
                 element.Name.LocalName == "Button"
-                && (element.Attribute("Classes")?.Value
-                    .Split(' ', StringSplitOptions.RemoveEmptyEntries)
-                    .Contains("settings-footer-action", StringComparer.Ordinal) ?? false))
+                && HasAnyClass(element, "flat-action", "primary-action")
+                && (element.Attribute("Command")?.Value
+                    is "{Binding WindowChrome.ShowSettingsCommand}"
+                    or "{Binding Settings.SaveSettingsCommand}"))
             .ToArray();
 
         Assert.Equal(2, settingsButtons.Length);
-        Assert.All(
-            settingsButtons,
-            button => Assert.Contains(
-                "dialog-action",
-                button.Attribute("Classes")!.Value.Split(
-                    ' ',
-                    StringSplitOptions.RemoveEmptyEntries),
-                StringComparer.Ordinal));
-
-        var dialogsDocument = XDocument.Load(ProjectFile("Views/MainWindowDialogsOverlay.axaml"));
-        var continueAfterCrashButton = dialogsDocument
-            .Descendants()
-            .Single(element =>
-                element.Name.LocalName == "Button"
-                && element.Attribute("Command")?.Value
-                    == "{Binding Dialogs.ContinueAfterCrashCommand}");
-
-        Assert.Null(continueAfterCrashButton.Attribute("Height"));
+        Assert.Equal("flat-action dialog-action", settingsButtons[0].Attribute("Classes")?.Value);
+        Assert.Equal("primary-action dialog-action", settingsButtons[1].Attribute("Classes")?.Value);
     }
+
+    [Fact]
+    public void DialogActionButtons_UseUnifiedClassAndIconSize()
+    {
+        var documents = new[]
+        {
+            XDocument.Load(ProjectFile("Views/MainWindowDialogsOverlay.axaml")),
+            XDocument.Load(ProjectFile("Views/MainWindowLogViewerOverlay.axaml")),
+            XDocument.Load(ProjectFile("Views/MainWindowSettingsOverlay.axaml")),
+        };
+        var actionButtons = documents
+            .SelectMany(document => document.Descendants())
+            .Where(element =>
+                element.Name.LocalName == "Button"
+                && HasAnyClass(
+                    element,
+                    "flat-action",
+                    "primary-action",
+                    "danger-action"))
+            .ToArray();
+
+        Assert.Equal(25, actionButtons.Length);
+        Assert.All(
+            actionButtons,
+            button =>
+            {
+                Assert.True(HasClass(button, "dialog-action"));
+                Assert.Null(button.Attribute("Height"));
+                Assert.Null(button.Attribute("Width"));
+                Assert.All(
+                    button
+                        .Descendants()
+                        .Where(element => element.Name.LocalName == "MaterialIcon"),
+                    icon =>
+                    {
+                        Assert.Equal(
+                            "{StaticResource LauncherIconSm}",
+                            icon.Attribute("Width")?.Value);
+                        Assert.Equal(
+                            "{StaticResource LauncherIconSm}",
+                            icon.Attribute("Height")?.Value);
+                    });
+            });
+    }
+
+    private static bool HasAnyClass(XElement element, params string[] classes) =>
+        classes.Any(className => HasClass(element, className));
+
+    private static bool HasClass(XElement element, string className) =>
+        element.Attribute("Classes")?.Value
+            .Split(' ', StringSplitOptions.RemoveEmptyEntries)
+            .Contains(className, StringComparer.Ordinal) ?? false;
 
     private static string ProjectFile(string relativePath) =>
         Path.Combine(FindProjectRoot(), relativePath.Replace('/', Path.DirectorySeparatorChar));
