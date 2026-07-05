@@ -72,8 +72,8 @@
                 <materialIcons:MaterialIcon Kind="Update" Width="{StaticResource LauncherIconMd}" Height="{StaticResource LauncherIconMd}" Foreground="{DynamicResource LauncherAccentBrush}" HorizontalAlignment="Center" VerticalAlignment="Center"/>
             </Border>
             <StackPanel Grid.Column="1" Classes="dialog-heading-copy">
-                <TextBlock Text="{Binding Shell.I18n.UpdateChannel}" Classes="section-title"/>
-                <TextBlock Text="{Binding Shell.I18n.UpdateChannelDescription}" Classes="caption" TextWrapping="Wrap"/>
+                <TextBlock Text="{Binding Shell.I18n.LauncherUpdateChannel}" Classes="section-title"/>
+                <TextBlock Text="{Binding Shell.I18n.LauncherUpdateChannelDescription}" Classes="caption" TextWrapping="Wrap"/>
             </StackPanel>
             <ComboBox Grid.Column="2" Classes="setting-control"
                       ItemsSource="{Binding Settings.Options.UpdateChannel}"

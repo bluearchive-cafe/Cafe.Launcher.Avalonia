@@ -41,9 +41,9 @@ public sealed class GameLaunchService
         {
             return Failed(snapshot.RuntimeState switch
             {
-                LauncherRuntimeState.Corrupted => localizer.T("corruptedInstallationState"),
-                LauncherRuntimeState.IoFailure => localizer.T("installationStateReadFailed"),
-                LauncherRuntimeState.RemoteUnavailable => localizer.T("remoteStateUnavailable"),
+                LauncherRuntimeState.Corrupted => localizer.T("gameCorruptedInstallationState"),
+                LauncherRuntimeState.IoFailure => localizer.T("gameInstallationStateReadFailed"),
+                LauncherRuntimeState.RemoteUnavailable => localizer.T("gameRemoteStateUnavailable"),
                 LauncherRuntimeState.UpdateAvailable => localizer.T("updateAvailable"),
                 _ => localizer.T("gameNotInstalled")
             });

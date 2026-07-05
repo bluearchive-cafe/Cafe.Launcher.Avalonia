@@ -304,13 +304,13 @@ public sealed partial class UiStyleContractTests
         Assert.Equal(2, groups.Count);
 
         Assert.Equal(
-            "{Binding Shell.I18n.SettingsThemeColorGroup}",
+            "{Binding Shell.I18n.SettingsGroupThemeColor}",
             groups[0]
                 .Elements()
                 .First(element => element.Name.LocalName == "TextBlock")
                 .Attribute("Text")?.Value);
         Assert.Equal(
-            "{Binding Shell.I18n.SettingsBackgroundGroup}",
+            "{Binding Shell.I18n.SettingsGroupBackground}",
             groups[1]
                 .Elements()
                 .First(element => element.Name.LocalName == "TextBlock")
