@@ -114,13 +114,13 @@ public sealed class SettingsOptionsViewModel
     public void RefreshDisplayNames()
     {
         EnsureSettingCategories();
-        UpdateSettingCategoryDisplayName(SettingsCategoryCodes.General, localizer.T("settingsCategoryGeneral"));
-        UpdateSettingCategoryDisplayName(SettingsCategoryCodes.Game, localizer.T("settingsCategoryGame"));
-        UpdateSettingCategoryDisplayName(SettingsCategoryCodes.DownloadNetwork, localizer.T("settingsCategoryDownloadNetwork"));
-        UpdateSettingCategoryDisplayName(SettingsCategoryCodes.Appearance, localizer.T("settingsCategoryAppearance"));
-        UpdateSettingCategoryDisplayName(SettingsCategoryCodes.NotificationsContent, localizer.T("settingsCategoryNotificationsContent"));
-        UpdateSettingCategoryDisplayName(SettingsCategoryCodes.Advanced, localizer.T("settingsCategoryAdvanced"));
-        UpdateSettingCategoryDisplayName(SettingsCategoryCodes.About, localizer.T("settingsCategoryAbout"));
+        UpdateSettingCategory(SettingsCategoryCodes.General, localizer.T("settingsCategoryGeneral"), localizer.T("settingsCategoryGeneralDescription"));
+        UpdateSettingCategory(SettingsCategoryCodes.Game, localizer.T("settingsCategoryGame"), localizer.T("settingsCategoryGameDescription"));
+        UpdateSettingCategory(SettingsCategoryCodes.DownloadNetwork, localizer.T("settingsCategoryDownloadNetwork"), localizer.T("settingsCategoryDownloadNetworkDescription"));
+        UpdateSettingCategory(SettingsCategoryCodes.Appearance, localizer.T("settingsCategoryAppearance"), localizer.T("settingsCategoryAppearanceDescription"));
+        UpdateSettingCategory(SettingsCategoryCodes.NotificationsContent, localizer.T("settingsCategoryNotificationsContent"), localizer.T("settingsCategoryNotificationsContentDescription"));
+        UpdateSettingCategory(SettingsCategoryCodes.Advanced, localizer.T("settingsCategoryAdvanced"), localizer.T("settingsCategoryAdvancedDescription"));
+        UpdateSettingCategory(SettingsCategoryCodes.About, localizer.T("settingsCategoryAbout"), localizer.T("settingsCategoryAboutDescription"));
 
         foreach (var option in Theme)
         {
@@ -262,10 +262,11 @@ public sealed class SettingsOptionsViewModel
         SettingsCategories.Add(new() { Code = SettingsCategoryCodes.About });
     }
 
-    private void UpdateSettingCategoryDisplayName(string code, string displayName)
+    private void UpdateSettingCategory(string code, string displayName, string description)
     {
         var option = SettingsCategories.First(option => option.Code == code);
         option.DisplayName = displayName;
+        option.Description = description;
     }
 
     public string ResolveLanguageDisplayName(string language) =>

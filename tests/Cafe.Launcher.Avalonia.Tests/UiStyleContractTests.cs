@@ -404,7 +404,7 @@ public sealed partial class UiStyleContractTests
         Assert.Equal("Center", settingControl["VerticalAlignment"]);
 
         var colorPickerControl = GetStyleSetters(document, "ColorPicker.setting-control");
-        Assert.False(colorPickerControl.ContainsKey("Width"));
+        Assert.Equal("220", colorPickerControl["Width"]);
         Assert.Equal("220", colorPickerControl["MinWidth"]);
         Assert.Equal(
             "{StaticResource LauncherControlHeightSetting}",
