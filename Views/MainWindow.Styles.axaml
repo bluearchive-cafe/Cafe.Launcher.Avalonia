@@ -560,8 +560,6 @@
     </Style>
     <Style Selector="StackPanel.settings-group">
         <Setter Property="Margin" Value="0,16,0,0"/>
-        <Setter Property="MaxWidth" Value="640"/>
-        <Setter Property="HorizontalAlignment" Value="Left"/>
     </Style>
     <Style Selector="Border.settings-status-summary">
         <Setter Property="Background" Value="{DynamicResource LauncherTransparentBrush}"/>

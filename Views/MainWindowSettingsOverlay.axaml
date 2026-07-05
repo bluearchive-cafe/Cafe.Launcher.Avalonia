@@ -61,7 +61,12 @@
                                                                 HorizontalAlignment="Center"
                                                                 VerticalAlignment="Center"/>
                                 </Border>
-                                <StackPanel Grid.Column="1" VerticalAlignment="Center" Margin="8,0,0,0">
+                                <StackPanel Grid.Column="1"
+                                            Classes="status-title-inline"
+                                            Orientation="Horizontal"
+                                            Spacing="{StaticResource LauncherSpacingXs}"
+                                            VerticalAlignment="Center"
+                                            Margin="8,0,0,0">
                                     <TextBlock Text="{Binding Shell.CurrentViewTitle}" Classes="status-summary-title"/>
                                     <TextBlock Text="{Binding Shell.VersionText}" Classes="caption"/>
                                 </StackPanel>

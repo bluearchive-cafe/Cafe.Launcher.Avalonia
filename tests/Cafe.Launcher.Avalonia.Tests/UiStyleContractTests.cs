@@ -915,6 +915,20 @@ public sealed partial class UiStyleContractTests
         Assert.DoesNotContain(
             document.Descendants(),
             element => element.Attribute("Text")?.Value == "{Binding Shell.OperationNote}");
+
+        var titleRow = summaryGrid
+            .Descendants()
+            .Single(element =>
+                element.Name.LocalName == "StackPanel"
+                && HasClass(element, "status-title-inline"));
+        Assert.Equal("Horizontal", titleRow.Attribute("Orientation")?.Value);
+        Assert.Equal(
+            ["{Binding Shell.CurrentViewTitle}", "{Binding Shell.VersionText}"],
+            titleRow
+                .Elements()
+                .Where(element => element.Name.LocalName == "TextBlock")
+                .Select(element => element.Attribute("Text")?.Value ?? "")
+                .ToArray());
     }
 
     [Fact]
@@ -926,6 +940,16 @@ public sealed partial class UiStyleContractTests
             "ListBox.settings-navigation > ListBoxItem:selected");
 
         Assert.Equal("SemiBold", selected["FontWeight"]);
+    }
+
+    [Fact]
+    public void SettingsGroups_UseAvailableContentWidth()
+    {
+        var document = XDocument.Load(ProjectFile("Views/MainWindow.Styles.axaml"));
+        var settingsGroup = GetStyleSetters(document, "StackPanel.settings-group");
+
+        Assert.DoesNotContain("MaxWidth", settingsGroup.Keys);
+        Assert.DoesNotContain("HorizontalAlignment", settingsGroup.Keys);
     }
 
     [Fact]
