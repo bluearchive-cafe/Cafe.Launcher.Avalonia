@@ -298,6 +298,11 @@
         <Setter Property="Background" Value="{DynamicResource LauncherDialogClosePressedBrush}"/>
         <Setter Property="Foreground" Value="{DynamicResource LauncherTextPrimaryBrush}"/>
     </Style>
+    <Style Selector="Button.dialog-close:focus-visible">
+        <Setter Property="Background" Value="{DynamicResource LauncherAccentSoftBrush}"/>
+        <Setter Property="BorderBrush" Value="{DynamicResource LauncherAccentBrush}"/>
+        <Setter Property="BorderThickness" Value="1"/>
+    </Style>
     <Style Selector="Button.dialog-close.header-action">
         <Setter Property="Margin" Value="0,0,16,0"/>
     </Style>
@@ -494,26 +499,26 @@
         <Setter Property="BorderThickness" Value="0"/>
     </Style>
     <Style Selector="ListBox.settings-navigation > ListBoxItem:selected">
-        <Setter Property="Background" Value="{DynamicResource LauncherAccentSoftBrush}"/>
+        <Setter Property="Background" Value="{DynamicResource LauncherFlatPressedBrush}"/>
         <Setter Property="Foreground" Value="{DynamicResource LauncherTextPrimaryBrush}"/>
         <Setter Property="BorderBrush" Value="{DynamicResource LauncherAccentBrush}"/>
         <Setter Property="BorderThickness" Value="3,0,0,0"/>
         <Setter Property="FontWeight" Value="SemiBold"/>
     </Style>
     <Style Selector="ListBox.settings-navigation > ListBoxItem:selected:not(:focus)">
-        <Setter Property="Background" Value="{DynamicResource LauncherAccentSoftBrush}"/>
+        <Setter Property="Background" Value="{DynamicResource LauncherFlatPressedBrush}"/>
         <Setter Property="Foreground" Value="{DynamicResource LauncherTextPrimaryBrush}"/>
         <Setter Property="BorderBrush" Value="{DynamicResource LauncherAccentBrush}"/>
         <Setter Property="BorderThickness" Value="3,0,0,0"/>
     </Style>
     <Style Selector="ListBox.settings-navigation > ListBoxItem:selected:pointerover">
-        <Setter Property="Background" Value="{DynamicResource LauncherAccentSoftBrush}"/>
+        <Setter Property="Background" Value="{DynamicResource LauncherFlatPressedBrush}"/>
         <Setter Property="Foreground" Value="{DynamicResource LauncherTextPrimaryBrush}"/>
         <Setter Property="BorderBrush" Value="{DynamicResource LauncherAccentBrush}"/>
         <Setter Property="BorderThickness" Value="3,0,0,0"/>
     </Style>
     <Style Selector="ListBox.settings-navigation > ListBoxItem:selected:pressed">
-        <Setter Property="Background" Value="{DynamicResource LauncherAccentSoftBrush}"/>
+        <Setter Property="Background" Value="{DynamicResource LauncherFlatPressedBrush}"/>
         <Setter Property="Foreground" Value="{DynamicResource LauncherTextPrimaryBrush}"/>
         <Setter Property="BorderBrush" Value="{DynamicResource LauncherAccentBrush}"/>
         <Setter Property="BorderThickness" Value="3,0,0,0"/>
@@ -528,23 +533,23 @@
         <Setter Property="Foreground" Value="{DynamicResource LauncherAccentBrush}"/>
     </Style>
     <Style Selector="ListBox.settings-navigation > ListBoxItem:pressed /template/ ContentPresenter#PART_ContentPresenter">
-        <Setter Property="Background" Value="{DynamicResource LauncherAccentSoftBrush}"/>
+        <Setter Property="Background" Value="{DynamicResource LauncherFlatPressedBrush}"/>
         <Setter Property="Foreground" Value="{DynamicResource LauncherTextPrimaryBrush}"/>
     </Style>
     <Style Selector="ListBox.settings-navigation > ListBoxItem:selected /template/ ContentPresenter#PART_ContentPresenter">
-        <Setter Property="Background" Value="{DynamicResource LauncherAccentSoftBrush}"/>
+        <Setter Property="Background" Value="{DynamicResource LauncherFlatPressedBrush}"/>
         <Setter Property="Foreground" Value="{DynamicResource LauncherTextPrimaryBrush}"/>
     </Style>
     <Style Selector="ListBox.settings-navigation > ListBoxItem:selected:not(:focus) /template/ ContentPresenter#PART_ContentPresenter">
-        <Setter Property="Background" Value="{DynamicResource LauncherAccentSoftBrush}"/>
+        <Setter Property="Background" Value="{DynamicResource LauncherFlatPressedBrush}"/>
         <Setter Property="Foreground" Value="{DynamicResource LauncherTextPrimaryBrush}"/>
     </Style>
     <Style Selector="ListBox.settings-navigation > ListBoxItem:selected:pointerover /template/ ContentPresenter#PART_ContentPresenter">
-        <Setter Property="Background" Value="{DynamicResource LauncherAccentSoftBrush}"/>
+        <Setter Property="Background" Value="{DynamicResource LauncherFlatPressedBrush}"/>
         <Setter Property="Foreground" Value="{DynamicResource LauncherTextPrimaryBrush}"/>
     </Style>
     <Style Selector="ListBox.settings-navigation > ListBoxItem:selected:pressed /template/ ContentPresenter#PART_ContentPresenter">
-        <Setter Property="Background" Value="{DynamicResource LauncherAccentSoftBrush}"/>
+        <Setter Property="Background" Value="{DynamicResource LauncherFlatPressedBrush}"/>
         <Setter Property="Foreground" Value="{DynamicResource LauncherTextPrimaryBrush}"/>
     </Style>
     <Style Selector="TextBlock.settings-navigation-item">
@@ -605,7 +610,7 @@
         <Setter Property="VerticalAlignment" Value="Center"/>
     </Style>
     <Style Selector="StackPanel.log-filter-bar">
-        <Setter Property="Margin" Value="16,12"/>
+        <Setter Property="Margin" Value="16,12,16,0"/>
     </Style>
     <Style Selector="Border.log-empty-state">
         <Setter Property="Margin" Value="16"/>
@@ -793,6 +798,10 @@
         <Setter Property="FontWeight" Value="SemiBold"/>
         <Setter Property="Foreground" Value="{DynamicResource LauncherTextPrimaryBrush}"/>
     </Style>
+    <Style Selector="TextBlock.status-summary-version">
+        <Setter Property="FontSize" Value="15"/>
+        <Setter Property="VerticalAlignment" Value="Center"/>
+    </Style>
     <Style Selector="Grid.status-details">
         <Setter Property="ColumnSpacing" Value="{StaticResource LauncherSpacingSm}"/>
         <Setter Property="RowSpacing" Value="{StaticResource LauncherSpacingSm}"/>
@@ -823,6 +832,12 @@
     <Style Selector="Border.settings-icon.danger">
         <Setter Property="Background" Value="{DynamicResource LauncherDangerSoftBrush}"/>
         <Setter Property="BorderBrush" Value="{DynamicResource LauncherDangerBrush}"/>
+    </Style>
+    <Style Selector="materialIcons|MaterialIcon.confirm-heading-icon">
+        <Setter Property="Foreground" Value="{DynamicResource LauncherAccentBrush}"/>
+    </Style>
+    <Style Selector="materialIcons|MaterialIcon.confirm-heading-icon.danger">
+        <Setter Property="Foreground" Value="{DynamicResource LauncherDangerBrush}"/>
     </Style>
     <Style Selector="Border.version-chip">
         <Setter Property="Background" Value="{DynamicResource LauncherAccentSoftBrush}"/>
@@ -1005,6 +1020,9 @@
         <Setter Property="Padding" Value="10,4"/>
         <Setter Property="MinHeight" Value="28"/>
     </Style>
+    <Style Selector="Button.news-tab.log-filter">
+        <Setter Property="Height" Value="{StaticResource LauncherControlHeightSetting}"/>
+    </Style>
     <Style Selector="Button.news-tab:pointerover">
         <Setter Property="Background" Value="{DynamicResource LauncherAccentHoverBrush}"/>
         <Setter Property="Foreground" Value="{DynamicResource LauncherOnAccentBrush}"/>
@@ -1012,6 +1030,11 @@
     <Style Selector="Button.news-tab.active">
         <Setter Property="Background" Value="{DynamicResource LauncherAccentBrush}"/>
         <Setter Property="Foreground" Value="{DynamicResource LauncherOnAccentBrush}"/>
+    </Style>
+    <Style Selector="Border.info-strip.resource-panel-status">
+        <Setter Property="Background" Value="{DynamicResource LauncherContentRowBrush}"/>
+        <Setter Property="BorderBrush" Value="{DynamicResource LauncherAccentBorderBrush}"/>
+        <Setter Property="BorderThickness" Value="1"/>
     </Style>
 
     <!-- Shared utility styles for repeated inline patterns -->

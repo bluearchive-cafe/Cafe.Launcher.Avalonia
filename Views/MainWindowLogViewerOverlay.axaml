@@ -29,24 +29,25 @@
 
                 <!-- Filter bar -->
                 <StackPanel Grid.Row="1" Orientation="Horizontal" Spacing="{StaticResource LauncherSpacingSm}" Classes="log-filter-bar">
-                    <Button Classes="news-tab" Classes.active="{Binding LogViewer.IsFilterAllActive}"
+                    <Button Classes="news-tab log-filter" Classes.active="{Binding LogViewer.IsFilterAllActive}"
                             Command="{Binding LogViewer.SetFilterAllCommand}">
                         <TextBlock Text="{Binding Shell.I18n.LogFilterAll}"/>
                     </Button>
-                    <Button Classes="news-tab" Classes.active="{Binding LogViewer.IsFilterErrorActive}"
+                    <Button Classes="news-tab log-filter" Classes.active="{Binding LogViewer.IsFilterErrorActive}"
                             Command="{Binding LogViewer.SetFilterErrorCommand}">
                         <TextBlock Text="{Binding Shell.I18n.LogFilterError}"/>
                     </Button>
-                    <Button Classes="news-tab" Classes.active="{Binding LogViewer.IsFilterWarnActive}"
+                    <Button Classes="news-tab log-filter" Classes.active="{Binding LogViewer.IsFilterWarnActive}"
                             Command="{Binding LogViewer.SetFilterWarnCommand}">
                         <TextBlock Text="{Binding Shell.I18n.LogFilterWarning}"/>
                     </Button>
-                    <Button Classes="news-tab" Classes.active="{Binding LogViewer.IsFilterInfoActive}"
+                    <Button Classes="news-tab log-filter" Classes.active="{Binding LogViewer.IsFilterInfoActive}"
                             Command="{Binding LogViewer.SetFilterInfoCommand}">
                         <TextBlock Text="{Binding Shell.I18n.LogFilterInformation}"/>
                     </Button>
                     <TextBox Text="{Binding LogViewer.FilterText, Mode=TwoWay}" PlaceholderText="{Binding Shell.I18n.LogSearchPlaceholder}"
-                             Classes="uid-input" MinWidth="160" MinHeight="{StaticResource LauncherControlHeightSetting}" VerticalAlignment="Center"/>
+                             Classes="uid-input log-search" MinWidth="160"
+                             Height="{StaticResource LauncherControlHeightSetting}" VerticalAlignment="Center"/>
                 </StackPanel>
 
                 <!-- Log entries list -->

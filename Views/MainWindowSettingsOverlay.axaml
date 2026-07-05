@@ -68,7 +68,7 @@
                                             VerticalAlignment="Center"
                                             Margin="8,0,0,0">
                                     <TextBlock Text="{Binding Shell.CurrentViewTitle}" Classes="status-summary-title"/>
-                                    <TextBlock Text="{Binding Shell.VersionText}" Classes="caption"/>
+                                    <TextBlock Text="{Binding Shell.VersionText}" Classes="caption status-summary-version"/>
                                 </StackPanel>
                                 <Border Grid.Column="2" Classes="status-detail">
                                     <TextBlock Text="{Binding Shell.NetworkStatusValueText}"

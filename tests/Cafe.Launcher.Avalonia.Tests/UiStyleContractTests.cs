@@ -257,7 +257,7 @@ public sealed partial class UiStyleContractTests
             "{DynamicResource LauncherAccentBrush}",
             GetStyleSetters(document, "ListBox.settings-navigation > ListBoxItem:selected")["BorderBrush"]);
         Assert.Equal(
-            "{DynamicResource LauncherAccentSoftBrush}",
+            "{DynamicResource LauncherFlatPressedBrush}",
             GetStyleSetters(document, "ListBox.settings-navigation > ListBoxItem:selected:not(:focus)")["Background"]);
         Assert.Equal(
             "{DynamicResource LauncherTextPrimaryBrush}",
@@ -375,8 +375,8 @@ public sealed partial class UiStyleContractTests
         Assert.Equal("20", resources["LauncherIconLg"]);
         Assert.Equal("22", resources["LauncherIconXl"]);
         Assert.Equal("24", resources["LauncherIconXxl"]);
-        Assert.Equal("44", resources["LauncherControlHeightSetting"]);
-        Assert.Equal("44", resources["LauncherControlHeightDialog"]);
+        Assert.Equal("36", resources["LauncherControlHeightSetting"]);
+        Assert.Equal("42", resources["LauncherControlHeightDialog"]);
         Assert.Equal("48", resources["LauncherControlHeightBottom"]);
         Assert.Equal("58", resources["LauncherControlHeightLaunch"]);
     }
@@ -568,7 +568,7 @@ public sealed partial class UiStyleContractTests
                     StringComparer.Ordinal);
 
             Assert.Equal(
-                "{DynamicResource LauncherAccentSoftBrush}",
+                "{DynamicResource LauncherFlatPressedBrush}",
                 setters["Background"]);
             Assert.Equal(
                 "{DynamicResource LauncherTextPrimaryBrush}",
@@ -940,6 +940,116 @@ public sealed partial class UiStyleContractTests
             "ListBox.settings-navigation > ListBoxItem:selected");
 
         Assert.Equal("SemiBold", selected["FontWeight"]);
+        Assert.Equal(
+            "{DynamicResource LauncherFlatPressedBrush}",
+            selected["Background"]);
+    }
+
+    [Fact]
+    public void StatusSummary_TitleAndVersionUseMatchingTypography()
+    {
+        var document = XDocument.Load(ProjectFile("Views/MainWindow.Styles.axaml"));
+        var title = GetStyleSetters(document, "TextBlock.status-summary-title");
+        var version = GetStyleSetters(document, "TextBlock.status-summary-version");
+
+        Assert.Equal(title["FontSize"], version["FontSize"]);
+        Assert.Equal("Center", version["VerticalAlignment"]);
+    }
+
+    [Fact]
+    public void DialogClose_FocusUsesSubtleAccentTreatment()
+    {
+        var document = XDocument.Load(ProjectFile("Views/MainWindow.Styles.axaml"));
+        var focus = GetStyleSetters(document, "Button.dialog-close:focus-visible");
+
+        Assert.Equal("{DynamicResource LauncherAccentSoftBrush}", focus["Background"]);
+        Assert.Equal("{DynamicResource LauncherAccentBrush}", focus["BorderBrush"]);
+        Assert.Equal("1", focus["BorderThickness"]);
+    }
+
+    [Fact]
+    public void ConfirmDialogs_DangerousActionsUseDangerHeadingIcons()
+    {
+        var control = XDocument.Load(ProjectFile("Controls/ConfirmDialog.axaml"));
+        var icon = control
+            .Descendants()
+            .Single(element =>
+                element.Name.LocalName == "MaterialIcon"
+                && HasClass(element, "confirm-heading-icon"));
+        Assert.Equal(
+            "{Binding IsDangerIcon, ElementName=Root}",
+            icon.Attribute("Classes.danger")?.Value);
+
+        var styles = XDocument.Load(ProjectFile("Views/MainWindow.Styles.axaml"));
+        Assert.Equal(
+            "{DynamicResource LauncherDangerBrush}",
+            GetStyleSetters(
+                styles,
+                "materialIcons|MaterialIcon.confirm-heading-icon.danger")["Foreground"]);
+
+        var dialogs = XDocument.Load(ProjectFile("Views/MainWindowDialogsOverlay.axaml"));
+        var dangerousConfirmDialogs = dialogs
+            .Descendants()
+            .Where(element =>
+                element.Name.LocalName == "ConfirmDialog"
+                && element.Attribute("IsDangerConfirm")?.Value == "True")
+            .ToList();
+        Assert.NotEmpty(dangerousConfirmDialogs);
+        Assert.All(
+            dangerousConfirmDialogs,
+            dialog => Assert.Equal("True", dialog.Attribute("IsDangerIcon")?.Value));
+    }
+
+    [Fact]
+    public void LogViewer_FilterControlsShareHeightAndSingleBottomGap()
+    {
+        var document = XDocument.Load(ProjectFile("Views/MainWindowLogViewerOverlay.axaml"));
+        var filterButtons = document
+            .Descendants()
+            .Where(element =>
+                element.Name.LocalName == "Button"
+                && HasClass(element, "log-filter"))
+            .ToList();
+        Assert.Equal(4, filterButtons.Count);
+
+        var search = document
+            .Descendants()
+            .Single(element =>
+                element.Name.LocalName == "TextBox"
+                && HasClass(element, "log-search"));
+        Assert.Equal(
+            "{StaticResource LauncherControlHeightSetting}",
+            search.Attribute("Height")?.Value);
+
+        var styles = XDocument.Load(ProjectFile("Views/MainWindow.Styles.axaml"));
+        Assert.Equal(
+            "{StaticResource LauncherControlHeightSetting}",
+            GetStyleSetters(styles, "Button.news-tab.log-filter")["Height"]);
+        Assert.Equal(
+            "16,12,16,0",
+            GetStyleSetters(styles, "StackPanel.log-filter-bar")["Margin"]);
+    }
+
+    [Fact]
+    public void ResourcePanel_StatusStripHasVisibleSurfaceAndBorder()
+    {
+        var dialogs = XDocument.Load(ProjectFile("Views/MainWindowDialogsOverlay.axaml"));
+        var statusStrip = dialogs
+            .Descendants()
+            .Single(element =>
+                element.Name.LocalName == "Border"
+                && HasClass(element, "resource-panel-status"));
+        Assert.True(HasClass(statusStrip, "info-strip"));
+
+        var styles = XDocument.Load(ProjectFile("Views/MainWindow.Styles.axaml"));
+        var statusStyle = GetStyleSetters(styles, "Border.info-strip.resource-panel-status");
+        Assert.Equal(
+            "{DynamicResource LauncherContentRowBrush}",
+            statusStyle["Background"]);
+        Assert.Equal(
+            "{DynamicResource LauncherAccentBorderBrush}",
+            statusStyle["BorderBrush"]);
+        Assert.Equal("1", statusStyle["BorderThickness"]);
     }
 
     [Fact]
