@@ -59,7 +59,7 @@
                     <TextBlock Text="{Binding Shell.I18n.ThemeColorPaletteDescription}" Classes="caption" TextWrapping="Wrap"/>
                 </StackPanel>
                 <StackPanel Grid.Column="2" Orientation="Horizontal" Spacing="{StaticResource LauncherSpacingSm}" VerticalAlignment="Center">
-                    <ItemsControl Width="136"
+                    <ItemsControl Width="212"
                                   ItemsSource="{Binding Settings.Appearance.ThemeColorPaletteItems}">
                         <ItemsControl.ItemsPanel>
                             <StaticResource ResourceKey="HorizontalSpacingSmPanel"/>

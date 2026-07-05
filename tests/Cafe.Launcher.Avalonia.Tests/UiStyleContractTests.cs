@@ -320,6 +320,20 @@ public sealed partial class UiStyleContractTests
     }
 
     [Fact]
+    public void AppearancePalette_ReservesWidthForFiveInteractiveSwatches()
+    {
+        var document = XDocument.Load(ProjectFile("Views/SettingsAppearanceSection.axaml"));
+        var palette = document
+            .Descendants()
+            .Single(element =>
+                element.Name.LocalName == "ItemsControl"
+                && element.Attribute("ItemsSource")?.Value
+                    == "{Binding Settings.Appearance.ThemeColorPaletteItems}");
+
+        Assert.Equal("212", palette.Attribute("Width")?.Value);
+    }
+
+    [Fact]
     public void AboutSection_UsesSettingsGroupForTopLevelRhythm()
     {
         var document = XDocument.Load(ProjectFile("Views/SettingsAboutSection.axaml"));
