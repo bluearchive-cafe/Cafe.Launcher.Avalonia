@@ -24,6 +24,40 @@ public sealed class DialogActionButtonContractTests
                 && element.Attribute("Selector")?.Value == "Button.settings-footer-action");
     }
 
+    [Fact]
+    public void DialogActionConsumers_UseSharedHeight()
+    {
+        var settingsDocument = XDocument.Load(ProjectFile("Views/MainWindowSettingsOverlay.axaml"));
+        var settingsButtons = settingsDocument
+            .Descendants()
+            .Where(element =>
+                element.Name.LocalName == "Button"
+                && (element.Attribute("Classes")?.Value
+                    .Split(' ', StringSplitOptions.RemoveEmptyEntries)
+                    .Contains("settings-footer-action", StringComparer.Ordinal) ?? false))
+            .ToArray();
+
+        Assert.Equal(2, settingsButtons.Length);
+        Assert.All(
+            settingsButtons,
+            button => Assert.Contains(
+                "dialog-action",
+                button.Attribute("Classes")!.Value.Split(
+                    ' ',
+                    StringSplitOptions.RemoveEmptyEntries),
+                StringComparer.Ordinal));
+
+        var dialogsDocument = XDocument.Load(ProjectFile("Views/MainWindowDialogsOverlay.axaml"));
+        var continueAfterCrashButton = dialogsDocument
+            .Descendants()
+            .Single(element =>
+                element.Name.LocalName == "Button"
+                && element.Attribute("Command")?.Value
+                    == "{Binding Dialogs.ContinueAfterCrashCommand}");
+
+        Assert.Null(continueAfterCrashButton.Attribute("Height"));
+    }
+
     private static string ProjectFile(string relativePath) =>
         Path.Combine(FindProjectRoot(), relativePath.Replace('/', Path.DirectorySeparatorChar));
 
