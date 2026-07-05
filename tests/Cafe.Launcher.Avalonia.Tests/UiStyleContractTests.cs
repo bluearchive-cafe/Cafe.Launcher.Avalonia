@@ -1104,6 +1104,31 @@ public sealed partial class UiStyleContractTests
             StringComparison.Ordinal);
     }
 
+    [Fact]
+    public void SystemTrayMenu_DoesNotLoadItemIcons()
+    {
+        var platform = File.ReadAllText(ProjectFile("Services/SystemTrayPlatform.cs"));
+
+        Assert.DoesNotContain("LoadMenuIcon", platform, StringComparison.Ordinal);
+        Assert.DoesNotContain("Icon = menuIcon", platform, StringComparison.Ordinal);
+        Assert.DoesNotContain(
+            "Assets/notification-8be8201c.png",
+            platform,
+            StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public void BundledBackground_UsesNormalizedResourceName()
+    {
+        const string resourceName = "Assets/launcher-background.png";
+        var backgroundViewModel =
+            File.ReadAllText(ProjectFile("ViewModels/BackgroundViewModel.cs"));
+
+        Assert.True(File.Exists(ProjectFile(resourceName)));
+        Assert.Contains(resourceName, backgroundViewModel, StringComparison.Ordinal);
+        Assert.False(File.Exists(ProjectFile("Assets/bg-7b36e4e0.png")));
+    }
+
     private static bool HasClass(XElement element, string className) =>
         element.Attribute("Classes")?.Value
             .Split(' ', StringSplitOptions.RemoveEmptyEntries)

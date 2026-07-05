@@ -1,6 +1,5 @@
 using System;
 using Avalonia.Controls;
-using Avalonia.Media.Imaging;
 using Avalonia.Platform;
 using Cafe.Launcher.Avalonia.Constants;
 
@@ -29,7 +28,6 @@ internal sealed class AvaloniaSystemTrayPlatform : ISystemTrayPlatform
     private NativeMenuItem? titleItem;
     private NativeMenuItem? showItem;
     private NativeMenuItem? exitItem;
-    private Bitmap? menuIcon;
     private Action? showWindow;
     private Action? exitApplication;
     private bool disposed;
@@ -44,7 +42,6 @@ internal sealed class AvaloniaSystemTrayPlatform : ISystemTrayPlatform
 
         using var iconStream = AssetLoader.Open(
             new Uri("avares://Cafe.Launcher.Avalonia/Assets/app-icon.ico"));
-        menuIcon = LoadMenuIcon();
         var menu = CreateMenu();
 
         trayIcon = new TrayIcon
@@ -90,7 +87,6 @@ internal sealed class AvaloniaSystemTrayPlatform : ISystemTrayPlatform
 
         titleItem = new NativeMenuItem(LauncherConstants.ProductName)
         {
-            Icon = menuIcon,
             IsEnabled = false
         };
         menu.Add(titleItem);
@@ -106,20 +102,6 @@ internal sealed class AvaloniaSystemTrayPlatform : ISystemTrayPlatform
         menu.Add(exitItem);
 
         return menu;
-    }
-
-    private static Bitmap? LoadMenuIcon()
-    {
-        try
-        {
-            using var stream = AssetLoader.Open(
-                new Uri("avares://Cafe.Launcher.Avalonia/Assets/notification-8be8201c.png"));
-            return new Bitmap(stream);
-        }
-        catch
-        {
-            return null;
-        }
     }
 
     private void OnTrayClicked(object? sender, EventArgs e) => showWindow?.Invoke();
@@ -153,8 +135,6 @@ internal sealed class AvaloniaSystemTrayPlatform : ISystemTrayPlatform
 
         trayIcon?.Dispose();
         trayIcon = null;
-        menuIcon?.Dispose();
-        menuIcon = null;
         showWindow = null;
         exitApplication = null;
     }
