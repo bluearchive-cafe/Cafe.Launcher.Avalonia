@@ -417,6 +417,27 @@ public sealed class MainWindowHeadlessTests
     }
 
     [AvaloniaFact]
+    public void RepairConfirm_WithLongMessage_DoesNotExceedDefaultMaximumWidth()
+    {
+        using var context = CreateContext();
+        context.Window.Show();
+        context.ViewModel.Dialogs.ShowRepairConfirm(
+            "下载源已切换。Cafe 下载源与官方下载源使用不同的文件清单，因此必须根据当前下载源修复已安装的游戏，才能得到可靠的启动校验结果。现在开始修复吗？");
+        Dispatcher.UIThread.RunJobs();
+
+        var dialog = context.Window
+            .GetVisualDescendants()
+            .OfType<global::Cafe.Launcher.Avalonia.Controls.ConfirmDialog>()
+            .Single(control => control.IsOpen);
+        var panel = dialog
+            .GetVisualDescendants()
+            .OfType<Border>()
+            .Single(control => control.Classes.Contains("confirm-panel"));
+
+        Assert.True(panel.Bounds.Width <= 540);
+    }
+
+    [AvaloniaFact]
     public void MainWindow_WhenEscapeRouteIsInvoked_ClosesSettingsOverlay()
     {
         using var context = CreateContext();
