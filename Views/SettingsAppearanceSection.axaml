@@ -24,6 +24,7 @@
                                  Description="{Binding Shell.I18n.ThemeDescription}">
                 <controls:SettingRow.Action>
                     <ComboBox Classes="setting-control"
+                              AutomationProperties.Name="{Binding Shell.I18n.Theme}"
                               ItemsSource="{Binding Settings.Options.Theme}"
                               SelectedValue="{Binding Settings.Editor.Current.ThemeMode, Mode=TwoWay}"
                               SelectedValueBinding="{Binding Code}"
@@ -39,6 +40,7 @@
                         <Border Classes="color-swatch"
                                 Background="{Binding Settings.Appearance.ThemeColorPreviewBrush}"/>
                         <ComboBox Classes="setting-control"
+                                  AutomationProperties.Name="{Binding Shell.I18n.ThemeColor}"
                                   ItemsSource="{Binding Settings.Options.ThemeColor}"
                                   SelectedValue="{Binding Settings.Editor.Current.ThemeColorMode, Mode=TwoWay}"
                                   SelectedValueBinding="{Binding Code}"
@@ -65,6 +67,7 @@
                         <ItemsControl.ItemTemplate>
                             <DataTemplate x:DataType="models:ThemeColorPaletteItem">
                                 <Button Classes="color-swatch-button"
+                                        AutomationProperties.Name="{Binding DataContext.Shell.I18n.ThemeColorPalette, ElementName=SettingsRoot}"
                                         Command="{Binding DataContext.Settings.Appearance.SelectThemeColorPaletteCommand, ElementName=SettingsRoot}"
                                         CommandParameter="{Binding Index}">
                                     <Border Classes="color-swatch"
@@ -96,6 +99,7 @@
                                  IsVisible="{Binding Settings.Appearance.IsCustomThemeColorSelected}">
                 <controls:SettingRow.Action>
                     <ColorPicker Classes="setting-control"
+                                 AutomationProperties.Name="{Binding Shell.I18n.ThemeColorCustom}"
                                  Color="{Binding Settings.Appearance.SelectedCustomThemeColor, Mode=TwoWay}">
                         <StackPanel Classes="button-content">
                             <Border Classes="color-swatch-preview"
@@ -116,6 +120,7 @@
                                  Description="{Binding Shell.I18n.BackgroundSourceDescription}">
                 <controls:SettingRow.Action>
                     <ComboBox Classes="setting-control"
+                              AutomationProperties.Name="{Binding Shell.I18n.BackgroundSource}"
                               ItemsSource="{Binding Settings.Options.BackgroundSource}"
                               SelectedValue="{Binding Settings.Editor.Current.BackgroundSource, Mode=TwoWay}"
                               SelectedValueBinding="{Binding Code}"
@@ -128,6 +133,7 @@
                                  Description="{Binding Shell.I18n.BackgroundFitDescription}">
                 <controls:SettingRow.Action>
                     <ComboBox Classes="setting-control"
+                              AutomationProperties.Name="{Binding Shell.I18n.BackgroundFit}"
                               ItemsSource="{Binding Settings.Options.BackgroundFit}"
                               SelectedValue="{Binding Settings.Editor.Current.BackgroundFit, Mode=TwoWay}"
                               SelectedValueBinding="{Binding Code}"
@@ -141,6 +147,7 @@
                                  IsVisible="{Binding Settings.Appearance.IsBackgroundFitSelected}">
                 <controls:SettingRow.Action>
                     <ColorPicker Classes="setting-control"
+                                 AutomationProperties.Name="{Binding Shell.I18n.BackgroundFillColor}"
                                  Color="{Binding Settings.Appearance.SelectedBackgroundFillColor, Mode=TwoWay}">
                         <StackPanel Classes="button-content">
                             <Border Classes="color-swatch-preview"
@@ -158,19 +165,24 @@
                                  IsVisible="{Binding Settings.Appearance.IsCustomBackgroundSelected}">
                 <controls:SettingRow.Action>
                     <StackPanel Orientation="Horizontal" Spacing="{StaticResource LauncherSpacingSm}" VerticalAlignment="Center">
-                        <Button Classes="flat-action" Command="{Binding Settings.ChooseBackgroundImageCommand}">
+                        <Button Classes="flat-action"
+                                Command="{Binding Settings.ChooseBackgroundImageCommand}"
+                                AutomationProperties.Name="{Binding Shell.I18n.ChooseImage}">
                             <StackPanel Classes="button-content">
                                 <materialIcons:MaterialIcon Kind="ImageOutline" Width="{StaticResource LauncherIconSm}" Height="{StaticResource LauncherIconSm}"/>
                                 <TextBlock Text="{Binding Shell.I18n.ChooseImage}"/>
                             </StackPanel>
                         </Button>
-                        <Button Classes="flat-action" Command="{Binding Settings.ChooseBackgroundFolderCommand}">
+                        <Button Classes="flat-action"
+                                Command="{Binding Settings.ChooseBackgroundFolderCommand}"
+                                AutomationProperties.Name="{Binding Shell.I18n.ChooseFolder}">
                             <StackPanel Classes="button-content">
                                 <materialIcons:MaterialIcon Kind="FolderOpen" Width="{StaticResource LauncherIconSm}" Height="{StaticResource LauncherIconSm}"/>
                                 <TextBlock Text="{Binding Shell.I18n.ChooseFolder}"/>
                             </StackPanel>
                         </Button>
                         <Button Classes="flat-action" Command="{Binding Settings.ClearBackgroundCommand}"
+                                AutomationProperties.Name="{Binding Shell.I18n.ClearBackground}"
                                 IsVisible="{Binding Settings.Appearance.IsCustomBackground}">
                             <StackPanel Classes="button-content">
                                 <materialIcons:MaterialIcon Kind="DeleteOutline" Width="{StaticResource LauncherIconSm}" Height="{StaticResource LauncherIconSm}"/>

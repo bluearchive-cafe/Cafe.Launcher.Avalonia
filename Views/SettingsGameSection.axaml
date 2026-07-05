@@ -20,6 +20,7 @@
                              Description="{Binding Settings.Editor.Current.GamePath}">
             <controls:SettingRow.Action>
                 <Button Classes="flat-action" Command="{Binding Settings.ChooseGamePathCommand}"
+                        AutomationProperties.Name="{Binding Shell.I18n.Choose}"
                         IsEnabled="{Binding Shell.IsBusy, Converter={x:Static BoolConverters.Not}}">
                     <StackPanel Classes="button-content">
                         <materialIcons:MaterialIcon Kind="FolderOpen" Width="{StaticResource LauncherIconSm}" Height="{StaticResource LauncherIconSm}"/>
@@ -34,6 +35,7 @@
                              Description="{Binding Shell.I18n.LaunchCheckDescription}">
             <controls:SettingRow.Action>
                 <ComboBox Classes="setting-control"
+                          AutomationProperties.Name="{Binding Shell.I18n.LaunchCheck}"
                           ItemsSource="{Binding Settings.Options.LaunchCheckMode}"
                           SelectedValue="{Binding Settings.Editor.Current.LaunchCheckMode, Mode=TwoWay}"
                           SelectedValueBinding="{Binding Code}"
@@ -47,6 +49,7 @@
             <controls:SettingRow.Action>
                 <StackPanel Orientation="Horizontal" Spacing="{StaticResource LauncherSpacingSm}" VerticalAlignment="Center">
                     <Button Classes="flat-action" Command="{Binding Operations.RequestRepairCommand}"
+                            AutomationProperties.Name="{Binding Shell.I18n.Repair}"
                             IsEnabled="{Binding Shell.IsBusy, Converter={x:Static BoolConverters.Not}}">
                         <StackPanel Classes="button-content">
                             <materialIcons:MaterialIcon Kind="Tools" Width="{StaticResource LauncherIconSm}" Height="{StaticResource LauncherIconSm}"/>
@@ -54,6 +57,7 @@
                         </StackPanel>
                     </Button>
                     <Button Classes="flat-action" Command="{Binding Operations.RequestUninstallCommand}"
+                            AutomationProperties.Name="{Binding Shell.I18n.Uninstall}"
                             IsEnabled="{Binding Shell.IsBusy, Converter={x:Static BoolConverters.Not}}">
                         <StackPanel Classes="button-content">
                             <materialIcons:MaterialIcon Kind="TrashCanOutline" Width="{StaticResource LauncherIconSm}" Height="{StaticResource LauncherIconSm}" Foreground="{DynamicResource LauncherDangerBrush}"/>

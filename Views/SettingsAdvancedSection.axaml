@@ -20,6 +20,7 @@
                              Description="{Binding Shell.I18n.LogLevelDescription}">
             <controls:SettingRow.Action>
                 <ComboBox Classes="setting-control"
+                          AutomationProperties.Name="{Binding Shell.I18n.LogLevel}"
                           ItemsSource="{Binding Settings.Options.LogLevel}"
                           SelectedValue="{Binding Settings.Editor.Current.LogLevel, Mode=TwoWay}"
                           SelectedValueBinding="{Binding Code}"

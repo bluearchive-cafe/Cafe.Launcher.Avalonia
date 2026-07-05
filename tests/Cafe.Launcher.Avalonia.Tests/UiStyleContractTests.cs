@@ -129,7 +129,7 @@ public sealed partial class UiStyleContractTests
     }
 
     [Fact]
-    public void SettingsOverlay_UsesFixedTwoColumnCategoryWorkspace()
+    public void SettingsOverlay_UsesResponsiveTwoColumnCategoryWorkspace()
     {
         var document = XDocument.Load(ProjectFile("Views/MainWindowSettingsOverlay.axaml"));
         var dialog = document
@@ -137,8 +137,10 @@ public sealed partial class UiStyleContractTests
             .Single(element =>
                 element.Name.LocalName == "Border"
                 && HasClass(element, "overlay-dialog"));
-        Assert.Equal("960", dialog.Attribute("Width")?.Value);
-        Assert.Equal("620", dialog.Attribute("Height")?.Value);
+        Assert.Null(dialog.Attribute("Width"));
+        Assert.Null(dialog.Attribute("Height"));
+        Assert.Equal("960", dialog.Attribute("MaxWidth")?.Value);
+        Assert.Equal("620", dialog.Attribute("MaxHeight")?.Value);
         var dialogLayout = dialog.Elements().Single(element => element.Name.LocalName == "Grid");
         Assert.Equal("Auto,*,Auto", dialogLayout.Attribute("RowDefinitions")?.Value);
 
@@ -373,8 +375,8 @@ public sealed partial class UiStyleContractTests
         Assert.Equal("20", resources["LauncherIconLg"]);
         Assert.Equal("22", resources["LauncherIconXl"]);
         Assert.Equal("24", resources["LauncherIconXxl"]);
-        Assert.Equal("36", resources["LauncherControlHeightSetting"]);
-        Assert.Equal("42", resources["LauncherControlHeightDialog"]);
+        Assert.Equal("44", resources["LauncherControlHeightSetting"]);
+        Assert.Equal("44", resources["LauncherControlHeightDialog"]);
         Assert.Equal("48", resources["LauncherControlHeightBottom"]);
         Assert.Equal("58", resources["LauncherControlHeightLaunch"]);
     }
@@ -898,6 +900,84 @@ public sealed partial class UiStyleContractTests
     }
 
     [Fact]
+    public void SettingsOverlay_UsesSingleRowStatusSummary()
+    {
+        var document = XDocument.Load(ProjectFile("Views/MainWindowSettingsOverlay.axaml"));
+        var summaryGrid = document
+            .Descendants()
+            .Single(element =>
+                element.Name.LocalName == "Grid"
+                && element.Parent?.Name.LocalName == "Border"
+                && HasClass(element.Parent, "settings-status-summary"));
+
+        Assert.Equal("Auto,*,Auto,Auto", summaryGrid.Attribute("ColumnDefinitions")?.Value);
+        Assert.Null(summaryGrid.Attribute("RowDefinitions"));
+        Assert.DoesNotContain(
+            document.Descendants(),
+            element => element.Attribute("Text")?.Value == "{Binding Shell.OperationNote}");
+    }
+
+    [Fact]
+    public void SettingsNavigation_SelectedItemUsesSemiboldText()
+    {
+        var document = XDocument.Load(ProjectFile("Views/MainWindow.Styles.axaml"));
+        var selected = GetStyleSetters(
+            document,
+            "ListBox.settings-navigation > ListBoxItem:selected");
+
+        Assert.Equal("SemiBold", selected["FontWeight"]);
+    }
+
+    [Fact]
+    public void SettingsSections_InteractiveControlsHaveLocalizedAutomationNames()
+    {
+        var sectionPaths = new[]
+        {
+            "Views/SettingsGeneralSection.axaml",
+            "Views/SettingsGameSection.axaml",
+            "Views/SettingsDownloadNetworkSection.axaml",
+            "Views/SettingsAppearanceSection.axaml",
+            "Views/SettingsNotificationsContentSection.axaml",
+            "Views/SettingsAdvancedSection.axaml",
+            "Views/SettingsAboutSection.axaml"
+        };
+        var interactiveControlNames = new HashSet<string>(StringComparer.Ordinal)
+        {
+            "Button",
+            "ColorPicker",
+            "ComboBox",
+            "TextBox",
+            "ToggleSwitch"
+        };
+
+        foreach (var sectionPath in sectionPaths)
+        {
+            var document = XDocument.Load(ProjectFile(sectionPath));
+            var controls = document
+                .Descendants()
+                .Where(element => interactiveControlNames.Contains(element.Name.LocalName))
+                .ToList();
+
+            Assert.NotEmpty(controls);
+            Assert.All(
+                controls,
+                control =>
+                {
+                    var automationName = control
+                        .Attributes()
+                        .SingleOrDefault(attribute =>
+                            attribute.Name.LocalName == "AutomationProperties.Name")
+                        ?.Value;
+
+                    Assert.False(
+                        string.IsNullOrWhiteSpace(automationName),
+                        $"{sectionPath}: {control.Name.LocalName} is missing AutomationProperties.Name.");
+                    Assert.Contains("Shell.I18n.", automationName, StringComparison.Ordinal);
+                });
+        }
+    }
+
+    [Fact]
     public void SettingsAboutActionsAndVersionChips_UsePurposeBasedOrder()
     {
         var text = File.ReadAllText(ProjectFile("Views/SettingsAboutSection.axaml"));
@@ -1070,26 +1150,18 @@ public sealed partial class UiStyleContractTests
                 element.Name.LocalName == "Border"
                 && HasClass(element, "status-detail"))
             .ToList();
-        var statusNote = statusPanel
-            .Descendants()
-            .Single(element =>
-                element.Name.LocalName == "Border"
-                && HasClass(element, "status-note"));
-
         Assert.Contains("Shell.CurrentViewTitle", markup, StringComparison.Ordinal);
         Assert.Contains("Shell.VersionText", markup, StringComparison.Ordinal);
         Assert.Contains("Shell.NetworkStatusValueText", markup, StringComparison.Ordinal);
         Assert.Contains("Shell.DiskSpaceText", markup, StringComparison.Ordinal);
-        Assert.Contains("Shell.OperationNote", markup, StringComparison.Ordinal);
+        Assert.DoesNotContain("Shell.OperationNote", markup, StringComparison.Ordinal);
         Assert.Contains("Kind=\"{Binding Shell.StatusIconKind}\"", markup, StringComparison.Ordinal);
         Assert.DoesNotContain("Shell.ExecutableText", markup, StringComparison.Ordinal);
         Assert.DoesNotContain("Shell.StatusText", markup, StringComparison.Ordinal);
         Assert.DoesNotContain("Shell.ProductName", markup, StringComparison.Ordinal);
-        Assert.Equal("Auto,Auto", detailsGrid.Attribute("ColumnDefinitions")?.Value);
-        Assert.Equal("Auto", detailsGrid.Attribute("RowDefinitions")?.Value);
-        Assert.Equal(3, detailCards.Count);
-        Assert.Contains("Grid.Row=\"1\"", statusNote.ToString(SaveOptions.DisableFormatting), StringComparison.Ordinal);
-        Assert.Contains("Grid.ColumnSpan=\"3\"", statusNote.ToString(SaveOptions.DisableFormatting), StringComparison.Ordinal);
+        Assert.Equal("Auto,*,Auto,Auto", detailsGrid.Attribute("ColumnDefinitions")?.Value);
+        Assert.Null(detailsGrid.Attribute("RowDefinitions"));
+        Assert.Equal(2, detailCards.Count);
         Assert.DoesNotContain("MaxWidth=\"160\"", markup, StringComparison.Ordinal);
     }
 

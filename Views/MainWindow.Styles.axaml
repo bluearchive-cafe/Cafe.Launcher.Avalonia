@@ -498,6 +498,7 @@
         <Setter Property="Foreground" Value="{DynamicResource LauncherTextPrimaryBrush}"/>
         <Setter Property="BorderBrush" Value="{DynamicResource LauncherAccentBrush}"/>
         <Setter Property="BorderThickness" Value="3,0,0,0"/>
+        <Setter Property="FontWeight" Value="SemiBold"/>
     </Style>
     <Style Selector="ListBox.settings-navigation > ListBoxItem:selected:not(:focus)">
         <Setter Property="Background" Value="{DynamicResource LauncherAccentSoftBrush}"/>
@@ -559,6 +560,8 @@
     </Style>
     <Style Selector="StackPanel.settings-group">
         <Setter Property="Margin" Value="0,16,0,0"/>
+        <Setter Property="MaxWidth" Value="640"/>
+        <Setter Property="HorizontalAlignment" Value="Left"/>
     </Style>
     <Style Selector="Border.settings-status-summary">
         <Setter Property="Background" Value="{DynamicResource LauncherTransparentBrush}"/>
@@ -872,6 +875,9 @@
         <Setter Property="Background" Value="{DynamicResource LauncherAccentBrush}"/>
         <Setter Property="BorderBrush" Value="{DynamicResource LauncherAccentBrush}"/>
     </Style>
+    <Style Selector="ToggleSwitch.setting-toggle">
+        <Setter Property="MinHeight" Value="{StaticResource LauncherControlHeightSetting}"/>
+    </Style>
     <Style Selector="ToggleSwitch:checked:pointerover /template/ Border#SwitchKnobBounds">
         <Setter Property="Background" Value="{DynamicResource LauncherAccentHoverBrush}"/>
         <Setter Property="BorderBrush" Value="{DynamicResource LauncherAccentHoverBrush}"/>
@@ -893,8 +899,8 @@
     <Style Selector="Button.color-swatch-button">
         <Setter Property="Background" Value="{DynamicResource LauncherTransparentBrush}"/>
         <Setter Property="BorderThickness" Value="0"/>
-        <Setter Property="Width" Value="{StaticResource LauncherSwatchSize}"/>
-        <Setter Property="Height" Value="{StaticResource LauncherSwatchSize}"/>
+        <Setter Property="Width" Value="{StaticResource LauncherControlHeightSetting}"/>
+        <Setter Property="Height" Value="{StaticResource LauncherControlHeightSetting}"/>
         <Setter Property="Padding" Value="0"/>
         <Setter Property="CornerRadius" Value="{StaticResource LauncherRadiusSm}"/>
         <Setter Property="HorizontalContentAlignment" Value="Stretch"/>

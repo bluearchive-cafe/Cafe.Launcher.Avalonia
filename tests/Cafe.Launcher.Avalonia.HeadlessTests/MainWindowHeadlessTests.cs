@@ -232,6 +232,50 @@ public sealed class MainWindowHeadlessTests
     }
 
     [AvaloniaFact]
+    public void SettingsOverlay_AtMinimumWindowSize_KeepsDialogAndFooterVisible()
+    {
+        using var context = CreateContext();
+        context.Window.Width = 1024;
+        context.Window.Height = 640;
+        OpenSettings(context);
+
+        var settingsOverlay = context.Window
+            .GetVisualDescendants()
+            .OfType<MainWindowSettingsOverlay>()
+            .Single();
+        var dialog = settingsOverlay
+            .GetVisualDescendants()
+            .OfType<Border>()
+            .Single(control => control.Classes.Contains("overlay-dialog"));
+        var footer = dialog
+            .GetVisualDescendants()
+            .OfType<Border>()
+            .Single(control => control.Classes.Contains("dialog-footer"));
+
+        Assert.True(dialog.Bounds.Width <= context.Window.ClientSize.Width - 48);
+        Assert.True(dialog.Bounds.Height <= context.Window.ClientSize.Height - 48);
+        Assert.True(dialog.Bounds.Height > 0);
+        Assert.True(footer.IsEffectivelyVisible);
+        Assert.True(footer.Bounds.Bottom <= dialog.Bounds.Height);
+    }
+
+    [AvaloniaFact]
+    public void SettingsControls_UseMinimumAccessibleInteractionHeight()
+    {
+        using var context = CreateContext();
+        OpenSettings(context);
+
+        var settingControls = context.Window
+            .GetVisualDescendants()
+            .OfType<ComboBox>()
+            .Where(control => control.Classes.Contains("setting-control"))
+            .ToArray();
+
+        Assert.NotEmpty(settingControls);
+        Assert.All(settingControls, control => Assert.True(control.Bounds.Height >= 44));
+    }
+
+    [AvaloniaFact]
     public void SettingsNavigation_WhenFocused_UsesDownAndUpToChangeSelection()
     {
         using var context = CreateContext();
