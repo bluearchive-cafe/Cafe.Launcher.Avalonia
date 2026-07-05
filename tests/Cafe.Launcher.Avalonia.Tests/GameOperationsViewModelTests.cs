@@ -460,6 +460,44 @@ public sealed class GameOperationsViewModelTests
     }
 
     [Fact]
+    public async Task RequestRepairCommand_WhenNotInstalled_ShowsWarningToast()
+    {
+        var context = CreateContext();
+        var notifications = new List<ToastNotification>();
+        context.ToastService.ToastRaised += notifications.Add;
+        context.ViewModel.ApplySnapshot(new LauncherStatusSnapshot
+        {
+            RuntimeState = LauncherRuntimeState.NotInstalled
+        });
+
+        await context.ViewModel.RequestRepairCommand.ExecuteAsync(null);
+
+        var notification = Assert.Single(notifications);
+        Assert.Equal(ToastSeverity.Warning, notification.Severity);
+        Assert.Equal(context.Shell.OperationNote, notification.Message);
+        Assert.False(context.Dialogs.IsRepairConfirmVisible);
+    }
+
+    [Fact]
+    public async Task RequestUninstallCommand_WhenNotInstalled_ShowsWarningToast()
+    {
+        var context = CreateContext();
+        var notifications = new List<ToastNotification>();
+        context.ToastService.ToastRaised += notifications.Add;
+        context.ViewModel.ApplySnapshot(new LauncherStatusSnapshot
+        {
+            RuntimeState = LauncherRuntimeState.NotInstalled
+        });
+
+        await context.ViewModel.RequestUninstallCommand.ExecuteAsync(null);
+
+        var notification = Assert.Single(notifications);
+        Assert.Equal(ToastSeverity.Warning, notification.Severity);
+        Assert.Equal(context.Shell.OperationNote, notification.Message);
+        Assert.False(context.Dialogs.IsUninstallConfirmVisible);
+    }
+
+    [Fact]
     public void StopOperationCommand_WhenNoDownloadIsRunning_StopsImmediately()
     {
         var context = CreateContext();

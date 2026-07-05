@@ -251,6 +251,7 @@ public partial class GameOperationsViewModel : ViewModelBase
         if (snapshot.RuntimeState is not (LauncherRuntimeState.Corrupted or LauncherRuntimeState.Ready))
         {
             shell.OperationNote = localizer.T("operationUnavailableForCurrentState");
+            toastService.ShowWarning(shell.OperationNote);
             return;
         }
 
@@ -363,6 +364,7 @@ public partial class GameOperationsViewModel : ViewModelBase
         if (snapshot.RuntimeState != LauncherRuntimeState.Ready)
         {
             shell.OperationNote = localizer.T("operationUnavailableForCurrentState");
+            toastService.ShowWarning(shell.OperationNote);
             return;
         }
 
