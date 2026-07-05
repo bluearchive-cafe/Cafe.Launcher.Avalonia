@@ -273,13 +273,7 @@
         <Setter Property="FontWeight" Value="SemiBold"/>
     </Style>
     <Style Selector="Button.dialog-action">
-        <Setter Property="MinHeight" Value="{StaticResource LauncherControlHeightDialog}"/>
-        <Setter Property="MinWidth" Value="108"/>
-        <Setter Property="Padding" Value="16,0"/>
-        <Setter Property="FontSize" Value="14"/>
-    </Style>
-    <Style Selector="Button.settings-footer-action">
-        <Setter Property="Height" Value="{StaticResource LauncherControlHeightBottom}"/>
+        <Setter Property="Height" Value="{StaticResource LauncherControlHeightDialog}"/>
         <Setter Property="MinWidth" Value="108"/>
         <Setter Property="Padding" Value="16,0"/>
         <Setter Property="FontSize" Value="14"/>
