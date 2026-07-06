@@ -4,7 +4,13 @@
     <TargetFramework>net10.0</TargetFramework>
     <AssemblyName>Cafe.Launcher.Avalonia.Tests</AssemblyName>
     <RootNamespace>Cafe.Launcher.Avalonia.Tests</RootNamespace>
-    <OutputType>Exe</OutputType>
+    <!--
+      xUnit v3 requires OutputType=Exe, but the Windows app host cannot
+      be created when cross-compiling on Linux with -r win-x64. Keep the
+      default (Library) during RID-specific builds so the VSTest adapter
+      loads tests in-process; use Exe on native builds for v3 compliance.
+    -->
+    <OutputType Condition="'$(RuntimeIdentifier)' == ''">Exe</OutputType>
     <ImplicitUsings>enable</ImplicitUsings>
     <Nullable>enable</Nullable>
     <AnalysisLevel>latest-recommended</AnalysisLevel>

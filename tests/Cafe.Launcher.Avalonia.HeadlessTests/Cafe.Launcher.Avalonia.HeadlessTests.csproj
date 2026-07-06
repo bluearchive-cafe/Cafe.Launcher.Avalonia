@@ -4,7 +4,8 @@
     <TargetFramework>net10.0</TargetFramework>
     <AssemblyName>Cafe.Launcher.Avalonia.HeadlessTests</AssemblyName>
     <RootNamespace>Cafe.Launcher.Avalonia.HeadlessTests</RootNamespace>
-    <OutputType>Exe</OutputType>
+    <!-- xUnit v3 OutputType: see sibling test project comment for details. -->
+    <OutputType Condition="'$(RuntimeIdentifier)' == ''">Exe</OutputType>
     <ImplicitUsings>enable</ImplicitUsings>
     <Nullable>enable</Nullable>
     <AnalysisLevel>latest-recommended</AnalysisLevel>
