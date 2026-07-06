@@ -4,6 +4,7 @@
     <TargetFramework>net10.0</TargetFramework>
     <AssemblyName>Cafe.Launcher.Avalonia.HeadlessTests</AssemblyName>
     <RootNamespace>Cafe.Launcher.Avalonia.HeadlessTests</RootNamespace>
+    <OutputType>Exe</OutputType>
     <ImplicitUsings>enable</ImplicitUsings>
     <Nullable>enable</Nullable>
     <AnalysisLevel>latest-recommended</AnalysisLevel>
@@ -12,18 +13,16 @@
     <TreatWarningsAsErrors>true</TreatWarningsAsErrors>
     <IsPackable>false</IsPackable>
     <!--
-      xunit.v3 builds this test project as an executable (Microsoft.Testing.Platform host).
       When the CI release build adds a RID (-r win-x64), referencing the self-contained main
       app trips NETSDK1151 (non-self-contained exe references self-contained exe). The test
       host only needs the app's managed assemblies, not its bundled runtime, so allow the
-      mismatch. (The xunit 2.x Tests project is a library and is unaffected.)
+      mismatch.
     -->
     <ValidateExecutableReferencesMatchSelfContained>false</ValidateExecutableReferencesMatchSelfContained>
   </PropertyGroup>
 
   <ItemGroup>
     <PackageReference Include="Avalonia.Headless.XUnit" Version="12.0.5" />
-    <PackageReference Include="coverlet.collector" Version="10.0.1" />
     <PackageReference Include="coverlet.msbuild" Version="10.0.1">
       <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
       <PrivateAssets>all</PrivateAssets>
