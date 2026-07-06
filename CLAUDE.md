@@ -5,7 +5,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 ## Build & Run
 
 ```powershell
-.\verify.ps1                              # Full verification: Debug build → coverage.ps1 (tests + 70% threshold) → Release build
+.\verify.ps1                              # Full verification: Debug build → coverage.ps1 (tests + 50% threshold) → Release build
 .\build.ps1                               # Debug build (expect 0 warnings, 0 errors)
 dotnet restore .\Cafe.Launcher.Avalonia.csproj -r win-x64
 dotnet build .\Cafe.Launcher.Avalonia.csproj -c Debug --no-restore
@@ -17,11 +17,11 @@ dotnet run --project .\Cafe.Launcher.Avalonia.csproj                   # Run loc
 **Tests** — two test projects under `tests/`:
 
 ```powershell
-# Unit tests (xUnit 2.9.3, coverlet 10.0.1)
+# Unit tests (xUnit v3 3.2.2, coverlet.collector 10.0.1, coverlet.msbuild 10.0.1)
 dotnet test .\tests\Cafe.Launcher.Avalonia.Tests\Cafe.Launcher.Avalonia.Tests.csproj -c Debug --no-restore
 dotnet test .\tests\Cafe.Launcher.Avalonia.Tests\Cafe.Launcher.Avalonia.Tests.csproj --filter "FullyQualifiedName~VersionComparerTests"
 
-# Headless Avalonia UI tests (xUnit v3 3.2.2, Avalonia.Headless.XUnit 12.0.4)
+# Headless Avalonia UI tests (xUnit v3 3.2.2, Avalonia.Headless.XUnit 12.0.5, coverlet.msbuild 10.0.1)
 dotnet test .\tests\Cafe.Launcher.Avalonia.HeadlessTests\Cafe.Launcher.Avalonia.HeadlessTests.csproj -c Debug --no-restore
 dotnet test .\tests\Cafe.Launcher.Avalonia.HeadlessTests\Cafe.Launcher.Avalonia.HeadlessTests.csproj --filter "FullyQualifiedName~SystemTrayServiceTests"
 
@@ -37,10 +37,10 @@ Headless test classes: `SystemTrayServiceTests`, `MainWindowHeadlessTests`, `Hea
 
 **Testing infrastructure**: No mocking framework (Moq/NSubstitute) is used. Tests hand-craft `HttpMessageHandler` subclasses (e.g., `GitHubReleaseHandler`) and manual stubs. The source project exposes internals to tests via `[assembly: InternalsVisibleTo("Cafe.Launcher.Avalonia.Tests")]` in `Properties/AssemblyInfo.cs`. Headless tests use `Avalonia.Headless.XUnit` for UI component testing without a display server.
 
-**Code coverage**: `coverage.ps1` runs both test projects with `XPlat Code Coverage` (Cobertura format via `coverage.runsettings`), merges the reports, and enforces a **70% threshold** on both line and branch coverage. The runsettings excludes `.axaml` files and `obj/` directories. `verify.ps1` calls `coverage.ps1` as its test step — coverage must pass for verification to succeed.
+**Code coverage**: `coverage.ps1` runs both test projects with `coverlet.msbuild` (Cobertura format, `CollectCoverage=true`), merges the reports, and enforces a **50% threshold** on both line and branch coverage. Excludes `.axaml` files and `obj/` directories. `verify.ps1` calls `coverage.ps1` as its test step — coverage must pass for verification to succeed.
 
 ```powershell
-.\coverage.ps1    # Run both test projects with coverage, enforce 70% line + branch threshold
+.\coverage.ps1    # Run both test projects with coverage, enforce 50% line + branch threshold
 ```
 
 **Windows installer (NSIS)**: `scripts/Build-Distribution.ps1` builds a standalone ZIP and an NSIS setup EXE (`installer/Cafe.Launcher.Avalonia.nsi`). Requires NSIS 3 with `makensis.exe` on `PATH`. Output goes to `artifacts/distribution/`. The installer installs system-wide to `C:\Program Files\Cafe Launcher`, requires admin rights, and cleans up old installer-managed files on upgrade. Uninstall optionally removes `%LOCALAPPDATA%\Cafe Launcher` (user data).
