@@ -37,7 +37,7 @@ public sealed class InstallationOperationStateTests : IDisposable
         Assert.Equal(localizer.T("gameCorruptedInstallationState"), result.Message);
     }
 
-    [SkippableFact]
+    [Fact]
     public async Task StartAsync_WhenRuntimeStateIsBelowLowestVersion_BlocksLaunch()
     {
         using var apiClient = new LauncherApiClient(
@@ -211,10 +211,10 @@ public sealed class InstallationOperationStateTests : IDisposable
         }
     }
 
-    [SkippableFact]
+    [Fact]
     public async Task StartAsync_WhenInstallationIsReady_StartsConfiguredExecutable()
     {
-        Skip.IfNot(OperatingSystem.IsWindows(), "ComSpec (cmd.exe) is only available on Windows.");
+        Assert.SkipUnless(OperatingSystem.IsWindows(), "ComSpec (cmd.exe) is only available on Windows.");
 
         var gamePath = Path.Combine(tempDir, "YostarGames", "BlueArchive_JP");
         Directory.CreateDirectory(gamePath);
