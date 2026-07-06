@@ -104,6 +104,42 @@ public sealed class MainWindowHeadlessTests
     }
 
     [AvaloniaFact]
+    public void LanguageFont_WhenLanguageChanges_UpdatesWindowAndInheritedText()
+    {
+        using var context = CreateContext();
+        context.Window.Show();
+        Dispatcher.UIThread.RunJobs();
+
+        var visibleText = context.Window
+            .GetVisualDescendants()
+            .OfType<TextBlock>()
+            .First(control => control.IsEffectivelyVisible);
+
+        Assert.Equal("Segoe UI", context.Window.FontFamily.Name);
+        Assert.Equal("Segoe UI", visibleText.FontFamily.Name);
+
+        context.ViewModel.Shell.ApplyLanguage(
+            LauncherLanguages.TraditionalChinese,
+            context.ViewModel.Settings,
+            context.ViewModel.ResourcePanel,
+            hasSnapshot: false);
+        Dispatcher.UIThread.RunJobs();
+
+        Assert.Equal("Microsoft JhengHei UI", context.Window.FontFamily.Name);
+        Assert.Equal("Microsoft JhengHei UI", visibleText.FontFamily.Name);
+
+        context.ViewModel.Shell.ApplyLanguage(
+            LauncherLanguages.Japanese,
+            context.ViewModel.Settings,
+            context.ViewModel.ResourcePanel,
+            hasSnapshot: false);
+        Dispatcher.UIThread.RunJobs();
+
+        Assert.Equal("Yu Gothic UI", context.Window.FontFamily.Name);
+        Assert.Equal("Yu Gothic UI", visibleText.FontFamily.Name);
+    }
+
+    [AvaloniaFact]
     public void SettingsWorkspace_WhenOpened_ShowsOnlyGeneralSection()
     {
         using var context = CreateContext();
