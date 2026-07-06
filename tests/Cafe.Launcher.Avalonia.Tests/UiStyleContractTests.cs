@@ -438,6 +438,30 @@ public sealed partial class UiStyleContractTests
     }
 
     [Fact]
+    public void FontConfiguration_UsesLanguageFontsWithoutInterDefault()
+    {
+        var program = File.ReadAllText(ProjectFile("Program.cs"));
+        var project = XDocument.Load(ProjectFile("Cafe.Launcher.Avalonia.csproj"));
+        var packageNames = project
+            .Descendants()
+            .Where(element => element.Name.LocalName == "PackageReference")
+            .Select(element => element.Attribute("Include")?.Value)
+            .ToArray();
+
+        Assert.DoesNotContain(".WithInterFont()", program, StringComparison.Ordinal);
+        Assert.DoesNotContain("Avalonia.Fonts.Inter", packageNames);
+
+        var appDocument = XDocument.Load(ProjectFile("App.axaml"));
+        var monospace = appDocument
+            .Descendants()
+            .Single(element =>
+                element.Attributes().Any(attribute =>
+                    attribute.Name.LocalName == "Key"
+                    && attribute.Value == "LauncherFontFamilyMonospace"));
+        Assert.Equal("Consolas", monospace.Value.Trim());
+    }
+
+    [Fact]
     public void FontWeight_StrongIsLimitedToConfirmedEmphasisScenarios()
     {
         var document = XDocument.Load(ProjectFile("Views/MainWindow.Styles.axaml"));
