@@ -25,8 +25,6 @@ public sealed class MainWindowHeadlessTests
         (SettingsCategoryCodes.Game, typeof(SettingsGameSection)),
         (SettingsCategoryCodes.DownloadNetwork, typeof(SettingsDownloadNetworkSection)),
         (SettingsCategoryCodes.Appearance, typeof(SettingsAppearanceSection)),
-        (SettingsCategoryCodes.NotificationsContent, typeof(SettingsNotificationsContentSection)),
-        (SettingsCategoryCodes.Advanced, typeof(SettingsAdvancedSection)),
         (SettingsCategoryCodes.About, typeof(SettingsAboutSection))
     ];
 
@@ -185,11 +183,11 @@ public sealed class MainWindowHeadlessTests
     {
         using var context = CreateContext();
         OpenSettings(context);
-        context.ViewModel.Settings.SelectedCategory = SettingsCategoryCodes.Advanced;
+        context.ViewModel.Settings.SelectedCategory = SettingsCategoryCodes.DownloadNetwork;
         context.ViewModel.WindowChrome.ShowSettingsCommand.Execute(null);
         context.ViewModel.WindowChrome.ShowSettingsCommand.Execute(null);
 
-        Assert.Equal(SettingsCategoryCodes.Advanced, context.ViewModel.Settings.SelectedCategory);
+        Assert.Equal(SettingsCategoryCodes.DownloadNetwork, context.ViewModel.Settings.SelectedCategory);
 
         using var newContext = CreateContext();
         Assert.Equal(SettingsCategoryCodes.General, newContext.ViewModel.Settings.SelectedCategory);
@@ -627,7 +625,7 @@ public sealed class MainWindowHeadlessTests
         var sections = window.GetVisualDescendants()
             .Where(control => SettingsSections.Any(section => section.SectionType == control.GetType()))
             .ToArray();
-        Assert.Equal(7, sections.Length);
+        Assert.Equal(5, sections.Length);
         Assert.Single(sections, control => control.GetType() == expectedType && control.IsEffectivelyVisible);
         Assert.All(
             sections.Where(control => control.GetType() != expectedType),
