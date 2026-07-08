@@ -169,6 +169,7 @@
   "resourcePanelSaveUid": "Save UID",
   "resourcePanelUid": "UID",
   "resourcePanelUidEmpty": "Enter a UID before saving.",
+  "resourcePanelUidInvalidFormat": "UID must be exactly 8 uppercase letters (A-Z), e.g. ABCDEFGH.",
   "resourcePanelUidMissing": "No UID was found in the game Cookie file:\n{0}\nEnter a UID manually to continue.",
   "resourcePanelUidSaved": "UID saved.",
   "resourcePanelWaiting": "Maintenance Pending",

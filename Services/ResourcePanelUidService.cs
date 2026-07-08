@@ -1,6 +1,7 @@
 using System;
 using System.IO;
 using System.Linq;
+using System.Text.RegularExpressions;
 using System.Threading;
 using System.Threading.Tasks;
 using Cafe.Launcher.Avalonia.Models;
@@ -12,6 +13,19 @@ public sealed class ResourcePanelUidService
     private const string ResourcePanelCookieName = "uid";
     private const string ResourcePanelCookieDomain = "bluearchive.cafe";
     private const string ResourcePanelCookiePath = "/";
+
+    /// <summary>
+    /// UID format: exactly 8 uppercase ASCII letters (e.g. <c>ABCDEFGH</c>).
+    /// Mirrors the dashboard's <c>/^[A-Z]{8}$/</c> validation so both clients
+    /// reject the same invalid UIDs and never send malformed values to the server.
+    /// </summary>
+    private static readonly Regex UidFormat = new("^[A-Z]{8}$", RegexOptions.Compiled);
+
+    /// <summary>Returns <see langword="true"/> when <paramref name="uid"/> matches the 8-uppercase-letter format.</summary>
+    public static bool IsValidUid(string? uid)
+    {
+        return !string.IsNullOrEmpty(uid) && UidFormat.IsMatch(uid);
+    }
 
     private readonly BestHttpCookieLibraryService cookieLibraryService;
     private readonly LauncherSettingsService settingsService;
@@ -39,19 +53,26 @@ public sealed class ResourcePanelUidService
     public async Task<string> ResolveUidAsync(CancellationToken cancellationToken = default)
     {
         var cookieUid = TryReadCookieUid();
-        if (!string.IsNullOrWhiteSpace(cookieUid))
+        if (IsValidUid(cookieUid))
         {
             return cookieUid;
         }
 
         var settings = await settingsService.ReadAsync(cancellationToken).ConfigureAwait(false);
-        return settings.ResourcePanelUid.Trim();
+        var settingsUid = settings.ResourcePanelUid.Trim();
+        return IsValidUid(settingsUid) ? settingsUid : "";
     }
 
     public async Task SaveManualUidAsync(string uid, CancellationToken cancellationToken = default)
     {
+        var trimmed = uid.Trim();
+        if (!IsValidUid(trimmed))
+        {
+            throw new ArgumentException("UID must be exactly 8 uppercase letters (A-Z).", nameof(uid));
+        }
+
         var settings = await settingsService.ReadAsync(cancellationToken).ConfigureAwait(false);
-        settings.ResourcePanelUid = uid.Trim();
+        settings.ResourcePanelUid = trimmed;
         await settingsService.SaveAsync(settings, cancellationToken).ConfigureAwait(false);
     }
 

@@ -129,6 +129,12 @@ public partial class ResourcePanelViewModel : ViewModelBase, IDisposable
             return;
         }
 
+        if (!ResourcePanelUidService.IsValidUid(uid))
+        {
+            ResourcePanelMessage = localizer.T("resourcePanelUidInvalidFormat");
+            return;
+        }
+
         IsResourcePanelBusy = true;
         try
         {

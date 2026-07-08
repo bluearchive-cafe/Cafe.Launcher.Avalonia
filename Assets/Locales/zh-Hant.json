@@ -169,6 +169,7 @@
   "resourcePanelSaveUid": "儲存 UID",
   "resourcePanelUid": "UID",
   "resourcePanelUidEmpty": "請先輸入 UID。",
+  "resourcePanelUidInvalidFormat": "UID 必須為八位大寫字母（A-Z），例如 ABCDEFGH。",
   "resourcePanelUidMissing": "未能從遊戲 Cookie 檔案中找到 UID：\n{0}\n請手動輸入 UID 後繼續。",
   "resourcePanelUidSaved": "UID 已儲存。",
   "resourcePanelWaiting": "待維護",
