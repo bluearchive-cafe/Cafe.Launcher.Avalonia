@@ -100,6 +100,25 @@ public sealed class LauncherApiClientTests
         Assert.Contains("gzip", ex.Message);
     }
 
+    [Fact]
+    public async Task GetRemoteManifestAsync_WhenFirstAttemptsReturnNonJson_RetriesAndSucceedsOnThirdAttempt()
+    {
+        var badBytes = new byte[] { 0x8B, 0x0B, 0x00, 0x01 };
+        const string goodJson = """{"source":"test","file":[]}""";
+        using var handler = new FlakyManifestHandler(badBytes, goodJson, failFirstAttempts: 2);
+        using var client = new LauncherApiClient(
+            handler,
+            new AuthorizationHeaderFactory(),
+            new PatchUrlGroupService());
+
+        var manifest = await client.GetRemoteManifestAsync(
+            "https://example.com/manifest.json",
+            ProxyModes.Direct);
+
+        Assert.Equal("test", manifest.Source);
+        Assert.Equal(3, handler.CallCount);
+    }
+
     private sealed class JsonResponseHandler(string json) : HttpMessageHandler
     {
         protected override Task<HttpResponseMessage> SendAsync(
@@ -123,5 +142,39 @@ public sealed class LauncherApiClientTests
                     Headers = { ContentType = new MediaTypeHeaderValue(mediaType) }
                 }
             });
+    }
+
+    private sealed class FlakyManifestHandler(byte[] badBytes, string goodJson, int failFirstAttempts) : HttpMessageHandler
+    {
+        private int _callCount;
+
+        public int CallCount => _callCount;
+
+        protected override Task<HttpResponseMessage> SendAsync(
+            HttpRequestMessage request,
+            CancellationToken cancellationToken)
+        {
+            var count = Interlocked.Increment(ref _callCount);
+            HttpResponseMessage response;
+            if (count <= failFirstAttempts)
+            {
+                response = new HttpResponseMessage(HttpStatusCode.OK)
+                {
+                    Content = new ByteArrayContent(badBytes)
+                    {
+                        Headers = { ContentType = new MediaTypeHeaderValue("application/octet-stream") }
+                    }
+                };
+            }
+            else
+            {
+                response = new HttpResponseMessage(HttpStatusCode.OK)
+                {
+                    Content = new StringContent(goodJson, Encoding.UTF8, "application/json")
+                };
+            }
+
+            return Task.FromResult(response);
+        }
     }
 }

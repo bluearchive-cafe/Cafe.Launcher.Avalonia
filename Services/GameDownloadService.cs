@@ -466,6 +466,12 @@ public sealed class GameDownloadService : IDisposable
         catch (Exception exception) when (exception is HttpRequestException or TaskCanceledException or JsonException)
         {
             await diagnostics.ErrorAsync("Game download network failed.", exception, CancellationToken.None).ConfigureAwait(false);
+            // Clear persisted download state to break the refresh→resume→fail loop.
+            // The state was saved before the manifest fetch (line 279); a network
+            // failure here means no files were downloaded yet, so there is nothing
+            // to resume. Without this, every RefreshAsync re-triggers
+            // ResumePersistedDownloadAsync → RunAsync → fail, hammering the CDN.
+            ClearDownloadState();
             return Failed(localizer.F("networkErrorDetail", exception.Message), "game-download-error-network-down");
         }
         catch (Exception exception)
