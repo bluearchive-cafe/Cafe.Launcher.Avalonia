@@ -3,13 +3,13 @@ using System.Globalization;
 using Avalonia;
 using Avalonia.Data.Converters;
 using Avalonia.Media;
-using Cafe.Launcher.Avalonia.Services;
+using Cafe.Launcher.Avalonia.Models;
 
 namespace Cafe.Launcher.Avalonia.Converters;
 
-public sealed class ToastSeverityToBrushConverter : IValueConverter
+public sealed class ResourcePanelStatusToBrushConverter : IValueConverter
 {
-    public static readonly ToastSeverityToBrushConverter Instance = new();
+    public static readonly ResourcePanelStatusToBrushConverter Instance = new();
 
     public object? Convert(
         object? value,
@@ -17,18 +17,14 @@ public sealed class ToastSeverityToBrushConverter : IValueConverter
         object? parameter,
         CultureInfo culture)
     {
-        if (value is not ToastSeverity severity)
+        if (value is not ResourcePanelItemStatus status)
         {
             return null;
         }
 
-        var resourceKey = severity switch
-        {
-            ToastSeverity.Success => "LauncherToastSuccessBrush",
-            ToastSeverity.Warning => "LauncherToastWarningBrush",
-            ToastSeverity.Error => "LauncherToastErrorBrush",
-            _ => "LauncherToastInfoBrush"
-        };
+        var resourceKey = status == ResourcePanelItemStatus.Failed
+            ? "LauncherDangerBrush"
+            : "LauncherTextSecondaryBrush";
 
         var app = Application.Current;
         return app?.TryGetResource(

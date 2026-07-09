@@ -8,7 +8,7 @@ using Cafe.Launcher.Avalonia.Models;
 
 namespace Cafe.Launcher.Avalonia.Services;
 
-public sealed class ResourcePanelUidService
+public sealed partial class ResourcePanelUidService
 {
     private const string ResourcePanelCookieName = "uid";
     private const string ResourcePanelCookieDomain = "bluearchive.cafe";
@@ -19,7 +19,8 @@ public sealed class ResourcePanelUidService
     /// Mirrors the dashboard's <c>/^[A-Z]{8}$/</c> validation so both clients
     /// reject the same invalid UIDs and never send malformed values to the server.
     /// </summary>
-    private static readonly Regex UidFormat = new("^[A-Z]{8}$", RegexOptions.Compiled);
+    [GeneratedRegex("^[A-Z]{8}$")]
+    private static partial Regex UidFormat { get; }
 
     /// <summary>Returns <see langword="true"/> when <paramref name="uid"/> matches the 8-uppercase-letter format.</summary>
     public static bool IsValidUid(string? uid)
@@ -50,7 +51,54 @@ public sealed class ResourcePanelUidService
 
     public string CookieLibraryPath => cookieLibraryPath;
 
+    public async Task<string> GetUidSourceAsync(CancellationToken cancellationToken = default)
+    {
+        var settings = await settingsService.ReadAsync(cancellationToken).ConfigureAwait(false);
+        return settings.ResourcePanelUidSource;
+    }
+
+    internal async Task<LauncherSettings> ReadSettingsAsync(CancellationToken cancellationToken = default)
+    {
+        return await settingsService.ReadAsync(cancellationToken).ConfigureAwait(false);
+    }
+
+    internal async Task SaveSettingsAsync(LauncherSettings settings, CancellationToken cancellationToken = default)
+    {
+        await settingsService.SaveAsync(settings, cancellationToken).ConfigureAwait(false);
+    }
+
     public async Task<string> ResolveUidAsync(CancellationToken cancellationToken = default)
+    {
+        var settings = await settingsService.ReadAsync(cancellationToken).ConfigureAwait(false);
+        return ResolveUidCore(settings, settings.ResourcePanelUidSource);
+    }
+
+    public async Task<string> ResolveUidWithSourceAsync(
+        string uidSource,
+        CancellationToken cancellationToken = default)
+    {
+        var settings = await settingsService.ReadAsync(cancellationToken).ConfigureAwait(false);
+        return ResolveUidCore(settings, uidSource);
+    }
+
+    private string ResolveUidCore(LauncherSettings settings, string uidSource)
+    {
+        if (uidSource == ResourcePanelUidSources.Custom)
+        {
+            var customUid = settings.ResourcePanelUid.Trim();
+            if (IsValidUid(customUid))
+            {
+                return customUid;
+            }
+
+            // Fallback: custom UID invalid, revert to auto-detection
+            return ResolveAutoUidCore(settings);
+        }
+
+        return ResolveAutoUidCore(settings);
+    }
+
+    private string ResolveAutoUidCore(LauncherSettings settings)
     {
         var cookieUid = TryReadCookieUid();
         if (IsValidUid(cookieUid))
@@ -58,7 +106,6 @@ public sealed class ResourcePanelUidService
             return cookieUid;
         }
 
-        var settings = await settingsService.ReadAsync(cancellationToken).ConfigureAwait(false);
         var settingsUid = settings.ResourcePanelUid.Trim();
         return IsValidUid(settingsUid) ? settingsUid : "";
     }

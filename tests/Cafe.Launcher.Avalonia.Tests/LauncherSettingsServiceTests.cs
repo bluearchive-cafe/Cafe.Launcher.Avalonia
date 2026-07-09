@@ -263,6 +263,7 @@ public sealed class LauncherSettingsServiceTests : IDisposable
             "backgroundFit",
             "backgroundFillColor",
             "resourcePanelUid",
+            "resourcePanelUidSource",
             "updateChannel",
             "logLevel"
         };

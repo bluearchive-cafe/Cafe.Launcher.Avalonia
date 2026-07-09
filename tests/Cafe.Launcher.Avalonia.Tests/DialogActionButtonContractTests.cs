@@ -87,7 +87,7 @@ public sealed class DialogActionButtonContractTests
                     "danger-action"))
             .ToArray();
 
-        Assert.Equal(16, actionButtons.Length);
+        Assert.Equal(19, actionButtons.Length);
         Assert.All(
             actionButtons,
             button =>

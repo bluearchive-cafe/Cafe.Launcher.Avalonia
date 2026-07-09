@@ -263,6 +263,12 @@ public sealed class LauncherSettingsService
 
         settings.GamePath ??= "";
         settings.ResourcePanelUid = settings.ResourcePanelUid?.Trim() ?? "";
+        if (settings.ResourcePanelUidSource is not ResourcePanelUidSources.Auto
+            and not ResourcePanelUidSources.Custom)
+        {
+            settings.ResourcePanelUidSource = ResourcePanelUidSources.Auto;
+        }
+
         return settings;
     }
 

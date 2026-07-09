@@ -60,6 +60,11 @@ public sealed partial class LocalizedStrings : ObservableObject
     [ObservableProperty] private string resourcePanelUidEmpty = "";
     [ObservableProperty] private string resourcePanelUidInvalidFormat = "";
     [ObservableProperty] private string resourcePanelCurrentUid = "";
+    [ObservableProperty] private string resourcePanelChangeUid = "";
+    [ObservableProperty] private string resourcePanelUidSource = "";
+    [ObservableProperty] private string resourcePanelUidSourceAuto = "";
+    [ObservableProperty] private string resourcePanelUidSourceCustom = "";
+    [ObservableProperty] private string resourcePanelEditUid = "";
     [ObservableProperty] private string notice = "";
     [ObservableProperty] private string banners = "";
     [ObservableProperty] private string news = "";
@@ -282,6 +287,11 @@ public sealed partial class LocalizedStrings : ObservableObject
         ResourcePanelUidEmpty = localizer.T("resourcePanelUidEmpty");
         ResourcePanelUidInvalidFormat = localizer.T("resourcePanelUidInvalidFormat");
         ResourcePanelCurrentUid = localizer.T("resourcePanelCurrentUid");
+        ResourcePanelChangeUid = localizer.T("resourcePanelChangeUid");
+        ResourcePanelUidSource = localizer.T("resourcePanelUidSource");
+        ResourcePanelUidSourceAuto = localizer.T("resourcePanelUidSourceAuto");
+        ResourcePanelUidSourceCustom = localizer.T("resourcePanelUidSourceCustom");
+        ResourcePanelEditUid = localizer.T("resourcePanelEditUid");
         Notice = localizer.T("notice");
         Banners = localizer.T("banners");
         News = localizer.T("news");
