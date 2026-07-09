@@ -175,7 +175,7 @@ public sealed class ImageCacheService : IDisposable
             },
             urlValidator,
             ct,
-            connectionUsesProxy: proxyMode == ProxyModes.System).ConfigureAwait(false);
+            connectionUsesProxy: proxyMode != ProxyModes.Direct).ConfigureAwait(false);
         response.EnsureSuccessStatusCode();
         if (response.Content.Headers.ContentLength is > MaxImageBytes)
         {

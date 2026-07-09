@@ -136,6 +136,7 @@
   "proxy": "プロキシ",
   "proxyDescription": "ゲームダウンロード時のネットワークプロキシ",
   "proxyDirect": "直接",
+  "proxyAuto": "自動検出",
   "proxySystem": "システムプロキシ",
   "ready": "起動できます。",
   "refresh": "更新",

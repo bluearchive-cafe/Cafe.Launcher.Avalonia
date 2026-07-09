@@ -77,6 +77,29 @@ public sealed class ProxySettingsServiceTests
     }
 
     [Fact]
+    public async Task CreateProxyAsync_WhenModeIsAuto_ReturnsSystemWebProxy()
+    {
+        var service = new ProxySettingsService(() => throw new InvalidOperationException());
+
+        var result = await service.CreateProxyAsync(ProxyModes.Auto);
+
+        Assert.NotNull(result);
+        Assert.IsAssignableFrom<IWebProxy>(result);
+    }
+
+    [Fact]
+    public async Task CreateHttpHandlerAsync_WhenModeIsAuto_EnablesProxyWithDefaultDetection()
+    {
+        var service = new ProxySettingsService(() => throw new InvalidOperationException());
+
+        using var handler = await service.CreateHttpHandlerAsync(ProxyModes.Auto);
+
+        Assert.True(handler.UseProxy);
+        Assert.NotNull(handler.Proxy);
+        Assert.False(handler.AllowAutoRedirect);
+    }
+
+    [Fact]
     public async Task CreateHttpHandlerAsync_WhenModeIsDirect_DisablesProxy()
     {
         var service = new ProxySettingsService(() => throw new InvalidOperationException());

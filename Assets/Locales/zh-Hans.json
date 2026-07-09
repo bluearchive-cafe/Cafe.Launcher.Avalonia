@@ -136,6 +136,7 @@
   "proxy": "代理",
   "proxyDescription": "游戏下载时使用的网络代理",
   "proxyDirect": "直连",
+  "proxyAuto": "跟随系统",
   "proxySystem": "系统代理",
   "ready": "可以启动。",
   "refresh": "刷新",

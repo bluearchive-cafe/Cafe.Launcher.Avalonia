@@ -26,6 +26,7 @@ public static class LaunchCheckModes
 public static class ProxyModes
 {
     public const string Direct = "direct";
+    public const string Auto = "auto";
     public const string System = "system";
 }
 
@@ -147,7 +148,7 @@ public sealed partial class LauncherSettings : ObservableObject
 
     [ObservableProperty]
     [property: JsonPropertyName("proxyMode")]
-    private string proxyMode = ProxyModes.Direct;
+    private string proxyMode = ProxyModes.Auto;
 
     [ObservableProperty]
     [property: JsonPropertyName("closeBehavior")]

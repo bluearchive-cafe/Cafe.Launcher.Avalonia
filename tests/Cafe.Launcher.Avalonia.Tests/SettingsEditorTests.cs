@@ -201,7 +201,7 @@ public sealed class SettingsEditorTests
         var current = editor.Current;
         Assert.Equal("", current.GamePath);
         Assert.Equal(LaunchCheckModes.LocalManifest, current.LaunchCheckMode);
-        Assert.Equal(ProxyModes.Direct, current.ProxyMode);
+        Assert.Equal(ProxyModes.Auto, current.ProxyMode);
         Assert.Equal(CloseBehaviors.Minimize, current.CloseBehavior);
         Assert.Equal(LauncherLanguages.Auto, current.Language);
         Assert.Equal(ThemeModes.System, current.ThemeMode);

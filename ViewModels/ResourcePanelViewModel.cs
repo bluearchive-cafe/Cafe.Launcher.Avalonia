@@ -22,7 +22,7 @@ public partial class ResourcePanelViewModel : ViewModelBase, IDisposable
     private readonly ToastService toastService;
     private readonly CancellationTokenSource lifetimeCts = new();
     private bool disposed;
-    private string proxyMode = ProxyModes.Direct;
+    private string proxyMode = ProxyModes.Auto;
     private string patchUrlGroup = PatchUrlGroups.Official;
     private bool isLoadingSource;
     private bool isSettingUidSource;

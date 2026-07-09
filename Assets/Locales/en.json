@@ -136,6 +136,7 @@
   "proxy": "Proxy",
   "proxyDescription": "Network proxy for game downloads",
   "proxyDirect": "Direct",
+  "proxyAuto": "Auto-detect",
   "proxySystem": "System Proxy",
   "ready": "Ready to start.",
   "refresh": "Refresh",
