@@ -8,7 +8,7 @@ on:
 
 jobs:
   build:
-    runs-on: ubuntu-latest
+    runs-on: windows-latest
 
     defaults:
       run:
@@ -43,6 +43,15 @@ jobs:
 
       - name: Coverage
         run: .\coverage.ps1
+
+      - name: Upload test and coverage reports
+        if: always()
+        uses: actions/upload-artifact@v6
+        with:
+          name: test-and-coverage-reports
+          path: |
+            TestResults/**/*.trx
+            TestResults/Coverage/**/coverage.cobertura.xml
 
       - name: Restore (Debug, win-x64)
         run: dotnet restore $env:Project_Path -r win-x64
