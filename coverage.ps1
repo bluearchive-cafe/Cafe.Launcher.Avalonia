@@ -2,9 +2,10 @@ $ErrorActionPreference = 'Stop'
 $env:DOTNET_CLI_TELEMETRY_OPTOUT = '1'
 $env:AVALONIA_TELEMETRY_OPTOUT = '1'
 $threshold = 0.50
+$lineBaseline = 0.8443
+$branchBaseline = 0.8899
 $resultsRoot = Join-Path $PSScriptRoot 'TestResults\Coverage'
 
-$runsettings = Join-Path $PSScriptRoot 'coverage.runsettings'
 $repositoryRoot = [IO.Path]::GetFullPath($PSScriptRoot)
 $repositoryRootPrefix = $repositoryRoot.TrimEnd([IO.Path]::DirectorySeparatorChar, [IO.Path]::AltDirectorySeparatorChar) + [IO.Path]::DirectorySeparatorChar
 
@@ -33,11 +34,16 @@ foreach ($projectInfo in $projects) {
     $project = $projectInfo.Project
     $projectResults = $projectInfo.ResultsDirectory
 
+    dotnet restore $project
+    if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+
     New-Item -ItemType Directory -Path $projectResults -Force | Out-Null
 
     $coverletOutput = Join-Path $projectResults 'coverage'
 
     dotnet test $project -c Debug --no-restore `
+        --results-directory $projectResults `
+        --logger "trx;LogFileName=$($projectInfo.Name).trx" `
         -p:CollectCoverage=true `
         -p:CoverletOutputFormat=cobertura `
         -p:CoverletOutput=$coverletOutput
@@ -129,6 +135,11 @@ Write-Output ("Headless report: {0}" -f $reportPaths.Headless)
 
 if ($lineRatio -lt $threshold -or $branchRatio -lt $threshold) {
     Write-Error ("Coverage threshold not met. Required {0:P0}; lines {1:N2}%, branches {2:N2}%." -f $threshold, ($lineRatio * 100), ($branchRatio * 100))
+    exit 1
+}
+
+if ($lineRatio -lt $lineBaseline -or $branchRatio -lt $branchBaseline) {
+    Write-Error ("Coverage baseline regressed. Required lines {0:N2}%, branches {1:N2}%; actual lines {2:N2}%, branches {3:N2}%." -f ($lineBaseline * 100), ($branchBaseline * 100), ($lineRatio * 100), ($branchRatio * 100))
     exit 1
 }
 

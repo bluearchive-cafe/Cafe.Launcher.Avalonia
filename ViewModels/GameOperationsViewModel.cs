@@ -24,13 +24,16 @@ public partial class GameOperationsViewModel : ViewModelBase
     private LauncherStatusSnapshot? currentSnapshot;
 
     [ObservableProperty]
-    private bool isInstallPanelVisible = true;
+    [NotifyPropertyChangedFor(nameof(IsInstallPanelVisible))]
+    [NotifyPropertyChangedFor(nameof(IsControlPanelVisible))]
+    [NotifyPropertyChangedFor(nameof(IsProgressPanelVisible))]
+    private GameOperationPanelMode panelMode = GameOperationPanelMode.Install;
 
-    [ObservableProperty]
-    private bool isControlPanelVisible;
+    public bool IsInstallPanelVisible => PanelMode == GameOperationPanelMode.Install;
 
-    [ObservableProperty]
-    private bool isProgressPanelVisible;
+    public bool IsControlPanelVisible => PanelMode == GameOperationPanelMode.Control;
+
+    public bool IsProgressPanelVisible => PanelMode == GameOperationPanelMode.Progress;
 
     [ObservableProperty]
     private string installButtonText = "";
@@ -133,10 +136,10 @@ public partial class GameOperationsViewModel : ViewModelBase
 
     public void SetIdlePanels(LauncherStatusSnapshot? snapshot)
     {
-        IsProgressPanelVisible = false;
         CanPauseOperation = false;
-        IsControlPanelVisible = snapshot?.RuntimeState == LauncherRuntimeState.Ready;
-        IsInstallPanelVisible = !IsControlPanelVisible;
+        PanelMode = snapshot?.RuntimeState == LauncherRuntimeState.Ready
+            ? GameOperationPanelMode.Control
+            : GameOperationPanelMode.Install;
     }
 
     [RelayCommand]
@@ -398,9 +401,7 @@ public partial class GameOperationsViewModel : ViewModelBase
 
         dialogs.IsUninstallConfirmVisible = false;
         shell.IsBusy = true;
-        IsProgressPanelVisible = true;
-        IsInstallPanelVisible = false;
-        IsControlPanelVisible = false;
+        PanelMode = GameOperationPanelMode.Progress;
         ProgressTitle = localizer.T("uninstalling");
         ProgressDetail = localizer.T("deletingManifestFiles");
 
@@ -470,7 +471,7 @@ public partial class GameOperationsViewModel : ViewModelBase
         {
             toastService.ShowSuccess(result.Message);
         }
-        else if (result.ErrorType == "stopped")
+        else if (result.ErrorCode == GameOperationErrorCode.Stopped)
         {
             toastService.ShowWarning(result.Message);
         }
@@ -506,9 +507,7 @@ public partial class GameOperationsViewModel : ViewModelBase
         }
 
         shell.IsBusy = true;
-        IsProgressPanelVisible = true;
-        IsInstallPanelVisible = false;
-        IsControlPanelVisible = false;
+        PanelMode = GameOperationPanelMode.Progress;
         ProgressTitle = localizer.T("preparing");
         ProgressValue = 0;
         ProgressDetail = localizer.T("buildingFileList");
@@ -541,49 +540,57 @@ public partial class GameOperationsViewModel : ViewModelBase
 
     private void ApplyProgressCore(GameOperationProgress progress)
     {
-        IsProgressPanelVisible = true;
-        IsInstallPanelVisible = false;
-        IsControlPanelVisible = false;
+        PanelMode = GameOperationPanelMode.Progress;
         ProgressValue = Math.Clamp(progress.Progress, 0, 100);
         ProgressTitle = ResolveProgressTitle(progress);
         ProgressDetail = progress.Stage switch
         {
-            "repair-confirm" => progress.AffectedFileCount > 0
+            GameOperationStage.RepairConfirmation => progress.AffectedFileCount > 0
                 ? localizer.F(
                     "repairFilesNeeded",
                     progress.AffectedFileCount,
                     FileSizeFormatter.Format(progress.DownloadedSize))
                 : localizer.T("repairNoFilesNeeded"),
-            "paused" => localizer.T("paused"),
-            "repair-check" => localizer.T("repairCheckingFiles"),
-            "update-check" => localizer.T("updateCheckingFiles"),
-            "check-file" => localizer.T("verifyingDownloadedFiles"),
-            "disk-check" => localizer.F(
+            GameOperationStage.Paused => localizer.T("paused"),
+            GameOperationStage.RepairCheck => localizer.T("repairCheckingFiles"),
+            GameOperationStage.UpdateCheck => localizer.T("updateCheckingFiles"),
+            GameOperationStage.FileCheck => localizer.T("verifyingDownloadedFiles"),
+            GameOperationStage.DiskCheck => localizer.F(
                 "diskSpaceCheck",
                 FileSizeFormatter.Format(progress.RequiredDiskBytes),
                 progress.AvailableDiskBytes.HasValue
                     ? FileSizeFormatter.Format(progress.AvailableDiskBytes.Value)
                     : "--"),
-            "verification-retry" => localizer.F(
+            GameOperationStage.VerificationRetry => localizer.F(
                 "verificationRetry",
                 progress.FailedFileCount,
                 progress.RetryAttempt,
                 progress.RetryLimit),
-            "verification-failed" => localizer.F("verificationFailed", progress.FailedFileCount),
-            "repair-done" => localizer.T("repairCompleted"),
-            "download-done" => localizer.T("installUpdateCompleted"),
-            "stopped" => localizer.T("operationStopped"),
-            "download" => localizer.T("downloading"),
-            _ => localizer.T("working")
+            GameOperationStage.VerificationFailed => localizer.F("verificationFailed", progress.FailedFileCount),
+            GameOperationStage.RepairCompleted => localizer.T("repairCompleted"),
+            GameOperationStage.DownloadCompleted => localizer.T("installUpdateCompleted"),
+            GameOperationStage.Stopped => localizer.T("operationStopped"),
+            GameOperationStage.Downloading => localizer.T("downloading"),
+            GameOperationStage.Uninstalling => localizer.T("uninstalling"),
+            GameOperationStage.Idle => localizer.T("working"),
+            _ => throw new ArgumentOutOfRangeException(nameof(progress), progress.Stage, null)
         };
         var clearsDownloadMetrics = progress.Stage is
-            "repair-confirm" or "paused" or "disk-check" or "verification-retry" or "verification-failed";
-        ProgressSpeed = clearsDownloadMetrics ? "" : progress.Speed;
+            GameOperationStage.RepairConfirmation or GameOperationStage.Paused
+            or GameOperationStage.DiskCheck or GameOperationStage.VerificationRetry
+            or GameOperationStage.VerificationFailed;
+        ProgressSpeed = clearsDownloadMetrics || progress.BytesPerSecond <= 0
+            ? ""
+            : $"{FileSizeFormatter.Format(progress.BytesPerSecond)}/S";
         ProgressSize = progress.TotalSize > 0 && !clearsDownloadMetrics
             ? $"{FileSizeFormatter.Format(progress.DownloadedSize)} / {FileSizeFormatter.Format(progress.TotalSize)}"
             : "";
-        ProgressEstimated = progress.TotalSize > 0 && progress.Stage == "download" && !string.IsNullOrWhiteSpace(progress.Estimated)
-            ? localizer.F("estimatedTimeRemaining", progress.Estimated)
+        ProgressEstimated = progress.TotalSize > 0
+            && progress.Stage == GameOperationStage.Downloading
+            && progress.EstimatedRemaining.HasValue
+            ? localizer.F(
+                "estimatedTimeRemaining",
+                progress.EstimatedRemaining.Value.ToString(@"hh\:mm\:ss", System.Globalization.CultureInfo.InvariantCulture))
             : "";
         IsPaused = progress.IsPaused;
         CanPauseOperation = progress.CanPause;
@@ -608,10 +615,11 @@ public partial class GameOperationsViewModel : ViewModelBase
     {
         return progress.OperationKind switch
         {
-            GameOperationKinds.Repair => localizer.T("repairing"),
-            GameOperationKinds.Uninstall => localizer.T("uninstalling"),
-            GameOperationKinds.Download => localizer.T("downloading"),
-            _ => localizer.T("working")
+            GameOperationKind.Repair => localizer.T("repairing"),
+            GameOperationKind.Uninstall => localizer.T("uninstalling"),
+            GameOperationKind.Download => localizer.T("downloading"),
+            GameOperationKind.Idle => localizer.T("working"),
+            _ => throw new ArgumentOutOfRangeException(nameof(progress), progress.OperationKind, null)
         };
     }
 

@@ -5,6 +5,8 @@ using System.Threading.Tasks;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 using Cafe.Launcher.Avalonia.Constants;
+using Cafe.Launcher.Avalonia.Features.Shell;
+using Cafe.Launcher.Avalonia.Helpers;
 using Cafe.Launcher.Avalonia.Models;
 using Cafe.Launcher.Avalonia.Services;
 using Cafe.Launcher.Avalonia.Services.Diagnostics;
@@ -12,7 +14,7 @@ using Serilog.Events;
 
 namespace Cafe.Launcher.Avalonia.ViewModels;
 
-public partial class SettingsViewModel : ViewModelBase, IDisposable
+public partial class SettingsViewModel : ViewModelBase, IDisposable, IModalContentViewModel
 {
     private readonly LauncherSettingsService settingsService;
     private readonly LocalizationService localizer;
@@ -165,12 +167,11 @@ public partial class SettingsViewModel : ViewModelBase, IDisposable
         Options.RefreshDisplayNames();
     }
 
-    public void ApplyLauncherSettings(LauncherSettings settings, string localGamePath)
+    /// <summary>Loads a persisted settings snapshot into the active edit session.</summary>
+    public void ApplyLauncherSettings(LauncherSettings settings)
     {
         editor.ApplySnapshot(settings);
         var snapshot = editor.GetSnapshot();
-        snapshot.GamePath = localGamePath;
-        editor.ApplySnapshot(snapshot);
         Appearance.Load(snapshot);
         ApplyLogLevel(snapshot.LogLevel);
     }
@@ -233,8 +234,7 @@ public partial class SettingsViewModel : ViewModelBase, IDisposable
             editor.ApplySnapshot(settings);
             toastService.ShowSuccess(localizer.T("settingsSaved"));
 
-            if (SettingsSaved is not null)
-                await SettingsSaved.Invoke();
+            await AsyncEvent.InvokeSequentiallyAsync(SettingsSaved);
         }
         catch (Exception exception)
         {
@@ -269,16 +269,26 @@ public partial class SettingsViewModel : ViewModelBase, IDisposable
     }
 
     [RelayCommand]
+    private async Task ChangePersistedGamePathAsync()
+    {
+        var settings = await settingsService.ReadAsync();
+        await PickAndPersistGamePathAsync(settings.GamePath);
+    }
+
+    [RelayCommand]
     private async Task SelectInstalledGameAsync()
+    {
+        var startPath = Environment.GetFolderPath(Environment.SpecialFolder.UserProfile);
+        await PickAndPersistGamePathAsync(startPath);
+    }
+
+    private async Task PickAndPersistGamePathAsync(string startPath)
     {
         if (PickGameFolderAsync is null)
         {
             toastService.ShowWarning(localizer.T("folderPickerUnavailable"));
             return;
         }
-
-        // Open the folder picker from the user's home directory.
-        var startPath = Environment.GetFolderPath(Environment.SpecialFolder.UserProfile);
 
         var pickedPath = await PickGameFolderAsync(startPath);
         if (string.IsNullOrWhiteSpace(pickedPath))
@@ -289,19 +299,15 @@ public partial class SettingsViewModel : ViewModelBase, IDisposable
         // Normalise: append YostarGames/BlueArchive_JP if missing.
         pickedPath = gameInstallationPath.NormalizeGamePath(pickedPath);
 
-        editor.Current.GamePath = pickedPath;
-
-        // Persist immediately and trigger a full state refresh so the game
-        // is detected without requiring the user to open settings and save.
         try
         {
-            var settings = editor.GetSnapshot();
+            var settings = await settingsService.ReadAsync();
+            settings.GamePath = pickedPath;
             await settingsService.SaveAsync(settings);
             editor.ApplySnapshot(settings);
             toastService.ShowSuccess(localizer.T("gamePathUpdated"));
 
-            if (SettingsSaved is not null)
-                await SettingsSaved.Invoke();
+            await AsyncEvent.InvokeSequentiallyAsync(SettingsSaved);
         }
         catch (Exception exception)
         {

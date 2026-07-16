@@ -266,6 +266,9 @@ public sealed partial class LocalizedStrings : ObservableObject
     [ObservableProperty] private string setupWizardPrevious = "";
     [ObservableProperty] private string setupWizardFinish = "";
     [ObservableProperty] private string setupWizardSkip = "";
+    [ObservableProperty] private string setupWizardExitTitle = "";
+    [ObservableProperty] private string setupWizardExitMessage = "";
+    [ObservableProperty] private string setupWizardExitConfirm = "";
     [ObservableProperty] private string setupWizardStepTitle = "";
 
     public void Apply(LocalizationService localizer)
@@ -526,6 +529,9 @@ public sealed partial class LocalizedStrings : ObservableObject
         SetupWizardPrevious = localizer.T("setupWizardPrevious");
         SetupWizardFinish = localizer.T("setupWizardFinish");
         SetupWizardSkip = localizer.T("setupWizardSkip");
+        SetupWizardExitTitle = localizer.T("setupWizardExitTitle");
+        SetupWizardExitMessage = localizer.T("setupWizardExitMessage");
+        SetupWizardExitConfirm = localizer.T("setupWizardExitConfirm");
         SetupWizardStepTitle = localizer.T("setupWizardStepTitle");
     }
 }

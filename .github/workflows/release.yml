@@ -40,7 +40,7 @@ jobs:
           makensis -VERSION
 
       - name: Test
-        run: dotnet test tests/Cafe.Launcher.Avalonia.Tests/Cafe.Launcher.Avalonia.Tests.csproj -c Release
+        run: .\test.ps1 -Configuration Release
 
       - name: Restore (Release, win-x64)
         run: dotnet restore $env:Project_Path -r win-x64

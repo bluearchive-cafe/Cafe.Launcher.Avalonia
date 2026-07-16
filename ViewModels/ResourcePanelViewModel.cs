@@ -5,6 +5,7 @@ using System.Threading;
 using System.Threading.Tasks;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
+using Cafe.Launcher.Avalonia.Features.Shell;
 using Cafe.Launcher.Avalonia.Models;
 using Cafe.Launcher.Avalonia.Services;
 
@@ -15,7 +16,7 @@ namespace Cafe.Launcher.Avalonia.ViewModels;
 /// The resource panel workflow (UID resolution, parallel API reads, mode mapping, save
 /// serialization) is delegated to <see cref="ResourcePanelService"/>.
 /// </summary>
-public partial class ResourcePanelViewModel : ViewModelBase, IDisposable
+public partial class ResourcePanelViewModel : ViewModelBase, IDisposable, IModalContentViewModel
 {
     private readonly ResourcePanelService resourcePanelService;
     private readonly LocalizationService localizer;

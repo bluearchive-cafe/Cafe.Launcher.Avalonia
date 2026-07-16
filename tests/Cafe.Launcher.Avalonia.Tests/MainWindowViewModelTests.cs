@@ -1,4 +1,5 @@
 using Cafe.Launcher.Avalonia.Models;
+using Cafe.Launcher.Avalonia.Features.Shell;
 using Cafe.Launcher.Avalonia.Services;
 using Cafe.Launcher.Avalonia.Services.Auth;
 using Cafe.Launcher.Avalonia.Services.Diagnostics;
@@ -444,8 +445,8 @@ public sealed class MainWindowViewModelTests : IDisposable
 
         ApplyProgress(viewModel, new GameOperationProgress
         {
-            OperationKind = GameOperationKinds.Uninstall,
-            Stage = "uninstall",
+            OperationKind = GameOperationKind.Uninstall,
+            Stage = GameOperationStage.Uninstalling,
             Progress = 50,
             CanPause = false
         });
@@ -461,8 +462,8 @@ public sealed class MainWindowViewModelTests : IDisposable
 
         ApplyProgress(viewModel, new GameOperationProgress
         {
-            OperationKind = GameOperationKinds.Download,
-            Stage = "download",
+            OperationKind = GameOperationKind.Download,
+            Stage = GameOperationStage.Downloading,
             Progress = 50,
             CanPause = true
         });
@@ -569,6 +570,39 @@ public sealed class MainWindowViewModelTests : IDisposable
         Assert.False(viewModel.Settings.IsSettingsDirty);
         Assert.True(viewModel.WindowChrome.IsSettingsVisible);
         Assert.Equal(expectedPath, (await settingsService.ReadAsync()).GamePath);
+    }
+
+    [Fact]
+    public async Task SelectInstalledGameAsync_PersistsOnlyGamePathAndRefreshesShell()
+    {
+        var originalPath = Path.Combine(tempDir, "original", "YostarGames", "BlueArchive_JP");
+        var selectedRoot = Path.Combine(tempDir, "selected");
+        Directory.CreateDirectory(selectedRoot);
+        var expectedPath = Path.Combine(selectedRoot, "YostarGames", "BlueArchive_JP");
+        var settingsPath = Path.Combine(tempDir, Guid.NewGuid().ToString("N"), "settings.json");
+        var settingsService = new LauncherSettingsService(settingsPath);
+        await settingsService.SaveAsync(new LauncherSettings
+        {
+            GamePath = originalPath,
+            ThemeMode = ThemeModes.Light
+        });
+        var snapshot = CreateSnapshot();
+        snapshot.Settings.GamePath = originalPath;
+        snapshot.Settings.ThemeMode = ThemeModes.Light;
+        snapshot.LocalGame = CopyLocalGameWithPath(snapshot.LocalGame, originalPath);
+        var coreService = new SettingsBackedCoreService(settingsService, snapshot);
+        using var viewModel = await CreateViewModelAsync(coreService, settingsService);
+        await viewModel.InitializeAsync();
+        viewModel.Settings.Editor.Current.ThemeMode = ThemeModes.Dark;
+        viewModel.Settings.PickGameFolderAsync = _ => Task.FromResult<string?>(selectedRoot);
+
+        await viewModel.Settings.SelectInstalledGameCommand.ExecuteAsync(null);
+
+        var persisted = await settingsService.ReadAsync();
+        Assert.Equal(expectedPath, persisted.GamePath);
+        Assert.Equal(ThemeModes.Light, persisted.ThemeMode);
+        Assert.Equal(expectedPath, viewModel.Shell.PathText);
+        Assert.Equal(expectedPath, viewModel.Settings.Editor.Current.GamePath);
     }
 
     [Fact]
@@ -1250,6 +1284,63 @@ public sealed class MainWindowViewModelTests : IDisposable
     }
 
     [Fact]
+    public async Task TryHandleEscape_ForEveryModalKind_ClosesOnlyTopModal()
+    {
+        using var viewModel = await CreateViewModelAsync(new CountingCoreService(CreateSnapshot()));
+
+        viewModel.WindowChrome.IsSettingsVisible = true;
+        viewModel.Dialogs.ShowRepairConfirm("repair");
+        Assert.Equal(ModalKind.RepairConfirmation, viewModel.ModalHost.Top?.Kind);
+        Assert.True(viewModel.TryHandleEscape());
+        Assert.False(viewModel.Dialogs.IsRepairConfirmVisible);
+        Assert.True(viewModel.WindowChrome.IsSettingsVisible);
+        Assert.True(viewModel.TryHandleEscape());
+        Assert.False(viewModel.WindowChrome.IsSettingsVisible);
+
+        viewModel.Settings.IsUnsavedChangesVisible = true;
+        Assert.True(viewModel.TryHandleEscape());
+        Assert.False(viewModel.Settings.IsUnsavedChangesVisible);
+
+        viewModel.Dialogs.ShowResourcePanelSourceConfirm("source");
+        Assert.True(viewModel.TryHandleEscape());
+        Assert.False(viewModel.Dialogs.IsResourcePanelSourceConfirmVisible);
+
+        viewModel.Dialogs.ShowUninstallConfirm("uninstall");
+        Assert.True(viewModel.TryHandleEscape());
+        Assert.False(viewModel.Dialogs.IsUninstallConfirmVisible);
+
+        viewModel.Dialogs.ShowStopConfirm();
+        Assert.True(viewModel.TryHandleEscape());
+        Assert.False(viewModel.Dialogs.IsStopConfirmVisible);
+
+        viewModel.Dialogs.ShowDownloadRunningCloseConfirm();
+        Assert.True(viewModel.TryHandleEscape());
+        Assert.False(viewModel.Dialogs.IsDownloadRunningCloseConfirmVisible);
+
+        viewModel.Dialogs.IsNoticeDialogVisible = true;
+        Assert.True(viewModel.TryHandleEscape());
+        Assert.False(viewModel.Dialogs.IsNoticeDialogVisible);
+
+        viewModel.Dialogs.ShowUpdateAvailable("1.0.0", []);
+        Assert.True(viewModel.TryHandleEscape());
+        Assert.False(viewModel.Dialogs.IsUpdateAvailableVisible);
+
+        viewModel.Dialogs.ShowCrashRecovery();
+        Assert.True(viewModel.TryHandleEscape());
+        Assert.False(viewModel.Dialogs.IsCrashRecoveryVisible);
+
+        viewModel.LogViewer.OpenCommand.Execute(null);
+        Assert.True(viewModel.TryHandleEscape());
+        Assert.False(viewModel.LogViewer.IsVisible);
+
+        viewModel.ResourcePanel.IsResourcePanelVisible = true;
+        Assert.True(viewModel.TryHandleEscape());
+        Assert.False(viewModel.ResourcePanel.IsResourcePanelVisible);
+
+        Assert.False(viewModel.TryHandleEscape());
+    }
+
+    [Fact]
     public async Task InitializeAsync_WithReducedMotion_AppliesMotionPreference()
     {
         var snapshot = CreateSnapshot();
@@ -1568,6 +1659,22 @@ public sealed class MainWindowViewModelTests : IDisposable
         return buffer;
     }
 
+    private static LocalInstallationState CopyLocalGameWithPath(
+        LocalInstallationState source,
+        string gamePath)
+    {
+        return new LocalInstallationState
+        {
+            Kind = source.Kind,
+            GamePath = gamePath,
+            ConfigPath = source.ConfigPath,
+            ManifestPath = source.ManifestPath,
+            GameConfig = source.GameConfig,
+            Manifest = source.Manifest,
+            Error = source.Error
+        };
+    }
+
     private static byte[] CreateStripedBgraBuffer(int width, int height, IReadOnlyList<Color> colors)
     {
         var rowBytes = width * 4;
@@ -1630,6 +1737,28 @@ public sealed class MainWindowViewModelTests : IDisposable
         {
             LoadCount++;
             return Task.FromResult(snapshot);
+        }
+    }
+
+    private sealed class SettingsBackedCoreService : ILauncherCoreService
+    {
+        private readonly LauncherSettingsService settingsService;
+        private readonly LauncherStatusSnapshot snapshot;
+
+        public SettingsBackedCoreService(
+            LauncherSettingsService settingsService,
+            LauncherStatusSnapshot snapshot)
+        {
+            this.settingsService = settingsService;
+            this.snapshot = snapshot;
+        }
+
+        public async Task<LauncherStatusSnapshot> LoadAsync(CancellationToken cancellationToken = default)
+        {
+            var settings = await settingsService.ReadAsync(cancellationToken);
+            snapshot.Settings = settings;
+            snapshot.LocalGame = CopyLocalGameWithPath(snapshot.LocalGame, settings.GamePath);
+            return snapshot;
         }
     }
 

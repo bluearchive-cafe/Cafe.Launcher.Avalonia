@@ -20,7 +20,7 @@ public static class LauncherConstants
 
     public const string OfficialGameWebsiteUrl = "https://bluearchive.jp/";
     public const string CafeWebsiteUrl = "https://bluearchive.cafe/";
-    public const string HelpDocsUrl = "https://docs.bluearchive.cafe/";
+    public const string HelpDocsUrl = "https://docs.bluearchive.cafe/cafe-launcher/";
     /// <summary>
     /// Full GitHub release repository URL.
     /// Redundant with <see cref="ApiConfig.GitHubReleaseRepositoryUrl"/>;

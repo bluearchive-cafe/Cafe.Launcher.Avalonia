@@ -340,6 +340,37 @@ public sealed class SettingsCategoryTests
         Assert.True(File.Exists(scope.SettingsPath));
     }
 
+    [Fact]
+    public async Task SaveSettingsCommand_WithMultipleAsyncSubscribers_AwaitsEverySubscriber()
+    {
+        using var scope = CreateSettingsViewModel();
+        var firstSubscriberInvoked = new TaskCompletionSource(
+            TaskCreationOptions.RunContinuationsAsynchronously);
+        var firstSubscriberRelease = new TaskCompletionSource(
+            TaskCreationOptions.RunContinuationsAsynchronously);
+        var secondSubscriberInvoked = new TaskCompletionSource(
+            TaskCreationOptions.RunContinuationsAsynchronously);
+        scope.ViewModel.SettingsSaved += async () =>
+        {
+            firstSubscriberInvoked.SetResult();
+            await firstSubscriberRelease.Task;
+        };
+        scope.ViewModel.SettingsSaved += () =>
+        {
+            secondSubscriberInvoked.SetResult();
+            return Task.CompletedTask;
+        };
+
+        var saveTask = scope.ViewModel.SaveSettingsCommand.ExecuteAsync(null);
+        await firstSubscriberInvoked.Task;
+
+        Assert.False(saveTask.IsCompleted);
+        Assert.False(secondSubscriberInvoked.Task.IsCompleted);
+        firstSubscriberRelease.SetResult();
+        await secondSubscriberInvoked.Task;
+        await saveTask;
+    }
+
     private static SettingsViewModelScope CreateSettingsViewModel()
     {
         var directory = Path.Combine(Path.GetTempPath(), Guid.NewGuid().ToString("N"));

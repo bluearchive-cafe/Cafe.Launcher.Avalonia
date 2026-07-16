@@ -435,5 +435,15 @@
             </Border>
         </Grid>
         <views:SetupWizardOverlay/>
+        <controls:ConfirmDialog IsOpen="{Binding Dialogs.IsSetupWizardExitConfirmVisible}"
+                                Title="{Binding Shell.I18n.SetupWizardExitTitle}"
+                                Description="{Binding Shell.I18n.SetupWizardExitMessage}"
+                                IconKind="AlertOutline"
+                                CancelText="{Binding Shell.I18n.Cancel}"
+                                CancelCommand="{Binding Dialogs.CancelSetupWizardExitCommand}"
+                                ConfirmText="{Binding Shell.I18n.SetupWizardExitConfirm}"
+                                ConfirmCommand="{Binding Dialogs.ConfirmSetupWizardExitCommand}"
+                                ConfirmIconKind="ExitToApp"
+                                CloseToolTip="{Binding Shell.I18n.Close}"/>
     </Grid>
 </UserControl>

@@ -1,6 +1,8 @@
 using System;
+using System.ComponentModel;
 using System.Threading;
 using System.Threading.Tasks;
+using Cafe.Launcher.Avalonia.Features.Shell;
 using Cafe.Launcher.Avalonia.Models;
 using Cafe.Launcher.Avalonia.Services;
 using Cafe.Launcher.Avalonia.Services.Diagnostics;
@@ -49,6 +51,8 @@ public partial class MainWindowViewModel : ViewModelBase, IDisposable
 
     public LogViewerDialogViewModel LogViewer { get; }
 
+    public ModalHostViewModel ModalHost { get; }
+
     public MainWindowViewModel(
         ILauncherCoreService launcherCoreService,
         LauncherSettingsService settingsService,
@@ -66,6 +70,7 @@ public partial class MainWindowViewModel : ViewModelBase, IDisposable
         SettingsViewModel settingsViewModel,
         ResourcePanelViewModel resourcePanelViewModel,
         LogViewerDialogViewModel? logViewer = null,
+        ModalHostViewModel? modalHost = null,
         WindowsAnimationSettingsProvider? windowsAnimationSettingsProvider = null)
     {
         this.launcherCoreService = launcherCoreService;
@@ -91,8 +96,10 @@ public partial class MainWindowViewModel : ViewModelBase, IDisposable
             null,
             null,
             null);
+        ModalHost = modalHost ?? new ModalHostViewModel();
 
         WireChildren();
+        WireModalHost();
         ApplyLanguage(LauncherLanguages.Auto);
     }
 
@@ -217,6 +224,114 @@ public partial class MainWindowViewModel : ViewModelBase, IDisposable
         Dialogs.SetupWizard.SettingsApplied += HandleSetupWizardCompletedAsync;
     }
 
+    private void WireModalHost()
+    {
+        WindowChrome.PropertyChanged += OnWindowChromePropertyChanged;
+        Settings.PropertyChanged += OnSettingsPropertyChanged;
+        ResourcePanel.PropertyChanged += OnResourcePanelPropertyChanged;
+        LogViewer.PropertyChanged += OnLogViewerPropertyChanged;
+        Dialogs.PropertyChanged += OnDialogsPropertyChanged;
+    }
+
+    private void OnWindowChromePropertyChanged(object? sender, PropertyChangedEventArgs e)
+    {
+        if (e.PropertyName == nameof(WindowChromeViewModel.IsSettingsVisible))
+        {
+            SyncModal(ModalKind.Settings, WindowChrome.IsSettingsVisible, Settings);
+        }
+    }
+
+    private void OnSettingsPropertyChanged(object? sender, PropertyChangedEventArgs e)
+    {
+        if (e.PropertyName == nameof(SettingsViewModel.IsUnsavedChangesVisible))
+        {
+            SyncModal(
+                ModalKind.UnsavedSettingsConfirmation,
+                Settings.IsUnsavedChangesVisible,
+                Settings);
+        }
+    }
+
+    private void OnResourcePanelPropertyChanged(object? sender, PropertyChangedEventArgs e)
+    {
+        if (e.PropertyName == nameof(ResourcePanelViewModel.IsResourcePanelVisible))
+        {
+            SyncModal(
+                ModalKind.ResourcePanel,
+                ResourcePanel.IsResourcePanelVisible,
+                ResourcePanel);
+        }
+    }
+
+    private void OnLogViewerPropertyChanged(object? sender, PropertyChangedEventArgs e)
+    {
+        if (e.PropertyName == nameof(LogViewerDialogViewModel.IsVisible))
+        {
+            SyncModal(ModalKind.LogViewer, LogViewer.IsVisible, LogViewer);
+        }
+    }
+
+    private void OnDialogsPropertyChanged(object? sender, PropertyChangedEventArgs e)
+    {
+        switch (e.PropertyName)
+        {
+            case nameof(DialogsViewModel.IsNoticeDialogVisible):
+                SyncModal(ModalKind.Notice, Dialogs.IsNoticeDialogVisible, Dialogs);
+                break;
+            case nameof(DialogsViewModel.IsUpdateAvailableVisible):
+                SyncModal(ModalKind.Update, Dialogs.IsUpdateAvailableVisible, Dialogs);
+                break;
+            case nameof(DialogsViewModel.IsCrashRecoveryVisible):
+                SyncModal(ModalKind.CrashRecovery, Dialogs.IsCrashRecoveryVisible, Dialogs);
+                break;
+            case nameof(DialogsViewModel.IsSetupWizardVisible):
+                SyncModal(ModalKind.SetupWizard, Dialogs.IsSetupWizardVisible, Dialogs.SetupWizard);
+                break;
+            case nameof(DialogsViewModel.IsSetupWizardExitConfirmVisible):
+                SyncModal(
+                    ModalKind.SetupWizardExitConfirmation,
+                    Dialogs.IsSetupWizardExitConfirmVisible,
+                    Dialogs);
+                break;
+            case nameof(DialogsViewModel.IsRepairConfirmVisible):
+                SyncModal(ModalKind.RepairConfirmation, Dialogs.IsRepairConfirmVisible, Dialogs);
+                break;
+            case nameof(DialogsViewModel.IsResourcePanelSourceConfirmVisible):
+                SyncModal(
+                    ModalKind.ResourcePanelSourceConfirmation,
+                    Dialogs.IsResourcePanelSourceConfirmVisible,
+                    Dialogs);
+                break;
+            case nameof(DialogsViewModel.IsUninstallConfirmVisible):
+                SyncModal(
+                    ModalKind.UninstallConfirmation,
+                    Dialogs.IsUninstallConfirmVisible,
+                    Dialogs);
+                break;
+            case nameof(DialogsViewModel.IsStopConfirmVisible):
+                SyncModal(ModalKind.StopConfirmation, Dialogs.IsStopConfirmVisible, Dialogs);
+                break;
+            case nameof(DialogsViewModel.IsDownloadRunningCloseConfirmVisible):
+                SyncModal(
+                    ModalKind.DownloadRunningCloseConfirmation,
+                    Dialogs.IsDownloadRunningCloseConfirmVisible,
+                    Dialogs);
+                break;
+        }
+    }
+
+    private void SyncModal(ModalKind kind, bool isVisible, IModalContentViewModel content)
+    {
+        if (isVisible)
+        {
+            ModalHost.Open(kind, content);
+        }
+        else
+        {
+            ModalHost.Close(kind);
+        }
+    }
+
     internal async Task HandleOperationsRefreshRequestedAsync(GameOperationsRefreshMode mode)
     {
         if (mode == GameOperationsRefreshMode.SkipPersistedResume)
@@ -316,7 +431,7 @@ public partial class MainWindowViewModel : ViewModelBase, IDisposable
 
     private async Task ApplySnapshotAsync(LauncherStatusSnapshot snapshot)
     {
-        ApplySettingsSnapshot(snapshot.Settings, snapshot.LocalGame.GamePath);
+        ApplySettingsSnapshot(snapshot.Settings);
         ApplyLanguage(snapshot.Settings.Language);
         SettingsAppearanceViewModel.ApplyTheme(snapshot.Settings.ThemeMode);
         await Background.UpdateBackgroundImageAsync(
@@ -333,9 +448,9 @@ public partial class MainWindowViewModel : ViewModelBase, IDisposable
         await Dialogs.ShowNoticeDialogIfNeededAsync(snapshot.Remote.BaseConfig, lifetimeCts.Token);
     }
 
-    private void ApplySettingsSnapshot(LauncherSettings settings, string localGamePath)
+    private void ApplySettingsSnapshot(LauncherSettings settings)
     {
-        Settings.ApplyLauncherSettings(settings, localGamePath);
+        Settings.ApplyLauncherSettings(settings);
         ResourcePanel.ApplySettings(settings);
         ApplyMotionSettings(settings);
     }
@@ -361,75 +476,59 @@ public partial class MainWindowViewModel : ViewModelBase, IDisposable
     // ── Window interaction (Escape key resolution) ──────────────────────
 
     /// <summary>
-    /// Build the current UI state snapshot for Escape key resolution.
-    /// </summary>
-    public WindowInteractionState BuildEscapeState() => new()
-    {
-        IsDownloadRunningCloseConfirmVisible = Dialogs.IsDownloadRunningCloseConfirmVisible,
-        IsStopConfirmVisible = Dialogs.IsStopConfirmVisible,
-        IsUnsavedChangesVisible = Settings.IsUnsavedChangesVisible,
-        IsRepairConfirmVisible = Dialogs.IsRepairConfirmVisible,
-        IsResourcePanelSourceConfirmVisible = Dialogs.IsResourcePanelSourceConfirmVisible,
-        IsUninstallConfirmVisible = Dialogs.IsUninstallConfirmVisible,
-        IsNoticeDialogVisible = Dialogs.IsNoticeDialogVisible,
-        IsSettingsVisible = WindowChrome.IsSettingsVisible,
-        IsResourcePanelVisible = ResourcePanel.IsResourcePanelVisible,
-        IsSetupWizardVisible = Dialogs.IsSetupWizardVisible,
-    };
-
-    /// <summary>
-    /// Execute the command corresponding to the given Escape action.
-    /// </summary>
-    private void ExecuteEscapeAction(WindowEscapeAction action)
-    {
-        switch (action)
-        {
-            case WindowEscapeAction.CancelCloseWhileDownloading:
-                Dialogs.CancelCloseWhileDownloadingCommand.Execute(null);
-                break;
-            case WindowEscapeAction.CancelStop:
-                Dialogs.CancelStopCommand.Execute(null);
-                break;
-            case WindowEscapeAction.KeepEditingSettings:
-                WindowChrome.KeepEditingSettingsCommand.Execute(null);
-                break;
-            case WindowEscapeAction.CancelRepair:
-                Dialogs.CancelRepairCommand.Execute(null);
-                break;
-            case WindowEscapeAction.CancelResourcePanelSourceSwitch:
-                Dialogs.CancelResourcePanelSourceSwitchCommand.Execute(null);
-                break;
-            case WindowEscapeAction.CancelUninstall:
-                Dialogs.CancelUninstallCommand.Execute(null);
-                break;
-            case WindowEscapeAction.DismissNotice:
-                Dialogs.DismissNoticeCommand.Execute(null);
-                break;
-            case WindowEscapeAction.ToggleSettings:
-                WindowChrome.ShowSettingsCommand.Execute(null);
-                break;
-            case WindowEscapeAction.CloseResourcePanel:
-                ResourcePanel.CloseResourcePanelCommand.Execute(null);
-                break;
-            case WindowEscapeAction.DismissSetupWizard:
-                Dialogs.SetupWizard.SkipCommand.Execute(null);
-                break;
-        }
-    }
-
-    /// <summary>
     /// Attempt to handle the Escape key press.
     /// Returns true if a visible overlay/dialog was dismissed, false if no action was needed.
     /// </summary>
     public bool TryHandleEscape()
     {
-        var action = WindowEscapeStrategy.ResolveEscape(BuildEscapeState());
-        if (action is null)
+        switch (ModalHost.Top?.Kind)
         {
-            return false;
+            case ModalKind.DownloadRunningCloseConfirmation:
+                Dialogs.CancelCloseWhileDownloadingCommand.Execute(null);
+                break;
+            case ModalKind.StopConfirmation:
+                Dialogs.CancelStopCommand.Execute(null);
+                break;
+            case ModalKind.UnsavedSettingsConfirmation:
+                WindowChrome.KeepEditingSettingsCommand.Execute(null);
+                break;
+            case ModalKind.RepairConfirmation:
+                Dialogs.CancelRepairCommand.Execute(null);
+                break;
+            case ModalKind.ResourcePanelSourceConfirmation:
+                Dialogs.CancelResourcePanelSourceSwitchCommand.Execute(null);
+                break;
+            case ModalKind.UninstallConfirmation:
+                Dialogs.CancelUninstallCommand.Execute(null);
+                break;
+            case ModalKind.Notice:
+                Dialogs.DismissNoticeCommand.Execute(null);
+                break;
+            case ModalKind.Update:
+                Dialogs.CancelUpdateAvailableCommand.Execute(null);
+                break;
+            case ModalKind.CrashRecovery:
+                Dialogs.ContinueAfterCrashCommand.Execute(null);
+                break;
+            case ModalKind.LogViewer:
+                LogViewer.CloseCommand.Execute(null);
+                break;
+            case ModalKind.SetupWizardExitConfirmation:
+                Dialogs.CancelSetupWizardExitCommand.Execute(null);
+                break;
+            case ModalKind.Settings:
+                WindowChrome.ShowSettingsCommand.Execute(null);
+                break;
+            case ModalKind.SetupWizard:
+                Dialogs.RequestSetupWizardExitCommand.Execute(null);
+                break;
+            case ModalKind.ResourcePanel:
+                ResourcePanel.CloseResourcePanelCommand.Execute(null);
+                break;
+            default:
+                return false;
         }
 
-        ExecuteEscapeAction(action.Value);
         return true;
     }
 
@@ -453,6 +552,11 @@ public partial class MainWindowViewModel : ViewModelBase, IDisposable
         Dialogs.CrashRecoveryResetSettingsRequested -= ResetSettingsAfterCrashAsync;
         Dialogs.CrashRecoveryViewLogRequested -= OpenCrashLog;
         Dialogs.SetupWizard.SettingsApplied -= HandleSetupWizardCompletedAsync;
+        WindowChrome.PropertyChanged -= OnWindowChromePropertyChanged;
+        Settings.PropertyChanged -= OnSettingsPropertyChanged;
+        ResourcePanel.PropertyChanged -= OnResourcePanelPropertyChanged;
+        LogViewer.PropertyChanged -= OnLogViewerPropertyChanged;
+        Dialogs.PropertyChanged -= OnDialogsPropertyChanged;
         Operations.StopDownload(clearPersistedState: false);
         Settings.Dispose();
         RemoteContent.Dispose();

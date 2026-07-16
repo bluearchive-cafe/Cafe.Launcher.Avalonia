@@ -2,7 +2,7 @@ $ErrorActionPreference = 'Stop'
 $env:DOTNET_CLI_TELEMETRY_OPTOUT = '1'
 $env:AVALONIA_TELEMETRY_OPTOUT = '1'
 
-dotnet build .\Cafe.Launcher.Avalonia.csproj -c Debug --no-restore
+& "$PSScriptRoot\build.ps1"
 if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
 
 & "$PSScriptRoot\coverage.ps1"

@@ -31,9 +31,6 @@ public sealed class ReleaseFile
     [JsonPropertyName("url")]
     public string Url { get; set; } = "";
 
-    [JsonPropertyName("sha512")]
-    public string Sha512 { get; set; } = "";
-
     [JsonPropertyName("size")]
     public long Size { get; set; }
 

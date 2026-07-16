@@ -128,14 +128,6 @@ public static class ResourcePanelUidSources
     public const string Custom = "custom";
 }
 
-public static class GameOperationKinds
-{
-    public const string Idle = "idle";
-    public const string Download = "download";
-    public const string Repair = "repair";
-    public const string Uninstall = "uninstall";
-}
-
 public sealed partial class LauncherSettings : ObservableObject
 {
     [ObservableProperty]
@@ -390,21 +382,21 @@ public sealed class GameLaunchResult
 
 public sealed class GameOperationProgress
 {
-    public string OperationKind { get; set; } = GameOperationKinds.Idle;
+    public GameOperationKind OperationKind { get; set; } = GameOperationKind.Idle;
 
-    public string Stage { get; set; } = "";
+    public GameOperationStage Stage { get; set; } = GameOperationStage.Idle;
 
     public int Progress { get; set; }
 
-    public string Speed { get; set; } = "";
+    public long BytesPerSecond { get; set; }
 
-    public string Estimated { get; set; } = "";
+    public TimeSpan? EstimatedRemaining { get; set; }
 
     public long DownloadedSize { get; set; }
 
     public long TotalSize { get; set; }
 
-    public string ErrorType { get; set; } = "";
+    public GameOperationErrorCode ErrorCode { get; set; } = GameOperationErrorCode.None;
 
     public int AffectedFileCount { get; set; }
 
@@ -433,7 +425,7 @@ public sealed class GameOperationResult
 
     public string Message { get; set; } = "";
 
-    public string ErrorType { get; set; } = "";
+    public GameOperationErrorCode ErrorCode { get; set; } = GameOperationErrorCode.None;
 
     public int AffectedFileCount { get; set; }
 

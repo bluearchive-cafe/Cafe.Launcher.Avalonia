@@ -171,6 +171,38 @@ public sealed class DialogsViewModelTests
     }
 
     [Fact]
+    public async Task ConfirmRepairCommand_WithMultipleAsyncSubscribers_AwaitsEverySubscriber()
+    {
+        var viewModel = CreateViewModel();
+        var firstSubscriberInvoked = new TaskCompletionSource(
+            TaskCreationOptions.RunContinuationsAsynchronously);
+        var firstSubscriberRelease = new TaskCompletionSource(
+            TaskCreationOptions.RunContinuationsAsynchronously);
+        var secondSubscriberInvoked = new TaskCompletionSource(
+            TaskCreationOptions.RunContinuationsAsynchronously);
+        viewModel.ConfirmRepairRequested += async () =>
+        {
+            firstSubscriberInvoked.SetResult();
+            await firstSubscriberRelease.Task;
+        };
+        viewModel.ConfirmRepairRequested += () =>
+        {
+            secondSubscriberInvoked.SetResult();
+            return Task.CompletedTask;
+        };
+        viewModel.ShowRepairConfirm("repair");
+
+        var confirmTask = viewModel.ConfirmRepairCommand.ExecuteAsync(null);
+        await firstSubscriberInvoked.Task;
+
+        Assert.False(confirmTask.IsCompleted);
+        Assert.False(secondSubscriberInvoked.Task.IsCompleted);
+        firstSubscriberRelease.SetResult();
+        await secondSubscriberInvoked.Task;
+        await confirmTask;
+    }
+
+    [Fact]
     public void CancelCommands_CloseEveryConfirmationDialog()
     {
         var viewModel = CreateViewModel();
