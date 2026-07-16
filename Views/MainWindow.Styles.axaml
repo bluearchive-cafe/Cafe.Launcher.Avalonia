@@ -370,6 +370,7 @@
         <Setter Property="VerticalAlignment" Value="Top"/>
         <Setter Property="Margin" Value="40,64,0,0"/>
         <Setter Property="Width" Value="500"/>
+        <Setter Property="MinHeight" Value="360"/>
         <Setter Property="MaxHeight" Value="480"/>
     </Style>
     <Style Selector="Border.info-strip">
@@ -395,8 +396,8 @@
         <Setter Property="HorizontalAlignment" Value="Stretch"/>
         <Setter Property="VerticalAlignment" Value="Stretch"/>
     </Style>
-    <Style Selector="Border.remote-content-loading-overlay">
-        <Setter Property="MinHeight" Value="120"/>
+    <Style Selector="UserControl.remote-content-loading-overlay">
+        <Setter Property="VerticalAlignment" Value="Stretch"/>
     </Style>
     <Style Selector="TextBlock.media-placeholder-text">
         <Setter Property="Foreground" Value="{DynamicResource LauncherMediaPlaceholderTextBrush}"/>

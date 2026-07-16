@@ -228,7 +228,13 @@ public sealed partial class LauncherSettings : ObservableObject
 
     [ObservableProperty]
     [property: JsonPropertyName("logLevel")]
-    private string logLevel = LogLevels.Information;
+    private string logLevel =
+#if DEBUG
+        LogLevels.Verbose
+#else
+        LogLevels.Information
+#endif
+    ;
 
     /// <summary>
     /// Deep-clones this settings object.
