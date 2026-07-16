@@ -212,9 +212,12 @@
                                                    Classes="value"
                                                    VerticalAlignment="Center"/>
                                         <Button Grid.Column="2" Classes="flat-action dialog-action wizard-review-edit"
-                                                Command="{Binding Dialogs.SetupWizard.GoToStepCommand}" CommandParameter="0"
+                                                Command="{Binding Dialogs.SetupWizard.GoToStepCommand}"
                                                 VerticalAlignment="Center"
                                                 AutomationProperties.Name="{Binding Shell.I18n.SetupWizardEditStep}">
+                                            <Button.CommandParameter>
+                                                <x:Int32>0</x:Int32>
+                                            </Button.CommandParameter>
                                             <TextBlock Text="{Binding Shell.I18n.SetupWizardEditStep}"/>
                                         </Button>
                                     </Grid>
@@ -226,9 +229,12 @@
                                                    Classes="value"
                                                    VerticalAlignment="Center"/>
                                         <Button Grid.Column="2" Classes="flat-action dialog-action wizard-review-edit"
-                                                Command="{Binding Dialogs.SetupWizard.GoToStepCommand}" CommandParameter="2"
+                                                Command="{Binding Dialogs.SetupWizard.GoToStepCommand}"
                                                 VerticalAlignment="Center"
                                                 AutomationProperties.Name="{Binding Shell.I18n.SetupWizardEditStep}">
+                                            <Button.CommandParameter>
+                                                <x:Int32>2</x:Int32>
+                                            </Button.CommandParameter>
                                             <TextBlock Text="{Binding Shell.I18n.SetupWizardEditStep}"/>
                                         </Button>
                                     </Grid>
@@ -241,9 +247,12 @@
                                                    TextTrimming="CharacterEllipsis"
                                                    VerticalAlignment="Center"/>
                                         <Button Grid.Column="2" Classes="flat-action dialog-action wizard-review-edit"
-                                                Command="{Binding Dialogs.SetupWizard.GoToStepCommand}" CommandParameter="1"
+                                                Command="{Binding Dialogs.SetupWizard.GoToStepCommand}"
                                                 VerticalAlignment="Center"
                                                 AutomationProperties.Name="{Binding Shell.I18n.SetupWizardEditStep}">
+                                            <Button.CommandParameter>
+                                                <x:Int32>1</x:Int32>
+                                            </Button.CommandParameter>
                                             <TextBlock Text="{Binding Shell.I18n.SetupWizardEditStep}"/>
                                         </Button>
                                     </Grid>
@@ -255,9 +264,12 @@
                                                    Classes="value"
                                                    VerticalAlignment="Center"/>
                                         <Button Grid.Column="2" Classes="flat-action dialog-action wizard-review-edit"
-                                                Command="{Binding Dialogs.SetupWizard.GoToStepCommand}" CommandParameter="3"
+                                                Command="{Binding Dialogs.SetupWizard.GoToStepCommand}"
                                                 VerticalAlignment="Center"
                                                 AutomationProperties.Name="{Binding Shell.I18n.SetupWizardEditStep}">
+                                            <Button.CommandParameter>
+                                                <x:Int32>3</x:Int32>
+                                            </Button.CommandParameter>
                                             <TextBlock Text="{Binding Shell.I18n.SetupWizardEditStep}"/>
                                         </Button>
                                     </Grid>

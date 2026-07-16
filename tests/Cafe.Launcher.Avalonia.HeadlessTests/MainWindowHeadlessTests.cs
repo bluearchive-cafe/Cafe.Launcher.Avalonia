@@ -736,6 +736,55 @@ public sealed class MainWindowHeadlessTests
     }
 
     [AvaloniaFact]
+    public async Task SetupWizard_ReviewList_EditButtonsNavigateToTheirSteps()
+    {
+        using var context = CreateContext();
+        var wizard = context.ViewModel.Dialogs.SetupWizard;
+        wizard.GamePath = Path.Combine(context.TempDir, "available-installation");
+
+        context.Window.Show();
+        context.ViewModel.Dialogs.ShowSetupWizard();
+        wizard.NextCommand.Execute(null);
+        await WaitForGamePathStatusAsync(wizard, SetupWizardGamePathStatus.AvailableForInstallation);
+        while (!wizard.IsLastStep)
+        {
+            wizard.NextCommand.Execute(null);
+        }
+        Dispatcher.UIThread.RunJobs();
+
+        var editButtons = context.Window
+            .GetVisualDescendants()
+            .OfType<Button>()
+            .Where(control => AutomationProperties.GetName(control)
+                == context.ViewModel.Shell.I18n.SetupWizardEditStep)
+            .ToArray();
+
+        Assert.Equal(4, editButtons.Length);
+
+        foreach (var (editButton, expectedStep) in editButtons.Zip([0, 2, 1, 3]))
+        {
+            Assert.NotNull(editButton.Command);
+            editButton.Command.Execute(editButton.CommandParameter);
+            Dispatcher.UIThread.RunJobs();
+
+            Assert.Equal(expectedStep, wizard.Step);
+
+            while (!wizard.IsLastStep)
+            {
+                if (wizard.IsStep1)
+                {
+                    await WaitForGamePathStatusAsync(
+                        wizard,
+                        SetupWizardGamePathStatus.AvailableForInstallation);
+                }
+
+                wizard.NextCommand.Execute(null);
+                Dispatcher.UIThread.RunJobs();
+            }
+        }
+    }
+
+    [AvaloniaFact]
     public void SetupWizard_RadioChoices_KeepGroupsIndependent()
     {
         using var context = CreateContext();
