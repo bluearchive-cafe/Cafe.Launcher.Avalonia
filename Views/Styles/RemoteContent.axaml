@@ -1,0 +1,51 @@
+<Styles xmlns="https://github.com/avaloniaui"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
+    <Style Selector="Border.banner-dot">
+        <Setter Property="Background" Value="{DynamicResource LauncherCarouselDotInactiveBrush}"/>
+        <Setter Property="Width" Value="{DynamicResource LauncherSpacingSm}"/>
+        <Setter Property="Height" Value="{DynamicResource LauncherSpacingSm}"/>
+        <Setter Property="CornerRadius" Value="{DynamicResource LauncherRadiusSm}"/>
+    </Style>
+    <Style Selector="Border.banner-dot.active">
+        <Setter Property="Background" Value="{DynamicResource LauncherCarouselDotActiveBrush}"/>
+    </Style>
+    <Style Selector="Button.social-chip">
+        <Setter Property="Background" Value="{DynamicResource LauncherContentRowBrush}"/>
+        <Setter Property="BorderBrush" Value="{DynamicResource LauncherButtonBorderBrush}"/>
+        <Setter Property="BorderThickness" Value="1"/>
+        <Setter Property="Foreground" Value="{DynamicResource LauncherTextPrimaryBrush}"/>
+        <Setter Property="Padding" Value="12,8"/>
+        <Setter Property="MinHeight" Value="{DynamicResource LauncherChipHeight}"/>
+        <Setter Property="CornerRadius" Value="{DynamicResource LauncherRadiusSm}"/>
+        <Setter Property="Margin" Value="0,0,8,8"/>
+    </Style>
+    <Style Selector="Button.social-chip:pointerover">
+        <Setter Property="Background" Value="{DynamicResource LauncherFlatHoverBrush}"/>
+        <Setter Property="BorderBrush" Value="{DynamicResource LauncherAccentHoverBrush}"/>
+        <Setter Property="Foreground" Value="{DynamicResource LauncherAccentBrush}"/>
+    </Style>
+    <Style Selector="Button.news-tab">
+        <Setter Property="Background" Value="{DynamicResource LauncherContentRowBrush}"/>
+        <Setter Property="Foreground" Value="{DynamicResource LauncherTextPrimaryBrush}"/>
+        <Setter Property="FontSize" Value="{DynamicResource LauncherFontSizeMd}"/>
+        <Setter Property="Padding" Value="10,4"/>
+        <Setter Property="MinHeight" Value="32"/>
+        <Setter Property="VerticalContentAlignment" Value="Center"/>
+    </Style>
+    <Style Selector="Button.news-tab.log-filter">
+        <Setter Property="Height" Value="{DynamicResource LauncherControlHeightSetting}"/>
+    </Style>
+    <Style Selector="Button.news-tab:pointerover">
+        <Setter Property="Background" Value="{DynamicResource LauncherAccentHoverBrush}"/>
+        <Setter Property="Foreground" Value="{DynamicResource LauncherOnAccentBrush}"/>
+    </Style>
+    <Style Selector="Button.news-tab.active">
+        <Setter Property="Background" Value="{DynamicResource LauncherAccentBrush}"/>
+        <Setter Property="Foreground" Value="{DynamicResource LauncherOnAccentBrush}"/>
+    </Style>
+    <Style Selector="Border.info-strip.resource-panel-status">
+        <Setter Property="Background" Value="{DynamicResource LauncherContentRowBrush}"/>
+        <Setter Property="BorderBrush" Value="{DynamicResource LauncherAccentBorderBrush}"/>
+        <Setter Property="BorderThickness" Value="1"/>
+    </Style>
+</Styles>
