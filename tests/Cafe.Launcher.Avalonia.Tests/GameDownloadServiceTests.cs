@@ -630,6 +630,35 @@ public sealed class GameDownloadServiceTests
         Directory.Delete(tempDir, recursive: true);
     }
 
+    [Fact]
+    public async Task InstallOrUpdateAsync_WhenDiskSpaceIsInsufficient_ClearsDownloadState()
+    {
+        var tempDir = Path.Combine(Path.GetTempPath(), Guid.NewGuid().ToString("N"));
+        var gamePath = Path.Combine(tempDir, "YostarGames", "BlueArchive_JP");
+        var settingsService = new LauncherSettingsService(Path.Combine(tempDir, "settings.json"));
+        await settingsService.SaveAsync(new LauncherSettings { GamePath = gamePath });
+        var manifestFile = new ManifestFile
+        {
+            Path = "data/huge.bin",
+            Size = long.MaxValue.ToString(CultureInfo.InvariantCulture),
+            Hash = "0"
+        };
+        using var apiClient = CreateManifestApiClient(manifestFile);
+        var statePath = Path.Combine(tempDir, "download_state.json");
+        using var service = CreateService(
+            apiClient,
+            settingsService,
+            statePath);
+        var snapshot = CreateSnapshot(gamePath);
+        snapshot.RuntimeState = LauncherRuntimeState.NotInstalled;
+
+        var result = await service.InstallOrUpdateAsync(snapshot, _ => { });
+
+        Assert.False(result.Success);
+        Assert.False(File.Exists(statePath));
+        Directory.Delete(tempDir, recursive: true);
+    }
+
     [Theory]
     [InlineData(null, false)]
     [InlineData(9L, false)]

@@ -90,6 +90,7 @@ public sealed class ProxySettingsService
             AllowAutoRedirect = false,
             UseProxy = proxyMode == ProxyModes.System,
             Proxy = proxy,
+            AutomaticDecompression = DecompressionMethods.All,
             PooledConnectionLifetime = TimeSpan.FromMinutes(15)
         };
     }

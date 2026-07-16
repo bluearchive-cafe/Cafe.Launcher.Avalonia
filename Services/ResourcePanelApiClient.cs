@@ -55,8 +55,8 @@ public sealed class ResourcePanelApiClient : IDisposable
             return new ResourcePanelConfigResponse();
         }
         response.EnsureSuccessStatusCode();
-        await using var stream = await response.Content.ReadAsStreamAsync(cancellationToken).ConfigureAwait(false);
-        return await JsonSerializer.DeserializeAsync<ResourcePanelConfigResponse>(stream, jsonOptions, cancellationToken).ConfigureAwait(false)
+        return await RemoteHttpRequestService.DeserializeJsonAsync<ResourcePanelConfigResponse>(
+            response, new Uri(ApiBaseUrl + path), jsonOptions, cancellationToken).ConfigureAwait(false)
             ?? new ResourcePanelConfigResponse();
     }
 
@@ -87,8 +87,8 @@ public sealed class ResourcePanelApiClient : IDisposable
         using var lease = await leaseSource.CreateLeaseAsync(proxyMode, cancellationToken).ConfigureAwait(false);
         using var response = await lease.Client.GetAsync(path, cancellationToken).ConfigureAwait(false);
         response.EnsureSuccessStatusCode();
-        await using var stream = await response.Content.ReadAsStreamAsync(cancellationToken).ConfigureAwait(false);
-        return await JsonSerializer.DeserializeAsync<T>(stream, jsonOptions, cancellationToken).ConfigureAwait(false) ?? new T();
+        return await RemoteHttpRequestService.DeserializeJsonAsync<T>(
+            response, new Uri(ApiBaseUrl + path), jsonOptions, cancellationToken).ConfigureAwait(false) ?? new T();
     }
 
     public void Dispose()
