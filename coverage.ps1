@@ -6,6 +6,7 @@ $resultsRoot = Join-Path $PSScriptRoot 'TestResults\Coverage'
 
 $runsettings = Join-Path $PSScriptRoot 'coverage.runsettings'
 $repositoryRoot = [IO.Path]::GetFullPath($PSScriptRoot)
+$repositoryRootPrefix = $repositoryRoot.TrimEnd([IO.Path]::DirectorySeparatorChar, [IO.Path]::AltDirectorySeparatorChar) + [IO.Path]::DirectorySeparatorChar
 
 if (Test-Path -LiteralPath $resultsRoot) {
     Remove-Item -LiteralPath $resultsRoot -Recurse -Force
@@ -59,7 +60,7 @@ foreach ($reportPath in $reportPaths.Values) {
 
             if (
                 $extension -ne '.cs' -or
-                -not $fullPath.StartsWith($repositoryRoot, [StringComparison]::OrdinalIgnoreCase) -or
+                -not $fullPath.StartsWith($repositoryRootPrefix, [StringComparison]::OrdinalIgnoreCase) -or
                 $relativePath.StartsWith('obj\', [StringComparison]::OrdinalIgnoreCase) -or
                 -not (Test-Path -LiteralPath $fullPath -PathType Leaf)
             ) {
