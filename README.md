@@ -10,7 +10,7 @@ Blue Archive 日服桌面启动器，基于 .NET 10 与 Avalonia 12 重写，替
 - **下载控制** — 暂停 / 继续 / 停止，下载限速（`unlimited` ~ `50MB/s` 六档），进行中状态持久化到 `download_state.json`
 - **CDN 切换** — 支持 `official`（yo-star.com）和 `cafe`（bluearchive.cafe）两套下载源
 - **崩溃恢复** — 进程启动时检测上一会话是否崩溃（`session.active` 标记），异常写入 `crash.log`
-- **多语言** — `auto`（跟随系统）、`en`、`zh-Hans`、`ja`
+- **多语言** — `auto`（跟随系统）、`en`、`zh-Hans`、`zh-Hant`、`ja`
 - **原生 UI** — Avalonia Fluent Theme，系统 / 浅色 / 深色主题，支持系统托盘，关闭时最小化到托盘
 - **远端内容** — 公告、活动 Banner、新闻、社交媒体入口
 - **背景定制** — 内置 / 远端 / 自定义壁纸，三档契合度（`fill` / `uniform` / `uniformToFill`），染色主题色提取
@@ -118,7 +118,7 @@ dotnet test .\tests\Cafe.Launcher.Avalonia.Tests\Cafe.Launcher.Avalonia.Tests.cs
 | 启动校验 | `launchCheckMode` | `localManifest` / `remoteManifest` / `none` |
 | 下载限速 | `downloadSpeedLimit` | `unlimited` / `1MB/s` / `5MB/s` / `10MB/s` / `25MB/s` / `50MB/s` |
 | 关闭行为 | `closeBehavior` | `minimize` / `exit` |
-| 代理 | `proxyMode` | `direct` / `system` |
+| 代理 | `proxyMode` | `auto` / `direct` / `system` |
 | 背景来源 | `backgroundSource` | `bundled` / `remote` / `custom` |
 | 壁纸契合度 | `backgroundFit` | `fill` / `uniform` / `uniformToFill` |
 | 壁纸背景色 | `backgroundFillColor` | 十六进制颜色（如 `#FF000000`） |

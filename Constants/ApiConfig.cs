@@ -13,6 +13,8 @@ public static class ApiConfig
     public const string YostarAuthorizationVersion = "1.7.2";
 
     public const string GitHubReleaseRepositorySlug = "bluearchive-cafe/Cafe.Launcher.Avalonia_Release";
+    public const string GitHubReleaseDownloadPathPrefix =
+        "/bluearchive-cafe/Cafe.Launcher.Avalonia_Release/releases/download/";
     /// <summary>
     /// Full repository URL. Constrained by <see cref="LauncherConstants.GitHubReleaseRepositoryUrl"/>
     /// to the same value. Defined here for API-config cohesion; prefer

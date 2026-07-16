@@ -8,7 +8,7 @@ This is a .NET 10 desktop launcher built with Avalonia. Application entry points
 
 - `.\build.ps1` — restore and build the Debug configuration with telemetry disabled.
 - `dotnet run --project .\Cafe.Launcher.Avalonia.csproj` — run the launcher locally.
-- `dotnet test` — run both xUnit test projects.
+- `.\test.ps1` — run both xUnit test projects.
 - `.\coverage.ps1` — run tests with Coverlet and enforce coverage thresholds.
 - `.\verify.ps1` — perform the complete Debug build, coverage, and Release build sequence.
 - `dotnet test .\tests\Cafe.Launcher.Avalonia.Tests\Cafe.Launcher.Avalonia.Tests.csproj --filter "FullyQualifiedName~VersionComparerTests"` — run one test class.
