@@ -17,7 +17,7 @@ dotnet run --project .\Cafe.Launcher.Avalonia.csproj                   # Run loc
 **Tests** — two test projects under `tests/`:
 
 ```powershell
-# Unit tests (xUnit v3 3.2.2, coverlet.collector 10.0.1, coverlet.msbuild 10.0.1)
+# Unit tests (xUnit v3 3.2.2, coverlet.msbuild 10.0.1)
 dotnet test .\tests\Cafe.Launcher.Avalonia.Tests\Cafe.Launcher.Avalonia.Tests.csproj -c Debug --no-restore
 dotnet test .\tests\Cafe.Launcher.Avalonia.Tests\Cafe.Launcher.Avalonia.Tests.csproj --filter "FullyQualifiedName~VersionComparerTests"
 
@@ -35,7 +35,7 @@ Headless test classes: `SystemTrayServiceTests`, `MainWindowHeadlessTests`, `Hea
 
 `UiStyleContractTests` enforces design token contracts: no raw colors in view XAML, proper use of `LauncherSpacing*` tokens, correct overlay Z-index ordering, toast layer using `LauncherConstants.ZIndexToast`, and dynamic accent brushes not replacing theme-specific brushes. Run this whenever touching XAML styles or overlays.
 
-**Testing infrastructure**: No mocking framework (Moq/NSubstitute) is used. Tests hand-craft `HttpMessageHandler` subclasses (e.g., `GitHubReleaseHandler`) and manual stubs. The source project exposes internals to tests via `[assembly: InternalsVisibleTo("Cafe.Launcher.Avalonia.Tests")]` in `Properties/AssemblyInfo.cs`. Headless tests use `Avalonia.Headless.XUnit` for UI component testing without a display server.
+**Testing infrastructure**: No mocking framework (Moq/NSubstitute) is used. Tests hand-craft `HttpMessageHandler` subclasses (e.g., `GitHubReleaseHandler`) and manual stubs. The source project exposes internals to tests via `[assembly: InternalsVisibleTo("Cafe.Launcher.Avalonia.Tests")]` in `Properties/AssemblyInfo.cs`. Headless tests use `Avalonia.Headless.XUnit` for UI component testing without a display server. Both test projects use xUnit v3 with `OutputType=Exe` (required by the v3 migration guide); `dotnet test` runs through the VSTest adapter (`xunit.runner.visualstudio`). Coverage is collected via `coverlet.msbuild` (`CollectCoverage=true`) — the `coverlet.collector` VSTest data collector is incompatible with xUnit v3.
 
 **Code coverage**: `coverage.ps1` runs both test projects with `coverlet.msbuild` (Cobertura format, `CollectCoverage=true`), merges the reports, and enforces a **50% threshold** on both line and branch coverage. Excludes `.axaml` files and `obj/` directories. `verify.ps1` calls `coverage.ps1` as its test step — coverage must pass for verification to succeed.
 
