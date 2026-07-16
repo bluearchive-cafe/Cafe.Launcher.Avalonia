@@ -294,6 +294,6 @@ GitHub Actions（`ubuntu-latest`、.NET 10.0.x）：
 - [Releases](https://github.com/bluearchive-cafe/Cafe.Launcher.Avalonia_Release)
 - [Issues](https://github.com/bluearchive-cafe/Cafe.Launcher.Avalonia/issues)
 
-## 许可证
+## 源代码
 
-本项目使用 MIT License。版权信息见 [LICENSE](./LICENSE)。
+Cafe Launcher 为闭源项目，源代码不向公众发布。公开 GitHub 仓库仅用于发布安装包、文档和问题反馈。
