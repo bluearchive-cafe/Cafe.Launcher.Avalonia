@@ -40,11 +40,11 @@
                     </Button>
                     <Button Classes="news-tab" Classes.active="{Binding LogViewer.IsFilterWarnActive}"
                             Command="{Binding LogViewer.SetFilterWarnCommand}">
-                        <TextBlock Text="{Binding Shell.I18n.LogFilterWarn}"/>
+                        <TextBlock Text="{Binding Shell.I18n.LogFilterWarning}"/>
                     </Button>
                     <Button Classes="news-tab" Classes.active="{Binding LogViewer.IsFilterInfoActive}"
                             Command="{Binding LogViewer.SetFilterInfoCommand}">
-                        <TextBlock Text="{Binding Shell.I18n.LogFilterInfo}"/>
+                        <TextBlock Text="{Binding Shell.I18n.LogFilterInformation}"/>
                     </Button>
                     <TextBox Text="{Binding LogViewer.FilterText, Mode=TwoWay}" PlaceholderText="{Binding Shell.I18n.LogSearchPlaceholder}"
                              Classes="uid-input" MinWidth="160" MinHeight="{StaticResource LauncherControlHeightSetting}" VerticalAlignment="Center"/>

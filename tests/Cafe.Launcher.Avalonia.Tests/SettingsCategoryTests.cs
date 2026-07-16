@@ -41,19 +41,23 @@ public sealed class SettingsCategoryTests
     private static readonly (string Key, Func<LocalizedStrings, string> GetValue)[] CategoryLocalizedValues =
     [
         ("settingsCategoryGeneral", strings => strings.SettingsCategoryGeneral),
-        ("settingsCategoryGeneralDescription", strings => strings.SettingsCategoryGeneralDescription),
         ("settingsCategoryGame", strings => strings.SettingsCategoryGame),
-        ("settingsCategoryGameDescription", strings => strings.SettingsCategoryGameDescription),
         ("settingsCategoryDownloadNetwork", strings => strings.SettingsCategoryDownloadNetwork),
-        ("settingsCategoryDownloadNetworkDescription", strings => strings.SettingsCategoryDownloadNetworkDescription),
         ("settingsCategoryAppearance", strings => strings.SettingsCategoryAppearance),
-        ("settingsCategoryAppearanceDescription", strings => strings.SettingsCategoryAppearanceDescription),
         ("settingsCategoryNotificationsContent", strings => strings.SettingsCategoryNotificationsContent),
-        ("settingsCategoryNotificationsContentDescription", strings => strings.SettingsCategoryNotificationsContentDescription),
         ("settingsCategoryAdvanced", strings => strings.SettingsCategoryAdvanced),
-        ("settingsCategoryAdvancedDescription", strings => strings.SettingsCategoryAdvancedDescription),
-        ("settingsCategoryAbout", strings => strings.SettingsCategoryAbout),
-        ("settingsCategoryAboutDescription", strings => strings.SettingsCategoryAboutDescription)
+        ("settingsCategoryAbout", strings => strings.SettingsCategoryAbout)
+    ];
+
+    private static readonly string[] CategoryDescriptionKeys =
+    [
+        "settingsCategoryGeneralDescription",
+        "settingsCategoryGameDescription",
+        "settingsCategoryDownloadNetworkDescription",
+        "settingsCategoryAppearanceDescription",
+        "settingsCategoryNotificationsContentDescription",
+        "settingsCategoryAdvancedDescription",
+        "settingsCategoryAboutDescription"
     ];
 
     private static readonly string[] CategoryPropertyNames =
@@ -156,17 +160,21 @@ public sealed class SettingsCategoryTests
             Assert.NotEqual(key, localizer.T(key));
         }
 
+        foreach (var key in CategoryDescriptionKeys)
+        {
+            Assert.NotEqual(key, localizer.T(key));
+        }
+
         var strings = new LocalizedStrings();
         strings.Apply(localizer);
         Assert.Equal(localizer.T("settingsCategoryGeneral"), strings.SettingsCategoryGeneral);
-        Assert.Equal(localizer.T("settingsCategoryAboutDescription"), strings.SettingsCategoryAboutDescription);
     }
 
     [Theory]
     [InlineData("en.json")]
     [InlineData("zh-Hans.json")]
     [InlineData("ja.json")]
-    public void CategoryLocaleFile_DefinesAllFourteenKeysDirectly(string fileName)
+    public void CategoryLocaleFile_DefinesAllCategoryKeysDirectly(string fileName)
     {
         var resources = JsonSerializer.Deserialize<Dictionary<string, string>>(
             File.ReadAllText(Path.Combine(LocaleDirectory, fileName), System.Text.Encoding.UTF8));
@@ -177,13 +185,19 @@ public sealed class SettingsCategoryTests
             Assert.True(resources.TryGetValue(key, out var value));
             Assert.False(string.IsNullOrWhiteSpace(value));
         }
+
+        foreach (var key in CategoryDescriptionKeys)
+        {
+            Assert.True(resources.TryGetValue(key, out var value));
+            Assert.False(string.IsNullOrWhiteSpace(value));
+        }
     }
 
     [Theory]
     [InlineData(LauncherLanguages.English)]
     [InlineData(LauncherLanguages.SimplifiedChinese)]
     [InlineData(LauncherLanguages.Japanese)]
-    public void LocalizedStrings_ApplyMapsAllFourteenCategoryProperties(string language)
+    public void LocalizedStrings_ApplyMapsAllSevenCategoryProperties(string language)
     {
         var localizer = new LocalizationService();
         localizer.SetLanguage(language);

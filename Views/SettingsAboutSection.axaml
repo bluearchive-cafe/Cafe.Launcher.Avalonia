@@ -40,7 +40,7 @@
                 </Border>
             </WrapPanel>
         </StackPanel>
-        <TextBlock Text="{Binding Shell.I18n.SettingsAboutActions}" Classes="group-title"/>
+        <TextBlock Text="{Binding Shell.I18n.SettingsGroupAboutActions}" Classes="group-title"/>
         <WrapPanel>
             <Button Classes="flat-action wrap-action"
                     Command="{Binding Settings.CheckForUpdatesCommand}">

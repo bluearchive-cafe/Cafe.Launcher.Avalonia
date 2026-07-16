@@ -34,7 +34,7 @@ public sealed class InstallationOperationStateTests : IDisposable
         });
 
         Assert.False(result.Success);
-        Assert.Equal(localizer.T("corruptedInstallationState"), result.Message);
+        Assert.Equal(localizer.T("gameCorruptedInstallationState"), result.Message);
     }
 
     [SkippableFact]
@@ -78,7 +78,7 @@ public sealed class InstallationOperationStateTests : IDisposable
         });
 
         Assert.False(result.Success);
-        Assert.Equal(localizer.T("installationStateReadFailed"), result.Message);
+        Assert.Equal(localizer.T("gameInstallationStateReadFailed"), result.Message);
     }
 
     [Fact]
@@ -100,7 +100,7 @@ public sealed class InstallationOperationStateTests : IDisposable
         });
 
         Assert.False(result.Success);
-        Assert.Equal(localizer.T("remoteStateUnavailable"), result.Message);
+        Assert.Equal(localizer.T("gameRemoteStateUnavailable"), result.Message);
     }
 
     [Fact]

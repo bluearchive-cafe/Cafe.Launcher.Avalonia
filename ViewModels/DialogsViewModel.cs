@@ -153,17 +153,17 @@ public partial class DialogsViewModel : ViewModelBase
     {
         if (IsStopConfirmVisible)
         {
-            StopConfirmText = localizer.T("stopDownloadConfirm");
+            StopConfirmText = localizer.T("stopDownloadMessage");
         }
 
         if (IsDownloadRunningCloseConfirmVisible)
         {
-            DownloadRunningCloseConfirmText = localizer.T("stopDownloadConfirm");
+            DownloadRunningCloseConfirmText = localizer.T("stopDownloadMessage");
         }
 
         if (IsUpdateAvailableVisible)
         {
-            UpdateAvailableText = localizer.F("updateAvailableMessage", UpdateAvailableVersion);
+            UpdateAvailableText = localizer.F("launcherUpdateAvailableMessage", UpdateAvailableVersion);
         }
     }
 
@@ -181,13 +181,13 @@ public partial class DialogsViewModel : ViewModelBase
 
     public void ShowStopConfirm()
     {
-        StopConfirmText = localizer.T("stopDownloadConfirm");
+        StopConfirmText = localizer.T("stopDownloadMessage");
         IsStopConfirmVisible = true;
     }
 
     public void ShowDownloadRunningCloseConfirm()
     {
-        DownloadRunningCloseConfirmText = localizer.T("stopDownloadConfirm");
+        DownloadRunningCloseConfirmText = localizer.T("stopDownloadMessage");
         IsDownloadRunningCloseConfirmVisible = true;
     }
 
@@ -270,7 +270,7 @@ public partial class DialogsViewModel : ViewModelBase
     public void ShowUpdateAvailable(string version, IReadOnlyList<ReleaseFile> files)
     {
         UpdateAvailableVersion = version;
-        UpdateAvailableText = localizer.F("updateAvailableMessage", version);
+        UpdateAvailableText = localizer.F("launcherUpdateAvailableMessage", version);
         SelectedUpdateFile = null;
         UpdateAvailableFiles.Clear();
         foreach (var file in files)

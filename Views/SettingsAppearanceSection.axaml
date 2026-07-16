@@ -7,7 +7,7 @@
              x:Name="SettingsRoot"
              x:DataType="vm:MainWindowViewModel"><StackPanel>
         <StackPanel Classes="settings-group">
-        <TextBlock Text="{Binding Shell.I18n.SettingsThemeColorGroup}" Classes="group-title"/>
+        <TextBlock Text="{Binding Shell.I18n.SettingsGroupThemeColor}" Classes="group-title"/>
     <Grid Classes="settings-row" ColumnDefinitions="Auto,*,Auto">
         <Border Classes="settings-icon">
             <materialIcons:MaterialIcon Kind="ThemeLightDark" Width="{StaticResource LauncherIconMd}" Height="{StaticResource LauncherIconMd}" Foreground="{DynamicResource LauncherAccentBrush}" HorizontalAlignment="Center" VerticalAlignment="Center"/>
@@ -119,7 +119,7 @@
     </Grid>
         </StackPanel>
         <StackPanel Classes="settings-group">
-    <TextBlock Text="{Binding Shell.I18n.SettingsBackgroundGroup}" Classes="group-title"/>
+    <TextBlock Text="{Binding Shell.I18n.SettingsGroupBackground}" Classes="group-title"/>
 
     <Grid Classes="settings-row" ColumnDefinitions="Auto,*,Auto">
         <Border Classes="settings-icon">

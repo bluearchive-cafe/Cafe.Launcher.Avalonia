@@ -197,7 +197,7 @@ public partial class SettingsViewModel : ViewModelBase, IDisposable
 
         if (!result.IsUpdateAvailable)
         {
-            toastService.ShowSuccess(localizer.F("launcherUpToDate", BuildInfo.LauncherVersion));
+            toastService.ShowSuccess(localizer.F("launcherUpdateUpToDate", BuildInfo.LauncherVersion));
             return;
         }
 

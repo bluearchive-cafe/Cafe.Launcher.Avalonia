@@ -6,7 +6,7 @@
              x:Class="Cafe.Launcher.Avalonia.Views.SettingsGeneralSection"
              x:Name="SettingsRoot"
              x:DataType="vm:MainWindowViewModel"><StackPanel Classes="settings-group">
-            <TextBlock Text="{Binding Shell.I18n.SettingsAppPreferences}" Classes="group-title"/>
+            <TextBlock Text="{Binding Shell.I18n.SettingsGroupAppPreferences}" Classes="group-title"/>
 
     <Grid Classes="settings-row" ColumnDefinitions="Auto,*,Auto">
         <Border Classes="settings-icon">

@@ -124,16 +124,16 @@ public partial class ShellViewModel : ViewModelBase
         if (!hasSnapshot)
         {
             StatusIconKind = "HelpCircleOutline";
-            CurrentViewTitle = localizer.T("loadingTitle");
-            StatusText = localizer.T("loadingStatus");
+            CurrentViewTitle = localizer.T("launcherLoadingTitle");
+            StatusText = localizer.T("launcherLoadingStatus");
             PathText = localizer.T("pathLoading");
             VersionText = localizer.T("versionLoading");
             NetworkText = localizer.T("networkLoading");
             LaunchCheckText = localizer.T("launchCheckLoading");
             ExecutableText = localizer.T("executableLoading");
-            ExecutableNameText = localizer.T("loadingValue");
-            NetworkStatusValueText = localizer.T("loadingValue");
-            LaunchCheckValueText = localizer.T("loadingValue");
+            ExecutableNameText = localizer.T("launcherLoadingValue");
+            NetworkStatusValueText = localizer.T("launcherLoadingValue");
+            LaunchCheckValueText = localizer.T("launcherLoadingValue");
             SettingsSummary = localizer.T("settings");
             OperationNote = localizer.T("operationTelemetryLocal");
         }
@@ -142,12 +142,12 @@ public partial class ShellViewModel : ViewModelBase
     public void SetLoading()
     {
         StatusIconKind = "HelpCircleOutline";
-        CurrentViewTitle = localizer.T("loadingTitle");
+        CurrentViewTitle = localizer.T("launcherLoadingTitle");
         StatusText = localizer.T("connectingApi");
-        ExecutableNameText = localizer.T("loadingValue");
-        NetworkStatusValueText = localizer.T("loadingValue");
-        LaunchCheckValueText = localizer.T("loadingValue");
-        OperationNote = localizer.T("loadingStatus");
+        ExecutableNameText = localizer.T("launcherLoadingValue");
+        NetworkStatusValueText = localizer.T("launcherLoadingValue");
+        LaunchCheckValueText = localizer.T("launcherLoadingValue");
+        OperationNote = localizer.T("launcherLoadingStatus");
     }
 
     public void SetRefreshError(Exception exception)
@@ -161,8 +161,8 @@ public partial class ShellViewModel : ViewModelBase
         OperationNote = localizer.T("apiFailedNoFileChange");
         PathText = localizer.T("pathLoading");
         ExecutableText = localizer.T("executableLoading");
-        ExecutableNameText = localizer.T("loadingValue");
-        LaunchCheckValueText = localizer.T("loadingValue");
+        ExecutableNameText = localizer.T("launcherLoadingValue");
+        LaunchCheckValueText = localizer.T("launcherLoadingValue");
     }
 
     public void ApplySnapshot(LauncherStatusSnapshot snapshot, SettingsViewModel settings)
@@ -181,7 +181,7 @@ public partial class ShellViewModel : ViewModelBase
             ? localizer.F("versionInstalled", localConfig?.Version, gameConfig?.GameLatestVersion ?? localizer.T("unknown"))
             : localizer.F("versionLatest", gameConfig?.GameLatestVersion ?? localizer.T("unknown"));
         var networkStatus = snapshot.RuntimeState == LauncherRuntimeState.RemoteUnavailable
-            ? localizer.T("remoteStateUnavailable")
+            ? localizer.T("gameRemoteStateUnavailable")
             : localizer.T("statusNetworkLoaded");
         NetworkText = networkStatus;
         NetworkStatusValueText = networkStatus;
@@ -212,14 +212,14 @@ public partial class ShellViewModel : ViewModelBase
     {
         return snapshot.RuntimeState switch
         {
-            LauncherRuntimeState.NotInstalled => localizer.T("notInstalled"),
-            LauncherRuntimeState.Corrupted => localizer.T("corruptedInstallationState"),
-            LauncherRuntimeState.IoFailure => localizer.T("installationStateReadFailed"),
-            LauncherRuntimeState.RemoteUnavailable => localizer.T("remoteStateUnavailable"),
+            LauncherRuntimeState.NotInstalled => localizer.T("gameNotInstalled"),
+            LauncherRuntimeState.Corrupted => localizer.T("gameCorruptedInstallationState"),
+            LauncherRuntimeState.IoFailure => localizer.T("gameInstallationStateReadFailed"),
+            LauncherRuntimeState.RemoteUnavailable => localizer.T("gameRemoteStateUnavailable"),
             LauncherRuntimeState.BelowLowestVersion => localizer.T("updateRequired"),
             LauncherRuntimeState.UpdateAvailable => localizer.T("updateAvailable"),
             LauncherRuntimeState.Ready => localizer.T("ready"),
-            _ => localizer.T("installationStateReadFailed")
+            _ => localizer.T("gameInstallationStateReadFailed")
         };
     }
 
@@ -257,13 +257,13 @@ public partial class ShellViewModel : ViewModelBase
         return snapshot.RuntimeState switch
         {
             LauncherRuntimeState.NotInstalled => localizer.T("choosePathInstall"),
-            LauncherRuntimeState.Corrupted => localizer.T("corruptedInstallationState"),
-            LauncherRuntimeState.IoFailure => localizer.T("installationStateReadFailed"),
-            LauncherRuntimeState.RemoteUnavailable => localizer.T("remoteStateUnavailable"),
-            LauncherRuntimeState.BelowLowestVersion => localizer.T("belowLowestVersion"),
+            LauncherRuntimeState.Corrupted => localizer.T("gameCorruptedInstallationState"),
+            LauncherRuntimeState.IoFailure => localizer.T("gameInstallationStateReadFailed"),
+            LauncherRuntimeState.RemoteUnavailable => localizer.T("gameRemoteStateUnavailable"),
+            LauncherRuntimeState.BelowLowestVersion => localizer.T("gameBelowLowestVersion"),
             LauncherRuntimeState.UpdateAvailable => localizer.T("updateAvailable"),
             LauncherRuntimeState.Ready => localizer.T("operationTelemetryLocal"),
-            _ => localizer.T("installationStateReadFailed")
+            _ => localizer.T("gameInstallationStateReadFailed")
         };
     }
 }
