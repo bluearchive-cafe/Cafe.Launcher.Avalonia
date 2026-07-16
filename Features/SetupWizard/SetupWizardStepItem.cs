@@ -14,10 +14,6 @@ public sealed partial class SetupWizardStepItem : ObservableObject
     /// <summary>Gets the localized step title.</summary>
     public required string Title { get; init; }
 
-    /// <summary>Gets the current selection summary for this step.</summary>
-    [ObservableProperty]
-    private string summary = "";
-
     /// <summary>Gets whether this step is current, completed, or locked.</summary>
     [ObservableProperty]
     [NotifyPropertyChangedFor(nameof(IsCurrent))]

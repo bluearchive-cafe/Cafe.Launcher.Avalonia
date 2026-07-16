@@ -57,9 +57,11 @@ public partial class SetupWizardViewModel : ViewModelBase, IModalContentViewMode
     [NotifyPropertyChangedFor(nameof(CanGoNext))]
     [NotifyPropertyChangedFor(nameof(CanGoPrevious))]
     [NotifyPropertyChangedFor(nameof(StepTitle))]
+    [NotifyPropertyChangedFor(nameof(StepProgress))]
     [NotifyPropertyChangedFor(nameof(IsStep1))]
     [NotifyPropertyChangedFor(nameof(IsStep2))]
     [NotifyPropertyChangedFor(nameof(IsStep3))]
+    [NotifyPropertyChangedFor(nameof(SelectedStep))]
     private int step;
 
     partial void OnStepChanged(int value) => RefreshSteps();
@@ -70,9 +72,33 @@ public partial class SetupWizardViewModel : ViewModelBase, IModalContentViewMode
     public bool IsStep2 => Step == 2;
     public bool IsStep3 => Step == 3;
 
+    /// <summary>Gets the current step position for the wizard header.</summary>
+    public string StepProgress => $"{Step + 1} / {Steps.Count}";
+
+    /// <summary>Gets or sets the step selected through the navigation list.</summary>
+    public int SelectedStep
+    {
+        get => Step;
+        set
+        {
+            if (value == Step)
+            {
+                return;
+            }
+
+            if (value < 0 || value >= Steps.Count || value > Step)
+            {
+                OnPropertyChanged();
+                return;
+            }
+
+            Step = value;
+        }
+    }
+
     public bool CanGoNext => Step switch
     {
-        2 => !string.IsNullOrWhiteSpace(GamePath),
+        1 => !string.IsNullOrWhiteSpace(GamePath),
         _ => true
     };
 
@@ -80,11 +106,11 @@ public partial class SetupWizardViewModel : ViewModelBase, IModalContentViewMode
 
     public string StepTitle => Step switch
     {
-        0 => localizer.T("setupWizardStep0Title"),
-        1 => localizer.T("setupWizardStep1Title"),
-        2 => localizer.T("setupWizardStep2Title"),
-        3 => localizer.T("setupWizardStep3Title"),
-        4 => localizer.T("setupWizardStep4Title"),
+        0 => localizer.T("setupWizardLanguage"),
+        1 => localizer.T("setupWizardGamePath"),
+        2 => localizer.T("setupWizardDownloadSource"),
+        3 => localizer.T("setupWizardProxy"),
+        4 => localizer.T("setupWizardReview"),
         _ => ""
     };
 
@@ -197,7 +223,7 @@ public partial class SetupWizardViewModel : ViewModelBase, IModalContentViewMode
             return;
         }
 
-        Step = targetStep;
+        SelectedStep = targetStep;
     }
 
     [RelayCommand]
@@ -256,7 +282,15 @@ public partial class SetupWizardViewModel : ViewModelBase, IModalContentViewMode
     private SetupWizardStepItem CreateStep(int index) => new()
     {
         Index = index,
-        Title = localizer.T($"setupWizardStep{index}Title")
+        Title = index switch
+        {
+            0 => localizer.T("setupWizardLanguage"),
+            1 => localizer.T("setupWizardGamePath"),
+            2 => localizer.T("setupWizardDownloadSource"),
+            3 => localizer.T("setupWizardProxy"),
+            4 => localizer.T("setupWizardReview"),
+            _ => ""
+        }
     };
 
     private void RefreshSteps()
@@ -273,14 +307,6 @@ public partial class SetupWizardViewModel : ViewModelBase, IModalContentViewMode
                 : item.Index == Step
                     ? SetupWizardStepState.Current
                     : SetupWizardStepState.Locked;
-            item.Summary = item.Index switch
-            {
-                0 => ResolveLanguageDisplayName(),
-                1 => ResolveDownloadSourceDisplayName(),
-                2 => GamePath,
-                3 => ResolveProxyDisplayName(),
-                _ => ""
-            };
         }
     }
 

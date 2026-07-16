@@ -1011,7 +1011,7 @@ public sealed partial class UiStyleContractTests
     }
 
     [Fact]
-    public void SetupWizard_UsesFixedFiveStepWorkspaceAndCollectionNavigation()
+    public void SetupWizard_UsesFixedFiveStepWorkspaceAndSettingsNavigation()
     {
         var document = XDocument.Load(ProjectFile("Views/SetupWizardOverlay.axaml"));
         var dialog = document
@@ -1023,24 +1023,27 @@ public sealed partial class UiStyleContractTests
         var navigation = document
             .Descendants()
             .Single(element =>
-                element.Name.LocalName == "ItemsControl"
+                element.Name.LocalName == "ListBox"
                 && element.Attribute("ItemsSource")?.Value == "{Binding Dialogs.SetupWizard.Steps}");
+        Assert.Contains("settings-navigation", navigation.Attribute("Classes")?.Value, StringComparison.Ordinal);
+        Assert.Equal(
+            "{Binding Dialogs.SetupWizard.SelectedStep, Mode=TwoWay}",
+            navigation.Attribute("SelectedValue")?.Value);
+        Assert.Equal("{Binding Index}", navigation.Attribute("SelectedValueBinding")?.Value);
         var template = navigation.Descendants().Single(element => element.Name.LocalName == "DataTemplate");
         Assert.Equal("setup:SetupWizardStepItem", template.Attributes().Single(
             attribute => attribute.Name.LocalName == "DataType").Value);
-        Assert.Single(template.Descendants(), element =>
-            element.Name.LocalName == "Button"
-            && element.Attribute("CommandParameter")?.Value == "{Binding Index}");
+        Assert.Equal(2, template.Descendants().Count(element => element.Name.LocalName == "TextBlock"));
     }
 
     [Fact]
-    public void SetupWizardNavigation_TitleWrapsAndSummaryUsesCharacterEllipsis()
+    public void SetupWizardNavigation_UsesSingleLineNumberAndTitle()
     {
         var document = XDocument.Load(ProjectFile("Views/SetupWizardOverlay.axaml"));
         var navigation = document
             .Descendants()
             .Single(element =>
-                element.Name.LocalName == "ItemsControl"
+                element.Name.LocalName == "ListBox"
                 && element.Attribute("ItemsSource")?.Value == "{Binding Dialogs.SetupWizard.Steps}");
         var template = navigation.Descendants().Single(element => element.Name.LocalName == "DataTemplate");
         var title = template
@@ -1048,63 +1051,43 @@ public sealed partial class UiStyleContractTests
             .Single(element =>
                 element.Name.LocalName == "TextBlock"
                 && element.Attribute("Text")?.Value == "{Binding Title}");
-        var summary = template
+        var number = template
             .Descendants()
             .Single(element =>
                 element.Name.LocalName == "TextBlock"
-                && element.Attribute("Text")?.Value == "{Binding Summary}");
+                && element.Attribute("Text")?.Value == "{Binding DisplayNumber}");
 
-        Assert.True(HasClass(title, "section-title"));
-        Assert.Equal("Wrap", title.Attribute("TextWrapping")?.Value);
-        Assert.Equal("CharacterEllipsis", summary.Attribute("TextTrimming")?.Value);
+        Assert.True(HasClass(title, "settings-navigation-item"));
+        Assert.Equal("CharacterEllipsis", title.Attribute("TextTrimming")?.Value);
+        Assert.Equal("{Binding DisplayNumber}", number.Attribute("Text")?.Value);
     }
 
     [Fact]
-    public void SetupWizardNavigation_UsesSettingsNavigationVisualStates()
+    public void SetupWizardNavigation_ReusesSettingsNavigationVisualStates()
     {
-        var wizardStyles = XDocument.Load(ProjectFile("Views/Styles/SetupWizard.axaml"));
+        var styles = XDocument.Load(ProjectFile("Views/MainWindow.Styles.axaml"));
+        var selected = GetStyleSetters(styles, "ListBox.settings-navigation > ListBoxItem:selected");
+        var disabled = GetStyleSetters(styles, "ListBox.settings-navigation > ListBoxItem:disabled");
 
-        Assert.Equal(
-            "16,8,8,16",
-            GetStyleSetters(wizardStyles, "Border.wizard-navigation")["Padding"]);
-
-        var step = GetStyleSetters(wizardStyles, "Button.wizard-step");
-        Assert.Equal("{DynamicResource LauncherTextBodyBrush}", step["Foreground"]);
-        Assert.Equal("0", step["BorderThickness"]);
-        Assert.Equal("0", step["CornerRadius"]);
-        Assert.Equal("8,12,12,12", step["Padding"]);
-
-        var pointerOver = GetStyleSetters(wizardStyles, "Button.wizard-step:pointerover");
-        Assert.Equal("{DynamicResource LauncherTransparentBrush}", pointerOver["Background"]);
-        Assert.Equal("{DynamicResource LauncherAccentBrush}", pointerOver["Foreground"]);
-
-        var pressed = GetStyleSetters(wizardStyles, "Button.wizard-step:pressed");
-        Assert.Equal("{DynamicResource LauncherFlatPressedBrush}", pressed["Background"]);
-        Assert.Equal("{DynamicResource LauncherTextPrimaryBrush}", pressed["Foreground"]);
-
-        var current = GetStyleSetters(wizardStyles, "Button.wizard-step.current");
-        Assert.Equal("{DynamicResource LauncherFlatPressedBrush}", current["Background"]);
-        Assert.Equal("{DynamicResource LauncherTextPrimaryBrush}", current["Foreground"]);
-        Assert.Equal("{DynamicResource LauncherAccentBrush}", current["BorderBrush"]);
-        Assert.Equal("3,0,0,0", current["BorderThickness"]);
-        Assert.Equal("{StaticResource LauncherFontWeightStrong}", current["FontWeight"]);
-
-        foreach (var selector in new[]
-                 {
-                     "Button.wizard-step.current:pointerover",
-                     "Button.wizard-step.current:pressed"
-                 })
-        {
-            var currentInteraction = GetStyleSetters(wizardStyles, selector);
-            Assert.Equal("{DynamicResource LauncherFlatPressedBrush}", currentInteraction["Background"]);
-            Assert.Equal("{DynamicResource LauncherTextPrimaryBrush}", currentInteraction["Foreground"]);
-            Assert.Equal("{DynamicResource LauncherAccentBrush}", currentInteraction["BorderBrush"]);
-            Assert.Equal("3,0,0,0", currentInteraction["BorderThickness"]);
-        }
-
-        var disabled = GetStyleSetters(wizardStyles, "Button.wizard-step:disabled");
+        Assert.Equal("3,0,0,0", selected["BorderThickness"]);
+        Assert.Equal("{DynamicResource LauncherAccentBrush}", selected["BorderBrush"]);
         Assert.Equal("{DynamicResource LauncherTextSecondaryBrush}", disabled["Foreground"]);
-        Assert.Equal("0", disabled["BorderThickness"]);
+    }
+
+    [Fact]
+    public void SetupWizardHeader_ShowsCurrentProgressBeforeTaskTitle()
+    {
+        var document = XDocument.Load(ProjectFile("Views/SetupWizardOverlay.axaml"));
+        var headerCopy = document
+            .Descendants()
+            .Single(element => element.Name.LocalName == "StackPanel" && HasClass(element, "dialog-heading-copy"));
+        var textBlocks = headerCopy.Elements()
+            .Where(element => element.Name.LocalName == "TextBlock")
+            .ToList();
+
+        Assert.Equal("{Binding Dialogs.SetupWizard.StepProgress}", textBlocks[0].Attribute("Text")?.Value);
+        Assert.Equal("{Binding Dialogs.SetupWizard.StepTitle}", textBlocks[1].Attribute("Text")?.Value);
+        Assert.True(HasClass(textBlocks[1], "dialog-title"));
     }
 
     [Fact]

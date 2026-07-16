@@ -20,6 +20,7 @@ public sealed class SetupWizardViewModelTests
     {
         var vm = CreateViewModel();
         Assert.Equal(0, vm.Step);
+        Assert.Equal("1 / 5", vm.StepProgress);
         Assert.True(vm.IsFirstStep);
         Assert.False(vm.IsLastStep);
         Assert.False(vm.CanGoPrevious);
@@ -84,12 +85,11 @@ public sealed class SetupWizardViewModelTests
 
         vm.NextCommand.Execute(null);
         Assert.True(vm.IsStep1);
-        Assert.False(vm.IsStep2);
 
+        vm.GamePath = @"D:\YostarGames\BlueArchive_JP";
         vm.NextCommand.Execute(null);
         Assert.True(vm.IsStep2);
 
-        vm.GamePath = @"D:\YostarGames\BlueArchive_JP";
         vm.NextCommand.Execute(null);
         Assert.True(vm.IsStep3);
 
@@ -110,35 +110,32 @@ public sealed class SetupWizardViewModelTests
     }
 
     [Fact]
-    public void CanGoNext_Step2WithEmptyPath_ReturnsFalse()
+    public void CanGoNext_Step1WithEmptyPath_ReturnsFalse()
     {
         var vm = CreateViewModel();
         vm.GamePath = "";
-        vm.NextCommand.Execute(null);
         vm.NextCommand.Execute(null);
         Assert.False(vm.CanGoNext);
     }
 
     [Fact]
-    public void NextCommand_Step2WithEmptyPath_DoesNotAdvance()
+    public void NextCommand_Step1WithEmptyPath_DoesNotAdvance()
     {
         var vm = CreateViewModel();
         vm.GamePath = "";
         vm.NextCommand.Execute(null);
         vm.NextCommand.Execute(null);
 
-        vm.NextCommand.Execute(null);
-
-        Assert.Equal(2, vm.Step);
+        Assert.Equal(1, vm.Step);
+        Assert.Equal("2 / 5", vm.StepProgress);
         Assert.False(vm.CanGoNext);
     }
 
     [Fact]
-    public void CanGoNext_Step2WithValidPath_ReturnsTrue()
+    public void CanGoNext_Step1WithValidPath_ReturnsTrue()
     {
         var vm = CreateViewModel();
         vm.GamePath = @"D:\YostarGames\BlueArchive_JP";
-        vm.NextCommand.Execute(null);
         vm.NextCommand.Execute(null);
         Assert.True(vm.CanGoNext);
     }

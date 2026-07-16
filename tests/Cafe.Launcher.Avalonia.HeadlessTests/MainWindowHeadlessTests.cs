@@ -691,21 +691,18 @@ public sealed class MainWindowHeadlessTests
         Dispatcher.UIThread.RunJobs();
         Assert.Equal(1, context.ViewModel.Dialogs.SetupWizard.Step);
 
-        // Step 1 → 2
-        context.ViewModel.Dialogs.SetupWizard.NextCommand.Execute(null);
-        Dispatcher.UIThread.RunJobs();
-        Assert.Equal(2, context.ViewModel.Dialogs.SetupWizard.Step);
-
-        // Step 2 requires GamePath to be non-empty for CanGoNext
+        // Step 1 requires GamePath to be non-empty for CanGoNext
         Assert.False(context.ViewModel.Dialogs.SetupWizard.CanGoNext);
         context.ViewModel.Dialogs.SetupWizard.GamePath = @"C:\Games\YostarGames\BlueArchive_JP";
         Assert.True(context.ViewModel.Dialogs.SetupWizard.CanGoNext);
         context.ViewModel.Dialogs.SetupWizard.NextCommand.Execute(null);
         Dispatcher.UIThread.RunJobs();
-        Assert.Equal(3, context.ViewModel.Dialogs.SetupWizard.Step);
+        Assert.Equal(2, context.ViewModel.Dialogs.SetupWizard.Step);
 
-        // Step 3 → 4 (last)
+        // Steps 2 and 3 → 4 (last)
         Assert.True(context.ViewModel.Dialogs.SetupWizard.CanGoNext);
+        context.ViewModel.Dialogs.SetupWizard.NextCommand.Execute(null);
+        Dispatcher.UIThread.RunJobs();
         context.ViewModel.Dialogs.SetupWizard.NextCommand.Execute(null);
         Dispatcher.UIThread.RunJobs();
 
@@ -792,12 +789,12 @@ public sealed class MainWindowHeadlessTests
         context.ViewModel.Dialogs.ShowSetupWizard();
         Dispatcher.UIThread.RunJobs();
 
-        // Navigate to step 2 (GamePath) and set a path
-        context.ViewModel.Dialogs.SetupWizard.NextCommand.Execute(null);
-        Dispatcher.UIThread.RunJobs();
+        // Navigate to step 1 (GamePath) and set a path
         context.ViewModel.Dialogs.SetupWizard.NextCommand.Execute(null);
         Dispatcher.UIThread.RunJobs();
         context.ViewModel.Dialogs.SetupWizard.GamePath = @"C:\Games\YostarGames\BlueArchive_JP";
+        context.ViewModel.Dialogs.SetupWizard.NextCommand.Execute(null);
+        Dispatcher.UIThread.RunJobs();
         context.ViewModel.Dialogs.SetupWizard.NextCommand.Execute(null);
         Dispatcher.UIThread.RunJobs();
         context.ViewModel.Dialogs.SetupWizard.NextCommand.Execute(null);

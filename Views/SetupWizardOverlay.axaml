@@ -14,36 +14,30 @@
                 MaxWidth="920"
                 MaxHeight="560"
                 Classes="dialog overlay-dialog confirm-panel">
-            <Grid ColumnDefinitions="240,*">
-                <Border Classes="wizard-navigation">
-                    <StackPanel Spacing="{StaticResource LauncherSpacingMd}">
-                        <TextBlock Text="{Binding Shell.I18n.SetupWizardStepTitle}"
-                                   Classes="dialog-title"/>
-                        <ItemsControl ItemsSource="{Binding Dialogs.SetupWizard.Steps}">
-                            <ItemsControl.ItemTemplate>
-                                <DataTemplate x:DataType="setup:SetupWizardStepItem">
-                                    <Button Classes="wizard-step"
-                                            Classes.current="{Binding IsCurrent}"
-                                            Classes.completed="{Binding IsCompleted}"
-                                            Command="{Binding DataContext.Dialogs.SetupWizard.GoToStepCommand, ElementName=WizardRoot}"
-                                            CommandParameter="{Binding Index}"
-                                            IsEnabled="{Binding CanNavigate}"
-                                            AutomationProperties.Name="{Binding Title}">
-                                        <Grid ColumnDefinitions="32,*" ColumnSpacing="{StaticResource LauncherSpacingSm}">
-                                            <Border Classes="wizard-step-index">
-                                                <TextBlock Text="{Binding DisplayNumber}" HorizontalAlignment="Center"/>
-                                            </Border>
-                                            <StackPanel Grid.Column="1" Spacing="{StaticResource LauncherSpacingXs}">
-                                                <TextBlock Text="{Binding Title}" Classes="section-title" TextWrapping="Wrap"/>
-                                                <TextBlock Text="{Binding Summary}" Classes="caption" TextTrimming="CharacterEllipsis"/>
-                                            </StackPanel>
-                                        </Grid>
-                                    </Button>
-                                </DataTemplate>
-                            </ItemsControl.ItemTemplate>
-                        </ItemsControl>
-                    </StackPanel>
-                </Border>
+            <Grid ColumnDefinitions="184,*">
+                <ListBox Classes="settings-navigation wizard-navigation"
+                         ItemsSource="{Binding Dialogs.SetupWizard.Steps}"
+                         SelectedValue="{Binding Dialogs.SetupWizard.SelectedStep, Mode=TwoWay}"
+                         SelectedValueBinding="{Binding Index}"
+                         AutomationProperties.Name="{Binding Shell.I18n.SetupWizardStepTitle}">
+                    <ListBox.Styles>
+                        <Style Selector="ListBoxItem" x:DataType="setup:SetupWizardStepItem">
+                            <Setter Property="IsEnabled" Value="{Binding CanNavigate}"/>
+                        </Style>
+                    </ListBox.Styles>
+                    <ListBox.ItemTemplate>
+                        <DataTemplate x:DataType="setup:SetupWizardStepItem">
+                            <Grid ColumnDefinitions="Auto,*" ColumnSpacing="{StaticResource LauncherSpacingSm}">
+                                <TextBlock Text="{Binding DisplayNumber}" Classes="wizard-step-number"/>
+                                <TextBlock Grid.Column="1"
+                                           Text="{Binding Title}"
+                                           Classes="settings-navigation-item"
+                                           TextTrimming="CharacterEllipsis"
+                                           AutomationProperties.Name="{Binding Title}"/>
+                            </Grid>
+                        </DataTemplate>
+                    </ListBox.ItemTemplate>
+                </ListBox>
                 <Grid Grid.Column="1" RowDefinitions="Auto,*,Auto" Classes="confirm-layout">
                 <!-- Header row -->
                 <Grid Classes="dialog-heading" ColumnDefinitions="Auto,*,Auto">
@@ -56,8 +50,8 @@
                                                    VerticalAlignment="Center"/>
                     </Border>
                     <StackPanel Grid.Column="1" Classes="dialog-heading-copy">
-                        <TextBlock Text="{Binding Shell.I18n.SetupWizardStepTitle}" Classes="dialog-title"/>
-                        <TextBlock Text="{Binding Dialogs.SetupWizard.StepTitle}" Classes="caption"/>
+                        <TextBlock Text="{Binding Dialogs.SetupWizard.StepProgress}" Classes="caption"/>
+                        <TextBlock Text="{Binding Dialogs.SetupWizard.StepTitle}" Classes="dialog-title"/>
                     </StackPanel>
                     <Button Grid.Column="2"
                             Classes="flat-action dialog-action"
@@ -101,38 +95,9 @@
                             </ComboBox>
                         </StackPanel>
 
-                        <!-- Step 1: Download Source -->
+                        <!-- Step 1: Game Path -->
                         <StackPanel Spacing="{StaticResource LauncherSpacingMd}"
                                     IsVisible="{Binding Dialogs.SetupWizard.IsStep1}">
-                            <TextBlock Text="{Binding Shell.I18n.SetupWizardDownloadSource}" Classes="section-title"/>
-                            <TextBlock Text="{Binding Shell.I18n.SetupWizardDownloadSourceHint}"
-                                       Classes="body"
-                                       TextWrapping="Wrap"/>
-                            <StackPanel Spacing="{StaticResource LauncherSpacingSm}">
-                                <Button Classes="wizard-choice"
-                                        Classes.active="{Binding Dialogs.SetupWizard.IsPatchUrlGroupCafe}"
-                                        Command="{Binding Dialogs.SetupWizard.SelectCafeDownloadSourceCommand}"
-                                        AutomationProperties.Name="{Binding Shell.I18n.DownloadSourceCafe}">
-                                    <StackPanel>
-                                        <TextBlock Text="{Binding Shell.I18n.DownloadSourceCafe}" Classes="section-title"/>
-                                        <TextBlock Text="{Binding Shell.I18n.SetupWizardDownloadSourceCafeDescription}" Classes="caption"/>
-                                    </StackPanel>
-                                </Button>
-                                <Button Classes="wizard-choice"
-                                        Classes.active="{Binding Dialogs.SetupWizard.IsPatchUrlGroupOfficial}"
-                                        Command="{Binding Dialogs.SetupWizard.SelectOfficialDownloadSourceCommand}"
-                                        AutomationProperties.Name="{Binding Shell.I18n.DownloadSourceOfficial}">
-                                    <StackPanel>
-                                        <TextBlock Text="{Binding Shell.I18n.DownloadSourceOfficial}" Classes="section-title"/>
-                                        <TextBlock Text="{Binding Shell.I18n.SetupWizardDownloadSourceOfficialDescription}" Classes="caption"/>
-                                    </StackPanel>
-                                </Button>
-                            </StackPanel>
-                        </StackPanel>
-
-                        <!-- Step 2: Game Path -->
-                        <StackPanel Spacing="{StaticResource LauncherSpacingMd}"
-                                    IsVisible="{Binding Dialogs.SetupWizard.IsStep2}">
                             <TextBlock Text="{Binding Shell.I18n.SetupWizardGamePath}" Classes="section-title"/>
                             <TextBlock Text="{Binding Shell.I18n.SetupWizardGamePathHint}"
                                        Classes="body"
@@ -157,6 +122,35 @@
                                        Classes="caption"
                                        Foreground="{DynamicResource LauncherDangerBrush}"
                                        IsVisible="{Binding Dialogs.SetupWizard.IsGamePathEmpty}"/>
+                        </StackPanel>
+
+                        <!-- Step 2: Download Source -->
+                        <StackPanel Spacing="{StaticResource LauncherSpacingMd}"
+                                    IsVisible="{Binding Dialogs.SetupWizard.IsStep2}">
+                            <TextBlock Text="{Binding Shell.I18n.SetupWizardDownloadSource}" Classes="section-title"/>
+                            <TextBlock Text="{Binding Shell.I18n.SetupWizardDownloadSourceHint}"
+                                       Classes="body"
+                                       TextWrapping="Wrap"/>
+                            <StackPanel Spacing="{StaticResource LauncherSpacingSm}">
+                                <Button Classes="wizard-choice"
+                                        Classes.active="{Binding Dialogs.SetupWizard.IsPatchUrlGroupCafe}"
+                                        Command="{Binding Dialogs.SetupWizard.SelectCafeDownloadSourceCommand}"
+                                        AutomationProperties.Name="{Binding Shell.I18n.DownloadSourceCafe}">
+                                    <StackPanel>
+                                        <TextBlock Text="{Binding Shell.I18n.DownloadSourceCafe}" Classes="section-title"/>
+                                        <TextBlock Text="{Binding Shell.I18n.SetupWizardDownloadSourceCafeDescription}" Classes="caption"/>
+                                    </StackPanel>
+                                </Button>
+                                <Button Classes="wizard-choice"
+                                        Classes.active="{Binding Dialogs.SetupWizard.IsPatchUrlGroupOfficial}"
+                                        Command="{Binding Dialogs.SetupWizard.SelectOfficialDownloadSourceCommand}"
+                                        AutomationProperties.Name="{Binding Shell.I18n.DownloadSourceOfficial}">
+                                    <StackPanel>
+                                        <TextBlock Text="{Binding Shell.I18n.DownloadSourceOfficial}" Classes="section-title"/>
+                                        <TextBlock Text="{Binding Shell.I18n.SetupWizardDownloadSourceOfficialDescription}" Classes="caption"/>
+                                    </StackPanel>
+                                </Button>
+                            </StackPanel>
                         </StackPanel>
 
                         <!-- Step 3: Proxy -->
@@ -223,7 +217,7 @@
                                                    Text="{Binding Dialogs.SetupWizard.DownloadSourceDisplayName}"
                                                    Classes="value"/>
                                         <Button Grid.Column="2" Classes="flat-action dialog-action wizard-review-edit"
-                                                Command="{Binding Dialogs.SetupWizard.GoToStepCommand}" CommandParameter="1"
+                                                Command="{Binding Dialogs.SetupWizard.GoToStepCommand}" CommandParameter="2"
                                                 AutomationProperties.Name="{Binding Shell.I18n.SetupWizardEditStep}">
                                             <TextBlock Text="{Binding Shell.I18n.SetupWizardEditStep}"/>
                                         </Button>
@@ -235,7 +229,7 @@
                                                    Classes="value"
                                                    TextTrimming="CharacterEllipsis"/>
                                         <Button Grid.Column="2" Classes="flat-action dialog-action wizard-review-edit"
-                                                Command="{Binding Dialogs.SetupWizard.GoToStepCommand}" CommandParameter="2"
+                                                Command="{Binding Dialogs.SetupWizard.GoToStepCommand}" CommandParameter="1"
                                                 AutomationProperties.Name="{Binding Shell.I18n.SetupWizardEditStep}">
                                             <TextBlock Text="{Binding Shell.I18n.SetupWizardEditStep}"/>
                                         </Button>
