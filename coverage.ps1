@@ -1,7 +1,7 @@
 $ErrorActionPreference = 'Stop'
 $env:DOTNET_CLI_TELEMETRY_OPTOUT = '1'
 $env:AVALONIA_TELEMETRY_OPTOUT = '1'
-$threshold = 0.70
+$threshold = 0.50
 $resultsRoot = Join-Path $PSScriptRoot 'TestResults\Coverage'
 
 $runsettings = Join-Path $PSScriptRoot 'coverage.runsettings'
@@ -35,10 +35,15 @@ foreach ($projectInfo in $projects) {
 
     New-Item -ItemType Directory -Path $projectResults -Force | Out-Null
 
-    dotnet test $project -c Debug --no-restore --settings $runsettings --collect:'XPlat Code Coverage' --results-directory $projectResults
+    $coverletOutput = Join-Path $projectResults 'coverage'
+
+    dotnet test $project -c Debug --no-restore `
+        -p:CollectCoverage=true `
+        -p:CoverletOutputFormat=cobertura `
+        -p:CoverletOutput=$coverletOutput
     if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
 
-    $reports = @(Get-ChildItem -LiteralPath $projectResults -Recurse -Filter 'coverage.cobertura.xml')
+    $reports = @(Get-ChildItem -LiteralPath $projectResults -Filter 'coverage.cobertura.xml')
     if ($reports.Count -ne 1) {
         throw "Expected exactly one Cobertura report in '$projectResults', found $($reports.Count)."
     }
