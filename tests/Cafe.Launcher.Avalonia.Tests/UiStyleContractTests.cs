@@ -78,19 +78,31 @@ public sealed partial class UiStyleContractTests
             .Single(element =>
                 element.Name.LocalName == "Button"
                 && element.Attribute("Command")?.Value == "{Binding RefreshCommand}");
-        var pathField = status
+        var pathRow = status
             .Descendants()
+            .Single(element =>
+                element.Name.LocalName == "Grid"
+                && HasClass(element, "install-path-row"));
+        var pathField = pathRow
+            .Elements()
             .Single(element =>
                 element.Name.LocalName == "Border"
                 && HasClass(element, "path-field"));
-        var installButton = pathField
-            .Descendants()
+        var pathButtons = pathRow
+            .Elements()
+            .Where(element => element.Name.LocalName == "Button")
+            .ToArray();
+        var installButton = pathButtons
             .Single(element =>
-                element.Name.LocalName == "Button"
-                && element.Attribute("Command")?.Value == "{Binding Operations.InstallOrUpdateCommand}");
+                element.Attribute("Command")?.Value == "{Binding Operations.InstallOrUpdateCommand}");
 
         Assert.Equal("1", refreshButton.Attribute("Grid.Column")?.Value);
-        Assert.Equal("4", installButton.Attribute("Grid.Column")?.Value);
+        Assert.Equal("*,Auto,Auto,Auto", pathRow.Attribute("ColumnDefinitions")?.Value);
+        Assert.Equal(3, pathButtons.Length);
+        Assert.DoesNotContain(
+            pathField.Descendants(),
+            element => element.Name.LocalName == "Button");
+        Assert.Equal("3", installButton.Attribute("Grid.Column")?.Value);
         Assert.True(HasClass(installButton, "primary-operation"));
         Assert.True(HasClass(installButton, "path-operation"));
         Assert.DoesNotContain(

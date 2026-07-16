@@ -576,6 +576,39 @@ public sealed class MainWindowHeadlessTests
         });
     }
 
+    [AvaloniaTheory]
+    [InlineData(1300, 754)]
+    [InlineData(1024, 640)]
+    public void MainWindow_InstallPathRow_AtDefaultAndMinimumWindowSizes_KeepsPathFieldSeparateFromActions(
+        double width,
+        double height)
+    {
+        using var context = CreateContext();
+        context.Window.Width = width;
+        context.Window.Height = height;
+        context.ViewModel.Operations.PanelMode = GameOperationPanelMode.Install;
+        context.Window.Show();
+        Dispatcher.UIThread.RunJobs();
+
+        var pathRow = context.Window
+            .GetVisualDescendants()
+            .OfType<Grid>()
+            .Single(control => control.Classes.Contains("install-path-row"));
+        var pathField = pathRow.Children
+            .OfType<Border>()
+            .Single(control => control.Classes.Contains("path-field"));
+        var actions = pathRow.Children
+            .OfType<Button>()
+            .OrderBy(control => control.Bounds.Left)
+            .ToArray();
+
+        Assert.Equal(3, actions.Length);
+        Assert.True(pathField.Bounds.Width > 0);
+        Assert.True(pathField.Bounds.Right <= actions[0].Bounds.Left);
+        AssertControlInsideWindow(pathField, context.Window);
+        Assert.All(actions, action => AssertControlInsideWindow(action, context.Window));
+    }
+
     [AvaloniaFact]
     public void SettingsControls_UseMinimumAccessibleInteractionHeight()
     {
