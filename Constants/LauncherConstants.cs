@@ -21,5 +21,12 @@ public static class LauncherConstants
     public const string OfficialGameWebsiteUrl = "https://bluearchive.jp/";
     public const string CafeWebsiteUrl = "https://bluearchive.cafe/";
     public const string HelpDocsUrl = "https://docs.bluearchive.cafe/";
-    public const string GitHubReleaseRepositoryUrl = "https://github.com/bluearchive-cafe/Cafe.Launcher.Avalonia_Release";
+    /// <summary>
+    /// Full GitHub release repository URL.
+    /// Redundant with <see cref="ApiConfig.GitHubReleaseRepositoryUrl"/>;
+    /// both must match. Present here for UI-layer convenience
+    /// (avoids referencing API config from view/viewmodel code).
+    /// </summary>
+    public const string GitHubReleaseRepositoryUrl =
+        "https://github.com/bluearchive-cafe/Cafe.Launcher.Avalonia_Release";
 }
