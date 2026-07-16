@@ -371,6 +371,53 @@ public sealed class GameOperationsViewModelTests
         Assert.Equal(expectedIconKind, context.ViewModel.ProgressIconKind);
     }
 
+    [Fact]
+    public async Task InstallOrUpdateCommand_WhenPreparingAfterPreviousOperation_UsesIdleProgressIcon()
+    {
+        var context = CreateContext();
+        context.ViewModel.ApplyProgress(new GameOperationProgress
+        {
+            OperationKind = GameOperationKind.Repair,
+            Stage = GameOperationStage.RepairCheck
+        });
+        context.ViewModel.ApplySnapshot(new LauncherStatusSnapshot
+        {
+            RuntimeState = LauncherRuntimeState.NotInstalled
+        });
+        context.Backend.InstallCompletion = new TaskCompletionSource<GameOperationResult>(
+            TaskCreationOptions.RunContinuationsAsynchronously);
+
+        var commandTask = context.ViewModel.InstallOrUpdateCommand.ExecuteAsync(null);
+
+        Assert.True(context.ViewModel.IsProgressPanelVisible);
+        Assert.Equal("Sync", context.ViewModel.ProgressIconKind);
+
+        context.Backend.InstallCompletion.SetResult(new GameOperationResult());
+        await commandTask;
+    }
+
+    [Fact]
+    public async Task ConfirmUninstallAsync_WhenStartingAfterPreviousOperation_UsesUninstallProgressIcon()
+    {
+        var context = CreateContext();
+        context.ViewModel.ApplyProgress(new GameOperationProgress
+        {
+            OperationKind = GameOperationKind.Download,
+            Stage = GameOperationStage.Downloading
+        });
+        context.ViewModel.ApplySnapshot(ReadySnapshot());
+        context.Backend.UninstallCompletion = new TaskCompletionSource<GameOperationResult>(
+            TaskCreationOptions.RunContinuationsAsynchronously);
+
+        var uninstallTask = context.ViewModel.ConfirmUninstallAsync();
+
+        Assert.True(context.ViewModel.IsProgressPanelVisible);
+        Assert.Equal("DeleteOutline", context.ViewModel.ProgressIconKind);
+
+        context.Backend.UninstallCompletion.SetResult(new GameOperationResult());
+        await uninstallTask;
+    }
+
     [Theory]
     [InlineData(GameOperationStage.DiskCheck, 10L, 20L, 0, 0, 0, "10B", "20B")]
     [InlineData(GameOperationStage.VerificationRetry, 0, null, 2, 1, 3, "2", "1/3")]
@@ -673,6 +720,8 @@ public sealed class GameOperationsViewModelTests
         public GameOperationResult UninstallResult { get; set; } = new();
         public GameOperationResult? ResumeResult { get; set; }
         public Exception? InstallException { get; set; }
+        public TaskCompletionSource<GameOperationResult>? InstallCompletion { get; set; }
+        public TaskCompletionSource<GameOperationResult>? UninstallCompletion { get; set; }
 
         public Task<GameLaunchResult> StartGameAsync(LauncherStatusSnapshot snapshot)
         {
@@ -690,7 +739,7 @@ public sealed class GameOperationsViewModelTests
                 throw InstallException;
             }
 
-            return Task.FromResult(InstallResult);
+            return InstallCompletion?.Task ?? Task.FromResult(InstallResult);
         }
 
         public Task<GameOperationResult> RepairAsync(
@@ -709,7 +758,7 @@ public sealed class GameOperationsViewModelTests
             Action<GameOperationProgress> progress)
         {
             UninstallInvocationCount++;
-            return Task.FromResult(UninstallResult);
+            return UninstallCompletion?.Task ?? Task.FromResult(UninstallResult);
         }
 
         public Task<GameOperationResult?> ResumePersistedAsync(
