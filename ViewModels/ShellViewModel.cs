@@ -1,5 +1,6 @@
 using System;
 using System.Runtime.InteropServices;
+using Avalonia.Media;
 using Cafe.Launcher.Avalonia.Constants;
 using Cafe.Launcher.Avalonia.Models;
 using Cafe.Launcher.Avalonia.Services;
@@ -88,6 +89,10 @@ public partial class ShellViewModel : ViewModelBase
     [ObservableProperty]
     private bool isBusy = true;
 
+    [ObservableProperty]
+    private FontFamily fontFamily =
+        LanguageFontFamilyService.GetForEffectiveLanguage(LauncherLanguages.English);
+
     public LocalizedStrings I18n { get; } = new();
 
     public string GameFolderPickerTitle { get; private set; } = "";
@@ -134,7 +139,8 @@ public partial class ShellViewModel : ViewModelBase
         ResourcePanelViewModel resourcePanel,
         bool hasSnapshot)
     {
-        localizer.SetLanguage(language);
+        var effectiveLanguage = localizer.SetLanguage(language);
+        FontFamily = LanguageFontFamilyService.GetForEffectiveLanguage(effectiveLanguage);
         I18n.Apply(localizer);
         LauncherVersionText = localizer.F("launcherVersionLabel", BuildInfo.LauncherVersion);
         CommitShaText = localizer.F("commitLabel", BuildInfo.CommitSha);

@@ -118,8 +118,6 @@ public sealed class SettingsOptionsViewModel
         UpdateSettingCategory(SettingsCategoryCodes.Game, localizer.T("settingsCategoryGame"), localizer.T("settingsCategoryGameDescription"));
         UpdateSettingCategory(SettingsCategoryCodes.DownloadNetwork, localizer.T("settingsCategoryDownloadNetwork"), localizer.T("settingsCategoryDownloadNetworkDescription"));
         UpdateSettingCategory(SettingsCategoryCodes.Appearance, localizer.T("settingsCategoryAppearance"), localizer.T("settingsCategoryAppearanceDescription"));
-        UpdateSettingCategory(SettingsCategoryCodes.NotificationsContent, localizer.T("settingsCategoryNotificationsContent"), localizer.T("settingsCategoryNotificationsContentDescription"));
-        UpdateSettingCategory(SettingsCategoryCodes.Advanced, localizer.T("settingsCategoryAdvanced"), localizer.T("settingsCategoryAdvancedDescription"));
         UpdateSettingCategory(SettingsCategoryCodes.About, localizer.T("settingsCategoryAbout"), localizer.T("settingsCategoryAboutDescription"));
 
         RefreshOptions(Theme, code => code switch
@@ -237,8 +235,6 @@ public sealed class SettingsOptionsViewModel
         SettingsCategories.Add(new() { Code = SettingsCategoryCodes.Game });
         SettingsCategories.Add(new() { Code = SettingsCategoryCodes.DownloadNetwork });
         SettingsCategories.Add(new() { Code = SettingsCategoryCodes.Appearance });
-        SettingsCategories.Add(new() { Code = SettingsCategoryCodes.NotificationsContent });
-        SettingsCategories.Add(new() { Code = SettingsCategoryCodes.Advanced });
         SettingsCategories.Add(new() { Code = SettingsCategoryCodes.About });
     }
 

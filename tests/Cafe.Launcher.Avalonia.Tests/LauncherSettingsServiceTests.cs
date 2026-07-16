@@ -23,6 +23,27 @@ public sealed class LauncherSettingsServiceTests : IDisposable
         await File.WriteAllTextAsync(settingsPath, """{"motionMode":"invalid"}""");
         Assert.Equal(MotionModes.System, (await service.ReadAsync()).MotionMode);
     }
+
+    [Fact]
+    public async Task Language_RoundTripsAllSupportedValuesAndInvalidFallsBackToAuto()
+    {
+        var service = new LauncherSettingsService(settingsPath);
+
+        foreach (var language in new[]
+        {
+            LauncherLanguages.English,
+            LauncherLanguages.SimplifiedChinese,
+            LauncherLanguages.TraditionalChinese,
+            LauncherLanguages.Japanese
+        })
+        {
+            await service.SaveAsync(new LauncherSettings { Language = language });
+            Assert.Equal(language, (await service.ReadAsync()).Language);
+        }
+
+        await File.WriteAllTextAsync(settingsPath, """{"language":"invalid"}""");
+        Assert.Equal(LauncherLanguages.Auto, (await service.ReadAsync()).Language);
+    }
     private readonly string tempDir = Path.Combine(Path.GetTempPath(), Guid.NewGuid().ToString("N"));
     private readonly string settingsPath;
 

@@ -175,6 +175,7 @@ public sealed class LauncherSettingsService
         if (settings.Language is not LauncherLanguages.Auto
             and not LauncherLanguages.English
             and not LauncherLanguages.SimplifiedChinese
+            and not LauncherLanguages.TraditionalChinese
             and not LauncherLanguages.Japanese)
         {
             settings.Language = LauncherLanguages.Auto;

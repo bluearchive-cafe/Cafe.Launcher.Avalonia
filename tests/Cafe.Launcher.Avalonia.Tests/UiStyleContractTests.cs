@@ -13,8 +13,6 @@ public sealed partial class UiStyleContractTests
         "Views/SettingsGameSection.axaml",
         "Views/SettingsDownloadNetworkSection.axaml",
         "Views/SettingsAppearanceSection.axaml",
-        "Views/SettingsNotificationsContentSection.axaml",
-        "Views/SettingsAdvancedSection.axaml",
         "Views/SettingsAboutSection.axaml",
         "Views/MainWindowDialogsOverlay.axaml",
         "Views/MainWindowLogViewerOverlay.axaml",
@@ -44,7 +42,8 @@ public sealed partial class UiStyleContractTests
                 "Settings.Editor.Current.ProxyMode",
                 "Settings.Editor.Current.PatchUrlGroup",
                 "Settings.Editor.Current.DownloadSpeedLimit",
-                "Settings.Editor.Current.UpdateChannel"
+                "Settings.Editor.Current.UpdateChannel",
+                "Settings.Editor.Current.LogLevel"
             ],
             ["SettingsAppearanceSection"] =
             [
@@ -52,6 +51,8 @@ public sealed partial class UiStyleContractTests
                 "Settings.Editor.Current.ThemeColorMode",
                 "Settings.Editor.Current.BackgroundSource",
                 "Settings.Editor.Current.BackgroundFit",
+                "Settings.Editor.Current.ToastNotificationsEnabled",
+                "Settings.Editor.Current.ShowRemoteContentCard",
                 "Settings.Appearance.ThemeColorPaletteItems",
                 "Settings.Appearance.SelectedCustomThemeColor",
                 "Settings.Appearance.SelectedBackgroundFillColor",
@@ -62,15 +63,6 @@ public sealed partial class UiStyleContractTests
                 "Settings.Appearance.IsCustomThemeColorSelected",
                 "Settings.Appearance.IsBackgroundFitSelected",
                 "Settings.Appearance.IsCustomBackgroundSelected"
-            ],
-            ["SettingsNotificationsContentSection"] =
-            [
-                "Settings.Editor.Current.ToastNotificationsEnabled",
-                "Settings.Editor.Current.ShowRemoteContentCard"
-            ],
-            ["SettingsAdvancedSection"] =
-            [
-                "Settings.Editor.Current.LogLevel"
             ],
             ["SettingsAboutSection"] =
             [
@@ -103,7 +95,7 @@ public sealed partial class UiStyleContractTests
     }
 
     [Fact]
-    public void SettingsOverlay_ReferencesSevenCategorySectionsWithoutOwningSettingsRows()
+    public void SettingsOverlay_ReferencesFiveCategorySectionsWithoutOwningSettingsRows()
     {
         var overlay = File.ReadAllText(ProjectFile("Views/MainWindowSettingsOverlay.axaml"));
         Dictionary<string, string> sectionVisibility = new(StringComparer.Ordinal)
@@ -112,8 +104,6 @@ public sealed partial class UiStyleContractTests
             ["SettingsGameSection"] = "Settings.IsGameCategorySelected",
             ["SettingsDownloadNetworkSection"] = "Settings.IsDownloadNetworkCategorySelected",
             ["SettingsAppearanceSection"] = "Settings.IsAppearanceCategorySelected",
-            ["SettingsNotificationsContentSection"] = "Settings.IsNotificationsContentCategorySelected",
-            ["SettingsAdvancedSection"] = "Settings.IsAdvancedCategorySelected",
             ["SettingsAboutSection"] = "Settings.IsAboutCategorySelected"
         };
 
@@ -303,7 +293,7 @@ public sealed partial class UiStyleContractTests
                 && HasClass(element, "settings-group"))
             .ToList();
 
-        Assert.Equal(2, groups.Count);
+        Assert.Equal(3, groups.Count);
 
         Assert.Equal(
             "{Binding Shell.I18n.SettingsGroupThemeColor}",
@@ -314,6 +304,12 @@ public sealed partial class UiStyleContractTests
         Assert.Equal(
             "{Binding Shell.I18n.SettingsGroupBackground}",
             groups[1]
+                .Elements()
+                .First(element => element.Name.LocalName == "TextBlock")
+                .Attribute("Text")?.Value);
+        Assert.Equal(
+            "{Binding Shell.I18n.SettingsGroupDisplay}",
+            groups[2]
                 .Elements()
                 .First(element => element.Name.LocalName == "TextBlock")
                 .Attribute("Text")?.Value);
@@ -439,6 +435,30 @@ public sealed partial class UiStyleContractTests
                 "{StaticResource LauncherFont",
                 setter.Attribute("Value")?.Value,
                 StringComparison.Ordinal));
+    }
+
+    [Fact]
+    public void FontConfiguration_UsesLanguageFontsWithoutInterDefault()
+    {
+        var program = File.ReadAllText(ProjectFile("Program.cs"));
+        var project = XDocument.Load(ProjectFile("Cafe.Launcher.Avalonia.csproj"));
+        var packageNames = project
+            .Descendants()
+            .Where(element => element.Name.LocalName == "PackageReference")
+            .Select(element => element.Attribute("Include")?.Value)
+            .ToArray();
+
+        Assert.DoesNotContain(".WithInterFont()", program, StringComparison.Ordinal);
+        Assert.DoesNotContain("Avalonia.Fonts.Inter", packageNames);
+
+        var appDocument = XDocument.Load(ProjectFile("App.axaml"));
+        var monospace = appDocument
+            .Descendants()
+            .Single(element =>
+                element.Attributes().Any(attribute =>
+                    attribute.Name.LocalName == "Key"
+                    && attribute.Value == "LauncherFontFamilyMonospace"));
+        Assert.Equal("Consolas", monospace.Value.Trim());
     }
 
     [Fact]
@@ -1180,8 +1200,6 @@ public sealed partial class UiStyleContractTests
             "Views/SettingsGameSection.axaml",
             "Views/SettingsDownloadNetworkSection.axaml",
             "Views/SettingsAppearanceSection.axaml",
-            "Views/SettingsNotificationsContentSection.axaml",
-            "Views/SettingsAdvancedSection.axaml",
             "Views/SettingsAboutSection.axaml"
         };
         var interactiveControlNames = new HashSet<string>(StringComparer.Ordinal)

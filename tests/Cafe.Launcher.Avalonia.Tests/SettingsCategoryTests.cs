@@ -33,8 +33,6 @@ public sealed class SettingsCategoryTests
         SettingsCategoryCodes.Game,
         SettingsCategoryCodes.DownloadNetwork,
         SettingsCategoryCodes.Appearance,
-        SettingsCategoryCodes.NotificationsContent,
-        SettingsCategoryCodes.Advanced,
         SettingsCategoryCodes.About
     ];
 
@@ -44,8 +42,6 @@ public sealed class SettingsCategoryTests
         ("settingsCategoryGame", strings => strings.SettingsCategoryGame),
         ("settingsCategoryDownloadNetwork", strings => strings.SettingsCategoryDownloadNetwork),
         ("settingsCategoryAppearance", strings => strings.SettingsCategoryAppearance),
-        ("settingsCategoryNotificationsContent", strings => strings.SettingsCategoryNotificationsContent),
-        ("settingsCategoryAdvanced", strings => strings.SettingsCategoryAdvanced),
         ("settingsCategoryAbout", strings => strings.SettingsCategoryAbout)
     ];
 
@@ -55,8 +51,6 @@ public sealed class SettingsCategoryTests
         "settingsCategoryGameDescription",
         "settingsCategoryDownloadNetworkDescription",
         "settingsCategoryAppearanceDescription",
-        "settingsCategoryNotificationsContentDescription",
-        "settingsCategoryAdvancedDescription",
         "settingsCategoryAboutDescription"
     ];
 
@@ -66,8 +60,6 @@ public sealed class SettingsCategoryTests
         nameof(SettingsViewModel.IsGameCategorySelected),
         nameof(SettingsViewModel.IsDownloadNetworkCategorySelected),
         nameof(SettingsViewModel.IsAppearanceCategorySelected),
-        nameof(SettingsViewModel.IsNotificationsContentCategorySelected),
-        nameof(SettingsViewModel.IsAdvancedCategorySelected),
         nameof(SettingsViewModel.IsAboutCategorySelected)
     ];
 
@@ -88,8 +80,6 @@ public sealed class SettingsCategoryTests
     [InlineData("game")]
     [InlineData("download-network")]
     [InlineData("appearance")]
-    [InlineData("notifications-content")]
-    [InlineData("advanced")]
     [InlineData("about")]
     public void Normalize_ExactCode_ReturnsCode(string code)
     {
@@ -121,10 +111,10 @@ public sealed class SettingsCategoryTests
         viewModel.LoadFromSnapshot(new LauncherSettings { Language = LauncherLanguages.English });
         viewModel.Editor.Current.Language = LauncherLanguages.Japanese;
 
-        viewModel.SelectedCategory = SettingsCategoryCodes.Advanced;
+        viewModel.SelectedCategory = SettingsCategoryCodes.DownloadNetwork;
         viewModel.LoadFromSnapshot(viewModel.Editor.GetSnapshot());
 
-        Assert.Equal(SettingsCategoryCodes.Advanced, viewModel.SelectedCategory);
+        Assert.Equal(SettingsCategoryCodes.DownloadNetwork, viewModel.SelectedCategory);
         Assert.Equal(LauncherLanguages.Japanese, viewModel.Editor.Current.Language);
     }
 
@@ -140,7 +130,6 @@ public sealed class SettingsCategoryTests
         Assert.Equal(
             [SettingsCategoryCodes.General, SettingsCategoryCodes.Game,
              SettingsCategoryCodes.DownloadNetwork, SettingsCategoryCodes.Appearance,
-             SettingsCategoryCodes.NotificationsContent, SettingsCategoryCodes.Advanced,
              SettingsCategoryCodes.About],
             options.SettingsCategories.Select(option => option.Code));
         Assert.All(options.SettingsCategories, option => Assert.False(string.IsNullOrWhiteSpace(option.DisplayName)));
@@ -149,6 +138,7 @@ public sealed class SettingsCategoryTests
     [Theory]
     [InlineData(LauncherLanguages.English)]
     [InlineData(LauncherLanguages.SimplifiedChinese)]
+    [InlineData(LauncherLanguages.TraditionalChinese)]
     [InlineData(LauncherLanguages.Japanese)]
     public void CategoryLocalization_HasNamesAndDescriptions(string language)
     {
@@ -173,6 +163,7 @@ public sealed class SettingsCategoryTests
     [Theory]
     [InlineData("en.json")]
     [InlineData("zh-Hans.json")]
+    [InlineData("zh-Hant.json")]
     [InlineData("ja.json")]
     public void CategoryLocaleFile_DefinesAllCategoryKeysDirectly(string fileName)
     {
@@ -196,8 +187,9 @@ public sealed class SettingsCategoryTests
     [Theory]
     [InlineData(LauncherLanguages.English)]
     [InlineData(LauncherLanguages.SimplifiedChinese)]
+    [InlineData(LauncherLanguages.TraditionalChinese)]
     [InlineData(LauncherLanguages.Japanese)]
-    public void LocalizedStrings_ApplyMapsAllSevenCategoryProperties(string language)
+    public void LocalizedStrings_ApplyMapsAllFiveCategoryProperties(string language)
     {
         var localizer = new LocalizationService();
         localizer.SetLanguage(language);
@@ -257,7 +249,7 @@ public sealed class SettingsCategoryTests
 
             viewModel.PropertyChanged -= handler;
             var changedProperties = changed.ToHashSet(StringComparer.Ordinal);
-            Assert.Equal(8, changedProperties.Count);
+            Assert.Equal(6, changedProperties.Count);
             Assert.Contains(nameof(SettingsViewModel.SelectedCategory), changedProperties);
             foreach (var propertyName in CategoryPropertyNames)
             {
@@ -270,8 +262,6 @@ public sealed class SettingsCategoryTests
                     viewModel.IsGameCategorySelected,
                     viewModel.IsDownloadNetworkCategorySelected,
                     viewModel.IsAppearanceCategorySelected,
-                    viewModel.IsNotificationsContentCategorySelected,
-                    viewModel.IsAdvancedCategorySelected,
                     viewModel.IsAboutCategorySelected
                 },
                 isSelected => isSelected);
@@ -285,12 +275,12 @@ public sealed class SettingsCategoryTests
         var viewModel = provider.GetRequiredService<SettingsViewModel>();
         viewModel.LoadFromSnapshot(new LauncherSettings { Language = LauncherLanguages.English });
         viewModel.Editor.Current.Language = LauncherLanguages.Japanese;
-        viewModel.SelectedCategory = SettingsCategoryCodes.Advanced;
+        viewModel.SelectedCategory = SettingsCategoryCodes.DownloadNetwork;
 
         await viewModel.DiscardChangesAsync();
 
         Assert.Equal(LauncherLanguages.English, viewModel.Editor.Current.Language);
-        Assert.Equal(SettingsCategoryCodes.Advanced, viewModel.SelectedCategory);
+        Assert.Equal(SettingsCategoryCodes.DownloadNetwork, viewModel.SelectedCategory);
     }
 
     [Fact]

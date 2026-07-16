@@ -20,8 +20,6 @@ public sealed partial class LocalizedStrings : ObservableObject
     [ObservableProperty] private string settingsCategoryGame = "";
     [ObservableProperty] private string settingsCategoryDownloadNetwork = "";
     [ObservableProperty] private string settingsCategoryAppearance = "";
-    [ObservableProperty] private string settingsCategoryNotificationsContent = "";
-    [ObservableProperty] private string settingsCategoryAdvanced = "";
     [ObservableProperty] private string settingsCategoryAbout = "";
     [ObservableProperty] private string minimize = "";
     [ObservableProperty] private string close = "";
@@ -243,8 +241,6 @@ public sealed partial class LocalizedStrings : ObservableObject
         SettingsCategoryGame = localizer.T("settingsCategoryGame");
         SettingsCategoryDownloadNetwork = localizer.T("settingsCategoryDownloadNetwork");
         SettingsCategoryAppearance = localizer.T("settingsCategoryAppearance");
-        SettingsCategoryNotificationsContent = localizer.T("settingsCategoryNotificationsContent");
-        SettingsCategoryAdvanced = localizer.T("settingsCategoryAdvanced");
         SettingsCategoryAbout = localizer.T("settingsCategoryAbout");
         Minimize = localizer.T("minimize");
         Close = localizer.T("close");
@@ -459,7 +455,7 @@ public sealed partial class LocalizedStrings : ObservableObject
 public sealed class LocalizationService
 {
     private static Dictionary<string, Dictionary<string, string>> Resources = new(StringComparer.Ordinal);
-    private static readonly string[] SupportedLocales = [LauncherLanguages.English, LauncherLanguages.SimplifiedChinese, LauncherLanguages.Japanese];
+    private static readonly string[] SupportedLocales = [LauncherLanguages.English, LauncherLanguages.SimplifiedChinese, LauncherLanguages.TraditionalChinese, LauncherLanguages.Japanese];
     private static volatile bool resourcesLoaded;
     private static readonly object LoadLock = new();
 
@@ -573,6 +569,7 @@ public sealed class LocalizationService
             new LanguageOption { Code = LauncherLanguages.Auto, DisplayName = "Auto" },
             new LanguageOption { Code = LauncherLanguages.English, DisplayName = "English" },
             new LanguageOption { Code = LauncherLanguages.SimplifiedChinese, DisplayName = "简体中文" },
+            new LanguageOption { Code = LauncherLanguages.TraditionalChinese, DisplayName = "繁體中文" },
             new LanguageOption { Code = LauncherLanguages.Japanese, DisplayName = "日本語" }
         ];
     }
@@ -583,6 +580,7 @@ public sealed class LocalizationService
         {
             LauncherLanguages.English => LauncherLanguages.English,
             LauncherLanguages.SimplifiedChinese => LauncherLanguages.SimplifiedChinese,
+            LauncherLanguages.TraditionalChinese => LauncherLanguages.TraditionalChinese,
             LauncherLanguages.Japanese => LauncherLanguages.Japanese,
             LauncherLanguages.Auto => ResolveSystemLanguage(),
             _ => ResolveSystemLanguage()
@@ -594,7 +592,11 @@ public sealed class LocalizationService
         var name = CultureInfo.CurrentUICulture.Name;
         if (name.StartsWith("zh", StringComparison.OrdinalIgnoreCase))
         {
-            return LauncherLanguages.SimplifiedChinese;
+            // zh-TW, zh-HK, zh-MO → Traditional; zh-CN, zh-SG, zh-Hans → Simplified.
+            // Fall back to Simplified when the region/script is ambiguous.
+            return IsTraditionalChineseRegion(name)
+                ? LauncherLanguages.TraditionalChinese
+                : LauncherLanguages.SimplifiedChinese;
         }
 
         if (name.StartsWith("ja", StringComparison.OrdinalIgnoreCase))
@@ -603,5 +605,24 @@ public sealed class LocalizationService
         }
 
         return LauncherLanguages.English;
+    }
+
+    private static bool IsTraditionalChineseRegion(string cultureName)
+    {
+        // Match by script subtag (zh-Hant, zh-Hans) first, then by region.
+        if (cultureName.Contains("Hant", StringComparison.OrdinalIgnoreCase))
+        {
+            return true;
+        }
+
+        if (cultureName.Contains("Hans", StringComparison.OrdinalIgnoreCase))
+        {
+            return false;
+        }
+
+        // Region fallback: TW (Taiwan), HK (Hong Kong), MO (Macau) use Traditional Chinese.
+        return cultureName.EndsWith("TW", StringComparison.OrdinalIgnoreCase)
+            || cultureName.EndsWith("HK", StringComparison.OrdinalIgnoreCase)
+            || cultureName.EndsWith("MO", StringComparison.OrdinalIgnoreCase);
     }
 }

@@ -98,8 +98,6 @@
                                 <views:SettingsGameSection IsVisible="{Binding Settings.IsGameCategorySelected}"/>
                                 <views:SettingsDownloadNetworkSection IsVisible="{Binding Settings.IsDownloadNetworkCategorySelected}"/>
                                 <views:SettingsAppearanceSection IsVisible="{Binding Settings.IsAppearanceCategorySelected}"/>
-                                <views:SettingsNotificationsContentSection IsVisible="{Binding Settings.IsNotificationsContentCategorySelected}"/>
-                                <views:SettingsAdvancedSection IsVisible="{Binding Settings.IsAdvancedCategorySelected}"/>
                                 <views:SettingsAboutSection IsVisible="{Binding Settings.IsAboutCategorySelected}"/>
                             </StackPanel>
                         </ScrollViewer>
