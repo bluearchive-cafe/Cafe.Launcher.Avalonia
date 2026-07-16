@@ -151,6 +151,8 @@
   "logExportFailed": "ログのエクスポートに失敗しました: {0}",
   "logExportFolderPickerTitle": "エクスポートしたログの保存先を選択",
   "logExportSucceeded": "ログを {0} にエクスポートしました",
+  "logFiles": "ログファイル",
+  "logFilesDescription": "ログを表示、エクスポート、または保存先フォルダーを開く",
   "logFilterAll": "すべて",
   "logFilterDebug": "デバッグ",
   "logFilterError": "エラー",

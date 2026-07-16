@@ -151,6 +151,8 @@
   "logExportFailed": "Failed to export logs: {0}",
   "logExportFolderPickerTitle": "Choose where to save exported logs",
   "logExportSucceeded": "Logs exported to {0}",
+  "logFiles": "Log Files",
+  "logFilesDescription": "View, export, or open the directory containing logs",
   "logFilterAll": "All",
   "logFilterDebug": "Debug",
   "logFilterError": "Error",

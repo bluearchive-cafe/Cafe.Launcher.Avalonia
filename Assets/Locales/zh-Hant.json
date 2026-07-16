@@ -151,6 +151,8 @@
   "logExportFailed": "匯出日誌失敗：{0}",
   "logExportFolderPickerTitle": "選擇匯出日誌的儲存位置",
   "logExportSucceeded": "日誌已匯出到 {0}",
+  "logFiles": "日誌檔案",
+  "logFilesDescription": "查看、匯出或開啟日誌所在目錄",
   "logFilterAll": "全部",
   "logFilterDebug": "除錯",
   "logFilterError": "錯誤",
