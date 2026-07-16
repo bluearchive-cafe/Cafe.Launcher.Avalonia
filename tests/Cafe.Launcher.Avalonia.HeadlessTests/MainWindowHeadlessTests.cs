@@ -386,6 +386,60 @@ public sealed class MainWindowHeadlessTests
         Assert.True(remotePanel.Bounds.Bottom <= operationPanel.Bounds.Top);
     }
 
+    [AvaloniaTheory]
+    [InlineData("install", 4, 1)]
+    [InlineData("progress", 2, 0)]
+    [InlineData("control", 2, 1)]
+    public void MainWindow_AtMinimumWindowSize_KeepsOperationStatusAndActionsInsideWindow(
+        string panelMode,
+        int expectedActionCount,
+        int expectedPrimaryActionCount)
+    {
+        using var context = CreateContext();
+        context.Window.Width = 1024;
+        context.Window.Height = 640;
+        context.ViewModel.Operations.PanelMode = panelMode switch
+        {
+            "install" => GameOperationPanelMode.Install,
+            "progress" => GameOperationPanelMode.Progress,
+            "control" => GameOperationPanelMode.Control,
+            _ => throw new ArgumentOutOfRangeException(nameof(panelMode)),
+        };
+        context.ViewModel.Operations.CanPauseOperation = panelMode == "progress";
+        context.Window.Show();
+        Dispatcher.UIThread.RunJobs();
+
+        var layout = context.Window
+            .GetVisualDescendants()
+            .OfType<Grid>()
+            .Single(control =>
+                control.Classes.Contains("operation-layout")
+                && control.IsEffectivelyVisible);
+        var title = layout
+            .GetVisualDescendants()
+            .OfType<TextBlock>()
+            .Single(control => control.Classes.Contains("operation-status-title"));
+        var actions = layout
+            .GetVisualDescendants()
+            .OfType<Button>()
+            .Where(control =>
+                control.Classes.Contains("primary-operation")
+                || control.Classes.Contains("secondary-operation"))
+            .ToArray();
+
+        Assert.True(title.IsEffectivelyVisible);
+        AssertControlInsideWindow(title, context.Window);
+        Assert.Equal(expectedActionCount, actions.Length);
+        Assert.Equal(
+            expectedPrimaryActionCount,
+            actions.Count(control => control.Classes.Contains("primary-operation")));
+        Assert.All(actions, control =>
+        {
+            Assert.True(control.IsEffectivelyVisible);
+            AssertControlInsideWindow(control, context.Window);
+        });
+    }
+
     [AvaloniaFact]
     public void SettingsControls_UseMinimumAccessibleInteractionHeight()
     {
@@ -1077,6 +1131,18 @@ public sealed class MainWindowHeadlessTests
         Assert.All(
             sections.Where(control => control.GetType() != expectedType),
             control => Assert.False(control.IsEffectivelyVisible));
+    }
+
+    private static void AssertControlInsideWindow(Control control, Window window)
+    {
+        var topLeft = control.TranslatePoint(default, window);
+        Assert.NotNull(topLeft);
+        Assert.True(control.Bounds.Width > 0);
+        Assert.True(control.Bounds.Height > 0);
+        Assert.True(topLeft.Value.X >= 0);
+        Assert.True(topLeft.Value.Y >= 0);
+        Assert.True(topLeft.Value.X + control.Bounds.Width <= window.ClientSize.Width);
+        Assert.True(topLeft.Value.Y + control.Bounds.Height <= window.ClientSize.Height);
     }
 
     private sealed record TestContext(

@@ -5,6 +5,89 @@ namespace Cafe.Launcher.Avalonia.Tests;
 
 public sealed partial class UiStyleContractTests
 {
+    [Fact]
+    public void MainWindow_OperationPanels_UseStableStatusAndActionColumns()
+    {
+        var document = XDocument.Load(ProjectFile("Views/MainWindow.axaml"));
+        var operationLayouts = document
+            .Descendants()
+            .Where(element =>
+                element.Name.LocalName == "Grid"
+                && HasClass(element, "operation-layout"))
+            .ToArray();
+
+        Assert.Equal(3, operationLayouts.Length);
+        Assert.All(operationLayouts, layout =>
+        {
+            Assert.Equal("*,Auto", layout.Attribute("ColumnDefinitions")?.Value);
+
+            var status = layout.Elements().Single(element => HasClass(element, "operation-status"));
+            Assert.Contains(
+                status.Descendants(),
+                element => element.Name.LocalName == "TextBlock"
+                    && HasClass(element, "operation-status-title"));
+            Assert.Contains(
+                status.Descendants(),
+                element => element.Name.LocalName == "MaterialIcon");
+
+            var actions = layout.Elements().Single(element => HasClass(element, "operation-actions"));
+            Assert.Equal("1", actions.Attribute("Grid.Column")?.Value);
+        });
+    }
+
+    [Fact]
+    public void MainWindow_OperationButtons_ExposeLocalizedNamesAndActionPriority()
+    {
+        var document = XDocument.Load(ProjectFile("Views/MainWindow.axaml"));
+        Dictionary<string, (string Name, string Priority)> expectedButtons = new(StringComparer.Ordinal)
+        {
+            ["{Binding RefreshCommand}"] = ("{Binding Shell.I18n.Refresh}", "secondary-operation"),
+            ["{Binding Operations.InstallOrUpdateCommand}"] = ("{Binding Operations.InstallButtonText}", "primary-operation"),
+            ["{Binding Settings.ChangePersistedGamePathCommand}"] = ("{Binding Shell.I18n.ChangePath}", "secondary-operation"),
+            ["{Binding Settings.SelectInstalledGameCommand}"] = ("{Binding Shell.I18n.SelectInstalledGame}", "secondary-operation"),
+            ["{Binding WindowChrome.OpenOfficialSiteCommand}"] = ("{Binding Shell.I18n.OfficialSite}", "secondary-operation"),
+            ["{Binding Operations.StartGameCommand}"] = ("{Binding Shell.I18n.StartGame}", "primary-operation"),
+            ["{Binding Operations.PauseResumeCommand}"] = ("{Binding Operations.PauseResumeText}", "secondary-operation"),
+            ["{Binding Operations.StopOperationCommand}"] = ("{Binding Shell.I18n.Stop}", "secondary-operation")
+        };
+
+        foreach (var (command, expected) in expectedButtons)
+        {
+            var button = document
+                .Descendants()
+                .Single(element =>
+                    element.Name.LocalName == "Button"
+                    && element.Attribute("Command")?.Value == command);
+
+            Assert.True(HasClass(button, expected.Priority), $"{command} must be {expected.Priority}.");
+            Assert.Equal(
+                expected.Name,
+                button.Attributes()
+                    .Single(attribute => attribute.Name.LocalName == "AutomationProperties.Name")
+                    .Value);
+            Assert.NotNull(button.Attributes().SingleOrDefault(attribute => attribute.Name.LocalName == "ToolTip.Tip"));
+        }
+    }
+
+    [Fact]
+    public void MainWindow_ControlPanel_ExplainsTheStartAction()
+    {
+        var document = XDocument.Load(ProjectFile("Views/MainWindow.axaml"));
+        var controlPanel = document
+            .Descendants()
+            .Single(element =>
+                element.Name.LocalName == "Border"
+                && HasClass(element, "control-panel"));
+        var status = controlPanel
+            .Descendants()
+            .Single(element => HasClass(element, "operation-status"));
+
+        Assert.Contains(
+            status.Descendants(),
+            element => element.Name.LocalName == "TextBlock"
+                && element.Attribute("Text")?.Value == "{Binding Shell.I18n.LaunchCheckDescription}");
+    }
+
     private static readonly string[] StyleFiles =
     [
         "Views/MainWindow.Styles.axaml",
@@ -504,6 +587,7 @@ public sealed partial class UiStyleContractTests
             "TextBlock.group-title",
             "TextBlock.category-title",
             "TextBlock.status-summary-title",
+            "TextBlock.operation-status-title",
             "ListBox.settings-navigation > ListBoxItem:selected",
             "Button.primary-action",
             "Button.danger-action",

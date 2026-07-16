@@ -251,8 +251,19 @@
                 <Border Grid.Row="1"
                         IsVisible="{Binding Operations.IsInstallPanelVisible}"
                         Classes="bottom-panel">
-                    <Grid ColumnDefinitions="*,Auto" RowDefinitions="*,Auto" ColumnSpacing="{StaticResource LauncherSpacingXl}">
-                        <StackPanel VerticalAlignment="Center" Spacing="{StaticResource LauncherSpacingSm}">
+                    <Grid Classes="operation-layout" ColumnDefinitions="*,Auto" ColumnSpacing="{StaticResource LauncherSpacingXl}">
+                        <StackPanel Classes="operation-status" VerticalAlignment="Center" Spacing="{StaticResource LauncherSpacingSm}">
+                            <Grid ColumnDefinitions="Auto,*" ColumnSpacing="{StaticResource LauncherSpacingMd}">
+                                <materialIcons:MaterialIcon Kind="{Binding Shell.StatusIconKind}"
+                                                            Width="{StaticResource LauncherIconXxl}"
+                                                            Height="{StaticResource LauncherIconXxl}"
+                                                            Foreground="{DynamicResource LauncherAccentBrush}"
+                                                            VerticalAlignment="Center"/>
+                                <StackPanel Grid.Column="1" Spacing="{StaticResource LauncherSpacingXs}">
+                                    <TextBlock Classes="operation-status-title" Text="{Binding Shell.StatusText}"/>
+                                    <TextBlock Classes="caption" Text="{Binding Shell.OperationNote}" TextWrapping="Wrap"/>
+                                </StackPanel>
+                            </Grid>
                             <StackPanel Orientation="Horizontal" Spacing="{StaticResource LauncherSpacingLg}">
                                 <TextBlock Classes="caption" Text="{Binding Shell.VersionText}"/>
                                 <TextBlock Classes="caption" Text="{Binding Shell.DiskSpaceText}"/>
@@ -262,15 +273,19 @@
                                 <Grid ColumnDefinitions="Auto,*,Auto,Auto" ColumnSpacing="{StaticResource LauncherSpacingSm}">
                                     <TextBlock Text="{Binding Shell.I18n.Path}" Classes="value" VerticalAlignment="Center"/>
                                     <TextBlock Grid.Column="1" Text="{Binding Shell.PathText}" Classes="caption" VerticalAlignment="Center" TextTrimming="CharacterEllipsis"/>
-                                    <Button Grid.Column="2" Classes="icon-link" Command="{Binding Settings.ChangePersistedGamePathCommand}" VerticalAlignment="Center"
-                                            IsEnabled="{Binding Shell.IsBusy, Converter={x:Static BoolConverters.Not}}">
+                                    <Button Grid.Column="2" Classes="icon-link secondary-operation" Command="{Binding Settings.ChangePersistedGamePathCommand}" VerticalAlignment="Center"
+                                            IsEnabled="{Binding Shell.IsBusy, Converter={x:Static BoolConverters.Not}}"
+                                            ToolTip.Tip="{Binding Shell.I18n.ChangePath}"
+                                            AutomationProperties.Name="{Binding Shell.I18n.ChangePath}">
                                         <StackPanel Classes="button-content">
                                             <materialIcons:MaterialIcon Kind="FolderOpen" Width="{StaticResource LauncherIconSm}" Height="{StaticResource LauncherIconSm}"/>
                                             <TextBlock Text="{Binding Shell.I18n.ChangePath}"/>
                                         </StackPanel>
                                     </Button>
-                                    <Button Grid.Column="3" Classes="icon-link" Command="{Binding Settings.SelectInstalledGameCommand}" VerticalAlignment="Center"
-                                            IsEnabled="{Binding Shell.IsBusy, Converter={x:Static BoolConverters.Not}}">
+                                    <Button Grid.Column="3" Classes="icon-link secondary-operation" Command="{Binding Settings.SelectInstalledGameCommand}" VerticalAlignment="Center"
+                                            IsEnabled="{Binding Shell.IsBusy, Converter={x:Static BoolConverters.Not}}"
+                                            ToolTip.Tip="{Binding Shell.I18n.SelectInstalledGame}"
+                                            AutomationProperties.Name="{Binding Shell.I18n.SelectInstalledGame}">
                                         <StackPanel Classes="button-content">
                                             <materialIcons:MaterialIcon Kind="Magnify" Width="{StaticResource LauncherIconSm}" Height="{StaticResource LauncherIconSm}"/>
                                             <TextBlock Text="{Binding Shell.I18n.SelectInstalledGame}"/>
@@ -279,16 +294,18 @@
                                 </Grid>
                             </Border>
                         </StackPanel>
-                        <StackPanel Grid.Column="1" Orientation="Horizontal" Spacing="{StaticResource LauncherSpacingMd}" VerticalAlignment="Center">
-                            <Button Classes="flat-action bottom-action" Command="{Binding RefreshCommand}" ToolTip.Tip="{Binding Shell.I18n.RefreshTooltip}"
-                                    IsEnabled="{Binding Shell.IsBusy, Converter={x:Static BoolConverters.Not}}">
+                        <StackPanel Grid.Column="1" Classes="operation-actions" Orientation="Horizontal" Spacing="{StaticResource LauncherSpacingMd}" VerticalAlignment="Center">
+                            <Button Classes="flat-action bottom-action secondary-operation" Command="{Binding RefreshCommand}" ToolTip.Tip="{Binding Shell.I18n.RefreshTooltip}"
+                                    IsEnabled="{Binding Shell.IsBusy, Converter={x:Static BoolConverters.Not}}"
+                                    AutomationProperties.Name="{Binding Shell.I18n.Refresh}">
                                 <StackPanel Classes="button-content">
                                     <materialIcons:MaterialIcon Kind="Refresh" Width="{StaticResource LauncherIconMd}" Height="{StaticResource LauncherIconMd}"/>
                                     <TextBlock Text="{Binding Shell.I18n.Refresh}"/>
                                 </StackPanel>
                             </Button>
-                            <Button Classes="primary-action bottom-action" Command="{Binding Operations.InstallOrUpdateCommand}" ToolTip.Tip="{Binding Operations.InstallButtonText}"
-                                    IsEnabled="{Binding Shell.IsBusy, Converter={x:Static BoolConverters.Not}}">
+                            <Button Classes="primary-action bottom-action primary-operation" Command="{Binding Operations.InstallOrUpdateCommand}" ToolTip.Tip="{Binding Operations.InstallButtonText}"
+                                    IsEnabled="{Binding Shell.IsBusy, Converter={x:Static BoolConverters.Not}}"
+                                    AutomationProperties.Name="{Binding Operations.InstallButtonText}">
                                 <StackPanel Classes="button-content">
                                     <materialIcons:MaterialIcon Kind="Download" Width="{StaticResource LauncherIconXl}" Height="{StaticResource LauncherIconXl}"/>
                                     <TextBlock Text="{Binding Operations.InstallButtonText}"/>
@@ -301,12 +318,17 @@
                 <Border Grid.Row="1"
                         IsVisible="{Binding Operations.IsProgressPanelVisible}"
                         Classes="bottom-panel">
-                    <Grid ColumnDefinitions="*,Auto" ColumnSpacing="{StaticResource LauncherSpacingXl}" VerticalAlignment="Center">
-                        <StackPanel Spacing="{StaticResource LauncherSpacingSm}" VerticalAlignment="Center">
+                    <Grid Classes="operation-layout" ColumnDefinitions="*,Auto" ColumnSpacing="{StaticResource LauncherSpacingXl}" VerticalAlignment="Center">
+                        <StackPanel Classes="operation-status" Spacing="{StaticResource LauncherSpacingSm}" VerticalAlignment="Center">
                             <!-- Title + percentage -->
-                            <Grid ColumnDefinitions="Auto,*,Auto">
-                                <TextBlock Text="{Binding Operations.ProgressTitle}" Classes="progress-title" VerticalAlignment="Center"/>
-                                <TextBlock Grid.Column="2" Text="{Binding Operations.ProgressValue, StringFormat={}{0}%}"
+                            <Grid ColumnDefinitions="Auto,Auto,*,Auto" ColumnSpacing="{StaticResource LauncherSpacingSm}">
+                                <materialIcons:MaterialIcon Kind="Download"
+                                                            Width="{StaticResource LauncherIconLg}"
+                                                            Height="{StaticResource LauncherIconLg}"
+                                                            Foreground="{DynamicResource LauncherAccentBrush}"
+                                                            VerticalAlignment="Center"/>
+                                <TextBlock Grid.Column="1" Text="{Binding Operations.ProgressTitle}" Classes="progress-title operation-status-title" VerticalAlignment="Center"/>
+                                <TextBlock Grid.Column="3" Text="{Binding Operations.ProgressValue, StringFormat={}{0}%}"
                                            Classes="progress-title" VerticalAlignment="Center"
                                            Foreground="{DynamicResource LauncherAccentBrush}"/>
                             </Grid>
@@ -324,15 +346,19 @@
                                            IsVisible="{Binding Operations.ProgressEstimated, Converter={x:Static StringConverters.IsNotNullOrEmpty}}"/>
                             </Grid>
                         </StackPanel>
-                        <StackPanel Grid.Column="1" Orientation="Horizontal" Spacing="{StaticResource LauncherSpacingSm}" VerticalAlignment="Center">
-                            <Button Classes="flat-action bottom-action" Command="{Binding Operations.PauseResumeCommand}" VerticalAlignment="Center"
-                                    IsVisible="{Binding Operations.CanPauseOperation}">
+                        <StackPanel Grid.Column="1" Classes="operation-actions" Orientation="Horizontal" Spacing="{StaticResource LauncherSpacingSm}" VerticalAlignment="Center">
+                            <Button Classes="flat-action bottom-action secondary-operation" Command="{Binding Operations.PauseResumeCommand}" VerticalAlignment="Center"
+                                    IsVisible="{Binding Operations.CanPauseOperation}"
+                                    ToolTip.Tip="{Binding Operations.PauseResumeText}"
+                                    AutomationProperties.Name="{Binding Operations.PauseResumeText}">
                                 <StackPanel Classes="button-content">
                                     <materialIcons:MaterialIcon Kind="{Binding Operations.PauseResumeIcon}" Width="{StaticResource LauncherIconMd}" Height="{StaticResource LauncherIconMd}"/>
                                     <TextBlock Text="{Binding Operations.PauseResumeText}"/>
                                 </StackPanel>
                             </Button>
-                            <Button Classes="flat-action bottom-action" Command="{Binding Operations.StopOperationCommand}" VerticalAlignment="Center">
+                            <Button Classes="flat-action bottom-action secondary-operation" Command="{Binding Operations.StopOperationCommand}" VerticalAlignment="Center"
+                                    ToolTip.Tip="{Binding Shell.I18n.Stop}"
+                                    AutomationProperties.Name="{Binding Shell.I18n.Stop}">
                                 <StackPanel Classes="button-content">
                                     <materialIcons:MaterialIcon Kind="Stop" Width="{StaticResource LauncherIconMd}" Height="{StaticResource LauncherIconMd}"/>
                                     <TextBlock Text="{Binding Shell.I18n.Stop}"/>
@@ -345,26 +371,41 @@
                 <Border Grid.Row="1"
                         IsVisible="{Binding Operations.IsControlPanelVisible}"
                         Classes="control-panel">
-                    <Grid ColumnDefinitions="*,Auto" RowDefinitions="*,Auto" ColumnSpacing="{StaticResource LauncherSpacingXxl}">
-                        <StackPanel Grid.Column="1" Orientation="Horizontal" Spacing="{StaticResource LauncherSpacingLg}" VerticalAlignment="Center">
-                            <Button Classes="launcher-control site" Command="{Binding WindowChrome.OpenOfficialSiteCommand}" ToolTip.Tip="{Binding Shell.I18n.OfficialSite}">
+                    <Grid Classes="operation-layout" ColumnDefinitions="*,Auto" ColumnSpacing="{StaticResource LauncherSpacingXxl}">
+                        <StackPanel Classes="operation-status" Spacing="{StaticResource LauncherSpacingMd}" VerticalAlignment="Center">
+                            <Grid ColumnDefinitions="Auto,*" ColumnSpacing="{StaticResource LauncherSpacingMd}">
+                                <materialIcons:MaterialIcon Kind="{Binding Shell.StatusIconKind}"
+                                                            Width="{StaticResource LauncherIconXxl}"
+                                                            Height="{StaticResource LauncherIconXxl}"
+                                                            Foreground="{DynamicResource LauncherOnChromeBrush}"
+                                                            VerticalAlignment="Center"/>
+                                <StackPanel Grid.Column="1" Spacing="{StaticResource LauncherSpacingXs}">
+                                    <TextBlock Classes="operation-status-title on-dark-title" Text="{Binding Shell.StatusText}"/>
+                                    <TextBlock Classes="on-dark-caption" Text="{Binding Shell.I18n.LaunchCheckDescription}" TextWrapping="Wrap"/>
+                                </StackPanel>
+                            </Grid>
+                            <StackPanel Orientation="Horizontal" Spacing="{StaticResource LauncherSpacingLg}">
+                                <TextBlock Text="{Binding Shell.VersionText}" Classes="on-dark-caption"/>
+                                <TextBlock Text="{Binding Shell.LaunchCheckText}" Classes="on-dark-caption"/>
+                                <TextBlock Text="{Binding Shell.NetworkText}" Classes="on-dark-caption"/>
+                            </StackPanel>
+                        </StackPanel>
+                        <StackPanel Grid.Column="1" Classes="operation-actions" Orientation="Horizontal" Spacing="{StaticResource LauncherSpacingLg}" VerticalAlignment="Center">
+                            <Button Classes="launcher-control site secondary-operation" Command="{Binding WindowChrome.OpenOfficialSiteCommand}" ToolTip.Tip="{Binding Shell.I18n.OfficialSite}"
+                                    AutomationProperties.Name="{Binding Shell.I18n.OfficialSite}">
                                 <StackPanel Classes="button-content">
                                     <materialIcons:MaterialIcon Kind="Web" Width="{StaticResource LauncherIconXl}" Height="{StaticResource LauncherIconXl}"/>
                                     <TextBlock Text="{Binding Shell.I18n.OfficialSite}"/>
                                 </StackPanel>
                             </Button>
-                            <Button Classes="launcher-control start" Command="{Binding Operations.StartGameCommand}" ToolTip.Tip="{Binding Shell.I18n.StartGame}"
-                                    IsEnabled="{Binding Shell.IsBusy, Converter={x:Static BoolConverters.Not}}">
+                            <Button Classes="launcher-control start primary-operation" Command="{Binding Operations.StartGameCommand}" ToolTip.Tip="{Binding Shell.I18n.StartGame}"
+                                    IsEnabled="{Binding Shell.IsBusy, Converter={x:Static BoolConverters.Not}}"
+                                    AutomationProperties.Name="{Binding Shell.I18n.StartGame}">
                                 <StackPanel Classes="button-content">
                                     <materialIcons:MaterialIcon Kind="PlayCircle" Width="{StaticResource LauncherIconXxl}" Height="{StaticResource LauncherIconXxl}"/>
                                     <TextBlock Text="{Binding Shell.I18n.StartGame}"/>
                                 </StackPanel>
                             </Button>
-                        </StackPanel>
-                        <StackPanel Grid.Row="1" Grid.ColumnSpan="2" Orientation="Horizontal" HorizontalAlignment="Right" Spacing="{StaticResource LauncherSpacingLg}">
-                            <TextBlock Text="{Binding Shell.VersionText}" Classes="on-dark-caption"/>
-                            <TextBlock Text="{Binding Shell.LaunchCheckText}" Classes="on-dark-caption"/>
-                            <TextBlock Text="{Binding Shell.NetworkText}" Classes="on-dark-caption"/>
                         </StackPanel>
                     </Grid>
                 </Border>
