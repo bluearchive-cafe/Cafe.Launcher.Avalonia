@@ -286,22 +286,67 @@ public sealed class MainWindowViewModelTests : IDisposable
         Assert.Equal(viewModel.Shell.I18n.Refresh, viewModel.Operations.InstallButtonText);
     }
 
-    [Theory]
-    [InlineData(LauncherRuntimeState.NotInstalled, "HelpCircleOutline")]
-    [InlineData(LauncherRuntimeState.Corrupted, "Alert")]
-    [InlineData(LauncherRuntimeState.IoFailure, "Alert")]
-    [InlineData(LauncherRuntimeState.RemoteUnavailable, "Alert")]
-    [InlineData(LauncherRuntimeState.BelowLowestVersion, "Alert")]
-    [InlineData(LauncherRuntimeState.UpdateAvailable, "AlertCircle")]
-    [InlineData(LauncherRuntimeState.Ready, "CheckAll")]
-    public void ResolveStatusIconKind_MapsLauncherState(
-        LauncherRuntimeState runtimeState,
-        string expectedIcon)
+    [Fact]
+    public void ResolveStatusIconKind_WhenRuntimeStateIsNotInstalled_ReturnsHelpCircleOutline()
     {
         var snapshot = CreateSnapshot();
-        snapshot.RuntimeState = runtimeState;
+        snapshot.RuntimeState = LauncherRuntimeState.NotInstalled;
 
-        Assert.Equal(expectedIcon, ShellViewModel.ResolveStatusIconKind(snapshot));
+        Assert.Equal("HelpCircleOutline", ShellViewModel.ResolveStatusIconKind(snapshot));
+    }
+
+    [Fact]
+    public void ResolveStatusIconKind_WhenRuntimeStateIsCorrupted_ReturnsAlert()
+    {
+        var snapshot = CreateSnapshot();
+        snapshot.RuntimeState = LauncherRuntimeState.Corrupted;
+
+        Assert.Equal("Alert", ShellViewModel.ResolveStatusIconKind(snapshot));
+    }
+
+    [Fact]
+    public void ResolveStatusIconKind_WhenRuntimeStateIsIoFailure_ReturnsAlert()
+    {
+        var snapshot = CreateSnapshot();
+        snapshot.RuntimeState = LauncherRuntimeState.IoFailure;
+
+        Assert.Equal("Alert", ShellViewModel.ResolveStatusIconKind(snapshot));
+    }
+
+    [Fact]
+    public void ResolveStatusIconKind_WhenRuntimeStateIsRemoteUnavailable_ReturnsAlert()
+    {
+        var snapshot = CreateSnapshot();
+        snapshot.RuntimeState = LauncherRuntimeState.RemoteUnavailable;
+
+        Assert.Equal("Alert", ShellViewModel.ResolveStatusIconKind(snapshot));
+    }
+
+    [Fact]
+    public void ResolveStatusIconKind_WhenRuntimeStateIsBelowLowestVersion_ReturnsAlert()
+    {
+        var snapshot = CreateSnapshot();
+        snapshot.RuntimeState = LauncherRuntimeState.BelowLowestVersion;
+
+        Assert.Equal("Alert", ShellViewModel.ResolveStatusIconKind(snapshot));
+    }
+
+    [Fact]
+    public void ResolveStatusIconKind_WhenRuntimeStateIsUpdateAvailable_ReturnsAlertCircle()
+    {
+        var snapshot = CreateSnapshot();
+        snapshot.RuntimeState = LauncherRuntimeState.UpdateAvailable;
+
+        Assert.Equal("AlertCircle", ShellViewModel.ResolveStatusIconKind(snapshot));
+    }
+
+    [Fact]
+    public void ResolveStatusIconKind_WhenRuntimeStateIsReady_ReturnsCheckAll()
+    {
+        var snapshot = CreateSnapshot();
+        snapshot.RuntimeState = LauncherRuntimeState.Ready;
+
+        Assert.Equal("CheckAll", ShellViewModel.ResolveStatusIconKind(snapshot));
     }
 
     [Fact]
@@ -450,6 +495,41 @@ public sealed class MainWindowViewModelTests : IDisposable
         });
         var coreService = new CountingCoreService(snapshot);
         using var viewModel = await CreateViewModelAsync(coreService, settingsService);
+        await viewModel.InitializeAsync();
+
+        viewModel.Settings.Editor.Current.PatchUrlGroup = PatchUrlGroups.Cafe;
+        await SaveSettingsAsync(viewModel);
+
+        Assert.True(viewModel.Dialogs.IsRepairConfirmVisible);
+        Assert.False(string.IsNullOrWhiteSpace(viewModel.Dialogs.RepairConfirmText));
+    }
+
+    [Fact]
+    public async Task SaveSettingsAsync_WhenPatchUrlGroupChangesDuringUpdateAvailable_ShowsRepairPrompt()
+    {
+        var snapshot = CreateSnapshot();
+        snapshot.RuntimeState = LauncherRuntimeState.UpdateAvailable;
+        snapshot.Settings.PatchUrlGroup = PatchUrlGroups.Official;
+        snapshot.LocalGame = new LocalInstallationState
+        {
+            Kind = LocalInstallationStateKind.Valid,
+            GamePath = snapshot.LocalGame.GamePath,
+            GameConfig = new GameLauncherConfig
+            {
+                Name = "BlueArchive",
+                Version = "1.0.0"
+            }
+        };
+        var settingsPath = Path.Combine(tempDir, Guid.NewGuid().ToString("N"), "settings.json");
+        var settingsService = new LauncherSettingsService(settingsPath);
+        await settingsService.SaveAsync(new LauncherSettings
+        {
+            GamePath = snapshot.Settings.GamePath,
+            PatchUrlGroup = PatchUrlGroups.Official
+        });
+        using var viewModel = await CreateViewModelAsync(
+            new CountingCoreService(snapshot),
+            settingsService);
         await viewModel.InitializeAsync();
 
         viewModel.Settings.Editor.Current.PatchUrlGroup = PatchUrlGroups.Cafe;
@@ -959,6 +1039,64 @@ public sealed class MainWindowViewModelTests : IDisposable
     }
 
     [Fact]
+    public async Task OpenResourcePanelAsync_WhenSourceIsNotCafe_ShowsConfirmBeforeOpening()
+    {
+        var cookiePath = Path.Combine(tempDir, "Library");
+        await WriteResourcePanelCookieLibraryAsync(cookiePath, "UID123");
+        var settingsService = new LauncherSettingsService(Path.Combine(tempDir, Guid.NewGuid().ToString("N"), "settings.json"));
+        var uidService = new ResourcePanelUidService(new BestHttpCookieLibraryService(), settingsService, cookiePath);
+        var handler = new ResourcePanelHandler();
+        using var apiClient = new ResourcePanelApiClient(handler);
+        using var viewModel = await CreateViewModelAsync(
+            new CountingCoreService(CreateSnapshot()),
+            settingsService,
+            uidService,
+            apiClient);
+        viewModel.ResourcePanel.ApplySettings(new LauncherSettings { PatchUrlGroup = PatchUrlGroups.Official });
+
+        await viewModel.ResourcePanel.OpenResourcePanelCommand.ExecuteAsync(null);
+
+        Assert.True(viewModel.Dialogs.IsResourcePanelSourceConfirmVisible);
+        Assert.False(viewModel.ResourcePanel.IsResourcePanelVisible);
+        Assert.Equal(0, handler.StatusListCount);
+        Assert.Equal(0, handler.ConfigGetCount);
+    }
+
+    [Fact]
+    public async Task ConfirmResourcePanelSourceSwitch_WhenUidExists_SwitchesToCafeAndOpensPanel()
+    {
+        var cookiePath = Path.Combine(tempDir, "Library");
+        await WriteResourcePanelCookieLibraryAsync(cookiePath, "UID123");
+        var settingsPath = Path.Combine(tempDir, Guid.NewGuid().ToString("N"), "settings.json");
+        var settingsService = new LauncherSettingsService(settingsPath);
+        await settingsService.SaveAsync(new LauncherSettings
+        {
+            PatchUrlGroup = PatchUrlGroups.Official
+        });
+        var uidService = new ResourcePanelUidService(new BestHttpCookieLibraryService(), settingsService, cookiePath);
+        var handler = new ResourcePanelHandler();
+        using var apiClient = new ResourcePanelApiClient(handler);
+        var snapshot = CreateSnapshot();
+        snapshot.Settings.PatchUrlGroup = PatchUrlGroups.Cafe;
+        using var viewModel = await CreateViewModelAsync(
+            new CountingCoreService(snapshot),
+            settingsService,
+            uidService,
+            apiClient);
+        viewModel.ResourcePanel.ApplySettings(new LauncherSettings { PatchUrlGroup = PatchUrlGroups.Official });
+        await viewModel.ResourcePanel.OpenResourcePanelCommand.ExecuteAsync(null);
+
+        viewModel.Dialogs.ConfirmResourcePanelSourceSwitchCommand.Execute(null);
+        await WaitForConditionAsync(() => viewModel.ResourcePanel.IsResourcePanelVisible && handler.StatusListCount == 1);
+
+        Assert.False(viewModel.Dialogs.IsResourcePanelSourceConfirmVisible);
+        Assert.True(viewModel.ResourcePanel.IsResourcePanelVisible);
+        Assert.Equal(PatchUrlGroups.Cafe, viewModel.Settings.Editor.Current.PatchUrlGroup);
+        Assert.Equal(PatchUrlGroups.Cafe, (await settingsService.ReadAsync()).PatchUrlGroup);
+        Assert.Equal(1, handler.ConfigGetCount);
+    }
+
+    [Fact]
     public async Task ResourcePanelApplySettings_UsesCafeSourceAndSystemProxyWhenOpeningPanel()
     {
         using var listener = new System.Net.Sockets.TcpListener(IPAddress.Loopback, 0);
@@ -1044,6 +1182,32 @@ public sealed class MainWindowViewModelTests : IDisposable
         Assert.True(viewModel.ResourcePanel.IsResourcePanelVisible);
         Assert.True(viewModel.ResourcePanel.IsResourcePanelUidMissing);
         Assert.Equal("", viewModel.ResourcePanel.ResourcePanelUid);
+        Assert.Equal(0, handler.StatusListCount);
+        Assert.Equal(0, handler.ConfigGetCount);
+        Assert.Equal(0, handler.ConfigSetCount);
+    }
+
+    [Fact]
+    public async Task SaveManualResourcePanelUidAsync_WhenUidIsBlank_ShowsValidationMessage()
+    {
+        var settingsService = new LauncherSettingsService(Path.Combine(tempDir, Guid.NewGuid().ToString("N"), "settings.json"));
+        var uidService = new ResourcePanelUidService(
+            new BestHttpCookieLibraryService(),
+            settingsService,
+            Path.Combine(tempDir, "missing"));
+        var handler = new ResourcePanelHandler();
+        using var apiClient = new ResourcePanelApiClient(handler);
+        using var viewModel = await CreateViewModelAsync(
+            new CountingCoreService(CreateSnapshot()),
+            settingsService,
+            uidService,
+            apiClient);
+        viewModel.ResourcePanel.ApplySettings(new LauncherSettings { PatchUrlGroup = PatchUrlGroups.Cafe });
+        viewModel.ResourcePanel.ManualResourcePanelUid = "   ";
+
+        await viewModel.ResourcePanel.SaveManualResourcePanelUidCommand.ExecuteAsync(null);
+
+        Assert.Equal(viewModel.Shell.I18n.ResourcePanelUidEmpty, viewModel.ResourcePanel.ResourcePanelMessage);
         Assert.Equal(0, handler.StatusListCount);
         Assert.Equal(0, handler.ConfigGetCount);
         Assert.Equal(0, handler.ConfigSetCount);
@@ -1427,6 +1591,16 @@ public sealed class MainWindowViewModelTests : IDisposable
     private static async Task SaveSettingsAsync(MainWindowViewModel viewModel)
     {
         await viewModel.Settings.SaveSettingsCommand.ExecuteAsync(null);
+    }
+
+    private static async Task WaitForConditionAsync(Func<bool> condition)
+    {
+        using var cts = new CancellationTokenSource(TimeSpan.FromSeconds(2));
+        while (!condition())
+        {
+            cts.Token.ThrowIfCancellationRequested();
+            await Task.Delay(10, cts.Token);
+        }
     }
 
     public void Dispose()

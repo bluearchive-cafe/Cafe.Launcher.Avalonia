@@ -42,4 +42,76 @@ public sealed class OverlayFocusBehaviorTests
         Assert.Same(previous, window.FocusManager?.GetFocusedElement());
         window.Close();
     }
+
+    [AvaloniaFact]
+    public void Overlay_WhenDisabledWhileVisible_RestoresPreviousFocus()
+    {
+        var previous = new Button { Content = "Previous" };
+        var first = new Button { Content = "First" };
+        var overlay = new Grid
+        {
+            IsVisible = false,
+            Children = { first }
+        };
+        OverlayFocusBehavior.SetIsEnabled(overlay, true);
+        var window = new Window
+        {
+            Content = new Grid
+            {
+                Children = { previous, overlay }
+            }
+        };
+
+        try
+        {
+            window.Show();
+            previous.Focus(NavigationMethod.Tab);
+            overlay.IsVisible = true;
+            Dispatcher.UIThread.RunJobs();
+            Assert.Same(first, window.FocusManager?.GetFocusedElement());
+
+            OverlayFocusBehavior.SetIsEnabled(overlay, false);
+            Dispatcher.UIThread.RunJobs();
+
+            Assert.Same(previous, window.FocusManager?.GetFocusedElement());
+        }
+        finally
+        {
+            window.Close();
+        }
+    }
+
+    [AvaloniaFact]
+    public void Overlay_WhenEnabledAfterAttachAndVisible_FocusesFirstControl()
+    {
+        var previous = new Button { Content = "Previous" };
+        var first = new Button { Content = "First" };
+        var overlay = new Grid
+        {
+            IsVisible = true,
+            Children = { first }
+        };
+        var window = new Window
+        {
+            Content = new Grid
+            {
+                Children = { previous, overlay }
+            }
+        };
+
+        try
+        {
+            window.Show();
+            previous.Focus(NavigationMethod.Tab);
+
+            OverlayFocusBehavior.SetIsEnabled(overlay, true);
+            Dispatcher.UIThread.RunJobs();
+
+            Assert.Same(first, window.FocusManager?.GetFocusedElement());
+        }
+        finally
+        {
+            window.Close();
+        }
+    }
 }

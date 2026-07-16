@@ -7,12 +7,74 @@ namespace Cafe.Launcher.Avalonia.Tests;
 public sealed class RemoteHttpUrlValidatorTests
 {
     [Theory]
+    [InlineData("file")]
+    [InlineData("/relative/path")]
+    public async Task ValidateAsync_WhenUrlIsNotAbsolute_Throws(string url)
+    {
+        var validator = RemoteHttpUrlValidator.CreateForTesting();
+
+        await Assert.ThrowsAsync<InvalidOperationException>(
+            () => validator.ValidateAsync(url));
+    }
+
+    [Theory]
+    [InlineData("ftp://example.test/file")]
+    [InlineData("file:///C:/temp/file.bin")]
+    public async Task ValidateAsync_WhenSchemeIsNotHttpOrHttps_Throws(string url)
+    {
+        var validator = RemoteHttpUrlValidator.CreateForTesting();
+
+        await Assert.ThrowsAsync<InvalidOperationException>(
+            () => validator.ValidateAsync(url));
+    }
+
+    [Fact]
+    public async Task ValidateAsync_WhenUrlContainsUserInfo_Throws()
+    {
+        var validator = RemoteHttpUrlValidator.CreateForTesting();
+
+        await Assert.ThrowsAsync<InvalidOperationException>(
+            () => validator.ValidateAsync("https://user:pass@example.test/file"));
+    }
+
+    [Theory]
+    [InlineData("http://example.test:81/file")]
+    [InlineData("https://example.test:444/file")]
+    public async Task ValidateAsync_WhenPortIsNotDefaultHttpOrHttps_Throws(string url)
+    {
+        var validator = RemoteHttpUrlValidator.CreateForTesting();
+
+        await Assert.ThrowsAsync<InvalidOperationException>(
+            () => validator.ValidateAsync(url));
+    }
+
+    [Fact]
+    public async Task ValidateAsync_WhenHostEndsWithDotLocalhost_Throws()
+    {
+        var validator = RemoteHttpUrlValidator.CreateForTesting();
+
+        await Assert.ThrowsAsync<InvalidOperationException>(
+            () => validator.ValidateAsync("https://service.localhost/file"));
+    }
+
+    [Theory]
     [InlineData("http://127.0.0.1/file")]
     [InlineData("http://10.0.0.1/file")]
+    [InlineData("http://100.64.0.1/file")]
     [InlineData("http://169.254.1.1/file")]
+    [InlineData("http://172.16.0.1/file")]
+    [InlineData("http://192.0.0.1/file")]
     [InlineData("http://192.168.1.1/file")]
+    [InlineData("http://198.18.0.1/file")]
+    [InlineData("http://198.51.100.1/file")]
+    [InlineData("http://203.0.113.1/file")]
+    [InlineData("http://224.0.0.1/file")]
     [InlineData("http://[::1]/file")]
+    [InlineData("http://[::]/file")]
     [InlineData("http://[fe80::1]/file")]
+    [InlineData("http://[fc00::1]/file")]
+    [InlineData("http://[2001:db8::1]/file")]
+    [InlineData("http://[::ffff:127.0.0.1]/file")]
     [InlineData("http://localhost/file")]
     public async Task ValidateAsync_WhenTargetIsLocalOrPrivate_Throws(string url)
     {
@@ -31,6 +93,26 @@ public sealed class RemoteHttpUrlValidatorTests
 
         await Assert.ThrowsAsync<InvalidOperationException>(
             () => validator.ValidateAsync("https://example.test/image.png"));
+    }
+
+    [Fact]
+    public async Task ValidateAsync_WhenDnsReturnsNoAddresses_Throws()
+    {
+        var validator = new RemoteHttpUrlValidator(
+            static (_, _) => Task.FromResult(Array.Empty<IPAddress>()));
+
+        await Assert.ThrowsAsync<InvalidOperationException>(
+            () => validator.ValidateAsync("https://example.test/image.png"));
+    }
+
+    [Fact]
+    public async Task ValidateAsync_WhenLiteralAddressIsPublic_ReturnsUri()
+    {
+        var validator = RemoteHttpUrlValidator.CreateForTesting();
+
+        var uri = await validator.ValidateAsync("https://93.184.216.34/file");
+
+        Assert.Equal("93.184.216.34", uri.Host);
     }
 
     [Fact]
@@ -78,6 +160,41 @@ public sealed class RemoteHttpUrlValidatorTests
                 validator,
                 CancellationToken.None));
 
+        Assert.Equal(1, handler.RequestCount);
+    }
+
+    [Fact]
+    public async Task SendAsync_WhenConnectionUsesProxy_SkipsLocalDnsResolution()
+    {
+        using var client = new HttpClient(new OkHandler());
+        var validator = new RemoteHttpUrlValidator(
+            static (_, _) => throw new InvalidOperationException("DNS must not be resolved."));
+
+        using var response = await RemoteHttpRequestService.SendAsync(
+            client,
+            new Uri("https://example.test/start"),
+            static uri => new HttpRequestMessage(HttpMethod.Get, uri),
+            validator,
+            CancellationToken.None,
+            connectionUsesProxy: true);
+
+        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+    }
+
+    [Fact]
+    public async Task SendAsync_WhenResponseIsNotRedirect_ReturnsFirstResponse()
+    {
+        var handler = new OkHandler();
+        using var client = new HttpClient(handler);
+
+        using var response = await RemoteHttpRequestService.SendAsync(
+            client,
+            new Uri("https://example.test/start"),
+            static uri => new HttpRequestMessage(HttpMethod.Get, uri),
+            RemoteHttpUrlValidator.CreateForTesting(),
+            CancellationToken.None);
+
+        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
         Assert.Equal(1, handler.RequestCount);
     }
 
@@ -145,6 +262,42 @@ public sealed class RemoteHttpUrlValidatorTests
         Assert.Equal(6, handler.RequestCount);
     }
 
+    [Theory]
+    [InlineData(HttpStatusCode.Moved)]
+    [InlineData(HttpStatusCode.RedirectMethod)]
+    [InlineData(HttpStatusCode.TemporaryRedirect)]
+    [InlineData(HttpStatusCode.PermanentRedirect)]
+    public async Task SendAsync_WhenRedirectUsesSupportedStatusCode_FollowsRedirect(HttpStatusCode statusCode)
+    {
+        var handler = new SingleRedirectHandler(statusCode);
+        using var client = new HttpClient(handler);
+
+        using var response = await RemoteHttpRequestService.SendAsync(
+            client,
+            new Uri("https://example.test/start"),
+            static uri => new HttpRequestMessage(HttpMethod.Get, uri),
+            RemoteHttpUrlValidator.CreateForTesting(),
+            CancellationToken.None);
+
+        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+        Assert.Equal(
+            ["https://example.test/start", "https://example.test/final"],
+            handler.RequestUris);
+    }
+
+    private sealed class OkHandler : HttpMessageHandler
+    {
+        public int RequestCount { get; private set; }
+
+        protected override Task<HttpResponseMessage> SendAsync(
+            HttpRequestMessage request,
+            CancellationToken cancellationToken)
+        {
+            RequestCount++;
+            return Task.FromResult(new HttpResponseMessage(HttpStatusCode.OK));
+        }
+    }
+
     private sealed class RedirectHandler : HttpMessageHandler
     {
         public int RequestCount { get; private set; }
@@ -175,6 +328,24 @@ public sealed class RemoteHttpUrlValidatorTests
             RequestUris.Add(request.RequestUri?.AbsoluteUri ?? "");
             return Task.FromResult(RequestUris.Count == 1
                 ? new HttpResponseMessage(HttpStatusCode.Redirect)
+                {
+                    Headers = { Location = new Uri("/final", UriKind.Relative) }
+                }
+                : new HttpResponseMessage(HttpStatusCode.OK));
+        }
+    }
+
+    private sealed class SingleRedirectHandler(HttpStatusCode redirectStatusCode) : HttpMessageHandler
+    {
+        public List<string> RequestUris { get; } = [];
+
+        protected override Task<HttpResponseMessage> SendAsync(
+            HttpRequestMessage request,
+            CancellationToken cancellationToken)
+        {
+            RequestUris.Add(request.RequestUri?.AbsoluteUri ?? "");
+            return Task.FromResult(RequestUris.Count == 1
+                ? new HttpResponseMessage(redirectStatusCode)
                 {
                     Headers = { Location = new Uri("/final", UriKind.Relative) }
                 }

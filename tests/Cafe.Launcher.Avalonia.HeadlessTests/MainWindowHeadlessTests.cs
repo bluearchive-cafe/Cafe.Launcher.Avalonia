@@ -380,6 +380,41 @@ public sealed class MainWindowHeadlessTests
     }
 
     [AvaloniaFact]
+    public void MainWindow_CloseCommand_WhenTrayIsConfigured_HidesWindow()
+    {
+        using var context = CreateContext();
+        context.ViewModel.Settings.Editor.ApplySnapshot(new LauncherSettings
+        {
+            CloseBehavior = CloseBehaviors.Minimize
+        });
+        using var trayService = new SystemTrayService(
+            context.Window,
+            new LocalizationService(),
+            new TestTrayPlatform());
+        context.Window.SetSystemTray(trayService);
+        context.Window.Show();
+
+        context.ViewModel.WindowChrome.CloseCommand.Execute(null);
+        Dispatcher.UIThread.RunJobs();
+
+        Assert.False(context.Window.IsVisible);
+        Assert.NotEqual(WindowState.Minimized, context.Window.WindowState);
+    }
+
+    [AvaloniaFact]
+    public void MainWindow_WhenEscapeKeyIsPressed_ClosesSettingsOverlay()
+    {
+        using var context = CreateContext();
+        OpenSettings(context);
+
+        context.Window.KeyPress(Key.Escape, RawInputModifiers.None, PhysicalKey.Escape, "");
+        context.Window.KeyRelease(Key.Escape, RawInputModifiers.None, PhysicalKey.Escape, "");
+        Dispatcher.UIThread.RunJobs();
+
+        Assert.False(context.ViewModel.WindowChrome.IsSettingsVisible);
+    }
+
+    [AvaloniaFact]
     public void ConfigureViewModel_WhenCalledAgain_UnsubscribesPreviousViewModel()
     {
         using var first = CreateContext();
@@ -467,6 +502,22 @@ public sealed class MainWindowHeadlessTests
             {
                 Directory.Delete(TempDir, recursive: true);
             }
+        }
+    }
+
+    private sealed class TestTrayPlatform : ISystemTrayPlatform
+    {
+        public bool Initialize(
+            SystemTrayMenuText text,
+            Action showWindow,
+            Action exitApplication) => true;
+
+        public void UpdateText(SystemTrayMenuText text)
+        {
+        }
+
+        public void Dispose()
+        {
         }
     }
 }

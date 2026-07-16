@@ -114,6 +114,105 @@ public sealed class GameDownloadServiceTests
     }
 
     [Fact]
+    public void BuildDownloadUrl_WhenDomainIsBlank_Throws()
+    {
+        Assert.Throws<InvalidOperationException>(
+            () => FileDownloadService.BuildDownloadUrl(" ", "/source/root", "/data/file.bin"));
+    }
+
+    [Fact]
+    public async Task DownloadFileAsync_WhenTemporaryFileAlreadyMatchesExpectedSize_SkipsHttpRequest()
+    {
+        var tempDir = Path.Combine(Path.GetTempPath(), Guid.NewGuid().ToString("N"));
+        Directory.CreateDirectory(tempDir);
+        try
+        {
+            var targetPath = Path.Combine(tempDir, "file.bin.tmp");
+            var expectedBytes = Encoding.UTF8.GetBytes("complete-content");
+            await File.WriteAllBytesAsync(targetPath, expectedBytes);
+            var hashPath = Path.Combine(tempDir, "hash-source.bin");
+            await File.WriteAllBytesAsync(hashPath, expectedBytes);
+            var expectedHash = await new Crc64Service().ComputeFileAsync(hashPath);
+            var handler = new CountingHandler(expectedBytes);
+            using var client = new HttpClient(handler);
+            var downloader = new FileDownloadService(
+                new Crc64Service(),
+                new LocalDiagnostics(),
+                RemoteHttpUrlValidator.CreateForTesting());
+
+            await downloader.DownloadAsync(
+                targetPath,
+                new CdnConfigResponse
+                {
+                    PrimaryCdn = "https://primary.example.invalid",
+                    BackUpCdn = "https://backup.example.invalid"
+                },
+                "source",
+                expectedBytes.Length,
+                expectedHash,
+                "file.bin",
+                client,
+                () => Task.CompletedTask,
+                (_, _) => Task.CompletedTask,
+                false,
+                CancellationToken.None);
+
+            Assert.Equal(0, handler.RequestCount);
+            Assert.Equal(expectedBytes, await File.ReadAllBytesAsync(targetPath));
+        }
+        finally
+        {
+            Directory.Delete(tempDir, recursive: true);
+        }
+    }
+
+    [Fact]
+    public async Task DownloadFileAsync_WhenTemporaryFileIsLargerThanExpected_DownloadsFreshCopyWithoutRangeHeader()
+    {
+        var tempDir = Path.Combine(Path.GetTempPath(), Guid.NewGuid().ToString("N"));
+        Directory.CreateDirectory(tempDir);
+        try
+        {
+            var targetPath = Path.Combine(tempDir, "file.bin.tmp");
+            var expectedBytes = Encoding.UTF8.GetBytes("fresh-content");
+            await File.WriteAllBytesAsync(targetPath, Encoding.UTF8.GetBytes("this-content-is-longer-than-expected"));
+            var hashPath = Path.Combine(tempDir, "hash-source.bin");
+            await File.WriteAllBytesAsync(hashPath, expectedBytes);
+            var expectedHash = await new Crc64Service().ComputeFileAsync(hashPath);
+            var handler = new RangeIgnoredHandler(expectedBytes);
+            using var client = new HttpClient(handler);
+            var downloader = new FileDownloadService(
+                new Crc64Service(),
+                new LocalDiagnostics(),
+                RemoteHttpUrlValidator.CreateForTesting());
+
+            await downloader.DownloadAsync(
+                targetPath,
+                new CdnConfigResponse
+                {
+                    PrimaryCdn = "https://primary.example.invalid",
+                    BackUpCdn = "https://backup.example.invalid"
+                },
+                "source",
+                expectedBytes.Length,
+                expectedHash,
+                "file.bin",
+                client,
+                () => Task.CompletedTask,
+                (_, _) => Task.CompletedTask,
+                false,
+                CancellationToken.None);
+
+            Assert.False(handler.RangeWasRequested);
+            Assert.Equal(expectedBytes, await File.ReadAllBytesAsync(targetPath));
+        }
+        finally
+        {
+            Directory.Delete(tempDir, recursive: true);
+        }
+    }
+
+    [Fact]
     public async Task DownloadFileAsync_WhenDownloadedHashMismatches_TriesNextRetryDomain()
     {
         var tempDir = Path.Combine(Path.GetTempPath(), Guid.NewGuid().ToString("N"));
@@ -266,6 +365,52 @@ public sealed class GameDownloadServiceTests
         Assert.Equal(2, handler.RequestCount);
         Assert.Equal(expectedBytes, await File.ReadAllBytesAsync(targetPath));
         Directory.Delete(tempDir, recursive: true);
+    }
+
+    [Fact]
+    public async Task DownloadFileAsync_WhenContentRangeTotalLengthMismatches_RetriesWithoutCorruptingFile()
+    {
+        var tempDir = Path.Combine(Path.GetTempPath(), Guid.NewGuid().ToString("N"));
+        Directory.CreateDirectory(tempDir);
+        try
+        {
+            var targetPath = Path.Combine(tempDir, "file.bin.tmp");
+            var expectedBytes = Encoding.UTF8.GetBytes("complete-content");
+            await File.WriteAllBytesAsync(targetPath, expectedBytes[..4]);
+            var hashPath = Path.Combine(tempDir, "hash-source.bin");
+            await File.WriteAllBytesAsync(hashPath, expectedBytes);
+            var expectedHash = await new Crc64Service().ComputeFileAsync(hashPath);
+            var handler = new InvalidContentLengthThenCompleteHandler(expectedBytes);
+            using var client = new HttpClient(handler);
+            var downloader = new FileDownloadService(
+                new Crc64Service(),
+                new LocalDiagnostics(),
+                RemoteHttpUrlValidator.CreateForTesting());
+
+            await downloader.DownloadAsync(
+                targetPath,
+                new CdnConfigResponse
+                {
+                    PrimaryCdn = "https://primary.example.invalid",
+                    BackUpCdn = "https://backup.example.invalid"
+                },
+                "source",
+                expectedBytes.Length,
+                expectedHash,
+                "file.bin",
+                client,
+                () => Task.CompletedTask,
+                (_, _) => Task.CompletedTask,
+                false,
+                CancellationToken.None);
+
+            Assert.Equal(2, handler.RequestCount);
+            Assert.Equal(expectedBytes, await File.ReadAllBytesAsync(targetPath));
+        }
+        finally
+        {
+            Directory.Delete(tempDir, recursive: true);
+        }
     }
 
     [Fact]
@@ -1226,6 +1371,22 @@ public sealed class GameDownloadServiceTests
         }
     }
 
+    private sealed class CountingHandler(byte[] content) : HttpMessageHandler
+    {
+        public int RequestCount { get; private set; }
+
+        protected override Task<HttpResponseMessage> SendAsync(
+            HttpRequestMessage request,
+            CancellationToken cancellationToken)
+        {
+            RequestCount++;
+            return Task.FromResult(new HttpResponseMessage(HttpStatusCode.OK)
+            {
+                Content = new ByteArrayContent(content)
+            });
+        }
+    }
+
     private sealed class AlwaysWrongContentHandler : HttpMessageHandler
     {
         public int RequestCount { get; private set; }
@@ -1272,6 +1433,33 @@ public sealed class GameDownloadServiceTests
                 var partialContent = new ByteArrayContent(content[4..]);
                 partialContent.Headers.ContentRange =
                     new System.Net.Http.Headers.ContentRangeHeaderValue(3, content.Length - 1, content.Length);
+                return Task.FromResult(new HttpResponseMessage(HttpStatusCode.PartialContent)
+                {
+                    Content = partialContent
+                });
+            }
+
+            return Task.FromResult(new HttpResponseMessage(HttpStatusCode.OK)
+            {
+                Content = new ByteArrayContent(content)
+            });
+        }
+    }
+
+    private sealed class InvalidContentLengthThenCompleteHandler(byte[] content) : HttpMessageHandler
+    {
+        public int RequestCount { get; private set; }
+
+        protected override Task<HttpResponseMessage> SendAsync(
+            HttpRequestMessage request,
+            CancellationToken cancellationToken)
+        {
+            RequestCount++;
+            if (RequestCount == 1)
+            {
+                var partialContent = new ByteArrayContent(content[4..]);
+                partialContent.Headers.ContentRange =
+                    new System.Net.Http.Headers.ContentRangeHeaderValue(4, content.Length - 1, content.Length + 1);
                 return Task.FromResult(new HttpResponseMessage(HttpStatusCode.PartialContent)
                 {
                     Content = partialContent

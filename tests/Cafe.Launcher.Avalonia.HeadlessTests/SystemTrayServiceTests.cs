@@ -1,5 +1,6 @@
 using Avalonia.Controls;
 using Avalonia.Headless.XUnit;
+using Avalonia.Threading;
 using Cafe.Launcher.Avalonia.Models;
 using Cafe.Launcher.Avalonia.Services;
 
@@ -48,6 +49,38 @@ public sealed class SystemTrayServiceTests
 
         Assert.False(service.Initialize());
         Assert.True(platform.Disposed);
+    }
+
+    [AvaloniaFact]
+    public void Initialize_WhenDisposed_ReturnsFalse()
+    {
+        var platform = new TestTrayPlatform();
+        var service = new SystemTrayService(
+            new Window(),
+            new LocalizationService(),
+            platform);
+
+        service.Dispose();
+
+        Assert.False(service.Initialize());
+        Assert.True(platform.Disposed);
+    }
+
+    [AvaloniaFact]
+    public async Task Initialize_WhenLanguageChangesOffUiThread_PostsUpdateToPlatform()
+    {
+        var window = new Window();
+        var localizer = new LocalizationService();
+        localizer.SetLanguage(LauncherLanguages.English);
+        var platform = new TestTrayPlatform();
+        using var service = new SystemTrayService(window, localizer, platform);
+
+        Assert.True(service.Initialize());
+
+        await Task.Run(() => localizer.SetLanguage(LauncherLanguages.Japanese));
+        Dispatcher.UIThread.RunJobs();
+
+        Assert.Equal(1, platform.UpdateCount);
     }
 
     private sealed class TestTrayPlatform : ISystemTrayPlatform
