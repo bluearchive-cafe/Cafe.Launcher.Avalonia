@@ -10,6 +10,8 @@ namespace Cafe.Launcher.Avalonia.ViewModels;
 public partial class ShellViewModel : ViewModelBase
 {
     private readonly LocalizationService localizer;
+    private readonly EasterEggAudioService? easterEggAudioService;
+    private int launcherVersionClickCount;
 
     private static readonly string FrameworkVersion = RuntimeInformation.FrameworkDescription;
     private static readonly string PlatformName = OperatingSystem.IsWindows() ? "Windows"
@@ -18,7 +20,7 @@ public partial class ShellViewModel : ViewModelBase
         : "Unknown";
 
     [ObservableProperty]
-    private string productName = LauncherConstants.ProductName;
+    private string productName = ResolveProductName(DateTime.Now, Random.Shared.Next(2));
 
     [ObservableProperty]
     private string launcherVersionText = "";
@@ -90,9 +92,40 @@ public partial class ShellViewModel : ViewModelBase
 
     public string GameFolderPickerTitle { get; private set; } = "";
 
-    public ShellViewModel(LocalizationService localizer)
+    public ShellViewModel(
+        LocalizationService localizer,
+        EasterEggAudioService? easterEggAudioService = null)
     {
         this.localizer = localizer;
+        this.easterEggAudioService = easterEggAudioService;
+    }
+
+    internal static string ResolveProductName(DateTime date, int randomIndex)
+    {
+        if (date.Month != 12 || date.Day != 8)
+        {
+            return LauncherConstants.ProductName;
+        }
+
+        return randomIndex switch
+        {
+            0 => "Midori Launcher",
+            1 => "Momoi Launcher",
+            _ => throw new ArgumentOutOfRangeException(nameof(randomIndex)),
+        };
+    }
+
+    public bool RegisterLauncherVersionClick()
+    {
+        launcherVersionClickCount++;
+        if (launcherVersionClickCount != 8)
+        {
+            return false;
+        }
+
+        launcherVersionClickCount = 0;
+        easterEggAudioService?.PlayKuyashi();
+        return true;
     }
 
     public void ApplyLanguage(

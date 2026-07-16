@@ -14,6 +14,7 @@ Cafe Launcher 的首个集中质量提升版本。全面规范了本地化键命
 - **NSIS 安装脚本**：支持 Windows 安装向导与发行制品打包（`0d6396a`）
 - **设置控件无障碍标注**：所有 ComboBox 和按钮添加 `AutomationProperties.Name`（`6d70ed2`）
 - **壁纸主题调色板完整显示**：调色板容器加宽以容纳所有色块（`b6b4430`）
+- **12 月 8 日彩蛋**：启动器名称随机显示为 `Midori Launcher` 或 `Momoi Launcher`；在关于页连续点击启动器版本 8 次可播放隐藏音频（`bc8ec70`）
 
 ### 修复
 
@@ -33,6 +34,7 @@ Cafe Launcher 的首个集中质量提升版本。全面规范了本地化键命
 - **确认对话框宽度**：`ConfirmDialog` 默认最大宽度限制为 540（`12a5d48`）
 - **并行测试竞态条件**：修复 `LocalizationService` 初始化线程安全问题（`2bbf20c`）
 - **UI 样式契约测试修正**：`ColorPicker.setting-control` 的 `Width` 断言与实际布局一致（`5cfa851`）
+- **关于页版本信息可读性**：增强版本 chip 的主题底色与边框，在浅色和深色主题下保持清晰层级
 
 ### 改进
 
@@ -47,6 +49,7 @@ Cafe Launcher 的首个集中质量提升版本。全面规范了本地化键命
 - **死代码移除**：`GameOperationsViewModel` 中 `await Task.CompletedTask` 无操作（`a41884c`）
 - **冗余属性清理**：移除 `MainWindowLogViewerOverlay` 中与全局配置冲突的 `x:CompileBindings=True`（`a41884c`）
 - **文档同步**：`CLAUDE.md` / `AGENTS.md` / `README.md` 更新 DI 生命周期、Controls 目录说明（`a41884c`）
+- **项目依赖更新**：Avalonia 更新至 12.0.5，并同步更新 DiagnosticsSupport、依赖注入、Serilog、文件日志和测试 SDK
 
 ### 移除
 

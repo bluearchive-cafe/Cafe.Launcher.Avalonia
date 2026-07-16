@@ -16,7 +16,8 @@
         <StackPanel Spacing="{StaticResource LauncherSpacingSm}">
             <TextBlock Text="{Binding Shell.I18n.VersionInfo}" Classes="group-title"/>
             <WrapPanel>
-                <Border Classes="version-chip">
+                <Border Classes="version-chip"
+                        PointerPressed="LauncherVersionChip_OnPointerPressed">
                     <TextBlock Text="{Binding Shell.LauncherVersionText}" Classes="chip-text"/>
                 </Border>
                 <Border Classes="version-chip"

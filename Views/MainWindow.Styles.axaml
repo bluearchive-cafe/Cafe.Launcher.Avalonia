@@ -840,8 +840,9 @@
         <Setter Property="Foreground" Value="{DynamicResource LauncherDangerBrush}"/>
     </Style>
     <Style Selector="Border.version-chip">
-        <Setter Property="Background" Value="{DynamicResource LauncherAccentSoftBrush}"/>
-        <Setter Property="BorderThickness" Value="0"/>
+        <Setter Property="Background" Value="{DynamicResource LauncherInfoBackgroundBrush}"/>
+        <Setter Property="BorderBrush" Value="{DynamicResource LauncherAccentBorderBrush}"/>
+        <Setter Property="BorderThickness" Value="1"/>
         <Setter Property="CornerRadius" Value="{StaticResource LauncherRadiusMd}"/>
         <Setter Property="Padding" Value="12,8"/>
         <Setter Property="MinHeight" Value="{StaticResource LauncherChipHeight}"/>

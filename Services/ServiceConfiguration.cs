@@ -20,6 +20,7 @@ public static class ServiceConfiguration
         services.AddSingleton<ClickCodeService>();
         services.AddSingleton<ToastService>();
         services.AddSingleton<BestHttpCookieLibraryService>();
+        services.AddSingleton<EasterEggAudioService>();
 
         // Reuse the pre-DI logger when provided so there is a single Serilog
         // pipeline for the entire process (crash handling + application logging).
