@@ -255,6 +255,7 @@ public abstract class SelectableOption : INotifyPropertyChanged
 {
     private string code = "";
     private string displayName = "";
+    private string description = "";
 
     public event PropertyChangedEventHandler? PropertyChanged;
 
@@ -268,6 +269,12 @@ public abstract class SelectableOption : INotifyPropertyChanged
     {
         get => displayName;
         set => SetField(ref displayName, value);
+    }
+
+    public string Description
+    {
+        get => description;
+        set => SetField(ref description, value);
     }
 
     protected void SetField(ref string field, string value, [CallerMemberName] string? propertyName = null)

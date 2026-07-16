@@ -40,6 +40,7 @@
                             <DataTemplate x:DataType="models:SettingOption">
                                 <TextBlock Text="{Binding DisplayName}"
                                            Classes="settings-navigation-item"
+                                           ToolTip.Tip="{Binding Description}"
                                            AutomationProperties.Name="{Binding DisplayName}"/>
                             </DataTemplate>
                         </ListBox.ItemTemplate>
