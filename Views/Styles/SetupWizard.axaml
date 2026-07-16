@@ -4,26 +4,53 @@
         <Setter Property="Background" Value="{DynamicResource LauncherContentRowBrush}"/>
         <Setter Property="BorderBrush" Value="{DynamicResource LauncherCardBorderBrush}"/>
         <Setter Property="BorderThickness" Value="0,0,1,0"/>
-        <Setter Property="Padding" Value="20"/>
+        <Setter Property="Padding" Value="16,8,8,16"/>
     </Style>
     <Style Selector="Button.wizard-step">
         <Setter Property="Background" Value="{DynamicResource LauncherTransparentBrush}"/>
+        <Setter Property="Foreground" Value="{DynamicResource LauncherTextBodyBrush}"/>
         <Setter Property="BorderBrush" Value="{DynamicResource LauncherTransparentBrush}"/>
-        <Setter Property="BorderThickness" Value="1"/>
-        <Setter Property="CornerRadius" Value="{DynamicResource LauncherRadiusMd}"/>
-        <Setter Property="Padding" Value="10"/>
+        <Setter Property="BorderThickness" Value="0"/>
+        <Setter Property="CornerRadius" Value="0"/>
+        <Setter Property="Padding" Value="8,12,12,12"/>
         <Setter Property="HorizontalContentAlignment" Value="Stretch"/>
-        <Setter Property="MinHeight" Value="56"/>
     </Style>
     <Style Selector="Button.wizard-step:pointerover">
-        <Setter Property="Background" Value="{DynamicResource LauncherFlatHoverBrush}"/>
+        <Setter Property="Background" Value="{DynamicResource LauncherTransparentBrush}"/>
+        <Setter Property="Foreground" Value="{DynamicResource LauncherAccentBrush}"/>
+        <Setter Property="BorderBrush" Value="{DynamicResource LauncherTransparentBrush}"/>
+        <Setter Property="BorderThickness" Value="0"/>
+    </Style>
+    <Style Selector="Button.wizard-step:pressed">
+        <Setter Property="Background" Value="{DynamicResource LauncherFlatPressedBrush}"/>
+        <Setter Property="Foreground" Value="{DynamicResource LauncherTextPrimaryBrush}"/>
     </Style>
     <Style Selector="Button.wizard-step.current">
-        <Setter Property="Background" Value="{DynamicResource LauncherAccentSoftBrush}"/>
-        <Setter Property="BorderBrush" Value="{DynamicResource LauncherAccentBorderBrush}"/>
+        <Setter Property="Background" Value="{DynamicResource LauncherFlatPressedBrush}"/>
+        <Setter Property="Foreground" Value="{DynamicResource LauncherTextPrimaryBrush}"/>
+        <Setter Property="BorderBrush" Value="{DynamicResource LauncherAccentBrush}"/>
+        <Setter Property="BorderThickness" Value="3,0,0,0"/>
+        <Setter Property="FontWeight" Value="{StaticResource LauncherFontWeightStrong}"/>
+    </Style>
+    <Style Selector="Button.wizard-step.current:pointerover">
+        <Setter Property="Background" Value="{DynamicResource LauncherFlatPressedBrush}"/>
+        <Setter Property="Foreground" Value="{DynamicResource LauncherTextPrimaryBrush}"/>
+        <Setter Property="BorderBrush" Value="{DynamicResource LauncherAccentBrush}"/>
+        <Setter Property="BorderThickness" Value="3,0,0,0"/>
+    </Style>
+    <Style Selector="Button.wizard-step.current:pressed">
+        <Setter Property="Background" Value="{DynamicResource LauncherFlatPressedBrush}"/>
+        <Setter Property="Foreground" Value="{DynamicResource LauncherTextPrimaryBrush}"/>
+        <Setter Property="BorderBrush" Value="{DynamicResource LauncherAccentBrush}"/>
+        <Setter Property="BorderThickness" Value="3,0,0,0"/>
     </Style>
     <Style Selector="Button.wizard-step.completed">
         <Setter Property="Foreground" Value="{DynamicResource LauncherTextPrimaryBrush}"/>
+    </Style>
+    <Style Selector="Button.wizard-step:disabled">
+        <Setter Property="Foreground" Value="{DynamicResource LauncherTextSecondaryBrush}"/>
+        <Setter Property="BorderBrush" Value="{DynamicResource LauncherTransparentBrush}"/>
+        <Setter Property="BorderThickness" Value="0"/>
     </Style>
     <Style Selector="Border.wizard-step-index">
         <Setter Property="Width" Value="32"/>

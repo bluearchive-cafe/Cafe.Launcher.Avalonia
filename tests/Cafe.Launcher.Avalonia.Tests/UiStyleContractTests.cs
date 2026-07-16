@@ -1060,6 +1060,54 @@ public sealed partial class UiStyleContractTests
     }
 
     [Fact]
+    public void SetupWizardNavigation_UsesSettingsNavigationVisualStates()
+    {
+        var wizardStyles = XDocument.Load(ProjectFile("Views/Styles/SetupWizard.axaml"));
+
+        Assert.Equal(
+            "16,8,8,16",
+            GetStyleSetters(wizardStyles, "Border.wizard-navigation")["Padding"]);
+
+        var step = GetStyleSetters(wizardStyles, "Button.wizard-step");
+        Assert.Equal("{DynamicResource LauncherTextBodyBrush}", step["Foreground"]);
+        Assert.Equal("0", step["BorderThickness"]);
+        Assert.Equal("0", step["CornerRadius"]);
+        Assert.Equal("8,12,12,12", step["Padding"]);
+
+        var pointerOver = GetStyleSetters(wizardStyles, "Button.wizard-step:pointerover");
+        Assert.Equal("{DynamicResource LauncherTransparentBrush}", pointerOver["Background"]);
+        Assert.Equal("{DynamicResource LauncherAccentBrush}", pointerOver["Foreground"]);
+
+        var pressed = GetStyleSetters(wizardStyles, "Button.wizard-step:pressed");
+        Assert.Equal("{DynamicResource LauncherFlatPressedBrush}", pressed["Background"]);
+        Assert.Equal("{DynamicResource LauncherTextPrimaryBrush}", pressed["Foreground"]);
+
+        var current = GetStyleSetters(wizardStyles, "Button.wizard-step.current");
+        Assert.Equal("{DynamicResource LauncherFlatPressedBrush}", current["Background"]);
+        Assert.Equal("{DynamicResource LauncherTextPrimaryBrush}", current["Foreground"]);
+        Assert.Equal("{DynamicResource LauncherAccentBrush}", current["BorderBrush"]);
+        Assert.Equal("3,0,0,0", current["BorderThickness"]);
+        Assert.Equal("{StaticResource LauncherFontWeightStrong}", current["FontWeight"]);
+
+        foreach (var selector in new[]
+                 {
+                     "Button.wizard-step.current:pointerover",
+                     "Button.wizard-step.current:pressed"
+                 })
+        {
+            var currentInteraction = GetStyleSetters(wizardStyles, selector);
+            Assert.Equal("{DynamicResource LauncherFlatPressedBrush}", currentInteraction["Background"]);
+            Assert.Equal("{DynamicResource LauncherTextPrimaryBrush}", currentInteraction["Foreground"]);
+            Assert.Equal("{DynamicResource LauncherAccentBrush}", currentInteraction["BorderBrush"]);
+            Assert.Equal("3,0,0,0", currentInteraction["BorderThickness"]);
+        }
+
+        var disabled = GetStyleSetters(wizardStyles, "Button.wizard-step:disabled");
+        Assert.Equal("{DynamicResource LauncherTextSecondaryBrush}", disabled["Foreground"]);
+        Assert.Equal("0", disabled["BorderThickness"]);
+    }
+
+    [Fact]
     public void MainWindow_GamePathUsesPersistedSnapshotAndImmediateCommand()
     {
         var mainWindow = File.ReadAllText(ProjectFile("Views/MainWindow.axaml"));
