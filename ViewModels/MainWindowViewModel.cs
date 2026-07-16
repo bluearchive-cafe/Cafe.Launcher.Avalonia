@@ -221,6 +221,7 @@ public partial class MainWindowViewModel : ViewModelBase, IDisposable
 
         // Setup wizard
         Dialogs.SetupWizard.PickGameFolderAsync = PickGameFolderForWizardAsync;
+        Dialogs.SetupWizard.LanguagePreviewRequested += PreviewSetupWizardLanguage;
         Dialogs.SetupWizard.SettingsApplied += HandleSetupWizardCompletedAsync;
     }
 
@@ -473,6 +474,14 @@ public partial class MainWindowViewModel : ViewModelBase, IDisposable
         Operations.ApplyLanguage();
     }
 
+    private void PreviewSetupWizardLanguage(string language)
+    {
+        if (Dialogs.IsSetupWizardVisible)
+        {
+            ApplyLanguage(language);
+        }
+    }
+
     // ── Window interaction (Escape key resolution) ──────────────────────
 
     /// <summary>
@@ -551,6 +560,7 @@ public partial class MainWindowViewModel : ViewModelBase, IDisposable
         Dialogs.CloseRequested -= WindowChrome.RequestClose;
         Dialogs.CrashRecoveryResetSettingsRequested -= ResetSettingsAfterCrashAsync;
         Dialogs.CrashRecoveryViewLogRequested -= OpenCrashLog;
+        Dialogs.SetupWizard.LanguagePreviewRequested -= PreviewSetupWizardLanguage;
         Dialogs.SetupWizard.SettingsApplied -= HandleSetupWizardCompletedAsync;
         WindowChrome.PropertyChanged -= OnWindowChromePropertyChanged;
         Settings.PropertyChanged -= OnSettingsPropertyChanged;

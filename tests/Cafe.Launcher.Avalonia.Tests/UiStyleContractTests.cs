@@ -1075,6 +1075,17 @@ public sealed partial class UiStyleContractTests
     }
 
     [Fact]
+    public void SetupWizardNavigation_UsesSymmetricHorizontalPadding()
+    {
+        var styles = XDocument.Load(ProjectFile("Views/Styles/SetupWizard.axaml"));
+        var navigation = GetStyleSetters(
+            styles,
+            "ListBox.settings-navigation.wizard-navigation");
+
+        Assert.Equal("8,8,8,16", navigation["Padding"]);
+    }
+
+    [Fact]
     public void SetupWizardHeader_ShowsCurrentProgressBeforeTaskTitle()
     {
         var document = XDocument.Load(ProjectFile("Views/SetupWizardOverlay.axaml"));

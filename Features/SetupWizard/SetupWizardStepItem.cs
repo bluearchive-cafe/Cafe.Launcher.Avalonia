@@ -12,7 +12,8 @@ public sealed partial class SetupWizardStepItem : ObservableObject
     public int DisplayNumber => Index + 1;
 
     /// <summary>Gets the localized step title.</summary>
-    public required string Title { get; init; }
+    [ObservableProperty]
+    private string title = "";
 
     /// <summary>Gets whether this step is current, completed, or locked.</summary>
     [ObservableProperty]

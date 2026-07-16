@@ -1,4 +1,5 @@
 using Cafe.Launcher.Avalonia.Features.SetupWizard;
+using Cafe.Launcher.Avalonia.Models;
 using Cafe.Launcher.Avalonia.Services;
 using Cafe.Launcher.Avalonia.ViewModels;
 using Xunit;
@@ -22,6 +23,25 @@ public sealed class SetupWizardStepItemTests
         Assert.All(
             viewModel.Steps.Skip(1),
             item => Assert.Equal(SetupWizardStepState.Locked, item.State));
+    }
+
+    [Fact]
+    public void LanguageChanged_RefreshesStepTitlesFromCurrentLocale()
+    {
+        var localizer = new LocalizationService();
+        var viewModel = new SetupWizardViewModel(localizer, new GameInstallationPath());
+
+        localizer.SetLanguage(LauncherLanguages.SimplifiedChinese);
+
+        Assert.Equal(
+            [
+                localizer.T("setupWizardLanguage"),
+                localizer.T("setupWizardGamePath"),
+                localizer.T("setupWizardDownloadSource"),
+                localizer.T("setupWizardProxy"),
+                localizer.T("setupWizardReview")
+            ],
+            viewModel.Steps.Select(item => item.Title));
     }
 
     [Fact]

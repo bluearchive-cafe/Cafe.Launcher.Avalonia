@@ -69,6 +69,31 @@ public sealed class MainWindowViewModelTests : IDisposable
     }
 
     [Fact]
+    public async Task SetupWizardLanguage_WhenChanged_AppliesLanguageImmediately()
+    {
+        var coreService = new CountingCoreService(CreateSnapshot());
+        using var viewModel = await CreateViewModelAsync(coreService);
+        viewModel.Dialogs.ShowSetupWizard();
+
+        viewModel.Dialogs.SetupWizard.Language = LauncherLanguages.Japanese;
+
+        Assert.Equal("言語", viewModel.Shell.I18n.SetupWizardLanguage);
+        Assert.Equal("言語", viewModel.Dialogs.SetupWizard.Steps[0].Title);
+    }
+
+    [Fact]
+    public async Task SetupWizardLanguage_WhenWizardIsHidden_DoesNotPreviewLanguage()
+    {
+        var coreService = new CountingCoreService(CreateSnapshot());
+        using var viewModel = await CreateViewModelAsync(coreService);
+        var originalTitle = viewModel.Shell.I18n.SetupWizardLanguage;
+
+        viewModel.Dialogs.SetupWizard.Language = LauncherLanguages.Japanese;
+
+        Assert.Equal(originalTitle, viewModel.Shell.I18n.SetupWizardLanguage);
+    }
+
+    [Fact]
     public async Task InitializeAsync_WhenCalledTwice_LoadsLauncherStateOnce()
     {
         var coreService = new CountingCoreService(CreateSnapshot());

@@ -40,6 +40,7 @@ public partial class SetupWizardViewModel : ViewModelBase, IModalContentViewMode
             CreateStep(3),
             CreateStep(4)
         ];
+        localizer.LanguageChanged += OnLocalizerLanguageChanged;
         RefreshSteps();
     }
 
@@ -104,22 +105,18 @@ public partial class SetupWizardViewModel : ViewModelBase, IModalContentViewMode
 
     public bool CanGoPrevious => Step > 0;
 
-    public string StepTitle => Step switch
-    {
-        0 => localizer.T("setupWizardLanguage"),
-        1 => localizer.T("setupWizardGamePath"),
-        2 => localizer.T("setupWizardDownloadSource"),
-        3 => localizer.T("setupWizardProxy"),
-        4 => localizer.T("setupWizardReview"),
-        _ => ""
-    };
+    public string StepTitle => ResolveStepTitle(Step);
 
     // ── Settings ──────────────────────────────────────────────────
 
     [ObservableProperty]
     private string language;
 
-    partial void OnLanguageChanged(string value) => RefreshSteps();
+    partial void OnLanguageChanged(string value)
+    {
+        LanguagePreviewRequested?.Invoke(value);
+        RefreshSteps();
+    }
 
     [ObservableProperty]
     [NotifyPropertyChangedFor(nameof(CanGoNext))]
@@ -187,6 +184,9 @@ public partial class SetupWizardViewModel : ViewModelBase, IModalContentViewMode
     // ── Events ────────────────────────────────────────────────────
 
     public event Func<LauncherSettings, Task>? SettingsApplied;
+
+    /// <summary>Raised when the selected language should be previewed before settings are saved.</summary>
+    public event Action<string>? LanguagePreviewRequested;
 
     // ── Commands ───────────────────────────────────────────────────
 
@@ -282,16 +282,32 @@ public partial class SetupWizardViewModel : ViewModelBase, IModalContentViewMode
     private SetupWizardStepItem CreateStep(int index) => new()
     {
         Index = index,
-        Title = index switch
-        {
-            0 => localizer.T("setupWizardLanguage"),
-            1 => localizer.T("setupWizardGamePath"),
-            2 => localizer.T("setupWizardDownloadSource"),
-            3 => localizer.T("setupWizardProxy"),
-            4 => localizer.T("setupWizardReview"),
-            _ => ""
-        }
+        Title = ResolveStepTitle(index)
     };
+
+    private string ResolveStepTitle(int index) => index switch
+    {
+        0 => localizer.T("setupWizardLanguage"),
+        1 => localizer.T("setupWizardGamePath"),
+        2 => localizer.T("setupWizardDownloadSource"),
+        3 => localizer.T("setupWizardProxy"),
+        4 => localizer.T("setupWizardReview"),
+        _ => ""
+    };
+
+    private void OnLocalizerLanguageChanged(object? sender, EventArgs e)
+    {
+        foreach (var item in Steps)
+        {
+            item.Title = ResolveStepTitle(item.Index);
+        }
+
+        OnPropertyChanged(nameof(StepTitle));
+        if (IsLastStep)
+        {
+            RefreshSummaryDisplayNames();
+        }
+    }
 
     private void RefreshSteps()
     {
