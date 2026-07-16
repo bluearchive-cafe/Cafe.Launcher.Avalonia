@@ -115,18 +115,19 @@ public sealed class GameDownloadService : IDisposable
     public void Stop(bool clearPersistedState = true)
     {
         ActiveDownloadOperation? operation;
+        TaskCompletionSource? tcs;
         lock (activeDownloadLock)
         {
             operation = activeDownload;
             if (operation is not null)
             {
                 operation.ClearPersistedStateOnCancel = clearPersistedState;
+                operation.CancellationTokenSource.Cancel();
+                activeDownload = null;
             }
         }
 
-        operation?.CancellationTokenSource.Cancel();
         // Release any paused awaits so they can observe the cancellation
-        TaskCompletionSource? tcs;
         lock (pauseLock)
         {
             tcs = pauseTcs;
@@ -526,9 +527,8 @@ public sealed class GameDownloadService : IDisposable
             ThrowIfDisposed();
             previous = activeDownload;
             activeDownload = operation;
+            previous?.CancellationTokenSource.Cancel();
         }
-
-        previous?.CancellationTokenSource.Cancel();
     }
 
     private void ClearActiveDownload(ActiveDownloadOperation operation)
@@ -562,9 +562,9 @@ public sealed class GameDownloadService : IDisposable
             disposed = true;
             operation = activeDownload;
             activeDownload = null;
+            operation?.CancellationTokenSource.Cancel();
         }
 
-        operation?.CancellationTokenSource.Cancel();
         lock (pauseLock)
         {
             pauseTcs?.TrySetResult();
@@ -596,8 +596,11 @@ public sealed class GameDownloadService : IDisposable
     private async Task SaveDownloadStateAsync(DownloadTaskState state, CancellationToken cancellationToken = default)
     {
         var json = JsonSerializer.Serialize(state, DownloadStateJsonOptions);
-        Directory.CreateDirectory(Path.GetDirectoryName(downloadStateFilePath) ?? ".");
-        await File.WriteAllTextAsync(downloadStateFilePath, json, cancellationToken).ConfigureAwait(false);
+        var dir = Path.GetDirectoryName(downloadStateFilePath) ?? ".";
+        Directory.CreateDirectory(dir);
+        var tempPath = downloadStateFilePath + ".tmp";
+        await File.WriteAllTextAsync(tempPath, json, cancellationToken).ConfigureAwait(false);
+        File.Move(tempPath, downloadStateFilePath, overwrite: true);
     }
 
     private void ClearDownloadState()

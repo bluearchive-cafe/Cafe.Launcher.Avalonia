@@ -187,6 +187,13 @@ public sealed class LauncherApiClient : IDisposable
         TimeSpan.FromMilliseconds(1000)
     ];
 
+    /// <summary>
+    /// Maximum retry attempts for core API envelope calls (game config, CDN config, etc.).
+    /// These are more critical than manifest downloads because they determine startup state.
+    /// Uses the same backoff sequence as manifest fetches.
+    /// </summary>
+    private const int MaxEnvelopeFetchAttempts = 3;
+
     public async Task<RemoteManifest> GetRemoteManifestAsync(
         string url,
         string proxyMode,
@@ -237,39 +244,62 @@ public sealed class LauncherApiClient : IDisposable
         string proxyMode,
         CancellationToken cancellationToken)
     {
-        var sw = Stopwatch.StartNew();
-        using var lease = await leaseSource.CreateLeaseAsync(proxyMode, cancellationToken).ConfigureAwait(false);
-        using var request = new HttpRequestMessage(HttpMethod.Get, path);
-        request.Headers.TryAddWithoutValidation(
-            "Authorization",
-            authorizationHeaderFactory.Create("", ApiConfig.YostarAuthorizationVersion));
+        Exception? lastException = null;
 
-        using var response = await lease.Client.SendAsync(request, cancellationToken).ConfigureAwait(false);
-        response.EnsureSuccessStatusCode();
-        LocalDiagnostics.LogSync(
-            LogEntrySeverity.Debug,
-            "ApiClient",
-            $"GET {path} -> {(int)response.StatusCode}, {sw.ElapsedMilliseconds}ms");
-
-        var envelope = await RemoteHttpRequestService.DeserializeJsonAsync<LauncherApiEnvelope<T>>(response, request.RequestUri, jsonOptions, cancellationToken).ConfigureAwait(false);
-
-        if (envelope is null)
+        for (var attempt = 0; attempt < MaxEnvelopeFetchAttempts; attempt++)
         {
-            throw new InvalidOperationException("API response body is empty.");
+            cancellationToken.ThrowIfCancellationRequested();
+            var sw = Stopwatch.StartNew();
+            try
+            {
+                using var lease = await leaseSource.CreateLeaseAsync(proxyMode, cancellationToken).ConfigureAwait(false);
+                using var request = new HttpRequestMessage(HttpMethod.Get, path);
+                request.Headers.TryAddWithoutValidation(
+                    "Authorization",
+                    authorizationHeaderFactory.Create("", ApiConfig.YostarAuthorizationVersion));
+
+                using var response = await lease.Client.SendAsync(request, cancellationToken).ConfigureAwait(false);
+                response.EnsureSuccessStatusCode();
+                LocalDiagnostics.LogSync(
+                    LogEntrySeverity.Debug,
+                    "ApiClient",
+                    $"GET {path} -> {(int)response.StatusCode}, {sw.ElapsedMilliseconds}ms (attempt {attempt + 1})");
+
+                var envelope = await RemoteHttpRequestService.DeserializeJsonAsync<LauncherApiEnvelope<T>>(response, request.RequestUri, jsonOptions, cancellationToken).ConfigureAwait(false);
+
+                if (envelope is null)
+                {
+                    throw new InvalidOperationException("API response body is empty.");
+                }
+
+                if (envelope.Code != 200)
+                {
+                    var message = envelope.Message ?? envelope.Msg ?? $"API response code: {envelope.Code}";
+                    throw new InvalidOperationException(message);
+                }
+
+                if (envelope.Data is null)
+                {
+                    throw new InvalidOperationException("API response data is empty.");
+                }
+
+                return envelope.Data;
+            }
+            catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
+            {
+                throw;
+            }
+            catch (Exception ex) when (ex is HttpRequestException or TaskCanceledException or JsonException or InvalidOperationException)
+            {
+                lastException = ex;
+                if (attempt < MaxEnvelopeFetchAttempts - 1)
+                {
+                    await Task.Delay(ManifestFetchBackoff[attempt], cancellationToken).ConfigureAwait(false);
+                }
+            }
         }
 
-        if (envelope.Code != 200)
-        {
-            var message = envelope.Message ?? envelope.Msg ?? $"API response code: {envelope.Code}";
-            throw new InvalidOperationException(message);
-        }
-
-        if (envelope.Data is null)
-        {
-            throw new InvalidOperationException("API response data is empty.");
-        }
-
-        return envelope.Data;
+        throw lastException!;
     }
 
     public void Dispose()

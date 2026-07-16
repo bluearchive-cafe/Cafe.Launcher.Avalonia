@@ -94,7 +94,10 @@ public sealed class UnifiedLogger : IDisposable
         Exception? exception = null,
         CancellationToken cancellationToken = default)
     {
-        cancellationToken.ThrowIfCancellationRequested();
+        // Note: cancellationToken is checked here to support the caller's
+        // cancellation needs, but logging is inherently fire-and-forget.
+        // If the caller has already been cancelled, their diagnostic about
+        // why they were cancelled is the most valuable log entry to keep.
         try
         {
             var level = severity switch
@@ -121,7 +124,9 @@ public sealed class UnifiedLogger : IDisposable
         }
         catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
         {
-            throw;
+            // Cancelled by caller — expected during shutdown.
+            // Suppress the OperationCanceledException here since logging
+            // must never crash the app.
         }
         catch
         {

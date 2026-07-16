@@ -14,6 +14,14 @@ public sealed class LocalDiagnostics
 {
     private readonly UnifiedLogger logger;
 
+    /// <summary>
+    /// Thread-safe static reference used by <see cref="LogSync"/> to reach the DI-resolved logger.
+    /// Uses Volatile.Read/Write to avoid stale reads without locking.
+    /// Falls back to Debug.WriteLine when no logger has been registered (e.g. before DI init,
+    /// or after the logger has been disposed during shutdown).
+    /// </summary>
+    private static UnifiedLogger? syncLogger;
+
     public LocalDiagnostics() : this(new UnifiedLogger(Path.Combine(
         Path.GetTempPath(),
         "Cafe.Launcher.Avalonia.Tests",
@@ -24,7 +32,7 @@ public sealed class LocalDiagnostics
     public LocalDiagnostics(UnifiedLogger logger)
     {
         this.logger = logger;
-        StaticLoggerHolder.Instance = logger;
+        Volatile.Write(ref syncLogger, logger);
     }
 
     internal string LogFilePath => logger.LogFilePath;
@@ -121,18 +129,28 @@ public sealed class LocalDiagnostics
 
     /// <summary>
     /// Synchronous log write for use in synchronous contexts (e.g. static methods).
+    /// Writes through the DI-resolved UnifiedLogger when available, falling back to
+    /// Debug.WriteLine if no DI logger has been registered yet or after disposal.
     /// </summary>
     public static void LogSync(string title, string message)
     {
         try
         {
-            StaticLoggerHolder.Instance.LogAsync(LogEntrySeverity.Info, title, message: message)
-                .GetAwaiter().GetResult();
+            var logger = Volatile.Read(ref syncLogger);
+            if (logger is not null)
+            {
+                logger.LogAsync(LogEntrySeverity.Info, title, message: message)
+                    .GetAwaiter().GetResult();
+                return;
+            }
         }
         catch
         {
             // Best-effort — diagnostic logging must never crash the app.
         }
+
+        System.Diagnostics.Debug.WriteLine(
+            $"{DateTimeOffset.Now:O} [INFO] [{title}] {message}");
     }
 
     /// <summary>
@@ -142,18 +160,20 @@ public sealed class LocalDiagnostics
     {
         try
         {
-            StaticLoggerHolder.Instance.LogAsync(severity, title, message: message)
-                .GetAwaiter().GetResult();
+            var logger = Volatile.Read(ref syncLogger);
+            if (logger is not null)
+            {
+                logger.LogAsync(severity, title, message: message)
+                    .GetAwaiter().GetResult();
+                return;
+            }
         }
         catch
         {
             // Best-effort.
         }
-    }
-}
 
-/// <summary>Bridge for static LogSync to reach the DI-resolved <see cref="UnifiedLogger"/> singleton.</summary>
-internal static class StaticLoggerHolder
-{
-    public static UnifiedLogger Instance { get; set; } = null!;
+        System.Diagnostics.Debug.WriteLine(
+            $"{DateTimeOffset.Now:O} [{severity}] [{title}] {message}");
+    }
 }
