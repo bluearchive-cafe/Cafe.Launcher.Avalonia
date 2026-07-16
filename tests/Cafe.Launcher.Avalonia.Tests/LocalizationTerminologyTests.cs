@@ -56,15 +56,15 @@ public sealed class LocalizationTerminologyTests
     }
 
     [Theory]
-    [InlineData("en.json", "Automatic system proxy", "Direct connection (no proxy)", "Configured system proxy",
-        "Use the system's automatically detected proxy settings.", "Connect directly without a proxy.",
-        "Use the proxy explicitly configured in system settings.")]
-    [InlineData("zh-Hans.json", "自动检测系统代理", "直连（不使用代理）", "已配置的系统代理",
-        "使用系统自动检测到的代理设置。", "不使用代理，直接连接。", "使用系统设置中明确配置的代理。")]
-    [InlineData("zh-Hant.json", "自動偵測系統代理", "直連（不使用代理）", "已設定的系統代理",
-        "使用系統自動偵測到的代理設定。", "不使用代理，直接連線。", "使用系統設定中明確設定的代理。")]
-    [InlineData("ja.json", "システムプロキシを自動検出", "直接接続（プロキシなし）", "設定済みシステムプロキシ",
-        "システムが自動検出したプロキシ設定を使用します。", "プロキシを使用せずに直接接続します。", "システム設定で明示的に構成されたプロキシを使用します。")]
+    [InlineData("en.json", "Automatic system proxy", "Direct connection (no proxy)", "System proxy (configured first)",
+        "Use the launcher's default network behavior.", "Connect directly without a proxy.",
+        "Prefer the explicitly configured system proxy; use the automatically detected system proxy when none is configured.")]
+    [InlineData("zh-Hans.json", "自动检测系统代理", "直连（不使用代理）", "系统代理（优先使用显式配置）",
+        "使用启动器默认网络行为。", "不使用代理，直接连接。", "优先使用系统中明确配置的代理；如未配置，则使用系统自动代理。")]
+    [InlineData("zh-Hant.json", "自動偵測系統代理", "直連（不使用代理）", "系統代理（優先使用明確設定）",
+        "使用啟動器預設網路行為。", "不使用代理，直接連線。", "優先使用系統中明確設定的代理；如未設定，則使用系統自動代理。")]
+    [InlineData("ja.json", "システムプロキシを自動検出", "直接接続（プロキシなし）", "システムプロキシ（明示設定を優先）",
+        "ランチャーの既定のネットワーク動作を使用します。", "プロキシを使用せずに直接接続します。", "システムで明示的に設定されたプロキシを優先し、未設定の場合は自動検出されたシステムプロキシを使用します。")]
     public void LocaleFiles_ProxyModes_HaveDistinctAccurateNamesAndDescriptions(
         string fileName,
         string expectedAuto,
@@ -87,8 +87,19 @@ public sealed class LocalizationTerminologyTests
         Assert.Equal(
             new[] { expectedAutoDescription, expectedDirectDescription, expectedSystemDescription },
             descriptions);
+        Assert.Equal(expectedSystemDescription, GetRequiredValue(locale, "proxySystemDescription"));
         Assert.Equal(3, names.Distinct(StringComparer.Ordinal).Count());
         Assert.Equal(3, descriptions.Distinct(StringComparer.Ordinal).Count());
+    }
+
+    [Theory]
+    [InlineData("zh-Hans.json", "显示公告、横幅、新闻和社交媒体整张卡片")]
+    [InlineData("zh-Hant.json", "顯示公告、橫幅、新聞和社群媒體整張卡片")]
+    public void LocaleFiles_RemoteContentCard_UsesBannerTerminology(string fileName, string expected)
+    {
+        var locale = ReadLocale(fileName);
+
+        Assert.Equal(expected, locale["showRemoteContentCard"]);
     }
 
     [Theory]

@@ -38,9 +38,9 @@
 
 | Mode | Definition | Simplified Chinese | Traditional Chinese | Japanese | Aliases to avoid |
 | --- | --- | --- | --- | --- | --- |
-| **Automatic system proxy** | The platform proxy selected through the runtime's automatic system detection. | 自动检测系统代理 | 自動偵測系統代理 | システムプロキシを自動検出 | 跟随系统、默认网络行为 |
+| **Automatic system proxy** | The launcher's default network behavior, backed by the runtime's system proxy selection. | 自动检测系统代理 | 自動偵測系統代理 | システムプロキシを自動検出 | 跟随系统 |
 | **Direct connection** | A connection that explicitly bypasses every proxy. | 直连（不使用代理） | 直連（不使用代理） | 直接接続（プロキシなし） | 直连、直接 |
-| **Configured system proxy** | The proxy explicitly configured in operating-system settings. | 已配置的系统代理 | 已設定的系統代理 | 設定済みシステムプロキシ | 系统代理、システムプロキシ |
+| **System proxy (configured first)** | The explicitly configured operating-system proxy, falling back to automatic system proxy detection when no explicit proxy exists. | 系统代理（优先使用显式配置） | 系統代理（優先使用明確設定） | システムプロキシ（明示設定を優先） | 已配置的系统代理、設定済みシステムプロキシ |
 
 ## Translation rules
 
@@ -80,5 +80,5 @@
 - “Resource Control Panel” and “Resource Panel” referred to the same interface; use **Resource Panel**.
 - “Validation,” “verification,” and “check” overlapped in launch-related copy; use **launch verification** for the user-configurable pre-launch operation.
 - “活动” and “活動” were used for **Banner**, but they mean an event; use “横幅” and “橫幅”.
-- “跟随系统” and the unqualified “系统代理” made two proxy modes appear equivalent; use **Automatic system proxy** and **Configured system proxy** to expose the actual distinction.
+- “跟随系统” and the unqualified “系统代理” made two proxy modes appear equivalent; use **Automatic system proxy** and **System proxy (configured first)** to expose the explicit-configuration priority and automatic fallback.
 - “汉化管理,” “中文化管理,” and “中国語化設定” named the **Resource Panel** after one resource type; use the canonical panel name and reserve localization wording for **localized resources**.
