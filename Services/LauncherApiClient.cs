@@ -229,5 +229,6 @@ public sealed class LauncherApiClient : IDisposable
     public void Dispose()
     {
         leaseSource.Dispose();
+        GC.SuppressFinalize(this);
     }
 }

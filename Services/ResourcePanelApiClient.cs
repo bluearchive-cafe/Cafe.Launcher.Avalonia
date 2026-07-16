@@ -94,5 +94,6 @@ public sealed class ResourcePanelApiClient : IDisposable
     public void Dispose()
     {
         leaseSource.Dispose();
+        GC.SuppressFinalize(this);
     }
 }

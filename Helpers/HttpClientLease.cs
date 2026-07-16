@@ -50,5 +50,6 @@ public sealed class HttpClientLease : IDisposable
             Client.Dispose();
             handler?.Dispose();
         }
+        GC.SuppressFinalize(this);
     }
 }

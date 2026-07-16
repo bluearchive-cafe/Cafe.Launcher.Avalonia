@@ -17,7 +17,8 @@ Blue Archive 日服桌面启动器，基于 .NET 10 与 Avalonia 12 重写，替
 - **主题色** — 四种模式：默认（`#FF2E7DF6`） / 跟随系统 / 壁纸提取 / 自定义取色
 - **自更新** — 通过服务端代理检查 launcher 自身更新，支持 `stable` / `beta` 频道
 - **本地诊断** — 运行诊断写入 `diagnostics.log`，支持日志轮转与导出
-- **无远端遥测** — 显式排除原启动器的 Aliyun SLS 遥测上报路径
+- **Toast 通知**：支持开启 / 关闭即时通知（含运动淡入动画）
+- **无障碍**：设置控件和对话框按钮均配有 `AutomationProperties.Name` 标注
 
 ## 技术栈
 
@@ -142,6 +143,7 @@ dotnet test .\tests\Cafe.Launcher.Avalonia.Tests\Cafe.Launcher.Avalonia.Tests.cs
 ├── Program.cs                  # 进程入口：单实例互斥、崩溃日志、会话恢复
 ├── Cafe.Launcher.Avalonia.csproj
 ├── Constants/                  # LauncherConstants / ApiConfig / BuildInfo / GamePaths
+├── Controls/                   # 共享 UI 控件（SettingRow、ConfirmDialog、LoadingOverlay）
 ├── Converters/                 # 值转换器（URL→Bitmap、ToastSeverity→Brush）
 ├── Helpers/                    # 工具类（FileSizeFormatter、GamePathValidator、HttpClientLease）
 ├── Models/                     # 数据模型（API 合约、状态模型、安装状态、清单结构等）
@@ -236,8 +238,7 @@ Program.Main()
 ### DI 注册要点
 
 `ServiceConfiguration.AddLauncherServices()` 统一注册：
-- 服务全部 `AddSingleton`（含 `ISettingsEditor`——单窗口共享编辑状态）
-- ViewModel 混合注册：`SettingsViewModel` / `ShellViewModel` / `RemoteContentViewModel` / `DialogsViewModel` / `GameOperationsViewModel` 为单例，其余 `AddTransient`
+- 服务与 ViewModel 全部 `AddSingleton`（单窗口桌面应用，无 Scope 边界）
 - `GameDownloadService` 通过 `Dependencies` 记录接收所有依赖
 - `IDisposable` 服务按反向注册顺序释放（`GameDownloadService` 最后）
 

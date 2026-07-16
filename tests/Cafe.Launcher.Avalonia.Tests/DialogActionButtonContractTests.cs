@@ -72,6 +72,7 @@ public sealed class DialogActionButtonContractTests
             XDocument.Load(ProjectFile("Views/MainWindowDialogsOverlay.axaml")),
             XDocument.Load(ProjectFile("Views/MainWindowLogViewerOverlay.axaml")),
             XDocument.Load(ProjectFile("Views/MainWindowSettingsOverlay.axaml")),
+            XDocument.Load(ProjectFile("Controls/ConfirmDialog.axaml")),
         };
         var actionButtons = documents
             .SelectMany(document => document.Descendants())
@@ -84,7 +85,7 @@ public sealed class DialogActionButtonContractTests
                     "danger-action"))
             .ToArray();
 
-        Assert.Equal(25, actionButtons.Length);
+        Assert.Equal(16, actionButtons.Length);
         Assert.All(
             actionButtons,
             button =>

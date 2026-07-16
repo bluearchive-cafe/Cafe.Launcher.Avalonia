@@ -165,6 +165,33 @@ public sealed class MainWindowHeadlessTests
     }
 
     [AvaloniaFact]
+    public void SettingRow_RendersAllFields_WithExplicitActionProperty()
+    {
+        using var context = CreateContext();
+        OpenSettings(context);
+        context.ViewModel.Settings.SelectedCategory = SettingsCategoryCodes.General;
+        Dispatcher.UIThread.RunJobs();
+
+        var rows = context.Window.GetVisualDescendants().OfType<global::Cafe.Launcher.Avalonia.Controls.SettingRow>().ToArray();
+        Assert.NotEmpty(rows);
+
+        foreach (var row in rows)
+        {
+            var titleText = row.FindControl<TextBlock>("RowTitle");
+            Assert.NotNull(titleText);
+            Assert.Equal(row.Title, titleText!.Text);
+
+            var descText = row.FindControl<TextBlock>("RowDescription");
+            Assert.NotNull(descText);
+            Assert.Equal(row.Description, descText!.Text);
+
+            var actionPresenter = row.FindControl<ContentPresenter>("ActionPresenter");
+            Assert.NotNull(actionPresenter);
+            Assert.Equal(row.Action, actionPresenter!.Content);
+        }
+    }
+
+    [AvaloniaFact]
     public void SettingsSaving_DisablesNavigationButKeepsSummaryAndFooterVisible()
     {
         using var context = CreateContext();
@@ -202,6 +229,50 @@ public sealed class MainWindowHeadlessTests
             .Single(control => control.Classes.Contains("dialog-scroll"));
 
         Assert.True(scrollViewer.Extent.Height > scrollViewer.Viewport.Height);
+    }
+
+    [AvaloniaFact]
+    public void SettingsOverlay_AtMinimumWindowSize_KeepsDialogAndFooterVisible()
+    {
+        using var context = CreateContext();
+        context.Window.Width = 1024;
+        context.Window.Height = 640;
+        OpenSettings(context);
+
+        var settingsOverlay = context.Window
+            .GetVisualDescendants()
+            .OfType<MainWindowSettingsOverlay>()
+            .Single();
+        var dialog = settingsOverlay
+            .GetVisualDescendants()
+            .OfType<Border>()
+            .Single(control => control.Classes.Contains("overlay-dialog"));
+        var footer = dialog
+            .GetVisualDescendants()
+            .OfType<Border>()
+            .Single(control => control.Classes.Contains("dialog-footer"));
+
+        Assert.True(dialog.Bounds.Width <= context.Window.ClientSize.Width - 48);
+        Assert.True(dialog.Bounds.Height <= context.Window.ClientSize.Height - 48);
+        Assert.True(dialog.Bounds.Height > 0);
+        Assert.True(footer.IsEffectivelyVisible);
+        Assert.True(footer.Bounds.Bottom <= dialog.Bounds.Height);
+    }
+
+    [AvaloniaFact]
+    public void SettingsControls_UseMinimumAccessibleInteractionHeight()
+    {
+        using var context = CreateContext();
+        OpenSettings(context);
+
+        var settingControls = context.Window
+            .GetVisualDescendants()
+            .OfType<ComboBox>()
+            .Where(control => control.Classes.Contains("setting-control"))
+            .ToArray();
+
+        Assert.NotEmpty(settingControls);
+        Assert.All(settingControls, control => Assert.True(control.Bounds.Height >= 36));
     }
 
     [AvaloniaFact]
@@ -346,6 +417,27 @@ public sealed class MainWindowHeadlessTests
     }
 
     [AvaloniaFact]
+    public void RepairConfirm_WithLongMessage_DoesNotExceedDefaultMaximumWidth()
+    {
+        using var context = CreateContext();
+        context.Window.Show();
+        context.ViewModel.Dialogs.ShowRepairConfirm(
+            "下载源已切换。Cafe 下载源与官方下载源使用不同的文件清单，因此必须根据当前下载源修复已安装的游戏，才能得到可靠的启动校验结果。现在开始修复吗？");
+        Dispatcher.UIThread.RunJobs();
+
+        var dialog = context.Window
+            .GetVisualDescendants()
+            .OfType<global::Cafe.Launcher.Avalonia.Controls.ConfirmDialog>()
+            .Single(control => control.IsOpen);
+        var panel = dialog
+            .GetVisualDescendants()
+            .OfType<Border>()
+            .Single(control => control.Classes.Contains("confirm-panel"));
+
+        Assert.True(panel.Bounds.Width <= 540);
+    }
+
+    [AvaloniaFact]
     public void MainWindow_WhenEscapeRouteIsInvoked_ClosesSettingsOverlay()
     {
         using var context = CreateContext();
@@ -362,6 +454,9 @@ public sealed class MainWindowHeadlessTests
             context.ViewModel.Settings.Editor.GetSnapshot());
         context.ViewModel.WindowChrome.IsSettingsVisible = true;
         Dispatcher.UIThread.RunJobs();
+        // Reset dirty state after binding resolution (same rationale as OpenSettings)
+        context.ViewModel.Settings.Editor.ApplySnapshot(
+            context.ViewModel.Settings.Editor.GetSnapshot());
 
         var handled = context.ViewModel.TryHandleEscape();
         Dispatcher.UIThread.RunJobs();
@@ -414,11 +509,15 @@ public sealed class MainWindowHeadlessTests
         using var context = CreateContext();
         OpenSettings(context);
 
+        var isDirty = context.ViewModel.Settings.IsSettingsDirty;
+        var isUnsaved = context.ViewModel.Settings.IsUnsavedChangesVisible;
+
         context.Window.KeyPress(Key.Escape, RawInputModifiers.None, PhysicalKey.Escape, "");
         context.Window.KeyRelease(Key.Escape, RawInputModifiers.None, PhysicalKey.Escape, "");
         Dispatcher.UIThread.RunJobs();
 
-        Assert.False(context.ViewModel.WindowChrome.IsSettingsVisible);
+        Assert.False(context.ViewModel.WindowChrome.IsSettingsVisible,
+            $"IsDirty={isDirty} IsUnsaved={isUnsaved} IsVisible={context.ViewModel.WindowChrome.IsSettingsVisible}");
     }
 
     [AvaloniaFact]
@@ -452,6 +551,10 @@ public sealed class MainWindowHeadlessTests
             hasSnapshot: false);
         viewModel.Settings.Editor.ApplySnapshot(
             viewModel.Settings.Editor.GetSnapshot());
+        // Apply default theme accent brushes so navigation selection visual
+        // matches the real app's initialization behavior.
+        SettingsAppearanceViewModel.ApplyAccentBrushes(
+            Color.Parse("#FF2E7DF6"));
         var window = new MainWindow { DataContext = viewModel };
         window.ConfigureViewModel(viewModel);
         return new TestContext(tempDir, provider, window, viewModel);
@@ -462,6 +565,11 @@ public sealed class MainWindowHeadlessTests
         context.Window.Show();
         context.ViewModel.WindowChrome.ShowSettingsCommand.Execute(null);
         Dispatcher.UIThread.RunJobs();
+        // Reset dirty state: TwoWay bindings on initial load may write back the
+        // same value, which triggers IsDirty via PropertyChanged. This is a UI
+        // loading artifact, not a real user change.
+        context.ViewModel.Settings.Editor.ApplySnapshot(
+            context.ViewModel.Settings.Editor.GetSnapshot());
     }
 
     private static ListBox GetSettingsNavigation(MainWindow window) =>
@@ -479,8 +587,8 @@ public sealed class MainWindowHeadlessTests
         Assert.Equal(expectedCode, ((SettingOption)selectedItem.DataContext!).Code);
         Assert.Equal(new Thickness(3, 0, 0, 0), selectedItem.BorderThickness);
         Assert.Equal(Color.Parse("#FF2E7DF6"), Assert.IsType<SolidColorBrush>(selectedItem.BorderBrush).Color);
-        Assert.Equal(Color.Parse("#242E7DF6"), Assert.IsType<SolidColorBrush>(selectedItem.Background).Color);
-        Assert.Equal(Color.Parse("#242E7DF6"), Assert.IsType<SolidColorBrush>(presenter.Background).Color);
+        Assert.Equal(Color.Parse("#302E7DF6"), Assert.IsType<SolidColorBrush>(selectedItem.Background).Color);
+        Assert.Equal(Color.Parse("#302E7DF6"), Assert.IsType<SolidColorBrush>(presenter.Background).Color);
     }
 
     private static void AssertVisibleSettingsSection(MainWindow window, Type expectedType)

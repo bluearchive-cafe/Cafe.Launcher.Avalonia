@@ -1,0 +1,23 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:materialIcons="clr-namespace:Material.Icons.Avalonia;assembly=Material.Icons.Avalonia"
+             xmlns:controls="using:Cafe.Launcher.Avalonia.Controls"
+             x:Class="Cafe.Launcher.Avalonia.Controls.SettingRow"
+             x:Name="Root"
+             x:DataType="controls:SettingRow">
+    <Grid Classes="settings-row" ColumnDefinitions="Auto,*,Auto">
+        <Border Classes="settings-icon">
+            <materialIcons:MaterialIcon Kind="{Binding IconKind, ElementName=Root}"
+                                        Width="{StaticResource LauncherIconMd}" Height="{StaticResource LauncherIconMd}"
+                                        Foreground="{DynamicResource LauncherAccentBrush}"
+                                        HorizontalAlignment="Center" VerticalAlignment="Center"/>
+        </Border>
+        <StackPanel Grid.Column="1" Classes="dialog-heading-copy">
+            <TextBlock x:Name="RowTitle" Text="{Binding Title, ElementName=Root}" Classes="section-title"/>
+            <TextBlock x:Name="RowDescription" Text="{Binding Description, ElementName=Root}" Classes="caption" TextWrapping="Wrap"/>
+        </StackPanel>
+        <ContentPresenter Grid.Column="2"
+                          x:Name="ActionPresenter"
+                          Content="{Binding Action, ElementName=Root}"/>
+    </Grid>
+</UserControl>

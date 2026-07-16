@@ -17,7 +17,7 @@
                     </ItemsPanelTemplate>
                 </ItemsControl.ItemsPanel>
                 <ItemsControl.ItemTemplate>
-                    <DataTemplate DataType="{x:Type services:ToastNotification}">
+                    <DataTemplate x:DataType="services:ToastNotification">
                         <Border Classes="toast-card"
                                 Classes.motion-enabled="{Binding DataContext.IsMotionEnabled, ElementName=ToastOverlayRoot}"
                                 IsHitTestVisible="True">

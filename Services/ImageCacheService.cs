@@ -235,5 +235,6 @@ public sealed class ImageCacheService : IDisposable
 
         cacheLocks.Clear();
         httpClientLeaseSource.Dispose();
+        GC.SuppressFinalize(this);
     }
 }

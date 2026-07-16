@@ -176,5 +176,6 @@ public sealed class UnifiedLogger : IDisposable
         if (disposed) return;
         disposed = true;
         serilogLogger.Dispose();
+        GC.SuppressFinalize(this);
     }
 }
