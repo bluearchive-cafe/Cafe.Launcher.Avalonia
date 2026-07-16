@@ -1153,23 +1153,15 @@ public sealed class GameDownloadServiceTests
     private sealed class WritingFileDownloadService(byte[] content) : IFileDownloadService
     {
         public async Task DownloadAsync(
-            string targetTempPath,
-            CdnConfigResponse cdnConfig,
-            string source,
-            long expectedSize,
-            string expectedHash,
-            string filePath,
-            HttpClient httpClient,
-            Func<Task> pauseAwaiter,
-            Func<long, CancellationToken, Task> onProgressAsync,
-            bool connectionUsesProxy,
+            FileDownloadRequest request,
+            FileDownloadOperationControl control,
             CancellationToken cancellationToken)
         {
-            await pauseAwaiter();
+            await control.WaitWhilePausedAsync();
             cancellationToken.ThrowIfCancellationRequested();
-            Directory.CreateDirectory(Path.GetDirectoryName(targetTempPath)!);
-            await File.WriteAllBytesAsync(targetTempPath, content, cancellationToken);
-            await onProgressAsync(content.Length, cancellationToken);
+            Directory.CreateDirectory(Path.GetDirectoryName(request.TargetTempPath)!);
+            await File.WriteAllBytesAsync(request.TargetTempPath, content, cancellationToken);
+            await control.ReportProgressAsync(content.Length, cancellationToken);
         }
     }
 
@@ -1185,26 +1177,18 @@ public sealed class GameDownloadServiceTests
             new(TaskCreationOptions.RunContinuationsAsynchronously);
 
         public async Task DownloadAsync(
-            string targetTempPath,
-            CdnConfigResponse cdnConfig,
-            string source,
-            long expectedSize,
-            string expectedHash,
-            string filePath,
-            HttpClient httpClient,
-            Func<Task> pauseAwaiter,
-            Func<long, CancellationToken, Task> onProgressAsync,
-            bool connectionUsesProxy,
+            FileDownloadRequest request,
+            FileDownloadOperationControl control,
             CancellationToken cancellationToken)
         {
             DownloadStarted.TrySetResult();
             await AllowPauseCheck.Task.WaitAsync(cancellationToken);
             PauseCheckStarted.TrySetResult();
-            await pauseAwaiter();
+            await control.WaitWhilePausedAsync();
             cancellationToken.ThrowIfCancellationRequested();
-            Directory.CreateDirectory(Path.GetDirectoryName(targetTempPath)!);
-            await File.WriteAllBytesAsync(targetTempPath, content, cancellationToken);
-            await onProgressAsync(content.Length, cancellationToken);
+            Directory.CreateDirectory(Path.GetDirectoryName(request.TargetTempPath)!);
+            await File.WriteAllBytesAsync(request.TargetTempPath, content, cancellationToken);
+            await control.ReportProgressAsync(content.Length, cancellationToken);
         }
     }
 
@@ -1213,16 +1197,8 @@ public sealed class GameDownloadServiceTests
         public int InvocationCount { get; private set; }
 
         public Task DownloadAsync(
-            string targetTempPath,
-            CdnConfigResponse cdnConfig,
-            string source,
-            long expectedSize,
-            string expectedHash,
-            string filePath,
-            HttpClient httpClient,
-            Func<Task> pauseAwaiter,
-            Func<long, CancellationToken, Task> onProgressAsync,
-            bool connectionUsesProxy,
+            FileDownloadRequest request,
+            FileDownloadOperationControl control,
             CancellationToken cancellationToken)
         {
             InvocationCount++;
@@ -1249,16 +1225,8 @@ public sealed class GameDownloadServiceTests
             new(TaskCreationOptions.RunContinuationsAsynchronously);
 
         public async Task DownloadAsync(
-            string targetTempPath,
-            CdnConfigResponse cdnConfig,
-            string source,
-            long expectedSize,
-            string expectedHash,
-            string filePath,
-            HttpClient httpClient,
-            Func<Task> pauseAwaiter,
-            Func<long, CancellationToken, Task> onProgressAsync,
-            bool connectionUsesProxy,
+            FileDownloadRequest request,
+            FileDownloadOperationControl control,
             CancellationToken cancellationToken)
         {
             var started = Interlocked.Increment(ref startedCount);
@@ -1272,10 +1240,10 @@ public sealed class GameDownloadServiceTests
             try
             {
                 await Release.Task.WaitAsync(cancellationToken);
-                await pauseAwaiter();
-                Directory.CreateDirectory(Path.GetDirectoryName(targetTempPath)!);
-                await File.WriteAllBytesAsync(targetTempPath, content, cancellationToken);
-                await onProgressAsync(content.Length, cancellationToken);
+                await control.WaitWhilePausedAsync();
+                Directory.CreateDirectory(Path.GetDirectoryName(request.TargetTempPath)!);
+                await File.WriteAllBytesAsync(request.TargetTempPath, content, cancellationToken);
+                await control.ReportProgressAsync(content.Length, cancellationToken);
             }
             finally
             {
@@ -1304,23 +1272,15 @@ public sealed class GameDownloadServiceTests
         public int InvocationCount { get; private set; }
 
         public async Task DownloadAsync(
-            string targetTempPath,
-            CdnConfigResponse cdnConfig,
-            string source,
-            long expectedSize,
-            string expectedHash,
-            string filePath,
-            HttpClient httpClient,
-            Func<Task> pauseAwaiter,
-            Func<long, CancellationToken, Task> onProgressAsync,
-            bool connectionUsesProxy,
+            FileDownloadRequest request,
+            FileDownloadOperationControl control,
             CancellationToken cancellationToken)
         {
             InvocationCount++;
             var content = InvocationCount == 1 ? firstContent : retryContent;
-            Directory.CreateDirectory(Path.GetDirectoryName(targetTempPath)!);
-            await File.WriteAllBytesAsync(targetTempPath, content, cancellationToken);
-            await onProgressAsync(content.Length, cancellationToken);
+            Directory.CreateDirectory(Path.GetDirectoryName(request.TargetTempPath)!);
+            await File.WriteAllBytesAsync(request.TargetTempPath, content, cancellationToken);
+            await control.ReportProgressAsync(content.Length, cancellationToken);
         }
     }
 

@@ -14,42 +14,6 @@ using Cafe.Launcher.Avalonia.Services.Diagnostics;
 namespace Cafe.Launcher.Avalonia.Services;
 
 /// <summary>
-/// Service for downloading a single manifest file with retry domain cycling,
-/// Range resume, CRC64 verification, cooperative pause, and cleanup.
-/// </summary>
-public interface IFileDownloadService
-{
-    /// <summary>
-    /// Download one manifest file with CDN retry domain cycling.
-    /// </summary>
-    /// <param name="targetTempPath">Full path to the temporary output file.</param>
-    /// <param name="cdnConfig">CDN configuration (primary/backup URLs used in retry order).</param>
-    /// <param name="source">Source path segment for URL construction.</param>
-    /// <param name="expectedSize">Expected file size in bytes. Skip download if temp file already matches.</param>
-    /// <param name="expectedHash">Expected CRC64 hash as unsigned decimal string.</param>
-    /// <param name="filePath">Relative file path within the game (used in URL construction and diagnostics).</param>
-    /// <param name="httpClient">Pre-configured HTTP client (shared, caller-disposed).</param>
-    /// <param name="pauseAwaiter">Cooperative pause: awaited inside the download loop.</param>
-    /// <param name="onProgressAsync">Async progress callback, called with byte count per read.
-    /// Throttling/speed limiting can be applied here since it runs inside the download loop.</param>
-    /// <param name="connectionUsesProxy">True when the supplied <paramref name="httpClient"/> egresses
-    /// through a proxy, so SSRF URL validation must delegate DNS resolution to the proxy.</param>
-    /// <param name="cancellationToken">Propagates cancellation.</param>
-    Task DownloadAsync(
-        string targetTempPath,
-        CdnConfigResponse cdnConfig,
-        string source,
-        long expectedSize,
-        string expectedHash,
-        string filePath,
-        HttpClient httpClient,
-        Func<Task> pauseAwaiter,
-        Func<long, CancellationToken, Task> onProgressAsync,
-        bool connectionUsesProxy,
-        CancellationToken cancellationToken);
-}
-
-/// <summary>
 /// Production implementation of <see cref="IFileDownloadService"/>.
 /// </summary>
 public sealed class FileDownloadService : IFileDownloadService
@@ -75,18 +39,20 @@ public sealed class FileDownloadService : IFileDownloadService
     }
 
     public async Task DownloadAsync(
-        string targetTempPath,
-        CdnConfigResponse cdnConfig,
-        string source,
-        long expectedSize,
-        string expectedHash,
-        string filePath,
-        HttpClient httpClient,
-        Func<Task> pauseAwaiter,
-        Func<long, CancellationToken, Task> onProgressAsync,
-        bool connectionUsesProxy,
+        FileDownloadRequest request,
+        FileDownloadOperationControl control,
         CancellationToken cancellationToken)
     {
+        var targetTempPath = request.TargetTempPath;
+        var cdnConfig = request.CdnConfig;
+        var source = request.Source;
+        var expectedSize = request.ExpectedSize;
+        var expectedHash = request.ExpectedHash;
+        var filePath = request.FilePath;
+        var httpClient = control.HttpClient;
+        var pauseAwaiter = control.WaitWhilePausedAsync;
+        var onProgressAsync = control.ReportProgressAsync;
+        var connectionUsesProxy = control.ConnectionUsesProxy;
         var targetDirectory = Path.GetDirectoryName(targetTempPath);
         if (!string.IsNullOrWhiteSpace(targetDirectory))
         {
@@ -203,6 +169,33 @@ public sealed class FileDownloadService : IFileDownloadService
 
         throw new HttpRequestException($"Download failed: {filePath}", lastError);
     }
+
+    /// <summary>Compatibility entry point used by focused transfer tests.</summary>
+    internal Task DownloadAsync(
+        string targetTempPath,
+        CdnConfigResponse cdnConfig,
+        string source,
+        long expectedSize,
+        string expectedHash,
+        string filePath,
+        HttpClient httpClient,
+        Func<Task> pauseAwaiter,
+        Func<long, CancellationToken, Task> onProgressAsync,
+        bool connectionUsesProxy,
+        CancellationToken cancellationToken) => DownloadAsync(
+            new FileDownloadRequest(
+                targetTempPath,
+                cdnConfig,
+                source,
+                expectedSize,
+                expectedHash,
+                filePath),
+            new FileDownloadOperationControl(
+                httpClient,
+                pauseAwaiter,
+                onProgressAsync,
+                connectionUsesProxy),
+            cancellationToken);
 
     /// <summary>Build the full download URL from a CDN domain, source path, and file path.</summary>
     internal static string BuildDownloadUrl(string? domain, string source, string filePath)

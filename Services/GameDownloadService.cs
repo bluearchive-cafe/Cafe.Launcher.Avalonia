@@ -10,6 +10,7 @@ using System.Text.Json;
 using System.Threading;
 using System.Threading.Tasks;
 using Cafe.Launcher.Avalonia.Constants;
+using Cafe.Launcher.Avalonia.Features.GameOperations;
 using Cafe.Launcher.Avalonia.Helpers;
 using Cafe.Launcher.Avalonia.Models;
 using Cafe.Launcher.Avalonia.Services.Diagnostics;
@@ -48,8 +49,7 @@ public sealed class GameDownloadService : IDisposable
     private readonly DiskSpaceService diskSpaceService;
     private readonly LocalDiagnostics diagnostics;
     private readonly LocalizationService localizer;
-    private readonly string downloadStateFilePath;
-    private static readonly JsonSerializerOptions DownloadStateJsonOptions = JsonDefaults.Indented;
+    private DownloadCheckpointStore checkpointStore;
     private readonly object activeDownloadLock = new();
     private readonly object pauseLock = new();
     private ActiveDownloadOperation? activeDownload;
@@ -70,16 +70,13 @@ public sealed class GameDownloadService : IDisposable
         diskSpaceService = deps.DiskSpaceService;
         diagnostics = deps.Diagnostics;
         localizer = deps.Localizer;
-        downloadStateFilePath = Path.Combine(
-            Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData),
-            LauncherConstants.ProductName,
-            GamePaths.DownloadStateFileName);
+        checkpointStore = DownloadCheckpointStore.CreateDefault();
     }
 
     internal GameDownloadService(Dependencies deps, string downloadStateFilePath)
         : this(deps)
     {
-        this.downloadStateFilePath = downloadStateFilePath;
+        checkpointStore = new DownloadCheckpointStore(downloadStateFilePath);
     }
 
     public async Task<GameOperationResult> InstallOrUpdateAsync(
@@ -147,7 +144,7 @@ public sealed class GameDownloadService : IDisposable
             return null;
         }
 
-        var state = await LoadDownloadStateAsync(cancellationToken).ConfigureAwait(false);
+        var state = await checkpointStore.LoadAsync(cancellationToken).ConfigureAwait(false);
         if (state is null)
         {
             return null;
@@ -162,7 +159,7 @@ public sealed class GameDownloadService : IDisposable
             || !string.Equals(statePath, settingsPath, StringComparison.Ordinal)
             || !string.Equals(state.PatchUrlGroup, snapshot.Settings.PatchUrlGroup, StringComparison.Ordinal))
         {
-            ClearDownloadState();
+            checkpointStore.Clear();
             return null;
         }
 
@@ -277,12 +274,12 @@ public sealed class GameDownloadService : IDisposable
             if (localGame.GameConfig?.Name is { Length: > 0 }
                 && await ProcessService.IsExeRunningAsync($"{localGame.GameConfig.Name}.exe", activeToken))
             {
-                ClearDownloadState();
+                checkpointStore.Clear();
                 return Failed(localizer.T("gameExecutableRunning"), GameOperationErrorCode.GameRunning);
             }
 
             // Persist download state for potential resume after restart
-            await SaveDownloadStateAsync(new Models.DownloadTaskState
+            await checkpointStore.SaveAsync(new DownloadTaskState
             {
                 Version = gameConfig.GameLatestVersion,
                 Basis = gameConfig.GameLatestFilePath,
@@ -304,7 +301,7 @@ public sealed class GameDownloadService : IDisposable
                     activeToken).ConfigureAwait(false);
             if (string.IsNullOrWhiteSpace(cdnConfig.PrimaryCdn) || string.IsNullOrWhiteSpace(cdnConfig.BackUpCdn))
             {
-                ClearDownloadState();
+                checkpointStore.Clear();
                 return Failed(localizer.T("cdnConfigIncomplete"), GameOperationErrorCode.CdnConfiguration);
             }
 
@@ -335,7 +332,7 @@ public sealed class GameDownloadService : IDisposable
                     gameConfig,
                     downloadPlan.ManifestFiles,
                     activeToken).ConfigureAwait(false);
-                ClearDownloadState();
+                checkpointStore.Clear();
                 return new GameOperationResult
                 {
                     Success = true,
@@ -368,7 +365,7 @@ public sealed class GameDownloadService : IDisposable
                     "Game download blocked by disk space.",
                     $"path: {gamePath}{Environment.NewLine}required: {FileSizeFormatter.Format(requiredBytes)}",
                     activeToken);
-                ClearDownloadState();
+                checkpointStore.Clear();
                 return Failed(
                     localizer.F(
                         "diskSpaceInsufficientDetail",
@@ -412,7 +409,7 @@ public sealed class GameDownloadService : IDisposable
                         gameConfig,
                         downloadPlan.ManifestFiles,
                         activeToken).ConfigureAwait(false);
-                    ClearDownloadState();
+                    checkpointStore.Clear();
                     progress(CreateProgress(
                         operationKind,
                         repair ? GameOperationStage.RepairCompleted : GameOperationStage.DownloadCompleted,
@@ -461,7 +458,7 @@ public sealed class GameDownloadService : IDisposable
                 IsRunning = true,
                 CanStop = true
             });
-            ClearDownloadState();
+            checkpointStore.Clear();
             return Failed(
                 localizer.F("verificationFailed", currentDownloadList.Count),
                 GameOperationErrorCode.Network,
@@ -472,7 +469,7 @@ public sealed class GameDownloadService : IDisposable
         {
             if (operation.ShouldClearPersistedStateOnCancel)
             {
-                ClearDownloadState();
+                checkpointStore.Clear();
             }
 
             progress(CreateProgress(operationKind, GameOperationStage.Stopped, 0));
@@ -481,19 +478,19 @@ public sealed class GameDownloadService : IDisposable
         catch (IOException exception) when (exception.HResult == unchecked((int)0x80070070))
         {
             await diagnostics.ErrorAsync("Game download disk space error.", exception, CancellationToken.None).ConfigureAwait(false);
-            ClearDownloadState();
+            checkpointStore.Clear();
             return Failed(localizer.T("diskSpaceInsufficient"), GameOperationErrorCode.InsufficientDiskSpace);
         }
         catch (Exception exception) when (exception is IOException or UnauthorizedAccessException)
         {
             await diagnostics.ErrorAsync("Game file operation failed.", exception, CancellationToken.None).ConfigureAwait(false);
-            ClearDownloadState();
+            checkpointStore.Clear();
             return Failed(localizer.F("fileOperationFailed", exception.Message), GameOperationErrorCode.System);
         }
         catch (Exception exception) when (exception is HttpRequestException or TaskCanceledException or JsonException)
         {
             await diagnostics.ErrorAsync("Game download network failed.", exception, CancellationToken.None).ConfigureAwait(false);
-            ClearDownloadState();
+            checkpointStore.Clear();
             return Failed(localizer.F("networkErrorDetail", exception.Message), GameOperationErrorCode.Network);
         }
         catch (Exception exception)
@@ -503,7 +500,7 @@ public sealed class GameDownloadService : IDisposable
                 $"Game download unexpected error (operation: {operationKind})",
                 exception,
                 CancellationToken.None);
-            ClearDownloadState();
+            checkpointStore.Clear();
             return Failed(localizer.F("unexpectedError", exception.Message), GameOperationErrorCode.System);
         }
         finally
@@ -579,41 +576,6 @@ public sealed class GameDownloadService : IDisposable
             pauseTask = Task.CompletedTask;
         }
         GC.SuppressFinalize(this);
-    }
-
-    private async Task<DownloadTaskState?> LoadDownloadStateAsync(CancellationToken cancellationToken = default)
-    {
-        if (!File.Exists(downloadStateFilePath))
-            return null;
-        try
-        {
-            var json = await File.ReadAllTextAsync(downloadStateFilePath, cancellationToken).ConfigureAwait(false);
-            return JsonSerializer.Deserialize<DownloadTaskState>(json);
-        }
-        catch (OperationCanceledException)
-        {
-            throw;
-        }
-        catch
-        {
-            return null;
-        }
-    }
-
-    private async Task SaveDownloadStateAsync(DownloadTaskState state, CancellationToken cancellationToken = default)
-    {
-        var json = JsonSerializer.Serialize(state, DownloadStateJsonOptions);
-        var dir = Path.GetDirectoryName(downloadStateFilePath) ?? ".";
-        Directory.CreateDirectory(dir);
-        var tempPath = downloadStateFilePath + ".tmp";
-        await File.WriteAllTextAsync(tempPath, json, cancellationToken).ConfigureAwait(false);
-        File.Move(tempPath, downloadStateFilePath, overwrite: true);
-    }
-
-    private void ClearDownloadState()
-    {
-        if (File.Exists(downloadStateFilePath))
-            File.Delete(downloadStateFilePath);
     }
 
     private async Task<DownloadPlan> BuildInstallOrUpdatePlanAsync(
@@ -765,61 +727,63 @@ public sealed class GameDownloadService : IDisposable
                 acquired = true;
                 var targetPath = GetTempName(GamePathValidator.GetSafePath(gamePath, file.Path));
                 await fileDownloadService.DownloadAsync(
-                    targetPath,
-                    cdnConfig,
-                    source,
-                    file.SizeBytes,
-                    file.Hash,
-                    file.Path,
-                    client,
-                    GetPauseTaskSnapshot,
-                    async (bytes, ct) =>
-                    {
-                        if (throttleState is not null)
+                    new FileDownloadRequest(
+                        targetPath,
+                        cdnConfig,
+                        source,
+                        file.SizeBytes,
+                        file.Hash,
+                        file.Path),
+                    new FileDownloadOperationControl(
+                        client,
+                        GetPauseTaskSnapshot,
+                        async (bytes, ct) =>
                         {
-                            var throttledTotal = Interlocked.Add(ref throttleState.TotalBytes, bytes);
-                            var targetMs = throttledTotal * 1000L / throttleState.BytesPerSec;
-                            var elapsedMs = throttleState.Watch.ElapsedMilliseconds;
-                            if (elapsedMs < targetMs)
-                                await Task.Delay((int)(targetMs - elapsedMs), ct).ConfigureAwait(false);
-                        }
+                            if (throttleState is not null)
+                            {
+                                var throttledTotal = Interlocked.Add(ref throttleState.TotalBytes, bytes);
+                                var targetMs = throttledTotal * 1000L / throttleState.BytesPerSec;
+                                var elapsedMs = throttleState.Watch.ElapsedMilliseconds;
+                                if (elapsedMs < targetMs)
+                                    await Task.Delay((int)(targetMs - elapsedMs), ct).ConfigureAwait(false);
+                            }
 
-                        var totalSizeVal = totalSize;
-                        var totalBytes = Interlocked.Add(ref downloadedSize, bytes);
-                        var elapsed = Math.Max(1, (DateTimeOffset.Now - startedAt).TotalSeconds);
-                        var speed = (long)(totalBytes / elapsed);
-                        var estimated = speed > 0 ? (totalSizeVal - totalBytes) / speed : 0;
+                            var totalSizeVal = totalSize;
+                            var totalBytes = Interlocked.Add(ref downloadedSize, bytes);
+                            var elapsed = Math.Max(1, (DateTimeOffset.Now - startedAt).TotalSeconds);
+                            var speed = (long)(totalBytes / elapsed);
+                            var estimated = speed > 0 ? (totalSizeVal - totalBytes) / speed : 0;
 
-                        // Throttle progress reporting to ~100ms intervals to avoid
-                        // overwhelming the UI thread with high-frequency callbacks.
-                        var now = Stopwatch.GetTimestamp();
-                        var prev = Interlocked.Read(ref lastProgressTime);
-                        if (now - prev < progressIntervalTicks)
-                        {
-                            // Skip this callback, progress stays current enough.
-                            // Speed/ETA already updated via closure captures.
-                            return;
-                        }
-                        Interlocked.Exchange(ref lastProgressTime, now);
+                            // Throttle progress reporting to ~100ms intervals to avoid
+                            // overwhelming the UI thread with high-frequency callbacks.
+                            var now = Stopwatch.GetTimestamp();
+                            var prev = Interlocked.Read(ref lastProgressTime);
+                            if (now - prev < progressIntervalTicks)
+                            {
+                                // Skip this callback, progress stays current enough.
+                                // Speed/ETA already updated via closure captures.
+                                return;
+                            }
+                            Interlocked.Exchange(ref lastProgressTime, now);
 
-                        progress(new GameOperationProgress
-                        {
-                            OperationKind = operationKind,
-                            Stage = IsPaused ? GameOperationStage.Paused : GameOperationStage.Downloading,
-                            Progress = totalSizeVal > 0 ? (int)Math.Round(totalBytes * 100d / totalSizeVal) : 0,
-                            BytesPerSecond = IsPaused ? 0 : speed,
-                            EstimatedRemaining = IsPaused
-                                ? null
-                                : TimeSpan.FromSeconds(Math.Max(0, estimated)),
-                            DownloadedSize = totalBytes,
-                            TotalSize = totalSizeVal,
-                            IsRunning = true,
-                            CanStop = true,
-                            CanPause = true,
-                            IsPaused = IsPaused
-                        });
-                    },
-                    proxyMode != ProxyModes.Direct,
+                            progress(new GameOperationProgress
+                            {
+                                OperationKind = operationKind,
+                                Stage = IsPaused ? GameOperationStage.Paused : GameOperationStage.Downloading,
+                                Progress = totalSizeVal > 0 ? (int)Math.Round(totalBytes * 100d / totalSizeVal) : 0,
+                                BytesPerSecond = IsPaused ? 0 : speed,
+                                EstimatedRemaining = IsPaused
+                                    ? null
+                                    : TimeSpan.FromSeconds(Math.Max(0, estimated)),
+                                DownloadedSize = totalBytes,
+                                TotalSize = totalSizeVal,
+                                IsRunning = true,
+                                CanStop = true,
+                                CanPause = true,
+                                IsPaused = IsPaused
+                            });
+                        },
+                        proxyMode != ProxyModes.Direct),
                     cancellationToken);
             }
             finally
@@ -1045,11 +1009,6 @@ public sealed class GameDownloadService : IDisposable
 
             progress?.Invoke((int)Math.Round((i + 1) * 100d / files.Count));
         }
-    }
-
-    internal static string? ResolveRetryDomain(CdnConfigResponse cdnConfig, int retryType)
-    {
-        return retryType == 0 ? cdnConfig.BackUpCdn : cdnConfig.PrimaryCdn;
     }
 
     private static void EnsureGamePath(string gamePath)
