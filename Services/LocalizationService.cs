@@ -101,6 +101,8 @@ public sealed partial class LocalizedStrings : ObservableObject
     [ObservableProperty] private string repair = "";
     [ObservableProperty] private string uninstall = "";
     [ObservableProperty] private string about = "";
+    [ObservableProperty] private string aboutActionsGeneral = "";
+    [ObservableProperty] private string aboutActionsDiagnostics = "";
     [ObservableProperty] private string aboutDescription = "";
     [ObservableProperty] private string confirmUninstall = "";
     [ObservableProperty] private string uninstallConfirmDescription = "";
@@ -114,6 +116,7 @@ public sealed partial class LocalizedStrings : ObservableObject
     [ObservableProperty] private string showLauncher = "";
     [ObservableProperty] private string exitLauncher = "";
     [ObservableProperty] private string gitHubRepository = "";
+    [ObservableProperty] private string helpDocs = "";
     [ObservableProperty] private string checkUpdates = "";
     [ObservableProperty] private string trayOpenLauncher = "";
     [ObservableProperty] private string trayExitLauncher = "";
@@ -204,9 +207,12 @@ public sealed partial class LocalizedStrings : ObservableObject
     [ObservableProperty] private string buildTimeLabel = "";
     [ObservableProperty] private string logViewerTitle = "";
     [ObservableProperty] private string logFilterAll = "";
+    [ObservableProperty] private string logFilterVerbose = "";
+    [ObservableProperty] private string logFilterDebug = "";
+    [ObservableProperty] private string logFilterInfo = "";
+    [ObservableProperty] private string logFilterWarn = "";
     [ObservableProperty] private string logFilterError = "";
-    [ObservableProperty] private string logFilterWarning = "";
-    [ObservableProperty] private string logFilterInformation = "";
+    [ObservableProperty] private string logFilterFatal = "";
     [ObservableProperty] private string logSearchPlaceholder = "";
     [ObservableProperty] private string logNoMatchingEntries = "";
     [ObservableProperty] private string exportLogs = "";
@@ -328,6 +334,8 @@ public sealed partial class LocalizedStrings : ObservableObject
         Repair = localizer.T("repair");
         Uninstall = localizer.T("uninstall");
         About = localizer.T("about");
+        AboutActionsGeneral = localizer.T("aboutActionsGeneral");
+        AboutActionsDiagnostics = localizer.T("aboutActionsDiagnostics");
         AboutDescription = localizer.T("aboutDescription");
         ConfirmUninstall = localizer.T("confirmUninstall");
         UninstallConfirmDescription = localizer.T("uninstallConfirmDescription");
@@ -341,6 +349,7 @@ public sealed partial class LocalizedStrings : ObservableObject
         ShowLauncher = localizer.T("showLauncher");
         ExitLauncher = localizer.T("exitLauncher");
         GitHubRepository = localizer.T("gitHubRepository");
+        HelpDocs = localizer.T("helpDocs");
         CheckUpdates = localizer.T("checkUpdates");
         TrayOpenLauncher = localizer.T("trayOpenLauncher");
         TrayExitLauncher = localizer.T("trayExitLauncher");
@@ -431,9 +440,12 @@ public sealed partial class LocalizedStrings : ObservableObject
         BuildTimeLabel = localizer.T("buildTimeLabel");
         LogViewerTitle = localizer.T("logViewerTitle");
         LogFilterAll = localizer.T("logFilterAll");
+        LogFilterVerbose = localizer.T("logFilterVerbose");
+        LogFilterDebug = localizer.T("logFilterDebug");
+        LogFilterInfo = localizer.T("logFilterInfo");
+        LogFilterWarn = localizer.T("logFilterWarn");
         LogFilterError = localizer.T("logFilterError");
-        LogFilterWarning = localizer.T("logFilterWarning");
-        LogFilterInformation = localizer.T("logFilterInformation");
+        LogFilterFatal = localizer.T("logFilterFatal");
         LogSearchPlaceholder = localizer.T("logSearchPlaceholder");
         LogNoMatchingEntries = localizer.T("logNoMatchingEntries");
         ExportLogs = localizer.T("exportLogs");

@@ -36,6 +36,7 @@ public sealed class LauncherCoreService : ILauncherCoreService
     public async Task<LauncherStatusSnapshot> LoadAsync(CancellationToken cancellationToken = default)
     {
         var settings = await settingsService.ReadAsync(cancellationToken).ConfigureAwait(false);
+        await diagnostics.DebugAsync("LauncherCore", "LoadAsync started", CancellationToken.None).ConfigureAwait(false);
         var gameConfigTask = ReadRemoteAsync(
             "game-config",
             () => apiClient.GetGameConfigAsync(settings.ProxyMode, cancellationToken),
@@ -82,6 +83,10 @@ public sealed class LauncherCoreService : ILauncherCoreService
         var localGame = await localGameTask.ConfigureAwait(false);
         var gameConfig = await gameConfigTask.ConfigureAwait(false);
         var runtimeState = ResolveRuntimeState(localGame, gameConfig);
+        await diagnostics.DebugAsync(
+            "LauncherCore",
+            $"API outcomes: gameConfig={gameConfig is not null}, baseConfig={baseConfigTask.Result is not null}, cdnConfig={cdnConfigTask.Result is not null}, operations={operationsResourceTask.Result is not null}, socialMedia={socialMediaResourceTask.Result is not null}, installation={installationConfigTask.Result is not null}", CancellationToken.None).ConfigureAwait(false);
+        await diagnostics.DebugAsync("LauncherCore", $"RuntimeState resolved: {runtimeState}", CancellationToken.None).ConfigureAwait(false);
 
         return new LauncherStatusSnapshot
         {

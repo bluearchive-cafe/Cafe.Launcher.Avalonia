@@ -20,5 +20,6 @@ public static class LauncherConstants
 
     public const string OfficialGameWebsiteUrl = "https://bluearchive.jp/";
     public const string CafeWebsiteUrl = "https://bluearchive.cafe/";
+    public const string HelpDocsUrl = "https://docs.bluearchive.cafe/";
     public const string GitHubReleaseRepositoryUrl = "https://github.com/bluearchive-cafe/Cafe.Launcher.Avalonia_Release";
 }

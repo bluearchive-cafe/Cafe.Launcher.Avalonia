@@ -1,4 +1,5 @@
 using System;
+using System.Diagnostics;
 using System.Net.Http;
 using System.Text.Json;
 using System.Threading;
@@ -7,6 +8,7 @@ using Cafe.Launcher.Avalonia.Constants;
 using Cafe.Launcher.Avalonia.Helpers;
 using Cafe.Launcher.Avalonia.Models;
 using Cafe.Launcher.Avalonia.Services.Auth;
+using Cafe.Launcher.Avalonia.Services.Diagnostics;
 
 namespace Cafe.Launcher.Avalonia.Services;
 
@@ -235,6 +237,7 @@ public sealed class LauncherApiClient : IDisposable
         string proxyMode,
         CancellationToken cancellationToken)
     {
+        var sw = Stopwatch.StartNew();
         using var lease = await leaseSource.CreateLeaseAsync(proxyMode, cancellationToken).ConfigureAwait(false);
         using var request = new HttpRequestMessage(HttpMethod.Get, path);
         request.Headers.TryAddWithoutValidation(
@@ -243,6 +246,10 @@ public sealed class LauncherApiClient : IDisposable
 
         using var response = await lease.Client.SendAsync(request, cancellationToken).ConfigureAwait(false);
         response.EnsureSuccessStatusCode();
+        LocalDiagnostics.LogSync(
+            LogEntrySeverity.Debug,
+            "ApiClient",
+            $"GET {path} -> {(int)response.StatusCode}, {sw.ElapsedMilliseconds}ms");
 
         var envelope = await RemoteHttpRequestService.DeserializeJsonAsync<LauncherApiEnvelope<T>>(response, request.RequestUri, jsonOptions, cancellationToken).ConfigureAwait(false);
 

@@ -55,6 +55,70 @@ public sealed class LocalDiagnostics
         }
     }
 
+    public async Task VerboseAsync(
+        string title,
+        string? message = null,
+        CancellationToken cancellationToken = default)
+    {
+        try
+        {
+            await logger.LogAsync(LogEntrySeverity.Verbose, title, message: message,
+                cancellationToken: cancellationToken).ConfigureAwait(false);
+        }
+        catch
+        {
+            // Best-effort.
+        }
+    }
+
+    public async Task DebugAsync(
+        string title,
+        string? message = null,
+        CancellationToken cancellationToken = default)
+    {
+        try
+        {
+            await logger.LogAsync(LogEntrySeverity.Debug, title, message: message,
+                cancellationToken: cancellationToken).ConfigureAwait(false);
+        }
+        catch
+        {
+            // Best-effort.
+        }
+    }
+
+    public async Task WarningAsync(
+        string title,
+        string message,
+        CancellationToken cancellationToken = default)
+    {
+        try
+        {
+            await logger.LogAsync(LogEntrySeverity.Warn, title, message: message,
+                cancellationToken: cancellationToken).ConfigureAwait(false);
+        }
+        catch
+        {
+            // Best-effort.
+        }
+    }
+
+    public async Task FatalAsync(
+        string title,
+        Exception exception,
+        CancellationToken cancellationToken = default)
+    {
+        try
+        {
+            await logger.LogAsync(LogEntrySeverity.Fatal, title, exception: exception,
+                cancellationToken: cancellationToken).ConfigureAwait(false);
+        }
+        catch
+        {
+            // Best-effort.
+        }
+    }
+
     /// <summary>
     /// Synchronous log write for use in synchronous contexts (e.g. static methods).
     /// </summary>
@@ -68,6 +132,22 @@ public sealed class LocalDiagnostics
         catch
         {
             // Best-effort — diagnostic logging must never crash the app.
+        }
+    }
+
+    /// <summary>
+    /// Synchronous log write with explicit severity for synchronous contexts.
+    /// </summary>
+    public static void LogSync(LogEntrySeverity severity, string title, string? message = null)
+    {
+        try
+        {
+            StaticLoggerHolder.Instance.LogAsync(severity, title, message: message)
+                .GetAwaiter().GetResult();
+        }
+        catch
+        {
+            // Best-effort.
         }
     }
 }

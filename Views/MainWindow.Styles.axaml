@@ -1014,6 +1014,7 @@
         <Setter Property="FontSize" Value="{StaticResource LauncherFontSizeMd}"/>
         <Setter Property="Padding" Value="10,4"/>
         <Setter Property="MinHeight" Value="28"/>
+        <Setter Property="VerticalContentAlignment" Value="Center"/>
     </Style>
     <Style Selector="Button.news-tab.log-filter">
         <Setter Property="Height" Value="{StaticResource LauncherControlHeightSetting}"/>

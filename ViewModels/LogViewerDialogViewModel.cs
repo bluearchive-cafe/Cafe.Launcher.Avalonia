@@ -36,15 +36,21 @@ public sealed partial class LogViewerDialogViewModel : ViewModelBase
 
     [ObservableProperty]
     [NotifyPropertyChangedFor(nameof(IsFilterAllActive))]
-    [NotifyPropertyChangedFor(nameof(IsFilterErrorActive))]
-    [NotifyPropertyChangedFor(nameof(IsFilterWarnActive))]
+    [NotifyPropertyChangedFor(nameof(IsFilterVerboseActive))]
+    [NotifyPropertyChangedFor(nameof(IsFilterDebugActive))]
     [NotifyPropertyChangedFor(nameof(IsFilterInfoActive))]
+    [NotifyPropertyChangedFor(nameof(IsFilterWarnActive))]
+    [NotifyPropertyChangedFor(nameof(IsFilterErrorActive))]
+    [NotifyPropertyChangedFor(nameof(IsFilterFatalActive))]
     private LogEntrySeverity? severityFilter; // null = show all
 
     public bool IsFilterAllActive => SeverityFilter is null;
-    public bool IsFilterErrorActive => SeverityFilter == LogEntrySeverity.Error;
-    public bool IsFilterWarnActive => SeverityFilter == LogEntrySeverity.Warn;
+    public bool IsFilterVerboseActive => SeverityFilter == LogEntrySeverity.Verbose;
+    public bool IsFilterDebugActive => SeverityFilter == LogEntrySeverity.Debug;
     public bool IsFilterInfoActive => SeverityFilter == LogEntrySeverity.Info;
+    public bool IsFilterWarnActive => SeverityFilter == LogEntrySeverity.Warn;
+    public bool IsFilterErrorActive => SeverityFilter == LogEntrySeverity.Error;
+    public bool IsFilterFatalActive => SeverityFilter == LogEntrySeverity.Fatal;
     public bool HasFilteredEntries => FilteredEntries.Count > 0;
     public bool IsEmpty => FilteredEntries.Count == 0;
 
@@ -190,11 +196,17 @@ public sealed partial class LogViewerDialogViewModel : ViewModelBase
     [RelayCommand]
     private void SetFilterAll() => SeverityFilter = null;
     [RelayCommand]
-    private void SetFilterError() => SeverityFilter = LogEntrySeverity.Error;
+    private void SetFilterVerbose() => SeverityFilter = LogEntrySeverity.Verbose;
+    [RelayCommand]
+    private void SetFilterDebug() => SeverityFilter = LogEntrySeverity.Debug;
+    [RelayCommand]
+    private void SetFilterInfo() => SeverityFilter = LogEntrySeverity.Info;
     [RelayCommand]
     private void SetFilterWarn() => SeverityFilter = LogEntrySeverity.Warn;
     [RelayCommand]
-    private void SetFilterInfo() => SeverityFilter = LogEntrySeverity.Info;
+    private void SetFilterError() => SeverityFilter = LogEntrySeverity.Error;
+    [RelayCommand]
+    private void SetFilterFatal() => SeverityFilter = LogEntrySeverity.Fatal;
 
     private IReadOnlyList<LogEntryDisplay> ReadEntries()
     {
@@ -260,17 +272,24 @@ public sealed partial class LogViewerDialogViewModel : ViewModelBase
                     TimestampText = match.Groups[1].Value,
                     SeverityLabel = severityLabel switch
                     {
-                        "ERR" => "ERROR",
-                        "WRN" => "WARN",
+                        "VRB" => "VERBOSE",
+                        "DBG" => "DEBUG",
                         "INF" => "INFO",
+                        "WRN" => "WARN",
+                        "ERR" => "ERROR",
+                        "FTL" => "FATAL",
                         _ => severityLabel
                     },
                     Title = title,
                     Details = "",
                     Severity = severityLabel switch
                     {
-                        "ERR" => LogEntrySeverity.Error,
+                        "VRB" => LogEntrySeverity.Verbose,
+                        "DBG" => LogEntrySeverity.Debug,
+                        "INF" => LogEntrySeverity.Info,
                         "WRN" => LogEntrySeverity.Warn,
+                        "ERR" => LogEntrySeverity.Error,
+                        "FTL" => LogEntrySeverity.Fatal,
                         _ => LogEntrySeverity.Info
                     }
                 };

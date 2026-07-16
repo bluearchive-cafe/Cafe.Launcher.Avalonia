@@ -132,6 +132,12 @@ public partial class WindowChromeViewModel : ViewModelBase
     }
 
     [RelayCommand]
+    private void OpenHelpDocs()
+    {
+        openExternalUrl(LauncherConstants.HelpDocsUrl);
+    }
+
+    [RelayCommand]
     private void OpenDataDirectory()
     {
         var path = Path.Combine(

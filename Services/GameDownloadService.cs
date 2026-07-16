@@ -132,6 +132,7 @@ public sealed class GameDownloadService : IDisposable
             tcs = pauseTcs;
         }
         tcs?.TrySetResult();
+        LocalDiagnostics.LogSync(LogEntrySeverity.Debug, "GameDownload", "Download stopped by user");
     }
 
     public async Task<GameOperationResult?> ResumePersistedAsync(
@@ -176,6 +177,7 @@ public sealed class GameDownloadService : IDisposable
                 pauseTask = pauseTcs.Task;
             }
         }
+        LocalDiagnostics.LogSync(LogEntrySeverity.Debug, "GameDownload", "Download paused");
     }
 
     public void Resume()
@@ -186,6 +188,7 @@ public sealed class GameDownloadService : IDisposable
             pauseTcs = null;
             pauseTask = Task.CompletedTask;
         }
+        LocalDiagnostics.LogSync(LogEntrySeverity.Debug, "GameDownload", "Download resumed");
     }
 
     public bool IsPaused
@@ -319,6 +322,9 @@ public sealed class GameDownloadService : IDisposable
 
             if (downloadPlan.NeedDownload.Count == 0 && downloadPlan.NeedDelete.Count == 0)
             {
+                await diagnostics.DebugAsync(
+                    "GameDownload",
+                    "Manifest diff: 0 files changed (already current)", CancellationToken.None).ConfigureAwait(false);
                 await CommitInstallationStateAsync(
                     gamePath,
                     gameConfig,
@@ -333,6 +339,10 @@ public sealed class GameDownloadService : IDisposable
                         : localizer.T("gameAlreadyCurrent")
                 };
             }
+
+            await diagnostics.DebugAsync(
+                "GameDownload",
+                $"Manifest diff: {downloadPlan.NeedDownload.Count} to download, {downloadPlan.NeedDelete.Count} to delete", CancellationToken.None).ConfigureAwait(false);
 
             var currentDownloadList = downloadPlan.NeedDownload;
             var affectedCount = currentDownloadList.Count + downloadPlan.NeedDelete.Count;
@@ -365,6 +375,9 @@ public sealed class GameDownloadService : IDisposable
 
             for (var retry = 0; retry <= MaxInstallVerificationRetry; retry++)
             {
+                await diagnostics.DebugAsync(
+                    "GameDownload",
+                    $"Install verification retry {retry + 1}/{MaxInstallVerificationRetry}, {currentDownloadList.Count} files", CancellationToken.None).ConfigureAwait(false);
                 activeToken.ThrowIfCancellationRequested();
                 await DownloadFilesAsync(
                     gamePath,
@@ -720,6 +733,9 @@ public sealed class GameDownloadService : IDisposable
         using var semaphore = new SemaphoreSlim(MaxParallelDownloads, MaxParallelDownloads);
         var downloadedSize = 0L;
         var totalSize = fileList.Sum(item => FileSizeFormatter.ParseSize(item.Size));
+        await diagnostics.DebugAsync(
+            "GameDownload",
+            $"Downloading {fileList.Count} files, total {FileSizeFormatter.Format(totalSize)}", CancellationToken.None).ConfigureAwait(false);
         var startedAt = DateTimeOffset.Now;
         var throttleState = speedLimitBytesPerSec > 0
             ? new ThrottleState { BytesPerSec = speedLimitBytesPerSec }
@@ -858,6 +874,11 @@ public sealed class GameDownloadService : IDisposable
 
             progress((int)Math.Round(++index * 100d / manifestFiles.Count));
         }
+
+        await diagnostics.VerboseAsync(
+            "GameDownload",
+            $"CRC check complete: {manifestFiles.Count - failedFiles.Count} passed, {failedFiles.Count} failed",
+            CancellationToken.None).ConfigureAwait(false);
 
         // Install passed files BEFORE returning failures — prevents retry cascade
         var failedPathSet = failedFiles.Select(f => f.Path).ToHashSet(StringComparer.Ordinal);

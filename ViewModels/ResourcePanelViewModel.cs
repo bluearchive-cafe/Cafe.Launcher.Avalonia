@@ -49,6 +49,9 @@ public partial class ResourcePanelViewModel : ViewModelBase, IDisposable
     private bool isResourcePanelBusy;
 
     [ObservableProperty]
+    private bool isResourcePanelSaveEnabled;
+
+    [ObservableProperty]
     private bool isResourcePanelUidMissing;
 
     [ObservableProperty]
@@ -353,7 +356,17 @@ public partial class ResourcePanelViewModel : ViewModelBase, IDisposable
         {
             if (IsResourcePanelBusy)
                 IsResourcePanelBusy = false;
+            RefreshSaveEnabled();
         }
+    }
+
+    private void RefreshSaveEnabled()
+    {
+        IsResourcePanelSaveEnabled =
+            !IsResourcePanelBusy &&
+            !IsResourcePanelUidMissing &&
+            ResourcePanelItems.Count > 0 &&
+            ResourcePanelItems.All(i => i is { Status: ResourcePanelItemStatus.Ready or ResourcePanelItemStatus.Waiting });
     }
 
     private async Task LoadResourcePanelDataAsync(string uid, CancellationToken cancellationToken)
