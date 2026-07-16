@@ -212,6 +212,9 @@ public partial class MainWindowViewModel : ViewModelBase, IDisposable
 
         RemoteContent.OpenExternalUrlRequested = WindowChrome.OpenExternalUrl;
 
+        // Setup wizard
+        Dialogs.SetupWizard.PickGameFolderAsync = PickGameFolderForWizardAsync;
+        Dialogs.SetupWizard.SettingsApplied += HandleSetupWizardCompletedAsync;
     }
 
     internal async Task HandleOperationsRefreshRequestedAsync(GameOperationsRefreshMode mode)
@@ -233,6 +236,27 @@ public partial class MainWindowViewModel : ViewModelBase, IDisposable
     private void OpenCrashLog()
     {
         LogViewer.OpenCommand.Execute(null);
+    }
+
+    private async Task<string?> PickGameFolderForWizardAsync(string currentPath)
+    {
+        if (Settings.PickGameFolderAsync is not null)
+            return await Settings.PickGameFolderAsync(currentPath);
+        return null;
+    }
+
+    private async Task HandleSetupWizardCompletedAsync(LauncherSettings settings)
+    {
+        await settingsService.SaveAsync(settings);
+
+        // Apply language immediately so the wizard overlays reflect the choice
+        ApplyLanguage(settings.Language);
+
+        // Hide wizard
+        Dialogs.IsSetupWizardVisible = false;
+
+        // Run normal initialization
+        await RefreshAsync();
     }
 
     private void ShowResourcePanelSourceConfirmDialog()
@@ -350,6 +374,7 @@ public partial class MainWindowViewModel : ViewModelBase, IDisposable
         IsNoticeDialogVisible = Dialogs.IsNoticeDialogVisible,
         IsSettingsVisible = WindowChrome.IsSettingsVisible,
         IsResourcePanelVisible = ResourcePanel.IsResourcePanelVisible,
+        IsSetupWizardVisible = Dialogs.IsSetupWizardVisible,
     };
 
     /// <summary>
@@ -385,6 +410,9 @@ public partial class MainWindowViewModel : ViewModelBase, IDisposable
                 break;
             case WindowEscapeAction.CloseResourcePanel:
                 ResourcePanel.CloseResourcePanelCommand.Execute(null);
+                break;
+            case WindowEscapeAction.DismissSetupWizard:
+                Dialogs.SetupWizard.SkipCommand.Execute(null);
                 break;
         }
     }
@@ -424,6 +452,7 @@ public partial class MainWindowViewModel : ViewModelBase, IDisposable
         Dialogs.CloseRequested -= WindowChrome.RequestClose;
         Dialogs.CrashRecoveryResetSettingsRequested -= ResetSettingsAfterCrashAsync;
         Dialogs.CrashRecoveryViewLogRequested -= OpenCrashLog;
+        Dialogs.SetupWizard.SettingsApplied -= HandleSetupWizardCompletedAsync;
         Operations.StopDownload(clearPersistedState: false);
         Settings.Dispose();
         RemoteContent.Dispose();

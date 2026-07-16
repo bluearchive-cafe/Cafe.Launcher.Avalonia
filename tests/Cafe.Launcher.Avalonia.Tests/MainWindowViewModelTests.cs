@@ -773,7 +773,8 @@ public sealed class MainWindowViewModelTests : IDisposable
         var appearance = new SettingsAppearanceViewModel(editor);
         var dialogs = new DialogsViewModel(
             localizer,
-            new NoticeStateService(Path.Combine(tempDir, "save-failure-notices.json")));
+            new NoticeStateService(Path.Combine(tempDir, "save-failure-notices.json")),
+            new SetupWizardViewModel(localizer, new GameInstallationPath()));
         using var testLogger = new UnifiedLogger(tempDir);
         using var settings = new SettingsViewModel(
             settingsService,
@@ -1379,7 +1380,7 @@ public sealed class MainWindowViewModelTests : IDisposable
         var settingsOptions = new SettingsOptionsViewModel(localizationService, diskSpaceService);
         var settingsAppearance = new SettingsAppearanceViewModel(settingsEditor);
         var noticeStateService = new NoticeStateService(Path.Combine(tempDir, Guid.NewGuid().ToString("N"), "shown_notices.json"));
-        var dialogsViewModel = new DialogsViewModel(localizationService, noticeStateService);
+        var dialogsViewModel = new DialogsViewModel(localizationService, noticeStateService, new SetupWizardViewModel(localizationService, new GameInstallationPath()));
         using var settingsLogger = new UnifiedLogger(Path.Combine(tempDir, Guid.NewGuid().ToString("N")));
         var settingsViewModel = new SettingsViewModel(
             settingsService, localizationService, toastService,

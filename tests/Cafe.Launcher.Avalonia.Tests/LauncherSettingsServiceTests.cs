@@ -74,7 +74,12 @@ public sealed class LauncherSettingsServiceTests : IDisposable
         Assert.Equal(DownloadSpeedLimits.Unlimited, settings.DownloadSpeedLimit);
         Assert.True(settings.ToastNotificationsEnabled);
         Assert.True(settings.ShowRemoteContentCard);
-        Assert.Equal(PatchUrlGroups.Official, settings.PatchUrlGroup);
+        // PatchUrlGroup defaults to Cafe when UI culture is Chinese, otherwise Official.
+        var expectedGroup = System.Globalization.CultureInfo.CurrentUICulture.Name is
+            "zh-CN" or "zh-TW" or "zh-HK" or "zh-MO" or "zh-SG" or "zh-Hans" or "zh-Hant"
+            ? PatchUrlGroups.Cafe
+            : PatchUrlGroups.Official;
+        Assert.Equal(expectedGroup, settings.PatchUrlGroup);
         Assert.Equal("", settings.CustomBackgroundPath);
         Assert.Equal(BackgroundSources.Bundled, settings.BackgroundSource);
         Assert.Equal("", settings.ResourcePanelUid);

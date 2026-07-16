@@ -14,6 +14,7 @@ public enum WindowEscapeAction
     CancelUninstall,
     DismissNotice,
     ToggleSettings,
+    DismissSetupWizard,
     CloseResourcePanel,
 }
 
@@ -31,6 +32,7 @@ public sealed class WindowInteractionState
     public bool IsNoticeDialogVisible { get; init; }
     public bool IsSettingsVisible { get; init; }
     public bool IsResourcePanelVisible { get; init; }
+    public bool IsSetupWizardVisible { get; init; }
 }
 
 /// <summary>
@@ -57,6 +59,7 @@ public static class WindowEscapeStrategy
         if (state.IsUninstallConfirmVisible) return WindowEscapeAction.CancelUninstall;
         if (state.IsNoticeDialogVisible) return WindowEscapeAction.DismissNotice;
         if (state.IsSettingsVisible) return WindowEscapeAction.ToggleSettings;
+        if (state.IsSetupWizardVisible) return WindowEscapeAction.DismissSetupWizard;
         if (state.IsResourcePanelVisible) return WindowEscapeAction.CloseResourcePanel;
         return null;
     }

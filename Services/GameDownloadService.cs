@@ -839,7 +839,7 @@ public sealed class GameDownloadService : IDisposable
             gameConfig.GameStartParams ?? [],
             files.Select(file => new LocalInstallationFile(
                 file.Path,
-                long.Parse(file.Size, NumberStyles.None, CultureInfo.InvariantCulture),
+                file.SizeBytes,
                 file.Hash)).ToArray());
         var state = await localInstallationStateStore.CommitAsync(
             gamePath,

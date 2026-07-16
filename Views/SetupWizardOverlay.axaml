@@ -1,0 +1,223 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:vm="using:Cafe.Launcher.Avalonia.ViewModels"
+             xmlns:models="using:Cafe.Launcher.Avalonia.Models"
+             xmlns:converters="using:Cafe.Launcher.Avalonia.Converters"
+             xmlns:materialIcons="clr-namespace:Material.Icons.Avalonia;assembly=Material.Icons.Avalonia"
+             x:Class="Cafe.Launcher.Avalonia.Views.SetupWizardOverlay"
+             x:DataType="vm:MainWindowViewModel">
+    <Grid IsVisible="{Binding Dialogs.IsSetupWizardVisible}" Classes="setup-wizard-overlay">
+        <Border MaxWidth="620"
+                MinWidth="480"
+                Classes="dialog overlay-dialog confirm-panel">
+            <Grid RowDefinitions="Auto,*,Auto" Classes="confirm-layout">
+                <!-- Header row -->
+                <Grid Classes="dialog-heading" ColumnDefinitions="Auto,*,Auto">
+                    <Border Classes="dialog-icon" VerticalAlignment="Center">
+                        <materialIcons:MaterialIcon Kind="StarOutline"
+                                                   Width="{StaticResource LauncherIconXl}"
+                                                   Height="{StaticResource LauncherIconXl}"
+                                                   Foreground="{DynamicResource LauncherAccentBrush}"
+                                                   HorizontalAlignment="Center"
+                                                   VerticalAlignment="Center"/>
+                    </Border>
+                    <StackPanel Grid.Column="1" Classes="dialog-heading-copy">
+                        <TextBlock Text="{Binding Shell.I18n.SetupWizardStepTitle}" Classes="dialog-title"/>
+                        <TextBlock Text="{Binding Dialogs.SetupWizard.StepTitle}" Classes="caption"/>
+                    </StackPanel>
+                    <Button Grid.Column="2"
+                            Classes="flat-action dialog-action"
+                            Command="{Binding Dialogs.SetupWizard.SkipCommand}"
+                            ToolTip.Tip="{Binding Shell.I18n.SetupWizardSkip}"
+                            AutomationProperties.Name="{Binding Shell.I18n.SetupWizardSkip}">
+                        <StackPanel Classes="button-content">
+                            <materialIcons:MaterialIcon Kind="Close"
+                                                       Width="{StaticResource LauncherIconSm}"
+                                                       Height="{StaticResource LauncherIconSm}"/>
+                            <TextBlock Text="{Binding Shell.I18n.SetupWizardSkip}"/>
+                        </StackPanel>
+                    </Button>
+                </Grid>
+
+                <!-- Content row -->
+                <ScrollViewer Grid.Row="1" Classes="scroll-pad">
+                    <StackPanel Spacing="{StaticResource LauncherSpacingLg}">
+
+                        <!-- Step 0: Welcome & Language -->
+                        <StackPanel Spacing="{StaticResource LauncherSpacingMd}"
+                                    IsVisible="{Binding Dialogs.SetupWizard.IsFirstStep}">
+                            <Border Classes="info-strip">
+                                <TextBlock Text="{Binding Shell.I18n.SetupWizardWelcomeText}"
+                                           Classes="body"
+                                           TextWrapping="Wrap"/>
+                            </Border>
+                            <TextBlock Text="{Binding Shell.I18n.SetupWizardLanguage}" Classes="section-title"/>
+                            <TextBlock Text="{Binding Shell.I18n.SetupWizardLanguageHint}" Classes="caption"/>
+                            <ComboBox ItemsSource="{Binding Dialogs.LanguageOptions}"
+                                      SelectedValue="{Binding Dialogs.SetupWizard.Language, Mode=TwoWay}"
+                                      SelectedValueBinding="{Binding Code}"
+                                      HorizontalAlignment="Left"
+                                      MinWidth="200"
+                                      AutomationProperties.Name="{Binding Shell.I18n.SetupWizardLanguage}">
+                                <ComboBox.ItemTemplate>
+                                    <DataTemplate x:DataType="models:LanguageOption">
+                                        <TextBlock Text="{Binding DisplayName}"/>
+                                    </DataTemplate>
+                                </ComboBox.ItemTemplate>
+                            </ComboBox>
+                        </StackPanel>
+
+                        <!-- Step 1: Download Source -->
+                        <StackPanel Spacing="{StaticResource LauncherSpacingMd}"
+                                    IsVisible="{Binding Dialogs.SetupWizard.IsStep1}">
+                            <TextBlock Text="{Binding Shell.I18n.SetupWizardDownloadSource}" Classes="section-title"/>
+                            <TextBlock Text="{Binding Shell.I18n.SetupWizardDownloadSourceHint}"
+                                       Classes="body"
+                                       TextWrapping="Wrap"/>
+                            <StackPanel Spacing="{StaticResource LauncherSpacingSm}">
+                                <RadioButton Content="{Binding Shell.I18n.DownloadSourceCafe}"
+                                             IsChecked="{Binding Dialogs.SetupWizard.IsPatchUrlGroupCafe}"
+                                             GroupName="WizardDownloadSource"
+                                             AutomationProperties.Name="{Binding Shell.I18n.DownloadSourceCafe}"/>
+                                <RadioButton Content="{Binding Shell.I18n.DownloadSourceOfficial}"
+                                             IsChecked="{Binding Dialogs.SetupWizard.IsPatchUrlGroupOfficial}"
+                                             GroupName="WizardDownloadSource"
+                                             AutomationProperties.Name="{Binding Shell.I18n.DownloadSourceOfficial}"/>
+                            </StackPanel>
+                        </StackPanel>
+
+                        <!-- Step 2: Game Path -->
+                        <StackPanel Spacing="{StaticResource LauncherSpacingMd}"
+                                    IsVisible="{Binding Dialogs.SetupWizard.IsStep2}">
+                            <TextBlock Text="{Binding Shell.I18n.SetupWizardGamePath}" Classes="section-title"/>
+                            <TextBlock Text="{Binding Shell.I18n.SetupWizardGamePathHint}"
+                                       Classes="body"
+                                       TextWrapping="Wrap"/>
+                            <Grid ColumnDefinitions="*,Auto" ColumnSpacing="{StaticResource LauncherSpacingMd}">
+                                <TextBox Classes="uid-input"
+                                         Text="{Binding Dialogs.SetupWizard.GamePath, Mode=TwoWay}"
+                                         AutomationProperties.Name="{Binding Shell.I18n.SetupWizardGamePath}"/>
+                                <Button Grid.Column="1"
+                                        Classes="flat-action dialog-action"
+                                        Command="{Binding Dialogs.SetupWizard.BrowseGamePathCommand}"
+                                        AutomationProperties.Name="{Binding Shell.I18n.SetupWizardBrowse}">
+                                    <StackPanel Classes="button-content">
+                                        <materialIcons:MaterialIcon Kind="FolderOpen"
+                                                                   Width="{StaticResource LauncherIconSm}"
+                                                                   Height="{StaticResource LauncherIconSm}"/>
+                                        <TextBlock Text="{Binding Shell.I18n.SetupWizardBrowse}"/>
+                                    </StackPanel>
+                                </Button>
+                            </Grid>
+                            <TextBlock Text="{Binding Shell.I18n.SetupWizardGamePathEmpty}"
+                                       Classes="caption"
+                                       Foreground="{DynamicResource LauncherDangerBrush}"
+                                       IsVisible="{Binding Dialogs.SetupWizard.IsGamePathEmpty}"/>
+                        </StackPanel>
+
+                        <!-- Step 3: Proxy -->
+                        <StackPanel Spacing="{StaticResource LauncherSpacingMd}"
+                                    IsVisible="{Binding Dialogs.SetupWizard.IsStep3}">
+                            <TextBlock Text="{Binding Shell.I18n.SetupWizardProxy}" Classes="section-title"/>
+                            <TextBlock Text="{Binding Shell.I18n.SetupWizardProxyHint}"
+                                       Classes="body"
+                                       TextWrapping="Wrap"/>
+                            <StackPanel Spacing="{StaticResource LauncherSpacingSm}">
+                                <RadioButton Content="{Binding Shell.I18n.ProxyAuto}"
+                                             IsChecked="{Binding Dialogs.SetupWizard.IsProxyAuto}"
+                                             GroupName="WizardProxyMode"
+                                             AutomationProperties.Name="{Binding Shell.I18n.ProxyAuto}"/>
+                                <RadioButton Content="{Binding Shell.I18n.ProxyDirect}"
+                                             IsChecked="{Binding Dialogs.SetupWizard.IsProxyDirect}"
+                                             GroupName="WizardProxyMode"
+                                             AutomationProperties.Name="{Binding Shell.I18n.ProxyDirect}"/>
+                                <RadioButton Content="{Binding Shell.I18n.ProxySystem}"
+                                             IsChecked="{Binding Dialogs.SetupWizard.IsProxySystem}"
+                                             GroupName="WizardProxyMode"
+                                             AutomationProperties.Name="{Binding Shell.I18n.ProxySystem}"/>
+                            </StackPanel>
+                        </StackPanel>
+
+                        <!-- Step 4: Review -->
+                        <StackPanel Spacing="{StaticResource LauncherSpacingMd}"
+                                    IsVisible="{Binding Dialogs.SetupWizard.IsLastStep}">
+                            <TextBlock Text="{Binding Shell.I18n.SetupWizardReview}" Classes="section-title"/>
+                            <TextBlock Text="{Binding Shell.I18n.SetupWizardReviewHint}"
+                                       Classes="body"
+                                       TextWrapping="Wrap"/>
+                            <Border Classes="info-strip">
+                                <StackPanel Spacing="{StaticResource LauncherSpacingMd}">
+                                    <Grid ColumnDefinitions="Auto,*" ColumnSpacing="{StaticResource LauncherSpacingMd}">
+                                        <TextBlock Text="{Binding Shell.I18n.SetupWizardLanguage}" Classes="caption"/>
+                                        <TextBlock Grid.Column="1"
+                                                   Text="{Binding Dialogs.SetupWizard.LanguageDisplayName}"
+                                                   Classes="value"/>
+                                    </Grid>
+                                    <Grid ColumnDefinitions="Auto,*" ColumnSpacing="{StaticResource LauncherSpacingMd}">
+                                        <TextBlock Text="{Binding Shell.I18n.SetupWizardDownloadSource}" Classes="caption"/>
+                                        <TextBlock Grid.Column="1"
+                                                   Text="{Binding Dialogs.SetupWizard.DownloadSourceDisplayName}"
+                                                   Classes="value"/>
+                                    </Grid>
+                                    <Grid ColumnDefinitions="Auto,*" ColumnSpacing="{StaticResource LauncherSpacingMd}">
+                                        <TextBlock Text="{Binding Shell.I18n.SetupWizardGamePath}" Classes="caption"/>
+                                        <TextBlock Grid.Column="1"
+                                                   Text="{Binding Dialogs.SetupWizard.GamePath}"
+                                                   Classes="value"
+                                                   TextTrimming="CharacterEllipsis"/>
+                                    </Grid>
+                                    <Grid ColumnDefinitions="Auto,*" ColumnSpacing="{StaticResource LauncherSpacingMd}">
+                                        <TextBlock Text="{Binding Shell.I18n.SetupWizardProxy}" Classes="caption"/>
+                                        <TextBlock Grid.Column="1"
+                                                   Text="{Binding Dialogs.SetupWizard.ProxyDisplayName}"
+                                                   Classes="value"/>
+                                    </Grid>
+                                </StackPanel>
+                            </Border>
+                        </StackPanel>
+
+                    </StackPanel>
+                </ScrollViewer>
+
+                <!-- Footer row -->
+                <StackPanel Grid.Row="2" Classes="confirm-actions">
+                    <Button Classes="flat-action dialog-action"
+                            Command="{Binding Dialogs.SetupWizard.PreviousCommand}"
+                            IsVisible="{Binding Dialogs.SetupWizard.CanGoPrevious}"
+                            AutomationProperties.Name="{Binding Shell.I18n.SetupWizardPrevious}">
+                        <StackPanel Classes="button-content">
+                            <materialIcons:MaterialIcon Kind="ChevronLeft"
+                                                       Width="{StaticResource LauncherIconSm}"
+                                                       Height="{StaticResource LauncherIconSm}"/>
+                            <TextBlock Text="{Binding Shell.I18n.SetupWizardPrevious}"/>
+                        </StackPanel>
+                    </Button>
+                    <Button Classes="primary-action dialog-action"
+                            Command="{Binding Dialogs.SetupWizard.NextCommand}"
+                            IsVisible="{Binding Dialogs.SetupWizard.IsLastStep, Converter={x:Static BoolConverters.Not}}"
+                            IsEnabled="{Binding Dialogs.SetupWizard.CanGoNext}"
+                            AutomationProperties.Name="{Binding Shell.I18n.SetupWizardNext}">
+                        <StackPanel Classes="button-content">
+                            <TextBlock Text="{Binding Shell.I18n.SetupWizardNext}"/>
+                            <materialIcons:MaterialIcon Kind="ChevronRight"
+                                                       Width="{StaticResource LauncherIconSm}"
+                                                       Height="{StaticResource LauncherIconSm}"/>
+                        </StackPanel>
+                    </Button>
+                    <Button Classes="primary-action dialog-action"
+                            Command="{Binding Dialogs.SetupWizard.CompleteCommand}"
+                            IsVisible="{Binding Dialogs.SetupWizard.IsLastStep}"
+                            AutomationProperties.Name="{Binding Shell.I18n.SetupWizardFinish}">
+                        <StackPanel Classes="button-content">
+                            <materialIcons:MaterialIcon Kind="Check"
+                                                       Width="{StaticResource LauncherIconSm}"
+                                                       Height="{StaticResource LauncherIconSm}"/>
+                            <TextBlock Text="{Binding Shell.I18n.SetupWizardFinish}"/>
+                        </StackPanel>
+                    </Button>
+                </StackPanel>
+
+            </Grid>
+        </Border>
+    </Grid>
+</UserControl>

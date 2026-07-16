@@ -16,7 +16,8 @@ public sealed partial class UiStyleContractTests
         "Views/SettingsAboutSection.axaml",
         "Views/MainWindowDialogsOverlay.axaml",
         "Views/MainWindowLogViewerOverlay.axaml",
-        "Views/MainWindowToastOverlay.axaml"
+        "Views/MainWindowToastOverlay.axaml",
+        "Views/SetupWizardOverlay.axaml"
     ];
 
     [Fact]
@@ -777,13 +778,35 @@ public sealed partial class UiStyleContractTests
         foreach (var relativePath in new[]
                  {
                      "Views/MainWindowDialogsOverlay.axaml",
-                     "Views/MainWindowLogViewerOverlay.axaml"
+                     "Views/MainWindowLogViewerOverlay.axaml",
+                     "Views/SetupWizardOverlay.axaml"
                  })
         {
             var text = File.ReadAllText(ProjectFile(relativePath));
             Assert.DoesNotContain("ZIndex=\"500\"", text, StringComparison.Ordinal);
             Assert.DoesNotContain("ZIndex=\"1001\"", text, StringComparison.Ordinal);
         }
+    }
+
+    [Fact]
+    public void SetupWizardOverlay_IsDedicatedViewIncludedByDialogsOverlay()
+    {
+        var dialogsOverlay = File.ReadAllText(ProjectFile("Views/MainWindowDialogsOverlay.axaml"));
+
+        Assert.Contains("<views:SetupWizardOverlay/>", dialogsOverlay, StringComparison.Ordinal);
+        Assert.DoesNotContain("Dialogs.SetupWizard.NextCommand", dialogsOverlay, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public void SetupWizardOverlay_UsesSetupWizardLayerBetweenDialogsAndToast()
+    {
+        var overlay = File.ReadAllText(ProjectFile("Views/SetupWizardOverlay.axaml"));
+        var styles = File.ReadAllText(ProjectFile("Views/MainWindow.Styles.axaml"));
+
+        Assert.Contains("Classes=\"setup-wizard-overlay\"", overlay, StringComparison.Ordinal);
+        Assert.Matches(
+            """(?s)<Style Selector="Grid\.setup-wizard-overlay">.*?<Setter Property="ZIndex" Value="500"/>.*?</Style>""",
+            styles);
     }
 
     [Fact]
@@ -1350,7 +1373,7 @@ public sealed partial class UiStyleContractTests
     }
 
     [Fact]
-    public void OverlayStyles_DefineSettingsAndDialogLayerOrder()
+    public void OverlayStyles_DefineSettingsDialogAndSetupWizardLayerOrder()
     {
         var styles = File.ReadAllText(ProjectFile("Views/MainWindow.Styles.axaml"));
 
@@ -1359,6 +1382,9 @@ public sealed partial class UiStyleContractTests
             styles);
         Assert.Matches(
             """(?s)<Style Selector="Grid\.dialog-overlay">.*?<Setter Property="ZIndex" Value="200"/>.*?</Style>""",
+            styles);
+        Assert.Matches(
+            """(?s)<Style Selector="Grid\.setup-wizard-overlay">.*?<Setter Property="ZIndex" Value="500"/>.*?</Style>""",
             styles);
     }
 
@@ -1369,13 +1395,13 @@ public sealed partial class UiStyleContractTests
         var behavior = File.ReadAllText(ProjectFile("Views/OverlayFocusBehavior.cs"));
 
         Assert.Equal(
-            2,
+            3,
             Regex.Count(
                 styles,
                 "KeyboardNavigation.TabNavigation\" Value=\"Cycle",
                 RegexOptions.CultureInvariant));
         Assert.Equal(
-            2,
+            3,
             Regex.Count(
                 styles,
                 "OverlayFocusBehavior.IsEnabled\" Value=\"True",

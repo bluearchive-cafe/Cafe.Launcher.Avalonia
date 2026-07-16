@@ -71,11 +71,17 @@ internal static class ColorUtils
             : Colors.White;
     }
 
+    /// <summary>
+    /// Computes WCAG relative luminance for an sRGB colour.
+    /// </summary>
     public static double GetRelativeLuminance(Color color) =>
         (0.2126 * SrgbToLinear(color.R / 255d))
         + (0.7152 * SrgbToLinear(color.G / 255d))
         + (0.0722 * SrgbToLinear(color.B / 255d));
 
+    /// <summary>
+    /// Converts an sRGB colour to HSV components.
+    /// </summary>
     public static (double Hue, double Saturation, double Value) ToHsv(Color color)
     {
         var r = color.R / 255d;
@@ -112,6 +118,9 @@ internal static class ColorUtils
         return (hue, saturation, max);
     }
 
+    /// <summary>
+    /// Converts HSV components to an sRGB colour with the supplied alpha channel.
+    /// </summary>
     public static Color FromHsv(double hue, double saturation, double value, byte alpha)
     {
         var chroma = value * saturation;

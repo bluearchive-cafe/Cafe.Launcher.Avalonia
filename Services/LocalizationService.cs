@@ -156,6 +156,9 @@ public sealed partial class LocalizedStrings : ObservableObject
     [ObservableProperty] private string toastInfo = "";
     [ObservableProperty] private string launchCheckDescription = "";
     [ObservableProperty] private string proxyDescription = "";
+    [ObservableProperty] private string proxyAuto = "";
+    [ObservableProperty] private string proxyDirect = "";
+    [ObservableProperty] private string proxySystem = "";
     [ObservableProperty] private string downloadSource = "";
     [ObservableProperty] private string downloadSourceDescription = "";
     [ObservableProperty] private string downloadSourceOfficial = "";
@@ -240,6 +243,30 @@ public sealed partial class LocalizedStrings : ObservableObject
     [ObservableProperty] private string logLevelDescription = "";
     [ObservableProperty] private string toastNotificationsDescription = "";
     [ObservableProperty] private string remoteContentCardDescription = "";
+    [ObservableProperty] private string setupWizardWelcomeTitle = "";
+    [ObservableProperty] private string setupWizardWelcomeText = "";
+    [ObservableProperty] private string setupWizardLanguage = "";
+    [ObservableProperty] private string setupWizardLanguageHint = "";
+    [ObservableProperty] private string setupWizardDownloadSource = "";
+    [ObservableProperty] private string setupWizardDownloadSourceHint = "";
+    [ObservableProperty] private string setupWizardGamePath = "";
+    [ObservableProperty] private string setupWizardGamePathHint = "";
+    [ObservableProperty] private string setupWizardGamePathEmpty = "";
+    [ObservableProperty] private string setupWizardBrowse = "";
+    [ObservableProperty] private string setupWizardProxy = "";
+    [ObservableProperty] private string setupWizardProxyHint = "";
+    [ObservableProperty] private string setupWizardReview = "";
+    [ObservableProperty] private string setupWizardReviewHint = "";
+    [ObservableProperty] private string setupWizardStep0Title = "";
+    [ObservableProperty] private string setupWizardStep1Title = "";
+    [ObservableProperty] private string setupWizardStep2Title = "";
+    [ObservableProperty] private string setupWizardStep3Title = "";
+    [ObservableProperty] private string setupWizardStep4Title = "";
+    [ObservableProperty] private string setupWizardNext = "";
+    [ObservableProperty] private string setupWizardPrevious = "";
+    [ObservableProperty] private string setupWizardFinish = "";
+    [ObservableProperty] private string setupWizardSkip = "";
+    [ObservableProperty] private string setupWizardStepTitle = "";
 
     public void Apply(LocalizationService localizer)
     {
@@ -389,6 +416,9 @@ public sealed partial class LocalizedStrings : ObservableObject
         ToastInfo = localizer.T("toastInfo");
         LaunchCheckDescription = localizer.T("launchCheckDescription");
         ProxyDescription = localizer.T("proxyDescription");
+        ProxyAuto = localizer.T("proxyAuto");
+        ProxyDirect = localizer.T("proxyDirect");
+        ProxySystem = localizer.T("proxySystem");
         DownloadSource = localizer.T("downloadSource");
         DownloadSourceDescription = localizer.T("downloadSourceDescription");
         DownloadSourceOfficial = localizer.T("downloadSourceOfficial");
@@ -473,6 +503,30 @@ public sealed partial class LocalizedStrings : ObservableObject
         LogLevelDescription = localizer.T("logLevelDescription");
         ToastNotificationsDescription = localizer.T("toastNotificationsDescription");
         RemoteContentCardDescription = localizer.T("remoteContentCardDescription");
+        SetupWizardWelcomeTitle = localizer.T("setupWizardWelcomeTitle");
+        SetupWizardWelcomeText = localizer.T("setupWizardWelcomeText");
+        SetupWizardLanguage = localizer.T("setupWizardLanguage");
+        SetupWizardLanguageHint = localizer.T("setupWizardLanguageHint");
+        SetupWizardDownloadSource = localizer.T("setupWizardDownloadSource");
+        SetupWizardDownloadSourceHint = localizer.T("setupWizardDownloadSourceHint");
+        SetupWizardGamePath = localizer.T("setupWizardGamePath");
+        SetupWizardGamePathHint = localizer.T("setupWizardGamePathHint");
+        SetupWizardGamePathEmpty = localizer.T("setupWizardGamePathEmpty");
+        SetupWizardBrowse = localizer.T("setupWizardBrowse");
+        SetupWizardProxy = localizer.T("setupWizardProxy");
+        SetupWizardProxyHint = localizer.T("setupWizardProxyHint");
+        SetupWizardReview = localizer.T("setupWizardReview");
+        SetupWizardReviewHint = localizer.T("setupWizardReviewHint");
+        SetupWizardStep0Title = localizer.T("setupWizardStep0Title");
+        SetupWizardStep1Title = localizer.T("setupWizardStep1Title");
+        SetupWizardStep2Title = localizer.T("setupWizardStep2Title");
+        SetupWizardStep3Title = localizer.T("setupWizardStep3Title");
+        SetupWizardStep4Title = localizer.T("setupWizardStep4Title");
+        SetupWizardNext = localizer.T("setupWizardNext");
+        SetupWizardPrevious = localizer.T("setupWizardPrevious");
+        SetupWizardFinish = localizer.T("setupWizardFinish");
+        SetupWizardSkip = localizer.T("setupWizardSkip");
+        SetupWizardStepTitle = localizer.T("setupWizardStepTitle");
     }
 }
 

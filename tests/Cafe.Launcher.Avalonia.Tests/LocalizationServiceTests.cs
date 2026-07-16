@@ -188,6 +188,19 @@ public sealed class LocalizationServiceTests
     }
 
     [Fact]
+    public void LocaleFiles_KeepKeysSortedOrdinal()
+    {
+        var localeDirectory = Path.Combine(FindProjectRoot(), "Assets", "Locales");
+
+        foreach (var fileName in new[] { "en.json", "zh-Hans.json", "zh-Hant.json", "ja.json" })
+        {
+            var keys = ReadLocale(localeDirectory, fileName).Keys.ToArray();
+
+            Assert.Equal(keys.OrderBy(key => key, StringComparer.Ordinal), keys);
+        }
+    }
+
+    [Fact]
     public void T_WhenChineseLocalizationItemsRequested_ReturnsEstablishedTerminology()
     {
         var service = new LocalizationService();

@@ -584,6 +584,12 @@
         <Setter Property="KeyboardNavigation.TabNavigation" Value="Cycle"/>
         <Setter Property="views:OverlayFocusBehavior.IsEnabled" Value="True"/>
     </Style>
+    <Style Selector="Grid.setup-wizard-overlay">
+        <Setter Property="Background" Value="{DynamicResource LauncherOverlayBrush}"/>
+        <Setter Property="ZIndex" Value="500"/>
+        <Setter Property="KeyboardNavigation.TabNavigation" Value="Cycle"/>
+        <Setter Property="views:OverlayFocusBehavior.IsEnabled" Value="True"/>
+    </Style>
     <Style Selector="Border.dialog">
         <Setter Property="Background" Value="{DynamicResource LauncherDialogBackgroundBrush}"/>
         <Setter Property="CornerRadius" Value="{StaticResource LauncherRadiusLg}"/>

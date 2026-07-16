@@ -212,7 +212,12 @@ public sealed class SettingsEditorTests
         Assert.Equal(DownloadSpeedLimits.Unlimited, current.DownloadSpeedLimit);
         Assert.True(current.ToastNotificationsEnabled);
         Assert.True(current.ShowRemoteContentCard);
-        Assert.Equal(PatchUrlGroups.Official, current.PatchUrlGroup);
+        // PatchUrlGroup defaults to Cafe when UI culture is Chinese, otherwise Official.
+        var expectedGroup = System.Globalization.CultureInfo.CurrentUICulture.Name is
+            "zh-CN" or "zh-TW" or "zh-HK" or "zh-MO" or "zh-SG" or "zh-Hans" or "zh-Hant"
+            ? PatchUrlGroups.Cafe
+            : PatchUrlGroups.Official;
+        Assert.Equal(expectedGroup, current.PatchUrlGroup);
         Assert.Equal("", current.CustomBackgroundPath);
         Assert.Equal(BackgroundSources.Bundled, current.BackgroundSource);
         Assert.Equal(BackgroundFits.UniformToFill, current.BackgroundFit);
