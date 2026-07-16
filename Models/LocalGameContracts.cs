@@ -49,6 +49,14 @@ public sealed class ManifestFile
     public string Size { get => size ??= "0"; set => size = value ?? "0"; }
     private string? size = "0";
 
+    /// <summary>
+    /// Size as a parsed long value. Returns 0 for non-parseable input.
+    /// Centralises the <see cref="Helpers.FileSizeFormatter.ParseSize"/> call
+    /// so consumers don't need to parse <see cref="Size"/> individually.
+    /// </summary>
+    [System.Text.Json.Serialization.JsonIgnore]
+    public long SizeBytes => long.TryParse(Size, out var s) ? s : 0;
+
     [JsonPropertyName("vc")]
     public string? Vc { get; set; }
 }
