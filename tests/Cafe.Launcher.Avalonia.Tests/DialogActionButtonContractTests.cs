@@ -25,6 +25,27 @@ public sealed class DialogActionButtonContractTests
     }
 
     [Fact]
+    public void DialogActionStyle_FollowsBaseSemanticActionStyles()
+    {
+        var document = XDocument.Load(ProjectFile("Views/MainWindow.Styles.axaml"));
+        var styles = document
+            .Descendants()
+            .Where(element => element.Name.LocalName == "Style")
+            .ToList();
+        var dialogActionIndex = FindStyleIndex(styles, "Button.dialog-action");
+
+        Assert.True(
+            dialogActionIndex > FindStyleIndex(styles, "Button.primary-action"),
+            "Button.dialog-action must follow Button.primary-action.");
+        Assert.True(
+            dialogActionIndex > FindStyleIndex(styles, "Button.flat-action"),
+            "Button.dialog-action must follow Button.flat-action.");
+        Assert.True(
+            dialogActionIndex > FindStyleIndex(styles, "Button.danger-action"),
+            "Button.dialog-action must follow Button.danger-action.");
+    }
+
+    [Fact]
     public void SettingsFooterActions_UseDialogActionClass()
     {
         var settingsDocument = XDocument.Load(ProjectFile("Views/MainWindowSettingsOverlay.axaml"));
@@ -94,6 +115,12 @@ public sealed class DialogActionButtonContractTests
         element.Attribute("Classes")?.Value
             .Split(' ', StringSplitOptions.RemoveEmptyEntries)
             .Contains(className, StringComparer.Ordinal) ?? false;
+
+    private static int FindStyleIndex(IReadOnlyList<XElement> styles, string selector) =>
+        styles
+            .Select((element, index) => (element, index))
+            .Single(item => item.element.Attribute("Selector")?.Value == selector)
+            .index;
 
     private static string ProjectFile(string relativePath) =>
         Path.Combine(FindProjectRoot(), relativePath.Replace('/', Path.DirectorySeparatorChar));
