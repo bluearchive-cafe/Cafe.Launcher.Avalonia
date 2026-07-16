@@ -6,6 +6,8 @@ namespace Cafe.Launcher.Avalonia.Constants;
 public static class ApiConfig
 {
     public const string ApiBaseUrl = "https://api-launcher-jp.yo-star.com";
+    public const string OfficialPackageHost = "launcher-pkg-ba-jp.yo-star.com";
+    public const string OfficialPackageBaseUrl = "https://" + OfficialPackageHost;
     public const string ResourcePanelApiBaseUrl = "https://api.bluearchive.cafe";
     public const string AuthorizationSalt = "DE7108E9B2842FD460F4777702727869";
     public const string YostarAuthorizationVersion = "1.7.2";
