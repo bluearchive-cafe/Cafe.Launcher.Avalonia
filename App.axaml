@@ -34,6 +34,7 @@
             <x:Double x:Key="LauncherChipHeight">32</x:Double>
             <x:Double x:Key="LauncherFieldHeight">40</x:Double>
             <x:Double x:Key="LauncherDialogTitleHeight">56</x:Double>
+            <x:Double x:Key="LauncherConfirmDialogMaxHeight">480</x:Double>
             <x:Double x:Key="LauncherLogViewerWidth">720</x:Double>
             <x:Double x:Key="LauncherLogViewerHeight">592</x:Double>
             <x:Double x:Key="LauncherFontSizeXs">11</x:Double>

@@ -1074,7 +1074,16 @@ public sealed partial class UiStyleContractTests
             .Elements()
             .Single(element => element.Name.LocalName == "StackPanel" && HasClass(element, "confirm-actions"));
 
-        Assert.Equal("480", panel.Attribute("MaxHeight")?.Value);
+        Assert.Equal(
+            "{StaticResource LauncherConfirmDialogMaxHeight}",
+            panel.Attribute("MaxHeight")?.Value);
+        var application = XDocument.Load(ProjectFile("App.axaml"));
+        var maxHeightToken = application
+            .Descendants()
+            .Single(element => element.Attributes().Any(attribute =>
+                attribute.Name.LocalName == "Key"
+                && attribute.Value == "LauncherConfirmDialogMaxHeight"));
+        Assert.Equal("480", maxHeightToken.Value);
         Assert.Equal("Auto,*,Auto", layout.Attribute("RowDefinitions")?.Value);
         Assert.Equal("1", messageScroller.Attribute("Grid.Row")?.Value);
         Assert.Equal("2", actions.Attribute("Grid.Row")?.Value);
@@ -1108,45 +1117,102 @@ public sealed partial class UiStyleContractTests
     [Fact]
     public void ViewsAndControls_UserFacingTextHasNoFixedEnglishLiterals()
     {
-        HashSet<string> userFacingAttributes = new(StringComparer.Ordinal)
-        {
-            "Content",
-            "Header",
-            "PlaceholderText",
-            "Text",
-            "ToolTip.Tip"
-        };
         var violations = Directory
             .GetFiles(ProjectFile("Views"), "*.axaml", SearchOption.AllDirectories)
             .Concat(Directory.GetFiles(ProjectFile("Controls"), "*.axaml", SearchOption.AllDirectories))
-            .SelectMany(path =>
-            {
-                var document = XDocument.Load(path, LoadOptions.SetLineInfo);
-                return document
-                    .Descendants()
-                    .SelectMany(element =>
-                        element.Attributes()
-                            .Where(attribute => userFacingAttributes.Contains(attribute.Name.LocalName))
-                            .Where(attribute => !attribute.Value.StartsWith('{'))
-                            .Where(attribute => attribute.Value.Any(char.IsAsciiLetter))
-                            .Select(attribute =>
-                                $"{Path.GetRelativePath(FindProjectRoot(), path)}:{((IXmlLineInfo)attribute).LineNumber} "
-                                + $"{attribute.Name.LocalName}=\"{attribute.Value}\"")
-                            .Concat(
-                                element.Name.LocalName is "TextBlock" or "Button" or "MenuItem"
-                                    ? element.Nodes()
-                                        .OfType<XText>()
-                                        .Where(node => !string.IsNullOrWhiteSpace(node.Value))
-                                        .Where(node => node.Value.Any(char.IsAsciiLetter))
-                                        .Select(node =>
-                                            $"{Path.GetRelativePath(FindProjectRoot(), path)}:{((IXmlLineInfo)node).LineNumber} "
-                                            + node.Value.Trim())
-                                    : []));
-            })
+            .SelectMany(path => FindFixedEnglishLiterals(
+                XDocument.Load(path, LoadOptions.SetLineInfo),
+                Path.GetRelativePath(FindProjectRoot(), path)))
             .Order(StringComparer.Ordinal)
             .ToList();
 
         Assert.Empty(violations);
+    }
+
+    [Theory]
+    [InlineData("Title")]
+    [InlineData("OnContent")]
+    [InlineData("OffContent")]
+    [InlineData("AutomationProperties.Name")]
+    [InlineData("Description")]
+    [InlineData("Message")]
+    [InlineData("CancelText")]
+    [InlineData("ConfirmText")]
+    [InlineData("CloseToolTip")]
+    public void FixedEnglishScanner_UserFacingAttributeLiteral_IsReported(string attributeName)
+    {
+        var document = XDocument.Parse(
+            $"<Control xmlns=\"https://github.com/avaloniaui\" {attributeName}=\"Hardcoded English\" />",
+            LoadOptions.SetLineInfo);
+
+        var violation = Assert.Single(FindFixedEnglishLiterals(document, "fixture.axaml"));
+        Assert.Contains($"{attributeName}=\"Hardcoded English\"", violation, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public void FixedEnglishScanner_BindingsAndDesignNamespacePreview_AreIgnored()
+    {
+        var document = XDocument.Parse(
+            """
+            <Panel xmlns="https://github.com/avaloniaui"
+                   xmlns:d="http://schemas.microsoft.com/expression/blend/2008">
+                <SettingRow Title="{Binding LocalizedTitle}"
+                            Description="{Binding LocalizedDescription}" />
+                <TextBlock d:Text="English design preview" />
+                <d:Preview Text="English preview text"
+                           Title="English preview title" />
+            </Panel>
+            """,
+            LoadOptions.SetLineInfo);
+
+        Assert.Empty(FindFixedEnglishLiterals(document, "fixture.axaml"));
+    }
+
+    private static IReadOnlyList<string> FindFixedEnglishLiterals(
+        XDocument document,
+        string source)
+    {
+        HashSet<string> userFacingAttributes = new(StringComparer.Ordinal)
+        {
+            "AutomationProperties.Name",
+            "CancelText",
+            "CloseToolTip",
+            "Content",
+            "ConfirmText",
+            "Description",
+            "Header",
+            "Message",
+            "OffContent",
+            "OnContent",
+            "PlaceholderText",
+            "Text",
+            "Title",
+            "ToolTip.Tip"
+        };
+        XNamespace designNamespace = "http://schemas.microsoft.com/expression/blend/2008";
+
+        return (document.Root?.DescendantsAndSelf() ?? [])
+            .Where(element => element.Name.Namespace != designNamespace)
+            .SelectMany(element =>
+                element.Attributes()
+                    .Where(attribute => attribute.Name.Namespace != designNamespace)
+                    .Where(attribute => userFacingAttributes.Contains(attribute.Name.LocalName))
+                    .Where(attribute => !attribute.Value.TrimStart().StartsWith('{'))
+                    .Where(attribute => attribute.Value.Any(char.IsAsciiLetter))
+                    .Select(attribute =>
+                        $"{source}:{((IXmlLineInfo)attribute).LineNumber} "
+                        + $"{attribute.Name.LocalName}=\"{attribute.Value}\"")
+                    .Concat(
+                        element.Name.LocalName is "TextBlock" or "Button" or "MenuItem"
+                            ? element.Nodes()
+                                .OfType<XText>()
+                                .Where(node => !string.IsNullOrWhiteSpace(node.Value))
+                                .Where(node => node.Value.Any(char.IsAsciiLetter))
+                                .Select(node =>
+                                    $"{source}:{((IXmlLineInfo)node).LineNumber} "
+                                    + node.Value.Trim())
+                            : []))
+            .ToList();
     }
 
     [Fact]

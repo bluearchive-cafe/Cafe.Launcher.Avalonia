@@ -6,7 +6,8 @@
              x:Name="Root"
              x:DataType="controls:ConfirmDialog">
     <Grid IsVisible="{Binding IsOpen, ElementName=Root}" Classes="dialog-overlay">
-        <Border Classes="dialog confirm-panel" MaxWidth="{Binding DialogMaxWidth, ElementName=Root}" MaxHeight="480">
+        <Border Classes="dialog confirm-panel" MaxWidth="{Binding DialogMaxWidth, ElementName=Root}"
+                MaxHeight="{StaticResource LauncherConfirmDialogMaxHeight}">
             <Grid RowDefinitions="Auto,*,Auto" Classes="confirm-layout">
                 <Grid Classes="dialog-heading" ColumnDefinitions="Auto,*,Auto">
                     <Border Classes="dialog-icon" Classes.danger="{Binding IsDangerIcon, ElementName=Root}" VerticalAlignment="Center">
