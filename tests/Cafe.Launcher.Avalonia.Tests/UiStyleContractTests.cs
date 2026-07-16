@@ -1,10 +1,118 @@
+using System.Globalization;
 using System.Text.RegularExpressions;
+using System.Text.Json;
+using System.Xml;
 using System.Xml.Linq;
 
 namespace Cafe.Launcher.Avalonia.Tests;
 
 public sealed partial class UiStyleContractTests
 {
+    [Fact]
+    public void MainWindow_OperationPanels_UseStableStatusAndActionColumns()
+    {
+        var document = XDocument.Load(ProjectFile("Views/MainWindow.axaml"));
+        var operationLayouts = document
+            .Descendants()
+            .Where(element =>
+                element.Name.LocalName == "Grid"
+                && HasClass(element, "operation-layout"))
+            .ToArray();
+
+        Assert.Equal(3, operationLayouts.Length);
+        Assert.All(operationLayouts, layout =>
+        {
+            Assert.Equal("*,Auto", layout.Attribute("ColumnDefinitions")?.Value);
+
+            var status = layout.Elements().Single(element => HasClass(element, "operation-status"));
+            Assert.Contains(
+                status.Descendants(),
+                element => element.Name.LocalName == "TextBlock"
+                    && HasClass(element, "operation-status-title"));
+            Assert.Contains(
+                status.Descendants(),
+                element => element.Name.LocalName == "MaterialIcon");
+
+            var actions = layout.Elements().Single(element => HasClass(element, "operation-actions"));
+            Assert.Equal("1", actions.Attribute("Grid.Column")?.Value);
+        });
+    }
+
+    [Fact]
+    public void MainWindow_OperationButtons_ExposeLocalizedNamesAndActionPriority()
+    {
+        var document = XDocument.Load(ProjectFile("Views/MainWindow.axaml"));
+        Dictionary<string, (string Name, string Priority)> expectedButtons = new(StringComparer.Ordinal)
+        {
+            ["{Binding RefreshCommand}"] = ("{Binding Shell.I18n.Refresh}", "secondary-operation"),
+            ["{Binding Operations.InstallOrUpdateCommand}"] = ("{Binding Operations.InstallButtonText}", "primary-operation"),
+            ["{Binding Settings.ChangePersistedGamePathCommand}"] = ("{Binding Shell.I18n.ChangePath}", "secondary-operation"),
+            ["{Binding Settings.SelectInstalledGameCommand}"] = ("{Binding Shell.I18n.SelectInstalledGame}", "secondary-operation"),
+            ["{Binding WindowChrome.OpenOfficialSiteCommand}"] = ("{Binding Shell.I18n.OfficialSite}", "secondary-operation"),
+            ["{Binding Operations.StartGameCommand}"] = ("{Binding Shell.I18n.StartGame}", "primary-operation"),
+            ["{Binding Operations.PauseResumeCommand}"] = ("{Binding Operations.PauseResumeText}", "secondary-operation"),
+            ["{Binding Operations.StopOperationCommand}"] = ("{Binding Shell.I18n.Stop}", "secondary-operation")
+        };
+
+        foreach (var (command, expected) in expectedButtons)
+        {
+            var button = document
+                .Descendants()
+                .Single(element =>
+                    element.Name.LocalName == "Button"
+                    && element.Attribute("Command")?.Value == command);
+
+            Assert.True(HasClass(button, expected.Priority), $"{command} must be {expected.Priority}.");
+            Assert.Equal(
+                expected.Name,
+                button.Attributes()
+                    .Single(attribute => attribute.Name.LocalName == "AutomationProperties.Name")
+                    .Value);
+            Assert.NotNull(button.Attributes().SingleOrDefault(attribute => attribute.Name.LocalName == "ToolTip.Tip"));
+        }
+    }
+
+    [Fact]
+    public void MainWindow_ControlPanel_ExplainsTheStartAction()
+    {
+        var document = XDocument.Load(ProjectFile("Views/MainWindow.axaml"));
+        var controlPanel = document
+            .Descendants()
+            .Single(element =>
+                element.Name.LocalName == "Border"
+                && HasClass(element, "control-panel"));
+        var status = controlPanel
+            .Descendants()
+            .Single(element => HasClass(element, "operation-status"));
+
+        Assert.Contains(
+            status.Descendants(),
+            element => element.Name.LocalName == "TextBlock"
+                && element.Attribute("Text")?.Value == "{Binding Shell.I18n.LaunchCheckDescription}");
+    }
+
+    [Fact]
+    public void MainWindow_ProgressPanel_BindsOperationSpecificIcon()
+    {
+        var document = XDocument.Load(ProjectFile("Views/MainWindow.axaml"));
+        var progressPanel = document
+            .Descendants()
+            .Single(element =>
+                element.Name.LocalName == "Border"
+                && element.Attribute("IsVisible")?.Value
+                    == "{Binding Operations.IsProgressPanelVisible}");
+        var status = progressPanel
+            .Descendants()
+            .Single(element => HasClass(element, "operation-status"));
+        var statusIcon = status
+            .Descendants()
+            .Single(element => element.Name.LocalName == "MaterialIcon");
+
+        Assert.Equal(
+            "{Binding Operations.ProgressIconKind}",
+            statusIcon.Attribute("Kind")?.Value);
+    }
+
     private static readonly string[] StyleFiles =
     [
         "Views/MainWindow.Styles.axaml",
@@ -22,6 +130,7 @@ public sealed partial class UiStyleContractTests
         "Views/SettingsGameSection.axaml",
         "Views/SettingsDownloadNetworkSection.axaml",
         "Views/SettingsAppearanceSection.axaml",
+        "Views/SettingsAdvancedSection.axaml",
         "Views/SettingsAboutSection.axaml",
         "Views/MainWindowDialogsOverlay.axaml",
         "Views/MainWindowLogViewerOverlay.axaml",
@@ -38,7 +147,8 @@ public sealed partial class UiStyleContractTests
             [
                 "Settings.Editor.Current.Language",
                 "Settings.Editor.Current.CloseBehavior",
-                "Settings.Editor.Current.MotionMode"
+                "Settings.Editor.Current.MotionMode",
+                "Settings.Editor.Current.ToastNotificationsEnabled"
             ],
             ["SettingsGameSection"] =
             [
@@ -52,8 +162,7 @@ public sealed partial class UiStyleContractTests
                 "Settings.Editor.Current.ProxyMode",
                 "Settings.Editor.Current.PatchUrlGroup",
                 "Settings.Editor.Current.DownloadSpeedLimit",
-                "Settings.Editor.Current.UpdateChannel",
-                "Settings.Editor.Current.LogLevel"
+                "Settings.Editor.Current.UpdateChannel"
             ],
             ["SettingsAppearanceSection"] =
             [
@@ -61,7 +170,6 @@ public sealed partial class UiStyleContractTests
                 "Settings.Editor.Current.ThemeColorMode",
                 "Settings.Editor.Current.BackgroundSource",
                 "Settings.Editor.Current.BackgroundFit",
-                "Settings.Editor.Current.ToastNotificationsEnabled",
                 "Settings.Editor.Current.ShowRemoteContentCard",
                 "Settings.Appearance.ThemeColorPaletteItems",
                 "Settings.Appearance.SelectedCustomThemeColor",
@@ -74,15 +182,19 @@ public sealed partial class UiStyleContractTests
                 "Settings.Appearance.IsBackgroundFitSelected",
                 "Settings.Appearance.IsCustomBackgroundSelected"
             ],
+            ["SettingsAdvancedSection"] =
+            [
+                "Settings.Editor.Current.LogLevel",
+                "LogViewer.OpenCommand",
+                "LogViewer.ExportCommand",
+                "WindowChrome.OpenDataDirectoryCommand"
+            ],
             ["SettingsAboutSection"] =
             [
                 "Settings.CheckForUpdatesCommand",
                 "WindowChrome.OpenOfficialSiteCommand",
                 "WindowChrome.OpenGitHubRepositoryCommand",
-                "WindowChrome.OpenHelpDocsCommand",
-                "LogViewer.OpenCommand",
-                "LogViewer.ExportCommand",
-                "WindowChrome.OpenDataDirectoryCommand"
+                "WindowChrome.OpenHelpDocsCommand"
             ]
         };
 
@@ -106,7 +218,7 @@ public sealed partial class UiStyleContractTests
     }
 
     [Fact]
-    public void SettingsOverlay_ReferencesFiveCategorySectionsWithoutOwningSettingsRows()
+    public void SettingsOverlay_ReferencesSixCategorySectionsWithoutOwningSettingsRows()
     {
         var overlay = File.ReadAllText(ProjectFile("Views/MainWindowSettingsOverlay.axaml"));
         Dictionary<string, string> sectionVisibility = new(StringComparer.Ordinal)
@@ -115,6 +227,7 @@ public sealed partial class UiStyleContractTests
             ["SettingsGameSection"] = "Settings.IsGameCategorySelected",
             ["SettingsDownloadNetworkSection"] = "Settings.IsDownloadNetworkCategorySelected",
             ["SettingsAppearanceSection"] = "Settings.IsAppearanceCategorySelected",
+            ["SettingsAdvancedSection"] = "Settings.IsAdvancedCategorySelected",
             ["SettingsAboutSection"] = "Settings.IsAboutCategorySelected"
         };
 
@@ -499,6 +612,7 @@ public sealed partial class UiStyleContractTests
             "TextBlock.group-title",
             "TextBlock.category-title",
             "TextBlock.status-summary-title",
+            "TextBlock.operation-status-title",
             "ListBox.settings-navigation > ListBoxItem:selected",
             "Button.primary-action",
             "Button.danger-action",
@@ -816,6 +930,322 @@ public sealed partial class UiStyleContractTests
         Assert.Matches(
             """(?s)<Style Selector="Grid\.setup-wizard-overlay">.*?<Setter Property="ZIndex" Value="500"/>.*?</Style>""",
             styles);
+    }
+
+    [Fact]
+    public void SecondaryOverlays_CriticalActionsExposeLocalizedAutomationNames()
+    {
+        Dictionary<string, Dictionary<string, string>> expectedActions = new(StringComparer.Ordinal)
+        {
+            ["Views/MainWindowDialogsOverlay.axaml"] = new(StringComparer.Ordinal)
+            {
+                ["{Binding ResourcePanel.CloseResourcePanelCommand}"] = "{Binding Shell.I18n.Close}",
+                ["{Binding ResourcePanel.SaveManualResourcePanelUidCommand}"] = "{Binding Shell.I18n.ResourcePanelSaveUid}",
+                ["{Binding ResourcePanel.CancelEditResourcePanelUidCommand}"] = "{Binding Shell.I18n.Cancel}",
+                ["{Binding ResourcePanel.BeginEditResourcePanelUidCommand}"] = "{Binding Shell.I18n.ResourcePanelChangeUid}",
+                ["{Binding ResourcePanel.RefreshResourcePanelCommand}"] = "{Binding Shell.I18n.ResourcePanelRefresh}",
+                ["{Binding ResourcePanel.SaveResourcePanelCommand}"] = "{Binding Shell.I18n.ResourcePanelSave}"
+            },
+            ["Views/MainWindowLogViewerOverlay.axaml"] = new(StringComparer.Ordinal)
+            {
+                ["{Binding LogViewer.CloseCommand}"] = "{Binding Shell.I18n.Close}",
+                ["{Binding LogViewer.ExportCommand}"] = "{Binding Shell.I18n.ExportLogs}"
+            },
+            ["Views/MainWindowToastOverlay.axaml"] = new(StringComparer.Ordinal)
+            {
+                ["{Binding DataContext.Toasts.DismissToastCommand, ElementName=ToastOverlayRoot}"] =
+                    "{Binding DataContext.Shell.I18n.Close, ElementName=ToastOverlayRoot}"
+            },
+            ["Views/SetupWizardOverlay.axaml"] = new(StringComparer.Ordinal)
+            {
+                ["{Binding Dialogs.RequestSetupWizardExitCommand}"] = "{Binding Shell.I18n.SetupWizardSkip}",
+                ["{Binding Dialogs.SetupWizard.BrowseGamePathCommand}"] = "{Binding Shell.I18n.SetupWizardBrowse}",
+                ["{Binding Dialogs.SetupWizard.PreviousCommand}"] = "{Binding Shell.I18n.SetupWizardPrevious}",
+                ["{Binding Dialogs.SetupWizard.NextCommand}"] = "{Binding Shell.I18n.SetupWizardNext}",
+                ["{Binding Dialogs.SetupWizard.CompleteCommand}"] = "{Binding Shell.I18n.SetupWizardFinish}"
+            }
+        };
+
+        foreach (var (path, expectedByCommand) in expectedActions)
+        {
+            var document = XDocument.Load(ProjectFile(path));
+            foreach (var (command, expectedName) in expectedByCommand)
+            {
+                var matchingButtons = document
+                    .Descendants()
+                    .Where(element =>
+                        element.Name.LocalName == "Button"
+                        && element.Attribute("Command")?.Value == command)
+                    .ToList();
+
+                Assert.NotEmpty(matchingButtons);
+                Assert.All(
+                    matchingButtons,
+                    button => Assert.Equal(
+                        expectedName,
+                        button.Attributes().SingleOrDefault(attribute =>
+                            attribute.Name.LocalName == "AutomationProperties.Name")?.Value));
+            }
+        }
+    }
+
+    [Fact]
+    public void ResourcePanel_InputsAndResourceSwitchesExposeMeaningfulAutomationNames()
+    {
+        var document = XDocument.Load(ProjectFile("Views/MainWindowDialogsOverlay.axaml"));
+        var resourcePanel = document
+            .Descendants()
+            .Single(element =>
+                element.Name.LocalName == "Grid"
+                && element.Attribute("IsVisible")?.Value == "{Binding ResourcePanel.IsResourcePanelVisible}");
+        var uidInputs = resourcePanel
+            .Descendants()
+            .Where(element =>
+                element.Name.LocalName == "TextBox"
+                && element.Attribute("Text")?.Value
+                    == "{Binding ResourcePanel.ManualResourcePanelUid, Mode=TwoWay}")
+            .ToList();
+        var uidSource = resourcePanel
+            .Descendants()
+            .Single(element =>
+                element.Name.LocalName == "ComboBox"
+                && element.Attribute("ItemsSource")?.Value
+                    == "{Binding ResourcePanel.ResourcePanelUidSourceOptions}");
+        var resourceSwitch = resourcePanel
+            .Descendants()
+            .Single(element => element.Name.LocalName == "CheckBox");
+
+        Assert.Equal(2, uidInputs.Count);
+        Assert.All(uidInputs, input => Assert.Equal(
+            "{Binding Shell.I18n.ResourcePanelUid}",
+            input.Attributes().SingleOrDefault(attribute =>
+                attribute.Name.LocalName == "AutomationProperties.Name")?.Value));
+        Assert.Equal(
+            "{Binding Shell.I18n.ResourcePanelUidSource}",
+            uidSource.Attributes().SingleOrDefault(attribute =>
+                attribute.Name.LocalName == "AutomationProperties.Name")?.Value);
+        Assert.Equal(
+            "{Binding DisplayName}",
+            resourceSwitch.Attributes().SingleOrDefault(attribute =>
+                attribute.Name.LocalName == "AutomationProperties.Name")?.Value);
+    }
+
+    [Fact]
+    public void ToastCloseButton_WhenRendered_UsesLocalizedAutomationNameAndToolTip()
+    {
+        var document = XDocument.Load(ProjectFile("Views/MainWindowToastOverlay.axaml"));
+        var closeButton = document
+            .Descendants()
+            .Single(element =>
+                element.Name.LocalName == "Button"
+                && element.Attribute("Command")?.Value
+                    == "{Binding DataContext.Toasts.DismissToastCommand, ElementName=ToastOverlayRoot}");
+        const string expectedBinding =
+            "{Binding DataContext.Shell.I18n.Close, ElementName=ToastOverlayRoot}";
+
+        Assert.Equal(
+            expectedBinding,
+            closeButton.Attributes().Single(attribute =>
+                attribute.Name.LocalName == "AutomationProperties.Name").Value);
+        Assert.Equal(
+            expectedBinding,
+            closeButton.Attributes().Single(attribute =>
+                attribute.Name.LocalName == "ToolTip.Tip").Value);
+    }
+
+    [Fact]
+    public void SettingRow_LongCopyWrapsInFlexibleContentColumn()
+    {
+        var document = XDocument.Load(ProjectFile("Controls/SettingRow.axaml"));
+        var layout = document
+            .Descendants()
+            .Single(element => element.Name.LocalName == "Grid" && HasClass(element, "settings-row"));
+        var copy = layout
+            .Elements()
+            .Single(element => element.Name.LocalName == "StackPanel");
+        var textBlocks = copy
+            .Elements()
+            .Where(element => element.Name.LocalName == "TextBlock")
+            .ToList();
+        var action = layout
+            .Elements()
+            .Single(element => element.Attributes().Any(attribute =>
+                attribute.Name.LocalName == "Name"
+                && attribute.Value == "ActionPresenter"));
+        var application = XDocument.Load(ProjectFile("App.axaml"));
+        var minWidthToken = application
+            .Descendants()
+            .Single(element => element.Attributes().Any(attribute =>
+                attribute.Name.LocalName == "Key"
+                && attribute.Value == "LauncherSettingRowContentMinWidth"));
+
+        Assert.Equal("Auto,*,Auto", layout.Attribute("ColumnDefinitions")?.Value);
+        Assert.Equal("1", copy.Attribute("Grid.Column")?.Value);
+        Assert.True(double.Parse(minWidthToken.Value, CultureInfo.InvariantCulture) > 0);
+        Assert.Equal(
+            "{StaticResource LauncherSettingRowContentMinWidth}",
+            copy.Attribute("MinWidth")?.Value);
+        Assert.Equal(2, textBlocks.Count);
+        Assert.All(textBlocks, text => Assert.Equal("Wrap", text.Attribute("TextWrapping")?.Value));
+        Assert.Equal("2", action.Attribute("Grid.Column")?.Value);
+    }
+
+    [Fact]
+    public void ConfirmDialog_LongContentScrollsWhileActionsRemainFixed()
+    {
+        var document = XDocument.Load(ProjectFile("Controls/ConfirmDialog.axaml"));
+        var panel = document
+            .Descendants()
+            .Single(element => element.Name.LocalName == "Border" && HasClass(element, "confirm-panel"));
+        var layout = panel
+            .Elements()
+            .Single(element => element.Name.LocalName == "Grid");
+        var messageScroller = layout
+            .Elements()
+            .Single(element => element.Name.LocalName == "ScrollViewer");
+        var actions = layout
+            .Elements()
+            .Single(element => element.Name.LocalName == "StackPanel" && HasClass(element, "confirm-actions"));
+
+        Assert.Equal(
+            "{StaticResource LauncherConfirmDialogMaxHeight}",
+            panel.Attribute("MaxHeight")?.Value);
+        var application = XDocument.Load(ProjectFile("App.axaml"));
+        var maxHeightToken = application
+            .Descendants()
+            .Single(element => element.Attributes().Any(attribute =>
+                attribute.Name.LocalName == "Key"
+                && attribute.Value == "LauncherConfirmDialogMaxHeight"));
+        Assert.Equal("480", maxHeightToken.Value);
+        Assert.Equal("Auto,*,Auto", layout.Attribute("RowDefinitions")?.Value);
+        Assert.Equal("1", messageScroller.Attribute("Grid.Row")?.Value);
+        Assert.Equal("2", actions.Attribute("Grid.Row")?.Value);
+    }
+
+    [Theory]
+    [InlineData("en.json")]
+    [InlineData("ja.json")]
+    [InlineData("zh-Hans.json")]
+    [InlineData("zh-Hant.json")]
+    public void LogSeverityNames_MatchBetweenViewerFiltersAndSettings(string localeFile)
+    {
+        var values = JsonSerializer.Deserialize<Dictionary<string, string>>(
+            File.ReadAllText(ProjectFile($"Assets/Locales/{localeFile}")))!;
+        Dictionary<string, string> matchingKeys = new(StringComparer.Ordinal)
+        {
+            ["logFilterVerbose"] = "logLevelVerbose",
+            ["logFilterDebug"] = "logLevelDebug",
+            ["logFilterInfo"] = "logLevelInformation",
+            ["logFilterWarn"] = "logLevelWarning",
+            ["logFilterError"] = "logLevelError",
+            ["logFilterFatal"] = "logLevelFatal"
+        };
+
+        foreach (var (filterKey, settingKey) in matchingKeys)
+        {
+            Assert.Equal(values[settingKey], values[filterKey]);
+        }
+    }
+
+    [Fact]
+    public void ViewsAndControls_UserFacingTextHasNoFixedEnglishLiterals()
+    {
+        var violations = Directory
+            .GetFiles(ProjectFile("Views"), "*.axaml", SearchOption.AllDirectories)
+            .Concat(Directory.GetFiles(ProjectFile("Controls"), "*.axaml", SearchOption.AllDirectories))
+            .SelectMany(path => FindFixedEnglishLiterals(
+                XDocument.Load(path, LoadOptions.SetLineInfo),
+                Path.GetRelativePath(FindProjectRoot(), path)))
+            .Order(StringComparer.Ordinal)
+            .ToList();
+
+        Assert.Empty(violations);
+    }
+
+    [Theory]
+    [InlineData("Title")]
+    [InlineData("OnContent")]
+    [InlineData("OffContent")]
+    [InlineData("AutomationProperties.Name")]
+    [InlineData("Description")]
+    [InlineData("Message")]
+    [InlineData("CancelText")]
+    [InlineData("ConfirmText")]
+    [InlineData("CloseToolTip")]
+    public void FixedEnglishScanner_UserFacingAttributeLiteral_IsReported(string attributeName)
+    {
+        var document = XDocument.Parse(
+            $"<Control xmlns=\"https://github.com/avaloniaui\" {attributeName}=\"Hardcoded English\" />",
+            LoadOptions.SetLineInfo);
+
+        var violation = Assert.Single(FindFixedEnglishLiterals(document, "fixture.axaml"));
+        Assert.Contains($"{attributeName}=\"Hardcoded English\"", violation, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public void FixedEnglishScanner_BindingsAndDesignNamespacePreview_AreIgnored()
+    {
+        var document = XDocument.Parse(
+            """
+            <Panel xmlns="https://github.com/avaloniaui"
+                   xmlns:d="http://schemas.microsoft.com/expression/blend/2008">
+                <SettingRow Title="{Binding LocalizedTitle}"
+                            Description="{Binding LocalizedDescription}" />
+                <TextBlock d:Text="English design preview" />
+                <d:Preview Text="English preview text"
+                           Title="English preview title" />
+            </Panel>
+            """,
+            LoadOptions.SetLineInfo);
+
+        Assert.Empty(FindFixedEnglishLiterals(document, "fixture.axaml"));
+    }
+
+    private static IReadOnlyList<string> FindFixedEnglishLiterals(
+        XDocument document,
+        string source)
+    {
+        HashSet<string> userFacingAttributes = new(StringComparer.Ordinal)
+        {
+            "AutomationProperties.Name",
+            "CancelText",
+            "CloseToolTip",
+            "Content",
+            "ConfirmText",
+            "Description",
+            "Header",
+            "Message",
+            "OffContent",
+            "OnContent",
+            "PlaceholderText",
+            "Text",
+            "Title",
+            "ToolTip.Tip"
+        };
+        XNamespace designNamespace = "http://schemas.microsoft.com/expression/blend/2008";
+
+        return (document.Root?.DescendantsAndSelf() ?? [])
+            .Where(element => element.Name.Namespace != designNamespace)
+            .SelectMany(element =>
+                element.Attributes()
+                    .Where(attribute => attribute.Name.Namespace != designNamespace)
+                    .Where(attribute => userFacingAttributes.Contains(attribute.Name.LocalName))
+                    .Where(attribute => !attribute.Value.TrimStart().StartsWith('{'))
+                    .Where(attribute => attribute.Value.Any(char.IsAsciiLetter))
+                    .Select(attribute =>
+                        $"{source}:{((IXmlLineInfo)attribute).LineNumber} "
+                        + $"{attribute.Name.LocalName}=\"{attribute.Value}\"")
+                    .Concat(
+                        element.Name.LocalName is "TextBlock" or "Button" or "MenuItem"
+                            ? element.Nodes()
+                                .OfType<XText>()
+                                .Where(node => !string.IsNullOrWhiteSpace(node.Value))
+                                .Where(node => node.Value.Any(char.IsAsciiLetter))
+                                .Select(node =>
+                                    $"{source}:{((IXmlLineInfo)node).LineNumber} "
+                                    + node.Value.Trim())
+                            : []))
+            .ToList();
     }
 
     [Fact]
@@ -1546,6 +1976,7 @@ public sealed partial class UiStyleContractTests
             "Views/SettingsGameSection.axaml",
             "Views/SettingsDownloadNetworkSection.axaml",
             "Views/SettingsAppearanceSection.axaml",
+            "Views/SettingsAdvancedSection.axaml",
             "Views/SettingsAboutSection.axaml"
         };
         var interactiveControlNames = new HashSet<string>(StringComparer.Ordinal)
@@ -1585,13 +2016,14 @@ public sealed partial class UiStyleContractTests
     }
 
     [Fact]
-    public void SettingsAboutActionsAndVersionChips_UsePurposeBasedOrder()
+    public void SettingsAboutAndAdvancedActions_UsePurposeBasedOrderAndExclusiveOwnership()
     {
-        var text = File.ReadAllText(ProjectFile("Views/SettingsAboutSection.axaml"));
+        var aboutText = File.ReadAllText(ProjectFile("Views/SettingsAboutSection.axaml"));
+        var advancedText = File.ReadAllText(ProjectFile("Views/SettingsAdvancedSection.axaml"));
         var overlay = File.ReadAllText(ProjectFile("Views/MainWindowSettingsOverlay.axaml"));
 
         AssertOrdered(
-            text,
+            aboutText,
             "Shell.LauncherVersionText",
             "Shell.BuildTimeText",
             "Shell.CommitShaText",
@@ -1600,18 +2032,22 @@ public sealed partial class UiStyleContractTests
             "Shell.AvaloniaVersionText",
             "Shell.PlatformText");
         AssertOrdered(
-            text,
+            aboutText,
             "Settings.CheckForUpdatesCommand",
             "WindowChrome.OpenOfficialSiteCommand",
             "WindowChrome.OpenGitHubRepositoryCommand",
-            "WindowChrome.OpenHelpDocsCommand",
+            "WindowChrome.OpenHelpDocsCommand");
+        AssertOrdered(
+            advancedText,
             "LogViewer.OpenCommand",
             "LogViewer.ExportCommand",
             "WindowChrome.OpenDataDirectoryCommand");
 
-        Assert.Contains("Shell.I18n.AboutActionsGeneral", text, StringComparison.Ordinal);
-        Assert.Contains("Shell.I18n.AboutActionsDiagnostics", text, StringComparison.Ordinal);
-        Assert.DoesNotContain("Shell.I18n.SettingsGroupAboutActions", text, StringComparison.Ordinal);
+        Assert.Contains("Shell.I18n.AboutActionsGeneral", aboutText, StringComparison.Ordinal);
+        Assert.DoesNotContain("LogViewer.OpenCommand", aboutText, StringComparison.Ordinal);
+        Assert.DoesNotContain("LogViewer.ExportCommand", aboutText, StringComparison.Ordinal);
+        Assert.DoesNotContain("WindowChrome.OpenDataDirectoryCommand", aboutText, StringComparison.Ordinal);
+        Assert.Contains("Shell.I18n.SettingsGroupDiagnostics", advancedText, StringComparison.Ordinal);
 
         var document = XDocument.Parse(overlay);
         var footerButtons = document

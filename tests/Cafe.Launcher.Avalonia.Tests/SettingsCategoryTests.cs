@@ -33,6 +33,7 @@ public sealed class SettingsCategoryTests
         SettingsCategoryCodes.Game,
         SettingsCategoryCodes.DownloadNetwork,
         SettingsCategoryCodes.Appearance,
+        SettingsCategoryCodes.Advanced,
         SettingsCategoryCodes.About
     ];
 
@@ -42,6 +43,7 @@ public sealed class SettingsCategoryTests
         ("settingsCategoryGame", strings => strings.SettingsCategoryGame),
         ("settingsCategoryDownloadNetwork", strings => strings.SettingsCategoryDownloadNetwork),
         ("settingsCategoryAppearance", strings => strings.SettingsCategoryAppearance),
+        ("settingsCategoryAdvanced", strings => strings.SettingsCategoryAdvanced),
         ("settingsCategoryAbout", strings => strings.SettingsCategoryAbout)
     ];
 
@@ -51,6 +53,7 @@ public sealed class SettingsCategoryTests
         "settingsCategoryGameDescription",
         "settingsCategoryDownloadNetworkDescription",
         "settingsCategoryAppearanceDescription",
+        "settingsCategoryAdvancedDescription",
         "settingsCategoryAboutDescription"
     ];
 
@@ -60,6 +63,7 @@ public sealed class SettingsCategoryTests
         nameof(SettingsViewModel.IsGameCategorySelected),
         nameof(SettingsViewModel.IsDownloadNetworkCategorySelected),
         nameof(SettingsViewModel.IsAppearanceCategorySelected),
+        nameof(SettingsViewModel.IsAdvancedCategorySelected),
         nameof(SettingsViewModel.IsAboutCategorySelected)
     ];
 
@@ -80,6 +84,7 @@ public sealed class SettingsCategoryTests
     [InlineData("game")]
     [InlineData("download-network")]
     [InlineData("appearance")]
+    [InlineData("advanced")]
     [InlineData("about")]
     public void Normalize_ExactCode_ReturnsCode(string code)
     {
@@ -130,6 +135,7 @@ public sealed class SettingsCategoryTests
         Assert.Equal(
             [SettingsCategoryCodes.General, SettingsCategoryCodes.Game,
              SettingsCategoryCodes.DownloadNetwork, SettingsCategoryCodes.Appearance,
+             SettingsCategoryCodes.Advanced,
              SettingsCategoryCodes.About],
             options.SettingsCategories.Select(option => option.Code));
         Assert.All(options.SettingsCategories, option => Assert.False(string.IsNullOrWhiteSpace(option.DisplayName)));
@@ -189,7 +195,7 @@ public sealed class SettingsCategoryTests
     [InlineData(LauncherLanguages.SimplifiedChinese)]
     [InlineData(LauncherLanguages.TraditionalChinese)]
     [InlineData(LauncherLanguages.Japanese)]
-    public void LocalizedStrings_ApplyMapsAllFiveCategoryProperties(string language)
+    public void LocalizedStrings_ApplyMapsAllSixCategoryProperties(string language)
     {
         var localizer = new LocalizationService();
         localizer.SetLanguage(language);
@@ -249,7 +255,7 @@ public sealed class SettingsCategoryTests
 
             viewModel.PropertyChanged -= handler;
             var changedProperties = changed.ToHashSet(StringComparer.Ordinal);
-            Assert.Equal(6, changedProperties.Count);
+            Assert.Equal(7, changedProperties.Count);
             Assert.Contains(nameof(SettingsViewModel.SelectedCategory), changedProperties);
             foreach (var propertyName in CategoryPropertyNames)
             {
@@ -262,6 +268,7 @@ public sealed class SettingsCategoryTests
                     viewModel.IsGameCategorySelected,
                     viewModel.IsDownloadNetworkCategorySelected,
                     viewModel.IsAppearanceCategorySelected,
+                    viewModel.IsAdvancedCategorySelected,
                     viewModel.IsAboutCategorySelected
                 },
                 isSelected => isSelected);

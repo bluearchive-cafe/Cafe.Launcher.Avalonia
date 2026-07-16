@@ -49,9 +49,11 @@
                                              Classes="uid-input"
                                              Text="{Binding ResourcePanel.ManualResourcePanelUid, Mode=TwoWay}"
                                              PlaceholderText="{Binding Shell.I18n.ResourcePanelUid}"
+                                             AutomationProperties.Name="{Binding Shell.I18n.ResourcePanelUid}"
                                              IsEnabled="{Binding ResourcePanel.IsResourcePanelBusy, Converter={x:Static BoolConverters.Not}}"/>
                                     <Button Grid.Row="1" Grid.Column="1" Classes="primary-action dialog-action"
                                             Command="{Binding ResourcePanel.SaveManualResourcePanelUidCommand}"
+                                            AutomationProperties.Name="{Binding Shell.I18n.ResourcePanelSaveUid}"
                                             IsEnabled="{Binding ResourcePanel.IsResourcePanelBusy, Converter={x:Static BoolConverters.Not}}">
                                         <StackPanel Classes="button-content">
                                             <materialIcons:MaterialIcon Kind="ContentSave" Width="{StaticResource LauncherIconSm}" Height="{StaticResource LauncherIconSm}"/>
@@ -70,9 +72,11 @@
                                              Classes="uid-input"
                                              Text="{Binding ResourcePanel.ManualResourcePanelUid, Mode=TwoWay}"
                                              PlaceholderText="{Binding Shell.I18n.ResourcePanelUid}"
+                                             AutomationProperties.Name="{Binding Shell.I18n.ResourcePanelUid}"
                                              IsEnabled="{Binding ResourcePanel.IsResourcePanelBusy, Converter={x:Static BoolConverters.Not}}"/>
                                     <Button Grid.Row="1" Grid.Column="1" Classes="flat-action dialog-action"
                                             Command="{Binding ResourcePanel.CancelEditResourcePanelUidCommand}"
+                                            AutomationProperties.Name="{Binding Shell.I18n.Cancel}"
                                             IsEnabled="{Binding ResourcePanel.IsResourcePanelBusy, Converter={x:Static BoolConverters.Not}}">
                                         <StackPanel Classes="button-content">
                                             <materialIcons:MaterialIcon Kind="CloseCircle" Width="{StaticResource LauncherIconSm}" Height="{StaticResource LauncherIconSm}"/>
@@ -81,6 +85,7 @@
                                     </Button>
                                     <Button Grid.Row="1" Grid.Column="2" Classes="primary-action dialog-action"
                                             Command="{Binding ResourcePanel.SaveManualResourcePanelUidCommand}"
+                                            AutomationProperties.Name="{Binding Shell.I18n.ResourcePanelSaveUid}"
                                             IsEnabled="{Binding ResourcePanel.IsResourcePanelBusy, Converter={x:Static BoolConverters.Not}}">
                                         <StackPanel Classes="button-content">
                                             <materialIcons:MaterialIcon Kind="ContentSave" Width="{StaticResource LauncherIconSm}" Height="{StaticResource LauncherIconSm}"/>
@@ -101,6 +106,7 @@
                                         </StackPanel>
                                         <Button Grid.Column="1" Classes="flat-action dialog-action"
                                                 Command="{Binding ResourcePanel.BeginEditResourcePanelUidCommand}"
+                                                AutomationProperties.Name="{Binding Shell.I18n.ResourcePanelChangeUid}"
                                                 IsVisible="{Binding ResourcePanel.IsResourcePanelUidSourceCustom}"
                                                 IsEnabled="{Binding ResourcePanel.IsResourcePanelBusy, Converter={x:Static BoolConverters.Not}}">
                                             <StackPanel Classes="button-content">
@@ -118,7 +124,8 @@
                                                   SelectedValueBinding="{Binding Code}"
                                                   IsEnabled="{Binding ResourcePanel.IsResourcePanelBusy, Converter={x:Static BoolConverters.Not}}"
                                                   HorizontalAlignment="Left"
-                                                  MinWidth="140">
+                                                  MinWidth="140"
+                                                  AutomationProperties.Name="{Binding Shell.I18n.ResourcePanelUidSource}">
                                             <ComboBox.ItemTemplate>
                                                 <DataTemplate x:DataType="models:SettingOption">
                                                     <TextBlock Text="{Binding DisplayName}"/>
@@ -148,6 +155,7 @@
                                                 <CheckBox Grid.Column="1"
                                                           IsChecked="{Binding IsEnabled, Mode=TwoWay}"
                                                           IsEnabled="{Binding IsOperable}"
+                                                          AutomationProperties.Name="{Binding DisplayName}"
                                                           VerticalAlignment="Center"/>
                                                 <Grid Grid.Row="1" Grid.ColumnSpan="2" ColumnDefinitions="Auto,*,Auto,*" ColumnSpacing="{StaticResource LauncherSpacingSm}">
                                                     <TextBlock Text="{Binding DataContext.Shell.I18n.ResourcePanelOfficialVersion, ElementName=DialogsRoot}" Classes="caption"/>
@@ -165,6 +173,7 @@
 
                     <StackPanel Grid.Row="2" Classes="confirm-actions">
                         <Button Classes="flat-action dialog-action" Command="{Binding ResourcePanel.RefreshResourcePanelCommand}"
+                                AutomationProperties.Name="{Binding Shell.I18n.ResourcePanelRefresh}"
                                 IsEnabled="{Binding ResourcePanel.IsResourcePanelBusy, Converter={x:Static BoolConverters.Not}}">
                             <StackPanel Classes="button-content">
                                 <materialIcons:MaterialIcon Kind="Refresh" Width="{StaticResource LauncherIconSm}" Height="{StaticResource LauncherIconSm}"/>
@@ -172,6 +181,7 @@
                             </StackPanel>
                         </Button>
                         <Button Classes="primary-action dialog-action" Command="{Binding ResourcePanel.SaveResourcePanelCommand}"
+                                AutomationProperties.Name="{Binding Shell.I18n.ResourcePanelSave}"
                                 IsEnabled="{Binding ResourcePanel.IsResourcePanelSaveEnabled}">
                             <StackPanel Classes="button-content">
                                 <materialIcons:MaterialIcon Kind="ContentSave" Width="{StaticResource LauncherIconSm}" Height="{StaticResource LauncherIconSm}"/>

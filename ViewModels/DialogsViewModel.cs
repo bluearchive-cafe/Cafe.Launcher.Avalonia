@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
+using System.Linq;
 using System.Security.Cryptography;
 using System.Threading;
 using System.Threading.Tasks;
@@ -69,7 +70,7 @@ public partial class DialogsViewModel : ViewModelBase, IModalContentViewModel
     [ObservableProperty]
     private bool isSetupWizardExitConfirmVisible;
 
-    public IReadOnlyList<LanguageOption> LanguageOptions { get; } = LocalizationService.GetLanguageOptions();
+    public IReadOnlyList<LanguageOption> LanguageOptions { get; }
 
     public void ShowSetupWizard()
     {
@@ -186,11 +187,13 @@ public partial class DialogsViewModel : ViewModelBase, IModalContentViewModel
         this.localizer = localizer;
         this.noticeStateService = noticeStateService;
         this.invokeOnUiAsync = invokeOnUiAsync;
+        LanguageOptions = LocalizationService.GetLanguageOptions(localizer);
         SetupWizard = setupWizard;
     }
 
     public void ApplyLanguage()
     {
+        LanguageOptions.First(option => option.Code == LauncherLanguages.Auto).DisplayName = localizer.T("languageAuto");
         if (IsStopConfirmVisible)
         {
             StopConfirmText = localizer.T("stopDownloadMessage");

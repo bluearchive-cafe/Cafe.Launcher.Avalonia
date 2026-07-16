@@ -45,6 +45,9 @@ public partial class GameOperationsViewModel : ViewModelBase
     private string progressTitle = "";
 
     [ObservableProperty]
+    private string progressIconKind = "Sync";
+
+    [ObservableProperty]
     private int progressValue;
 
     [ObservableProperty]
@@ -409,6 +412,7 @@ public partial class GameOperationsViewModel : ViewModelBase
         shell.IsBusy = true;
         PanelMode = GameOperationPanelMode.Progress;
         ProgressTitle = localizer.T("uninstalling");
+        ProgressIconKind = ResolveProgressPresentation(GameOperationKind.Uninstall).IconKind;
         ProgressDetail = localizer.T("deletingManifestFiles");
 
         try
@@ -518,6 +522,7 @@ public partial class GameOperationsViewModel : ViewModelBase
         shell.IsBusy = true;
         PanelMode = GameOperationPanelMode.Progress;
         ProgressTitle = localizer.T("preparing");
+        ProgressIconKind = ResolveProgressPresentation(GameOperationKind.Idle).IconKind;
         ProgressValue = 0;
         ProgressDetail = localizer.T("buildingFileList");
         ProgressSpeed = "";
@@ -551,7 +556,9 @@ public partial class GameOperationsViewModel : ViewModelBase
     {
         PanelMode = GameOperationPanelMode.Progress;
         ProgressValue = Math.Clamp(progress.Progress, 0, 100);
-        ProgressTitle = ResolveProgressTitle(progress);
+        var progressPresentation = ResolveProgressPresentation(progress.OperationKind);
+        ProgressTitle = progressPresentation.Title;
+        ProgressIconKind = progressPresentation.IconKind;
         ProgressDetail = progress.Stage switch
         {
             GameOperationStage.RepairConfirmation => progress.AffectedFileCount > 0
@@ -620,15 +627,15 @@ public partial class GameOperationsViewModel : ViewModelBase
         }
     }
 
-    private string ResolveProgressTitle(GameOperationProgress progress)
+    private (string Title, string IconKind) ResolveProgressPresentation(GameOperationKind operationKind)
     {
-        return progress.OperationKind switch
+        return operationKind switch
         {
-            GameOperationKind.Repair => localizer.T("repairing"),
-            GameOperationKind.Uninstall => localizer.T("uninstalling"),
-            GameOperationKind.Download => localizer.T("downloading"),
-            GameOperationKind.Idle => localizer.T("working"),
-            _ => throw new ArgumentOutOfRangeException(nameof(progress), progress.OperationKind, null)
+            GameOperationKind.Repair => (localizer.T("repairing"), "Tools"),
+            GameOperationKind.Uninstall => (localizer.T("uninstalling"), "DeleteOutline"),
+            GameOperationKind.Download => (localizer.T("downloading"), "Download"),
+            GameOperationKind.Idle => (localizer.T("working"), "Sync"),
+            _ => throw new ArgumentOutOfRangeException(nameof(operationKind), operationKind, null)
         };
     }
 

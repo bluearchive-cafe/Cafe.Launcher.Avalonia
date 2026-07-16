@@ -18,6 +18,7 @@ public sealed class SettingsOptionsViewModel
     {
         this.localizer = localizer;
         this.diskSpaceService = diskSpaceService;
+        Language = LocalizationService.GetLanguageOptions(localizer);
     }
 
     public ObservableCollection<SettingOption> BackgroundSource { get; } =
@@ -78,7 +79,7 @@ public sealed class SettingsOptionsViewModel
         new() { Code = CloseBehaviors.Exit }
     ];
 
-    public IReadOnlyList<LanguageOption> Language { get; } = LocalizationService.GetLanguageOptions();
+    public IReadOnlyList<LanguageOption> Language { get; }
 
     public ObservableCollection<SettingOption> UpdateChannel { get; } =
     [
@@ -114,11 +115,13 @@ public sealed class SettingsOptionsViewModel
 
     public void RefreshDisplayNames()
     {
+        Language.First(option => option.Code == LauncherLanguages.Auto).DisplayName = localizer.T("languageAuto");
         EnsureSettingCategories();
         UpdateSettingCategory(SettingsCategoryCodes.General, localizer.T("settingsCategoryGeneral"), localizer.T("settingsCategoryGeneralDescription"));
         UpdateSettingCategory(SettingsCategoryCodes.Game, localizer.T("settingsCategoryGame"), localizer.T("settingsCategoryGameDescription"));
         UpdateSettingCategory(SettingsCategoryCodes.DownloadNetwork, localizer.T("settingsCategoryDownloadNetwork"), localizer.T("settingsCategoryDownloadNetworkDescription"));
         UpdateSettingCategory(SettingsCategoryCodes.Appearance, localizer.T("settingsCategoryAppearance"), localizer.T("settingsCategoryAppearanceDescription"));
+        UpdateSettingCategory(SettingsCategoryCodes.Advanced, localizer.T("settingsCategoryAdvanced"), localizer.T("settingsCategoryAdvancedDescription"));
         UpdateSettingCategory(SettingsCategoryCodes.About, localizer.T("settingsCategoryAbout"), localizer.T("settingsCategoryAboutDescription"));
 
         RefreshOptions(Theme, code => code switch
@@ -237,6 +240,7 @@ public sealed class SettingsOptionsViewModel
         SettingsCategories.Add(new() { Code = SettingsCategoryCodes.Game });
         SettingsCategories.Add(new() { Code = SettingsCategoryCodes.DownloadNetwork });
         SettingsCategories.Add(new() { Code = SettingsCategoryCodes.Appearance });
+        SettingsCategories.Add(new() { Code = SettingsCategoryCodes.Advanced });
         SettingsCategories.Add(new() { Code = SettingsCategoryCodes.About });
     }
 

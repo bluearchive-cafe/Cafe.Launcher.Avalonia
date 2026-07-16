@@ -22,15 +22,38 @@
 
 ## Canonical translations
 
-| English | Simplified Chinese | Japanese |
-| --- | --- | --- |
-| Launcher | 启动器 | ランチャー |
-| Manifest | 文件清单 | マニフェスト |
-| Launch verification | 启动校验 | 起動チェック |
-| Download source | 下载源 | ダウンロードソース |
-| Remote | 远程 | リモート |
-| Resource Panel | 资源面板 | リソースパネル |
-| Localized resources | 本地化资源 | ローカライズリソース |
+| English | Simplified Chinese | Traditional Chinese | Japanese |
+| --- | --- | --- | --- |
+| Launcher | 启动器 | 啟動器 | ランチャー |
+| Manifest | 文件清单 | 檔案清單 | マニフェスト |
+| Launch verification | 启动校验 | 啟動校驗 | 起動チェック |
+| Download source | 下载源 | 下載來源 | ダウンロードソース |
+| Remote | 远程 | 遠端 | リモート |
+| Resource Panel | 资源面板 | 資源面板 | リソースパネル |
+| Localized resources | 本地化资源 | 本地化資源 | ローカライズリソース |
+| Banner | 横幅 | 橫幅 | バナー |
+| Fatal | 致命 | 致命 | 致命的 |
+
+## Proxy modes
+
+| Mode | Definition | Simplified Chinese | Traditional Chinese | Japanese | Aliases to avoid |
+| --- | --- | --- | --- | --- | --- |
+| **Automatic system proxy** | The launcher's default network behavior, backed by the runtime's system proxy selection. | 自动检测系统代理 | 自動偵測系統代理 | システムプロキシを自動検出 | 跟随系统 |
+| **Direct connection** | A connection that explicitly bypasses every proxy. | 直连（不使用代理） | 直連（不使用代理） | 直接接続（プロキシなし） | 直连、直接 |
+| **System proxy (configured first)** | The explicitly configured operating-system proxy, falling back to automatic system proxy detection when no explicit proxy exists. | 系统代理（优先使用显式配置） | 系統代理（優先使用明確設定） | システムプロキシ（明示設定を優先） | 已配置的系统代理、設定済みシステムプロキシ |
+
+## Translation rules
+
+- Prefer the natural localized name in user-facing copy; do not append the English source term mechanically.
+- A first explanation or a dangerous confirmation may retain `Manifest` in parentheses after “文件清单” or “檔案清單”; short labels use only the localized name. Japanese uses “マニフェスト” without a repeated English term.
+- Automatic language selection uses the localized `languageAuto` value; never build it by appending a fixed English `(Auto)` suffix.
+- `banner` and `banners` mean **Banner**, not an event or activity. Chinese copy uses “横幅” or “橫幅”.
+- Log filters and log-level settings use the same **Fatal** translation within each language.
+
+## Reserved terms
+
+- Keep `UID`, `CDN`, `API`, `Cafe Launcher`, and file names exactly as supplied; do not translate, recase, or respell them.
+- Keep dynamic server-provided content unchanged. These rules apply only to launcher-owned interface copy.
 
 ## Relationships
 
@@ -56,3 +79,6 @@
 - “Manifest,” “list,” and “file list” referred to the same domain object; use **manifest**, translated as “文件清单” and “マニフェスト.”
 - “Resource Control Panel” and “Resource Panel” referred to the same interface; use **Resource Panel**.
 - “Validation,” “verification,” and “check” overlapped in launch-related copy; use **launch verification** for the user-configurable pre-launch operation.
+- “活动” and “活動” were used for **Banner**, but they mean an event; use “横幅” and “橫幅”.
+- “跟随系统” and the unqualified “系统代理” made two proxy modes appear equivalent; use **Automatic system proxy** and **System proxy (configured first)** to expose the explicit-configuration priority and automatic fallback.
+- “汉化管理,” “中文化管理,” and “中国語化設定” named the **Resource Panel** after one resource type; use the canonical panel name and reserve localization wording for **localized resources**.

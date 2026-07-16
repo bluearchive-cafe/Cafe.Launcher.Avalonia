@@ -29,6 +29,7 @@ public sealed class MainWindowHeadlessTests
         (SettingsCategoryCodes.Game, typeof(SettingsGameSection)),
         (SettingsCategoryCodes.DownloadNetwork, typeof(SettingsDownloadNetworkSection)),
         (SettingsCategoryCodes.Appearance, typeof(SettingsAppearanceSection)),
+        (SettingsCategoryCodes.Advanced, typeof(SettingsAdvancedSection)),
         (SettingsCategoryCodes.About, typeof(SettingsAboutSection))
     ];
 
@@ -354,6 +355,63 @@ public sealed class MainWindowHeadlessTests
     }
 
     [AvaloniaTheory]
+    [InlineData("resource-panel")]
+    [InlineData("log-viewer")]
+    [InlineData("confirmation")]
+    [InlineData("setup-wizard")]
+    public void SecondaryOverlay_AtMinimumWindowSize_KeepsCriticalActionsReachable(string overlay)
+    {
+        using var context = CreateContext();
+        context.Window.Width = 1024;
+        context.Window.Height = 640;
+        context.Window.Show();
+
+        Button[] actions = overlay switch
+        {
+            "resource-panel" => ShowResourcePanel(context),
+            "log-viewer" => ShowLogViewer(context),
+            "confirmation" => ShowLongConfirmation(context),
+            "setup-wizard" => ShowSetupWizard(context),
+            _ => throw new ArgumentOutOfRangeException(nameof(overlay))
+        };
+        Dispatcher.UIThread.RunJobs();
+
+        Assert.NotEmpty(actions);
+        Assert.All(actions, action =>
+        {
+            Assert.True(action.IsEffectivelyVisible);
+            Assert.False(string.IsNullOrWhiteSpace(AutomationProperties.GetName(action)));
+            AssertControlInsideWindow(action, context.Window);
+        });
+    }
+
+    [AvaloniaFact]
+    public void SetupWizard_InJapaneseAtMinimumWindowSize_KeepsScrollableContentAndNavigationReachable()
+    {
+        using var context = CreateContext();
+        context.Window.Width = 1024;
+        context.Window.Height = 640;
+        context.Window.Show();
+        context.ViewModel.Dialogs.ShowSetupWizard();
+        context.ViewModel.Shell.ApplyLanguage(
+            LauncherLanguages.Japanese,
+            context.ViewModel.Settings,
+            context.ViewModel.ResourcePanel,
+            hasSnapshot: false);
+        Dispatcher.UIThread.RunJobs();
+
+        var wizard = context.Window.GetVisualDescendants().OfType<SetupWizardOverlay>().Single();
+        var content = wizard.GetVisualDescendants().OfType<ScrollViewer>()
+            .Single(control => control.Classes.Contains("scroll-pad"));
+        var next = GetWizardNextButton(context.Window, context.ViewModel);
+
+        Assert.True(content.IsEffectivelyVisible);
+        Assert.True(content.Viewport.Height > 0);
+        Assert.True(next.IsEffectivelyVisible);
+        AssertControlInsideWindow(next, context.Window);
+    }
+
+    [AvaloniaTheory]
     [InlineData("install")]
     [InlineData("progress")]
     [InlineData("control")]
@@ -383,6 +441,60 @@ public sealed class MainWindowHeadlessTests
 
         Assert.True(remotePanel.IsEffectivelyVisible);
         Assert.True(remotePanel.Bounds.Bottom <= operationPanel.Bounds.Top);
+    }
+
+    [AvaloniaTheory]
+    [InlineData("install", 4, 1)]
+    [InlineData("progress", 2, 0)]
+    [InlineData("control", 2, 1)]
+    public void MainWindow_AtMinimumWindowSize_KeepsOperationStatusAndActionsInsideWindow(
+        string panelMode,
+        int expectedActionCount,
+        int expectedPrimaryActionCount)
+    {
+        using var context = CreateContext();
+        context.Window.Width = 1024;
+        context.Window.Height = 640;
+        context.ViewModel.Operations.PanelMode = panelMode switch
+        {
+            "install" => GameOperationPanelMode.Install,
+            "progress" => GameOperationPanelMode.Progress,
+            "control" => GameOperationPanelMode.Control,
+            _ => throw new ArgumentOutOfRangeException(nameof(panelMode)),
+        };
+        context.ViewModel.Operations.CanPauseOperation = panelMode == "progress";
+        context.Window.Show();
+        Dispatcher.UIThread.RunJobs();
+
+        var layout = context.Window
+            .GetVisualDescendants()
+            .OfType<Grid>()
+            .Single(control =>
+                control.Classes.Contains("operation-layout")
+                && control.IsEffectivelyVisible);
+        var title = layout
+            .GetVisualDescendants()
+            .OfType<TextBlock>()
+            .Single(control => control.Classes.Contains("operation-status-title"));
+        var actions = layout
+            .GetVisualDescendants()
+            .OfType<Button>()
+            .Where(control =>
+                control.Classes.Contains("primary-operation")
+                || control.Classes.Contains("secondary-operation"))
+            .ToArray();
+
+        Assert.True(title.IsEffectivelyVisible);
+        AssertControlInsideWindow(title, context.Window);
+        Assert.Equal(expectedActionCount, actions.Length);
+        Assert.Equal(
+            expectedPrimaryActionCount,
+            actions.Count(control => control.Classes.Contains("primary-operation")));
+        Assert.All(actions, control =>
+        {
+            Assert.True(control.IsEffectivelyVisible);
+            AssertControlInsideWindow(control, context.Window);
+        });
     }
 
     [AvaloniaFact]
@@ -977,6 +1089,54 @@ public sealed class MainWindowHeadlessTests
         Assert.Contains(@"BlueArchive_JP", applied!.GamePath);
     }
 
+    private static Button[] ShowResourcePanel(TestContext context)
+    {
+        context.ViewModel.ResourcePanel.IsResourcePanelVisible = true;
+        Dispatcher.UIThread.RunJobs();
+        return context.Window.GetVisualDescendants().OfType<Button>()
+            .Where(button =>
+                ReferenceEquals(button.Command, context.ViewModel.ResourcePanel.CloseResourcePanelCommand)
+                || ReferenceEquals(button.Command, context.ViewModel.ResourcePanel.RefreshResourcePanelCommand)
+                || ReferenceEquals(button.Command, context.ViewModel.ResourcePanel.SaveResourcePanelCommand))
+            .ToArray();
+    }
+
+    private static Button[] ShowLogViewer(TestContext context)
+    {
+        context.ViewModel.LogViewer.IsVisible = true;
+        Dispatcher.UIThread.RunJobs();
+        return context.Window.GetVisualDescendants().OfType<Button>()
+            .Where(button =>
+                ReferenceEquals(button.Command, context.ViewModel.LogViewer.CloseCommand)
+                || ReferenceEquals(button.Command, context.ViewModel.LogViewer.ExportCommand))
+            .ToArray();
+    }
+
+    private static Button[] ShowLongConfirmation(TestContext context)
+    {
+        context.ViewModel.Dialogs.ShowRepairConfirm(string.Concat(Enumerable.Repeat(
+            "下载源已切换，修复前需要重新确认本地文件状态。",
+            30)));
+        Dispatcher.UIThread.RunJobs();
+        return context.Window.GetVisualDescendants().OfType<Button>()
+            .Where(button =>
+                (ReferenceEquals(button.Command, context.ViewModel.Dialogs.CancelRepairCommand)
+                    || ReferenceEquals(button.Command, context.ViewModel.Dialogs.ConfirmRepairCommand))
+                && button.IsEffectivelyVisible)
+            .ToArray();
+    }
+
+    private static Button[] ShowSetupWizard(TestContext context)
+    {
+        context.ViewModel.Dialogs.ShowSetupWizard();
+        Dispatcher.UIThread.RunJobs();
+        return context.Window.GetVisualDescendants().OfType<Button>()
+            .Where(button =>
+                ReferenceEquals(button.Command, context.ViewModel.Dialogs.RequestSetupWizardExitCommand)
+                || ReferenceEquals(button.Command, context.ViewModel.Dialogs.SetupWizard.NextCommand))
+            .ToArray();
+    }
+
     private static TestContext CreateContext()
     {
         var tempDir = Path.Combine(Path.GetTempPath(), Guid.NewGuid().ToString("N"));
@@ -1071,11 +1231,23 @@ public sealed class MainWindowHeadlessTests
         var sections = window.GetVisualDescendants()
             .Where(control => SettingsSections.Any(section => section.SectionType == control.GetType()))
             .ToArray();
-        Assert.Equal(5, sections.Length);
+        Assert.Equal(SettingsSections.Length, sections.Length);
         Assert.Single(sections, control => control.GetType() == expectedType && control.IsEffectivelyVisible);
         Assert.All(
             sections.Where(control => control.GetType() != expectedType),
             control => Assert.False(control.IsEffectivelyVisible));
+    }
+
+    private static void AssertControlInsideWindow(Control control, Window window)
+    {
+        var topLeft = control.TranslatePoint(default, window);
+        Assert.NotNull(topLeft);
+        Assert.True(control.Bounds.Width > 0);
+        Assert.True(control.Bounds.Height > 0);
+        Assert.True(topLeft.Value.X >= 0);
+        Assert.True(topLeft.Value.Y >= 0);
+        Assert.True(topLeft.Value.X + control.Bounds.Width <= window.ClientSize.Width);
+        Assert.True(topLeft.Value.Y + control.Bounds.Height <= window.ClientSize.Height);
     }
 
     private sealed record TestContext(
