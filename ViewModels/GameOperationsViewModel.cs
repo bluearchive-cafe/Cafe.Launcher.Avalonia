@@ -194,7 +194,7 @@ public partial class GameOperationsViewModel : ViewModelBase
             var snapshot = currentSnapshot;
             if (snapshot is null)
             {
-                shell.OperationNote = localizer.T("stateNotLoaded");
+                shell.OperationNote = localizer.T("launcherStateNotLoaded");
                 return;
             }
 
@@ -244,7 +244,7 @@ public partial class GameOperationsViewModel : ViewModelBase
         var snapshot = currentSnapshot;
         if (snapshot is null)
         {
-            shell.OperationNote = localizer.T("stateNotLoaded");
+            shell.OperationNote = localizer.T("launcherStateNotLoaded");
             return;
         }
 
@@ -263,7 +263,7 @@ public partial class GameOperationsViewModel : ViewModelBase
         var snapshot = currentSnapshot;
         if (snapshot is null)
         {
-            shell.OperationNote = localizer.T("stateNotLoaded");
+            shell.OperationNote = localizer.T("launcherStateNotLoaded");
             return;
         }
 
@@ -357,7 +357,7 @@ public partial class GameOperationsViewModel : ViewModelBase
         var snapshot = currentSnapshot;
         if (snapshot is null)
         {
-            shell.OperationNote = localizer.T("stateNotLoaded");
+            shell.OperationNote = localizer.T("launcherStateNotLoaded");
             return;
         }
 
@@ -385,7 +385,7 @@ public partial class GameOperationsViewModel : ViewModelBase
         var snapshot = currentSnapshot;
         if (snapshot is null)
         {
-            shell.OperationNote = localizer.T("stateNotLoaded");
+            shell.OperationNote = localizer.T("launcherStateNotLoaded");
             return;
         }
 
@@ -489,7 +489,7 @@ public partial class GameOperationsViewModel : ViewModelBase
 
         if (snapshot is null)
         {
-            shell.OperationNote = localizer.T("stateNotLoaded");
+            shell.OperationNote = localizer.T("launcherStateNotLoaded");
             return false;
         }
 

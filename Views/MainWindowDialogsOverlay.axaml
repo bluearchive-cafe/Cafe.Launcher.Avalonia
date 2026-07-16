@@ -211,7 +211,7 @@
                             <materialIcons:MaterialIcon Kind="Update" Width="{StaticResource LauncherIconXl}" Height="{StaticResource LauncherIconXl}" Foreground="{DynamicResource LauncherAccentBrush}" HorizontalAlignment="Center" VerticalAlignment="Center"/>
                         </Border>
                         <StackPanel Grid.Column="1" Classes="dialog-heading-copy">
-                            <TextBlock Text="{Binding Shell.I18n.UpdateAvailableTitle}" Classes="dialog-title"/>
+                            <TextBlock Text="{Binding Shell.I18n.LauncherUpdateAvailableTitle}" Classes="dialog-title"/>
                             <TextBlock Text="{Binding Dialogs.UpdateAvailableText}" Classes="caption"/>
                         </StackPanel>
                         <Button Grid.Column="2" Classes="dialog-close" Command="{Binding Dialogs.CancelUpdateAvailableCommand}" ToolTip.Tip="{Binding Shell.I18n.Close}"
@@ -226,7 +226,7 @@
                                                        Height="{StaticResource LauncherIconSm}"
                                                        Foreground="{DynamicResource LauncherAccentBrush}"
                                                        VerticalAlignment="Center"/>
-                            <TextBlock Text="{Binding Shell.I18n.UpdateSelectFile}"
+                            <TextBlock Text="{Binding Shell.I18n.LauncherUpdateSelectFile}"
                                        Classes="confirm-message-text"
                                        VerticalAlignment="Center"/>
                         </StackPanel>
@@ -262,7 +262,7 @@
                                                 VerticalAlignment="Center">
                                             <StackPanel Orientation="Horizontal"
                                                         Spacing="{StaticResource LauncherSpacingXs}">
-                                                <TextBlock Text="{Binding $parent[UserControl].DataContext.Shell.I18n.UpdateFileSize}"
+                                                <TextBlock Text="{Binding $parent[UserControl].DataContext.Shell.I18n.LauncherUpdateFileSize}"
                                                            Classes="caption"/>
                                                 <TextBlock Text="{Binding DisplaySize}"
                                                            Classes="update-file-size-text"/>
@@ -277,7 +277,7 @@
                         <Button Classes="flat-action dialog-action" Command="{Binding Dialogs.CancelUpdateAvailableCommand}">
                             <StackPanel Classes="button-content">
                                 <materialIcons:MaterialIcon Kind="ClockOutline" Width="{StaticResource LauncherIconSm}" Height="{StaticResource LauncherIconSm}"/>
-                                <TextBlock Text="{Binding Shell.I18n.UpdateLater}" VerticalAlignment="Center"/>
+                                <TextBlock Text="{Binding Shell.I18n.LauncherUpdateLater}" VerticalAlignment="Center"/>
                             </StackPanel>
                         </Button>
                         <Button Classes="primary-action dialog-action"
@@ -285,7 +285,7 @@
                                 IsEnabled="{Binding Dialogs.HasSelectedUpdateFile}">
                             <StackPanel Classes="button-content">
                                 <materialIcons:MaterialIcon Kind="Download" Width="{StaticResource LauncherIconSm}" Height="{StaticResource LauncherIconSm}" Foreground="{DynamicResource LauncherOnAccentBrush}"/>
-                                <TextBlock Text="{Binding Shell.I18n.UpdateDownload}" VerticalAlignment="Center" Foreground="{DynamicResource LauncherOnAccentBrush}"/>
+                                <TextBlock Text="{Binding Shell.I18n.LauncherUpdateDownload}" VerticalAlignment="Center" Foreground="{DynamicResource LauncherOnAccentBrush}"/>
                             </StackPanel>
                         </Button>
                     </StackPanel>
@@ -301,8 +301,8 @@
                             <materialIcons:MaterialIcon Kind="Stop" Width="{StaticResource LauncherIconXl}" Height="{StaticResource LauncherIconXl}" Foreground="{DynamicResource LauncherAccentBrush}" HorizontalAlignment="Center" VerticalAlignment="Center"/>
                         </Border>
                         <StackPanel Grid.Column="1" Classes="dialog-heading-copy">
-                            <TextBlock Text="{Binding Shell.I18n.ConfirmStop}" Classes="dialog-title"/>
-                            <TextBlock Text="{Binding Shell.I18n.StopDownloadConfirm}" Classes="caption"/>
+                            <TextBlock Text="{Binding Shell.I18n.StopDownloadTitle}" Classes="dialog-title"/>
+                            <TextBlock Text="{Binding Shell.I18n.StopDownloadMessage}" Classes="caption"/>
                         </StackPanel>
                         <Button Grid.Column="2" Classes="dialog-close" Command="{Binding Dialogs.CancelStopCommand}" ToolTip.Tip="{Binding Shell.I18n.Close}"
                                 AutomationProperties.Name="{Binding Shell.I18n.Close}">
@@ -338,8 +338,8 @@
                             <materialIcons:MaterialIcon Kind="Stop" Width="{StaticResource LauncherIconXl}" Height="{StaticResource LauncherIconXl}" Foreground="{DynamicResource LauncherAccentBrush}" HorizontalAlignment="Center" VerticalAlignment="Center"/>
                         </Border>
                         <StackPanel Grid.Column="1" Classes="dialog-heading-copy">
-                            <TextBlock Text="{Binding Shell.I18n.ConfirmStop}" Classes="dialog-title"/>
-                            <TextBlock Text="{Binding Shell.I18n.StopDownloadConfirm}" Classes="caption"/>
+                            <TextBlock Text="{Binding Shell.I18n.StopDownloadTitle}" Classes="dialog-title"/>
+                            <TextBlock Text="{Binding Shell.I18n.StopDownloadMessage}" Classes="caption"/>
                         </StackPanel>
                         <Button Grid.Column="2" Classes="dialog-close" Command="{Binding Dialogs.CancelCloseWhileDownloadingCommand}" ToolTip.Tip="{Binding Shell.I18n.Close}"
                                 AutomationProperties.Name="{Binding Shell.I18n.Close}">

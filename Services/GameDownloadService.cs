@@ -263,7 +263,7 @@ public sealed class GameDownloadService : IDisposable
 
             var speedLimitBytesPerSec = DownloadSpeedLimits.ToBytesPerSecond(settings.DownloadSpeedLimit);
             if (string.IsNullOrWhiteSpace(settings.GamePath))
-                return Failed(localizer.T("installPathNotConfigured"), "no-path");
+                return Failed(localizer.T("gameInstallPathNotConfigured"), "no-path");
             var gamePath = installationPath.NormalizeGamePath(settings.GamePath);
             EnsureGamePath(gamePath);
             Directory.CreateDirectory(gamePath);

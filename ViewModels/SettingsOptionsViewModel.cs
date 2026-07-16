@@ -227,8 +227,8 @@ public sealed class SettingsOptionsViewModel
         {
             option.DisplayName = option.Code switch
             {
-                UpdateChannels.Beta => localizer.T("updateChannelBeta"),
-                _ => localizer.T("updateChannelStable")
+                UpdateChannels.Beta => localizer.T("launcherUpdateChannelBeta"),
+                _ => localizer.T("launcherUpdateChannelStable")
             };
         }
 

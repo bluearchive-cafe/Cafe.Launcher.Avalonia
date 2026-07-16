@@ -6,7 +6,7 @@
              x:Class="Cafe.Launcher.Avalonia.Views.SettingsGameSection"
              x:Name="SettingsRoot"
              x:DataType="vm:MainWindowViewModel"><StackPanel Classes="settings-group">
-            <TextBlock Text="{Binding Shell.I18n.SettingsGameFiles}" Classes="group-title"/>
+            <TextBlock Text="{Binding Shell.I18n.SettingsGroupGameFiles}" Classes="group-title"/>
 
     <Grid Classes="settings-row" ColumnDefinitions="Auto,*,Auto">
         <Border Classes="settings-icon">
