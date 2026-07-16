@@ -15,6 +15,7 @@
             <x:Double x:Key="LauncherSpacingXl">20</x:Double>
             <x:Double x:Key="LauncherSpacingXxl">24</x:Double>
             <x:Double x:Key="LauncherSpacingSection">40</x:Double>
+            <Thickness x:Key="LauncherThicknessNone">0</Thickness>
             <Thickness x:Key="LauncherThicknessSm">8</Thickness>
             <Thickness x:Key="LauncherThicknessMd">12</Thickness>
             <Thickness x:Key="LauncherThicknessLg">16</Thickness>
@@ -34,6 +35,8 @@
             <x:Double x:Key="LauncherChipHeight">32</x:Double>
             <x:Double x:Key="LauncherFieldHeight">40</x:Double>
             <x:Double x:Key="LauncherDialogTitleHeight">56</x:Double>
+            <x:Double x:Key="LauncherNewsRowHeight">56</x:Double>
+            <x:Double x:Key="LauncherNewsViewportHeight">184</x:Double>
             <x:Double x:Key="LauncherConfirmDialogMaxHeight">480</x:Double>
             <x:Double x:Key="LauncherLogViewerWidth">720</x:Double>
             <x:Double x:Key="LauncherLogViewerHeight">592</x:Double>

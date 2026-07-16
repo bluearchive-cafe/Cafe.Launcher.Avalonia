@@ -269,13 +269,29 @@ public sealed class SettingsOptionsViewModel
 
     public string ResolveDiskSpaceText(string gamePath, string? requiredSize)
     {
-        var required = string.IsNullOrWhiteSpace(requiredSize)
+        var requiredDisplay = string.IsNullOrWhiteSpace(requiredSize)
             ? "--"
             : requiredSize.Replace(" ", "", System.StringComparison.Ordinal);
         var availableBytes = diskSpaceService.GetAvailableBytes(gamePath);
-        var available = availableBytes.HasValue
+        var availableDisplay = availableBytes.HasValue
             ? FileSizeFormatter.Format(availableBytes.Value)
             : "--";
-        return localizer.F("diskSpace", required, available);
+        var baseText = localizer.F("diskSpace", requiredDisplay, availableDisplay);
+
+        // Only append a conclusion when both required and available are known.
+        if (!availableBytes.HasValue
+            || string.IsNullOrWhiteSpace(requiredSize)
+            || !FileSizeFormatter.TryParseHumanReadable(requiredSize, out var requiredBytes))
+        {
+            return baseText;
+        }
+
+        if (availableBytes.Value >= requiredBytes)
+        {
+            return baseText + " " + localizer.T("diskSpaceOkSuffix");
+        }
+
+        var difference = requiredBytes - availableBytes.Value;
+        return baseText + " " + localizer.F("diskSpaceShortSuffix", FileSizeFormatter.Format(difference));
     }
 }

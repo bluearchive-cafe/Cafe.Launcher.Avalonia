@@ -69,6 +69,18 @@ public sealed class LocalizationTerminologyTests
     [InlineData("zh-Hans.json")]
     [InlineData("zh-Hant.json")]
     [InlineData("ja.json")]
+    public void LocaleFiles_CarouselPage_UsesCompactLanguageNeutralFormat(string fileName)
+    {
+        var locale = ReadLocale(fileName);
+
+        Assert.Equal("{0} / {1}", locale["carouselPage"]);
+    }
+
+    [Theory]
+    [InlineData("en.json")]
+    [InlineData("zh-Hans.json")]
+    [InlineData("zh-Hant.json")]
+    [InlineData("ja.json")]
     public void LocaleFiles_FatalConcept_UsesSameTermAcrossFilterAndLevel(string fileName)
     {
         var locale = ReadLocale(fileName);
@@ -120,6 +132,19 @@ public sealed class LocalizationTerminologyTests
         var locale = ReadLocale(fileName);
 
         Assert.Equal(expected, locale["showRemoteContentCard"]);
+    }
+
+    [Theory]
+    [InlineData("en.json", "Reload server version, announcements, and local installation state.")]
+    [InlineData("zh-Hans.json", "重新获取服务器版本和公告，并重新读取本地安装状态")]
+    [InlineData("zh-Hant.json", "重新取得伺服器版本與公告，並重新讀取本機安裝狀態")]
+    [InlineData("ja.json", "サーバーのバージョンとお知らせを再取得し、ローカルのインストール状態を再確認します。")]
+    public void LocaleFiles_RefreshTooltip_ExplainsUserVisibleScope(string fileName, string expected)
+    {
+        var locale = ReadLocale(fileName);
+
+        Assert.Equal(expected, locale["refreshTooltip"]);
+        Assert.DoesNotContain("API", locale["refreshTooltip"], StringComparison.OrdinalIgnoreCase);
     }
 
     [Theory]
