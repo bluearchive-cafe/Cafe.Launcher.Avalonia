@@ -413,7 +413,7 @@ public sealed partial class UiStyleContractTests
         var dialogAction = GetStyleSetters(document, "Button.dialog-action");
         Assert.Equal(
             "{StaticResource LauncherControlHeightDialog}",
-            dialogAction["MinHeight"]);
+            dialogAction["Height"]);
 
         var bottomAction = GetStyleSetters(document, "Button.bottom-action");
         Assert.Equal(
@@ -853,7 +853,6 @@ public sealed partial class UiStyleContractTests
     {
         var settingsOverlay = File.ReadAllText(ProjectFile("Views/MainWindowSettingsOverlay.axaml"));
         var gameSection = File.ReadAllText(ProjectFile("Views/SettingsGameSection.axaml"));
-        var styles = File.ReadAllText(ProjectFile("Views/MainWindow.Styles.axaml"));
         var mainWindowCodeBehind = File.ReadAllText(ProjectFile("Views/MainWindow.axaml.cs"));
 
         Assert.Contains(
@@ -868,20 +867,17 @@ public sealed partial class UiStyleContractTests
             "IsEnabled=\"{Binding Settings.CanSaveSettings}\"",
             settingsOverlay,
             StringComparison.Ordinal);
-        Assert.Equal(
-            2,
-            Regex.Count(
-                settingsOverlay,
-                "settings-footer-action",
-                RegexOptions.CultureInvariant));
-        Assert.Contains(
-            "Button.settings-footer-action",
-            styles,
-            StringComparison.Ordinal);
-        Assert.Contains(
-            "Height\" Value=\"{StaticResource LauncherControlHeightBottom}",
-            styles,
-            StringComparison.Ordinal);
+        var settingsDocument = XDocument.Parse(settingsOverlay);
+        var settingsFooterButtons = settingsDocument
+            .Descendants()
+            .Where(element =>
+                element.Name.LocalName == "Button"
+                && HasClass(element, "dialog-action")
+                && element.Attribute("Command")?.Value
+                    is "{Binding WindowChrome.ShowSettingsCommand}"
+                    or "{Binding Settings.SaveSettingsCommand}")
+            .ToList();
+        Assert.Equal(2, settingsFooterButtons.Count);
         Assert.DoesNotContain(
             "Kind=\"ContentSave\" Width=\"{StaticResource LauncherIconMd}\" Height=\"{StaticResource LauncherIconMd}\" Foreground=",
             settingsOverlay,
@@ -930,7 +926,10 @@ public sealed partial class UiStyleContractTests
             .Descendants()
             .Where(element =>
                 element.Name.LocalName == "Button"
-                && HasClass(element, "settings-footer-action"))
+                && HasClass(element, "dialog-action")
+                && element.Attribute("Command")?.Value
+                    is "{Binding WindowChrome.ShowSettingsCommand}"
+                    or "{Binding Settings.SaveSettingsCommand}")
             .ToList();
         Assert.Equal(2, footerButtons.Count);
         Assert.Equal(

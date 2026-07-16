@@ -272,25 +272,6 @@
         <Setter Property="FontSize" Value="15"/>
         <Setter Property="FontWeight" Value="SemiBold"/>
     </Style>
-    <Style Selector="Button.dialog-action">
-        <Setter Property="MinHeight" Value="{StaticResource LauncherControlHeightDialog}"/>
-        <Setter Property="MinWidth" Value="108"/>
-        <Setter Property="Padding" Value="16,0"/>
-        <Setter Property="FontSize" Value="14"/>
-    </Style>
-    <Style Selector="Button.settings-footer-action">
-        <Setter Property="Height" Value="{StaticResource LauncherControlHeightBottom}"/>
-        <Setter Property="MinWidth" Value="108"/>
-        <Setter Property="Padding" Value="16,0"/>
-        <Setter Property="FontSize" Value="14"/>
-        <Setter Property="FontWeight" Value="SemiBold"/>
-    </Style>
-    <Style Selector="Button.primary-action.settings-footer-action:disabled">
-        <Setter Property="Background" Value="{DynamicResource LauncherContentRowBrush}"/>
-        <Setter Property="BorderBrush" Value="{DynamicResource LauncherCardBorderBrush}"/>
-        <Setter Property="BorderThickness" Value="1"/>
-        <Setter Property="Foreground" Value="{DynamicResource LauncherTextSecondaryBrush}"/>
-    </Style>
     <Style Selector="StackPanel.confirm-actions">
         <Setter Property="Orientation" Value="Horizontal"/>
         <Setter Property="HorizontalAlignment" Value="Right"/>
@@ -328,6 +309,19 @@
     <Style Selector="Button.danger-action:pressed">
         <Setter Property="Background" Value="{DynamicResource LauncherDangerPressedBrush}"/>
         <Setter Property="Foreground" Value="{DynamicResource LauncherOnAccentBrush}"/>
+    </Style>
+    <Style Selector="Button.dialog-action">
+        <Setter Property="Height" Value="{StaticResource LauncherControlHeightDialog}"/>
+        <Setter Property="MinWidth" Value="108"/>
+        <Setter Property="Padding" Value="16,0"/>
+        <Setter Property="FontSize" Value="14"/>
+        <Setter Property="FontWeight" Value="SemiBold"/>
+    </Style>
+    <Style Selector="Button.primary-action.dialog-action:disabled">
+        <Setter Property="Background" Value="{DynamicResource LauncherContentRowBrush}"/>
+        <Setter Property="BorderBrush" Value="{DynamicResource LauncherCardBorderBrush}"/>
+        <Setter Property="BorderThickness" Value="1"/>
+        <Setter Property="Foreground" Value="{DynamicResource LauncherTextSecondaryBrush}"/>
     </Style>
     <Style Selector="Button.dialog-close">
         <Setter Property="Background" Value="{DynamicResource LauncherTransparentBrush}"/>

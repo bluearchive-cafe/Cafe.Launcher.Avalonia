@@ -305,7 +305,14 @@ public sealed class MainWindowHeadlessTests
         var footerButtons = context.Window
             .GetVisualDescendants()
             .OfType<Button>()
-            .Where(control => control.Classes.Contains("settings-footer-action"))
+            .Where(control =>
+                control.Classes.Contains("dialog-action")
+                && (ReferenceEquals(
+                        control.Command,
+                        context.ViewModel.Settings.SaveSettingsCommand)
+                    || ReferenceEquals(
+                        control.Command,
+                        context.ViewModel.WindowChrome.ShowSettingsCommand)))
             .ToArray();
         Assert.Equal(2, footerButtons.Length);
         var save = footerButtons.Single(button =>
