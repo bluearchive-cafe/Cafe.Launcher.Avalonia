@@ -22,7 +22,13 @@ public sealed class LocalDiagnostics
     /// </summary>
     private static UnifiedLogger? syncLogger;
 
-    public LocalDiagnostics() : this(new UnifiedLogger(Path.Combine(
+    /// <summary>
+    /// Creates a <see cref="LocalDiagnostics"/> writing to a test-only temporary directory.
+    /// Only for use by test projects (see <c>InternalsVisibleTo</c>) and legacy call sites.
+    /// Production code should always go through the DI container which provides the real
+    /// <see cref="UnifiedLogger"/> path via <see cref="LocalDiagnostics(UnifiedLogger)"/>.
+    /// </summary>
+    internal LocalDiagnostics() : this(new UnifiedLogger(Path.Combine(
         Path.GetTempPath(),
         "Cafe.Launcher.Avalonia.Tests",
         Environment.ProcessId.ToString(CultureInfo.InvariantCulture))))

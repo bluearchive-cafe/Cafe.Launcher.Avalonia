@@ -435,42 +435,28 @@ public sealed class RemoteContentItem : INotifyPropertyChanged
 
     public event PropertyChangedEventHandler? PropertyChanged;
 
-    public string Title { get => title; set { if (title != value) { title = value; Notify(nameof(Title)); } } }
-    public string Subtitle { get => subtitle; set { if (subtitle != value) { subtitle = value; Notify(nameof(Subtitle)); } } }
-    public string Url { get => url; set { if (url != value) { url = value; Notify(nameof(Url)); } } }
-    public string ImageUrl { get => imageUrl; set { if (imageUrl != value) { imageUrl = value; Notify(nameof(ImageUrl)); } } }
-    public string SocialIconKind { get => socialIconKind; set { if (socialIconKind != value) { socialIconKind = value; Notify(nameof(SocialIconKind)); } } }
+    public string Title { get => title; set => SetField(ref title, value); }
+    public string Subtitle { get => subtitle; set => SetField(ref subtitle, value); }
+    public string Url { get => url; set => SetField(ref url, value); }
+    public string ImageUrl { get => imageUrl; set => SetField(ref imageUrl, value); }
+    public string SocialIconKind { get => socialIconKind; set => SetField(ref socialIconKind, value); }
 
     public global::Avalonia.Media.Imaging.Bitmap? BannerBitmap
     {
         get => bannerBitmap;
-        set { if (bannerBitmap != value) { bannerBitmap = value; Notify(nameof(BannerBitmap)); } }
+        set => SetField(ref bannerBitmap, value);
     }
 
     public bool IsImageLoading
     {
         get => isImageLoading;
-        private set
-        {
-            if (isImageLoading != value)
-            {
-                isImageLoading = value;
-                Notify(nameof(IsImageLoading));
-            }
-        }
+        private set => SetField(ref isImageLoading, value);
     }
 
     public bool IsImageLoadFailed
     {
         get => isImageLoadFailed;
-        private set
-        {
-            if (isImageLoadFailed != value)
-            {
-                isImageLoadFailed = value;
-                Notify(nameof(IsImageLoadFailed));
-            }
-        }
+        private set => SetField(ref isImageLoadFailed, value);
     }
 
     public void MarkImageLoading()
@@ -493,33 +479,43 @@ public sealed class RemoteContentItem : INotifyPropertyChanged
 
     private void Notify(string propertyName) =>
         PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(propertyName));
+
+    private void SetField<T>(ref T field, T value, [System.Runtime.CompilerServices.CallerMemberName] string? propertyName = null)
+    {
+        if (EqualityComparer<T>.Default.Equals(field, value))
+            return;
+        field = value;
+        PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(propertyName));
+    }
 }
 
 public sealed class NewsCategory : INotifyPropertyChanged
 {
     private string label = "";
     private bool isActive;
+    private readonly ObservableCollection<RemoteContentItem> items = [];
 
     public event PropertyChangedEventHandler? PropertyChanged;
 
     public string Label
     {
         get => label;
-        set { if (label != value) { label = value; PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(nameof(Label))); } }
+        set => SetField(ref label, value);
     }
 
     public bool IsActive
     {
         get => isActive;
-        set
-        {
-            if (isActive != value)
-            {
-                isActive = value;
-                PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(nameof(IsActive)));
-            }
-        }
+        set => SetField(ref isActive, value);
     }
 
-    public ObservableCollection<RemoteContentItem> Items { get; set; } = [];
+    public ObservableCollection<RemoteContentItem> Items { get => items; }
+
+    private void SetField<T>(ref T field, T value, [CallerMemberName] string? propertyName = null)
+    {
+        if (EqualityComparer<T>.Default.Equals(field, value))
+            return;
+        field = value;
+        PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(propertyName));
+    }
 }
