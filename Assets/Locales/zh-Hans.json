@@ -164,6 +164,7 @@
   "logLevelInformation": "信息",
   "logLevelVerbose": "详细",
   "logLevelWarning": "警告",
+  "logLoadEarlier": "加载更早记录",
   "logNoMatchingEntries": "没有匹配的日志条目。",
   "logSearchPlaceholder": "搜索...",
   "logViewerTitle": "日志查看器",

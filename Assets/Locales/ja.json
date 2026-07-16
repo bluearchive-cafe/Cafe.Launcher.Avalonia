@@ -164,6 +164,7 @@
   "logLevelInformation": "情報",
   "logLevelVerbose": "詳細",
   "logLevelWarning": "警告",
+  "logLoadEarlier": "以前のエントリを読み込む",
   "logNoMatchingEntries": "一致するログエントリがありません。",
   "logSearchPlaceholder": "検索...",
   "logViewerTitle": "ログビューアー",

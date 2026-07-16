@@ -64,8 +64,18 @@
 
                 <!-- Log entries list -->
                 <Grid Grid.Row="2"
+                      RowDefinitions="Auto,*"
                       Classes="log-content">
-                    <ListBox ItemsSource="{Binding LogViewer.FilteredEntries}"
+                    <Button Grid.Row="0"
+                            Classes="flat-action dialog-action log-load-earlier"
+                            Margin="16,12,16,0"
+                            Command="{Binding LogViewer.LoadEarlierCommand}"
+                            IsVisible="{Binding LogViewer.HasEarlierEntries}"
+                            AutomationProperties.Name="{Binding Shell.I18n.LogLoadEarlier}">
+                        <TextBlock Text="{Binding Shell.I18n.LogLoadEarlier}"/>
+                    </Button>
+                    <ListBox Grid.Row="1"
+                             ItemsSource="{Binding LogViewer.FilteredEntries}"
                              Classes="log-entry-list"
                              IsVisible="{Binding LogViewer.HasFilteredEntries}">
                         <ListBox.ItemTemplate>
@@ -86,7 +96,8 @@
                             </DataTemplate>
                         </ListBox.ItemTemplate>
                     </ListBox>
-                    <Border Classes="log-empty-state"
+                    <Border Grid.Row="1"
+                            Classes="log-empty-state"
                             IsVisible="{Binding LogViewer.IsEmpty}">
                         <TextBlock Text="{Binding Shell.I18n.LogNoMatchingEntries}"
                                    Classes="media-placeholder-text"/>
