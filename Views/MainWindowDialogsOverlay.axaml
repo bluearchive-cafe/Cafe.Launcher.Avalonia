@@ -7,10 +7,10 @@
              x:Name="DialogsRoot"
              x:DataType="vm:MainWindowViewModel">
     <Grid>
-        <!-- Resource control panel -->
+        <!-- Chinese localization settings -->
         <Grid IsVisible="{Binding ResourcePanel.IsResourcePanelVisible}" Classes="dialog-overlay">
-            <Border MaxWidth="720"
-                    MaxHeight="592"
+            <Border Width="720"
+                    Height="592"
                     Classes="dialog overlay-dialog">
                 <Grid RowDefinitions="Auto,*,Auto" Classes="confirm-layout">
                     <Grid Classes="dialog-heading" ColumnDefinitions="Auto,*,Auto">
