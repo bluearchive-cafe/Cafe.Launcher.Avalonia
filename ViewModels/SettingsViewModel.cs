@@ -242,6 +242,8 @@ public partial class SettingsViewModel : ViewModelBase, IDisposable
         }
         catch (Exception exception)
         {
+            System.Diagnostics.Debug.WriteLine(
+                $"Settings: save failed: {exception.Message}");
             toastService.ShowError(localizer.F("settingsSaveFailed", exception.Message));
         }
         finally
@@ -307,6 +309,8 @@ public partial class SettingsViewModel : ViewModelBase, IDisposable
         }
         catch (Exception exception)
         {
+            System.Diagnostics.Debug.WriteLine(
+                $"Settings: game path update failed: {exception.Message}");
             toastService.ShowError(localizer.F("gamePathUpdateFailed", exception.Message));
         }
     }
@@ -394,6 +398,8 @@ public partial class SettingsViewModel : ViewModelBase, IDisposable
         }
         catch (Exception exception)
         {
+            System.Diagnostics.Debug.WriteLine(
+                $"Settings: appearance preview failed: {exception.Message}");
             toastService.ShowError(localizer.F("appearancePreviewFailed", exception.Message));
         }
     }
@@ -430,8 +436,10 @@ public partial class SettingsViewModel : ViewModelBase, IDisposable
             };
             unifiedLogger.SetMinimumLevel(level);
         }
-        catch
+        catch (Exception ex)
         {
+            System.Diagnostics.Debug.WriteLine(
+                $"Settings: failed to apply log level: {ex.Message}");
             // Best-effort — log level application must never disrupt settings flow.
         }
     }

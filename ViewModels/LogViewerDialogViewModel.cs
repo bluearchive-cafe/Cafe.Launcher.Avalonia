@@ -85,8 +85,10 @@ public sealed partial class LogViewerDialogViewModel : ViewModelBase
         {
             allEntries = ReadEntries();
         }
-        catch
+        catch (Exception ex)
         {
+            System.Diagnostics.Debug.WriteLine(
+                $"LogViewer: failed to read log entries synchronously: {ex.Message}");
             allEntries = [];
         }
 
@@ -121,8 +123,10 @@ public sealed partial class LogViewerDialogViewModel : ViewModelBase
         {
             return;
         }
-        catch
+        catch (Exception ex)
         {
+            System.Diagnostics.Debug.WriteLine(
+                $"LogViewer: failed to load log entries: {ex.Message}");
             allEntries = [];
         }
 
