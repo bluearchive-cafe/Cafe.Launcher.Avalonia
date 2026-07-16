@@ -35,6 +35,8 @@
 - 复用 `LauncherFieldBackgroundBrush`、`LauncherFieldBorderBrush`、`LauncherSpacingMd`、`LauncherIconSm`、`LauncherFieldHeight` 与现有圆角令牌。
 - 字段尾部操作与路径文本之间不使用分隔线，使用 `LauncherSpacingMd` 保留 `12px` 间距。
 - “更改路径”默认保持透明背景，悬停与键盘聚焦继续复用现有按钮状态和焦点环，不新增阴影或强调色。
+- `path-field` 使用语义化复合内边距令牌 `LauncherPathFieldPadding`，其值为 `16,0,4,0`：左侧保留 `16px` 以维持标签对齐，右侧缩减为 `4px`，使尾部按钮背景与字段右边框的留白接近按钮上下留白。
+- 该内边距调整只作用于字段容器，不改变 `icon-link` 的内容内边距、高度、圆角、悬停、按压或焦点状态。
 - “检测”复用现有次要操作样式，位于 `path-field` 外部，并使用 `LauncherSpacingSm` 与字段保持 `8px` 间距。
 - 不改变底部面板其他状态、元数据或刷新按钮布局。
 
@@ -42,5 +44,7 @@
 
 - XAML 契约测试确认“更改路径”是 `path-field` 后代，而“检测”和“安装游戏”不是。
 - 契约测试确认字段内部顺序为路径标签、路径文本、尾部更改按钮，并锁定原有命令、Tooltip、无障碍名称和样式类。
+- 样式契约测试确认 `Border.path-field` 通过 `LauncherPathFieldPadding` 使用复合内边距，不在 View 中直接写入新的原始间距。
 - Headless 测试在默认与最小窗口尺寸下验证路径字段、内嵌按钮和两个外部按钮不重叠、未裁切并位于窗口内。
+- Headless 测试比较内嵌按钮相对字段的右侧、顶部和底部留白，要求右侧与任一垂直留白的差值不超过 `4px`，从而捕获截图所示的边缘留白失衡回归。
 - 运行 `./dev.ps1 ui` 与 `git diff --check`。
