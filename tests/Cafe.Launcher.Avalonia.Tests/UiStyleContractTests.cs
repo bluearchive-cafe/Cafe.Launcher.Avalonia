@@ -278,7 +278,7 @@ public sealed partial class UiStyleContractTests
             "0,0,0,8",
             GetStyleSetters(document, "Border.settings-status-summary")["Padding"]);
         Assert.Equal(
-            "14",
+            "{StaticResource LauncherFontSizeLg}",
             GetStyleSetters(document, "TextBlock.group-title")["FontSize"]);
         Assert.Equal(
             "0,12,0,0",
@@ -393,6 +393,99 @@ public sealed partial class UiStyleContractTests
         Assert.Equal("42", resources["LauncherControlHeightDialog"]);
         Assert.Equal("48", resources["LauncherControlHeightBottom"]);
         Assert.Equal("58", resources["LauncherControlHeightLaunch"]);
+    }
+
+    [Fact]
+    public void TypographyTokens_ContainExactScaleWeightAndFamilyValues()
+    {
+        var appDocument = XDocument.Load(ProjectFile("App.axaml"));
+        var resources = appDocument
+            .Descendants()
+            .Where(element => element.Attributes().Any(attribute => attribute.Name.LocalName == "Key"))
+            .GroupBy(
+                element => element.Attributes().Single(attribute => attribute.Name.LocalName == "Key").Value,
+                StringComparer.Ordinal)
+            .ToDictionary(
+                group => group.Key,
+                group => group.First().Value.Trim(),
+                StringComparer.Ordinal);
+
+        Assert.Equal("11", resources["LauncherFontSizeXs"]);
+        Assert.Equal("12", resources["LauncherFontSizeSm"]);
+        Assert.Equal("13", resources["LauncherFontSizeMd"]);
+        Assert.Equal("14", resources["LauncherFontSizeLg"]);
+        Assert.Equal("15", resources["LauncherFontSizeXl"]);
+        Assert.Equal("16", resources["LauncherFontSizeXxl"]);
+        Assert.Equal("17", resources["LauncherFontSizeHeadingSm"]);
+        Assert.Equal("18", resources["LauncherFontSizeHeadingMd"]);
+        Assert.Equal("19", resources["LauncherFontSizeHeadingLg"]);
+        Assert.Equal("22", resources["LauncherFontSizeDisplay"]);
+        Assert.Equal("Normal", resources["LauncherFontWeightNormal"]);
+        Assert.Equal("SemiBold", resources["LauncherFontWeightStrong"]);
+        Assert.Equal("Consolas", resources["LauncherFontFamilyMonospace"]);
+
+        var stylesDocument = XDocument.Load(ProjectFile("Views/MainWindow.Styles.axaml"));
+        var typographySetters = stylesDocument
+            .Descendants()
+            .Where(element =>
+                element.Name.LocalName == "Setter"
+                && element.Attribute("Property")?.Value is "FontSize" or "FontWeight")
+            .ToArray();
+
+        Assert.NotEmpty(typographySetters);
+        Assert.All(
+            typographySetters,
+            setter => Assert.StartsWith(
+                "{StaticResource LauncherFont",
+                setter.Attribute("Value")?.Value,
+                StringComparison.Ordinal));
+    }
+
+    [Fact]
+    public void FontWeight_StrongIsLimitedToConfirmedEmphasisScenarios()
+    {
+        var document = XDocument.Load(ProjectFile("Views/MainWindow.Styles.axaml"));
+        var strongSelectors = document
+            .Descendants()
+            .Where(element =>
+                element.Name.LocalName == "Style"
+                && element.Elements().Any(setter =>
+                    setter.Name.LocalName == "Setter"
+                    && setter.Attribute("Property")?.Value == "FontWeight"
+                    && setter.Attribute("Value")?.Value
+                        == "{StaticResource LauncherFontWeightStrong}"))
+            .Select(element => element.Attribute("Selector")?.Value)
+            .ToHashSet(StringComparer.Ordinal);
+
+        var expectedSelectors = new HashSet<string>(StringComparer.Ordinal)
+        {
+            "TextBlock.heading",
+            "TextBlock.dialog-title",
+            "TextBlock.titlebar-brand",
+            "TextBlock.progress-title",
+            "TextBlock.panel-title",
+            "TextBlock.section-title",
+            "TextBlock.group-title",
+            "TextBlock.category-title",
+            "TextBlock.status-summary-title",
+            "ListBox.settings-navigation > ListBoxItem:selected",
+            "Button.primary-action",
+            "Button.danger-action",
+            "Button.launcher-control.start"
+        };
+
+        Assert.True(
+            strongSelectors.SetEquals(expectedSelectors),
+            $"Strong font weight selectors: {string.Join(", ", strongSelectors.Order())}");
+
+        Assert.DoesNotContain(
+            document.Descendants(),
+            element =>
+                element.Name.LocalName == "Style"
+                && element.Attribute("Selector")?.Value == "Window"
+                && element.Elements().Any(setter =>
+                    setter.Name.LocalName == "Setter"
+                    && setter.Attribute("Property")?.Value == "FontWeight"));
     }
 
     [Fact]
@@ -953,7 +1046,9 @@ public sealed partial class UiStyleContractTests
             document,
             "ListBox.settings-navigation > ListBoxItem:selected");
 
-        Assert.Equal("SemiBold", selected["FontWeight"]);
+        Assert.Equal(
+            "{StaticResource LauncherFontWeightStrong}",
+            selected["FontWeight"]);
         Assert.Equal(
             "{DynamicResource LauncherFlatPressedBrush}",
             selected["Background"]);

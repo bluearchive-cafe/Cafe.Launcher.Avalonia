@@ -75,6 +75,37 @@ public sealed class MainWindowHeadlessTests
     }
 
     [AvaloniaFact]
+    public void SettingsTypography_WhenShown_AppliesNormalAndStrongWeights()
+    {
+        using var context = CreateContext();
+        OpenSettings(context);
+
+        var textBlocks = context.Window.GetVisualDescendants().OfType<TextBlock>().ToArray();
+        Assert.Equal(
+            FontWeight.SemiBold,
+            textBlocks.Single(control =>
+                control.Classes.Contains("dialog-title")
+                && control.IsEffectivelyVisible).FontWeight);
+        Assert.Equal(
+            FontWeight.SemiBold,
+            textBlocks.Single(control => control.Classes.Contains("category-title")).FontWeight);
+        Assert.All(
+            textBlocks.Where(control => control.Classes.Contains("group-title")),
+            control => Assert.Equal(FontWeight.SemiBold, control.FontWeight));
+        Assert.Equal(
+            FontWeight.Normal,
+            textBlocks.First(control => control.Classes.Contains("caption")).FontWeight);
+
+        var navigation = GetSettingsNavigation(context.Window);
+        var selectedItem = navigation.ContainerFromIndex(navigation.SelectedIndex)
+            ?? throw new InvalidOperationException("Selected settings item was not realized.");
+        var selectedText = selectedItem.GetVisualDescendants()
+            .OfType<TextBlock>()
+            .Single(control => control.Classes.Contains("settings-navigation-item"));
+        Assert.Equal(FontWeight.SemiBold, selectedText.FontWeight);
+    }
+
+    [AvaloniaFact]
     public void SettingsWorkspace_WhenOpened_ShowsOnlyGeneralSection()
     {
         using var context = CreateContext();

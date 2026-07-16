@@ -15,8 +15,10 @@ public sealed class DialogActionButtonContractTests
             setters["Height"]);
         Assert.Equal("108", setters["MinWidth"]);
         Assert.Equal("16,0", setters["Padding"]);
-        Assert.Equal("14", setters["FontSize"]);
-        Assert.Equal("SemiBold", setters["FontWeight"]);
+        Assert.Equal(
+            "{StaticResource LauncherFontSizeLg}",
+            setters["FontSize"]);
+        Assert.DoesNotContain("FontWeight", setters);
         Assert.DoesNotContain(
             document.Descendants(),
             element =>
