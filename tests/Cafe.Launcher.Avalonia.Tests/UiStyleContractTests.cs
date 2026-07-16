@@ -1161,6 +1161,57 @@ public sealed partial class UiStyleContractTests
     }
 
     [Fact]
+    public void SetupWizard_ChoiceSteps_UseGroupedRadioButtons()
+    {
+        var document = XDocument.Load(ProjectFile("Views/SetupWizardOverlay.axaml"));
+        var choiceSteps = document
+            .Descendants()
+            .Where(element =>
+                element.Name.LocalName == "StackPanel"
+                && element.Attribute("IsVisible")?.Value
+                    is "{Binding Dialogs.SetupWizard.IsStep2}"
+                    or "{Binding Dialogs.SetupWizard.IsStep3}")
+            .ToList();
+        Assert.Equal(2, choiceSteps.Count);
+
+        var radioButtons = choiceSteps
+            .SelectMany(step => step.Descendants())
+            .Where(element => element.Name.LocalName == "RadioButton")
+            .ToList();
+        Assert.Equal(2, radioButtons.Count(button =>
+            button.Attribute("GroupName")?.Value == "SetupWizardDownloadSource"));
+        Assert.Equal(3, radioButtons.Count(button =>
+            button.Attribute("GroupName")?.Value == "SetupWizardProxy"));
+        Assert.Equal(
+            new[]
+            {
+                "{Binding Dialogs.SetupWizard.IsPatchUrlGroupCafe, Mode=TwoWay}",
+                "{Binding Dialogs.SetupWizard.IsPatchUrlGroupOfficial, Mode=TwoWay}",
+                "{Binding Dialogs.SetupWizard.IsProxyAuto, Mode=TwoWay}",
+                "{Binding Dialogs.SetupWizard.IsProxyDirect, Mode=TwoWay}",
+                "{Binding Dialogs.SetupWizard.IsProxySystem, Mode=TwoWay}"
+            },
+            radioButtons.Select(button => button.Attribute("IsChecked")?.Value));
+        Assert.Equal(
+            new[]
+            {
+                "{Binding Shell.I18n.DownloadSourceCafe}",
+                "{Binding Shell.I18n.DownloadSourceOfficial}",
+                "{Binding Shell.I18n.ProxyAuto}",
+                "{Binding Shell.I18n.ProxyDirect}",
+                "{Binding Shell.I18n.ProxySystem}"
+            },
+            radioButtons.Select(button =>
+                button.Attribute("AutomationProperties.Name")?.Value));
+        Assert.DoesNotContain(
+            choiceSteps.SelectMany(step => step.Descendants()),
+            element =>
+                HasClass(element, "wizard-choice")
+                || element.Attribute("Classes.active") is not null
+                || element.Attribute("Command") is not null);
+    }
+
+    [Fact]
     public void MainWindow_GamePathUsesPersistedSnapshotAndImmediateCommand()
     {
         var mainWindow = File.ReadAllText(ProjectFile("Views/MainWindow.axaml"));

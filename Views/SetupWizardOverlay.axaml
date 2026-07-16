@@ -142,24 +142,22 @@
                                        Classes="body"
                                        TextWrapping="Wrap"/>
                             <StackPanel Spacing="{StaticResource LauncherSpacingSm}">
-                                <Button Classes="wizard-choice"
-                                        Classes.active="{Binding Dialogs.SetupWizard.IsPatchUrlGroupCafe}"
-                                        Command="{Binding Dialogs.SetupWizard.SelectCafeDownloadSourceCommand}"
+                                <RadioButton GroupName="SetupWizardDownloadSource"
+                                        IsChecked="{Binding Dialogs.SetupWizard.IsPatchUrlGroupCafe, Mode=TwoWay}"
                                         AutomationProperties.Name="{Binding Shell.I18n.DownloadSourceCafe}">
                                     <StackPanel>
                                         <TextBlock Text="{Binding Shell.I18n.DownloadSourceCafe}" Classes="section-title"/>
                                         <TextBlock Text="{Binding Shell.I18n.SetupWizardDownloadSourceCafeDescription}" Classes="caption"/>
                                     </StackPanel>
-                                </Button>
-                                <Button Classes="wizard-choice"
-                                        Classes.active="{Binding Dialogs.SetupWizard.IsPatchUrlGroupOfficial}"
-                                        Command="{Binding Dialogs.SetupWizard.SelectOfficialDownloadSourceCommand}"
+                                </RadioButton>
+                                <RadioButton GroupName="SetupWizardDownloadSource"
+                                        IsChecked="{Binding Dialogs.SetupWizard.IsPatchUrlGroupOfficial, Mode=TwoWay}"
                                         AutomationProperties.Name="{Binding Shell.I18n.DownloadSourceOfficial}">
                                     <StackPanel>
                                         <TextBlock Text="{Binding Shell.I18n.DownloadSourceOfficial}" Classes="section-title"/>
                                         <TextBlock Text="{Binding Shell.I18n.SetupWizardDownloadSourceOfficialDescription}" Classes="caption"/>
                                     </StackPanel>
-                                </Button>
+                                </RadioButton>
                             </StackPanel>
                         </StackPanel>
 
@@ -171,33 +169,30 @@
                                        Classes="body"
                                        TextWrapping="Wrap"/>
                             <StackPanel Spacing="{StaticResource LauncherSpacingSm}">
-                                <Button Classes="wizard-choice"
-                                        Classes.active="{Binding Dialogs.SetupWizard.IsProxyAuto}"
-                                        Command="{Binding Dialogs.SetupWizard.SelectProxyAutoCommand}"
+                                <RadioButton GroupName="SetupWizardProxy"
+                                        IsChecked="{Binding Dialogs.SetupWizard.IsProxyAuto, Mode=TwoWay}"
                                         AutomationProperties.Name="{Binding Shell.I18n.ProxyAuto}">
                                     <StackPanel>
                                         <TextBlock Text="{Binding Shell.I18n.ProxyAuto}" Classes="section-title"/>
                                         <TextBlock Text="{Binding Shell.I18n.SetupWizardProxyAutoDescription}" Classes="caption"/>
                                     </StackPanel>
-                                </Button>
-                                <Button Classes="wizard-choice"
-                                        Classes.active="{Binding Dialogs.SetupWizard.IsProxyDirect}"
-                                        Command="{Binding Dialogs.SetupWizard.SelectProxyDirectCommand}"
+                                </RadioButton>
+                                <RadioButton GroupName="SetupWizardProxy"
+                                        IsChecked="{Binding Dialogs.SetupWizard.IsProxyDirect, Mode=TwoWay}"
                                         AutomationProperties.Name="{Binding Shell.I18n.ProxyDirect}">
                                     <StackPanel>
                                         <TextBlock Text="{Binding Shell.I18n.ProxyDirect}" Classes="section-title"/>
                                         <TextBlock Text="{Binding Shell.I18n.SetupWizardProxyDirectDescription}" Classes="caption"/>
                                     </StackPanel>
-                                </Button>
-                                <Button Classes="wizard-choice"
-                                        Classes.active="{Binding Dialogs.SetupWizard.IsProxySystem}"
-                                        Command="{Binding Dialogs.SetupWizard.SelectProxySystemCommand}"
+                                </RadioButton>
+                                <RadioButton GroupName="SetupWizardProxy"
+                                        IsChecked="{Binding Dialogs.SetupWizard.IsProxySystem, Mode=TwoWay}"
                                         AutomationProperties.Name="{Binding Shell.I18n.ProxySystem}">
                                     <StackPanel>
                                         <TextBlock Text="{Binding Shell.I18n.ProxySystem}" Classes="section-title"/>
                                         <TextBlock Text="{Binding Shell.I18n.SetupWizardProxySystemDescription}" Classes="caption"/>
                                     </StackPanel>
-                                </Button>
+                                </RadioButton>
                             </StackPanel>
                         </StackPanel>
 
