@@ -1164,24 +1164,41 @@ public sealed partial class UiStyleContractTests
     public void SetupWizard_ChoiceSteps_UseGroupedRadioButtons()
     {
         var document = XDocument.Load(ProjectFile("Views/SetupWizardOverlay.axaml"));
-        var choiceSteps = document
+        var downloadSourceStep = document
             .Descendants()
-            .Where(element =>
+            .Single(element =>
                 element.Name.LocalName == "StackPanel"
                 && element.Attribute("IsVisible")?.Value
-                    is "{Binding Dialogs.SetupWizard.IsStep2}"
-                    or "{Binding Dialogs.SetupWizard.IsStep3}")
-            .ToList();
-        Assert.Equal(2, choiceSteps.Count);
-
-        var radioButtons = choiceSteps
-            .SelectMany(step => step.Descendants())
+                    == "{Binding Dialogs.SetupWizard.IsStep2}");
+        var proxyStep = document
+            .Descendants()
+            .Single(element =>
+                element.Name.LocalName == "StackPanel"
+                && element.Attribute("IsVisible")?.Value
+                    == "{Binding Dialogs.SetupWizard.IsStep3}");
+        var downloadSourceRadioButtons = downloadSourceStep
+            .Descendants()
             .Where(element => element.Name.LocalName == "RadioButton")
             .ToList();
-        Assert.Equal(2, radioButtons.Count(button =>
-            button.Attribute("GroupName")?.Value == "SetupWizardDownloadSource"));
-        Assert.Equal(3, radioButtons.Count(button =>
-            button.Attribute("GroupName")?.Value == "SetupWizardProxy"));
+        Assert.Equal(2, downloadSourceRadioButtons.Count);
+        Assert.All(
+            downloadSourceRadioButtons,
+            button => Assert.Equal(
+                "SetupWizardDownloadSource",
+                button.Attribute("GroupName")?.Value));
+
+        var proxyRadioButtons = proxyStep
+            .Descendants()
+            .Where(element => element.Name.LocalName == "RadioButton")
+            .ToList();
+        Assert.Equal(3, proxyRadioButtons.Count);
+        Assert.All(
+            proxyRadioButtons,
+            button => Assert.Equal(
+                "SetupWizardProxy",
+                button.Attribute("GroupName")?.Value));
+
+        var radioButtons = downloadSourceRadioButtons.Concat(proxyRadioButtons);
         Assert.Equal(
             new[]
             {
@@ -1204,7 +1221,7 @@ public sealed partial class UiStyleContractTests
             radioButtons.Select(button =>
                 button.Attribute("AutomationProperties.Name")?.Value));
         Assert.DoesNotContain(
-            choiceSteps.SelectMany(step => step.Descendants()),
+            downloadSourceStep.Descendants().Concat(proxyStep.Descendants()),
             element =>
                 HasClass(element, "wizard-choice")
                 || element.Attribute("Classes.active") is not null

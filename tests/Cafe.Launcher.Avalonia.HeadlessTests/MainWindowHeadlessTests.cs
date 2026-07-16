@@ -735,6 +735,57 @@ public sealed class MainWindowHeadlessTests
         Assert.Equal(1, context.ViewModel.Dialogs.SetupWizard.Step);
     }
 
+    [AvaloniaFact]
+    public void SetupWizard_RadioChoices_KeepGroupsIndependent()
+    {
+        using var context = CreateContext();
+        context.Window.Show();
+        context.ViewModel.Dialogs.ShowSetupWizard();
+        context.ViewModel.Dialogs.SetupWizard.Step = 2;
+        Dispatcher.UIThread.RunJobs();
+
+        var cafe = context.Window.GetVisualDescendants().OfType<RadioButton>().Single(control =>
+            AutomationProperties.GetName(control) == context.ViewModel.Shell.I18n.DownloadSourceCafe);
+        var official = context.Window.GetVisualDescendants().OfType<RadioButton>().Single(control =>
+            AutomationProperties.GetName(control) == context.ViewModel.Shell.I18n.DownloadSourceOfficial);
+
+        official.IsChecked = true;
+        Dispatcher.UIThread.RunJobs();
+
+        Assert.True(context.ViewModel.Dialogs.SetupWizard.IsPatchUrlGroupOfficial);
+        Assert.False(context.ViewModel.Dialogs.SetupWizard.IsPatchUrlGroupCafe);
+        Assert.False(cafe.IsChecked);
+        Assert.True(official.IsChecked);
+
+        context.ViewModel.Dialogs.SetupWizard.NextCommand.Execute(null);
+        Dispatcher.UIThread.RunJobs();
+
+        var auto = context.Window.GetVisualDescendants().OfType<RadioButton>().Single(control =>
+            AutomationProperties.GetName(control) == context.ViewModel.Shell.I18n.ProxyAuto);
+        var direct = context.Window.GetVisualDescendants().OfType<RadioButton>().Single(control =>
+            AutomationProperties.GetName(control) == context.ViewModel.Shell.I18n.ProxyDirect);
+        var system = context.Window.GetVisualDescendants().OfType<RadioButton>().Single(control =>
+            AutomationProperties.GetName(control) == context.ViewModel.Shell.I18n.ProxySystem);
+
+        direct.IsChecked = true;
+        Dispatcher.UIThread.RunJobs();
+
+        Assert.True(context.ViewModel.Dialogs.SetupWizard.IsProxyDirect);
+        Assert.False(context.ViewModel.Dialogs.SetupWizard.IsProxySystem);
+        Assert.True(context.ViewModel.Dialogs.SetupWizard.IsPatchUrlGroupOfficial);
+        Assert.False(auto.IsChecked);
+        Assert.True(direct.IsChecked);
+        Assert.False(system.IsChecked);
+
+        system.IsChecked = true;
+        Dispatcher.UIThread.RunJobs();
+
+        Assert.True(context.ViewModel.Dialogs.SetupWizard.IsProxySystem);
+        Assert.False(context.ViewModel.Dialogs.SetupWizard.IsProxyAuto);
+        Assert.False(context.ViewModel.Dialogs.SetupWizard.IsProxyDirect);
+        Assert.True(system.IsChecked);
+    }
+
     [AvaloniaTheory]
     [InlineData(LauncherLanguages.English)]
     [InlineData(LauncherLanguages.SimplifiedChinese)]
