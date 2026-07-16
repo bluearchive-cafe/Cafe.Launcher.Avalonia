@@ -470,7 +470,7 @@
                                 <TextBlock Text="{Binding Shell.I18n.CrashRecoveryResetSettings}" VerticalAlignment="Center"/>
                             </StackPanel>
                         </Button>
-                        <Button Classes="primary-action dialog-action" Command="{Binding Dialogs.ContinueAfterCrashCommand}">
+                        <Button Classes="primary-action dialog-action" Height="{StaticResource LauncherControlHeightDialog}" Command="{Binding Dialogs.ContinueAfterCrashCommand}">
                             <StackPanel Classes="button-content">
                                 <materialIcons:MaterialIcon Kind="Check" Width="{StaticResource LauncherIconMd}" Height="{StaticResource LauncherIconMd}" Foreground="{DynamicResource LauncherOnAccentBrush}"/>
                                 <TextBlock Text="{Binding Shell.I18n.CrashRecoveryContinue}" VerticalAlignment="Center" Foreground="{DynamicResource LauncherOnAccentBrush}"/>
