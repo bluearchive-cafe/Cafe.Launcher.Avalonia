@@ -19,6 +19,7 @@
             <Thickness x:Key="LauncherThicknessSm">8</Thickness>
             <Thickness x:Key="LauncherThicknessMd">12</Thickness>
             <Thickness x:Key="LauncherThicknessLg">16</Thickness>
+            <Thickness x:Key="LauncherPathFieldPadding">16,0,4,0</Thickness>
             <CornerRadius x:Key="LauncherRadiusSm">4</CornerRadius>
             <CornerRadius x:Key="LauncherRadiusMd">6</CornerRadius>
             <CornerRadius x:Key="LauncherRadiusLg">8</CornerRadius>

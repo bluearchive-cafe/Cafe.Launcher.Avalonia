@@ -782,6 +782,14 @@ public sealed partial class UiStyleContractTests
                 StringComparer.Ordinal);
 
         Assert.Equal("40", resources["LauncherSpacingSection"]);
+        Assert.Equal("16,0,4,0", resources["LauncherPathFieldPadding"]);
+        var pathFieldPadding = document
+            .Descendants()
+            .Single(element =>
+                element.Attributes().Any(attribute =>
+                    attribute.Name.LocalName == "Key"
+                    && attribute.Value == "LauncherPathFieldPadding"));
+        Assert.Equal("Thickness", pathFieldPadding.Name.LocalName);
         Assert.Equal("8", resources["LauncherThicknessSm"]);
         Assert.Equal("12", resources["LauncherThicknessMd"]);
         Assert.Equal("16", resources["LauncherThicknessLg"]);
@@ -1000,9 +1008,13 @@ public sealed partial class UiStyleContractTests
             sharedButtonFocus["BorderBrush"]);
         Assert.Equal("2", sharedButtonFocus["BorderThickness"]);
 
+        var pathField = GetStyleSetters(document, "Border.path-field");
         Assert.Equal(
             "{StaticResource LauncherFieldHeight}",
-            GetStyleSetters(document, "Border.path-field")["Height"]);
+            pathField["Height"]);
+        Assert.Equal(
+            "{StaticResource LauncherPathFieldPadding}",
+            pathField["Padding"]);
         Assert.Equal(
             "{StaticResource LauncherDialogTitleHeight}",
             GetStyleSetters(document, "Grid.dialog-header")["Height"]);

@@ -434,7 +434,7 @@
         <Setter Property="BorderThickness" Value="1"/>
         <Setter Property="CornerRadius" Value="{StaticResource LauncherRadiusSm}"/>
         <Setter Property="Height" Value="{StaticResource LauncherFieldHeight}"/>
-        <Setter Property="Padding" Value="16,0"/>
+        <Setter Property="Padding" Value="{StaticResource LauncherPathFieldPadding}"/>
     </Style>
     <!-- Operation panels share 40px horizontal alignment and common padding. -->
     <Style Selector="Border.bottom-panel">

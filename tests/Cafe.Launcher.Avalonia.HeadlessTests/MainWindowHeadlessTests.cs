@@ -612,17 +612,26 @@ public sealed class MainWindowHeadlessTests
         var changePathTopLeft = changePathButton.TranslatePoint(default, pathField);
         var pathTextTopLeft = pathText.TranslatePoint(default, pathField);
 
+        Assert.NotNull(changePathTopLeft);
+        Assert.NotNull(pathTextTopLeft);
+
+        var changePathRightInset = pathField.Bounds.Width
+            - (changePathTopLeft.Value.X + changePathButton.Bounds.Width);
+        var changePathTopInset = changePathTopLeft.Value.Y;
+        var changePathBottomInset = pathField.Bounds.Height
+            - (changePathTopLeft.Value.Y + changePathButton.Bounds.Height);
+
         Assert.Equal(2, externalActions.Length);
         Assert.True(pathField.Bounds.Width > 0);
         Assert.True(pathField.Bounds.Right <= externalActions[0].Bounds.Left);
         Assert.True(externalActions[0].Bounds.Right <= externalActions[1].Bounds.Left);
-        Assert.NotNull(changePathTopLeft);
-        Assert.NotNull(pathTextTopLeft);
         Assert.True(pathTextTopLeft.Value.X + pathText.Bounds.Width <= changePathTopLeft.Value.X);
         Assert.True(changePathTopLeft.Value.X >= 0);
         Assert.True(changePathTopLeft.Value.X + changePathButton.Bounds.Width <= pathField.Bounds.Width);
         Assert.True(changePathTopLeft.Value.Y >= 0);
         Assert.True(changePathTopLeft.Value.Y + changePathButton.Bounds.Height <= pathField.Bounds.Height);
+        Assert.InRange(Math.Abs(changePathRightInset - changePathTopInset), 0, 4);
+        Assert.InRange(Math.Abs(changePathRightInset - changePathBottomInset), 0, 4);
         Assert.Contains("secondary-operation", externalActions[0].Classes);
         Assert.Contains("primary-operation", externalActions[1].Classes);
         AssertControlInsideWindow(pathField, context.Window);
