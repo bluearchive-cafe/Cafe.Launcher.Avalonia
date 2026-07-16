@@ -8,8 +8,10 @@
              x:Name="SettingsRoot"
              x:DataType="vm:MainWindowViewModel">
     <Grid IsVisible="{Binding WindowChrome.IsSettingsVisible}" Classes="settings-overlay">
-        <Border Width="960"
-                Height="620"
+        <Border MaxWidth="960"
+                MaxHeight="620"
+                HorizontalAlignment="Stretch"
+                VerticalAlignment="Stretch"
                 Classes="dialog overlay-dialog">
             <Grid RowDefinitions="Auto,*,Auto">
                 <Grid ColumnDefinitions="*,Auto" Classes="dialog-header">
@@ -50,7 +52,7 @@
                       <Border Classes="settings-content-padding">
                         <Grid Classes="settings-content" RowDefinitions="Auto,*">
                         <Border Classes="status-summary settings-status-summary">
-                            <Grid ColumnDefinitions="Auto,*,Auto" RowDefinitions="Auto,Auto">
+                            <Grid Classes="status-details" ColumnDefinitions="Auto,*,Auto,Auto">
                                 <Border Classes="settings-icon">
                                     <materialIcons:MaterialIcon Kind="{Binding Shell.StatusIconKind}"
                                                                 Width="{StaticResource LauncherIconMd}"
@@ -59,32 +61,24 @@
                                                                 HorizontalAlignment="Center"
                                                                 VerticalAlignment="Center"/>
                                 </Border>
-                                <StackPanel Grid.Column="1" VerticalAlignment="Center" Margin="8,0,0,0">
+                                <StackPanel Grid.Column="1"
+                                            Classes="status-title-inline"
+                                            Orientation="Horizontal"
+                                            Spacing="{StaticResource LauncherSpacingXs}"
+                                            VerticalAlignment="Center"
+                                            Margin="8,0,0,0">
                                     <TextBlock Text="{Binding Shell.CurrentViewTitle}" Classes="status-summary-title"/>
-                                    <TextBlock Text="{Binding Shell.VersionText}" Classes="caption"/>
+                                    <TextBlock Text="{Binding Shell.VersionText}" Classes="caption status-summary-version"/>
                                 </StackPanel>
-                                <Grid Grid.Column="2"
-                                      Classes="status-details"
-                                      ColumnDefinitions="Auto,Auto"
-                                      RowDefinitions="Auto"
-                                      HorizontalAlignment="Right"
-                                      VerticalAlignment="Center">
-                                    <Border Classes="status-detail">
-                                        <TextBlock Text="{Binding Shell.NetworkStatusValueText}"
-                                                   Classes="caption"
-                                                   VerticalAlignment="Center"/>
-                                    </Border>
-                                    <Border Grid.Column="1" Classes="status-detail">
-                                        <TextBlock Text="{Binding Shell.DiskSpaceText}"
-                                                   Classes="caption"
-                                                   VerticalAlignment="Center"/>
-                                    </Border>
-                                </Grid>
-                                <Border Grid.Row="1" Grid.ColumnSpan="3" Classes="status-detail status-note">
-                                    <TextBlock Text="{Binding Shell.OperationNote}"
+                                <Border Grid.Column="2" Classes="status-detail">
+                                    <TextBlock Text="{Binding Shell.NetworkStatusValueText}"
                                                Classes="caption"
-                                               VerticalAlignment="Center"
-                                               TextWrapping="Wrap"/>
+                                               VerticalAlignment="Center"/>
+                                </Border>
+                                <Border Grid.Column="3" Classes="status-detail">
+                                    <TextBlock Text="{Binding Shell.DiskSpaceText}"
+                                               Classes="caption"
+                                               VerticalAlignment="Center"/>
                                 </Border>
                             </Grid>
                         </Border>
@@ -121,7 +115,8 @@
                                 VerticalAlignment="Center">
                         <Button Classes="flat-action dialog-action"
                                 Command="{Binding WindowChrome.ShowSettingsCommand}"
-                                IsEnabled="{Binding Settings.IsSaving, Converter={x:Static BoolConverters.Not}}">
+                                IsEnabled="{Binding Settings.IsSaving, Converter={x:Static BoolConverters.Not}}"
+                                AutomationProperties.Name="{Binding Shell.I18n.Cancel}">
                             <StackPanel Classes="button-content" HorizontalAlignment="Center">
                                 <materialIcons:MaterialIcon Kind="CloseCircleOutline"
                                     Width="{StaticResource LauncherIconSm}" Height="{StaticResource LauncherIconSm}"/>
@@ -130,7 +125,8 @@
                         </Button>
                         <Button Classes="primary-action dialog-action"
                                 Command="{Binding Settings.SaveSettingsCommand}"
-                                IsEnabled="{Binding Settings.CanSaveSettings}">
+                                IsEnabled="{Binding Settings.CanSaveSettings}"
+                                AutomationProperties.Name="{Binding Shell.I18n.Save}">
                             <StackPanel Classes="button-content" HorizontalAlignment="Center">
                                 <materialIcons:MaterialIcon Kind="ContentSave"
                                     Width="{StaticResource LauncherIconSm}" Height="{StaticResource LauncherIconSm}"/>

@@ -11,8 +11,9 @@
                 <Grid Classes="dialog-heading" ColumnDefinitions="Auto,*,Auto">
                     <Border Classes="dialog-icon" Classes.danger="{Binding IsDangerIcon, ElementName=Root}" VerticalAlignment="Center">
                         <materialIcons:MaterialIcon Kind="{Binding IconKind, ElementName=Root}"
+                                                    Classes="confirm-heading-icon"
+                                                    Classes.danger="{Binding IsDangerIcon, ElementName=Root}"
                                                     Width="{StaticResource LauncherIconXl}" Height="{StaticResource LauncherIconXl}"
-                                                    Foreground="{DynamicResource LauncherAccentBrush}"
                                                     HorizontalAlignment="Center" VerticalAlignment="Center"/>
                     </Border>
                     <StackPanel Grid.Column="1" Classes="dialog-heading-copy">

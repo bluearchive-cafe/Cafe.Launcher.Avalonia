@@ -23,6 +23,7 @@
                              Description="{Binding Shell.I18n.LanguageDescription}">
             <controls:SettingRow.Action>
                 <ComboBox Classes="setting-control"
+                          AutomationProperties.Name="{Binding Shell.I18n.Language}"
                           ItemsSource="{Binding Settings.Options.Language}"
                           SelectedValue="{Binding Settings.Editor.Current.Language, Mode=TwoWay}"
                           SelectedValueBinding="{Binding Code}"
@@ -35,6 +36,7 @@
                              Description="{Binding Shell.I18n.CloseBehaviorDescription}">
             <controls:SettingRow.Action>
                 <ComboBox Classes="setting-control"
+                          AutomationProperties.Name="{Binding Shell.I18n.CloseBehavior}"
                           ItemsSource="{Binding Settings.Options.CloseBehavior}"
                           SelectedValue="{Binding Settings.Editor.Current.CloseBehavior, Mode=TwoWay}"
                           SelectedValueBinding="{Binding Code}"
@@ -47,6 +49,7 @@
                              Description="{Binding Shell.I18n.MotionModeDescription}">
             <controls:SettingRow.Action>
                 <ComboBox Classes="setting-control"
+                          AutomationProperties.Name="{Binding Shell.I18n.MotionMode}"
                           ItemsSource="{Binding Settings.Options.MotionMode}"
                           SelectedValue="{Binding Settings.Editor.Current.MotionMode, Mode=TwoWay}"
                           SelectedValueBinding="{Binding Code}"

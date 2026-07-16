@@ -43,40 +43,48 @@
         <TextBlock Text="{Binding Shell.I18n.SettingsGroupAboutActions}" Classes="group-title"/>
         <WrapPanel>
             <Button Classes="flat-action wrap-action"
-                    Command="{Binding Settings.CheckForUpdatesCommand}">
+                    Command="{Binding Settings.CheckForUpdatesCommand}"
+                    AutomationProperties.Name="{Binding Shell.I18n.CheckUpdates}">
                 <StackPanel Classes="button-content">
                     <materialIcons:MaterialIcon Kind="Update" Width="{StaticResource LauncherIconSm}" Height="{StaticResource LauncherIconSm}"/>
                     <TextBlock Text="{Binding Shell.I18n.CheckUpdates}"/>
                 </StackPanel>
             </Button>
-            <Button Classes="flat-action wrap-action" Command="{Binding WindowChrome.OpenOfficialSiteCommand}">
+            <Button Classes="flat-action wrap-action"
+                    Command="{Binding WindowChrome.OpenOfficialSiteCommand}"
+                    AutomationProperties.Name="{Binding Shell.I18n.OfficialSite}">
                 <StackPanel Classes="button-content">
                     <materialIcons:MaterialIcon Kind="Web" Width="{StaticResource LauncherIconSm}" Height="{StaticResource LauncherIconSm}"/>
                     <TextBlock Text="{Binding Shell.I18n.OfficialSite}"/>
                 </StackPanel>
             </Button>
-            <Button Classes="flat-action wrap-action" Command="{Binding WindowChrome.OpenGitHubRepositoryCommand}">
+            <Button Classes="flat-action wrap-action"
+                    Command="{Binding WindowChrome.OpenGitHubRepositoryCommand}"
+                    AutomationProperties.Name="{Binding Shell.I18n.GitHubRepository}">
                 <StackPanel Classes="button-content">
                     <materialIcons:MaterialIcon Kind="Github" Width="{StaticResource LauncherIconSm}" Height="{StaticResource LauncherIconSm}"/>
                     <TextBlock Text="{Binding Shell.I18n.GitHubRepository}"/>
                 </StackPanel>
             </Button>
             <Button Classes="flat-action wrap-action"
-                    Command="{Binding LogViewer.OpenCommand}">
+                    Command="{Binding LogViewer.OpenCommand}"
+                    AutomationProperties.Name="{Binding Shell.I18n.ViewLog}">
                 <StackPanel Classes="button-content">
                     <materialIcons:MaterialIcon Kind="TextBoxOutline" Width="{StaticResource LauncherIconSm}" Height="{StaticResource LauncherIconSm}"/>
                     <TextBlock Text="{Binding Shell.I18n.ViewLog}"/>
                 </StackPanel>
             </Button>
             <Button Classes="flat-action wrap-action"
-                    Command="{Binding LogViewer.ExportCommand}">
+                    Command="{Binding LogViewer.ExportCommand}"
+                    AutomationProperties.Name="{Binding Shell.I18n.ExportLogs}">
                 <StackPanel Classes="button-content">
                     <materialIcons:MaterialIcon Kind="Export" Width="{StaticResource LauncherIconSm}" Height="{StaticResource LauncherIconSm}"/>
                     <TextBlock Text="{Binding Shell.I18n.ExportLogs}"/>
                 </StackPanel>
             </Button>
             <Button Classes="flat-action wrap-action"
-                    Command="{Binding WindowChrome.OpenDataDirectoryCommand}">
+                    Command="{Binding WindowChrome.OpenDataDirectoryCommand}"
+                    AutomationProperties.Name="{Binding Shell.I18n.OpenDataDirectory}">
                 <StackPanel Classes="button-content">
                     <materialIcons:MaterialIcon Kind="FolderOpen" Width="{StaticResource LauncherIconSm}" Height="{StaticResource LauncherIconSm}"/>
                     <TextBlock Text="{Binding Shell.I18n.OpenDataDirectory}"/>

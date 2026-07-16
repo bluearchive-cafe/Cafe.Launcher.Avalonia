@@ -232,6 +232,50 @@ public sealed class MainWindowHeadlessTests
     }
 
     [AvaloniaFact]
+    public void SettingsOverlay_AtMinimumWindowSize_KeepsDialogAndFooterVisible()
+    {
+        using var context = CreateContext();
+        context.Window.Width = 1024;
+        context.Window.Height = 640;
+        OpenSettings(context);
+
+        var settingsOverlay = context.Window
+            .GetVisualDescendants()
+            .OfType<MainWindowSettingsOverlay>()
+            .Single();
+        var dialog = settingsOverlay
+            .GetVisualDescendants()
+            .OfType<Border>()
+            .Single(control => control.Classes.Contains("overlay-dialog"));
+        var footer = dialog
+            .GetVisualDescendants()
+            .OfType<Border>()
+            .Single(control => control.Classes.Contains("dialog-footer"));
+
+        Assert.True(dialog.Bounds.Width <= context.Window.ClientSize.Width - 48);
+        Assert.True(dialog.Bounds.Height <= context.Window.ClientSize.Height - 48);
+        Assert.True(dialog.Bounds.Height > 0);
+        Assert.True(footer.IsEffectivelyVisible);
+        Assert.True(footer.Bounds.Bottom <= dialog.Bounds.Height);
+    }
+
+    [AvaloniaFact]
+    public void SettingsControls_UseMinimumAccessibleInteractionHeight()
+    {
+        using var context = CreateContext();
+        OpenSettings(context);
+
+        var settingControls = context.Window
+            .GetVisualDescendants()
+            .OfType<ComboBox>()
+            .Where(control => control.Classes.Contains("setting-control"))
+            .ToArray();
+
+        Assert.NotEmpty(settingControls);
+        Assert.All(settingControls, control => Assert.True(control.Bounds.Height >= 36));
+    }
+
+    [AvaloniaFact]
     public void SettingsNavigation_WhenFocused_UsesDownAndUpToChangeSelection()
     {
         using var context = CreateContext();
@@ -370,6 +414,27 @@ public sealed class MainWindowHeadlessTests
         Assert.Contains(
             context.Window.GetVisualDescendants().OfType<TextBlock>(),
             text => text.Text == "repair confirmation");
+    }
+
+    [AvaloniaFact]
+    public void RepairConfirm_WithLongMessage_DoesNotExceedDefaultMaximumWidth()
+    {
+        using var context = CreateContext();
+        context.Window.Show();
+        context.ViewModel.Dialogs.ShowRepairConfirm(
+            "下载源已切换。Cafe 下载源与官方下载源使用不同的文件清单，因此必须根据当前下载源修复已安装的游戏，才能得到可靠的启动校验结果。现在开始修复吗？");
+        Dispatcher.UIThread.RunJobs();
+
+        var dialog = context.Window
+            .GetVisualDescendants()
+            .OfType<global::Cafe.Launcher.Avalonia.Controls.ConfirmDialog>()
+            .Single(control => control.IsOpen);
+        var panel = dialog
+            .GetVisualDescendants()
+            .OfType<Border>()
+            .Single(control => control.Classes.Contains("confirm-panel"));
+
+        Assert.True(panel.Bounds.Width <= 540);
     }
 
     [AvaloniaFact]
@@ -522,8 +587,8 @@ public sealed class MainWindowHeadlessTests
         Assert.Equal(expectedCode, ((SettingOption)selectedItem.DataContext!).Code);
         Assert.Equal(new Thickness(3, 0, 0, 0), selectedItem.BorderThickness);
         Assert.Equal(Color.Parse("#FF2E7DF6"), Assert.IsType<SolidColorBrush>(selectedItem.BorderBrush).Color);
-        Assert.Equal(Color.Parse("#242E7DF6"), Assert.IsType<SolidColorBrush>(selectedItem.Background).Color);
-        Assert.Equal(Color.Parse("#242E7DF6"), Assert.IsType<SolidColorBrush>(presenter.Background).Color);
+        Assert.Equal(Color.Parse("#FFDCEFFF"), Assert.IsType<SolidColorBrush>(selectedItem.Background).Color);
+        Assert.Equal(Color.Parse("#FFDCEFFF"), Assert.IsType<SolidColorBrush>(presenter.Background).Color);
     }
 
     private static void AssertVisibleSettingsSection(MainWindow window, Type expectedType)

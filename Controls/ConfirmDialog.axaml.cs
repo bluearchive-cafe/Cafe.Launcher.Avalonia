@@ -47,7 +47,7 @@ public partial class ConfirmDialog : UserControl
         AvaloniaProperty.Register<ConfirmDialog, bool>(nameof(IsDangerConfirm));
 
     public static readonly StyledProperty<double> DialogMaxWidthProperty =
-        AvaloniaProperty.Register<ConfirmDialog, double>(nameof(DialogMaxWidth), double.NaN);
+        AvaloniaProperty.Register<ConfirmDialog, double>(nameof(DialogMaxWidth), 540);
 
     public static readonly StyledProperty<string?> CloseToolTipProperty =
         AvaloniaProperty.Register<ConfirmDialog, string?>(nameof(CloseToolTip));

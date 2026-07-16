@@ -129,7 +129,7 @@ public sealed partial class UiStyleContractTests
     }
 
     [Fact]
-    public void SettingsOverlay_UsesFixedTwoColumnCategoryWorkspace()
+    public void SettingsOverlay_UsesResponsiveTwoColumnCategoryWorkspace()
     {
         var document = XDocument.Load(ProjectFile("Views/MainWindowSettingsOverlay.axaml"));
         var dialog = document
@@ -137,8 +137,10 @@ public sealed partial class UiStyleContractTests
             .Single(element =>
                 element.Name.LocalName == "Border"
                 && HasClass(element, "overlay-dialog"));
-        Assert.Equal("960", dialog.Attribute("Width")?.Value);
-        Assert.Equal("620", dialog.Attribute("Height")?.Value);
+        Assert.Null(dialog.Attribute("Width"));
+        Assert.Null(dialog.Attribute("Height"));
+        Assert.Equal("960", dialog.Attribute("MaxWidth")?.Value);
+        Assert.Equal("620", dialog.Attribute("MaxHeight")?.Value);
         var dialogLayout = dialog.Elements().Single(element => element.Name.LocalName == "Grid");
         Assert.Equal("Auto,*,Auto", dialogLayout.Attribute("RowDefinitions")?.Value);
 
@@ -255,7 +257,7 @@ public sealed partial class UiStyleContractTests
             "{DynamicResource LauncherAccentBrush}",
             GetStyleSetters(document, "ListBox.settings-navigation > ListBoxItem:selected")["BorderBrush"]);
         Assert.Equal(
-            "{DynamicResource LauncherAccentSoftBrush}",
+            "{DynamicResource LauncherFlatPressedBrush}",
             GetStyleSetters(document, "ListBox.settings-navigation > ListBoxItem:selected:not(:focus)")["Background"]);
         Assert.Equal(
             "{DynamicResource LauncherTextPrimaryBrush}",
@@ -315,6 +317,20 @@ public sealed partial class UiStyleContractTests
                 .Elements()
                 .First(element => element.Name.LocalName == "TextBlock")
                 .Attribute("Text")?.Value);
+    }
+
+    [Fact]
+    public void AppearancePalette_ReservesWidthForFiveInteractiveSwatches()
+    {
+        var document = XDocument.Load(ProjectFile("Views/SettingsAppearanceSection.axaml"));
+        var palette = document
+            .Descendants()
+            .Single(element =>
+                element.Name.LocalName == "ItemsControl"
+                && element.Attribute("ItemsSource")?.Value
+                    == "{Binding Settings.Appearance.ThemeColorPaletteItems}");
+
+        Assert.Equal("212", palette.Attribute("Width")?.Value);
     }
 
     [Fact]
@@ -566,7 +582,7 @@ public sealed partial class UiStyleContractTests
                     StringComparer.Ordinal);
 
             Assert.Equal(
-                "{DynamicResource LauncherAccentSoftBrush}",
+                "{DynamicResource LauncherFlatPressedBrush}",
                 setters["Background"]);
             Assert.Equal(
                 "{DynamicResource LauncherTextPrimaryBrush}",
@@ -898,6 +914,218 @@ public sealed partial class UiStyleContractTests
     }
 
     [Fact]
+    public void SettingsOverlay_UsesSingleRowStatusSummary()
+    {
+        var document = XDocument.Load(ProjectFile("Views/MainWindowSettingsOverlay.axaml"));
+        var summaryGrid = document
+            .Descendants()
+            .Single(element =>
+                element.Name.LocalName == "Grid"
+                && element.Parent?.Name.LocalName == "Border"
+                && HasClass(element.Parent, "settings-status-summary"));
+
+        Assert.Equal("Auto,*,Auto,Auto", summaryGrid.Attribute("ColumnDefinitions")?.Value);
+        Assert.Null(summaryGrid.Attribute("RowDefinitions"));
+        Assert.DoesNotContain(
+            document.Descendants(),
+            element => element.Attribute("Text")?.Value == "{Binding Shell.OperationNote}");
+
+        var titleRow = summaryGrid
+            .Descendants()
+            .Single(element =>
+                element.Name.LocalName == "StackPanel"
+                && HasClass(element, "status-title-inline"));
+        Assert.Equal("Horizontal", titleRow.Attribute("Orientation")?.Value);
+        Assert.Equal(
+            ["{Binding Shell.CurrentViewTitle}", "{Binding Shell.VersionText}"],
+            titleRow
+                .Elements()
+                .Where(element => element.Name.LocalName == "TextBlock")
+                .Select(element => element.Attribute("Text")?.Value ?? "")
+                .ToArray());
+    }
+
+    [Fact]
+    public void SettingsNavigation_SelectedItemUsesSemiboldText()
+    {
+        var document = XDocument.Load(ProjectFile("Views/MainWindow.Styles.axaml"));
+        var selected = GetStyleSetters(
+            document,
+            "ListBox.settings-navigation > ListBoxItem:selected");
+
+        Assert.Equal("SemiBold", selected["FontWeight"]);
+        Assert.Equal(
+            "{DynamicResource LauncherFlatPressedBrush}",
+            selected["Background"]);
+    }
+
+    [Fact]
+    public void StatusSummary_TitleAndVersionUseMatchingTypography()
+    {
+        var document = XDocument.Load(ProjectFile("Views/MainWindow.Styles.axaml"));
+        var title = GetStyleSetters(document, "TextBlock.status-summary-title");
+        var version = GetStyleSetters(document, "TextBlock.status-summary-version");
+
+        Assert.Equal(title["FontSize"], version["FontSize"]);
+        Assert.Equal("Center", version["VerticalAlignment"]);
+    }
+
+    [Fact]
+    public void DialogClose_FocusUsesSubtleAccentTreatment()
+    {
+        var document = XDocument.Load(ProjectFile("Views/MainWindow.Styles.axaml"));
+        var focus = GetStyleSetters(document, "Button.dialog-close:focus-visible");
+
+        Assert.Equal("{DynamicResource LauncherAccentSoftBrush}", focus["Background"]);
+        Assert.Equal("{DynamicResource LauncherAccentBrush}", focus["BorderBrush"]);
+        Assert.Equal("1", focus["BorderThickness"]);
+    }
+
+    [Fact]
+    public void ConfirmDialogs_DangerousActionsUseDangerHeadingIcons()
+    {
+        var control = XDocument.Load(ProjectFile("Controls/ConfirmDialog.axaml"));
+        var icon = control
+            .Descendants()
+            .Single(element =>
+                element.Name.LocalName == "MaterialIcon"
+                && HasClass(element, "confirm-heading-icon"));
+        Assert.Equal(
+            "{Binding IsDangerIcon, ElementName=Root}",
+            icon.Attribute("Classes.danger")?.Value);
+
+        var styles = XDocument.Load(ProjectFile("Views/MainWindow.Styles.axaml"));
+        Assert.Equal(
+            "{DynamicResource LauncherDangerBrush}",
+            GetStyleSetters(
+                styles,
+                "materialIcons|MaterialIcon.confirm-heading-icon.danger")["Foreground"]);
+
+        var dialogs = XDocument.Load(ProjectFile("Views/MainWindowDialogsOverlay.axaml"));
+        var dangerousConfirmDialogs = dialogs
+            .Descendants()
+            .Where(element =>
+                element.Name.LocalName == "ConfirmDialog"
+                && element.Attribute("IsDangerConfirm")?.Value == "True")
+            .ToList();
+        Assert.NotEmpty(dangerousConfirmDialogs);
+        Assert.All(
+            dangerousConfirmDialogs,
+            dialog => Assert.Equal("True", dialog.Attribute("IsDangerIcon")?.Value));
+    }
+
+    [Fact]
+    public void LogViewer_FilterControlsShareHeightAndSingleBottomGap()
+    {
+        var document = XDocument.Load(ProjectFile("Views/MainWindowLogViewerOverlay.axaml"));
+        var filterButtons = document
+            .Descendants()
+            .Where(element =>
+                element.Name.LocalName == "Button"
+                && HasClass(element, "log-filter"))
+            .ToList();
+        Assert.Equal(4, filterButtons.Count);
+
+        var search = document
+            .Descendants()
+            .Single(element =>
+                element.Name.LocalName == "TextBox"
+                && HasClass(element, "log-search"));
+        Assert.Equal(
+            "{StaticResource LauncherControlHeightSetting}",
+            search.Attribute("Height")?.Value);
+
+        var styles = XDocument.Load(ProjectFile("Views/MainWindow.Styles.axaml"));
+        Assert.Equal(
+            "{StaticResource LauncherControlHeightSetting}",
+            GetStyleSetters(styles, "Button.news-tab.log-filter")["Height"]);
+        Assert.Equal(
+            "16,12,16,0",
+            GetStyleSetters(styles, "StackPanel.log-filter-bar")["Margin"]);
+    }
+
+    [Fact]
+    public void ResourcePanel_StatusStripHasVisibleSurfaceAndBorder()
+    {
+        var dialogs = XDocument.Load(ProjectFile("Views/MainWindowDialogsOverlay.axaml"));
+        var statusStrip = dialogs
+            .Descendants()
+            .Single(element =>
+                element.Name.LocalName == "Border"
+                && HasClass(element, "resource-panel-status"));
+        Assert.True(HasClass(statusStrip, "info-strip"));
+
+        var styles = XDocument.Load(ProjectFile("Views/MainWindow.Styles.axaml"));
+        var statusStyle = GetStyleSetters(styles, "Border.info-strip.resource-panel-status");
+        Assert.Equal(
+            "{DynamicResource LauncherContentRowBrush}",
+            statusStyle["Background"]);
+        Assert.Equal(
+            "{DynamicResource LauncherAccentBorderBrush}",
+            statusStyle["BorderBrush"]);
+        Assert.Equal("1", statusStyle["BorderThickness"]);
+    }
+
+    [Fact]
+    public void SettingsGroups_UseAvailableContentWidth()
+    {
+        var document = XDocument.Load(ProjectFile("Views/MainWindow.Styles.axaml"));
+        var settingsGroup = GetStyleSetters(document, "StackPanel.settings-group");
+
+        Assert.DoesNotContain("MaxWidth", settingsGroup.Keys);
+        Assert.DoesNotContain("HorizontalAlignment", settingsGroup.Keys);
+    }
+
+    [Fact]
+    public void SettingsSections_InteractiveControlsHaveLocalizedAutomationNames()
+    {
+        var sectionPaths = new[]
+        {
+            "Views/SettingsGeneralSection.axaml",
+            "Views/SettingsGameSection.axaml",
+            "Views/SettingsDownloadNetworkSection.axaml",
+            "Views/SettingsAppearanceSection.axaml",
+            "Views/SettingsNotificationsContentSection.axaml",
+            "Views/SettingsAdvancedSection.axaml",
+            "Views/SettingsAboutSection.axaml"
+        };
+        var interactiveControlNames = new HashSet<string>(StringComparer.Ordinal)
+        {
+            "Button",
+            "ColorPicker",
+            "ComboBox",
+            "TextBox",
+            "ToggleSwitch"
+        };
+
+        foreach (var sectionPath in sectionPaths)
+        {
+            var document = XDocument.Load(ProjectFile(sectionPath));
+            var controls = document
+                .Descendants()
+                .Where(element => interactiveControlNames.Contains(element.Name.LocalName))
+                .ToList();
+
+            Assert.NotEmpty(controls);
+            Assert.All(
+                controls,
+                control =>
+                {
+                    var automationName = control
+                        .Attributes()
+                        .SingleOrDefault(attribute =>
+                            attribute.Name.LocalName == "AutomationProperties.Name")
+                        ?.Value;
+
+                    Assert.False(
+                        string.IsNullOrWhiteSpace(automationName),
+                        $"{sectionPath}: {control.Name.LocalName} is missing AutomationProperties.Name.");
+                    Assert.Contains("Shell.I18n.", automationName, StringComparison.Ordinal);
+                });
+        }
+    }
+
+    [Fact]
     public void SettingsAboutActionsAndVersionChips_UsePurposeBasedOrder()
     {
         var text = File.ReadAllText(ProjectFile("Views/SettingsAboutSection.axaml"));
@@ -1070,26 +1298,18 @@ public sealed partial class UiStyleContractTests
                 element.Name.LocalName == "Border"
                 && HasClass(element, "status-detail"))
             .ToList();
-        var statusNote = statusPanel
-            .Descendants()
-            .Single(element =>
-                element.Name.LocalName == "Border"
-                && HasClass(element, "status-note"));
-
         Assert.Contains("Shell.CurrentViewTitle", markup, StringComparison.Ordinal);
         Assert.Contains("Shell.VersionText", markup, StringComparison.Ordinal);
         Assert.Contains("Shell.NetworkStatusValueText", markup, StringComparison.Ordinal);
         Assert.Contains("Shell.DiskSpaceText", markup, StringComparison.Ordinal);
-        Assert.Contains("Shell.OperationNote", markup, StringComparison.Ordinal);
+        Assert.DoesNotContain("Shell.OperationNote", markup, StringComparison.Ordinal);
         Assert.Contains("Kind=\"{Binding Shell.StatusIconKind}\"", markup, StringComparison.Ordinal);
         Assert.DoesNotContain("Shell.ExecutableText", markup, StringComparison.Ordinal);
         Assert.DoesNotContain("Shell.StatusText", markup, StringComparison.Ordinal);
         Assert.DoesNotContain("Shell.ProductName", markup, StringComparison.Ordinal);
-        Assert.Equal("Auto,Auto", detailsGrid.Attribute("ColumnDefinitions")?.Value);
-        Assert.Equal("Auto", detailsGrid.Attribute("RowDefinitions")?.Value);
-        Assert.Equal(3, detailCards.Count);
-        Assert.Contains("Grid.Row=\"1\"", statusNote.ToString(SaveOptions.DisableFormatting), StringComparison.Ordinal);
-        Assert.Contains("Grid.ColumnSpan=\"3\"", statusNote.ToString(SaveOptions.DisableFormatting), StringComparison.Ordinal);
+        Assert.Equal("Auto,*,Auto,Auto", detailsGrid.Attribute("ColumnDefinitions")?.Value);
+        Assert.Null(detailsGrid.Attribute("RowDefinitions"));
+        Assert.Equal(2, detailCards.Count);
         Assert.DoesNotContain("MaxWidth=\"160\"", markup, StringComparison.Ordinal);
     }
 

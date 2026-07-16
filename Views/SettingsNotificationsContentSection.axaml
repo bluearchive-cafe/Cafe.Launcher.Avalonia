@@ -13,7 +13,9 @@
                              Title="{Binding Shell.I18n.NotificationSettings}"
                              Description="{Binding Shell.I18n.ToastNotificationsDescription}">
             <controls:SettingRow.Action>
-                <ToggleSwitch IsChecked="{Binding Settings.Editor.Current.ToastNotificationsEnabled, Mode=TwoWay}"
+                <ToggleSwitch Classes="setting-toggle"
+                              AutomationProperties.Name="{Binding Shell.I18n.NotificationSettings}"
+                              IsChecked="{Binding Settings.Editor.Current.ToastNotificationsEnabled, Mode=TwoWay}"
                               OnContent="{Binding Shell.I18n.ToggleOn}"
                               OffContent="{Binding Shell.I18n.ToggleOff}"
                               VerticalAlignment="Center"/>
@@ -24,7 +26,9 @@
                              Title="{Binding Shell.I18n.RemoteContentCard}"
                              Description="{Binding Shell.I18n.RemoteContentCardDescription}">
             <controls:SettingRow.Action>
-                <ToggleSwitch IsChecked="{Binding Settings.Editor.Current.ShowRemoteContentCard, Mode=TwoWay}"
+                <ToggleSwitch Classes="setting-toggle"
+                              AutomationProperties.Name="{Binding Shell.I18n.RemoteContentCard}"
+                              IsChecked="{Binding Settings.Editor.Current.ShowRemoteContentCard, Mode=TwoWay}"
                               OnContent="{Binding Shell.I18n.ToggleOn}"
                               OffContent="{Binding Shell.I18n.ToggleOff}"
                               VerticalAlignment="Center"/>
