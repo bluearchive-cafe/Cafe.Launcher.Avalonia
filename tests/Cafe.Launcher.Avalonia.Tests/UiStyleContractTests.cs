@@ -1034,6 +1034,32 @@ public sealed partial class UiStyleContractTests
     }
 
     [Fact]
+    public void SetupWizardNavigation_TitleWrapsAndSummaryUsesCharacterEllipsis()
+    {
+        var document = XDocument.Load(ProjectFile("Views/SetupWizardOverlay.axaml"));
+        var navigation = document
+            .Descendants()
+            .Single(element =>
+                element.Name.LocalName == "ItemsControl"
+                && element.Attribute("ItemsSource")?.Value == "{Binding Dialogs.SetupWizard.Steps}");
+        var template = navigation.Descendants().Single(element => element.Name.LocalName == "DataTemplate");
+        var title = template
+            .Descendants()
+            .Single(element =>
+                element.Name.LocalName == "TextBlock"
+                && element.Attribute("Text")?.Value == "{Binding Title}");
+        var summary = template
+            .Descendants()
+            .Single(element =>
+                element.Name.LocalName == "TextBlock"
+                && element.Attribute("Text")?.Value == "{Binding Summary}");
+
+        Assert.True(HasClass(title, "section-title"));
+        Assert.Equal("Wrap", title.Attribute("TextWrapping")?.Value);
+        Assert.Equal("CharacterEllipsis", summary.Attribute("TextTrimming")?.Value);
+    }
+
+    [Fact]
     public void MainWindow_GamePathUsesPersistedSnapshotAndImmediateCommand()
     {
         var mainWindow = File.ReadAllText(ProjectFile("Views/MainWindow.axaml"));

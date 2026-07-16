@@ -34,7 +34,7 @@
                                                 <TextBlock Text="{Binding DisplayNumber}" HorizontalAlignment="Center"/>
                                             </Border>
                                             <StackPanel Grid.Column="1" Spacing="{StaticResource LauncherSpacingXs}">
-                                                <TextBlock Text="{Binding Title}" Classes="section-title"/>
+                                                <TextBlock Text="{Binding Title}" Classes="section-title" TextWrapping="Wrap"/>
                                                 <TextBlock Text="{Binding Summary}" Classes="caption" TextTrimming="CharacterEllipsis"/>
                                             </StackPanel>
                                         </Grid>
