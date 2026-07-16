@@ -4,6 +4,7 @@ using System.Threading.Tasks;
 using Avalonia;
 using Avalonia.Threading;
 using Cafe.Launcher.Avalonia.Helpers;
+using Cafe.Launcher.Avalonia.Features.GameOperations;
 using Cafe.Launcher.Avalonia.Models;
 using Cafe.Launcher.Avalonia.Services;
 using Cafe.Launcher.Avalonia.Services.Diagnostics;
@@ -14,7 +15,9 @@ namespace Cafe.Launcher.Avalonia.ViewModels;
 
 public partial class GameOperationsViewModel : ViewModelBase
 {
-    private readonly IGameOperationsBackend backend;
+    private readonly IGameLaunchWorkflow launchWorkflow;
+    private readonly IGameInstallationWorkflow installationWorkflow;
+    private readonly IGameUninstallWorkflow uninstallWorkflow;
     private readonly Func<TimeSpan, Task> delayAsync;
     private readonly LocalizationService localizer;
     private readonly ToastService toastService;
@@ -81,10 +84,9 @@ public partial class GameOperationsViewModel : ViewModelBase
         ShellViewModel shell,
         DialogsViewModel dialogs)
         : this(
-            new GameOperationsBackend(
-                gameLaunchService,
-                gameDownloadService,
-                gameUninstallService),
+            new GameLaunchWorkflow(gameLaunchService),
+            new GameInstallationWorkflow(gameDownloadService),
+            new GameUninstallWorkflow(gameUninstallService),
             localizer,
             toastService,
             diagnostics,
@@ -95,7 +97,9 @@ public partial class GameOperationsViewModel : ViewModelBase
     }
 
     internal GameOperationsViewModel(
-        IGameOperationsBackend backend,
+        IGameLaunchWorkflow launchWorkflow,
+        IGameInstallationWorkflow installationWorkflow,
+        IGameUninstallWorkflow uninstallWorkflow,
         LocalizationService localizer,
         ToastService toastService,
         LocalDiagnostics diagnostics,
@@ -103,7 +107,9 @@ public partial class GameOperationsViewModel : ViewModelBase
         DialogsViewModel dialogs,
         Func<TimeSpan, Task> delayAsync)
     {
-        this.backend = backend;
+        this.launchWorkflow = launchWorkflow;
+        this.installationWorkflow = installationWorkflow;
+        this.uninstallWorkflow = uninstallWorkflow;
         this.delayAsync = delayAsync;
         this.localizer = localizer;
         this.toastService = toastService;
@@ -156,7 +162,7 @@ public partial class GameOperationsViewModel : ViewModelBase
 
         try
         {
-            var launchResult = await backend.StartGameAsync(snapshot!);
+            var launchResult = await launchWorkflow.StartGameAsync(snapshot!);
             shell.SetLaunchCheckResult(launchResult.Validation.Message);
             shell.OperationNote = launchResult.Message;
 
@@ -220,7 +226,7 @@ public partial class GameOperationsViewModel : ViewModelBase
                 return;
             }
 
-            var result = await backend.InstallOrUpdateAsync(snapshot, ApplyProgress);
+            var result = await installationWorkflow.InstallOrUpdateAsync(snapshot, ApplyProgress);
             shell.OperationNote = result.Message;
             ShowOperationResult(result);
             await RequestRefresh(GameOperationsRefreshMode.SkipPersistedResume);
@@ -283,7 +289,7 @@ public partial class GameOperationsViewModel : ViewModelBase
 
         try
         {
-            var result = await backend.RepairAsync(snapshot, ApplyProgress);
+            var result = await installationWorkflow.RepairAsync(snapshot, ApplyProgress);
             shell.OperationNote = result.Message;
             ShowOperationResult(result);
             await RequestRefresh(GameOperationsRefreshMode.Normal);
@@ -307,7 +313,7 @@ public partial class GameOperationsViewModel : ViewModelBase
     [RelayCommand]
     private void StopOperation()
     {
-        if (backend.IsDownloadRunning)
+        if (installationWorkflow.IsRunning)
         {
             dialogs.ShowStopConfirm();
             return;
@@ -318,7 +324,7 @@ public partial class GameOperationsViewModel : ViewModelBase
 
     public void PerformStop()
     {
-        backend.Stop(clearPersistedState: true);
+        installationWorkflow.Stop(clearPersistedState: true);
         shell.OperationNote = localizer.T("stopRequested");
         try { toastService.ShowWarning(localizer.T("stopRequested")); }
         catch (Exception ex) { System.Diagnostics.Debug.WriteLine($"Failed to show stop toast: {ex.Message}"); }
@@ -332,9 +338,9 @@ public partial class GameOperationsViewModel : ViewModelBase
             return;
         }
 
-        if (backend.IsPaused)
+        if (installationWorkflow.IsPaused)
         {
-            backend.Resume();
+            installationWorkflow.Resume();
             IsPaused = false;
             PauseResumeText = localizer.T("pause");
             PauseResumeIcon = "Pause";
@@ -343,7 +349,7 @@ public partial class GameOperationsViewModel : ViewModelBase
         }
         else
         {
-            backend.Pause();
+            installationWorkflow.Pause();
             IsPaused = true;
             PauseResumeText = localizer.T("resume");
             PauseResumeIcon = "Play";
@@ -371,7 +377,7 @@ public partial class GameOperationsViewModel : ViewModelBase
             return;
         }
 
-        var validation = await backend.ValidateUninstallAsync(snapshot.LocalGame.GamePath);
+        var validation = await uninstallWorkflow.ValidateUninstallAsync(snapshot.LocalGame.GamePath);
         if (!validation.Success)
         {
             shell.OperationNote = validation.Message;
@@ -407,7 +413,7 @@ public partial class GameOperationsViewModel : ViewModelBase
 
         try
         {
-            var result = await backend.UninstallAsync(snapshot, ApplyProgress);
+            var result = await uninstallWorkflow.UninstallAsync(snapshot, ApplyProgress);
             shell.OperationNote = result.Message;
             await RequestRefresh(GameOperationsRefreshMode.Normal);
         }
@@ -433,7 +439,10 @@ public partial class GameOperationsViewModel : ViewModelBase
         try
         {
             shell.IsBusy = true;
-            var result = await backend.ResumePersistedAsync(snapshot, ApplyProgress, cancellationToken);
+            var result = await installationWorkflow.ResumePersistedAsync(
+                snapshot,
+                ApplyProgress,
+                cancellationToken);
             if (result is null)
             {
                 return;
@@ -460,10 +469,10 @@ public partial class GameOperationsViewModel : ViewModelBase
 
     public void StopDownload(bool clearPersistedState)
     {
-        backend.Stop(clearPersistedState);
+        installationWorkflow.Stop(clearPersistedState);
     }
 
-    public bool IsDownloadRunning => backend.IsDownloadRunning;
+    public bool IsDownloadRunning => installationWorkflow.IsRunning;
 
     private void ShowOperationResult(GameOperationResult result)
     {
