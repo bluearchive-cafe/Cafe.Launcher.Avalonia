@@ -32,6 +32,13 @@ jobs:
         with:
           dotnet-version: 10.0.x
 
+      - name: Install NSIS
+        shell: bash
+        run: |
+          sudo apt-get update
+          sudo apt-get install --yes nsis
+          makensis -VERSION
+
       - name: Restore tests
         run: dotnet restore tests/Cafe.Launcher.Avalonia.Tests/Cafe.Launcher.Avalonia.Tests.csproj -r win-x64
 
@@ -44,16 +51,13 @@ jobs:
       - name: Build (Release, win-x64)
         run: dotnet build $env:Project_Path -c Release -r win-x64 --no-restore
 
-      - name: Publish (Release, win-x64)
-        run: dotnet publish $env:Project_Path -c Release -r win-x64 -o publish --no-restore
-
-      - name: Create ZIP archive
+      - name: Build distribution artifacts
         run: |
-          $tag = "${{ github.ref_name }}"
-          $zipName = "Cafe.Launcher.Avalonia_$tag.zip"
-          Compress-Archive -Path publish/* -DestinationPath $zipName
-          Write-Host "Created $zipName"
-          "zip_name=$zipName" >> $env:GITHUB_ENV
+          $result = .\scripts\Build-Distribution.ps1 -Tag "${{ github.ref_name }}"
+          $standaloneName = Split-Path -Leaf $result.StandalonePath
+          $setupName = Split-Path -Leaf $result.SetupPath
+          "standalone_name=$standaloneName" >> $env:GITHUB_ENV
+          "setup_name=$setupName" >> $env:GITHUB_ENV
 
       - name: Prepare changelog
         run: |
@@ -81,7 +85,9 @@ jobs:
         with:
           name: ${{ github.ref_name }}
           body_path: changelog.md
-          files: ${{ env.zip_name }}
+          files: |
+            artifacts/distribution/${{ env.standalone_name }}
+            artifacts/distribution/${{ env.setup_name }}
           prerelease: ${{ contains(github.ref_name, '-') }}
           fail_on_unmatched_files: true
 
@@ -94,6 +100,8 @@ jobs:
           tag_name: ${{ github.ref_name }}
           name: ${{ github.ref_name }}
           body_path: changelog.md
-          files: ${{ env.zip_name }}
+          files: |
+            artifacts/distribution/${{ env.standalone_name }}
+            artifacts/distribution/${{ env.setup_name }}
           prerelease: ${{ contains(github.ref_name, '-') }}
           fail_on_unmatched_files: true
