@@ -36,6 +36,7 @@ public sealed class LauncherCoreService : ILauncherCoreService
     public async Task<LauncherStatusSnapshot> LoadAsync(CancellationToken cancellationToken = default)
     {
         var settings = await settingsService.ReadAsync(cancellationToken).ConfigureAwait(false);
+        await diagnostics.DebugAsync("LauncherCore", "LoadAsync started", CancellationToken.None).ConfigureAwait(false);
         var gameConfigTask = ReadRemoteAsync(
             "game-config",
             () => apiClient.GetGameConfigAsync(settings.ProxyMode, cancellationToken),
@@ -81,7 +82,16 @@ public sealed class LauncherCoreService : ILauncherCoreService
 
         var localGame = await localGameTask.ConfigureAwait(false);
         var gameConfig = await gameConfigTask.ConfigureAwait(false);
+        var baseConfig = await baseConfigTask.ConfigureAwait(false);
+        var cdnConfig = await cdnConfigTask.ConfigureAwait(false);
+        var operationsResource = await operationsResourceTask.ConfigureAwait(false);
+        var socialMediaResource = await socialMediaResourceTask.ConfigureAwait(false);
+        var installationConfig = await installationConfigTask.ConfigureAwait(false);
         var runtimeState = ResolveRuntimeState(localGame, gameConfig);
+        await diagnostics.DebugAsync(
+            "LauncherCore",
+            $"API outcomes: gameConfig={gameConfig is not null}, baseConfig={baseConfig is not null}, cdnConfig={cdnConfig is not null}, operations={operationsResource is not null}, socialMedia={socialMediaResource is not null}, installation={installationConfig is not null}", CancellationToken.None).ConfigureAwait(false);
+        await diagnostics.DebugAsync("LauncherCore", $"RuntimeState resolved: {runtimeState}", CancellationToken.None).ConfigureAwait(false);
 
         return new LauncherStatusSnapshot
         {
@@ -90,11 +100,11 @@ public sealed class LauncherCoreService : ILauncherCoreService
             Remote = new LauncherRemoteState
             {
                 GameConfig = gameConfig,
-                BaseConfig = await baseConfigTask,
-                CdnConfig = await cdnConfigTask,
-                OperationsResource = await operationsResourceTask,
-                SocialMediaResource = await socialMediaResourceTask,
-                InstallationConfig = await installationConfigTask
+                BaseConfig = baseConfig,
+                CdnConfig = cdnConfig,
+                OperationsResource = operationsResource,
+                SocialMediaResource = socialMediaResource,
+                InstallationConfig = installationConfig
             },
             RuntimeState = runtimeState,
             CheckedAt = System.DateTimeOffset.Now

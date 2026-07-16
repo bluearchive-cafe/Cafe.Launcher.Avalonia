@@ -228,18 +228,58 @@ public sealed partial class LauncherSettings : ObservableObject
 
     [ObservableProperty]
     [property: JsonPropertyName("logLevel")]
-    private string logLevel = LogLevels.Information;
+    private string logLevel =
+#if DEBUG
+        LogLevels.Verbose
+#else
+        LogLevels.Information
+#endif
+    ;
 
     /// <summary>
-    /// Deep-clones this settings object via JSON round-trip.
+    /// Deep-clones this settings object.
     /// Shared by <c>LauncherSettingsService.NormalizeSettings</c> and <see cref="Services.SettingsEditor"/>.
     /// </summary>
     public LauncherSettings DeepClone()
     {
-        var json = System.Text.Json.JsonSerializer.Serialize(this, CloneJsonOptions);
-        return System.Text.Json.JsonSerializer.Deserialize<LauncherSettings>(json, CloneJsonOptions)
-            ?? new LauncherSettings();
+        return new LauncherSettings(this);
     }
+
+    /// <summary>
+    /// Copy constructor for deep cloning. Copies all settings properties,
+    /// including a shallow copy of <see cref="ThemeColorPalette"/> (strings are immutable).
+    /// </summary>
+    public LauncherSettings(LauncherSettings other)
+    {
+        GamePath = other.GamePath;
+        LaunchCheckMode = other.LaunchCheckMode;
+        ProxyMode = other.ProxyMode;
+        CloseBehavior = other.CloseBehavior;
+        Language = other.Language;
+        ThemeMode = other.ThemeMode;
+        MotionMode = other.MotionMode;
+        ThemeColorMode = other.ThemeColorMode;
+        CustomThemeColor = other.CustomThemeColor;
+        ThemeColorPalette = [.. other.ThemeColorPalette];
+        SelectedThemeColorPaletteIndex = other.SelectedThemeColorPaletteIndex;
+        DownloadSpeedLimit = other.DownloadSpeedLimit;
+        ToastNotificationsEnabled = other.ToastNotificationsEnabled;
+        ShowRemoteContentCard = other.ShowRemoteContentCard;
+        PatchUrlGroup = other.PatchUrlGroup;
+        CustomBackgroundPath = other.CustomBackgroundPath;
+        BackgroundSource = other.BackgroundSource;
+        BackgroundFit = other.BackgroundFit;
+        BackgroundFillColor = other.BackgroundFillColor;
+        ResourcePanelUid = other.ResourcePanelUid;
+        ResourcePanelUidSource = other.ResourcePanelUidSource;
+        UpdateChannel = other.UpdateChannel;
+        LogLevel = other.LogLevel;
+    }
+
+    /// <summary>
+    /// Default constructor. Creates settings with defaults.
+    /// </summary>
+    public LauncherSettings() { }
 
     /// <summary>
     /// Creates default settings with pre-release builds defaulting to the beta update channel.
@@ -256,8 +296,6 @@ public sealed partial class LauncherSettings : ObservableObject
 
         return settings;
     }
-
-    private static readonly System.Text.Json.JsonSerializerOptions CloneJsonOptions = JsonDefaults.Strict;
 }
 
 /// <summary>
@@ -435,42 +473,28 @@ public sealed class RemoteContentItem : INotifyPropertyChanged
 
     public event PropertyChangedEventHandler? PropertyChanged;
 
-    public string Title { get => title; set { if (title != value) { title = value; Notify(nameof(Title)); } } }
-    public string Subtitle { get => subtitle; set { if (subtitle != value) { subtitle = value; Notify(nameof(Subtitle)); } } }
-    public string Url { get => url; set { if (url != value) { url = value; Notify(nameof(Url)); } } }
-    public string ImageUrl { get => imageUrl; set { if (imageUrl != value) { imageUrl = value; Notify(nameof(ImageUrl)); } } }
-    public string SocialIconKind { get => socialIconKind; set { if (socialIconKind != value) { socialIconKind = value; Notify(nameof(SocialIconKind)); } } }
+    public string Title { get => title; set => SetField(ref title, value); }
+    public string Subtitle { get => subtitle; set => SetField(ref subtitle, value); }
+    public string Url { get => url; set => SetField(ref url, value); }
+    public string ImageUrl { get => imageUrl; set => SetField(ref imageUrl, value); }
+    public string SocialIconKind { get => socialIconKind; set => SetField(ref socialIconKind, value); }
 
     public global::Avalonia.Media.Imaging.Bitmap? BannerBitmap
     {
         get => bannerBitmap;
-        set { if (bannerBitmap != value) { bannerBitmap = value; Notify(nameof(BannerBitmap)); } }
+        set => SetField(ref bannerBitmap, value);
     }
 
     public bool IsImageLoading
     {
         get => isImageLoading;
-        private set
-        {
-            if (isImageLoading != value)
-            {
-                isImageLoading = value;
-                Notify(nameof(IsImageLoading));
-            }
-        }
+        private set => SetField(ref isImageLoading, value);
     }
 
     public bool IsImageLoadFailed
     {
         get => isImageLoadFailed;
-        private set
-        {
-            if (isImageLoadFailed != value)
-            {
-                isImageLoadFailed = value;
-                Notify(nameof(IsImageLoadFailed));
-            }
-        }
+        private set => SetField(ref isImageLoadFailed, value);
     }
 
     public void MarkImageLoading()
@@ -493,33 +517,43 @@ public sealed class RemoteContentItem : INotifyPropertyChanged
 
     private void Notify(string propertyName) =>
         PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(propertyName));
+
+    private void SetField<T>(ref T field, T value, [System.Runtime.CompilerServices.CallerMemberName] string? propertyName = null)
+    {
+        if (EqualityComparer<T>.Default.Equals(field, value))
+            return;
+        field = value;
+        PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(propertyName));
+    }
 }
 
 public sealed class NewsCategory : INotifyPropertyChanged
 {
     private string label = "";
     private bool isActive;
+    private readonly ObservableCollection<RemoteContentItem> items = [];
 
     public event PropertyChangedEventHandler? PropertyChanged;
 
     public string Label
     {
         get => label;
-        set { if (label != value) { label = value; PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(nameof(Label))); } }
+        set => SetField(ref label, value);
     }
 
     public bool IsActive
     {
         get => isActive;
-        set
-        {
-            if (isActive != value)
-            {
-                isActive = value;
-                PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(nameof(IsActive)));
-            }
-        }
+        set => SetField(ref isActive, value);
     }
 
-    public ObservableCollection<RemoteContentItem> Items { get; set; } = [];
+    public ObservableCollection<RemoteContentItem> Items { get => items; }
+
+    private void SetField<T>(ref T field, T value, [CallerMemberName] string? propertyName = null)
+    {
+        if (EqualityComparer<T>.Default.Equals(field, value))
+            return;
+        field = value;
+        PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(propertyName));
+    }
 }

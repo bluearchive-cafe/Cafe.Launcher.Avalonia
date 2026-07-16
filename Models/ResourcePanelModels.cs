@@ -90,6 +90,13 @@ public sealed partial class ResourcePanelItem : ObservableObject
     [ObservableProperty]
     private ResourcePanelItemStatus status;
 
+    public bool IsOperable => Status is ResourcePanelItemStatus.Ready or ResourcePanelItemStatus.Waiting;
+
+    partial void OnStatusChanged(ResourcePanelItemStatus value)
+    {
+        OnPropertyChanged(nameof(IsOperable));
+    }
+
     [ObservableProperty]
     private string statusIconKind = "";
 }

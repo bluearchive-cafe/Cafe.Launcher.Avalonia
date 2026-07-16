@@ -69,6 +69,7 @@ public sealed partial class UiStyleContractTests
                 "Settings.CheckForUpdatesCommand",
                 "WindowChrome.OpenOfficialSiteCommand",
                 "WindowChrome.OpenGitHubRepositoryCommand",
+                "WindowChrome.OpenHelpDocsCommand",
                 "LogViewer.OpenCommand",
                 "LogViewer.ExportCommand",
                 "WindowChrome.OpenDataDirectoryCommand"
@@ -1151,7 +1152,7 @@ public sealed partial class UiStyleContractTests
                 element.Name.LocalName == "Button"
                 && HasClass(element, "log-filter"))
             .ToList();
-        Assert.Equal(4, filterButtons.Count);
+        Assert.Equal(7, filterButtons.Count);
 
         var search = document
             .Descendants()
@@ -1270,9 +1271,14 @@ public sealed partial class UiStyleContractTests
             "Settings.CheckForUpdatesCommand",
             "WindowChrome.OpenOfficialSiteCommand",
             "WindowChrome.OpenGitHubRepositoryCommand",
+            "WindowChrome.OpenHelpDocsCommand",
             "LogViewer.OpenCommand",
             "LogViewer.ExportCommand",
             "WindowChrome.OpenDataDirectoryCommand");
+
+        Assert.Contains("Shell.I18n.AboutActionsGeneral", text, StringComparison.Ordinal);
+        Assert.Contains("Shell.I18n.AboutActionsDiagnostics", text, StringComparison.Ordinal);
+        Assert.DoesNotContain("Shell.I18n.SettingsGroupAboutActions", text, StringComparison.Ordinal);
 
         var document = XDocument.Parse(overlay);
         var footerButtons = document

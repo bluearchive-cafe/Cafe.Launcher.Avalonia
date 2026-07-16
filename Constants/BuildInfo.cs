@@ -45,7 +45,24 @@ public static class BuildInfo
 #endif
 
     /// <summary>
-    /// Keep in sync with .csproj PackageReference for Avalonia.
+    /// Avalonia framework version resolved at runtime from the Avalonia assembly.
+    /// Falls back to "0.0.0.0" if the runtime value cannot be read.
     /// </summary>
-    public const string AvaloniaVersion = "12.0.4";
+    public static readonly string AvaloniaVersion = ResolveAvaloniaVersion();
+
+    private static string ResolveAvaloniaVersion()
+    {
+        try
+        {
+            var assembly = typeof(global::Avalonia.Application).Assembly;
+            var version = assembly.GetName().Version;
+            return version is not null
+                ? $"{version.Major}.{version.Minor}.{version.Build}"
+                : "0.0.0";
+        }
+        catch
+        {
+            return "0.0.0";
+        }
+    }
 }

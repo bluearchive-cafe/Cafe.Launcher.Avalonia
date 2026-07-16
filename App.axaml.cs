@@ -37,6 +37,10 @@ public partial class App : Application
             serviceProvider = serviceCollection.BuildServiceProvider();
             Program.ServiceProvider = serviceProvider;
 
+            // Application-started trace (best-effort, fire-and-forget)
+            _ = serviceProvider.GetRequiredService<Services.Diagnostics.LocalDiagnostics>()
+                .DebugAsync("Application", "Application started, DI container built", CancellationToken.None);
+
             // Track install attribution (non-critical, best-effort)
             try
             {

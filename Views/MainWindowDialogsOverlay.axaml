@@ -146,7 +146,7 @@
                                                 </StackPanel>
                                                 <CheckBox Grid.Column="1"
                                                           IsChecked="{Binding IsEnabled, Mode=TwoWay}"
-                                                          IsEnabled="{Binding DataContext.ResourcePanel.IsResourcePanelBusy, Converter={x:Static BoolConverters.Not}, ElementName=DialogsRoot}"
+                                                          IsEnabled="{Binding IsOperable}"
                                                           VerticalAlignment="Center"/>
                                                 <Grid Grid.Row="1" Grid.ColumnSpan="2" ColumnDefinitions="Auto,*,Auto,*" ColumnSpacing="{StaticResource LauncherSpacingSm}">
                                                     <TextBlock Text="{Binding DataContext.Shell.I18n.ResourcePanelOfficialVersion, ElementName=DialogsRoot}" Classes="caption"/>
@@ -171,7 +171,7 @@
                             </StackPanel>
                         </Button>
                         <Button Classes="primary-action dialog-action" Command="{Binding ResourcePanel.SaveResourcePanelCommand}"
-                                IsEnabled="{Binding ResourcePanel.IsResourcePanelBusy, Converter={x:Static BoolConverters.Not}}">
+                                IsEnabled="{Binding ResourcePanel.IsResourcePanelSaveEnabled}">
                             <StackPanel Classes="button-content">
                                 <materialIcons:MaterialIcon Kind="ContentSave" Width="{StaticResource LauncherIconSm}" Height="{StaticResource LauncherIconSm}"/>
                                 <TextBlock Text="{Binding Shell.I18n.ResourcePanelSave}"/>

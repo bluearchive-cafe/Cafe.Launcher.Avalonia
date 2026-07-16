@@ -116,6 +116,89 @@ public sealed class DiagnosticsServicesTests : IDisposable
             StringComparison.OrdinalIgnoreCase);
     }
 
+    [Fact]
+    public async Task EnrichedTemplate_RendersLogTitleTag()
+    {
+        using var logger = new UnifiedLogger(tempDir);
+        await logger.LogAsync(LogEntrySeverity.Info, "TestTitle", "TestMessage");
+
+        logger.Dispose();
+        var text = File.ReadAllText(logger.LogFilePath);
+        Assert.Contains("[TestTitle]", text, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public async Task DebugLevel_WrittenWhenMinLevelIsVerbose()
+    {
+        using var logger = new UnifiedLogger(tempDir);
+        logger.SetMinimumLevel(Serilog.Events.LogEventLevel.Verbose);
+        await logger.LogAsync(LogEntrySeverity.Debug, "DebugTest");
+
+        logger.Dispose();
+        var text = File.ReadAllText(logger.LogFilePath);
+        Assert.Contains("[DebugTest]", text, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public async Task DebugLevel_SuppressedWhenMinLevelIsInfo()
+    {
+        using var logger = new UnifiedLogger(tempDir);
+        logger.SetMinimumLevel(Serilog.Events.LogEventLevel.Information);
+        // Seed an Info event so the log file exists even if the Debug event is suppressed.
+        await logger.LogAsync(LogEntrySeverity.Info, "SeedEvent");
+        await logger.LogAsync(LogEntrySeverity.Debug, "ShouldNotAppear");
+
+        logger.Dispose();
+        var text = File.ReadAllText(logger.LogFilePath);
+        Assert.Contains("[SeedEvent]", text, StringComparison.Ordinal);
+        Assert.DoesNotContain("[ShouldNotAppear]", text, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public async Task FatalLevel_PassesFatalSwitch()
+    {
+        using var logger = new UnifiedLogger(tempDir);
+        logger.SetMinimumLevel(Serilog.Events.LogEventLevel.Fatal);
+        await logger.LogAsync(
+            LogEntrySeverity.Fatal,
+            "FatalTest",
+            exception: new InvalidOperationException("boom"));
+
+        logger.Dispose();
+        var text = File.ReadAllText(logger.LogFilePath);
+        Assert.Contains("[FatalTest]", text, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public async Task LocalDiagnostics_NewFacades_WriteExpectedLevels()
+    {
+        using var logger = new UnifiedLogger(tempDir);
+        logger.SetMinimumLevel(Serilog.Events.LogEventLevel.Verbose);
+        var diagnostics = new LocalDiagnostics(logger);
+
+        await diagnostics.DebugAsync("DebugFacade", "debug msg");
+        await diagnostics.VerboseAsync("VerboseFacade", "verbose msg");
+        await diagnostics.WarningAsync("WarningFacade", "warning msg");
+        await diagnostics.FatalAsync("FatalFacade", new InvalidOperationException("fatal"));
+
+        logger.Dispose();
+        var text = File.ReadAllText(logger.LogFilePath);
+        Assert.Contains("[DebugFacade]", text, StringComparison.Ordinal);
+        Assert.Contains("[VerboseFacade]", text, StringComparison.Ordinal);
+        Assert.Contains("[WarningFacade]", text, StringComparison.Ordinal);
+        Assert.Contains("[FatalFacade]", text, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public void LogSyncSeverityOverload_DoesNotThrow()
+    {
+        // LogSync uses a Volatile-read static reference. This at minimum verifies the
+        // Debug.WriteLine fallback path does not throw. The integrated path (writing
+        // through the DI-resolved UnifiedLogger) is exercised by the instance-level facade tests.
+        LocalDiagnostics.LogSync(LogEntrySeverity.Debug, "SyncDebug", "sync msg");
+        LocalDiagnostics.LogSync("SyncInfo", "info msg");
+    }
+
     public void Dispose()
     {
         if (Directory.Exists(tempDir))

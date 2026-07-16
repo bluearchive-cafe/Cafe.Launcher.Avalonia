@@ -33,17 +33,29 @@
                             Command="{Binding LogViewer.SetFilterAllCommand}">
                         <TextBlock Text="{Binding Shell.I18n.LogFilterAll}"/>
                     </Button>
+                    <Button Classes="news-tab log-filter" Classes.active="{Binding LogViewer.IsFilterVerboseActive}"
+                            Command="{Binding LogViewer.SetFilterVerboseCommand}">
+                        <TextBlock Text="{Binding Shell.I18n.LogFilterVerbose}"/>
+                    </Button>
+                    <Button Classes="news-tab log-filter" Classes.active="{Binding LogViewer.IsFilterDebugActive}"
+                            Command="{Binding LogViewer.SetFilterDebugCommand}">
+                        <TextBlock Text="{Binding Shell.I18n.LogFilterDebug}"/>
+                    </Button>
+                    <Button Classes="news-tab log-filter" Classes.active="{Binding LogViewer.IsFilterInfoActive}"
+                            Command="{Binding LogViewer.SetFilterInfoCommand}">
+                        <TextBlock Text="{Binding Shell.I18n.LogFilterInfo}"/>
+                    </Button>
+                    <Button Classes="news-tab log-filter" Classes.active="{Binding LogViewer.IsFilterWarnActive}"
+                            Command="{Binding LogViewer.SetFilterWarnCommand}">
+                        <TextBlock Text="{Binding Shell.I18n.LogFilterWarn}"/>
+                    </Button>
                     <Button Classes="news-tab log-filter" Classes.active="{Binding LogViewer.IsFilterErrorActive}"
                             Command="{Binding LogViewer.SetFilterErrorCommand}">
                         <TextBlock Text="{Binding Shell.I18n.LogFilterError}"/>
                     </Button>
-                    <Button Classes="news-tab log-filter" Classes.active="{Binding LogViewer.IsFilterWarnActive}"
-                            Command="{Binding LogViewer.SetFilterWarnCommand}">
-                        <TextBlock Text="{Binding Shell.I18n.LogFilterWarning}"/>
-                    </Button>
-                    <Button Classes="news-tab log-filter" Classes.active="{Binding LogViewer.IsFilterInfoActive}"
-                            Command="{Binding LogViewer.SetFilterInfoCommand}">
-                        <TextBlock Text="{Binding Shell.I18n.LogFilterInformation}"/>
+                    <Button Classes="news-tab log-filter" Classes.active="{Binding LogViewer.IsFilterFatalActive}"
+                            Command="{Binding LogViewer.SetFilterFatalCommand}">
+                        <TextBlock Text="{Binding Shell.I18n.LogFilterFatal}"/>
                     </Button>
                     <TextBox Text="{Binding LogViewer.FilterText, Mode=TwoWay}" PlaceholderText="{Binding Shell.I18n.LogSearchPlaceholder}"
                              Classes="uid-input log-search" MinWidth="160"

@@ -41,7 +41,7 @@
                 </Border>
             </WrapPanel>
         </StackPanel>
-        <TextBlock Text="{Binding Shell.I18n.SettingsGroupAboutActions}" Classes="group-title"/>
+        <TextBlock Text="{Binding Shell.I18n.AboutActionsGeneral}" Classes="group-title"/>
         <WrapPanel>
             <Button Classes="flat-action wrap-action"
                     Command="{Binding Settings.CheckForUpdatesCommand}"
@@ -67,6 +67,17 @@
                     <TextBlock Text="{Binding Shell.I18n.GitHubRepository}"/>
                 </StackPanel>
             </Button>
+            <Button Classes="flat-action wrap-action"
+                    Command="{Binding WindowChrome.OpenHelpDocsCommand}"
+                    AutomationProperties.Name="{Binding Shell.I18n.HelpDocs}">
+                <StackPanel Classes="button-content">
+                    <materialIcons:MaterialIcon Kind="HelpCircleOutline" Width="{StaticResource LauncherIconSm}" Height="{StaticResource LauncherIconSm}"/>
+                    <TextBlock Text="{Binding Shell.I18n.HelpDocs}"/>
+                </StackPanel>
+            </Button>
+        </WrapPanel>
+        <TextBlock Text="{Binding Shell.I18n.AboutActionsDiagnostics}" Classes="group-title"/>
+        <WrapPanel>
             <Button Classes="flat-action wrap-action"
                     Command="{Binding LogViewer.OpenCommand}"
                     AutomationProperties.Name="{Binding Shell.I18n.ViewLog}">

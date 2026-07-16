@@ -12,7 +12,7 @@ using Cafe.Launcher.Avalonia.Services.Diagnostics;
 
 namespace Cafe.Launcher.Avalonia.Services;
 
-public sealed class LauncherSettingsService
+public sealed class LauncherSettingsService : IDisposable
 {
     private readonly SemaphoreSlim writeLock = new(1, 1);
     private readonly string? settingsPath;
@@ -309,5 +309,10 @@ public sealed class LauncherSettingsService
         }
 
         return true;
+    }
+
+    public void Dispose()
+    {
+        writeLock.Dispose();
     }
 }
