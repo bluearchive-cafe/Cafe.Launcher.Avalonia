@@ -28,31 +28,47 @@
             </controls:SettingRow.Action>
         </controls:SettingRow>
 
-        <WrapPanel>
-            <Button Classes="flat-action wrap-action"
-                    Command="{Binding LogViewer.OpenCommand}"
-                    AutomationProperties.Name="{Binding Shell.I18n.ViewLog}">
-                <StackPanel Classes="button-content">
-                    <materialIcons:MaterialIcon Kind="TextBoxOutline" Width="{StaticResource LauncherIconSm}" Height="{StaticResource LauncherIconSm}"/>
-                    <TextBlock Text="{Binding Shell.I18n.ViewLog}"/>
-                </StackPanel>
-            </Button>
-            <Button Classes="flat-action wrap-action"
-                    Command="{Binding LogViewer.ExportCommand}"
-                    AutomationProperties.Name="{Binding Shell.I18n.ExportLogs}">
-                <StackPanel Classes="button-content">
-                    <materialIcons:MaterialIcon Kind="Export" Width="{StaticResource LauncherIconSm}" Height="{StaticResource LauncherIconSm}"/>
-                    <TextBlock Text="{Binding Shell.I18n.ExportLogs}"/>
-                </StackPanel>
-            </Button>
-            <Button Classes="flat-action wrap-action"
-                    Command="{Binding WindowChrome.OpenDataDirectoryCommand}"
-                    AutomationProperties.Name="{Binding Shell.I18n.OpenDataDirectory}">
-                <StackPanel Classes="button-content">
-                    <materialIcons:MaterialIcon Kind="FolderOpen" Width="{StaticResource LauncherIconSm}" Height="{StaticResource LauncherIconSm}"/>
-                    <TextBlock Text="{Binding Shell.I18n.OpenDataDirectory}"/>
-                </StackPanel>
-            </Button>
-        </WrapPanel>
+        <controls:SettingRow IconKind="FolderOpen"
+                             Title="{Binding Shell.I18n.LogFiles}"
+                             Description="{Binding Shell.I18n.LogFilesDescription}">
+            <controls:SettingRow.Action>
+                <WrapPanel MaxWidth="{StaticResource LauncherSettingRowActionMaxWidth}"
+                           ItemSpacing="{StaticResource LauncherSpacingSm}"
+                           LineSpacing="{StaticResource LauncherSpacingSm}"
+                           HorizontalAlignment="Right"
+                           VerticalAlignment="Center">
+                    <Button Classes="flat-action"
+                            Command="{Binding LogViewer.OpenCommand}"
+                            AutomationProperties.Name="{Binding Shell.I18n.ViewLog}">
+                        <StackPanel Classes="button-content">
+                            <materialIcons:MaterialIcon Kind="TextBoxOutline"
+                                                        Width="{StaticResource LauncherIconSm}"
+                                                        Height="{StaticResource LauncherIconSm}"/>
+                            <TextBlock Text="{Binding Shell.I18n.ViewLog}"/>
+                        </StackPanel>
+                    </Button>
+                    <Button Classes="flat-action"
+                            Command="{Binding LogViewer.ExportCommand}"
+                            AutomationProperties.Name="{Binding Shell.I18n.ExportLogs}">
+                        <StackPanel Classes="button-content">
+                            <materialIcons:MaterialIcon Kind="Export"
+                                                        Width="{StaticResource LauncherIconSm}"
+                                                        Height="{StaticResource LauncherIconSm}"/>
+                            <TextBlock Text="{Binding Shell.I18n.ExportLogs}"/>
+                        </StackPanel>
+                    </Button>
+                    <Button Classes="flat-action"
+                            Command="{Binding WindowChrome.OpenDataDirectoryCommand}"
+                            AutomationProperties.Name="{Binding Shell.I18n.OpenDataDirectory}">
+                        <StackPanel Classes="button-content">
+                            <materialIcons:MaterialIcon Kind="FolderOpen"
+                                                        Width="{StaticResource LauncherIconSm}"
+                                                        Height="{StaticResource LauncherIconSm}"/>
+                            <TextBlock Text="{Binding Shell.I18n.OpenDataDirectory}"/>
+                        </StackPanel>
+                    </Button>
+                </WrapPanel>
+            </controls:SettingRow.Action>
+        </controls:SettingRow>
     </StackPanel>
 </UserControl>

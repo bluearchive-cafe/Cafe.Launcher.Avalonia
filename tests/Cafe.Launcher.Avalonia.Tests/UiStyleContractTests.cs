@@ -2407,6 +2407,73 @@ public sealed partial class UiStyleContractTests
     }
 
     [Fact]
+    public void AdvancedSettings_LogActionsBelongToDedicatedSettingRow()
+    {
+        var document = XDocument.Load(ProjectFile("Views/SettingsAdvancedSection.axaml"));
+        var group = document
+            .Descendants()
+            .Single(element =>
+                element.Name.LocalName == "StackPanel"
+                && HasClass(element, "settings-group"));
+        var rows = group
+            .Elements()
+            .Where(element => element.Name.LocalName == "SettingRow")
+            .ToList();
+
+        Assert.Equal(2, rows.Count);
+        var logFilesRow = rows[1];
+        Assert.Equal(
+            "{Binding Shell.I18n.LogFiles}",
+            logFilesRow.Attribute("Title")?.Value);
+        Assert.Equal(
+            "{Binding Shell.I18n.LogFilesDescription}",
+            logFilesRow.Attribute("Description")?.Value);
+
+        var action = logFilesRow
+            .Elements()
+            .Single(element => element.Name.LocalName == "SettingRow.Action");
+        var actionPanel = action
+            .Elements()
+            .Single(element => element.Name.LocalName == "WrapPanel");
+        Assert.Equal(
+            "{StaticResource LauncherSpacingSm}",
+            actionPanel.Attribute("ItemSpacing")?.Value);
+        Assert.Equal(
+            "{StaticResource LauncherSpacingSm}",
+            actionPanel.Attribute("LineSpacing")?.Value);
+        Assert.Equal(
+            "{StaticResource LauncherSettingRowActionMaxWidth}",
+            actionPanel.Attribute("MaxWidth")?.Value);
+
+        var app = XDocument.Load(ProjectFile("App.axaml"));
+        var actionMaxWidth = app
+            .Descendants()
+            .Single(element =>
+                element.Attributes().Any(attribute =>
+                    attribute.Name.LocalName == "Key"
+                    && attribute.Value == "LauncherSettingRowActionMaxWidth"));
+        Assert.Equal("440", actionMaxWidth.Value);
+
+        var commands = actionPanel
+            .Elements()
+            .Where(element => element.Name.LocalName == "Button")
+            .Select(element =>
+                element.Attribute("Command")?.Value
+                ?? throw new InvalidDataException("Advanced log action is missing Command."))
+            .ToArray();
+        Assert.Equal(
+            [
+                "{Binding LogViewer.OpenCommand}",
+                "{Binding LogViewer.ExportCommand}",
+                "{Binding WindowChrome.OpenDataDirectoryCommand}"
+            ],
+            commands);
+        Assert.DoesNotContain(
+            group.Elements(),
+            element => element.Name.LocalName == "WrapPanel");
+    }
+
+    [Fact]
     public void SettingsAboutAndAdvancedActions_UsePurposeBasedOrderAndExclusiveOwnership()
     {
         var aboutText = File.ReadAllText(ProjectFile("Views/SettingsAboutSection.axaml"));

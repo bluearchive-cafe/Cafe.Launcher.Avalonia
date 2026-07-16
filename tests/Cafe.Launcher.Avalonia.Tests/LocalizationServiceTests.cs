@@ -81,6 +81,38 @@ public sealed class LocalizationServiceTests
     }
 
     [Theory]
+    [InlineData(
+        LauncherLanguages.English,
+        "Log Files",
+        "View, export, or open the directory containing logs")]
+    [InlineData(
+        LauncherLanguages.SimplifiedChinese,
+        "日志文件",
+        "查看、导出或打开日志所在目录")]
+    [InlineData(
+        LauncherLanguages.TraditionalChinese,
+        "日誌檔案",
+        "查看、匯出或開啟日誌所在目錄")]
+    [InlineData(
+        LauncherLanguages.Japanese,
+        "ログファイル",
+        "ログを表示、エクスポート、または保存先フォルダーを開く")]
+    public void LocalizedStrings_WhenLogFileKeysApplied_MapsLocalizedValues(
+        string language,
+        string expectedTitle,
+        string expectedDescription)
+    {
+        var service = new LocalizationService();
+        service.SetLanguage(language);
+        var strings = new LocalizedStrings();
+
+        strings.Apply(service);
+
+        Assert.Equal(expectedTitle, strings.LogFiles);
+        Assert.Equal(expectedDescription, strings.LogFilesDescription);
+    }
+
+    [Theory]
     [InlineData(LauncherLanguages.English)]
     [InlineData(LauncherLanguages.SimplifiedChinese)]
     [InlineData(LauncherLanguages.TraditionalChinese)]

@@ -224,6 +224,8 @@ public sealed partial class LocalizedStrings : ObservableObject
     [ObservableProperty] private string exportLogs = "";
     [ObservableProperty] private string viewLog = "";
     [ObservableProperty] private string openDataDirectory = "";
+    [ObservableProperty] private string logFiles = "";
+    [ObservableProperty] private string logFilesDescription = "";
     [ObservableProperty] private string logExportFolderPickerTitle = "";
     [ObservableProperty] private string logExportSucceeded = "";
     [ObservableProperty] private string logExportFailed = "";
@@ -501,6 +503,8 @@ public sealed partial class LocalizedStrings : ObservableObject
         ExportLogs = localizer.T("exportLogs");
         ViewLog = localizer.T("viewLog");
         OpenDataDirectory = localizer.T("openDataDirectory");
+        LogFiles = localizer.T("logFiles");
+        LogFilesDescription = localizer.T("logFilesDescription");
         LogExportFolderPickerTitle = localizer.T("logExportFolderPickerTitle");
         LogExportSucceeded = localizer.T("logExportSucceeded");
         LogExportFailed = localizer.T("logExportFailed");
