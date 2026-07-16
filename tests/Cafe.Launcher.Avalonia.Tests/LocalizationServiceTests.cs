@@ -207,10 +207,10 @@ public sealed class LocalizationServiceTests
     }
 
     [Theory]
-    [InlineData(LauncherLanguages.English, "Remote Manifest", "Download Source", "Chinese Localization Settings")]
-    [InlineData(LauncherLanguages.SimplifiedChinese, "远程文件清单", "下载源", "汉化管理")]
-    [InlineData(LauncherLanguages.TraditionalChinese, "遠端檔案清單", "下載來源", "中文化管理")]
-    [InlineData(LauncherLanguages.Japanese, "リモートマニフェスト", "ダウンロードソース", "中国語化設定")]
+    [InlineData(LauncherLanguages.English, "Remote Manifest", "Download Source", "Resource Panel")]
+    [InlineData(LauncherLanguages.SimplifiedChinese, "远程文件清单", "下载源", "资源面板")]
+    [InlineData(LauncherLanguages.TraditionalChinese, "遠端檔案清單", "下載來源", "資源面板")]
+    [InlineData(LauncherLanguages.Japanese, "リモートマニフェスト", "ダウンロードソース", "リソースパネル")]
     public void T_WhenCanonicalTermsRequested_ReturnsConsistentTerminology(
         string language,
         string expectedManifest,

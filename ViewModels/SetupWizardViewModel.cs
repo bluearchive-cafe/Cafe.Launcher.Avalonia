@@ -538,7 +538,7 @@ public partial class SetupWizardViewModel : ViewModelBase, IModalContentViewMode
         LauncherLanguages.SimplifiedChinese => "简体中文",
         LauncherLanguages.TraditionalChinese => "繁體中文",
         LauncherLanguages.Japanese => "日本語",
-        _ => localizer.T("language") + " (Auto)"
+        _ => localizer.T("languageAuto")
     };
 
     private string ResolveDownloadSourceDisplayName() => PatchUrlGroup switch
