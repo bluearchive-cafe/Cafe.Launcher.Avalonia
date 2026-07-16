@@ -349,9 +349,12 @@ public partial class DialogsViewModel : ViewModelBase
         }
         catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
         {
+            // Operation cancelled — nothing to do.
         }
-        catch
+        catch (Exception ex)
         {
+            System.Diagnostics.Debug.WriteLine(
+                $"Dialogs: notice dialog load failed: {ex.Message}");
         }
     }
 

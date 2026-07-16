@@ -472,7 +472,7 @@ public sealed partial class LocalizedStrings : ObservableObject
 
 public sealed class LocalizationService
 {
-    private static readonly Dictionary<string, Dictionary<string, string>> Resources = new(StringComparer.Ordinal);
+    private static Dictionary<string, Dictionary<string, string>> Resources = new(StringComparer.Ordinal);
     private static readonly string[] SupportedLocales = [LauncherLanguages.English, LauncherLanguages.SimplifiedChinese, LauncherLanguages.Japanese];
     private static volatile bool resourcesLoaded;
     private static readonly object LoadLock = new();
@@ -483,14 +483,19 @@ public sealed class LocalizationService
     /// </summary>
     internal static void InitializeForTesting(Dictionary<string, Dictionary<string, string>> resources)
     {
+        // Build a complete replacement outside the lock so that concurrent T()
+        // calls never observe a partially-cleared dictionary.  Swapping the static
+        // reference is atomic (.NET object references are always atomic) and the
+        // inner per-locale dictionaries are never mutated after creation.
+        var newResources = new Dictionary<string, Dictionary<string, string>>(StringComparer.Ordinal);
+        foreach (var (locale, dict) in resources)
+        {
+            newResources[locale] = new Dictionary<string, string>(dict, StringComparer.Ordinal);
+        }
+
         lock (LoadLock)
         {
-            Resources.Clear();
-            foreach (var (locale, dict) in resources)
-            {
-                Resources[locale] = new Dictionary<string, string>(dict, StringComparer.Ordinal);
-            }
-
+            Resources = newResources;
             resourcesLoaded = true;
         }
     }

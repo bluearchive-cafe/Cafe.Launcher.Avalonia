@@ -90,8 +90,10 @@ public sealed class RemoteManifestService
         {
             throw;
         }
-        catch
+        catch (Exception ex)
         {
+            System.Diagnostics.Debug.WriteLine(
+                $"RemoteManifest: fetch failed: {ex.Message}");
             return null;
         }
     }
