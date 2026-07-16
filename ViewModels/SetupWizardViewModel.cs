@@ -1,5 +1,6 @@
 using System;
 using System.Collections.ObjectModel;
+using System.Threading;
 using System.Threading.Tasks;
 using Cafe.Launcher.Avalonia.Features.SetupWizard;
 using Cafe.Launcher.Avalonia.Features.Shell;
@@ -18,14 +19,22 @@ public partial class SetupWizardViewModel : ViewModelBase, IModalContentViewMode
 {
     private readonly LocalizationService localizer;
     private readonly GameInstallationPath gameInstallationPath;
+    private readonly LocalInstallationStateStore localInstallationStateStore;
+    private bool hasInitializedGamePath;
+    private CancellationTokenSource? gamePathStatusCancellationTokenSource;
+    private int gamePathStatusVersion;
 
     /// <summary>
     /// Creates a setup wizard with defaults aligned to <see cref="LauncherSettings.CreateDefaults"/>.
     /// </summary>
-    public SetupWizardViewModel(LocalizationService localizer, GameInstallationPath gameInstallationPath)
+    public SetupWizardViewModel(
+        LocalizationService localizer,
+        GameInstallationPath gameInstallationPath,
+        LocalInstallationStateStore localInstallationStateStore)
     {
         this.localizer = localizer;
         this.gameInstallationPath = gameInstallationPath;
+        this.localInstallationStateStore = localInstallationStateStore;
 
         var defaults = LauncherSettings.CreateDefaults();
         language = defaults.Language;
@@ -40,6 +49,7 @@ public partial class SetupWizardViewModel : ViewModelBase, IModalContentViewMode
             CreateStep(3),
             CreateStep(4)
         ];
+        localizer.LanguageChanged += OnLocalizerLanguageChanged;
         RefreshSteps();
     }
 
@@ -57,12 +67,31 @@ public partial class SetupWizardViewModel : ViewModelBase, IModalContentViewMode
     [NotifyPropertyChangedFor(nameof(CanGoNext))]
     [NotifyPropertyChangedFor(nameof(CanGoPrevious))]
     [NotifyPropertyChangedFor(nameof(StepTitle))]
+    [NotifyPropertyChangedFor(nameof(StepProgress))]
     [NotifyPropertyChangedFor(nameof(IsStep1))]
     [NotifyPropertyChangedFor(nameof(IsStep2))]
     [NotifyPropertyChangedFor(nameof(IsStep3))]
+    [NotifyPropertyChangedFor(nameof(SelectedStep))]
     private int step;
 
-    partial void OnStepChanged(int value) => RefreshSteps();
+    partial void OnStepChanged(int value)
+    {
+        if (value == 1 && !hasInitializedGamePath)
+        {
+            hasInitializedGamePath = true;
+            if (string.IsNullOrWhiteSpace(GamePath))
+            {
+                GamePath = gameInstallationPath.GetDefaultGamePath();
+            }
+        }
+
+        if (value == 1)
+        {
+            RefreshGamePathStatus();
+        }
+
+        RefreshSteps();
+    }
 
     public bool IsFirstStep => Step == 0;
     public bool IsLastStep => Step == 4;
@@ -70,30 +99,50 @@ public partial class SetupWizardViewModel : ViewModelBase, IModalContentViewMode
     public bool IsStep2 => Step == 2;
     public bool IsStep3 => Step == 3;
 
+    /// <summary>Gets the current step position for the wizard header.</summary>
+    public string StepProgress => $"{Step + 1} / {Steps.Count}";
+
+    /// <summary>Gets or sets the step selected through the navigation list.</summary>
+    public int SelectedStep
+    {
+        get => Step;
+        set
+        {
+            if (value == Step)
+            {
+                return;
+            }
+
+            if (value < 0 || value >= Steps.Count || value > Step)
+            {
+                OnPropertyChanged();
+                return;
+            }
+
+            Step = value;
+        }
+    }
+
     public bool CanGoNext => Step switch
     {
-        2 => !string.IsNullOrWhiteSpace(GamePath),
+        1 => IsGamePathReady,
         _ => true
     };
 
     public bool CanGoPrevious => Step > 0;
 
-    public string StepTitle => Step switch
-    {
-        0 => localizer.T("setupWizardStep0Title"),
-        1 => localizer.T("setupWizardStep1Title"),
-        2 => localizer.T("setupWizardStep2Title"),
-        3 => localizer.T("setupWizardStep3Title"),
-        4 => localizer.T("setupWizardStep4Title"),
-        _ => ""
-    };
+    public string StepTitle => ResolveStepTitle(Step);
 
     // ── Settings ──────────────────────────────────────────────────
 
     [ObservableProperty]
     private string language;
 
-    partial void OnLanguageChanged(string value) => RefreshSteps();
+    partial void OnLanguageChanged(string value)
+    {
+        LanguagePreviewRequested?.Invoke(value);
+        RefreshSteps();
+    }
 
     [ObservableProperty]
     [NotifyPropertyChangedFor(nameof(CanGoNext))]
@@ -108,7 +157,48 @@ public partial class SetupWizardViewModel : ViewModelBase, IModalContentViewMode
     [NotifyPropertyChangedFor(nameof(IsGamePathEmpty))]
     private string gamePath;
 
-    partial void OnGamePathChanged(string value) => RefreshSteps();
+    partial void OnGamePathChanged(string value)
+    {
+        RefreshGamePathStatus();
+        RefreshSteps();
+    }
+
+    [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(GamePathStatusText))]
+    [NotifyPropertyChangedFor(nameof(IsGamePathChecking))]
+    [NotifyPropertyChangedFor(nameof(IsGamePathReady))]
+    [NotifyPropertyChangedFor(nameof(IsGamePathAvailableForInstallation))]
+    [NotifyPropertyChangedFor(nameof(IsGamePathValidInstallation))]
+    [NotifyPropertyChangedFor(nameof(IsGamePathCorruptedInstallation))]
+    [NotifyPropertyChangedFor(nameof(IsGamePathInaccessible))]
+    [NotifyPropertyChangedFor(nameof(CanGoNext))]
+    private SetupWizardGamePathStatus gamePathStatus;
+
+    public string GamePathStatusText => GamePathStatus switch
+    {
+        SetupWizardGamePathStatus.Checking => localizer.T("setupWizardGamePathChecking"),
+        SetupWizardGamePathStatus.AvailableForInstallation => localizer.T("setupWizardGamePathAvailable"),
+        SetupWizardGamePathStatus.ValidInstallation => localizer.T("setupWizardGamePathInstalled"),
+        SetupWizardGamePathStatus.CorruptedInstallation => localizer.T("setupWizardGamePathCorrupted"),
+        SetupWizardGamePathStatus.Inaccessible => localizer.T("setupWizardGamePathInaccessible"),
+        _ => string.Empty
+    };
+
+    public bool IsGamePathChecking => GamePathStatus == SetupWizardGamePathStatus.Checking;
+
+    public bool IsGamePathReady => GamePathStatus is SetupWizardGamePathStatus.AvailableForInstallation
+        or SetupWizardGamePathStatus.ValidInstallation;
+
+    public bool IsGamePathAvailableForInstallation =>
+        GamePathStatus == SetupWizardGamePathStatus.AvailableForInstallation;
+
+    public bool IsGamePathValidInstallation =>
+        GamePathStatus == SetupWizardGamePathStatus.ValidInstallation;
+
+    public bool IsGamePathCorruptedInstallation =>
+        GamePathStatus == SetupWizardGamePathStatus.CorruptedInstallation;
+
+    public bool IsGamePathInaccessible => GamePathStatus == SetupWizardGamePathStatus.Inaccessible;
 
     [ObservableProperty]
     [NotifyPropertyChangedFor(nameof(IsProxyAuto))]
@@ -162,6 +252,9 @@ public partial class SetupWizardViewModel : ViewModelBase, IModalContentViewMode
 
     public event Func<LauncherSettings, Task>? SettingsApplied;
 
+    /// <summary>Raised when the selected language should be previewed before settings are saved.</summary>
+    public event Action<string>? LanguagePreviewRequested;
+
     // ── Commands ───────────────────────────────────────────────────
 
     [RelayCommand]
@@ -197,7 +290,7 @@ public partial class SetupWizardViewModel : ViewModelBase, IModalContentViewMode
             return;
         }
 
-        Step = targetStep;
+        SelectedStep = targetStep;
     }
 
     [RelayCommand]
@@ -232,6 +325,89 @@ public partial class SetupWizardViewModel : ViewModelBase, IModalContentViewMode
 
     // ── Internal ──────────────────────────────────────────────────
 
+    private void RefreshGamePathStatus()
+    {
+        gamePathStatusCancellationTokenSource?.Cancel();
+        gamePathStatusCancellationTokenSource?.Dispose();
+        var cancellationTokenSource = new CancellationTokenSource();
+        gamePathStatusCancellationTokenSource = cancellationTokenSource;
+        var version = ++gamePathStatusVersion;
+
+        if (string.IsNullOrWhiteSpace(GamePath))
+        {
+            GamePathStatus = SetupWizardGamePathStatus.NotSelected;
+            return;
+        }
+
+        _ = RefreshGamePathStatusAsync(GamePath, version, cancellationTokenSource);
+    }
+
+    private async Task RefreshGamePathStatusAsync(
+        string path,
+        int version,
+        CancellationTokenSource cancellationTokenSource)
+    {
+        string normalizedPath;
+        try
+        {
+            normalizedPath = gameInstallationPath.NormalizeGamePath(path);
+        }
+        catch (Exception)
+        {
+            SetGamePathStatusIfCurrent(
+                SetupWizardGamePathStatus.Inaccessible,
+                version,
+                cancellationTokenSource);
+            return;
+        }
+
+        SetGamePathStatusIfCurrent(
+            SetupWizardGamePathStatus.Checking,
+            version,
+            cancellationTokenSource);
+
+        try
+        {
+            var state = await localInstallationStateStore.ReadAsync(
+                normalizedPath,
+                cancellationTokenSource.Token);
+            var status = state.Kind switch
+            {
+                LocalInstallationStateKind.NotInstalled => SetupWizardGamePathStatus.AvailableForInstallation,
+                LocalInstallationStateKind.Valid => SetupWizardGamePathStatus.ValidInstallation,
+                LocalInstallationStateKind.Corrupted => SetupWizardGamePathStatus.CorruptedInstallation,
+                LocalInstallationStateKind.IoFailure => SetupWizardGamePathStatus.Inaccessible,
+                _ => SetupWizardGamePathStatus.Inaccessible
+            };
+            SetGamePathStatusIfCurrent(status, version, cancellationTokenSource);
+        }
+        catch (OperationCanceledException) when (cancellationTokenSource.IsCancellationRequested)
+        {
+        }
+        catch (Exception)
+        {
+            SetGamePathStatusIfCurrent(
+                SetupWizardGamePathStatus.Inaccessible,
+                version,
+                cancellationTokenSource);
+        }
+    }
+
+    private void SetGamePathStatusIfCurrent(
+        SetupWizardGamePathStatus status,
+        int version,
+        CancellationTokenSource cancellationTokenSource)
+    {
+        if (version != gamePathStatusVersion
+            || cancellationTokenSource.IsCancellationRequested
+            || !ReferenceEquals(cancellationTokenSource, gamePathStatusCancellationTokenSource))
+        {
+            return;
+        }
+
+        GamePathStatus = status;
+    }
+
     private LauncherSettings BuildSettings()
     {
         var normalizedPath = gameInstallationPath.NormalizeGamePath(GamePath);
@@ -256,8 +432,33 @@ public partial class SetupWizardViewModel : ViewModelBase, IModalContentViewMode
     private SetupWizardStepItem CreateStep(int index) => new()
     {
         Index = index,
-        Title = localizer.T($"setupWizardStep{index}Title")
+        Title = ResolveStepTitle(index)
     };
+
+    private string ResolveStepTitle(int index) => index switch
+    {
+        0 => localizer.T("setupWizardLanguage"),
+        1 => localizer.T("setupWizardGamePath"),
+        2 => localizer.T("setupWizardDownloadSource"),
+        3 => localizer.T("setupWizardProxy"),
+        4 => localizer.T("setupWizardReview"),
+        _ => ""
+    };
+
+    private void OnLocalizerLanguageChanged(object? sender, EventArgs e)
+    {
+        foreach (var item in Steps)
+        {
+            item.Title = ResolveStepTitle(item.Index);
+        }
+
+        OnPropertyChanged(nameof(StepTitle));
+        OnPropertyChanged(nameof(GamePathStatusText));
+        if (IsLastStep)
+        {
+            RefreshSummaryDisplayNames();
+        }
+    }
 
     private void RefreshSteps()
     {
@@ -273,14 +474,6 @@ public partial class SetupWizardViewModel : ViewModelBase, IModalContentViewMode
                 : item.Index == Step
                     ? SetupWizardStepState.Current
                     : SetupWizardStepState.Locked;
-            item.Summary = item.Index switch
-            {
-                0 => ResolveLanguageDisplayName(),
-                1 => ResolveDownloadSourceDisplayName(),
-                2 => GamePath,
-                3 => ResolveProxyDisplayName(),
-                _ => ""
-            };
         }
     }
 

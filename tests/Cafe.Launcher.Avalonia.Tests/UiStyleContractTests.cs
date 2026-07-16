@@ -1011,7 +1011,7 @@ public sealed partial class UiStyleContractTests
     }
 
     [Fact]
-    public void SetupWizard_UsesFixedFiveStepWorkspaceAndCollectionNavigation()
+    public void SetupWizard_UsesFixedFiveStepWorkspaceAndSettingsNavigation()
     {
         var document = XDocument.Load(ProjectFile("Views/SetupWizardOverlay.axaml"));
         var dialog = document
@@ -1023,14 +1023,273 @@ public sealed partial class UiStyleContractTests
         var navigation = document
             .Descendants()
             .Single(element =>
-                element.Name.LocalName == "ItemsControl"
+                element.Name.LocalName == "ListBox"
                 && element.Attribute("ItemsSource")?.Value == "{Binding Dialogs.SetupWizard.Steps}");
+        Assert.Contains("settings-navigation", navigation.Attribute("Classes")?.Value, StringComparison.Ordinal);
+        Assert.Equal(
+            "{Binding Dialogs.SetupWizard.SelectedStep, Mode=TwoWay}",
+            navigation.Attribute("SelectedValue")?.Value);
+        Assert.Equal("{Binding Index}", navigation.Attribute("SelectedValueBinding")?.Value);
         var template = navigation.Descendants().Single(element => element.Name.LocalName == "DataTemplate");
         Assert.Equal("setup:SetupWizardStepItem", template.Attributes().Single(
             attribute => attribute.Name.LocalName == "DataType").Value);
-        Assert.Single(template.Descendants(), element =>
-            element.Name.LocalName == "Button"
-            && element.Attribute("CommandParameter")?.Value == "{Binding Index}");
+        Assert.Equal(2, template.Descendants().Count(element => element.Name.LocalName == "TextBlock"));
+    }
+
+    [Fact]
+    public void SetupWizardNavigation_UsesSingleLineNumberAndTitle()
+    {
+        var document = XDocument.Load(ProjectFile("Views/SetupWizardOverlay.axaml"));
+        var navigation = document
+            .Descendants()
+            .Single(element =>
+                element.Name.LocalName == "ListBox"
+                && element.Attribute("ItemsSource")?.Value == "{Binding Dialogs.SetupWizard.Steps}");
+        var template = navigation.Descendants().Single(element => element.Name.LocalName == "DataTemplate");
+        var title = template
+            .Descendants()
+            .Single(element =>
+                element.Name.LocalName == "TextBlock"
+                && element.Attribute("Text")?.Value == "{Binding Title}");
+        var number = template
+            .Descendants()
+            .Single(element =>
+                element.Name.LocalName == "TextBlock"
+                && element.Attribute("Text")?.Value == "{Binding DisplayNumber}");
+
+        Assert.True(HasClass(title, "settings-navigation-item"));
+        Assert.Equal("CharacterEllipsis", title.Attribute("TextTrimming")?.Value);
+        Assert.Equal("{Binding DisplayNumber}", number.Attribute("Text")?.Value);
+    }
+
+    [Fact]
+    public void SetupWizardNavigation_ReusesSettingsNavigationVisualStates()
+    {
+        var styles = XDocument.Load(ProjectFile("Views/MainWindow.Styles.axaml"));
+        var selected = GetStyleSetters(styles, "ListBox.settings-navigation > ListBoxItem:selected");
+        var disabled = GetStyleSetters(styles, "ListBox.settings-navigation > ListBoxItem:disabled");
+
+        Assert.Equal("3,0,0,0", selected["BorderThickness"]);
+        Assert.Equal("{DynamicResource LauncherAccentBrush}", selected["BorderBrush"]);
+        Assert.Equal("{DynamicResource LauncherTextSecondaryBrush}", disabled["Foreground"]);
+    }
+
+    [Fact]
+    public void SetupWizardNavigation_UsesSymmetricHorizontalPadding()
+    {
+        var styles = XDocument.Load(ProjectFile("Views/Styles/SetupWizard.axaml"));
+        var navigation = GetStyleSetters(
+            styles,
+            "ListBox.settings-navigation.wizard-navigation");
+
+        Assert.Equal("8,8,8,16", navigation["Padding"]);
+    }
+
+    [Fact]
+    public void SetupWizardHeader_ShowsCurrentProgressBeforeTaskTitle()
+    {
+        var document = XDocument.Load(ProjectFile("Views/SetupWizardOverlay.axaml"));
+        var headerCopy = document
+            .Descendants()
+            .Single(element => element.Name.LocalName == "StackPanel" && HasClass(element, "dialog-heading-copy"));
+        var textBlocks = headerCopy.Elements()
+            .Where(element => element.Name.LocalName == "TextBlock")
+            .ToList();
+
+        Assert.Equal("{Binding Dialogs.SetupWizard.StepProgress}", textBlocks[0].Attribute("Text")?.Value);
+        Assert.Equal("{Binding Dialogs.SetupWizard.StepTitle}", textBlocks[1].Attribute("Text")?.Value);
+        Assert.True(HasClass(textBlocks[1], "dialog-title"));
+    }
+
+    [Fact]
+    public void SetupWizard_Review_UsesSeparatedCenteredRows()
+    {
+        var overlay = XDocument.Load(ProjectFile("Views/SetupWizardOverlay.axaml"));
+        var reviewStep = overlay
+            .Descendants()
+            .Single(element =>
+                element.Name.LocalName == "StackPanel"
+                && element.Attribute("IsVisible")?.Value
+                    == "{Binding Dialogs.SetupWizard.IsLastStep}");
+        var reviewContent = reviewStep
+            .Descendants()
+            .Single(element =>
+                element.Name.LocalName == "Border"
+                && HasClass(element, "info-strip"))
+            .Elements()
+            .Single(element => element.Name.LocalName == "StackPanel");
+        var reviewRows = reviewContent
+            .Elements()
+            .Where(element => element.Name.LocalName == "Grid")
+            .ToList();
+        var dividers = reviewContent
+            .Elements()
+            .Where(element =>
+                element.Name.LocalName == "Border"
+                && HasClass(element, "wizard-review-divider"))
+            .ToList();
+
+        Assert.Equal(4, reviewRows.Count);
+        Assert.All(reviewRows, row => Assert.True(HasClass(row, "wizard-review-row")));
+        Assert.Equal(3, dividers.Count);
+        Assert.Collection(
+            reviewContent.Elements(),
+            element => Assert.True(
+                element.Name.LocalName == "Grid" && HasClass(element, "wizard-review-row")),
+            element => Assert.True(
+                element.Name.LocalName == "Border" && HasClass(element, "wizard-review-divider")),
+            element => Assert.True(
+                element.Name.LocalName == "Grid" && HasClass(element, "wizard-review-row")),
+            element => Assert.True(
+                element.Name.LocalName == "Border" && HasClass(element, "wizard-review-divider")),
+            element => Assert.True(
+                element.Name.LocalName == "Grid" && HasClass(element, "wizard-review-row")),
+            element => Assert.True(
+                element.Name.LocalName == "Border" && HasClass(element, "wizard-review-divider")),
+            element => Assert.True(
+                element.Name.LocalName == "Grid" && HasClass(element, "wizard-review-row")));
+        Assert.All(
+            reviewRows,
+            row => Assert.All(
+                row.Elements().Where(element =>
+                    element.Name.LocalName is "TextBlock" or "Button"),
+                element => Assert.Equal("Center", element.Attribute("VerticalAlignment")?.Value)));
+
+        var styles = XDocument.Load(ProjectFile("Views/Styles/SetupWizard.axaml"));
+        var rowStyle = GetStyleSetters(styles, "Grid.wizard-review-row");
+        var dividerStyle = GetStyleSetters(styles, "Border.wizard-review-divider");
+
+        Assert.Equal("{StaticResource LauncherControlHeightDialog}", rowStyle["MinHeight"]);
+        Assert.Equal("Center", rowStyle["VerticalAlignment"]);
+        Assert.Equal("1", dividerStyle["Height"]);
+        Assert.Equal("{DynamicResource LauncherCardBorderBrush}", dividerStyle["Background"]);
+    }
+
+    [Fact]
+    public void SetupWizardGamePath_ShowsStatusWithSemanticStateStyles()
+    {
+        var overlay = XDocument.Load(ProjectFile("Views/SetupWizardOverlay.axaml"));
+        var gamePathInput = overlay
+            .Descendants()
+            .Single(element =>
+                element.Name.LocalName == "TextBox"
+                && element.Attribute("Text")?.Value
+                    == "{Binding Dialogs.SetupWizard.GamePath, Mode=TwoWay}")
+            .Parent;
+        Assert.NotNull(gamePathInput);
+        var status = gamePathInput
+            .ElementsAfterSelf()
+            .Single(element =>
+                element.Name.LocalName == "TextBlock"
+                && element.Attribute("Text")?.Value
+                    == "{Binding Dialogs.SetupWizard.GamePathStatusText}");
+
+        Assert.Equal(
+            "{Binding Dialogs.SetupWizard.GamePathStatusText}",
+            status.Attributes()
+                .Single(attribute => attribute.Name.LocalName == "AutomationProperties.Name")
+                .Value);
+        Assert.Equal(
+            "{Binding Dialogs.SetupWizard.IsGamePathEmpty, Converter={x:Static BoolConverters.Not}}",
+            status.Attribute("IsVisible")?.Value);
+        Assert.True(HasClass(status, "caption"));
+        Assert.True(HasClass(status, "wizard-game-path-status"));
+        Assert.Equal(
+            "{Binding Dialogs.SetupWizard.IsGamePathChecking}",
+            status.Attribute("Classes.checking")?.Value);
+        Assert.Equal(
+            "{Binding Dialogs.SetupWizard.IsGamePathReady}",
+            status.Attribute("Classes.ready")?.Value);
+        Assert.Equal(
+            "{Binding Dialogs.SetupWizard.IsGamePathCorruptedInstallation}",
+            status.Attribute("Classes.corrupted")?.Value);
+        Assert.Equal(
+            "{Binding Dialogs.SetupWizard.IsGamePathInaccessible}",
+            status.Attribute("Classes.inaccessible")?.Value);
+        Assert.Equal("CharacterEllipsis", status.Attribute("TextTrimming")?.Value);
+        Assert.Equal("1", status.Attribute("MaxLines")?.Value);
+
+        var styles = XDocument.Load(ProjectFile("Views/Styles/SetupWizard.axaml"));
+        Assert.Equal(
+            "{DynamicResource LauncherAccentBrush}",
+            GetStyleSetters(styles, "TextBlock.wizard-game-path-status.checking")["Foreground"]);
+        Assert.Equal(
+            "{DynamicResource LauncherSuccessBrush}",
+            GetStyleSetters(styles, "TextBlock.wizard-game-path-status.ready")["Foreground"]);
+        Assert.Equal(
+            "{DynamicResource LauncherDangerBrush}",
+            GetStyleSetters(styles, "TextBlock.wizard-game-path-status.corrupted")["Foreground"]);
+        Assert.Equal(
+            "{DynamicResource LauncherDangerBrush}",
+            GetStyleSetters(styles, "TextBlock.wizard-game-path-status.inaccessible")["Foreground"]);
+    }
+
+    [Fact]
+    public void SetupWizard_ChoiceSteps_UseGroupedRadioButtons()
+    {
+        var document = XDocument.Load(ProjectFile("Views/SetupWizardOverlay.axaml"));
+        var downloadSourceStep = document
+            .Descendants()
+            .Single(element =>
+                element.Name.LocalName == "StackPanel"
+                && element.Attribute("IsVisible")?.Value
+                    == "{Binding Dialogs.SetupWizard.IsStep2}");
+        var proxyStep = document
+            .Descendants()
+            .Single(element =>
+                element.Name.LocalName == "StackPanel"
+                && element.Attribute("IsVisible")?.Value
+                    == "{Binding Dialogs.SetupWizard.IsStep3}");
+        var downloadSourceRadioButtons = downloadSourceStep
+            .Descendants()
+            .Where(element => element.Name.LocalName == "RadioButton")
+            .ToList();
+        Assert.Equal(2, downloadSourceRadioButtons.Count);
+        Assert.All(
+            downloadSourceRadioButtons,
+            button => Assert.Equal(
+                "SetupWizardDownloadSource",
+                button.Attribute("GroupName")?.Value));
+
+        var proxyRadioButtons = proxyStep
+            .Descendants()
+            .Where(element => element.Name.LocalName == "RadioButton")
+            .ToList();
+        Assert.Equal(3, proxyRadioButtons.Count);
+        Assert.All(
+            proxyRadioButtons,
+            button => Assert.Equal(
+                "SetupWizardProxy",
+                button.Attribute("GroupName")?.Value));
+
+        var radioButtons = downloadSourceRadioButtons.Concat(proxyRadioButtons);
+        Assert.Equal(
+            new[]
+            {
+                "{Binding Dialogs.SetupWizard.IsPatchUrlGroupCafe, Mode=TwoWay}",
+                "{Binding Dialogs.SetupWizard.IsPatchUrlGroupOfficial, Mode=TwoWay}",
+                "{Binding Dialogs.SetupWizard.IsProxyAuto, Mode=TwoWay}",
+                "{Binding Dialogs.SetupWizard.IsProxyDirect, Mode=TwoWay}",
+                "{Binding Dialogs.SetupWizard.IsProxySystem, Mode=TwoWay}"
+            },
+            radioButtons.Select(button => button.Attribute("IsChecked")?.Value));
+        Assert.Equal(
+            new[]
+            {
+                "{Binding Shell.I18n.DownloadSourceCafe}",
+                "{Binding Shell.I18n.DownloadSourceOfficial}",
+                "{Binding Shell.I18n.ProxyAuto}",
+                "{Binding Shell.I18n.ProxyDirect}",
+                "{Binding Shell.I18n.ProxySystem}"
+            },
+            radioButtons.Select(button =>
+                button.Attribute("AutomationProperties.Name")?.Value));
+        Assert.DoesNotContain(
+            downloadSourceStep.Descendants().Concat(proxyStep.Descendants()),
+            element =>
+                HasClass(element, "wizard-choice")
+                || element.Attribute("Classes.active") is not null
+                || element.Attribute("Command") is not null);
     }
 
     [Fact]

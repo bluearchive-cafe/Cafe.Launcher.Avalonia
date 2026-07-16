@@ -1,5 +1,7 @@
+using System.ComponentModel;
 using Avalonia;
 using Avalonia.Automation;
+using Avalonia.Automation.Peers;
 using Avalonia.Controls;
 using Avalonia.Controls.Presenters;
 using Avalonia.Headless;
@@ -8,6 +10,8 @@ using Avalonia.Input;
 using Avalonia.Media;
 using Avalonia.Threading;
 using Avalonia.VisualTree;
+using Cafe.Launcher.Avalonia.Constants;
+using Cafe.Launcher.Avalonia.Features.SetupWizard;
 using Cafe.Launcher.Avalonia.Models;
 using Cafe.Launcher.Avalonia.Services;
 using Cafe.Launcher.Avalonia.Services.Diagnostics;
@@ -673,7 +677,7 @@ public sealed class MainWindowHeadlessTests
     }
 
     [AvaloniaFact]
-    public void SetupWizard_WhenShown_IsVisibleAndNavigatesSteps()
+    public async Task SetupWizard_WhenGamePathStatusChanges_UpdatesStatusLineAndNextAvailability()
     {
         using var context = CreateContext();
         context.Window.Show();
@@ -686,31 +690,191 @@ public sealed class MainWindowHeadlessTests
         Assert.True(context.ViewModel.Dialogs.IsSetupWizardVisible);
         Assert.True(context.ViewModel.Dialogs.SetupWizard.IsFirstStep);
 
-        // Step 0 → 1
+        var installationBasePath = Path.Combine(context.TempDir, "available-installation");
+        context.ViewModel.Dialogs.SetupWizard.GamePath = installationBasePath;
+
+        // Step 0 → 1 detects only the preconfigured test path.
         context.ViewModel.Dialogs.SetupWizard.NextCommand.Execute(null);
         Dispatcher.UIThread.RunJobs();
         Assert.Equal(1, context.ViewModel.Dialogs.SetupWizard.Step);
+        Assert.Equal(installationBasePath, context.ViewModel.Dialogs.SetupWizard.GamePath);
+        Assert.True(GetWizardGamePathStatus(context.Window).IsEffectivelyVisible);
 
-        // Step 1 → 2
-        context.ViewModel.Dialogs.SetupWizard.NextCommand.Execute(null);
+        await WaitForGamePathStatusAsync(
+            context.ViewModel.Dialogs.SetupWizard,
+            SetupWizardGamePathStatus.AvailableForInstallation);
         Dispatcher.UIThread.RunJobs();
-        Assert.Equal(2, context.ViewModel.Dialogs.SetupWizard.Step);
 
-        // Step 2 requires GamePath to be non-empty for CanGoNext
+        var statusLine = GetWizardGamePathStatus(context.Window);
+        var nextButton = GetWizardNextButton(context.Window, context.ViewModel);
+        Assert.Equal(
+            context.ViewModel.Shell.I18n.SetupWizardGamePathAvailable,
+            statusLine.Text);
+        Assert.True(context.ViewModel.Dialogs.SetupWizard.CanGoNext);
+        Assert.True(nextButton.IsEnabled);
+
+        var corruptedInstallationPath = new GameInstallationPath().NormalizeGamePath(
+            Path.Combine(context.TempDir, "corrupted-installation"));
+        Directory.CreateDirectory(corruptedInstallationPath);
+        await File.WriteAllTextAsync(
+            Path.Combine(corruptedInstallationPath, GamePaths.ManifestFileName),
+            "{}");
+        context.ViewModel.Dialogs.SetupWizard.GamePath = corruptedInstallationPath;
+        await WaitForGamePathStatusAsync(
+            context.ViewModel.Dialogs.SetupWizard,
+            SetupWizardGamePathStatus.CorruptedInstallation);
+        Dispatcher.UIThread.RunJobs();
+
+        Assert.Equal(
+            context.ViewModel.Shell.I18n.SetupWizardGamePathCorrupted,
+            statusLine.Text);
         Assert.False(context.ViewModel.Dialogs.SetupWizard.CanGoNext);
-        context.ViewModel.Dialogs.SetupWizard.GamePath = @"C:\Games\YostarGames\BlueArchive_JP";
-        Assert.True(context.ViewModel.Dialogs.SetupWizard.CanGoNext);
+        Assert.False(nextButton.IsEnabled);
+
         context.ViewModel.Dialogs.SetupWizard.NextCommand.Execute(null);
         Dispatcher.UIThread.RunJobs();
-        Assert.Equal(3, context.ViewModel.Dialogs.SetupWizard.Step);
+        Assert.Equal(1, context.ViewModel.Dialogs.SetupWizard.Step);
+    }
 
-        // Step 3 → 4 (last)
-        Assert.True(context.ViewModel.Dialogs.SetupWizard.CanGoNext);
+    [AvaloniaFact]
+    public async Task SetupWizard_ReviewList_EditButtonsNavigateToTheirSteps()
+    {
+        using var context = CreateContext();
+        var wizard = context.ViewModel.Dialogs.SetupWizard;
+        wizard.GamePath = Path.Combine(context.TempDir, "available-installation");
+
+        context.Window.Show();
+        context.ViewModel.Dialogs.ShowSetupWizard();
+        wizard.NextCommand.Execute(null);
+        await WaitForGamePathStatusAsync(wizard, SetupWizardGamePathStatus.AvailableForInstallation);
+        while (!wizard.IsLastStep)
+        {
+            wizard.NextCommand.Execute(null);
+        }
+        Dispatcher.UIThread.RunJobs();
+
+        var editButtons = context.Window
+            .GetVisualDescendants()
+            .OfType<Button>()
+            .Where(control => AutomationProperties.GetName(control)
+                == context.ViewModel.Shell.I18n.SetupWizardEditStep)
+            .ToArray();
+
+        Assert.Equal(4, editButtons.Length);
+
+        foreach (var (editButton, expectedStep) in editButtons.Zip([0, 2, 1, 3]))
+        {
+            new ButtonAutomationPeer(editButton).Invoke();
+            Dispatcher.UIThread.RunJobs();
+
+            Assert.Equal(expectedStep, wizard.Step);
+
+            while (!wizard.IsLastStep)
+            {
+                if (wizard.IsStep1)
+                {
+                    await WaitForGamePathStatusAsync(
+                        wizard,
+                        SetupWizardGamePathStatus.AvailableForInstallation);
+                }
+
+                wizard.NextCommand.Execute(null);
+                Dispatcher.UIThread.RunJobs();
+            }
+        }
+    }
+
+    [AvaloniaFact]
+    public void SetupWizard_RadioChoices_KeepGroupsIndependent()
+    {
+        using var context = CreateContext();
+        context.Window.Show();
+        context.ViewModel.Dialogs.ShowSetupWizard();
+        context.ViewModel.Dialogs.SetupWizard.Step = 2;
+        Dispatcher.UIThread.RunJobs();
+
+        var cafe = context.Window.GetVisualDescendants().OfType<RadioButton>().Single(control =>
+            AutomationProperties.GetName(control) == context.ViewModel.Shell.I18n.DownloadSourceCafe);
+        var official = context.Window.GetVisualDescendants().OfType<RadioButton>().Single(control =>
+            AutomationProperties.GetName(control) == context.ViewModel.Shell.I18n.DownloadSourceOfficial);
+
+        official.IsChecked = true;
+        Dispatcher.UIThread.RunJobs();
+
+        Assert.True(context.ViewModel.Dialogs.SetupWizard.IsPatchUrlGroupOfficial);
+        Assert.False(context.ViewModel.Dialogs.SetupWizard.IsPatchUrlGroupCafe);
+        Assert.False(cafe.IsChecked);
+        Assert.True(official.IsChecked);
+
         context.ViewModel.Dialogs.SetupWizard.NextCommand.Execute(null);
         Dispatcher.UIThread.RunJobs();
 
-        Assert.True(context.ViewModel.Dialogs.SetupWizard.IsLastStep);
-        Assert.Equal(4, context.ViewModel.Dialogs.SetupWizard.Step);
+        var auto = context.Window.GetVisualDescendants().OfType<RadioButton>().Single(control =>
+            AutomationProperties.GetName(control) == context.ViewModel.Shell.I18n.ProxyAuto);
+        var direct = context.Window.GetVisualDescendants().OfType<RadioButton>().Single(control =>
+            AutomationProperties.GetName(control) == context.ViewModel.Shell.I18n.ProxyDirect);
+        var system = context.Window.GetVisualDescendants().OfType<RadioButton>().Single(control =>
+            AutomationProperties.GetName(control) == context.ViewModel.Shell.I18n.ProxySystem);
+
+        direct.IsChecked = true;
+        Dispatcher.UIThread.RunJobs();
+
+        Assert.True(context.ViewModel.Dialogs.SetupWizard.IsProxyDirect);
+        Assert.False(context.ViewModel.Dialogs.SetupWizard.IsProxySystem);
+        Assert.True(context.ViewModel.Dialogs.SetupWizard.IsPatchUrlGroupOfficial);
+        Assert.False(auto.IsChecked);
+        Assert.True(direct.IsChecked);
+        Assert.False(system.IsChecked);
+
+        system.IsChecked = true;
+        Dispatcher.UIThread.RunJobs();
+
+        Assert.True(context.ViewModel.Dialogs.SetupWizard.IsProxySystem);
+        Assert.False(context.ViewModel.Dialogs.SetupWizard.IsProxyAuto);
+        Assert.False(context.ViewModel.Dialogs.SetupWizard.IsProxyDirect);
+        Assert.True(system.IsChecked);
+    }
+
+    [AvaloniaTheory]
+    [InlineData(LauncherLanguages.English)]
+    [InlineData(LauncherLanguages.SimplifiedChinese)]
+    [InlineData(LauncherLanguages.TraditionalChinese)]
+    [InlineData(LauncherLanguages.Japanese)]
+    public async Task SetupWizard_WhenLanguageChanges_LocalizesStatusLineAndKeepsNavigationAccessible(
+        string language)
+    {
+        using var context = CreateContext();
+        var installationBasePath = Path.Combine(context.TempDir, "available-installation");
+        context.ViewModel.Dialogs.SetupWizard.GamePath = installationBasePath;
+        context.Window.Show();
+        context.ViewModel.Dialogs.ShowSetupWizard();
+        context.ViewModel.Dialogs.SetupWizard.NextCommand.Execute(null);
+        await WaitForGamePathStatusAsync(
+            context.ViewModel.Dialogs.SetupWizard,
+            SetupWizardGamePathStatus.AvailableForInstallation);
+
+        context.ViewModel.Shell.ApplyLanguage(
+            language,
+            context.ViewModel.Settings,
+            context.ViewModel.ResourcePanel,
+            hasSnapshot: false);
+        Dispatcher.UIThread.RunJobs();
+
+        var statusLine = GetWizardGamePathStatus(context.Window);
+        var navigation = context.Window.GetVisualDescendants().OfType<ListBox>()
+            .Single(control => control.Classes.Contains("wizard-navigation"));
+
+        Assert.Equal(
+            context.ViewModel.Shell.I18n.SetupWizardGamePathAvailable,
+            statusLine.Text);
+        Assert.Equal(statusLine.Text, AutomationProperties.GetName(statusLine));
+        Assert.Equal(
+            context.ViewModel.Shell.I18n.SetupWizardStepTitle,
+            AutomationProperties.GetName(navigation));
+        Assert.All(
+            navigation.GetVisualDescendants().OfType<TextBlock>()
+                .Where(control => control.Classes.Contains("settings-navigation-item")),
+            control => Assert.Equal(control.Text, AutomationProperties.GetName(control)));
     }
 
     [AvaloniaFact]
@@ -792,12 +956,12 @@ public sealed class MainWindowHeadlessTests
         context.ViewModel.Dialogs.ShowSetupWizard();
         Dispatcher.UIThread.RunJobs();
 
-        // Navigate to step 2 (GamePath) and set a path
-        context.ViewModel.Dialogs.SetupWizard.NextCommand.Execute(null);
-        Dispatcher.UIThread.RunJobs();
+        // Navigate to step 1 (GamePath) and set a path
         context.ViewModel.Dialogs.SetupWizard.NextCommand.Execute(null);
         Dispatcher.UIThread.RunJobs();
         context.ViewModel.Dialogs.SetupWizard.GamePath = @"C:\Games\YostarGames\BlueArchive_JP";
+        context.ViewModel.Dialogs.SetupWizard.NextCommand.Execute(null);
+        Dispatcher.UIThread.RunJobs();
         context.ViewModel.Dialogs.SetupWizard.NextCommand.Execute(null);
         Dispatcher.UIThread.RunJobs();
         context.ViewModel.Dialogs.SetupWizard.NextCommand.Execute(null);
@@ -843,6 +1007,44 @@ public sealed class MainWindowHeadlessTests
         context.Window.Show();
         context.ViewModel.WindowChrome.ShowSettingsCommand.Execute(null);
         Dispatcher.UIThread.RunJobs();
+    }
+
+    private static TextBlock GetWizardGamePathStatus(MainWindow window) =>
+        window.GetVisualDescendants().OfType<TextBlock>().Single(control =>
+            control.Classes.Contains("wizard-game-path-status"));
+
+    private static Button GetWizardNextButton(MainWindow window, MainWindowViewModel viewModel) =>
+        window.GetVisualDescendants().OfType<Button>().Single(control =>
+            ReferenceEquals(control.Command, viewModel.Dialogs.SetupWizard.NextCommand));
+
+    private static async Task WaitForGamePathStatusAsync(
+        SetupWizardViewModel viewModel,
+        SetupWizardGamePathStatus expectedStatus)
+    {
+        var completion = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
+        PropertyChangedEventHandler? handler = null;
+        handler = (_, args) =>
+        {
+            if (args.PropertyName == nameof(SetupWizardViewModel.GamePathStatus)
+                && viewModel.GamePathStatus == expectedStatus)
+            {
+                completion.TrySetResult();
+            }
+        };
+        viewModel.PropertyChanged += handler;
+        try
+        {
+            if (viewModel.GamePathStatus == expectedStatus)
+            {
+                return;
+            }
+
+            await completion.Task.WaitAsync(TimeSpan.FromSeconds(2));
+        }
+        finally
+        {
+            viewModel.PropertyChanged -= handler;
+        }
     }
 
     private static ListBox GetSettingsNavigation(MainWindow window) =>

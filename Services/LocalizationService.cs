@@ -254,7 +254,12 @@ public sealed partial class LocalizedStrings : ObservableObject
     [ObservableProperty] private string setupWizardDownloadSourceOfficialDescription = "";
     [ObservableProperty] private string setupWizardEditStep = "";
     [ObservableProperty] private string setupWizardGamePath = "";
+    [ObservableProperty] private string setupWizardGamePathAvailable = "";
+    [ObservableProperty] private string setupWizardGamePathChecking = "";
+    [ObservableProperty] private string setupWizardGamePathCorrupted = "";
     [ObservableProperty] private string setupWizardGamePathHint = "";
+    [ObservableProperty] private string setupWizardGamePathInaccessible = "";
+    [ObservableProperty] private string setupWizardGamePathInstalled = "";
     [ObservableProperty] private string setupWizardGamePathEmpty = "";
     [ObservableProperty] private string setupWizardBrowse = "";
     [ObservableProperty] private string setupWizardProxy = "";
@@ -524,7 +529,12 @@ public sealed partial class LocalizedStrings : ObservableObject
         SetupWizardDownloadSourceOfficialDescription = localizer.T("setupWizardDownloadSourceOfficialDescription");
         SetupWizardEditStep = localizer.T("setupWizardEditStep");
         SetupWizardGamePath = localizer.T("setupWizardGamePath");
+        SetupWizardGamePathAvailable = localizer.T("setupWizardGamePathAvailable");
+        SetupWizardGamePathChecking = localizer.T("setupWizardGamePathChecking");
+        SetupWizardGamePathCorrupted = localizer.T("setupWizardGamePathCorrupted");
         SetupWizardGamePathHint = localizer.T("setupWizardGamePathHint");
+        SetupWizardGamePathInaccessible = localizer.T("setupWizardGamePathInaccessible");
+        SetupWizardGamePathInstalled = localizer.T("setupWizardGamePathInstalled");
         SetupWizardGamePathEmpty = localizer.T("setupWizardGamePathEmpty");
         SetupWizardBrowse = localizer.T("setupWizardBrowse");
         SetupWizardProxy = localizer.T("setupWizardProxy");

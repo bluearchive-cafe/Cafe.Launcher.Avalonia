@@ -69,6 +69,31 @@ public sealed class MainWindowViewModelTests : IDisposable
     }
 
     [Fact]
+    public async Task SetupWizardLanguage_WhenChanged_AppliesLanguageImmediately()
+    {
+        var coreService = new CountingCoreService(CreateSnapshot());
+        using var viewModel = await CreateViewModelAsync(coreService);
+        viewModel.Dialogs.ShowSetupWizard();
+
+        viewModel.Dialogs.SetupWizard.Language = LauncherLanguages.Japanese;
+
+        Assert.Equal("言語", viewModel.Shell.I18n.SetupWizardLanguage);
+        Assert.Equal("言語", viewModel.Dialogs.SetupWizard.Steps[0].Title);
+    }
+
+    [Fact]
+    public async Task SetupWizardLanguage_WhenWizardIsHidden_DoesNotPreviewLanguage()
+    {
+        var coreService = new CountingCoreService(CreateSnapshot());
+        using var viewModel = await CreateViewModelAsync(coreService);
+        var originalTitle = viewModel.Shell.I18n.SetupWizardLanguage;
+
+        viewModel.Dialogs.SetupWizard.Language = LauncherLanguages.Japanese;
+
+        Assert.Equal(originalTitle, viewModel.Shell.I18n.SetupWizardLanguage);
+    }
+
+    [Fact]
     public async Task InitializeAsync_WhenCalledTwice_LoadsLauncherStateOnce()
     {
         var coreService = new CountingCoreService(CreateSnapshot());
@@ -809,7 +834,7 @@ public sealed class MainWindowViewModelTests : IDisposable
         var dialogs = new DialogsViewModel(
             localizer,
             new NoticeStateService(Path.Combine(tempDir, "save-failure-notices.json")),
-            new SetupWizardViewModel(localizer, new GameInstallationPath()));
+            new SetupWizardViewModel(localizer, new GameInstallationPath(), new LocalInstallationStateStore()));
         using var testLogger = new UnifiedLogger(tempDir);
         using var settings = new SettingsViewModel(
             settingsService,
@@ -1472,7 +1497,7 @@ public sealed class MainWindowViewModelTests : IDisposable
         var settingsOptions = new SettingsOptionsViewModel(localizationService, diskSpaceService);
         var settingsAppearance = new SettingsAppearanceViewModel(settingsEditor);
         var noticeStateService = new NoticeStateService(Path.Combine(tempDir, Guid.NewGuid().ToString("N"), "shown_notices.json"));
-        var dialogsViewModel = new DialogsViewModel(localizationService, noticeStateService, new SetupWizardViewModel(localizationService, new GameInstallationPath()));
+        var dialogsViewModel = new DialogsViewModel(localizationService, noticeStateService, new SetupWizardViewModel(localizationService, new GameInstallationPath(), new LocalInstallationStateStore()));
         using var settingsLogger = new UnifiedLogger(Path.Combine(tempDir, Guid.NewGuid().ToString("N")));
         var settingsViewModel = new SettingsViewModel(
             settingsService, localizationService, toastService,

@@ -14,36 +14,30 @@
                 MaxWidth="920"
                 MaxHeight="560"
                 Classes="dialog overlay-dialog confirm-panel">
-            <Grid ColumnDefinitions="240,*">
-                <Border Classes="wizard-navigation">
-                    <StackPanel Spacing="{StaticResource LauncherSpacingMd}">
-                        <TextBlock Text="{Binding Shell.I18n.SetupWizardStepTitle}"
-                                   Classes="dialog-title"/>
-                        <ItemsControl ItemsSource="{Binding Dialogs.SetupWizard.Steps}">
-                            <ItemsControl.ItemTemplate>
-                                <DataTemplate x:DataType="setup:SetupWizardStepItem">
-                                    <Button Classes="wizard-step"
-                                            Classes.current="{Binding IsCurrent}"
-                                            Classes.completed="{Binding IsCompleted}"
-                                            Command="{Binding DataContext.Dialogs.SetupWizard.GoToStepCommand, ElementName=WizardRoot}"
-                                            CommandParameter="{Binding Index}"
-                                            IsEnabled="{Binding CanNavigate}"
-                                            AutomationProperties.Name="{Binding Title}">
-                                        <Grid ColumnDefinitions="32,*" ColumnSpacing="{StaticResource LauncherSpacingSm}">
-                                            <Border Classes="wizard-step-index">
-                                                <TextBlock Text="{Binding DisplayNumber}" HorizontalAlignment="Center"/>
-                                            </Border>
-                                            <StackPanel Grid.Column="1" Spacing="{StaticResource LauncherSpacingXs}">
-                                                <TextBlock Text="{Binding Title}" Classes="section-title"/>
-                                                <TextBlock Text="{Binding Summary}" Classes="caption" TextTrimming="CharacterEllipsis"/>
-                                            </StackPanel>
-                                        </Grid>
-                                    </Button>
-                                </DataTemplate>
-                            </ItemsControl.ItemTemplate>
-                        </ItemsControl>
-                    </StackPanel>
-                </Border>
+            <Grid ColumnDefinitions="184,*">
+                <ListBox Classes="settings-navigation wizard-navigation"
+                         ItemsSource="{Binding Dialogs.SetupWizard.Steps}"
+                         SelectedValue="{Binding Dialogs.SetupWizard.SelectedStep, Mode=TwoWay}"
+                         SelectedValueBinding="{Binding Index}"
+                         AutomationProperties.Name="{Binding Shell.I18n.SetupWizardStepTitle}">
+                    <ListBox.Styles>
+                        <Style Selector="ListBoxItem" x:DataType="setup:SetupWizardStepItem">
+                            <Setter Property="IsEnabled" Value="{Binding CanNavigate}"/>
+                        </Style>
+                    </ListBox.Styles>
+                    <ListBox.ItemTemplate>
+                        <DataTemplate x:DataType="setup:SetupWizardStepItem">
+                            <Grid ColumnDefinitions="Auto,*" ColumnSpacing="{StaticResource LauncherSpacingSm}">
+                                <TextBlock Text="{Binding DisplayNumber}" Classes="wizard-step-number"/>
+                                <TextBlock Grid.Column="1"
+                                           Text="{Binding Title}"
+                                           Classes="settings-navigation-item"
+                                           TextTrimming="CharacterEllipsis"
+                                           AutomationProperties.Name="{Binding Title}"/>
+                            </Grid>
+                        </DataTemplate>
+                    </ListBox.ItemTemplate>
+                </ListBox>
                 <Grid Grid.Column="1" RowDefinitions="Auto,*,Auto" Classes="confirm-layout">
                 <!-- Header row -->
                 <Grid Classes="dialog-heading" ColumnDefinitions="Auto,*,Auto">
@@ -56,8 +50,8 @@
                                                    VerticalAlignment="Center"/>
                     </Border>
                     <StackPanel Grid.Column="1" Classes="dialog-heading-copy">
-                        <TextBlock Text="{Binding Shell.I18n.SetupWizardStepTitle}" Classes="dialog-title"/>
-                        <TextBlock Text="{Binding Dialogs.SetupWizard.StepTitle}" Classes="caption"/>
+                        <TextBlock Text="{Binding Dialogs.SetupWizard.StepProgress}" Classes="caption"/>
+                        <TextBlock Text="{Binding Dialogs.SetupWizard.StepTitle}" Classes="dialog-title"/>
                     </StackPanel>
                     <Button Grid.Column="2"
                             Classes="flat-action dialog-action"
@@ -101,38 +95,9 @@
                             </ComboBox>
                         </StackPanel>
 
-                        <!-- Step 1: Download Source -->
+                        <!-- Step 1: Game Path -->
                         <StackPanel Spacing="{StaticResource LauncherSpacingMd}"
                                     IsVisible="{Binding Dialogs.SetupWizard.IsStep1}">
-                            <TextBlock Text="{Binding Shell.I18n.SetupWizardDownloadSource}" Classes="section-title"/>
-                            <TextBlock Text="{Binding Shell.I18n.SetupWizardDownloadSourceHint}"
-                                       Classes="body"
-                                       TextWrapping="Wrap"/>
-                            <StackPanel Spacing="{StaticResource LauncherSpacingSm}">
-                                <Button Classes="wizard-choice"
-                                        Classes.active="{Binding Dialogs.SetupWizard.IsPatchUrlGroupCafe}"
-                                        Command="{Binding Dialogs.SetupWizard.SelectCafeDownloadSourceCommand}"
-                                        AutomationProperties.Name="{Binding Shell.I18n.DownloadSourceCafe}">
-                                    <StackPanel>
-                                        <TextBlock Text="{Binding Shell.I18n.DownloadSourceCafe}" Classes="section-title"/>
-                                        <TextBlock Text="{Binding Shell.I18n.SetupWizardDownloadSourceCafeDescription}" Classes="caption"/>
-                                    </StackPanel>
-                                </Button>
-                                <Button Classes="wizard-choice"
-                                        Classes.active="{Binding Dialogs.SetupWizard.IsPatchUrlGroupOfficial}"
-                                        Command="{Binding Dialogs.SetupWizard.SelectOfficialDownloadSourceCommand}"
-                                        AutomationProperties.Name="{Binding Shell.I18n.DownloadSourceOfficial}">
-                                    <StackPanel>
-                                        <TextBlock Text="{Binding Shell.I18n.DownloadSourceOfficial}" Classes="section-title"/>
-                                        <TextBlock Text="{Binding Shell.I18n.SetupWizardDownloadSourceOfficialDescription}" Classes="caption"/>
-                                    </StackPanel>
-                                </Button>
-                            </StackPanel>
-                        </StackPanel>
-
-                        <!-- Step 2: Game Path -->
-                        <StackPanel Spacing="{StaticResource LauncherSpacingMd}"
-                                    IsVisible="{Binding Dialogs.SetupWizard.IsStep2}">
                             <TextBlock Text="{Binding Shell.I18n.SetupWizardGamePath}" Classes="section-title"/>
                             <TextBlock Text="{Binding Shell.I18n.SetupWizardGamePathHint}"
                                        Classes="body"
@@ -153,10 +118,47 @@
                                     </StackPanel>
                                 </Button>
                             </Grid>
+                            <TextBlock Text="{Binding Dialogs.SetupWizard.GamePathStatusText}"
+                                       AutomationProperties.Name="{Binding Dialogs.SetupWizard.GamePathStatusText}"
+                                       Classes="caption wizard-game-path-status"
+                                       Classes.checking="{Binding Dialogs.SetupWizard.IsGamePathChecking}"
+                                       Classes.ready="{Binding Dialogs.SetupWizard.IsGamePathReady}"
+                                       Classes.corrupted="{Binding Dialogs.SetupWizard.IsGamePathCorruptedInstallation}"
+                                       Classes.inaccessible="{Binding Dialogs.SetupWizard.IsGamePathInaccessible}"
+                                       IsVisible="{Binding Dialogs.SetupWizard.IsGamePathEmpty, Converter={x:Static BoolConverters.Not}}"
+                                       TextTrimming="CharacterEllipsis"
+                                       MaxLines="1"/>
                             <TextBlock Text="{Binding Shell.I18n.SetupWizardGamePathEmpty}"
                                        Classes="caption"
                                        Foreground="{DynamicResource LauncherDangerBrush}"
                                        IsVisible="{Binding Dialogs.SetupWizard.IsGamePathEmpty}"/>
+                        </StackPanel>
+
+                        <!-- Step 2: Download Source -->
+                        <StackPanel Spacing="{StaticResource LauncherSpacingMd}"
+                                    IsVisible="{Binding Dialogs.SetupWizard.IsStep2}">
+                            <TextBlock Text="{Binding Shell.I18n.SetupWizardDownloadSource}" Classes="section-title"/>
+                            <TextBlock Text="{Binding Shell.I18n.SetupWizardDownloadSourceHint}"
+                                       Classes="body"
+                                       TextWrapping="Wrap"/>
+                            <StackPanel Spacing="{StaticResource LauncherSpacingSm}">
+                                <RadioButton GroupName="SetupWizardDownloadSource"
+                                        IsChecked="{Binding Dialogs.SetupWizard.IsPatchUrlGroupCafe, Mode=TwoWay}"
+                                        AutomationProperties.Name="{Binding Shell.I18n.DownloadSourceCafe}">
+                                    <StackPanel>
+                                        <TextBlock Text="{Binding Shell.I18n.DownloadSourceCafe}" Classes="section-title"/>
+                                        <TextBlock Text="{Binding Shell.I18n.SetupWizardDownloadSourceCafeDescription}" Classes="caption"/>
+                                    </StackPanel>
+                                </RadioButton>
+                                <RadioButton GroupName="SetupWizardDownloadSource"
+                                        IsChecked="{Binding Dialogs.SetupWizard.IsPatchUrlGroupOfficial, Mode=TwoWay}"
+                                        AutomationProperties.Name="{Binding Shell.I18n.DownloadSourceOfficial}">
+                                    <StackPanel>
+                                        <TextBlock Text="{Binding Shell.I18n.DownloadSourceOfficial}" Classes="section-title"/>
+                                        <TextBlock Text="{Binding Shell.I18n.SetupWizardDownloadSourceOfficialDescription}" Classes="caption"/>
+                                    </StackPanel>
+                                </RadioButton>
+                            </StackPanel>
                         </StackPanel>
 
                         <!-- Step 3: Proxy -->
@@ -167,33 +169,30 @@
                                        Classes="body"
                                        TextWrapping="Wrap"/>
                             <StackPanel Spacing="{StaticResource LauncherSpacingSm}">
-                                <Button Classes="wizard-choice"
-                                        Classes.active="{Binding Dialogs.SetupWizard.IsProxyAuto}"
-                                        Command="{Binding Dialogs.SetupWizard.SelectProxyAutoCommand}"
+                                <RadioButton GroupName="SetupWizardProxy"
+                                        IsChecked="{Binding Dialogs.SetupWizard.IsProxyAuto, Mode=TwoWay}"
                                         AutomationProperties.Name="{Binding Shell.I18n.ProxyAuto}">
                                     <StackPanel>
                                         <TextBlock Text="{Binding Shell.I18n.ProxyAuto}" Classes="section-title"/>
                                         <TextBlock Text="{Binding Shell.I18n.SetupWizardProxyAutoDescription}" Classes="caption"/>
                                     </StackPanel>
-                                </Button>
-                                <Button Classes="wizard-choice"
-                                        Classes.active="{Binding Dialogs.SetupWizard.IsProxyDirect}"
-                                        Command="{Binding Dialogs.SetupWizard.SelectProxyDirectCommand}"
+                                </RadioButton>
+                                <RadioButton GroupName="SetupWizardProxy"
+                                        IsChecked="{Binding Dialogs.SetupWizard.IsProxyDirect, Mode=TwoWay}"
                                         AutomationProperties.Name="{Binding Shell.I18n.ProxyDirect}">
                                     <StackPanel>
                                         <TextBlock Text="{Binding Shell.I18n.ProxyDirect}" Classes="section-title"/>
                                         <TextBlock Text="{Binding Shell.I18n.SetupWizardProxyDirectDescription}" Classes="caption"/>
                                     </StackPanel>
-                                </Button>
-                                <Button Classes="wizard-choice"
-                                        Classes.active="{Binding Dialogs.SetupWizard.IsProxySystem}"
-                                        Command="{Binding Dialogs.SetupWizard.SelectProxySystemCommand}"
+                                </RadioButton>
+                                <RadioButton GroupName="SetupWizardProxy"
+                                        IsChecked="{Binding Dialogs.SetupWizard.IsProxySystem, Mode=TwoWay}"
                                         AutomationProperties.Name="{Binding Shell.I18n.ProxySystem}">
                                     <StackPanel>
                                         <TextBlock Text="{Binding Shell.I18n.ProxySystem}" Classes="section-title"/>
                                         <TextBlock Text="{Binding Shell.I18n.SetupWizardProxySystemDescription}" Classes="caption"/>
                                     </StackPanel>
-                                </Button>
+                                </RadioButton>
                             </StackPanel>
                         </StackPanel>
 
@@ -206,48 +205,71 @@
                                        TextWrapping="Wrap"/>
                             <Border Classes="info-strip">
                                 <StackPanel Spacing="{StaticResource LauncherSpacingMd}">
-                                    <Grid ColumnDefinitions="Auto,*,Auto" ColumnSpacing="{StaticResource LauncherSpacingMd}">
-                                        <TextBlock Text="{Binding Shell.I18n.SetupWizardLanguage}" Classes="caption"/>
+                                    <Grid Classes="wizard-review-row" ColumnDefinitions="Auto,*,Auto" ColumnSpacing="{StaticResource LauncherSpacingMd}">
+                                        <TextBlock Text="{Binding Shell.I18n.SetupWizardLanguage}" Classes="caption" VerticalAlignment="Center"/>
                                         <TextBlock Grid.Column="1"
                                                    Text="{Binding Dialogs.SetupWizard.LanguageDisplayName}"
-                                                   Classes="value"/>
+                                                   Classes="value"
+                                                   VerticalAlignment="Center"/>
                                         <Button Grid.Column="2" Classes="flat-action dialog-action wizard-review-edit"
-                                                Command="{Binding Dialogs.SetupWizard.GoToStepCommand}" CommandParameter="0"
+                                                Command="{Binding Dialogs.SetupWizard.GoToStepCommand}"
+                                                VerticalAlignment="Center"
                                                 AutomationProperties.Name="{Binding Shell.I18n.SetupWizardEditStep}">
+                                            <Button.CommandParameter>
+                                                <x:Int32>0</x:Int32>
+                                            </Button.CommandParameter>
                                             <TextBlock Text="{Binding Shell.I18n.SetupWizardEditStep}"/>
                                         </Button>
                                     </Grid>
-                                    <Grid ColumnDefinitions="Auto,*,Auto" ColumnSpacing="{StaticResource LauncherSpacingMd}">
-                                        <TextBlock Text="{Binding Shell.I18n.SetupWizardDownloadSource}" Classes="caption"/>
+                                    <Border Classes="wizard-review-divider"/>
+                                    <Grid Classes="wizard-review-row" ColumnDefinitions="Auto,*,Auto" ColumnSpacing="{StaticResource LauncherSpacingMd}">
+                                        <TextBlock Text="{Binding Shell.I18n.SetupWizardDownloadSource}" Classes="caption" VerticalAlignment="Center"/>
                                         <TextBlock Grid.Column="1"
                                                    Text="{Binding Dialogs.SetupWizard.DownloadSourceDisplayName}"
-                                                   Classes="value"/>
+                                                   Classes="value"
+                                                   VerticalAlignment="Center"/>
                                         <Button Grid.Column="2" Classes="flat-action dialog-action wizard-review-edit"
-                                                Command="{Binding Dialogs.SetupWizard.GoToStepCommand}" CommandParameter="1"
+                                                Command="{Binding Dialogs.SetupWizard.GoToStepCommand}"
+                                                VerticalAlignment="Center"
                                                 AutomationProperties.Name="{Binding Shell.I18n.SetupWizardEditStep}">
+                                            <Button.CommandParameter>
+                                                <x:Int32>2</x:Int32>
+                                            </Button.CommandParameter>
                                             <TextBlock Text="{Binding Shell.I18n.SetupWizardEditStep}"/>
                                         </Button>
                                     </Grid>
-                                    <Grid ColumnDefinitions="Auto,*,Auto" ColumnSpacing="{StaticResource LauncherSpacingMd}">
-                                        <TextBlock Text="{Binding Shell.I18n.SetupWizardGamePath}" Classes="caption"/>
+                                    <Border Classes="wizard-review-divider"/>
+                                    <Grid Classes="wizard-review-row" ColumnDefinitions="Auto,*,Auto" ColumnSpacing="{StaticResource LauncherSpacingMd}">
+                                        <TextBlock Text="{Binding Shell.I18n.SetupWizardGamePath}" Classes="caption" VerticalAlignment="Center"/>
                                         <TextBlock Grid.Column="1"
                                                    Text="{Binding Dialogs.SetupWizard.GamePath}"
                                                    Classes="value"
-                                                   TextTrimming="CharacterEllipsis"/>
+                                                   TextTrimming="CharacterEllipsis"
+                                                   VerticalAlignment="Center"/>
                                         <Button Grid.Column="2" Classes="flat-action dialog-action wizard-review-edit"
-                                                Command="{Binding Dialogs.SetupWizard.GoToStepCommand}" CommandParameter="2"
+                                                Command="{Binding Dialogs.SetupWizard.GoToStepCommand}"
+                                                VerticalAlignment="Center"
                                                 AutomationProperties.Name="{Binding Shell.I18n.SetupWizardEditStep}">
+                                            <Button.CommandParameter>
+                                                <x:Int32>1</x:Int32>
+                                            </Button.CommandParameter>
                                             <TextBlock Text="{Binding Shell.I18n.SetupWizardEditStep}"/>
                                         </Button>
                                     </Grid>
-                                    <Grid ColumnDefinitions="Auto,*,Auto" ColumnSpacing="{StaticResource LauncherSpacingMd}">
-                                        <TextBlock Text="{Binding Shell.I18n.SetupWizardProxy}" Classes="caption"/>
+                                    <Border Classes="wizard-review-divider"/>
+                                    <Grid Classes="wizard-review-row" ColumnDefinitions="Auto,*,Auto" ColumnSpacing="{StaticResource LauncherSpacingMd}">
+                                        <TextBlock Text="{Binding Shell.I18n.SetupWizardProxy}" Classes="caption" VerticalAlignment="Center"/>
                                         <TextBlock Grid.Column="1"
                                                    Text="{Binding Dialogs.SetupWizard.ProxyDisplayName}"
-                                                   Classes="value"/>
+                                                   Classes="value"
+                                                   VerticalAlignment="Center"/>
                                         <Button Grid.Column="2" Classes="flat-action dialog-action wizard-review-edit"
-                                                Command="{Binding Dialogs.SetupWizard.GoToStepCommand}" CommandParameter="3"
+                                                Command="{Binding Dialogs.SetupWizard.GoToStepCommand}"
+                                                VerticalAlignment="Center"
                                                 AutomationProperties.Name="{Binding Shell.I18n.SetupWizardEditStep}">
+                                            <Button.CommandParameter>
+                                                <x:Int32>3</x:Int32>
+                                            </Button.CommandParameter>
                                             <TextBlock Text="{Binding Shell.I18n.SetupWizardEditStep}"/>
                                         </Button>
                                     </Grid>
