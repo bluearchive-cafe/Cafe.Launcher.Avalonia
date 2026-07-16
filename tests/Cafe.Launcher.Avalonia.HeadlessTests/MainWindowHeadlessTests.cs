@@ -286,6 +286,65 @@ public sealed class MainWindowHeadlessTests
         }
     }
 
+    [AvaloniaTheory]
+    [InlineData(1300, 754)]
+    [InlineData(1024, 640)]
+    public void SettingsAdvanced_AtSupportedWindowSizes_AlignsDedicatedLogActionRow(
+        double width,
+        double height)
+    {
+        using var context = CreateContext();
+        context.Window.Width = width;
+        context.Window.Height = height;
+        OpenSettings(context);
+        context.ViewModel.Settings.SelectedCategory = SettingsCategoryCodes.Advanced;
+        Dispatcher.UIThread.RunJobs();
+
+        var section = context.Window
+            .GetVisualDescendants()
+            .OfType<SettingsAdvancedSection>()
+            .Single();
+        var rows = section
+            .GetVisualDescendants()
+            .OfType<global::Cafe.Launcher.Avalonia.Controls.SettingRow>()
+            .Where(row => row.IsEffectivelyVisible)
+            .ToArray();
+
+        Assert.Equal(2, rows.Length);
+        var levelControl = rows[0]
+            .GetVisualDescendants()
+            .OfType<ComboBox>()
+            .Single();
+        var logButtons = rows[1]
+            .GetVisualDescendants()
+            .OfType<Button>()
+            .ToArray();
+        Assert.Equal(3, logButtons.Length);
+
+        var levelTopLeft = levelControl.TranslatePoint(default, context.Window);
+        Assert.NotNull(levelTopLeft);
+        var levelRight = levelTopLeft.Value.X + levelControl.Bounds.Width;
+        var logPresenter = rows[1].FindControl<ContentPresenter>("ActionPresenter");
+        Assert.NotNull(logPresenter);
+        var logPresenterTopLeft = logPresenter!.TranslatePoint(default, context.Window);
+        Assert.NotNull(logPresenterTopLeft);
+        var logPresenterRight = logPresenterTopLeft.Value.X + logPresenter.Bounds.Width;
+        Assert.InRange(Math.Abs(levelRight - logPresenterRight), 0, 1);
+
+        var description = rows[1].FindControl<TextBlock>("RowDescription");
+        Assert.NotNull(description);
+        var descriptionTopLeft = description!.TranslatePoint(default, context.Window);
+        var firstButtonTopLeft = logButtons[0].TranslatePoint(default, context.Window);
+        Assert.NotNull(descriptionTopLeft);
+        Assert.NotNull(firstButtonTopLeft);
+        Assert.True(
+            descriptionTopLeft.Value.X + description.Bounds.Width
+            <= firstButtonTopLeft.Value.X);
+
+        AssertControlInsideWindow(levelControl, context.Window);
+        Assert.All(logButtons, button => AssertControlInsideWindow(button, context.Window));
+    }
+
     [AvaloniaFact]
     public void SettingsSaving_DisablesNavigationButKeepsSummaryAndFooterVisible()
     {

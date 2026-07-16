@@ -12,7 +12,7 @@
 
 - 保留设置内容顶部的启动状态摘要、对话框尺寸、左侧导航和底部取消/保存区域。
 - 复用 `StackPanel.settings-group`、`SettingRow`、`flat-action`、`button-content`、`setting-control`、`LauncherSpacingSm`、`LauncherIconSm` 和 `LauncherControlHeightSetting`。
-- 不增加卡片、背景层、行边框、分隔线、主题令牌、ViewModel 状态、服务或依赖。
+- 只新增语义尺寸令牌 `LauncherSettingRowActionMaxWidth=440`，确保长本地化按钮不会挤入文本列；不增加卡片、背景层、行边框、分隔线、颜色令牌、ViewModel 状态、服务或依赖。
 - 不修改 `Controls/SettingRow.axaml`、其他设置分类、日志命令或设置保存逻辑。
 - 默认 `1300×754` 与最小 `1024×640` 下，两个设置行及其操作必须保持正尺寸、无重叠且位于设置对话框内。
 - 新增 `logFiles`、`logFilesDescription` 两个键，四种语言的键集合和格式占位符必须一致。
@@ -27,7 +27,8 @@
 - `Assets/Locales/zh-Hans.json`：简体中文“日志文件”标题和说明。
 - `Assets/Locales/zh-Hant.json`：繁体中文“日志文件”标题和说明。
 - `Services/LocalizationService.cs`：声明 `LogFiles`、`LogFilesDescription` 可观察属性，并在 `LocalizedStrings.Apply` 中赋值。
-- `Views/SettingsAdvancedSection.axaml`：把行外 `WrapPanel` 改为第二个 `SettingRow`。
+- `App.axaml`：定义日志多操作区复用的语义最大宽度。
+- `Views/SettingsAdvancedSection.axaml`：把行外 `WrapPanel` 改为第二个 `SettingRow`，并在其操作区内使用受限宽度的 `WrapPanel`。
 - `tests/Cafe.Launcher.Avalonia.Tests/LocalizationServiceTests.cs`：验证四种语言的新键和 `LocalizedStrings` 映射。
 - `tests/Cafe.Launcher.Avalonia.Tests/UiStyleContractTests.cs`：验证两个设置行、日志按钮归属、顺序和现有绑定。
 - `tests/Cafe.Launcher.Avalonia.HeadlessTests/MainWindowHeadlessTests.cs`：验证默认与最小窗口尺寸下的对齐、可达性和无重叠。
@@ -155,6 +156,7 @@ git commit -m "feat(i18n): 添加日志文件设置文案"
 ### Task 2: Move log actions into a dedicated SettingRow
 
 **Files:**
+- Modify: `App.axaml:44`
 - Modify: `Views/SettingsAdvancedSection.axaml:15-56`
 - Test: `tests/Cafe.Launcher.Avalonia.Tests/UiStyleContractTests.cs:2410`
 - Test: `tests/Cafe.Launcher.Avalonia.HeadlessTests/MainWindowHeadlessTests.cs:263-290`
@@ -196,16 +198,32 @@ public void AdvancedSettings_LogActionsBelongToDedicatedSettingRow()
         .Single(element => element.Name.LocalName == "SettingRow.Action");
     var actionPanel = action
         .Elements()
-        .Single(element => element.Name.LocalName == "StackPanel");
-    Assert.Equal("Horizontal", actionPanel.Attribute("Orientation")?.Value);
+        .Single(element => element.Name.LocalName == "WrapPanel");
     Assert.Equal(
         "{StaticResource LauncherSpacingSm}",
-        actionPanel.Attribute("Spacing")?.Value);
+        actionPanel.Attribute("ItemSpacing")?.Value);
+    Assert.Equal(
+        "{StaticResource LauncherSpacingSm}",
+        actionPanel.Attribute("LineSpacing")?.Value);
+    Assert.Equal(
+        "{StaticResource LauncherSettingRowActionMaxWidth}",
+        actionPanel.Attribute("MaxWidth")?.Value);
+
+    var app = XDocument.Load(ProjectFile("App.axaml"));
+    var actionMaxWidth = app
+        .Descendants()
+        .Single(element =>
+            element.Attributes().Any(attribute =>
+                attribute.Name.LocalName == "Key"
+                && attribute.Value == "LauncherSettingRowActionMaxWidth"));
+    Assert.Equal("440", actionMaxWidth.Value);
 
     var commands = actionPanel
         .Elements()
         .Where(element => element.Name.LocalName == "Button")
-        .Select(element => element.Attribute("Command")?.Value)
+        .Select(element =>
+            element.Attribute("Command")?.Value
+            ?? throw new InvalidDataException("Advanced log action is missing Command."))
         .ToArray();
     Assert.Equal(
         [
@@ -271,12 +289,14 @@ public void SettingsAdvanced_AtSupportedWindowSizes_AlignsDedicatedLogActionRow(
     Assert.Equal(3, logButtons.Length);
 
     var levelTopLeft = levelControl.TranslatePoint(default, context.Window);
-    var lastButtonTopLeft = logButtons[^1].TranslatePoint(default, context.Window);
     Assert.NotNull(levelTopLeft);
-    Assert.NotNull(lastButtonTopLeft);
     var levelRight = levelTopLeft.Value.X + levelControl.Bounds.Width;
-    var buttonRight = lastButtonTopLeft.Value.X + logButtons[^1].Bounds.Width;
-    Assert.InRange(Math.Abs(levelRight - buttonRight), 0, 1);
+    var logPresenter = rows[1].FindControl<ContentPresenter>("ActionPresenter");
+    Assert.NotNull(logPresenter);
+    var logPresenterTopLeft = logPresenter!.TranslatePoint(default, context.Window);
+    Assert.NotNull(logPresenterTopLeft);
+    var logPresenterRight = logPresenterTopLeft.Value.X + logPresenter.Bounds.Width;
+    Assert.InRange(Math.Abs(levelRight - logPresenterRight), 0, 1);
 
     var description = rows[1].FindControl<TextBlock>("RowDescription");
     Assert.NotNull(description);
@@ -312,9 +332,11 @@ Replace the existing `WrapPanel` in `Views/SettingsAdvancedSection.axaml` with:
                      Title="{Binding Shell.I18n.LogFiles}"
                      Description="{Binding Shell.I18n.LogFilesDescription}">
     <controls:SettingRow.Action>
-        <StackPanel Orientation="Horizontal"
-                    Spacing="{StaticResource LauncherSpacingSm}"
-                    VerticalAlignment="Center">
+        <WrapPanel MaxWidth="{StaticResource LauncherSettingRowActionMaxWidth}"
+                   ItemSpacing="{StaticResource LauncherSpacingSm}"
+                   LineSpacing="{StaticResource LauncherSpacingSm}"
+                   HorizontalAlignment="Right"
+                   VerticalAlignment="Center">
             <Button Classes="flat-action"
                     Command="{Binding LogViewer.OpenCommand}"
                     AutomationProperties.Name="{Binding Shell.I18n.ViewLog}">
@@ -345,9 +367,15 @@ Replace the existing `WrapPanel` in `Views/SettingsAdvancedSection.axaml` with:
                     <TextBlock Text="{Binding Shell.I18n.OpenDataDirectory}"/>
                 </StackPanel>
             </Button>
-        </StackPanel>
+        </WrapPanel>
     </controls:SettingRow.Action>
 </controls:SettingRow>
+```
+
+Add this token after `LauncherSettingRowContentMinWidth` in `App.axaml`:
+
+```xml
+<x:Double x:Key="LauncherSettingRowActionMaxWidth">440</x:Double>
 ```
 
 Do not modify `Controls/SettingRow.axaml` or `Views/MainWindow.Styles.axaml`; the existing shared row and button styles already provide the selected design.
@@ -373,7 +401,7 @@ Run:
 git diff --check
 ```
 
-Expected: localization contract exits `0`; unit/UI style suite reports `98` passed and `0` failed; Headless suite reports `72` passed and `0` failed; `git diff --check` exits `0` with no whitespace errors.
+Expected: localization contract exits `0`; unit/UI style suite reports `94` passed and `0` failed; Headless suite reports `72` passed and `0` failed; `git diff --check` exits `0` with no whitespace errors.
 
 - [ ] **Step 8: Compare the rendered page with the approved design boundary**
 
@@ -396,7 +424,7 @@ Use `docs/superpowers/specs/assets/2026-07-16-settings-advanced-consistent-layou
 - [ ] **Step 9: Commit the layout slice**
 
 ```powershell
-git add -- Views/SettingsAdvancedSection.axaml tests/Cafe.Launcher.Avalonia.Tests/UiStyleContractTests.cs tests/Cafe.Launcher.Avalonia.HeadlessTests/MainWindowHeadlessTests.cs
+git add -- App.axaml Views/SettingsAdvancedSection.axaml tests/Cafe.Launcher.Avalonia.Tests/UiStyleContractTests.cs tests/Cafe.Launcher.Avalonia.HeadlessTests/MainWindowHeadlessTests.cs docs/superpowers/specs/2026-07-16-settings-advanced-layout-design.md docs/superpowers/plans/2026-07-16-settings-advanced-layout.md
 git commit -m "fix(ui): 统一高级设置日志操作布局"
 ```
 
