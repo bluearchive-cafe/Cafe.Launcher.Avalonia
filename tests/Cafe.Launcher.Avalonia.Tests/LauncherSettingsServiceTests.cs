@@ -8,6 +8,16 @@ namespace Cafe.Launcher.Avalonia.Tests;
 public sealed class LauncherSettingsServiceTests : IDisposable
 {
     [Fact]
+    public void LauncherSettings_Serialize_LeavesExistingPropertyOrderUnchanged()
+    {
+        using var document = JsonDocument.Parse(JsonSerializer.Serialize(new LauncherSettings()));
+        var propertyNames = document.RootElement.EnumerateObject().Select(property => property.Name).ToList();
+
+        Assert.True(propertyNames.IndexOf("updateChannel") < propertyNames.IndexOf("logLevel"));
+        Assert.Equal("resourcePanelUidSource", propertyNames[^1]);
+    }
+
+    [Fact]
     public void LauncherSettings_DefaultMotionModeIsSystem()
     {
         Assert.Equal(MotionModes.System, new LauncherSettings().MotionMode);

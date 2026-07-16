@@ -257,6 +257,30 @@ public sealed class SetupWizardViewModelTests
     }
 
     [Fact]
+    public void DownloadSources_WhenSimplifiedChineseSelected_RecommendCafeWithReason()
+    {
+        var vm = CreateViewModel();
+        vm.Language = LauncherLanguages.SimplifiedChinese;
+
+        var cafe = Assert.Single(vm.DownloadSources, item => item.Code == PatchUrlGroups.Cafe);
+
+        Assert.True(cafe.IsRecommended);
+        Assert.NotEmpty(cafe.RecommendationReason);
+    }
+
+    [Fact]
+    public void Steps_AfterLanguageSelectionAndAdvance_ShowsLanguageSummaryOnlyForCompletedStep()
+    {
+        var vm = CreateViewModel();
+        vm.Language = LauncherLanguages.Japanese;
+
+        vm.NextCommand.Execute(null);
+
+        Assert.NotEmpty(vm.Steps[0].Summary);
+        Assert.Empty(vm.Steps[1].Summary);
+    }
+
+    [Fact]
     public async Task GamePathStatus_WhenStateFilesDoNotExist_IsAvailableForInstallationAndCanGoNext()
     {
         var vm = CreateViewModel();
@@ -304,6 +328,27 @@ public sealed class SetupWizardViewModelTests
 
         Assert.False(vm.IsGamePathReady);
         Assert.False(vm.CanGoNext);
+    }
+
+    [Fact]
+    public async Task GamePathPresentation_WhenInstallationIsCorrupted_HasTitleAndDescription()
+    {
+        var gamePath = Path.Combine(Path.GetTempPath(), Guid.NewGuid().ToString("N"));
+        var normalizedGamePath = new GameInstallationPath().NormalizeGamePath(gamePath);
+        Directory.CreateDirectory(normalizedGamePath);
+        await File.WriteAllTextAsync(Path.Combine(normalizedGamePath, "manifest.json"), "{}");
+        var localizer = new LocalizationService();
+        var vm = new SetupWizardViewModel(
+            localizer,
+            new GameInstallationPath(),
+            new LocalInstallationStateStore());
+        vm.GamePath = gamePath;
+        vm.NextCommand.Execute(null);
+
+        await WaitForGamePathStatusAsync(vm, SetupWizardGamePathStatus.CorruptedInstallation);
+
+        Assert.Equal(localizer.T("setupWizardGamePathStatusTitle"), vm.GamePathPresentation.Title);
+        Assert.Equal(localizer.T("setupWizardGamePathCorrupted"), vm.GamePathPresentation.Description);
     }
 
     [Fact]

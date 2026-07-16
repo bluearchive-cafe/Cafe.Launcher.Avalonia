@@ -11,6 +11,14 @@ public sealed class SetupWizardStepItemTests
     static SetupWizardStepItemTests() => TestLocalizationHelper.Initialize();
 
     [Fact]
+    public void Constructor_SetsSummaryToEmpty()
+    {
+        var item = new SetupWizardStepItem { Index = 0 };
+
+        Assert.Equal(string.Empty, item.Summary);
+    }
+
+    [Fact]
     public void InitialState_ExposesFiveOrderedStepsWithOnlyFirstCurrent()
     {
         var viewModel = new SetupWizardViewModel(

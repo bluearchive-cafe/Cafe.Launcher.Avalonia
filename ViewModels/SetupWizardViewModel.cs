@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using System.Threading;
 using System.Threading.Tasks;
@@ -50,6 +51,7 @@ public partial class SetupWizardViewModel : ViewModelBase, IModalContentViewMode
             CreateStep(4)
         ];
         localizer.LanguageChanged += OnLocalizerLanguageChanged;
+        RefreshDownloadSources();
         RefreshSteps();
     }
 
@@ -58,6 +60,9 @@ public partial class SetupWizardViewModel : ViewModelBase, IModalContentViewMode
 
     /// <summary>Gets the five ordered navigation steps and their current states.</summary>
     public ObservableCollection<SetupWizardStepItem> Steps { get; }
+
+    /// <summary>Gets the localized download source choices for the setup wizard.</summary>
+    public IReadOnlyList<SetupWizardDownloadSourceItem> DownloadSources { get; private set; } = [];
 
     // ── Step state ───────────────────────────────────────────────
 
@@ -141,6 +146,7 @@ public partial class SetupWizardViewModel : ViewModelBase, IModalContentViewMode
     partial void OnLanguageChanged(string value)
     {
         LanguagePreviewRequested?.Invoke(value);
+        RefreshDownloadSources();
         RefreshSteps();
     }
 
@@ -165,6 +171,7 @@ public partial class SetupWizardViewModel : ViewModelBase, IModalContentViewMode
 
     [ObservableProperty]
     [NotifyPropertyChangedFor(nameof(GamePathStatusText))]
+    [NotifyPropertyChangedFor(nameof(GamePathPresentation))]
     [NotifyPropertyChangedFor(nameof(IsGamePathChecking))]
     [NotifyPropertyChangedFor(nameof(IsGamePathReady))]
     [NotifyPropertyChangedFor(nameof(IsGamePathAvailableForInstallation))]
@@ -183,6 +190,11 @@ public partial class SetupWizardViewModel : ViewModelBase, IModalContentViewMode
         SetupWizardGamePathStatus.Inaccessible => localizer.T("setupWizardGamePathInaccessible"),
         _ => string.Empty
     };
+
+    /// <summary>Gets the localized title and description for the current game path status.</summary>
+    public SetupWizardGamePathPresentation GamePathPresentation => new(
+        localizer.T("setupWizardGamePathStatusTitle"),
+        ResolveGamePathPresentationDescription());
 
     public bool IsGamePathChecking => GamePathStatus == SetupWizardGamePathStatus.Checking;
 
@@ -429,6 +441,34 @@ public partial class SetupWizardViewModel : ViewModelBase, IModalContentViewMode
         OnPropertyChanged(nameof(ProxyDisplayName));
     }
 
+    private void RefreshDownloadSources()
+    {
+        var isCafeRecommended = Language is LauncherLanguages.SimplifiedChinese
+            or LauncherLanguages.TraditionalChinese;
+        DownloadSources =
+        [
+            new SetupWizardDownloadSourceItem(
+                PatchUrlGroups.Cafe,
+                localizer.T("downloadSourceCafe"),
+                isCafeRecommended,
+                isCafeRecommended
+                    ? localizer.T("setupWizardDownloadSourceCafeRecommendationReason")
+                    : string.Empty),
+            new SetupWizardDownloadSourceItem(
+                PatchUrlGroups.Official,
+                localizer.T("downloadSourceOfficial"),
+                false,
+                string.Empty)
+        ];
+        OnPropertyChanged(nameof(DownloadSources));
+    }
+
+    private string ResolveGamePathPresentationDescription() => GamePathStatus switch
+    {
+        SetupWizardGamePathStatus.NotSelected => localizer.T("setupWizardGamePathEmpty"),
+        _ => GamePathStatusText
+    };
+
     private SetupWizardStepItem CreateStep(int index) => new()
     {
         Index = index,
@@ -454,6 +494,9 @@ public partial class SetupWizardViewModel : ViewModelBase, IModalContentViewMode
 
         OnPropertyChanged(nameof(StepTitle));
         OnPropertyChanged(nameof(GamePathStatusText));
+        OnPropertyChanged(nameof(GamePathPresentation));
+        RefreshDownloadSources();
+        RefreshSteps();
         if (IsLastStep)
         {
             RefreshSummaryDisplayNames();
@@ -474,8 +517,20 @@ public partial class SetupWizardViewModel : ViewModelBase, IModalContentViewMode
                 : item.Index == Step
                     ? SetupWizardStepState.Current
                     : SetupWizardStepState.Locked;
+            item.Summary = item.State == SetupWizardStepState.Completed
+                ? ResolveStepSummary(item.Index)
+                : string.Empty;
         }
     }
+
+    private string ResolveStepSummary(int index) => index switch
+    {
+        0 => ResolveLanguageDisplayName(),
+        1 => GamePath,
+        2 => ResolveDownloadSourceDisplayName(),
+        3 => ResolveProxyDisplayName(),
+        _ => string.Empty
+    };
 
     private string ResolveLanguageDisplayName() => Language switch
     {
