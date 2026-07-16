@@ -39,7 +39,6 @@ public sealed partial class LocalizedStrings : ObservableObject
     [ObservableProperty] private string officialSite = "";
     [ObservableProperty] private string startGame = "";
     [ObservableProperty] private string resourcePanel = "";
-    [ObservableProperty] private string localizedResources = "";
     [ObservableProperty] private string resourcePanelDescription = "";
     [ObservableProperty] private string resourcePanelGameText = "";
     [ObservableProperty] private string resourcePanelMainVoice = "";
@@ -74,7 +73,6 @@ public sealed partial class LocalizedStrings : ObservableObject
     [ObservableProperty] private string gamePath = "";
     [ObservableProperty] private string choose = "";
     [ObservableProperty] private string launchCheck = "";
-    [ObservableProperty] private string manifest = "";
     [ObservableProperty] private string proxy = "";
     [ObservableProperty] private string closeBehavior = "";
     [ObservableProperty] private string language = "";
@@ -317,7 +315,6 @@ public sealed partial class LocalizedStrings : ObservableObject
         OfficialSite = localizer.T("officialSite");
         StartGame = localizer.T("startGame");
         ResourcePanel = localizer.T("resourcePanel");
-        LocalizedResources = localizer.T("localizedResources");
         ResourcePanelDescription = localizer.T("resourcePanelDescription");
         ResourcePanelGameText = localizer.T("resourcePanelGameText");
         ResourcePanelMainVoice = localizer.T("resourcePanelMainVoice");
@@ -352,7 +349,6 @@ public sealed partial class LocalizedStrings : ObservableObject
         GamePath = localizer.T("gamePath");
         Choose = localizer.T("choose");
         LaunchCheck = localizer.T("launchCheck");
-        Manifest = localizer.T("manifest");
         Proxy = localizer.T("proxy");
         CloseBehavior = localizer.T("closeBehavior");
         Language = localizer.T("language");

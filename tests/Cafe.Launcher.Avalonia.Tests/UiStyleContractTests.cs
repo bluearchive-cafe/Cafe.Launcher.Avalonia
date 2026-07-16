@@ -1,3 +1,4 @@
+using System.Globalization;
 using System.Text.RegularExpressions;
 using System.Text.Json;
 using System.Xml;
@@ -1030,6 +1031,29 @@ public sealed partial class UiStyleContractTests
     }
 
     [Fact]
+    public void ToastCloseButton_WhenRendered_UsesLocalizedAutomationNameAndToolTip()
+    {
+        var document = XDocument.Load(ProjectFile("Views/MainWindowToastOverlay.axaml"));
+        var closeButton = document
+            .Descendants()
+            .Single(element =>
+                element.Name.LocalName == "Button"
+                && element.Attribute("Command")?.Value
+                    == "{Binding DataContext.Toasts.DismissToastCommand, ElementName=ToastOverlayRoot}");
+        const string expectedBinding =
+            "{Binding DataContext.Shell.I18n.Close, ElementName=ToastOverlayRoot}";
+
+        Assert.Equal(
+            expectedBinding,
+            closeButton.Attributes().Single(attribute =>
+                attribute.Name.LocalName == "AutomationProperties.Name").Value);
+        Assert.Equal(
+            expectedBinding,
+            closeButton.Attributes().Single(attribute =>
+                attribute.Name.LocalName == "ToolTip.Tip").Value);
+    }
+
+    [Fact]
     public void SettingRow_LongCopyWrapsInFlexibleContentColumn()
     {
         var document = XDocument.Load(ProjectFile("Controls/SettingRow.axaml"));
@@ -1048,10 +1072,19 @@ public sealed partial class UiStyleContractTests
             .Single(element => element.Attributes().Any(attribute =>
                 attribute.Name.LocalName == "Name"
                 && attribute.Value == "ActionPresenter"));
+        var application = XDocument.Load(ProjectFile("App.axaml"));
+        var minWidthToken = application
+            .Descendants()
+            .Single(element => element.Attributes().Any(attribute =>
+                attribute.Name.LocalName == "Key"
+                && attribute.Value == "LauncherSettingRowContentMinWidth"));
 
         Assert.Equal("Auto,*,Auto", layout.Attribute("ColumnDefinitions")?.Value);
         Assert.Equal("1", copy.Attribute("Grid.Column")?.Value);
-        Assert.Equal("0", copy.Attribute("MinWidth")?.Value);
+        Assert.True(double.Parse(minWidthToken.Value, CultureInfo.InvariantCulture) > 0);
+        Assert.Equal(
+            "{StaticResource LauncherSettingRowContentMinWidth}",
+            copy.Attribute("MinWidth")?.Value);
         Assert.Equal(2, textBlocks.Count);
         Assert.All(textBlocks, text => Assert.Equal("Wrap", text.Attribute("TextWrapping")?.Value));
         Assert.Equal("2", action.Attribute("Grid.Column")?.Value);

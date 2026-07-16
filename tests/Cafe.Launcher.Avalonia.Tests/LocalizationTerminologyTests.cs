@@ -13,23 +13,44 @@ public sealed class LocalizationTerminologyTests
     }
 
     [Theory]
-    [InlineData("en.json", "Manifest", "Launch verification", "Resource Panel", "Localized resources")]
-    [InlineData("zh-Hans.json", "文件清单", "启动校验", "资源面板", "本地化资源")]
-    [InlineData("zh-Hant.json", "檔案清單", "啟動校驗", "資源面板", "本地化資源")]
-    [InlineData("ja.json", "マニフェスト", "起動チェック", "リソースパネル", "ローカライズリソース")]
+    [InlineData("en.json", "Launch verification", "Resource Panel")]
+    [InlineData("zh-Hans.json", "启动校验", "资源面板")]
+    [InlineData("zh-Hant.json", "啟動校驗", "資源面板")]
+    [InlineData("ja.json", "起動チェック", "リソースパネル")]
     public void LocaleFiles_CanonicalDomainTerms_MatchFourLanguageBaseline(
         string fileName,
-        string expectedManifest,
         string expectedLaunchVerification,
-        string expectedResourcePanel,
-        string expectedLocalizedResources)
+        string expectedResourcePanel)
     {
         var locale = ReadLocale(fileName);
 
-        Assert.Equal(expectedManifest, GetRequiredValue(locale, "manifest"));
         Assert.Equal(expectedLaunchVerification, GetRequiredValue(locale, "launchCheck"));
         Assert.Equal(expectedResourcePanel, GetRequiredValue(locale, "resourcePanel"));
-        Assert.Equal(expectedLocalizedResources, GetRequiredValue(locale, "localizedResources"));
+    }
+
+    [Theory]
+    [InlineData("en.json", "Localized resources")]
+    [InlineData("zh-Hans.json", "本地化资源")]
+    [InlineData("zh-Hant.json", "本地化資源")]
+    [InlineData("ja.json", "ローカライズリソース")]
+    public void LocaleFiles_ConsumedResourceCopy_UsesCanonicalLocalizedResourcesTerm(
+        string fileName,
+        string expectedTerm)
+    {
+        var locale = ReadLocale(fileName);
+        var consumedKeys = new[]
+        {
+            "resourcePanelDescription",
+            "resourcePanelLocalizedVersion",
+            "setupWizardDownloadSourceCafeDescription",
+            "setupWizardDownloadSourceCafeRecommendationReason",
+            "setupWizardDownloadSourceHint"
+        };
+
+        Assert.All(consumedKeys, key => Assert.Contains(
+            expectedTerm,
+            GetRequiredValue(locale, key),
+            StringComparison.OrdinalIgnoreCase));
     }
 
     [Theory]
@@ -87,7 +108,6 @@ public sealed class LocalizationTerminologyTests
         Assert.Equal(
             new[] { expectedAutoDescription, expectedDirectDescription, expectedSystemDescription },
             descriptions);
-        Assert.Equal(expectedSystemDescription, GetRequiredValue(locale, "proxySystemDescription"));
         Assert.Equal(3, names.Distinct(StringComparer.Ordinal).Count());
         Assert.Equal(3, descriptions.Distinct(StringComparer.Ordinal).Count());
     }

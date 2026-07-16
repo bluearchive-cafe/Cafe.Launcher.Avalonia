@@ -244,7 +244,7 @@ public sealed class LocalizationServiceTests
         var service = new LocalizationService();
         service.SetLanguage(LauncherLanguages.SimplifiedChinese);
 
-        Assert.Equal("汉化", service.T("resourcePanelLocalizedVersion"));
+        Assert.Equal("本地化资源", service.T("resourcePanelLocalizedVersion"));
         Assert.Equal("主线中配", service.T("resourcePanelMainVoice"));
         Assert.Equal("图像视频", service.T("resourcePanelMedia"));
     }
