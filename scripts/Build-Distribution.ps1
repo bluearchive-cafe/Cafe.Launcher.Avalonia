@@ -106,12 +106,14 @@ if ($null -eq $makeNsis) {
 
 $publishGlob = Join-Path $PublishDir "*"
 
+$definePrefix = if ($IsWindows) { "/D" } else { "-D" }
+
 & $makeNsis.Source `
-    "/DAPP_VERSION=$versionPrefix" `
-    "/DFILE_VERSION=$fileVersion" `
-    "/DPUBLISH_GLOB=$publishGlob" `
-    "/DUNINSTALL_INCLUDE=$uninstallInclude" `
-    "/DOUTPUT_FILE=$setupPath" `
+    "${definePrefix}APP_VERSION=$versionPrefix" `
+    "${definePrefix}FILE_VERSION=$fileVersion" `
+    "${definePrefix}PUBLISH_GLOB=$publishGlob" `
+    "${definePrefix}UNINSTALL_INCLUDE=$uninstallInclude" `
+    "${definePrefix}OUTPUT_FILE=$setupPath" `
     $InstallerScript | Out-Host
 if ($LASTEXITCODE -ne 0) {
     throw "NSIS compilation failed."
