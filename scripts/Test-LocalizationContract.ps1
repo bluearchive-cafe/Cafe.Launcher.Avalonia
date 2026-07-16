@@ -6,8 +6,21 @@ $ErrorActionPreference = 'Stop'
 $env:DOTNET_CLI_TELEMETRY_OPTOUT = '1'
 $env:AVALONIA_TELEMETRY_OPTOUT = '1'
 
+function ConvertFrom-JsonToStringHashtable {
+    param([string]$Json)
+
+    $jsonObject = ConvertFrom-Json -InputObject $Json
+    $result = @{}
+
+    foreach ($property in $jsonObject.PSObject.Properties) {
+        $result[$property.Name] = [string]$property.Value
+    }
+
+    return $result
+}
+
 $referencePath = Join-Path $LocalesDirectory 'en.json'
-$reference = Get-Content -LiteralPath $referencePath -Raw | ConvertFrom-Json -AsHashtable
+$reference = ConvertFrom-JsonToStringHashtable -Json (Get-Content -LiteralPath $referencePath -Raw -Encoding UTF8)
 $placeholderPattern = '\{(\d+)(?:[^}]*)\}'
 $hasErrors = $false
 
@@ -23,7 +36,7 @@ function Get-CompositeFormatArgumentIndexes {
 
 foreach ($fileName in @('ja.json', 'zh-Hans.json', 'zh-Hant.json')) {
     $localizedPath = Join-Path $LocalesDirectory $fileName
-    $localized = Get-Content -LiteralPath $localizedPath -Raw | ConvertFrom-Json -AsHashtable
+    $localized = ConvertFrom-JsonToStringHashtable -Json (Get-Content -LiteralPath $localizedPath -Raw -Encoding UTF8)
 
     foreach ($key in @($reference.Keys | Sort-Object)) {
         if (-not $localized.ContainsKey($key)) {
