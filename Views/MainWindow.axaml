@@ -322,7 +322,7 @@
                         <StackPanel Classes="operation-status" Spacing="{StaticResource LauncherSpacingSm}" VerticalAlignment="Center">
                             <!-- Title + percentage -->
                             <Grid ColumnDefinitions="Auto,Auto,*,Auto" ColumnSpacing="{StaticResource LauncherSpacingSm}">
-                                <materialIcons:MaterialIcon Kind="Download"
+                                <materialIcons:MaterialIcon Kind="{Binding Operations.ProgressIconKind}"
                                                             Width="{StaticResource LauncherIconLg}"
                                                             Height="{StaticResource LauncherIconLg}"
                                                             Foreground="{DynamicResource LauncherAccentBrush}"

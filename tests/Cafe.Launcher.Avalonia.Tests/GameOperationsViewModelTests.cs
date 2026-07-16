@@ -351,6 +351,27 @@ public sealed class GameOperationsViewModelTests
     }
 
     [Theory]
+    [InlineData(GameOperationKind.Download, GameOperationStage.Downloading, "Download")]
+    [InlineData(GameOperationKind.Repair, GameOperationStage.RepairCheck, "Tools")]
+    [InlineData(GameOperationKind.Uninstall, GameOperationStage.Uninstalling, "DeleteOutline")]
+    [InlineData(GameOperationKind.Idle, GameOperationStage.Idle, "Sync")]
+    public void ApplyProgress_ForOperationKind_UsesSemanticProgressIcon(
+        GameOperationKind operationKind,
+        GameOperationStage stage,
+        string expectedIconKind)
+    {
+        var context = CreateContext();
+
+        context.ViewModel.ApplyProgress(new GameOperationProgress
+        {
+            OperationKind = operationKind,
+            Stage = stage
+        });
+
+        Assert.Equal(expectedIconKind, context.ViewModel.ProgressIconKind);
+    }
+
+    [Theory]
     [InlineData(GameOperationStage.DiskCheck, 10L, 20L, 0, 0, 0, "10B", "20B")]
     [InlineData(GameOperationStage.VerificationRetry, 0, null, 2, 1, 3, "2", "1/3")]
     [InlineData(GameOperationStage.VerificationFailed, 0, null, 2, 0, 0, "2", null)]

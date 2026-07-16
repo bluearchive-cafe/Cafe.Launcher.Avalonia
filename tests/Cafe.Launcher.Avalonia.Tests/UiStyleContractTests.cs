@@ -88,6 +88,28 @@ public sealed partial class UiStyleContractTests
                 && element.Attribute("Text")?.Value == "{Binding Shell.I18n.LaunchCheckDescription}");
     }
 
+    [Fact]
+    public void MainWindow_ProgressPanel_BindsOperationSpecificIcon()
+    {
+        var document = XDocument.Load(ProjectFile("Views/MainWindow.axaml"));
+        var progressPanel = document
+            .Descendants()
+            .Single(element =>
+                element.Name.LocalName == "Border"
+                && element.Attribute("IsVisible")?.Value
+                    == "{Binding Operations.IsProgressPanelVisible}");
+        var status = progressPanel
+            .Descendants()
+            .Single(element => HasClass(element, "operation-status"));
+        var statusIcon = status
+            .Descendants()
+            .Single(element => element.Name.LocalName == "MaterialIcon");
+
+        Assert.Equal(
+            "{Binding Operations.ProgressIconKind}",
+            statusIcon.Attribute("Kind")?.Value);
+    }
+
     private static readonly string[] StyleFiles =
     [
         "Views/MainWindow.Styles.axaml",

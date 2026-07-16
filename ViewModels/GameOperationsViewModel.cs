@@ -45,6 +45,9 @@ public partial class GameOperationsViewModel : ViewModelBase
     private string progressTitle = "";
 
     [ObservableProperty]
+    private string progressIconKind = "Sync";
+
+    [ObservableProperty]
     private int progressValue;
 
     [ObservableProperty]
@@ -551,7 +554,9 @@ public partial class GameOperationsViewModel : ViewModelBase
     {
         PanelMode = GameOperationPanelMode.Progress;
         ProgressValue = Math.Clamp(progress.Progress, 0, 100);
-        ProgressTitle = ResolveProgressTitle(progress);
+        var progressPresentation = ResolveProgressPresentation(progress);
+        ProgressTitle = progressPresentation.Title;
+        ProgressIconKind = progressPresentation.IconKind;
         ProgressDetail = progress.Stage switch
         {
             GameOperationStage.RepairConfirmation => progress.AffectedFileCount > 0
@@ -620,14 +625,14 @@ public partial class GameOperationsViewModel : ViewModelBase
         }
     }
 
-    private string ResolveProgressTitle(GameOperationProgress progress)
+    private (string Title, string IconKind) ResolveProgressPresentation(GameOperationProgress progress)
     {
         return progress.OperationKind switch
         {
-            GameOperationKind.Repair => localizer.T("repairing"),
-            GameOperationKind.Uninstall => localizer.T("uninstalling"),
-            GameOperationKind.Download => localizer.T("downloading"),
-            GameOperationKind.Idle => localizer.T("working"),
+            GameOperationKind.Repair => (localizer.T("repairing"), "Tools"),
+            GameOperationKind.Uninstall => (localizer.T("uninstalling"), "DeleteOutline"),
+            GameOperationKind.Download => (localizer.T("downloading"), "Download"),
+            GameOperationKind.Idle => (localizer.T("working"), "Sync"),
             _ => throw new ArgumentOutOfRangeException(nameof(progress), progress.OperationKind, null)
         };
     }
