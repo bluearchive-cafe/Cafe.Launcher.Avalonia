@@ -11,6 +11,8 @@ This is a .NET 10 desktop launcher built with Avalonia. Application entry points
 - `.\test.ps1` — run both xUnit test projects.
 - `.\coverage.ps1` — run tests with Coverlet and enforce coverage thresholds.
 - `.\verify.ps1` — perform the complete Debug build, coverage, and Release build sequence.
+- `.\dev.ps1 ui` — run UI style-contract and headless UI tests after localized UI changes.
+- `.\scripts\Test-LocalizationContract.ps1` — verify keys and composite-format placeholders across all locale JSON files.
 - `dotnet test .\tests\Cafe.Launcher.Avalonia.Tests\Cafe.Launcher.Avalonia.Tests.csproj --filter "FullyQualifiedName~VersionComparerTests"` — run one test class.
 
 ## Coding Style & Naming Conventions
@@ -23,7 +25,7 @@ Add every UI string to all four files in `Assets/Locales/` and wire the exact ke
 
 ## Testing Guidelines
 
-Tests use xUnit v3; UI tests use `Avalonia.Headless.XUnit`. Name tests `Method_State_ExpectedResult`. Add focused regression tests for behavior changes and run `UiStyleContractTests` after XAML/style edits. Line and branch coverage must each remain at or above 50%.
+Tests use xUnit v3; UI tests use `Avalonia.Headless.XUnit`. Name tests `Method_State_ExpectedResult`. Add focused regression tests for behavior changes and run `UiStyleContractTests` after XAML/style edits. Run `.\scripts\Test-LocalizationContract.ps1` after modifying any `Assets/Locales/*.json`; run `.\dev.ps1 ui` after XAML or style changes. Before merging or releasing, still run `.\verify.ps1`. Line and branch coverage must each remain at or above 50%.
 
 ## Commit & Pull Request Guidelines
 
