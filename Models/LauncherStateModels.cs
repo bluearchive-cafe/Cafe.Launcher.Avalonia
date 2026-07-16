@@ -231,15 +231,49 @@ public sealed partial class LauncherSettings : ObservableObject
     private string logLevel = LogLevels.Information;
 
     /// <summary>
-    /// Deep-clones this settings object via JSON round-trip.
+    /// Deep-clones this settings object.
     /// Shared by <c>LauncherSettingsService.NormalizeSettings</c> and <see cref="Services.SettingsEditor"/>.
     /// </summary>
     public LauncherSettings DeepClone()
     {
-        var json = System.Text.Json.JsonSerializer.Serialize(this, CloneJsonOptions);
-        return System.Text.Json.JsonSerializer.Deserialize<LauncherSettings>(json, CloneJsonOptions)
-            ?? new LauncherSettings();
+        return new LauncherSettings(this);
     }
+
+    /// <summary>
+    /// Copy constructor for deep cloning. Copies all settings properties,
+    /// including a shallow copy of <see cref="ThemeColorPalette"/> (strings are immutable).
+    /// </summary>
+    public LauncherSettings(LauncherSettings other)
+    {
+        GamePath = other.GamePath;
+        LaunchCheckMode = other.LaunchCheckMode;
+        ProxyMode = other.ProxyMode;
+        CloseBehavior = other.CloseBehavior;
+        Language = other.Language;
+        ThemeMode = other.ThemeMode;
+        MotionMode = other.MotionMode;
+        ThemeColorMode = other.ThemeColorMode;
+        CustomThemeColor = other.CustomThemeColor;
+        ThemeColorPalette = [.. other.ThemeColorPalette];
+        SelectedThemeColorPaletteIndex = other.SelectedThemeColorPaletteIndex;
+        DownloadSpeedLimit = other.DownloadSpeedLimit;
+        ToastNotificationsEnabled = other.ToastNotificationsEnabled;
+        ShowRemoteContentCard = other.ShowRemoteContentCard;
+        PatchUrlGroup = other.PatchUrlGroup;
+        CustomBackgroundPath = other.CustomBackgroundPath;
+        BackgroundSource = other.BackgroundSource;
+        BackgroundFit = other.BackgroundFit;
+        BackgroundFillColor = other.BackgroundFillColor;
+        ResourcePanelUid = other.ResourcePanelUid;
+        ResourcePanelUidSource = other.ResourcePanelUidSource;
+        UpdateChannel = other.UpdateChannel;
+        LogLevel = other.LogLevel;
+    }
+
+    /// <summary>
+    /// Default constructor. Creates settings with defaults.
+    /// </summary>
+    public LauncherSettings() { }
 
     /// <summary>
     /// Creates default settings with pre-release builds defaulting to the beta update channel.
@@ -256,8 +290,6 @@ public sealed partial class LauncherSettings : ObservableObject
 
         return settings;
     }
-
-    private static readonly System.Text.Json.JsonSerializerOptions CloneJsonOptions = JsonDefaults.Strict;
 }
 
 /// <summary>
