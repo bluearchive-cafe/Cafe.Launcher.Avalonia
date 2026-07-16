@@ -73,6 +73,31 @@ public sealed class MainWindowHeadlessTests
     }
 
     [AvaloniaFact]
+    public void SettingsStatusSummary_WhenShown_UsesUniformThirtyTwoPixelElements()
+    {
+        using var context = CreateContext();
+        OpenSettings(context);
+
+        var statusSummary = context.Window
+            .GetVisualDescendants()
+            .OfType<Border>()
+            .Single(control => control.Classes.Contains("settings-status-summary"));
+        var statusIcon = statusSummary
+            .GetVisualDescendants()
+            .OfType<Border>()
+            .Single(control => control.Classes.Contains("settings-icon"));
+        var statusDetails = statusSummary
+            .GetVisualDescendants()
+            .OfType<Border>()
+            .Where(control => control.Classes.Contains("status-detail"))
+            .ToArray();
+
+        Assert.Equal(32, statusIcon.Bounds.Height);
+        Assert.Equal(2, statusDetails.Length);
+        Assert.All(statusDetails, detail => Assert.Equal(32, detail.Bounds.Height));
+    }
+
+    [AvaloniaFact]
     public void SettingsTypography_WhenShown_AppliesNormalAndStrongWeights()
     {
         using var context = CreateContext();

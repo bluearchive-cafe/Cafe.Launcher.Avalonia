@@ -802,7 +802,8 @@
     <Style Selector="Border.status-detail">
         <Setter Property="Background" Value="{DynamicResource LauncherContentRowBrush}"/>
         <Setter Property="CornerRadius" Value="{StaticResource LauncherRadiusSm}"/>
-        <Setter Property="Padding" Value="12"/>
+        <Setter Property="Height" Value="{StaticResource LauncherChipHeight}"/>
+        <Setter Property="Padding" Value="12,0"/>
         <Setter Property="MinWidth" Value="0"/>
     </Style>
     <Style Selector="Border.status-note">
