@@ -62,14 +62,26 @@ public sealed class LauncherApiClient : IDisposable
             cancellationToken);
     }
 
-    public Task<BaseConfigResponse> GetBaseConfigAsync(
+    public async Task<BaseConfigResponse> GetBaseConfigAsync(
         string proxyMode,
         CancellationToken cancellationToken = default)
     {
-        return GetEnvelopeDataAsync<BaseConfigResponse>(
+        var response = await GetEnvelopeDataAsync<BaseConfigResponse>(
             "/api/launcher/base/config",
             proxyMode,
-            cancellationToken);
+            cancellationToken).ConfigureAwait(false);
+        response.LauncherBackgroundImg = ResolveLauncherBackgroundUrl(
+            response.LauncherBackgroundImg);
+        return response;
+    }
+
+    private static string? ResolveLauncherBackgroundUrl(string? value)
+    {
+        const string packageRelativePrefix =
+            "/prod/BlueArchive_JP/launcher_background_img/";
+        return value?.StartsWith(packageRelativePrefix, StringComparison.Ordinal) == true
+            ? ApiConfig.OfficialPackageBaseUrl + value
+            : value;
     }
 
     private Task<CdnConfigResponse> GetCdnConfigAsync(

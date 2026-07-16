@@ -89,7 +89,12 @@ public sealed class RemoteHttpUrlValidator
         var addresses = await resolveHostAsync(uri.IdnHost, cancellationToken).ConfigureAwait(false);
         if (addresses.Length == 0 || addresses.Any(address => !IsPublicAddress(address)))
         {
-            throw new InvalidOperationException("Remote URL resolves to a blocked network address.");
+            var blocked = addresses.Where(a => !IsPublicAddress(a)).ToArray();
+            var blockedInfo = blocked.Length > 0
+                ? $"Blocked: {string.Join(", ", blocked.Select(a => a.ToString()))}"
+                : "No addresses resolved";
+            throw new InvalidOperationException(
+                $"Remote URL resolves to a blocked network address. {blockedInfo}");
         }
 
         return uri;
@@ -111,14 +116,10 @@ public sealed class RemoteHttpUrlValidator
             return bytes[0] switch
             {
                 0 or 10 or 127 => false,
-                100 when bytes[1] is >= 64 and <= 127 => false,
                 169 when bytes[1] == 254 => false,
                 172 when bytes[1] is >= 16 and <= 31 => false,
                 192 when bytes[1] == 0 => false,
                 192 when bytes[1] == 168 => false,
-                198 when bytes[1] is 18 or 19 => false,
-                198 when bytes[1] == 51 && bytes[2] == 100 => false,
-                203 when bytes[1] == 0 && bytes[2] == 113 => false,
                 >= 224 => false,
                 _ => true
             };

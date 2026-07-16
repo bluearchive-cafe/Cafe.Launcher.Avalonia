@@ -24,6 +24,7 @@ public partial class RemoteContentViewModel : ViewModelBase, IDisposable
     private string proxyMode = ProxyModes.Direct;
     private bool showRemoteContentCard = true;
     private bool isMotionReduced;
+    private bool disposed;
 
     [ObservableProperty]
     private string noticeText = "";
@@ -109,6 +110,7 @@ public partial class RemoteContentViewModel : ViewModelBase, IDisposable
 
     public void ApplyMotionPreference(bool reduceMotion)
     {
+        if (disposed) return;
         isMotionReduced = reduceMotion;
         CarouselTransition = new CrossFade(
             reduceMotion ? TimeSpan.Zero : TimeSpan.FromMilliseconds(350));
@@ -122,6 +124,7 @@ public partial class RemoteContentViewModel : ViewModelBase, IDisposable
 
     public void Apply(LauncherRemoteState remote, LauncherSettings settings, CancellationToken cancellationToken)
     {
+        if (disposed) return;
         proxyMode = settings.ProxyMode;
         StopCarouselTimer();
         carouselDelayCts?.Cancel();
@@ -452,8 +455,10 @@ public partial class RemoteContentViewModel : ViewModelBase, IDisposable
             {
                 return;
             }
-            catch
+            catch (Exception ex)
             {
+                System.Diagnostics.Debug.WriteLine(
+                    $"RemoteContent: banner image load failed for '{item.ImageUrl}': {ex.Message}");
                 await Dispatcher.UIThread.InvokeAsync(item.MarkImageLoadFailed);
             }
         }
@@ -461,6 +466,7 @@ public partial class RemoteContentViewModel : ViewModelBase, IDisposable
 
     private async Task ScheduleCarouselResumeAfterDelayAsync()
     {
+        if (disposed) return;
         carouselDelayCts?.Cancel();
         carouselDelayCts = new CancellationTokenSource();
         var token = carouselDelayCts.Token;
@@ -543,9 +549,13 @@ public partial class RemoteContentViewModel : ViewModelBase, IDisposable
 
     public void Dispose()
     {
+        if (disposed) return;
+        disposed = true;
+
         StopCarouselTimer();
         carouselDelayCts?.Cancel();
         carouselDelayCts?.Dispose();
+        carouselDelayCts = null;
         DisposeBannerBitmaps();
     }
 

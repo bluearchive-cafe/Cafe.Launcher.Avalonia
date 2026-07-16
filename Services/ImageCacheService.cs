@@ -166,7 +166,13 @@ public sealed class ImageCacheService : IDisposable
         using var response = await RemoteHttpRequestService.SendAsync(
             lease.Client,
             new Uri(url),
-            static uri => new HttpRequestMessage(HttpMethod.Get, uri),
+            static uri =>
+            {
+                var request = new HttpRequestMessage(HttpMethod.Get, uri);
+                request.Headers.TryAddWithoutValidation("User-Agent",
+                    $"CafeLauncher/{BuildInfo.LauncherVersion} (.NET)");
+                return request;
+            },
             urlValidator,
             ct,
             connectionUsesProxy: proxyMode == ProxyModes.System).ConfigureAwait(false);

@@ -641,7 +641,7 @@
         <Setter Property="VerticalAlignment" Value="Center"/>
     </Style>
     <Style Selector="Grid.settings-content">
-        <Setter Property="Background" Value="{DynamicResource LauncherCardBackgroundBrush}"/>
+        <Setter Property="Background" Value="{DynamicResource LauncherDialogBackgroundBrush}"/>
         <Setter Property="RowSpacing" Value="{StaticResource LauncherSpacingMd}"/>
     </Style>
     <Style Selector="StackPanel.settings-category-header">
@@ -930,6 +930,7 @@
     </Style>
     <Style Selector="ColorPicker.setting-control">
         <Setter Property="MinWidth" Value="220"/>
+        <Setter Property="Width" Value="220"/>
         <Setter Property="MinHeight" Value="{StaticResource LauncherControlHeightSetting}"/>
         <Setter Property="HorizontalContentAlignment" Value="Center"/>
         <Setter Property="VerticalContentAlignment" Value="Center"/>

@@ -1,11 +1,11 @@
 using System;
+using Cafe.Launcher.Avalonia.Constants;
 using Cafe.Launcher.Avalonia.Models;
 
 namespace Cafe.Launcher.Avalonia.Services;
 
 public sealed class PatchUrlGroupService
 {
-    private const string OfficialPackageHost = "launcher-pkg-ba-jp.yo-star.com";
     private const string CafePackageHost = "launcher-pkg-ba-jp.bluearchive.cafe";
 
     public PatchUrlGroupDefinition Resolve(string? group)
@@ -14,7 +14,7 @@ public sealed class PatchUrlGroupService
             ? new PatchUrlGroupDefinition
             {
                 Code = PatchUrlGroups.Cafe,
-                PackageHostFrom = OfficialPackageHost,
+                PackageHostFrom = ApiConfig.OfficialPackageHost,
                 PackageHostTo = CafePackageHost
             }
             : new PatchUrlGroupDefinition
