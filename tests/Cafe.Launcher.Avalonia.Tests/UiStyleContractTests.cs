@@ -734,6 +734,27 @@ public sealed partial class UiStyleContractTests
     }
 
     [Fact]
+    public void LocalizationManagement_UsesFixedDialogDimensions()
+    {
+        var document = XDocument.Load(ProjectFile("Views/MainWindowDialogsOverlay.axaml"));
+        var dialog = document
+            .Descendants()
+            .Single(element =>
+                element.Name.LocalName == "Grid"
+                && element.Attribute("IsVisible")?.Value
+                    == "{Binding ResourcePanel.IsResourcePanelVisible}")
+            .Elements()
+            .Single(element =>
+                element.Name.LocalName == "Border"
+                && HasClass(element, "overlay-dialog"));
+
+        Assert.Equal("720", dialog.Attribute("Width")?.Value);
+        Assert.Equal("592", dialog.Attribute("Height")?.Value);
+        Assert.Null(dialog.Attribute("MaxWidth"));
+        Assert.Null(dialog.Attribute("MaxHeight"));
+    }
+
+    [Fact]
     public void LogViewer_UsesVirtualizedListBox()
     {
         var document = XDocument.Load(ProjectFile("Views/MainWindowLogViewerOverlay.axaml"));
