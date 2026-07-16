@@ -4,6 +4,7 @@ using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
 using Cafe.Launcher.Avalonia.Constants;
+using Cafe.Launcher.Avalonia.Features.GameOperations;
 using Cafe.Launcher.Avalonia.Helpers;
 using Cafe.Launcher.Avalonia.Models;
 using Cafe.Launcher.Avalonia.Services.Diagnostics;
@@ -16,17 +17,34 @@ public sealed class GameUninstallService
     private readonly GameInstallationPath installationPath;
     private readonly LocalDiagnostics diagnostics;
     private readonly LocalizationService localizer;
+    private readonly DownloadCheckpointStore checkpointStore;
 
     public GameUninstallService(
         LocalInstallationStateStore localInstallationStateStore,
         LocalDiagnostics diagnostics,
         LocalizationService localizer,
         GameInstallationPath installationPath)
+        : this(
+            localInstallationStateStore,
+            diagnostics,
+            localizer,
+            installationPath,
+            DownloadCheckpointStore.CreateDefault())
+    {
+    }
+
+    internal GameUninstallService(
+        LocalInstallationStateStore localInstallationStateStore,
+        LocalDiagnostics diagnostics,
+        LocalizationService localizer,
+        GameInstallationPath installationPath,
+        DownloadCheckpointStore checkpointStore)
     {
         this.localInstallationStateStore = localInstallationStateStore;
         this.installationPath = installationPath;
         this.diagnostics = diagnostics;
         this.localizer = localizer;
+        this.checkpointStore = checkpointStore;
     }
 
     public async Task<GameOperationResult> UninstallAsync(
@@ -83,7 +101,14 @@ public sealed class GameUninstallService
             // The download resume marker lives in LOCALAPPDATA and is not under the game
             // directory, so the manifest-driven file deletion above never touches it. Remove
             // it best-effort so a finished uninstall leaves no stale resume state behind.
-            TryDeleteDownloadState();
+            try
+            {
+                checkpointStore.Clear();
+            }
+            catch (Exception exception) when (exception is IOException or UnauthorizedAccessException)
+            {
+                // Best-effort cleanup of the resume marker; preserve uninstall success.
+            }
 
             await diagnostics.MessageAsync(
                 "Game uninstall completed.",
@@ -150,25 +175,6 @@ public sealed class GameUninstallService
             Message = localizer.F("readyToUninstall", localGame.Manifest?.Files.Count ?? 0),
             AffectedFileCount = (localGame.Manifest?.Files.Count ?? 0) + 2
         };
-    }
-
-    private static void TryDeleteDownloadState()
-    {
-        try
-        {
-            var path = Path.Combine(
-                Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData),
-                LauncherConstants.ProductName,
-                GamePaths.DownloadStateFileName);
-            if (File.Exists(path))
-            {
-                File.Delete(path);
-            }
-        }
-        catch (Exception exception) when (exception is IOException or UnauthorizedAccessException)
-        {
-            // Best-effort cleanup of the resume marker; ignore failures.
-        }
     }
 
     private static bool IsSystemProtectPath(string path)

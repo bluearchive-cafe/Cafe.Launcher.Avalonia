@@ -1,5 +1,6 @@
 using Cafe.Launcher.Avalonia.Models;
 using Cafe.Launcher.Avalonia.Features.Shell;
+using Cafe.Launcher.Avalonia.Features.GameOperations;
 using Cafe.Launcher.Avalonia.Services;
 using Cafe.Launcher.Avalonia.Services.Auth;
 using Cafe.Launcher.Avalonia.Services.Diagnostics;
@@ -1425,7 +1426,7 @@ public sealed class MainWindowViewModelTests : IDisposable
         ResourcePanelUidService? resourcePanelUidService = null,
         ResourcePanelApiClient? resourcePanelApiClient = null,
         ToastService? toastService = null,
-        IGameOperationsBackend? gameOperationsBackend = null,
+        CountingGameOperationsBackend? gameOperationsBackend = null,
         WindowsAnimationSettingsProvider? windowsAnimationSettingsProvider = null)
     {
         settingsService ??= new LauncherSettingsService(
@@ -1503,6 +1504,8 @@ public sealed class MainWindowViewModelTests : IDisposable
                 shellViewModel,
                 dialogsViewModel)
             : new GameOperationsViewModel(
+                gameOperationsBackend,
+                gameOperationsBackend,
                 gameOperationsBackend,
                 localizationService,
                 toastService,
@@ -1762,7 +1765,10 @@ public sealed class MainWindowViewModelTests : IDisposable
         }
     }
 
-    private sealed class CountingGameOperationsBackend : IGameOperationsBackend
+    private sealed class CountingGameOperationsBackend :
+        IGameLaunchWorkflow,
+        IGameInstallationWorkflow,
+        IGameUninstallWorkflow
     {
         private readonly bool isDownloadRunning;
 
@@ -1773,6 +1779,7 @@ public sealed class MainWindowViewModelTests : IDisposable
 
         public int ResumeInvocationCount { get; private set; }
         public bool IsDownloadRunning => isDownloadRunning;
+        public bool IsRunning => IsDownloadRunning;
         public bool IsPaused => false;
 
         public Task<GameLaunchResult> StartGameAsync(LauncherStatusSnapshot snapshot) =>

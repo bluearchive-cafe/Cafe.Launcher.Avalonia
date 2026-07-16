@@ -1,5 +1,6 @@
 using Cafe.Launcher.Avalonia.Constants;
 using Cafe.Launcher.Avalonia.Models;
+using Cafe.Launcher.Avalonia.Features.GameOperations;
 using Cafe.Launcher.Avalonia.Services;
 using Cafe.Launcher.Avalonia.Services.Diagnostics;
 using Cafe.Launcher.Avalonia.ViewModels;
@@ -252,6 +253,8 @@ public sealed class WindowChromeViewModelTests : IDisposable
         var backend = new TestBackend();
         var operations = new GameOperationsViewModel(
             backend,
+            backend,
+            backend,
             provider.GetRequiredService<LocalizationService>(),
             provider.GetRequiredService<ToastService>(),
             provider.GetRequiredService<LocalDiagnostics>(),
@@ -299,9 +302,13 @@ public sealed class WindowChromeViewModelTests : IDisposable
         }
     }
 
-    private sealed class TestBackend : IGameOperationsBackend
+    private sealed class TestBackend :
+        IGameLaunchWorkflow,
+        IGameInstallationWorkflow,
+        IGameUninstallWorkflow
     {
         public bool IsDownloadRunning { get; set; }
+        public bool IsRunning => IsDownloadRunning;
         public bool IsPaused { get; private set; }
         public bool LastClearPersistedState { get; private set; }
 
