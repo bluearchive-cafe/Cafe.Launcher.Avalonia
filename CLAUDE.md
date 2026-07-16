@@ -5,7 +5,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 ## Build & Run
 
 ```powershell
-.\verify.ps1                              # Full verification: Debug build → unit tests → headless tests → Release build
+.\verify.ps1                              # Full verification: Debug build → coverage.ps1 (tests + 70% threshold) → Release build
 .\build.ps1                               # Debug build (expect 0 warnings, 0 errors)
 dotnet restore .\Cafe.Launcher.Avalonia.csproj -r win-x64
 dotnet build .\Cafe.Launcher.Avalonia.csproj -c Debug --no-restore
@@ -29,7 +29,7 @@ dotnet test .\tests\Cafe.Launcher.Avalonia.HeadlessTests\Cafe.Launcher.Avalonia.
 dotnet test
 ```
 
-Available unit test classes include `VersionComparerTests`, `LauncherApiClientTests`, `LauncherConstantsTests`, `LauncherSettingsServiceTests`, `SettingsNormalizerTests`, `SettingsEditorTests`, `ToastServiceTests`, `GameInstallationPathTests`, `LocalInstallationStateStoreTests`, `LauncherCoreServiceTests`, `InstallationOperationStateTests`, `LocalizationServiceTests`, `MainWindowViewModelTests`, `DialogsViewModelTests`, `GameDownloadServiceTests`, `PatchUrlGroupServiceTests`, `BestHttpCookieLibraryServiceTests`, `ResourcePanelUidServiceTests`, `ExternalLinkServiceTests`, `ResourcePanelApiClientTests`, `LauncherUpdateServiceTests`, `HttpClientFactoryTests`, `OfficialHashServiceTests`, `UiStyleContractTests`, `BackgroundViewModelTests`, `Crc64ServiceTests`, `DiagnosticsServicesTests`, `FileSizeFormatterTests`, `FlexibleBoolConverterTests`, `GameOperationsViewModelTests`, `GamePathValidatorTests`, `ImageCacheServiceTests`, `LogExportServiceTests`, `LogViewerDialogViewModelTests`, `ManifestValidationServiceTests`, `MotionSettingsResolverTests`, `NoticeStateServiceTests`, `ProxySettingsServiceTests`, `ReleaseScriptTests`, `RemoteContentViewModelTests`, `RemoteHttpUrlValidatorTests`, `RemoteManifestServiceTests`, `ServiceConfigurationTests`, `SettingsCategoryTests`, `ToastHostViewModelTests`, `WindowChromeViewModelTests`, `WindowsAnimationSettingsProviderTests`, and `WindowEscapeStrategyTests`.
+Available unit test classes include `VersionComparerTests`, `LauncherApiClientTests`, `LauncherConstantsTests`, `LauncherSettingsServiceTests`, `SettingsNormalizerTests`, `SettingsEditorTests`, `ToastServiceTests`, `GameInstallationPathTests`, `LocalInstallationStateStoreTests`, `LauncherCoreServiceTests`, `InstallationOperationStateTests`, `LocalizationServiceTests`, `MainWindowViewModelTests`, `DialogsViewModelTests`, `GameDownloadServiceTests`, `PatchUrlGroupServiceTests`, `BestHttpCookieLibraryServiceTests`, `ResourcePanelUidServiceTests`, `ExternalLinkServiceTests`, `ResourcePanelApiClientTests`, `LauncherUpdateServiceTests`, `HttpClientFactoryTests`, `OfficialHashServiceTests`, `UiStyleContractTests`, `DialogActionButtonContractTests`, `InstallerContractTests`, `BackgroundViewModelTests`, `Crc64ServiceTests`, `DiagnosticsServicesTests`, `FileSizeFormatterTests`, `FlexibleBoolConverterTests`, `GameOperationsViewModelTests`, `GamePathValidatorTests`, `ImageCacheServiceTests`, `LogExportServiceTests`, `LogViewerDialogViewModelTests`, `ManifestValidationServiceTests`, `MotionSettingsResolverTests`, `NoticeStateServiceTests`, `ProxySettingsServiceTests`, `ReleaseScriptTests`, `RemoteContentViewModelTests`, `RemoteHttpUrlValidatorTests`, `RemoteManifestServiceTests`, `ServiceConfigurationTests`, `SettingsCategoryTests`, `ToastHostViewModelTests`, `WindowChromeViewModelTests`, `WindowsAnimationSettingsProviderTests`, and `WindowEscapeStrategyTests`.
 
 Headless test classes: `SystemTrayServiceTests`, `MainWindowHeadlessTests`, `HeadlessSmokeTests`, `OverlayFocusBehaviorTests`, and `ConverterHeadlessTests`.
 
@@ -37,9 +37,22 @@ Headless test classes: `SystemTrayServiceTests`, `MainWindowHeadlessTests`, `Hea
 
 **Testing infrastructure**: No mocking framework (Moq/NSubstitute) is used. Tests hand-craft `HttpMessageHandler` subclasses (e.g., `GitHubReleaseHandler`) and manual stubs. The source project exposes internals to tests via `[assembly: InternalsVisibleTo("Cafe.Launcher.Avalonia.Tests")]` in `Properties/AssemblyInfo.cs`. Headless tests use `Avalonia.Headless.XUnit` for UI component testing without a display server.
 
+**Code coverage**: `coverage.ps1` runs both test projects with `XPlat Code Coverage` (Cobertura format via `coverage.runsettings`), merges the reports, and enforces a **70% threshold** on both line and branch coverage. The runsettings excludes `.axaml` files and `obj/` directories. `verify.ps1` calls `coverage.ps1` as its test step — coverage must pass for verification to succeed.
+
+```powershell
+.\coverage.ps1    # Run both test projects with coverage, enforce 70% line + branch threshold
+```
+
+**Windows installer (NSIS)**: `scripts/Build-Distribution.ps1` builds a standalone ZIP and an NSIS setup EXE (`installer/Cafe.Launcher.Avalonia.nsi`). Requires NSIS 3 with `makensis.exe` on `PATH`. Output goes to `artifacts/distribution/`. The installer installs system-wide to `C:\Program Files\Cafe Launcher`, requires admin rights, and cleans up old installer-managed files on upgrade. Uninstall optionally removes `%LOCALAPPDATA%\Cafe Launcher` (user data).
+
+```powershell
+.\scripts\Build-Distribution.ps1           # Build standalone ZIP + NSIS setup EXE
+.\scripts\Build-Distribution.ps1 -Tag v1.0 # Specify tag for version stamping
+```
+
 CI is GitHub Actions on **Linux** (`ubuntu-latest`), .NET 10.0.x. Release builds cross-compile to `win-x64`:
 - **build.yml** (push/PR to `main`): restore, Debug build, test (both projects), Release build (`-r win-x64`), self-contained publish (`-r win-x64`), upload artifact.
-- **release.yml** (push of `v*` tag): test, Release build (`-r win-x64`), publish (`-r win-x64`), ZIP archive via PowerShell Core `Compress-Archive`, generate the grouped changelog through `scripts/New-ReleaseChangelog.ps1`, then create matching GitHub Releases in both the source repository and the distribution repository (`bluearchive-cafe/Cafe.Launcher.Avalonia_Release`, defined as `GitHubReleaseRepositorySlug` in constants). The local release script uses the same changelog generator. The distribution repository uses the `RELEASE_REPOSITORY_TOKEN` Actions secret. Pre-release if tag contains `-`.
+- **release.yml** (push of `v*` tag): test, Release build (`-r win-x64`), publish (`-r win-x64`), build standalone ZIP + NSIS setup EXE via `scripts/Build-Distribution.ps1`, generate the grouped changelog through `scripts/New-ReleaseChangelog.ps1`, then create matching GitHub Releases in both the source repository and the distribution repository (`bluearchive-cafe/Cafe.Launcher.Avalonia_Release`, defined as `GitHubReleaseRepositorySlug` in constants). The local release script uses the same changelog generator. The distribution repository uses the `RELEASE_REPOSITORY_TOKEN` Actions secret. Pre-release if tag contains `-`.
 
 **Telemetry must be off during local builds** (already set in `build.ps1`):
 - `DOTNET_CLI_TELEMETRY_OPTOUT=1`
@@ -51,6 +64,7 @@ CI is GitHub Actions on **Linux** (`ubuntu-latest`), .NET 10.0.x. Release builds
 .\release.ps1 patch                  # Bump patch version, generate changelog, commit, tag, push
 .\release.ps1 minor -DryRun          # Preview minor bump without modifying files
 .\release.ps1 2.0.0-beta.1          # Explicit version (prerelease if tag contains -)
+.\release.ps1 patch -Force           # Skip safety checks (dirty tree, existing tag)
 .\release.ps1 patch -SkipPush        # Commit + tag locally, don't push to origin
 ```
 
@@ -60,7 +74,7 @@ CI is GitHub Actions on **Linux** (`ubuntu-latest`), .NET 10.0.x. Release builds
 
 **Tech stack**: .NET 10.0, Avalonia 12.0.4, CommunityToolkit.Mvvm 8.4.2 (source generators), Material.Icons.Avalonia, Fluent Theme. Compiled bindings enabled by default. Nullable reference types enabled project-wide (`<Nullable>enable</Nullable>` in the `.csproj`).
 
-**Build configuration**: `TreatWarningsAsErrors` + `EnforceCodeStyleInBuild` are enabled project-wide (0 warnings is the norm, not aspirational). Analysis level is `latest-recommended` with `Minimum` mode. Release builds are self-contained `win-x64` with aggressive trimming (`DebuggerSupport=false`, `EventSourceSupport=false`, `HttpActivityPropagationSupport=false`, `MetadataUpdaterSupport=false`, `DebugType=none`). An `AddGitCommitMetadata` MSBuild target embeds `git rev-parse --short=7 HEAD` as `[AssemblyMetadata("CommitSha")]`, surfaced via `LauncherConstants.CommitSha`. The `AvaloniaUI.DiagnosticsSupport` package is Debug-only (conditionally excluded in Release). The Windows `app.manifest` declares DPI awareness (`PerMonitorV2`) and Windows 10/11 support.
+**Build configuration**: `TreatWarningsAsErrors` + `EnforceCodeStyleInBuild` are enabled project-wide (0 warnings is the norm, not aspirational). Analysis level is `latest-recommended` with `Minimum` mode. Release builds are self-contained `win-x64` with aggressive trimming (`DebuggerSupport=false`, `EventSourceSupport=false`, `HttpActivityPropagationSupport=false`, `MetadataUpdaterSupport=false`, `DebugType=none`). An `AddGitCommitMetadata` MSBuild target embeds `git rev-parse --short=7 HEAD` as `[AssemblyMetadata("CommitSha")]`, surfaced via `LauncherConstants.CommitSha`. The `AvaloniaUI.DiagnosticsSupport` package is Debug-only (conditionally excluded in Release). The Windows `app.manifest` declares DPI awareness (`PerMonitorV2`) and Windows 10/11 support. The app icon is `Assets/app-icon.ico` (`<ApplicationIcon>` in the `.csproj`).
 
 **`.editorconfig` key diagnostics**:
 - `CA5351` (MD5) → `none` — MD5 is required by the official launcher wire protocol and local compatibility hashes
@@ -266,6 +280,9 @@ Users can switch between `Official` (yo-star.com) and `Cafe` (bluearchive.cafe) 
 - `Services/Diagnostics/` — `UnifiedLogger` (Serilog-backed central logging with async sink, global enrichers, and `LoggingLevelSwitch`), `LocalDiagnostics` (public facade over `UnifiedLogger`), `LogExportService` (ZIP log export), `CrashRecoveryService` (session crash detection via `session.active` marker), `LogEntrySeverity` enum (Error/Warn/Info). Log rotation is handled by Serilog's file sink (5 MB threshold, 3 retained files). All diagnostics and crash logs go to a single `unified.log`.
 - `Services/HttpClientLeaseSource.cs` — Internal `IHttpClientLeaseSource` abstraction over `HttpClientFactory.CreateLeaseAsync()`. Two implementations: `ProxyAwareHttpClientLeaseSource` (production, delegates to `HttpClientFactory`) and `FixedHttpClientLeaseSource` (testing, wraps a fixed `HttpMessageHandler`). Used by services like `LauncherUpdateService` that need proxy-aware HTTP with lease lifetime management.
 - `Services/ServiceConfiguration.cs` — DI registration; services as `AddSingleton`, ViewModels as a mix of singleton (shared state: `SettingsViewModel`, `ShellViewModel`, `RemoteContentViewModel`, `DialogsViewModel`, `GameOperationsViewModel`) and transient (fresh per resolution). `AddLauncherServices(existingLogger?)` accepts an optional pre-created `UnifiedLogger` to reuse across crash handling and application logging.
+- `installer/` — NSIS installer script (`Cafe.Launcher.Avalonia.nsi`) for building the Windows setup EXE
+- `docs/adr/` — Architecture Decision Records (e.g., `0001-local-installation-state-module.md`)
+- `docs/superpowers/plans/` + `docs/superpowers/specs/` — Implementation plans and design specs for past feature work
 
 ### Localization
 
@@ -364,7 +381,7 @@ All numeric design values use `StaticResource` keys defined in `App.axaml`:
 - **Version comparison**: `VersionComparer.Compare()` returns -1/0/1 for old/equal/new.
 - **XAML extraction**: Large XAML blocks (styles, overlays) are extracted into separate `.axaml` files under `Views/` and referenced via `<StyleInclude>` or `Classes` attributes. The main `MainWindow.axaml` keeps only the window shell and content grid.
 - **Conventional commits**: Release changelog generation groups commits by `feat:`/`fix:`/`refactor:`/`perf:` prefixes. Use these prefixes for commit messages to get clean changelogs.
-- **AGENTS.md**: A parallel instruction file for Codex exists at the repo root. It covers the same architecture and should be kept in sync when significant structural changes are made.
+- **AGENTS.md**: A parallel instruction file for Codex exists at the repo root. It covers the same architecture and should be kept in sync when significant structural changes are made. **Known discrepancy**: AGENTS.md says CI runs on `windows-latest` but actual CI uses `ubuntu-latest`.
 - *****REMOVED***.md**: Analysis report comparing this launcher to the original Electron launcher, covering implementation differences and intentionally excluded features.
 - **VSCode**: `.vscode/launch.json` has `build`/`publish`/`watch` tasks and `.NET Core Launch`/`Attach` configurations.
 
