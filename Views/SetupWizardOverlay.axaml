@@ -205,47 +205,58 @@
                                        TextWrapping="Wrap"/>
                             <Border Classes="info-strip">
                                 <StackPanel Spacing="{StaticResource LauncherSpacingMd}">
-                                    <Grid ColumnDefinitions="Auto,*,Auto" ColumnSpacing="{StaticResource LauncherSpacingMd}">
-                                        <TextBlock Text="{Binding Shell.I18n.SetupWizardLanguage}" Classes="caption"/>
+                                    <Grid Classes="wizard-review-row" ColumnDefinitions="Auto,*,Auto" ColumnSpacing="{StaticResource LauncherSpacingMd}">
+                                        <TextBlock Text="{Binding Shell.I18n.SetupWizardLanguage}" Classes="caption" VerticalAlignment="Center"/>
                                         <TextBlock Grid.Column="1"
                                                    Text="{Binding Dialogs.SetupWizard.LanguageDisplayName}"
-                                                   Classes="value"/>
+                                                   Classes="value"
+                                                   VerticalAlignment="Center"/>
                                         <Button Grid.Column="2" Classes="flat-action dialog-action wizard-review-edit"
                                                 Command="{Binding Dialogs.SetupWizard.GoToStepCommand}" CommandParameter="0"
+                                                VerticalAlignment="Center"
                                                 AutomationProperties.Name="{Binding Shell.I18n.SetupWizardEditStep}">
                                             <TextBlock Text="{Binding Shell.I18n.SetupWizardEditStep}"/>
                                         </Button>
                                     </Grid>
-                                    <Grid ColumnDefinitions="Auto,*,Auto" ColumnSpacing="{StaticResource LauncherSpacingMd}">
-                                        <TextBlock Text="{Binding Shell.I18n.SetupWizardDownloadSource}" Classes="caption"/>
+                                    <Border Classes="wizard-review-divider"/>
+                                    <Grid Classes="wizard-review-row" ColumnDefinitions="Auto,*,Auto" ColumnSpacing="{StaticResource LauncherSpacingMd}">
+                                        <TextBlock Text="{Binding Shell.I18n.SetupWizardDownloadSource}" Classes="caption" VerticalAlignment="Center"/>
                                         <TextBlock Grid.Column="1"
                                                    Text="{Binding Dialogs.SetupWizard.DownloadSourceDisplayName}"
-                                                   Classes="value"/>
+                                                   Classes="value"
+                                                   VerticalAlignment="Center"/>
                                         <Button Grid.Column="2" Classes="flat-action dialog-action wizard-review-edit"
                                                 Command="{Binding Dialogs.SetupWizard.GoToStepCommand}" CommandParameter="2"
+                                                VerticalAlignment="Center"
                                                 AutomationProperties.Name="{Binding Shell.I18n.SetupWizardEditStep}">
                                             <TextBlock Text="{Binding Shell.I18n.SetupWizardEditStep}"/>
                                         </Button>
                                     </Grid>
-                                    <Grid ColumnDefinitions="Auto,*,Auto" ColumnSpacing="{StaticResource LauncherSpacingMd}">
-                                        <TextBlock Text="{Binding Shell.I18n.SetupWizardGamePath}" Classes="caption"/>
+                                    <Border Classes="wizard-review-divider"/>
+                                    <Grid Classes="wizard-review-row" ColumnDefinitions="Auto,*,Auto" ColumnSpacing="{StaticResource LauncherSpacingMd}">
+                                        <TextBlock Text="{Binding Shell.I18n.SetupWizardGamePath}" Classes="caption" VerticalAlignment="Center"/>
                                         <TextBlock Grid.Column="1"
                                                    Text="{Binding Dialogs.SetupWizard.GamePath}"
                                                    Classes="value"
-                                                   TextTrimming="CharacterEllipsis"/>
+                                                   TextTrimming="CharacterEllipsis"
+                                                   VerticalAlignment="Center"/>
                                         <Button Grid.Column="2" Classes="flat-action dialog-action wizard-review-edit"
                                                 Command="{Binding Dialogs.SetupWizard.GoToStepCommand}" CommandParameter="1"
+                                                VerticalAlignment="Center"
                                                 AutomationProperties.Name="{Binding Shell.I18n.SetupWizardEditStep}">
                                             <TextBlock Text="{Binding Shell.I18n.SetupWizardEditStep}"/>
                                         </Button>
                                     </Grid>
-                                    <Grid ColumnDefinitions="Auto,*,Auto" ColumnSpacing="{StaticResource LauncherSpacingMd}">
-                                        <TextBlock Text="{Binding Shell.I18n.SetupWizardProxy}" Classes="caption"/>
+                                    <Border Classes="wizard-review-divider"/>
+                                    <Grid Classes="wizard-review-row" ColumnDefinitions="Auto,*,Auto" ColumnSpacing="{StaticResource LauncherSpacingMd}">
+                                        <TextBlock Text="{Binding Shell.I18n.SetupWizardProxy}" Classes="caption" VerticalAlignment="Center"/>
                                         <TextBlock Grid.Column="1"
                                                    Text="{Binding Dialogs.SetupWizard.ProxyDisplayName}"
-                                                   Classes="value"/>
+                                                   Classes="value"
+                                                   VerticalAlignment="Center"/>
                                         <Button Grid.Column="2" Classes="flat-action dialog-action wizard-review-edit"
                                                 Command="{Binding Dialogs.SetupWizard.GoToStepCommand}" CommandParameter="3"
+                                                VerticalAlignment="Center"
                                                 AutomationProperties.Name="{Binding Shell.I18n.SetupWizardEditStep}">
                                             <TextBlock Text="{Binding Shell.I18n.SetupWizardEditStep}"/>
                                         </Button>

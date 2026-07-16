@@ -1102,6 +1102,54 @@ public sealed partial class UiStyleContractTests
     }
 
     [Fact]
+    public void SetupWizard_Review_UsesSeparatedCenteredRows()
+    {
+        var overlay = XDocument.Load(ProjectFile("Views/SetupWizardOverlay.axaml"));
+        var reviewStep = overlay
+            .Descendants()
+            .Single(element =>
+                element.Name.LocalName == "StackPanel"
+                && element.Attribute("IsVisible")?.Value
+                    == "{Binding Dialogs.SetupWizard.IsLastStep}");
+        var reviewContent = reviewStep
+            .Descendants()
+            .Single(element =>
+                element.Name.LocalName == "Border"
+                && HasClass(element, "info-strip"))
+            .Elements()
+            .Single(element => element.Name.LocalName == "StackPanel");
+        var reviewRows = reviewContent
+            .Elements()
+            .Where(element => element.Name.LocalName == "Grid")
+            .ToList();
+        var dividers = reviewContent
+            .Elements()
+            .Where(element =>
+                element.Name.LocalName == "Border"
+                && HasClass(element, "wizard-review-divider"))
+            .ToList();
+
+        Assert.Equal(4, reviewRows.Count);
+        Assert.All(reviewRows, row => Assert.True(HasClass(row, "wizard-review-row")));
+        Assert.Equal(3, dividers.Count);
+        Assert.All(
+            reviewRows,
+            row => Assert.All(
+                row.Elements().Where(element =>
+                    element.Name.LocalName is "TextBlock" or "Button"),
+                element => Assert.Equal("Center", element.Attribute("VerticalAlignment")?.Value)));
+
+        var styles = XDocument.Load(ProjectFile("Views/Styles/SetupWizard.axaml"));
+        var rowStyle = GetStyleSetters(styles, "Grid.wizard-review-row");
+        var dividerStyle = GetStyleSetters(styles, "Border.wizard-review-divider");
+
+        Assert.Equal("{StaticResource LauncherControlHeightDialog}", rowStyle["MinHeight"]);
+        Assert.Equal("Center", rowStyle["VerticalAlignment"]);
+        Assert.Equal("1", dividerStyle["Height"]);
+        Assert.Equal("{DynamicResource LauncherCardBorderBrush}", dividerStyle["Background"]);
+    }
+
+    [Fact]
     public void SetupWizardGamePath_ShowsStatusWithSemanticStateStyles()
     {
         var overlay = XDocument.Load(ProjectFile("Views/SetupWizardOverlay.axaml"));

@@ -8,6 +8,14 @@
         <Setter Property="HorizontalAlignment" Value="Center"/>
         <Setter Property="VerticalAlignment" Value="Center"/>
     </Style>
+    <Style Selector="Grid.wizard-review-row">
+        <Setter Property="MinHeight" Value="{StaticResource LauncherControlHeightDialog}"/>
+        <Setter Property="VerticalAlignment" Value="Center"/>
+    </Style>
+    <Style Selector="Border.wizard-review-divider">
+        <Setter Property="Height" Value="1"/>
+        <Setter Property="Background" Value="{DynamicResource LauncherCardBorderBrush}"/>
+    </Style>
     <Style Selector="Button.wizard-choice">
         <Setter Property="Background" Value="{DynamicResource LauncherContentRowBrush}"/>
         <Setter Property="BorderBrush" Value="{DynamicResource LauncherCardBorderBrush}"/>
