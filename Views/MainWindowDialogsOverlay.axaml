@@ -5,6 +5,7 @@
              xmlns:converters="using:Cafe.Launcher.Avalonia.Converters"
              xmlns:materialIcons="clr-namespace:Material.Icons.Avalonia;assembly=Material.Icons.Avalonia"
              xmlns:controls="using:Cafe.Launcher.Avalonia.Controls"
+             xmlns:views="using:Cafe.Launcher.Avalonia.Views"
              x:Class="Cafe.Launcher.Avalonia.Views.MainWindowDialogsOverlay"
              x:Name="DialogsRoot"
              x:DataType="vm:MainWindowViewModel">
@@ -433,5 +434,6 @@
                 </Grid>
             </Border>
         </Grid>
+        <views:SetupWizardOverlay/>
     </Grid>
 </UserControl>

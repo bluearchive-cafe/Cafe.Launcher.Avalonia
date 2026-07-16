@@ -248,6 +248,9 @@ public sealed partial class LauncherSettings : ObservableObject
     /// <summary>
     /// Copy constructor for deep cloning. Copies all settings properties,
     /// including a shallow copy of <see cref="ThemeColorPalette"/> (strings are immutable).
+    /// ⚠️ When adding a new setting property to this class,
+    /// you MUST add a corresponding line to this constructor.
+    /// Failure to do so results in silent shallow copy of the new property.
     /// </summary>
     public LauncherSettings(LauncherSettings other)
     {
@@ -284,6 +287,8 @@ public sealed partial class LauncherSettings : ObservableObject
     /// <summary>
     /// Creates default settings with pre-release builds defaulting to the beta update channel.
     /// Shared by <see cref="Services.LauncherSettingsService"/> and <see cref="Services.SettingsEditor"/>.
+    /// When the system UI language is Chinese, defaults to the Cafe patch URL group so Chinese
+    /// players get the Cafe-localised version without manually changing the download source.
     /// </summary>
     public static LauncherSettings CreateDefaults()
     {
@@ -294,7 +299,21 @@ public sealed partial class LauncherSettings : ObservableObject
             settings.UpdateChannel = UpdateChannels.Beta;
         }
 
+        // Chinese users are the primary audience for Cafe-localised game resources;
+        // default to Cafe source so they get Chinese text without manual setup.
+        if (IsChineseUICulture())
+        {
+            settings.PatchUrlGroup = PatchUrlGroups.Cafe;
+        }
+
         return settings;
+    }
+
+    private static bool IsChineseUICulture()
+    {
+        var culture = System.Globalization.CultureInfo.CurrentUICulture.Name;
+        return culture is "zh-CN" or "zh-TW" or "zh-HK" or "zh-MO" or "zh-SG"
+            or "zh-Hans" or "zh-Hant";
     }
 }
 

@@ -625,6 +625,108 @@ public sealed class MainWindowHeadlessTests
         Assert.Equal(WindowState.Minimized, first.Window.WindowState);
     }
 
+    [AvaloniaFact]
+    public void SetupWizard_WhenShown_IsVisibleAndNavigatesSteps()
+    {
+        using var context = CreateContext();
+        context.Window.Show();
+        Dispatcher.UIThread.RunJobs();
+
+        // Simulate first-launch trigger (settings.json missing)
+        context.ViewModel.Dialogs.ShowSetupWizard();
+        Dispatcher.UIThread.RunJobs();
+
+        Assert.True(context.ViewModel.Dialogs.IsSetupWizardVisible);
+        Assert.True(context.ViewModel.Dialogs.SetupWizard.IsFirstStep);
+
+        // Step 0 → 1
+        context.ViewModel.Dialogs.SetupWizard.NextCommand.Execute(null);
+        Dispatcher.UIThread.RunJobs();
+        Assert.Equal(1, context.ViewModel.Dialogs.SetupWizard.Step);
+
+        // Step 1 → 2
+        context.ViewModel.Dialogs.SetupWizard.NextCommand.Execute(null);
+        Dispatcher.UIThread.RunJobs();
+        Assert.Equal(2, context.ViewModel.Dialogs.SetupWizard.Step);
+
+        // Step 2 requires GamePath to be non-empty for CanGoNext
+        Assert.False(context.ViewModel.Dialogs.SetupWizard.CanGoNext);
+        context.ViewModel.Dialogs.SetupWizard.GamePath = @"C:\Games\YostarGames\BlueArchive_JP";
+        Assert.True(context.ViewModel.Dialogs.SetupWizard.CanGoNext);
+        context.ViewModel.Dialogs.SetupWizard.NextCommand.Execute(null);
+        Dispatcher.UIThread.RunJobs();
+        Assert.Equal(3, context.ViewModel.Dialogs.SetupWizard.Step);
+
+        // Step 3 → 4 (last)
+        Assert.True(context.ViewModel.Dialogs.SetupWizard.CanGoNext);
+        context.ViewModel.Dialogs.SetupWizard.NextCommand.Execute(null);
+        Dispatcher.UIThread.RunJobs();
+
+        Assert.True(context.ViewModel.Dialogs.SetupWizard.IsLastStep);
+        Assert.Equal(4, context.ViewModel.Dialogs.SetupWizard.Step);
+    }
+
+    [AvaloniaFact]
+    public async Task SetupWizard_WhenSkipped_HidesOverlay()
+    {
+        using var context = CreateContext();
+        LauncherSettings? applied = null;
+        context.ViewModel.Dialogs.SetupWizard.SettingsApplied += settings =>
+        {
+            applied = settings;
+            // Simulate the parent ViewModel's behavior: hide wizard on completion
+            context.ViewModel.Dialogs.IsSetupWizardVisible = false;
+            return Task.CompletedTask;
+        };
+        context.Window.Show();
+        context.ViewModel.Dialogs.ShowSetupWizard();
+        Dispatcher.UIThread.RunJobs();
+
+        await context.ViewModel.Dialogs.SetupWizard.SkipCommand.ExecuteAsync(null);
+        Dispatcher.UIThread.RunJobs();
+
+        Assert.False(context.ViewModel.Dialogs.IsSetupWizardVisible);
+        Assert.NotNull(applied);
+        Assert.Equal("auto", applied!.Language);
+    }
+
+    [AvaloniaFact]
+    public async Task SetupWizard_WhenCompleted_BuildsSettingsAndHidesOverlay()
+    {
+        using var context = CreateContext();
+        LauncherSettings? applied = null;
+        context.ViewModel.Dialogs.SetupWizard.SettingsApplied += settings =>
+        {
+            applied = settings;
+            // Simulate the parent ViewModel's behavior: hide wizard on completion
+            context.ViewModel.Dialogs.IsSetupWizardVisible = false;
+            return Task.CompletedTask;
+        };
+        context.Window.Show();
+        context.ViewModel.Dialogs.ShowSetupWizard();
+        Dispatcher.UIThread.RunJobs();
+
+        // Navigate to step 2 (GamePath) and set a path
+        context.ViewModel.Dialogs.SetupWizard.NextCommand.Execute(null);
+        Dispatcher.UIThread.RunJobs();
+        context.ViewModel.Dialogs.SetupWizard.NextCommand.Execute(null);
+        Dispatcher.UIThread.RunJobs();
+        context.ViewModel.Dialogs.SetupWizard.GamePath = @"C:\Games\YostarGames\BlueArchive_JP";
+        context.ViewModel.Dialogs.SetupWizard.NextCommand.Execute(null);
+        Dispatcher.UIThread.RunJobs();
+        context.ViewModel.Dialogs.SetupWizard.NextCommand.Execute(null);
+        Dispatcher.UIThread.RunJobs();
+
+        Assert.True(context.ViewModel.Dialogs.SetupWizard.IsLastStep);
+
+        await context.ViewModel.Dialogs.SetupWizard.CompleteCommand.ExecuteAsync(null);
+        Dispatcher.UIThread.RunJobs();
+
+        Assert.False(context.ViewModel.Dialogs.IsSetupWizardVisible);
+        Assert.NotNull(applied);
+        Assert.Contains(@"BlueArchive_JP", applied!.GamePath);
+    }
+
     private static TestContext CreateContext()
     {
         var tempDir = Path.Combine(Path.GetTempPath(), Guid.NewGuid().ToString("N"));

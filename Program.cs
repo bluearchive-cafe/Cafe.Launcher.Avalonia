@@ -1,7 +1,9 @@
 using Avalonia;
 using System;
+using System.IO;
 using System.Threading;
 using System.Threading.Tasks;
+using Cafe.Launcher.Avalonia.Constants;
 using Microsoft.Extensions.DependencyInjection;
 using Cafe.Launcher.Avalonia.Services.Diagnostics;
 
@@ -13,6 +15,12 @@ sealed class Program
     private const string SignalName = @"Local\Cafe_Launcher_SI_Show";
 
     internal static bool PreviousSessionCrashed { get; private set; }
+
+    /// <summary>
+    /// True when the launcher settings file is missing at process startup.
+    /// Used by <see cref="App"/> to show the first-launch setup wizard before normal refresh.
+    /// </summary>
+    internal static bool FirstLaunch { get; private set; }
 
     /// <summary>
     /// The pre-DI <see cref="UnifiedLogger"/> created before the DI container
@@ -43,6 +51,7 @@ sealed class Program
         // for the entire process.
         var crashLogger = new UnifiedLogger();
         PreDiLogger = crashLogger;
+        FirstLaunch = DetectFirstLaunch();
         var crashRecovery = new CrashRecoveryService(crashLogger);
         SetupCrashLogging(crashLogger);
         try
@@ -56,6 +65,15 @@ sealed class Program
             LogCrash(crashLogger, "Main", exception);
             throw;
         }
+    }
+
+    private static bool DetectFirstLaunch()
+    {
+        var settingsPath = Path.Combine(
+            Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData),
+            LauncherConstants.ProductName,
+            GamePaths.LauncherSettingsFileName);
+        return !File.Exists(settingsPath);
     }
 
     internal static void RunSession(CrashRecoveryService crashRecovery, Action runApplication)

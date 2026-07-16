@@ -204,6 +204,7 @@ public sealed class DialogsViewModelTests
         var viewModel = new DialogsViewModel(
             new LocalizationService(),
             stateService,
+            new SetupWizardViewModel(new LocalizationService(), new GameInstallationPath()),
             action =>
             {
                 action();
@@ -272,6 +273,7 @@ public sealed class DialogsViewModelTests
         return new DialogsViewModel(
             new LocalizationService(),
             new NoticeStateService(noticePath),
+            new SetupWizardViewModel(new LocalizationService(), new GameInstallationPath()),
             action =>
             {
                 action();

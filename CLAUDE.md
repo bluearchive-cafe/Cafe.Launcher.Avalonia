@@ -2,6 +2,8 @@
 
 This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
 
+> **See also:** [PROJECT_CONVENTIONS.md](PROJECT_CONVENTIONS.md) — AI-assisted development rules, code style, testing conventions, and code review checklist.
+
 ## Build & Run
 
 ```powershell

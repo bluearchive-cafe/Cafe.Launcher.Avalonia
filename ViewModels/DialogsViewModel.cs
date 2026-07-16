@@ -57,6 +57,21 @@ public partial class DialogsViewModel : ViewModelBase
     [ObservableProperty]
     private string crashRecoveryText = "";
 
+    // ── Setup wizard ─────────────────────────────────────────────────────
+
+    public SetupWizardViewModel SetupWizard { get; }
+
+    [ObservableProperty]
+    private bool isSetupWizardVisible;
+
+    public IReadOnlyList<LanguageOption> LanguageOptions { get; } = LocalizationService.GetLanguageOptions();
+
+    public void ShowSetupWizard()
+    {
+        System.Diagnostics.Debug.WriteLine("DIALOGS: ShowSetupWizard called, setting IsSetupWizardVisible=true");
+        IsSetupWizardVisible = true;
+    }
+
     public event Action? CrashRecoveryContinueRequested;
     public event Func<Task>? CrashRecoveryResetSettingsRequested;
     public event Action? CrashRecoveryViewLogRequested;
@@ -131,10 +146,11 @@ public partial class DialogsViewModel : ViewModelBase
 
     public event Action<string>? ConfirmUpdateAvailableRequested;
 
-    public DialogsViewModel(LocalizationService localizer, NoticeStateService noticeStateService)
+    public DialogsViewModel(LocalizationService localizer, NoticeStateService noticeStateService, SetupWizardViewModel setupWizard)
         : this(
             localizer,
             noticeStateService,
+            setupWizard,
             async action => await Dispatcher.UIThread.InvokeAsync(action))
     {
     }
@@ -142,11 +158,13 @@ public partial class DialogsViewModel : ViewModelBase
     internal DialogsViewModel(
         LocalizationService localizer,
         NoticeStateService noticeStateService,
+        SetupWizardViewModel setupWizard,
         Func<Action, Task> invokeOnUiAsync)
     {
         this.localizer = localizer;
         this.noticeStateService = noticeStateService;
         this.invokeOnUiAsync = invokeOnUiAsync;
+        SetupWizard = setupWizard;
     }
 
     public void ApplyLanguage()

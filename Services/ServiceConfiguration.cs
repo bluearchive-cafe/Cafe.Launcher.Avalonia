@@ -31,6 +31,7 @@ public static class ServiceConfiguration
         services.AddSingleton<LogExportService>();
         services.AddSingleton<LogViewerDialogViewModel>();
         services.AddSingleton<LocalDiagnostics>();
+        services.AddSingleton<SetupWizardViewModel>();
         services.AddSingleton<AuthorizationHeaderFactory>();
         services.AddSingleton<RemoteHttpUrlValidator>();
         services.AddSingleton<PatchUrlGroupService>();
