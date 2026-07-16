@@ -62,6 +62,23 @@ dotnet publish .\Cafe.Launcher.Avalonia.csproj -c Release -o publish     # 自�
 
 项目启用 `TreatWarningsAsErrors` + `EnforceCodeStyleInBuild`，分析级别 `latest-recommended`。Debug 构建期望 **0 警告 0 错误**。
 
+### Windows 安装程序
+
+安装程序使用 NSIS 3 构建。本地构建前需安装 NSIS，并确保 `makensis.exe` 可通过 `PATH` 调用：
+
+```powershell
+.\scripts\Build-Distribution.ps1
+```
+
+输出：
+
+- `artifacts/distribution/Cafe.Launcher.Avalonia_v<version>_standalone.zip`
+- `artifacts/distribution/Cafe.Launcher.Avalonia_v<version>_setup.exe`
+
+Setup 安装范围为所有用户，默认目录为 `C:\Program Files\Cafe Launcher`，安装、升级和卸载均需要管理员权限。升级会删除旧版本中由安装器管理、但新版本不再发布的文件；安装目录内的其他文件会保留。
+
+交互式卸载可选择删除执行卸载用户的 `%LOCALAPPDATA%\Cafe Launcher`，该选项默认关闭。静默卸载始终保留应用程序数据。安装器不会管理或删除游戏目录。
+
 ## 测试
 
 ```powershell
@@ -246,10 +263,10 @@ Launcher 自更新请求通过服务端代理 `ApiConfig.LauncherApiBaseUrl` 进
 
 ## CI 与发布
 
-GitHub Actions（`windows-latest`、.NET 10.0.x）：
+GitHub Actions（`ubuntu-latest`、.NET 10.0.x）：
 
 - **`build.yml`**（push / PR to `main`）：restore → Debug build → test → Release build → publish → 上传制品
-- **`release.yml`**（push `v*` tag）：test → Release build → publish → ZIP → 生成 changelog → 在源仓库和分发仓库（`bluearchive-cafe/Cafe.Launcher.Avalonia_Release`）同时创建 GitHub Release。预发布版标签含 `-`。
+- **`release.yml`**（push `v*` tag）：test → Release build → 构建 standalone ZIP 与 NSIS setup EXE → 生成 changelog → 在源仓库和分发仓库（`bluearchive-cafe/Cafe.Launcher.Avalonia_Release`）同时创建 GitHub Release。预发布版标签含 `-`。
 
 本地发布脚本：
 
