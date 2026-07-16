@@ -1132,6 +1132,22 @@ public sealed partial class UiStyleContractTests
         Assert.Equal(4, reviewRows.Count);
         Assert.All(reviewRows, row => Assert.True(HasClass(row, "wizard-review-row")));
         Assert.Equal(3, dividers.Count);
+        Assert.Collection(
+            reviewContent.Elements(),
+            element => Assert.True(
+                element.Name.LocalName == "Grid" && HasClass(element, "wizard-review-row")),
+            element => Assert.True(
+                element.Name.LocalName == "Border" && HasClass(element, "wizard-review-divider")),
+            element => Assert.True(
+                element.Name.LocalName == "Grid" && HasClass(element, "wizard-review-row")),
+            element => Assert.True(
+                element.Name.LocalName == "Border" && HasClass(element, "wizard-review-divider")),
+            element => Assert.True(
+                element.Name.LocalName == "Grid" && HasClass(element, "wizard-review-row")),
+            element => Assert.True(
+                element.Name.LocalName == "Border" && HasClass(element, "wizard-review-divider")),
+            element => Assert.True(
+                element.Name.LocalName == "Grid" && HasClass(element, "wizard-review-row")));
         Assert.All(
             reviewRows,
             row => Assert.All(
