@@ -13,7 +13,7 @@
         x:Name="Root"
         x:DataType="vm:MainWindowViewModel"
         Icon="/Assets/app-icon.ico"
-        Title="Cafe Launcher"
+        Title="{Binding Shell.ProductName}"
         Width="1300"
         Height="754"
         MinWidth="1024"
