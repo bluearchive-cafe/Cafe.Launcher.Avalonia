@@ -25,7 +25,7 @@ Blue Archive 日服桌面启动器，基于 .NET 10 与 Avalonia 12 重写，替
 | 项 | 版本 |
 |---|---|
 | .NET | `net10.0` |
-| Avalonia | `12.0.4` |
+| Avalonia | `12.0.5` |
 | CommunityToolkit.Mvvm | `8.4.2` |
 | Material.Icons.Avalonia | `3.0.2` |
 | Microsoft.Extensions.DependencyInjection | `10.0.0` |
@@ -102,7 +102,7 @@ dotnet test .\tests\Cafe.Launcher.Avalonia.Tests\Cafe.Launcher.Avalonia.Tests.cs
 |---|---|
 | `settings.json` | 启动器设置 |
 | `session.active` | 活跃会话标记（启动时存在 = 上次崩溃） |
-| `diagnostics.log` | 运行诊断日志 |
+| `unified.log` | 统一运行日志（日志查看器按 500 条分页） |
 | `crash.log` | 未处理异常日志 |
 | `download_state.json` | 下载任务状态（断点续传） |
 | `shown_notices.json` | 已展示公告 ID |
@@ -147,6 +147,7 @@ dotnet test .\tests\Cafe.Launcher.Avalonia.Tests\Cafe.Launcher.Avalonia.Tests.cs
 ├── Converters/                 # 值转换器（URL→Bitmap、ToastSeverity→Brush）
 ├── Helpers/                    # 工具类（FileSizeFormatter、GamePathValidator、HttpClientLease）
 ├── Models/                     # 数据模型（API 合约、状态模型、安装状态、清单结构等）
+├── Features/                   # Shell、游戏操作、首次向导、诊断功能边界
 ├── Services/                   # 业务服务（DI 注册、HTTP、下载、设置、本地化等）
 │   ├── Auth/                   # AuthorizationHeaderFactory（MD5 签名认证头）
 │   └── Diagnostics/            # 日志、崩溃恢复、日志轮转、日志导出
@@ -216,7 +217,8 @@ Program.Main()
 
 视图文件按职责拆分：
 - `MainWindow.axaml` — 窗口壳、标题栏、远端内容、底部面板
-- `MainWindow.Styles.axaml` — 窗口样式（`<StyleInclude>` 引用）
+- `MainWindow.Styles.axaml` — 共享样式与功能样式入口
+- `Views/Styles/` — Diagnostics、RemoteContent、SetupWizard、Toast 功能样式
 - `MainWindowSettingsOverlay.axaml` — 设置覆盖层（Z-Index 100）
 - `MainWindowDialogsOverlay.axaml` — 对话框覆盖层（Z-Index 200）
 - `MainWindowToastOverlay.axaml` — Toast 覆盖层（Z-Index 1000）
