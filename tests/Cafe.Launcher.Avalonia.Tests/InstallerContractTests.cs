@@ -109,9 +109,9 @@ public sealed class InstallerContractTests
         var nsisScript = ReadProjectFile("installer/Cafe.Launcher.Avalonia.nsi");
 
         Assert.Contains("$publishGlob = Join-Path $PublishDir \"*\"", buildScript, StringComparison.Ordinal);
-        Assert.Contains("\"/DPUBLISH_GLOB=$publishGlob\"", buildScript, StringComparison.Ordinal);
-        Assert.Contains("\"/DUNINSTALL_INCLUDE=$uninstallInclude\"", buildScript, StringComparison.Ordinal);
-        Assert.Contains("\"/DOUTPUT_FILE=$setupPath\"", buildScript, StringComparison.Ordinal);
+        Assert.Contains("\"${definePrefix}PUBLISH_GLOB=$publishGlob\"", buildScript, StringComparison.Ordinal);
+        Assert.Contains("\"${definePrefix}UNINSTALL_INCLUDE=$uninstallInclude\"", buildScript, StringComparison.Ordinal);
+        Assert.Contains("\"${definePrefix}OUTPUT_FILE=$setupPath\"", buildScript, StringComparison.Ordinal);
         Assert.Contains("File /r \"${PUBLISH_GLOB}\"", nsisScript, StringComparison.Ordinal);
     }
 
