@@ -211,10 +211,6 @@ public sealed partial class LauncherSettings : ObservableObject
     private string resourcePanelUid = "";
 
     [ObservableProperty]
-    [property: JsonPropertyName("resourcePanelUidSource")]
-    private string resourcePanelUidSource = ResourcePanelUidSources.Auto;
-
-    [ObservableProperty]
     [property: JsonPropertyName("updateChannel")]
     private string updateChannel = UpdateChannels.Stable;
 
@@ -227,6 +223,10 @@ public sealed partial class LauncherSettings : ObservableObject
         LogLevels.Information
 #endif
     ;
+
+    [ObservableProperty]
+    [property: JsonPropertyName("resourcePanelUidSource")]
+    private string resourcePanelUidSource = ResourcePanelUidSources.Auto;
 
     /// <summary>
     /// Deep-clones this settings object.
