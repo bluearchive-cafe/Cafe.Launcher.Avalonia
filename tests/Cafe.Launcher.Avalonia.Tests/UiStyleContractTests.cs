@@ -926,7 +926,10 @@ public sealed partial class UiStyleContractTests
             .Descendants()
             .Where(element =>
                 element.Name.LocalName == "Button"
-                && HasClass(element, "dialog-action"))
+                && HasClass(element, "dialog-action")
+                && element.Attribute("Command")?.Value
+                    is "{Binding WindowChrome.ShowSettingsCommand}"
+                    or "{Binding Settings.SaveSettingsCommand}")
             .ToList();
         Assert.Equal(2, footerButtons.Count);
         Assert.Equal(
