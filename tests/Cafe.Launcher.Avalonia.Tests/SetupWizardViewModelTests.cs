@@ -1,3 +1,5 @@
+using System.ComponentModel;
+using Cafe.Launcher.Avalonia.Features.SetupWizard;
 using Cafe.Launcher.Avalonia.Models;
 using Cafe.Launcher.Avalonia.Services;
 using Cafe.Launcher.Avalonia.ViewModels;
@@ -13,7 +15,8 @@ public sealed class SetupWizardViewModelTests
 
     private static SetupWizardViewModel CreateViewModel() => new(
         new LocalizationService(),
-        new GameInstallationPath());
+        new GameInstallationPath(),
+        new LocalInstallationStateStore());
 
     [Fact]
     public void InitialState_IsStep0_CanGoNext_CannotGoPrevious()
@@ -39,6 +42,36 @@ public sealed class SetupWizardViewModelTests
     }
 
     [Fact]
+    public void NextCommand_FirstEntryToStep1WithEmptyGamePath_FillsDefaultGamePath()
+    {
+        var installationPath = new GameInstallationPath();
+        var vm = new SetupWizardViewModel(
+            new LocalizationService(),
+            installationPath,
+            new LocalInstallationStateStore());
+
+        vm.NextCommand.Execute(null);
+
+        Assert.Equal(installationPath.GetDefaultGamePath(), vm.GamePath);
+    }
+
+    [Fact]
+    public void Step1_WhenGamePathWasAlreadySetOrCleared_DoesNotOverwriteItOnReentry()
+    {
+        var vm = CreateViewModel();
+        var existingPath = Path.Combine(Path.GetTempPath(), Guid.NewGuid().ToString("N"));
+        vm.GamePath = existingPath;
+
+        vm.NextCommand.Execute(null);
+
+        Assert.Equal(existingPath, vm.GamePath);
+        vm.GamePath = "";
+        vm.PreviousCommand.Execute(null);
+        vm.NextCommand.Execute(null);
+        Assert.Equal("", vm.GamePath);
+    }
+
+    [Fact]
     public void PreviousCommand_MovesBack()
     {
         var vm = CreateViewModel();
@@ -58,11 +91,13 @@ public sealed class SetupWizardViewModelTests
     }
 
     [Fact]
-    public void NextCommand_AtStep4_DoesNotMove()
+    public async Task NextCommand_AtStep4_DoesNotMove()
     {
         var vm = CreateViewModel();
-        vm.GamePath = @"D:\YostarGames\BlueArchive_JP";
-        for (var i = 0; i < 4; i++)
+        vm.GamePath = Path.Combine(Path.GetTempPath(), Guid.NewGuid().ToString("N"));
+        vm.NextCommand.Execute(null);
+        await WaitForGamePathStatusAsync(vm, SetupWizardGamePathStatus.AvailableForInstallation);
+        for (var i = 0; i < 3; i++)
             vm.NextCommand.Execute(null);
         Assert.Equal(4, vm.Step);
         Assert.True(vm.IsLastStep);
@@ -74,7 +109,7 @@ public sealed class SetupWizardViewModelTests
     }
 
     [Fact]
-    public void Step_IsStepProperties_AreConsistent()
+    public async Task Step_IsStepProperties_AreConsistent()
     {
         var vm = CreateViewModel();
         Assert.True(vm.IsFirstStep);
@@ -86,7 +121,8 @@ public sealed class SetupWizardViewModelTests
         vm.NextCommand.Execute(null);
         Assert.True(vm.IsStep1);
 
-        vm.GamePath = @"D:\YostarGames\BlueArchive_JP";
+        vm.GamePath = Path.Combine(Path.GetTempPath(), Guid.NewGuid().ToString("N"));
+        await WaitForGamePathStatusAsync(vm, SetupWizardGamePathStatus.AvailableForInstallation);
         vm.NextCommand.Execute(null);
         Assert.True(vm.IsStep2);
 
@@ -98,11 +134,15 @@ public sealed class SetupWizardViewModelTests
     }
 
     [Fact]
-    public void StepTitle_AtEachStep_ReturnsNonEmpty()
+    public async Task StepTitle_AtEachStep_ReturnsNonEmpty()
     {
         var vm = CreateViewModel();
         Assert.NotEmpty(vm.StepTitle);
-        for (var i = 0; i < 4; i++)
+        vm.GamePath = Path.Combine(Path.GetTempPath(), Guid.NewGuid().ToString("N"));
+        vm.NextCommand.Execute(null);
+        await WaitForGamePathStatusAsync(vm, SetupWizardGamePathStatus.AvailableForInstallation);
+        Assert.NotEmpty(vm.StepTitle);
+        for (var i = 0; i < 3; i++)
         {
             vm.NextCommand.Execute(null);
             Assert.NotEmpty(vm.StepTitle);
@@ -110,20 +150,22 @@ public sealed class SetupWizardViewModelTests
     }
 
     [Fact]
-    public void CanGoNext_Step1WithEmptyPath_ReturnsFalse()
+    public async Task CanGoNext_Step1WithEmptyPath_ReturnsFalse()
     {
         var vm = CreateViewModel();
-        vm.GamePath = "";
         vm.NextCommand.Execute(null);
+        vm.GamePath = "";
+        await WaitForGamePathStatusAsync(vm, SetupWizardGamePathStatus.NotSelected);
         Assert.False(vm.CanGoNext);
     }
 
     [Fact]
-    public void NextCommand_Step1WithEmptyPath_DoesNotAdvance()
+    public async Task NextCommand_Step1WithEmptyPath_DoesNotAdvance()
     {
         var vm = CreateViewModel();
-        vm.GamePath = "";
         vm.NextCommand.Execute(null);
+        vm.GamePath = "";
+        await WaitForGamePathStatusAsync(vm, SetupWizardGamePathStatus.NotSelected);
         vm.NextCommand.Execute(null);
 
         Assert.Equal(1, vm.Step);
@@ -132,11 +174,16 @@ public sealed class SetupWizardViewModelTests
     }
 
     [Fact]
-    public void CanGoNext_Step1WithValidPath_ReturnsTrue()
+    public async Task CanGoNext_Step1WithNotInstalledPath_ReturnsTrue()
     {
-        var vm = CreateViewModel();
-        vm.GamePath = @"D:\YostarGames\BlueArchive_JP";
+        var path = Path.Combine(Path.GetTempPath(), Guid.NewGuid().ToString("N"));
+        var vm = new SetupWizardViewModel(
+            new LocalizationService(),
+            new GameInstallationPath(),
+            new LocalInstallationStateStore());
+        vm.GamePath = path;
         vm.NextCommand.Execute(null);
+        await WaitForGamePathStatusAsync(vm, SetupWizardGamePathStatus.AvailableForInstallation);
         Assert.True(vm.CanGoNext);
     }
 
@@ -208,4 +255,214 @@ public sealed class SetupWizardViewModelTests
         Assert.Equal(defaults.PatchUrlGroup, vm.PatchUrlGroup);
         Assert.Equal(defaults.ProxyMode, vm.ProxyMode);
     }
+
+    [Fact]
+    public async Task GamePathStatus_WhenStateFilesDoNotExist_IsAvailableForInstallationAndCanGoNext()
+    {
+        var vm = CreateViewModel();
+        vm.GamePath = Path.Combine(Path.GetTempPath(), Guid.NewGuid().ToString("N"));
+        vm.NextCommand.Execute(null);
+
+        await WaitForGamePathStatusAsync(vm, SetupWizardGamePathStatus.AvailableForInstallation);
+
+        Assert.True(vm.IsGamePathReady);
+        Assert.True(vm.CanGoNext);
+    }
+
+    [Fact]
+    public async Task GamePathStatus_WhenStateFilesAreValid_IsValidInstallationAndCanGoNext()
+    {
+        var gamePath = Path.Combine(Path.GetTempPath(), Guid.NewGuid().ToString("N"));
+        var normalizedGamePath = new GameInstallationPath().NormalizeGamePath(gamePath);
+        var store = new LocalInstallationStateStore();
+        Directory.CreateDirectory(normalizedGamePath);
+        await store.CommitAsync(normalizedGamePath, CreateCommit());
+        var vm = new SetupWizardViewModel(new LocalizationService(), new GameInstallationPath(), store)
+        {
+            GamePath = gamePath
+        };
+
+        vm.NextCommand.Execute(null);
+        await WaitForGamePathStatusAsync(vm, SetupWizardGamePathStatus.ValidInstallation);
+
+        Assert.True(vm.IsGamePathReady);
+        Assert.True(vm.CanGoNext);
+    }
+
+    [Fact]
+    public async Task GamePathStatus_WhenOnlyManifestExists_IsCorruptedInstallationAndCannotGoNext()
+    {
+        var gamePath = Path.Combine(Path.GetTempPath(), Guid.NewGuid().ToString("N"));
+        var normalizedGamePath = new GameInstallationPath().NormalizeGamePath(gamePath);
+        Directory.CreateDirectory(normalizedGamePath);
+        await File.WriteAllTextAsync(Path.Combine(normalizedGamePath, "manifest.json"), "{}");
+        var vm = CreateViewModel();
+        vm.GamePath = gamePath;
+        vm.NextCommand.Execute(null);
+
+        await WaitForGamePathStatusAsync(vm, SetupWizardGamePathStatus.CorruptedInstallation);
+
+        Assert.False(vm.IsGamePathReady);
+        Assert.False(vm.CanGoNext);
+    }
+
+    [Fact]
+    public async Task GamePathStatus_WhenStateFileIsLocked_IsInaccessibleAndCannotGoNext()
+    {
+        var gamePath = Path.Combine(Path.GetTempPath(), Guid.NewGuid().ToString("N"));
+        var normalizedGamePath = new GameInstallationPath().NormalizeGamePath(gamePath);
+        var store = new LocalInstallationStateStore();
+        Directory.CreateDirectory(normalizedGamePath);
+        await store.CommitAsync(normalizedGamePath, CreateCommit());
+        await using var locked = new FileStream(
+            Path.Combine(normalizedGamePath, "manifest.json"), FileMode.Open, FileAccess.ReadWrite, FileShare.None);
+        var vm = new SetupWizardViewModel(new LocalizationService(), new GameInstallationPath(), store)
+        {
+            GamePath = gamePath
+        };
+        vm.NextCommand.Execute(null);
+
+        await WaitForGamePathStatusAsync(vm, SetupWizardGamePathStatus.Inaccessible);
+
+        Assert.False(vm.IsGamePathReady);
+        Assert.False(vm.CanGoNext);
+    }
+
+    [Fact]
+    public async Task GamePathStatus_WhenPathCannotBeNormalized_IsInaccessibleAndCannotGoNext()
+    {
+        var vm = CreateViewModel();
+        vm.GamePath = "\0";
+        vm.NextCommand.Execute(null);
+
+        await WaitForGamePathStatusAsync(vm, SetupWizardGamePathStatus.Inaccessible);
+
+        Assert.False(vm.IsGamePathReady);
+        Assert.False(vm.CanGoNext);
+    }
+
+    [Fact]
+    public async Task GamePathStatus_WhenChecking_CannotGoNextAndUpdatesWhenReadCompletes()
+    {
+        var gamePath = Path.Combine(Path.GetTempPath(), Guid.NewGuid().ToString("N"));
+        var normalizedGamePath = new GameInstallationPath().NormalizeGamePath(gamePath);
+        Directory.CreateDirectory(normalizedGamePath);
+        var tempFilesWritten = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
+        var releaseCommit = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
+        var store = new LocalInstallationStateStore(async (_, cancellationToken) =>
+        {
+            tempFilesWritten.TrySetResult();
+            await releaseCommit.Task.WaitAsync(cancellationToken);
+        });
+        var commitTask = store.CommitAsync(normalizedGamePath, CreateCommit());
+        await tempFilesWritten.Task.WaitAsync(TimeSpan.FromSeconds(2));
+        var vm = new SetupWizardViewModel(new LocalizationService(), new GameInstallationPath(), store)
+        {
+            GamePath = gamePath
+        };
+
+        vm.NextCommand.Execute(null);
+        await WaitForGamePathStatusAsync(vm, SetupWizardGamePathStatus.Checking);
+        Assert.False(vm.CanGoNext);
+
+        releaseCommit.TrySetResult();
+        await commitTask;
+        await WaitForGamePathStatusAsync(vm, SetupWizardGamePathStatus.ValidInstallation);
+        Assert.True(vm.CanGoNext);
+    }
+
+    [Fact]
+    public async Task GamePathStatus_WhenOldReadIsCancelled_DoesNotOverwriteNewPathStatus()
+    {
+        var oldGamePath = Path.Combine(Path.GetTempPath(), Guid.NewGuid().ToString("N"));
+        var normalizedOldGamePath = new GameInstallationPath().NormalizeGamePath(oldGamePath);
+        var newGamePath = Path.Combine(Path.GetTempPath(), Guid.NewGuid().ToString("N"));
+        Directory.CreateDirectory(normalizedOldGamePath);
+        var tempFilesWritten = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
+        var releaseCommit = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
+        var store = new LocalInstallationStateStore(async (_, cancellationToken) =>
+        {
+            tempFilesWritten.TrySetResult();
+            await releaseCommit.Task.WaitAsync(cancellationToken);
+        });
+        var commitTask = store.CommitAsync(normalizedOldGamePath, CreateCommit());
+        await tempFilesWritten.Task.WaitAsync(TimeSpan.FromSeconds(2));
+        var vm = new SetupWizardViewModel(new LocalizationService(), new GameInstallationPath(), store)
+        {
+            GamePath = oldGamePath
+        };
+        vm.NextCommand.Execute(null);
+        await WaitForGamePathStatusAsync(vm, SetupWizardGamePathStatus.Checking);
+
+        vm.GamePath = newGamePath;
+        await WaitForGamePathStatusAsync(vm, SetupWizardGamePathStatus.AvailableForInstallation);
+        releaseCommit.TrySetResult();
+        await commitTask;
+
+        Assert.Equal(SetupWizardGamePathStatus.AvailableForInstallation, vm.GamePathStatus);
+    }
+
+    [Fact]
+    public async Task GamePathStatusText_WhenLanguageChanges_RaisesPropertyChanged()
+    {
+        var localizer = new LocalizationService();
+        var vm = new SetupWizardViewModel(
+            localizer,
+            new GameInstallationPath(),
+            new LocalInstallationStateStore())
+        {
+            GamePath = Path.Combine(Path.GetTempPath(), Guid.NewGuid().ToString("N"))
+        };
+        vm.NextCommand.Execute(null);
+        await WaitForGamePathStatusAsync(vm, SetupWizardGamePathStatus.AvailableForInstallation);
+        var changed = false;
+        vm.PropertyChanged += (_, args) =>
+        {
+            if (args.PropertyName == nameof(SetupWizardViewModel.GamePathStatusText))
+            {
+                changed = true;
+            }
+        };
+
+        localizer.SetLanguage(LauncherLanguages.Japanese);
+
+        Assert.True(changed);
+    }
+
+    private static async Task WaitForGamePathStatusAsync(
+        SetupWizardViewModel viewModel,
+        SetupWizardGamePathStatus expectedStatus)
+    {
+        var completion = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
+        PropertyChangedEventHandler? handler = null;
+        handler = (_, args) =>
+        {
+            if (args.PropertyName == nameof(SetupWizardViewModel.GamePathStatus)
+                && viewModel.GamePathStatus == expectedStatus)
+            {
+                completion.TrySetResult();
+            }
+        };
+        viewModel.PropertyChanged += handler;
+        try
+        {
+            if (viewModel.GamePathStatus == expectedStatus)
+            {
+                return;
+            }
+
+            await completion.Task.WaitAsync(TimeSpan.FromSeconds(2));
+        }
+        finally
+        {
+            viewModel.PropertyChanged -= handler;
+        }
+    }
+
+    private static LocalInstallationStateCommit CreateCommit() => new(
+        "1.2.3",
+        "manifest.json",
+        "BlueArchive",
+        ["--test"],
+        [new LocalInstallationFile("BlueArchive.exe", 4, "1234")]);
 }

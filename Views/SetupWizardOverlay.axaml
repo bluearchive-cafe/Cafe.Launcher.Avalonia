@@ -118,6 +118,16 @@
                                     </StackPanel>
                                 </Button>
                             </Grid>
+                            <TextBlock Text="{Binding Dialogs.SetupWizard.GamePathStatusText}"
+                                       AutomationProperties.Name="{Binding Dialogs.SetupWizard.GamePathStatusText}"
+                                       Classes="caption wizard-game-path-status"
+                                       Classes.checking="{Binding Dialogs.SetupWizard.IsGamePathChecking}"
+                                       Classes.ready="{Binding Dialogs.SetupWizard.IsGamePathReady}"
+                                       Classes.corrupted="{Binding Dialogs.SetupWizard.IsGamePathCorruptedInstallation}"
+                                       Classes.inaccessible="{Binding Dialogs.SetupWizard.IsGamePathInaccessible}"
+                                       IsVisible="{Binding Dialogs.SetupWizard.IsGamePathEmpty, Converter={x:Static BoolConverters.Not}}"
+                                       TextTrimming="CharacterEllipsis"
+                                       MaxLines="1"/>
                             <TextBlock Text="{Binding Shell.I18n.SetupWizardGamePathEmpty}"
                                        Classes="caption"
                                        Foreground="{DynamicResource LauncherDangerBrush}"

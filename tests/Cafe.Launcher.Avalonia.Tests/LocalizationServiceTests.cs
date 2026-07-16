@@ -80,6 +80,44 @@ public sealed class LocalizationServiceTests
         Assert.Equal(service.T("verificationFailed"), strings.VerificationFailed);
     }
 
+    [Theory]
+    [InlineData(LauncherLanguages.English)]
+    [InlineData(LauncherLanguages.SimplifiedChinese)]
+    [InlineData(LauncherLanguages.TraditionalChinese)]
+    [InlineData(LauncherLanguages.Japanese)]
+    public void LocalizedStrings_WhenGamePathStatusKeysApplied_MapsLocalizedValues(string language)
+    {
+        var service = new LocalizationService();
+        service.SetLanguage(language);
+        var strings = new LocalizedStrings();
+
+        strings.Apply(service);
+
+        Assert.Equal(service.T("setupWizardGamePathAvailable"), strings.SetupWizardGamePathAvailable);
+        Assert.Equal(service.T("setupWizardGamePathChecking"), strings.SetupWizardGamePathChecking);
+        Assert.Equal(service.T("setupWizardGamePathCorrupted"), strings.SetupWizardGamePathCorrupted);
+        Assert.Equal(service.T("setupWizardGamePathInaccessible"), strings.SetupWizardGamePathInaccessible);
+        Assert.Equal(service.T("setupWizardGamePathInstalled"), strings.SetupWizardGamePathInstalled);
+    }
+
+    [Fact]
+    public void LocalizedStrings_WhenLanguageChanges_UpdatesGamePathStatusValues()
+    {
+        var service = new LocalizationService();
+        service.SetLanguage(LauncherLanguages.English);
+        var strings = new LocalizedStrings();
+        strings.Apply(service);
+        service.LanguageChanged += (_, _) => strings.Apply(service);
+
+        service.SetLanguage(LauncherLanguages.SimplifiedChinese);
+
+        Assert.Equal(service.T("setupWizardGamePathAvailable"), strings.SetupWizardGamePathAvailable);
+        Assert.Equal(service.T("setupWizardGamePathChecking"), strings.SetupWizardGamePathChecking);
+        Assert.Equal(service.T("setupWizardGamePathCorrupted"), strings.SetupWizardGamePathCorrupted);
+        Assert.Equal(service.T("setupWizardGamePathInaccessible"), strings.SetupWizardGamePathInaccessible);
+        Assert.Equal(service.T("setupWizardGamePathInstalled"), strings.SetupWizardGamePathInstalled);
+    }
+
     [Fact]
     public void T_WhenLegalInfoRequested_ReturnsChineseCopy()
     {

@@ -25,4 +25,16 @@
         <Setter Property="Background" Value="{DynamicResource LauncherAccentSoftBrush}"/>
         <Setter Property="BorderBrush" Value="{DynamicResource LauncherAccentBrush}"/>
     </Style>
+    <Style Selector="TextBlock.wizard-game-path-status.checking">
+        <Setter Property="Foreground" Value="{DynamicResource LauncherAccentBrush}"/>
+    </Style>
+    <Style Selector="TextBlock.wizard-game-path-status.ready">
+        <Setter Property="Foreground" Value="{DynamicResource LauncherSuccessBrush}"/>
+    </Style>
+    <Style Selector="TextBlock.wizard-game-path-status.corrupted">
+        <Setter Property="Foreground" Value="{DynamicResource LauncherDangerBrush}"/>
+    </Style>
+    <Style Selector="TextBlock.wizard-game-path-status.inaccessible">
+        <Setter Property="Foreground" Value="{DynamicResource LauncherDangerBrush}"/>
+    </Style>
 </Styles>

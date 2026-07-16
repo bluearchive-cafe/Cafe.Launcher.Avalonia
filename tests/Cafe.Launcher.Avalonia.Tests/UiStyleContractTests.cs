@@ -1102,6 +1102,65 @@ public sealed partial class UiStyleContractTests
     }
 
     [Fact]
+    public void SetupWizardGamePath_ShowsStatusWithSemanticStateStyles()
+    {
+        var overlay = XDocument.Load(ProjectFile("Views/SetupWizardOverlay.axaml"));
+        var gamePathInput = overlay
+            .Descendants()
+            .Single(element =>
+                element.Name.LocalName == "TextBox"
+                && element.Attribute("Text")?.Value
+                    == "{Binding Dialogs.SetupWizard.GamePath, Mode=TwoWay}")
+            .Parent;
+        Assert.NotNull(gamePathInput);
+        var status = gamePathInput
+            .ElementsAfterSelf()
+            .Single(element =>
+                element.Name.LocalName == "TextBlock"
+                && element.Attribute("Text")?.Value
+                    == "{Binding Dialogs.SetupWizard.GamePathStatusText}");
+
+        Assert.Equal(
+            "{Binding Dialogs.SetupWizard.GamePathStatusText}",
+            status.Attributes()
+                .Single(attribute => attribute.Name.LocalName == "AutomationProperties.Name")
+                .Value);
+        Assert.Equal(
+            "{Binding Dialogs.SetupWizard.IsGamePathEmpty, Converter={x:Static BoolConverters.Not}}",
+            status.Attribute("IsVisible")?.Value);
+        Assert.True(HasClass(status, "caption"));
+        Assert.True(HasClass(status, "wizard-game-path-status"));
+        Assert.Equal(
+            "{Binding Dialogs.SetupWizard.IsGamePathChecking}",
+            status.Attribute("Classes.checking")?.Value);
+        Assert.Equal(
+            "{Binding Dialogs.SetupWizard.IsGamePathReady}",
+            status.Attribute("Classes.ready")?.Value);
+        Assert.Equal(
+            "{Binding Dialogs.SetupWizard.IsGamePathCorruptedInstallation}",
+            status.Attribute("Classes.corrupted")?.Value);
+        Assert.Equal(
+            "{Binding Dialogs.SetupWizard.IsGamePathInaccessible}",
+            status.Attribute("Classes.inaccessible")?.Value);
+        Assert.Equal("CharacterEllipsis", status.Attribute("TextTrimming")?.Value);
+        Assert.Equal("1", status.Attribute("MaxLines")?.Value);
+
+        var styles = XDocument.Load(ProjectFile("Views/Styles/SetupWizard.axaml"));
+        Assert.Equal(
+            "{DynamicResource LauncherAccentBrush}",
+            GetStyleSetters(styles, "TextBlock.wizard-game-path-status.checking")["Foreground"]);
+        Assert.Equal(
+            "{DynamicResource LauncherSuccessBrush}",
+            GetStyleSetters(styles, "TextBlock.wizard-game-path-status.ready")["Foreground"]);
+        Assert.Equal(
+            "{DynamicResource LauncherDangerBrush}",
+            GetStyleSetters(styles, "TextBlock.wizard-game-path-status.corrupted")["Foreground"]);
+        Assert.Equal(
+            "{DynamicResource LauncherDangerBrush}",
+            GetStyleSetters(styles, "TextBlock.wizard-game-path-status.inaccessible")["Foreground"]);
+    }
+
+    [Fact]
     public void MainWindow_GamePathUsesPersistedSnapshotAndImmediateCommand()
     {
         var mainWindow = File.ReadAllText(ProjectFile("Views/MainWindow.axaml"));

@@ -15,7 +15,7 @@ public sealed class SetupWizardStepItemTests
     {
         var viewModel = new SetupWizardViewModel(
             new LocalizationService(),
-            new GameInstallationPath());
+            new GameInstallationPath(), new LocalInstallationStateStore());
 
         Assert.Equal(5, viewModel.Steps.Count);
         Assert.Equal([0, 1, 2, 3, 4], viewModel.Steps.Select(item => item.Index));
@@ -29,7 +29,7 @@ public sealed class SetupWizardStepItemTests
     public void LanguageChanged_RefreshesStepTitlesFromCurrentLocale()
     {
         var localizer = new LocalizationService();
-        var viewModel = new SetupWizardViewModel(localizer, new GameInstallationPath());
+        var viewModel = new SetupWizardViewModel(localizer, new GameInstallationPath(), new LocalInstallationStateStore());
 
         localizer.SetLanguage(LauncherLanguages.SimplifiedChinese);
 
@@ -49,7 +49,7 @@ public sealed class SetupWizardStepItemTests
     {
         var viewModel = new SetupWizardViewModel(
             new LocalizationService(),
-            new GameInstallationPath());
+            new GameInstallationPath(), new LocalInstallationStateStore());
 
         viewModel.NextCommand.Execute(null);
 
@@ -63,7 +63,7 @@ public sealed class SetupWizardStepItemTests
     {
         var viewModel = new SetupWizardViewModel(
             new LocalizationService(),
-            new GameInstallationPath());
+            new GameInstallationPath(), new LocalInstallationStateStore());
 
         viewModel.GoToStepCommand.Execute(3);
 
@@ -75,7 +75,7 @@ public sealed class SetupWizardStepItemTests
     {
         var viewModel = new SetupWizardViewModel(
             new LocalizationService(),
-            new GameInstallationPath());
+            new GameInstallationPath(), new LocalInstallationStateStore());
         viewModel.NextCommand.Execute(null);
         viewModel.NextCommand.Execute(null);
 
