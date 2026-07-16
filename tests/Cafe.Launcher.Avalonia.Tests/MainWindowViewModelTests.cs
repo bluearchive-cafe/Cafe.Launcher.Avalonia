@@ -161,7 +161,7 @@ public sealed class MainWindowViewModelTests : IDisposable
 
         await viewModel.InitializeAsync();
 
-        Assert.Equal("HelpCircleOutline", viewModel.Shell.StatusIconKind);
+        Assert.Equal("DownloadOutline", viewModel.Shell.StatusIconKind);
         Assert.Equal("BlueArchive.exe", viewModel.Shell.ExecutableNameText);
         Assert.Equal(viewModel.Shell.I18n.StatusNetworkLoaded, viewModel.Shell.NetworkStatusValueText);
         Assert.Equal(
@@ -313,67 +313,53 @@ public sealed class MainWindowViewModelTests : IDisposable
         Assert.Equal(viewModel.Shell.I18n.Refresh, viewModel.Operations.InstallButtonText);
     }
 
-    [Fact]
-    public void ResolveStatusIconKind_WhenRuntimeStateIsNotInstalled_ReturnsHelpCircleOutline()
+    public static IEnumerable<object[]> RuntimeStatusCases
+    {
+        get
+        {
+            yield return [LauncherRuntimeState.NotInstalled, "gameNotInstalled", "choosePathInstall", "DownloadOutline"];
+            yield return [LauncherRuntimeState.Corrupted, "gameCorruptedInstallationState", "gameCorruptedInstallationState", "Alert"];
+            yield return [LauncherRuntimeState.IoFailure, "gameInstallationStateReadFailed", "gameInstallationStateReadFailed", "Alert"];
+            yield return [LauncherRuntimeState.RemoteUnavailable, "gameRemoteStateUnavailable", "gameRemoteStateUnavailable", "Alert"];
+            yield return [LauncherRuntimeState.BelowLowestVersion, "updateRequired", "gameBelowLowestVersion", "Alert"];
+            yield return [LauncherRuntimeState.UpdateAvailable, "updateAvailable", "updateAvailable", "AlertCircle"];
+            yield return [LauncherRuntimeState.Ready, "ready", "operationTelemetryLocal", "CheckAll"];
+        }
+    }
+
+    [Theory]
+    [MemberData(nameof(RuntimeStatusCases))]
+    public async Task InitializeAsync_ForEveryRuntimeState_ResolvesCompleteLocalizedStatusPresentation(
+        LauncherRuntimeState runtimeState,
+        string expectedStatusKey,
+        string expectedOperationNoteKey,
+        string expectedIconKind)
     {
         var snapshot = CreateSnapshot();
-        snapshot.RuntimeState = LauncherRuntimeState.NotInstalled;
+        snapshot.RuntimeState = runtimeState;
+        using var viewModel = await CreateViewModelAsync(new CountingCoreService(snapshot));
+        var expectedLocalization = new LocalizationService();
+        expectedLocalization.SetLanguage(snapshot.Settings.Language);
 
-        Assert.Equal("HelpCircleOutline", ShellViewModel.ResolveStatusIconKind(snapshot));
+        await viewModel.InitializeAsync();
+
+        Assert.Equal(expectedLocalization.T(expectedStatusKey), viewModel.Shell.StatusText);
+        Assert.Equal(expectedLocalization.T(expectedOperationNoteKey), viewModel.Shell.OperationNote);
+        Assert.Equal(expectedIconKind, viewModel.Shell.StatusIconKind);
+        Assert.False(string.IsNullOrWhiteSpace(viewModel.Shell.StatusText));
+        Assert.False(string.IsNullOrWhiteSpace(viewModel.Shell.OperationNote));
+        Assert.NotEqual(expectedStatusKey, viewModel.Shell.StatusText);
+        Assert.NotEqual(expectedOperationNoteKey, viewModel.Shell.OperationNote);
     }
 
     [Fact]
-    public void ResolveStatusIconKind_WhenRuntimeStateIsCorrupted_ReturnsAlert()
+    public void RuntimeStatusCases_ExplicitlyCoverEveryLauncherRuntimeState()
     {
-        var snapshot = CreateSnapshot();
-        snapshot.RuntimeState = LauncherRuntimeState.Corrupted;
+        var expectedStates = RuntimeStatusCases
+            .Select(testCase => Assert.IsType<LauncherRuntimeState>(testCase[0]))
+            .ToArray();
 
-        Assert.Equal("Alert", ShellViewModel.ResolveStatusIconKind(snapshot));
-    }
-
-    [Fact]
-    public void ResolveStatusIconKind_WhenRuntimeStateIsIoFailure_ReturnsAlert()
-    {
-        var snapshot = CreateSnapshot();
-        snapshot.RuntimeState = LauncherRuntimeState.IoFailure;
-
-        Assert.Equal("Alert", ShellViewModel.ResolveStatusIconKind(snapshot));
-    }
-
-    [Fact]
-    public void ResolveStatusIconKind_WhenRuntimeStateIsRemoteUnavailable_ReturnsAlert()
-    {
-        var snapshot = CreateSnapshot();
-        snapshot.RuntimeState = LauncherRuntimeState.RemoteUnavailable;
-
-        Assert.Equal("Alert", ShellViewModel.ResolveStatusIconKind(snapshot));
-    }
-
-    [Fact]
-    public void ResolveStatusIconKind_WhenRuntimeStateIsBelowLowestVersion_ReturnsAlert()
-    {
-        var snapshot = CreateSnapshot();
-        snapshot.RuntimeState = LauncherRuntimeState.BelowLowestVersion;
-
-        Assert.Equal("Alert", ShellViewModel.ResolveStatusIconKind(snapshot));
-    }
-
-    [Fact]
-    public void ResolveStatusIconKind_WhenRuntimeStateIsUpdateAvailable_ReturnsAlertCircle()
-    {
-        var snapshot = CreateSnapshot();
-        snapshot.RuntimeState = LauncherRuntimeState.UpdateAvailable;
-
-        Assert.Equal("AlertCircle", ShellViewModel.ResolveStatusIconKind(snapshot));
-    }
-
-    [Fact]
-    public void ResolveStatusIconKind_WhenRuntimeStateIsReady_ReturnsCheckAll()
-    {
-        var snapshot = CreateSnapshot();
-        snapshot.RuntimeState = LauncherRuntimeState.Ready;
-
-        Assert.Equal("CheckAll", ShellViewModel.ResolveStatusIconKind(snapshot));
+        Assert.Equal(Enum.GetValues<LauncherRuntimeState>(), expectedStates);
     }
 
     [Fact]

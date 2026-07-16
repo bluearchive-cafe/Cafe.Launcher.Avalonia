@@ -161,6 +161,10 @@
         <Setter Property="Width" Value="24"/>
         <Setter Property="Height" Value="24"/>
     </Style>
+    <Style Selector="Button.icon-button.carousel-navigation">
+        <Setter Property="Width" Value="{StaticResource LauncherControlHeightSetting}"/>
+        <Setter Property="Height" Value="{StaticResource LauncherControlHeightSetting}"/>
+    </Style>
     <Style Selector="Button.icon-button.dot">
         <Setter Property="Width" Value="20"/>
         <Setter Property="Height" Value="20"/>
@@ -172,6 +176,12 @@
     <Style Selector="Button.icon-button:pressed">
         <Setter Property="Background" Value="{DynamicResource LauncherFlatPressedBrush}"/>
         <Setter Property="Foreground" Value="{DynamicResource LauncherAccentPressedBrush}"/>
+    </Style>
+    <Style Selector="Button.icon-button.carousel-navigation:pointerover">
+        <Setter Property="Background" Value="{DynamicResource LauncherChromeHoverBrush}"/>
+    </Style>
+    <Style Selector="Button.icon-button.carousel-navigation:pressed">
+        <Setter Property="Background" Value="{DynamicResource LauncherAccentSoftBrush}"/>
     </Style>
     <Style Selector="Button.primary-action">
         <Setter Property="Background" Value="{DynamicResource LauncherAccentBrush}"/>
@@ -236,6 +246,11 @@
         <Setter Property="MinWidth" Value="156"/>
         <Setter Property="Padding" Value="20,12"/>
         <Setter Property="FontSize" Value="{StaticResource LauncherFontSizeXl}"/>
+    </Style>
+    <Style Selector="Button.primary-action.path-operation">
+        <Setter Property="Height" Value="{StaticResource LauncherFieldHeight}"/>
+        <Setter Property="MinHeight" Value="{StaticResource LauncherFieldHeight}"/>
+        <Setter Property="Padding" Value="{StaticResource LauncherThicknessSm}"/>
     </Style>
     <Style Selector="StackPanel.confirm-actions">
         <Setter Property="Orientation" Value="Horizontal"/>
@@ -421,8 +436,7 @@
         <Setter Property="Height" Value="{StaticResource LauncherFieldHeight}"/>
         <Setter Property="Padding" Value="16,0"/>
     </Style>
-    <!-- Bottom panels share 40px horizontal alignment with the remote surface.
-         The control panel keeps a larger 24px top inset for visual separation. -->
+    <!-- Operation panels share 40px horizontal alignment and common padding. -->
     <Style Selector="Border.bottom-panel">
         <Setter Property="VerticalAlignment" Value="Bottom"/>
         <Setter Property="MinHeight" Value="132"/>
@@ -430,9 +444,7 @@
         <Setter Property="Padding" Value="40,20,40,20"/>
     </Style>
     <Style Selector="Border.control-panel">
-        <Setter Property="VerticalAlignment" Value="Bottom"/>
         <Setter Property="MinHeight" Value="156"/>
-        <Setter Property="Padding" Value="40,24,40,20"/>
         <!-- Dark gradient overlay on top of wallpaper — intentionally theme-invariant (black transparency). -->
         <Setter Property="Background">
             <LinearGradientBrush StartPoint="0%,0%" EndPoint="0%,100%">
@@ -447,6 +459,10 @@
         <Setter Property="CornerRadius" Value="{StaticResource LauncherRadiusSm}"/>
         <Setter Property="Padding" Value="12"/>
         <Setter Property="Margin" Value="0,0,0,4"/>
+    </Style>
+    <Style Selector="Border.content-row.news-content-row">
+        <Setter Property="Padding" Value="{StaticResource LauncherThicknessSm}"/>
+        <Setter Property="Margin" Value="{StaticResource LauncherThicknessNone}"/>
     </Style>
     <Style Selector="Button.content-link">
         <Setter Property="Background" Value="{DynamicResource LauncherTransparentBrush}"/>

@@ -266,7 +266,7 @@ public partial class ShellViewModel : ViewModelBase
     {
         return snapshot.RuntimeState switch
         {
-            LauncherRuntimeState.NotInstalled => "HelpCircleOutline",
+            LauncherRuntimeState.NotInstalled => "DownloadOutline",
             LauncherRuntimeState.Corrupted or
                 LauncherRuntimeState.IoFailure or
                 LauncherRuntimeState.RemoteUnavailable or

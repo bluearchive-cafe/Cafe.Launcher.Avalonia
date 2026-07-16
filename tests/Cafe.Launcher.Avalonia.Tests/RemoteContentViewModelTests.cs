@@ -198,6 +198,22 @@ public sealed class RemoteContentViewModelTests
     }
 
     [Fact]
+    public void CarouselPageText_WithMultipleBanners_UsesCompactLocalizedFormat()
+    {
+        using var context = CreateContext(LauncherLanguages.English);
+        context.ViewModel.Apply(
+            CreateBannerState(2, loop: false),
+            new LauncherSettings(),
+            CancellationToken.None);
+
+        Assert.Equal("1 / 2", context.ViewModel.CarouselPageText);
+
+        context.ViewModel.SelectNextBannerCommand.Execute(null);
+
+        Assert.Equal("2 / 2", context.ViewModel.CarouselPageText);
+    }
+
+    [Fact]
     public void ToggleCarouselLoopCommand_PausesAndResumesTimer()
     {
         using var context = CreateContext();
@@ -426,15 +442,21 @@ public sealed class RemoteContentViewModelTests
             }
         };
 
-    private static TestContext CreateContext()
+    private static TestContext CreateContext(string? language = null)
     {
         var factory = new HttpClientFactory(new ProxySettingsService());
         var cache = new ImageCacheService(
             factory,
             new Crc64Service(),
             RemoteHttpUrlValidator.CreateForTesting());
+        var localizer = new LocalizationService();
+        if (language is not null)
+        {
+            localizer.SetLanguage(language);
+        }
+
         return new TestContext(
-            new RemoteContentViewModel(new LocalizationService(), cache),
+            new RemoteContentViewModel(localizer, cache),
             cache,
             factory);
     }

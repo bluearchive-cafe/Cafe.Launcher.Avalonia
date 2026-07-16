@@ -115,6 +115,7 @@
                         <Button Classes="flat-action dialog-action"
                                 Command="{Binding WindowChrome.ShowSettingsCommand}"
                                 IsEnabled="{Binding Settings.IsSaving, Converter={x:Static BoolConverters.Not}}"
+                                ToolTip.Tip="{Binding Shell.I18n.Cancel}"
                                 AutomationProperties.Name="{Binding Shell.I18n.Cancel}">
                             <StackPanel Classes="button-content" HorizontalAlignment="Center">
                                 <materialIcons:MaterialIcon Kind="CloseCircleOutline"
@@ -125,6 +126,7 @@
                         <Button Classes="primary-action dialog-action"
                                 Command="{Binding Settings.SaveSettingsCommand}"
                                 IsEnabled="{Binding Settings.CanSaveSettings}"
+                                ToolTip.Tip="{Binding Shell.I18n.Save}"
                                 AutomationProperties.Name="{Binding Shell.I18n.Save}">
                             <StackPanel Classes="button-content" HorizontalAlignment="Center">
                                 <materialIcons:MaterialIcon Kind="ContentSave"

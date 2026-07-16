@@ -34,6 +34,7 @@
                 </ScrollViewer>
                 <StackPanel Grid.Row="2" Classes="confirm-actions">
                     <Button Classes="flat-action dialog-action" Command="{Binding CancelCommand, ElementName=Root}"
+                            ToolTip.Tip="{Binding CancelText, ElementName=Root}"
                             AutomationProperties.Name="{Binding CancelText, ElementName=Root}">
                         <StackPanel Classes="button-content">
                             <materialIcons:MaterialIcon Kind="CloseCircle" Width="{StaticResource LauncherIconSm}" Height="{StaticResource LauncherIconSm}"/>
@@ -42,6 +43,7 @@
                     </Button>
                     <Button Classes="primary-action dialog-action" Command="{Binding ConfirmCommand, ElementName=Root}"
                             IsVisible="{Binding !IsDangerConfirm, ElementName=Root}"
+                            ToolTip.Tip="{Binding ConfirmText, ElementName=Root}"
                             AutomationProperties.Name="{Binding ConfirmText, ElementName=Root}">
                         <StackPanel Classes="button-content">
                             <materialIcons:MaterialIcon Kind="{Binding ConfirmIconKind, ElementName=Root}"
@@ -51,6 +53,7 @@
                     </Button>
                     <Button Classes="danger-action dialog-action" Command="{Binding ConfirmCommand, ElementName=Root}"
                             IsVisible="{Binding IsDangerConfirm, ElementName=Root}"
+                            ToolTip.Tip="{Binding ConfirmText, ElementName=Root}"
                             AutomationProperties.Name="{Binding ConfirmText, ElementName=Root}">
                         <StackPanel Classes="button-content">
                             <materialIcons:MaterialIcon Kind="{Binding ConfirmIconKind, ElementName=Root}"

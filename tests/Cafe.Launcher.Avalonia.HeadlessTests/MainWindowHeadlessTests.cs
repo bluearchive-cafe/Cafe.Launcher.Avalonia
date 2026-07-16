@@ -440,7 +440,86 @@ public sealed class MainWindowHeadlessTests
                 && control.IsEffectivelyVisible);
 
         Assert.True(remotePanel.IsEffectivelyVisible);
-        Assert.True(remotePanel.Bounds.Bottom <= operationPanel.Bounds.Top);
+        Assert.True(
+            remotePanel.Bounds.Bottom <= operationPanel.Bounds.Top,
+            $"Remote panel bottom {remotePanel.Bounds.Bottom} overlaps operation panel top {operationPanel.Bounds.Top}.");
+    }
+
+    [AvaloniaFact]
+    public void MainWindow_NewsList_WithMoreThanThreeItems_KeepsAllItemsAccessibleByScrolling()
+    {
+        using var context = CreateContext();
+        const string longTitle =
+            "This deliberately long launcher news title must wrap onto exactly two visible lines without being clipped by the fixed-height clickable row";
+        var rows = Enumerable.Range(1, 5)
+            .Select(index => new NewsRowItem
+            {
+                Title = index == 1 ? longTitle : $"News item {index}",
+                Link = $"https://news.example.invalid/{index}",
+                PublishTime = 1_700_000_000_000 + index
+            })
+            .ToList();
+        context.ViewModel.RemoteContent.Apply(
+            new LauncherRemoteState
+            {
+                OperationsResource = new OperationsResourceResponse
+                {
+                    OperationsResourceOpen = true,
+                    NewsList = new NewsListEnvelope
+                    {
+                        Code = 0,
+                        Data = new NewsListData
+                        {
+                            News =
+                            [
+                                new NewsTypeItem
+                                {
+                                    TypeLabel = "News",
+                                    Rows = rows
+                                }
+                            ]
+                        }
+                    }
+                }
+            },
+            new LauncherSettings { ShowRemoteContentCard = true },
+            CancellationToken.None);
+        context.Window.Show();
+        Dispatcher.UIThread.RunJobs();
+
+        var viewport = context.Window
+            .GetVisualDescendants()
+            .OfType<ScrollViewer>()
+            .Single(control => control.Classes.Contains("news-viewport"));
+        var rowButtons = viewport
+            .GetVisualDescendants()
+            .OfType<Button>()
+            .Where(control => control.Classes.Contains("news-row"))
+            .ToArray();
+
+        Assert.Equal(5, context.ViewModel.RemoteContent.SelectedNewsCategory?.Items.Count);
+        Assert.Equal(5, rowButtons.Length);
+        Assert.Equal(184, viewport.Viewport.Height);
+        Assert.All(rowButtons, row => Assert.Equal(56, row.Bounds.Height));
+        Assert.True(viewport.Extent.Height > viewport.Viewport.Height);
+
+        var longTitleText = rowButtons[0]
+            .GetVisualDescendants()
+            .OfType<TextBlock>()
+            .Single(control => control.Text == longTitle);
+        var longTitleTop = longTitleText.TranslatePoint(default, rowButtons[0]);
+        Assert.Equal(2, longTitleText.TextLayout.TextLines.Count);
+        Assert.True(longTitleText.TextLayout.Height <= longTitleText.Bounds.Height);
+        Assert.NotNull(longTitleTop);
+        Assert.True(longTitleTop.Value.Y >= 0);
+        Assert.True(longTitleTop.Value.Y + longTitleText.Bounds.Height <= rowButtons[0].Bounds.Height);
+
+        viewport.Offset = new Vector(0, viewport.Extent.Height - viewport.Viewport.Height);
+        Dispatcher.UIThread.RunJobs();
+
+        var lastRowTop = rowButtons[^1].TranslatePoint(default, viewport);
+        Assert.NotNull(lastRowTop);
+        Assert.InRange(lastRowTop.Value.Y, 0, viewport.Viewport.Height - rowButtons[^1].Bounds.Height);
     }
 
     [AvaloniaTheory]
