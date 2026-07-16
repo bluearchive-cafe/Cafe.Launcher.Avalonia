@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.IO;
 using System.Linq;
 using System.Globalization;
@@ -347,7 +348,7 @@ public sealed class GameDownloadService : IDisposable
 
             var currentDownloadList = downloadPlan.NeedDownload;
             var affectedCount = currentDownloadList.Count + downloadPlan.NeedDelete.Count;
-            var requiredBytes = currentDownloadList.Sum(item => FileSizeFormatter.ParseSize(item.Size));
+            var requiredBytes = currentDownloadList.Sum(item => item.SizeBytes);
             var availableBytes = diskSpaceService.GetAvailableBytes(gamePath);
             progress(new GameOperationProgress
             {
@@ -696,7 +697,7 @@ public sealed class GameDownloadService : IDisposable
             Stage = "repair-confirm",
             Progress = -1,
             AffectedFileCount = actual.NeedDownload.Count + actual.NeedDelete.Count,
-            DownloadedSize = actual.NeedDownload.Sum(f => FileSizeFormatter.ParseSize(f.Size)),
+            DownloadedSize = actual.NeedDownload.Sum(f => f.SizeBytes),
             IsRunning = true,
             CanStop = false
         });
@@ -735,7 +736,7 @@ public sealed class GameDownloadService : IDisposable
         };
         using var semaphore = new SemaphoreSlim(MaxParallelDownloads, MaxParallelDownloads);
         var downloadedSize = 0L;
-        var totalSize = fileList.Sum(item => FileSizeFormatter.ParseSize(item.Size));
+        var totalSize = fileList.Sum(item => item.SizeBytes);
         await diagnostics.DebugAsync(
             "GameDownload",
             $"Downloading {fileList.Count} files, total {FileSizeFormatter.Format(totalSize)}", CancellationToken.None).ConfigureAwait(false);
@@ -743,6 +744,8 @@ public sealed class GameDownloadService : IDisposable
         var throttleState = speedLimitBytesPerSec > 0
             ? new ThrottleState { BytesPerSec = speedLimitBytesPerSec }
             : null;
+        var lastProgressTime = 0L;                   // Stopwatch timestamp-based throttling
+        var progressIntervalTicks = Stopwatch.Frequency / 10;  // ~100ms
 
         var tasks = fileList.Select(async file =>
         {
@@ -756,7 +759,7 @@ public sealed class GameDownloadService : IDisposable
                     targetPath,
                     cdnConfig,
                     source,
-                    FileSizeFormatter.ParseSize(file.Size),
+                    file.SizeBytes,
                     file.Hash,
                     file.Path,
                     client,
@@ -777,6 +780,19 @@ public sealed class GameDownloadService : IDisposable
                         var elapsed = Math.Max(1, (DateTimeOffset.Now - startedAt).TotalSeconds);
                         var speed = (long)(totalBytes / elapsed);
                         var estimated = speed > 0 ? (totalSizeVal - totalBytes) / speed : 0;
+
+                        // Throttle progress reporting to ~100ms intervals to avoid
+                        // overwhelming the UI thread with high-frequency callbacks.
+                        var now = Stopwatch.GetTimestamp();
+                        var prev = Interlocked.Read(ref lastProgressTime);
+                        if (now - prev < progressIntervalTicks)
+                        {
+                            // Skip this callback, progress stays current enough.
+                            // Speed/ETA already updated via closure captures.
+                            return;
+                        }
+                        Interlocked.Exchange(ref lastProgressTime, now);
+
                         progress(new GameOperationProgress
                         {
                             OperationKind = operationKind,
@@ -969,7 +985,7 @@ public sealed class GameDownloadService : IDisposable
             var file = files[i];
             var filePath = GamePathValidator.GetSafePath(gamePath, file.Path);
             var fileInfo = new FileInfo(filePath);
-            if (!fileInfo.Exists || fileInfo.Length != FileSizeFormatter.ParseSize(file.Size))
+            if (!fileInfo.Exists || fileInfo.Length != file.SizeBytes)
             {
                 diff.Add(file);
             }

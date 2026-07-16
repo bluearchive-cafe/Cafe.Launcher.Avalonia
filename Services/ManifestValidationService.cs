@@ -127,7 +127,7 @@ public sealed class ManifestValidationService
                 continue;
             }
 
-            if (fileInfo.Length != FileSizeFormatter.ParseSize(fileItem.Size))
+            if (fileInfo.Length != fileItem.SizeBytes)
             {
                 sizeMismatchFileCount++;
             }
