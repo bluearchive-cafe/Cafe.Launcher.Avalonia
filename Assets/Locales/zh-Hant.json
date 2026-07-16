@@ -152,7 +152,7 @@
   "logExportFolderPickerTitle": "選擇匯出日誌的儲存位置",
   "logExportSucceeded": "日誌已匯出到 {0}",
   "logFilterAll": "全部",
-  "logFilterDebug": "調試",
+  "logFilterDebug": "除錯",
   "logFilterError": "錯誤",
   "logFilterFatal": "致命",
   "logFilterInfo": "資訊",

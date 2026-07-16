@@ -12,8 +12,8 @@
                                         Foreground="{DynamicResource LauncherAccentBrush}"
                                         HorizontalAlignment="Center" VerticalAlignment="Center"/>
         </Border>
-        <StackPanel Grid.Column="1" Classes="dialog-heading-copy">
-            <TextBlock x:Name="RowTitle" Text="{Binding Title, ElementName=Root}" Classes="section-title"/>
+        <StackPanel Grid.Column="1" MinWidth="0" Classes="dialog-heading-copy">
+            <TextBlock x:Name="RowTitle" Text="{Binding Title, ElementName=Root}" Classes="section-title" TextWrapping="Wrap"/>
             <TextBlock x:Name="RowDescription" Text="{Binding Description, ElementName=Root}" Classes="caption" TextWrapping="Wrap"/>
         </StackPanel>
         <ContentPresenter Grid.Column="2"

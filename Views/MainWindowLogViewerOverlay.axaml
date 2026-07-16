@@ -107,13 +107,15 @@
                 <!-- Footer -->
                 <Border Grid.Row="3" Classes="dialog-footer">
                     <StackPanel Classes="confirm-actions">
-                        <Button Classes="flat-action dialog-action" Command="{Binding LogViewer.ExportCommand}">
+                        <Button Classes="flat-action dialog-action" Command="{Binding LogViewer.ExportCommand}"
+                                AutomationProperties.Name="{Binding Shell.I18n.ExportLogs}">
                             <StackPanel Classes="button-content">
                                 <materialIcons:MaterialIcon Kind="Export" Width="{StaticResource LauncherIconSm}" Height="{StaticResource LauncherIconSm}"/>
                                 <TextBlock Text="{Binding Shell.I18n.ExportLogs}"/>
                             </StackPanel>
                         </Button>
-                        <Button Classes="flat-action dialog-action" Command="{Binding LogViewer.CloseCommand}">
+                        <Button Classes="flat-action dialog-action" Command="{Binding LogViewer.CloseCommand}"
+                                AutomationProperties.Name="{Binding Shell.I18n.Close}">
                             <StackPanel Classes="button-content">
                                 <materialIcons:MaterialIcon Kind="CloseCircleOutline" Width="{StaticResource LauncherIconSm}" Height="{StaticResource LauncherIconSm}"/>
                                 <TextBlock Text="{Binding Shell.I18n.Close}"/>

@@ -6,8 +6,8 @@
              x:Name="Root"
              x:DataType="controls:ConfirmDialog">
     <Grid IsVisible="{Binding IsOpen, ElementName=Root}" Classes="dialog-overlay">
-        <Border Classes="dialog confirm-panel" MaxWidth="{Binding DialogMaxWidth, ElementName=Root}">
-            <Grid RowDefinitions="Auto,Auto,Auto" Classes="confirm-layout">
+        <Border Classes="dialog confirm-panel" MaxWidth="{Binding DialogMaxWidth, ElementName=Root}" MaxHeight="480">
+            <Grid RowDefinitions="Auto,*,Auto" Classes="confirm-layout">
                 <Grid Classes="dialog-heading" ColumnDefinitions="Auto,*,Auto">
                     <Border Classes="dialog-icon" Classes.danger="{Binding IsDangerIcon, ElementName=Root}" VerticalAlignment="Center">
                         <materialIcons:MaterialIcon Kind="{Binding IconKind, ElementName=Root}"
@@ -18,7 +18,7 @@
                     </Border>
                     <StackPanel Grid.Column="1" Classes="dialog-heading-copy">
                         <TextBlock Text="{Binding Title, ElementName=Root}" Classes="dialog-title"/>
-                        <TextBlock Text="{Binding Description, ElementName=Root}" Classes="caption"/>
+                        <TextBlock Text="{Binding Description, ElementName=Root}" Classes="caption" TextWrapping="Wrap"/>
                     </StackPanel>
                     <Button Grid.Column="2" Classes="dialog-close" Command="{Binding CancelCommand, ElementName=Root}"
                             ToolTip.Tip="{Binding CloseToolTip, ElementName=Root}"
@@ -26,9 +26,11 @@
                         <materialIcons:MaterialIcon Kind="Close" Width="{StaticResource LauncherIconMd}" Height="{StaticResource LauncherIconMd}"/>
                     </Button>
                 </Grid>
-                <Border Grid.Row="1" Classes="confirm-message" Background="{Binding MessageBackground, ElementName=Root}">
-                    <TextBlock Text="{Binding Message, ElementName=Root}" Classes="confirm-message-text"/>
-                </Border>
+                <ScrollViewer Grid.Row="1" Classes="scroll-pad">
+                    <Border Classes="confirm-message" Background="{Binding MessageBackground, ElementName=Root}">
+                        <TextBlock Text="{Binding Message, ElementName=Root}" Classes="confirm-message-text"/>
+                    </Border>
+                </ScrollViewer>
                 <StackPanel Grid.Row="2" Classes="confirm-actions">
                     <Button Classes="flat-action dialog-action" Command="{Binding CancelCommand, ElementName=Root}"
                             AutomationProperties.Name="{Binding CancelText, ElementName=Root}">

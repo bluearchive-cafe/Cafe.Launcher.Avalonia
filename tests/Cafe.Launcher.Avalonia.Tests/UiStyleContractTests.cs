@@ -1,4 +1,6 @@
 using System.Text.RegularExpressions;
+using System.Text.Json;
+using System.Xml;
 using System.Xml.Linq;
 
 namespace Cafe.Launcher.Avalonia.Tests;
@@ -927,6 +929,224 @@ public sealed partial class UiStyleContractTests
         Assert.Matches(
             """(?s)<Style Selector="Grid\.setup-wizard-overlay">.*?<Setter Property="ZIndex" Value="500"/>.*?</Style>""",
             styles);
+    }
+
+    [Fact]
+    public void SecondaryOverlays_CriticalActionsExposeLocalizedAutomationNames()
+    {
+        Dictionary<string, Dictionary<string, string>> expectedActions = new(StringComparer.Ordinal)
+        {
+            ["Views/MainWindowDialogsOverlay.axaml"] = new(StringComparer.Ordinal)
+            {
+                ["{Binding ResourcePanel.CloseResourcePanelCommand}"] = "{Binding Shell.I18n.Close}",
+                ["{Binding ResourcePanel.SaveManualResourcePanelUidCommand}"] = "{Binding Shell.I18n.ResourcePanelSaveUid}",
+                ["{Binding ResourcePanel.CancelEditResourcePanelUidCommand}"] = "{Binding Shell.I18n.Cancel}",
+                ["{Binding ResourcePanel.BeginEditResourcePanelUidCommand}"] = "{Binding Shell.I18n.ResourcePanelChangeUid}",
+                ["{Binding ResourcePanel.RefreshResourcePanelCommand}"] = "{Binding Shell.I18n.ResourcePanelRefresh}",
+                ["{Binding ResourcePanel.SaveResourcePanelCommand}"] = "{Binding Shell.I18n.ResourcePanelSave}"
+            },
+            ["Views/MainWindowLogViewerOverlay.axaml"] = new(StringComparer.Ordinal)
+            {
+                ["{Binding LogViewer.CloseCommand}"] = "{Binding Shell.I18n.Close}",
+                ["{Binding LogViewer.ExportCommand}"] = "{Binding Shell.I18n.ExportLogs}"
+            },
+            ["Views/MainWindowToastOverlay.axaml"] = new(StringComparer.Ordinal)
+            {
+                ["{Binding DataContext.Toasts.DismissToastCommand, ElementName=ToastOverlayRoot}"] =
+                    "{Binding DataContext.Shell.I18n.Close, ElementName=ToastOverlayRoot}"
+            },
+            ["Views/SetupWizardOverlay.axaml"] = new(StringComparer.Ordinal)
+            {
+                ["{Binding Dialogs.RequestSetupWizardExitCommand}"] = "{Binding Shell.I18n.SetupWizardSkip}",
+                ["{Binding Dialogs.SetupWizard.BrowseGamePathCommand}"] = "{Binding Shell.I18n.SetupWizardBrowse}",
+                ["{Binding Dialogs.SetupWizard.PreviousCommand}"] = "{Binding Shell.I18n.SetupWizardPrevious}",
+                ["{Binding Dialogs.SetupWizard.NextCommand}"] = "{Binding Shell.I18n.SetupWizardNext}",
+                ["{Binding Dialogs.SetupWizard.CompleteCommand}"] = "{Binding Shell.I18n.SetupWizardFinish}"
+            }
+        };
+
+        foreach (var (path, expectedByCommand) in expectedActions)
+        {
+            var document = XDocument.Load(ProjectFile(path));
+            foreach (var (command, expectedName) in expectedByCommand)
+            {
+                var matchingButtons = document
+                    .Descendants()
+                    .Where(element =>
+                        element.Name.LocalName == "Button"
+                        && element.Attribute("Command")?.Value == command)
+                    .ToList();
+
+                Assert.NotEmpty(matchingButtons);
+                Assert.All(
+                    matchingButtons,
+                    button => Assert.Equal(
+                        expectedName,
+                        button.Attributes().SingleOrDefault(attribute =>
+                            attribute.Name.LocalName == "AutomationProperties.Name")?.Value));
+            }
+        }
+    }
+
+    [Fact]
+    public void ResourcePanel_InputsAndResourceSwitchesExposeMeaningfulAutomationNames()
+    {
+        var document = XDocument.Load(ProjectFile("Views/MainWindowDialogsOverlay.axaml"));
+        var resourcePanel = document
+            .Descendants()
+            .Single(element =>
+                element.Name.LocalName == "Grid"
+                && element.Attribute("IsVisible")?.Value == "{Binding ResourcePanel.IsResourcePanelVisible}");
+        var uidInputs = resourcePanel
+            .Descendants()
+            .Where(element =>
+                element.Name.LocalName == "TextBox"
+                && element.Attribute("Text")?.Value
+                    == "{Binding ResourcePanel.ManualResourcePanelUid, Mode=TwoWay}")
+            .ToList();
+        var uidSource = resourcePanel
+            .Descendants()
+            .Single(element =>
+                element.Name.LocalName == "ComboBox"
+                && element.Attribute("ItemsSource")?.Value
+                    == "{Binding ResourcePanel.ResourcePanelUidSourceOptions}");
+        var resourceSwitch = resourcePanel
+            .Descendants()
+            .Single(element => element.Name.LocalName == "CheckBox");
+
+        Assert.Equal(2, uidInputs.Count);
+        Assert.All(uidInputs, input => Assert.Equal(
+            "{Binding Shell.I18n.ResourcePanelUid}",
+            input.Attributes().SingleOrDefault(attribute =>
+                attribute.Name.LocalName == "AutomationProperties.Name")?.Value));
+        Assert.Equal(
+            "{Binding Shell.I18n.ResourcePanelUidSource}",
+            uidSource.Attributes().SingleOrDefault(attribute =>
+                attribute.Name.LocalName == "AutomationProperties.Name")?.Value);
+        Assert.Equal(
+            "{Binding DisplayName}",
+            resourceSwitch.Attributes().SingleOrDefault(attribute =>
+                attribute.Name.LocalName == "AutomationProperties.Name")?.Value);
+    }
+
+    [Fact]
+    public void SettingRow_LongCopyWrapsInFlexibleContentColumn()
+    {
+        var document = XDocument.Load(ProjectFile("Controls/SettingRow.axaml"));
+        var layout = document
+            .Descendants()
+            .Single(element => element.Name.LocalName == "Grid" && HasClass(element, "settings-row"));
+        var copy = layout
+            .Elements()
+            .Single(element => element.Name.LocalName == "StackPanel");
+        var textBlocks = copy
+            .Elements()
+            .Where(element => element.Name.LocalName == "TextBlock")
+            .ToList();
+        var action = layout
+            .Elements()
+            .Single(element => element.Attributes().Any(attribute =>
+                attribute.Name.LocalName == "Name"
+                && attribute.Value == "ActionPresenter"));
+
+        Assert.Equal("Auto,*,Auto", layout.Attribute("ColumnDefinitions")?.Value);
+        Assert.Equal("1", copy.Attribute("Grid.Column")?.Value);
+        Assert.Equal("0", copy.Attribute("MinWidth")?.Value);
+        Assert.Equal(2, textBlocks.Count);
+        Assert.All(textBlocks, text => Assert.Equal("Wrap", text.Attribute("TextWrapping")?.Value));
+        Assert.Equal("2", action.Attribute("Grid.Column")?.Value);
+    }
+
+    [Fact]
+    public void ConfirmDialog_LongContentScrollsWhileActionsRemainFixed()
+    {
+        var document = XDocument.Load(ProjectFile("Controls/ConfirmDialog.axaml"));
+        var panel = document
+            .Descendants()
+            .Single(element => element.Name.LocalName == "Border" && HasClass(element, "confirm-panel"));
+        var layout = panel
+            .Elements()
+            .Single(element => element.Name.LocalName == "Grid");
+        var messageScroller = layout
+            .Elements()
+            .Single(element => element.Name.LocalName == "ScrollViewer");
+        var actions = layout
+            .Elements()
+            .Single(element => element.Name.LocalName == "StackPanel" && HasClass(element, "confirm-actions"));
+
+        Assert.Equal("480", panel.Attribute("MaxHeight")?.Value);
+        Assert.Equal("Auto,*,Auto", layout.Attribute("RowDefinitions")?.Value);
+        Assert.Equal("1", messageScroller.Attribute("Grid.Row")?.Value);
+        Assert.Equal("2", actions.Attribute("Grid.Row")?.Value);
+    }
+
+    [Theory]
+    [InlineData("en.json")]
+    [InlineData("ja.json")]
+    [InlineData("zh-Hans.json")]
+    [InlineData("zh-Hant.json")]
+    public void LogSeverityNames_MatchBetweenViewerFiltersAndSettings(string localeFile)
+    {
+        var values = JsonSerializer.Deserialize<Dictionary<string, string>>(
+            File.ReadAllText(ProjectFile($"Assets/Locales/{localeFile}")))!;
+        Dictionary<string, string> matchingKeys = new(StringComparer.Ordinal)
+        {
+            ["logFilterVerbose"] = "logLevelVerbose",
+            ["logFilterDebug"] = "logLevelDebug",
+            ["logFilterInfo"] = "logLevelInformation",
+            ["logFilterWarn"] = "logLevelWarning",
+            ["logFilterError"] = "logLevelError",
+            ["logFilterFatal"] = "logLevelFatal"
+        };
+
+        foreach (var (filterKey, settingKey) in matchingKeys)
+        {
+            Assert.Equal(values[settingKey], values[filterKey]);
+        }
+    }
+
+    [Fact]
+    public void ViewsAndControls_UserFacingTextHasNoFixedEnglishLiterals()
+    {
+        HashSet<string> userFacingAttributes = new(StringComparer.Ordinal)
+        {
+            "Content",
+            "Header",
+            "PlaceholderText",
+            "Text",
+            "ToolTip.Tip"
+        };
+        var violations = Directory
+            .GetFiles(ProjectFile("Views"), "*.axaml", SearchOption.AllDirectories)
+            .Concat(Directory.GetFiles(ProjectFile("Controls"), "*.axaml", SearchOption.AllDirectories))
+            .SelectMany(path =>
+            {
+                var document = XDocument.Load(path, LoadOptions.SetLineInfo);
+                return document
+                    .Descendants()
+                    .SelectMany(element =>
+                        element.Attributes()
+                            .Where(attribute => userFacingAttributes.Contains(attribute.Name.LocalName))
+                            .Where(attribute => !attribute.Value.StartsWith('{'))
+                            .Where(attribute => attribute.Value.Any(char.IsAsciiLetter))
+                            .Select(attribute =>
+                                $"{Path.GetRelativePath(FindProjectRoot(), path)}:{((IXmlLineInfo)attribute).LineNumber} "
+                                + $"{attribute.Name.LocalName}=\"{attribute.Value}\"")
+                            .Concat(
+                                element.Name.LocalName is "TextBlock" or "Button" or "MenuItem"
+                                    ? element.Nodes()
+                                        .OfType<XText>()
+                                        .Where(node => !string.IsNullOrWhiteSpace(node.Value))
+                                        .Where(node => node.Value.Any(char.IsAsciiLetter))
+                                        .Select(node =>
+                                            $"{Path.GetRelativePath(FindProjectRoot(), path)}:{((IXmlLineInfo)node).LineNumber} "
+                                            + node.Value.Trim())
+                                    : []));
+            })
+            .Order(StringComparer.Ordinal)
+            .ToList();
+
+        Assert.Empty(violations);
     }
 
     [Fact]

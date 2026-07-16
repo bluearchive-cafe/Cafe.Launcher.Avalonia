@@ -355,6 +355,63 @@ public sealed class MainWindowHeadlessTests
     }
 
     [AvaloniaTheory]
+    [InlineData("resource-panel")]
+    [InlineData("log-viewer")]
+    [InlineData("confirmation")]
+    [InlineData("setup-wizard")]
+    public void SecondaryOverlay_AtMinimumWindowSize_KeepsCriticalActionsReachable(string overlay)
+    {
+        using var context = CreateContext();
+        context.Window.Width = 1024;
+        context.Window.Height = 640;
+        context.Window.Show();
+
+        Button[] actions = overlay switch
+        {
+            "resource-panel" => ShowResourcePanel(context),
+            "log-viewer" => ShowLogViewer(context),
+            "confirmation" => ShowLongConfirmation(context),
+            "setup-wizard" => ShowSetupWizard(context),
+            _ => throw new ArgumentOutOfRangeException(nameof(overlay))
+        };
+        Dispatcher.UIThread.RunJobs();
+
+        Assert.NotEmpty(actions);
+        Assert.All(actions, action =>
+        {
+            Assert.True(action.IsEffectivelyVisible);
+            Assert.False(string.IsNullOrWhiteSpace(AutomationProperties.GetName(action)));
+            AssertControlInsideWindow(action, context.Window);
+        });
+    }
+
+    [AvaloniaFact]
+    public void SetupWizard_InJapaneseAtMinimumWindowSize_KeepsScrollableContentAndNavigationReachable()
+    {
+        using var context = CreateContext();
+        context.Window.Width = 1024;
+        context.Window.Height = 640;
+        context.Window.Show();
+        context.ViewModel.Dialogs.ShowSetupWizard();
+        context.ViewModel.Shell.ApplyLanguage(
+            LauncherLanguages.Japanese,
+            context.ViewModel.Settings,
+            context.ViewModel.ResourcePanel,
+            hasSnapshot: false);
+        Dispatcher.UIThread.RunJobs();
+
+        var wizard = context.Window.GetVisualDescendants().OfType<SetupWizardOverlay>().Single();
+        var content = wizard.GetVisualDescendants().OfType<ScrollViewer>()
+            .Single(control => control.Classes.Contains("scroll-pad"));
+        var next = GetWizardNextButton(context.Window, context.ViewModel);
+
+        Assert.True(content.IsEffectivelyVisible);
+        Assert.True(content.Viewport.Height > 0);
+        Assert.True(next.IsEffectivelyVisible);
+        AssertControlInsideWindow(next, context.Window);
+    }
+
+    [AvaloniaTheory]
     [InlineData("install")]
     [InlineData("progress")]
     [InlineData("control")]
@@ -1030,6 +1087,54 @@ public sealed class MainWindowHeadlessTests
         Assert.False(context.ViewModel.Dialogs.IsSetupWizardVisible);
         Assert.NotNull(applied);
         Assert.Contains(@"BlueArchive_JP", applied!.GamePath);
+    }
+
+    private static Button[] ShowResourcePanel(TestContext context)
+    {
+        context.ViewModel.ResourcePanel.IsResourcePanelVisible = true;
+        Dispatcher.UIThread.RunJobs();
+        return context.Window.GetVisualDescendants().OfType<Button>()
+            .Where(button =>
+                ReferenceEquals(button.Command, context.ViewModel.ResourcePanel.CloseResourcePanelCommand)
+                || ReferenceEquals(button.Command, context.ViewModel.ResourcePanel.RefreshResourcePanelCommand)
+                || ReferenceEquals(button.Command, context.ViewModel.ResourcePanel.SaveResourcePanelCommand))
+            .ToArray();
+    }
+
+    private static Button[] ShowLogViewer(TestContext context)
+    {
+        context.ViewModel.LogViewer.IsVisible = true;
+        Dispatcher.UIThread.RunJobs();
+        return context.Window.GetVisualDescendants().OfType<Button>()
+            .Where(button =>
+                ReferenceEquals(button.Command, context.ViewModel.LogViewer.CloseCommand)
+                || ReferenceEquals(button.Command, context.ViewModel.LogViewer.ExportCommand))
+            .ToArray();
+    }
+
+    private static Button[] ShowLongConfirmation(TestContext context)
+    {
+        context.ViewModel.Dialogs.ShowRepairConfirm(string.Concat(Enumerable.Repeat(
+            "下载源已切换，修复前需要重新确认本地文件状态。",
+            30)));
+        Dispatcher.UIThread.RunJobs();
+        return context.Window.GetVisualDescendants().OfType<Button>()
+            .Where(button =>
+                (ReferenceEquals(button.Command, context.ViewModel.Dialogs.CancelRepairCommand)
+                    || ReferenceEquals(button.Command, context.ViewModel.Dialogs.ConfirmRepairCommand))
+                && button.IsEffectivelyVisible)
+            .ToArray();
+    }
+
+    private static Button[] ShowSetupWizard(TestContext context)
+    {
+        context.ViewModel.Dialogs.ShowSetupWizard();
+        Dispatcher.UIThread.RunJobs();
+        return context.Window.GetVisualDescendants().OfType<Button>()
+            .Where(button =>
+                ReferenceEquals(button.Command, context.ViewModel.Dialogs.RequestSetupWizardExitCommand)
+                || ReferenceEquals(button.Command, context.ViewModel.Dialogs.SetupWizard.NextCommand))
+            .ToArray();
     }
 
     private static TestContext CreateContext()
