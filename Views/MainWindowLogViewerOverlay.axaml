@@ -68,7 +68,7 @@
                                         <TextBlock Text="{Binding Title}" Classes="section-title" TextWrapping="Wrap"/>
                                         <TextBlock Text="{Binding Details}" Classes="caption" TextWrapping="Wrap"
                                                    IsVisible="{Binding Details, Converter={x:Static StringConverters.IsNotNullOrEmpty}}"
-                                                   FontFamily="Consolas" MaxHeight="120"/>
+                                                   FontFamily="{StaticResource LauncherFontFamilyMonospace}" MaxHeight="120"/>
                                     </StackPanel>
                                 </Border>
                             </DataTemplate>

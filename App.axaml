@@ -36,6 +36,19 @@
             <x:Double x:Key="LauncherDialogTitleHeight">56</x:Double>
             <x:Double x:Key="LauncherLogViewerWidth">720</x:Double>
             <x:Double x:Key="LauncherLogViewerHeight">592</x:Double>
+            <x:Double x:Key="LauncherFontSizeXs">11</x:Double>
+            <x:Double x:Key="LauncherFontSizeSm">12</x:Double>
+            <x:Double x:Key="LauncherFontSizeMd">13</x:Double>
+            <x:Double x:Key="LauncherFontSizeLg">14</x:Double>
+            <x:Double x:Key="LauncherFontSizeXl">15</x:Double>
+            <x:Double x:Key="LauncherFontSizeXxl">16</x:Double>
+            <x:Double x:Key="LauncherFontSizeHeadingSm">17</x:Double>
+            <x:Double x:Key="LauncherFontSizeHeadingMd">18</x:Double>
+            <x:Double x:Key="LauncherFontSizeHeadingLg">19</x:Double>
+            <x:Double x:Key="LauncherFontSizeDisplay">22</x:Double>
+            <FontWeight x:Key="LauncherFontWeightNormal">Normal</FontWeight>
+            <FontWeight x:Key="LauncherFontWeightStrong">SemiBold</FontWeight>
+            <FontFamily x:Key="LauncherFontFamilyMonospace">Consolas</FontFamily>
             <SolidColorBrush x:Key="LauncherAccentBrush" Color="{DynamicResource SystemAccentColor}"/>
             <SolidColorBrush x:Key="LauncherAccentHoverBrush" Color="{DynamicResource SystemAccentColorLight1}"/>
             <SolidColorBrush x:Key="LauncherAccentPressedBrush" Color="{DynamicResource SystemAccentColorDark1}"/>

@@ -316,7 +316,7 @@ The selected mode, custom color, and palette are persisted in `settings.json` (`
 
 ### Design Tokens
 
-All numeric design values use `StaticResource` keys defined in `App.axaml`:
+Design values use `StaticResource` keys defined in `App.axaml`:
 
 **Spacing tokens** (4px grid: 0, 4, 8, 12, 16, 20, 24, 40):
 
@@ -360,6 +360,24 @@ All numeric design values use `StaticResource` keys defined in `App.axaml`:
 | `LauncherChipHeight` | 32 | Settings icons, version chips, social chips |
 | `LauncherFieldHeight` | 40 | Path fields and UID inputs |
 | `LauncherDialogTitleHeight` | 56 | Dialog header height |
+
+**Typography tokens:**
+
+| Token | Value |
+|---|---|
+| `LauncherFontSizeXs` | 11 |
+| `LauncherFontSizeSm` | 12 |
+| `LauncherFontSizeMd` | 13 |
+| `LauncherFontSizeLg` | 14 |
+| `LauncherFontSizeXl` | 15 |
+| `LauncherFontSizeXxl` | 16 |
+| `LauncherFontSizeHeadingSm` | 17 |
+| `LauncherFontSizeHeadingMd` | 18 |
+| `LauncherFontSizeHeadingLg` | 19 |
+| `LauncherFontSizeDisplay` | 22 |
+| `LauncherFontWeightNormal` | `Normal` |
+| `LauncherFontWeightStrong` | `SemiBold` |
+| `LauncherFontFamilyMonospace` | `Consolas` |
 
 **Gradient brushes**: Title bar gradient (`LauncherTitleBarGradient` in `App.axaml`) and control panel gradient (inline in `MainWindow.Styles.axaml`) use fixed black-transparency values that are intentionally theme-invariant — they overlay the wallpaper/background image.
 

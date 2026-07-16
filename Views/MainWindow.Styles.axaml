@@ -23,51 +23,49 @@
         </ItemsPanelTemplate>
     </Styles.Resources>
     <Style Selector="TextBlock.caption">
-        <Setter Property="FontSize" Value="13"/>
+        <Setter Property="FontSize" Value="{StaticResource LauncherFontSizeMd}"/>
         <Setter Property="Foreground" Value="{DynamicResource LauncherTextSecondaryBrush}"/>
     </Style>
     <Style Selector="TextBlock.value">
-        <Setter Property="FontSize" Value="14"/>
+        <Setter Property="FontSize" Value="{StaticResource LauncherFontSizeLg}"/>
         <Setter Property="Foreground" Value="{DynamicResource LauncherTextPrimaryBrush}"/>
-        <Setter Property="FontWeight" Value="SemiBold"/>
     </Style>
     <Style Selector="TextBlock.heading">
-        <Setter Property="FontSize" Value="22"/>
+        <Setter Property="FontSize" Value="{StaticResource LauncherFontSizeDisplay}"/>
         <Setter Property="Foreground" Value="{DynamicResource LauncherTextPrimaryBrush}"/>
-        <Setter Property="FontWeight" Value="SemiBold"/>
+        <Setter Property="FontWeight" Value="{StaticResource LauncherFontWeightStrong}"/>
     </Style>
     <Style Selector="TextBlock.body">
-        <Setter Property="FontSize" Value="14"/>
+        <Setter Property="FontSize" Value="{StaticResource LauncherFontSizeLg}"/>
         <Setter Property="Foreground" Value="{DynamicResource LauncherTextBodyBrush}"/>
         <Setter Property="TextWrapping" Value="Wrap"/>
     </Style>
     <Style Selector="TextBlock.dialog-title">
-        <Setter Property="FontSize" Value="19"/>
+        <Setter Property="FontSize" Value="{StaticResource LauncherFontSizeHeadingLg}"/>
         <Setter Property="Foreground" Value="{DynamicResource LauncherTextPrimaryBrush}"/>
-        <Setter Property="FontWeight" Value="SemiBold"/>
+        <Setter Property="FontWeight" Value="{StaticResource LauncherFontWeightStrong}"/>
     </Style>
     <Style Selector="TextBlock.kicker">
-        <Setter Property="FontSize" Value="11"/>
+        <Setter Property="FontSize" Value="{StaticResource LauncherFontSizeXs}"/>
         <Setter Property="Foreground" Value="{DynamicResource LauncherAccentBrush}"/>
-        <Setter Property="FontWeight" Value="SemiBold"/>
     </Style>
     <Style Selector="TextBlock.titlebar-brand">
         <Setter Property="Foreground" Value="{DynamicResource LauncherOnChromeBrush}"/>
-        <Setter Property="FontSize" Value="16"/>
-        <Setter Property="FontWeight" Value="SemiBold"/>
+        <Setter Property="FontSize" Value="{StaticResource LauncherFontSizeXxl}"/>
+        <Setter Property="FontWeight" Value="{StaticResource LauncherFontWeightStrong}"/>
     </Style>
     <Style Selector="TextBlock.titlebar-status">
         <Setter Property="Foreground" Value="{DynamicResource LauncherOnChromeMutedBrush}"/>
-        <Setter Property="FontSize" Value="12"/>
+        <Setter Property="FontSize" Value="{StaticResource LauncherFontSizeSm}"/>
     </Style>
     <Style Selector="TextBlock.progress-title">
         <Setter Property="Foreground" Value="{DynamicResource LauncherTextPrimaryBrush}"/>
-        <Setter Property="FontSize" Value="15"/>
-        <Setter Property="FontWeight" Value="SemiBold"/>
+        <Setter Property="FontSize" Value="{StaticResource LauncherFontSizeXl}"/>
+        <Setter Property="FontWeight" Value="{StaticResource LauncherFontWeightStrong}"/>
     </Style>
     <Style Selector="TextBlock.on-dark-caption">
         <Setter Property="Foreground" Value="{DynamicResource LauncherOnDarkMutedBrush}"/>
-        <Setter Property="FontSize" Value="14"/>
+        <Setter Property="FontSize" Value="{StaticResource LauncherFontSizeLg}"/>
     </Style>
     <Style Selector="StackPanel.titlebar-brand-row">
         <Setter Property="Orientation" Value="Horizontal"/>
@@ -126,7 +124,7 @@
         <Setter Property="BorderThickness" Value="0"/>
         <Setter Property="Foreground" Value="{DynamicResource LauncherTextLinkBrush}"/>
         <Setter Property="Padding" Value="0"/>
-        <Setter Property="FontSize" Value="14"/>
+        <Setter Property="FontSize" Value="{StaticResource LauncherFontSizeLg}"/>
         <Setter Property="TextBlock.TextDecorations" Value="Underline"/>
     </Style>
     <Style Selector="Button.icon-link">
@@ -135,7 +133,7 @@
         <Setter Property="Foreground" Value="{DynamicResource LauncherAccentBrush}"/>
         <Setter Property="Padding" Value="8,4"/>
         <Setter Property="CornerRadius" Value="{StaticResource LauncherRadiusSm}"/>
-        <Setter Property="FontSize" Value="14"/>
+        <Setter Property="FontSize" Value="{StaticResource LauncherFontSizeLg}"/>
         <Setter Property="HorizontalContentAlignment" Value="Center"/>
         <Setter Property="VerticalContentAlignment" Value="Center"/>
         <Setter Property="Template" Value="{StaticResource LauncherBorderButtonTemplate}"/>
@@ -178,8 +176,8 @@
     <Style Selector="Button.primary-action">
         <Setter Property="Background" Value="{DynamicResource LauncherAccentBrush}"/>
         <Setter Property="Foreground" Value="{DynamicResource LauncherOnAccentBrush}"/>
-        <Setter Property="FontSize" Value="16"/>
-        <Setter Property="FontWeight" Value="SemiBold"/>
+        <Setter Property="FontSize" Value="{StaticResource LauncherFontSizeXxl}"/>
+        <Setter Property="FontWeight" Value="{StaticResource LauncherFontWeightStrong}"/>
         <Setter Property="MinWidth" Value="150"/>
         <Setter Property="Height" Value="{StaticResource LauncherControlHeightBottom}"/>
         <Setter Property="Padding" Value="20,12"/>
@@ -237,8 +235,7 @@
         <Setter Property="MinHeight" Value="{StaticResource LauncherControlHeightBottom}"/>
         <Setter Property="MinWidth" Value="156"/>
         <Setter Property="Padding" Value="20,12"/>
-        <Setter Property="FontSize" Value="15"/>
-        <Setter Property="FontWeight" Value="SemiBold"/>
+        <Setter Property="FontSize" Value="{StaticResource LauncherFontSizeXl}"/>
     </Style>
     <Style Selector="StackPanel.confirm-actions">
         <Setter Property="Orientation" Value="Horizontal"/>
@@ -249,7 +246,7 @@
         <Setter Property="Background" Value="{DynamicResource LauncherDangerBrush}"/>
         <Setter Property="Foreground" Value="{DynamicResource LauncherOnAccentBrush}"/>
         <Setter Property="BorderThickness" Value="0"/>
-        <Setter Property="FontWeight" Value="SemiBold"/>
+        <Setter Property="FontWeight" Value="{StaticResource LauncherFontWeightStrong}"/>
         <Setter Property="MinHeight" Value="{StaticResource LauncherControlHeightDialog}"/>
         <Setter Property="Padding" Value="20,12"/>
         <Setter Property="CornerRadius" Value="{StaticResource LauncherRadiusSm}"/>
@@ -269,8 +266,7 @@
         <Setter Property="Height" Value="{StaticResource LauncherControlHeightDialog}"/>
         <Setter Property="MinWidth" Value="108"/>
         <Setter Property="Padding" Value="16,0"/>
-        <Setter Property="FontSize" Value="14"/>
-        <Setter Property="FontWeight" Value="SemiBold"/>
+        <Setter Property="FontSize" Value="{StaticResource LauncherFontSizeLg}"/>
     </Style>
     <Style Selector="Button.primary-action.dialog-action:disabled">
         <Setter Property="Background" Value="{DynamicResource LauncherContentRowBrush}"/>
@@ -312,8 +308,7 @@
         <Setter Property="Height" Value="{StaticResource LauncherControlHeightLaunch}"/>
         <Setter Property="Padding" Value="20,0"/>
         <Setter Property="CornerRadius" Value="{StaticResource LauncherRadiusMd}"/>
-        <Setter Property="FontSize" Value="17"/>
-        <Setter Property="FontWeight" Value="SemiBold"/>
+        <Setter Property="FontSize" Value="{StaticResource LauncherFontSizeHeadingSm}"/>
         <Setter Property="Opacity" Value="1"/>
         <Setter Property="HorizontalContentAlignment" Value="Center"/>
         <Setter Property="VerticalContentAlignment" Value="Center"/>
@@ -343,6 +338,7 @@
         <Setter Property="BorderBrush" Value="{DynamicResource LauncherAccentBrush}"/>
         <Setter Property="BorderThickness" Value="1"/>
         <Setter Property="Foreground" Value="{DynamicResource LauncherOnAccentBrush}"/>
+        <Setter Property="FontWeight" Value="{StaticResource LauncherFontWeightStrong}"/>
         <Setter Property="MinHeight" Value="{StaticResource LauncherControlHeightLaunch}"/>
         <Setter Property="Opacity" Value="1"/>
     </Style>
@@ -360,8 +356,8 @@
     </Style>
     <Style Selector="TextBlock.panel-title">
         <Setter Property="Foreground" Value="{DynamicResource LauncherTextPrimaryBrush}"/>
-        <Setter Property="FontSize" Value="14"/>
-        <Setter Property="FontWeight" Value="SemiBold"/>
+        <Setter Property="FontSize" Value="{StaticResource LauncherFontSizeLg}"/>
+        <Setter Property="FontWeight" Value="{StaticResource LauncherFontWeightStrong}"/>
     </Style>
     <Style Selector="Border.surface">
         <Setter Property="Background" Value="{DynamicResource LauncherPanelBackgroundBrush}"/>
@@ -404,7 +400,7 @@
     </Style>
     <Style Selector="TextBlock.media-placeholder-text">
         <Setter Property="Foreground" Value="{DynamicResource LauncherMediaPlaceholderTextBrush}"/>
-        <Setter Property="FontSize" Value="13"/>
+        <Setter Property="FontSize" Value="{StaticResource LauncherFontSizeMd}"/>
         <Setter Property="HorizontalAlignment" Value="Center"/>
         <Setter Property="VerticalAlignment" Value="Center"/>
     </Style>
@@ -503,7 +499,7 @@
         <Setter Property="Foreground" Value="{DynamicResource LauncherTextPrimaryBrush}"/>
         <Setter Property="BorderBrush" Value="{DynamicResource LauncherAccentBrush}"/>
         <Setter Property="BorderThickness" Value="3,0,0,0"/>
-        <Setter Property="FontWeight" Value="SemiBold"/>
+        <Setter Property="FontWeight" Value="{StaticResource LauncherFontWeightStrong}"/>
     </Style>
     <Style Selector="ListBox.settings-navigation > ListBoxItem:selected:not(:focus)">
         <Setter Property="Background" Value="{DynamicResource LauncherFlatPressedBrush}"/>
@@ -737,13 +733,11 @@
         <Setter Property="Padding" Value="8,4"/>
     </Style>
     <Style Selector="TextBlock.update-file-name">
-        <Setter Property="FontSize" Value="13"/>
-        <Setter Property="FontWeight" Value="SemiBold"/>
+        <Setter Property="FontSize" Value="{StaticResource LauncherFontSizeMd}"/>
         <Setter Property="Foreground" Value="{DynamicResource LauncherTextPrimaryBrush}"/>
     </Style>
     <Style Selector="TextBlock.update-file-size-text">
-        <Setter Property="FontSize" Value="12"/>
-        <Setter Property="FontWeight" Value="SemiBold"/>
+        <Setter Property="FontSize" Value="{StaticResource LauncherFontSizeSm}"/>
         <Setter Property="Foreground" Value="{DynamicResource LauncherTextSecondaryBrush}"/>
     </Style>
     <Style Selector="Border.dialog-icon">
@@ -759,23 +753,22 @@
         <Setter Property="BorderBrush" Value="{DynamicResource LauncherDangerBrush}"/>
     </Style>
     <Style Selector="TextBlock.section-title">
-        <Setter Property="FontSize" Value="14"/>
-        <Setter Property="FontWeight" Value="SemiBold"/>
+        <Setter Property="FontSize" Value="{StaticResource LauncherFontSizeLg}"/>
+        <Setter Property="FontWeight" Value="{StaticResource LauncherFontWeightStrong}"/>
         <Setter Property="Foreground" Value="{DynamicResource LauncherTextPrimaryBrush}"/>
     </Style>
     <Style Selector="TextBlock.group-title">
-        <Setter Property="FontSize" Value="14"/>
-        <Setter Property="FontWeight" Value="SemiBold"/>
+        <Setter Property="FontSize" Value="{StaticResource LauncherFontSizeLg}"/>
+        <Setter Property="FontWeight" Value="{StaticResource LauncherFontWeightStrong}"/>
         <Setter Property="Foreground" Value="{DynamicResource LauncherTextSecondaryBrush}"/>
     </Style>
     <Style Selector="TextBlock.category-title">
-        <Setter Property="FontSize" Value="18"/>
-        <Setter Property="FontWeight" Value="SemiBold"/>
+        <Setter Property="FontSize" Value="{StaticResource LauncherFontSizeHeadingMd}"/>
+        <Setter Property="FontWeight" Value="{StaticResource LauncherFontWeightStrong}"/>
         <Setter Property="Foreground" Value="{DynamicResource LauncherTextPrimaryBrush}"/>
     </Style>
     <Style Selector="TextBlock.chip-text">
-        <Setter Property="FontSize" Value="12"/>
-        <Setter Property="FontWeight" Value="SemiBold"/>
+        <Setter Property="FontSize" Value="{StaticResource LauncherFontSizeSm}"/>
         <Setter Property="Foreground" Value="{DynamicResource LauncherTextPrimaryBrush}"/>
         <Setter Property="VerticalAlignment" Value="Center"/>
     </Style>
@@ -794,12 +787,12 @@
         <Setter Property="ColumnSpacing" Value="{StaticResource LauncherSpacingMd}"/>
     </Style>
     <Style Selector="TextBlock.status-summary-title">
-        <Setter Property="FontSize" Value="15"/>
-        <Setter Property="FontWeight" Value="SemiBold"/>
+        <Setter Property="FontSize" Value="{StaticResource LauncherFontSizeXl}"/>
+        <Setter Property="FontWeight" Value="{StaticResource LauncherFontWeightStrong}"/>
         <Setter Property="Foreground" Value="{DynamicResource LauncherTextPrimaryBrush}"/>
     </Style>
     <Style Selector="TextBlock.status-summary-version">
-        <Setter Property="FontSize" Value="15"/>
+        <Setter Property="FontSize" Value="{StaticResource LauncherFontSizeXl}"/>
         <Setter Property="VerticalAlignment" Value="Center"/>
     </Style>
     <Style Selector="Grid.status-details">
@@ -872,7 +865,7 @@
         <Setter Property="BorderThickness" Value="1"/>
         <Setter Property="CornerRadius" Value="{StaticResource LauncherRadiusMd}"/>
         <Setter Property="Padding" Value="12,8"/>
-        <Setter Property="FontSize" Value="14"/>
+        <Setter Property="FontSize" Value="{StaticResource LauncherFontSizeLg}"/>
         <Setter Property="Foreground" Value="{DynamicResource LauncherTextPrimaryBrush}"/>
         <Setter Property="MinWidth" Value="160"/>
         <Setter Property="MinHeight" Value="{StaticResource LauncherFieldHeight}"/>
@@ -984,7 +977,7 @@
         <Setter Property="Spacing" Value="{StaticResource LauncherSpacingXs}"/>
     </Style>
     <Style Selector="TextBlock.toast-message">
-        <Setter Property="FontSize" Value="13"/>
+        <Setter Property="FontSize" Value="{StaticResource LauncherFontSizeMd}"/>
         <Setter Property="Foreground" Value="{DynamicResource LauncherTextBodyBrush}"/>
         <Setter Property="TextWrapping" Value="Wrap"/>
         <Setter Property="MaxWidth" Value="282"/>
@@ -1017,7 +1010,7 @@
     <Style Selector="Button.news-tab">
         <Setter Property="Background" Value="{DynamicResource LauncherContentRowBrush}"/>
         <Setter Property="Foreground" Value="{DynamicResource LauncherTextPrimaryBrush}"/>
-        <Setter Property="FontSize" Value="13"/>
+        <Setter Property="FontSize" Value="{StaticResource LauncherFontSizeMd}"/>
         <Setter Property="Padding" Value="10,4"/>
         <Setter Property="MinHeight" Value="28"/>
     </Style>
@@ -1050,8 +1043,7 @@
         <Setter Property="BorderThickness" Value="1"/>
     </Style>
     <Style Selector="TextBlock.toast-severity">
-        <Setter Property="FontSize" Value="11"/>
-        <Setter Property="FontWeight" Value="SemiBold"/>
+        <Setter Property="FontSize" Value="{StaticResource LauncherFontSizeXs}"/>
     </Style>
     <Style Selector="materialIcons|MaterialIcon.toast-icon">
         <Setter Property="VerticalAlignment" Value="Top"/>
