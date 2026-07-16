@@ -20,6 +20,7 @@ public sealed partial class LocalizedStrings : ObservableObject
     [ObservableProperty] private string settingsCategoryGame = "";
     [ObservableProperty] private string settingsCategoryDownloadNetwork = "";
     [ObservableProperty] private string settingsCategoryAppearance = "";
+    [ObservableProperty] private string settingsCategoryAdvanced = "";
     [ObservableProperty] private string settingsCategoryAbout = "";
     [ObservableProperty] private string minimize = "";
     [ObservableProperty] private string close = "";
@@ -297,6 +298,7 @@ public sealed partial class LocalizedStrings : ObservableObject
         SettingsCategoryGame = localizer.T("settingsCategoryGame");
         SettingsCategoryDownloadNetwork = localizer.T("settingsCategoryDownloadNetwork");
         SettingsCategoryAppearance = localizer.T("settingsCategoryAppearance");
+        SettingsCategoryAdvanced = localizer.T("settingsCategoryAdvanced");
         SettingsCategoryAbout = localizer.T("settingsCategoryAbout");
         Minimize = localizer.T("minimize");
         Close = localizer.T("close");

@@ -22,6 +22,7 @@ public sealed partial class UiStyleContractTests
         "Views/SettingsGameSection.axaml",
         "Views/SettingsDownloadNetworkSection.axaml",
         "Views/SettingsAppearanceSection.axaml",
+        "Views/SettingsAdvancedSection.axaml",
         "Views/SettingsAboutSection.axaml",
         "Views/MainWindowDialogsOverlay.axaml",
         "Views/MainWindowLogViewerOverlay.axaml",
@@ -38,7 +39,8 @@ public sealed partial class UiStyleContractTests
             [
                 "Settings.Editor.Current.Language",
                 "Settings.Editor.Current.CloseBehavior",
-                "Settings.Editor.Current.MotionMode"
+                "Settings.Editor.Current.MotionMode",
+                "Settings.Editor.Current.ToastNotificationsEnabled"
             ],
             ["SettingsGameSection"] =
             [
@@ -52,8 +54,7 @@ public sealed partial class UiStyleContractTests
                 "Settings.Editor.Current.ProxyMode",
                 "Settings.Editor.Current.PatchUrlGroup",
                 "Settings.Editor.Current.DownloadSpeedLimit",
-                "Settings.Editor.Current.UpdateChannel",
-                "Settings.Editor.Current.LogLevel"
+                "Settings.Editor.Current.UpdateChannel"
             ],
             ["SettingsAppearanceSection"] =
             [
@@ -61,7 +62,6 @@ public sealed partial class UiStyleContractTests
                 "Settings.Editor.Current.ThemeColorMode",
                 "Settings.Editor.Current.BackgroundSource",
                 "Settings.Editor.Current.BackgroundFit",
-                "Settings.Editor.Current.ToastNotificationsEnabled",
                 "Settings.Editor.Current.ShowRemoteContentCard",
                 "Settings.Appearance.ThemeColorPaletteItems",
                 "Settings.Appearance.SelectedCustomThemeColor",
@@ -74,15 +74,19 @@ public sealed partial class UiStyleContractTests
                 "Settings.Appearance.IsBackgroundFitSelected",
                 "Settings.Appearance.IsCustomBackgroundSelected"
             ],
+            ["SettingsAdvancedSection"] =
+            [
+                "Settings.Editor.Current.LogLevel",
+                "LogViewer.OpenCommand",
+                "LogViewer.ExportCommand",
+                "WindowChrome.OpenDataDirectoryCommand"
+            ],
             ["SettingsAboutSection"] =
             [
                 "Settings.CheckForUpdatesCommand",
                 "WindowChrome.OpenOfficialSiteCommand",
                 "WindowChrome.OpenGitHubRepositoryCommand",
-                "WindowChrome.OpenHelpDocsCommand",
-                "LogViewer.OpenCommand",
-                "LogViewer.ExportCommand",
-                "WindowChrome.OpenDataDirectoryCommand"
+                "WindowChrome.OpenHelpDocsCommand"
             ]
         };
 
@@ -106,7 +110,7 @@ public sealed partial class UiStyleContractTests
     }
 
     [Fact]
-    public void SettingsOverlay_ReferencesFiveCategorySectionsWithoutOwningSettingsRows()
+    public void SettingsOverlay_ReferencesSixCategorySectionsWithoutOwningSettingsRows()
     {
         var overlay = File.ReadAllText(ProjectFile("Views/MainWindowSettingsOverlay.axaml"));
         Dictionary<string, string> sectionVisibility = new(StringComparer.Ordinal)
@@ -115,6 +119,7 @@ public sealed partial class UiStyleContractTests
             ["SettingsGameSection"] = "Settings.IsGameCategorySelected",
             ["SettingsDownloadNetworkSection"] = "Settings.IsDownloadNetworkCategorySelected",
             ["SettingsAppearanceSection"] = "Settings.IsAppearanceCategorySelected",
+            ["SettingsAdvancedSection"] = "Settings.IsAdvancedCategorySelected",
             ["SettingsAboutSection"] = "Settings.IsAboutCategorySelected"
         };
 
@@ -1546,6 +1551,7 @@ public sealed partial class UiStyleContractTests
             "Views/SettingsGameSection.axaml",
             "Views/SettingsDownloadNetworkSection.axaml",
             "Views/SettingsAppearanceSection.axaml",
+            "Views/SettingsAdvancedSection.axaml",
             "Views/SettingsAboutSection.axaml"
         };
         var interactiveControlNames = new HashSet<string>(StringComparer.Ordinal)
@@ -1585,13 +1591,14 @@ public sealed partial class UiStyleContractTests
     }
 
     [Fact]
-    public void SettingsAboutActionsAndVersionChips_UsePurposeBasedOrder()
+    public void SettingsAboutAndAdvancedActions_UsePurposeBasedOrderAndExclusiveOwnership()
     {
-        var text = File.ReadAllText(ProjectFile("Views/SettingsAboutSection.axaml"));
+        var aboutText = File.ReadAllText(ProjectFile("Views/SettingsAboutSection.axaml"));
+        var advancedText = File.ReadAllText(ProjectFile("Views/SettingsAdvancedSection.axaml"));
         var overlay = File.ReadAllText(ProjectFile("Views/MainWindowSettingsOverlay.axaml"));
 
         AssertOrdered(
-            text,
+            aboutText,
             "Shell.LauncherVersionText",
             "Shell.BuildTimeText",
             "Shell.CommitShaText",
@@ -1600,18 +1607,22 @@ public sealed partial class UiStyleContractTests
             "Shell.AvaloniaVersionText",
             "Shell.PlatformText");
         AssertOrdered(
-            text,
+            aboutText,
             "Settings.CheckForUpdatesCommand",
             "WindowChrome.OpenOfficialSiteCommand",
             "WindowChrome.OpenGitHubRepositoryCommand",
-            "WindowChrome.OpenHelpDocsCommand",
+            "WindowChrome.OpenHelpDocsCommand");
+        AssertOrdered(
+            advancedText,
             "LogViewer.OpenCommand",
             "LogViewer.ExportCommand",
             "WindowChrome.OpenDataDirectoryCommand");
 
-        Assert.Contains("Shell.I18n.AboutActionsGeneral", text, StringComparison.Ordinal);
-        Assert.Contains("Shell.I18n.AboutActionsDiagnostics", text, StringComparison.Ordinal);
-        Assert.DoesNotContain("Shell.I18n.SettingsGroupAboutActions", text, StringComparison.Ordinal);
+        Assert.Contains("Shell.I18n.AboutActionsGeneral", aboutText, StringComparison.Ordinal);
+        Assert.DoesNotContain("LogViewer.OpenCommand", aboutText, StringComparison.Ordinal);
+        Assert.DoesNotContain("LogViewer.ExportCommand", aboutText, StringComparison.Ordinal);
+        Assert.DoesNotContain("WindowChrome.OpenDataDirectoryCommand", aboutText, StringComparison.Ordinal);
+        Assert.Contains("Shell.I18n.SettingsGroupDiagnostics", advancedText, StringComparison.Ordinal);
 
         var document = XDocument.Parse(overlay);
         var footerButtons = document

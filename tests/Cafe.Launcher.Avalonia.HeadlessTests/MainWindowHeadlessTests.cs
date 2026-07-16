@@ -29,6 +29,7 @@ public sealed class MainWindowHeadlessTests
         (SettingsCategoryCodes.Game, typeof(SettingsGameSection)),
         (SettingsCategoryCodes.DownloadNetwork, typeof(SettingsDownloadNetworkSection)),
         (SettingsCategoryCodes.Appearance, typeof(SettingsAppearanceSection)),
+        (SettingsCategoryCodes.Advanced, typeof(SettingsAdvancedSection)),
         (SettingsCategoryCodes.About, typeof(SettingsAboutSection))
     ];
 
@@ -1071,7 +1072,7 @@ public sealed class MainWindowHeadlessTests
         var sections = window.GetVisualDescendants()
             .Where(control => SettingsSections.Any(section => section.SectionType == control.GetType()))
             .ToArray();
-        Assert.Equal(5, sections.Length);
+        Assert.Equal(SettingsSections.Length, sections.Length);
         Assert.Single(sections, control => control.GetType() == expectedType && control.IsEffectivelyVisible);
         Assert.All(
             sections.Where(control => control.GetType() != expectedType),
