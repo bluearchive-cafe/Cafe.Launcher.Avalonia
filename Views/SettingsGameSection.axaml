@@ -3,72 +3,65 @@
              xmlns:vm="using:Cafe.Launcher.Avalonia.ViewModels"
              xmlns:models="using:Cafe.Launcher.Avalonia.Models"
              xmlns:materialIcons="clr-namespace:Material.Icons.Avalonia;assembly=Material.Icons.Avalonia"
+             xmlns:controls="using:Cafe.Launcher.Avalonia.Controls"
              x:Class="Cafe.Launcher.Avalonia.Views.SettingsGameSection"
              x:Name="SettingsRoot"
-             x:DataType="vm:MainWindowViewModel"><StackPanel Classes="settings-group">
-            <TextBlock Text="{Binding Shell.I18n.SettingsGroupGameFiles}" Classes="group-title"/>
+             x:DataType="vm:MainWindowViewModel">
+    <UserControl.Resources>
+        <DataTemplate x:Key="SettingOptionTemplate" x:DataType="models:SettingOption">
+            <TextBlock Text="{Binding DisplayName}"/>
+        </DataTemplate>
+    </UserControl.Resources>
+    <StackPanel Classes="settings-group">
+        <TextBlock Text="{Binding Shell.I18n.SettingsGroupGameFiles}" Classes="group-title"/>
 
-    <Grid Classes="settings-row" ColumnDefinitions="Auto,*,Auto">
-        <Border Classes="settings-icon">
-            <materialIcons:MaterialIcon Kind="FolderOpen" Width="{StaticResource LauncherIconMd}" Height="{StaticResource LauncherIconMd}" Foreground="{DynamicResource LauncherAccentBrush}" HorizontalAlignment="Center" VerticalAlignment="Center"/>
-        </Border>
-        <StackPanel Grid.Column="1" Classes="dialog-heading-copy">
-            <TextBlock Text="{Binding Shell.I18n.GamePath}" Classes="section-title"/>
-            <TextBlock Text="{Binding Settings.Editor.Current.GamePath}" Classes="caption" TextWrapping="Wrap" TextTrimming="CharacterEllipsis"/>
-        </StackPanel>
-        <Button Grid.Column="2" Classes="flat-action" Command="{Binding Settings.ChooseGamePathCommand}"
-                IsEnabled="{Binding Shell.IsBusy, Converter={x:Static BoolConverters.Not}}">
-            <StackPanel Classes="button-content">
-                <materialIcons:MaterialIcon Kind="FolderOpen" Width="{StaticResource LauncherIconSm}" Height="{StaticResource LauncherIconSm}"/>
-                <TextBlock Text="{Binding Shell.I18n.Choose}" VerticalAlignment="Center"/>
-            </StackPanel>
-        </Button>
-    </Grid>
+        <controls:SettingRow IconKind="FolderOpen"
+                             Title="{Binding Shell.I18n.GamePath}"
+                             Description="{Binding Settings.Editor.Current.GamePath}">
+            <controls:SettingRow.Action>
+                <Button Classes="flat-action" Command="{Binding Settings.ChooseGamePathCommand}"
+                        IsEnabled="{Binding Shell.IsBusy, Converter={x:Static BoolConverters.Not}}">
+                    <StackPanel Classes="button-content">
+                        <materialIcons:MaterialIcon Kind="FolderOpen" Width="{StaticResource LauncherIconSm}" Height="{StaticResource LauncherIconSm}"/>
+                        <TextBlock Text="{Binding Shell.I18n.Choose}"/>
+                    </StackPanel>
+                </Button>
+            </controls:SettingRow.Action>
+        </controls:SettingRow>
 
-    <Grid Classes="settings-row" ColumnDefinitions="Auto,*,Auto">
-        <Border Classes="settings-icon">
-            <materialIcons:MaterialIcon Kind="PlaylistCheck" Width="{StaticResource LauncherIconMd}" Height="{StaticResource LauncherIconMd}" Foreground="{DynamicResource LauncherAccentBrush}" HorizontalAlignment="Center" VerticalAlignment="Center"/>
-        </Border>
-        <StackPanel Grid.Column="1" Classes="dialog-heading-copy">
-            <TextBlock Text="{Binding Shell.I18n.LaunchCheck}" Classes="section-title"/>
-            <TextBlock Text="{Binding Shell.I18n.LaunchCheckDescription}" Classes="caption" TextWrapping="Wrap"/>
-        </StackPanel>
-        <ComboBox Grid.Column="2" Classes="setting-control"
-                  ItemsSource="{Binding Settings.Options.LaunchCheckMode}"
-                  SelectedValue="{Binding Settings.Editor.Current.LaunchCheckMode, Mode=TwoWay}"
-                  SelectedValueBinding="{Binding Code}">
-            <ComboBox.ItemTemplate>
-                <DataTemplate x:DataType="models:SettingOption">
-                    <TextBlock Text="{Binding DisplayName}"/>
-                </DataTemplate>
-            </ComboBox.ItemTemplate>
-        </ComboBox>
-    </Grid>
+        <controls:SettingRow IconKind="PlaylistCheck"
+                             Title="{Binding Shell.I18n.LaunchCheck}"
+                             Description="{Binding Shell.I18n.LaunchCheckDescription}">
+            <controls:SettingRow.Action>
+                <ComboBox Classes="setting-control"
+                          ItemsSource="{Binding Settings.Options.LaunchCheckMode}"
+                          SelectedValue="{Binding Settings.Editor.Current.LaunchCheckMode, Mode=TwoWay}"
+                          SelectedValueBinding="{Binding Code}"
+                          ItemTemplate="{StaticResource SettingOptionTemplate}"/>
+            </controls:SettingRow.Action>
+        </controls:SettingRow>
 
-    <Grid Classes="settings-row" ColumnDefinitions="Auto,*,Auto">
-        <Border Classes="settings-icon">
-            <materialIcons:MaterialIcon Kind="GamepadSquareOutline" Width="{StaticResource LauncherIconMd}" Height="{StaticResource LauncherIconMd}" Foreground="{DynamicResource LauncherAccentBrush}" HorizontalAlignment="Center" VerticalAlignment="Center"/>
-        </Border>
-        <StackPanel Grid.Column="1" Classes="dialog-heading-copy">
-            <TextBlock Text="{Binding Shell.I18n.GameManagement}" Classes="section-title"/>
-            <TextBlock Text="{Binding Shell.I18n.GameManagementDescription}" Classes="caption" TextWrapping="Wrap"/>
-        </StackPanel>
-        <StackPanel Grid.Column="2" Orientation="Horizontal" Spacing="{StaticResource LauncherSpacingSm}" VerticalAlignment="Center">
-            <Button Classes="flat-action" Command="{Binding Operations.RequestRepairCommand}"
-                    IsEnabled="{Binding Shell.IsBusy, Converter={x:Static BoolConverters.Not}}">
-                <StackPanel Classes="button-content">
-                    <materialIcons:MaterialIcon Kind="Tools" Width="{StaticResource LauncherIconSm}" Height="{StaticResource LauncherIconSm}"/>
-                    <TextBlock Text="{Binding Shell.I18n.Repair}" VerticalAlignment="Center"/>
+        <controls:SettingRow IconKind="GamepadSquareOutline"
+                             Title="{Binding Shell.I18n.GameManagement}"
+                             Description="{Binding Shell.I18n.GameManagementDescription}">
+            <controls:SettingRow.Action>
+                <StackPanel Orientation="Horizontal" Spacing="{StaticResource LauncherSpacingSm}" VerticalAlignment="Center">
+                    <Button Classes="flat-action" Command="{Binding Operations.RequestRepairCommand}"
+                            IsEnabled="{Binding Shell.IsBusy, Converter={x:Static BoolConverters.Not}}">
+                        <StackPanel Classes="button-content">
+                            <materialIcons:MaterialIcon Kind="Tools" Width="{StaticResource LauncherIconSm}" Height="{StaticResource LauncherIconSm}"/>
+                            <TextBlock Text="{Binding Shell.I18n.Repair}"/>
+                        </StackPanel>
+                    </Button>
+                    <Button Classes="flat-action" Command="{Binding Operations.RequestUninstallCommand}"
+                            IsEnabled="{Binding Shell.IsBusy, Converter={x:Static BoolConverters.Not}}">
+                        <StackPanel Classes="button-content">
+                            <materialIcons:MaterialIcon Kind="TrashCanOutline" Width="{StaticResource LauncherIconSm}" Height="{StaticResource LauncherIconSm}" Foreground="{DynamicResource LauncherDangerBrush}"/>
+                            <TextBlock Text="{Binding Shell.I18n.Uninstall}" Foreground="{DynamicResource LauncherDangerBrush}"/>
+                        </StackPanel>
+                    </Button>
                 </StackPanel>
-            </Button>
-            <Button Classes="flat-action" Command="{Binding Operations.RequestUninstallCommand}"
-                    IsEnabled="{Binding Shell.IsBusy, Converter={x:Static BoolConverters.Not}}">
-                <StackPanel Classes="button-content">
-                    <materialIcons:MaterialIcon Kind="TrashCanOutline" Width="{StaticResource LauncherIconSm}" Height="{StaticResource LauncherIconSm}" Foreground="{DynamicResource LauncherDangerBrush}"/>
-                    <TextBlock Text="{Binding Shell.I18n.Uninstall}" VerticalAlignment="Center" Foreground="{DynamicResource LauncherDangerBrush}"/>
-                </StackPanel>
-            </Button>
-        </StackPanel>
-    </Grid>
-        </StackPanel>
-    </UserControl>
+            </controls:SettingRow.Action>
+        </controls:SettingRow>
+    </StackPanel>
+</UserControl>

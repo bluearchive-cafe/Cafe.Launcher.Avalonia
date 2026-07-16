@@ -4,6 +4,7 @@
         xmlns:models="using:Cafe.Launcher.Avalonia.Models"
         xmlns:services="using:Cafe.Launcher.Avalonia.Services"
         xmlns:views="using:Cafe.Launcher.Avalonia.Views"
+        xmlns:controls="using:Cafe.Launcher.Avalonia.Controls"
         xmlns:materialIcons="clr-namespace:Material.Icons.Avalonia;assembly=Material.Icons.Avalonia"
         xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
         xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
@@ -101,6 +102,7 @@
                                 <Carousel x:Name="BannerCarousel"
                                           ItemsSource="{Binding RemoteContent.BannerItems}"
                                           SelectedIndex="{Binding RemoteContent.CarouselSelectedIndex, Mode=TwoWay}"
+                                          PageTransition="{Binding RemoteContent.CarouselTransition}"
                                           Height="220"
                                           CornerRadius="{StaticResource LauncherRadiusSm}" ClipToBounds="True">
                                     <Carousel.Styles>
@@ -109,9 +111,6 @@
                                             <Setter Property="VerticalContentAlignment" Value="Stretch"/>
                                         </Style>
                                     </Carousel.Styles>
-                                    <Carousel.PageTransition>
-                                        <Binding Path="RemoteContent.CarouselTransition"/>
-                                    </Carousel.PageTransition>
                                     <Carousel.ItemTemplate>
                                         <DataTemplate x:DataType="models:RemoteContentItem">
                                             <Button Classes="banner-link"
@@ -129,18 +128,8 @@
                                                         </Border>
                                                         <Image Source="{Binding BannerBitmap}"
                                                                Stretch="UniformToFill"/>
-                                                        <Border Classes="loading-overlay"
-                                                                IsVisible="{Binding IsImageLoading}">
-                                                            <StackPanel Spacing="{StaticResource LauncherSpacingSm}"
-                                                                        HorizontalAlignment="Center"
-                                                                        VerticalAlignment="Center">
-                                                                <ProgressBar IsIndeterminate="True"
-                                                                             Width="120"
-                                                                             Height="4"/>
-                                                                <TextBlock Text="{Binding DataContext.Shell.I18n.BannerLoading, ElementName=Root}"
-                                                                           Classes="media-placeholder-text"/>
-                                                            </StackPanel>
-                                                        </Border>
+                                                        <controls:LoadingOverlay IsVisible="{Binding IsImageLoading}"
+                                                                                  Text="{Binding DataContext.Shell.I18n.BannerLoading, ElementName=Root}"/>
                                                     </Panel>
                                                 </Border>
                                             </Button>
@@ -159,9 +148,7 @@
                                     </Button>
                                     <ItemsControl Grid.Column="1" ItemsSource="{Binding RemoteContent.BannerDots}" HorizontalAlignment="Center">
                                         <ItemsControl.ItemsPanel>
-                                            <ItemsPanelTemplate>
-                                                <StackPanel Orientation="Horizontal" Spacing="{StaticResource LauncherSpacingSm}"/>
-                                            </ItemsPanelTemplate>
+                                            <StaticResource ResourceKey="HorizontalSpacingSmPanel"/>
                                         </ItemsControl.ItemsPanel>
                                         <ItemsControl.ItemTemplate>
                                             <DataTemplate x:DataType="models:BannerDot">
@@ -193,9 +180,7 @@
                                     <StackPanel Orientation="Horizontal" Spacing="{StaticResource LauncherSpacingXs}">
                                         <ItemsControl ItemsSource="{Binding RemoteContent.NewsCategories}">
                                             <ItemsControl.ItemsPanel>
-                                                <ItemsPanelTemplate>
-                                                    <StackPanel Orientation="Horizontal" Spacing="{StaticResource LauncherSpacingXs}"/>
-                                                </ItemsPanelTemplate>
+                                                <StaticResource ResourceKey="HorizontalSpacingXsPanel"/>
                                             </ItemsControl.ItemsPanel>
                                             <ItemsControl.ItemTemplate>
                                                 <DataTemplate x:DataType="models:NewsCategory">
@@ -247,7 +232,7 @@
                                                 <StackPanel Classes="button-content">
                                                     <materialIcons:MaterialIcon Kind="{Binding SocialIconKind}" Width="{StaticResource LauncherIconSm}" Height="{StaticResource LauncherIconSm}"
                                                                                 Foreground="{DynamicResource LauncherTextSecondaryBrush}"/>
-                                                    <TextBlock Text="{Binding Title}" VerticalAlignment="Center"/>
+                                                    <TextBlock Text="{Binding Title}"/>
                                                 </StackPanel>
                                             </Button>
                                         </DataTemplate>
@@ -256,18 +241,9 @@
                             </StackPanel>
                             </StackPanel>
                         </ScrollViewer>
-                        <Border Classes="loading-overlay remote-content-loading-overlay"
-                                IsVisible="{Binding RemoteContent.IsLoading}">
-                            <StackPanel Spacing="{StaticResource LauncherSpacingSm}"
-                                        HorizontalAlignment="Center"
-                                        VerticalAlignment="Center">
-                                <ProgressBar IsIndeterminate="True"
-                                             Width="120"
-                                             Height="4"/>
-                                <TextBlock Text="{Binding Shell.I18n.RemoteContentLoading}"
-                                           Classes="media-placeholder-text"/>
-                            </StackPanel>
-                        </Border>
+                        <controls:LoadingOverlay Classes="remote-content-loading-overlay"
+                                                  IsVisible="{Binding RemoteContent.IsLoading}"
+                                                  Text="{Binding Shell.I18n.RemoteContentLoading}"/>
                     </Panel>
                 </Border>
 
@@ -288,14 +264,14 @@
                                             IsEnabled="{Binding Shell.IsBusy, Converter={x:Static BoolConverters.Not}}">
                                         <StackPanel Classes="button-content">
                                             <materialIcons:MaterialIcon Kind="FolderOpen" Width="{StaticResource LauncherIconSm}" Height="{StaticResource LauncherIconSm}"/>
-                                            <TextBlock Text="{Binding Shell.I18n.ChangePath}" VerticalAlignment="Center"/>
+                                            <TextBlock Text="{Binding Shell.I18n.ChangePath}"/>
                                         </StackPanel>
                                     </Button>
                                     <Button Grid.Column="3" Classes="icon-link" Command="{Binding Settings.SelectInstalledGameCommand}" VerticalAlignment="Center"
                                             IsEnabled="{Binding Shell.IsBusy, Converter={x:Static BoolConverters.Not}}">
                                         <StackPanel Classes="button-content">
                                             <materialIcons:MaterialIcon Kind="Magnify" Width="{StaticResource LauncherIconSm}" Height="{StaticResource LauncherIconSm}"/>
-                                            <TextBlock Text="{Binding Shell.I18n.SelectInstalledGame}" VerticalAlignment="Center"/>
+                                            <TextBlock Text="{Binding Shell.I18n.SelectInstalledGame}"/>
                                         </StackPanel>
                                     </Button>
                                 </Grid>
@@ -306,14 +282,14 @@
                                     IsEnabled="{Binding Shell.IsBusy, Converter={x:Static BoolConverters.Not}}">
                                 <StackPanel Classes="button-content">
                                     <materialIcons:MaterialIcon Kind="Refresh" Width="{StaticResource LauncherIconMd}" Height="{StaticResource LauncherIconMd}"/>
-                                    <TextBlock Text="{Binding Shell.I18n.Refresh}" VerticalAlignment="Center"/>
+                                    <TextBlock Text="{Binding Shell.I18n.Refresh}"/>
                                 </StackPanel>
                             </Button>
                             <Button Classes="primary-action bottom-action" Command="{Binding Operations.InstallOrUpdateCommand}" ToolTip.Tip="{Binding Operations.InstallButtonText}"
                                     IsEnabled="{Binding Shell.IsBusy, Converter={x:Static BoolConverters.Not}}">
                                 <StackPanel Classes="button-content">
-                                    <materialIcons:MaterialIcon Kind="Download" Width="{StaticResource LauncherIconXl}" Height="{StaticResource LauncherIconXl}" Foreground="{DynamicResource LauncherOnAccentBrush}"/>
-                                    <TextBlock Text="{Binding Operations.InstallButtonText}" VerticalAlignment="Center"/>
+                                    <materialIcons:MaterialIcon Kind="Download" Width="{StaticResource LauncherIconXl}" Height="{StaticResource LauncherIconXl}"/>
+                                    <TextBlock Text="{Binding Operations.InstallButtonText}"/>
                                 </StackPanel>
                             </Button>
                         </StackPanel>
@@ -350,13 +326,13 @@
                                     IsVisible="{Binding Operations.CanPauseOperation}">
                                 <StackPanel Classes="button-content">
                                     <materialIcons:MaterialIcon Kind="{Binding Operations.PauseResumeIcon}" Width="{StaticResource LauncherIconMd}" Height="{StaticResource LauncherIconMd}"/>
-                                    <TextBlock Text="{Binding Operations.PauseResumeText}" VerticalAlignment="Center"/>
+                                    <TextBlock Text="{Binding Operations.PauseResumeText}"/>
                                 </StackPanel>
                             </Button>
                             <Button Classes="flat-action bottom-action" Command="{Binding Operations.StopOperationCommand}" VerticalAlignment="Center">
                                 <StackPanel Classes="button-content">
                                     <materialIcons:MaterialIcon Kind="Stop" Width="{StaticResource LauncherIconMd}" Height="{StaticResource LauncherIconMd}"/>
-                                    <TextBlock Text="{Binding Shell.I18n.Stop}" VerticalAlignment="Center"/>
+                                    <TextBlock Text="{Binding Shell.I18n.Stop}"/>
                                 </StackPanel>
                             </Button>
                         </StackPanel>
@@ -370,14 +346,14 @@
                             <Button Classes="launcher-control site" Command="{Binding WindowChrome.OpenOfficialSiteCommand}" ToolTip.Tip="{Binding Shell.I18n.OfficialSite}">
                                 <StackPanel Classes="button-content">
                                     <materialIcons:MaterialIcon Kind="Web" Width="{StaticResource LauncherIconXl}" Height="{StaticResource LauncherIconXl}"/>
-                                    <TextBlock Text="{Binding Shell.I18n.OfficialSite}" VerticalAlignment="Center"/>
+                                    <TextBlock Text="{Binding Shell.I18n.OfficialSite}"/>
                                 </StackPanel>
                             </Button>
                             <Button Classes="launcher-control start" Command="{Binding Operations.StartGameCommand}" ToolTip.Tip="{Binding Shell.I18n.StartGame}"
                                     IsEnabled="{Binding Shell.IsBusy, Converter={x:Static BoolConverters.Not}}">
                                 <StackPanel Classes="button-content">
-                                    <materialIcons:MaterialIcon Kind="PlayCircle" Width="{StaticResource LauncherIconXxl}" Height="{StaticResource LauncherIconXxl}" Foreground="{DynamicResource LauncherOnAccentBrush}"/>
-                                    <TextBlock Text="{Binding Shell.I18n.StartGame}" VerticalAlignment="Center"/>
+                                    <materialIcons:MaterialIcon Kind="PlayCircle" Width="{StaticResource LauncherIconXxl}" Height="{StaticResource LauncherIconXxl}"/>
+                                    <TextBlock Text="{Binding Shell.I18n.StartGame}"/>
                                 </StackPanel>
                             </Button>
                         </StackPanel>

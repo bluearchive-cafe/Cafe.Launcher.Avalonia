@@ -550,6 +550,7 @@ public sealed class GameDownloadService : IDisposable
             pauseTcs = null;
             pauseTask = Task.CompletedTask;
         }
+        GC.SuppressFinalize(this);
     }
 
     private async Task<DownloadTaskState?> LoadDownloadStateAsync(CancellationToken cancellationToken = default)
@@ -1003,14 +1004,16 @@ public sealed class GameDownloadService : IDisposable
         }
     }
 
+    private const string TempFileExtension = ".tmp";
+
     private static string GetTempName(string name)
     {
-        return $"{name}.tmp";
+        return $"{name}{TempFileExtension}";
     }
 
     private static string GetOriginName(string name)
     {
-        return name.EndsWith(".tmp", StringComparison.Ordinal) ? name[..^4] : name;
+        return name.EndsWith(TempFileExtension, StringComparison.Ordinal) ? name[..^TempFileExtension.Length] : name;
     }
 
     private static GameOperationProgress CreateProgress(string kind, string stage, int value)

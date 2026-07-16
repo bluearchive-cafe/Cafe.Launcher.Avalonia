@@ -28,7 +28,7 @@ public static class ServiceConfiguration
         else
             services.AddSingleton<UnifiedLogger>();
         services.AddSingleton<LogExportService>();
-        services.AddTransient<LogViewerDialogViewModel>();
+        services.AddSingleton<LogViewerDialogViewModel>();
         services.AddSingleton<LocalDiagnostics>();
         services.AddSingleton<AuthorizationHeaderFactory>();
         services.AddSingleton<RemoteHttpUrlValidator>();
@@ -75,16 +75,16 @@ public static class ServiceConfiguration
                 sp.GetRequiredService<LocalizationService>(),
                 sp.GetRequiredService<GameInstallationPath>())));
 
-        // ── ViewModels (transient unless explicitly registered otherwise) ─
+        // ── ViewModels (all singleton — single-window desktop app) ─────────
         services.AddSingleton<SettingsViewModel>();
-        services.AddTransient<ResourcePanelViewModel>();
+        services.AddSingleton<ResourcePanelViewModel>();
         services.AddSingleton<ShellViewModel>();
-        services.AddTransient<BackgroundViewModel>();
+        services.AddSingleton<BackgroundViewModel>();
         services.AddSingleton<RemoteContentViewModel>();
         services.AddSingleton<DialogsViewModel>();
         services.AddSingleton<GameOperationsViewModel>();
-        services.AddTransient<ToastHostViewModel>();
-        services.AddTransient<WindowChromeViewModel>();
+        services.AddSingleton<ToastHostViewModel>();
+        services.AddSingleton<WindowChromeViewModel>();
         services.AddSingleton<MainWindowViewModel>();
 
         return services;

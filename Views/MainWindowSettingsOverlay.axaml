@@ -125,7 +125,7 @@
                             <StackPanel Classes="button-content" HorizontalAlignment="Center">
                                 <materialIcons:MaterialIcon Kind="CloseCircleOutline"
                                     Width="{StaticResource LauncherIconSm}" Height="{StaticResource LauncherIconSm}"/>
-                                <TextBlock Text="{Binding Shell.I18n.Cancel}" VerticalAlignment="Center"/>
+                                <TextBlock Text="{Binding Shell.I18n.Cancel}"/>
                             </StackPanel>
                         </Button>
                         <Button Classes="primary-action dialog-action"
@@ -134,7 +134,7 @@
                             <StackPanel Classes="button-content" HorizontalAlignment="Center">
                                 <materialIcons:MaterialIcon Kind="ContentSave"
                                     Width="{StaticResource LauncherIconSm}" Height="{StaticResource LauncherIconSm}"/>
-                                <TextBlock Text="{Binding Shell.I18n.Save}" VerticalAlignment="Center"/>
+                                <TextBlock Text="{Binding Shell.I18n.Save}"/>
                             </StackPanel>
                         </Button>
                     </StackPanel>

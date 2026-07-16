@@ -255,7 +255,6 @@ public partial class GameOperationsViewModel : ViewModelBase
         }
 
         dialogs.ShowRepairConfirm(localizer.T("repairWarning"));
-        await Task.CompletedTask;
     }
 
     public async Task RepairAsync()

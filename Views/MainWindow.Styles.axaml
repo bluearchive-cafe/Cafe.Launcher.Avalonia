@@ -2,6 +2,26 @@
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
         xmlns:views="using:Cafe.Launcher.Avalonia.Views"
         xmlns:materialIcons="clr-namespace:Material.Icons.Avalonia;assembly=Material.Icons.Avalonia">
+    <Styles.Resources>
+        <ControlTemplate x:Key="LauncherBorderButtonTemplate" TargetType="Button">
+            <Border Background="{TemplateBinding Background}"
+                    BorderBrush="{TemplateBinding BorderBrush}"
+                    BorderThickness="{TemplateBinding BorderThickness}"
+                    CornerRadius="{TemplateBinding CornerRadius}">
+                <ContentPresenter Content="{TemplateBinding Content}"
+                                  ContentTemplate="{TemplateBinding ContentTemplate}"
+                                  Padding="{TemplateBinding Padding}"
+                                  HorizontalContentAlignment="{TemplateBinding HorizontalContentAlignment}"
+                                  VerticalContentAlignment="{TemplateBinding VerticalContentAlignment}"/>
+            </Border>
+        </ControlTemplate>
+        <ItemsPanelTemplate x:Key="HorizontalSpacingXsPanel">
+            <StackPanel Orientation="Horizontal" Spacing="{StaticResource LauncherSpacingXs}"/>
+        </ItemsPanelTemplate>
+        <ItemsPanelTemplate x:Key="HorizontalSpacingSmPanel">
+            <StackPanel Orientation="Horizontal" Spacing="{StaticResource LauncherSpacingSm}"/>
+        </ItemsPanelTemplate>
+    </Styles.Resources>
     <Style Selector="TextBlock.caption">
         <Setter Property="FontSize" Value="13"/>
         <Setter Property="Foreground" Value="{DynamicResource LauncherTextSecondaryBrush}"/>
@@ -68,20 +88,7 @@
         <Setter Property="CornerRadius" Value="{StaticResource LauncherRadiusSm}"/>
         <Setter Property="HorizontalContentAlignment" Value="Center"/>
         <Setter Property="VerticalContentAlignment" Value="Center"/>
-        <Setter Property="Template">
-            <ControlTemplate>
-                <Border Background="{TemplateBinding Background}"
-                        BorderBrush="{TemplateBinding BorderBrush}"
-                        BorderThickness="{TemplateBinding BorderThickness}"
-                        CornerRadius="{TemplateBinding CornerRadius}">
-                    <ContentPresenter Content="{TemplateBinding Content}"
-                                      ContentTemplate="{TemplateBinding ContentTemplate}"
-                                      Padding="{TemplateBinding Padding}"
-                                      HorizontalContentAlignment="{TemplateBinding HorizontalContentAlignment}"
-                                      VerticalContentAlignment="{TemplateBinding VerticalContentAlignment}"/>
-                </Border>
-            </ControlTemplate>
-        </Setter>
+        <Setter Property="Template" Value="{StaticResource LauncherBorderButtonTemplate}"/>
     </Style>
     <Style Selector="Button.chrome.settings">
         <Setter Property="Margin" Value="0,0,4,0"/>
@@ -131,20 +138,7 @@
         <Setter Property="FontSize" Value="14"/>
         <Setter Property="HorizontalContentAlignment" Value="Center"/>
         <Setter Property="VerticalContentAlignment" Value="Center"/>
-        <Setter Property="Template">
-            <ControlTemplate>
-                <Border Background="{TemplateBinding Background}"
-                        BorderBrush="{TemplateBinding BorderBrush}"
-                        BorderThickness="{TemplateBinding BorderThickness}"
-                        CornerRadius="{TemplateBinding CornerRadius}">
-                    <ContentPresenter Content="{TemplateBinding Content}"
-                                      ContentTemplate="{TemplateBinding ContentTemplate}"
-                                      Padding="{TemplateBinding Padding}"
-                                      HorizontalContentAlignment="{TemplateBinding HorizontalContentAlignment}"
-                                      VerticalContentAlignment="{TemplateBinding VerticalContentAlignment}"/>
-                </Border>
-            </ControlTemplate>
-        </Setter>
+        <Setter Property="Template" Value="{StaticResource LauncherBorderButtonTemplate}"/>
     </Style>
     <Style Selector="Button.icon-link:pointerover">
         <Setter Property="Background" Value="{DynamicResource LauncherInfoBackgroundBrush}"/>
@@ -158,8 +152,8 @@
         <Setter Property="Background" Value="{DynamicResource LauncherTransparentBrush}"/>
         <Setter Property="BorderThickness" Value="0"/>
         <Setter Property="Foreground" Value="{DynamicResource LauncherTextSecondaryBrush}"/>
-        <Setter Property="Width" Value="28"/>
-        <Setter Property="Height" Value="28"/>
+        <Setter Property="Width" Value="{StaticResource LauncherSwatchSize}"/>
+        <Setter Property="Height" Value="{StaticResource LauncherSwatchSize}"/>
         <Setter Property="Padding" Value="0"/>
         <Setter Property="CornerRadius" Value="{StaticResource LauncherRadiusSm}"/>
         <Setter Property="HorizontalContentAlignment" Value="Center"/>
@@ -192,20 +186,7 @@
         <Setter Property="CornerRadius" Value="{StaticResource LauncherRadiusSm}"/>
         <Setter Property="HorizontalContentAlignment" Value="Center"/>
         <Setter Property="VerticalContentAlignment" Value="Center"/>
-        <Setter Property="Template">
-            <ControlTemplate>
-                <Border Background="{TemplateBinding Background}"
-                        BorderBrush="{TemplateBinding BorderBrush}"
-                        BorderThickness="{TemplateBinding BorderThickness}"
-                        CornerRadius="{TemplateBinding CornerRadius}">
-                    <ContentPresenter Content="{TemplateBinding Content}"
-                                      ContentTemplate="{TemplateBinding ContentTemplate}"
-                                      Padding="{TemplateBinding Padding}"
-                                      HorizontalContentAlignment="{TemplateBinding HorizontalContentAlignment}"
-                                      VerticalContentAlignment="{TemplateBinding VerticalContentAlignment}"/>
-                </Border>
-            </ControlTemplate>
-        </Setter>
+        <Setter Property="Template" Value="{StaticResource LauncherBorderButtonTemplate}"/>
     </Style>
     <Style Selector="Button.primary-action:pointerover">
         <Setter Property="Background" Value="{DynamicResource LauncherAccentHoverBrush}"/>
@@ -229,20 +210,7 @@
         <Setter Property="MinHeight" Value="{StaticResource LauncherControlHeightSetting}"/>
         <Setter Property="HorizontalContentAlignment" Value="Center"/>
         <Setter Property="VerticalContentAlignment" Value="Center"/>
-        <Setter Property="Template">
-            <ControlTemplate>
-                <Border Background="{TemplateBinding Background}"
-                        BorderBrush="{TemplateBinding BorderBrush}"
-                        BorderThickness="{TemplateBinding BorderThickness}"
-                        CornerRadius="{TemplateBinding CornerRadius}">
-                    <ContentPresenter Content="{TemplateBinding Content}"
-                                      ContentTemplate="{TemplateBinding ContentTemplate}"
-                                      Padding="{TemplateBinding Padding}"
-                                      HorizontalContentAlignment="{TemplateBinding HorizontalContentAlignment}"
-                                      VerticalContentAlignment="{TemplateBinding VerticalContentAlignment}"/>
-                </Border>
-            </ControlTemplate>
-        </Setter>
+        <Setter Property="Template" Value="{StaticResource LauncherBorderButtonTemplate}"/>
     </Style>
     <Style Selector="Button.flat-action:pointerover">
         <Setter Property="Background" Value="{DynamicResource LauncherFlatHoverBrush}"/>
@@ -287,20 +255,7 @@
         <Setter Property="CornerRadius" Value="{StaticResource LauncherRadiusSm}"/>
         <Setter Property="HorizontalContentAlignment" Value="Center"/>
         <Setter Property="VerticalContentAlignment" Value="Center"/>
-        <Setter Property="Template">
-            <ControlTemplate>
-                <Border Background="{TemplateBinding Background}"
-                        BorderBrush="{TemplateBinding BorderBrush}"
-                        BorderThickness="{TemplateBinding BorderThickness}"
-                        CornerRadius="{TemplateBinding CornerRadius}">
-                    <ContentPresenter Content="{TemplateBinding Content}"
-                                      ContentTemplate="{TemplateBinding ContentTemplate}"
-                                      Padding="{TemplateBinding Padding}"
-                                      HorizontalContentAlignment="{TemplateBinding HorizontalContentAlignment}"
-                                      VerticalContentAlignment="{TemplateBinding VerticalContentAlignment}"/>
-                </Border>
-            </ControlTemplate>
-        </Setter>
+        <Setter Property="Template" Value="{StaticResource LauncherBorderButtonTemplate}"/>
     </Style>
     <Style Selector="Button.danger-action:pointerover">
         <Setter Property="Background" Value="{DynamicResource LauncherDangerHoverBrush}"/>
@@ -333,20 +288,7 @@
         <Setter Property="CornerRadius" Value="{StaticResource LauncherRadiusSm}"/>
         <Setter Property="HorizontalContentAlignment" Value="Center"/>
         <Setter Property="VerticalContentAlignment" Value="Center"/>
-        <Setter Property="Template">
-            <ControlTemplate>
-                <Border Background="{TemplateBinding Background}"
-                        BorderBrush="{TemplateBinding BorderBrush}"
-                        BorderThickness="{TemplateBinding BorderThickness}"
-                        CornerRadius="{TemplateBinding CornerRadius}">
-                    <ContentPresenter Content="{TemplateBinding Content}"
-                                      ContentTemplate="{TemplateBinding ContentTemplate}"
-                                      Padding="{TemplateBinding Padding}"
-                                      HorizontalContentAlignment="{TemplateBinding HorizontalContentAlignment}"
-                                      VerticalContentAlignment="{TemplateBinding VerticalContentAlignment}"/>
-                </Border>
-            </ControlTemplate>
-        </Setter>
+        <Setter Property="Template" Value="{StaticResource LauncherBorderButtonTemplate}"/>
     </Style>
     <Style Selector="Button.dialog-close:pointerover">
         <Setter Property="Background" Value="{DynamicResource LauncherDialogCloseHoverBrush}"/>
@@ -370,20 +312,7 @@
         <Setter Property="Opacity" Value="1"/>
         <Setter Property="HorizontalContentAlignment" Value="Center"/>
         <Setter Property="VerticalContentAlignment" Value="Center"/>
-        <Setter Property="Template">
-            <ControlTemplate>
-                <Border Background="{TemplateBinding Background}"
-                        BorderBrush="{TemplateBinding BorderBrush}"
-                        BorderThickness="{TemplateBinding BorderThickness}"
-                        CornerRadius="{TemplateBinding CornerRadius}">
-                    <ContentPresenter Content="{TemplateBinding Content}"
-                                      ContentTemplate="{TemplateBinding ContentTemplate}"
-                                      Padding="{TemplateBinding Padding}"
-                                      HorizontalContentAlignment="{TemplateBinding HorizontalContentAlignment}"
-                                      VerticalContentAlignment="{TemplateBinding VerticalContentAlignment}"/>
-                </Border>
-            </ControlTemplate>
-        </Setter>
+        <Setter Property="Template" Value="{StaticResource LauncherBorderButtonTemplate}"/>
     </Style>
     <Style Selector="Button.launcher-control.site">
         <Setter Property="Background" Value="{DynamicResource LauncherSiteButtonBackgroundBrush}"/>
@@ -479,7 +408,7 @@
         <Setter Property="BorderBrush" Value="{DynamicResource LauncherFieldBorderBrush}"/>
         <Setter Property="BorderThickness" Value="1"/>
         <Setter Property="CornerRadius" Value="{StaticResource LauncherRadiusSm}"/>
-        <Setter Property="Height" Value="40"/>
+        <Setter Property="Height" Value="{StaticResource LauncherFieldHeight}"/>
         <Setter Property="Padding" Value="16,0"/>
     </Style>
     <!-- Bottom panels share 40px horizontal alignment with the remote surface.
@@ -516,20 +445,7 @@
         <Setter Property="HorizontalAlignment" Value="Stretch"/>
         <Setter Property="HorizontalContentAlignment" Value="Stretch"/>
         <Setter Property="VerticalContentAlignment" Value="Stretch"/>
-        <Setter Property="Template">
-            <ControlTemplate>
-                <Border Background="{TemplateBinding Background}"
-                        BorderBrush="{TemplateBinding BorderBrush}"
-                        BorderThickness="{TemplateBinding BorderThickness}"
-                        CornerRadius="{TemplateBinding CornerRadius}">
-                    <ContentPresenter Content="{TemplateBinding Content}"
-                                      ContentTemplate="{TemplateBinding ContentTemplate}"
-                                      Padding="{TemplateBinding Padding}"
-                                      HorizontalContentAlignment="{TemplateBinding HorizontalContentAlignment}"
-                                      VerticalContentAlignment="{TemplateBinding VerticalContentAlignment}"/>
-                </Border>
-            </ControlTemplate>
-        </Setter>
+        <Setter Property="Template" Value="{StaticResource LauncherBorderButtonTemplate}"/>
     </Style>
     <Style Selector="Button.content-link:pointerover">
         <Setter Property="Background" Value="{DynamicResource LauncherContentRowHoverBrush}"/>
@@ -678,7 +594,7 @@
     </Style>
     <Style Selector="Grid.dialog-header">
         <Setter Property="Background" Value="{DynamicResource LauncherDialogHeaderBrush}"/>
-        <Setter Property="Height" Value="56"/>
+        <Setter Property="Height" Value="{StaticResource LauncherDialogTitleHeight}"/>
         <Setter Property="ClipToBounds" Value="True"/>
     </Style>
     <Style Selector="StackPanel.dialog-title-row">
@@ -861,6 +777,9 @@
         <Setter Property="Orientation" Value="Horizontal"/>
         <Setter Property="Spacing" Value="{StaticResource LauncherSpacingSm}"/>
     </Style>
+    <Style Selector="StackPanel.button-content > TextBlock">
+        <Setter Property="VerticalAlignment" Value="Center"/>
+    </Style>
     <Style Selector="StackPanel.card-heading">
         <Setter Property="Orientation" Value="Horizontal"/>
         <Setter Property="Spacing" Value="{StaticResource LauncherSpacingSm}"/>
@@ -893,8 +812,8 @@
         <Setter Property="Padding" Value="{StaticResource LauncherThicknessLg}"/>
     </Style>
     <Style Selector="Border.settings-icon">
-        <Setter Property="Width" Value="32"/>
-        <Setter Property="Height" Value="32"/>
+        <Setter Property="Width" Value="{StaticResource LauncherChipHeight}"/>
+        <Setter Property="Height" Value="{StaticResource LauncherChipHeight}"/>
         <Setter Property="CornerRadius" Value="{StaticResource LauncherRadiusSm}"/>
         <Setter Property="Background" Value="{DynamicResource LauncherAccentSoftBrush}"/>
         <Setter Property="BorderBrush" Value="{DynamicResource LauncherAccentBorderBrush}"/>
@@ -909,7 +828,7 @@
         <Setter Property="BorderThickness" Value="0"/>
         <Setter Property="CornerRadius" Value="{StaticResource LauncherRadiusMd}"/>
         <Setter Property="Padding" Value="12,8"/>
-        <Setter Property="MinHeight" Value="32"/>
+        <Setter Property="MinHeight" Value="{StaticResource LauncherChipHeight}"/>
         <Setter Property="Margin" Value="0,0,8,8"/>
     </Style>
     <Style Selector="Grid.settings-row">
@@ -939,7 +858,7 @@
         <Setter Property="FontSize" Value="14"/>
         <Setter Property="Foreground" Value="{DynamicResource LauncherTextPrimaryBrush}"/>
         <Setter Property="MinWidth" Value="160"/>
-        <Setter Property="MinHeight" Value="40"/>
+        <Setter Property="MinHeight" Value="{StaticResource LauncherFieldHeight}"/>
         <Setter Property="VerticalContentAlignment" Value="Center"/>
         <Setter Property="CaretBrush" Value="{DynamicResource LauncherAccentBrush}"/>
     </Style>
@@ -965,8 +884,8 @@
         <Setter Property="Fill" Value="{DynamicResource LauncherOnAccentBrush}"/>
     </Style>
     <Style Selector="Border.color-swatch">
-        <Setter Property="Width" Value="28"/>
-        <Setter Property="Height" Value="28"/>
+        <Setter Property="Width" Value="{StaticResource LauncherSwatchSize}"/>
+        <Setter Property="Height" Value="{StaticResource LauncherSwatchSize}"/>
         <Setter Property="CornerRadius" Value="{StaticResource LauncherRadiusSm}"/>
         <Setter Property="BorderBrush" Value="{DynamicResource LauncherCardBorderBrush}"/>
         <Setter Property="BorderThickness" Value="1"/>
@@ -974,8 +893,8 @@
     <Style Selector="Button.color-swatch-button">
         <Setter Property="Background" Value="{DynamicResource LauncherTransparentBrush}"/>
         <Setter Property="BorderThickness" Value="0"/>
-        <Setter Property="Width" Value="28"/>
-        <Setter Property="Height" Value="28"/>
+        <Setter Property="Width" Value="{StaticResource LauncherSwatchSize}"/>
+        <Setter Property="Height" Value="{StaticResource LauncherSwatchSize}"/>
         <Setter Property="Padding" Value="0"/>
         <Setter Property="CornerRadius" Value="{StaticResource LauncherRadiusSm}"/>
         <Setter Property="HorizontalContentAlignment" Value="Stretch"/>
@@ -999,7 +918,7 @@
         <Setter Property="BorderThickness" Value="1"/>
         <Setter Property="Foreground" Value="{DynamicResource LauncherTextPrimaryBrush}"/>
         <Setter Property="Padding" Value="12,8"/>
-        <Setter Property="MinHeight" Value="32"/>
+        <Setter Property="MinHeight" Value="{StaticResource LauncherChipHeight}"/>
         <Setter Property="CornerRadius" Value="{StaticResource LauncherRadiusSm}"/>
         <Setter Property="Margin" Value="0,0,8,8"/>
     </Style>

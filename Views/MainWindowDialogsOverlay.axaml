@@ -3,6 +3,7 @@
              xmlns:vm="using:Cafe.Launcher.Avalonia.ViewModels"
              xmlns:models="using:Cafe.Launcher.Avalonia.Models"
              xmlns:materialIcons="clr-namespace:Material.Icons.Avalonia;assembly=Material.Icons.Avalonia"
+             xmlns:controls="using:Cafe.Launcher.Avalonia.Controls"
              x:Class="Cafe.Launcher.Avalonia.Views.MainWindowDialogsOverlay"
              x:Name="DialogsRoot"
              x:DataType="vm:MainWindowViewModel">
@@ -48,8 +49,8 @@
                                             Command="{Binding ResourcePanel.SaveManualResourcePanelUidCommand}"
                                             IsEnabled="{Binding ResourcePanel.IsResourcePanelBusy, Converter={x:Static BoolConverters.Not}}">
                                         <StackPanel Classes="button-content">
-                                            <materialIcons:MaterialIcon Kind="ContentSave" Width="{StaticResource LauncherIconSm}" Height="{StaticResource LauncherIconSm}" Foreground="{DynamicResource LauncherOnAccentBrush}"/>
-                                            <TextBlock Text="{Binding Shell.I18n.ResourcePanelSaveUid}" VerticalAlignment="Center" Foreground="{DynamicResource LauncherOnAccentBrush}"/>
+                                            <materialIcons:MaterialIcon Kind="ContentSave" Width="{StaticResource LauncherIconSm}" Height="{StaticResource LauncherIconSm}"/>
+                                            <TextBlock Text="{Binding Shell.I18n.ResourcePanelSaveUid}"/>
                                         </StackPanel>
                                     </Button>
                                 </Grid>
@@ -88,20 +89,21 @@
                                 IsEnabled="{Binding ResourcePanel.IsResourcePanelBusy, Converter={x:Static BoolConverters.Not}}">
                             <StackPanel Classes="button-content">
                                 <materialIcons:MaterialIcon Kind="Refresh" Width="{StaticResource LauncherIconSm}" Height="{StaticResource LauncherIconSm}"/>
-                                <TextBlock Text="{Binding Shell.I18n.ResourcePanelRefresh}" VerticalAlignment="Center"/>
+                                <TextBlock Text="{Binding Shell.I18n.ResourcePanelRefresh}"/>
                             </StackPanel>
                         </Button>
                         <Button Classes="primary-action dialog-action" Command="{Binding ResourcePanel.SaveResourcePanelCommand}"
                                 IsEnabled="{Binding ResourcePanel.IsResourcePanelBusy, Converter={x:Static BoolConverters.Not}}">
                             <StackPanel Classes="button-content">
-                                <materialIcons:MaterialIcon Kind="ContentSave" Width="{StaticResource LauncherIconSm}" Height="{StaticResource LauncherIconSm}" Foreground="{DynamicResource LauncherOnAccentBrush}"/>
-                                <TextBlock Text="{Binding Shell.I18n.ResourcePanelSave}" VerticalAlignment="Center" Foreground="{DynamicResource LauncherOnAccentBrush}"/>
+                                <materialIcons:MaterialIcon Kind="ContentSave" Width="{StaticResource LauncherIconSm}" Height="{StaticResource LauncherIconSm}"/>
+                                <TextBlock Text="{Binding Shell.I18n.ResourcePanelSave}"/>
                             </StackPanel>
                         </Button>
                     </StackPanel>
                 </Grid>
             </Border>
         </Grid>
+
         <!-- Notice popup dialog -->
         <Grid IsVisible="{Binding Dialogs.IsNoticeDialogVisible}" Classes="dialog-overlay">
             <Border MaxWidth="540"
@@ -122,86 +124,41 @@
                     <Button Grid.Row="2" Classes="primary-action dialog-action" Command="{Binding Dialogs.DismissNoticeCommand}"
                             HorizontalAlignment="Center">
                         <StackPanel Classes="button-content" HorizontalAlignment="Center">
-                            <TextBlock Text="{Binding Dialogs.NoticeDialogConfirmText}" VerticalAlignment="Center" Foreground="{DynamicResource LauncherOnAccentBrush}"/>
+                            <TextBlock Text="{Binding Dialogs.NoticeDialogConfirmText}"/>
                         </StackPanel>
                     </Button>
                 </Grid>
             </Border>
         </Grid>
+
         <!-- Repair confirmation dialog -->
-        <Grid IsVisible="{Binding Dialogs.IsRepairConfirmVisible}" Classes="dialog-overlay">
-            <Border Classes="dialog confirm-panel">
-                <Grid RowDefinitions="Auto,Auto,Auto" Classes="confirm-layout">
-                    <Grid Classes="dialog-heading" ColumnDefinitions="Auto,*,Auto">
-                        <Border Classes="dialog-icon" VerticalAlignment="Center">
-                            <materialIcons:MaterialIcon Kind="Tools" Width="{StaticResource LauncherIconXl}" Height="{StaticResource LauncherIconXl}" Foreground="{DynamicResource LauncherAccentBrush}" HorizontalAlignment="Center" VerticalAlignment="Center"/>
-                        </Border>
-                        <StackPanel Grid.Column="1" Classes="dialog-heading-copy">
-                            <TextBlock Text="{Binding Shell.I18n.RepairConfirm}" Classes="dialog-title"/>
-                            <TextBlock Text="{Binding Shell.I18n.RepairConfirmDescription}" Classes="caption"/>
-                        </StackPanel>
-                        <Button Grid.Column="2" Classes="dialog-close" Command="{Binding Dialogs.CancelRepairCommand}" ToolTip.Tip="{Binding Shell.I18n.Close}"
-                                AutomationProperties.Name="{Binding Shell.I18n.Close}">
-                            <materialIcons:MaterialIcon Kind="Close" Width="{StaticResource LauncherIconMd}" Height="{StaticResource LauncherIconMd}"/>
-                        </Button>
-                    </Grid>
-                    <Border Grid.Row="1" Classes="confirm-message" Background="{DynamicResource LauncherWarningBackgroundBrush}">
-                        <TextBlock Text="{Binding Dialogs.RepairConfirmText}" Classes="confirm-message-text"/>
-                    </Border>
-                    <StackPanel Grid.Row="2" Classes="confirm-actions">
-                        <Button Classes="flat-action dialog-action" Command="{Binding Dialogs.CancelRepairCommand}">
-                            <StackPanel Classes="button-content">
-                                <materialIcons:MaterialIcon Kind="CloseCircle" Width="{StaticResource LauncherIconSm}" Height="{StaticResource LauncherIconSm}"/>
-                                <TextBlock Text="{Binding Shell.I18n.Cancel}" VerticalAlignment="Center"/>
-                            </StackPanel>
-                        </Button>
-                        <Button Classes="primary-action dialog-action" Command="{Binding Dialogs.ConfirmRepairCommand}">
-                            <StackPanel Classes="button-content">
-                                <materialIcons:MaterialIcon Kind="Tools" Width="{StaticResource LauncherIconSm}" Height="{StaticResource LauncherIconSm}" Foreground="{DynamicResource LauncherOnAccentBrush}"/>
-                                <TextBlock Text="{Binding Shell.I18n.Repair}" VerticalAlignment="Center" Foreground="{DynamicResource LauncherOnAccentBrush}"/>
-                            </StackPanel>
-                        </Button>
-                    </StackPanel>
-                </Grid>
-            </Border>
-        </Grid>
+        <controls:ConfirmDialog IsOpen="{Binding Dialogs.IsRepairConfirmVisible}"
+                                Title="{Binding Shell.I18n.RepairConfirm}"
+                                Description="{Binding Shell.I18n.RepairConfirmDescription}"
+                                IconKind="Tools"
+                                Message="{Binding Dialogs.RepairConfirmText}"
+                                MessageBackground="{DynamicResource LauncherWarningBackgroundBrush}"
+                                CancelText="{Binding Shell.I18n.Cancel}"
+                                CancelCommand="{Binding Dialogs.CancelRepairCommand}"
+                                ConfirmText="{Binding Shell.I18n.Repair}"
+                                ConfirmCommand="{Binding Dialogs.ConfirmRepairCommand}"
+                                ConfirmIconKind="Tools"
+                                CloseToolTip="{Binding Shell.I18n.Close}"/>
+
         <!-- Resource Panel source confirmation dialog -->
-        <Grid IsVisible="{Binding Dialogs.IsResourcePanelSourceConfirmVisible}" Classes="dialog-overlay">
-            <Border Classes="dialog confirm-panel">
-                <Grid RowDefinitions="Auto,Auto,Auto" Classes="confirm-layout">
-                    <Grid Classes="dialog-heading" ColumnDefinitions="Auto,*,Auto">
-                        <Border Classes="dialog-icon" VerticalAlignment="Center">
-                            <materialIcons:MaterialIcon Kind="Web" Width="{StaticResource LauncherIconXl}" Height="{StaticResource LauncherIconXl}" Foreground="{DynamicResource LauncherAccentBrush}" HorizontalAlignment="Center" VerticalAlignment="Center"/>
-                        </Border>
-                        <StackPanel Grid.Column="1" Classes="dialog-heading-copy">
-                            <TextBlock Text="{Binding Shell.I18n.ResourcePanelCafeOnlyTitle}" Classes="dialog-title"/>
-                            <TextBlock Text="{Binding Shell.I18n.ResourcePanelCafeOnlyDescription}" Classes="caption"/>
-                        </StackPanel>
-                        <Button Grid.Column="2" Classes="dialog-close" Command="{Binding Dialogs.CancelResourcePanelSourceSwitchCommand}" ToolTip.Tip="{Binding Shell.I18n.Close}"
-                                AutomationProperties.Name="{Binding Shell.I18n.Close}">
-                            <materialIcons:MaterialIcon Kind="Close" Width="{StaticResource LauncherIconMd}" Height="{StaticResource LauncherIconMd}"/>
-                        </Button>
-                    </Grid>
-                    <Border Grid.Row="1" Classes="confirm-message" Background="{DynamicResource LauncherWarningBackgroundBrush}">
-                        <TextBlock Text="{Binding Dialogs.ResourcePanelSourceConfirmText}" Classes="confirm-message-text"/>
-                    </Border>
-                    <StackPanel Grid.Row="2" Classes="confirm-actions">
-                        <Button Classes="flat-action dialog-action" Command="{Binding Dialogs.CancelResourcePanelSourceSwitchCommand}">
-                            <StackPanel Classes="button-content">
-                                <materialIcons:MaterialIcon Kind="CloseCircle" Width="{StaticResource LauncherIconSm}" Height="{StaticResource LauncherIconSm}"/>
-                                <TextBlock Text="{Binding Shell.I18n.Cancel}" VerticalAlignment="Center"/>
-                            </StackPanel>
-                        </Button>
-                        <Button Classes="primary-action dialog-action" Command="{Binding Dialogs.ConfirmResourcePanelSourceSwitchCommand}">
-                            <StackPanel Classes="button-content">
-                                <materialIcons:MaterialIcon Kind="SwapHorizontal" Width="{StaticResource LauncherIconSm}" Height="{StaticResource LauncherIconSm}" Foreground="{DynamicResource LauncherOnAccentBrush}"/>
-                                <TextBlock Text="{Binding Shell.I18n.ResourcePanelCafeOnlySwitch}" VerticalAlignment="Center" Foreground="{DynamicResource LauncherOnAccentBrush}"/>
-                            </StackPanel>
-                        </Button>
-                    </StackPanel>
-                </Grid>
-            </Border>
-        </Grid>
+        <controls:ConfirmDialog IsOpen="{Binding Dialogs.IsResourcePanelSourceConfirmVisible}"
+                                Title="{Binding Shell.I18n.ResourcePanelCafeOnlyTitle}"
+                                Description="{Binding Shell.I18n.ResourcePanelCafeOnlyDescription}"
+                                IconKind="Web"
+                                Message="{Binding Dialogs.ResourcePanelSourceConfirmText}"
+                                MessageBackground="{DynamicResource LauncherWarningBackgroundBrush}"
+                                CancelText="{Binding Shell.I18n.Cancel}"
+                                CancelCommand="{Binding Dialogs.CancelResourcePanelSourceSwitchCommand}"
+                                ConfirmText="{Binding Shell.I18n.ResourcePanelCafeOnlySwitch}"
+                                ConfirmCommand="{Binding Dialogs.ConfirmResourcePanelSourceSwitchCommand}"
+                                ConfirmIconKind="SwapHorizontal"
+                                CloseToolTip="{Binding Shell.I18n.Close}"/>
+
         <!-- Update available dialog -->
         <Grid IsVisible="{Binding Dialogs.IsUpdateAvailableVisible}" Classes="dialog-overlay">
             <Border Classes="dialog confirm-panel" MaxWidth="620">
@@ -277,168 +234,83 @@
                         <Button Classes="flat-action dialog-action" Command="{Binding Dialogs.CancelUpdateAvailableCommand}">
                             <StackPanel Classes="button-content">
                                 <materialIcons:MaterialIcon Kind="ClockOutline" Width="{StaticResource LauncherIconSm}" Height="{StaticResource LauncherIconSm}"/>
-                                <TextBlock Text="{Binding Shell.I18n.LauncherUpdateLater}" VerticalAlignment="Center"/>
+                                <TextBlock Text="{Binding Shell.I18n.LauncherUpdateLater}"/>
                             </StackPanel>
                         </Button>
                         <Button Classes="primary-action dialog-action"
                                 Command="{Binding Dialogs.ConfirmUpdateAvailableCommand}"
                                 IsEnabled="{Binding Dialogs.HasSelectedUpdateFile}">
                             <StackPanel Classes="button-content">
-                                <materialIcons:MaterialIcon Kind="Download" Width="{StaticResource LauncherIconSm}" Height="{StaticResource LauncherIconSm}" Foreground="{DynamicResource LauncherOnAccentBrush}"/>
-                                <TextBlock Text="{Binding Shell.I18n.LauncherUpdateDownload}" VerticalAlignment="Center" Foreground="{DynamicResource LauncherOnAccentBrush}"/>
+                                <materialIcons:MaterialIcon Kind="Download" Width="{StaticResource LauncherIconSm}" Height="{StaticResource LauncherIconSm}"/>
+                                <TextBlock Text="{Binding Shell.I18n.LauncherUpdateDownload}"/>
                             </StackPanel>
                         </Button>
                     </StackPanel>
                 </Grid>
             </Border>
         </Grid>
-        <!-- I4: Stop download confirmation dialog -->
-        <Grid IsVisible="{Binding Dialogs.IsStopConfirmVisible}" Classes="dialog-overlay">
-            <Border Classes="dialog confirm-panel">
-                <Grid RowDefinitions="Auto,Auto,Auto" Classes="confirm-layout">
-                    <Grid Classes="dialog-heading" ColumnDefinitions="Auto,*,Auto">
-                        <Border Classes="dialog-icon" VerticalAlignment="Center">
-                            <materialIcons:MaterialIcon Kind="Stop" Width="{StaticResource LauncherIconXl}" Height="{StaticResource LauncherIconXl}" Foreground="{DynamicResource LauncherAccentBrush}" HorizontalAlignment="Center" VerticalAlignment="Center"/>
-                        </Border>
-                        <StackPanel Grid.Column="1" Classes="dialog-heading-copy">
-                            <TextBlock Text="{Binding Shell.I18n.StopDownloadTitle}" Classes="dialog-title"/>
-                            <TextBlock Text="{Binding Shell.I18n.StopDownloadMessage}" Classes="caption"/>
-                        </StackPanel>
-                        <Button Grid.Column="2" Classes="dialog-close" Command="{Binding Dialogs.CancelStopCommand}" ToolTip.Tip="{Binding Shell.I18n.Close}"
-                                AutomationProperties.Name="{Binding Shell.I18n.Close}">
-                            <materialIcons:MaterialIcon Kind="Close" Width="{StaticResource LauncherIconMd}" Height="{StaticResource LauncherIconMd}"/>
-                        </Button>
-                    </Grid>
-                    <Border Grid.Row="1" Classes="confirm-message" Background="{DynamicResource LauncherWarningBackgroundBrush}">
-                        <TextBlock Text="{Binding Dialogs.StopConfirmText}" Classes="confirm-message-text"/>
-                    </Border>
-                    <StackPanel Grid.Row="2" Classes="confirm-actions">
-                        <Button Classes="flat-action dialog-action" Command="{Binding Dialogs.CancelStopCommand}">
-                            <StackPanel Classes="button-content">
-                                <materialIcons:MaterialIcon Kind="CloseCircle" Width="{StaticResource LauncherIconSm}" Height="{StaticResource LauncherIconSm}"/>
-                                <TextBlock Text="{Binding Shell.I18n.Cancel}" VerticalAlignment="Center"/>
-                            </StackPanel>
-                        </Button>
-                        <Button Classes="danger-action dialog-action" Command="{Binding Dialogs.ConfirmStopCommand}">
-                            <StackPanel Classes="button-content">
-                                <materialIcons:MaterialIcon Kind="Stop" Width="{StaticResource LauncherIconSm}" Height="{StaticResource LauncherIconSm}" Foreground="{DynamicResource LauncherOnAccentBrush}"/>
-                                <TextBlock Text="{Binding Shell.I18n.Stop}" VerticalAlignment="Center" Foreground="{DynamicResource LauncherOnAccentBrush}"/>
-                            </StackPanel>
-                        </Button>
-                    </StackPanel>
-                </Grid>
-            </Border>
-        </Grid>
-        <!-- I9: Download running close confirmation dialog -->
-        <Grid IsVisible="{Binding Dialogs.IsDownloadRunningCloseConfirmVisible}" Classes="dialog-overlay">
-            <Border Classes="dialog confirm-panel">
-                <Grid RowDefinitions="Auto,Auto,Auto" Classes="confirm-layout">
-                    <Grid Classes="dialog-heading" ColumnDefinitions="Auto,*,Auto">
-                        <Border Classes="dialog-icon" VerticalAlignment="Center">
-                            <materialIcons:MaterialIcon Kind="Stop" Width="{StaticResource LauncherIconXl}" Height="{StaticResource LauncherIconXl}" Foreground="{DynamicResource LauncherAccentBrush}" HorizontalAlignment="Center" VerticalAlignment="Center"/>
-                        </Border>
-                        <StackPanel Grid.Column="1" Classes="dialog-heading-copy">
-                            <TextBlock Text="{Binding Shell.I18n.StopDownloadTitle}" Classes="dialog-title"/>
-                            <TextBlock Text="{Binding Shell.I18n.StopDownloadMessage}" Classes="caption"/>
-                        </StackPanel>
-                        <Button Grid.Column="2" Classes="dialog-close" Command="{Binding Dialogs.CancelCloseWhileDownloadingCommand}" ToolTip.Tip="{Binding Shell.I18n.Close}"
-                                AutomationProperties.Name="{Binding Shell.I18n.Close}">
-                            <materialIcons:MaterialIcon Kind="Close" Width="{StaticResource LauncherIconMd}" Height="{StaticResource LauncherIconMd}"/>
-                        </Button>
-                    </Grid>
-                    <Border Grid.Row="1" Classes="confirm-message" Background="{DynamicResource LauncherWarningBackgroundBrush}">
-                        <TextBlock Text="{Binding Dialogs.DownloadRunningCloseConfirmText}" Classes="confirm-message-text"/>
-                    </Border>
-                    <StackPanel Grid.Row="2" Classes="confirm-actions">
-                        <Button Classes="flat-action dialog-action" Command="{Binding Dialogs.CancelCloseWhileDownloadingCommand}">
-                            <StackPanel Classes="button-content">
-                                <materialIcons:MaterialIcon Kind="CloseCircle" Width="{StaticResource LauncherIconSm}" Height="{StaticResource LauncherIconSm}"/>
-                                <TextBlock Text="{Binding Shell.I18n.Cancel}" VerticalAlignment="Center"/>
-                            </StackPanel>
-                        </Button>
-                        <Button Classes="danger-action dialog-action" Command="{Binding Dialogs.ConfirmCloseWhileDownloadingCommand}">
-                            <StackPanel Classes="button-content">
-                                <materialIcons:MaterialIcon Kind="Stop" Width="{StaticResource LauncherIconSm}" Height="{StaticResource LauncherIconSm}" Foreground="{DynamicResource LauncherOnAccentBrush}"/>
-                                <TextBlock Text="{Binding Shell.I18n.Stop}" VerticalAlignment="Center" Foreground="{DynamicResource LauncherOnAccentBrush}"/>
-                            </StackPanel>
-                        </Button>
-                    </StackPanel>
-                </Grid>
-            </Border>
-        </Grid>
-        <Grid IsVisible="{Binding Dialogs.IsUninstallConfirmVisible}" Classes="dialog-overlay">
-            <Border Classes="dialog confirm-panel">
-                <Grid RowDefinitions="Auto,Auto,Auto" Classes="confirm-layout">
-                    <Grid Classes="dialog-heading" ColumnDefinitions="Auto,*,Auto">
-                        <Border Classes="dialog-icon danger" VerticalAlignment="Center">
-                            <materialIcons:MaterialIcon Kind="AlertCircle" Width="{StaticResource LauncherIconXl}" Height="{StaticResource LauncherIconXl}" Foreground="{DynamicResource LauncherDangerBrush}" HorizontalAlignment="Center" VerticalAlignment="Center"/>
-                        </Border>
-                        <StackPanel Grid.Column="1" Classes="dialog-heading-copy">
-                            <TextBlock Text="{Binding Shell.I18n.ConfirmUninstall}" Classes="dialog-title"/>
-                            <TextBlock Text="{Binding Shell.I18n.UninstallConfirmDescription}" Classes="caption"/>
-                        </StackPanel>
-                        <Button Grid.Column="2" Classes="dialog-close" Command="{Binding Dialogs.CancelUninstallCommand}" ToolTip.Tip="{Binding Shell.I18n.Close}"
-                                AutomationProperties.Name="{Binding Shell.I18n.Close}">
-                            <materialIcons:MaterialIcon Kind="Close" Width="{StaticResource LauncherIconMd}" Height="{StaticResource LauncherIconMd}"/>
-                        </Button>
-                    </Grid>
-                    <Border Grid.Row="1" Classes="confirm-message" Background="{DynamicResource LauncherDangerSoftBrush}">
-                        <TextBlock Text="{Binding Dialogs.UninstallConfirmText}" Classes="confirm-message-text"/>
-                    </Border>
-                    <StackPanel Grid.Row="2" Classes="confirm-actions">
-                        <Button Classes="flat-action dialog-action" Command="{Binding Dialogs.CancelUninstallCommand}">
-                            <StackPanel Classes="button-content">
-                                <materialIcons:MaterialIcon Kind="CloseCircle" Width="{StaticResource LauncherIconSm}" Height="{StaticResource LauncherIconSm}"/>
-                                <TextBlock Text="{Binding Shell.I18n.Cancel}" VerticalAlignment="Center"/>
-                            </StackPanel>
-                        </Button>
-                        <Button Classes="danger-action dialog-action" Command="{Binding Dialogs.ConfirmUninstallCommand}">
-                            <StackPanel Classes="button-content">
-                                <materialIcons:MaterialIcon Kind="TrashCanOutline" Width="{StaticResource LauncherIconSm}" Height="{StaticResource LauncherIconSm}" Foreground="{DynamicResource LauncherOnAccentBrush}"/>
-                                <TextBlock Text="{Binding Shell.I18n.Uninstall}" VerticalAlignment="Center"/>
-                            </StackPanel>
-                        </Button>
-                    </StackPanel>
-                </Grid>
-            </Border>
-        </Grid>
-        <!-- M4: Unsaved changes confirmation dialog -->
-        <Grid IsVisible="{Binding Settings.IsUnsavedChangesVisible}" Classes="dialog-overlay">
-            <Border Classes="dialog confirm-panel">
-                <Grid RowDefinitions="Auto,Auto,Auto" Classes="confirm-layout">
-                    <Grid Classes="dialog-heading" ColumnDefinitions="Auto,*,Auto">
-                        <Border Classes="dialog-icon" VerticalAlignment="Center">
-                            <materialIcons:MaterialIcon Kind="AlertCircle" Width="{StaticResource LauncherIconXl}" Height="{StaticResource LauncherIconXl}" Foreground="{DynamicResource LauncherAccentBrush}" HorizontalAlignment="Center" VerticalAlignment="Center"/>
-                        </Border>
-                        <StackPanel Grid.Column="1" Classes="dialog-heading-copy">
-                            <TextBlock Text="{Binding Shell.I18n.UnsavedChanges}" Classes="dialog-title"/>
-                            <TextBlock Text="{Binding Shell.I18n.UnsavedChangesMessage}" Classes="caption"/>
-                        </StackPanel>
-                        <Button Grid.Column="2" Classes="dialog-close" Command="{Binding WindowChrome.KeepEditingSettingsCommand}" ToolTip.Tip="{Binding Shell.I18n.Close}"
-                                AutomationProperties.Name="{Binding Shell.I18n.Close}">
-                            <materialIcons:MaterialIcon Kind="Close" Width="{StaticResource LauncherIconMd}" Height="{StaticResource LauncherIconMd}"/>
-                        </Button>
-                    </Grid>
-                    <Border Grid.Row="1" Classes="confirm-message" Background="{DynamicResource LauncherWarningBackgroundBrush}">
-                        <TextBlock Text="{Binding Shell.I18n.UnsavedChangesMessage}" Classes="confirm-message-text"/>
-                    </Border>
-                    <StackPanel Grid.Row="2" Classes="confirm-actions">
-                        <Button Classes="flat-action dialog-action" Command="{Binding WindowChrome.KeepEditingSettingsCommand}">
-                            <StackPanel Classes="button-content">
-                                <materialIcons:MaterialIcon Kind="Pencil" Width="{StaticResource LauncherIconSm}" Height="{StaticResource LauncherIconSm}"/>
-                                <TextBlock Text="{Binding Shell.I18n.KeepEditing}" VerticalAlignment="Center"/>
-                            </StackPanel>
-                        </Button>
-                        <Button Classes="danger-action dialog-action" Command="{Binding WindowChrome.DiscardSettingsChangesCommand}">
-                            <StackPanel Classes="button-content">
-                                <materialIcons:MaterialIcon Kind="DeleteOutline" Width="{StaticResource LauncherIconSm}" Height="{StaticResource LauncherIconSm}" Foreground="{DynamicResource LauncherOnAccentBrush}"/>
-                                <TextBlock Text="{Binding Shell.I18n.DiscardChanges}" VerticalAlignment="Center" Foreground="{DynamicResource LauncherOnAccentBrush}"/>
-                            </StackPanel>
-                        </Button>
-                    </StackPanel>
-                </Grid>
-            </Border>
-        </Grid>
+
+        <!-- Stop download confirmation dialog -->
+        <controls:ConfirmDialog IsOpen="{Binding Dialogs.IsStopConfirmVisible}"
+                                Title="{Binding Shell.I18n.StopDownloadTitle}"
+                                Description="{Binding Shell.I18n.StopDownloadMessage}"
+                                IconKind="Stop"
+                                Message="{Binding Dialogs.StopConfirmText}"
+                                MessageBackground="{DynamicResource LauncherWarningBackgroundBrush}"
+                                CancelText="{Binding Shell.I18n.Cancel}"
+                                CancelCommand="{Binding Dialogs.CancelStopCommand}"
+                                ConfirmText="{Binding Shell.I18n.Stop}"
+                                ConfirmCommand="{Binding Dialogs.ConfirmStopCommand}"
+                                ConfirmIconKind="Stop"
+                                IsDangerConfirm="True"
+                                CloseToolTip="{Binding Shell.I18n.Close}"/>
+
+        <!-- Download running close confirmation dialog -->
+        <controls:ConfirmDialog IsOpen="{Binding Dialogs.IsDownloadRunningCloseConfirmVisible}"
+                                Title="{Binding Shell.I18n.StopDownloadTitle}"
+                                Description="{Binding Shell.I18n.StopDownloadMessage}"
+                                IconKind="Stop"
+                                Message="{Binding Dialogs.DownloadRunningCloseConfirmText}"
+                                MessageBackground="{DynamicResource LauncherWarningBackgroundBrush}"
+                                CancelText="{Binding Shell.I18n.Cancel}"
+                                CancelCommand="{Binding Dialogs.CancelCloseWhileDownloadingCommand}"
+                                ConfirmText="{Binding Shell.I18n.Stop}"
+                                ConfirmCommand="{Binding Dialogs.ConfirmCloseWhileDownloadingCommand}"
+                                ConfirmIconKind="Stop"
+                                IsDangerConfirm="True"
+                                CloseToolTip="{Binding Shell.I18n.Close}"/>
+
+        <!-- Uninstall confirmation dialog -->
+        <controls:ConfirmDialog IsOpen="{Binding Dialogs.IsUninstallConfirmVisible}"
+                                Title="{Binding Shell.I18n.ConfirmUninstall}"
+                                Description="{Binding Shell.I18n.UninstallConfirmDescription}"
+                                IconKind="AlertCircle"
+                                IsDangerIcon="True"
+                                Message="{Binding Dialogs.UninstallConfirmText}"
+                                MessageBackground="{DynamicResource LauncherDangerSoftBrush}"
+                                CancelText="{Binding Shell.I18n.Cancel}"
+                                CancelCommand="{Binding Dialogs.CancelUninstallCommand}"
+                                ConfirmText="{Binding Shell.I18n.Uninstall}"
+                                ConfirmCommand="{Binding Dialogs.ConfirmUninstallCommand}"
+                                ConfirmIconKind="TrashCanOutline"
+                                IsDangerConfirm="True"
+                                CloseToolTip="{Binding Shell.I18n.Close}"/>
+
+        <!-- Unsaved changes confirmation dialog -->
+        <controls:ConfirmDialog IsOpen="{Binding Settings.IsUnsavedChangesVisible}"
+                                Title="{Binding Shell.I18n.UnsavedChanges}"
+                                Description="{Binding Shell.I18n.UnsavedChangesMessage}"
+                                IconKind="AlertCircle"
+                                Message="{Binding Shell.I18n.UnsavedChangesMessage}"
+                                MessageBackground="{DynamicResource LauncherWarningBackgroundBrush}"
+                                CancelText="{Binding Shell.I18n.KeepEditing}"
+                                CancelCommand="{Binding WindowChrome.KeepEditingSettingsCommand}"
+                                ConfirmText="{Binding Shell.I18n.DiscardChanges}"
+                                ConfirmCommand="{Binding WindowChrome.DiscardSettingsChangesCommand}"
+                                ConfirmIconKind="DeleteOutline"
+                                IsDangerConfirm="True"
+                                CloseToolTip="{Binding Shell.I18n.Close}"/>
+
         <!-- Crash recovery dialog (shown on startup after unclean shutdown) -->
         <Grid IsVisible="{Binding Dialogs.IsCrashRecoveryVisible}" Classes="dialog-overlay">
             <Border Classes="dialog confirm-panel" MaxWidth="460">
@@ -461,19 +333,19 @@
                         <Button Classes="flat-action dialog-action" Command="{Binding Dialogs.ViewCrashLogCommand}">
                             <StackPanel Classes="button-content">
                                 <materialIcons:MaterialIcon Kind="TextBoxOutline" Width="{StaticResource LauncherIconSm}" Height="{StaticResource LauncherIconSm}"/>
-                                <TextBlock Text="{Binding Shell.I18n.CrashRecoveryViewLog}" VerticalAlignment="Center"/>
+                                <TextBlock Text="{Binding Shell.I18n.CrashRecoveryViewLog}"/>
                             </StackPanel>
                         </Button>
                         <Button Classes="flat-action dialog-action" Command="{Binding Dialogs.ResetSettingsAfterCrashCommand}">
                             <StackPanel Classes="button-content">
                                 <materialIcons:MaterialIcon Kind="CogRefreshOutline" Width="{StaticResource LauncherIconSm}" Height="{StaticResource LauncherIconSm}"/>
-                                <TextBlock Text="{Binding Shell.I18n.CrashRecoveryResetSettings}" VerticalAlignment="Center"/>
+                                <TextBlock Text="{Binding Shell.I18n.CrashRecoveryResetSettings}"/>
                             </StackPanel>
                         </Button>
                         <Button Classes="primary-action dialog-action" Command="{Binding Dialogs.ContinueAfterCrashCommand}">
                             <StackPanel Classes="button-content">
-                                <materialIcons:MaterialIcon Kind="Check" Width="{StaticResource LauncherIconSm}" Height="{StaticResource LauncherIconSm}" Foreground="{DynamicResource LauncherOnAccentBrush}"/>
-                                <TextBlock Text="{Binding Shell.I18n.CrashRecoveryContinue}" VerticalAlignment="Center" Foreground="{DynamicResource LauncherOnAccentBrush}"/>
+                                <materialIcons:MaterialIcon Kind="Check" Width="{StaticResource LauncherIconSm}" Height="{StaticResource LauncherIconSm}"/>
+                                <TextBlock Text="{Binding Shell.I18n.CrashRecoveryContinue}"/>
                             </StackPanel>
                         </Button>
                     </StackPanel>

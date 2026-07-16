@@ -94,5 +94,6 @@ public sealed class HttpClientFactory : IDisposable
         if (disposed) return;
         disposed = true;
         defaultHandler.Dispose();
+        GC.SuppressFinalize(this);
     }
 }
