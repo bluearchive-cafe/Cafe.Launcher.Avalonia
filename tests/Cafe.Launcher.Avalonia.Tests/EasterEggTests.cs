@@ -62,6 +62,17 @@ public sealed class EasterEggTests
         Assert.False(shell.RegisterLauncherVersionClick());
     }
 
+    [Fact]
+    public void PlayKuyashi_WhenPlaybackFails_DoesNotThrow()
+    {
+        var service = new EasterEggAudioService(
+            () => throw new InvalidOperationException("Audio device unavailable."));
+
+        var exception = Record.Exception(service.PlayKuyashi);
+
+        Assert.Null(exception);
+    }
+
     private static string ProjectFile(string relativePath)
     {
         var directory = new DirectoryInfo(AppContext.BaseDirectory);
