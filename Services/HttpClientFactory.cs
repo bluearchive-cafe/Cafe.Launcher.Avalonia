@@ -71,7 +71,7 @@ public sealed class HttpClientFactory : IDisposable
         CancellationToken cancellationToken = default)
     {
         ThrowIfDisposed();
-        if (proxyMode != ProxyModes.System)
+        if (proxyMode == ProxyModes.Direct)
         {
             var client = new HttpClient(defaultHandler, disposeHandler: false);
             if (baseAddress is not null) client.BaseAddress = baseAddress;

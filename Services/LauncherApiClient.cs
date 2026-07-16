@@ -207,7 +207,7 @@ public sealed class LauncherApiClient : IDisposable
                     static uri => new HttpRequestMessage(HttpMethod.Get, uri),
                     urlValidator,
                     cancellationToken,
-                    connectionUsesProxy: proxyMode == ProxyModes.System).ConfigureAwait(false);
+                    connectionUsesProxy: proxyMode != ProxyModes.Direct).ConfigureAwait(false);
                 response.EnsureSuccessStatusCode();
                 var manifest = await RemoteHttpRequestService.DeserializeJsonAsync<RemoteManifest>(
                     response, requestUri, jsonOptions, cancellationToken).ConfigureAwait(false);

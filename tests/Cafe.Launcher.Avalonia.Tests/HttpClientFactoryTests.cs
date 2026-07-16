@@ -70,6 +70,19 @@ public sealed class HttpClientFactoryTests
     }
 
     [Fact]
+    public async Task CreateLeaseAsync_WhenAutoMode_CreatesProxyAwareLease()
+    {
+        using var factory = new HttpClientFactory(new ProxySettingsService());
+
+        using var lease = await factory.CreateLeaseAsync(ProxyModes.Auto);
+
+        // Auto mode goes through the proxy-aware path (non-direct),
+        // so the lease should own a handler and the client should be usable.
+        Assert.NotNull(lease.Client);
+        Assert.Null(lease.Client.BaseAddress);
+    }
+
+    [Fact]
     public async Task CreateLeaseAsync_AfterFactoryIsDisposed_Throws()
     {
         var factory = new HttpClientFactory(new ProxySettingsService());

@@ -708,7 +708,8 @@ public sealed class GameDownloadService : IDisposable
         using var handler = new SocketsHttpHandler
         {
             AllowAutoRedirect = false,
-            UseProxy = proxyMode == ProxyModes.System,
+            AutomaticDecompression = DecompressionMethods.All,
+            UseProxy = proxyMode != ProxyModes.Direct,
             Proxy = proxy,
             PooledConnectionLifetime = TimeSpan.FromMinutes(15)
         };
@@ -775,7 +776,7 @@ public sealed class GameDownloadService : IDisposable
                             IsPaused = IsPaused
                         });
                     },
-                    proxyMode == ProxyModes.System,
+                    proxyMode != ProxyModes.Direct,
                     cancellationToken);
             }
             finally

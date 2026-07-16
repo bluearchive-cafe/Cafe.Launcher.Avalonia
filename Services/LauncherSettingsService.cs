@@ -162,9 +162,9 @@ public sealed class LauncherSettingsService
             settings.LaunchCheckMode = LaunchCheckModes.LocalManifest;
         }
 
-        if (settings.ProxyMode is not ProxyModes.Direct and not ProxyModes.System)
+        if (settings.ProxyMode is not ProxyModes.Direct and not ProxyModes.Auto and not ProxyModes.System)
         {
-            settings.ProxyMode = ProxyModes.Direct;
+            settings.ProxyMode = ProxyModes.Auto;
         }
 
         if (settings.CloseBehavior is not CloseBehaviors.Minimize and not CloseBehaviors.Exit)
@@ -263,6 +263,12 @@ public sealed class LauncherSettingsService
 
         settings.GamePath ??= "";
         settings.ResourcePanelUid = settings.ResourcePanelUid?.Trim() ?? "";
+        if (settings.ResourcePanelUidSource is not ResourcePanelUidSources.Auto
+            and not ResourcePanelUidSources.Custom)
+        {
+            settings.ResourcePanelUidSource = ResourcePanelUidSources.Auto;
+        }
+
         return settings;
     }
 
