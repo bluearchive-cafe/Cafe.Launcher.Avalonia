@@ -142,9 +142,9 @@ public sealed class LocalizationServiceTests
     }
 
     [Theory]
-    [InlineData(LauncherLanguages.English, "Remote Manifest", "Download Source", "Resource Panel")]
-    [InlineData(LauncherLanguages.SimplifiedChinese, "远程文件清单", "下载源", "资源面板")]
-    [InlineData(LauncherLanguages.Japanese, "リモートマニフェスト", "ダウンロードソース", "リソースパネル")]
+    [InlineData(LauncherLanguages.English, "Remote Manifest", "Download Source", "Chinese Localization Settings")]
+    [InlineData(LauncherLanguages.SimplifiedChinese, "远程文件清单", "下载源", "汉化管理")]
+    [InlineData(LauncherLanguages.Japanese, "リモートマニフェスト", "ダウンロードソース", "中国語化設定")]
     public void T_WhenCanonicalTermsRequested_ReturnsConsistentTerminology(
         string language,
         string expectedManifest,
@@ -157,6 +157,17 @@ public sealed class LocalizationServiceTests
         Assert.Equal(expectedManifest, service.T("launchCheckRemoteManifest"));
         Assert.Equal(expectedDownloadSource, service.T("downloadSource"));
         Assert.Equal(expectedResourcePanel, service.T("resourcePanel"));
+    }
+
+    [Fact]
+    public void T_WhenChineseLocalizationItemsRequested_ReturnsEstablishedTerminology()
+    {
+        var service = new LocalizationService();
+        service.SetLanguage(LauncherLanguages.SimplifiedChinese);
+
+        Assert.Equal("汉化", service.T("resourcePanelLocalizedVersion"));
+        Assert.Equal("主线中配", service.T("resourcePanelMainVoice"));
+        Assert.Equal("图像视频", service.T("resourcePanelMedia"));
     }
 
     [Theory]
