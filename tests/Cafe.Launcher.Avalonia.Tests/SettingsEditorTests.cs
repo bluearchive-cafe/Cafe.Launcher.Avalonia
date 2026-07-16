@@ -44,6 +44,18 @@ public sealed class SettingsEditorTests
     }
 
     [Fact]
+    public void CurrentPropertyChange_WhenRevertedToSavedValue_ClearsDirty()
+    {
+        var editor = new SettingsEditor();
+        editor.ApplySnapshot(new LauncherSettings { Language = LauncherLanguages.Auto });
+
+        editor.Current.Language = LauncherLanguages.Japanese;
+        editor.Current.Language = LauncherLanguages.Auto;
+
+        Assert.False(editor.IsDirty);
+    }
+
+    [Fact]
     public void ApplySnapshot_LoadsAllFields()
     {
         var editor = new SettingsEditor();

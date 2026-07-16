@@ -277,7 +277,7 @@ public sealed class InstallationOperationStateTests : IDisposable
         var result = await service.ValidateAsync(gamePath);
 
         Assert.False(result.Success);
-        Assert.Equal("uninstall-error", result.ErrorType);
+        Assert.Equal(GameOperationErrorCode.Uninstall, result.ErrorCode);
     }
 
     [Fact]
@@ -296,7 +296,7 @@ public sealed class InstallationOperationStateTests : IDisposable
 
         Assert.False(result.Success);
         Assert.Equal(localizer.F("gamePathProtected", protectedPath), result.Message);
-        Assert.Equal("uninstall-error", result.ErrorType);
+        Assert.Equal(GameOperationErrorCode.Uninstall, result.ErrorCode);
     }
 
     [Fact]
@@ -318,7 +318,7 @@ public sealed class InstallationOperationStateTests : IDisposable
 
             Assert.False(result.Success);
             Assert.Equal(localizer.F("gameDirectoryNameInvalid", "BlueArchive_JP"), result.Message);
-            Assert.Equal("uninstall-error", result.ErrorType);
+            Assert.Equal(GameOperationErrorCode.Uninstall, result.ErrorCode);
         }
         finally
         {
@@ -366,7 +366,7 @@ public sealed class InstallationOperationStateTests : IDisposable
 
             Assert.False(result.Success);
             Assert.Equal(localizer.F("gameConfigMetadataMissing", "game-launcher-config.json"), result.Message);
-            Assert.Equal("uninstall-error", result.ErrorType);
+            Assert.Equal(GameOperationErrorCode.Uninstall, result.ErrorCode);
         }
         finally
         {
@@ -443,7 +443,7 @@ public sealed class InstallationOperationStateTests : IDisposable
             _ => { });
 
         Assert.False(result.Success);
-        Assert.Equal("invalid-state", result.ErrorType);
+        Assert.Equal(GameOperationErrorCode.InvalidState, result.ErrorCode);
     }
 
     [Fact]
@@ -463,7 +463,7 @@ public sealed class InstallationOperationStateTests : IDisposable
             _ => { });
 
         Assert.False(result.Success);
-        Assert.Equal("invalid-state", result.ErrorType);
+        Assert.Equal(GameOperationErrorCode.InvalidState, result.ErrorCode);
     }
 
     public void Dispose()

@@ -46,8 +46,7 @@ public sealed class WindowChromeViewModelTests : IDisposable
     {
         using var context = CreateContext();
         context.Settings.ApplyLauncherSettings(
-            new LauncherSettings { Language = LauncherLanguages.Japanese },
-            "");
+            new LauncherSettings { Language = LauncherLanguages.Japanese });
 
         context.ViewModel.ShowSettingsCommand.Execute(null);
 
@@ -61,7 +60,7 @@ public sealed class WindowChromeViewModelTests : IDisposable
     public void ShowSettingsCommand_WhenDirty_ShowsUnsavedChangesInsteadOfClosing()
     {
         using var context = CreateContext();
-        context.Settings.ApplyLauncherSettings(new LauncherSettings(), "");
+        context.Settings.ApplyLauncherSettings(new LauncherSettings());
         context.ViewModel.ShowSettingsCommand.Execute(null);
         context.Settings.Editor.Current.Language = LauncherLanguages.Japanese;
 
@@ -75,7 +74,7 @@ public sealed class WindowChromeViewModelTests : IDisposable
     public async Task DiscardSettingsChangesCommand_DiscardsAndClosesSettings()
     {
         using var context = CreateContext();
-        context.Settings.ApplyLauncherSettings(new LauncherSettings(), "");
+        context.Settings.ApplyLauncherSettings(new LauncherSettings());
         context.ViewModel.ShowSettingsCommand.Execute(null);
         context.Settings.Editor.Current.Language = LauncherLanguages.Japanese;
 
@@ -201,13 +200,15 @@ public sealed class WindowChromeViewModelTests : IDisposable
         });
 
         viewModel.OpenOfficialSiteCommand.Execute(null);
+        viewModel.OpenHelpDocsCommand.Execute(null);
         viewModel.OpenGitHubRepositoryCommand.Execute(null);
         viewModel.OpenExternalUrl("mailto:support@example.invalid");
         viewModel.OpenDataDirectoryCommand.Execute(null);
 
         Assert.Equal(LauncherConstants.CafeWebsiteUrl, openedUrls[0]);
-        Assert.Equal(LauncherConstants.GitHubReleaseRepositoryUrl, openedUrls[1]);
-        Assert.Equal("mailto:support@example.invalid", openedUrls[2]);
+        Assert.Equal("https://docs.bluearchive.cafe/cafe-launcher/", openedUrls[1]);
+        Assert.Equal(LauncherConstants.GitHubReleaseRepositoryUrl, openedUrls[2]);
+        Assert.Equal("mailto:support@example.invalid", openedUrls[3]);
         Assert.Equal(
             Path.Combine(
                 Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData),

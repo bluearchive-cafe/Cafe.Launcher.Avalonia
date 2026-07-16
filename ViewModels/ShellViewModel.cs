@@ -215,7 +215,7 @@ public partial class ShellViewModel : ViewModelBase
         StatusIconKind = ResolveStatusIconKind(snapshot);
         CurrentViewTitle = status;
         StatusText = status;
-        PathText = localGame.GamePath;
+        PathText = snapshot.Settings.GamePath;
         VersionText = snapshot.RuntimeState != LauncherRuntimeState.NotInstalled
             ? localizer.F("versionInstalled", localConfig?.Version, gameConfig?.GameLatestVersion ?? localizer.T("unknown"))
             : localizer.F("versionLatest", gameConfig?.GameLatestVersion ?? localizer.T("unknown"));

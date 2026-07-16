@@ -30,14 +30,16 @@
                     <TextBlock Text="{Binding Message, ElementName=Root}" Classes="confirm-message-text"/>
                 </Border>
                 <StackPanel Grid.Row="2" Classes="confirm-actions">
-                    <Button Classes="flat-action dialog-action" Command="{Binding CancelCommand, ElementName=Root}">
+                    <Button Classes="flat-action dialog-action" Command="{Binding CancelCommand, ElementName=Root}"
+                            AutomationProperties.Name="{Binding CancelText, ElementName=Root}">
                         <StackPanel Classes="button-content">
                             <materialIcons:MaterialIcon Kind="CloseCircle" Width="{StaticResource LauncherIconSm}" Height="{StaticResource LauncherIconSm}"/>
                             <TextBlock Text="{Binding CancelText, ElementName=Root}"/>
                         </StackPanel>
                     </Button>
                     <Button Classes="primary-action dialog-action" Command="{Binding ConfirmCommand, ElementName=Root}"
-                            IsVisible="{Binding !IsDangerConfirm, ElementName=Root}">
+                            IsVisible="{Binding !IsDangerConfirm, ElementName=Root}"
+                            AutomationProperties.Name="{Binding ConfirmText, ElementName=Root}">
                         <StackPanel Classes="button-content">
                             <materialIcons:MaterialIcon Kind="{Binding ConfirmIconKind, ElementName=Root}"
                                                         Width="{StaticResource LauncherIconSm}" Height="{StaticResource LauncherIconSm}"/>
@@ -45,7 +47,8 @@
                         </StackPanel>
                     </Button>
                     <Button Classes="danger-action dialog-action" Command="{Binding ConfirmCommand, ElementName=Root}"
-                            IsVisible="{Binding IsDangerConfirm, ElementName=Root}">
+                            IsVisible="{Binding IsDangerConfirm, ElementName=Root}"
+                            AutomationProperties.Name="{Binding ConfirmText, ElementName=Root}">
                         <StackPanel Classes="button-content">
                             <materialIcons:MaterialIcon Kind="{Binding ConfirmIconKind, ElementName=Root}"
                                                         Width="{StaticResource LauncherIconSm}" Height="{StaticResource LauncherIconSm}"/>

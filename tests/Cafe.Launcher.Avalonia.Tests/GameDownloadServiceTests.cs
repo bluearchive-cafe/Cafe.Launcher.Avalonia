@@ -517,7 +517,8 @@ public sealed class GameDownloadServiceTests
         Assert.Contains(
             installationState.Manifest?.Files ?? [],
             file => file.Path == "data/file.bin" && file.Hash == expectedHash);
-        Assert.Contains(progress, item => item.Stage == "download-done" && item.Progress == 100);
+        Assert.Contains(progress, item =>
+            item.Stage == GameOperationStage.DownloadCompleted && item.Progress == 100);
         Assert.False(File.Exists(statePath));
         Directory.Delete(tempDir, recursive: true);
     }
@@ -590,10 +591,10 @@ public sealed class GameDownloadServiceTests
         var result = await operation.WaitAsync(TimeSpan.FromSeconds(2));
 
         Assert.False(result.Success);
-        Assert.Equal("stopped", result.ErrorType);
+        Assert.Equal(GameOperationErrorCode.Stopped, result.ErrorCode);
         Assert.False(service.IsRunning);
         Assert.False(service.IsPaused);
-        Assert.Contains(progress, item => item.Stage == "stopped");
+        Assert.Contains(progress, item => item.Stage == GameOperationStage.Stopped);
         Assert.Equal(expectedStateFileExists, File.Exists(statePath));
         Directory.Delete(tempDir, recursive: true);
     }
@@ -624,7 +625,7 @@ public sealed class GameDownloadServiceTests
         var result = await service.InstallOrUpdateAsync(snapshot, _ => { });
 
         Assert.False(result.Success);
-        Assert.Equal("game-download-error-no-space", result.ErrorType);
+        Assert.Equal(GameOperationErrorCode.InsufficientDiskSpace, result.ErrorCode);
         Assert.Equal(1, result.AffectedFileCount);
         Assert.Equal(0, downloader.InvocationCount);
         Directory.Delete(tempDir, recursive: true);
@@ -698,7 +699,7 @@ public sealed class GameDownloadServiceTests
         Assert.Equal(expectedSuccess, result.Success);
         Assert.Equal(1, readCount);
         Assert.Contains(progress, item =>
-            item.Stage == "disk-check"
+            item.Stage == GameOperationStage.DiskCheck
             && item.RequiredDiskBytes == 10
             && item.AvailableDiskBytes == availableBytes);
         if (!expectedSuccess)
@@ -845,17 +846,17 @@ public sealed class GameDownloadServiceTests
         var result = await service.InstallOrUpdateAsync(snapshot, progress.Add);
 
         Assert.False(result.Success);
-        Assert.Equal("game-download-error-network-down", result.ErrorType);
+        Assert.Equal(GameOperationErrorCode.Network, result.ErrorCode);
         Assert.Equal(1, result.FailedFileCount);
         Assert.Equal(4, downloader.InvocationCount);
         Assert.Equal(
             [(1, 3, 1), (2, 3, 1), (3, 3, 1)],
             progress
-                .Where(item => item.Stage == "verification-retry")
+                .Where(item => item.Stage == GameOperationStage.VerificationRetry)
                 .Select(item => (item.RetryAttempt, item.RetryLimit, item.FailedFileCount))
                 .ToArray());
         Assert.Contains(progress, item =>
-            item.Stage == "verification-failed"
+            item.Stage == GameOperationStage.VerificationFailed
             && item.FailedFileCount == 1);
         Assert.False(File.Exists(Path.Combine(gamePath, "data", "file.bin.tmp")));
         Assert.False(File.Exists(Path.Combine(gamePath, "data", "file.bin")));

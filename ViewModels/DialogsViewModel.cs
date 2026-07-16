@@ -5,6 +5,8 @@ using System.Security.Cryptography;
 using System.Threading;
 using System.Threading.Tasks;
 using Avalonia.Threading;
+using Cafe.Launcher.Avalonia.Features.Shell;
+using Cafe.Launcher.Avalonia.Helpers;
 using Cafe.Launcher.Avalonia.Models;
 using Cafe.Launcher.Avalonia.Services;
 using CommunityToolkit.Mvvm.ComponentModel;
@@ -12,7 +14,7 @@ using CommunityToolkit.Mvvm.Input;
 
 namespace Cafe.Launcher.Avalonia.ViewModels;
 
-public partial class DialogsViewModel : ViewModelBase
+public partial class DialogsViewModel : ViewModelBase, IModalContentViewModel
 {
     private readonly LocalizationService localizer;
     private readonly NoticeStateService noticeStateService;
@@ -64,12 +66,34 @@ public partial class DialogsViewModel : ViewModelBase
     [ObservableProperty]
     private bool isSetupWizardVisible;
 
+    [ObservableProperty]
+    private bool isSetupWizardExitConfirmVisible;
+
     public IReadOnlyList<LanguageOption> LanguageOptions { get; } = LocalizationService.GetLanguageOptions();
 
     public void ShowSetupWizard()
     {
         System.Diagnostics.Debug.WriteLine("DIALOGS: ShowSetupWizard called, setting IsSetupWizardVisible=true");
         IsSetupWizardVisible = true;
+    }
+
+    [RelayCommand]
+    private void RequestSetupWizardExit()
+    {
+        IsSetupWizardExitConfirmVisible = true;
+    }
+
+    [RelayCommand]
+    private void CancelSetupWizardExit()
+    {
+        IsSetupWizardExitConfirmVisible = false;
+    }
+
+    [RelayCommand]
+    private async Task ConfirmSetupWizardExitAsync()
+    {
+        IsSetupWizardExitConfirmVisible = false;
+        await SetupWizard.SkipCommand.ExecuteAsync(null);
     }
 
     public event Action? CrashRecoveryContinueRequested;
@@ -92,9 +116,7 @@ public partial class DialogsViewModel : ViewModelBase
     [RelayCommand]
     private async Task ResetSettingsAfterCrashAsync()
     {
-        var handler = CrashRecoveryResetSettingsRequested;
-        if (handler is not null)
-            await handler();
+        await AsyncEvent.InvokeSequentiallyAsync(CrashRecoveryResetSettingsRequested);
         IsCrashRecoveryVisible = false;
     }
 
@@ -219,10 +241,7 @@ public partial class DialogsViewModel : ViewModelBase
     private async Task ConfirmRepairAsync()
     {
         IsRepairConfirmVisible = false;
-        if (ConfirmRepairRequested is not null)
-        {
-            await ConfirmRepairRequested.Invoke();
-        }
+        await AsyncEvent.InvokeSequentiallyAsync(ConfirmRepairRequested);
     }
 
     public void ShowResourcePanelSourceConfirm(string text)
@@ -253,10 +272,7 @@ public partial class DialogsViewModel : ViewModelBase
     [RelayCommand]
     private async Task ConfirmUninstallAsync()
     {
-        if (ConfirmUninstallRequested is not null)
-        {
-            await ConfirmUninstallRequested.Invoke();
-        }
+        await AsyncEvent.InvokeSequentiallyAsync(ConfirmUninstallRequested);
     }
 
     [RelayCommand]

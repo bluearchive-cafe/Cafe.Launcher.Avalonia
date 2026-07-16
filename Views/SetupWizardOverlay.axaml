@@ -27,7 +27,7 @@
                     </StackPanel>
                     <Button Grid.Column="2"
                             Classes="flat-action dialog-action"
-                            Command="{Binding Dialogs.SetupWizard.SkipCommand}"
+                            Command="{Binding Dialogs.RequestSetupWizardExitCommand}"
                             ToolTip.Tip="{Binding Shell.I18n.SetupWizardSkip}"
                             AutomationProperties.Name="{Binding Shell.I18n.SetupWizardSkip}">
                         <StackPanel Classes="button-content">

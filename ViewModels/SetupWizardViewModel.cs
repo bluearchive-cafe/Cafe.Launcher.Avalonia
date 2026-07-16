@@ -1,5 +1,7 @@
 using System;
 using System.Threading.Tasks;
+using Cafe.Launcher.Avalonia.Features.Shell;
+using Cafe.Launcher.Avalonia.Helpers;
 using Cafe.Launcher.Avalonia.Models;
 using Cafe.Launcher.Avalonia.Services;
 using CommunityToolkit.Mvvm.ComponentModel;
@@ -10,7 +12,7 @@ namespace Cafe.Launcher.Avalonia.ViewModels;
 /// <summary>
 /// Coordinates the first-launch setup wizard state, validation, and settings output.
 /// </summary>
-public partial class SetupWizardViewModel : ViewModelBase
+public partial class SetupWizardViewModel : ViewModelBase, IModalContentViewModel
 {
     private readonly LocalizationService localizer;
     private readonly GameInstallationPath gameInstallationPath;
@@ -160,17 +162,13 @@ public partial class SetupWizardViewModel : ViewModelBase
     [RelayCommand]
     private async Task CompleteAsync()
     {
-        var handler = SettingsApplied;
-        if (handler is not null)
-            await handler(BuildSettings());
+        await AsyncEvent.InvokeSequentiallyAsync(SettingsApplied, BuildSettings());
     }
 
     [RelayCommand]
     private async Task SkipAsync()
     {
-        var handler = SettingsApplied;
-        if (handler is not null)
-            await handler(LauncherSettings.CreateDefaults());
+        await AsyncEvent.InvokeSequentiallyAsync(SettingsApplied, LauncherSettings.CreateDefaults());
     }
 
     [RelayCommand]

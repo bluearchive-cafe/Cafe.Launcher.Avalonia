@@ -1002,6 +1002,25 @@ public sealed partial class UiStyleContractTests
     }
 
     [Fact]
+    public void MainWindow_GamePathUsesPersistedSnapshotAndImmediateCommand()
+    {
+        var mainWindow = File.ReadAllText(ProjectFile("Views/MainWindow.axaml"));
+
+        Assert.Contains(
+            "Text=\"{Binding Shell.PathText}\"",
+            mainWindow,
+            StringComparison.Ordinal);
+        Assert.Contains(
+            "Command=\"{Binding Settings.ChangePersistedGamePathCommand}\"",
+            mainWindow,
+            StringComparison.Ordinal);
+        Assert.DoesNotContain(
+            "Text=\"{Binding Settings.Editor.Current.GamePath}\"",
+            mainWindow,
+            StringComparison.Ordinal);
+    }
+
+    [Fact]
     public void SettingsPanel_UsesTransactionalSaveAndCancelActions()
     {
         var settingsOverlay = File.ReadAllText(ProjectFile("Views/MainWindowSettingsOverlay.axaml"));
@@ -1037,7 +1056,7 @@ public sealed partial class UiStyleContractTests
             StringComparison.Ordinal);
         var mainWindowViewModel = File.ReadAllText(ProjectFile("ViewModels/MainWindowViewModel.cs"));
         Assert.Contains(
-            "WindowEscapeAction.ToggleSettings",
+            "case ModalKind.Settings:",
             mainWindowViewModel,
             StringComparison.Ordinal);
         Assert.Contains(

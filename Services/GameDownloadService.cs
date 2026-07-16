@@ -92,7 +92,7 @@ public sealed class GameDownloadService : IDisposable
             LauncherRuntimeState.BelowLowestVersion or
             LauncherRuntimeState.UpdateAvailable))
         {
-            return Failed(localizer.T("operationUnavailableForCurrentState"), "invalid-state");
+            return Failed(localizer.T("operationUnavailableForCurrentState"), GameOperationErrorCode.InvalidState);
         }
 
         return await RunAsync(snapshot, repair: false, progress, cancellationToken).ConfigureAwait(false);
@@ -107,7 +107,7 @@ public sealed class GameDownloadService : IDisposable
             LauncherRuntimeState.Corrupted or
             LauncherRuntimeState.Ready))
         {
-            return Failed(localizer.T("operationUnavailableForCurrentState"), "invalid-state");
+            return Failed(localizer.T("operationUnavailableForCurrentState"), GameOperationErrorCode.InvalidState);
         }
 
         return await RunAsync(snapshot, repair: true, progress, cancellationToken).ConfigureAwait(false);
@@ -243,7 +243,7 @@ public sealed class GameDownloadService : IDisposable
         var operationCts = operation.CancellationTokenSource;
         var activeToken = operationCts.Token;
         var operationRegistered = false;
-        var operationKind = repair ? GameOperationKinds.Repair : GameOperationKinds.Download;
+        var operationKind = repair ? GameOperationKind.Repair : GameOperationKind.Download;
 
         try
         {
@@ -263,12 +263,12 @@ public sealed class GameDownloadService : IDisposable
                 || string.IsNullOrWhiteSpace(gameConfig.GameLatestFilePath)
                 || string.IsNullOrWhiteSpace(gameConfig.GameStartExeName))
             {
-                return Failed(localizer.T("downloadRemoteConfigIncomplete"), "remote-config");
+                return Failed(localizer.T("downloadRemoteConfigIncomplete"), GameOperationErrorCode.RemoteConfiguration);
             }
 
             var speedLimitBytesPerSec = DownloadSpeedLimits.ToBytesPerSecond(settings.DownloadSpeedLimit);
             if (string.IsNullOrWhiteSpace(settings.GamePath))
-                return Failed(localizer.T("gameInstallPathNotConfigured"), "no-path");
+                return Failed(localizer.T("gameInstallPathNotConfigured"), GameOperationErrorCode.PathMissing);
             var gamePath = installationPath.NormalizeGamePath(settings.GamePath);
             EnsureGamePath(gamePath);
             Directory.CreateDirectory(gamePath);
@@ -278,7 +278,7 @@ public sealed class GameDownloadService : IDisposable
                 && await ProcessService.IsExeRunningAsync($"{localGame.GameConfig.Name}.exe", activeToken))
             {
                 ClearDownloadState();
-                return Failed(localizer.T("gameExecutableRunning"), "game-running");
+                return Failed(localizer.T("gameExecutableRunning"), GameOperationErrorCode.GameRunning);
             }
 
             // Persist download state for potential resume after restart
@@ -292,7 +292,10 @@ public sealed class GameDownloadService : IDisposable
                 StartedAt = DateTimeOffset.Now.ToString("O")
             }, activeToken);
 
-            progress(CreateProgress(operationKind, repair ? "repair-check" : "update-check", 0));
+            progress(CreateProgress(
+                operationKind,
+                repair ? GameOperationStage.RepairCheck : GameOperationStage.UpdateCheck,
+                0));
 
             var cdnConfig = snapshot.Remote.CdnConfig
                 ?? await apiClient.GetCdnConfigAsync(
@@ -302,7 +305,7 @@ public sealed class GameDownloadService : IDisposable
             if (string.IsNullOrWhiteSpace(cdnConfig.PrimaryCdn) || string.IsNullOrWhiteSpace(cdnConfig.BackUpCdn))
             {
                 ClearDownloadState();
-                return Failed(localizer.T("cdnConfigIncomplete"), "cdn-config");
+                return Failed(localizer.T("cdnConfigIncomplete"), GameOperationErrorCode.CdnConfiguration);
             }
 
             var downloadPlan = repair
@@ -353,7 +356,7 @@ public sealed class GameDownloadService : IDisposable
             progress(new GameOperationProgress
             {
                 OperationKind = operationKind,
-                Stage = "disk-check",
+                Stage = GameOperationStage.DiskCheck,
                 RequiredDiskBytes = requiredBytes,
                 AvailableDiskBytes = availableBytes,
                 IsRunning = true,
@@ -371,7 +374,7 @@ public sealed class GameDownloadService : IDisposable
                         "diskSpaceInsufficientDetail",
                         FileSizeFormatter.Format(requiredBytes),
                         availableBytes.HasValue ? FileSizeFormatter.Format(availableBytes.Value) : "--"),
-                    "game-download-error-no-space",
+                    GameOperationErrorCode.InsufficientDiskSpace,
                     affectedCount);
             }
 
@@ -394,12 +397,12 @@ public sealed class GameDownloadService : IDisposable
 
                 RemoveFiles(gamePath, downloadPlan.NeedDelete, null);
 
-                progress(CreateProgress(operationKind, "check-file", 0));
+                progress(CreateProgress(operationKind, GameOperationStage.FileCheck, 0));
                 var failedFiles = await InstallDownloadedFilesAsync(
                     gamePath,
                     downloadPlan.ManifestFiles,
                     currentDownloadList,
-                    value => progress(CreateProgress(operationKind, "check-file", value)),
+                    value => progress(CreateProgress(operationKind, GameOperationStage.FileCheck, value)),
                     activeToken).ConfigureAwait(false);
 
                 if (failedFiles.Count == 0)
@@ -410,7 +413,10 @@ public sealed class GameDownloadService : IDisposable
                         downloadPlan.ManifestFiles,
                         activeToken).ConfigureAwait(false);
                     ClearDownloadState();
-                    progress(CreateProgress(operationKind, repair ? "repair-done" : "download-done", 100));
+                    progress(CreateProgress(
+                        operationKind,
+                        repair ? GameOperationStage.RepairCompleted : GameOperationStage.DownloadCompleted,
+                        100));
                     await diagnostics.MessageAsync(
                         repair ? "Game repair completed." : "Game install or update completed.",
                         $"path: {gamePath}{Environment.NewLine}version: {gameConfig.GameLatestVersion}",
@@ -430,7 +436,7 @@ public sealed class GameDownloadService : IDisposable
                     progress(new GameOperationProgress
                     {
                         OperationKind = operationKind,
-                        Stage = "verification-retry",
+                        Stage = GameOperationStage.VerificationRetry,
                         FailedFileCount = failedFiles.Count,
                         RetryAttempt = retry + 1,
                         RetryLimit = MaxInstallVerificationRetry,
@@ -450,7 +456,7 @@ public sealed class GameDownloadService : IDisposable
             progress(new GameOperationProgress
             {
                 OperationKind = operationKind,
-                Stage = "verification-failed",
+                Stage = GameOperationStage.VerificationFailed,
                 FailedFileCount = currentDownloadList.Count,
                 IsRunning = true,
                 CanStop = true
@@ -458,7 +464,7 @@ public sealed class GameDownloadService : IDisposable
             ClearDownloadState();
             return Failed(
                 localizer.F("verificationFailed", currentDownloadList.Count),
-                "game-download-error-network-down",
+                GameOperationErrorCode.Network,
                 affectedCount,
                 currentDownloadList.Count);
         }
@@ -469,26 +475,26 @@ public sealed class GameDownloadService : IDisposable
                 ClearDownloadState();
             }
 
-            progress(CreateProgress(operationKind, "stopped", 0));
-            return Failed(localizer.T("operationStopped"), "stopped");
+            progress(CreateProgress(operationKind, GameOperationStage.Stopped, 0));
+            return Failed(localizer.T("operationStopped"), GameOperationErrorCode.Stopped);
         }
         catch (IOException exception) when (exception.HResult == unchecked((int)0x80070070))
         {
             await diagnostics.ErrorAsync("Game download disk space error.", exception, CancellationToken.None).ConfigureAwait(false);
             ClearDownloadState();
-            return Failed(localizer.T("diskSpaceInsufficient"), "game-download-error-no-space");
+            return Failed(localizer.T("diskSpaceInsufficient"), GameOperationErrorCode.InsufficientDiskSpace);
         }
         catch (Exception exception) when (exception is IOException or UnauthorizedAccessException)
         {
             await diagnostics.ErrorAsync("Game file operation failed.", exception, CancellationToken.None).ConfigureAwait(false);
             ClearDownloadState();
-            return Failed(localizer.F("fileOperationFailed", exception.Message), "error-system");
+            return Failed(localizer.F("fileOperationFailed", exception.Message), GameOperationErrorCode.System);
         }
         catch (Exception exception) when (exception is HttpRequestException or TaskCanceledException or JsonException)
         {
             await diagnostics.ErrorAsync("Game download network failed.", exception, CancellationToken.None).ConfigureAwait(false);
             ClearDownloadState();
-            return Failed(localizer.F("networkErrorDetail", exception.Message), "game-download-error-network-down");
+            return Failed(localizer.F("networkErrorDetail", exception.Message), GameOperationErrorCode.Network);
         }
         catch (Exception exception)
         {
@@ -498,7 +504,7 @@ public sealed class GameDownloadService : IDisposable
                 exception,
                 CancellationToken.None);
             ClearDownloadState();
-            return Failed(localizer.F("unexpectedError", exception.Message), "error-system");
+            return Failed(localizer.F("unexpectedError", exception.Message), GameOperationErrorCode.System);
         }
         finally
         {
@@ -646,7 +652,10 @@ public sealed class GameDownloadService : IDisposable
             patchUrlGroup,
             proxyMode,
             cancellationToken).ConfigureAwait(false);
-        var statDiff = CheckStat(currentFiles, gamePath, value => progress(CreateProgress(GameOperationKinds.Download, "update-check", value)));
+        var statDiff = CheckStat(
+            currentFiles,
+            gamePath,
+            value => progress(CreateProgress(GameOperationKind.Download, GameOperationStage.UpdateCheck, value)));
         var expected = GameManifestDiff(currentFiles, latestManifest.File);
         var actual = GameResultMerge(expected, new DownloadPlan { NeedDownload = statDiff });
 
@@ -676,7 +685,7 @@ public sealed class GameDownloadService : IDisposable
         var hashDiff = await CheckHashAsync(
             latestManifest.File,
             gamePath,
-            value => progress(CreateProgress(GameOperationKinds.Repair, "repair-check", value)),
+            value => progress(CreateProgress(GameOperationKind.Repair, GameOperationStage.RepairCheck, value)),
             cancellationToken).ConfigureAwait(false);
         var needDelete = localGame.Kind == LocalInstallationStateKind.Valid
             ? GameManifestDiff(localGame.Manifest?.Files ?? [], latestManifest.File).NeedDelete
@@ -693,8 +702,8 @@ public sealed class GameDownloadService : IDisposable
         // Report repair-confirm with diff summary (matches original's repair-confirm progress = -1)
         progress(new GameOperationProgress
         {
-            OperationKind = GameOperationKinds.Repair,
-            Stage = "repair-confirm",
+            OperationKind = GameOperationKind.Repair,
+            Stage = GameOperationStage.RepairConfirmation,
             Progress = -1,
             AffectedFileCount = actual.NeedDownload.Count + actual.NeedDelete.Count,
             DownloadedSize = actual.NeedDownload.Sum(f => f.SizeBytes),
@@ -712,7 +721,7 @@ public sealed class GameDownloadService : IDisposable
         IReadOnlyList<ManifestFile> fileList,
         string proxyMode,
         int speedLimitBytesPerSec,
-        string operationKind,
+        GameOperationKind operationKind,
         Action<GameOperationProgress> progress,
         CancellationToken cancellationToken)
     {
@@ -796,13 +805,12 @@ public sealed class GameDownloadService : IDisposable
                         progress(new GameOperationProgress
                         {
                             OperationKind = operationKind,
-                            Stage = IsPaused ? "paused" : "download",
+                            Stage = IsPaused ? GameOperationStage.Paused : GameOperationStage.Downloading,
                             Progress = totalSizeVal > 0 ? (int)Math.Round(totalBytes * 100d / totalSizeVal) : 0,
-                            Speed = IsPaused ? "" : $"{FileSizeFormatter.Format(speed)}/S",
-                            Estimated = IsPaused
-                                ? ""
-                                : TimeSpan.FromSeconds(Math.Max(0, estimated))
-                                    .ToString(@"hh\:mm\:ss", CultureInfo.InvariantCulture),
+                            BytesPerSecond = IsPaused ? 0 : speed,
+                            EstimatedRemaining = IsPaused
+                                ? null
+                                : TimeSpan.FromSeconds(Math.Max(0, estimated)),
                             DownloadedSize = totalBytes,
                             TotalSize = totalSizeVal,
                             IsRunning = true,
@@ -1065,7 +1073,10 @@ public sealed class GameDownloadService : IDisposable
         return name.EndsWith(TempFileExtension, StringComparison.Ordinal) ? name[..^TempFileExtension.Length] : name;
     }
 
-    private static GameOperationProgress CreateProgress(string kind, string stage, int value)
+    private static GameOperationProgress CreateProgress(
+        GameOperationKind kind,
+        GameOperationStage stage,
+        int value)
     {
         return new GameOperationProgress
         {
@@ -1073,14 +1084,14 @@ public sealed class GameDownloadService : IDisposable
             Stage = stage,
             Progress = value,
             IsRunning = true,
-            CanStop = kind is GameOperationKinds.Download or GameOperationKinds.Repair,
+            CanStop = kind is GameOperationKind.Download or GameOperationKind.Repair,
             CanPause = false
         };
     }
 
     private static GameOperationResult Failed(
         string message,
-        string errorType,
+        GameOperationErrorCode errorCode,
         int affectedFileCount = 0,
         int failedFileCount = 0)
     {
@@ -1088,7 +1099,7 @@ public sealed class GameDownloadService : IDisposable
         {
             Success = false,
             Message = message,
-            ErrorType = errorType,
+            ErrorCode = errorCode,
             AffectedFileCount = affectedFileCount,
             FailedFileCount = failedFileCount
         };

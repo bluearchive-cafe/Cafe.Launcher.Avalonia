@@ -215,8 +215,8 @@ public sealed class GameOperationsViewModelTests
         var context = CreateContext();
         context.ViewModel.ApplyProgress(new GameOperationProgress
         {
-            OperationKind = GameOperationKinds.Download,
-            Stage = "download",
+            OperationKind = GameOperationKind.Download,
+            Stage = GameOperationStage.Downloading,
             CanPause = true
         });
 
@@ -295,7 +295,7 @@ public sealed class GameOperationsViewModelTests
         context.Backend.ResumeResult = new GameOperationResult
         {
             Success = false,
-            ErrorType = "stopped",
+            ErrorCode = GameOperationErrorCode.Stopped,
             Message = "stopped"
         };
         context.ViewModel.RefreshRequested += _ =>
@@ -319,8 +319,8 @@ public sealed class GameOperationsViewModelTests
 
         context.ViewModel.ApplyProgress(new GameOperationProgress
         {
-            OperationKind = GameOperationKinds.Repair,
-            Stage = "repair-confirm",
+            OperationKind = GameOperationKind.Repair,
+            Stage = GameOperationStage.RepairConfirmation,
             Progress = -1,
             AffectedFileCount = 2,
             DownloadedSize = 1024
@@ -332,29 +332,29 @@ public sealed class GameOperationsViewModelTests
 
         context.ViewModel.ApplyProgress(new GameOperationProgress
         {
-            OperationKind = GameOperationKinds.Download,
-            Stage = "download",
+            OperationKind = GameOperationKind.Download,
+            Stage = GameOperationStage.Downloading,
             Progress = 50,
             DownloadedSize = 1024,
             TotalSize = 2048,
-            Speed = "1 MB/S",
-            Estimated = "00:00:01",
+            BytesPerSecond = 1024 * 1024,
+            EstimatedRemaining = TimeSpan.FromSeconds(1),
             CanPause = true
         });
 
         Assert.Equal(50, context.ViewModel.ProgressValue);
-        Assert.Equal("1 MB/S", context.ViewModel.ProgressSpeed);
+        Assert.Equal("1MB/S", context.ViewModel.ProgressSpeed);
         Assert.NotEmpty(context.ViewModel.ProgressSize);
         Assert.NotEmpty(context.ViewModel.ProgressEstimated);
         Assert.True(context.ViewModel.CanPauseOperation);
     }
 
     [Theory]
-    [InlineData("disk-check", 10L, 20L, 0, 0, 0, "10B", "20B")]
-    [InlineData("verification-retry", 0, null, 2, 1, 3, "2", "1/3")]
-    [InlineData("verification-failed", 0, null, 2, 0, 0, "2", null)]
+    [InlineData(GameOperationStage.DiskCheck, 10L, 20L, 0, 0, 0, "10B", "20B")]
+    [InlineData(GameOperationStage.VerificationRetry, 0, null, 2, 1, 3, "2", "1/3")]
+    [InlineData(GameOperationStage.VerificationFailed, 0, null, 2, 0, 0, "2", null)]
     public void ApplyProgress_MapsPreflightAndVerificationStagesAndClearsDownloadMetrics(
-        string stage,
+        GameOperationStage stage,
         long requiredBytes,
         long? availableBytes,
         int failedFileCount,
@@ -367,17 +367,17 @@ public sealed class GameOperationsViewModelTests
 
         context.ViewModel.ApplyProgress(new GameOperationProgress
         {
-            OperationKind = GameOperationKinds.Download,
+            OperationKind = GameOperationKind.Download,
             Stage = stage,
             RequiredDiskBytes = requiredBytes,
             AvailableDiskBytes = availableBytes,
             FailedFileCount = failedFileCount,
             RetryAttempt = retryAttempt,
             RetryLimit = retryLimit,
-            Speed = "old-speed",
+            BytesPerSecond = 1,
             DownloadedSize = 10,
             TotalSize = 20,
-            Estimated = "old-eta"
+            EstimatedRemaining = TimeSpan.FromSeconds(1)
         });
 
         Assert.Contains(expectedText, context.ViewModel.ProgressDetail, StringComparison.Ordinal);
@@ -389,6 +389,26 @@ public sealed class GameOperationsViewModelTests
         Assert.Empty(context.ViewModel.ProgressSize);
         Assert.Empty(context.ViewModel.ProgressEstimated);
     }
+
+    [Theory]
+    [MemberData(nameof(AllOperationStages))]
+    public void ApplyProgress_ForEveryStage_ProducesLocalizedPresentation(
+        GameOperationStage stage)
+    {
+        var context = CreateContext();
+
+        context.ViewModel.ApplyProgress(new GameOperationProgress
+        {
+            OperationKind = GameOperationKind.Download,
+            Stage = stage,
+        });
+
+        Assert.NotEmpty(context.ViewModel.ProgressTitle);
+        Assert.NotEmpty(context.ViewModel.ProgressDetail);
+    }
+
+    public static TheoryData<GameOperationStage> AllOperationStages =>
+        new(Enum.GetValues<GameOperationStage>());
 
     [Fact]
     public async Task StartGameCommand_WhenBusyOrStateMissing_DoesNotStartGame()

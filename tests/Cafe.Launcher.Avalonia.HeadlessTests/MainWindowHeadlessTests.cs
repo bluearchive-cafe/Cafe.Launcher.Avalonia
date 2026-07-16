@@ -349,6 +349,38 @@ public sealed class MainWindowHeadlessTests
         Assert.True(footer.Bounds.Bottom <= dialog.Bounds.Height);
     }
 
+    [AvaloniaTheory]
+    [InlineData("install")]
+    [InlineData("progress")]
+    [InlineData("control")]
+    public void MainWindow_AtMinimumWindowSize_RemoteContentDoesNotOverlapOperationPanel(
+        string panelMode)
+    {
+        using var context = CreateContext();
+        context.Window.Width = 1024;
+        context.Window.Height = 640;
+        context.ViewModel.RemoteContent.IsPanelVisible = true;
+        context.ViewModel.Operations.PanelMode = panelMode switch
+        {
+            "install" => GameOperationPanelMode.Install,
+            "progress" => GameOperationPanelMode.Progress,
+            "control" => GameOperationPanelMode.Control,
+            _ => throw new ArgumentOutOfRangeException(nameof(panelMode)),
+        };
+        context.Window.Show();
+        Dispatcher.UIThread.RunJobs();
+
+        var remotePanel = context.Window.GetVisualDescendants().OfType<Border>()
+            .Single(control => control.Classes.Contains("remote-surface"));
+        var operationPanelClass = panelMode == "control" ? "control-panel" : "bottom-panel";
+        var operationPanel = context.Window.GetVisualDescendants().OfType<Border>()
+            .Single(control => control.Classes.Contains(operationPanelClass)
+                && control.IsEffectivelyVisible);
+
+        Assert.True(remotePanel.IsEffectivelyVisible);
+        Assert.True(remotePanel.Bounds.Bottom <= operationPanel.Bounds.Top);
+    }
+
     [AvaloniaFact]
     public void SettingsControls_UseMinimumAccessibleInteractionHeight()
     {
@@ -544,15 +576,30 @@ public sealed class MainWindowHeadlessTests
             context.ViewModel.Settings.Editor.GetSnapshot());
         context.ViewModel.WindowChrome.IsSettingsVisible = true;
         Dispatcher.UIThread.RunJobs();
-        // Reset dirty state after binding resolution (same rationale as OpenSettings)
-        context.ViewModel.Settings.Editor.ApplySnapshot(
-            context.ViewModel.Settings.Editor.GetSnapshot());
 
         var handled = context.ViewModel.TryHandleEscape();
         Dispatcher.UIThread.RunJobs();
 
         Assert.True(handled);
         Assert.False(context.ViewModel.WindowChrome.IsSettingsVisible);
+    }
+
+    [AvaloniaFact]
+    public void SettingsOverlay_WhenOpenedWithoutChanges_RemainsClean()
+    {
+        using var context = CreateContext();
+        context.Window.Show();
+        var changedProperties = new List<string>();
+        context.ViewModel.Settings.Editor.CurrentPropertyChanged += (_, args) =>
+            changedProperties.Add(args.PropertyName ?? "<null>");
+
+        context.ViewModel.WindowChrome.ShowSettingsCommand.Execute(null);
+        Dispatcher.UIThread.RunJobs();
+
+        Assert.True(context.ViewModel.WindowChrome.IsSettingsVisible);
+        Assert.False(
+            context.ViewModel.Settings.IsSettingsDirty,
+            string.Join(", ", changedProperties));
     }
 
     [AvaloniaFact]
@@ -667,6 +714,45 @@ public sealed class MainWindowHeadlessTests
     }
 
     [AvaloniaFact]
+    public void SetupWizard_WhenEscapeIsPressed_RequiresExitConfirmation()
+    {
+        using var context = CreateContext();
+        context.Window.Show();
+        context.ViewModel.Dialogs.ShowSetupWizard();
+        Dispatcher.UIThread.RunJobs();
+
+        var firstHandled = context.ViewModel.TryHandleEscape();
+        Dispatcher.UIThread.RunJobs();
+
+        Assert.True(firstHandled);
+        Assert.True(context.ViewModel.Dialogs.IsSetupWizardVisible);
+        Assert.True(context.ViewModel.Dialogs.IsSetupWizardExitConfirmVisible);
+
+        var secondHandled = context.ViewModel.TryHandleEscape();
+        Dispatcher.UIThread.RunJobs();
+
+        Assert.True(secondHandled);
+        Assert.True(context.ViewModel.Dialogs.IsSetupWizardVisible);
+        Assert.False(context.ViewModel.Dialogs.IsSetupWizardExitConfirmVisible);
+    }
+
+    [AvaloniaFact]
+    public async Task SetupWizard_WhenExitIsConfirmed_AppliesSkipAndClosesWizard()
+    {
+        using var context = CreateContext();
+        context.Window.Show();
+        context.ViewModel.Dialogs.ShowSetupWizard();
+        context.ViewModel.TryHandleEscape();
+        Dispatcher.UIThread.RunJobs();
+
+        await context.ViewModel.Dialogs.ConfirmSetupWizardExitCommand.ExecuteAsync(null);
+        Dispatcher.UIThread.RunJobs();
+
+        Assert.False(context.ViewModel.Dialogs.IsSetupWizardExitConfirmVisible);
+        Assert.False(context.ViewModel.Dialogs.IsSetupWizardVisible);
+    }
+
+    [AvaloniaFact]
     public async Task SetupWizard_WhenSkipped_HidesOverlay()
     {
         using var context = CreateContext();
@@ -757,11 +843,6 @@ public sealed class MainWindowHeadlessTests
         context.Window.Show();
         context.ViewModel.WindowChrome.ShowSettingsCommand.Execute(null);
         Dispatcher.UIThread.RunJobs();
-        // Reset dirty state: TwoWay bindings on initial load may write back the
-        // same value, which triggers IsDirty via PropertyChanged. This is a UI
-        // loading artifact, not a real user change.
-        context.ViewModel.Settings.Editor.ApplySnapshot(
-            context.ViewModel.Settings.Editor.GetSnapshot());
     }
 
     private static ListBox GetSettingsNavigation(MainWindow window) =>
