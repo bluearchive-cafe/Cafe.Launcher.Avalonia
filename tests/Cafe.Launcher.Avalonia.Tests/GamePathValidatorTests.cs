@@ -51,7 +51,7 @@ public sealed class GamePathValidatorTests
         Assert.StartsWith(driveRoot.TrimEnd(Path.DirectorySeparatorChar), result);
     }
 
-    [SkippableFact]
+    [Fact]
     public void GetSafePath_WhenExistingDirectoryIsSymbolicLink_ThrowsInvalidOperation()
     {
         var tempDir = Path.Combine(Path.GetTempPath(), Guid.NewGuid().ToString("N"));
@@ -81,7 +81,7 @@ public sealed class GamePathValidatorTests
         }
     }
 
-    [SkippableFact]
+    [Fact]
     public void GetSafePath_WhenGameRootIsSymbolicLink_ThrowsInvalidOperation()
     {
         var tempDir = Path.Combine(Path.GetTempPath(), Guid.NewGuid().ToString("N"));
@@ -120,7 +120,7 @@ public sealed class GamePathValidatorTests
                 or UnauthorizedAccessException
                 or PlatformNotSupportedException)
         {
-            Skip.If(
+            Assert.SkipWhen(
                 true,
                 $"Directory symbolic links are unavailable: {exception.Message}");
         }
