@@ -615,6 +615,7 @@ public sealed class MainWindowHeadlessTests
         Assert.Equal(2, externalActions.Length);
         Assert.True(pathField.Bounds.Width > 0);
         Assert.True(pathField.Bounds.Right <= externalActions[0].Bounds.Left);
+        Assert.True(externalActions[0].Bounds.Right <= externalActions[1].Bounds.Left);
         Assert.NotNull(changePathTopLeft);
         Assert.NotNull(pathTextTopLeft);
         Assert.True(pathTextTopLeft.Value.X + pathText.Bounds.Width <= changePathTopLeft.Value.X);
