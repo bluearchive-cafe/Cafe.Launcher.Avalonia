@@ -1,4 +1,5 @@
 using System.Collections.Generic;
+using System.Text.RegularExpressions;
 using System.Text.Json;
 using Cafe.Launcher.Avalonia.Models;
 using Cafe.Launcher.Avalonia.Services;
@@ -124,6 +125,40 @@ public sealed class LocalizationServiceTests
             japanese.Keys.OrderBy(key => key, StringComparer.Ordinal));
     }
 
+    [Fact]
+    public void LocaleFiles_HaveMatchingFormatPlaceholders()
+    {
+        var localeDirectory = Path.Combine(FindProjectRoot(), "Assets", "Locales");
+        var english = ReadLocale(localeDirectory, "en.json");
+        var simplifiedChinese = ReadLocale(localeDirectory, "zh-Hans.json");
+        var japanese = ReadLocale(localeDirectory, "ja.json");
+
+        foreach (var key in english.Keys)
+        {
+            var expected = GetFormatPlaceholders(english[key]);
+            Assert.Equal(expected, GetFormatPlaceholders(simplifiedChinese[key]));
+            Assert.Equal(expected, GetFormatPlaceholders(japanese[key]));
+        }
+    }
+
+    [Theory]
+    [InlineData(LauncherLanguages.English, "Remote Manifest", "Download Source", "Resource Panel")]
+    [InlineData(LauncherLanguages.SimplifiedChinese, "远程文件清单", "下载源", "资源面板")]
+    [InlineData(LauncherLanguages.Japanese, "リモートマニフェスト", "ダウンロードソース", "リソースパネル")]
+    public void T_WhenCanonicalTermsRequested_ReturnsConsistentTerminology(
+        string language,
+        string expectedManifest,
+        string expectedDownloadSource,
+        string expectedResourcePanel)
+    {
+        var service = new LocalizationService();
+        service.SetLanguage(language);
+
+        Assert.Equal(expectedManifest, service.T("launchCheckRemoteManifest"));
+        Assert.Equal(expectedDownloadSource, service.T("downloadSource"));
+        Assert.Equal(expectedResourcePanel, service.T("resourcePanel"));
+    }
+
     [Theory]
     [InlineData(LauncherLanguages.English, "3 files need repair (12 MB)", "ETA 1 minute")]
     [InlineData(LauncherLanguages.SimplifiedChinese, "需要修复 3 个文件（12 MB）", "预计剩余时间 1 minute")]
@@ -145,6 +180,14 @@ public sealed class LocalizationServiceTests
         var json = File.ReadAllText(Path.Combine(localeDirectory, fileName));
         return JsonSerializer.Deserialize<Dictionary<string, string>>(json)
             ?? throw new InvalidDataException($"{fileName} is not a localization dictionary.");
+    }
+
+    private static string[] GetFormatPlaceholders(string value)
+    {
+        return Regex.Matches(value, @"\{\d+(?:[^}]*)\}")
+            .Select(match => match.Value)
+            .OrderBy(placeholder => placeholder, StringComparer.Ordinal)
+            .ToArray();
     }
 
     private static string FindProjectRoot()

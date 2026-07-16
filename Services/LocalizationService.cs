@@ -11,9 +11,7 @@ namespace Cafe.Launcher.Avalonia.Services;
 public sealed partial class LocalizedStrings : ObservableObject
 {
     [ObservableProperty] private string settings = "";
-    [ObservableProperty] private string settingsStatus = "";
     [ObservableProperty] private string settingsGameFiles = "";
-    [ObservableProperty] private string settingsDownloadNetwork = "";
     [ObservableProperty] private string settingsAppPreferences = "";
     [ObservableProperty] private string settingsAboutActions = "";
     [ObservableProperty] private string settingsBackgroundGroup = "";
@@ -37,7 +35,6 @@ public sealed partial class LocalizedStrings : ObservableObject
     [ObservableProperty] private string version = "";
     [ObservableProperty] private string executable = "";
     [ObservableProperty] private string network = "";
-    [ObservableProperty] private string diskSpaceLabel = "";
     [ObservableProperty] private string diskSpaceCheck = "";
     [ObservableProperty] private string diskSpaceInsufficientDetail = "";
     [ObservableProperty] private string verificationRetry = "";
@@ -108,9 +105,6 @@ public sealed partial class LocalizedStrings : ObservableObject
     [ObservableProperty] private string uninstall = "";
     [ObservableProperty] private string about = "";
     [ObservableProperty] private string aboutDescription = "";
-    [ObservableProperty] private string agreement = "";
-    [ObservableProperty] private string privacy = "";
-    [ObservableProperty] private string updateEndpoint = "";
     [ObservableProperty] private string confirmUninstall = "";
     [ObservableProperty] private string uninstallConfirmDescription = "";
     [ObservableProperty] private string cancel = "";
@@ -134,8 +128,6 @@ public sealed partial class LocalizedStrings : ObservableObject
     [ObservableProperty] private string chooseImage = "";
     [ObservableProperty] private string chooseFolder = "";
     [ObservableProperty] private string clearBackground = "";
-    [ObservableProperty] private string backgroundSet = "";
-    [ObservableProperty] private string backgroundCleared = "";
     [ObservableProperty] private string backgroundSource = "";
     [ObservableProperty] private string backgroundSourceDescription = "";
     [ObservableProperty] private string backgroundSourceBundled = "";
@@ -149,12 +141,10 @@ public sealed partial class LocalizedStrings : ObservableObject
     [ObservableProperty] private string backgroundFillColor = "";
     [ObservableProperty] private string backgroundFillColorDescription = "";
     [ObservableProperty] private string versionInfo = "";
-    [ObservableProperty] private string runtimeInfo = "";
     [ObservableProperty] private string buildInfo = "";
     [ObservableProperty] private string downloadSpeedLimit = "";
     [ObservableProperty] private string downloadSpeedLimitDescription = "";
     [ObservableProperty] private string notificationSettings = "";
-    [ObservableProperty] private string toastNotifications = "";
     [ObservableProperty] private string remoteContentCard = "";
     [ObservableProperty] private string remoteContentLoading = "";
     [ObservableProperty] private string showRemoteContentCard = "";
@@ -251,9 +241,7 @@ public sealed partial class LocalizedStrings : ObservableObject
     public void Apply(LocalizationService localizer)
     {
         Settings = localizer.T("settings");
-        SettingsStatus = localizer.T("settingsStatus");
         SettingsGameFiles = localizer.T("settingsGameFiles");
-        SettingsDownloadNetwork = localizer.T("settingsDownloadNetwork");
         SettingsAppPreferences = localizer.T("settingsAppPreferences");
         SettingsAboutActions = localizer.T("settingsAboutActions");
         SettingsBackgroundGroup = localizer.T("settingsBackgroundGroup");
@@ -277,7 +265,6 @@ public sealed partial class LocalizedStrings : ObservableObject
         Version = localizer.T("version");
         Executable = localizer.T("executable");
         Network = localizer.T("network");
-        DiskSpaceLabel = localizer.T("diskSpaceLabel");
         DiskSpaceCheck = localizer.T("diskSpaceCheck");
         DiskSpaceInsufficientDetail = localizer.T("diskSpaceInsufficientDetail");
         VerificationRetry = localizer.T("verificationRetry");
@@ -348,9 +335,6 @@ public sealed partial class LocalizedStrings : ObservableObject
         Uninstall = localizer.T("uninstall");
         About = localizer.T("about");
         AboutDescription = localizer.T("aboutDescription");
-        Agreement = localizer.T("agreement");
-        Privacy = localizer.T("privacy");
-        UpdateEndpoint = localizer.T("updateEndpoint");
         ConfirmUninstall = localizer.T("confirmUninstall");
         UninstallConfirmDescription = localizer.T("uninstallConfirmDescription");
         Cancel = localizer.T("cancel");
@@ -374,8 +358,6 @@ public sealed partial class LocalizedStrings : ObservableObject
         ChooseImage = localizer.T("chooseImage");
         ChooseFolder = localizer.T("chooseFolder");
         ClearBackground = localizer.T("clearBackground");
-        BackgroundSet = localizer.T("backgroundSet");
-        BackgroundCleared = localizer.T("backgroundCleared");
         BackgroundSource = localizer.T("backgroundSource");
         BackgroundSourceDescription = localizer.T("backgroundSourceDescription");
         BackgroundSourceBundled = localizer.T("backgroundSourceBundled");
@@ -389,12 +371,10 @@ public sealed partial class LocalizedStrings : ObservableObject
         BackgroundFillColor = localizer.T("backgroundFillColor");
         BackgroundFillColorDescription = localizer.T("backgroundFillColorDescription");
         VersionInfo = localizer.T("versionInfo");
-        RuntimeInfo = localizer.T("runtimeInfo");
         BuildInfo = localizer.T("buildInfo");
         DownloadSpeedLimit = localizer.T("downloadSpeedLimit");
         DownloadSpeedLimitDescription = localizer.T("downloadSpeedLimitDescription");
         NotificationSettings = localizer.T("notificationSettings");
-        ToastNotifications = localizer.T("toastNotifications");
         RemoteContentCard = localizer.T("remoteContentCard");
         RemoteContentLoading = localizer.T("remoteContentLoading");
         ShowRemoteContentCard = localizer.T("showRemoteContentCard");
