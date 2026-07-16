@@ -38,17 +38,17 @@ jobs:
           restore-keys: |
             ${{ runner.os }}-nuget-
 
-      - name: Restore (Debug, win-x64)
-        run: dotnet restore $env:Project_Path -r win-x64
-
       - name: Restore tests
         run: dotnet restore tests/Cafe.Launcher.Avalonia.Tests/Cafe.Launcher.Avalonia.Tests.csproj
 
-      - name: Build (Debug)
-        run: dotnet build $env:Project_Path -c Debug --no-restore
-
       - name: Test
         run: dotnet test tests/Cafe.Launcher.Avalonia.Tests/Cafe.Launcher.Avalonia.Tests.csproj -c Debug --no-restore
+
+      - name: Restore (Debug, win-x64)
+        run: dotnet restore $env:Project_Path -r win-x64
+
+      - name: Build (Debug, win-x64)
+        run: dotnet build $env:Project_Path -c Debug -r win-x64 --no-restore
 
       - name: Restore (Release, win-x64)
         run: dotnet restore $env:Project_Path -r win-x64
