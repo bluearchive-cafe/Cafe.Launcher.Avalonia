@@ -94,7 +94,7 @@
                         <Button Classes="primary-action dialog-action" Command="{Binding ResourcePanel.SaveResourcePanelCommand}"
                                 IsEnabled="{Binding ResourcePanel.IsResourcePanelBusy, Converter={x:Static BoolConverters.Not}}">
                             <StackPanel Classes="button-content">
-                                <materialIcons:MaterialIcon Kind="ContentSave" Width="{StaticResource LauncherIconMd}" Height="{StaticResource LauncherIconMd}" Foreground="{DynamicResource LauncherOnAccentBrush}"/>
+                                <materialIcons:MaterialIcon Kind="ContentSave" Width="{StaticResource LauncherIconSm}" Height="{StaticResource LauncherIconSm}" Foreground="{DynamicResource LauncherOnAccentBrush}"/>
                                 <TextBlock Text="{Binding Shell.I18n.ResourcePanelSave}" VerticalAlignment="Center" Foreground="{DynamicResource LauncherOnAccentBrush}"/>
                             </StackPanel>
                         </Button>
@@ -119,8 +119,8 @@
                             <TextBlock Text="{Binding Dialogs.NoticeDialogContent}" TextWrapping="Wrap" Foreground="{DynamicResource LauncherInfoTextBrush}" Classes="caption"/>
                         </Border>
                     </ScrollViewer>
-                    <Button Grid.Row="2" Classes="primary-action" Command="{Binding Dialogs.DismissNoticeCommand}"
-                            HorizontalAlignment="Center" Width="120">
+                    <Button Grid.Row="2" Classes="primary-action dialog-action" Command="{Binding Dialogs.DismissNoticeCommand}"
+                            HorizontalAlignment="Center">
                         <StackPanel Classes="button-content" HorizontalAlignment="Center">
                             <TextBlock Text="{Binding Dialogs.NoticeDialogConfirmText}" VerticalAlignment="Center" Foreground="{DynamicResource LauncherOnAccentBrush}"/>
                         </StackPanel>
@@ -157,7 +157,7 @@
                         </Button>
                         <Button Classes="primary-action dialog-action" Command="{Binding Dialogs.ConfirmRepairCommand}">
                             <StackPanel Classes="button-content">
-                                <materialIcons:MaterialIcon Kind="Tools" Width="{StaticResource LauncherIconMd}" Height="{StaticResource LauncherIconMd}" Foreground="{DynamicResource LauncherOnAccentBrush}"/>
+                                <materialIcons:MaterialIcon Kind="Tools" Width="{StaticResource LauncherIconSm}" Height="{StaticResource LauncherIconSm}" Foreground="{DynamicResource LauncherOnAccentBrush}"/>
                                 <TextBlock Text="{Binding Shell.I18n.Repair}" VerticalAlignment="Center" Foreground="{DynamicResource LauncherOnAccentBrush}"/>
                             </StackPanel>
                         </Button>
@@ -194,7 +194,7 @@
                         </Button>
                         <Button Classes="primary-action dialog-action" Command="{Binding Dialogs.ConfirmResourcePanelSourceSwitchCommand}">
                             <StackPanel Classes="button-content">
-                                <materialIcons:MaterialIcon Kind="SwapHorizontal" Width="{StaticResource LauncherIconMd}" Height="{StaticResource LauncherIconMd}" Foreground="{DynamicResource LauncherOnAccentBrush}"/>
+                                <materialIcons:MaterialIcon Kind="SwapHorizontal" Width="{StaticResource LauncherIconSm}" Height="{StaticResource LauncherIconSm}" Foreground="{DynamicResource LauncherOnAccentBrush}"/>
                                 <TextBlock Text="{Binding Shell.I18n.ResourcePanelCafeOnlySwitch}" VerticalAlignment="Center" Foreground="{DynamicResource LauncherOnAccentBrush}"/>
                             </StackPanel>
                         </Button>
@@ -284,7 +284,7 @@
                                 Command="{Binding Dialogs.ConfirmUpdateAvailableCommand}"
                                 IsEnabled="{Binding Dialogs.HasSelectedUpdateFile}">
                             <StackPanel Classes="button-content">
-                                <materialIcons:MaterialIcon Kind="Download" Width="{StaticResource LauncherIconMd}" Height="{StaticResource LauncherIconMd}" Foreground="{DynamicResource LauncherOnAccentBrush}"/>
+                                <materialIcons:MaterialIcon Kind="Download" Width="{StaticResource LauncherIconSm}" Height="{StaticResource LauncherIconSm}" Foreground="{DynamicResource LauncherOnAccentBrush}"/>
                                 <TextBlock Text="{Binding Shell.I18n.UpdateDownload}" VerticalAlignment="Center" Foreground="{DynamicResource LauncherOnAccentBrush}"/>
                             </StackPanel>
                         </Button>
@@ -321,7 +321,7 @@
                         </Button>
                         <Button Classes="danger-action dialog-action" Command="{Binding Dialogs.ConfirmStopCommand}">
                             <StackPanel Classes="button-content">
-                                <materialIcons:MaterialIcon Kind="Stop" Width="{StaticResource LauncherIconMd}" Height="{StaticResource LauncherIconMd}" Foreground="{DynamicResource LauncherOnAccentBrush}"/>
+                                <materialIcons:MaterialIcon Kind="Stop" Width="{StaticResource LauncherIconSm}" Height="{StaticResource LauncherIconSm}" Foreground="{DynamicResource LauncherOnAccentBrush}"/>
                                 <TextBlock Text="{Binding Shell.I18n.Stop}" VerticalAlignment="Center" Foreground="{DynamicResource LauncherOnAccentBrush}"/>
                             </StackPanel>
                         </Button>
@@ -358,7 +358,7 @@
                         </Button>
                         <Button Classes="danger-action dialog-action" Command="{Binding Dialogs.ConfirmCloseWhileDownloadingCommand}">
                             <StackPanel Classes="button-content">
-                                <materialIcons:MaterialIcon Kind="Stop" Width="{StaticResource LauncherIconMd}" Height="{StaticResource LauncherIconMd}" Foreground="{DynamicResource LauncherOnAccentBrush}"/>
+                                <materialIcons:MaterialIcon Kind="Stop" Width="{StaticResource LauncherIconSm}" Height="{StaticResource LauncherIconSm}" Foreground="{DynamicResource LauncherOnAccentBrush}"/>
                                 <TextBlock Text="{Binding Shell.I18n.Stop}" VerticalAlignment="Center" Foreground="{DynamicResource LauncherOnAccentBrush}"/>
                             </StackPanel>
                         </Button>
@@ -394,7 +394,7 @@
                         </Button>
                         <Button Classes="danger-action dialog-action" Command="{Binding Dialogs.ConfirmUninstallCommand}">
                             <StackPanel Classes="button-content">
-                                <materialIcons:MaterialIcon Kind="TrashCanOutline" Width="{StaticResource LauncherIconMd}" Height="{StaticResource LauncherIconMd}" Foreground="{DynamicResource LauncherOnAccentBrush}"/>
+                                <materialIcons:MaterialIcon Kind="TrashCanOutline" Width="{StaticResource LauncherIconSm}" Height="{StaticResource LauncherIconSm}" Foreground="{DynamicResource LauncherOnAccentBrush}"/>
                                 <TextBlock Text="{Binding Shell.I18n.Uninstall}" VerticalAlignment="Center"/>
                             </StackPanel>
                         </Button>
@@ -431,7 +431,7 @@
                         </Button>
                         <Button Classes="danger-action dialog-action" Command="{Binding WindowChrome.DiscardSettingsChangesCommand}">
                             <StackPanel Classes="button-content">
-                                <materialIcons:MaterialIcon Kind="DeleteOutline" Width="{StaticResource LauncherIconMd}" Height="{StaticResource LauncherIconMd}" Foreground="{DynamicResource LauncherOnAccentBrush}"/>
+                                <materialIcons:MaterialIcon Kind="DeleteOutline" Width="{StaticResource LauncherIconSm}" Height="{StaticResource LauncherIconSm}" Foreground="{DynamicResource LauncherOnAccentBrush}"/>
                                 <TextBlock Text="{Binding Shell.I18n.DiscardChanges}" VerticalAlignment="Center" Foreground="{DynamicResource LauncherOnAccentBrush}"/>
                             </StackPanel>
                         </Button>
@@ -470,9 +470,9 @@
                                 <TextBlock Text="{Binding Shell.I18n.CrashRecoveryResetSettings}" VerticalAlignment="Center"/>
                             </StackPanel>
                         </Button>
-                        <Button Classes="primary-action dialog-action" Height="{StaticResource LauncherControlHeightDialog}" Command="{Binding Dialogs.ContinueAfterCrashCommand}">
+                        <Button Classes="primary-action dialog-action" Command="{Binding Dialogs.ContinueAfterCrashCommand}">
                             <StackPanel Classes="button-content">
-                                <materialIcons:MaterialIcon Kind="Check" Width="{StaticResource LauncherIconMd}" Height="{StaticResource LauncherIconMd}" Foreground="{DynamicResource LauncherOnAccentBrush}"/>
+                                <materialIcons:MaterialIcon Kind="Check" Width="{StaticResource LauncherIconSm}" Height="{StaticResource LauncherIconSm}" Foreground="{DynamicResource LauncherOnAccentBrush}"/>
                                 <TextBlock Text="{Binding Shell.I18n.CrashRecoveryContinue}" VerticalAlignment="Center" Foreground="{DynamicResource LauncherOnAccentBrush}"/>
                             </StackPanel>
                         </Button>
