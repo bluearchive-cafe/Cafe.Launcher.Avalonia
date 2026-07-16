@@ -5,6 +5,14 @@ namespace Cafe.Launcher.Avalonia.Tests;
 
 public sealed partial class UiStyleContractTests
 {
+    private static readonly string[] StyleFiles =
+    [
+        "Views/MainWindow.Styles.axaml",
+        "Views/Styles/Diagnostics.axaml",
+        "Views/Styles/RemoteContent.axaml",
+        "Views/Styles/Toast.axaml"
+    ];
+
     private static readonly string[] ViewFiles =
     [
         "Views/MainWindow.axaml",
@@ -850,7 +858,7 @@ public sealed partial class UiStyleContractTests
                 element.Name.LocalName == "TextBlock"
                 && element.Attribute("Text")?.Value == "{Binding Shell.I18n.LogNoMatchingEntries}");
 
-        var styles = XDocument.Load(ProjectFile("Views/MainWindow.Styles.axaml"));
+        var styles = XDocument.Load(ProjectFile("Views/Styles/Diagnostics.axaml"));
         var emptyStateTextStyle = styles
             .Descendants()
             .Single(element =>
@@ -940,7 +948,7 @@ public sealed partial class UiStyleContractTests
     [Fact]
     public void ToastHost_AllowsHitTestingSoDismissButtonCanReceiveClicks()
     {
-        var document = XDocument.Load(ProjectFile("Views/MainWindow.Styles.axaml"));
+        var document = XDocument.Load(ProjectFile("Views/Styles/Toast.axaml"));
 
         Assert.Equal(
             "True",
@@ -1207,7 +1215,7 @@ public sealed partial class UiStyleContractTests
 
         var styles = XDocument.Load(ProjectFile("Views/MainWindow.Styles.axaml"));
         Assert.Equal(
-            "{StaticResource LauncherControlHeightSetting}",
+            "{DynamicResource LauncherControlHeightSetting}",
             GetStyleSetters(styles, "Button.news-tab.log-filter")["Height"]);
         Assert.Equal(
             "16,12,16,0",
@@ -1344,7 +1352,7 @@ public sealed partial class UiStyleContractTests
     [Fact]
     public void ToastCards_DoNotUseOverlappingBoxShadows()
     {
-        var document = XDocument.Load(ProjectFile("Views/MainWindow.Styles.axaml"));
+        var document = XDocument.Load(ProjectFile("Views/Styles/Toast.axaml"));
         var toastCardStyle = document
             .Descendants()
             .Single(element =>
@@ -1367,7 +1375,7 @@ public sealed partial class UiStyleContractTests
             overlay,
             StringComparison.Ordinal);
 
-        var document = XDocument.Load(ProjectFile("Views/MainWindow.Styles.axaml"));
+        var document = XDocument.Load(ProjectFile("Views/Styles/Toast.axaml"));
         var toastStyles = document
             .Descendants()
             .Where(element =>
@@ -1389,6 +1397,23 @@ public sealed partial class UiStyleContractTests
         Assert.Contains(
             motionStyle.Elements(),
             element => element.Name.LocalName == "Style.Animations");
+    }
+
+    [Fact]
+    public void StyleFiles_AreExplicitAndParseable()
+    {
+        var discoveredFiles = Directory
+            .GetFiles(ProjectFile("Views"), "*.axaml", SearchOption.AllDirectories)
+            .Where(path => path.EndsWith(".Styles.axaml", StringComparison.Ordinal)
+                || path.Contains(
+                    $"{Path.DirectorySeparatorChar}Styles{Path.DirectorySeparatorChar}",
+                    StringComparison.Ordinal))
+            .Select(path => Path.GetRelativePath(FindProjectRoot(), path).Replace('\\', '/'))
+            .Order(StringComparer.Ordinal)
+            .ToArray();
+
+        Assert.Equal(StyleFiles.Order(StringComparer.Ordinal), discoveredFiles);
+        Assert.All(StyleFiles, path => XDocument.Load(ProjectFile(path)));
     }
 
     [Fact]
@@ -1567,11 +1592,19 @@ public sealed partial class UiStyleContractTests
         XDocument document,
         string selector)
     {
-        return document
+        var matchingStyle = document
             .Descendants()
+            .SingleOrDefault(element =>
+                element.Name.LocalName == "Style"
+                && element.Attribute("Selector")?.Value == selector);
+        matchingStyle ??= StyleFiles
+            .Select(path => XDocument.Load(ProjectFile(path)))
+            .SelectMany(styleDocument => styleDocument.Descendants())
             .Single(element =>
                 element.Name.LocalName == "Style"
-                && element.Attribute("Selector")?.Value == selector)
+                && element.Attribute("Selector")?.Value == selector);
+
+        return matchingStyle
             .Elements()
             .Where(element => element.Name.LocalName == "Setter")
             .ToDictionary(

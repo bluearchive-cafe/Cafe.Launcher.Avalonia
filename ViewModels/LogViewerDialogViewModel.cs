@@ -17,6 +17,8 @@ namespace Cafe.Launcher.Avalonia.ViewModels;
 
 public sealed partial class LogViewerDialogViewModel : ViewModelBase, IModalContentViewModel
 {
+    private const int PageSize = 500;
+    private static readonly TimeSpan FilterDebounceDelay = TimeSpan.FromMilliseconds(200);
     private readonly UnifiedLogger logger;
     private readonly LogExportService? exportService;
     private readonly ToastService? toastService;
@@ -24,6 +26,15 @@ public sealed partial class LogViewerDialogViewModel : ViewModelBase, IModalCont
     private readonly LocalDiagnostics? diagnostics;
     private readonly Func<CancellationToken, Task<IReadOnlyList<LogEntryDisplay>>> entryLoader;
     private IReadOnlyList<LogEntryDisplay> allEntries = [];
+    private CancellationTokenSource? filterCancellationTokenSource;
+    private int loadedPageCount = 1;
+    private int totalEntryCount;
+
+    /// <summary>Gets the active debounced filter operation for deterministic coordination.</summary>
+    internal Task PendingFilterTask { get; private set; } = Task.CompletedTask;
+
+    /// <summary>Gets whether another 500-entry page is available before the loaded entries.</summary>
+    public bool HasEarlierEntries => allEntries.Count < totalEntryCount;
 
     public Func<string, Task<string?>>? PickExportDirectoryAsync { get; set; }
 
@@ -90,7 +101,8 @@ public sealed partial class LogViewerDialogViewModel : ViewModelBase, IModalCont
     {
         try
         {
-            allEntries = ReadEntries();
+            loadedPageCount = 1;
+            SetLoadedEntries(ReadEntries());
         }
         catch (Exception ex)
         {
@@ -102,8 +114,27 @@ public sealed partial class LogViewerDialogViewModel : ViewModelBase, IModalCont
         ApplyFilter();
     }
 
-    partial void OnFilterTextChanged(string value) => ApplyFilter();
+    partial void OnFilterTextChanged(string value)
+    {
+        filterCancellationTokenSource?.Cancel();
+        filterCancellationTokenSource?.Dispose();
+        filterCancellationTokenSource = new CancellationTokenSource();
+        PendingFilterTask = ApplyFilterAfterDelayAsync(filterCancellationTokenSource.Token);
+    }
+
     partial void OnSeverityFilterChanged(LogEntrySeverity? value) => ApplyFilter();
+
+    private async Task ApplyFilterAfterDelayAsync(CancellationToken cancellationToken)
+    {
+        try
+        {
+            await Task.Delay(FilterDebounceDelay, cancellationToken);
+            ApplyFilter();
+        }
+        catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
+        {
+        }
+    }
 
     private void ApplyFilter()
     {
@@ -122,9 +153,10 @@ public sealed partial class LogViewerDialogViewModel : ViewModelBase, IModalCont
     private async Task OpenAsync(CancellationToken cancellationToken)
     {
         IsVisible = true;
+        loadedPageCount = 1;
         try
         {
-            allEntries = await entryLoader(cancellationToken);
+            SetLoadedEntries(await entryLoader(cancellationToken));
         }
         catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
         {
@@ -143,7 +175,29 @@ public sealed partial class LogViewerDialogViewModel : ViewModelBase, IModalCont
     [RelayCommand]
     private void Close()
     {
+        filterCancellationTokenSource?.Cancel();
         IsVisible = false;
+    }
+
+    [RelayCommand(CanExecute = nameof(HasEarlierEntries))]
+    private async Task LoadEarlierAsync(CancellationToken cancellationToken)
+    {
+        loadedPageCount++;
+        try
+        {
+            SetLoadedEntries(await entryLoader(cancellationToken));
+            ApplyFilter();
+        }
+        catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
+        {
+            loadedPageCount--;
+        }
+        catch (Exception ex)
+        {
+            loadedPageCount--;
+            System.Diagnostics.Debug.WriteLine(
+                $"LogViewer: failed to load earlier entries: {ex.Message}");
+        }
     }
 
     [RelayCommand]
@@ -221,6 +275,15 @@ public sealed partial class LogViewerDialogViewModel : ViewModelBase, IModalCont
             lines.Add(line);
 
         return ParseEntries(lines);
+    }
+
+    private void SetLoadedEntries(IReadOnlyList<LogEntryDisplay> entries)
+    {
+        totalEntryCount = entries.Count;
+        var takeCount = Math.Min(entries.Count, checked(loadedPageCount * PageSize));
+        allEntries = entries.Skip(entries.Count - takeCount).ToArray();
+        OnPropertyChanged(nameof(HasEarlierEntries));
+        LoadEarlierCommand.NotifyCanExecuteChanged();
     }
 
     private async Task<IReadOnlyList<LogEntryDisplay>> LoadEntriesAsync(CancellationToken cancellationToken)
@@ -307,13 +370,4 @@ public sealed partial class LogViewerDialogViewModel : ViewModelBase, IModalCont
 
         return entries;
     }
-}
-
-public sealed class LogEntryDisplay
-{
-    public string TimestampText { get; set; } = "";
-    public string SeverityLabel { get; set; } = "";
-    public string Title { get; set; } = "";
-    public string Details { get; set; } = "";
-    public LogEntrySeverity Severity { get; set; }
 }

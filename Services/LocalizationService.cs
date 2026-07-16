@@ -217,6 +217,7 @@ public sealed partial class LocalizedStrings : ObservableObject
     [ObservableProperty] private string logFilterError = "";
     [ObservableProperty] private string logFilterFatal = "";
     [ObservableProperty] private string logSearchPlaceholder = "";
+    [ObservableProperty] private string logLoadEarlier = "";
     [ObservableProperty] private string logNoMatchingEntries = "";
     [ObservableProperty] private string exportLogs = "";
     [ObservableProperty] private string viewLog = "";
@@ -480,6 +481,7 @@ public sealed partial class LocalizedStrings : ObservableObject
         LogFilterError = localizer.T("logFilterError");
         LogFilterFatal = localizer.T("logFilterFatal");
         LogSearchPlaceholder = localizer.T("logSearchPlaceholder");
+        LogLoadEarlier = localizer.T("logLoadEarlier");
         LogNoMatchingEntries = localizer.T("logNoMatchingEntries");
         ExportLogs = localizer.T("exportLogs");
         ViewLog = localizer.T("viewLog");

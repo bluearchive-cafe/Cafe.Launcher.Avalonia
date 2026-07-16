@@ -164,6 +164,7 @@
   "logLevelInformation": "資訊",
   "logLevelVerbose": "詳細",
   "logLevelWarning": "警告",
+  "logLoadEarlier": "載入較早記錄",
   "logNoMatchingEntries": "沒有符合的日誌項目。",
   "logSearchPlaceholder": "搜尋...",
   "logViewerTitle": "日誌檢視器",

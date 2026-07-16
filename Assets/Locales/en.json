@@ -164,6 +164,7 @@
   "logLevelInformation": "Information",
   "logLevelVerbose": "Verbose",
   "logLevelWarning": "Warning",
+  "logLoadEarlier": "Load earlier entries",
   "logNoMatchingEntries": "No matching log entries.",
   "logSearchPlaceholder": "Search...",
   "logViewerTitle": "Log Viewer",

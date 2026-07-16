@@ -28,6 +28,7 @@ public sealed class LogViewerDialogViewModelTests : IDisposable
         viewModel.LoadEntries();
 
         viewModel.FilterText = "text-that-does-not-exist";
+        await viewModel.PendingFilterTask;
 
         Assert.Empty(viewModel.FilteredEntries);
         Assert.True(viewModel.IsEmpty);
@@ -130,6 +131,78 @@ public sealed class LogViewerDialogViewModelTests : IDisposable
         Assert.Contains(viewModel.FilteredEntries, e => e.Title == "Session started");
         Assert.Contains(viewModel.FilteredEntries, e => e.Title == "Wallpaper applied");
         Assert.Contains(viewModel.FilteredEntries, e => e.Title == "Session ended");
+    }
+
+    [Fact]
+    public async Task OpenCommand_WithSixHundredEntries_LoadsLatestFiveHundred()
+    {
+        await File.WriteAllLinesAsync(
+            logger.LogFilePath,
+            Enumerable.Range(0, 600).Select(index =>
+                $"2026-06-22T00:27:57.4750472+08:00 [INF] Entry {index:D3}"));
+        var viewModel = CreateViewModel();
+
+        await viewModel.OpenCommand.ExecuteAsync(null);
+
+        Assert.Equal(500, viewModel.FilteredEntries.Count);
+        Assert.Equal("Entry 100", viewModel.FilteredEntries[0].Title);
+        Assert.Equal("Entry 599", viewModel.FilteredEntries[^1].Title);
+        Assert.True(viewModel.HasEarlierEntries);
+    }
+
+    [Fact]
+    public async Task LoadEarlierCommand_AfterInitialPage_LoadsPreviousFiveHundred()
+    {
+        await File.WriteAllLinesAsync(
+            logger.LogFilePath,
+            Enumerable.Range(0, 600).Select(index =>
+                $"2026-06-22T00:27:57.4750472+08:00 [INF] Entry {index:D3}"));
+        var viewModel = CreateViewModel();
+        await viewModel.OpenCommand.ExecuteAsync(null);
+
+        await viewModel.LoadEarlierCommand.ExecuteAsync(null);
+
+        Assert.Equal(600, viewModel.FilteredEntries.Count);
+        Assert.Equal("Entry 000", viewModel.FilteredEntries[0].Title);
+        Assert.False(viewModel.HasEarlierEntries);
+    }
+
+    [Fact]
+    public async Task FilterText_WhenChangedAgainBeforeDebounce_CompletesLatestSearchOnly()
+    {
+        await File.WriteAllLinesAsync(
+            logger.LogFilePath,
+            [
+                "2026-06-22T00:27:57.4750472+08:00 [INF] First entry",
+                "2026-06-22T00:28:57.4750472+08:00 [INF] Second entry"
+            ]);
+        var viewModel = CreateViewModel();
+        await viewModel.OpenCommand.ExecuteAsync(null);
+
+        viewModel.FilterText = "First";
+        viewModel.FilterText = "Second";
+        await viewModel.PendingFilterTask;
+
+        var entry = Assert.Single(viewModel.FilteredEntries);
+        Assert.Equal("Second entry", entry.Title);
+    }
+
+    [Fact]
+    public async Task OpenCommand_AfterLogFileGrows_IncludesNewEntry()
+    {
+        await File.WriteAllLinesAsync(
+            logger.LogFilePath,
+            ["2026-06-22T00:27:57.4750472+08:00 [INF] Existing entry"]);
+        var viewModel = CreateViewModel();
+        await viewModel.OpenCommand.ExecuteAsync(null);
+        await File.AppendAllLinesAsync(
+            logger.LogFilePath,
+            ["2026-06-22T00:28:57.4750472+08:00 [INF] Appended entry"]);
+
+        await viewModel.OpenCommand.ExecuteAsync(null);
+
+        Assert.Equal(2, viewModel.FilteredEntries.Count);
+        Assert.Equal("Appended entry", viewModel.FilteredEntries[^1].Title);
     }
 
     [Fact]
