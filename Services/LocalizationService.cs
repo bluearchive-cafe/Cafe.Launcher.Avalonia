@@ -103,7 +103,6 @@ public sealed partial class LocalizedStrings : ObservableObject
     [ObservableProperty] private string uninstall = "";
     [ObservableProperty] private string about = "";
     [ObservableProperty] private string aboutActionsGeneral = "";
-    [ObservableProperty] private string aboutActionsDiagnostics = "";
     [ObservableProperty] private string aboutDescription = "";
     [ObservableProperty] private string confirmUninstall = "";
     [ObservableProperty] private string uninstallConfirmDescription = "";
@@ -379,7 +378,6 @@ public sealed partial class LocalizedStrings : ObservableObject
         Uninstall = localizer.T("uninstall");
         About = localizer.T("about");
         AboutActionsGeneral = localizer.T("aboutActionsGeneral");
-        AboutActionsDiagnostics = localizer.T("aboutActionsDiagnostics");
         AboutDescription = localizer.T("aboutDescription");
         ConfirmUninstall = localizer.T("confirmUninstall");
         UninstallConfirmDescription = localizer.T("uninstallConfirmDescription");
