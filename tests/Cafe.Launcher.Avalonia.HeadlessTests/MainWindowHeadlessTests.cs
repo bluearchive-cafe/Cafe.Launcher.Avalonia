@@ -1,6 +1,7 @@
 using System.ComponentModel;
 using Avalonia;
 using Avalonia.Automation;
+using Avalonia.Automation.Peers;
 using Avalonia.Controls;
 using Avalonia.Controls.Presenters;
 using Avalonia.Headless;
@@ -763,8 +764,7 @@ public sealed class MainWindowHeadlessTests
 
         foreach (var (editButton, expectedStep) in editButtons.Zip([0, 2, 1, 3]))
         {
-            Assert.NotNull(editButton.Command);
-            editButton.Command.Execute(editButton.CommandParameter);
+            new ButtonAutomationPeer(editButton).Invoke();
             Dispatcher.UIThread.RunJobs();
 
             Assert.Equal(expectedStep, wizard.Step);
