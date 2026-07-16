@@ -145,13 +145,20 @@ quotedLoop:
 parsed:
   StrCpy $2 $0 $3
   GetFullPathName $3 "$2\.."
-  IfFileExists "$2" 0 failed
+  IfFileExists "$2" 0 staleRegistration
   ExecWait '"$2" /S _?=$3' $1
   IntCmp $1 0 cleanup failed failed
 
 cleanup:
   Delete "$2"
   RMDir "$3"
+  Pop $3
+  Pop $2
+  Pop $1
+  Goto done
+
+staleRegistration:
+  DeleteRegKey HKLM "${UNINSTALL_KEY}"
   Pop $3
   Pop $2
   Pop $1
