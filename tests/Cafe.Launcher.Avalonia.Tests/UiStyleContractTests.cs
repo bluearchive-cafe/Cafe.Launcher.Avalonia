@@ -1059,6 +1059,18 @@ public sealed partial class UiStyleContractTests
     }
 
     [Fact]
+    public void SettingsStatusDetails_UseChipHeightWithoutVerticalPadding()
+    {
+        var document = XDocument.Load(ProjectFile("Views/MainWindow.Styles.axaml"));
+        var statusDetail = GetStyleSetters(document, "Border.status-detail");
+
+        Assert.Equal(
+            "{StaticResource LauncherChipHeight}",
+            statusDetail["Height"]);
+        Assert.Equal("12,0", statusDetail["Padding"]);
+    }
+
+    [Fact]
     public void SettingsNavigation_SelectedItemUsesSemiboldText()
     {
         var document = XDocument.Load(ProjectFile("Views/MainWindow.Styles.axaml"));
