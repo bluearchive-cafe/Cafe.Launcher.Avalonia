@@ -576,6 +576,69 @@ public sealed class MainWindowHeadlessTests
         });
     }
 
+    [AvaloniaTheory]
+    [InlineData(1300, 754)]
+    [InlineData(1024, 640)]
+    public void MainWindow_InstallPathRow_AtDefaultAndMinimumWindowSizes_KeepsInlinePathActionAndExternalActionsReachable(
+        double width,
+        double height)
+    {
+        using var context = CreateContext();
+        context.Window.Width = width;
+        context.Window.Height = height;
+        context.ViewModel.Operations.PanelMode = GameOperationPanelMode.Install;
+        context.Window.Show();
+        Dispatcher.UIThread.RunJobs();
+
+        var pathRow = context.Window
+            .GetVisualDescendants()
+            .OfType<Grid>()
+            .Single(control => control.Classes.Contains("install-path-row"));
+        var pathField = pathRow.Children
+            .OfType<Border>()
+            .Single(control => control.Classes.Contains("path-field"));
+        var changePathButton = pathField
+            .GetVisualDescendants()
+            .OfType<Button>()
+            .Single(control => control.Classes.Contains("secondary-operation"));
+        var pathText = pathField
+            .GetVisualDescendants()
+            .OfType<TextBlock>()
+            .Single(control => control.Classes.Contains("caption"));
+        var externalActions = pathRow.Children
+            .OfType<Button>()
+            .OrderBy(control => control.Bounds.Left)
+            .ToArray();
+        var changePathTopLeft = changePathButton.TranslatePoint(default, pathField);
+        var pathTextTopLeft = pathText.TranslatePoint(default, pathField);
+
+        Assert.NotNull(changePathTopLeft);
+        Assert.NotNull(pathTextTopLeft);
+
+        var changePathRightInset = pathField.Bounds.Width
+            - (changePathTopLeft.Value.X + changePathButton.Bounds.Width);
+        var changePathTopInset = changePathTopLeft.Value.Y;
+        var changePathBottomInset = pathField.Bounds.Height
+            - (changePathTopLeft.Value.Y + changePathButton.Bounds.Height);
+
+        Assert.Equal(2, externalActions.Length);
+        Assert.True(pathField.Bounds.Width > 0);
+        Assert.True(pathField.Bounds.Right <= externalActions[0].Bounds.Left);
+        Assert.True(externalActions[0].Bounds.Right <= externalActions[1].Bounds.Left);
+        Assert.True(pathTextTopLeft.Value.X + pathText.Bounds.Width <= changePathTopLeft.Value.X);
+        Assert.True(changePathTopLeft.Value.X >= 0);
+        Assert.True(changePathTopLeft.Value.X + changePathButton.Bounds.Width <= pathField.Bounds.Width);
+        Assert.True(changePathTopLeft.Value.Y >= 0);
+        Assert.True(changePathTopLeft.Value.Y + changePathButton.Bounds.Height <= pathField.Bounds.Height);
+        Assert.InRange(Math.Abs(changePathRightInset - changePathTopInset), 0, 4);
+        Assert.InRange(Math.Abs(changePathRightInset - changePathBottomInset), 0, 4);
+        Assert.Contains("secondary-operation", externalActions[0].Classes);
+        Assert.Contains("primary-operation", externalActions[1].Classes);
+        AssertControlInsideWindow(pathField, context.Window);
+        AssertControlInsideWindow(changePathButton, context.Window);
+        Assert.All(externalActions, action => AssertControlInsideWindow(action, context.Window));
+    }
+
     [AvaloniaFact]
     public void SettingsControls_UseMinimumAccessibleInteractionHeight()
     {
