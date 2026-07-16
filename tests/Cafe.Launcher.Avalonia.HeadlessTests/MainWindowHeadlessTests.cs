@@ -587,8 +587,8 @@ public sealed class MainWindowHeadlessTests
         Assert.Equal(expectedCode, ((SettingOption)selectedItem.DataContext!).Code);
         Assert.Equal(new Thickness(3, 0, 0, 0), selectedItem.BorderThickness);
         Assert.Equal(Color.Parse("#FF2E7DF6"), Assert.IsType<SolidColorBrush>(selectedItem.BorderBrush).Color);
-        Assert.Equal(Color.Parse("#FFDCEFFF"), Assert.IsType<SolidColorBrush>(selectedItem.Background).Color);
-        Assert.Equal(Color.Parse("#FFDCEFFF"), Assert.IsType<SolidColorBrush>(presenter.Background).Color);
+        Assert.Equal(Color.Parse("#302E7DF6"), Assert.IsType<SolidColorBrush>(selectedItem.Background).Color);
+        Assert.Equal(Color.Parse("#302E7DF6"), Assert.IsType<SolidColorBrush>(presenter.Background).Color);
     }
 
     private static void AssertVisibleSettingsSection(MainWindow window, Type expectedType)
