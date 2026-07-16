@@ -21,7 +21,7 @@ public partial class RemoteContentViewModel : ViewModelBase, IDisposable
     private readonly ImageCacheService imageCacheService;
     private DispatcherTimer? carouselTimer;
     private CancellationTokenSource? carouselDelayCts;
-    private string proxyMode = ProxyModes.Direct;
+    private string proxyMode = ProxyModes.Auto;
     private bool showRemoteContentCard = true;
     private bool isMotionReduced;
     private bool disposed;

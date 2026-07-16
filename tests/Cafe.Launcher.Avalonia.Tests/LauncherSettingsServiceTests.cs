@@ -62,7 +62,7 @@ public sealed class LauncherSettingsServiceTests : IDisposable
 
         Assert.Equal("", settings.GamePath);
         Assert.Equal(LaunchCheckModes.LocalManifest, settings.LaunchCheckMode);
-        Assert.Equal(ProxyModes.Direct, settings.ProxyMode);
+        Assert.Equal(ProxyModes.Auto, settings.ProxyMode);
         Assert.Equal(CloseBehaviors.Minimize, settings.CloseBehavior);
         Assert.Equal(LauncherLanguages.Auto, settings.Language);
         Assert.Equal(ThemeModes.System, settings.ThemeMode);
@@ -163,7 +163,7 @@ public sealed class LauncherSettingsServiceTests : IDisposable
 
         Assert.Equal("", settings.GamePath);
         Assert.Equal(LaunchCheckModes.LocalManifest, settings.LaunchCheckMode);
-        Assert.Equal(ProxyModes.Direct, settings.ProxyMode);
+        Assert.Equal(ProxyModes.Auto, settings.ProxyMode);
         Assert.Equal(CloseBehaviors.Minimize, settings.CloseBehavior);
         Assert.Equal(LauncherLanguages.Auto, settings.Language);
         Assert.Equal(ThemeModes.System, settings.ThemeMode);
@@ -263,6 +263,7 @@ public sealed class LauncherSettingsServiceTests : IDisposable
             "backgroundFit",
             "backgroundFillColor",
             "resourcePanelUid",
+            "resourcePanelUidSource",
             "updateChannel",
             "logLevel"
         };

@@ -51,6 +51,7 @@ public sealed class SettingsOptionsViewModel
 
     public ObservableCollection<SettingOption> ProxyMode { get; } =
     [
+        new() { Code = ProxyModes.Auto },
         new() { Code = ProxyModes.Direct },
         new() { Code = ProxyModes.System }
     ];
@@ -151,6 +152,7 @@ public sealed class SettingsOptionsViewModel
 
         RefreshOptions(ProxyMode, code => code switch
         {
+            ProxyModes.Auto => localizer.T("proxyAuto"),
             ProxyModes.System => localizer.T("proxySystem"),
             _ => localizer.T("proxyDirect")
         });

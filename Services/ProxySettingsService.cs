@@ -27,9 +27,14 @@ public sealed class ProxySettingsService
 
     public Task<IWebProxy?> CreateProxyAsync(string proxyMode, CancellationToken cancellationToken = default)
     {
-        if (proxyMode != ProxyModes.System)
+        if (proxyMode == ProxyModes.Direct)
         {
             return Task.FromResult<IWebProxy?>(null);
+        }
+
+        if (proxyMode == ProxyModes.Auto)
+        {
+            return Task.FromResult<IWebProxy?>(WebRequest.GetSystemWebProxy());
         }
 
         var settings = systemProxySettingsProvider();
@@ -88,7 +93,7 @@ public sealed class ProxySettingsService
         return new SocketsHttpHandler
         {
             AllowAutoRedirect = false,
-            UseProxy = proxyMode == ProxyModes.System,
+            UseProxy = proxyMode != ProxyModes.Direct,
             Proxy = proxy,
             AutomaticDecompression = DecompressionMethods.All,
             PooledConnectionLifetime = TimeSpan.FromMinutes(15)

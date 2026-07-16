@@ -26,6 +26,7 @@ public static class LaunchCheckModes
 public static class ProxyModes
 {
     public const string Direct = "direct";
+    public const string Auto = "auto";
     public const string System = "system";
 }
 
@@ -121,6 +122,12 @@ public static class LogLevels
     public const string Fatal = "fatal";
 }
 
+public static class ResourcePanelUidSources
+{
+    public const string Auto = "auto";
+    public const string Custom = "custom";
+}
+
 public static class GameOperationKinds
 {
     public const string Idle = "idle";
@@ -141,7 +148,7 @@ public sealed partial class LauncherSettings : ObservableObject
 
     [ObservableProperty]
     [property: JsonPropertyName("proxyMode")]
-    private string proxyMode = ProxyModes.Direct;
+    private string proxyMode = ProxyModes.Auto;
 
     [ObservableProperty]
     [property: JsonPropertyName("closeBehavior")]
@@ -210,6 +217,10 @@ public sealed partial class LauncherSettings : ObservableObject
     [ObservableProperty]
     [property: JsonPropertyName("resourcePanelUid")]
     private string resourcePanelUid = "";
+
+    [ObservableProperty]
+    [property: JsonPropertyName("resourcePanelUidSource")]
+    private string resourcePanelUidSource = ResourcePanelUidSources.Auto;
 
     [ObservableProperty]
     [property: JsonPropertyName("updateChannel")]

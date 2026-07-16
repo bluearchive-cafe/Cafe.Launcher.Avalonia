@@ -3,7 +3,6 @@ using System.Globalization;
 using Avalonia;
 using Avalonia.Data.Converters;
 using Avalonia.Media;
-using Avalonia.Styling;
 using Cafe.Launcher.Avalonia.Services;
 
 namespace Cafe.Launcher.Avalonia.Converters;
@@ -31,9 +30,10 @@ public sealed class ToastSeverityToBrushConverter : IValueConverter
             _ => "LauncherToastInfoBrush"
         };
 
-        return Application.Current?.TryGetResource(
+        var app = Application.Current;
+        return app?.TryGetResource(
             resourceKey,
-            ThemeVariant.Default,
+            app.ActualThemeVariant,
             out var resource) == true
             && resource is IBrush brush
                 ? brush

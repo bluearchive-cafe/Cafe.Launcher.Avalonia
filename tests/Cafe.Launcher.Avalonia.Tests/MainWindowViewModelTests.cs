@@ -1014,7 +1014,7 @@ public sealed class MainWindowViewModelTests : IDisposable
     public async Task OpenResourcePanelAsync_WhenCookieUidExists_LoadsStatusAndConfig()
     {
         var cookiePath = Path.Combine(tempDir, "Library");
-        await WriteResourcePanelCookieLibraryAsync(cookiePath, "UID123");
+        await WriteResourcePanelCookieLibraryAsync(cookiePath, "UIDTESTA");
         var settingsService = new LauncherSettingsService(Path.Combine(tempDir, Guid.NewGuid().ToString("N"), "settings.json"));
         var uidService = new ResourcePanelUidService(new BestHttpCookieLibraryService(), settingsService, cookiePath);
         var handler = new ResourcePanelHandler();
@@ -1027,7 +1027,7 @@ public sealed class MainWindowViewModelTests : IDisposable
 
         Assert.True(viewModel.ResourcePanel.IsResourcePanelVisible);
         Assert.False(viewModel.ResourcePanel.IsResourcePanelUidMissing);
-        Assert.Equal("UID123", viewModel.ResourcePanel.ResourcePanelUid);
+        Assert.Equal("UIDTESTA", viewModel.ResourcePanel.ResourcePanelUid);
         Assert.Equal(1, handler.StatusListCount);
         Assert.Equal(1, handler.ConfigGetCount);
         var text = viewModel.ResourcePanel.ResourcePanelItems.First(item => item.Code == ResourcePanelResourceCodes.Text);
@@ -1042,7 +1042,7 @@ public sealed class MainWindowViewModelTests : IDisposable
     public async Task OpenResourcePanelAsync_WhenSourceIsNotCafe_ShowsConfirmBeforeOpening()
     {
         var cookiePath = Path.Combine(tempDir, "Library");
-        await WriteResourcePanelCookieLibraryAsync(cookiePath, "UID123");
+        await WriteResourcePanelCookieLibraryAsync(cookiePath, "UIDTESTA");
         var settingsService = new LauncherSettingsService(Path.Combine(tempDir, Guid.NewGuid().ToString("N"), "settings.json"));
         var uidService = new ResourcePanelUidService(new BestHttpCookieLibraryService(), settingsService, cookiePath);
         var handler = new ResourcePanelHandler();
@@ -1066,7 +1066,7 @@ public sealed class MainWindowViewModelTests : IDisposable
     public async Task ConfirmResourcePanelSourceSwitch_WhenUidExists_SwitchesToCafeAndOpensPanel()
     {
         var cookiePath = Path.Combine(tempDir, "Library");
-        await WriteResourcePanelCookieLibraryAsync(cookiePath, "UID123");
+        await WriteResourcePanelCookieLibraryAsync(cookiePath, "UIDTESTA");
         var settingsPath = Path.Combine(tempDir, Guid.NewGuid().ToString("N"), "settings.json");
         var settingsService = new LauncherSettingsService(settingsPath);
         await settingsService.SaveAsync(new LauncherSettings
@@ -1109,7 +1109,7 @@ public sealed class MainWindowViewModelTests : IDisposable
         using var apiClient = new ResourcePanelApiClient(clientFactory);
         var settingsService = new LauncherSettingsService(
             Path.Combine(tempDir, Guid.NewGuid().ToString("N"), "settings.json"));
-        await settingsService.SaveAsync(new LauncherSettings { ResourcePanelUid = "UID123" });
+        await settingsService.SaveAsync(new LauncherSettings { ResourcePanelUid = "UIDTESTA" });
         var uidService = new ResourcePanelUidService(
             new BestHttpCookieLibraryService(),
             settingsService,
@@ -1140,7 +1140,7 @@ public sealed class MainWindowViewModelTests : IDisposable
     public async Task SaveResourcePanelAsync_SendsCnForEnabledAndJpForDisabled()
     {
         var settingsService = new LauncherSettingsService(Path.Combine(tempDir, Guid.NewGuid().ToString("N"), "settings.json"));
-        await settingsService.SaveAsync(new LauncherSettings { ResourcePanelUid = "UID123" });
+        await settingsService.SaveAsync(new LauncherSettings { ResourcePanelUid = "UIDTESTA" });
         var uidService = new ResourcePanelUidService(
             new BestHttpCookieLibraryService(),
             settingsService,
@@ -1158,7 +1158,7 @@ public sealed class MainWindowViewModelTests : IDisposable
         await viewModel.ResourcePanel.SaveResourcePanelCommand.ExecuteAsync(null);
 
         Assert.Equal("GET", handler.LastRequestMethod);
-        Assert.Equal("/config/set?uid=UID123&text=cn&voice=jp&media=cn", handler.LastRequestPathAndQuery);
+        Assert.Equal("/config/set?uid=UIDTESTA&text=cn&voice=jp&media=cn", handler.LastRequestPathAndQuery);
         Assert.Null(handler.LastRequestBody);
         Assert.Equal(1, handler.ConfigSetCount);
     }
@@ -1771,7 +1771,7 @@ public sealed class MainWindowViewModelTests : IDisposable
                 }
                 """;
             }
-            else if (request.RequestUri?.PathAndQuery == "/config/set?uid=UID123&text=cn&voice=jp&media=cn")
+            else if (request.RequestUri?.PathAndQuery == "/config/set?uid=UIDTESTA&text=cn&voice=jp&media=cn")
             {
                 ConfigSetCount++;
             }

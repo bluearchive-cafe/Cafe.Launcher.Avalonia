@@ -89,6 +89,34 @@ public sealed class ResourcePanelApiClientTests
         Assert.Null(config.Media);
     }
 
+    [Fact]
+    public async Task GetStatusAsync_WhenFirstAttemptThrows_RetriesAndSucceeds()
+    {
+        var handler = new FlakyHandler(
+            new HttpRequestException("simulated network failure"),
+            """{"text":{"official":{"version":"1.0.0"},"localized":{"version":"1.0.0"}},"voice":{"official":{"version":"2.0.0"},"localized":{"version":"2.0.0"}},"media":{"official":{"version":"3.0.0"},"localized":{"version":"3.0.0"}}}""",
+            failFirstAttempts: 1);
+        using var client = new ResourcePanelApiClient(handler);
+
+        var status = await client.GetStatusAsync(ProxyModes.Direct);
+
+        Assert.Equal("1.0.0", status.Text.Official.Version);
+        Assert.Equal(2, handler.CallCount);
+    }
+
+    [Fact]
+    public async Task GetStatusAsync_WhenAllAttemptsThrow_ThrowsAfterMaxRetries()
+    {
+        var handler = new FlakyHandler(
+            new HttpRequestException("persistent failure"),
+            "{}",
+            failFirstAttempts: 99);
+        using var client = new ResourcePanelApiClient(handler);
+
+        await Assert.ThrowsAsync<HttpRequestException>(() => client.GetStatusAsync(ProxyModes.Direct));
+        Assert.Equal(3, handler.CallCount);
+    }
+
     private sealed class JsonHandler : HttpMessageHandler
     {
         private readonly string json;
@@ -121,6 +149,39 @@ public sealed class ResourcePanelApiClientTests
         protected override Task<HttpResponseMessage> SendAsync(HttpRequestMessage request, CancellationToken cancellationToken)
         {
             return Task.FromResult(new HttpResponseMessage(HttpStatusCode.NotFound));
+        }
+    }
+
+    private sealed class FlakyHandler : HttpMessageHandler
+    {
+        private readonly Exception _firstFailure;
+        private readonly string _successJson;
+        private readonly int _failFirstAttempts;
+        private int _callCount;
+
+        public int CallCount => _callCount;
+
+        public FlakyHandler(Exception firstFailure, string successJson, int failFirstAttempts)
+        {
+            _firstFailure = firstFailure;
+            _successJson = successJson;
+            _failFirstAttempts = failFirstAttempts;
+        }
+
+        protected override Task<HttpResponseMessage> SendAsync(
+            HttpRequestMessage request,
+            CancellationToken cancellationToken)
+        {
+            var count = Interlocked.Increment(ref _callCount);
+            if (count <= _failFirstAttempts)
+            {
+                return Task.FromException<HttpResponseMessage>(_firstFailure);
+            }
+
+            return Task.FromResult(new HttpResponseMessage(HttpStatusCode.OK)
+            {
+                Content = new StringContent(_successJson, Encoding.UTF8, "application/json")
+            });
         }
     }
 }
