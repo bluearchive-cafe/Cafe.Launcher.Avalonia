@@ -579,7 +579,7 @@ public sealed class MainWindowHeadlessTests
     [AvaloniaTheory]
     [InlineData(1300, 754)]
     [InlineData(1024, 640)]
-    public void MainWindow_InstallPathRow_AtDefaultAndMinimumWindowSizes_KeepsPathFieldSeparateFromActions(
+    public void MainWindow_InstallPathRow_AtDefaultAndMinimumWindowSizes_KeepsInlinePathActionAndExternalActionsReachable(
         double width,
         double height)
     {
@@ -597,16 +597,36 @@ public sealed class MainWindowHeadlessTests
         var pathField = pathRow.Children
             .OfType<Border>()
             .Single(control => control.Classes.Contains("path-field"));
-        var actions = pathRow.Children
+        var changePathButton = pathField
+            .GetVisualDescendants()
+            .OfType<Button>()
+            .Single(control => control.Classes.Contains("secondary-operation"));
+        var pathText = pathField
+            .GetVisualDescendants()
+            .OfType<TextBlock>()
+            .Single(control => control.Classes.Contains("caption"));
+        var externalActions = pathRow.Children
             .OfType<Button>()
             .OrderBy(control => control.Bounds.Left)
             .ToArray();
+        var changePathTopLeft = changePathButton.TranslatePoint(default, pathField);
+        var pathTextTopLeft = pathText.TranslatePoint(default, pathField);
 
-        Assert.Equal(3, actions.Length);
+        Assert.Equal(2, externalActions.Length);
         Assert.True(pathField.Bounds.Width > 0);
-        Assert.True(pathField.Bounds.Right <= actions[0].Bounds.Left);
+        Assert.True(pathField.Bounds.Right <= externalActions[0].Bounds.Left);
+        Assert.NotNull(changePathTopLeft);
+        Assert.NotNull(pathTextTopLeft);
+        Assert.True(pathTextTopLeft.Value.X + pathText.Bounds.Width <= changePathTopLeft.Value.X);
+        Assert.True(changePathTopLeft.Value.X >= 0);
+        Assert.True(changePathTopLeft.Value.X + changePathButton.Bounds.Width <= pathField.Bounds.Width);
+        Assert.True(changePathTopLeft.Value.Y >= 0);
+        Assert.True(changePathTopLeft.Value.Y + changePathButton.Bounds.Height <= pathField.Bounds.Height);
+        Assert.Contains("secondary-operation", externalActions[0].Classes);
+        Assert.Contains("primary-operation", externalActions[1].Classes);
         AssertControlInsideWindow(pathField, context.Window);
-        Assert.All(actions, action => AssertControlInsideWindow(action, context.Window));
+        AssertControlInsideWindow(changePathButton, context.Window);
+        Assert.All(externalActions, action => AssertControlInsideWindow(action, context.Window));
     }
 
     [AvaloniaFact]

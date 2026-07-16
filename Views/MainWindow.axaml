@@ -305,23 +305,25 @@
                                 <TextBlock Classes="caption" Text="{Binding Shell.DiskSpaceText}"/>
                                 <TextBlock Classes="caption" Text="{Binding Shell.NetworkText}"/>
                             </StackPanel>
-                            <Grid Grid.Row="2" Grid.Column="1" Classes="install-path-row" ColumnDefinitions="*,Auto,Auto,Auto" ColumnSpacing="{StaticResource LauncherSpacingSm}">
+                            <Grid Grid.Row="2" Grid.Column="1" Classes="install-path-row" ColumnDefinitions="*,Auto,Auto" ColumnSpacing="{StaticResource LauncherSpacingSm}">
                                 <Border Classes="path-field">
                                     <Grid ColumnDefinitions="Auto,*" ColumnSpacing="{StaticResource LauncherSpacingSm}">
                                         <TextBlock Text="{Binding Shell.I18n.Path}" Classes="value" VerticalAlignment="Center"/>
-                                        <TextBlock Grid.Column="1" Text="{Binding Shell.PathText}" Classes="caption" VerticalAlignment="Center" TextTrimming="CharacterEllipsis"/>
+                                        <Grid Grid.Column="1" ColumnDefinitions="*,Auto" ColumnSpacing="{StaticResource LauncherSpacingMd}">
+                                            <TextBlock Text="{Binding Shell.PathText}" Classes="caption" VerticalAlignment="Center" TextTrimming="CharacterEllipsis"/>
+                                            <Button Grid.Column="1" Classes="icon-link secondary-operation" Command="{Binding Settings.ChangePersistedGamePathCommand}" VerticalAlignment="Center"
+                                                    IsEnabled="{Binding Shell.IsBusy, Converter={x:Static BoolConverters.Not}}"
+                                                    ToolTip.Tip="{Binding Shell.I18n.ChangePath}"
+                                                    AutomationProperties.Name="{Binding Shell.I18n.ChangePath}">
+                                                <StackPanel Classes="button-content">
+                                                    <materialIcons:MaterialIcon Kind="FolderOpen" Width="{StaticResource LauncherIconSm}" Height="{StaticResource LauncherIconSm}"/>
+                                                    <TextBlock Text="{Binding Shell.I18n.ChangePath}"/>
+                                                </StackPanel>
+                                            </Button>
+                                        </Grid>
                                     </Grid>
                                 </Border>
-                                <Button Grid.Column="1" Classes="icon-link secondary-operation" Command="{Binding Settings.ChangePersistedGamePathCommand}" VerticalAlignment="Center"
-                                        IsEnabled="{Binding Shell.IsBusy, Converter={x:Static BoolConverters.Not}}"
-                                        ToolTip.Tip="{Binding Shell.I18n.ChangePath}"
-                                        AutomationProperties.Name="{Binding Shell.I18n.ChangePath}">
-                                    <StackPanel Classes="button-content">
-                                        <materialIcons:MaterialIcon Kind="FolderOpen" Width="{StaticResource LauncherIconSm}" Height="{StaticResource LauncherIconSm}"/>
-                                        <TextBlock Text="{Binding Shell.I18n.ChangePath}"/>
-                                    </StackPanel>
-                                </Button>
-                                <Button Grid.Column="2" Classes="icon-link secondary-operation" Command="{Binding Settings.SelectInstalledGameCommand}" VerticalAlignment="Center"
+                                <Button Grid.Column="1" Classes="icon-link secondary-operation" Command="{Binding Settings.SelectInstalledGameCommand}" VerticalAlignment="Center"
                                         IsEnabled="{Binding Shell.IsBusy, Converter={x:Static BoolConverters.Not}}"
                                         ToolTip.Tip="{Binding Shell.I18n.SelectInstalledGame}"
                                         AutomationProperties.Name="{Binding Shell.I18n.SelectInstalledGame}">
@@ -330,7 +332,7 @@
                                         <TextBlock Text="{Binding Shell.I18n.SelectInstalledGame}"/>
                                     </StackPanel>
                                 </Button>
-                                <Button Grid.Column="3" Classes="primary-action bottom-action path-operation primary-operation" Command="{Binding Operations.InstallOrUpdateCommand}" ToolTip.Tip="{Binding Operations.InstallButtonText}"
+                                <Button Grid.Column="2" Classes="primary-action bottom-action path-operation primary-operation" Command="{Binding Operations.InstallOrUpdateCommand}" ToolTip.Tip="{Binding Operations.InstallButtonText}"
                                         IsEnabled="{Binding Shell.IsBusy, Converter={x:Static BoolConverters.Not}}"
                                         AutomationProperties.Name="{Binding Operations.InstallButtonText}"
                                         HorizontalAlignment="Right">

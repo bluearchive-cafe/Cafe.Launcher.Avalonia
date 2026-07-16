@@ -88,21 +88,42 @@ public sealed partial class UiStyleContractTests
             .Single(element =>
                 element.Name.LocalName == "Border"
                 && HasClass(element, "path-field"));
+        var pathLayout = pathField
+            .Elements()
+            .Single(element => element.Name.LocalName == "Grid");
+        var pathContent = pathLayout
+            .Elements()
+            .Single(element => element.Name.LocalName == "Grid");
+        var changePathButton = pathContent
+            .Elements()
+            .Single(element =>
+                element.Name.LocalName == "Button"
+                && element.Attribute("Command")?.Value == "{Binding Settings.ChangePersistedGamePathCommand}");
         var pathButtons = pathRow
             .Elements()
             .Where(element => element.Name.LocalName == "Button")
             .ToArray();
+        var detectButton = pathButtons
+            .Single(element =>
+                element.Attribute("Command")?.Value == "{Binding Settings.SelectInstalledGameCommand}");
         var installButton = pathButtons
             .Single(element =>
                 element.Attribute("Command")?.Value == "{Binding Operations.InstallOrUpdateCommand}");
 
         Assert.Equal("1", refreshButton.Attribute("Grid.Column")?.Value);
-        Assert.Equal("*,Auto,Auto,Auto", pathRow.Attribute("ColumnDefinitions")?.Value);
-        Assert.Equal(3, pathButtons.Length);
+        Assert.Equal("*,Auto,Auto", pathRow.Attribute("ColumnDefinitions")?.Value);
+        Assert.Equal("{StaticResource LauncherSpacingSm}", pathRow.Attribute("ColumnSpacing")?.Value);
+        Assert.Equal(2, pathButtons.Length);
+        Assert.Equal("Auto,*", pathLayout.Attribute("ColumnDefinitions")?.Value);
+        Assert.Equal("{StaticResource LauncherSpacingSm}", pathLayout.Attribute("ColumnSpacing")?.Value);
+        Assert.Equal("*,Auto", pathContent.Attribute("ColumnDefinitions")?.Value);
+        Assert.Equal("{StaticResource LauncherSpacingMd}", pathContent.Attribute("ColumnSpacing")?.Value);
+        Assert.Equal("1", changePathButton.Attribute("Grid.Column")?.Value);
         Assert.DoesNotContain(
             pathField.Descendants(),
-            element => element.Name.LocalName == "Button");
-        Assert.Equal("3", installButton.Attribute("Grid.Column")?.Value);
+            element => element.Name.LocalName == "Border");
+        Assert.Equal("1", detectButton.Attribute("Grid.Column")?.Value);
+        Assert.Equal("2", installButton.Attribute("Grid.Column")?.Value);
         Assert.True(HasClass(installButton, "primary-operation"));
         Assert.True(HasClass(installButton, "path-operation"));
         Assert.DoesNotContain(
