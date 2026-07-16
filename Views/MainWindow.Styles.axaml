@@ -279,7 +279,7 @@
         <Setter Property="FontSize" Value="14"/>
         <Setter Property="FontWeight" Value="SemiBold"/>
     </Style>
-    <Style Selector="Button.primary-action.settings-footer-action:disabled">
+    <Style Selector="Button.primary-action.dialog-action:disabled">
         <Setter Property="Background" Value="{DynamicResource LauncherContentRowBrush}"/>
         <Setter Property="BorderBrush" Value="{DynamicResource LauncherCardBorderBrush}"/>
         <Setter Property="BorderThickness" Value="1"/>
