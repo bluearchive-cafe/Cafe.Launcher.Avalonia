@@ -109,20 +109,18 @@ One `MainWindow` (1300×754 initial size, resizable with MinWidth 1024/MinHeight
 - `MainWindow.axaml` — window shell, title bar, remote content panel, bottom install/progress/control panels
 - `MainWindow.Styles.axaml` — all `Window.Styles` extracted via `<StyleInclude Source="avares://..."/>`
 - `MainWindowSettingsOverlay.axaml` — settings dialog overlay with category navigation, runtime status, section host, and transactional footer
-- `SettingsGeneralSection.axaml` — language, theme mode, motion mode settings
+- `SettingsGeneralSection.axaml` — language, close behavior, motion mode settings
 - `SettingsGameSection.axaml` — game path, launch check, repair/uninstall settings
-- `SettingsDownloadNetworkSection.axaml` — download speed, CDN, proxy, update channel settings
-- `SettingsAppearanceSection.axaml` — background, theme color, wallpaper settings
-- `SettingsNotificationsContentSection.axaml` — toast, remote content card settings
-- `SettingsAdvancedSection.axaml` — log level, resource panel settings
-- `SettingsAboutSection.axaml` — version info, licenses, release notes
+- `SettingsDownloadNetworkSection.axaml` — proxy, download source, speed limit, update channel, log level settings
+- `SettingsAppearanceSection.axaml` — theme, theme color, background, toast notifications, remote content card settings
+- `SettingsAboutSection.axaml` — version info, action buttons, copyright
 - `MainWindowDialogsOverlay.axaml` — notice popup, repair/uninstall/stop/close confirmations, update dialog, crash recovery
 - `MainWindowToastOverlay.axaml` — toast notification overlay
 - `Controls/SettingRow.axaml` — reusable settings row (icon + title + description + action slot)
 - `Controls/ConfirmDialog.axaml` — reusable confirmation dialog (StyledProperty-driven)
 - `Controls/LoadingOverlay.axaml` — reusable loading overlay (indeterminate progress + label)
 
-All settings sections and Controls share the owning `MainWindowViewModel` data context. Settings are organized by category code (see `SettingsCategoryCodes` model: `general`, `game`, `download-network`, `appearance`, `notifications-content`, `advanced`, `about`).
+All settings sections and Controls share the owning `MainWindowViewModel` data context. Settings are organized by category code (see `SettingsCategoryCodes` model: `general`, `game`, `download-network`, `appearance`, `about`).
 
 **Entries:**
 1. **Program.cs** — Process mutex (`Local\Cafe_Launcher_SI`), single-instance enforcement via `EventWaitHandle` signal. Creates `UnifiedLogger` + `CrashRecoveryService` on startup before the DI container is available; exposes the logger via `PreDiLogger` so the DI container reuses the same instance (single Serilog pipeline for the entire process). Tracks `PreviousSessionCrashed` via a `session.active` marker file. Sets up unhandled-exception handlers (`AppDomain.UnhandledException`, `TaskScheduler.UnobservedTaskException`). `RunSession` orchestrates the session lifecycle: begin → run app → complete/cleanup, with proper crash-marker preservation. The `ServiceProvider` is disposed in `RunSession`'s finally block after the session-end log entry is written.
@@ -163,7 +161,7 @@ All settings sections and Controls share the owning `MainWindowViewModel` data c
 | `ResourcePanelService` | Service layer for resource panel data operations |
 | `GameLaunchService` | Manifest validation + process launch; gated to `Ready` state |
 | `GameUninstallService` | Guarded uninstall (checks path safety, exe not running, deletes only manifest-listed files) |
-| `LocalizationService` | Inline dictionaries for `en`/`zh-Hans`/`ja`; `auto` resolves via `CultureInfo.CurrentUICulture` |
+| `LocalizationService` | JSON locale files for `en`/`zh-Hans`/`zh-Hant`/`ja` under `Assets/Locales/`; `auto` resolves via `CultureInfo.CurrentUICulture` (zh-TW/HK/MO/Hant → `zh-Hant`, other zh → `zh-Hans`) |
 | `SystemTrayService` | Avalonia 12 `TrayIcon` + `NativeMenu` for minimize-to-tray |
 | `ToastService` | Event-based transient notifications. `ToastNotification` is pure data (`Id`, `Message`, `Severity`, `DurationMs`, `IconKind`); view brush resolution stays in the toast XAML converter |
 | `UnifiedLogger` | Serilog-backed central logging engine with async sink wrapper (`Serilog.Sinks.Async`, 10k-event buffer). Writes `unified.log` with size-based rolling (5 MB, 3 retained files). Enriches events with `AppVersion`/`CommitSha` globally; uses `LoggingLevelSwitch` (Verbose in Debug, Information in Release, runtime-adjustable via `SetMinimumLevel()`). Output template: `{Timestamp:O} [{Level:u3}] {Message:l}{NewLine}{Exception}`. `LogAsync` attaches `LogTitle`/`LogMessage` as structured properties. `SelfLog` routes Serilog diagnostics to `Debug.WriteLine`. Created in `Program.cs` and shared with the DI container (single pipeline). Implements `IDisposable`. |
@@ -220,7 +218,7 @@ Persisted fields in `settings.json` and their valid values:
 
 | Setting | JSON key | Valid codes |
 |---|---|---|
-| Language | `language` | `auto`, `en`, `zh-Hans`, `ja` |
+| Language | `language` | `auto`, `en`, `zh-Hans`, `zh-Hant`, `ja` |
 | Theme | `themeMode` | `system`, `light`, `dark` |
 | Patch URL group | `patchUrlGroup` | `official`, `cafe` |
 | Launch check | `launchCheckMode` | `localManifest`, `remoteManifest`, `none` |
@@ -248,7 +246,7 @@ Persisted fields in `settings.json` and their valid values:
 - `LauncherStateModels.cs` — String constants for modes/behaviors (`LaunchCheckModes`, `ProxyModes`, `CloseBehaviors`, `LauncherLanguages`, `ThemeModes`, `ThemeColorModes`, `DownloadSpeedLimits`, `PatchUrlGroups`, `UpdateChannels`, `LogLevels`, `BackgroundSources`, `BackgroundFits`, `GameOperationKinds`), plus runtime state objects (`LauncherStatusSnapshot`, `LauncherRemoteState`, `LauncherRuntimeState`, `LauncherSettings`, `GameOperationProgress`, `GameOperationResult`, `ManifestValidationResult`, `GameLaunchResult`), and option types (`SettingOption`, `LanguageOption`, `ThemeOption`) for localized dropdown binding
 - `LocalInstallationStateModels.cs` — Local installation classifications, immutable state snapshots, and commit input records
 - `LocalGameContracts.cs` — `LocalManifest`, `RemoteManifest`, `ManifestFile`, `GameLauncherConfig`. **`ManifestFile` property order (`path, hash, size, vc`) is a wire contract**: it defines the serialized JSON key order, and the `vc` integrity hash is computed over those values in the same order (see `OfficialHashService`). Do not reorder — it must match the official launcher's manifest or both launchers reject each other's `manifest.json` as corrupted
-- `SettingsCategoryCodes.cs` — Settings section category code constants (`general`, `game`, `download-network`, `appearance`, `notifications-content`, `advanced`, `about`) with `Normalize()` fallback
+- `SettingsCategoryCodes.cs` — Settings section category code constants (`general`, `game`, `download-network`, `appearance`, `about`) with `Normalize()` fallback
 - `PatchUrlGroupDefinition.cs` — Code + host-from/to tuples for CDN URL rewriting
 - `DownloadTaskState.cs` — Serializable download resume state
 - `BannerDot.cs` — Observable carousel dot indicator
@@ -290,10 +288,10 @@ Users can switch between `Official` (yo-star.com) and `Cafe` (bluearchive.cafe) 
 
 ### Localization
 
-All UI strings go through `LocalizationService.T(key)` and `LocalizationService.F(key, args)` for formatted strings. String data is loaded from embedded JSON resource files at `Assets/Locales/{locale}.json` (en, zh-Hans, ja) at first access via `AssetLoader`. `LocalizedStrings` (generated by CommunityToolkit source generators) exposes individual `[ObservableProperty]` properties for XAML binding: `{Binding I18n.Settings}`, etc.
+All UI strings go through `LocalizationService.T(key)` and `LocalizationService.F(key, args)` for formatted strings. String data is loaded from embedded JSON resource files at `Assets/Locales/{locale}.json` (en, zh-Hans, zh-Hant, ja) at first access via `AssetLoader`. `LocalizedStrings` (generated by CommunityToolkit source generators) exposes individual `[ObservableProperty]` properties for XAML binding: `{Binding I18n.Settings}`, etc.
 
 **Adding localized strings:**
-1. Add the key and value to all 3 JSON files at `Assets/Locales/` (en.json, zh-Hans.json, ja.json)
+1. Add the key and value to all 4 JSON files at `Assets/Locales/` (en.json, zh-Hans.json, zh-Hant.json, ja.json)
 2. Add an `[ObservableProperty]` field to `LocalizedStrings`
 3. Wire it in `LocalizedStrings.Apply()`
 4. Build — JSON files are automatically embedded via `<AvaloniaResource Include="Assets\**"/>`
