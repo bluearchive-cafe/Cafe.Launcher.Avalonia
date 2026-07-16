@@ -1,5 +1,7 @@
 using System;
+using System.Collections.ObjectModel;
 using System.Threading.Tasks;
+using Cafe.Launcher.Avalonia.Features.SetupWizard;
 using Cafe.Launcher.Avalonia.Features.Shell;
 using Cafe.Launcher.Avalonia.Helpers;
 using Cafe.Launcher.Avalonia.Models;
@@ -30,10 +32,22 @@ public partial class SetupWizardViewModel : ViewModelBase, IModalContentViewMode
         patchUrlGroup = defaults.PatchUrlGroup;
         gamePath = defaults.GamePath;
         proxyMode = defaults.ProxyMode;
+        Steps =
+        [
+            CreateStep(0),
+            CreateStep(1),
+            CreateStep(2),
+            CreateStep(3),
+            CreateStep(4)
+        ];
+        RefreshSteps();
     }
 
     /// <summary>Folder picker delegate, set by MainWindowViewModel.WireChildren().</summary>
     public Func<string, Task<string?>>? PickGameFolderAsync { get; set; }
+
+    /// <summary>Gets the five ordered navigation steps and their current states.</summary>
+    public ObservableCollection<SetupWizardStepItem> Steps { get; }
 
     // ── Step state ───────────────────────────────────────────────
 
@@ -47,6 +61,8 @@ public partial class SetupWizardViewModel : ViewModelBase, IModalContentViewMode
     [NotifyPropertyChangedFor(nameof(IsStep2))]
     [NotifyPropertyChangedFor(nameof(IsStep3))]
     private int step;
+
+    partial void OnStepChanged(int value) => RefreshSteps();
 
     public bool IsFirstStep => Step == 0;
     public bool IsLastStep => Step == 4;
@@ -77,22 +93,30 @@ public partial class SetupWizardViewModel : ViewModelBase, IModalContentViewMode
     [ObservableProperty]
     private string language;
 
+    partial void OnLanguageChanged(string value) => RefreshSteps();
+
     [ObservableProperty]
     [NotifyPropertyChangedFor(nameof(CanGoNext))]
     [NotifyPropertyChangedFor(nameof(IsPatchUrlGroupCafe))]
     [NotifyPropertyChangedFor(nameof(IsPatchUrlGroupOfficial))]
     private string patchUrlGroup;
 
+    partial void OnPatchUrlGroupChanged(string value) => RefreshSteps();
+
     [ObservableProperty]
     [NotifyPropertyChangedFor(nameof(CanGoNext))]
     [NotifyPropertyChangedFor(nameof(IsGamePathEmpty))]
     private string gamePath;
+
+    partial void OnGamePathChanged(string value) => RefreshSteps();
 
     [ObservableProperty]
     [NotifyPropertyChangedFor(nameof(IsProxyAuto))]
     [NotifyPropertyChangedFor(nameof(IsProxyDirect))]
     [NotifyPropertyChangedFor(nameof(IsProxySystem))]
     private string proxyMode;
+
+    partial void OnProxyModeChanged(string value) => RefreshSteps();
 
     // ── RadioButton helpers ───────────────────────────────────────
 
@@ -166,6 +190,32 @@ public partial class SetupWizardViewModel : ViewModelBase, IModalContentViewMode
     }
 
     [RelayCommand]
+    private void GoToStep(int targetStep)
+    {
+        if (targetStep < 0 || targetStep >= Steps.Count || targetStep > Step)
+        {
+            return;
+        }
+
+        Step = targetStep;
+    }
+
+    [RelayCommand]
+    private void SelectCafeDownloadSource() => PatchUrlGroup = PatchUrlGroups.Cafe;
+
+    [RelayCommand]
+    private void SelectOfficialDownloadSource() => PatchUrlGroup = PatchUrlGroups.Official;
+
+    [RelayCommand]
+    private void SelectProxyAuto() => ProxyMode = ProxyModes.Auto;
+
+    [RelayCommand]
+    private void SelectProxyDirect() => ProxyMode = ProxyModes.Direct;
+
+    [RelayCommand]
+    private void SelectProxySystem() => ProxyMode = ProxyModes.System;
+
+    [RelayCommand]
     private async Task SkipAsync()
     {
         await AsyncEvent.InvokeSequentiallyAsync(SettingsApplied, LauncherSettings.CreateDefaults());
@@ -195,28 +245,65 @@ public partial class SetupWizardViewModel : ViewModelBase, IModalContentViewMode
 
     private void RefreshSummaryDisplayNames()
     {
-        LanguageDisplayName = Language switch
-        {
-            LauncherLanguages.English => "English",
-            LauncherLanguages.SimplifiedChinese => "简体中文",
-            LauncherLanguages.TraditionalChinese => "繁體中文",
-            LauncherLanguages.Japanese => "日本語",
-            _ => localizer.T("language") + " (Auto)"
-        };
-        DownloadSourceDisplayName = PatchUrlGroup switch
-        {
-            PatchUrlGroups.Cafe => localizer.T("downloadSourceCafe"),
-            _ => localizer.T("downloadSourceOfficial")
-        };
-        ProxyDisplayName = ProxyMode switch
-        {
-            ProxyModes.Direct => localizer.T("proxyDirect"),
-            ProxyModes.Auto => localizer.T("proxyAuto"),
-            ProxyModes.System => localizer.T("proxySystem"),
-            _ => ProxyMode
-        };
+        LanguageDisplayName = ResolveLanguageDisplayName();
+        DownloadSourceDisplayName = ResolveDownloadSourceDisplayName();
+        ProxyDisplayName = ResolveProxyDisplayName();
         OnPropertyChanged(nameof(LanguageDisplayName));
         OnPropertyChanged(nameof(DownloadSourceDisplayName));
         OnPropertyChanged(nameof(ProxyDisplayName));
     }
+
+    private SetupWizardStepItem CreateStep(int index) => new()
+    {
+        Index = index,
+        Title = localizer.T($"setupWizardStep{index}Title")
+    };
+
+    private void RefreshSteps()
+    {
+        if (Steps is null)
+        {
+            return;
+        }
+
+        foreach (var item in Steps)
+        {
+            item.State = item.Index < Step
+                ? SetupWizardStepState.Completed
+                : item.Index == Step
+                    ? SetupWizardStepState.Current
+                    : SetupWizardStepState.Locked;
+            item.Summary = item.Index switch
+            {
+                0 => ResolveLanguageDisplayName(),
+                1 => ResolveDownloadSourceDisplayName(),
+                2 => GamePath,
+                3 => ResolveProxyDisplayName(),
+                _ => ""
+            };
+        }
+    }
+
+    private string ResolveLanguageDisplayName() => Language switch
+    {
+        LauncherLanguages.English => "English",
+        LauncherLanguages.SimplifiedChinese => "简体中文",
+        LauncherLanguages.TraditionalChinese => "繁體中文",
+        LauncherLanguages.Japanese => "日本語",
+        _ => localizer.T("language") + " (Auto)"
+    };
+
+    private string ResolveDownloadSourceDisplayName() => PatchUrlGroup switch
+    {
+        PatchUrlGroups.Cafe => localizer.T("downloadSourceCafe"),
+        _ => localizer.T("downloadSourceOfficial")
+    };
+
+    private string ResolveProxyDisplayName() => ProxyMode switch
+    {
+        ProxyModes.Direct => localizer.T("proxyDirect"),
+        ProxyModes.Auto => localizer.T("proxyAuto"),
+        ProxyModes.System => localizer.T("proxySystem"),
+        _ => ProxyMode
+    };
 }

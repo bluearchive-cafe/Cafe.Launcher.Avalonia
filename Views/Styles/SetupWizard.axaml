@@ -1,0 +1,58 @@
+<Styles xmlns="https://github.com/avaloniaui"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
+    <Style Selector="Border.wizard-navigation">
+        <Setter Property="Background" Value="{DynamicResource LauncherContentRowBrush}"/>
+        <Setter Property="BorderBrush" Value="{DynamicResource LauncherCardBorderBrush}"/>
+        <Setter Property="BorderThickness" Value="0,0,1,0"/>
+        <Setter Property="Padding" Value="20"/>
+    </Style>
+    <Style Selector="Button.wizard-step">
+        <Setter Property="Background" Value="{DynamicResource LauncherTransparentBrush}"/>
+        <Setter Property="BorderBrush" Value="{DynamicResource LauncherTransparentBrush}"/>
+        <Setter Property="BorderThickness" Value="1"/>
+        <Setter Property="CornerRadius" Value="{DynamicResource LauncherRadiusMd}"/>
+        <Setter Property="Padding" Value="10"/>
+        <Setter Property="HorizontalContentAlignment" Value="Stretch"/>
+        <Setter Property="MinHeight" Value="56"/>
+    </Style>
+    <Style Selector="Button.wizard-step:pointerover">
+        <Setter Property="Background" Value="{DynamicResource LauncherFlatHoverBrush}"/>
+    </Style>
+    <Style Selector="Button.wizard-step.current">
+        <Setter Property="Background" Value="{DynamicResource LauncherAccentSoftBrush}"/>
+        <Setter Property="BorderBrush" Value="{DynamicResource LauncherAccentBorderBrush}"/>
+    </Style>
+    <Style Selector="Button.wizard-step.completed">
+        <Setter Property="Foreground" Value="{DynamicResource LauncherTextPrimaryBrush}"/>
+    </Style>
+    <Style Selector="Border.wizard-step-index">
+        <Setter Property="Width" Value="32"/>
+        <Setter Property="Height" Value="32"/>
+        <Setter Property="CornerRadius" Value="16"/>
+        <Setter Property="Background" Value="{DynamicResource LauncherContentSurfaceBrush}"/>
+        <Setter Property="BorderBrush" Value="{DynamicResource LauncherCardBorderBrush}"/>
+        <Setter Property="BorderThickness" Value="1"/>
+        <Setter Property="VerticalAlignment" Value="Center"/>
+    </Style>
+    <Style Selector="Button.wizard-step.current Border.wizard-step-index">
+        <Setter Property="Background" Value="{DynamicResource LauncherAccentBrush}"/>
+        <Setter Property="BorderBrush" Value="{DynamicResource LauncherAccentBrush}"/>
+    </Style>
+    <Style Selector="Button.wizard-choice">
+        <Setter Property="Background" Value="{DynamicResource LauncherContentRowBrush}"/>
+        <Setter Property="BorderBrush" Value="{DynamicResource LauncherCardBorderBrush}"/>
+        <Setter Property="BorderThickness" Value="1"/>
+        <Setter Property="CornerRadius" Value="{DynamicResource LauncherRadiusMd}"/>
+        <Setter Property="Padding" Value="14"/>
+        <Setter Property="MinHeight" Value="64"/>
+        <Setter Property="HorizontalContentAlignment" Value="Stretch"/>
+    </Style>
+    <Style Selector="Button.wizard-choice:pointerover">
+        <Setter Property="Background" Value="{DynamicResource LauncherFlatHoverBrush}"/>
+        <Setter Property="BorderBrush" Value="{DynamicResource LauncherAccentHoverBrush}"/>
+    </Style>
+    <Style Selector="Button.wizard-choice.active">
+        <Setter Property="Background" Value="{DynamicResource LauncherAccentSoftBrush}"/>
+        <Setter Property="BorderBrush" Value="{DynamicResource LauncherAccentBrush}"/>
+    </Style>
+</Styles>

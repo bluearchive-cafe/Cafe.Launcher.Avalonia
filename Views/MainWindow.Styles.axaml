@@ -910,5 +910,6 @@
     </Style>
     <StyleInclude Source="avares://Cafe.Launcher.Avalonia/Views/Styles/Diagnostics.axaml"/>
     <StyleInclude Source="avares://Cafe.Launcher.Avalonia/Views/Styles/RemoteContent.axaml"/>
+    <StyleInclude Source="avares://Cafe.Launcher.Avalonia/Views/Styles/SetupWizard.axaml"/>
     <StyleInclude Source="avares://Cafe.Launcher.Avalonia/Views/Styles/Toast.axaml"/>
 </Styles>

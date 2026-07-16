@@ -10,6 +10,7 @@ public sealed partial class UiStyleContractTests
         "Views/MainWindow.Styles.axaml",
         "Views/Styles/Diagnostics.axaml",
         "Views/Styles/RemoteContent.axaml",
+        "Views/Styles/SetupWizard.axaml",
         "Views/Styles/Toast.axaml"
     ];
 
@@ -1007,6 +1008,29 @@ public sealed partial class UiStyleContractTests
         Assert.Equal("True", window.Attribute("CanResize")?.Value);
         Assert.Equal("1024", window.Attribute("MinWidth")?.Value);
         Assert.Equal("640", window.Attribute("MinHeight")?.Value);
+    }
+
+    [Fact]
+    public void SetupWizard_UsesFixedFiveStepWorkspaceAndCollectionNavigation()
+    {
+        var document = XDocument.Load(ProjectFile("Views/SetupWizardOverlay.axaml"));
+        var dialog = document
+            .Descendants()
+            .Single(element => element.Name.LocalName == "Border" && HasClass(element, "overlay-dialog"));
+        Assert.Equal("920", dialog.Attribute("Width")?.Value);
+        Assert.Equal("560", dialog.Attribute("Height")?.Value);
+
+        var navigation = document
+            .Descendants()
+            .Single(element =>
+                element.Name.LocalName == "ItemsControl"
+                && element.Attribute("ItemsSource")?.Value == "{Binding Dialogs.SetupWizard.Steps}");
+        var template = navigation.Descendants().Single(element => element.Name.LocalName == "DataTemplate");
+        Assert.Equal("setup:SetupWizardStepItem", template.Attributes().Single(
+            attribute => attribute.Name.LocalName == "DataType").Value);
+        Assert.Single(template.Descendants(), element =>
+            element.Name.LocalName == "Button"
+            && element.Attribute("CommandParameter")?.Value == "{Binding Index}");
     }
 
     [Fact]
