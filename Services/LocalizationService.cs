@@ -20,6 +20,7 @@ public sealed partial class LocalizedStrings : ObservableObject
     [ObservableProperty] private string settingsCategoryGame = "";
     [ObservableProperty] private string settingsCategoryDownloadNetwork = "";
     [ObservableProperty] private string settingsCategoryAppearance = "";
+    [ObservableProperty] private string settingsCategoryAdvanced = "";
     [ObservableProperty] private string settingsCategoryAbout = "";
     [ObservableProperty] private string minimize = "";
     [ObservableProperty] private string close = "";
@@ -102,7 +103,6 @@ public sealed partial class LocalizedStrings : ObservableObject
     [ObservableProperty] private string uninstall = "";
     [ObservableProperty] private string about = "";
     [ObservableProperty] private string aboutActionsGeneral = "";
-    [ObservableProperty] private string aboutActionsDiagnostics = "";
     [ObservableProperty] private string aboutDescription = "";
     [ObservableProperty] private string confirmUninstall = "";
     [ObservableProperty] private string uninstallConfirmDescription = "";
@@ -295,6 +295,7 @@ public sealed partial class LocalizedStrings : ObservableObject
         SettingsCategoryGame = localizer.T("settingsCategoryGame");
         SettingsCategoryDownloadNetwork = localizer.T("settingsCategoryDownloadNetwork");
         SettingsCategoryAppearance = localizer.T("settingsCategoryAppearance");
+        SettingsCategoryAdvanced = localizer.T("settingsCategoryAdvanced");
         SettingsCategoryAbout = localizer.T("settingsCategoryAbout");
         Minimize = localizer.T("minimize");
         Close = localizer.T("close");
@@ -377,7 +378,6 @@ public sealed partial class LocalizedStrings : ObservableObject
         Uninstall = localizer.T("uninstall");
         About = localizer.T("about");
         AboutActionsGeneral = localizer.T("aboutActionsGeneral");
-        AboutActionsDiagnostics = localizer.T("aboutActionsDiagnostics");
         AboutDescription = localizer.T("aboutDescription");
         ConfirmUninstall = localizer.T("confirmUninstall");
         UninstallConfirmDescription = localizer.T("uninstallConfirmDescription");
@@ -670,11 +670,14 @@ public sealed class LocalizationService
         }
     }
 
-    public static IReadOnlyList<LanguageOption> GetLanguageOptions()
+    public static IReadOnlyList<LanguageOption> GetLanguageOptions() =>
+        GetLanguageOptions(new LocalizationService());
+
+    public static IReadOnlyList<LanguageOption> GetLanguageOptions(LocalizationService localizer)
     {
         return
         [
-            new LanguageOption { Code = LauncherLanguages.Auto, DisplayName = "Auto" },
+            new LanguageOption { Code = LauncherLanguages.Auto, DisplayName = localizer.T("languageAuto") },
             new LanguageOption { Code = LauncherLanguages.English, DisplayName = "English" },
             new LanguageOption { Code = LauncherLanguages.SimplifiedChinese, DisplayName = "简体中文" },
             new LanguageOption { Code = LauncherLanguages.TraditionalChinese, DisplayName = "繁體中文" },

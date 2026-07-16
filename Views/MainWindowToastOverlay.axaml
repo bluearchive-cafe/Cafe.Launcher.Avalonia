@@ -37,6 +37,7 @@
                                         Classes="toast-close"
                                         Command="{Binding DataContext.Toasts.DismissToastCommand, ElementName=ToastOverlayRoot}"
                                         CommandParameter="{Binding Id}"
+                                        ToolTip.Tip="{Binding DataContext.Shell.I18n.Close, ElementName=ToastOverlayRoot}"
                                         AutomationProperties.Name="{Binding DataContext.Shell.I18n.Close, ElementName=ToastOverlayRoot}">
                                     <materialIcons:MaterialIcon Kind="Close" Width="{StaticResource LauncherIconSm}" Height="{StaticResource LauncherIconSm}"/>
                                 </Button>

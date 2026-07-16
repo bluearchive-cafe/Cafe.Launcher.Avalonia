@@ -76,33 +76,6 @@
                 </StackPanel>
             </Button>
         </WrapPanel>
-        <TextBlock Text="{Binding Shell.I18n.AboutActionsDiagnostics}" Classes="group-title"/>
-        <WrapPanel>
-            <Button Classes="flat-action wrap-action"
-                    Command="{Binding LogViewer.OpenCommand}"
-                    AutomationProperties.Name="{Binding Shell.I18n.ViewLog}">
-                <StackPanel Classes="button-content">
-                    <materialIcons:MaterialIcon Kind="TextBoxOutline" Width="{StaticResource LauncherIconSm}" Height="{StaticResource LauncherIconSm}"/>
-                    <TextBlock Text="{Binding Shell.I18n.ViewLog}"/>
-                </StackPanel>
-            </Button>
-            <Button Classes="flat-action wrap-action"
-                    Command="{Binding LogViewer.ExportCommand}"
-                    AutomationProperties.Name="{Binding Shell.I18n.ExportLogs}">
-                <StackPanel Classes="button-content">
-                    <materialIcons:MaterialIcon Kind="Export" Width="{StaticResource LauncherIconSm}" Height="{StaticResource LauncherIconSm}"/>
-                    <TextBlock Text="{Binding Shell.I18n.ExportLogs}"/>
-                </StackPanel>
-            </Button>
-            <Button Classes="flat-action wrap-action"
-                    Command="{Binding WindowChrome.OpenDataDirectoryCommand}"
-                    AutomationProperties.Name="{Binding Shell.I18n.OpenDataDirectory}">
-                <StackPanel Classes="button-content">
-                    <materialIcons:MaterialIcon Kind="FolderOpen" Width="{StaticResource LauncherIconSm}" Height="{StaticResource LauncherIconSm}"/>
-                    <TextBlock Text="{Binding Shell.I18n.OpenDataDirectory}"/>
-                </StackPanel>
-            </Button>
-        </WrapPanel>
         <StackPanel Spacing="{StaticResource LauncherSpacingXs}">
             <TextBlock Text="{Binding Shell.I18n.AboutLinks}" Classes="group-title"/>
             <TextBlock Text="{Binding Shell.I18n.AboutCopyrightText}" Classes="caption" TextWrapping="Wrap"/>

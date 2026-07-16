@@ -354,6 +354,14 @@
         <Setter Property="Foreground" Value="{DynamicResource LauncherOnAccentBrush}"/>
         <Setter Property="Opacity" Value="1"/>
     </Style>
+    <Style Selector="TextBlock.operation-status-title">
+        <Setter Property="FontSize" Value="{StaticResource LauncherFontSizeHeadingSm}"/>
+        <Setter Property="FontWeight" Value="{StaticResource LauncherFontWeightStrong}"/>
+        <Setter Property="Foreground" Value="{DynamicResource LauncherTextPrimaryBrush}"/>
+    </Style>
+    <Style Selector="TextBlock.operation-status-title.on-dark-title">
+        <Setter Property="Foreground" Value="{DynamicResource LauncherOnChromeBrush}"/>
+    </Style>
     <Style Selector="TextBlock.panel-title">
         <Setter Property="Foreground" Value="{DynamicResource LauncherTextPrimaryBrush}"/>
         <Setter Property="FontSize" Value="{StaticResource LauncherFontSizeLg}"/>

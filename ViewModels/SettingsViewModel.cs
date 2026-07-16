@@ -119,6 +119,7 @@ public partial class SettingsViewModel : ViewModelBase, IDisposable, IModalConte
             OnPropertyChanged(nameof(IsGameCategorySelected));
             OnPropertyChanged(nameof(IsDownloadNetworkCategorySelected));
             OnPropertyChanged(nameof(IsAppearanceCategorySelected));
+            OnPropertyChanged(nameof(IsAdvancedCategorySelected));
             OnPropertyChanged(nameof(IsAboutCategorySelected));
         }
     }
@@ -127,6 +128,7 @@ public partial class SettingsViewModel : ViewModelBase, IDisposable, IModalConte
     public bool IsGameCategorySelected => SelectedCategory == SettingsCategoryCodes.Game;
     public bool IsDownloadNetworkCategorySelected => SelectedCategory == SettingsCategoryCodes.DownloadNetwork;
     public bool IsAppearanceCategorySelected => SelectedCategory == SettingsCategoryCodes.Appearance;
+    public bool IsAdvancedCategorySelected => SelectedCategory == SettingsCategoryCodes.Advanced;
     public bool IsAboutCategorySelected => SelectedCategory == SettingsCategoryCodes.About;
 
     internal Task PendingAppearancePreview => appearancePreviewTask;
