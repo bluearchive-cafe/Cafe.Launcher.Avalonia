@@ -171,23 +171,63 @@ public sealed class LauncherApiClient : IDisposable
         return patchUrlGroupService.RewriteCdnConfig(response, patchUrlGroup);
     }
 
+    /// <summary>
+    /// Maximum number of attempts for transient manifest fetch failures
+    /// (initial attempt + retries). Mirrors the bounded retry philosophy of
+    /// <see cref="FileDownloadService.RetryDomainOrder"/> but with fewer
+    /// attempts — manifests are small metadata payloads, not large file
+    /// downloads. Backoff: 500ms, 1000ms.
+    /// </summary>
+    private const int MaxManifestFetchAttempts = 3;
+    private static readonly TimeSpan[] ManifestFetchBackoff =
+    [
+        TimeSpan.FromMilliseconds(500),
+        TimeSpan.FromMilliseconds(1000)
+    ];
+
     public async Task<RemoteManifest> GetRemoteManifestAsync(
         string url,
         string proxyMode,
         CancellationToken cancellationToken = default)
     {
-        using var lease = await leaseSource.CreateLeaseAsync(proxyMode, cancellationToken).ConfigureAwait(false);
-        using var response = await RemoteHttpRequestService.SendAsync(
-            lease.Client,
-            new Uri(url),
-            static uri => new HttpRequestMessage(HttpMethod.Get, uri),
-            urlValidator,
-            cancellationToken,
-            connectionUsesProxy: proxyMode == ProxyModes.System).ConfigureAwait(false);
-        response.EnsureSuccessStatusCode();
-        await using var stream = await response.Content.ReadAsStreamAsync(cancellationToken).ConfigureAwait(false);
-        var manifest = await JsonSerializer.DeserializeAsync<RemoteManifest>(stream, jsonOptions, cancellationToken).ConfigureAwait(false);
-        return manifest ?? new RemoteManifest();
+        var requestUri = new Uri(url);
+        Exception? lastException = null;
+
+        for (var attempt = 0; attempt < MaxManifestFetchAttempts; attempt++)
+        {
+            cancellationToken.ThrowIfCancellationRequested();
+            try
+            {
+                using var lease = await leaseSource
+                    .CreateLeaseAsync(proxyMode, cancellationToken)
+                    .ConfigureAwait(false);
+                using var response = await RemoteHttpRequestService.SendAsync(
+                    lease.Client,
+                    requestUri,
+                    static uri => new HttpRequestMessage(HttpMethod.Get, uri),
+                    urlValidator,
+                    cancellationToken,
+                    connectionUsesProxy: proxyMode == ProxyModes.System).ConfigureAwait(false);
+                response.EnsureSuccessStatusCode();
+                var manifest = await RemoteHttpRequestService.DeserializeJsonAsync<RemoteManifest>(
+                    response, requestUri, jsonOptions, cancellationToken).ConfigureAwait(false);
+                return manifest ?? new RemoteManifest();
+            }
+            catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
+            {
+                throw;
+            }
+            catch (Exception ex) when (ex is HttpRequestException or TaskCanceledException or JsonException)
+            {
+                lastException = ex;
+                if (attempt < MaxManifestFetchAttempts - 1)
+                {
+                    await Task.Delay(ManifestFetchBackoff[attempt], cancellationToken).ConfigureAwait(false);
+                }
+            }
+        }
+
+        throw lastException!;
     }
 
     private async Task<T> GetEnvelopeDataAsync<T>(
@@ -204,8 +244,7 @@ public sealed class LauncherApiClient : IDisposable
         using var response = await lease.Client.SendAsync(request, cancellationToken).ConfigureAwait(false);
         response.EnsureSuccessStatusCode();
 
-        await using var stream = await response.Content.ReadAsStreamAsync(cancellationToken).ConfigureAwait(false);
-        var envelope = await JsonSerializer.DeserializeAsync<LauncherApiEnvelope<T>>(stream, jsonOptions, cancellationToken).ConfigureAwait(false);
+        var envelope = await RemoteHttpRequestService.DeserializeJsonAsync<LauncherApiEnvelope<T>>(response, request.RequestUri, jsonOptions, cancellationToken).ConfigureAwait(false);
 
         if (envelope is null)
         {

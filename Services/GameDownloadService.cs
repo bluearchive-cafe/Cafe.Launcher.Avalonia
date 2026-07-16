@@ -272,6 +272,7 @@ public sealed class GameDownloadService : IDisposable
             if (localGame.GameConfig?.Name is { Length: > 0 }
                 && await ProcessService.IsExeRunningAsync($"{localGame.GameConfig.Name}.exe", activeToken))
             {
+                ClearDownloadState();
                 return Failed(localizer.T("gameExecutableRunning"), "game-running");
             }
 
@@ -295,6 +296,7 @@ public sealed class GameDownloadService : IDisposable
                     activeToken).ConfigureAwait(false);
             if (string.IsNullOrWhiteSpace(cdnConfig.PrimaryCdn) || string.IsNullOrWhiteSpace(cdnConfig.BackUpCdn))
             {
+                ClearDownloadState();
                 return Failed(localizer.T("cdnConfigIncomplete"), "cdn-config");
             }
 
@@ -351,6 +353,7 @@ public sealed class GameDownloadService : IDisposable
                     "Game download blocked by disk space.",
                     $"path: {gamePath}{Environment.NewLine}required: {FileSizeFormatter.Format(requiredBytes)}",
                     activeToken);
+                ClearDownloadState();
                 return Failed(
                     localizer.F(
                         "diskSpaceInsufficientDetail",
@@ -437,6 +440,7 @@ public sealed class GameDownloadService : IDisposable
                 IsRunning = true,
                 CanStop = true
             });
+            ClearDownloadState();
             return Failed(
                 localizer.F("verificationFailed", currentDownloadList.Count),
                 "game-download-error-network-down",
@@ -456,16 +460,19 @@ public sealed class GameDownloadService : IDisposable
         catch (IOException exception) when (exception.HResult == unchecked((int)0x80070070))
         {
             await diagnostics.ErrorAsync("Game download disk space error.", exception, CancellationToken.None).ConfigureAwait(false);
+            ClearDownloadState();
             return Failed(localizer.T("diskSpaceInsufficient"), "game-download-error-no-space");
         }
         catch (Exception exception) when (exception is IOException or UnauthorizedAccessException)
         {
             await diagnostics.ErrorAsync("Game file operation failed.", exception, CancellationToken.None).ConfigureAwait(false);
+            ClearDownloadState();
             return Failed(localizer.F("fileOperationFailed", exception.Message), "error-system");
         }
         catch (Exception exception) when (exception is HttpRequestException or TaskCanceledException or JsonException)
         {
             await diagnostics.ErrorAsync("Game download network failed.", exception, CancellationToken.None).ConfigureAwait(false);
+            ClearDownloadState();
             return Failed(localizer.F("networkErrorDetail", exception.Message), "game-download-error-network-down");
         }
         catch (Exception exception)
@@ -475,6 +482,7 @@ public sealed class GameDownloadService : IDisposable
                 $"Game download unexpected error (operation: {operationKind})",
                 exception,
                 CancellationToken.None);
+            ClearDownloadState();
             return Failed(localizer.F("unexpectedError", exception.Message), "error-system");
         }
         finally

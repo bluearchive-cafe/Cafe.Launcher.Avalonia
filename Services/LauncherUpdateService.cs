@@ -161,9 +161,9 @@ public sealed partial class LauncherUpdateService : IDisposable
             cancellationToken).ConfigureAwait(false);
         response.EnsureSuccessStatusCode();
 
-        await using var stream = await response.Content.ReadAsStreamAsync(cancellationToken).ConfigureAwait(false);
-        return await JsonSerializer.DeserializeAsync<List<LauncherReleaseResponse>>(
-            stream,
+        return await RemoteHttpRequestService.DeserializeJsonAsync<List<LauncherReleaseResponse>>(
+            response,
+            new Uri(ApiConfig.LauncherApiBaseUrl + ApiConfig.LauncherReleasesPath),
             JsonOptions,
             cancellationToken).ConfigureAwait(false);
     }
