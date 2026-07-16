@@ -452,8 +452,10 @@ public partial class RemoteContentViewModel : ViewModelBase, IDisposable
             {
                 return;
             }
-            catch
+            catch (Exception ex)
             {
+                System.Diagnostics.Debug.WriteLine(
+                    $"RemoteContent: banner image load failed for '{item.ImageUrl}': {ex.Message}");
                 await Dispatcher.UIThread.InvokeAsync(item.MarkImageLoadFailed);
             }
         }
