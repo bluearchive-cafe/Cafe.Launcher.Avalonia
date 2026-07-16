@@ -302,7 +302,7 @@ public partial class BackgroundViewModel : ViewModelBase, IDisposable
     {
         try
         {
-            var uri = new Uri("avares://Cafe.Launcher.Avalonia/Assets/bg-7b36e4e0.png");
+            var uri = new Uri("avares://Cafe.Launcher.Avalonia/Assets/launcher-background.png");
             using var stream = AssetLoader.Open(uri);
             return new Bitmap(stream);
         }
