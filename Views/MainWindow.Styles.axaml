@@ -443,6 +443,89 @@
         <Setter Property="Background" Value="{DynamicResource LauncherBottomPanelBackgroundBrush}"/>
         <Setter Property="Padding" Value="40,20,40,20"/>
     </Style>
+    <Style Selector="Grid.motion-overlay">
+        <Setter Property="Opacity" Value="1"/>
+    </Style>
+    <Style Selector="Border.motion-surface">
+        <Setter Property="Opacity" Value="1"/>
+    </Style>
+    <Style Selector=":is(UserControl).motion-content">
+        <Setter Property="Opacity" Value="1"/>
+    </Style>
+    <Style Selector="StackPanel.motion-content">
+        <Setter Property="Opacity" Value="1"/>
+    </Style>
+    <Style Selector="Border.motion-bottom">
+        <Setter Property="Opacity" Value="1"/>
+    </Style>
+    <Style Selector="Grid.motion-overlay.motion-enabled.motion-enter">
+        <Style.Animations>
+            <Animation Duration="0:0:0.16" FillMode="Forward" Easing="QuadraticEaseOut">
+                <KeyFrame Cue="0%">
+                    <Setter Property="Opacity" Value="0"/>
+                </KeyFrame>
+                <KeyFrame Cue="100%">
+                    <Setter Property="Opacity" Value="1"/>
+                </KeyFrame>
+            </Animation>
+        </Style.Animations>
+    </Style>
+    <Style Selector="Grid.motion-overlay.motion-enabled.motion-enter > Border.motion-surface">
+        <Style.Animations>
+            <Animation Duration="0:0:0.22" FillMode="Forward" Easing="QuadraticEaseOut">
+                <KeyFrame Cue="0%">
+                    <Setter Property="Opacity" Value="0"/>
+                    <Setter Property="TranslateTransform.Y" Value="8"/>
+                </KeyFrame>
+                <KeyFrame Cue="100%">
+                    <Setter Property="Opacity" Value="1"/>
+                    <Setter Property="TranslateTransform.Y" Value="0"/>
+                </KeyFrame>
+            </Animation>
+        </Style.Animations>
+    </Style>
+    <Style Selector=":is(UserControl).motion-content.motion-enabled.motion-enter">
+        <Style.Animations>
+            <Animation Duration="0:0:0.18" FillMode="Forward" Easing="QuadraticEaseOut">
+                <KeyFrame Cue="0%">
+                    <Setter Property="Opacity" Value="0"/>
+                    <Setter Property="TranslateTransform.Y" Value="6"/>
+                </KeyFrame>
+                <KeyFrame Cue="100%">
+                    <Setter Property="Opacity" Value="1"/>
+                    <Setter Property="TranslateTransform.Y" Value="0"/>
+                </KeyFrame>
+            </Animation>
+        </Style.Animations>
+    </Style>
+    <Style Selector="StackPanel.motion-content.motion-enabled.motion-enter">
+        <Style.Animations>
+            <Animation Duration="0:0:0.18" FillMode="Forward" Easing="QuadraticEaseOut">
+                <KeyFrame Cue="0%">
+                    <Setter Property="Opacity" Value="0"/>
+                    <Setter Property="TranslateTransform.Y" Value="6"/>
+                </KeyFrame>
+                <KeyFrame Cue="100%">
+                    <Setter Property="Opacity" Value="1"/>
+                    <Setter Property="TranslateTransform.Y" Value="0"/>
+                </KeyFrame>
+            </Animation>
+        </Style.Animations>
+    </Style>
+    <Style Selector="Border.motion-bottom.motion-enabled.motion-enter">
+        <Style.Animations>
+            <Animation Duration="0:0:0.20" FillMode="Forward" Easing="QuadraticEaseOut">
+                <KeyFrame Cue="0%">
+                    <Setter Property="Opacity" Value="0"/>
+                    <Setter Property="TranslateTransform.Y" Value="10"/>
+                </KeyFrame>
+                <KeyFrame Cue="100%">
+                    <Setter Property="Opacity" Value="1"/>
+                    <Setter Property="TranslateTransform.Y" Value="0"/>
+                </KeyFrame>
+            </Animation>
+        </Style.Animations>
+    </Style>
     <Style Selector="Border.control-panel">
         <Setter Property="MinHeight" Value="156"/>
         <!-- Dark gradient overlay on top of wallpaper — intentionally theme-invariant (black transparency). -->

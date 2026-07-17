@@ -11,10 +11,16 @@
              x:DataType="vm:MainWindowViewModel">
     <Grid>
         <!-- Chinese localization settings -->
-        <Grid IsVisible="{Binding ResourcePanel.IsResourcePanelVisible}" Classes="dialog-overlay">
+        <Grid IsVisible="{Binding ResourcePanel.IsResourcePanelVisible}"
+              Classes="dialog-overlay motion-overlay"
+              Classes.motion-enabled="{Binding IsMotionEnabled}"
+              Classes.motion-enter="{Binding ResourcePanel.IsResourcePanelVisible}">
             <Border Width="720"
                     Height="592"
-                    Classes="dialog overlay-dialog">
+                    Classes="dialog overlay-dialog motion-surface">
+                <Border.RenderTransform>
+                    <TranslateTransform/>
+                </Border.RenderTransform>
                 <Grid RowDefinitions="Auto,*,Auto" Classes="confirm-layout">
                     <Grid Classes="dialog-heading" ColumnDefinitions="Auto,*,Auto">
                         <Border Classes="dialog-icon" VerticalAlignment="Center">
@@ -194,10 +200,16 @@
         </Grid>
 
         <!-- Notice popup dialog -->
-        <Grid IsVisible="{Binding Dialogs.IsNoticeDialogVisible}" Classes="dialog-overlay">
+        <Grid IsVisible="{Binding Dialogs.IsNoticeDialogVisible}"
+              Classes="dialog-overlay motion-overlay"
+              Classes.motion-enabled="{Binding IsMotionEnabled}"
+              Classes.motion-enter="{Binding Dialogs.IsNoticeDialogVisible}">
             <Border MaxWidth="540"
                     MaxHeight="480"
-                    Classes="dialog overlay-dialog">
+                    Classes="dialog overlay-dialog motion-surface">
+                <Border.RenderTransform>
+                    <TranslateTransform/>
+                </Border.RenderTransform>
                 <Grid RowDefinitions="Auto,*,Auto" Classes="confirm-layout">
                     <StackPanel Orientation="Horizontal" Spacing="{StaticResource LauncherSpacingMd}">
                         <Border Classes="dialog-icon">
@@ -249,8 +261,14 @@
                                 CloseToolTip="{Binding Shell.I18n.Close}"/>
 
         <!-- Update available dialog -->
-        <Grid IsVisible="{Binding Dialogs.IsUpdateAvailableVisible}" Classes="dialog-overlay">
-            <Border Classes="dialog confirm-panel" MaxWidth="620">
+        <Grid IsVisible="{Binding Dialogs.IsUpdateAvailableVisible}"
+              Classes="dialog-overlay motion-overlay"
+              Classes.motion-enabled="{Binding IsMotionEnabled}"
+              Classes.motion-enter="{Binding Dialogs.IsUpdateAvailableVisible}">
+            <Border Classes="dialog confirm-panel motion-surface" MaxWidth="620">
+                <Border.RenderTransform>
+                    <TranslateTransform/>
+                </Border.RenderTransform>
                 <Grid RowDefinitions="Auto,*,Auto" Classes="confirm-layout">
                     <Grid Classes="dialog-heading" ColumnDefinitions="Auto,*,Auto">
                         <Border Classes="dialog-icon" VerticalAlignment="Center">
@@ -404,8 +422,14 @@
                                 CloseToolTip="{Binding Shell.I18n.Close}"/>
 
         <!-- Crash recovery dialog (shown on startup after unclean shutdown) -->
-        <Grid IsVisible="{Binding Dialogs.IsCrashRecoveryVisible}" Classes="dialog-overlay">
-            <Border Classes="dialog confirm-panel" MaxWidth="460">
+        <Grid IsVisible="{Binding Dialogs.IsCrashRecoveryVisible}"
+              Classes="dialog-overlay motion-overlay"
+              Classes.motion-enabled="{Binding IsMotionEnabled}"
+              Classes.motion-enter="{Binding Dialogs.IsCrashRecoveryVisible}">
+            <Border Classes="dialog confirm-panel motion-surface" MaxWidth="460">
+                <Border.RenderTransform>
+                    <TranslateTransform/>
+                </Border.RenderTransform>
                 <Grid RowDefinitions="Auto,Auto,Auto" Classes="confirm-layout">
                     <Grid Classes="dialog-heading" ColumnDefinitions="Auto,*,Auto">
                         <Border Classes="dialog-icon" VerticalAlignment="Center">

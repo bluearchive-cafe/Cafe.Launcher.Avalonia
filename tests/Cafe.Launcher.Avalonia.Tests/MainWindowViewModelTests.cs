@@ -131,7 +131,7 @@ public sealed class MainWindowViewModelTests : IDisposable
 
         viewModel.Shell.SetLoading();
 
-        Assert.Equal("HelpCircleOutline", viewModel.Shell.StatusIconKind);
+        Assert.Equal("Sync", viewModel.Shell.StatusIconKind);
         Assert.Equal(viewModel.Shell.ExecutableNameText, viewModel.Shell.NetworkStatusValueText);
         Assert.Equal(viewModel.Shell.ExecutableNameText, viewModel.Shell.LaunchCheckValueText);
         Assert.DoesNotContain(':', viewModel.Shell.ExecutableNameText);
@@ -322,8 +322,8 @@ public sealed class MainWindowViewModelTests : IDisposable
             yield return [LauncherRuntimeState.IoFailure, "gameInstallationStateReadFailed", "gameInstallationStateReadFailed", "Alert"];
             yield return [LauncherRuntimeState.RemoteUnavailable, "gameRemoteStateUnavailable", "gameRemoteStateUnavailable", "Alert"];
             yield return [LauncherRuntimeState.BelowLowestVersion, "updateRequired", "gameBelowLowestVersion", "Alert"];
-            yield return [LauncherRuntimeState.UpdateAvailable, "updateAvailable", "updateAvailable", "AlertCircle"];
-            yield return [LauncherRuntimeState.Ready, "ready", "operationTelemetryLocal", "CheckAll"];
+            yield return [LauncherRuntimeState.UpdateAvailable, "updateAvailable", "updateAvailable", "Update"];
+            yield return [LauncherRuntimeState.Ready, "ready", "operationTelemetryLocal", "CheckCircleOutline"];
         }
     }
 

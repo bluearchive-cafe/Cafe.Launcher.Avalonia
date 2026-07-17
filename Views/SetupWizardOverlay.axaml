@@ -8,12 +8,18 @@
              x:Class="Cafe.Launcher.Avalonia.Views.SetupWizardOverlay"
              x:Name="WizardRoot"
              x:DataType="vm:MainWindowViewModel">
-    <Grid IsVisible="{Binding Dialogs.IsSetupWizardVisible}" Classes="setup-wizard-overlay">
+    <Grid IsVisible="{Binding Dialogs.IsSetupWizardVisible}"
+          Classes="setup-wizard-overlay motion-overlay"
+          Classes.motion-enabled="{Binding IsMotionEnabled}"
+          Classes.motion-enter="{Binding Dialogs.IsSetupWizardVisible}">
         <Border Width="920"
                 Height="560"
                 MaxWidth="920"
                 MaxHeight="560"
-                Classes="dialog overlay-dialog confirm-panel">
+                Classes="dialog overlay-dialog confirm-panel motion-surface">
+            <Border.RenderTransform>
+                <TranslateTransform/>
+            </Border.RenderTransform>
             <Grid ColumnDefinitions="184,*">
                 <ListBox Classes="settings-navigation wizard-navigation"
                          ItemsSource="{Binding Dialogs.SetupWizard.Steps}"
@@ -73,7 +79,13 @@
 
                         <!-- Step 0: Welcome & Language -->
                         <StackPanel Spacing="{StaticResource LauncherSpacingMd}"
-                                    IsVisible="{Binding Dialogs.SetupWizard.IsFirstStep}">
+                                    IsVisible="{Binding Dialogs.SetupWizard.IsFirstStep}"
+                                    Classes="motion-content"
+                                    Classes.motion-enabled="{Binding IsMotionEnabled}"
+                                    Classes.motion-enter="{Binding Dialogs.SetupWizard.IsFirstStep}">
+                            <StackPanel.RenderTransform>
+                                <TranslateTransform/>
+                            </StackPanel.RenderTransform>
                             <Border Classes="info-strip">
                                 <TextBlock Text="{Binding Shell.I18n.SetupWizardWelcomeText}"
                                            Classes="body"
@@ -97,7 +109,13 @@
 
                         <!-- Step 1: Game Path -->
                         <StackPanel Spacing="{StaticResource LauncherSpacingMd}"
-                                    IsVisible="{Binding Dialogs.SetupWizard.IsStep1}">
+                                    IsVisible="{Binding Dialogs.SetupWizard.IsStep1}"
+                                    Classes="motion-content"
+                                    Classes.motion-enabled="{Binding IsMotionEnabled}"
+                                    Classes.motion-enter="{Binding Dialogs.SetupWizard.IsStep1}">
+                            <StackPanel.RenderTransform>
+                                <TranslateTransform/>
+                            </StackPanel.RenderTransform>
                             <TextBlock Text="{Binding Shell.I18n.SetupWizardGamePath}" Classes="section-title"/>
                             <TextBlock Text="{Binding Shell.I18n.SetupWizardGamePathHint}"
                                        Classes="body"
@@ -136,7 +154,13 @@
 
                         <!-- Step 2: Download Source -->
                         <StackPanel Spacing="{StaticResource LauncherSpacingMd}"
-                                    IsVisible="{Binding Dialogs.SetupWizard.IsStep2}">
+                                    IsVisible="{Binding Dialogs.SetupWizard.IsStep2}"
+                                    Classes="motion-content"
+                                    Classes.motion-enabled="{Binding IsMotionEnabled}"
+                                    Classes.motion-enter="{Binding Dialogs.SetupWizard.IsStep2}">
+                            <StackPanel.RenderTransform>
+                                <TranslateTransform/>
+                            </StackPanel.RenderTransform>
                             <TextBlock Text="{Binding Shell.I18n.SetupWizardDownloadSource}" Classes="section-title"/>
                             <TextBlock Text="{Binding Shell.I18n.SetupWizardDownloadSourceHint}"
                                        Classes="body"
@@ -163,7 +187,13 @@
 
                         <!-- Step 3: Proxy -->
                         <StackPanel Spacing="{StaticResource LauncherSpacingMd}"
-                                    IsVisible="{Binding Dialogs.SetupWizard.IsStep3}">
+                                    IsVisible="{Binding Dialogs.SetupWizard.IsStep3}"
+                                    Classes="motion-content"
+                                    Classes.motion-enabled="{Binding IsMotionEnabled}"
+                                    Classes.motion-enter="{Binding Dialogs.SetupWizard.IsStep3}">
+                            <StackPanel.RenderTransform>
+                                <TranslateTransform/>
+                            </StackPanel.RenderTransform>
                             <TextBlock Text="{Binding Shell.I18n.SetupWizardProxy}" Classes="section-title"/>
                             <TextBlock Text="{Binding Shell.I18n.SetupWizardProxyHint}"
                                        Classes="body"
@@ -198,7 +228,13 @@
 
                         <!-- Step 4: Review -->
                         <StackPanel Spacing="{StaticResource LauncherSpacingMd}"
-                                    IsVisible="{Binding Dialogs.SetupWizard.IsLastStep}">
+                                    IsVisible="{Binding Dialogs.SetupWizard.IsLastStep}"
+                                    Classes="motion-content"
+                                    Classes.motion-enabled="{Binding IsMotionEnabled}"
+                                    Classes.motion-enter="{Binding Dialogs.SetupWizard.IsLastStep}">
+                            <StackPanel.RenderTransform>
+                                <TranslateTransform/>
+                            </StackPanel.RenderTransform>
                             <TextBlock Text="{Binding Shell.I18n.SetupWizardReview}" Classes="section-title"/>
                             <TextBlock Text="{Binding Shell.I18n.SetupWizardReviewHint}"
                                        Classes="body"

@@ -64,11 +64,13 @@ public sealed class LauncherCoreService : ILauncherCoreService
             "installation-config",
             () => apiClient.GetInstallationConfigAsync(settings.ProxyMode, cancellationToken),
             cancellationToken);
-        var configuredPath = string.IsNullOrWhiteSpace(settings.GamePath)
-            ? installationPath.GetDefaultGamePath()
-            : settings.GamePath;
+        if (string.IsNullOrWhiteSpace(settings.GamePath))
+        {
+            settings.GamePath = installationPath.GetDefaultGamePath();
+        }
+
         var localGameTask = localInstallationStateStore.ReadAsync(
-            installationPath.NormalizeGamePath(configuredPath),
+            installationPath.NormalizeGamePath(settings.GamePath),
             cancellationToken);
 
         await Task.WhenAll(

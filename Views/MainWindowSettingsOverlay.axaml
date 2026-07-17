@@ -7,12 +7,18 @@
              x:Class="Cafe.Launcher.Avalonia.Views.MainWindowSettingsOverlay"
              x:Name="SettingsRoot"
              x:DataType="vm:MainWindowViewModel">
-    <Grid IsVisible="{Binding WindowChrome.IsSettingsVisible}" Classes="settings-overlay">
+    <Grid IsVisible="{Binding WindowChrome.IsSettingsVisible}"
+          Classes="settings-overlay motion-overlay"
+          Classes.motion-enabled="{Binding IsMotionEnabled}"
+          Classes.motion-enter="{Binding WindowChrome.IsSettingsVisible}">
         <Border MaxWidth="960"
                 MaxHeight="620"
                 HorizontalAlignment="Stretch"
                 VerticalAlignment="Stretch"
-                Classes="dialog overlay-dialog">
+                Classes="dialog overlay-dialog motion-surface">
+            <Border.RenderTransform>
+                <TranslateTransform/>
+            </Border.RenderTransform>
             <Grid RowDefinitions="Auto,*,Auto">
                 <Grid ColumnDefinitions="*,Auto" Classes="dialog-header">
                     <StackPanel Classes="dialog-title-row">
@@ -94,12 +100,54 @@
                                            x:DataType="models:SettingOption"
                                            Text="{Binding DisplayName}"
                                            AutomationProperties.Name="{Binding DisplayName}"/>
-                                <views:SettingsGeneralSection IsVisible="{Binding Settings.IsGeneralCategorySelected}"/>
-                                <views:SettingsGameSection IsVisible="{Binding Settings.IsGameCategorySelected}"/>
-                                <views:SettingsDownloadNetworkSection IsVisible="{Binding Settings.IsDownloadNetworkCategorySelected}"/>
-                                <views:SettingsAppearanceSection IsVisible="{Binding Settings.IsAppearanceCategorySelected}"/>
-                                <views:SettingsAdvancedSection IsVisible="{Binding Settings.IsAdvancedCategorySelected}"/>
-                                <views:SettingsAboutSection IsVisible="{Binding Settings.IsAboutCategorySelected}"/>
+                                <views:SettingsGeneralSection IsVisible="{Binding Settings.IsGeneralCategorySelected}"
+                                                              Classes="motion-content"
+                                                              Classes.motion-enabled="{Binding IsMotionEnabled}"
+                                                              Classes.motion-enter="{Binding Settings.IsGeneralCategorySelected}">
+                                    <views:SettingsGeneralSection.RenderTransform>
+                                        <TranslateTransform/>
+                                    </views:SettingsGeneralSection.RenderTransform>
+                                </views:SettingsGeneralSection>
+                                <views:SettingsGameSection IsVisible="{Binding Settings.IsGameCategorySelected}"
+                                                           Classes="motion-content"
+                                                           Classes.motion-enabled="{Binding IsMotionEnabled}"
+                                                           Classes.motion-enter="{Binding Settings.IsGameCategorySelected}">
+                                    <views:SettingsGameSection.RenderTransform>
+                                        <TranslateTransform/>
+                                    </views:SettingsGameSection.RenderTransform>
+                                </views:SettingsGameSection>
+                                <views:SettingsDownloadNetworkSection IsVisible="{Binding Settings.IsDownloadNetworkCategorySelected}"
+                                                                      Classes="motion-content"
+                                                                      Classes.motion-enabled="{Binding IsMotionEnabled}"
+                                                                      Classes.motion-enter="{Binding Settings.IsDownloadNetworkCategorySelected}">
+                                    <views:SettingsDownloadNetworkSection.RenderTransform>
+                                        <TranslateTransform/>
+                                    </views:SettingsDownloadNetworkSection.RenderTransform>
+                                </views:SettingsDownloadNetworkSection>
+                                <views:SettingsAppearanceSection IsVisible="{Binding Settings.IsAppearanceCategorySelected}"
+                                                                 Classes="motion-content"
+                                                                 Classes.motion-enabled="{Binding IsMotionEnabled}"
+                                                                 Classes.motion-enter="{Binding Settings.IsAppearanceCategorySelected}">
+                                    <views:SettingsAppearanceSection.RenderTransform>
+                                        <TranslateTransform/>
+                                    </views:SettingsAppearanceSection.RenderTransform>
+                                </views:SettingsAppearanceSection>
+                                <views:SettingsAdvancedSection IsVisible="{Binding Settings.IsAdvancedCategorySelected}"
+                                                               Classes="motion-content"
+                                                               Classes.motion-enabled="{Binding IsMotionEnabled}"
+                                                               Classes.motion-enter="{Binding Settings.IsAdvancedCategorySelected}">
+                                    <views:SettingsAdvancedSection.RenderTransform>
+                                        <TranslateTransform/>
+                                    </views:SettingsAdvancedSection.RenderTransform>
+                                </views:SettingsAdvancedSection>
+                                <views:SettingsAboutSection IsVisible="{Binding Settings.IsAboutCategorySelected}"
+                                                            Classes="motion-content"
+                                                            Classes.motion-enabled="{Binding IsMotionEnabled}"
+                                                            Classes.motion-enter="{Binding Settings.IsAboutCategorySelected}">
+                                    <views:SettingsAboutSection.RenderTransform>
+                                        <TranslateTransform/>
+                                    </views:SettingsAboutSection.RenderTransform>
+                                </views:SettingsAboutSection>
                             </StackPanel>
                         </ScrollViewer>
                       </Grid>

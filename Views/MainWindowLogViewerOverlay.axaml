@@ -5,10 +5,16 @@
              x:Class="Cafe.Launcher.Avalonia.Views.MainWindowLogViewerOverlay"
              x:Name="LogViewerRoot"
              x:DataType="vm:MainWindowViewModel">
-    <Grid IsVisible="{Binding LogViewer.IsVisible}" Classes="dialog-overlay">
+    <Grid IsVisible="{Binding LogViewer.IsVisible}"
+          Classes="dialog-overlay motion-overlay"
+          Classes.motion-enabled="{Binding IsMotionEnabled}"
+          Classes.motion-enter="{Binding LogViewer.IsVisible}">
         <Border Width="{StaticResource LauncherLogViewerWidth}"
                 Height="{StaticResource LauncherLogViewerHeight}"
-                Classes="dialog overlay-dialog">
+                Classes="dialog overlay-dialog motion-surface">
+            <Border.RenderTransform>
+                <TranslateTransform/>
+            </Border.RenderTransform>
             <Grid RowDefinitions="Auto,Auto,*,Auto">
                 <!-- Header -->
                 <Grid ColumnDefinitions="*,Auto" Classes="dialog-header">
