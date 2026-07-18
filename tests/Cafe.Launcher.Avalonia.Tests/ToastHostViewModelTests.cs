@@ -8,6 +8,7 @@ namespace Cafe.Launcher.Avalonia.Tests;
 
 public sealed class ToastHostViewModelTests : IDisposable
 {
+    private readonly object invokeGate = new();
     private readonly string tempDir = Path.Combine(Path.GetTempPath(), Guid.NewGuid().ToString("N"));
 
     static ToastHostViewModelTests()
@@ -31,7 +32,7 @@ public sealed class ToastHostViewModelTests : IDisposable
             toastService,
             provider.GetRequiredService<LocalizationService>(),
             settings,
-            InvokeImmediately,
+            InvokeSerially,
             (_, cancellationToken) => delay.Task.WaitAsync(cancellationToken));
 
         toastService.ShowSuccess("saved");
@@ -58,7 +59,7 @@ public sealed class ToastHostViewModelTests : IDisposable
             toastService,
             provider.GetRequiredService<LocalizationService>(),
             settings,
-            InvokeImmediately,
+            InvokeSerially,
             static (_, _) => Task.CompletedTask);
 
         toastService.Show("hidden");
@@ -85,7 +86,7 @@ public sealed class ToastHostViewModelTests : IDisposable
             toastService,
             provider.GetRequiredService<LocalizationService>(),
             settings,
-            InvokeImmediately,
+            InvokeSerially,
             (delay, cancellationToken) =>
                 (delay == AnimationTimings.ExitAnimationDuration ? exitDelay : displayDelay)
                     .Task.WaitAsync(cancellationToken));
@@ -124,7 +125,7 @@ public sealed class ToastHostViewModelTests : IDisposable
             toastService,
             provider.GetRequiredService<LocalizationService>(),
             settings,
-            InvokeImmediately,
+            InvokeSerially,
             (delay, cancellationToken) =>
             {
                 if (delay == AnimationTimings.ExitAnimationDuration)
@@ -166,7 +167,7 @@ public sealed class ToastHostViewModelTests : IDisposable
             toastService,
             provider.GetRequiredService<LocalizationService>(),
             settings,
-            InvokeImmediately,
+            InvokeSerially,
             (delay, cancellationToken) =>
                 (delay == AnimationTimings.ExitAnimationDuration ? exitDelay : displayDelay)
                     .Task.WaitAsync(cancellationToken));
@@ -203,7 +204,7 @@ public sealed class ToastHostViewModelTests : IDisposable
             toastService,
             provider.GetRequiredService<LocalizationService>(),
             settings,
-            InvokeImmediately,
+            InvokeSerially,
             (delay, cancellationToken) =>
             {
                 if (delay != AnimationTimings.ExitAnimationDuration)
@@ -259,7 +260,7 @@ public sealed class ToastHostViewModelTests : IDisposable
             toastService,
             provider.GetRequiredService<LocalizationService>(),
             settings,
-            InvokeImmediately,
+            InvokeSerially,
             (delay, cancellationToken) =>
                 (delay == AnimationTimings.ExitAnimationDuration ? exitDelay : displayDelay)
                     .Task.WaitAsync(cancellationToken));
@@ -303,7 +304,7 @@ public sealed class ToastHostViewModelTests : IDisposable
             toastService,
             provider.GetRequiredService<LocalizationService>(),
             settings,
-            InvokeImmediately,
+            InvokeSerially,
             async (delay, cancellationToken) =>
             {
                 if (delay != AnimationTimings.ExitAnimationDuration)
@@ -348,7 +349,7 @@ public sealed class ToastHostViewModelTests : IDisposable
             toastService,
             provider.GetRequiredService<LocalizationService>(),
             settings,
-            InvokeImmediately,
+            InvokeSerially,
             (delay, cancellationToken) =>
                 delay == AnimationTimings.ExitAnimationDuration
                     ? Task.FromCanceled(unrelatedCts.Token)
@@ -394,7 +395,7 @@ public sealed class ToastHostViewModelTests : IDisposable
             toastService,
             provider.GetRequiredService<LocalizationService>(),
             settings,
-            InvokeImmediately,
+            InvokeSerially,
             async (delay, cancellationToken) =>
             {
                 if (delay != AnimationTimings.ExitAnimationDuration)
@@ -434,7 +435,7 @@ public sealed class ToastHostViewModelTests : IDisposable
             toastService,
             provider.GetRequiredService<LocalizationService>(),
             settings,
-            InvokeImmediately,
+            InvokeSerially,
             static (_, _) => Task.CompletedTask);
         viewModel.Dispose();
 
@@ -453,9 +454,13 @@ public sealed class ToastHostViewModelTests : IDisposable
         return services.BuildServiceProvider();
     }
 
-    private static Task InvokeImmediately(Action action)
+    private Task InvokeSerially(Action action)
     {
-        action();
+        lock (invokeGate)
+        {
+            action();
+        }
+
         return Task.CompletedTask;
     }
 
