@@ -1,6 +1,7 @@
 using Cafe.Launcher.Avalonia.Features.SetupWizard;
 using Cafe.Launcher.Avalonia.Models;
 using Cafe.Launcher.Avalonia.Services;
+using Cafe.Launcher.Avalonia.Services.Diagnostics;
 using Cafe.Launcher.Avalonia.ViewModels;
 using Xunit;
 
@@ -23,7 +24,8 @@ public sealed class SetupWizardStepItemTests
     {
         var viewModel = new SetupWizardViewModel(
             new LocalizationService(),
-            new GameInstallationPath(), new LocalInstallationStateStore());
+            new GameInstallationPath(), new LocalInstallationStateStore(),
+            new LocalDiagnostics());
 
         Assert.Equal(5, viewModel.Steps.Count);
         Assert.Equal([0, 1, 2, 3, 4], viewModel.Steps.Select(item => item.Index));
@@ -37,7 +39,7 @@ public sealed class SetupWizardStepItemTests
     public void LanguageChanged_RefreshesStepTitlesFromCurrentLocale()
     {
         var localizer = new LocalizationService();
-        var viewModel = new SetupWizardViewModel(localizer, new GameInstallationPath(), new LocalInstallationStateStore());
+        var viewModel = new SetupWizardViewModel(localizer, new GameInstallationPath(), new LocalInstallationStateStore(), new LocalDiagnostics());
 
         localizer.SetLanguage(LauncherLanguages.SimplifiedChinese);
 
@@ -57,7 +59,8 @@ public sealed class SetupWizardStepItemTests
     {
         var viewModel = new SetupWizardViewModel(
             new LocalizationService(),
-            new GameInstallationPath(), new LocalInstallationStateStore());
+            new GameInstallationPath(), new LocalInstallationStateStore(),
+            new LocalDiagnostics());
 
         viewModel.NextCommand.Execute(null);
 
@@ -71,7 +74,8 @@ public sealed class SetupWizardStepItemTests
     {
         var viewModel = new SetupWizardViewModel(
             new LocalizationService(),
-            new GameInstallationPath(), new LocalInstallationStateStore());
+            new GameInstallationPath(), new LocalInstallationStateStore(),
+            new LocalDiagnostics());
 
         viewModel.GoToStepCommand.Execute(3);
 
@@ -83,7 +87,8 @@ public sealed class SetupWizardStepItemTests
     {
         var viewModel = new SetupWizardViewModel(
             new LocalizationService(),
-            new GameInstallationPath(), new LocalInstallationStateStore());
+            new GameInstallationPath(), new LocalInstallationStateStore(),
+            new LocalDiagnostics());
         viewModel.NextCommand.Execute(null);
         viewModel.NextCommand.Execute(null);
 

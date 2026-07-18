@@ -1,5 +1,6 @@
 using Cafe.Launcher.Avalonia.Models;
 using Cafe.Launcher.Avalonia.Services;
+using Cafe.Launcher.Avalonia.Services.Diagnostics;
 using Cafe.Launcher.Avalonia.ViewModels;
 
 namespace Cafe.Launcher.Avalonia.Tests;
@@ -236,7 +237,7 @@ public sealed class DialogsViewModelTests
         var viewModel = new DialogsViewModel(
             new LocalizationService(),
             stateService,
-            new SetupWizardViewModel(new LocalizationService(), new GameInstallationPath(), new LocalInstallationStateStore()),
+            new SetupWizardViewModel(new LocalizationService(), new GameInstallationPath(), new LocalInstallationStateStore(), new LocalDiagnostics()),
             action =>
             {
                 action();
@@ -305,7 +306,7 @@ public sealed class DialogsViewModelTests
         return new DialogsViewModel(
             new LocalizationService(),
             new NoticeStateService(noticePath),
-            new SetupWizardViewModel(new LocalizationService(), new GameInstallationPath(), new LocalInstallationStateStore()),
+            new SetupWizardViewModel(new LocalizationService(), new GameInstallationPath(), new LocalInstallationStateStore(), new LocalDiagnostics()),
             action =>
             {
                 action();

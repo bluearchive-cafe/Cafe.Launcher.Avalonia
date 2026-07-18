@@ -10,6 +10,7 @@ using Cafe.Launcher.Avalonia.Features.Shell;
 using Cafe.Launcher.Avalonia.Helpers;
 using Cafe.Launcher.Avalonia.Models;
 using Cafe.Launcher.Avalonia.Services;
+using Cafe.Launcher.Avalonia.Services.Diagnostics;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 
@@ -74,7 +75,7 @@ public partial class DialogsViewModel : ViewModelBase, IModalContentViewModel
 
     public void ShowSetupWizard()
     {
-        System.Diagnostics.Debug.WriteLine("DIALOGS: ShowSetupWizard called, setting IsSetupWizardVisible=true");
+        LocalDiagnostics.LogSync(LogEntrySeverity.Info, "SetupWizardShow", "Setup wizard visibility requested.");
         IsSetupWizardVisible = true;
     }
 
@@ -390,8 +391,7 @@ public partial class DialogsViewModel : ViewModelBase, IModalContentViewModel
         }
         catch (Exception ex)
         {
-            System.Diagnostics.Debug.WriteLine(
-                $"Dialogs: notice dialog load failed: {ex.Message}");
+            LocalDiagnostics.LogSync(LogEntrySeverity.Warn, "NoticeDialogLoadFailed", ex.Message);
         }
     }
 

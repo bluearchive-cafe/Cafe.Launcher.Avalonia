@@ -667,7 +667,7 @@ public sealed class GameOperationsViewModelTests
         shell.IsBusy = false;
         var dialogs = new DialogsViewModel(localizer, new NoticeStateService(
             Path.Combine(Path.GetTempPath(), Guid.NewGuid().ToString("N"), "notices.json")),
-            new SetupWizardViewModel(localizer, new GameInstallationPath(), new LocalInstallationStateStore()));
+            new SetupWizardViewModel(localizer, new GameInstallationPath(), new LocalInstallationStateStore(), new LocalDiagnostics()));
         var backend = new TestBackend();
         var viewModel = new GameOperationsViewModel(
             backend,

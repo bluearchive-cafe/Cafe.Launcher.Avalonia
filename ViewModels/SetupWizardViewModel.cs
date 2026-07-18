@@ -8,6 +8,7 @@ using Cafe.Launcher.Avalonia.Features.Shell;
 using Cafe.Launcher.Avalonia.Helpers;
 using Cafe.Launcher.Avalonia.Models;
 using Cafe.Launcher.Avalonia.Services;
+using Cafe.Launcher.Avalonia.Services.Diagnostics;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 
@@ -21,6 +22,7 @@ public partial class SetupWizardViewModel : ViewModelBase, IModalContentViewMode
     private readonly LocalizationService localizer;
     private readonly GameInstallationPath gameInstallationPath;
     private readonly LocalInstallationStateStore localInstallationStateStore;
+    private readonly LocalDiagnostics diagnostics;
     private bool hasInitializedGamePath;
     private CancellationTokenSource? gamePathStatusCancellationTokenSource;
     private int gamePathStatusVersion;
@@ -31,11 +33,13 @@ public partial class SetupWizardViewModel : ViewModelBase, IModalContentViewMode
     public SetupWizardViewModel(
         LocalizationService localizer,
         GameInstallationPath gameInstallationPath,
-        LocalInstallationStateStore localInstallationStateStore)
+        LocalInstallationStateStore localInstallationStateStore,
+        LocalDiagnostics diagnostics)
     {
         this.localizer = localizer;
         this.gameInstallationPath = gameInstallationPath;
         this.localInstallationStateStore = localInstallationStateStore;
+        this.diagnostics = diagnostics;
 
         var defaults = LauncherSettings.CreateDefaults();
         language = defaults.Language;
@@ -306,21 +310,6 @@ public partial class SetupWizardViewModel : ViewModelBase, IModalContentViewMode
     }
 
     [RelayCommand]
-    private void SelectCafeDownloadSource() => PatchUrlGroup = PatchUrlGroups.Cafe;
-
-    [RelayCommand]
-    private void SelectOfficialDownloadSource() => PatchUrlGroup = PatchUrlGroups.Official;
-
-    [RelayCommand]
-    private void SelectProxyAuto() => ProxyMode = ProxyModes.Auto;
-
-    [RelayCommand]
-    private void SelectProxyDirect() => ProxyMode = ProxyModes.Direct;
-
-    [RelayCommand]
-    private void SelectProxySystem() => ProxyMode = ProxyModes.System;
-
-    [RelayCommand]
     private async Task SkipAsync()
     {
         await AsyncEvent.InvokeSequentiallyAsync(SettingsApplied, LauncherSettings.CreateDefaults());
@@ -364,8 +353,9 @@ public partial class SetupWizardViewModel : ViewModelBase, IModalContentViewMode
         {
             normalizedPath = gameInstallationPath.NormalizeGamePath(path);
         }
-        catch (Exception)
+        catch (Exception ex)
         {
+            _ = diagnostics.WarningAsync("SetupWizardGamePathNormalize", ex.Message, CancellationToken.None);
             SetGamePathStatusIfCurrent(
                 SetupWizardGamePathStatus.Inaccessible,
                 version,
@@ -396,8 +386,9 @@ public partial class SetupWizardViewModel : ViewModelBase, IModalContentViewMode
         catch (OperationCanceledException) when (cancellationTokenSource.IsCancellationRequested)
         {
         }
-        catch (Exception)
+        catch (Exception ex)
         {
+            _ = diagnostics.WarningAsync("SetupWizardGamePathRead", ex.Message, cancellationTokenSource.Token);
             SetGamePathStatusIfCurrent(
                 SetupWizardGamePathStatus.Inaccessible,
                 version,

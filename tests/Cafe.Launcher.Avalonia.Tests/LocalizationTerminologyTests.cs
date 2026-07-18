@@ -1,6 +1,7 @@
 using System.Text.Json;
 using Cafe.Launcher.Avalonia.Models;
 using Cafe.Launcher.Avalonia.Services;
+using Cafe.Launcher.Avalonia.Services.Diagnostics;
 using Cafe.Launcher.Avalonia.ViewModels;
 
 namespace Cafe.Launcher.Avalonia.Tests;
@@ -168,7 +169,8 @@ public sealed class LocalizationTerminologyTests
         var viewModel = new SetupWizardViewModel(
             localizer,
             new GameInstallationPath(),
-            new LocalInstallationStateStore())
+            new LocalInstallationStateStore(),
+            new LocalDiagnostics())
         {
             Language = LauncherLanguages.Auto
         };
@@ -189,7 +191,8 @@ public sealed class LocalizationTerminologyTests
         var setupWizard = new SetupWizardViewModel(
             localizer,
             new GameInstallationPath(),
-            new LocalInstallationStateStore());
+            new LocalInstallationStateStore(),
+            new LocalDiagnostics());
         var dialogs = new DialogsViewModel(
             localizer,
             new NoticeStateService(Path.Combine(Path.GetTempPath(), Guid.NewGuid().ToString("N"), "notice.json")),
