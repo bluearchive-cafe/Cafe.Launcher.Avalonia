@@ -462,6 +462,7 @@ public partial class MainWindowViewModel : ViewModelBase, IDisposable
             settings.MotionMode,
             windowsAnimationSettingsProvider.GetWindowsAnimationsEnabled());
         RemoteContent.ApplyMotionPreference(IsMotionReduced);
+        Toasts.ApplyMotionPreference(IsMotionReduced);
     }
 
     private void ApplyLanguage(string language)

@@ -272,7 +272,12 @@
 
                 <Border Grid.Row="1"
                         IsVisible="{Binding Operations.IsInstallPanelVisible}"
-                        Classes="bottom-panel">
+                        Classes="bottom-panel motion-bottom"
+                        Classes.motion-enabled="{Binding IsMotionEnabled}"
+                        Classes.motion-enter="{Binding Operations.IsInstallPanelVisible}">
+                    <Border.RenderTransform>
+                        <TranslateTransform/>
+                    </Border.RenderTransform>
                     <Grid Classes="operation-layout" ColumnDefinitions="*,Auto" ColumnSpacing="{StaticResource LauncherSpacingXl}">
                         <Grid Classes="operation-status"
                               RowDefinitions="Auto,Auto,Auto"
@@ -328,7 +333,7 @@
                                         ToolTip.Tip="{Binding Shell.I18n.SelectInstalledGame}"
                                         AutomationProperties.Name="{Binding Shell.I18n.SelectInstalledGame}">
                                     <StackPanel Classes="button-content">
-                                        <materialIcons:MaterialIcon Kind="Magnify" Width="{StaticResource LauncherIconSm}" Height="{StaticResource LauncherIconSm}"/>
+                                        <materialIcons:MaterialIcon Kind="FolderSearchOutline" Width="{StaticResource LauncherIconSm}" Height="{StaticResource LauncherIconSm}"/>
                                         <TextBlock Text="{Binding Shell.I18n.SelectInstalledGame}"/>
                                     </StackPanel>
                                 </Button>
@@ -410,7 +415,12 @@
 
                 <Border Grid.Row="1"
                         IsVisible="{Binding Operations.IsControlPanelVisible}"
-                        Classes="bottom-panel control-panel">
+                        Classes="bottom-panel control-panel motion-bottom"
+                        Classes.motion-enabled="{Binding IsMotionEnabled}"
+                        Classes.motion-enter="{Binding Operations.IsControlPanelVisible}">
+                    <Border.RenderTransform>
+                        <TranslateTransform/>
+                    </Border.RenderTransform>
                     <Grid Classes="operation-layout" ColumnDefinitions="*,Auto" ColumnSpacing="{StaticResource LauncherSpacingXl}">
                         <Grid Classes="operation-status"
                               RowDefinitions="Auto,Auto"

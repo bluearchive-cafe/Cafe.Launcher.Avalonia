@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using CommunityToolkit.Mvvm.ComponentModel;
 
 namespace Cafe.Launcher.Avalonia.Services;
 
@@ -37,8 +38,11 @@ public sealed class ToastService
 /// <summary>
 /// Represents a single toast notification to be displayed in the UI.
 /// </summary>
-public sealed class ToastNotification
+public sealed partial class ToastNotification : ObservableObject
 {
+    [ObservableProperty]
+    private bool isExiting;
+
     public string Id { get; set; } = Guid.NewGuid().ToString("N");
     public string Message { get; set; } = "";
     public ToastSeverity Severity { get; set; } = ToastSeverity.Info;

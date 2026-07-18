@@ -20,7 +20,11 @@
                     <DataTemplate x:DataType="services:ToastNotification">
                         <Border Classes="toast-card"
                                 Classes.motion-enabled="{Binding DataContext.IsMotionEnabled, ElementName=ToastOverlayRoot}"
+                                Classes.motion-exit="{Binding IsExiting}"
                                 IsHitTestVisible="True">
+                            <Border.RenderTransform>
+                                <TranslateTransform/>
+                            </Border.RenderTransform>
                             <Grid Classes="toast-layout" ColumnDefinitions="Auto,*,Auto">
                                 <materialIcons:MaterialIcon Kind="{Binding IconKind}" Width="{StaticResource LauncherIconMd}" Height="{StaticResource LauncherIconMd}"
                                                             Foreground="{Binding Severity, Converter={x:Static converters:ToastSeverityToBrushConverter.Instance}}"

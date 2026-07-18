@@ -9,6 +9,52 @@ namespace Cafe.Launcher.Avalonia.Tests;
 public sealed partial class UiStyleContractTests
 {
     [Fact]
+    public void LauncherIcons_UserFacingActionsAndSettings_UseApprovedSemanticMappings()
+    {
+        var mainWindow = XDocument.Load(ProjectFile("Views/MainWindow.axaml"));
+        var generalSettings = XDocument.Load(ProjectFile("Views/SettingsGeneralSection.axaml"));
+        var downloadNetworkSettings = XDocument.Load(ProjectFile("Views/SettingsDownloadNetworkSection.axaml"));
+        var dialogs = XDocument.Load(ProjectFile("Views/MainWindowDialogsOverlay.axaml"));
+        var settingsOverlay = XDocument.Load(ProjectFile("Views/MainWindowSettingsOverlay.axaml"));
+
+        var detectButton = mainWindow
+            .Descendants()
+            .Single(element =>
+                element.Name.LocalName == "Button"
+                && element.Attribute("Command")?.Value == "{Binding Settings.SelectInstalledGameCommand}");
+        Assert.Equal(
+            "FolderSearchOutline",
+            detectButton.Descendants().Single(element => element.Name.LocalName == "MaterialIcon").Attribute("Kind")?.Value);
+
+        AssertSettingRowIcon(generalSettings, "{Binding Shell.I18n.CloseBehavior}", "WindowClose");
+        AssertSettingRowIcon(downloadNetworkSettings, "{Binding Shell.I18n.Proxy}", "LanConnect");
+        AssertSettingRowIcon(downloadNetworkSettings, "{Binding Shell.I18n.LauncherUpdateChannel}", "SourceBranch");
+
+        var resourcePanelButton = mainWindow
+            .Descendants()
+            .Single(element =>
+                element.Name.LocalName == "Button"
+                && element.Attribute("Command")?.Value == "{Binding ResourcePanel.OpenResourcePanelCommand}");
+        Assert.Equal(
+            "Web",
+            resourcePanelButton.Descendants().Single(element => element.Name.LocalName == "MaterialIcon").Attribute("Kind")?.Value);
+        AssertSettingRowIcon(downloadNetworkSettings, "{Binding Shell.I18n.DownloadSource}", "Web");
+
+        var resourcePanelHeadingIcon = dialogs
+            .Descendants()
+            .First(element => element.Name.LocalName == "MaterialIcon");
+        Assert.Equal("Web", resourcePanelHeadingIcon.Attribute("Kind")?.Value);
+
+        var settingsFooterIcons = settingsOverlay
+            .Descendants()
+            .Where(element => element.Name.LocalName == "MaterialIcon")
+            .Select(element => element.Attribute("Kind")?.Value)
+            .ToArray();
+        Assert.Contains("CloseCircleOutline", settingsFooterIcons);
+        Assert.Contains("ContentSave", settingsFooterIcons);
+    }
+
+    [Fact]
     public void MainWindow_OperationPanels_UseStableStatusAndActionColumns()
     {
         var document = XDocument.Load(ProjectFile("Views/MainWindow.axaml"));
@@ -515,6 +561,7 @@ public sealed partial class UiStyleContractTests
     public void SettingsOverlay_ReferencesSixCategorySectionsWithoutOwningSettingsRows()
     {
         var overlay = File.ReadAllText(ProjectFile("Views/MainWindowSettingsOverlay.axaml"));
+        var document = XDocument.Parse(overlay);
         Dictionary<string, string> sectionVisibility = new(StringComparer.Ordinal)
         {
             ["SettingsGeneralSection"] = "Settings.IsGeneralCategorySelected",
@@ -527,9 +574,11 @@ public sealed partial class UiStyleContractTests
 
         foreach (var (sectionName, visibility) in sectionVisibility)
         {
-            Assert.Equal(
-                1,
-                Regex.Count(overlay, $"<views:{sectionName} IsVisible=\"{{Binding {Regex.Escape(visibility)}}}\"/>"));
+            Assert.Single(
+                document.Descendants(),
+                element =>
+                    element.Name.LocalName == sectionName
+                    && element.Attribute("IsVisible")?.Value == $"{{Binding {visibility}}}");
         }
 
         Assert.DoesNotContain("Settings.Editor.Current", overlay, StringComparison.Ordinal);
@@ -1263,10 +1312,12 @@ public sealed partial class UiStyleContractTests
     [Fact]
     public void SetupWizardOverlay_UsesSetupWizardLayerBetweenDialogsAndToast()
     {
-        var overlay = File.ReadAllText(ProjectFile("Views/SetupWizardOverlay.axaml"));
+        var overlay = XDocument.Load(ProjectFile("Views/SetupWizardOverlay.axaml"));
         var styles = File.ReadAllText(ProjectFile("Views/MainWindow.Styles.axaml"));
 
-        Assert.Contains("Classes=\"setup-wizard-overlay\"", overlay, StringComparison.Ordinal);
+        Assert.Contains(
+            overlay.Descendants(),
+            element => HasClass(element, "setup-wizard-overlay"));
         Assert.Matches(
             """(?s)<Style Selector="Grid\.setup-wizard-overlay">.*?<Setter Property="ZIndex" Value="500"/>.*?</Style>""",
             styles);
@@ -1333,11 +1384,9 @@ public sealed partial class UiStyleContractTests
     public void ResourcePanel_InputsAndResourceSwitchesExposeMeaningfulAutomationNames()
     {
         var document = XDocument.Load(ProjectFile("Views/MainWindowDialogsOverlay.axaml"));
-        var resourcePanel = document
-            .Descendants()
-            .Single(element =>
-                element.Name.LocalName == "Grid"
-                && element.Attribute("IsVisible")?.Value == "{Binding ResourcePanel.IsResourcePanelVisible}");
+        var resourcePanel = FindMotionOverlay(
+            document,
+            "{Binding ResourcePanel.IsResourcePanelVisible}");
         var uidInputs = resourcePanel
             .Descendants()
             .Where(element =>
@@ -1720,12 +1769,9 @@ public sealed partial class UiStyleContractTests
     public void LocalizationManagement_UsesFixedDialogDimensions()
     {
         var document = XDocument.Load(ProjectFile("Views/MainWindowDialogsOverlay.axaml"));
-        var dialog = document
-            .Descendants()
-            .Single(element =>
-                element.Name.LocalName == "Grid"
-                && element.Attribute("IsVisible")?.Value
-                    == "{Binding ResourcePanel.IsResourcePanelVisible}")
+        var dialog = FindMotionOverlay(
+                document,
+                "{Binding ResourcePanel.IsResourcePanelVisible}")
             .Elements()
             .Single(element =>
                 element.Name.LocalName == "Border"
@@ -2551,6 +2597,13 @@ public sealed partial class UiStyleContractTests
             "Classes.motion-enabled=\"{Binding DataContext.IsMotionEnabled, ElementName=ToastOverlayRoot}\"",
             overlay,
             StringComparison.Ordinal);
+        var overlayDocument = XDocument.Load(ProjectFile("Views/MainWindowToastOverlay.axaml"));
+        var toastCard = overlayDocument
+            .Descendants()
+            .Single(element =>
+                element.Name.LocalName == "Border"
+                && HasClass(element, "toast-card"));
+        Assert.Equal("{Binding IsExiting}", toastCard.Attribute("Classes.motion-exit")?.Value);
 
         var document = XDocument.Load(ProjectFile("Views/Styles/Toast.axaml"));
         var toastStyles = document
@@ -2564,16 +2617,177 @@ public sealed partial class UiStyleContractTests
         var baseStyle = Assert.Single(
             toastStyles,
             style => style.Attribute("Selector")?.Value == "Border.toast-card");
-        var motionStyle = Assert.Single(
+        var enterMotionStyle = Assert.Single(
             toastStyles,
-            style => style.Attribute("Selector")?.Value == "Border.toast-card.motion-enabled");
+            style => style.Attribute("Selector")?.Value
+                == "Border.toast-card.motion-enabled:not(.motion-exit)");
+        var exitMotionStyle = Assert.Single(
+            toastStyles,
+            style => style.Attribute("Selector")?.Value
+                == "Border.toast-card.motion-enabled.motion-exit");
 
         Assert.DoesNotContain(
             baseStyle.Elements(),
             element => element.Name.LocalName == "Style.Animations");
         Assert.Contains(
-            motionStyle.Elements(),
+            enterMotionStyle.Elements(),
             element => element.Name.LocalName == "Style.Animations");
+        Assert.Contains(
+            exitMotionStyle.Elements(),
+            element => element.Name.LocalName == "Style.Animations");
+
+        AssertMotionAnimation(
+            document,
+            "Border.toast-card.motion-enabled:not(.motion-exit)",
+            "0:0:0.22",
+            expectedStartOffset: "4");
+        AssertExitMotionAnimation(
+            document,
+            "Border.toast-card.motion-enabled.motion-exit",
+            expectedEndOffset: "4");
+    }
+
+    [Fact]
+    public void CoreMotionStyles_DefineExactConditionalAnimations()
+    {
+        var document = XDocument.Load(ProjectFile("Views/MainWindow.Styles.axaml"));
+
+        AssertMotionAnimation(
+            document,
+            "Grid.motion-overlay.motion-enabled.motion-enter",
+            "0:0:0.16",
+            expectedStartOffset: null);
+        AssertMotionAnimation(
+            document,
+            "Grid.motion-overlay.motion-enabled.motion-enter > Border.motion-surface",
+            "0:0:0.22",
+            expectedStartOffset: "8");
+        AssertMotionAnimation(
+            document,
+            ":is(UserControl).motion-content.motion-enabled.motion-enter",
+            "0:0:0.18",
+            expectedStartOffset: "6");
+        AssertMotionAnimation(
+            document,
+            "StackPanel.motion-content.motion-enabled.motion-enter",
+            "0:0:0.18",
+            expectedStartOffset: "6");
+        AssertMotionAnimation(
+            document,
+            "Border.motion-bottom.motion-enabled.motion-enter",
+            "0:0:0.20",
+            expectedStartOffset: "10");
+        AssertExitMotionAnimation(
+            document,
+            "Grid.motion-overlay.motion-enabled.motion-exit",
+            expectedEndOffset: null);
+        AssertExitMotionAnimation(
+            document,
+            "Grid.motion-overlay.motion-enabled.motion-exit > Border.motion-surface",
+            expectedEndOffset: "6");
+
+        foreach (var selector in new[]
+                 {
+                     "Grid.motion-overlay",
+                     "Border.motion-surface",
+                     ":is(UserControl).motion-content",
+                     "StackPanel.motion-content",
+                     "Border.motion-bottom",
+                     "ListBox.settings-navigation > ListBoxItem:selected"
+                 })
+        {
+            var style = document
+                .Descendants()
+                .Single(element =>
+                    element.Name.LocalName == "Style"
+                    && element.Attribute("Selector")?.Value == selector);
+            Assert.DoesNotContain(
+                style.Elements(),
+                element => element.Name.LocalName == "Style.Animations");
+        }
+    }
+
+    [Fact]
+    public void CoreMotionOverlays_UseMotionVisibilityWithoutDirectVisibilityBindings()
+    {
+        var overlayFiles = new[]
+        {
+            "Views/MainWindowSettingsOverlay.axaml",
+            "Views/MainWindowLogViewerOverlay.axaml",
+            "Views/MainWindowDialogsOverlay.axaml",
+            "Views/SetupWizardOverlay.axaml"
+        };
+        var overlays = new List<(XElement Element, XNamespace ControlsNamespace)>();
+        foreach (var path in overlayFiles)
+        {
+            var document = XDocument.Load(ProjectFile(path));
+            var controlsNamespace = document.Root?.GetNamespaceOfPrefix("controls");
+            Assert.NotNull(controlsNamespace);
+            overlays.AddRange(
+                document
+                    .Descendants()
+                    .Where(element => HasClass(element, "motion-overlay"))
+                    .Select(element => (element, controlsNamespace)));
+        }
+
+        Assert.Equal(7, overlays.Count);
+        Assert.All(overlays, overlay =>
+        {
+            var element = overlay.Element;
+            Assert.Equal(
+                "{Binding IsMotionEnabled}",
+                element.Attribute("Classes.motion-enabled")?.Value);
+            Assert.Equal(
+                "{Binding IsMotionEnabled}",
+                element.Attribute(
+                    overlay.ControlsNamespace + "MotionVisibility.IsMotionEnabled")?.Value);
+            Assert.StartsWith(
+                "{Binding ",
+                element.Attribute(overlay.ControlsNamespace + "MotionVisibility.IsOpen")?.Value);
+            Assert.Null(element.Attribute("IsVisible"));
+            Assert.Null(element.Attribute("Classes.motion-enter"));
+            var surface = element.Elements().First();
+            Assert.True(HasClass(surface, "motion-surface"));
+            AssertHasLocalTranslateTransform(surface);
+        });
+
+        var settings = XDocument.Load(ProjectFile("Views/MainWindowSettingsOverlay.axaml"));
+        var wizard = XDocument.Load(ProjectFile("Views/SetupWizardOverlay.axaml"));
+        var contentTargets = settings
+            .Descendants()
+            .Concat(wizard.Descendants())
+            .Where(element => HasClass(element, "motion-content"))
+            .ToList();
+
+        Assert.Equal(11, contentTargets.Count);
+        Assert.All(contentTargets, element =>
+        {
+            Assert.Equal(
+                "{Binding IsMotionEnabled}",
+                element.Attribute("Classes.motion-enabled")?.Value);
+            Assert.Equal(
+                element.Attribute("IsVisible")?.Value,
+                element.Attribute("Classes.motion-enter")?.Value);
+            AssertHasLocalTranslateTransform(element);
+        });
+
+        var mainWindow = XDocument.Load(ProjectFile("Views/MainWindow.axaml"));
+        var bottomTargets = mainWindow
+            .Descendants()
+            .Where(element => HasClass(element, "motion-bottom"))
+            .ToList();
+
+        Assert.Equal(2, bottomTargets.Count);
+        Assert.All(bottomTargets, element =>
+        {
+            Assert.Equal(
+                "{Binding IsMotionEnabled}",
+                element.Attribute("Classes.motion-enabled")?.Value);
+            Assert.Equal(
+                element.Attribute("IsVisible")?.Value,
+                element.Attribute("Classes.motion-enter")?.Value);
+            AssertHasLocalTranslateTransform(element);
+        });
     }
 
     [Fact]
@@ -2731,6 +2945,163 @@ public sealed partial class UiStyleContractTests
         element.Attribute("Classes")?.Value
             .Split(' ', StringSplitOptions.RemoveEmptyEntries)
             .Contains(className, StringComparer.Ordinal) == true;
+
+    private static XElement FindMotionOverlay(XDocument document, string isOpenBinding)
+    {
+        var controlsNamespace = document.Root?.GetNamespaceOfPrefix("controls")
+            ?? throw new InvalidOperationException("The controls XML namespace is missing.");
+        return document
+            .Descendants()
+            .Single(element =>
+                HasClass(element, "motion-overlay")
+                && element.Attribute(controlsNamespace + "MotionVisibility.IsOpen")?.Value
+                    == isOpenBinding);
+    }
+
+    private static void AssertHasLocalTranslateTransform(XElement element)
+    {
+        var renderTransform = Assert.Single(
+            element.Elements(),
+            child => child.Name.LocalName.EndsWith(".RenderTransform", StringComparison.Ordinal));
+        Assert.Single(
+            renderTransform.Elements(),
+            child => child.Name.LocalName == "TranslateTransform");
+    }
+
+    private static void AssertMotionAnimation(
+        XDocument document,
+        string selector,
+        string expectedDuration,
+        string? expectedStartOffset)
+    {
+        var style = document
+            .Descendants()
+            .Single(element =>
+                element.Name.LocalName == "Style"
+                && element.Attribute("Selector")?.Value == selector);
+        var animation = style
+            .Descendants()
+            .Single(element => element.Name.LocalName == "Animation");
+        Assert.Equal(expectedDuration, animation.Attribute("Duration")?.Value);
+        Assert.Equal("Forward", animation.Attribute("FillMode")?.Value);
+        Assert.Equal("QuadraticEaseOut", animation.Attribute("Easing")?.Value);
+
+        var keyFrames = animation
+            .Elements()
+            .Where(element => element.Name.LocalName == "KeyFrame")
+            .ToDictionary(
+                element => element.Attribute("Cue")?.Value ?? "",
+                element => element,
+                StringComparer.Ordinal);
+        Assert.Equal(2, keyFrames.Count);
+        Assert.Equal(
+            "0",
+            keyFrames["0%"]
+                .Elements()
+                .Single(element => element.Attribute("Property")?.Value == "Opacity")
+                .Attribute("Value")?.Value);
+        Assert.Equal(
+            "1",
+            keyFrames["100%"]
+                .Elements()
+                .Single(element => element.Attribute("Property")?.Value == "Opacity")
+                .Attribute("Value")?.Value);
+
+        if (expectedStartOffset is null)
+        {
+            Assert.DoesNotContain(
+                keyFrames.SelectMany(pair => pair.Value.Elements()),
+                element => element.Attribute("Property")?.Value == "TranslateTransform.Y");
+            return;
+        }
+
+        Assert.Equal(
+            expectedStartOffset,
+            keyFrames["0%"]
+                .Elements()
+                .Single(element => element.Attribute("Property")?.Value == "TranslateTransform.Y")
+                .Attribute("Value")?.Value);
+        Assert.Equal(
+            "0",
+            keyFrames["100%"]
+                .Elements()
+                .Single(element => element.Attribute("Property")?.Value == "TranslateTransform.Y")
+                .Attribute("Value")?.Value);
+    }
+
+    private static void AssertExitMotionAnimation(
+        XDocument document,
+        string selector,
+        string? expectedEndOffset)
+    {
+        var style = document
+            .Descendants()
+            .Single(element =>
+                element.Name.LocalName == "Style"
+                && element.Attribute("Selector")?.Value == selector);
+        var animation = style
+            .Descendants()
+            .Single(element => element.Name.LocalName == "Animation");
+        Assert.Equal("0:0:0.15", animation.Attribute("Duration")?.Value);
+        Assert.Equal("Forward", animation.Attribute("FillMode")?.Value);
+        Assert.Equal("QuadraticEaseIn", animation.Attribute("Easing")?.Value);
+
+        var keyFrames = animation
+            .Elements()
+            .Where(element => element.Name.LocalName == "KeyFrame")
+            .ToDictionary(
+                element => element.Attribute("Cue")?.Value ?? "",
+                element => element,
+                StringComparer.Ordinal);
+        Assert.Equal(2, keyFrames.Count);
+        Assert.Equal(
+            "1",
+            keyFrames["0%"]
+                .Elements()
+                .Single(element => element.Attribute("Property")?.Value == "Opacity")
+                .Attribute("Value")?.Value);
+        Assert.Equal(
+            "0",
+            keyFrames["100%"]
+                .Elements()
+                .Single(element => element.Attribute("Property")?.Value == "Opacity")
+                .Attribute("Value")?.Value);
+
+        if (expectedEndOffset is null)
+        {
+            Assert.DoesNotContain(
+                keyFrames.SelectMany(pair => pair.Value.Elements()),
+                element => element.Attribute("Property")?.Value == "TranslateTransform.Y");
+            return;
+        }
+
+        Assert.Equal(
+            "0",
+            keyFrames["0%"]
+                .Elements()
+                .Single(element => element.Attribute("Property")?.Value == "TranslateTransform.Y")
+                .Attribute("Value")?.Value);
+        Assert.Equal(
+            expectedEndOffset,
+            keyFrames["100%"]
+                .Elements()
+                .Single(element => element.Attribute("Property")?.Value == "TranslateTransform.Y")
+                .Attribute("Value")?.Value);
+    }
+
+    private static void AssertSettingRowIcon(
+        XDocument document,
+        string titleBinding,
+        string expectedIconKind)
+    {
+        var settingRow = document
+            .Descendants()
+            .Single(element =>
+                element.Name.LocalName == "SettingRow"
+                && element.Attribute("Title")?.Value == titleBinding);
+
+        Assert.Equal(expectedIconKind, settingRow.Attribute("IconKind")?.Value);
+    }
 
     private static void AssertOrdered(string text, params string[] values)
     {

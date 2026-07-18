@@ -48,7 +48,7 @@ public partial class ShellViewModel : ViewModelBase
     private string currentViewTitle = "";
 
     [ObservableProperty]
-    private string statusIconKind = "HelpCircleOutline";
+    private string statusIconKind = "Sync";
 
     [ObservableProperty]
     private string statusText = "";
@@ -162,7 +162,7 @@ public partial class ShellViewModel : ViewModelBase
 
         if (!hasSnapshot)
         {
-            StatusIconKind = "HelpCircleOutline";
+            StatusIconKind = "Sync";
             CurrentViewTitle = localizer.T("launcherLoadingTitle");
             StatusText = localizer.T("launcherLoadingStatus");
             PathText = localizer.T("pathLoading");
@@ -180,7 +180,7 @@ public partial class ShellViewModel : ViewModelBase
 
     public void SetLoading()
     {
-        StatusIconKind = "HelpCircleOutline";
+        StatusIconKind = "Sync";
         CurrentViewTitle = localizer.T("launcherLoadingTitle");
         StatusText = localizer.T("connectingApi");
         ExecutableNameText = localizer.T("launcherLoadingValue");
@@ -271,8 +271,8 @@ public partial class ShellViewModel : ViewModelBase
                 LauncherRuntimeState.IoFailure or
                 LauncherRuntimeState.RemoteUnavailable or
                 LauncherRuntimeState.BelowLowestVersion => "Alert",
-            LauncherRuntimeState.UpdateAvailable => "AlertCircle",
-            LauncherRuntimeState.Ready => "CheckAll",
+            LauncherRuntimeState.UpdateAvailable => "Update",
+            LauncherRuntimeState.Ready => "CheckCircleOutline",
             _ => "Alert"
         };
     }

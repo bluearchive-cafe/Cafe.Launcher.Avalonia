@@ -31,7 +31,7 @@
             </controls:SettingRow.Action>
         </controls:SettingRow>
 
-        <controls:SettingRow IconKind="ProgressClose"
+        <controls:SettingRow IconKind="WindowClose"
                              Title="{Binding Shell.I18n.CloseBehavior}"
                              Description="{Binding Shell.I18n.CloseBehaviorDescription}">
             <controls:SettingRow.Action>
