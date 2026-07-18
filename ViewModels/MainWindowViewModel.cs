@@ -22,6 +22,8 @@ public partial class MainWindowViewModel : ViewModelBase, IDisposable
     private int initialized;
     private bool disposed;
     private bool skipNextPersistedResume;
+    private bool motionSettingsApplied;
+    private bool settingsSnapshotInitialized;
     private LauncherStatusSnapshot? currentSnapshot;
     private readonly WindowsAnimationSettingsProvider windowsAnimationSettingsProvider;
 
@@ -113,6 +115,25 @@ public partial class MainWindowViewModel : ViewModelBase, IDisposable
         await RefreshAsync(cancellationToken);
     }
 
+    /// <summary>
+    /// Refreshes the effective motion preference only when the saved mode follows the system setting.
+    /// </summary>
+    public void RefreshSystemMotionPreference()
+    {
+        if (!settingsSnapshotInitialized)
+        {
+            return;
+        }
+
+        var settings = Settings.Editor.GetSavedSnapshot();
+        if (settings.MotionMode != MotionModes.System)
+        {
+            return;
+        }
+
+        ApplyMotionSettings(settings);
+    }
+
     [RelayCommand]
     private async Task RefreshAsync(CancellationToken cancellationToken = default)
     {
@@ -121,6 +142,8 @@ public partial class MainWindowViewModel : ViewModelBase, IDisposable
         try
         {
             var settingsForLanguage = await settingsService.ReadAsync(cancellationToken);
+            Settings.Editor.ApplySnapshot(settingsForLanguage);
+            settingsSnapshotInitialized = true;
             ApplyMotionSettings(settingsForLanguage);
             ApplyLanguage(settingsForLanguage.Language);
             Settings.Appearance.Load(settingsForLanguage);
@@ -458,11 +481,21 @@ public partial class MainWindowViewModel : ViewModelBase, IDisposable
 
     private void ApplyMotionSettings(LauncherSettings settings)
     {
-        IsMotionReduced = MotionSettingsResolver.ShouldReduceMotion(
+        var windowsAnimationsEnabled = settings.MotionMode == MotionModes.System
+            ? windowsAnimationSettingsProvider.GetWindowsAnimationsEnabled()
+            : null;
+        var reduceMotion = MotionSettingsResolver.ShouldReduceMotion(
             settings.MotionMode,
-            windowsAnimationSettingsProvider.GetWindowsAnimationsEnabled());
-        RemoteContent.ApplyMotionPreference(IsMotionReduced);
-        Toasts.ApplyMotionPreference(IsMotionReduced);
+            windowsAnimationsEnabled);
+        if (motionSettingsApplied && reduceMotion == IsMotionReduced)
+        {
+            return;
+        }
+
+        motionSettingsApplied = true;
+        IsMotionReduced = reduceMotion;
+        RemoteContent.ApplyMotionPreference(reduceMotion);
+        Toasts.ApplyMotionPreference(reduceMotion);
     }
 
     private void ApplyLanguage(string language)

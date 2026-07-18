@@ -1431,6 +1431,188 @@ public sealed class MainWindowViewModelTests : IDisposable
         Assert.False(viewModel.RemoteContent.IsCarouselTimerRunning);
     }
 
+    [Fact]
+    public async Task RefreshSystemMotionPreference_SystemMode_ReevaluatesEffectiveMotion()
+    {
+        var animationsEnabled = true;
+        var snapshot = CreateSnapshot();
+        snapshot.Settings.MotionMode = MotionModes.System;
+        using var viewModel = await CreateViewModelAsync(
+            new CountingCoreService(snapshot),
+            windowsAnimationSettingsProvider: new WindowsAnimationSettingsProvider(
+                () => (true, animationsEnabled)));
+        await viewModel.InitializeAsync();
+        Assert.False(viewModel.IsMotionReduced);
+        animationsEnabled = false;
+
+        viewModel.RefreshSystemMotionPreference();
+
+        Assert.True(viewModel.IsMotionReduced);
+    }
+
+    [Fact]
+    public async Task RefreshSystemMotionPreference_UnchangedSystemValue_RetainsChildStateAndReadsProvider()
+    {
+        var providerReadCount = 0;
+        var snapshot = CreateSnapshot();
+        snapshot.Settings.MotionMode = MotionModes.System;
+        using var viewModel = await CreateViewModelAsync(
+            new CountingCoreService(snapshot),
+            windowsAnimationSettingsProvider: new WindowsAnimationSettingsProvider(
+                () =>
+                {
+                    providerReadCount++;
+                    return (true, true);
+                }));
+        await viewModel.InitializeAsync();
+        var carouselTransition = viewModel.RemoteContent.CarouselTransition;
+        var readsBeforeRefresh = providerReadCount;
+
+        viewModel.RefreshSystemMotionPreference();
+
+        Assert.Same(carouselTransition, viewModel.RemoteContent.CarouselTransition);
+        Assert.Equal(readsBeforeRefresh + 1, providerReadCount);
+    }
+
+    [Theory]
+    [InlineData(MotionModes.Full)]
+    [InlineData(MotionModes.Reduced)]
+    public async Task RefreshSystemMotionPreference_ExplicitMode_NeverReadsProvider(string motionMode)
+    {
+        var providerReadCount = 0;
+        var snapshot = CreateSnapshot();
+        snapshot.Settings.MotionMode = motionMode;
+        using var settingsService = new LauncherSettingsService(
+            Path.Combine(tempDir, Guid.NewGuid().ToString("N"), "settings.json"));
+        await settingsService.SaveAsync(snapshot.Settings);
+        using var viewModel = await CreateViewModelAsync(
+            new CountingCoreService(snapshot),
+            settingsService: settingsService,
+            windowsAnimationSettingsProvider: new WindowsAnimationSettingsProvider(
+                () =>
+                {
+                    providerReadCount++;
+                    return (true, false);
+                }));
+
+        await viewModel.InitializeAsync();
+        viewModel.RefreshSystemMotionPreference();
+
+        Assert.Equal(0, providerReadCount);
+    }
+
+    [Fact]
+    public async Task RefreshSystemMotionPreference_BeforeSettingsSnapshotInitialized_DoesNotReadProvider()
+    {
+        var providerReadCount = 0;
+        var snapshot = CreateSnapshot();
+        snapshot.Settings.MotionMode = MotionModes.Full;
+        using var settingsService = new LauncherSettingsService(
+            Path.Combine(tempDir, Guid.NewGuid().ToString("N"), "settings.json"));
+        await settingsService.SaveAsync(snapshot.Settings);
+        using var viewModel = await CreateViewModelAsync(
+            new CountingCoreService(snapshot),
+            settingsService: settingsService,
+            windowsAnimationSettingsProvider: new WindowsAnimationSettingsProvider(
+                () =>
+                {
+                    providerReadCount++;
+                    return (true, true);
+                }));
+
+        viewModel.RefreshSystemMotionPreference();
+
+        Assert.Equal(0, providerReadCount);
+        Assert.True(viewModel.IsMotionReduced);
+
+        await viewModel.InitializeAsync();
+
+        Assert.Equal(0, providerReadCount);
+        Assert.False(viewModel.IsMotionReduced);
+    }
+
+    [Fact]
+    public async Task RefreshSystemMotionPreference_CoreLoadFails_UsesPersistedSystemSnapshot()
+    {
+        var animationsEnabled = true;
+        var providerReadCount = 0;
+        var persistedSettings = new LauncherSettings
+        {
+            GamePath = "persisted-game-path",
+            MotionMode = MotionModes.System
+        };
+        using var settingsService = new LauncherSettingsService(
+            Path.Combine(tempDir, Guid.NewGuid().ToString("N"), "settings.json"));
+        await settingsService.SaveAsync(persistedSettings);
+        using var viewModel = await CreateViewModelAsync(
+            new ThrowingCoreService(),
+            settingsService: settingsService,
+            windowsAnimationSettingsProvider: new WindowsAnimationSettingsProvider(
+                () =>
+                {
+                    providerReadCount++;
+                    return (true, animationsEnabled);
+                }));
+
+        await viewModel.InitializeAsync();
+        Assert.Equal(
+            persistedSettings.GamePath,
+            viewModel.Settings.Editor.GetSavedSnapshot().GamePath);
+        Assert.False(viewModel.IsMotionReduced);
+        var readsBeforeRefresh = providerReadCount;
+        animationsEnabled = false;
+
+        viewModel.RefreshSystemMotionPreference();
+
+        Assert.Equal(readsBeforeRefresh + 1, providerReadCount);
+        Assert.True(viewModel.IsMotionReduced);
+    }
+
+    [Fact]
+    public async Task InitializeAsync_InitialReducedValue_SynchronizesChildMotionPreferences()
+    {
+        var snapshot = CreateSnapshot();
+        snapshot.Settings.MotionMode = MotionModes.Reduced;
+        using var settingsService = new LauncherSettingsService(
+            Path.Combine(tempDir, Guid.NewGuid().ToString("N"), "settings.json"));
+        await settingsService.SaveAsync(snapshot.Settings);
+        var toastService = new ToastService();
+        var displayDelay = new TaskCompletionSource(
+            TaskCreationOptions.RunContinuationsAsynchronously);
+        var exitDelayCalls = 0;
+        using var viewModel = await CreateViewModelAsync(
+            new CountingCoreService(snapshot),
+            settingsService: settingsService,
+            toastService: toastService,
+            toastDelayAsync: (delay, cancellationToken) =>
+            {
+                if (delay == AnimationTimings.ExitAnimationDuration)
+                {
+                    Interlocked.Increment(ref exitDelayCalls);
+                    return Task.CompletedTask;
+                }
+
+                return displayDelay.Task.WaitAsync(cancellationToken);
+            });
+        viewModel.RemoteContent.ApplyMotionPreference(reduceMotion: false);
+        viewModel.Toasts.ApplyMotionPreference(reduceMotion: false);
+
+        await viewModel.InitializeAsync();
+        toastService.Show("reduced");
+        var toast = Assert.Single(viewModel.Toasts.ActiveToasts);
+        await viewModel.Toasts.DismissToastCommand.ExecuteAsync(toast.Id);
+
+        Assert.True(viewModel.IsMotionReduced);
+        Assert.Equal(
+            TimeSpan.Zero,
+            Assert.IsType<global::Avalonia.Animation.CrossFade>(
+                viewModel.RemoteContent.CarouselTransition).Duration);
+        Assert.Empty(viewModel.Toasts.ActiveToasts);
+        Assert.False(toast.IsExiting);
+        Assert.Equal(0, exitDelayCalls);
+        displayDelay.TrySetResult();
+    }
+
     private async Task<MainWindowViewModel> CreateViewModelAsync(
         ILauncherCoreService coreService,
         LauncherSettingsService? settingsService = null,
@@ -1438,7 +1620,8 @@ public sealed class MainWindowViewModelTests : IDisposable
         ResourcePanelApiClient? resourcePanelApiClient = null,
         ToastService? toastService = null,
         CountingGameOperationsBackend? gameOperationsBackend = null,
-        WindowsAnimationSettingsProvider? windowsAnimationSettingsProvider = null)
+        WindowsAnimationSettingsProvider? windowsAnimationSettingsProvider = null,
+        Func<TimeSpan, CancellationToken, Task>? toastDelayAsync = null)
     {
         settingsService ??= new LauncherSettingsService(
             Path.Combine(tempDir, Guid.NewGuid().ToString("N"), "settings.json"));
@@ -1524,7 +1707,18 @@ public sealed class MainWindowViewModelTests : IDisposable
                 shellViewModel,
                 dialogsViewModel,
                 _ => Task.CompletedTask);
-        var toastHostViewModel = new ToastHostViewModel(toastService, localizationService, settingsViewModel);
+        var toastHostViewModel = toastDelayAsync is null
+            ? new ToastHostViewModel(toastService, localizationService, settingsViewModel)
+            : new ToastHostViewModel(
+                toastService,
+                localizationService,
+                settingsViewModel,
+                action =>
+                {
+                    action();
+                    return Task.CompletedTask;
+                },
+                toastDelayAsync);
         var windowChromeViewModel = new WindowChromeViewModel(
             settingsViewModel, remoteContentViewModel, dialogsViewModel, gameOperationsViewModel);
 

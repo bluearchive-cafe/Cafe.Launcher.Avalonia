@@ -9,8 +9,8 @@
                     HorizontalAlignment="Center"
                     VerticalAlignment="Center">
             <ProgressBar IsIndeterminate="True"
-                         Width="120"
-                         Height="4"/>
+                         Width="{StaticResource LauncherLoadingBarWidth}"
+                         Height="{StaticResource LauncherLoadingBarHeight}"/>
             <TextBlock Text="{Binding Text, ElementName=Root}"
                        Classes="media-placeholder-text"/>
         </StackPanel>
