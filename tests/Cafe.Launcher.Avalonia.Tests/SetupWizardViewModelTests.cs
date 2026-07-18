@@ -2,6 +2,7 @@ using System.ComponentModel;
 using Cafe.Launcher.Avalonia.Features.SetupWizard;
 using Cafe.Launcher.Avalonia.Models;
 using Cafe.Launcher.Avalonia.Services;
+using Cafe.Launcher.Avalonia.Services.Diagnostics;
 using Cafe.Launcher.Avalonia.ViewModels;
 
 namespace Cafe.Launcher.Avalonia.Tests;
@@ -16,7 +17,8 @@ public sealed class SetupWizardViewModelTests
     private static SetupWizardViewModel CreateViewModel() => new(
         new LocalizationService(),
         new GameInstallationPath(),
-        new LocalInstallationStateStore());
+        new LocalInstallationStateStore(),
+        new LocalDiagnostics());
 
     [Fact]
     public void InitialState_IsStep0_CanGoNext_CannotGoPrevious()
@@ -48,7 +50,8 @@ public sealed class SetupWizardViewModelTests
         var vm = new SetupWizardViewModel(
             new LocalizationService(),
             installationPath,
-            new LocalInstallationStateStore());
+            new LocalInstallationStateStore(),
+            new LocalDiagnostics());
 
         vm.NextCommand.Execute(null);
 
@@ -180,7 +183,8 @@ public sealed class SetupWizardViewModelTests
         var vm = new SetupWizardViewModel(
             new LocalizationService(),
             new GameInstallationPath(),
-            new LocalInstallationStateStore());
+            new LocalInstallationStateStore(),
+            new LocalDiagnostics());
         vm.GamePath = path;
         vm.NextCommand.Execute(null);
         await WaitForGamePathStatusAsync(vm, SetupWizardGamePathStatus.AvailableForInstallation);
@@ -301,7 +305,7 @@ public sealed class SetupWizardViewModelTests
         var store = new LocalInstallationStateStore();
         Directory.CreateDirectory(normalizedGamePath);
         await store.CommitAsync(normalizedGamePath, CreateCommit());
-        var vm = new SetupWizardViewModel(new LocalizationService(), new GameInstallationPath(), store)
+        var vm = new SetupWizardViewModel(new LocalizationService(), new GameInstallationPath(), store, new LocalDiagnostics())
         {
             GamePath = gamePath
         };
@@ -341,7 +345,8 @@ public sealed class SetupWizardViewModelTests
         var vm = new SetupWizardViewModel(
             localizer,
             new GameInstallationPath(),
-            new LocalInstallationStateStore());
+            new LocalInstallationStateStore(),
+            new LocalDiagnostics());
         vm.GamePath = gamePath;
         vm.NextCommand.Execute(null);
 
@@ -361,7 +366,7 @@ public sealed class SetupWizardViewModelTests
         await store.CommitAsync(normalizedGamePath, CreateCommit());
         await using var locked = new FileStream(
             Path.Combine(normalizedGamePath, "manifest.json"), FileMode.Open, FileAccess.ReadWrite, FileShare.None);
-        var vm = new SetupWizardViewModel(new LocalizationService(), new GameInstallationPath(), store)
+        var vm = new SetupWizardViewModel(new LocalizationService(), new GameInstallationPath(), store, new LocalDiagnostics())
         {
             GamePath = gamePath
         };
@@ -401,7 +406,7 @@ public sealed class SetupWizardViewModelTests
         });
         var commitTask = store.CommitAsync(normalizedGamePath, CreateCommit());
         await tempFilesWritten.Task.WaitAsync(TimeSpan.FromSeconds(2));
-        var vm = new SetupWizardViewModel(new LocalizationService(), new GameInstallationPath(), store)
+        var vm = new SetupWizardViewModel(new LocalizationService(), new GameInstallationPath(), store, new LocalDiagnostics())
         {
             GamePath = gamePath
         };
@@ -432,7 +437,7 @@ public sealed class SetupWizardViewModelTests
         });
         var commitTask = store.CommitAsync(normalizedOldGamePath, CreateCommit());
         await tempFilesWritten.Task.WaitAsync(TimeSpan.FromSeconds(2));
-        var vm = new SetupWizardViewModel(new LocalizationService(), new GameInstallationPath(), store)
+        var vm = new SetupWizardViewModel(new LocalizationService(), new GameInstallationPath(), store, new LocalDiagnostics())
         {
             GamePath = oldGamePath
         };
@@ -454,7 +459,8 @@ public sealed class SetupWizardViewModelTests
         var vm = new SetupWizardViewModel(
             localizer,
             new GameInstallationPath(),
-            new LocalInstallationStateStore())
+            new LocalInstallationStateStore(),
+            new LocalDiagnostics())
         {
             GamePath = Path.Combine(Path.GetTempPath(), Guid.NewGuid().ToString("N"))
         };
