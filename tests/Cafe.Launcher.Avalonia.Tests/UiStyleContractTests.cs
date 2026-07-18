@@ -2597,6 +2597,13 @@ public sealed partial class UiStyleContractTests
             "Classes.motion-enabled=\"{Binding DataContext.IsMotionEnabled, ElementName=ToastOverlayRoot}\"",
             overlay,
             StringComparison.Ordinal);
+        var overlayDocument = XDocument.Load(ProjectFile("Views/MainWindowToastOverlay.axaml"));
+        var toastCard = overlayDocument
+            .Descendants()
+            .Single(element =>
+                element.Name.LocalName == "Border"
+                && HasClass(element, "toast-card"));
+        Assert.Equal("{Binding IsExiting}", toastCard.Attribute("Classes.motion-exit")?.Value);
 
         var document = XDocument.Load(ProjectFile("Views/Styles/Toast.axaml"));
         var toastStyles = document
@@ -2610,16 +2617,34 @@ public sealed partial class UiStyleContractTests
         var baseStyle = Assert.Single(
             toastStyles,
             style => style.Attribute("Selector")?.Value == "Border.toast-card");
-        var motionStyle = Assert.Single(
+        var enterMotionStyle = Assert.Single(
             toastStyles,
-            style => style.Attribute("Selector")?.Value == "Border.toast-card.motion-enabled");
+            style => style.Attribute("Selector")?.Value
+                == "Border.toast-card.motion-enabled:not(.motion-exit)");
+        var exitMotionStyle = Assert.Single(
+            toastStyles,
+            style => style.Attribute("Selector")?.Value
+                == "Border.toast-card.motion-enabled.motion-exit");
 
         Assert.DoesNotContain(
             baseStyle.Elements(),
             element => element.Name.LocalName == "Style.Animations");
         Assert.Contains(
-            motionStyle.Elements(),
+            enterMotionStyle.Elements(),
             element => element.Name.LocalName == "Style.Animations");
+        Assert.Contains(
+            exitMotionStyle.Elements(),
+            element => element.Name.LocalName == "Style.Animations");
+
+        AssertMotionAnimation(
+            document,
+            "Border.toast-card.motion-enabled:not(.motion-exit)",
+            "0:0:0.22",
+            expectedStartOffset: "4");
+        AssertExitMotionAnimation(
+            document,
+            "Border.toast-card.motion-enabled.motion-exit",
+            expectedEndOffset: "4");
     }
 
     [Fact]

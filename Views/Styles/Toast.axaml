@@ -10,7 +10,7 @@
         <Setter Property="MaxWidth" Value="340"/>
         <Setter Property="Opacity" Value="1"/>
     </Style>
-    <Style Selector="Border.toast-card.motion-enabled">
+    <Style Selector="Border.toast-card.motion-enabled:not(.motion-exit)">
         <Style.Animations>
             <Animation Duration="0:0:0.22" FillMode="Forward" Easing="QuadraticEaseOut">
                 <KeyFrame Cue="0%">
@@ -20,6 +20,20 @@
                 <KeyFrame Cue="100%">
                     <Setter Property="Opacity" Value="1"/>
                     <Setter Property="TranslateTransform.Y" Value="0"/>
+                </KeyFrame>
+            </Animation>
+        </Style.Animations>
+    </Style>
+    <Style Selector="Border.toast-card.motion-enabled.motion-exit">
+        <Style.Animations>
+            <Animation Duration="0:0:0.15" FillMode="Forward" Easing="QuadraticEaseIn">
+                <KeyFrame Cue="0%">
+                    <Setter Property="Opacity" Value="1"/>
+                    <Setter Property="TranslateTransform.Y" Value="0"/>
+                </KeyFrame>
+                <KeyFrame Cue="100%">
+                    <Setter Property="Opacity" Value="0"/>
+                    <Setter Property="TranslateTransform.Y" Value="4"/>
                 </KeyFrame>
             </Animation>
         </Style.Animations>

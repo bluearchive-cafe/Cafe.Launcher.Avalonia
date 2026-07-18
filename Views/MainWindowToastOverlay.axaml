@@ -20,6 +20,7 @@
                     <DataTemplate x:DataType="services:ToastNotification">
                         <Border Classes="toast-card"
                                 Classes.motion-enabled="{Binding DataContext.IsMotionEnabled, ElementName=ToastOverlayRoot}"
+                                Classes.motion-exit="{Binding IsExiting}"
                                 IsHitTestVisible="True">
                             <Border.RenderTransform>
                                 <TranslateTransform/>
