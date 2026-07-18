@@ -198,6 +198,77 @@ public sealed class RemoteContentViewModelTests
     }
 
     [Fact]
+    public void TryAdvanceCarousel_WithoutBanners_KeepsCurrentIndex()
+    {
+        using var context = CreateContext();
+
+        var advanced = context.ViewModel.TryAdvanceCarousel();
+
+        Assert.False(advanced);
+        Assert.Equal(0, context.ViewModel.CarouselSelectedIndex);
+    }
+
+    [Fact]
+    public void TryAdvanceCarousel_NextImageLoading_KeepsCurrentBanner()
+    {
+        using var context = CreateContext();
+        context.ViewModel.Apply(
+            CreateBannerState(2, loop: false),
+            new LauncherSettings(),
+            CancellationToken.None);
+        context.ViewModel.BannerItems[1].MarkImageLoading();
+
+        var advanced = context.ViewModel.TryAdvanceCarousel();
+
+        Assert.False(advanced);
+        Assert.Equal(0, context.ViewModel.CarouselSelectedIndex);
+    }
+
+    [Theory]
+    [InlineData(false)]
+    [InlineData(true)]
+    public void TryAdvanceCarousel_NextImageTerminal_Advances(bool failed)
+    {
+        using var context = CreateContext();
+        context.ViewModel.Apply(
+            CreateBannerState(2, loop: false),
+            new LauncherSettings(),
+            CancellationToken.None);
+
+        if (failed)
+        {
+            context.ViewModel.BannerItems[1].MarkImageLoadFailed();
+        }
+        else
+        {
+            context.ViewModel.BannerItems[1].MarkImageLoaded();
+        }
+
+        var advanced = context.ViewModel.TryAdvanceCarousel();
+
+        Assert.True(advanced);
+        Assert.Equal(1, context.ViewModel.CarouselSelectedIndex);
+    }
+
+    [Fact]
+    public void TryAdvanceCarousel_WrapsToLoadingFirstImage_KeepsCurrentBanner()
+    {
+        using var context = CreateContext();
+        context.ViewModel.Apply(
+            CreateBannerState(2, loop: false),
+            new LauncherSettings(),
+            CancellationToken.None);
+        context.ViewModel.BannerItems[1].MarkImageLoaded();
+        context.ViewModel.BannerItems[0].MarkImageLoading();
+        context.ViewModel.CarouselSelectedIndex = 1;
+
+        var advanced = context.ViewModel.TryAdvanceCarousel();
+
+        Assert.False(advanced);
+        Assert.Equal(1, context.ViewModel.CarouselSelectedIndex);
+    }
+
+    [Fact]
     public void CarouselPageText_WithMultipleBanners_UsesCompactLocalizedFormat()
     {
         using var context = CreateContext(LauncherLanguages.English);

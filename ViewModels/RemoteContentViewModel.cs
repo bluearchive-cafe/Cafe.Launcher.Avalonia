@@ -307,17 +307,25 @@ public partial class RemoteContentViewModel : ViewModelBase, IDisposable
         {
             Interval = TimeSpan.FromMilliseconds(BannerIntervalMs)
         };
-        carouselTimer.Tick += (_, _) =>
-        {
-            if (BannerItems.Count == 0)
-            {
-                return;
-            }
-
-            var next = CarouselSelectedIndex + 1;
-            CarouselSelectedIndex = next % BannerItems.Count;
-        };
+        carouselTimer.Tick += (_, _) => TryAdvanceCarousel();
         carouselTimer.Start();
+    }
+
+    internal bool TryAdvanceCarousel()
+    {
+        if (BannerItems.Count == 0)
+        {
+            return false;
+        }
+
+        var next = (CarouselSelectedIndex + 1) % BannerItems.Count;
+        if (BannerItems[next].IsImageLoading)
+        {
+            return false;
+        }
+
+        CarouselSelectedIndex = next;
+        return true;
     }
 
     [RelayCommand]
