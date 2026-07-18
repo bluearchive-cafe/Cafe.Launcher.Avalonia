@@ -25,6 +25,7 @@ public partial class MainWindow : Window
         InitializeComponent();
         PointerPressed += OnPointerPressed;
         KeyDown += OnKeyDown;
+        Activated += OnActivated;
     }
 
     public void ConfigureViewModel(MainWindowViewModel viewModel)
@@ -62,6 +63,11 @@ public partial class MainWindow : Window
         viewModel.WindowChrome.CloseRequested -= PerformClose;
         viewModel.WindowChrome.RestoreRequested -= ShowWindow;
         configuredViewModel = null;
+    }
+
+    private void OnActivated(object? sender, EventArgs e)
+    {
+        configuredViewModel?.RefreshSystemMotionPreference();
     }
 
     private void MinimizeWindow() => WindowState = WindowState.Minimized;
