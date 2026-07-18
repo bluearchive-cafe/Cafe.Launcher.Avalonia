@@ -115,6 +115,12 @@ public static class MotionVisibility
             try
             {
                 await Task.Delay(AnimationTimings.ExitAnimationDuration, token);
+                token.ThrowIfCancellationRequested();
+                if (!ReferenceEquals(exitCancellation, cancellation))
+                {
+                    return;
+                }
+
                 control.IsVisible = false;
                 control.Classes.Remove("motion-exit");
             }
