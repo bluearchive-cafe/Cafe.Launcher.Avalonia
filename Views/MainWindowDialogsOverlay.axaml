@@ -11,10 +11,10 @@
              x:DataType="vm:MainWindowViewModel">
     <Grid>
         <!-- Chinese localization settings -->
-        <Grid IsVisible="{Binding ResourcePanel.IsResourcePanelVisible}"
-              Classes="dialog-overlay motion-overlay"
+        <Grid Classes="dialog-overlay motion-overlay"
               Classes.motion-enabled="{Binding IsMotionEnabled}"
-              Classes.motion-enter="{Binding ResourcePanel.IsResourcePanelVisible}">
+              controls:MotionVisibility.IsOpen="{Binding ResourcePanel.IsResourcePanelVisible}"
+              controls:MotionVisibility.IsMotionEnabled="{Binding IsMotionEnabled}">
             <Border Width="720"
                     Height="592"
                     Classes="dialog overlay-dialog motion-surface">
@@ -200,10 +200,10 @@
         </Grid>
 
         <!-- Notice popup dialog -->
-        <Grid IsVisible="{Binding Dialogs.IsNoticeDialogVisible}"
-              Classes="dialog-overlay motion-overlay"
+        <Grid Classes="dialog-overlay motion-overlay"
               Classes.motion-enabled="{Binding IsMotionEnabled}"
-              Classes.motion-enter="{Binding Dialogs.IsNoticeDialogVisible}">
+              controls:MotionVisibility.IsOpen="{Binding Dialogs.IsNoticeDialogVisible}"
+              controls:MotionVisibility.IsMotionEnabled="{Binding IsMotionEnabled}">
             <Border MaxWidth="540"
                     MaxHeight="480"
                     Classes="dialog overlay-dialog motion-surface">
@@ -261,10 +261,10 @@
                                 CloseToolTip="{Binding Shell.I18n.Close}"/>
 
         <!-- Update available dialog -->
-        <Grid IsVisible="{Binding Dialogs.IsUpdateAvailableVisible}"
-              Classes="dialog-overlay motion-overlay"
+        <Grid Classes="dialog-overlay motion-overlay"
               Classes.motion-enabled="{Binding IsMotionEnabled}"
-              Classes.motion-enter="{Binding Dialogs.IsUpdateAvailableVisible}">
+              controls:MotionVisibility.IsOpen="{Binding Dialogs.IsUpdateAvailableVisible}"
+              controls:MotionVisibility.IsMotionEnabled="{Binding IsMotionEnabled}">
             <Border Classes="dialog confirm-panel motion-surface" MaxWidth="620">
                 <Border.RenderTransform>
                     <TranslateTransform/>
@@ -422,10 +422,10 @@
                                 CloseToolTip="{Binding Shell.I18n.Close}"/>
 
         <!-- Crash recovery dialog (shown on startup after unclean shutdown) -->
-        <Grid IsVisible="{Binding Dialogs.IsCrashRecoveryVisible}"
-              Classes="dialog-overlay motion-overlay"
+        <Grid Classes="dialog-overlay motion-overlay"
               Classes.motion-enabled="{Binding IsMotionEnabled}"
-              Classes.motion-enter="{Binding Dialogs.IsCrashRecoveryVisible}">
+              controls:MotionVisibility.IsOpen="{Binding Dialogs.IsCrashRecoveryVisible}"
+              controls:MotionVisibility.IsMotionEnabled="{Binding IsMotionEnabled}">
             <Border Classes="dialog confirm-panel motion-surface" MaxWidth="460">
                 <Border.RenderTransform>
                     <TranslateTransform/>

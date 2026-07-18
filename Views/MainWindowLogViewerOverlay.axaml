@@ -1,14 +1,15 @@
 <UserControl xmlns="https://github.com/avaloniaui"
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
              xmlns:vm="using:Cafe.Launcher.Avalonia.ViewModels"
+             xmlns:controls="using:Cafe.Launcher.Avalonia.Controls"
              xmlns:materialIcons="clr-namespace:Material.Icons.Avalonia;assembly=Material.Icons.Avalonia"
              x:Class="Cafe.Launcher.Avalonia.Views.MainWindowLogViewerOverlay"
              x:Name="LogViewerRoot"
              x:DataType="vm:MainWindowViewModel">
-    <Grid IsVisible="{Binding LogViewer.IsVisible}"
-          Classes="dialog-overlay motion-overlay"
+    <Grid Classes="dialog-overlay motion-overlay"
           Classes.motion-enabled="{Binding IsMotionEnabled}"
-          Classes.motion-enter="{Binding LogViewer.IsVisible}">
+          controls:MotionVisibility.IsOpen="{Binding LogViewer.IsVisible}"
+          controls:MotionVisibility.IsMotionEnabled="{Binding IsMotionEnabled}">
         <Border Width="{StaticResource LauncherLogViewerWidth}"
                 Height="{StaticResource LauncherLogViewerHeight}"
                 Classes="dialog overlay-dialog motion-surface">

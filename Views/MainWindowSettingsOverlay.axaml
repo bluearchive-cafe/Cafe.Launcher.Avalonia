@@ -2,15 +2,16 @@
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
              xmlns:vm="using:Cafe.Launcher.Avalonia.ViewModels"
              xmlns:models="using:Cafe.Launcher.Avalonia.Models"
+             xmlns:controls="using:Cafe.Launcher.Avalonia.Controls"
              xmlns:materialIcons="clr-namespace:Material.Icons.Avalonia;assembly=Material.Icons.Avalonia"
              xmlns:views="using:Cafe.Launcher.Avalonia.Views"
              x:Class="Cafe.Launcher.Avalonia.Views.MainWindowSettingsOverlay"
              x:Name="SettingsRoot"
              x:DataType="vm:MainWindowViewModel">
-    <Grid IsVisible="{Binding WindowChrome.IsSettingsVisible}"
-          Classes="settings-overlay motion-overlay"
+    <Grid Classes="settings-overlay motion-overlay"
           Classes.motion-enabled="{Binding IsMotionEnabled}"
-          Classes.motion-enter="{Binding WindowChrome.IsSettingsVisible}">
+          controls:MotionVisibility.IsOpen="{Binding WindowChrome.IsSettingsVisible}"
+          controls:MotionVisibility.IsMotionEnabled="{Binding IsMotionEnabled}">
         <Border MaxWidth="960"
                 MaxHeight="620"
                 HorizontalAlignment="Stretch"
