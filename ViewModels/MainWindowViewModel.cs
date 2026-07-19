@@ -33,11 +33,13 @@ public partial class MainWindowViewModel : ViewModelBase, IDisposable
 
     public bool IsMotionEnabled => !IsMotionReduced;
 
-    public bool IsBottomPanelVisible =>
-        Settings.Editor.Current.StatusDetailMode != StatusDetailModes.Hidden;
+    public bool IsBottomPanelVisible => true;
 
     public bool IsStatusDetailExpanded =>
         Settings.Editor.Current.StatusDetailMode == StatusDetailModes.Detailed;
+
+    public bool IsStatusDetailHidden =>
+        Settings.Editor.Current.StatusDetailMode == StatusDetailModes.Hidden;
 
     public ShellViewModel Shell { get; }
 
@@ -268,8 +270,8 @@ public partial class MainWindowViewModel : ViewModelBase, IDisposable
     {
         if (e.PropertyName == nameof(LauncherSettings.StatusDetailMode))
         {
-            OnPropertyChanged(nameof(IsBottomPanelVisible));
             OnPropertyChanged(nameof(IsStatusDetailExpanded));
+            OnPropertyChanged(nameof(IsStatusDetailHidden));
         }
     }
 
@@ -614,6 +616,7 @@ public partial class MainWindowViewModel : ViewModelBase, IDisposable
         Dialogs.SetupWizard.SettingsApplied -= HandleSetupWizardCompletedAsync;
         WindowChrome.PropertyChanged -= OnWindowChromePropertyChanged;
         Settings.PropertyChanged -= OnSettingsPropertyChanged;
+        Settings.Editor.CurrentPropertyChanged -= OnSettingPropertyChanged;
         ResourcePanel.PropertyChanged -= OnResourcePanelPropertyChanged;
         LogViewer.PropertyChanged -= OnLogViewerPropertyChanged;
         Dialogs.PropertyChanged -= OnDialogsPropertyChanged;

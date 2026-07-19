@@ -2655,12 +2655,14 @@ public sealed partial class UiStyleContractTests
         AssertMotionAnimation(
             document,
             "Border.toast-card.motion-enabled:not(.motion-exit)",
-            "0:0:0.22",
-            expectedStartOffset: "4");
+            "0:0:0.200",
+            expectedStartOffset: "6",
+            expectedStartAxis: "TranslateTransform.X");
         AssertExitMotionAnimation(
             document,
             "Border.toast-card.motion-enabled.motion-exit",
-            expectedEndOffset: "4");
+            expectedEndOffset: "6",
+            expectedEndAxis: "TranslateTransform.X");
     }
 
     [Fact]
@@ -2671,28 +2673,28 @@ public sealed partial class UiStyleContractTests
         AssertMotionAnimation(
             document,
             "Grid.motion-overlay.motion-enabled.motion-enter",
-            "0:0:0.16",
+            "0:0:0.167",
             expectedStartOffset: null);
         AssertMotionAnimation(
             document,
             "Grid.motion-overlay.motion-enabled.motion-enter > Border.motion-surface",
-            "0:0:0.22",
+            "0:0:0.250",
             expectedStartOffset: "8");
         AssertMotionAnimation(
             document,
             ":is(UserControl).motion-content.motion-enabled.motion-enter",
-            "0:0:0.18",
+            "0:0:0.200",
             expectedStartOffset: "6");
         AssertMotionAnimation(
             document,
             "StackPanel.motion-content.motion-enabled.motion-enter",
-            "0:0:0.18",
+            "0:0:0.200",
             expectedStartOffset: "6");
         AssertMotionAnimation(
             document,
             "Border.motion-bottom.motion-enabled.motion-enter",
-            "0:0:0.20",
-            expectedStartOffset: "10");
+            "0:0:0.250",
+            expectedStartOffset: "12");
         AssertExitMotionAnimation(
             document,
             "Grid.motion-overlay.motion-enabled.motion-exit",
@@ -2700,7 +2702,7 @@ public sealed partial class UiStyleContractTests
         AssertExitMotionAnimation(
             document,
             "Grid.motion-overlay.motion-enabled.motion-exit > Border.motion-surface",
-            expectedEndOffset: "6");
+            expectedEndOffset: "8");
 
         foreach (var selector in new[]
                  {
@@ -2990,7 +2992,8 @@ public sealed partial class UiStyleContractTests
         XDocument document,
         string selector,
         string expectedDuration,
-        string? expectedStartOffset)
+        string? expectedStartOffset,
+        string expectedStartAxis = "TranslateTransform.Y")
     {
         var style = document
             .Descendants()
@@ -3002,7 +3005,7 @@ public sealed partial class UiStyleContractTests
             .Single(element => element.Name.LocalName == "Animation");
         Assert.Equal(expectedDuration, animation.Attribute("Duration")?.Value);
         Assert.Equal("Forward", animation.Attribute("FillMode")?.Value);
-        Assert.Equal("QuadraticEaseOut", animation.Attribute("Easing")?.Value);
+        Assert.Equal("ExponentialEaseOut", animation.Attribute("Easing")?.Value);
 
         var keyFrames = animation
             .Elements()
@@ -3029,7 +3032,7 @@ public sealed partial class UiStyleContractTests
         {
             Assert.DoesNotContain(
                 keyFrames.SelectMany(pair => pair.Value.Elements()),
-                element => element.Attribute("Property")?.Value == "TranslateTransform.Y");
+                element => element.Attribute("Property")?.Value == expectedStartAxis);
             return;
         }
 
@@ -3037,20 +3040,21 @@ public sealed partial class UiStyleContractTests
             expectedStartOffset,
             keyFrames["0%"]
                 .Elements()
-                .Single(element => element.Attribute("Property")?.Value == "TranslateTransform.Y")
+                .Single(element => element.Attribute("Property")?.Value == expectedStartAxis)
                 .Attribute("Value")?.Value);
         Assert.Equal(
             "0",
             keyFrames["100%"]
                 .Elements()
-                .Single(element => element.Attribute("Property")?.Value == "TranslateTransform.Y")
+                .Single(element => element.Attribute("Property")?.Value == expectedStartAxis)
                 .Attribute("Value")?.Value);
     }
 
     private static void AssertExitMotionAnimation(
         XDocument document,
         string selector,
-        string? expectedEndOffset)
+        string? expectedEndOffset,
+        string expectedEndAxis = "TranslateTransform.Y")
     {
         var style = document
             .Descendants()
@@ -3060,9 +3064,9 @@ public sealed partial class UiStyleContractTests
         var animation = style
             .Descendants()
             .Single(element => element.Name.LocalName == "Animation");
-        Assert.Equal("0:0:0.15", animation.Attribute("Duration")?.Value);
+        Assert.Equal("0:0:0.167", animation.Attribute("Duration")?.Value);
         Assert.Equal("Forward", animation.Attribute("FillMode")?.Value);
-        Assert.Equal("QuadraticEaseIn", animation.Attribute("Easing")?.Value);
+        Assert.Equal("ExponentialEaseIn", animation.Attribute("Easing")?.Value);
 
         var keyFrames = animation
             .Elements()
@@ -3089,7 +3093,7 @@ public sealed partial class UiStyleContractTests
         {
             Assert.DoesNotContain(
                 keyFrames.SelectMany(pair => pair.Value.Elements()),
-                element => element.Attribute("Property")?.Value == "TranslateTransform.Y");
+                element => element.Attribute("Property")?.Value == expectedEndAxis);
             return;
         }
 
@@ -3097,13 +3101,13 @@ public sealed partial class UiStyleContractTests
             "0",
             keyFrames["0%"]
                 .Elements()
-                .Single(element => element.Attribute("Property")?.Value == "TranslateTransform.Y")
+                .Single(element => element.Attribute("Property")?.Value == expectedEndAxis)
                 .Attribute("Value")?.Value);
         Assert.Equal(
             expectedEndOffset,
             keyFrames["100%"]
                 .Elements()
-                .Single(element => element.Attribute("Property")?.Value == "TranslateTransform.Y")
+                .Single(element => element.Attribute("Property")?.Value == expectedEndAxis)
                 .Attribute("Value")?.Value);
     }
 

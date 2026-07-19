@@ -541,8 +541,13 @@
                         </StackPanel>
                     </Grid>
                     <!-- Compact layout (classic style) -->
-                    <Grid ColumnDefinitions="*,Auto" RowDefinitions="*,Auto" ColumnSpacing="{StaticResource LauncherSpacingXxl}"
-                          IsVisible="{Binding IsStatusDetailExpanded, Converter={x:Static BoolConverters.Not}}">
+                    <Grid ColumnDefinitions="*,Auto" RowDefinitions="*,Auto" ColumnSpacing="{StaticResource LauncherSpacingXxl}">
+                        <Grid.IsVisible>
+                            <MultiBinding Converter="{x:Static BoolConverters.And}">
+                                <Binding Path="IsStatusDetailExpanded" Converter="{x:Static BoolConverters.Not}"/>
+                                <Binding Path="IsStatusDetailHidden" Converter="{x:Static BoolConverters.Not}"/>
+                            </MultiBinding>
+                        </Grid.IsVisible>
                         <StackPanel Grid.Column="1" Orientation="Horizontal" Spacing="{StaticResource LauncherSpacingLg}" VerticalAlignment="Center">
                             <Button Classes="launcher-control site secondary-operation" Command="{Binding WindowChrome.OpenOfficialSiteCommand}" ToolTip.Tip="{Binding Shell.I18n.OfficialSite}"
                                     AutomationProperties.Name="{Binding Shell.I18n.OfficialSite}">
@@ -566,6 +571,26 @@
                             <TextBlock Text="{Binding Shell.NetworkText}" Classes="on-dark-caption"/>
                         </StackPanel>
                     </Grid>
+                    <!-- Hidden layout (buttons only) -->
+                    <StackPanel Orientation="Horizontal" HorizontalAlignment="Right" Spacing="{StaticResource LauncherSpacingLg}"
+                                IsVisible="{Binding IsStatusDetailHidden}"
+                                VerticalAlignment="Center">
+                        <Button Classes="launcher-control site secondary-operation" Command="{Binding WindowChrome.OpenOfficialSiteCommand}" ToolTip.Tip="{Binding Shell.I18n.OfficialSite}"
+                                AutomationProperties.Name="{Binding Shell.I18n.OfficialSite}">
+                            <StackPanel Classes="button-content">
+                                <materialIcons:MaterialIcon Kind="Web" Width="{StaticResource LauncherIconXl}" Height="{StaticResource LauncherIconXl}"/>
+                                <TextBlock Text="{Binding Shell.I18n.OfficialSite}"/>
+                            </StackPanel>
+                        </Button>
+                        <Button Classes="launcher-control start primary-operation" Command="{Binding Operations.StartGameCommand}" ToolTip.Tip="{Binding Shell.I18n.StartGame}"
+                                IsEnabled="{Binding Shell.IsBusy, Converter={x:Static BoolConverters.Not}}"
+                                AutomationProperties.Name="{Binding Shell.I18n.StartGame}">
+                            <StackPanel Classes="button-content">
+                                <materialIcons:MaterialIcon Kind="PlayCircle" Width="{StaticResource LauncherIconXxl}" Height="{StaticResource LauncherIconXxl}"/>
+                                <TextBlock Text="{Binding Shell.I18n.StartGame}"/>
+                            </StackPanel>
+                        </Button>
+                    </StackPanel>
                     </Panel>
                 </Border>
             </Grid>

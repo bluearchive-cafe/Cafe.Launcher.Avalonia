@@ -461,7 +461,7 @@
     </Style>
     <Style Selector="Grid.motion-overlay.motion-enabled.motion-enter">
         <Style.Animations>
-            <Animation Duration="0:0:0.16" FillMode="Forward" Easing="QuadraticEaseOut">
+            <Animation Duration="0:0:0.167" FillMode="Forward" Easing="ExponentialEaseOut">
                 <KeyFrame Cue="0%">
                     <Setter Property="Opacity" Value="0"/>
                 </KeyFrame>
@@ -473,7 +473,7 @@
     </Style>
     <Style Selector="Grid.motion-overlay.motion-enabled.motion-enter > Border.motion-surface">
         <Style.Animations>
-            <Animation Duration="0:0:0.22" FillMode="Forward" Easing="QuadraticEaseOut">
+            <Animation Duration="0:0:0.250" FillMode="Forward" Easing="ExponentialEaseOut" Delay="0:0:0.050">
                 <KeyFrame Cue="0%">
                     <Setter Property="Opacity" Value="0"/>
                     <Setter Property="TranslateTransform.Y" Value="8"/>
@@ -487,7 +487,7 @@
     </Style>
     <Style Selector="Grid.motion-overlay.motion-enabled.motion-exit">
         <Style.Animations>
-            <Animation Duration="0:0:0.15" FillMode="Forward" Easing="QuadraticEaseIn">
+            <Animation Duration="0:0:0.167" FillMode="Forward" Easing="ExponentialEaseIn">
                 <KeyFrame Cue="0%">
                     <Setter Property="Opacity" Value="1"/>
                 </KeyFrame>
@@ -499,21 +499,21 @@
     </Style>
     <Style Selector="Grid.motion-overlay.motion-enabled.motion-exit > Border.motion-surface">
         <Style.Animations>
-            <Animation Duration="0:0:0.15" FillMode="Forward" Easing="QuadraticEaseIn">
+            <Animation Duration="0:0:0.167" FillMode="Forward" Easing="ExponentialEaseIn">
                 <KeyFrame Cue="0%">
                     <Setter Property="Opacity" Value="1"/>
                     <Setter Property="TranslateTransform.Y" Value="0"/>
                 </KeyFrame>
                 <KeyFrame Cue="100%">
                     <Setter Property="Opacity" Value="0"/>
-                    <Setter Property="TranslateTransform.Y" Value="6"/>
+                    <Setter Property="TranslateTransform.Y" Value="8"/>
                 </KeyFrame>
             </Animation>
         </Style.Animations>
     </Style>
     <Style Selector=":is(UserControl).motion-content.motion-enabled.motion-enter">
         <Style.Animations>
-            <Animation Duration="0:0:0.18" FillMode="Forward" Easing="QuadraticEaseOut">
+            <Animation Duration="0:0:0.200" FillMode="Forward" Easing="ExponentialEaseOut">
                 <KeyFrame Cue="0%">
                     <Setter Property="Opacity" Value="0"/>
                     <Setter Property="TranslateTransform.Y" Value="6"/>
@@ -527,7 +527,7 @@
     </Style>
     <Style Selector="StackPanel.motion-content.motion-enabled.motion-enter">
         <Style.Animations>
-            <Animation Duration="0:0:0.18" FillMode="Forward" Easing="QuadraticEaseOut">
+            <Animation Duration="0:0:0.200" FillMode="Forward" Easing="ExponentialEaseOut">
                 <KeyFrame Cue="0%">
                     <Setter Property="Opacity" Value="0"/>
                     <Setter Property="TranslateTransform.Y" Value="6"/>
@@ -541,10 +541,10 @@
     </Style>
     <Style Selector="Border.motion-bottom.motion-enabled.motion-enter">
         <Style.Animations>
-            <Animation Duration="0:0:0.20" FillMode="Forward" Easing="QuadraticEaseOut">
+            <Animation Duration="0:0:0.250" FillMode="Forward" Easing="ExponentialEaseOut">
                 <KeyFrame Cue="0%">
                     <Setter Property="Opacity" Value="0"/>
-                    <Setter Property="TranslateTransform.Y" Value="10"/>
+                    <Setter Property="TranslateTransform.Y" Value="12"/>
                 </KeyFrame>
                 <KeyFrame Cue="100%">
                     <Setter Property="Opacity" Value="1"/>

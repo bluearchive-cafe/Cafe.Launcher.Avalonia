@@ -359,7 +359,7 @@ public sealed class RemoteContentViewModelTests
 
         Assert.True(context.ViewModel.IsCarouselPaused);
         Assert.False(context.ViewModel.IsCarouselTimerRunning);
-        Assert.Equal(TimeSpan.FromMilliseconds(350), Assert.IsType<global::Avalonia.Animation.CrossFade>(
+        Assert.Equal(TimeSpan.FromMilliseconds(250), Assert.IsType<global::Avalonia.Animation.CrossFade>(
             context.ViewModel.CarouselTransition).Duration);
     }
 
@@ -383,7 +383,7 @@ public sealed class RemoteContentViewModelTests
         Assert.True(context.ViewModel.IsCarouselPaused);
         Assert.False(context.ViewModel.IsCarouselTimerRunning);
         Assert.Equal(
-            TimeSpan.FromMilliseconds(350),
+            TimeSpan.FromMilliseconds(250),
             Assert.IsType<global::Avalonia.Animation.CrossFade>(
                 context.ViewModel.CarouselTransition).Duration);
     }
