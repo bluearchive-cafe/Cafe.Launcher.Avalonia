@@ -34,7 +34,8 @@ public partial class MainWindowViewModel : ViewModelBase, IDisposable
     public bool IsMotionEnabled => !IsMotionReduced;
 
     public bool IsBottomPanelVisible =>
-        Settings.Editor.Current.StatusDetailMode != StatusDetailModes.Hidden;
+        Settings.Editor.Current.StatusDetailMode != StatusDetailModes.Hidden
+        || !Operations.IsControlPanelVisible;
 
     public bool IsStatusDetailExpanded =>
         Settings.Editor.Current.StatusDetailMode == StatusDetailModes.Detailed;
@@ -262,6 +263,7 @@ public partial class MainWindowViewModel : ViewModelBase, IDisposable
         ResourcePanel.PropertyChanged += OnResourcePanelPropertyChanged;
         LogViewer.PropertyChanged += OnLogViewerPropertyChanged;
         Dialogs.PropertyChanged += OnDialogsPropertyChanged;
+        Operations.PropertyChanged += OnOperationsPropertyChanged;
     }
 
     private void OnSettingPropertyChanged(object? sender, PropertyChangedEventArgs e)
@@ -357,6 +359,14 @@ public partial class MainWindowViewModel : ViewModelBase, IDisposable
                     Dialogs.IsDownloadRunningCloseConfirmVisible,
                     Dialogs);
                 break;
+        }
+    }
+
+    private void OnOperationsPropertyChanged(object? sender, PropertyChangedEventArgs e)
+    {
+        if (e.PropertyName == nameof(GameOperationsViewModel.IsControlPanelVisible))
+        {
+            OnPropertyChanged(nameof(IsBottomPanelVisible));
         }
     }
 
@@ -614,9 +624,11 @@ public partial class MainWindowViewModel : ViewModelBase, IDisposable
         Dialogs.SetupWizard.SettingsApplied -= HandleSetupWizardCompletedAsync;
         WindowChrome.PropertyChanged -= OnWindowChromePropertyChanged;
         Settings.PropertyChanged -= OnSettingsPropertyChanged;
+        Settings.Editor.CurrentPropertyChanged -= OnSettingPropertyChanged;
         ResourcePanel.PropertyChanged -= OnResourcePanelPropertyChanged;
         LogViewer.PropertyChanged -= OnLogViewerPropertyChanged;
         Dialogs.PropertyChanged -= OnDialogsPropertyChanged;
+        Operations.PropertyChanged -= OnOperationsPropertyChanged;
         Operations.StopDownload(clearPersistedState: false);
         Settings.Dispose();
         RemoteContent.Dispose();

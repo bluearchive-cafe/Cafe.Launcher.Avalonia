@@ -75,7 +75,7 @@ public partial class RemoteContentViewModel : ViewModelBase, IDisposable
     private int bannerIntervalMs = 5000;
 
     [ObservableProperty]
-    private IPageTransition carouselTransition = new CrossFade(TimeSpan.FromMilliseconds(350));
+    private IPageTransition carouselTransition = new CrossFade(TimeSpan.FromMilliseconds(250));
 
     [ObservableProperty]
     private NewsCategory? selectedNewsCategory;
@@ -113,7 +113,7 @@ public partial class RemoteContentViewModel : ViewModelBase, IDisposable
         if (disposed) return;
         isMotionReduced = reduceMotion;
         CarouselTransition = new CrossFade(
-            reduceMotion ? TimeSpan.Zero : TimeSpan.FromMilliseconds(350));
+            reduceMotion ? TimeSpan.Zero : TimeSpan.FromMilliseconds(250));
         if (reduceMotion)
         {
             carouselDelayCts?.Cancel();
