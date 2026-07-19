@@ -14,7 +14,8 @@ public sealed class LauncherSettingsServiceTests : IDisposable
         var propertyNames = document.RootElement.EnumerateObject().Select(property => property.Name).ToList();
 
         Assert.True(propertyNames.IndexOf("updateChannel") < propertyNames.IndexOf("logLevel"));
-        Assert.Equal("resourcePanelUidSource", propertyNames[^1]);
+        Assert.True(propertyNames.IndexOf("resourcePanelUidSource") < propertyNames.IndexOf("statusDetailMode"));
+        Assert.Equal("statusDetailMode", propertyNames[^1]);
     }
 
     [Fact]
@@ -279,6 +280,7 @@ public sealed class LauncherSettingsServiceTests : IDisposable
             "backgroundFillColor",
             "resourcePanelUid",
             "resourcePanelUidSource",
+            "statusDetailMode",
             "updateChannel",
             "logLevel"
         };

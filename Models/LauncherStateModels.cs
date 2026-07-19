@@ -128,6 +128,13 @@ public static class ResourcePanelUidSources
     public const string Custom = "custom";
 }
 
+public static class StatusDetailModes
+{
+    public const string Hidden = "hidden";
+    public const string Compact = "compact";
+    public const string Detailed = "detailed";
+}
+
 public sealed partial class LauncherSettings : ObservableObject
 {
     [ObservableProperty]
@@ -228,6 +235,10 @@ public sealed partial class LauncherSettings : ObservableObject
     [property: JsonPropertyName("resourcePanelUidSource")]
     private string resourcePanelUidSource = ResourcePanelUidSources.Auto;
 
+    [ObservableProperty]
+    [property: JsonPropertyName("statusDetailMode")]
+    private string statusDetailMode = StatusDetailModes.Detailed;
+
     /// <summary>
     /// Deep-clones this settings object.
     /// Shared by <c>LauncherSettingsService.NormalizeSettings</c> and <see cref="Services.SettingsEditor"/>.
@@ -267,6 +278,7 @@ public sealed partial class LauncherSettings : ObservableObject
         BackgroundFillColor = other.BackgroundFillColor;
         ResourcePanelUid = other.ResourcePanelUid;
         ResourcePanelUidSource = other.ResourcePanelUidSource;
+        StatusDetailMode = other.StatusDetailMode;
         UpdateChannel = other.UpdateChannel;
         LogLevel = other.LogLevel;
     }

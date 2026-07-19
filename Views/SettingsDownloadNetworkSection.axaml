@@ -16,7 +16,7 @@
         <StackPanel Classes="settings-group">
             <TextBlock Text="{Binding Shell.I18n.SettingsGroupConnection}" Classes="group-title"/>
 
-            <controls:SettingRow IconKind="LanConnect"
+            <controls:SettingRow IconKind="serverNetworkOutline"
                                  Title="{Binding Shell.I18n.Proxy}"
                                  Description="{Binding Shell.I18n.ProxyDescription}">
                 <controls:SettingRow.Action>

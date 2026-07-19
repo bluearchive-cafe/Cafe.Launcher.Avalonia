@@ -591,6 +591,7 @@ public sealed class MainWindowHeadlessTests
         int expectedPrimaryActionCount)
     {
         using var context = CreateContext();
+        context.ViewModel.Settings.Editor.Current.StatusDetailMode = StatusDetailModes.Detailed;
         context.Window.Width = 1024;
         context.Window.Height = 640;
         context.ViewModel.Operations.PanelMode = panelMode switch
@@ -618,8 +619,9 @@ public sealed class MainWindowHeadlessTests
             .GetVisualDescendants()
             .OfType<Button>()
             .Where(control =>
-                control.Classes.Contains("primary-operation")
-                || control.Classes.Contains("secondary-operation"))
+                control.IsEffectivelyVisible
+                && (control.Classes.Contains("primary-operation")
+                    || control.Classes.Contains("secondary-operation")))
             .ToArray();
 
         Assert.True(title.IsEffectivelyVisible);
@@ -708,6 +710,8 @@ public sealed class MainWindowHeadlessTests
         bool expectedEnabled)
     {
         using var context = CreateContext();
+        // Default to detailed mode so the primary install button in the path row is visible.
+        context.ViewModel.Settings.Editor.Current.StatusDetailMode = StatusDetailModes.Detailed;
         context.Window.Show();
         context.ViewModel.Shell.IsInstallBlockedByDiskSpace = isBlockedByDiskSpace;
         context.ViewModel.Shell.InstallDiskSpaceMessage = isBlockedByDiskSpace
@@ -720,12 +724,15 @@ public sealed class MainWindowHeadlessTests
         });
         Dispatcher.UIThread.RunJobs();
 
+        // Find the path-row install button which includes the disk-space tooltip.
         var installButton = context.Window
             .GetVisualDescendants()
             .OfType<Button>()
-            .Single(button => ReferenceEquals(
+            .Where(button => ReferenceEquals(
                 button.Command,
-                context.ViewModel.Operations.InstallOrUpdateCommand));
+                context.ViewModel.Operations.InstallOrUpdateCommand))
+            .First(button =>
+                button.Classes.Contains("path-operation"));
 
         Assert.Equal(expectedEnabled, installButton.IsEffectivelyEnabled);
     }

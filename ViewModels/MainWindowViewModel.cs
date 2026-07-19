@@ -33,6 +33,12 @@ public partial class MainWindowViewModel : ViewModelBase, IDisposable
 
     public bool IsMotionEnabled => !IsMotionReduced;
 
+    public bool IsBottomPanelVisible =>
+        Settings.Editor.Current.StatusDetailMode != StatusDetailModes.Hidden;
+
+    public bool IsStatusDetailExpanded =>
+        Settings.Editor.Current.StatusDetailMode == StatusDetailModes.Detailed;
+
     public ShellViewModel Shell { get; }
 
     public BackgroundViewModel Background { get; }
@@ -252,9 +258,19 @@ public partial class MainWindowViewModel : ViewModelBase, IDisposable
     {
         WindowChrome.PropertyChanged += OnWindowChromePropertyChanged;
         Settings.PropertyChanged += OnSettingsPropertyChanged;
+        Settings.Editor.CurrentPropertyChanged += OnSettingPropertyChanged;
         ResourcePanel.PropertyChanged += OnResourcePanelPropertyChanged;
         LogViewer.PropertyChanged += OnLogViewerPropertyChanged;
         Dialogs.PropertyChanged += OnDialogsPropertyChanged;
+    }
+
+    private void OnSettingPropertyChanged(object? sender, PropertyChangedEventArgs e)
+    {
+        if (e.PropertyName == nameof(LauncherSettings.StatusDetailMode))
+        {
+            OnPropertyChanged(nameof(IsBottomPanelVisible));
+            OnPropertyChanged(nameof(IsStatusDetailExpanded));
+        }
     }
 
     private void OnWindowChromePropertyChanged(object? sender, PropertyChangedEventArgs e)

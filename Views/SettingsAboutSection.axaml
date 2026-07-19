@@ -60,19 +60,19 @@
                 </StackPanel>
             </Button>
             <Button Classes="flat-action wrap-action"
-                    Command="{Binding WindowChrome.OpenGitHubRepositoryCommand}"
-                    AutomationProperties.Name="{Binding Shell.I18n.GitHubRepository}">
-                <StackPanel Classes="button-content">
-                    <materialIcons:MaterialIcon Kind="Github" Width="{StaticResource LauncherIconSm}" Height="{StaticResource LauncherIconSm}"/>
-                    <TextBlock Text="{Binding Shell.I18n.GitHubRepository}"/>
-                </StackPanel>
-            </Button>
-            <Button Classes="flat-action wrap-action"
                     Command="{Binding WindowChrome.OpenHelpDocsCommand}"
                     AutomationProperties.Name="{Binding Shell.I18n.HelpDocs}">
                 <StackPanel Classes="button-content">
                     <materialIcons:MaterialIcon Kind="HelpCircleOutline" Width="{StaticResource LauncherIconSm}" Height="{StaticResource LauncherIconSm}"/>
                     <TextBlock Text="{Binding Shell.I18n.HelpDocs}"/>
+                </StackPanel>
+            </Button>
+            <Button Classes="flat-action wrap-action"
+                    Command="{Binding WindowChrome.OpenGitHubRepositoryCommand}"
+                    AutomationProperties.Name="{Binding Shell.I18n.GitHubRepository}">
+                <StackPanel Classes="button-content">
+                    <materialIcons:MaterialIcon Kind="Github" Width="{StaticResource LauncherIconSm}" Height="{StaticResource LauncherIconSm}"/>
+                    <TextBlock Text="{Binding Shell.I18n.GitHubRepository}"/>
                 </StackPanel>
             </Button>
         </WrapPanel>
