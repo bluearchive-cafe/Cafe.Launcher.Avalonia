@@ -368,7 +368,7 @@ public sealed class GameDownloadService : IDisposable
             {
                 await diagnostics.MessageAsync(
                     "Game download blocked by disk space.",
-                    $"path: {gamePath}{Environment.NewLine}required: {FileSizeFormatter.Format(diskCheck.RequiredBytes)}",
+                    $"path: {gamePath}{Environment.NewLine}required: {FileSizeFormatter.Format(diskCheck.RequiredBytes)}{Environment.NewLine}available: {(diskCheck.AvailableBytes.HasValue ? FileSizeFormatter.Format(diskCheck.AvailableBytes.Value) : "--")}",
                     activeToken);
                 checkpointStore.Clear();
                 return Failed(

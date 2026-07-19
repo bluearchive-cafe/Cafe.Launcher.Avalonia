@@ -698,6 +698,38 @@ public sealed class MainWindowHeadlessTests
         Assert.All(externalActions, action => AssertControlInsideWindow(action, context.Window));
     }
 
+    [AvaloniaTheory]
+    [InlineData(true, false, false)]
+    [InlineData(false, false, true)]
+    [InlineData(false, true, false)]
+    public void MainWindow_InstallButton_CombinesDiskSpaceCommandAndBusyBinding(
+        bool isBlockedByDiskSpace,
+        bool isBusy,
+        bool expectedEnabled)
+    {
+        using var context = CreateContext();
+        context.Window.Show();
+        context.ViewModel.Shell.IsInstallBlockedByDiskSpace = isBlockedByDiskSpace;
+        context.ViewModel.Shell.InstallDiskSpaceMessage = isBlockedByDiskSpace
+            ? "磁盘空间不足：需要 10GB，可用 6GB。"
+            : "";
+        context.ViewModel.Shell.IsBusy = isBusy;
+        context.ViewModel.Operations.ApplySnapshot(new LauncherStatusSnapshot
+        {
+            RuntimeState = LauncherRuntimeState.NotInstalled
+        });
+        Dispatcher.UIThread.RunJobs();
+
+        var installButton = context.Window
+            .GetVisualDescendants()
+            .OfType<Button>()
+            .Single(button => ReferenceEquals(
+                button.Command,
+                context.ViewModel.Operations.InstallOrUpdateCommand));
+
+        Assert.Equal(expectedEnabled, installButton.IsEffectivelyEnabled);
+    }
+
     [AvaloniaFact]
     public void SettingsControls_UseMinimumAccessibleInteractionHeight()
     {

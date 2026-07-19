@@ -113,6 +113,36 @@ public sealed class GameOperationsViewModelTests
     }
 
     [Fact]
+    public void ApplySnapshot_WhenDiskSpaceBlockClears_NotifiesCommandAndRestoresInstallAction()
+    {
+        var context = CreateContext();
+        var canExecuteChangedCount = 0;
+        context.ViewModel.InstallOrUpdateCommand.CanExecuteChanged += (_, _) => canExecuteChangedCount++;
+        context.Shell.IsInstallBlockedByDiskSpace = true;
+        context.Shell.InstallDiskSpaceMessage = "磁盘空间不足：需要 10GB，可用 6GB。";
+
+        context.ViewModel.ApplySnapshot(new LauncherStatusSnapshot
+        {
+            RuntimeState = LauncherRuntimeState.NotInstalled
+        });
+
+        Assert.False(context.ViewModel.InstallOrUpdateCommand.CanExecute(null));
+        Assert.Equal(context.Shell.InstallDiskSpaceMessage, context.ViewModel.InstallButtonToolTip);
+
+        canExecuteChangedCount = 0;
+        context.Shell.IsInstallBlockedByDiskSpace = false;
+        context.Shell.InstallDiskSpaceMessage = "";
+        context.ViewModel.ApplySnapshot(new LauncherStatusSnapshot
+        {
+            RuntimeState = LauncherRuntimeState.NotInstalled
+        });
+
+        Assert.True(canExecuteChangedCount > 0);
+        Assert.True(context.ViewModel.InstallOrUpdateCommand.CanExecute(null));
+        Assert.Equal(context.ViewModel.InstallButtonText, context.ViewModel.InstallButtonToolTip);
+    }
+
+    [Fact]
     public async Task StartGameCommand_WhenLaunchSucceeds_MinimizesWindowAndShowsSuccess()
     {
         var context = CreateContext();
