@@ -95,6 +95,90 @@ public sealed class SettingsOptionsDiskSpaceTests
     }
 
     [Fact]
+    public void ResolveDiskSpaceCheck_WhenAvailableBelowRequired_FormatsTheSameResultWithoutAnotherRead()
+    {
+        var readCount = 0;
+        var diskSpace = new DiskSpaceService
+        {
+            GetAvailableBytesOverride = _ =>
+            {
+                readCount++;
+                return 6L * 1024 * 1024 * 1024;
+            }
+        };
+        var options = CreateOptions(diskSpace);
+
+        var check = options.ResolveDiskSpaceCheck(
+            @"C:\Games\YostarGames\BlueArchive_JP",
+            "10 GB");
+        var text = options.ResolveDiskSpaceText("10 GB", check);
+
+        Assert.Equal(1, readCount);
+        Assert.Equal(10L * 1024 * 1024 * 1024, check.RequiredBytes);
+        Assert.Equal(6L * 1024 * 1024 * 1024, check.AvailableBytes);
+        Assert.False(check.HasEnoughSpace);
+        Assert.Equal("所需 10GB / 可用 6GB （不足，还差 4GB）", text);
+    }
+
+    [Theory]
+    [InlineData(6L * 1024 * 1024 * 1024, true)]
+    [InlineData(null, false)]
+    public void ApplySnapshot_ForFreshInstall_UsesOneDiskReadAndBlocksOnlyKnownShortage(
+        long? availableBytes,
+        bool expectedBlocked)
+    {
+        var readCount = 0;
+        var diskSpace = new DiskSpaceService
+        {
+            GetAvailableBytesOverride = _ =>
+            {
+                readCount++;
+                return availableBytes;
+            }
+        };
+        var localizer = new LocalizationService();
+        localizer.SetLanguage(LauncherLanguages.SimplifiedChinese);
+        var options = new SettingsOptionsViewModel(localizer, diskSpace);
+        var editor = new SettingsEditor();
+        using var settings = new SettingsViewModel(
+            null!,
+            localizer,
+            null!,
+            null!,
+            null!,
+            null!,
+            null!,
+            options,
+            new SettingsAppearanceViewModel(editor));
+        var shell = new ShellViewModel(localizer);
+        var snapshot = new LauncherStatusSnapshot
+        {
+            RuntimeState = LauncherRuntimeState.NotInstalled,
+            Settings = new LauncherSettings { GamePath = @"C:\Games\YostarGames\BlueArchive_JP" },
+            LocalGame = new LocalInstallationState { GamePath = @"C:\Games\YostarGames\BlueArchive_JP" },
+            Remote = new LauncherRemoteState
+            {
+                GameConfig = new GameConfigResponse { DecompressionSize = "10GB" }
+            }
+        };
+
+        shell.ApplySnapshot(snapshot, settings);
+
+        Assert.Equal(1, readCount);
+        Assert.Equal(expectedBlocked, shell.IsInstallBlockedByDiskSpace);
+        if (expectedBlocked)
+        {
+            Assert.Equal("所需 10GB / 可用 6GB （不足，还差 4GB）", shell.DiskSpaceText);
+            Assert.Equal("磁盘空间不足：需要 10GB，可用 6GB。", shell.InstallDiskSpaceMessage);
+        }
+        else
+        {
+            Assert.Equal("所需 10GB / 可用 --", shell.DiskSpaceText);
+            Assert.Empty(shell.InstallDiskSpaceMessage);
+        }
+    }
+
+    [Fact]
     public void ResolveDiskSpaceText_WhenRequiredCannotBeParsed_AppendsNoSuffix()
     {
         var diskSpace = new DiskSpaceService

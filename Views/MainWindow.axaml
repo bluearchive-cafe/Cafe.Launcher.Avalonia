@@ -337,9 +337,11 @@
                                         <TextBlock Text="{Binding Shell.I18n.SelectInstalledGame}"/>
                                     </StackPanel>
                                 </Button>
-                                <Button Grid.Column="2" Classes="primary-action bottom-action path-operation primary-operation" Command="{Binding Operations.InstallOrUpdateCommand}" ToolTip.Tip="{Binding Operations.InstallButtonText}"
+                                <Button Grid.Column="2" Classes="primary-action bottom-action path-operation primary-operation" Command="{Binding Operations.InstallOrUpdateCommand}" ToolTip.Tip="{Binding Operations.InstallButtonToolTip}"
+                                        ToolTip.ShowOnDisabled="True"
                                         IsEnabled="{Binding Shell.IsBusy, Converter={x:Static BoolConverters.Not}}"
                                         AutomationProperties.Name="{Binding Operations.InstallButtonText}"
+                                        AutomationProperties.HelpText="{Binding Operations.InstallButtonToolTip}"
                                         HorizontalAlignment="Right">
                                     <StackPanel Classes="button-content">
                                         <materialIcons:MaterialIcon Kind="Download" Width="{StaticResource LauncherIconXl}" Height="{StaticResource LauncherIconXl}"/>
