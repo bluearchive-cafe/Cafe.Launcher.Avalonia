@@ -1134,7 +1134,10 @@ public sealed class MainWindowViewModelTests : IDisposable
         await viewModel.ResourcePanel.OpenResourcePanelCommand.ExecuteAsync(null);
 
         viewModel.Dialogs.ConfirmResourcePanelSourceSwitchCommand.Execute(null);
-        await WaitForConditionAsync(() => viewModel.ResourcePanel.IsResourcePanelVisible && handler.StatusListCount == 1);
+        await WaitForConditionAsync(() =>
+            viewModel.ResourcePanel.IsResourcePanelVisible
+            && handler.StatusListCount == 1
+            && handler.ConfigGetCount == 1);
 
         Assert.False(viewModel.Dialogs.IsResourcePanelSourceConfirmVisible);
         Assert.True(viewModel.ResourcePanel.IsResourcePanelVisible);

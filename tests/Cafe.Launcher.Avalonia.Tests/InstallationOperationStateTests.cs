@@ -1,4 +1,5 @@
 using System.Net.Http;
+using System.Threading;
 using Cafe.Launcher.Avalonia.Models;
 using Cafe.Launcher.Avalonia.Services;
 using Cafe.Launcher.Avalonia.Services.Auth;
@@ -470,7 +471,20 @@ public sealed class InstallationOperationStateTests : IDisposable
     {
         if (Directory.Exists(tempDir))
         {
-            Directory.Delete(tempDir, recursive: true);
+            const int maxRetries = 5;
+            for (var attempt = 0; attempt < maxRetries; attempt++)
+            {
+                try
+                {
+                    Directory.Delete(tempDir, recursive: true);
+                    break;
+                }
+                catch (UnauthorizedAccessException)
+                {
+                    if (attempt == maxRetries - 1) throw;
+                    Thread.Sleep(TimeSpan.FromMilliseconds(200 * (attempt + 1)));
+                }
+            }
         }
     }
 
