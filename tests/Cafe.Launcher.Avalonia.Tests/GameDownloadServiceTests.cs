@@ -632,6 +632,165 @@ public sealed class GameDownloadServiceTests
     }
 
     [Fact]
+    public async Task InstallOrUpdateAsync_WhenFreshInstallNeedsDecompressionSpace_BlocksBeforeDownload()
+    {
+        var tempDir = Path.Combine(Path.GetTempPath(), Guid.NewGuid().ToString("N"));
+        var gamePath = Path.Combine(tempDir, "YostarGames", "BlueArchive_JP");
+        var settingsService = new LauncherSettingsService(Path.Combine(tempDir, "settings.json"));
+        await settingsService.SaveAsync(new LauncherSettings { GamePath = gamePath });
+        Assert.True(FileSizeFormatter.TryParseHumanReadable("1.09GB", out var plannedDownloadBytes));
+        Assert.True(FileSizeFormatter.TryParseHumanReadable("18.5GB", out var decompressionBytes));
+        Assert.True(FileSizeFormatter.TryParseHumanReadable("7.15GB", out var availableBytes));
+        var manifestFile = new ManifestFile
+        {
+            Path = "data/game.bin",
+            Size = plannedDownloadBytes.ToString(CultureInfo.InvariantCulture),
+            Hash = "0"
+        };
+        using var apiClient = CreateManifestApiClient(manifestFile);
+        var downloader = new RecordingFileDownloadService();
+        var diskSpaceService = new DiskSpaceService
+        {
+            GetAvailableBytesOverride = _ => availableBytes
+        };
+        using var service = CreateService(
+            apiClient,
+            settingsService,
+            Path.Combine(tempDir, "download_state.json"),
+            downloader,
+            diskSpaceService);
+        var progress = new List<GameOperationProgress>();
+        var snapshot = CreateSnapshot(gamePath);
+        snapshot.RuntimeState = LauncherRuntimeState.NotInstalled;
+        snapshot.Remote.GameConfig!.DecompressionSize = "18.5GB";
+
+        var result = await service.InstallOrUpdateAsync(snapshot, progress.Add);
+
+        Assert.False(result.Success);
+        Assert.Equal(GameOperationErrorCode.InsufficientDiskSpace, result.ErrorCode);
+        Assert.Equal(0, downloader.InvocationCount);
+        Assert.Contains(progress, item =>
+            item.Stage == GameOperationStage.DiskCheck
+            && item.RequiredDiskBytes == decompressionBytes
+            && item.AvailableDiskBytes == availableBytes);
+        Directory.Delete(tempDir, recursive: true);
+    }
+
+    [Theory]
+    [InlineData(null, "--")]
+    [InlineData(9L, "9B")]
+    public async Task InstallOrUpdateAsync_WhenDiskSpaceBlocks_LogsRequiredAndAvailable(
+        long? availableBytes,
+        string expectedAvailable)
+    {
+        var tempDir = Path.Combine(Path.GetTempPath(), Guid.NewGuid().ToString("N"));
+        var gamePath = Path.Combine(tempDir, "YostarGames", "BlueArchive_JP");
+        var settingsService = new LauncherSettingsService(Path.Combine(tempDir, "settings.json"));
+        await settingsService.SaveAsync(new LauncherSettings { GamePath = gamePath });
+        var fileBytes = new byte[10];
+        var manifestFile = await CreateManifestFileAsync(tempDir, "data/file.bin", fileBytes);
+        using var apiClient = CreateManifestApiClient(manifestFile);
+        var diskSpaceService = new DiskSpaceService
+        {
+            GetAvailableBytesOverride = _ => availableBytes
+        };
+        using var logger = new UnifiedLogger(Path.Combine(tempDir, "logs"));
+        using var service = CreateService(
+            apiClient,
+            settingsService,
+            Path.Combine(tempDir, "download_state.json"),
+            new RecordingFileDownloadService(),
+            diskSpaceService,
+            new LocalDiagnostics(logger));
+        var snapshot = CreateSnapshot(gamePath);
+        snapshot.RuntimeState = LauncherRuntimeState.NotInstalled;
+
+        var result = await service.InstallOrUpdateAsync(snapshot, _ => { });
+        logger.Dispose();
+        var logText = await File.ReadAllTextAsync(logger.LogFilePath);
+
+        Assert.False(result.Success);
+        Assert.Contains($"required: {FileSizeFormatter.Format(10)}", logText, StringComparison.Ordinal);
+        Assert.Contains($"available: {expectedAvailable}", logText, StringComparison.Ordinal);
+        Directory.Delete(tempDir, recursive: true);
+    }
+
+    [Fact]
+    public async Task InstallOrUpdateAsync_WhenUpdating_UsesPendingDownloadBytesOnly()
+    {
+        var tempDir = Path.Combine(Path.GetTempPath(), Guid.NewGuid().ToString("N"));
+        var gamePath = Path.Combine(tempDir, "YostarGames", "BlueArchive_JP");
+        Directory.CreateDirectory(gamePath);
+        await WriteLocalGameFilesAsync(gamePath);
+        var settingsService = new LauncherSettingsService(Path.Combine(tempDir, "settings.json"));
+        await settingsService.SaveAsync(new LauncherSettings { GamePath = gamePath });
+        var fileBytes = new byte[10];
+        var manifestFile = await CreateManifestFileAsync(tempDir, "data/update.bin", fileBytes);
+        using var apiClient = CreateManifestApiClient(manifestFile);
+        var diskSpaceService = new DiskSpaceService
+        {
+            GetAvailableBytesOverride = _ => 15
+        };
+        using var service = CreateService(
+            apiClient,
+            settingsService,
+            Path.Combine(tempDir, "download_state.json"),
+            new WritingFileDownloadService(fileBytes),
+            diskSpaceService);
+        var progress = new List<GameOperationProgress>();
+        var snapshot = CreateSnapshot(gamePath);
+        snapshot.RuntimeState = LauncherRuntimeState.UpdateAvailable;
+        snapshot.Remote.GameConfig!.DecompressionSize = "20B";
+
+        var result = await service.InstallOrUpdateAsync(snapshot, progress.Add);
+
+        Assert.True(result.Success);
+        Assert.Contains(progress, item =>
+            item.Stage == GameOperationStage.DiskCheck
+            && item.RequiredDiskBytes == 10
+            && item.AvailableDiskBytes == 15);
+        Directory.Delete(tempDir, recursive: true);
+    }
+
+    [Fact]
+    public async Task RepairAsync_WhenPendingDownloadFitsButDecompressionDoesNot_UsesPendingDownloadBytesOnly()
+    {
+        var tempDir = Path.Combine(Path.GetTempPath(), Guid.NewGuid().ToString("N"));
+        var gamePath = Path.Combine(tempDir, "YostarGames", "BlueArchive_JP");
+        Directory.CreateDirectory(gamePath);
+        await WriteLocalGameFilesAsync(gamePath);
+        var settingsService = new LauncherSettingsService(Path.Combine(tempDir, "settings.json"));
+        await settingsService.SaveAsync(new LauncherSettings { GamePath = gamePath });
+        var fileBytes = new byte[10];
+        var manifestFile = await CreateManifestFileAsync(tempDir, "data/repair.bin", fileBytes);
+        using var apiClient = CreateManifestApiClient(manifestFile);
+        var diskSpaceService = new DiskSpaceService
+        {
+            GetAvailableBytesOverride = _ => 15
+        };
+        using var service = CreateService(
+            apiClient,
+            settingsService,
+            Path.Combine(tempDir, "download_state.json"),
+            new WritingFileDownloadService(fileBytes),
+            diskSpaceService);
+        var progress = new List<GameOperationProgress>();
+        var snapshot = CreateSnapshot(gamePath);
+        snapshot.RuntimeState = LauncherRuntimeState.Ready;
+        snapshot.Remote.GameConfig!.DecompressionSize = "20B";
+
+        var result = await service.RepairAsync(snapshot, progress.Add);
+
+        Assert.True(result.Success);
+        Assert.Equal(fileBytes, await File.ReadAllBytesAsync(Path.Combine(gamePath, "data", "repair.bin")));
+        Assert.Contains(progress, item =>
+            item.Stage == GameOperationStage.DiskCheck
+            && item.RequiredDiskBytes == 10
+            && item.AvailableDiskBytes == 15);
+        Directory.Delete(tempDir, recursive: true);
+    }
+
+    [Fact]
     public async Task InstallOrUpdateAsync_WhenDiskSpaceIsInsufficient_ClearsDownloadState()
     {
         var tempDir = Path.Combine(Path.GetTempPath(), Guid.NewGuid().ToString("N"));
@@ -998,10 +1157,11 @@ public sealed class GameDownloadServiceTests
         LauncherSettingsService settingsService,
         string downloadStateFilePath,
         IFileDownloadService? fileDownloadService = null,
-        DiskSpaceService? diskSpaceService = null)
+        DiskSpaceService? diskSpaceService = null,
+        LocalDiagnostics? diagnostics = null)
     {
         var localInstallationStateStore = new LocalInstallationStateStore();
-        var diagnostics = new LocalDiagnostics();
+        diagnostics ??= new LocalDiagnostics();
         var remoteManifestService = new RemoteManifestService(apiClient);
         fileDownloadService ??= new FileDownloadService(
             new Crc64Service(),

@@ -42,6 +42,9 @@ public partial class GameOperationsViewModel : ViewModelBase
     private string installButtonText = "";
 
     [ObservableProperty]
+    private string installButtonToolTip = "";
+
+    [ObservableProperty]
     private string progressTitle = "";
 
     [ObservableProperty]
@@ -140,6 +143,10 @@ public partial class GameOperationsViewModel : ViewModelBase
             LauncherRuntimeState.IoFailure or LauncherRuntimeState.RemoteUnavailable => localizer.T("refresh"),
             _ => localizer.T("updateGame")
         };
+        InstallButtonToolTip = shell.IsInstallBlockedByDiskSpace
+            ? shell.InstallDiskSpaceMessage
+            : InstallButtonText;
+        InstallOrUpdateCommand.NotifyCanExecuteChanged();
         SetIdlePanels(snapshot);
     }
 
@@ -193,7 +200,9 @@ public partial class GameOperationsViewModel : ViewModelBase
         }
     }
 
-    [RelayCommand]
+    private bool CanInstallOrUpdate() => !shell.IsInstallBlockedByDiskSpace;
+
+    [RelayCommand(CanExecute = nameof(CanInstallOrUpdate))]
     private async Task InstallOrUpdateAsync()
     {
         if (!PrepareOperation())

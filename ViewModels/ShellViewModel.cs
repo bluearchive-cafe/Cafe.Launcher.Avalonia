@@ -2,6 +2,7 @@ using System;
 using System.Runtime.InteropServices;
 using Avalonia.Media;
 using Cafe.Launcher.Avalonia.Constants;
+using Cafe.Launcher.Avalonia.Helpers;
 using Cafe.Launcher.Avalonia.Models;
 using Cafe.Launcher.Avalonia.Services;
 using CommunityToolkit.Mvvm.ComponentModel;
@@ -79,6 +80,12 @@ public partial class ShellViewModel : ViewModelBase
 
     [ObservableProperty]
     private string diskSpaceText = "";
+
+    [ObservableProperty]
+    private bool isInstallBlockedByDiskSpace;
+
+    [ObservableProperty]
+    private string installDiskSpaceMessage = "";
 
     [ObservableProperty]
     private string settingsSummary = "";
@@ -231,7 +238,18 @@ public partial class ShellViewModel : ViewModelBase
             : localConfig.Name;
         ExecutableText = localizer.F("executableValue", executableName);
         ExecutableNameText = localizer.F("executableNameValue", executableName);
-        DiskSpaceText = settings.Options.ResolveDiskSpaceText(localGame.GamePath, gameConfig?.DecompressionSize);
+        var diskCheck = settings.Options.ResolveDiskSpaceCheck(localGame.GamePath, gameConfig?.DecompressionSize);
+        DiskSpaceText = settings.Options.ResolveDiskSpaceText(gameConfig?.DecompressionSize, diskCheck);
+        IsInstallBlockedByDiskSpace = snapshot.RuntimeState == LauncherRuntimeState.NotInstalled
+            && diskCheck.RequiredBytes > 0
+            && diskCheck.IsAvailableKnown
+            && !diskCheck.HasEnoughSpace;
+        InstallDiskSpaceMessage = IsInstallBlockedByDiskSpace
+            ? localizer.F(
+                "diskSpaceInsufficientDetail",
+                FileSizeFormatter.Format(diskCheck.RequiredBytes),
+                FileSizeFormatter.Format(diskCheck.AvailableBytes!.Value))
+            : "";
         SettingsSummary = localizer.F(
             "settingsSummaryWithTheme",
             snapshot.Settings.ProxyMode,

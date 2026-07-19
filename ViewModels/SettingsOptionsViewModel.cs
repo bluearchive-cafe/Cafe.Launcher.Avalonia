@@ -267,31 +267,42 @@ public sealed class SettingsOptionsViewModel
             _ => localizer.T("statusLaunchCheckLocal")
         };
 
-    public string ResolveDiskSpaceText(string gamePath, string? requiredSize)
+    public DiskSpaceCheckResult ResolveDiskSpaceCheck(string gamePath, string? requiredSize)
+    {
+        var requiredBytes = DiskSpaceService.ResolveRequiredBytes(true, 0L, requiredSize);
+        return diskSpaceService.Check(gamePath, requiredBytes);
+    }
+
+    public string ResolveDiskSpaceText(string? requiredSize, DiskSpaceCheckResult check)
     {
         var requiredDisplay = string.IsNullOrWhiteSpace(requiredSize)
             ? "--"
             : requiredSize.Replace(" ", "", System.StringComparison.Ordinal);
-        var availableBytes = diskSpaceService.GetAvailableBytes(gamePath);
-        var availableDisplay = availableBytes.HasValue
-            ? FileSizeFormatter.Format(availableBytes.Value)
+        var availableDisplay = check.AvailableBytes.HasValue
+            ? FileSizeFormatter.Format(check.AvailableBytes.Value)
             : "--";
         var baseText = localizer.F("diskSpace", requiredDisplay, availableDisplay);
 
         // Only append a conclusion when both required and available are known.
-        if (!availableBytes.HasValue
+        if (!check.IsAvailableKnown
             || string.IsNullOrWhiteSpace(requiredSize)
-            || !FileSizeFormatter.TryParseHumanReadable(requiredSize, out var requiredBytes))
+            || !FileSizeFormatter.TryParseHumanReadable(requiredSize, out _))
         {
             return baseText;
         }
 
-        if (availableBytes.Value >= requiredBytes)
+        if (check.HasEnoughSpace)
         {
             return baseText + " " + localizer.T("diskSpaceOkSuffix");
         }
 
-        var difference = requiredBytes - availableBytes.Value;
+        var difference = check.RequiredBytes - check.AvailableBytes!.Value;
         return baseText + " " + localizer.F("diskSpaceShortSuffix", FileSizeFormatter.Format(difference));
+    }
+
+    public string ResolveDiskSpaceText(string gamePath, string? requiredSize)
+    {
+        var check = ResolveDiskSpaceCheck(gamePath, requiredSize);
+        return ResolveDiskSpaceText(requiredSize, check);
     }
 }
