@@ -135,6 +135,7 @@ public sealed class SettingsEditor : ISettingsEditor
             && string.Equals(left.BackgroundFillColor, right.BackgroundFillColor, StringComparison.Ordinal)
             && string.Equals(left.ResourcePanelUid, right.ResourcePanelUid, StringComparison.Ordinal)
             && string.Equals(left.ResourcePanelUidSource, right.ResourcePanelUidSource, StringComparison.Ordinal)
+            && string.Equals(left.StatusDetailMode, right.StatusDetailMode, StringComparison.Ordinal)
             && string.Equals(left.UpdateChannel, right.UpdateChannel, StringComparison.Ordinal)
             && string.Equals(left.LogLevel, right.LogLevel, StringComparison.Ordinal);
     }

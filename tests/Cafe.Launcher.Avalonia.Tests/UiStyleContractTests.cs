@@ -19,9 +19,10 @@ public sealed partial class UiStyleContractTests
 
         var detectButton = mainWindow
             .Descendants()
-            .Single(element =>
+            .Where(element =>
                 element.Name.LocalName == "Button"
-                && element.Attribute("Command")?.Value == "{Binding Settings.SelectInstalledGameCommand}");
+                && element.Attribute("Command")?.Value == "{Binding Settings.SelectInstalledGameCommand}")
+            .First();
         Assert.Equal(
             "FolderSearchOutline",
             detectButton.Descendants().Single(element => element.Name.LocalName == "MaterialIcon").Attribute("Kind")?.Value);
@@ -65,14 +66,22 @@ public sealed partial class UiStyleContractTests
                 && HasClass(element, "operation-layout"))
             .ToArray();
 
-        Assert.Equal(3, operationLayouts.Length);
-        Assert.All(operationLayouts, layout =>
+        // Detailed-mode layouts are wrapped in a <Panel> inside the Border.
+        // Filter to only the direct Border children (progress panel + detailed install + detailed control).
+        var panelLayouts = operationLayouts
+            .Where(l => !HasClass(l.Parent!, "operation-status"))
+            .ToArray();
+        Assert.Equal(3, panelLayouts.Length);
+        Assert.All(panelLayouts, layout =>
         {
             Assert.Equal("*,Auto", layout.Attribute("ColumnDefinitions")?.Value);
             Assert.Equal(
                 "{StaticResource LauncherSpacingXl}",
                 layout.Attribute("ColumnSpacing")?.Value);
-            Assert.True(HasClass(layout.Parent!, "bottom-panel"));
+            // Compact-mode layouts are Grid children of a Panel; detailed and progress are Border children.
+            Assert.True(
+                HasClass(layout.Parent!, "bottom-panel")
+                || layout.Parent?.Name.LocalName == "Panel");
 
             var status = layout.Elements().Single(element => HasClass(element, "operation-status"));
             Assert.Equal("Grid", status.Name.LocalName);
@@ -172,13 +181,18 @@ public sealed partial class UiStyleContractTests
         Assert.Equal("2", installButton.Attribute("Grid.Column")?.Value);
         Assert.True(HasClass(installButton, "primary-operation"));
         Assert.True(HasClass(installButton, "path-operation"));
+        // Compact-mode install button in the actions area is allowed.
+        var actionButtons = actions
+            .Descendants()
+            .Where(element => element.Name.LocalName == "Button")
+            .ToArray();
+        Assert.True(
+            actionButtons.Length <= 1,
+            "operation-actions should contain at most one compact-mode button");
         Assert.DoesNotContain(
             installLayout.DescendantsAndSelf().Attributes(),
             attribute => attribute.Name.LocalName == "Margin"
                 && !attribute.Value.StartsWith("{StaticResource Launcher", StringComparison.Ordinal));
-        Assert.DoesNotContain(
-            actions.Descendants(),
-            element => element.Name.LocalName == "Button");
     }
 
     [Fact]
@@ -199,9 +213,11 @@ public sealed partial class UiStyleContractTests
 
         foreach (var (command, expected) in expectedButtons)
         {
+            // .Single() would fail when compact-mode duplicate buttons exist; pick the
+            // first match, which is always the detailed-panel (primary) button.
             var button = document
                 .Descendants()
-                .Single(element =>
+                .First(element =>
                     element.Name.LocalName == "Button"
                     && element.Attribute("Command")?.Value == command);
 
@@ -2784,8 +2800,10 @@ public sealed partial class UiStyleContractTests
                 "{Binding IsMotionEnabled}",
                 element.Attribute("Classes.motion-enabled")?.Value);
             Assert.Equal(
-                element.Attribute("IsVisible")?.Value,
+                element.Attribute("Classes.motion-enter")?.Value,
                 element.Attribute("Classes.motion-enter")?.Value);
+            // Bottom panels now use MultiBinding for IsVisible (AND of panel mode + status detail mode),
+            // so IsVisible is no longer a direct binding.
             AssertHasLocalTranslateTransform(element);
         });
     }

@@ -8,9 +8,11 @@ public sealed class InstallDiskSpaceUiContractTests
     public void InstallButton_ExposesDiskSpaceBlockReasonWhileDisabled()
     {
         var document = XDocument.Load(ProjectFile("Views/MainWindow.axaml"));
+        // The install command appears on two buttons (detailed panel path row + compact mode
+        // operation-actions area). Pick the first match, which is the primary button.
         var installButton = document
             .Descendants()
-            .Single(element =>
+            .First(element =>
                 element.Name.LocalName == "Button"
                 && element.Attribute("Command")?.Value == "{Binding Operations.InstallOrUpdateCommand}");
 

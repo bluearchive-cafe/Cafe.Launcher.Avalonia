@@ -111,6 +111,13 @@ public sealed class SettingsOptionsViewModel
         new() { Code = MotionModes.Reduced }
     ];
 
+    public ObservableCollection<SettingOption> StatusDetailMode { get; } =
+    [
+        new() { Code = StatusDetailModes.Hidden },
+        new() { Code = StatusDetailModes.Compact },
+        new() { Code = StatusDetailModes.Detailed }
+    ];
+
     public ObservableCollection<SettingOption> SettingsCategories { get; } = [];
 
     public void RefreshDisplayNames()
@@ -136,6 +143,13 @@ public sealed class SettingsOptionsViewModel
             MotionModes.Full => localizer.T("motionModeFull"),
             MotionModes.Reduced => localizer.T("motionModeReduced"),
             _ => localizer.T("motionModeSystem")
+        });
+
+        RefreshOptions(StatusDetailMode, code => code switch
+        {
+            StatusDetailModes.Hidden => localizer.T("statusDetailModeHidden"),
+            StatusDetailModes.Compact => localizer.T("statusDetailModeCompact"),
+            _ => localizer.T("statusDetailModeDetailed")
         });
 
         RefreshOptions(ThemeColor, code => code switch

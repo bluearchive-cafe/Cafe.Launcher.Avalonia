@@ -195,6 +195,13 @@ public sealed class LauncherSettingsService : IDisposable
             settings.MotionMode = MotionModes.System;
         }
 
+        if (settings.StatusDetailMode is not StatusDetailModes.Hidden
+            and not StatusDetailModes.Compact
+            and not StatusDetailModes.Detailed)
+        {
+            settings.StatusDetailMode = StatusDetailModes.Detailed;
+        }
+
         if (settings.ThemeColorMode is not ThemeColorModes.Default
             and not ThemeColorModes.System
             and not ThemeColorModes.Wallpaper

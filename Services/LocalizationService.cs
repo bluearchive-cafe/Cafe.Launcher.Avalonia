@@ -190,6 +190,11 @@ public sealed partial class LocalizedStrings : ObservableObject
     [ObservableProperty] private string bannerLoadingFailed = "";
     [ObservableProperty] private string bannerLoading = "";
     [ObservableProperty] private string statusNetworkLoaded = "";
+    [ObservableProperty] private string statusDetailMode = "";
+    [ObservableProperty] private string statusDetailModeDescription = "";
+    [ObservableProperty] private string statusDetailModeHidden = "";
+    [ObservableProperty] private string statusDetailModeCompact = "";
+    [ObservableProperty] private string statusDetailModeDetailed = "";
     [ObservableProperty] private string statusLaunchCheckLocal = "";
     [ObservableProperty] private string statusLaunchCheckRemote = "";
     [ObservableProperty] private string statusLaunchCheckNone = "";
@@ -469,6 +474,11 @@ public sealed partial class LocalizedStrings : ObservableObject
         BannerLoadingFailed = localizer.T("bannerLoadingFailed");
         BannerLoading = localizer.T("bannerLoading");
         StatusNetworkLoaded = localizer.T("statusNetworkLoaded");
+        StatusDetailMode = localizer.T("statusDetailMode");
+        StatusDetailModeDescription = localizer.T("statusDetailModeDescription");
+        StatusDetailModeHidden = localizer.T("statusDetailModeHidden");
+        StatusDetailModeCompact = localizer.T("statusDetailModeCompact");
+        StatusDetailModeDetailed = localizer.T("statusDetailModeDetailed");
         StatusLaunchCheckLocal = localizer.T("statusLaunchCheckLocal");
         StatusLaunchCheckRemote = localizer.T("statusLaunchCheckRemote");
         StatusLaunchCheckNone = localizer.T("statusLaunchCheckNone");
