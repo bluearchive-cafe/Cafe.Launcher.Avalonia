@@ -33,12 +33,13 @@ public partial class MainWindowViewModel : ViewModelBase, IDisposable
 
     public bool IsMotionEnabled => !IsMotionReduced;
 
-    public bool IsBottomPanelVisible =>
-        Settings.Editor.Current.StatusDetailMode != StatusDetailModes.Hidden
-        || !Operations.IsControlPanelVisible;
+    public bool IsBottomPanelVisible => true;
 
     public bool IsStatusDetailExpanded =>
         Settings.Editor.Current.StatusDetailMode == StatusDetailModes.Detailed;
+
+    public bool IsStatusDetailHidden =>
+        Settings.Editor.Current.StatusDetailMode == StatusDetailModes.Hidden;
 
     public ShellViewModel Shell { get; }
 
@@ -263,15 +264,14 @@ public partial class MainWindowViewModel : ViewModelBase, IDisposable
         ResourcePanel.PropertyChanged += OnResourcePanelPropertyChanged;
         LogViewer.PropertyChanged += OnLogViewerPropertyChanged;
         Dialogs.PropertyChanged += OnDialogsPropertyChanged;
-        Operations.PropertyChanged += OnOperationsPropertyChanged;
     }
 
     private void OnSettingPropertyChanged(object? sender, PropertyChangedEventArgs e)
     {
         if (e.PropertyName == nameof(LauncherSettings.StatusDetailMode))
         {
-            OnPropertyChanged(nameof(IsBottomPanelVisible));
             OnPropertyChanged(nameof(IsStatusDetailExpanded));
+            OnPropertyChanged(nameof(IsStatusDetailHidden));
         }
     }
 
@@ -359,14 +359,6 @@ public partial class MainWindowViewModel : ViewModelBase, IDisposable
                     Dialogs.IsDownloadRunningCloseConfirmVisible,
                     Dialogs);
                 break;
-        }
-    }
-
-    private void OnOperationsPropertyChanged(object? sender, PropertyChangedEventArgs e)
-    {
-        if (e.PropertyName == nameof(GameOperationsViewModel.IsControlPanelVisible))
-        {
-            OnPropertyChanged(nameof(IsBottomPanelVisible));
         }
     }
 
@@ -628,7 +620,6 @@ public partial class MainWindowViewModel : ViewModelBase, IDisposable
         ResourcePanel.PropertyChanged -= OnResourcePanelPropertyChanged;
         LogViewer.PropertyChanged -= OnLogViewerPropertyChanged;
         Dialogs.PropertyChanged -= OnDialogsPropertyChanged;
-        Operations.PropertyChanged -= OnOperationsPropertyChanged;
         Operations.StopDownload(clearPersistedState: false);
         Settings.Dispose();
         RemoteContent.Dispose();
