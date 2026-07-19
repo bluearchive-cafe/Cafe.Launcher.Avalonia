@@ -27,7 +27,7 @@ public sealed partial class UiStyleContractTests
             detectButton.Descendants().Single(element => element.Name.LocalName == "MaterialIcon").Attribute("Kind")?.Value);
 
         AssertSettingRowIcon(generalSettings, "{Binding Shell.I18n.CloseBehavior}", "WindowClose");
-        AssertSettingRowIcon(downloadNetworkSettings, "{Binding Shell.I18n.Proxy}", "LanConnect");
+        AssertSettingRowIcon(downloadNetworkSettings, "{Binding Shell.I18n.Proxy}", "serverNetworkOutline");
         AssertSettingRowIcon(downloadNetworkSettings, "{Binding Shell.I18n.LauncherUpdateChannel}", "SourceBranch");
 
         var resourcePanelButton = mainWindow
@@ -533,8 +533,8 @@ public sealed partial class UiStyleContractTests
             [
                 "Settings.CheckForUpdatesCommand",
                 "WindowChrome.OpenOfficialSiteCommand",
-                "WindowChrome.OpenGitHubRepositoryCommand",
-                "WindowChrome.OpenHelpDocsCommand"
+                "WindowChrome.OpenHelpDocsCommand",
+                "WindowChrome.OpenGitHubRepositoryCommand"
             ]
         };
 
@@ -2539,8 +2539,8 @@ public sealed partial class UiStyleContractTests
             aboutText,
             "Settings.CheckForUpdatesCommand",
             "WindowChrome.OpenOfficialSiteCommand",
-            "WindowChrome.OpenGitHubRepositoryCommand",
-            "WindowChrome.OpenHelpDocsCommand");
+            "WindowChrome.OpenHelpDocsCommand",
+            "WindowChrome.OpenGitHubRepositoryCommand");
         AssertOrdered(
             advancedText,
             "LogViewer.OpenCommand",
