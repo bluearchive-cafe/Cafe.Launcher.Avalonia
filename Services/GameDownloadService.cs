@@ -348,29 +348,34 @@ public sealed class GameDownloadService : IDisposable
 
             var currentDownloadList = downloadPlan.NeedDownload;
             var affectedCount = currentDownloadList.Count + downloadPlan.NeedDelete.Count;
-            var requiredBytes = currentDownloadList.Sum(item => item.SizeBytes);
-            var availableBytes = diskSpaceService.GetAvailableBytes(gamePath);
+            var plannedDownloadBytes = currentDownloadList.Sum(item => item.SizeBytes);
+            var isFreshInstall = snapshot.RuntimeState == LauncherRuntimeState.NotInstalled;
+            var requiredBytes = DiskSpaceService.ResolveRequiredBytes(
+                isFreshInstall,
+                plannedDownloadBytes,
+                gameConfig.DecompressionSize);
+            var diskCheck = diskSpaceService.Check(gamePath, requiredBytes);
             progress(new GameOperationProgress
             {
                 OperationKind = operationKind,
                 Stage = GameOperationStage.DiskCheck,
-                RequiredDiskBytes = requiredBytes,
-                AvailableDiskBytes = availableBytes,
+                RequiredDiskBytes = diskCheck.RequiredBytes,
+                AvailableDiskBytes = diskCheck.AvailableBytes,
                 IsRunning = true,
                 CanStop = true
             });
-            if (!availableBytes.HasValue || availableBytes.Value < requiredBytes)
+            if (!diskCheck.HasEnoughSpace)
             {
                 await diagnostics.MessageAsync(
                     "Game download blocked by disk space.",
-                    $"path: {gamePath}{Environment.NewLine}required: {FileSizeFormatter.Format(requiredBytes)}",
+                    $"path: {gamePath}{Environment.NewLine}required: {FileSizeFormatter.Format(diskCheck.RequiredBytes)}",
                     activeToken);
                 checkpointStore.Clear();
                 return Failed(
                     localizer.F(
                         "diskSpaceInsufficientDetail",
-                        FileSizeFormatter.Format(requiredBytes),
-                        availableBytes.HasValue ? FileSizeFormatter.Format(availableBytes.Value) : "--"),
+                        FileSizeFormatter.Format(diskCheck.RequiredBytes),
+                        diskCheck.AvailableBytes.HasValue ? FileSizeFormatter.Format(diskCheck.AvailableBytes.Value) : "--"),
                     GameOperationErrorCode.InsufficientDiskSpace,
                     affectedCount);
             }
