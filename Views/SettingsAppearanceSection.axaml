@@ -197,7 +197,7 @@
         <StackPanel Classes="settings-group">
             <TextBlock Text="{Binding Shell.I18n.SettingsGroupDisplay}" Classes="group-title"/>
 
-            <controls:SettingRow IconKind="InformationVariant"
+            <controls:SettingRow IconKind="listStatus"
                                  Title="{Binding Shell.I18n.StatusDetailMode}"
                                  Description="{Binding Shell.I18n.StatusDetailModeDescription}">
                 <controls:SettingRow.Action>
