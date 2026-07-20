@@ -127,6 +127,7 @@ public sealed class SettingsEditor : ISettingsEditor
             && left.SelectedThemeColorPaletteIndex == right.SelectedThemeColorPaletteIndex
             && string.Equals(left.DownloadSpeedLimit, right.DownloadSpeedLimit, StringComparison.Ordinal)
             && left.ToastNotificationsEnabled == right.ToastNotificationsEnabled
+            && left.EnableStartupUpdateCheck == right.EnableStartupUpdateCheck
             && left.ShowRemoteContentCard == right.ShowRemoteContentCard
             && string.Equals(left.PatchUrlGroup, right.PatchUrlGroup, StringComparison.Ordinal)
             && string.Equals(left.CustomBackgroundPath, right.CustomBackgroundPath, StringComparison.Ordinal)

@@ -1616,12 +1616,94 @@ public sealed class MainWindowViewModelTests : IDisposable
         displayDelay.TrySetResult();
     }
 
+    [Fact]
+    public async Task InitializeAsync_WhenStartupUpdateCheckEnabledAndUpdateAvailable_ShowsToast()
+    {
+        var snapshot = CreateSnapshot();
+        snapshot.Settings.EnableStartupUpdateCheck = true;
+        snapshot.Settings.UpdateChannel = UpdateChannels.Stable;
+        var coreService = new CountingCoreService(snapshot);
+        var toasts = new List<string>();
+        var toastService = new ToastService();
+        toastService.ToastRaised += notification => toasts.Add(notification.Message);
+        var releaseJson = """
+            [
+                {
+                    "version": "99.0.0",
+                    "files": [
+                        {
+                            "name": "installer.exe",
+                            "url": "https://github.com/bluearchive-cafe/Cafe.Launcher.Avalonia_Release/releases/download/v99.0.0/installer.exe",
+                            "size": 123456
+                        }
+                    ],
+                    "releaseDate": "2026-01-01"
+                }
+            ]
+            """;
+        var updateSvc = new LauncherUpdateService(
+            new LauncherUpdateHandler(releaseJson),
+            currentVersionOverride: "1.0.0");
+        using var viewModel = await CreateViewModelAsync(
+            coreService,
+            toastService: toastService,
+            launcherUpdateService: updateSvc);
+
+        await viewModel.InitializeAsync();
+        // The update check is fire-and-forget; wait briefly for it to complete.
+        await Task.Delay(500);
+
+        Assert.Contains(toasts, t => t.Contains("99.0.0"));
+    }
+
+    [Fact]
+    public async Task InitializeAsync_WhenStartupUpdateCheckDisabled_DoesNotShowToast()
+    {
+        var snapshot = CreateSnapshot();
+        snapshot.Settings.EnableStartupUpdateCheck = false;
+        snapshot.Settings.UpdateChannel = UpdateChannels.Stable;
+        var coreService = new CountingCoreService(snapshot);
+        var toasts = new List<string>();
+        var toastService = new ToastService();
+        toastService.ToastRaised += notification => toasts.Add(notification.Message);
+        using var viewModel = await CreateViewModelAsync(
+            coreService,
+            toastService: toastService);
+
+        await viewModel.InitializeAsync();
+        await Task.Delay(300);
+
+        Assert.DoesNotContain(toasts, t => t.Contains("available"));
+    }
+
+    [Fact]
+    public async Task InitializeAsync_WhenStartupUpdateCheckEnabledButNoUpdate_DoesNotShowToast()
+    {
+        var snapshot = CreateSnapshot();
+        snapshot.Settings.EnableStartupUpdateCheck = true;
+        snapshot.Settings.UpdateChannel = UpdateChannels.Stable;
+        var coreService = new CountingCoreService(snapshot);
+        var toasts = new List<string>();
+        var toastService = new ToastService();
+        toastService.ToastRaised += notification => toasts.Add(notification.Message);
+        // LauncherUpdateHandler returns 404 by default (no releases found = no update)
+        using var viewModel = await CreateViewModelAsync(
+            coreService,
+            toastService: toastService);
+
+        await viewModel.InitializeAsync();
+        await Task.Delay(300);
+
+        Assert.DoesNotContain(toasts, t => t.Contains("available"));
+    }
+
     private async Task<MainWindowViewModel> CreateViewModelAsync(
         ILauncherCoreService coreService,
         LauncherSettingsService? settingsService = null,
         ResourcePanelUidService? resourcePanelUidService = null,
         ResourcePanelApiClient? resourcePanelApiClient = null,
         ToastService? toastService = null,
+        LauncherUpdateService? launcherUpdateService = null,
         CountingGameOperationsBackend? gameOperationsBackend = null,
         WindowsAnimationSettingsProvider? windowsAnimationSettingsProvider = null,
         Func<TimeSpan, CancellationToken, Task>? toastDelayAsync = null)
@@ -1664,7 +1746,7 @@ public sealed class MainWindowViewModelTests : IDisposable
 
         toastService ??= new ToastService();
         var diskSpaceService = new DiskSpaceService();
-        var launcherUpdateService = new LauncherUpdateService(new LauncherUpdateHandler());
+        var launcherUpdateSvc = launcherUpdateService ?? new LauncherUpdateService(new LauncherUpdateHandler());
         var settingsEditor = new SettingsEditor();
         var settingsOptions = new SettingsOptionsViewModel(localizationService, diskSpaceService);
         var settingsAppearance = new SettingsAppearanceViewModel(settingsEditor);
@@ -1673,7 +1755,7 @@ public sealed class MainWindowViewModelTests : IDisposable
         using var settingsLogger = new UnifiedLogger(Path.Combine(tempDir, Guid.NewGuid().ToString("N")));
         var settingsViewModel = new SettingsViewModel(
             settingsService, localizationService, toastService,
-            launcherUpdateService, dialogsViewModel,
+            launcherUpdateSvc, dialogsViewModel,
             settingsLogger,
             new GameInstallationPath(),
             settingsOptions, settingsAppearance);
@@ -1731,6 +1813,7 @@ public sealed class MainWindowViewModelTests : IDisposable
             settingsService,
             localizationService,
             toastService,
+            launcherUpdateSvc,
             diagnostics,
             testLogger,
             shellViewModel,
@@ -2130,10 +2213,25 @@ public sealed class MainWindowViewModelTests : IDisposable
 
     private sealed class LauncherUpdateHandler : HttpMessageHandler
     {
+        private readonly string? responseJson;
+
+        public LauncherUpdateHandler(string? responseJson = null)
+        {
+            this.responseJson = responseJson;
+        }
+
         protected override Task<HttpResponseMessage> SendAsync(
             HttpRequestMessage request,
             CancellationToken cancellationToken)
         {
+            if (responseJson is not null)
+            {
+                return Task.FromResult(new HttpResponseMessage(HttpStatusCode.OK)
+                {
+                    Content = new StringContent(responseJson, Encoding.UTF8, "application/json")
+                });
+            }
+
             return Task.FromResult(new HttpResponseMessage(HttpStatusCode.NotFound));
         }
     }

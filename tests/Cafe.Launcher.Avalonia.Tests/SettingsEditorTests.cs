@@ -71,6 +71,7 @@ public sealed class SettingsEditorTests
             CustomThemeColor = "#FF00FF00",
             DownloadSpeedLimit = DownloadSpeedLimits.Speed10MBs,
             ToastNotificationsEnabled = false,
+            EnableStartupUpdateCheck = false,
             ShowRemoteContentCard = false,
             PatchUrlGroup = PatchUrlGroups.Cafe,
             CustomBackgroundPath = @"C:\wallpaper.png",
@@ -94,6 +95,7 @@ public sealed class SettingsEditorTests
         Assert.Equal("#FF00FF00", current.CustomThemeColor);
         Assert.Equal(DownloadSpeedLimits.Speed10MBs, current.DownloadSpeedLimit);
         Assert.False(current.ToastNotificationsEnabled);
+        Assert.False(current.EnableStartupUpdateCheck);
         Assert.False(current.ShowRemoteContentCard);
         Assert.Equal(PatchUrlGroups.Cafe, current.PatchUrlGroup);
         Assert.Equal(@"C:\wallpaper.png", current.CustomBackgroundPath);
@@ -223,6 +225,7 @@ public sealed class SettingsEditorTests
         Assert.Equal(0, current.SelectedThemeColorPaletteIndex);
         Assert.Equal(DownloadSpeedLimits.Unlimited, current.DownloadSpeedLimit);
         Assert.True(current.ToastNotificationsEnabled);
+        Assert.True(current.EnableStartupUpdateCheck);
         Assert.True(current.ShowRemoteContentCard);
         // PatchUrlGroup defaults to Cafe when UI culture is Chinese, otherwise Official.
         var expectedGroup = System.Globalization.CultureInfo.CurrentUICulture.Name is

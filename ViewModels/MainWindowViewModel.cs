@@ -17,6 +17,7 @@ public partial class MainWindowViewModel : ViewModelBase, IDisposable
     private readonly LauncherSettingsService settingsService;
     private readonly LocalizationService localizer;
     private readonly ToastService toastService;
+    private readonly LauncherUpdateService launcherUpdateService;
     private readonly LocalDiagnostics diagnostics;
     private readonly CancellationTokenSource lifetimeCts = new();
     private int initialized;
@@ -68,6 +69,7 @@ public partial class MainWindowViewModel : ViewModelBase, IDisposable
         LauncherSettingsService settingsService,
         LocalizationService localizer,
         ToastService toastService,
+        LauncherUpdateService launcherUpdateService,
         LocalDiagnostics diagnostics,
         UnifiedLogger unifiedLogger,
         ShellViewModel shell,
@@ -87,6 +89,7 @@ public partial class MainWindowViewModel : ViewModelBase, IDisposable
         this.settingsService = settingsService;
         this.localizer = localizer;
         this.toastService = toastService;
+        this.launcherUpdateService = launcherUpdateService;
         this.diagnostics = diagnostics;
         this.windowsAnimationSettingsProvider = windowsAnimationSettingsProvider ?? new WindowsAnimationSettingsProvider();
 
@@ -194,7 +197,42 @@ public partial class MainWindowViewModel : ViewModelBase, IDisposable
             return;
         }
 
+        if (Settings.Editor.GetSavedSnapshot().EnableStartupUpdateCheck)
+        {
+            _ = CheckForStartupUpdateAsync(cancellationToken);
+        }
+
         await Operations.ResumePersistedDownloadAsync(cancellationToken);
+    }
+
+    private async Task CheckForStartupUpdateAsync(CancellationToken cancellationToken)
+    {
+        try
+        {
+            var settings = Settings.Editor.GetSavedSnapshot();
+            var result = await launcherUpdateService.CheckForUpdateAsync(
+                settings.UpdateChannel,
+                settings.ProxyMode,
+                cancellationToken);
+
+            if (result.IsSuccessful && result.IsUpdateAvailable)
+            {
+                toastService.Show(
+                    localizer.F("startupUpdateAvailable", result.LatestVersion),
+                    ToastSeverity.Info,
+                    durationMs: 8000);
+            }
+        }
+        catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
+        {
+        }
+        catch (Exception exception)
+        {
+            await diagnostics.DebugAsync(
+                "StartupUpdateCheck",
+                $"Startup update check failed (non-critical): {exception.Message}",
+                CancellationToken.None);
+        }
     }
 
     private void WireChildren()

@@ -69,5 +69,18 @@
                               VerticalAlignment="Center"/>
             </controls:SettingRow.Action>
         </controls:SettingRow>
+
+        <controls:SettingRow IconKind="Update"
+                             Title="{Binding Shell.I18n.EnableStartupUpdateCheck}"
+                             Description="{Binding Shell.I18n.EnableStartupUpdateCheckDescription}">
+            <controls:SettingRow.Action>
+                <ToggleSwitch Classes="setting-toggle"
+                              AutomationProperties.Name="{Binding Shell.I18n.EnableStartupUpdateCheck}"
+                              IsChecked="{Binding Settings.Editor.Current.EnableStartupUpdateCheck, Mode=TwoWay}"
+                              OnContent="{Binding Shell.I18n.ToggleOn}"
+                              OffContent="{Binding Shell.I18n.ToggleOff}"
+                              VerticalAlignment="Center"/>
+            </controls:SettingRow.Action>
+        </controls:SettingRow>
     </StackPanel>
 </UserControl>

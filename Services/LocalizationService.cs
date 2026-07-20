@@ -252,6 +252,9 @@ public sealed partial class LocalizedStrings : ObservableObject
     [ObservableProperty] private string launcherUpdateChannelDescription = "";
     [ObservableProperty] private string logLevelDescription = "";
     [ObservableProperty] private string toastNotificationsDescription = "";
+    [ObservableProperty] private string enableStartupUpdateCheck = "";
+    [ObservableProperty] private string enableStartupUpdateCheckDescription = "";
+    [ObservableProperty] private string startupUpdateAvailable = "";
     [ObservableProperty] private string remoteContentCardDescription = "";
     [ObservableProperty] private string setupWizardWelcomeTitle = "";
     [ObservableProperty] private string setupWizardWelcomeText = "";
@@ -536,6 +539,9 @@ public sealed partial class LocalizedStrings : ObservableObject
         LauncherUpdateChannelDescription = localizer.T("launcherUpdateChannelDescription");
         LogLevelDescription = localizer.T("logLevelDescription");
         ToastNotificationsDescription = localizer.T("toastNotificationsDescription");
+        EnableStartupUpdateCheck = localizer.T("enableStartupUpdateCheck");
+        EnableStartupUpdateCheckDescription = localizer.T("enableStartupUpdateCheckDescription");
+        StartupUpdateAvailable = localizer.T("startupUpdateAvailable");
         RemoteContentCardDescription = localizer.T("remoteContentCardDescription");
         SetupWizardWelcomeTitle = localizer.T("setupWizardWelcomeTitle");
         SetupWizardWelcomeText = localizer.T("setupWizardWelcomeText");

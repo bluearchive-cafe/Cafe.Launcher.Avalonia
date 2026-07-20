@@ -50,11 +50,22 @@ dotnet test .\tests\Cafe.Launcher.Avalonia.HeadlessTests\Cafe.Launcher.Avalonia.
 # Both test projects with Coverlet; deletes and recreates TestResults\Coverage
 .\coverage.ps1
 
+# Both test projects (without coverage)
+.\test.ps1
+
+# UI style-contract and headless UI tests (run after XAML or style changes)
+.\dev.ps1 ui
+
+# Verify keys and composite-format placeholders across all locale JSON files
+.\scripts\Test-LocalizationContract.ps1
+
 # Debug build, coverage (both test projects, 50% line/branch threshold), then win-x64 Release build
 .\verify.ps1
 ```
 
-Tests use xUnit v3 and `coverlet.msbuild`; do not introduce a mocking framework. Prefer handwritten `HttpMessageHandler` subclasses, fakes, and stubs. Use `Avalonia.Headless.XUnit` for UI behavior. When changing XAML or styles, run `UiStyleContractTests` in addition to the focused tests.
+Tests use xUnit v3 and `coverlet.msbuild`; do not introduce a mocking framework. Prefer handwritten `HttpMessageHandler` subclasses, fakes, and stubs. Use `Avalonia.Headless.XUnit` for UI behavior. When changing XAML or styles, run `UiStyleContractTests` in addition to the focused tests. Coverage thresholds: line ≥ 50%, branch ≥ 50% (enforced by `coverage.ps1`).
+
+Test project internals are exposed through `Properties/AssemblyInfo.cs`. Keep tests near the class under test and name them `Method_State_ExpectedResult`. New services should cover: success path, typical failure path (exception/validation failure), and boundary conditions (null input, empty collection).
 
 To build the distributable ZIP and NSIS installer, install NSIS 3 and make `makensis`/`makensis.exe` available on `PATH`, then run:
 
@@ -70,11 +81,12 @@ GitHub Actions runs on `ubuntu-latest` with .NET `10.0.x`. The build workflow cu
 
 - `Program.cs` owns process lifetime: Windows single-instance mutex/signaling, the logger created before DI, crash handlers, first-launch detection, and the `session.active` crash-recovery lifecycle. The pre-DI `UnifiedLogger` is passed into DI so the process has one Serilog pipeline and is disposed only after session completion logging.
 - `App.axaml.cs` is the composition root. It builds `ServiceCollection`, calls `ServiceConfiguration.AddLauncherServices(existingLogger:)`, constructs the single `MainWindow`, configures tray/single-instance restoration, and either shows the first-launch setup wizard or starts normal asynchronous initialization.
-- `Services/ServiceConfiguration.cs` is the only DI registration point. This is a single-window desktop app: services and view models are singletons. Be deliberate when adding `IDisposable` services because Microsoft DI disposes registrations in reverse order.
+- `Services/ServiceConfiguration.cs` is the only DI registration point. This is a single-window desktop app: services and view models are singletons. Be deliberate when adding `IDisposable` services — Microsoft DI disposes registrations in reverse order. The expected disposal order is `LauncherApiClient` → `ResourcePanelApiClient` → `ImageCacheService` → `UnifiedLogger` → `GameDownloadService`. New `IDisposable` services should be registered before `UnifiedLogger` unless a later disposal slot is required.
 - `App.axaml` defines Fluent/Material resources, theme dictionaries, and `Launcher*` design tokens.
 
 ### MVVM and views
 
+- `Features/` organizes behavior vertically across the layers — shell, game operations, first-launch setup, and diagnostics each own their boundary. When adding a major feature, prefer extending an existing feature boundary or adding a new `Features/` directory rather than scattering changes across Services/ViewModels/Views.
 - Avalonia uses compiled, explicit bindings; there is no reflection-based view locator. `ViewModelBase` extends CommunityToolkit.Mvvm's `ObservableObject`.
 - `MainWindowViewModel` is the shell that composes focused view models for shell state, background, remote content, dialogs, game operations, toast host, window chrome, settings, resource panel, log viewer, and first-launch setup. Child view models call parent capabilities through injected delegates and expose events for parent-owned coordination.
 - `Views/MainWindow.axaml` retains the window shell. Styles, settings, dialog/log-viewer, and toast layers are separate `.axaml` files. State-driven settings navigation selects categories inside the one window rather than using a navigation framework.
@@ -96,13 +108,17 @@ GitHub Actions runs on `ubuntu-latest` with .NET `10.0.x`. The build workflow cu
 
 ### Localization, themes, and diagnostics
 
-- UI strings come from the embedded `Assets/Locales/{en,zh-Hans,zh-Hant,ja}.json` resources through `LocalizationService`. Adding a string requires all locale files plus the generated-property wiring in `LocalizedStrings`; localization unit tests must initialize test dictionaries before using `LocalizationService.T()`.
+- UI strings come from the embedded `Assets/Locales/{en,zh-Hans,zh-Hant,ja}.json` resources through `LocalizationService`. Adding a new string:
+  1. Add the key alphabetically to all four locale files.
+  2. Add an `[ObservableProperty] private string newKey = "";` field in `LocalizedStrings`.
+  3. Add `NewKey = localizer.T("newKey");` in `LocalizedStrings.Apply()`.
+  4. Bind in XAML via `{Binding Shell.I18n.NewKey}` and add `AutomationProperties.Name` for interactive controls.
+  Localization unit tests must initialize test dictionaries via `TestLocalizationHelper.Initialize()` before using `LocalizationService.T()`. After modifying any locale file, run `.\scripts\Test-LocalizationContract.ps1`.
 - Theme mode, wallpaper-derived/custom accents, and other UI state are persisted settings. Keep theme brushes in the dictionaries rather than replacing theme-specific brushes with hardcoded values.
 - `UnifiedLogger` writes local rolling logs; application code uses `LocalDiagnostics` with a concise PascalCase title and must not log authorization headers, salts, cookies, or tokens.
 
 ## High-value test and change contracts
 
-- Test project internals are exposed through `Properties/AssemblyInfo.cs`. Keep tests near the class under test and name them `Method_State_ExpectedResult`.
 - `UiStyleContractTests` protect XAML tokens and overlay layering.
 - `OfficialHashServiceTests`, `ManifestValidationServiceTests`, `GamePathValidatorTests`, and `RemoteHttpUrlValidatorTests` protect interoperability and safety contracts. Run them when touching the corresponding code paths.
 - Settings changes require defaults, normalization, and backward-compatible JSON field handling. New user-visible strings require all four locale files and localized automation names for interactive controls.

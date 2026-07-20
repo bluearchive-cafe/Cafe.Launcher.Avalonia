@@ -190,6 +190,10 @@ public sealed partial class LauncherSettings : ObservableObject
     private bool toastNotificationsEnabled = true;
 
     [ObservableProperty]
+    [property: JsonPropertyName("enableStartupUpdateCheck")]
+    private bool enableStartupUpdateCheck = true;
+
+    [ObservableProperty]
     [property: JsonPropertyName("showRemoteContentCard")]
     private bool showRemoteContentCard = true;
 
@@ -270,6 +274,7 @@ public sealed partial class LauncherSettings : ObservableObject
         SelectedThemeColorPaletteIndex = other.SelectedThemeColorPaletteIndex;
         DownloadSpeedLimit = other.DownloadSpeedLimit;
         ToastNotificationsEnabled = other.ToastNotificationsEnabled;
+        EnableStartupUpdateCheck = other.EnableStartupUpdateCheck;
         ShowRemoteContentCard = other.ShowRemoteContentCard;
         PatchUrlGroup = other.PatchUrlGroup;
         CustomBackgroundPath = other.CustomBackgroundPath;
