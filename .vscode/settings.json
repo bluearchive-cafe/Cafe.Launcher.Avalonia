@@ -1,0 +1,9 @@
+{
+    "dotnet.defaultSolution": "disable",
+    "files.exclude": {
+        ".worktrees": true
+    },
+    "search.exclude": {
+        ".worktrees": true
+    }
+}
