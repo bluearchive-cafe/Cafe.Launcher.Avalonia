@@ -84,6 +84,7 @@ public sealed class LauncherSettingsServiceTests : IDisposable
         Assert.Equal(0, settings.SelectedThemeColorPaletteIndex);
         Assert.Equal(DownloadSpeedLimits.Unlimited, settings.DownloadSpeedLimit);
         Assert.True(settings.ToastNotificationsEnabled);
+        Assert.True(settings.EnableStartupUpdateCheck);
         Assert.True(settings.ShowRemoteContentCard);
         // PatchUrlGroup defaults to Cafe when UI culture is Chinese, otherwise Official.
         var expectedGroup = System.Globalization.CultureInfo.CurrentUICulture.Name is
@@ -213,6 +214,7 @@ public sealed class LauncherSettingsServiceTests : IDisposable
             SelectedThemeColorPaletteIndex = 1,
             DownloadSpeedLimit = DownloadSpeedLimits.Speed10MBs,
             ToastNotificationsEnabled = false,
+            EnableStartupUpdateCheck = false,
             ShowRemoteContentCard = false,
             PatchUrlGroup = PatchUrlGroups.Cafe,
             CustomBackgroundPath = tempDir,
@@ -246,6 +248,7 @@ public sealed class LauncherSettingsServiceTests : IDisposable
         Assert.Equal(1, selectedThemeColorPaletteIndex.GetInt32());
         Assert.True(root.TryGetProperty("downloadSpeedLimit", out _));
         Assert.True(root.TryGetProperty("toastNotificationsEnabled", out _));
+        Assert.True(root.TryGetProperty("enableStartupUpdateCheck", out _));
         Assert.True(root.TryGetProperty("showRemoteContentCard", out _));
         Assert.True(root.TryGetProperty("patchUrlGroup", out _));
         Assert.True(root.TryGetProperty("customBackgroundPath", out var customBackgroundPath));
@@ -272,6 +275,7 @@ public sealed class LauncherSettingsServiceTests : IDisposable
             "selectedThemeColorPaletteIndex",
             "downloadSpeedLimit",
             "toastNotificationsEnabled",
+            "enableStartupUpdateCheck",
             "showRemoteContentCard",
             "patchUrlGroup",
             "customBackgroundPath",
@@ -286,6 +290,17 @@ public sealed class LauncherSettingsServiceTests : IDisposable
         };
         Assert.True(expectedPropertyNames.SetEquals(propertyNames));
         Assert.False(File.Exists($"{settingsPath}.tmp"));
+    }
+
+    [Fact]
+    public async Task EnableStartupUpdateCheck_RoundTripsAndMissingDefaultsToTrue()
+    {
+        var service = new LauncherSettingsService(settingsPath);
+        await service.SaveAsync(new LauncherSettings { EnableStartupUpdateCheck = false });
+        Assert.False((await service.ReadAsync()).EnableStartupUpdateCheck);
+
+        await File.WriteAllTextAsync(settingsPath, """{"language":"ja"}""");
+        Assert.True((await service.ReadAsync()).EnableStartupUpdateCheck);
     }
 
     [Fact]
