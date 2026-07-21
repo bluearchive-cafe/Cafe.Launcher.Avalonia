@@ -192,6 +192,58 @@
                     </StackPanel>
                 </controls:SettingRow.Action>
             </controls:SettingRow>
+
+            <controls:SettingRow IconKind="Filmstrip"
+                                 Title="{Binding Shell.I18n.VideoBackground}"
+                                 Description="{Binding Shell.I18n.VideoBackgroundDescription}"
+                                 IsVisible="{Binding Settings.Appearance.IsVideoBackgroundSelected}">
+                <controls:SettingRow.Action>
+                    <StackPanel Orientation="Horizontal" Spacing="{StaticResource LauncherSpacingSm}" VerticalAlignment="Center">
+                        <Button Classes="flat-action"
+                                Command="{Binding Settings.ChooseBackgroundVideoCommand}"
+                                AutomationProperties.Name="{Binding Shell.I18n.ChooseVideo}">
+                            <StackPanel Classes="button-content">
+                                <materialIcons:MaterialIcon Kind="Filmstrip" Width="{StaticResource LauncherIconSm}" Height="{StaticResource LauncherIconSm}"/>
+                                <TextBlock Text="{Binding Shell.I18n.ChooseVideo}"/>
+                            </StackPanel>
+                        </Button>
+                    </StackPanel>
+                </controls:SettingRow.Action>
+            </controls:SettingRow>
+
+            <Grid Classes="settings-row" ColumnDefinitions="Auto,*,Auto"
+                  IsVisible="{Binding Settings.Appearance.IsVideoBackgroundSelected}">
+                <Border Classes="settings-icon">
+                    <materialIcons:MaterialIcon Kind="VolumeHigh" Width="{StaticResource LauncherIconMd}" Height="{StaticResource LauncherIconMd}" Foreground="{DynamicResource LauncherAccentBrush}" HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                </Border>
+                <StackPanel Grid.Column="1" Classes="dialog-heading-copy">
+                    <TextBlock Text="{Binding Shell.I18n.VideoVolume}" Classes="section-title"/>
+                </StackPanel>
+                <StackPanel Grid.Column="2" Orientation="Horizontal" Spacing="{StaticResource LauncherSpacingSm}" VerticalAlignment="Center">
+                    <Slider Classes="setting-control"
+                            AutomationProperties.Name="{Binding Shell.I18n.VideoVolume}"
+                            Minimum="0" Maximum="100"
+                            Value="{Binding Settings.Appearance.VideoVolume, Mode=TwoWay}"/>
+                    <TextBlock Text="{Binding Settings.Appearance.VideoVolume}" Classes="value"
+                               Width="32" TextAlignment="Right"/>
+                </StackPanel>
+            </Grid>
+
+            <Grid Classes="settings-row" ColumnDefinitions="Auto,*,Auto"
+                  IsVisible="{Binding Settings.Appearance.IsVideoBackgroundSelected}">
+                <Border Classes="settings-icon">
+                    <materialIcons:MaterialIcon Kind="VolumeMute" Width="{StaticResource LauncherIconMd}" Height="{StaticResource LauncherIconMd}" Foreground="{DynamicResource LauncherAccentBrush}" HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                </Border>
+                <StackPanel Grid.Column="1" Classes="dialog-heading-copy">
+                    <TextBlock Text="{Binding Shell.I18n.VideoMute}" Classes="section-title"/>
+                </StackPanel>
+                <ToggleSwitch Grid.Column="2" Classes="setting-toggle"
+                              AutomationProperties.Name="{Binding Shell.I18n.VideoMute}"
+                              IsChecked="{Binding Settings.Appearance.IsVideoMuted, Mode=TwoWay}"
+                              OnContent="{Binding Shell.I18n.ToggleOn}"
+                              OffContent="{Binding Shell.I18n.ToggleOff}"
+                              VerticalAlignment="Center"/>
+            </Grid>
         </StackPanel>
 
         <StackPanel Classes="settings-group">

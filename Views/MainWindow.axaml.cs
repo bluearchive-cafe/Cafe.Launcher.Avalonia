@@ -8,6 +8,7 @@ using Cafe.Launcher.Avalonia.Services;
 using Cafe.Launcher.Avalonia.ViewModels;
 using System;
 using System.Collections.Generic;
+using System.ComponentModel;
 using System.Diagnostics;
 using System.IO;
 using System.Linq;
@@ -44,6 +45,8 @@ public partial class MainWindow : Window
         viewModel.WindowChrome.MinimizeRequested += MinimizeWindow;
         viewModel.WindowChrome.CloseRequested += PerformClose;
         viewModel.WindowChrome.RestoreRequested += ShowWindow;
+        viewModel.ModalHost.PropertyChanged += OnModalHostPropertyChanged;
+        UpdateBackgroundPlaybackState();
     }
 
     protected override void OnClosed(EventArgs e)
@@ -63,7 +66,31 @@ public partial class MainWindow : Window
         viewModel.WindowChrome.MinimizeRequested -= MinimizeWindow;
         viewModel.WindowChrome.CloseRequested -= PerformClose;
         viewModel.WindowChrome.RestoreRequested -= ShowWindow;
+        viewModel.ModalHost.PropertyChanged -= OnModalHostPropertyChanged;
         configuredViewModel = null;
+    }
+
+    private void OnModalHostPropertyChanged(object? sender, PropertyChangedEventArgs e)
+    {
+        if (e.PropertyName == nameof(Features.Shell.ModalHostViewModel.HasEntries))
+        {
+            UpdateBackgroundPlaybackState();
+        }
+    }
+
+    private void UpdateBackgroundPlaybackState()
+    {
+        if (configuredViewModel is not { } viewModel)
+        {
+            return;
+        }
+
+        // Pause the wallpaper whenever the window is not visible to the user OR when a modal overlay
+        // fully covers the background (settings, dialogs, log viewer, resource panel, etc.).
+        var active = IsVisible
+            && WindowState != WindowState.Minimized
+            && !viewModel.ModalHost.HasEntries;
+        viewModel.Background.SetPlaybackActive(active);
     }
 
     private void OnActivated(object? sender, EventArgs e)
@@ -238,15 +265,11 @@ public partial class MainWindow : Window
     protected override void OnPropertyChanged(AvaloniaPropertyChangedEventArgs change)
     {
         base.OnPropertyChanged(change);
-        // Pause the video wallpaper whenever the window is not actually visible to the user: minimized
-        // to the taskbar (WindowState) or hidden to the tray (IsVisible, set by Window.Hide()/Show()).
-        // Driving this off the resulting state — rather than each individual hide/restore call site —
-        // covers every path, including SystemTrayService.ShowWindow which bypasses MainWindow.ShowWindow.
-        if ((change.Property == WindowStateProperty || change.Property == IsVisibleProperty)
-            && DataContext is MainWindowViewModel vm)
+        // Drive playback from the resulting visible/covered state rather than individual call sites:
+        // minimized, hidden to tray, and modal overlays all flow through UpdateBackgroundPlaybackState.
+        if (change.Property == WindowStateProperty || change.Property == IsVisibleProperty)
         {
-            var active = IsVisible && WindowState != WindowState.Minimized;
-            vm.Background.SetPlaybackActive(active);
+            UpdateBackgroundPlaybackState();
         }
     }
 

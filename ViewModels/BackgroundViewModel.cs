@@ -27,6 +27,9 @@ public partial class BackgroundViewModel : ViewModelBase, IDisposable
     private LauncherSettings? activeVideoSettings;
     private bool playbackActive = true;
     private bool videoPaletteExtracted;
+    // The non-video image live when a video starts, kept alive until the engine delivers its first
+    // frame (see OnVideoFrameReady) so the UI never renders a disposed bitmap while decoding starts up.
+    private IDisposable? pendingPreviousImage;
     private bool disposed;
 
     // Replaced background images are disposed off the UI thread (Background priority) so an in-flight
@@ -352,9 +355,10 @@ public partial class BackgroundViewModel : ViewModelBase, IDisposable
             activeVideoSettings = settings;
 
             // The current image is a non-video, VM-owned bitmap (or null after a video→video StopVideo).
-            // Capture it now and dispose it once the first engine frame replaces it below; later frames
-            // are engine-owned and must not be disposed here.
-            var previousImage = BackgroundImageSource as IDisposable;
+            // Hold it until OnVideoFrameReady actually swaps in the first engine frame — decoding may not
+            // have produced a frame yet, so disposing it here unconditionally could leave the UI holding
+            // a disposed bitmap while it renders.
+            pendingPreviousImage = BackgroundImageSource as IDisposable;
 
             engine.SetVolume(settings.VideoBackgroundVolume);
             engine.SetMuted(settings.VideoBackgroundMuted);
@@ -366,11 +370,6 @@ public partial class BackgroundViewModel : ViewModelBase, IDisposable
             }
 
             OnVideoFrameReady();
-
-            if (previousImage is not null)
-            {
-                ImageDisposeScheduler(previousImage);
-            }
 
             return true;
         }
@@ -395,6 +394,12 @@ public partial class BackgroundViewModel : ViewModelBase, IDisposable
         {
             // 直接赋值，不走 SetBackgroundImage（后者会 Dispose 旧帧）；视频帧由引擎双缓冲拥有。
             BackgroundImageSource = frame;
+            if (pendingPreviousImage is not null)
+            {
+                ImageDisposeScheduler(pendingPreviousImage);
+                pendingPreviousImage = null;
+            }
+
             if (!videoPaletteExtracted && activeVideoSettings.ThemeColorMode == ThemeColorModes.Wallpaper)
             {
                 videoPaletteExtracted = true;
@@ -405,6 +410,13 @@ public partial class BackgroundViewModel : ViewModelBase, IDisposable
 
     private void StopVideo()
     {
+        if (pendingPreviousImage is not null)
+        {
+            // No engine frame ever arrived to trigger the swap in OnVideoFrameReady — release it now.
+            ImageDisposeScheduler(pendingPreviousImage);
+            pendingPreviousImage = null;
+        }
+
         if (videoEngine is null)
         {
             return;
