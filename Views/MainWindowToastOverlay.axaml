@@ -17,13 +17,18 @@
                     </ItemsPanelTemplate>
                 </ItemsControl.ItemsPanel>
                 <ItemsControl.ItemTemplate>
-                    <DataTemplate DataType="{x:Type services:ToastNotification}">
+                    <DataTemplate x:DataType="services:ToastNotification">
                         <Border Classes="toast-card"
+                                Classes.motion-enabled="{Binding DataContext.IsMotionEnabled, ElementName=ToastOverlayRoot}"
+                                Classes.motion-exit="{Binding IsExiting}"
                                 IsHitTestVisible="True">
+                            <Border.RenderTransform>
+                                <TranslateTransform/>
+                            </Border.RenderTransform>
                             <Grid Classes="toast-layout" ColumnDefinitions="Auto,*,Auto">
                                 <materialIcons:MaterialIcon Kind="{Binding IconKind}" Width="{StaticResource LauncherIconMd}" Height="{StaticResource LauncherIconMd}"
                                                             Foreground="{Binding Severity, Converter={x:Static converters:ToastSeverityToBrushConverter.Instance}}"
-                                                            VerticalAlignment="Top" Margin="0,4,0,0"
+                                                            Classes="toast-icon"
                                                             AutomationProperties.Name="{Binding SeverityLabel}"/>
                                 <StackPanel Grid.Column="1" Classes="toast-copy">
                                     <TextBlock Text="{Binding SeverityLabel}" Classes="toast-severity"
@@ -36,6 +41,7 @@
                                         Classes="toast-close"
                                         Command="{Binding DataContext.Toasts.DismissToastCommand, ElementName=ToastOverlayRoot}"
                                         CommandParameter="{Binding Id}"
+                                        ToolTip.Tip="{Binding DataContext.Shell.I18n.Close, ElementName=ToastOverlayRoot}"
                                         AutomationProperties.Name="{Binding DataContext.Shell.I18n.Close, ElementName=ToastOverlayRoot}">
                                     <materialIcons:MaterialIcon Kind="Close" Width="{StaticResource LauncherIconSm}" Height="{StaticResource LauncherIconSm}"/>
                                 </Button>

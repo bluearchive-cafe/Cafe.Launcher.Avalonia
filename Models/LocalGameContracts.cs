@@ -32,17 +32,30 @@ public sealed class RemoteManifest
 
 public sealed class ManifestFile
 {
+    // Property declaration order defines the serialized JSON key order, which MUST match the
+    // official manifest (path, hash, size, vc). The vc integrity hash is computed over the
+    // values in this exact order (see OfficialHashService.GetManifestFileHash); keeping the
+    // serialization order identical lets the official and rewritten launchers read each
+    // other's manifest.json without flagging it corrupted.
     [JsonPropertyName("path")]
     public string Path { get => path ??= ""; set => path = value ?? ""; }
     private string? path = "";
+
+    [JsonPropertyName("hash")]
+    public string Hash { get => hash ??= ""; set => hash = value ?? ""; }
+    private string? hash = "";
 
     [JsonPropertyName("size")]
     public string Size { get => size ??= "0"; set => size = value ?? "0"; }
     private string? size = "0";
 
-    [JsonPropertyName("hash")]
-    public string Hash { get => hash ??= ""; set => hash = value ?? ""; }
-    private string? hash = "";
+    /// <summary>
+    /// Size as a parsed long value. Returns 0 for non-parseable input.
+    /// Centralises the <see cref="Helpers.FileSizeFormatter.ParseSize"/> call
+    /// so consumers don't need to parse <see cref="Size"/> individually.
+    /// </summary>
+    [System.Text.Json.Serialization.JsonIgnore]
+    public long SizeBytes => long.TryParse(Size, out var s) ? s : 0;
 
     [JsonPropertyName("vc")]
     public string? Vc { get; set; }

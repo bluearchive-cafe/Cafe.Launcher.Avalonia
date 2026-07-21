@@ -4,6 +4,7 @@ using System.Threading.Tasks;
 using Avalonia;
 using Avalonia.Threading;
 using Cafe.Launcher.Avalonia.Helpers;
+using Cafe.Launcher.Avalonia.Features.GameOperations;
 using Cafe.Launcher.Avalonia.Models;
 using Cafe.Launcher.Avalonia.Services;
 using Cafe.Launcher.Avalonia.Services.Diagnostics;
@@ -14,28 +15,40 @@ namespace Cafe.Launcher.Avalonia.ViewModels;
 
 public partial class GameOperationsViewModel : ViewModelBase
 {
-    private readonly IGameOperationsBackend backend;
+    private readonly IGameLaunchWorkflow launchWorkflow;
+    private readonly IGameInstallationWorkflow installationWorkflow;
+    private readonly IGameUninstallWorkflow uninstallWorkflow;
     private readonly Func<TimeSpan, Task> delayAsync;
     private readonly LocalizationService localizer;
     private readonly ToastService toastService;
     private readonly LocalDiagnostics diagnostics;
     private readonly ShellViewModel shell;
     private readonly DialogsViewModel dialogs;
+    private LauncherStatusSnapshot? currentSnapshot;
 
     [ObservableProperty]
-    private bool isInstallPanelVisible = true;
+    [NotifyPropertyChangedFor(nameof(IsInstallPanelVisible))]
+    [NotifyPropertyChangedFor(nameof(IsControlPanelVisible))]
+    [NotifyPropertyChangedFor(nameof(IsProgressPanelVisible))]
+    private GameOperationPanelMode panelMode = GameOperationPanelMode.Install;
 
-    [ObservableProperty]
-    private bool isControlPanelVisible;
+    public bool IsInstallPanelVisible => PanelMode == GameOperationPanelMode.Install;
 
-    [ObservableProperty]
-    private bool isProgressPanelVisible;
+    public bool IsControlPanelVisible => PanelMode == GameOperationPanelMode.Control;
+
+    public bool IsProgressPanelVisible => PanelMode == GameOperationPanelMode.Progress;
 
     [ObservableProperty]
     private string installButtonText = "";
 
     [ObservableProperty]
+    private string installButtonToolTip = "";
+
+    [ObservableProperty]
     private string progressTitle = "";
+
+    [ObservableProperty]
+    private string progressIconKind = "Sync";
 
     [ObservableProperty]
     private int progressValue;
@@ -64,15 +77,8 @@ public partial class GameOperationsViewModel : ViewModelBase
     [ObservableProperty]
     private string pauseResumeIcon = "Pause";
 
-    public Func<LauncherStatusSnapshot?>? GetSnapshot { get; set; }
-
-    public Func<Task>? RequestRefreshAsync { get; set; }
-
-    public Func<Task>? RequestRefreshAfterPersistedResumeAsync { get; set; }
-
-    public Func<LauncherStatusSnapshot, Task>? ApplySnapshotAsync { get; set; }
-
-    public Action? MinimizeWindow { get; set; }
+    public event Func<GameOperationsRefreshMode, Task>? RefreshRequested;
+    public event Action? MinimizeRequested;
 
     public GameOperationsViewModel(
         GameLaunchService gameLaunchService,
@@ -84,10 +90,9 @@ public partial class GameOperationsViewModel : ViewModelBase
         ShellViewModel shell,
         DialogsViewModel dialogs)
         : this(
-            new GameOperationsBackend(
-                gameLaunchService,
-                gameDownloadService,
-                gameUninstallService),
+            new GameLaunchWorkflow(gameLaunchService),
+            new GameInstallationWorkflow(gameDownloadService),
+            new GameUninstallWorkflow(gameUninstallService),
             localizer,
             toastService,
             diagnostics,
@@ -98,7 +103,9 @@ public partial class GameOperationsViewModel : ViewModelBase
     }
 
     internal GameOperationsViewModel(
-        IGameOperationsBackend backend,
+        IGameLaunchWorkflow launchWorkflow,
+        IGameInstallationWorkflow installationWorkflow,
+        IGameUninstallWorkflow uninstallWorkflow,
         LocalizationService localizer,
         ToastService toastService,
         LocalDiagnostics diagnostics,
@@ -106,7 +113,9 @@ public partial class GameOperationsViewModel : ViewModelBase
         DialogsViewModel dialogs,
         Func<TimeSpan, Task> delayAsync)
     {
-        this.backend = backend;
+        this.launchWorkflow = launchWorkflow;
+        this.installationWorkflow = installationWorkflow;
+        this.uninstallWorkflow = uninstallWorkflow;
         this.delayAsync = delayAsync;
         this.localizer = localizer;
         this.toastService = toastService;
@@ -126,6 +135,7 @@ public partial class GameOperationsViewModel : ViewModelBase
 
     public void ApplySnapshot(LauncherStatusSnapshot snapshot)
     {
+        currentSnapshot = snapshot;
         InstallButtonText = snapshot.RuntimeState switch
         {
             LauncherRuntimeState.NotInstalled => localizer.T("installGame"),
@@ -133,21 +143,25 @@ public partial class GameOperationsViewModel : ViewModelBase
             LauncherRuntimeState.IoFailure or LauncherRuntimeState.RemoteUnavailable => localizer.T("refresh"),
             _ => localizer.T("updateGame")
         };
+        InstallButtonToolTip = shell.IsInstallBlockedByDiskSpace
+            ? shell.InstallDiskSpaceMessage
+            : InstallButtonText;
+        InstallOrUpdateCommand.NotifyCanExecuteChanged();
         SetIdlePanels(snapshot);
     }
 
     public void SetIdlePanels(LauncherStatusSnapshot? snapshot)
     {
-        IsProgressPanelVisible = false;
         CanPauseOperation = false;
-        IsControlPanelVisible = snapshot?.RuntimeState == LauncherRuntimeState.Ready;
-        IsInstallPanelVisible = !IsControlPanelVisible;
+        PanelMode = snapshot?.RuntimeState == LauncherRuntimeState.Ready
+            ? GameOperationPanelMode.Control
+            : GameOperationPanelMode.Install;
     }
 
     [RelayCommand]
     private async Task StartGameAsync()
     {
-        var snapshot = GetSnapshot?.Invoke();
+        var snapshot = currentSnapshot;
         if (!PrepareShellOnly(snapshot))
         {
             return;
@@ -158,7 +172,7 @@ public partial class GameOperationsViewModel : ViewModelBase
 
         try
         {
-            var launchResult = await backend.StartGameAsync(snapshot!);
+            var launchResult = await launchWorkflow.StartGameAsync(snapshot!);
             shell.SetLaunchCheckResult(launchResult.Validation.Message);
             shell.OperationNote = launchResult.Message;
 
@@ -166,7 +180,7 @@ public partial class GameOperationsViewModel : ViewModelBase
             {
                 toastService.ShowSuccess(localizer.T("gameLaunchedMinimized"));
                 await delayAsync(TimeSpan.FromMilliseconds(600));
-                MinimizeWindow?.Invoke();
+                MinimizeRequested?.Invoke();
             }
             else
             {
@@ -186,7 +200,9 @@ public partial class GameOperationsViewModel : ViewModelBase
         }
     }
 
-    [RelayCommand]
+    private bool CanInstallOrUpdate() => !shell.IsInstallBlockedByDiskSpace;
+
+    [RelayCommand(CanExecute = nameof(CanInstallOrUpdate))]
     private async Task InstallOrUpdateAsync()
     {
         if (!PrepareOperation())
@@ -196,10 +212,10 @@ public partial class GameOperationsViewModel : ViewModelBase
 
         try
         {
-            var snapshot = GetSnapshot?.Invoke();
+            var snapshot = currentSnapshot;
             if (snapshot is null)
             {
-                shell.OperationNote = localizer.T("stateNotLoaded");
+                shell.OperationNote = localizer.T("launcherStateNotLoaded");
                 return;
             }
 
@@ -211,10 +227,7 @@ public partial class GameOperationsViewModel : ViewModelBase
 
             if (snapshot.RuntimeState is LauncherRuntimeState.IoFailure or LauncherRuntimeState.RemoteUnavailable)
             {
-                if (RequestRefreshAsync is not null)
-                {
-                    await RequestRefreshAsync.Invoke();
-                }
+                await RequestRefresh(GameOperationsRefreshMode.Normal);
 
                 return;
             }
@@ -225,14 +238,10 @@ public partial class GameOperationsViewModel : ViewModelBase
                 return;
             }
 
-            var result = await backend.InstallOrUpdateAsync(snapshot, ApplyProgress);
+            var result = await installationWorkflow.InstallOrUpdateAsync(snapshot, ApplyProgress);
             shell.OperationNote = result.Message;
             ShowOperationResult(result);
-            var refresh = RequestRefreshAfterPersistedResumeAsync ?? RequestRefreshAsync;
-            if (refresh is not null)
-            {
-                await refresh.Invoke();
-            }
+            await RequestRefresh(GameOperationsRefreshMode.SkipPersistedResume);
         }
         catch (Exception exception)
         {
@@ -243,10 +252,9 @@ public partial class GameOperationsViewModel : ViewModelBase
         finally
         {
             shell.IsBusy = false;
-            var currentSnapshot = GetSnapshot?.Invoke();
-            if (currentSnapshot is not null && ApplySnapshotAsync is not null)
+            if (currentSnapshot is not null)
             {
-                await ApplySnapshotAsync.Invoke(currentSnapshot);
+                ApplySnapshot(currentSnapshot);
             }
         }
     }
@@ -254,29 +262,29 @@ public partial class GameOperationsViewModel : ViewModelBase
     [RelayCommand]
     private async Task RequestRepairAsync()
     {
-        var snapshot = GetSnapshot?.Invoke();
+        var snapshot = currentSnapshot;
         if (snapshot is null)
         {
-            shell.OperationNote = localizer.T("stateNotLoaded");
+            shell.OperationNote = localizer.T("launcherStateNotLoaded");
             return;
         }
 
         if (snapshot.RuntimeState is not (LauncherRuntimeState.Corrupted or LauncherRuntimeState.Ready))
         {
             shell.OperationNote = localizer.T("operationUnavailableForCurrentState");
+            toastService.ShowWarning(shell.OperationNote);
             return;
         }
 
         dialogs.ShowRepairConfirm(localizer.T("repairWarning"));
-        await Task.CompletedTask;
     }
 
     public async Task RepairAsync()
     {
-        var snapshot = GetSnapshot?.Invoke();
+        var snapshot = currentSnapshot;
         if (snapshot is null)
         {
-            shell.OperationNote = localizer.T("stateNotLoaded");
+            shell.OperationNote = localizer.T("launcherStateNotLoaded");
             return;
         }
 
@@ -293,13 +301,10 @@ public partial class GameOperationsViewModel : ViewModelBase
 
         try
         {
-            var result = await backend.RepairAsync(snapshot, ApplyProgress);
+            var result = await installationWorkflow.RepairAsync(snapshot, ApplyProgress);
             shell.OperationNote = result.Message;
             ShowOperationResult(result);
-            if (RequestRefreshAsync is not null)
-            {
-                await RequestRefreshAsync.Invoke();
-            }
+            await RequestRefresh(GameOperationsRefreshMode.Normal);
         }
         catch (Exception exception)
         {
@@ -310,10 +315,9 @@ public partial class GameOperationsViewModel : ViewModelBase
         finally
         {
             shell.IsBusy = false;
-            var currentSnapshot = GetSnapshot?.Invoke();
-            if (currentSnapshot is not null && ApplySnapshotAsync is not null)
+            if (currentSnapshot is not null)
             {
-                await ApplySnapshotAsync.Invoke(currentSnapshot);
+                ApplySnapshot(currentSnapshot);
             }
         }
     }
@@ -321,7 +325,7 @@ public partial class GameOperationsViewModel : ViewModelBase
     [RelayCommand]
     private void StopOperation()
     {
-        if (backend.IsDownloadRunning)
+        if (installationWorkflow.IsRunning)
         {
             dialogs.ShowStopConfirm();
             return;
@@ -332,7 +336,7 @@ public partial class GameOperationsViewModel : ViewModelBase
 
     public void PerformStop()
     {
-        backend.Stop(clearPersistedState: true);
+        installationWorkflow.Stop(clearPersistedState: true);
         shell.OperationNote = localizer.T("stopRequested");
         try { toastService.ShowWarning(localizer.T("stopRequested")); }
         catch (Exception ex) { System.Diagnostics.Debug.WriteLine($"Failed to show stop toast: {ex.Message}"); }
@@ -346,9 +350,9 @@ public partial class GameOperationsViewModel : ViewModelBase
             return;
         }
 
-        if (backend.IsPaused)
+        if (installationWorkflow.IsPaused)
         {
-            backend.Resume();
+            installationWorkflow.Resume();
             IsPaused = false;
             PauseResumeText = localizer.T("pause");
             PauseResumeIcon = "Pause";
@@ -357,7 +361,7 @@ public partial class GameOperationsViewModel : ViewModelBase
         }
         else
         {
-            backend.Pause();
+            installationWorkflow.Pause();
             IsPaused = true;
             PauseResumeText = localizer.T("resume");
             PauseResumeIcon = "Play";
@@ -371,20 +375,21 @@ public partial class GameOperationsViewModel : ViewModelBase
     [RelayCommand]
     private async Task RequestUninstallAsync()
     {
-        var snapshot = GetSnapshot?.Invoke();
+        var snapshot = currentSnapshot;
         if (snapshot is null)
         {
-            shell.OperationNote = localizer.T("stateNotLoaded");
+            shell.OperationNote = localizer.T("launcherStateNotLoaded");
             return;
         }
 
         if (snapshot.RuntimeState != LauncherRuntimeState.Ready)
         {
             shell.OperationNote = localizer.T("operationUnavailableForCurrentState");
+            toastService.ShowWarning(shell.OperationNote);
             return;
         }
 
-        var validation = await backend.ValidateUninstallAsync(snapshot.LocalGame.GamePath);
+        var validation = await uninstallWorkflow.ValidateUninstallAsync(snapshot.LocalGame.GamePath);
         if (!validation.Success)
         {
             shell.OperationNote = validation.Message;
@@ -399,10 +404,10 @@ public partial class GameOperationsViewModel : ViewModelBase
 
     public async Task ConfirmUninstallAsync()
     {
-        var snapshot = GetSnapshot?.Invoke();
+        var snapshot = currentSnapshot;
         if (snapshot is null)
         {
-            shell.OperationNote = localizer.T("stateNotLoaded");
+            shell.OperationNote = localizer.T("launcherStateNotLoaded");
             return;
         }
 
@@ -414,20 +419,16 @@ public partial class GameOperationsViewModel : ViewModelBase
 
         dialogs.IsUninstallConfirmVisible = false;
         shell.IsBusy = true;
-        IsProgressPanelVisible = true;
-        IsInstallPanelVisible = false;
-        IsControlPanelVisible = false;
+        PanelMode = GameOperationPanelMode.Progress;
         ProgressTitle = localizer.T("uninstalling");
+        ProgressIconKind = ResolveProgressPresentation(GameOperationKind.Uninstall).IconKind;
         ProgressDetail = localizer.T("deletingManifestFiles");
 
         try
         {
-            var result = await backend.UninstallAsync(snapshot, ApplyProgress);
+            var result = await uninstallWorkflow.UninstallAsync(snapshot, ApplyProgress);
             shell.OperationNote = result.Message;
-            if (RequestRefreshAsync is not null)
-            {
-                await RequestRefreshAsync.Invoke();
-            }
+            await RequestRefresh(GameOperationsRefreshMode.Normal);
         }
         catch (Exception exception)
         {
@@ -442,7 +443,7 @@ public partial class GameOperationsViewModel : ViewModelBase
 
     public async Task ResumePersistedDownloadAsync(CancellationToken cancellationToken)
     {
-        var snapshot = GetSnapshot?.Invoke();
+        var snapshot = currentSnapshot;
         if (snapshot is null || shell.IsBusy)
         {
             return;
@@ -451,7 +452,10 @@ public partial class GameOperationsViewModel : ViewModelBase
         try
         {
             shell.IsBusy = true;
-            var result = await backend.ResumePersistedAsync(snapshot, ApplyProgress, cancellationToken);
+            var result = await installationWorkflow.ResumePersistedAsync(
+                snapshot,
+                ApplyProgress,
+                cancellationToken);
             if (result is null)
             {
                 return;
@@ -459,10 +463,7 @@ public partial class GameOperationsViewModel : ViewModelBase
 
             shell.OperationNote = result.Message;
             ShowOperationResult(result);
-            if (RequestRefreshAsync is not null)
-            {
-                await RequestRefreshAsync.Invoke();
-            }
+            await RequestRefresh(GameOperationsRefreshMode.Normal);
         }
         catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
         {
@@ -481,10 +482,10 @@ public partial class GameOperationsViewModel : ViewModelBase
 
     public void StopDownload(bool clearPersistedState)
     {
-        backend.Stop(clearPersistedState);
+        installationWorkflow.Stop(clearPersistedState);
     }
 
-    public bool IsDownloadRunning => backend.IsDownloadRunning;
+    public bool IsDownloadRunning => installationWorkflow.IsRunning;
 
     private void ShowOperationResult(GameOperationResult result)
     {
@@ -492,7 +493,7 @@ public partial class GameOperationsViewModel : ViewModelBase
         {
             toastService.ShowSuccess(result.Message);
         }
-        else if (result.ErrorType == "stopped")
+        else if (result.ErrorCode == GameOperationErrorCode.Stopped)
         {
             toastService.ShowWarning(result.Message);
         }
@@ -512,7 +513,7 @@ public partial class GameOperationsViewModel : ViewModelBase
 
         if (snapshot is null)
         {
-            shell.OperationNote = localizer.T("stateNotLoaded");
+            shell.OperationNote = localizer.T("launcherStateNotLoaded");
             return false;
         }
 
@@ -521,17 +522,16 @@ public partial class GameOperationsViewModel : ViewModelBase
 
     private bool PrepareOperation()
     {
-        var snapshot = GetSnapshot?.Invoke();
+        var snapshot = currentSnapshot;
         if (!PrepareShellOnly(snapshot))
         {
             return false;
         }
 
         shell.IsBusy = true;
-        IsProgressPanelVisible = true;
-        IsInstallPanelVisible = false;
-        IsControlPanelVisible = false;
+        PanelMode = GameOperationPanelMode.Progress;
         ProgressTitle = localizer.T("preparing");
+        ProgressIconKind = ResolveProgressPresentation(GameOperationKind.Idle).IconKind;
         ProgressValue = 0;
         ProgressDetail = localizer.T("buildingFileList");
         ProgressSpeed = "";
@@ -563,35 +563,59 @@ public partial class GameOperationsViewModel : ViewModelBase
 
     private void ApplyProgressCore(GameOperationProgress progress)
     {
-        IsProgressPanelVisible = true;
-        IsInstallPanelVisible = false;
-        IsControlPanelVisible = false;
+        PanelMode = GameOperationPanelMode.Progress;
         ProgressValue = Math.Clamp(progress.Progress, 0, 100);
-        ProgressTitle = ResolveProgressTitle(progress);
+        var progressPresentation = ResolveProgressPresentation(progress.OperationKind);
+        ProgressTitle = progressPresentation.Title;
+        ProgressIconKind = progressPresentation.IconKind;
         ProgressDetail = progress.Stage switch
         {
-            "repair-confirm" => progress.AffectedFileCount > 0
+            GameOperationStage.RepairConfirmation => progress.AffectedFileCount > 0
                 ? localizer.F(
                     "repairFilesNeeded",
                     progress.AffectedFileCount,
                     FileSizeFormatter.Format(progress.DownloadedSize))
                 : localizer.T("repairNoFilesNeeded"),
-            "paused" => localizer.T("paused"),
-            "repair-check" => localizer.T("repairCheckingFiles"),
-            "update-check" => localizer.T("updateCheckingFiles"),
-            "check-file" => localizer.T("verifyingDownloadedFiles"),
-            "repair-done" => localizer.T("repairCompleted"),
-            "download-done" => localizer.T("installUpdateCompleted"),
-            "stopped" => localizer.T("operationStopped"),
-            "download" => localizer.T("downloading"),
-            _ => localizer.T("working")
+            GameOperationStage.Paused => localizer.T("paused"),
+            GameOperationStage.RepairCheck => localizer.T("repairCheckingFiles"),
+            GameOperationStage.UpdateCheck => localizer.T("updateCheckingFiles"),
+            GameOperationStage.FileCheck => localizer.T("verifyingDownloadedFiles"),
+            GameOperationStage.DiskCheck => localizer.F(
+                "diskSpaceCheck",
+                FileSizeFormatter.Format(progress.RequiredDiskBytes),
+                progress.AvailableDiskBytes.HasValue
+                    ? FileSizeFormatter.Format(progress.AvailableDiskBytes.Value)
+                    : "--"),
+            GameOperationStage.VerificationRetry => localizer.F(
+                "verificationRetry",
+                progress.FailedFileCount,
+                progress.RetryAttempt,
+                progress.RetryLimit),
+            GameOperationStage.VerificationFailed => localizer.F("verificationFailed", progress.FailedFileCount),
+            GameOperationStage.RepairCompleted => localizer.T("repairCompleted"),
+            GameOperationStage.DownloadCompleted => localizer.T("installUpdateCompleted"),
+            GameOperationStage.Stopped => localizer.T("operationStopped"),
+            GameOperationStage.Downloading => localizer.T("downloading"),
+            GameOperationStage.Uninstalling => localizer.T("uninstalling"),
+            GameOperationStage.Idle => localizer.T("working"),
+            _ => throw new ArgumentOutOfRangeException(nameof(progress), progress.Stage, null)
         };
-        ProgressSpeed = progress.Stage == "repair-confirm" || progress.Stage == "paused" ? "" : progress.Speed;
-        ProgressSize = progress.TotalSize > 0 && progress.Stage != "repair-confirm" && progress.Stage != "paused"
+        var clearsDownloadMetrics = progress.Stage is
+            GameOperationStage.RepairConfirmation or GameOperationStage.Paused
+            or GameOperationStage.DiskCheck or GameOperationStage.VerificationRetry
+            or GameOperationStage.VerificationFailed;
+        ProgressSpeed = clearsDownloadMetrics || progress.BytesPerSecond <= 0
+            ? ""
+            : $"{FileSizeFormatter.Format(progress.BytesPerSecond)}/S";
+        ProgressSize = progress.TotalSize > 0 && !clearsDownloadMetrics
             ? $"{FileSizeFormatter.Format(progress.DownloadedSize)} / {FileSizeFormatter.Format(progress.TotalSize)}"
             : "";
-        ProgressEstimated = progress.TotalSize > 0 && progress.Stage == "download" && !string.IsNullOrWhiteSpace(progress.Estimated)
-            ? localizer.F("estimatedTimeRemaining", progress.Estimated)
+        ProgressEstimated = progress.TotalSize > 0
+            && progress.Stage == GameOperationStage.Downloading
+            && progress.EstimatedRemaining.HasValue
+            ? localizer.F(
+                "estimatedTimeRemaining",
+                progress.EstimatedRemaining.Value.ToString(@"hh\:mm\:ss", System.Globalization.CultureInfo.InvariantCulture))
             : "";
         IsPaused = progress.IsPaused;
         CanPauseOperation = progress.CanPause;
@@ -599,14 +623,28 @@ public partial class GameOperationsViewModel : ViewModelBase
         PauseResumeIcon = progress.IsPaused ? "Play" : "Pause";
     }
 
-    private string ResolveProgressTitle(GameOperationProgress progress)
+    private async Task RequestRefresh(GameOperationsRefreshMode mode)
     {
-        return progress.OperationKind switch
+        if (RefreshRequested is null)
         {
-            GameOperationKinds.Repair => localizer.T("repairing"),
-            GameOperationKinds.Uninstall => localizer.T("uninstalling"),
-            GameOperationKinds.Download => localizer.T("downloading"),
-            _ => localizer.T("working")
+            return;
+        }
+
+        foreach (Func<GameOperationsRefreshMode, Task> subscriber in RefreshRequested.GetInvocationList())
+        {
+            await subscriber(mode);
+        }
+    }
+
+    private (string Title, string IconKind) ResolveProgressPresentation(GameOperationKind operationKind)
+    {
+        return operationKind switch
+        {
+            GameOperationKind.Repair => (localizer.T("repairing"), "Tools"),
+            GameOperationKind.Uninstall => (localizer.T("uninstalling"), "DeleteOutline"),
+            GameOperationKind.Download => (localizer.T("downloading"), "Download"),
+            GameOperationKind.Idle => (localizer.T("working"), "Sync"),
+            _ => throw new ArgumentOutOfRangeException(nameof(operationKind), operationKind, null)
         };
     }
 

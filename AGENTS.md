@@ -1,187 +1,32 @@
-# AGENTS.md
+# Repository Guidelines
 
-This file provides guidance to Codex (Codex.ai/code) when working with code in this repository.
+## Project Structure & Module Organization
 
-## Build & Run
+This is a .NET 10 desktop launcher built with Avalonia. Application entry points (`Program.cs`, `App.axaml`, and `App.axaml.cs`) live at the repository root. Domain data belongs in `Models/`; shared values in `Constants/`; application logic and integrations in `Services/`; presentation state in `ViewModels/`; and UI markup/code-behind in `Views/` and `Controls/`. Static images, audio, icons, and locale JSON files are under `Assets/`. Unit tests live in `tests/Cafe.Launcher.Avalonia.Tests`; headless UI tests live in `tests/Cafe.Launcher.Avalonia.HeadlessTests`. Packaging scripts are in `scripts/` and `installer/`.
 
-```powershell
-.\build.ps1                              # Debug build (expect 0 warnings, 0 errors)
-dotnet build .\Cafe.Launcher.Avalonia.csproj -c Debug --no-restore
-dotnet restore .\Cafe.Launcher.Avalonia.csproj -r win-x64
-dotnet build .\Cafe.Launcher.Avalonia.csproj -c Release --no-restore   # Release build
-dotnet publish .\Cafe.Launcher.Avalonia.csproj -c Release -o publish   # Self-contained publish (win-x64)
-```
+## Build, Test, and Development Commands
 
-**Tests** (xUnit 2.9.3, under `tests/Cafe.Launcher.Avalonia.Tests/`, with coverlet 10.0.1):
-```powershell
-dotnet test                                                    # Run all tests
-dotnet test --filter "FullyQualifiedName~VersionComparerTests" # Run a single test class
-```
+- `.\build.ps1` — restore and build the Debug configuration with telemetry disabled.
+- `dotnet run --project .\Cafe.Launcher.Avalonia.csproj` — run the launcher locally.
+- `.\test.ps1` — run both xUnit test projects.
+- `.\coverage.ps1` — run tests with Coverlet and enforce coverage thresholds.
+- `.\verify.ps1` — perform the complete Debug build, coverage, and Release build sequence.
+- `.\dev.ps1 ui` — run UI style-contract and headless UI tests after localized UI changes.
+- `.\scripts\Test-LocalizationContract.ps1` — verify keys and composite-format placeholders across all locale JSON files.
+- `dotnet test .\tests\Cafe.Launcher.Avalonia.Tests\Cafe.Launcher.Avalonia.Tests.csproj --filter "FullyQualifiedName~VersionComparerTests"` — run one test class.
 
-Available test classes include `VersionComparerTests`, `LauncherApiClientTests`, `LauncherConstantsTests`, `LauncherSettingsServiceTests`, `SettingsNormalizerTests`, `SettingsEditorTests`, `LocalizationServiceTests`, `MainWindowViewModelTests`, `DialogsViewModelTests`, `GameDownloadServiceTests`, `GameInstallationPathTests`, `LocalInstallationStateStoreTests`, `LauncherCoreServiceTests`, `InstallationOperationStateTests`, `PatchUrlGroupServiceTests`, `BestHttpCookieLibraryServiceTests`, `ResourcePanelUidServiceTests`, `ExternalLinkServiceTests`, `ResourcePanelApiClientTests`, `MigrationWizardViewModelTests`, `LevelDbReaderTests`, `OldLauncherDetectionServiceTests`, `LauncherUpdateServiceTests`, `HttpClientFactoryTests`, `ToastServiceTests`, `UiStyleContractTests`, `VideoWallpaperSettingsTests`, and `VideoWallpaperEngineSmokeTests`.
+## Coding Style & Naming Conventions
 
-CI is GitHub Actions on `windows-latest`, .NET 10.0.x:
-- **build.yml** (push/PR to `main`): restore, Debug build, test, Release build, self-contained publish, upload artifact.
-- **release.yml** (push of `v*` tag): test, Release build, publish, ZIP archive, generate the grouped changelog through `scripts/New-ReleaseChangelog.ps1`, then create matching GitHub Releases in both the source repository and the distribution repository (`bluearchive-cafe/Cafe.Launcher.Avalonia_Release`, defined as `GitHubReleaseRepositorySlug` in constants). The local release script uses the same changelog generator. The distribution repository uses the `RELEASE_REPOSITORY_TOKEN` Actions secret. Pre-release if tag contains `-`.
+Follow `.editorconfig`: C# uses UTF-8, CRLF, four-space indentation, file-scoped namespaces, braces, and explicit types unless the type is apparent. Other repository text files use LF. Nullable reference types, compiled bindings, code-style enforcement, and warnings-as-errors are enabled. Use PascalCase for types and public members, camelCase for locals and parameters, and the existing `IService`/`Service` pairing for abstractions. Keep XAML values on the design tokens defined in `App.axaml`; do not introduce raw colors or spacing values in views.
 
-**Telemetry must be off during local builds** (already set in `build.ps1`):
-- `DOTNET_CLI_TELEMETRY_OPTOUT=1`
-- `AVALONIA_TELEMETRY_OPTOUT=1`
+## Localization & Configuration
 
-## Architecture
+Add every UI string to all four files in `Assets/Locales/` and wire the exact key through `LocalizedStrings`. Preserve documented JSON keys and wire-contract property order. Never infer identifier spelling, casing, paths, or payload structure; inspect the defining code, tests, logs, or captured data first.
 
-**Tech stack**: .NET 10.0, Avalonia 12.0.4, CommunityToolkit.Mvvm 8.4.2 (source generators), Material.Icons.Avalonia, Fluent Theme, LibVLCSharp 3.9.4 + VideoLAN.LibVLC.Windows 3.0.21 (video wallpaper). Compiled bindings enabled by default. `AllowUnsafeBlocks` is enabled (used only in `VideoWallpaperEngine` for frame-buffer copy). The native libvlc binaries are included in the self-contained win-x64 publish output, adding approximately 40 MB to the package size.
+## Testing Guidelines
 
-**MVVM pattern** with explicit XAML composition. `ViewModelBase` extends `ObservableObject`; the app does not use a reflection-based `ViewLocator`.
+Tests use xUnit v3; UI tests use `Avalonia.Headless.XUnit`. Name tests `Method_State_ExpectedResult`. Add focused regression tests for behavior changes and run `UiStyleContractTests` after XAML/style edits. Run `.\scripts\Test-LocalizationContract.ps1` after modifying any `Assets/Locales/*.json`; run `.\dev.ps1 ui` after XAML or style changes. Before merging or releasing, still run `.\verify.ps1`. Line and branch coverage must each remain at or above 50%.
 
-### Single-window desktop app
+## Commit & Pull Request Guidelines
 
-One `MainWindow` (1300×754, non-resizable, borderless with custom chrome). The ViewModel drives panel visibility through boolean flags (`IsInstallPanelVisible`, `IsControlPanelVisible`, `IsProgressPanelVisible`, `IsSettingsVisible`).
-
-**View files** (XAML split by concern, all under `Views/`):
-- `MainWindow.axaml` — window shell, title bar, remote content panel, bottom install/progress/control panels
-- `MainWindow.Styles.axaml` — all `Window.Styles` extracted via `<StyleInclude Source="avares://..."/>`
-- `MainWindowSettingsOverlay.axaml` — settings dialog overlay
-- `MainWindowDialogsOverlay.axaml` — notice popup, repair/uninstall confirmation dialogs
-- `MainWindowToastOverlay.axaml` — toast notification overlay
-
-**Entries:**
-1. **Program.cs** — Process mutex (`Local\Cafe_Launcher_SI`), single-instance enforcement via `EventWaitHandle` signal. Creates `UnifiedLogger` + `CrashRecoveryService` before DI is available; exposes the logger via `PreDiLogger` so the DI container reuses the same instance. Tracks `PreviousSessionCrashed` via a `session.active` marker file. `RunSession` orchestrates session lifecycle with proper crash-marker preservation.
-2. **App.axaml.cs** — On framework init: calls `LibVLCSharp.Shared.Core.Initialize()` (video wallpaper runtime), builds DI container via `ServiceConfiguration.AddLauncherServices()`, resolves `MainWindowViewModel`, creates `MainWindow`, wires `ClickCodeService`, `SystemTrayService`. Starts a background thread listening for `EventWaitHandle` signals to restore window from tray.
-3. **App.axaml** — Light/Dark `ThemeDictionaries` with custom `Launcher*` brushes, FluentTheme + MaterialIconStyles.
-
-**Composition root**: `ServiceConfiguration.AddLauncherServices()` is the DI configuration — it registers all services with `Microsoft.Extensions.DependencyInjection`. The container is built in `App.axaml.cs` via `ServiceCollection.BuildServiceProvider()`. All services are registered as `AddSingleton`; ViewModels are a mix of singleton (shared state: `SettingsViewModel`, `ShellViewModel`, `RemoteContentViewModel`, `DialogsViewModel`, `GameOperationsViewModel`) and transient (fresh per resolution). Thread-safe disposal order for IDisposable services is defined by reverse registration order.
-
-**View code-behind** (`MainWindow.axaml.cs`): handles native folder-picker dialog (via `StorageProvider`), window drag-to-move (borderless chrome), and close-behavior routing (minimize-to-tray vs exit). The ViewModel receives `PickGameFolderAsync`, `MinimizeWindow`, and `CloseWindow` delegates via `ConfigureViewModel()`.
-
-### Core data flow
-
-`LauncherCoreService.LoadAsync()` is the central orchestrator:
-1. Reads local `settings.json` via `LauncherSettingsService`
-2. Fires 6 parallel API calls via `LauncherApiClient` (game config, base config, CDN config — plus 3 optional: operations, social media, installation config)
-3. Reads local `game-launcher-config.json` + `manifest.json` via `LocalInstallationStateStore`
-4. Computes one `LauncherRuntimeState` value from local classification and remote version comparison
-5. Returns a single `LauncherStatusSnapshot` consumed by the ViewModel
-
-### Services (all in `Services/`)
-
-| Service | Role |
-|---|---|
-| `LauncherApiClient` | HTTP to `api-launcher-jp.yo-star.com`, MD5-signed `Authorization` header, envelope unwrapping |
-| `LauncherCoreService` | Orchestrates API + local state into `LauncherStatusSnapshot`. Exposed as `ILauncherCoreService` in the DI container. |
-| `LauncherSettingsService` | Reads/writes `settings.json` at `%LOCALAPPDATA%\Cafe Launcher\`, normalizes enum values, handles legacy camelCase fields |
-| `GameInstallationPath` | Computes the default game path and normalizes paths to `YostarGames\BlueArchive_JP` |
-| `LocalInstallationStateStore` | Strictly reads, validates, commits, and deletes local `game-launcher-config.json` + `manifest.json` as one installation state |
-| `GameDownloadService` | Install/update/repair: manifest diff → parallel CDN download (10 concurrent, `.tmp` files, `Range` resume, CRC64 verify, rename on success). Supports download speed throttling, async pause/resume via `TaskCompletionSource`. Implements `IDisposable` — thread-safe CTS management via `activeDownloadLock`. |
-| `GameLaunchService` | Manifest validation + process launch |
-| `GameUninstallService` | Guarded uninstall (checks path safety, exe not running, deletes only manifest-listed files) |
-| `LocalizationService` | Inline dictionaries for `en`/`zh-Hans`/`ja`; `auto` resolves via `CultureInfo.CurrentUICulture` |
-| `SystemTrayService` | Avalonia 12 `TrayIcon` + `NativeMenu` for minimize-to-tray |
-| `ToastService` | Event-based transient notifications (info/success/warning/error) |
-| `LocalDiagnostics` | Public facade over `UnifiedLogger`; wraps `LogAsync` as `ErrorAsync`/`MessageAsync`/`LogSync`. All logs go to `unified.log` via the shared `UnifiedLogger` instance. |
-| `PatchUrlGroupService` | URL rewriting between Official and Cafe CDN hosts for manifest + CDN config URLs |
-| `NoticeStateService` | Tracks which notice IDs have been shown (persisted to `shown_notices.json`) |
-| `LauncherUpdateService` | Checks stable and beta launcher releases through the server proxy endpoint and returns every validated release file in API order |
-| `Crc64Service` | CRC64 hash computation for downloaded file verification |
-| `OfficialHashService` | Official launcher hash algorithm for local file integrity checks |
-| `ProxySettingsService` | Creates proxy-aware `SocketsHttpHandler` instances for `HttpClientFactory` |
-| `DiskSpaceService` | Checks available disk space before download/install |
-| `ProcessService` | Checks if game processes are running via `Process.GetProcessesByName` |
-| `VersionComparer` | Static utility — semantic version comparison: returns -1/0/1 for old/equal/new |
-| `ClickCodeService` | Saves install attribution code (`clickCode`) on first launch |
-| `ImageCacheService` | Caches downloaded images (banners, avatars). Implements `IDisposable`. |
-| `ExternalLinkService` | Static utility — opens external URLs in the default browser (http/https/mailto only) |
-| `ManifestValidationService` | Validates local game files against manifest |
-| `ResourcePanelApiClient` | HTTP client for resource panel data. Implements `IDisposable`. |
-| `ResourcePanelUidService` | Manages resource panel UID state |
-| `BestHttpCookieLibraryService` | Cookie handling for HTTP requests |
-| `GamePathValidator` | Static utility — validates file operations stay within the game directory |
-| `ThemeColorExtractionService` | Extracts dominant colors from wallpaper images for UI theming |
-| `VideoWallpaperEngine` / `IVideoWallpaperEngine` | LibVLCSharp memory-rendering engine: decodes video frames into a double-buffered `WriteableBitmap`, raises `FrameReady` on the UI thread. `NullVideoWallpaperEngine` is the no-op fallback when libvlc is unavailable. `VideoWallpaperEngineFactory` selects the real engine or the fallback. Not DI-registered; `BackgroundViewModel` creates and disposes instances per playback lifecycle. |
-
-### Key models (`Models/`)
-
-- `LauncherApiContracts.cs` — All API response DTOs
-- `LauncherStateModels.cs` — String constants for modes/behaviors (`LaunchCheckModes`, `ProxyModes`, `CloseBehaviors`, `LauncherLanguages`, `ThemeModes`, `DownloadSpeedLimits`, `PatchUrlGroups`, `BackgroundSources` (includes `video`)), plus runtime state objects (`LauncherStatusSnapshot`, `LauncherRemoteState`, `LauncherRuntimeState`, `LauncherSettings`, `GameOperationProgress`, `GameOperationResult`), and option types (`SettingOption`, `LanguageOption`, `ThemeOption`) for localized dropdown binding
-- `LocalInstallationStateModels.cs` — Local installation classifications, immutable state snapshots, and commit input records
-- `LocalGameContracts.cs` — `LocalManifest`, `RemoteManifest`, `ManifestFile`, `GameLauncherConfig`
-- `PatchUrlGroupDefinition.cs` — Code + host-from/to tuples for CDN URL rewriting
-- `DownloadTaskState.cs` — Serializable download resume state
-- `BannerDot.cs` — Observable carousel dot indicator
-- `LauncherReleaseResponse.cs` — Launcher release data returned by the server proxy: version, release date, and file entries containing name, URL, SHA-512, size, and formatted display size. The update dialog requires explicit file selection.
-
-### Constants
-
-Constants are split across `LauncherConstants`, `ApiConfig`, `BuildInfo`, and `GamePaths`. Launcher self-update requests use the exact `ApiConfig.LauncherApiBaseUrl` and `ApiConfig.LauncherReleasesPath` values. `BuildInfo.LauncherVersion` reads `AssemblyInformationalVersionAttribute` and must match the `.csproj` `VersionPrefix`.
-
-### Video wallpaper settings
-
-Three new `settings.json` fields support the video wallpaper source (`backgroundSource` = `"video"`):
-
-| Setting | JSON key | Valid values |
-|---|---|---|
-| Video background path | `videoBackgroundPath` | Absolute file path (mp4/webm/mkv/mov); empty string if unset |
-| Video muted | `videoBackgroundMuted` | `true`/`false` (default `true`) |
-| Video volume | `videoBackgroundVolume` | Integer 0–100 (default `50`; clamped by `SettingsNormalizer`) |
-
-`BackgroundViewModel` drives playback; `MainWindow.axaml.cs` calls `SetPlaybackActive(bool)` based on `IsVisible`/`WindowState` to pause when the window is hidden or minimized.
-
-### Patch URL groups
-
-Users can switch between `Official` (yo-star.com) and `Cafe` (bluearchive.cafe) CDN hosts for downloading game files. The `PatchUrlGroupService` defines host-rewrite rules, and `LauncherApiClient.RewriteManifestUrl()` / `GameDownloadService.BuildDownloadUrl()` apply them when constructing download URLs. The setting is persisted as `patchUrlGroup` in `settings.json`. A sentinel test ensures URL rewriting scope is strictly limited to package download hosts — no status/list, serverinfo, or SDK netloc endpoints are touched.
-
-### Converters
-
-`UrlToBitmapConverter` (`Converters/`) — converts image URLs to `Bitmap?` for XAML binding, used for remote banner/avatar images.
-
-### Other directories
-
-- `Constants/` — `LauncherConstants`, `ApiConfig`, `BuildInfo`, and `GamePaths`
-- `Helpers/` — `FileSizeFormatter`, `GamePathValidator`
-- `Services/Auth/` — `AuthorizationHeaderFactory` (MD5-signed API auth header)
-- `Services/Diagnostics/` — `UnifiedLogger` (Serilog-backed engine with async sink, enrichers, LoggingLevelSwitch), `LocalDiagnostics` (facade), `LogExportService`, `CrashRecoveryService`. All diagnostics and crash logs go to a single `unified.log`.
-- `Services/VideoWallpaper/` — `IVideoWallpaperEngine` (interface: `IImage?` frame type, `FrameReady` event on the UI thread), `VideoWallpaperEngine` (LibVLCSharp memory-rendering — no VideoView/native HWND; overlays compose normally), `NullVideoWallpaperEngine` (no-op fallback when libvlc is unavailable), `VideoWallpaperEngineFactory` (selects real or fallback engine). Engines are not DI-registered; `BackgroundViewModel` holds and disposes them per playback lifecycle.
-
-### Localization
-
-All UI strings go through `LocalizationService.T(key)` and `LocalizationService.F(key, args)` for formatted strings. `LocalizedStrings` (generated by CommunityToolkit source generators) exposes individual `[ObservableProperty]` properties for XAML binding: `{Binding I18n.Settings}`, etc.
-
-**Adding localized strings:**
-1. Add the key to all 3 language dictionaries (`en`, `zh-Hans`, `ja`)
-2. Add an `[ObservableProperty]` field to `LocalizedStrings`
-3. Wire it in `LocalizedStrings.Apply()`
-
-**Localized dropdown values** follow the same pattern as `ThemeOption`: create `SettingOption` instances with `Code` (the persisted value) and `DisplayName` (set from `localizer.T()` in a `Refresh*Options()` method called from `ApplyLanguage()`). Bind the ComboBox with `SelectedValue="{Binding SelectedX}"` + `SelectedValueBinding="{Binding Code}"` + an `ItemTemplate` showing `{Binding DisplayName}`.
-
-### Theme
-
-Light/Dark themes defined as `ThemeDictionaries` in `App.axaml` with custom `Launcher*` brush keys. `ThemeModes.System` → `ThemeVariant.Default` (follows OS), `Light`/`Dark` → explicit. Applied via `Application.Current.RequestedThemeVariant`.
-
-### Design Tokens
-
-Numeric design tokens are defined as `StaticResource` keys in `App.axaml`. See CLAUDE.md § Design Tokens for the full reference table. Key values:
-
-- **Spacing**: 4px grid — `LauncherSpacingXs`(4) through `LauncherSpacingXxl`(24) + `LauncherSpacingSection`(40)
-- **Corner radius**: `LauncherRadiusSm`(4) for controls, `LauncherRadiusMd`(6) for panels, `LauncherRadiusLg`(8) for dialogs
-- **Icons**: `LauncherIconSm`(16), `LauncherIconMd`(18), `LauncherIconLg`(20), `LauncherIconXl`(22), `LauncherIconXxl`(24)
-- **Control heights**: `LauncherControlHeightSetting`(36), `LauncherControlHeightDialog`(42), `LauncherControlHeightBottom`(48), `LauncherControlHeightLaunch`(58)
-- **Z-index**: base content → settings overlay (100) → dialog overlay (200) → toast (`LauncherConstants.ZIndexToast`, 1000)
-- **Visual value rules**: view XAML uses semantic brushes and tokenized icon/radius values. Direct colors, `Transparent`, raw icon sizes, and raw 4/6/8 corner radii are forbidden outside `App.axaml` and `MainWindow.Styles.axaml`. Theme-invariant wallpaper gradients and the three shadows remain centralized in those resource/style files.
-
-### Single-instance pattern
-
-`Program.cs` uses a named global `Mutex`. Second instances signal the first via `EventWaitHandle`, which triggers `Dispatcher.UIThread.InvokeAsync` to restore the window from tray/minimized state. Windows-only (`EventWaitHandle` is not supported on Linux — see commit `19db5a3`).
-
-### API auth
-
-`AuthorizationHeaderFactory` builds a JSON header with `{head: {game_tag, time, version}, sign: MD5(headJson + data + salt)}`. Salt is in `LauncherConstants.AuthorizationSalt`.
-
-## Important patterns
-
-- **No remote telemetry**: The original Electron launcher sent logs to Aliyun SLS. This rewrite explicitly excludes those paths (`/api/launcher/advanced/config`, `/api/open/api/config`). Always keep diagnostics local.
-- **Path safety**: `GameDownloadService.GetSafePath()` validates that all file operations stay within the game directory — path traversal is rejected.
-- **Download resilience**: CRC64 verification after download, rename `.tmp` → final only on success, up to 3 install-verification retries, CDN failover (primary → backup with retry order).
-- **Async pause**: `GameDownloadService` uses `TaskCompletionSource`-based pause (never blocks threads). `Pause()` creates a pending `TaskCompletionSource`, download loops `await` it, `Resume()` completes it. `Stop()` also completes the TCS to unblock paused awaits before cancellation.
-- **Spacing**: UI spacing follows a 4px grid (0, 4, 8, 12, 16, 20, 24, …). Left panel margin and bottom panel horizontal padding are both 40px for visual symmetry.
-- **Version comparison**: `VersionComparer.Compare()` returns -1/0/1 for old/equal/new.
-- **XAML extraction**: Large XAML blocks (styles, overlays) are extracted into separate `.axaml` files under `Views/` and referenced via `<StyleInclude>` or `Classes` attributes. The main `MainWindow.axaml` keeps only the window shell and content grid.
+Use Conventional Commits, matching history: `feat(setup): ...`, `fix: ...`, `refactor: ...`, `perf: ...`, or `docs: ...`. Keep each commit focused. Pull requests must explain the change and motivation, link related issues, list verification commands, and include screenshots for visible UI changes. Confirm `verify.ps1` succeeds before requesting review.

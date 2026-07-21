@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Net;
 using System.Net.Http;
+using System.Text.RegularExpressions;
 using System.Threading;
 using System.Threading.Tasks;
 using Cafe.Launcher.Avalonia.Models;
@@ -26,9 +27,14 @@ public sealed class ProxySettingsService
 
     public Task<IWebProxy?> CreateProxyAsync(string proxyMode, CancellationToken cancellationToken = default)
     {
-        if (proxyMode != ProxyModes.System)
+        if (proxyMode == ProxyModes.Direct)
         {
             return Task.FromResult<IWebProxy?>(null);
+        }
+
+        if (proxyMode == ProxyModes.Auto)
+        {
+            return Task.FromResult<IWebProxy?>(WebRequest.GetSystemWebProxy());
         }
 
         var settings = systemProxySettingsProvider();
@@ -39,8 +45,44 @@ public sealed class ProxySettingsService
 
         return Task.FromResult<IWebProxy?>(new WebProxy(settings.ProxyUrl)
         {
-            BypassList = settings.NoProxy.ToArray()
+            BypassProxyOnLocal = settings.NoProxy.Any(IsLocalBypassToken),
+            BypassList = BuildBypassRegexList(settings.NoProxy)
         });
+    }
+
+    private static bool IsLocalBypassToken(string entry) =>
+        string.Equals(entry.Trim(), "<local>", StringComparison.OrdinalIgnoreCase);
+
+    internal static string[] BuildBypassRegexList(IEnumerable<string> entries) =>
+        entries
+            .Select(ConvertBypassEntryToRegex)
+            .Where(pattern => pattern is not null)
+            .Select(pattern => pattern!)
+            .ToArray();
+
+    internal static string? ConvertBypassEntryToRegex(string entry)
+    {
+        var trimmed = entry.Trim();
+        if (trimmed.Length == 0)
+        {
+            return null;
+        }
+
+        // Bracketed tokens such as <local> or <-loopback> are not host patterns: <local> is
+        // mapped to BypassProxyOnLocal by the caller, and any others are ignored.
+        if (trimmed.StartsWith('<') && trimmed.EndsWith('>'))
+        {
+            return null;
+        }
+
+        // Windows ProxyOverride / NO_PROXY entries use shell-style wildcards (e.g. "*.zhihu.com",
+        // "192.168.*"), but WebProxy.BypassList compiles each entry as a .NET regex. Passing a raw
+        // wildcard like "*zhihu.com" throws RegexParseException ("Quantifier '*' following nothing")
+        // the first time the proxy is used, which breaks every proxied request. Escape regex
+        // metacharacters, then translate the two shell wildcards.
+        return Regex.Escape(trimmed)
+            .Replace("\\*", ".*", StringComparison.Ordinal)
+            .Replace("\\?", ".", StringComparison.Ordinal);
     }
 
     public async Task<SocketsHttpHandler> CreateHttpHandlerAsync(
@@ -51,8 +93,9 @@ public sealed class ProxySettingsService
         return new SocketsHttpHandler
         {
             AllowAutoRedirect = false,
-            UseProxy = proxyMode == ProxyModes.System,
+            UseProxy = proxyMode != ProxyModes.Direct,
             Proxy = proxy,
+            AutomaticDecompression = DecompressionMethods.All,
             PooledConnectionLifetime = TimeSpan.FromMinutes(15)
         };
     }

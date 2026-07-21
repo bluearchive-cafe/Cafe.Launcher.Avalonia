@@ -1,4 +1,6 @@
 using Cafe.Launcher.Avalonia.Models;
+using Cafe.Launcher.Avalonia.Features.Shell;
+using Cafe.Launcher.Avalonia.Features.GameOperations;
 using Cafe.Launcher.Avalonia.Services;
 using Cafe.Launcher.Avalonia.Services.Auth;
 using Cafe.Launcher.Avalonia.Services.Diagnostics;
@@ -67,6 +69,31 @@ public sealed class MainWindowViewModelTests : IDisposable
     }
 
     [Fact]
+    public async Task SetupWizardLanguage_WhenChanged_AppliesLanguageImmediately()
+    {
+        var coreService = new CountingCoreService(CreateSnapshot());
+        using var viewModel = await CreateViewModelAsync(coreService);
+        viewModel.Dialogs.ShowSetupWizard();
+
+        viewModel.Dialogs.SetupWizard.Language = LauncherLanguages.Japanese;
+
+        Assert.Equal("言語", viewModel.Shell.I18n.SetupWizardLanguage);
+        Assert.Equal("言語", viewModel.Dialogs.SetupWizard.Steps[0].Title);
+    }
+
+    [Fact]
+    public async Task SetupWizardLanguage_WhenWizardIsHidden_DoesNotPreviewLanguage()
+    {
+        var coreService = new CountingCoreService(CreateSnapshot());
+        using var viewModel = await CreateViewModelAsync(coreService);
+        var originalTitle = viewModel.Shell.I18n.SetupWizardLanguage;
+
+        viewModel.Dialogs.SetupWizard.Language = LauncherLanguages.Japanese;
+
+        Assert.Equal(originalTitle, viewModel.Shell.I18n.SetupWizardLanguage);
+    }
+
+    [Fact]
     public async Task InitializeAsync_WhenCalledTwice_LoadsLauncherStateOnce()
     {
         var coreService = new CountingCoreService(CreateSnapshot());
@@ -79,6 +106,24 @@ public sealed class MainWindowViewModelTests : IDisposable
     }
 
     [Fact]
+    public async Task HandleOperationsRefreshRequestedAsync_ConsumesSkipPersistedResumeOnce()
+    {
+        var coreService = new CountingCoreService(CreateSnapshot());
+        var backend = new CountingGameOperationsBackend();
+        using var viewModel = await CreateViewModelAsync(coreService, gameOperationsBackend: backend);
+
+        await viewModel.HandleOperationsRefreshRequestedAsync(GameOperationsRefreshMode.Normal);
+        Assert.Equal(1, backend.ResumeInvocationCount);
+
+        await viewModel.HandleOperationsRefreshRequestedAsync(GameOperationsRefreshMode.SkipPersistedResume);
+        Assert.Equal(1, backend.ResumeInvocationCount);
+
+        await viewModel.HandleOperationsRefreshRequestedAsync(GameOperationsRefreshMode.Normal);
+        Assert.Equal(2, backend.ResumeInvocationCount);
+        Assert.Equal(3, coreService.LoadCount);
+    }
+
+    [Fact]
     public async Task ShellSetLoading_UsesPureLoadingValuesForStatusDetails()
     {
         var coreService = new CountingCoreService(CreateSnapshot());
@@ -86,7 +131,7 @@ public sealed class MainWindowViewModelTests : IDisposable
 
         viewModel.Shell.SetLoading();
 
-        Assert.Equal("HelpCircleOutline", viewModel.Shell.StatusIconKind);
+        Assert.Equal("Sync", viewModel.Shell.StatusIconKind);
         Assert.Equal(viewModel.Shell.ExecutableNameText, viewModel.Shell.NetworkStatusValueText);
         Assert.Equal(viewModel.Shell.ExecutableNameText, viewModel.Shell.LaunchCheckValueText);
         Assert.DoesNotContain(':', viewModel.Shell.ExecutableNameText);
@@ -116,7 +161,7 @@ public sealed class MainWindowViewModelTests : IDisposable
 
         await viewModel.InitializeAsync();
 
-        Assert.Equal("HelpCircleOutline", viewModel.Shell.StatusIconKind);
+        Assert.Equal("DownloadOutline", viewModel.Shell.StatusIconKind);
         Assert.Equal("BlueArchive.exe", viewModel.Shell.ExecutableNameText);
         Assert.Equal(viewModel.Shell.I18n.StatusNetworkLoaded, viewModel.Shell.NetworkStatusValueText);
         Assert.Equal(
@@ -268,22 +313,53 @@ public sealed class MainWindowViewModelTests : IDisposable
         Assert.Equal(viewModel.Shell.I18n.Refresh, viewModel.Operations.InstallButtonText);
     }
 
+    public static IEnumerable<object[]> RuntimeStatusCases
+    {
+        get
+        {
+            yield return [LauncherRuntimeState.NotInstalled, "gameNotInstalled", "choosePathInstall", "DownloadOutline"];
+            yield return [LauncherRuntimeState.Corrupted, "gameCorruptedInstallationState", "gameCorruptedInstallationState", "Alert"];
+            yield return [LauncherRuntimeState.IoFailure, "gameInstallationStateReadFailed", "gameInstallationStateReadFailed", "Alert"];
+            yield return [LauncherRuntimeState.RemoteUnavailable, "gameRemoteStateUnavailable", "gameRemoteStateUnavailable", "Alert"];
+            yield return [LauncherRuntimeState.BelowLowestVersion, "updateRequired", "gameBelowLowestVersion", "Alert"];
+            yield return [LauncherRuntimeState.UpdateAvailable, "updateAvailable", "updateAvailable", "Update"];
+            yield return [LauncherRuntimeState.Ready, "ready", "operationTelemetryLocal", "CheckCircleOutline"];
+        }
+    }
+
     [Theory]
-    [InlineData(LauncherRuntimeState.NotInstalled, "HelpCircleOutline")]
-    [InlineData(LauncherRuntimeState.Corrupted, "Alert")]
-    [InlineData(LauncherRuntimeState.IoFailure, "Alert")]
-    [InlineData(LauncherRuntimeState.RemoteUnavailable, "Alert")]
-    [InlineData(LauncherRuntimeState.BelowLowestVersion, "Alert")]
-    [InlineData(LauncherRuntimeState.UpdateAvailable, "AlertCircle")]
-    [InlineData(LauncherRuntimeState.Ready, "CheckAll")]
-    public void ResolveStatusIconKind_MapsLauncherState(
+    [MemberData(nameof(RuntimeStatusCases))]
+    public async Task InitializeAsync_ForEveryRuntimeState_ResolvesCompleteLocalizedStatusPresentation(
         LauncherRuntimeState runtimeState,
-        string expectedIcon)
+        string expectedStatusKey,
+        string expectedOperationNoteKey,
+        string expectedIconKind)
     {
         var snapshot = CreateSnapshot();
         snapshot.RuntimeState = runtimeState;
+        using var viewModel = await CreateViewModelAsync(new CountingCoreService(snapshot));
+        var expectedLocalization = new LocalizationService();
+        expectedLocalization.SetLanguage(snapshot.Settings.Language);
 
-        Assert.Equal(expectedIcon, ShellViewModel.ResolveStatusIconKind(snapshot));
+        await viewModel.InitializeAsync();
+
+        Assert.Equal(expectedLocalization.T(expectedStatusKey), viewModel.Shell.StatusText);
+        Assert.Equal(expectedLocalization.T(expectedOperationNoteKey), viewModel.Shell.OperationNote);
+        Assert.Equal(expectedIconKind, viewModel.Shell.StatusIconKind);
+        Assert.False(string.IsNullOrWhiteSpace(viewModel.Shell.StatusText));
+        Assert.False(string.IsNullOrWhiteSpace(viewModel.Shell.OperationNote));
+        Assert.NotEqual(expectedStatusKey, viewModel.Shell.StatusText);
+        Assert.NotEqual(expectedOperationNoteKey, viewModel.Shell.OperationNote);
+    }
+
+    [Fact]
+    public void RuntimeStatusCases_ExplicitlyCoverEveryLauncherRuntimeState()
+    {
+        var expectedStates = RuntimeStatusCases
+            .Select(testCase => Assert.IsType<LauncherRuntimeState>(testCase[0]))
+            .ToArray();
+
+        Assert.Equal(Enum.GetValues<LauncherRuntimeState>(), expectedStates);
     }
 
     [Fact]
@@ -381,8 +457,8 @@ public sealed class MainWindowViewModelTests : IDisposable
 
         ApplyProgress(viewModel, new GameOperationProgress
         {
-            OperationKind = GameOperationKinds.Uninstall,
-            Stage = "uninstall",
+            OperationKind = GameOperationKind.Uninstall,
+            Stage = GameOperationStage.Uninstalling,
             Progress = 50,
             CanPause = false
         });
@@ -398,8 +474,8 @@ public sealed class MainWindowViewModelTests : IDisposable
 
         ApplyProgress(viewModel, new GameOperationProgress
         {
-            OperationKind = GameOperationKinds.Download,
-            Stage = "download",
+            OperationKind = GameOperationKind.Download,
+            Stage = GameOperationStage.Downloading,
             Progress = 50,
             CanPause = true
         });
@@ -442,6 +518,41 @@ public sealed class MainWindowViewModelTests : IDisposable
     }
 
     [Fact]
+    public async Task SaveSettingsAsync_WhenPatchUrlGroupChangesDuringUpdateAvailable_ShowsRepairPrompt()
+    {
+        var snapshot = CreateSnapshot();
+        snapshot.RuntimeState = LauncherRuntimeState.UpdateAvailable;
+        snapshot.Settings.PatchUrlGroup = PatchUrlGroups.Official;
+        snapshot.LocalGame = new LocalInstallationState
+        {
+            Kind = LocalInstallationStateKind.Valid,
+            GamePath = snapshot.LocalGame.GamePath,
+            GameConfig = new GameLauncherConfig
+            {
+                Name = "BlueArchive",
+                Version = "1.0.0"
+            }
+        };
+        var settingsPath = Path.Combine(tempDir, Guid.NewGuid().ToString("N"), "settings.json");
+        var settingsService = new LauncherSettingsService(settingsPath);
+        await settingsService.SaveAsync(new LauncherSettings
+        {
+            GamePath = snapshot.Settings.GamePath,
+            PatchUrlGroup = PatchUrlGroups.Official
+        });
+        using var viewModel = await CreateViewModelAsync(
+            new CountingCoreService(snapshot),
+            settingsService);
+        await viewModel.InitializeAsync();
+
+        viewModel.Settings.Editor.Current.PatchUrlGroup = PatchUrlGroups.Cafe;
+        await SaveSettingsAsync(viewModel);
+
+        Assert.True(viewModel.Dialogs.IsRepairConfirmVisible);
+        Assert.False(string.IsNullOrWhiteSpace(viewModel.Dialogs.RepairConfirmText));
+    }
+
+    [Fact]
     public async Task ChooseGamePathAsync_UpdatesEditorWithoutPersistingUntilSave()
     {
         var pickedPath = Path.Combine(tempDir, "installed-game");
@@ -471,6 +582,39 @@ public sealed class MainWindowViewModelTests : IDisposable
         Assert.False(viewModel.Settings.IsSettingsDirty);
         Assert.True(viewModel.WindowChrome.IsSettingsVisible);
         Assert.Equal(expectedPath, (await settingsService.ReadAsync()).GamePath);
+    }
+
+    [Fact]
+    public async Task SelectInstalledGameAsync_PersistsOnlyGamePathAndRefreshesShell()
+    {
+        var originalPath = Path.Combine(tempDir, "original", "YostarGames", "BlueArchive_JP");
+        var selectedRoot = Path.Combine(tempDir, "selected");
+        Directory.CreateDirectory(selectedRoot);
+        var expectedPath = Path.Combine(selectedRoot, "YostarGames", "BlueArchive_JP");
+        var settingsPath = Path.Combine(tempDir, Guid.NewGuid().ToString("N"), "settings.json");
+        var settingsService = new LauncherSettingsService(settingsPath);
+        await settingsService.SaveAsync(new LauncherSettings
+        {
+            GamePath = originalPath,
+            ThemeMode = ThemeModes.Light
+        });
+        var snapshot = CreateSnapshot();
+        snapshot.Settings.GamePath = originalPath;
+        snapshot.Settings.ThemeMode = ThemeModes.Light;
+        snapshot.LocalGame = CopyLocalGameWithPath(snapshot.LocalGame, originalPath);
+        var coreService = new SettingsBackedCoreService(settingsService, snapshot);
+        using var viewModel = await CreateViewModelAsync(coreService, settingsService);
+        await viewModel.InitializeAsync();
+        viewModel.Settings.Editor.Current.ThemeMode = ThemeModes.Dark;
+        viewModel.Settings.PickGameFolderAsync = _ => Task.FromResult<string?>(selectedRoot);
+
+        await viewModel.Settings.SelectInstalledGameCommand.ExecuteAsync(null);
+
+        var persisted = await settingsService.ReadAsync();
+        Assert.Equal(expectedPath, persisted.GamePath);
+        Assert.Equal(ThemeModes.Light, persisted.ThemeMode);
+        Assert.Equal(expectedPath, viewModel.Shell.PathText);
+        Assert.Equal(expectedPath, viewModel.Settings.Editor.Current.GamePath);
     }
 
     [Fact]
@@ -675,7 +819,8 @@ public sealed class MainWindowViewModelTests : IDisposable
         var appearance = new SettingsAppearanceViewModel(editor);
         var dialogs = new DialogsViewModel(
             localizer,
-            new NoticeStateService(Path.Combine(tempDir, "save-failure-notices.json")));
+            new NoticeStateService(Path.Combine(tempDir, "save-failure-notices.json")),
+            new SetupWizardViewModel(localizer, new GameInstallationPath(), new LocalInstallationStateStore(), new LocalDiagnostics()));
         using var testLogger = new UnifiedLogger(tempDir);
         using var settings = new SettingsViewModel(
             settingsService,
@@ -796,6 +941,28 @@ public sealed class MainWindowViewModelTests : IDisposable
     }
 
     [Fact]
+    public void NormalizeAccentColorForUi_WhenColorIsPaleAndLowSaturation_IncreasesContrast()
+    {
+        var source = Color.FromRgb(0xC9, 0xCD, 0xD8);
+
+        var normalized = SettingsAppearanceViewModel.NormalizeAccentColorForUi(source);
+
+        Assert.NotEqual(source, normalized);
+        Assert.True(GetPerceivedSaturation(normalized) >= 0.22d);
+        Assert.True(GetRelativeLuminance(normalized) < GetRelativeLuminance(source));
+    }
+
+    [Fact]
+    public void NormalizeAccentColorForUi_WhenColorAlreadyHasStrongContrast_KeepsOriginalColor()
+    {
+        var source = Color.FromRgb(0x20, 0x50, 0xD8);
+
+        var normalized = SettingsAppearanceViewModel.NormalizeAccentColorForUi(source);
+
+        Assert.Equal(source, normalized);
+    }
+
+    [Fact]
     public async Task SelectedThemeColorPaletteIndex_WhenSettingsVisible_MarksSettingsDirtyAndUpdatesSelection()
     {
         var coreService = new CountingCoreService(CreateSnapshot());
@@ -894,20 +1061,20 @@ public sealed class MainWindowViewModelTests : IDisposable
     public async Task OpenResourcePanelAsync_WhenCookieUidExists_LoadsStatusAndConfig()
     {
         var cookiePath = Path.Combine(tempDir, "Library");
-        await WriteResourcePanelCookieLibraryAsync(cookiePath, "UID123");
+        await WriteResourcePanelCookieLibraryAsync(cookiePath, "UIDTESTA");
         var settingsService = new LauncherSettingsService(Path.Combine(tempDir, Guid.NewGuid().ToString("N"), "settings.json"));
         var uidService = new ResourcePanelUidService(new BestHttpCookieLibraryService(), settingsService, cookiePath);
         var handler = new ResourcePanelHandler();
         using var apiClient = new ResourcePanelApiClient(handler);
         var coreService = new CountingCoreService(CreateSnapshot());
         using var viewModel = await CreateViewModelAsync(coreService, settingsService, uidService, apiClient);
-        viewModel.ResourcePanel.GetPatchUrlGroup = () => PatchUrlGroups.Cafe;
+        viewModel.ResourcePanel.ApplySettings(new LauncherSettings { PatchUrlGroup = PatchUrlGroups.Cafe });
 
         await viewModel.ResourcePanel.OpenResourcePanelCommand.ExecuteAsync(null);
 
         Assert.True(viewModel.ResourcePanel.IsResourcePanelVisible);
         Assert.False(viewModel.ResourcePanel.IsResourcePanelUidMissing);
-        Assert.Equal("UID123", viewModel.ResourcePanel.ResourcePanelUid);
+        Assert.Equal("UIDTESTA", viewModel.ResourcePanel.ResourcePanelUid);
         Assert.Equal(1, handler.StatusListCount);
         Assert.Equal(1, handler.ConfigGetCount);
         var text = viewModel.ResourcePanel.ResourcePanelItems.First(item => item.Code == ResourcePanelResourceCodes.Text);
@@ -919,10 +1086,111 @@ public sealed class MainWindowViewModelTests : IDisposable
     }
 
     [Fact]
+    public async Task OpenResourcePanelAsync_WhenSourceIsNotCafe_ShowsConfirmBeforeOpening()
+    {
+        var cookiePath = Path.Combine(tempDir, "Library");
+        await WriteResourcePanelCookieLibraryAsync(cookiePath, "UIDTESTA");
+        var settingsService = new LauncherSettingsService(Path.Combine(tempDir, Guid.NewGuid().ToString("N"), "settings.json"));
+        var uidService = new ResourcePanelUidService(new BestHttpCookieLibraryService(), settingsService, cookiePath);
+        var handler = new ResourcePanelHandler();
+        using var apiClient = new ResourcePanelApiClient(handler);
+        using var viewModel = await CreateViewModelAsync(
+            new CountingCoreService(CreateSnapshot()),
+            settingsService,
+            uidService,
+            apiClient);
+        viewModel.ResourcePanel.ApplySettings(new LauncherSettings { PatchUrlGroup = PatchUrlGroups.Official });
+
+        await viewModel.ResourcePanel.OpenResourcePanelCommand.ExecuteAsync(null);
+
+        Assert.True(viewModel.Dialogs.IsResourcePanelSourceConfirmVisible);
+        Assert.False(viewModel.ResourcePanel.IsResourcePanelVisible);
+        Assert.Equal(0, handler.StatusListCount);
+        Assert.Equal(0, handler.ConfigGetCount);
+    }
+
+    [Fact]
+    public async Task ConfirmResourcePanelSourceSwitch_WhenUidExists_SwitchesToCafeAndOpensPanel()
+    {
+        var cookiePath = Path.Combine(tempDir, "Library");
+        await WriteResourcePanelCookieLibraryAsync(cookiePath, "UIDTESTA");
+        var settingsPath = Path.Combine(tempDir, Guid.NewGuid().ToString("N"), "settings.json");
+        var settingsService = new LauncherSettingsService(settingsPath);
+        await settingsService.SaveAsync(new LauncherSettings
+        {
+            PatchUrlGroup = PatchUrlGroups.Official
+        });
+        var uidService = new ResourcePanelUidService(new BestHttpCookieLibraryService(), settingsService, cookiePath);
+        var handler = new ResourcePanelHandler();
+        using var apiClient = new ResourcePanelApiClient(handler);
+        var snapshot = CreateSnapshot();
+        snapshot.Settings.PatchUrlGroup = PatchUrlGroups.Cafe;
+        using var viewModel = await CreateViewModelAsync(
+            new CountingCoreService(snapshot),
+            settingsService,
+            uidService,
+            apiClient);
+        viewModel.ResourcePanel.ApplySettings(new LauncherSettings { PatchUrlGroup = PatchUrlGroups.Official });
+        await viewModel.ResourcePanel.OpenResourcePanelCommand.ExecuteAsync(null);
+
+        viewModel.Dialogs.ConfirmResourcePanelSourceSwitchCommand.Execute(null);
+        await WaitForConditionAsync(() =>
+            viewModel.ResourcePanel.IsResourcePanelVisible
+            && handler.StatusListCount == 1
+            && handler.ConfigGetCount == 1);
+
+        Assert.False(viewModel.Dialogs.IsResourcePanelSourceConfirmVisible);
+        Assert.True(viewModel.ResourcePanel.IsResourcePanelVisible);
+        Assert.Equal(PatchUrlGroups.Cafe, viewModel.Settings.Editor.Current.PatchUrlGroup);
+        Assert.Equal(PatchUrlGroups.Cafe, (await settingsService.ReadAsync()).PatchUrlGroup);
+        Assert.Equal(1, handler.ConfigGetCount);
+    }
+
+    [Fact]
+    public async Task ResourcePanelApplySettings_UsesCafeSourceAndSystemProxyWhenOpeningPanel()
+    {
+        using var listener = new System.Net.Sockets.TcpListener(IPAddress.Loopback, 0);
+        listener.Start();
+        var proxyEndpoint = (IPEndPoint)listener.LocalEndpoint;
+        var proxySettings = new ProxySettingsService(() => new SystemProxySettings(
+            $"http://127.0.0.1:{proxyEndpoint.Port}",
+            []));
+        using var clientFactory = new HttpClientFactory(proxySettings);
+        using var apiClient = new ResourcePanelApiClient(clientFactory);
+        var settingsService = new LauncherSettingsService(
+            Path.Combine(tempDir, Guid.NewGuid().ToString("N"), "settings.json"));
+        await settingsService.SaveAsync(new LauncherSettings { ResourcePanelUid = "UIDTESTA" });
+        var uidService = new ResourcePanelUidService(
+            new BestHttpCookieLibraryService(),
+            settingsService,
+            Path.Combine(tempDir, "missing"));
+        using var viewModel = await CreateViewModelAsync(
+            new CountingCoreService(CreateSnapshot()),
+            settingsService,
+            uidService,
+            apiClient);
+        viewModel.ResourcePanel.ApplySettings(new LauncherSettings
+        {
+            ProxyMode = ProxyModes.System,
+            PatchUrlGroup = PatchUrlGroups.Cafe
+        });
+        var proxyConnection = listener.AcceptTcpClientAsync();
+
+        var openTask = viewModel.ResourcePanel.OpenResourcePanelCommand.ExecuteAsync(null);
+        using var acceptedClient = await proxyConnection.WaitAsync(TimeSpan.FromSeconds(5));
+        acceptedClient.Close();
+        listener.Stop();
+        await openTask;
+
+        Assert.True(viewModel.ResourcePanel.IsResourcePanelVisible);
+        Assert.False(viewModel.Dialogs.IsResourcePanelSourceConfirmVisible);
+    }
+
+    [Fact]
     public async Task SaveResourcePanelAsync_SendsCnForEnabledAndJpForDisabled()
     {
         var settingsService = new LauncherSettingsService(Path.Combine(tempDir, Guid.NewGuid().ToString("N"), "settings.json"));
-        await settingsService.SaveAsync(new LauncherSettings { ResourcePanelUid = "UID123" });
+        await settingsService.SaveAsync(new LauncherSettings { ResourcePanelUid = "UIDTESTA" });
         var uidService = new ResourcePanelUidService(
             new BestHttpCookieLibraryService(),
             settingsService,
@@ -931,7 +1199,7 @@ public sealed class MainWindowViewModelTests : IDisposable
         using var apiClient = new ResourcePanelApiClient(handler);
         var coreService = new CountingCoreService(CreateSnapshot());
         using var viewModel = await CreateViewModelAsync(coreService, settingsService, uidService, apiClient);
-        viewModel.ResourcePanel.GetPatchUrlGroup = () => PatchUrlGroups.Cafe;
+        viewModel.ResourcePanel.ApplySettings(new LauncherSettings { PatchUrlGroup = PatchUrlGroups.Cafe });
         await viewModel.ResourcePanel.OpenResourcePanelCommand.ExecuteAsync(null);
         viewModel.ResourcePanel.ResourcePanelItems.First(item => item.Code == ResourcePanelResourceCodes.Text).IsEnabled = true;
         viewModel.ResourcePanel.ResourcePanelItems.First(item => item.Code == ResourcePanelResourceCodes.Voice).IsEnabled = false;
@@ -940,7 +1208,7 @@ public sealed class MainWindowViewModelTests : IDisposable
         await viewModel.ResourcePanel.SaveResourcePanelCommand.ExecuteAsync(null);
 
         Assert.Equal("GET", handler.LastRequestMethod);
-        Assert.Equal("/config/set?uid=UID123&text=cn&voice=jp&media=cn", handler.LastRequestPathAndQuery);
+        Assert.Equal("/config/set?uid=UIDTESTA&text=cn&voice=jp&media=cn", handler.LastRequestPathAndQuery);
         Assert.Null(handler.LastRequestBody);
         Assert.Equal(1, handler.ConfigSetCount);
     }
@@ -957,13 +1225,39 @@ public sealed class MainWindowViewModelTests : IDisposable
         using var apiClient = new ResourcePanelApiClient(handler);
         var coreService = new CountingCoreService(CreateSnapshot());
         using var viewModel = await CreateViewModelAsync(coreService, settingsService, uidService, apiClient);
-        viewModel.ResourcePanel.GetPatchUrlGroup = () => PatchUrlGroups.Cafe;
+        viewModel.ResourcePanel.ApplySettings(new LauncherSettings { PatchUrlGroup = PatchUrlGroups.Cafe });
 
         await viewModel.ResourcePanel.OpenResourcePanelCommand.ExecuteAsync(null);
 
         Assert.True(viewModel.ResourcePanel.IsResourcePanelVisible);
         Assert.True(viewModel.ResourcePanel.IsResourcePanelUidMissing);
         Assert.Equal("", viewModel.ResourcePanel.ResourcePanelUid);
+        Assert.Equal(0, handler.StatusListCount);
+        Assert.Equal(0, handler.ConfigGetCount);
+        Assert.Equal(0, handler.ConfigSetCount);
+    }
+
+    [Fact]
+    public async Task SaveManualResourcePanelUidAsync_WhenUidIsBlank_ShowsValidationMessage()
+    {
+        var settingsService = new LauncherSettingsService(Path.Combine(tempDir, Guid.NewGuid().ToString("N"), "settings.json"));
+        var uidService = new ResourcePanelUidService(
+            new BestHttpCookieLibraryService(),
+            settingsService,
+            Path.Combine(tempDir, "missing"));
+        var handler = new ResourcePanelHandler();
+        using var apiClient = new ResourcePanelApiClient(handler);
+        using var viewModel = await CreateViewModelAsync(
+            new CountingCoreService(CreateSnapshot()),
+            settingsService,
+            uidService,
+            apiClient);
+        viewModel.ResourcePanel.ApplySettings(new LauncherSettings { PatchUrlGroup = PatchUrlGroups.Cafe });
+        viewModel.ResourcePanel.ManualResourcePanelUid = "   ";
+
+        await viewModel.ResourcePanel.SaveManualResourcePanelUidCommand.ExecuteAsync(null);
+
+        Assert.Equal(viewModel.Shell.I18n.ResourcePanelUidEmpty, viewModel.ResourcePanel.ResourcePanelMessage);
         Assert.Equal(0, handler.StatusListCount);
         Assert.Equal(0, handler.ConfigGetCount);
         Assert.Equal(0, handler.ConfigSetCount);
@@ -977,7 +1271,6 @@ public sealed class MainWindowViewModelTests : IDisposable
         var modified = LauncherSettings.CreateDefaults();
         modified.GamePath = Path.Combine(tempDir, "custom-game");
         modified.ThemeMode = ThemeModes.Dark;
-        modified.HasCompletedFirstLaunchWizard = true;
         await settingsService.SaveAsync(modified);
         using var viewModel = await CreateViewModelAsync(
             new CountingCoreService(CreateSnapshot()),
@@ -990,7 +1283,6 @@ public sealed class MainWindowViewModelTests : IDisposable
         var defaults = LauncherSettings.CreateDefaults();
         Assert.Equal(defaults.GamePath, persisted.GamePath);
         Assert.Equal(defaults.ThemeMode, persisted.ThemeMode);
-        Assert.Equal(defaults.HasCompletedFirstLaunchWizard, persisted.HasCompletedFirstLaunchWizard);
         Assert.False(viewModel.Dialogs.IsCrashRecoveryVisible);
     }
 
@@ -1006,18 +1298,418 @@ public sealed class MainWindowViewModelTests : IDisposable
         Assert.False(viewModel.Dialogs.IsCrashRecoveryVisible);
     }
 
+    [Fact]
+    public async Task TryHandleEscape_ForEveryModalKind_ClosesOnlyTopModal()
+    {
+        using var viewModel = await CreateViewModelAsync(new CountingCoreService(CreateSnapshot()));
+
+        viewModel.WindowChrome.IsSettingsVisible = true;
+        viewModel.Dialogs.ShowRepairConfirm("repair");
+        Assert.Equal(ModalKind.RepairConfirmation, viewModel.ModalHost.Top?.Kind);
+        Assert.True(viewModel.TryHandleEscape());
+        Assert.False(viewModel.Dialogs.IsRepairConfirmVisible);
+        Assert.True(viewModel.WindowChrome.IsSettingsVisible);
+        Assert.True(viewModel.TryHandleEscape());
+        Assert.False(viewModel.WindowChrome.IsSettingsVisible);
+
+        viewModel.Settings.IsUnsavedChangesVisible = true;
+        Assert.True(viewModel.TryHandleEscape());
+        Assert.False(viewModel.Settings.IsUnsavedChangesVisible);
+
+        viewModel.Dialogs.ShowResourcePanelSourceConfirm("source");
+        Assert.True(viewModel.TryHandleEscape());
+        Assert.False(viewModel.Dialogs.IsResourcePanelSourceConfirmVisible);
+
+        viewModel.Dialogs.ShowUninstallConfirm("uninstall");
+        Assert.True(viewModel.TryHandleEscape());
+        Assert.False(viewModel.Dialogs.IsUninstallConfirmVisible);
+
+        viewModel.Dialogs.ShowStopConfirm();
+        Assert.True(viewModel.TryHandleEscape());
+        Assert.False(viewModel.Dialogs.IsStopConfirmVisible);
+
+        viewModel.Dialogs.ShowDownloadRunningCloseConfirm();
+        Assert.True(viewModel.TryHandleEscape());
+        Assert.False(viewModel.Dialogs.IsDownloadRunningCloseConfirmVisible);
+
+        viewModel.Dialogs.IsNoticeDialogVisible = true;
+        Assert.True(viewModel.TryHandleEscape());
+        Assert.False(viewModel.Dialogs.IsNoticeDialogVisible);
+
+        viewModel.Dialogs.ShowUpdateAvailable("1.0.0", []);
+        Assert.True(viewModel.TryHandleEscape());
+        Assert.False(viewModel.Dialogs.IsUpdateAvailableVisible);
+
+        viewModel.Dialogs.ShowCrashRecovery();
+        Assert.True(viewModel.TryHandleEscape());
+        Assert.False(viewModel.Dialogs.IsCrashRecoveryVisible);
+
+        viewModel.LogViewer.OpenCommand.Execute(null);
+        Assert.True(viewModel.TryHandleEscape());
+        Assert.False(viewModel.LogViewer.IsVisible);
+
+        viewModel.ResourcePanel.IsResourcePanelVisible = true;
+        Assert.True(viewModel.TryHandleEscape());
+        Assert.False(viewModel.ResourcePanel.IsResourcePanelVisible);
+
+        Assert.False(viewModel.TryHandleEscape());
+    }
+
+    [Fact]
+    public async Task InitializeAsync_WithReducedMotion_AppliesMotionPreference()
+    {
+        var snapshot = CreateSnapshot();
+        snapshot.Settings.MotionMode = MotionModes.Reduced;
+        using var viewModel = await CreateViewModelAsync(
+            new CountingCoreService(snapshot),
+            windowsAnimationSettingsProvider: new WindowsAnimationSettingsProvider(() => (true, true)));
+
+        await viewModel.InitializeAsync();
+
+        Assert.True(viewModel.IsMotionReduced);
+        Assert.False(viewModel.IsMotionEnabled);
+    }
+
+    [Fact]
+    public async Task SaveSettingsAsync_WithFullMotion_AppliesMotionPreferenceImmediately()
+    {
+        var snapshot = CreateSnapshot();
+        snapshot.Settings.MotionMode = MotionModes.Reduced;
+        using var viewModel = await CreateViewModelAsync(
+            new CountingCoreService(snapshot),
+            gameOperationsBackend: new CountingGameOperationsBackend(isDownloadRunning: true),
+            windowsAnimationSettingsProvider: new WindowsAnimationSettingsProvider(() => (true, false)));
+        await viewModel.InitializeAsync();
+        viewModel.Settings.Editor.Current.MotionMode = MotionModes.Full;
+
+        await SaveSettingsAsync(viewModel);
+
+        Assert.False(viewModel.IsMotionReduced);
+        Assert.True(viewModel.IsMotionEnabled);
+    }
+
+    [Fact]
+    public async Task InitializeAsync_WithReducedMotionAndBanners_DoesNotStartBannerCarousel()
+    {
+        var snapshot = CreateSnapshot();
+        snapshot.Settings.MotionMode = MotionModes.Reduced;
+        snapshot.Remote.OperationsResource = new OperationsResourceResponse
+        {
+            OperationsResourceOpen = true,
+            BannerLoop = true,
+            OperationsBannerList = [new(), new()]
+        };
+        using var viewModel = await CreateViewModelAsync(
+            new CountingCoreService(snapshot),
+            windowsAnimationSettingsProvider: new WindowsAnimationSettingsProvider(() => (true, true)));
+
+        await viewModel.InitializeAsync();
+
+        Assert.True(viewModel.IsMotionReduced);
+        Assert.False(viewModel.RemoteContent.IsCarouselTimerRunning);
+    }
+
+    [Fact]
+    public async Task SaveSettingsAsync_WithReducedMotionAndBanners_StopsBannerCarouselImmediately()
+    {
+        var snapshot = CreateSnapshot();
+        snapshot.Settings.MotionMode = MotionModes.Full;
+        snapshot.Remote.OperationsResource = new OperationsResourceResponse
+        {
+            OperationsResourceOpen = true,
+            BannerLoop = true,
+            OperationsBannerList = [new(), new()]
+        };
+        using var viewModel = await CreateViewModelAsync(
+            new CountingCoreService(snapshot),
+            gameOperationsBackend: new CountingGameOperationsBackend(isDownloadRunning: true),
+            windowsAnimationSettingsProvider: new WindowsAnimationSettingsProvider(() => (true, true)));
+        await viewModel.InitializeAsync();
+        Assert.True(viewModel.RemoteContent.IsCarouselTimerRunning);
+
+        viewModel.Settings.Editor.Current.MotionMode = MotionModes.Reduced;
+        await SaveSettingsAsync(viewModel);
+
+        Assert.True(viewModel.IsMotionReduced);
+        Assert.False(viewModel.RemoteContent.IsCarouselTimerRunning);
+    }
+
+    [Fact]
+    public async Task RefreshSystemMotionPreference_SystemMode_ReevaluatesEffectiveMotion()
+    {
+        var animationsEnabled = true;
+        var snapshot = CreateSnapshot();
+        snapshot.Settings.MotionMode = MotionModes.System;
+        using var viewModel = await CreateViewModelAsync(
+            new CountingCoreService(snapshot),
+            windowsAnimationSettingsProvider: new WindowsAnimationSettingsProvider(
+                () => (true, animationsEnabled)));
+        await viewModel.InitializeAsync();
+        Assert.False(viewModel.IsMotionReduced);
+        animationsEnabled = false;
+
+        viewModel.RefreshSystemMotionPreference();
+
+        Assert.True(viewModel.IsMotionReduced);
+    }
+
+    [Fact]
+    public async Task RefreshSystemMotionPreference_UnchangedSystemValue_RetainsChildStateAndReadsProvider()
+    {
+        var providerReadCount = 0;
+        var snapshot = CreateSnapshot();
+        snapshot.Settings.MotionMode = MotionModes.System;
+        using var viewModel = await CreateViewModelAsync(
+            new CountingCoreService(snapshot),
+            windowsAnimationSettingsProvider: new WindowsAnimationSettingsProvider(
+                () =>
+                {
+                    providerReadCount++;
+                    return (true, true);
+                }));
+        await viewModel.InitializeAsync();
+        var carouselTransition = viewModel.RemoteContent.CarouselTransition;
+        var readsBeforeRefresh = providerReadCount;
+
+        viewModel.RefreshSystemMotionPreference();
+
+        Assert.Same(carouselTransition, viewModel.RemoteContent.CarouselTransition);
+        Assert.Equal(readsBeforeRefresh + 1, providerReadCount);
+    }
+
+    [Theory]
+    [InlineData(MotionModes.Full)]
+    [InlineData(MotionModes.Reduced)]
+    public async Task RefreshSystemMotionPreference_ExplicitMode_NeverReadsProvider(string motionMode)
+    {
+        var providerReadCount = 0;
+        var snapshot = CreateSnapshot();
+        snapshot.Settings.MotionMode = motionMode;
+        using var settingsService = new LauncherSettingsService(
+            Path.Combine(tempDir, Guid.NewGuid().ToString("N"), "settings.json"));
+        await settingsService.SaveAsync(snapshot.Settings);
+        using var viewModel = await CreateViewModelAsync(
+            new CountingCoreService(snapshot),
+            settingsService: settingsService,
+            windowsAnimationSettingsProvider: new WindowsAnimationSettingsProvider(
+                () =>
+                {
+                    providerReadCount++;
+                    return (true, false);
+                }));
+
+        await viewModel.InitializeAsync();
+        viewModel.RefreshSystemMotionPreference();
+
+        Assert.Equal(0, providerReadCount);
+    }
+
+    [Fact]
+    public async Task RefreshSystemMotionPreference_BeforeSettingsSnapshotInitialized_DoesNotReadProvider()
+    {
+        var providerReadCount = 0;
+        var snapshot = CreateSnapshot();
+        snapshot.Settings.MotionMode = MotionModes.Full;
+        using var settingsService = new LauncherSettingsService(
+            Path.Combine(tempDir, Guid.NewGuid().ToString("N"), "settings.json"));
+        await settingsService.SaveAsync(snapshot.Settings);
+        using var viewModel = await CreateViewModelAsync(
+            new CountingCoreService(snapshot),
+            settingsService: settingsService,
+            windowsAnimationSettingsProvider: new WindowsAnimationSettingsProvider(
+                () =>
+                {
+                    providerReadCount++;
+                    return (true, true);
+                }));
+
+        viewModel.RefreshSystemMotionPreference();
+
+        Assert.Equal(0, providerReadCount);
+        Assert.True(viewModel.IsMotionReduced);
+
+        await viewModel.InitializeAsync();
+
+        Assert.Equal(0, providerReadCount);
+        Assert.False(viewModel.IsMotionReduced);
+    }
+
+    [Fact]
+    public async Task RefreshSystemMotionPreference_CoreLoadFails_UsesPersistedSystemSnapshot()
+    {
+        var animationsEnabled = true;
+        var providerReadCount = 0;
+        var persistedSettings = new LauncherSettings
+        {
+            GamePath = "persisted-game-path",
+            MotionMode = MotionModes.System
+        };
+        using var settingsService = new LauncherSettingsService(
+            Path.Combine(tempDir, Guid.NewGuid().ToString("N"), "settings.json"));
+        await settingsService.SaveAsync(persistedSettings);
+        using var viewModel = await CreateViewModelAsync(
+            new ThrowingCoreService(),
+            settingsService: settingsService,
+            windowsAnimationSettingsProvider: new WindowsAnimationSettingsProvider(
+                () =>
+                {
+                    providerReadCount++;
+                    return (true, animationsEnabled);
+                }));
+
+        await viewModel.InitializeAsync();
+        Assert.Equal(
+            persistedSettings.GamePath,
+            viewModel.Settings.Editor.GetSavedSnapshot().GamePath);
+        Assert.False(viewModel.IsMotionReduced);
+        var readsBeforeRefresh = providerReadCount;
+        animationsEnabled = false;
+
+        viewModel.RefreshSystemMotionPreference();
+
+        Assert.Equal(readsBeforeRefresh + 1, providerReadCount);
+        Assert.True(viewModel.IsMotionReduced);
+    }
+
+    [Fact]
+    public async Task InitializeAsync_InitialReducedValue_SynchronizesChildMotionPreferences()
+    {
+        var snapshot = CreateSnapshot();
+        snapshot.Settings.MotionMode = MotionModes.Reduced;
+        using var settingsService = new LauncherSettingsService(
+            Path.Combine(tempDir, Guid.NewGuid().ToString("N"), "settings.json"));
+        await settingsService.SaveAsync(snapshot.Settings);
+        var toastService = new ToastService();
+        var displayDelay = new TaskCompletionSource(
+            TaskCreationOptions.RunContinuationsAsynchronously);
+        var exitDelayCalls = 0;
+        using var viewModel = await CreateViewModelAsync(
+            new CountingCoreService(snapshot),
+            settingsService: settingsService,
+            toastService: toastService,
+            toastDelayAsync: (delay, cancellationToken) =>
+            {
+                if (delay == AnimationTimings.ExitAnimationDuration)
+                {
+                    Interlocked.Increment(ref exitDelayCalls);
+                    return Task.CompletedTask;
+                }
+
+                return displayDelay.Task.WaitAsync(cancellationToken);
+            });
+        viewModel.RemoteContent.ApplyMotionPreference(reduceMotion: false);
+        viewModel.Toasts.ApplyMotionPreference(reduceMotion: false);
+
+        await viewModel.InitializeAsync();
+        toastService.Show("reduced");
+        var toast = Assert.Single(viewModel.Toasts.ActiveToasts);
+        await viewModel.Toasts.DismissToastCommand.ExecuteAsync(toast.Id);
+
+        Assert.True(viewModel.IsMotionReduced);
+        Assert.Equal(
+            TimeSpan.Zero,
+            Assert.IsType<global::Avalonia.Animation.CrossFade>(
+                viewModel.RemoteContent.CarouselTransition).Duration);
+        Assert.Empty(viewModel.Toasts.ActiveToasts);
+        Assert.False(toast.IsExiting);
+        Assert.Equal(0, exitDelayCalls);
+        displayDelay.TrySetResult();
+    }
+
+    [Fact]
+    public async Task InitializeAsync_WhenStartupUpdateCheckEnabledAndUpdateAvailable_ShowsToast()
+    {
+        var snapshot = CreateSnapshot();
+        snapshot.Settings.EnableStartupUpdateCheck = true;
+        snapshot.Settings.UpdateChannel = UpdateChannels.Stable;
+        var coreService = new CountingCoreService(snapshot);
+        var toasts = new List<string>();
+        var toastService = new ToastService();
+        toastService.ToastRaised += notification => toasts.Add(notification.Message);
+        var releaseJson = """
+            [
+                {
+                    "version": "99.0.0",
+                    "files": [
+                        {
+                            "name": "installer.exe",
+                            "url": "https://github.com/bluearchive-cafe/Cafe.Launcher.Avalonia_Release/releases/download/v99.0.0/installer.exe",
+                            "size": 123456
+                        }
+                    ],
+                    "releaseDate": "2026-01-01"
+                }
+            ]
+            """;
+        var updateSvc = new LauncherUpdateService(
+            new LauncherUpdateHandler(releaseJson),
+            currentVersionOverride: "1.0.0");
+        using var viewModel = await CreateViewModelAsync(
+            coreService,
+            toastService: toastService,
+            launcherUpdateService: updateSvc);
+
+        await viewModel.InitializeAsync();
+        // The update check is fire-and-forget; wait briefly for it to complete.
+        await Task.Delay(500);
+
+        Assert.Contains(toasts, t => t.Contains("99.0.0"));
+    }
+
+    [Fact]
+    public async Task InitializeAsync_WhenStartupUpdateCheckDisabled_DoesNotShowToast()
+    {
+        var snapshot = CreateSnapshot();
+        snapshot.Settings.EnableStartupUpdateCheck = false;
+        snapshot.Settings.UpdateChannel = UpdateChannels.Stable;
+        var coreService = new CountingCoreService(snapshot);
+        var toasts = new List<string>();
+        var toastService = new ToastService();
+        toastService.ToastRaised += notification => toasts.Add(notification.Message);
+        using var viewModel = await CreateViewModelAsync(
+            coreService,
+            toastService: toastService);
+
+        await viewModel.InitializeAsync();
+        await Task.Delay(300);
+
+        Assert.DoesNotContain(toasts, t => t.Contains("available"));
+    }
+
+    [Fact]
+    public async Task InitializeAsync_WhenStartupUpdateCheckEnabledButNoUpdate_DoesNotShowToast()
+    {
+        var snapshot = CreateSnapshot();
+        snapshot.Settings.EnableStartupUpdateCheck = true;
+        snapshot.Settings.UpdateChannel = UpdateChannels.Stable;
+        var coreService = new CountingCoreService(snapshot);
+        var toasts = new List<string>();
+        var toastService = new ToastService();
+        toastService.ToastRaised += notification => toasts.Add(notification.Message);
+        // LauncherUpdateHandler returns 404 by default (no releases found = no update)
+        using var viewModel = await CreateViewModelAsync(
+            coreService,
+            toastService: toastService);
+
+        await viewModel.InitializeAsync();
+        await Task.Delay(300);
+
+        Assert.DoesNotContain(toasts, t => t.Contains("available"));
+    }
+
     private async Task<MainWindowViewModel> CreateViewModelAsync(
         ILauncherCoreService coreService,
         LauncherSettingsService? settingsService = null,
         ResourcePanelUidService? resourcePanelUidService = null,
         ResourcePanelApiClient? resourcePanelApiClient = null,
-        ToastService? toastService = null)
+        ToastService? toastService = null,
+        LauncherUpdateService? launcherUpdateService = null,
+        CountingGameOperationsBackend? gameOperationsBackend = null,
+        WindowsAnimationSettingsProvider? windowsAnimationSettingsProvider = null,
+        Func<TimeSpan, CancellationToken, Task>? toastDelayAsync = null)
     {
         settingsService ??= new LauncherSettingsService(
             Path.Combine(tempDir, Guid.NewGuid().ToString("N"), "settings.json"));
-        var testSettings = await settingsService.ReadAsync();
-        testSettings.HasCompletedFirstLaunchWizard = true;
-        await settingsService.SaveAsync(testSettings);
         var localInstallationStateStore = new LocalInstallationStateStore();
         var diagnostics = new LocalDiagnostics();
         var localizationService = new LocalizationService();
@@ -1054,16 +1746,16 @@ public sealed class MainWindowViewModelTests : IDisposable
 
         toastService ??= new ToastService();
         var diskSpaceService = new DiskSpaceService();
-        var launcherUpdateService = new LauncherUpdateService(new LauncherUpdateHandler());
+        var launcherUpdateSvc = launcherUpdateService ?? new LauncherUpdateService(new LauncherUpdateHandler());
         var settingsEditor = new SettingsEditor();
         var settingsOptions = new SettingsOptionsViewModel(localizationService, diskSpaceService);
         var settingsAppearance = new SettingsAppearanceViewModel(settingsEditor);
         var noticeStateService = new NoticeStateService(Path.Combine(tempDir, Guid.NewGuid().ToString("N"), "shown_notices.json"));
-        var dialogsViewModel = new DialogsViewModel(localizationService, noticeStateService);
+        var dialogsViewModel = new DialogsViewModel(localizationService, noticeStateService, new SetupWizardViewModel(localizationService, new GameInstallationPath(), new LocalInstallationStateStore(), new LocalDiagnostics()));
         using var settingsLogger = new UnifiedLogger(Path.Combine(tempDir, Guid.NewGuid().ToString("N")));
         var settingsViewModel = new SettingsViewModel(
             settingsService, localizationService, toastService,
-            launcherUpdateService, dialogsViewModel,
+            launcherUpdateSvc, dialogsViewModel,
             settingsLogger,
             new GameInstallationPath(),
             settingsOptions, settingsAppearance);
@@ -1080,16 +1772,38 @@ public sealed class MainWindowViewModelTests : IDisposable
         var shellViewModel = new ShellViewModel(localizationService);
         var remoteContentViewModel = new RemoteContentViewModel(localizationService, imageCacheService);
         var backgroundViewModel = new BackgroundViewModel(imageCacheService, diagnostics, settingsViewModel);
-        var gameOperationsViewModel = new GameOperationsViewModel(
-            gameLaunchService,
-            gameDownloadService,
-            gameUninstallService,
-            localizationService,
-            toastService,
-            diagnostics,
-            shellViewModel,
-            dialogsViewModel);
-        var toastHostViewModel = new ToastHostViewModel(toastService, localizationService, settingsViewModel);
+        var gameOperationsViewModel = gameOperationsBackend is null
+            ? new GameOperationsViewModel(
+                gameLaunchService,
+                gameDownloadService,
+                gameUninstallService,
+                localizationService,
+                toastService,
+                diagnostics,
+                shellViewModel,
+                dialogsViewModel)
+            : new GameOperationsViewModel(
+                gameOperationsBackend,
+                gameOperationsBackend,
+                gameOperationsBackend,
+                localizationService,
+                toastService,
+                diagnostics,
+                shellViewModel,
+                dialogsViewModel,
+                _ => Task.CompletedTask);
+        var toastHostViewModel = toastDelayAsync is null
+            ? new ToastHostViewModel(toastService, localizationService, settingsViewModel)
+            : new ToastHostViewModel(
+                toastService,
+                localizationService,
+                settingsViewModel,
+                action =>
+                {
+                    action();
+                    return Task.CompletedTask;
+                },
+                toastDelayAsync);
         var windowChromeViewModel = new WindowChromeViewModel(
             settingsViewModel, remoteContentViewModel, dialogsViewModel, gameOperationsViewModel);
 
@@ -1099,8 +1813,8 @@ public sealed class MainWindowViewModelTests : IDisposable
             settingsService,
             localizationService,
             toastService,
+            launcherUpdateSvc,
             diagnostics,
-            new OldLauncherDetectionService(),
             testLogger,
             shellViewModel,
             backgroundViewModel,
@@ -1111,9 +1825,7 @@ public sealed class MainWindowViewModelTests : IDisposable
             windowChromeViewModel,
             settingsViewModel,
             resourcePanelViewModel,
-            new MigrationWizardViewModel(
-                new SettingsEditor(),
-                new SettingsOptionsViewModel(localizationService, diskSpaceService)));
+            windowsAnimationSettingsProvider: windowsAnimationSettingsProvider);
     }
 
     private LauncherStatusSnapshot CreateSnapshot()
@@ -1241,6 +1953,22 @@ public sealed class MainWindowViewModelTests : IDisposable
         return buffer;
     }
 
+    private static LocalInstallationState CopyLocalGameWithPath(
+        LocalInstallationState source,
+        string gamePath)
+    {
+        return new LocalInstallationState
+        {
+            Kind = source.Kind,
+            GamePath = gamePath,
+            ConfigPath = source.ConfigPath,
+            ManifestPath = source.ManifestPath,
+            GameConfig = source.GameConfig,
+            Manifest = source.Manifest,
+            Error = source.Error
+        };
+    }
+
     private static byte[] CreateStripedBgraBuffer(int width, int height, IReadOnlyList<Color> colors)
     {
         var rowBytes = width * 4;
@@ -1265,6 +1993,16 @@ public sealed class MainWindowViewModelTests : IDisposable
     private static async Task SaveSettingsAsync(MainWindowViewModel viewModel)
     {
         await viewModel.Settings.SaveSettingsCommand.ExecuteAsync(null);
+    }
+
+    private static async Task WaitForConditionAsync(Func<bool> condition)
+    {
+        using var cts = new CancellationTokenSource(TimeSpan.FromSeconds(2));
+        while (!condition())
+        {
+            cts.Token.ThrowIfCancellationRequested();
+            await Task.Delay(10, cts.Token);
+        }
     }
 
     public void Dispose()
@@ -1293,6 +2031,88 @@ public sealed class MainWindowViewModelTests : IDisposable
         {
             LoadCount++;
             return Task.FromResult(snapshot);
+        }
+    }
+
+    private sealed class SettingsBackedCoreService : ILauncherCoreService
+    {
+        private readonly LauncherSettingsService settingsService;
+        private readonly LauncherStatusSnapshot snapshot;
+
+        public SettingsBackedCoreService(
+            LauncherSettingsService settingsService,
+            LauncherStatusSnapshot snapshot)
+        {
+            this.settingsService = settingsService;
+            this.snapshot = snapshot;
+        }
+
+        public async Task<LauncherStatusSnapshot> LoadAsync(CancellationToken cancellationToken = default)
+        {
+            var settings = await settingsService.ReadAsync(cancellationToken);
+            snapshot.Settings = settings;
+            snapshot.LocalGame = CopyLocalGameWithPath(snapshot.LocalGame, settings.GamePath);
+            return snapshot;
+        }
+    }
+
+    private sealed class CountingGameOperationsBackend :
+        IGameLaunchWorkflow,
+        IGameInstallationWorkflow,
+        IGameUninstallWorkflow
+    {
+        private readonly bool isDownloadRunning;
+
+        public CountingGameOperationsBackend(bool isDownloadRunning = false)
+        {
+            this.isDownloadRunning = isDownloadRunning;
+        }
+
+        public int ResumeInvocationCount { get; private set; }
+        public bool IsDownloadRunning => isDownloadRunning;
+        public bool IsRunning => IsDownloadRunning;
+        public bool IsPaused => false;
+
+        public Task<GameLaunchResult> StartGameAsync(LauncherStatusSnapshot snapshot) =>
+            throw new NotSupportedException();
+
+        public Task<GameOperationResult> InstallOrUpdateAsync(
+            LauncherStatusSnapshot snapshot,
+            Action<GameOperationProgress> progress) =>
+            throw new NotSupportedException();
+
+        public Task<GameOperationResult> RepairAsync(
+            LauncherStatusSnapshot snapshot,
+            Action<GameOperationProgress> progress) =>
+            throw new NotSupportedException();
+
+        public Task<GameOperationResult> ValidateUninstallAsync(string gamePath) =>
+            throw new NotSupportedException();
+
+        public Task<GameOperationResult> UninstallAsync(
+            LauncherStatusSnapshot snapshot,
+            Action<GameOperationProgress> progress) =>
+            throw new NotSupportedException();
+
+        public Task<GameOperationResult?> ResumePersistedAsync(
+            LauncherStatusSnapshot snapshot,
+            Action<GameOperationProgress> progress,
+            CancellationToken cancellationToken)
+        {
+            ResumeInvocationCount++;
+            return Task.FromResult<GameOperationResult?>(null);
+        }
+
+        public void Stop(bool clearPersistedState)
+        {
+        }
+
+        public void Pause()
+        {
+        }
+
+        public void Resume()
+        {
         }
     }
 
@@ -1379,7 +2199,7 @@ public sealed class MainWindowViewModelTests : IDisposable
                 }
                 """;
             }
-            else if (request.RequestUri?.PathAndQuery == "/config/set?uid=UID123&text=cn&voice=jp&media=cn")
+            else if (request.RequestUri?.PathAndQuery == "/config/set?uid=UIDTESTA&text=cn&voice=jp&media=cn")
             {
                 ConfigSetCount++;
             }
@@ -1393,11 +2213,48 @@ public sealed class MainWindowViewModelTests : IDisposable
 
     private sealed class LauncherUpdateHandler : HttpMessageHandler
     {
+        private readonly string? responseJson;
+
+        public LauncherUpdateHandler(string? responseJson = null)
+        {
+            this.responseJson = responseJson;
+        }
+
         protected override Task<HttpResponseMessage> SendAsync(
             HttpRequestMessage request,
             CancellationToken cancellationToken)
         {
+            if (responseJson is not null)
+            {
+                return Task.FromResult(new HttpResponseMessage(HttpStatusCode.OK)
+                {
+                    Content = new StringContent(responseJson, Encoding.UTF8, "application/json")
+                });
+            }
+
             return Task.FromResult(new HttpResponseMessage(HttpStatusCode.NotFound));
         }
+    }
+
+    private static double GetPerceivedSaturation(Color color)
+    {
+        var max = Math.Max(color.R, Math.Max(color.G, color.B));
+        var min = Math.Min(color.R, Math.Min(color.G, color.B));
+        return max == 0 ? 0 : 1d - (min / (double)max);
+    }
+
+    private static double GetRelativeLuminance(Color color)
+    {
+        static double ToLinear(byte channel)
+        {
+            var value = channel / 255d;
+            return value <= 0.04045
+                ? value / 12.92
+                : Math.Pow((value + 0.055) / 1.055, 2.4);
+        }
+
+        return (0.2126 * ToLinear(color.R))
+            + (0.7152 * ToLinear(color.G))
+            + (0.0722 * ToLinear(color.B));
     }
 }

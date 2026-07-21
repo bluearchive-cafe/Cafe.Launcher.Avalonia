@@ -1,52 +1,71 @@
 <Styles xmlns="https://github.com/avaloniaui"
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
-        xmlns:views="using:Cafe.Launcher.Avalonia.Views">
+        xmlns:views="using:Cafe.Launcher.Avalonia.Views"
+        xmlns:materialIcons="clr-namespace:Material.Icons.Avalonia;assembly=Material.Icons.Avalonia">
+    <Styles.Resources>
+        <ControlTemplate x:Key="LauncherBorderButtonTemplate" TargetType="Button">
+            <Border Background="{TemplateBinding Background}"
+                    BorderBrush="{TemplateBinding BorderBrush}"
+                    BorderThickness="{TemplateBinding BorderThickness}"
+                    CornerRadius="{TemplateBinding CornerRadius}">
+                <ContentPresenter Content="{TemplateBinding Content}"
+                                  ContentTemplate="{TemplateBinding ContentTemplate}"
+                                  Padding="{TemplateBinding Padding}"
+                                  HorizontalContentAlignment="{TemplateBinding HorizontalContentAlignment}"
+                                  VerticalContentAlignment="{TemplateBinding VerticalContentAlignment}"/>
+            </Border>
+        </ControlTemplate>
+        <ItemsPanelTemplate x:Key="HorizontalSpacingXsPanel">
+            <StackPanel Orientation="Horizontal" Spacing="{StaticResource LauncherSpacingXs}"/>
+        </ItemsPanelTemplate>
+        <ItemsPanelTemplate x:Key="HorizontalSpacingSmPanel">
+            <StackPanel Orientation="Horizontal" Spacing="{StaticResource LauncherSpacingSm}"/>
+        </ItemsPanelTemplate>
+    </Styles.Resources>
     <Style Selector="TextBlock.caption">
-        <Setter Property="FontSize" Value="13"/>
+        <Setter Property="FontSize" Value="{StaticResource LauncherFontSizeMd}"/>
         <Setter Property="Foreground" Value="{DynamicResource LauncherTextSecondaryBrush}"/>
     </Style>
     <Style Selector="TextBlock.value">
-        <Setter Property="FontSize" Value="14"/>
+        <Setter Property="FontSize" Value="{StaticResource LauncherFontSizeLg}"/>
         <Setter Property="Foreground" Value="{DynamicResource LauncherTextPrimaryBrush}"/>
-        <Setter Property="FontWeight" Value="SemiBold"/>
     </Style>
     <Style Selector="TextBlock.heading">
-        <Setter Property="FontSize" Value="22"/>
+        <Setter Property="FontSize" Value="{StaticResource LauncherFontSizeDisplay}"/>
         <Setter Property="Foreground" Value="{DynamicResource LauncherTextPrimaryBrush}"/>
-        <Setter Property="FontWeight" Value="SemiBold"/>
+        <Setter Property="FontWeight" Value="{StaticResource LauncherFontWeightStrong}"/>
     </Style>
     <Style Selector="TextBlock.body">
-        <Setter Property="FontSize" Value="14"/>
+        <Setter Property="FontSize" Value="{StaticResource LauncherFontSizeLg}"/>
         <Setter Property="Foreground" Value="{DynamicResource LauncherTextBodyBrush}"/>
         <Setter Property="TextWrapping" Value="Wrap"/>
     </Style>
     <Style Selector="TextBlock.dialog-title">
-        <Setter Property="FontSize" Value="19"/>
+        <Setter Property="FontSize" Value="{StaticResource LauncherFontSizeHeadingLg}"/>
         <Setter Property="Foreground" Value="{DynamicResource LauncherTextPrimaryBrush}"/>
-        <Setter Property="FontWeight" Value="SemiBold"/>
+        <Setter Property="FontWeight" Value="{StaticResource LauncherFontWeightStrong}"/>
     </Style>
     <Style Selector="TextBlock.kicker">
-        <Setter Property="FontSize" Value="11"/>
+        <Setter Property="FontSize" Value="{StaticResource LauncherFontSizeXs}"/>
         <Setter Property="Foreground" Value="{DynamicResource LauncherAccentBrush}"/>
-        <Setter Property="FontWeight" Value="SemiBold"/>
     </Style>
     <Style Selector="TextBlock.titlebar-brand">
         <Setter Property="Foreground" Value="{DynamicResource LauncherOnChromeBrush}"/>
-        <Setter Property="FontSize" Value="16"/>
-        <Setter Property="FontWeight" Value="SemiBold"/>
+        <Setter Property="FontSize" Value="{StaticResource LauncherFontSizeXxl}"/>
+        <Setter Property="FontWeight" Value="{StaticResource LauncherFontWeightStrong}"/>
     </Style>
     <Style Selector="TextBlock.titlebar-status">
         <Setter Property="Foreground" Value="{DynamicResource LauncherOnChromeMutedBrush}"/>
-        <Setter Property="FontSize" Value="12"/>
+        <Setter Property="FontSize" Value="{StaticResource LauncherFontSizeSm}"/>
     </Style>
     <Style Selector="TextBlock.progress-title">
         <Setter Property="Foreground" Value="{DynamicResource LauncherTextPrimaryBrush}"/>
-        <Setter Property="FontSize" Value="15"/>
-        <Setter Property="FontWeight" Value="SemiBold"/>
+        <Setter Property="FontSize" Value="{StaticResource LauncherFontSizeXl}"/>
+        <Setter Property="FontWeight" Value="{StaticResource LauncherFontWeightStrong}"/>
     </Style>
     <Style Selector="TextBlock.on-dark-caption">
         <Setter Property="Foreground" Value="{DynamicResource LauncherOnDarkMutedBrush}"/>
-        <Setter Property="FontSize" Value="14"/>
+        <Setter Property="FontSize" Value="{StaticResource LauncherFontSizeLg}"/>
     </Style>
     <Style Selector="StackPanel.titlebar-brand-row">
         <Setter Property="Orientation" Value="Horizontal"/>
@@ -67,20 +86,7 @@
         <Setter Property="CornerRadius" Value="{StaticResource LauncherRadiusSm}"/>
         <Setter Property="HorizontalContentAlignment" Value="Center"/>
         <Setter Property="VerticalContentAlignment" Value="Center"/>
-        <Setter Property="Template">
-            <ControlTemplate>
-                <Border Background="{TemplateBinding Background}"
-                        BorderBrush="{TemplateBinding BorderBrush}"
-                        BorderThickness="{TemplateBinding BorderThickness}"
-                        CornerRadius="{TemplateBinding CornerRadius}">
-                    <ContentPresenter Content="{TemplateBinding Content}"
-                                      ContentTemplate="{TemplateBinding ContentTemplate}"
-                                      Padding="{TemplateBinding Padding}"
-                                      HorizontalContentAlignment="{TemplateBinding HorizontalContentAlignment}"
-                                      VerticalContentAlignment="{TemplateBinding VerticalContentAlignment}"/>
-                </Border>
-            </ControlTemplate>
-        </Setter>
+        <Setter Property="Template" Value="{StaticResource LauncherBorderButtonTemplate}"/>
     </Style>
     <Style Selector="Button.chrome.settings">
         <Setter Property="Margin" Value="0,0,4,0"/>
@@ -118,7 +124,7 @@
         <Setter Property="BorderThickness" Value="0"/>
         <Setter Property="Foreground" Value="{DynamicResource LauncherTextLinkBrush}"/>
         <Setter Property="Padding" Value="0"/>
-        <Setter Property="FontSize" Value="14"/>
+        <Setter Property="FontSize" Value="{StaticResource LauncherFontSizeLg}"/>
         <Setter Property="TextBlock.TextDecorations" Value="Underline"/>
     </Style>
     <Style Selector="Button.icon-link">
@@ -127,23 +133,10 @@
         <Setter Property="Foreground" Value="{DynamicResource LauncherAccentBrush}"/>
         <Setter Property="Padding" Value="8,4"/>
         <Setter Property="CornerRadius" Value="{StaticResource LauncherRadiusSm}"/>
-        <Setter Property="FontSize" Value="14"/>
+        <Setter Property="FontSize" Value="{StaticResource LauncherFontSizeLg}"/>
         <Setter Property="HorizontalContentAlignment" Value="Center"/>
         <Setter Property="VerticalContentAlignment" Value="Center"/>
-        <Setter Property="Template">
-            <ControlTemplate>
-                <Border Background="{TemplateBinding Background}"
-                        BorderBrush="{TemplateBinding BorderBrush}"
-                        BorderThickness="{TemplateBinding BorderThickness}"
-                        CornerRadius="{TemplateBinding CornerRadius}">
-                    <ContentPresenter Content="{TemplateBinding Content}"
-                                      ContentTemplate="{TemplateBinding ContentTemplate}"
-                                      Padding="{TemplateBinding Padding}"
-                                      HorizontalContentAlignment="{TemplateBinding HorizontalContentAlignment}"
-                                      VerticalContentAlignment="{TemplateBinding VerticalContentAlignment}"/>
-                </Border>
-            </ControlTemplate>
-        </Setter>
+        <Setter Property="Template" Value="{StaticResource LauncherBorderButtonTemplate}"/>
     </Style>
     <Style Selector="Button.icon-link:pointerover">
         <Setter Property="Background" Value="{DynamicResource LauncherInfoBackgroundBrush}"/>
@@ -157,8 +150,8 @@
         <Setter Property="Background" Value="{DynamicResource LauncherTransparentBrush}"/>
         <Setter Property="BorderThickness" Value="0"/>
         <Setter Property="Foreground" Value="{DynamicResource LauncherTextSecondaryBrush}"/>
-        <Setter Property="Width" Value="28"/>
-        <Setter Property="Height" Value="28"/>
+        <Setter Property="Width" Value="{StaticResource LauncherSwatchSize}"/>
+        <Setter Property="Height" Value="{StaticResource LauncherSwatchSize}"/>
         <Setter Property="Padding" Value="0"/>
         <Setter Property="CornerRadius" Value="{StaticResource LauncherRadiusSm}"/>
         <Setter Property="HorizontalContentAlignment" Value="Center"/>
@@ -167,6 +160,10 @@
     <Style Selector="Button.icon-button.compact">
         <Setter Property="Width" Value="24"/>
         <Setter Property="Height" Value="24"/>
+    </Style>
+    <Style Selector="Button.icon-button.carousel-navigation">
+        <Setter Property="Width" Value="{StaticResource LauncherControlHeightSetting}"/>
+        <Setter Property="Height" Value="{StaticResource LauncherControlHeightSetting}"/>
     </Style>
     <Style Selector="Button.icon-button.dot">
         <Setter Property="Width" Value="20"/>
@@ -180,31 +177,24 @@
         <Setter Property="Background" Value="{DynamicResource LauncherFlatPressedBrush}"/>
         <Setter Property="Foreground" Value="{DynamicResource LauncherAccentPressedBrush}"/>
     </Style>
+    <Style Selector="Button.icon-button.carousel-navigation:pointerover">
+        <Setter Property="Background" Value="{DynamicResource LauncherChromeHoverBrush}"/>
+    </Style>
+    <Style Selector="Button.icon-button.carousel-navigation:pressed">
+        <Setter Property="Background" Value="{DynamicResource LauncherAccentSoftBrush}"/>
+    </Style>
     <Style Selector="Button.primary-action">
         <Setter Property="Background" Value="{DynamicResource LauncherAccentBrush}"/>
         <Setter Property="Foreground" Value="{DynamicResource LauncherOnAccentBrush}"/>
-        <Setter Property="FontSize" Value="16"/>
-        <Setter Property="FontWeight" Value="SemiBold"/>
+        <Setter Property="FontSize" Value="{StaticResource LauncherFontSizeXxl}"/>
+        <Setter Property="FontWeight" Value="{StaticResource LauncherFontWeightStrong}"/>
         <Setter Property="MinWidth" Value="150"/>
         <Setter Property="Height" Value="{StaticResource LauncherControlHeightBottom}"/>
         <Setter Property="Padding" Value="20,12"/>
         <Setter Property="CornerRadius" Value="{StaticResource LauncherRadiusSm}"/>
         <Setter Property="HorizontalContentAlignment" Value="Center"/>
         <Setter Property="VerticalContentAlignment" Value="Center"/>
-        <Setter Property="Template">
-            <ControlTemplate>
-                <Border Background="{TemplateBinding Background}"
-                        BorderBrush="{TemplateBinding BorderBrush}"
-                        BorderThickness="{TemplateBinding BorderThickness}"
-                        CornerRadius="{TemplateBinding CornerRadius}">
-                    <ContentPresenter Content="{TemplateBinding Content}"
-                                      ContentTemplate="{TemplateBinding ContentTemplate}"
-                                      Padding="{TemplateBinding Padding}"
-                                      HorizontalContentAlignment="{TemplateBinding HorizontalContentAlignment}"
-                                      VerticalContentAlignment="{TemplateBinding VerticalContentAlignment}"/>
-                </Border>
-            </ControlTemplate>
-        </Setter>
+        <Setter Property="Template" Value="{StaticResource LauncherBorderButtonTemplate}"/>
     </Style>
     <Style Selector="Button.primary-action:pointerover">
         <Setter Property="Background" Value="{DynamicResource LauncherAccentHoverBrush}"/>
@@ -228,20 +218,7 @@
         <Setter Property="MinHeight" Value="{StaticResource LauncherControlHeightSetting}"/>
         <Setter Property="HorizontalContentAlignment" Value="Center"/>
         <Setter Property="VerticalContentAlignment" Value="Center"/>
-        <Setter Property="Template">
-            <ControlTemplate>
-                <Border Background="{TemplateBinding Background}"
-                        BorderBrush="{TemplateBinding BorderBrush}"
-                        BorderThickness="{TemplateBinding BorderThickness}"
-                        CornerRadius="{TemplateBinding CornerRadius}">
-                    <ContentPresenter Content="{TemplateBinding Content}"
-                                      ContentTemplate="{TemplateBinding ContentTemplate}"
-                                      Padding="{TemplateBinding Padding}"
-                                      HorizontalContentAlignment="{TemplateBinding HorizontalContentAlignment}"
-                                      VerticalContentAlignment="{TemplateBinding VerticalContentAlignment}"/>
-                </Border>
-            </ControlTemplate>
-        </Setter>
+        <Setter Property="Template" Value="{StaticResource LauncherBorderButtonTemplate}"/>
     </Style>
     <Style Selector="Button.flat-action:pointerover">
         <Setter Property="Background" Value="{DynamicResource LauncherFlatHoverBrush}"/>
@@ -265,30 +242,15 @@
         <Setter Property="Padding" Value="0"/>
     </Style>
     <Style Selector="Button.bottom-action">
-        <Setter Property="Height" Value="{StaticResource LauncherControlHeightBottom}"/>
+        <Setter Property="MinHeight" Value="{StaticResource LauncherControlHeightBottom}"/>
         <Setter Property="MinWidth" Value="156"/>
         <Setter Property="Padding" Value="20,12"/>
-        <Setter Property="FontSize" Value="15"/>
-        <Setter Property="FontWeight" Value="SemiBold"/>
+        <Setter Property="FontSize" Value="{StaticResource LauncherFontSizeXl}"/>
     </Style>
-    <Style Selector="Button.dialog-action">
-        <Setter Property="Height" Value="{StaticResource LauncherControlHeightDialog}"/>
-        <Setter Property="MinWidth" Value="108"/>
-        <Setter Property="Padding" Value="16,0"/>
-        <Setter Property="FontSize" Value="14"/>
-    </Style>
-    <Style Selector="Button.settings-footer-action">
-        <Setter Property="Height" Value="{StaticResource LauncherControlHeightBottom}"/>
-        <Setter Property="MinWidth" Value="0"/>
-        <Setter Property="Padding" Value="20,0"/>
-        <Setter Property="FontSize" Value="15"/>
-        <Setter Property="FontWeight" Value="SemiBold"/>
-    </Style>
-    <Style Selector="Button.primary-action.settings-footer-action:disabled">
-        <Setter Property="Background" Value="{DynamicResource LauncherContentRowBrush}"/>
-        <Setter Property="BorderBrush" Value="{DynamicResource LauncherCardBorderBrush}"/>
-        <Setter Property="BorderThickness" Value="1"/>
-        <Setter Property="Foreground" Value="{DynamicResource LauncherTextSecondaryBrush}"/>
+    <Style Selector="Button.primary-action.path-operation">
+        <Setter Property="Height" Value="{StaticResource LauncherFieldHeight}"/>
+        <Setter Property="MinHeight" Value="{StaticResource LauncherFieldHeight}"/>
+        <Setter Property="Padding" Value="{StaticResource LauncherThicknessSm}"/>
     </Style>
     <Style Selector="StackPanel.confirm-actions">
         <Setter Property="Orientation" Value="Horizontal"/>
@@ -299,26 +261,13 @@
         <Setter Property="Background" Value="{DynamicResource LauncherDangerBrush}"/>
         <Setter Property="Foreground" Value="{DynamicResource LauncherOnAccentBrush}"/>
         <Setter Property="BorderThickness" Value="0"/>
-        <Setter Property="FontWeight" Value="SemiBold"/>
+        <Setter Property="FontWeight" Value="{StaticResource LauncherFontWeightStrong}"/>
         <Setter Property="MinHeight" Value="{StaticResource LauncherControlHeightDialog}"/>
         <Setter Property="Padding" Value="20,12"/>
         <Setter Property="CornerRadius" Value="{StaticResource LauncherRadiusSm}"/>
         <Setter Property="HorizontalContentAlignment" Value="Center"/>
         <Setter Property="VerticalContentAlignment" Value="Center"/>
-        <Setter Property="Template">
-            <ControlTemplate>
-                <Border Background="{TemplateBinding Background}"
-                        BorderBrush="{TemplateBinding BorderBrush}"
-                        BorderThickness="{TemplateBinding BorderThickness}"
-                        CornerRadius="{TemplateBinding CornerRadius}">
-                    <ContentPresenter Content="{TemplateBinding Content}"
-                                      ContentTemplate="{TemplateBinding ContentTemplate}"
-                                      Padding="{TemplateBinding Padding}"
-                                      HorizontalContentAlignment="{TemplateBinding HorizontalContentAlignment}"
-                                      VerticalContentAlignment="{TemplateBinding VerticalContentAlignment}"/>
-                </Border>
-            </ControlTemplate>
-        </Setter>
+        <Setter Property="Template" Value="{StaticResource LauncherBorderButtonTemplate}"/>
     </Style>
     <Style Selector="Button.danger-action:pointerover">
         <Setter Property="Background" Value="{DynamicResource LauncherDangerHoverBrush}"/>
@@ -327,6 +276,18 @@
     <Style Selector="Button.danger-action:pressed">
         <Setter Property="Background" Value="{DynamicResource LauncherDangerPressedBrush}"/>
         <Setter Property="Foreground" Value="{DynamicResource LauncherOnAccentBrush}"/>
+    </Style>
+    <Style Selector="Button.dialog-action">
+        <Setter Property="Height" Value="{StaticResource LauncherControlHeightDialog}"/>
+        <Setter Property="MinWidth" Value="108"/>
+        <Setter Property="Padding" Value="16,0"/>
+        <Setter Property="FontSize" Value="{StaticResource LauncherFontSizeLg}"/>
+    </Style>
+    <Style Selector="Button.primary-action.dialog-action:disabled">
+        <Setter Property="Background" Value="{DynamicResource LauncherContentRowBrush}"/>
+        <Setter Property="BorderBrush" Value="{DynamicResource LauncherCardBorderBrush}"/>
+        <Setter Property="BorderThickness" Value="1"/>
+        <Setter Property="Foreground" Value="{DynamicResource LauncherTextSecondaryBrush}"/>
     </Style>
     <Style Selector="Button.dialog-close">
         <Setter Property="Background" Value="{DynamicResource LauncherTransparentBrush}"/>
@@ -338,20 +299,7 @@
         <Setter Property="CornerRadius" Value="{StaticResource LauncherRadiusSm}"/>
         <Setter Property="HorizontalContentAlignment" Value="Center"/>
         <Setter Property="VerticalContentAlignment" Value="Center"/>
-        <Setter Property="Template">
-            <ControlTemplate>
-                <Border Background="{TemplateBinding Background}"
-                        BorderBrush="{TemplateBinding BorderBrush}"
-                        BorderThickness="{TemplateBinding BorderThickness}"
-                        CornerRadius="{TemplateBinding CornerRadius}">
-                    <ContentPresenter Content="{TemplateBinding Content}"
-                                      ContentTemplate="{TemplateBinding ContentTemplate}"
-                                      Padding="{TemplateBinding Padding}"
-                                      HorizontalContentAlignment="{TemplateBinding HorizontalContentAlignment}"
-                                      VerticalContentAlignment="{TemplateBinding VerticalContentAlignment}"/>
-                </Border>
-            </ControlTemplate>
-        </Setter>
+        <Setter Property="Template" Value="{StaticResource LauncherBorderButtonTemplate}"/>
     </Style>
     <Style Selector="Button.dialog-close:pointerover">
         <Setter Property="Background" Value="{DynamicResource LauncherDialogCloseHoverBrush}"/>
@@ -361,30 +309,25 @@
         <Setter Property="Background" Value="{DynamicResource LauncherDialogClosePressedBrush}"/>
         <Setter Property="Foreground" Value="{DynamicResource LauncherTextPrimaryBrush}"/>
     </Style>
+    <Style Selector="Button.dialog-close:focus-visible">
+        <Setter Property="Background" Value="{DynamicResource LauncherAccentSoftBrush}"/>
+        <Setter Property="BorderBrush" Value="{DynamicResource LauncherAccentBrush}"/>
+        <Setter Property="BorderThickness" Value="1"/>
+    </Style>
+    <Style Selector="Button.dialog-close.header-action">
+        <Setter Property="Margin" Value="0,0,16,0"/>
+    </Style>
     <Style Selector="Button.launcher-control">
         <Setter Property="Width" Value="220"/>
+        <Setter Property="MinHeight" Value="{StaticResource LauncherControlHeightLaunch}"/>
         <Setter Property="Height" Value="{StaticResource LauncherControlHeightLaunch}"/>
         <Setter Property="Padding" Value="20,0"/>
         <Setter Property="CornerRadius" Value="{StaticResource LauncherRadiusMd}"/>
-        <Setter Property="FontSize" Value="17"/>
-        <Setter Property="FontWeight" Value="SemiBold"/>
+        <Setter Property="FontSize" Value="{StaticResource LauncherFontSizeHeadingSm}"/>
         <Setter Property="Opacity" Value="1"/>
         <Setter Property="HorizontalContentAlignment" Value="Center"/>
         <Setter Property="VerticalContentAlignment" Value="Center"/>
-        <Setter Property="Template">
-            <ControlTemplate>
-                <Border Background="{TemplateBinding Background}"
-                        BorderBrush="{TemplateBinding BorderBrush}"
-                        BorderThickness="{TemplateBinding BorderThickness}"
-                        CornerRadius="{TemplateBinding CornerRadius}">
-                    <ContentPresenter Content="{TemplateBinding Content}"
-                                      ContentTemplate="{TemplateBinding ContentTemplate}"
-                                      Padding="{TemplateBinding Padding}"
-                                      HorizontalContentAlignment="{TemplateBinding HorizontalContentAlignment}"
-                                      VerticalContentAlignment="{TemplateBinding VerticalContentAlignment}"/>
-                </Border>
-            </ControlTemplate>
-        </Setter>
+        <Setter Property="Template" Value="{StaticResource LauncherBorderButtonTemplate}"/>
     </Style>
     <Style Selector="Button.launcher-control.site">
         <Setter Property="Background" Value="{DynamicResource LauncherSiteButtonBackgroundBrush}"/>
@@ -410,6 +353,8 @@
         <Setter Property="BorderBrush" Value="{DynamicResource LauncherAccentBrush}"/>
         <Setter Property="BorderThickness" Value="1"/>
         <Setter Property="Foreground" Value="{DynamicResource LauncherOnAccentBrush}"/>
+        <Setter Property="FontWeight" Value="{StaticResource LauncherFontWeightStrong}"/>
+        <Setter Property="MinHeight" Value="{StaticResource LauncherControlHeightLaunch}"/>
         <Setter Property="Opacity" Value="1"/>
     </Style>
     <Style Selector="Button.launcher-control.start:pointerover">
@@ -424,10 +369,18 @@
         <Setter Property="Foreground" Value="{DynamicResource LauncherOnAccentBrush}"/>
         <Setter Property="Opacity" Value="1"/>
     </Style>
+    <Style Selector="TextBlock.operation-status-title">
+        <Setter Property="FontSize" Value="{StaticResource LauncherFontSizeHeadingSm}"/>
+        <Setter Property="FontWeight" Value="{StaticResource LauncherFontWeightStrong}"/>
+        <Setter Property="Foreground" Value="{DynamicResource LauncherTextPrimaryBrush}"/>
+    </Style>
+    <Style Selector="TextBlock.operation-status-title.on-dark-title">
+        <Setter Property="Foreground" Value="{DynamicResource LauncherOnChromeBrush}"/>
+    </Style>
     <Style Selector="TextBlock.panel-title">
         <Setter Property="Foreground" Value="{DynamicResource LauncherTextPrimaryBrush}"/>
-        <Setter Property="FontSize" Value="14"/>
-        <Setter Property="FontWeight" Value="SemiBold"/>
+        <Setter Property="FontSize" Value="{StaticResource LauncherFontSizeLg}"/>
+        <Setter Property="FontWeight" Value="{StaticResource LauncherFontWeightStrong}"/>
     </Style>
     <Style Selector="Border.surface">
         <Setter Property="Background" Value="{DynamicResource LauncherPanelBackgroundBrush}"/>
@@ -440,6 +393,7 @@
         <Setter Property="VerticalAlignment" Value="Top"/>
         <Setter Property="Margin" Value="40,64,0,0"/>
         <Setter Property="Width" Value="500"/>
+        <Setter Property="MinHeight" Value="360"/>
         <Setter Property="MaxHeight" Value="480"/>
     </Style>
     <Style Selector="Border.info-strip">
@@ -465,12 +419,12 @@
         <Setter Property="HorizontalAlignment" Value="Stretch"/>
         <Setter Property="VerticalAlignment" Value="Stretch"/>
     </Style>
-    <Style Selector="Border.remote-content-loading-overlay">
-        <Setter Property="MinHeight" Value="120"/>
+    <Style Selector="UserControl.remote-content-loading-overlay">
+        <Setter Property="VerticalAlignment" Value="Stretch"/>
     </Style>
     <Style Selector="TextBlock.media-placeholder-text">
         <Setter Property="Foreground" Value="{DynamicResource LauncherMediaPlaceholderTextBrush}"/>
-        <Setter Property="FontSize" Value="13"/>
+        <Setter Property="FontSize" Value="{StaticResource LauncherFontSizeMd}"/>
         <Setter Property="HorizontalAlignment" Value="Center"/>
         <Setter Property="VerticalAlignment" Value="Center"/>
     </Style>
@@ -479,21 +433,128 @@
         <Setter Property="BorderBrush" Value="{DynamicResource LauncherFieldBorderBrush}"/>
         <Setter Property="BorderThickness" Value="1"/>
         <Setter Property="CornerRadius" Value="{StaticResource LauncherRadiusSm}"/>
-        <Setter Property="Height" Value="40"/>
-        <Setter Property="Padding" Value="16,0"/>
+        <Setter Property="Height" Value="{StaticResource LauncherFieldHeight}"/>
+        <Setter Property="Padding" Value="{StaticResource LauncherPathFieldPadding}"/>
     </Style>
-    <!-- Bottom panels share 40px horizontal alignment with the remote surface.
-         The control panel keeps a larger 24px top inset for visual separation. -->
+    <!-- Operation panels share 40px horizontal alignment and common padding. -->
     <Style Selector="Border.bottom-panel">
         <Setter Property="VerticalAlignment" Value="Bottom"/>
         <Setter Property="MinHeight" Value="132"/>
         <Setter Property="Background" Value="{DynamicResource LauncherBottomPanelBackgroundBrush}"/>
         <Setter Property="Padding" Value="40,20,40,20"/>
     </Style>
+    <Style Selector="Grid.motion-overlay">
+        <Setter Property="IsVisible" Value="False"/>
+        <Setter Property="Opacity" Value="1"/>
+    </Style>
+    <Style Selector="Border.motion-surface">
+        <Setter Property="Opacity" Value="1"/>
+    </Style>
+    <Style Selector=":is(UserControl).motion-content">
+        <Setter Property="Opacity" Value="1"/>
+    </Style>
+    <Style Selector="StackPanel.motion-content">
+        <Setter Property="Opacity" Value="1"/>
+    </Style>
+    <Style Selector="Border.motion-bottom">
+        <Setter Property="Opacity" Value="1"/>
+    </Style>
+    <Style Selector="Grid.motion-overlay.motion-enabled.motion-enter">
+        <Style.Animations>
+            <Animation Duration="0:0:0.167" FillMode="Forward" Easing="ExponentialEaseOut">
+                <KeyFrame Cue="0%">
+                    <Setter Property="Opacity" Value="0"/>
+                </KeyFrame>
+                <KeyFrame Cue="100%">
+                    <Setter Property="Opacity" Value="1"/>
+                </KeyFrame>
+            </Animation>
+        </Style.Animations>
+    </Style>
+    <Style Selector="Grid.motion-overlay.motion-enabled.motion-enter > Border.motion-surface">
+        <Style.Animations>
+            <Animation Duration="0:0:0.250" FillMode="Forward" Easing="ExponentialEaseOut" Delay="0:0:0.050">
+                <KeyFrame Cue="0%">
+                    <Setter Property="Opacity" Value="0"/>
+                    <Setter Property="TranslateTransform.Y" Value="8"/>
+                </KeyFrame>
+                <KeyFrame Cue="100%">
+                    <Setter Property="Opacity" Value="1"/>
+                    <Setter Property="TranslateTransform.Y" Value="0"/>
+                </KeyFrame>
+            </Animation>
+        </Style.Animations>
+    </Style>
+    <Style Selector="Grid.motion-overlay.motion-enabled.motion-exit">
+        <Style.Animations>
+            <Animation Duration="0:0:0.167" FillMode="Forward" Easing="ExponentialEaseIn">
+                <KeyFrame Cue="0%">
+                    <Setter Property="Opacity" Value="1"/>
+                </KeyFrame>
+                <KeyFrame Cue="100%">
+                    <Setter Property="Opacity" Value="0"/>
+                </KeyFrame>
+            </Animation>
+        </Style.Animations>
+    </Style>
+    <Style Selector="Grid.motion-overlay.motion-enabled.motion-exit > Border.motion-surface">
+        <Style.Animations>
+            <Animation Duration="0:0:0.167" FillMode="Forward" Easing="ExponentialEaseIn">
+                <KeyFrame Cue="0%">
+                    <Setter Property="Opacity" Value="1"/>
+                    <Setter Property="TranslateTransform.Y" Value="0"/>
+                </KeyFrame>
+                <KeyFrame Cue="100%">
+                    <Setter Property="Opacity" Value="0"/>
+                    <Setter Property="TranslateTransform.Y" Value="8"/>
+                </KeyFrame>
+            </Animation>
+        </Style.Animations>
+    </Style>
+    <Style Selector=":is(UserControl).motion-content.motion-enabled.motion-enter">
+        <Style.Animations>
+            <Animation Duration="0:0:0.200" FillMode="Forward" Easing="ExponentialEaseOut">
+                <KeyFrame Cue="0%">
+                    <Setter Property="Opacity" Value="0"/>
+                    <Setter Property="TranslateTransform.Y" Value="6"/>
+                </KeyFrame>
+                <KeyFrame Cue="100%">
+                    <Setter Property="Opacity" Value="1"/>
+                    <Setter Property="TranslateTransform.Y" Value="0"/>
+                </KeyFrame>
+            </Animation>
+        </Style.Animations>
+    </Style>
+    <Style Selector="StackPanel.motion-content.motion-enabled.motion-enter">
+        <Style.Animations>
+            <Animation Duration="0:0:0.200" FillMode="Forward" Easing="ExponentialEaseOut">
+                <KeyFrame Cue="0%">
+                    <Setter Property="Opacity" Value="0"/>
+                    <Setter Property="TranslateTransform.Y" Value="6"/>
+                </KeyFrame>
+                <KeyFrame Cue="100%">
+                    <Setter Property="Opacity" Value="1"/>
+                    <Setter Property="TranslateTransform.Y" Value="0"/>
+                </KeyFrame>
+            </Animation>
+        </Style.Animations>
+    </Style>
+    <Style Selector="Border.motion-bottom.motion-enabled.motion-enter">
+        <Style.Animations>
+            <Animation Duration="0:0:0.250" FillMode="Forward" Easing="ExponentialEaseOut">
+                <KeyFrame Cue="0%">
+                    <Setter Property="Opacity" Value="0"/>
+                    <Setter Property="TranslateTransform.Y" Value="12"/>
+                </KeyFrame>
+                <KeyFrame Cue="100%">
+                    <Setter Property="Opacity" Value="1"/>
+                    <Setter Property="TranslateTransform.Y" Value="0"/>
+                </KeyFrame>
+            </Animation>
+        </Style.Animations>
+    </Style>
     <Style Selector="Border.control-panel">
-        <Setter Property="VerticalAlignment" Value="Bottom"/>
         <Setter Property="MinHeight" Value="156"/>
-        <Setter Property="Padding" Value="40,24,40,20"/>
         <!-- Dark gradient overlay on top of wallpaper — intentionally theme-invariant (black transparency). -->
         <Setter Property="Background">
             <LinearGradientBrush StartPoint="0%,0%" EndPoint="0%,100%">
@@ -506,8 +567,12 @@
     <Style Selector="Border.content-row">
         <Setter Property="Background" Value="{DynamicResource LauncherContentRowBrush}"/>
         <Setter Property="CornerRadius" Value="{StaticResource LauncherRadiusSm}"/>
-        <Setter Property="Padding" Value="8"/>
+        <Setter Property="Padding" Value="12"/>
         <Setter Property="Margin" Value="0,0,0,4"/>
+    </Style>
+    <Style Selector="Border.content-row.news-content-row">
+        <Setter Property="Padding" Value="{StaticResource LauncherThicknessSm}"/>
+        <Setter Property="Margin" Value="{StaticResource LauncherThicknessNone}"/>
     </Style>
     <Style Selector="Button.content-link">
         <Setter Property="Background" Value="{DynamicResource LauncherTransparentBrush}"/>
@@ -516,20 +581,7 @@
         <Setter Property="HorizontalAlignment" Value="Stretch"/>
         <Setter Property="HorizontalContentAlignment" Value="Stretch"/>
         <Setter Property="VerticalContentAlignment" Value="Stretch"/>
-        <Setter Property="Template">
-            <ControlTemplate>
-                <Border Background="{TemplateBinding Background}"
-                        BorderBrush="{TemplateBinding BorderBrush}"
-                        BorderThickness="{TemplateBinding BorderThickness}"
-                        CornerRadius="{TemplateBinding CornerRadius}">
-                    <ContentPresenter Content="{TemplateBinding Content}"
-                                      ContentTemplate="{TemplateBinding ContentTemplate}"
-                                      Padding="{TemplateBinding Padding}"
-                                      HorizontalContentAlignment="{TemplateBinding HorizontalContentAlignment}"
-                                      VerticalContentAlignment="{TemplateBinding VerticalContentAlignment}"/>
-                </Border>
-            </ControlTemplate>
-        </Setter>
+        <Setter Property="Template" Value="{StaticResource LauncherBorderButtonTemplate}"/>
     </Style>
     <Style Selector="Button.content-link:pointerover">
         <Setter Property="Background" Value="{DynamicResource LauncherContentRowHoverBrush}"/>
@@ -553,9 +605,122 @@
         <Setter Property="KeyboardNavigation.TabNavigation" Value="Cycle"/>
         <Setter Property="views:OverlayFocusBehavior.IsEnabled" Value="True"/>
     </Style>
+    <Style Selector="Grid.settings-workspace">
+        <Setter Property="ColumnSpacing" Value="0"/>
+        <Setter Property="Margin" Value="0"/>
+    </Style>
+    <Style Selector="ListBox.settings-navigation">
+        <Setter Property="Background" Value="{DynamicResource LauncherContentRowBrush}"/>
+        <Setter Property="BorderThickness" Value="0"/>
+        <Setter Property="Padding" Value="16,8,8,16"/>
+    </Style>
+    <Style Selector="ListBox.settings-navigation > ListBoxItem">
+        <Setter Property="Background" Value="{DynamicResource LauncherTransparentBrush}"/>
+        <Setter Property="Foreground" Value="{DynamicResource LauncherTextBodyBrush}"/>
+        <Setter Property="BorderBrush" Value="{DynamicResource LauncherTransparentBrush}"/>
+        <Setter Property="BorderThickness" Value="0"/>
+        <Setter Property="CornerRadius" Value="0"/>
+        <Setter Property="Padding" Value="8,12,12,12"/>
+        <Setter Property="HorizontalContentAlignment" Value="Stretch"/>
+    </Style>
+    <Style Selector="ListBox.settings-navigation > ListBoxItem:pointerover">
+        <Setter Property="Background" Value="{DynamicResource LauncherTransparentBrush}"/>
+        <Setter Property="Foreground" Value="{DynamicResource LauncherAccentBrush}"/>
+        <Setter Property="BorderBrush" Value="{DynamicResource LauncherTransparentBrush}"/>
+        <Setter Property="BorderThickness" Value="0"/>
+    </Style>
+    <Style Selector="ListBox.settings-navigation > ListBoxItem:selected">
+        <Setter Property="Background" Value="{DynamicResource LauncherFlatPressedBrush}"/>
+        <Setter Property="Foreground" Value="{DynamicResource LauncherTextPrimaryBrush}"/>
+        <Setter Property="BorderBrush" Value="{DynamicResource LauncherAccentBrush}"/>
+        <Setter Property="BorderThickness" Value="3,0,0,0"/>
+        <Setter Property="FontWeight" Value="{StaticResource LauncherFontWeightStrong}"/>
+    </Style>
+    <Style Selector="ListBox.settings-navigation > ListBoxItem:selected:not(:focus)">
+        <Setter Property="Background" Value="{DynamicResource LauncherFlatPressedBrush}"/>
+        <Setter Property="Foreground" Value="{DynamicResource LauncherTextPrimaryBrush}"/>
+        <Setter Property="BorderBrush" Value="{DynamicResource LauncherAccentBrush}"/>
+        <Setter Property="BorderThickness" Value="3,0,0,0"/>
+    </Style>
+    <Style Selector="ListBox.settings-navigation > ListBoxItem:selected:pointerover">
+        <Setter Property="Background" Value="{DynamicResource LauncherFlatPressedBrush}"/>
+        <Setter Property="Foreground" Value="{DynamicResource LauncherTextPrimaryBrush}"/>
+        <Setter Property="BorderBrush" Value="{DynamicResource LauncherAccentBrush}"/>
+        <Setter Property="BorderThickness" Value="3,0,0,0"/>
+    </Style>
+    <Style Selector="ListBox.settings-navigation > ListBoxItem:selected:pressed">
+        <Setter Property="Background" Value="{DynamicResource LauncherFlatPressedBrush}"/>
+        <Setter Property="Foreground" Value="{DynamicResource LauncherTextPrimaryBrush}"/>
+        <Setter Property="BorderBrush" Value="{DynamicResource LauncherAccentBrush}"/>
+        <Setter Property="BorderThickness" Value="3,0,0,0"/>
+    </Style>
+    <Style Selector="ListBox.settings-navigation > ListBoxItem:disabled">
+        <Setter Property="Foreground" Value="{DynamicResource LauncherTextSecondaryBrush}"/>
+        <Setter Property="BorderBrush" Value="{DynamicResource LauncherTransparentBrush}"/>
+        <Setter Property="BorderThickness" Value="0"/>
+    </Style>
+    <Style Selector="ListBox.settings-navigation > ListBoxItem:pointerover /template/ ContentPresenter#PART_ContentPresenter">
+        <Setter Property="Background" Value="{DynamicResource LauncherTransparentBrush}"/>
+        <Setter Property="Foreground" Value="{DynamicResource LauncherAccentBrush}"/>
+    </Style>
+    <Style Selector="ListBox.settings-navigation > ListBoxItem:pressed /template/ ContentPresenter#PART_ContentPresenter">
+        <Setter Property="Background" Value="{DynamicResource LauncherFlatPressedBrush}"/>
+        <Setter Property="Foreground" Value="{DynamicResource LauncherTextPrimaryBrush}"/>
+    </Style>
+    <Style Selector="ListBox.settings-navigation > ListBoxItem:selected /template/ ContentPresenter#PART_ContentPresenter">
+        <Setter Property="Background" Value="{DynamicResource LauncherFlatPressedBrush}"/>
+        <Setter Property="Foreground" Value="{DynamicResource LauncherTextPrimaryBrush}"/>
+    </Style>
+    <Style Selector="ListBox.settings-navigation > ListBoxItem:selected:not(:focus) /template/ ContentPresenter#PART_ContentPresenter">
+        <Setter Property="Background" Value="{DynamicResource LauncherFlatPressedBrush}"/>
+        <Setter Property="Foreground" Value="{DynamicResource LauncherTextPrimaryBrush}"/>
+    </Style>
+    <Style Selector="ListBox.settings-navigation > ListBoxItem:selected:pointerover /template/ ContentPresenter#PART_ContentPresenter">
+        <Setter Property="Background" Value="{DynamicResource LauncherFlatPressedBrush}"/>
+        <Setter Property="Foreground" Value="{DynamicResource LauncherTextPrimaryBrush}"/>
+    </Style>
+    <Style Selector="ListBox.settings-navigation > ListBoxItem:selected:pressed /template/ ContentPresenter#PART_ContentPresenter">
+        <Setter Property="Background" Value="{DynamicResource LauncherFlatPressedBrush}"/>
+        <Setter Property="Foreground" Value="{DynamicResource LauncherTextPrimaryBrush}"/>
+    </Style>
+    <Style Selector="TextBlock.settings-navigation-item">
+        <Setter Property="TextTrimming" Value="CharacterEllipsis"/>
+        <Setter Property="VerticalAlignment" Value="Center"/>
+    </Style>
+    <Style Selector="Grid.settings-content">
+        <Setter Property="Background" Value="{DynamicResource LauncherDialogBackgroundBrush}"/>
+        <Setter Property="RowSpacing" Value="{StaticResource LauncherSpacingMd}"/>
+    </Style>
+    <Style Selector="StackPanel.settings-category-header">
+        <Setter Property="Spacing" Value="0"/>
+    </Style>
+    <Style Selector="StackPanel.settings-group">
+        <Setter Property="Margin" Value="0,16,0,0"/>
+    </Style>
+    <Style Selector="Border.settings-status-summary">
+        <Setter Property="Background" Value="{DynamicResource LauncherTransparentBrush}"/>
+        <Setter Property="BorderBrush" Value="{DynamicResource LauncherCardBorderBrush}"/>
+        <Setter Property="BorderThickness" Value="0,0,0,1"/>
+        <Setter Property="Padding" Value="0,0,0,8"/>
+        <Setter Property="Margin" Value="0,0,0,12"/>
+    </Style>
+    <Style Selector="Border.settings-content-padding">
+        <Setter Property="Padding" Value="16,12,16,16"/>
+    </Style>
+    <Style Selector="Border.settings-content-divider">
+        <Setter Property="BorderBrush" Value="{DynamicResource LauncherCardBorderBrush}"/>
+        <Setter Property="BorderThickness" Value="1,0,0,0"/>
+        <Setter Property="Background" Value="{DynamicResource LauncherTransparentBrush}"/>
+    </Style>
     <Style Selector="Grid.dialog-overlay">
         <Setter Property="Background" Value="{DynamicResource LauncherOverlayBrush}"/>
         <Setter Property="ZIndex" Value="200"/>
+        <Setter Property="KeyboardNavigation.TabNavigation" Value="Cycle"/>
+        <Setter Property="views:OverlayFocusBehavior.IsEnabled" Value="True"/>
+    </Style>
+    <Style Selector="Grid.setup-wizard-overlay">
+        <Setter Property="Background" Value="{DynamicResource LauncherOverlayBrush}"/>
+        <Setter Property="ZIndex" Value="500"/>
         <Setter Property="KeyboardNavigation.TabNavigation" Value="Cycle"/>
         <Setter Property="views:OverlayFocusBehavior.IsEnabled" Value="True"/>
     </Style>
@@ -572,7 +737,7 @@
     </Style>
     <Style Selector="Grid.dialog-header">
         <Setter Property="Background" Value="{DynamicResource LauncherDialogHeaderBrush}"/>
-        <Setter Property="Height" Value="56"/>
+        <Setter Property="Height" Value="{StaticResource LauncherDialogTitleHeight}"/>
         <Setter Property="ClipToBounds" Value="True"/>
     </Style>
     <Style Selector="StackPanel.dialog-title-row">
@@ -581,41 +746,14 @@
         <Setter Property="Margin" Value="16,0,0,0"/>
         <Setter Property="VerticalAlignment" Value="Center"/>
     </Style>
-    <Style Selector="StackPanel.log-filter-bar">
-        <Setter Property="Margin" Value="16,12"/>
-    </Style>
-    <Style Selector="Border.log-empty-state">
-        <Setter Property="Margin" Value="16"/>
-        <Setter Property="HorizontalAlignment" Value="Stretch"/>
-        <Setter Property="VerticalAlignment" Value="Stretch"/>
-    </Style>
-    <Style Selector="Border.log-empty-state TextBlock.media-placeholder-text">
-        <Setter Property="Foreground" Value="{DynamicResource LauncherTextSecondaryBrush}"/>
-    </Style>
-    <Style Selector="ListBox.log-entry-list">
-        <Setter Property="Margin" Value="16"/>
-        <Setter Property="Background" Value="{DynamicResource LauncherTransparentBrush}"/>
-        <Setter Property="BorderThickness" Value="0"/>
-    </Style>
-    <Style Selector="ListBox.log-entry-list > ListBoxItem">
-        <Setter Property="Padding" Value="0"/>
-        <Setter Property="Margin" Value="0,0,0,8"/>
-        <Setter Property="HorizontalContentAlignment" Value="Stretch"/>
-    </Style>
-    <Style Selector="ListBox.log-entry-list > ListBoxItem:pointerover /template/ ContentPresenter#PART_ContentPresenter">
-        <Setter Property="Background" Value="{DynamicResource LauncherTransparentBrush}"/>
-    </Style>
-    <Style Selector="ListBox.log-entry-list > ListBoxItem:selected /template/ ContentPresenter#PART_ContentPresenter">
-        <Setter Property="Background" Value="{DynamicResource LauncherTransparentBrush}"/>
-    </Style>
     <Style Selector="ScrollViewer.dialog-scroll">
-        <Setter Property="Margin" Value="16"/>
+        <Setter Property="Margin" Value="0"/>
     </Style>
     <Style Selector="Border.dialog-footer">
         <Setter Property="Background" Value="{DynamicResource LauncherDialogFooterBrush}"/>
         <Setter Property="BorderBrush" Value="{DynamicResource LauncherCardBorderBrush}"/>
         <Setter Property="BorderThickness" Value="0,1,0,0"/>
-        <Setter Property="Padding" Value="16"/>
+        <Setter Property="Padding" Value="{StaticResource LauncherThicknessMd}"/>
     </Style>
     <Style Selector="Border.confirm-panel">
         <Setter Property="MaxWidth" Value="540"/>
@@ -708,6 +846,14 @@
         <Setter Property="CornerRadius" Value="{StaticResource LauncherRadiusSm}"/>
         <Setter Property="Padding" Value="8,4"/>
     </Style>
+    <Style Selector="TextBlock.update-file-name">
+        <Setter Property="FontSize" Value="{StaticResource LauncherFontSizeMd}"/>
+        <Setter Property="Foreground" Value="{DynamicResource LauncherTextPrimaryBrush}"/>
+    </Style>
+    <Style Selector="TextBlock.update-file-size-text">
+        <Setter Property="FontSize" Value="{StaticResource LauncherFontSizeSm}"/>
+        <Setter Property="Foreground" Value="{DynamicResource LauncherTextSecondaryBrush}"/>
+    </Style>
     <Style Selector="Border.dialog-icon">
         <Setter Property="Width" Value="{StaticResource LauncherControlHeightSetting}"/>
         <Setter Property="Height" Value="{StaticResource LauncherControlHeightSetting}"/>
@@ -721,18 +867,22 @@
         <Setter Property="BorderBrush" Value="{DynamicResource LauncherDangerBrush}"/>
     </Style>
     <Style Selector="TextBlock.section-title">
-        <Setter Property="FontSize" Value="14"/>
-        <Setter Property="FontWeight" Value="SemiBold"/>
+        <Setter Property="FontSize" Value="{StaticResource LauncherFontSizeLg}"/>
+        <Setter Property="FontWeight" Value="{StaticResource LauncherFontWeightStrong}"/>
         <Setter Property="Foreground" Value="{DynamicResource LauncherTextPrimaryBrush}"/>
     </Style>
     <Style Selector="TextBlock.group-title">
-        <Setter Property="FontSize" Value="12"/>
-        <Setter Property="FontWeight" Value="SemiBold"/>
+        <Setter Property="FontSize" Value="{StaticResource LauncherFontSizeLg}"/>
+        <Setter Property="FontWeight" Value="{StaticResource LauncherFontWeightStrong}"/>
         <Setter Property="Foreground" Value="{DynamicResource LauncherTextSecondaryBrush}"/>
     </Style>
+    <Style Selector="TextBlock.category-title">
+        <Setter Property="FontSize" Value="{StaticResource LauncherFontSizeHeadingMd}"/>
+        <Setter Property="FontWeight" Value="{StaticResource LauncherFontWeightStrong}"/>
+        <Setter Property="Foreground" Value="{DynamicResource LauncherTextPrimaryBrush}"/>
+    </Style>
     <Style Selector="TextBlock.chip-text">
-        <Setter Property="FontSize" Value="12"/>
-        <Setter Property="FontWeight" Value="SemiBold"/>
+        <Setter Property="FontSize" Value="{StaticResource LauncherFontSizeSm}"/>
         <Setter Property="Foreground" Value="{DynamicResource LauncherTextPrimaryBrush}"/>
         <Setter Property="VerticalAlignment" Value="Center"/>
     </Style>
@@ -740,20 +890,24 @@
         <Setter Property="Orientation" Value="Horizontal"/>
         <Setter Property="Spacing" Value="{StaticResource LauncherSpacingSm}"/>
     </Style>
+    <Style Selector="StackPanel.button-content > TextBlock">
+        <Setter Property="VerticalAlignment" Value="Center"/>
+    </Style>
     <Style Selector="StackPanel.card-heading">
         <Setter Property="Orientation" Value="Horizontal"/>
         <Setter Property="Spacing" Value="{StaticResource LauncherSpacingSm}"/>
-    </Style>
-    <Style Selector="StackPanel.status-panel">
-        <Setter Property="Spacing" Value="{StaticResource LauncherSpacingMd}"/>
     </Style>
     <Style Selector="Grid.status-summary">
         <Setter Property="ColumnSpacing" Value="{StaticResource LauncherSpacingMd}"/>
     </Style>
     <Style Selector="TextBlock.status-summary-title">
-        <Setter Property="FontSize" Value="15"/>
-        <Setter Property="FontWeight" Value="SemiBold"/>
+        <Setter Property="FontSize" Value="{StaticResource LauncherFontSizeXl}"/>
+        <Setter Property="FontWeight" Value="{StaticResource LauncherFontWeightStrong}"/>
         <Setter Property="Foreground" Value="{DynamicResource LauncherTextPrimaryBrush}"/>
+    </Style>
+    <Style Selector="TextBlock.status-summary-version">
+        <Setter Property="FontSize" Value="{StaticResource LauncherFontSizeXl}"/>
+        <Setter Property="VerticalAlignment" Value="Center"/>
     </Style>
     <Style Selector="Grid.status-details">
         <Setter Property="ColumnSpacing" Value="{StaticResource LauncherSpacingSm}"/>
@@ -762,19 +916,22 @@
     <Style Selector="Border.status-detail">
         <Setter Property="Background" Value="{DynamicResource LauncherContentRowBrush}"/>
         <Setter Property="CornerRadius" Value="{StaticResource LauncherRadiusSm}"/>
-        <Setter Property="Padding" Value="12"/>
+        <Setter Property="Height" Value="{StaticResource LauncherChipHeight}"/>
+        <Setter Property="Padding" Value="12,0"/>
         <Setter Property="MinWidth" Value="0"/>
+    </Style>
+    <Style Selector="Border.status-note">
+        <Setter Property="Margin" Value="0,8,0,0"/>
     </Style>
     <Style Selector="Border.settings-section">
         <Setter Property="Background" Value="{DynamicResource LauncherCardBackgroundBrush}"/>
-        <Setter Property="BorderBrush" Value="{DynamicResource LauncherCardBorderBrush}"/>
-        <Setter Property="BorderThickness" Value="1"/>
+        <Setter Property="BorderThickness" Value="0"/>
         <Setter Property="CornerRadius" Value="{StaticResource LauncherRadiusMd}"/>
-        <Setter Property="Padding" Value="16"/>
+        <Setter Property="Padding" Value="{StaticResource LauncherThicknessLg}"/>
     </Style>
     <Style Selector="Border.settings-icon">
-        <Setter Property="Width" Value="32"/>
-        <Setter Property="Height" Value="32"/>
+        <Setter Property="Width" Value="{StaticResource LauncherChipHeight}"/>
+        <Setter Property="Height" Value="{StaticResource LauncherChipHeight}"/>
         <Setter Property="CornerRadius" Value="{StaticResource LauncherRadiusSm}"/>
         <Setter Property="Background" Value="{DynamicResource LauncherAccentSoftBrush}"/>
         <Setter Property="BorderBrush" Value="{DynamicResource LauncherAccentBorderBrush}"/>
@@ -784,26 +941,34 @@
         <Setter Property="Background" Value="{DynamicResource LauncherDangerSoftBrush}"/>
         <Setter Property="BorderBrush" Value="{DynamicResource LauncherDangerBrush}"/>
     </Style>
+    <Style Selector="materialIcons|MaterialIcon.confirm-heading-icon">
+        <Setter Property="Foreground" Value="{DynamicResource LauncherAccentBrush}"/>
+    </Style>
+    <Style Selector="materialIcons|MaterialIcon.confirm-heading-icon.danger">
+        <Setter Property="Foreground" Value="{DynamicResource LauncherDangerBrush}"/>
+    </Style>
     <Style Selector="Border.version-chip">
-        <Setter Property="Background" Value="{DynamicResource LauncherAccentSoftBrush}"/>
-        <Setter Property="BorderThickness" Value="0"/>
+        <Setter Property="Background" Value="{DynamicResource LauncherInfoBackgroundBrush}"/>
+        <Setter Property="BorderBrush" Value="{DynamicResource LauncherAccentBorderBrush}"/>
+        <Setter Property="BorderThickness" Value="1"/>
         <Setter Property="CornerRadius" Value="{StaticResource LauncherRadiusMd}"/>
         <Setter Property="Padding" Value="12,8"/>
-        <Setter Property="MinHeight" Value="32"/>
+        <Setter Property="MinHeight" Value="{StaticResource LauncherChipHeight}"/>
         <Setter Property="Margin" Value="0,0,8,8"/>
     </Style>
     <Style Selector="Grid.settings-row">
         <Setter Property="MinHeight" Value="44"/>
-        <Setter Property="Margin" Value="0,8,0,0"/>
+        <Setter Property="Margin" Value="0,12,0,0"/>
         <Setter Property="ColumnSpacing" Value="{StaticResource LauncherSpacingMd}"/>
     </Style>
     <Style Selector="ComboBox.setting-control">
-        <Setter Property="Width" Value="190"/>
+        <Setter Property="MinWidth" Value="220"/>
         <Setter Property="MinHeight" Value="{StaticResource LauncherControlHeightSetting}"/>
         <Setter Property="VerticalAlignment" Value="Center"/>
     </Style>
     <Style Selector="ColorPicker.setting-control">
-        <Setter Property="Width" Value="190"/>
+        <Setter Property="MinWidth" Value="220"/>
+        <Setter Property="Width" Value="220"/>
         <Setter Property="MinHeight" Value="{StaticResource LauncherControlHeightSetting}"/>
         <Setter Property="HorizontalContentAlignment" Value="Center"/>
         <Setter Property="VerticalContentAlignment" Value="Center"/>
@@ -819,10 +984,10 @@
         <Setter Property="BorderThickness" Value="1"/>
         <Setter Property="CornerRadius" Value="{StaticResource LauncherRadiusMd}"/>
         <Setter Property="Padding" Value="12,8"/>
-        <Setter Property="FontSize" Value="14"/>
+        <Setter Property="FontSize" Value="{StaticResource LauncherFontSizeLg}"/>
         <Setter Property="Foreground" Value="{DynamicResource LauncherTextPrimaryBrush}"/>
         <Setter Property="MinWidth" Value="160"/>
-        <Setter Property="MinHeight" Value="40"/>
+        <Setter Property="MinHeight" Value="{StaticResource LauncherFieldHeight}"/>
         <Setter Property="VerticalContentAlignment" Value="Center"/>
         <Setter Property="CaretBrush" Value="{DynamicResource LauncherAccentBrush}"/>
     </Style>
@@ -836,6 +1001,9 @@
         <Setter Property="Background" Value="{DynamicResource LauncherAccentBrush}"/>
         <Setter Property="BorderBrush" Value="{DynamicResource LauncherAccentBrush}"/>
     </Style>
+    <Style Selector="ToggleSwitch.setting-toggle">
+        <Setter Property="MinHeight" Value="{StaticResource LauncherControlHeightSetting}"/>
+    </Style>
     <Style Selector="ToggleSwitch:checked:pointerover /template/ Border#SwitchKnobBounds">
         <Setter Property="Background" Value="{DynamicResource LauncherAccentHoverBrush}"/>
         <Setter Property="BorderBrush" Value="{DynamicResource LauncherAccentHoverBrush}"/>
@@ -848,8 +1016,8 @@
         <Setter Property="Fill" Value="{DynamicResource LauncherOnAccentBrush}"/>
     </Style>
     <Style Selector="Border.color-swatch">
-        <Setter Property="Width" Value="28"/>
-        <Setter Property="Height" Value="28"/>
+        <Setter Property="Width" Value="{StaticResource LauncherSwatchSize}"/>
+        <Setter Property="Height" Value="{StaticResource LauncherSwatchSize}"/>
         <Setter Property="CornerRadius" Value="{StaticResource LauncherRadiusSm}"/>
         <Setter Property="BorderBrush" Value="{DynamicResource LauncherCardBorderBrush}"/>
         <Setter Property="BorderThickness" Value="1"/>
@@ -857,121 +1025,16 @@
     <Style Selector="Button.color-swatch-button">
         <Setter Property="Background" Value="{DynamicResource LauncherTransparentBrush}"/>
         <Setter Property="BorderThickness" Value="0"/>
-        <Setter Property="Width" Value="28"/>
-        <Setter Property="Height" Value="28"/>
+        <Setter Property="Width" Value="{StaticResource LauncherControlHeightSetting}"/>
+        <Setter Property="Height" Value="{StaticResource LauncherControlHeightSetting}"/>
         <Setter Property="Padding" Value="0"/>
         <Setter Property="CornerRadius" Value="{StaticResource LauncherRadiusSm}"/>
         <Setter Property="HorizontalContentAlignment" Value="Stretch"/>
         <Setter Property="VerticalContentAlignment" Value="Stretch"/>
     </Style>
-    <Style Selector="Border.banner-dot">
-        <Setter Property="Background" Value="{DynamicResource LauncherCarouselDotInactiveBrush}"/>
-        <Setter Property="Width" Value="{StaticResource LauncherSpacingSm}"/>
-        <Setter Property="Height" Value="{StaticResource LauncherSpacingSm}"/>
-        <Setter Property="CornerRadius" Value="{StaticResource LauncherRadiusSm}"/>
-    </Style>
-    <Style Selector="Border.banner-dot.active">
-        <Setter Property="Background" Value="{DynamicResource LauncherCarouselDotActiveBrush}"/>
-    </Style>
     <Style Selector="Button.wrap-action">
         <Setter Property="Margin" Value="0,0,8,8"/>
     </Style>
-    <Style Selector="Button.social-chip">
-        <Setter Property="Background" Value="{DynamicResource LauncherContentRowBrush}"/>
-        <Setter Property="BorderBrush" Value="{DynamicResource LauncherButtonBorderBrush}"/>
-        <Setter Property="BorderThickness" Value="1"/>
-        <Setter Property="Foreground" Value="{DynamicResource LauncherTextPrimaryBrush}"/>
-        <Setter Property="Padding" Value="12,8"/>
-        <Setter Property="MinHeight" Value="32"/>
-        <Setter Property="CornerRadius" Value="{StaticResource LauncherRadiusSm}"/>
-        <Setter Property="Margin" Value="0,0,8,8"/>
-    </Style>
-    <Style Selector="Button.social-chip:pointerover">
-        <Setter Property="Background" Value="{DynamicResource LauncherFlatHoverBrush}"/>
-        <Setter Property="BorderBrush" Value="{DynamicResource LauncherAccentHoverBrush}"/>
-        <Setter Property="Foreground" Value="{DynamicResource LauncherAccentBrush}"/>
-    </Style>
-    <Style Selector="Border.toast-card">
-        <Setter Property="Background" Value="{DynamicResource LauncherToastBackgroundBrush}"/>
-        <Setter Property="BorderBrush" Value="{DynamicResource LauncherCardBorderBrush}"/>
-        <Setter Property="BorderThickness" Value="1"/>
-        <Setter Property="CornerRadius" Value="{StaticResource LauncherRadiusMd}"/>
-        <Setter Property="Padding" Value="12"/>
-        <Setter Property="MaxWidth" Value="340"/>
-        <Style.Animations>
-            <Animation Duration="0:0:0.35" FillMode="Forward">
-                <KeyFrame Cue="0%">
-                    <Setter Property="Opacity" Value="0"/>
-                </KeyFrame>
-                <KeyFrame Cue="100%">
-                    <Setter Property="Opacity" Value="1"/>
-                </KeyFrame>
-            </Animation>
-        </Style.Animations>
-    </Style>
-    <Style Selector="Grid.toast-host">
-        <Setter Property="IsHitTestVisible" Value="False"/>
-        <Setter Property="Margin" Value="0,56,16,0"/>
-        <Setter Property="VerticalAlignment" Value="Top"/>
-        <Setter Property="HorizontalAlignment" Value="Right"/>
-    </Style>
-    <Style Selector="StackPanel.toast-list">
-        <Setter Property="Spacing" Value="{StaticResource LauncherSpacingSm}"/>
-        <Setter Property="HorizontalAlignment" Value="Right"/>
-    </Style>
-    <Style Selector="Grid.toast-layout">
-        <Setter Property="ColumnSpacing" Value="{StaticResource LauncherSpacingSm}"/>
-    </Style>
-    <Style Selector="StackPanel.toast-copy">
-        <Setter Property="Spacing" Value="{StaticResource LauncherSpacingXs}"/>
-    </Style>
-    <Style Selector="TextBlock.toast-message">
-        <Setter Property="FontSize" Value="13"/>
-        <Setter Property="Foreground" Value="{DynamicResource LauncherTextBodyBrush}"/>
-        <Setter Property="TextWrapping" Value="Wrap"/>
-        <Setter Property="MaxWidth" Value="282"/>
-    </Style>
-    <Style Selector="Button.toast-close">
-        <Setter Property="Background" Value="{DynamicResource LauncherTransparentBrush}"/>
-        <Setter Property="BorderThickness" Value="0"/>
-        <Setter Property="Foreground" Value="{DynamicResource LauncherTextSecondaryBrush}"/>
-        <Setter Property="Width" Value="22"/>
-        <Setter Property="Height" Value="22"/>
-        <Setter Property="Padding" Value="0"/>
-        <Setter Property="CornerRadius" Value="{StaticResource LauncherRadiusSm}"/>
-        <Setter Property="HorizontalContentAlignment" Value="Center"/>
-        <Setter Property="VerticalContentAlignment" Value="Center"/>
-        <Setter Property="Opacity" Value="0.5"/>
-        <Setter Property="VerticalAlignment" Value="Top"/>
-        <Setter Property="Margin" Value="0,4,0,0"/>
-    </Style>
-    <Style Selector="Button.toast-close:pointerover">
-        <Setter Property="Opacity" Value="1"/>
-        <Setter Property="Background" Value="{DynamicResource LauncherFlatHoverBrush}"/>
-        <Setter Property="Foreground" Value="{DynamicResource LauncherTextPrimaryBrush}"/>
-    </Style>
-    <Style Selector="Button.toast-close:pressed">
-        <Setter Property="Background" Value="{DynamicResource LauncherFlatPressedBrush}"/>
-        <Setter Property="Foreground" Value="{DynamicResource LauncherTextPrimaryBrush}"/>
-    </Style>
-
-    <!-- News category tab buttons -->
-    <Style Selector="Button.news-tab">
-        <Setter Property="Background" Value="{DynamicResource LauncherContentRowBrush}"/>
-        <Setter Property="Foreground" Value="{DynamicResource LauncherTextPrimaryBrush}"/>
-        <Setter Property="FontSize" Value="13"/>
-        <Setter Property="Padding" Value="10,4"/>
-        <Setter Property="MinHeight" Value="28"/>
-    </Style>
-    <Style Selector="Button.news-tab:pointerover">
-        <Setter Property="Background" Value="{DynamicResource LauncherAccentHoverBrush}"/>
-        <Setter Property="Foreground" Value="{DynamicResource LauncherOnAccentBrush}"/>
-    </Style>
-    <Style Selector="Button.news-tab.active">
-        <Setter Property="Background" Value="{DynamicResource LauncherAccentBrush}"/>
-        <Setter Property="Foreground" Value="{DynamicResource LauncherOnAccentBrush}"/>
-    </Style>
-
     <!-- Shared utility styles for repeated inline patterns -->
     <Style Selector="ScrollViewer.scroll-pad">
         <Setter Property="Padding" Value="0,0,8,0"/>
@@ -983,8 +1046,8 @@
         <Setter Property="BorderBrush" Value="{DynamicResource LauncherCardBorderBrush}"/>
         <Setter Property="BorderThickness" Value="1"/>
     </Style>
-    <Style Selector="TextBlock.toast-severity">
-        <Setter Property="FontSize" Value="11"/>
-        <Setter Property="FontWeight" Value="SemiBold"/>
-    </Style>
+    <StyleInclude Source="avares://Cafe.Launcher.Avalonia/Views/Styles/Diagnostics.axaml"/>
+    <StyleInclude Source="avares://Cafe.Launcher.Avalonia/Views/Styles/RemoteContent.axaml"/>
+    <StyleInclude Source="avares://Cafe.Launcher.Avalonia/Views/Styles/SetupWizard.axaml"/>
+    <StyleInclude Source="avares://Cafe.Launcher.Avalonia/Views/Styles/Toast.axaml"/>
 </Styles>

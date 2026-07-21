@@ -15,6 +15,11 @@
             <x:Double x:Key="LauncherSpacingXl">20</x:Double>
             <x:Double x:Key="LauncherSpacingXxl">24</x:Double>
             <x:Double x:Key="LauncherSpacingSection">40</x:Double>
+            <Thickness x:Key="LauncherThicknessNone">0</Thickness>
+            <Thickness x:Key="LauncherThicknessSm">8</Thickness>
+            <Thickness x:Key="LauncherThicknessMd">12</Thickness>
+            <Thickness x:Key="LauncherThicknessLg">16</Thickness>
+            <Thickness x:Key="LauncherPathFieldPadding">16,0,4,0</Thickness>
             <CornerRadius x:Key="LauncherRadiusSm">4</CornerRadius>
             <CornerRadius x:Key="LauncherRadiusMd">6</CornerRadius>
             <CornerRadius x:Key="LauncherRadiusLg">8</CornerRadius>
@@ -27,13 +32,37 @@
             <x:Double x:Key="LauncherControlHeightDialog">42</x:Double>
             <x:Double x:Key="LauncherControlHeightBottom">48</x:Double>
             <x:Double x:Key="LauncherControlHeightLaunch">58</x:Double>
+            <x:Double x:Key="LauncherSwatchSize">28</x:Double>
+            <x:Double x:Key="LauncherChipHeight">32</x:Double>
+            <x:Double x:Key="LauncherFieldHeight">40</x:Double>
+            <x:Double x:Key="LauncherDialogTitleHeight">56</x:Double>
+            <x:Double x:Key="LauncherNewsRowHeight">56</x:Double>
+            <x:Double x:Key="LauncherNewsViewportHeight">184</x:Double>
+            <x:Double x:Key="LauncherConfirmDialogMaxHeight">480</x:Double>
             <x:Double x:Key="LauncherLogViewerWidth">720</x:Double>
             <x:Double x:Key="LauncherLogViewerHeight">592</x:Double>
+            <x:Double x:Key="LauncherSettingRowContentMinWidth">240</x:Double>
+            <x:Double x:Key="LauncherSettingRowActionMaxWidth">440</x:Double>
+            <x:Double x:Key="LauncherLoadingBarWidth">120</x:Double>
+            <x:Double x:Key="LauncherLoadingBarHeight">4</x:Double>
+            <x:Double x:Key="LauncherFontSizeXs">11</x:Double>
+            <x:Double x:Key="LauncherFontSizeSm">12</x:Double>
+            <x:Double x:Key="LauncherFontSizeMd">13</x:Double>
+            <x:Double x:Key="LauncherFontSizeLg">14</x:Double>
+            <x:Double x:Key="LauncherFontSizeXl">15</x:Double>
+            <x:Double x:Key="LauncherFontSizeXxl">16</x:Double>
+            <x:Double x:Key="LauncherFontSizeHeadingSm">17</x:Double>
+            <x:Double x:Key="LauncherFontSizeHeadingMd">18</x:Double>
+            <x:Double x:Key="LauncherFontSizeHeadingLg">19</x:Double>
+            <x:Double x:Key="LauncherFontSizeDisplay">22</x:Double>
+            <FontWeight x:Key="LauncherFontWeightNormal">Normal</FontWeight>
+            <FontWeight x:Key="LauncherFontWeightStrong">SemiBold</FontWeight>
+            <FontFamily x:Key="LauncherFontFamilyMonospace">Consolas</FontFamily>
             <SolidColorBrush x:Key="LauncherAccentBrush" Color="{DynamicResource SystemAccentColor}"/>
             <SolidColorBrush x:Key="LauncherAccentHoverBrush" Color="{DynamicResource SystemAccentColorLight1}"/>
             <SolidColorBrush x:Key="LauncherAccentPressedBrush" Color="{DynamicResource SystemAccentColorDark1}"/>
-            <SolidColorBrush x:Key="LauncherAccentSoftBrush" Color="#1A2E7DF6"/>
-            <SolidColorBrush x:Key="LauncherAccentBorderBrush" Color="#662E7DF6"/>
+            <SolidColorBrush x:Key="LauncherAccentSoftBrush" Color="{DynamicResource SystemAccentColor}" Opacity="0.10"/>
+            <SolidColorBrush x:Key="LauncherAccentBorderBrush" Color="{DynamicResource SystemAccentColor}" Opacity="0.40"/>
             <SolidColorBrush x:Key="LauncherOnAccentBrush" Color="#FFFFFFFF"/>
             <SolidColorBrush x:Key="LauncherOnChromeBrush" Color="#FFFFFFFF"/>
             <SolidColorBrush x:Key="LauncherOnChromeMutedBrush" Color="#CCFFFFFF"/>
@@ -45,8 +74,8 @@
             <SolidColorBrush x:Key="LauncherDangerHoverBrush" Color="#FFF15B60"/>
             <SolidColorBrush x:Key="LauncherDangerPressedBrush" Color="#FFC9353A"/>
             <SolidColorBrush x:Key="LauncherOverlayBrush" Color="#99000000"/>
-            <SolidColorBrush x:Key="LauncherFocusRingBrush" Color="#993A9CFF"/>
-            <SolidColorBrush x:Key="LauncherCarouselDotActiveBrush" Color="#FF2E7DF6"/>
+            <SolidColorBrush x:Key="LauncherFocusRingBrush" Color="{DynamicResource SystemAccentColor}" Opacity="0.60"/>
+            <SolidColorBrush x:Key="LauncherCarouselDotActiveBrush" Color="{DynamicResource SystemAccentColor}"/>
             <SolidColorBrush x:Key="LauncherCarouselDotInactiveBrush" Color="#FFD0D4DA"/>
             <SolidColorBrush x:Key="LauncherToastSuccessBrush" Color="#FF22C55E"/>
             <SolidColorBrush x:Key="LauncherToastWarningBrush" Color="#FFF59E0B"/>
@@ -77,7 +106,7 @@
                     <SolidColorBrush x:Key="LauncherDialogClosePressedBrush" Color="#FFDDE6F0"/>
                     <SolidColorBrush x:Key="LauncherFieldBackgroundBrush" Color="#FFF0F6FD"/>
                     <SolidColorBrush x:Key="LauncherFieldBorderBrush" Color="#FFB8CADB"/>
-                    <SolidColorBrush x:Key="LauncherInfoBackgroundBrush" Color="#FFE8F3FF"/>
+                    <SolidColorBrush x:Key="LauncherInfoBackgroundBrush" Color="#FFDCEFFF"/>
                     <SolidColorBrush x:Key="LauncherNoticeBackgroundBrush" Color="#FFFFF6D8"/>
                     <SolidColorBrush x:Key="LauncherWarningBackgroundBrush" Color="#FFFFF2C2"/>
                     <SolidColorBrush x:Key="LauncherDangerSoftBrush" Color="#FFFFECEE"/>

@@ -1,5 +1,6 @@
 using Cafe.Launcher.Avalonia.Constants;
 using Cafe.Launcher.Avalonia.Models;
+using Cafe.Launcher.Avalonia.Features.GameOperations;
 using Cafe.Launcher.Avalonia.Services;
 using Cafe.Launcher.Avalonia.Services.Diagnostics;
 using Cafe.Launcher.Avalonia.ViewModels;
@@ -16,6 +17,21 @@ public sealed class WindowChromeViewModelTests : IDisposable
         TestLocalizationHelper.Initialize();
     }
 
+    [Fact]
+    public void LegacyWindowDelegateProperties_AreRemoved()
+    {
+        var propertyNames = typeof(WindowChromeViewModel)
+            .GetProperties(System.Reflection.BindingFlags.Instance |
+                System.Reflection.BindingFlags.Public |
+                System.Reflection.BindingFlags.NonPublic)
+            .Select(property => property.Name);
+
+        Assert.DoesNotContain("GetSnapshot", propertyNames);
+        Assert.DoesNotContain("MinimizeWindow", propertyNames);
+        Assert.DoesNotContain("CloseWindow", propertyNames);
+        Assert.DoesNotContain("RestoreWindow", propertyNames);
+    }
+
     [Theory]
     [InlineData(PatchUrlGroups.Official, LauncherConstants.OfficialGameWebsiteUrl)]
     [InlineData(PatchUrlGroups.Cafe, LauncherConstants.CafeWebsiteUrl)]
@@ -30,10 +46,8 @@ public sealed class WindowChromeViewModelTests : IDisposable
     public void ShowSettingsCommand_OpensSettingsAndLoadsSnapshot()
     {
         using var context = CreateContext();
-        context.ViewModel.GetSnapshot = () => new LauncherStatusSnapshot
-        {
-            Settings = new LauncherSettings { Language = LauncherLanguages.Japanese }
-        };
+        context.Settings.ApplyLauncherSettings(
+            new LauncherSettings { Language = LauncherLanguages.Japanese });
 
         context.ViewModel.ShowSettingsCommand.Execute(null);
 
@@ -47,10 +61,7 @@ public sealed class WindowChromeViewModelTests : IDisposable
     public void ShowSettingsCommand_WhenDirty_ShowsUnsavedChangesInsteadOfClosing()
     {
         using var context = CreateContext();
-        context.ViewModel.GetSnapshot = () => new LauncherStatusSnapshot
-        {
-            Settings = new LauncherSettings()
-        };
+        context.Settings.ApplyLauncherSettings(new LauncherSettings());
         context.ViewModel.ShowSettingsCommand.Execute(null);
         context.Settings.Editor.Current.Language = LauncherLanguages.Japanese;
 
@@ -64,10 +75,7 @@ public sealed class WindowChromeViewModelTests : IDisposable
     public async Task DiscardSettingsChangesCommand_DiscardsAndClosesSettings()
     {
         using var context = CreateContext();
-        context.ViewModel.GetSnapshot = () => new LauncherStatusSnapshot
-        {
-            Settings = new LauncherSettings()
-        };
+        context.Settings.ApplyLauncherSettings(new LauncherSettings());
         context.ViewModel.ShowSettingsCommand.Execute(null);
         context.Settings.Editor.Current.Language = LauncherLanguages.Japanese;
 
@@ -99,8 +107,8 @@ public sealed class WindowChromeViewModelTests : IDisposable
             },
             new LauncherSettings(),
             CancellationToken.None);
-        context.ViewModel.MinimizeWindow = () => minimized = true;
-        context.ViewModel.RestoreWindow = () => restored = true;
+        context.ViewModel.MinimizeRequested += () => minimized = true;
+        context.ViewModel.RestoreRequested += () => restored = true;
 
         context.ViewModel.MinimizeCommand.Execute(null);
 
@@ -119,7 +127,7 @@ public sealed class WindowChromeViewModelTests : IDisposable
         using var context = CreateContext();
         context.Backend.IsDownloadRunning = true;
         var closed = false;
-        context.ViewModel.CloseWindow = () => closed = true;
+        context.ViewModel.CloseRequested += () => closed = true;
 
         context.ViewModel.CloseCommand.Execute(null);
 
@@ -132,7 +140,7 @@ public sealed class WindowChromeViewModelTests : IDisposable
     {
         using var context = CreateContext();
         var closed = false;
-        context.ViewModel.CloseWindow = () => closed = true;
+        context.ViewModel.CloseRequested += () => closed = true;
 
         context.ViewModel.CloseCommand.Execute(null);
 
@@ -144,7 +152,7 @@ public sealed class WindowChromeViewModelTests : IDisposable
     {
         using var context = CreateContext();
         var closed = false;
-        context.ViewModel.CloseWindow = () => closed = true;
+        context.ViewModel.CloseRequested += () => closed = true;
 
         context.ViewModel.CloseAfterStoppingDownload();
 
@@ -193,18 +201,43 @@ public sealed class WindowChromeViewModelTests : IDisposable
         });
 
         viewModel.OpenOfficialSiteCommand.Execute(null);
+        viewModel.OpenHelpDocsCommand.Execute(null);
         viewModel.OpenGitHubRepositoryCommand.Execute(null);
         viewModel.OpenExternalUrl("mailto:support@example.invalid");
         viewModel.OpenDataDirectoryCommand.Execute(null);
 
         Assert.Equal(LauncherConstants.CafeWebsiteUrl, openedUrls[0]);
-        Assert.Equal(LauncherConstants.GitHubReleaseRepositoryUrl, openedUrls[1]);
-        Assert.Equal("mailto:support@example.invalid", openedUrls[2]);
+        Assert.Equal("https://docs.bluearchive.cafe/cafe-launcher/", openedUrls[1]);
+        Assert.Equal(LauncherConstants.GitHubReleaseRepositoryUrl, openedUrls[2]);
+        Assert.Equal("mailto:support@example.invalid", openedUrls[3]);
         Assert.Equal(
             Path.Combine(
                 Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData),
                 LauncherConstants.ProductName),
             openedDirectory);
+    }
+
+    [Fact]
+    public void ExecuteRestoreWindow_WhenMotionReduced_DoesNotStartCarousel()
+    {
+        using var context = CreateContext();
+        context.RemoteContent.Apply(
+            new LauncherRemoteState
+            {
+                OperationsResource = new OperationsResourceResponse
+                {
+                    OperationsResourceOpen = true,
+                    BannerLoop = true,
+                    OperationsBannerList = [new(), new()]
+                }
+            },
+            new LauncherSettings(),
+            CancellationToken.None);
+        context.RemoteContent.ApplyMotionPreference(true);
+
+        context.ViewModel.ExecuteRestoreWindowCommand.Execute(null);
+
+        Assert.False(context.RemoteContent.IsCarouselTimerRunning);
     }
 
     private TestContext CreateContext()
@@ -219,6 +252,8 @@ public sealed class WindowChromeViewModelTests : IDisposable
         var dialogs = provider.GetRequiredService<DialogsViewModel>();
         var backend = new TestBackend();
         var operations = new GameOperationsViewModel(
+            backend,
+            backend,
             backend,
             provider.GetRequiredService<LocalizationService>(),
             provider.GetRequiredService<ToastService>(),
@@ -267,9 +302,13 @@ public sealed class WindowChromeViewModelTests : IDisposable
         }
     }
 
-    private sealed class TestBackend : IGameOperationsBackend
+    private sealed class TestBackend :
+        IGameLaunchWorkflow,
+        IGameInstallationWorkflow,
+        IGameUninstallWorkflow
     {
         public bool IsDownloadRunning { get; set; }
+        public bool IsRunning => IsDownloadRunning;
         public bool IsPaused { get; private set; }
         public bool LastClearPersistedState { get; private set; }
 

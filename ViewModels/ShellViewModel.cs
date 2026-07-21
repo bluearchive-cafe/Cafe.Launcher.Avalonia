@@ -1,6 +1,8 @@
 using System;
 using System.Runtime.InteropServices;
+using Avalonia.Media;
 using Cafe.Launcher.Avalonia.Constants;
+using Cafe.Launcher.Avalonia.Helpers;
 using Cafe.Launcher.Avalonia.Models;
 using Cafe.Launcher.Avalonia.Services;
 using CommunityToolkit.Mvvm.ComponentModel;
@@ -10,6 +12,8 @@ namespace Cafe.Launcher.Avalonia.ViewModels;
 public partial class ShellViewModel : ViewModelBase
 {
     private readonly LocalizationService localizer;
+    private readonly EasterEggAudioService? easterEggAudioService;
+    private int launcherVersionClickCount;
 
     private static readonly string FrameworkVersion = RuntimeInformation.FrameworkDescription;
     private static readonly string PlatformName = OperatingSystem.IsWindows() ? "Windows"
@@ -18,7 +22,7 @@ public partial class ShellViewModel : ViewModelBase
         : "Unknown";
 
     [ObservableProperty]
-    private string productName = LauncherConstants.ProductName;
+    private string productName = ResolveProductName(DateTime.Now, Random.Shared.Next(2));
 
     [ObservableProperty]
     private string launcherVersionText = "";
@@ -45,7 +49,7 @@ public partial class ShellViewModel : ViewModelBase
     private string currentViewTitle = "";
 
     [ObservableProperty]
-    private string statusIconKind = "HelpCircleOutline";
+    private string statusIconKind = "Sync";
 
     [ObservableProperty]
     private string statusText = "";
@@ -78,6 +82,12 @@ public partial class ShellViewModel : ViewModelBase
     private string diskSpaceText = "";
 
     [ObservableProperty]
+    private bool isInstallBlockedByDiskSpace;
+
+    [ObservableProperty]
+    private string installDiskSpaceMessage = "";
+
+    [ObservableProperty]
     private string settingsSummary = "";
 
     [ObservableProperty]
@@ -86,13 +96,48 @@ public partial class ShellViewModel : ViewModelBase
     [ObservableProperty]
     private bool isBusy = true;
 
+    [ObservableProperty]
+    private FontFamily fontFamily =
+        LanguageFontFamilyService.GetForEffectiveLanguage(LauncherLanguages.English);
+
     public LocalizedStrings I18n { get; } = new();
 
     public string GameFolderPickerTitle { get; private set; } = "";
 
-    public ShellViewModel(LocalizationService localizer)
+    public ShellViewModel(
+        LocalizationService localizer,
+        EasterEggAudioService? easterEggAudioService = null)
     {
         this.localizer = localizer;
+        this.easterEggAudioService = easterEggAudioService;
+    }
+
+    internal static string ResolveProductName(DateTime date, int randomIndex)
+    {
+        if (date.Month != 12 || date.Day != 8)
+        {
+            return LauncherConstants.ProductName;
+        }
+
+        return randomIndex switch
+        {
+            0 => "Midori Launcher",
+            1 => "Momoi Launcher",
+            _ => throw new ArgumentOutOfRangeException(nameof(randomIndex)),
+        };
+    }
+
+    public bool RegisterLauncherVersionClick()
+    {
+        launcherVersionClickCount++;
+        if (launcherVersionClickCount != 8)
+        {
+            return false;
+        }
+
+        launcherVersionClickCount = 0;
+        easterEggAudioService?.PlayKuyashi();
+        return true;
     }
 
     public void ApplyLanguage(
@@ -101,7 +146,8 @@ public partial class ShellViewModel : ViewModelBase
         ResourcePanelViewModel resourcePanel,
         bool hasSnapshot)
     {
-        localizer.SetLanguage(language);
+        var effectiveLanguage = localizer.SetLanguage(language);
+        FontFamily = LanguageFontFamilyService.GetForEffectiveLanguage(effectiveLanguage);
         I18n.Apply(localizer);
         LauncherVersionText = localizer.F("launcherVersionLabel", BuildInfo.LauncherVersion);
         CommitShaText = localizer.F("commitLabel", BuildInfo.CommitSha);
@@ -123,17 +169,17 @@ public partial class ShellViewModel : ViewModelBase
 
         if (!hasSnapshot)
         {
-            StatusIconKind = "HelpCircleOutline";
-            CurrentViewTitle = localizer.T("loadingTitle");
-            StatusText = localizer.T("loadingStatus");
+            StatusIconKind = "Sync";
+            CurrentViewTitle = localizer.T("launcherLoadingTitle");
+            StatusText = localizer.T("launcherLoadingStatus");
             PathText = localizer.T("pathLoading");
             VersionText = localizer.T("versionLoading");
             NetworkText = localizer.T("networkLoading");
             LaunchCheckText = localizer.T("launchCheckLoading");
             ExecutableText = localizer.T("executableLoading");
-            ExecutableNameText = localizer.T("loadingValue");
-            NetworkStatusValueText = localizer.T("loadingValue");
-            LaunchCheckValueText = localizer.T("loadingValue");
+            ExecutableNameText = localizer.T("launcherLoadingValue");
+            NetworkStatusValueText = localizer.T("launcherLoadingValue");
+            LaunchCheckValueText = localizer.T("launcherLoadingValue");
             SettingsSummary = localizer.T("settings");
             OperationNote = localizer.T("operationTelemetryLocal");
         }
@@ -141,13 +187,13 @@ public partial class ShellViewModel : ViewModelBase
 
     public void SetLoading()
     {
-        StatusIconKind = "HelpCircleOutline";
-        CurrentViewTitle = localizer.T("loadingTitle");
+        StatusIconKind = "Sync";
+        CurrentViewTitle = localizer.T("launcherLoadingTitle");
         StatusText = localizer.T("connectingApi");
-        ExecutableNameText = localizer.T("loadingValue");
-        NetworkStatusValueText = localizer.T("loadingValue");
-        LaunchCheckValueText = localizer.T("loadingValue");
-        OperationNote = localizer.T("loadingStatus");
+        ExecutableNameText = localizer.T("launcherLoadingValue");
+        NetworkStatusValueText = localizer.T("launcherLoadingValue");
+        LaunchCheckValueText = localizer.T("launcherLoadingValue");
+        OperationNote = localizer.T("launcherLoadingStatus");
     }
 
     public void SetRefreshError(Exception exception)
@@ -161,8 +207,8 @@ public partial class ShellViewModel : ViewModelBase
         OperationNote = localizer.T("apiFailedNoFileChange");
         PathText = localizer.T("pathLoading");
         ExecutableText = localizer.T("executableLoading");
-        ExecutableNameText = localizer.T("loadingValue");
-        LaunchCheckValueText = localizer.T("loadingValue");
+        ExecutableNameText = localizer.T("launcherLoadingValue");
+        LaunchCheckValueText = localizer.T("launcherLoadingValue");
     }
 
     public void ApplySnapshot(LauncherStatusSnapshot snapshot, SettingsViewModel settings)
@@ -176,12 +222,12 @@ public partial class ShellViewModel : ViewModelBase
         StatusIconKind = ResolveStatusIconKind(snapshot);
         CurrentViewTitle = status;
         StatusText = status;
-        PathText = localGame.GamePath;
+        PathText = snapshot.Settings.GamePath;
         VersionText = snapshot.RuntimeState != LauncherRuntimeState.NotInstalled
             ? localizer.F("versionInstalled", localConfig?.Version, gameConfig?.GameLatestVersion ?? localizer.T("unknown"))
             : localizer.F("versionLatest", gameConfig?.GameLatestVersion ?? localizer.T("unknown"));
         var networkStatus = snapshot.RuntimeState == LauncherRuntimeState.RemoteUnavailable
-            ? localizer.T("remoteStateUnavailable")
+            ? localizer.T("gameRemoteStateUnavailable")
             : localizer.T("statusNetworkLoaded");
         NetworkText = networkStatus;
         NetworkStatusValueText = networkStatus;
@@ -192,7 +238,18 @@ public partial class ShellViewModel : ViewModelBase
             : localConfig.Name;
         ExecutableText = localizer.F("executableValue", executableName);
         ExecutableNameText = localizer.F("executableNameValue", executableName);
-        DiskSpaceText = settings.Options.ResolveDiskSpaceText(localGame.GamePath, gameConfig?.DecompressionSize);
+        var diskCheck = settings.Options.ResolveDiskSpaceCheck(localGame.GamePath, gameConfig?.DecompressionSize);
+        DiskSpaceText = settings.Options.ResolveDiskSpaceText(gameConfig?.DecompressionSize, diskCheck);
+        IsInstallBlockedByDiskSpace = snapshot.RuntimeState == LauncherRuntimeState.NotInstalled
+            && diskCheck.RequiredBytes > 0
+            && diskCheck.IsAvailableKnown
+            && !diskCheck.HasEnoughSpace;
+        InstallDiskSpaceMessage = IsInstallBlockedByDiskSpace
+            ? localizer.F(
+                "diskSpaceInsufficientDetail",
+                FileSizeFormatter.Format(diskCheck.RequiredBytes),
+                FileSizeFormatter.Format(diskCheck.AvailableBytes!.Value))
+            : "";
         SettingsSummary = localizer.F(
             "settingsSummaryWithTheme",
             snapshot.Settings.ProxyMode,
@@ -212,14 +269,14 @@ public partial class ShellViewModel : ViewModelBase
     {
         return snapshot.RuntimeState switch
         {
-            LauncherRuntimeState.NotInstalled => localizer.T("notInstalled"),
-            LauncherRuntimeState.Corrupted => localizer.T("corruptedInstallationState"),
-            LauncherRuntimeState.IoFailure => localizer.T("installationStateReadFailed"),
-            LauncherRuntimeState.RemoteUnavailable => localizer.T("remoteStateUnavailable"),
+            LauncherRuntimeState.NotInstalled => localizer.T("gameNotInstalled"),
+            LauncherRuntimeState.Corrupted => localizer.T("gameCorruptedInstallationState"),
+            LauncherRuntimeState.IoFailure => localizer.T("gameInstallationStateReadFailed"),
+            LauncherRuntimeState.RemoteUnavailable => localizer.T("gameRemoteStateUnavailable"),
             LauncherRuntimeState.BelowLowestVersion => localizer.T("updateRequired"),
             LauncherRuntimeState.UpdateAvailable => localizer.T("updateAvailable"),
             LauncherRuntimeState.Ready => localizer.T("ready"),
-            _ => localizer.T("installationStateReadFailed")
+            _ => localizer.T("gameInstallationStateReadFailed")
         };
     }
 
@@ -227,13 +284,13 @@ public partial class ShellViewModel : ViewModelBase
     {
         return snapshot.RuntimeState switch
         {
-            LauncherRuntimeState.NotInstalled => "HelpCircleOutline",
+            LauncherRuntimeState.NotInstalled => "DownloadOutline",
             LauncherRuntimeState.Corrupted or
                 LauncherRuntimeState.IoFailure or
                 LauncherRuntimeState.RemoteUnavailable or
                 LauncherRuntimeState.BelowLowestVersion => "Alert",
-            LauncherRuntimeState.UpdateAvailable => "AlertCircle",
-            LauncherRuntimeState.Ready => "CheckAll",
+            LauncherRuntimeState.UpdateAvailable => "Update",
+            LauncherRuntimeState.Ready => "CheckCircleOutline",
             _ => "Alert"
         };
     }
@@ -257,13 +314,13 @@ public partial class ShellViewModel : ViewModelBase
         return snapshot.RuntimeState switch
         {
             LauncherRuntimeState.NotInstalled => localizer.T("choosePathInstall"),
-            LauncherRuntimeState.Corrupted => localizer.T("corruptedInstallationState"),
-            LauncherRuntimeState.IoFailure => localizer.T("installationStateReadFailed"),
-            LauncherRuntimeState.RemoteUnavailable => localizer.T("remoteStateUnavailable"),
-            LauncherRuntimeState.BelowLowestVersion => localizer.T("belowLowestVersion"),
+            LauncherRuntimeState.Corrupted => localizer.T("gameCorruptedInstallationState"),
+            LauncherRuntimeState.IoFailure => localizer.T("gameInstallationStateReadFailed"),
+            LauncherRuntimeState.RemoteUnavailable => localizer.T("gameRemoteStateUnavailable"),
+            LauncherRuntimeState.BelowLowestVersion => localizer.T("gameBelowLowestVersion"),
             LauncherRuntimeState.UpdateAvailable => localizer.T("updateAvailable"),
             LauncherRuntimeState.Ready => localizer.T("operationTelemetryLocal"),
-            _ => localizer.T("installationStateReadFailed")
+            _ => localizer.T("gameInstallationStateReadFailed")
         };
     }
 }

@@ -36,6 +36,28 @@ public sealed class ResourcePanelService
         return await uidService.ResolveUidAsync(cancellationToken).ConfigureAwait(false);
     }
 
+    /// <summary>Resolve effective UID with explicit source preference and fallback.</summary>
+    public async Task<string> ResolveUidWithSourceAsync(
+        string uidSource,
+        CancellationToken cancellationToken = default)
+    {
+        return await uidService.ResolveUidWithSourceAsync(uidSource, cancellationToken).ConfigureAwait(false);
+    }
+
+    /// <summary>Read the persisted UID source preference.</summary>
+    public async Task<string> GetUidSourceAsync(CancellationToken cancellationToken = default)
+    {
+        return await uidService.GetUidSourceAsync(cancellationToken).ConfigureAwait(false);
+    }
+
+    /// <summary>Persist UID source preference to settings.</summary>
+    public async Task SaveUidSourceAsync(string uidSource, CancellationToken cancellationToken = default)
+    {
+        var settings = await uidService.ReadSettingsAsync(cancellationToken).ConfigureAwait(false);
+        settings.ResourcePanelUidSource = uidSource;
+        await uidService.SaveSettingsAsync(settings, cancellationToken).ConfigureAwait(false);
+    }
+
     /// <summary>Persist a manually-entered UID to settings.</summary>
     public async Task SaveManualUidAsync(string uid, CancellationToken cancellationToken = default)
     {

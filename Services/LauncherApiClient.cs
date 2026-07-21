@@ -1,4 +1,5 @@
 using System;
+using System.Diagnostics;
 using System.Net.Http;
 using System.Text.Json;
 using System.Threading;
@@ -7,6 +8,7 @@ using Cafe.Launcher.Avalonia.Constants;
 using Cafe.Launcher.Avalonia.Helpers;
 using Cafe.Launcher.Avalonia.Models;
 using Cafe.Launcher.Avalonia.Services.Auth;
+using Cafe.Launcher.Avalonia.Services.Diagnostics;
 
 namespace Cafe.Launcher.Avalonia.Services;
 
@@ -62,14 +64,26 @@ public sealed class LauncherApiClient : IDisposable
             cancellationToken);
     }
 
-    public Task<BaseConfigResponse> GetBaseConfigAsync(
+    public async Task<BaseConfigResponse> GetBaseConfigAsync(
         string proxyMode,
         CancellationToken cancellationToken = default)
     {
-        return GetEnvelopeDataAsync<BaseConfigResponse>(
+        var response = await GetEnvelopeDataAsync<BaseConfigResponse>(
             "/api/launcher/base/config",
             proxyMode,
-            cancellationToken);
+            cancellationToken).ConfigureAwait(false);
+        response.LauncherBackgroundImg = ResolveLauncherBackgroundUrl(
+            response.LauncherBackgroundImg);
+        return response;
+    }
+
+    private static string? ResolveLauncherBackgroundUrl(string? value)
+    {
+        const string packageRelativePrefix =
+            "/prod/BlueArchive_JP/launcher_background_img/";
+        return value?.StartsWith(packageRelativePrefix, StringComparison.Ordinal) == true
+            ? ApiConfig.OfficialPackageBaseUrl + value
+            : value;
     }
 
     private Task<CdnConfigResponse> GetCdnConfigAsync(
@@ -159,22 +173,70 @@ public sealed class LauncherApiClient : IDisposable
         return patchUrlGroupService.RewriteCdnConfig(response, patchUrlGroup);
     }
 
+    /// <summary>
+    /// Maximum number of attempts for transient manifest fetch failures
+    /// (initial attempt + retries). Mirrors the bounded retry philosophy of
+    /// <see cref="FileDownloadService.RetryDomainOrder"/> but with fewer
+    /// attempts — manifests are small metadata payloads, not large file
+    /// downloads. Backoff: 500ms, 1000ms.
+    /// </summary>
+    private const int MaxManifestFetchAttempts = 3;
+    private static readonly TimeSpan[] ManifestFetchBackoff =
+    [
+        TimeSpan.FromMilliseconds(500),
+        TimeSpan.FromMilliseconds(1000)
+    ];
+
+    /// <summary>
+    /// Maximum retry attempts for core API envelope calls (game config, CDN config, etc.).
+    /// These are more critical than manifest downloads because they determine startup state.
+    /// Uses the same backoff sequence as manifest fetches.
+    /// </summary>
+    private const int MaxEnvelopeFetchAttempts = 3;
+
     public async Task<RemoteManifest> GetRemoteManifestAsync(
         string url,
         string proxyMode,
         CancellationToken cancellationToken = default)
     {
-        using var lease = await leaseSource.CreateLeaseAsync(proxyMode, cancellationToken).ConfigureAwait(false);
-        using var response = await RemoteHttpRequestService.SendAsync(
-            lease.Client,
-            new Uri(url),
-            static uri => new HttpRequestMessage(HttpMethod.Get, uri),
-            urlValidator,
-            cancellationToken).ConfigureAwait(false);
-        response.EnsureSuccessStatusCode();
-        await using var stream = await response.Content.ReadAsStreamAsync(cancellationToken).ConfigureAwait(false);
-        var manifest = await JsonSerializer.DeserializeAsync<RemoteManifest>(stream, jsonOptions, cancellationToken).ConfigureAwait(false);
-        return manifest ?? new RemoteManifest();
+        var requestUri = new Uri(url);
+        Exception? lastException = null;
+
+        for (var attempt = 0; attempt < MaxManifestFetchAttempts; attempt++)
+        {
+            cancellationToken.ThrowIfCancellationRequested();
+            try
+            {
+                using var lease = await leaseSource
+                    .CreateLeaseAsync(proxyMode, cancellationToken)
+                    .ConfigureAwait(false);
+                using var response = await RemoteHttpRequestService.SendAsync(
+                    lease.Client,
+                    requestUri,
+                    static uri => new HttpRequestMessage(HttpMethod.Get, uri),
+                    urlValidator,
+                    cancellationToken,
+                    connectionUsesProxy: proxyMode != ProxyModes.Direct).ConfigureAwait(false);
+                response.EnsureSuccessStatusCode();
+                var manifest = await RemoteHttpRequestService.DeserializeJsonAsync<RemoteManifest>(
+                    response, requestUri, jsonOptions, cancellationToken).ConfigureAwait(false);
+                return manifest ?? new RemoteManifest();
+            }
+            catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
+            {
+                throw;
+            }
+            catch (Exception ex) when (ex is HttpRequestException or TaskCanceledException or JsonException)
+            {
+                lastException = ex;
+                if (attempt < MaxManifestFetchAttempts - 1)
+                {
+                    await Task.Delay(ManifestFetchBackoff[attempt], cancellationToken).ConfigureAwait(false);
+                }
+            }
+        }
+
+        throw lastException!;
     }
 
     private async Task<T> GetEnvelopeDataAsync<T>(
@@ -182,39 +244,67 @@ public sealed class LauncherApiClient : IDisposable
         string proxyMode,
         CancellationToken cancellationToken)
     {
-        using var lease = await leaseSource.CreateLeaseAsync(proxyMode, cancellationToken).ConfigureAwait(false);
-        using var request = new HttpRequestMessage(HttpMethod.Get, path);
-        request.Headers.TryAddWithoutValidation(
-            "Authorization",
-            authorizationHeaderFactory.Create("", ApiConfig.YostarAuthorizationVersion));
+        Exception? lastException = null;
 
-        using var response = await lease.Client.SendAsync(request, cancellationToken).ConfigureAwait(false);
-        response.EnsureSuccessStatusCode();
-
-        await using var stream = await response.Content.ReadAsStreamAsync(cancellationToken).ConfigureAwait(false);
-        var envelope = await JsonSerializer.DeserializeAsync<LauncherApiEnvelope<T>>(stream, jsonOptions, cancellationToken).ConfigureAwait(false);
-
-        if (envelope is null)
+        for (var attempt = 0; attempt < MaxEnvelopeFetchAttempts; attempt++)
         {
-            throw new InvalidOperationException("API response body is empty.");
+            cancellationToken.ThrowIfCancellationRequested();
+            var sw = Stopwatch.StartNew();
+            try
+            {
+                using var lease = await leaseSource.CreateLeaseAsync(proxyMode, cancellationToken).ConfigureAwait(false);
+                using var request = new HttpRequestMessage(HttpMethod.Get, path);
+                request.Headers.TryAddWithoutValidation(
+                    "Authorization",
+                    authorizationHeaderFactory.Create("", ApiConfig.YostarAuthorizationVersion));
+
+                using var response = await lease.Client.SendAsync(request, cancellationToken).ConfigureAwait(false);
+                response.EnsureSuccessStatusCode();
+                LocalDiagnostics.LogSync(
+                    LogEntrySeverity.Debug,
+                    "ApiClient",
+                    $"GET {path} -> {(int)response.StatusCode}, {sw.ElapsedMilliseconds}ms (attempt {attempt + 1})");
+
+                var envelope = await RemoteHttpRequestService.DeserializeJsonAsync<LauncherApiEnvelope<T>>(response, request.RequestUri, jsonOptions, cancellationToken).ConfigureAwait(false);
+
+                if (envelope is null)
+                {
+                    throw new InvalidOperationException("API response body is empty.");
+                }
+
+                if (envelope.Code != 200)
+                {
+                    var message = envelope.Message ?? envelope.Msg ?? $"API response code: {envelope.Code}";
+                    throw new InvalidOperationException(message);
+                }
+
+                if (envelope.Data is null)
+                {
+                    throw new InvalidOperationException("API response data is empty.");
+                }
+
+                return envelope.Data;
+            }
+            catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
+            {
+                throw;
+            }
+            catch (Exception ex) when (ex is HttpRequestException or TaskCanceledException or JsonException or InvalidOperationException)
+            {
+                lastException = ex;
+                if (attempt < MaxEnvelopeFetchAttempts - 1)
+                {
+                    await Task.Delay(ManifestFetchBackoff[attempt], cancellationToken).ConfigureAwait(false);
+                }
+            }
         }
 
-        if (envelope.Code != 200)
-        {
-            var message = envelope.Message ?? envelope.Msg ?? $"API response code: {envelope.Code}";
-            throw new InvalidOperationException(message);
-        }
-
-        if (envelope.Data is null)
-        {
-            throw new InvalidOperationException("API response data is empty.");
-        }
-
-        return envelope.Data;
+        throw lastException!;
     }
 
     public void Dispose()
     {
         leaseSource.Dispose();
+        GC.SuppressFinalize(this);
     }
 }

@@ -1,4 +1,5 @@
 using Cafe.Launcher.Avalonia.Models;
+using Cafe.Launcher.Avalonia.Features.GameOperations;
 using Cafe.Launcher.Avalonia.Services;
 using Cafe.Launcher.Avalonia.Services.Diagnostics;
 using Cafe.Launcher.Avalonia.ViewModels;
@@ -10,6 +11,54 @@ public sealed class GameOperationsViewModelTests
     static GameOperationsViewModelTests()
     {
         TestLocalizationHelper.Initialize();
+    }
+
+    [Fact]
+    public void LegacyDelegateProperties_AreRemoved()
+    {
+        var propertyNames = typeof(GameOperationsViewModel)
+            .GetProperties(System.Reflection.BindingFlags.Instance |
+                System.Reflection.BindingFlags.Public |
+                System.Reflection.BindingFlags.NonPublic)
+            .Select(property => property.Name);
+
+        Assert.DoesNotContain("GetSnapshot", propertyNames);
+        Assert.DoesNotContain("RequestRefreshAsync", propertyNames);
+        Assert.DoesNotContain("RequestRefreshAfterPersistedResumeAsync", propertyNames);
+        Assert.DoesNotContain("ApplySnapshotAsync", propertyNames);
+        Assert.DoesNotContain("MinimizeWindow", propertyNames);
+    }
+
+    [Fact]
+    public async Task RefreshRequested_AwaitsSubscribersStrictlyInRegistrationOrder()
+    {
+        var context = CreateContext();
+        var sequence = new List<string>();
+        var firstSubscriberRelease = new TaskCompletionSource(
+            TaskCreationOptions.RunContinuationsAsynchronously);
+        context.ViewModel.ApplySnapshot(new LauncherStatusSnapshot
+        {
+            RuntimeState = LauncherRuntimeState.RemoteUnavailable
+        });
+        context.ViewModel.RefreshRequested += async _ =>
+        {
+            sequence.Add("first-start");
+            await firstSubscriberRelease.Task;
+            sequence.Add("first-end");
+        };
+        context.ViewModel.RefreshRequested += _ =>
+        {
+            sequence.Add("second");
+            return Task.CompletedTask;
+        };
+
+        var commandTask = context.ViewModel.InstallOrUpdateCommand.ExecuteAsync(null);
+        await Task.Yield();
+
+        Assert.Equal(["first-start"], sequence);
+        firstSubscriberRelease.SetResult();
+        await commandTask;
+        Assert.Equal(["first-start", "first-end", "second"], sequence);
     }
 
     [Theory]
@@ -32,6 +81,68 @@ public sealed class GameOperationsViewModelTests
     }
 
     [Fact]
+    public void ApplySnapshot_WhenFreshInstallIsBlocked_DisablesCommandAndExplainsShortage()
+    {
+        var context = CreateContext();
+        context.Shell.IsInstallBlockedByDiskSpace = true;
+        context.Shell.InstallDiskSpaceMessage = "磁盘空间不足：需要 10GB，可用 6GB。";
+
+        context.ViewModel.ApplySnapshot(new LauncherStatusSnapshot
+        {
+            RuntimeState = LauncherRuntimeState.NotInstalled
+        });
+
+        Assert.False(context.ViewModel.InstallOrUpdateCommand.CanExecute(null));
+        Assert.Equal(context.Shell.InstallDiskSpaceMessage, context.ViewModel.InstallButtonToolTip);
+    }
+
+    [Fact]
+    public void ApplySnapshot_WhenInstallIsNotBlocked_LeavesCommandAvailableAndUsesActionTooltip()
+    {
+        var context = CreateContext();
+        context.Shell.IsBusy = true;
+        context.Shell.IsInstallBlockedByDiskSpace = false;
+
+        context.ViewModel.ApplySnapshot(new LauncherStatusSnapshot
+        {
+            RuntimeState = LauncherRuntimeState.NotInstalled
+        });
+
+        Assert.True(context.ViewModel.InstallOrUpdateCommand.CanExecute(null));
+        Assert.Equal(context.ViewModel.InstallButtonText, context.ViewModel.InstallButtonToolTip);
+    }
+
+    [Fact]
+    public void ApplySnapshot_WhenDiskSpaceBlockClears_NotifiesCommandAndRestoresInstallAction()
+    {
+        var context = CreateContext();
+        var canExecuteChangedCount = 0;
+        context.ViewModel.InstallOrUpdateCommand.CanExecuteChanged += (_, _) => canExecuteChangedCount++;
+        context.Shell.IsInstallBlockedByDiskSpace = true;
+        context.Shell.InstallDiskSpaceMessage = "磁盘空间不足：需要 10GB，可用 6GB。";
+
+        context.ViewModel.ApplySnapshot(new LauncherStatusSnapshot
+        {
+            RuntimeState = LauncherRuntimeState.NotInstalled
+        });
+
+        Assert.False(context.ViewModel.InstallOrUpdateCommand.CanExecute(null));
+        Assert.Equal(context.Shell.InstallDiskSpaceMessage, context.ViewModel.InstallButtonToolTip);
+
+        canExecuteChangedCount = 0;
+        context.Shell.IsInstallBlockedByDiskSpace = false;
+        context.Shell.InstallDiskSpaceMessage = "";
+        context.ViewModel.ApplySnapshot(new LauncherStatusSnapshot
+        {
+            RuntimeState = LauncherRuntimeState.NotInstalled
+        });
+
+        Assert.True(canExecuteChangedCount > 0);
+        Assert.True(context.ViewModel.InstallOrUpdateCommand.CanExecute(null));
+        Assert.Equal(context.ViewModel.InstallButtonText, context.ViewModel.InstallButtonToolTip);
+    }
+
+    [Fact]
     public async Task StartGameCommand_WhenLaunchSucceeds_MinimizesWindowAndShowsSuccess()
     {
         var context = CreateContext();
@@ -48,8 +159,8 @@ public sealed class GameOperationsViewModelTests
                 Message = "validated"
             }
         };
-        context.ViewModel.GetSnapshot = () => ReadySnapshot();
-        context.ViewModel.MinimizeWindow = () => minimized = true;
+        context.ViewModel.ApplySnapshot(ReadySnapshot());
+        context.ViewModel.MinimizeRequested += () => minimized = true;
 
         await context.ViewModel.StartGameCommand.ExecuteAsync(null);
 
@@ -63,10 +174,10 @@ public sealed class GameOperationsViewModelTests
     public async Task InstallOrUpdateCommand_WhenInstallationStateIsCorrupted_ShowsRepairDialog()
     {
         var context = CreateContext();
-        context.ViewModel.GetSnapshot = () => new LauncherStatusSnapshot
+        context.ViewModel.ApplySnapshot(new LauncherStatusSnapshot
         {
             RuntimeState = LauncherRuntimeState.Corrupted
-        };
+        });
 
         await context.ViewModel.InstallOrUpdateCommand.ExecuteAsync(null);
 
@@ -79,20 +190,20 @@ public sealed class GameOperationsViewModelTests
     public async Task InstallOrUpdateCommand_WhenRemoteStateIsUnavailable_RefreshesWithoutDownloading()
     {
         var context = CreateContext();
-        var refreshCount = 0;
-        context.ViewModel.GetSnapshot = () => new LauncherStatusSnapshot
+        GameOperationsRefreshMode? refreshMode = null;
+        context.ViewModel.ApplySnapshot(new LauncherStatusSnapshot
         {
             RuntimeState = LauncherRuntimeState.RemoteUnavailable
-        };
-        context.ViewModel.RequestRefreshAsync = () =>
+        });
+        context.ViewModel.RefreshRequested += mode =>
         {
-            refreshCount++;
+            refreshMode = mode;
             return Task.CompletedTask;
         };
 
         await context.ViewModel.InstallOrUpdateCommand.ExecuteAsync(null);
 
-        Assert.Equal(1, refreshCount);
+        Assert.Equal(GameOperationsRefreshMode.Normal, refreshMode);
         Assert.Equal(0, context.Backend.InstallInvocationCount);
     }
 
@@ -104,30 +215,24 @@ public sealed class GameOperationsViewModelTests
         {
             RuntimeState = LauncherRuntimeState.NotInstalled
         };
-        var refreshCount = 0;
-        var applyCount = 0;
-        context.ViewModel.GetSnapshot = () => snapshot;
+        GameOperationsRefreshMode? refreshMode = null;
+        context.ViewModel.ApplySnapshot(snapshot);
         context.Backend.InstallResult = new GameOperationResult
         {
             Success = true,
             Message = "installed"
         };
-        context.ViewModel.RequestRefreshAsync = () =>
+        context.ViewModel.RefreshRequested += mode =>
         {
-            refreshCount++;
-            return Task.CompletedTask;
-        };
-        context.ViewModel.ApplySnapshotAsync = _ =>
-        {
-            applyCount++;
+            refreshMode = mode;
             return Task.CompletedTask;
         };
 
         await context.ViewModel.InstallOrUpdateCommand.ExecuteAsync(null);
 
         Assert.Equal(1, context.Backend.InstallInvocationCount);
-        Assert.Equal(1, refreshCount);
-        Assert.Equal(1, applyCount);
+        Assert.Equal(GameOperationsRefreshMode.SkipPersistedResume, refreshMode);
+        Assert.False(context.ViewModel.IsProgressPanelVisible);
         Assert.Equal("installed", context.Shell.OperationNote);
         Assert.False(context.Shell.IsBusy);
     }
@@ -136,7 +241,7 @@ public sealed class GameOperationsViewModelTests
     public async Task RequestRepairCommand_WhenStateAllowsRepair_ShowsConfirmation()
     {
         var context = CreateContext();
-        context.ViewModel.GetSnapshot = () => ReadySnapshot();
+        context.ViewModel.ApplySnapshot(ReadySnapshot());
 
         await context.ViewModel.RequestRepairCommand.ExecuteAsync(null);
 
@@ -148,13 +253,13 @@ public sealed class GameOperationsViewModelTests
     {
         var context = CreateContext();
         var refreshCount = 0;
-        context.ViewModel.GetSnapshot = () => ReadySnapshot();
+        context.ViewModel.ApplySnapshot(ReadySnapshot());
         context.Backend.RepairResult = new GameOperationResult
         {
             Success = true,
             Message = "repaired"
         };
-        context.ViewModel.RequestRefreshAsync = () =>
+        context.ViewModel.RefreshRequested += _ =>
         {
             refreshCount++;
             return Task.CompletedTask;
@@ -173,8 +278,8 @@ public sealed class GameOperationsViewModelTests
         var context = CreateContext();
         context.ViewModel.ApplyProgress(new GameOperationProgress
         {
-            OperationKind = GameOperationKinds.Download,
-            Stage = "download",
+            OperationKind = GameOperationKind.Download,
+            Stage = GameOperationStage.Downloading,
             CanPause = true
         });
 
@@ -207,7 +312,7 @@ public sealed class GameOperationsViewModelTests
     public async Task RequestUninstallCommand_WhenValidationSucceeds_ShowsConfirmation()
     {
         var context = CreateContext();
-        context.ViewModel.GetSnapshot = () => ReadySnapshot("C:\\Game");
+        context.ViewModel.ApplySnapshot(ReadySnapshot("C:\\Game"));
         context.Backend.ValidateUninstallResult = new GameOperationResult
         {
             Success = true,
@@ -225,13 +330,13 @@ public sealed class GameOperationsViewModelTests
     {
         var context = CreateContext();
         var refreshCount = 0;
-        context.ViewModel.GetSnapshot = () => ReadySnapshot("C:\\Game");
+        context.ViewModel.ApplySnapshot(ReadySnapshot("C:\\Game"));
         context.Backend.UninstallResult = new GameOperationResult
         {
             Success = true,
             Message = "uninstalled"
         };
-        context.ViewModel.RequestRefreshAsync = () =>
+        context.ViewModel.RefreshRequested += _ =>
         {
             refreshCount++;
             return Task.CompletedTask;
@@ -249,14 +354,14 @@ public sealed class GameOperationsViewModelTests
     {
         var context = CreateContext();
         var refreshCount = 0;
-        context.ViewModel.GetSnapshot = () => ReadySnapshot();
+        context.ViewModel.ApplySnapshot(ReadySnapshot());
         context.Backend.ResumeResult = new GameOperationResult
         {
             Success = false,
-            ErrorType = "stopped",
+            ErrorCode = GameOperationErrorCode.Stopped,
             Message = "stopped"
         };
-        context.ViewModel.RequestRefreshAsync = () =>
+        context.ViewModel.RefreshRequested += _ =>
         {
             refreshCount++;
             return Task.CompletedTask;
@@ -277,8 +382,8 @@ public sealed class GameOperationsViewModelTests
 
         context.ViewModel.ApplyProgress(new GameOperationProgress
         {
-            OperationKind = GameOperationKinds.Repair,
-            Stage = "repair-confirm",
+            OperationKind = GameOperationKind.Repair,
+            Stage = GameOperationStage.RepairConfirmation,
             Progress = -1,
             AffectedFileCount = 2,
             DownloadedSize = 1024
@@ -290,39 +395,167 @@ public sealed class GameOperationsViewModelTests
 
         context.ViewModel.ApplyProgress(new GameOperationProgress
         {
-            OperationKind = GameOperationKinds.Download,
-            Stage = "download",
+            OperationKind = GameOperationKind.Download,
+            Stage = GameOperationStage.Downloading,
             Progress = 50,
             DownloadedSize = 1024,
             TotalSize = 2048,
-            Speed = "1 MB/S",
-            Estimated = "00:00:01",
+            BytesPerSecond = 1024 * 1024,
+            EstimatedRemaining = TimeSpan.FromSeconds(1),
             CanPause = true
         });
 
         Assert.Equal(50, context.ViewModel.ProgressValue);
-        Assert.Equal("1 MB/S", context.ViewModel.ProgressSpeed);
+        Assert.Equal("1MB/S", context.ViewModel.ProgressSpeed);
         Assert.NotEmpty(context.ViewModel.ProgressSize);
         Assert.NotEmpty(context.ViewModel.ProgressEstimated);
         Assert.True(context.ViewModel.CanPauseOperation);
     }
+
+    [Theory]
+    [InlineData(GameOperationKind.Download, GameOperationStage.Downloading, "Download")]
+    [InlineData(GameOperationKind.Repair, GameOperationStage.RepairCheck, "Tools")]
+    [InlineData(GameOperationKind.Uninstall, GameOperationStage.Uninstalling, "DeleteOutline")]
+    [InlineData(GameOperationKind.Idle, GameOperationStage.Idle, "Sync")]
+    public void ApplyProgress_ForOperationKind_UsesSemanticProgressIcon(
+        GameOperationKind operationKind,
+        GameOperationStage stage,
+        string expectedIconKind)
+    {
+        var context = CreateContext();
+
+        context.ViewModel.ApplyProgress(new GameOperationProgress
+        {
+            OperationKind = operationKind,
+            Stage = stage
+        });
+
+        Assert.Equal(expectedIconKind, context.ViewModel.ProgressIconKind);
+    }
+
+    [Fact]
+    public async Task InstallOrUpdateCommand_WhenPreparingAfterPreviousOperation_UsesIdleProgressIcon()
+    {
+        var context = CreateContext();
+        context.ViewModel.ApplyProgress(new GameOperationProgress
+        {
+            OperationKind = GameOperationKind.Repair,
+            Stage = GameOperationStage.RepairCheck
+        });
+        context.ViewModel.ApplySnapshot(new LauncherStatusSnapshot
+        {
+            RuntimeState = LauncherRuntimeState.NotInstalled
+        });
+        context.Backend.InstallCompletion = new TaskCompletionSource<GameOperationResult>(
+            TaskCreationOptions.RunContinuationsAsynchronously);
+
+        var commandTask = context.ViewModel.InstallOrUpdateCommand.ExecuteAsync(null);
+
+        Assert.True(context.ViewModel.IsProgressPanelVisible);
+        Assert.Equal("Sync", context.ViewModel.ProgressIconKind);
+
+        context.Backend.InstallCompletion.SetResult(new GameOperationResult());
+        await commandTask;
+    }
+
+    [Fact]
+    public async Task ConfirmUninstallAsync_WhenStartingAfterPreviousOperation_UsesUninstallProgressIcon()
+    {
+        var context = CreateContext();
+        context.ViewModel.ApplyProgress(new GameOperationProgress
+        {
+            OperationKind = GameOperationKind.Download,
+            Stage = GameOperationStage.Downloading
+        });
+        context.ViewModel.ApplySnapshot(ReadySnapshot());
+        context.Backend.UninstallCompletion = new TaskCompletionSource<GameOperationResult>(
+            TaskCreationOptions.RunContinuationsAsynchronously);
+
+        var uninstallTask = context.ViewModel.ConfirmUninstallAsync();
+
+        Assert.True(context.ViewModel.IsProgressPanelVisible);
+        Assert.Equal("DeleteOutline", context.ViewModel.ProgressIconKind);
+
+        context.Backend.UninstallCompletion.SetResult(new GameOperationResult());
+        await uninstallTask;
+    }
+
+    [Theory]
+    [InlineData(GameOperationStage.DiskCheck, 10L, 20L, 0, 0, 0, "10B", "20B")]
+    [InlineData(GameOperationStage.VerificationRetry, 0, null, 2, 1, 3, "2", "1/3")]
+    [InlineData(GameOperationStage.VerificationFailed, 0, null, 2, 0, 0, "2", null)]
+    public void ApplyProgress_MapsPreflightAndVerificationStagesAndClearsDownloadMetrics(
+        GameOperationStage stage,
+        long requiredBytes,
+        long? availableBytes,
+        int failedFileCount,
+        int retryAttempt,
+        int retryLimit,
+        string expectedText,
+        string? secondExpectedText)
+    {
+        var context = CreateContext();
+
+        context.ViewModel.ApplyProgress(new GameOperationProgress
+        {
+            OperationKind = GameOperationKind.Download,
+            Stage = stage,
+            RequiredDiskBytes = requiredBytes,
+            AvailableDiskBytes = availableBytes,
+            FailedFileCount = failedFileCount,
+            RetryAttempt = retryAttempt,
+            RetryLimit = retryLimit,
+            BytesPerSecond = 1,
+            DownloadedSize = 10,
+            TotalSize = 20,
+            EstimatedRemaining = TimeSpan.FromSeconds(1)
+        });
+
+        Assert.Contains(expectedText, context.ViewModel.ProgressDetail, StringComparison.Ordinal);
+        if (secondExpectedText is not null)
+        {
+            Assert.Contains(secondExpectedText, context.ViewModel.ProgressDetail, StringComparison.Ordinal);
+        }
+        Assert.Empty(context.ViewModel.ProgressSpeed);
+        Assert.Empty(context.ViewModel.ProgressSize);
+        Assert.Empty(context.ViewModel.ProgressEstimated);
+    }
+
+    [Theory]
+    [MemberData(nameof(AllOperationStages))]
+    public void ApplyProgress_ForEveryStage_ProducesLocalizedPresentation(
+        GameOperationStage stage)
+    {
+        var context = CreateContext();
+
+        context.ViewModel.ApplyProgress(new GameOperationProgress
+        {
+            OperationKind = GameOperationKind.Download,
+            Stage = stage,
+        });
+
+        Assert.NotEmpty(context.ViewModel.ProgressTitle);
+        Assert.NotEmpty(context.ViewModel.ProgressDetail);
+    }
+
+    public static TheoryData<GameOperationStage> AllOperationStages =>
+        new(Enum.GetValues<GameOperationStage>());
 
     [Fact]
     public async Task StartGameCommand_WhenBusyOrStateMissing_DoesNotStartGame()
     {
         var context = CreateContext();
         context.Shell.IsBusy = true;
-        context.ViewModel.GetSnapshot = () => ReadySnapshot();
+        context.ViewModel.ApplySnapshot(ReadySnapshot());
 
         await context.ViewModel.StartGameCommand.ExecuteAsync(null);
 
         Assert.Equal(0, context.Backend.LaunchInvocationCount);
 
-        context.Shell.IsBusy = false;
-        context.ViewModel.GetSnapshot = () => null;
-        await context.ViewModel.StartGameCommand.ExecuteAsync(null);
+        var missingStateContext = CreateContext();
+        await missingStateContext.ViewModel.StartGameCommand.ExecuteAsync(null);
 
-        Assert.Equal(0, context.Backend.LaunchInvocationCount);
+        Assert.Equal(0, missingStateContext.Backend.LaunchInvocationCount);
     }
 
     [Fact]
@@ -331,7 +564,7 @@ public sealed class GameOperationsViewModelTests
         var context = CreateContext();
         var notifications = new List<ToastNotification>();
         context.ToastService.ToastRaised += notifications.Add;
-        context.ViewModel.GetSnapshot = () => ReadySnapshot();
+        context.ViewModel.ApplySnapshot(ReadySnapshot());
         context.Backend.LaunchResult = new GameLaunchResult
         {
             Success = false,
@@ -353,7 +586,7 @@ public sealed class GameOperationsViewModelTests
     public async Task InstallOrUpdateCommand_WhenStateIsReady_ReturnsUnavailable()
     {
         var context = CreateContext();
-        context.ViewModel.GetSnapshot = () => ReadySnapshot();
+        context.ViewModel.ApplySnapshot(ReadySnapshot());
 
         await context.ViewModel.InstallOrUpdateCommand.ExecuteAsync(null);
 
@@ -365,16 +598,54 @@ public sealed class GameOperationsViewModelTests
     public async Task RequestRepairAndRepair_WhenStateIsInvalid_DoNotCallBackend()
     {
         var context = CreateContext();
-        context.ViewModel.GetSnapshot = () => new LauncherStatusSnapshot
+        context.ViewModel.ApplySnapshot(new LauncherStatusSnapshot
         {
             RuntimeState = LauncherRuntimeState.NotInstalled
-        };
+        });
 
         await context.ViewModel.RequestRepairCommand.ExecuteAsync(null);
         await context.ViewModel.RepairAsync();
 
         Assert.False(context.Dialogs.IsRepairConfirmVisible);
         Assert.Equal(0, context.Backend.RepairInvocationCount);
+    }
+
+    [Fact]
+    public async Task RequestRepairCommand_WhenNotInstalled_ShowsWarningToast()
+    {
+        var context = CreateContext();
+        var notifications = new List<ToastNotification>();
+        context.ToastService.ToastRaised += notifications.Add;
+        context.ViewModel.ApplySnapshot(new LauncherStatusSnapshot
+        {
+            RuntimeState = LauncherRuntimeState.NotInstalled
+        });
+
+        await context.ViewModel.RequestRepairCommand.ExecuteAsync(null);
+
+        var notification = Assert.Single(notifications);
+        Assert.Equal(ToastSeverity.Warning, notification.Severity);
+        Assert.Equal(context.Shell.OperationNote, notification.Message);
+        Assert.False(context.Dialogs.IsRepairConfirmVisible);
+    }
+
+    [Fact]
+    public async Task RequestUninstallCommand_WhenNotInstalled_ShowsWarningToast()
+    {
+        var context = CreateContext();
+        var notifications = new List<ToastNotification>();
+        context.ToastService.ToastRaised += notifications.Add;
+        context.ViewModel.ApplySnapshot(new LauncherStatusSnapshot
+        {
+            RuntimeState = LauncherRuntimeState.NotInstalled
+        });
+
+        await context.ViewModel.RequestUninstallCommand.ExecuteAsync(null);
+
+        var notification = Assert.Single(notifications);
+        Assert.Equal(ToastSeverity.Warning, notification.Severity);
+        Assert.Equal(context.Shell.OperationNote, notification.Message);
+        Assert.False(context.Dialogs.IsUninstallConfirmVisible);
     }
 
     [Fact]
@@ -402,7 +673,7 @@ public sealed class GameOperationsViewModelTests
     public async Task RequestUninstallCommand_WhenValidationFails_DoesNotShowConfirmation()
     {
         var context = CreateContext();
-        context.ViewModel.GetSnapshot = () => ReadySnapshot("C:\\Game");
+        context.ViewModel.ApplySnapshot(ReadySnapshot("C:\\Game"));
         context.Backend.ValidateUninstallResult = new GameOperationResult
         {
             Success = false,
@@ -420,9 +691,9 @@ public sealed class GameOperationsViewModelTests
     {
         var context = CreateContext();
         var refreshCount = 0;
-        context.ViewModel.GetSnapshot = () => ReadySnapshot();
+        context.ViewModel.ApplySnapshot(ReadySnapshot());
         context.Backend.ResumeResult = null;
-        context.ViewModel.RequestRefreshAsync = () =>
+        context.ViewModel.RefreshRequested += _ =>
         {
             refreshCount++;
             return Task.CompletedTask;
@@ -438,10 +709,10 @@ public sealed class GameOperationsViewModelTests
     public async Task BackendExceptions_AreConvertedToOperationNotes()
     {
         var context = CreateContext();
-        context.ViewModel.GetSnapshot = () => new LauncherStatusSnapshot
+        context.ViewModel.ApplySnapshot(new LauncherStatusSnapshot
         {
             RuntimeState = LauncherRuntimeState.NotInstalled
-        };
+        });
         context.Backend.InstallException = new InvalidOperationException("install failed");
 
         await context.ViewModel.InstallOrUpdateCommand.ExecuteAsync(null);
@@ -457,9 +728,12 @@ public sealed class GameOperationsViewModelTests
         var shell = new ShellViewModel(localizer);
         shell.IsBusy = false;
         var dialogs = new DialogsViewModel(localizer, new NoticeStateService(
-            Path.Combine(Path.GetTempPath(), Guid.NewGuid().ToString("N"), "notices.json")));
+            Path.Combine(Path.GetTempPath(), Guid.NewGuid().ToString("N"), "notices.json")),
+            new SetupWizardViewModel(localizer, new GameInstallationPath(), new LocalInstallationStateStore(), new LocalDiagnostics()));
         var backend = new TestBackend();
         var viewModel = new GameOperationsViewModel(
+            backend,
+            backend,
             backend,
             localizer,
             toastService,
@@ -484,9 +758,13 @@ public sealed class GameOperationsViewModelTests
         DialogsViewModel Dialogs,
         ToastService ToastService);
 
-    private sealed class TestBackend : IGameOperationsBackend
+    private sealed class TestBackend :
+        IGameLaunchWorkflow,
+        IGameInstallationWorkflow,
+        IGameUninstallWorkflow
     {
         public bool IsDownloadRunning { get; set; }
+        public bool IsRunning => IsDownloadRunning;
         public bool IsPaused { get; set; }
         public int InstallInvocationCount { get; private set; }
         public int LaunchInvocationCount { get; private set; }
@@ -504,6 +782,8 @@ public sealed class GameOperationsViewModelTests
         public GameOperationResult UninstallResult { get; set; } = new();
         public GameOperationResult? ResumeResult { get; set; }
         public Exception? InstallException { get; set; }
+        public TaskCompletionSource<GameOperationResult>? InstallCompletion { get; set; }
+        public TaskCompletionSource<GameOperationResult>? UninstallCompletion { get; set; }
 
         public Task<GameLaunchResult> StartGameAsync(LauncherStatusSnapshot snapshot)
         {
@@ -521,7 +801,7 @@ public sealed class GameOperationsViewModelTests
                 throw InstallException;
             }
 
-            return Task.FromResult(InstallResult);
+            return InstallCompletion?.Task ?? Task.FromResult(InstallResult);
         }
 
         public Task<GameOperationResult> RepairAsync(
@@ -540,7 +820,7 @@ public sealed class GameOperationsViewModelTests
             Action<GameOperationProgress> progress)
         {
             UninstallInvocationCount++;
-            return Task.FromResult(UninstallResult);
+            return UninstallCompletion?.Task ?? Task.FromResult(UninstallResult);
         }
 
         public Task<GameOperationResult?> ResumePersistedAsync(

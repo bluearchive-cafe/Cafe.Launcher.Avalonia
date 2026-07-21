@@ -5,6 +5,8 @@ using System.Threading.Tasks;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 using Cafe.Launcher.Avalonia.Constants;
+using Cafe.Launcher.Avalonia.Features.Shell;
+using Cafe.Launcher.Avalonia.Helpers;
 using Cafe.Launcher.Avalonia.Models;
 using Cafe.Launcher.Avalonia.Services;
 using Cafe.Launcher.Avalonia.Services.Diagnostics;
@@ -12,7 +14,7 @@ using Serilog.Events;
 
 namespace Cafe.Launcher.Avalonia.ViewModels;
 
-public partial class SettingsViewModel : ViewModelBase, IDisposable
+public partial class SettingsViewModel : ViewModelBase, IDisposable, IModalContentViewModel
 {
     private readonly LauncherSettingsService settingsService;
     private readonly LocalizationService localizer;
@@ -102,6 +104,34 @@ public partial class SettingsViewModel : ViewModelBase, IDisposable
     [ObservableProperty]
     private bool isSaving;
 
+    private string selectedCategory = SettingsCategoryCodes.General;
+
+    public string SelectedCategory
+    {
+        get => selectedCategory;
+        set
+        {
+            if (!SetProperty(ref selectedCategory, SettingsCategoryCodes.Normalize(value)))
+            {
+                return;
+            }
+
+            OnPropertyChanged(nameof(IsGeneralCategorySelected));
+            OnPropertyChanged(nameof(IsGameCategorySelected));
+            OnPropertyChanged(nameof(IsDownloadNetworkCategorySelected));
+            OnPropertyChanged(nameof(IsAppearanceCategorySelected));
+            OnPropertyChanged(nameof(IsAdvancedCategorySelected));
+            OnPropertyChanged(nameof(IsAboutCategorySelected));
+        }
+    }
+
+    public bool IsGeneralCategorySelected => SelectedCategory == SettingsCategoryCodes.General;
+    public bool IsGameCategorySelected => SelectedCategory == SettingsCategoryCodes.Game;
+    public bool IsDownloadNetworkCategorySelected => SelectedCategory == SettingsCategoryCodes.DownloadNetwork;
+    public bool IsAppearanceCategorySelected => SelectedCategory == SettingsCategoryCodes.Appearance;
+    public bool IsAdvancedCategorySelected => SelectedCategory == SettingsCategoryCodes.Advanced;
+    public bool IsAboutCategorySelected => SelectedCategory == SettingsCategoryCodes.About;
+
     internal Task PendingAppearancePreview => appearancePreviewTask;
 
     // ── Public API for parent VM ──────────────────────────────────────────
@@ -140,12 +170,11 @@ public partial class SettingsViewModel : ViewModelBase, IDisposable
         Options.RefreshDisplayNames();
     }
 
-    public void ApplyLauncherSettings(LauncherSettings settings, string localGamePath)
+    /// <summary>Loads a persisted settings snapshot into the active edit session.</summary>
+    public void ApplyLauncherSettings(LauncherSettings settings)
     {
         editor.ApplySnapshot(settings);
         var snapshot = editor.GetSnapshot();
-        snapshot.GamePath = localGamePath;
-        editor.ApplySnapshot(snapshot);
         Appearance.Load(snapshot);
         ApplyLogLevel(snapshot.LogLevel);
     }
@@ -168,7 +197,7 @@ public partial class SettingsViewModel : ViewModelBase, IDisposable
 
         if (!result.IsUpdateAvailable)
         {
-            toastService.ShowSuccess(localizer.F("launcherUpToDate", BuildInfo.LauncherVersion));
+            toastService.ShowSuccess(localizer.F("launcherUpdateUpToDate", BuildInfo.LauncherVersion));
             return;
         }
 
@@ -208,11 +237,12 @@ public partial class SettingsViewModel : ViewModelBase, IDisposable
             editor.ApplySnapshot(settings);
             toastService.ShowSuccess(localizer.T("settingsSaved"));
 
-            if (SettingsSaved is not null)
-                await SettingsSaved.Invoke();
+            await AsyncEvent.InvokeSequentiallyAsync(SettingsSaved);
         }
         catch (Exception exception)
         {
+            System.Diagnostics.Debug.WriteLine(
+                $"Settings: save failed: {exception.Message}");
             toastService.ShowError(localizer.F("settingsSaveFailed", exception.Message));
         }
         finally
@@ -242,18 +272,26 @@ public partial class SettingsViewModel : ViewModelBase, IDisposable
     }
 
     [RelayCommand]
+    private async Task ChangePersistedGamePathAsync()
+    {
+        var settings = await settingsService.ReadAsync();
+        await PickAndPersistGamePathAsync(settings.GamePath);
+    }
+
+    [RelayCommand]
     private async Task SelectInstalledGameAsync()
+    {
+        var startPath = Environment.GetFolderPath(Environment.SpecialFolder.UserProfile);
+        await PickAndPersistGamePathAsync(startPath);
+    }
+
+    private async Task PickAndPersistGamePathAsync(string startPath)
     {
         if (PickGameFolderAsync is null)
         {
             toastService.ShowWarning(localizer.T("folderPickerUnavailable"));
             return;
         }
-
-        // Default the folder picker to the original launcher's game path
-        // so users can quickly locate an existing installation.
-        var startPath = OriginalLauncherMigrationService.TryGetGamePath()
-            ?? Environment.GetFolderPath(Environment.SpecialFolder.UserProfile);
 
         var pickedPath = await PickGameFolderAsync(startPath);
         if (string.IsNullOrWhiteSpace(pickedPath))
@@ -264,22 +302,20 @@ public partial class SettingsViewModel : ViewModelBase, IDisposable
         // Normalise: append YostarGames/BlueArchive_JP if missing.
         pickedPath = gameInstallationPath.NormalizeGamePath(pickedPath);
 
-        editor.Current.GamePath = pickedPath;
-
-        // Persist immediately and trigger a full state refresh so the game
-        // is detected without requiring the user to open settings and save.
         try
         {
-            var settings = editor.GetSnapshot();
+            var settings = await settingsService.ReadAsync();
+            settings.GamePath = pickedPath;
             await settingsService.SaveAsync(settings);
             editor.ApplySnapshot(settings);
             toastService.ShowSuccess(localizer.T("gamePathUpdated"));
 
-            if (SettingsSaved is not null)
-                await SettingsSaved.Invoke();
+            await AsyncEvent.InvokeSequentiallyAsync(SettingsSaved);
         }
         catch (Exception exception)
         {
+            System.Diagnostics.Debug.WriteLine(
+                $"Settings: game path update failed: {exception.Message}");
             toastService.ShowError(localizer.F("gamePathUpdateFailed", exception.Message));
         }
     }
@@ -381,6 +417,8 @@ public partial class SettingsViewModel : ViewModelBase, IDisposable
         }
         catch (Exception exception)
         {
+            System.Diagnostics.Debug.WriteLine(
+                $"Settings: appearance preview failed: {exception.Message}");
             toastService.ShowError(localizer.F("appearancePreviewFailed", exception.Message));
         }
     }
@@ -417,8 +455,10 @@ public partial class SettingsViewModel : ViewModelBase, IDisposable
             };
             unifiedLogger.SetMinimumLevel(level);
         }
-        catch
+        catch (Exception ex)
         {
+            System.Diagnostics.Debug.WriteLine(
+                $"Settings: failed to apply log level: {ex.Message}");
             // Best-effort — log level application must never disrupt settings flow.
         }
     }

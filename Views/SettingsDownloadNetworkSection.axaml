@@ -1,0 +1,73 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:vm="using:Cafe.Launcher.Avalonia.ViewModels"
+             xmlns:models="using:Cafe.Launcher.Avalonia.Models"
+             xmlns:materialIcons="clr-namespace:Material.Icons.Avalonia;assembly=Material.Icons.Avalonia"
+             xmlns:controls="using:Cafe.Launcher.Avalonia.Controls"
+             x:Class="Cafe.Launcher.Avalonia.Views.SettingsDownloadNetworkSection"
+             x:Name="SettingsRoot"
+             x:DataType="vm:MainWindowViewModel">
+    <UserControl.Resources>
+        <DataTemplate x:Key="SettingOptionTemplate" x:DataType="models:SettingOption">
+            <TextBlock Text="{Binding DisplayName}"/>
+        </DataTemplate>
+    </UserControl.Resources>
+    <StackPanel>
+        <StackPanel Classes="settings-group">
+            <TextBlock Text="{Binding Shell.I18n.SettingsGroupConnection}" Classes="group-title"/>
+
+            <controls:SettingRow IconKind="serverNetworkOutline"
+                                 Title="{Binding Shell.I18n.Proxy}"
+                                 Description="{Binding Shell.I18n.ProxyDescription}">
+                <controls:SettingRow.Action>
+                    <ComboBox Classes="setting-control"
+                              AutomationProperties.Name="{Binding Shell.I18n.Proxy}"
+                              ItemsSource="{Binding Settings.Options.ProxyMode}"
+                              SelectedValue="{Binding Settings.Editor.Current.ProxyMode, Mode=TwoWay}"
+                              SelectedValueBinding="{Binding Code}"
+                              ItemTemplate="{StaticResource SettingOptionTemplate}"/>
+                </controls:SettingRow.Action>
+            </controls:SettingRow>
+
+            <controls:SettingRow IconKind="Web"
+                                 Title="{Binding Shell.I18n.DownloadSource}"
+                                 Description="{Binding Shell.I18n.DownloadSourceDescription}">
+                <controls:SettingRow.Action>
+                    <ComboBox Classes="setting-control"
+                              AutomationProperties.Name="{Binding Shell.I18n.DownloadSource}"
+                              ItemsSource="{Binding Settings.Options.PatchUrlGroup}"
+                              SelectedValue="{Binding Settings.Editor.Current.PatchUrlGroup, Mode=TwoWay}"
+                              SelectedValueBinding="{Binding Code}"
+                              ItemTemplate="{StaticResource SettingOptionTemplate}"/>
+                </controls:SettingRow.Action>
+            </controls:SettingRow>
+
+            <controls:SettingRow IconKind="Speedometer"
+                                 Title="{Binding Shell.I18n.DownloadSpeedLimit}"
+                                 Description="{Binding Shell.I18n.DownloadSpeedLimitDescription}">
+                <controls:SettingRow.Action>
+                    <ComboBox Classes="setting-control"
+                              AutomationProperties.Name="{Binding Shell.I18n.DownloadSpeedLimit}"
+                              ItemsSource="{Binding Settings.Options.DownloadSpeedLimit}"
+                              SelectedValue="{Binding Settings.Editor.Current.DownloadSpeedLimit, Mode=TwoWay}"
+                              SelectedValueBinding="{Binding Code}"
+                              ItemTemplate="{StaticResource SettingOptionTemplate}"/>
+                </controls:SettingRow.Action>
+            </controls:SettingRow>
+
+            <controls:SettingRow IconKind="SourceBranch"
+                                 Title="{Binding Shell.I18n.LauncherUpdateChannel}"
+                                 Description="{Binding Shell.I18n.LauncherUpdateChannelDescription}">
+                <controls:SettingRow.Action>
+                    <ComboBox Classes="setting-control"
+                              AutomationProperties.Name="{Binding Shell.I18n.LauncherUpdateChannel}"
+                              ItemsSource="{Binding Settings.Options.UpdateChannel}"
+                              SelectedValue="{Binding Settings.Editor.Current.UpdateChannel, Mode=TwoWay}"
+                              SelectedValueBinding="{Binding Code}"
+                              ItemTemplate="{StaticResource SettingOptionTemplate}"/>
+                </controls:SettingRow.Action>
+            </controls:SettingRow>
+        </StackPanel>
+
+    </StackPanel>
+</UserControl>

@@ -89,23 +89,48 @@ public sealed class LauncherCoreServiceTests : IDisposable
             () => service.LoadAsync(cancellation.Token));
     }
 
-    private async Task<LauncherCoreService> CreateServiceAsync(HttpMessageHandler handler)
+    [Fact]
+    public async Task LoadAsync_WhenSettingsDocumentHasNoGamePath_ReturnsEffectiveDefaultGamePath()
     {
-        var gamePath = Path.Combine(tempDir, "YostarGames", "BlueArchive_JP");
-        Directory.CreateDirectory(gamePath);
-        var store = new LocalInstallationStateStore();
-        var committed = await store.CommitAsync(
-            gamePath,
-            new LocalInstallationStateCommit(
-                "2.0.0",
-                "manifest.json",
-                "BlueArchive",
-                [],
-                []));
-        Assert.Equal(LocalInstallationStateKind.Valid, committed.Kind);
+        var service = await CreateServiceAsync(
+            new LauncherStateHandler("/api/launcher/never"),
+            useEmptySettingsDocument: true);
+        var expectedPath = new GameInstallationPath().GetDefaultGamePath();
 
-        var settingsService = new LauncherSettingsService(Path.Combine(tempDir, "settings.json"));
-        await settingsService.SaveAsync(new LauncherSettings { GamePath = gamePath });
+        var snapshot = await service.LoadAsync();
+
+        Assert.Equal(expectedPath, snapshot.Settings.GamePath);
+        Assert.Equal(expectedPath, snapshot.LocalGame.GamePath);
+    }
+
+    private async Task<LauncherCoreService> CreateServiceAsync(
+        HttpMessageHandler handler,
+        bool useEmptySettingsDocument = false)
+    {
+        var store = new LocalInstallationStateStore();
+        var settingsPath = Path.Combine(tempDir, "settings.json");
+        var settingsService = new LauncherSettingsService(settingsPath);
+        if (useEmptySettingsDocument)
+        {
+            Directory.CreateDirectory(tempDir);
+            await File.WriteAllTextAsync(settingsPath, "{}");
+        }
+        else
+        {
+            var gamePath = Path.Combine(tempDir, "YostarGames", "BlueArchive_JP");
+            Directory.CreateDirectory(gamePath);
+            var committed = await store.CommitAsync(
+                gamePath,
+                new LocalInstallationStateCommit(
+                    "2.0.0",
+                    "manifest.json",
+                    "BlueArchive",
+                    [],
+                    []));
+            Assert.Equal(LocalInstallationStateKind.Valid, committed.Kind);
+            await settingsService.SaveAsync(new LauncherSettings { GamePath = gamePath });
+        }
+
         var apiClient = new LauncherApiClient(
             handler,
             new AuthorizationHeaderFactory(),

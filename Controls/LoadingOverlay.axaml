@@ -1,0 +1,18 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:controls="using:Cafe.Launcher.Avalonia.Controls"
+             x:Class="Cafe.Launcher.Avalonia.Controls.LoadingOverlay"
+             x:Name="Root"
+             x:DataType="controls:LoadingOverlay">
+    <Border Classes="loading-overlay">
+        <StackPanel Spacing="{StaticResource LauncherSpacingSm}"
+                    HorizontalAlignment="Center"
+                    VerticalAlignment="Center">
+            <ProgressBar IsIndeterminate="True"
+                         Width="{StaticResource LauncherLoadingBarWidth}"
+                         Height="{StaticResource LauncherLoadingBarHeight}"/>
+            <TextBlock Text="{Binding Text, ElementName=Root}"
+                       Classes="media-placeholder-text"/>
+        </StackPanel>
+    </Border>
+</UserControl>

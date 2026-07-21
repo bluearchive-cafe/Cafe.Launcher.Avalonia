@@ -10,9 +10,12 @@ jobs:
   build:
     runs-on: windows-latest
 
+    defaults:
+      run:
+        shell: pwsh
+
     env:
       Project_Path: Cafe.Launcher.Avalonia.csproj
-      NUGET_PACKAGES: ${{ github.workspace }}\.nuget\packages
       DOTNET_CLI_TELEMETRY_OPTOUT: 1
       AVALONIA_TELEMETRY_OPTOUT: 1
 
@@ -30,32 +33,37 @@ jobs:
       - name: Cache NuGet packages
         uses: actions/cache@v5
         with:
-          path: ${{ env.NUGET_PACKAGES }}
+          path: ~/.nuget/packages
           key: ${{ runner.os }}-nuget-${{ hashFiles('**/*.csproj') }}
           restore-keys: |
             ${{ runner.os }}-nuget-
 
-      - name: Restore (Debug)
-        run: dotnet restore $env:Project_Path
-
-      - name: Restore tests
-        run: |
-          dotnet restore tests/Cafe.Launcher.Avalonia.Tests/Cafe.Launcher.Avalonia.Tests.csproj
-          dotnet restore tests/Cafe.Launcher.Avalonia.HeadlessTests/Cafe.Launcher.Avalonia.HeadlessTests.csproj
-
-      - name: Build (Debug)
-        run: dotnet build $env:Project_Path -c Debug --no-restore
-
       - name: Test
-        run: |
-          dotnet test tests/Cafe.Launcher.Avalonia.Tests/Cafe.Launcher.Avalonia.Tests.csproj -c Debug --no-restore
-          dotnet test tests/Cafe.Launcher.Avalonia.HeadlessTests/Cafe.Launcher.Avalonia.HeadlessTests.csproj -c Debug --no-restore
+        run: .\test.ps1 -Configuration Debug
 
-      - name: Restore (Release)
+      - name: Coverage
+        run: .\coverage.ps1
+
+      - name: Upload test and coverage reports
+        if: always()
+        uses: actions/upload-artifact@v6
+        with:
+          name: test-and-coverage-reports
+          path: |
+            TestResults/**/*.trx
+            TestResults/Coverage/**/coverage.cobertura.xml
+
+      - name: Restore (Debug, win-x64)
         run: dotnet restore $env:Project_Path -r win-x64
 
-      - name: Build (Release)
-        run: dotnet build $env:Project_Path -c Release --no-restore
+      - name: Build (Debug, win-x64)
+        run: dotnet build $env:Project_Path -c Debug -r win-x64 --no-restore
 
-      - name: Publish (Release)
-        run: dotnet publish $env:Project_Path -c Release -o publish --no-restore
+      - name: Restore (Release, win-x64)
+        run: dotnet restore $env:Project_Path -r win-x64
+
+      - name: Build (Release, win-x64)
+        run: dotnet build $env:Project_Path -c Release -r win-x64 --no-restore
+
+      - name: Publish (Release, win-x64)
+        run: dotnet publish $env:Project_Path -c Release -r win-x64 -o publish --no-restore

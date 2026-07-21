@@ -1,12 +1,20 @@
 using System;
 using System.IO;
+using Cafe.Launcher.Avalonia.Helpers;
 
 namespace Cafe.Launcher.Avalonia.Services;
 
 public sealed class DiskSpaceService
 {
+    internal Func<string, long?>? GetAvailableBytesOverride { get; set; }
+
     public long? GetAvailableBytes(string path)
     {
+        if (GetAvailableBytesOverride is not null)
+        {
+            return GetAvailableBytesOverride(path);
+        }
+
         var existingPath = FindExistingDirectory(path);
         if (string.IsNullOrWhiteSpace(existingPath))
         {
@@ -36,8 +44,27 @@ public sealed class DiskSpaceService
             return true;
         }
 
+        return Check(path, requiredBytes).HasEnoughSpace;
+    }
+
+    public DiskSpaceCheckResult Check(string path, long requiredBytes)
+    {
+        var normalizedRequiredBytes = Math.Max(0, requiredBytes);
         var availableBytes = GetAvailableBytes(path);
-        return availableBytes.HasValue && availableBytes.Value >= requiredBytes;
+        return new DiskSpaceCheckResult(normalizedRequiredBytes, availableBytes);
+    }
+
+    public static long ResolveRequiredBytes(bool isFreshInstall, long plannedDownloadBytes, string? decompressionSize)
+    {
+        var normalizedPlannedDownloadBytes = Math.Max(0, plannedDownloadBytes);
+        if (!isFreshInstall
+            || string.IsNullOrWhiteSpace(decompressionSize)
+            || !FileSizeFormatter.TryParseHumanReadable(decompressionSize, out var decompressionBytes))
+        {
+            return normalizedPlannedDownloadBytes;
+        }
+
+        return Math.Max(normalizedPlannedDownloadBytes, decompressionBytes);
     }
 
     private static string? FindExistingDirectory(string path)

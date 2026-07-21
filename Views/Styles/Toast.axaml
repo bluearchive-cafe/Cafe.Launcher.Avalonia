@@ -1,0 +1,92 @@
+<Styles xmlns="https://github.com/avaloniaui"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:materialIcons="clr-namespace:Material.Icons.Avalonia;assembly=Material.Icons.Avalonia">
+    <Style Selector="Border.toast-card">
+        <Setter Property="Background" Value="{DynamicResource LauncherToastBackgroundBrush}"/>
+        <Setter Property="BorderBrush" Value="{DynamicResource LauncherCardBorderBrush}"/>
+        <Setter Property="BorderThickness" Value="1"/>
+        <Setter Property="CornerRadius" Value="{DynamicResource LauncherRadiusMd}"/>
+        <Setter Property="Padding" Value="12"/>
+        <Setter Property="MaxWidth" Value="340"/>
+        <Setter Property="Opacity" Value="1"/>
+    </Style>
+    <Style Selector="Border.toast-card.motion-enabled:not(.motion-exit)">
+        <Style.Animations>
+            <Animation Duration="0:0:0.200" FillMode="Forward" Easing="ExponentialEaseOut">
+                <KeyFrame Cue="0%">
+                    <Setter Property="Opacity" Value="0"/>
+                    <Setter Property="TranslateTransform.X" Value="6"/>
+                </KeyFrame>
+                <KeyFrame Cue="100%">
+                    <Setter Property="Opacity" Value="1"/>
+                    <Setter Property="TranslateTransform.X" Value="0"/>
+                </KeyFrame>
+            </Animation>
+        </Style.Animations>
+    </Style>
+    <Style Selector="Border.toast-card.motion-enabled.motion-exit">
+        <Style.Animations>
+            <Animation Duration="0:0:0.167" FillMode="Forward" Easing="ExponentialEaseIn">
+                <KeyFrame Cue="0%">
+                    <Setter Property="Opacity" Value="1"/>
+                    <Setter Property="TranslateTransform.X" Value="0"/>
+                </KeyFrame>
+                <KeyFrame Cue="100%">
+                    <Setter Property="Opacity" Value="0"/>
+                    <Setter Property="TranslateTransform.X" Value="6"/>
+                </KeyFrame>
+            </Animation>
+        </Style.Animations>
+    </Style>
+    <Style Selector="Grid.toast-host">
+        <Setter Property="IsHitTestVisible" Value="True"/>
+        <Setter Property="Margin" Value="0,56,16,0"/>
+        <Setter Property="VerticalAlignment" Value="Top"/>
+        <Setter Property="HorizontalAlignment" Value="Right"/>
+    </Style>
+    <Style Selector="StackPanel.toast-list">
+        <Setter Property="Spacing" Value="{DynamicResource LauncherSpacingSm}"/>
+        <Setter Property="HorizontalAlignment" Value="Right"/>
+    </Style>
+    <Style Selector="Grid.toast-layout">
+        <Setter Property="ColumnSpacing" Value="{DynamicResource LauncherSpacingSm}"/>
+    </Style>
+    <Style Selector="StackPanel.toast-copy">
+        <Setter Property="Spacing" Value="{DynamicResource LauncherSpacingXs}"/>
+    </Style>
+    <Style Selector="TextBlock.toast-message">
+        <Setter Property="FontSize" Value="{DynamicResource LauncherFontSizeMd}"/>
+        <Setter Property="Foreground" Value="{DynamicResource LauncherTextBodyBrush}"/>
+        <Setter Property="TextWrapping" Value="Wrap"/>
+        <Setter Property="MaxWidth" Value="282"/>
+    </Style>
+    <Style Selector="Button.toast-close">
+        <Setter Property="Background" Value="{DynamicResource LauncherTransparentBrush}"/>
+        <Setter Property="BorderThickness" Value="0"/>
+        <Setter Property="Foreground" Value="{DynamicResource LauncherTextSecondaryBrush}"/>
+        <Setter Property="Width" Value="32"/>
+        <Setter Property="Height" Value="32"/>
+        <Setter Property="Padding" Value="0"/>
+        <Setter Property="CornerRadius" Value="{DynamicResource LauncherRadiusSm}"/>
+        <Setter Property="HorizontalContentAlignment" Value="Center"/>
+        <Setter Property="VerticalContentAlignment" Value="Center"/>
+        <Setter Property="Opacity" Value="0.5"/>
+        <Setter Property="VerticalAlignment" Value="Top"/>
+    </Style>
+    <Style Selector="Button.toast-close:pointerover">
+        <Setter Property="Opacity" Value="1"/>
+        <Setter Property="Background" Value="{DynamicResource LauncherFlatHoverBrush}"/>
+        <Setter Property="Foreground" Value="{DynamicResource LauncherTextPrimaryBrush}"/>
+    </Style>
+    <Style Selector="Button.toast-close:pressed">
+        <Setter Property="Background" Value="{DynamicResource LauncherFlatPressedBrush}"/>
+        <Setter Property="Foreground" Value="{DynamicResource LauncherTextPrimaryBrush}"/>
+    </Style>
+    <Style Selector="TextBlock.toast-severity">
+        <Setter Property="FontSize" Value="{DynamicResource LauncherFontSizeXs}"/>
+    </Style>
+    <Style Selector="materialIcons|MaterialIcon.toast-icon">
+        <Setter Property="VerticalAlignment" Value="Top"/>
+        <Setter Property="Margin" Value="0,8,0,0"/>
+    </Style>
+</Styles>

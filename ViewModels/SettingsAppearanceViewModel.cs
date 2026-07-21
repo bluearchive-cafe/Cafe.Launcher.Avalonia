@@ -354,24 +354,38 @@ public partial class SettingsAppearanceViewModel : ViewModelBase, IDisposable
             return;
         }
 
-        SetBrush(application, "LauncherAccentBrush", color);
-        SetBrush(application, "LauncherAccentHoverBrush", AdjustColor(color, 1.15));
-        SetBrush(application, "LauncherAccentPressedBrush", AdjustColor(color, 0.85));
+        var accentColor = ColorUtils.NormalizeAccentColorForUi(color);
+
+        SetBrush(application, "LauncherAccentBrush", accentColor);
+        SetBrush(application, "LauncherAccentHoverBrush", ColorUtils.AdjustColor(accentColor, 1.15));
+        SetBrush(application, "LauncherAccentPressedBrush", ColorUtils.AdjustColor(accentColor, 0.85));
         SetBrush(
             application,
             "LauncherAccentSoftBrush",
-            Color.FromArgb(0x24, color.R, color.G, color.B));
+            Color.FromArgb(0x24, accentColor.R, accentColor.G, accentColor.B));
         SetBrush(
             application,
             "LauncherAccentBorderBrush",
-            Color.FromArgb(0x80, color.R, color.G, color.B));
+            Color.FromArgb(0x80, accentColor.R, accentColor.G, accentColor.B));
         SetBrush(
             application,
             "LauncherFocusRingBrush",
-            Color.FromArgb(0x99, color.R, color.G, color.B));
-        SetBrush(application, "LauncherCarouselDotActiveBrush", color);
-        SetBrush(application, "LauncherToastInfoBrush", color);
-        SetBrush(application, "LauncherOnAccentBrush", GetReadableOnAccentColor(color));
+            Color.FromArgb(0x99, accentColor.R, accentColor.G, accentColor.B));
+        SetBrush(application, "LauncherCarouselDotActiveBrush", accentColor);
+        SetBrush(application, "LauncherToastInfoBrush", accentColor);
+        SetBrush(application, "LauncherOnAccentBrush", ColorUtils.GetReadableOnAccentColor(accentColor));
+        SetBrush(
+            application,
+            "LauncherFlatHoverBrush",
+            Color.FromArgb(0x14, accentColor.R, accentColor.G, accentColor.B));
+        SetBrush(
+            application,
+            "LauncherFlatPressedBrush",
+            Color.FromArgb(0x30, accentColor.R, accentColor.G, accentColor.B));
+        SetBrush(
+            application,
+            "LauncherInfoBackgroundBrush",
+            Color.FromArgb(0x24, accentColor.R, accentColor.G, accentColor.B));
     }
 
     private static void SetBrush(Application application, string key, Color color)
@@ -389,32 +403,14 @@ public partial class SettingsAppearanceViewModel : ViewModelBase, IDisposable
         application.Resources[key] = new SolidColorBrush(color);
     }
 
-    internal static Color AdjustColor(Color color, double factor)
-    {
-        static byte Adjust(byte value, double amount) =>
-            (byte)Math.Clamp((int)Math.Round(value * amount), 0, 255);
+    internal static Color NormalizeAccentColorForUi(Color color) =>
+        ColorUtils.NormalizeAccentColorForUi(color);
 
-        return Color.FromArgb(
-            color.A,
-            Adjust(color.R, factor),
-            Adjust(color.G, factor),
-            Adjust(color.B, factor));
-    }
+    internal static Color GetReadableOnAccentColor(Color color) =>
+        ColorUtils.GetReadableOnAccentColor(color);
 
-    internal static Color GetReadableOnAccentColor(Color color)
-    {
-        var luminance = (0.2126 * SrgbToLinear(color.R / 255d))
-            + (0.7152 * SrgbToLinear(color.G / 255d))
-            + (0.0722 * SrgbToLinear(color.B / 255d));
-        return luminance > 0.45
-            ? Color.FromRgb(0x12, 0x18, 0x20)
-            : Colors.White;
-    }
-
-    private static double SrgbToLinear(double value) =>
-        value <= 0.04045
-            ? value / 12.92
-            : Math.Pow((value + 0.055) / 1.055, 2.4);
+    internal static Color AdjustColor(Color color, double factor) =>
+        ColorUtils.AdjustColor(color, factor);
 
     public static string ToColorHex(Color color) =>
         ThemeColorExtractionService.ToColorHex(color);

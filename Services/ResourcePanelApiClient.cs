@@ -13,8 +13,20 @@ namespace Cafe.Launcher.Avalonia.Services;
 public sealed class ResourcePanelApiClient : IDisposable
 {
     private static readonly string ApiBaseUrl = ApiConfig.ResourcePanelApiBaseUrl;
-    private readonly IHttpClientLeaseSource leaseSource;
     private readonly JsonSerializerOptions jsonOptions = JsonDefaults.Strict;
+
+    /// <summary>
+    /// Network resilience parameters mirrored from the dashboard's
+    /// <c>fetchWithRetry</c>: 10s timeout (enforced by the lease), 2 retries,
+    /// 800ms × attempt linear backoff. Retries fire only on thrown network
+    /// errors (timeout/socket), not on HTTP non-2xx — matching the dashboard
+    /// which only retries <c>catch</c> blocks, leaving HTTP status handling
+    /// to the caller.
+    /// </summary>
+    private const int MaxRetries = 2;
+    private const int RetryDelayMs = 800;
+
+    private readonly IHttpClientLeaseSource leaseSource;
 
     public ResourcePanelApiClient(HttpClientFactory httpClientFactory)
     {
@@ -49,14 +61,15 @@ public sealed class ResourcePanelApiClient : IDisposable
     {
         var path = $"/config/get?uid={Uri.EscapeDataString(uid)}";
         using var lease = await leaseSource.CreateLeaseAsync(proxyMode, cancellationToken).ConfigureAwait(false);
-        using var response = await lease.Client.GetAsync(path, cancellationToken).ConfigureAwait(false);
+        using var response = await SendWithRetryAsync(
+            lease.Client, path, cancellationToken).ConfigureAwait(false);
         if (response.StatusCode == HttpStatusCode.NotFound)
         {
             return new ResourcePanelConfigResponse();
         }
         response.EnsureSuccessStatusCode();
-        await using var stream = await response.Content.ReadAsStreamAsync(cancellationToken).ConfigureAwait(false);
-        return await JsonSerializer.DeserializeAsync<ResourcePanelConfigResponse>(stream, jsonOptions, cancellationToken).ConfigureAwait(false)
+        return await RemoteHttpRequestService.DeserializeJsonAsync<ResourcePanelConfigResponse>(
+            response, new Uri(ApiBaseUrl + path), jsonOptions, cancellationToken).ConfigureAwait(false)
             ?? new ResourcePanelConfigResponse();
     }
 
@@ -74,7 +87,8 @@ public sealed class ResourcePanelApiClient : IDisposable
             + $"&voice={Uri.EscapeDataString(voice)}"
             + $"&media={Uri.EscapeDataString(media)}";
         using var lease = await leaseSource.CreateLeaseAsync(proxyMode, cancellationToken).ConfigureAwait(false);
-        using var response = await lease.Client.GetAsync(path, cancellationToken).ConfigureAwait(false);
+        using var response = await SendWithRetryAsync(
+            lease.Client, path, cancellationToken).ConfigureAwait(false);
         response.EnsureSuccessStatusCode();
     }
 
@@ -85,14 +99,51 @@ public sealed class ResourcePanelApiClient : IDisposable
         where T : new()
     {
         using var lease = await leaseSource.CreateLeaseAsync(proxyMode, cancellationToken).ConfigureAwait(false);
-        using var response = await lease.Client.GetAsync(path, cancellationToken).ConfigureAwait(false);
+        using var response = await SendWithRetryAsync(
+            lease.Client, path, cancellationToken).ConfigureAwait(false);
         response.EnsureSuccessStatusCode();
-        await using var stream = await response.Content.ReadAsStreamAsync(cancellationToken).ConfigureAwait(false);
-        return await JsonSerializer.DeserializeAsync<T>(stream, jsonOptions, cancellationToken).ConfigureAwait(false) ?? new T();
+        return await RemoteHttpRequestService.DeserializeJsonAsync<T>(
+            response, new Uri(ApiBaseUrl + path), jsonOptions, cancellationToken).ConfigureAwait(false) ?? new T();
+    }
+
+    /// <summary>
+    /// Sends a GET request with bounded retry + linear backoff on network
+    /// errors only (not HTTP non-2xx), mirroring the dashboard's
+    /// <c>fetchWithRetry</c>. Cancellation always propagates immediately.
+    /// </summary>
+    private async Task<HttpResponseMessage> SendWithRetryAsync(
+        HttpClient client,
+        string path,
+        CancellationToken cancellationToken)
+    {
+        Exception? lastException = null;
+        for (var attempt = 0; attempt <= MaxRetries; attempt++)
+        {
+            cancellationToken.ThrowIfCancellationRequested();
+            try
+            {
+                return await client.GetAsync(path, cancellationToken).ConfigureAwait(false);
+            }
+            catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
+            {
+                throw;
+            }
+            catch (Exception ex) when (ex is HttpRequestException or TaskCanceledException)
+            {
+                lastException = ex;
+                if (attempt < MaxRetries)
+                {
+                    await Task.Delay(RetryDelayMs * (attempt + 1), cancellationToken).ConfigureAwait(false);
+                }
+            }
+        }
+
+        throw lastException!;
     }
 
     public void Dispose()
     {
         leaseSource.Dispose();
+        GC.SuppressFinalize(this);
     }
 }

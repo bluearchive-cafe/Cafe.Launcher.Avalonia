@@ -17,6 +17,7 @@ public partial class ToastHostViewModel : ViewModelBase, IDisposable
     private readonly Func<Action, Task> invokeOnUiAsync;
     private readonly Func<TimeSpan, CancellationToken, Task> delayAsync;
     private readonly CancellationTokenSource lifetimeCts = new();
+    private bool reduceMotion = true;
     private bool disposed;
 
     public ObservableCollection<ToastNotification> ActiveToasts { get; } = [];
@@ -46,15 +47,21 @@ public partial class ToastHostViewModel : ViewModelBase, IDisposable
         toastService.ToastRaised += OnToastRaised;
     }
 
-    [RelayCommand]
-    private void DismissToast(string toastId)
+    /// <summary>
+    /// Controls whether subsequent Toast exits skip the exit animation delay.
+    /// </summary>
+    /// <param name="reduceMotion">
+    /// <see langword="true"/> to remove subsequent Toasts immediately; otherwise,
+    /// <see langword="false"/> to wait for the exit animation.
+    /// </param>
+    public void ApplyMotionPreference(bool reduceMotion)
     {
-        var toast = ActiveToasts.FirstOrDefault(t => t.Id == toastId);
-        if (toast is not null)
-        {
-            ActiveToasts.Remove(toast);
-        }
+        this.reduceMotion = reduceMotion;
     }
+
+    [RelayCommand(AllowConcurrentExecutions = true)]
+    private Task DismissToastAsync(string toastId) =>
+        ExitToastAsync(toastId, lifetimeCts.Token);
 
     private void OnToastRaised(ToastNotification notification)
     {
@@ -84,18 +91,65 @@ public partial class ToastHostViewModel : ViewModelBase, IDisposable
 
             await invokeOnUiAsync(() => ActiveToasts.Add(notification));
             await delayAsync(TimeSpan.FromMilliseconds(notification.DurationMs), cancellationToken);
-            await invokeOnUiAsync(
-                () =>
+            await ExitToastAsync(notification.Id, cancellationToken);
+        }
+        catch (OperationCanceledException exception) when (
+            exception.CancellationToken == cancellationToken
+            && cancellationToken.IsCancellationRequested)
+        {
+            // Toast lifecycle was cancelled — nothing to do.
+        }
+        catch (OperationCanceledException)
+        {
+            throw;
+        }
+        catch (Exception ex)
+        {
+            System.Diagnostics.Debug.WriteLine(
+                $"ToastHost: toast notification lifecycle failed: {ex.Message}");
+        }
+    }
+
+    private async Task ExitToastAsync(string toastId, CancellationToken cancellationToken)
+    {
+        ToastNotification? exitingToast = null;
+        var shouldWaitForAnimation = false;
+        await invokeOnUiAsync(
+            () =>
+            {
+                var toast = ActiveToasts.FirstOrDefault(candidate => candidate.Id == toastId);
+                if (toast is null || toast.IsExiting)
                 {
-                    try { ActiveToasts.Remove(notification); }
-                    catch (InvalidOperationException) { }
-                });
-        }
-        catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
+                    return;
+                }
+
+                if (reduceMotion)
+                {
+                    ActiveToasts.Remove(toast);
+                    return;
+                }
+
+                toast.IsExiting = true;
+                exitingToast = toast;
+                shouldWaitForAnimation = true;
+            });
+
+        if (!shouldWaitForAnimation || exitingToast is null)
         {
+            return;
         }
-        catch
+
+        try
         {
+            await delayAsync(AnimationTimings.ExitAnimationDuration, cancellationToken);
+            await invokeOnUiAsync(
+                () => ActiveToasts.Remove(exitingToast));
+        }
+        catch (OperationCanceledException exception) when (
+            exception.CancellationToken == cancellationToken
+            && cancellationToken.IsCancellationRequested)
+        {
+            // The host lifetime ended while the exit animation was pending.
         }
     }
 

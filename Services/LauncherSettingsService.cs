@@ -12,7 +12,7 @@ using Cafe.Launcher.Avalonia.Services.Diagnostics;
 
 namespace Cafe.Launcher.Avalonia.Services;
 
-public sealed class LauncherSettingsService
+public sealed class LauncherSettingsService : IDisposable
 {
     private readonly SemaphoreSlim writeLock = new(1, 1);
     private readonly string? settingsPath;
@@ -165,9 +165,9 @@ public sealed class LauncherSettingsService
             settings.LaunchCheckMode = LaunchCheckModes.LocalManifest;
         }
 
-        if (settings.ProxyMode is not ProxyModes.Direct and not ProxyModes.System)
+        if (settings.ProxyMode is not ProxyModes.Direct and not ProxyModes.Auto and not ProxyModes.System)
         {
-            settings.ProxyMode = ProxyModes.Direct;
+            settings.ProxyMode = ProxyModes.Auto;
         }
 
         if (settings.CloseBehavior is not CloseBehaviors.Minimize and not CloseBehaviors.Exit)
@@ -178,6 +178,7 @@ public sealed class LauncherSettingsService
         if (settings.Language is not LauncherLanguages.Auto
             and not LauncherLanguages.English
             and not LauncherLanguages.SimplifiedChinese
+            and not LauncherLanguages.TraditionalChinese
             and not LauncherLanguages.Japanese)
         {
             settings.Language = LauncherLanguages.Auto;
@@ -188,6 +189,20 @@ public sealed class LauncherSettingsService
             and not ThemeModes.Dark)
         {
             settings.ThemeMode = ThemeModes.System;
+        }
+
+        if (settings.MotionMode is not MotionModes.System
+            and not MotionModes.Full
+            and not MotionModes.Reduced)
+        {
+            settings.MotionMode = MotionModes.System;
+        }
+
+        if (settings.StatusDetailMode is not StatusDetailModes.Hidden
+            and not StatusDetailModes.Compact
+            and not StatusDetailModes.Detailed)
+        {
+            settings.StatusDetailMode = StatusDetailModes.Detailed;
         }
 
         if (settings.ThemeColorMode is not ThemeColorModes.Default
@@ -261,6 +276,12 @@ public sealed class LauncherSettingsService
 
         settings.GamePath ??= "";
         settings.ResourcePanelUid = settings.ResourcePanelUid?.Trim() ?? "";
+        if (settings.ResourcePanelUidSource is not ResourcePanelUidSources.Auto
+            and not ResourcePanelUidSources.Custom)
+        {
+            settings.ResourcePanelUidSource = ResourcePanelUidSources.Auto;
+        }
+
         return settings;
     }
 
@@ -301,5 +322,10 @@ public sealed class LauncherSettingsService
         }
 
         return true;
+    }
+
+    public void Dispose()
+    {
+        writeLock.Dispose();
     }
 }

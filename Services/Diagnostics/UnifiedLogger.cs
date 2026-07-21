@@ -58,7 +58,7 @@ public sealed class UnifiedLogger : IDisposable
                 retainedFileCountLimit: 4,                  // current + 3 rotated
                 rollingInterval: RollingInterval.Infinite,
                 shared: true,                               // allow log viewer to read while writing
-                outputTemplate: "{Timestamp:O} [{Level:u3}] {Message}{NewLine}{Exception}"),
+                outputTemplate: "{Timestamp:O} [{Level:u3}] [{LogTitle}] {Message}{NewLine}{Exception}"),
                 bufferSize: 10000)
             .CreateLogger();
 
@@ -94,13 +94,20 @@ public sealed class UnifiedLogger : IDisposable
         Exception? exception = null,
         CancellationToken cancellationToken = default)
     {
-        cancellationToken.ThrowIfCancellationRequested();
+        // Note: cancellationToken is checked here to support the caller's
+        // cancellation needs, but logging is inherently fire-and-forget.
+        // If the caller has already been cancelled, their diagnostic about
+        // why they were cancelled is the most valuable log entry to keep.
         try
         {
             var level = severity switch
             {
-                LogEntrySeverity.Error => LogEventLevel.Error,
+                LogEntrySeverity.Verbose => LogEventLevel.Verbose,
+                LogEntrySeverity.Debug => LogEventLevel.Debug,
+                LogEntrySeverity.Info => LogEventLevel.Information,
                 LogEntrySeverity.Warn => LogEventLevel.Warning,
+                LogEntrySeverity.Error => LogEventLevel.Error,
+                LogEntrySeverity.Fatal => LogEventLevel.Fatal,
                 _ => LogEventLevel.Information
             };
 
@@ -117,7 +124,9 @@ public sealed class UnifiedLogger : IDisposable
         }
         catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
         {
-            throw;
+            // Cancelled by caller — expected during shutdown.
+            // Suppress the OperationCanceledException here since logging
+            // must never crash the app.
         }
         catch
         {
@@ -144,6 +153,7 @@ public sealed class UnifiedLogger : IDisposable
             message.Append("BuildConfig: ").Append(buildConfig).AppendLine();
 
             serilogLogger
+                .ForContext("LogTitle", "Session")
                 .ForContext("SessionVersion", version)
                 .ForContext("SessionCommitSha", commitSha)
                 .ForContext("SessionOS", os)
@@ -161,7 +171,7 @@ public sealed class UnifiedLogger : IDisposable
     {
         try
         {
-            serilogLogger.Information("Session ended");
+            serilogLogger.ForContext("LogTitle", "Session").Information("Session ended");
         }
         catch
         {
@@ -176,5 +186,6 @@ public sealed class UnifiedLogger : IDisposable
         if (disposed) return;
         disposed = true;
         serilogLogger.Dispose();
+        GC.SuppressFinalize(this);
     }
 }

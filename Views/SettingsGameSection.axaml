@@ -1,0 +1,71 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:vm="using:Cafe.Launcher.Avalonia.ViewModels"
+             xmlns:models="using:Cafe.Launcher.Avalonia.Models"
+             xmlns:materialIcons="clr-namespace:Material.Icons.Avalonia;assembly=Material.Icons.Avalonia"
+             xmlns:controls="using:Cafe.Launcher.Avalonia.Controls"
+             x:Class="Cafe.Launcher.Avalonia.Views.SettingsGameSection"
+             x:Name="SettingsRoot"
+             x:DataType="vm:MainWindowViewModel">
+    <UserControl.Resources>
+        <DataTemplate x:Key="SettingOptionTemplate" x:DataType="models:SettingOption">
+            <TextBlock Text="{Binding DisplayName}"/>
+        </DataTemplate>
+    </UserControl.Resources>
+    <StackPanel Classes="settings-group">
+        <TextBlock Text="{Binding Shell.I18n.SettingsGroupGameFiles}" Classes="group-title"/>
+
+        <controls:SettingRow IconKind="FolderOpen"
+                             Title="{Binding Shell.I18n.GamePath}"
+                             Description="{Binding Settings.Editor.Current.GamePath}">
+            <controls:SettingRow.Action>
+                <Button Classes="flat-action" Command="{Binding Settings.ChooseGamePathCommand}"
+                        AutomationProperties.Name="{Binding Shell.I18n.Choose}"
+                        IsEnabled="{Binding Shell.IsBusy, Converter={x:Static BoolConverters.Not}}">
+                    <StackPanel Classes="button-content">
+                        <materialIcons:MaterialIcon Kind="FolderOpen" Width="{StaticResource LauncherIconSm}" Height="{StaticResource LauncherIconSm}"/>
+                        <TextBlock Text="{Binding Shell.I18n.Choose}"/>
+                    </StackPanel>
+                </Button>
+            </controls:SettingRow.Action>
+        </controls:SettingRow>
+
+        <controls:SettingRow IconKind="PlaylistCheck"
+                             Title="{Binding Shell.I18n.LaunchCheck}"
+                             Description="{Binding Shell.I18n.LaunchCheckDescription}">
+            <controls:SettingRow.Action>
+                <ComboBox Classes="setting-control"
+                          AutomationProperties.Name="{Binding Shell.I18n.LaunchCheck}"
+                          ItemsSource="{Binding Settings.Options.LaunchCheckMode}"
+                          SelectedValue="{Binding Settings.Editor.Current.LaunchCheckMode, Mode=TwoWay}"
+                          SelectedValueBinding="{Binding Code}"
+                          ItemTemplate="{StaticResource SettingOptionTemplate}"/>
+            </controls:SettingRow.Action>
+        </controls:SettingRow>
+
+        <controls:SettingRow IconKind="GamepadSquareOutline"
+                             Title="{Binding Shell.I18n.GameManagement}"
+                             Description="{Binding Shell.I18n.GameManagementDescription}">
+            <controls:SettingRow.Action>
+                <StackPanel Orientation="Horizontal" Spacing="{StaticResource LauncherSpacingSm}" VerticalAlignment="Center">
+                    <Button Classes="flat-action" Command="{Binding Operations.RequestRepairCommand}"
+                            AutomationProperties.Name="{Binding Shell.I18n.Repair}"
+                            IsEnabled="{Binding Shell.IsBusy, Converter={x:Static BoolConverters.Not}}">
+                        <StackPanel Classes="button-content">
+                            <materialIcons:MaterialIcon Kind="Tools" Width="{StaticResource LauncherIconSm}" Height="{StaticResource LauncherIconSm}"/>
+                            <TextBlock Text="{Binding Shell.I18n.Repair}"/>
+                        </StackPanel>
+                    </Button>
+                    <Button Classes="flat-action" Command="{Binding Operations.RequestUninstallCommand}"
+                            AutomationProperties.Name="{Binding Shell.I18n.Uninstall}"
+                            IsEnabled="{Binding Shell.IsBusy, Converter={x:Static BoolConverters.Not}}">
+                        <StackPanel Classes="button-content">
+                            <materialIcons:MaterialIcon Kind="TrashCanOutline" Width="{StaticResource LauncherIconSm}" Height="{StaticResource LauncherIconSm}" Foreground="{DynamicResource LauncherDangerBrush}"/>
+                            <TextBlock Text="{Binding Shell.I18n.Uninstall}" Foreground="{DynamicResource LauncherDangerBrush}"/>
+                        </StackPanel>
+                    </Button>
+                </StackPanel>
+            </controls:SettingRow.Action>
+        </controls:SettingRow>
+    </StackPanel>
+</UserControl>

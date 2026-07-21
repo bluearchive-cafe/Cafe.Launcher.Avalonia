@@ -49,6 +49,10 @@ public partial class App : Application
             serviceProvider = serviceCollection.BuildServiceProvider();
             Program.ServiceProvider = serviceProvider;
 
+            // Application-started trace (best-effort, fire-and-forget)
+            _ = serviceProvider.GetRequiredService<Services.Diagnostics.LocalDiagnostics>()
+                .DebugAsync("Application", "Application started, DI container built", CancellationToken.None);
+
             // Track install attribution (non-critical, best-effort)
             try
             {
@@ -104,8 +108,26 @@ public partial class App : Application
             // Listen for show-window signal from second instances
             showWindowListener = ShowWindowSignalListener.Start(mainWindow, trayService, SignalName);
 
+            // Register Opened handler BEFORE desktop.MainWindow is set — that assignment
+            // may trigger the window to show and fire Opened synchronously.
+            if (Program.FirstLaunch)
+            {
+                mainWindow.Opened += (_, _) =>
+                {
+                    // Post at a priority that ensures layout/render/bindings are complete
+                    // before we toggle visibility.
+                    Dispatcher.UIThread.Post(() => viewModel.Dialogs.ShowSetupWizard(), DispatcherPriority.Background);
+                };
+            }
+            else
+            {
+                mainWindow.Opened += (_, _) =>
+                {
+                    _ = InitializeViewModelAsync(viewModel, serviceProvider, shutdownCts.Token);
+                };
+            }
+
             desktop.MainWindow = mainWindow;
-            _ = InitializeViewModelAsync(viewModel, serviceProvider, shutdownCts.Token);
         }
 
         base.OnFrameworkInitializationCompleted();

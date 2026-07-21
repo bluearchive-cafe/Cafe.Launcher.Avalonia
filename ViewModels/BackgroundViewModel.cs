@@ -150,7 +150,7 @@ public partial class BackgroundViewModel : ViewModelBase, IDisposable
                 {
                     try
                     {
-                        var proxyMode = snapshot?.Settings.ProxyMode ?? ProxyModes.Direct;
+                        var proxyMode = snapshot?.Settings.ProxyMode ?? ProxyModes.Auto;
                         var cachedPath = await imageCacheService.GetCachedPathAsync(crc64, cancellationToken)
                             ?? await imageCacheService.CacheImageAsync(bgImg, crc64, proxyMode, cancellationToken);
                         cancellationToken.ThrowIfCancellationRequested();
@@ -456,7 +456,7 @@ public partial class BackgroundViewModel : ViewModelBase, IDisposable
     {
         try
         {
-            var uri = new Uri("avares://Cafe.Launcher.Avalonia/Assets/bg-7b36e4e0.png");
+            var uri = new Uri("avares://Cafe.Launcher.Avalonia/Assets/launcher-background.png");
             using var stream = AssetLoader.Open(uri);
             return new Bitmap(stream);
         }

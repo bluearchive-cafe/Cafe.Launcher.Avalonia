@@ -161,9 +161,9 @@ public sealed partial class LauncherUpdateService : IDisposable
             cancellationToken).ConfigureAwait(false);
         response.EnsureSuccessStatusCode();
 
-        await using var stream = await response.Content.ReadAsStreamAsync(cancellationToken).ConfigureAwait(false);
-        return await JsonSerializer.DeserializeAsync<List<LauncherReleaseResponse>>(
-            stream,
+        return await RemoteHttpRequestService.DeserializeJsonAsync<List<LauncherReleaseResponse>>(
+            response,
+            new Uri(ApiConfig.LauncherApiBaseUrl + ApiConfig.LauncherReleasesPath),
             JsonOptions,
             cancellationToken).ConfigureAwait(false);
     }
@@ -194,10 +194,9 @@ public sealed partial class LauncherUpdateService : IDisposable
                 return false;
             }
 
-            if (!ExternalLinkService.TryCreateAllowedUri(file.Url, out var downloadUri)
-                || downloadUri.Scheme is not ("http" or "https"))
+            if (!IsReleaseDownloadUri(file.Url))
             {
-                validationError = $"files[{index}].url must be an absolute HTTP or HTTPS URL";
+                validationError = $"files[{index}].url must be a GitHub release download URL";
                 return false;
             }
 
@@ -210,6 +209,16 @@ public sealed partial class LauncherUpdateService : IDisposable
 
         validationError = "";
         return true;
+    }
+
+    private static bool IsReleaseDownloadUri(string url)
+    {
+        return Uri.TryCreate(url, UriKind.Absolute, out var downloadUri)
+            && downloadUri.Scheme == Uri.UriSchemeHttps
+            && string.Equals(downloadUri.Host, "github.com", StringComparison.OrdinalIgnoreCase)
+            && downloadUri.AbsolutePath.StartsWith(
+                ApiConfig.GitHubReleaseDownloadPathPrefix,
+                StringComparison.Ordinal);
     }
 
     internal static bool IsNewerVersion(string latestVersion, string currentVersion)

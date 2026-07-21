@@ -3,6 +3,14 @@ using CommunityToolkit.Mvvm.ComponentModel;
 
 namespace Cafe.Launcher.Avalonia.Models;
 
+public enum ResourcePanelItemStatus
+{
+    Loading,
+    Ready,
+    Waiting,
+    Failed
+}
+
 public static class ResourcePanelResourceCodes
 {
     public const string Text = "text";
@@ -78,4 +86,17 @@ public sealed partial class ResourcePanelItem : ObservableObject
 
     [ObservableProperty]
     private bool isEnabled;
+
+    [ObservableProperty]
+    private ResourcePanelItemStatus status;
+
+    public bool IsOperable => Status is ResourcePanelItemStatus.Ready or ResourcePanelItemStatus.Waiting;
+
+    partial void OnStatusChanged(ResourcePanelItemStatus value)
+    {
+        OnPropertyChanged(nameof(IsOperable));
+    }
+
+    [ObservableProperty]
+    private string statusIconKind = "";
 }

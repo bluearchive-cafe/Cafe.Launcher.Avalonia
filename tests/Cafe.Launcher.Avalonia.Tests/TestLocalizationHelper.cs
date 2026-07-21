@@ -20,7 +20,7 @@ public static class TestLocalizationHelper
     {
         var localesDir = FindLocalesDirectory();
         var resources = new Dictionary<string, Dictionary<string, string>>();
-        foreach (var locale in new[] { LauncherLanguages.English, LauncherLanguages.SimplifiedChinese, LauncherLanguages.Japanese })
+        foreach (var locale in new[] { LauncherLanguages.English, LauncherLanguages.SimplifiedChinese, LauncherLanguages.TraditionalChinese, LauncherLanguages.Japanese })
         {
             var filePath = Path.Combine(localesDir, $"{locale}.json");
             if (File.Exists(filePath))

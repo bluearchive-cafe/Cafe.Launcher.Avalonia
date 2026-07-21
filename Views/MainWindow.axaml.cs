@@ -18,16 +18,20 @@ namespace Cafe.Launcher.Avalonia.Views;
 public partial class MainWindow : Window
 {
     private SystemTrayService? systemTray;
+    private MainWindowViewModel? configuredViewModel;
 
     public MainWindow()
     {
         InitializeComponent();
         PointerPressed += OnPointerPressed;
         KeyDown += OnKeyDown;
+        Activated += OnActivated;
     }
 
     public void ConfigureViewModel(MainWindowViewModel viewModel)
     {
+        UnconfigureViewModel();
+        configuredViewModel = viewModel;
         viewModel.Settings.PickGameFolderAsync = PickGameFolderAsync;
         viewModel.Settings.PickBackgroundImageAsync = PickBackgroundImageAsync;
         viewModel.Settings.PickBackgroundFolderAsync = PickBackgroundFolderAsync;
@@ -36,13 +40,38 @@ public partial class MainWindow : Window
         viewModel.Background.PickBackgroundFolderAsync = PickBackgroundFolderAsync;
         viewModel.LogViewer.PickExportDirectoryAsync = PickLogExportDirectoryAsync;
         viewModel.LogViewer.OpenExportDirectory = OpenDirectory;
-        viewModel.Operations.MinimizeWindow = () => WindowState = WindowState.Minimized;
-        viewModel.WindowChrome.MinimizeWindow = () => WindowState = WindowState.Minimized;
-        viewModel.WindowChrome.CloseWindow = PerformClose;
-        viewModel.WindowChrome.RestoreWindow = ShowWindow;
-        viewModel.MigrationWizard.PickGameFolderAsync =
-            () => PickGameFolderAsync(viewModel.MigrationWizard.Editor.Current.GamePath);
+        viewModel.Operations.MinimizeRequested += MinimizeWindow;
+        viewModel.WindowChrome.MinimizeRequested += MinimizeWindow;
+        viewModel.WindowChrome.CloseRequested += PerformClose;
+        viewModel.WindowChrome.RestoreRequested += ShowWindow;
     }
+
+    protected override void OnClosed(EventArgs e)
+    {
+        UnconfigureViewModel();
+        base.OnClosed(e);
+    }
+
+    private void UnconfigureViewModel()
+    {
+        if (configuredViewModel is not { } viewModel)
+        {
+            return;
+        }
+
+        viewModel.Operations.MinimizeRequested -= MinimizeWindow;
+        viewModel.WindowChrome.MinimizeRequested -= MinimizeWindow;
+        viewModel.WindowChrome.CloseRequested -= PerformClose;
+        viewModel.WindowChrome.RestoreRequested -= ShowWindow;
+        configuredViewModel = null;
+    }
+
+    private void OnActivated(object? sender, EventArgs e)
+    {
+        configuredViewModel?.RefreshSystemMotionPreference();
+    }
+
+    private void MinimizeWindow() => WindowState = WindowState.Minimized;
 
     public void SetSystemTray(SystemTrayService trayService)
     {

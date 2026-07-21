@@ -20,6 +20,7 @@ public static class ServiceConfiguration
         services.AddSingleton<ClickCodeService>();
         services.AddSingleton<ToastService>();
         services.AddSingleton<BestHttpCookieLibraryService>();
+        services.AddSingleton<EasterEggAudioService>();
 
         // Reuse the pre-DI logger when provided so there is a single Serilog
         // pipeline for the entire process (crash handling + application logging).
@@ -28,8 +29,9 @@ public static class ServiceConfiguration
         else
             services.AddSingleton<UnifiedLogger>();
         services.AddSingleton<LogExportService>();
-        services.AddTransient<LogViewerDialogViewModel>();
+        services.AddSingleton<LogViewerDialogViewModel>();
         services.AddSingleton<LocalDiagnostics>();
+        services.AddSingleton<SetupWizardViewModel>();
         services.AddSingleton<AuthorizationHeaderFactory>();
         services.AddSingleton<RemoteHttpUrlValidator>();
         services.AddSingleton<PatchUrlGroupService>();
@@ -46,6 +48,7 @@ public static class ServiceConfiguration
         services.AddSingleton<NoticeStateService>();
         services.AddSingleton<ResourcePanelUidService>();
         services.AddSingleton<LauncherSettingsService>();
+        services.AddSingleton<WindowsAnimationSettingsProvider>();
         services.AddSingleton<ISettingsEditor, SettingsEditor>();
         services.AddSingleton<SettingsOptionsViewModel>();
         services.AddSingleton<SettingsAppearanceViewModel>();
@@ -74,21 +77,17 @@ public static class ServiceConfiguration
                 sp.GetRequiredService<LocalizationService>(),
                 sp.GetRequiredService<GameInstallationPath>())));
 
-        // ── Migration services ────────────────────────────────────────────
-        services.AddSingleton<OldLauncherDetectionService>();
-
-        // ── ViewModels (transient unless explicitly registered otherwise) ─
+        // ── ViewModels (all singleton — single-window desktop app) ─────────
         services.AddSingleton<SettingsViewModel>();
-        services.AddTransient<ResourcePanelViewModel>();
+        services.AddSingleton<ResourcePanelViewModel>();
         services.AddSingleton<ShellViewModel>();
-        services.AddTransient<BackgroundViewModel>();
+        services.AddSingleton<BackgroundViewModel>();
         services.AddSingleton<RemoteContentViewModel>();
         services.AddSingleton<DialogsViewModel>();
         services.AddSingleton<GameOperationsViewModel>();
-        services.AddTransient<ToastHostViewModel>();
-        services.AddTransient<WindowChromeViewModel>();
-        services.AddTransient<MigrationWizardViewModel>();
-        services.AddTransient<MainWindowViewModel>();
+        services.AddSingleton<ToastHostViewModel>();
+        services.AddSingleton<WindowChromeViewModel>();
+        services.AddSingleton<MainWindowViewModel>();
 
         return services;
     }

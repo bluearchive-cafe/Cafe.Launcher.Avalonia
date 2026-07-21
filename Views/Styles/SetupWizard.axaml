@@ -1,0 +1,48 @@
+<Styles xmlns="https://github.com/avaloniaui"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
+    <Style Selector="ListBox.settings-navigation.wizard-navigation">
+        <Setter Property="Padding" Value="8,8,8,16"/>
+    </Style>
+    <Style Selector="TextBlock.wizard-step-number">
+        <Setter Property="MinWidth" Value="20"/>
+        <Setter Property="HorizontalAlignment" Value="Center"/>
+        <Setter Property="VerticalAlignment" Value="Center"/>
+    </Style>
+    <Style Selector="Grid.wizard-review-row">
+        <Setter Property="MinHeight" Value="{StaticResource LauncherControlHeightDialog}"/>
+        <Setter Property="VerticalAlignment" Value="Center"/>
+    </Style>
+    <Style Selector="Border.wizard-review-divider">
+        <Setter Property="Height" Value="1"/>
+        <Setter Property="Background" Value="{DynamicResource LauncherCardBorderBrush}"/>
+    </Style>
+    <Style Selector="Button.wizard-choice">
+        <Setter Property="Background" Value="{DynamicResource LauncherContentRowBrush}"/>
+        <Setter Property="BorderBrush" Value="{DynamicResource LauncherCardBorderBrush}"/>
+        <Setter Property="BorderThickness" Value="1"/>
+        <Setter Property="CornerRadius" Value="{DynamicResource LauncherRadiusMd}"/>
+        <Setter Property="Padding" Value="14"/>
+        <Setter Property="MinHeight" Value="64"/>
+        <Setter Property="HorizontalContentAlignment" Value="Stretch"/>
+    </Style>
+    <Style Selector="Button.wizard-choice:pointerover">
+        <Setter Property="Background" Value="{DynamicResource LauncherFlatHoverBrush}"/>
+        <Setter Property="BorderBrush" Value="{DynamicResource LauncherAccentHoverBrush}"/>
+    </Style>
+    <Style Selector="Button.wizard-choice.active">
+        <Setter Property="Background" Value="{DynamicResource LauncherAccentSoftBrush}"/>
+        <Setter Property="BorderBrush" Value="{DynamicResource LauncherAccentBrush}"/>
+    </Style>
+    <Style Selector="TextBlock.wizard-game-path-status.checking">
+        <Setter Property="Foreground" Value="{DynamicResource LauncherAccentBrush}"/>
+    </Style>
+    <Style Selector="TextBlock.wizard-game-path-status.ready">
+        <Setter Property="Foreground" Value="{DynamicResource LauncherSuccessBrush}"/>
+    </Style>
+    <Style Selector="TextBlock.wizard-game-path-status.corrupted">
+        <Setter Property="Foreground" Value="{DynamicResource LauncherDangerBrush}"/>
+    </Style>
+    <Style Selector="TextBlock.wizard-game-path-status.inaccessible">
+        <Setter Property="Foreground" Value="{DynamicResource LauncherDangerBrush}"/>
+    </Style>
+</Styles>

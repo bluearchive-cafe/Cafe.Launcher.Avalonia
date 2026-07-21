@@ -11,16 +11,28 @@ namespace Cafe.Launcher.Avalonia.Services;
 public sealed partial class LocalizedStrings : ObservableObject
 {
     [ObservableProperty] private string settings = "";
-    [ObservableProperty] private string settingsStatus = "";
-    [ObservableProperty] private string settingsGameFiles = "";
-    [ObservableProperty] private string settingsDownloadNetwork = "";
-    [ObservableProperty] private string settingsAppPreferences = "";
+    [ObservableProperty] private string settingsGroupGameFiles = "";
+    [ObservableProperty] private string settingsGroupAppPreferences = "";
+    [ObservableProperty] private string settingsGroupAboutActions = "";
+    [ObservableProperty] private string settingsGroupBackground = "";
+    [ObservableProperty] private string settingsGroupThemeColor = "";
+    [ObservableProperty] private string settingsCategoryGeneral = "";
+    [ObservableProperty] private string settingsCategoryGame = "";
+    [ObservableProperty] private string settingsCategoryDownloadNetwork = "";
+    [ObservableProperty] private string settingsCategoryAppearance = "";
+    [ObservableProperty] private string settingsCategoryAdvanced = "";
+    [ObservableProperty] private string settingsCategoryAbout = "";
     [ObservableProperty] private string minimize = "";
     [ObservableProperty] private string close = "";
     [ObservableProperty] private string version = "";
     [ObservableProperty] private string executable = "";
     [ObservableProperty] private string network = "";
-    [ObservableProperty] private string diskSpaceLabel = "";
+    [ObservableProperty] private string diskSpaceCheck = "";
+    [ObservableProperty] private string diskSpaceInsufficientDetail = "";
+    [ObservableProperty] private string diskSpaceOkSuffix = "";
+    [ObservableProperty] private string diskSpaceShortSuffix = "";
+    [ObservableProperty] private string verificationRetry = "";
+    [ObservableProperty] private string verificationFailed = "";
     [ObservableProperty] private string path = "";
     [ObservableProperty] private string changePath = "";
     [ObservableProperty] private string refresh = "";
@@ -49,7 +61,13 @@ public sealed partial class LocalizedStrings : ObservableObject
     [ObservableProperty] private string resourcePanelSaved = "";
     [ObservableProperty] private string resourcePanelUidSaved = "";
     [ObservableProperty] private string resourcePanelUidEmpty = "";
+    [ObservableProperty] private string resourcePanelUidInvalidFormat = "";
     [ObservableProperty] private string resourcePanelCurrentUid = "";
+    [ObservableProperty] private string resourcePanelChangeUid = "";
+    [ObservableProperty] private string resourcePanelUidSource = "";
+    [ObservableProperty] private string resourcePanelUidSourceAuto = "";
+    [ObservableProperty] private string resourcePanelUidSourceCustom = "";
+    [ObservableProperty] private string resourcePanelEditUid = "";
     [ObservableProperty] private string notice = "";
     [ObservableProperty] private string banners = "";
     [ObservableProperty] private string news = "";
@@ -65,6 +83,11 @@ public sealed partial class LocalizedStrings : ObservableObject
     [ObservableProperty] private string themeSystem = "";
     [ObservableProperty] private string themeLight = "";
     [ObservableProperty] private string themeDark = "";
+    [ObservableProperty] private string motionMode = "";
+    [ObservableProperty] private string motionModeDescription = "";
+    [ObservableProperty] private string motionModeSystem = "";
+    [ObservableProperty] private string motionModeFull = "";
+    [ObservableProperty] private string motionModeReduced = "";
     [ObservableProperty] private string themeColor = "";
     [ObservableProperty] private string themeColorDescription = "";
     [ObservableProperty] private string themeColorDefault = "";
@@ -81,10 +104,8 @@ public sealed partial class LocalizedStrings : ObservableObject
     [ObservableProperty] private string repair = "";
     [ObservableProperty] private string uninstall = "";
     [ObservableProperty] private string about = "";
+    [ObservableProperty] private string aboutActionsGeneral = "";
     [ObservableProperty] private string aboutDescription = "";
-    [ObservableProperty] private string agreement = "";
-    [ObservableProperty] private string privacy = "";
-    [ObservableProperty] private string updateEndpoint = "";
     [ObservableProperty] private string confirmUninstall = "";
     [ObservableProperty] private string uninstallConfirmDescription = "";
     [ObservableProperty] private string cancel = "";
@@ -97,6 +118,7 @@ public sealed partial class LocalizedStrings : ObservableObject
     [ObservableProperty] private string showLauncher = "";
     [ObservableProperty] private string exitLauncher = "";
     [ObservableProperty] private string gitHubRepository = "";
+    [ObservableProperty] private string helpDocs = "";
     [ObservableProperty] private string checkUpdates = "";
     [ObservableProperty] private string trayOpenLauncher = "";
     [ObservableProperty] private string trayExitLauncher = "";
@@ -108,8 +130,6 @@ public sealed partial class LocalizedStrings : ObservableObject
     [ObservableProperty] private string chooseImage = "";
     [ObservableProperty] private string chooseFolder = "";
     [ObservableProperty] private string clearBackground = "";
-    [ObservableProperty] private string backgroundSet = "";
-    [ObservableProperty] private string backgroundCleared = "";
     [ObservableProperty] private string backgroundSource = "";
     [ObservableProperty] private string backgroundSourceDescription = "";
     [ObservableProperty] private string backgroundSourceBundled = "";
@@ -128,12 +148,10 @@ public sealed partial class LocalizedStrings : ObservableObject
     [ObservableProperty] private string videoVolume = "";
     [ObservableProperty] private string videoMute = "";
     [ObservableProperty] private string versionInfo = "";
-    [ObservableProperty] private string runtimeInfo = "";
     [ObservableProperty] private string buildInfo = "";
     [ObservableProperty] private string downloadSpeedLimit = "";
     [ObservableProperty] private string downloadSpeedLimitDescription = "";
     [ObservableProperty] private string notificationSettings = "";
-    [ObservableProperty] private string toastNotifications = "";
     [ObservableProperty] private string remoteContentCard = "";
     [ObservableProperty] private string remoteContentLoading = "";
     [ObservableProperty] private string showRemoteContentCard = "";
@@ -145,6 +163,9 @@ public sealed partial class LocalizedStrings : ObservableObject
     [ObservableProperty] private string toastInfo = "";
     [ObservableProperty] private string launchCheckDescription = "";
     [ObservableProperty] private string proxyDescription = "";
+    [ObservableProperty] private string proxyAuto = "";
+    [ObservableProperty] private string proxyDirect = "";
+    [ObservableProperty] private string proxySystem = "";
     [ObservableProperty] private string downloadSource = "";
     [ObservableProperty] private string downloadSourceDescription = "";
     [ObservableProperty] private string downloadSourceOfficial = "";
@@ -157,8 +178,8 @@ public sealed partial class LocalizedStrings : ObservableObject
     [ObservableProperty] private string pause = "";
     [ObservableProperty] private string resume = "";
     [ObservableProperty] private string paused = "";
-    [ObservableProperty] private string confirmStop = "";
-    [ObservableProperty] private string stopDownloadConfirm = "";
+    [ObservableProperty] private string stopDownloadTitle = "";
+    [ObservableProperty] private string stopDownloadMessage = "";
     [ObservableProperty] private string unsavedChanges = "";
     [ObservableProperty] private string unsavedChangesMessage = "";
     [ObservableProperty] private string discardChanges = "";
@@ -174,32 +195,24 @@ public sealed partial class LocalizedStrings : ObservableObject
     [ObservableProperty] private string bannerLoadingFailed = "";
     [ObservableProperty] private string bannerLoading = "";
     [ObservableProperty] private string statusNetworkLoaded = "";
+    [ObservableProperty] private string statusDetailMode = "";
+    [ObservableProperty] private string statusDetailModeDescription = "";
+    [ObservableProperty] private string statusDetailModeHidden = "";
+    [ObservableProperty] private string statusDetailModeCompact = "";
+    [ObservableProperty] private string statusDetailModeDetailed = "";
     [ObservableProperty] private string statusLaunchCheckLocal = "";
     [ObservableProperty] private string statusLaunchCheckRemote = "";
     [ObservableProperty] private string statusLaunchCheckNone = "";
     [ObservableProperty] private string gameLaunchedMinimized = "";
-    [ObservableProperty] private string migrationWizardTitle = "";
-    [ObservableProperty] private string migrationWizardDescription = "";
-    [ObservableProperty] private string migrationGamePathLabel = "";
-    [ObservableProperty] private string migrationGamePathBrowse = "";
-    [ObservableProperty] private string migrationProxyLabel = "";
-    [ObservableProperty] private string migrationCloseBehaviorLabel = "";
-    [ObservableProperty] private string migrationClickCodeFound = "";
-    [ObservableProperty] private string migrationLevelDbFailed = "";
-    [ObservableProperty] private string migrationGamePathNotFound = "";
-    [ObservableProperty] private string migrationSkip = "";
-    [ObservableProperty] private string migrationApply = "";
-    [ObservableProperty] private string migrationApplied = "";
-    [ObservableProperty] private string migrationNoOldLauncher = "";
-    [ObservableProperty] private string updateChannel = "";
-    [ObservableProperty] private string updateChannelStable = "";
-    [ObservableProperty] private string updateChannelBeta = "";
-    [ObservableProperty] private string updateAvailableTitle = "";
-    [ObservableProperty] private string updateAvailableMessage = "";
-    [ObservableProperty] private string updateSelectFile = "";
-    [ObservableProperty] private string updateFileSize = "";
-    [ObservableProperty] private string updateDownload = "";
-    [ObservableProperty] private string updateLater = "";
+    [ObservableProperty] private string launcherUpdateChannel = "";
+    [ObservableProperty] private string launcherUpdateChannelStable = "";
+    [ObservableProperty] private string launcherUpdateChannelBeta = "";
+    [ObservableProperty] private string launcherUpdateAvailableTitle = "";
+    [ObservableProperty] private string launcherUpdateAvailableMessage = "";
+    [ObservableProperty] private string launcherUpdateSelectFile = "";
+    [ObservableProperty] private string launcherUpdateFileSize = "";
+    [ObservableProperty] private string launcherUpdateDownload = "";
+    [ObservableProperty] private string launcherUpdateLater = "";
     [ObservableProperty] private string crashRecoveryTitle = "";
     [ObservableProperty] private string crashRecoveryDescription = "";
     [ObservableProperty] private string crashRecoveryMessage = "";
@@ -209,14 +222,20 @@ public sealed partial class LocalizedStrings : ObservableObject
     [ObservableProperty] private string buildTimeLabel = "";
     [ObservableProperty] private string logViewerTitle = "";
     [ObservableProperty] private string logFilterAll = "";
-    [ObservableProperty] private string logFilterError = "";
-    [ObservableProperty] private string logFilterWarn = "";
+    [ObservableProperty] private string logFilterVerbose = "";
+    [ObservableProperty] private string logFilterDebug = "";
     [ObservableProperty] private string logFilterInfo = "";
+    [ObservableProperty] private string logFilterWarn = "";
+    [ObservableProperty] private string logFilterError = "";
+    [ObservableProperty] private string logFilterFatal = "";
     [ObservableProperty] private string logSearchPlaceholder = "";
+    [ObservableProperty] private string logLoadEarlier = "";
     [ObservableProperty] private string logNoMatchingEntries = "";
     [ObservableProperty] private string exportLogs = "";
     [ObservableProperty] private string viewLog = "";
     [ObservableProperty] private string openDataDirectory = "";
+    [ObservableProperty] private string logFiles = "";
+    [ObservableProperty] private string logFilesDescription = "";
     [ObservableProperty] private string logExportFolderPickerTitle = "";
     [ObservableProperty] private string logExportSucceeded = "";
     [ObservableProperty] private string logExportFailed = "";
@@ -230,20 +249,82 @@ public sealed partial class LocalizedStrings : ObservableObject
     [ObservableProperty] private string selectInstalledGame = "";
     [ObservableProperty] private string gamePathUpdated = "";
     [ObservableProperty] private string gamePathUpdateFailed = "";
+    [ObservableProperty] private string settingsGroupConnection = "";
+    [ObservableProperty] private string settingsGroupDisplay = "";
+    [ObservableProperty] private string settingsGroupDiagnostics = "";
+    [ObservableProperty] private string languageDescription = "";
+    [ObservableProperty] private string closeBehaviorDescription = "";
+    [ObservableProperty] private string launcherUpdateChannelDescription = "";
+    [ObservableProperty] private string logLevelDescription = "";
+    [ObservableProperty] private string toastNotificationsDescription = "";
+    [ObservableProperty] private string enableStartupUpdateCheck = "";
+    [ObservableProperty] private string enableStartupUpdateCheckDescription = "";
+    [ObservableProperty] private string startupUpdateAvailable = "";
+    [ObservableProperty] private string remoteContentCardDescription = "";
+    [ObservableProperty] private string setupWizardWelcomeTitle = "";
+    [ObservableProperty] private string setupWizardWelcomeText = "";
+    [ObservableProperty] private string setupWizardLanguage = "";
+    [ObservableProperty] private string setupWizardLanguageHint = "";
+    [ObservableProperty] private string setupWizardDownloadSource = "";
+    [ObservableProperty] private string setupWizardDownloadSourceCafeDescription = "";
+    [ObservableProperty] private string setupWizardDownloadSourceHint = "";
+    [ObservableProperty] private string setupWizardDownloadSourceOfficialDescription = "";
+    [ObservableProperty] private string setupWizardEditStep = "";
+    [ObservableProperty] private string setupWizardGamePath = "";
+    [ObservableProperty] private string setupWizardGamePathAvailable = "";
+    [ObservableProperty] private string setupWizardGamePathChecking = "";
+    [ObservableProperty] private string setupWizardGamePathCorrupted = "";
+    [ObservableProperty] private string setupWizardGamePathHint = "";
+    [ObservableProperty] private string setupWizardGamePathInaccessible = "";
+    [ObservableProperty] private string setupWizardGamePathInstalled = "";
+    [ObservableProperty] private string setupWizardGamePathEmpty = "";
+    [ObservableProperty] private string setupWizardBrowse = "";
+    [ObservableProperty] private string setupWizardProxy = "";
+    [ObservableProperty] private string setupWizardProxyAutoDescription = "";
+    [ObservableProperty] private string setupWizardProxyDirectDescription = "";
+    [ObservableProperty] private string setupWizardProxyHint = "";
+    [ObservableProperty] private string setupWizardProxySystemDescription = "";
+    [ObservableProperty] private string setupWizardReview = "";
+    [ObservableProperty] private string setupWizardReviewHint = "";
+    [ObservableProperty] private string setupWizardStep0Title = "";
+    [ObservableProperty] private string setupWizardStep1Title = "";
+    [ObservableProperty] private string setupWizardStep2Title = "";
+    [ObservableProperty] private string setupWizardStep3Title = "";
+    [ObservableProperty] private string setupWizardStep4Title = "";
+    [ObservableProperty] private string setupWizardNext = "";
+    [ObservableProperty] private string setupWizardPrevious = "";
+    [ObservableProperty] private string setupWizardFinish = "";
+    [ObservableProperty] private string setupWizardSkip = "";
+    [ObservableProperty] private string setupWizardExitTitle = "";
+    [ObservableProperty] private string setupWizardExitMessage = "";
+    [ObservableProperty] private string setupWizardExitConfirm = "";
+    [ObservableProperty] private string setupWizardStepTitle = "";
 
     public void Apply(LocalizationService localizer)
     {
         Settings = localizer.T("settings");
-        SettingsStatus = localizer.T("settingsStatus");
-        SettingsGameFiles = localizer.T("settingsGameFiles");
-        SettingsDownloadNetwork = localizer.T("settingsDownloadNetwork");
-        SettingsAppPreferences = localizer.T("settingsAppPreferences");
+        SettingsGroupGameFiles = localizer.T("settingsGroupGameFiles");
+        SettingsGroupAppPreferences = localizer.T("settingsGroupAppPreferences");
+        SettingsGroupAboutActions = localizer.T("settingsGroupAboutActions");
+        SettingsGroupBackground = localizer.T("settingsGroupBackground");
+        SettingsGroupThemeColor = localizer.T("settingsGroupThemeColor");
+        SettingsCategoryGeneral = localizer.T("settingsCategoryGeneral");
+        SettingsCategoryGame = localizer.T("settingsCategoryGame");
+        SettingsCategoryDownloadNetwork = localizer.T("settingsCategoryDownloadNetwork");
+        SettingsCategoryAppearance = localizer.T("settingsCategoryAppearance");
+        SettingsCategoryAdvanced = localizer.T("settingsCategoryAdvanced");
+        SettingsCategoryAbout = localizer.T("settingsCategoryAbout");
         Minimize = localizer.T("minimize");
         Close = localizer.T("close");
         Version = localizer.T("version");
         Executable = localizer.T("executable");
         Network = localizer.T("network");
-        DiskSpaceLabel = localizer.T("diskSpaceLabel");
+        DiskSpaceCheck = localizer.T("diskSpaceCheck");
+        DiskSpaceInsufficientDetail = localizer.T("diskSpaceInsufficientDetail");
+        DiskSpaceOkSuffix = localizer.T("diskSpaceOkSuffix");
+        DiskSpaceShortSuffix = localizer.T("diskSpaceShortSuffix");
+        VerificationRetry = localizer.T("verificationRetry");
+        VerificationFailed = localizer.T("verificationFailed");
         Path = localizer.T("path");
         ChangePath = localizer.T("changePath");
         Refresh = localizer.T("refresh");
@@ -272,7 +353,13 @@ public sealed partial class LocalizedStrings : ObservableObject
         ResourcePanelSaved = localizer.T("resourcePanelSaved");
         ResourcePanelUidSaved = localizer.T("resourcePanelUidSaved");
         ResourcePanelUidEmpty = localizer.T("resourcePanelUidEmpty");
+        ResourcePanelUidInvalidFormat = localizer.T("resourcePanelUidInvalidFormat");
         ResourcePanelCurrentUid = localizer.T("resourcePanelCurrentUid");
+        ResourcePanelChangeUid = localizer.T("resourcePanelChangeUid");
+        ResourcePanelUidSource = localizer.T("resourcePanelUidSource");
+        ResourcePanelUidSourceAuto = localizer.T("resourcePanelUidSourceAuto");
+        ResourcePanelUidSourceCustom = localizer.T("resourcePanelUidSourceCustom");
+        ResourcePanelEditUid = localizer.T("resourcePanelEditUid");
         Notice = localizer.T("notice");
         Banners = localizer.T("banners");
         News = localizer.T("news");
@@ -288,6 +375,11 @@ public sealed partial class LocalizedStrings : ObservableObject
         ThemeSystem = localizer.T("themeSystem");
         ThemeLight = localizer.T("themeLight");
         ThemeDark = localizer.T("themeDark");
+        MotionMode = localizer.T("motionMode");
+        MotionModeDescription = localizer.T("motionModeDescription");
+        MotionModeSystem = localizer.T("motionModeSystem");
+        MotionModeFull = localizer.T("motionModeFull");
+        MotionModeReduced = localizer.T("motionModeReduced");
         ThemeColor = localizer.T("themeColor");
         ThemeColorDescription = localizer.T("themeColorDescription");
         ThemeColorDefault = localizer.T("themeColorDefault");
@@ -304,10 +396,8 @@ public sealed partial class LocalizedStrings : ObservableObject
         Repair = localizer.T("repair");
         Uninstall = localizer.T("uninstall");
         About = localizer.T("about");
+        AboutActionsGeneral = localizer.T("aboutActionsGeneral");
         AboutDescription = localizer.T("aboutDescription");
-        Agreement = localizer.T("agreement");
-        Privacy = localizer.T("privacy");
-        UpdateEndpoint = localizer.T("updateEndpoint");
         ConfirmUninstall = localizer.T("confirmUninstall");
         UninstallConfirmDescription = localizer.T("uninstallConfirmDescription");
         Cancel = localizer.T("cancel");
@@ -320,6 +410,7 @@ public sealed partial class LocalizedStrings : ObservableObject
         ShowLauncher = localizer.T("showLauncher");
         ExitLauncher = localizer.T("exitLauncher");
         GitHubRepository = localizer.T("gitHubRepository");
+        HelpDocs = localizer.T("helpDocs");
         CheckUpdates = localizer.T("checkUpdates");
         TrayOpenLauncher = localizer.T("trayOpenLauncher");
         TrayExitLauncher = localizer.T("trayExitLauncher");
@@ -331,8 +422,6 @@ public sealed partial class LocalizedStrings : ObservableObject
         ChooseImage = localizer.T("chooseImage");
         ChooseFolder = localizer.T("chooseFolder");
         ClearBackground = localizer.T("clearBackground");
-        BackgroundSet = localizer.T("backgroundSet");
-        BackgroundCleared = localizer.T("backgroundCleared");
         BackgroundSource = localizer.T("backgroundSource");
         BackgroundSourceDescription = localizer.T("backgroundSourceDescription");
         BackgroundSourceBundled = localizer.T("backgroundSourceBundled");
@@ -351,12 +440,10 @@ public sealed partial class LocalizedStrings : ObservableObject
         VideoVolume = localizer.T("videoVolume");
         VideoMute = localizer.T("videoMute");
         VersionInfo = localizer.T("versionInfo");
-        RuntimeInfo = localizer.T("runtimeInfo");
         BuildInfo = localizer.T("buildInfo");
         DownloadSpeedLimit = localizer.T("downloadSpeedLimit");
         DownloadSpeedLimitDescription = localizer.T("downloadSpeedLimitDescription");
         NotificationSettings = localizer.T("notificationSettings");
-        ToastNotifications = localizer.T("toastNotifications");
         RemoteContentCard = localizer.T("remoteContentCard");
         RemoteContentLoading = localizer.T("remoteContentLoading");
         ShowRemoteContentCard = localizer.T("showRemoteContentCard");
@@ -368,6 +455,9 @@ public sealed partial class LocalizedStrings : ObservableObject
         ToastInfo = localizer.T("toastInfo");
         LaunchCheckDescription = localizer.T("launchCheckDescription");
         ProxyDescription = localizer.T("proxyDescription");
+        ProxyAuto = localizer.T("proxyAuto");
+        ProxyDirect = localizer.T("proxyDirect");
+        ProxySystem = localizer.T("proxySystem");
         DownloadSource = localizer.T("downloadSource");
         DownloadSourceDescription = localizer.T("downloadSourceDescription");
         DownloadSourceOfficial = localizer.T("downloadSourceOfficial");
@@ -380,8 +470,8 @@ public sealed partial class LocalizedStrings : ObservableObject
         Pause = localizer.T("pause");
         Resume = localizer.T("resume");
         Paused = localizer.T("paused");
-        ConfirmStop = localizer.T("confirmStop");
-        StopDownloadConfirm = localizer.T("stopDownloadConfirm");
+        StopDownloadTitle = localizer.T("stopDownloadTitle");
+        StopDownloadMessage = localizer.T("stopDownloadMessage");
         UnsavedChanges = localizer.T("unsavedChanges");
         UnsavedChangesMessage = localizer.T("unsavedChangesMessage");
         DiscardChanges = localizer.T("discardChanges");
@@ -397,32 +487,24 @@ public sealed partial class LocalizedStrings : ObservableObject
         BannerLoadingFailed = localizer.T("bannerLoadingFailed");
         BannerLoading = localizer.T("bannerLoading");
         StatusNetworkLoaded = localizer.T("statusNetworkLoaded");
+        StatusDetailMode = localizer.T("statusDetailMode");
+        StatusDetailModeDescription = localizer.T("statusDetailModeDescription");
+        StatusDetailModeHidden = localizer.T("statusDetailModeHidden");
+        StatusDetailModeCompact = localizer.T("statusDetailModeCompact");
+        StatusDetailModeDetailed = localizer.T("statusDetailModeDetailed");
         StatusLaunchCheckLocal = localizer.T("statusLaunchCheckLocal");
         StatusLaunchCheckRemote = localizer.T("statusLaunchCheckRemote");
         StatusLaunchCheckNone = localizer.T("statusLaunchCheckNone");
         GameLaunchedMinimized = localizer.T("gameLaunchedMinimized");
-        MigrationWizardTitle = localizer.T("migrationWizardTitle");
-        MigrationWizardDescription = localizer.T("migrationWizardDescription");
-        MigrationGamePathLabel = localizer.T("migrationGamePathLabel");
-        MigrationGamePathBrowse = localizer.T("migrationGamePathBrowse");
-        MigrationProxyLabel = localizer.T("migrationProxyLabel");
-        MigrationCloseBehaviorLabel = localizer.T("migrationCloseBehaviorLabel");
-        MigrationClickCodeFound = localizer.T("migrationClickCodeFound");
-        MigrationLevelDbFailed = localizer.T("migrationLevelDbFailed");
-        MigrationGamePathNotFound = localizer.T("migrationGamePathNotFound");
-        MigrationSkip = localizer.T("migrationSkip");
-        MigrationApply = localizer.T("migrationApply");
-        MigrationApplied = localizer.T("migrationApplied");
-        MigrationNoOldLauncher = localizer.T("migrationNoOldLauncher");
-        UpdateChannel = localizer.T("updateChannel");
-        UpdateChannelStable = localizer.T("updateChannelStable");
-        UpdateChannelBeta = localizer.T("updateChannelBeta");
-        UpdateAvailableTitle = localizer.T("updateAvailableTitle");
-        UpdateAvailableMessage = localizer.T("updateAvailableMessage");
-        UpdateSelectFile = localizer.T("updateSelectFile");
-        UpdateFileSize = localizer.T("updateFileSize");
-        UpdateDownload = localizer.T("updateDownload");
-        UpdateLater = localizer.T("updateLater");
+        LauncherUpdateChannel = localizer.T("launcherUpdateChannel");
+        LauncherUpdateChannelStable = localizer.T("launcherUpdateChannelStable");
+        LauncherUpdateChannelBeta = localizer.T("launcherUpdateChannelBeta");
+        LauncherUpdateAvailableTitle = localizer.T("launcherUpdateAvailableTitle");
+        LauncherUpdateAvailableMessage = localizer.T("launcherUpdateAvailableMessage");
+        LauncherUpdateSelectFile = localizer.T("launcherUpdateSelectFile");
+        LauncherUpdateFileSize = localizer.T("launcherUpdateFileSize");
+        LauncherUpdateDownload = localizer.T("launcherUpdateDownload");
+        LauncherUpdateLater = localizer.T("launcherUpdateLater");
         CrashRecoveryTitle = localizer.T("crashRecoveryTitle");
         CrashRecoveryDescription = localizer.T("crashRecoveryDescription");
         CrashRecoveryMessage = localizer.T("crashRecoveryMessage");
@@ -432,14 +514,20 @@ public sealed partial class LocalizedStrings : ObservableObject
         BuildTimeLabel = localizer.T("buildTimeLabel");
         LogViewerTitle = localizer.T("logViewerTitle");
         LogFilterAll = localizer.T("logFilterAll");
-        LogFilterError = localizer.T("logFilterError");
-        LogFilterWarn = localizer.T("logFilterWarn");
+        LogFilterVerbose = localizer.T("logFilterVerbose");
+        LogFilterDebug = localizer.T("logFilterDebug");
         LogFilterInfo = localizer.T("logFilterInfo");
+        LogFilterWarn = localizer.T("logFilterWarn");
+        LogFilterError = localizer.T("logFilterError");
+        LogFilterFatal = localizer.T("logFilterFatal");
         LogSearchPlaceholder = localizer.T("logSearchPlaceholder");
+        LogLoadEarlier = localizer.T("logLoadEarlier");
         LogNoMatchingEntries = localizer.T("logNoMatchingEntries");
         ExportLogs = localizer.T("exportLogs");
         ViewLog = localizer.T("viewLog");
         OpenDataDirectory = localizer.T("openDataDirectory");
+        LogFiles = localizer.T("logFiles");
+        LogFilesDescription = localizer.T("logFilesDescription");
         LogExportFolderPickerTitle = localizer.T("logExportFolderPickerTitle");
         LogExportSucceeded = localizer.T("logExportSucceeded");
         LogExportFailed = localizer.T("logExportFailed");
@@ -453,13 +541,63 @@ public sealed partial class LocalizedStrings : ObservableObject
         SelectInstalledGame = localizer.T("selectInstalledGame");
         GamePathUpdated = localizer.T("gamePathUpdated");
         GamePathUpdateFailed = localizer.T("gamePathUpdateFailed");
+        SettingsGroupConnection = localizer.T("settingsGroupConnection");
+        SettingsGroupDisplay = localizer.T("settingsGroupDisplay");
+        SettingsGroupDiagnostics = localizer.T("settingsGroupDiagnostics");
+        LanguageDescription = localizer.T("languageDescription");
+        CloseBehaviorDescription = localizer.T("closeBehaviorDescription");
+        LauncherUpdateChannelDescription = localizer.T("launcherUpdateChannelDescription");
+        LogLevelDescription = localizer.T("logLevelDescription");
+        ToastNotificationsDescription = localizer.T("toastNotificationsDescription");
+        EnableStartupUpdateCheck = localizer.T("enableStartupUpdateCheck");
+        EnableStartupUpdateCheckDescription = localizer.T("enableStartupUpdateCheckDescription");
+        StartupUpdateAvailable = localizer.T("startupUpdateAvailable");
+        RemoteContentCardDescription = localizer.T("remoteContentCardDescription");
+        SetupWizardWelcomeTitle = localizer.T("setupWizardWelcomeTitle");
+        SetupWizardWelcomeText = localizer.T("setupWizardWelcomeText");
+        SetupWizardLanguage = localizer.T("setupWizardLanguage");
+        SetupWizardLanguageHint = localizer.T("setupWizardLanguageHint");
+        SetupWizardDownloadSource = localizer.T("setupWizardDownloadSource");
+        SetupWizardDownloadSourceCafeDescription = localizer.T("setupWizardDownloadSourceCafeDescription");
+        SetupWizardDownloadSourceHint = localizer.T("setupWizardDownloadSourceHint");
+        SetupWizardDownloadSourceOfficialDescription = localizer.T("setupWizardDownloadSourceOfficialDescription");
+        SetupWizardEditStep = localizer.T("setupWizardEditStep");
+        SetupWizardGamePath = localizer.T("setupWizardGamePath");
+        SetupWizardGamePathAvailable = localizer.T("setupWizardGamePathAvailable");
+        SetupWizardGamePathChecking = localizer.T("setupWizardGamePathChecking");
+        SetupWizardGamePathCorrupted = localizer.T("setupWizardGamePathCorrupted");
+        SetupWizardGamePathHint = localizer.T("setupWizardGamePathHint");
+        SetupWizardGamePathInaccessible = localizer.T("setupWizardGamePathInaccessible");
+        SetupWizardGamePathInstalled = localizer.T("setupWizardGamePathInstalled");
+        SetupWizardGamePathEmpty = localizer.T("setupWizardGamePathEmpty");
+        SetupWizardBrowse = localizer.T("setupWizardBrowse");
+        SetupWizardProxy = localizer.T("setupWizardProxy");
+        SetupWizardProxyAutoDescription = localizer.T("setupWizardProxyAutoDescription");
+        SetupWizardProxyDirectDescription = localizer.T("setupWizardProxyDirectDescription");
+        SetupWizardProxyHint = localizer.T("setupWizardProxyHint");
+        SetupWizardProxySystemDescription = localizer.T("setupWizardProxySystemDescription");
+        SetupWizardReview = localizer.T("setupWizardReview");
+        SetupWizardReviewHint = localizer.T("setupWizardReviewHint");
+        SetupWizardStep0Title = localizer.T("setupWizardStep0Title");
+        SetupWizardStep1Title = localizer.T("setupWizardStep1Title");
+        SetupWizardStep2Title = localizer.T("setupWizardStep2Title");
+        SetupWizardStep3Title = localizer.T("setupWizardStep3Title");
+        SetupWizardStep4Title = localizer.T("setupWizardStep4Title");
+        SetupWizardNext = localizer.T("setupWizardNext");
+        SetupWizardPrevious = localizer.T("setupWizardPrevious");
+        SetupWizardFinish = localizer.T("setupWizardFinish");
+        SetupWizardSkip = localizer.T("setupWizardSkip");
+        SetupWizardExitTitle = localizer.T("setupWizardExitTitle");
+        SetupWizardExitMessage = localizer.T("setupWizardExitMessage");
+        SetupWizardExitConfirm = localizer.T("setupWizardExitConfirm");
+        SetupWizardStepTitle = localizer.T("setupWizardStepTitle");
     }
 }
 
 public sealed class LocalizationService
 {
-    private static readonly Dictionary<string, Dictionary<string, string>> Resources = new(StringComparer.Ordinal);
-    private static readonly string[] SupportedLocales = [LauncherLanguages.English, LauncherLanguages.SimplifiedChinese, LauncherLanguages.Japanese];
+    private static Dictionary<string, Dictionary<string, string>> Resources = new(StringComparer.Ordinal);
+    private static readonly string[] SupportedLocales = [LauncherLanguages.English, LauncherLanguages.SimplifiedChinese, LauncherLanguages.TraditionalChinese, LauncherLanguages.Japanese];
     private static volatile bool resourcesLoaded;
     private static readonly object LoadLock = new();
 
@@ -469,14 +607,19 @@ public sealed class LocalizationService
     /// </summary>
     internal static void InitializeForTesting(Dictionary<string, Dictionary<string, string>> resources)
     {
+        // Build a complete replacement outside the lock so that concurrent T()
+        // calls never observe a partially-cleared dictionary.  Swapping the static
+        // reference is atomic (.NET object references are always atomic) and the
+        // inner per-locale dictionaries are never mutated after creation.
+        var newResources = new Dictionary<string, Dictionary<string, string>>(StringComparer.Ordinal);
+        foreach (var (locale, dict) in resources)
+        {
+            newResources[locale] = new Dictionary<string, string>(dict, StringComparer.Ordinal);
+        }
+
         lock (LoadLock)
         {
-            Resources.Clear();
-            foreach (var (locale, dict) in resources)
-            {
-                Resources[locale] = new Dictionary<string, string>(dict, StringComparer.Ordinal);
-            }
-
+            Resources = newResources;
             resourcesLoaded = true;
         }
     }
@@ -561,13 +704,17 @@ public sealed class LocalizationService
         }
     }
 
-    public static IReadOnlyList<LanguageOption> GetLanguageOptions()
+    public static IReadOnlyList<LanguageOption> GetLanguageOptions() =>
+        GetLanguageOptions(new LocalizationService());
+
+    public static IReadOnlyList<LanguageOption> GetLanguageOptions(LocalizationService localizer)
     {
         return
         [
-            new LanguageOption { Code = LauncherLanguages.Auto, DisplayName = "Auto" },
+            new LanguageOption { Code = LauncherLanguages.Auto, DisplayName = localizer.T("languageAuto") },
             new LanguageOption { Code = LauncherLanguages.English, DisplayName = "English" },
             new LanguageOption { Code = LauncherLanguages.SimplifiedChinese, DisplayName = "简体中文" },
+            new LanguageOption { Code = LauncherLanguages.TraditionalChinese, DisplayName = "繁體中文" },
             new LanguageOption { Code = LauncherLanguages.Japanese, DisplayName = "日本語" }
         ];
     }
@@ -578,6 +725,7 @@ public sealed class LocalizationService
         {
             LauncherLanguages.English => LauncherLanguages.English,
             LauncherLanguages.SimplifiedChinese => LauncherLanguages.SimplifiedChinese,
+            LauncherLanguages.TraditionalChinese => LauncherLanguages.TraditionalChinese,
             LauncherLanguages.Japanese => LauncherLanguages.Japanese,
             LauncherLanguages.Auto => ResolveSystemLanguage(),
             _ => ResolveSystemLanguage()
@@ -589,7 +737,11 @@ public sealed class LocalizationService
         var name = CultureInfo.CurrentUICulture.Name;
         if (name.StartsWith("zh", StringComparison.OrdinalIgnoreCase))
         {
-            return LauncherLanguages.SimplifiedChinese;
+            // zh-TW, zh-HK, zh-MO → Traditional; zh-CN, zh-SG, zh-Hans → Simplified.
+            // Fall back to Simplified when the region/script is ambiguous.
+            return IsTraditionalChineseRegion(name)
+                ? LauncherLanguages.TraditionalChinese
+                : LauncherLanguages.SimplifiedChinese;
         }
 
         if (name.StartsWith("ja", StringComparison.OrdinalIgnoreCase))
@@ -598,5 +750,24 @@ public sealed class LocalizationService
         }
 
         return LauncherLanguages.English;
+    }
+
+    private static bool IsTraditionalChineseRegion(string cultureName)
+    {
+        // Match by script subtag (zh-Hant, zh-Hans) first, then by region.
+        if (cultureName.Contains("Hant", StringComparison.OrdinalIgnoreCase))
+        {
+            return true;
+        }
+
+        if (cultureName.Contains("Hans", StringComparison.OrdinalIgnoreCase))
+        {
+            return false;
+        }
+
+        // Region fallback: TW (Taiwan), HK (Hong Kong), MO (Macau) use Traditional Chinese.
+        return cultureName.EndsWith("TW", StringComparison.OrdinalIgnoreCase)
+            || cultureName.EndsWith("HK", StringComparison.OrdinalIgnoreCase)
+            || cultureName.EndsWith("MO", StringComparison.OrdinalIgnoreCase);
     }
 }

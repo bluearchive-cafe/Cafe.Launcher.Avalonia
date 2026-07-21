@@ -198,6 +198,93 @@ public sealed class RemoteContentViewModelTests
     }
 
     [Fact]
+    public void TryAdvanceCarousel_WithoutBanners_KeepsCurrentIndex()
+    {
+        using var context = CreateContext();
+
+        var advanced = context.ViewModel.TryAdvanceCarousel();
+
+        Assert.False(advanced);
+        Assert.Equal(0, context.ViewModel.CarouselSelectedIndex);
+    }
+
+    [Fact]
+    public void TryAdvanceCarousel_NextImageLoading_KeepsCurrentBanner()
+    {
+        using var context = CreateContext();
+        context.ViewModel.Apply(
+            CreateBannerState(2, loop: false),
+            new LauncherSettings(),
+            CancellationToken.None);
+        context.ViewModel.BannerItems[1].MarkImageLoading();
+
+        var advanced = context.ViewModel.TryAdvanceCarousel();
+
+        Assert.False(advanced);
+        Assert.Equal(0, context.ViewModel.CarouselSelectedIndex);
+    }
+
+    [Theory]
+    [InlineData(false)]
+    [InlineData(true)]
+    public void TryAdvanceCarousel_NextImageTerminal_Advances(bool failed)
+    {
+        using var context = CreateContext();
+        context.ViewModel.Apply(
+            CreateBannerState(2, loop: false),
+            new LauncherSettings(),
+            CancellationToken.None);
+
+        if (failed)
+        {
+            context.ViewModel.BannerItems[1].MarkImageLoadFailed();
+        }
+        else
+        {
+            context.ViewModel.BannerItems[1].MarkImageLoaded();
+        }
+
+        var advanced = context.ViewModel.TryAdvanceCarousel();
+
+        Assert.True(advanced);
+        Assert.Equal(1, context.ViewModel.CarouselSelectedIndex);
+    }
+
+    [Fact]
+    public void TryAdvanceCarousel_WrapsToLoadingFirstImage_KeepsCurrentBanner()
+    {
+        using var context = CreateContext();
+        context.ViewModel.Apply(
+            CreateBannerState(2, loop: false),
+            new LauncherSettings(),
+            CancellationToken.None);
+        context.ViewModel.BannerItems[1].MarkImageLoaded();
+        context.ViewModel.BannerItems[0].MarkImageLoading();
+        context.ViewModel.CarouselSelectedIndex = 1;
+
+        var advanced = context.ViewModel.TryAdvanceCarousel();
+
+        Assert.False(advanced);
+        Assert.Equal(1, context.ViewModel.CarouselSelectedIndex);
+    }
+
+    [Fact]
+    public void CarouselPageText_WithMultipleBanners_UsesCompactLocalizedFormat()
+    {
+        using var context = CreateContext(LauncherLanguages.English);
+        context.ViewModel.Apply(
+            CreateBannerState(2, loop: false),
+            new LauncherSettings(),
+            CancellationToken.None);
+
+        Assert.Equal("1 / 2", context.ViewModel.CarouselPageText);
+
+        context.ViewModel.SelectNextBannerCommand.Execute(null);
+
+        Assert.Equal("2 / 2", context.ViewModel.CarouselPageText);
+    }
+
+    [Fact]
     public void ToggleCarouselLoopCommand_PausesAndResumesTimer()
     {
         using var context = CreateContext();
@@ -217,6 +304,88 @@ public sealed class RemoteContentViewModelTests
         Assert.False(context.ViewModel.IsCarouselPaused);
         Assert.True(context.ViewModel.IsCarouselTimerRunning);
         Assert.Equal("Pause", context.ViewModel.CarouselPauseIcon);
+    }
+
+    [Fact]
+    public void ApplyMotionPreference_ReducedPausesAutomaticCarouselAndRemovesTransition()
+    {
+        using var context = CreateContext();
+        context.ViewModel.Apply(
+            CreateBannerState(2, loop: true),
+            new LauncherSettings(),
+            CancellationToken.None);
+
+        context.ViewModel.ApplyMotionPreference(true);
+        Assert.False(context.ViewModel.IsCarouselTimerRunning);
+        Assert.True(context.ViewModel.IsCarouselPaused);
+        Assert.Equal("Play", context.ViewModel.CarouselPauseIcon);
+        Assert.Equal(TimeSpan.Zero, Assert.IsType<global::Avalonia.Animation.CrossFade>(
+            context.ViewModel.CarouselTransition).Duration);
+
+        context.ViewModel.SelectNextBannerCommand.Execute(null);
+        Assert.Equal(1, context.ViewModel.CarouselSelectedIndex);
+    }
+
+    [Fact]
+    public void ToggleCarouselLoopCommand_WhenReduced_AllowsManualPlaybackWithoutTransition()
+    {
+        using var context = CreateContext();
+        context.ViewModel.Apply(
+            CreateBannerState(2, loop: true),
+            new LauncherSettings(),
+            CancellationToken.None);
+        context.ViewModel.ApplyMotionPreference(true);
+
+        context.ViewModel.ToggleCarouselLoopCommand.Execute(null);
+
+        Assert.False(context.ViewModel.IsCarouselPaused);
+        Assert.True(context.ViewModel.IsCarouselTimerRunning);
+        Assert.Equal("Pause", context.ViewModel.CarouselPauseIcon);
+        Assert.Equal(TimeSpan.Zero, Assert.IsType<global::Avalonia.Animation.CrossFade>(
+            context.ViewModel.CarouselTransition).Duration);
+    }
+
+    [Fact]
+    public void ApplyMotionPreference_FullAfterReduced_KeepsCarouselPausedUntilUserResumes()
+    {
+        using var context = CreateContext();
+        context.ViewModel.Apply(
+            CreateBannerState(2, loop: true),
+            new LauncherSettings(),
+            CancellationToken.None);
+        context.ViewModel.ApplyMotionPreference(true);
+
+        context.ViewModel.ApplyMotionPreference(false);
+
+        Assert.True(context.ViewModel.IsCarouselPaused);
+        Assert.False(context.ViewModel.IsCarouselTimerRunning);
+        Assert.Equal(TimeSpan.FromMilliseconds(250), Assert.IsType<global::Avalonia.Animation.CrossFade>(
+            context.ViewModel.CarouselTransition).Duration);
+    }
+
+    [Theory]
+    [InlineData(MotionModes.Full, false)]
+    [InlineData(MotionModes.System, true)]
+    public void ApplyMotionPreference_FullOrSystemEffectiveStateRestoresTransitionWithoutAutoResumingCarousel(
+        string motionMode,
+        bool windowsAnimationsEnabled)
+    {
+        using var context = CreateContext();
+        context.ViewModel.Apply(
+            CreateBannerState(2, loop: true),
+            new LauncherSettings(),
+            CancellationToken.None);
+        context.ViewModel.ApplyMotionPreference(true);
+
+        context.ViewModel.ApplyMotionPreference(
+            MotionSettingsResolver.ShouldReduceMotion(motionMode, windowsAnimationsEnabled));
+
+        Assert.True(context.ViewModel.IsCarouselPaused);
+        Assert.False(context.ViewModel.IsCarouselTimerRunning);
+        Assert.Equal(
+            TimeSpan.FromMilliseconds(250),
+            Assert.IsType<global::Avalonia.Animation.CrossFade>(
+                context.ViewModel.CarouselTransition).Duration);
     }
 
     [Fact]
@@ -344,15 +513,21 @@ public sealed class RemoteContentViewModelTests
             }
         };
 
-    private static TestContext CreateContext()
+    private static TestContext CreateContext(string? language = null)
     {
         var factory = new HttpClientFactory(new ProxySettingsService());
         var cache = new ImageCacheService(
             factory,
             new Crc64Service(),
             RemoteHttpUrlValidator.CreateForTesting());
+        var localizer = new LocalizationService();
+        if (language is not null)
+        {
+            localizer.SetLanguage(language);
+        }
+
         return new TestContext(
-            new RemoteContentViewModel(new LocalizationService(), cache),
+            new RemoteContentViewModel(localizer, cache),
             cache,
             factory);
     }

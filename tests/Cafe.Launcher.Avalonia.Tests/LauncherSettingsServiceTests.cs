@@ -7,6 +7,54 @@ namespace Cafe.Launcher.Avalonia.Tests;
 
 public sealed class LauncherSettingsServiceTests : IDisposable
 {
+    [Fact]
+    public void LauncherSettings_Serialize_LeavesExistingPropertyOrderUnchanged()
+    {
+        using var document = JsonDocument.Parse(JsonSerializer.Serialize(new LauncherSettings()));
+        var propertyNames = document.RootElement.EnumerateObject().Select(property => property.Name).ToList();
+
+        Assert.True(propertyNames.IndexOf("updateChannel") < propertyNames.IndexOf("logLevel"));
+        Assert.True(propertyNames.IndexOf("resourcePanelUidSource") < propertyNames.IndexOf("statusDetailMode"));
+        Assert.Equal("statusDetailMode", propertyNames[^1]);
+    }
+
+    [Fact]
+    public void LauncherSettings_DefaultMotionModeIsSystem()
+    {
+        Assert.Equal(MotionModes.System, new LauncherSettings().MotionMode);
+    }
+
+    [Fact]
+    public async Task MotionMode_RoundTripsAndInvalidValueFallsBackToSystem()
+    {
+        var service = new LauncherSettingsService(settingsPath);
+        await service.SaveAsync(new LauncherSettings { MotionMode = MotionModes.Reduced });
+        Assert.Equal(MotionModes.Reduced, (await service.ReadAsync()).MotionMode);
+
+        await File.WriteAllTextAsync(settingsPath, """{"motionMode":"invalid"}""");
+        Assert.Equal(MotionModes.System, (await service.ReadAsync()).MotionMode);
+    }
+
+    [Fact]
+    public async Task Language_RoundTripsAllSupportedValuesAndInvalidFallsBackToAuto()
+    {
+        var service = new LauncherSettingsService(settingsPath);
+
+        foreach (var language in new[]
+        {
+            LauncherLanguages.English,
+            LauncherLanguages.SimplifiedChinese,
+            LauncherLanguages.TraditionalChinese,
+            LauncherLanguages.Japanese
+        })
+        {
+            await service.SaveAsync(new LauncherSettings { Language = language });
+            Assert.Equal(language, (await service.ReadAsync()).Language);
+        }
+
+        await File.WriteAllTextAsync(settingsPath, """{"language":"invalid"}""");
+        Assert.Equal(LauncherLanguages.Auto, (await service.ReadAsync()).Language);
+    }
     private readonly string tempDir = Path.Combine(Path.GetTempPath(), Guid.NewGuid().ToString("N"));
     private readonly string settingsPath;
 
@@ -25,21 +73,38 @@ public sealed class LauncherSettingsServiceTests : IDisposable
 
         Assert.Equal("", settings.GamePath);
         Assert.Equal(LaunchCheckModes.LocalManifest, settings.LaunchCheckMode);
-        Assert.Equal(ProxyModes.Direct, settings.ProxyMode);
+        Assert.Equal(ProxyModes.Auto, settings.ProxyMode);
         Assert.Equal(CloseBehaviors.Minimize, settings.CloseBehavior);
         Assert.Equal(LauncherLanguages.Auto, settings.Language);
         Assert.Equal(ThemeModes.System, settings.ThemeMode);
+        Assert.Equal(MotionModes.System, settings.MotionMode);
         Assert.Equal(ThemeColorModes.Default, settings.ThemeColorMode);
         Assert.Equal(LauncherConstants.DefaultThemeColor, settings.CustomThemeColor);
         Assert.Empty(settings.ThemeColorPalette);
         Assert.Equal(0, settings.SelectedThemeColorPaletteIndex);
         Assert.Equal(DownloadSpeedLimits.Unlimited, settings.DownloadSpeedLimit);
         Assert.True(settings.ToastNotificationsEnabled);
+        Assert.True(settings.EnableStartupUpdateCheck);
         Assert.True(settings.ShowRemoteContentCard);
-        Assert.Equal(PatchUrlGroups.Official, settings.PatchUrlGroup);
+        // PatchUrlGroup defaults to Cafe when UI culture is Chinese, otherwise Official.
+        var expectedGroup = System.Globalization.CultureInfo.CurrentUICulture.Name is
+            "zh-CN" or "zh-TW" or "zh-HK" or "zh-MO" or "zh-SG" or "zh-Hans" or "zh-Hant"
+            ? PatchUrlGroups.Cafe
+            : PatchUrlGroups.Official;
+        Assert.Equal(expectedGroup, settings.PatchUrlGroup);
         Assert.Equal("", settings.CustomBackgroundPath);
         Assert.Equal(BackgroundSources.Bundled, settings.BackgroundSource);
         Assert.Equal("", settings.ResourcePanelUid);
+    }
+
+    [Fact]
+    public async Task ReadAsync_WhenMotionModeMissing_UsesSystem()
+    {
+        await File.WriteAllTextAsync(settingsPath, """{"language":"ja"}""");
+
+        var settings = await new LauncherSettingsService(settingsPath).ReadAsync();
+
+        Assert.Equal(MotionModes.System, settings.MotionMode);
     }
 
     [Fact]
@@ -59,6 +124,29 @@ public sealed class LauncherSettingsServiceTests : IDisposable
 
         Assert.Equal(@"D:\Games", settings.GamePath);
         Assert.Equal(LaunchCheckModes.RemoteManifest, settings.LaunchCheckMode);
+    }
+
+    [Fact]
+    public async Task ReadAsync_WhenRemovedFirstLaunchWizardFieldExists_IgnoresUnknownField()
+    {
+        await File.WriteAllTextAsync(
+            settingsPath,
+            """
+            {
+              "hasCompletedFirstLaunchWizard": true,
+              "resourcePanelUid": "LEGACY-COMPAT-UID"
+            }
+            """);
+        var service = new LauncherSettingsService(settingsPath);
+
+        var exception = await Record.ExceptionAsync(async () =>
+        {
+            LauncherSettings settings = await service.ReadAsync();
+            Assert.NotNull(settings);
+            Assert.Equal("LEGACY-COMPAT-UID", settings.ResourcePanelUid);
+        });
+
+        Assert.Null(exception);
     }
 
     [Fact]
@@ -92,7 +180,7 @@ public sealed class LauncherSettingsServiceTests : IDisposable
 
         Assert.Equal("", settings.GamePath);
         Assert.Equal(LaunchCheckModes.LocalManifest, settings.LaunchCheckMode);
-        Assert.Equal(ProxyModes.Direct, settings.ProxyMode);
+        Assert.Equal(ProxyModes.Auto, settings.ProxyMode);
         Assert.Equal(CloseBehaviors.Minimize, settings.CloseBehavior);
         Assert.Equal(LauncherLanguages.Auto, settings.Language);
         Assert.Equal(ThemeModes.System, settings.ThemeMode);
@@ -126,6 +214,7 @@ public sealed class LauncherSettingsServiceTests : IDisposable
             SelectedThemeColorPaletteIndex = 1,
             DownloadSpeedLimit = DownloadSpeedLimits.Speed10MBs,
             ToastNotificationsEnabled = false,
+            EnableStartupUpdateCheck = false,
             ShowRemoteContentCard = false,
             PatchUrlGroup = PatchUrlGroups.Cafe,
             CustomBackgroundPath = tempDir,
@@ -148,6 +237,7 @@ public sealed class LauncherSettingsServiceTests : IDisposable
         Assert.True(root.TryGetProperty("closeBehavior", out _));
         Assert.True(root.TryGetProperty("language", out _));
         Assert.True(root.TryGetProperty("themeMode", out _));
+        Assert.True(root.TryGetProperty("motionMode", out _));
         Assert.True(root.TryGetProperty("themeColorMode", out var themeColorMode));
         Assert.Equal(ThemeColorModes.Custom, themeColorMode.GetString());
         Assert.True(root.TryGetProperty("customThemeColor", out var customThemeColor));
@@ -158,6 +248,7 @@ public sealed class LauncherSettingsServiceTests : IDisposable
         Assert.Equal(1, selectedThemeColorPaletteIndex.GetInt32());
         Assert.True(root.TryGetProperty("downloadSpeedLimit", out _));
         Assert.True(root.TryGetProperty("toastNotificationsEnabled", out _));
+        Assert.True(root.TryGetProperty("enableStartupUpdateCheck", out _));
         Assert.True(root.TryGetProperty("showRemoteContentCard", out _));
         Assert.True(root.TryGetProperty("patchUrlGroup", out _));
         Assert.True(root.TryGetProperty("customBackgroundPath", out var customBackgroundPath));
@@ -177,12 +268,14 @@ public sealed class LauncherSettingsServiceTests : IDisposable
             "closeBehavior",
             "language",
             "themeMode",
+            "motionMode",
             "themeColorMode",
             "customThemeColor",
             "themeColorPalette",
             "selectedThemeColorPaletteIndex",
             "downloadSpeedLimit",
             "toastNotificationsEnabled",
+            "enableStartupUpdateCheck",
             "showRemoteContentCard",
             "patchUrlGroup",
             "customBackgroundPath",
@@ -193,12 +286,24 @@ public sealed class LauncherSettingsServiceTests : IDisposable
             "videoBackgroundMuted",
             "videoBackgroundVolume",
             "resourcePanelUid",
-            "hasCompletedFirstLaunchWizard",
+            "resourcePanelUidSource",
+            "statusDetailMode",
             "updateChannel",
             "logLevel"
         };
         Assert.True(expectedPropertyNames.SetEquals(propertyNames));
         Assert.False(File.Exists($"{settingsPath}.tmp"));
+    }
+
+    [Fact]
+    public async Task EnableStartupUpdateCheck_RoundTripsAndMissingDefaultsToTrue()
+    {
+        var service = new LauncherSettingsService(settingsPath);
+        await service.SaveAsync(new LauncherSettings { EnableStartupUpdateCheck = false });
+        Assert.False((await service.ReadAsync()).EnableStartupUpdateCheck);
+
+        await File.WriteAllTextAsync(settingsPath, """{"language":"ja"}""");
+        Assert.True((await service.ReadAsync()).EnableStartupUpdateCheck);
     }
 
     [Fact]

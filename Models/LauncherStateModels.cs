@@ -10,6 +10,12 @@ using CommunityToolkit.Mvvm.ComponentModel;
 
 namespace Cafe.Launcher.Avalonia.Models;
 
+public enum GameOperationsRefreshMode
+{
+    Normal,
+    SkipPersistedResume
+}
+
 public static class LaunchCheckModes
 {
     public const string LocalManifest = "localManifest";
@@ -20,6 +26,7 @@ public static class LaunchCheckModes
 public static class ProxyModes
 {
     public const string Direct = "direct";
+    public const string Auto = "auto";
     public const string System = "system";
 }
 
@@ -34,6 +41,7 @@ public static class LauncherLanguages
     public const string Auto = "auto";
     public const string English = "en";
     public const string SimplifiedChinese = "zh-Hans";
+    public const string TraditionalChinese = "zh-Hant";
     public const string Japanese = "ja";
 }
 
@@ -42,6 +50,13 @@ public static class ThemeModes
     public const string System = "system";
     public const string Light = "light";
     public const string Dark = "dark";
+}
+
+public static class MotionModes
+{
+    public const string System = "system";
+    public const string Full = "full";
+    public const string Reduced = "reduced";
 }
 
 public static class ThemeColorModes
@@ -108,12 +123,17 @@ public static class LogLevels
     public const string Fatal = "fatal";
 }
 
-public static class GameOperationKinds
+public static class ResourcePanelUidSources
 {
-    public const string Idle = "idle";
-    public const string Download = "download";
-    public const string Repair = "repair";
-    public const string Uninstall = "uninstall";
+    public const string Auto = "auto";
+    public const string Custom = "custom";
+}
+
+public static class StatusDetailModes
+{
+    public const string Hidden = "hidden";
+    public const string Compact = "compact";
+    public const string Detailed = "detailed";
 }
 
 public sealed partial class LauncherSettings : ObservableObject
@@ -128,7 +148,7 @@ public sealed partial class LauncherSettings : ObservableObject
 
     [ObservableProperty]
     [property: JsonPropertyName("proxyMode")]
-    private string proxyMode = ProxyModes.Direct;
+    private string proxyMode = ProxyModes.Auto;
 
     [ObservableProperty]
     [property: JsonPropertyName("closeBehavior")]
@@ -141,6 +161,10 @@ public sealed partial class LauncherSettings : ObservableObject
     [ObservableProperty]
     [property: JsonPropertyName("themeMode")]
     private string themeMode = ThemeModes.System;
+
+    [ObservableProperty]
+    [property: JsonPropertyName("motionMode")]
+    private string motionMode = MotionModes.System;
 
     [ObservableProperty]
     [property: JsonPropertyName("themeColorMode")]
@@ -165,6 +189,10 @@ public sealed partial class LauncherSettings : ObservableObject
     [ObservableProperty]
     [property: JsonPropertyName("toastNotificationsEnabled")]
     private bool toastNotificationsEnabled = true;
+
+    [ObservableProperty]
+    [property: JsonPropertyName("enableStartupUpdateCheck")]
+    private bool enableStartupUpdateCheck = true;
 
     [ObservableProperty]
     [property: JsonPropertyName("showRemoteContentCard")]
@@ -207,31 +235,82 @@ public sealed partial class LauncherSettings : ObservableObject
     private string resourcePanelUid = "";
 
     [ObservableProperty]
-    [property: JsonPropertyName("hasCompletedFirstLaunchWizard")]
-    private bool hasCompletedFirstLaunchWizard;
-
-    [ObservableProperty]
     [property: JsonPropertyName("updateChannel")]
     private string updateChannel = UpdateChannels.Stable;
 
     [ObservableProperty]
     [property: JsonPropertyName("logLevel")]
-    private string logLevel = LogLevels.Information;
+    private string logLevel =
+#if DEBUG
+        LogLevels.Verbose
+#else
+        LogLevels.Information
+#endif
+    ;
+
+    [ObservableProperty]
+    [property: JsonPropertyName("resourcePanelUidSource")]
+    private string resourcePanelUidSource = ResourcePanelUidSources.Auto;
+
+    [ObservableProperty]
+    [property: JsonPropertyName("statusDetailMode")]
+    private string statusDetailMode = StatusDetailModes.Detailed;
 
     /// <summary>
-    /// Deep-clones this settings object via JSON round-trip.
+    /// Deep-clones this settings object.
     /// Shared by <c>LauncherSettingsService.NormalizeSettings</c> and <see cref="Services.SettingsEditor"/>.
     /// </summary>
     public LauncherSettings DeepClone()
     {
-        var json = System.Text.Json.JsonSerializer.Serialize(this, CloneJsonOptions);
-        return System.Text.Json.JsonSerializer.Deserialize<LauncherSettings>(json, CloneJsonOptions)
-            ?? new LauncherSettings();
+        return new LauncherSettings(this);
     }
+
+    /// <summary>
+    /// Copy constructor for deep cloning. Copies all settings properties,
+    /// including a shallow copy of <see cref="ThemeColorPalette"/> (strings are immutable).
+    /// ⚠️ When adding a new setting property to this class,
+    /// you MUST add a corresponding line to this constructor.
+    /// Failure to do so results in silent shallow copy of the new property.
+    /// </summary>
+    public LauncherSettings(LauncherSettings other)
+    {
+        GamePath = other.GamePath;
+        LaunchCheckMode = other.LaunchCheckMode;
+        ProxyMode = other.ProxyMode;
+        CloseBehavior = other.CloseBehavior;
+        Language = other.Language;
+        ThemeMode = other.ThemeMode;
+        MotionMode = other.MotionMode;
+        ThemeColorMode = other.ThemeColorMode;
+        CustomThemeColor = other.CustomThemeColor;
+        ThemeColorPalette = [.. other.ThemeColorPalette];
+        SelectedThemeColorPaletteIndex = other.SelectedThemeColorPaletteIndex;
+        DownloadSpeedLimit = other.DownloadSpeedLimit;
+        ToastNotificationsEnabled = other.ToastNotificationsEnabled;
+        EnableStartupUpdateCheck = other.EnableStartupUpdateCheck;
+        ShowRemoteContentCard = other.ShowRemoteContentCard;
+        PatchUrlGroup = other.PatchUrlGroup;
+        CustomBackgroundPath = other.CustomBackgroundPath;
+        BackgroundSource = other.BackgroundSource;
+        BackgroundFit = other.BackgroundFit;
+        BackgroundFillColor = other.BackgroundFillColor;
+        ResourcePanelUid = other.ResourcePanelUid;
+        ResourcePanelUidSource = other.ResourcePanelUidSource;
+        StatusDetailMode = other.StatusDetailMode;
+        UpdateChannel = other.UpdateChannel;
+        LogLevel = other.LogLevel;
+    }
+
+    /// <summary>
+    /// Default constructor. Creates settings with defaults.
+    /// </summary>
+    public LauncherSettings() { }
 
     /// <summary>
     /// Creates default settings with pre-release builds defaulting to the beta update channel.
     /// Shared by <see cref="Services.LauncherSettingsService"/> and <see cref="Services.SettingsEditor"/>.
+    /// When the system UI language is Chinese, defaults to the Cafe patch URL group so Chinese
+    /// players get the Cafe-localised version without manually changing the download source.
     /// </summary>
     public static LauncherSettings CreateDefaults()
     {
@@ -242,10 +321,22 @@ public sealed partial class LauncherSettings : ObservableObject
             settings.UpdateChannel = UpdateChannels.Beta;
         }
 
+        // Chinese users are the primary audience for Cafe-localised game resources;
+        // default to Cafe source so they get Chinese text without manual setup.
+        if (IsChineseUICulture())
+        {
+            settings.PatchUrlGroup = PatchUrlGroups.Cafe;
+        }
+
         return settings;
     }
 
-    private static readonly System.Text.Json.JsonSerializerOptions CloneJsonOptions = JsonDefaults.Strict;
+    private static bool IsChineseUICulture()
+    {
+        var culture = System.Globalization.CultureInfo.CurrentUICulture.Name;
+        return culture is "zh-CN" or "zh-TW" or "zh-HK" or "zh-MO" or "zh-SG"
+            or "zh-Hans" or "zh-Hant";
+    }
 }
 
 /// <summary>
@@ -255,6 +346,7 @@ public abstract class SelectableOption : INotifyPropertyChanged
 {
     private string code = "";
     private string displayName = "";
+    private string description = "";
 
     public event PropertyChangedEventHandler? PropertyChanged;
 
@@ -268,6 +360,12 @@ public abstract class SelectableOption : INotifyPropertyChanged
     {
         get => displayName;
         set => SetField(ref displayName, value);
+    }
+
+    public string Description
+    {
+        get => description;
+        set => SetField(ref description, value);
     }
 
     protected void SetField(ref string field, string value, [CallerMemberName] string? propertyName = null)
@@ -314,23 +412,33 @@ public sealed class GameLaunchResult
 
 public sealed class GameOperationProgress
 {
-    public string OperationKind { get; set; } = GameOperationKinds.Idle;
+    public GameOperationKind OperationKind { get; set; } = GameOperationKind.Idle;
 
-    public string Stage { get; set; } = "";
+    public GameOperationStage Stage { get; set; } = GameOperationStage.Idle;
 
     public int Progress { get; set; }
 
-    public string Speed { get; set; } = "";
+    public long BytesPerSecond { get; set; }
 
-    public string Estimated { get; set; } = "";
+    public TimeSpan? EstimatedRemaining { get; set; }
 
     public long DownloadedSize { get; set; }
 
     public long TotalSize { get; set; }
 
-    public string ErrorType { get; set; } = "";
+    public GameOperationErrorCode ErrorCode { get; set; } = GameOperationErrorCode.None;
 
     public int AffectedFileCount { get; set; }
+
+    public long RequiredDiskBytes { get; set; }
+
+    public long? AvailableDiskBytes { get; set; }
+
+    public int FailedFileCount { get; set; }
+
+    public int RetryAttempt { get; set; }
+
+    public int RetryLimit { get; set; }
 
     public bool IsRunning { get; set; }
 
@@ -347,9 +455,11 @@ public sealed class GameOperationResult
 
     public string Message { get; set; } = "";
 
-    public string ErrorType { get; set; } = "";
+    public GameOperationErrorCode ErrorCode { get; set; } = GameOperationErrorCode.None;
 
     public int AffectedFileCount { get; set; }
+
+    public int FailedFileCount { get; set; }
 }
 
 public sealed class LauncherRemoteState
@@ -404,42 +514,28 @@ public sealed class RemoteContentItem : INotifyPropertyChanged
 
     public event PropertyChangedEventHandler? PropertyChanged;
 
-    public string Title { get => title; set { if (title != value) { title = value; Notify(nameof(Title)); } } }
-    public string Subtitle { get => subtitle; set { if (subtitle != value) { subtitle = value; Notify(nameof(Subtitle)); } } }
-    public string Url { get => url; set { if (url != value) { url = value; Notify(nameof(Url)); } } }
-    public string ImageUrl { get => imageUrl; set { if (imageUrl != value) { imageUrl = value; Notify(nameof(ImageUrl)); } } }
-    public string SocialIconKind { get => socialIconKind; set { if (socialIconKind != value) { socialIconKind = value; Notify(nameof(SocialIconKind)); } } }
+    public string Title { get => title; set => SetField(ref title, value); }
+    public string Subtitle { get => subtitle; set => SetField(ref subtitle, value); }
+    public string Url { get => url; set => SetField(ref url, value); }
+    public string ImageUrl { get => imageUrl; set => SetField(ref imageUrl, value); }
+    public string SocialIconKind { get => socialIconKind; set => SetField(ref socialIconKind, value); }
 
     public global::Avalonia.Media.Imaging.Bitmap? BannerBitmap
     {
         get => bannerBitmap;
-        set { if (bannerBitmap != value) { bannerBitmap = value; Notify(nameof(BannerBitmap)); } }
+        set => SetField(ref bannerBitmap, value);
     }
 
     public bool IsImageLoading
     {
         get => isImageLoading;
-        private set
-        {
-            if (isImageLoading != value)
-            {
-                isImageLoading = value;
-                Notify(nameof(IsImageLoading));
-            }
-        }
+        private set => SetField(ref isImageLoading, value);
     }
 
     public bool IsImageLoadFailed
     {
         get => isImageLoadFailed;
-        private set
-        {
-            if (isImageLoadFailed != value)
-            {
-                isImageLoadFailed = value;
-                Notify(nameof(IsImageLoadFailed));
-            }
-        }
+        private set => SetField(ref isImageLoadFailed, value);
     }
 
     public void MarkImageLoading()
@@ -462,33 +558,43 @@ public sealed class RemoteContentItem : INotifyPropertyChanged
 
     private void Notify(string propertyName) =>
         PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(propertyName));
+
+    private void SetField<T>(ref T field, T value, [System.Runtime.CompilerServices.CallerMemberName] string? propertyName = null)
+    {
+        if (EqualityComparer<T>.Default.Equals(field, value))
+            return;
+        field = value;
+        PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(propertyName));
+    }
 }
 
 public sealed class NewsCategory : INotifyPropertyChanged
 {
     private string label = "";
     private bool isActive;
+    private readonly ObservableCollection<RemoteContentItem> items = [];
 
     public event PropertyChangedEventHandler? PropertyChanged;
 
     public string Label
     {
         get => label;
-        set { if (label != value) { label = value; PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(nameof(Label))); } }
+        set => SetField(ref label, value);
     }
 
     public bool IsActive
     {
         get => isActive;
-        set
-        {
-            if (isActive != value)
-            {
-                isActive = value;
-                PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(nameof(IsActive)));
-            }
-        }
+        set => SetField(ref isActive, value);
     }
 
-    public ObservableCollection<RemoteContentItem> Items { get; set; } = [];
+    public ObservableCollection<RemoteContentItem> Items { get => items; }
+
+    private void SetField<T>(ref T field, T value, [CallerMemberName] string? propertyName = null)
+    {
+        if (EqualityComparer<T>.Default.Equals(field, value))
+            return;
+        field = value;
+        PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(propertyName));
+    }
 }

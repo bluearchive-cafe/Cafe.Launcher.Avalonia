@@ -166,9 +166,16 @@ public sealed class ImageCacheService : IDisposable
         using var response = await RemoteHttpRequestService.SendAsync(
             lease.Client,
             new Uri(url),
-            static uri => new HttpRequestMessage(HttpMethod.Get, uri),
+            static uri =>
+            {
+                var request = new HttpRequestMessage(HttpMethod.Get, uri);
+                request.Headers.TryAddWithoutValidation("User-Agent",
+                    $"CafeLauncher/{BuildInfo.LauncherVersion} (.NET)");
+                return request;
+            },
             urlValidator,
-            ct).ConfigureAwait(false);
+            ct,
+            connectionUsesProxy: proxyMode != ProxyModes.Direct).ConfigureAwait(false);
         response.EnsureSuccessStatusCode();
         if (response.Content.Headers.ContentLength is > MaxImageBytes)
         {
@@ -228,5 +235,6 @@ public sealed class ImageCacheService : IDisposable
 
         cacheLocks.Clear();
         httpClientLeaseSource.Dispose();
+        GC.SuppressFinalize(this);
     }
 }

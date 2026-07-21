@@ -1,0 +1,227 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:vm="using:Cafe.Launcher.Avalonia.ViewModels"
+             xmlns:models="using:Cafe.Launcher.Avalonia.Models"
+             xmlns:materialIcons="clr-namespace:Material.Icons.Avalonia;assembly=Material.Icons.Avalonia"
+             xmlns:controls="using:Cafe.Launcher.Avalonia.Controls"
+             x:Class="Cafe.Launcher.Avalonia.Views.SettingsAppearanceSection"
+             x:Name="SettingsRoot"
+             x:DataType="vm:MainWindowViewModel">
+    <UserControl.Resources>
+        <DataTemplate x:Key="SettingOptionTemplate" x:DataType="models:SettingOption">
+            <TextBlock Text="{Binding DisplayName}"/>
+        </DataTemplate>
+        <DataTemplate x:Key="ThemeOptionTemplate" x:DataType="models:ThemeOption">
+            <TextBlock Text="{Binding DisplayName}"/>
+        </DataTemplate>
+    </UserControl.Resources>
+    <StackPanel>
+        <StackPanel Classes="settings-group">
+            <TextBlock Text="{Binding Shell.I18n.SettingsGroupThemeColor}" Classes="group-title"/>
+
+            <controls:SettingRow IconKind="ThemeLightDark"
+                                 Title="{Binding Shell.I18n.Theme}"
+                                 Description="{Binding Shell.I18n.ThemeDescription}">
+                <controls:SettingRow.Action>
+                    <ComboBox Classes="setting-control"
+                              AutomationProperties.Name="{Binding Shell.I18n.Theme}"
+                              ItemsSource="{Binding Settings.Options.Theme}"
+                              SelectedValue="{Binding Settings.Editor.Current.ThemeMode, Mode=TwoWay}"
+                              SelectedValueBinding="{Binding Code}"
+                              ItemTemplate="{StaticResource ThemeOptionTemplate}"/>
+                </controls:SettingRow.Action>
+            </controls:SettingRow>
+
+            <controls:SettingRow IconKind="PaletteOutline"
+                                 Title="{Binding Shell.I18n.ThemeColor}"
+                                 Description="{Binding Shell.I18n.ThemeColorDescription}">
+                <controls:SettingRow.Action>
+                    <StackPanel Orientation="Horizontal" Spacing="{StaticResource LauncherSpacingSm}" VerticalAlignment="Center">
+                        <Border Classes="color-swatch"
+                                Background="{Binding Settings.Appearance.ThemeColorPreviewBrush}"/>
+                        <ComboBox Classes="setting-control"
+                                  AutomationProperties.Name="{Binding Shell.I18n.ThemeColor}"
+                                  ItemsSource="{Binding Settings.Options.ThemeColor}"
+                                  SelectedValue="{Binding Settings.Editor.Current.ThemeColorMode, Mode=TwoWay}"
+                                  SelectedValueBinding="{Binding Code}"
+                                  ItemTemplate="{StaticResource SettingOptionTemplate}"/>
+                    </StackPanel>
+                </controls:SettingRow.Action>
+            </controls:SettingRow>
+
+            <Grid Classes="settings-row" ColumnDefinitions="Auto,*,Auto"
+                  IsVisible="{Binding Settings.Appearance.IsWallpaperThemeColorSelected}">
+                <Border Classes="settings-icon">
+                    <materialIcons:MaterialIcon Kind="PaletteSwatchOutline" Width="{StaticResource LauncherIconMd}" Height="{StaticResource LauncherIconMd}" Foreground="{DynamicResource LauncherAccentBrush}" HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                </Border>
+                <StackPanel Grid.Column="1" Classes="dialog-heading-copy">
+                    <TextBlock Text="{Binding Shell.I18n.ThemeColorPalette}" Classes="section-title"/>
+                    <TextBlock Text="{Binding Shell.I18n.ThemeColorPaletteDescription}" Classes="caption" TextWrapping="Wrap"/>
+                </StackPanel>
+                <StackPanel Grid.Column="2" Orientation="Horizontal" Spacing="{StaticResource LauncherSpacingSm}" VerticalAlignment="Center">
+                    <ItemsControl Width="212"
+                                  ItemsSource="{Binding Settings.Appearance.ThemeColorPaletteItems}">
+                        <ItemsControl.ItemsPanel>
+                            <StaticResource ResourceKey="HorizontalSpacingSmPanel"/>
+                        </ItemsControl.ItemsPanel>
+                        <ItemsControl.ItemTemplate>
+                            <DataTemplate x:DataType="models:ThemeColorPaletteItem">
+                                <Button Classes="color-swatch-button"
+                                        AutomationProperties.Name="{Binding DataContext.Shell.I18n.ThemeColorPalette, ElementName=SettingsRoot}"
+                                        Command="{Binding DataContext.Settings.Appearance.SelectThemeColorPaletteCommand, ElementName=SettingsRoot}"
+                                        CommandParameter="{Binding Index}">
+                                    <Border Classes="color-swatch"
+                                            Background="{Binding Brush}">
+                                        <materialIcons:MaterialIcon Kind="Check"
+                                                                    Width="{StaticResource LauncherIconSm}"
+                                                                    Height="{StaticResource LauncherIconSm}"
+                                                                    HorizontalAlignment="Center"
+                                                                    VerticalAlignment="Center"
+                                                                    Foreground="{DynamicResource LauncherOnAccentBrush}"
+                                                                    IsVisible="{Binding IsSelected}"/>
+                                    </Border>
+                                </Button>
+                            </DataTemplate>
+                        </ItemsControl.ItemTemplate>
+                    </ItemsControl>
+                    <Button Classes="flat-action icon-only"
+                            Command="{Binding Settings.Appearance.RefreshThemeColorPaletteCommand}"
+                            ToolTip.Tip="{Binding Shell.I18n.RefreshThemeColorPalette}"
+                            AutomationProperties.Name="{Binding Shell.I18n.RefreshThemeColorPalette}">
+                        <materialIcons:MaterialIcon Kind="Refresh" Width="{StaticResource LauncherIconSm}" Height="{StaticResource LauncherIconSm}"/>
+                    </Button>
+                </StackPanel>
+            </Grid>
+
+            <controls:SettingRow IconKind="FormatColorFill"
+                                 Title="{Binding Shell.I18n.ThemeColorCustom}"
+                                 Description="{Binding Shell.I18n.ThemeColorDescription}"
+                                 IsVisible="{Binding Settings.Appearance.IsCustomThemeColorSelected}">
+                <controls:SettingRow.Action>
+                    <ColorPicker Classes="setting-control"
+                                 AutomationProperties.Name="{Binding Shell.I18n.ThemeColorCustom}"
+                                 Color="{Binding Settings.Appearance.SelectedCustomThemeColor, Mode=TwoWay}">
+                        <StackPanel Classes="button-content">
+                            <Border Classes="color-swatch-preview"
+                                    Background="{Binding Settings.Appearance.ThemeColorPreviewBrush}"/>
+                            <materialIcons:MaterialIcon Kind="PaletteOutline" Width="{StaticResource LauncherIconSm}" Height="{StaticResource LauncherIconSm}"/>
+                            <TextBlock Text="{Binding Shell.I18n.OpenColorPalette}"/>
+                        </StackPanel>
+                    </ColorPicker>
+                </controls:SettingRow.Action>
+            </controls:SettingRow>
+        </StackPanel>
+
+        <StackPanel Classes="settings-group">
+            <TextBlock Text="{Binding Shell.I18n.SettingsGroupBackground}" Classes="group-title"/>
+
+            <controls:SettingRow IconKind="ImageOutline"
+                                 Title="{Binding Shell.I18n.BackgroundSource}"
+                                 Description="{Binding Shell.I18n.BackgroundSourceDescription}">
+                <controls:SettingRow.Action>
+                    <ComboBox Classes="setting-control"
+                              AutomationProperties.Name="{Binding Shell.I18n.BackgroundSource}"
+                              ItemsSource="{Binding Settings.Options.BackgroundSource}"
+                              SelectedValue="{Binding Settings.Editor.Current.BackgroundSource, Mode=TwoWay}"
+                              SelectedValueBinding="{Binding Code}"
+                              ItemTemplate="{StaticResource SettingOptionTemplate}"/>
+                </controls:SettingRow.Action>
+            </controls:SettingRow>
+
+            <controls:SettingRow IconKind="ImageAspectRatio"
+                                 Title="{Binding Shell.I18n.BackgroundFit}"
+                                 Description="{Binding Shell.I18n.BackgroundFitDescription}">
+                <controls:SettingRow.Action>
+                    <ComboBox Classes="setting-control"
+                              AutomationProperties.Name="{Binding Shell.I18n.BackgroundFit}"
+                              ItemsSource="{Binding Settings.Options.BackgroundFit}"
+                              SelectedValue="{Binding Settings.Editor.Current.BackgroundFit, Mode=TwoWay}"
+                              SelectedValueBinding="{Binding Code}"
+                              ItemTemplate="{StaticResource SettingOptionTemplate}"/>
+                </controls:SettingRow.Action>
+            </controls:SettingRow>
+
+            <controls:SettingRow IconKind="FormatColorFill"
+                                 Title="{Binding Shell.I18n.BackgroundFillColor}"
+                                 Description="{Binding Shell.I18n.BackgroundFillColorDescription}"
+                                 IsVisible="{Binding Settings.Appearance.IsBackgroundFitSelected}">
+                <controls:SettingRow.Action>
+                    <ColorPicker Classes="setting-control"
+                                 AutomationProperties.Name="{Binding Shell.I18n.BackgroundFillColor}"
+                                 Color="{Binding Settings.Appearance.SelectedBackgroundFillColor, Mode=TwoWay}">
+                        <StackPanel Classes="button-content">
+                            <Border Classes="color-swatch-preview"
+                                    Background="{Binding Settings.Appearance.BackgroundFillColorPreviewBrush}"/>
+                            <materialIcons:MaterialIcon Kind="PaletteOutline" Width="{StaticResource LauncherIconSm}" Height="{StaticResource LauncherIconSm}"/>
+                            <TextBlock Text="{Binding Shell.I18n.OpenColorPalette}"/>
+                        </StackPanel>
+                    </ColorPicker>
+                </controls:SettingRow.Action>
+            </controls:SettingRow>
+
+            <controls:SettingRow IconKind="ImageEditOutline"
+                                 Title="{Binding Shell.I18n.CustomBackground}"
+                                 Description="{Binding Shell.I18n.CustomBackgroundDescription}"
+                                 IsVisible="{Binding Settings.Appearance.IsCustomBackgroundSelected}">
+                <controls:SettingRow.Action>
+                    <StackPanel Orientation="Horizontal" Spacing="{StaticResource LauncherSpacingSm}" VerticalAlignment="Center">
+                        <Button Classes="flat-action"
+                                Command="{Binding Settings.ChooseBackgroundImageCommand}"
+                                AutomationProperties.Name="{Binding Shell.I18n.ChooseImage}">
+                            <StackPanel Classes="button-content">
+                                <materialIcons:MaterialIcon Kind="ImageOutline" Width="{StaticResource LauncherIconSm}" Height="{StaticResource LauncherIconSm}"/>
+                                <TextBlock Text="{Binding Shell.I18n.ChooseImage}"/>
+                            </StackPanel>
+                        </Button>
+                        <Button Classes="flat-action"
+                                Command="{Binding Settings.ChooseBackgroundFolderCommand}"
+                                AutomationProperties.Name="{Binding Shell.I18n.ChooseFolder}">
+                            <StackPanel Classes="button-content">
+                                <materialIcons:MaterialIcon Kind="FolderOpen" Width="{StaticResource LauncherIconSm}" Height="{StaticResource LauncherIconSm}"/>
+                                <TextBlock Text="{Binding Shell.I18n.ChooseFolder}"/>
+                            </StackPanel>
+                        </Button>
+                        <Button Classes="flat-action" Command="{Binding Settings.ClearBackgroundCommand}"
+                                AutomationProperties.Name="{Binding Shell.I18n.ClearBackground}"
+                                IsVisible="{Binding Settings.Appearance.IsCustomBackground}">
+                            <StackPanel Classes="button-content">
+                                <materialIcons:MaterialIcon Kind="DeleteOutline" Width="{StaticResource LauncherIconSm}" Height="{StaticResource LauncherIconSm}"/>
+                                <TextBlock Text="{Binding Shell.I18n.ClearBackground}"/>
+                            </StackPanel>
+                        </Button>
+                    </StackPanel>
+                </controls:SettingRow.Action>
+            </controls:SettingRow>
+        </StackPanel>
+
+        <StackPanel Classes="settings-group">
+            <TextBlock Text="{Binding Shell.I18n.SettingsGroupDisplay}" Classes="group-title"/>
+
+            <controls:SettingRow IconKind="listStatus"
+                                 Title="{Binding Shell.I18n.StatusDetailMode}"
+                                 Description="{Binding Shell.I18n.StatusDetailModeDescription}">
+                <controls:SettingRow.Action>
+                    <ComboBox Classes="setting-control"
+                              AutomationProperties.Name="{Binding Shell.I18n.StatusDetailMode}"
+                              ItemsSource="{Binding Settings.Options.StatusDetailMode}"
+                              SelectedValue="{Binding Settings.Editor.Current.StatusDetailMode, Mode=TwoWay}"
+                              SelectedValueBinding="{Binding Code}"
+                              ItemTemplate="{StaticResource SettingOptionTemplate}"/>
+                </controls:SettingRow.Action>
+            </controls:SettingRow>
+
+            <controls:SettingRow IconKind="ViewDashboardOutline"
+                                 Title="{Binding Shell.I18n.RemoteContentCard}"
+                                 Description="{Binding Shell.I18n.RemoteContentCardDescription}">
+                <controls:SettingRow.Action>
+                    <ToggleSwitch Classes="setting-toggle"
+                                  AutomationProperties.Name="{Binding Shell.I18n.RemoteContentCard}"
+                                  IsChecked="{Binding Settings.Editor.Current.ShowRemoteContentCard, Mode=TwoWay}"
+                                  OnContent="{Binding Shell.I18n.ToggleOn}"
+                                  OffContent="{Binding Shell.I18n.ToggleOff}"
+                                  VerticalAlignment="Center"/>
+                </controls:SettingRow.Action>
+            </controls:SettingRow>
+        </StackPanel>
+    </StackPanel>
+</UserControl>

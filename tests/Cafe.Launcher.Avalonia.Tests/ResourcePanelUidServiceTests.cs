@@ -16,21 +16,21 @@ public sealed class ResourcePanelUidServiceTests : IDisposable
     public async Task ResolveUidAsync_WhenCookieContainsUid_ReturnsCookieUid()
     {
         var cookiePath = Path.Combine(tempDir, "Library");
-        await WriteCookieLibraryAsync(cookiePath, "COOKIE_UID");
+        await WriteCookieLibraryAsync(cookiePath, "COOKIEAA");
         var settingsService = new LauncherSettingsService(Path.Combine(tempDir, "settings.json"));
-        await settingsService.SaveAsync(new LauncherSettings { ResourcePanelUid = "SETTINGS_UID" });
+        await settingsService.SaveAsync(new LauncherSettings { ResourcePanelUid = "SETTINGA" });
         var service = new ResourcePanelUidService(new BestHttpCookieLibraryService(), settingsService, cookiePath);
 
         var uid = await service.ResolveUidAsync();
 
-        Assert.Equal("COOKIE_UID", uid);
+        Assert.Equal("COOKIEAA", uid);
     }
 
     [Fact]
     public async Task ResolveUidAsync_WhenCookieMissing_ReturnsSettingsUid()
     {
         var settingsService = new LauncherSettingsService(Path.Combine(tempDir, "settings.json"));
-        await settingsService.SaveAsync(new LauncherSettings { ResourcePanelUid = "SETTINGS_UID" });
+        await settingsService.SaveAsync(new LauncherSettings { ResourcePanelUid = "SETTINGA" });
         var service = new ResourcePanelUidService(
             new BestHttpCookieLibraryService(),
             settingsService,
@@ -38,21 +38,21 @@ public sealed class ResourcePanelUidServiceTests : IDisposable
 
         var uid = await service.ResolveUidAsync();
 
-        Assert.Equal("SETTINGS_UID", uid);
+        Assert.Equal("SETTINGA", uid);
     }
 
     [Fact]
     public async Task ResolveUidAsync_WhenUidCookieDomainDoesNotMatch_ReturnsSettingsUid()
     {
         var cookiePath = Path.Combine(tempDir, "Library");
-        await WriteCookieLibraryAsync(cookiePath, "COOKIE_UID", "example.com", "/");
+        await WriteCookieLibraryAsync(cookiePath, "COOKIEAA", "example.com", "/");
         var settingsService = new LauncherSettingsService(Path.Combine(tempDir, "settings.json"));
-        await settingsService.SaveAsync(new LauncherSettings { ResourcePanelUid = "SETTINGS_UID" });
+        await settingsService.SaveAsync(new LauncherSettings { ResourcePanelUid = "SETTINGA" });
         var service = new ResourcePanelUidService(new BestHttpCookieLibraryService(), settingsService, cookiePath);
 
         var uid = await service.ResolveUidAsync();
 
-        Assert.Equal("SETTINGS_UID", uid);
+        Assert.Equal("SETTINGA", uid);
     }
 
     [Fact]
@@ -68,6 +68,62 @@ public sealed class ResourcePanelUidServiceTests : IDisposable
         var uid = await service.ResolveUidAsync();
 
         Assert.Equal("", uid);
+    }
+
+    [Theory]
+    [InlineData("ABCDEFGH", true)]
+    [InlineData("ZXYWVUTS", true)]
+    [InlineData("", false)]
+    [InlineData(null, false)]
+    [InlineData("ABCDEFG", false)]
+    [InlineData("ABCDEFGHI", false)]
+    [InlineData("abcdefgh", false)]
+    [InlineData("ABC12345", false)]
+    [InlineData("ABCD-EFG", false)]
+    [InlineData(" ABCDEFGH ", false)]
+    public void IsValidUid_ValidatesEightUppercaseLetters(string? uid, bool expected)
+    {
+        Assert.Equal(expected, ResourcePanelUidService.IsValidUid(uid));
+    }
+
+    [Fact]
+    public async Task ResolveUidAsync_WhenCookieUidHasInvalidFormat_FallsBackToSettings()
+    {
+        var cookiePath = Path.Combine(tempDir, "Library");
+        await WriteCookieLibraryAsync(cookiePath, "invalid");
+        var settingsService = new LauncherSettingsService(Path.Combine(tempDir, "settings.json"));
+        await settingsService.SaveAsync(new LauncherSettings { ResourcePanelUid = "SETTINGA" });
+        var service = new ResourcePanelUidService(new BestHttpCookieLibraryService(), settingsService, cookiePath);
+
+        var uid = await service.ResolveUidAsync();
+
+        Assert.Equal("SETTINGA", uid);
+    }
+
+    [Fact]
+    public async Task ResolveUidAsync_WhenBothCookieAndSettingsAreInvalid_ReturnsEmpty()
+    {
+        var cookiePath = Path.Combine(tempDir, "Library");
+        await WriteCookieLibraryAsync(cookiePath, "bad");
+        var settingsService = new LauncherSettingsService(Path.Combine(tempDir, "settings.json"));
+        await settingsService.SaveAsync(new LauncherSettings { ResourcePanelUid = "also-bad" });
+        var service = new ResourcePanelUidService(new BestHttpCookieLibraryService(), settingsService, cookiePath);
+
+        var uid = await service.ResolveUidAsync();
+
+        Assert.Equal("", uid);
+    }
+
+    [Fact]
+    public async Task SaveManualUidAsync_WhenUidHasInvalidFormat_Throws()
+    {
+        var settingsService = new LauncherSettingsService(Path.Combine(tempDir, "settings.json"));
+        var service = new ResourcePanelUidService(
+            new BestHttpCookieLibraryService(),
+            settingsService,
+            Path.Combine(tempDir, "missing"));
+
+        await Assert.ThrowsAsync<ArgumentException>(() => service.SaveManualUidAsync("bad-uid"));
     }
 
     private static async Task WriteCookieLibraryAsync(

@@ -8,9 +8,13 @@ public sealed class GameInstallationPath
 {
     public string GetDefaultGamePath()
     {
-        var appDir = AppContext.BaseDirectory;
-        var parent = Directory.GetParent(appDir)?.FullName ?? appDir;
-        return NormalizeGamePath(parent);
+        // Match the official launcher's request-default-download-path (index.js:742-743):
+        //   checkPath(path.join(path.dirname(app.getPath("exe")), ".."))
+        // The game defaults to the launcher's PARENT directory so it sits sibling to
+        // (not inside) the launcher folder, keeping it safe from launcher self-update
+        // overwrites. NormalizeGamePath is a faithful port of the official checkPath,
+        // so the only requirement is feeding it the same base — the parent directory.
+        return NormalizeGamePath(Path.Combine(AppContext.BaseDirectory, ".."));
     }
 
     public string NormalizeGamePath(string path)

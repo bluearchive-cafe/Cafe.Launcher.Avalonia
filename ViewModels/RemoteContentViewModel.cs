@@ -5,6 +5,7 @@ using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
 using Avalonia.Media.Imaging;
+using Avalonia.Animation;
 using Avalonia.Threading;
 using Cafe.Launcher.Avalonia.Models;
 using Cafe.Launcher.Avalonia.Services;
@@ -20,8 +21,10 @@ public partial class RemoteContentViewModel : ViewModelBase, IDisposable
     private readonly ImageCacheService imageCacheService;
     private DispatcherTimer? carouselTimer;
     private CancellationTokenSource? carouselDelayCts;
-    private string proxyMode = ProxyModes.Direct;
+    private string proxyMode = ProxyModes.Auto;
     private bool showRemoteContentCard = true;
+    private bool isMotionReduced;
+    private bool disposed;
 
     [ObservableProperty]
     private string noticeText = "";
@@ -72,6 +75,9 @@ public partial class RemoteContentViewModel : ViewModelBase, IDisposable
     private int bannerIntervalMs = 5000;
 
     [ObservableProperty]
+    private IPageTransition carouselTransition = new CrossFade(TimeSpan.FromMilliseconds(250));
+
+    [ObservableProperty]
     private NewsCategory? selectedNewsCategory;
 
     public ObservableCollection<BannerDot> BannerDots { get; } = [];
@@ -102,8 +108,23 @@ public partial class RemoteContentViewModel : ViewModelBase, IDisposable
         UpdateCarouselPageText();
     }
 
+    public void ApplyMotionPreference(bool reduceMotion)
+    {
+        if (disposed) return;
+        isMotionReduced = reduceMotion;
+        CarouselTransition = new CrossFade(
+            reduceMotion ? TimeSpan.Zero : TimeSpan.FromMilliseconds(250));
+        if (reduceMotion)
+        {
+            carouselDelayCts?.Cancel();
+            StopCarouselTimer();
+            SetCarouselPausedState(true);
+        }
+    }
+
     public void Apply(LauncherRemoteState remote, LauncherSettings settings, CancellationToken cancellationToken)
     {
+        if (disposed) return;
         proxyMode = settings.ProxyMode;
         StopCarouselTimer();
         carouselDelayCts?.Cancel();
@@ -139,9 +160,7 @@ public partial class RemoteContentViewModel : ViewModelBase, IDisposable
             CarouselSelectedIndex = 0;
             HasMultipleBanners = BannerItems.Count > 1;
             UpdateCarouselPageText();
-            IsCarouselPaused = false;
-            CarouselPauseIcon = "Pause";
-            CarouselPauseTooltip = localizer.T("pauseCarousel");
+            SetCarouselPausedState(isMotionReduced);
             _ = PreloadBannerImagesAsync(cancellationToken);
         }
         else
@@ -288,34 +307,38 @@ public partial class RemoteContentViewModel : ViewModelBase, IDisposable
         {
             Interval = TimeSpan.FromMilliseconds(BannerIntervalMs)
         };
-        carouselTimer.Tick += (_, _) =>
-        {
-            if (BannerItems.Count == 0)
-            {
-                return;
-            }
-
-            var next = CarouselSelectedIndex + 1;
-            CarouselSelectedIndex = next % BannerItems.Count;
-        };
+        carouselTimer.Tick += (_, _) => TryAdvanceCarousel();
         carouselTimer.Start();
+    }
+
+    internal bool TryAdvanceCarousel()
+    {
+        if (BannerItems.Count == 0)
+        {
+            return false;
+        }
+
+        var next = (CarouselSelectedIndex + 1) % BannerItems.Count;
+        if (BannerItems[next].IsImageLoading)
+        {
+            return false;
+        }
+
+        CarouselSelectedIndex = next;
+        return true;
     }
 
     [RelayCommand]
     private void ToggleCarouselLoop()
     {
-        IsCarouselPaused = !IsCarouselPaused;
+        SetCarouselPausedState(!IsCarouselPaused);
         if (IsCarouselPaused)
         {
             StopCarouselTimer();
-            CarouselPauseIcon = "Play";
-            CarouselPauseTooltip = localizer.T("resumeCarousel");
         }
         else
         {
             StartCarouselTimer();
-            CarouselPauseIcon = "Pause";
-            CarouselPauseTooltip = localizer.T("pauseCarousel");
         }
     }
 
@@ -440,8 +463,10 @@ public partial class RemoteContentViewModel : ViewModelBase, IDisposable
             {
                 return;
             }
-            catch
+            catch (Exception ex)
             {
+                System.Diagnostics.Debug.WriteLine(
+                    $"RemoteContent: banner image load failed for '{item.ImageUrl}': {ex.Message}");
                 await Dispatcher.UIThread.InvokeAsync(item.MarkImageLoadFailed);
             }
         }
@@ -449,6 +474,7 @@ public partial class RemoteContentViewModel : ViewModelBase, IDisposable
 
     private async Task ScheduleCarouselResumeAfterDelayAsync()
     {
+        if (disposed) return;
         carouselDelayCts?.Cancel();
         carouselDelayCts = new CancellationTokenSource();
         var token = carouselDelayCts.Token;
@@ -531,9 +557,13 @@ public partial class RemoteContentViewModel : ViewModelBase, IDisposable
 
     public void Dispose()
     {
+        if (disposed) return;
+        disposed = true;
+
         StopCarouselTimer();
         carouselDelayCts?.Cancel();
         carouselDelayCts?.Dispose();
+        carouselDelayCts = null;
         DisposeBannerBitmaps();
     }
 
@@ -544,5 +574,14 @@ public partial class RemoteContentViewModel : ViewModelBase, IDisposable
             item.BannerBitmap?.Dispose();
             item.BannerBitmap = null;
         }
+    }
+
+    private void SetCarouselPausedState(bool paused)
+    {
+        IsCarouselPaused = paused;
+        CarouselPauseIcon = paused ? "Play" : "Pause";
+        CarouselPauseTooltip = paused
+            ? localizer.T("resumeCarousel")
+            : localizer.T("pauseCarousel");
     }
 }

@@ -1,18 +1,22 @@
 using System;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
+using System.Linq;
 using System.Security.Cryptography;
 using System.Threading;
 using System.Threading.Tasks;
 using Avalonia.Threading;
+using Cafe.Launcher.Avalonia.Features.Shell;
+using Cafe.Launcher.Avalonia.Helpers;
 using Cafe.Launcher.Avalonia.Models;
 using Cafe.Launcher.Avalonia.Services;
+using Cafe.Launcher.Avalonia.Services.Diagnostics;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 
 namespace Cafe.Launcher.Avalonia.ViewModels;
 
-public partial class DialogsViewModel : ViewModelBase
+public partial class DialogsViewModel : ViewModelBase, IModalContentViewModel
 {
     private readonly LocalizationService localizer;
     private readonly NoticeStateService noticeStateService;
@@ -57,6 +61,43 @@ public partial class DialogsViewModel : ViewModelBase
     [ObservableProperty]
     private string crashRecoveryText = "";
 
+    // ── Setup wizard ─────────────────────────────────────────────────────
+
+    public SetupWizardViewModel SetupWizard { get; }
+
+    [ObservableProperty]
+    private bool isSetupWizardVisible;
+
+    [ObservableProperty]
+    private bool isSetupWizardExitConfirmVisible;
+
+    public IReadOnlyList<LanguageOption> LanguageOptions { get; }
+
+    public void ShowSetupWizard()
+    {
+        LocalDiagnostics.LogSync(LogEntrySeverity.Info, "SetupWizardShow", "Setup wizard visibility requested.");
+        IsSetupWizardVisible = true;
+    }
+
+    [RelayCommand]
+    private void RequestSetupWizardExit()
+    {
+        IsSetupWizardExitConfirmVisible = true;
+    }
+
+    [RelayCommand]
+    private void CancelSetupWizardExit()
+    {
+        IsSetupWizardExitConfirmVisible = false;
+    }
+
+    [RelayCommand]
+    private async Task ConfirmSetupWizardExitAsync()
+    {
+        IsSetupWizardExitConfirmVisible = false;
+        await SetupWizard.SkipCommand.ExecuteAsync(null);
+    }
+
     public event Action? CrashRecoveryContinueRequested;
     public event Func<Task>? CrashRecoveryResetSettingsRequested;
     public event Action? CrashRecoveryViewLogRequested;
@@ -77,9 +118,7 @@ public partial class DialogsViewModel : ViewModelBase
     [RelayCommand]
     private async Task ResetSettingsAfterCrashAsync()
     {
-        var handler = CrashRecoveryResetSettingsRequested;
-        if (handler is not null)
-            await handler();
+        await AsyncEvent.InvokeSequentiallyAsync(CrashRecoveryResetSettingsRequested);
         IsCrashRecoveryVisible = false;
     }
 
@@ -131,10 +170,11 @@ public partial class DialogsViewModel : ViewModelBase
 
     public event Action<string>? ConfirmUpdateAvailableRequested;
 
-    public DialogsViewModel(LocalizationService localizer, NoticeStateService noticeStateService)
+    public DialogsViewModel(LocalizationService localizer, NoticeStateService noticeStateService, SetupWizardViewModel setupWizard)
         : this(
             localizer,
             noticeStateService,
+            setupWizard,
             async action => await Dispatcher.UIThread.InvokeAsync(action))
     {
     }
@@ -142,28 +182,32 @@ public partial class DialogsViewModel : ViewModelBase
     internal DialogsViewModel(
         LocalizationService localizer,
         NoticeStateService noticeStateService,
+        SetupWizardViewModel setupWizard,
         Func<Action, Task> invokeOnUiAsync)
     {
         this.localizer = localizer;
         this.noticeStateService = noticeStateService;
         this.invokeOnUiAsync = invokeOnUiAsync;
+        LanguageOptions = LocalizationService.GetLanguageOptions(localizer);
+        SetupWizard = setupWizard;
     }
 
     public void ApplyLanguage()
     {
+        LanguageOptions.First(option => option.Code == LauncherLanguages.Auto).DisplayName = localizer.T("languageAuto");
         if (IsStopConfirmVisible)
         {
-            StopConfirmText = localizer.T("stopDownloadConfirm");
+            StopConfirmText = localizer.T("stopDownloadMessage");
         }
 
         if (IsDownloadRunningCloseConfirmVisible)
         {
-            DownloadRunningCloseConfirmText = localizer.T("stopDownloadConfirm");
+            DownloadRunningCloseConfirmText = localizer.T("stopDownloadMessage");
         }
 
         if (IsUpdateAvailableVisible)
         {
-            UpdateAvailableText = localizer.F("updateAvailableMessage", UpdateAvailableVersion);
+            UpdateAvailableText = localizer.F("launcherUpdateAvailableMessage", UpdateAvailableVersion);
         }
     }
 
@@ -181,13 +225,13 @@ public partial class DialogsViewModel : ViewModelBase
 
     public void ShowStopConfirm()
     {
-        StopConfirmText = localizer.T("stopDownloadConfirm");
+        StopConfirmText = localizer.T("stopDownloadMessage");
         IsStopConfirmVisible = true;
     }
 
     public void ShowDownloadRunningCloseConfirm()
     {
-        DownloadRunningCloseConfirmText = localizer.T("stopDownloadConfirm");
+        DownloadRunningCloseConfirmText = localizer.T("stopDownloadMessage");
         IsDownloadRunningCloseConfirmVisible = true;
     }
 
@@ -201,10 +245,7 @@ public partial class DialogsViewModel : ViewModelBase
     private async Task ConfirmRepairAsync()
     {
         IsRepairConfirmVisible = false;
-        if (ConfirmRepairRequested is not null)
-        {
-            await ConfirmRepairRequested.Invoke();
-        }
+        await AsyncEvent.InvokeSequentiallyAsync(ConfirmRepairRequested);
     }
 
     public void ShowResourcePanelSourceConfirm(string text)
@@ -235,10 +276,7 @@ public partial class DialogsViewModel : ViewModelBase
     [RelayCommand]
     private async Task ConfirmUninstallAsync()
     {
-        if (ConfirmUninstallRequested is not null)
-        {
-            await ConfirmUninstallRequested.Invoke();
-        }
+        await AsyncEvent.InvokeSequentiallyAsync(ConfirmUninstallRequested);
     }
 
     [RelayCommand]
@@ -270,7 +308,7 @@ public partial class DialogsViewModel : ViewModelBase
     public void ShowUpdateAvailable(string version, IReadOnlyList<ReleaseFile> files)
     {
         UpdateAvailableVersion = version;
-        UpdateAvailableText = localizer.F("updateAvailableMessage", version);
+        UpdateAvailableText = localizer.F("launcherUpdateAvailableMessage", version);
         SelectedUpdateFile = null;
         UpdateAvailableFiles.Clear();
         foreach (var file in files)
@@ -349,9 +387,11 @@ public partial class DialogsViewModel : ViewModelBase
         }
         catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
         {
+            // Operation cancelled — nothing to do.
         }
-        catch
+        catch (Exception ex)
         {
+            LocalDiagnostics.LogSync(LogEntrySeverity.Warn, "NoticeDialogLoadFailed", ex.Message);
         }
     }
 

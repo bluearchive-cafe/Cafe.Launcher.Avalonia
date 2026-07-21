@@ -18,6 +18,7 @@ public sealed class SettingsOptionsViewModel
     {
         this.localizer = localizer;
         this.diskSpaceService = diskSpaceService;
+        Language = LocalizationService.GetLanguageOptions(localizer);
     }
 
     public ObservableCollection<SettingOption> BackgroundSource { get; } =
@@ -52,6 +53,7 @@ public sealed class SettingsOptionsViewModel
 
     public ObservableCollection<SettingOption> ProxyMode { get; } =
     [
+        new() { Code = ProxyModes.Auto },
         new() { Code = ProxyModes.Direct },
         new() { Code = ProxyModes.System }
     ];
@@ -78,7 +80,7 @@ public sealed class SettingsOptionsViewModel
         new() { Code = CloseBehaviors.Exit }
     ];
 
-    public IReadOnlyList<LanguageOption> Language { get; } = LocalizationService.GetLanguageOptions();
+    public IReadOnlyList<LanguageOption> Language { get; }
 
     public ObservableCollection<SettingOption> UpdateChannel { get; } =
     [
@@ -103,121 +105,166 @@ public sealed class SettingsOptionsViewModel
         new() { Code = ThemeModes.Dark }
     ];
 
+    public ObservableCollection<SettingOption> MotionMode { get; } =
+    [
+        new() { Code = MotionModes.System },
+        new() { Code = MotionModes.Full },
+        new() { Code = MotionModes.Reduced }
+    ];
+
+    public ObservableCollection<SettingOption> StatusDetailMode { get; } =
+    [
+        new() { Code = StatusDetailModes.Hidden },
+        new() { Code = StatusDetailModes.Compact },
+        new() { Code = StatusDetailModes.Detailed }
+    ];
+
+    public ObservableCollection<SettingOption> SettingsCategories { get; } = [];
+
     public void RefreshDisplayNames()
     {
-        foreach (var option in Theme)
+        Language.First(option => option.Code == LauncherLanguages.Auto).DisplayName = localizer.T("languageAuto");
+        EnsureSettingCategories();
+        UpdateSettingCategory(SettingsCategoryCodes.General, localizer.T("settingsCategoryGeneral"), localizer.T("settingsCategoryGeneralDescription"));
+        UpdateSettingCategory(SettingsCategoryCodes.Game, localizer.T("settingsCategoryGame"), localizer.T("settingsCategoryGameDescription"));
+        UpdateSettingCategory(SettingsCategoryCodes.DownloadNetwork, localizer.T("settingsCategoryDownloadNetwork"), localizer.T("settingsCategoryDownloadNetworkDescription"));
+        UpdateSettingCategory(SettingsCategoryCodes.Appearance, localizer.T("settingsCategoryAppearance"), localizer.T("settingsCategoryAppearanceDescription"));
+        UpdateSettingCategory(SettingsCategoryCodes.Advanced, localizer.T("settingsCategoryAdvanced"), localizer.T("settingsCategoryAdvancedDescription"));
+        UpdateSettingCategory(SettingsCategoryCodes.About, localizer.T("settingsCategoryAbout"), localizer.T("settingsCategoryAboutDescription"));
+
+        RefreshOptions(Theme, code => code switch
         {
-            option.DisplayName = option.Code switch
-            {
-                ThemeModes.Light => localizer.T("themeLight"),
-                ThemeModes.Dark => localizer.T("themeDark"),
-                _ => localizer.T("themeSystem")
-            };
+            ThemeModes.Light => localizer.T("themeLight"),
+            ThemeModes.Dark => localizer.T("themeDark"),
+            _ => localizer.T("themeSystem")
+        });
+
+        RefreshOptions(MotionMode, code => code switch
+        {
+            MotionModes.Full => localizer.T("motionModeFull"),
+            MotionModes.Reduced => localizer.T("motionModeReduced"),
+            _ => localizer.T("motionModeSystem")
+        });
+
+        RefreshOptions(StatusDetailMode, code => code switch
+        {
+            StatusDetailModes.Hidden => localizer.T("statusDetailModeHidden"),
+            StatusDetailModes.Compact => localizer.T("statusDetailModeCompact"),
+            _ => localizer.T("statusDetailModeDetailed")
+        });
+
+        RefreshOptions(ThemeColor, code => code switch
+        {
+            ThemeColorModes.System => localizer.T("themeColorSystem"),
+            ThemeColorModes.Wallpaper => localizer.T("themeColorWallpaper"),
+            ThemeColorModes.Custom => localizer.T("themeColorCustom"),
+            _ => localizer.T("themeColorDefault")
+        });
+
+        RefreshOptions(LaunchCheckMode, code => code switch
+        {
+            LaunchCheckModes.RemoteManifest => localizer.T("launchCheckRemoteManifest"),
+            LaunchCheckModes.None => localizer.T("launchCheckNone"),
+            _ => localizer.T("launchCheckLocalManifest")
+        });
+
+        RefreshOptions(ProxyMode, code => code switch
+        {
+            ProxyModes.Auto => localizer.T("proxyAuto"),
+            ProxyModes.System => localizer.T("proxySystem"),
+            _ => localizer.T("proxyDirect")
+        });
+
+        RefreshOptions(PatchUrlGroup, code => code switch
+        {
+            PatchUrlGroups.Cafe => localizer.T("downloadSourceCafe"),
+            _ => localizer.T("downloadSourceOfficial")
+        });
+
+        RefreshOptions(CloseBehavior, code => code switch
+        {
+            CloseBehaviors.Exit => localizer.T("closeBehaviorExit"),
+            _ => localizer.T("closeBehaviorMinimize")
+        });
+
+        RefreshOptions(DownloadSpeedLimit, code => code switch
+        {
+            DownloadSpeedLimits.Speed1MBs => localizer.T("speed1MBs"),
+            DownloadSpeedLimits.Speed5MBs => localizer.T("speed5MBs"),
+            DownloadSpeedLimits.Speed10MBs => localizer.T("speed10MBs"),
+            DownloadSpeedLimits.Speed25MBs => localizer.T("speed25MBs"),
+            DownloadSpeedLimits.Speed50MBs => localizer.T("speed50MBs"),
+            _ => localizer.T("speedUnlimited")
+        });
+
+        RefreshOptions(BackgroundSource, code => code switch
+        {
+            BackgroundSources.Remote => localizer.T("backgroundSourceRemote"),
+            BackgroundSources.Custom => localizer.T("backgroundSourceCustom"),
+            BackgroundSources.Video => localizer.T("backgroundSourceVideo"),
+            _ => localizer.T("backgroundSourceBundled")
+        });
+
+        RefreshOptions(BackgroundFit, code => code switch
+        {
+            BackgroundFits.Fill => localizer.T("backgroundFitFill"),
+            BackgroundFits.Uniform => localizer.T("backgroundFitUniform"),
+            _ => localizer.T("backgroundFitUniformToFill")
+        });
+
+        RefreshOptions(UpdateChannel, code => code switch
+        {
+            UpdateChannels.Beta => localizer.T("launcherUpdateChannelBeta"),
+            _ => localizer.T("launcherUpdateChannelStable")
+        });
+
+        RefreshOptions(LogLevel, code => code switch
+        {
+            LogLevels.Verbose => localizer.T("logLevelVerbose"),
+            LogLevels.Debug => localizer.T("logLevelDebug"),
+            LogLevels.Warning => localizer.T("logLevelWarning"),
+            LogLevels.Error => localizer.T("logLevelError"),
+            LogLevels.Fatal => localizer.T("logLevelFatal"),
+            _ => localizer.T("logLevelInformation")
+        });
+    }
+
+    private void RefreshOptions(ObservableCollection<SettingOption> options, System.Func<string, string> resolveDisplayName)
+    {
+        foreach (var option in options)
+        {
+            option.DisplayName = resolveDisplayName(option.Code);
+        }
+    }
+
+    private void RefreshOptions(ObservableCollection<ThemeOption> options, System.Func<string, string> resolveDisplayName)
+    {
+        foreach (var option in options)
+        {
+            option.DisplayName = resolveDisplayName(option.Code);
+        }
+    }
+
+    private void EnsureSettingCategories()
+    {
+        if (SettingsCategories.Count > 0)
+        {
+            return;
         }
 
-        foreach (var option in ThemeColor)
-        {
-            option.DisplayName = option.Code switch
-            {
-                ThemeColorModes.System => localizer.T("themeColorSystem"),
-                ThemeColorModes.Wallpaper => localizer.T("themeColorWallpaper"),
-                ThemeColorModes.Custom => localizer.T("themeColorCustom"),
-                _ => localizer.T("themeColorDefault")
-            };
-        }
+        SettingsCategories.Add(new() { Code = SettingsCategoryCodes.General });
+        SettingsCategories.Add(new() { Code = SettingsCategoryCodes.Game });
+        SettingsCategories.Add(new() { Code = SettingsCategoryCodes.DownloadNetwork });
+        SettingsCategories.Add(new() { Code = SettingsCategoryCodes.Appearance });
+        SettingsCategories.Add(new() { Code = SettingsCategoryCodes.Advanced });
+        SettingsCategories.Add(new() { Code = SettingsCategoryCodes.About });
+    }
 
-        foreach (var option in LaunchCheckMode)
-        {
-            option.DisplayName = option.Code switch
-            {
-                LaunchCheckModes.RemoteManifest => localizer.T("launchCheckRemoteManifest"),
-                LaunchCheckModes.None => localizer.T("launchCheckNone"),
-                _ => localizer.T("launchCheckLocalManifest")
-            };
-        }
-
-        foreach (var option in ProxyMode)
-        {
-            option.DisplayName = option.Code switch
-            {
-                ProxyModes.System => localizer.T("proxySystem"),
-                _ => localizer.T("proxyDirect")
-            };
-        }
-
-        foreach (var option in PatchUrlGroup)
-        {
-            option.DisplayName = option.Code switch
-            {
-                PatchUrlGroups.Cafe => localizer.T("downloadSourceCafe"),
-                _ => localizer.T("downloadSourceOfficial")
-            };
-        }
-
-        foreach (var option in CloseBehavior)
-        {
-            option.DisplayName = option.Code switch
-            {
-                CloseBehaviors.Exit => localizer.T("closeBehaviorExit"),
-                _ => localizer.T("closeBehaviorMinimize")
-            };
-        }
-
-        foreach (var option in DownloadSpeedLimit)
-        {
-            option.DisplayName = option.Code switch
-            {
-                DownloadSpeedLimits.Speed1MBs => localizer.T("speed1MBs"),
-                DownloadSpeedLimits.Speed5MBs => localizer.T("speed5MBs"),
-                DownloadSpeedLimits.Speed10MBs => localizer.T("speed10MBs"),
-                DownloadSpeedLimits.Speed25MBs => localizer.T("speed25MBs"),
-                DownloadSpeedLimits.Speed50MBs => localizer.T("speed50MBs"),
-                _ => localizer.T("speedUnlimited")
-            };
-        }
-
-        foreach (var option in BackgroundSource)
-        {
-            option.DisplayName = option.Code switch
-            {
-                BackgroundSources.Remote => localizer.T("backgroundSourceRemote"),
-                BackgroundSources.Custom => localizer.T("backgroundSourceCustom"),
-                BackgroundSources.Video => localizer.T("backgroundSourceVideo"),
-                _ => localizer.T("backgroundSourceBundled")
-            };
-        }
-
-        foreach (var option in BackgroundFit)
-        {
-            option.DisplayName = option.Code switch
-            {
-                BackgroundFits.Fill => localizer.T("backgroundFitFill"),
-                BackgroundFits.Uniform => localizer.T("backgroundFitUniform"),
-                _ => localizer.T("backgroundFitUniformToFill")
-            };
-        }
-
-        foreach (var option in UpdateChannel)
-        {
-            option.DisplayName = option.Code switch
-            {
-                UpdateChannels.Beta => localizer.T("updateChannelBeta"),
-                _ => localizer.T("updateChannelStable")
-            };
-        }
-
-        foreach (var option in LogLevel)
-        {
-            option.DisplayName = option.Code switch
-            {
-                LogLevels.Verbose => localizer.T("logLevelVerbose"),
-                LogLevels.Debug => localizer.T("logLevelDebug"),
-                LogLevels.Warning => localizer.T("logLevelWarning"),
-                LogLevels.Error => localizer.T("logLevelError"),
-                LogLevels.Fatal => localizer.T("logLevelFatal"),
-                _ => localizer.T("logLevelInformation")
-            };
-        }
+    private void UpdateSettingCategory(string code, string displayName, string description)
+    {
+        var option = SettingsCategories.First(option => option.Code == code);
+        option.DisplayName = displayName;
+        option.Description = description;
     }
 
     public string ResolveLanguageDisplayName(string language) =>
@@ -236,15 +283,42 @@ public sealed class SettingsOptionsViewModel
             _ => localizer.T("statusLaunchCheckLocal")
         };
 
-    public string ResolveDiskSpaceText(string gamePath, string? requiredSize)
+    public DiskSpaceCheckResult ResolveDiskSpaceCheck(string gamePath, string? requiredSize)
     {
-        var required = string.IsNullOrWhiteSpace(requiredSize)
+        var requiredBytes = DiskSpaceService.ResolveRequiredBytes(true, 0L, requiredSize);
+        return diskSpaceService.Check(gamePath, requiredBytes);
+    }
+
+    public string ResolveDiskSpaceText(string? requiredSize, DiskSpaceCheckResult check)
+    {
+        var requiredDisplay = string.IsNullOrWhiteSpace(requiredSize)
             ? "--"
             : requiredSize.Replace(" ", "", System.StringComparison.Ordinal);
-        var availableBytes = diskSpaceService.GetAvailableBytes(gamePath);
-        var available = availableBytes.HasValue
-            ? FileSizeFormatter.Format(availableBytes.Value)
+        var availableDisplay = check.AvailableBytes.HasValue
+            ? FileSizeFormatter.Format(check.AvailableBytes.Value)
             : "--";
-        return localizer.F("diskSpace", required, available);
+        var baseText = localizer.F("diskSpace", requiredDisplay, availableDisplay);
+
+        // Only append a conclusion when both required and available are known.
+        if (!check.IsAvailableKnown
+            || string.IsNullOrWhiteSpace(requiredSize)
+            || !FileSizeFormatter.TryParseHumanReadable(requiredSize, out _))
+        {
+            return baseText;
+        }
+
+        if (check.HasEnoughSpace)
+        {
+            return baseText + " " + localizer.T("diskSpaceOkSuffix");
+        }
+
+        var difference = check.RequiredBytes - check.AvailableBytes!.Value;
+        return baseText + " " + localizer.F("diskSpaceShortSuffix", FileSizeFormatter.Format(difference));
+    }
+
+    public string ResolveDiskSpaceText(string gamePath, string? requiredSize)
+    {
+        var check = ResolveDiskSpaceCheck(gamePath, requiredSize);
+        return ResolveDiskSpaceText(requiredSize, check);
     }
 }

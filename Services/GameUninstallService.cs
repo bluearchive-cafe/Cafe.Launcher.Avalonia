@@ -4,6 +4,7 @@ using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
 using Cafe.Launcher.Avalonia.Constants;
+using Cafe.Launcher.Avalonia.Features.GameOperations;
 using Cafe.Launcher.Avalonia.Helpers;
 using Cafe.Launcher.Avalonia.Models;
 using Cafe.Launcher.Avalonia.Services.Diagnostics;
@@ -16,17 +17,34 @@ public sealed class GameUninstallService
     private readonly GameInstallationPath installationPath;
     private readonly LocalDiagnostics diagnostics;
     private readonly LocalizationService localizer;
+    private readonly DownloadCheckpointStore checkpointStore;
 
     public GameUninstallService(
         LocalInstallationStateStore localInstallationStateStore,
         LocalDiagnostics diagnostics,
         LocalizationService localizer,
         GameInstallationPath installationPath)
+        : this(
+            localInstallationStateStore,
+            diagnostics,
+            localizer,
+            installationPath,
+            DownloadCheckpointStore.CreateDefault())
+    {
+    }
+
+    internal GameUninstallService(
+        LocalInstallationStateStore localInstallationStateStore,
+        LocalDiagnostics diagnostics,
+        LocalizationService localizer,
+        GameInstallationPath installationPath,
+        DownloadCheckpointStore checkpointStore)
     {
         this.localInstallationStateStore = localInstallationStateStore;
         this.installationPath = installationPath;
         this.diagnostics = diagnostics;
         this.localizer = localizer;
+        this.checkpointStore = checkpointStore;
     }
 
     public async Task<GameOperationResult> UninstallAsync(
@@ -36,7 +54,7 @@ public sealed class GameUninstallService
     {
         if (snapshot.RuntimeState != LauncherRuntimeState.Ready)
         {
-            return Failed(localizer.T("operationUnavailableForCurrentState"), "invalid-state");
+            return Failed(localizer.T("operationUnavailableForCurrentState"), GameOperationErrorCode.InvalidState);
         }
 
         var gamePath = installationPath.NormalizeGamePath(snapshot.LocalGame.GamePath ?? "");
@@ -65,8 +83,8 @@ public sealed class GameUninstallService
 
                 progress(new GameOperationProgress
                 {
-                    OperationKind = GameOperationKinds.Uninstall,
-                    Stage = "uninstall",
+                    OperationKind = GameOperationKind.Uninstall,
+                    Stage = GameOperationStage.Uninstalling,
                     Progress = files.Count > 0 ? (int)Math.Round((i + 1) * 100d / files.Count) : 100,
                     IsRunning = true
                 });
@@ -78,6 +96,18 @@ public sealed class GameUninstallService
             if (deletedState.Kind == LocalInstallationStateKind.IoFailure)
             {
                 throw new IOException(deletedState.Error);
+            }
+
+            // The download resume marker lives in LOCALAPPDATA and is not under the game
+            // directory, so the manifest-driven file deletion above never touches it. Remove
+            // it best-effort so a finished uninstall leaves no stale resume state behind.
+            try
+            {
+                checkpointStore.Clear();
+            }
+            catch (Exception exception) when (exception is IOException or UnauthorizedAccessException)
+            {
+                // Best-effort cleanup of the resume marker; preserve uninstall success.
             }
 
             await diagnostics.MessageAsync(
@@ -99,7 +129,7 @@ public sealed class GameUninstallService
             {
                 Success = false,
                 Message = localizer.F("uninstallFailed", exception.Message),
-                ErrorType = "error-system"
+                ErrorCode = GameOperationErrorCode.System
             };
         }
     }
@@ -110,33 +140,33 @@ public sealed class GameUninstallService
     {
         if (!Directory.Exists(gamePath))
         {
-            return Failed(localizer.F("gamePathMissing", gamePath), "uninstall-error");
+            return Failed(localizer.F("gamePathMissing", gamePath), GameOperationErrorCode.Uninstall);
         }
 
         if (IsSystemProtectPath(gamePath))
         {
-            return Failed(localizer.F("gamePathProtected", gamePath), "uninstall-error");
+            return Failed(localizer.F("gamePathProtected", gamePath), GameOperationErrorCode.Uninstall);
         }
 
         if (!string.Equals(Path.GetFileName(Path.GetFullPath(gamePath)), GamePaths.GameFolderName, StringComparison.Ordinal))
         {
-            return Failed(localizer.F("gameDirectoryNameInvalid", GamePaths.GameFolderName), "uninstall-error");
+            return Failed(localizer.F("gameDirectoryNameInvalid", GamePaths.GameFolderName), GameOperationErrorCode.Uninstall);
         }
 
         var localGame = await localInstallationStateStore.ReadAsync(gamePath, cancellationToken).ConfigureAwait(false);
         if (localGame.Kind != LocalInstallationStateKind.Valid)
         {
-            return Failed(localizer.F("gameConfigMetadataMissing", GamePaths.GameConfigFileName), "uninstall-error");
+            return Failed(localizer.F("gameConfigMetadataMissing", GamePaths.GameConfigFileName), GameOperationErrorCode.Uninstall);
         }
 
         if (string.IsNullOrWhiteSpace(localGame.GameConfig?.Version) || string.IsNullOrWhiteSpace(localGame.GameConfig?.Name))
         {
-            return Failed(localizer.F("gameConfigMetadataMissing", GamePaths.GameConfigFileName), "uninstall-error");
+            return Failed(localizer.F("gameConfigMetadataMissing", GamePaths.GameConfigFileName), GameOperationErrorCode.Uninstall);
         }
 
         if (await ProcessService.IsExeRunningAsync($"{localGame.GameConfig.Name}.exe", cancellationToken))
         {
-            return Failed(localizer.F("gameIsRunning", $"{localGame.GameConfig.Name}.exe"), "uninstall-error-running");
+            return Failed(localizer.F("gameIsRunning", $"{localGame.GameConfig.Name}.exe"), GameOperationErrorCode.GameRunning);
         }
 
         return new GameOperationResult
@@ -177,13 +207,13 @@ public sealed class GameUninstallService
             .Select(item => Path.GetFullPath(item).TrimEnd(Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar))
             .Any(item => string.Equals(fullPath, item, StringComparison.OrdinalIgnoreCase));
     }
-    private static GameOperationResult Failed(string message, string errorType)
+    private static GameOperationResult Failed(string message, GameOperationErrorCode errorCode)
     {
         return new GameOperationResult
         {
             Success = false,
             Message = message,
-            ErrorType = errorType
+            ErrorCode = errorCode
         };
     }
 }

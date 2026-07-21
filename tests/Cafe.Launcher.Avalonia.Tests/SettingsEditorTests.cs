@@ -44,6 +44,18 @@ public sealed class SettingsEditorTests
     }
 
     [Fact]
+    public void CurrentPropertyChange_WhenRevertedToSavedValue_ClearsDirty()
+    {
+        var editor = new SettingsEditor();
+        editor.ApplySnapshot(new LauncherSettings { Language = LauncherLanguages.Auto });
+
+        editor.Current.Language = LauncherLanguages.Japanese;
+        editor.Current.Language = LauncherLanguages.Auto;
+
+        Assert.False(editor.IsDirty);
+    }
+
+    [Fact]
     public void ApplySnapshot_LoadsAllFields()
     {
         var editor = new SettingsEditor();
@@ -59,6 +71,7 @@ public sealed class SettingsEditorTests
             CustomThemeColor = "#FF00FF00",
             DownloadSpeedLimit = DownloadSpeedLimits.Speed10MBs,
             ToastNotificationsEnabled = false,
+            EnableStartupUpdateCheck = false,
             ShowRemoteContentCard = false,
             PatchUrlGroup = PatchUrlGroups.Cafe,
             CustomBackgroundPath = @"C:\wallpaper.png",
@@ -66,8 +79,7 @@ public sealed class SettingsEditorTests
             BackgroundFit = BackgroundFits.Fill,
             BackgroundFillColor = "#FF112233",
             ResourcePanelUid = "12345",
-            UpdateChannel = UpdateChannels.Beta,
-            HasCompletedFirstLaunchWizard = true
+            UpdateChannel = UpdateChannels.Beta
         };
 
         editor.ApplySnapshot(settings);
@@ -83,6 +95,7 @@ public sealed class SettingsEditorTests
         Assert.Equal("#FF00FF00", current.CustomThemeColor);
         Assert.Equal(DownloadSpeedLimits.Speed10MBs, current.DownloadSpeedLimit);
         Assert.False(current.ToastNotificationsEnabled);
+        Assert.False(current.EnableStartupUpdateCheck);
         Assert.False(current.ShowRemoteContentCard);
         Assert.Equal(PatchUrlGroups.Cafe, current.PatchUrlGroup);
         Assert.Equal(@"C:\wallpaper.png", current.CustomBackgroundPath);
@@ -91,7 +104,6 @@ public sealed class SettingsEditorTests
         Assert.Equal("#FF112233", current.BackgroundFillColor);
         Assert.Equal("12345", current.ResourcePanelUid);
         Assert.Equal(UpdateChannels.Beta, current.UpdateChannel);
-        Assert.True(current.HasCompletedFirstLaunchWizard);
         Assert.False(editor.IsDirty);
     }
 
@@ -203,7 +215,7 @@ public sealed class SettingsEditorTests
         var current = editor.Current;
         Assert.Equal("", current.GamePath);
         Assert.Equal(LaunchCheckModes.LocalManifest, current.LaunchCheckMode);
-        Assert.Equal(ProxyModes.Direct, current.ProxyMode);
+        Assert.Equal(ProxyModes.Auto, current.ProxyMode);
         Assert.Equal(CloseBehaviors.Minimize, current.CloseBehavior);
         Assert.Equal(LauncherLanguages.Auto, current.Language);
         Assert.Equal(ThemeModes.System, current.ThemeMode);
@@ -213,8 +225,14 @@ public sealed class SettingsEditorTests
         Assert.Equal(0, current.SelectedThemeColorPaletteIndex);
         Assert.Equal(DownloadSpeedLimits.Unlimited, current.DownloadSpeedLimit);
         Assert.True(current.ToastNotificationsEnabled);
+        Assert.True(current.EnableStartupUpdateCheck);
         Assert.True(current.ShowRemoteContentCard);
-        Assert.Equal(PatchUrlGroups.Official, current.PatchUrlGroup);
+        // PatchUrlGroup defaults to Cafe when UI culture is Chinese, otherwise Official.
+        var expectedGroup = System.Globalization.CultureInfo.CurrentUICulture.Name is
+            "zh-CN" or "zh-TW" or "zh-HK" or "zh-MO" or "zh-SG" or "zh-Hans" or "zh-Hant"
+            ? PatchUrlGroups.Cafe
+            : PatchUrlGroups.Official;
+        Assert.Equal(expectedGroup, current.PatchUrlGroup);
         Assert.Equal("", current.CustomBackgroundPath);
         Assert.Equal(BackgroundSources.Bundled, current.BackgroundSource);
         Assert.Equal(BackgroundFits.UniformToFill, current.BackgroundFit);
@@ -225,7 +243,6 @@ public sealed class SettingsEditorTests
                 ? UpdateChannels.Beta
                 : UpdateChannels.Stable,
             current.UpdateChannel);
-        Assert.False(current.HasCompletedFirstLaunchWizard);
     }
 
     [Fact]
