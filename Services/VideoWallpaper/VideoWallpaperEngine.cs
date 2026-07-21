@@ -23,7 +23,9 @@ namespace Cafe.Launcher.Avalonia.Services.VideoWallpaper;
 internal sealed class VideoWallpaperEngine : IVideoWallpaperEngine
 {
     // Cap frame delivery to ~30 fps to avoid burning CPU/GPU on cosmetic wallpaper playback.
-    private const long MinFrameIntervalTicks = (long)(TimeSpan.TicksPerSecond / 30.0);
+    private static readonly long MinFrameIntervalTicks = CalculateFrameInterval(Stopwatch.Frequency);
+
+    internal static long CalculateFrameInterval(long frequency) => frequency / 30;
 
     private readonly LibVLC libVlc;
     private readonly MediaPlayer mediaPlayer;
@@ -37,6 +39,7 @@ internal sealed class VideoWallpaperEngine : IVideoWallpaperEngine
     private WriteableBitmap? backBuffer;
     private int frameInFlight;
     private long lastFrameTimestamp;
+    private VideoWallpaperLoadGate? loadGate;
     private bool disposed;
 
     public VideoWallpaperEngine()
@@ -49,24 +52,54 @@ internal sealed class VideoWallpaperEngine : IVideoWallpaperEngine
 
     public event Action? FrameReady;
 
-    public Task<bool> LoadAsync(string path, CancellationToken cancellationToken)
+    public async Task<bool> LoadAsync(string path, CancellationToken cancellationToken)
     {
+        if (cancellationToken.IsCancellationRequested || !File.Exists(path))
+        {
+            return false;
+        }
+
+        using var gate = new VideoWallpaperLoadGate(cancellationToken);
+        using var timeout = new CancellationTokenSource(TimeSpan.FromSeconds(10));
+        using var timeoutRegistration = timeout.Token.Register(gate.Fail);
+        using var media = new Media(libVlc, new Uri(path));
+
+        void FailLoad(object? sender, EventArgs args) => gate.Fail();
+
+        mediaPlayer.EncounteredError += FailLoad;
+        mediaPlayer.EndReached += FailLoad;
+        mediaPlayer.Stopped += FailLoad;
+        loadGate = gate;
         try
         {
-            if (cancellationToken.IsCancellationRequested || !File.Exists(path))
-            {
-                return Task.FromResult(false);
-            }
-
-            using var media = new Media(libVlc, new Uri(path));
             media.AddOption(":input-repeat=65535"); // loop playback
             mediaPlayer.SetVideoFormatCallbacks(OnVideoFormat, OnVideoCleanup);
             mediaPlayer.SetVideoCallbacks(OnLock, null, OnDisplay);
-            return Task.FromResult(mediaPlayer.Play(media));
+            if (!mediaPlayer.Play(media))
+            {
+                return false;
+            }
+
+            return await gate.WaitAsync().ConfigureAwait(false);
+        }
+        catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
+        {
+            try { mediaPlayer.Stop(); } catch (Exception) { /* ignore */ }
+            throw;
         }
         catch (Exception)
         {
-            return Task.FromResult(false);
+            return false;
+        }
+        finally
+        {
+            if (ReferenceEquals(loadGate, gate))
+            {
+                loadGate = null;
+            }
+            mediaPlayer.EncounteredError -= FailLoad;
+            mediaPlayer.EndReached -= FailLoad;
+            mediaPlayer.Stopped -= FailLoad;
         }
     }
 
@@ -151,6 +184,7 @@ internal sealed class VideoWallpaperEngine : IVideoWallpaperEngine
             try
             {
                 CopyAndSwap();
+                loadGate?.Succeed();
                 FrameReady?.Invoke();
             }
             finally
@@ -191,7 +225,11 @@ internal sealed class VideoWallpaperEngine : IVideoWallpaperEngine
 
     public void Play() => mediaPlayer.Play();
     public void Pause() => mediaPlayer.SetPause(true);
-    public void Stop() => mediaPlayer.Stop();
+    public void Stop()
+    {
+        loadGate?.Fail();
+        mediaPlayer.Stop();
+    }
     public void SetVolume(int volume) => mediaPlayer.Volume = Math.Clamp(volume, 0, 100);
     public void SetMuted(bool muted) => mediaPlayer.Mute = muted;
 
@@ -205,6 +243,7 @@ internal sealed class VideoWallpaperEngine : IVideoWallpaperEngine
         }
 
         disposed = true;
+        loadGate?.Fail();
         try { mediaPlayer.Stop(); } catch (Exception) { /* ignore */ }
         try { mediaPlayer.Dispose(); } catch (Exception) { /* ignore */ }
         try { libVlc.Dispose(); } catch (Exception) { /* ignore */ }

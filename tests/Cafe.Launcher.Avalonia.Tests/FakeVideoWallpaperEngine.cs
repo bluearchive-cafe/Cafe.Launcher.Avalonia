@@ -18,6 +18,8 @@ internal sealed class FakeVideoWallpaperEngine : IVideoWallpaperEngine
     public int? LastVolume { get; private set; }
     public bool? LastMuted { get; private set; }
     public bool Disposed { get; private set; }
+    public int DisposeCount { get; private set; }
+    public Action? AfterLoad { get; set; }
 
     public IImage? CurrentFrame { get; private set; }
 
@@ -32,6 +34,7 @@ internal sealed class FakeVideoWallpaperEngine : IVideoWallpaperEngine
             // unit tests must not require an Avalonia render platform.
             CurrentFrame = new StubFrame();
         }
+        AfterLoad?.Invoke();
         return Task.FromResult(LoadResult);
     }
 
@@ -46,7 +49,11 @@ internal sealed class FakeVideoWallpaperEngine : IVideoWallpaperEngine
     // The fake's frame is not a real Bitmap; theme-color capture is exercised in engine-level tests.
     public Bitmap? CaptureFrame() => null;
 
-    public void Dispose() => Disposed = true;
+    public void Dispose()
+    {
+        Disposed = true;
+        DisposeCount++;
+    }
 
     private sealed class StubFrame : IImage
     {

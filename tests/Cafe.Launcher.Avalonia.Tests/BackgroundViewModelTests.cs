@@ -305,6 +305,22 @@ public sealed class BackgroundViewModelTests : IDisposable
     }
 
     [Fact]
+    public async Task UpdateBackgroundImageAsync_WhenCanceledAfterVideoLoad_DisposesCreatedEngine()
+    {
+        using var cancellation = new CancellationTokenSource();
+        var fake = new FakeVideoWallpaperEngine { AfterLoad = cancellation.Cancel };
+        using var vm = CreateViewModelWithEngine(() => fake);
+
+        await Assert.ThrowsAsync<OperationCanceledException>(() => vm.UpdateBackgroundImageAsync(
+            new LauncherSettings { BackgroundSource = BackgroundSources.Video, VideoBackgroundPath = @"C:\v.mp4" },
+            null,
+            cancellation.Token));
+
+        Assert.Equal(1, fake.DisposeCount);
+        Assert.Equal(0, fake.PlayCount);
+    }
+
+    [Fact]
     public async Task UpdateBackgroundImageAsync_WhenSwitchingAwayFromVideo_DisposesEngine()
     {
         var fake = new FakeVideoWallpaperEngine();

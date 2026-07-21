@@ -339,19 +339,23 @@ public partial class BackgroundViewModel : ViewModelBase, IDisposable
         LauncherSettings settings,
         CancellationToken cancellationToken)
     {
+        IVideoWallpaperEngine? engine = null;
         try
         {
             StopVideo();
-            var engine = engineFactory();
+            engine = engineFactory();
             var ok = await engine.LoadAsync(settings.VideoBackgroundPath, cancellationToken);
             cancellationToken.ThrowIfCancellationRequested();
             if (!ok)
             {
-                engine.Dispose();
                 return false;
             }
 
+            engine.SetVolume(settings.VideoBackgroundVolume);
+            engine.SetMuted(settings.VideoBackgroundMuted);
+            engine.FrameReady += OnVideoFrameReady;
             videoEngine = engine;
+            engine = null;
             activeVideoSettings = settings;
 
             // The current image is a non-video, VM-owned bitmap (or null after a video→video StopVideo).
@@ -360,13 +364,10 @@ public partial class BackgroundViewModel : ViewModelBase, IDisposable
             // a disposed bitmap while it renders.
             pendingPreviousImage = BackgroundImageSource as IDisposable;
 
-            engine.SetVolume(settings.VideoBackgroundVolume);
-            engine.SetMuted(settings.VideoBackgroundMuted);
-            engine.FrameReady += OnVideoFrameReady;
             videoPaletteExtracted = false;
             if (playbackActive)
             {
-                engine.Play();
+                videoEngine.Play();
             }
 
             OnVideoFrameReady();
@@ -384,6 +385,10 @@ public partial class BackgroundViewModel : ViewModelBase, IDisposable
                 $"path: {settings.VideoBackgroundPath}\nexception: {ex.Message}",
                 CancellationToken.None);
             return false;
+        }
+        finally
+        {
+            engine?.Dispose();
         }
     }
 

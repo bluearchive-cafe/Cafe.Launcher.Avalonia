@@ -43,6 +43,7 @@
             <x:Double x:Key="LauncherLogViewerHeight">592</x:Double>
             <x:Double x:Key="LauncherSettingRowContentMinWidth">240</x:Double>
             <x:Double x:Key="LauncherSettingRowActionMaxWidth">440</x:Double>
+            <x:Double x:Key="LauncherValueLabelWidth">32</x:Double>
             <x:Double x:Key="LauncherLoadingBarWidth">120</x:Double>
             <x:Double x:Key="LauncherLoadingBarHeight">4</x:Double>
             <x:Double x:Key="LauncherFontSizeXs">11</x:Double>

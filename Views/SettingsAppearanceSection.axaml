@@ -225,7 +225,7 @@
                             Minimum="0" Maximum="100"
                             Value="{Binding Settings.Appearance.VideoVolume, Mode=TwoWay}"/>
                     <TextBlock Text="{Binding Settings.Appearance.VideoVolume}" Classes="value"
-                               Width="32" TextAlignment="Right"/>
+                               Width="{StaticResource LauncherValueLabelWidth}" TextAlignment="Right"/>
                 </StackPanel>
             </Grid>
 

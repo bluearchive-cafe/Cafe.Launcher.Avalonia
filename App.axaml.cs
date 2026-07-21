@@ -28,18 +28,6 @@ public partial class App : Application
 
     public override void OnFrameworkInitializationCompleted()
     {
-        // Initialize the native libvlc core for video wallpaper support.
-        // Failure is non-fatal — the engine factory falls back when libvlc is unavailable.
-        try
-        {
-            LibVLCSharp.Shared.Core.Initialize();
-        }
-        catch (Exception ex)
-        {
-            Cafe.Launcher.Avalonia.Services.Diagnostics.LocalDiagnostics.LogSync(
-                "LibVLC", $"Core.Initialize failed; video wallpaper disabled: {ex.Message}");
-        }
-
         if (ApplicationLifetime is IClassicDesktopStyleApplicationLifetime desktop)
         {
             // Build DI container, reusing the pre-DI UnifiedLogger so there is
@@ -49,9 +37,19 @@ public partial class App : Application
             serviceProvider = serviceCollection.BuildServiceProvider();
             Program.ServiceProvider = serviceProvider;
 
+            var diagnostics = serviceProvider.GetRequiredService<Services.Diagnostics.LocalDiagnostics>();
+            try
+            {
+                LibVLCSharp.Shared.Core.Initialize();
+            }
+            catch (Exception ex)
+            {
+                _ = diagnostics.ErrorAsync("LibVlcInitialize", ex, CancellationToken.None);
+            }
+
             // Application-started trace (best-effort, fire-and-forget)
-            _ = serviceProvider.GetRequiredService<Services.Diagnostics.LocalDiagnostics>()
-                .DebugAsync("Application", "Application started, DI container built", CancellationToken.None);
+            _ = diagnostics.DebugAsync(
+                "Application", "Application started, DI container built", CancellationToken.None);
 
             // Track install attribution (non-critical, best-effort)
             try
