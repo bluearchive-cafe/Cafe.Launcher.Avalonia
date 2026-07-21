@@ -799,6 +799,35 @@ public sealed partial class UiStyleContractTests
     }
 
     [Fact]
+    public void AppearanceVideoVolume_UsesResponsiveSettingRowAction()
+    {
+        var document = XDocument.Load(ProjectFile("Views/SettingsAppearanceSection.axaml"));
+        var slider = document
+            .Descendants()
+            .Single(element =>
+                element.Name.LocalName == "Slider"
+                && element.Attribute("Value")?.Value
+                    == "{Binding Settings.Appearance.VideoVolume, Mode=TwoWay}");
+        var actionGrid = slider.Parent;
+        var settingRow = actionGrid?.Parent?.Parent;
+        var valueLabel = actionGrid?
+            .Elements()
+            .Single(element => element.Name.LocalName == "TextBlock");
+
+        Assert.Equal("Grid", actionGrid?.Name.LocalName);
+        Assert.Equal("*,Auto", actionGrid?.Attribute("ColumnDefinitions")?.Value);
+        Assert.Equal(
+            "{StaticResource LauncherSettingRowActionMaxWidth}",
+            actionGrid?.Attribute("MaxWidth")?.Value);
+        Assert.Equal("SettingRow", settingRow?.Name.LocalName);
+        Assert.Null(slider.Attribute("Width"));
+        Assert.Equal("1", valueLabel?.Attribute("Grid.Column")?.Value);
+        Assert.Equal(
+            "{StaticResource LauncherValueLabelWidth}",
+            valueLabel?.Attribute("Width")?.Value);
+    }
+
+    [Fact]
     public void AppearancePalette_ReservesWidthForFiveInteractiveSwatches()
     {
         var document = XDocument.Load(ProjectFile("Views/SettingsAppearanceSection.axaml"));

@@ -975,7 +975,8 @@
         <Setter Property="VerticalAlignment" Value="Center"/>
     </Style>
     <Style Selector="Slider.setting-control">
-        <Setter Property="Width" Value="190"/>
+        <Setter Property="MinWidth" Value="{StaticResource LauncherSettingSliderMinWidth}"/>
+        <Setter Property="HorizontalAlignment" Value="Stretch"/>
         <Setter Property="VerticalAlignment" Value="Center"/>
     </Style>
     <Style Selector="TextBox.uid-input">

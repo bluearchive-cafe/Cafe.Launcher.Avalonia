@@ -131,6 +131,9 @@ public sealed class SettingsEditor : ISettingsEditor
             && left.ShowRemoteContentCard == right.ShowRemoteContentCard
             && string.Equals(left.PatchUrlGroup, right.PatchUrlGroup, StringComparison.Ordinal)
             && string.Equals(left.CustomBackgroundPath, right.CustomBackgroundPath, StringComparison.Ordinal)
+            && string.Equals(left.VideoBackgroundPath, right.VideoBackgroundPath, StringComparison.Ordinal)
+            && left.VideoBackgroundVolume == right.VideoBackgroundVolume
+            && left.VideoBackgroundMuted == right.VideoBackgroundMuted
             && string.Equals(left.BackgroundSource, right.BackgroundSource, StringComparison.Ordinal)
             && string.Equals(left.BackgroundFit, right.BackgroundFit, StringComparison.Ordinal)
             && string.Equals(left.BackgroundFillColor, right.BackgroundFillColor, StringComparison.Ordinal)

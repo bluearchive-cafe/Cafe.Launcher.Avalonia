@@ -211,23 +211,25 @@
                 </controls:SettingRow.Action>
             </controls:SettingRow>
 
-            <Grid Classes="settings-row" ColumnDefinitions="Auto,*,Auto"
-                  IsVisible="{Binding Settings.Appearance.IsVideoBackgroundSelected}">
-                <Border Classes="settings-icon">
-                    <materialIcons:MaterialIcon Kind="VolumeHigh" Width="{StaticResource LauncherIconMd}" Height="{StaticResource LauncherIconMd}" Foreground="{DynamicResource LauncherAccentBrush}" HorizontalAlignment="Center" VerticalAlignment="Center"/>
-                </Border>
-                <StackPanel Grid.Column="1" Classes="dialog-heading-copy">
-                    <TextBlock Text="{Binding Shell.I18n.VideoVolume}" Classes="section-title"/>
-                </StackPanel>
-                <StackPanel Grid.Column="2" Orientation="Horizontal" Spacing="{StaticResource LauncherSpacingSm}" VerticalAlignment="Center">
-                    <Slider Classes="setting-control"
-                            AutomationProperties.Name="{Binding Shell.I18n.VideoVolume}"
-                            Minimum="0" Maximum="100"
-                            Value="{Binding Settings.Appearance.VideoVolume, Mode=TwoWay}"/>
-                    <TextBlock Text="{Binding Settings.Appearance.VideoVolume}" Classes="value"
-                               Width="{StaticResource LauncherValueLabelWidth}" TextAlignment="Right"/>
-                </StackPanel>
-            </Grid>
+            <controls:SettingRow IconKind="VolumeHigh"
+                                 Title="{Binding Shell.I18n.VideoVolume}"
+                                 IsVisible="{Binding Settings.Appearance.IsVideoBackgroundSelected}">
+                <controls:SettingRow.Action>
+                    <Grid ColumnDefinitions="*,Auto"
+                          ColumnSpacing="{StaticResource LauncherSpacingSm}"
+                          MaxWidth="{StaticResource LauncherSettingRowActionMaxWidth}">
+                        <Slider Classes="setting-control"
+                                AutomationProperties.Name="{Binding Shell.I18n.VideoVolume}"
+                                Minimum="0" Maximum="100"
+                                Value="{Binding Settings.Appearance.VideoVolume, Mode=TwoWay}"/>
+                        <TextBlock Grid.Column="1"
+                                   Text="{Binding Settings.Appearance.VideoVolume}"
+                                   Classes="value"
+                                   Width="{StaticResource LauncherValueLabelWidth}"
+                                   TextAlignment="Right"/>
+                    </Grid>
+                </controls:SettingRow.Action>
+            </controls:SettingRow>
 
             <Grid Classes="settings-row" ColumnDefinitions="Auto,*,Auto"
                   IsVisible="{Binding Settings.Appearance.IsVideoBackgroundSelected}">

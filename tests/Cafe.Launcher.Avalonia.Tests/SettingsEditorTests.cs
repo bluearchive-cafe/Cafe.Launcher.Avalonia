@@ -26,6 +26,43 @@ public sealed class SettingsEditorTests
         Assert.True(saved.ToastNotificationsEnabled);
     }
 
+    [Theory]
+    [InlineData(nameof(LauncherSettings.VideoBackgroundPath))]
+    [InlineData(nameof(LauncherSettings.VideoBackgroundVolume))]
+    [InlineData(nameof(LauncherSettings.VideoBackgroundMuted))]
+    public void CurrentVideoSettingChange_WhenChangedAndReverted_UpdatesDirty(string propertyName)
+    {
+        var editor = new SettingsEditor();
+        editor.ApplySnapshot(new LauncherSettings
+        {
+            VideoBackgroundPath = @"C:\saved.mp4",
+            VideoBackgroundVolume = 50,
+            VideoBackgroundMuted = false,
+        });
+
+        SetVideoSetting(editor.Current, propertyName, changed: true);
+        Assert.True(editor.IsDirty);
+
+        SetVideoSetting(editor.Current, propertyName, changed: false);
+        Assert.False(editor.IsDirty);
+    }
+
+    private static void SetVideoSetting(LauncherSettings settings, string propertyName, bool changed)
+    {
+        switch (propertyName)
+        {
+            case nameof(LauncherSettings.VideoBackgroundPath):
+                settings.VideoBackgroundPath = changed ? @"C:\changed.mp4" : @"C:\saved.mp4";
+                break;
+            case nameof(LauncherSettings.VideoBackgroundVolume):
+                settings.VideoBackgroundVolume = changed ? 75 : 50;
+                break;
+            case nameof(LauncherSettings.VideoBackgroundMuted):
+                settings.VideoBackgroundMuted = changed;
+                break;
+        }
+    }
+
     [Fact]
     public void CurrentPropertyChange_MarksDirtyAndDiscardRestoresSnapshot()
     {
