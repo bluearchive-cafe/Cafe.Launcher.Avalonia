@@ -433,6 +433,11 @@ public partial class BackgroundViewModel : ViewModelBase, IDisposable
 
     public void SetPlaybackActive(bool active)
     {
+        if (playbackActive == active)
+        {
+            return;
+        }
+
         playbackActive = active;
         if (videoEngine is null)
         {

@@ -3,6 +3,7 @@ using Avalonia.Controls;
 using Avalonia.Controls.ApplicationLifetimes;
 using Avalonia.Input;
 using Avalonia.Platform.Storage;
+using Avalonia.Threading;
 using Cafe.Launcher.Avalonia.Models;
 using Cafe.Launcher.Avalonia.Services;
 using Cafe.Launcher.Avalonia.ViewModels;
@@ -18,15 +19,23 @@ namespace Cafe.Launcher.Avalonia.Views;
 
 public partial class MainWindow : Window
 {
+    private readonly DispatcherTimer movePlaybackResumeTimer;
     private SystemTrayService? systemTray;
     private MainWindowViewModel? configuredViewModel;
+    private bool isWindowMoving;
 
     public MainWindow()
     {
         InitializeComponent();
+        movePlaybackResumeTimer = new DispatcherTimer
+        {
+            Interval = TimeSpan.FromMilliseconds(150)
+        };
+        movePlaybackResumeTimer.Tick += OnMovePlaybackResumeTimerTick;
         PointerPressed += OnPointerPressed;
         KeyDown += OnKeyDown;
         Activated += OnActivated;
+        PositionChanged += OnPositionChanged;
     }
 
     public void ConfigureViewModel(MainWindowViewModel viewModel)
@@ -51,6 +60,8 @@ public partial class MainWindow : Window
 
     protected override void OnClosed(EventArgs e)
     {
+        movePlaybackResumeTimer.Stop();
+        PositionChanged -= OnPositionChanged;
         UnconfigureViewModel();
         base.OnClosed(e);
     }
@@ -85,12 +96,28 @@ public partial class MainWindow : Window
             return;
         }
 
-        // Pause the wallpaper whenever the window is not visible to the user OR when a modal overlay
-        // fully covers the background (settings, dialogs, log viewer, resource panel, etc.).
+        // Pause the wallpaper whenever the window is not visible to the user, while it is moving, or
+        // when a modal overlay fully covers the background (settings, dialogs, log viewer, etc.).
         var active = IsVisible
             && WindowState != WindowState.Minimized
+            && !isWindowMoving
             && !viewModel.ModalHost.HasEntries;
         viewModel.Background.SetPlaybackActive(active);
+    }
+
+    private void OnPositionChanged(object? sender, PixelPointEventArgs e)
+    {
+        isWindowMoving = true;
+        movePlaybackResumeTimer.Stop();
+        movePlaybackResumeTimer.Start();
+        UpdateBackgroundPlaybackState();
+    }
+
+    private void OnMovePlaybackResumeTimerTick(object? sender, EventArgs e)
+    {
+        movePlaybackResumeTimer.Stop();
+        isWindowMoving = false;
+        UpdateBackgroundPlaybackState();
     }
 
     private void OnActivated(object? sender, EventArgs e)
