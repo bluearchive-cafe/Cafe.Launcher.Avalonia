@@ -330,8 +330,11 @@ public partial class SettingsViewModel : ViewModelBase, IDisposable, IModalConte
         if (string.IsNullOrWhiteSpace(pickedPath))
             return;
 
-        editor.Current.CustomBackgroundPath = pickedPath;
-        editor.Current.BackgroundSource = BackgroundSources.Custom;
+        editor.Commit(settings =>
+        {
+            settings.CustomBackgroundPath = pickedPath;
+            settings.BackgroundSource = BackgroundSources.Custom;
+        });
     }
 
     [RelayCommand]
@@ -344,8 +347,11 @@ public partial class SettingsViewModel : ViewModelBase, IDisposable, IModalConte
         if (string.IsNullOrWhiteSpace(pickedPath))
             return;
 
-        editor.Current.VideoBackgroundPath = pickedPath;
-        editor.Current.BackgroundSource = BackgroundSources.Video;
+        editor.Commit(settings =>
+        {
+            settings.VideoBackgroundPath = pickedPath;
+            settings.BackgroundSource = BackgroundSources.Video;
+        });
     }
 
     [RelayCommand]
@@ -358,15 +364,21 @@ public partial class SettingsViewModel : ViewModelBase, IDisposable, IModalConte
         if (string.IsNullOrWhiteSpace(pickedPath))
             return;
 
-        editor.Current.CustomBackgroundPath = pickedPath;
-        editor.Current.BackgroundSource = BackgroundSources.Custom;
+        editor.Commit(settings =>
+        {
+            settings.CustomBackgroundPath = pickedPath;
+            settings.BackgroundSource = BackgroundSources.Custom;
+        });
     }
 
     [RelayCommand]
     private void ClearBackground()
     {
-        editor.Current.CustomBackgroundPath = "";
-        editor.Current.BackgroundSource = BackgroundSources.Bundled;
+        editor.Commit(settings =>
+        {
+            settings.CustomBackgroundPath = "";
+            settings.BackgroundSource = BackgroundSources.Bundled;
+        });
     }
 
     public async Task DiscardChangesAsync()
@@ -431,6 +443,9 @@ public partial class SettingsViewModel : ViewModelBase, IDisposable, IModalConte
             or nameof(LauncherSettings.SelectedThemeColorPaletteIndex)
             or nameof(LauncherSettings.BackgroundSource)
             or nameof(LauncherSettings.CustomBackgroundPath)
+            or nameof(LauncherSettings.VideoBackgroundPath)
+            or nameof(LauncherSettings.VideoBackgroundVolume)
+            or nameof(LauncherSettings.VideoBackgroundMuted)
             or nameof(LauncherSettings.BackgroundFit)
             or nameof(LauncherSettings.BackgroundFillColor);
 
