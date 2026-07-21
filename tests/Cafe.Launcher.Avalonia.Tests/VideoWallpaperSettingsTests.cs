@@ -190,10 +190,15 @@ public sealed class VideoWallpaperSettingsTests
             var toastService = new ToastService();
             var editor = new SettingsEditor();
             var appearance = new SettingsAppearanceViewModel(editor);
+            using var testLogger = new UnifiedLogger(tempDir);
             var dialogs = new DialogsViewModel(
                 localizer,
-                new NoticeStateService(Path.Combine(tempDir, "notices.json")));
-            using var testLogger = new UnifiedLogger(tempDir);
+                new NoticeStateService(Path.Combine(tempDir, "notices.json")),
+                new SetupWizardViewModel(
+                    localizer,
+                    new GameInstallationPath(),
+                    new LocalInstallationStateStore(),
+                    new LocalDiagnostics(testLogger)));
             using var vm = new SettingsViewModel(
                 settingsService,
                 localizer,

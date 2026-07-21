@@ -294,6 +294,9 @@ public sealed partial class LauncherSettings : ObservableObject
         BackgroundSource = other.BackgroundSource;
         BackgroundFit = other.BackgroundFit;
         BackgroundFillColor = other.BackgroundFillColor;
+        VideoBackgroundPath = other.VideoBackgroundPath;
+        VideoBackgroundMuted = other.VideoBackgroundMuted;
+        VideoBackgroundVolume = other.VideoBackgroundVolume;
         ResourcePanelUid = other.ResourcePanelUid;
         ResourcePanelUidSource = other.ResourcePanelUidSource;
         StatusDetailMode = other.StatusDetailMode;

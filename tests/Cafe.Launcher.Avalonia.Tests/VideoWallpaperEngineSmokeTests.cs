@@ -19,16 +19,16 @@ public sealed class VideoWallpaperEngineSmokeTests
         }
     }
 
-    [SkippableFact]
+    [Fact]
     public async Task Create_WhenLibVlcAvailable_ReturnsUsableEngine()
     {
-        Skip.IfNot(LibVlcAvailable(), "libvlc native libraries not available in this environment.");
+        if (!LibVlcAvailable())
+            Assert.Skip("libvlc native libraries not available in this environment.");
 
         using var engine = VideoWallpaperEngineFactory.Create();
 
         Assert.NotNull(engine);
 
-        // 加载不存在的文件应安全失败而非抛出
         var ok = await engine.LoadAsync("C:\\__nonexistent_video__.mp4", default);
         Assert.False(ok);
     }
