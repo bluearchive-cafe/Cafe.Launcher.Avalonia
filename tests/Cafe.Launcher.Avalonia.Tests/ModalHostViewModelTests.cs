@@ -56,5 +56,61 @@ public sealed class ModalHostViewModelTests
         Assert.Null(host.Top);
     }
 
+    [Fact]
+    public void InteractionState_WhenNestedModalOpens_OnlyTopLayerIsInteractive()
+    {
+        var host = new ModalHostViewModel();
+        var content = new TestModalContent();
+
+        host.Open(ModalKind.ResourcePanel, content);
+        host.Open(ModalKind.ResourcePanelSourceConfirmation, content);
+
+        Assert.False(host.IsBaseLayerInteractive);
+        Assert.False(host.IsResourcePanelInteractive);
+        Assert.True(host.IsDialogLayerInteractive);
+    }
+
+    [Fact]
+    public void InteractionState_WhenTopModalCloses_RestoresUnderlyingLayer()
+    {
+        var host = new ModalHostViewModel();
+        var content = new TestModalContent();
+        host.Open(ModalKind.Settings, content);
+        host.Open(ModalKind.UnsavedSettingsConfirmation, content);
+
+        host.Close(ModalKind.UnsavedSettingsConfirmation);
+
+        Assert.True(host.IsSettingsInteractive);
+        Assert.False(host.IsDialogLayerInteractive);
+        Assert.False(host.IsBaseLayerInteractive);
+    }
+
+    [Fact]
+    public void InteractionState_WhenNoModalIsOpen_OnlyBaseLayerIsInteractive()
+    {
+        var host = new ModalHostViewModel();
+
+        Assert.True(host.IsBaseLayerInteractive);
+        Assert.False(host.IsSettingsInteractive);
+        Assert.False(host.IsResourcePanelInteractive);
+        Assert.False(host.IsLogViewerInteractive);
+        Assert.False(host.IsSetupWizardInteractive);
+        Assert.False(host.IsDialogLayerInteractive);
+    }
+
+    [Fact]
+    public void InteractionState_WhenExistingKindMovesToTop_UpdatesInteractiveLayer()
+    {
+        var host = new ModalHostViewModel();
+        var content = new TestModalContent();
+        host.Open(ModalKind.Settings, content);
+        host.Open(ModalKind.RepairConfirmation, content);
+
+        host.Open(ModalKind.Settings, content);
+
+        Assert.True(host.IsSettingsInteractive);
+        Assert.False(host.IsDialogLayerInteractive);
+    }
+
     private sealed class TestModalContent : IModalContentViewModel;
 }

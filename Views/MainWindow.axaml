@@ -34,7 +34,8 @@
         <Rectangle Fill="{Binding Background.BackgroundFillBrush}"/>
         <Image Source="{Binding Background.BackgroundImageSource}" Stretch="{Binding Background.BackgroundStretch}"/>
 
-        <Grid RowDefinitions="Auto,*">
+        <Grid RowDefinitions="Auto,*"
+              IsEnabled="{Binding ModalHost.IsBaseLayerInteractive}">
             <Grid ColumnDefinitions="*,Auto" Height="48">
                 <Grid.Background>
                     <StaticResource ResourceKey="LauncherTitleBarGradient"/>

@@ -12,6 +12,7 @@
     <Grid>
         <!-- Chinese localization settings -->
         <Grid Classes="dialog-overlay motion-overlay"
+              IsEnabled="{Binding ModalHost.IsResourcePanelInteractive}"
               Classes.motion-enabled="{Binding IsMotionEnabled}"
               controls:MotionVisibility.IsOpen="{Binding ResourcePanel.IsResourcePanelVisible}"
               controls:MotionVisibility.IsMotionEnabled="{Binding IsMotionEnabled}">
