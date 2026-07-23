@@ -878,6 +878,73 @@ public sealed class MainWindowHeadlessTests
     }
 
     [AvaloniaFact]
+    public void ModalIsolation_WhenConfirmationIsVisible_DisablesBackgroundAndRestoresItAfterClose()
+    {
+        using var context = CreateContext();
+        context.Window.Show();
+        context.ViewModel.Dialogs.ShowResourcePanelSourceConfirm("switch source");
+        Dispatcher.UIThread.RunJobs();
+        var settingsButton = context.Window
+            .GetVisualDescendants()
+            .OfType<Button>()
+            .Single(button =>
+                button.Classes.Contains("settings")
+                && ReferenceEquals(
+                    button.Command,
+                    context.ViewModel.WindowChrome.ShowSettingsCommand));
+        var startButton = context.Window
+            .GetVisualDescendants()
+            .OfType<Button>()
+            .First(button =>
+                button.Classes.Contains("primary-operation")
+                && ReferenceEquals(
+                    button.Command,
+                    context.ViewModel.Operations.StartGameCommand));
+        var cancelButton = context.Window
+            .GetVisualDescendants()
+            .OfType<Button>()
+            .First(button =>
+                button.IsEffectivelyVisible
+                && ReferenceEquals(
+                    button.Command,
+                    context.ViewModel.Dialogs.CancelResourcePanelSourceSwitchCommand));
+
+        Assert.False(settingsButton.IsEffectivelyEnabled);
+        Assert.False(startButton.IsEffectivelyEnabled);
+        Assert.True(cancelButton.IsEffectivelyEnabled);
+
+        cancelButton.Command!.Execute(cancelButton.CommandParameter);
+        Dispatcher.UIThread.RunJobs();
+
+        Assert.True(settingsButton.IsEffectivelyEnabled);
+    }
+
+    [AvaloniaFact]
+    public void ModalIsolation_WhenConfirmationCoversSettings_DisablesSettingsLayer()
+    {
+        using var context = CreateContext();
+        context.Window.Show();
+        context.ViewModel.WindowChrome.IsSettingsVisible = true;
+        context.ViewModel.Dialogs.ShowRepairConfirm("repair confirmation");
+        Dispatcher.UIThread.RunJobs();
+        var settingsCancelButton = context.Window
+            .GetVisualDescendants()
+            .OfType<Button>()
+            .Single(button =>
+                button.Classes.Contains("dialog-action")
+                && ReferenceEquals(
+                    button.Command,
+                    context.ViewModel.WindowChrome.ShowSettingsCommand));
+        var confirmDialog = context.Window
+            .GetVisualDescendants()
+            .OfType<global::Cafe.Launcher.Avalonia.Controls.ConfirmDialog>()
+            .Single(control => control.IsOpen);
+
+        Assert.False(settingsCancelButton.IsEffectivelyEnabled);
+        Assert.True(confirmDialog.IsEffectivelyEnabled);
+    }
+
+    [AvaloniaFact]
     public void DialogOverlay_WhenRepairIsRequested_BecomesVisible()
     {
         using var context = CreateContext();

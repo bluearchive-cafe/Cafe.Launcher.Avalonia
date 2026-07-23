@@ -10,6 +10,7 @@
              x:Name="WizardRoot"
              x:DataType="vm:MainWindowViewModel">
     <Grid Classes="setup-wizard-overlay motion-overlay"
+          IsEnabled="{Binding ModalHost.IsSetupWizardInteractive}"
           Classes.motion-enabled="{Binding IsMotionEnabled}"
           controls:MotionVisibility.IsOpen="{Binding Dialogs.IsSetupWizardVisible}"
           controls:MotionVisibility.IsMotionEnabled="{Binding IsMotionEnabled}">

@@ -9,6 +9,7 @@
              x:Name="SettingsRoot"
              x:DataType="vm:MainWindowViewModel">
     <Grid Classes="settings-overlay motion-overlay"
+          IsEnabled="{Binding ModalHost.IsSettingsInteractive}"
           Classes.motion-enabled="{Binding IsMotionEnabled}"
           controls:MotionVisibility.IsOpen="{Binding WindowChrome.IsSettingsVisible}"
           controls:MotionVisibility.IsMotionEnabled="{Binding IsMotionEnabled}">

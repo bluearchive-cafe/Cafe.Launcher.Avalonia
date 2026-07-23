@@ -7,6 +7,7 @@
              x:Name="LogViewerRoot"
              x:DataType="vm:MainWindowViewModel">
     <Grid Classes="dialog-overlay motion-overlay"
+          IsEnabled="{Binding ModalHost.IsLogViewerInteractive}"
           Classes.motion-enabled="{Binding IsMotionEnabled}"
           controls:MotionVisibility.IsOpen="{Binding LogViewer.IsVisible}"
           controls:MotionVisibility.IsMotionEnabled="{Binding IsMotionEnabled}">
