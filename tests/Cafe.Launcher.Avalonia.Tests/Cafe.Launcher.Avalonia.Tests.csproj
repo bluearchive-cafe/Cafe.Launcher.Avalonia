@@ -40,4 +40,8 @@
     <ProjectReference Include="..\..\Cafe.Launcher.Avalonia.csproj" />
   </ItemGroup>
 
+  <ItemGroup>
+    <Compile Include="..\TestUserDataIsolation.cs" Link="TestUserDataIsolation.cs" />
+  </ItemGroup>
+
 </Project>

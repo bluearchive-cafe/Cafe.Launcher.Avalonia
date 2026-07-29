@@ -140,10 +140,7 @@ public partial class WindowChromeViewModel : ViewModelBase
     [RelayCommand]
     private void OpenDataDirectory()
     {
-        var path = Path.Combine(
-            Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData),
-            LauncherConstants.ProductName);
-        openDirectory(path);
+        openDirectory(LauncherUserDataDirectory.Path);
     }
 
     public void OpenExternalUrl(string? url)

@@ -38,8 +38,7 @@ public sealed class ImageCacheService : IDisposable
             crc64Service,
             urlValidator,
             Path.Combine(
-                Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData),
-                LauncherConstants.ProductName,
+                LauncherUserDataDirectory.Path,
                 "image-cache"))
     {
     }

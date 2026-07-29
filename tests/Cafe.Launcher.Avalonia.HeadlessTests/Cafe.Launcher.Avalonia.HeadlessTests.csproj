@@ -38,6 +38,10 @@
   </ItemGroup>
 
   <ItemGroup>
+    <Compile Include="..\TestUserDataIsolation.cs" Link="TestUserDataIsolation.cs" />
+  </ItemGroup>
+
+  <ItemGroup>
     <Using Include="Xunit" />
   </ItemGroup>
 

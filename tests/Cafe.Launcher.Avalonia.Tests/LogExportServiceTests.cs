@@ -1,5 +1,6 @@
 using System.IO.Compression;
 using Cafe.Launcher.Avalonia.Constants;
+using Cafe.Launcher.Avalonia.Services;
 using Cafe.Launcher.Avalonia.Services.Diagnostics;
 
 namespace Cafe.Launcher.Avalonia.Tests;
@@ -36,13 +37,12 @@ public sealed class LogExportServiceTests : IDisposable
     public void DefaultExportDirectory_UsesProductDataExportFolder()
     {
         var expected = Path.Combine(
-            Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData),
-            LauncherConstants.ProductName,
+            LauncherUserDataDirectory.Path,
             LauncherConstants.LogExportFolderName);
 
         Assert.Equal(expected, LogExportService.DefaultExportDirectory);
         Assert.EndsWith(
-            Path.Combine(LauncherConstants.ProductName, "log-exports"),
+            "log-exports",
             LogExportService.DefaultExportDirectory,
             StringComparison.Ordinal);
     }

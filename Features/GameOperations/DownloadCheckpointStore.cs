@@ -6,6 +6,7 @@ using System.Threading.Tasks;
 using Cafe.Launcher.Avalonia.Constants;
 using Cafe.Launcher.Avalonia.Helpers;
 using Cafe.Launcher.Avalonia.Models;
+using Cafe.Launcher.Avalonia.Services;
 
 namespace Cafe.Launcher.Avalonia.Features.GameOperations;
 
@@ -17,8 +18,7 @@ public sealed class DownloadCheckpointStore(string filePath)
 
     /// <summary>Creates a store for the launcher's standard per-user checkpoint path.</summary>
     internal static DownloadCheckpointStore CreateDefault() => new(Path.Combine(
-        Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData),
-        LauncherConstants.ProductName,
+        LauncherUserDataDirectory.Path,
         GamePaths.DownloadStateFileName));
 
     /// <summary>Reads the current checkpoint, or returns <see langword="null"/> when none is usable.</summary>

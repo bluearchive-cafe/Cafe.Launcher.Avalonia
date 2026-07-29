@@ -27,10 +27,9 @@ public sealed class NoticeStateService
                 return statePath;
             }
 
-            var folder = Path.Combine(
-                Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData),
-                LauncherConstants.ProductName);
-            return Path.Combine(folder, "shown_notices.json");
+            return Path.Combine(
+                LauncherUserDataDirectory.Path,
+                "shown_notices.json");
         }
     }
 

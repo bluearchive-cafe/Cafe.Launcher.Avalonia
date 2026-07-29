@@ -4,6 +4,7 @@ using System.IO;
 using System.Threading;
 using System.Threading.Tasks;
 using Cafe.Launcher.Avalonia.Constants;
+using Cafe.Launcher.Avalonia.Services;
 using Microsoft.Extensions.DependencyInjection;
 using Cafe.Launcher.Avalonia.Services.Diagnostics;
 
@@ -70,8 +71,7 @@ sealed class Program
     private static bool DetectFirstLaunch()
     {
         var settingsPath = Path.Combine(
-            Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData),
-            LauncherConstants.ProductName,
+            LauncherUserDataDirectory.Path,
             GamePaths.LauncherSettingsFileName);
         return !File.Exists(settingsPath);
     }
