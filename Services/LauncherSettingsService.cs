@@ -46,10 +46,9 @@ public sealed class LauncherSettingsService : IDisposable
                 return settingsPath;
             }
 
-            var folder = Path.Combine(
-                Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData),
-                LauncherConstants.ProductName);
-            return Path.Combine(folder, GamePaths.LauncherSettingsFileName);
+            return Path.Combine(
+                LauncherUserDataDirectory.Path,
+                GamePaths.LauncherSettingsFileName);
         }
     }
 
