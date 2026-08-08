@@ -1,18 +1,15 @@
 using System;
 using System.Collections.Generic;
-using System.Diagnostics;
 using System.IO;
 using System.Linq;
-using System.Globalization;
-using System.Net;
 using System.Net.Http;
 using System.Text.Json;
 using System.Threading;
 using System.Threading.Tasks;
 using Cafe.Launcher.Avalonia.Constants;
 using Cafe.Launcher.Avalonia.Helpers;
-using Cafe.Launcher.Avalonia.Services;
 using Cafe.Launcher.Avalonia.Models;
+using Cafe.Launcher.Avalonia.Services;
 using Cafe.Launcher.Avalonia.Services.Diagnostics;
 
 namespace Cafe.Launcher.Avalonia.Features.GameOperations;
@@ -35,20 +32,17 @@ public sealed class GameDownloadService : IDisposable
 
     // Retry domain order: 0 = backup CDN, 1 = primary CDN (matching the original Electron launcher).
     // The first 4 attempts use the primary CDN, then 3 on backup, then 3 on primary.
-    private const int MaxParallelDownloads = 10;
     private const int MaxInstallVerificationRetry = 3;
 
     private readonly LauncherApiClient apiClient;
-    private readonly RemoteManifestService remoteManifestService;
-    private readonly IFileDownloadService fileDownloadService;
     private readonly LocalInstallationStateStore localInstallationStateStore;
     private readonly GameInstallationPath installationPath;
     private readonly LauncherSettingsService settingsService;
-    private readonly ProxySettingsService proxySettingsService;
-    private readonly Crc64Service crc64Service;
     private readonly DiskSpaceService diskSpaceService;
     private readonly LocalDiagnostics diagnostics;
     private readonly LocalizationService localizer;
+    private readonly ManifestDiffCalculator diffCalculator;
+    private readonly DownloadExecutor downloadExecutor;
     private DownloadCheckpointStore checkpointStore;
     private readonly object activeDownloadLock = new();
     private readonly object pauseLock = new();
@@ -60,17 +54,24 @@ public sealed class GameDownloadService : IDisposable
     public GameDownloadService(Dependencies deps)
     {
         apiClient = deps.ApiClient;
-        remoteManifestService = deps.RemoteManifestService;
-        fileDownloadService = deps.FileDownloadService;
         localInstallationStateStore = deps.LocalInstallationStateStore;
         installationPath = deps.InstallationPath;
         settingsService = deps.SettingsService;
-        proxySettingsService = deps.ProxySettingsService;
-        crc64Service = deps.Crc64Service;
         diskSpaceService = deps.DiskSpaceService;
         diagnostics = deps.Diagnostics;
         localizer = deps.Localizer;
         checkpointStore = DownloadCheckpointStore.CreateDefault();
+        diffCalculator = new ManifestDiffCalculator(
+            deps.RemoteManifestService,
+            deps.LocalInstallationStateStore,
+            deps.Crc64Service);
+        downloadExecutor = new DownloadExecutor(
+            deps.FileDownloadService,
+            deps.Crc64Service,
+            deps.ProxySettingsService,
+            deps.Diagnostics,
+            GetPauseTaskSnapshot,
+            () => IsPaused);
     }
 
     internal GameDownloadService(Dependencies deps, string downloadStateFilePath)
@@ -306,14 +307,14 @@ public sealed class GameDownloadService : IDisposable
             }
 
             var downloadPlan = repair
-                ? await BuildRepairPlanAsync(
+                ? await diffCalculator.BuildRepairPlanAsync(
                     gamePath,
                     gameConfig,
                     settings.PatchUrlGroup,
                     settings.ProxyMode,
                     progress,
                     activeToken)
-                : await BuildInstallOrUpdatePlanAsync(
+                : await diffCalculator.BuildInstallOrUpdatePlanAsync(
                     gamePath,
                     localGame,
                     gameConfig,
@@ -386,7 +387,7 @@ public sealed class GameDownloadService : IDisposable
                     "GameDownload",
                     $"Install verification retry {retry + 1}/{MaxInstallVerificationRetry}, {currentDownloadList.Count} files", CancellationToken.None).ConfigureAwait(false);
                 activeToken.ThrowIfCancellationRequested();
-                await DownloadFilesAsync(
+                await downloadExecutor.DownloadFilesAsync(
                     gamePath,
                     cdnConfig,
                     downloadPlan.Source,
@@ -397,10 +398,10 @@ public sealed class GameDownloadService : IDisposable
                     progress,
                     activeToken).ConfigureAwait(false);
 
-                RemoveFiles(gamePath, downloadPlan.NeedDelete, null);
+                DownloadExecutor.RemoveFiles(gamePath, downloadPlan.NeedDelete, null);
 
                 progress(CreateProgress(operationKind, GameOperationStage.FileCheck, 0));
-                var failedFiles = await InstallDownloadedFilesAsync(
+                var failedFiles = await downloadExecutor.InstallDownloadedFilesAsync(
                     gamePath,
                     downloadPlan.ManifestFiles,
                     currentDownloadList,
@@ -583,226 +584,6 @@ public sealed class GameDownloadService : IDisposable
         GC.SuppressFinalize(this);
     }
 
-    private async Task<DownloadPlan> BuildInstallOrUpdatePlanAsync(
-        string gamePath,
-        LocalInstallationState localGame,
-        GameConfigResponse gameConfig,
-        string patchUrlGroup,
-        string proxyMode,
-        Action<GameOperationProgress> progress,
-        CancellationToken cancellationToken)
-    {
-        // Current files: best-effort remote fetch matching the local version, fall back to local manifest.
-        var currentFiles = localGame.Manifest?.Files ?? [];
-        if (localGame.Manifest is not null
-            && !string.IsNullOrWhiteSpace(localGame.Manifest.Version)
-            && !string.IsNullOrWhiteSpace(localGame.Manifest.Basis))
-        {
-            var currentManifest = await remoteManifestService.GetOptionalManifestAsync(
-                localGame.Manifest.Version,
-                localGame.Manifest.Basis,
-                patchUrlGroup,
-                proxyMode,
-                cancellationToken).ConfigureAwait(false);
-            if (currentManifest is not null)
-            {
-                currentFiles = currentManifest.File;
-            }
-        }
-
-        // Latest manifest: required for diff computation.
-        var version = gameConfig.GameLatestVersion ?? "";
-        var basis = gameConfig.GameLatestFilePath ?? "";
-        var latestManifest = await remoteManifestService.GetRequiredManifestAsync(
-            version,
-            basis,
-            patchUrlGroup,
-            proxyMode,
-            cancellationToken).ConfigureAwait(false);
-        var statDiff = CheckStat(
-            currentFiles,
-            gamePath,
-            value => progress(CreateProgress(GameOperationKind.Download, GameOperationStage.UpdateCheck, value)));
-        var expected = GameManifestDiff(currentFiles, latestManifest.File);
-        var actual = GameResultMerge(expected, new DownloadPlan { NeedDownload = statDiff });
-
-        actual.Source = latestManifest.Source ?? "";
-        actual.ManifestFiles = latestManifest.File;
-        return actual;
-    }
-
-    private async Task<DownloadPlan> BuildRepairPlanAsync(
-        string gamePath,
-        GameConfigResponse gameConfig,
-        string patchUrlGroup,
-        string proxyMode,
-        Action<GameOperationProgress> progress,
-        CancellationToken cancellationToken)
-    {
-        var localGame = await localInstallationStateStore.ReadAsync(gamePath, cancellationToken).ConfigureAwait(false);
-        var version = gameConfig.GameLatestVersion ?? "";
-        var basis = gameConfig.GameLatestFilePath ?? "";
-        var latestManifest = await remoteManifestService.GetRequiredManifestAsync(
-            version,
-            basis,
-            patchUrlGroup,
-            proxyMode,
-            cancellationToken).ConfigureAwait(false);
-
-        var hashDiff = await CheckHashAsync(
-            latestManifest.File,
-            gamePath,
-            value => progress(CreateProgress(GameOperationKind.Repair, GameOperationStage.RepairCheck, value)),
-            cancellationToken).ConfigureAwait(false);
-        var needDelete = localGame.Kind == LocalInstallationStateKind.Valid
-            ? GameManifestDiff(localGame.Manifest?.Files ?? [], latestManifest.File).NeedDelete
-            : [];
-        var actual = new DownloadPlan
-        {
-            NeedDownload = hashDiff,
-            NeedDelete = needDelete
-        };
-
-        actual.Source = latestManifest.Source ?? "";
-        actual.ManifestFiles = latestManifest.File;
-
-        // Report repair-confirm with diff summary (matches original's repair-confirm progress = -1)
-        progress(new GameOperationProgress
-        {
-            OperationKind = GameOperationKind.Repair,
-            Stage = GameOperationStage.RepairConfirmation,
-            Progress = -1,
-            AffectedFileCount = actual.NeedDownload.Count + actual.NeedDelete.Count,
-            DownloadedSize = actual.NeedDownload.Sum(f => f.SizeBytes),
-            IsRunning = true,
-            CanStop = false
-        });
-
-        return actual;
-    }
-
-    private async Task DownloadFilesAsync(
-        string gamePath,
-        CdnConfigResponse cdnConfig,
-        string source,
-        IReadOnlyList<ManifestFile> fileList,
-        string proxyMode,
-        int speedLimitBytesPerSec,
-        GameOperationKind operationKind,
-        Action<GameOperationProgress> progress,
-        CancellationToken cancellationToken)
-    {
-        if (fileList.Count == 0)
-        {
-            return;
-        }
-
-        var proxy = await proxySettingsService.CreateProxyAsync(proxyMode, cancellationToken).ConfigureAwait(false);
-        using var handler = new SocketsHttpHandler
-        {
-            AllowAutoRedirect = false,
-            AutomaticDecompression = DecompressionMethods.All,
-            UseProxy = proxyMode != ProxyModes.Direct,
-            Proxy = proxy,
-            PooledConnectionLifetime = TimeSpan.FromMinutes(15)
-        };
-        using var client = new HttpClient(handler, disposeHandler: false)
-        {
-            Timeout = TimeSpan.FromMinutes(10)
-        };
-        using var semaphore = new SemaphoreSlim(MaxParallelDownloads, MaxParallelDownloads);
-        var downloadedSize = 0L;
-        var totalSize = fileList.Sum(item => item.SizeBytes);
-        await diagnostics.DebugAsync(
-            "GameDownload",
-            $"Downloading {fileList.Count} files, total {FileSizeFormatter.Format(totalSize)}", CancellationToken.None).ConfigureAwait(false);
-        var startedAt = DateTimeOffset.Now;
-        var throttleState = speedLimitBytesPerSec > 0
-            ? new ThrottleState { BytesPerSec = speedLimitBytesPerSec }
-            : null;
-        var lastProgressTime = 0L;                   // Stopwatch timestamp-based throttling
-        var progressIntervalTicks = Stopwatch.Frequency / 10;  // ~100ms
-
-        var tasks = fileList.Select(async file =>
-        {
-            var acquired = false;
-            try
-            {
-                await semaphore.WaitAsync(cancellationToken).ConfigureAwait(false);
-                acquired = true;
-                var targetPath = GetTempName(GamePathValidator.GetSafePath(gamePath, file.Path));
-                await fileDownloadService.DownloadAsync(
-                    new FileDownloadRequest(
-                        targetPath,
-                        cdnConfig,
-                        source,
-                        file.SizeBytes,
-                        file.Hash,
-                        file.Path),
-                    new FileDownloadOperationControl(
-                        client,
-                        GetPauseTaskSnapshot,
-                        async (bytes, ct) =>
-                        {
-                            if (throttleState is not null)
-                            {
-                                var throttledTotal = Interlocked.Add(ref throttleState.TotalBytes, bytes);
-                                var targetMs = throttledTotal * 1000L / throttleState.BytesPerSec;
-                                var elapsedMs = throttleState.Watch.ElapsedMilliseconds;
-                                if (elapsedMs < targetMs)
-                                    await Task.Delay((int)(targetMs - elapsedMs), ct).ConfigureAwait(false);
-                            }
-
-                            var totalSizeVal = totalSize;
-                            var totalBytes = Interlocked.Add(ref downloadedSize, bytes);
-                            var elapsed = Math.Max(1, (DateTimeOffset.Now - startedAt).TotalSeconds);
-                            var speed = (long)(totalBytes / elapsed);
-                            var estimated = speed > 0 ? (totalSizeVal - totalBytes) / speed : 0;
-
-                            // Throttle progress reporting to ~100ms intervals to avoid
-                            // overwhelming the UI thread with high-frequency callbacks.
-                            var now = Stopwatch.GetTimestamp();
-                            var prev = Interlocked.Read(ref lastProgressTime);
-                            if (now - prev < progressIntervalTicks)
-                            {
-                                // Skip this callback, progress stays current enough.
-                                // Speed/ETA already updated via closure captures.
-                                return;
-                            }
-                            Interlocked.Exchange(ref lastProgressTime, now);
-
-                            progress(new GameOperationProgress
-                            {
-                                OperationKind = operationKind,
-                                Stage = IsPaused ? GameOperationStage.Paused : GameOperationStage.Downloading,
-                                Progress = totalSizeVal > 0 ? (int)Math.Round(totalBytes * 100d / totalSizeVal) : 0,
-                                BytesPerSecond = IsPaused ? 0 : speed,
-                                EstimatedRemaining = IsPaused
-                                    ? null
-                                    : TimeSpan.FromSeconds(Math.Max(0, estimated)),
-                                DownloadedSize = totalBytes,
-                                TotalSize = totalSizeVal,
-                                IsRunning = true,
-                                CanStop = true,
-                                CanPause = true,
-                                IsPaused = IsPaused
-                            });
-                        },
-                        proxyMode != ProxyModes.Direct),
-                    cancellationToken);
-            }
-            finally
-            {
-                if (acquired)
-                {
-                    try { semaphore.Release(); } catch (ObjectDisposedException) { }
-                }
-            }
-        });
-
-        await Task.WhenAll(tasks).ConfigureAwait(false);
-    }
-
     private async Task CommitInstallationStateAsync(
         string gamePath,
         GameConfigResponse gameConfig,
@@ -828,216 +609,8 @@ public sealed class GameDownloadService : IDisposable
         }
     }
 
-    private async Task<IReadOnlyList<ManifestFile>> InstallDownloadedFilesAsync(
-        string gamePath,
-        IReadOnlyList<ManifestFile> manifestFiles,
-        IReadOnlyList<ManifestFile> downloadedFiles,
-        Action<int> progress,
-        CancellationToken cancellationToken)
-    {
-        var downloadedPathSet = downloadedFiles.Select(item => item.Path).ToHashSet(StringComparer.Ordinal);
-        var failedFiles = new List<ManifestFile>();
-        var index = 0;
-
-        foreach (var file in manifestFiles)
-        {
-            cancellationToken.ThrowIfCancellationRequested();
-            var checkPath = downloadedPathSet.Contains(file.Path)
-                ? GetTempName(GamePathValidator.GetSafePath(gamePath, file.Path))
-                : GamePathValidator.GetSafePath(gamePath, file.Path);
-
-            if (!File.Exists(checkPath))
-            {
-                failedFiles.Add(new ManifestFile { Path = GetTempName(file.Path), Size = file.Size, Hash = file.Hash });
-            }
-            else
-            {
-                var crc64 = await crc64Service.ComputeFileAsync(checkPath, null, cancellationToken).ConfigureAwait(false);
-                if (crc64 != file.Hash)
-                {
-                    await diagnostics.MessageAsync(
-                        "CRC64 mismatch during install verification",
-                        $"file: {file.Path}{Environment.NewLine}" +
-                        $"expected: {file.Hash}{Environment.NewLine}" +
-                        $"actual:   {crc64}{Environment.NewLine}" +
-                        $"size: {new FileInfo(checkPath).Length}",
-                        CancellationToken.None);
-
-                    failedFiles.Add(new ManifestFile { Path = GetTempName(file.Path), Size = file.Size, Hash = file.Hash });
-                    File.Delete(checkPath);
-                }
-            }
-
-            progress((int)Math.Round(++index * 100d / manifestFiles.Count));
-        }
-
-        await diagnostics.VerboseAsync(
-            "GameDownload",
-            $"CRC check complete: {manifestFiles.Count - failedFiles.Count} passed, {failedFiles.Count} failed",
-            CancellationToken.None).ConfigureAwait(false);
-
-        // Install passed files BEFORE returning failures — prevents retry cascade
-        var failedPathSet = failedFiles.Select(f => f.Path).ToHashSet(StringComparer.Ordinal);
-        foreach (var file in downloadedFiles)
-        {
-            if (failedPathSet.Contains(GetTempName(file.Path)))
-                continue;
-
-            var tempPath = GetTempName(GamePathValidator.GetSafePath(gamePath, file.Path));
-            var targetPath = GetOriginName(tempPath);
-            if (File.Exists(tempPath))
-            {
-                var dir = Path.GetDirectoryName(targetPath);
-                if (!string.IsNullOrWhiteSpace(dir))
-                    Directory.CreateDirectory(dir);
-                if (File.Exists(targetPath))
-                    File.Delete(targetPath);
-
-                File.Move(tempPath, targetPath);
-            }
-        }
-
-        if (failedFiles.Count > 0)
-            return failedFiles;
-
-        return failedFiles;
-    }
-
-    private static DownloadPlan GameManifestDiff(IReadOnlyList<ManifestFile> oldList, IReadOnlyList<ManifestFile> newList)
-    {
-        var needDownload = newList.ToDictionary(file => file.Path, file => file, StringComparer.Ordinal);
-        var needDelete = new Dictionary<string, ManifestFile>(StringComparer.Ordinal);
-
-        foreach (var oldFile in oldList)
-        {
-            if (!needDownload.TryGetValue(oldFile.Path, out var newFile))
-            {
-                needDelete[oldFile.Path] = oldFile;
-            }
-            else if (newFile.Hash == oldFile.Hash)
-            {
-                needDownload.Remove(oldFile.Path);
-            }
-        }
-
-        return new DownloadPlan
-        {
-            NeedDownload = needDownload.Values.ToList(),
-            NeedDelete = needDelete.Values.ToList()
-        };
-    }
-
-    private static DownloadPlan GameResultMerge(params DownloadPlan[] plans)
-    {
-        var result = new DownloadPlan();
-        var processed = new HashSet<string>(StringComparer.Ordinal);
-
-        foreach (var file in plans.SelectMany(plan => plan.NeedDelete))
-        {
-            if (processed.Add(file.Path))
-            {
-                result.NeedDelete.Add(file);
-            }
-        }
-
-        foreach (var file in plans.SelectMany(plan => plan.NeedDownload))
-        {
-            if (processed.Add(file.Path))
-            {
-                result.NeedDownload.Add(file);
-            }
-        }
-
-        return result;
-    }
-
-    private static List<ManifestFile> CheckStat(
-        IReadOnlyList<ManifestFile> files,
-        string gamePath,
-        Action<int>? progress)
-    {
-        var diff = new List<ManifestFile>();
-        for (var i = 0; i < files.Count; i++)
-        {
-            var file = files[i];
-            var filePath = GamePathValidator.GetSafePath(gamePath, file.Path);
-            var fileInfo = new FileInfo(filePath);
-            if (!fileInfo.Exists || fileInfo.Length != file.SizeBytes)
-            {
-                diff.Add(file);
-            }
-
-            progress?.Invoke((int)Math.Round((i + 1) * 100d / files.Count));
-        }
-
-        return diff;
-    }
-
-    private async Task<List<ManifestFile>> CheckHashAsync(
-        IReadOnlyList<ManifestFile> files,
-        string gamePath,
-        Action<int>? progress,
-        CancellationToken cancellationToken)
-    {
-        var diff = new List<ManifestFile>();
-        for (var i = 0; i < files.Count; i++)
-        {
-            var file = files[i];
-            var filePath = GamePathValidator.GetSafePath(gamePath, file.Path);
-            if (!File.Exists(filePath))
-            {
-                diff.Add(file);
-                continue;
-            }
-
-            var crc64 = await crc64Service.ComputeFileAsync(filePath, null, cancellationToken).ConfigureAwait(false);
-            if (crc64 != file.Hash)
-            {
-                diff.Add(file);
-            }
-
-            progress?.Invoke((int)Math.Round((i + 1) * 100d / files.Count));
-        }
-
-        return diff;
-    }
-
-    private static void RemoveFiles(string gamePath, IReadOnlyList<ManifestFile> files, Action<int>? progress)
-    {
-        for (var i = 0; i < files.Count; i++)
-        {
-            var filePath = GamePathValidator.GetSafePath(gamePath, files[i].Path);
-            if (File.Exists(filePath))
-            {
-                File.Delete(filePath);
-            }
-
-            progress?.Invoke((int)Math.Round((i + 1) * 100d / files.Count));
-        }
-    }
-
-    private static void EnsureGamePath(string gamePath)
-    {
-        var fullPath = Path.GetFullPath(gamePath);
-        if (!string.Equals(Path.GetFileName(fullPath), GamePaths.GameFolderName, StringComparison.Ordinal))
-        {
-            throw new InvalidOperationException($"Game directory name must be {GamePaths.GameFolderName}.");
-        }
-    }
-
-    private const string TempFileExtension = ".tmp";
-
-    private static string GetTempName(string name)
-    {
-        return $"{name}{TempFileExtension}";
-    }
-
-    private static string GetOriginName(string name)
-    {
-        return name.EndsWith(TempFileExtension, StringComparison.Ordinal) ? name[..^TempFileExtension.Length] : name;
-    }
-
-    private static GameOperationProgress CreateProgress(
+    /// <summary>Builds a progress snapshot for a phase boundary of an operation.</summary>
+    internal static GameOperationProgress CreateProgress(
         GameOperationKind kind,
         GameOperationStage stage,
         int value)
@@ -1053,7 +626,7 @@ public sealed class GameDownloadService : IDisposable
         };
     }
 
-    private static GameOperationResult Failed(
+    internal static GameOperationResult Failed(
         string message,
         GameOperationErrorCode errorCode,
         int affectedFileCount = 0,
@@ -1069,11 +642,25 @@ public sealed class GameDownloadService : IDisposable
         };
     }
 
-    private sealed class ThrottleState
+    private const string TempFileExtension = ".tmp";
+
+    internal static string GetTempName(string name)
     {
-        public int BytesPerSec;
-        public long TotalBytes;
-        public System.Diagnostics.Stopwatch Watch = System.Diagnostics.Stopwatch.StartNew();
+        return $"{name}{TempFileExtension}";
+    }
+
+    internal static string GetOriginName(string name)
+    {
+        return name.EndsWith(TempFileExtension, StringComparison.Ordinal) ? name[..^TempFileExtension.Length] : name;
+    }
+
+    internal static void EnsureGamePath(string gamePath)
+    {
+        var fullPath = Path.GetFullPath(gamePath);
+        if (!string.Equals(Path.GetFileName(fullPath), GamePaths.GameFolderName, StringComparison.Ordinal))
+        {
+            throw new InvalidOperationException($"Game directory name must be {GamePaths.GameFolderName}.");
+        }
     }
 
     private sealed class ActiveDownloadOperation
@@ -1094,16 +681,5 @@ public sealed class GameDownloadService : IDisposable
 
         public bool ShouldClearPersistedStateOnCancel =>
             Volatile.Read(ref clearPersistedStateOnCancel) == 1;
-    }
-
-    private sealed class DownloadPlan
-    {
-        public string Source { get; set; } = "";
-
-        public List<ManifestFile> NeedDownload { get; set; } = [];
-
-        public List<ManifestFile> NeedDelete { get; set; } = [];
-
-        public List<ManifestFile> ManifestFiles { get; set; } = [];
     }
 }
