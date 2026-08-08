@@ -1,5 +1,6 @@
 using Microsoft.Extensions.DependencyInjection;
 using Cafe.Launcher.Avalonia.Features.GameOperations;
+using Cafe.Launcher.Avalonia.Features.Shell;
 using Cafe.Launcher.Avalonia.Services.Auth;
 using Cafe.Launcher.Avalonia.Services.Diagnostics;
 using Cafe.Launcher.Avalonia.ViewModels;
@@ -88,6 +89,8 @@ public static class ServiceConfiguration
         services.AddSingleton<GameOperationsViewModel>();
         services.AddSingleton<ToastHostViewModel>();
         services.AddSingleton<WindowChromeViewModel>();
+        services.AddSingleton<ModalHostViewModel>();
+        services.AddSingleton<ShellCoordinator>();
         services.AddSingleton<MainWindowViewModel>();
 
         return services;

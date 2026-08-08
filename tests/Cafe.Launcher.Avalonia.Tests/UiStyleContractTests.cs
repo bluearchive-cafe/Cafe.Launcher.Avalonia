@@ -2228,14 +2228,16 @@ public sealed partial class UiStyleContractTests
             "Kind=\"ContentSave\" Width=\"{StaticResource LauncherIconMd}\" Height=\"{StaticResource LauncherIconMd}\" Foreground=",
             settingsOverlay,
             StringComparison.Ordinal);
-        var mainWindowViewModel = File.ReadAllText(ProjectFile("ViewModels/MainWindowViewModel.cs"));
+        // The escape-key resolution for the settings modal moved to ShellCoordinator
+        // when the modal coordination was extracted from MainWindowViewModel.
+        var shellCoordinator = File.ReadAllText(ProjectFile("Features/Shell/ShellCoordinator.cs"));
         Assert.Contains(
             "case ModalKind.Settings:",
-            mainWindowViewModel,
+            shellCoordinator,
             StringComparison.Ordinal);
         Assert.Contains(
-            "WindowChrome.ShowSettingsCommand.Execute(null)",
-            mainWindowViewModel,
+            "windowChrome.ShowSettingsCommand.Execute(null)",
+            shellCoordinator,
             StringComparison.Ordinal);
         Assert.DoesNotContain(
             "vm.WindowChrome.IsSettingsVisible",
