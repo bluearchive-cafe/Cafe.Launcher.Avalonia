@@ -3,7 +3,6 @@ using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
 using System.Linq;
-using System.Net;
 using System.Net.Http;
 using System.Threading;
 using System.Threading.Tasks;
@@ -66,12 +65,8 @@ internal sealed class DownloadExecutor
         }
 
         using var lease = await httpClientFactory.CreateLeaseAsync(
-            proxyMode, cancellationToken: cancellationToken).ConfigureAwait(false);
+            proxyMode, timeout: TimeSpan.FromMinutes(10), cancellationToken: cancellationToken).ConfigureAwait(false);
         var client = lease.Client;
-        if (client.Timeout != TimeSpan.FromMinutes(10))
-        {
-            client.Timeout = TimeSpan.FromMinutes(10);
-        }
         using var semaphore = new SemaphoreSlim(MaxParallelDownloads, MaxParallelDownloads);
         var downloadedSize = 0L;
         var totalSize = fileList.Sum(item => item.SizeBytes);
@@ -87,11 +82,9 @@ internal sealed class DownloadExecutor
 
         var tasks = fileList.Select(async file =>
         {
-            var acquired = false;
+            await semaphore.WaitAsync(cancellationToken).ConfigureAwait(false);
             try
             {
-                await semaphore.WaitAsync(cancellationToken).ConfigureAwait(false);
-                acquired = true;
                 var targetPath = GetTempName(GamePathValidator.GetSafePath(gamePath, file.Path));
                 await fileDownloadService.DownloadAsync(
                     new FileDownloadRequest(
@@ -106,6 +99,16 @@ internal sealed class DownloadExecutor
                         getPauseTask,
                         async (bytes, ct) =>
                         {
+                            // Throttle progress reporting to ~100ms intervals to avoid
+                            // overwhelming the UI thread with high-frequency callbacks.
+                            var now = Stopwatch.GetTimestamp();
+                            var prev = Interlocked.Read(ref lastProgressTime);
+                            if (now - prev < progressIntervalTicks)
+                            {
+                                return;
+                            }
+                            Interlocked.Exchange(ref lastProgressTime, now);
+
                             if (throttleState is not null)
                             {
                                 var throttledTotal = Interlocked.Add(ref throttleState.TotalBytes, bytes);
@@ -121,25 +124,14 @@ internal sealed class DownloadExecutor
                             var speed = (long)(totalBytes / elapsed);
                             var estimated = speed > 0 ? (totalSizeVal - totalBytes) / speed : 0;
 
-                            // Throttle progress reporting to ~100ms intervals to avoid
-                            // overwhelming the UI thread with high-frequency callbacks.
-                            var now = Stopwatch.GetTimestamp();
-                            var prev = Interlocked.Read(ref lastProgressTime);
-                            if (now - prev < progressIntervalTicks)
-                            {
-                                // Skip this callback, progress stays current enough.
-                                // Speed/ETA already updated via closure captures.
-                                return;
-                            }
-                            Interlocked.Exchange(ref lastProgressTime, now);
-
+                            var paused = isPaused();
                             progress(new GameOperationProgress
                             {
                                 OperationKind = operationKind,
-                                Stage = isPaused() ? GameOperationStage.Paused : GameOperationStage.Downloading,
+                                Stage = paused ? GameOperationStage.Paused : GameOperationStage.Downloading,
                                 Progress = totalSizeVal > 0 ? (int)Math.Round(totalBytes * 100d / totalSizeVal) : 0,
-                                BytesPerSecond = isPaused() ? 0 : speed,
-                                EstimatedRemaining = isPaused()
+                                BytesPerSecond = paused ? 0 : speed,
+                                EstimatedRemaining = paused
                                     ? null
                                     : TimeSpan.FromSeconds(Math.Max(0, estimated)),
                                 DownloadedSize = totalBytes,
@@ -147,7 +139,7 @@ internal sealed class DownloadExecutor
                                 IsRunning = true,
                                 CanStop = true,
                                 CanPause = true,
-                                IsPaused = isPaused()
+                                IsPaused = paused
                             });
                         },
                         proxyMode != ProxyModes.Direct),
@@ -155,10 +147,7 @@ internal sealed class DownloadExecutor
             }
             finally
             {
-                if (acquired)
-                {
-                    try { semaphore.Release(); } catch (ObjectDisposedException) { }
-                }
+                semaphore.Release();
             }
         });
 
@@ -190,7 +179,7 @@ internal sealed class DownloadExecutor
 
             if (!File.Exists(checkPath))
             {
-                failedFiles.Add(new ManifestFile { Path = GetTempName(file.Path), Size = file.Size, Hash = file.Hash });
+                failedFiles.Add(new ManifestFile { Path = file.Path, Size = file.Size, Hash = file.Hash });
             }
             else
             {
@@ -205,7 +194,7 @@ internal sealed class DownloadExecutor
                         $"size: {new FileInfo(checkPath).Length}",
                         CancellationToken.None);
 
-                    failedFiles.Add(new ManifestFile { Path = GetTempName(file.Path), Size = file.Size, Hash = file.Hash });
+                    failedFiles.Add(new ManifestFile { Path = file.Path, Size = file.Size, Hash = file.Hash });
                     File.Delete(checkPath);
                 }
             }
@@ -222,7 +211,7 @@ internal sealed class DownloadExecutor
         var failedPathSet = failedFiles.Select(f => f.Path).ToHashSet(StringComparer.Ordinal);
         foreach (var file in downloadedFiles)
         {
-            if (failedPathSet.Contains(GetTempName(file.Path)))
+            if (failedPathSet.Contains(file.Path))
                 continue;
 
             var tempPath = GetTempName(GamePathValidator.GetSafePath(gamePath, file.Path));
@@ -275,7 +264,7 @@ internal sealed class DownloadExecutor
     }
 
     /// <summary>Strips the temporary file extension to recover the original file name.</summary>
-    internal static string GetOriginName(string name)
+    private static string GetOriginName(string name)
     {
         return name.EndsWith(TempFileExtension, StringComparison.Ordinal) ? name[..^TempFileExtension.Length] : name;
     }

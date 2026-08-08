@@ -47,7 +47,6 @@ public sealed class GameDownloadService : IDisposable
     private readonly object activeDownloadLock = new();
     private readonly object pauseLock = new();
     private ActiveDownloadOperation? activeDownload;
-    private Task pauseTask = Task.CompletedTask;
     private TaskCompletionSource? pauseTcs;
     private bool disposed;
 
@@ -171,23 +170,14 @@ public sealed class GameDownloadService : IDisposable
     {
         lock (pauseLock)
         {
-            if (pauseTcs is null)
-            {
-                pauseTcs = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
-                pauseTask = pauseTcs.Task;
-            }
+            pauseTcs ??= new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
         }
         LocalDiagnostics.LogSync(LogEntrySeverity.Debug, "GameDownload", "Download paused");
     }
 
     public void Resume()
     {
-        lock (pauseLock)
-        {
-            pauseTcs?.TrySetResult();
-            pauseTcs = null;
-            pauseTask = Task.CompletedTask;
-        }
+        ResetPauseState();
         LocalDiagnostics.LogSync(LogEntrySeverity.Debug, "GameDownload", "Download resumed");
     }
 
@@ -210,7 +200,7 @@ public sealed class GameDownloadService : IDisposable
     {
         lock (pauseLock)
         {
-            return pauseTask;
+            return pauseTcs?.Task ?? Task.CompletedTask;
         }
     }
 
@@ -247,12 +237,7 @@ public sealed class GameDownloadService : IDisposable
         {
             ReplaceActiveDownload(operation);
             operationRegistered = true;
-            lock (pauseLock)
-            {
-                pauseTcs?.TrySetResult();
-                pauseTcs = null;
-                pauseTask = Task.CompletedTask;
-            }
+            ResetPauseState();
 
             var settings = await settingsService.ReadAsync(activeToken).ConfigureAwait(false);
             var gameConfig = snapshot.Remote.GameConfig
@@ -450,7 +435,7 @@ public sealed class GameDownloadService : IDisposable
 
                 currentDownloadList = failedFiles.Select(file => new ManifestFile
                 {
-                    Path = DownloadExecutor.GetOriginName(file.Path),
+                    Path = file.Path,
                     Size = file.Size,
                     Hash = file.Hash
                 }).ToList();
@@ -520,12 +505,7 @@ public sealed class GameDownloadService : IDisposable
                 operationCts.Dispose();
             }
 
-            lock (pauseLock)
-            {
-                pauseTcs?.TrySetResult();
-                pauseTcs = null;
-                pauseTask = Task.CompletedTask;
-            }
+            ResetPauseState();
         }
     }
 
@@ -554,6 +534,15 @@ public sealed class GameDownloadService : IDisposable
         operation.CancellationTokenSource.Dispose();
     }
 
+    private void ResetPauseState()
+    {
+        lock (pauseLock)
+        {
+            pauseTcs?.TrySetResult();
+            pauseTcs = null;
+        }
+    }
+
     private void ThrowIfDisposed()
     {
         ObjectDisposedException.ThrowIf(disposed, this);
@@ -575,12 +564,7 @@ public sealed class GameDownloadService : IDisposable
             operation?.CancellationTokenSource.Cancel();
         }
 
-        lock (pauseLock)
-        {
-            pauseTcs?.TrySetResult();
-            pauseTcs = null;
-            pauseTask = Task.CompletedTask;
-        }
+        ResetPauseState();
         GC.SuppressFinalize(this);
     }
 

@@ -223,9 +223,6 @@ public sealed class RemoteContentItem : INotifyPropertyChanged
         IsImageLoadFailed = true;
     }
 
-    private void Notify(string propertyName) =>
-        PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(propertyName));
-
     private void SetField<T>(ref T field, T value, [System.Runtime.CompilerServices.CallerMemberName] string? propertyName = null)
     {
         if (EqualityComparer<T>.Default.Equals(field, value))
