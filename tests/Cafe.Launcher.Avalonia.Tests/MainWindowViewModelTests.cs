@@ -1,3 +1,4 @@
+using Cafe.Launcher.Avalonia.Helpers;
 using Cafe.Launcher.Avalonia.Models;
 using Cafe.Launcher.Avalonia.Features.Shell;
 using Cafe.Launcher.Avalonia.Features.GameOperations;

@@ -2,7 +2,7 @@ using System.Collections.Concurrent;
 using Avalonia.Controls;
 using Avalonia.Headless.XUnit;
 using Cafe.Launcher.Avalonia.Controls;
-using Cafe.Launcher.Avalonia.Services;
+using Cafe.Launcher.Avalonia.Helpers;
 
 namespace Cafe.Launcher.Avalonia.HeadlessTests;
 
