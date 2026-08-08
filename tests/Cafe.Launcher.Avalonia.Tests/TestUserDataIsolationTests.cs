@@ -69,7 +69,15 @@ public sealed class TestUserDataIsolationTests
         };
         var offenders = Directory
             .EnumerateFiles(projectRoot, "*.cs", SearchOption.AllDirectories)
-            .Where(path => !IsBuildOrTestArtifact(projectRoot, path))
+            .Where(path =>
+            {
+                var relativePath = Path.GetRelativePath(projectRoot, path);
+                return !relativePath.StartsWith($"tests{Path.DirectorySeparatorChar}", StringComparison.OrdinalIgnoreCase)
+                    && !relativePath.StartsWith($".claude{Path.DirectorySeparatorChar}", StringComparison.OrdinalIgnoreCase)
+                    && !relativePath.StartsWith($".worktrees{Path.DirectorySeparatorChar}", StringComparison.OrdinalIgnoreCase)
+                    && !relativePath.Contains($"{Path.DirectorySeparatorChar}bin{Path.DirectorySeparatorChar}", StringComparison.OrdinalIgnoreCase)
+                    && !relativePath.Contains($"{Path.DirectorySeparatorChar}obj{Path.DirectorySeparatorChar}", StringComparison.OrdinalIgnoreCase);
+            })
             .Where(path => !allowedFiles.Contains(path))
             .Where(path => File
                 .ReadAllText(path)

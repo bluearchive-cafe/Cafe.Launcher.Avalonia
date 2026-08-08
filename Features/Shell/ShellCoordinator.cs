@@ -16,9 +16,13 @@ public sealed class ShellCoordinator
     private readonly ResourcePanelViewModel resourcePanel;
     private readonly LogViewerDialogViewModel logViewer;
     private readonly DialogsViewModel dialogs;
+    private bool isWired;
 
     /// <summary>Raised when the status detail mode setting changes; the shell raises its dependent property notifications.</summary>
     public event Action? StatusDetailModeChanged;
+
+    /// <summary>The modal host this coordinator manages.</summary>
+    public ModalHostViewModel ModalHost => modalHost;
 
     public ShellCoordinator(
         ModalHostViewModel modalHost,
@@ -39,6 +43,8 @@ public sealed class ShellCoordinator
     /// <summary>Subscribes to PropertyChanged on child view models for modal sync.</summary>
     public void Wire()
     {
+        if (isWired) return;
+        isWired = true;
         windowChrome.PropertyChanged += OnWindowChromePropertyChanged;
         settings.PropertyChanged += OnSettingsPropertyChanged;
         settings.Editor.CurrentPropertyChanged += OnSettingPropertyChanged;
@@ -50,6 +56,8 @@ public sealed class ShellCoordinator
     /// <summary>Unsubscribes from all PropertyChanged handlers.</summary>
     public void Unwire()
     {
+        if (!isWired) return;
+        isWired = false;
         windowChrome.PropertyChanged -= OnWindowChromePropertyChanged;
         settings.PropertyChanged -= OnSettingsPropertyChanged;
         settings.Editor.CurrentPropertyChanged -= OnSettingPropertyChanged;

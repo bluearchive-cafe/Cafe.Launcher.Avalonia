@@ -433,7 +433,7 @@ public sealed class InstallationOperationStateTests : IDisposable
                     RemoteHttpUrlValidator.CreateForTesting()),
                 new LocalInstallationStateStore(),
                 new LauncherSettingsService(Path.Combine(tempDir, "settings.json")),
-                new ProxySettingsService(),
+                new HttpClientFactory(new ProxySettingsService()),
                 new Crc64Service(),
                 new DiskSpaceService(),
                 new LocalDiagnostics(),

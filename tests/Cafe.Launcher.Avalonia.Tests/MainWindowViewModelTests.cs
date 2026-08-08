@@ -1732,7 +1732,7 @@ public sealed class MainWindowViewModelTests : IDisposable
                 fileDownloadService,
                 localInstallationStateStore,
                 settingsService,
-                new ProxySettingsService(),
+                new HttpClientFactory(new ProxySettingsService()),
                 new Crc64Service(),
                 new DiskSpaceService(),
                 diagnostics,

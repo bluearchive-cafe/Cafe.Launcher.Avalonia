@@ -111,7 +111,7 @@ public partial class MainWindowViewModel : ViewModelBase, IDisposable
             null,
             null,
             null);
-        ModalHost = modalHost ?? new ModalHostViewModel();
+        ModalHost = modalHost ?? coordinator?.ModalHost ?? new ModalHostViewModel();
 
         this.coordinator = coordinator ?? new ShellCoordinator(
             ModalHost,
@@ -293,7 +293,7 @@ public partial class MainWindowViewModel : ViewModelBase, IDisposable
         Dialogs.ConfirmStopRequested += Operations.PerformStop;
         Dialogs.CloseAfterStoppingDownloadRequested += WindowChrome.CloseAfterStoppingDownload;
         Dialogs.CloseRequested += WindowChrome.RequestClose;
-        Dialogs.ConfirmUpdateAvailableRequested += url => ExternalLinkService.Open(url);
+        Dialogs.ConfirmUpdateAvailableRequested += OnConfirmUpdateAvailableRequested;
         Dialogs.CrashRecoveryResetSettingsRequested += ResetSettingsAfterCrashAsync;
         Dialogs.CrashRecoveryViewLogRequested += OpenCrashLog;
 
@@ -330,6 +330,11 @@ public partial class MainWindowViewModel : ViewModelBase, IDisposable
     private void OpenCrashLog()
     {
         LogViewer.OpenCommand.Execute(null);
+    }
+
+    private void OnConfirmUpdateAvailableRequested(string url)
+    {
+        ExternalLinkService.Open(url);
     }
 
     private async Task<string?> PickGameFolderForWizardAsync(string currentPath)
@@ -496,6 +501,7 @@ public partial class MainWindowViewModel : ViewModelBase, IDisposable
         Dialogs.ConfirmStopRequested -= Operations.PerformStop;
         Dialogs.CloseAfterStoppingDownloadRequested -= WindowChrome.CloseAfterStoppingDownload;
         Dialogs.CloseRequested -= WindowChrome.RequestClose;
+        Dialogs.ConfirmUpdateAvailableRequested -= OnConfirmUpdateAvailableRequested;
         Dialogs.CrashRecoveryResetSettingsRequested -= ResetSettingsAfterCrashAsync;
         Dialogs.CrashRecoveryViewLogRequested -= OpenCrashLog;
         Dialogs.SetupWizard.LanguagePreviewRequested -= PreviewSetupWizardLanguage;

@@ -30,7 +30,7 @@ public sealed class UnifiedLogger : IDisposable
     internal UnifiedLogger(string? logDirectory)
     {
         var dir = logDirectory ?? Path.Combine(
-            LauncherUserDataDirectory.Path);
+            LauncherUserDataDirectory.Root);
         logFilePath = Path.Combine(dir, "unified.log");
 
         // Verbose in Debug builds so developers see everything; Information in

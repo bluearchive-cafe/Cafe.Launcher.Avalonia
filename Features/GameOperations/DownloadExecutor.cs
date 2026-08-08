@@ -24,7 +24,7 @@ internal sealed class DownloadExecutor
 
     private readonly IFileDownloadService fileDownloadService;
     private readonly Crc64Service crc64Service;
-    private readonly ProxySettingsService proxySettingsService;
+    private readonly HttpClientFactory httpClientFactory;
     private readonly LocalDiagnostics diagnostics;
     private readonly Func<Task> getPauseTask;
     private readonly Func<bool> isPaused;
@@ -32,14 +32,14 @@ internal sealed class DownloadExecutor
     internal DownloadExecutor(
         IFileDownloadService fileDownloadService,
         Crc64Service crc64Service,
-        ProxySettingsService proxySettingsService,
+        HttpClientFactory httpClientFactory,
         LocalDiagnostics diagnostics,
         Func<Task> getPauseTask,
         Func<bool> isPaused)
     {
         this.fileDownloadService = fileDownloadService;
         this.crc64Service = crc64Service;
-        this.proxySettingsService = proxySettingsService;
+        this.httpClientFactory = httpClientFactory;
         this.diagnostics = diagnostics;
         this.getPauseTask = getPauseTask;
         this.isPaused = isPaused;
@@ -65,19 +65,13 @@ internal sealed class DownloadExecutor
             return;
         }
 
-        var proxy = await proxySettingsService.CreateProxyAsync(proxyMode, cancellationToken).ConfigureAwait(false);
-        using var handler = new SocketsHttpHandler
+        using var lease = await httpClientFactory.CreateLeaseAsync(
+            proxyMode, cancellationToken: cancellationToken).ConfigureAwait(false);
+        var client = lease.Client;
+        if (client.Timeout != TimeSpan.FromMinutes(10))
         {
-            AllowAutoRedirect = false,
-            AutomaticDecompression = DecompressionMethods.All,
-            UseProxy = proxyMode != ProxyModes.Direct,
-            Proxy = proxy,
-            PooledConnectionLifetime = TimeSpan.FromMinutes(15)
-        };
-        using var client = new HttpClient(handler, disposeHandler: false)
-        {
-            Timeout = TimeSpan.FromMinutes(10)
-        };
+            client.Timeout = TimeSpan.FromMinutes(10);
+        }
         using var semaphore = new SemaphoreSlim(MaxParallelDownloads, MaxParallelDownloads);
         var downloadedSize = 0L;
         var totalSize = fileList.Sum(item => item.SizeBytes);
@@ -98,7 +92,7 @@ internal sealed class DownloadExecutor
             {
                 await semaphore.WaitAsync(cancellationToken).ConfigureAwait(false);
                 acquired = true;
-                var targetPath = GameDownloadService.GetTempName(GamePathValidator.GetSafePath(gamePath, file.Path));
+                var targetPath = GetTempName(GamePathValidator.GetSafePath(gamePath, file.Path));
                 await fileDownloadService.DownloadAsync(
                     new FileDownloadRequest(
                         targetPath,
@@ -118,7 +112,7 @@ internal sealed class DownloadExecutor
                                 var targetMs = throttledTotal * 1000L / throttleState.BytesPerSec;
                                 var elapsedMs = throttleState.Watch.ElapsedMilliseconds;
                                 if (elapsedMs < targetMs)
-                                    await Task.Delay((int)(targetMs - elapsedMs), ct).ConfigureAwait(false);
+                                    await Task.Delay((int)Math.Clamp(targetMs - elapsedMs, 0, int.MaxValue), ct).ConfigureAwait(false);
                             }
 
                             var totalSizeVal = totalSize;
@@ -191,12 +185,12 @@ internal sealed class DownloadExecutor
         {
             cancellationToken.ThrowIfCancellationRequested();
             var checkPath = downloadedPathSet.Contains(file.Path)
-                ? GameDownloadService.GetTempName(GamePathValidator.GetSafePath(gamePath, file.Path))
+                ? GetTempName(GamePathValidator.GetSafePath(gamePath, file.Path))
                 : GamePathValidator.GetSafePath(gamePath, file.Path);
 
             if (!File.Exists(checkPath))
             {
-                failedFiles.Add(new ManifestFile { Path = GameDownloadService.GetTempName(file.Path), Size = file.Size, Hash = file.Hash });
+                failedFiles.Add(new ManifestFile { Path = GetTempName(file.Path), Size = file.Size, Hash = file.Hash });
             }
             else
             {
@@ -204,14 +198,14 @@ internal sealed class DownloadExecutor
                 if (crc64 != file.Hash)
                 {
                     await diagnostics.MessageAsync(
-                        "CRC64 mismatch during install verification",
-                        $"file: {file.Path}{Environment.NewLine}" +
+                        "GameDownload",
+                        $"CRC64 mismatch: {file.Path}{Environment.NewLine}" +
                         $"expected: {file.Hash}{Environment.NewLine}" +
                         $"actual:   {crc64}{Environment.NewLine}" +
                         $"size: {new FileInfo(checkPath).Length}",
                         CancellationToken.None);
 
-                    failedFiles.Add(new ManifestFile { Path = GameDownloadService.GetTempName(file.Path), Size = file.Size, Hash = file.Hash });
+                    failedFiles.Add(new ManifestFile { Path = GetTempName(file.Path), Size = file.Size, Hash = file.Hash });
                     File.Delete(checkPath);
                 }
             }
@@ -228,11 +222,11 @@ internal sealed class DownloadExecutor
         var failedPathSet = failedFiles.Select(f => f.Path).ToHashSet(StringComparer.Ordinal);
         foreach (var file in downloadedFiles)
         {
-            if (failedPathSet.Contains(GameDownloadService.GetTempName(file.Path)))
+            if (failedPathSet.Contains(GetTempName(file.Path)))
                 continue;
 
-            var tempPath = GameDownloadService.GetTempName(GamePathValidator.GetSafePath(gamePath, file.Path));
-            var targetPath = GameDownloadService.GetOriginName(tempPath);
+            var tempPath = GetTempName(GamePathValidator.GetSafePath(gamePath, file.Path));
+            var targetPath = GetOriginName(tempPath);
             if (File.Exists(tempPath))
             {
                 var dir = Path.GetDirectoryName(targetPath);
@@ -270,5 +264,19 @@ internal sealed class DownloadExecutor
         public int BytesPerSec;
         public long TotalBytes;
         public Stopwatch Watch = Stopwatch.StartNew();
+    }
+
+    private const string TempFileExtension = ".tmp";
+
+    /// <summary>Gets the temporary download path for a file name.</summary>
+    internal static string GetTempName(string name)
+    {
+        return $"{name}{TempFileExtension}";
+    }
+
+    /// <summary>Strips the temporary file extension to recover the original file name.</summary>
+    internal static string GetOriginName(string name)
+    {
+        return name.EndsWith(TempFileExtension, StringComparison.Ordinal) ? name[..^TempFileExtension.Length] : name;
     }
 }

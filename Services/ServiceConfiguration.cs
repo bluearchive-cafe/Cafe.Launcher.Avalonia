@@ -72,7 +72,7 @@ public static class ServiceConfiguration
                 sp.GetRequiredService<IFileDownloadService>(),
                 sp.GetRequiredService<LocalInstallationStateStore>(),
                 sp.GetRequiredService<LauncherSettingsService>(),
-                sp.GetRequiredService<ProxySettingsService>(),
+                sp.GetRequiredService<HttpClientFactory>(),
                 sp.GetRequiredService<Crc64Service>(),
                 sp.GetRequiredService<DiskSpaceService>(),
                 sp.GetRequiredService<LocalDiagnostics>(),

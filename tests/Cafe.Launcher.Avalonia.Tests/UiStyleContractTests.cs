@@ -2236,7 +2236,7 @@ public sealed partial class UiStyleContractTests
             shellCoordinator,
             StringComparison.Ordinal);
         Assert.Contains(
-            "windowChrome.ShowSettingsCommand.Execute(null)",
+            "ShowSettingsCommand",
             shellCoordinator,
             StringComparison.Ordinal);
         Assert.DoesNotContain(

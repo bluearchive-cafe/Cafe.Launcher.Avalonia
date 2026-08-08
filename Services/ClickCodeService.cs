@@ -15,7 +15,7 @@ public sealed class ClickCodeService
 {
     private const string ClickCodeFileName = "clickCode";
 
-    private static string UserDataDir => LauncherUserDataDirectory.Path;
+    private static string UserDataDir => LauncherUserDataDirectory.Root;
 
     /// <summary>
     /// Reads the clickCode from the app directory (if it exists from installer),

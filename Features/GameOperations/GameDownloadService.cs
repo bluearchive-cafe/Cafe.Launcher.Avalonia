@@ -23,7 +23,7 @@ public sealed class GameDownloadService : IDisposable
         IFileDownloadService FileDownloadService,
         LocalInstallationStateStore LocalInstallationStateStore,
         LauncherSettingsService SettingsService,
-        ProxySettingsService ProxySettingsService,
+        HttpClientFactory HttpClientFactory,
         Crc64Service Crc64Service,
         DiskSpaceService DiskSpaceService,
         LocalDiagnostics Diagnostics,
@@ -68,7 +68,7 @@ public sealed class GameDownloadService : IDisposable
         downloadExecutor = new DownloadExecutor(
             deps.FileDownloadService,
             deps.Crc64Service,
-            deps.ProxySettingsService,
+            deps.HttpClientFactory,
             deps.Diagnostics,
             GetPauseTaskSnapshot,
             () => IsPaused);
@@ -173,7 +173,7 @@ public sealed class GameDownloadService : IDisposable
         {
             if (pauseTcs is null)
             {
-                pauseTcs = new TaskCompletionSource();
+                pauseTcs = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
                 pauseTask = pauseTcs.Task;
             }
         }
@@ -313,7 +313,7 @@ public sealed class GameDownloadService : IDisposable
                     settings.PatchUrlGroup,
                     settings.ProxyMode,
                     progress,
-                    activeToken)
+                    activeToken).ConfigureAwait(false)
                 : await diffCalculator.BuildInstallOrUpdatePlanAsync(
                     gamePath,
                     localGame,
@@ -450,7 +450,7 @@ public sealed class GameDownloadService : IDisposable
 
                 currentDownloadList = failedFiles.Select(file => new ManifestFile
                 {
-                    Path = GetOriginName(file.Path),
+                    Path = DownloadExecutor.GetOriginName(file.Path),
                     Size = file.Size,
                     Hash = file.Hash
                 }).ToList();
@@ -626,6 +626,7 @@ public sealed class GameDownloadService : IDisposable
         };
     }
 
+    /// <summary>Creates a failed <see cref="GameOperationResult"/> with the given details.</summary>
     internal static GameOperationResult Failed(
         string message,
         GameOperationErrorCode errorCode,
@@ -642,18 +643,7 @@ public sealed class GameDownloadService : IDisposable
         };
     }
 
-    private const string TempFileExtension = ".tmp";
-
-    internal static string GetTempName(string name)
-    {
-        return $"{name}{TempFileExtension}";
-    }
-
-    internal static string GetOriginName(string name)
-    {
-        return name.EndsWith(TempFileExtension, StringComparison.Ordinal) ? name[..^TempFileExtension.Length] : name;
-    }
-
+    /// <summary>Validates that the game directory has the expected folder name.</summary>
     internal static void EnsureGamePath(string gamePath)
     {
         var fullPath = Path.GetFullPath(gamePath);

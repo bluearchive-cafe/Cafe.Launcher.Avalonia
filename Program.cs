@@ -71,7 +71,7 @@ sealed class Program
     private static bool DetectFirstLaunch()
     {
         var settingsPath = Path.Combine(
-            LauncherUserDataDirectory.Path,
+            LauncherUserDataDirectory.Root,
             GamePaths.LauncherSettingsFileName);
         return !File.Exists(settingsPath);
     }

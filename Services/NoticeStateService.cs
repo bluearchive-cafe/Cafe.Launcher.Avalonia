@@ -28,7 +28,7 @@ public sealed class NoticeStateService
             }
 
             return Path.Combine(
-                LauncherUserDataDirectory.Path,
+                LauncherUserDataDirectory.Root,
                 "shown_notices.json");
         }
     }

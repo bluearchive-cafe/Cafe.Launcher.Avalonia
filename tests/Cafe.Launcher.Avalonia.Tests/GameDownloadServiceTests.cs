@@ -1175,7 +1175,7 @@ public sealed class GameDownloadServiceTests
                 fileDownloadService,
                 localInstallationStateStore,
                 settingsService,
-                new ProxySettingsService(),
+                new HttpClientFactory(new ProxySettingsService()),
                 new Crc64Service(),
                 diskSpaceService ?? new DiskSpaceService(),
                 diagnostics,
@@ -1266,7 +1266,7 @@ public sealed class GameDownloadServiceTests
         ManifestFile file,
         HttpClient client)
     {
-        var targetPath = Path.Combine(gamePath, GetTempNameInternal(file.Path));
+        var targetPath = Path.Combine(gamePath, DownloadExecutor.GetTempName(file.Path));
         var crc64Service = new Crc64Service();
         var diagnostics = new LocalDiagnostics();
         var downloader = new FileDownloadService(
@@ -1285,11 +1285,6 @@ public sealed class GameDownloadServiceTests
             (_, _) => Task.CompletedTask,
             false,
             CancellationToken.None);
-    }
-
-    private static string GetTempNameInternal(string name)
-    {
-        return $"{name}.tmp";
     }
 
     private sealed class ManifestHandler(params ManifestFile[] files) : HttpMessageHandler

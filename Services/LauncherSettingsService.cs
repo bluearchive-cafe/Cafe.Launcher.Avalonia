@@ -47,7 +47,7 @@ public sealed class LauncherSettingsService : IDisposable
             }
 
             return Path.Combine(
-                LauncherUserDataDirectory.Path,
+                LauncherUserDataDirectory.Root,
                 GamePaths.LauncherSettingsFileName);
         }
     }

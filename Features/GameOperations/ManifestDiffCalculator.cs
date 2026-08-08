@@ -30,6 +30,11 @@ internal sealed class ManifestDiffCalculator
         this.crc64Service = crc64Service;
     }
 
+    /// <summary>
+    /// Computes an install or update download plan by diffing the local installation
+    /// against the latest remote manifest, with size-based stat verification fallback when
+    /// the current manifest is unavailable.
+    /// </summary>
     internal async Task<DownloadPlan> BuildInstallOrUpdatePlanAsync(
         string gamePath,
         LocalInstallationState localGame,
@@ -78,6 +83,10 @@ internal sealed class ManifestDiffCalculator
         return actual;
     }
 
+    /// <summary>
+    /// Computes a repair download plan by reading the local installation state and
+    /// comparing file hashes against the latest remote manifest.
+    /// </summary>
     internal async Task<DownloadPlan> BuildRepairPlanAsync(
         string gamePath,
         GameConfigResponse gameConfig,

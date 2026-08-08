@@ -54,7 +54,7 @@ public sealed class GameUninstallService
     {
         if (snapshot.RuntimeState != LauncherRuntimeState.Ready)
         {
-            return Failed(localizer.T("operationUnavailableForCurrentState"), GameOperationErrorCode.InvalidState);
+            return GameDownloadService.Failed(localizer.T("operationUnavailableForCurrentState"), GameOperationErrorCode.InvalidState);
         }
 
         var gamePath = installationPath.NormalizeGamePath(snapshot.LocalGame.GamePath ?? "");
@@ -140,33 +140,37 @@ public sealed class GameUninstallService
     {
         if (!Directory.Exists(gamePath))
         {
-            return Failed(localizer.F("gamePathMissing", gamePath), GameOperationErrorCode.Uninstall);
+            return GameDownloadService.Failed(localizer.F("gamePathMissing", gamePath), GameOperationErrorCode.Uninstall);
         }
 
         if (IsSystemProtectPath(gamePath))
         {
-            return Failed(localizer.F("gamePathProtected", gamePath), GameOperationErrorCode.Uninstall);
+            return GameDownloadService.Failed(localizer.F("gamePathProtected", gamePath), GameOperationErrorCode.Uninstall);
         }
 
-        if (!string.Equals(Path.GetFileName(Path.GetFullPath(gamePath)), GamePaths.GameFolderName, StringComparison.Ordinal))
+        try
         {
-            return Failed(localizer.F("gameDirectoryNameInvalid", GamePaths.GameFolderName), GameOperationErrorCode.Uninstall);
+            GameDownloadService.EnsureGamePath(gamePath);
+        }
+        catch (InvalidOperationException)
+        {
+            return GameDownloadService.Failed(localizer.F("gameDirectoryNameInvalid", GamePaths.GameFolderName), GameOperationErrorCode.Uninstall);
         }
 
         var localGame = await localInstallationStateStore.ReadAsync(gamePath, cancellationToken).ConfigureAwait(false);
         if (localGame.Kind != LocalInstallationStateKind.Valid)
         {
-            return Failed(localizer.F("gameConfigMetadataMissing", GamePaths.GameConfigFileName), GameOperationErrorCode.Uninstall);
+            return GameDownloadService.Failed(localizer.F("gameConfigMetadataMissing", GamePaths.GameConfigFileName), GameOperationErrorCode.Uninstall);
         }
 
         if (string.IsNullOrWhiteSpace(localGame.GameConfig?.Version) || string.IsNullOrWhiteSpace(localGame.GameConfig?.Name))
         {
-            return Failed(localizer.F("gameConfigMetadataMissing", GamePaths.GameConfigFileName), GameOperationErrorCode.Uninstall);
+            return GameDownloadService.Failed(localizer.F("gameConfigMetadataMissing", GamePaths.GameConfigFileName), GameOperationErrorCode.Uninstall);
         }
 
         if (await ProcessService.IsExeRunningAsync($"{localGame.GameConfig.Name}.exe", cancellationToken))
         {
-            return Failed(localizer.F("gameIsRunning", $"{localGame.GameConfig.Name}.exe"), GameOperationErrorCode.GameRunning);
+            return GameDownloadService.Failed(localizer.F("gameIsRunning", $"{localGame.GameConfig.Name}.exe"), GameOperationErrorCode.GameRunning);
         }
 
         return new GameOperationResult
@@ -206,14 +210,5 @@ public sealed class GameUninstallService
             .Where(item => !string.IsNullOrWhiteSpace(item))
             .Select(item => Path.GetFullPath(item).TrimEnd(Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar))
             .Any(item => string.Equals(fullPath, item, StringComparison.OrdinalIgnoreCase));
-    }
-    private static GameOperationResult Failed(string message, GameOperationErrorCode errorCode)
-    {
-        return new GameOperationResult
-        {
-            Success = false,
-            Message = message,
-            ErrorCode = errorCode
-        };
     }
 }

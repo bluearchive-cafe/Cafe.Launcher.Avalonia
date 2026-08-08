@@ -140,7 +140,7 @@ public partial class WindowChromeViewModel : ViewModelBase
     [RelayCommand]
     private void OpenDataDirectory()
     {
-        openDirectory(LauncherUserDataDirectory.Path);
+        openDirectory(LauncherUserDataDirectory.Root);
     }
 
     public void OpenExternalUrl(string? url)

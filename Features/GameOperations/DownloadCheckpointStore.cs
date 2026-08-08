@@ -18,7 +18,7 @@ public sealed class DownloadCheckpointStore(string filePath)
 
     /// <summary>Creates a store for the launcher's standard per-user checkpoint path.</summary>
     internal static DownloadCheckpointStore CreateDefault() => new(Path.Combine(
-        LauncherUserDataDirectory.Path,
+        LauncherUserDataDirectory.Root,
         GamePaths.DownloadStateFileName));
 
     /// <summary>Reads the current checkpoint, or returns <see langword="null"/> when none is usable.</summary>
