@@ -65,7 +65,7 @@ public sealed class TestUserDataIsolationTests
         var allowedFiles = new HashSet<string>(StringComparer.OrdinalIgnoreCase)
         {
             Path.Combine(projectRoot, "Services", "LauncherUserDataDirectory.cs"),
-            Path.Combine(projectRoot, "Services", "GameUninstallService.cs")
+            Path.Combine(projectRoot, "Features", "GameOperations", "GameUninstallService.cs")
         };
         var offenders = Directory
             .EnumerateFiles(projectRoot, "*.cs", SearchOption.AllDirectories)
