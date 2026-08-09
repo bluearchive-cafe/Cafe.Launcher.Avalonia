@@ -183,8 +183,17 @@ public sealed class GameUninstallService
 
     private static bool IsSystemProtectPath(string path)
     {
+        // Port of v1.7.2 isSystemProtectPath (out/main/index.js:612-658).
         var fullPath = Path.GetFullPath(path)
             .TrimEnd(Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar);
+
+        // v1.7.2: statSync fails → path does not exist → protect (index.js:645-648).
+        if (!Directory.Exists(fullPath) && !File.Exists(fullPath))
+        {
+            return true;
+        }
+
+        // v1.7.2: drive root regex /^[a-zA-Z]:\\$/ → protect (index.js:651-653).
         var root = Path.GetPathRoot(fullPath)?.TrimEnd(Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar);
         if (string.Equals(fullPath, root, StringComparison.OrdinalIgnoreCase))
         {
@@ -196,19 +205,31 @@ public sealed class GameUninstallService
             AppContext.BaseDirectory,
             Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData),
             Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData),
+            Path.GetTempPath(),
             Environment.GetFolderPath(Environment.SpecialFolder.DesktopDirectory),
             Environment.GetFolderPath(Environment.SpecialFolder.MyDocuments),
             Environment.GetFolderPath(Environment.SpecialFolder.MyMusic),
             Environment.GetFolderPath(Environment.SpecialFolder.MyPictures),
+            Environment.GetFolderPath(Environment.SpecialFolder.MyVideos),
             Environment.GetFolderPath(Environment.SpecialFolder.UserProfile),
             Environment.GetFolderPath(Environment.SpecialFolder.Windows),
             Environment.GetFolderPath(Environment.SpecialFolder.ProgramFiles),
-            Environment.GetFolderPath(Environment.SpecialFolder.ProgramFilesX86)
+            Environment.GetFolderPath(Environment.SpecialFolder.ProgramFilesX86),
+            Environment.GetEnvironmentVariable("SystemDrive") ?? "",
+            Environment.GetEnvironmentVariable("SystemRoot") ?? "",
         };
+
+        // v1.7.2: app.getPath("home") parent dir (line 627).
+        var userProfile = Environment.GetFolderPath(Environment.SpecialFolder.UserProfile);
 
         return protectedPaths
             .Where(item => !string.IsNullOrWhiteSpace(item))
             .Select(item => Path.GetFullPath(item).TrimEnd(Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar))
-            .Any(item => string.Equals(fullPath, item, StringComparison.OrdinalIgnoreCase));
+            .Any(item => string.Equals(fullPath, item, StringComparison.OrdinalIgnoreCase))
+            || (userProfile.Length > 0
+                && string.Equals(
+                    fullPath,
+                    Path.GetFullPath(Path.GetDirectoryName(userProfile)!).TrimEnd(Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar),
+                    StringComparison.OrdinalIgnoreCase));
     }
 }
