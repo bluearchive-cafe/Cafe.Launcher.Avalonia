@@ -15,6 +15,7 @@ public sealed class ShellCoordinator
     private readonly SettingsViewModel settings;
     private readonly ResourcePanelViewModel resourcePanel;
     private readonly LogViewerDialogViewModel logViewer;
+    private readonly DebugViewModel debug;
     private readonly DialogsViewModel dialogs;
     private bool isWired;
 
@@ -30,6 +31,7 @@ public sealed class ShellCoordinator
         SettingsViewModel settings,
         ResourcePanelViewModel resourcePanel,
         LogViewerDialogViewModel logViewer,
+        DebugViewModel debug,
         DialogsViewModel dialogs)
     {
         this.modalHost = modalHost;
@@ -37,6 +39,7 @@ public sealed class ShellCoordinator
         this.settings = settings;
         this.resourcePanel = resourcePanel;
         this.logViewer = logViewer;
+        this.debug = debug;
         this.dialogs = dialogs;
     }
 
@@ -50,6 +53,7 @@ public sealed class ShellCoordinator
         settings.Editor.CurrentPropertyChanged += OnSettingPropertyChanged;
         resourcePanel.PropertyChanged += OnResourcePanelPropertyChanged;
         logViewer.PropertyChanged += OnLogViewerPropertyChanged;
+        debug.PropertyChanged += OnDebugPropertyChanged;
         dialogs.PropertyChanged += OnDialogsPropertyChanged;
     }
 
@@ -63,6 +67,7 @@ public sealed class ShellCoordinator
         settings.Editor.CurrentPropertyChanged -= OnSettingPropertyChanged;
         resourcePanel.PropertyChanged -= OnResourcePanelPropertyChanged;
         logViewer.PropertyChanged -= OnLogViewerPropertyChanged;
+        debug.PropertyChanged -= OnDebugPropertyChanged;
         dialogs.PropertyChanged -= OnDialogsPropertyChanged;
     }
 
@@ -112,6 +117,14 @@ public sealed class ShellCoordinator
         }
     }
 
+    private void OnDebugPropertyChanged(object? sender, PropertyChangedEventArgs e)
+    {
+        if (e.PropertyName == nameof(DebugViewModel.IsVisible))
+        {
+            SyncModal(ModalKind.Debug, debug.IsVisible, debug);
+        }
+    }
+
     private void OnDialogsPropertyChanged(object? sender, PropertyChangedEventArgs e)
     {
         switch (e.PropertyName)
@@ -124,6 +137,15 @@ public sealed class ShellCoordinator
                 break;
             case nameof(DialogsViewModel.IsCrashRecoveryVisible):
                 SyncModal(ModalKind.CrashRecovery, dialogs.IsCrashRecoveryVisible, dialogs);
+                break;
+            case nameof(DialogsViewModel.IsErrorDialogVisible):
+                SyncModal(ModalKind.Error, dialogs.IsErrorDialogVisible, dialogs);
+                break;
+            case nameof(DialogsViewModel.IsDebugResetConfirmationVisible):
+                SyncModal(
+                    ModalKind.DebugResetConfirmation,
+                    dialogs.IsDebugResetConfirmationVisible,
+                    dialogs);
                 break;
             case nameof(DialogsViewModel.IsSetupWizardVisible):
                 SyncModal(ModalKind.SetupWizard, dialogs.IsSetupWizardVisible, dialogs.SetupWizard);
@@ -208,8 +230,17 @@ public sealed class ShellCoordinator
             case ModalKind.CrashRecovery:
                 dialogs.ContinueAfterCrashCommand.Execute(null);
                 break;
+            case ModalKind.Error:
+                dialogs.ContinueAfterErrorCommand.Execute(null);
+                break;
             case ModalKind.LogViewer:
                 logViewer.CloseCommand.Execute(null);
+                break;
+            case ModalKind.Debug:
+                debug.CloseCommand.Execute(null);
+                break;
+            case ModalKind.DebugResetConfirmation:
+                dialogs.CancelDebugResetCommand.Execute(null);
                 break;
             case ModalKind.SetupWizardExitConfirmation:
                 dialogs.CancelSetupWizardExitCommand.Execute(null);

@@ -5,98 +5,30 @@ using CommunityToolkit.Mvvm.ComponentModel;
 
 namespace Cafe.Launcher.Avalonia.Models;
 
-public sealed partial class LauncherSettings : ObservableObject
+public sealed class LauncherSettings : ObservableObject
 {
-    [ObservableProperty]
-    [property: JsonPropertyName("gamePath")]
     private string gamePath = "";
-
-    [ObservableProperty]
-    [property: JsonPropertyName("launchCheckMode")]
     private string launchCheckMode = LaunchCheckModes.LocalManifest;
-
-    [ObservableProperty]
-    [property: JsonPropertyName("proxyMode")]
     private string proxyMode = ProxyModes.Auto;
-
-    [ObservableProperty]
-    [property: JsonPropertyName("closeBehavior")]
     private string closeBehavior = CloseBehaviors.Minimize;
-
-    [ObservableProperty]
-    [property: JsonPropertyName("language")]
     private string language = LauncherLanguages.Auto;
-
-    [ObservableProperty]
-    [property: JsonPropertyName("themeMode")]
     private string themeMode = ThemeModes.System;
-
-    [ObservableProperty]
-    [property: JsonPropertyName("motionMode")]
     private string motionMode = MotionModes.System;
-
-    [ObservableProperty]
-    [property: JsonPropertyName("themeColorMode")]
     private string themeColorMode = ThemeColorModes.Default;
-
-    [ObservableProperty]
-    [property: JsonPropertyName("customThemeColor")]
     private string customThemeColor = LauncherConstants.DefaultThemeColor;
-
-    [ObservableProperty]
-    [property: JsonPropertyName("themeColorPalette")]
     private List<string> themeColorPalette = [];
-
-    [ObservableProperty]
-    [property: JsonPropertyName("selectedThemeColorPaletteIndex")]
     private int selectedThemeColorPaletteIndex;
-
-    [ObservableProperty]
-    [property: JsonPropertyName("downloadSpeedLimit")]
     private string downloadSpeedLimit = DownloadSpeedLimits.Unlimited;
-
-    [ObservableProperty]
-    [property: JsonPropertyName("toastNotificationsEnabled")]
     private bool toastNotificationsEnabled = true;
-
-    [ObservableProperty]
-    [property: JsonPropertyName("enableStartupUpdateCheck")]
     private bool enableStartupUpdateCheck = true;
-
-    [ObservableProperty]
-    [property: JsonPropertyName("showRemoteContentCard")]
     private bool showRemoteContentCard = true;
-
-    [ObservableProperty]
-    [property: JsonPropertyName("patchUrlGroup")]
     private string patchUrlGroup = PatchUrlGroups.Official;
-
-    [ObservableProperty]
-    [property: JsonPropertyName("customBackgroundPath")]
     private string customBackgroundPath = "";
-
-    [ObservableProperty]
-    [property: JsonPropertyName("backgroundSource")]
     private string backgroundSource = BackgroundSources.Bundled;
-
-    [ObservableProperty]
-    [property: JsonPropertyName("backgroundFit")]
     private string backgroundFit = BackgroundFits.UniformToFill;
-
-    [ObservableProperty]
-    [property: JsonPropertyName("backgroundFillColor")]
     private string backgroundFillColor = "#FF000000";
-
-    [ObservableProperty]
-    [property: JsonPropertyName("resourcePanelUid")]
     private string resourcePanelUid = "";
-
-    [ObservableProperty]
-    [property: JsonPropertyName("updateChannel")]
     private string updateChannel = UpdateChannels.Stable;
-
-    [ObservableProperty]
-    [property: JsonPropertyName("logLevel")]
     private string logLevel =
 #if DEBUG
         LogLevels.Verbose
@@ -104,14 +36,83 @@ public sealed partial class LauncherSettings : ObservableObject
         LogLevels.Information
 #endif
     ;
-
-    [ObservableProperty]
-    [property: JsonPropertyName("resourcePanelUidSource")]
     private string resourcePanelUidSource = ResourcePanelUidSources.Auto;
-
-    [ObservableProperty]
-    [property: JsonPropertyName("statusDetailMode")]
     private string statusDetailMode = StatusDetailModes.Detailed;
+
+    [JsonPropertyName("gamePath")]
+    public string GamePath { get => gamePath; set => SetProperty(ref gamePath, value); }
+
+    [JsonPropertyName("launchCheckMode")]
+    public string LaunchCheckMode { get => launchCheckMode; set => SetProperty(ref launchCheckMode, value); }
+
+    [JsonPropertyName("proxyMode")]
+    public string ProxyMode { get => proxyMode; set => SetProperty(ref proxyMode, value); }
+
+    [JsonPropertyName("closeBehavior")]
+    public string CloseBehavior { get => closeBehavior; set => SetProperty(ref closeBehavior, value); }
+
+    [JsonPropertyName("language")]
+    public string Language { get => language; set => SetProperty(ref language, value); }
+
+    [JsonPropertyName("themeMode")]
+    public string ThemeMode { get => themeMode; set => SetProperty(ref themeMode, value); }
+
+    [JsonPropertyName("motionMode")]
+    public string MotionMode { get => motionMode; set => SetProperty(ref motionMode, value); }
+
+    [JsonPropertyName("themeColorMode")]
+    public string ThemeColorMode { get => themeColorMode; set => SetProperty(ref themeColorMode, value); }
+
+    [JsonPropertyName("customThemeColor")]
+    public string CustomThemeColor { get => customThemeColor; set => SetProperty(ref customThemeColor, value); }
+
+    [JsonPropertyName("themeColorPalette")]
+    public List<string> ThemeColorPalette { get => themeColorPalette; set => SetProperty(ref themeColorPalette, value); }
+
+    [JsonPropertyName("selectedThemeColorPaletteIndex")]
+    public int SelectedThemeColorPaletteIndex { get => selectedThemeColorPaletteIndex; set => SetProperty(ref selectedThemeColorPaletteIndex, value); }
+
+    [JsonPropertyName("downloadSpeedLimit")]
+    public string DownloadSpeedLimit { get => downloadSpeedLimit; set => SetProperty(ref downloadSpeedLimit, value); }
+
+    [JsonPropertyName("toastNotificationsEnabled")]
+    public bool ToastNotificationsEnabled { get => toastNotificationsEnabled; set => SetProperty(ref toastNotificationsEnabled, value); }
+
+    [JsonPropertyName("enableStartupUpdateCheck")]
+    public bool EnableStartupUpdateCheck { get => enableStartupUpdateCheck; set => SetProperty(ref enableStartupUpdateCheck, value); }
+
+    [JsonPropertyName("showRemoteContentCard")]
+    public bool ShowRemoteContentCard { get => showRemoteContentCard; set => SetProperty(ref showRemoteContentCard, value); }
+
+    [JsonPropertyName("patchUrlGroup")]
+    public string PatchUrlGroup { get => patchUrlGroup; set => SetProperty(ref patchUrlGroup, value); }
+
+    [JsonPropertyName("customBackgroundPath")]
+    public string CustomBackgroundPath { get => customBackgroundPath; set => SetProperty(ref customBackgroundPath, value); }
+
+    [JsonPropertyName("backgroundSource")]
+    public string BackgroundSource { get => backgroundSource; set => SetProperty(ref backgroundSource, value); }
+
+    [JsonPropertyName("backgroundFit")]
+    public string BackgroundFit { get => backgroundFit; set => SetProperty(ref backgroundFit, value); }
+
+    [JsonPropertyName("backgroundFillColor")]
+    public string BackgroundFillColor { get => backgroundFillColor; set => SetProperty(ref backgroundFillColor, value); }
+
+    [JsonPropertyName("resourcePanelUid")]
+    public string ResourcePanelUid { get => resourcePanelUid; set => SetProperty(ref resourcePanelUid, value); }
+
+    [JsonPropertyName("updateChannel")]
+    public string UpdateChannel { get => updateChannel; set => SetProperty(ref updateChannel, value); }
+
+    [JsonPropertyName("logLevel")]
+    public string LogLevel { get => logLevel; set => SetProperty(ref logLevel, value); }
+
+    [JsonPropertyName("resourcePanelUidSource")]
+    public string ResourcePanelUidSource { get => resourcePanelUidSource; set => SetProperty(ref resourcePanelUidSource, value); }
+
+    [JsonPropertyName("statusDetailMode")]
+    public string StatusDetailMode { get => statusDetailMode; set => SetProperty(ref statusDetailMode, value); }
 
     /// <summary>
     /// Deep-clones this settings object.

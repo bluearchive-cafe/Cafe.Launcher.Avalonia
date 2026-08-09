@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using System.Linq;
 using System.Threading;
@@ -6,28 +7,43 @@ using System.Threading.Tasks;
 using Avalonia.Threading;
 using Cafe.Launcher.Avalonia.Helpers;
 using Cafe.Launcher.Avalonia.Services;
+using Cafe.Launcher.Avalonia.Services.Diagnostics;
 using CommunityToolkit.Mvvm.Input;
 
 namespace Cafe.Launcher.Avalonia.ViewModels;
 
 public partial class ToastHostViewModel : ViewModelBase, IDisposable
 {
+    private const int AutoDismissProgressIntervalMs = 50;
     private readonly ToastService toastService;
     private readonly LocalizationService localizer;
     private readonly SettingsViewModel settings;
+    private readonly LocalDiagnostics diagnostics;
     private readonly Func<Action, Task> invokeOnUiAsync;
     private readonly Func<TimeSpan, CancellationToken, Task> delayAsync;
     private readonly CancellationTokenSource lifetimeCts = new();
+    private readonly Dictionary<string, TaskCompletionSource> exitCompletions = [];
+    private readonly Dictionary<string, CancellationTokenSource> actionTokens = [];
     private bool reduceMotion = true;
     private bool disposed;
 
     public ObservableCollection<ToastNotification> ActiveToasts { get; } = [];
 
     public ToastHostViewModel(ToastService toastService, LocalizationService localizer, SettingsViewModel settings)
+        : this(toastService, localizer, settings, new LocalDiagnostics())
+    {
+    }
+
+    public ToastHostViewModel(
+        ToastService toastService,
+        LocalizationService localizer,
+        SettingsViewModel settings,
+        LocalDiagnostics diagnostics)
         : this(
             toastService,
             localizer,
             settings,
+            diagnostics,
             async action => await Dispatcher.UIThread.InvokeAsync(action),
             static (delay, cancellationToken) => Task.Delay(delay, cancellationToken))
     {
@@ -39,10 +55,28 @@ public partial class ToastHostViewModel : ViewModelBase, IDisposable
         SettingsViewModel settings,
         Func<Action, Task> invokeOnUiAsync,
         Func<TimeSpan, CancellationToken, Task> delayAsync)
+        : this(
+            toastService,
+            localizer,
+            settings,
+            new LocalDiagnostics(),
+            invokeOnUiAsync,
+            delayAsync)
+    {
+    }
+
+    internal ToastHostViewModel(
+        ToastService toastService,
+        LocalizationService localizer,
+        SettingsViewModel settings,
+        LocalDiagnostics diagnostics,
+        Func<Action, Task> invokeOnUiAsync,
+        Func<TimeSpan, CancellationToken, Task> delayAsync)
     {
         this.toastService = toastService;
         this.localizer = localizer;
         this.settings = settings;
+        this.diagnostics = diagnostics;
         this.invokeOnUiAsync = invokeOnUiAsync;
         this.delayAsync = delayAsync;
         toastService.ToastRaised += OnToastRaised;
@@ -61,8 +95,28 @@ public partial class ToastHostViewModel : ViewModelBase, IDisposable
     }
 
     [RelayCommand(AllowConcurrentExecutions = true)]
-    private Task DismissToastAsync(string toastId) =>
-        ExitToastAsync(toastId, lifetimeCts.Token);
+    private async Task DismissToastAsync(string toastId)
+    {
+        CancelActionToken(toastId);
+        var canDismiss = false;
+        await invokeOnUiAsync(() =>
+        {
+            var toast = ActiveToasts.FirstOrDefault(candidate => candidate.Id == toastId);
+            canDismiss = toast is not null;
+        });
+        if (canDismiss)
+        {
+            await ExitToastAsync(toastId, lifetimeCts.Token);
+        }
+    }
+
+    [RelayCommand(AllowConcurrentExecutions = true)]
+    private Task ExecutePrimaryToastActionAsync(string toastId) =>
+        ExecuteToastActionAsync(toastId, static toast => toast.PrimaryAction);
+
+    [RelayCommand(AllowConcurrentExecutions = true)]
+    private Task ExecuteSecondaryToastActionAsync(string toastId) =>
+        ExecuteToastActionAsync(toastId, static toast => toast.SecondaryAction);
 
     private void OnToastRaised(ToastNotification notification)
     {
@@ -73,6 +127,11 @@ public partial class ToastHostViewModel : ViewModelBase, IDisposable
             ToastSeverity.Error => localizer.T("toastError"),
             _ => localizer.T("toastInfo")
         };
+        if (string.IsNullOrWhiteSpace(notification.Title))
+        {
+            notification.Title = notification.SeverityLabel;
+        }
+
         _ = ShowToastAsync(notification, lifetimeCts.Token);
     }
 
@@ -91,6 +150,17 @@ public partial class ToastHostViewModel : ViewModelBase, IDisposable
             }
 
             await invokeOnUiAsync(() => ActiveToasts.Add(notification));
+            if (notification.HasActions)
+            {
+                return;
+            }
+
+            if (notification.HasAutoDismissProgress)
+            {
+                await RunAutoDismissCountdownAsync(notification, cancellationToken);
+                return;
+            }
+
             await delayAsync(TimeSpan.FromMilliseconds(notification.DurationMs), cancellationToken);
             await ExitToastAsync(notification.Id, cancellationToken);
         }
@@ -106,21 +176,172 @@ public partial class ToastHostViewModel : ViewModelBase, IDisposable
         }
         catch (Exception ex)
         {
-            System.Diagnostics.Debug.WriteLine(
+            LocalDiagnostics.LogSync(
+                LogEntrySeverity.Warn,
+                "ToastLifecycleFailed",
                 $"ToastHost: toast notification lifecycle failed: {ex.Message}");
         }
     }
 
+    private async Task RunAutoDismissCountdownAsync(
+        ToastNotification notification,
+        CancellationToken cancellationToken)
+    {
+        var totalMilliseconds = notification.DurationMs;
+        var remainingMilliseconds = totalMilliseconds;
+
+        while (remainingMilliseconds > 0)
+        {
+            var stepMilliseconds = Math.Min(
+                AutoDismissProgressIntervalMs,
+                remainingMilliseconds);
+            await delayAsync(
+                TimeSpan.FromMilliseconds(stepMilliseconds),
+                cancellationToken);
+            remainingMilliseconds -= stepMilliseconds;
+
+            var progress = remainingMilliseconds * 100d / totalMilliseconds;
+            var isStillActive = false;
+            await invokeOnUiAsync(() =>
+            {
+                isStillActive = ActiveToasts.Contains(notification)
+                    && !notification.IsExiting;
+                if (isStillActive)
+                {
+                    notification.AutoDismissProgress = progress;
+                }
+            });
+
+            if (!isStillActive)
+            {
+                return;
+            }
+        }
+
+        await ExitToastAsync(notification.Id, cancellationToken);
+    }
+
+    private async Task ExecuteToastActionAsync(
+        string toastId,
+        Func<ToastNotification, ToastAction?> selectAction)
+    {
+        ToastNotification? toast = null;
+        ToastAction? action = null;
+        await invokeOnUiAsync(() =>
+        {
+            var candidate = ActiveToasts.FirstOrDefault(item => item.Id == toastId);
+            if (candidate is null || candidate.IsExiting || candidate.IsActionExecuting)
+            {
+                return;
+            }
+
+            var selectedAction = selectAction(candidate);
+            if (selectedAction is null)
+            {
+                return;
+            }
+
+            candidate.IsActionExecuting = true;
+            toast = candidate;
+            action = selectedAction;
+        });
+
+        if (toast is null || action is null)
+        {
+            return;
+        }
+
+        CancellationTokenSource? actionTimeoutCts = null;
+        try
+        {
+            actionTimeoutCts = CancellationTokenSource.CreateLinkedTokenSource(lifetimeCts.Token);
+            if (action.Timeout is { } timeout)
+            {
+                actionTimeoutCts.CancelAfter(timeout);
+            }
+
+            actionTokens[toast.Id] = actionTimeoutCts;
+            var result = await action.ExecuteAsync(actionTimeoutCts.Token);
+            if (result.IsSuccess)
+            {
+                await ExitToastAsync(toast.Id, lifetimeCts.Token);
+                return;
+            }
+
+            await ApplyActionFailureAsync(toast, result.Message!, result.Title);
+        }
+        catch (OperationCanceledException) when (actionTimeoutCts?.IsCancellationRequested == true
+            && !lifetimeCts.IsCancellationRequested)
+        {
+            // Dismiss killed the action — exit quietly.
+            await ExitToastAsync(toast.Id, lifetimeCts.Token);
+        }
+        catch (OperationCanceledException exception) when (
+            exception.CancellationToken == lifetimeCts.Token
+            && lifetimeCts.IsCancellationRequested)
+        {
+            // Host lifetime ended while the action was running.
+        }
+        catch (Exception exception)
+        {
+            await diagnostics.ErrorAsync("Toast action failed.", exception, CancellationToken.None);
+            await ApplyActionFailureAsync(
+                toast,
+                localizer.T("toastActionFailedMessage"),
+                localizer.T("toastActionFailedTitle"));
+        }
+        finally
+        {
+            actionTokens.Remove(toast.Id);
+            actionTimeoutCts?.Dispose();
+        }
+    }
+
+    private void CancelActionToken(string toastId)
+    {
+        if (actionTokens.TryGetValue(toastId, out var cts))
+        {
+            cts.Cancel();
+            actionTokens.Remove(toastId);
+        }
+    }
+
+    private Task ApplyActionFailureAsync(ToastNotification toast, string message, string? title) =>
+        invokeOnUiAsync(() =>
+        {
+            if (!ActiveToasts.Contains(toast))
+            {
+                return;
+            }
+
+            toast.Severity = ToastSeverity.Error;
+            toast.SeverityLabel = localizer.T("toastError");
+            if (!string.IsNullOrWhiteSpace(title))
+            {
+                toast.Title = title;
+            }
+
+            toast.Message = message;
+            toast.IsActionExecuting = false;
+        });
+
     private async Task ExitToastAsync(string toastId, CancellationToken cancellationToken)
     {
         ToastNotification? exitingToast = null;
-        var shouldWaitForAnimation = false;
+        TaskCompletionSource? exitCompletion = null;
+        var ownsExit = false;
         await invokeOnUiAsync(
             () =>
             {
                 var toast = ActiveToasts.FirstOrDefault(candidate => candidate.Id == toastId);
-                if (toast is null || toast.IsExiting)
+                if (toast is null)
                 {
+                    return;
+                }
+
+                if (exitCompletions.TryGetValue(toastId, out var existingCompletion))
+                {
+                    exitCompletion = existingCompletion;
                     return;
                 }
 
@@ -132,27 +353,62 @@ public partial class ToastHostViewModel : ViewModelBase, IDisposable
 
                 toast.IsExiting = true;
                 exitingToast = toast;
-                shouldWaitForAnimation = true;
+                exitCompletion = new TaskCompletionSource(
+                    TaskCreationOptions.RunContinuationsAsynchronously);
+                exitCompletions.Add(toastId, exitCompletion);
+                ownsExit = true;
             });
 
-        if (!shouldWaitForAnimation || exitingToast is null)
+        if (exitCompletion is null)
         {
+            return;
+        }
+
+        if (!ownsExit)
+        {
+            try
+            {
+                await exitCompletion.Task.WaitAsync(cancellationToken);
+            }
+            catch (OperationCanceledException)
+            {
+                // Cancellation swallowed — the owner handles cleanup.
+            }
             return;
         }
 
         try
         {
             await delayAsync(AnimationTimings.ExitAnimationDuration, cancellationToken);
-            await invokeOnUiAsync(
-                () => ActiveToasts.Remove(exitingToast));
+            await FinishExitOnUiThread(toastId, exitingToast!);
+            exitCompletion.TrySetResult();
         }
         catch (OperationCanceledException exception) when (
             exception.CancellationToken == cancellationToken
             && cancellationToken.IsCancellationRequested)
         {
             // The host lifetime ended while the exit animation was pending.
+            await FinishExitOnUiThread(toastId, exitingToast!);
+            exitCompletion.TrySetResult();
+        }
+        catch (OperationCanceledException exception)
+        {
+            exitCompletion.TrySetCanceled(exception.CancellationToken);
+            await exitCompletion.Task;
+        }
+        catch (Exception exception)
+        {
+            exitCompletion.TrySetException(exception);
+            await exitCompletion.Task;
         }
     }
+
+    private Task FinishExitOnUiThread(string toastId, ToastNotification toast) =>
+        invokeOnUiAsync(() =>
+        {
+            ActiveToasts.Remove(toast);
+            exitCompletions.Remove(toastId);
+        });
 
     public void Dispose()
     {

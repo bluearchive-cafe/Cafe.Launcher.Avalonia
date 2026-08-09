@@ -58,6 +58,7 @@ public static class ServiceConfiguration
         services.AddSingleton<GameUninstallService>();
         services.AddSingleton<LauncherUpdateService>();
         services.AddSingleton<ILauncherCoreService, LauncherCoreService>();
+        services.AddSingleton<IErrorHandlingService, ErrorHandlingService>();
 
         // ── IDisposable services ─────────────────────────────────────────
         // The container disposes created services in reverse order. This keeps
@@ -87,6 +88,7 @@ public static class ServiceConfiguration
         services.AddSingleton<RemoteContentViewModel>();
         services.AddSingleton<DialogsViewModel>();
         services.AddSingleton<GameOperationsViewModel>();
+        services.AddSingleton<DebugViewModel>();
         services.AddSingleton<ToastHostViewModel>();
         services.AddSingleton<WindowChromeViewModel>();
         services.AddSingleton<ModalHostViewModel>();

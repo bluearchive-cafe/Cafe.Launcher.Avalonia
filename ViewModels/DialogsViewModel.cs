@@ -53,6 +53,49 @@ public partial class DialogsViewModel : ViewModelBase, IModalContentViewModel
     [ObservableProperty]
     private string resourcePanelSourceConfirmText = "";
 
+    private bool isDebugResetConfirmationVisible;
+
+    public bool IsDebugResetConfirmationVisible
+    {
+        get => isDebugResetConfirmationVisible;
+        set => SetProperty(ref isDebugResetConfirmationVisible, value);
+    }
+
+    public IRelayCommand CancelDebugResetCommand { get; }
+
+    public IAsyncRelayCommand ConfirmDebugResetCommand { get; }
+
+    public event Func<Task>? ConfirmDebugResetRequested;
+
+    public void ShowDebugResetConfirmation()
+    {
+        IsDebugResetConfirmationVisible = true;
+    }
+
+    private void CancelDebugReset()
+    {
+        IsDebugResetConfirmationVisible = false;
+    }
+
+    private async Task ConfirmDebugResetAsync()
+    {
+        try
+        {
+            await AsyncEvent.InvokeSequentiallyAsync(ConfirmDebugResetRequested);
+        }
+        catch (Exception ex)
+        {
+            LocalDiagnostics.LogSync(
+                LogEntrySeverity.Error,
+                "DebugResetFailed",
+                $"Failed to reset settings: {ex.Message}");
+        }
+        finally
+        {
+            IsDebugResetConfirmationVisible = false;
+        }
+    }
+
     // ── Crash recovery ─────────────────────────────────────────────────
 
     [ObservableProperty]
@@ -129,6 +172,52 @@ public partial class DialogsViewModel : ViewModelBase, IModalContentViewModel
         CrashRecoveryViewLogRequested?.Invoke();
     }
 
+    // ── Critical error ────────────────────────────────────────────────────
+
+    [ObservableProperty]
+    private bool isErrorDialogVisible;
+
+    [ObservableProperty]
+    private string errorDialogMessage = "";
+
+    [ObservableProperty]
+    private string errorDialogDetails = "";
+
+    public event Action? ErrorViewLogRequested;
+    public event Action<string>? ErrorCopyDetailsRequested;
+
+    public void ShowCriticalError(string message, string details)
+    {
+        if (Dispatcher.UIThread.CheckAccess())
+        {
+            ErrorDialogMessage = message;
+            ErrorDialogDetails = details;
+            IsErrorDialogVisible = true;
+            return;
+        }
+
+        Dispatcher.UIThread.Post(() => ShowCriticalError(message, details));
+    }
+
+    [RelayCommand]
+    private void ContinueAfterError()
+    {
+        IsErrorDialogVisible = false;
+    }
+
+    [RelayCommand]
+    private void ViewErrorLog()
+    {
+        IsErrorDialogVisible = false;
+        ErrorViewLogRequested?.Invoke();
+    }
+
+    [RelayCommand]
+    private void CopyErrorDetails()
+    {
+        ErrorCopyDetailsRequested?.Invoke(ErrorDialogDetails);
+    }
+
     // ── Notice ─────────────────────────────────────────────────────────
 
     [ObservableProperty]
@@ -190,6 +279,8 @@ public partial class DialogsViewModel : ViewModelBase, IModalContentViewModel
         this.invokeOnUiAsync = invokeOnUiAsync;
         LanguageOptions = LocalizationService.GetLanguageOptions(localizer);
         SetupWizard = setupWizard;
+        CancelDebugResetCommand = new RelayCommand(CancelDebugReset);
+        ConfirmDebugResetCommand = new AsyncRelayCommand(ConfirmDebugResetAsync);
     }
 
     public void ApplyLanguage()

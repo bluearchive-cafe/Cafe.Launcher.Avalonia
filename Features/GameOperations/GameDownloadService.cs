@@ -16,6 +16,9 @@ namespace Cafe.Launcher.Avalonia.Features.GameOperations;
 
 public sealed class GameDownloadService : IDisposable
 {
+    /// <summary>Raised when <see cref="IsRunning"/> changes value.</summary>
+    internal event Action? IsRunningChanged;
+
     /// <summary>Parameter object grouping all constructor dependencies.</summary>
     public sealed record Dependencies(
         LauncherApiClient ApiClient,
@@ -112,6 +115,7 @@ public sealed class GameDownloadService : IDisposable
 
     public void Stop(bool clearPersistedState = true)
     {
+        // Only notify the observer if there is an actual state change.
         ActiveDownloadOperation? operation;
         TaskCompletionSource? tcs;
         lock (activeDownloadLock)
@@ -131,6 +135,11 @@ public sealed class GameDownloadService : IDisposable
             tcs = pauseTcs;
         }
         tcs?.TrySetResult();
+
+        if (operation is not null)
+        {
+            IsRunningChanged?.Invoke();
+        }
         LocalDiagnostics.LogSync(LogEntrySeverity.Debug, "GameDownload", "Download stopped by user");
     }
 
@@ -237,6 +246,7 @@ public sealed class GameDownloadService : IDisposable
         {
             ReplaceActiveDownload(operation);
             operationRegistered = true;
+            IsRunningChanged?.Invoke();
             ResetPauseState();
 
             var settings = await settingsService.ReadAsync(activeToken).ConfigureAwait(false);
@@ -499,6 +509,7 @@ public sealed class GameDownloadService : IDisposable
             if (operationRegistered)
             {
                 ClearActiveDownload(operation);
+                IsRunningChanged?.Invoke();
             }
             else
             {
