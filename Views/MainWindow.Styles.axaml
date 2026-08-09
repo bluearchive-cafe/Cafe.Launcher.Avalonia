@@ -1042,6 +1042,15 @@
         <Setter Property="BorderBrush" Value="{DynamicResource LauncherCardBorderBrush}"/>
         <Setter Property="BorderThickness" Value="1"/>
     </Style>
+    <!-- Semantic marker classes used by layout and headless UI contracts. -->
+    <Style Selector="Grid.install-path-row"/>
+    <Style Selector="Button.news-row"/>
+    <Style Selector="ScrollViewer.news-viewport"/>
+    <Style Selector="StackPanel.operation-actions"/>
+    <Style Selector="Grid.operation-layout"/>
+    <Style Selector="Grid.operation-status"/>
+    <Style Selector="Button.primary-operation"/>
+    <Style Selector="Button.secondary-operation"/>
     <StyleInclude Source="avares://Cafe.Launcher.Avalonia/Views/Styles/Diagnostics.axaml"/>
     <StyleInclude Source="avares://Cafe.Launcher.Avalonia/Views/Styles/RemoteContent.axaml"/>
     <StyleInclude Source="avares://Cafe.Launcher.Avalonia/Views/Styles/SetupWizard.axaml"/>
