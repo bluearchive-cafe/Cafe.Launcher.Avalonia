@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 using System.IO;
 using Cafe.Launcher.Avalonia.Helpers;
 
@@ -6,6 +7,10 @@ namespace Cafe.Launcher.Avalonia.Services;
 
 public sealed class DiskSpaceService
 {
+    private readonly record struct CacheEntry(long AvailableBytes, long Timestamp);
+
+    private readonly Dictionary<string, CacheEntry> _cache = new(StringComparer.OrdinalIgnoreCase);
+
     internal Func<string, long?>? GetAvailableBytesOverride { get; set; }
 
     public long? GetAvailableBytes(string path)
@@ -21,21 +26,31 @@ public sealed class DiskSpaceService
             return null;
         }
 
+        var root = Path.GetPathRoot(existingPath);
+        if (string.IsNullOrWhiteSpace(root))
+        {
+            return null;
+        }
+
+        var now = Environment.TickCount64;
+        if (_cache.TryGetValue(root, out var entry) && now - entry.Timestamp < CacheDurationMs)
+        {
+            return entry.AvailableBytes;
+        }
+
         try
         {
-            var root = Path.GetPathRoot(existingPath);
-            if (string.IsNullOrWhiteSpace(root))
-            {
-                return null;
-            }
-
-            return new DriveInfo(root).AvailableFreeSpace;
+            var available = new DriveInfo(root).AvailableFreeSpace;
+            _cache[root] = new CacheEntry(available, now);
+            return available;
         }
         catch (Exception exception) when (exception is IOException or UnauthorizedAccessException or ArgumentException)
         {
             return null;
         }
     }
+
+    private const long CacheDurationMs = 30_000;
 
     public bool HasEnoughSpace(string path, long requiredBytes)
     {
