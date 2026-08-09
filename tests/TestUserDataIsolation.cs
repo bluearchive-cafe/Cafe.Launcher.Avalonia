@@ -10,7 +10,7 @@ internal static class TestUserDataIsolation
         "Cafe.Launcher.Avalonia.Tests",
         "UserData",
         typeof(TestUserDataIsolation).Assembly.GetName().Name ?? "UnknownAssembly",
-        $"{Environment.ProcessId}-{Guid.NewGuid():N}");
+        Guid.NewGuid().ToString("N"));
 
     [ModuleInitializer]
     internal static void Initialize()
@@ -19,23 +19,5 @@ internal static class TestUserDataIsolation
         Environment.SetEnvironmentVariable(
             LauncherUserDataDirectory.TestOverrideEnvironmentVariable,
             userDataDirectory);
-        AppDomain.CurrentDomain.ProcessExit += (_, _) => TryDeleteUserDataDirectory();
-    }
-
-    private static void TryDeleteUserDataDirectory()
-    {
-        try
-        {
-            if (Directory.Exists(userDataDirectory))
-            {
-                Directory.Delete(userDataDirectory, recursive: true);
-            }
-        }
-        catch (IOException)
-        {
-        }
-        catch (UnauthorizedAccessException)
-        {
-        }
     }
 }

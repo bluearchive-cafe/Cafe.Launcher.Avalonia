@@ -1,7 +1,7 @@
 using System;
 using Avalonia.Media;
 
-namespace Cafe.Launcher.Avalonia.Services;
+namespace Cafe.Launcher.Avalonia.Helpers;
 
 /// <summary>
 /// Colour-space conversion and accent-colour normalisation utilities.

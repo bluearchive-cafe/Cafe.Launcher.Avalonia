@@ -1,6 +1,6 @@
 using System;
 using System.Runtime.CompilerServices;
-using Cafe.Launcher.Avalonia.Services;
+using Cafe.Launcher.Avalonia.Helpers;
 
 namespace Cafe.Launcher.Avalonia.HeadlessTests;
 

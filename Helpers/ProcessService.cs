@@ -4,7 +4,7 @@ using System.IO;
 using System.Threading;
 using System.Threading.Tasks;
 
-namespace Cafe.Launcher.Avalonia.Services;
+namespace Cafe.Launcher.Avalonia.Helpers;
 
 public static class ProcessService
 {

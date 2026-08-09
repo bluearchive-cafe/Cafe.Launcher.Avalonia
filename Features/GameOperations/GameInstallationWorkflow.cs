@@ -2,7 +2,6 @@ using System;
 using System.Threading;
 using System.Threading.Tasks;
 using Cafe.Launcher.Avalonia.Models;
-using Cafe.Launcher.Avalonia.Services;
 
 namespace Cafe.Launcher.Avalonia.Features.GameOperations;
 
@@ -14,9 +13,17 @@ internal sealed class GameInstallationWorkflow(GameDownloadService service) : IG
     /// <inheritdoc />
     public bool IsPaused => service.IsPaused;
     /// <inheritdoc />
+    public event Action? IsRunningChanged
+    {
+        add => service.IsRunningChanged += value;
+        remove => service.IsRunningChanged -= value;
+    }
+
+    /// <inheritdoc />
     public Task<GameOperationResult> InstallOrUpdateAsync(
         LauncherStatusSnapshot snapshot,
-        Action<GameOperationProgress> progress) => service.InstallOrUpdateAsync(snapshot, progress);
+        Action<GameOperationProgress> progress,
+        CancellationToken cancellationToken = default) => service.InstallOrUpdateAsync(snapshot, progress, cancellationToken);
     /// <inheritdoc />
     public Task<GameOperationResult> RepairAsync(
         LauncherStatusSnapshot snapshot,

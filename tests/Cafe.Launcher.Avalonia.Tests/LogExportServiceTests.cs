@@ -37,7 +37,7 @@ public sealed class LogExportServiceTests : IDisposable
     public void DefaultExportDirectory_UsesProductDataExportFolder()
     {
         var expected = Path.Combine(
-            LauncherUserDataDirectory.Path,
+            LauncherUserDataDirectory.Root,
             LauncherConstants.LogExportFolderName);
 
         Assert.Equal(expected, LogExportService.DefaultExportDirectory);

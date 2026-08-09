@@ -1,5 +1,6 @@
 using System.Net.Http;
 using System.Threading;
+using Cafe.Launcher.Avalonia.Features.GameOperations;
 using Cafe.Launcher.Avalonia.Models;
 using Cafe.Launcher.Avalonia.Services;
 using Cafe.Launcher.Avalonia.Services.Auth;
@@ -432,7 +433,7 @@ public sealed class InstallationOperationStateTests : IDisposable
                     RemoteHttpUrlValidator.CreateForTesting()),
                 new LocalInstallationStateStore(),
                 new LauncherSettingsService(Path.Combine(tempDir, "settings.json")),
-                new ProxySettingsService(),
+                new HttpClientFactory(new ProxySettingsService()),
                 new Crc64Service(),
                 new DiskSpaceService(),
                 new LocalDiagnostics(),

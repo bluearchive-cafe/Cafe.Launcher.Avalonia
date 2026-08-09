@@ -210,7 +210,7 @@ public sealed class WindowChromeViewModelTests : IDisposable
         Assert.Equal("https://docs.bluearchive.cafe/cafe-launcher/", openedUrls[1]);
         Assert.Equal(LauncherConstants.GitHubReleaseRepositoryUrl, openedUrls[2]);
         Assert.Equal("mailto:support@example.invalid", openedUrls[3]);
-        Assert.Equal(LauncherUserDataDirectory.Path, openedDirectory);
+        Assert.Equal(LauncherUserDataDirectory.Root, openedDirectory);
     }
 
     [Fact]

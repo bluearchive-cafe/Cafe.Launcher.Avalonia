@@ -1,3 +1,4 @@
+using Cafe.Launcher.Avalonia.Services;
 using Cafe.Launcher.Avalonia.Services.Diagnostics;
 
 namespace Cafe.Launcher.Avalonia.Tests;
@@ -109,9 +110,7 @@ public sealed class DiagnosticsServicesTests : IDisposable
             diagnostics.LogFilePath,
             StringComparison.OrdinalIgnoreCase);
         Assert.DoesNotContain(
-            Path.Combine(
-                Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData),
-                "Cafe Launcher"),
+            LauncherUserDataDirectory.Root,
             diagnostics.LogFilePath,
             StringComparison.OrdinalIgnoreCase);
     }

@@ -4,7 +4,7 @@ using System.Threading;
 using System.Threading.Tasks;
 using Avalonia;
 using Avalonia.Controls;
-using Cafe.Launcher.Avalonia.Services;
+using Cafe.Launcher.Avalonia.Helpers;
 
 namespace Cafe.Launcher.Avalonia.Controls;
 

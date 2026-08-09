@@ -1,3 +1,4 @@
+using Cafe.Launcher.Avalonia.Features.Shell;
 using Cafe.Launcher.Avalonia.Models;
 using Cafe.Launcher.Avalonia.Services;
 using Cafe.Launcher.Avalonia.Services.Diagnostics;
@@ -58,23 +59,27 @@ public sealed class ServiceConfigurationTests : IDisposable
         using var viewModel = provider.GetRequiredService<MainWindowViewModel>();
         viewModel.Operations.ApplySnapshot(new LauncherStatusSnapshot
         {
+            Settings = new LauncherSettings
+            {
+                GamePath = Path.Combine(Path.GetTempPath(), Guid.NewGuid().ToString("N"), "YostarGames", "BlueArchive_JP")
+            },
             RuntimeState = LauncherRuntimeState.Ready,
             Remote = new LauncherRemoteState
             {
                 GameConfig = new GameConfigResponse()
             }
         });
-        viewModel.Dispose();
-        viewModel.Dialogs.ConfirmRepairRequested += viewModel.Operations.RepairAsync;
         viewModel.Shell.IsBusy = false;
         viewModel.Dialogs.ShowRepairConfirm("repair");
+
+        Assert.NotNull(viewModel.ModalHost.Top);
+        Assert.Equal(ModalKind.RepairConfirmation, viewModel.ModalHost.Top!.Kind);
+        Assert.True(viewModel.ModalHost.HasEntries);
 
         await viewModel.Dialogs.ConfirmRepairCommand.ExecuteAsync(null);
 
         Assert.False(viewModel.Dialogs.IsRepairConfirmVisible);
-        Assert.Equal(
-            provider.GetRequiredService<LocalizationService>().T("downloadRemoteConfigIncomplete"),
-            viewModel.Shell.OperationNote);
+        Assert.Null(viewModel.ModalHost.Top);
     }
 
     [Fact]

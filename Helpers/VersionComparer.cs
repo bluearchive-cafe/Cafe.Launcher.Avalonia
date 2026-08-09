@@ -1,6 +1,6 @@
 using System;
 
-namespace Cafe.Launcher.Avalonia.Services;
+namespace Cafe.Launcher.Avalonia.Helpers;
 
 /// <summary>
 /// Semantic-version comparison aware of pre-release suffixes (e.g. <c>1.0.0-beta.1</c> &lt; <c>1.0.0</c>).

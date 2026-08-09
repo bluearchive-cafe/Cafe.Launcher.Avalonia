@@ -1,4 +1,6 @@
 using Microsoft.Extensions.DependencyInjection;
+using Cafe.Launcher.Avalonia.Features.GameOperations;
+using Cafe.Launcher.Avalonia.Features.Shell;
 using Cafe.Launcher.Avalonia.Services.Auth;
 using Cafe.Launcher.Avalonia.Services.Diagnostics;
 using Cafe.Launcher.Avalonia.ViewModels;
@@ -56,6 +58,7 @@ public static class ServiceConfiguration
         services.AddSingleton<GameUninstallService>();
         services.AddSingleton<LauncherUpdateService>();
         services.AddSingleton<ILauncherCoreService, LauncherCoreService>();
+        services.AddSingleton<IErrorHandlingService, ErrorHandlingService>();
 
         // ── IDisposable services ─────────────────────────────────────────
         // The container disposes created services in reverse order. This keeps
@@ -70,7 +73,7 @@ public static class ServiceConfiguration
                 sp.GetRequiredService<IFileDownloadService>(),
                 sp.GetRequiredService<LocalInstallationStateStore>(),
                 sp.GetRequiredService<LauncherSettingsService>(),
-                sp.GetRequiredService<ProxySettingsService>(),
+                sp.GetRequiredService<HttpClientFactory>(),
                 sp.GetRequiredService<Crc64Service>(),
                 sp.GetRequiredService<DiskSpaceService>(),
                 sp.GetRequiredService<LocalDiagnostics>(),
@@ -85,8 +88,11 @@ public static class ServiceConfiguration
         services.AddSingleton<RemoteContentViewModel>();
         services.AddSingleton<DialogsViewModel>();
         services.AddSingleton<GameOperationsViewModel>();
+        services.AddSingleton<DebugViewModel>();
         services.AddSingleton<ToastHostViewModel>();
         services.AddSingleton<WindowChromeViewModel>();
+        services.AddSingleton<ModalHostViewModel>();
+        services.AddSingleton<ShellCoordinator>();
         services.AddSingleton<MainWindowViewModel>();
 
         return services;

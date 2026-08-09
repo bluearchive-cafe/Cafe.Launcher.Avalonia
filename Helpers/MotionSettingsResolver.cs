@@ -1,6 +1,6 @@
 using Cafe.Launcher.Avalonia.Models;
 
-namespace Cafe.Launcher.Avalonia.Services;
+namespace Cafe.Launcher.Avalonia.Helpers;
 
 public static class MotionSettingsResolver
 {

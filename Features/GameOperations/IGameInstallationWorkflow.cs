@@ -8,6 +8,9 @@ namespace Cafe.Launcher.Avalonia.Features.GameOperations;
 /// <summary>Coordinates installation, repair, resume, pause, and stop behavior.</summary>
 internal interface IGameInstallationWorkflow
 {
+    /// <summary>Raised when <see cref="IsRunning"/> changes.</summary>
+    event Action? IsRunningChanged;
+
     /// <summary>Gets whether an installation operation is active.</summary>
     bool IsRunning { get; }
 
@@ -17,7 +20,8 @@ internal interface IGameInstallationWorkflow
     /// <summary>Installs or updates the game represented by the snapshot.</summary>
     Task<GameOperationResult> InstallOrUpdateAsync(
         LauncherStatusSnapshot snapshot,
-        Action<GameOperationProgress> progress);
+        Action<GameOperationProgress> progress,
+        CancellationToken cancellationToken = default);
 
     /// <summary>Repairs the game represented by the snapshot.</summary>
     Task<GameOperationResult> RepairAsync(

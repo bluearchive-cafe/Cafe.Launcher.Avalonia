@@ -20,7 +20,7 @@ public sealed class LogExportService
     private readonly UnifiedLogger logger;
 
     public static string DefaultExportDirectory => Path.Combine(
-        LauncherUserDataDirectory.Path,
+        LauncherUserDataDirectory.Root,
         LauncherConstants.LogExportFolderName);
 
     public LogExportService(UnifiedLogger logger)
