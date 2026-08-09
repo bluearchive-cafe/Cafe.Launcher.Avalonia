@@ -19,6 +19,7 @@ public partial class MainWindowViewModel : ViewModelBase, IDisposable
     private readonly ToastService toastService;
     private readonly LauncherUpdateService launcherUpdateService;
     private readonly LocalDiagnostics diagnostics;
+    private readonly IErrorHandlingService errorHandling;
     private readonly CancellationTokenSource lifetimeCts = new();
     private int initialized;
     private bool disposed;
@@ -63,7 +64,21 @@ public partial class MainWindowViewModel : ViewModelBase, IDisposable
 
     public LogViewerDialogViewModel LogViewer { get; }
 
+    public DebugViewModel Debug { get; }
+
     public ModalHostViewModel ModalHost { get; }
+
+    public bool IsDebugFeaturesEnabled
+    {
+        get
+        {
+#if DEBUG
+            return true;
+#else
+            return false;
+#endif
+        }
+    }
 
     public MainWindowViewModel(
         ILauncherCoreService launcherCoreService,
@@ -82,7 +97,9 @@ public partial class MainWindowViewModel : ViewModelBase, IDisposable
         WindowChromeViewModel windowChrome,
         SettingsViewModel settingsViewModel,
         ResourcePanelViewModel resourcePanelViewModel,
+        IErrorHandlingService errorHandling,
         LogViewerDialogViewModel? logViewer = null,
+        DebugViewModel? debug = null,
         ModalHostViewModel? modalHost = null,
         WindowsAnimationSettingsProvider? windowsAnimationSettingsProvider = null,
         ShellCoordinator? coordinator = null)
@@ -111,6 +128,14 @@ public partial class MainWindowViewModel : ViewModelBase, IDisposable
             null,
             null,
             null);
+
+        this.errorHandling = errorHandling;
+        this.errorHandling.CriticalErrorRequested += OnCriticalError;
+
+        Debug = debug ?? new DebugViewModel(
+            toastService, unifiedLogger, this.errorHandling,
+            settingsService, Operations, Shell);
+
         ModalHost = modalHost ?? coordinator?.ModalHost ?? new ModalHostViewModel();
 
         this.coordinator = coordinator ?? new ShellCoordinator(
@@ -119,6 +144,7 @@ public partial class MainWindowViewModel : ViewModelBase, IDisposable
             Settings,
             ResourcePanel,
             LogViewer,
+            Debug,
             Dialogs);
         this.coordinator.StatusDetailModeChanged += OnStatusDetailModeChanged;
 
@@ -188,8 +214,8 @@ public partial class MainWindowViewModel : ViewModelBase, IDisposable
         {
             Shell.SetRefreshError(exception);
             Operations.SetIdlePanels(currentSnapshot);
-            toastService.ShowError(localizer.F("networkWithMessage", exception.Message));
-            await diagnostics.ErrorAsync("Launcher core refresh failed.", exception, CancellationToken.None);
+            await errorHandling.HandleErrorAsync("Launcher core refresh failed.", exception,
+                new ErrorHandlingOptions { OperationNoteKey = "networkWithMessage" });
         }
         finally
         {
@@ -287,6 +313,7 @@ public partial class MainWindowViewModel : ViewModelBase, IDisposable
         Dialogs.ConfirmResourcePanelSourceSwitchRequested += SwitchToCafeAndOpenResourcePanel;
 
         Operations.RefreshRequested += HandleOperationsRefreshRequestedAsync;
+        Operations.OpenLogViewerRequested += OpenLogViewerAsync;
 
         Dialogs.ConfirmRepairRequested += Operations.RepairAsync;
         Dialogs.ConfirmUninstallRequested += Operations.ConfirmUninstallAsync;
@@ -296,6 +323,12 @@ public partial class MainWindowViewModel : ViewModelBase, IDisposable
         Dialogs.ConfirmUpdateAvailableRequested += OnConfirmUpdateAvailableRequested;
         Dialogs.CrashRecoveryResetSettingsRequested += ResetSettingsAfterCrashAsync;
         Dialogs.CrashRecoveryViewLogRequested += OpenCrashLog;
+        Dialogs.ErrorViewLogRequested += OpenCrashLog;
+
+        Debug.RefreshRequested += HandleDebugRefreshRequestedAsync;
+        Debug.ResetSettingsRequested += ResetSettingsAfterCrashAsync;
+        Debug.ResetSettingsConfirmationRequested += Dialogs.ShowDebugResetConfirmation;
+        Dialogs.ConfirmDebugResetRequested += Debug.ConfirmResetSettingsAsync;
 
         RemoteContent.OpenExternalUrlRequested = WindowChrome.OpenExternalUrl;
 
@@ -321,6 +354,10 @@ public partial class MainWindowViewModel : ViewModelBase, IDisposable
         await RefreshAsync();
     }
 
+    private Task HandleDebugRefreshRequestedAsync() => RefreshAsync();
+
+    private Task OpenLogViewerAsync() => LogViewer.OpenCommand.ExecuteAsync(null);
+
     private async Task ResetSettingsAfterCrashAsync()
     {
         await settingsService.SaveAsync(LauncherSettings.CreateDefaults());
@@ -335,6 +372,11 @@ public partial class MainWindowViewModel : ViewModelBase, IDisposable
     private void OnConfirmUpdateAvailableRequested(string url)
     {
         ExternalLinkService.Open(url);
+    }
+
+    private void OnCriticalError(CriticalErrorInfo info)
+    {
+        Dialogs.ShowCriticalError(info.Message, info.Details);
     }
 
     private async Task<string?> PickGameFolderForWizardAsync(string currentPath)
@@ -382,8 +424,8 @@ public partial class MainWindowViewModel : ViewModelBase, IDisposable
         }
         catch (Exception exception)
         {
-            toastService.ShowError(localizer.F("resourcePanelLoadFailed", exception.Message));
-            await diagnostics.ErrorAsync("Resource panel source switch failed.", exception);
+            await errorHandling.HandleErrorAsync("Resource panel source switch failed.", exception,
+                new ErrorHandlingOptions { ToastMessage = localizer.F("resourcePanelLoadFailed", exception.Message) });
         }
     }
 
@@ -466,6 +508,7 @@ public partial class MainWindowViewModel : ViewModelBase, IDisposable
         RemoteContent.ApplyLanguage();
         Dialogs.ApplyLanguage();
         Operations.ApplyLanguage();
+        Debug.ApplyLanguage();
     }
 
     private void PreviewSetupWizardLanguage(string language)
@@ -494,6 +537,7 @@ public partial class MainWindowViewModel : ViewModelBase, IDisposable
         disposed = true;
         Settings.SettingsSaved -= HandleSettingsSavedAsync;
         Operations.RefreshRequested -= HandleOperationsRefreshRequestedAsync;
+        Operations.OpenLogViewerRequested -= OpenLogViewerAsync;
         ResourcePanel.ResourcePanelSourceConfirmRequested -= ShowResourcePanelSourceConfirmDialog;
         Dialogs.ConfirmResourcePanelSourceSwitchRequested -= SwitchToCafeAndOpenResourcePanel;
         Dialogs.ConfirmRepairRequested -= Operations.RepairAsync;
@@ -504,9 +548,15 @@ public partial class MainWindowViewModel : ViewModelBase, IDisposable
         Dialogs.ConfirmUpdateAvailableRequested -= OnConfirmUpdateAvailableRequested;
         Dialogs.CrashRecoveryResetSettingsRequested -= ResetSettingsAfterCrashAsync;
         Dialogs.CrashRecoveryViewLogRequested -= OpenCrashLog;
+        Dialogs.ErrorViewLogRequested -= OpenCrashLog;
         Dialogs.SetupWizard.LanguagePreviewRequested -= PreviewSetupWizardLanguage;
         Dialogs.SetupWizard.SettingsApplied -= HandleSetupWizardCompletedAsync;
         this.coordinator.StatusDetailModeChanged -= OnStatusDetailModeChanged;
+        this.errorHandling.CriticalErrorRequested -= OnCriticalError;
+        Debug.RefreshRequested -= HandleDebugRefreshRequestedAsync;
+        Debug.ResetSettingsRequested -= ResetSettingsAfterCrashAsync;
+        Debug.ResetSettingsConfirmationRequested -= Dialogs.ShowDebugResetConfirmation;
+        Dialogs.ConfirmDebugResetRequested -= Debug.ConfirmResetSettingsAsync;
         coordinator.Unwire();
         Operations.StopDownload(clearPersistedState: false);
         Settings.Dispose();
@@ -514,6 +564,7 @@ public partial class MainWindowViewModel : ViewModelBase, IDisposable
         Background.Dispose();
         Toasts.Dispose();
         ResourcePanel.Dispose();
+        Debug.Dispose();
         lifetimeCts.Cancel();
         lifetimeCts.Dispose();
     }

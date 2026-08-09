@@ -8,47 +8,85 @@
              x:Class="Cafe.Launcher.Avalonia.Views.MainWindowToastOverlay"
              x:Name="ToastOverlayRoot"
              x:DataType="vm:MainWindowViewModel">
-        <!-- Toast notification overlay -->
-        <Grid Classes="toast-host" ZIndex="{x:Static constants:LauncherConstants.ZIndexToast}">
-            <ItemsControl ItemsSource="{Binding Toasts.ActiveToasts}">
-                <ItemsControl.ItemsPanel>
-                    <ItemsPanelTemplate>
-                        <StackPanel Classes="toast-list"/>
-                    </ItemsPanelTemplate>
-                </ItemsControl.ItemsPanel>
-                <ItemsControl.ItemTemplate>
-                    <DataTemplate x:DataType="services:ToastNotification">
-                        <Border Classes="toast-card"
-                                Classes.motion-enabled="{Binding DataContext.IsMotionEnabled, ElementName=ToastOverlayRoot}"
-                                Classes.motion-exit="{Binding IsExiting}"
-                                IsHitTestVisible="True">
-                            <Border.RenderTransform>
-                                <TranslateTransform/>
-                            </Border.RenderTransform>
-                            <Grid Classes="toast-layout" ColumnDefinitions="Auto,*,Auto">
-                                <materialIcons:MaterialIcon Kind="{Binding IconKind}" Width="{StaticResource LauncherIconMd}" Height="{StaticResource LauncherIconMd}"
-                                                            Foreground="{Binding Severity, Converter={x:Static converters:ToastSeverityToBrushConverter.Instance}}"
-                                                            Classes="toast-icon"
-                                                            AutomationProperties.Name="{Binding SeverityLabel}"/>
-                                <StackPanel Grid.Column="1" Classes="toast-copy">
-                                    <TextBlock Text="{Binding SeverityLabel}" Classes="toast-severity"
-                                               Foreground="{Binding Severity, Converter={x:Static converters:ToastSeverityToBrushConverter.Instance}}"/>
-                                    <TextBlock Text="{Binding Message}"
+    <!-- Toast notification overlay -->
+    <Grid Classes="toast-host" ZIndex="{x:Static constants:LauncherConstants.ZIndexToast}">
+        <ItemsControl ItemsSource="{Binding Toasts.ActiveToasts}">
+            <ItemsControl.ItemsPanel>
+                <ItemsPanelTemplate>
+                    <StackPanel Classes="toast-list"/>
+                </ItemsPanelTemplate>
+            </ItemsControl.ItemsPanel>
+            <ItemsControl.ItemTemplate>
+                <DataTemplate x:DataType="services:ToastNotification">
+                    <Border Classes="toast-card"
+                            Classes.motion-enabled="{Binding #ToastOverlayRoot.((vm:MainWindowViewModel)DataContext).IsMotionEnabled}"
+                            Classes.motion-exit="{Binding IsExiting}"
+                            IsHitTestVisible="True">
+                        <Border.RenderTransform>
+                            <TranslateTransform/>
+                        </Border.RenderTransform>
+                        <Grid RowDefinitions="Auto,Auto">
+                            <Border Grid.Row="0" Classes="toast-content">
+                                <Grid Classes="toast-layout" ColumnDefinitions="Auto,*,Auto" RowDefinitions="Auto,Auto,Auto">
+                                    <materialIcons:MaterialIcon Grid.Row="0" Grid.Column="0"
+                                                                Kind="{Binding IconKind}" Width="{StaticResource LauncherIconSm}" Height="{StaticResource LauncherIconSm}"
+                                                                Foreground="{Binding Severity, Converter={x:Static converters:ToastSeverityToBrushConverter.Instance}}"
+                                                                VerticalAlignment="Center"
+                                                                Classes="toast-icon"
+                                                                AutomationProperties.Name="{Binding SeverityLabel}"/>
+                                    <TextBlock Grid.Row="0" Grid.Column="1"
+                                               Text="{Binding Title}"
                                                VerticalAlignment="Center"
+                                               Classes="toast-title"/>
+                                    <TextBlock Grid.Row="1" Grid.Column="1"
+                                               Text="{Binding Message}"
                                                Classes="toast-message"/>
-                                </StackPanel>
-                                <Button Grid.Column="2"
-                                        Classes="toast-close"
-                                        Command="{Binding DataContext.Toasts.DismissToastCommand, ElementName=ToastOverlayRoot}"
-                                        CommandParameter="{Binding Id}"
-                                        ToolTip.Tip="{Binding DataContext.Shell.I18n.Close, ElementName=ToastOverlayRoot}"
-                                        AutomationProperties.Name="{Binding DataContext.Shell.I18n.Close, ElementName=ToastOverlayRoot}">
-                                    <materialIcons:MaterialIcon Kind="Close" Width="{StaticResource LauncherIconSm}" Height="{StaticResource LauncherIconSm}"/>
-                                </Button>
-                            </Grid>
-                        </Border>
-                    </DataTemplate>
-                </ItemsControl.ItemTemplate>
-            </ItemsControl>
-        </Grid>
+                                    <WrapPanel Grid.Row="2" Grid.Column="1"
+                                               Classes="toast-actions"
+                                               HorizontalAlignment="Left">
+                                        <Button Classes="toast-primary-action"
+                                                IsVisible="{Binding HasPrimaryAction}"
+                                                IsEnabled="{Binding IsActionExecuting, Converter={x:Static BoolConverters.Not}}"
+                                                Command="{Binding #ToastOverlayRoot.((vm:MainWindowViewModel)DataContext).Toasts.ExecutePrimaryToastActionCommand}"
+                                                CommandParameter="{Binding Id}"
+                                                AutomationProperties.Name="{Binding PrimaryActionLabel}">
+                                            <TextBlock Text="{Binding PrimaryActionLabel}"/>
+                                        </Button>
+                                        <Button Classes="toast-secondary-action"
+                                                IsVisible="{Binding HasSecondaryAction}"
+                                                IsEnabled="{Binding IsActionExecuting, Converter={x:Static BoolConverters.Not}}"
+                                                Command="{Binding #ToastOverlayRoot.((vm:MainWindowViewModel)DataContext).Toasts.ExecuteSecondaryToastActionCommand}"
+                                                CommandParameter="{Binding Id}"
+                                                AutomationProperties.Name="{Binding SecondaryActionLabel}">
+                                            <TextBlock Text="{Binding SecondaryActionLabel}"/>
+                                        </Button>
+                                    </WrapPanel>
+                                    <Button Grid.Row="0" Grid.Column="2" Grid.RowSpan="3"
+                                            Classes="toast-close"
+                                            Command="{Binding #ToastOverlayRoot.((vm:MainWindowViewModel)DataContext).Toasts.DismissToastCommand}"
+                                            CommandParameter="{Binding Id}"
+                                            ToolTip.Tip="{Binding #ToastOverlayRoot.((vm:MainWindowViewModel)DataContext).Shell.I18n.Close}"
+                                            AutomationProperties.Name="{Binding #ToastOverlayRoot.((vm:MainWindowViewModel)DataContext).Shell.I18n.Close}">
+                                        <materialIcons:MaterialIcon Kind="Close" Width="{StaticResource LauncherIconSm}" Height="{StaticResource LauncherIconSm}"/>
+                                    </Button>
+                                </Grid>
+                            </Border>
+                            <ProgressBar Grid.Row="1"
+                                         Classes="toast-progress"
+                                         Minimum="0"
+                                         Maximum="100"
+                                         Value="{Binding AutoDismissProgress}"
+                                         IsVisible="{Binding HasAutoDismissProgress}"
+                                         Foreground="{Binding Severity, Converter={x:Static converters:ToastSeverityToBrushConverter.Instance}}"/>
+                            <ProgressBar Grid.Row="1"
+                                         Classes="toast-progress"
+                                         IsVisible="{Binding IsActionExecuting}"
+                                         IsIndeterminate="True"
+                                         Foreground="{Binding Severity, Converter={x:Static converters:ToastSeverityToBrushConverter.Instance}}"/>
+                        </Grid>
+                    </Border>
+                </DataTemplate>
+            </ItemsControl.ItemTemplate>
+        </ItemsControl>
+    </Grid>
 </UserControl>

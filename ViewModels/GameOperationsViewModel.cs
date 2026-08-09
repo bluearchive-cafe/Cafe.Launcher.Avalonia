@@ -1,4 +1,5 @@
 using System;
+using System.IO;
 using System.Threading;
 using System.Threading.Tasks;
 using Avalonia;
@@ -24,6 +25,7 @@ public partial class GameOperationsViewModel : ViewModelBase
     private readonly LocalDiagnostics diagnostics;
     private readonly ShellViewModel shell;
     private readonly DialogsViewModel dialogs;
+    private readonly IErrorHandlingService errorHandling;
     private LauncherStatusSnapshot? currentSnapshot;
 
     [ObservableProperty]
@@ -78,6 +80,7 @@ public partial class GameOperationsViewModel : ViewModelBase
     private string pauseResumeIcon = "Pause";
 
     public event Func<GameOperationsRefreshMode, Task>? RefreshRequested;
+    public event Func<Task>? OpenLogViewerRequested;
     public event Action? MinimizeRequested;
 
     public GameOperationsViewModel(
@@ -88,7 +91,8 @@ public partial class GameOperationsViewModel : ViewModelBase
         ToastService toastService,
         LocalDiagnostics diagnostics,
         ShellViewModel shell,
-        DialogsViewModel dialogs)
+        DialogsViewModel dialogs,
+        IErrorHandlingService errorHandling)
         : this(
             new GameLaunchWorkflow(gameLaunchService),
             new GameInstallationWorkflow(gameDownloadService),
@@ -98,7 +102,8 @@ public partial class GameOperationsViewModel : ViewModelBase
             diagnostics,
             shell,
             dialogs,
-            Task.Delay)
+            Task.Delay,
+            errorHandling)
     {
     }
 
@@ -111,7 +116,8 @@ public partial class GameOperationsViewModel : ViewModelBase
         LocalDiagnostics diagnostics,
         ShellViewModel shell,
         DialogsViewModel dialogs,
-        Func<TimeSpan, Task> delayAsync)
+        Func<TimeSpan, Task> delayAsync,
+        IErrorHandlingService errorHandling)
     {
         this.launchWorkflow = launchWorkflow;
         this.installationWorkflow = installationWorkflow;
@@ -122,6 +128,8 @@ public partial class GameOperationsViewModel : ViewModelBase
         this.diagnostics = diagnostics;
         this.shell = shell;
         this.dialogs = dialogs;
+        this.errorHandling = errorHandling;
+        installationWorkflow.IsRunningChanged += OnInstallationIsRunningChanged;
     }
 
     public void ApplyLanguage()
@@ -190,9 +198,8 @@ public partial class GameOperationsViewModel : ViewModelBase
         }
         catch (Exception exception)
         {
-            shell.OperationNote = localizer.F("gameLaunchFailed", exception.Message);
-            toastService.ShowError(exception.Message);
-            await diagnostics.ErrorAsync("Game launch failed.", exception);
+            await errorHandling.HandleErrorAsync("Game launch failed.", exception,
+                new ErrorHandlingOptions { OperationNoteKey = "gameLaunchFailed" });
         }
         finally
         {
@@ -205,9 +212,26 @@ public partial class GameOperationsViewModel : ViewModelBase
     [RelayCommand(CanExecute = nameof(CanInstallOrUpdate))]
     private async Task InstallOrUpdateAsync()
     {
-        if (!PrepareOperation())
+        var result = await RunInstallOrUpdateAttemptAsync();
+        if (result is null)
         {
             return;
+        }
+
+        if (result.Success || result.ErrorCode == GameOperationErrorCode.Stopped)
+        {
+            ShowOperationResult(result);
+            return;
+        }
+
+        ShowInstallUpdateFailureToast(result.Message, result.ErrorCode);
+    }
+
+    private async Task<GameOperationResult?> RunInstallOrUpdateAttemptAsync(CancellationToken cancellationToken = default)
+    {
+        if (!PrepareOperation())
+        {
+            return null;
         }
 
         try
@@ -216,38 +240,50 @@ public partial class GameOperationsViewModel : ViewModelBase
             if (snapshot is null)
             {
                 shell.OperationNote = localizer.T("launcherStateNotLoaded");
-                return;
+                return new GameOperationResult
+                {
+                    Success = false,
+                    Message = shell.OperationNote,
+                    ErrorCode = GameOperationErrorCode.InvalidState
+                };
             }
 
             if (snapshot.RuntimeState == LauncherRuntimeState.Corrupted)
             {
                 dialogs.ShowRepairConfirm(localizer.T("repairWarning"));
-                return;
+                return null;
             }
 
             if (snapshot.RuntimeState is LauncherRuntimeState.IoFailure or LauncherRuntimeState.RemoteUnavailable)
             {
                 await RequestRefresh(GameOperationsRefreshMode.Normal);
-
-                return;
+                return null;
             }
 
             if (snapshot.RuntimeState == LauncherRuntimeState.Ready)
             {
                 shell.OperationNote = localizer.T("operationUnavailableForCurrentState");
-                return;
+                return null;
             }
 
-            var result = await installationWorkflow.InstallOrUpdateAsync(snapshot, ApplyProgress);
+            var result = await installationWorkflow.InstallOrUpdateAsync(snapshot, ApplyProgress, cancellationToken);
             shell.OperationNote = result.Message;
-            ShowOperationResult(result);
             await RequestRefresh(GameOperationsRefreshMode.SkipPersistedResume);
+            return result;
         }
         catch (Exception exception)
         {
-            shell.OperationNote = localizer.F("networkWithMessage", exception.Message);
-            toastService.ShowError(exception.Message);
-            await diagnostics.ErrorAsync("Game install/update failed.", exception);
+            var key = exception is IOException or UnauthorizedAccessException
+                ? "fileOperationFailed"
+                : "networkWithMessage";
+            await errorHandling.HandleErrorAsync("Game install/update failed.", exception,
+                new ErrorHandlingOptions { OperationNoteKey = key });
+            return new GameOperationResult
+            {
+                Success = false,
+                Message = shell.OperationNote,
+                ErrorCode = GameOperationErrorCode.System
+            };
         }
         finally
         {
@@ -257,6 +293,66 @@ public partial class GameOperationsViewModel : ViewModelBase
                 ApplySnapshot(currentSnapshot);
             }
         }
+    }
+
+    private void ShowInstallUpdateFailureToast(string message, GameOperationErrorCode errorCode)
+    {
+        var isTerminal = errorCode is
+            GameOperationErrorCode.PathMissing or
+            GameOperationErrorCode.CdnConfiguration or
+            GameOperationErrorCode.RemoteConfiguration or
+            GameOperationErrorCode.GameRunning or
+            GameOperationErrorCode.InsufficientDiskSpace or
+            GameOperationErrorCode.InvalidState;
+
+        if (isTerminal)
+        {
+            toastService.ShowError(message);
+            return;
+        }
+
+        toastService.Show(new ToastOptions
+        {
+            Title = localizer.T("installUpdateFailedTitle"),
+            Message = message,
+            Severity = ToastSeverity.Error,
+            PrimaryAction = new ToastAction(localizer.T("retry"), RetryInstallOrUpdateAsync, Timeout: null),
+            SecondaryAction = new ToastAction(localizer.T("viewLog"), OpenLogViewerAsync)
+        });
+    }
+
+    private async Task<ToastActionResult> RetryInstallOrUpdateAsync(CancellationToken cancellationToken)
+    {
+        cancellationToken.ThrowIfCancellationRequested();
+        if (!CanInstallOrUpdate())
+        {
+            return ToastActionResult.Failure(shell.InstallDiskSpaceMessage, localizer.T("installUpdateFailedTitle"));
+        }
+
+        var result = await RunInstallOrUpdateAttemptAsync(cancellationToken);
+        cancellationToken.ThrowIfCancellationRequested();
+        if (result?.Success == true)
+        {
+            ShowOperationResult(result);
+            return ToastActionResult.Success();
+        }
+
+        var message = result?.Message;
+        if (string.IsNullOrWhiteSpace(message))
+        {
+            message = result?.ErrorCode == GameOperationErrorCode.Stopped
+                ? localizer.T("operationStopped")
+                : localizer.T("operationUnavailableForCurrentState");
+        }
+
+        return ToastActionResult.Failure(message, localizer.T("installUpdateFailedTitle"));
+    }
+
+    private async Task<ToastActionResult> OpenLogViewerAsync(CancellationToken cancellationToken)
+    {
+        cancellationToken.ThrowIfCancellationRequested();
+        await AsyncEvent.InvokeSequentiallyAsync(OpenLogViewerRequested);
+        return ToastActionResult.Success();
     }
 
     [RelayCommand]
@@ -308,9 +404,8 @@ public partial class GameOperationsViewModel : ViewModelBase
         }
         catch (Exception exception)
         {
-            shell.OperationNote = localizer.F("networkWithMessage", exception.Message);
-            toastService.ShowError(exception.Message);
-            await diagnostics.ErrorAsync("Game repair failed.", exception);
+            await errorHandling.HandleErrorAsync("Game repair failed.", exception,
+                new ErrorHandlingOptions { OperationNoteKey = "networkWithMessage" });
         }
         finally
         {
@@ -339,7 +434,13 @@ public partial class GameOperationsViewModel : ViewModelBase
         installationWorkflow.Stop(clearPersistedState: true);
         shell.OperationNote = localizer.T("stopRequested");
         try { toastService.ShowWarning(localizer.T("stopRequested")); }
-        catch (Exception ex) { System.Diagnostics.Debug.WriteLine($"Failed to show stop toast: {ex.Message}"); }
+        catch (Exception ex)
+        {
+            LocalDiagnostics.LogSync(
+                LogEntrySeverity.Warn,
+                "StopToastFailed",
+                $"Failed to show stop toast: {ex.Message}");
+        }
     }
 
     [RelayCommand]
@@ -432,8 +533,8 @@ public partial class GameOperationsViewModel : ViewModelBase
         }
         catch (Exception exception)
         {
-            shell.OperationNote = localizer.F("networkWithMessage", exception.Message);
-            await diagnostics.ErrorAsync("Game uninstall failed.", exception);
+            await errorHandling.HandleErrorAsync("Game uninstall failed.", exception,
+                new ErrorHandlingOptions { ShowToast = false, OperationNoteKey = "networkWithMessage" });
         }
         finally
         {
@@ -470,8 +571,8 @@ public partial class GameOperationsViewModel : ViewModelBase
         }
         catch (Exception exception)
         {
-            shell.OperationNote = localizer.F("networkWithMessage", exception.Message);
-            await diagnostics.ErrorAsync("Persisted game download resume failed.", exception, CancellationToken.None);
+            await errorHandling.HandleErrorAsync("Persisted game download resume failed.", exception,
+                new ErrorHandlingOptions { ShowToast = false, OperationNoteKey = "networkWithMessage" });
         }
         finally
         {
@@ -486,6 +587,11 @@ public partial class GameOperationsViewModel : ViewModelBase
     }
 
     public bool IsDownloadRunning => installationWorkflow.IsRunning;
+
+    private void OnInstallationIsRunningChanged()
+    {
+        OnPropertyChanged(nameof(IsDownloadRunning));
+    }
 
     private void ShowOperationResult(GameOperationResult result)
     {

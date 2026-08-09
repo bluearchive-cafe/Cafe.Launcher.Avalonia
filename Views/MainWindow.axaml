@@ -24,12 +24,6 @@
         ExtendClientAreaToDecorationsHint="True"
         ExtendClientAreaTitleBarHeightHint="0"
         Background="{DynamicResource LauncherMediaPlaceholderBrush}">
-
-
-    <Window.Styles>
-        <StyleInclude Source="avares://Cafe.Launcher.Avalonia/Views/MainWindow.Styles.axaml"/>
-    </Window.Styles>
-
     <Grid KeyboardNavigation.TabNavigation="Cycle">
         <Rectangle Fill="{Binding Background.BackgroundFillBrush}"/>
         <Image Source="{Binding Background.BackgroundImageSource}" Stretch="{Binding Background.BackgroundStretch}"/>
@@ -53,6 +47,11 @@
                     <TextBlock Text="{Binding Shell.ProductName}" Classes="titlebar-brand"/>
                 </StackPanel>
                 <StackPanel Grid.Column="1" Classes="titlebar-actions">
+                    <Button Classes="chrome" Command="{Binding WindowChrome.OpenDebugPanelCommand}" ToolTip.Tip="{Binding Shell.I18n.DebugPanel}"
+                            IsVisible="{Binding IsDebugFeaturesEnabled}"
+                            AutomationProperties.Name="{Binding Shell.I18n.DebugPanel}">
+                        <materialIcons:MaterialIcon Kind="BugOutline" Width="{StaticResource LauncherIconMd}" Height="{StaticResource LauncherIconMd}" Foreground="{DynamicResource LauncherOnChromeBrush}"/>
+                    </Button>
                     <Button Classes="chrome" Command="{Binding ResourcePanel.OpenResourcePanelCommand}" ToolTip.Tip="{Binding Shell.I18n.ResourcePanel}"
                             AutomationProperties.Name="{Binding Shell.I18n.ResourcePanel}">
                         <materialIcons:MaterialIcon Kind="Web" Width="{StaticResource LauncherIconMd}" Height="{StaticResource LauncherIconMd}" Foreground="{DynamicResource LauncherOnChromeBrush}"/>
@@ -119,19 +118,19 @@
                                                     Cursor="Hand"
                                                     Width="{Binding #BannerCarousel.Bounds.Width}"
                                                     Height="{Binding #BannerCarousel.Bounds.Height}"
-                                                    Command="{Binding DataContext.RemoteContent.OpenExternalUrlCommand, ElementName=Root}"
+                                                    Command="{Binding #Root.((vm:MainWindowViewModel)DataContext).RemoteContent.OpenExternalUrlCommand}"
                                                     CommandParameter="{Binding Url}">
                                                 <Border Classes="banner-media">
                                                     <Panel>
                                                         <Border Classes="media-placeholder"
                                                                 IsVisible="{Binding IsImageLoadFailed}">
-                                                            <TextBlock Text="{Binding DataContext.Shell.I18n.BannerLoadingFailed, ElementName=Root}"
+                                                            <TextBlock Text="{Binding #Root.((vm:MainWindowViewModel)DataContext).Shell.I18n.BannerLoadingFailed}"
                                                                        Classes="media-placeholder-text"/>
                                                         </Border>
                                                         <Image Source="{Binding BannerBitmap}"
                                                                Stretch="UniformToFill"/>
                                                         <controls:LoadingOverlay IsVisible="{Binding IsImageLoading}"
-                                                                                  Text="{Binding DataContext.Shell.I18n.BannerLoading, ElementName=Root}"/>
+                                                                                  Text="{Binding #Root.((vm:MainWindowViewModel)DataContext).Shell.I18n.BannerLoading}"/>
                                                     </Panel>
                                                 </Border>
                                             </Button>
@@ -156,7 +155,7 @@
                                             <DataTemplate x:DataType="models:BannerDot">
                                                 <Button Classes="icon-button dot"
                                                         Cursor="Hand"
-                                                        Command="{Binding DataContext.RemoteContent.SelectBannerCommand, ElementName=Root}"
+                                                        Command="{Binding #Root.((vm:MainWindowViewModel)DataContext).RemoteContent.SelectBannerCommand}"
                                                         CommandParameter="{Binding Index}">
                                                     <Border Classes="banner-dot"
                                                             Classes.active="{Binding IsActive}"/>
@@ -189,7 +188,7 @@
                                                     <Button Cursor="Hand"
                                                             Classes="news-tab"
                                                             Classes.active="{Binding IsActive}"
-                                                            Command="{Binding DataContext.RemoteContent.SelectNewsCategoryCommand, ElementName=Root}"
+                                                            Command="{Binding #Root.((vm:MainWindowViewModel)DataContext).RemoteContent.SelectNewsCategoryCommand}"
                                                             CommandParameter="{Binding .}">
                                                         <TextBlock Text="{Binding Label}" VerticalAlignment="Center"/>
                                                     </Button>
@@ -215,7 +214,7 @@
                                                 <Button Classes="content-link news-row"
                                                         Cursor="Hand"
                                                         Height="{StaticResource LauncherNewsRowHeight}"
-                                                        Command="{Binding DataContext.RemoteContent.OpenExternalUrlCommand, ElementName=Root}"
+                                                        Command="{Binding #Root.((vm:MainWindowViewModel)DataContext).RemoteContent.OpenExternalUrlCommand}"
                                                         CommandParameter="{Binding Url}">
                                                     <Border Classes="content-row news-content-row">
                                                         <Grid ColumnDefinitions="*,Auto" ColumnSpacing="{StaticResource LauncherSpacingLg}">
@@ -251,7 +250,7 @@
                                     <ItemsControl.ItemTemplate>
                                         <DataTemplate x:DataType="models:RemoteContentItem">
                                             <Button Classes="social-chip"
-                                                    Command="{Binding DataContext.RemoteContent.OpenExternalUrlCommand, ElementName=Root}"
+                                                    Command="{Binding #Root.((vm:MainWindowViewModel)DataContext).RemoteContent.OpenExternalUrlCommand}"
                                                     CommandParameter="{Binding Url}">
                                                 <StackPanel Classes="button-content">
                                                     <materialIcons:MaterialIcon Kind="{Binding SocialIconKind}" Width="{StaticResource LauncherIconSm}" Height="{StaticResource LauncherIconSm}"
@@ -302,7 +301,7 @@
                                                         Height="{StaticResource LauncherIconXxl}"
                                                         Foreground="{DynamicResource LauncherAccentBrush}"
                                                         VerticalAlignment="Center"/>
-                            <Grid Grid.Column="1" ColumnDefinitions="*,Auto" ColumnSpacing="{StaticResource LauncherSpacingMd}">
+                            <Grid Grid.Row="0" Grid.Column="1" ColumnDefinitions="*,Auto" ColumnSpacing="{StaticResource LauncherSpacingMd}">
                                 <StackPanel Spacing="{StaticResource LauncherSpacingXs}">
                                     <TextBlock Classes="operation-status-title" Text="{Binding Shell.StatusText}"/>
                                     <TextBlock Classes="caption" Text="{Binding Shell.OperationNote}" TextWrapping="Wrap"/>
@@ -395,7 +394,7 @@
                                 </Grid>
                             </Border>
                         </StackPanel>
-                        <StackPanel Grid.Column="1" Orientation="Horizontal" Spacing="{StaticResource LauncherSpacingMd}" VerticalAlignment="Center">
+                        <StackPanel Grid.Row="0" Grid.Column="1" Orientation="Horizontal" Spacing="{StaticResource LauncherSpacingMd}" VerticalAlignment="Center">
                             <Button Classes="flat-action bottom-action secondary-operation" Command="{Binding RefreshCommand}"
                                     ToolTip.Tip="{Binding Shell.I18n.RefreshTooltip}"
                                     IsEnabled="{Binding Shell.IsBusy, Converter={x:Static BoolConverters.Not}}"
@@ -440,7 +439,7 @@
                                                         Height="{StaticResource LauncherIconLg}"
                                                         Foreground="{DynamicResource LauncherAccentBrush}"
                                                         VerticalAlignment="Center"/>
-                            <Grid Grid.Column="1" ColumnDefinitions="Auto,*,Auto" ColumnSpacing="{StaticResource LauncherSpacingSm}">
+                            <Grid Grid.Row="0" Grid.Column="1" ColumnDefinitions="Auto,*,Auto" ColumnSpacing="{StaticResource LauncherSpacingSm}">
                                 <TextBlock Text="{Binding Operations.ProgressTitle}" Classes="progress-title operation-status-title" VerticalAlignment="Center"/>
                                 <TextBlock Grid.Column="2" Text="{Binding Operations.ProgressValue, StringFormat={}{0}%}"
                                            Classes="progress-title" VerticalAlignment="Center"
@@ -513,7 +512,7 @@
                                                         Height="{StaticResource LauncherIconXxl}"
                                                         Foreground="{DynamicResource LauncherOnChromeBrush}"
                                                         VerticalAlignment="Center"/>
-                            <StackPanel Grid.Column="1" Spacing="{StaticResource LauncherSpacingXs}">
+                            <StackPanel Grid.Row="0" Grid.Column="1" Spacing="{StaticResource LauncherSpacingXs}">
                                 <TextBlock Classes="operation-status-title on-dark-title" Text="{Binding Shell.StatusText}"/>
                                 <TextBlock Classes="on-dark-caption" Text="{Binding Shell.I18n.LaunchCheckDescription}" TextWrapping="Wrap"/>
                             </StackPanel>
@@ -598,6 +597,7 @@
         </Grid>
 
         <views:MainWindowSettingsOverlay/>
+        <views:MainWindowDebugOverlay/>
         <views:MainWindowLogViewerOverlay/>
         <views:MainWindowDialogsOverlay/>
         <views:MainWindowToastOverlay/>

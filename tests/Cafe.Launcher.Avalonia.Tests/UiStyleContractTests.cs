@@ -279,6 +279,7 @@ public sealed partial class UiStyleContractTests
         var styles = XDocument.Load(ProjectFile("Views/MainWindow.Styles.axaml"));
         Dictionary<string, string> expectedNames = new(StringComparer.Ordinal)
         {
+            ["{Binding WindowChrome.OpenDebugPanelCommand}"] = "{Binding Shell.I18n.DebugPanel}",
             ["{Binding ResourcePanel.OpenResourcePanelCommand}"] = "{Binding Shell.I18n.ResourcePanel}",
             ["{Binding WindowChrome.ShowSettingsCommand}"] = "{Binding Shell.I18n.Settings}",
             ["{Binding WindowChrome.MinimizeCommand}"] = "{Binding Shell.I18n.Minimize}",
@@ -339,6 +340,186 @@ public sealed partial class UiStyleContractTests
         var focus = GetStyleSetters(styles, "Button:focus-visible");
         Assert.Equal("{DynamicResource LauncherFocusRingBrush}", focus["BorderBrush"]);
         Assert.Equal("2", focus["BorderThickness"]);
+    }
+
+    [Fact]
+    public void MainWindow_DataTemplateRootBindings_UseTypedNamedElementSyntax()
+    {
+        var document = XDocument.Load(ProjectFile("Views/MainWindow.axaml"));
+        var bindingValues = document
+            .Descendants()
+            .SelectMany(element => element.Attributes())
+            .Select(attribute => attribute.Value)
+            .Where(value => value.Contains("Root", StringComparison.Ordinal))
+            .ToArray();
+
+        Assert.DoesNotContain(
+            bindingValues,
+            value => value.Contains("ElementName=Root", StringComparison.Ordinal));
+        Assert.Equal(
+            7,
+            bindingValues.Count(value =>
+                value.Contains(
+                    "#Root.((vm:MainWindowViewModel)DataContext).",
+                    StringComparison.Ordinal)));
+    }
+
+    [Fact]
+    public void SharedLauncherStyles_AreApplicationScopedForSplitViews()
+    {
+        const string sharedStylesSource =
+            "avares://Cafe.Launcher.Avalonia/Views/MainWindow.Styles.axaml";
+        var application = XDocument.Load(ProjectFile("App.axaml"));
+        var mainWindow = XDocument.Load(ProjectFile("Views/MainWindow.axaml"));
+
+        Assert.Contains(
+            application.Descendants(),
+            element =>
+                element.Name.LocalName == "StyleInclude"
+                && element.Attribute("Source")?.Value == sharedStylesSource);
+        Assert.DoesNotContain(
+            mainWindow.Descendants(),
+            element =>
+                element.Name.LocalName == "StyleInclude"
+                && element.Attribute("Source")?.Value == sharedStylesSource);
+    }
+
+    [Fact]
+    public void LocalizedStrings_DebugBindings_UseTheExistingGeneratedFieldPattern()
+    {
+        var overlay = XDocument.Load(ProjectFile("Views/MainWindowDebugOverlay.axaml"));
+        var source = File.ReadAllText(ProjectFile("Services/LocalizationService.cs"));
+        var debugProperties = overlay
+            .Descendants()
+            .SelectMany(element => element.Attributes())
+            .Select(attribute => attribute.Value)
+            .SelectMany(value => Regex.Matches(value, @"Shell\.I18n\.(Debug[A-Za-z0-9_]+)"))
+            .Select(match => match.Groups[1].Value)
+            .Distinct(StringComparer.Ordinal)
+            .ToArray();
+
+        Assert.NotEmpty(debugProperties);
+        foreach (var property in debugProperties)
+        {
+            var field = char.ToLowerInvariant(property[0]) + property[1..];
+            Assert.Contains(
+                $"[ObservableProperty] private string {field}",
+                source,
+                StringComparison.Ordinal);
+            Assert.DoesNotContain(
+                $"public partial string {property}",
+                source,
+                StringComparison.Ordinal);
+        }
+    }
+
+    [Fact]
+    public void LauncherSettings_JsonProperties_AreExplicitNonGeneratedDeclarations()
+    {
+        var source = File.ReadAllText(ProjectFile("Models/LauncherSettings.cs"));
+
+        Assert.DoesNotContain("[property:", source, StringComparison.Ordinal);
+        Assert.DoesNotContain("[ObservableProperty]", source, StringComparison.Ordinal);
+        Assert.Contains("public sealed class LauncherSettings", source, StringComparison.Ordinal);
+        Assert.DoesNotContain("partial class LauncherSettings", source, StringComparison.Ordinal);
+        Assert.Contains("[JsonPropertyName(\"gamePath\")]", source, StringComparison.Ordinal);
+        Assert.Contains("public string GamePath", source, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public void DebugResetDialogMembers_AreExplicitlyDeclared()
+    {
+        var source = File.ReadAllText(ProjectFile("ViewModels/DialogsViewModel.cs"));
+
+        Assert.Contains("public bool IsDebugResetConfirmationVisible", source, StringComparison.Ordinal);
+        Assert.Contains("public IRelayCommand CancelDebugResetCommand", source, StringComparison.Ordinal);
+        Assert.Contains("public IAsyncRelayCommand ConfirmDebugResetCommand", source, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public void SplitViewDataTemplates_UseTypedRootBindings()
+    {
+        string[] paths =
+        [
+            "Views/MainWindowDialogsOverlay.axaml",
+            "Views/MainWindowToastOverlay.axaml",
+            "Views/SettingsAppearanceSection.axaml"
+        ];
+
+        foreach (var path in paths)
+        {
+            var markup = File.ReadAllText(ProjectFile(path));
+            Assert.DoesNotContain("DataContext.", markup, StringComparison.Ordinal);
+            Assert.DoesNotContain("$parent[UserControl].DataContext.", markup, StringComparison.Ordinal);
+        }
+    }
+
+    [Fact]
+    public void MainWindow_SemanticContractClasses_HaveDeclaredStyleSelectors()
+    {
+        var selectors = new[]
+        {
+            "Views/MainWindow.Styles.axaml",
+            "Views/Styles/RemoteContent.axaml"
+        }
+            .Select(path => XDocument.Load(ProjectFile(path)))
+            .SelectMany(document => document.Descendants())
+            .Where(element => element.Name.LocalName == "Style")
+            .Select(element => element.Attribute("Selector")?.Value ?? "")
+            .ToArray();
+        string[] semanticClasses =
+        [
+            "install-path-row",
+            "news-row",
+            "news-viewport",
+            "operation-actions",
+            "operation-layout",
+            "operation-status",
+            "primary-operation",
+            "secondary-operation"
+        ];
+
+        foreach (var semanticClass in semanticClasses)
+        {
+            Assert.Contains(
+                selectors,
+                selector => Regex.IsMatch(
+                    selector,
+                    $@"\.{Regex.Escape(semanticClass)}(?:[^A-Za-z0-9_-]|$)",
+                    RegexOptions.CultureInvariant));
+        }
+    }
+
+    [Fact]
+    public void MainWindow_MultiRowGridChildren_DeclareTheirFirstRowExplicitly()
+    {
+        var document = XDocument.Load(ProjectFile("Views/MainWindow.axaml"));
+        var expectedBindings = new[]
+        {
+            "{Binding Shell.OperationNote}",
+            "{Binding RefreshCommand}",
+            "{Binding Operations.ProgressTitle}",
+            "{Binding Shell.I18n.LaunchCheckDescription}"
+        };
+
+        foreach (var binding in expectedBindings)
+        {
+            var directGridChildren = document
+                .Descendants()
+                .Where(element => element.Attributes().Any(attribute => attribute.Value == binding))
+                .Select(element => element
+                    .Ancestors()
+                    .First(ancestor =>
+                        ancestor.Parent?.Name.LocalName == "Grid"
+                        && ancestor.Parent.Attribute("RowDefinitions") is not null))
+                .Distinct()
+                .ToArray();
+
+            Assert.NotEmpty(directGridChildren);
+            Assert.All(
+                directGridChildren,
+                directGridChild => Assert.Equal("0", directGridChild.Attribute("Grid.Row")?.Value));
+        }
     }
 
     [Fact]
@@ -1291,11 +1472,13 @@ public sealed partial class UiStyleContractTests
         var mainWindow = File.ReadAllText(ProjectFile("Views/MainWindow.axaml"));
         var settingsIndex = mainWindow.IndexOf("<views:MainWindowSettingsOverlay/>", StringComparison.Ordinal);
         var logViewerIndex = mainWindow.IndexOf("<views:MainWindowLogViewerOverlay/>", StringComparison.Ordinal);
+        var debugIndex = mainWindow.IndexOf("<views:MainWindowDebugOverlay/>", StringComparison.Ordinal);
         var dialogsIndex = mainWindow.IndexOf("<views:MainWindowDialogsOverlay/>", StringComparison.Ordinal);
         var toastIndex = mainWindow.IndexOf("<views:MainWindowToastOverlay/>", StringComparison.Ordinal);
 
         Assert.True(settingsIndex >= 0);
-        Assert.True(logViewerIndex > settingsIndex);
+        Assert.True(debugIndex > settingsIndex);
+        Assert.True(logViewerIndex > debugIndex);
         Assert.True(dialogsIndex > logViewerIndex);
         Assert.True(toastIndex > dialogsIndex);
     }
@@ -1360,8 +1543,8 @@ public sealed partial class UiStyleContractTests
             },
             ["Views/MainWindowToastOverlay.axaml"] = new(StringComparer.Ordinal)
             {
-                ["{Binding DataContext.Toasts.DismissToastCommand, ElementName=ToastOverlayRoot}"] =
-                    "{Binding DataContext.Shell.I18n.Close, ElementName=ToastOverlayRoot}"
+                ["{Binding #ToastOverlayRoot.((vm:MainWindowViewModel)DataContext).Toasts.DismissToastCommand}"] =
+                    "{Binding #ToastOverlayRoot.((vm:MainWindowViewModel)DataContext).Shell.I18n.Close}"
             },
             ["Views/SetupWizardOverlay.axaml"] = new(StringComparer.Ordinal)
             {
@@ -1444,9 +1627,9 @@ public sealed partial class UiStyleContractTests
             .Single(element =>
                 element.Name.LocalName == "Button"
                 && element.Attribute("Command")?.Value
-                    == "{Binding DataContext.Toasts.DismissToastCommand, ElementName=ToastOverlayRoot}");
+                    == "{Binding #ToastOverlayRoot.((vm:MainWindowViewModel)DataContext).Toasts.DismissToastCommand}");
         const string expectedBinding =
-            "{Binding DataContext.Shell.I18n.Close, ElementName=ToastOverlayRoot}";
+            "{Binding #ToastOverlayRoot.((vm:MainWindowViewModel)DataContext).Shell.I18n.Close}";
 
         Assert.Equal(
             expectedBinding,
@@ -2608,11 +2791,118 @@ public sealed partial class UiStyleContractTests
     }
 
     [Fact]
+    public void ToastActions_UseTitleAlignedGridAndPrimaryFirstLeftAlignedLayout()
+    {
+        var document = XDocument.Load(ProjectFile("Views/MainWindowToastOverlay.axaml"));
+        var layout = document.Descendants().Single(element => HasClass(element, "toast-layout"));
+        Assert.Equal("Auto,*,Auto", layout.Attribute("ColumnDefinitions")?.Value);
+        Assert.Equal("Auto,Auto,Auto", layout.Attribute("RowDefinitions")?.Value);
+
+        var title = document.Descendants().Single(element => HasClass(element, "toast-title"));
+        Assert.Equal("{Binding Title}", title.Attribute("Text")?.Value);
+        Assert.Equal("0", title.Attribute("Grid.Row")?.Value);
+        Assert.Equal("1", title.Attribute("Grid.Column")?.Value);
+
+        var icon = document.Descendants().Single(element => HasClass(element, "toast-icon"));
+        Assert.Equal("0", icon.Attribute("Grid.Row")?.Value);
+        Assert.Equal("0", icon.Attribute("Grid.Column")?.Value);
+        Assert.Equal("Center", icon.Attribute("VerticalAlignment")?.Value);
+        Assert.Null(icon.Attribute("Margin"));
+
+        var actions = document.Descendants().Single(element => HasClass(element, "toast-actions"));
+        Assert.Equal("2", actions.Attribute("Grid.Row")?.Value);
+        Assert.Equal("1", actions.Attribute("Grid.Column")?.Value);
+        Assert.Equal("Left", actions.Attribute("HorizontalAlignment")?.Value);
+
+        var actionButtons = actions.Elements().Where(element => element.Name.LocalName == "Button").ToArray();
+        Assert.Equal(2, actionButtons.Length);
+        Assert.True(HasClass(actionButtons[0], "toast-primary-action"));
+        Assert.True(HasClass(actionButtons[1], "toast-secondary-action"));
+        Assert.Equal(
+            "{Binding #ToastOverlayRoot.((vm:MainWindowViewModel)DataContext).Toasts.ExecutePrimaryToastActionCommand}",
+            actionButtons[0].Attribute("Command")?.Value);
+        Assert.Equal(
+            "{Binding #ToastOverlayRoot.((vm:MainWindowViewModel)DataContext).Toasts.ExecuteSecondaryToastActionCommand}",
+            actionButtons[1].Attribute("Command")?.Value);
+        Assert.Equal("{Binding Id}", actionButtons[0].Attribute("CommandParameter")?.Value);
+        Assert.Equal("{Binding Id}", actionButtons[1].Attribute("CommandParameter")?.Value);
+        Assert.Equal("{Binding PrimaryActionLabel}", actionButtons[0].Attribute("AutomationProperties.Name")?.Value);
+        Assert.Equal("{Binding SecondaryActionLabel}", actionButtons[1].Attribute("AutomationProperties.Name")?.Value);
+
+        var styles = XDocument.Load(ProjectFile("Views/Styles/Toast.axaml"));
+        var titleStyle = styles.Descendants().Single(element =>
+            element.Name.LocalName == "Style"
+            && element.Attribute("Selector")?.Value == "TextBlock.toast-title");
+        Assert.Contains(titleStyle.Elements(), element =>
+            element.Name.LocalName == "Setter"
+            && element.Attribute("Property")?.Value == "FontSize"
+            && element.Attribute("Value")?.Value == "{DynamicResource LauncherFontSizeLg}");
+        // toast-title no longer sets FontWeight (removed to match the lighter title + button styling).
+    }
+
+    [Fact]
+    public void ToastAutoDismissProgress_UsesSelectedBottomEdgeLayoutAndTokens()
+    {
+        var document = XDocument.Load(ProjectFile("Views/MainWindowToastOverlay.axaml"));
+        var progressElements = document.Descendants()
+            .Where(element => HasClass(element, "toast-progress")).ToArray();
+        Assert.Equal(2, progressElements.Length);
+
+        var autoDismiss = progressElements[0];
+        Assert.Equal("1", autoDismiss.Attribute("Grid.Row")?.Value);
+        Assert.Equal("{Binding AutoDismissProgress}", autoDismiss.Attribute("Value")?.Value);
+        Assert.Equal("{Binding HasAutoDismissProgress}", autoDismiss.Attribute("IsVisible")?.Value);
+        Assert.Equal(
+            "{Binding Severity, Converter={x:Static converters:ToastSeverityToBrushConverter.Instance}}",
+            autoDismiss.Attribute("Foreground")?.Value);
+
+        var actionExecuting = progressElements[1];
+        Assert.Equal("1", actionExecuting.Attribute("Grid.Row")?.Value);
+        Assert.Equal("{Binding IsActionExecuting}", actionExecuting.Attribute("IsVisible")?.Value);
+
+        var styles = XDocument.Load(ProjectFile("Views/Styles/Toast.axaml"));
+        var progressStyle = styles.Descendants().Single(element =>
+            element.Name.LocalName == "Style"
+            && element.Attribute("Selector")?.Value == "ProgressBar.toast-progress");
+        Assert.Contains(progressStyle.Elements(), element =>
+            element.Name.LocalName == "Setter"
+            && element.Attribute("Property")?.Value == "Height"
+            && element.Attribute("Value")?.Value
+                == "{DynamicResource LauncherToastAutoDismissProgressHeight}");
+
+        var toastCardStyle = styles.Descendants().Single(element =>
+            element.Name.LocalName == "Style"
+            && element.Attribute("Selector")?.Value == "Border.toast-card");
+        foreach (var property in new[] { "MinWidth", "MaxWidth" })
+        {
+            Assert.Contains(toastCardStyle.Elements(), element =>
+                element.Name.LocalName == "Setter"
+                && element.Attribute("Property")?.Value == property
+                && element.Attribute("Value")?.Value == "{DynamicResource LauncherToastWidth}");
+        }
+    }
+
+    [Fact]
+    public void DebugPanel_ProvidesLocalizedActionToastEntry()
+    {
+        var document = XDocument.Load(ProjectFile("Views/MainWindowDebugOverlay.axaml"));
+        var button = document.Descendants().Single(element =>
+            element.Name.LocalName == "Button"
+            && element.Attribute("Command")?.Value == "{Binding Debug.TestActionToastCommand}");
+
+        Assert.Equal(
+            "{Binding Shell.I18n.DebugTestActionToast}",
+            button.Attribute("AutomationProperties.Name")?.Value);
+        var text = button.Descendants().Single(element => element.Name.LocalName == "TextBlock");
+        Assert.Equal("{Binding Shell.I18n.DebugTestActionToast}", text.Attribute("Text")?.Value);
+    }
+
+    [Fact]
     public void ToastMotionAnimation_IsEnabledOnlyByRootMotionPreference()
     {
         var overlay = File.ReadAllText(ProjectFile("Views/MainWindowToastOverlay.axaml"));
         Assert.Contains(
-            "Classes.motion-enabled=\"{Binding DataContext.IsMotionEnabled, ElementName=ToastOverlayRoot}\"",
+            "Classes.motion-enabled=\"{Binding #ToastOverlayRoot.((vm:MainWindowViewModel)DataContext).IsMotionEnabled}\"",
             overlay,
             StringComparison.Ordinal);
         var overlayDocument = XDocument.Load(ProjectFile("Views/MainWindowToastOverlay.axaml"));
@@ -2734,6 +3024,7 @@ public sealed partial class UiStyleContractTests
         {
             "Views/MainWindowSettingsOverlay.axaml",
             "Views/MainWindowLogViewerOverlay.axaml",
+            "Views/MainWindowDebugOverlay.axaml",
             "Views/MainWindowDialogsOverlay.axaml",
             "Views/SetupWizardOverlay.axaml"
         };
@@ -2750,7 +3041,7 @@ public sealed partial class UiStyleContractTests
                     .Select(element => (element, controlsNamespace)));
         }
 
-        Assert.Equal(7, overlays.Count);
+        Assert.Equal(9, overlays.Count);
         Assert.All(overlays, overlay =>
         {
             var element = overlay.Element;

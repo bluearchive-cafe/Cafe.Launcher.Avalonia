@@ -2,9 +2,11 @@ using Avalonia;
 using Avalonia.Controls;
 using Avalonia.Controls.ApplicationLifetimes;
 using Avalonia.Input;
+using Avalonia.Input.Platform;
 using Avalonia.Platform.Storage;
 using Cafe.Launcher.Avalonia.Models;
 using Cafe.Launcher.Avalonia.Services;
+using Cafe.Launcher.Avalonia.Services.Diagnostics;
 using Cafe.Launcher.Avalonia.ViewModels;
 using System;
 using System.Collections.Generic;
@@ -39,10 +41,13 @@ public partial class MainWindow : Window
         viewModel.Background.PickBackgroundFolderAsync = PickBackgroundFolderAsync;
         viewModel.LogViewer.PickExportDirectoryAsync = PickLogExportDirectoryAsync;
         viewModel.LogViewer.OpenExportDirectory = OpenDirectory;
+        viewModel.Debug.PickExportDirectoryAsync = PickLogExportDirectoryAsync;
+        viewModel.Debug.OpenDirectory = OpenDirectory;
         viewModel.Operations.MinimizeRequested += MinimizeWindow;
         viewModel.WindowChrome.MinimizeRequested += MinimizeWindow;
         viewModel.WindowChrome.CloseRequested += PerformClose;
         viewModel.WindowChrome.RestoreRequested += ShowWindow;
+        viewModel.Dialogs.ErrorCopyDetailsRequested += CopyErrorDetailsToClipboard;
     }
 
     protected override void OnClosed(EventArgs e)
@@ -62,6 +67,9 @@ public partial class MainWindow : Window
         viewModel.WindowChrome.MinimizeRequested -= MinimizeWindow;
         viewModel.WindowChrome.CloseRequested -= PerformClose;
         viewModel.WindowChrome.RestoreRequested -= ShowWindow;
+        viewModel.Dialogs.ErrorCopyDetailsRequested -= CopyErrorDetailsToClipboard;
+        viewModel.Debug.PickExportDirectoryAsync = null;
+        viewModel.Debug.OpenDirectory = null;
         configuredViewModel = null;
     }
 
@@ -243,5 +251,23 @@ public partial class MainWindow : Window
         Show();
         WindowState = WindowState.Normal;
         Activate();
+    }
+
+    private async void CopyErrorDetailsToClipboard(string details)
+    {
+        if (Clipboard is not null)
+        {
+            try
+            {
+                await Clipboard.SetTextAsync(details);
+            }
+            catch (Exception ex)
+            {
+                LocalDiagnostics.LogSync(
+                    LogEntrySeverity.Warn,
+                    "ClipboardCopyFailed",
+                    $"Failed to copy error details to clipboard: {ex.Message}");
+            }
+        }
     }
 }

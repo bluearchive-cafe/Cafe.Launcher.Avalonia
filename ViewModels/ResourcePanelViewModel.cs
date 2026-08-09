@@ -8,6 +8,7 @@ using CommunityToolkit.Mvvm.Input;
 using Cafe.Launcher.Avalonia.Features.Shell;
 using Cafe.Launcher.Avalonia.Models;
 using Cafe.Launcher.Avalonia.Services;
+using Cafe.Launcher.Avalonia.Services.Diagnostics;
 
 namespace Cafe.Launcher.Avalonia.ViewModels;
 
@@ -21,6 +22,7 @@ public partial class ResourcePanelViewModel : ViewModelBase, IDisposable, IModal
     private readonly ResourcePanelService resourcePanelService;
     private readonly LocalizationService localizer;
     private readonly ToastService toastService;
+    private readonly IErrorHandlingService errorHandling;
     private readonly CancellationTokenSource lifetimeCts = new();
     private bool disposed;
     private string proxyMode = ProxyModes.Auto;
@@ -34,11 +36,13 @@ public partial class ResourcePanelViewModel : ViewModelBase, IDisposable, IModal
     public ResourcePanelViewModel(
         ResourcePanelService resourcePanelService,
         LocalizationService localizer,
-        ToastService toastService)
+        ToastService toastService,
+        IErrorHandlingService errorHandling)
     {
         this.resourcePanelService = resourcePanelService;
         this.localizer = localizer;
         this.toastService = toastService;
+        this.errorHandling = errorHandling;
         PopulateUidSourceOptions();
         UpdateUidPresent();
     }
@@ -239,7 +243,8 @@ public partial class ResourcePanelViewModel : ViewModelBase, IDisposable, IModal
         catch (Exception exception)
         {
             ResourcePanelMessage = localizer.F("resourcePanelLoadFailed", exception.Message);
-            await resourcePanelService.LogErrorAsync("Resource panel manual UID save failed.", exception);
+            await errorHandling.HandleErrorAsync("Resource panel manual UID save failed.", exception,
+                new ErrorHandlingOptions { ShowToast = false, OperationNoteKey = null });
         }
         finally
         {
@@ -277,8 +282,8 @@ public partial class ResourcePanelViewModel : ViewModelBase, IDisposable, IModal
         {
             var message = localizer.F("resourcePanelSaveFailed", exception.Message);
             ResourcePanelMessage = message;
-            toastService.ShowError(message);
-            await resourcePanelService.LogErrorAsync("Resource panel save failed.", exception);
+            await errorHandling.HandleErrorAsync("Resource panel save failed.", exception,
+                new ErrorHandlingOptions { ToastMessage = message, OperationNoteKey = null });
         }
         finally
         {

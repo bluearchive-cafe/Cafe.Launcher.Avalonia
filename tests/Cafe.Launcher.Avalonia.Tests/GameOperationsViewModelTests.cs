@@ -238,6 +238,120 @@ public sealed class GameOperationsViewModelTests
     }
 
     [Fact]
+    public async Task InstallOrUpdateCommand_WhenBackendFails_RaisesActionableToast()
+    {
+        var context = CreateContext();
+        ToastNotification? raised = null;
+        context.ToastService.ToastRaised += toast => raised = toast;
+        context.Backend.InstallResult = new GameOperationResult
+        {
+            Success = false,
+            Message = "offline",
+            ErrorCode = GameOperationErrorCode.Network
+        };
+        context.ViewModel.ApplySnapshot(new LauncherStatusSnapshot
+        {
+            RuntimeState = LauncherRuntimeState.NotInstalled
+        });
+
+        await context.ViewModel.InstallOrUpdateCommand.ExecuteAsync(null);
+
+        Assert.NotNull(raised);
+        Assert.Equal(context.Localizer.T("installUpdateFailedTitle"), raised!.Title);
+        Assert.Equal(ToastSeverity.Error, raised.Severity);
+        Assert.Contains("offline", raised.Message);
+        Assert.Equal(context.Localizer.T("retry"), raised.PrimaryAction!.Label);
+        Assert.Equal(context.Localizer.T("viewLog"), raised.SecondaryAction!.Label);
+    }
+
+    [Fact]
+    public async Task RetryAction_WhenSecondAttemptFails_ReturnsFailureWithoutRaisingAnotherToast()
+    {
+        var context = CreateContext();
+        var notifications = new List<ToastNotification>();
+        context.ToastService.ToastRaised += notifications.Add;
+        context.Backend.InstallResult = new GameOperationResult
+        {
+            Success = false,
+            Message = "first failure"
+        };
+        context.ViewModel.ApplySnapshot(new LauncherStatusSnapshot
+        {
+            RuntimeState = LauncherRuntimeState.NotInstalled
+        });
+        await context.ViewModel.InstallOrUpdateCommand.ExecuteAsync(null);
+        context.Backend.InstallResult = new GameOperationResult
+        {
+            Success = false,
+            Message = "second failure"
+        };
+
+        var result = await notifications.Single().PrimaryAction!.ExecuteAsync(CancellationToken.None);
+
+        Assert.False(result.IsSuccess);
+        Assert.Equal("second failure", result.Message);
+        Assert.Single(notifications);
+        Assert.Equal(2, context.Backend.InstallInvocationCount);
+    }
+
+    [Fact]
+    public async Task RetryAction_WhenSecondAttemptSucceeds_ReturnsSuccess()
+    {
+        var context = CreateContext();
+        ToastNotification? raised = null;
+        context.ToastService.ToastRaised += toast => raised = toast;
+        context.Backend.InstallResult = new GameOperationResult
+        {
+            Success = false,
+            Message = "first failure"
+        };
+        context.ViewModel.ApplySnapshot(new LauncherStatusSnapshot
+        {
+            RuntimeState = LauncherRuntimeState.NotInstalled
+        });
+        await context.ViewModel.InstallOrUpdateCommand.ExecuteAsync(null);
+        context.Backend.InstallResult = new GameOperationResult
+        {
+            Success = true,
+            Message = "installed"
+        };
+
+        var result = await raised!.PrimaryAction!.ExecuteAsync(CancellationToken.None);
+
+        Assert.True(result.IsSuccess);
+        Assert.Equal(2, context.Backend.InstallInvocationCount);
+    }
+
+    [Fact]
+    public async Task ViewLogAction_RaisesOpenLogViewerRequestOnce()
+    {
+        var context = CreateContext();
+        ToastNotification? raised = null;
+        var requests = 0;
+        context.ToastService.ToastRaised += toast => raised = toast;
+        context.ViewModel.OpenLogViewerRequested += () =>
+        {
+            requests++;
+            return Task.CompletedTask;
+        };
+        context.Backend.InstallResult = new GameOperationResult
+        {
+            Success = false,
+            Message = "offline"
+        };
+        context.ViewModel.ApplySnapshot(new LauncherStatusSnapshot
+        {
+            RuntimeState = LauncherRuntimeState.NotInstalled
+        });
+        await context.ViewModel.InstallOrUpdateCommand.ExecuteAsync(null);
+
+        var result = await raised!.SecondaryAction!.ExecuteAsync(CancellationToken.None);
+
+        Assert.True(result.IsSuccess);
+        Assert.Equal(1, requests);
+    }
+
+    [Fact]
     public async Task RequestRepairCommand_WhenStateAllowsRepair_ShowsConfirmation()
     {
         var context = CreateContext();
@@ -740,8 +854,9 @@ public sealed class GameOperationsViewModelTests
             new LocalDiagnostics(),
             shell,
             dialogs,
-            _ => Task.CompletedTask);
-        return new TestContext(viewModel, backend, shell, dialogs, toastService);
+            _ => Task.CompletedTask,
+            new ErrorHandlingService(localizer, new LocalDiagnostics(), toastService, shell));
+        return new TestContext(viewModel, backend, shell, dialogs, toastService, localizer);
     }
 
     private static LauncherStatusSnapshot ReadySnapshot(string gamePath = "") =>
@@ -756,13 +871,15 @@ public sealed class GameOperationsViewModelTests
         TestBackend Backend,
         ShellViewModel Shell,
         DialogsViewModel Dialogs,
-        ToastService ToastService);
+        ToastService ToastService,
+        LocalizationService Localizer);
 
     private sealed class TestBackend :
         IGameLaunchWorkflow,
         IGameInstallationWorkflow,
         IGameUninstallWorkflow
     {
+        public event Action? IsRunningChanged { add { } remove { } }
         public bool IsDownloadRunning { get; set; }
         public bool IsRunning => IsDownloadRunning;
         public bool IsPaused { get; set; }
@@ -793,7 +910,8 @@ public sealed class GameOperationsViewModelTests
 
         public Task<GameOperationResult> InstallOrUpdateAsync(
             LauncherStatusSnapshot snapshot,
-            Action<GameOperationProgress> progress)
+            Action<GameOperationProgress> progress,
+            CancellationToken cancellationToken = default)
         {
             InstallInvocationCount++;
             if (InstallException is not null)

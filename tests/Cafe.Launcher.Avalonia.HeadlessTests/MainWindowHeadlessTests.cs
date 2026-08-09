@@ -56,6 +56,128 @@ public sealed class MainWindowHeadlessTests
     }
 
     [AvaloniaFact]
+    public async Task Toast_WithActions_RendersTitlePrimaryFirstAndDisablesControlsWhileExecuting()
+    {
+        using var context = CreateContext();
+        var settings = context.ViewModel.Settings.Editor.GetSnapshot();
+        settings.ToastNotificationsEnabled = true;
+        context.ViewModel.Settings.Editor.ApplySnapshot(settings);
+        var release = new TaskCompletionSource<ToastActionResult>(
+            TaskCreationOptions.RunContinuationsAsynchronously);
+        var toastService = context.Provider.GetRequiredService<ToastService>();
+        context.Window.Show();
+        toastService.Show(new ToastOptions
+        {
+            Title = "Install failed",
+            Message = "Offline",
+            Severity = ToastSeverity.Error,
+            PrimaryAction = new ToastAction("Retry", _ => release.Task),
+            SecondaryAction = new ToastAction(
+                "View log",
+                _ => Task.FromResult(ToastActionResult.Success()))
+        });
+        Dispatcher.UIThread.RunJobs();
+
+        var title = context.Window.GetVisualDescendants().OfType<TextBlock>()
+            .Single(control => control.Classes.Contains("toast-title"));
+        var actionButtons = context.Window.GetVisualDescendants().OfType<Button>()
+            .Where(control =>
+                control.Classes.Contains("toast-primary-action")
+                || control.Classes.Contains("toast-secondary-action"))
+            .ToArray();
+        var closeButton = context.Window.GetVisualDescendants().OfType<Button>()
+            .Single(control => control.Classes.Contains("toast-close"));
+        var autoDismissProgress = context.Window.GetVisualDescendants().OfType<ProgressBar>()
+            .Single(control => control.Classes.Contains("toast-progress") && !control.IsIndeterminate);
+
+        Assert.Equal("Install failed", title.Text);
+        Assert.Equal(2, actionButtons.Length);
+        Assert.Contains("toast-primary-action", actionButtons[0].Classes);
+        Assert.Contains("toast-secondary-action", actionButtons[1].Classes);
+        Assert.Equal("Retry", AutomationProperties.GetName(actionButtons[0]));
+        Assert.Equal("View log", AutomationProperties.GetName(actionButtons[1]));
+        Assert.False(autoDismissProgress.IsVisible);
+
+        var executeTask = context.ViewModel.Toasts.ExecutePrimaryToastActionCommand.ExecuteAsync(
+            context.ViewModel.Toasts.ActiveToasts.Single().Id);
+        Dispatcher.UIThread.RunJobs();
+
+        Assert.All(actionButtons, button => Assert.False(button.IsEffectivelyEnabled));
+        Assert.True(closeButton.IsEffectivelyEnabled);
+
+        release.SetResult(ToastActionResult.Failure("Still offline", "Retry failed"));
+        await executeTask;
+        Dispatcher.UIThread.RunJobs();
+    }
+
+    [AvaloniaFact]
+    public void Toast_WithoutActions_RendersAutoDismissProgress()
+    {
+        using var context = CreateContext();
+        var settings = context.ViewModel.Settings.Editor.GetSnapshot();
+        settings.ToastNotificationsEnabled = true;
+        context.ViewModel.Settings.Editor.ApplySnapshot(settings);
+        var toastService = context.Provider.GetRequiredService<ToastService>();
+        context.Window.Show();
+        toastService.Show(new ToastOptions
+        {
+            Title = "Updated",
+            Message = "You are up to date.",
+            DurationMs = 60000
+        });
+        Dispatcher.UIThread.RunJobs();
+
+        var progress = context.Window.GetVisualDescendants().OfType<ProgressBar>()
+            .Where(control => control.IsVisible)
+            .Single(control => control.Classes.Contains("toast-progress"));
+
+        Assert.True(progress.IsVisible);
+        Assert.InRange(progress.Value, 99d, 100d);
+    }
+
+    [AvaloniaFact]
+    public void ConfigureViewModel_WiresAndUnwiresDebugPlatformCapabilities()
+    {
+        var context = CreateContext();
+        var debug = context.ViewModel.Debug;
+
+        Assert.NotNull(debug.PickExportDirectoryAsync);
+        Assert.NotNull(debug.OpenDirectory);
+
+        context.Dispose();
+
+        Assert.Null(debug.PickExportDirectoryAsync);
+        Assert.Null(debug.OpenDirectory);
+    }
+
+    [AvaloniaFact]
+    public void DebugEntry_VisibilityMatchesBuildConfiguration()
+    {
+        using var context = CreateContext();
+        context.Window.Show();
+        Dispatcher.UIThread.RunJobs();
+        var button = context.Window.GetVisualDescendants().OfType<Button>().Single(control =>
+            ReferenceEquals(control.Command, context.ViewModel.WindowChrome.OpenDebugPanelCommand));
+
+#if DEBUG
+        Assert.True(button.IsEffectivelyVisible);
+#else
+        Assert.False(button.IsEffectivelyVisible);
+#endif
+    }
+
+    [AvaloniaFact]
+    public void DebugResetSettings_WhenRequested_ShowsConfirmationDialog()
+    {
+        using var context = CreateContext();
+
+        context.ViewModel.Debug.ResetSettingsCommand.Execute(null);
+        Dispatcher.UIThread.RunJobs();
+
+        Assert.True(context.ViewModel.Dialogs.IsDebugResetConfirmationVisible);
+    }
+
+    [AvaloniaFact]
     public void SettingsWorkspace_WhenShown_AppliesWorkspaceAndStatusSummaryStyles()
     {
         using var context = CreateContext();

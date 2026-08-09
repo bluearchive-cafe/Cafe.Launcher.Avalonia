@@ -165,9 +165,9 @@
                                                           AutomationProperties.Name="{Binding DisplayName}"
                                                           VerticalAlignment="Center"/>
                                                 <Grid Grid.Row="1" Grid.ColumnSpan="2" ColumnDefinitions="Auto,*,Auto,*" ColumnSpacing="{StaticResource LauncherSpacingSm}">
-                                                    <TextBlock Text="{Binding DataContext.Shell.I18n.ResourcePanelOfficialVersion, ElementName=DialogsRoot}" Classes="caption"/>
+                                                    <TextBlock Text="{Binding #DialogsRoot.((vm:MainWindowViewModel)DataContext).Shell.I18n.ResourcePanelOfficialVersion}" Classes="caption"/>
                                                     <TextBlock Grid.Column="1" Text="{Binding OfficialVersion}" Classes="value"/>
-                                                    <TextBlock Grid.Column="2" Text="{Binding DataContext.Shell.I18n.ResourcePanelLocalizedVersion, ElementName=DialogsRoot}" Classes="caption"/>
+                                                    <TextBlock Grid.Column="2" Text="{Binding #DialogsRoot.((vm:MainWindowViewModel)DataContext).Shell.I18n.ResourcePanelLocalizedVersion}" Classes="caption"/>
                                                     <TextBlock Grid.Column="3" Text="{Binding LocalizedVersion}" Classes="value"/>
                                                 </Grid>
                                             </Grid>
@@ -327,7 +327,7 @@
                                                 VerticalAlignment="Center">
                                             <StackPanel Orientation="Horizontal"
                                                         Spacing="{StaticResource LauncherSpacingXs}">
-                                                <TextBlock Text="{Binding $parent[UserControl].DataContext.Shell.I18n.LauncherUpdateFileSize}"
+                                                <TextBlock Text="{Binding #DialogsRoot.((vm:MainWindowViewModel)DataContext).Shell.I18n.LauncherUpdateFileSize}"
                                                            Classes="caption"/>
                                                 <TextBlock Text="{Binding DisplaySize}"
                                                            Classes="update-file-size-text"/>
@@ -469,6 +469,60 @@
                 </Grid>
             </Border>
         </Grid>
+
+        <!-- Critical error dialog -->
+        <Grid Classes="dialog-overlay motion-overlay"
+              Classes.motion-enabled="{Binding IsMotionEnabled}"
+              controls:MotionVisibility.IsOpen="{Binding Dialogs.IsErrorDialogVisible}"
+              controls:MotionVisibility.IsMotionEnabled="{Binding IsMotionEnabled}">
+            <Border Classes="dialog confirm-panel motion-surface" MaxWidth="540">
+                <Border.RenderTransform>
+                    <TranslateTransform/>
+                </Border.RenderTransform>
+                <Grid RowDefinitions="Auto,*,Auto" Classes="confirm-layout">
+                    <Grid Classes="dialog-heading" ColumnDefinitions="Auto,*,Auto">
+                        <Border Classes="dialog-icon" VerticalAlignment="Center">
+                            <materialIcons:MaterialIcon Kind="AlertCircle" Width="{StaticResource LauncherIconXl}" Height="{StaticResource LauncherIconXl}"
+                                                       Foreground="{DynamicResource LauncherDangerBrush}"
+                                                       HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                        </Border>
+                        <StackPanel Grid.Column="1" Classes="dialog-heading-copy">
+                            <TextBlock Text="{Binding Shell.I18n.ErrorDialogTitle}" Classes="dialog-title"/>
+                            <TextBlock Text="{Binding Shell.I18n.ErrorDialogDescription}" Classes="caption"/>
+                        </StackPanel>
+                    </Grid>
+                    <ScrollViewer Grid.Row="1" MaxHeight="300" Classes="scroll-pad">
+                        <Border Classes="confirm-message" Background="{DynamicResource LauncherDangerSoftBrush}">
+                            <TextBlock Text="{Binding Dialogs.ErrorDialogMessage}" Classes="confirm-message-text" TextWrapping="Wrap"/>
+                        </Border>
+                    </ScrollViewer>
+                    <StackPanel Grid.Row="2" Classes="confirm-actions">
+                        <Button Classes="flat-action dialog-action" Command="{Binding Dialogs.ViewErrorLogCommand}"
+                                AutomationProperties.Name="{Binding Shell.I18n.ErrorDialogViewLog}">
+                            <StackPanel Classes="button-content">
+                                <materialIcons:MaterialIcon Kind="TextBoxOutline" Width="{StaticResource LauncherIconSm}" Height="{StaticResource LauncherIconSm}"/>
+                                <TextBlock Text="{Binding Shell.I18n.ErrorDialogViewLog}"/>
+                            </StackPanel>
+                        </Button>
+                        <Button Classes="flat-action dialog-action" Command="{Binding Dialogs.CopyErrorDetailsCommand}"
+                                AutomationProperties.Name="{Binding Shell.I18n.ErrorDialogCopyDetails}">
+                            <StackPanel Classes="button-content">
+                                <materialIcons:MaterialIcon Kind="ContentCopy" Width="{StaticResource LauncherIconSm}" Height="{StaticResource LauncherIconSm}"/>
+                                <TextBlock Text="{Binding Shell.I18n.ErrorDialogCopyDetails}"/>
+                            </StackPanel>
+                        </Button>
+                        <Button Classes="primary-action dialog-action" Command="{Binding Dialogs.ContinueAfterErrorCommand}"
+                                AutomationProperties.Name="{Binding Shell.I18n.ErrorDialogContinue}">
+                            <StackPanel Classes="button-content">
+                                <materialIcons:MaterialIcon Kind="Check" Width="{StaticResource LauncherIconSm}" Height="{StaticResource LauncherIconSm}"/>
+                                <TextBlock Text="{Binding Shell.I18n.ErrorDialogContinue}"/>
+                            </StackPanel>
+                        </Button>
+                    </StackPanel>
+                </Grid>
+            </Border>
+        </Grid>
+
         <views:SetupWizardOverlay/>
         <controls:ConfirmDialog IsOpen="{Binding Dialogs.IsSetupWizardExitConfirmVisible}"
                                 Title="{Binding Shell.I18n.SetupWizardExitTitle}"
@@ -479,6 +533,18 @@
                                 ConfirmText="{Binding Shell.I18n.SetupWizardExitConfirm}"
                                 ConfirmCommand="{Binding Dialogs.ConfirmSetupWizardExitCommand}"
                                 ConfirmIconKind="ExitToApp"
+                                CloseToolTip="{Binding Shell.I18n.Close}"/>
+        <controls:ConfirmDialog IsOpen="{Binding Dialogs.IsDebugResetConfirmationVisible}"
+                                Title="{Binding Shell.I18n.DebugResetSettingsTitle}"
+                                Description="{Binding Shell.I18n.DebugResetSettingsDescription}"
+                                IconKind="AlertOutline"
+                                IsDangerIcon="True"
+                                CancelText="{Binding Shell.I18n.Cancel}"
+                                CancelCommand="{Binding Dialogs.CancelDebugResetCommand}"
+                                ConfirmText="{Binding Shell.I18n.DebugResetSettingsConfirm}"
+                                ConfirmCommand="{Binding Dialogs.ConfirmDebugResetCommand}"
+                                ConfirmIconKind="Restore"
+                                IsDangerConfirm="True"
                                 CloseToolTip="{Binding Shell.I18n.Close}"/>
     </Grid>
 </UserControl>

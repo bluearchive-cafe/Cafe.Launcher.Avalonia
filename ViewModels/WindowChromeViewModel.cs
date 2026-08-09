@@ -5,6 +5,7 @@ using System.Threading.Tasks;
 using Cafe.Launcher.Avalonia.Constants;
 using Cafe.Launcher.Avalonia.Models;
 using Cafe.Launcher.Avalonia.Services;
+using Cafe.Launcher.Avalonia.Services.Diagnostics;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 
@@ -16,6 +17,7 @@ public partial class WindowChromeViewModel : ViewModelBase
     private readonly RemoteContentViewModel remoteContent;
     private readonly DialogsViewModel dialogs;
     private readonly GameOperationsViewModel operations;
+    private readonly DebugViewModel debug;
     private readonly Action<string?> openExternalUrl;
     private readonly Action<string> openDirectory;
 
@@ -30,12 +32,14 @@ public partial class WindowChromeViewModel : ViewModelBase
         SettingsViewModel settings,
         RemoteContentViewModel remoteContent,
         DialogsViewModel dialogs,
-        GameOperationsViewModel operations)
+        GameOperationsViewModel operations,
+        DebugViewModel debug)
         : this(
             settings,
             remoteContent,
             dialogs,
             operations,
+            debug,
             ExternalLinkService.Open,
             static path => Process.Start(new ProcessStartInfo
             {
@@ -50,6 +54,7 @@ public partial class WindowChromeViewModel : ViewModelBase
         RemoteContentViewModel remoteContent,
         DialogsViewModel dialogs,
         GameOperationsViewModel operations,
+        DebugViewModel debug,
         Action<string?> openExternalUrl,
         Action<string> openDirectory)
     {
@@ -57,6 +62,7 @@ public partial class WindowChromeViewModel : ViewModelBase
         this.remoteContent = remoteContent;
         this.dialogs = dialogs;
         this.operations = operations;
+        this.debug = debug;
         this.openExternalUrl = openExternalUrl;
         this.openDirectory = openDirectory;
     }
@@ -141,6 +147,12 @@ public partial class WindowChromeViewModel : ViewModelBase
     private void OpenDataDirectory()
     {
         openDirectory(LauncherUserDataDirectory.Root);
+    }
+
+    [RelayCommand]
+    private async Task OpenDebugPanelAsync()
+    {
+        await debug.OpenCommand.ExecuteAsync(null);
     }
 
     public void OpenExternalUrl(string? url)

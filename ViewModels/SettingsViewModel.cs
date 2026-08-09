@@ -24,6 +24,7 @@ public partial class SettingsViewModel : ViewModelBase, IDisposable, IModalConte
     private readonly ISettingsEditor editor;
     private readonly UnifiedLogger unifiedLogger;
     private readonly GameInstallationPath gameInstallationPath;
+    private readonly IErrorHandlingService errorHandling;
     private CancellationTokenSource? appearancePreviewCts;
     private Task appearancePreviewTask = Task.CompletedTask;
     private bool disposed;
@@ -55,7 +56,8 @@ public partial class SettingsViewModel : ViewModelBase, IDisposable, IModalConte
         UnifiedLogger unifiedLogger,
         GameInstallationPath gameInstallationPath,
         SettingsOptionsViewModel options,
-        SettingsAppearanceViewModel appearance)
+        SettingsAppearanceViewModel appearance,
+        IErrorHandlingService errorHandling)
     {
         this.settingsService = settingsService;
         this.localizer = localizer;
@@ -67,6 +69,7 @@ public partial class SettingsViewModel : ViewModelBase, IDisposable, IModalConte
         editor = appearance.Editor;
         Options = options;
         Appearance = appearance;
+        this.errorHandling = errorHandling;
         editor.PropertyChanged += OnEditorPropertyChanged;
         editor.CurrentPropertyChanged += OnCurrentSettingChanged;
     }
@@ -240,9 +243,8 @@ public partial class SettingsViewModel : ViewModelBase, IDisposable, IModalConte
         }
         catch (Exception exception)
         {
-            System.Diagnostics.Debug.WriteLine(
-                $"Settings: save failed: {exception.Message}");
-            toastService.ShowError(localizer.F("settingsSaveFailed", exception.Message));
+            await errorHandling.HandleErrorAsync("Settings save failed.", exception,
+                new ErrorHandlingOptions { ToastMessage = localizer.F("settingsSaveFailed", exception.Message) });
         }
         finally
         {
@@ -313,9 +315,8 @@ public partial class SettingsViewModel : ViewModelBase, IDisposable, IModalConte
         }
         catch (Exception exception)
         {
-            System.Diagnostics.Debug.WriteLine(
-                $"Settings: game path update failed: {exception.Message}");
-            toastService.ShowError(localizer.F("gamePathUpdateFailed", exception.Message));
+            await errorHandling.HandleErrorAsync("Settings game path update failed.", exception,
+                new ErrorHandlingOptions { ToastMessage = localizer.F("gamePathUpdateFailed", exception.Message) });
         }
     }
 
@@ -402,9 +403,8 @@ public partial class SettingsViewModel : ViewModelBase, IDisposable, IModalConte
         }
         catch (Exception exception)
         {
-            System.Diagnostics.Debug.WriteLine(
-                $"Settings: appearance preview failed: {exception.Message}");
-            toastService.ShowError(localizer.F("appearancePreviewFailed", exception.Message));
+            await errorHandling.HandleErrorAsync("Settings appearance preview failed.", exception,
+                new ErrorHandlingOptions { ToastMessage = localizer.F("appearancePreviewFailed", exception.Message) });
         }
     }
 
