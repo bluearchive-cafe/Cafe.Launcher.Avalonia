@@ -832,7 +832,8 @@ public sealed class MainWindowViewModelTests : IDisposable
             testLogger,
             new GameInstallationPath(),
             new SettingsOptionsViewModel(localizer, new DiskSpaceService()),
-            appearance);
+            appearance,
+            new ErrorHandlingService(localizer, new LocalDiagnostics(testLogger), toastService, new ShellViewModel(localizer)));
         ToastNotification? errorToast = null;
         toastService.ToastRaised += notification =>
         {
@@ -1698,6 +1699,40 @@ public sealed class MainWindowViewModelTests : IDisposable
         Assert.DoesNotContain(toasts, t => t.Contains("available"));
     }
 
+    [Fact]
+    public async Task InstallFailureViewLogAction_OpensLogViewerUntilMainWindowIsDisposed()
+    {
+        var toastService = new ToastService();
+        ToastNotification? raised = null;
+        toastService.ToastRaised += toast => raised = toast;
+        var backend = new CountingGameOperationsBackend
+        {
+            InstallResult = new GameOperationResult
+            {
+                Success = false,
+                Message = "offline"
+            }
+        };
+        var viewModel = await CreateViewModelAsync(
+            new CountingCoreService(CreateSnapshot()),
+            toastService: toastService,
+            gameOperationsBackend: backend);
+        viewModel.Shell.IsBusy = false;
+        viewModel.Operations.ApplySnapshot(new LauncherStatusSnapshot
+        {
+            RuntimeState = LauncherRuntimeState.NotInstalled
+        });
+        await viewModel.Operations.InstallOrUpdateCommand.ExecuteAsync(null);
+
+        await raised!.SecondaryAction!.ExecuteAsync(CancellationToken.None);
+
+        Assert.True(viewModel.LogViewer.IsVisible);
+        viewModel.LogViewer.CloseCommand.Execute(null);
+        viewModel.Dispose();
+        await raised.SecondaryAction.ExecuteAsync(CancellationToken.None);
+        Assert.False(viewModel.LogViewer.IsVisible);
+    }
+
     private async Task<MainWindowViewModel> CreateViewModelAsync(
         ILauncherCoreService coreService,
         LauncherSettingsService? settingsService = null,
@@ -1751,6 +1786,8 @@ public sealed class MainWindowViewModelTests : IDisposable
         var settingsEditor = new SettingsEditor();
         var settingsOptions = new SettingsOptionsViewModel(localizationService, diskSpaceService);
         var settingsAppearance = new SettingsAppearanceViewModel(settingsEditor);
+        var shellViewModel = new ShellViewModel(localizationService);
+        var errorHandling = new ErrorHandlingService(localizationService, diagnostics, toastService, shellViewModel);
         var noticeStateService = new NoticeStateService(Path.Combine(tempDir, Guid.NewGuid().ToString("N"), "shown_notices.json"));
         var dialogsViewModel = new DialogsViewModel(localizationService, noticeStateService, new SetupWizardViewModel(localizationService, new GameInstallationPath(), new LocalInstallationStateStore(), new LocalDiagnostics()));
         using var settingsLogger = new UnifiedLogger(Path.Combine(tempDir, Guid.NewGuid().ToString("N")));
@@ -1759,18 +1796,17 @@ public sealed class MainWindowViewModelTests : IDisposable
             launcherUpdateSvc, dialogsViewModel,
             settingsLogger,
             new GameInstallationPath(),
-            settingsOptions, settingsAppearance);
+            settingsOptions, settingsAppearance, errorHandling);
         var resourcePanelService = new ResourcePanelService(
             resourcePanelUidService, resourcePanelApiClient, diagnostics);
         var resourcePanelViewModel = new ResourcePanelViewModel(
-            resourcePanelService, localizationService, toastService);
+            resourcePanelService, localizationService, toastService, errorHandling);
         var gameUninstallService = new GameUninstallService(
             localInstallationStateStore,
             diagnostics,
             localizationService,
             new GameInstallationPath());
 
-        var shellViewModel = new ShellViewModel(localizationService);
         var remoteContentViewModel = new RemoteContentViewModel(localizationService, imageCacheService);
         var backgroundViewModel = new BackgroundViewModel(imageCacheService, diagnostics, settingsViewModel);
         var gameOperationsViewModel = gameOperationsBackend is null
@@ -1782,7 +1818,8 @@ public sealed class MainWindowViewModelTests : IDisposable
                 toastService,
                 diagnostics,
                 shellViewModel,
-                dialogsViewModel)
+                dialogsViewModel,
+                errorHandling)
             : new GameOperationsViewModel(
                 gameOperationsBackend,
                 gameOperationsBackend,
@@ -1792,7 +1829,8 @@ public sealed class MainWindowViewModelTests : IDisposable
                 diagnostics,
                 shellViewModel,
                 dialogsViewModel,
-                _ => Task.CompletedTask);
+                _ => Task.CompletedTask,
+                errorHandling);
         var toastHostViewModel = toastDelayAsync is null
             ? new ToastHostViewModel(toastService, localizationService, settingsViewModel)
             : new ToastHostViewModel(
@@ -1805,8 +1843,10 @@ public sealed class MainWindowViewModelTests : IDisposable
                     return Task.CompletedTask;
                 },
                 toastDelayAsync);
+        var debugViewModel = new DebugViewModel(toastService, new UnifiedLogger(Path.Combine(tempDir, Guid.NewGuid().ToString("N"))), errorHandling, settingsService, gameOperationsViewModel, shellViewModel);
         var windowChromeViewModel = new WindowChromeViewModel(
-            settingsViewModel, remoteContentViewModel, dialogsViewModel, gameOperationsViewModel);
+            settingsViewModel, remoteContentViewModel, dialogsViewModel, gameOperationsViewModel,
+            debugViewModel);
 
         using var testLogger = new UnifiedLogger(tempDir);
         return new MainWindowViewModel(
@@ -1826,6 +1866,8 @@ public sealed class MainWindowViewModelTests : IDisposable
             windowChromeViewModel,
             settingsViewModel,
             resourcePanelViewModel,
+            errorHandling,
+            debug: debugViewModel,
             windowsAnimationSettingsProvider: windowsAnimationSettingsProvider);
     }
 
@@ -2070,17 +2112,20 @@ public sealed class MainWindowViewModelTests : IDisposable
         }
 
         public int ResumeInvocationCount { get; private set; }
+        public GameOperationResult InstallResult { get; set; } = new();
         public bool IsDownloadRunning => isDownloadRunning;
         public bool IsRunning => IsDownloadRunning;
         public bool IsPaused => false;
+        public event Action? IsRunningChanged { add { } remove { } }
 
         public Task<GameLaunchResult> StartGameAsync(LauncherStatusSnapshot snapshot) =>
             throw new NotSupportedException();
 
         public Task<GameOperationResult> InstallOrUpdateAsync(
             LauncherStatusSnapshot snapshot,
-            Action<GameOperationProgress> progress) =>
-            throw new NotSupportedException();
+            Action<GameOperationProgress> progress,
+            CancellationToken cancellationToken = default) =>
+            Task.FromResult(InstallResult);
 
         public Task<GameOperationResult> RepairAsync(
             LauncherStatusSnapshot snapshot,

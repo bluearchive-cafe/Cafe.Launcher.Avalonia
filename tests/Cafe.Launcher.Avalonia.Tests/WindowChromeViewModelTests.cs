@@ -193,6 +193,7 @@ public sealed class WindowChromeViewModelTests : IDisposable
             context.RemoteContent,
             context.Dialogs,
             context.Operations,
+            context.Debug,
             openedUrls.Add,
             path => openedDirectory = path);
         context.Settings.Editor.ApplySnapshot(new LauncherSettings
@@ -256,14 +257,24 @@ public sealed class WindowChromeViewModelTests : IDisposable
             provider.GetRequiredService<LocalDiagnostics>(),
             provider.GetRequiredService<ShellViewModel>(),
             dialogs,
-            _ => Task.CompletedTask);
+            _ => Task.CompletedTask,
+            provider.GetRequiredService<IErrorHandlingService>());
+        var debug = new DebugViewModel(
+            provider.GetRequiredService<ToastService>(),
+            logger,
+            provider.GetRequiredService<IErrorHandlingService>(),
+            provider.GetRequiredService<LauncherSettingsService>(),
+            operations,
+            provider.GetRequiredService<ShellViewModel>());
         var viewModel = new WindowChromeViewModel(
             settings,
             remoteContent,
             dialogs,
-            operations);
+            operations,
+            debug);
         return new TestContext(
             viewModel,
+            debug,
             settings,
             remoteContent,
             dialogs,
@@ -283,6 +294,7 @@ public sealed class WindowChromeViewModelTests : IDisposable
 
     private sealed record TestContext(
         WindowChromeViewModel ViewModel,
+        DebugViewModel Debug,
         SettingsViewModel Settings,
         RemoteContentViewModel RemoteContent,
         DialogsViewModel Dialogs,
@@ -306,6 +318,7 @@ public sealed class WindowChromeViewModelTests : IDisposable
         public bool IsDownloadRunning { get; set; }
         public bool IsRunning => IsDownloadRunning;
         public bool IsPaused { get; private set; }
+        public event Action? IsRunningChanged { add { } remove { } }
         public bool LastClearPersistedState { get; private set; }
 
         public Task<GameLaunchResult> StartGameAsync(LauncherStatusSnapshot snapshot) =>
@@ -313,7 +326,8 @@ public sealed class WindowChromeViewModelTests : IDisposable
 
         public Task<GameOperationResult> InstallOrUpdateAsync(
             LauncherStatusSnapshot snapshot,
-            Action<GameOperationProgress> progress) =>
+            Action<GameOperationProgress> progress,
+            CancellationToken cancellationToken = default) =>
             Task.FromResult(new GameOperationResult());
 
         public Task<GameOperationResult> RepairAsync(

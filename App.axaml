@@ -15,11 +15,19 @@
             <x:Double x:Key="LauncherSpacingXl">20</x:Double>
             <x:Double x:Key="LauncherSpacingXxl">24</x:Double>
             <x:Double x:Key="LauncherSpacingSection">40</x:Double>
+            <Thickness x:Key="LauncherSpacingXsThickness">4</Thickness>
+            <Thickness x:Key="LauncherSpacingSmThickness">8</Thickness>
+            <Thickness x:Key="LauncherSpacingXlThickness">20</Thickness>
             <Thickness x:Key="LauncherThicknessNone">0</Thickness>
             <Thickness x:Key="LauncherThicknessSm">8</Thickness>
             <Thickness x:Key="LauncherThicknessMd">12</Thickness>
             <Thickness x:Key="LauncherThicknessLg">16</Thickness>
             <Thickness x:Key="LauncherPathFieldPadding">16,0,4,0</Thickness>
+            <Thickness x:Key="LauncherToastMessageMargin">0,4,0,0</Thickness>
+            <Thickness x:Key="LauncherToastActionRowMargin">0,8,0,0</Thickness>
+            <Thickness x:Key="LauncherToastPrimaryActionMargin">0,0,8,0</Thickness>
+            <Thickness x:Key="LauncherToastActionProgressMargin">8,0,0,0</Thickness>
+            <Thickness x:Key="LauncherToastContentPadding">12</Thickness>
             <CornerRadius x:Key="LauncherRadiusSm">4</CornerRadius>
             <CornerRadius x:Key="LauncherRadiusMd">6</CornerRadius>
             <CornerRadius x:Key="LauncherRadiusLg">8</CornerRadius>
@@ -32,6 +40,7 @@
             <x:Double x:Key="LauncherControlHeightDialog">42</x:Double>
             <x:Double x:Key="LauncherControlHeightBottom">48</x:Double>
             <x:Double x:Key="LauncherControlHeightLaunch">58</x:Double>
+            <x:Double x:Key="LauncherControlMinWidthNone">0</x:Double>
             <x:Double x:Key="LauncherSwatchSize">28</x:Double>
             <x:Double x:Key="LauncherChipHeight">32</x:Double>
             <x:Double x:Key="LauncherFieldHeight">40</x:Double>
@@ -45,6 +54,8 @@
             <x:Double x:Key="LauncherSettingRowActionMaxWidth">440</x:Double>
             <x:Double x:Key="LauncherLoadingBarWidth">120</x:Double>
             <x:Double x:Key="LauncherLoadingBarHeight">4</x:Double>
+            <x:Double x:Key="LauncherToastAutoDismissProgressHeight">3</x:Double>
+            <x:Double x:Key="LauncherToastWidth">340</x:Double>
             <x:Double x:Key="LauncherFontSizeXs">11</x:Double>
             <x:Double x:Key="LauncherFontSizeSm">12</x:Double>
             <x:Double x:Key="LauncherFontSizeMd">13</x:Double>
@@ -159,5 +170,6 @@
         <FluentTheme />
         <StyleInclude Source="avares://Avalonia.Controls.ColorPicker/Themes/Fluent/Fluent.xaml" />
         <materialIcons:MaterialIconStyles />
+        <StyleInclude Source="avares://Cafe.Launcher.Avalonia/Views/MainWindow.Styles.axaml"/>
     </Application.Styles>
 </Application>

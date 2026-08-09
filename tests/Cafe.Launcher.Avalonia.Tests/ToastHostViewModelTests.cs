@@ -1,3 +1,4 @@
+using System.Collections.Concurrent;
 using Cafe.Launcher.Avalonia.Helpers;
 using Cafe.Launcher.Avalonia.Models;
 using Cafe.Launcher.Avalonia.Services;
@@ -15,6 +16,195 @@ public sealed class ToastHostViewModelTests : IDisposable
     static ToastHostViewModelTests()
     {
         TestLocalizationHelper.Initialize();
+    }
+
+    [Fact]
+    public async Task ToastRaised_WithAction_DoesNotStartDisplayDelay()
+    {
+        await using var provider = CreateProvider();
+        var settings = EnableToasts(provider);
+        var toastService = provider.GetRequiredService<ToastService>();
+        var delayCalls = 0;
+        using var viewModel = new ToastHostViewModel(
+            toastService,
+            provider.GetRequiredService<LocalizationService>(),
+            settings,
+            InvokeSerially,
+            (_, _) =>
+            {
+                delayCalls++;
+                return Task.CompletedTask;
+            });
+
+        toastService.Show(CreateActionOptions(durationMs: 0));
+        await WaitUntilAsync(() => viewModel.ActiveToasts.Count == 1);
+
+        Assert.Equal(0, delayCalls);
+    }
+
+    [Fact]
+    public async Task ToastRaised_WithFiniteDuration_UpdatesProgressThenExpires()
+    {
+        await using var provider = CreateProvider();
+        var settings = EnableToasts(provider);
+        var toastService = provider.GetRequiredService<ToastService>();
+        var delays = new ControlledDelay();
+        using var viewModel = new ToastHostViewModel(
+            toastService,
+            provider.GetRequiredService<LocalizationService>(),
+            settings,
+            InvokeSerially,
+            delays.WaitAsync);
+
+        toastService.Show(new ToastOptions
+        {
+            Message = "saved",
+            DurationMs = 100
+        });
+        await WaitUntilAsync(() => viewModel.ActiveToasts.Count == 1);
+        var toast = viewModel.ActiveToasts.Single();
+
+        Assert.True(toast.HasAutoDismissProgress);
+        Assert.Equal(100d, toast.AutoDismissProgress);
+
+        await delays.ReleaseNextAsync();
+        await WaitUntilAsync(() => toast.AutoDismissProgress == 50d);
+        await delays.ReleaseNextAsync();
+        await WaitUntilAsync(() => viewModel.ActiveToasts.Count == 0);
+    }
+
+    [Fact]
+    public async Task ToastRaised_WithAction_DoesNotExposeAutoDismissProgress()
+    {
+        await using var provider = CreateProvider();
+        var settings = EnableToasts(provider);
+        var toastService = provider.GetRequiredService<ToastService>();
+
+        using var viewModel = new ToastHostViewModel(
+            toastService,
+            provider.GetRequiredService<LocalizationService>(),
+            settings,
+            InvokeSerially,
+            static (_, _) => Task.CompletedTask);
+
+        toastService.Show(CreateActionOptions());
+        await WaitUntilAsync(() => viewModel.ActiveToasts.Count == 1);
+        var toast = viewModel.ActiveToasts.Single();
+
+        Assert.False(toast.HasAutoDismissProgress);
+        Assert.Equal(100d, toast.AutoDismissProgress);
+    }
+
+    [Fact]
+    public async Task DismissToast_WhileCountdownIsWaiting_DoesNotScheduleAnotherProgressUpdate()
+    {
+        await using var provider = CreateProvider();
+        var settings = EnableToasts(provider);
+        var toastService = provider.GetRequiredService<ToastService>();
+        var delays = new ControlledDelay();
+        using var viewModel = new ToastHostViewModel(
+            toastService,
+            provider.GetRequiredService<LocalizationService>(),
+            settings,
+            InvokeSerially,
+            delays.WaitAsync);
+
+        toastService.Show(new ToastOptions { Message = "saved", DurationMs = 100 });
+        await WaitUntilAsync(() => viewModel.ActiveToasts.Count == 1);
+        var toast = viewModel.ActiveToasts.Single();
+
+        await viewModel.DismissToastCommand.ExecuteAsync(toast.Id);
+        await delays.ReleaseNextAsync();
+        await Task.Delay(20);
+
+        Assert.Empty(viewModel.ActiveToasts);
+        Assert.Equal(100d, toast.AutoDismissProgress);
+        Assert.Equal(1, delays.RequestCount);
+    }
+
+    [Fact]
+    public async Task ExecutePrimaryToastAction_WhenSuccessful_ExecutesOnceAndDismisses()
+    {
+        await using var provider = CreateProvider();
+        var settings = EnableToasts(provider);
+        var toastService = provider.GetRequiredService<ToastService>();
+        var calls = 0;
+        var release = new TaskCompletionSource<ToastActionResult>(
+            TaskCreationOptions.RunContinuationsAsynchronously);
+        using var viewModel = new ToastHostViewModel(
+            toastService,
+            provider.GetRequiredService<LocalizationService>(),
+            settings,
+            InvokeSerially,
+            static (_, _) => Task.CompletedTask);
+        toastService.Show(CreateActionOptions(async _ =>
+        {
+            calls++;
+            return await release.Task;
+        }, durationMs: 0));
+        await WaitUntilAsync(() => viewModel.ActiveToasts.Count == 1);
+        var toast = viewModel.ActiveToasts[0];
+
+        var first = viewModel.ExecutePrimaryToastActionCommand.ExecuteAsync(toast.Id);
+        var duplicate = viewModel.ExecutePrimaryToastActionCommand.ExecuteAsync(toast.Id);
+        await WaitUntilAsync(() => toast.IsActionExecuting);
+        release.SetResult(ToastActionResult.Success());
+        await Task.WhenAll(first, duplicate);
+
+        Assert.Equal(1, calls);
+        Assert.Empty(viewModel.ActiveToasts);
+    }
+
+    [Fact]
+    public async Task ExecutePrimaryToastAction_WhenFailure_ReturnsToastToInteractiveErrorState()
+    {
+        await using var provider = CreateProvider();
+        var settings = EnableToasts(provider);
+        var toastService = provider.GetRequiredService<ToastService>();
+        using var viewModel = new ToastHostViewModel(
+            toastService,
+            provider.GetRequiredService<LocalizationService>(),
+            settings,
+            InvokeSerially,
+            static (_, _) => Task.CompletedTask);
+        toastService.Show(CreateActionOptions(_ => Task.FromResult(
+            ToastActionResult.Failure("Still offline", "Retry failed")), durationMs: 0));
+        await WaitUntilAsync(() => viewModel.ActiveToasts.Count == 1);
+        var toast = viewModel.ActiveToasts[0];
+
+        await viewModel.ExecutePrimaryToastActionCommand.ExecuteAsync(toast.Id);
+
+        Assert.Equal(ToastSeverity.Error, toast.Severity);
+        Assert.Equal("Retry failed", toast.Title);
+        Assert.Equal("Still offline", toast.Message);
+        Assert.False(toast.IsActionExecuting);
+        Assert.Contains(toast, viewModel.ActiveToasts);
+    }
+
+    [Fact]
+    public async Task ExecuteSecondaryToastAction_WhenUnexpectedException_UsesLocalizedFallback()
+    {
+        await using var provider = CreateProvider();
+        var settings = EnableToasts(provider);
+        var localizer = provider.GetRequiredService<LocalizationService>();
+        var toastService = provider.GetRequiredService<ToastService>();
+        using var viewModel = new ToastHostViewModel(
+            toastService,
+            localizer,
+            settings,
+            InvokeSerially,
+            static (_, _) => Task.CompletedTask);
+        toastService.Show(CreateActionOptions(
+            secondary: _ => throw new InvalidOperationException("secret detail"), durationMs: 0));
+        await WaitUntilAsync(() => viewModel.ActiveToasts.Count == 1);
+        var toast = viewModel.ActiveToasts[0];
+
+        await viewModel.ExecuteSecondaryToastActionCommand.ExecuteAsync(toast.Id);
+
+        Assert.Equal(localizer.T("toastActionFailedTitle"), toast.Title);
+        Assert.Equal(localizer.T("toastActionFailedMessage"), toast.Message);
+        Assert.DoesNotContain("secret detail", toast.Message, StringComparison.Ordinal);
+        Assert.False(toast.IsActionExecuting);
     }
 
     [Fact]
@@ -217,7 +407,7 @@ public sealed class ToastHostViewModelTests : IDisposable
                 return exitDelay.Task.WaitAsync(cancellationToken);
             });
         viewModel.ApplyMotionPreference(reduceMotion: false);
-        toastService.Show("overlap");
+        toastService.Show("overlap", durationMs: 1234);
         await WaitUntilAsync(() => viewModel.ActiveToasts.Count == 1);
         var toast = viewModel.ActiveToasts[0];
         var removeCount = 0;
@@ -230,10 +420,11 @@ public sealed class ToastHostViewModelTests : IDisposable
         };
 
         displayDelay.TrySetResult();
-        var dismissTask = viewModel.DismissToastCommand.ExecuteAsync(toast.Id);
         await WaitUntilAsync(() => toast.IsExiting);
+        var dismissTask = viewModel.DismissToastCommand.ExecuteAsync(toast.Id);
 
         Assert.Equal(1, exitDelayCalls);
+        Assert.False(dismissTask.IsCompleted);
 
         exitDelay.TrySetResult();
         await dismissTask;
@@ -329,7 +520,7 @@ public sealed class ToastHostViewModelTests : IDisposable
         await dismissTask;
 
         Assert.True(dismissTask.IsCompletedSuccessfully);
-        Assert.Contains(toast, viewModel.ActiveToasts);
+        Assert.Empty(viewModel.ActiveToasts);
     }
 
     [Fact]
@@ -455,6 +646,33 @@ public sealed class ToastHostViewModelTests : IDisposable
         return services.BuildServiceProvider();
     }
 
+    private static SettingsViewModel EnableToasts(ServiceProvider provider)
+    {
+        var settings = provider.GetRequiredService<SettingsViewModel>();
+        settings.Editor.ApplySnapshot(new LauncherSettings
+        {
+            ToastNotificationsEnabled = true
+        });
+        return settings;
+    }
+
+    private static ToastOptions CreateActionOptions(
+        Func<CancellationToken, Task<ToastActionResult>>? primary = null,
+        Func<CancellationToken, Task<ToastActionResult>>? secondary = null,
+        int durationMs = 4000) =>
+        new()
+        {
+            Title = "Action",
+            Message = "Choose",
+            DurationMs = durationMs,
+            PrimaryAction = new ToastAction(
+                "Primary",
+                primary ?? (_ => Task.FromResult(ToastActionResult.Success()))),
+            SecondaryAction = new ToastAction(
+                "Secondary",
+                secondary ?? (_ => Task.FromResult(ToastActionResult.Success())))
+        };
+
     private Task InvokeSerially(Action action)
     {
         lock (invokeGate)
@@ -476,6 +694,36 @@ public sealed class ToastHostViewModelTests : IDisposable
             }
 
             await Task.Delay(10);
+        }
+    }
+
+    private sealed class ControlledDelay
+    {
+        private readonly ConcurrentQueue<TaskCompletionSource> requests = new();
+        private readonly SemaphoreSlim requestAvailable = new(0);
+        private int requestCount;
+
+        public int RequestCount => Volatile.Read(ref requestCount);
+
+        public Task WaitAsync(TimeSpan _, CancellationToken cancellationToken)
+        {
+            var request = new TaskCompletionSource(
+                TaskCreationOptions.RunContinuationsAsynchronously);
+            requests.Enqueue(request);
+            Interlocked.Increment(ref requestCount);
+            requestAvailable.Release();
+            return request.Task.WaitAsync(cancellationToken);
+        }
+
+        public async Task ReleaseNextAsync()
+        {
+            await requestAvailable.WaitAsync();
+            if (!requests.TryDequeue(out var request))
+            {
+                throw new InvalidOperationException("A recorded delay request could not be dequeued.");
+            }
+
+            request.TrySetResult();
         }
     }
 

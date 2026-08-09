@@ -5,6 +5,21 @@ using Cafe.Launcher.Avalonia.ViewModels;
 
 namespace Cafe.Launcher.Avalonia.Tests;
 
+internal sealed class FakeErrorHandlingService : IErrorHandlingService
+{
+    public Task HandleErrorAsync(string context, Exception exception, ErrorHandlingOptions? options = null)
+        => Task.CompletedTask;
+
+    public Task HandleCriticalErrorAsync(string context, Exception exception)
+        => Task.CompletedTask;
+
+    public event Action<CriticalErrorInfo>? CriticalErrorRequested
+    {
+        add { }
+        remove { }
+    }
+}
+
 public sealed class SettingsOptionsDiskSpaceTests
 {
     static SettingsOptionsDiskSpaceTests()
@@ -140,6 +155,8 @@ public sealed class SettingsOptionsDiskSpaceTests
         localizer.SetLanguage(LauncherLanguages.SimplifiedChinese);
         var options = new SettingsOptionsViewModel(localizer, diskSpace);
         var editor = new SettingsEditor();
+        var errorHandling = new FakeErrorHandlingService();
+        var shell = new ShellViewModel(localizer);
         using var settings = new SettingsViewModel(
             null!,
             localizer,
@@ -149,8 +166,8 @@ public sealed class SettingsOptionsDiskSpaceTests
             null!,
             null!,
             options,
-            new SettingsAppearanceViewModel(editor));
-        var shell = new ShellViewModel(localizer);
+            new SettingsAppearanceViewModel(editor),
+            errorHandling);
         var snapshot = new LauncherStatusSnapshot
         {
             RuntimeState = LauncherRuntimeState.NotInstalled,
