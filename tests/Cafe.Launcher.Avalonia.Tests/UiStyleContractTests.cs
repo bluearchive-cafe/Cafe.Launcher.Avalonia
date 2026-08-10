@@ -2074,7 +2074,7 @@ public sealed partial class UiStyleContractTests
             StringComparison.Ordinal);
         Assert.Equal("True", GetStyleSetters(styles, "Border.remote-surface")["ClipToBounds"]);
         Assert.Equal("{StaticResource LauncherThicknessNone}", GetStyleSetters(styles, "Border.remote-surface")["Padding"]);
-        Assert.Equal("#80000000", app.Descendants().Single(element =>
+        Assert.Equal("#99000000", app.Descendants().Single(element =>
             element.Attribute(XName.Get("Key", "http://schemas.microsoft.com/winfx/2006/xaml"))?.Value == "LauncherOverlayBrush").Attribute("Color")?.Value);
 
         var remoteSurface = document.Descendants().Single(element =>
@@ -2812,6 +2812,21 @@ public sealed partial class UiStyleContractTests
 
         Assert.Equal("0", GetStyleSetters(styles, "Button.news-tab")["BorderThickness"]);
         Assert.Equal("{DynamicResource LauncherAccentBrush}", GetStyleSetters(styles, "Button.news-tab.active")["Background"]);
+    }
+
+    [Fact]
+    public void ToastAndDebugOverlay_NewMeasurements_UseLauncherTokens()
+    {
+        var debugOverlay = File.ReadAllText(ProjectFile("Views/MainWindowDebugOverlay.axaml"));
+        var toastStyles = File.ReadAllText(ProjectFile("Views/Styles/Toast.axaml"));
+
+        Assert.DoesNotContain("Width=\"720\"", debugOverlay, StringComparison.Ordinal);
+        Assert.DoesNotContain("Height=\"540\"", debugOverlay, StringComparison.Ordinal);
+        Assert.DoesNotContain("MaxWidth=\"300\"", debugOverlay, StringComparison.Ordinal);
+        Assert.DoesNotContain("MinWidth=\"110\"", debugOverlay, StringComparison.Ordinal);
+        Assert.DoesNotContain("MaxHeight=\"160\"", debugOverlay, StringComparison.Ordinal);
+        Assert.DoesNotContain("MinHeight\" Value=\"30\"", toastStyles, StringComparison.Ordinal);
+        Assert.DoesNotContain("Padding\" Value=\"12,8\"", toastStyles, StringComparison.Ordinal);
     }
 
     [Fact]

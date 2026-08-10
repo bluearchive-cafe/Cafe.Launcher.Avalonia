@@ -5,15 +5,16 @@ using CommunityToolkit.Mvvm.ComponentModel;
 
 namespace Cafe.Launcher.Avalonia.Services;
 
-/// <param name="Timeout">Maximum duration for <see cref="ExecuteAsync"/> before the action is
-/// automatically cancelled. The toast itself is NOT dismissed after this timeout — cancellation
-/// falls through to the failure path, keeping the toast visible with an error state.</param>
-
+/// <summary>Describes an asynchronous action presented by a toast notification.</summary>
+/// <param name="Label">Localized label displayed for the action.</param>
+/// <param name="ExecuteAsync">Operation executed when the user selects the action.</param>
+/// <param name="Timeout">Maximum duration for <paramref name="ExecuteAsync"/> before cancellation.</param>
 public sealed record ToastAction(
     string Label,
     Func<CancellationToken, Task<ToastActionResult>> ExecuteAsync,
     TimeSpan? Timeout = null);
 
+/// <summary>Represents the outcome of a toast action execution.</summary>
 public sealed record ToastActionResult
 {
     private ToastActionResult(bool isSuccess, string? message, string? title)
@@ -23,12 +24,19 @@ public sealed record ToastActionResult
         Title = title;
     }
 
+    /// <summary>Gets whether the action completed successfully.</summary>
     public bool IsSuccess { get; }
+
+    /// <summary>Gets the user-safe failure message when the action did not succeed.</summary>
     public string? Message { get; }
+
+    /// <summary>Gets the optional title that replaces the toast title after a failure.</summary>
     public string? Title { get; }
 
+    /// <summary>Creates a successful action result.</summary>
     public static ToastActionResult Success() => new(true, null, null);
 
+    /// <summary>Creates a failed action result with a user-safe message.</summary>
     public static ToastActionResult Failure(string message, string? title = null)
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(message);
@@ -36,6 +44,7 @@ public sealed record ToastActionResult
     }
 }
 
+/// <summary>Configures the content, severity, lifetime, and actions of a toast notification.</summary>
 public sealed class ToastOptions
 {
     public string? Title { get; init; }

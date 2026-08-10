@@ -62,12 +62,12 @@ public sealed partial class LauncherUpdateService : IDisposable
 
             if (releases is null || releases.Count == 0)
             {
-                return LauncherUpdateCheckResult.Failed();
+                return LauncherUpdateCheckResult.Failed(message: "No release metadata was returned.");
             }
 
             if (!TryParseSemanticVersion(currentVersion, out _))
             {
-                return LauncherUpdateCheckResult.Failed();
+                return LauncherUpdateCheckResult.Failed(message: "The current launcher version is invalid.");
             }
 
             var validReleases = releases
@@ -75,7 +75,7 @@ public sealed partial class LauncherUpdateService : IDisposable
                 .ToList();
             if (validReleases.Count == 0)
             {
-                return LauncherUpdateCheckResult.Failed();
+                return LauncherUpdateCheckResult.Failed(message: "No valid release versions were returned.");
             }
 
             // Sort by semantic version descending so the latest by version is first.
@@ -109,7 +109,7 @@ public sealed partial class LauncherUpdateService : IDisposable
                         CancellationToken.None).ConfigureAwait(false);
                 }
 
-                return LauncherUpdateCheckResult.Failed();
+                return LauncherUpdateCheckResult.Failed(message: validationError);
             }
 
             return LauncherUpdateCheckResult.Succeeded(

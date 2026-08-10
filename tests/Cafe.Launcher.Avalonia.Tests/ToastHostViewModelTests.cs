@@ -27,6 +27,7 @@ public sealed class ToastHostViewModelTests : IDisposable
         using var viewModel = new ToastHostViewModel(
             toastService,
             provider.GetRequiredService<LocalizationService>(),
+            new LocalDiagnostics(),
             InvokeSerially,
             (_, _) =>
             {
@@ -49,6 +50,7 @@ public sealed class ToastHostViewModelTests : IDisposable
         using var viewModel = new ToastHostViewModel(
             toastService,
             provider.GetRequiredService<LocalizationService>(),
+            new LocalDiagnostics(),
             InvokeSerially,
             delays.WaitAsync);
 
@@ -78,6 +80,7 @@ public sealed class ToastHostViewModelTests : IDisposable
         using var viewModel = new ToastHostViewModel(
             toastService,
             provider.GetRequiredService<LocalizationService>(),
+            new LocalDiagnostics(),
             InvokeSerially,
             static (_, _) => Task.CompletedTask);
 
@@ -98,6 +101,7 @@ public sealed class ToastHostViewModelTests : IDisposable
         using var viewModel = new ToastHostViewModel(
             toastService,
             provider.GetRequiredService<LocalizationService>(),
+            new LocalDiagnostics(),
             InvokeSerially,
             delays.WaitAsync);
 
@@ -125,6 +129,7 @@ public sealed class ToastHostViewModelTests : IDisposable
         using var viewModel = new ToastHostViewModel(
             toastService,
             provider.GetRequiredService<LocalizationService>(),
+            new LocalDiagnostics(),
             InvokeSerially,
             static (_, _) => Task.CompletedTask);
         toastService.Show(CreateActionOptions(async _ =>
@@ -153,6 +158,7 @@ public sealed class ToastHostViewModelTests : IDisposable
         using var viewModel = new ToastHostViewModel(
             toastService,
             provider.GetRequiredService<LocalizationService>(),
+            new LocalDiagnostics(),
             InvokeSerially,
             static (_, _) => Task.CompletedTask);
         toastService.Show(CreateActionOptions(_ => Task.FromResult(
@@ -178,6 +184,7 @@ public sealed class ToastHostViewModelTests : IDisposable
         using var viewModel = new ToastHostViewModel(
             toastService,
             localizer,
+            new LocalDiagnostics(),
             InvokeSerially,
             static (_, _) => Task.CompletedTask);
         toastService.Show(CreateActionOptions(
@@ -207,6 +214,7 @@ public sealed class ToastHostViewModelTests : IDisposable
         using var viewModel = new ToastHostViewModel(
             toastService,
             provider.GetRequiredService<LocalizationService>(),
+            new LocalDiagnostics(),
             InvokeSerially,
             (_, cancellationToken) => delay.Task.WaitAsync(cancellationToken));
 
@@ -230,6 +238,7 @@ public sealed class ToastHostViewModelTests : IDisposable
         using var viewModel = new ToastHostViewModel(
             toastService,
             provider.GetRequiredService<LocalizationService>(),
+            new LocalDiagnostics(),
             InvokeSerially,
             (_, cancellationToken) => delay.Task.WaitAsync(cancellationToken));
 
@@ -258,6 +267,7 @@ public sealed class ToastHostViewModelTests : IDisposable
         using var viewModel = new ToastHostViewModel(
             toastService,
             provider.GetRequiredService<LocalizationService>(),
+            new LocalDiagnostics(),
             InvokeSerially,
             (delay, cancellationToken) =>
                 (delay == AnimationTimings.ExitAnimationDuration ? exitDelay : displayDelay)
@@ -295,6 +305,7 @@ public sealed class ToastHostViewModelTests : IDisposable
         using var viewModel = new ToastHostViewModel(
             toastService,
             provider.GetRequiredService<LocalizationService>(),
+            new LocalDiagnostics(),
             InvokeSerially,
             (delay, cancellationToken) =>
             {
@@ -335,6 +346,7 @@ public sealed class ToastHostViewModelTests : IDisposable
         using var viewModel = new ToastHostViewModel(
             toastService,
             provider.GetRequiredService<LocalizationService>(),
+            new LocalDiagnostics(),
             InvokeSerially,
             (delay, cancellationToken) =>
                 (delay == AnimationTimings.ExitAnimationDuration ? exitDelay : displayDelay)
@@ -370,6 +382,7 @@ public sealed class ToastHostViewModelTests : IDisposable
         using var viewModel = new ToastHostViewModel(
             toastService,
             provider.GetRequiredService<LocalizationService>(),
+            new LocalDiagnostics(),
             InvokeSerially,
             (delay, cancellationToken) =>
             {
@@ -425,6 +438,7 @@ public sealed class ToastHostViewModelTests : IDisposable
         using var viewModel = new ToastHostViewModel(
             toastService,
             provider.GetRequiredService<LocalizationService>(),
+            new LocalDiagnostics(),
             InvokeSerially,
             (delay, cancellationToken) =>
                 (delay == AnimationTimings.ExitAnimationDuration ? exitDelay : displayDelay)
@@ -463,6 +477,7 @@ public sealed class ToastHostViewModelTests : IDisposable
         using var viewModel = new ToastHostViewModel(
             toastService,
             provider.GetRequiredService<LocalizationService>(),
+            new LocalDiagnostics(),
             InvokeSerially,
             (_, cancellationToken) => displayDelay.Task.WaitAsync(cancellationToken));
 
@@ -493,6 +508,7 @@ public sealed class ToastHostViewModelTests : IDisposable
         var viewModel = new ToastHostViewModel(
             toastService,
             provider.GetRequiredService<LocalizationService>(),
+            new LocalDiagnostics(),
             InvokeSerially,
             async (delay, cancellationToken) =>
             {
@@ -536,6 +552,7 @@ public sealed class ToastHostViewModelTests : IDisposable
         using var viewModel = new ToastHostViewModel(
             toastService,
             provider.GetRequiredService<LocalizationService>(),
+            new LocalDiagnostics(),
             InvokeSerially,
             (delay, cancellationToken) =>
                 delay == AnimationTimings.ExitAnimationDuration
@@ -580,6 +597,7 @@ public sealed class ToastHostViewModelTests : IDisposable
         using var viewModel = new ToastHostViewModel(
             toastService,
             provider.GetRequiredService<LocalizationService>(),
+            new LocalDiagnostics(),
             InvokeSerially,
             async (delay, cancellationToken) =>
             {
@@ -619,6 +637,7 @@ public sealed class ToastHostViewModelTests : IDisposable
         var viewModel = new ToastHostViewModel(
             toastService,
             provider.GetRequiredService<LocalizationService>(),
+            new LocalDiagnostics(),
             InvokeSerially,
             static (_, _) => Task.CompletedTask);
         viewModel.Dispose();

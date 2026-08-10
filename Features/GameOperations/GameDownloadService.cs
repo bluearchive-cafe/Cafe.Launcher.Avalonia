@@ -14,24 +14,13 @@ using Cafe.Launcher.Avalonia.Services.Diagnostics;
 
 namespace Cafe.Launcher.Avalonia.Features.GameOperations;
 
+/// <summary>
+/// Coordinates game download, update, repair, pause, and persisted-resume operations.
+/// </summary>
 public sealed class GameDownloadService : IDisposable
 {
     /// <summary>Raised when <see cref="IsRunning"/> changes value.</summary>
     internal event Action? IsRunningChanged;
-
-    /// <summary>Parameter object grouping all constructor dependencies.</summary>
-    public sealed record Dependencies(
-        LauncherApiClient ApiClient,
-        RemoteManifestService RemoteManifestService,
-        IFileDownloadService FileDownloadService,
-        LocalInstallationStateStore LocalInstallationStateStore,
-        LauncherSettingsService SettingsService,
-        HttpClientFactory HttpClientFactory,
-        Crc64Service Crc64Service,
-        DiskSpaceService DiskSpaceService,
-        LocalDiagnostics Diagnostics,
-        LocalizationService Localizer,
-        GameInstallationPath InstallationPath);
 
     // Retry domain order: 0 = backup CDN, 1 = primary CDN (matching the original Electron launcher).
     // The first 4 attempts use the primary CDN, then 3 on backup, then 3 on primary.
@@ -53,31 +42,68 @@ public sealed class GameDownloadService : IDisposable
     private TaskCompletionSource? pauseTcs;
     private bool disposed;
 
-    public GameDownloadService(Dependencies deps)
+    /// <summary>
+    /// Initializes the download coordinator and its focused manifest-diff and download-execution collaborators.
+    /// </summary>
+    public GameDownloadService(
+        LauncherApiClient apiClient,
+        RemoteManifestService remoteManifestService,
+        IFileDownloadService fileDownloadService,
+        LocalInstallationStateStore localInstallationStateStore,
+        LauncherSettingsService settingsService,
+        HttpClientFactory httpClientFactory,
+        Crc64Service crc64Service,
+        DiskSpaceService diskSpaceService,
+        LocalDiagnostics diagnostics,
+        LocalizationService localizer,
+        GameInstallationPath installationPath)
     {
-        apiClient = deps.ApiClient;
-        localInstallationStateStore = deps.LocalInstallationStateStore;
-        installationPath = deps.InstallationPath;
-        settingsService = deps.SettingsService;
-        diskSpaceService = deps.DiskSpaceService;
-        diagnostics = deps.Diagnostics;
-        localizer = deps.Localizer;
+        this.apiClient = apiClient;
+        this.localInstallationStateStore = localInstallationStateStore;
+        this.installationPath = installationPath;
+        this.settingsService = settingsService;
+        this.diskSpaceService = diskSpaceService;
+        this.diagnostics = diagnostics;
+        this.localizer = localizer;
         checkpointStore = DownloadCheckpointStore.CreateDefault();
         diffCalculator = new ManifestDiffCalculator(
-            deps.RemoteManifestService,
-            deps.LocalInstallationStateStore,
-            deps.Crc64Service);
+            remoteManifestService,
+            localInstallationStateStore,
+            crc64Service);
         downloadExecutor = new DownloadExecutor(
-            deps.FileDownloadService,
-            deps.Crc64Service,
-            deps.HttpClientFactory,
-            deps.Diagnostics,
+            fileDownloadService,
+            crc64Service,
+            httpClientFactory,
+            diagnostics,
             GetPauseTaskSnapshot,
             () => IsPaused);
     }
 
-    internal GameDownloadService(Dependencies deps, string downloadStateFilePath)
-        : this(deps)
+    internal GameDownloadService(
+        LauncherApiClient apiClient,
+        RemoteManifestService remoteManifestService,
+        IFileDownloadService fileDownloadService,
+        LocalInstallationStateStore localInstallationStateStore,
+        LauncherSettingsService settingsService,
+        HttpClientFactory httpClientFactory,
+        Crc64Service crc64Service,
+        DiskSpaceService diskSpaceService,
+        LocalDiagnostics diagnostics,
+        LocalizationService localizer,
+        GameInstallationPath installationPath,
+        string downloadStateFilePath)
+        : this(
+            apiClient,
+            remoteManifestService,
+            fileDownloadService,
+            localInstallationStateStore,
+            settingsService,
+            httpClientFactory,
+            crc64Service,
+            diskSpaceService,
+            diagnostics,
+            localizer,
+            installationPath)
     {
         checkpointStore = new DownloadCheckpointStore(downloadStateFilePath);
     }

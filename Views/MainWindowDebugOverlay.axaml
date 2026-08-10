@@ -11,8 +11,8 @@
           Classes.motion-enabled="{Binding IsMotionEnabled}"
           controls:MotionVisibility.IsOpen="{Binding Debug.IsVisible}"
           controls:MotionVisibility.IsMotionEnabled="{Binding IsMotionEnabled}">
-        <Border Width="720"
-                Height="540"
+        <Border Width="{StaticResource LauncherDebugDialogWidth}"
+                Height="{StaticResource LauncherDebugDialogHeight}"
                 Classes="dialog overlay-dialog motion-surface">
             <Border.RenderTransform>
                 <TranslateTransform/>
@@ -48,7 +48,7 @@
                                 <StackPanel Orientation="Horizontal" Spacing="{StaticResource LauncherSpacingSm}">
                                     <TextBlock Text="{Binding Shell.I18n.LogFiles}" Classes="caption" VerticalAlignment="Center"/>
                                     <TextBlock Text="{Binding Debug.LogFilePath}" Classes="caption" TextTrimming="CharacterEllipsis"
-                                               MaxWidth="300" VerticalAlignment="Center"/>
+                                                MaxWidth="{StaticResource LauncherDebugLogPathMaxWidth}" VerticalAlignment="Center"/>
                                 </StackPanel>
                                 <StackPanel Orientation="Horizontal" Spacing="{StaticResource LauncherSpacingSm}">
                                     <TextBlock Text="{Binding Shell.I18n.OpenDataDirectory}" Classes="caption" VerticalAlignment="Center"/>
@@ -67,7 +67,7 @@
                                     <TextBlock Text="{Binding Shell.I18n.LogLevel}" Classes="caption" VerticalAlignment="Center"/>
                                     <ComboBox ItemsSource="{Binding Debug.LogLevelOptions}"
                                               SelectedIndex="{Binding Debug.SelectedLogLevelIndex, Mode=TwoWay}"
-                                              MinWidth="110" Height="{StaticResource LauncherControlHeightSetting}"
+                                               MinWidth="{StaticResource LauncherDebugLogLevelMinWidth}" Height="{StaticResource LauncherControlHeightSetting}"
                                               VerticalAlignment="Center"
                                                AutomationProperties.Name="{Binding Shell.I18n.LogLevel}"/>
                                     <TextBlock Text="{Binding Debug.LogLevelDisplay}" Classes="caption" VerticalAlignment="Center"/>
@@ -191,7 +191,7 @@
                         <Border Classes="dialog-card">
                             <StackPanel Spacing="{StaticResource LauncherSpacingSm}">
                                 <TextBlock Text="{Binding Shell.I18n.Settings}" Classes="section-title"/>
-                                <Border Classes="confirm-message" MaxHeight="160" Background="{DynamicResource LauncherInfoBackgroundBrush}">
+                                <Border Classes="confirm-message" MaxHeight="{StaticResource LauncherDebugSettingsPreviewMaxHeight}" Background="{DynamicResource LauncherInfoBackgroundBrush}">
                                     <ScrollViewer>
                                         <TextBlock Text="{Binding Debug.SettingsJsonDisplay}" Classes="caption"
                                                    FontFamily="{StaticResource LauncherFontFamilyMonospace}"

@@ -54,6 +54,9 @@ public interface IErrorHandlingService
     event Action<CriticalErrorInfo>? CriticalErrorRequested;
 }
 
+/// <summary>
+/// Implements recoverable and critical error handling with local diagnostics and shell notifications.
+/// </summary>
 public sealed class ErrorHandlingService : IErrorHandlingService
 {
     private readonly LocalizationService localizer;
@@ -61,6 +64,7 @@ public sealed class ErrorHandlingService : IErrorHandlingService
     private readonly ToastService toastService;
     private readonly ShellViewModel shell;
 
+    /// <summary>Initializes the service with its localization, diagnostics, toast, and shell collaborators.</summary>
     public ErrorHandlingService(
         LocalizationService localizer,
         LocalDiagnostics diagnostics,
@@ -73,13 +77,15 @@ public sealed class ErrorHandlingService : IErrorHandlingService
         this.shell = shell;
     }
 
+    /// <summary>Raised when a critical failure must be presented in a modal dialog.</summary>
     public event Action<CriticalErrorInfo>? CriticalErrorRequested;
 
+    /// <summary>Logs a recoverable failure and applies its requested shell notification behavior.</summary>
     public async Task HandleErrorAsync(string context, Exception exception, ErrorHandlingOptions? options = null)
     {
         options ??= new ErrorHandlingOptions();
 
-        await diagnostics.ErrorAsync(context, exception, CancellationToken.None);
+        await diagnostics.ErrorAsync("ErrorHandling", exception, CancellationToken.None);
 
         if (options.OperationNoteKey is { } key)
         {
@@ -92,6 +98,7 @@ public sealed class ErrorHandlingService : IErrorHandlingService
         }
     }
 
+    /// <summary>Formats a user-safe exception summary without stack traces or source locations.</summary>
     internal static string FormatToastMessage(string? operationMessage, Exception exception)
     {
         ArgumentNullException.ThrowIfNull(exception);
@@ -128,9 +135,10 @@ public sealed class ErrorHandlingService : IErrorHandlingService
         return message.ToString();
     }
 
+    /// <summary>Logs a critical failure and requests that the shell show its modal error dialog.</summary>
     public async Task HandleCriticalErrorAsync(string context, Exception exception)
     {
-        await diagnostics.ErrorAsync(context, exception, CancellationToken.None);
+        await diagnostics.ErrorAsync("ErrorHandling", exception, CancellationToken.None);
 
         CriticalErrorRequested?.Invoke(new CriticalErrorInfo
         {

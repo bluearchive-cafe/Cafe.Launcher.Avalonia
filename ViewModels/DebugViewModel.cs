@@ -15,6 +15,9 @@ using Serilog.Events;
 
 namespace Cafe.Launcher.Avalonia.ViewModels;
 
+/// <summary>
+/// Supplies the development-only diagnostics overlay with state, commands, and shell coordination hooks.
+/// </summary>
 public sealed partial class DebugViewModel : ViewModelBase, IModalContentViewModel, IDisposable
 {
     private readonly ToastService toastService;
