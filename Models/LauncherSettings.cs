@@ -19,7 +19,6 @@ public sealed class LauncherSettings : ObservableObject
     private List<string> themeColorPalette = [];
     private int selectedThemeColorPaletteIndex;
     private string downloadSpeedLimit = DownloadSpeedLimits.Unlimited;
-    private bool toastNotificationsEnabled = true;
     private bool enableStartupUpdateCheck = true;
     private bool showRemoteContentCard = true;
     private string patchUrlGroup = PatchUrlGroups.Official;
@@ -74,9 +73,6 @@ public sealed class LauncherSettings : ObservableObject
 
     [JsonPropertyName("downloadSpeedLimit")]
     public string DownloadSpeedLimit { get => downloadSpeedLimit; set => SetProperty(ref downloadSpeedLimit, value); }
-
-    [JsonPropertyName("toastNotificationsEnabled")]
-    public bool ToastNotificationsEnabled { get => toastNotificationsEnabled; set => SetProperty(ref toastNotificationsEnabled, value); }
 
     [JsonPropertyName("enableStartupUpdateCheck")]
     public bool EnableStartupUpdateCheck { get => enableStartupUpdateCheck; set => SetProperty(ref enableStartupUpdateCheck, value); }
@@ -144,7 +140,6 @@ public sealed class LauncherSettings : ObservableObject
         ThemeColorPalette = [.. other.ThemeColorPalette];
         SelectedThemeColorPaletteIndex = other.SelectedThemeColorPaletteIndex;
         DownloadSpeedLimit = other.DownloadSpeedLimit;
-        ToastNotificationsEnabled = other.ToastNotificationsEnabled;
         EnableStartupUpdateCheck = other.EnableStartupUpdateCheck;
         ShowRemoteContentCard = other.ShowRemoteContentCard;
         PatchUrlGroup = other.PatchUrlGroup;

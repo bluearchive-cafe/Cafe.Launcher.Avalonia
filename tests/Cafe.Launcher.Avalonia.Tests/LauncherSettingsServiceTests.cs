@@ -83,7 +83,6 @@ public sealed class LauncherSettingsServiceTests : IDisposable
         Assert.Empty(settings.ThemeColorPalette);
         Assert.Equal(0, settings.SelectedThemeColorPaletteIndex);
         Assert.Equal(DownloadSpeedLimits.Unlimited, settings.DownloadSpeedLimit);
-        Assert.True(settings.ToastNotificationsEnabled);
         Assert.True(settings.EnableStartupUpdateCheck);
         Assert.True(settings.ShowRemoteContentCard);
         // PatchUrlGroup defaults to Cafe when UI culture is Chinese, otherwise Official.
@@ -189,7 +188,6 @@ public sealed class LauncherSettingsServiceTests : IDisposable
         Assert.Equal(["#FF112233", "#FF445566"], settings.ThemeColorPalette);
         Assert.Equal(0, settings.SelectedThemeColorPaletteIndex);
         Assert.Equal(DownloadSpeedLimits.Unlimited, settings.DownloadSpeedLimit);
-        Assert.False(settings.ToastNotificationsEnabled);
         Assert.False(settings.ShowRemoteContentCard);
         Assert.Equal(PatchUrlGroups.Official, settings.PatchUrlGroup);
         Assert.Equal(BackgroundSources.Bundled, settings.BackgroundSource);
@@ -213,7 +211,6 @@ public sealed class LauncherSettingsServiceTests : IDisposable
             ThemeColorPalette = ["#FF112233", "#FF445566"],
             SelectedThemeColorPaletteIndex = 1,
             DownloadSpeedLimit = DownloadSpeedLimits.Speed10MBs,
-            ToastNotificationsEnabled = false,
             EnableStartupUpdateCheck = false,
             ShowRemoteContentCard = false,
             PatchUrlGroup = PatchUrlGroups.Cafe,
@@ -247,7 +244,7 @@ public sealed class LauncherSettingsServiceTests : IDisposable
         Assert.True(root.TryGetProperty("selectedThemeColorPaletteIndex", out var selectedThemeColorPaletteIndex));
         Assert.Equal(1, selectedThemeColorPaletteIndex.GetInt32());
         Assert.True(root.TryGetProperty("downloadSpeedLimit", out _));
-        Assert.True(root.TryGetProperty("toastNotificationsEnabled", out _));
+        Assert.False(root.TryGetProperty("toastNotificationsEnabled", out _));
         Assert.True(root.TryGetProperty("enableStartupUpdateCheck", out _));
         Assert.True(root.TryGetProperty("showRemoteContentCard", out _));
         Assert.True(root.TryGetProperty("patchUrlGroup", out _));
@@ -274,7 +271,6 @@ public sealed class LauncherSettingsServiceTests : IDisposable
             "themeColorPalette",
             "selectedThemeColorPaletteIndex",
             "downloadSpeedLimit",
-            "toastNotificationsEnabled",
             "enableStartupUpdateCheck",
             "showRemoteContentCard",
             "patchUrlGroup",

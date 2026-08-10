@@ -225,7 +225,6 @@ public sealed class SetupWizardViewModelTests
         Assert.Contains("BlueArchive_JP", captured.GamePath, StringComparison.Ordinal);
         Assert.Equal(defaults.UpdateChannel, captured.UpdateChannel);
         Assert.Equal(defaults.LogLevel, captured.LogLevel);
-        Assert.Equal(defaults.ToastNotificationsEnabled, captured.ToastNotificationsEnabled);
         Assert.Equal(defaults.ShowRemoteContentCard, captured.ShowRemoteContentCard);
     }
 

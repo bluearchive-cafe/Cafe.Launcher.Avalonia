@@ -392,6 +392,8 @@
     <Style Selector="Border.remote-surface">
         <Setter Property="HorizontalAlignment" Value="Left"/>
         <Setter Property="VerticalAlignment" Value="Top"/>
+        <Setter Property="ClipToBounds" Value="True"/>
+        <Setter Property="Padding" Value="{StaticResource LauncherThicknessNone}"/>
         <Setter Property="Margin" Value="40,64,0,0"/>
         <Setter Property="Width" Value="500"/>
         <Setter Property="MinHeight" Value="360"/>
@@ -421,6 +423,14 @@
         <Setter Property="VerticalAlignment" Value="Stretch"/>
     </Style>
     <Style Selector="UserControl.remote-content-loading-overlay">
+        <Setter Property="VerticalAlignment" Value="Stretch"/>
+    </Style>
+    <Style Selector="Border.remote-content-scroll-host">
+        <Setter Property="Padding" Value="{StaticResource LauncherThicknessMd}"/>
+    </Style>
+    <Style Selector="Border.remote-content-load-error">
+        <Setter Property="Padding" Value="{StaticResource LauncherSpacingXlThickness}"/>
+        <Setter Property="HorizontalAlignment" Value="Stretch"/>
         <Setter Property="VerticalAlignment" Value="Stretch"/>
     </Style>
     <Style Selector="TextBlock.media-placeholder-text">

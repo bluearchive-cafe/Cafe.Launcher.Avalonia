@@ -139,24 +139,14 @@ public partial class App : Application
             try
             {
                 await serviceProvider
-                    .GetRequiredService<Services.Diagnostics.LocalDiagnostics>()
-                    .ErrorAsync("Launcher initialization failed.", exception, CancellationToken.None);
+                    .GetRequiredService<IErrorHandlingService>()
+                    .HandleErrorAsync("Launcher initialization failed.", exception);
             }
             catch (Exception diagnosticsException)
             {
                 Debug.WriteLine($"Initialization diagnostics failed: {diagnosticsException.Message}");
             }
 
-            try
-            {
-                serviceProvider
-                    .GetRequiredService<ToastService>()
-                    .ShowError(exception.Message);
-            }
-            catch (Exception toastException)
-            {
-                Debug.WriteLine($"Initialization toast failed: {toastException.Message}");
-            }
         }
     }
 

@@ -17,7 +17,7 @@ Blue Archive 日服桌面启动器，基于 .NET 10 与 Avalonia 12 重写，替
 - **主题色** — 四种模式：默认（`#FF2E7DF6`） / 跟随系统 / 壁纸提取 / 自定义取色
 - **自更新** — 通过服务端代理检查 launcher 自身更新，支持 `stable` / `beta` 频道
 - **本地诊断** — 运行诊断写入 `diagnostics.log`，支持日志轮转与导出
-- **Toast 通知**：支持开启 / 关闭即时通知（含运动淡入动画）
+- **Toast 通知**：即时展示操作状态（含运动淡入动画）
 - **无障碍**：设置控件和对话框按钮均配有 `AutomationProperties.Name` 标注
 
 ## 技术栈
@@ -128,7 +128,6 @@ dotnet test .\tests\Cafe.Launcher.Avalonia.Tests\Cafe.Launcher.Avalonia.Tests.cs
 | 调色板选中索引 | `selectedThemeColorPaletteIndex` | 整数 |
 | 游戏路径 | `gamePath` | 绝对路径 |
 | 自定义背景 | `customBackgroundPath` | 绝对文件路径 |
-| Toast 通知 | `toastNotificationsEnabled` | `true` / `false` |
 | 远端内容卡片 | `showRemoteContentCard` | `true` / `false` |
 | 更新频道 | `updateChannel` | `stable` / `beta` |
 | 资源面板 UID | `resourcePanelUid` | 玩家 UID 字符串 |

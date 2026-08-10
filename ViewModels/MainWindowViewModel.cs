@@ -471,6 +471,7 @@ public partial class MainWindowViewModel : ViewModelBase, IDisposable
         Shell.ApplySnapshot(snapshot, Settings);
         Operations.ApplySnapshot(snapshot);
         RemoteContent.Apply(snapshot.Remote, snapshot.Settings, lifetimeCts.Token);
+        RemoteContent.SetLoadError(snapshot.RuntimeState == LauncherRuntimeState.RemoteUnavailable);
         await Dialogs.ShowNoticeDialogIfNeededAsync(snapshot.Remote.BaseConfig, lifetimeCts.Token);
     }
 

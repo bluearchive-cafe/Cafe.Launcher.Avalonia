@@ -51,6 +51,9 @@ public partial class RemoteContentViewModel : ViewModelBase, IDisposable
     private bool isLoading;
 
     [ObservableProperty]
+    private bool hasLoadError;
+
+    [ObservableProperty]
     private int carouselSelectedIndex;
 
     [ObservableProperty]
@@ -274,12 +277,19 @@ public partial class RemoteContentViewModel : ViewModelBase, IDisposable
         this.showRemoteContentCard = showRemoteContentCard;
         var hasContent = HasNotice || HasBannerItems || HasNewsItems || HasSocialMediaItems;
         HasRemoteContent = showRemoteContentCard && hasContent;
-        IsPanelVisible = showRemoteContentCard && (IsLoading || hasContent);
+        IsPanelVisible = showRemoteContentCard && (IsLoading || hasContent || HasLoadError);
     }
 
     public void BeginLoading(bool showRemoteContentCard)
     {
+        HasLoadError = false;
         IsLoading = showRemoteContentCard;
+        UpdateRemoteContentVisibility(showRemoteContentCard);
+    }
+
+    public void SetLoadError(bool hasLoadError)
+    {
+        HasLoadError = hasLoadError;
         UpdateRemoteContentVisibility(showRemoteContentCard);
     }
 

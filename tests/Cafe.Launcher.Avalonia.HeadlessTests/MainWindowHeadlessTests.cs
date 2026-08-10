@@ -59,9 +59,6 @@ public sealed class MainWindowHeadlessTests
     public async Task Toast_WithActions_RendersTitlePrimaryFirstAndDisablesControlsWhileExecuting()
     {
         using var context = CreateContext();
-        var settings = context.ViewModel.Settings.Editor.GetSnapshot();
-        settings.ToastNotificationsEnabled = true;
-        context.ViewModel.Settings.Editor.ApplySnapshot(settings);
         var release = new TaskCompletionSource<ToastActionResult>(
             TaskCreationOptions.RunContinuationsAsynchronously);
         var toastService = context.Provider.GetRequiredService<ToastService>();
@@ -114,9 +111,6 @@ public sealed class MainWindowHeadlessTests
     public void Toast_WithoutActions_RendersAutoDismissProgress()
     {
         using var context = CreateContext();
-        var settings = context.ViewModel.Settings.Editor.GetSnapshot();
-        settings.ToastNotificationsEnabled = true;
-        context.ViewModel.Settings.Editor.ApplySnapshot(settings);
         var toastService = context.Provider.GetRequiredService<ToastService>();
         context.Window.Show();
         toastService.Show(new ToastOptions

@@ -17,7 +17,6 @@ public partial class ToastHostViewModel : ViewModelBase, IDisposable
     private const int AutoDismissProgressIntervalMs = 50;
     private readonly ToastService toastService;
     private readonly LocalizationService localizer;
-    private readonly SettingsViewModel settings;
     private readonly LocalDiagnostics diagnostics;
     private readonly Func<Action, Task> invokeOnUiAsync;
     private readonly Func<TimeSpan, CancellationToken, Task> delayAsync;
@@ -29,20 +28,18 @@ public partial class ToastHostViewModel : ViewModelBase, IDisposable
 
     public ObservableCollection<ToastNotification> ActiveToasts { get; } = [];
 
-    public ToastHostViewModel(ToastService toastService, LocalizationService localizer, SettingsViewModel settings)
-        : this(toastService, localizer, settings, new LocalDiagnostics())
+    public ToastHostViewModel(ToastService toastService, LocalizationService localizer)
+        : this(toastService, localizer, new LocalDiagnostics())
     {
     }
 
     public ToastHostViewModel(
         ToastService toastService,
         LocalizationService localizer,
-        SettingsViewModel settings,
         LocalDiagnostics diagnostics)
         : this(
             toastService,
             localizer,
-            settings,
             diagnostics,
             async action => await Dispatcher.UIThread.InvokeAsync(action),
             static (delay, cancellationToken) => Task.Delay(delay, cancellationToken))
@@ -52,13 +49,11 @@ public partial class ToastHostViewModel : ViewModelBase, IDisposable
     internal ToastHostViewModel(
         ToastService toastService,
         LocalizationService localizer,
-        SettingsViewModel settings,
         Func<Action, Task> invokeOnUiAsync,
         Func<TimeSpan, CancellationToken, Task> delayAsync)
         : this(
             toastService,
             localizer,
-            settings,
             new LocalDiagnostics(),
             invokeOnUiAsync,
             delayAsync)
@@ -68,14 +63,12 @@ public partial class ToastHostViewModel : ViewModelBase, IDisposable
     internal ToastHostViewModel(
         ToastService toastService,
         LocalizationService localizer,
-        SettingsViewModel settings,
         LocalDiagnostics diagnostics,
         Func<Action, Task> invokeOnUiAsync,
         Func<TimeSpan, CancellationToken, Task> delayAsync)
     {
         this.toastService = toastService;
         this.localizer = localizer;
-        this.settings = settings;
         this.diagnostics = diagnostics;
         this.invokeOnUiAsync = invokeOnUiAsync;
         this.delayAsync = delayAsync;
@@ -137,11 +130,6 @@ public partial class ToastHostViewModel : ViewModelBase, IDisposable
 
     private async Task ShowToastAsync(ToastNotification notification, CancellationToken cancellationToken)
     {
-        if (!settings.Editor.GetSavedSnapshot().ToastNotificationsEnabled)
-        {
-            return;
-        }
-
         try
         {
             if (string.IsNullOrWhiteSpace(notification.Message))

@@ -22,13 +22,11 @@ public sealed class ToastHostViewModelTests : IDisposable
     public async Task ToastRaised_WithAction_DoesNotStartDisplayDelay()
     {
         await using var provider = CreateProvider();
-        var settings = EnableToasts(provider);
         var toastService = provider.GetRequiredService<ToastService>();
         var delayCalls = 0;
         using var viewModel = new ToastHostViewModel(
             toastService,
             provider.GetRequiredService<LocalizationService>(),
-            settings,
             InvokeSerially,
             (_, _) =>
             {
@@ -46,13 +44,11 @@ public sealed class ToastHostViewModelTests : IDisposable
     public async Task ToastRaised_WithFiniteDuration_UpdatesProgressThenExpires()
     {
         await using var provider = CreateProvider();
-        var settings = EnableToasts(provider);
         var toastService = provider.GetRequiredService<ToastService>();
         var delays = new ControlledDelay();
         using var viewModel = new ToastHostViewModel(
             toastService,
             provider.GetRequiredService<LocalizationService>(),
-            settings,
             InvokeSerially,
             delays.WaitAsync);
 
@@ -77,13 +73,11 @@ public sealed class ToastHostViewModelTests : IDisposable
     public async Task ToastRaised_WithAction_DoesNotExposeAutoDismissProgress()
     {
         await using var provider = CreateProvider();
-        var settings = EnableToasts(provider);
         var toastService = provider.GetRequiredService<ToastService>();
 
         using var viewModel = new ToastHostViewModel(
             toastService,
             provider.GetRequiredService<LocalizationService>(),
-            settings,
             InvokeSerially,
             static (_, _) => Task.CompletedTask);
 
@@ -99,13 +93,11 @@ public sealed class ToastHostViewModelTests : IDisposable
     public async Task DismissToast_WhileCountdownIsWaiting_DoesNotScheduleAnotherProgressUpdate()
     {
         await using var provider = CreateProvider();
-        var settings = EnableToasts(provider);
         var toastService = provider.GetRequiredService<ToastService>();
         var delays = new ControlledDelay();
         using var viewModel = new ToastHostViewModel(
             toastService,
             provider.GetRequiredService<LocalizationService>(),
-            settings,
             InvokeSerially,
             delays.WaitAsync);
 
@@ -126,7 +118,6 @@ public sealed class ToastHostViewModelTests : IDisposable
     public async Task ExecutePrimaryToastAction_WhenSuccessful_ExecutesOnceAndDismisses()
     {
         await using var provider = CreateProvider();
-        var settings = EnableToasts(provider);
         var toastService = provider.GetRequiredService<ToastService>();
         var calls = 0;
         var release = new TaskCompletionSource<ToastActionResult>(
@@ -134,7 +125,6 @@ public sealed class ToastHostViewModelTests : IDisposable
         using var viewModel = new ToastHostViewModel(
             toastService,
             provider.GetRequiredService<LocalizationService>(),
-            settings,
             InvokeSerially,
             static (_, _) => Task.CompletedTask);
         toastService.Show(CreateActionOptions(async _ =>
@@ -159,12 +149,10 @@ public sealed class ToastHostViewModelTests : IDisposable
     public async Task ExecutePrimaryToastAction_WhenFailure_ReturnsToastToInteractiveErrorState()
     {
         await using var provider = CreateProvider();
-        var settings = EnableToasts(provider);
         var toastService = provider.GetRequiredService<ToastService>();
         using var viewModel = new ToastHostViewModel(
             toastService,
             provider.GetRequiredService<LocalizationService>(),
-            settings,
             InvokeSerially,
             static (_, _) => Task.CompletedTask);
         toastService.Show(CreateActionOptions(_ => Task.FromResult(
@@ -185,13 +173,11 @@ public sealed class ToastHostViewModelTests : IDisposable
     public async Task ExecuteSecondaryToastAction_WhenUnexpectedException_UsesLocalizedFallback()
     {
         await using var provider = CreateProvider();
-        var settings = EnableToasts(provider);
         var localizer = provider.GetRequiredService<LocalizationService>();
         var toastService = provider.GetRequiredService<ToastService>();
         using var viewModel = new ToastHostViewModel(
             toastService,
             localizer,
-            settings,
             InvokeSerially,
             static (_, _) => Task.CompletedTask);
         toastService.Show(CreateActionOptions(
@@ -214,7 +200,6 @@ public sealed class ToastHostViewModelTests : IDisposable
         var settings = provider.GetRequiredService<SettingsViewModel>();
         settings.Editor.ApplySnapshot(new LauncherSettings
         {
-            ToastNotificationsEnabled = true
         });
         var toastService = provider.GetRequiredService<ToastService>();
         var delay = new TaskCompletionSource(
@@ -222,7 +207,6 @@ public sealed class ToastHostViewModelTests : IDisposable
         using var viewModel = new ToastHostViewModel(
             toastService,
             provider.GetRequiredService<LocalizationService>(),
-            settings,
             InvokeSerially,
             (_, cancellationToken) => delay.Task.WaitAsync(cancellationToken));
 
@@ -237,26 +221,25 @@ public sealed class ToastHostViewModelTests : IDisposable
     }
 
     [Fact]
-    public async Task ToastRaised_WhenNotificationsAreDisabled_DoesNotAddToast()
+    public async Task ToastRaised_AddsToastWithoutNotificationPreference()
     {
         await using var provider = CreateProvider();
-        var settings = provider.GetRequiredService<SettingsViewModel>();
-        settings.Editor.ApplySnapshot(new LauncherSettings
-        {
-            ToastNotificationsEnabled = false
-        });
         var toastService = provider.GetRequiredService<ToastService>();
+        var delay = new TaskCompletionSource(
+            TaskCreationOptions.RunContinuationsAsynchronously);
         using var viewModel = new ToastHostViewModel(
             toastService,
             provider.GetRequiredService<LocalizationService>(),
-            settings,
             InvokeSerially,
-            static (_, _) => Task.CompletedTask);
+            (_, cancellationToken) => delay.Task.WaitAsync(cancellationToken));
 
-        toastService.Show("hidden");
-        await Task.Delay(20);
+        toastService.Show("shown");
+        await WaitUntilAsync(() => viewModel.ActiveToasts.Count == 1);
 
-        Assert.Empty(viewModel.ActiveToasts);
+        Assert.Equal("shown", viewModel.ActiveToasts.Single().Message);
+
+        delay.TrySetResult();
+        await WaitUntilAsync(() => viewModel.ActiveToasts.Count == 0);
     }
 
     [Fact]
@@ -266,7 +249,6 @@ public sealed class ToastHostViewModelTests : IDisposable
         var settings = provider.GetRequiredService<SettingsViewModel>();
         settings.Editor.ApplySnapshot(new LauncherSettings
         {
-            ToastNotificationsEnabled = true
         });
         var toastService = provider.GetRequiredService<ToastService>();
         var displayDelay = new TaskCompletionSource(
@@ -276,7 +258,6 @@ public sealed class ToastHostViewModelTests : IDisposable
         using var viewModel = new ToastHostViewModel(
             toastService,
             provider.GetRequiredService<LocalizationService>(),
-            settings,
             InvokeSerially,
             (delay, cancellationToken) =>
                 (delay == AnimationTimings.ExitAnimationDuration ? exitDelay : displayDelay)
@@ -306,7 +287,6 @@ public sealed class ToastHostViewModelTests : IDisposable
         var settings = provider.GetRequiredService<SettingsViewModel>();
         settings.Editor.ApplySnapshot(new LauncherSettings
         {
-            ToastNotificationsEnabled = true
         });
         var toastService = provider.GetRequiredService<ToastService>();
         var displayDelay = new TaskCompletionSource(
@@ -315,7 +295,6 @@ public sealed class ToastHostViewModelTests : IDisposable
         using var viewModel = new ToastHostViewModel(
             toastService,
             provider.GetRequiredService<LocalizationService>(),
-            settings,
             InvokeSerially,
             (delay, cancellationToken) =>
             {
@@ -347,7 +326,6 @@ public sealed class ToastHostViewModelTests : IDisposable
         var settings = provider.GetRequiredService<SettingsViewModel>();
         settings.Editor.ApplySnapshot(new LauncherSettings
         {
-            ToastNotificationsEnabled = true
         });
         var toastService = provider.GetRequiredService<ToastService>();
         var displayDelay = new TaskCompletionSource(
@@ -357,7 +335,6 @@ public sealed class ToastHostViewModelTests : IDisposable
         using var viewModel = new ToastHostViewModel(
             toastService,
             provider.GetRequiredService<LocalizationService>(),
-            settings,
             InvokeSerially,
             (delay, cancellationToken) =>
                 (delay == AnimationTimings.ExitAnimationDuration ? exitDelay : displayDelay)
@@ -383,7 +360,6 @@ public sealed class ToastHostViewModelTests : IDisposable
         var settings = provider.GetRequiredService<SettingsViewModel>();
         settings.Editor.ApplySnapshot(new LauncherSettings
         {
-            ToastNotificationsEnabled = true
         });
         var toastService = provider.GetRequiredService<ToastService>();
         var displayDelay = new TaskCompletionSource(
@@ -394,7 +370,6 @@ public sealed class ToastHostViewModelTests : IDisposable
         using var viewModel = new ToastHostViewModel(
             toastService,
             provider.GetRequiredService<LocalizationService>(),
-            settings,
             InvokeSerially,
             (delay, cancellationToken) =>
             {
@@ -441,7 +416,6 @@ public sealed class ToastHostViewModelTests : IDisposable
         var settings = provider.GetRequiredService<SettingsViewModel>();
         settings.Editor.ApplySnapshot(new LauncherSettings
         {
-            ToastNotificationsEnabled = true
         });
         var toastService = provider.GetRequiredService<ToastService>();
         var displayDelay = new TaskCompletionSource(
@@ -451,7 +425,6 @@ public sealed class ToastHostViewModelTests : IDisposable
         using var viewModel = new ToastHostViewModel(
             toastService,
             provider.GetRequiredService<LocalizationService>(),
-            settings,
             InvokeSerially,
             (delay, cancellationToken) =>
                 (delay == AnimationTimings.ExitAnimationDuration ? exitDelay : displayDelay)
@@ -485,7 +458,6 @@ public sealed class ToastHostViewModelTests : IDisposable
         var settings = provider.GetRequiredService<SettingsViewModel>();
         settings.Editor.ApplySnapshot(new LauncherSettings
         {
-            ToastNotificationsEnabled = true
         });
         var toastService = provider.GetRequiredService<ToastService>();
         var displayDelay = new TaskCompletionSource(
@@ -495,7 +467,6 @@ public sealed class ToastHostViewModelTests : IDisposable
         var viewModel = new ToastHostViewModel(
             toastService,
             provider.GetRequiredService<LocalizationService>(),
-            settings,
             InvokeSerially,
             async (delay, cancellationToken) =>
             {
@@ -530,7 +501,6 @@ public sealed class ToastHostViewModelTests : IDisposable
         var settings = provider.GetRequiredService<SettingsViewModel>();
         settings.Editor.ApplySnapshot(new LauncherSettings
         {
-            ToastNotificationsEnabled = true
         });
         var toastService = provider.GetRequiredService<ToastService>();
         var displayDelay = new TaskCompletionSource(
@@ -540,7 +510,6 @@ public sealed class ToastHostViewModelTests : IDisposable
         using var viewModel = new ToastHostViewModel(
             toastService,
             provider.GetRequiredService<LocalizationService>(),
-            settings,
             InvokeSerially,
             (delay, cancellationToken) =>
                 delay == AnimationTimings.ExitAnimationDuration
@@ -569,7 +538,6 @@ public sealed class ToastHostViewModelTests : IDisposable
         var settings = provider.GetRequiredService<SettingsViewModel>();
         settings.Editor.ApplySnapshot(new LauncherSettings
         {
-            ToastNotificationsEnabled = true
         });
         var toastService = provider.GetRequiredService<ToastService>();
         var displayDelay = new TaskCompletionSource(
@@ -586,7 +554,6 @@ public sealed class ToastHostViewModelTests : IDisposable
         using var viewModel = new ToastHostViewModel(
             toastService,
             provider.GetRequiredService<LocalizationService>(),
-            settings,
             InvokeSerially,
             async (delay, cancellationToken) =>
             {
@@ -626,7 +593,6 @@ public sealed class ToastHostViewModelTests : IDisposable
         var viewModel = new ToastHostViewModel(
             toastService,
             provider.GetRequiredService<LocalizationService>(),
-            settings,
             InvokeSerially,
             static (_, _) => Task.CompletedTask);
         viewModel.Dispose();
@@ -644,16 +610,6 @@ public sealed class ToastHostViewModelTests : IDisposable
         services.AddLauncherServices();
         services.AddSingleton(_ => new UnifiedLogger(Path.Combine(tempDir, "logs")));
         return services.BuildServiceProvider();
-    }
-
-    private static SettingsViewModel EnableToasts(ServiceProvider provider)
-    {
-        var settings = provider.GetRequiredService<SettingsViewModel>();
-        settings.Editor.ApplySnapshot(new LauncherSettings
-        {
-            ToastNotificationsEnabled = true
-        });
-        return settings;
     }
 
     private static ToastOptions CreateActionOptions(

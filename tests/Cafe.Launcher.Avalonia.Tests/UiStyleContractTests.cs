@@ -684,8 +684,7 @@ public sealed partial class UiStyleContractTests
             [
                 "Settings.Editor.Current.Language",
                 "Settings.Editor.Current.CloseBehavior",
-                "Settings.Editor.Current.MotionMode",
-                "Settings.Editor.Current.ToastNotificationsEnabled"
+                "Settings.Editor.Current.MotionMode"
             ],
             ["SettingsGameSection"] =
             [
@@ -2049,6 +2048,9 @@ public sealed partial class UiStyleContractTests
     public void RemoteContentPanel_UsesExplicitLoadingState()
     {
         var mainWindow = File.ReadAllText(ProjectFile("Views/MainWindow.axaml"));
+        var document = XDocument.Load(ProjectFile("Views/MainWindow.axaml"));
+        var styles = XDocument.Load(ProjectFile("Views/MainWindow.Styles.axaml"));
+        var app = XDocument.Load(ProjectFile("App.axaml"));
 
         Assert.Contains(
             "IsVisible=\"{Binding RemoteContent.IsPanelVisible}\"",
@@ -2062,6 +2064,24 @@ public sealed partial class UiStyleContractTests
             "Shell.I18n.RemoteContentLoading",
             mainWindow,
             StringComparison.Ordinal);
+        Assert.Contains(
+            "IsVisible=\"{Binding RemoteContent.HasLoadError}\"",
+            mainWindow,
+            StringComparison.Ordinal);
+        Assert.Contains(
+            "Shell.I18n.RemoteContentLoadFailed",
+            mainWindow,
+            StringComparison.Ordinal);
+        Assert.Equal("True", GetStyleSetters(styles, "Border.remote-surface")["ClipToBounds"]);
+        Assert.Equal("{StaticResource LauncherThicknessNone}", GetStyleSetters(styles, "Border.remote-surface")["Padding"]);
+        Assert.Equal("#80000000", app.Descendants().Single(element =>
+            element.Attribute(XName.Get("Key", "http://schemas.microsoft.com/winfx/2006/xaml"))?.Value == "LauncherOverlayBrush").Attribute("Color")?.Value);
+
+        var remoteSurface = document.Descendants().Single(element =>
+            element.Name.LocalName == "Border" && HasClass(element, "remote-surface"));
+        var panel = remoteSurface.Elements().Single(element => element.Name.LocalName == "Panel");
+        Assert.Equal(2, panel.Elements().Count(element => element.Name.LocalName == "Border"));
+        Assert.Single(panel.Elements(), element => element.Name.LocalName == "LoadingOverlay");
     }
 
     [Fact]
@@ -2786,6 +2806,15 @@ public sealed partial class UiStyleContractTests
     }
 
     [Fact]
+    public void NewsCategoryTabs_UseNoThemeBorderForAccentStates()
+    {
+        var styles = XDocument.Load(ProjectFile("Views/Styles/RemoteContent.axaml"));
+
+        Assert.Equal("0", GetStyleSetters(styles, "Button.news-tab")["BorderThickness"]);
+        Assert.Equal("{DynamicResource LauncherAccentBrush}", GetStyleSetters(styles, "Button.news-tab.active")["Background"]);
+    }
+
+    [Fact]
     public void ToastCards_DoNotUseOverlappingBoxShadows()
     {
         var document = XDocument.Load(ProjectFile("Views/Styles/Toast.axaml"));
@@ -2881,6 +2910,11 @@ public sealed partial class UiStyleContractTests
             && element.Attribute("Property")?.Value == "Height"
             && element.Attribute("Value")?.Value
                 == "{DynamicResource LauncherToastAutoDismissProgressHeight}");
+        var progressTransition = progressStyle.Descendants().Single(element =>
+            element.Name.LocalName == "DoubleTransition"
+            && element.Attribute("Property")?.Value == "Value");
+        Assert.Equal("0:0:0.050", progressTransition.Attribute("Duration")?.Value);
+        Assert.Equal("LinearEasing", progressTransition.Attribute("Easing")?.Value);
 
         var toastCardStyle = styles.Descendants().Single(element =>
             element.Name.LocalName == "Style"

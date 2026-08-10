@@ -235,9 +235,9 @@ public sealed partial class LogViewerDialogViewModel : ViewModelBase, IModalCont
         }
         catch (Exception exception)
         {
-            toastService?.ShowError(
-                localizer?.F("logExportFailed", exception.Message)
-                ?? $"Log export failed: {exception.Message}");
+            toastService?.ShowError(ErrorHandlingService.FormatToastMessage(
+                localizer?.T("logExportFailed") ?? "Log export failed",
+                exception));
             if (diagnostics is not null)
             {
                 await diagnostics.ErrorAsync(
