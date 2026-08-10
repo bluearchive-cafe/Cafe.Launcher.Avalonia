@@ -26,6 +26,7 @@
     </Style>
     <Style Selector="Button.news-tab">
         <Setter Property="Background" Value="{DynamicResource LauncherContentRowBrush}"/>
+        <Setter Property="BorderThickness" Value="0"/>
         <Setter Property="Foreground" Value="{DynamicResource LauncherTextPrimaryBrush}"/>
         <Setter Property="FontSize" Value="{DynamicResource LauncherFontSizeMd}"/>
         <Setter Property="Padding" Value="10,4"/>

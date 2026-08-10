@@ -236,6 +236,7 @@ public sealed class LogViewerDialogViewModelTests : IDisposable
 
         Assert.NotNull(toast);
         Assert.Equal(ToastSeverity.Error, toast.Severity);
+        Assert.Contains("ArgumentException", toast.Message, StringComparison.Ordinal);
         logger.Dispose(); // release Serilog file handle before reading
         Assert.Contains("Log export failed.", File.ReadAllText(logger.LogFilePath), StringComparison.Ordinal);
     }

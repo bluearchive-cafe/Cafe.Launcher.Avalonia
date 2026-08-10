@@ -13,17 +13,14 @@ public sealed class SettingsEditorTests
         var editor = new SettingsEditor();
         editor.ApplySnapshot(new LauncherSettings
         {
-            PatchUrlGroup = PatchUrlGroups.Official,
-            ToastNotificationsEnabled = true
+            PatchUrlGroup = PatchUrlGroups.Official
         });
 
         editor.Current.PatchUrlGroup = PatchUrlGroups.Cafe;
-        editor.Current.ToastNotificationsEnabled = false;
 
         var saved = editor.GetSavedSnapshot();
 
         Assert.Equal(PatchUrlGroups.Official, saved.PatchUrlGroup);
-        Assert.True(saved.ToastNotificationsEnabled);
     }
 
     [Fact]
@@ -70,7 +67,6 @@ public sealed class SettingsEditorTests
             ThemeColorMode = ThemeColorModes.Custom,
             CustomThemeColor = "#FF00FF00",
             DownloadSpeedLimit = DownloadSpeedLimits.Speed10MBs,
-            ToastNotificationsEnabled = false,
             EnableStartupUpdateCheck = false,
             ShowRemoteContentCard = false,
             PatchUrlGroup = PatchUrlGroups.Cafe,
@@ -94,7 +90,6 @@ public sealed class SettingsEditorTests
         Assert.Equal(ThemeColorModes.Custom, current.ThemeColorMode);
         Assert.Equal("#FF00FF00", current.CustomThemeColor);
         Assert.Equal(DownloadSpeedLimits.Speed10MBs, current.DownloadSpeedLimit);
-        Assert.False(current.ToastNotificationsEnabled);
         Assert.False(current.EnableStartupUpdateCheck);
         Assert.False(current.ShowRemoteContentCard);
         Assert.Equal(PatchUrlGroups.Cafe, current.PatchUrlGroup);
@@ -224,7 +219,6 @@ public sealed class SettingsEditorTests
         Assert.Empty(current.ThemeColorPalette);
         Assert.Equal(0, current.SelectedThemeColorPaletteIndex);
         Assert.Equal(DownloadSpeedLimits.Unlimited, current.DownloadSpeedLimit);
-        Assert.True(current.ToastNotificationsEnabled);
         Assert.True(current.EnableStartupUpdateCheck);
         Assert.True(current.ShowRemoteContentCard);
         // PatchUrlGroup defaults to Cafe when UI culture is Chinese, otherwise Official.

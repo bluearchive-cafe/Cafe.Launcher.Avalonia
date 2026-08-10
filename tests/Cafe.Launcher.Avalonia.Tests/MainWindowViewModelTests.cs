@@ -1832,11 +1832,10 @@ public sealed class MainWindowViewModelTests : IDisposable
                 _ => Task.CompletedTask,
                 errorHandling);
         var toastHostViewModel = toastDelayAsync is null
-            ? new ToastHostViewModel(toastService, localizationService, settingsViewModel)
+            ? new ToastHostViewModel(toastService, localizationService)
             : new ToastHostViewModel(
                 toastService,
                 localizationService,
-                settingsViewModel,
                 action =>
                 {
                     action();

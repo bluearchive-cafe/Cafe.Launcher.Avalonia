@@ -185,6 +185,7 @@ public sealed partial class LocalizedStrings : ObservableObject
     [ObservableProperty] private string downloadSpeedLimitDescription = "";
     [ObservableProperty] private string notificationSettings = "";
     [ObservableProperty] private string remoteContentCard = "";
+    [ObservableProperty] private string remoteContentLoadFailed = "";
     [ObservableProperty] private string remoteContentLoading = "";
     [ObservableProperty] private string showRemoteContentCard = "";
     [ObservableProperty] private string toggleOn = "";
@@ -520,8 +521,8 @@ public sealed partial class LocalizedStrings : ObservableObject
         DebugToastShown = localizer.T("debugToastShown");
         DownloadSpeedLimit = localizer.T("downloadSpeedLimit");
         DownloadSpeedLimitDescription = localizer.T("downloadSpeedLimitDescription");
-        NotificationSettings = localizer.T("notificationSettings");
         RemoteContentCard = localizer.T("remoteContentCard");
+        RemoteContentLoadFailed = localizer.T("remoteContentLoadFailed");
         RemoteContentLoading = localizer.T("remoteContentLoading");
         ShowRemoteContentCard = localizer.T("showRemoteContentCard");
         ToggleOn = localizer.T("toggleOn");
@@ -638,7 +639,6 @@ public sealed partial class LocalizedStrings : ObservableObject
         CloseBehaviorDescription = localizer.T("closeBehaviorDescription");
         LauncherUpdateChannelDescription = localizer.T("launcherUpdateChannelDescription");
         LogLevelDescription = localizer.T("logLevelDescription");
-        ToastNotificationsDescription = localizer.T("toastNotificationsDescription");
         EnableStartupUpdateCheck = localizer.T("enableStartupUpdateCheck");
         EnableStartupUpdateCheckDescription = localizer.T("enableStartupUpdateCheckDescription");
         StartupUpdateAvailable = localizer.T("startupUpdateAvailable");

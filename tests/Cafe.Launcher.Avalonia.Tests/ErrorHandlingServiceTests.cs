@@ -24,7 +24,7 @@ public sealed class ErrorHandlingServiceTests
 
         Assert.NotNull(toast);
         Assert.Equal(ToastSeverity.Error, toast!.Severity);
-        Assert.Equal("test error", toast.Message);
+        Assert.Equal("TestError（InvalidOperationException）：test error", toast.Message);
         Assert.Equal(previousNote, shell.OperationNote);
     }
 
@@ -42,7 +42,31 @@ public sealed class ErrorHandlingServiceTests
         });
 
         Assert.NotNull(toast);
-        Assert.Equal("custom message", toast!.Message);
+        Assert.Equal("custom message（InvalidOperationException）：original", toast!.Message);
+    }
+
+    [Fact]
+    public void FormatToastMessage_WithNestedExceptions_UsesOrderedDetails()
+    {
+        var exception = new InvalidOperationException(
+            "outer",
+            new IOException("inner", new TimeoutException("timeout")));
+
+        var message = ErrorHandlingService.FormatToastMessage("Download failed", exception);
+
+        Assert.Equal(
+            "Download failed（InvalidOperationException）：outer → IOException：inner → TimeoutException：timeout",
+            message);
+    }
+
+    [Fact]
+    public void FormatToastMessage_WithBlankExceptionMessage_OmitsBlankMessageSeparator()
+    {
+        var exception = new InvalidOperationException("", new IOException("disk unavailable"));
+
+        var message = ErrorHandlingService.FormatToastMessage("Save failed", exception);
+
+        Assert.Equal("Save failed（InvalidOperationException） → IOException：disk unavailable", message);
     }
 
     [Fact]

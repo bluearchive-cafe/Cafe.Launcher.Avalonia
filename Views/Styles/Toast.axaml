@@ -152,6 +152,11 @@
         <Setter Property="BorderBrush" Value="{DynamicResource LauncherCardBorderBrush}"/>
     </Style>
     <Style Selector="ProgressBar.toast-progress">
+        <Setter Property="Transitions">
+            <Transitions>
+                <DoubleTransition Property="Value" Duration="0:0:0.050" Easing="LinearEasing"/>
+            </Transitions>
+        </Setter>
         <Setter Property="Height" Value="{DynamicResource LauncherToastAutoDismissProgressHeight}"/>
         <Setter Property="MinHeight" Value="{DynamicResource LauncherToastAutoDismissProgressHeight}"/>
         <Setter Property="Background" Value="{DynamicResource LauncherCardBorderBrush}"/>

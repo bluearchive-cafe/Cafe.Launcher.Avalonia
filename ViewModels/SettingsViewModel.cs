@@ -193,7 +193,13 @@ public partial class SettingsViewModel : ViewModelBase, IDisposable, IModalConte
 
         if (!result.IsSuccessful)
         {
-            toastService.ShowError(localizer.T("launcherUpdateCheckFailed"));
+            var operationMessage = localizer.T("launcherUpdateCheckFailed");
+            var message = result.FailureException is not null
+                ? ErrorHandlingService.FormatToastMessage(operationMessage, result.FailureException)
+                : string.IsNullOrWhiteSpace(result.FailureMessage)
+                    ? operationMessage
+                    : $"{operationMessage}：{result.FailureMessage}";
+            toastService.ShowError(message);
             return;
         }
 

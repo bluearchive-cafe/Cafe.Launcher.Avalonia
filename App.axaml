@@ -84,7 +84,7 @@
             <SolidColorBrush x:Key="LauncherDangerBrush" Color="#FFE5484D"/>
             <SolidColorBrush x:Key="LauncherDangerHoverBrush" Color="#FFF15B60"/>
             <SolidColorBrush x:Key="LauncherDangerPressedBrush" Color="#FFC9353A"/>
-            <SolidColorBrush x:Key="LauncherOverlayBrush" Color="#99000000"/>
+            <SolidColorBrush x:Key="LauncherOverlayBrush" Color="#80000000"/>
             <SolidColorBrush x:Key="LauncherFocusRingBrush" Color="{DynamicResource SystemAccentColor}" Opacity="0.60"/>
             <SolidColorBrush x:Key="LauncherCarouselDotActiveBrush" Color="{DynamicResource SystemAccentColor}"/>
             <SolidColorBrush x:Key="LauncherCarouselDotInactiveBrush" Color="#FFD0D4DA"/>

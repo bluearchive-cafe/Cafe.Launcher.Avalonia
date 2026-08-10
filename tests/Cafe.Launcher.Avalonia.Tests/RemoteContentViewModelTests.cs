@@ -453,6 +453,19 @@ public sealed class RemoteContentViewModelTests
     }
 
     [Fact]
+    public void SetLoadError_WhenRemoteContentIsEnabled_KeepsPanelVisibleAfterLoading()
+    {
+        using var context = CreateContext();
+
+        context.ViewModel.BeginLoading(showRemoteContentCard: true);
+        context.ViewModel.SetLoadError(true);
+        context.ViewModel.EndLoading();
+
+        Assert.True(context.ViewModel.HasLoadError);
+        Assert.True(context.ViewModel.IsPanelVisible);
+    }
+
+    [Fact]
     public void OpenExternalUrlCommand_ForwardsExactUrl()
     {
         using var context = CreateContext();

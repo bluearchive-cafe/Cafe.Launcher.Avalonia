@@ -1,4 +1,5 @@
 using System;
+using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
 using Cafe.Launcher.Avalonia.Services.Diagnostics;
@@ -9,7 +10,7 @@ namespace Cafe.Launcher.Avalonia.Services;
 /// <summary>Standardized options for non-critical error handling.</summary>
 public sealed class ErrorHandlingOptions
 {
-    /// <summary>Custom toast message. When null, <see cref="Exception.Message"/> is used.</summary>
+    /// <summary>Custom operation message shown before the exception details in the toast.</summary>
     public string? ToastMessage { get; init; }
 
     /// <summary>Whether to show a toast notification. Defaults to true.</summary>
@@ -87,8 +88,44 @@ public sealed class ErrorHandlingService : IErrorHandlingService
 
         if (options.ShowToast)
         {
-            toastService.ShowError(options.ToastMessage ?? exception.Message);
+            toastService.ShowError(FormatToastMessage(options.ToastMessage ?? context, exception));
         }
+    }
+
+    internal static string FormatToastMessage(string? operationMessage, Exception exception)
+    {
+        ArgumentNullException.ThrowIfNull(exception);
+
+        var message = new StringBuilder(operationMessage?.Trim());
+        var isFirstException = true;
+        for (var current = exception; current is not null; current = current.InnerException)
+        {
+            var exceptionType = current.GetType().Name;
+            var exceptionDetail = string.IsNullOrWhiteSpace(current.Message)
+                ? exceptionType
+                : $"{exceptionType}：{current.Message}";
+
+            if (isFirstException && message.Length > 0)
+            {
+                message.Append('（').Append(exceptionType).Append('）');
+                if (!string.IsNullOrWhiteSpace(current.Message))
+                {
+                    message.Append('：').Append(current.Message);
+                }
+            }
+            else if (isFirstException)
+            {
+                message.Append(exceptionDetail);
+            }
+            else
+            {
+                message.Append(" → ").Append(exceptionDetail);
+            }
+
+            isFirstException = false;
+        }
+
+        return message.ToString();
     }
 
     public async Task HandleCriticalErrorAsync(string context, Exception exception)

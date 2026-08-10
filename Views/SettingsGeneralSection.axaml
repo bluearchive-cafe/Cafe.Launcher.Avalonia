@@ -57,19 +57,6 @@
             </controls:SettingRow.Action>
         </controls:SettingRow>
 
-        <controls:SettingRow IconKind="BellOutline"
-                             Title="{Binding Shell.I18n.NotificationSettings}"
-                             Description="{Binding Shell.I18n.ToastNotificationsDescription}">
-            <controls:SettingRow.Action>
-                <ToggleSwitch Classes="setting-toggle"
-                              AutomationProperties.Name="{Binding Shell.I18n.NotificationSettings}"
-                              IsChecked="{Binding Settings.Editor.Current.ToastNotificationsEnabled, Mode=TwoWay}"
-                              OnContent="{Binding Shell.I18n.ToggleOn}"
-                              OffContent="{Binding Shell.I18n.ToggleOff}"
-                              VerticalAlignment="Center"/>
-            </controls:SettingRow.Action>
-        </controls:SettingRow>
-
         <controls:SettingRow IconKind="Update"
                              Title="{Binding Shell.I18n.EnableStartupUpdateCheck}"
                              Description="{Binding Shell.I18n.EnableStartupUpdateCheckDescription}">

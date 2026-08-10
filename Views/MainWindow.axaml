@@ -75,7 +75,8 @@
                 <Border Classes="surface remote-surface"
                         IsVisible="{Binding RemoteContent.IsPanelVisible}">
                     <Panel>
-                        <ScrollViewer Classes="scroll-pad">
+                        <Border Classes="remote-content-scroll-host">
+                            <ScrollViewer Classes="scroll-pad">
                             <StackPanel Spacing="{StaticResource LauncherSpacingXxl}">
                             <Border IsVisible="{Binding RemoteContent.HasNotice}" Classes="notice-card">
                                 <StackPanel Spacing="{StaticResource LauncherSpacingXs}">
@@ -263,7 +264,23 @@
                                 </ItemsControl>
                             </StackPanel>
                             </StackPanel>
-                        </ScrollViewer>
+                            </ScrollViewer>
+                        </Border>
+                        <Border Classes="remote-content-load-error"
+                                IsVisible="{Binding RemoteContent.HasLoadError}">
+                            <StackPanel HorizontalAlignment="Center"
+                                        VerticalAlignment="Center"
+                                        Spacing="{StaticResource LauncherSpacingMd}">
+                                <materialIcons:MaterialIcon Kind="AlertCircle"
+                                                            Width="{StaticResource LauncherIconMd}"
+                                                            Height="{StaticResource LauncherIconMd}"
+                                                            HorizontalAlignment="Center"
+                                                            Foreground="{DynamicResource LauncherDangerBrush}"/>
+                                <TextBlock Text="{Binding Shell.I18n.RemoteContentLoadFailed}"
+                                           Classes="body"
+                                           TextAlignment="Center"/>
+                            </StackPanel>
+                        </Border>
                         <controls:LoadingOverlay Classes="remote-content-loading-overlay"
                                                   IsVisible="{Binding RemoteContent.IsLoading}"
                                                   Text="{Binding Shell.I18n.RemoteContentLoading}"/>

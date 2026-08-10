@@ -128,7 +128,7 @@ public sealed partial class LauncherUpdateService : IDisposable
                     "Launcher update check failed — HTTP request error",
                     ex,
                     CancellationToken.None).ConfigureAwait(false);
-            return LauncherUpdateCheckResult.Failed();
+            return LauncherUpdateCheckResult.Failed(exception: ex);
         }
         catch (JsonException ex)
         {
@@ -137,7 +137,7 @@ public sealed partial class LauncherUpdateService : IDisposable
                     "Launcher update check failed — JSON deserialization error",
                     ex,
                     CancellationToken.None).ConfigureAwait(false);
-            return LauncherUpdateCheckResult.Failed();
+            return LauncherUpdateCheckResult.Failed(exception: ex);
         }
         catch (TaskCanceledException ex)
         {
@@ -146,7 +146,7 @@ public sealed partial class LauncherUpdateService : IDisposable
                     "Launcher update check failed — request timeout",
                     ex,
                     CancellationToken.None).ConfigureAwait(false);
-            return LauncherUpdateCheckResult.Failed();
+            return LauncherUpdateCheckResult.Failed(exception: ex);
         }
     }
 
@@ -327,12 +327,16 @@ public sealed class LauncherUpdateCheckResult
         bool isSuccessful,
         bool isUpdateAvailable,
         string latestVersion,
-        IReadOnlyList<ReleaseFile> files)
+        IReadOnlyList<ReleaseFile> files,
+        Exception? failureException = null,
+        string? failureMessage = null)
     {
         IsSuccessful = isSuccessful;
         IsUpdateAvailable = isUpdateAvailable;
         LatestVersion = latestVersion;
         Files = files;
+        FailureException = failureException;
+        FailureMessage = failureMessage;
     }
 
     public bool IsSuccessful { get; }
@@ -340,6 +344,8 @@ public sealed class LauncherUpdateCheckResult
     public string LatestVersion { get; }
 
     public IReadOnlyList<ReleaseFile> Files { get; }
+    public Exception? FailureException { get; }
+    public string? FailureMessage { get; }
 
     internal static LauncherUpdateCheckResult Succeeded(
         string latestVersion,
@@ -353,12 +359,16 @@ public sealed class LauncherUpdateCheckResult
             files);
     }
 
-    internal static LauncherUpdateCheckResult Failed()
+    internal static LauncherUpdateCheckResult Failed(
+        Exception? exception = null,
+        string? message = null)
     {
         return new LauncherUpdateCheckResult(
             isSuccessful: false,
             isUpdateAvailable: false,
             latestVersion: "",
-            files: []);
+            files: [],
+            failureException: exception,
+            failureMessage: message);
     }
 }
