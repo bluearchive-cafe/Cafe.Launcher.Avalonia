@@ -2913,8 +2913,12 @@ public sealed partial class UiStyleContractTests
         var progressTransition = progressStyle.Descendants().Single(element =>
             element.Name.LocalName == "DoubleTransition"
             && element.Attribute("Property")?.Value == "Value");
-        Assert.Equal("0:0:0.050", progressTransition.Attribute("Duration")?.Value);
-        Assert.Equal("LinearEasing", progressTransition.Attribute("Easing")?.Value);
+        Assert.Equal(
+            "{StaticResource LauncherMotionFasterDuration}",
+            progressTransition.Attribute("Duration")?.Value);
+        Assert.Equal(
+            "{StaticResource LauncherMotionLinearEasing}",
+            progressTransition.Attribute("Easing")?.Value);
 
         var toastCardStyle = styles.Descendants().Single(element =>
             element.Name.LocalName == "Style"
@@ -2993,14 +2997,29 @@ public sealed partial class UiStyleContractTests
         AssertMotionAnimation(
             document,
             "Border.toast-card.motion-enabled:not(.motion-exit)",
-            "0:0:0.200",
-            expectedStartOffset: "6",
+            "{StaticResource LauncherMotionContentDuration}",
+            expectedStartOffset: "{StaticResource LauncherMotionToastOffset}",
             expectedStartAxis: "TranslateTransform.X");
         AssertExitMotionAnimation(
             document,
             "Border.toast-card.motion-enabled.motion-exit",
-            expectedEndOffset: "6",
+            expectedEndOffset: "{StaticResource LauncherMotionToastOffset}",
             expectedEndAxis: "TranslateTransform.X");
+    }
+
+    [Fact]
+    public void ToastStack_UsesRootMotionPreference()
+    {
+        var document = XDocument.Load(ProjectFile("Views/MainWindowToastOverlay.axaml"));
+        var controlsNamespace = document.Root?.GetNamespaceOfPrefix("controls");
+        Assert.NotNull(controlsNamespace);
+        var toastList = document
+            .Descendants()
+            .Single(element => element.Name.LocalName == "StackPanel" && HasClass(element, "toast-list"));
+
+        Assert.Equal(
+            "{Binding #ToastOverlayRoot.((vm:MainWindowViewModel)DataContext).IsMotionEnabled}",
+            toastList.Attribute(controlsNamespace! + "ToastStackMotion.IsEnabled")?.Value);
     }
 
     [Fact]
@@ -3011,28 +3030,28 @@ public sealed partial class UiStyleContractTests
         AssertMotionAnimation(
             document,
             "Grid.motion-overlay.motion-enabled.motion-enter",
-            "0:0:0.167",
+            "{StaticResource LauncherMotionFastDuration}",
             expectedStartOffset: null);
         AssertMotionAnimation(
             document,
             "Grid.motion-overlay.motion-enabled.motion-enter > Border.motion-surface",
-            "0:0:0.250",
-            expectedStartOffset: "8");
+            "{StaticResource LauncherMotionNormalDuration}",
+            expectedStartOffset: "{StaticResource LauncherMotionSurfaceOffset}");
         AssertMotionAnimation(
             document,
             ":is(UserControl).motion-content.motion-enabled.motion-enter",
-            "0:0:0.200",
-            expectedStartOffset: "6");
+            "{StaticResource LauncherMotionContentDuration}",
+            expectedStartOffset: "{StaticResource LauncherMotionContentOffset}");
         AssertMotionAnimation(
             document,
             "StackPanel.motion-content.motion-enabled.motion-enter",
-            "0:0:0.200",
-            expectedStartOffset: "6");
+            "{StaticResource LauncherMotionContentDuration}",
+            expectedStartOffset: "{StaticResource LauncherMotionContentOffset}");
         AssertMotionAnimation(
             document,
             "Border.motion-bottom.motion-enabled.motion-enter",
-            "0:0:0.250",
-            expectedStartOffset: "12");
+            "{StaticResource LauncherMotionNormalDuration}",
+            expectedStartOffset: "{StaticResource LauncherMotionBottomOffset}");
         AssertExitMotionAnimation(
             document,
             "Grid.motion-overlay.motion-enabled.motion-exit",
@@ -3040,7 +3059,7 @@ public sealed partial class UiStyleContractTests
         AssertExitMotionAnimation(
             document,
             "Grid.motion-overlay.motion-enabled.motion-exit > Border.motion-surface",
-            expectedEndOffset: "8");
+            expectedEndOffset: "{StaticResource LauncherMotionSurfaceOffset}");
 
         foreach (var selector in new[]
                  {
@@ -3344,7 +3363,7 @@ public sealed partial class UiStyleContractTests
             .Single(element => element.Name.LocalName == "Animation");
         Assert.Equal(expectedDuration, animation.Attribute("Duration")?.Value);
         Assert.Equal("Forward", animation.Attribute("FillMode")?.Value);
-        Assert.Equal("ExponentialEaseOut", animation.Attribute("Easing")?.Value);
+        Assert.Equal("{StaticResource LauncherMotionEnterEasing}", animation.Attribute("Easing")?.Value);
 
         var keyFrames = animation
             .Elements()
@@ -3403,9 +3422,9 @@ public sealed partial class UiStyleContractTests
         var animation = style
             .Descendants()
             .Single(element => element.Name.LocalName == "Animation");
-        Assert.Equal("0:0:0.167", animation.Attribute("Duration")?.Value);
+        Assert.Equal("{StaticResource LauncherMotionFastDuration}", animation.Attribute("Duration")?.Value);
         Assert.Equal("Forward", animation.Attribute("FillMode")?.Value);
-        Assert.Equal("ExponentialEaseIn", animation.Attribute("Easing")?.Value);
+        Assert.Equal("{StaticResource LauncherMotionExitEasing}", animation.Attribute("Easing")?.Value);
 
         var keyFrames = animation
             .Elements()

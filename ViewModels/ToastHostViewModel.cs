@@ -137,7 +137,7 @@ public partial class ToastHostViewModel : ViewModelBase, IDisposable
                 return;
             }
 
-            await invokeOnUiAsync(() => ActiveToasts.Add(notification));
+            await invokeOnUiAsync(() => ActiveToasts.Insert(0, notification));
             if (notification.HasActions)
             {
                 return;

@@ -7,6 +7,7 @@ using System.Threading.Tasks;
 using Avalonia.Media.Imaging;
 using Avalonia.Animation;
 using Avalonia.Threading;
+using Cafe.Launcher.Avalonia.Helpers;
 using Cafe.Launcher.Avalonia.Models;
 using Cafe.Launcher.Avalonia.Services;
 using CommunityToolkit.Mvvm.ComponentModel;
@@ -78,7 +79,7 @@ public partial class RemoteContentViewModel : ViewModelBase, IDisposable
     private int bannerIntervalMs = 5000;
 
     [ObservableProperty]
-    private IPageTransition carouselTransition = new CrossFade(TimeSpan.FromMilliseconds(250));
+    private IPageTransition carouselTransition = new CrossFade(MotionTokens.NormalDuration);
 
     [ObservableProperty]
     private NewsCategory? selectedNewsCategory;
@@ -116,7 +117,7 @@ public partial class RemoteContentViewModel : ViewModelBase, IDisposable
         if (disposed) return;
         isMotionReduced = reduceMotion;
         CarouselTransition = new CrossFade(
-            reduceMotion ? TimeSpan.Zero : TimeSpan.FromMilliseconds(250));
+            reduceMotion ? TimeSpan.Zero : MotionTokens.NormalDuration);
         if (reduceMotion)
         {
             carouselDelayCts?.Cancel();

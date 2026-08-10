@@ -4,6 +4,7 @@
              xmlns:services="using:Cafe.Launcher.Avalonia.Services"
              xmlns:converters="using:Cafe.Launcher.Avalonia.Converters"
              xmlns:constants="using:Cafe.Launcher.Avalonia.Constants"
+             xmlns:controls="using:Cafe.Launcher.Avalonia.Controls"
              xmlns:materialIcons="clr-namespace:Material.Icons.Avalonia;assembly=Material.Icons.Avalonia"
              x:Class="Cafe.Launcher.Avalonia.Views.MainWindowToastOverlay"
              x:Name="ToastOverlayRoot"
@@ -13,7 +14,8 @@
         <ItemsControl ItemsSource="{Binding Toasts.ActiveToasts}">
             <ItemsControl.ItemsPanel>
                 <ItemsPanelTemplate>
-                    <StackPanel Classes="toast-list"/>
+                    <StackPanel Classes="toast-list"
+                                controls:ToastStackMotion.IsEnabled="{Binding #ToastOverlayRoot.((vm:MainWindowViewModel)DataContext).IsMotionEnabled}"/>
                 </ItemsPanelTemplate>
             </ItemsControl.ItemsPanel>
             <ItemsControl.ItemTemplate>
