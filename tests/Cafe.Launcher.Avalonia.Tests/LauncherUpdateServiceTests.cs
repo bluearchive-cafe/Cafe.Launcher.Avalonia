@@ -105,6 +105,21 @@ public sealed class LauncherUpdateServiceTests
     }
 
     [Fact]
+    public async Task CheckForUpdateAsync_WhenProxyIsUnavailable_UsesGitHubReleases()
+    {
+        using var service = new LauncherUpdateService(
+            new ProxyFailureGitHubReleaseHandler(),
+            currentVersionOverride: "1.0.0-beta.7");
+
+        var result = await service.CheckForUpdateAsync(UpdateChannels.Beta, ProxyModes.Direct);
+
+        Assert.True(result.IsSuccessful);
+        Assert.True(result.IsUpdateAvailable);
+        Assert.Equal("1.0.0-beta.8", result.LatestVersion);
+        Assert.Single(result.Files);
+    }
+
+    [Fact]
     public async Task CheckForUpdateAsync_WhenRequiredFieldsAreMissing_ReturnsFailure()
     {
         using var service = new LauncherUpdateService(
@@ -440,6 +455,39 @@ public sealed class LauncherUpdateServiceTests
             return Task.FromResult(new HttpResponseMessage(statusCode)
             {
                 Content = new StringContent(content, Encoding.UTF8, "application/json")
+            });
+        }
+    }
+
+    private sealed class ProxyFailureGitHubReleaseHandler : HttpMessageHandler
+    {
+        protected override Task<HttpResponseMessage> SendAsync(
+            HttpRequestMessage request,
+            CancellationToken cancellationToken)
+        {
+            if (request.RequestUri?.Host == "api-cafe-launcher.saibamidori.com")
+            {
+                throw new HttpRequestException("proxy unavailable");
+            }
+
+            return Task.FromResult(new HttpResponseMessage(HttpStatusCode.OK)
+            {
+                Content = new StringContent(
+                    """
+                    [{
+                      "tag_name":"v1.0.0-beta.8",
+                      "draft":false,
+                      "published_at":"2026-07-19T14:28:42Z",
+                      "assets":[{
+                        "name":"Cafe.Launcher.Avalonia_v1.0.0-beta.8_setup.exe",
+                        "browser_download_url":"https://github.com/bluearchive-cafe/Cafe.Launcher.Avalonia_Release/releases/download/v1.0.0-beta.8/Cafe.Launcher.Avalonia_v1.0.0-beta.8_setup.exe",
+                        "size":54170696,
+                        "state":"uploaded"
+                      }]
+                    }]
+                    """,
+                    Encoding.UTF8,
+                    "application/json")
             });
         }
     }

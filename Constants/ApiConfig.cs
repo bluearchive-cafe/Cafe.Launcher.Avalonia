@@ -24,4 +24,6 @@ public static class ApiConfig
         "https://github.com/" + GitHubReleaseRepositorySlug;
     public const string LauncherApiBaseUrl = "https://api-cafe-launcher.saibamidori.com/";
     public const string LauncherReleasesPath = "/api/launcher/releases";
+    public const string GitHubReleasesApiUrl =
+        "https://api.github.com/repos/" + GitHubReleaseRepositorySlug + "/releases";
 }

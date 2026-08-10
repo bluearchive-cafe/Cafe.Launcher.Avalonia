@@ -227,7 +227,7 @@ public sealed class LauncherApiClient : IDisposable
             MaxManifestFetchAttempts,
             i => ManifestFetchBackoff[i],
             cancellationToken,
-            ex => ex is HttpRequestException or TaskCanceledException or JsonException);
+            ex => IsRetryableRequestFailure(ex) || ex is JsonException);
     }
 
     private async Task<T> GetEnvelopeDataAsync<T>(
@@ -275,7 +275,25 @@ public sealed class LauncherApiClient : IDisposable
             MaxEnvelopeFetchAttempts,
             i => ManifestFetchBackoff[i],
             cancellationToken,
-            ex => ex is HttpRequestException or TaskCanceledException or JsonException or InvalidOperationException);
+            ex => IsRetryableRequestFailure(ex)
+                || ex is JsonException or InvalidOperationException);
+    }
+
+    private static bool IsRetryableRequestFailure(Exception exception)
+    {
+        if (exception is TaskCanceledException)
+        {
+            return true;
+        }
+
+        if (exception is not HttpRequestException { StatusCode: { } statusCode })
+        {
+            return exception is HttpRequestException;
+        }
+
+        return statusCode == System.Net.HttpStatusCode.RequestTimeout
+            || statusCode == System.Net.HttpStatusCode.TooManyRequests
+            || (int)statusCode >= 500;
     }
 
     public void Dispose()
