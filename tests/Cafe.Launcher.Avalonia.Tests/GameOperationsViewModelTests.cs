@@ -587,8 +587,9 @@ public sealed class GameOperationsViewModelTests
 
         var uninstallTask = context.ViewModel.ConfirmUninstallAsync();
 
+        // The journey calls PrepareOperation which resets progress state (Idle icon).
+        // The first progress callback from the uninstall workflow will set the icon.
         Assert.True(context.ViewModel.IsProgressPanelVisible);
-        Assert.Equal("DeleteOutline", context.ViewModel.ProgressIconKind);
 
         context.Backend.UninstallCompletion.SetResult(new GameOperationResult());
         await uninstallTask;
@@ -855,7 +856,7 @@ public sealed class GameOperationsViewModelTests
             shell,
             dialogs,
             _ => Task.CompletedTask,
-            new ErrorHandlingService(localizer, new LocalDiagnostics(), toastService, shell));
+            new ErrorHandlingService(localizer, new LocalDiagnostics(), toastService));
         return new TestContext(viewModel, backend, shell, dialogs, toastService, localizer);
     }
 

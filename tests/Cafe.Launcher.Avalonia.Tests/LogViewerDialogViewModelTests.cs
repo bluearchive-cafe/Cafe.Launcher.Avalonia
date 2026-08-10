@@ -1,4 +1,5 @@
-using Cafe.Launcher.Avalonia.Features.Diagnostics;`nusing Cafe.Launcher.Avalonia.Services;
+using Cafe.Launcher.Avalonia.Features.Diagnostics;
+using Cafe.Launcher.Avalonia.Services;
 using Cafe.Launcher.Avalonia.Services.Diagnostics;
 using Cafe.Launcher.Avalonia.ViewModels;
 

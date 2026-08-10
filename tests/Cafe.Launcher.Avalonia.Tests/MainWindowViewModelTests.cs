@@ -220,6 +220,7 @@ public sealed class MainWindowViewModelTests : IDisposable
 
         try
         {
+            Assert.True(viewModel.IsBusy);
             Assert.True(viewModel.RemoteContent.IsLoading);
             Assert.True(viewModel.RemoteContent.IsPanelVisible);
         }
@@ -229,6 +230,7 @@ public sealed class MainWindowViewModelTests : IDisposable
             await refreshTask;
         }
 
+        Assert.False(viewModel.IsBusy);
         Assert.False(viewModel.RemoteContent.IsLoading);
         Assert.True(viewModel.RemoteContent.IsPanelVisible);
     }
@@ -833,7 +835,7 @@ public sealed class MainWindowViewModelTests : IDisposable
             new GameInstallationPath(),
             new SettingsOptionsViewModel(localizer, new DiskSpaceService()),
             appearance,
-            new ErrorHandlingService(localizer, new LocalDiagnostics(testLogger), toastService, new ShellViewModel(localizer)));
+            new ErrorHandlingService(localizer, new LocalDiagnostics(testLogger), toastService));
         ToastNotification? errorToast = null;
         toastService.ToastRaised += notification =>
         {
@@ -1786,7 +1788,7 @@ public sealed class MainWindowViewModelTests : IDisposable
         var settingsOptions = new SettingsOptionsViewModel(localizationService, diskSpaceService);
         var settingsAppearance = new SettingsAppearanceViewModel(settingsEditor);
         var shellViewModel = new ShellViewModel(localizationService);
-        var errorHandling = new ErrorHandlingService(localizationService, diagnostics, toastService, shellViewModel);
+        var errorHandling = new ErrorHandlingService(localizationService, diagnostics, toastService);
         var noticeStateService = new NoticeStateService(Path.Combine(tempDir, Guid.NewGuid().ToString("N"), "shown_notices.json"));
         var dialogsViewModel = new DialogsViewModel(localizationService, noticeStateService, new SetupWizardViewModel(localizationService, new GameInstallationPath(), new LocalInstallationStateStore(), new LocalDiagnostics()));
         using var settingsLogger = new UnifiedLogger(Path.Combine(tempDir, Guid.NewGuid().ToString("N")));
