@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Net.Http;
 using System.Text.Json;
+using System.Text.Json.Serialization;
 using System.Text.RegularExpressions;
 using System.Threading;
 using System.Threading.Tasks;
@@ -154,6 +155,20 @@ public sealed partial class LauncherUpdateService : IDisposable
         string proxyMode,
         CancellationToken cancellationToken)
     {
+        try
+        {
+            return await FetchProxyReleasesAsync(proxyMode, cancellationToken).ConfigureAwait(false);
+        }
+        catch (HttpRequestException)
+        {
+            return await FetchGitHubReleasesAsync(proxyMode, cancellationToken).ConfigureAwait(false);
+        }
+    }
+
+    private async Task<List<LauncherReleaseResponse>?> FetchProxyReleasesAsync(
+        string proxyMode,
+        CancellationToken cancellationToken)
+    {
         using var lease = await leaseSource.CreateLeaseAsync(proxyMode, cancellationToken).ConfigureAwait(false);
         using var response = await lease.Client.GetAsync(
             ApiConfig.LauncherReleasesPath,
@@ -167,6 +182,48 @@ public sealed partial class LauncherUpdateService : IDisposable
             JsonOptions,
             cancellationToken).ConfigureAwait(false);
     }
+
+    private async Task<List<LauncherReleaseResponse>> FetchGitHubReleasesAsync(
+        string proxyMode,
+        CancellationToken cancellationToken)
+    {
+        using var lease = await leaseSource.CreateLeaseAsync(proxyMode, cancellationToken).ConfigureAwait(false);
+        using var request = new HttpRequestMessage(HttpMethod.Get, ApiConfig.GitHubReleasesApiUrl);
+        request.Headers.UserAgent.ParseAdd($"CafeLauncher/{BuildInfo.LauncherVersion}");
+        using var response = await lease.Client.SendAsync(
+            request,
+            HttpCompletionOption.ResponseHeadersRead,
+            cancellationToken).ConfigureAwait(false);
+        response.EnsureSuccessStatusCode();
+
+        var releases = await RemoteHttpRequestService.DeserializeJsonAsync<List<GitHubRelease>>(
+            response,
+            new Uri(ApiConfig.GitHubReleasesApiUrl),
+            JsonOptions,
+            cancellationToken).ConfigureAwait(false) ?? [];
+        return releases
+            .Where(release => !release.Draft)
+            .Select(release => new LauncherReleaseResponse
+            {
+                Version = NormalizeGitHubTag(release.TagName),
+                ReleaseDate = release.PublishedAt,
+                Files = release.Assets
+                    .Where(asset => string.Equals(asset.State, "uploaded", StringComparison.OrdinalIgnoreCase))
+                    .Select(asset => new ReleaseFile
+                    {
+                        Name = asset.Name,
+                        Url = asset.BrowserDownloadUrl,
+                        Size = asset.Size
+                    })
+                    .ToList()
+            })
+            .ToList();
+    }
+
+    private static string NormalizeGitHubTag(string tagName) =>
+        tagName.StartsWith("v", StringComparison.OrdinalIgnoreCase)
+            ? tagName[1..]
+            : tagName;
 
     /// <summary>
     /// Detects whether a version string represents a pre-release by checking for a hyphen suffix
@@ -314,6 +371,36 @@ public sealed partial class LauncherUpdateService : IDisposable
     }
 
     private readonly record struct SemanticVersion(string CoreVersion, bool IsPrerelease, string PrereleaseLabel);
+
+    private sealed class GitHubRelease
+    {
+        [JsonPropertyName("tag_name")]
+        public string TagName { get; set; } = "";
+
+        [JsonPropertyName("draft")]
+        public bool Draft { get; set; }
+
+        [JsonPropertyName("published_at")]
+        public DateTime? PublishedAt { get; set; }
+
+        [JsonPropertyName("assets")]
+        public List<GitHubReleaseAsset> Assets { get; set; } = [];
+    }
+
+    private sealed class GitHubReleaseAsset
+    {
+        [JsonPropertyName("name")]
+        public string Name { get; set; } = "";
+
+        [JsonPropertyName("browser_download_url")]
+        public string BrowserDownloadUrl { get; set; } = "";
+
+        [JsonPropertyName("size")]
+        public long Size { get; set; }
+
+        [JsonPropertyName("state")]
+        public string State { get; set; } = "";
+    }
 
     [GeneratedRegex(
         @"^(0|[1-9]\d*)\.(0|[1-9]\d*)\.(0|[1-9]\d*)(?:-([0-9A-Za-z-]+(?:\.[0-9A-Za-z-]+)*))?(?:\+[0-9A-Za-z-]+(?:\.[0-9A-Za-z-]+)*)?$",
