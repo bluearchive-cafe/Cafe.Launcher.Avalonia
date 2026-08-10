@@ -14,7 +14,7 @@ using CommunityToolkit.Mvvm.Input;
 
 namespace Cafe.Launcher.Avalonia.ViewModels;
 
-public partial class GameOperationsViewModel : ViewModelBase
+public partial class GameOperationsViewModel : ViewModelBase, IDisposable
 {
     private readonly IGameLaunchWorkflow launchWorkflow;
     private readonly IGameInstallationWorkflow installationWorkflow;
@@ -752,6 +752,11 @@ public partial class GameOperationsViewModel : ViewModelBase
             GameOperationKind.Idle => (localizer.T("working"), "Sync"),
             _ => throw new ArgumentOutOfRangeException(nameof(operationKind), operationKind, null)
         };
+    }
+
+    public void Dispose()
+    {
+        installationWorkflow.IsRunningChanged -= OnInstallationIsRunningChanged;
     }
 
 }

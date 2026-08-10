@@ -157,7 +157,7 @@ AI 辅助开发规范 —— 本文件为所有 AI 编码助手（Claude Code、
 - 新增字段：提供合理默认值（在 `LauncherSettings` 模型中），`LauncherSettingsService` 不因缺失字段而抛异常。
 - 删除字段：保留 `JsonIgnore` 属性或 `JsonExtensionData`，避免反序列化失败。
 - 重命名字段：使用 `[JsonPropertyName("oldName")]` 保留序列化兼容。
-- `SettingsNormalizer.Normalize()` 负责对任何未知/不合法值兜底为有效默认值。
+- `LauncherSettingsService.NormalizeSettings()` 负责对任何未知/不合法值兜底为有效默认值。
 
 ---
 

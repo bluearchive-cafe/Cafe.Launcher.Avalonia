@@ -17,7 +17,7 @@ namespace Cafe.Launcher.Avalonia.ViewModels;
 /// <summary>
 /// Coordinates the first-launch setup wizard state, validation, and settings output.
 /// </summary>
-public partial class SetupWizardViewModel : ViewModelBase, IModalContentViewModel
+public partial class SetupWizardViewModel : ViewModelBase, IModalContentViewModel, IDisposable
 {
     private readonly LocalizationService localizer;
     private readonly GameInstallationPath gameInstallationPath;
@@ -545,4 +545,10 @@ public partial class SetupWizardViewModel : ViewModelBase, IModalContentViewMode
         ProxyModes.System => localizer.T("proxySystem"),
         _ => ProxyMode
     };
+
+    public void Dispose()
+    {
+        localizer.LanguageChanged -= OnLocalizerLanguageChanged;
+        gamePathStatusCancellationTokenSource?.Dispose();
+    }
 }

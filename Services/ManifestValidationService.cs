@@ -88,7 +88,7 @@ public sealed class ManifestValidationService
             return Failed(localizer.F("localManifestUnreadable", localGame.ManifestPath));
         }
 
-        return ValidateFiles(gamePath, localGame.Manifest.Files);
+        return await Task.Run(() => ValidateFiles(gamePath, localGame.Manifest.Files)).ConfigureAwait(false);
     }
 
     private ManifestValidationResult ValidateFiles(string gamePath, IReadOnlyList<ManifestFile> files)

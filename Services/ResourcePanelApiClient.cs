@@ -111,34 +111,17 @@ public sealed class ResourcePanelApiClient : IDisposable
     /// errors only (not HTTP non-2xx), mirroring the dashboard's
     /// <c>fetchWithRetry</c>. Cancellation always propagates immediately.
     /// </summary>
-    private async Task<HttpResponseMessage> SendWithRetryAsync(
+    private static async Task<HttpResponseMessage> SendWithRetryAsync(
         HttpClient client,
         string path,
         CancellationToken cancellationToken)
     {
-        Exception? lastException = null;
-        for (var attempt = 0; attempt <= MaxRetries; attempt++)
-        {
-            cancellationToken.ThrowIfCancellationRequested();
-            try
-            {
-                return await client.GetAsync(path, cancellationToken).ConfigureAwait(false);
-            }
-            catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
-            {
-                throw;
-            }
-            catch (Exception ex) when (ex is HttpRequestException or TaskCanceledException)
-            {
-                lastException = ex;
-                if (attempt < MaxRetries)
-                {
-                    await Task.Delay(RetryDelayMs * (attempt + 1), cancellationToken).ConfigureAwait(false);
-                }
-            }
-        }
-
-        throw lastException!;
+        return await RetryPolicy.ExecuteWithRetryAsync(
+            async ct => await client.GetAsync(path, ct).ConfigureAwait(false),
+            MaxRetries + 1,
+            i => TimeSpan.FromMilliseconds(RetryDelayMs * (i + 1)),
+            cancellationToken,
+            ex => ex is HttpRequestException or TaskCanceledException);
     }
 
     public void Dispose()

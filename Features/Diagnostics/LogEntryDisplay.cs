@@ -1,6 +1,6 @@
 using Cafe.Launcher.Avalonia.Services.Diagnostics;
 
-namespace Cafe.Launcher.Avalonia.ViewModels;
+namespace Cafe.Launcher.Avalonia.Features.Diagnostics;
 
 /// <summary>Presentation model for one parsed diagnostic log entry.</summary>
 public sealed class LogEntryDisplay

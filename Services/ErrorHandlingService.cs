@@ -3,7 +3,6 @@ using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
 using Cafe.Launcher.Avalonia.Services.Diagnostics;
-using Cafe.Launcher.Avalonia.ViewModels;
 
 namespace Cafe.Launcher.Avalonia.Services;
 
@@ -17,8 +16,8 @@ public sealed class ErrorHandlingOptions
     public bool ShowToast { get; init; } = true;
 
     /// <summary>
-    /// Localization key for <see cref="ShellViewModel.OperationNote"/>.
-    /// When null, OperationNote is not changed.
+    /// Localization key for <see cref="IErrorHandlingService.OperationNoteRequested"/>.
+    /// When null, the event is not raised.
     /// </summary>
     public string? OperationNoteKey { get; init; }
 }
@@ -39,7 +38,7 @@ public sealed class CriticalErrorInfo
 public interface IErrorHandlingService
 {
     /// <summary>
-    /// Logs the error, optionally shows a toast, and optionally sets <see cref="ShellViewModel.OperationNote"/>.
+    /// Logs the error, optionally shows a toast, and optionally raises <see cref="OperationNoteRequested"/>.
     /// Use for recoverable failures where the user can continue.
     /// </summary>
     Task HandleErrorAsync(string context, Exception exception, ErrorHandlingOptions? options = null);
@@ -52,6 +51,9 @@ public interface IErrorHandlingService
 
     /// <summary>Raised when a critical error requires a modal dialog.</summary>
     event Action<CriticalErrorInfo>? CriticalErrorRequested;
+
+    /// <summary>Raised when a recoverable error requests an operation note update.</summary>
+    event Action<string>? OperationNoteRequested;
 }
 
 /// <summary>
@@ -62,23 +64,23 @@ public sealed class ErrorHandlingService : IErrorHandlingService
     private readonly LocalizationService localizer;
     private readonly LocalDiagnostics diagnostics;
     private readonly ToastService toastService;
-    private readonly ShellViewModel shell;
 
-    /// <summary>Initializes the service with its localization, diagnostics, toast, and shell collaborators.</summary>
+    /// <summary>Initializes the service with its localization, diagnostics, and toast collaborators.</summary>
     public ErrorHandlingService(
         LocalizationService localizer,
         LocalDiagnostics diagnostics,
-        ToastService toastService,
-        ShellViewModel shell)
+        ToastService toastService)
     {
         this.localizer = localizer;
         this.diagnostics = diagnostics;
         this.toastService = toastService;
-        this.shell = shell;
     }
 
     /// <summary>Raised when a critical failure must be presented in a modal dialog.</summary>
     public event Action<CriticalErrorInfo>? CriticalErrorRequested;
+
+    /// <summary>Raised when a recoverable error requests an operation note update.</summary>
+    public event Action<string>? OperationNoteRequested;
 
     /// <summary>Logs a recoverable failure and applies its requested shell notification behavior.</summary>
     public async Task HandleErrorAsync(string context, Exception exception, ErrorHandlingOptions? options = null)
@@ -89,7 +91,7 @@ public sealed class ErrorHandlingService : IErrorHandlingService
 
         if (options.OperationNoteKey is { } key)
         {
-            shell.OperationNote = localizer.F(key, exception.Message);
+            OperationNoteRequested?.Invoke(localizer.F(key, exception.Message));
         }
 
         if (options.ShowToast)

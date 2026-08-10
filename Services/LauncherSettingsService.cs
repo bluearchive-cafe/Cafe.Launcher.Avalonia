@@ -154,59 +154,13 @@ public sealed class LauncherSettingsService : IDisposable
             _ => settings.LaunchCheckMode
         };
 
-        if (settings.LaunchCheckMode is not LaunchCheckModes.LocalManifest
-            and not LaunchCheckModes.RemoteManifest
-            and not LaunchCheckModes.None)
+        foreach (var (getter, setter, isValid, fallback) in SettingValidations)
         {
-            settings.LaunchCheckMode = LaunchCheckModes.LocalManifest;
-        }
-
-        if (settings.ProxyMode is not ProxyModes.Direct and not ProxyModes.Auto and not ProxyModes.System)
-        {
-            settings.ProxyMode = ProxyModes.Auto;
-        }
-
-        if (settings.CloseBehavior is not CloseBehaviors.Minimize and not CloseBehaviors.Exit)
-        {
-            settings.CloseBehavior = CloseBehaviors.Minimize;
-        }
-
-        if (settings.Language is not LauncherLanguages.Auto
-            and not LauncherLanguages.English
-            and not LauncherLanguages.SimplifiedChinese
-            and not LauncherLanguages.TraditionalChinese
-            and not LauncherLanguages.Japanese)
-        {
-            settings.Language = LauncherLanguages.Auto;
-        }
-
-        if (settings.ThemeMode is not ThemeModes.System
-            and not ThemeModes.Light
-            and not ThemeModes.Dark)
-        {
-            settings.ThemeMode = ThemeModes.System;
-        }
-
-        if (settings.MotionMode is not MotionModes.System
-            and not MotionModes.Full
-            and not MotionModes.Reduced)
-        {
-            settings.MotionMode = MotionModes.System;
-        }
-
-        if (settings.StatusDetailMode is not StatusDetailModes.Hidden
-            and not StatusDetailModes.Compact
-            and not StatusDetailModes.Detailed)
-        {
-            settings.StatusDetailMode = StatusDetailModes.Detailed;
-        }
-
-        if (settings.ThemeColorMode is not ThemeColorModes.Default
-            and not ThemeColorModes.System
-            and not ThemeColorModes.Wallpaper
-            and not ThemeColorModes.Custom)
-        {
-            settings.ThemeColorMode = ThemeColorModes.Default;
+            var current = getter(settings);
+            if (!isValid(current))
+            {
+                setter(settings, fallback);
+            }
         }
 
         settings.CustomThemeColor = NormalizeColor(settings.CustomThemeColor);
@@ -221,62 +175,64 @@ public sealed class LauncherSettingsService : IDisposable
             settings.SelectedThemeColorPaletteIndex = 0;
         }
 
-        if (settings.DownloadSpeedLimit is not DownloadSpeedLimits.Unlimited
-            and not DownloadSpeedLimits.Speed1MBs
-            and not DownloadSpeedLimits.Speed5MBs
-            and not DownloadSpeedLimits.Speed10MBs
-            and not DownloadSpeedLimits.Speed25MBs
-            and not DownloadSpeedLimits.Speed50MBs)
-        {
-            settings.DownloadSpeedLimit = DownloadSpeedLimits.Unlimited;
-        }
-
-        if (settings.PatchUrlGroup is not PatchUrlGroups.Official and not PatchUrlGroups.Cafe)
-        {
-            settings.PatchUrlGroup = PatchUrlGroups.Official;
-        }
-
-        if (settings.BackgroundSource is not BackgroundSources.Bundled
-            and not BackgroundSources.Remote
-            and not BackgroundSources.Custom)
-        {
-            settings.BackgroundSource = BackgroundSources.Bundled;
-        }
-
-        if (settings.BackgroundFit is not BackgroundFits.Fill
-            and not BackgroundFits.Uniform
-            and not BackgroundFits.UniformToFill)
-        {
-            settings.BackgroundFit = BackgroundFits.UniformToFill;
-        }
-
         settings.BackgroundFillColor = NormalizeColor(settings.BackgroundFillColor);
-
-        if (settings.UpdateChannel is not UpdateChannels.Stable and not UpdateChannels.Beta)
-        {
-            settings.UpdateChannel = UpdateChannels.Stable;
-        }
-
-        if (settings.LogLevel is not LogLevels.Verbose
-            and not LogLevels.Debug
-            and not LogLevels.Information
-            and not LogLevels.Warning
-            and not LogLevels.Error
-            and not LogLevels.Fatal)
-        {
-            settings.LogLevel = LogLevels.Information;
-        }
-
         settings.GamePath ??= "";
         settings.ResourcePanelUid = settings.ResourcePanelUid?.Trim() ?? "";
-        if (settings.ResourcePanelUidSource is not ResourcePanelUidSources.Auto
-            and not ResourcePanelUidSources.Custom)
-        {
-            settings.ResourcePanelUidSource = ResourcePanelUidSources.Auto;
-        }
 
         return settings;
     }
+
+    private delegate string SettingGetter(LauncherSettings settings);
+    private delegate void SettingSetter(LauncherSettings settings, string value);
+
+    private static readonly (SettingGetter Get, SettingSetter Set, Func<string, bool> IsValid, string Fallback)[] SettingValidations =
+    [
+        (s => s.LaunchCheckMode, (s, v) => s.LaunchCheckMode = v,
+            v => v is LaunchCheckModes.LocalManifest or LaunchCheckModes.RemoteManifest or LaunchCheckModes.None,
+            LaunchCheckModes.LocalManifest),
+        (s => s.ProxyMode, (s, v) => s.ProxyMode = v,
+            v => v is ProxyModes.Direct or ProxyModes.Auto or ProxyModes.System,
+            ProxyModes.Auto),
+        (s => s.CloseBehavior, (s, v) => s.CloseBehavior = v,
+            v => v is CloseBehaviors.Minimize or CloseBehaviors.Exit,
+            CloseBehaviors.Minimize),
+        (s => s.Language, (s, v) => s.Language = v,
+            v => v is LauncherLanguages.Auto or LauncherLanguages.English or LauncherLanguages.SimplifiedChinese or LauncherLanguages.TraditionalChinese or LauncherLanguages.Japanese,
+            LauncherLanguages.Auto),
+        (s => s.ThemeMode, (s, v) => s.ThemeMode = v,
+            v => v is ThemeModes.System or ThemeModes.Light or ThemeModes.Dark,
+            ThemeModes.System),
+        (s => s.MotionMode, (s, v) => s.MotionMode = v,
+            v => v is MotionModes.System or MotionModes.Full or MotionModes.Reduced,
+            MotionModes.System),
+        (s => s.StatusDetailMode, (s, v) => s.StatusDetailMode = v,
+            v => v is StatusDetailModes.Hidden or StatusDetailModes.Compact or StatusDetailModes.Detailed,
+            StatusDetailModes.Detailed),
+        (s => s.ThemeColorMode, (s, v) => s.ThemeColorMode = v,
+            v => v is ThemeColorModes.Default or ThemeColorModes.System or ThemeColorModes.Wallpaper or ThemeColorModes.Custom,
+            ThemeColorModes.Default),
+        (s => s.DownloadSpeedLimit, (s, v) => s.DownloadSpeedLimit = v,
+            v => v is DownloadSpeedLimits.Unlimited or DownloadSpeedLimits.Speed1MBs or DownloadSpeedLimits.Speed5MBs or DownloadSpeedLimits.Speed10MBs or DownloadSpeedLimits.Speed25MBs or DownloadSpeedLimits.Speed50MBs,
+            DownloadSpeedLimits.Unlimited),
+        (s => s.PatchUrlGroup, (s, v) => s.PatchUrlGroup = v,
+            v => v is PatchUrlGroups.Official or PatchUrlGroups.Cafe,
+            PatchUrlGroups.Official),
+        (s => s.BackgroundSource, (s, v) => s.BackgroundSource = v,
+            v => v is BackgroundSources.Bundled or BackgroundSources.Remote or BackgroundSources.Custom,
+            BackgroundSources.Bundled),
+        (s => s.BackgroundFit, (s, v) => s.BackgroundFit = v,
+            v => v is BackgroundFits.Fill or BackgroundFits.Uniform or BackgroundFits.UniformToFill,
+            BackgroundFits.UniformToFill),
+        (s => s.UpdateChannel, (s, v) => s.UpdateChannel = v,
+            v => v is UpdateChannels.Stable or UpdateChannels.Beta,
+            UpdateChannels.Stable),
+        (s => s.LogLevel, (s, v) => s.LogLevel = v,
+            v => v is LogLevels.Verbose or LogLevels.Debug or LogLevels.Information or LogLevels.Warning or LogLevels.Error or LogLevels.Fatal,
+            LogLevels.Information),
+        (s => s.ResourcePanelUidSource, (s, v) => s.ResourcePanelUidSource = v,
+            v => v is ResourcePanelUidSources.Auto or ResourcePanelUidSources.Custom,
+            ResourcePanelUidSources.Auto),
+    ];
 
     private static string NormalizeColor(string? value) =>
         TryNormalizeColor(value) ?? LauncherConstants.DefaultThemeColor;
