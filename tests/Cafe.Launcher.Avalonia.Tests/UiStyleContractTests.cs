@@ -2774,6 +2774,18 @@ public sealed partial class UiStyleContractTests
     }
 
     [Fact]
+    public void PrimaryActionButtons_NormalStateUsesNoBorderWhileFocusAndDisabledStatesKeepTheirBorders()
+    {
+        var mainStyles = XDocument.Load(ProjectFile("Views/MainWindow.Styles.axaml"));
+        var toastStyles = XDocument.Load(ProjectFile("Views/Styles/Toast.axaml"));
+
+        Assert.Equal("0", GetStyleSetters(mainStyles, "Button.primary-action")["BorderThickness"]);
+        Assert.Equal("0", GetStyleSetters(toastStyles, "Button.toast-primary-action")["BorderThickness"]);
+        Assert.Equal("2", GetStyleSetters(mainStyles, "Button:focus-visible")["BorderThickness"]);
+        Assert.Equal("1", GetStyleSetters(mainStyles, "Button.primary-action.dialog-action:disabled")["BorderThickness"]);
+    }
+
+    [Fact]
     public void ToastCards_DoNotUseOverlappingBoxShadows()
     {
         var document = XDocument.Load(ProjectFile("Views/Styles/Toast.axaml"));
