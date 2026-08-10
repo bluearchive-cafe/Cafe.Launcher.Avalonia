@@ -452,6 +452,32 @@ public sealed class ToastHostViewModelTests : IDisposable
     }
 
     [Fact]
+    public async Task ShowToastAsync_WhenNewNotificationArrives_InsertsNewestToastFirst()
+    {
+        await using var provider = CreateProvider();
+        var settings = provider.GetRequiredService<SettingsViewModel>();
+        settings.Editor.ApplySnapshot(new LauncherSettings());
+        var toastService = provider.GetRequiredService<ToastService>();
+        var displayDelay = new TaskCompletionSource(
+            TaskCreationOptions.RunContinuationsAsynchronously);
+        using var viewModel = new ToastHostViewModel(
+            toastService,
+            provider.GetRequiredService<LocalizationService>(),
+            InvokeSerially,
+            (_, cancellationToken) => displayDelay.Task.WaitAsync(cancellationToken));
+
+        toastService.Show("first");
+        await WaitUntilAsync(() => viewModel.ActiveToasts.Count == 1);
+        var firstToast = viewModel.ActiveToasts.Single();
+
+        toastService.Show("second");
+        await WaitUntilAsync(() => viewModel.ActiveToasts.Count == 2);
+
+        Assert.Equal("second", viewModel.ActiveToasts[0].Message);
+        Assert.Same(firstToast, viewModel.ActiveToasts[1]);
+    }
+
+    [Fact]
     public async Task Dispose_WhileExitDelayIsPending_CancelsObservedCommandTask()
     {
         await using var provider = CreateProvider();
