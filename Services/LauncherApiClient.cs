@@ -168,6 +168,11 @@ public sealed class LauncherApiClient : IDisposable
         return patchUrlGroupService.RewriteManifestUrl(response, patchUrlGroup);
     }
 
+    internal string RestoreOfficialPackageUrl(string url)
+    {
+        return patchUrlGroupService.RestoreOfficialPackageUrl(url);
+    }
+
     internal CdnConfigResponse RewriteCdnConfig(CdnConfigResponse response, string patchUrlGroup)
     {
         return patchUrlGroupService.RewriteCdnConfig(response, patchUrlGroup);

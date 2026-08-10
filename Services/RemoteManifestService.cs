@@ -1,6 +1,9 @@
 using System;
+using System.Net;
+using System.Net.Http;
 using System.Threading;
 using System.Threading.Tasks;
+using Cafe.Launcher.Avalonia.Constants;
 using Cafe.Launcher.Avalonia.Models;
 
 namespace Cafe.Launcher.Avalonia.Services;
@@ -48,8 +51,9 @@ public sealed class RemoteManifestService
             throw new InvalidOperationException("Remote manifest URL is empty.");
         }
 
-        return await apiClient.GetRemoteManifestAsync(
+        return await FetchManifestAsync(
             url.Url,
+            patchUrlGroup,
             proxyMode,
             cancellationToken).ConfigureAwait(false);
     }
@@ -81,8 +85,9 @@ public sealed class RemoteManifestService
                 return null;
             }
 
-            return await apiClient.GetRemoteManifestAsync(
+            return await FetchManifestAsync(
                 url.Url,
+                patchUrlGroup,
                 proxyMode,
                 cancellationToken).ConfigureAwait(false);
         }
@@ -95,6 +100,36 @@ public sealed class RemoteManifestService
             System.Diagnostics.Debug.WriteLine(
                 $"RemoteManifest: fetch failed: {ex.Message}");
             return null;
+        }
+    }
+
+    private async Task<RemoteManifest> FetchManifestAsync(
+        string manifestUrl,
+        string patchUrlGroup,
+        string proxyMode,
+        CancellationToken cancellationToken)
+    {
+        try
+        {
+            return await apiClient.GetRemoteManifestAsync(
+                manifestUrl,
+                proxyMode,
+                cancellationToken).ConfigureAwait(false);
+        }
+        catch (HttpRequestException exception)
+            when (exception.StatusCode == HttpStatusCode.NotFound
+                && patchUrlGroup == PatchUrlGroups.Cafe)
+        {
+            var officialUrl = apiClient.RestoreOfficialPackageUrl(manifestUrl);
+            if (string.Equals(officialUrl, manifestUrl, StringComparison.Ordinal))
+            {
+                throw;
+            }
+
+            return await apiClient.GetRemoteManifestAsync(
+                officialUrl,
+                proxyMode,
+                cancellationToken).ConfigureAwait(false);
         }
     }
 }

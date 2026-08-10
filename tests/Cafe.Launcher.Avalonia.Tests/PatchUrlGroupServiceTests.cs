@@ -28,6 +28,19 @@ public sealed class PatchUrlGroupServiceTests
     }
 
     [Fact]
+    public void RestoreOfficialPackageUrl_WhenCafeManifestUrl_ReturnsOfficialHost()
+    {
+        var service = new PatchUrlGroupService();
+
+        var result = service.RestoreOfficialPackageUrl(
+            "https://launcher-pkg-ba-jp.bluearchive.cafe/zip_online_config_json/test.json");
+
+        Assert.Equal(
+            "https://launcher-pkg-ba-jp.yo-star.com/zip_online_config_json/test.json",
+            result);
+    }
+
+    [Fact]
     public void RewriteCdnConfig_WhenCafe_RewritesPrimaryAndBackupCdn()
     {
         var service = new PatchUrlGroupService();

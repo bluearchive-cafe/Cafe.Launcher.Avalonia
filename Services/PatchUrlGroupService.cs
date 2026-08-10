@@ -28,20 +28,21 @@ public sealed class PatchUrlGroupService
         var text = value ?? "";
         var definition = Resolve(group);
         if (string.IsNullOrWhiteSpace(definition.PackageHostFrom)
-            || !Uri.TryCreate(text, UriKind.Absolute, out var uri)
-            || !string.Equals(uri.Host, definition.PackageHostFrom, StringComparison.OrdinalIgnoreCase))
+            || string.IsNullOrWhiteSpace(definition.PackageHostTo))
         {
             return text;
         }
 
-        var authority = uri.GetLeftPart(UriPartial.Authority);
-        var hostIndex = authority.IndexOf(uri.Host, StringComparison.OrdinalIgnoreCase);
-        return hostIndex < 0
-            ? text
-            : string.Concat(
-                text.AsSpan(0, hostIndex),
-                definition.PackageHostTo,
-                text.AsSpan(hostIndex + uri.Host.Length));
+        return RewritePackageHost(text, definition.PackageHostFrom, definition.PackageHostTo);
+    }
+
+    /// <summary>
+    /// Restores a Cafe package URL to the official package host. This is used only
+    /// as a one-time fallback when the Cafe mirror does not have a manifest yet.
+    /// </summary>
+    public string RestoreOfficialPackageUrl(string? value)
+    {
+        return RewritePackageHost(value ?? "", CafePackageHost, ApiConfig.OfficialPackageHost);
     }
 
     public ManifestUrlResponse RewriteManifestUrl(ManifestUrlResponse response, string? group)
@@ -55,5 +56,23 @@ public sealed class PatchUrlGroupService
         response.PrimaryCdn = RewritePackageUrl(response.PrimaryCdn, group);
         response.BackUpCdn = RewritePackageUrl(response.BackUpCdn, group);
         return response;
+    }
+
+    private static string RewritePackageHost(string text, string fromHost, string toHost)
+    {
+        if (!Uri.TryCreate(text, UriKind.Absolute, out var uri)
+            || !string.Equals(uri.Host, fromHost, StringComparison.OrdinalIgnoreCase))
+        {
+            return text;
+        }
+
+        var authority = uri.GetLeftPart(UriPartial.Authority);
+        var hostIndex = authority.IndexOf(uri.Host, StringComparison.OrdinalIgnoreCase);
+        return hostIndex < 0
+            ? text
+            : string.Concat(
+                text.AsSpan(0, hostIndex),
+                toHost,
+                text.AsSpan(hostIndex + uri.Host.Length));
     }
 }

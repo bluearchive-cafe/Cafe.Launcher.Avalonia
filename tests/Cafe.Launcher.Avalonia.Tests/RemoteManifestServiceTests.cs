@@ -41,6 +41,29 @@ public sealed class RemoteManifestServiceTests
     }
 
     [Fact]
+    public async Task GetRequiredManifestAsync_WhenCafeManifestIsNotFound_FallsBackToOfficialHost()
+    {
+        using var handler = new CafeManifestNotFoundHandler();
+        using var apiClient = CreateApiClient(handler);
+        var service = new RemoteManifestService(apiClient);
+
+        var result = await service.GetRequiredManifestAsync(
+            "1.0.0",
+            "manifest.json",
+            PatchUrlGroups.Cafe,
+            ProxyModes.Direct);
+
+        Assert.Equal("official", result.Source);
+        Assert.Equal(
+            [
+                "api-launcher-jp.yo-star.com",
+                "launcher-pkg-ba-jp.bluearchive.cafe",
+                "launcher-pkg-ba-jp.yo-star.com"
+            ],
+            handler.RequestHosts);
+    }
+
+    [Fact]
     public async Task GetOptionalManifestAsync_WhenUrlIsEmpty_ReturnsNull()
     {
         using var apiClient = CreateApiClient(new ManifestProtocolHandler("", "{}"));
@@ -125,5 +148,39 @@ public sealed class RemoteManifestServiceTests
             HttpRequestMessage request,
             CancellationToken cancellationToken) =>
             Task.FromCanceled<HttpResponseMessage>(cancellationToken);
+    }
+
+    private sealed class CafeManifestNotFoundHandler : HttpMessageHandler
+    {
+        public List<string> RequestHosts { get; } = [];
+
+        protected override Task<HttpResponseMessage> SendAsync(
+            HttpRequestMessage request,
+            CancellationToken cancellationToken)
+        {
+            var host = request.RequestUri?.Host ?? "";
+            RequestHosts.Add(host);
+
+            if (request.RequestUri?.AbsolutePath.Contains(
+                    "/api/launcher/game/config/json",
+                    StringComparison.Ordinal) == true)
+            {
+                return Task.FromResult(CreateJsonResponse(
+                    "{\"code\":200,\"data\":{\"url\":\"https://launcher-pkg-ba-jp.yo-star.com/zip_online_config_json/test.json\"}}"));
+            }
+
+            if (host == "launcher-pkg-ba-jp.bluearchive.cafe")
+            {
+                return Task.FromResult(new HttpResponseMessage(HttpStatusCode.NotFound));
+            }
+
+            return Task.FromResult(CreateJsonResponse("{\"source\":\"official\",\"file\":[]}"));
+        }
+
+        private static HttpResponseMessage CreateJsonResponse(string json) =>
+            new(HttpStatusCode.OK)
+            {
+                Content = new StringContent(json, Encoding.UTF8, "application/json")
+            };
     }
 }
