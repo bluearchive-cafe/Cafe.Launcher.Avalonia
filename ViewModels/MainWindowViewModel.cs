@@ -68,6 +68,8 @@ public partial class MainWindowViewModel : ViewModelBase, IDisposable, IShellLif
         }
     }
 
+    internal Task PendingStartupUpdateCheck => lifecycle.PendingStartupUpdateCheck;
+
     bool IShellLifecyclePresentation.IsBusy
     {
         get => IsBusy;
@@ -87,7 +89,6 @@ public partial class MainWindowViewModel : ViewModelBase, IDisposable, IShellLif
         ToastService toastService,
         LauncherUpdateService launcherUpdateService,
         LocalDiagnostics diagnostics,
-        UnifiedLogger unifiedLogger,
         ShellViewModel shell,
         BackgroundViewModel background,
         RemoteContentViewModel remoteContent,
@@ -98,10 +99,10 @@ public partial class MainWindowViewModel : ViewModelBase, IDisposable, IShellLif
         SettingsViewModel settingsViewModel,
         ResourcePanelViewModel resourcePanelViewModel,
         IErrorHandlingService errorHandling,
-        LogViewerDialogViewModel? logViewer = null,
-        DebugViewModel? debug = null,
-        ModalHostViewModel? modalHost = null,
-        WindowsAnimationSettingsProvider? windowsAnimationSettingsProvider = null)
+        LogViewerDialogViewModel logViewer,
+        DebugViewModel debug,
+        ModalHostViewModel modalHost,
+        WindowsAnimationSettingsProvider windowsAnimationSettingsProvider)
     {
         this.localizer = localizer;
         Shell = shell;
@@ -113,14 +114,10 @@ public partial class MainWindowViewModel : ViewModelBase, IDisposable, IShellLif
         WindowChrome = windowChrome;
         Settings = settingsViewModel;
         ResourcePanel = resourcePanelViewModel;
-        LogViewer = logViewer ?? new LogViewerDialogViewModel(
-            unifiedLogger, null, null, null, null, null);
-        Debug = debug ?? new DebugViewModel(
-            toastService, unifiedLogger, errorHandling,
-            settingsService, Operations, Shell);
-        ModalHost = modalHost ?? new ModalHostViewModel();
+        LogViewer = logViewer;
+        Debug = debug;
+        ModalHost = modalHost;
 
-        var animationProvider = windowsAnimationSettingsProvider ?? new WindowsAnimationSettingsProvider();
         lifecycle = new ShellLifecycle(
             launcherCoreService,
             settingsService,
@@ -129,7 +126,7 @@ public partial class MainWindowViewModel : ViewModelBase, IDisposable, IShellLif
             launcherUpdateService,
             diagnostics,
             errorHandling,
-            animationProvider,
+            windowsAnimationSettingsProvider,
             this,
             Shell,
             Background,

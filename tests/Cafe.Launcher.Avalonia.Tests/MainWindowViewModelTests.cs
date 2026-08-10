@@ -1654,8 +1654,7 @@ public sealed class MainWindowViewModelTests : IDisposable
             launcherUpdateService: updateSvc);
 
         await viewModel.InitializeAsync();
-        // The update check is fire-and-forget; wait briefly for it to complete.
-        await Task.Delay(500);
+        await viewModel.PendingStartupUpdateCheck.WaitAsync(TimeSpan.FromSeconds(2));
 
         Assert.Contains(toasts, t => t.Contains("99.0.0"));
     }
@@ -1675,7 +1674,7 @@ public sealed class MainWindowViewModelTests : IDisposable
             toastService: toastService);
 
         await viewModel.InitializeAsync();
-        await Task.Delay(300);
+        await viewModel.PendingStartupUpdateCheck.WaitAsync(TimeSpan.FromSeconds(2));
 
         Assert.DoesNotContain(toasts, t => t.Contains("available"));
     }
@@ -1696,7 +1695,7 @@ public sealed class MainWindowViewModelTests : IDisposable
             toastService: toastService);
 
         await viewModel.InitializeAsync();
-        await Task.Delay(300);
+        await viewModel.PendingStartupUpdateCheck.WaitAsync(TimeSpan.FromSeconds(2));
 
         Assert.DoesNotContain(toasts, t => t.Contains("available"));
     }
@@ -1857,7 +1856,6 @@ public sealed class MainWindowViewModelTests : IDisposable
             toastService,
             launcherUpdateSvc,
             diagnostics,
-            testLogger,
             shellViewModel,
             backgroundViewModel,
             remoteContentViewModel,
@@ -1868,8 +1866,10 @@ public sealed class MainWindowViewModelTests : IDisposable
             settingsViewModel,
             resourcePanelViewModel,
             errorHandling,
-            debug: debugViewModel,
-            windowsAnimationSettingsProvider: windowsAnimationSettingsProvider);
+            new LogViewerDialogViewModel(testLogger, null, null, null, null, null),
+            debugViewModel,
+            new ModalHostViewModel(),
+            windowsAnimationSettingsProvider ?? new WindowsAnimationSettingsProvider());
     }
 
     private LauncherStatusSnapshot CreateSnapshot()

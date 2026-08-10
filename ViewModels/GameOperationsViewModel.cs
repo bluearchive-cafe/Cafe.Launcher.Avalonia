@@ -20,6 +20,8 @@ public partial class GameOperationsViewModel : ViewModelBase, IGameOperationJour
     private readonly LocalizationService localizer;
     private readonly DialogsViewModel dialogs;
     private readonly ShellViewModel shell;
+    private readonly IErrorHandlingService errorHandling;
+    private readonly Action<string> operationNoteRequestedHandler;
     private LauncherStatusSnapshot? currentSnapshot;
 
     [ObservableProperty]
@@ -132,7 +134,9 @@ public partial class GameOperationsViewModel : ViewModelBase, IGameOperationJour
         this.localizer = localizer;
         this.dialogs = dialogs;
         this.shell = shell;
-        errorHandling.OperationNoteRequested += note => shell.OperationNote = note;
+        this.errorHandling = errorHandling;
+        operationNoteRequestedHandler = note => shell.OperationNote = note;
+        errorHandling.OperationNoteRequested += operationNoteRequestedHandler;
         journey = new GameOperationJourney(
             launchWorkflow,
             installationWorkflow,
@@ -404,6 +408,7 @@ public partial class GameOperationsViewModel : ViewModelBase, IGameOperationJour
         dialogs.ConfirmRepairRequested -= RepairAsync;
         dialogs.ConfirmUninstallRequested -= ConfirmUninstallAsync;
         dialogs.ConfirmStopRequested -= PerformStop;
+        errorHandling.OperationNoteRequested -= operationNoteRequestedHandler;
     }
 
 }

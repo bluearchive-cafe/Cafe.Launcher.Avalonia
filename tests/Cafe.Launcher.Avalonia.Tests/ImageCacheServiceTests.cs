@@ -1,5 +1,6 @@
 using System.Net;
 using System.Net.Http;
+using Cafe.Launcher.Avalonia.Models;
 using Cafe.Launcher.Avalonia.Services;
 
 namespace Cafe.Launcher.Avalonia.Tests;
@@ -62,6 +63,29 @@ public sealed class ImageCacheServiceTests : IDisposable
         Assert.Equal(1, handler.RequestCount);
         Assert.Equal(results[0], results[1]);
         Assert.Equal(bytes, await File.ReadAllBytesAsync(results[0]));
+    }
+
+    [Fact]
+    public async Task GetCachedOrDownloadImageBytesAsync_WhenUrlIsRequestedTwice_ReusesDiskCache()
+    {
+        var bytes = "remote-banner"u8.ToArray();
+        var handler = new CountingHandler(bytes);
+        using IHttpClientLeaseSource source = new FixedHttpClientLeaseSource(
+            handler,
+            baseAddress: null,
+            timeout: Timeout.InfiniteTimeSpan);
+        using var service = CreateService(source);
+
+        var first = await service.GetCachedOrDownloadImageBytesAsync(
+            "https://images.example.invalid/banner.png",
+            ProxyModes.Direct);
+        var second = await service.GetCachedOrDownloadImageBytesAsync(
+            "https://images.example.invalid/banner.png",
+            ProxyModes.Direct);
+
+        Assert.Equal(bytes, first);
+        Assert.Equal(bytes, second);
+        Assert.Equal(1, handler.RequestCount);
     }
 
     [Theory]
