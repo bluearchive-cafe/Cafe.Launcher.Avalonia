@@ -185,6 +185,7 @@
     </Style>
     <Style Selector="Button.primary-action">
         <Setter Property="Background" Value="{DynamicResource LauncherAccentBrush}"/>
+        <Setter Property="BorderThickness" Value="0"/>
         <Setter Property="Foreground" Value="{DynamicResource LauncherOnAccentBrush}"/>
         <Setter Property="FontSize" Value="{StaticResource LauncherFontSizeXxl}"/>
         <Setter Property="FontWeight" Value="{StaticResource LauncherFontWeightStrong}"/>

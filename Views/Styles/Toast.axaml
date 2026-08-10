@@ -103,6 +103,7 @@
         <Setter Property="Margin" Value="{DynamicResource LauncherToastPrimaryActionMargin}"/>
         <Setter Property="FontSize" Value="{DynamicResource LauncherFontSizeSm}"/>
         <Setter Property="Background" Value="{DynamicResource LauncherAccentBrush}"/>
+        <Setter Property="BorderThickness" Value="0"/>
         <Setter Property="Foreground" Value="{DynamicResource LauncherOnAccentBrush}"/>
         <Setter Property="CornerRadius" Value="{DynamicResource LauncherRadiusSm}"/>
         <Setter Property="HorizontalContentAlignment" Value="Center"/>
