@@ -11,28 +11,16 @@ using CommunityToolkit.Mvvm.ComponentModel;
 
 namespace Cafe.Launcher.Avalonia.ViewModels;
 
-public partial class MainWindowViewModel : ViewModelBase, IDisposable
+public partial class MainWindowViewModel : ViewModelBase, IDisposable, IShellLifecyclePresentation
 {
-    private readonly ILauncherCoreService launcherCoreService;
-    private readonly LauncherSettingsService settingsService;
-    private readonly LocalizationService localizer;
-    private readonly ToastService toastService;
-    private readonly LauncherUpdateService launcherUpdateService;
-    private readonly LocalDiagnostics diagnostics;
-    private readonly IErrorHandlingService errorHandling;
-    private readonly CancellationTokenSource lifetimeCts = new();
-    private int initialized;
-    private bool disposed;
-    private bool skipNextPersistedResume;
-    private bool motionSettingsApplied;
-    private bool settingsSnapshotInitialized;
-    private LauncherStatusSnapshot? currentSnapshot;
-    private readonly WindowsAnimationSettingsProvider windowsAnimationSettingsProvider;
-    private readonly ShellCoordinator coordinator;
+    private readonly ShellLifecycle lifecycle;
 
     [ObservableProperty]
     [NotifyPropertyChangedFor(nameof(IsMotionEnabled))]
     private bool isMotionReduced = true;
+
+    [ObservableProperty]
+    private bool isBusy;
 
     public bool IsMotionEnabled => !IsMotionReduced;
 
@@ -80,6 +68,18 @@ public partial class MainWindowViewModel : ViewModelBase, IDisposable
         }
     }
 
+    bool IShellLifecyclePresentation.IsBusy
+    {
+        get => IsBusy;
+        set => IsBusy = value;
+    }
+
+    bool IShellLifecyclePresentation.IsMotionReduced
+    {
+        get => IsMotionReduced;
+        set => IsMotionReduced = value;
+    }
+
     public MainWindowViewModel(
         ILauncherCoreService launcherCoreService,
         LauncherSettingsService settingsService,
@@ -101,17 +101,9 @@ public partial class MainWindowViewModel : ViewModelBase, IDisposable
         LogViewerDialogViewModel? logViewer = null,
         DebugViewModel? debug = null,
         ModalHostViewModel? modalHost = null,
-        WindowsAnimationSettingsProvider? windowsAnimationSettingsProvider = null,
-        ShellCoordinator? coordinator = null)
+        WindowsAnimationSettingsProvider? windowsAnimationSettingsProvider = null)
     {
-        this.launcherCoreService = launcherCoreService;
-        this.settingsService = settingsService;
         this.localizer = localizer;
-        this.toastService = toastService;
-        this.launcherUpdateService = launcherUpdateService;
-        this.diagnostics = diagnostics;
-        this.windowsAnimationSettingsProvider = windowsAnimationSettingsProvider ?? new WindowsAnimationSettingsProvider();
-
         Shell = shell;
         Background = background;
         RemoteContent = remoteContent;
@@ -122,394 +114,68 @@ public partial class MainWindowViewModel : ViewModelBase, IDisposable
         Settings = settingsViewModel;
         ResourcePanel = resourcePanelViewModel;
         LogViewer = logViewer ?? new LogViewerDialogViewModel(
-            unifiedLogger,
-            null,
-            null,
-            null,
-            null,
-            null);
-
-        this.errorHandling = errorHandling;
-        this.errorHandling.CriticalErrorRequested += OnCriticalError;
-        this.errorHandling.OperationNoteRequested += OnOperationNoteRequested;
-
+            unifiedLogger, null, null, null, null, null);
         Debug = debug ?? new DebugViewModel(
-            toastService, unifiedLogger, this.errorHandling,
+            toastService, unifiedLogger, errorHandling,
             settingsService, Operations, Shell);
+        ModalHost = modalHost ?? new ModalHostViewModel();
 
-        ModalHost = modalHost ?? coordinator?.ModalHost ?? new ModalHostViewModel();
-
-        this.coordinator = coordinator ?? new ShellCoordinator(
-            ModalHost,
+        var animationProvider = windowsAnimationSettingsProvider ?? new WindowsAnimationSettingsProvider();
+        lifecycle = new ShellLifecycle(
+            launcherCoreService,
+            settingsService,
+            localizer,
+            toastService,
+            launcherUpdateService,
+            diagnostics,
+            errorHandling,
+            animationProvider,
+            this,
+            Shell,
+            Background,
+            RemoteContent,
+            Dialogs,
+            Operations,
+            Toasts,
             WindowChrome,
             Settings,
             ResourcePanel,
             LogViewer,
             Debug,
-            Dialogs);
-        this.coordinator.StatusDetailModeChanged += OnStatusDetailModeChanged;
+            ModalHost);
 
-        WireChildren();
-        this.coordinator.Wire();
+        lifecycle.StatusDetailModeChanged += () =>
+        {
+            OnPropertyChanged(nameof(IsStatusDetailExpanded));
+            OnPropertyChanged(nameof(IsStatusDetailHidden));
+        };
+        lifecycle.Wire();
         ApplyLanguage(LauncherLanguages.Auto);
     }
 
-    public async Task InitializeAsync(CancellationToken cancellationToken = default)
-    {
-        if (Interlocked.Exchange(ref initialized, 1) == 1)
-        {
-            return;
-        }
+    public async Task InitializeAsync(CancellationToken cancellationToken = default) =>
+        await lifecycle.InitializeAsync(cancellationToken);
 
-        await RefreshAsync(cancellationToken);
-    }
-
-    /// <summary>
-    /// Refreshes the effective motion preference only when the saved mode follows the system setting.
-    /// </summary>
-    public void RefreshSystemMotionPreference()
-    {
-        if (!settingsSnapshotInitialized)
-        {
-            return;
-        }
-
-        var settings = Settings.Editor.GetSavedSnapshot();
-        if (settings.MotionMode != MotionModes.System)
-        {
-            return;
-        }
-
-        ApplyMotionSettings(settings);
-    }
+    public void RefreshSystemMotionPreference() =>
+        lifecycle.RefreshSystemMotionPreference();
 
     [RelayCommand]
-    private async Task RefreshAsync(CancellationToken cancellationToken = default)
+    private async Task RefreshAsync(CancellationToken cancellationToken = default) =>
+        await lifecycle.RefreshAsync(cancellationToken);
+
+    public bool TryHandleEscape() => lifecycle.TryHandleEscape();
+
+    internal async Task HandleOperationsRefreshRequestedAsync(GameOperationsRefreshMode mode) =>
+        await lifecycle.HandleOperationsRefreshRequestedAsync(mode);
+
+    public void Dispose()
     {
-        Shell.IsBusy = true;
-        var loaded = false;
-        try
-        {
-            var settingsForLanguage = await settingsService.ReadAsync(cancellationToken);
-            Settings.Editor.ApplySnapshot(settingsForLanguage);
-            settingsSnapshotInitialized = true;
-            ApplyMotionSettings(settingsForLanguage);
-            ApplyLanguage(settingsForLanguage.Language);
-            Settings.Appearance.Load(settingsForLanguage);
-            SettingsAppearanceViewModel.ApplyTheme(settingsForLanguage.ThemeMode);
-            Settings.Appearance.ApplyThemeColor(
-                settingsForLanguage.ThemeColorMode,
-                SettingsAppearanceViewModel.ParseColorOrDefault(settingsForLanguage.CustomThemeColor));
-            Shell.SetLoading();
-            RemoteContent.BeginLoading(settingsForLanguage.ShowRemoteContentCard);
-
-            var snapshot = await launcherCoreService.LoadAsync(cancellationToken);
-            currentSnapshot = snapshot;
-            await ApplySnapshotAsync(snapshot);
-            loaded = true;
-        }
-        catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
-        {
-        }
-        catch (Exception exception)
-        {
-            Shell.SetRefreshError(exception);
-            Operations.SetIdlePanels(currentSnapshot);
-            await errorHandling.HandleErrorAsync("Launcher core refresh failed.", exception,
-                new ErrorHandlingOptions { OperationNoteKey = "networkWithMessage" });
-        }
-        finally
-        {
-            RemoteContent.EndLoading();
-            Shell.IsBusy = false;
-        }
-
-        if (!loaded)
-        {
-            return;
-        }
-
-        if (skipNextPersistedResume)
-        {
-            skipNextPersistedResume = false;
-            return;
-        }
-
-        if (Settings.Editor.GetSavedSnapshot().EnableStartupUpdateCheck)
-        {
-            _ = CheckForStartupUpdateAsync(cancellationToken);
-        }
-
-        await Operations.ResumePersistedDownloadAsync(cancellationToken);
-    }
-
-    private async Task CheckForStartupUpdateAsync(CancellationToken cancellationToken)
-    {
-        try
-        {
-            var settings = Settings.Editor.GetSavedSnapshot();
-            var result = await launcherUpdateService.CheckForUpdateAsync(
-                settings.UpdateChannel,
-                settings.ProxyMode,
-                cancellationToken);
-
-            if (result.IsSuccessful && result.IsUpdateAvailable)
-            {
-                toastService.Show(
-                    localizer.F("startupUpdateAvailable", result.LatestVersion),
-                    ToastSeverity.Info,
-                    durationMs: 8000);
-            }
-        }
-        catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
-        {
-        }
-        catch (Exception exception)
-        {
-            await diagnostics.DebugAsync(
-                "StartupUpdateCheck",
-                $"Startup update check failed (non-critical): {exception.Message}",
-                CancellationToken.None);
-        }
-    }
-
-    private void WireChildren()
-    {
-        Settings.Appearance.GetBackgroundBitmap = Background.GetBackgroundBitmap;
-        Settings.PreviewAppearanceAsync = async (settings, propertyName, cancellationToken) =>
-        {
-            SettingsAppearanceViewModel.ApplyTheme(settings.ThemeMode);
-            Settings.Appearance.ApplyThemeColor(
-                settings.ThemeColorMode,
-                SettingsAppearanceViewModel.ParseColorOrDefault(settings.CustomThemeColor));
-            Background.ApplyBackgroundPresentation(settings);
-
-            if (propertyName is null
-                or nameof(LauncherSettings.BackgroundSource)
-                or nameof(LauncherSettings.CustomBackgroundPath))
-            {
-                await Background.UpdateBackgroundImageAsync(
-                    settings,
-                    currentSnapshot,
-                    cancellationToken);
-            }
-        };
-        Settings.ApplyLanguageAndTheme = async s =>
-        {
-            ApplyLanguage(s.Language);
-            SettingsAppearanceViewModel.ApplyTheme(s.ThemeMode);
-            // Background is intentionally NOT updated here.
-            // Both callers (SaveSettingsAsync, ChooseGamePathAsync) fire SettingsSaved
-            // immediately after, which triggers RefreshAsync → ApplySnapshotAsync →
-            // Background.UpdateBackgroundImageAsync. Updating it here too would cause
-            // a double-update; for folder-based (random) backgrounds each update picks a
-            // different image, so the wallpaper visibly flickers between two random picks.
-            Settings.Appearance.ApplyThemeColor(
-                s.ThemeColorMode,
-                SettingsAppearanceViewModel.ParseColorOrDefault(s.CustomThemeColor));
-        };
-        Settings.SettingsSaved += HandleSettingsSavedAsync;
-
-        ResourcePanel.ResourcePanelSourceConfirmRequested += ShowResourcePanelSourceConfirmDialog;
-        Dialogs.ConfirmResourcePanelSourceSwitchRequested += SwitchToCafeAndOpenResourcePanel;
-
-        Operations.RefreshRequested += HandleOperationsRefreshRequestedAsync;
-        Operations.OpenLogViewerRequested += OpenLogViewerAsync;
-
-        Dialogs.ConfirmRepairRequested += Operations.RepairAsync;
-        Dialogs.ConfirmUninstallRequested += Operations.ConfirmUninstallAsync;
-        Dialogs.ConfirmStopRequested += Operations.PerformStop;
-        Dialogs.CloseAfterStoppingDownloadRequested += WindowChrome.CloseAfterStoppingDownload;
-        Dialogs.CloseRequested += WindowChrome.RequestClose;
-        Dialogs.ConfirmUpdateAvailableRequested += OnConfirmUpdateAvailableRequested;
-        Dialogs.CrashRecoveryResetSettingsRequested += ResetSettingsAfterCrashAsync;
-        Dialogs.CrashRecoveryViewLogRequested += OpenCrashLog;
-        Dialogs.ErrorViewLogRequested += OpenCrashLog;
-
-        Debug.RefreshRequested += HandleDebugRefreshRequestedAsync;
-        Debug.ResetSettingsRequested += ResetSettingsAfterCrashAsync;
-        Debug.ResetSettingsConfirmationRequested += Dialogs.ShowDebugResetConfirmation;
-        Dialogs.ConfirmDebugResetRequested += Debug.ConfirmResetSettingsAsync;
-
-        RemoteContent.OpenExternalUrlRequested = WindowChrome.OpenExternalUrl;
-
-        // Setup wizard
-        Dialogs.SetupWizard.PickGameFolderAsync = PickGameFolderForWizardAsync;
-        Dialogs.SetupWizard.LanguagePreviewRequested += PreviewSetupWizardLanguage;
-        Dialogs.SetupWizard.SettingsApplied += HandleSetupWizardCompletedAsync;
-    }
-
-    private void OnStatusDetailModeChanged()
-    {
-        OnPropertyChanged(nameof(IsStatusDetailExpanded));
-        OnPropertyChanged(nameof(IsStatusDetailHidden));
-    }
-
-    internal async Task HandleOperationsRefreshRequestedAsync(GameOperationsRefreshMode mode)
-    {
-        if (mode == GameOperationsRefreshMode.SkipPersistedResume)
-        {
-            skipNextPersistedResume = true;
-        }
-
-        await RefreshAsync();
-    }
-
-    private Task HandleDebugRefreshRequestedAsync() => RefreshAsync();
-
-    private Task OpenLogViewerAsync() => LogViewer.OpenCommand.ExecuteAsync(null);
-
-    private async Task ResetSettingsAfterCrashAsync()
-    {
-        await settingsService.SaveAsync(LauncherSettings.CreateDefaults());
-        await RefreshAsync();
-    }
-
-    private void OpenCrashLog()
-    {
-        LogViewer.OpenCommand.Execute(null);
-    }
-
-    private void OnConfirmUpdateAvailableRequested(string url)
-    {
-        ExternalLinkService.Open(url);
-    }
-
-    private void OnCriticalError(CriticalErrorInfo info)
-    {
-        Dialogs.ShowCriticalError(info.Message, info.Details);
-    }
-
-    private void OnOperationNoteRequested(string note)
-    {
-        Shell.OperationNote = note;
-    }
-
-    private async Task<string?> PickGameFolderForWizardAsync(string currentPath)
-    {
-        if (Settings.PickGameFolderAsync is not null)
-            return await Settings.PickGameFolderAsync(currentPath);
-        return null;
-    }
-
-    private async Task HandleSetupWizardCompletedAsync(LauncherSettings settings)
-    {
-        await settingsService.SaveAsync(settings);
-
-        // Apply language immediately so the wizard overlays reflect the choice
-        ApplyLanguage(settings.Language);
-
-        // Hide wizard
-        Dialogs.IsSetupWizardVisible = false;
-
-        // Run normal initialization
-        await RefreshAsync();
-    }
-
-    private void ShowResourcePanelSourceConfirmDialog()
-    {
-        Dialogs.ShowResourcePanelSourceConfirm(localizer.T("resourcePanelCafeOnlyMessage"));
-    }
-
-    private void SwitchToCafeAndOpenResourcePanel()
-    {
-        _ = SwitchSourceThenOpenPanelAsync();
-    }
-
-    private async Task SwitchSourceThenOpenPanelAsync()
-    {
-        try
-        {
-            var settings = await settingsService.ReadAsync();
-            settings.PatchUrlGroup = PatchUrlGroups.Cafe;
-            await settingsService.SaveAsync(settings);
-            Settings.Editor.Current.PatchUrlGroup = PatchUrlGroups.Cafe;
-
-            await HandleSettingsSavedAsync();
-            await ResourcePanel.OpenPanelDirectly();
-        }
-        catch (Exception exception)
-        {
-            await errorHandling.HandleErrorAsync("Resource panel source switch failed.", exception,
-                new ErrorHandlingOptions { ToastMessage = localizer.F("resourcePanelLoadFailed", exception.Message) });
-        }
-    }
-
-    private async Task HandleSettingsSavedAsync()
-    {
-        var previousPatchUrlGroup = currentSnapshot?.Settings.PatchUrlGroup;
-        var savedPatchUrlGroup = Settings.Editor.Current.PatchUrlGroup;
-        RemoteContent.UpdateRemoteContentVisibility(
-            Settings.Editor.Current.ShowRemoteContentCard);
-        ApplyMotionSettings(Settings.Editor.Current);
-
-        if (Operations.IsDownloadRunning)
-        {
-            if (currentSnapshot is not null)
-            {
-                currentSnapshot.Settings = await settingsService.ReadAsync();
-            }
-
-            return;
-        }
-
-        await RefreshAsync();
-        if (currentSnapshot?.RuntimeState is LauncherRuntimeState.Ready or LauncherRuntimeState.UpdateAvailable
-            && !string.Equals(previousPatchUrlGroup, savedPatchUrlGroup, StringComparison.Ordinal))
-        {
-            Dialogs.ShowRepairConfirm(localizer.T("downloadSourceChangedRepairPrompt"));
-        }
-    }
-
-    private async Task ApplySnapshotAsync(LauncherStatusSnapshot snapshot)
-    {
-        ApplySettingsSnapshot(snapshot.Settings);
-        ApplyLanguage(snapshot.Settings.Language);
-        SettingsAppearanceViewModel.ApplyTheme(snapshot.Settings.ThemeMode);
-        await Background.UpdateBackgroundImageAsync(
-            snapshot.Settings,
-            snapshot,
-            lifetimeCts.Token);
-        Settings.Appearance.ApplyThemeColor(
-            snapshot.Settings.ThemeColorMode,
-            SettingsAppearanceViewModel.ParseColorOrDefault(snapshot.Settings.CustomThemeColor));
-
-        Shell.ApplySnapshot(snapshot, Settings);
-        Operations.ApplySnapshot(snapshot);
-        RemoteContent.Apply(snapshot.Remote, snapshot.Settings, lifetimeCts.Token);
-        RemoteContent.SetLoadError(snapshot.RuntimeState == LauncherRuntimeState.RemoteUnavailable);
-        await Dialogs.ShowNoticeDialogIfNeededAsync(snapshot.Remote.BaseConfig, lifetimeCts.Token);
-    }
-
-    private void ApplySettingsSnapshot(LauncherSettings settings)
-    {
-        Settings.ApplyLauncherSettings(settings);
-        ResourcePanel.ApplySettings(settings);
-        ApplyMotionSettings(settings);
-    }
-
-    private void ApplyMotionSettings(LauncherSettings settings)
-    {
-        var windowsAnimationsEnabled = settings.MotionMode == MotionModes.System
-            ? windowsAnimationSettingsProvider.GetWindowsAnimationsEnabled()
-            : null;
-        var reduceMotion = MotionSettingsResolver.ShouldReduceMotion(
-            settings.MotionMode,
-            windowsAnimationsEnabled);
-        if (motionSettingsApplied && reduceMotion == IsMotionReduced)
-        {
-            return;
-        }
-
-        motionSettingsApplied = true;
-        IsMotionReduced = reduceMotion;
-        RemoteContent.ApplyMotionPreference(reduceMotion);
-        Toasts.ApplyMotionPreference(reduceMotion);
+        lifecycle.Dispose();
     }
 
     private void ApplyLanguage(string language)
     {
-        Shell.ApplyLanguage(language, Settings, ResourcePanel, currentSnapshot is not null);
+        Shell.ApplyLanguage(language, Settings, ResourcePanel, false);
         Background.BackgroundImagePickerTitle = localizer.T("chooseBackgroundImageTitle");
         Background.BackgroundFolderPickerTitle = localizer.T("chooseBackgroundFolderTitle");
         RemoteContent.ApplyLanguage();
@@ -518,64 +184,5 @@ public partial class MainWindowViewModel : ViewModelBase, IDisposable
         Debug.ApplyLanguage();
     }
 
-    private void PreviewSetupWizardLanguage(string language)
-    {
-        if (Dialogs.IsSetupWizardVisible)
-        {
-            ApplyLanguage(language);
-        }
-    }
-
-    // ── Window interaction (Escape key resolution) ──────────────────────
-
-    /// <summary>
-    /// Attempt to handle the Escape key press.
-    /// Returns true if a visible overlay/dialog was dismissed, false if no action was needed.
-    /// </summary>
-    public bool TryHandleEscape() => coordinator.TryHandleEscape();
-
-    public void Dispose()
-    {
-        if (disposed)
-        {
-            return;
-        }
-
-        disposed = true;
-        Settings.SettingsSaved -= HandleSettingsSavedAsync;
-        Operations.RefreshRequested -= HandleOperationsRefreshRequestedAsync;
-        Operations.OpenLogViewerRequested -= OpenLogViewerAsync;
-        ResourcePanel.ResourcePanelSourceConfirmRequested -= ShowResourcePanelSourceConfirmDialog;
-        Dialogs.ConfirmResourcePanelSourceSwitchRequested -= SwitchToCafeAndOpenResourcePanel;
-        Dialogs.ConfirmRepairRequested -= Operations.RepairAsync;
-        Dialogs.ConfirmUninstallRequested -= Operations.ConfirmUninstallAsync;
-        Dialogs.ConfirmStopRequested -= Operations.PerformStop;
-        Dialogs.CloseAfterStoppingDownloadRequested -= WindowChrome.CloseAfterStoppingDownload;
-        Dialogs.CloseRequested -= WindowChrome.RequestClose;
-        Dialogs.ConfirmUpdateAvailableRequested -= OnConfirmUpdateAvailableRequested;
-        Dialogs.CrashRecoveryResetSettingsRequested -= ResetSettingsAfterCrashAsync;
-        Dialogs.CrashRecoveryViewLogRequested -= OpenCrashLog;
-        Dialogs.ErrorViewLogRequested -= OpenCrashLog;
-        Dialogs.SetupWizard.LanguagePreviewRequested -= PreviewSetupWizardLanguage;
-        Dialogs.SetupWizard.SettingsApplied -= HandleSetupWizardCompletedAsync;
-        this.coordinator.StatusDetailModeChanged -= OnStatusDetailModeChanged;
-        this.errorHandling.CriticalErrorRequested -= OnCriticalError;
-        this.errorHandling.OperationNoteRequested -= OnOperationNoteRequested;
-        Debug.RefreshRequested -= HandleDebugRefreshRequestedAsync;
-        Debug.ResetSettingsRequested -= ResetSettingsAfterCrashAsync;
-        Debug.ResetSettingsConfirmationRequested -= Dialogs.ShowDebugResetConfirmation;
-        Dialogs.ConfirmDebugResetRequested -= Debug.ConfirmResetSettingsAsync;
-        coordinator.Unwire();
-        Operations.StopDownload(clearPersistedState: false);
-        Operations.Dispose();
-        Settings.Dispose();
-        RemoteContent.Dispose();
-        Background.Dispose();
-        Toasts.Dispose();
-        ResourcePanel.Dispose();
-        Debug.Dispose();
-        Dialogs.SetupWizard.Dispose();
-        lifetimeCts.Cancel();
-        lifetimeCts.Dispose();
-    }
+    private readonly LocalizationService localizer;
 }

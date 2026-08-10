@@ -74,7 +74,7 @@ internal sealed class ManifestDiffCalculator
         var statDiff = CheckStat(
             currentFiles,
             gamePath,
-            value => progress(GameDownloadService.CreateProgress(GameOperationKind.Download, GameOperationStage.UpdateCheck, value)));
+            value => progress(DownloadSession.CreateProgress(GameOperationKind.Download, GameOperationStage.UpdateCheck, value)));
         var expected = GameManifestDiff(currentFiles, latestManifest.File);
         var actual = GameResultMerge(expected, new DownloadPlan { NeedDownload = statDiff });
 
@@ -108,7 +108,7 @@ internal sealed class ManifestDiffCalculator
         var hashDiff = await CheckHashAsync(
             latestManifest.File,
             gamePath,
-            value => progress(GameDownloadService.CreateProgress(GameOperationKind.Repair, GameOperationStage.RepairCheck, value)),
+            value => progress(DownloadSession.CreateProgress(GameOperationKind.Repair, GameOperationStage.RepairCheck, value)),
             cancellationToken).ConfigureAwait(false);
         var needDelete = localGame.Kind == LocalInstallationStateKind.Valid
             ? GameManifestDiff(localGame.Manifest?.Files ?? [], latestManifest.File).NeedDelete
