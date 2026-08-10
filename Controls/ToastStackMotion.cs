@@ -12,8 +12,12 @@ using Cafe.Launcher.Avalonia.Helpers;
 
 namespace Cafe.Launcher.Avalonia.Controls;
 
+/// <summary>
+/// Animates vertical Toast stack reflow while preserving each child's original render transform.
+/// </summary>
 public static class ToastStackMotion
 {
+    /// <summary>Attached property that enables vertical stack reflow animation for a panel.</summary>
     public static readonly AttachedProperty<bool> IsEnabledProperty =
         AvaloniaProperty.RegisterAttached<ToastStackMotionOwner, Panel, bool>("IsEnabled");
 
@@ -24,12 +28,15 @@ public static class ToastStackMotion
         IsEnabledProperty.Changed.AddClassHandler<Panel>(OnIsEnabledChanged);
     }
 
+    /// <summary>Gets whether vertical stack reflow animation is enabled for <paramref name="panel"/>.</summary>
     public static bool GetIsEnabled(Panel panel) =>
         panel.GetValue(IsEnabledProperty);
 
+    /// <summary>Sets whether vertical stack reflow animation is enabled for <paramref name="panel"/>.</summary>
     public static void SetIsEnabled(Panel panel, bool value) =>
         panel.SetValue(IsEnabledProperty, value);
 
+    /// <summary>Calculates the Y transform that keeps a child at its pre-layout visual position.</summary>
     internal static double CalculateInitialOffset(double previousY, double currentY) =>
         previousY - currentY;
 

@@ -200,43 +200,29 @@ public sealed class LauncherApiClient : IDisposable
         CancellationToken cancellationToken = default)
     {
         var requestUri = new Uri(url);
-        Exception? lastException = null;
 
-        for (var attempt = 0; attempt < MaxManifestFetchAttempts; attempt++)
-        {
-            cancellationToken.ThrowIfCancellationRequested();
-            try
+        return await RetryPolicy.ExecuteWithRetryAsync(
+            async ct =>
             {
                 using var lease = await leaseSource
-                    .CreateLeaseAsync(proxyMode, cancellationToken)
+                    .CreateLeaseAsync(proxyMode, ct)
                     .ConfigureAwait(false);
                 using var response = await RemoteHttpRequestService.SendAsync(
                     lease.Client,
                     requestUri,
                     static uri => new HttpRequestMessage(HttpMethod.Get, uri),
                     urlValidator,
-                    cancellationToken,
+                    ct,
                     connectionUsesProxy: proxyMode != ProxyModes.Direct).ConfigureAwait(false);
                 response.EnsureSuccessStatusCode();
                 var manifest = await RemoteHttpRequestService.DeserializeJsonAsync<RemoteManifest>(
-                    response, requestUri, jsonOptions, cancellationToken).ConfigureAwait(false);
+                    response, requestUri, jsonOptions, ct).ConfigureAwait(false);
                 return manifest ?? new RemoteManifest();
-            }
-            catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
-            {
-                throw;
-            }
-            catch (Exception ex) when (ex is HttpRequestException or TaskCanceledException or JsonException)
-            {
-                lastException = ex;
-                if (attempt < MaxManifestFetchAttempts - 1)
-                {
-                    await Task.Delay(ManifestFetchBackoff[attempt], cancellationToken).ConfigureAwait(false);
-                }
-            }
-        }
-
-        throw lastException!;
+            },
+            MaxManifestFetchAttempts,
+            i => ManifestFetchBackoff[i],
+            cancellationToken,
+            ex => ex is HttpRequestException or TaskCanceledException or JsonException);
     }
 
     private async Task<T> GetEnvelopeDataAsync<T>(
@@ -244,28 +230,24 @@ public sealed class LauncherApiClient : IDisposable
         string proxyMode,
         CancellationToken cancellationToken)
     {
-        Exception? lastException = null;
-
-        for (var attempt = 0; attempt < MaxEnvelopeFetchAttempts; attempt++)
-        {
-            cancellationToken.ThrowIfCancellationRequested();
-            var sw = Stopwatch.StartNew();
-            try
+        return await RetryPolicy.ExecuteWithRetryAsync(
+            async ct =>
             {
-                using var lease = await leaseSource.CreateLeaseAsync(proxyMode, cancellationToken).ConfigureAwait(false);
+                var sw = Stopwatch.StartNew();
+                using var lease = await leaseSource.CreateLeaseAsync(proxyMode, ct).ConfigureAwait(false);
                 using var request = new HttpRequestMessage(HttpMethod.Get, path);
                 request.Headers.TryAddWithoutValidation(
                     "Authorization",
                     authorizationHeaderFactory.Create("", ApiConfig.YostarAuthorizationVersion));
 
-                using var response = await lease.Client.SendAsync(request, cancellationToken).ConfigureAwait(false);
+                using var response = await lease.Client.SendAsync(request, ct).ConfigureAwait(false);
                 response.EnsureSuccessStatusCode();
                 LocalDiagnostics.LogSync(
                     LogEntrySeverity.Debug,
                     "ApiClient",
-                    $"GET {path} -> {(int)response.StatusCode}, {sw.ElapsedMilliseconds}ms (attempt {attempt + 1})");
+                    $"GET {path} -> {(int)response.StatusCode}, {sw.ElapsedMilliseconds}ms (attempt N/A)");
 
-                var envelope = await RemoteHttpRequestService.DeserializeJsonAsync<LauncherApiEnvelope<T>>(response, request.RequestUri, jsonOptions, cancellationToken).ConfigureAwait(false);
+                var envelope = await RemoteHttpRequestService.DeserializeJsonAsync<LauncherApiEnvelope<T>>(response, request.RequestUri, jsonOptions, ct).ConfigureAwait(false);
 
                 if (envelope is null)
                 {
@@ -284,22 +266,11 @@ public sealed class LauncherApiClient : IDisposable
                 }
 
                 return envelope.Data;
-            }
-            catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
-            {
-                throw;
-            }
-            catch (Exception ex) when (ex is HttpRequestException or TaskCanceledException or JsonException or InvalidOperationException)
-            {
-                lastException = ex;
-                if (attempt < MaxEnvelopeFetchAttempts - 1)
-                {
-                    await Task.Delay(ManifestFetchBackoff[attempt], cancellationToken).ConfigureAwait(false);
-                }
-            }
-        }
-
-        throw lastException!;
+            },
+            MaxEnvelopeFetchAttempts,
+            i => ManifestFetchBackoff[i],
+            cancellationToken,
+            ex => ex is HttpRequestException or TaskCanceledException or JsonException or InvalidOperationException);
     }
 
     public void Dispose()

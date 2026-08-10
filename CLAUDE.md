@@ -100,7 +100,7 @@ GitHub Actions runs on `ubuntu-latest` with .NET `10.0.x`. The build workflow cu
 
 ### Persistence and compatibility contracts
 
-- Launcher data lives in `%LOCALAPPDATA%\Cafe Launcher\`: settings, crash marker, unified log, persisted download state, shown notices, and click code. `LauncherSettingsService` and `SettingsNormalizer` must preserve compatibility with old or invalid `settings.json` content; `SettingsEditor` gives the UI transactional save/discard behavior.
+- Launcher data lives in `%LOCALAPPDATA%\Cafe Launcher\`: settings, crash marker, unified log, persisted download state, shown notices, and click code. `LauncherSettingsService` must preserve compatibility with old or invalid `settings.json` content; `SettingsEditor` gives the UI transactional save/discard behavior.
 - The game directory is normalized to `YostarGames\BlueArchive_JP`. All file operations must go through `GamePathValidator` so they remain inside that game directory.
 - `LocalInstallationStateStore` manages `game-launcher-config.json` and `manifest.json` as one coordinated installation state shared with the official launcher. Preserve the JSON/wire field order used by `OfficialHashService`—changing it makes launchers reject each other's manifest.
 - Launch validation intentionally fails open if a requested remote manifest cannot be retrieved; repair uses CRC64 whereas launch validation checks file size. These mirror the official launcher and are covered by contract tests.

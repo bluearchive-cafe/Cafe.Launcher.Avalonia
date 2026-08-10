@@ -1,6 +1,5 @@
 using Cafe.Launcher.Avalonia.Services;
 using Cafe.Launcher.Avalonia.Services.Diagnostics;
-using Cafe.Launcher.Avalonia.ViewModels;
 
 namespace Cafe.Launcher.Avalonia.Tests;
 
@@ -14,8 +13,9 @@ public sealed class ErrorHandlingServiceTests
     [Fact]
     public async Task HandleErrorAsync_WhenErrorOccurs_ShowsErrorToastWithoutChangingOperationNote()
     {
-        var (service, toastService, shell) = CreateService();
-        var previousNote = shell.OperationNote;
+        var (service, toastService) = CreateService();
+        string? operationNote = null;
+        service.OperationNoteRequested += note => operationNote = note;
         var exception = new InvalidOperationException("test error");
         ToastNotification? toast = null;
         toastService.ToastRaised += t => toast = t;
@@ -25,13 +25,13 @@ public sealed class ErrorHandlingServiceTests
         Assert.NotNull(toast);
         Assert.Equal(ToastSeverity.Error, toast!.Severity);
         Assert.Equal("TestError（InvalidOperationException）：test error", toast.Message);
-        Assert.Equal(previousNote, shell.OperationNote);
+        Assert.Null(operationNote);
     }
 
     [Fact]
     public async Task HandleErrorAsync_WithCustomToastMessage_UsesProvidedMessage()
     {
-        var (service, toastService, _) = CreateService();
+        var (service, toastService) = CreateService();
         var exception = new InvalidOperationException("original");
         ToastNotification? toast = null;
         toastService.ToastRaised += t => toast = t;
@@ -72,7 +72,7 @@ public sealed class ErrorHandlingServiceTests
     [Fact]
     public async Task HandleErrorAsync_WithShowToastFalse_DoesNotRaiseToast()
     {
-        var (service, toastService, _) = CreateService();
+        var (service, toastService) = CreateService();
         var exception = new InvalidOperationException("test error");
         ToastNotification? toast = null;
         toastService.ToastRaised += t => toast = t;
@@ -86,10 +86,11 @@ public sealed class ErrorHandlingServiceTests
     }
 
     [Fact]
-    public async Task HandleErrorAsync_WithNullOperationNoteKey_DoesNotChangeOperationNote()
+    public async Task HandleErrorAsync_WithNullOperationNoteKey_DoesNotRaiseOperationNoteEvent()
     {
-        var (service, _, shell) = CreateService();
-        var previous = shell.OperationNote;
+        var (service, _) = CreateService();
+        string? operationNote = null;
+        service.OperationNoteRequested += note => operationNote = note;
         var exception = new InvalidOperationException("test error");
 
         await service.HandleErrorAsync("TestError", exception, new ErrorHandlingOptions
@@ -97,13 +98,15 @@ public sealed class ErrorHandlingServiceTests
             OperationNoteKey = null
         });
 
-        Assert.Equal(previous, shell.OperationNote);
+        Assert.Null(operationNote);
     }
 
     [Fact]
-    public async Task HandleErrorAsync_WithCustomOperationNoteKey_FormatsWithThatKey()
+    public async Task HandleErrorAsync_WithCustomOperationNoteKey_RaisesOperationNoteEvent()
     {
-        var (service, _, shell) = CreateService();
+        var (service, _) = CreateService();
+        string? operationNote = null;
+        service.OperationNoteRequested += note => operationNote = note;
         var exception = new InvalidOperationException("test error");
 
         await service.HandleErrorAsync("TestError", exception, new ErrorHandlingOptions
@@ -111,14 +114,14 @@ public sealed class ErrorHandlingServiceTests
             OperationNoteKey = "gameLaunchFailed"
         });
 
-        Assert.StartsWith("Game launch failed:", shell.OperationNote, StringComparison.Ordinal);
+        Assert.NotNull(operationNote);
+        Assert.StartsWith("Game launch failed:", operationNote!, StringComparison.Ordinal);
     }
 
     [Fact]
     public async Task HandleCriticalErrorAsync_RaisesRequestedEventWithDetailsAndNoToast()
     {
-        var (service, toastService, shell) = CreateService();
-        var previousNote = shell.OperationNote;
+        var (service, toastService) = CreateService();
         var exception = new InvalidOperationException("critical failure");
         CriticalErrorInfo? info = null;
         service.CriticalErrorRequested += i => info = i;
@@ -128,7 +131,6 @@ public sealed class ErrorHandlingServiceTests
         await service.HandleCriticalErrorAsync("CriticalContext", exception);
 
         Assert.Null(toast);
-        Assert.Equal(previousNote, shell.OperationNote);
         Assert.NotNull(info);
         Assert.Equal("CriticalContext", info!.Context);
         Assert.Equal("critical failure", info.Message);
@@ -152,8 +154,7 @@ public sealed class ErrorHandlingServiceTests
             using var logger = new UnifiedLogger(readOnlyDir);
             var diagnostics = new LocalDiagnostics(logger);
             var toastService = new ToastService();
-            var shell = new ShellViewModel(localizer);
-            var service = new ErrorHandlingService(localizer, diagnostics, toastService, shell);
+            var service = new ErrorHandlingService(localizer, diagnostics, toastService);
             var exception = new InvalidOperationException("test error");
 
             // Should not throw even when diagnostics logging fails internally.
@@ -166,12 +167,11 @@ public sealed class ErrorHandlingServiceTests
         }
     }
 
-    private static (ErrorHandlingService Service, ToastService ToastService, ShellViewModel Shell) CreateService()
+    private static (ErrorHandlingService Service, ToastService ToastService) CreateService()
     {
         var localizer = new LocalizationService();
         var diagnostics = new LocalDiagnostics();
         var toastService = new ToastService();
-        var shell = new ShellViewModel(localizer);
-        return (new ErrorHandlingService(localizer, diagnostics, toastService, shell), toastService, shell);
+        return (new ErrorHandlingService(localizer, diagnostics, toastService), toastService);
     }
 }

@@ -200,6 +200,19 @@ public sealed class LauncherUpdateServiceTests
         Assert.False(result.IsSuccessful);
     }
 
+    [Fact]
+    public async Task CheckForUpdateAsync_WhenReleaseFilesAreMissing_ReturnsValidationFailureMessage()
+    {
+        using var service = new LauncherUpdateService(
+            new ReleaseHandler(HttpStatusCode.OK, """[{"version":"1.2.0","files":[]}]"""),
+            currentVersionOverride: "1.0.0");
+
+        var result = await service.CheckForUpdateAsync(UpdateChannels.Beta, ProxyModes.Direct);
+
+        Assert.False(result.IsSuccessful);
+        Assert.Equal("files must contain at least one entry", result.FailureMessage);
+    }
+
     [Theory]
     [InlineData("""[{"version":"1.2.0","files":[]}]""")]
     [InlineData("""[{"version":"1.2.0","files":[{"name":"","url":"https://example.com/update.zip","sha512":"","size":100}]}]""")]

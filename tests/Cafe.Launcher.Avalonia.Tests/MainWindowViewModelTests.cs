@@ -1761,18 +1761,17 @@ public sealed class MainWindowViewModelTests : IDisposable
             new ClickCodeService(),
             localizationService);
         var gameDownloadService = new GameDownloadService(
-            new GameDownloadService.Dependencies(
-                apiClient,
-                remoteManifestService,
-                fileDownloadService,
-                localInstallationStateStore,
-                settingsService,
-                new HttpClientFactory(new ProxySettingsService()),
-                new Crc64Service(),
-                new DiskSpaceService(),
-                diagnostics,
-                localizationService,
-                new GameInstallationPath()),
+            apiClient,
+            remoteManifestService,
+            fileDownloadService,
+            localInstallationStateStore,
+            settingsService,
+            new HttpClientFactory(new ProxySettingsService()),
+            new Crc64Service(),
+            new DiskSpaceService(),
+            diagnostics,
+            localizationService,
+            new GameInstallationPath(),
             Path.Combine(tempDir, Guid.NewGuid().ToString("N"), "download_state.json"));
         resourcePanelUidService ??= new ResourcePanelUidService(
             new BestHttpCookieLibraryService(),
@@ -1832,11 +1831,12 @@ public sealed class MainWindowViewModelTests : IDisposable
                 _ => Task.CompletedTask,
                 errorHandling);
         var toastHostViewModel = toastDelayAsync is null
-            ? new ToastHostViewModel(toastService, localizationService)
+            ? new ToastHostViewModel(toastService, localizationService, diagnostics)
             : new ToastHostViewModel(
                 toastService,
                 localizationService,
-                action =>
+                diagnostics,
+            action =>
                 {
                     action();
                     return Task.CompletedTask;

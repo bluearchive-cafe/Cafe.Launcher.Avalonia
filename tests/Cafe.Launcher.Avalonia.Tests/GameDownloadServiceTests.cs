@@ -1169,18 +1169,17 @@ public sealed class GameDownloadServiceTests
             diagnostics,
             RemoteHttpUrlValidator.CreateForTesting());
         return new GameDownloadService(
-            new GameDownloadService.Dependencies(
-                apiClient,
-                remoteManifestService,
-                fileDownloadService,
-                localInstallationStateStore,
-                settingsService,
-                new HttpClientFactory(new ProxySettingsService()),
-                new Crc64Service(),
-                diskSpaceService ?? new DiskSpaceService(),
-                diagnostics,
-                new LocalizationService(),
-                new GameInstallationPath()),
+            apiClient,
+            remoteManifestService,
+            fileDownloadService,
+            localInstallationStateStore,
+            settingsService,
+            new HttpClientFactory(new ProxySettingsService()),
+            new Crc64Service(),
+            diskSpaceService ?? new DiskSpaceService(),
+            diagnostics,
+            new LocalizationService(),
+            new GameInstallationPath(),
             downloadStateFilePath);
     }
 

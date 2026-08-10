@@ -98,8 +98,8 @@
     </Style>
     <Style Selector="Button.toast-primary-action">
         <Setter Property="MinWidth" Value="{DynamicResource LauncherControlMinWidthNone}"/>
-        <Setter Property="MinHeight" Value="30"/>
-        <Setter Property="Padding" Value="12,8"/>
+        <Setter Property="MinHeight" Value="{DynamicResource LauncherToastActionMinHeight}"/>
+        <Setter Property="Padding" Value="{DynamicResource LauncherToastActionPadding}"/>
         <Setter Property="Margin" Value="{DynamicResource LauncherToastPrimaryActionMargin}"/>
         <Setter Property="FontSize" Value="{DynamicResource LauncherFontSizeSm}"/>
         <Setter Property="Background" Value="{DynamicResource LauncherAccentBrush}"/>
@@ -124,8 +124,8 @@
     </Style>
     <Style Selector="Button.toast-secondary-action">
         <Setter Property="MinWidth" Value="{DynamicResource LauncherControlMinWidthNone}"/>
-        <Setter Property="MinHeight" Value="30"/>
-        <Setter Property="Padding" Value="12,8"/>
+        <Setter Property="MinHeight" Value="{DynamicResource LauncherToastActionMinHeight}"/>
+        <Setter Property="Padding" Value="{DynamicResource LauncherToastActionPadding}"/>
         <Setter Property="FontSize" Value="{DynamicResource LauncherFontSizeSm}"/>
         <Setter Property="Background" Value="{DynamicResource LauncherTransparentBrush}"/>
         <Setter Property="BorderBrush" Value="{DynamicResource LauncherButtonBorderBrush}"/>

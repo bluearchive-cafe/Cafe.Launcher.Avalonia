@@ -18,6 +18,12 @@ internal sealed class FakeErrorHandlingService : IErrorHandlingService
         add { }
         remove { }
     }
+
+    public event Action<string>? OperationNoteRequested
+    {
+        add { }
+        remove { }
+    }
 }
 
 public sealed class SettingsOptionsDiskSpaceTests

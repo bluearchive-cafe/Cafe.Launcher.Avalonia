@@ -67,18 +67,17 @@ public static class ServiceConfiguration
         services.AddSingleton<ResourcePanelApiClient>();
         services.AddSingleton<ImageCacheService>();
         services.AddSingleton(sp => new GameDownloadService(
-            new GameDownloadService.Dependencies(
-                sp.GetRequiredService<LauncherApiClient>(),
-                sp.GetRequiredService<RemoteManifestService>(),
-                sp.GetRequiredService<IFileDownloadService>(),
-                sp.GetRequiredService<LocalInstallationStateStore>(),
-                sp.GetRequiredService<LauncherSettingsService>(),
-                sp.GetRequiredService<HttpClientFactory>(),
-                sp.GetRequiredService<Crc64Service>(),
-                sp.GetRequiredService<DiskSpaceService>(),
-                sp.GetRequiredService<LocalDiagnostics>(),
-                sp.GetRequiredService<LocalizationService>(),
-                sp.GetRequiredService<GameInstallationPath>())));
+            sp.GetRequiredService<LauncherApiClient>(),
+            sp.GetRequiredService<RemoteManifestService>(),
+            sp.GetRequiredService<IFileDownloadService>(),
+            sp.GetRequiredService<LocalInstallationStateStore>(),
+            sp.GetRequiredService<LauncherSettingsService>(),
+            sp.GetRequiredService<HttpClientFactory>(),
+            sp.GetRequiredService<Crc64Service>(),
+            sp.GetRequiredService<DiskSpaceService>(),
+            sp.GetRequiredService<LocalDiagnostics>(),
+            sp.GetRequiredService<LocalizationService>(),
+            sp.GetRequiredService<GameInstallationPath>()));
 
         // ── ViewModels (all singleton — single-window desktop app) ─────────
         services.AddSingleton<SettingsViewModel>();

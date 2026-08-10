@@ -28,11 +28,7 @@ public partial class ToastHostViewModel : ViewModelBase, IDisposable
 
     public ObservableCollection<ToastNotification> ActiveToasts { get; } = [];
 
-    public ToastHostViewModel(ToastService toastService, LocalizationService localizer)
-        : this(toastService, localizer, new LocalDiagnostics())
-    {
-    }
-
+    /// <summary>Initializes the toast host with UI services supplied by dependency injection.</summary>
     public ToastHostViewModel(
         ToastService toastService,
         LocalizationService localizer,
@@ -43,20 +39,6 @@ public partial class ToastHostViewModel : ViewModelBase, IDisposable
             diagnostics,
             async action => await Dispatcher.UIThread.InvokeAsync(action),
             static (delay, cancellationToken) => Task.Delay(delay, cancellationToken))
-    {
-    }
-
-    internal ToastHostViewModel(
-        ToastService toastService,
-        LocalizationService localizer,
-        Func<Action, Task> invokeOnUiAsync,
-        Func<TimeSpan, CancellationToken, Task> delayAsync)
-        : this(
-            toastService,
-            localizer,
-            new LocalDiagnostics(),
-            invokeOnUiAsync,
-            delayAsync)
     {
     }
 

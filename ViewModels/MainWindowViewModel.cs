@@ -131,6 +131,7 @@ public partial class MainWindowViewModel : ViewModelBase, IDisposable
 
         this.errorHandling = errorHandling;
         this.errorHandling.CriticalErrorRequested += OnCriticalError;
+        this.errorHandling.OperationNoteRequested += OnOperationNoteRequested;
 
         Debug = debug ?? new DebugViewModel(
             toastService, unifiedLogger, this.errorHandling,
@@ -379,6 +380,11 @@ public partial class MainWindowViewModel : ViewModelBase, IDisposable
         Dialogs.ShowCriticalError(info.Message, info.Details);
     }
 
+    private void OnOperationNoteRequested(string note)
+    {
+        Shell.OperationNote = note;
+    }
+
     private async Task<string?> PickGameFolderForWizardAsync(string currentPath)
     {
         if (Settings.PickGameFolderAsync is not null)
@@ -554,18 +560,21 @@ public partial class MainWindowViewModel : ViewModelBase, IDisposable
         Dialogs.SetupWizard.SettingsApplied -= HandleSetupWizardCompletedAsync;
         this.coordinator.StatusDetailModeChanged -= OnStatusDetailModeChanged;
         this.errorHandling.CriticalErrorRequested -= OnCriticalError;
+        this.errorHandling.OperationNoteRequested -= OnOperationNoteRequested;
         Debug.RefreshRequested -= HandleDebugRefreshRequestedAsync;
         Debug.ResetSettingsRequested -= ResetSettingsAfterCrashAsync;
         Debug.ResetSettingsConfirmationRequested -= Dialogs.ShowDebugResetConfirmation;
         Dialogs.ConfirmDebugResetRequested -= Debug.ConfirmResetSettingsAsync;
         coordinator.Unwire();
         Operations.StopDownload(clearPersistedState: false);
+        Operations.Dispose();
         Settings.Dispose();
         RemoteContent.Dispose();
         Background.Dispose();
         Toasts.Dispose();
         ResourcePanel.Dispose();
         Debug.Dispose();
+        Dialogs.SetupWizard.Dispose();
         lifetimeCts.Cancel();
         lifetimeCts.Dispose();
     }

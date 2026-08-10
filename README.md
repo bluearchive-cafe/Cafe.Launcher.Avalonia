@@ -90,7 +90,7 @@ dotnet test .\tests\Cafe.Launcher.Avalonia.Tests\Cafe.Launcher.Avalonia.Tests.cs
 
 测试工程位于 `tests/Cafe.Launcher.Avalonia.Tests/`，不引入 Moq/NSubstitute 等模拟框架——所有测试通过手写 `HttpMessageHandler` 子类和手动桩实现。源码项目通过 `InternalsVisibleTo` 向测试暴露 `internal` 成员。
 
-当前测试类覆盖：`VersionComparerTests` / `LauncherApiClientTests` / `LauncherConstantsTests` / `LauncherSettingsServiceTests` / `SettingsNormalizerTests` / `SettingsEditorTests` / `ToastServiceTests` / `GameInstallationPathTests` / `LocalInstallationStateStoreTests` / `LauncherCoreServiceTests` / `InstallationOperationStateTests` / `LocalizationServiceTests` / `MainWindowViewModelTests` / `DialogsViewModelTests` / `GameDownloadServiceTests` / `PatchUrlGroupServiceTests` / `BestHttpCookieLibraryServiceTests` / `ResourcePanelUidServiceTests` / `ExternalLinkServiceTests` / `ResourcePanelApiClientTests` / `LauncherUpdateServiceTests` / `HttpClientFactoryTests` / `UiStyleContractTests`。
+当前测试类覆盖：`VersionComparerTests` / `LauncherApiClientTests` / `LauncherConstantsTests` / `LauncherSettingsServiceTests`（含 NormalizeSettings 覆盖）/ `SettingsEditorTests` / `ToastServiceTests` / `GameInstallationPathTests` / `LocalInstallationStateStoreTests` / `LauncherCoreServiceTests` / `InstallationOperationStateTests` / `LocalizationServiceTests` / `MainWindowViewModelTests` / `DialogsViewModelTests` / `GameDownloadServiceTests` / `PatchUrlGroupServiceTests` / `BestHttpCookieLibraryServiceTests` / `ResourcePanelUidServiceTests` / `ExternalLinkServiceTests` / `ResourcePanelApiClientTests` / `LauncherUpdateServiceTests` / `HttpClientFactoryTests` / `UiStyleContractTests`。
 
 `UiStyleContractTests` 强制执行设计标记契约：禁止视图 XAML 中出现裸色值，强制使用 `LauncherSpacing*` 标记，验证 Z-Index 分层顺序，确保动态主题色笔刷不替代主题字典笔刷。修改 XAML 或样式时务必运行此测试。
 

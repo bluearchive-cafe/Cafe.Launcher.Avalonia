@@ -1,6 +1,6 @@
 using Cafe.Launcher.Avalonia.Features.GameOperations;
 using Cafe.Launcher.Avalonia.Constants;
-using Cafe.Launcher.Avalonia.Models;
+using Cafe.Launcher.Avalonia.Features.Diagnostics;`nusing Cafe.Launcher.Avalonia.Models;
 using Cafe.Launcher.Avalonia.Services;
 using Cafe.Launcher.Avalonia.Services.Diagnostics;
 using Cafe.Launcher.Avalonia.ViewModels;
@@ -134,7 +134,7 @@ public sealed class DebugViewModelTests : IDisposable
                 new LocalInstallationStateStore(),
                 diagnostics));
         var backend = new TestBackend { IsRunning = true };
-        var errorHandling = new ErrorHandlingService(localizer, diagnostics, toastService, shell);
+        var errorHandling = new ErrorHandlingService(localizer, diagnostics, toastService);
         var operations = new GameOperationsViewModel(
             backend,
             backend,
