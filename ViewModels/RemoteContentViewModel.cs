@@ -18,6 +18,7 @@ namespace Cafe.Launcher.Avalonia.ViewModels;
 public partial class RemoteContentViewModel : ViewModelBase, IDisposable
 {
     private const int ManualNavResumeDelayMs = 5000;
+    private const int MaxConcurrentBannerImageLoads = 4;
     private readonly LocalizationService localizer;
     private readonly ImageCacheService imageCacheService;
     private DispatcherTimer? carouselTimer;
@@ -449,13 +450,33 @@ public partial class RemoteContentViewModel : ViewModelBase, IDisposable
             }
 
             item.MarkImageLoading();
+        }
+
+        using var concurrencyGate = new SemaphoreSlim(MaxConcurrentBannerImageLoads);
+        var imageLoads = snapshot
+            .Where(item => !string.IsNullOrWhiteSpace(item.ImageUrl))
+            .Select(item => PreloadBannerImageAsync(item, concurrencyGate, cancellationToken));
+        await Task.WhenAll(imageLoads);
+    }
+
+    private async Task PreloadBannerImageAsync(
+        RemoteContentItem item,
+        SemaphoreSlim concurrencyGate,
+        CancellationToken cancellationToken)
+    {
+        try
+        {
+            await concurrencyGate.WaitAsync(cancellationToken);
             try
             {
-                var bytes = await imageCacheService.GetImageBytesAsync(item.ImageUrl, proxyMode, cancellationToken);
+                var bytes = await imageCacheService.GetCachedOrDownloadImageBytesAsync(
+                    item.ImageUrl,
+                    proxyMode,
+                    cancellationToken);
                 if (bytes is null)
                 {
                     await Dispatcher.UIThread.InvokeAsync(item.MarkImageLoadFailed);
-                    continue;
+                    return;
                 }
 
                 await Dispatcher.UIThread.InvokeAsync(() =>
@@ -470,16 +491,19 @@ public partial class RemoteContentViewModel : ViewModelBase, IDisposable
                     item.MarkImageLoaded();
                 });
             }
-            catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
+            finally
             {
-                return;
+                concurrencyGate.Release();
             }
-            catch (Exception ex)
-            {
-                System.Diagnostics.Debug.WriteLine(
-                    $"RemoteContent: banner image load failed for '{item.ImageUrl}': {ex.Message}");
-                await Dispatcher.UIThread.InvokeAsync(item.MarkImageLoadFailed);
-            }
+        }
+        catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
+        {
+        }
+        catch (Exception ex)
+        {
+            System.Diagnostics.Debug.WriteLine(
+                $"RemoteContent: banner image load failed for '{item.ImageUrl}': {ex.Message}");
+            await Dispatcher.UIThread.InvokeAsync(item.MarkImageLoadFailed);
         }
     }
 

@@ -49,6 +49,9 @@ public sealed class ShellLifecycle : IDisposable
     private LauncherStatusSnapshot? currentSnapshot;
     private bool isWired;
 
+    /// <summary>Gets the active startup update check so tests can coordinate without timing delays.</summary>
+    internal Task PendingStartupUpdateCheck { get; private set; } = Task.CompletedTask;
+
     public ShellLifecycle(
         ILauncherCoreService launcherCoreService,
         LauncherSettingsService settingsService,
@@ -179,7 +182,7 @@ public sealed class ShellLifecycle : IDisposable
 
         if (settings.Editor.GetSavedSnapshot().EnableStartupUpdateCheck)
         {
-            _ = CheckForStartupUpdateAsync(cancellationToken);
+            PendingStartupUpdateCheck = CheckForStartupUpdateAsync(cancellationToken);
         }
 
         await operations.ResumePersistedDownloadAsync(cancellationToken);

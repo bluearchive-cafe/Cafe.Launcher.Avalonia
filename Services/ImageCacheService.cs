@@ -2,6 +2,8 @@ using System;
 using System.Collections.Concurrent;
 using System.IO;
 using System.Net.Http;
+using System.Security.Cryptography;
+using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
 using Cafe.Launcher.Avalonia.Constants;
@@ -17,6 +19,7 @@ namespace Cafe.Launcher.Avalonia.Services;
 public sealed class ImageCacheService : IDisposable
 {
     private const int MaxImageBytes = 25 * 1024 * 1024;
+    private static readonly TimeSpan RemoteImageCacheLifetime = TimeSpan.FromHours(24);
     private static readonly TimeSpan RequestTimeout = TimeSpan.FromSeconds(30);
     private readonly string cacheDir;
     private readonly IHttpClientLeaseSource httpClientLeaseSource;
@@ -144,6 +147,61 @@ public sealed class ImageCacheService : IDisposable
             {
                 TryDelete(tempPath);
             }
+        }
+        finally
+        {
+            cacheLock.Release();
+        }
+    }
+
+    /// <summary>
+    /// Returns a URL-keyed image cache entry when it is still fresh, otherwise downloads and
+    /// persists a new copy. Use this when the remote payload does not provide a content hash.
+    /// </summary>
+    public async Task<byte[]> GetCachedOrDownloadImageBytesAsync(
+        string url,
+        string proxyMode,
+        CancellationToken ct = default)
+    {
+        var cacheKey = Convert.ToHexString(
+            SHA256.HashData(Encoding.UTF8.GetBytes(url))).ToLowerInvariant();
+        var cachePath = Path.Combine(cacheDir, $"{cacheKey}.remote");
+        var cacheLock = cacheLocks.GetOrAdd(cacheKey, static _ => new SemaphoreSlim(1, 1));
+        await cacheLock.WaitAsync(ct).ConfigureAwait(false);
+        try
+        {
+            if (File.Exists(cachePath)
+                && DateTime.UtcNow - File.GetLastWriteTimeUtc(cachePath) <= RemoteImageCacheLifetime)
+            {
+                try
+                {
+                    return await File.ReadAllBytesAsync(cachePath, ct).ConfigureAwait(false);
+                }
+                catch (Exception exception) when (exception is IOException or UnauthorizedAccessException)
+                {
+                    TryDelete(cachePath);
+                }
+            }
+
+            var bytes = await GetImageBytesAsync(url, proxyMode, ct).ConfigureAwait(false);
+            var tempPath = $"{cachePath}.{Guid.NewGuid():N}.tmp";
+            try
+            {
+                await File.WriteAllBytesAsync(tempPath, bytes, ct).ConfigureAwait(false);
+                File.Move(tempPath, cachePath, overwrite: true);
+            }
+            catch (Exception exception) when (exception is IOException or UnauthorizedAccessException)
+            {
+                // A cache write is optional: callers can still render the downloaded image.
+                System.Diagnostics.Debug.WriteLine(
+                    $"ImageCacheService: failed to cache remote image: {exception.Message}");
+            }
+            finally
+            {
+                TryDelete(tempPath);
+            }
+
+            return bytes;
         }
         finally
         {
