@@ -21,6 +21,7 @@ public sealed class ShellRuntime : IShellRuntime, IShellLifecyclePresentation
     private bool isBusy;
     private bool isMotionReduced = true;
 
+    /// <summary>Initializes and wires the shell lifecycle with its presentation collaborators.</summary>
     public ShellRuntime(
         ILauncherCoreService launcherCoreService,
         LauncherSettingsService settingsService,
@@ -70,11 +71,19 @@ public sealed class ShellRuntime : IShellRuntime, IShellLifecyclePresentation
         lifecycle.ApplyInitialLanguage();
     }
 
+    /// <summary>Raised when shell presentation state changes.</summary>
     public event Action? PresentationChanged;
+
+    /// <summary>Raised when the configured status-detail mode changes.</summary>
     public event Action? StatusDetailModeChanged;
 
+    /// <summary>Gets whether the shell is currently processing an operation.</summary>
     public bool IsBusy => isBusy;
+
+    /// <summary>Gets whether reduced motion is currently effective.</summary>
     public bool IsMotionReduced => isMotionReduced;
+
+    /// <summary>Gets the startup update-check task, if one was scheduled.</summary>
     public Task PendingStartupUpdateCheck => lifecycle.PendingStartupUpdateCheck;
 
     bool IShellLifecyclePresentation.IsBusy
@@ -89,19 +98,25 @@ public sealed class ShellRuntime : IShellRuntime, IShellLifecyclePresentation
         set => SetPresentationState(ref isMotionReduced, value);
     }
 
+    /// <summary>Initializes the shell state after the main window opens.</summary>
     public Task InitializeAsync(CancellationToken cancellationToken = default) =>
         lifecycle.InitializeAsync(cancellationToken);
 
+    /// <summary>Refreshes launcher state and its shell presentation.</summary>
     public Task RefreshAsync(CancellationToken cancellationToken = default) =>
         lifecycle.RefreshAsync(cancellationToken);
 
+    /// <summary>Re-evaluates the system motion preference and updates presentation state.</summary>
     public void RefreshSystemMotionPreference() => lifecycle.RefreshSystemMotionPreference();
 
+    /// <summary>Refreshes shell state after a completed game operation.</summary>
     public Task HandleOperationsRefreshRequestedAsync(GameOperationsRefreshMode mode) =>
         lifecycle.HandleOperationsRefreshRequestedAsync(mode);
 
+    /// <summary>Attempts to handle Escape through the active shell surface.</summary>
     public bool TryHandleEscape() => lifecycle.TryHandleEscape();
 
+    /// <summary>Unsubscribes shell events and releases lifecycle-owned resources.</summary>
     public void Dispose()
     {
         lifecycle.StatusDetailModeChanged -= OnStatusDetailModeChanged;

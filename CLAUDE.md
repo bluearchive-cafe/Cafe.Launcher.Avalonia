@@ -56,14 +56,14 @@ dotnet test .\tests\Cafe.Launcher.Avalonia.HeadlessTests\Cafe.Launcher.Avalonia.
 # UI style-contract and headless UI tests (run after XAML or style changes)
 .\dev.ps1 ui
 
-# Verify keys and composite-format placeholders across all locale JSON files
+# Verify keys and composite-format placeholders across all localized .resx files
 .\scripts\Test-LocalizationContract.ps1
 
 # Debug build, coverage (both test projects, 50% line/branch threshold), then win-x64 Release build
 .\verify.ps1
 ```
 
-Tests use xUnit v3 and `coverlet.msbuild`; do not introduce a mocking framework. Prefer handwritten `HttpMessageHandler` subclasses, fakes, and stubs. Use `Avalonia.Headless.XUnit` for UI behavior. When changing XAML or styles, run `UiStyleContractTests` in addition to the focused tests. Coverage thresholds: line ≥ 50%, branch ≥ 50% (enforced by `coverage.ps1`).
+Tests use xUnit v3 and `coverlet.msbuild`; do not introduce a mocking framework. Prefer handwritten `HttpMessageHandler` subclasses, fakes, and stubs. Use `Avalonia.Headless.XUnit` for UI behavior. When changing XAML or styles, run `UiStyleContractTests` in addition to the focused tests. `coverage.ps1` enforces the 50% line/branch minimum and rejects regressions below the repository baseline.
 
 Test project internals are exposed through `Properties/AssemblyInfo.cs`. Keep tests near the class under test and name them `Method_State_ExpectedResult`. New services should cover: success path, typical failure path (exception/validation failure), and boundary conditions (null input, empty collection).
 
@@ -81,7 +81,7 @@ GitHub Actions runs on `ubuntu-latest` with .NET `10.0.x`. The build workflow cu
 
 - `Program.cs` owns process lifetime: Windows single-instance mutex/signaling, the logger created before DI, crash handlers, first-launch detection, and the `session.active` crash-recovery lifecycle. The pre-DI `UnifiedLogger` is passed into DI so the process has one Serilog pipeline and is disposed only after session completion logging.
 - `App.axaml.cs` is the composition root. It builds `ServiceCollection`, calls `ServiceConfiguration.AddLauncherServices(existingLogger:)`, constructs the single `MainWindow`, configures tray/single-instance restoration, and either shows the first-launch setup wizard or starts normal asynchronous initialization.
-- `Services/ServiceConfiguration.cs` is the only DI registration point. This is a single-window desktop app: services and view models are singletons. Be deliberate when adding `IDisposable` services — Microsoft DI disposes registrations in reverse order. The expected disposal order is `LauncherApiClient` → `ResourcePanelApiClient` → `ImageCacheService` → `UnifiedLogger` → `GameDownloadService`. New `IDisposable` services should be registered before `UnifiedLogger` unless a later disposal slot is required.
+- `Composition/ServiceConfiguration.cs` is the DI registration point. This is a single-window desktop app: services and view models are singletons. Microsoft DI disposes created services in reverse registration order, so position a new `IDisposable` service after the consumers that must release first. `Program.RunSession` explicitly disposes the shared pre-DI `UnifiedLogger` after all session-end logging has completed.
 - `App.axaml` defines Fluent/Material resources, theme dictionaries, and `Launcher*` design tokens.
 
 ### MVVM and views
@@ -95,7 +95,7 @@ GitHub Actions runs on `ubuntu-latest` with .NET `10.0.x`. The build workflow cu
 ### Core runtime and game operations
 
 - `LauncherCoreService.LoadAsync()` is the startup/refresh orchestrator. It reads settings, loads local installation state, starts the required and optional remote API requests concurrently, derives `LauncherRuntimeState`, and returns `LauncherStatusSnapshot` for the view model.
-- `GameOperationsBackend` keeps UI commands separate from the implementation services: `GameLaunchService`, `GameDownloadService`, and `GameUninstallService`. Downloads use remote-manifest diffs, up to 10 concurrent downloads, `.tmp` files, Range resume, CRC64 verification, persisted state, and pause/resume without blocking threads.
+- `Features/GameOperations` separates command presentation (`GameOperationsViewModel`) from journey orchestration (`GameOperationJourney`) and workflows for launch, installation, and uninstall. Downloads use remote-manifest diffs, up to 10 concurrent downloads, `.tmp` files, Range resume, CRC64 verification, persisted state, and pause/resume without blocking threads.
 - `HttpClientFactory` owns shared pooled handlers and provides proxy-aware leases. Dispose clients/leases according to the factory method used; do not create ad-hoc long-lived handlers.
 
 ### Persistence and compatibility contracts
@@ -108,13 +108,12 @@ GitHub Actions runs on `ubuntu-latest` with .NET `10.0.x`. The build workflow cu
 
 ### Localization, themes, and diagnostics
 
-- UI strings come from the embedded `Resources/LauncherStrings{,.zh-Hans,.zh-Hant,.ja}.resx` resources through `LocalizationService`. Adding a new string:
-  1. Add the key alphabetically to all four `.resx` files.
-  2. Add an `[ObservableProperty] private string newKey = "";` field in `LocalizedStrings`.
-  3. Add `NewKey = localizer.T("newKey");` in `LocalizedStrings.Apply()`.
-  4. Bind in XAML via `{Binding Shell.I18n.NewKey}` and add `AutomationProperties.Name` for interactive controls.
-  5. Run `.\scripts\Generate-LauncherStringsDesigner.ps1` when adding or renaming a key.
-  Localization unit tests must initialize test dictionaries via `TestLocalizationHelper.Initialize()` before using `LocalizationService.T()`. After modifying any locale file, run `.\scripts\Test-LocalizationContract.ps1`.
+- UI strings come from the embedded `Resources/LauncherStrings{,.zh-Hans,.zh-Hant,.ja}.resx` resources through `LocalizationService`. `ShellViewModel` exposes `LocalizedTextCatalog` as `Shell.I18n`; XAML resolves resource keys with `{Binding Shell.I18n[resourceKey]}`. Adding a new string:
+  1. Add the key to all four `.resx` files, keeping each file alphabetically ordered.
+  2. Use `localizer.T("resourceKey")` or `localizer.F("resourceKey", ...)` in C#, and `Shell.I18n[resourceKey]` in XAML.
+  3. Add `AutomationProperties.Name` for interactive controls.
+  4. Run `.\scripts\Generate-LauncherStringsDesigner.ps1` after adding or renaming a key, then `.\scripts\Test-LocalizationContract.ps1`.
+  Localization unit tests initialize resource data via `TestLocalizationHelper.Initialize()` or `LocalizationService.InitializeForTesting(...)`.
 - Theme mode, wallpaper-derived/custom accents, and other UI state are persisted settings. Keep theme brushes in the dictionaries rather than replacing theme-specific brushes with hardcoded values.
 - `UnifiedLogger` writes local rolling logs; application code uses `LocalDiagnostics` with a concise PascalCase title and must not log authorization headers, salts, cookies, or tokens.
 

@@ -46,6 +46,7 @@ foreach ($projectInfo in $projects) {
         --logger "trx;LogFileName=$($projectInfo.Name).trx" `
         -p:CollectCoverage=true `
         -p:CoverletOutputFormat=cobertura `
+        -p:ExcludeByFile=**/Resources/LauncherStrings.Designer.cs `
         -p:CoverletOutput=$coverletOutput
     if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
 

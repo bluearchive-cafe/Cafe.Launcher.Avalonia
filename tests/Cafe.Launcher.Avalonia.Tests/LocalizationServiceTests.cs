@@ -9,6 +9,7 @@ using Cafe.Launcher.Avalonia.Services.Diagnostics;
 
 namespace Cafe.Launcher.Avalonia.Tests;
 
+[Collection(nameof(LocalizationServiceTestIsolation))]
 public sealed class LocalizationServiceTests
 {
     static LocalizationServiceTests()

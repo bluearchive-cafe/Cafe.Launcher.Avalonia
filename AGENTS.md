@@ -2,7 +2,7 @@
 
 ## Project Structure & Module Organization
 
-This is a .NET 10 desktop launcher built with Avalonia. Application entry points (`Program.cs`, `App.axaml`, and `App.axaml.cs`) live at the repository root. Domain data belongs in `Models/`; shared values in `Constants/`; application logic and integrations in `Services/`; presentation state in `ViewModels/`; and UI markup/code-behind in `Views/` and `Controls/`. Static images, audio, icons, and locale JSON files are under `Assets/`. Unit tests live in `tests/Cafe.Launcher.Avalonia.Tests`; headless UI tests live in `tests/Cafe.Launcher.Avalonia.HeadlessTests`. Packaging scripts are in `scripts/` and `installer/`.
+This is a .NET 10 Avalonia desktop launcher. Application entry points (`Program.cs`, `App.axaml`, and `App.axaml.cs`) live at the repository root. `Composition/ServiceConfiguration.cs` is the DI composition root. Major behaviour is organised vertically in `Features/` (`Shell`, `GameOperations`, `Settings`, `SetupWizard`, `Diagnostics`, and `ResourcePanel`); shared infrastructure remains in `Services/`, `Helpers/`, `Models/`, `Constants/`, `Controls/`, and `Converters/`. Views and their styles live in `Views/`. Static runtime assets are under `Assets/`; embedded UI resources are in `Resources/`. Unit tests live in `tests/Cafe.Launcher.Avalonia.Tests`; headless UI tests live in `tests/Cafe.Launcher.Avalonia.HeadlessTests`; packaging scripts are in `scripts/` and `installer/`.
 
 ## Build, Test, and Development Commands
 
@@ -12,7 +12,7 @@ This is a .NET 10 desktop launcher built with Avalonia. Application entry points
 - `.\coverage.ps1` — run tests with Coverlet and enforce coverage thresholds.
 - `.\verify.ps1` — perform the complete Debug build, coverage, and Release build sequence.
 - `.\dev.ps1 ui` — run UI style-contract and headless UI tests after localized UI changes.
-- `.\scripts\Test-LocalizationContract.ps1` — verify keys and composite-format placeholders across all locale JSON files.
+- `.\scripts\Test-LocalizationContract.ps1` — verify resource keys and composite-format placeholders across all localized `.resx` files.
 - `dotnet test .\tests\Cafe.Launcher.Avalonia.Tests\Cafe.Launcher.Avalonia.Tests.csproj --filter "FullyQualifiedName~VersionComparerTests"` — run one test class.
 
 ## Coding Style & Naming Conventions
@@ -21,11 +21,11 @@ Follow `.editorconfig`: C# uses UTF-8, CRLF, four-space indentation, file-scoped
 
 ## Localization & Configuration
 
-Add every UI string to all four `Resources/LauncherStrings*.resx` files and wire the exact key through `LocalizedStrings`. Regenerate `Resources/LauncherStrings.Designer.cs` with `scripts/Generate-LauncherStringsDesigner.ps1` after changing keys. Preserve resource keys and wire-contract property order. Never infer identifier spelling, casing, paths, or payload structure; inspect the defining code, tests, logs, or captured data first.
+Add every UI string to the neutral `Resources/LauncherStrings.resx` file and its `zh-Hans`, `zh-Hant`, and `ja` counterparts. Bind UI text through `Shell.I18n[resourceKey]` and use `LocalizationService.T()` / `F()` in C#. Regenerate `Resources/LauncherStrings.Designer.cs` with `scripts/Generate-LauncherStringsDesigner.ps1` after adding or renaming a key, then run `scripts/Test-LocalizationContract.ps1`. Preserve resource-key spelling, casing, and composite-format placeholders. Never infer identifier spelling, casing, paths, or payload structure; inspect the defining code, tests, logs, or captured data first.
 
 ## Testing Guidelines
 
-Tests use xUnit v3; UI tests use `Avalonia.Headless.XUnit`. Name tests `Method_State_ExpectedResult`. Add focused regression tests for behavior changes and run `UiStyleContractTests` after XAML/style edits. Run `.\scripts\Test-LocalizationContract.ps1` after modifying any `Resources/LauncherStrings*.resx`; run `.\dev.ps1 ui` after XAML or style changes. Before merging or releasing, still run `.\verify.ps1`. Line and branch coverage must each remain at or above 50%.
+Tests use xUnit v3; UI tests use `Avalonia.Headless.XUnit`. Name tests `Method_State_ExpectedResult`. Add focused regression tests for behavior changes and run `UiStyleContractTests` after XAML/style edits. Run `.\scripts\Test-LocalizationContract.ps1` after modifying any `Resources/LauncherStrings*.resx`; run `.\dev.ps1 ui` after XAML or style changes. Before merging or releasing, still run `.\verify.ps1`. `coverage.ps1` enforces the 50% minimum for line and branch coverage and rejects regressions below the repository baseline.
 
 ## Commit & Pull Request Guidelines
 

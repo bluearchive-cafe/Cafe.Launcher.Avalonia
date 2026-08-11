@@ -64,13 +64,22 @@ public sealed partial class DebugViewModel : ViewModelBase, IModalContentViewMod
     [ObservableProperty]
     private string lastActionResult = "";
 
+    /// <summary>Raised when the debug panel requests a shell refresh.</summary>
     public event Func<Task>? RefreshRequested;
+
+    /// <summary>Raised after the user confirms that persisted settings should be reset.</summary>
     public event Func<Task>? ResetSettingsRequested;
+
+    /// <summary>Raised when the debug panel needs the shell to present reset confirmation.</summary>
     public event Action? ResetSettingsConfirmationRequested;
 
+    /// <summary>Gets or sets the action used to open a local directory.</summary>
     public Action<string>? OpenDirectory { get; set; }
+
+    /// <summary>Gets or sets the picker used to select a directory for exported logs.</summary>
     public Func<string, Task<string?>>? PickExportDirectoryAsync { get; set; }
 
+    /// <summary>Initializes the debug overlay and observes game-operation state.</summary>
     public DebugViewModel(
         ToastService toastService,
         UnifiedLogger unifiedLogger,
@@ -126,6 +135,7 @@ public sealed partial class DebugViewModel : ViewModelBase, IModalContentViewMod
 
     // ── Log level ────────────────────────────────────────────────────────
 
+    /// <summary>Gets localized display names for the selectable diagnostic log levels.</summary>
     public string[] LogLevelOptions =>
     [
         shell.I18n["logLevelVerbose"],
@@ -136,6 +146,7 @@ public sealed partial class DebugViewModel : ViewModelBase, IModalContentViewMod
         shell.I18n["logLevelFatal"]
     ];
 
+    /// <summary>Refreshes debug-panel text after the active UI language changes.</summary>
     public void ApplyLanguage()
     {
         OnPropertyChanged(nameof(LogLevelOptions));
@@ -306,6 +317,7 @@ public sealed partial class DebugViewModel : ViewModelBase, IModalContentViewMod
         }
     }
 
+    /// <summary>Stops observing game-operation state.</summary>
     public void Dispose()
     {
         if (disposed)
@@ -387,6 +399,7 @@ public sealed partial class DebugViewModel : ViewModelBase, IModalContentViewMod
         ResetSettingsConfirmationRequested?.Invoke();
     }
 
+    /// <summary>Runs the reset callback after the shell has confirmed the destructive action.</summary>
     public async Task ConfirmResetSettingsAsync()
     {
         if (ResetSettingsRequested is not null)

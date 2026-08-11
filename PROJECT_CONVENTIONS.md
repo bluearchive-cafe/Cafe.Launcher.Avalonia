@@ -8,8 +8,8 @@ AI 辅助开发规范 —— 本文件为所有 AI 编码助手（Claude Code、
 
 ## 1. 核心价值观
 
-1. **测试先行（TDD）** — 写实现代码之前先写测试。如果没有测试保护，不要碰任何已有功能。
-2. **设计先于编码** — 收到功能需求时，先用 brainstorming 做需求分析；非简单任务（超过 2–3 个文件的改动）必须写书面计划。
+1. **行为有测试保护** — 新功能和行为变更应有聚焦测试；先用测试固定缺陷或风险边界，并在完成前运行受影响的测试。
+2. **按仓库工作流实施** — `AGENTS.md` 是代理工作流的权威来源：清晰且范围有限的修改直接实施；仅在其中列出的条件成立时才升级到设计或计划流程。
 3. **验证先于完成** — 声称完成前必须运行 `dotnet test`（至少跑受影响的测试类）。Don't claim "done" on trust.
 4. **向后兼容** — 对 `settings.json` 的修改与新增 key 均需保留对旧格式的兼容；修改公共 API 签名时，所有现有调用点不能断编。
 5. **零警告** — `TreatWarningsAsErrors` + `EnforceCodeStyleInBuild` 已启用，任何 warning = error。本地 build 后必须看到 `0 个警告 0 个错误`。
@@ -33,7 +33,7 @@ AI 辅助开发规范 —— 本文件为所有 AI 编码助手（Claude Code、
 
 ### 2.2 文件组织
 
-- 每个文件一个类/枚举（除非是紧密耦合的内部类型，如 `LogEntryDisplay` 在同一文件末尾）。
+- 默认每个文件一个主要类型；紧密协作的支持类型可以同文件放置，但应保持同一职责边界。
 - `Services/` 下的每个 Service 对应一个文件，文件名与类名一致。
 - `Models/` 下按领域分组文件，每个文件对应一个 DTO 或一组强相关的 DTO。
 - `Constants/` 下的每个文件独立一个常量类别。
@@ -49,7 +49,7 @@ AI 辅助开发规范 —— 本文件为所有 AI 编码助手（Claude Code、
 
 ### 2.4 代码注释
 
-- 公开 API（public/internal 方法、类）必须有 XML doc comment (`/// <summary>`)。
+- 新增或修改的公共类型，以及跨功能边界的 public/internal 成员，应有 XML doc comment (`/// <summary>`) 说明其稳定合约。
 - 关键合约与不变量（线程安全、disposal order、线序）必须在注释中写明。
 - 注释面向**下一个维护者**（可能是 AI），解释 **why** 而不只是 **what**。
 - 符合 `CA2016` 等分析器的抑制项须单行注释说明原因。
@@ -93,15 +93,13 @@ AI 辅助开发规范 —— 本文件为所有 AI 编码助手（Claude Code、
 ### 4.1 添加新字符串
 
 1. 在 4 个资源文件（`Resources/LauncherStrings{,.zh-Hans,.zh-Hant,.ja}.resx`）中按字母序添加 key-value。
-2. 在 `LocalizedStrings` 中添加 `[ObservableProperty] private string newKey = "";` 字段。
-3. 在 `LocalizedStrings.Apply()` 中添加 `NewKey = localizer.T("newKey");`。
-4. XAML 中绑定：`{Binding Shell.I18n.NewKey}`。
-5. 所有 4 种语言都提供翻译（对专有名词可回退到英文文本，但不得留空）。
-6. 新增或重命名 key 后运行 `scripts/Generate-LauncherStringsDesigner.ps1`。
+2. XAML 中绑定：`{Binding Shell.I18n[newKey]}`。
+3. 所有 4 种语言都提供翻译（对专有名词可回退到英文文本，但不得留空）。
+4. 新增或重命名 key 后运行 `scripts/Generate-LauncherStringsDesigner.ps1`，并运行 `scripts/Test-LocalizationContract.ps1`。
 
 ### 4.2 测试中的本地化
 
-- 使用 `LocalizationService.T()` 的单元测试必须在类的静态构造函数中调用 `TestLocalizationHelper.Initialize()`（或直接 `LocalizationService.InitializeForTesting(...)`）。
+- 使用 `LocalizationService.T()` 的单元测试通过 `TestLocalizationHelper.Initialize()` 或 `LocalizationService.InitializeForTesting(...)` 提供测试资源。
 - 不要在测试中直接写死预期中文字符串（本地化可能变化）；改用 key 查找或只断言非空/非 null。
 
 ---
@@ -110,13 +108,13 @@ AI 辅助开发规范 —— 本文件为所有 AI 编码助手（Claude Code、
 
 ### 5.1 注册规则
 
-- 所有 Service 和 ViewModel 在 `ServiceConfiguration.AddLauncherServices()` 中注册。
+- 所有 DI 管理的 Service 和 ViewModel 在 `Composition/ServiceConfiguration.AddLauncherServices()` 中注册。
 - 单窗口桌面应用：全部注册为 `AddSingleton`（无 scoped 边界）。
-- `UnifiedLogger` 在 `Program.cs` 预创建，通过 `ServiceConfiguration.AddLauncherServices(existingLogger:)` 传入 DI 容器复用同一实例。
+- `UnifiedLogger` 在 `Program.cs` 预创建，通过 `Composition.ServiceConfiguration.AddLauncherServices(existingLogger:)` 传入 DI 容器复用同一实例。
 
 ### 5.2 IDisposable 顺序
 
-`ServiceProvider` 按注册的**逆序**调用 `Dispose()`。IDisposable 服务按以下顺序 dispose：`LauncherApiClient` → `ResourcePanelApiClient` → `ImageCacheService` → `UnifiedLogger` → `GameDownloadService`。**新增 IDisposable 服务时，将其注册在 `UnifiedLogger` 之前或 `GameDownloadService` 之后不会影响现有顺序，但必须确保不早于依赖它的服务之前 dispose。**
+`ServiceProvider` 按已创建服务的注册逆序调用 `Dispose()`。新增 `IDisposable` 服务时，检查 `Composition/ServiceConfiguration.cs` 中的注册位置，确保它在仍依赖它的服务之后释放。`Program.RunSession` 在会话结束日志写入后显式释放共享的预 DI `UnifiedLogger`。
 
 ### 5.3 构造函数注入
 
@@ -142,8 +140,8 @@ AI 辅助开发规范 —— 本文件为所有 AI 编码助手（Claude Code、
 - **每个新功能必有测试。** 没有测试的 PR/分支不应合并。
 - 修改框架/基础设施（日志、本地化、DI）时，先跑现有的全套测试 → 再写新的覆盖新增行为。
 - `UiStyleContractTests` 在修改任何 XAML 文件后都必须跑一遍。
-- 覆盖阈值：line ≥ 50%、branch ≥ 50%（`coverage.ps1` 强制执行）。
-- 新增服务需覆盖：正向路径（success case）、典型失败路径（exception/validation failure）、边界条件（null input、empty collection）。
+- 覆盖率最低阈值为 line ≥ 50%、branch ≥ 50%；`coverage.ps1` 还会验证仓库当前覆盖率基线未回退。
+- 新增服务按适用情况覆盖：正向路径、典型失败路径（exception/validation failure）和关键边界条件（如 null input、empty collection）。
 
 ### 6.4 测试替身
 - 不用 Moq/NSubstitute。伪造 `HttpMessageHandler` 时手写子类。
@@ -156,9 +154,8 @@ AI 辅助开发规范 —— 本文件为所有 AI 编码助手（Claude Code、
 
 `settings.json` 的 JSON 字段名必须向后兼容：
 - 新增字段：提供合理默认值（在 `LauncherSettings` 模型中），`LauncherSettingsService` 不因缺失字段而抛异常。
-- 删除字段：保留 `JsonIgnore` 属性或 `JsonExtensionData`，避免反序列化失败。
-- 重命名字段：使用 `[JsonPropertyName("oldName")]` 保留序列化兼容。
-- `LauncherSettingsService.NormalizeSettings()` 负责对任何未知/不合法值兜底为有效默认值。
+- 重命名或删除字段前，明确旧 JSON 的读取策略；必要时在 `LauncherSettingsService` 中解析旧字段。
+- `LauncherSettings` 的新增字段需有默认值，并同步更新 `DeepClone()`；`LauncherSettingsService.NormalizeSettings()` 负责将未知或不合法值兜底为有效默认值。
 
 ---
 
@@ -186,7 +183,7 @@ AI 辅助开发规范 —— 本文件为所有 AI 编码助手（Claude Code、
 - [ ] `dotnet test`（受影响的测试类）→ 全部通过
 - [ ] XAML 改动 → `UiStyleContractTests` 通过
 - [ ] 新功能的测试覆盖了预期行为
-- [ ] 新增的本地化 key 在 4 种语言文件中都存在且按字母序
+- [ ] 新增的本地化 key 存在于 4 个 `LauncherStrings*.resx` 文件中，已生成 `LauncherStrings.Designer.cs`，且资源合约测试通过
 - [ ] 未引入裸色号、裸图标尺寸、裸圆角在 View XAML 中
 - [ ] 新增的 public/internal API 有 XML doc comment
 - [ ] IDisposable 新增类注册顺序不影响现有 disposal order
@@ -216,11 +213,11 @@ AI 辅助开发规范 —— 本文件为所有 AI 编码助手（Claude Code、
 | 工具/库 | 版本 | 用途 |
 |---|---|---|
 | .NET SDK | 10.0.x | Runtime |
-| Avalonia | 12.0.4 | UI Framework |
+| Avalonia | 12.1.1 | UI Framework |
 | CommunityToolkit.Mvvm | 8.4.2 | MVVM source generators |
 | Material.Icons.Avalonia | (latest) | Icon library |
 | Serilog + Sinks.Async + Sinks.File | (latest) | Logging pipeline |
 | xUnit v3 | 3.2.2 | Test framework |
-| Avalonia.Headless.XUnit | 12.0.5 | Headless UI testing |
+| Avalonia.Headless.XUnit | 12.1.1 | Headless UI testing |
 | coverlet.msbuild | 10.0.1 | Code coverage |
 | NSIS | 3.x | Windows installer |
