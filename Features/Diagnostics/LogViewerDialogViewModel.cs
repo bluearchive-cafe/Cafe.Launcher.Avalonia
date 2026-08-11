@@ -9,12 +9,12 @@ using System.Threading;
 using System.Threading.Tasks;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
-using Cafe.Launcher.Avalonia.Features.Diagnostics;
 using Cafe.Launcher.Avalonia.Features.Shell;
 using Cafe.Launcher.Avalonia.Services;
 using Cafe.Launcher.Avalonia.Services.Diagnostics;
+using Cafe.Launcher.Avalonia.ViewModels;
 
-namespace Cafe.Launcher.Avalonia.ViewModels;
+namespace Cafe.Launcher.Avalonia.Features.Diagnostics;
 
 public sealed partial class LogViewerDialogViewModel : ViewModelBase, IModalContentViewModel
 {

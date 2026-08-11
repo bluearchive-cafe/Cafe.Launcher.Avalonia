@@ -1,3 +1,4 @@
+using Cafe.Launcher.Avalonia.Features.ResourcePanel;
 using Cafe.Launcher.Avalonia.Services;
 using Cafe.Launcher.Avalonia.Models;
 

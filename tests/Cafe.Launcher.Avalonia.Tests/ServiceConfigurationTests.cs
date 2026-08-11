@@ -1,4 +1,6 @@
 using Cafe.Launcher.Avalonia.Features.Shell;
+using Cafe.Launcher.Avalonia.Features.GameOperations;
+using Cafe.Launcher.Avalonia.Composition;
 using Cafe.Launcher.Avalonia.Models;
 using Cafe.Launcher.Avalonia.Services;
 using Cafe.Launcher.Avalonia.Services.Diagnostics;

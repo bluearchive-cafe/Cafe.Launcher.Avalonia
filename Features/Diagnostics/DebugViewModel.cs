@@ -7,13 +7,15 @@ using System.Threading.Tasks;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 using Cafe.Launcher.Avalonia.Constants;
+using Cafe.Launcher.Avalonia.Features.GameOperations;
 using Cafe.Launcher.Avalonia.Features.Shell;
 using Cafe.Launcher.Avalonia.Models;
 using Cafe.Launcher.Avalonia.Services;
 using Cafe.Launcher.Avalonia.Services.Diagnostics;
+using Cafe.Launcher.Avalonia.ViewModels;
 using Serilog.Events;
 
-namespace Cafe.Launcher.Avalonia.ViewModels;
+namespace Cafe.Launcher.Avalonia.Features.Diagnostics;
 
 /// <summary>
 /// Supplies the development-only diagnostics overlay with state, commands, and shell coordination hooks.

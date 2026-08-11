@@ -4,6 +4,8 @@ using Avalonia.Media;
 using Cafe.Launcher.Avalonia.Constants;
 using Cafe.Launcher.Avalonia.Helpers;
 using Cafe.Launcher.Avalonia.Models;
+using Cafe.Launcher.Avalonia.Features.ResourcePanel;
+using Cafe.Launcher.Avalonia.Features.Settings;
 using Cafe.Launcher.Avalonia.Services;
 using CommunityToolkit.Mvvm.ComponentModel;
 

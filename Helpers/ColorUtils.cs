@@ -5,7 +5,7 @@ namespace Cafe.Launcher.Avalonia.Helpers;
 
 /// <summary>
 /// Colour-space conversion and accent-colour normalisation utilities.
-/// Extracted <see cref="ViewModels.SettingsAppearanceViewModel"/> so the VM
+/// Extracted <see cref="Features.Settings.SettingsAppearanceViewModel"/> so the VM
 /// stays focused on state coordination.
 /// </summary>
 internal static class ColorUtils

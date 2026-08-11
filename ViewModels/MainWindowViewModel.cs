@@ -1,6 +1,10 @@
 using System;
 using System.Threading;
 using System.Threading.Tasks;
+using Cafe.Launcher.Avalonia.Features.Diagnostics;
+using Cafe.Launcher.Avalonia.Features.GameOperations;
+using Cafe.Launcher.Avalonia.Features.ResourcePanel;
+using Cafe.Launcher.Avalonia.Features.Settings;
 using Cafe.Launcher.Avalonia.Features.Shell;
 using Cafe.Launcher.Avalonia.Helpers;
 using Cafe.Launcher.Avalonia.Models;

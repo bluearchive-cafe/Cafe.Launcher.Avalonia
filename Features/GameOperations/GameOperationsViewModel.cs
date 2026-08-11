@@ -5,14 +5,14 @@ using System.Threading.Tasks;
 using Avalonia;
 using Avalonia.Threading;
 using Cafe.Launcher.Avalonia.Helpers;
-using Cafe.Launcher.Avalonia.Features.GameOperations;
 using Cafe.Launcher.Avalonia.Models;
 using Cafe.Launcher.Avalonia.Services;
 using Cafe.Launcher.Avalonia.Services.Diagnostics;
+using Cafe.Launcher.Avalonia.ViewModels;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 
-namespace Cafe.Launcher.Avalonia.ViewModels;
+namespace Cafe.Launcher.Avalonia.Features.GameOperations;
 
 public partial class GameOperationsViewModel : ViewModelBase, IGameOperationJourneyHost, IDisposable
 {

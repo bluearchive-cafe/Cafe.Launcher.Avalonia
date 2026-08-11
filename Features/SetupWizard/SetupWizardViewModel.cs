@@ -9,10 +9,11 @@ using Cafe.Launcher.Avalonia.Helpers;
 using Cafe.Launcher.Avalonia.Models;
 using Cafe.Launcher.Avalonia.Services;
 using Cafe.Launcher.Avalonia.Services.Diagnostics;
+using Cafe.Launcher.Avalonia.ViewModels;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 
-namespace Cafe.Launcher.Avalonia.ViewModels;
+namespace Cafe.Launcher.Avalonia.Features.SetupWizard;
 
 /// <summary>
 /// Coordinates the first-launch setup wizard state, validation, and settings output.

@@ -4,7 +4,7 @@ using System.Threading.Tasks;
 using Cafe.Launcher.Avalonia.Models;
 using Cafe.Launcher.Avalonia.Services.Diagnostics;
 
-namespace Cafe.Launcher.Avalonia.Services;
+namespace Cafe.Launcher.Avalonia.Features.ResourcePanel;
 
 /// <summary>
 /// Deep module that owns the resource panel workflow:

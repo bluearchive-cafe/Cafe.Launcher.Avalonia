@@ -4,6 +4,7 @@ using System.IO;
 using System.Threading;
 using System.Threading.Tasks;
 using Cafe.Launcher.Avalonia.Constants;
+using Cafe.Launcher.Avalonia.Composition;
 using Cafe.Launcher.Avalonia.Services;
 using Microsoft.Extensions.DependencyInjection;
 using Cafe.Launcher.Avalonia.Services.Diagnostics;

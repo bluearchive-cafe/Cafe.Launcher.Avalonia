@@ -1,6 +1,9 @@
 using System;
 using System.ComponentModel;
+using Cafe.Launcher.Avalonia.Features.Diagnostics;
 using Cafe.Launcher.Avalonia.Models;
+using Cafe.Launcher.Avalonia.Features.ResourcePanel;
+using Cafe.Launcher.Avalonia.Features.Settings;
 using Cafe.Launcher.Avalonia.ViewModels;
 
 namespace Cafe.Launcher.Avalonia.Features.Shell;

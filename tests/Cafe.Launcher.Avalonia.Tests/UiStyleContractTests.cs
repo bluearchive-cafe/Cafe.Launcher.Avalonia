@@ -3300,7 +3300,7 @@ public sealed partial class UiStyleContractTests
     [Fact]
     public void DynamicAccent_DoesNotReplaceThemeSpecificInformationTextBrush()
     {
-        var settingsViewModel = File.ReadAllText(ProjectFile("ViewModels/SettingsViewModel.cs"));
+        var settingsViewModel = File.ReadAllText(ProjectFile("Features/Settings/SettingsViewModel.cs"));
 
         Assert.DoesNotContain(
             "SetBrush(application, \"LauncherInfoTextBrush\"",
