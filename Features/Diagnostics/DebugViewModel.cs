@@ -7,13 +7,15 @@ using System.Threading.Tasks;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 using Cafe.Launcher.Avalonia.Constants;
+using Cafe.Launcher.Avalonia.Features.GameOperations;
 using Cafe.Launcher.Avalonia.Features.Shell;
 using Cafe.Launcher.Avalonia.Models;
 using Cafe.Launcher.Avalonia.Services;
 using Cafe.Launcher.Avalonia.Services.Diagnostics;
+using Cafe.Launcher.Avalonia.ViewModels;
 using Serilog.Events;
 
-namespace Cafe.Launcher.Avalonia.ViewModels;
+namespace Cafe.Launcher.Avalonia.Features.Diagnostics;
 
 /// <summary>
 /// Supplies the development-only diagnostics overlay with state, commands, and shell coordination hooks.
@@ -62,13 +64,22 @@ public sealed partial class DebugViewModel : ViewModelBase, IModalContentViewMod
     [ObservableProperty]
     private string lastActionResult = "";
 
+    /// <summary>Raised when the debug panel requests a shell refresh.</summary>
     public event Func<Task>? RefreshRequested;
+
+    /// <summary>Raised after the user confirms that persisted settings should be reset.</summary>
     public event Func<Task>? ResetSettingsRequested;
+
+    /// <summary>Raised when the debug panel needs the shell to present reset confirmation.</summary>
     public event Action? ResetSettingsConfirmationRequested;
 
+    /// <summary>Gets or sets the action used to open a local directory.</summary>
     public Action<string>? OpenDirectory { get; set; }
+
+    /// <summary>Gets or sets the picker used to select a directory for exported logs.</summary>
     public Func<string, Task<string?>>? PickExportDirectoryAsync { get; set; }
 
+    /// <summary>Initializes the debug overlay and observes game-operation state.</summary>
     public DebugViewModel(
         ToastService toastService,
         UnifiedLogger unifiedLogger,
@@ -113,7 +124,7 @@ public sealed partial class DebugViewModel : ViewModelBase, IModalContentViewMod
         DataDirectoryPath = LauncherUserDataDirectory.Root;
 
         SystemInfoText = Format(
-            shell.I18n.DebugSystemInfoFormat,
+            shell.I18n["debugSystemInfoFormat"],
             BuildInfo.LauncherVersion,
             BuildInfo.CommitSha,
             System.Runtime.InteropServices.RuntimeInformation.FrameworkDescription,
@@ -124,16 +135,18 @@ public sealed partial class DebugViewModel : ViewModelBase, IModalContentViewMod
 
     // ── Log level ────────────────────────────────────────────────────────
 
+    /// <summary>Gets localized display names for the selectable diagnostic log levels.</summary>
     public string[] LogLevelOptions =>
     [
-        shell.I18n.LogLevelVerbose,
-        shell.I18n.LogLevelDebug,
-        shell.I18n.LogLevelInformation,
-        shell.I18n.LogLevelWarning,
-        shell.I18n.LogLevelError,
-        shell.I18n.LogLevelFatal
+        shell.I18n["logLevelVerbose"],
+        shell.I18n["logLevelDebug"],
+        shell.I18n["logLevelInformation"],
+        shell.I18n["logLevelWarning"],
+        shell.I18n["logLevelError"],
+        shell.I18n["logLevelFatal"]
     ];
 
+    /// <summary>Refreshes debug-panel text after the active UI language changes.</summary>
     public void ApplyLanguage()
     {
         OnPropertyChanged(nameof(LogLevelOptions));
@@ -177,7 +190,7 @@ public sealed partial class DebugViewModel : ViewModelBase, IModalContentViewMod
         };
         unifiedLogger.SetMinimumLevel(level);
         LogLevelDisplay = LogLevelOptions[Math.Clamp(value, 0, LogLevelOptions.Length - 1)];
-        LastActionResult = Format(shell.I18n.DebugLogLevelSet, LogLevelDisplay);
+        LastActionResult = Format(shell.I18n["debugLogLevelSet"], LogLevelDisplay);
     }
 
     // ── Log writes ───────────────────────────────────────────────────────
@@ -197,17 +210,17 @@ public sealed partial class DebugViewModel : ViewModelBase, IModalContentViewMod
         };
         var severityDisplay = severity switch
         {
-            "Verbose" => shell.I18n.LogLevelVerbose,
-            "Debug" => shell.I18n.LogLevelDebug,
-            "Info" => shell.I18n.LogLevelInformation,
-            "Warn" => shell.I18n.LogLevelWarning,
-            "Error" => shell.I18n.LogLevelError,
-            "Fatal" => shell.I18n.LogLevelFatal,
-            _ => shell.I18n.LogLevelInformation
+            "Verbose" => shell.I18n["logLevelVerbose"],
+            "Debug" => shell.I18n["logLevelDebug"],
+            "Info" => shell.I18n["logLevelInformation"],
+            "Warn" => shell.I18n["logLevelWarning"],
+            "Error" => shell.I18n["logLevelError"],
+            "Fatal" => shell.I18n["logLevelFatal"],
+            _ => shell.I18n["logLevelInformation"]
         };
-        var message = Format(shell.I18n.DebugTestLogMessage, DateTimeOffset.Now.ToString("HH:mm:ss.fff", CultureInfo.CurrentCulture));
+        var message = Format(shell.I18n["debugTestLogMessage"], DateTimeOffset.Now.ToString("HH:mm:ss.fff", CultureInfo.CurrentCulture));
         LocalDiagnostics.LogSync(sev, "DebugPanel", message);
-        LastActionResult = Format(shell.I18n.DebugLogEntryWritten, severityDisplay);
+        LastActionResult = Format(shell.I18n["debugLogEntryWritten"], severityDisplay);
     }
 
     // ── Toast notifications ──────────────────────────────────────────────
@@ -217,14 +230,14 @@ public sealed partial class DebugViewModel : ViewModelBase, IModalContentViewMod
     {
         var severityDisplay = severity switch
         {
-            "Info" => shell.I18n.LogLevelInformation,
-            "Success" => shell.I18n.ToastSuccess,
-            "Warning" => shell.I18n.LogLevelWarning,
-            "Error" => shell.I18n.LogLevelError,
+            "Info" => shell.I18n["logLevelInformation"],
+            "Success" => shell.I18n["toastSuccess"],
+            "Warning" => shell.I18n["logLevelWarning"],
+            "Error" => shell.I18n["logLevelError"],
             _ => severity
         };
         var message = Format(
-            shell.I18n.DebugTestToastMessage,
+            shell.I18n["debugTestToastMessage"],
             severityDisplay,
             DateTimeOffset.Now.ToString("HH:mm:ss", CultureInfo.CurrentCulture));
         switch (severity)
@@ -242,7 +255,7 @@ public sealed partial class DebugViewModel : ViewModelBase, IModalContentViewMod
                 toastService.ShowError(message);
                 break;
         }
-        LastActionResult = Format(shell.I18n.DebugToastShown, severityDisplay);
+        LastActionResult = Format(shell.I18n["debugToastShown"], severityDisplay);
     }
 
     [RelayCommand]
@@ -250,17 +263,17 @@ public sealed partial class DebugViewModel : ViewModelBase, IModalContentViewMod
     {
         toastService.Show(new ToastOptions
         {
-            Title = shell.I18n.DebugActionToastTitle,
-            Message = shell.I18n.DebugActionToastMessage,
+            Title = shell.I18n["debugActionToastTitle"],
+            Message = shell.I18n["debugActionToastMessage"],
             Severity = ToastSeverity.Info,
             PrimaryAction = new ToastAction(
-                shell.I18n.DebugSimulateSuccess,
+                shell.I18n["debugSimulateSuccess"],
                 _ => Task.FromResult(ToastActionResult.Success())),
             SecondaryAction = new ToastAction(
-                shell.I18n.DebugSimulateFailure,
+                shell.I18n["debugSimulateFailure"],
                 _ => Task.FromResult(ToastActionResult.Failure(
-                    shell.I18n.DebugActionFailureMessage,
-                    shell.I18n.DebugActionFailureTitle)))
+                    shell.I18n["debugActionFailureMessage"],
+                    shell.I18n["debugActionFailureTitle"])))
         });
     }
 
@@ -270,18 +283,18 @@ public sealed partial class DebugViewModel : ViewModelBase, IModalContentViewMod
     private async Task TriggerErrorDialogAsync()
     {
         var exception = new InvalidOperationException(Format(
-            shell.I18n.DebugCriticalErrorMessage,
+            shell.I18n["debugCriticalErrorMessage"],
             DateTimeOffset.Now.ToString("HH:mm:ss", CultureInfo.CurrentCulture)));
         await errorHandling.HandleCriticalErrorAsync(
             "DebugPanel: test critical error", exception);
-        LastActionResult = shell.I18n.DebugCriticalErrorTriggered;
+        LastActionResult = shell.I18n["debugCriticalErrorTriggered"];
     }
 
     [RelayCommand]
     private async Task SimulateHandledErrorAsync()
     {
         var exception = new InvalidOperationException(Format(
-            shell.I18n.DebugHandledErrorMessage,
+            shell.I18n["debugHandledErrorMessage"],
             DateTimeOffset.Now.ToString("HH:mm:ss", CultureInfo.CurrentCulture)));
         await errorHandling.HandleErrorAsync(
             "DebugPanel: test handled error", exception,
@@ -290,7 +303,7 @@ public sealed partial class DebugViewModel : ViewModelBase, IModalContentViewMod
                 ToastMessage = exception.Message,
                 OperationNoteKey = "networkWithMessage"
             });
-        LastActionResult = shell.I18n.DebugHandledErrorSimulated;
+        LastActionResult = shell.I18n["debugHandledErrorSimulated"];
     }
 
     // ── Game operations ──────────────────────────────────────────────────
@@ -304,6 +317,7 @@ public sealed partial class DebugViewModel : ViewModelBase, IModalContentViewMod
         }
     }
 
+    /// <summary>Stops observing game-operation state.</summary>
     public void Dispose()
     {
         if (disposed)
@@ -320,8 +334,8 @@ public sealed partial class DebugViewModel : ViewModelBase, IModalContentViewMod
         IsDownloadRunning = operations.IsDownloadRunning;
         IsDownloadPaused = operations.IsPaused;
         DownloadStatusText = IsDownloadRunning
-            ? (IsDownloadPaused ? shell.I18n.Paused : shell.I18n.Downloading)
-            : shell.I18n.DebugIdle;
+            ? (IsDownloadPaused ? shell.I18n["paused"] : shell.I18n["downloading"])
+            : shell.I18n["debugIdle"];
     }
 
     [RelayCommand]
@@ -333,7 +347,7 @@ public sealed partial class DebugViewModel : ViewModelBase, IModalContentViewMod
         }
 
         operations.PauseResumeCommand.Execute(null);
-        LastActionResult = operations.IsPaused ? shell.I18n.PauseRequested : shell.I18n.ResumeRequested;
+        LastActionResult = operations.IsPaused ? shell.I18n["pauseRequested"] : shell.I18n["resumeRequested"];
     }
 
     [RelayCommand]
@@ -345,7 +359,7 @@ public sealed partial class DebugViewModel : ViewModelBase, IModalContentViewMod
         }
 
         operations.StopOperationCommand.Execute(null);
-        LastActionResult = shell.I18n.StopRequested;
+        LastActionResult = shell.I18n["stopRequested"];
     }
 
     [RelayCommand]
@@ -355,7 +369,7 @@ public sealed partial class DebugViewModel : ViewModelBase, IModalContentViewMod
         {
             await RefreshRequested.Invoke();
         }
-        LastActionResult = shell.I18n.DebugStateRefreshTriggered;
+        LastActionResult = shell.I18n["debugStateRefreshTriggered"];
     }
 
     // ── Settings ─────────────────────────────────────────────────────────
@@ -375,7 +389,7 @@ public sealed partial class DebugViewModel : ViewModelBase, IModalContentViewMod
         }
         catch (Exception ex)
         {
-            SettingsJsonDisplay = Format(shell.I18n.DebugSettingsReadFailed, ex.Message);
+            SettingsJsonDisplay = Format(shell.I18n["debugSettingsReadFailed"], ex.Message);
         }
     }
 
@@ -385,13 +399,14 @@ public sealed partial class DebugViewModel : ViewModelBase, IModalContentViewMod
         ResetSettingsConfirmationRequested?.Invoke();
     }
 
+    /// <summary>Runs the reset callback after the shell has confirmed the destructive action.</summary>
     public async Task ConfirmResetSettingsAsync()
     {
         if (ResetSettingsRequested is not null)
         {
             await ResetSettingsRequested.Invoke();
             await RefreshSettingsDisplayAsync();
-            LastActionResult = shell.I18n.DebugSettingsReset;
+            LastActionResult = shell.I18n["debugSettingsReset"];
         }
     }
 
@@ -402,21 +417,21 @@ public sealed partial class DebugViewModel : ViewModelBase, IModalContentViewMod
     {
         if (logExportService is null || PickExportDirectoryAsync is null)
         {
-            LastActionResult = shell.I18n.DebugLogExportUnavailable;
+            LastActionResult = shell.I18n["debugLogExportUnavailable"];
             return;
         }
 
         var dir = await PickExportDirectoryAsync(LauncherUserDataDirectory.Root);
         if (string.IsNullOrWhiteSpace(dir))
         {
-            LastActionResult = shell.I18n.DebugExportCancelled;
+            LastActionResult = shell.I18n["debugExportCancelled"];
             return;
         }
 
         try
         {
             var zipPath = await logExportService.ExportAsync(dir);
-            LastActionResult = Format(shell.I18n.LogExportSucceeded, zipPath);
+            LastActionResult = Format(shell.I18n["logExportSucceeded"], zipPath);
 
             // Open the containing folder
             var folder = Path.GetDirectoryName(zipPath);
@@ -427,7 +442,7 @@ public sealed partial class DebugViewModel : ViewModelBase, IModalContentViewMod
         }
         catch (Exception ex)
         {
-            LastActionResult = Format(shell.I18n.LogExportFailed, ex.Message);
+            LastActionResult = Format(shell.I18n["logExportFailed"], ex.Message);
         }
     }
 

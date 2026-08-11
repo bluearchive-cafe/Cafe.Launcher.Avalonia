@@ -5,14 +5,14 @@ using System.Threading.Tasks;
 using Avalonia;
 using Avalonia.Threading;
 using Cafe.Launcher.Avalonia.Helpers;
-using Cafe.Launcher.Avalonia.Features.GameOperations;
 using Cafe.Launcher.Avalonia.Models;
 using Cafe.Launcher.Avalonia.Services;
 using Cafe.Launcher.Avalonia.Services.Diagnostics;
+using Cafe.Launcher.Avalonia.ViewModels;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 
-namespace Cafe.Launcher.Avalonia.ViewModels;
+namespace Cafe.Launcher.Avalonia.Features.GameOperations;
 
 public partial class GameOperationsViewModel : ViewModelBase, IGameOperationJourneyHost, IDisposable
 {
@@ -95,7 +95,7 @@ public partial class GameOperationsViewModel : ViewModelBase, IGameOperationJour
 
     bool IGameOperationJourneyHost.IsBusy => shell.IsBusy;
 
-    public GameOperationsViewModel(
+    internal GameOperationsViewModel(
         GameLaunchService gameLaunchService,
         GameDownloadService gameDownloadService,
         GameUninstallService gameUninstallService,
@@ -106,15 +106,19 @@ public partial class GameOperationsViewModel : ViewModelBase, IGameOperationJour
         DialogsViewModel dialogs,
         IErrorHandlingService errorHandling)
         : this(
-            new GameLaunchWorkflow(gameLaunchService),
-            new GameInstallationWorkflow(gameDownloadService),
-            new GameUninstallWorkflow(gameUninstallService),
+            new GameOperationJourneyFactory(
+                new GameLaunchWorkflow(gameLaunchService),
+                new GameInstallationWorkflow(gameDownloadService),
+                new GameUninstallWorkflow(gameUninstallService),
+                localizer,
+                toastService,
+                diagnostics,
+                shell,
+                dialogs,
+                errorHandling),
             localizer,
-            toastService,
-            diagnostics,
             shell,
             dialogs,
-            Task.Delay,
             errorHandling)
     {
     }
@@ -130,6 +134,31 @@ public partial class GameOperationsViewModel : ViewModelBase, IGameOperationJour
         DialogsViewModel dialogs,
         Func<TimeSpan, Task> delayAsync,
         IErrorHandlingService errorHandling)
+        : this(
+            new GameOperationJourneyFactory(
+                launchWorkflow,
+                installationWorkflow,
+                uninstallWorkflow,
+                localizer,
+                toastService,
+                diagnostics,
+                shell,
+                dialogs,
+                errorHandling,
+                delayAsync),
+            localizer,
+            shell,
+            dialogs,
+            errorHandling)
+    {
+    }
+
+    internal GameOperationsViewModel(
+        IGameOperationJourneyFactory journeyFactory,
+        LocalizationService localizer,
+        ShellViewModel shell,
+        DialogsViewModel dialogs,
+        IErrorHandlingService errorHandling)
     {
         this.localizer = localizer;
         this.dialogs = dialogs;
@@ -137,18 +166,7 @@ public partial class GameOperationsViewModel : ViewModelBase, IGameOperationJour
         this.errorHandling = errorHandling;
         operationNoteRequestedHandler = note => shell.OperationNote = note;
         errorHandling.OperationNoteRequested += operationNoteRequestedHandler;
-        journey = new GameOperationJourney(
-            launchWorkflow,
-            installationWorkflow,
-            uninstallWorkflow,
-            localizer,
-            toastService,
-            diagnostics,
-            shell,
-            dialogs,
-            errorHandling,
-            delayAsync,
-            this);
+        journey = journeyFactory.Create(this);
         dialogs.ConfirmRepairRequested += RepairAsync;
         dialogs.ConfirmUninstallRequested += ConfirmUninstallAsync;
         dialogs.ConfirmStopRequested += PerformStop;

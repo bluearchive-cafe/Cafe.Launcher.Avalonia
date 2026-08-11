@@ -1,3 +1,4 @@
+using System.Globalization;
 using Cafe.Launcher.Avalonia.Helpers;
 
 namespace Cafe.Launcher.Avalonia.Tests;
@@ -16,7 +17,31 @@ public sealed class FileSizeFormatterTests
     [InlineData(-1, "0B")]
     public void Format_WhenGivenBytes_ReturnsExpectedString(long bytes, string expected)
     {
-        Assert.Equal(expected, FileSizeFormatter.Format(bytes));
+        var savedCulture = CultureInfo.CurrentCulture;
+        try
+        {
+            CultureInfo.CurrentCulture = CultureInfo.GetCultureInfo("en-US");
+            Assert.Equal(expected, FileSizeFormatter.Format(bytes));
+        }
+        finally
+        {
+            CultureInfo.CurrentCulture = savedCulture;
+        }
+    }
+
+    [Fact]
+    public void Format_WhenCurrentCultureUsesCommaDecimalSeparator_ReturnsLocalizedDecimalSeparator()
+    {
+        var savedCulture = CultureInfo.CurrentCulture;
+        try
+        {
+            CultureInfo.CurrentCulture = CultureInfo.GetCultureInfo("fr-FR");
+            Assert.Equal("1,5KB", FileSizeFormatter.Format(1536));
+        }
+        finally
+        {
+            CultureInfo.CurrentCulture = savedCulture;
+        }
     }
 
     [Theory]

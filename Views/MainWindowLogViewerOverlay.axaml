@@ -27,11 +27,11 @@
                                                        Foreground="{DynamicResource LauncherAccentBrush}"
                                                        HorizontalAlignment="Center" VerticalAlignment="Center"/>
                         </Border>
-                        <TextBlock Text="{Binding Shell.I18n.LogViewerTitle}" Classes="dialog-title" VerticalAlignment="Center"/>
+                        <TextBlock Text="{Binding Shell.I18n[logViewerTitle]}" Classes="dialog-title" VerticalAlignment="Center"/>
                     </StackPanel>
                     <Button Grid.Column="1" Classes="dialog-close header-action" Command="{Binding LogViewer.CloseCommand}"
-                            ToolTip.Tip="{Binding Shell.I18n.Close}"
-                            AutomationProperties.Name="{Binding Shell.I18n.Close}">
+                            ToolTip.Tip="{Binding Shell.I18n[close]}"
+                            AutomationProperties.Name="{Binding Shell.I18n[close]}">
                         <materialIcons:MaterialIcon Kind="Close" Width="{StaticResource LauncherIconMd}" Height="{StaticResource LauncherIconMd}"/>
                     </Button>
                 </Grid>
@@ -40,33 +40,33 @@
                 <StackPanel Grid.Row="1" Orientation="Horizontal" Spacing="{StaticResource LauncherSpacingSm}" Classes="log-filter-bar">
                     <Button Classes="news-tab log-filter" Classes.active="{Binding LogViewer.IsFilterAllActive}"
                             Command="{Binding LogViewer.SetFilterAllCommand}">
-                        <TextBlock Text="{Binding Shell.I18n.LogFilterAll}"/>
+                        <TextBlock Text="{Binding Shell.I18n[logFilterAll]}"/>
                     </Button>
                     <Button Classes="news-tab log-filter" Classes.active="{Binding LogViewer.IsFilterVerboseActive}"
                             Command="{Binding LogViewer.SetFilterVerboseCommand}">
-                        <TextBlock Text="{Binding Shell.I18n.LogFilterVerbose}"/>
+                        <TextBlock Text="{Binding Shell.I18n[logFilterVerbose]}"/>
                     </Button>
                     <Button Classes="news-tab log-filter" Classes.active="{Binding LogViewer.IsFilterDebugActive}"
                             Command="{Binding LogViewer.SetFilterDebugCommand}">
-                        <TextBlock Text="{Binding Shell.I18n.LogFilterDebug}"/>
+                        <TextBlock Text="{Binding Shell.I18n[logFilterDebug]}"/>
                     </Button>
                     <Button Classes="news-tab log-filter" Classes.active="{Binding LogViewer.IsFilterInfoActive}"
                             Command="{Binding LogViewer.SetFilterInfoCommand}">
-                        <TextBlock Text="{Binding Shell.I18n.LogFilterInfo}"/>
+                        <TextBlock Text="{Binding Shell.I18n[logFilterInfo]}"/>
                     </Button>
                     <Button Classes="news-tab log-filter" Classes.active="{Binding LogViewer.IsFilterWarnActive}"
                             Command="{Binding LogViewer.SetFilterWarnCommand}">
-                        <TextBlock Text="{Binding Shell.I18n.LogFilterWarn}"/>
+                        <TextBlock Text="{Binding Shell.I18n[logFilterWarn]}"/>
                     </Button>
                     <Button Classes="news-tab log-filter" Classes.active="{Binding LogViewer.IsFilterErrorActive}"
                             Command="{Binding LogViewer.SetFilterErrorCommand}">
-                        <TextBlock Text="{Binding Shell.I18n.LogFilterError}"/>
+                        <TextBlock Text="{Binding Shell.I18n[logFilterError]}"/>
                     </Button>
                     <Button Classes="news-tab log-filter" Classes.active="{Binding LogViewer.IsFilterFatalActive}"
                             Command="{Binding LogViewer.SetFilterFatalCommand}">
-                        <TextBlock Text="{Binding Shell.I18n.LogFilterFatal}"/>
+                        <TextBlock Text="{Binding Shell.I18n[logFilterFatal]}"/>
                     </Button>
-                    <TextBox Text="{Binding LogViewer.FilterText, Mode=TwoWay}" PlaceholderText="{Binding Shell.I18n.LogSearchPlaceholder}"
+                    <TextBox Text="{Binding LogViewer.FilterText, Mode=TwoWay}" PlaceholderText="{Binding Shell.I18n[logSearchPlaceholder]}"
                              Classes="uid-input log-search" MinWidth="160"
                              Height="{StaticResource LauncherControlHeightSetting}" VerticalAlignment="Center"/>
                 </StackPanel>
@@ -80,8 +80,8 @@
                             Margin="16,12,16,0"
                             Command="{Binding LogViewer.LoadEarlierCommand}"
                             IsVisible="{Binding LogViewer.HasEarlierEntries}"
-                            AutomationProperties.Name="{Binding Shell.I18n.LogLoadEarlier}">
-                        <TextBlock Text="{Binding Shell.I18n.LogLoadEarlier}"/>
+                            AutomationProperties.Name="{Binding Shell.I18n[logLoadEarlier]}">
+                        <TextBlock Text="{Binding Shell.I18n[logLoadEarlier]}"/>
                     </Button>
                     <ListBox Grid.Row="1"
                              ItemsSource="{Binding LogViewer.FilteredEntries}"
@@ -108,7 +108,7 @@
                     <Border Grid.Row="1"
                             Classes="log-empty-state"
                             IsVisible="{Binding LogViewer.IsEmpty}">
-                        <TextBlock Text="{Binding Shell.I18n.LogNoMatchingEntries}"
+                        <TextBlock Text="{Binding Shell.I18n[logNoMatchingEntries]}"
                                    Classes="media-placeholder-text"/>
                     </Border>
                 </Grid>
@@ -117,17 +117,17 @@
                 <Border Grid.Row="3" Classes="dialog-footer">
                     <StackPanel Classes="confirm-actions">
                         <Button Classes="flat-action dialog-action" Command="{Binding LogViewer.ExportCommand}"
-                                AutomationProperties.Name="{Binding Shell.I18n.ExportLogs}">
+                                AutomationProperties.Name="{Binding Shell.I18n[exportLogs]}">
                             <StackPanel Classes="button-content">
                                 <materialIcons:MaterialIcon Kind="Export" Width="{StaticResource LauncherIconSm}" Height="{StaticResource LauncherIconSm}"/>
-                                <TextBlock Text="{Binding Shell.I18n.ExportLogs}"/>
+                                <TextBlock Text="{Binding Shell.I18n[exportLogs]}"/>
                             </StackPanel>
                         </Button>
                         <Button Classes="flat-action dialog-action" Command="{Binding LogViewer.CloseCommand}"
-                                AutomationProperties.Name="{Binding Shell.I18n.Close}">
+                                AutomationProperties.Name="{Binding Shell.I18n[close]}">
                             <StackPanel Classes="button-content">
                                 <materialIcons:MaterialIcon Kind="CloseCircleOutline" Width="{StaticResource LauncherIconSm}" Height="{StaticResource LauncherIconSm}"/>
-                                <TextBlock Text="{Binding Shell.I18n.Close}"/>
+                                <TextBlock Text="{Binding Shell.I18n[close]}"/>
                             </StackPanel>
                         </Button>
                     </StackPanel>

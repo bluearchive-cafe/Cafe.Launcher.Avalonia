@@ -1,6 +1,9 @@
 using Cafe.Launcher.Avalonia.Constants;
+using Cafe.Launcher.Avalonia.Composition;
 using Cafe.Launcher.Avalonia.Models;
+using Cafe.Launcher.Avalonia.Features.Diagnostics;
 using Cafe.Launcher.Avalonia.Features.GameOperations;
+using Cafe.Launcher.Avalonia.Features.Settings;
 using Cafe.Launcher.Avalonia.Services;
 using Cafe.Launcher.Avalonia.Services.Diagnostics;
 using Cafe.Launcher.Avalonia.ViewModels;

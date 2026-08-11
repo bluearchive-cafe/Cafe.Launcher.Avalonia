@@ -67,8 +67,8 @@
                                             Classes="toast-close"
                                             Command="{Binding #ToastOverlayRoot.((vm:MainWindowViewModel)DataContext).Toasts.DismissToastCommand}"
                                             CommandParameter="{Binding Id}"
-                                            ToolTip.Tip="{Binding #ToastOverlayRoot.((vm:MainWindowViewModel)DataContext).Shell.I18n.Close}"
-                                            AutomationProperties.Name="{Binding #ToastOverlayRoot.((vm:MainWindowViewModel)DataContext).Shell.I18n.Close}">
+                                            ToolTip.Tip="{Binding #ToastOverlayRoot.((vm:MainWindowViewModel)DataContext).Shell.I18n[close]}"
+                                            AutomationProperties.Name="{Binding #ToastOverlayRoot.((vm:MainWindowViewModel)DataContext).Shell.I18n[close]}">
                                         <materialIcons:MaterialIcon Kind="Close" Width="{StaticResource LauncherIconSm}" Height="{StaticResource LauncherIconSm}"/>
                                     </Button>
                                 </Grid>

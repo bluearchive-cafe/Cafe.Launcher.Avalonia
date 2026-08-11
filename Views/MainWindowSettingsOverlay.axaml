@@ -27,12 +27,12 @@
                         <Border Classes="dialog-icon">
                             <materialIcons:MaterialIcon Kind="CogOutline" Width="{StaticResource LauncherIconMd}" Height="{StaticResource LauncherIconMd}" Foreground="{DynamicResource LauncherAccentBrush}" HorizontalAlignment="Center" VerticalAlignment="Center"/>
                         </Border>
-                        <TextBlock Text="{Binding Shell.I18n.Settings}" Classes="dialog-title" VerticalAlignment="Center"/>
+                        <TextBlock Text="{Binding Shell.I18n[settings]}" Classes="dialog-title" VerticalAlignment="Center"/>
                     </StackPanel>
                     <Button Grid.Column="1" Classes="dialog-close header-action" Command="{Binding WindowChrome.ShowSettingsCommand}"
                             IsEnabled="{Binding Settings.IsSaving, Converter={x:Static BoolConverters.Not}}"
-                            VerticalAlignment="Center" ToolTip.Tip="{Binding Shell.I18n.Close}"
-                            AutomationProperties.Name="{Binding Shell.I18n.Close}">
+                            VerticalAlignment="Center" ToolTip.Tip="{Binding Shell.I18n[close]}"
+                            AutomationProperties.Name="{Binding Shell.I18n[close]}">
                         <materialIcons:MaterialIcon Kind="Close" Width="{StaticResource LauncherIconMd}" Height="{StaticResource LauncherIconMd}"/>
                     </Button>
                 </Grid>
@@ -165,23 +165,23 @@
                         <Button Classes="flat-action dialog-action"
                                 Command="{Binding WindowChrome.ShowSettingsCommand}"
                                 IsEnabled="{Binding Settings.IsSaving, Converter={x:Static BoolConverters.Not}}"
-                                ToolTip.Tip="{Binding Shell.I18n.Cancel}"
-                                AutomationProperties.Name="{Binding Shell.I18n.Cancel}">
+                                ToolTip.Tip="{Binding Shell.I18n[cancel]}"
+                                AutomationProperties.Name="{Binding Shell.I18n[cancel]}">
                             <StackPanel Classes="button-content" HorizontalAlignment="Center">
                                 <materialIcons:MaterialIcon Kind="CloseCircleOutline"
                                     Width="{StaticResource LauncherIconSm}" Height="{StaticResource LauncherIconSm}"/>
-                                <TextBlock Text="{Binding Shell.I18n.Cancel}"/>
+                                <TextBlock Text="{Binding Shell.I18n[cancel]}"/>
                             </StackPanel>
                         </Button>
                         <Button Classes="primary-action dialog-action"
                                 Command="{Binding Settings.SaveSettingsCommand}"
                                 IsEnabled="{Binding Settings.CanSaveSettings}"
-                                ToolTip.Tip="{Binding Shell.I18n.Save}"
-                                AutomationProperties.Name="{Binding Shell.I18n.Save}">
+                                ToolTip.Tip="{Binding Shell.I18n[save]}"
+                                AutomationProperties.Name="{Binding Shell.I18n[save]}">
                             <StackPanel Classes="button-content" HorizontalAlignment="Center">
                                 <materialIcons:MaterialIcon Kind="ContentSave"
                                     Width="{StaticResource LauncherIconSm}" Height="{StaticResource LauncherIconSm}"/>
-                                <TextBlock Text="{Binding Shell.I18n.Save}"/>
+                                <TextBlock Text="{Binding Shell.I18n[save]}"/>
                             </StackPanel>
                         </Button>
                     </StackPanel>

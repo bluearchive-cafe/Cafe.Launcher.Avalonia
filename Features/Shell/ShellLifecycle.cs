@@ -2,8 +2,12 @@ using System;
 using System.ComponentModel;
 using System.Threading;
 using System.Threading.Tasks;
+using Cafe.Launcher.Avalonia.Features.Diagnostics;
+using Cafe.Launcher.Avalonia.Features.GameOperations;
 using Cafe.Launcher.Avalonia.Helpers;
 using Cafe.Launcher.Avalonia.Models;
+using Cafe.Launcher.Avalonia.Features.ResourcePanel;
+using Cafe.Launcher.Avalonia.Features.Settings;
 using Cafe.Launcher.Avalonia.Services;
 using Cafe.Launcher.Avalonia.Services.Diagnostics;
 using Cafe.Launcher.Avalonia.ViewModels;
@@ -133,6 +137,9 @@ public sealed class ShellLifecycle : IDisposable
 
         ApplyMotionSettings(savedSettings);
     }
+
+    /// <summary>Applies the initial automatic language before a launcher snapshot exists.</summary>
+    public void ApplyInitialLanguage() => ApplyLanguage(LauncherLanguages.Auto);
 
     /// <summary>Reloads launcher state and updates all dependent presentation models.</summary>
     public async Task RefreshAsync(CancellationToken cancellationToken = default)
@@ -265,6 +272,13 @@ public sealed class ShellLifecycle : IDisposable
         await RefreshAsync();
     }
 
+    private void OnResourcePanelSourceSwitchConfirmed() => _ = SwitchSourceThenOpenPanelAsync();
+
+    private static void OnUpdateAvailableConfirmed(string downloadUrl) => ExternalLinkService.Open(downloadUrl);
+
+    private Task HandleSetupWizardSettingsAppliedAsync(LauncherSettings newSettings) =>
+        HandleSetupWizardCompletedAsync(newSettings);
+
     /// <summary>Refreshes shell state after a game operation and records resume behavior.</summary>
     internal async Task HandleOperationsRefreshRequestedAsync(GameOperationsRefreshMode mode)
     {
@@ -324,7 +338,7 @@ public sealed class ShellLifecycle : IDisposable
         settings.SettingsSaved += HandleSettingsSavedAsync;
 
         resourcePanel.ResourcePanelSourceConfirmRequested += ShowResourcePanelSourceConfirmDialog;
-        dialogs.ConfirmResourcePanelSourceSwitchRequested += () => _ = SwitchSourceThenOpenPanelAsync();
+        dialogs.ConfirmResourcePanelSourceSwitchRequested += OnResourcePanelSourceSwitchConfirmed;
 
         operations.RefreshRequested += HandleOperationsRefreshRequestedAsync;
         operations.OpenLogViewerRequested += OpenLogViewerAsync;
@@ -334,13 +348,13 @@ public sealed class ShellLifecycle : IDisposable
         dialogs.ConfirmStopRequested += operations.PerformStop;
         dialogs.CloseAfterStoppingDownloadRequested += windowChrome.CloseAfterStoppingDownload;
         dialogs.CloseRequested += windowChrome.RequestClose;
-        dialogs.ConfirmUpdateAvailableRequested += url => ExternalLinkService.Open(url);
-        dialogs.CrashRecoveryResetSettingsRequested += () => _ = ResetSettingsAfterCrashAsync();
+        dialogs.ConfirmUpdateAvailableRequested += OnUpdateAvailableConfirmed;
+        dialogs.CrashRecoveryResetSettingsRequested += ResetSettingsAfterCrashAsync;
         dialogs.CrashRecoveryViewLogRequested += OpenCrashLog;
         dialogs.ErrorViewLogRequested += OpenCrashLog;
 
         debug.RefreshRequested += HandleDebugRefreshRequestedAsync;
-        debug.ResetSettingsRequested += () => _ = ResetSettingsAfterCrashAsync();
+        debug.ResetSettingsRequested += ResetSettingsAfterCrashAsync;
         debug.ResetSettingsConfirmationRequested += dialogs.ShowDebugResetConfirmation;
         dialogs.ConfirmDebugResetRequested += debug.ConfirmResetSettingsAsync;
 
@@ -353,10 +367,7 @@ public sealed class ShellLifecycle : IDisposable
             return Task.FromResult<string?>(null);
         };
         dialogs.SetupWizard.LanguagePreviewRequested += PreviewSetupWizardLanguage;
-        dialogs.SetupWizard.SettingsApplied += async s =>
-        {
-            await HandleSetupWizardCompletedAsync(s);
-        };
+        dialogs.SetupWizard.SettingsApplied += HandleSetupWizardSettingsAppliedAsync;
 
         windowChrome.PropertyChanged += OnWindowChromePropertyChanged;
         settings.PropertyChanged += OnSettingsPropertyChanged;
@@ -377,20 +388,20 @@ public sealed class ShellLifecycle : IDisposable
         operations.RefreshRequested -= HandleOperationsRefreshRequestedAsync;
         operations.OpenLogViewerRequested -= OpenLogViewerAsync;
         resourcePanel.ResourcePanelSourceConfirmRequested -= ShowResourcePanelSourceConfirmDialog;
-        dialogs.ConfirmResourcePanelSourceSwitchRequested -= null!;
+        dialogs.ConfirmResourcePanelSourceSwitchRequested -= OnResourcePanelSourceSwitchConfirmed;
         dialogs.ConfirmRepairRequested -= operations.RepairAsync;
         dialogs.ConfirmUninstallRequested -= operations.ConfirmUninstallAsync;
         dialogs.ConfirmStopRequested -= operations.PerformStop;
         dialogs.CloseAfterStoppingDownloadRequested -= windowChrome.CloseAfterStoppingDownload;
         dialogs.CloseRequested -= windowChrome.RequestClose;
-        dialogs.ConfirmUpdateAvailableRequested -= null!;
-        dialogs.CrashRecoveryResetSettingsRequested -= null!;
+        dialogs.ConfirmUpdateAvailableRequested -= OnUpdateAvailableConfirmed;
+        dialogs.CrashRecoveryResetSettingsRequested -= ResetSettingsAfterCrashAsync;
         dialogs.CrashRecoveryViewLogRequested -= OpenCrashLog;
         dialogs.ErrorViewLogRequested -= OpenCrashLog;
         dialogs.SetupWizard.LanguagePreviewRequested -= PreviewSetupWizardLanguage;
-        dialogs.SetupWizard.SettingsApplied -= null!;
+        dialogs.SetupWizard.SettingsApplied -= HandleSetupWizardSettingsAppliedAsync;
         debug.RefreshRequested -= HandleDebugRefreshRequestedAsync;
-        debug.ResetSettingsRequested -= null!;
+        debug.ResetSettingsRequested -= ResetSettingsAfterCrashAsync;
         debug.ResetSettingsConfirmationRequested -= dialogs.ShowDebugResetConfirmation;
         dialogs.ConfirmDebugResetRequested -= debug.ConfirmResetSettingsAsync;
         windowChrome.PropertyChanged -= OnWindowChromePropertyChanged;
@@ -473,6 +484,7 @@ public sealed class ShellLifecycle : IDisposable
         Unwire();
         operations.StopDownload(clearPersistedState: false);
         operations.Dispose();
+        shell.Dispose();
         settings.Dispose();
         remoteContent.Dispose();
         background.Dispose();

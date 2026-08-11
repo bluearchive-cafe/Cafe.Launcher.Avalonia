@@ -16,14 +16,14 @@
         </DataTemplate>
     </UserControl.Resources>
     <StackPanel Classes="settings-group">
-        <TextBlock Text="{Binding Shell.I18n.SettingsGroupAppPreferences}" Classes="group-title"/>
+        <TextBlock Text="{Binding Shell.I18n[settingsGroupAppPreferences]}" Classes="group-title"/>
 
         <controls:SettingRow IconKind="Translate"
-                             Title="{Binding Shell.I18n.Language}"
-                             Description="{Binding Shell.I18n.LanguageDescription}">
+                             Title="{Binding Shell.I18n[language]}"
+                             Description="{Binding Shell.I18n[languageDescription]}">
             <controls:SettingRow.Action>
                 <ComboBox Classes="setting-control"
-                          AutomationProperties.Name="{Binding Shell.I18n.Language}"
+                          AutomationProperties.Name="{Binding Shell.I18n[language]}"
                           ItemsSource="{Binding Settings.Options.Language}"
                           SelectedValue="{Binding Settings.Editor.Current.Language, Mode=TwoWay}"
                           SelectedValueBinding="{Binding Code}"
@@ -32,11 +32,11 @@
         </controls:SettingRow>
 
         <controls:SettingRow IconKind="WindowClose"
-                             Title="{Binding Shell.I18n.CloseBehavior}"
-                             Description="{Binding Shell.I18n.CloseBehaviorDescription}">
+                             Title="{Binding Shell.I18n[closeBehavior]}"
+                             Description="{Binding Shell.I18n[closeBehaviorDescription]}">
             <controls:SettingRow.Action>
                 <ComboBox Classes="setting-control"
-                          AutomationProperties.Name="{Binding Shell.I18n.CloseBehavior}"
+                          AutomationProperties.Name="{Binding Shell.I18n[closeBehavior]}"
                           ItemsSource="{Binding Settings.Options.CloseBehavior}"
                           SelectedValue="{Binding Settings.Editor.Current.CloseBehavior, Mode=TwoWay}"
                           SelectedValueBinding="{Binding Code}"
@@ -45,11 +45,11 @@
         </controls:SettingRow>
 
         <controls:SettingRow IconKind="AnimationPlayOutline"
-                             Title="{Binding Shell.I18n.MotionMode}"
-                             Description="{Binding Shell.I18n.MotionModeDescription}">
+                             Title="{Binding Shell.I18n[motionMode]}"
+                             Description="{Binding Shell.I18n[motionModeDescription]}">
             <controls:SettingRow.Action>
                 <ComboBox Classes="setting-control"
-                          AutomationProperties.Name="{Binding Shell.I18n.MotionMode}"
+                          AutomationProperties.Name="{Binding Shell.I18n[motionMode]}"
                           ItemsSource="{Binding Settings.Options.MotionMode}"
                           SelectedValue="{Binding Settings.Editor.Current.MotionMode, Mode=TwoWay}"
                           SelectedValueBinding="{Binding Code}"
@@ -58,14 +58,14 @@
         </controls:SettingRow>
 
         <controls:SettingRow IconKind="Update"
-                             Title="{Binding Shell.I18n.EnableStartupUpdateCheck}"
-                             Description="{Binding Shell.I18n.EnableStartupUpdateCheckDescription}">
+                             Title="{Binding Shell.I18n[enableStartupUpdateCheck]}"
+                             Description="{Binding Shell.I18n[enableStartupUpdateCheckDescription]}">
             <controls:SettingRow.Action>
                 <ToggleSwitch Classes="setting-toggle"
-                              AutomationProperties.Name="{Binding Shell.I18n.EnableStartupUpdateCheck}"
+                              AutomationProperties.Name="{Binding Shell.I18n[enableStartupUpdateCheck]}"
                               IsChecked="{Binding Settings.Editor.Current.EnableStartupUpdateCheck, Mode=TwoWay}"
-                              OnContent="{Binding Shell.I18n.ToggleOn}"
-                              OffContent="{Binding Shell.I18n.ToggleOff}"
+                              OnContent="{Binding Shell.I18n[toggleOn]}"
+                              OffContent="{Binding Shell.I18n[toggleOff]}"
                               VerticalAlignment="Center"/>
             </controls:SettingRow.Action>
         </controls:SettingRow>

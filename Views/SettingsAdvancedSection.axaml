@@ -13,14 +13,14 @@
         </DataTemplate>
     </UserControl.Resources>
     <StackPanel Classes="settings-group">
-        <TextBlock Text="{Binding Shell.I18n.SettingsGroupDiagnostics}" Classes="group-title"/>
+        <TextBlock Text="{Binding Shell.I18n[settingsGroupDiagnostics]}" Classes="group-title"/>
 
         <controls:SettingRow IconKind="Bug"
-                             Title="{Binding Shell.I18n.LogLevel}"
-                             Description="{Binding Shell.I18n.LogLevelDescription}">
+                             Title="{Binding Shell.I18n[logLevel]}"
+                             Description="{Binding Shell.I18n[logLevelDescription]}">
             <controls:SettingRow.Action>
                 <ComboBox Classes="setting-control"
-                          AutomationProperties.Name="{Binding Shell.I18n.LogLevel}"
+                          AutomationProperties.Name="{Binding Shell.I18n[logLevel]}"
                           ItemsSource="{Binding Settings.Options.LogLevel}"
                           SelectedValue="{Binding Settings.Editor.Current.LogLevel, Mode=TwoWay}"
                           SelectedValueBinding="{Binding Code}"
@@ -29,8 +29,8 @@
         </controls:SettingRow>
 
         <controls:SettingRow IconKind="FolderOpen"
-                             Title="{Binding Shell.I18n.LogFiles}"
-                             Description="{Binding Shell.I18n.LogFilesDescription}">
+                             Title="{Binding Shell.I18n[logFiles]}"
+                             Description="{Binding Shell.I18n[logFilesDescription]}">
             <controls:SettingRow.Action>
                 <WrapPanel MaxWidth="{StaticResource LauncherSettingRowActionMaxWidth}"
                            ItemSpacing="{StaticResource LauncherSpacingSm}"
@@ -39,32 +39,32 @@
                            VerticalAlignment="Center">
                     <Button Classes="flat-action"
                             Command="{Binding LogViewer.OpenCommand}"
-                            AutomationProperties.Name="{Binding Shell.I18n.ViewLog}">
+                            AutomationProperties.Name="{Binding Shell.I18n[viewLog]}">
                         <StackPanel Classes="button-content">
                             <materialIcons:MaterialIcon Kind="TextBoxOutline"
                                                         Width="{StaticResource LauncherIconSm}"
                                                         Height="{StaticResource LauncherIconSm}"/>
-                            <TextBlock Text="{Binding Shell.I18n.ViewLog}"/>
+                            <TextBlock Text="{Binding Shell.I18n[viewLog]}"/>
                         </StackPanel>
                     </Button>
                     <Button Classes="flat-action"
                             Command="{Binding LogViewer.ExportCommand}"
-                            AutomationProperties.Name="{Binding Shell.I18n.ExportLogs}">
+                            AutomationProperties.Name="{Binding Shell.I18n[exportLogs]}">
                         <StackPanel Classes="button-content">
                             <materialIcons:MaterialIcon Kind="Export"
                                                         Width="{StaticResource LauncherIconSm}"
                                                         Height="{StaticResource LauncherIconSm}"/>
-                            <TextBlock Text="{Binding Shell.I18n.ExportLogs}"/>
+                            <TextBlock Text="{Binding Shell.I18n[exportLogs]}"/>
                         </StackPanel>
                     </Button>
                     <Button Classes="flat-action"
                             Command="{Binding WindowChrome.OpenDataDirectoryCommand}"
-                            AutomationProperties.Name="{Binding Shell.I18n.OpenDataDirectory}">
+                            AutomationProperties.Name="{Binding Shell.I18n[openDataDirectory]}">
                         <StackPanel Classes="button-content">
                             <materialIcons:MaterialIcon Kind="FolderOpen"
                                                         Width="{StaticResource LauncherIconSm}"
                                                         Height="{StaticResource LauncherIconSm}"/>
-                            <TextBlock Text="{Binding Shell.I18n.OpenDataDirectory}"/>
+                            <TextBlock Text="{Binding Shell.I18n[openDataDirectory]}"/>
                         </StackPanel>
                     </Button>
                 </WrapPanel>

@@ -1,5 +1,6 @@
 using System.Net;
 using System.Text;
+using Cafe.Launcher.Avalonia.Features.ResourcePanel;
 using Cafe.Launcher.Avalonia.Models;
 using Cafe.Launcher.Avalonia.Services;
 

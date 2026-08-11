@@ -5,8 +5,9 @@ using System.Text.RegularExpressions;
 using System.Threading;
 using System.Threading.Tasks;
 using Cafe.Launcher.Avalonia.Models;
+using Cafe.Launcher.Avalonia.Services;
 
-namespace Cafe.Launcher.Avalonia.Services;
+namespace Cafe.Launcher.Avalonia.Features.ResourcePanel;
 
 public sealed partial class ResourcePanelUidService
 {

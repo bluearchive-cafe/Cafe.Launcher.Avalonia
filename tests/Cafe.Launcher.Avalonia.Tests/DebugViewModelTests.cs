@@ -1,4 +1,5 @@
 using Cafe.Launcher.Avalonia.Features.GameOperations;
+using Cafe.Launcher.Avalonia.Features.SetupWizard;
 using Cafe.Launcher.Avalonia.Constants;
 using Cafe.Launcher.Avalonia.Features.Diagnostics;
 using Cafe.Launcher.Avalonia.Models;
@@ -124,7 +125,6 @@ public sealed class DebugViewModelTests : IDisposable
         localizer.SetLanguage(language);
         var toastService = new ToastService();
         var shell = new ShellViewModel(localizer);
-        shell.I18n.Apply(localizer);
         var diagnostics = new LocalDiagnostics();
         var dialogs = new DialogsViewModel(
             localizer,

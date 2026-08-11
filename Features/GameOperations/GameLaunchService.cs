@@ -4,8 +4,9 @@ using System.IO;
 using System.Threading;
 using System.Threading.Tasks;
 using Cafe.Launcher.Avalonia.Models;
+using Cafe.Launcher.Avalonia.Services;
 
-namespace Cafe.Launcher.Avalonia.Services;
+namespace Cafe.Launcher.Avalonia.Features.GameOperations;
 
 public sealed class GameLaunchService
 {
