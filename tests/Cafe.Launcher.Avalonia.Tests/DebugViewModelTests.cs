@@ -125,7 +125,6 @@ public sealed class DebugViewModelTests : IDisposable
         localizer.SetLanguage(language);
         var toastService = new ToastService();
         var shell = new ShellViewModel(localizer);
-        shell.I18n.Apply(localizer);
         var diagnostics = new LocalDiagnostics();
         var dialogs = new DialogsViewModel(
             localizer,

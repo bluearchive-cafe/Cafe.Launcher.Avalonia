@@ -82,7 +82,7 @@ public sealed class MainWindowViewModelTests : IDisposable
 
         viewModel.Dialogs.SetupWizard.Language = LauncherLanguages.Japanese;
 
-        Assert.Equal("言語", viewModel.Shell.I18n.SetupWizardLanguage);
+        Assert.Equal("言語", viewModel.Shell.I18n["setupWizardLanguage"]);
         Assert.Equal("言語", viewModel.Dialogs.SetupWizard.Steps[0].Title);
     }
 
@@ -91,11 +91,11 @@ public sealed class MainWindowViewModelTests : IDisposable
     {
         var coreService = new CountingCoreService(CreateSnapshot());
         using var viewModel = await CreateViewModelAsync(coreService);
-        var originalTitle = viewModel.Shell.I18n.SetupWizardLanguage;
+        var originalTitle = viewModel.Shell.I18n["setupWizardLanguage"];
 
         viewModel.Dialogs.SetupWizard.Language = LauncherLanguages.Japanese;
 
-        Assert.Equal(originalTitle, viewModel.Shell.I18n.SetupWizardLanguage);
+        Assert.Equal(originalTitle, viewModel.Shell.I18n["setupWizardLanguage"]);
     }
 
     [Fact]
@@ -168,7 +168,7 @@ public sealed class MainWindowViewModelTests : IDisposable
 
         Assert.Equal("DownloadOutline", viewModel.Shell.StatusIconKind);
         Assert.Equal("BlueArchive.exe", viewModel.Shell.ExecutableNameText);
-        Assert.Equal(viewModel.Shell.I18n.StatusNetworkLoaded, viewModel.Shell.NetworkStatusValueText);
+        Assert.Equal(viewModel.Shell.I18n["statusNetworkLoaded"], viewModel.Shell.NetworkStatusValueText);
         Assert.Equal(
             viewModel.Settings.Options.ResolveLaunchCheckDisplayName(snapshot.Settings.LaunchCheckMode),
             viewModel.Shell.LaunchCheckValueText);
@@ -282,7 +282,7 @@ public sealed class MainWindowViewModelTests : IDisposable
 
         await viewModel.InitializeAsync();
 
-        Assert.DoesNotContain(viewModel.Shell.I18n.StatusNetworkLoaded, successToasts);
+        Assert.DoesNotContain(viewModel.Shell.I18n["statusNetworkLoaded"], successToasts);
         Assert.Equal("Alert", viewModel.Shell.StatusIconKind);
         Assert.Equal("load failed", viewModel.Shell.NetworkStatusValueText);
         Assert.False(viewModel.RemoteContent.IsLoading);
@@ -299,7 +299,7 @@ public sealed class MainWindowViewModelTests : IDisposable
         await viewModel.InitializeAsync();
         await viewModel.Operations.InstallOrUpdateCommand.ExecuteAsync(null);
 
-        Assert.Equal(viewModel.Shell.I18n.Repair, viewModel.Operations.InstallButtonText);
+        Assert.Equal(viewModel.Shell.I18n["repair"], viewModel.Operations.InstallButtonText);
         Assert.True(viewModel.Operations.IsInstallPanelVisible);
         Assert.False(viewModel.Operations.IsControlPanelVisible);
         Assert.True(viewModel.Dialogs.IsRepairConfirmVisible);
@@ -317,7 +317,7 @@ public sealed class MainWindowViewModelTests : IDisposable
         await viewModel.Operations.InstallOrUpdateCommand.ExecuteAsync(null);
 
         Assert.Equal(2, coreService.LoadCount);
-        Assert.Equal(viewModel.Shell.I18n.Refresh, viewModel.Operations.InstallButtonText);
+        Assert.Equal(viewModel.Shell.I18n["refresh"], viewModel.Operations.InstallButtonText);
     }
 
     public static IEnumerable<object[]> RuntimeStatusCases
@@ -1087,9 +1087,9 @@ public sealed class MainWindowViewModelTests : IDisposable
         Assert.Equal(1, handler.ConfigGetCount);
         var text = viewModel.ResourcePanel.ResourcePanelItems.First(item => item.Code == ResourcePanelResourceCodes.Text);
         var voice = viewModel.ResourcePanel.ResourcePanelItems.First(item => item.Code == ResourcePanelResourceCodes.Voice);
-        Assert.Equal(viewModel.Shell.I18n.ResourcePanelReady, text.StatusText);
+        Assert.Equal(viewModel.Shell.I18n["resourcePanelReady"], text.StatusText);
         Assert.True(text.IsEnabled);
-        Assert.Equal(viewModel.Shell.I18n.ResourcePanelWaiting, voice.StatusText);
+        Assert.Equal(viewModel.Shell.I18n["resourcePanelWaiting"], voice.StatusText);
         Assert.False(voice.IsEnabled);
     }
 
@@ -1265,7 +1265,7 @@ public sealed class MainWindowViewModelTests : IDisposable
 
         await viewModel.ResourcePanel.SaveManualResourcePanelUidCommand.ExecuteAsync(null);
 
-        Assert.Equal(viewModel.Shell.I18n.ResourcePanelUidEmpty, viewModel.ResourcePanel.ResourcePanelMessage);
+        Assert.Equal(viewModel.Shell.I18n["resourcePanelUidEmpty"], viewModel.ResourcePanel.ResourcePanelMessage);
         Assert.Equal(0, handler.StatusListCount);
         Assert.Equal(0, handler.ConfigGetCount);
         Assert.Equal(0, handler.ConfigSetCount);

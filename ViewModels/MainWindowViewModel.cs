@@ -6,18 +6,17 @@ using Cafe.Launcher.Avalonia.Features.GameOperations;
 using Cafe.Launcher.Avalonia.Features.ResourcePanel;
 using Cafe.Launcher.Avalonia.Features.Settings;
 using Cafe.Launcher.Avalonia.Features.Shell;
-using Cafe.Launcher.Avalonia.Helpers;
 using Cafe.Launcher.Avalonia.Models;
 using Cafe.Launcher.Avalonia.Services;
 using Cafe.Launcher.Avalonia.Services.Diagnostics;
-using CommunityToolkit.Mvvm.Input;
 using CommunityToolkit.Mvvm.ComponentModel;
+using CommunityToolkit.Mvvm.Input;
 
 namespace Cafe.Launcher.Avalonia.ViewModels;
 
-public partial class MainWindowViewModel : ViewModelBase, IDisposable, IShellLifecyclePresentation
+public partial class MainWindowViewModel : ViewModelBase, IDisposable
 {
-    private readonly ShellLifecycle lifecycle;
+    private readonly IShellRuntime runtime;
 
     [ObservableProperty]
     [NotifyPropertyChangedFor(nameof(IsMotionEnabled))]
@@ -27,37 +26,21 @@ public partial class MainWindowViewModel : ViewModelBase, IDisposable, IShellLif
     private bool isBusy;
 
     public bool IsMotionEnabled => !IsMotionReduced;
-
     public bool IsBottomPanelVisible => true;
-
-    public bool IsStatusDetailExpanded =>
-        Settings.Editor.Current.StatusDetailMode == StatusDetailModes.Detailed;
-
-    public bool IsStatusDetailHidden =>
-        Settings.Editor.Current.StatusDetailMode == StatusDetailModes.Hidden;
+    public bool IsStatusDetailExpanded => Settings.Editor.Current.StatusDetailMode == StatusDetailModes.Detailed;
+    public bool IsStatusDetailHidden => Settings.Editor.Current.StatusDetailMode == StatusDetailModes.Hidden;
 
     public ShellViewModel Shell { get; }
-
     public BackgroundViewModel Background { get; }
-
     public RemoteContentViewModel RemoteContent { get; }
-
     public DialogsViewModel Dialogs { get; }
-
     public GameOperationsViewModel Operations { get; }
-
     public ToastHostViewModel Toasts { get; }
-
     public WindowChromeViewModel WindowChrome { get; }
-
     public SettingsViewModel Settings { get; }
-
     public ResourcePanelViewModel ResourcePanel { get; }
-
     public LogViewerDialogViewModel LogViewer { get; }
-
     public DebugViewModel Debug { get; }
-
     public ModalHostViewModel ModalHost { get; }
 
     public bool IsDebugFeaturesEnabled
@@ -72,21 +55,43 @@ public partial class MainWindowViewModel : ViewModelBase, IDisposable, IShellLif
         }
     }
 
-    internal Task PendingStartupUpdateCheck => lifecycle.PendingStartupUpdateCheck;
-
-    bool IShellLifecyclePresentation.IsBusy
-    {
-        get => IsBusy;
-        set => IsBusy = value;
-    }
-
-    bool IShellLifecyclePresentation.IsMotionReduced
-    {
-        get => IsMotionReduced;
-        set => IsMotionReduced = value;
-    }
+    internal Task PendingStartupUpdateCheck => runtime.PendingStartupUpdateCheck;
 
     public MainWindowViewModel(
+        ShellViewModel shell,
+        BackgroundViewModel background,
+        RemoteContentViewModel remoteContent,
+        DialogsViewModel dialogs,
+        GameOperationsViewModel operations,
+        ToastHostViewModel toasts,
+        WindowChromeViewModel windowChrome,
+        SettingsViewModel settings,
+        ResourcePanelViewModel resourcePanel,
+        LogViewerDialogViewModel logViewer,
+        DebugViewModel debug,
+        ModalHostViewModel modalHost,
+        IShellRuntime runtime)
+    {
+        this.runtime = runtime;
+        Shell = shell;
+        Background = background;
+        RemoteContent = remoteContent;
+        Dialogs = dialogs;
+        Operations = operations;
+        Toasts = toasts;
+        WindowChrome = windowChrome;
+        Settings = settings;
+        ResourcePanel = resourcePanel;
+        LogViewer = logViewer;
+        Debug = debug;
+        ModalHost = modalHost;
+
+        runtime.PresentationChanged += OnRuntimePresentationChanged;
+        runtime.StatusDetailModeChanged += OnStatusDetailModeChanged;
+        OnRuntimePresentationChanged();
+    }
+
+    internal MainWindowViewModel(
         ILauncherCoreService launcherCoreService,
         LauncherSettingsService settingsService,
         LocalizationService localizer,
@@ -100,90 +105,80 @@ public partial class MainWindowViewModel : ViewModelBase, IDisposable, IShellLif
         GameOperationsViewModel operations,
         ToastHostViewModel toasts,
         WindowChromeViewModel windowChrome,
-        SettingsViewModel settingsViewModel,
-        ResourcePanelViewModel resourcePanelViewModel,
+        SettingsViewModel settings,
+        ResourcePanelViewModel resourcePanel,
         IErrorHandlingService errorHandling,
         LogViewerDialogViewModel logViewer,
         DebugViewModel debug,
         ModalHostViewModel modalHost,
         WindowsAnimationSettingsProvider windowsAnimationSettingsProvider)
+        : this(
+            shell,
+            background,
+            remoteContent,
+            dialogs,
+            operations,
+            toasts,
+            windowChrome,
+            settings,
+            resourcePanel,
+            logViewer,
+            debug,
+            modalHost,
+            new ShellRuntime(
+                launcherCoreService,
+                settingsService,
+                localizer,
+                toastService,
+                launcherUpdateService,
+                diagnostics,
+                errorHandling,
+                windowsAnimationSettingsProvider,
+                shell,
+                background,
+                remoteContent,
+                dialogs,
+                operations,
+                toasts,
+                windowChrome,
+                settings,
+                resourcePanel,
+                logViewer,
+                debug,
+                modalHost))
     {
-        this.localizer = localizer;
-        Shell = shell;
-        Background = background;
-        RemoteContent = remoteContent;
-        Dialogs = dialogs;
-        Operations = operations;
-        Toasts = toasts;
-        WindowChrome = windowChrome;
-        Settings = settingsViewModel;
-        ResourcePanel = resourcePanelViewModel;
-        LogViewer = logViewer;
-        Debug = debug;
-        ModalHost = modalHost;
-
-        lifecycle = new ShellLifecycle(
-            launcherCoreService,
-            settingsService,
-            localizer,
-            toastService,
-            launcherUpdateService,
-            diagnostics,
-            errorHandling,
-            windowsAnimationSettingsProvider,
-            this,
-            Shell,
-            Background,
-            RemoteContent,
-            Dialogs,
-            Operations,
-            Toasts,
-            WindowChrome,
-            Settings,
-            ResourcePanel,
-            LogViewer,
-            Debug,
-            ModalHost);
-
-        lifecycle.StatusDetailModeChanged += () =>
-        {
-            OnPropertyChanged(nameof(IsStatusDetailExpanded));
-            OnPropertyChanged(nameof(IsStatusDetailHidden));
-        };
-        lifecycle.Wire();
-        ApplyLanguage(LauncherLanguages.Auto);
     }
 
-    public async Task InitializeAsync(CancellationToken cancellationToken = default) =>
-        await lifecycle.InitializeAsync(cancellationToken);
+    public Task InitializeAsync(CancellationToken cancellationToken = default) =>
+        runtime.InitializeAsync(cancellationToken);
 
-    public void RefreshSystemMotionPreference() =>
-        lifecycle.RefreshSystemMotionPreference();
+    public void RefreshSystemMotionPreference() => runtime.RefreshSystemMotionPreference();
 
     [RelayCommand]
-    private async Task RefreshAsync(CancellationToken cancellationToken = default) =>
-        await lifecycle.RefreshAsync(cancellationToken);
+    private Task RefreshAsync(CancellationToken cancellationToken = default) =>
+        runtime.RefreshAsync(cancellationToken);
 
-    public bool TryHandleEscape() => lifecycle.TryHandleEscape();
+    public bool TryHandleEscape() => runtime.TryHandleEscape();
 
-    internal async Task HandleOperationsRefreshRequestedAsync(GameOperationsRefreshMode mode) =>
-        await lifecycle.HandleOperationsRefreshRequestedAsync(mode);
+    internal Task HandleOperationsRefreshRequestedAsync(GameOperationsRefreshMode mode) =>
+        runtime.HandleOperationsRefreshRequestedAsync(mode);
 
     public void Dispose()
     {
-        lifecycle.Dispose();
+        runtime.PresentationChanged -= OnRuntimePresentationChanged;
+        runtime.StatusDetailModeChanged -= OnStatusDetailModeChanged;
+        runtime.Dispose();
     }
 
-    private void ApplyLanguage(string language)
+    private void OnRuntimePresentationChanged()
     {
-        Shell.ApplyLanguage(language, Settings, ResourcePanel, false);
-        Background.BackgroundImagePickerTitle = localizer.T("chooseBackgroundImageTitle");
-        Background.BackgroundFolderPickerTitle = localizer.T("chooseBackgroundFolderTitle");
-        RemoteContent.ApplyLanguage();
-        Dialogs.ApplyLanguage();
-        Operations.ApplyLanguage();
-        Debug.ApplyLanguage();
+        IsBusy = runtime.IsBusy;
+        IsMotionReduced = runtime.IsMotionReduced;
     }
 
-    private readonly LocalizationService localizer;
+    private void OnStatusDetailModeChanged()
+    {
+        OnPropertyChanged(nameof(IsStatusDetailExpanded));
+        OnPropertyChanged(nameof(IsStatusDetailHidden));
+    }
 }

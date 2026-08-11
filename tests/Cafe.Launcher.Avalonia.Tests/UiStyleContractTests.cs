@@ -27,9 +27,9 @@ public sealed partial class UiStyleContractTests
             "FolderSearchOutline",
             detectButton.Descendants().Single(element => element.Name.LocalName == "MaterialIcon").Attribute("Kind")?.Value);
 
-        AssertSettingRowIcon(generalSettings, "{Binding Shell.I18n.CloseBehavior}", "WindowClose");
-        AssertSettingRowIcon(downloadNetworkSettings, "{Binding Shell.I18n.Proxy}", "serverNetworkOutline");
-        AssertSettingRowIcon(downloadNetworkSettings, "{Binding Shell.I18n.LauncherUpdateChannel}", "SourceBranch");
+        AssertSettingRowIcon(generalSettings, "{Binding Shell.I18n[closeBehavior]}", "WindowClose");
+        AssertSettingRowIcon(downloadNetworkSettings, "{Binding Shell.I18n[proxy]}", "serverNetworkOutline");
+        AssertSettingRowIcon(downloadNetworkSettings, "{Binding Shell.I18n[launcherUpdateChannel]}", "SourceBranch");
 
         var resourcePanelButton = mainWindow
             .Descendants()
@@ -39,7 +39,7 @@ public sealed partial class UiStyleContractTests
         Assert.Equal(
             "Web",
             resourcePanelButton.Descendants().Single(element => element.Name.LocalName == "MaterialIcon").Attribute("Kind")?.Value);
-        AssertSettingRowIcon(downloadNetworkSettings, "{Binding Shell.I18n.DownloadSource}", "Web");
+        AssertSettingRowIcon(downloadNetworkSettings, "{Binding Shell.I18n[downloadSource]}", "Web");
 
         var resourcePanelHeadingIcon = dialogs
             .Descendants()
@@ -201,14 +201,14 @@ public sealed partial class UiStyleContractTests
         var document = XDocument.Load(ProjectFile("Views/MainWindow.axaml"));
         Dictionary<string, (string Name, string Priority)> expectedButtons = new(StringComparer.Ordinal)
         {
-            ["{Binding RefreshCommand}"] = ("{Binding Shell.I18n.Refresh}", "secondary-operation"),
+            ["{Binding RefreshCommand}"] = ("{Binding Shell.I18n[refresh]}", "secondary-operation"),
             ["{Binding Operations.InstallOrUpdateCommand}"] = ("{Binding Operations.InstallButtonText}", "primary-operation"),
-            ["{Binding Settings.ChangePersistedGamePathCommand}"] = ("{Binding Shell.I18n.ChangePath}", "secondary-operation"),
-            ["{Binding Settings.SelectInstalledGameCommand}"] = ("{Binding Shell.I18n.SelectInstalledGame}", "secondary-operation"),
-            ["{Binding WindowChrome.OpenOfficialSiteCommand}"] = ("{Binding Shell.I18n.OfficialSite}", "secondary-operation"),
-            ["{Binding Operations.StartGameCommand}"] = ("{Binding Shell.I18n.StartGame}", "primary-operation"),
+            ["{Binding Settings.ChangePersistedGamePathCommand}"] = ("{Binding Shell.I18n[changePath]}", "secondary-operation"),
+            ["{Binding Settings.SelectInstalledGameCommand}"] = ("{Binding Shell.I18n[selectInstalledGame]}", "secondary-operation"),
+            ["{Binding WindowChrome.OpenOfficialSiteCommand}"] = ("{Binding Shell.I18n[officialSite]}", "secondary-operation"),
+            ["{Binding Operations.StartGameCommand}"] = ("{Binding Shell.I18n[startGame]}", "primary-operation"),
             ["{Binding Operations.PauseResumeCommand}"] = ("{Binding Operations.PauseResumeText}", "secondary-operation"),
-            ["{Binding Operations.StopOperationCommand}"] = ("{Binding Shell.I18n.Stop}", "secondary-operation")
+            ["{Binding Operations.StopOperationCommand}"] = ("{Binding Shell.I18n[stop]}", "secondary-operation")
         };
 
         foreach (var (command, expected) in expectedButtons)
@@ -247,7 +247,7 @@ public sealed partial class UiStyleContractTests
         Assert.Contains(
             status.Descendants(),
             element => element.Name.LocalName == "TextBlock"
-                && element.Attribute("Text")?.Value == "{Binding Shell.I18n.LaunchCheckDescription}");
+                && element.Attribute("Text")?.Value == "{Binding Shell.I18n[launchCheckDescription]}");
     }
 
     [Fact]
@@ -279,11 +279,11 @@ public sealed partial class UiStyleContractTests
         var styles = XDocument.Load(ProjectFile("Views/MainWindow.Styles.axaml"));
         Dictionary<string, string> expectedNames = new(StringComparer.Ordinal)
         {
-            ["{Binding WindowChrome.OpenDebugPanelCommand}"] = "{Binding Shell.I18n.DebugPanel}",
-            ["{Binding ResourcePanel.OpenResourcePanelCommand}"] = "{Binding Shell.I18n.ResourcePanel}",
-            ["{Binding WindowChrome.ShowSettingsCommand}"] = "{Binding Shell.I18n.Settings}",
-            ["{Binding WindowChrome.MinimizeCommand}"] = "{Binding Shell.I18n.Minimize}",
-            ["{Binding WindowChrome.CloseCommand}"] = "{Binding Shell.I18n.Close}"
+            ["{Binding WindowChrome.OpenDebugPanelCommand}"] = "{Binding Shell.I18n[debugPanel]}",
+            ["{Binding ResourcePanel.OpenResourcePanelCommand}"] = "{Binding Shell.I18n[resourcePanel]}",
+            ["{Binding WindowChrome.ShowSettingsCommand}"] = "{Binding Shell.I18n[settings]}",
+            ["{Binding WindowChrome.MinimizeCommand}"] = "{Binding Shell.I18n[minimize]}",
+            ["{Binding WindowChrome.CloseCommand}"] = "{Binding Shell.I18n[close]}"
         };
 
         var brandRow = view
@@ -385,7 +385,7 @@ public sealed partial class UiStyleContractTests
     }
 
     [Fact]
-    public void LocalizedStrings_DebugBindings_UseTheExistingGeneratedFieldPattern()
+    public void LocalizedTextCatalog_DebugBindings_UseResourceKeys()
     {
         var overlay = XDocument.Load(ProjectFile("Views/MainWindowDebugOverlay.axaml"));
         var source = File.ReadAllText(ProjectFile("Services/LocalizationService.cs"));
@@ -393,23 +393,16 @@ public sealed partial class UiStyleContractTests
             .Descendants()
             .SelectMany(element => element.Attributes())
             .Select(attribute => attribute.Value)
-            .SelectMany(value => Regex.Matches(value, @"Shell\.I18n\.(Debug[A-Za-z0-9_]+)"))
+            .SelectMany(value => Regex.Matches(value, @"Shell\.I18n\[(debug[A-Za-z0-9_]+)\]"))
             .Select(match => match.Groups[1].Value)
             .Distinct(StringComparer.Ordinal)
             .ToArray();
 
         Assert.NotEmpty(debugProperties);
-        foreach (var property in debugProperties)
+        foreach (var key in debugProperties)
         {
-            var field = char.ToLowerInvariant(property[0]) + property[1..];
-            Assert.Contains(
-                $"[ObservableProperty] private string {field}",
-                source,
-                StringComparison.Ordinal);
-            Assert.DoesNotContain(
-                $"public partial string {property}",
-                source,
-                StringComparison.Ordinal);
+            Assert.Contains($"this[string key] => localizer.T(key)", source, StringComparison.Ordinal);
+            Assert.StartsWith("debug", key, StringComparison.Ordinal);
         }
     }
 
@@ -499,7 +492,7 @@ public sealed partial class UiStyleContractTests
             "{Binding Shell.OperationNote}",
             "{Binding RefreshCommand}",
             "{Binding Operations.ProgressTitle}",
-            "{Binding Shell.I18n.LaunchCheckDescription}"
+            "{Binding Shell.I18n[launchCheckDescription]}"
         };
 
         foreach (var binding in expectedBindings)
@@ -578,8 +571,8 @@ public sealed partial class UiStyleContractTests
         var styles = XDocument.Load(ProjectFile("Views/MainWindow.Styles.axaml"));
         Dictionary<string, string> expectedNames = new(StringComparer.Ordinal)
         {
-            ["{Binding RemoteContent.SelectPreviousBannerCommand}"] = "{Binding Shell.I18n.PreviousBanner}",
-            ["{Binding RemoteContent.SelectNextBannerCommand}"] = "{Binding Shell.I18n.NextBanner}"
+            ["{Binding RemoteContent.SelectPreviousBannerCommand}"] = "{Binding Shell.I18n[previousBanner]}",
+            ["{Binding RemoteContent.SelectNextBannerCommand}"] = "{Binding Shell.I18n[nextBanner]}"
         };
 
         foreach (var (command, expectedName) in expectedNames)
@@ -959,19 +952,19 @@ public sealed partial class UiStyleContractTests
         Assert.Equal(3, groups.Count);
 
         Assert.Equal(
-            "{Binding Shell.I18n.SettingsGroupThemeColor}",
+            "{Binding Shell.I18n[settingsGroupThemeColor]}",
             groups[0]
                 .Elements()
                 .First(element => element.Name.LocalName == "TextBlock")
                 .Attribute("Text")?.Value);
         Assert.Equal(
-            "{Binding Shell.I18n.SettingsGroupBackground}",
+            "{Binding Shell.I18n[settingsGroupBackground]}",
             groups[1]
                 .Elements()
                 .First(element => element.Name.LocalName == "TextBlock")
                 .Attribute("Text")?.Value);
         Assert.Equal(
-            "{Binding Shell.I18n.SettingsGroupDisplay}",
+            "{Binding Shell.I18n[settingsGroupDisplay]}",
             groups[2]
                 .Elements()
                 .First(element => element.Name.LocalName == "TextBlock")
@@ -1528,30 +1521,30 @@ public sealed partial class UiStyleContractTests
         {
             ["Views/MainWindowDialogsOverlay.axaml"] = new(StringComparer.Ordinal)
             {
-                ["{Binding ResourcePanel.CloseResourcePanelCommand}"] = "{Binding Shell.I18n.Close}",
-                ["{Binding ResourcePanel.SaveManualResourcePanelUidCommand}"] = "{Binding Shell.I18n.ResourcePanelSaveUid}",
-                ["{Binding ResourcePanel.CancelEditResourcePanelUidCommand}"] = "{Binding Shell.I18n.Cancel}",
-                ["{Binding ResourcePanel.BeginEditResourcePanelUidCommand}"] = "{Binding Shell.I18n.ResourcePanelChangeUid}",
-                ["{Binding ResourcePanel.RefreshResourcePanelCommand}"] = "{Binding Shell.I18n.ResourcePanelRefresh}",
-                ["{Binding ResourcePanel.SaveResourcePanelCommand}"] = "{Binding Shell.I18n.ResourcePanelSave}"
+                ["{Binding ResourcePanel.CloseResourcePanelCommand}"] = "{Binding Shell.I18n[close]}",
+                ["{Binding ResourcePanel.SaveManualResourcePanelUidCommand}"] = "{Binding Shell.I18n[resourcePanelSaveUid]}",
+                ["{Binding ResourcePanel.CancelEditResourcePanelUidCommand}"] = "{Binding Shell.I18n[cancel]}",
+                ["{Binding ResourcePanel.BeginEditResourcePanelUidCommand}"] = "{Binding Shell.I18n[resourcePanelChangeUid]}",
+                ["{Binding ResourcePanel.RefreshResourcePanelCommand}"] = "{Binding Shell.I18n[resourcePanelRefresh]}",
+                ["{Binding ResourcePanel.SaveResourcePanelCommand}"] = "{Binding Shell.I18n[resourcePanelSave]}"
             },
             ["Views/MainWindowLogViewerOverlay.axaml"] = new(StringComparer.Ordinal)
             {
-                ["{Binding LogViewer.CloseCommand}"] = "{Binding Shell.I18n.Close}",
-                ["{Binding LogViewer.ExportCommand}"] = "{Binding Shell.I18n.ExportLogs}"
+                ["{Binding LogViewer.CloseCommand}"] = "{Binding Shell.I18n[close]}",
+                ["{Binding LogViewer.ExportCommand}"] = "{Binding Shell.I18n[exportLogs]}"
             },
             ["Views/MainWindowToastOverlay.axaml"] = new(StringComparer.Ordinal)
             {
                 ["{Binding #ToastOverlayRoot.((vm:MainWindowViewModel)DataContext).Toasts.DismissToastCommand}"] =
-                    "{Binding #ToastOverlayRoot.((vm:MainWindowViewModel)DataContext).Shell.I18n.Close}"
+                    "{Binding #ToastOverlayRoot.((vm:MainWindowViewModel)DataContext).Shell.I18n[close]}"
             },
             ["Views/SetupWizardOverlay.axaml"] = new(StringComparer.Ordinal)
             {
-                ["{Binding Dialogs.RequestSetupWizardExitCommand}"] = "{Binding Shell.I18n.SetupWizardSkip}",
-                ["{Binding Dialogs.SetupWizard.BrowseGamePathCommand}"] = "{Binding Shell.I18n.SetupWizardBrowse}",
-                ["{Binding Dialogs.SetupWizard.PreviousCommand}"] = "{Binding Shell.I18n.SetupWizardPrevious}",
-                ["{Binding Dialogs.SetupWizard.NextCommand}"] = "{Binding Shell.I18n.SetupWizardNext}",
-                ["{Binding Dialogs.SetupWizard.CompleteCommand}"] = "{Binding Shell.I18n.SetupWizardFinish}"
+                ["{Binding Dialogs.RequestSetupWizardExitCommand}"] = "{Binding Shell.I18n[setupWizardSkip]}",
+                ["{Binding Dialogs.SetupWizard.BrowseGamePathCommand}"] = "{Binding Shell.I18n[setupWizardBrowse]}",
+                ["{Binding Dialogs.SetupWizard.PreviousCommand}"] = "{Binding Shell.I18n[setupWizardPrevious]}",
+                ["{Binding Dialogs.SetupWizard.NextCommand}"] = "{Binding Shell.I18n[setupWizardNext]}",
+                ["{Binding Dialogs.SetupWizard.CompleteCommand}"] = "{Binding Shell.I18n[setupWizardFinish]}"
             }
         };
 
@@ -1604,11 +1597,11 @@ public sealed partial class UiStyleContractTests
 
         Assert.Equal(2, uidInputs.Count);
         Assert.All(uidInputs, input => Assert.Equal(
-            "{Binding Shell.I18n.ResourcePanelUid}",
+            "{Binding Shell.I18n[resourcePanelUid]}",
             input.Attributes().SingleOrDefault(attribute =>
                 attribute.Name.LocalName == "AutomationProperties.Name")?.Value));
         Assert.Equal(
-            "{Binding Shell.I18n.ResourcePanelUidSource}",
+            "{Binding Shell.I18n[resourcePanelUidSource]}",
             uidSource.Attributes().SingleOrDefault(attribute =>
                 attribute.Name.LocalName == "AutomationProperties.Name")?.Value);
         Assert.Equal(
@@ -1628,7 +1621,7 @@ public sealed partial class UiStyleContractTests
                 && element.Attribute("Command")?.Value
                     == "{Binding #ToastOverlayRoot.((vm:MainWindowViewModel)DataContext).Toasts.DismissToastCommand}");
         const string expectedBinding =
-            "{Binding #ToastOverlayRoot.((vm:MainWindowViewModel)DataContext).Shell.I18n.Close}";
+            "{Binding #ToastOverlayRoot.((vm:MainWindowViewModel)DataContext).Shell.I18n[close]}";
 
         Assert.Equal(
             expectedBinding,
@@ -1739,8 +1732,8 @@ public sealed partial class UiStyleContractTests
         var settingsOverlay = XDocument.Load(ProjectFile("Views/MainWindowSettingsOverlay.axaml"));
         Dictionary<string, string> settingsActions = new(StringComparer.Ordinal)
         {
-            ["{Binding WindowChrome.ShowSettingsCommand}"] = "{Binding Shell.I18n.Cancel}",
-            ["{Binding Settings.SaveSettingsCommand}"] = "{Binding Shell.I18n.Save}"
+            ["{Binding WindowChrome.ShowSettingsCommand}"] = "{Binding Shell.I18n[cancel]}",
+            ["{Binding Settings.SaveSettingsCommand}"] = "{Binding Shell.I18n[save]}"
         };
 
         foreach (var (command, expectedBinding) in settingsActions)
@@ -1924,7 +1917,7 @@ public sealed partial class UiStyleContractTests
             emptyState.Descendants(),
             element =>
                 element.Name.LocalName == "TextBlock"
-                && element.Attribute("Text")?.Value == "{Binding Shell.I18n.LogNoMatchingEntries}");
+                && element.Attribute("Text")?.Value == "{Binding Shell.I18n[logNoMatchingEntries]}");
 
         var styles = XDocument.Load(ProjectFile("Views/Styles/Diagnostics.axaml"));
         var emptyStateTextStyle = styles
@@ -2034,7 +2027,7 @@ public sealed partial class UiStyleContractTests
             mainWindow,
             StringComparison.Ordinal);
         Assert.Contains(
-            "Shell.I18n.BannerLoading",
+            "Shell.I18n[bannerLoading]",
             mainWindow,
             StringComparison.Ordinal);
         Assert.DoesNotContain(
@@ -2060,7 +2053,7 @@ public sealed partial class UiStyleContractTests
             mainWindow,
             StringComparison.Ordinal);
         Assert.Contains(
-            "Shell.I18n.RemoteContentLoading",
+            "Shell.I18n[remoteContentLoading]",
             mainWindow,
             StringComparison.Ordinal);
         Assert.Contains(
@@ -2068,7 +2061,7 @@ public sealed partial class UiStyleContractTests
             mainWindow,
             StringComparison.Ordinal);
         Assert.Contains(
-            "Shell.I18n.RemoteContentLoadFailed",
+            "Shell.I18n[remoteContentLoadFailed]",
             mainWindow,
             StringComparison.Ordinal);
         Assert.Equal("True", GetStyleSetters(styles, "Border.remote-surface")["ClipToBounds"]);
@@ -2361,11 +2354,11 @@ public sealed partial class UiStyleContractTests
         Assert.Equal(
             new[]
             {
-                "{Binding Shell.I18n.DownloadSourceCafe}",
-                "{Binding Shell.I18n.DownloadSourceOfficial}",
-                "{Binding Shell.I18n.ProxyAuto}",
-                "{Binding Shell.I18n.ProxyDirect}",
-                "{Binding Shell.I18n.ProxySystem}"
+                "{Binding Shell.I18n[downloadSourceCafe]}",
+                "{Binding Shell.I18n[downloadSourceOfficial]}",
+                "{Binding Shell.I18n[proxyAuto]}",
+                "{Binding Shell.I18n[proxyDirect]}",
+                "{Binding Shell.I18n[proxySystem]}"
             },
             radioButtons.Select(button =>
                 button.Attribute("AutomationProperties.Name")?.Value));
@@ -2667,7 +2660,7 @@ public sealed partial class UiStyleContractTests
                     Assert.False(
                         string.IsNullOrWhiteSpace(automationName),
                         $"{sectionPath}: {control.Name.LocalName} is missing AutomationProperties.Name.");
-                    Assert.Contains("Shell.I18n.", automationName, StringComparison.Ordinal);
+                    Assert.Contains("Shell.I18n[", automationName, StringComparison.Ordinal);
                 });
         }
     }
@@ -2689,10 +2682,10 @@ public sealed partial class UiStyleContractTests
         Assert.Equal(2, rows.Count);
         var logFilesRow = rows[1];
         Assert.Equal(
-            "{Binding Shell.I18n.LogFiles}",
+            "{Binding Shell.I18n[logFiles]}",
             logFilesRow.Attribute("Title")?.Value);
         Assert.Equal(
-            "{Binding Shell.I18n.LogFilesDescription}",
+            "{Binding Shell.I18n[logFilesDescription]}",
             logFilesRow.Attribute("Description")?.Value);
 
         var action = logFilesRow
@@ -2767,11 +2760,11 @@ public sealed partial class UiStyleContractTests
             "LogViewer.ExportCommand",
             "WindowChrome.OpenDataDirectoryCommand");
 
-        Assert.Contains("Shell.I18n.AboutActionsGeneral", aboutText, StringComparison.Ordinal);
+        Assert.Contains("Shell.I18n[aboutActionsGeneral]", aboutText, StringComparison.Ordinal);
         Assert.DoesNotContain("LogViewer.OpenCommand", aboutText, StringComparison.Ordinal);
         Assert.DoesNotContain("LogViewer.ExportCommand", aboutText, StringComparison.Ordinal);
         Assert.DoesNotContain("WindowChrome.OpenDataDirectoryCommand", aboutText, StringComparison.Ordinal);
-        Assert.Contains("Shell.I18n.SettingsGroupDiagnostics", advancedText, StringComparison.Ordinal);
+        Assert.Contains("Shell.I18n[settingsGroupDiagnostics]", advancedText, StringComparison.Ordinal);
 
         var document = XDocument.Parse(overlay);
         var footerButtons = document
@@ -2955,10 +2948,10 @@ public sealed partial class UiStyleContractTests
             && element.Attribute("Command")?.Value == "{Binding Debug.TestActionToastCommand}");
 
         Assert.Equal(
-            "{Binding Shell.I18n.DebugTestActionToast}",
+            "{Binding Shell.I18n[debugTestActionToast]}",
             button.Attribute("AutomationProperties.Name")?.Value);
         var text = button.Descendants().Single(element => element.Name.LocalName == "TextBlock");
-        Assert.Equal("{Binding Shell.I18n.DebugTestActionToast}", text.Attribute("Text")?.Value);
+        Assert.Equal("{Binding Shell.I18n[debugTestActionToast]}", text.Attribute("Text")?.Value);
     }
 
     [Fact]

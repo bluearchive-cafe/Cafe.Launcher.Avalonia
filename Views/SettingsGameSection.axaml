@@ -13,29 +13,29 @@
         </DataTemplate>
     </UserControl.Resources>
     <StackPanel Classes="settings-group">
-        <TextBlock Text="{Binding Shell.I18n.SettingsGroupGameFiles}" Classes="group-title"/>
+        <TextBlock Text="{Binding Shell.I18n[settingsGroupGameFiles]}" Classes="group-title"/>
 
         <controls:SettingRow IconKind="FolderOpen"
-                             Title="{Binding Shell.I18n.GamePath}"
+                             Title="{Binding Shell.I18n[gamePath]}"
                              Description="{Binding Settings.Editor.Current.GamePath}">
             <controls:SettingRow.Action>
                 <Button Classes="flat-action" Command="{Binding Settings.ChooseGamePathCommand}"
-                        AutomationProperties.Name="{Binding Shell.I18n.Choose}"
+                        AutomationProperties.Name="{Binding Shell.I18n[choose]}"
                         IsEnabled="{Binding Shell.IsBusy, Converter={x:Static BoolConverters.Not}}">
                     <StackPanel Classes="button-content">
                         <materialIcons:MaterialIcon Kind="FolderOpen" Width="{StaticResource LauncherIconSm}" Height="{StaticResource LauncherIconSm}"/>
-                        <TextBlock Text="{Binding Shell.I18n.Choose}"/>
+                        <TextBlock Text="{Binding Shell.I18n[choose]}"/>
                     </StackPanel>
                 </Button>
             </controls:SettingRow.Action>
         </controls:SettingRow>
 
         <controls:SettingRow IconKind="PlaylistCheck"
-                             Title="{Binding Shell.I18n.LaunchCheck}"
-                             Description="{Binding Shell.I18n.LaunchCheckDescription}">
+                             Title="{Binding Shell.I18n[launchCheck]}"
+                             Description="{Binding Shell.I18n[launchCheckDescription]}">
             <controls:SettingRow.Action>
                 <ComboBox Classes="setting-control"
-                          AutomationProperties.Name="{Binding Shell.I18n.LaunchCheck}"
+                          AutomationProperties.Name="{Binding Shell.I18n[launchCheck]}"
                           ItemsSource="{Binding Settings.Options.LaunchCheckMode}"
                           SelectedValue="{Binding Settings.Editor.Current.LaunchCheckMode, Mode=TwoWay}"
                           SelectedValueBinding="{Binding Code}"
@@ -44,24 +44,24 @@
         </controls:SettingRow>
 
         <controls:SettingRow IconKind="GamepadSquareOutline"
-                             Title="{Binding Shell.I18n.GameManagement}"
-                             Description="{Binding Shell.I18n.GameManagementDescription}">
+                             Title="{Binding Shell.I18n[gameManagement]}"
+                             Description="{Binding Shell.I18n[gameManagementDescription]}">
             <controls:SettingRow.Action>
                 <StackPanel Orientation="Horizontal" Spacing="{StaticResource LauncherSpacingSm}" VerticalAlignment="Center">
                     <Button Classes="flat-action" Command="{Binding Operations.RequestRepairCommand}"
-                            AutomationProperties.Name="{Binding Shell.I18n.Repair}"
+                            AutomationProperties.Name="{Binding Shell.I18n[repair]}"
                             IsEnabled="{Binding Shell.IsBusy, Converter={x:Static BoolConverters.Not}}">
                         <StackPanel Classes="button-content">
                             <materialIcons:MaterialIcon Kind="Tools" Width="{StaticResource LauncherIconSm}" Height="{StaticResource LauncherIconSm}"/>
-                            <TextBlock Text="{Binding Shell.I18n.Repair}"/>
+                            <TextBlock Text="{Binding Shell.I18n[repair]}"/>
                         </StackPanel>
                     </Button>
                     <Button Classes="flat-action" Command="{Binding Operations.RequestUninstallCommand}"
-                            AutomationProperties.Name="{Binding Shell.I18n.Uninstall}"
+                            AutomationProperties.Name="{Binding Shell.I18n[uninstall]}"
                             IsEnabled="{Binding Shell.IsBusy, Converter={x:Static BoolConverters.Not}}">
                         <StackPanel Classes="button-content">
                             <materialIcons:MaterialIcon Kind="TrashCanOutline" Width="{StaticResource LauncherIconSm}" Height="{StaticResource LauncherIconSm}" Foreground="{DynamicResource LauncherDangerBrush}"/>
-                            <TextBlock Text="{Binding Shell.I18n.Uninstall}" Foreground="{DynamicResource LauncherDangerBrush}"/>
+                            <TextBlock Text="{Binding Shell.I18n[uninstall]}" Foreground="{DynamicResource LauncherDangerBrush}"/>
                         </StackPanel>
                     </Button>
                 </StackPanel>

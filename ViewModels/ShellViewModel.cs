@@ -11,7 +11,7 @@ using CommunityToolkit.Mvvm.ComponentModel;
 
 namespace Cafe.Launcher.Avalonia.ViewModels;
 
-public partial class ShellViewModel : ViewModelBase
+public partial class ShellViewModel : ViewModelBase, IDisposable
 {
     private readonly LocalizationService localizer;
     private readonly EasterEggAudioService? easterEggAudioService;
@@ -102,7 +102,7 @@ public partial class ShellViewModel : ViewModelBase
     private FontFamily fontFamily =
         LanguageFontFamilyService.GetForEffectiveLanguage(LauncherLanguages.English);
 
-    public LocalizedStrings I18n { get; } = new();
+    public LocalizedTextCatalog I18n { get; }
 
     public string GameFolderPickerTitle { get; private set; } = "";
 
@@ -112,6 +112,7 @@ public partial class ShellViewModel : ViewModelBase
     {
         this.localizer = localizer;
         this.easterEggAudioService = easterEggAudioService;
+        I18n = new LocalizedTextCatalog(localizer);
     }
 
     internal static string ResolveProductName(DateTime date, int randomIndex)
@@ -150,7 +151,6 @@ public partial class ShellViewModel : ViewModelBase
     {
         var effectiveLanguage = localizer.SetLanguage(language);
         FontFamily = LanguageFontFamilyService.GetForEffectiveLanguage(effectiveLanguage);
-        I18n.Apply(localizer);
         LauncherVersionText = localizer.F("launcherVersionLabel", BuildInfo.LauncherVersion);
         CommitShaText = localizer.F("commitLabel", BuildInfo.CommitSha);
         FrameworkVersionText = FrameworkVersion;
@@ -324,5 +324,10 @@ public partial class ShellViewModel : ViewModelBase
             LauncherRuntimeState.Ready => localizer.T("operationTelemetryLocal"),
             _ => localizer.T("gameInstallationStateReadFailed")
         };
+    }
+
+    public void Dispose()
+    {
+        I18n.Dispose();
     }
 }

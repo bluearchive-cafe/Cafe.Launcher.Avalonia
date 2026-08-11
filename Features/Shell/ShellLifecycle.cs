@@ -138,6 +138,9 @@ public sealed class ShellLifecycle : IDisposable
         ApplyMotionSettings(savedSettings);
     }
 
+    /// <summary>Applies the initial automatic language before a launcher snapshot exists.</summary>
+    public void ApplyInitialLanguage() => ApplyLanguage(LauncherLanguages.Auto);
+
     /// <summary>Reloads launcher state and updates all dependent presentation models.</summary>
     public async Task RefreshAsync(CancellationToken cancellationToken = default)
     {
@@ -477,6 +480,7 @@ public sealed class ShellLifecycle : IDisposable
         Unwire();
         operations.StopDownload(clearPersistedState: false);
         operations.Dispose();
+        shell.Dispose();
         settings.Dispose();
         remoteContent.Dispose();
         background.Dispose();

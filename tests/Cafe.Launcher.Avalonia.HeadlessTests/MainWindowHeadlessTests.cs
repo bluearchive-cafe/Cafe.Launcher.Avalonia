@@ -1269,7 +1269,7 @@ public sealed class MainWindowHeadlessTests
         var statusLine = GetWizardGamePathStatus(context.Window);
         var nextButton = GetWizardNextButton(context.Window, context.ViewModel);
         Assert.Equal(
-            context.ViewModel.Shell.I18n.SetupWizardGamePathAvailable,
+            context.ViewModel.Shell.I18n["setupWizardGamePathAvailable"],
             statusLine.Text);
         Assert.True(context.ViewModel.Dialogs.SetupWizard.CanGoNext);
         Assert.True(nextButton.IsEnabled);
@@ -1287,7 +1287,7 @@ public sealed class MainWindowHeadlessTests
         Dispatcher.UIThread.RunJobs();
 
         Assert.Equal(
-            context.ViewModel.Shell.I18n.SetupWizardGamePathCorrupted,
+            context.ViewModel.Shell.I18n["setupWizardGamePathCorrupted"],
             statusLine.Text);
         Assert.False(context.ViewModel.Dialogs.SetupWizard.CanGoNext);
         Assert.False(nextButton.IsEnabled);
@@ -1318,7 +1318,7 @@ public sealed class MainWindowHeadlessTests
             .GetVisualDescendants()
             .OfType<Button>()
             .Where(control => AutomationProperties.GetName(control)
-                == context.ViewModel.Shell.I18n.SetupWizardEditStep)
+                == context.ViewModel.Shell.I18n["setupWizardEditStep"])
             .ToArray();
 
         Assert.Equal(4, editButtons.Length);
@@ -1355,9 +1355,9 @@ public sealed class MainWindowHeadlessTests
         Dispatcher.UIThread.RunJobs();
 
         var cafe = context.Window.GetVisualDescendants().OfType<RadioButton>().Single(control =>
-            AutomationProperties.GetName(control) == context.ViewModel.Shell.I18n.DownloadSourceCafe);
+            AutomationProperties.GetName(control) == context.ViewModel.Shell.I18n["downloadSourceCafe"]);
         var official = context.Window.GetVisualDescendants().OfType<RadioButton>().Single(control =>
-            AutomationProperties.GetName(control) == context.ViewModel.Shell.I18n.DownloadSourceOfficial);
+            AutomationProperties.GetName(control) == context.ViewModel.Shell.I18n["downloadSourceOfficial"]);
 
         official.IsChecked = true;
         Dispatcher.UIThread.RunJobs();
@@ -1371,11 +1371,11 @@ public sealed class MainWindowHeadlessTests
         Dispatcher.UIThread.RunJobs();
 
         var auto = context.Window.GetVisualDescendants().OfType<RadioButton>().Single(control =>
-            AutomationProperties.GetName(control) == context.ViewModel.Shell.I18n.ProxyAuto);
+            AutomationProperties.GetName(control) == context.ViewModel.Shell.I18n["proxyAuto"]);
         var direct = context.Window.GetVisualDescendants().OfType<RadioButton>().Single(control =>
-            AutomationProperties.GetName(control) == context.ViewModel.Shell.I18n.ProxyDirect);
+            AutomationProperties.GetName(control) == context.ViewModel.Shell.I18n["proxyDirect"]);
         var system = context.Window.GetVisualDescendants().OfType<RadioButton>().Single(control =>
-            AutomationProperties.GetName(control) == context.ViewModel.Shell.I18n.ProxySystem);
+            AutomationProperties.GetName(control) == context.ViewModel.Shell.I18n["proxySystem"]);
 
         direct.IsChecked = true;
         Dispatcher.UIThread.RunJobs();
@@ -1422,11 +1422,11 @@ public sealed class MainWindowHeadlessTests
             .Single(control => control.Classes.Contains("wizard-navigation"));
 
         Assert.Equal(
-            context.ViewModel.Shell.I18n.SetupWizardGamePathAvailable,
+            context.ViewModel.Shell.I18n["setupWizardGamePathAvailable"],
             statusLine.Text);
         Assert.Equal(statusLine.Text, AutomationProperties.GetName(statusLine));
         Assert.Equal(
-            context.ViewModel.Shell.I18n.SetupWizardStepTitle,
+            context.ViewModel.Shell.I18n["setupWizardStepTitle"],
             AutomationProperties.GetName(navigation));
         Assert.All(
             navigation.GetVisualDescendants().OfType<TextBlock>()

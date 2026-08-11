@@ -130,10 +130,9 @@ public sealed class LocalizationServiceTests
         Assert.NotEqual("diskSpaceInsufficientDetail", service.F("diskSpaceInsufficientDetail", "10B", "--"));
         Assert.NotEqual("verificationRetry", service.F("verificationRetry", 2, 1, 3));
         Assert.NotEqual("verificationFailed", service.F("verificationFailed", 2));
-        var strings = new LocalizedStrings();
-        strings.Apply(service);
-        Assert.Equal(service.T("diskSpaceCheck"), strings.DiskSpaceCheck);
-        Assert.Equal(service.T("verificationFailed"), strings.VerificationFailed);
+        using var strings = new LocalizedTextCatalog(service);
+        Assert.Equal(service.T("diskSpaceCheck"), strings["diskSpaceCheck"]);
+        Assert.Equal(service.T("verificationFailed"), strings["verificationFailed"]);
     }
 
     [Theory]
@@ -153,19 +152,17 @@ public sealed class LocalizationServiceTests
         LauncherLanguages.Japanese,
         "ログファイル",
         "ログを表示、エクスポート、または保存先フォルダーを開く")]
-    public void LocalizedStrings_WhenLogFileKeysApplied_MapsLocalizedValues(
+    public void LocalizedTextCatalog_WhenLogFileKeysRequested_MapsLocalizedValues(
         string language,
         string expectedTitle,
         string expectedDescription)
     {
         var service = new LocalizationService();
         service.SetLanguage(language);
-        var strings = new LocalizedStrings();
+        using var strings = new LocalizedTextCatalog(service);
 
-        strings.Apply(service);
-
-        Assert.Equal(expectedTitle, strings.LogFiles);
-        Assert.Equal(expectedDescription, strings.LogFilesDescription);
+        Assert.Equal(expectedTitle, strings["logFiles"]);
+        Assert.Equal(expectedDescription, strings["logFilesDescription"]);
     }
 
     [Theory]
@@ -173,37 +170,36 @@ public sealed class LocalizationServiceTests
     [InlineData(LauncherLanguages.SimplifiedChinese)]
     [InlineData(LauncherLanguages.TraditionalChinese)]
     [InlineData(LauncherLanguages.Japanese)]
-    public void LocalizedStrings_WhenGamePathStatusKeysApplied_MapsLocalizedValues(string language)
+    public void LocalizedTextCatalog_WhenGamePathStatusKeysRequested_MapsLocalizedValues(string language)
     {
         var service = new LocalizationService();
         service.SetLanguage(language);
-        var strings = new LocalizedStrings();
+        using var strings = new LocalizedTextCatalog(service);
 
-        strings.Apply(service);
-
-        Assert.Equal(service.T("setupWizardGamePathAvailable"), strings.SetupWizardGamePathAvailable);
-        Assert.Equal(service.T("setupWizardGamePathChecking"), strings.SetupWizardGamePathChecking);
-        Assert.Equal(service.T("setupWizardGamePathCorrupted"), strings.SetupWizardGamePathCorrupted);
-        Assert.Equal(service.T("setupWizardGamePathInaccessible"), strings.SetupWizardGamePathInaccessible);
-        Assert.Equal(service.T("setupWizardGamePathInstalled"), strings.SetupWizardGamePathInstalled);
+        Assert.Equal(service.T("setupWizardGamePathAvailable"), strings["setupWizardGamePathAvailable"]);
+        Assert.Equal(service.T("setupWizardGamePathChecking"), strings["setupWizardGamePathChecking"]);
+        Assert.Equal(service.T("setupWizardGamePathCorrupted"), strings["setupWizardGamePathCorrupted"]);
+        Assert.Equal(service.T("setupWizardGamePathInaccessible"), strings["setupWizardGamePathInaccessible"]);
+        Assert.Equal(service.T("setupWizardGamePathInstalled"), strings["setupWizardGamePathInstalled"]);
     }
 
     [Fact]
-    public void LocalizedStrings_WhenLanguageChanges_UpdatesGamePathStatusValues()
+    public void LocalizedTextCatalog_WhenLanguageChanges_NotifiesIndexerBindings()
     {
         var service = new LocalizationService();
         service.SetLanguage(LauncherLanguages.English);
-        var strings = new LocalizedStrings();
-        strings.Apply(service);
-        service.LanguageChanged += (_, _) => strings.Apply(service);
+        using var strings = new LocalizedTextCatalog(service);
+        var indexerChanged = false;
+        strings.PropertyChanged += (_, eventArgs) => indexerChanged |= eventArgs.PropertyName == "Item[]";
 
         service.SetLanguage(LauncherLanguages.SimplifiedChinese);
 
-        Assert.Equal(service.T("setupWizardGamePathAvailable"), strings.SetupWizardGamePathAvailable);
-        Assert.Equal(service.T("setupWizardGamePathChecking"), strings.SetupWizardGamePathChecking);
-        Assert.Equal(service.T("setupWizardGamePathCorrupted"), strings.SetupWizardGamePathCorrupted);
-        Assert.Equal(service.T("setupWizardGamePathInaccessible"), strings.SetupWizardGamePathInaccessible);
-        Assert.Equal(service.T("setupWizardGamePathInstalled"), strings.SetupWizardGamePathInstalled);
+        Assert.True(indexerChanged);
+        Assert.Equal(service.T("setupWizardGamePathAvailable"), strings["setupWizardGamePathAvailable"]);
+        Assert.Equal(service.T("setupWizardGamePathChecking"), strings["setupWizardGamePathChecking"]);
+        Assert.Equal(service.T("setupWizardGamePathCorrupted"), strings["setupWizardGamePathCorrupted"]);
+        Assert.Equal(service.T("setupWizardGamePathInaccessible"), strings["setupWizardGamePathInaccessible"]);
+        Assert.Equal(service.T("setupWizardGamePathInstalled"), strings["setupWizardGamePathInstalled"]);
     }
 
     [Fact]

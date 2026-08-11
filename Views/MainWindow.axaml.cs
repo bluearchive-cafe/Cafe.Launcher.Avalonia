@@ -157,7 +157,7 @@ public partial class MainWindow : Window
         }
 
         var startLocation = await StorageProvider.TryGetFolderFromPathAsync(defaultPath);
-        var pickerTitle = (DataContext as MainWindowViewModel)?.Shell.I18n.LogExportFolderPickerTitle ?? "";
+        var pickerTitle = (DataContext as MainWindowViewModel)?.Shell.I18n["logExportFolderPickerTitle"] ?? "";
         var folders = await StorageProvider.OpenFolderPickerAsync(new FolderPickerOpenOptions
         {
             Title = pickerTitle,

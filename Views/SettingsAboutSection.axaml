@@ -10,11 +10,11 @@
             <materialIcons:MaterialIcon Kind="InformationOutline" Width="{StaticResource LauncherIconLg}" Height="{StaticResource LauncherIconLg}" Foreground="{DynamicResource LauncherAccentBrush}"/>
             <StackPanel>
                 <TextBlock Text="{Binding Shell.ProductName}" Classes="section-title"/>
-                <TextBlock Text="{Binding Shell.I18n.AboutDescription}" Classes="caption" TextWrapping="Wrap"/>
+                <TextBlock Text="{Binding Shell.I18n[aboutDescription]}" Classes="caption" TextWrapping="Wrap"/>
             </StackPanel>
         </StackPanel>
         <StackPanel Spacing="{StaticResource LauncherSpacingSm}">
-            <TextBlock Text="{Binding Shell.I18n.VersionInfo}" Classes="group-title"/>
+            <TextBlock Text="{Binding Shell.I18n[versionInfo]}" Classes="group-title"/>
             <WrapPanel>
                 <Border Classes="version-chip"
                         PointerPressed="LauncherVersionChip_OnPointerPressed">
@@ -41,45 +41,45 @@
                 </Border>
             </WrapPanel>
         </StackPanel>
-        <TextBlock Text="{Binding Shell.I18n.AboutActionsGeneral}" Classes="group-title"/>
+        <TextBlock Text="{Binding Shell.I18n[aboutActionsGeneral]}" Classes="group-title"/>
         <WrapPanel>
             <Button Classes="flat-action wrap-action"
                     Command="{Binding Settings.CheckForUpdatesCommand}"
-                    AutomationProperties.Name="{Binding Shell.I18n.CheckUpdates}">
+                    AutomationProperties.Name="{Binding Shell.I18n[checkUpdates]}">
                 <StackPanel Classes="button-content">
                     <materialIcons:MaterialIcon Kind="Update" Width="{StaticResource LauncherIconSm}" Height="{StaticResource LauncherIconSm}"/>
-                    <TextBlock Text="{Binding Shell.I18n.CheckUpdates}"/>
+                    <TextBlock Text="{Binding Shell.I18n[checkUpdates]}"/>
                 </StackPanel>
             </Button>
             <Button Classes="flat-action wrap-action"
                     Command="{Binding WindowChrome.OpenOfficialSiteCommand}"
-                    AutomationProperties.Name="{Binding Shell.I18n.OfficialSite}">
+                    AutomationProperties.Name="{Binding Shell.I18n[officialSite]}">
                 <StackPanel Classes="button-content">
                     <materialIcons:MaterialIcon Kind="Web" Width="{StaticResource LauncherIconSm}" Height="{StaticResource LauncherIconSm}"/>
-                    <TextBlock Text="{Binding Shell.I18n.OfficialSite}"/>
+                    <TextBlock Text="{Binding Shell.I18n[officialSite]}"/>
                 </StackPanel>
             </Button>
             <Button Classes="flat-action wrap-action"
                     Command="{Binding WindowChrome.OpenHelpDocsCommand}"
-                    AutomationProperties.Name="{Binding Shell.I18n.HelpDocs}">
+                    AutomationProperties.Name="{Binding Shell.I18n[helpDocs]}">
                 <StackPanel Classes="button-content">
                     <materialIcons:MaterialIcon Kind="HelpCircleOutline" Width="{StaticResource LauncherIconSm}" Height="{StaticResource LauncherIconSm}"/>
-                    <TextBlock Text="{Binding Shell.I18n.HelpDocs}"/>
+                    <TextBlock Text="{Binding Shell.I18n[helpDocs]}"/>
                 </StackPanel>
             </Button>
             <Button Classes="flat-action wrap-action"
                     Command="{Binding WindowChrome.OpenGitHubRepositoryCommand}"
-                    AutomationProperties.Name="{Binding Shell.I18n.GitHubRepository}">
+                    AutomationProperties.Name="{Binding Shell.I18n[gitHubRepository]}">
                 <StackPanel Classes="button-content">
                     <materialIcons:MaterialIcon Kind="Github" Width="{StaticResource LauncherIconSm}" Height="{StaticResource LauncherIconSm}"/>
-                    <TextBlock Text="{Binding Shell.I18n.GitHubRepository}"/>
+                    <TextBlock Text="{Binding Shell.I18n[gitHubRepository]}"/>
                 </StackPanel>
             </Button>
         </WrapPanel>
         <StackPanel Spacing="{StaticResource LauncherSpacingXs}">
-            <TextBlock Text="{Binding Shell.I18n.AboutLinks}" Classes="group-title"/>
-            <TextBlock Text="{Binding Shell.I18n.AboutCopyrightText}" Classes="caption" TextWrapping="Wrap"/>
-            <TextBlock Text="{Binding Shell.I18n.AboutDisclaimerText}" Classes="caption" TextWrapping="Wrap"/>
+            <TextBlock Text="{Binding Shell.I18n[aboutLinks]}" Classes="group-title"/>
+            <TextBlock Text="{Binding Shell.I18n[aboutCopyrightText]}" Classes="caption" TextWrapping="Wrap"/>
+            <TextBlock Text="{Binding Shell.I18n[aboutDisclaimerText]}" Classes="caption" TextWrapping="Wrap"/>
         </StackPanel>
     </StackPanel>
 </UserControl>

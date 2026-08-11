@@ -25,14 +25,14 @@ public sealed class SettingsCategoryTests
         SettingsCategoryCodes.About
     ];
 
-    private static readonly (string Key, Func<LocalizedStrings, string> GetValue)[] CategoryLocalizedValues =
+    private static readonly (string Key, Func<LocalizedTextCatalog, string> GetValue)[] CategoryLocalizedValues =
     [
-        ("settingsCategoryGeneral", strings => strings.SettingsCategoryGeneral),
-        ("settingsCategoryGame", strings => strings.SettingsCategoryGame),
-        ("settingsCategoryDownloadNetwork", strings => strings.SettingsCategoryDownloadNetwork),
-        ("settingsCategoryAppearance", strings => strings.SettingsCategoryAppearance),
-        ("settingsCategoryAdvanced", strings => strings.SettingsCategoryAdvanced),
-        ("settingsCategoryAbout", strings => strings.SettingsCategoryAbout)
+        ("settingsCategoryGeneral", strings => strings["settingsCategoryGeneral"]),
+        ("settingsCategoryGame", strings => strings["settingsCategoryGame"]),
+        ("settingsCategoryDownloadNetwork", strings => strings["settingsCategoryDownloadNetwork"]),
+        ("settingsCategoryAppearance", strings => strings["settingsCategoryAppearance"]),
+        ("settingsCategoryAdvanced", strings => strings["settingsCategoryAdvanced"]),
+        ("settingsCategoryAbout", strings => strings["settingsCategoryAbout"])
     ];
 
     private static readonly string[] CategoryDescriptionKeys =
@@ -149,9 +149,8 @@ public sealed class SettingsCategoryTests
             Assert.NotEqual(key, localizer.T(key));
         }
 
-        var strings = new LocalizedStrings();
-        strings.Apply(localizer);
-        Assert.Equal(localizer.T("settingsCategoryGeneral"), strings.SettingsCategoryGeneral);
+        using var strings = new LocalizedTextCatalog(localizer);
+        Assert.Equal(localizer.T("settingsCategoryGeneral"), strings["settingsCategoryGeneral"]);
     }
 
     [Theory]
@@ -182,13 +181,11 @@ public sealed class SettingsCategoryTests
     [InlineData(LauncherLanguages.SimplifiedChinese)]
     [InlineData(LauncherLanguages.TraditionalChinese)]
     [InlineData(LauncherLanguages.Japanese)]
-    public void LocalizedStrings_ApplyMapsAllSixCategoryProperties(string language)
+    public void LocalizedTextCatalog_MapsAllSixCategoryKeys(string language)
     {
         var localizer = new LocalizationService();
         localizer.SetLanguage(language);
-        var strings = new LocalizedStrings();
-
-        strings.Apply(localizer);
+        using var strings = new LocalizedTextCatalog(localizer);
 
         foreach (var (key, getValue) in CategoryLocalizedValues)
         {
