@@ -10,6 +10,7 @@ public sealed class DiskSpaceService
     private readonly record struct CacheEntry(long AvailableBytes, long Timestamp);
 
     private readonly Dictionary<string, CacheEntry> _cache = new(StringComparer.OrdinalIgnoreCase);
+    private readonly object cacheLock = new();
 
     internal Func<string, long?>? GetAvailableBytesOverride { get; set; }
 
@@ -33,15 +34,25 @@ public sealed class DiskSpaceService
         }
 
         var now = Environment.TickCount64;
-        if (_cache.TryGetValue(root, out var entry) && now - entry.Timestamp < CacheDurationMs)
+        lock (cacheLock)
         {
-            return entry.AvailableBytes;
+            if (_cache.TryGetValue(root, out var entry) && now - entry.Timestamp < CacheDurationMs)
+            {
+                return entry.AvailableBytes;
+            }
         }
 
         try
         {
-            var available = new DriveInfo(root).AvailableFreeSpace;
-            _cache[root] = new CacheEntry(available, now);
+            // The official launcher reads Win32_LogicalDisk.FreeSpace.  TotalFreeSpace
+            // has the same volume-wide meaning; AvailableFreeSpace can instead be
+            // restricted by a per-user disk quota.
+            var available = new DriveInfo(root).TotalFreeSpace;
+            lock (cacheLock)
+            {
+                _cache[root] = new CacheEntry(available, now);
+            }
+
             return available;
         }
         catch (Exception exception) when (exception is IOException or UnauthorizedAccessException or ArgumentException)
@@ -89,7 +100,16 @@ public sealed class DiskSpaceService
             return null;
         }
 
-        var current = Path.GetFullPath(path);
+        string current;
+        try
+        {
+            current = Path.GetFullPath(path);
+        }
+        catch (Exception exception) when (exception is IOException or UnauthorizedAccessException or ArgumentException or NotSupportedException)
+        {
+            return null;
+        }
+
         while (!string.IsNullOrWhiteSpace(current))
         {
             try

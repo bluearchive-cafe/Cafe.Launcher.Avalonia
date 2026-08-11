@@ -80,4 +80,14 @@ public sealed class DiskSpaceServiceTests
 
         Assert.True(result);
     }
+
+    [Fact]
+    public void GetAvailableBytes_WhenPathIsInvalid_ReturnsNull()
+    {
+        var service = new DiskSpaceService();
+
+        var result = service.GetAvailableBytes("invalid\0path");
+
+        Assert.Null(result);
+    }
 }
