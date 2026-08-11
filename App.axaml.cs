@@ -37,6 +37,10 @@ public partial class App : Application
             serviceProvider = serviceCollection.BuildServiceProvider();
             Program.ServiceProvider = serviceProvider;
 
+            // Capture OS culture before any SetLanguage call so "auto"
+            // can restore the genuine startup culture later.
+            _ = serviceProvider.GetRequiredService<LocalizationService>();
+
             // Application-started trace (best-effort, fire-and-forget)
             _ = serviceProvider.GetRequiredService<Services.Diagnostics.LocalDiagnostics>()
                 .DebugAsync("Application", "Application started, DI container built", CancellationToken.None);

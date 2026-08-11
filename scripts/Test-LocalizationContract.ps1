@@ -1,26 +1,26 @@
 param(
-    [string]$LocalesDirectory = (Join-Path $PSScriptRoot '..\Assets\Locales')
+    [string]$ResourcesDirectory = (Join-Path $PSScriptRoot '..\Resources')
 )
 
 $ErrorActionPreference = 'Stop'
 $env:DOTNET_CLI_TELEMETRY_OPTOUT = '1'
 $env:AVALONIA_TELEMETRY_OPTOUT = '1'
 
-function ConvertFrom-JsonToStringHashtable {
-    param([string]$Json)
+# Load resx files as key-value hashtables using PowerShell XML parsing.
+function Read-ResxHashtable {
+    param([string]$Path)
 
-    $jsonObject = ConvertFrom-Json -InputObject $Json
+    $doc = [xml](Get-Content -LiteralPath $Path -Raw -Encoding UTF8)
     $result = @{}
-
-    foreach ($property in $jsonObject.PSObject.Properties) {
-        $result[$property.Name] = [string]$property.Value
+    foreach ($data in $doc.root.data) {
+        $result[$data.name] = $data.value
     }
 
     return $result
 }
 
-$referencePath = Join-Path $LocalesDirectory 'en.json'
-$reference = ConvertFrom-JsonToStringHashtable -Json (Get-Content -LiteralPath $referencePath -Raw -Encoding UTF8)
+$referencePath = Join-Path $ResourcesDirectory 'LauncherStrings.resx'
+$reference = Read-ResxHashtable -Path $referencePath
 $placeholderPattern = '\{(\d+)(?:[^}]*)\}'
 $hasErrors = $false
 
@@ -34,9 +34,9 @@ function Get-CompositeFormatArgumentIndexes {
     )
 }
 
-foreach ($fileName in @('ja.json', 'zh-Hans.json', 'zh-Hant.json')) {
-    $localizedPath = Join-Path $LocalesDirectory $fileName
-    $localized = ConvertFrom-JsonToStringHashtable -Json (Get-Content -LiteralPath $localizedPath -Raw -Encoding UTF8)
+foreach ($fileName in @('LauncherStrings.ja.resx', 'LauncherStrings.zh-Hans.resx', 'LauncherStrings.zh-Hant.resx')) {
+    $localizedPath = Join-Path $ResourcesDirectory $fileName
+    $localized = Read-ResxHashtable -Path $localizedPath
 
     foreach ($key in @($reference.Keys | Sort-Object)) {
         if (-not $localized.ContainsKey($key)) {

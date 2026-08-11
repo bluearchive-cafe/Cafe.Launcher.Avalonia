@@ -1,53 +1,76 @@
 using System.Collections.Generic;
 using System.IO;
-using System.Text.Json;
+using System.Xml.Linq;
 using Cafe.Launcher.Avalonia.Models;
 using Cafe.Launcher.Avalonia.Services;
 
 namespace Cafe.Launcher.Avalonia.Tests;
 
 /// <summary>
-/// Shared locale initialization for unit tests. All test classes that use
+/// Shared locale and project-root helpers for unit tests. All test classes that use
 /// <see cref="LocalizationService"/> must call <see cref="Initialize"/> in
 /// their static constructor, because <see cref="LocalizationService.InitializeForTesting"/>
-/// replaces the entire dictionary set — the last static constructor to run wins.
-/// This helper loads the real locale JSON files from the source tree so tests
-/// always match production data without manual key-list maintenance.
+/// replaces the entire test resource set — the last static constructor to run wins.
+/// This helper loads from the .resx files on disk so tests always match the committed
+/// resource data.
 /// </summary>
 public static class TestLocalizationHelper
 {
+    private static readonly string[] Locales = [LauncherLanguages.English, LauncherLanguages.SimplifiedChinese, LauncherLanguages.TraditionalChinese, LauncherLanguages.Japanese];
+    private static readonly string[] ResxFiles = ["LauncherStrings.resx", "LauncherStrings.zh-Hans.resx", "LauncherStrings.zh-Hant.resx", "LauncherStrings.ja.resx"];
+
     public static void Initialize()
     {
-        var localesDir = FindLocalesDirectory();
+        var resxDir = Path.Combine(FindProjectRoot(), "Resources");
+        if (!Directory.Exists(resxDir))
+            throw new DirectoryNotFoundException($"Required localization resource directory is missing: {resxDir}");
+
         var resources = new Dictionary<string, Dictionary<string, string>>();
-        foreach (var locale in new[] { LauncherLanguages.English, LauncherLanguages.SimplifiedChinese, LauncherLanguages.TraditionalChinese, LauncherLanguages.Japanese })
+        for (var i = 0; i < Locales.Length; i++)
         {
-            var filePath = Path.Combine(localesDir, $"{locale}.json");
-            if (File.Exists(filePath))
-            {
-                var dict = JsonSerializer.Deserialize<Dictionary<string, string>>(File.ReadAllText(filePath));
-                if (dict is not null)
-                    resources[locale] = dict;
-            }
+            var filePath = Path.Combine(resxDir, ResxFiles[i]);
+            if (!File.Exists(filePath))
+                throw new FileNotFoundException($"Required localization resource is missing: {filePath}", filePath);
+
+            resources[Locales[i]] = ReadResx(filePath);
         }
 
-        if (resources.Count > 0)
-            LocalizationService.InitializeForTesting(resources);
+        LocalizationService.InitializeForTesting(resources);
     }
 
-    private static string FindLocalesDirectory()
+    /// <summary>
+    /// Reads a .resx file and returns its key→value pairs.
+    /// </summary>
+    public static Dictionary<string, string> ReadResx(string path)
     {
-        // Walk up from the test assembly location until we find Assets/Locales.
-        var dir = Path.GetDirectoryName(typeof(TestLocalizationHelper).Assembly.Location);
-        for (var i = 0; i < 8 && dir is not null; i++)
+        var doc = XDocument.Load(path);
+        var dict = new Dictionary<string, string>(StringComparer.Ordinal);
+        foreach (var data in doc.Root!.Elements("data"))
         {
-            var candidate = Path.Combine(dir, "Assets", "Locales");
-            if (Directory.Exists(candidate))
-                return candidate;
-            dir = Path.GetDirectoryName(dir);
+            var name = data.Attribute("name")?.Value
+                ?? throw new InvalidDataException($"data element without name in {path}");
+            var value = data.Element("value")?.Value ?? string.Empty;
+            dict[name] = value;
         }
 
-        // Fallback: working directory (CI typically runs from repo root).
-        return Path.Combine(Directory.GetCurrentDirectory(), "Assets", "Locales");
+        return dict;
+    }
+
+    /// <summary>
+    /// Walks up from <see cref="AppContext.BaseDirectory"/> to find the
+    /// repository root containing <c>Cafe.Launcher.Avalonia.csproj</c>.
+    /// </summary>
+    public static string FindProjectRoot()
+    {
+        var directory = new DirectoryInfo(AppContext.BaseDirectory);
+        while (directory is not null)
+        {
+            if (File.Exists(Path.Combine(directory.FullName, "Cafe.Launcher.Avalonia.csproj")))
+                return directory.FullName;
+
+            directory = directory.Parent;
+        }
+
+        throw new DirectoryNotFoundException("Cafe.Launcher.Avalonia.csproj was not found.");
     }
 }

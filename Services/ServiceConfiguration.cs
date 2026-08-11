@@ -18,6 +18,7 @@ public static class ServiceConfiguration
         services.AddSingleton<LocalInstallationStateStore>();
         services.AddSingleton<Crc64Service>();
         services.AddSingleton<DiskSpaceService>();
+        services.AddSingleton<SystemCultureSnapshot>();
         services.AddSingleton<LocalizationService>();
         services.AddSingleton<ClickCodeService>();
         services.AddSingleton<ToastService>();

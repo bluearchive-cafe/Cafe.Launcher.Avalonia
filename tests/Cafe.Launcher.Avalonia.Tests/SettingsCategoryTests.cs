@@ -1,31 +1,17 @@
+using System.ComponentModel;
 using Cafe.Launcher.Avalonia.Models;
 using Cafe.Launcher.Avalonia.Services;
 using Cafe.Launcher.Avalonia.ViewModels;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
-using System.ComponentModel;
-using System.Text.Json;
 
 namespace Cafe.Launcher.Avalonia.Tests;
 
 [Collection("Settings category localization")]
 public sealed class SettingsCategoryTests
 {
-    private static readonly string LocaleDirectory = FindLocaleDirectory()
-        ?? throw new InvalidOperationException("Could not locate Assets/Locales directory.");
-
-    private static string? FindLocaleDirectory()
-    {
-        var dir = new DirectoryInfo(AppContext.BaseDirectory);
-        while (dir is not null)
-        {
-            var candidate = Path.Combine(dir.FullName, "Assets", "Locales");
-            if (Directory.Exists(candidate))
-                return candidate;
-            dir = dir.Parent;
-        }
-        return null;
-    }
+    private static readonly string ResourceDirectory = Path.Combine(
+        TestLocalizationHelper.FindProjectRoot(), "Resources");
 
     private static readonly string[] CategoryCodes =
     [
@@ -167,14 +153,13 @@ public sealed class SettingsCategoryTests
     }
 
     [Theory]
-    [InlineData("en.json")]
-    [InlineData("zh-Hans.json")]
-    [InlineData("zh-Hant.json")]
-    [InlineData("ja.json")]
+    [InlineData("LauncherStrings.resx")]
+    [InlineData("LauncherStrings.zh-Hans.resx")]
+    [InlineData("LauncherStrings.zh-Hant.resx")]
+    [InlineData("LauncherStrings.ja.resx")]
     public void CategoryLocaleFile_DefinesAllCategoryKeysDirectly(string fileName)
     {
-        var resources = JsonSerializer.Deserialize<Dictionary<string, string>>(
-            File.ReadAllText(Path.Combine(LocaleDirectory, fileName), System.Text.Encoding.UTF8));
+        var resources = TestLocalizationHelper.ReadResx(Path.Combine(ResourceDirectory, fileName));
         Assert.NotNull(resources);
 
         foreach (var (key, _) in CategoryLocalizedValues)

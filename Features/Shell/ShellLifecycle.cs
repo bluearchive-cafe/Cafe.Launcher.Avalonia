@@ -17,7 +17,10 @@ namespace Cafe.Launcher.Avalonia.Features.Shell;
 /// </summary>
 public sealed class ShellLifecycle : IDisposable
 {
+    /// <summary>Raised after a saved status-detail setting changes the shell presentation mode.</summary>
     public event Action? StatusDetailModeChanged;
+
+    /// <summary>Gets the modal host coordinated by this shell lifecycle.</summary>
     public ModalHostViewModel ModalHost { get; }
 
     private readonly ILauncherCoreService launcherCoreService;
@@ -52,6 +55,7 @@ public sealed class ShellLifecycle : IDisposable
     /// <summary>Gets the active startup update check so tests can coordinate without timing delays.</summary>
     internal Task PendingStartupUpdateCheck { get; private set; } = Task.CompletedTask;
 
+    /// <summary>Initializes shell lifecycle dependencies and subscribes error handling callbacks.</summary>
     public ShellLifecycle(
         ILauncherCoreService launcherCoreService,
         LauncherSettingsService settingsService,
@@ -99,8 +103,10 @@ public sealed class ShellLifecycle : IDisposable
 
         errorHandling.CriticalErrorRequested += OnCriticalError;
         errorHandling.OperationNoteRequested += OnOperationNoteRequested;
+        localizer.LocalizationFailure += OnLocalizationFailure;
     }
 
+    /// <summary>Initializes the shell once by loading settings and launcher state.</summary>
     public async Task InitializeAsync(CancellationToken cancellationToken = default)
     {
         if (Interlocked.Exchange(ref initialized, 1) == 1)
@@ -111,6 +117,7 @@ public sealed class ShellLifecycle : IDisposable
         await RefreshAsync(cancellationToken);
     }
 
+    /// <summary>Reapplies the system motion preference when the user chose the system option.</summary>
     public void RefreshSystemMotionPreference()
     {
         if (!settingsSnapshotInitialized)
@@ -127,6 +134,7 @@ public sealed class ShellLifecycle : IDisposable
         ApplyMotionSettings(savedSettings);
     }
 
+    /// <summary>Reloads launcher state and updates all dependent presentation models.</summary>
     public async Task RefreshAsync(CancellationToken cancellationToken = default)
     {
         presentation.IsBusy = true;
@@ -188,6 +196,7 @@ public sealed class ShellLifecycle : IDisposable
         await operations.ResumePersistedDownloadAsync(cancellationToken);
     }
 
+    /// <summary>Refreshes the shell after the settings editor saves a new snapshot.</summary>
     public async Task HandleSettingsSavedAsync()
     {
         var previousPatchUrlGroup = currentSnapshot?.Settings.PatchUrlGroup;
@@ -214,6 +223,7 @@ public sealed class ShellLifecycle : IDisposable
         }
     }
 
+    /// <summary>Saves completed wizard settings, applies their language, and refreshes the shell.</summary>
     public async Task HandleSetupWizardCompletedAsync(LauncherSettings newSettings)
     {
         await settingsService.SaveAsync(newSettings);
@@ -222,11 +232,13 @@ public sealed class ShellLifecycle : IDisposable
         await RefreshAsync();
     }
 
+    /// <summary>Shows confirmation before switching the resource-panel source.</summary>
     public void ShowResourcePanelSourceConfirmDialog()
     {
         dialogs.ShowResourcePanelSourceConfirm(localizer.T("resourcePanelCafeOnlyMessage"));
     }
 
+    /// <summary>Switches the confirmed resource-panel source and opens its panel.</summary>
     public async Task SwitchSourceThenOpenPanelAsync()
     {
         try
@@ -246,12 +258,14 @@ public sealed class ShellLifecycle : IDisposable
         }
     }
 
+    /// <summary>Restores default settings after crash recovery requests a reset.</summary>
     public async Task ResetSettingsAfterCrashAsync()
     {
         await settingsService.SaveAsync(LauncherSettings.CreateDefaults());
         await RefreshAsync();
     }
 
+    /// <summary>Refreshes shell state after a game operation and records resume behavior.</summary>
     internal async Task HandleOperationsRefreshRequestedAsync(GameOperationsRefreshMode mode)
     {
         if (mode == GameOperationsRefreshMode.SkipPersistedResume)
@@ -262,15 +276,19 @@ public sealed class ShellLifecycle : IDisposable
         await RefreshAsync();
     }
 
+    /// <summary>Refreshes shell state in response to the debug panel.</summary>
     internal Task HandleDebugRefreshRequestedAsync() => RefreshAsync();
 
+    /// <summary>Opens the log viewer from an operation failure action.</summary>
     internal Task OpenLogViewerAsync() => logViewer.OpenCommand.ExecuteAsync(null);
 
+    /// <summary>Opens the log viewer from crash-recovery UI.</summary>
     internal void OpenCrashLog()
     {
         logViewer.OpenCommand.Execute(null);
     }
 
+    /// <summary>Subscribes cross-feature events once for the active shell lifecycle.</summary>
     public void Wire()
     {
         if (isWired) return;
@@ -349,6 +367,7 @@ public sealed class ShellLifecycle : IDisposable
         dialogs.PropertyChanged += OnDialogsPropertyChanged;
     }
 
+    /// <summary>Removes cross-feature event subscriptions established by <see cref="Wire"/>.</summary>
     public void Unwire()
     {
         if (!isWired) return;
@@ -383,6 +402,7 @@ public sealed class ShellLifecycle : IDisposable
         dialogs.PropertyChanged -= OnDialogsPropertyChanged;
     }
 
+    /// <summary>Handles Escape for the active modal and returns whether a modal consumed it.</summary>
     public bool TryHandleEscape()
     {
         switch (ModalHost.Top?.Kind)
@@ -444,6 +464,7 @@ public sealed class ShellLifecycle : IDisposable
         return true;
     }
 
+    /// <summary>Unsubscribes lifecycle callbacks and disposes presentation collaborators in ownership order.</summary>
     public void Dispose()
     {
         if (disposed) return;
@@ -463,6 +484,7 @@ public sealed class ShellLifecycle : IDisposable
         lifetimeCts.Dispose();
         errorHandling.CriticalErrorRequested -= OnCriticalError;
         errorHandling.OperationNoteRequested -= OnOperationNoteRequested;
+        localizer.LocalizationFailure -= OnLocalizationFailure;
     }
 
     private async Task CheckForStartupUpdateAsync(CancellationToken cancellationToken)
@@ -558,6 +580,19 @@ public sealed class ShellLifecycle : IDisposable
         {
             ApplyLanguage(language);
         }
+    }
+
+    private void OnLocalizationFailure(object? sender, LocalizationFailureEventArgs eventArgs)
+    {
+        _ = errorHandling.HandleErrorAsync(
+            "Localization resources could not be loaded.",
+            eventArgs.Exception,
+            new ErrorHandlingOptions
+            {
+                ToastMessage = "Localization unavailable.",
+                IncludeExceptionDetails = false,
+                OperationNoteKey = null
+            });
     }
 
     private void OnStatusDetailModeChanged()

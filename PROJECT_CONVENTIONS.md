@@ -92,11 +92,12 @@ AI 辅助开发规范 —— 本文件为所有 AI 编码助手（Claude Code、
 
 ### 4.1 添加新字符串
 
-1. 在 4 个语言文件（`Assets/Locales/{en,zh-Hans,zh-Hant,ja}.json`）中按字母序添加 key-value。
+1. 在 4 个资源文件（`Resources/LauncherStrings{,.zh-Hans,.zh-Hant,.ja}.resx`）中按字母序添加 key-value。
 2. 在 `LocalizedStrings` 中添加 `[ObservableProperty] private string newKey = "";` 字段。
 3. 在 `LocalizedStrings.Apply()` 中添加 `NewKey = localizer.T("newKey");`。
 4. XAML 中绑定：`{Binding Shell.I18n.NewKey}`。
-5. 所有 4 种语言都提供翻译（对专有名词可使用 `null` 或回退到 en）。
+5. 所有 4 种语言都提供翻译（对专有名词可回退到英文文本，但不得留空）。
+6. 新增或重命名 key 后运行 `scripts/Generate-LauncherStringsDesigner.ps1`。
 
 ### 4.2 测试中的本地化
 
