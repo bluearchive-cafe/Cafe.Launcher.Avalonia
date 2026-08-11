@@ -108,11 +108,12 @@ GitHub Actions runs on `ubuntu-latest` with .NET `10.0.x`. The build workflow cu
 
 ### Localization, themes, and diagnostics
 
-- UI strings come from the embedded `Assets/Locales/{en,zh-Hans,zh-Hant,ja}.json` resources through `LocalizationService`. Adding a new string:
-  1. Add the key alphabetically to all four locale files.
+- UI strings come from the embedded `Resources/LauncherStrings{,.zh-Hans,.zh-Hant,.ja}.resx` resources through `LocalizationService`. Adding a new string:
+  1. Add the key alphabetically to all four `.resx` files.
   2. Add an `[ObservableProperty] private string newKey = "";` field in `LocalizedStrings`.
   3. Add `NewKey = localizer.T("newKey");` in `LocalizedStrings.Apply()`.
   4. Bind in XAML via `{Binding Shell.I18n.NewKey}` and add `AutomationProperties.Name` for interactive controls.
+  5. Run `.\scripts\Generate-LauncherStringsDesigner.ps1` when adding or renaming a key.
   Localization unit tests must initialize test dictionaries via `TestLocalizationHelper.Initialize()` before using `LocalizationService.T()`. After modifying any locale file, run `.\scripts\Test-LocalizationContract.ps1`.
 - Theme mode, wallpaper-derived/custom accents, and other UI state are persisted settings. Keep theme brushes in the dictionaries rather than replacing theme-specific brushes with hardcoded values.
 - `UnifiedLogger` writes local rolling logs; application code uses `LocalDiagnostics` with a concise PascalCase title and must not log authorization headers, salts, cookies, or tokens.

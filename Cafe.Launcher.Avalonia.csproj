@@ -38,9 +38,17 @@
     <AvaloniaResource Include="Assets\**" />
     <Compile Remove="tests\**\*.cs" />
     <None Remove="tests\**" />
+    <EmbeddedResource Remove="Resources\LauncherStrings*" />
     <None Update="Assets\app-icon.ico">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </None>
+  </ItemGroup>
+
+  <ItemGroup>
+    <EmbeddedResource Include="Resources\LauncherStrings.resx" />
+    <EmbeddedResource Include="Resources\LauncherStrings.zh-Hans.resx" />
+    <EmbeddedResource Include="Resources\LauncherStrings.zh-Hant.resx" />
+    <EmbeddedResource Include="Resources\LauncherStrings.ja.resx" />
   </ItemGroup>
 
   <ItemGroup>

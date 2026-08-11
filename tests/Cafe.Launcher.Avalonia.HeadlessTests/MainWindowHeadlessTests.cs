@@ -34,6 +34,30 @@ public sealed class MainWindowHeadlessTests
     ];
 
     [AvaloniaFact]
+    public void Settings_WhenLanguageChanges_RefreshesVisibleCategoryTitle()
+    {
+        using var context = CreateContext();
+        OpenSettings(context);
+
+        var categoryTitle = context.Window.GetVisualDescendants().OfType<TextBlock>()
+            .Single(control => control.Classes.Contains("category-title"));
+        var english = categoryTitle.Text;
+
+        context.ViewModel.Shell.ApplyLanguage(
+            LauncherLanguages.SimplifiedChinese,
+            context.ViewModel.Settings,
+            context.ViewModel.ResourcePanel,
+            hasSnapshot: false);
+        Dispatcher.UIThread.RunJobs();
+
+        Assert.NotEqual(english, categoryTitle.Text);
+        Assert.Equal(
+            context.ViewModel.Settings.Options.SettingsCategories.First(option =>
+                option.Code == context.ViewModel.Settings.SelectedCategory).DisplayName,
+            categoryTitle.Text);
+    }
+
+    [AvaloniaFact]
     public void MainWindow_WhenShown_LoadsRealXamlAndOverlayBindings()
     {
         using var context = CreateContext();

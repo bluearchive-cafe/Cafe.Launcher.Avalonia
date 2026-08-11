@@ -1761,14 +1761,13 @@ public sealed partial class UiStyleContractTests
     }
 
     [Theory]
-    [InlineData("en.json")]
-    [InlineData("ja.json")]
-    [InlineData("zh-Hans.json")]
-    [InlineData("zh-Hant.json")]
-    public void LogSeverityNames_MatchBetweenViewerFiltersAndSettings(string localeFile)
+    [InlineData("LauncherStrings.resx")]
+    [InlineData("LauncherStrings.ja.resx")]
+    [InlineData("LauncherStrings.zh-Hans.resx")]
+    [InlineData("LauncherStrings.zh-Hant.resx")]
+    public void LogSeverityNames_MatchBetweenViewerFiltersAndSettings(string resxFile)
     {
-        var values = JsonSerializer.Deserialize<Dictionary<string, string>>(
-            File.ReadAllText(ProjectFile($"Assets/Locales/{localeFile}")))!;
+        var values = TestLocalizationHelper.ReadResx(ProjectFile($"Resources/{resxFile}"));
         Dictionary<string, string> matchingKeys = new(StringComparer.Ordinal)
         {
             ["logFilterVerbose"] = "logLevelVerbose",

@@ -1,8 +1,10 @@
 using System.Collections.Generic;
+using System.Globalization;
+using System.IO;
 using System.Text.RegularExpressions;
-using System.Text.Json;
 using Cafe.Launcher.Avalonia.Models;
 using Cafe.Launcher.Avalonia.Services;
+using Cafe.Launcher.Avalonia.Services.Diagnostics;
 
 namespace Cafe.Launcher.Avalonia.Tests;
 
@@ -11,6 +13,59 @@ public sealed class LocalizationServiceTests
     static LocalizationServiceTests()
     {
         TestLocalizationHelper.Initialize();
+    }
+
+    [Fact]
+    public void T_WhenCurrentLanguageKeyIsMissing_DoesNotFallbackToEnglish()
+    {
+        LocalizationService.InitializeForTesting(new Dictionary<string, Dictionary<string, string>>
+        {
+            [LauncherLanguages.English] = new(StringComparer.Ordinal)
+            {
+                ["onlyEnglish"] = "English only"
+            },
+            [LauncherLanguages.Japanese] = new(StringComparer.Ordinal)
+        });
+
+        var service = new LocalizationService();
+        service.SetLanguage(LauncherLanguages.Japanese);
+
+        Assert.Equal("Localization unavailable.", service.T("onlyEnglish"));
+
+        TestLocalizationHelper.Initialize();
+    }
+
+    [Fact]
+    public void T_WhenRegionalAutoCultureRequested_UsesResourceManagerFallback()
+    {
+        var savedCulture = CultureInfo.CurrentCulture;
+        var savedUiCulture = CultureInfo.CurrentUICulture;
+        var savedDefaultCulture = CultureInfo.DefaultThreadCurrentCulture;
+        var savedDefaultUiCulture = CultureInfo.DefaultThreadCurrentUICulture;
+        try
+        {
+            CultureInfo.CurrentCulture = new CultureInfo("en-GB");
+            CultureInfo.CurrentUICulture = new CultureInfo("zh-HK");
+            CultureInfo.DefaultThreadCurrentCulture = CultureInfo.CurrentCulture;
+            CultureInfo.DefaultThreadCurrentUICulture = CultureInfo.CurrentUICulture;
+            TestLocalizationHelper.Initialize();
+
+            var service = new LocalizationService();
+            service.SetLanguage(LauncherLanguages.Auto);
+
+            Assert.Equal(
+                Resources.LauncherStrings.ResourceManager.GetString(
+                    "languageAuto", CultureInfo.CurrentUICulture),
+                service.T("languageAuto"));
+        }
+        finally
+        {
+            CultureInfo.CurrentCulture = savedCulture;
+            CultureInfo.CurrentUICulture = savedUiCulture;
+            CultureInfo.DefaultThreadCurrentCulture = savedDefaultCulture;
+            CultureInfo.DefaultThreadCurrentUICulture = savedDefaultUiCulture;
+            TestLocalizationHelper.Initialize();
+        }
     }
 
     [Fact]
@@ -151,46 +206,10 @@ public sealed class LocalizationServiceTests
     }
 
     [Fact]
-    public void T_WhenLegalInfoRequested_ReturnsChineseCopy()
-    {
-        var json = File.ReadAllText(Path.Combine(FindProjectRoot(), "Assets", "Locales", "zh-Hans.json"));
-        var values = JsonSerializer.Deserialize<Dictionary<string, string>>(json);
-        Assert.NotNull(values);
-
-        var copyright = values["aboutCopyrightText"];
-        var disclaimer = values["aboutDisclaimerText"];
-
-        Assert.Contains("版权所有", copyright);
-        Assert.DoesNotContain("All rights reserved", copyright);
-        Assert.Contains("“Cafe Launcher”", disclaimer);
-        Assert.Contains("中文名“蔚蓝档案”", disclaimer);
-        Assert.DoesNotContain("中文名'蔚蓝档案'", disclaimer);
-    }
-
-    [Fact]
-    public void T_WhenTraditionalChineseLegalInfoRequested_ReturnsTraditionalCopy()
-    {
-        var json = File.ReadAllText(Path.Combine(FindProjectRoot(), "Assets", "Locales", "zh-Hant.json"));
-        var values = JsonSerializer.Deserialize<Dictionary<string, string>>(json);
-        Assert.NotNull(values);
-
-        var copyright = values["aboutCopyrightText"];
-        var disclaimer = values["aboutDisclaimerText"];
-
-        Assert.Contains("版權所有", copyright);
-        Assert.Contains("「Cafe Launcher」", disclaimer);
-        Assert.Contains("中文名「蔚藍檔案」", disclaimer);
-        // Make sure Traditional strings are not accidentally Simplified copies.
-        Assert.DoesNotContain("版权所有", copyright);
-        Assert.DoesNotContain("“Cafe Launcher”", disclaimer);
-    }
-
-    [Fact]
     public void T_WhenEnglishDisclaimerRequested_ReturnsQuotesWithoutEscapeCharacters()
     {
-        var json = File.ReadAllText(Path.Combine(FindProjectRoot(), "Assets", "Locales", "en.json"));
-        var values = JsonSerializer.Deserialize<Dictionary<string, string>>(json);
-        Assert.NotNull(values);
+        var values = TestLocalizationHelper.ReadResx(
+            Path.Combine(TestLocalizationHelper.FindProjectRoot(), "Resources", "LauncherStrings.resx"));
 
         var disclaimer = values["aboutDisclaimerText"];
 
@@ -203,11 +222,11 @@ public sealed class LocalizationServiceTests
     [Fact]
     public void LocaleFiles_HaveMatchingKeys()
     {
-        var localeDirectory = Path.Combine(FindProjectRoot(), "Assets", "Locales");
-        var english = ReadLocale(localeDirectory, "en.json");
-        var simplifiedChinese = ReadLocale(localeDirectory, "zh-Hans.json");
-        var traditionalChinese = ReadLocale(localeDirectory, "zh-Hant.json");
-        var japanese = ReadLocale(localeDirectory, "ja.json");
+        var resxDir = Path.Combine(TestLocalizationHelper.FindProjectRoot(), "Resources");
+        var english = TestLocalizationHelper.ReadResx(Path.Combine(resxDir, "LauncherStrings.resx"));
+        var simplifiedChinese = TestLocalizationHelper.ReadResx(Path.Combine(resxDir, "LauncherStrings.zh-Hans.resx"));
+        var traditionalChinese = TestLocalizationHelper.ReadResx(Path.Combine(resxDir, "LauncherStrings.zh-Hant.resx"));
+        var japanese = TestLocalizationHelper.ReadResx(Path.Combine(resxDir, "LauncherStrings.ja.resx"));
 
         Assert.Equal(
             english.Keys.OrderBy(key => key, StringComparer.Ordinal),
@@ -223,11 +242,11 @@ public sealed class LocalizationServiceTests
     [Fact]
     public void LocaleFiles_HaveMatchingFormatPlaceholders()
     {
-        var localeDirectory = Path.Combine(FindProjectRoot(), "Assets", "Locales");
-        var english = ReadLocale(localeDirectory, "en.json");
-        var simplifiedChinese = ReadLocale(localeDirectory, "zh-Hans.json");
-        var traditionalChinese = ReadLocale(localeDirectory, "zh-Hant.json");
-        var japanese = ReadLocale(localeDirectory, "ja.json");
+        var resxDir = Path.Combine(TestLocalizationHelper.FindProjectRoot(), "Resources");
+        var english = TestLocalizationHelper.ReadResx(Path.Combine(resxDir, "LauncherStrings.resx"));
+        var simplifiedChinese = TestLocalizationHelper.ReadResx(Path.Combine(resxDir, "LauncherStrings.zh-Hans.resx"));
+        var traditionalChinese = TestLocalizationHelper.ReadResx(Path.Combine(resxDir, "LauncherStrings.zh-Hant.resx"));
+        var japanese = TestLocalizationHelper.ReadResx(Path.Combine(resxDir, "LauncherStrings.ja.resx"));
 
         foreach (var key in english.Keys)
         {
@@ -260,11 +279,11 @@ public sealed class LocalizationServiceTests
     [Fact]
     public void LocaleFiles_KeepKeysSortedOrdinal()
     {
-        var localeDirectory = Path.Combine(FindProjectRoot(), "Assets", "Locales");
+        var resxDir = Path.Combine(TestLocalizationHelper.FindProjectRoot(), "Resources");
 
-        foreach (var fileName in new[] { "en.json", "zh-Hans.json", "zh-Hant.json", "ja.json" })
+        foreach (var fileName in new[] { "LauncherStrings.resx", "LauncherStrings.zh-Hans.resx", "LauncherStrings.zh-Hant.resx", "LauncherStrings.ja.resx" })
         {
-            var keys = ReadLocale(localeDirectory, fileName).Keys.ToArray();
+            var keys = TestLocalizationHelper.ReadResx(Path.Combine(resxDir, fileName)).Keys.ToArray();
 
             Assert.Equal(keys.OrderBy(key => key, StringComparer.Ordinal), keys);
         }
@@ -275,10 +294,91 @@ public sealed class LocalizationServiceTests
     {
         var service = new LocalizationService();
         service.SetLanguage(LauncherLanguages.SimplifiedChinese);
+        var values = TestLocalizationHelper.ReadResx(Path.Combine(
+            TestLocalizationHelper.FindProjectRoot(), "Resources", "LauncherStrings.zh-Hans.resx"));
 
-        Assert.Equal("本地化资源", service.T("resourcePanelLocalizedVersion"));
-        Assert.Equal("主线中配", service.T("resourcePanelMainVoice"));
-        Assert.Equal("图像视频", service.T("resourcePanelMedia"));
+        Assert.Equal(values["resourcePanelLocalizedVersion"], service.T("resourcePanelLocalizedVersion"));
+        Assert.Equal(values["resourcePanelMainVoice"], service.T("resourcePanelMainVoice"));
+        Assert.Equal(values["resourcePanelMedia"], service.T("resourcePanelMedia"));
+    }
+
+    [Fact]
+    public void T_WhenResourceKeyIsMissing_ReturnsSafeFallbackText()
+    {
+        var service = new LocalizationService();
+        service.SetLanguage(LauncherLanguages.English);
+
+        var value = service.T("nonexistentLocalizationKey");
+
+        Assert.Equal("Localization unavailable.", value);
+    }
+
+    [Fact]
+    public void SetLanguage_AutoAfterManual_RestoresStartupCulture()
+    {
+        var savedCulture = CultureInfo.CurrentCulture;
+        var savedUiCulture = CultureInfo.CurrentUICulture;
+        var savedDefaultCulture = CultureInfo.DefaultThreadCurrentCulture;
+        var savedDefaultUiCulture = CultureInfo.DefaultThreadCurrentUICulture;
+        try
+        {
+            CultureInfo.CurrentCulture = new CultureInfo("en-GB");
+            CultureInfo.CurrentUICulture = new CultureInfo("zh-HK");
+            CultureInfo.DefaultThreadCurrentCulture = CultureInfo.CurrentCulture;
+            CultureInfo.DefaultThreadCurrentUICulture = CultureInfo.CurrentUICulture;
+
+            var snapshot = new SystemCultureSnapshot();
+            snapshot.Capture();
+
+            var service = new LocalizationService(snapshot, new LocalDiagnostics());
+
+            service.SetLanguage(LauncherLanguages.Japanese);
+
+            service.SetLanguage(LauncherLanguages.Auto);
+            Assert.Equal(LauncherLanguages.TraditionalChinese, service.CurrentLanguage);
+            Assert.Equal("en-GB", CultureInfo.CurrentCulture.Name);
+            Assert.Equal("zh-HK", CultureInfo.CurrentUICulture.Name);
+            Assert.Equal("en-GB", CultureInfo.DefaultThreadCurrentCulture!.Name);
+            Assert.Equal("zh-HK", CultureInfo.DefaultThreadCurrentUICulture!.Name);
+        }
+        finally
+        {
+            CultureInfo.CurrentCulture = savedCulture;
+            CultureInfo.CurrentUICulture = savedUiCulture;
+            CultureInfo.DefaultThreadCurrentCulture = savedDefaultCulture;
+            CultureInfo.DefaultThreadCurrentUICulture = savedDefaultUiCulture;
+        }
+    }
+
+    [Theory]
+    [InlineData(LauncherLanguages.English, "en-US")]
+    [InlineData(LauncherLanguages.SimplifiedChinese, "zh-CN")]
+    [InlineData(LauncherLanguages.TraditionalChinese, "zh-TW")]
+    [InlineData(LauncherLanguages.Japanese, "ja-JP")]
+    public void SetLanguage_ManualSelection_AppliesAllProcessCultureSettings(string language, string cultureName)
+    {
+        var savedCulture = CultureInfo.CurrentCulture;
+        var savedUiCulture = CultureInfo.CurrentUICulture;
+        var savedDefaultCulture = CultureInfo.DefaultThreadCurrentCulture;
+        var savedDefaultUiCulture = CultureInfo.DefaultThreadCurrentUICulture;
+        try
+        {
+            var service = new LocalizationService();
+
+            service.SetLanguage(language);
+
+            Assert.Equal(cultureName, CultureInfo.CurrentCulture.Name);
+            Assert.Equal(cultureName, CultureInfo.CurrentUICulture.Name);
+            Assert.Equal(cultureName, CultureInfo.DefaultThreadCurrentCulture!.Name);
+            Assert.Equal(cultureName, CultureInfo.DefaultThreadCurrentUICulture!.Name);
+        }
+        finally
+        {
+            CultureInfo.CurrentCulture = savedCulture;
+            CultureInfo.CurrentUICulture = savedUiCulture;
+            CultureInfo.DefaultThreadCurrentCulture = savedDefaultCulture;
+            CultureInfo.DefaultThreadCurrentUICulture = savedDefaultUiCulture;
+        }
     }
 
     [Theory]
@@ -298,34 +398,11 @@ public sealed class LocalizationServiceTests
         Assert.Equal(expectedEstimatedText, service.F("estimatedTimeRemaining", "1 minute"));
     }
 
-    private static Dictionary<string, string> ReadLocale(string localeDirectory, string fileName)
-    {
-        var json = File.ReadAllText(Path.Combine(localeDirectory, fileName));
-        return JsonSerializer.Deserialize<Dictionary<string, string>>(json)
-            ?? throw new InvalidDataException($"{fileName} is not a localization dictionary.");
-    }
-
     private static string[] GetFormatPlaceholders(string value)
     {
         return Regex.Matches(value, @"\{\d+(?:[^}]*)\}")
-            .Select(match => match.Value)
-            .OrderBy(placeholder => placeholder, StringComparer.Ordinal)
+            .Select(m => m.Value)
+            .OrderBy(p => p, StringComparer.Ordinal)
             .ToArray();
-    }
-
-    private static string FindProjectRoot()
-    {
-        var directory = new DirectoryInfo(AppContext.BaseDirectory);
-        while (directory is not null)
-        {
-            if (File.Exists(Path.Combine(directory.FullName, "Cafe.Launcher.Avalonia.csproj")))
-            {
-                return directory.FullName;
-            }
-
-            directory = directory.Parent;
-        }
-
-        throw new DirectoryNotFoundException("Cafe.Launcher.Avalonia.csproj was not found.");
     }
 }

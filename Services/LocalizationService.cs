@@ -2,8 +2,10 @@ using System;
 using System.Collections.Generic;
 using System.Globalization;
 using System.IO;
+using System.Resources;
 using System.Text.Json;
 using Cafe.Launcher.Avalonia.Models;
+using Cafe.Launcher.Avalonia.Services.Diagnostics;
 using CommunityToolkit.Mvvm.ComponentModel;
 
 namespace Cafe.Launcher.Avalonia.Services;
@@ -686,112 +688,143 @@ public sealed partial class LocalizedStrings : ObservableObject
 
 public sealed class LocalizationService
 {
-    private static Dictionary<string, Dictionary<string, string>> Resources = new(StringComparer.Ordinal);
-    private static readonly string[] SupportedLocales = [LauncherLanguages.English, LauncherLanguages.SimplifiedChinese, LauncherLanguages.TraditionalChinese, LauncherLanguages.Japanese];
-    private static volatile bool resourcesLoaded;
-    private static readonly object LoadLock = new();
+    /// <summary>
+    /// Test-only resource override. When non-null, <see cref="T"/> uses only
+    /// the current language dictionary. Populated by <see cref="InitializeForTesting"/>.
+    /// </summary>
+    private static volatile IReadOnlyDictionary<string, IReadOnlyDictionary<string, string>>? testResources;
+
+    private readonly SystemCultureSnapshot cultureSnapshot;
+    private readonly LocalDiagnostics diagnostics;
 
     /// <summary>
-    /// Pre-populates resources for unit testing without AssetLoader.
+    /// DI constructor. Captures the OS culture snapshot and records the
+    /// auto-resolved language at construction time so "auto" can restore the
+    /// genuine startup culture even after a manual language selection.
+    /// </summary>
+    public LocalizationService(SystemCultureSnapshot cultureSnapshot, LocalDiagnostics diagnostics)
+    {
+        this.cultureSnapshot = cultureSnapshot;
+        this.diagnostics = diagnostics;
+        CaptureStartupCulture();
+    }
+
+    /// <summary>
+    /// Parameterless constructor for tests and static factory methods.
+    /// It captures the current test process culture in the same way as the
+    /// DI constructor.
+    /// </summary>
+    internal LocalizationService()
+        : this(new SystemCultureSnapshot(), new LocalDiagnostics()) { }
+
+    /// <summary>
+    /// Pre-populates resources for unit testing.
     /// Call once before creating LocalizationService instances in tests.
+    /// Keys are locale codes ("en", "zh-Hans", etc.); values are key→translation maps.
     /// </summary>
     internal static void InitializeForTesting(Dictionary<string, Dictionary<string, string>> resources)
     {
-        // Build a complete replacement outside the lock so that concurrent T()
-        // calls never observe a partially-cleared dictionary.  Swapping the static
-        // reference is atomic (.NET object references are always atomic) and the
-        // inner per-locale dictionaries are never mutated after creation.
-        var newResources = new Dictionary<string, Dictionary<string, string>>(StringComparer.Ordinal);
+        var copy = new Dictionary<string, IReadOnlyDictionary<string, string>>(StringComparer.Ordinal);
         foreach (var (locale, dict) in resources)
         {
-            newResources[locale] = new Dictionary<string, string>(dict, StringComparer.Ordinal);
+            copy[locale] = new Dictionary<string, string>(dict, StringComparer.Ordinal);
         }
 
-        lock (LoadLock)
-        {
-            Resources = newResources;
-            resourcesLoaded = true;
-        }
+        testResources = copy;
     }
 
     public string CurrentLanguage { get; private set; } = LauncherLanguages.English;
 
     public event EventHandler? LanguageChanged;
 
-    private static void EnsureResourcesLoaded()
-    {
-        if (resourcesLoaded)
-            return;
-
-        lock (LoadLock)
-        {
-            if (resourcesLoaded)
-                return;
-
-            foreach (var locale in SupportedLocales)
-            {
-                try
-                {
-                    var dict = LoadLocaleFromJson(locale);
-                    Resources[locale] = dict;
-                }
-                catch (Exception ex)
-                {
-                    System.Diagnostics.Debug.WriteLine($"LocalizationService: failed to load {locale}.json: {ex.Message}");
-                    Resources[locale] = new Dictionary<string, string>(StringComparer.Ordinal);
-                }
-            }
-
-            resourcesLoaded = true;
-        }
-    }
-
-    private static Dictionary<string, string> LoadLocaleFromJson(string locale)
-    {
-        var assemblyName = typeof(LocalizationService).Assembly.GetName().Name;
-        var uri = new Uri($"avares://{assemblyName}/Assets/Locales/{locale}.json");
-        using var stream = global::Avalonia.Platform.AssetLoader.Open(uri);
-        using var reader = new StreamReader(stream);
-        var json = reader.ReadToEnd();
-        var dict = JsonSerializer.Deserialize<Dictionary<string, string>>(json);
-        return dict is not null
-            ? new Dictionary<string, string>(dict, StringComparer.Ordinal)
-            : new Dictionary<string, string>(StringComparer.Ordinal);
-    }
-
     public string SetLanguage(string language)
     {
-        CurrentLanguage = ResolveLanguage(language);
+        if (language == LauncherLanguages.Auto)
+        {
+            cultureSnapshot.Restore();
+            CultureInfo.DefaultThreadCurrentCulture = cultureSnapshot.Culture;
+            CultureInfo.DefaultThreadCurrentUICulture = cultureSnapshot.UiCulture;
+            CurrentLanguage = currentAutoResolvedLanguage;
+        }
+        else
+        {
+            CurrentLanguage = LauncherCultureResolver.ResolveEffectiveLanguage(language);
+            ApplyCulture(CurrentLanguage);
+        }
+
         LanguageChanged?.Invoke(this, EventArgs.Empty);
         return CurrentLanguage;
     }
 
+    private void ApplyCulture(string effectiveLanguage)
+    {
+        var culture = LauncherCultureResolver.GetCultureFor(effectiveLanguage);
+        CultureInfo.CurrentCulture = culture;
+        CultureInfo.CurrentUICulture = culture;
+        CultureInfo.DefaultThreadCurrentCulture = culture;
+        CultureInfo.DefaultThreadCurrentUICulture = culture;
+    }
+
+    /// <summary>
+    /// Records the effective language that <c>"auto"</c> resolved to at startup.
+    /// When the user chooses "auto" we restore the system culture snapshot
+    /// and this recorded language is used for font / resource-key lookups.
+    /// </summary>
+    private string currentAutoResolvedLanguage = LauncherLanguages.English;
+
+    /// <summary>
+    /// Captures the OS culture snapshot and the auto-resolved language
+    /// from the current thread state. Call once during startup, before
+    /// any manual <see cref="SetLanguage"/> call.
+    /// </summary>
+    public void CaptureStartupCulture()
+    {
+        cultureSnapshot.Capture();
+        currentAutoResolvedLanguage = LauncherCultureResolver.ResolveSystemLanguage(
+            cultureSnapshot.UiCulture.Name);
+    }
+
     public string T(string key)
     {
-        EnsureResourcesLoaded();
-
-        if (Resources.TryGetValue(CurrentLanguage, out var current)
-            && current.TryGetValue(key, out var value))
+        var tr = testResources;
+        if (tr is not null)
         {
-            return value;
+            if (tr.TryGetValue(CurrentLanguage, out var testDict)
+                && testDict.TryGetValue(key, out var testValue))
+            {
+                return testValue;
+            }
+
+            return ReportFailure($"Missing test resource key '{key}' for language '{CurrentLanguage}'.");
         }
 
-        return Resources.TryGetValue(LauncherLanguages.English, out var english)
-            && english.TryGetValue(key, out var fallback)
-                ? fallback
-                : key;
+        // Use the active UI culture so automatic mode starts lookup at the
+        // restored system culture (for example zh-HK), not a fixed mapping.
+        var result = Resources.LauncherStrings.ResourceManager.GetString(
+            key, CultureInfo.CurrentUICulture);
+        if (result is not null)
+            return result;
+
+        return ReportFailure($"Missing key '{key}' for language '{CurrentLanguage}'.");
     }
 
     public string F(string key, params object?[] args)
     {
+        var template = T(key);
         try
         {
-            return string.Format(CultureInfo.CurrentCulture, T(key), args);
+            return string.Format(CultureInfo.CurrentCulture, template, args);
         }
         catch (FormatException)
         {
-            return T(key);
+            return ReportFailure($"Format exception for key '{key}'.");
         }
+    }
+
+    private string ReportFailure(string message)
+    {
+        _ = diagnostics.ErrorAsync("Localization", new MissingManifestResourceException(message));
+        return "Localization unavailable.";
     }
 
     public static IReadOnlyList<LanguageOption> GetLanguageOptions() =>
@@ -811,53 +844,6 @@ public sealed class LocalizationService
 
     public static string ResolveLanguage(string? language)
     {
-        return language switch
-        {
-            LauncherLanguages.English => LauncherLanguages.English,
-            LauncherLanguages.SimplifiedChinese => LauncherLanguages.SimplifiedChinese,
-            LauncherLanguages.TraditionalChinese => LauncherLanguages.TraditionalChinese,
-            LauncherLanguages.Japanese => LauncherLanguages.Japanese,
-            LauncherLanguages.Auto => ResolveSystemLanguage(),
-            _ => ResolveSystemLanguage()
-        };
-    }
-
-    private static string ResolveSystemLanguage()
-    {
-        var name = CultureInfo.CurrentUICulture.Name;
-        if (name.StartsWith("zh", StringComparison.OrdinalIgnoreCase))
-        {
-            // zh-TW, zh-HK, zh-MO → Traditional; zh-CN, zh-SG, zh-Hans → Simplified.
-            // Fall back to Simplified when the region/script is ambiguous.
-            return IsTraditionalChineseRegion(name)
-                ? LauncherLanguages.TraditionalChinese
-                : LauncherLanguages.SimplifiedChinese;
-        }
-
-        if (name.StartsWith("ja", StringComparison.OrdinalIgnoreCase))
-        {
-            return LauncherLanguages.Japanese;
-        }
-
-        return LauncherLanguages.English;
-    }
-
-    private static bool IsTraditionalChineseRegion(string cultureName)
-    {
-        // Match by script subtag (zh-Hant, zh-Hans) first, then by region.
-        if (cultureName.Contains("Hant", StringComparison.OrdinalIgnoreCase))
-        {
-            return true;
-        }
-
-        if (cultureName.Contains("Hans", StringComparison.OrdinalIgnoreCase))
-        {
-            return false;
-        }
-
-        // Region fallback: TW (Taiwan), HK (Hong Kong), MO (Macau) use Traditional Chinese.
-        return cultureName.EndsWith("TW", StringComparison.OrdinalIgnoreCase)
-            || cultureName.EndsWith("HK", StringComparison.OrdinalIgnoreCase)
-            || cultureName.EndsWith("MO", StringComparison.OrdinalIgnoreCase);
+        return LauncherCultureResolver.ResolveEffectiveLanguage(language);
     }
 }

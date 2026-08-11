@@ -21,11 +21,11 @@ Follow `.editorconfig`: C# uses UTF-8, CRLF, four-space indentation, file-scoped
 
 ## Localization & Configuration
 
-Add every UI string to all four files in `Assets/Locales/` and wire the exact key through `LocalizedStrings`. Preserve documented JSON keys and wire-contract property order. Never infer identifier spelling, casing, paths, or payload structure; inspect the defining code, tests, logs, or captured data first.
+Add every UI string to all four `Resources/LauncherStrings*.resx` files and wire the exact key through `LocalizedStrings`. Regenerate `Resources/LauncherStrings.Designer.cs` with `scripts/Generate-LauncherStringsDesigner.ps1` after changing keys. Preserve resource keys and wire-contract property order. Never infer identifier spelling, casing, paths, or payload structure; inspect the defining code, tests, logs, or captured data first.
 
 ## Testing Guidelines
 
-Tests use xUnit v3; UI tests use `Avalonia.Headless.XUnit`. Name tests `Method_State_ExpectedResult`. Add focused regression tests for behavior changes and run `UiStyleContractTests` after XAML/style edits. Run `.\scripts\Test-LocalizationContract.ps1` after modifying any `Assets/Locales/*.json`; run `.\dev.ps1 ui` after XAML or style changes. Before merging or releasing, still run `.\verify.ps1`. Line and branch coverage must each remain at or above 50%.
+Tests use xUnit v3; UI tests use `Avalonia.Headless.XUnit`. Name tests `Method_State_ExpectedResult`. Add focused regression tests for behavior changes and run `UiStyleContractTests` after XAML/style edits. Run `.\scripts\Test-LocalizationContract.ps1` after modifying any `Resources/LauncherStrings*.resx`; run `.\dev.ps1 ui` after XAML or style changes. Before merging or releasing, still run `.\verify.ps1`. Line and branch coverage must each remain at or above 50%.
 
 ## Commit & Pull Request Guidelines
 
