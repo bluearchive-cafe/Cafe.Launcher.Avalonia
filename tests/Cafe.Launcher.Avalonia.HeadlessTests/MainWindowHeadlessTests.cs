@@ -1407,16 +1407,12 @@ public sealed class MainWindowHeadlessTests
         context.ViewModel.Dialogs.SetupWizard.GamePath = installationBasePath;
         context.Window.Show();
         context.ViewModel.Dialogs.ShowSetupWizard();
+        context.ViewModel.Dialogs.SetupWizard.Language = language;
+        Dispatcher.UIThread.RunJobs();
         context.ViewModel.Dialogs.SetupWizard.NextCommand.Execute(null);
         await WaitForGamePathStatusAsync(
             context.ViewModel.Dialogs.SetupWizard,
             SetupWizardGamePathStatus.AvailableForInstallation);
-
-        context.ViewModel.Shell.ApplyLanguage(
-            language,
-            context.ViewModel.Settings,
-            context.ViewModel.ResourcePanel,
-            hasSnapshot: false);
         Dispatcher.UIThread.RunJobs();
 
         var statusLine = GetWizardGamePathStatus(context.Window);

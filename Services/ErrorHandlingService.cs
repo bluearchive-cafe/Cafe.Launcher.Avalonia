@@ -16,6 +16,12 @@ public sealed class ErrorHandlingOptions
     public bool ShowToast { get; init; } = true;
 
     /// <summary>
+    /// Whether the recoverable-error toast includes exception details. Disable this
+    /// when the exception can expose an implementation detail such as a resource key.
+    /// </summary>
+    public bool IncludeExceptionDetails { get; init; } = true;
+
+    /// <summary>
     /// Localization key for <see cref="IErrorHandlingService.OperationNoteRequested"/>.
     /// When null, the event is not raised.
     /// </summary>
@@ -96,7 +102,10 @@ public sealed class ErrorHandlingService : IErrorHandlingService
 
         if (options.ShowToast)
         {
-            toastService.ShowError(FormatToastMessage(options.ToastMessage ?? context, exception));
+            var toastMessage = options.IncludeExceptionDetails
+                ? FormatToastMessage(options.ToastMessage ?? context, exception)
+                : options.ToastMessage ?? context;
+            toastService.ShowError(toastMessage);
         }
     }
 

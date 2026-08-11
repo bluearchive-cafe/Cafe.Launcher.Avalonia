@@ -40,9 +40,11 @@ internal sealed class DownloadSession : IDisposable
     private TaskCompletionSource? pauseTcs;
     private bool disposed;
 
+    /// <summary>Gets the cancellation source owned by this single download session.</summary>
     public CancellationTokenSource CancellationTokenSource { get; }
     private int clearPersistedStateOnCancel;
 
+    /// <summary>Sets whether cancellation clears the persisted download checkpoint.</summary>
     public bool ClearPersistedStateOnCancel
     {
         set => Volatile.Write(ref clearPersistedStateOnCancel, value ? 1 : 0);
@@ -51,6 +53,7 @@ internal sealed class DownloadSession : IDisposable
     private bool ShouldClearPersistedStateOnCancel =>
         Volatile.Read(ref clearPersistedStateOnCancel) == 1;
 
+    /// <summary>Gets whether execution is currently paused at a download boundary.</summary>
     public bool IsPaused
     {
         get
@@ -62,6 +65,7 @@ internal sealed class DownloadSession : IDisposable
         }
     }
 
+    /// <summary>Initializes the session and its isolated pause and cancellation state.</summary>
     public DownloadSession(
         LauncherApiClient apiClient,
         RemoteManifestService remoteManifestService,
@@ -105,6 +109,7 @@ internal sealed class DownloadSession : IDisposable
             () => IsPaused);
     }
 
+    /// <summary>Runs the configured install, update, or repair workflow to a terminal result.</summary>
     public async Task<GameOperationResult> RunAsync()
     {
         var activeToken = CancellationTokenSource.Token;
@@ -225,7 +230,7 @@ internal sealed class DownloadSession : IDisposable
             if (!diskCheck.HasEnoughSpace)
             {
                 await diagnostics.MessageAsync(
-                    "Game download blocked by disk space.",
+                    "GameDownload",
                     $"path: {gamePath}{Environment.NewLine}required: {FileSizeFormatter.Format(diskCheck.RequiredBytes)}{Environment.NewLine}available: {(diskCheck.AvailableBytes.HasValue ? FileSizeFormatter.Format(diskCheck.AvailableBytes.Value) : "--")}",
                     activeToken);
                 checkpointStore.Clear();
@@ -278,7 +283,7 @@ internal sealed class DownloadSession : IDisposable
                         repair ? GameOperationStage.RepairCompleted : GameOperationStage.DownloadCompleted,
                         100));
                     await diagnostics.MessageAsync(
-                        repair ? "Game repair completed." : "Game install or update completed.",
+                        repair ? "GameRepair" : "GameDownload",
                         $"path: {gamePath}{Environment.NewLine}version: {gameConfig.GameLatestVersion}",
                         activeToken);
                     return new GameOperationResult
@@ -340,26 +345,26 @@ internal sealed class DownloadSession : IDisposable
         }
         catch (IOException exception) when (exception.HResult == unchecked((int)0x80070070))
         {
-            await diagnostics.ErrorAsync("Game download disk space error.", exception, CancellationToken.None).ConfigureAwait(false);
+            await diagnostics.ErrorAsync("GameDownload", exception, CancellationToken.None).ConfigureAwait(false);
             checkpointStore.Clear();
             return Failed(localizer.T("diskSpaceInsufficient"), GameOperationErrorCode.InsufficientDiskSpace);
         }
         catch (Exception exception) when (exception is IOException or UnauthorizedAccessException)
         {
-            await diagnostics.ErrorAsync("Game file operation failed.", exception, CancellationToken.None).ConfigureAwait(false);
+            await diagnostics.ErrorAsync("GameDownload", exception, CancellationToken.None).ConfigureAwait(false);
             checkpointStore.Clear();
             return Failed(localizer.F("fileOperationFailed", exception.Message), GameOperationErrorCode.System);
         }
         catch (Exception exception) when (exception is HttpRequestException or TaskCanceledException or JsonException)
         {
-            await diagnostics.ErrorAsync("Game download network failed.", exception, CancellationToken.None).ConfigureAwait(false);
+            await diagnostics.ErrorAsync("GameDownload", exception, CancellationToken.None).ConfigureAwait(false);
             checkpointStore.Clear();
             return Failed(localizer.F("networkErrorDetail", exception.Message), GameOperationErrorCode.Network);
         }
         catch (Exception exception)
         {
             await diagnostics.ErrorAsync(
-                $"Game download unexpected error (operation: {operationKind})",
+                "GameDownload",
                 exception,
                 CancellationToken.None);
             checkpointStore.Clear();
@@ -367,6 +372,7 @@ internal sealed class DownloadSession : IDisposable
         }
     }
 
+    /// <summary>Pauses the session until <see cref="Resume"/> releases the pause gate.</summary>
     public void Pause()
     {
         lock (pauseLock)
@@ -377,6 +383,7 @@ internal sealed class DownloadSession : IDisposable
         LocalDiagnostics.LogSync(LogEntrySeverity.Debug, "GameDownload", "Download paused");
     }
 
+    /// <summary>Releases a paused session so subsequent download work can continue.</summary>
     public void Resume()
     {
         ResetPauseState();
@@ -400,12 +407,14 @@ internal sealed class DownloadSession : IDisposable
         }
     }
 
+    /// <summary>Cancels the session and releases any paused work.</summary>
     public void Stop()
     {
         CancellationTokenSource.Cancel();
         ResetPauseState();
     }
 
+    /// <summary>Releases the session-owned cancellation source and pause gate.</summary>
     public void Dispose()
     {
         if (disposed) return;

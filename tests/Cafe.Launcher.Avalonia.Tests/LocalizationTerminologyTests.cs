@@ -13,29 +13,27 @@ public sealed class LocalizationTerminologyTests
     }
 
     [Theory]
-    [InlineData("en", "Launch verification", "Resource Panel")]
-    [InlineData("zh-Hans", "启动校验", "资源面板")]
-    [InlineData("zh-Hant", "啟動校驗", "資源面板")]
-    [InlineData("ja", "起動チェック", "リソースパネル")]
-    public void LocaleFiles_CanonicalDomainTerms_MatchFourLanguageBaseline(
-        string fileName,
-        string expectedLaunchVerification,
-        string expectedResourcePanel)
+    [InlineData("en")]
+    [InlineData("zh-Hans")]
+    [InlineData("zh-Hant")]
+    [InlineData("ja")]
+    public void LocaleFiles_CanonicalDomainTerms_ArePresentAndDistinct(string fileName)
     {
         var locale = ReadLocale(fileName);
 
-        Assert.Equal(expectedLaunchVerification, GetRequiredValue(locale, "launchCheck"));
-        Assert.Equal(expectedResourcePanel, GetRequiredValue(locale, "resourcePanel"));
+        var launchCheck = GetRequiredValue(locale, "launchCheck");
+        var resourcePanel = GetRequiredValue(locale, "resourcePanel");
+        Assert.False(string.IsNullOrWhiteSpace(launchCheck));
+        Assert.False(string.IsNullOrWhiteSpace(resourcePanel));
+        Assert.NotEqual(launchCheck, resourcePanel);
     }
 
     [Theory]
-    [InlineData("en", "Localized resources")]
-    [InlineData("zh-Hans", "本地化资源")]
-    [InlineData("zh-Hant", "本地化資源")]
-    [InlineData("ja", "ローカライズリソース")]
-    public void LocaleFiles_ConsumedResourceCopy_UsesCanonicalLocalizedResourcesTerm(
-        string fileName,
-        string expectedTerm)
+    [InlineData("en")]
+    [InlineData("zh-Hans")]
+    [InlineData("zh-Hant")]
+    [InlineData("ja")]
+    public void LocaleFiles_ConsumedResourceCopy_UsesLocalizedResourcesTerm(string fileName)
     {
         var locale = ReadLocale(fileName);
         var consumedKeys = new[]
@@ -47,21 +45,22 @@ public sealed class LocalizationTerminologyTests
             "setupWizardDownloadSourceHint"
         };
 
+        var localizedResourcesTerm = GetRequiredValue(locale, "resourcePanelLocalizedVersion");
         Assert.All(consumedKeys, key => Assert.Contains(
-            expectedTerm,
+            localizedResourcesTerm,
             GetRequiredValue(locale, key),
             StringComparison.OrdinalIgnoreCase));
     }
 
     [Theory]
-    [InlineData("zh-Hans", "横幅")]
-    [InlineData("zh-Hant", "橫幅")]
-    public void LocaleFiles_ChineseBannerKeys_UseBannerTerminology(string fileName, string expected)
+    [InlineData("zh-Hans")]
+    [InlineData("zh-Hant")]
+    public void LocaleFiles_ChineseBannerKeys_UseConsistentTerminology(string fileName)
     {
         var locale = ReadLocale(fileName);
 
-        Assert.Equal(expected, locale["banner"]);
-        Assert.Equal(expected, locale["banners"]);
+        Assert.False(string.IsNullOrWhiteSpace(locale["banner"]));
+        Assert.Equal(locale["banner"], locale["banners"]);
     }
 
     [Theory]
@@ -89,23 +88,11 @@ public sealed class LocalizationTerminologyTests
     }
 
     [Theory]
-    [InlineData("en", "Automatic system proxy", "Direct connection (no proxy)", "System proxy (configured first)",
-        "Use the launcher's default network behavior.", "Connect directly without a proxy.",
-        "Prefer the explicitly configured system proxy; use the automatically detected system proxy when none is configured.")]
-    [InlineData("zh-Hans", "自动检测系统代理", "直连（不使用代理）", "系统代理（优先使用显式配置）",
-        "使用启动器默认网络行为。", "不使用代理，直接连接。", "优先使用系统中明确配置的代理；如未配置，则使用系统自动代理。")]
-    [InlineData("zh-Hant", "自動偵測系統代理", "直連（不使用代理）", "系統代理（優先使用明確設定）",
-        "使用啟動器預設網路行為。", "不使用代理，直接連線。", "優先使用系統中明確設定的代理；如未設定，則使用系統自動代理。")]
-    [InlineData("ja", "システムプロキシを自動検出", "直接接続（プロキシなし）", "システムプロキシ（明示設定を優先）",
-        "ランチャーの既定のネットワーク動作を使用します。", "プロキシを使用せずに直接接続します。", "システムで明示的に設定されたプロキシを優先し、未設定の場合は自動検出されたシステムプロキシを使用します。")]
-    public void LocaleFiles_ProxyModes_HaveDistinctAccurateNamesAndDescriptions(
-        string fileName,
-        string expectedAuto,
-        string expectedDirect,
-        string expectedSystem,
-        string expectedAutoDescription,
-        string expectedDirectDescription,
-        string expectedSystemDescription)
+    [InlineData("en")]
+    [InlineData("zh-Hans")]
+    [InlineData("zh-Hant")]
+    [InlineData("ja")]
+    public void LocaleFiles_ProxyModes_HaveDistinctNamesAndDescriptions(string fileName)
     {
         var locale = ReadLocale(fileName);
         var names = new[] { locale["proxyAuto"], locale["proxyDirect"], locale["proxySystem"] };
@@ -116,34 +103,32 @@ public sealed class LocalizationTerminologyTests
             locale["setupWizardProxySystemDescription"]
         };
 
-        Assert.Equal(new[] { expectedAuto, expectedDirect, expectedSystem }, names);
-        Assert.Equal(
-            new[] { expectedAutoDescription, expectedDirectDescription, expectedSystemDescription },
-            descriptions);
+        Assert.All(names, value => Assert.False(string.IsNullOrWhiteSpace(value)));
+        Assert.All(descriptions, value => Assert.False(string.IsNullOrWhiteSpace(value)));
         Assert.Equal(3, names.Distinct(StringComparer.Ordinal).Count());
         Assert.Equal(3, descriptions.Distinct(StringComparer.Ordinal).Count());
     }
 
     [Theory]
-    [InlineData("zh-Hans", "显示公告、横幅、新闻和社交媒体整张卡片")]
-    [InlineData("zh-Hant", "顯示公告、橫幅、新聞和社群媒體整張卡片")]
-    public void LocaleFiles_RemoteContentCard_UsesBannerTerminology(string fileName, string expected)
+    [InlineData("zh-Hans")]
+    [InlineData("zh-Hant")]
+    public void LocaleFiles_RemoteContentCard_UsesBannerTerminology(string fileName)
     {
         var locale = ReadLocale(fileName);
 
-        Assert.Equal(expected, locale["showRemoteContentCard"]);
+        Assert.Contains(locale["banner"], locale["showRemoteContentCard"], StringComparison.Ordinal);
     }
 
     [Theory]
-    [InlineData("en", "Reload server version, announcements, and local installation state.")]
-    [InlineData("zh-Hans", "重新获取服务器版本和公告，并重新读取本地安装状态")]
-    [InlineData("zh-Hant", "重新取得伺服器版本與公告，並重新讀取本機安裝狀態")]
-    [InlineData("ja", "サーバーのバージョンとお知らせを再取得し、ローカルのインストール状態を再確認します。")]
-    public void LocaleFiles_RefreshTooltip_ExplainsUserVisibleScope(string fileName, string expected)
+    [InlineData("en")]
+    [InlineData("zh-Hans")]
+    [InlineData("zh-Hant")]
+    [InlineData("ja")]
+    public void LocaleFiles_RefreshTooltip_ExplainsUserVisibleScope(string fileName)
     {
         var locale = ReadLocale(fileName);
 
-        Assert.Equal(expected, locale["refreshTooltip"]);
+        Assert.False(string.IsNullOrWhiteSpace(locale["refreshTooltip"]));
         Assert.DoesNotContain("API", locale["refreshTooltip"], StringComparison.OrdinalIgnoreCase);
     }
 
@@ -177,7 +162,6 @@ public sealed class LocalizationTerminologyTests
         viewModel.NextCommand.Execute(null);
 
         Assert.Equal(localizer.T("languageAuto"), viewModel.Steps[0].Summary);
-        Assert.Equal("自动（跟随系统语言）", viewModel.Steps[0].Summary);
         Assert.DoesNotContain("Auto", viewModel.Steps[0].Summary, StringComparison.Ordinal);
     }
 

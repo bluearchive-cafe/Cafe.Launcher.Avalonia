@@ -1,5 +1,6 @@
 using System.Collections.Generic;
 using System.Globalization;
+using System.Resources;
 using System.IO;
 using System.Text.RegularExpressions;
 using Cafe.Launcher.Avalonia.Models;
@@ -311,6 +312,19 @@ public sealed class LocalizationServiceTests
         var value = service.T("nonexistentLocalizationKey");
 
         Assert.Equal("Localization unavailable.", value);
+    }
+
+    [Fact]
+    public void T_WhenResourceKeyIsMissing_RaisesApplicationFailureEvent()
+    {
+        var service = new LocalizationService();
+        LocalizationFailureEventArgs? failure = null;
+        service.LocalizationFailure += (_, eventArgs) => failure = eventArgs;
+
+        _ = service.T("nonexistentLocalizationKey");
+
+        Assert.NotNull(failure);
+        Assert.IsType<MissingManifestResourceException>(failure!.Exception);
     }
 
     [Fact]

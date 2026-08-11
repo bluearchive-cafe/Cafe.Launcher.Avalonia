@@ -46,6 +46,24 @@ public sealed class ErrorHandlingServiceTests
     }
 
     [Fact]
+    public async Task HandleErrorAsync_WithoutExceptionDetails_ShowsOnlySafeToastMessage()
+    {
+        var (service, toastService) = CreateService();
+        ToastNotification? toast = null;
+        toastService.ToastRaised += notification => toast = notification;
+
+        await service.HandleErrorAsync("TestError", new InvalidOperationException("resource key: secret"),
+            new ErrorHandlingOptions
+            {
+                ToastMessage = "Localization unavailable.",
+                IncludeExceptionDetails = false
+            });
+
+        Assert.NotNull(toast);
+        Assert.Equal("Localization unavailable.", toast!.Message);
+    }
+
+    [Fact]
     public void FormatToastMessage_WithNestedExceptions_UsesOrderedDetails()
     {
         var exception = new InvalidOperationException(

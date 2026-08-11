@@ -18,8 +18,13 @@ namespace Cafe.Launcher.Avalonia.Features.GameOperations;
 /// </summary>
 internal sealed class GameOperationJourney : IGameOperationJourney
 {
+    /// <summary>Raised after an operation needs the shell state refreshed.</summary>
     public event Func<GameOperationsRefreshMode, Task>? RefreshRequested;
+
+    /// <summary>Raised when an operation failure asks the shell to open its log viewer.</summary>
     public event Func<Task>? OpenLogViewerRequested;
+
+    /// <summary>Raised after a successful game launch requests window minimization.</summary>
     public event Action? MinimizeRequested;
 
     private readonly IGameLaunchWorkflow launchWorkflow;
@@ -36,6 +41,7 @@ internal sealed class GameOperationJourney : IGameOperationJourney
 
     private LauncherStatusSnapshot? lastInstallSnapshot;
 
+    /// <summary>Initializes the workflow collaborators and presentation host for game operations.</summary>
     public GameOperationJourney(
         IGameLaunchWorkflow launchWorkflow,
         IGameInstallationWorkflow installationWorkflow,
@@ -62,10 +68,13 @@ internal sealed class GameOperationJourney : IGameOperationJourney
         this.host = host;
     }
 
+    /// <summary>Gets whether a download or repair workflow is currently running.</summary>
     public bool IsDownloadRunning => installationWorkflow.IsRunning;
 
+    /// <summary>Gets whether the active download workflow is paused.</summary>
     public bool IsPaused => installationWorkflow.IsPaused;
 
+    /// <summary>Starts the game after validating the supplied launcher state.</summary>
     public async Task StartGameAsync(LauncherStatusSnapshot snapshot)
     {
         if (!PrepareShellOnly(snapshot))
@@ -91,7 +100,7 @@ internal sealed class GameOperationJourney : IGameOperationJourney
             else
             {
                 toastService.ShowWarning(launchResult.Message);
-                await diagnostics.MessageAsync("Game launch blocked.", launchResult.Message);
+                await diagnostics.MessageAsync("GameLaunch", launchResult.Message);
             }
         }
         catch (Exception exception)
@@ -105,6 +114,7 @@ internal sealed class GameOperationJourney : IGameOperationJourney
         }
     }
 
+    /// <summary>Installs or updates the game and presents the terminal result.</summary>
     public async Task InstallOrUpdateAsync(LauncherStatusSnapshot snapshot)
     {
         lastInstallSnapshot = snapshot;
@@ -123,6 +133,7 @@ internal sealed class GameOperationJourney : IGameOperationJourney
         ShowInstallUpdateFailureToast(result.Message, result.ErrorCode);
     }
 
+    /// <summary>Validates whether repair can be requested and opens its confirmation dialog.</summary>
     public async Task RequestRepairAsync(LauncherStatusSnapshot snapshot)
     {
         if (snapshot.RuntimeState is not (LauncherRuntimeState.Corrupted or LauncherRuntimeState.Ready))
@@ -135,6 +146,7 @@ internal sealed class GameOperationJourney : IGameOperationJourney
         dialogs.ShowRepairConfirm(localizer.T("repairWarning"));
     }
 
+    /// <summary>Runs a confirmed repair and refreshes launcher state afterward.</summary>
     public async Task RepairAsync(LauncherStatusSnapshot snapshot)
     {
         if (!PrepareOperation(snapshot))
@@ -161,6 +173,7 @@ internal sealed class GameOperationJourney : IGameOperationJourney
         }
     }
 
+    /// <summary>Validates uninstall eligibility and opens its confirmation dialog.</summary>
     public async Task RequestUninstallAsync(LauncherStatusSnapshot snapshot)
     {
         if (snapshot.RuntimeState != LauncherRuntimeState.Ready)
@@ -183,6 +196,7 @@ internal sealed class GameOperationJourney : IGameOperationJourney
             Math.Max(0, validation.AffectedFileCount - 2)));
     }
 
+    /// <summary>Runs a confirmed uninstall and refreshes launcher state afterward.</summary>
     public async Task ConfirmUninstallAsync(LauncherStatusSnapshot snapshot)
     {
         if (snapshot.RuntimeState != LauncherRuntimeState.Ready)
@@ -214,6 +228,7 @@ internal sealed class GameOperationJourney : IGameOperationJourney
         }
     }
 
+    /// <summary>Requests a stop confirmation when work is active, or stops immediately otherwise.</summary>
     public void RequestStop()
     {
         if (installationWorkflow.IsRunning)
@@ -225,6 +240,7 @@ internal sealed class GameOperationJourney : IGameOperationJourney
         PerformStop();
     }
 
+    /// <summary>Executes the stop after the confirmation flow has completed.</summary>
     public void PerformStop()
     {
         installationWorkflow.Stop(clearPersistedState: true);
@@ -239,6 +255,7 @@ internal sealed class GameOperationJourney : IGameOperationJourney
         }
     }
 
+    /// <summary>Attempts to continue a persisted download while respecting cancellation.</summary>
     public async Task ResumePersistedAsync(LauncherStatusSnapshot snapshot, CancellationToken cancellationToken)
     {
         if (host.IsBusy)
@@ -276,16 +293,19 @@ internal sealed class GameOperationJourney : IGameOperationJourney
         }
     }
 
+    /// <summary>Stops the active workflow, optionally clearing its persisted checkpoint.</summary>
     public void Stop(bool clearPersistedState)
     {
         installationWorkflow.Stop(clearPersistedState);
     }
 
+    /// <summary>Pauses the active download workflow.</summary>
     public void Pause()
     {
         installationWorkflow.Pause();
     }
 
+    /// <summary>Resumes the active download workflow.</summary>
     public void Resume()
     {
         installationWorkflow.Resume();

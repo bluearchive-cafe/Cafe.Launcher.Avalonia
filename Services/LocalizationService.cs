@@ -686,6 +686,20 @@ public sealed partial class LocalizedStrings : ObservableObject
     }
 }
 
+/// <summary>Payload raised when a resource lookup or format operation cannot produce UI text.</summary>
+public sealed class LocalizationFailureEventArgs : EventArgs
+{
+    /// <summary>Initializes the payload with the diagnostic exception.</summary>
+    public LocalizationFailureEventArgs(Exception exception)
+    {
+        Exception = exception;
+    }
+
+    /// <summary>Gets the failure that should be logged without being displayed verbatim.</summary>
+    public Exception Exception { get; }
+}
+
+/// <summary>Resolves localized UI strings and applies the selected process culture.</summary>
 public sealed class LocalizationService
 {
     /// <summary>
@@ -736,6 +750,12 @@ public sealed class LocalizationService
     public string CurrentLanguage { get; private set; } = LauncherLanguages.English;
 
     public event EventHandler? LanguageChanged;
+
+    /// <summary>
+    /// Raised for a resource lookup or format failure so the application-level error
+    /// handler can inform the user without exposing a resource key or format template.
+    /// </summary>
+    public event EventHandler<LocalizationFailureEventArgs>? LocalizationFailure;
 
     public string SetLanguage(string language)
     {
@@ -823,7 +843,17 @@ public sealed class LocalizationService
 
     private string ReportFailure(string message)
     {
-        _ = diagnostics.ErrorAsync("Localization", new MissingManifestResourceException(message));
+        var exception = new MissingManifestResourceException(message);
+        var failureHandler = LocalizationFailure;
+        if (failureHandler is null)
+        {
+            _ = diagnostics.ErrorAsync("Localization", exception);
+        }
+        else
+        {
+            failureHandler(this, new LocalizationFailureEventArgs(exception));
+        }
+
         return "Localization unavailable.";
     }
 
