@@ -240,6 +240,34 @@ public sealed class MainWindowViewModelTests : IDisposable
     }
 
     [Fact]
+    public async Task RefreshAsync_WhenRequestsOverlap_SerializesLoadsAndKeepsNewestSnapshot()
+    {
+        var initial = CreateSnapshot();
+        initial.RuntimeState = LauncherRuntimeState.NotInstalled;
+        var older = CreateSnapshot();
+        older.RuntimeState = LauncherRuntimeState.Corrupted;
+        var newest = CreateSnapshot();
+        newest.RuntimeState = LauncherRuntimeState.Ready;
+        var coreService = new SequencedBlockingCoreService(initial, older, newest);
+        using var viewModel = await CreateViewModelAsync(coreService);
+        await viewModel.InitializeAsync();
+
+        var olderRefresh = viewModel.HandleOperationsRefreshRequestedAsync(
+            GameOperationsRefreshMode.SkipPersistedResume);
+        await coreService.SecondLoadStarted.Task.WaitAsync(TimeSpan.FromSeconds(2));
+        var newestRefresh = viewModel.HandleOperationsRefreshRequestedAsync(
+            GameOperationsRefreshMode.SkipPersistedResume);
+
+        coreService.ReleaseSecondLoad.TrySetResult();
+        await Task.WhenAll(olderRefresh, newestRefresh).WaitAsync(TimeSpan.FromSeconds(2));
+
+        Assert.Equal(1, coreService.MaximumConcurrency);
+        Assert.Equal(3, coreService.LoadCount);
+        Assert.True(viewModel.Operations.IsControlPanelVisible);
+        Assert.False(viewModel.Operations.IsInstallPanelVisible);
+    }
+
+    [Fact]
     public async Task SaveSettingsAsync_WhenRemoteContentVisibilityChanges_AppliesBeforeRefreshCompletes()
     {
         var snapshot = CreateSnapshot();
@@ -303,6 +331,65 @@ public sealed class MainWindowViewModelTests : IDisposable
         Assert.True(viewModel.Operations.IsInstallPanelVisible);
         Assert.False(viewModel.Operations.IsControlPanelVisible);
         Assert.True(viewModel.Dialogs.IsRepairConfirmVisible);
+    }
+
+    [Fact]
+    public async Task ConfirmRepairCommand_WhenShellIsWired_InvokesRepairOnce()
+    {
+        var snapshot = CreateSnapshot();
+        snapshot.RuntimeState = LauncherRuntimeState.Corrupted;
+        var backend = new CountingGameOperationsBackend
+        {
+            RepairResult = new GameOperationResult
+            {
+                Success = true,
+                Message = "repaired"
+            }
+        };
+        using var viewModel = await CreateViewModelAsync(
+            new CountingCoreService(snapshot),
+            gameOperationsBackend: backend);
+        await viewModel.InitializeAsync();
+        await viewModel.Operations.InstallOrUpdateCommand.ExecuteAsync(null);
+
+        await viewModel.Dialogs.ConfirmRepairCommand.ExecuteAsync(null);
+
+        Assert.Equal(1, backend.RepairInvocationCount);
+    }
+
+    [Fact]
+    public async Task ConfirmUninstallCommand_WhenShellIsWired_InvokesUninstallOnce()
+    {
+        var snapshot = CreateSnapshot();
+        snapshot.RuntimeState = LauncherRuntimeState.Ready;
+        var backend = new CountingGameOperationsBackend
+        {
+            ValidateUninstallResult = new GameOperationResult { Success = true },
+            UninstallResult = new GameOperationResult { Success = true, Message = "uninstalled" }
+        };
+        using var viewModel = await CreateViewModelAsync(
+            new CountingCoreService(snapshot),
+            gameOperationsBackend: backend);
+        await viewModel.InitializeAsync();
+        await viewModel.Operations.RequestUninstallCommand.ExecuteAsync(null);
+
+        await viewModel.Dialogs.ConfirmUninstallCommand.ExecuteAsync(null);
+
+        Assert.Equal(1, backend.UninstallInvocationCount);
+    }
+
+    [Fact]
+    public async Task ConfirmStopCommand_WhenShellIsWired_InvokesStopOnce()
+    {
+        var backend = new CountingGameOperationsBackend(isDownloadRunning: true);
+        using var viewModel = await CreateViewModelAsync(
+            new CountingCoreService(CreateSnapshot()),
+            gameOperationsBackend: backend);
+        viewModel.Dialogs.ShowStopConfirm();
+
+        viewModel.Dialogs.ConfirmStopCommand.Execute(null);
+
+        Assert.Equal(1, backend.StopInvocationCount);
     }
 
     [Fact]
@@ -2117,7 +2204,13 @@ public sealed class MainWindowViewModelTests : IDisposable
         }
 
         public int ResumeInvocationCount { get; private set; }
+        public int RepairInvocationCount { get; private set; }
+        public int UninstallInvocationCount { get; private set; }
+        public int StopInvocationCount { get; private set; }
         public GameOperationResult InstallResult { get; set; } = new();
+        public GameOperationResult RepairResult { get; set; } = new();
+        public GameOperationResult ValidateUninstallResult { get; set; } = new();
+        public GameOperationResult UninstallResult { get; set; } = new();
         public bool IsDownloadRunning => isDownloadRunning;
         public bool IsRunning => IsDownloadRunning;
         public bool IsPaused => false;
@@ -2134,16 +2227,22 @@ public sealed class MainWindowViewModelTests : IDisposable
 
         public Task<GameOperationResult> RepairAsync(
             LauncherStatusSnapshot snapshot,
-            Action<GameOperationProgress> progress) =>
-            throw new NotSupportedException();
+            Action<GameOperationProgress> progress)
+        {
+            RepairInvocationCount++;
+            return Task.FromResult(RepairResult);
+        }
 
         public Task<GameOperationResult> ValidateUninstallAsync(string gamePath) =>
-            throw new NotSupportedException();
+            Task.FromResult(ValidateUninstallResult);
 
         public Task<GameOperationResult> UninstallAsync(
             LauncherStatusSnapshot snapshot,
-            Action<GameOperationProgress> progress) =>
-            throw new NotSupportedException();
+            Action<GameOperationProgress> progress)
+        {
+            UninstallInvocationCount++;
+            return Task.FromResult(UninstallResult);
+        }
 
         public Task<GameOperationResult?> ResumePersistedAsync(
             LauncherStatusSnapshot snapshot,
@@ -2156,6 +2255,7 @@ public sealed class MainWindowViewModelTests : IDisposable
 
         public void Stop(bool clearPersistedState)
         {
+            StopInvocationCount++;
         }
 
         public void Pause()
@@ -2200,6 +2300,65 @@ public sealed class MainWindowViewModelTests : IDisposable
             }
 
             return snapshot;
+        }
+    }
+
+    private sealed class SequencedBlockingCoreService(
+        LauncherStatusSnapshot initial,
+        LauncherStatusSnapshot older,
+        LauncherStatusSnapshot newest) : ILauncherCoreService
+    {
+        private int loadCount;
+        private int currentConcurrency;
+        private int maximumConcurrency;
+
+        public int LoadCount => Volatile.Read(ref loadCount);
+        public int MaximumConcurrency => Volatile.Read(ref maximumConcurrency);
+
+        public TaskCompletionSource SecondLoadStarted { get; } =
+            new(TaskCreationOptions.RunContinuationsAsynchronously);
+
+        public TaskCompletionSource ReleaseSecondLoad { get; } =
+            new(TaskCreationOptions.RunContinuationsAsynchronously);
+
+        public async Task<LauncherStatusSnapshot> LoadAsync(
+            CancellationToken cancellationToken = default)
+        {
+            var invocation = Interlocked.Increment(ref loadCount);
+            var concurrency = Interlocked.Increment(ref currentConcurrency);
+            UpdateMaximum(concurrency);
+            try
+            {
+                if (invocation == 2)
+                {
+                    SecondLoadStarted.TrySetResult();
+                    await ReleaseSecondLoad.Task.WaitAsync(cancellationToken);
+                }
+
+                return invocation switch
+                {
+                    1 => initial,
+                    2 => older,
+                    _ => newest
+                };
+            }
+            finally
+            {
+                Interlocked.Decrement(ref currentConcurrency);
+            }
+        }
+
+        private void UpdateMaximum(int value)
+        {
+            while (true)
+            {
+                var current = Volatile.Read(ref maximumConcurrency);
+                if (current >= value
+                    || Interlocked.CompareExchange(ref maximumConcurrency, value, current) == current)
+                {
+                    return;
+                }
+            }
         }
     }
 

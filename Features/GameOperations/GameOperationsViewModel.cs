@@ -20,8 +20,6 @@ public partial class GameOperationsViewModel : ViewModelBase, IGameOperationJour
     private readonly LocalizationService localizer;
     private readonly DialogsViewModel dialogs;
     private readonly ShellViewModel shell;
-    private readonly IErrorHandlingService errorHandling;
-    private readonly Action<string> operationNoteRequestedHandler;
     private LauncherStatusSnapshot? currentSnapshot;
 
     [ObservableProperty]
@@ -118,8 +116,7 @@ public partial class GameOperationsViewModel : ViewModelBase, IGameOperationJour
                 errorHandling),
             localizer,
             shell,
-            dialogs,
-            errorHandling)
+            dialogs)
     {
     }
 
@@ -148,8 +145,7 @@ public partial class GameOperationsViewModel : ViewModelBase, IGameOperationJour
                 delayAsync),
             localizer,
             shell,
-            dialogs,
-            errorHandling)
+            dialogs)
     {
     }
 
@@ -157,15 +153,11 @@ public partial class GameOperationsViewModel : ViewModelBase, IGameOperationJour
         IGameOperationJourneyFactory journeyFactory,
         LocalizationService localizer,
         ShellViewModel shell,
-        DialogsViewModel dialogs,
-        IErrorHandlingService errorHandling)
+        DialogsViewModel dialogs)
     {
         this.localizer = localizer;
         this.dialogs = dialogs;
         this.shell = shell;
-        this.errorHandling = errorHandling;
-        operationNoteRequestedHandler = note => shell.OperationNote = note;
-        errorHandling.OperationNoteRequested += operationNoteRequestedHandler;
         journey = journeyFactory.Create(this);
         dialogs.ConfirmRepairRequested += RepairAsync;
         dialogs.ConfirmUninstallRequested += ConfirmUninstallAsync;
@@ -426,7 +418,6 @@ public partial class GameOperationsViewModel : ViewModelBase, IGameOperationJour
         dialogs.ConfirmRepairRequested -= RepairAsync;
         dialogs.ConfirmUninstallRequested -= ConfirmUninstallAsync;
         dialogs.ConfirmStopRequested -= PerformStop;
-        errorHandling.OperationNoteRequested -= operationNoteRequestedHandler;
     }
 
 }

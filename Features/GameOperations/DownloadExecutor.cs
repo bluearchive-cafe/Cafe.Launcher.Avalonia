@@ -1,6 +1,5 @@
 using System;
 using System.Collections.Generic;
-using System.Diagnostics;
 using System.IO;
 using System.Linq;
 using System.Net.Http;
@@ -68,79 +67,143 @@ internal sealed class DownloadExecutor
             proxyMode, timeout: TimeSpan.FromMinutes(10), cancellationToken: cancellationToken).ConfigureAwait(false);
         var client = lease.Client;
         using var semaphore = new SemaphoreSlim(MaxParallelDownloads, MaxParallelDownloads);
-        var downloadedSize = 0L;
         var totalSize = fileList.Sum(item => item.SizeBytes);
+        var downloadFiles = fileList.Select(file =>
+        {
+            var targetPath = GetTempName(GamePathValidator.GetSafePath(gamePath, file.Path));
+            return new DownloadFileState(
+                file,
+                targetPath,
+                GetExistingDownloadedSize(targetPath, file.SizeBytes));
+        }).ToArray();
+        var initialDownloadedSize = downloadFiles.Sum(item => item.ReportedSize);
         await diagnostics.DebugAsync(
             "GameDownload",
             $"Downloading {fileList.Count} files, total {FileSizeFormatter.Format(totalSize)}", CancellationToken.None).ConfigureAwait(false);
-        var startedAt = DateTimeOffset.Now;
         var throttleState = speedLimitBytesPerSec > 0
-            ? new ThrottleState { BytesPerSec = speedLimitBytesPerSec }
+            ? new DownloadTransferThrottle(speedLimitBytesPerSec)
             : null;
-        var lastProgressTime = 0L;                   // Stopwatch timestamp-based throttling
-        var progressIntervalTicks = Stopwatch.Frequency / 10;  // ~100ms
+        var progressAccumulator = new DownloadProgressAccumulator(
+            totalSize,
+            initialDownloadedSize,
+            TimeSpan.FromMilliseconds(100));
+        var pauseMeasurementLock = new object();
+        Task? measuredPauseTask = null;
 
-        var tasks = fileList.Select(async file =>
+        void ReportProgress(DownloadProgressSnapshot snapshot, bool paused)
+        {
+            var speed = snapshot.BytesPerSecond;
+            TimeSpan? estimated = speed > 0
+                ? TimeSpan.FromSeconds(Math.Max(0, (totalSize - snapshot.DownloadedSize) / speed))
+                : null;
+            progress(new GameOperationProgress
+            {
+                OperationKind = operationKind,
+                Stage = paused ? GameOperationStage.Paused : GameOperationStage.Downloading,
+                Progress = totalSize > 0
+                    ? (int)Math.Round(snapshot.DownloadedSize * 100d / totalSize)
+                    : 0,
+                BytesPerSecond = paused ? 0 : speed,
+                EstimatedRemaining = paused ? null : estimated,
+                DownloadedSize = snapshot.DownloadedSize,
+                TotalSize = totalSize,
+                IsRunning = true,
+                CanStop = true,
+                CanPause = true,
+                IsPaused = paused
+            });
+        }
+
+        async Task WaitWhilePausedAsync()
+        {
+            var pauseTask = getPauseTask();
+            if (pauseTask.IsCompleted)
+            {
+                return;
+            }
+
+            lock (pauseMeasurementLock)
+            {
+                if (!ReferenceEquals(measuredPauseTask, pauseTask))
+                {
+                    measuredPauseTask = pauseTask;
+                    throttleState?.Pause();
+                    progressAccumulator.Pause();
+                }
+            }
+
+            try
+            {
+                await pauseTask.ConfigureAwait(false);
+            }
+            finally
+            {
+                lock (pauseMeasurementLock)
+                {
+                    if (ReferenceEquals(measuredPauseTask, pauseTask))
+                    {
+                        measuredPauseTask = null;
+                        throttleState?.Resume();
+                        progressAccumulator.Resume();
+                    }
+                }
+            }
+        }
+
+        void RecordFileProgress(DownloadFileState downloadFile, long transferredBytes)
+        {
+            var paused = isPaused();
+            var downloadedSize = GetExistingDownloadedSize(
+                downloadFile.TargetPath,
+                downloadFile.File.SizeBytes);
+            var previousSize = Interlocked.Exchange(
+                ref downloadFile.ReportedSize,
+                downloadedSize);
+            if (progressAccumulator.TryRecord(
+                    transferredBytes,
+                    downloadedSize - previousSize,
+                    paused,
+                    out var snapshot))
+            {
+                ReportProgress(snapshot, paused);
+            }
+        }
+
+        ReportProgress(progressAccumulator.GetCurrentSnapshot(), paused: false);
+
+        var tasks = downloadFiles.Select(async downloadFile =>
         {
             await semaphore.WaitAsync(cancellationToken).ConfigureAwait(false);
             try
             {
-                var targetPath = GetTempName(GamePathValidator.GetSafePath(gamePath, file.Path));
                 await fileDownloadService.DownloadAsync(
                     new FileDownloadRequest(
-                        targetPath,
+                        downloadFile.TargetPath,
                         cdnConfig,
                         source,
-                        file.SizeBytes,
-                        file.Hash,
-                        file.Path),
+                        downloadFile.File.SizeBytes,
+                        downloadFile.File.Hash,
+                        downloadFile.File.Path),
                     new FileDownloadOperationControl(
                         client,
-                        getPauseTask,
+                        WaitWhilePausedAsync,
                         async (bytes, ct) =>
                         {
-                            // Throttle progress reporting to ~100ms intervals to avoid
-                            // overwhelming the UI thread with high-frequency callbacks.
-                            var now = Stopwatch.GetTimestamp();
-                            var prev = Interlocked.Read(ref lastProgressTime);
-                            if (now - prev < progressIntervalTicks)
+                            if (throttleState is not null && bytes > 0)
                             {
-                                return;
-                            }
-                            Interlocked.Exchange(ref lastProgressTime, now);
-
-                            if (throttleState is not null)
-                            {
-                                var throttledTotal = Interlocked.Add(ref throttleState.TotalBytes, bytes);
-                                var targetMs = throttledTotal * 1000L / throttleState.BytesPerSec;
-                                var elapsedMs = throttleState.Watch.ElapsedMilliseconds;
-                                if (elapsedMs < targetMs)
-                                    await Task.Delay((int)Math.Clamp(targetMs - elapsedMs, 0, int.MaxValue), ct).ConfigureAwait(false);
+                                var delay = throttleState.RecordBytes(bytes);
+                                if (delay > TimeSpan.Zero)
+                                {
+                                    await Task.Delay(delay, ct).ConfigureAwait(false);
+                                }
                             }
 
-                            var totalSizeVal = totalSize;
-                            var totalBytes = Interlocked.Add(ref downloadedSize, bytes);
-                            var elapsed = Math.Max(1, (DateTimeOffset.Now - startedAt).TotalSeconds);
-                            var speed = (long)(totalBytes / elapsed);
-                            var estimated = speed > 0 ? (totalSizeVal - totalBytes) / speed : 0;
-
-                            var paused = isPaused();
-                            progress(new GameOperationProgress
-                            {
-                                OperationKind = operationKind,
-                                Stage = paused ? GameOperationStage.Paused : GameOperationStage.Downloading,
-                                Progress = totalSizeVal > 0 ? (int)Math.Round(totalBytes * 100d / totalSizeVal) : 0,
-                                BytesPerSecond = paused ? 0 : speed,
-                                EstimatedRemaining = paused
-                                    ? null
-                                    : TimeSpan.FromSeconds(Math.Max(0, estimated)),
-                                DownloadedSize = totalBytes,
-                                TotalSize = totalSizeVal,
-                                IsRunning = true,
-                                CanStop = true,
-                                CanPause = true,
-                                IsPaused = paused
-                            });
+                            RecordFileProgress(downloadFile, bytes);
+                        },
+                        _ =>
+                        {
+                            RecordFileProgress(downloadFile, transferredBytes: 0);
+                            return Task.CompletedTask;
                         },
                         proxyMode != ProxyModes.Direct),
                     cancellationToken);
@@ -248,11 +311,25 @@ internal sealed class DownloadExecutor
         }
     }
 
-    private sealed class ThrottleState
+    private static long GetExistingDownloadedSize(string path, long expectedSize)
     {
-        public int BytesPerSec;
-        public long TotalBytes;
-        public Stopwatch Watch = Stopwatch.StartNew();
+        if (expectedSize <= 0 || !File.Exists(path))
+        {
+            return 0;
+        }
+
+        var length = new FileInfo(path).Length;
+        return length <= expectedSize ? length : 0;
+    }
+
+    private sealed class DownloadFileState(
+        ManifestFile file,
+        string targetPath,
+        long reportedSize)
+    {
+        public ManifestFile File { get; } = file;
+        public string TargetPath { get; } = targetPath;
+        public long ReportedSize = reportedSize;
     }
 
     private const string TempFileExtension = ".tmp";

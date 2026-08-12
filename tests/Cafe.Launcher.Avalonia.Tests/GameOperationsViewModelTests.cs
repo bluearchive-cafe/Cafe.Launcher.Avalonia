@@ -226,6 +226,7 @@ public sealed class GameOperationsViewModelTests
         context.ViewModel.RefreshRequested += mode =>
         {
             refreshMode = mode;
+            context.ViewModel.ApplySnapshot(ReadySnapshot());
             return Task.CompletedTask;
         };
 
@@ -233,7 +234,8 @@ public sealed class GameOperationsViewModelTests
 
         Assert.Equal(1, context.Backend.InstallInvocationCount);
         Assert.Equal(GameOperationsRefreshMode.SkipPersistedResume, refreshMode);
-        Assert.False(context.ViewModel.IsProgressPanelVisible);
+        Assert.True(context.ViewModel.IsControlPanelVisible);
+        Assert.False(context.ViewModel.IsInstallPanelVisible);
         Assert.Equal("installed", context.Shell.OperationNote);
         Assert.False(context.Shell.IsBusy);
     }
@@ -847,6 +849,11 @@ public sealed class GameOperationsViewModelTests
             Path.Combine(Path.GetTempPath(), Guid.NewGuid().ToString("N"), "notices.json")),
             new SetupWizardViewModel(localizer, new GameInstallationPath(), new LocalInstallationStateStore(), new LocalDiagnostics()));
         var backend = new TestBackend();
+        var errorHandling = new ErrorHandlingService(
+            localizer,
+            new LocalDiagnostics(),
+            toastService);
+        errorHandling.OperationNoteRequested += note => shell.OperationNote = note;
         var viewModel = new GameOperationsViewModel(
             backend,
             backend,
@@ -857,7 +864,7 @@ public sealed class GameOperationsViewModelTests
             shell,
             dialogs,
             _ => Task.CompletedTask,
-            new ErrorHandlingService(localizer, new LocalDiagnostics(), toastService));
+            errorHandling);
         return new TestContext(viewModel, backend, shell, dialogs, toastService, localizer);
     }
 

@@ -48,9 +48,9 @@ public sealed class ShellLifecycle : IDisposable
     private readonly LogViewerDialogViewModel logViewer;
     private readonly DebugViewModel debug;
     private readonly CancellationTokenSource lifetimeCts = new();
+    private readonly SemaphoreSlim refreshGate = new(1, 1);
     private int initialized;
     private bool disposed;
-    private bool skipNextPersistedResume;
     private bool motionSettingsApplied;
     private bool settingsSnapshotInitialized;
     private LauncherStatusSnapshot? currentSnapshot;
@@ -144,54 +144,64 @@ public sealed class ShellLifecycle : IDisposable
     /// <summary>Reloads launcher state and updates all dependent presentation models.</summary>
     public async Task RefreshAsync(CancellationToken cancellationToken = default)
     {
-        presentation.IsBusy = true;
-        shell.IsBusy = true;
+        await RefreshAsync(resumePersistedDownload: true, cancellationToken);
+    }
+
+    private async Task RefreshAsync(
+        bool resumePersistedDownload,
+        CancellationToken cancellationToken = default)
+    {
+        await refreshGate.WaitAsync(cancellationToken);
         var loaded = false;
         try
         {
-            var settingsForLanguage = await settingsService.ReadAsync(cancellationToken);
-            settings.Editor.ApplySnapshot(settingsForLanguage);
-            settingsSnapshotInitialized = true;
-            ApplyMotionSettings(settingsForLanguage);
-            ApplyLanguage(settingsForLanguage.Language);
-            settings.Appearance.Load(settingsForLanguage);
-            SettingsAppearanceViewModel.ApplyTheme(settingsForLanguage.ThemeMode);
-            settings.Appearance.ApplyThemeColor(
-                settingsForLanguage.ThemeColorMode,
-                SettingsAppearanceViewModel.ParseColorOrDefault(settingsForLanguage.CustomThemeColor));
-            shell.SetLoading();
-            remoteContent.BeginLoading(settingsForLanguage.ShowRemoteContentCard);
+            presentation.IsBusy = true;
+            shell.IsBusy = true;
+            try
+            {
+                var settingsForLanguage = await settingsService.ReadAsync(cancellationToken);
+                settings.Editor.ApplySnapshot(settingsForLanguage);
+                settingsSnapshotInitialized = true;
+                ApplyMotionSettings(settingsForLanguage);
+                ApplyLanguage(settingsForLanguage.Language);
+                settings.Appearance.Load(settingsForLanguage);
+                SettingsAppearanceViewModel.ApplyTheme(settingsForLanguage.ThemeMode);
+                settings.Appearance.ApplyThemeColor(
+                    settingsForLanguage.ThemeColorMode,
+                    SettingsAppearanceViewModel.ParseColorOrDefault(settingsForLanguage.CustomThemeColor));
+                shell.SetLoading();
+                remoteContent.BeginLoading(settingsForLanguage.ShowRemoteContentCard);
 
-            var snapshot = await launcherCoreService.LoadAsync(cancellationToken);
-            currentSnapshot = snapshot;
-            await ApplySnapshotAsync(snapshot);
-            loaded = true;
-        }
-        catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
-        {
-        }
-        catch (Exception exception)
-        {
-            shell.SetRefreshError(exception);
-            operations.SetIdlePanels(currentSnapshot);
-            await errorHandling.HandleErrorAsync("Launcher core refresh failed.", exception,
-                new ErrorHandlingOptions { OperationNoteKey = "networkWithMessage" });
+                var snapshot = await launcherCoreService.LoadAsync(cancellationToken);
+                currentSnapshot = snapshot;
+                await ApplySnapshotAsync(snapshot);
+                loaded = true;
+            }
+            catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
+            {
+            }
+            catch (Exception exception)
+            {
+                shell.SetRefreshError(exception);
+                operations.SetIdlePanels(currentSnapshot);
+                await errorHandling.HandleErrorAsync("Launcher core refresh failed.", exception,
+                    new ErrorHandlingOptions { OperationNoteKey = "networkWithMessage" });
+            }
+            finally
+            {
+                remoteContent.EndLoading();
+                shell.IsBusy = false;
+                presentation.IsBusy = false;
+            }
+
         }
         finally
         {
-            remoteContent.EndLoading();
-            shell.IsBusy = false;
-            presentation.IsBusy = false;
+            refreshGate.Release();
         }
 
         if (!loaded)
         {
-            return;
-        }
-
-        if (skipNextPersistedResume)
-        {
-            skipNextPersistedResume = false;
             return;
         }
 
@@ -200,7 +210,10 @@ public sealed class ShellLifecycle : IDisposable
             PendingStartupUpdateCheck = CheckForStartupUpdateAsync(cancellationToken);
         }
 
-        await operations.ResumePersistedDownloadAsync(cancellationToken);
+        if (resumePersistedDownload)
+        {
+            await operations.ResumePersistedDownloadAsync(cancellationToken);
+        }
     }
 
     /// <summary>Refreshes the shell after the settings editor saves a new snapshot.</summary>
@@ -282,12 +295,8 @@ public sealed class ShellLifecycle : IDisposable
     /// <summary>Refreshes shell state after a game operation and records resume behavior.</summary>
     internal async Task HandleOperationsRefreshRequestedAsync(GameOperationsRefreshMode mode)
     {
-        if (mode == GameOperationsRefreshMode.SkipPersistedResume)
-        {
-            skipNextPersistedResume = true;
-        }
-
-        await RefreshAsync();
+        await RefreshAsync(
+            resumePersistedDownload: mode != GameOperationsRefreshMode.SkipPersistedResume);
     }
 
     /// <summary>Refreshes shell state in response to the debug panel.</summary>
@@ -343,9 +352,6 @@ public sealed class ShellLifecycle : IDisposable
         operations.RefreshRequested += HandleOperationsRefreshRequestedAsync;
         operations.OpenLogViewerRequested += OpenLogViewerAsync;
 
-        dialogs.ConfirmRepairRequested += operations.RepairAsync;
-        dialogs.ConfirmUninstallRequested += operations.ConfirmUninstallAsync;
-        dialogs.ConfirmStopRequested += operations.PerformStop;
         dialogs.CloseAfterStoppingDownloadRequested += windowChrome.CloseAfterStoppingDownload;
         dialogs.CloseRequested += windowChrome.RequestClose;
         dialogs.ConfirmUpdateAvailableRequested += OnUpdateAvailableConfirmed;
@@ -389,9 +395,6 @@ public sealed class ShellLifecycle : IDisposable
         operations.OpenLogViewerRequested -= OpenLogViewerAsync;
         resourcePanel.ResourcePanelSourceConfirmRequested -= ShowResourcePanelSourceConfirmDialog;
         dialogs.ConfirmResourcePanelSourceSwitchRequested -= OnResourcePanelSourceSwitchConfirmed;
-        dialogs.ConfirmRepairRequested -= operations.RepairAsync;
-        dialogs.ConfirmUninstallRequested -= operations.ConfirmUninstallAsync;
-        dialogs.ConfirmStopRequested -= operations.PerformStop;
         dialogs.CloseAfterStoppingDownloadRequested -= windowChrome.CloseAfterStoppingDownload;
         dialogs.CloseRequested -= windowChrome.RequestClose;
         dialogs.ConfirmUpdateAvailableRequested -= OnUpdateAvailableConfirmed;
@@ -494,6 +497,7 @@ public sealed class ShellLifecycle : IDisposable
         dialogs.SetupWizard.Dispose();
         lifetimeCts.Cancel();
         lifetimeCts.Dispose();
+        refreshGate.Dispose();
         errorHandling.CriticalErrorRequested -= OnCriticalError;
         errorHandling.OperationNoteRequested -= OnOperationNoteRequested;
         localizer.LocalizationFailure -= OnLocalizationFailure;
