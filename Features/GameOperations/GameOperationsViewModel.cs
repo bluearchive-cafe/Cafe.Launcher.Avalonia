@@ -159,6 +159,7 @@ public partial class GameOperationsViewModel : ViewModelBase, IGameOperationJour
         this.dialogs = dialogs;
         this.shell = shell;
         journey = journeyFactory.Create(this);
+        journey.IsRunningChanged += OnInstallationIsRunningChanged;
         dialogs.ConfirmRepairRequested += RepairAsync;
         dialogs.ConfirmUninstallRequested += ConfirmUninstallAsync;
         dialogs.ConfirmStopRequested += PerformStop;
@@ -413,8 +414,14 @@ public partial class GameOperationsViewModel : ViewModelBase, IGameOperationJour
         };
     }
 
+    private void OnInstallationIsRunningChanged()
+    {
+        OnPropertyChanged(nameof(IsDownloadRunning));
+    }
+
     public void Dispose()
     {
+        journey.IsRunningChanged -= OnInstallationIsRunningChanged;
         dialogs.ConfirmRepairRequested -= RepairAsync;
         dialogs.ConfirmUninstallRequested -= ConfirmUninstallAsync;
         dialogs.ConfirmStopRequested -= PerformStop;

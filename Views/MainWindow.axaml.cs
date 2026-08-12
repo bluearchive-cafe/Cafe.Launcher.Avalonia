@@ -21,10 +21,20 @@ public partial class MainWindow : Window
 {
     private SystemTrayService? systemTray;
     private MainWindowViewModel? configuredViewModel;
+    private readonly Func<string, Task<string?>> pickGameFolderAsync;
+    private readonly Func<Task<string?>> pickBackgroundImageAsync;
+    private readonly Func<Task<string?>> pickBackgroundFolderAsync;
+    private readonly Func<string, Task<string?>> pickLogExportDirectoryAsync;
+    private readonly Action<string> openDirectory;
 
     public MainWindow()
     {
         InitializeComponent();
+        pickGameFolderAsync = PickGameFolderAsync;
+        pickBackgroundImageAsync = PickBackgroundImageAsync;
+        pickBackgroundFolderAsync = PickBackgroundFolderAsync;
+        pickLogExportDirectoryAsync = PickLogExportDirectoryAsync;
+        openDirectory = OpenDirectory;
         PointerPressed += OnPointerPressed;
         KeyDown += OnKeyDown;
         Activated += OnActivated;
@@ -34,15 +44,15 @@ public partial class MainWindow : Window
     {
         UnconfigureViewModel();
         configuredViewModel = viewModel;
-        viewModel.Settings.PickGameFolderAsync = PickGameFolderAsync;
-        viewModel.Settings.PickBackgroundImageAsync = PickBackgroundImageAsync;
-        viewModel.Settings.PickBackgroundFolderAsync = PickBackgroundFolderAsync;
-        viewModel.Background.PickBackgroundImageAsync = PickBackgroundImageAsync;
-        viewModel.Background.PickBackgroundFolderAsync = PickBackgroundFolderAsync;
-        viewModel.LogViewer.PickExportDirectoryAsync = PickLogExportDirectoryAsync;
-        viewModel.LogViewer.OpenExportDirectory = OpenDirectory;
-        viewModel.Debug.PickExportDirectoryAsync = PickLogExportDirectoryAsync;
-        viewModel.Debug.OpenDirectory = OpenDirectory;
+        viewModel.Settings.PickGameFolderAsync = pickGameFolderAsync;
+        viewModel.Settings.PickBackgroundImageAsync = pickBackgroundImageAsync;
+        viewModel.Settings.PickBackgroundFolderAsync = pickBackgroundFolderAsync;
+        viewModel.Background.PickBackgroundImageAsync = pickBackgroundImageAsync;
+        viewModel.Background.PickBackgroundFolderAsync = pickBackgroundFolderAsync;
+        viewModel.LogViewer.PickExportDirectoryAsync = pickLogExportDirectoryAsync;
+        viewModel.LogViewer.OpenExportDirectory = openDirectory;
+        viewModel.Debug.PickExportDirectoryAsync = pickLogExportDirectoryAsync;
+        viewModel.Debug.OpenDirectory = openDirectory;
         viewModel.Operations.MinimizeRequested += MinimizeWindow;
         viewModel.WindowChrome.MinimizeRequested += MinimizeWindow;
         viewModel.WindowChrome.CloseRequested += PerformClose;
@@ -68,8 +78,52 @@ public partial class MainWindow : Window
         viewModel.WindowChrome.CloseRequested -= PerformClose;
         viewModel.WindowChrome.RestoreRequested -= ShowWindow;
         viewModel.Dialogs.ErrorCopyDetailsRequested -= CopyErrorDetailsToClipboard;
-        viewModel.Debug.PickExportDirectoryAsync = null;
-        viewModel.Debug.OpenDirectory = null;
+
+        if (viewModel.Settings.PickGameFolderAsync == pickGameFolderAsync)
+        {
+            viewModel.Settings.PickGameFolderAsync = null;
+        }
+
+        if (viewModel.Settings.PickBackgroundImageAsync == pickBackgroundImageAsync)
+        {
+            viewModel.Settings.PickBackgroundImageAsync = null;
+        }
+
+        if (viewModel.Settings.PickBackgroundFolderAsync == pickBackgroundFolderAsync)
+        {
+            viewModel.Settings.PickBackgroundFolderAsync = null;
+        }
+
+        if (viewModel.Background.PickBackgroundImageAsync == pickBackgroundImageAsync)
+        {
+            viewModel.Background.PickBackgroundImageAsync = null;
+        }
+
+        if (viewModel.Background.PickBackgroundFolderAsync == pickBackgroundFolderAsync)
+        {
+            viewModel.Background.PickBackgroundFolderAsync = null;
+        }
+
+        if (viewModel.LogViewer.PickExportDirectoryAsync == pickLogExportDirectoryAsync)
+        {
+            viewModel.LogViewer.PickExportDirectoryAsync = null;
+        }
+
+        if (viewModel.LogViewer.OpenExportDirectory == openDirectory)
+        {
+            viewModel.LogViewer.OpenExportDirectory = null;
+        }
+
+        if (viewModel.Debug.PickExportDirectoryAsync == pickLogExportDirectoryAsync)
+        {
+            viewModel.Debug.PickExportDirectoryAsync = null;
+        }
+
+        if (viewModel.Debug.OpenDirectory == openDirectory)
+        {
+            viewModel.Debug.OpenDirectory = null;
+        }
+
         configuredViewModel = null;
     }
 

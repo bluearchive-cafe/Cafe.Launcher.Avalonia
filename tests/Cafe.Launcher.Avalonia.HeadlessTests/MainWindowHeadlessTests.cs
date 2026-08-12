@@ -156,18 +156,32 @@ public sealed class MainWindowHeadlessTests
     }
 
     [AvaloniaFact]
-    public void ConfigureViewModel_WiresAndUnwiresDebugPlatformCapabilities()
+    public void ConfigureViewModel_WiresAndUnwiresPlatformCapabilities()
     {
         var context = CreateContext();
-        var debug = context.ViewModel.Debug;
+        var viewModel = context.ViewModel;
 
-        Assert.NotNull(debug.PickExportDirectoryAsync);
-        Assert.NotNull(debug.OpenDirectory);
+        Assert.NotNull(viewModel.Settings.PickGameFolderAsync);
+        Assert.NotNull(viewModel.Settings.PickBackgroundImageAsync);
+        Assert.NotNull(viewModel.Settings.PickBackgroundFolderAsync);
+        Assert.NotNull(viewModel.Background.PickBackgroundImageAsync);
+        Assert.NotNull(viewModel.Background.PickBackgroundFolderAsync);
+        Assert.NotNull(viewModel.LogViewer.PickExportDirectoryAsync);
+        Assert.NotNull(viewModel.LogViewer.OpenExportDirectory);
+        Assert.NotNull(viewModel.Debug.PickExportDirectoryAsync);
+        Assert.NotNull(viewModel.Debug.OpenDirectory);
 
         context.Dispose();
 
-        Assert.Null(debug.PickExportDirectoryAsync);
-        Assert.Null(debug.OpenDirectory);
+        Assert.Null(viewModel.Settings.PickGameFolderAsync);
+        Assert.Null(viewModel.Settings.PickBackgroundImageAsync);
+        Assert.Null(viewModel.Settings.PickBackgroundFolderAsync);
+        Assert.Null(viewModel.Background.PickBackgroundImageAsync);
+        Assert.Null(viewModel.Background.PickBackgroundFolderAsync);
+        Assert.Null(viewModel.LogViewer.PickExportDirectoryAsync);
+        Assert.Null(viewModel.LogViewer.OpenExportDirectory);
+        Assert.Null(viewModel.Debug.PickExportDirectoryAsync);
+        Assert.Null(viewModel.Debug.OpenDirectory);
     }
 
     [AvaloniaFact]

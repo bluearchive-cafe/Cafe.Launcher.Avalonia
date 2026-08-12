@@ -40,6 +40,26 @@ public sealed class MainWindowViewModelTests : IDisposable
         Assert.Equal(0, notificationCount);
     }
 
+    [Fact]
+    public async Task Dispose_UnhooksLifecycleCoordinationDelegates()
+    {
+        var viewModel = await CreateViewModelAsync(new CountingCoreService(CreateSnapshot()));
+
+        Assert.NotNull(viewModel.Settings.Appearance.GetBackgroundBitmap);
+        Assert.NotNull(viewModel.Settings.PreviewAppearanceAsync);
+        Assert.NotNull(viewModel.Settings.ApplyLanguageAndTheme);
+        Assert.NotNull(viewModel.RemoteContent.OpenExternalUrlRequested);
+        Assert.NotNull(viewModel.Dialogs.SetupWizard.PickGameFolderAsync);
+
+        viewModel.Dispose();
+
+        Assert.Null(viewModel.Settings.Appearance.GetBackgroundBitmap);
+        Assert.Null(viewModel.Settings.PreviewAppearanceAsync);
+        Assert.Null(viewModel.Settings.ApplyLanguageAndTheme);
+        Assert.Null(viewModel.RemoteContent.OpenExternalUrlRequested);
+        Assert.Null(viewModel.Dialogs.SetupWizard.PickGameFolderAsync);
+    }
+
     static MainWindowViewModelTests()
     {
         TestLocalizationHelper.Initialize();

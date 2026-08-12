@@ -2,6 +2,7 @@ using System;
 using System.ComponentModel;
 using System.Threading;
 using System.Threading.Tasks;
+using Avalonia.Media.Imaging;
 using Cafe.Launcher.Avalonia.Features.Diagnostics;
 using Cafe.Launcher.Avalonia.Features.GameOperations;
 using Cafe.Launcher.Avalonia.Helpers;
@@ -47,6 +48,11 @@ public sealed class ShellLifecycle : IDisposable
     private readonly ResourcePanelViewModel resourcePanel;
     private readonly LogViewerDialogViewModel logViewer;
     private readonly DebugViewModel debug;
+    private readonly Func<Bitmap?> getBackgroundBitmap;
+    private readonly Func<LauncherSettings, string?, CancellationToken, Task> previewAppearanceAsync;
+    private readonly Func<LauncherSettings, Task> applyLanguageAndThemeAsync;
+    private readonly Action<string?> openExternalUrl;
+    private readonly Func<string, Task<string?>> pickSetupWizardGameFolderAsync;
     private readonly CancellationTokenSource lifetimeCts = new();
     private readonly SemaphoreSlim refreshGate = new(1, 1);
     private int initialized;
@@ -104,6 +110,12 @@ public sealed class ShellLifecycle : IDisposable
         this.logViewer = logViewer;
         this.debug = debug;
         ModalHost = modalHost;
+
+        getBackgroundBitmap = background.GetBackgroundBitmap;
+        previewAppearanceAsync = PreviewAppearanceAsync;
+        applyLanguageAndThemeAsync = ApplyLanguageAndThemeAsync;
+        openExternalUrl = windowChrome.OpenExternalUrl;
+        pickSetupWizardGameFolderAsync = PickSetupWizardGameFolderAsync;
 
         errorHandling.CriticalErrorRequested += OnCriticalError;
         errorHandling.OperationNoteRequested += OnOperationNoteRequested;
@@ -311,39 +323,50 @@ public sealed class ShellLifecycle : IDisposable
         logViewer.OpenCommand.Execute(null);
     }
 
+    private async Task PreviewAppearanceAsync(
+        LauncherSettings previewSettings,
+        string? propertyName,
+        CancellationToken cancellationToken)
+    {
+        SettingsAppearanceViewModel.ApplyTheme(previewSettings.ThemeMode);
+        settings.Appearance.ApplyThemeColor(
+            previewSettings.ThemeColorMode,
+            SettingsAppearanceViewModel.ParseColorOrDefault(previewSettings.CustomThemeColor));
+        background.ApplyBackgroundPresentation(previewSettings);
+
+        if (propertyName is null
+            or nameof(LauncherSettings.BackgroundSource)
+            or nameof(LauncherSettings.CustomBackgroundPath))
+        {
+            await background.UpdateBackgroundImageAsync(
+                previewSettings,
+                currentSnapshot,
+                cancellationToken);
+        }
+    }
+
+    private Task ApplyLanguageAndThemeAsync(LauncherSettings launcherSettings)
+    {
+        ApplyLanguage(launcherSettings.Language);
+        SettingsAppearanceViewModel.ApplyTheme(launcherSettings.ThemeMode);
+        settings.Appearance.ApplyThemeColor(
+            launcherSettings.ThemeColorMode,
+            SettingsAppearanceViewModel.ParseColorOrDefault(launcherSettings.CustomThemeColor));
+        return Task.CompletedTask;
+    }
+
+    private Task<string?> PickSetupWizardGameFolderAsync(string currentPath) =>
+        settings.PickGameFolderAsync?.Invoke(currentPath) ?? Task.FromResult<string?>(null);
+
     /// <summary>Subscribes cross-feature events once for the active shell lifecycle.</summary>
     public void Wire()
     {
         if (isWired) return;
         isWired = true;
 
-        settings.Appearance.GetBackgroundBitmap = background.GetBackgroundBitmap;
-        settings.PreviewAppearanceAsync = async (previewSettings, propertyName, cancellationToken) =>
-        {
-            SettingsAppearanceViewModel.ApplyTheme(previewSettings.ThemeMode);
-            settings.Appearance.ApplyThemeColor(
-                previewSettings.ThemeColorMode,
-                SettingsAppearanceViewModel.ParseColorOrDefault(previewSettings.CustomThemeColor));
-            background.ApplyBackgroundPresentation(previewSettings);
-
-            if (propertyName is null
-                or nameof(LauncherSettings.BackgroundSource)
-                or nameof(LauncherSettings.CustomBackgroundPath))
-            {
-                await background.UpdateBackgroundImageAsync(
-                    previewSettings,
-                    currentSnapshot,
-                    cancellationToken);
-            }
-        };
-        settings.ApplyLanguageAndTheme = async s =>
-        {
-            ApplyLanguage(s.Language);
-            SettingsAppearanceViewModel.ApplyTheme(s.ThemeMode);
-            settings.Appearance.ApplyThemeColor(
-                s.ThemeColorMode,
-                SettingsAppearanceViewModel.ParseColorOrDefault(s.CustomThemeColor));
-        };
+        settings.Appearance.GetBackgroundBitmap = getBackgroundBitmap;
+        settings.PreviewAppearanceAsync = previewAppearanceAsync;
+        settings.ApplyLanguageAndTheme = applyLanguageAndThemeAsync;
         settings.SettingsSaved += HandleSettingsSavedAsync;
 
         resourcePanel.ResourcePanelSourceConfirmRequested += ShowResourcePanelSourceConfirmDialog;
@@ -364,14 +387,9 @@ public sealed class ShellLifecycle : IDisposable
         debug.ResetSettingsConfirmationRequested += dialogs.ShowDebugResetConfirmation;
         dialogs.ConfirmDebugResetRequested += debug.ConfirmResetSettingsAsync;
 
-        remoteContent.OpenExternalUrlRequested = windowChrome.OpenExternalUrl;
+        remoteContent.OpenExternalUrlRequested = openExternalUrl;
 
-        dialogs.SetupWizard.PickGameFolderAsync = currentPath =>
-        {
-            if (settings.PickGameFolderAsync is not null)
-                return settings.PickGameFolderAsync(currentPath);
-            return Task.FromResult<string?>(null);
-        };
+        dialogs.SetupWizard.PickGameFolderAsync = pickSetupWizardGameFolderAsync;
         dialogs.SetupWizard.LanguagePreviewRequested += PreviewSetupWizardLanguage;
         dialogs.SetupWizard.SettingsApplied += HandleSetupWizardSettingsAppliedAsync;
 
@@ -414,6 +432,31 @@ public sealed class ShellLifecycle : IDisposable
         logViewer.PropertyChanged -= OnLogViewerPropertyChanged;
         debug.PropertyChanged -= OnDebugPropertyChanged;
         dialogs.PropertyChanged -= OnDialogsPropertyChanged;
+
+        if (settings.Appearance.GetBackgroundBitmap == getBackgroundBitmap)
+        {
+            settings.Appearance.GetBackgroundBitmap = null;
+        }
+
+        if (settings.PreviewAppearanceAsync == previewAppearanceAsync)
+        {
+            settings.PreviewAppearanceAsync = null;
+        }
+
+        if (settings.ApplyLanguageAndTheme == applyLanguageAndThemeAsync)
+        {
+            settings.ApplyLanguageAndTheme = null;
+        }
+
+        if (remoteContent.OpenExternalUrlRequested == openExternalUrl)
+        {
+            remoteContent.OpenExternalUrlRequested = null;
+        }
+
+        if (dialogs.SetupWizard.PickGameFolderAsync == pickSetupWizardGameFolderAsync)
+        {
+            dialogs.SetupWizard.PickGameFolderAsync = null;
+        }
     }
 
     /// <summary>Handles Escape for the active modal and returns whether a modal consumed it.</summary>

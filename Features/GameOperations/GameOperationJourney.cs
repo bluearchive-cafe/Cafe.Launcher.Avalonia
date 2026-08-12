@@ -27,6 +27,13 @@ internal sealed class GameOperationJourney : IGameOperationJourney
     /// <summary>Raised after a successful game launch requests window minimization.</summary>
     public event Action? MinimizeRequested;
 
+    /// <summary>Forwards installation running-state changes to the presentation host.</summary>
+    public event Action? IsRunningChanged
+    {
+        add => installationWorkflow.IsRunningChanged += value;
+        remove => installationWorkflow.IsRunningChanged -= value;
+    }
+
     private readonly IGameLaunchWorkflow launchWorkflow;
     private readonly IGameInstallationWorkflow installationWorkflow;
     private readonly IGameUninstallWorkflow uninstallWorkflow;

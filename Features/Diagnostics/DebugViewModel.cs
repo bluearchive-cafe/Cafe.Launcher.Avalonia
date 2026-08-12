@@ -9,6 +9,7 @@ using CommunityToolkit.Mvvm.Input;
 using Cafe.Launcher.Avalonia.Constants;
 using Cafe.Launcher.Avalonia.Features.GameOperations;
 using Cafe.Launcher.Avalonia.Features.Shell;
+using Cafe.Launcher.Avalonia.Helpers;
 using Cafe.Launcher.Avalonia.Models;
 using Cafe.Launcher.Avalonia.Services;
 using Cafe.Launcher.Avalonia.Services.Diagnostics;
@@ -365,10 +366,7 @@ public sealed partial class DebugViewModel : ViewModelBase, IModalContentViewMod
     [RelayCommand]
     private async Task RefreshStateAsync()
     {
-        if (RefreshRequested is not null)
-        {
-            await RefreshRequested.Invoke();
-        }
+        await AsyncEvent.InvokeSequentiallyAsync(RefreshRequested);
         LastActionResult = shell.I18n["debugStateRefreshTriggered"];
     }
 
@@ -402,12 +400,14 @@ public sealed partial class DebugViewModel : ViewModelBase, IModalContentViewMod
     /// <summary>Runs the reset callback after the shell has confirmed the destructive action.</summary>
     public async Task ConfirmResetSettingsAsync()
     {
-        if (ResetSettingsRequested is not null)
+        if (ResetSettingsRequested is null)
         {
-            await ResetSettingsRequested.Invoke();
-            await RefreshSettingsDisplayAsync();
-            LastActionResult = shell.I18n["debugSettingsReset"];
+            return;
         }
+
+        await AsyncEvent.InvokeSequentiallyAsync(ResetSettingsRequested);
+        await RefreshSettingsDisplayAsync();
+        LastActionResult = shell.I18n["debugSettingsReset"];
     }
 
     // ── File operations ──────────────────────────────────────────────────
