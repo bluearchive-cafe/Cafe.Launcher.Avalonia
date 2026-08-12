@@ -73,7 +73,7 @@ To build the distributable ZIP and NSIS installer, install NSIS 3 and make `make
 .\scripts\Build-Distribution.ps1
 ```
 
-GitHub Actions runs on `ubuntu-latest` with .NET `10.0.x`. The build workflow currently runs the unit-test project, then cross-builds and publishes `win-x64`; local `coverage.ps1` is the command that runs both test projects. `release.ps1` creates commits, tags, and pushes, so run it only when explicitly asked to perform a release.
+GitHub Actions uses .NET `10.0.x`. The build workflow runs on `windows-latest`: `test.ps1` executes both test projects, `coverage.ps1` enforces the merged coverage baseline, then Debug and Release `win-x64` builds and a Release publish run. The tag-triggered release workflow runs on `ubuntu-latest` and builds both distribution formats with NSIS. `release.ps1` creates commits, tags, and pushes, so run it only when explicitly asked to perform a release.
 
 ## Application architecture
 
