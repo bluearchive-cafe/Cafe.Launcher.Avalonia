@@ -22,7 +22,7 @@
                 <Border.RenderTransform>
                     <TranslateTransform/>
                 </Border.RenderTransform>
-                <Grid RowDefinitions="Auto,*,Auto" Classes="confirm-layout">
+                <Grid RowDefinitions="Auto,*,Auto" Classes="confirm-layout motion-surface-content">
                     <Grid Classes="dialog-heading" ColumnDefinitions="Auto,*,Auto">
                         <Border Classes="dialog-icon" VerticalAlignment="Center">
                             <materialIcons:MaterialIcon Kind="Web" Width="{StaticResource LauncherIconXl}" Height="{StaticResource LauncherIconXl}" Foreground="{DynamicResource LauncherAccentBrush}" HorizontalAlignment="Center" VerticalAlignment="Center"/>
@@ -211,7 +211,7 @@
                 <Border.RenderTransform>
                     <TranslateTransform/>
                 </Border.RenderTransform>
-                <Grid RowDefinitions="Auto,*,Auto" Classes="confirm-layout">
+                <Grid RowDefinitions="Auto,*,Auto" Classes="confirm-layout motion-surface-content">
                     <StackPanel Orientation="Horizontal" Spacing="{StaticResource LauncherSpacingMd}">
                         <Border Classes="dialog-icon">
                             <materialIcons:MaterialIcon Kind="InformationOutline" Width="{StaticResource LauncherIconXl}" Height="{StaticResource LauncherIconXl}" Foreground="{DynamicResource LauncherAccentBrush}" HorizontalAlignment="Center" VerticalAlignment="Center"/>
@@ -270,7 +270,7 @@
                 <Border.RenderTransform>
                     <TranslateTransform/>
                 </Border.RenderTransform>
-                <Grid RowDefinitions="Auto,*,Auto" Classes="confirm-layout">
+                <Grid RowDefinitions="Auto,*,Auto" Classes="confirm-layout motion-surface-content">
                     <Grid Classes="dialog-heading" ColumnDefinitions="Auto,*,Auto">
                         <Border Classes="dialog-icon" VerticalAlignment="Center">
                             <materialIcons:MaterialIcon Kind="Update" Width="{StaticResource LauncherIconXl}" Height="{StaticResource LauncherIconXl}" Foreground="{DynamicResource LauncherAccentBrush}" HorizontalAlignment="Center" VerticalAlignment="Center"/>
@@ -431,7 +431,7 @@
                 <Border.RenderTransform>
                     <TranslateTransform/>
                 </Border.RenderTransform>
-                <Grid RowDefinitions="Auto,Auto,Auto" Classes="confirm-layout">
+                <Grid RowDefinitions="Auto,Auto,Auto" Classes="confirm-layout motion-surface-content">
                     <Grid Classes="dialog-heading" ColumnDefinitions="Auto,*,Auto">
                         <Border Classes="dialog-icon" VerticalAlignment="Center">
                             <materialIcons:MaterialIcon Kind="AlertCircle" Width="{StaticResource LauncherIconXl}" Height="{StaticResource LauncherIconXl}"
@@ -479,7 +479,7 @@
                 <Border.RenderTransform>
                     <TranslateTransform/>
                 </Border.RenderTransform>
-                <Grid RowDefinitions="Auto,*,Auto" Classes="confirm-layout">
+                <Grid RowDefinitions="Auto,*,Auto" Classes="confirm-layout motion-surface-content">
                     <Grid Classes="dialog-heading" ColumnDefinitions="Auto,*,Auto">
                         <Border Classes="dialog-icon" VerticalAlignment="Center">
                             <materialIcons:MaterialIcon Kind="AlertCircle" Width="{StaticResource LauncherIconXl}" Height="{StaticResource LauncherIconXl}"

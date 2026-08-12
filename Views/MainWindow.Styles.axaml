@@ -461,6 +461,9 @@
     <Style Selector="Border.motion-surface">
         <Setter Property="Opacity" Value="1"/>
     </Style>
+    <Style Selector="Grid.motion-surface-content">
+        <Setter Property="Opacity" Value="1"/>
+    </Style>
     <Style Selector=":is(UserControl).motion-content">
         <Setter Property="Opacity" Value="1"/>
     </Style>
@@ -474,24 +477,34 @@
         <Style.Animations>
             <Animation Duration="{StaticResource LauncherMotionFastDuration}" FillMode="Forward" Easing="{StaticResource LauncherMotionEnterEasing}">
                 <KeyFrame Cue="0%">
-                    <Setter Property="Opacity" Value="0"/>
+                    <Setter Property="Background" Value="{DynamicResource LauncherTransparentBrush}"/>
                 </KeyFrame>
                 <KeyFrame Cue="100%">
-                    <Setter Property="Opacity" Value="1"/>
+                    <Setter Property="Background" Value="{DynamicResource LauncherOverlayBrush}"/>
                 </KeyFrame>
             </Animation>
         </Style.Animations>
     </Style>
     <Style Selector="Grid.motion-overlay.motion-enabled.motion-enter > Border.motion-surface">
         <Style.Animations>
-            <Animation Duration="{StaticResource LauncherMotionNormalDuration}" FillMode="Forward" Easing="{StaticResource LauncherMotionEnterEasing}" Delay="{StaticResource LauncherMotionOverlayDelay}">
+            <Animation Duration="{StaticResource LauncherMotionNormalDuration}" FillMode="Forward" Easing="{StaticResource LauncherMotionEnterEasing}">
                 <KeyFrame Cue="0%">
-                    <Setter Property="Opacity" Value="0"/>
                     <Setter Property="TranslateTransform.Y" Value="{StaticResource LauncherMotionSurfaceOffset}"/>
                 </KeyFrame>
                 <KeyFrame Cue="100%">
-                    <Setter Property="Opacity" Value="1"/>
                     <Setter Property="TranslateTransform.Y" Value="0"/>
+                </KeyFrame>
+            </Animation>
+        </Style.Animations>
+    </Style>
+    <Style Selector="Grid.motion-overlay.motion-enabled.motion-enter > Border.motion-surface > Grid.motion-surface-content">
+        <Style.Animations>
+            <Animation Duration="{StaticResource LauncherMotionNormalDuration}" FillMode="Forward" Easing="{StaticResource LauncherMotionEnterEasing}">
+                <KeyFrame Cue="0%">
+                    <Setter Property="Opacity" Value="0"/>
+                </KeyFrame>
+                <KeyFrame Cue="100%">
+                    <Setter Property="Opacity" Value="1"/>
                 </KeyFrame>
             </Animation>
         </Style.Animations>
@@ -500,10 +513,10 @@
         <Style.Animations>
             <Animation Duration="{StaticResource LauncherMotionFastDuration}" FillMode="Forward" Easing="{StaticResource LauncherMotionExitEasing}">
                 <KeyFrame Cue="0%">
-                    <Setter Property="Opacity" Value="1"/>
+                    <Setter Property="Background" Value="{DynamicResource LauncherOverlayBrush}"/>
                 </KeyFrame>
                 <KeyFrame Cue="100%">
-                    <Setter Property="Opacity" Value="0"/>
+                    <Setter Property="Background" Value="{DynamicResource LauncherTransparentBrush}"/>
                 </KeyFrame>
             </Animation>
         </Style.Animations>
@@ -512,12 +525,22 @@
         <Style.Animations>
             <Animation Duration="{StaticResource LauncherMotionFastDuration}" FillMode="Forward" Easing="{StaticResource LauncherMotionExitEasing}">
                 <KeyFrame Cue="0%">
-                    <Setter Property="Opacity" Value="1"/>
                     <Setter Property="TranslateTransform.Y" Value="0"/>
                 </KeyFrame>
                 <KeyFrame Cue="100%">
-                    <Setter Property="Opacity" Value="0"/>
                     <Setter Property="TranslateTransform.Y" Value="{StaticResource LauncherMotionSurfaceOffset}"/>
+                </KeyFrame>
+            </Animation>
+        </Style.Animations>
+    </Style>
+    <Style Selector="Grid.motion-overlay.motion-enabled.motion-exit > Border.motion-surface > Grid.motion-surface-content">
+        <Style.Animations>
+            <Animation Duration="{StaticResource LauncherMotionFastDuration}" FillMode="Forward" Easing="{StaticResource LauncherMotionExitEasing}">
+                <KeyFrame Cue="0%">
+                    <Setter Property="Opacity" Value="1"/>
+                </KeyFrame>
+                <KeyFrame Cue="100%">
+                    <Setter Property="Opacity" Value="0"/>
                 </KeyFrame>
             </Animation>
         </Style.Animations>
