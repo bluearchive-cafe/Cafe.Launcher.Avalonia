@@ -849,6 +849,11 @@ public sealed class GameOperationsViewModelTests
             Path.Combine(Path.GetTempPath(), Guid.NewGuid().ToString("N"), "notices.json")),
             new SetupWizardViewModel(localizer, new GameInstallationPath(), new LocalInstallationStateStore(), new LocalDiagnostics()));
         var backend = new TestBackend();
+        var errorHandling = new ErrorHandlingService(
+            localizer,
+            new LocalDiagnostics(),
+            toastService);
+        errorHandling.OperationNoteRequested += note => shell.OperationNote = note;
         var viewModel = new GameOperationsViewModel(
             backend,
             backend,
@@ -859,7 +864,7 @@ public sealed class GameOperationsViewModelTests
             shell,
             dialogs,
             _ => Task.CompletedTask,
-            new ErrorHandlingService(localizer, new LocalDiagnostics(), toastService));
+            errorHandling);
         return new TestContext(viewModel, backend, shell, dialogs, toastService, localizer);
     }
 

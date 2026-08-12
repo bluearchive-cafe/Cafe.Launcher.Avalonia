@@ -52,6 +52,7 @@ public sealed class FileDownloadService : IFileDownloadService
         var httpClient = control.HttpClient;
         var pauseAwaiter = control.WaitWhilePausedAsync;
         var onProgressAsync = control.ReportProgressAsync;
+        var onProgressResetAsync = control.ReportProgressResetAsync;
         var connectionUsesProxy = control.ConnectionUsesProxy;
         var targetDirectory = Path.GetDirectoryName(targetTempPath);
         if (!string.IsNullOrWhiteSpace(targetDirectory))
@@ -140,6 +141,7 @@ public sealed class FileDownloadService : IFileDownloadService
 
                 var downloadedLength = new FileInfo(targetTempPath).Length;
                 File.Delete(targetTempPath);
+                await onProgressResetAsync(cancellationToken).ConfigureAwait(false);
 
                 await diagnostics.MessageAsync(
                     "CRC64 mismatch after download",
@@ -159,7 +161,24 @@ public sealed class FileDownloadService : IFileDownloadService
             {
                 if (ex is InvalidDataException || ex is not (HttpRequestException or IOException))
                 {
-                    try { File.Delete(targetTempPath); } catch { /* best-effort */ }
+                    var deleted = false;
+                    try
+                    {
+                        if (File.Exists(targetTempPath))
+                        {
+                            File.Delete(targetTempPath);
+                            deleted = true;
+                        }
+                    }
+                    catch
+                    {
+                        // Best-effort cleanup; preserve the original transfer exception.
+                    }
+
+                    if (deleted)
+                    {
+                        await onProgressResetAsync(cancellationToken).ConfigureAwait(false);
+                    }
                 }
 
                 lastError = ex;
@@ -194,6 +213,7 @@ public sealed class FileDownloadService : IFileDownloadService
                 httpClient,
                 pauseAwaiter,
                 onProgressAsync,
+                ct => onProgressAsync(0, ct),
                 connectionUsesProxy),
             cancellationToken);
 

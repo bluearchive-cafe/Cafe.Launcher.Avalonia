@@ -18,9 +18,13 @@ internal sealed class DownloadProgressAccumulator
     private long lastReportTimestamp;
     private bool completionReported;
 
-    internal DownloadProgressAccumulator(long totalSize, TimeSpan reportInterval)
+    internal DownloadProgressAccumulator(
+        long totalSize,
+        long initialDownloadedSize,
+        TimeSpan reportInterval)
         : this(
             totalSize,
+            initialDownloadedSize,
             Stopwatch.GetTimestamp(),
             Stopwatch.Frequency,
             Math.Max(1, (long)(reportInterval.TotalSeconds * Stopwatch.Frequency)))
@@ -29,58 +33,115 @@ internal sealed class DownloadProgressAccumulator
 
     internal DownloadProgressAccumulator(
         long totalSize,
+        long initialDownloadedSize,
         long initialTimestamp,
         long timestampFrequency,
         long reportIntervalTicks)
     {
         ArgumentOutOfRangeException.ThrowIfNegative(totalSize);
+        ArgumentOutOfRangeException.ThrowIfNegative(initialDownloadedSize);
         ArgumentOutOfRangeException.ThrowIfNegativeOrZero(timestampFrequency);
         ArgumentOutOfRangeException.ThrowIfNegativeOrZero(reportIntervalTicks);
 
         this.totalSize = totalSize;
         this.timestampFrequency = timestampFrequency;
         this.reportIntervalTicks = reportIntervalTicks;
+        downloadedSize = Math.Min(initialDownloadedSize, totalSize);
         lastReportTimestamp = initialTimestamp;
     }
 
     internal bool TryRecord(
-        long bytes,
+        long transferredBytes,
+        long downloadedBytesDelta,
         bool paused,
         out DownloadProgressSnapshot snapshot)
     {
         lock (sync)
         {
-            return TryRecordCore(bytes, paused, Stopwatch.GetTimestamp(), out snapshot);
+            return TryRecordCore(
+                transferredBytes,
+                downloadedBytesDelta,
+                paused,
+                Stopwatch.GetTimestamp(),
+                out snapshot);
         }
     }
 
     /// <summary>Records a transfer at a supplied timestamp for deterministic tests.</summary>
     internal bool TryRecordAt(
-        long bytes,
+        long transferredBytes,
+        long downloadedBytesDelta,
         bool paused,
         long timestamp,
         out DownloadProgressSnapshot snapshot)
     {
         lock (sync)
         {
-            return TryRecordCore(bytes, paused, timestamp, out snapshot);
+            return TryRecordCore(
+                transferredBytes,
+                downloadedBytesDelta,
+                paused,
+                timestamp,
+                out snapshot);
+        }
+    }
+
+    internal DownloadProgressSnapshot GetCurrentSnapshot()
+    {
+        lock (sync)
+        {
+            return new DownloadProgressSnapshot(downloadedSize, 0);
+        }
+    }
+
+    internal void Pause()
+    {
+        lock (sync)
+        {
+            bytesSinceLastReport = 0;
+        }
+    }
+
+    internal void Resume()
+    {
+        lock (sync)
+        {
+            bytesSinceLastReport = 0;
+            lastReportTimestamp = Stopwatch.GetTimestamp();
+        }
+    }
+
+    /// <summary>Resumes sampling at a supplied timestamp for deterministic tests.</summary>
+    internal void ResumeAt(long timestamp)
+    {
+        lock (sync)
+        {
+            bytesSinceLastReport = 0;
+            lastReportTimestamp = timestamp;
         }
     }
 
     private bool TryRecordCore(
-        long bytes,
+        long transferredBytes,
+        long downloadedBytesDelta,
         bool paused,
         long timestamp,
         out DownloadProgressSnapshot snapshot)
     {
-        ArgumentOutOfRangeException.ThrowIfNegative(bytes);
+        ArgumentOutOfRangeException.ThrowIfNegative(transferredBytes);
 
-        downloadedSize += bytes;
-        bytesSinceLastReport += bytes;
+        downloadedSize = Math.Clamp(downloadedSize + downloadedBytesDelta, 0, totalSize);
+        bytesSinceLastReport += transferredBytes;
 
         var elapsedTicks = timestamp - lastReportTimestamp;
+        if (downloadedSize < totalSize)
+        {
+            completionReported = false;
+        }
+
         var completed = downloadedSize >= totalSize && !completionReported;
-        if (!completed && elapsedTicks < reportIntervalTicks)
+        var progressRolledBack = downloadedBytesDelta < 0;
+        if (!completed && !progressRolledBack && elapsedTicks < reportIntervalTicks)
         {
             snapshot = default;
             return false;

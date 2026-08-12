@@ -100,8 +100,7 @@ public static class ServiceConfiguration
             sp.GetRequiredService<IGameOperationJourneyFactory>(),
             sp.GetRequiredService<LocalizationService>(),
             sp.GetRequiredService<ShellViewModel>(),
-            sp.GetRequiredService<DialogsViewModel>(),
-            sp.GetRequiredService<IErrorHandlingService>()));
+            sp.GetRequiredService<DialogsViewModel>()));
         services.AddSingleton<DebugViewModel>();
         services.AddSingleton<ToastHostViewModel>();
         services.AddSingleton<WindowChromeViewModel>();
