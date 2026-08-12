@@ -1,5 +1,6 @@
 using Cafe.Launcher.Avalonia.Features.Shell;
 using Cafe.Launcher.Avalonia.Features.GameOperations;
+using Cafe.Launcher.Avalonia.Features.Settings;
 using Cafe.Launcher.Avalonia.Composition;
 using Cafe.Launcher.Avalonia.Models;
 using Cafe.Launcher.Avalonia.Services;
@@ -94,6 +95,42 @@ public sealed class ServiceConfigurationTests : IDisposable
         Assert.Same(provider.GetRequiredService<ShellViewModel>(), viewModel.Shell);
         Assert.Same(provider.GetRequiredService<RemoteContentViewModel>(), viewModel.RemoteContent);
         Assert.Same(provider.GetRequiredService<GameOperationsViewModel>(), viewModel.Operations);
+    }
+
+    [Fact]
+    public void AddLauncherServices_RegistersShellRuntimeThroughOneDisposableServiceDescriptor()
+    {
+        var services = CreateServices();
+
+        var runtimeDescriptor = Assert.Single(
+            services,
+            descriptor => descriptor.ServiceType == typeof(IShellRuntime));
+
+        Assert.Equal(typeof(ShellRuntime), runtimeDescriptor.ImplementationType);
+        Assert.DoesNotContain(
+            services,
+            descriptor => descriptor.ServiceType == typeof(ShellRuntime));
+    }
+
+    [Fact]
+    public async Task MainWindowViewModel_Dispose_LeavesContainerOwnedViewModelsForProvider()
+    {
+        var services = CreateServices();
+        await using var provider = services.BuildServiceProvider();
+        var viewModel = provider.GetRequiredService<MainWindowViewModel>();
+        var notificationCount = 0;
+        viewModel.Settings.PropertyChanged += (_, eventArgs) =>
+        {
+            if (eventArgs.PropertyName == nameof(SettingsViewModel.IsSettingsDirty))
+            {
+                notificationCount++;
+            }
+        };
+
+        viewModel.Dispose();
+        viewModel.Settings.Editor.Current.Language = LauncherLanguages.Japanese;
+
+        Assert.Equal(1, notificationCount);
     }
 
     public void Dispose()

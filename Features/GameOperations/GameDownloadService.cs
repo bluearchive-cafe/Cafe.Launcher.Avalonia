@@ -261,8 +261,10 @@ public sealed class GameDownloadService : IDisposable
         {
             if (registered)
             {
-                ClearActiveSession(session);
-                IsRunningChanged?.Invoke();
+                if (ClearActiveSession(session))
+                {
+                    IsRunningChanged?.Invoke();
+                }
             }
             else
             {
@@ -284,17 +286,20 @@ public sealed class GameDownloadService : IDisposable
         previous?.Stop();
     }
 
-    private void ClearActiveSession(DownloadSession session)
+    private bool ClearActiveSession(DownloadSession session)
     {
+        var cleared = false;
         lock (activeDownloadLock)
         {
             if (ReferenceEquals(activeSession, session))
             {
                 activeSession = null;
+                cleared = true;
             }
         }
 
         session.Dispose();
+        return cleared;
     }
 
     private void ThrowIfDisposed()

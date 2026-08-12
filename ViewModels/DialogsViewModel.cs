@@ -368,6 +368,7 @@ public partial class DialogsViewModel : ViewModelBase, IModalContentViewModel
     [RelayCommand]
     private async Task ConfirmUninstallAsync()
     {
+        IsUninstallConfirmVisible = false;
         await AsyncEvent.InvokeSequentiallyAsync(ConfirmUninstallRequested);
     }
 

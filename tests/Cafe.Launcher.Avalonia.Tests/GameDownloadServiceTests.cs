@@ -513,6 +513,8 @@ public sealed class GameDownloadServiceTests
         var downloader = new WritingFileDownloadService(fileBytes);
         using var service = CreateService(apiClient, settingsService, statePath, downloader);
         var progress = new List<GameOperationProgress>();
+        var runningStates = new List<bool>();
+        service.IsRunningChanged += () => runningStates.Add(service.IsRunning);
         var snapshot = CreateSnapshot(gamePath);
         snapshot.RuntimeState = LauncherRuntimeState.NotInstalled;
 
@@ -529,6 +531,7 @@ public sealed class GameDownloadServiceTests
             file => file.Path == "data/file.bin" && file.Hash == expectedHash);
         Assert.Contains(progress, item =>
             item.Stage == GameOperationStage.DownloadCompleted && item.Progress == 100);
+        Assert.Equal([true, false], runningStates);
         Assert.False(File.Exists(statePath));
         Directory.Delete(tempDir, recursive: true);
     }
@@ -588,6 +591,8 @@ public sealed class GameDownloadServiceTests
         var downloader = new ControlledFileDownloadService(fileBytes);
         using var service = CreateService(apiClient, settingsService, statePath, downloader);
         var progress = new List<GameOperationProgress>();
+        var runningStates = new List<bool>();
+        service.IsRunningChanged += () => runningStates.Add(service.IsRunning);
         var snapshot = CreateSnapshot(gamePath);
         snapshot.RuntimeState = LauncherRuntimeState.NotInstalled;
 
@@ -604,6 +609,7 @@ public sealed class GameDownloadServiceTests
         Assert.Equal(GameOperationErrorCode.Stopped, result.ErrorCode);
         Assert.False(service.IsRunning);
         Assert.False(service.IsPaused);
+        Assert.Equal([true, false], runningStates);
         Assert.Contains(progress, item => item.Stage == GameOperationStage.Stopped);
         Assert.Equal(expectedStateFileExists, File.Exists(statePath));
         Directory.Delete(tempDir, recursive: true);

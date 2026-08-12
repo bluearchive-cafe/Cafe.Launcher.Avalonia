@@ -23,6 +23,9 @@ internal interface IGameOperationJourney
     /// <summary>Raised when a successful launch should minimize the launcher.</summary>
     event Action? MinimizeRequested;
 
+    /// <summary>Raised when the underlying installation workflow starts or stops running.</summary>
+    event Action? IsRunningChanged;
+
     /// <summary>Gets whether an installation workflow is active.</summary>
     bool IsDownloadRunning { get; }
 

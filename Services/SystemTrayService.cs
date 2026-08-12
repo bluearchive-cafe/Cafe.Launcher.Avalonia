@@ -107,7 +107,7 @@ public sealed class SystemTrayService : IDisposable
 
         if (Application.Current?.ApplicationLifetime is IClassicDesktopStyleApplicationLifetime desktop)
         {
-            desktop.Shutdown();
+            desktop.TryShutdown();
         }
     }
 

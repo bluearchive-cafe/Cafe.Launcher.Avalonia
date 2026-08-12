@@ -68,6 +68,20 @@ public sealed class DebugViewModelTests : IDisposable
     }
 
     [Fact]
+    public async Task InstallationRunningChanged_WhenJourneyForwardsEvent_UpdatesDebugState()
+    {
+        using var context = CreateContext();
+        await context.ViewModel.OpenCommand.ExecuteAsync(null);
+
+        Assert.True(context.ViewModel.IsDownloadRunning);
+
+        context.Backend.IsRunning = false;
+
+        Assert.False(context.ViewModel.IsDownloadRunning);
+        Assert.Equal(context.Localizer.T("debugIdle"), context.ViewModel.DownloadStatusText);
+    }
+
+    [Fact]
     public async Task TestActionToastCommand_RaisesPrimarySuccessAndSecondaryFailureActions()
     {
         using var context = CreateContext();
@@ -108,6 +122,62 @@ public sealed class DebugViewModelTests : IDisposable
         await context.ViewModel.ConfirmResetSettingsAsync();
 
         Assert.Equal(1, resetCount);
+    }
+
+    [Fact]
+    public async Task RefreshStateCommand_AwaitsSubscribersStrictlyInRegistrationOrder()
+    {
+        using var context = CreateContext();
+        var sequence = new List<string>();
+        var firstSubscriberRelease = new TaskCompletionSource(
+            TaskCreationOptions.RunContinuationsAsynchronously);
+        context.ViewModel.RefreshRequested += async () =>
+        {
+            sequence.Add("first-start");
+            await firstSubscriberRelease.Task;
+            sequence.Add("first-end");
+        };
+        context.ViewModel.RefreshRequested += () =>
+        {
+            sequence.Add("second");
+            return Task.CompletedTask;
+        };
+
+        var commandTask = context.ViewModel.RefreshStateCommand.ExecuteAsync(null);
+        await Task.Yield();
+
+        Assert.Equal(["first-start"], sequence);
+        firstSubscriberRelease.SetResult();
+        await commandTask;
+        Assert.Equal(["first-start", "first-end", "second"], sequence);
+    }
+
+    [Fact]
+    public async Task ConfirmResetSettingsAsync_AwaitsSubscribersStrictlyInRegistrationOrder()
+    {
+        using var context = CreateContext();
+        var sequence = new List<string>();
+        var firstSubscriberRelease = new TaskCompletionSource(
+            TaskCreationOptions.RunContinuationsAsynchronously);
+        context.ViewModel.ResetSettingsRequested += async () =>
+        {
+            sequence.Add("first-start");
+            await firstSubscriberRelease.Task;
+            sequence.Add("first-end");
+        };
+        context.ViewModel.ResetSettingsRequested += () =>
+        {
+            sequence.Add("second");
+            return Task.CompletedTask;
+        };
+
+        var resetTask = context.ViewModel.ConfirmResetSettingsAsync();
+        await Task.Yield();
+
+        Assert.Equal(["first-start"], sequence);
+        firstSubscriberRelease.SetResult();
+        await resetTask;
+        Assert.Equal(["first-start", "first-end", "second"], sequence);
     }
 
     public void Dispose()
@@ -155,12 +225,13 @@ public sealed class DebugViewModelTests : IDisposable
             new LauncherSettingsService(tempDir),
             operations,
             shell);
-        return new TestContext(viewModel, operations, logger, toastService, localizer);
+        return new TestContext(viewModel, operations, backend, logger, toastService, localizer);
     }
 
     private sealed record TestContext(
         DebugViewModel ViewModel,
         GameOperationsViewModel Operations,
+        TestBackend Backend,
         UnifiedLogger Logger,
         ToastService ToastService,
         LocalizationService Localizer) : IDisposable
@@ -176,9 +247,23 @@ public sealed class DebugViewModelTests : IDisposable
         IGameInstallationWorkflow,
         IGameUninstallWorkflow
     {
-        public bool IsRunning { get; set; }
+        private bool isRunning;
+        public bool IsRunning
+        {
+            get => isRunning;
+            set
+            {
+                if (isRunning == value)
+                {
+                    return;
+                }
+
+                isRunning = value;
+                IsRunningChanged?.Invoke();
+            }
+        }
         public bool IsPaused { get; private set; }
-        public event Action? IsRunningChanged { add { } remove { } }
+        public event Action? IsRunningChanged;
 
         public Task<GameLaunchResult> StartGameAsync(LauncherStatusSnapshot snapshot) =>
             Task.FromResult(new GameLaunchResult { Validation = new ManifestValidationResult() });

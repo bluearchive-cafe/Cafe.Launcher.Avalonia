@@ -21,6 +21,8 @@ public partial class GameOperationsViewModel : ViewModelBase, IGameOperationJour
     private readonly DialogsViewModel dialogs;
     private readonly ShellViewModel shell;
     private LauncherStatusSnapshot? currentSnapshot;
+    private long runningStateVersion;
+    private bool disposed;
 
     [ObservableProperty]
     [NotifyPropertyChangedFor(nameof(IsInstallPanelVisible))]
@@ -159,6 +161,7 @@ public partial class GameOperationsViewModel : ViewModelBase, IGameOperationJour
         this.dialogs = dialogs;
         this.shell = shell;
         journey = journeyFactory.Create(this);
+        journey.IsRunningChanged += OnInstallationIsRunningChanged;
         dialogs.ConfirmRepairRequested += RepairAsync;
         dialogs.ConfirmUninstallRequested += ConfirmUninstallAsync;
         dialogs.ConfirmStopRequested += PerformStop;
@@ -413,8 +416,42 @@ public partial class GameOperationsViewModel : ViewModelBase, IGameOperationJour
         };
     }
 
+    private void OnInstallationIsRunningChanged()
+    {
+        var version = Interlocked.Increment(ref runningStateVersion);
+        if (disposed)
+        {
+            return;
+        }
+
+        if (!Dispatcher.UIThread.CheckAccess() && Application.Current is not null)
+        {
+            Dispatcher.UIThread.Post(() => NotifyDownloadRunningChanged(version));
+            return;
+        }
+
+        NotifyDownloadRunningChanged(version);
+    }
+
+    private void NotifyDownloadRunningChanged(long version)
+    {
+        if (disposed || version != Interlocked.Read(ref runningStateVersion))
+        {
+            return;
+        }
+
+        OnPropertyChanged(nameof(IsDownloadRunning));
+    }
+
     public void Dispose()
     {
+        if (disposed)
+        {
+            return;
+        }
+
+        disposed = true;
+        journey.IsRunningChanged -= OnInstallationIsRunningChanged;
         dialogs.ConfirmRepairRequested -= RepairAsync;
         dialogs.ConfirmUninstallRequested -= ConfirmUninstallAsync;
         dialogs.ConfirmStopRequested -= PerformStop;

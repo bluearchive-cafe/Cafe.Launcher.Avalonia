@@ -40,6 +40,26 @@ public sealed class MainWindowViewModelTests : IDisposable
         Assert.Equal(0, notificationCount);
     }
 
+    [Fact]
+    public async Task Dispose_UnhooksLifecycleCoordinationDelegates()
+    {
+        var viewModel = await CreateViewModelAsync(new CountingCoreService(CreateSnapshot()));
+
+        Assert.NotNull(viewModel.Settings.Appearance.GetBackgroundBitmap);
+        Assert.NotNull(viewModel.Settings.PreviewAppearanceAsync);
+        Assert.NotNull(viewModel.Settings.ApplyLanguageAndTheme);
+        Assert.NotNull(viewModel.RemoteContent.OpenExternalUrlRequested);
+        Assert.NotNull(viewModel.Dialogs.SetupWizard.PickGameFolderAsync);
+
+        viewModel.Dispose();
+
+        Assert.Null(viewModel.Settings.Appearance.GetBackgroundBitmap);
+        Assert.Null(viewModel.Settings.PreviewAppearanceAsync);
+        Assert.Null(viewModel.Settings.ApplyLanguageAndTheme);
+        Assert.Null(viewModel.RemoteContent.OpenExternalUrlRequested);
+        Assert.Null(viewModel.Dialogs.SetupWizard.PickGameFolderAsync);
+    }
+
     static MainWindowViewModelTests()
     {
         TestLocalizationHelper.Initialize();
@@ -237,6 +257,26 @@ public sealed class MainWindowViewModelTests : IDisposable
         Assert.False(viewModel.IsBusy);
         Assert.False(viewModel.RemoteContent.IsLoading);
         Assert.True(viewModel.RemoteContent.IsPanelVisible);
+    }
+
+    [Fact]
+    public async Task PrepareForShutdownAsync_WhileRefreshIsPending_CancelsAndDrainsRefresh()
+    {
+        var coreService = new BlockingSecondLoadCoreService(CreateSnapshot());
+        using var viewModel = await CreateViewModelAsync(coreService);
+        await viewModel.InitializeAsync();
+
+        Task refreshTask = viewModel.RefreshCommand.ExecuteAsync(null);
+        await coreService.SecondLoadStarted.Task.WaitAsync(TimeSpan.FromSeconds(2));
+
+        await viewModel.PrepareForShutdownAsync().WaitAsync(TimeSpan.FromSeconds(2));
+        await refreshTask.WaitAsync(TimeSpan.FromSeconds(2));
+        await viewModel.HandleOperationsRefreshRequestedAsync(
+            GameOperationsRefreshMode.SkipPersistedResume);
+
+        Assert.Equal(2, coreService.LoadCount);
+        Assert.False(viewModel.IsBusy);
+        Assert.False(viewModel.RemoteContent.IsLoading);
     }
 
     [Fact]
@@ -2290,6 +2330,8 @@ public sealed class MainWindowViewModelTests : IDisposable
 
         public TaskCompletionSource ReleaseSecondLoad { get; } =
             new(TaskCreationOptions.RunContinuationsAsynchronously);
+
+        public int LoadCount => Volatile.Read(ref loadCount);
 
         public async Task<LauncherStatusSnapshot> LoadAsync(CancellationToken cancellationToken = default)
         {

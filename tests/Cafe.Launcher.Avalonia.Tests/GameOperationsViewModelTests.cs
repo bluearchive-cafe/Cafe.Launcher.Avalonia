@@ -426,6 +426,30 @@ public sealed class GameOperationsViewModelTests
     }
 
     [Fact]
+    public void InstallationRunningChanged_NotifiesObserversUntilViewModelIsDisposed()
+    {
+        var context = CreateContext();
+        var notificationCount = 0;
+        context.ViewModel.PropertyChanged += (_, eventArgs) =>
+        {
+            if (eventArgs.PropertyName == nameof(GameOperationsViewModel.IsDownloadRunning))
+            {
+                notificationCount++;
+            }
+        };
+
+        context.Backend.IsDownloadRunning = true;
+
+        Assert.Equal(1, notificationCount);
+        Assert.True(context.ViewModel.IsDownloadRunning);
+
+        context.ViewModel.Dispose();
+        context.Backend.IsDownloadRunning = false;
+
+        Assert.Equal(1, notificationCount);
+    }
+
+    [Fact]
     public async Task RequestUninstallCommand_WhenValidationSucceeds_ShowsConfirmation()
     {
         var context = CreateContext();
@@ -888,8 +912,22 @@ public sealed class GameOperationsViewModelTests
         IGameInstallationWorkflow,
         IGameUninstallWorkflow
     {
-        public event Action? IsRunningChanged { add { } remove { } }
-        public bool IsDownloadRunning { get; set; }
+        public event Action? IsRunningChanged;
+        private bool isDownloadRunning;
+        public bool IsDownloadRunning
+        {
+            get => isDownloadRunning;
+            set
+            {
+                if (isDownloadRunning == value)
+                {
+                    return;
+                }
+
+                isDownloadRunning = value;
+                IsRunningChanged?.Invoke();
+            }
+        }
         public bool IsRunning => IsDownloadRunning;
         public bool IsPaused { get; set; }
         public int InstallInvocationCount { get; private set; }

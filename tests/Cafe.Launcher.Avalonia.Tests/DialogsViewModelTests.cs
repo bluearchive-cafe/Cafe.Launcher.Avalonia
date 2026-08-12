@@ -167,6 +167,7 @@ public sealed class DialogsViewModelTests
         Assert.True(switchSource);
         Assert.True(closeAfterStop);
         Assert.False(viewModel.IsRepairConfirmVisible);
+        Assert.False(viewModel.IsUninstallConfirmVisible);
         Assert.False(viewModel.IsStopConfirmVisible);
         Assert.False(viewModel.IsResourcePanelSourceConfirmVisible);
         Assert.False(viewModel.IsDownloadRunningCloseConfirmVisible);
