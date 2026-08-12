@@ -3049,16 +3049,21 @@ public sealed partial class UiStyleContractTests
     {
         var document = XDocument.Load(ProjectFile("Views/MainWindow.Styles.axaml"));
 
-        AssertMotionAnimation(
+        AssertOverlayBrushAnimation(
             document,
             "Grid.motion-overlay.motion-enabled.motion-enter",
-            "{StaticResource LauncherMotionFastDuration}",
-            expectedStartOffset: null);
+            "{StaticResource LauncherMotionFastDuration}");
         AssertMotionAnimation(
             document,
             "Grid.motion-overlay.motion-enabled.motion-enter > Border.motion-surface",
             "{StaticResource LauncherMotionNormalDuration}",
-            expectedStartOffset: "{StaticResource LauncherMotionSurfaceOffset}");
+            expectedStartOffset: "{StaticResource LauncherMotionSurfaceOffset}",
+            expectsOpacity: false);
+        AssertMotionAnimation(
+            document,
+            "Grid.motion-overlay.motion-enabled.motion-enter > Border.motion-surface > Grid.motion-surface-content",
+            "{StaticResource LauncherMotionNormalDuration}",
+            expectedStartOffset: null);
         AssertMotionAnimation(
             document,
             ":is(UserControl).motion-content.motion-enabled.motion-enter",
@@ -3074,19 +3079,24 @@ public sealed partial class UiStyleContractTests
             "Border.motion-bottom.motion-enabled.motion-enter",
             "{StaticResource LauncherMotionNormalDuration}",
             expectedStartOffset: "{StaticResource LauncherMotionBottomOffset}");
-        AssertExitMotionAnimation(
+        AssertOverlayBrushExitAnimation(
             document,
-            "Grid.motion-overlay.motion-enabled.motion-exit",
-            expectedEndOffset: null);
+            "Grid.motion-overlay.motion-enabled.motion-exit");
         AssertExitMotionAnimation(
             document,
             "Grid.motion-overlay.motion-enabled.motion-exit > Border.motion-surface",
-            expectedEndOffset: "{StaticResource LauncherMotionSurfaceOffset}");
+            expectedEndOffset: "{StaticResource LauncherMotionSurfaceOffset}",
+            expectsOpacity: false);
+        AssertExitMotionAnimation(
+            document,
+            "Grid.motion-overlay.motion-enabled.motion-exit > Border.motion-surface > Grid.motion-surface-content",
+            expectedEndOffset: null);
 
         foreach (var selector in new[]
                  {
                      "Grid.motion-overlay",
                      "Border.motion-surface",
+                     "Grid.motion-surface-content",
                      ":is(UserControl).motion-content",
                      "StackPanel.motion-content",
                      "Border.motion-bottom",
@@ -3147,6 +3157,10 @@ public sealed partial class UiStyleContractTests
             var surface = element.Elements().First();
             Assert.True(HasClass(surface, "motion-surface"));
             AssertHasLocalTranslateTransform(surface);
+            var surfaceContent = surface
+                .Elements()
+                .Single(child => child.Name.LocalName == "Grid");
+            Assert.True(HasClass(surfaceContent, "motion-surface-content"));
         });
 
         var settings = XDocument.Load(ProjectFile("Views/MainWindowSettingsOverlay.axaml"));
@@ -3368,45 +3382,61 @@ public sealed partial class UiStyleContractTests
             child => child.Name.LocalName == "TranslateTransform");
     }
 
+    private static void AssertOverlayBrushAnimation(
+        XDocument document,
+        string selector,
+        string expectedDuration)
+    {
+        var animation = GetMotionAnimation(document, selector);
+        Assert.Equal(expectedDuration, animation.Attribute("Duration")?.Value);
+        Assert.Equal("Forward", animation.Attribute("FillMode")?.Value);
+        Assert.Equal("{StaticResource LauncherMotionEnterEasing}", animation.Attribute("Easing")?.Value);
+
+        var keyFrames = GetAnimationKeyFrames(animation);
+        AssertAnimationProperty(
+            keyFrames,
+            "Background",
+            "{DynamicResource LauncherTransparentBrush}",
+            "{DynamicResource LauncherOverlayBrush}");
+        AssertAnimationProperty(keyFrames, "Opacity", null, null);
+    }
+
+    private static void AssertOverlayBrushExitAnimation(XDocument document, string selector)
+    {
+        var animation = GetMotionAnimation(document, selector);
+        Assert.Equal("{StaticResource LauncherMotionFastDuration}", animation.Attribute("Duration")?.Value);
+        Assert.Equal("Forward", animation.Attribute("FillMode")?.Value);
+        Assert.Equal("{StaticResource LauncherMotionExitEasing}", animation.Attribute("Easing")?.Value);
+
+        var keyFrames = GetAnimationKeyFrames(animation);
+        AssertAnimationProperty(
+            keyFrames,
+            "Background",
+            "{DynamicResource LauncherOverlayBrush}",
+            "{DynamicResource LauncherTransparentBrush}");
+        AssertAnimationProperty(keyFrames, "Opacity", null, null);
+    }
+
     private static void AssertMotionAnimation(
         XDocument document,
         string selector,
         string expectedDuration,
         string? expectedStartOffset,
-        string expectedStartAxis = "TranslateTransform.Y")
+        string expectedStartAxis = "TranslateTransform.Y",
+        bool expectsOpacity = true)
     {
-        var style = document
-            .Descendants()
-            .Single(element =>
-                element.Name.LocalName == "Style"
-                && element.Attribute("Selector")?.Value == selector);
-        var animation = style
-            .Descendants()
-            .Single(element => element.Name.LocalName == "Animation");
+        var animation = GetMotionAnimation(document, selector);
         Assert.Equal(expectedDuration, animation.Attribute("Duration")?.Value);
         Assert.Equal("Forward", animation.Attribute("FillMode")?.Value);
         Assert.Equal("{StaticResource LauncherMotionEnterEasing}", animation.Attribute("Easing")?.Value);
+        Assert.Null(animation.Attribute("Delay"));
 
-        var keyFrames = animation
-            .Elements()
-            .Where(element => element.Name.LocalName == "KeyFrame")
-            .ToDictionary(
-                element => element.Attribute("Cue")?.Value ?? "",
-                element => element,
-                StringComparer.Ordinal);
-        Assert.Equal(2, keyFrames.Count);
-        Assert.Equal(
-            "0",
-            keyFrames["0%"]
-                .Elements()
-                .Single(element => element.Attribute("Property")?.Value == "Opacity")
-                .Attribute("Value")?.Value);
-        Assert.Equal(
-            "1",
-            keyFrames["100%"]
-                .Elements()
-                .Single(element => element.Attribute("Property")?.Value == "Opacity")
-                .Attribute("Value")?.Value);
+        var keyFrames = GetAnimationKeyFrames(animation);
+        AssertAnimationProperty(
+            keyFrames,
+            "Opacity",
+            expectsOpacity ? "0" : null,
+            expectsOpacity ? "1" : null);
 
         if (expectedStartOffset is null)
         {
@@ -3434,40 +3464,20 @@ public sealed partial class UiStyleContractTests
         XDocument document,
         string selector,
         string? expectedEndOffset,
-        string expectedEndAxis = "TranslateTransform.Y")
+        string expectedEndAxis = "TranslateTransform.Y",
+        bool expectsOpacity = true)
     {
-        var style = document
-            .Descendants()
-            .Single(element =>
-                element.Name.LocalName == "Style"
-                && element.Attribute("Selector")?.Value == selector);
-        var animation = style
-            .Descendants()
-            .Single(element => element.Name.LocalName == "Animation");
+        var animation = GetMotionAnimation(document, selector);
         Assert.Equal("{StaticResource LauncherMotionFastDuration}", animation.Attribute("Duration")?.Value);
         Assert.Equal("Forward", animation.Attribute("FillMode")?.Value);
         Assert.Equal("{StaticResource LauncherMotionExitEasing}", animation.Attribute("Easing")?.Value);
 
-        var keyFrames = animation
-            .Elements()
-            .Where(element => element.Name.LocalName == "KeyFrame")
-            .ToDictionary(
-                element => element.Attribute("Cue")?.Value ?? "",
-                element => element,
-                StringComparer.Ordinal);
-        Assert.Equal(2, keyFrames.Count);
-        Assert.Equal(
-            "1",
-            keyFrames["0%"]
-                .Elements()
-                .Single(element => element.Attribute("Property")?.Value == "Opacity")
-                .Attribute("Value")?.Value);
-        Assert.Equal(
-            "0",
-            keyFrames["100%"]
-                .Elements()
-                .Single(element => element.Attribute("Property")?.Value == "Opacity")
-                .Attribute("Value")?.Value);
+        var keyFrames = GetAnimationKeyFrames(animation);
+        AssertAnimationProperty(
+            keyFrames,
+            "Opacity",
+            expectsOpacity ? "1" : null,
+            expectsOpacity ? "0" : null);
 
         if (expectedEndOffset is null)
         {
@@ -3488,6 +3498,61 @@ public sealed partial class UiStyleContractTests
             keyFrames["100%"]
                 .Elements()
                 .Single(element => element.Attribute("Property")?.Value == expectedEndAxis)
+                .Attribute("Value")?.Value);
+    }
+
+    private static XElement GetMotionAnimation(XDocument document, string selector)
+    {
+        var style = document
+            .Descendants()
+            .Single(element =>
+                element.Name.LocalName == "Style"
+                && element.Attribute("Selector")?.Value == selector);
+        return style
+            .Descendants()
+            .Single(element => element.Name.LocalName == "Animation");
+    }
+
+    private static Dictionary<string, XElement> GetAnimationKeyFrames(XElement animation)
+    {
+        var keyFrames = animation
+            .Elements()
+            .Where(element => element.Name.LocalName == "KeyFrame")
+            .ToDictionary(
+                element => element.Attribute("Cue")?.Value ?? "",
+                element => element,
+                StringComparer.Ordinal);
+        Assert.Equal(2, keyFrames.Count);
+        return keyFrames;
+    }
+
+    private static void AssertAnimationProperty(
+        IReadOnlyDictionary<string, XElement> keyFrames,
+        string property,
+        string? expectedStartValue,
+        string? expectedEndValue)
+    {
+        var setters = keyFrames
+            .SelectMany(pair => pair.Value.Elements())
+            .Where(element => element.Attribute("Property")?.Value == property)
+            .ToList();
+        if (expectedStartValue is null || expectedEndValue is null)
+        {
+            Assert.Empty(setters);
+            return;
+        }
+
+        Assert.Equal(
+            expectedStartValue,
+            keyFrames["0%"]
+                .Elements()
+                .Single(element => element.Attribute("Property")?.Value == property)
+                .Attribute("Value")?.Value);
+        Assert.Equal(
+            expectedEndValue,
+            keyFrames["100%"]
+                .Elements()
+                .Single(element => element.Attribute("Property")?.Value == property)
                 .Attribute("Value")?.Value);
     }
 

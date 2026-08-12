@@ -18,7 +18,7 @@
             <Border.RenderTransform>
                 <TranslateTransform/>
             </Border.RenderTransform>
-            <Grid RowDefinitions="Auto,Auto,*,Auto">
+            <Grid RowDefinitions="Auto,Auto,*,Auto" Classes="motion-surface-content">
                 <!-- Header -->
                 <Grid ColumnDefinitions="*,Auto" Classes="dialog-header">
                     <StackPanel Classes="dialog-title-row">

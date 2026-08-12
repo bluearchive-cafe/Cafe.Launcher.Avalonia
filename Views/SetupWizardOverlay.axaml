@@ -22,7 +22,7 @@
             <Border.RenderTransform>
                 <TranslateTransform/>
             </Border.RenderTransform>
-            <Grid ColumnDefinitions="184,*">
+            <Grid ColumnDefinitions="184,*" Classes="motion-surface-content">
                 <ListBox Classes="settings-navigation wizard-navigation"
                          ItemsSource="{Binding Dialogs.SetupWizard.Steps}"
                          SelectedValue="{Binding Dialogs.SetupWizard.SelectedStep, Mode=TwoWay}"

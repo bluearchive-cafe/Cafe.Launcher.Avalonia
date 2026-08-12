@@ -67,7 +67,6 @@
             <x:TimeSpan x:Key="LauncherMotionFastDuration">0:0:0.167</x:TimeSpan>
             <x:TimeSpan x:Key="LauncherMotionContentDuration">0:0:0.200</x:TimeSpan>
             <x:TimeSpan x:Key="LauncherMotionNormalDuration">0:0:0.250</x:TimeSpan>
-            <x:TimeSpan x:Key="LauncherMotionOverlayDelay">0:0:0.050</x:TimeSpan>
             <x:Double x:Key="LauncherMotionToastOffset">6</x:Double>
             <x:Double x:Key="LauncherMotionContentOffset">6</x:Double>
             <x:Double x:Key="LauncherMotionSurfaceOffset">8</x:Double>
