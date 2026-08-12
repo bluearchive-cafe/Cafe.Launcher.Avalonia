@@ -37,30 +37,62 @@ public sealed class MainWindowHeadlessTests
     ];
 
     [AvaloniaFact]
-    public async Task DownloadRunningChanged_FromWorkerThread_NotifiesOnUiThread()
+    public void DownloadRunningChanged_FromWorkerThread_NotifiesOnUiThread()
     {
         var journey = new ThreadAwareGameOperationJourney();
         using var context = CreateContext(new FixedGameOperationJourneyFactory(journey));
-        var uiThreadId = Environment.CurrentManagedThreadId;
-        int? notificationThreadId = null;
+        bool? notificationHasUiAccess = null;
         context.ViewModel.Operations.PropertyChanged += (_, eventArgs) =>
         {
             if (eventArgs.PropertyName == nameof(GameOperationsViewModel.IsDownloadRunning))
             {
-                notificationThreadId = Environment.CurrentManagedThreadId;
+                notificationHasUiAccess = Dispatcher.UIThread.CheckAccess();
             }
         };
 
-        await Task.Run(() => journey.SetDownloadRunning(true));
+        var worker = Task.Run(() => journey.SetDownloadRunning(true));
+        Assert.True(worker.Wait(TimeSpan.FromSeconds(5)));
 
-        Assert.Null(notificationThreadId);
+        Assert.Null(notificationHasUiAccess);
         Dispatcher.UIThread.RunJobs();
-        Assert.Equal(uiThreadId, notificationThreadId);
+        Assert.True(notificationHasUiAccess);
         Assert.True(context.ViewModel.Operations.IsDownloadRunning);
     }
 
     [AvaloniaFact]
-    public async Task DownloadRunningChanged_WhenNewerStateArrives_DropsStaleWorkerNotification()
+    public void DownloadRunningChanged_WhenNewerStateArrives_DropsStaleWorkerNotification()
+    {
+        var journey = new ThreadAwareGameOperationJourney();
+        using var context = CreateContext(new FixedGameOperationJourneyFactory(journey));
+        using var workerRaisedNotification = new ManualResetEventSlim();
+        using var completeWorker = new ManualResetEventSlim();
+        var notificationCount = 0;
+        context.ViewModel.Operations.PropertyChanged += (_, eventArgs) =>
+        {
+            if (eventArgs.PropertyName == nameof(GameOperationsViewModel.IsDownloadRunning))
+            {
+                notificationCount++;
+            }
+        };
+
+        var worker = Task.Run(() =>
+        {
+            journey.SetDownloadRunning(true);
+            workerRaisedNotification.Set();
+            completeWorker.Wait();
+        });
+        Assert.True(workerRaisedNotification.Wait(TimeSpan.FromSeconds(5)));
+        journey.SetDownloadRunning(false);
+        completeWorker.Set();
+        Assert.True(worker.Wait(TimeSpan.FromSeconds(5)));
+        Dispatcher.UIThread.RunJobs();
+
+        Assert.Equal(1, notificationCount);
+        Assert.False(context.ViewModel.Operations.IsDownloadRunning);
+    }
+
+    [AvaloniaFact]
+    public void DownloadRunningChanged_AfterOperationsDisposed_IgnoresStaleJourneyCallback()
     {
         var journey = new ThreadAwareGameOperationJourney();
         using var context = CreateContext(new FixedGameOperationJourneyFactory(journey));
@@ -73,12 +105,31 @@ public sealed class MainWindowHeadlessTests
             }
         };
 
-        await Task.Run(() => journey.SetDownloadRunning(true));
-        journey.SetDownloadRunning(false);
+        context.ViewModel.Operations.Dispose();
+        context.ViewModel.Operations.Dispose();
+        journey.RaiseStaleRunningChanged();
         Dispatcher.UIThread.RunJobs();
 
-        Assert.Equal(1, notificationCount);
-        Assert.False(context.ViewModel.Operations.IsDownloadRunning);
+        Assert.Equal(0, notificationCount);
+    }
+
+    [AvaloniaFact]
+    public void ApplyProgress_FromWorkerThread_QueuesUiUpdate()
+    {
+        using var context = CreateContext();
+        var worker = Task.Run(() => context.ViewModel.Operations.ApplyProgress(new GameOperationProgress
+        {
+            OperationKind = GameOperationKind.Download,
+            Stage = GameOperationStage.Downloading,
+            Progress = 50
+        }));
+        Assert.True(worker.Wait(TimeSpan.FromSeconds(5)));
+        Assert.False(context.ViewModel.Operations.IsProgressPanelVisible);
+
+        Dispatcher.UIThread.RunJobs();
+
+        Assert.True(context.ViewModel.Operations.IsProgressPanelVisible);
+        Assert.Equal(50, context.ViewModel.Operations.ProgressValue);
     }
 
     [AvaloniaFact]
@@ -1802,11 +1853,21 @@ public sealed class MainWindowHeadlessTests
     private sealed class ThreadAwareGameOperationJourney : IGameOperationJourney
     {
         private bool isDownloadRunning;
+        private Action? isRunningChanged;
+        private Action? staleIsRunningChanged;
 
         public event Func<GameOperationsRefreshMode, Task>? RefreshRequested { add { } remove { } }
         public event Func<Task>? OpenLogViewerRequested { add { } remove { } }
         public event Action? MinimizeRequested { add { } remove { } }
-        public event Action? IsRunningChanged;
+        public event Action? IsRunningChanged
+        {
+            add
+            {
+                isRunningChanged += value;
+                staleIsRunningChanged = value;
+            }
+            remove => isRunningChanged -= value;
+        }
 
         public bool IsDownloadRunning => isDownloadRunning;
         public bool IsPaused => false;
@@ -1814,8 +1875,10 @@ public sealed class MainWindowHeadlessTests
         public void SetDownloadRunning(bool value)
         {
             isDownloadRunning = value;
-            IsRunningChanged?.Invoke();
+            isRunningChanged?.Invoke();
         }
+
+        public void RaiseStaleRunningChanged() => staleIsRunningChanged?.Invoke();
 
         public Task StartGameAsync(LauncherStatusSnapshot snapshot) => Task.CompletedTask;
         public Task InstallOrUpdateAsync(LauncherStatusSnapshot snapshot) => Task.CompletedTask;
