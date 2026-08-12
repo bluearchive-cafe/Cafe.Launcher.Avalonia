@@ -12,6 +12,7 @@ using Avalonia.Threading;
 using Avalonia.VisualTree;
 using Cafe.Launcher.Avalonia.Composition;
 using Cafe.Launcher.Avalonia.Constants;
+using Cafe.Launcher.Avalonia.Features.GameOperations;
 using Cafe.Launcher.Avalonia.Features.Settings;
 using Cafe.Launcher.Avalonia.Features.SetupWizard;
 using Cafe.Launcher.Avalonia.Models;
@@ -34,6 +35,51 @@ public sealed class MainWindowHeadlessTests
         (SettingsCategoryCodes.Advanced, typeof(SettingsAdvancedSection)),
         (SettingsCategoryCodes.About, typeof(SettingsAboutSection))
     ];
+
+    [AvaloniaFact]
+    public async Task DownloadRunningChanged_FromWorkerThread_NotifiesOnUiThread()
+    {
+        var journey = new ThreadAwareGameOperationJourney();
+        using var context = CreateContext(new FixedGameOperationJourneyFactory(journey));
+        var uiThreadId = Environment.CurrentManagedThreadId;
+        int? notificationThreadId = null;
+        context.ViewModel.Operations.PropertyChanged += (_, eventArgs) =>
+        {
+            if (eventArgs.PropertyName == nameof(GameOperationsViewModel.IsDownloadRunning))
+            {
+                notificationThreadId = Environment.CurrentManagedThreadId;
+            }
+        };
+
+        await Task.Run(() => journey.SetDownloadRunning(true));
+
+        Assert.Null(notificationThreadId);
+        Dispatcher.UIThread.RunJobs();
+        Assert.Equal(uiThreadId, notificationThreadId);
+        Assert.True(context.ViewModel.Operations.IsDownloadRunning);
+    }
+
+    [AvaloniaFact]
+    public async Task DownloadRunningChanged_WhenNewerStateArrives_DropsStaleWorkerNotification()
+    {
+        var journey = new ThreadAwareGameOperationJourney();
+        using var context = CreateContext(new FixedGameOperationJourneyFactory(journey));
+        var notificationCount = 0;
+        context.ViewModel.Operations.PropertyChanged += (_, eventArgs) =>
+        {
+            if (eventArgs.PropertyName == nameof(GameOperationsViewModel.IsDownloadRunning))
+            {
+                notificationCount++;
+            }
+        };
+
+        await Task.Run(() => journey.SetDownloadRunning(true));
+        journey.SetDownloadRunning(false);
+        Dispatcher.UIThread.RunJobs();
+
+        Assert.Equal(1, notificationCount);
+        Assert.False(context.ViewModel.Operations.IsDownloadRunning);
+    }
 
     [AvaloniaFact]
     public void Settings_WhenLanguageChanges_RefreshesVisibleCategoryTitle()
@@ -1596,12 +1642,17 @@ public sealed class MainWindowHeadlessTests
             .ToArray();
     }
 
-    private static TestContext CreateContext()
+    private static TestContext CreateContext(IGameOperationJourneyFactory? journeyFactory = null)
     {
         var tempDir = Path.Combine(Path.GetTempPath(), Guid.NewGuid().ToString("N"));
         Directory.CreateDirectory(tempDir);
         var services = new ServiceCollection();
         services.AddLauncherServices();
+        if (journeyFactory is not null)
+        {
+            services.AddSingleton(journeyFactory);
+        }
+
         services.AddSingleton(_ => new UnifiedLogger(Path.Combine(tempDir, "logs")));
         var provider = services.BuildServiceProvider();
         var viewModel = provider.GetRequiredService<MainWindowViewModel>();
@@ -1738,6 +1789,61 @@ public sealed class MainWindowHeadlessTests
         }
 
         public void Dispose()
+        {
+        }
+    }
+
+    private sealed class FixedGameOperationJourneyFactory(IGameOperationJourney journey)
+        : IGameOperationJourneyFactory
+    {
+        public IGameOperationJourney Create(IGameOperationJourneyHost host) => journey;
+    }
+
+    private sealed class ThreadAwareGameOperationJourney : IGameOperationJourney
+    {
+        private bool isDownloadRunning;
+
+        public event Func<GameOperationsRefreshMode, Task>? RefreshRequested { add { } remove { } }
+        public event Func<Task>? OpenLogViewerRequested { add { } remove { } }
+        public event Action? MinimizeRequested { add { } remove { } }
+        public event Action? IsRunningChanged;
+
+        public bool IsDownloadRunning => isDownloadRunning;
+        public bool IsPaused => false;
+
+        public void SetDownloadRunning(bool value)
+        {
+            isDownloadRunning = value;
+            IsRunningChanged?.Invoke();
+        }
+
+        public Task StartGameAsync(LauncherStatusSnapshot snapshot) => Task.CompletedTask;
+        public Task InstallOrUpdateAsync(LauncherStatusSnapshot snapshot) => Task.CompletedTask;
+        public Task RequestRepairAsync(LauncherStatusSnapshot snapshot) => Task.CompletedTask;
+        public Task RepairAsync(LauncherStatusSnapshot snapshot) => Task.CompletedTask;
+        public Task RequestUninstallAsync(LauncherStatusSnapshot snapshot) => Task.CompletedTask;
+        public Task ConfirmUninstallAsync(LauncherStatusSnapshot snapshot) => Task.CompletedTask;
+        public Task ResumePersistedAsync(
+            LauncherStatusSnapshot snapshot,
+            CancellationToken cancellationToken) => Task.CompletedTask;
+
+        public void RequestStop()
+        {
+        }
+
+        public void PerformStop()
+        {
+        }
+
+        public void Stop(bool clearPersistedState)
+        {
+        }
+
+        public void Pause()
+        {
+        }
+
+        public void Resume()
         {
         }
     }

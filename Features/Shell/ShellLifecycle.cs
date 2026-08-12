@@ -53,10 +53,16 @@ public sealed class ShellLifecycle : IDisposable
     private readonly Func<LauncherSettings, Task> applyLanguageAndThemeAsync;
     private readonly Action<string?> openExternalUrl;
     private readonly Func<string, Task<string?>> pickSetupWizardGameFolderAsync;
+    private readonly bool ownsPresentationCollaborators;
+    private readonly object refreshLifetimeLock = new();
     private readonly CancellationTokenSource lifetimeCts = new();
     private readonly SemaphoreSlim refreshGate = new(1, 1);
+    private TaskCompletionSource? refreshesDrained;
+    private int activeRefreshCount;
     private int initialized;
     private bool disposed;
+    private bool shutdownRequested;
+    private bool lifetimeResourcesDisposed;
     private bool motionSettingsApplied;
     private bool settingsSnapshotInitialized;
     private LauncherStatusSnapshot? currentSnapshot;
@@ -87,7 +93,8 @@ public sealed class ShellLifecycle : IDisposable
         ResourcePanelViewModel resourcePanelViewModel,
         LogViewerDialogViewModel logViewer,
         DebugViewModel debug,
-        ModalHostViewModel modalHost)
+        ModalHostViewModel modalHost,
+        bool ownsPresentationCollaborators)
     {
         this.launcherCoreService = launcherCoreService;
         this.settingsService = settingsService;
@@ -109,6 +116,7 @@ public sealed class ShellLifecycle : IDisposable
         resourcePanel = resourcePanelViewModel;
         this.logViewer = logViewer;
         this.debug = debug;
+        this.ownsPresentationCollaborators = ownsPresentationCollaborators;
         ModalHost = modalHost;
 
         getBackgroundBitmap = background.GetBackgroundBitmap;
@@ -163,69 +171,114 @@ public sealed class ShellLifecycle : IDisposable
         bool resumePersistedDownload,
         CancellationToken cancellationToken = default)
     {
-        await refreshGate.WaitAsync(cancellationToken);
+        CancellationToken lifetimeToken;
+        lock (refreshLifetimeLock)
+        {
+            if (shutdownRequested || disposed)
+            {
+                return;
+            }
+
+            activeRefreshCount++;
+            lifetimeToken = lifetimeCts.Token;
+        }
+
+        using var refreshCts = CancellationTokenSource.CreateLinkedTokenSource(
+            cancellationToken,
+            lifetimeToken);
+        var refreshToken = refreshCts.Token;
         var loaded = false;
+        var gateEntered = false;
         try
         {
-            presentation.IsBusy = true;
-            shell.IsBusy = true;
             try
             {
-                var settingsForLanguage = await settingsService.ReadAsync(cancellationToken);
-                settings.Editor.ApplySnapshot(settingsForLanguage);
-                settingsSnapshotInitialized = true;
-                ApplyMotionSettings(settingsForLanguage);
-                ApplyLanguage(settingsForLanguage.Language);
-                settings.Appearance.Load(settingsForLanguage);
-                SettingsAppearanceViewModel.ApplyTheme(settingsForLanguage.ThemeMode);
-                settings.Appearance.ApplyThemeColor(
-                    settingsForLanguage.ThemeColorMode,
-                    SettingsAppearanceViewModel.ParseColorOrDefault(settingsForLanguage.CustomThemeColor));
-                shell.SetLoading();
-                remoteContent.BeginLoading(settingsForLanguage.ShowRemoteContentCard);
+                await refreshGate.WaitAsync(refreshToken);
+                gateEntered = true;
+                presentation.IsBusy = true;
+                shell.IsBusy = true;
+                try
+                {
+                    var settingsForLanguage = await settingsService.ReadAsync(refreshToken);
+                    refreshToken.ThrowIfCancellationRequested();
+                    settings.Editor.ApplySnapshot(settingsForLanguage);
+                    settingsSnapshotInitialized = true;
+                    ApplyMotionSettings(settingsForLanguage);
+                    ApplyLanguage(settingsForLanguage.Language);
+                    settings.Appearance.Load(settingsForLanguage);
+                    SettingsAppearanceViewModel.ApplyTheme(settingsForLanguage.ThemeMode);
+                    settings.Appearance.ApplyThemeColor(
+                        settingsForLanguage.ThemeColorMode,
+                        SettingsAppearanceViewModel.ParseColorOrDefault(settingsForLanguage.CustomThemeColor));
+                    shell.SetLoading();
+                    remoteContent.BeginLoading(settingsForLanguage.ShowRemoteContentCard);
 
-                var snapshot = await launcherCoreService.LoadAsync(cancellationToken);
-                currentSnapshot = snapshot;
-                await ApplySnapshotAsync(snapshot);
-                loaded = true;
-            }
-            catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
-            {
-            }
-            catch (Exception exception)
-            {
-                shell.SetRefreshError(exception);
-                operations.SetIdlePanels(currentSnapshot);
-                await errorHandling.HandleErrorAsync("Launcher core refresh failed.", exception,
-                    new ErrorHandlingOptions { OperationNoteKey = "networkWithMessage" });
+                    var snapshot = await launcherCoreService.LoadAsync(refreshToken);
+                    refreshToken.ThrowIfCancellationRequested();
+                    currentSnapshot = snapshot;
+                    await ApplySnapshotAsync(snapshot);
+                    refreshToken.ThrowIfCancellationRequested();
+                    loaded = true;
+                }
+                catch (OperationCanceledException) when (refreshToken.IsCancellationRequested)
+                {
+                }
+                catch (Exception exception)
+                {
+                    shell.SetRefreshError(exception);
+                    operations.SetIdlePanels(currentSnapshot);
+                    await errorHandling.HandleErrorAsync("Launcher core refresh failed.", exception,
+                        new ErrorHandlingOptions { OperationNoteKey = "networkWithMessage" });
+                }
+                finally
+                {
+                    if (!disposed)
+                    {
+                        remoteContent.EndLoading();
+                        shell.IsBusy = false;
+                        presentation.IsBusy = false;
+                    }
+                }
             }
             finally
             {
-                remoteContent.EndLoading();
-                shell.IsBusy = false;
-                presentation.IsBusy = false;
+                if (gateEntered)
+                {
+                    refreshGate.Release();
+                }
             }
 
+            if (!loaded || refreshToken.IsCancellationRequested)
+            {
+                return;
+            }
+
+            if (settings.Editor.GetSavedSnapshot().EnableStartupUpdateCheck)
+            {
+                PendingStartupUpdateCheck = CheckForStartupUpdateAsync(lifetimeToken);
+            }
+
+            if (resumePersistedDownload)
+            {
+                await operations.ResumePersistedDownloadAsync(refreshToken);
+            }
+        }
+        catch (OperationCanceledException) when (refreshToken.IsCancellationRequested)
+        {
         }
         finally
         {
-            refreshGate.Release();
+            CompleteRefresh();
         }
+    }
 
-        if (!loaded)
-        {
-            return;
-        }
-
-        if (settings.Editor.GetSavedSnapshot().EnableStartupUpdateCheck)
-        {
-            PendingStartupUpdateCheck = CheckForStartupUpdateAsync(cancellationToken);
-        }
-
-        if (resumePersistedDownload)
-        {
-            await operations.ResumePersistedDownloadAsync(cancellationToken);
-        }
+    /// <summary>Cancels lifecycle work and waits until every active refresh has finished.</summary>
+    public async Task PrepareForShutdownAsync()
+    {
+        Task pendingRefreshes = BeginShutdown();
+        lifetimeCts.Cancel();
+        operations.StopDownload(clearPersistedState: false);
+        await WaitForShutdownWorkAsync(pendingRefreshes);
     }
 
     /// <summary>Refreshes the shell after the settings editor saves a new snapshot.</summary>
@@ -521,29 +574,99 @@ public sealed class ShellLifecycle : IDisposable
         return true;
     }
 
-    /// <summary>Unsubscribes lifecycle callbacks and disposes presentation collaborators in ownership order.</summary>
+    /// <summary>Unsubscribes lifecycle callbacks and releases lifecycle-owned resources.</summary>
     public void Dispose()
     {
         if (disposed) return;
         disposed = true;
 
+        Task pendingRefreshes = BeginShutdown();
+        lifetimeCts.Cancel();
         Unwire();
         operations.StopDownload(clearPersistedState: false);
-        operations.Dispose();
-        shell.Dispose();
-        settings.Dispose();
-        remoteContent.Dispose();
-        background.Dispose();
-        toasts.Dispose();
-        resourcePanel.Dispose();
-        debug.Dispose();
-        dialogs.SetupWizard.Dispose();
-        lifetimeCts.Cancel();
-        lifetimeCts.Dispose();
-        refreshGate.Dispose();
+        if (ownsPresentationCollaborators)
+        {
+            operations.Dispose();
+            shell.Dispose();
+            settings.Dispose();
+            remoteContent.Dispose();
+            background.Dispose();
+            toasts.Dispose();
+            resourcePanel.Dispose();
+            debug.Dispose();
+            dialogs.SetupWizard.Dispose();
+        }
+
         errorHandling.CriticalErrorRequested -= OnCriticalError;
         errorHandling.OperationNoteRequested -= OnOperationNoteRequested;
         localizer.LocalizationFailure -= OnLocalizationFailure;
+
+        Task pendingWork = WaitForShutdownWorkAsync(pendingRefreshes);
+        if (pendingWork.IsCompleted)
+        {
+            DisposeLifetimeResources();
+        }
+        else
+        {
+            _ = pendingWork.ContinueWith(
+                _ => DisposeLifetimeResources(),
+                CancellationToken.None,
+                TaskContinuationOptions.ExecuteSynchronously,
+                TaskScheduler.Default);
+        }
+    }
+
+    private async Task WaitForShutdownWorkAsync(Task pendingRefreshes)
+    {
+        await pendingRefreshes;
+        await PendingStartupUpdateCheck;
+    }
+
+    private Task BeginShutdown()
+    {
+        lock (refreshLifetimeLock)
+        {
+            shutdownRequested = true;
+            if (activeRefreshCount == 0)
+            {
+                return Task.CompletedTask;
+            }
+
+            refreshesDrained ??= new TaskCompletionSource(
+                TaskCreationOptions.RunContinuationsAsynchronously);
+            return refreshesDrained.Task;
+        }
+    }
+
+    private void CompleteRefresh()
+    {
+        TaskCompletionSource? drained = null;
+        lock (refreshLifetimeLock)
+        {
+            activeRefreshCount--;
+            if (activeRefreshCount == 0)
+            {
+                drained = refreshesDrained;
+            }
+        }
+
+        drained?.TrySetResult();
+    }
+
+    private void DisposeLifetimeResources()
+    {
+        lock (refreshLifetimeLock)
+        {
+            if (lifetimeResourcesDisposed)
+            {
+                return;
+            }
+
+            lifetimeResourcesDisposed = true;
+        }
+
+        lifetimeCts.Dispose();
+        refreshGate.Dispose();
     }
 
     private async Task CheckForStartupUpdateAsync(CancellationToken cancellationToken)

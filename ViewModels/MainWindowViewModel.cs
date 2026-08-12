@@ -17,6 +17,7 @@ namespace Cafe.Launcher.Avalonia.ViewModels;
 public partial class MainWindowViewModel : ViewModelBase, IDisposable
 {
     private readonly IShellRuntime runtime;
+    private bool disposed;
 
     [ObservableProperty]
     [NotifyPropertyChangedFor(nameof(IsMotionEnabled))]
@@ -145,12 +146,15 @@ public partial class MainWindowViewModel : ViewModelBase, IDisposable
                 resourcePanel,
                 logViewer,
                 debug,
-                modalHost))
+                modalHost,
+                ownsPresentationCollaborators: true))
     {
     }
 
     public Task InitializeAsync(CancellationToken cancellationToken = default) =>
         runtime.InitializeAsync(cancellationToken);
+
+    internal Task PrepareForShutdownAsync() => runtime.PrepareForShutdownAsync();
 
     public void RefreshSystemMotionPreference() => runtime.RefreshSystemMotionPreference();
 
@@ -165,6 +169,12 @@ public partial class MainWindowViewModel : ViewModelBase, IDisposable
 
     public void Dispose()
     {
+        if (disposed)
+        {
+            return;
+        }
+
+        disposed = true;
         runtime.PresentationChanged -= OnRuntimePresentationChanged;
         runtime.StatusDetailModeChanged -= OnStatusDetailModeChanged;
         runtime.Dispose();

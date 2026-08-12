@@ -31,6 +31,9 @@ public interface IShellRuntime : IDisposable
     /// <summary>Refreshes launcher state and its shell presentation.</summary>
     Task RefreshAsync(CancellationToken cancellationToken = default);
 
+    /// <summary>Cancels lifecycle work and waits for active refreshes to finish before shutdown.</summary>
+    Task PrepareForShutdownAsync();
+
     /// <summary>Re-evaluates the system motion preference and updates presentation state.</summary>
     void RefreshSystemMotionPreference();
 

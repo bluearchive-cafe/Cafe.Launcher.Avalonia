@@ -105,8 +105,7 @@ public static class ServiceConfiguration
         services.AddSingleton<ToastHostViewModel>();
         services.AddSingleton<WindowChromeViewModel>();
         services.AddSingleton<ModalHostViewModel>();
-        services.AddSingleton<ShellRuntime>();
-        services.AddSingleton<IShellRuntime>(sp => sp.GetRequiredService<ShellRuntime>());
+        services.AddSingleton<IShellRuntime, ShellRuntime>();
         services.AddSingleton<MainWindowViewModel>();
 
         return services;

@@ -62,6 +62,40 @@ public partial class App : Application
             {
                 DataContext = viewModel,
             };
+            var shutdownDeferred = false;
+
+            async void HandleShutdownRequested(object? _, ShutdownRequestedEventArgs eventArgs)
+            {
+                if (shutdownDeferred)
+                {
+                    eventArgs.Cancel = true;
+                    return;
+                }
+
+                shutdownCts.Cancel();
+                Task shutdownTask = viewModel.PrepareForShutdownAsync();
+                if (shutdownTask.IsCompletedSuccessfully)
+                {
+                    return;
+                }
+
+                eventArgs.Cancel = true;
+                shutdownDeferred = true;
+                try
+                {
+                    await shutdownTask;
+                }
+                catch (Exception exception)
+                {
+                    Debug.WriteLine($"Launcher shutdown coordination failed: {exception}");
+                }
+                finally
+                {
+                    desktop.Shutdown();
+                }
+            }
+
+            desktop.ShutdownRequested += HandleShutdownRequested;
             mainWindow.ConfigureViewModel(viewModel);
             if (Program.PreviousSessionCrashed)
                 viewModel.Dialogs.ShowCrashRecovery();
@@ -90,6 +124,7 @@ public partial class App : Application
             // so the logger stays alive through CompleteSessionAsync.
             desktop.Exit += (_, _) =>
             {
+                desktop.ShutdownRequested -= HandleShutdownRequested;
                 showWindowListener?.Dispose();
                 shutdownCts.Cancel();
                 viewModel.Dispose();

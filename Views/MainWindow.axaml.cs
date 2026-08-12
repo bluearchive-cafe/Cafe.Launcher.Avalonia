@@ -293,7 +293,7 @@ public partial class MainWindow : Window
 
         if (Application.Current?.ApplicationLifetime is IClassicDesktopStyleApplicationLifetime desktop)
         {
-            desktop.Shutdown();
+            desktop.TryShutdown();
             return;
         }
 

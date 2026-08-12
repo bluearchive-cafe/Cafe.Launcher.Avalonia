@@ -20,6 +20,7 @@ public sealed class ShellRuntime : IShellRuntime, IShellLifecyclePresentation
     private readonly ShellLifecycle lifecycle;
     private bool isBusy;
     private bool isMotionReduced = true;
+    private bool disposed;
 
     /// <summary>Initializes and wires the shell lifecycle with its presentation collaborators.</summary>
     public ShellRuntime(
@@ -43,6 +44,53 @@ public sealed class ShellRuntime : IShellRuntime, IShellLifecyclePresentation
         LogViewerDialogViewModel logViewer,
         DebugViewModel debug,
         ModalHostViewModel modalHost)
+        : this(
+            launcherCoreService,
+            settingsService,
+            localizer,
+            toastService,
+            launcherUpdateService,
+            diagnostics,
+            errorHandling,
+            windowsAnimationSettingsProvider,
+            shell,
+            background,
+            remoteContent,
+            dialogs,
+            operations,
+            toasts,
+            windowChrome,
+            settings,
+            resourcePanel,
+            logViewer,
+            debug,
+            modalHost,
+            ownsPresentationCollaborators: false)
+    {
+    }
+
+    internal ShellRuntime(
+        ILauncherCoreService launcherCoreService,
+        LauncherSettingsService settingsService,
+        LocalizationService localizer,
+        ToastService toastService,
+        LauncherUpdateService launcherUpdateService,
+        LocalDiagnostics diagnostics,
+        IErrorHandlingService errorHandling,
+        WindowsAnimationSettingsProvider windowsAnimationSettingsProvider,
+        ShellViewModel shell,
+        BackgroundViewModel background,
+        RemoteContentViewModel remoteContent,
+        DialogsViewModel dialogs,
+        GameOperationsViewModel operations,
+        ToastHostViewModel toasts,
+        WindowChromeViewModel windowChrome,
+        SettingsViewModel settings,
+        ResourcePanelViewModel resourcePanel,
+        LogViewerDialogViewModel logViewer,
+        DebugViewModel debug,
+        ModalHostViewModel modalHost,
+        bool ownsPresentationCollaborators)
     {
         lifecycle = new ShellLifecycle(
             launcherCoreService,
@@ -65,7 +113,8 @@ public sealed class ShellRuntime : IShellRuntime, IShellLifecyclePresentation
             resourcePanel,
             logViewer,
             debug,
-            modalHost);
+            modalHost,
+            ownsPresentationCollaborators);
         lifecycle.StatusDetailModeChanged += OnStatusDetailModeChanged;
         lifecycle.Wire();
         lifecycle.ApplyInitialLanguage();
@@ -106,6 +155,9 @@ public sealed class ShellRuntime : IShellRuntime, IShellLifecyclePresentation
     public Task RefreshAsync(CancellationToken cancellationToken = default) =>
         lifecycle.RefreshAsync(cancellationToken);
 
+    /// <summary>Cancels lifecycle work and waits for active refreshes to finish before shutdown.</summary>
+    public Task PrepareForShutdownAsync() => lifecycle.PrepareForShutdownAsync();
+
     /// <summary>Re-evaluates the system motion preference and updates presentation state.</summary>
     public void RefreshSystemMotionPreference() => lifecycle.RefreshSystemMotionPreference();
 
@@ -119,6 +171,12 @@ public sealed class ShellRuntime : IShellRuntime, IShellLifecyclePresentation
     /// <summary>Unsubscribes shell events and releases lifecycle-owned resources.</summary>
     public void Dispose()
     {
+        if (disposed)
+        {
+            return;
+        }
+
+        disposed = true;
         lifecycle.StatusDetailModeChanged -= OnStatusDetailModeChanged;
         lifecycle.Dispose();
     }

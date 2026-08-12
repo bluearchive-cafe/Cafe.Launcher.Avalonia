@@ -216,7 +216,6 @@ internal sealed class GameOperationJourney : IGameOperationJourney
             return;
         }
 
-        dialogs.IsUninstallConfirmVisible = false;
         host.SetBusy(true);
 
         try
