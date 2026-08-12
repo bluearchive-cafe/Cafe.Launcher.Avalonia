@@ -2807,6 +2807,21 @@ public sealed partial class UiStyleContractTests
     }
 
     [Fact]
+    public void SocialChips_UseCrispBorderTemplateAcrossInteractiveStates()
+    {
+        var styles = XDocument.Load(ProjectFile("Views/Styles/RemoteContent.axaml"));
+
+        var socialChip = GetStyleSetters(styles, "Button.social-chip");
+        Assert.Equal("{StaticResource LauncherBorderButtonTemplate}", socialChip["Template"]);
+        Assert.Equal("Center", socialChip["HorizontalContentAlignment"]);
+        Assert.Equal("Center", socialChip["VerticalContentAlignment"]);
+
+        var disabled = GetStyleSetters(styles, "Button.social-chip:disabled");
+        Assert.Equal("1", disabled["Opacity"]);
+        Assert.Equal("{DynamicResource LauncherButtonBorderBrush}", disabled["BorderBrush"]);
+    }
+
+    [Fact]
     public void ToastAndDebugOverlay_NewMeasurements_UseLauncherTokens()
     {
         var debugOverlay = File.ReadAllText(ProjectFile("Views/MainWindowDebugOverlay.axaml"));
