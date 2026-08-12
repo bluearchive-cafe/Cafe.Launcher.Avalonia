@@ -37,33 +37,35 @@ public sealed class MainWindowHeadlessTests
     ];
 
     [AvaloniaFact]
-    public async Task DownloadRunningChanged_FromWorkerThread_NotifiesOnUiThread()
+    public void DownloadRunningChanged_FromWorkerThread_NotifiesOnUiThread()
     {
         var journey = new ThreadAwareGameOperationJourney();
         using var context = CreateContext(new FixedGameOperationJourneyFactory(journey));
-        var uiThreadId = Environment.CurrentManagedThreadId;
-        int? notificationThreadId = null;
+        bool? notificationHasUiAccess = null;
         context.ViewModel.Operations.PropertyChanged += (_, eventArgs) =>
         {
             if (eventArgs.PropertyName == nameof(GameOperationsViewModel.IsDownloadRunning))
             {
-                notificationThreadId = Environment.CurrentManagedThreadId;
+                notificationHasUiAccess = Dispatcher.UIThread.CheckAccess();
             }
         };
 
-        await Task.Run(() => journey.SetDownloadRunning(true));
+        var worker = Task.Run(() => journey.SetDownloadRunning(true));
+        Assert.True(worker.Wait(TimeSpan.FromSeconds(5)));
 
-        Assert.Null(notificationThreadId);
+        Assert.Null(notificationHasUiAccess);
         Dispatcher.UIThread.RunJobs();
-        Assert.Equal(uiThreadId, notificationThreadId);
+        Assert.True(notificationHasUiAccess);
         Assert.True(context.ViewModel.Operations.IsDownloadRunning);
     }
 
     [AvaloniaFact]
-    public async Task DownloadRunningChanged_WhenNewerStateArrives_DropsStaleWorkerNotification()
+    public void DownloadRunningChanged_WhenNewerStateArrives_DropsStaleWorkerNotification()
     {
         var journey = new ThreadAwareGameOperationJourney();
         using var context = CreateContext(new FixedGameOperationJourneyFactory(journey));
+        using var workerRaisedNotification = new ManualResetEventSlim();
+        using var completeWorker = new ManualResetEventSlim();
         var notificationCount = 0;
         context.ViewModel.Operations.PropertyChanged += (_, eventArgs) =>
         {
@@ -73,8 +75,16 @@ public sealed class MainWindowHeadlessTests
             }
         };
 
-        await Task.Run(() => journey.SetDownloadRunning(true));
+        var worker = Task.Run(() =>
+        {
+            journey.SetDownloadRunning(true);
+            workerRaisedNotification.Set();
+            completeWorker.Wait();
+        });
+        Assert.True(workerRaisedNotification.Wait(TimeSpan.FromSeconds(5)));
         journey.SetDownloadRunning(false);
+        completeWorker.Set();
+        Assert.True(worker.Wait(TimeSpan.FromSeconds(5)));
         Dispatcher.UIThread.RunJobs();
 
         Assert.Equal(1, notificationCount);
