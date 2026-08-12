@@ -10,6 +10,7 @@
         <Setter Property="Background" Value="{DynamicResource LauncherCarouselDotActiveBrush}"/>
     </Style>
     <Style Selector="Button.social-chip">
+        <Setter Property="Template" Value="{StaticResource LauncherBorderButtonTemplate}"/>
         <Setter Property="Background" Value="{DynamicResource LauncherContentRowBrush}"/>
         <Setter Property="BorderBrush" Value="{DynamicResource LauncherButtonBorderBrush}"/>
         <Setter Property="BorderThickness" Value="1"/>
@@ -18,11 +19,19 @@
         <Setter Property="MinHeight" Value="{DynamicResource LauncherChipHeight}"/>
         <Setter Property="CornerRadius" Value="{DynamicResource LauncherRadiusSm}"/>
         <Setter Property="Margin" Value="0,0,8,8"/>
+        <Setter Property="HorizontalContentAlignment" Value="Center"/>
+        <Setter Property="VerticalContentAlignment" Value="Center"/>
     </Style>
     <Style Selector="Button.social-chip:pointerover">
         <Setter Property="Background" Value="{DynamicResource LauncherFlatHoverBrush}"/>
         <Setter Property="BorderBrush" Value="{DynamicResource LauncherAccentHoverBrush}"/>
         <Setter Property="Foreground" Value="{DynamicResource LauncherAccentBrush}"/>
+    </Style>
+    <Style Selector="Button.social-chip:disabled">
+        <Setter Property="Opacity" Value="1"/>
+        <Setter Property="Background" Value="{DynamicResource LauncherContentRowBrush}"/>
+        <Setter Property="BorderBrush" Value="{DynamicResource LauncherButtonBorderBrush}"/>
+        <Setter Property="Foreground" Value="{DynamicResource LauncherTextSecondaryBrush}"/>
     </Style>
     <Style Selector="Button.news-tab">
         <Setter Property="Background" Value="{DynamicResource LauncherContentRowBrush}"/>
