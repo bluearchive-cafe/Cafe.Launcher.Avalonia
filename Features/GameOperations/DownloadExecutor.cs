@@ -68,17 +68,16 @@ internal sealed class DownloadExecutor
             proxyMode, timeout: TimeSpan.FromMinutes(10), cancellationToken: cancellationToken).ConfigureAwait(false);
         var client = lease.Client;
         using var semaphore = new SemaphoreSlim(MaxParallelDownloads, MaxParallelDownloads);
-        var downloadedSize = 0L;
         var totalSize = fileList.Sum(item => item.SizeBytes);
         await diagnostics.DebugAsync(
             "GameDownload",
             $"Downloading {fileList.Count} files, total {FileSizeFormatter.Format(totalSize)}", CancellationToken.None).ConfigureAwait(false);
-        var startedAt = DateTimeOffset.Now;
         var throttleState = speedLimitBytesPerSec > 0
             ? new ThrottleState { BytesPerSec = speedLimitBytesPerSec }
             : null;
-        var lastProgressTime = 0L;                   // Stopwatch timestamp-based throttling
-        var progressIntervalTicks = Stopwatch.Frequency / 10;  // ~100ms
+        var progressAccumulator = new DownloadProgressAccumulator(
+            totalSize,
+            TimeSpan.FromMilliseconds(100));
 
         var tasks = fileList.Select(async file =>
         {
@@ -99,16 +98,6 @@ internal sealed class DownloadExecutor
                         getPauseTask,
                         async (bytes, ct) =>
                         {
-                            // Throttle progress reporting to ~100ms intervals to avoid
-                            // overwhelming the UI thread with high-frequency callbacks.
-                            var now = Stopwatch.GetTimestamp();
-                            var prev = Interlocked.Read(ref lastProgressTime);
-                            if (now - prev < progressIntervalTicks)
-                            {
-                                return;
-                            }
-                            Interlocked.Exchange(ref lastProgressTime, now);
-
                             if (throttleState is not null)
                             {
                                 var throttledTotal = Interlocked.Add(ref throttleState.TotalBytes, bytes);
@@ -118,13 +107,17 @@ internal sealed class DownloadExecutor
                                     await Task.Delay((int)Math.Clamp(targetMs - elapsedMs, 0, int.MaxValue), ct).ConfigureAwait(false);
                             }
 
+                            var paused = isPaused();
+                            if (!progressAccumulator.TryRecord(bytes, paused, out var snapshot))
+                            {
+                                return;
+                            }
+
                             var totalSizeVal = totalSize;
-                            var totalBytes = Interlocked.Add(ref downloadedSize, bytes);
-                            var elapsed = Math.Max(1, (DateTimeOffset.Now - startedAt).TotalSeconds);
-                            var speed = (long)(totalBytes / elapsed);
+                            var totalBytes = snapshot.DownloadedSize;
+                            var speed = snapshot.BytesPerSecond;
                             var estimated = speed > 0 ? (totalSizeVal - totalBytes) / speed : 0;
 
-                            var paused = isPaused();
                             progress(new GameOperationProgress
                             {
                                 OperationKind = operationKind,

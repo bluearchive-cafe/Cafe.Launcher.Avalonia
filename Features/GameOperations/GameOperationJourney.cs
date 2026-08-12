@@ -154,12 +154,13 @@ internal sealed class GameOperationJourney : IGameOperationJourney
             return;
         }
 
+        var refreshHandled = false;
         try
         {
             var result = await installationWorkflow.RepairAsync(snapshot, host.ApplyProgress);
             host.SetOperationNote(result.Message);
             ShowOperationResult(result);
-            await RequestRefresh(GameOperationsRefreshMode.Normal);
+            refreshHandled = await RequestRefresh(GameOperationsRefreshMode.Normal);
         }
         catch (Exception exception)
         {
@@ -169,7 +170,10 @@ internal sealed class GameOperationJourney : IGameOperationJourney
         finally
         {
             host.SetBusy(false);
-            ApplySnapshotSafe(snapshot);
+            if (!refreshHandled)
+            {
+                ApplySnapshotSafe(snapshot);
+            }
         }
     }
 
@@ -318,6 +322,7 @@ internal sealed class GameOperationJourney : IGameOperationJourney
             return null;
         }
 
+        var refreshHandled = false;
         try
         {
             if (snapshot.RuntimeState == LauncherRuntimeState.Corrupted)
@@ -328,7 +333,7 @@ internal sealed class GameOperationJourney : IGameOperationJourney
 
             if (snapshot.RuntimeState is LauncherRuntimeState.IoFailure or LauncherRuntimeState.RemoteUnavailable)
             {
-                await RequestRefresh(GameOperationsRefreshMode.Normal);
+                refreshHandled = await RequestRefresh(GameOperationsRefreshMode.Normal);
                 return null;
             }
 
@@ -340,7 +345,7 @@ internal sealed class GameOperationJourney : IGameOperationJourney
 
             var result = await installationWorkflow.InstallOrUpdateAsync(snapshot, host.ApplyProgress, cancellationToken);
             host.SetOperationNote(result.Message);
-            await RequestRefresh(GameOperationsRefreshMode.SkipPersistedResume);
+            refreshHandled = await RequestRefresh(GameOperationsRefreshMode.SkipPersistedResume);
             return result;
         }
         catch (Exception exception)
@@ -360,7 +365,10 @@ internal sealed class GameOperationJourney : IGameOperationJourney
         finally
         {
             host.SetBusy(false);
-            ApplySnapshotSafe(snapshot);
+            if (!refreshHandled)
+            {
+                ApplySnapshotSafe(snapshot);
+            }
         }
     }
 
@@ -441,17 +449,19 @@ internal sealed class GameOperationJourney : IGameOperationJourney
         }
     }
 
-    private async Task RequestRefresh(GameOperationsRefreshMode mode)
+    private async Task<bool> RequestRefresh(GameOperationsRefreshMode mode)
     {
         if (RefreshRequested is null)
         {
-            return;
+            return false;
         }
 
         foreach (Func<GameOperationsRefreshMode, Task> subscriber in RefreshRequested.GetInvocationList())
         {
             await subscriber(mode);
         }
+
+        return true;
     }
 
     private bool PrepareShellOnly(LauncherStatusSnapshot? snapshot)

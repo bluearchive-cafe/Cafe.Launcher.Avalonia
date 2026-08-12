@@ -982,6 +982,57 @@ public sealed class GameDownloadServiceTests
     }
 
     [Fact]
+    public async Task InstallOrUpdateAsync_WhenChunksArriveInsideProgressInterval_ReportsEveryTransferredByte()
+    {
+        var tempDir = Path.Combine(Path.GetTempPath(), Guid.NewGuid().ToString("N"));
+        var gamePath = Path.Combine(tempDir, "YostarGames", "BlueArchive_JP");
+        var settingsService = new LauncherSettingsService(Path.Combine(tempDir, "settings.json"));
+        await settingsService.SaveAsync(new LauncherSettings { GamePath = gamePath });
+        var fileBytes = new byte[1024];
+        Random.Shared.NextBytes(fileBytes);
+        var manifestFile = await CreateManifestFileAsync(tempDir, "data/file.bin", fileBytes);
+        using var apiClient = CreateManifestApiClient(manifestFile);
+        using var service = CreateService(
+            apiClient,
+            settingsService,
+            Path.Combine(tempDir, "download_state.json"),
+            new ChunkedFileDownloadService(fileBytes, chunkSize: 128));
+        var snapshot = CreateSnapshot(gamePath);
+        snapshot.RuntimeState = LauncherRuntimeState.NotInstalled;
+        var progress = new List<GameOperationProgress>();
+
+        var result = await service.InstallOrUpdateAsync(snapshot, progress.Add);
+
+        Assert.True(result.Success);
+        var finalDownloadProgress = Assert.Single(
+            progress,
+            item =>
+                item.Stage == GameOperationStage.Downloading
+                && item.Progress == 100);
+        Assert.Equal(fileBytes.Length, finalDownloadProgress.DownloadedSize);
+        Assert.Equal(fileBytes.Length, finalDownloadProgress.TotalSize);
+        Assert.True(finalDownloadProgress.BytesPerSecond > 0);
+        Directory.Delete(tempDir, recursive: true);
+    }
+
+    [Fact]
+    public void TryRecordAt_WhenTransferRateChanges_ReportsMostRecentSampleSpeed()
+    {
+        var accumulator = new DownloadProgressAccumulator(
+            totalSize: 3000,
+            initialTimestamp: 0,
+            timestampFrequency: 1000,
+            reportIntervalTicks: 100);
+
+        Assert.True(accumulator.TryRecordAt(1000, paused: false, timestamp: 100, out var first));
+        Assert.Equal(10_000, first.BytesPerSecond);
+
+        Assert.True(accumulator.TryRecordAt(1000, paused: false, timestamp: 600, out var second));
+        Assert.Equal(2_000, second.BytesPerSecond);
+        Assert.Equal(2000, second.DownloadedSize);
+    }
+
+    [Fact]
     public async Task InstallOrUpdateAsync_WhenInstallVerificationAlwaysFails_StopsAfterThreeRetries()
     {
         var tempDir = Path.Combine(Path.GetTempPath(), Guid.NewGuid().ToString("N"));
@@ -1317,6 +1368,25 @@ public sealed class GameDownloadServiceTests
             Directory.CreateDirectory(Path.GetDirectoryName(request.TargetTempPath)!);
             await File.WriteAllBytesAsync(request.TargetTempPath, content, cancellationToken);
             await control.ReportProgressAsync(content.Length, cancellationToken);
+        }
+    }
+
+    private sealed class ChunkedFileDownloadService(
+        byte[] content,
+        int chunkSize) : IFileDownloadService
+    {
+        public async Task DownloadAsync(
+            FileDownloadRequest request,
+            FileDownloadOperationControl control,
+            CancellationToken cancellationToken)
+        {
+            Directory.CreateDirectory(Path.GetDirectoryName(request.TargetTempPath)!);
+            await File.WriteAllBytesAsync(request.TargetTempPath, content, cancellationToken);
+            for (var offset = 0; offset < content.Length; offset += chunkSize)
+            {
+                var bytes = Math.Min(chunkSize, content.Length - offset);
+                await control.ReportProgressAsync(bytes, cancellationToken);
+            }
         }
     }
 

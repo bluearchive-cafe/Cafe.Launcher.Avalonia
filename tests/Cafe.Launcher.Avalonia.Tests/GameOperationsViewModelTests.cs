@@ -226,6 +226,7 @@ public sealed class GameOperationsViewModelTests
         context.ViewModel.RefreshRequested += mode =>
         {
             refreshMode = mode;
+            context.ViewModel.ApplySnapshot(ReadySnapshot());
             return Task.CompletedTask;
         };
 
@@ -233,7 +234,8 @@ public sealed class GameOperationsViewModelTests
 
         Assert.Equal(1, context.Backend.InstallInvocationCount);
         Assert.Equal(GameOperationsRefreshMode.SkipPersistedResume, refreshMode);
-        Assert.False(context.ViewModel.IsProgressPanelVisible);
+        Assert.True(context.ViewModel.IsControlPanelVisible);
+        Assert.False(context.ViewModel.IsInstallPanelVisible);
         Assert.Equal("installed", context.Shell.OperationNote);
         Assert.False(context.Shell.IsBusy);
     }
