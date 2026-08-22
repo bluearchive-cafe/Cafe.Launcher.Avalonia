@@ -23,6 +23,7 @@ public sealed class UnifiedLogger : IDisposable
     private readonly Logger serilogLogger;
     private readonly LoggingLevelSwitch levelSwitch;
     private readonly string logFilePath;
+    private readonly AsyncLogBufferMonitor asyncLogBufferMonitor;
     private bool disposed;
 
     public UnifiedLogger() : this(null) { }
@@ -44,6 +45,8 @@ public sealed class UnifiedLogger : IDisposable
 #endif
         );
 
+        asyncLogBufferMonitor = new AsyncLogBufferMonitor();
+
         serilogLogger = new LoggerConfiguration()
             .MinimumLevel.ControlledBy(levelSwitch)
             .Enrich.FromLogContext()
@@ -58,7 +61,8 @@ public sealed class UnifiedLogger : IDisposable
                 rollingInterval: RollingInterval.Infinite,
                 shared: true,                               // allow log viewer to read while writing
                 outputTemplate: "{Timestamp:O} [{Level:u3}] [{LogTitle}] {Message}{NewLine}{Exception}"),
-                bufferSize: 10000)
+                bufferSize: 10000,
+                monitor: asyncLogBufferMonitor)
             .CreateLogger();
 
         // Route Serilog's own diagnostics to Debug output so sink failures
@@ -185,6 +189,7 @@ public sealed class UnifiedLogger : IDisposable
         if (disposed) return;
         disposed = true;
         serilogLogger.Dispose();
+        asyncLogBufferMonitor.Dispose();
         GC.SuppressFinalize(this);
     }
 }

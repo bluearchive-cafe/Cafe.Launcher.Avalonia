@@ -16,8 +16,6 @@ sealed class Program
     private const string MutexName = @"Local\Cafe_Launcher_SI";
     private const string SignalName = @"Local\Cafe_Launcher_SI_Show";
 
-    internal static bool PreviousSessionCrashed { get; private set; }
-
     /// <summary>
     /// True when the launcher settings file is missing at process startup.
     /// Used by <see cref="App"/> to show the first-launch setup wizard before normal refresh.
@@ -54,12 +52,10 @@ sealed class Program
         var crashLogger = new UnifiedLogger();
         PreDiLogger = crashLogger;
         FirstLaunch = DetectFirstLaunch();
-        var crashRecovery = new CrashRecoveryService(crashLogger);
         SetupCrashLogging(crashLogger);
         try
         {
             RunSession(
-                crashRecovery,
                 () => BuildAvaloniaApp().StartWithClassicDesktopLifetime(args));
         }
         catch (Exception exception)
@@ -77,22 +73,22 @@ sealed class Program
         return !File.Exists(settingsPath);
     }
 
-    internal static void RunSession(CrashRecoveryService crashRecovery, Action runApplication)
+    internal static void RunSession(Action runApplication)
     {
-        PreviousSessionCrashed = crashRecovery.BeginSessionAsync().GetAwaiter().GetResult();
+        var logger = PreDiLogger;
+        logger?.WriteSessionStartAsync().GetAwaiter().GetResult();
         try
         {
             runApplication();
             // Normal exit — finalise the session cleanly.
-            crashRecovery.CompleteSessionAsync().GetAwaiter().GetResult();
+            logger?.WriteSessionEndAsync().GetAwaiter().GetResult();
         }
         catch (Exception ex)
         {
-            // Log the crash before the logger is disposed, and intentionally
-            // skip CompleteSessionAsync so the crash marker survives for the
-            // next launch to detect. Main's catch block serves as a fallback
-            // for pre-DI-container crashes (ServiceProvider is null).
-            LogCrash(PreDiLogger!, "Main", ex);
+            // Log the crash before the logger is disposed. Main's catch block
+            // serves as a fallback for pre-DI-container crashes.
+            if (logger is not null)
+                LogCrash(logger, "Main", ex);
             throw;
         }
         finally
@@ -157,7 +153,15 @@ sealed class Program
 
     // Avalonia configuration, don't remove; also used by visual designer.
     public static AppBuilder BuildAvaloniaApp()
-        => AppBuilder.Configure<App>()
+    {
+        var builder = AppBuilder.Configure<App>()
             .UsePlatformDetect()
             .LogToTrace();
+
+#if DEBUG
+        builder = builder.WithDeveloperTools();
+#endif
+
+        return builder;
+    }
 }

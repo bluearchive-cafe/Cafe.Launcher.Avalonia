@@ -128,18 +128,6 @@ internal static class LauncherStrings
 
     internal static string Copyright => GetRequiredString("copyright");
 
-    internal static string CrashRecoveryContinue => GetRequiredString("crashRecoveryContinue");
-
-    internal static string CrashRecoveryDescription => GetRequiredString("crashRecoveryDescription");
-
-    internal static string CrashRecoveryMessage => GetRequiredString("crashRecoveryMessage");
-
-    internal static string CrashRecoveryResetSettings => GetRequiredString("crashRecoveryResetSettings");
-
-    internal static string CrashRecoveryTitle => GetRequiredString("crashRecoveryTitle");
-
-    internal static string CrashRecoveryViewLog => GetRequiredString("crashRecoveryViewLog");
-
     internal static string CustomBackground => GetRequiredString("customBackground");
 
     internal static string CustomBackgroundDescription => GetRequiredString("customBackgroundDescription");

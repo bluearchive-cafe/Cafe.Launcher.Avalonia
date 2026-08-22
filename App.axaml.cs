@@ -97,8 +97,6 @@ public partial class App : Application
 
             desktop.ShutdownRequested += HandleShutdownRequested;
             mainWindow.ConfigureViewModel(viewModel);
-            if (Program.PreviousSessionCrashed)
-                viewModel.Dialogs.ShowCrashRecovery();
 
             // Initialize system tray (depends on Window — kept outside DI)
             try
