@@ -13,7 +13,7 @@ public static class ThemeColorExtractionService
 {
     private const int MaxScaledSide = 64;
     private const int MaxLeafCount = 16;
-    private const int MaxPaletteColors = 5;
+    private const int MaxPaletteColors = 4;
     private const double TargetLightValue = 0.6;
     private const double MinimumSaturation = 0.08;
     private const double MinimumValue = 0.18;

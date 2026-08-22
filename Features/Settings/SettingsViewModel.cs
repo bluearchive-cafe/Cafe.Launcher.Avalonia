@@ -17,6 +17,7 @@ namespace Cafe.Launcher.Avalonia.Features.Settings;
 
 public partial class SettingsViewModel : ViewModelBase, IDisposable, IModalContentViewModel
 {
+    private const int AutoSaveDebounceMilliseconds = 400;
     private readonly LauncherSettingsService settingsService;
     private readonly LocalizationService localizer;
     private readonly ToastService toastService;
@@ -26,8 +27,15 @@ public partial class SettingsViewModel : ViewModelBase, IDisposable, IModalConte
     private readonly UnifiedLogger unifiedLogger;
     private readonly GameInstallationPath gameInstallationPath;
     private readonly IErrorHandlingService errorHandling;
+    private readonly SemaphoreSlim settingsSaveGate = new(1, 1);
+    private readonly object autoSaveSync = new();
     private CancellationTokenSource? appearancePreviewCts;
     private Task appearancePreviewTask = Task.CompletedTask;
+    private Task runtimeApplyTask = Task.CompletedTask;
+    private Task pendingAutoSaveTask = Task.CompletedTask;
+    private CancellationTokenSource? autoSaveDelayCts;
+    private bool isAutoSaveQueued;
+    private bool isAutoSaveFlushRequested;
     private bool disposed;
 
     // Coordination delegates — set by parent after construction.
@@ -87,12 +95,23 @@ public partial class SettingsViewModel : ViewModelBase, IDisposable, IModalConte
 
     private void OnCurrentSettingChanged(object? sender, PropertyChangedEventArgs e)
     {
-        if (!IsAppearanceSetting(e.PropertyName))
+        if (IsAutoSaveEnabled && editor.IsDirty)
         {
-            return;
+            QueueAutoSave();
         }
 
-        RequestAppearancePreview(e.PropertyName);
+        if (IsAppearanceSetting(e.PropertyName))
+        {
+            RequestAppearancePreview(e.PropertyName);
+        }
+        else if (e.PropertyName == nameof(LauncherSettings.Language))
+        {
+            RequestRuntimeLanguageAndThemeApply();
+        }
+        else if (e.PropertyName == nameof(LauncherSettings.LogLevel))
+        {
+            ApplyLogLevel(editor.Current.LogLevel);
+        }
     }
 
     // ── Settings UI state ────────────────────────────────────────────────
@@ -100,6 +119,14 @@ public partial class SettingsViewModel : ViewModelBase, IDisposable, IModalConte
     public bool IsSettingsDirty => editor.IsDirty;
 
     public bool CanSaveSettings => IsSettingsDirty && !IsSaving;
+
+    public bool IsAutoSaveEnabled { get; set; }
+
+    [ObservableProperty]
+    private bool hasAutoSaveFailure;
+
+    [ObservableProperty]
+    private string autoSaveFailureMessage = "";
 
     [ObservableProperty]
     private bool isUnsavedChangesVisible;
@@ -136,6 +163,37 @@ public partial class SettingsViewModel : ViewModelBase, IDisposable, IModalConte
     public bool IsAboutCategorySelected => SelectedCategory == SettingsCategoryCodes.About;
 
     internal Task PendingAppearancePreview => appearancePreviewTask;
+    internal Task PendingRuntimeApply => runtimeApplyTask;
+    internal Task PendingAutoSave => pendingAutoSaveTask;
+
+    /// <summary>
+    /// Persists the latest pending settings snapshot without waiting for the debounce delay.
+    /// Closing an edit session calls this method so a recent edit cannot be replaced by the
+    /// last saved snapshot when the panel is reopened.
+    /// </summary>
+    public async Task FlushPendingAutoSaveAsync()
+    {
+        if (disposed || !editor.IsDirty)
+        {
+            return;
+        }
+
+        Task task;
+        lock (autoSaveSync)
+        {
+            isAutoSaveQueued = true;
+            isAutoSaveFlushRequested = true;
+            autoSaveDelayCts?.Cancel();
+            if (pendingAutoSaveTask.IsCompleted)
+            {
+                pendingAutoSaveTask = ProcessAutoSaveQueueAsync();
+            }
+
+            task = pendingAutoSaveTask;
+        }
+
+        await task;
+    }
 
     // ── Public API for parent VM ──────────────────────────────────────────
 
@@ -184,6 +242,17 @@ public partial class SettingsViewModel : ViewModelBase, IDisposable, IModalConte
 
     // ── Commands ──────────────────────────────────────────────────────────
 
+    /// <summary>
+    /// Uses the shared destructive-action confirmation before resetting the complete
+    /// launcher configuration. The shell owns the reset so every runtime consumer
+    /// reloads the same persisted defaults.
+    /// </summary>
+    [RelayCommand]
+    private void RequestResetSettings()
+    {
+        dialogs.ShowDebugResetConfirmation();
+    }
+
     [RelayCommand]
     private async Task CheckForUpdatesAsync()
     {
@@ -216,22 +285,88 @@ public partial class SettingsViewModel : ViewModelBase, IDisposable, IModalConte
     [RelayCommand(CanExecute = nameof(CanSaveSettings))]
     private async Task SaveSettingsAsync()
     {
-        CancelAppearancePreview();
-        IsSaving = true;
+        await PersistCurrentSettingsAsync(showSuccessToast: true);
+    }
+
+    private void QueueAutoSave()
+    {
+        if (disposed)
+        {
+            return;
+        }
+
+        lock (autoSaveSync)
+        {
+            isAutoSaveQueued = true;
+            autoSaveDelayCts?.Cancel();
+            autoSaveDelayCts = new CancellationTokenSource();
+            if (!pendingAutoSaveTask.IsCompleted)
+            {
+                return;
+            }
+
+            pendingAutoSaveTask = ProcessAutoSaveQueueAsync();
+        }
+    }
+
+    private async Task ProcessAutoSaveQueueAsync()
+    {
+        while (true)
+        {
+            CancellationToken delayToken;
+            var skipDebounce = false;
+            lock (autoSaveSync)
+            {
+                if (!isAutoSaveQueued)
+                {
+                    return;
+                }
+
+                isAutoSaveQueued = false;
+                skipDebounce = isAutoSaveFlushRequested;
+                isAutoSaveFlushRequested = false;
+                delayToken = autoSaveDelayCts?.Token ?? CancellationToken.None;
+            }
+
+            if (!skipDebounce)
+            {
+                try
+                {
+                    await Task.Delay(AutoSaveDebounceMilliseconds, delayToken);
+                }
+                catch (OperationCanceledException) when (delayToken.IsCancellationRequested)
+                {
+                    continue;
+                }
+            }
+
+            await PersistCurrentSettingsAsync(showSuccessToast: false);
+        }
+    }
+
+    private async Task PersistCurrentSettingsAsync(bool showSuccessToast)
+    {
+        await settingsSaveGate.WaitAsync();
         try
         {
+            if (!editor.IsDirty)
+            {
+                return;
+            }
+
+            CancelAppearancePreview();
+            IsSaving = true;
             if (editor.Current.ThemeColorMode == ThemeColorModes.Wallpaper
                 && Appearance.ThemeColorPaletteItems.Count == 0)
             {
                 Appearance.RefreshThemeColorPaletteFromCurrentBackground(markDirty: false);
             }
 
-            editor.Commit(s =>
+            editor.Commit(current =>
             {
-                s.ThemeColorPalette = Appearance.GetThemeColorPaletteHexes();
-                s.SelectedThemeColorPaletteIndex = Appearance.SelectedThemeColorPaletteIndex;
+                current.ThemeColorPalette = Appearance.GetThemeColorPaletteHexes();
+                current.SelectedThemeColorPaletteIndex = Appearance.SelectedThemeColorPaletteIndex;
             });
-
             var settings = editor.GetSnapshot();
             await settingsService.SaveAsync(settings);
             ApplyLogLevel(settings.LogLevel);
@@ -243,20 +378,35 @@ public partial class SettingsViewModel : ViewModelBase, IDisposable, IModalConte
                     settings.ThemeColorMode,
                     SettingsAppearanceViewModel.ParseColorOrDefault(settings.CustomThemeColor));
 
-            editor.ApplySnapshot(settings);
-            toastService.ShowSuccess(localizer.T("settingsSaved"));
+            editor.MarkSaved(settings);
+            HasAutoSaveFailure = false;
+            AutoSaveFailureMessage = "";
+
+            if (showSuccessToast)
+            {
+                toastService.ShowSuccess(localizer.T("settingsSaved"));
+            }
 
             await AsyncEvent.InvokeSequentiallyAsync(SettingsSaved);
         }
         catch (Exception exception)
         {
+            HasAutoSaveFailure = true;
+            AutoSaveFailureMessage = localizer.F("settingsSaveFailed", exception.Message);
             await errorHandling.HandleErrorAsync("Settings save failed.", exception,
-                new ErrorHandlingOptions { ToastMessage = localizer.F("settingsSaveFailed", exception.Message) });
+                new ErrorHandlingOptions { ToastMessage = AutoSaveFailureMessage });
         }
         finally
         {
             IsSaving = false;
+            settingsSaveGate.Release();
         }
+    }
+
+    [RelayCommand]
+    private async Task RetryAutoSaveAsync()
+    {
+        await FlushPendingAutoSaveAsync();
     }
 
     [RelayCommand]
@@ -385,6 +535,29 @@ public partial class SettingsViewModel : ViewModelBase, IDisposable, IModalConte
         appearancePreviewTask = PreviewCurrentAppearanceAsync(propertyName, appearancePreviewCts.Token);
     }
 
+    private void RequestRuntimeLanguageAndThemeApply()
+    {
+        runtimeApplyTask = ApplyRuntimeLanguageAndThemeAsync(editor.GetSnapshot());
+    }
+
+    private async Task ApplyRuntimeLanguageAndThemeAsync(LauncherSettings settings)
+    {
+        if (ApplyLanguageAndTheme is null)
+        {
+            return;
+        }
+
+        try
+        {
+            await ApplyLanguageAndTheme(settings);
+        }
+        catch (Exception exception)
+        {
+            await errorHandling.HandleErrorAsync("Settings runtime apply failed.", exception,
+                new ErrorHandlingOptions { ToastMessage = localizer.F("settingsSaveFailed", exception.Message) });
+        }
+    }
+
     private void CancelAppearancePreview()
     {
         appearancePreviewCts?.Cancel();
@@ -417,6 +590,7 @@ public partial class SettingsViewModel : ViewModelBase, IDisposable, IModalConte
 
     private static bool IsAppearanceSetting(string? propertyName) =>
         propertyName is nameof(LauncherSettings.ThemeMode)
+            or nameof(LauncherSettings.MotionMode)
             or nameof(LauncherSettings.ThemeColorMode)
             or nameof(LauncherSettings.CustomThemeColor)
             or nameof(LauncherSettings.ThemeColorPalette)
@@ -463,9 +637,32 @@ public partial class SettingsViewModel : ViewModelBase, IDisposable, IModalConte
         }
 
         disposed = true;
+        IsAutoSaveEnabled = false;
+        lock (autoSaveSync)
+        {
+            isAutoSaveQueued = false;
+            isAutoSaveFlushRequested = false;
+            autoSaveDelayCts?.Cancel();
+        }
+
         CancelAppearancePreview();
         editor.PropertyChanged -= OnEditorPropertyChanged;
         editor.CurrentPropertyChanged -= OnCurrentSettingChanged;
+        autoSaveDelayCts?.Dispose();
         Appearance.Dispose();
+
+        var pendingWork = Task.WhenAll(pendingAutoSaveTask, runtimeApplyTask);
+        if (pendingWork.IsCompleted)
+        {
+            settingsSaveGate.Dispose();
+        }
+        else
+        {
+            _ = pendingWork.ContinueWith(
+                _ => settingsSaveGate.Dispose(),
+                CancellationToken.None,
+                TaskContinuationOptions.ExecuteSynchronously,
+                TaskScheduler.Default);
+        }
     }
 }

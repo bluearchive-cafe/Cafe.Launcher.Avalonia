@@ -65,6 +65,26 @@ public partial class SettingsAppearanceViewModel : ViewModelBase, IDisposable
 
     public ObservableCollection<ThemeColorPaletteItem> ThemeColorPaletteItems { get; } = [];
 
+    /// <summary>
+    /// Presents the appearance prototype's single animation switch while retaining the
+    /// persisted full/reduced/system motion modes behind it.
+    /// </summary>
+    public bool IsMotionEnabled
+    {
+        get => editor.Current.MotionMode != MotionModes.Reduced;
+        set
+        {
+            var targetMode = value ? MotionModes.Full : MotionModes.Reduced;
+            if (editor.Current.MotionMode == targetMode)
+            {
+                return;
+            }
+
+            editor.Current.MotionMode = targetMode;
+            OnPropertyChanged();
+        }
+    }
+
     public void Load(LauncherSettings settings)
     {
         var previous = suppressEditorUpdates;
@@ -81,6 +101,7 @@ public partial class SettingsAppearanceViewModel : ViewModelBase, IDisposable
             ReplaceThemeColorPalette(
                 settings.ThemeColorPalette,
                 settings.SelectedThemeColorPaletteIndex);
+            OnPropertyChanged(nameof(IsMotionEnabled));
         }
         finally
         {
@@ -155,6 +176,12 @@ public partial class SettingsAppearanceViewModel : ViewModelBase, IDisposable
 
     private void OnCurrentSettingChanged(object? sender, PropertyChangedEventArgs e)
     {
+        if (e.PropertyName == nameof(LauncherSettings.MotionMode))
+        {
+            OnPropertyChanged(nameof(IsMotionEnabled));
+            return;
+        }
+
         if (e.PropertyName == nameof(LauncherSettings.ThemeColorMode))
         {
             var value = editor.Current.ThemeColorMode;
@@ -337,37 +364,37 @@ public partial class SettingsAppearanceViewModel : ViewModelBase, IDisposable
         }
 
         var accentColor = ColorUtils.NormalizeAccentColorForUi(color);
+        var hoverColor = ColorUtils.AdjustColor(accentColor, 1.15);
+        var pressedColor = ColorUtils.AdjustColor(accentColor, 0.85);
 
-        SetBrush(application, "LauncherAccentBrush", accentColor);
-        SetBrush(application, "LauncherAccentHoverBrush", ColorUtils.AdjustColor(accentColor, 1.15));
-        SetBrush(application, "LauncherAccentPressedBrush", ColorUtils.AdjustColor(accentColor, 0.85));
+        SetBrush(application, "Cafe.Color.Accent", accentColor);
+        SetBrush(application, "Cafe.Color.Accent.Hover", hoverColor);
+        SetBrush(application, "Cafe.Color.Accent.Pressed", pressedColor);
         SetBrush(
             application,
-            "LauncherAccentSoftBrush",
+            "Cafe.Color.Accent.Soft",
             Color.FromArgb(0x24, accentColor.R, accentColor.G, accentColor.B));
         SetBrush(
             application,
-            "LauncherAccentBorderBrush",
+            "Cafe.Color.Accent.Outline",
             Color.FromArgb(0x80, accentColor.R, accentColor.G, accentColor.B));
         SetBrush(
             application,
-            "LauncherFocusRingBrush",
+            "Cafe.Color.Focus",
             Color.FromArgb(0x99, accentColor.R, accentColor.G, accentColor.B));
-        SetBrush(application, "LauncherCarouselDotActiveBrush", accentColor);
-        SetBrush(application, "LauncherToastInfoBrush", accentColor);
-        SetBrush(application, "LauncherOnAccentBrush", ColorUtils.GetReadableOnAccentColor(accentColor));
+        SetBrush(application, "Cafe.Color.Accent", accentColor);
+        SetBrush(application, "Cafe.Color.Info", accentColor);
+        SetBrush(application, "Cafe.Color.OnAccent", ColorUtils.GetReadableForegroundColor(accentColor));
+        SetBrush(application, "Cafe.Color.OnAccent.Hover", ColorUtils.GetReadableForegroundColor(hoverColor));
+        SetBrush(application, "Cafe.Color.OnAccent.Pressed", ColorUtils.GetReadableForegroundColor(pressedColor));
         SetBrush(
             application,
-            "LauncherFlatHoverBrush",
+            "Cafe.Color.Surface.QuietHover",
             Color.FromArgb(0x14, accentColor.R, accentColor.G, accentColor.B));
         SetBrush(
             application,
-            "LauncherFlatPressedBrush",
+            "Cafe.Color.Surface.QuietPressed",
             Color.FromArgb(0x30, accentColor.R, accentColor.G, accentColor.B));
-        SetBrush(
-            application,
-            "LauncherInfoBackgroundBrush",
-            Color.FromArgb(0x24, accentColor.R, accentColor.G, accentColor.B));
     }
 
     private static void SetBrush(Application application, string key, Color color)

@@ -17,35 +17,35 @@
                 MaxHeight="620"
                 HorizontalAlignment="Stretch"
                 VerticalAlignment="Stretch"
-                Classes="dialog overlay-dialog motion-surface">
+                Classes="dialog overlay-dialog panel-frame motion-surface">
             <Border.RenderTransform>
                 <TranslateTransform/>
             </Border.RenderTransform>
-            <Grid RowDefinitions="Auto,*,Auto" Classes="motion-surface-content">
-                <Grid ColumnDefinitions="*,Auto" Classes="dialog-header">
-                    <StackPanel Classes="dialog-title-row">
-                        <Border Classes="dialog-icon">
-                            <materialIcons:MaterialIcon Kind="CogOutline" Width="{StaticResource LauncherIconMd}" Height="{StaticResource LauncherIconMd}" Foreground="{DynamicResource LauncherAccentBrush}" HorizontalAlignment="Center" VerticalAlignment="Center"/>
-                        </Border>
-                        <TextBlock Text="{Binding Shell.I18n[settings]}" Classes="dialog-title" VerticalAlignment="Center"/>
-                    </StackPanel>
-                    <Button Grid.Column="1" Classes="dialog-close header-action" Command="{Binding WindowChrome.ShowSettingsCommand}"
-                            IsEnabled="{Binding Settings.IsSaving, Converter={x:Static BoolConverters.Not}}"
-                            VerticalAlignment="Center" ToolTip.Tip="{Binding Shell.I18n[close]}"
-                            AutomationProperties.Name="{Binding Shell.I18n[close]}">
-                        <materialIcons:MaterialIcon Kind="Close" Width="{StaticResource LauncherIconMd}" Height="{StaticResource LauncherIconMd}"/>
+            <Grid RowDefinitions="*" Classes="motion-surface-content panel-content">
+                <Grid x:Name="SettingsWorkspace" Classes="settings-workspace" ColumnDefinitions="188,*">
+                    <Button x:Name="SettingsFloatingClose"
+                            Grid.Column="1"
+                            Classes="dialog-close settings-floating-close"
+                            Command="{Binding WindowChrome.ShowSettingsCommand}"
+                            ToolTip.Tip="{Binding Shell.I18n[close]}"
+                            AutomationProperties.Name="{Binding Shell.I18n[close]}"
+                            ZIndex="2">
+                        <materialIcons:MaterialIcon Kind="Close" Width="{StaticResource Cafe.Icon.Medium}" Height="{StaticResource Cafe.Icon.Medium}"/>
                     </Button>
-                </Grid>
 
-                <Grid Grid.Row="1" Classes="settings-workspace" ColumnDefinitions="184,*">
-                    <ListBox Classes="settings-navigation"
-                             x:Name="SettingsNavigation"
-                             AutomationProperties.AutomationId="SettingsNavigation"
-                             Focusable="True"
-                             ItemsSource="{Binding Settings.Options.SettingsCategories}"
-                             SelectedValue="{Binding Settings.SelectedCategory, Mode=TwoWay}"
-                             SelectedValueBinding="{Binding Code}"
-                             IsEnabled="{Binding Settings.IsSaving, Converter={x:Static BoolConverters.Not}}">
+                    <Grid x:Name="SettingsNavigationPane" Classes="settings-navigation-pane" RowDefinitions="Auto,*">
+                        <TextBlock Text="{Binding Shell.I18n[settings]}"
+                                   Classes="dialog-title settings-navigation-title"
+                                   AutomationProperties.Name="{Binding Shell.I18n[settings]}"/>
+                        <ListBox Grid.Row="1"
+                                 Classes="settings-navigation"
+                                 x:Name="SettingsNavigation"
+                                 AutomationProperties.AutomationId="SettingsNavigation"
+                                 Focusable="True"
+                                 ItemsSource="{Binding Settings.Options.SettingsCategories}"
+                                 SelectedValue="{Binding Settings.SelectedCategory, Mode=TwoWay}"
+                                 SelectedValueBinding="{Binding Code}"
+                                 IsEnabled="{Binding Settings.IsSaving, Converter={x:Static BoolConverters.Not}}">
                         <ListBox.ItemTemplate>
                             <DataTemplate x:DataType="models:SettingOption">
                                 <TextBlock Text="{Binding DisplayName}"
@@ -54,44 +54,13 @@
                                            AutomationProperties.Name="{Binding DisplayName}"/>
                             </DataTemplate>
                         </ListBox.ItemTemplate>
-                    </ListBox>
+                        </ListBox>
+                    </Grid>
 
-                    <Border Grid.Column="1" Classes="settings-content-divider">
+                    <Border x:Name="SettingsContentDivider" Grid.Column="1" Classes="settings-content-divider">
                       <Border Classes="settings-content-padding">
-                        <Grid Classes="settings-content" RowDefinitions="Auto,*">
-                        <Border Classes="status-summary settings-status-summary">
-                            <Grid Classes="status-details" ColumnDefinitions="Auto,*,Auto,Auto">
-                                <Border Classes="settings-icon">
-                                    <materialIcons:MaterialIcon Kind="{Binding Shell.StatusIconKind}"
-                                                                Width="{StaticResource LauncherIconMd}"
-                                                                Height="{StaticResource LauncherIconMd}"
-                                                                Foreground="{DynamicResource LauncherAccentBrush}"
-                                                                HorizontalAlignment="Center"
-                                                                VerticalAlignment="Center"/>
-                                </Border>
-                                <StackPanel Grid.Column="1"
-                                            Classes="status-title-inline"
-                                            Orientation="Horizontal"
-                                            Spacing="{StaticResource LauncherSpacingXs}"
-                                            VerticalAlignment="Center"
-                                            Margin="8,0,0,0">
-                                    <TextBlock Text="{Binding Shell.CurrentViewTitle}" Classes="status-summary-title"/>
-                                    <TextBlock Text="{Binding Shell.VersionText}" Classes="caption status-summary-version"/>
-                                </StackPanel>
-                                <Border Grid.Column="2" Classes="status-detail">
-                                    <TextBlock Text="{Binding Shell.NetworkStatusValueText}"
-                                               Classes="caption"
-                                               VerticalAlignment="Center"/>
-                                </Border>
-                                <Border Grid.Column="3" Classes="status-detail">
-                                    <TextBlock Text="{Binding Shell.DiskSpaceText}"
-                                               Classes="caption"
-                                               VerticalAlignment="Center"/>
-                                </Border>
-                            </Grid>
-                        </Border>
-
-                        <ScrollViewer Grid.Row="1"
+                        <Grid Classes="settings-content">
+                        <ScrollViewer
                                       Classes="dialog-scroll"
                                       VerticalScrollBarVisibility="Auto"
                                       HorizontalScrollBarVisibility="Disabled"
@@ -102,6 +71,24 @@
                                            x:DataType="models:SettingOption"
                                            Text="{Binding DisplayName}"
                                            AutomationProperties.Name="{Binding DisplayName}"/>
+                                <TextBlock Classes="settings-intro caption"
+                                           DataContext="{Binding SelectedItem, ElementName=SettingsNavigation}"
+                                           x:DataType="models:SettingOption"
+                                           Text="{Binding Description}"
+                                           TextWrapping="Wrap"/>
+                                <Border Classes="settings-save-error" IsVisible="{Binding Settings.HasAutoSaveFailure}">
+                                    <Grid ColumnDefinitions="Auto,*,Auto" ColumnSpacing="{StaticResource Cafe.Space.3}">
+                                        <materialIcons:MaterialIcon Kind="AlertCircle"
+                                                                     Width="{StaticResource Cafe.Icon.Medium}"
+                                                                     Height="{StaticResource Cafe.Icon.Medium}"
+                                                                     Foreground="{DynamicResource Cafe.Color.Danger}"
+                                                                     VerticalAlignment="Center"/>
+                                        <TextBlock Grid.Column="1" Text="{Binding Settings.AutoSaveFailureMessage}" Classes="body"/>
+                                        <Button Grid.Column="2" Classes="flat-action settings-retry-action" Command="{Binding Settings.RetryAutoSaveCommand}">
+                                            <TextBlock Text="{Binding Shell.I18n[retry]}"/>
+                                        </Button>
+                                    </Grid>
+                                </Border>
                                 <views:SettingsGeneralSection IsVisible="{Binding Settings.IsGeneralCategorySelected}"
                                                               Classes="motion-content"
                                                               Classes.motion-enabled="{Binding IsMotionEnabled}"
@@ -155,37 +142,9 @@
                       </Grid>
                     </Border>
                     </Border>
+
                 </Grid>
 
-                <Border Grid.Row="2" Classes="dialog-footer">
-                    <StackPanel Orientation="Horizontal"
-                                Spacing="{StaticResource LauncherSpacingSm}"
-                                HorizontalAlignment="Right"
-                                VerticalAlignment="Center">
-                        <Button Classes="flat-action dialog-action"
-                                Command="{Binding WindowChrome.ShowSettingsCommand}"
-                                IsEnabled="{Binding Settings.IsSaving, Converter={x:Static BoolConverters.Not}}"
-                                ToolTip.Tip="{Binding Shell.I18n[cancel]}"
-                                AutomationProperties.Name="{Binding Shell.I18n[cancel]}">
-                            <StackPanel Classes="button-content" HorizontalAlignment="Center">
-                                <materialIcons:MaterialIcon Kind="CloseCircleOutline"
-                                    Width="{StaticResource LauncherIconSm}" Height="{StaticResource LauncherIconSm}"/>
-                                <TextBlock Text="{Binding Shell.I18n[cancel]}"/>
-                            </StackPanel>
-                        </Button>
-                        <Button Classes="primary-action dialog-action"
-                                Command="{Binding Settings.SaveSettingsCommand}"
-                                IsEnabled="{Binding Settings.CanSaveSettings}"
-                                ToolTip.Tip="{Binding Shell.I18n[save]}"
-                                AutomationProperties.Name="{Binding Shell.I18n[save]}">
-                            <StackPanel Classes="button-content" HorizontalAlignment="Center">
-                                <materialIcons:MaterialIcon Kind="ContentSave"
-                                    Width="{StaticResource LauncherIconSm}" Height="{StaticResource LauncherIconSm}"/>
-                                <TextBlock Text="{Binding Shell.I18n[save]}"/>
-                            </StackPanel>
-                        </Button>
-                    </StackPanel>
-                </Border>
             </Grid>
         </Border>
     </Grid>

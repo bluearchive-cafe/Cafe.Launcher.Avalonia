@@ -19,104 +19,48 @@ public sealed class SettingsOptionsViewModel
         this.localizer = localizer;
         this.diskSpaceService = diskSpaceService;
         Language = LocalizationService.GetLanguageOptions(localizer);
+        BackgroundSource = CreateSettingOptions(SettingOptionDescriptors.BackgroundSource);
+        BackgroundFit = CreateSettingOptions(SettingOptionDescriptors.BackgroundFit);
+        ThemeColor = CreateSettingOptions(SettingOptionDescriptors.ThemeColor);
+        LaunchCheckMode = CreateSettingOptions(SettingOptionDescriptors.LaunchCheckMode);
+        ProxyMode = CreateSettingOptions(SettingOptionDescriptors.ProxyMode);
+        PatchUrlGroup = CreateSettingOptions(SettingOptionDescriptors.PatchUrlGroup);
+        DownloadSpeedLimit = CreateSettingOptions(SettingOptionDescriptors.DownloadSpeedLimit);
+        CloseBehavior = CreateSettingOptions(SettingOptionDescriptors.CloseBehavior);
+        UpdateChannel = CreateSettingOptions(SettingOptionDescriptors.UpdateChannel);
+        LogLevel = CreateSettingOptions(SettingOptionDescriptors.LogLevel);
+        Theme = CreateThemeOptions(SettingOptionDescriptors.Theme);
+        MotionMode = CreateSettingOptions(SettingOptionDescriptors.MotionMode);
+        StatusDetailMode = CreateSettingOptions(SettingOptionDescriptors.StatusDetailMode);
     }
 
-    public ObservableCollection<SettingOption> BackgroundSource { get; } =
-    [
-        new() { Code = BackgroundSources.Bundled },
-        new() { Code = BackgroundSources.Remote },
-        new() { Code = BackgroundSources.Custom }
-    ];
+    public ObservableCollection<SettingOption> BackgroundSource { get; }
 
-    public ObservableCollection<SettingOption> BackgroundFit { get; } =
-    [
-        new() { Code = BackgroundFits.Fill },
-        new() { Code = BackgroundFits.Uniform },
-        new() { Code = BackgroundFits.UniformToFill }
-    ];
+    public ObservableCollection<SettingOption> BackgroundFit { get; }
 
-    public ObservableCollection<SettingOption> ThemeColor { get; } =
-    [
-        new() { Code = ThemeColorModes.Default },
-        new() { Code = ThemeColorModes.System },
-        new() { Code = ThemeColorModes.Wallpaper },
-        new() { Code = ThemeColorModes.Custom }
-    ];
+    public ObservableCollection<SettingOption> ThemeColor { get; }
 
-    public ObservableCollection<SettingOption> LaunchCheckMode { get; } =
-    [
-        new() { Code = LaunchCheckModes.LocalManifest },
-        new() { Code = LaunchCheckModes.RemoteManifest },
-        new() { Code = LaunchCheckModes.None }
-    ];
+    public ObservableCollection<SettingOption> LaunchCheckMode { get; }
 
-    public ObservableCollection<SettingOption> ProxyMode { get; } =
-    [
-        new() { Code = ProxyModes.Auto },
-        new() { Code = ProxyModes.Direct },
-        new() { Code = ProxyModes.System }
-    ];
+    public ObservableCollection<SettingOption> ProxyMode { get; }
 
-    public ObservableCollection<SettingOption> PatchUrlGroup { get; } =
-    [
-        new() { Code = PatchUrlGroups.Official },
-        new() { Code = PatchUrlGroups.Cafe }
-    ];
+    public ObservableCollection<SettingOption> PatchUrlGroup { get; }
 
-    public ObservableCollection<SettingOption> DownloadSpeedLimit { get; } =
-    [
-        new() { Code = DownloadSpeedLimits.Unlimited },
-        new() { Code = DownloadSpeedLimits.Speed1MBs },
-        new() { Code = DownloadSpeedLimits.Speed5MBs },
-        new() { Code = DownloadSpeedLimits.Speed10MBs },
-        new() { Code = DownloadSpeedLimits.Speed25MBs },
-        new() { Code = DownloadSpeedLimits.Speed50MBs }
-    ];
+    public ObservableCollection<SettingOption> DownloadSpeedLimit { get; }
 
-    public ObservableCollection<SettingOption> CloseBehavior { get; } =
-    [
-        new() { Code = CloseBehaviors.Minimize },
-        new() { Code = CloseBehaviors.Exit }
-    ];
+    public ObservableCollection<SettingOption> CloseBehavior { get; }
 
     public IReadOnlyList<LanguageOption> Language { get; }
 
-    public ObservableCollection<SettingOption> UpdateChannel { get; } =
-    [
-        new() { Code = UpdateChannels.Stable },
-        new() { Code = UpdateChannels.Beta }
-    ];
+    public ObservableCollection<SettingOption> UpdateChannel { get; }
 
-    public ObservableCollection<SettingOption> LogLevel { get; } =
-    [
-        new() { Code = LogLevels.Verbose },
-        new() { Code = LogLevels.Debug },
-        new() { Code = LogLevels.Information },
-        new() { Code = LogLevels.Warning },
-        new() { Code = LogLevels.Error },
-        new() { Code = LogLevels.Fatal }
-    ];
+    public ObservableCollection<SettingOption> LogLevel { get; }
 
-    public ObservableCollection<ThemeOption> Theme { get; } =
-    [
-        new() { Code = ThemeModes.System },
-        new() { Code = ThemeModes.Light },
-        new() { Code = ThemeModes.Dark }
-    ];
+    public ObservableCollection<ThemeOption> Theme { get; }
 
-    public ObservableCollection<SettingOption> MotionMode { get; } =
-    [
-        new() { Code = MotionModes.System },
-        new() { Code = MotionModes.Full },
-        new() { Code = MotionModes.Reduced }
-    ];
+    public ObservableCollection<SettingOption> MotionMode { get; }
 
-    public ObservableCollection<SettingOption> StatusDetailMode { get; } =
-    [
-        new() { Code = StatusDetailModes.Hidden },
-        new() { Code = StatusDetailModes.Compact },
-        new() { Code = StatusDetailModes.Detailed }
-    ];
+    public ObservableCollection<SettingOption> StatusDetailMode { get; }
 
     public ObservableCollection<SettingOption> SettingsCategories { get; } = [];
 
@@ -131,115 +75,48 @@ public sealed class SettingsOptionsViewModel
         UpdateSettingCategory(SettingsCategoryCodes.Advanced, localizer.T("settingsCategoryAdvanced"), localizer.T("settingsCategoryAdvancedDescription"));
         UpdateSettingCategory(SettingsCategoryCodes.About, localizer.T("settingsCategoryAbout"), localizer.T("settingsCategoryAboutDescription"));
 
-        RefreshOptions(Theme, code => code switch
-        {
-            ThemeModes.Light => localizer.T("themeLight"),
-            ThemeModes.Dark => localizer.T("themeDark"),
-            _ => localizer.T("themeSystem")
-        });
-
-        RefreshOptions(MotionMode, code => code switch
-        {
-            MotionModes.Full => localizer.T("motionModeFull"),
-            MotionModes.Reduced => localizer.T("motionModeReduced"),
-            _ => localizer.T("motionModeSystem")
-        });
-
-        RefreshOptions(StatusDetailMode, code => code switch
-        {
-            StatusDetailModes.Hidden => localizer.T("statusDetailModeHidden"),
-            StatusDetailModes.Compact => localizer.T("statusDetailModeCompact"),
-            _ => localizer.T("statusDetailModeDetailed")
-        });
-
-        RefreshOptions(ThemeColor, code => code switch
-        {
-            ThemeColorModes.System => localizer.T("themeColorSystem"),
-            ThemeColorModes.Wallpaper => localizer.T("themeColorWallpaper"),
-            ThemeColorModes.Custom => localizer.T("themeColorCustom"),
-            _ => localizer.T("themeColorDefault")
-        });
-
-        RefreshOptions(LaunchCheckMode, code => code switch
-        {
-            LaunchCheckModes.RemoteManifest => localizer.T("launchCheckRemoteManifest"),
-            LaunchCheckModes.None => localizer.T("launchCheckNone"),
-            _ => localizer.T("launchCheckLocalManifest")
-        });
-
-        RefreshOptions(ProxyMode, code => code switch
-        {
-            ProxyModes.Auto => localizer.T("proxyAuto"),
-            ProxyModes.System => localizer.T("proxySystem"),
-            _ => localizer.T("proxyDirect")
-        });
-
-        RefreshOptions(PatchUrlGroup, code => code switch
-        {
-            PatchUrlGroups.Cafe => localizer.T("downloadSourceCafe"),
-            _ => localizer.T("downloadSourceOfficial")
-        });
-
-        RefreshOptions(CloseBehavior, code => code switch
-        {
-            CloseBehaviors.Exit => localizer.T("closeBehaviorExit"),
-            _ => localizer.T("closeBehaviorMinimize")
-        });
-
-        RefreshOptions(DownloadSpeedLimit, code => code switch
-        {
-            DownloadSpeedLimits.Speed1MBs => localizer.T("speed1MBs"),
-            DownloadSpeedLimits.Speed5MBs => localizer.T("speed5MBs"),
-            DownloadSpeedLimits.Speed10MBs => localizer.T("speed10MBs"),
-            DownloadSpeedLimits.Speed25MBs => localizer.T("speed25MBs"),
-            DownloadSpeedLimits.Speed50MBs => localizer.T("speed50MBs"),
-            _ => localizer.T("speedUnlimited")
-        });
-
-        RefreshOptions(BackgroundSource, code => code switch
-        {
-            BackgroundSources.Remote => localizer.T("backgroundSourceRemote"),
-            BackgroundSources.Custom => localizer.T("backgroundSourceCustom"),
-            _ => localizer.T("backgroundSourceBundled")
-        });
-
-        RefreshOptions(BackgroundFit, code => code switch
-        {
-            BackgroundFits.Fill => localizer.T("backgroundFitFill"),
-            BackgroundFits.Uniform => localizer.T("backgroundFitUniform"),
-            _ => localizer.T("backgroundFitUniformToFill")
-        });
-
-        RefreshOptions(UpdateChannel, code => code switch
-        {
-            UpdateChannels.Beta => localizer.T("launcherUpdateChannelBeta"),
-            _ => localizer.T("launcherUpdateChannelStable")
-        });
-
-        RefreshOptions(LogLevel, code => code switch
-        {
-            LogLevels.Verbose => localizer.T("logLevelVerbose"),
-            LogLevels.Debug => localizer.T("logLevelDebug"),
-            LogLevels.Warning => localizer.T("logLevelWarning"),
-            LogLevels.Error => localizer.T("logLevelError"),
-            LogLevels.Fatal => localizer.T("logLevelFatal"),
-            _ => localizer.T("logLevelInformation")
-        });
+        RefreshOptions(Theme, SettingOptionDescriptors.Theme);
+        RefreshOptions(MotionMode, SettingOptionDescriptors.MotionMode);
+        RefreshOptions(StatusDetailMode, SettingOptionDescriptors.StatusDetailMode);
+        RefreshOptions(ThemeColor, SettingOptionDescriptors.ThemeColor);
+        RefreshOptions(LaunchCheckMode, SettingOptionDescriptors.LaunchCheckMode);
+        RefreshOptions(ProxyMode, SettingOptionDescriptors.ProxyMode);
+        RefreshOptions(PatchUrlGroup, SettingOptionDescriptors.PatchUrlGroup);
+        RefreshOptions(CloseBehavior, SettingOptionDescriptors.CloseBehavior);
+        RefreshOptions(DownloadSpeedLimit, SettingOptionDescriptors.DownloadSpeedLimit);
+        RefreshOptions(BackgroundSource, SettingOptionDescriptors.BackgroundSource);
+        RefreshOptions(BackgroundFit, SettingOptionDescriptors.BackgroundFit);
+        RefreshOptions(UpdateChannel, SettingOptionDescriptors.UpdateChannel);
+        RefreshOptions(LogLevel, SettingOptionDescriptors.LogLevel);
     }
 
-    private void RefreshOptions(ObservableCollection<SettingOption> options, System.Func<string, string> resolveDisplayName)
+    private static ObservableCollection<SettingOption> CreateSettingOptions(
+        IReadOnlyList<SettingOptionDescriptor> descriptors)
+    {
+        return new ObservableCollection<SettingOption>(descriptors.Select(descriptor => new SettingOption
+        {
+            Code = descriptor.Code
+        }));
+    }
+
+    private static ObservableCollection<ThemeOption> CreateThemeOptions(
+        IReadOnlyList<SettingOptionDescriptor> descriptors)
+    {
+        return new ObservableCollection<ThemeOption>(descriptors.Select(descriptor => new ThemeOption
+        {
+            Code = descriptor.Code
+        }));
+    }
+
+    private void RefreshOptions<TOption>(
+        IEnumerable<TOption> options,
+        IReadOnlyList<SettingOptionDescriptor> descriptors)
+        where TOption : SelectableOption
     {
         foreach (var option in options)
         {
-            option.DisplayName = resolveDisplayName(option.Code);
-        }
-    }
-
-    private void RefreshOptions(ObservableCollection<ThemeOption> options, System.Func<string, string> resolveDisplayName)
-    {
-        foreach (var option in options)
-        {
-            option.DisplayName = resolveDisplayName(option.Code);
+            var resourceKey = SettingOptionDescriptors.ResolveDisplayResourceKey(descriptors, option.Code);
+            option.DisplayName = localizer.T(resourceKey);
         }
     }
 

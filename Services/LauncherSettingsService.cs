@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
 using System.Linq;
@@ -154,10 +155,10 @@ public sealed class LauncherSettingsService : IDisposable
             _ => settings.LaunchCheckMode
         };
 
-        foreach (var (getter, setter, isValid, fallback) in SettingValidations)
+        foreach (var (getter, setter, options, fallback) in SettingValidations)
         {
             var current = getter(settings);
-            if (!isValid(current))
+            if (!SettingOptionDescriptors.ContainsCode(options, current))
             {
                 setter(settings, fallback);
             }
@@ -185,52 +186,52 @@ public sealed class LauncherSettingsService : IDisposable
     private delegate string SettingGetter(LauncherSettings settings);
     private delegate void SettingSetter(LauncherSettings settings, string value);
 
-    private static readonly (SettingGetter Get, SettingSetter Set, Func<string, bool> IsValid, string Fallback)[] SettingValidations =
+    private static readonly (SettingGetter Get, SettingSetter Set, IReadOnlyList<SettingOptionDescriptor> Options, string Fallback)[] SettingValidations =
     [
         (s => s.LaunchCheckMode, (s, v) => s.LaunchCheckMode = v,
-            v => v is LaunchCheckModes.LocalManifest or LaunchCheckModes.RemoteManifest or LaunchCheckModes.None,
+            SettingOptionDescriptors.LaunchCheckMode,
             LaunchCheckModes.LocalManifest),
         (s => s.ProxyMode, (s, v) => s.ProxyMode = v,
-            v => v is ProxyModes.Direct or ProxyModes.Auto or ProxyModes.System,
+            SettingOptionDescriptors.ProxyMode,
             ProxyModes.Auto),
         (s => s.CloseBehavior, (s, v) => s.CloseBehavior = v,
-            v => v is CloseBehaviors.Minimize or CloseBehaviors.Exit,
+            SettingOptionDescriptors.CloseBehavior,
             CloseBehaviors.Minimize),
         (s => s.Language, (s, v) => s.Language = v,
-            v => v is LauncherLanguages.Auto or LauncherLanguages.English or LauncherLanguages.SimplifiedChinese or LauncherLanguages.TraditionalChinese or LauncherLanguages.Japanese,
+            SettingOptionDescriptors.Language,
             LauncherLanguages.Auto),
         (s => s.ThemeMode, (s, v) => s.ThemeMode = v,
-            v => v is ThemeModes.System or ThemeModes.Light or ThemeModes.Dark,
+            SettingOptionDescriptors.Theme,
             ThemeModes.System),
         (s => s.MotionMode, (s, v) => s.MotionMode = v,
-            v => v is MotionModes.System or MotionModes.Full or MotionModes.Reduced,
+            SettingOptionDescriptors.MotionMode,
             MotionModes.System),
         (s => s.StatusDetailMode, (s, v) => s.StatusDetailMode = v,
-            v => v is StatusDetailModes.Hidden or StatusDetailModes.Compact or StatusDetailModes.Detailed,
-            StatusDetailModes.Detailed),
+            SettingOptionDescriptors.StatusDetailMode,
+            StatusDetailModes.Compact),
         (s => s.ThemeColorMode, (s, v) => s.ThemeColorMode = v,
-            v => v is ThemeColorModes.Default or ThemeColorModes.System or ThemeColorModes.Wallpaper or ThemeColorModes.Custom,
+            SettingOptionDescriptors.ThemeColor,
             ThemeColorModes.Default),
         (s => s.DownloadSpeedLimit, (s, v) => s.DownloadSpeedLimit = v,
-            v => v is DownloadSpeedLimits.Unlimited or DownloadSpeedLimits.Speed1MBs or DownloadSpeedLimits.Speed5MBs or DownloadSpeedLimits.Speed10MBs or DownloadSpeedLimits.Speed25MBs or DownloadSpeedLimits.Speed50MBs,
+            SettingOptionDescriptors.DownloadSpeedLimit,
             DownloadSpeedLimits.Unlimited),
         (s => s.PatchUrlGroup, (s, v) => s.PatchUrlGroup = v,
-            v => v is PatchUrlGroups.Official or PatchUrlGroups.Cafe,
+            SettingOptionDescriptors.PatchUrlGroup,
             PatchUrlGroups.Official),
         (s => s.BackgroundSource, (s, v) => s.BackgroundSource = v,
-            v => v is BackgroundSources.Bundled or BackgroundSources.Remote or BackgroundSources.Custom,
+            SettingOptionDescriptors.BackgroundSource,
             BackgroundSources.Bundled),
         (s => s.BackgroundFit, (s, v) => s.BackgroundFit = v,
-            v => v is BackgroundFits.Fill or BackgroundFits.Uniform or BackgroundFits.UniformToFill,
+            SettingOptionDescriptors.BackgroundFit,
             BackgroundFits.UniformToFill),
         (s => s.UpdateChannel, (s, v) => s.UpdateChannel = v,
-            v => v is UpdateChannels.Stable or UpdateChannels.Beta,
+            SettingOptionDescriptors.UpdateChannel,
             UpdateChannels.Stable),
         (s => s.LogLevel, (s, v) => s.LogLevel = v,
-            v => v is LogLevels.Verbose or LogLevels.Debug or LogLevels.Information or LogLevels.Warning or LogLevels.Error or LogLevels.Fatal,
+            SettingOptionDescriptors.LogLevel,
             LogLevels.Information),
         (s => s.ResourcePanelUidSource, (s, v) => s.ResourcePanelUidSource = v,
-            v => v is ResourcePanelUidSources.Auto or ResourcePanelUidSources.Custom,
+            SettingOptionDescriptors.ResourcePanelUidSource,
             ResourcePanelUidSources.Auto),
     ];
 

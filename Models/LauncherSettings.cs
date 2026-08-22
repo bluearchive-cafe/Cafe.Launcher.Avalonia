@@ -36,7 +36,7 @@ public sealed class LauncherSettings : ObservableObject
 #endif
     ;
     private string resourcePanelUidSource = ResourcePanelUidSources.Auto;
-    private string statusDetailMode = StatusDetailModes.Detailed;
+    private string statusDetailMode = StatusDetailModes.Compact;
 
     [JsonPropertyName("gamePath")]
     public string GamePath { get => gamePath; set => SetProperty(ref gamePath, value); }
@@ -108,7 +108,13 @@ public sealed class LauncherSettings : ObservableObject
     public string ResourcePanelUidSource { get => resourcePanelUidSource; set => SetProperty(ref resourcePanelUidSource, value); }
 
     [JsonPropertyName("statusDetailMode")]
-    public string StatusDetailMode { get => statusDetailMode; set => SetProperty(ref statusDetailMode, value); }
+    public string StatusDetailMode
+    {
+        get => statusDetailMode;
+        set => SetProperty(
+            ref statusDetailMode,
+            value == StatusDetailModes.Detailed ? StatusDetailModes.Compact : value);
+    }
 
     /// <summary>
     /// Deep-clones this settings object.
@@ -122,36 +128,11 @@ public sealed class LauncherSettings : ObservableObject
     /// <summary>
     /// Copy constructor for deep cloning. Copies all settings properties,
     /// including a shallow copy of <see cref="ThemeColorPalette"/> (strings are immutable).
-    /// ⚠️ When adding a new setting property to this class,
-    /// you MUST add a corresponding line to this constructor.
-    /// Failure to do so results in silent shallow copy of the new property.
+    /// Keep <see cref="LauncherSettingsContract"/> in sync when adding persisted settings.
     /// </summary>
     public LauncherSettings(LauncherSettings other)
     {
-        GamePath = other.GamePath;
-        LaunchCheckMode = other.LaunchCheckMode;
-        ProxyMode = other.ProxyMode;
-        CloseBehavior = other.CloseBehavior;
-        Language = other.Language;
-        ThemeMode = other.ThemeMode;
-        MotionMode = other.MotionMode;
-        ThemeColorMode = other.ThemeColorMode;
-        CustomThemeColor = other.CustomThemeColor;
-        ThemeColorPalette = [.. other.ThemeColorPalette];
-        SelectedThemeColorPaletteIndex = other.SelectedThemeColorPaletteIndex;
-        DownloadSpeedLimit = other.DownloadSpeedLimit;
-        EnableStartupUpdateCheck = other.EnableStartupUpdateCheck;
-        ShowRemoteContentCard = other.ShowRemoteContentCard;
-        PatchUrlGroup = other.PatchUrlGroup;
-        CustomBackgroundPath = other.CustomBackgroundPath;
-        BackgroundSource = other.BackgroundSource;
-        BackgroundFit = other.BackgroundFit;
-        BackgroundFillColor = other.BackgroundFillColor;
-        ResourcePanelUid = other.ResourcePanelUid;
-        ResourcePanelUidSource = other.ResourcePanelUidSource;
-        StatusDetailMode = other.StatusDetailMode;
-        UpdateChannel = other.UpdateChannel;
-        LogLevel = other.LogLevel;
+        LauncherSettingsContract.CopyAll(this, other);
     }
 
     /// <summary>
