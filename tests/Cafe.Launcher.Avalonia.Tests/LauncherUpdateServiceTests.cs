@@ -389,6 +389,32 @@ public sealed class LauncherUpdateServiceTests
         Assert.False(result.IsUpdateAvailable);
     }
 
+    [Fact]
+    public async Task CheckForUpdateAsync_WhenStableChannel_CurrentPrereleaseReceivesStableRelease()
+    {
+        using var service = new LauncherUpdateService(
+            new ReleaseHandler(
+                HttpStatusCode.OK,
+                """
+                [{
+                  "version": "1.0.0",
+                  "files": [{
+                    "name": "Cafe.Launcher.Avalonia_v1.0.0_setup.exe",
+                    "url": "https://github.com/bluearchive-cafe/Cafe.Launcher.Avalonia_Release/releases/download/v1.0.0/Cafe.Launcher.Avalonia_v1.0.0_setup.exe",
+                    "size": 100
+                  }]
+                }]
+                """),
+            currentVersionOverride: "1.0.0-beta.10");
+
+        var result = await service.CheckForUpdateAsync(UpdateChannels.Stable, ProxyModes.Direct);
+
+        Assert.True(result.IsSuccessful);
+        Assert.True(result.IsUpdateAvailable);
+        Assert.Equal("1.0.0", result.LatestVersion);
+        Assert.Single(result.Files);
+    }
+
     // ── Prerelease label comparison ────────────────────────────────────────
 
     [Fact]
