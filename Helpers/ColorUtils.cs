@@ -10,6 +10,9 @@ namespace Cafe.Launcher.Avalonia.Helpers;
 /// </summary>
 internal static class ColorUtils
 {
+    private const double MinimumNormalTextContrast = 4.5d;
+    private static readonly Color DarkOnAccent = Color.FromRgb(0x12, 0x18, 0x20);
+
     /// <summary>
     /// Adjusts a colour's RGB channels by a uniform factor (e.g. 1.15 = 15% brighter, 0.85 = 15% darker).
     /// </summary>
@@ -26,8 +29,9 @@ internal static class ColorUtils
     }
 
     /// <summary>
-    /// Normalises an accent colour for UI display so it has sufficient saturation and value
-    /// and the resulting relative luminance is <= 0.32 (ensuring readable on-accent text).
+    /// Normalises an accent colour for UI display so it has sufficient saturation and a
+    /// foreground with WCAG normal-text contrast. The old luminance cap could produce an
+    /// accent that was too light for white text and too dark for the dark foreground.
     /// </summary>
     public static Color NormalizeAccentColorForUi(Color color)
     {
@@ -36,39 +40,77 @@ internal static class ColorUtils
         var adjustedValue = Math.Max(value, 0.30d);
         var adjustedColor = FromHsv(hue, adjustedSaturation, adjustedValue, color.A);
 
-        if (GetRelativeLuminance(adjustedColor) <= 0.32d)
+        if (GetBestForegroundContrast(adjustedColor) >= MinimumNormalTextContrast)
         {
             return adjustedColor;
         }
 
-        var low = 0d;
-        var high = adjustedValue;
+        var darkForegroundContrast = GetContrastRatio(adjustedColor, DarkOnAccent);
+        var prefersDarkForeground = darkForegroundContrast
+            >= GetContrastRatio(adjustedColor, Colors.White);
+        var low = prefersDarkForeground ? adjustedValue : 0d;
+        var high = prefersDarkForeground ? 1d : adjustedValue;
         for (var i = 0; i < 12; i++)
         {
             var mid = (low + high) / 2d;
             var candidate = FromHsv(hue, adjustedSaturation, mid, color.A);
-            if (GetRelativeLuminance(candidate) > 0.32d)
+            var hasContrast = GetContrastRatio(
+                candidate,
+                prefersDarkForeground ? DarkOnAccent : Colors.White) >= MinimumNormalTextContrast;
+            if (hasContrast)
             {
-                high = mid;
+                if (prefersDarkForeground)
+                {
+                    high = mid;
+                }
+                else
+                {
+                    low = mid;
+                }
             }
             else
             {
-                low = mid;
+                if (prefersDarkForeground)
+                {
+                    low = mid;
+                }
+                else
+                {
+                    high = mid;
+                }
             }
         }
 
-        return FromHsv(hue, adjustedSaturation, low, color.A);
+        return FromHsv(
+            hue,
+            adjustedSaturation,
+            prefersDarkForeground ? high : low,
+            color.A);
     }
 
     /// <summary>
-    /// Returns black or white, whichever offers the better contrast against <paramref name="color"/>.
+    /// Returns the accessible dark foreground or white, whichever offers the better contrast.
     /// </summary>
-    public static Color GetReadableOnAccentColor(Color color)
+    public static Color GetReadableForegroundColor(Color color)
     {
-        var luminance = GetRelativeLuminance(color);
-        return luminance > 0.45
-            ? Color.FromRgb(0x12, 0x18, 0x20)
+        return GetContrastRatio(color, DarkOnAccent) >= GetContrastRatio(color, Colors.White)
+            ? DarkOnAccent
             : Colors.White;
+    }
+
+    /// <summary>
+    /// Returns an accessible foreground for an accent colour.
+    /// </summary>
+    public static Color GetReadableOnAccentColor(Color color) =>
+        GetReadableForegroundColor(color);
+
+    /// <summary>Computes the WCAG contrast ratio between two opaque UI colors.</summary>
+    public static double GetContrastRatio(Color first, Color second)
+    {
+        var firstLuminance = GetRelativeLuminance(first);
+        var secondLuminance = GetRelativeLuminance(second);
+        return (Math.Max(firstLuminance, secondLuminance) + 0.05d)
+            / (Math.Min(firstLuminance, secondLuminance) + 0.05d);
     }
 
     /// <summary>
@@ -78,6 +120,11 @@ internal static class ColorUtils
         (0.2126 * SrgbToLinear(color.R / 255d))
         + (0.7152 * SrgbToLinear(color.G / 255d))
         + (0.0722 * SrgbToLinear(color.B / 255d));
+
+    private static double GetBestForegroundContrast(Color color) =>
+        Math.Max(
+            GetContrastRatio(color, DarkOnAccent),
+            GetContrastRatio(color, Colors.White));
 
     /// <summary>
     /// Converts an sRGB colour to HSV components.

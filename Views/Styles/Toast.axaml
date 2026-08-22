@@ -2,22 +2,22 @@
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
         xmlns:materialIcons="clr-namespace:Material.Icons.Avalonia;assembly=Material.Icons.Avalonia">
     <Style Selector="Border.toast-card">
-        <Setter Property="Background" Value="{DynamicResource LauncherToastBackgroundBrush}"/>
-        <Setter Property="BorderBrush" Value="{DynamicResource LauncherCardBorderBrush}"/>
+        <Setter Property="Background" Value="{DynamicResource Cafe.Color.Surface}"/>
+        <Setter Property="BorderBrush" Value="{DynamicResource Cafe.Color.Border}"/>
         <Setter Property="BorderThickness" Value="1"/>
-        <Setter Property="CornerRadius" Value="{DynamicResource LauncherRadiusMd}"/>
-        <Setter Property="Padding" Value="{DynamicResource LauncherThicknessNone}"/>
-        <Setter Property="MinWidth" Value="{DynamicResource LauncherToastWidth}"/>
-        <Setter Property="MaxWidth" Value="{DynamicResource LauncherToastWidth}"/>
+        <Setter Property="CornerRadius" Value="{DynamicResource Cafe.Radius.Medium}"/>
+        <Setter Property="Padding" Value="{DynamicResource Cafe.Inset.None}"/>
+        <Setter Property="MinWidth" Value="{DynamicResource Cafe.Control.Width.Toast}"/>
+        <Setter Property="MaxWidth" Value="{DynamicResource Cafe.Control.Width.Toast}"/>
         <Setter Property="Opacity" Value="1"/>
         <Setter Property="ClipToBounds" Value="True"/>
     </Style>
     <Style Selector="Border.toast-card.motion-enabled:not(.motion-exit)">
         <Style.Animations>
-            <Animation Duration="{StaticResource LauncherMotionContentDuration}" FillMode="Forward" Easing="{StaticResource LauncherMotionEnterEasing}">
+            <Animation Duration="{StaticResource Cafe.Motion.Standard}" FillMode="Forward" Easing="{StaticResource Cafe.Motion.Ease.Enter}">
                 <KeyFrame Cue="0%">
                     <Setter Property="Opacity" Value="0"/>
-                    <Setter Property="TranslateTransform.X" Value="{StaticResource LauncherMotionToastOffset}"/>
+                    <Setter Property="TranslateTransform.X" Value="{StaticResource Cafe.Motion.Offset.Small}"/>
                 </KeyFrame>
                 <KeyFrame Cue="100%">
                     <Setter Property="Opacity" Value="1"/>
@@ -28,14 +28,14 @@
     </Style>
     <Style Selector="Border.toast-card.motion-enabled.motion-exit">
         <Style.Animations>
-            <Animation Duration="{StaticResource LauncherMotionFastDuration}" FillMode="Forward" Easing="{StaticResource LauncherMotionExitEasing}">
+            <Animation Duration="{StaticResource Cafe.Motion.Fast}" FillMode="Forward" Easing="{StaticResource Cafe.Motion.Ease.Exit}">
                 <KeyFrame Cue="0%">
                     <Setter Property="Opacity" Value="1"/>
                     <Setter Property="TranslateTransform.X" Value="0"/>
                 </KeyFrame>
                 <KeyFrame Cue="100%">
                     <Setter Property="Opacity" Value="0"/>
-                    <Setter Property="TranslateTransform.X" Value="{StaticResource LauncherMotionToastOffset}"/>
+                    <Setter Property="TranslateTransform.X" Value="{StaticResource Cafe.Motion.Offset.Small}"/>
                 </KeyFrame>
             </Animation>
         </Style.Animations>
@@ -47,30 +47,30 @@
         <Setter Property="HorizontalAlignment" Value="Right"/>
     </Style>
     <Style Selector="StackPanel.toast-list">
-        <Setter Property="Spacing" Value="{DynamicResource LauncherSpacingSm}"/>
+        <Setter Property="Spacing" Value="{DynamicResource Cafe.Space.2}"/>
         <Setter Property="HorizontalAlignment" Value="Right"/>
     </Style>
     <Style Selector="Grid.toast-layout">
-        <Setter Property="ColumnSpacing" Value="{DynamicResource LauncherSpacingSm}"/>
+        <Setter Property="ColumnSpacing" Value="{DynamicResource Cafe.Space.2}"/>
     </Style>
     <Style Selector="Border.toast-content">
-        <Setter Property="Padding" Value="{DynamicResource LauncherToastContentPadding}"/>
+        <Setter Property="Padding" Value="{DynamicResource Cafe.Inset.Content}"/>
     </Style>
     <Style Selector="TextBlock.toast-message">
-        <Setter Property="FontSize" Value="{DynamicResource LauncherFontSizeMd}"/>
-        <Setter Property="Foreground" Value="{DynamicResource LauncherTextBodyBrush}"/>
+        <Setter Property="FontSize" Value="{DynamicResource Cafe.Type.Body}"/>
+        <Setter Property="Foreground" Value="{DynamicResource Cafe.Color.Text.Body}"/>
         <Setter Property="TextWrapping" Value="Wrap"/>
         <Setter Property="MaxWidth" Value="282"/>
-        <Setter Property="Margin" Value="{DynamicResource LauncherToastMessageMargin}"/>
+        <Setter Property="Margin" Value="{DynamicResource Cafe.Inset.Message.Top}"/>
     </Style>
     <Style Selector="Button.toast-close">
-        <Setter Property="Background" Value="{DynamicResource LauncherTransparentBrush}"/>
+        <Setter Property="Background" Value="{DynamicResource Cafe.Color.Transparent}"/>
         <Setter Property="BorderThickness" Value="0"/>
-        <Setter Property="Foreground" Value="{DynamicResource LauncherTextSecondaryBrush}"/>
+        <Setter Property="Foreground" Value="{DynamicResource Cafe.Color.Text.Muted}"/>
         <Setter Property="Width" Value="32"/>
         <Setter Property="Height" Value="32"/>
         <Setter Property="Padding" Value="0"/>
-        <Setter Property="CornerRadius" Value="{DynamicResource LauncherRadiusSm}"/>
+        <Setter Property="CornerRadius" Value="{DynamicResource Cafe.Radius.Small}"/>
         <Setter Property="HorizontalContentAlignment" Value="Center"/>
         <Setter Property="VerticalContentAlignment" Value="Center"/>
         <Setter Property="Opacity" Value="0.5"/>
@@ -78,88 +78,83 @@
     </Style>
     <Style Selector="Button.toast-close:pointerover">
         <Setter Property="Opacity" Value="1"/>
-        <Setter Property="Background" Value="{DynamicResource LauncherFlatHoverBrush}"/>
-        <Setter Property="Foreground" Value="{DynamicResource LauncherTextPrimaryBrush}"/>
+        <Setter Property="Background" Value="{DynamicResource Cafe.Color.Surface.QuietHover}"/>
+        <Setter Property="Foreground" Value="{DynamicResource Cafe.Color.Text}"/>
     </Style>
     <Style Selector="Button.toast-close:pressed">
-        <Setter Property="Background" Value="{DynamicResource LauncherFlatPressedBrush}"/>
-        <Setter Property="Foreground" Value="{DynamicResource LauncherTextPrimaryBrush}"/>
+        <Setter Property="Background" Value="{DynamicResource Cafe.Color.Surface.QuietPressed}"/>
+        <Setter Property="Foreground" Value="{DynamicResource Cafe.Color.Text}"/>
     </Style>
     <Style Selector="TextBlock.toast-title">
-        <Setter Property="FontSize" Value="{DynamicResource LauncherFontSizeLg}"/>
-        <Setter Property="Foreground" Value="{DynamicResource LauncherTextPrimaryBrush}"/>
+        <Setter Property="FontSize" Value="{DynamicResource Cafe.Type.Body}"/>
+        <Setter Property="Foreground" Value="{DynamicResource Cafe.Color.Text}"/>
         <Setter Property="TextWrapping" Value="Wrap"/>
     </Style>
     <Style Selector="materialIcons|MaterialIcon.toast-icon">
         <Setter Property="VerticalAlignment" Value="Center"/>
     </Style>
     <Style Selector="WrapPanel.toast-actions">
-        <Setter Property="Margin" Value="{DynamicResource LauncherToastActionRowMargin}"/>
+        <Setter Property="Margin" Value="{DynamicResource Cafe.Inset.Action.Top}"/>
     </Style>
     <Style Selector="Button.toast-primary-action">
-        <Setter Property="MinWidth" Value="{DynamicResource LauncherControlMinWidthNone}"/>
-        <Setter Property="MinHeight" Value="{DynamicResource LauncherToastActionMinHeight}"/>
-        <Setter Property="Padding" Value="{DynamicResource LauncherToastActionPadding}"/>
-        <Setter Property="Margin" Value="{DynamicResource LauncherToastPrimaryActionMargin}"/>
-        <Setter Property="FontSize" Value="{DynamicResource LauncherFontSizeSm}"/>
-        <Setter Property="Background" Value="{DynamicResource LauncherAccentBrush}"/>
+        <Setter Property="MinWidth" Value="{DynamicResource Cafe.Control.MinWidth.None}"/>
+        <Setter Property="MinHeight" Value="{DynamicResource Cafe.Control.Height.Action}"/>
+        <Setter Property="Padding" Value="{DynamicResource Cafe.Inset.Control}"/>
+        <Setter Property="Margin" Value="{DynamicResource Cafe.Inset.Action.End}"/>
+        <Setter Property="FontSize" Value="{DynamicResource Cafe.Type.Caption}"/>
+        <Setter Property="Background" Value="{DynamicResource Cafe.Color.Accent}"/>
         <Setter Property="BorderThickness" Value="0"/>
-        <Setter Property="Foreground" Value="{DynamicResource LauncherOnAccentBrush}"/>
-        <Setter Property="CornerRadius" Value="{DynamicResource LauncherRadiusSm}"/>
+        <Setter Property="Foreground" Value="{DynamicResource Cafe.Color.OnAccent}"/>
+        <Setter Property="CornerRadius" Value="{DynamicResource Cafe.Radius.Small}"/>
         <Setter Property="HorizontalContentAlignment" Value="Center"/>
         <Setter Property="VerticalContentAlignment" Value="Center"/>
-        <Setter Property="Template" Value="{StaticResource LauncherBorderButtonTemplate}"/>
+        <Setter Property="Template" Value="{StaticResource Cafe.Control.Template.BorderButton}"/>
     </Style>
     <Style Selector="Button.toast-primary-action:pointerover">
-        <Setter Property="Background" Value="{DynamicResource LauncherAccentHoverBrush}"/>
-        <Setter Property="Foreground" Value="{DynamicResource LauncherOnAccentBrush}"/>
+        <Setter Property="Background" Value="{DynamicResource Cafe.Color.Accent.Hover}"/>
+        <Setter Property="Foreground" Value="{DynamicResource Cafe.Color.OnAccent.Hover}"/>
     </Style>
     <Style Selector="Button.toast-primary-action:pressed">
-        <Setter Property="Background" Value="{DynamicResource LauncherAccentPressedBrush}"/>
-        <Setter Property="Foreground" Value="{DynamicResource LauncherOnAccentBrush}"/>
+        <Setter Property="Background" Value="{DynamicResource Cafe.Color.Accent.Pressed}"/>
+        <Setter Property="Foreground" Value="{DynamicResource Cafe.Color.OnAccent.Pressed}"/>
     </Style>
     <Style Selector="Button.toast-primary-action:disabled">
-        <Setter Property="Background" Value="{DynamicResource LauncherButtonBorderBrush}"/>
-        <Setter Property="Foreground" Value="{DynamicResource LauncherTextSecondaryBrush}"/>
+        <Setter Property="Background" Value="{DynamicResource Cafe.Color.Border.Button}"/>
+        <Setter Property="Foreground" Value="{DynamicResource Cafe.Color.Text.Muted}"/>
     </Style>
     <Style Selector="Button.toast-secondary-action">
-        <Setter Property="MinWidth" Value="{DynamicResource LauncherControlMinWidthNone}"/>
-        <Setter Property="MinHeight" Value="{DynamicResource LauncherToastActionMinHeight}"/>
-        <Setter Property="Padding" Value="{DynamicResource LauncherToastActionPadding}"/>
-        <Setter Property="FontSize" Value="{DynamicResource LauncherFontSizeSm}"/>
-        <Setter Property="Background" Value="{DynamicResource LauncherTransparentBrush}"/>
-        <Setter Property="BorderBrush" Value="{DynamicResource LauncherButtonBorderBrush}"/>
+        <Setter Property="MinWidth" Value="{DynamicResource Cafe.Control.MinWidth.None}"/>
+        <Setter Property="MinHeight" Value="{DynamicResource Cafe.Control.Height.Action}"/>
+        <Setter Property="Padding" Value="{DynamicResource Cafe.Inset.Control}"/>
+        <Setter Property="FontSize" Value="{DynamicResource Cafe.Type.Caption}"/>
+        <Setter Property="Background" Value="{DynamicResource Cafe.Color.Transparent}"/>
+        <Setter Property="BorderBrush" Value="{DynamicResource Cafe.Color.Border.Button}"/>
         <Setter Property="BorderThickness" Value="1"/>
-        <Setter Property="Foreground" Value="{DynamicResource LauncherTextPrimaryBrush}"/>
-        <Setter Property="CornerRadius" Value="{DynamicResource LauncherRadiusSm}"/>
+        <Setter Property="Foreground" Value="{DynamicResource Cafe.Color.Text}"/>
+        <Setter Property="CornerRadius" Value="{DynamicResource Cafe.Radius.Small}"/>
         <Setter Property="HorizontalContentAlignment" Value="Center"/>
         <Setter Property="VerticalContentAlignment" Value="Center"/>
-        <Setter Property="Template" Value="{StaticResource LauncherBorderButtonTemplate}"/>
+        <Setter Property="Template" Value="{StaticResource Cafe.Control.Template.BorderButton}"/>
     </Style>
     <Style Selector="Button.toast-secondary-action:pointerover">
-        <Setter Property="Background" Value="{DynamicResource LauncherFlatHoverBrush}"/>
-        <Setter Property="BorderBrush" Value="{DynamicResource LauncherAccentHoverBrush}"/>
-        <Setter Property="Foreground" Value="{DynamicResource LauncherAccentBrush}"/>
+        <Setter Property="Background" Value="{DynamicResource Cafe.Color.Surface.QuietHover}"/>
+        <Setter Property="BorderBrush" Value="{DynamicResource Cafe.Color.Accent.Hover}"/>
+        <Setter Property="Foreground" Value="{DynamicResource Cafe.Color.Accent}"/>
     </Style>
     <Style Selector="Button.toast-secondary-action:pressed">
-        <Setter Property="Background" Value="{DynamicResource LauncherFlatPressedBrush}"/>
-        <Setter Property="BorderBrush" Value="{DynamicResource LauncherAccentBrush}"/>
-        <Setter Property="Foreground" Value="{DynamicResource LauncherAccentBrush}"/>
+        <Setter Property="Background" Value="{DynamicResource Cafe.Color.Surface.QuietPressed}"/>
+        <Setter Property="BorderBrush" Value="{DynamicResource Cafe.Color.Accent}"/>
+        <Setter Property="Foreground" Value="{DynamicResource Cafe.Color.Accent}"/>
     </Style>
     <Style Selector="Button.toast-secondary-action:disabled">
-        <Setter Property="Background" Value="{DynamicResource LauncherContentRowBrush}"/>
-        <Setter Property="Foreground" Value="{DynamicResource LauncherTextSecondaryBrush}"/>
-        <Setter Property="BorderBrush" Value="{DynamicResource LauncherCardBorderBrush}"/>
+        <Setter Property="Background" Value="{DynamicResource Cafe.Color.Surface.Row}"/>
+        <Setter Property="Foreground" Value="{DynamicResource Cafe.Color.Text.Muted}"/>
+        <Setter Property="BorderBrush" Value="{DynamicResource Cafe.Color.Border}"/>
     </Style>
     <Style Selector="ProgressBar.toast-progress">
-        <Setter Property="Transitions">
-            <Transitions>
-                <DoubleTransition Property="Value" Duration="{StaticResource LauncherMotionFasterDuration}" Easing="{StaticResource LauncherMotionLinearEasing}"/>
-            </Transitions>
-        </Setter>
-        <Setter Property="Height" Value="{DynamicResource LauncherToastAutoDismissProgressHeight}"/>
-        <Setter Property="MinHeight" Value="{DynamicResource LauncherToastAutoDismissProgressHeight}"/>
-        <Setter Property="Background" Value="{DynamicResource LauncherCardBorderBrush}"/>
+        <Setter Property="Height" Value="{DynamicResource Cafe.Control.Height.Progress}"/>
+        <Setter Property="MinHeight" Value="{DynamicResource Cafe.Control.Height.Progress}"/>
+        <Setter Property="Background" Value="{DynamicResource Cafe.Color.Border}"/>
         <Setter Property="HorizontalAlignment" Value="Stretch"/>
         <Setter Property="VerticalAlignment" Value="Bottom"/>
     </Style>

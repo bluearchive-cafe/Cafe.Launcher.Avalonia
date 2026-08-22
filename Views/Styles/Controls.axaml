@@ -1,0 +1,51 @@
+<Styles xmlns="https://github.com/avaloniaui">
+    <!-- Shared interaction primitives. Feature layout rules remain in feature styles. -->
+    <!--
+        Keep FluentTheme's defaults from leaking a second radius scale into the
+        application. Feature styles may still opt into Medium/Large for a
+        particular surface, but every unqualified control starts on this hierarchy.
+    -->
+    <Style Selector="Button">
+        <Setter Property="CornerRadius" Value="{StaticResource Cafe.Radius.Small}"/>
+    </Style>
+    <Style Selector="TextBox">
+        <Setter Property="CornerRadius" Value="{StaticResource Cafe.Radius.Medium}"/>
+    </Style>
+    <Style Selector="ComboBox">
+        <Setter Property="CornerRadius" Value="{StaticResource Cafe.Radius.Medium}"/>
+    </Style>
+    <Style Selector="ColorPicker">
+        <Setter Property="CornerRadius" Value="{StaticResource Cafe.Radius.Medium}"/>
+    </Style>
+    <Style Selector="ListBox">
+        <Setter Property="CornerRadius" Value="{StaticResource Cafe.Radius.Medium}"/>
+    </Style>
+    <Style Selector="ListBoxItem">
+        <Setter Property="CornerRadius" Value="{StaticResource Cafe.Radius.Small}"/>
+    </Style>
+    <Style Selector="ProgressBar">
+        <Setter Property="CornerRadius" Value="{StaticResource Cafe.Radius.Small}"/>
+    </Style>
+    <Style Selector="Button:focus-visible, ComboBox:focus-visible, ToggleSwitch:focus-visible">
+        <Setter Property="BorderBrush" Value="{DynamicResource Cafe.Color.Focus}"/>
+        <Setter Property="BorderThickness" Value="2"/>
+    </Style>
+    <Style Selector="TextBox:focus-visible">
+        <Setter Property="BorderBrush" Value="{DynamicResource Cafe.Color.Focus}"/>
+        <Setter Property="BorderThickness" Value="2"/>
+    </Style>
+    <Style Selector="Border.surface">
+        <Setter Property="Background" Value="{DynamicResource Cafe.Color.Surface.Subtle}"/>
+        <Setter Property="BorderBrush" Value="{DynamicResource Cafe.Color.Border}"/>
+        <Setter Property="BorderThickness" Value="1"/>
+        <Setter Property="CornerRadius" Value="{StaticResource Cafe.Radius.Large}"/>
+        <Setter Property="Padding" Value="{StaticResource Cafe.Inset.Large}"/>
+        <Setter Property="BoxShadow" Value="0 12 32 0 #33000000"/>
+    </Style>
+    <Style Selector="ScrollViewer.dialog-frame-body.scroll-pad">
+        <Setter Property="Padding" Value="{StaticResource Cafe.Inset.Large}"/>
+    </Style>
+    <Style Selector="ScrollViewer.dialog-frame-body.confirm-body">
+        <Setter Property="Padding" Value="{StaticResource Cafe.Inset.None}"/>
+    </Style>
+</Styles>

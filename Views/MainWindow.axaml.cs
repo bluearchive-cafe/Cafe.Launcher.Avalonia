@@ -38,6 +38,8 @@ public partial class MainWindow : Window
         PointerPressed += OnPointerPressed;
         KeyDown += OnKeyDown;
         Activated += OnActivated;
+        Deactivated += OnDeactivated;
+        SizeChanged += OnSizeChanged;
     }
 
     public void ConfigureViewModel(MainWindowViewModel viewModel)
@@ -58,6 +60,7 @@ public partial class MainWindow : Window
         viewModel.WindowChrome.CloseRequested += PerformClose;
         viewModel.WindowChrome.RestoreRequested += ShowWindow;
         viewModel.Dialogs.ErrorCopyDetailsRequested += CopyErrorDetailsToClipboard;
+        viewModel.SetCompactHome(Bounds.Width < 1080);
     }
 
     protected override void OnClosed(EventArgs e)
@@ -130,6 +133,43 @@ public partial class MainWindow : Window
     private void OnActivated(object? sender, EventArgs e)
     {
         configuredViewModel?.RefreshSystemMotionPreference();
+        configuredViewModel?.RemoteContent.SetWindowActive(true);
+    }
+
+    private void OnDeactivated(object? sender, EventArgs e) =>
+        configuredViewModel?.RemoteContent.SetWindowActive(false);
+
+    private void OnSizeChanged(object? sender, SizeChangedEventArgs e) =>
+        configuredViewModel?.SetCompactHome(e.NewSize.Width < 1080);
+
+    private void BannerHost_OnPointerEntered(object? sender, PointerEventArgs e) =>
+        configuredViewModel?.RemoteContent.SetBannerPointerOver(true);
+
+    private void BannerHost_OnPointerExited(object? sender, PointerEventArgs e) =>
+        configuredViewModel?.RemoteContent.SetBannerPointerOver(false);
+
+    private void BannerHost_OnKeyDown(object? sender, KeyEventArgs e)
+    {
+        if (configuredViewModel is not { } viewModel)
+        {
+            return;
+        }
+
+        switch (e.Key)
+        {
+            case Key.Left:
+                viewModel.RemoteContent.SelectPreviousBannerCommand.Execute(null);
+                e.Handled = true;
+                break;
+            case Key.Right:
+                viewModel.RemoteContent.SelectNextBannerCommand.Execute(null);
+                e.Handled = true;
+                break;
+            case Key.Space:
+                viewModel.RemoteContent.ToggleCarouselLoopCommand.Execute(null);
+                e.Handled = true;
+                break;
+        }
     }
 
     private void MinimizeWindow() => WindowState = WindowState.Minimized;

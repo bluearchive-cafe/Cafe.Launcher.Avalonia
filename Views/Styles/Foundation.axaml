@@ -1,0 +1,100 @@
+<ResourceDictionary xmlns="https://github.com/avaloniaui"
+                    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+                    xmlns:models="using:Cafe.Launcher.Avalonia.Models">
+    <!-- Stable, theme-independent scales. Feature layouts may use local values when a
+         value has only one consumer; shared UI must use these semantic resources. -->
+    <x:Double x:Key="Cafe.Space.1">4</x:Double>
+    <x:Double x:Key="Cafe.Space.2">8</x:Double>
+    <x:Double x:Key="Cafe.Space.3">12</x:Double>
+    <x:Double x:Key="Cafe.Space.4">16</x:Double>
+    <x:Double x:Key="Cafe.Space.5">24</x:Double>
+    <x:Double x:Key="Cafe.Space.6">32</x:Double>
+    <Thickness x:Key="Cafe.Space.1.Thickness">4</Thickness>
+    <Thickness x:Key="Cafe.Space.2.Thickness">8</Thickness>
+    <Thickness x:Key="Cafe.Space.3.Thickness">12</Thickness>
+    <Thickness x:Key="Cafe.Space.4.Thickness">16</Thickness>
+    <Thickness x:Key="Cafe.Space.5.Thickness">24</Thickness>
+    <Thickness x:Key="Cafe.Space.6.Thickness">32</Thickness>
+    <Thickness x:Key="Cafe.Inset.None">0</Thickness>
+    <Thickness x:Key="Cafe.Inset.Small">8</Thickness>
+    <Thickness x:Key="Cafe.Inset.Medium">12</Thickness>
+    <Thickness x:Key="Cafe.Inset.Large">16</Thickness>
+    <Thickness x:Key="Cafe.Inset.FieldPath">16,0,4,0</Thickness>
+    <Thickness x:Key="Cafe.Inset.Message.Top">0,4,0,0</Thickness>
+    <Thickness x:Key="Cafe.Inset.Action.Top">0,8,0,0</Thickness>
+    <Thickness x:Key="Cafe.Inset.Action.End">0,0,8,0</Thickness>
+    <Thickness x:Key="Cafe.Inset.Action.Start">8,0,0,0</Thickness>
+    <Thickness x:Key="Cafe.Inset.Content">12</Thickness>
+    <Thickness x:Key="Cafe.Inset.Control">12,8</Thickness>
+    <Thickness x:Key="Cafe.Inset.Tab">8,4</Thickness>
+    <Thickness x:Key="Cafe.Inset.Settings.Content">28,32,0,32</Thickness>
+    <Thickness x:Key="Cafe.Inset.Settings.Scrollbar">0,0,28,0</Thickness>
+    <Thickness x:Key="Cafe.Border.TabUnderline">0,0,0,2</Thickness>
+    <Thickness x:Key="Cafe.Border.Focus">2</Thickness>
+
+    <CornerRadius x:Key="Cafe.Radius.Small">6</CornerRadius>
+    <CornerRadius x:Key="Cafe.Radius.Medium">10</CornerRadius>
+    <CornerRadius x:Key="Cafe.Radius.Large">16</CornerRadius>
+    <CornerRadius x:Key="Cafe.Radius.None">0</CornerRadius>
+
+    <x:Double x:Key="Cafe.Icon.Small">16</x:Double>
+    <x:Double x:Key="Cafe.Icon.Medium">20</x:Double>
+    <x:Double x:Key="Cafe.Icon.Large">24</x:Double>
+
+    <x:Double x:Key="Cafe.Type.Caption">12</x:Double>
+    <x:Double x:Key="Cafe.Type.Body">14</x:Double>
+    <x:Double x:Key="Cafe.Type.Label">14</x:Double>
+    <x:Double x:Key="Cafe.Type.Title">18</x:Double>
+    <x:Double x:Key="Cafe.Type.Display">24</x:Double>
+    <FontWeight x:Key="Cafe.Type.Weight.Regular">Normal</FontWeight>
+    <FontWeight x:Key="Cafe.Type.Weight.Strong">SemiBold</FontWeight>
+    <FontFamily x:Key="Cafe.Type.Family.Monospace">Consolas</FontFamily>
+
+    <x:TimeSpan x:Key="Cafe.Motion.Instant">0:0:0.050</x:TimeSpan>
+    <x:TimeSpan x:Key="Cafe.Motion.Fast">0:0:0.140</x:TimeSpan>
+    <x:TimeSpan x:Key="Cafe.Motion.Standard">0:0:0.220</x:TimeSpan>
+    <x:TimeSpan x:Key="Cafe.Motion.Surface">0:0:0.320</x:TimeSpan>
+    <x:Double x:Key="Cafe.Motion.Offset.Small">6</x:Double>
+    <x:Double x:Key="Cafe.Motion.Offset.Medium">8</x:Double>
+    <x:Double x:Key="Cafe.Motion.Offset.Large">12</x:Double>
+    <ExponentialEaseOut x:Key="Cafe.Motion.Ease.Enter"/>
+    <ExponentialEaseIn x:Key="Cafe.Motion.Ease.Exit"/>
+    <LinearEasing x:Key="Cafe.Motion.Ease.Linear"/>
+
+    <!-- Shared control measures. Page-private measures will progressively move into
+         their feature styles as those layouts are rebuilt. -->
+    <x:Double x:Key="Cafe.Control.Height.Setting">36</x:Double>
+    <x:Double x:Key="Cafe.Control.Height.Dialog">42</x:Double>
+    <x:Double x:Key="Cafe.Control.Height.Dock">48</x:Double>
+    <x:Double x:Key="Cafe.Control.Height.PrimaryAction">52</x:Double>
+    <x:Double x:Key="Cafe.Control.Height.Action">30</x:Double>
+    <x:Double x:Key="Cafe.Control.MinWidth.None">0</x:Double>
+    <x:Double x:Key="Cafe.Control.Height.Field">40</x:Double>
+    <x:Double x:Key="Cafe.Control.Height.Progress">4</x:Double>
+    <x:Double x:Key="Cafe.Control.Size.Swatch">28</x:Double>
+    <x:Double x:Key="Cafe.Control.Size.Chip">32</x:Double>
+    <x:Double x:Key="Cafe.Control.Width.Toast">340</x:Double>
+    <x:Double x:Key="Cafe.Control.Width.Loading">120</x:Double>
+    <x:Double x:Key="Cafe.Control.Height.Loading">4</x:Double>
+    <x:Double x:Key="Cafe.Layout.Dialog.Confirm.MaxHeight">480</x:Double>
+    <x:Double x:Key="Cafe.Layout.Dialog.Title.Height">56</x:Double>
+    <x:Double x:Key="Cafe.Layout.Debug.LogPath.MaxWidth">300</x:Double>
+    <x:Double x:Key="Cafe.Layout.Debug.LogLevel.MinWidth">110</x:Double>
+    <x:Double x:Key="Cafe.Layout.Debug.SettingsPreview.MaxHeight">160</x:Double>
+    <x:Double x:Key="Cafe.Layout.Settings.RowContent.MinWidth">240</x:Double>
+    <x:Double x:Key="Cafe.Layout.Settings.RowAction.MaxWidth">440</x:Double>
+    <x:Double x:Key="Cafe.Layout.News.Row.Height">56</x:Double>
+    <x:Double x:Key="Cafe.Layout.News.Viewport.Height">184</x:Double>
+    <x:Double x:Key="Cafe.Layout.Home.ContentRail.Width">424</x:Double>
+    <x:Double x:Key="Cafe.Layout.Home.Banner.Height">220</x:Double>
+    <x:Double x:Key="Cafe.Layout.Home.SocialRail.Width">48</x:Double>
+    <x:Double x:Key="Cafe.Layout.Home.Dock.MinHeight">120</x:Double>
+    <x:Double x:Key="Cafe.Layout.Home.PathAction.Width">220</x:Double>
+    <Thickness x:Key="Cafe.Layout.Home.ContentRail.Margin">24,16,0,16</Thickness>
+    <Thickness x:Key="Cafe.Layout.Home.SocialRail.Margin">0,0,24,0</Thickness>
+    <Thickness x:Key="Cafe.Layout.Home.Dock.Padding">24,16</Thickness>
+
+    <DataTemplate x:Key="SelectableOptionTextTemplate" x:DataType="models:SelectableOption">
+        <TextBlock Text="{Binding DisplayName}"/>
+    </DataTemplate>
+</ResourceDictionary>

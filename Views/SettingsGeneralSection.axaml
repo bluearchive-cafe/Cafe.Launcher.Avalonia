@@ -1,63 +1,36 @@
 <UserControl xmlns="https://github.com/avaloniaui"
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
              xmlns:vm="using:Cafe.Launcher.Avalonia.ViewModels"
-             xmlns:models="using:Cafe.Launcher.Avalonia.Models"
              xmlns:materialIcons="clr-namespace:Material.Icons.Avalonia;assembly=Material.Icons.Avalonia"
              xmlns:controls="using:Cafe.Launcher.Avalonia.Controls"
              x:Class="Cafe.Launcher.Avalonia.Views.SettingsGeneralSection"
              x:Name="SettingsRoot"
              x:DataType="vm:MainWindowViewModel">
-    <UserControl.Resources>
-        <DataTemplate x:Key="SettingOptionTemplate" x:DataType="models:SettingOption">
-            <TextBlock Text="{Binding DisplayName}"/>
-        </DataTemplate>
-        <DataTemplate x:Key="LanguageOptionTemplate" x:DataType="models:LanguageOption">
-            <TextBlock Text="{Binding DisplayName}"/>
-        </DataTemplate>
-    </UserControl.Resources>
-    <StackPanel Classes="settings-group">
-        <TextBlock Text="{Binding Shell.I18n[settingsGroupAppPreferences]}" Classes="group-title"/>
+    <StackPanel Classes="settings-group first">
+        <TextBlock Text="{Binding Shell.I18n[settingsGroupAppPreferences]}" Classes="group-title settings-group-title"/>
 
-        <controls:SettingRow IconKind="Translate"
-                             Title="{Binding Shell.I18n[language]}"
-                             Description="{Binding Shell.I18n[languageDescription]}">
-            <controls:SettingRow.Action>
-                <ComboBox Classes="setting-control"
-                          AutomationProperties.Name="{Binding Shell.I18n[language]}"
-                          ItemsSource="{Binding Settings.Options.Language}"
-                          SelectedValue="{Binding Settings.Editor.Current.Language, Mode=TwoWay}"
-                          SelectedValueBinding="{Binding Code}"
-                          ItemTemplate="{StaticResource LanguageOptionTemplate}"/>
-            </controls:SettingRow.Action>
-        </controls:SettingRow>
+        <controls:SettingComboRow
+                                  Title="{Binding Shell.I18n[language]}"
+                                  Description="{Binding Shell.I18n[languageDescription]}"
+                                  ItemsSource="{Binding Settings.Options.Language}"
+                                  SelectedValue="{Binding Settings.Editor.Current.Language, Mode=TwoWay}"
+                                  ItemTemplate="{StaticResource SelectableOptionTextTemplate}"/>
 
-        <controls:SettingRow IconKind="WindowClose"
-                             Title="{Binding Shell.I18n[closeBehavior]}"
-                             Description="{Binding Shell.I18n[closeBehaviorDescription]}">
-            <controls:SettingRow.Action>
-                <ComboBox Classes="setting-control"
-                          AutomationProperties.Name="{Binding Shell.I18n[closeBehavior]}"
-                          ItemsSource="{Binding Settings.Options.CloseBehavior}"
-                          SelectedValue="{Binding Settings.Editor.Current.CloseBehavior, Mode=TwoWay}"
-                          SelectedValueBinding="{Binding Code}"
-                          ItemTemplate="{StaticResource SettingOptionTemplate}"/>
-            </controls:SettingRow.Action>
-        </controls:SettingRow>
+        <controls:SettingComboRow
+                                  Title="{Binding Shell.I18n[closeBehavior]}"
+                                  Description="{Binding Shell.I18n[closeBehaviorDescription]}"
+                                  ItemsSource="{Binding Settings.Options.CloseBehavior}"
+                                  SelectedValue="{Binding Settings.Editor.Current.CloseBehavior, Mode=TwoWay}"
+                                  ItemTemplate="{StaticResource SelectableOptionTextTemplate}"/>
 
-        <controls:SettingRow IconKind="AnimationPlayOutline"
-                             Title="{Binding Shell.I18n[motionMode]}"
-                             Description="{Binding Shell.I18n[motionModeDescription]}">
-            <controls:SettingRow.Action>
-                <ComboBox Classes="setting-control"
-                          AutomationProperties.Name="{Binding Shell.I18n[motionMode]}"
-                          ItemsSource="{Binding Settings.Options.MotionMode}"
-                          SelectedValue="{Binding Settings.Editor.Current.MotionMode, Mode=TwoWay}"
-                          SelectedValueBinding="{Binding Code}"
-                          ItemTemplate="{StaticResource SettingOptionTemplate}"/>
-            </controls:SettingRow.Action>
-        </controls:SettingRow>
+        <controls:SettingComboRow
+                                  Title="{Binding Shell.I18n[statusDetailMode]}"
+                                  Description="{Binding Shell.I18n[statusDetailModeDescription]}"
+                                  ItemsSource="{Binding Settings.Options.StatusDetailMode}"
+                                  SelectedValue="{Binding Settings.Editor.Current.StatusDetailMode, Mode=TwoWay}"
+                                  ItemTemplate="{StaticResource SelectableOptionTextTemplate}"/>
 
-        <controls:SettingRow IconKind="Update"
+        <controls:SettingRow
                              Title="{Binding Shell.I18n[enableStartupUpdateCheck]}"
                              Description="{Binding Shell.I18n[enableStartupUpdateCheckDescription]}">
             <controls:SettingRow.Action>

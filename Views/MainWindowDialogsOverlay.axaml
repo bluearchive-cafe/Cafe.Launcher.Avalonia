@@ -16,41 +16,31 @@
               Classes.motion-enabled="{Binding IsMotionEnabled}"
               controls:MotionVisibility.IsOpen="{Binding ResourcePanel.IsResourcePanelVisible}"
               controls:MotionVisibility.IsMotionEnabled="{Binding IsMotionEnabled}">
-            <Border Width="720"
-                    Height="592"
-                    Classes="dialog overlay-dialog motion-surface">
+            <Border MaxWidth="920"
+                    MaxHeight="620"
+                    HorizontalAlignment="Stretch"
+                    VerticalAlignment="Stretch"
+                    Classes="overlay-dialog motion-surface">
                 <Border.RenderTransform>
                     <TranslateTransform/>
                 </Border.RenderTransform>
-                <Grid RowDefinitions="Auto,*,Auto" Classes="confirm-layout motion-surface-content">
-                    <Grid Classes="dialog-heading" ColumnDefinitions="Auto,*,Auto">
-                        <Border Classes="dialog-icon" VerticalAlignment="Center">
-                            <materialIcons:MaterialIcon Kind="Web" Width="{StaticResource LauncherIconXl}" Height="{StaticResource LauncherIconXl}" Foreground="{DynamicResource LauncherAccentBrush}" HorizontalAlignment="Center" VerticalAlignment="Center"/>
-                        </Border>
-                        <StackPanel Grid.Column="1" Classes="dialog-heading-copy">
-                            <TextBlock Text="{Binding Shell.I18n[resourcePanel]}" Classes="dialog-title"/>
-                            <TextBlock Text="{Binding Shell.I18n[resourcePanelDescription]}" Classes="caption"/>
-                        </StackPanel>
-                        <Button Grid.Column="2" Classes="dialog-close" Command="{Binding ResourcePanel.CloseResourcePanelCommand}" ToolTip.Tip="{Binding Shell.I18n[close]}"
-                                AutomationProperties.Name="{Binding Shell.I18n[close]}">
-                            <materialIcons:MaterialIcon Kind="Close" Width="{StaticResource LauncherIconMd}" Height="{StaticResource LauncherIconMd}"/>
-                        </Button>
-                    </Grid>
-
-                    <ScrollViewer Grid.Row="1" Classes="scroll-pad">
-                        <StackPanel Spacing="{StaticResource LauncherSpacingMd}">
+                <Grid Classes="motion-surface-content">
+                    <controls:DialogFrame Title="{Binding Shell.I18n[resourcePanel]}"
+                                          ShowIcon="False"
+                                          ShowDescription="False"
+                                          UseToolPanelChrome="True"
+                                          CloseCommand="{Binding ResourcePanel.CloseResourcePanelCommand}"
+                                          CloseToolTip="{Binding Shell.I18n[close]}">
+                        <controls:DialogFrame.BodyContent>
+                        <StackPanel Spacing="{StaticResource Cafe.Space.2}">
                             <Border Classes="info-strip resource-panel-status">
-                                <StackPanel Spacing="{StaticResource LauncherSpacingSm}">
-                                    <TextBlock Text="{Binding ResourcePanel.ResourcePanelUidText}" Classes="body"
-                                               IsVisible="{Binding ResourcePanel.ResourcePanelUidText, Converter={x:Static StringConverters.IsNotNullOrEmpty}}"/>
-                                    <TextBlock Text="{Binding ResourcePanel.ResourcePanelMessage}" Classes="body"/>
-                                </StackPanel>
+                                <TextBlock Text="{Binding ResourcePanel.ResourcePanelMessage}" Classes="body"/>
                             </Border>
 
                             <!-- UID input card: shown when UID missing -->
                             <Border Classes="dialog-card"
                                     IsVisible="{Binding ResourcePanel.IsResourcePanelUidMissing}">
-                                <Grid RowDefinitions="Auto,Auto" ColumnDefinitions="*,Auto" ColumnSpacing="{StaticResource LauncherSpacingMd}" RowSpacing="{StaticResource LauncherSpacingSm}">
+                                <Grid RowDefinitions="Auto,Auto" ColumnDefinitions="*,Auto" ColumnSpacing="{StaticResource Cafe.Space.3}" RowSpacing="{StaticResource Cafe.Space.2}">
                                     <TextBlock Grid.ColumnSpan="2" Text="{Binding Shell.I18n[resourcePanelManualUid]}" Classes="group-title"/>
                                     <TextBox Grid.Row="1"
                                              Classes="uid-input"
@@ -63,7 +53,7 @@
                                             AutomationProperties.Name="{Binding Shell.I18n[resourcePanelSaveUid]}"
                                             IsEnabled="{Binding ResourcePanel.IsResourcePanelBusy, Converter={x:Static BoolConverters.Not}}">
                                         <StackPanel Classes="button-content">
-                                            <materialIcons:MaterialIcon Kind="ContentSave" Width="{StaticResource LauncherIconSm}" Height="{StaticResource LauncherIconSm}"/>
+                                            <materialIcons:MaterialIcon Kind="ContentSave" Width="{StaticResource Cafe.Icon.Small}" Height="{StaticResource Cafe.Icon.Small}"/>
                                             <TextBlock Text="{Binding Shell.I18n[resourcePanelSaveUid]}"/>
                                         </StackPanel>
                                     </Button>
@@ -73,7 +63,7 @@
                             <!-- UID edit card: shown when user clicked Change on existing UID -->
                             <Border Classes="dialog-card"
                                     IsVisible="{Binding ResourcePanel.IsResourcePanelUidEditing}">
-                                <Grid RowDefinitions="Auto,Auto" ColumnDefinitions="*,Auto,Auto" ColumnSpacing="{StaticResource LauncherSpacingMd}" RowSpacing="{StaticResource LauncherSpacingSm}">
+                                <Grid RowDefinitions="Auto,Auto" ColumnDefinitions="*,Auto,Auto" ColumnSpacing="{StaticResource Cafe.Space.3}" RowSpacing="{StaticResource Cafe.Space.2}">
                                     <TextBlock Grid.ColumnSpan="3" Text="{Binding Shell.I18n[resourcePanelEditUid]}" Classes="group-title"/>
                                     <TextBox Grid.Row="1"
                                              Classes="uid-input"
@@ -86,7 +76,7 @@
                                             AutomationProperties.Name="{Binding Shell.I18n[cancel]}"
                                             IsEnabled="{Binding ResourcePanel.IsResourcePanelBusy, Converter={x:Static BoolConverters.Not}}">
                                         <StackPanel Classes="button-content">
-                                            <materialIcons:MaterialIcon Kind="CloseCircle" Width="{StaticResource LauncherIconSm}" Height="{StaticResource LauncherIconSm}"/>
+                                            <materialIcons:MaterialIcon Kind="CloseCircle" Width="{StaticResource Cafe.Icon.Small}" Height="{StaticResource Cafe.Icon.Small}"/>
                                             <TextBlock Text="{Binding Shell.I18n[cancel]}"/>
                                         </StackPanel>
                                     </Button>
@@ -95,7 +85,7 @@
                                             AutomationProperties.Name="{Binding Shell.I18n[resourcePanelSaveUid]}"
                                             IsEnabled="{Binding ResourcePanel.IsResourcePanelBusy, Converter={x:Static BoolConverters.Not}}">
                                         <StackPanel Classes="button-content">
-                                            <materialIcons:MaterialIcon Kind="ContentSave" Width="{StaticResource LauncherIconSm}" Height="{StaticResource LauncherIconSm}"/>
+                                            <materialIcons:MaterialIcon Kind="ContentSave" Width="{StaticResource Cafe.Icon.Small}" Height="{StaticResource Cafe.Icon.Small}"/>
                                             <TextBlock Text="{Binding Shell.I18n[resourcePanelSaveUid]}"/>
                                         </StackPanel>
                                     </Button>
@@ -105,9 +95,9 @@
                             <!-- UID display card: shown when UID is present and not editing -->
                             <Border Classes="dialog-card"
                                     IsVisible="{Binding ResourcePanel.IsResourcePanelUidPresent}">
-                                <StackPanel Spacing="{StaticResource LauncherSpacingMd}">
-                                    <Grid ColumnDefinitions="*,Auto" ColumnSpacing="{StaticResource LauncherSpacingMd}">
-                                        <StackPanel Spacing="{StaticResource LauncherSpacingSm}" VerticalAlignment="Center">
+                                <StackPanel Spacing="{StaticResource Cafe.Space.3}">
+                                    <Grid ColumnDefinitions="*,Auto" ColumnSpacing="{StaticResource Cafe.Space.3}">
+                                        <StackPanel Spacing="{StaticResource Cafe.Space.2}" VerticalAlignment="Center">
                                             <TextBlock Text="{Binding Shell.I18n[resourcePanelUid]}" Classes="caption"/>
                                             <TextBlock Text="{Binding ResourcePanel.ResourcePanelUidText}" Classes="body"/>
                                         </StackPanel>
@@ -117,12 +107,12 @@
                                                 IsVisible="{Binding ResourcePanel.IsResourcePanelUidSourceCustom}"
                                                 IsEnabled="{Binding ResourcePanel.IsResourcePanelBusy, Converter={x:Static BoolConverters.Not}}">
                                             <StackPanel Classes="button-content">
-                                                <materialIcons:MaterialIcon Kind="Pencil" Width="{StaticResource LauncherIconSm}" Height="{StaticResource LauncherIconSm}"/>
+                                                <materialIcons:MaterialIcon Kind="Pencil" Width="{StaticResource Cafe.Icon.Small}" Height="{StaticResource Cafe.Icon.Small}"/>
                                                 <TextBlock Text="{Binding Shell.I18n[resourcePanelChangeUid]}"/>
                                             </StackPanel>
                                         </Button>
                                     </Grid>
-                                    <Grid ColumnDefinitions="Auto,*" ColumnSpacing="{StaticResource LauncherSpacingMd}">
+                                    <Grid ColumnDefinitions="Auto,*" ColumnSpacing="{StaticResource Cafe.Space.3}">
                                         <TextBlock Text="{Binding Shell.I18n[resourcePanelUidSource]}" Classes="group-title"
                                                    VerticalAlignment="Center"/>
                                         <ComboBox Grid.Column="1"
@@ -146,15 +136,15 @@
                             <ItemsControl ItemsSource="{Binding ResourcePanel.ResourcePanelItems}">
                                 <ItemsControl.ItemTemplate>
                                     <DataTemplate x:DataType="models:ResourcePanelItem">
-                                        <Border Classes="dialog-card" Margin="0,0,0,8">
-                                            <Grid ColumnDefinitions="*,Auto" RowDefinitions="Auto,Auto,Auto" RowSpacing="{StaticResource LauncherSpacingSm}" ColumnSpacing="{StaticResource LauncherSpacingLg}">
-                                                <StackPanel Spacing="{StaticResource LauncherSpacingXs}">
+                                        <Border Classes="dialog-card resource-panel-item-card" Margin="0,0,0,8">
+                                            <Grid ColumnDefinitions="*,Auto" RowDefinitions="Auto,Auto" RowSpacing="{StaticResource Cafe.Space.1}" ColumnSpacing="{StaticResource Cafe.Space.4}">
+                                                <StackPanel Spacing="{StaticResource Cafe.Space.1}">
                                                     <TextBlock Text="{Binding DisplayName}" Classes="section-title"/>
-                                                    <StackPanel Orientation="Horizontal" Spacing="{StaticResource LauncherSpacingXs}">
+                                                    <StackPanel Orientation="Horizontal" Spacing="{StaticResource Cafe.Space.1}">
                                                         <TextBlock Text="{Binding StatusText}" Classes="caption" VerticalAlignment="Center"/>
                                                         <materialIcons:MaterialIcon Kind="{Binding StatusIconKind}"
-                                                                                    Width="{StaticResource LauncherIconSm}"
-                                                                                    Height="{StaticResource LauncherIconSm}"
+                                                                                    Width="{StaticResource Cafe.Icon.Small}"
+                                                                                    Height="{StaticResource Cafe.Icon.Small}"
                                                                                     Foreground="{Binding Status, Converter={x:Static converters:ResourcePanelStatusToBrushConverter.Instance}}"
                                                                                     VerticalAlignment="Center"/>
                                                     </StackPanel>
@@ -164,7 +154,7 @@
                                                           IsEnabled="{Binding IsOperable}"
                                                           AutomationProperties.Name="{Binding DisplayName}"
                                                           VerticalAlignment="Center"/>
-                                                <Grid Grid.Row="1" Grid.ColumnSpan="2" ColumnDefinitions="Auto,*,Auto,*" ColumnSpacing="{StaticResource LauncherSpacingSm}">
+                                                <Grid Grid.Row="1" Grid.ColumnSpan="2" ColumnDefinitions="Auto,*,Auto,*" ColumnSpacing="{StaticResource Cafe.Space.2}">
                                                     <TextBlock Text="{Binding #DialogsRoot.((vm:MainWindowViewModel)DataContext).Shell.I18n[resourcePanelOfficialVersion]}" Classes="caption"/>
                                                     <TextBlock Grid.Column="1" Text="{Binding OfficialVersion}" Classes="value"/>
                                                     <TextBlock Grid.Column="2" Text="{Binding #DialogsRoot.((vm:MainWindowViewModel)DataContext).Shell.I18n[resourcePanelLocalizedVersion]}" Classes="caption"/>
@@ -176,14 +166,15 @@
                                 </ItemsControl.ItemTemplate>
                             </ItemsControl>
                         </StackPanel>
-                    </ScrollViewer>
+                        </controls:DialogFrame.BodyContent>
 
-                    <StackPanel Grid.Row="2" Classes="confirm-actions">
+                        <controls:DialogFrame.ActionsContent>
+                    <StackPanel Classes="confirm-actions">
                         <Button Classes="flat-action dialog-action" Command="{Binding ResourcePanel.RefreshResourcePanelCommand}"
                                 AutomationProperties.Name="{Binding Shell.I18n[resourcePanelRefresh]}"
                                 IsEnabled="{Binding ResourcePanel.IsResourcePanelBusy, Converter={x:Static BoolConverters.Not}}">
                             <StackPanel Classes="button-content">
-                                <materialIcons:MaterialIcon Kind="Refresh" Width="{StaticResource LauncherIconSm}" Height="{StaticResource LauncherIconSm}"/>
+                                <materialIcons:MaterialIcon Kind="Refresh" Width="{StaticResource Cafe.Icon.Small}" Height="{StaticResource Cafe.Icon.Small}"/>
                                 <TextBlock Text="{Binding Shell.I18n[resourcePanelRefresh]}"/>
                             </StackPanel>
                         </Button>
@@ -191,11 +182,13 @@
                                 AutomationProperties.Name="{Binding Shell.I18n[resourcePanelSave]}"
                                 IsEnabled="{Binding ResourcePanel.IsResourcePanelSaveEnabled}">
                             <StackPanel Classes="button-content">
-                                <materialIcons:MaterialIcon Kind="ContentSave" Width="{StaticResource LauncherIconSm}" Height="{StaticResource LauncherIconSm}"/>
+                                <materialIcons:MaterialIcon Kind="ContentSave" Width="{StaticResource Cafe.Icon.Small}" Height="{StaticResource Cafe.Icon.Small}"/>
                                 <TextBlock Text="{Binding Shell.I18n[resourcePanelSave]}"/>
                             </StackPanel>
                         </Button>
                     </StackPanel>
+                        </controls:DialogFrame.ActionsContent>
+                    </controls:DialogFrame>
                 </Grid>
             </Border>
         </Grid>
@@ -205,30 +198,39 @@
               Classes.motion-enabled="{Binding IsMotionEnabled}"
               controls:MotionVisibility.IsOpen="{Binding Dialogs.IsNoticeDialogVisible}"
               controls:MotionVisibility.IsMotionEnabled="{Binding IsMotionEnabled}">
-            <Border MaxWidth="540"
-                    MaxHeight="480"
-                    Classes="dialog overlay-dialog motion-surface">
+            <Border Classes="motion-surface"
+                    HorizontalAlignment="Center"
+                    VerticalAlignment="Center">
                 <Border.RenderTransform>
                     <TranslateTransform/>
                 </Border.RenderTransform>
-                <Grid RowDefinitions="Auto,*,Auto" Classes="confirm-layout motion-surface-content">
-                    <StackPanel Orientation="Horizontal" Spacing="{StaticResource LauncherSpacingMd}">
-                        <Border Classes="dialog-icon">
-                            <materialIcons:MaterialIcon Kind="InformationOutline" Width="{StaticResource LauncherIconXl}" Height="{StaticResource LauncherIconXl}" Foreground="{DynamicResource LauncherAccentBrush}" HorizontalAlignment="Center" VerticalAlignment="Center"/>
-                        </Border>
-                        <TextBlock Text="{Binding Shell.I18n[notice]}" Classes="dialog-title" VerticalAlignment="Center"/>
-                    </StackPanel>
-                    <ScrollViewer Grid.Row="1" MaxHeight="300" Classes="scroll-pad">
-                        <Border Classes="info-strip">
-                            <TextBlock Text="{Binding Dialogs.NoticeDialogContent}" TextWrapping="Wrap" Foreground="{DynamicResource LauncherInfoTextBrush}" Classes="caption"/>
-                        </Border>
-                    </ScrollViewer>
-                    <Button Grid.Row="2" Classes="primary-action dialog-action" Command="{Binding Dialogs.DismissNoticeCommand}"
-                            HorizontalAlignment="Center">
-                        <StackPanel Classes="button-content" HorizontalAlignment="Center">
-                            <TextBlock Text="{Binding Dialogs.NoticeDialogConfirmText}"/>
-                        </StackPanel>
-                    </Button>
+                <Grid Classes="motion-surface-content">
+                    <controls:DialogFrame Title="{Binding Shell.I18n[notice]}"
+                                          IconKind="InformationOutline"
+                                          IsConfirmPanel="True"
+                                          MaxWidth="540"
+                                          MaxHeight="{StaticResource Cafe.Layout.Dialog.Confirm.MaxHeight}"
+                                          BodyMaxHeight="300"
+                                          ShowCloseButton="False">
+                        <controls:DialogFrame.BodyContent>
+                            <Border Classes="info-strip">
+                                <TextBlock Text="{Binding Dialogs.NoticeDialogContent}"
+                                           TextWrapping="Wrap"
+                                           Foreground="{DynamicResource Cafe.Color.Text.Info}"
+                                           Classes="caption"/>
+                            </Border>
+                        </controls:DialogFrame.BodyContent>
+                        <controls:DialogFrame.ActionsContent>
+                            <Button Classes="primary-action dialog-action"
+                                    Command="{Binding Dialogs.DismissNoticeCommand}"
+                                    HorizontalAlignment="Center"
+                                    AutomationProperties.Name="{Binding Dialogs.NoticeDialogConfirmText}">
+                                <StackPanel Classes="button-content" HorizontalAlignment="Center">
+                                    <TextBlock Text="{Binding Dialogs.NoticeDialogConfirmText}"/>
+                                </StackPanel>
+                            </Button>
+                        </controls:DialogFrame.ActionsContent>
+                    </controls:DialogFrame>
                 </Grid>
             </Border>
         </Grid>
@@ -239,7 +241,7 @@
                                 Description="{Binding Shell.I18n[repairConfirmDescription]}"
                                 IconKind="Tools"
                                 Message="{Binding Dialogs.RepairConfirmText}"
-                                MessageBackground="{DynamicResource LauncherWarningBackgroundBrush}"
+                                MessageBackground="{DynamicResource Cafe.Color.Surface.Warning}"
                                 CancelText="{Binding Shell.I18n[cancel]}"
                                 CancelCommand="{Binding Dialogs.CancelRepairCommand}"
                                 ConfirmText="{Binding Shell.I18n[repair]}"
@@ -253,7 +255,7 @@
                                 Description="{Binding Shell.I18n[resourcePanelCafeOnlyDescription]}"
                                 IconKind="Web"
                                 Message="{Binding Dialogs.ResourcePanelSourceConfirmText}"
-                                MessageBackground="{DynamicResource LauncherWarningBackgroundBrush}"
+                                MessageBackground="{DynamicResource Cafe.Color.Surface.Warning}"
                                 CancelText="{Binding Shell.I18n[cancel]}"
                                 CancelCommand="{Binding Dialogs.CancelResourcePanelSourceSwitchCommand}"
                                 ConfirmText="{Binding Shell.I18n[resourcePanelCafeOnlySwitch]}"
@@ -266,94 +268,98 @@
               Classes.motion-enabled="{Binding IsMotionEnabled}"
               controls:MotionVisibility.IsOpen="{Binding Dialogs.IsUpdateAvailableVisible}"
               controls:MotionVisibility.IsMotionEnabled="{Binding IsMotionEnabled}">
-            <Border Classes="dialog confirm-panel motion-surface" MaxWidth="620">
+            <Border Classes="motion-surface"
+                    HorizontalAlignment="Center"
+                    VerticalAlignment="Center">
                 <Border.RenderTransform>
                     <TranslateTransform/>
                 </Border.RenderTransform>
-                <Grid RowDefinitions="Auto,*,Auto" Classes="confirm-layout motion-surface-content">
-                    <Grid Classes="dialog-heading" ColumnDefinitions="Auto,*,Auto">
-                        <Border Classes="dialog-icon" VerticalAlignment="Center">
-                            <materialIcons:MaterialIcon Kind="Update" Width="{StaticResource LauncherIconXl}" Height="{StaticResource LauncherIconXl}" Foreground="{DynamicResource LauncherAccentBrush}" HorizontalAlignment="Center" VerticalAlignment="Center"/>
-                        </Border>
-                        <StackPanel Grid.Column="1" Classes="dialog-heading-copy">
-                            <TextBlock Text="{Binding Shell.I18n[launcherUpdateAvailableTitle]}" Classes="dialog-title"/>
-                            <TextBlock Text="{Binding Dialogs.UpdateAvailableText}" Classes="caption"/>
-                        </StackPanel>
-                        <Button Grid.Column="2" Classes="dialog-close" Command="{Binding Dialogs.CancelUpdateAvailableCommand}" ToolTip.Tip="{Binding Shell.I18n[close]}"
-                                AutomationProperties.Name="{Binding Shell.I18n[close]}">
-                            <materialIcons:MaterialIcon Kind="Close" Width="{StaticResource LauncherIconMd}" Height="{StaticResource LauncherIconMd}"/>
-                        </Button>
-                    </Grid>
-                    <StackPanel Grid.Row="1" Spacing="{StaticResource LauncherSpacingMd}">
-                        <StackPanel Classes="card-heading">
-                            <materialIcons:MaterialIcon Kind="InformationOutline"
-                                                       Width="{StaticResource LauncherIconSm}"
-                                                       Height="{StaticResource LauncherIconSm}"
-                                                       Foreground="{DynamicResource LauncherAccentBrush}"
-                                                       VerticalAlignment="Center"/>
-                            <TextBlock Text="{Binding Shell.I18n[launcherUpdateSelectFile]}"
-                                       Classes="confirm-message-text"
-                                       VerticalAlignment="Center"/>
-                        </StackPanel>
-                        <ListBox ItemsSource="{Binding Dialogs.UpdateAvailableFiles}"
-                                 SelectedItem="{Binding Dialogs.SelectedUpdateFile, Mode=TwoWay}"
-                                 Classes="update-file-list"
-                                 MaxHeight="240">
-                            <ListBox.ItemTemplate>
-                                <DataTemplate x:DataType="models:ReleaseFile">
-                                    <Grid ColumnDefinitions="Auto,*,Auto"
-                                          ColumnSpacing="{StaticResource LauncherSpacingMd}">
-                                        <Border Classes="update-file-icon">
-                                            <materialIcons:MaterialIcon Kind="Download"
-                                                                       Width="{StaticResource LauncherIconLg}"
-                                                                       Height="{StaticResource LauncherIconLg}"
-                                                                       Foreground="{DynamicResource LauncherAccentBrush}"
-                                                                       HorizontalAlignment="Center"
-                                                                       VerticalAlignment="Center"/>
-                                        </Border>
-                                        <StackPanel Grid.Column="1"
-                                                    Spacing="{StaticResource LauncherSpacingXs}"
-                                                    VerticalAlignment="Center">
-                                            <TextBlock Text="{Binding Name}"
-                                                       Classes="update-file-name"
-                                                       TextWrapping="Wrap"/>
-                                            <TextBlock Text="{Binding Url}"
-                                                       Classes="caption"
-                                                       TextTrimming="CharacterEllipsis"
-                                                       MaxLines="1"/>
-                                        </StackPanel>
-                                        <Border Grid.Column="2"
-                                                Classes="update-file-size"
-                                                VerticalAlignment="Center">
-                                            <StackPanel Orientation="Horizontal"
-                                                        Spacing="{StaticResource LauncherSpacingXs}">
-                                                <TextBlock Text="{Binding #DialogsRoot.((vm:MainWindowViewModel)DataContext).Shell.I18n[launcherUpdateFileSize]}"
-                                                           Classes="caption"/>
-                                                <TextBlock Text="{Binding DisplaySize}"
-                                                           Classes="update-file-size-text"/>
-                                            </StackPanel>
-                                        </Border>
-                                    </Grid>
-                                </DataTemplate>
-                            </ListBox.ItemTemplate>
-                        </ListBox>
-                    </StackPanel>
-                    <StackPanel Grid.Row="2" Classes="confirm-actions">
-                        <Button Classes="flat-action dialog-action" Command="{Binding Dialogs.CancelUpdateAvailableCommand}">
-                            <StackPanel Classes="button-content">
-                                <materialIcons:MaterialIcon Kind="ClockOutline" Width="{StaticResource LauncherIconSm}" Height="{StaticResource LauncherIconSm}"/>
-                                <TextBlock Text="{Binding Shell.I18n[launcherUpdateLater]}"/>
+                <Grid Classes="motion-surface-content">
+                    <controls:DialogFrame Title="{Binding Shell.I18n[launcherUpdateAvailableTitle]}"
+                                          Description="{Binding Dialogs.UpdateAvailableText}"
+                                          IconKind="Update"
+                                          IsConfirmPanel="True"
+                                          MaxWidth="620"
+                                          CloseCommand="{Binding Dialogs.CancelUpdateAvailableCommand}"
+                                          CloseToolTip="{Binding Shell.I18n[close]}">
+                        <controls:DialogFrame.BodyContent>
+                            <StackPanel Spacing="{StaticResource Cafe.Space.3}">
+                                <StackPanel Classes="card-heading">
+                                    <materialIcons:MaterialIcon Kind="InformationOutline"
+                                                               Width="{StaticResource Cafe.Icon.Small}"
+                                                               Height="{StaticResource Cafe.Icon.Small}"
+                                                               Foreground="{DynamicResource Cafe.Color.Accent}"
+                                                               VerticalAlignment="Center"/>
+                                    <TextBlock Text="{Binding Shell.I18n[launcherUpdateSelectFile]}"
+                                               Classes="confirm-message-text"
+                                               VerticalAlignment="Center"/>
+                                </StackPanel>
+                                <ListBox ItemsSource="{Binding Dialogs.UpdateAvailableFiles}"
+                                         SelectedItem="{Binding Dialogs.SelectedUpdateFile, Mode=TwoWay}"
+                                         Classes="update-file-list"
+                                         MaxHeight="240">
+                                    <ListBox.ItemTemplate>
+                                        <DataTemplate x:DataType="models:ReleaseFile">
+                                            <Grid ColumnDefinitions="Auto,*,Auto"
+                                                  ColumnSpacing="{StaticResource Cafe.Space.3}">
+                                                <Border Classes="update-file-icon">
+                                                    <materialIcons:MaterialIcon Kind="Download"
+                                                                               Width="{StaticResource Cafe.Icon.Large}"
+                                                                               Height="{StaticResource Cafe.Icon.Large}"
+                                                                               Foreground="{DynamicResource Cafe.Color.Accent}"
+                                                                               HorizontalAlignment="Center"
+                                                                               VerticalAlignment="Center"/>
+                                                </Border>
+                                                <StackPanel Grid.Column="1"
+                                                            Spacing="{StaticResource Cafe.Space.1}"
+                                                            VerticalAlignment="Center">
+                                                    <TextBlock Text="{Binding Name}"
+                                                               Classes="update-file-name"
+                                                               TextWrapping="Wrap"/>
+                                                    <TextBlock Text="{Binding Url}"
+                                                               Classes="caption"
+                                                               TextTrimming="CharacterEllipsis"
+                                                               MaxLines="1"/>
+                                                </StackPanel>
+                                                <Border Grid.Column="2"
+                                                        Classes="update-file-size"
+                                                        VerticalAlignment="Center">
+                                                    <StackPanel Orientation="Horizontal"
+                                                                Spacing="{StaticResource Cafe.Space.1}">
+                                                        <TextBlock Text="{Binding #DialogsRoot.((vm:MainWindowViewModel)DataContext).Shell.I18n[launcherUpdateFileSize]}"
+                                                                   Classes="caption"/>
+                                                        <TextBlock Text="{Binding DisplaySize}"
+                                                                   Classes="update-file-size-text"/>
+                                                    </StackPanel>
+                                                </Border>
+                                            </Grid>
+                                        </DataTemplate>
+                                    </ListBox.ItemTemplate>
+                                </ListBox>
                             </StackPanel>
-                        </Button>
-                        <Button Classes="primary-action dialog-action"
-                                Command="{Binding Dialogs.ConfirmUpdateAvailableCommand}"
-                                IsEnabled="{Binding Dialogs.HasSelectedUpdateFile}">
-                            <StackPanel Classes="button-content">
-                                <materialIcons:MaterialIcon Kind="Download" Width="{StaticResource LauncherIconSm}" Height="{StaticResource LauncherIconSm}"/>
-                                <TextBlock Text="{Binding Shell.I18n[launcherUpdateDownload]}"/>
+                        </controls:DialogFrame.BodyContent>
+                        <controls:DialogFrame.ActionsContent>
+                            <StackPanel Classes="confirm-actions">
+                                <Button Classes="flat-action dialog-action"
+                                        Command="{Binding Dialogs.CancelUpdateAvailableCommand}"
+                                        AutomationProperties.Name="{Binding Shell.I18n[launcherUpdateLater]}">
+                                    <StackPanel Classes="button-content">
+                                        <materialIcons:MaterialIcon Kind="ClockOutline" Width="{StaticResource Cafe.Icon.Small}" Height="{StaticResource Cafe.Icon.Small}"/>
+                                        <TextBlock Text="{Binding Shell.I18n[launcherUpdateLater]}"/>
+                                    </StackPanel>
+                                </Button>
+                                <Button Classes="primary-action dialog-action"
+                                        Command="{Binding Dialogs.ConfirmUpdateAvailableCommand}"
+                                        IsEnabled="{Binding Dialogs.HasSelectedUpdateFile}"
+                                        AutomationProperties.Name="{Binding Shell.I18n[launcherUpdateDownload]}">
+                                    <StackPanel Classes="button-content">
+                                        <materialIcons:MaterialIcon Kind="Download" Width="{StaticResource Cafe.Icon.Small}" Height="{StaticResource Cafe.Icon.Small}"/>
+                                        <TextBlock Text="{Binding Shell.I18n[launcherUpdateDownload]}"/>
+                                    </StackPanel>
+                                </Button>
                             </StackPanel>
-                        </Button>
-                    </StackPanel>
+                        </controls:DialogFrame.ActionsContent>
+                    </controls:DialogFrame>
                 </Grid>
             </Border>
         </Grid>
@@ -364,7 +370,7 @@
                                 Description="{Binding Shell.I18n[stopDownloadMessage]}"
                                 IconKind="Stop"
                                 Message="{Binding Dialogs.StopConfirmText}"
-                                MessageBackground="{DynamicResource LauncherWarningBackgroundBrush}"
+                                MessageBackground="{DynamicResource Cafe.Color.Surface.Warning}"
                                 CancelText="{Binding Shell.I18n[cancel]}"
                                 CancelCommand="{Binding Dialogs.CancelStopCommand}"
                                 ConfirmText="{Binding Shell.I18n[stop]}"
@@ -380,7 +386,7 @@
                                 Description="{Binding Shell.I18n[stopDownloadMessage]}"
                                 IconKind="Stop"
                                 Message="{Binding Dialogs.DownloadRunningCloseConfirmText}"
-                                MessageBackground="{DynamicResource LauncherWarningBackgroundBrush}"
+                                MessageBackground="{DynamicResource Cafe.Color.Surface.Warning}"
                                 CancelText="{Binding Shell.I18n[cancel]}"
                                 CancelCommand="{Binding Dialogs.CancelCloseWhileDownloadingCommand}"
                                 ConfirmText="{Binding Shell.I18n[stop]}"
@@ -397,7 +403,7 @@
                                 IconKind="AlertCircle"
                                 IsDangerIcon="True"
                                 Message="{Binding Dialogs.UninstallConfirmText}"
-                                MessageBackground="{DynamicResource LauncherDangerSoftBrush}"
+                                MessageBackground="{DynamicResource Cafe.Color.Surface.Danger}"
                                 CancelText="{Binding Shell.I18n[cancel]}"
                                 CancelCommand="{Binding Dialogs.CancelUninstallCommand}"
                                 ConfirmText="{Binding Shell.I18n[uninstall]}"
@@ -406,119 +412,63 @@
                                 IsDangerConfirm="True"
                                 CloseToolTip="{Binding Shell.I18n[close]}"/>
 
-        <!-- Unsaved changes confirmation dialog -->
-        <controls:ConfirmDialog IsOpen="{Binding Settings.IsUnsavedChangesVisible}"
-                                Title="{Binding Shell.I18n[unsavedChanges]}"
-                                Description="{Binding Shell.I18n[unsavedChangesMessage]}"
-                                IconKind="AlertCircle"
-                                Message="{Binding Shell.I18n[unsavedChangesMessage]}"
-                                MessageBackground="{DynamicResource LauncherWarningBackgroundBrush}"
-                                CancelText="{Binding Shell.I18n[keepEditing]}"
-                                CancelCommand="{Binding WindowChrome.KeepEditingSettingsCommand}"
-                                ConfirmText="{Binding Shell.I18n[discardChanges]}"
-                                ConfirmCommand="{Binding WindowChrome.DiscardSettingsChangesCommand}"
-                                ConfirmIconKind="DeleteOutline"
-                                IsDangerConfirm="True"
-                                IsDangerIcon="True"
-                                CloseToolTip="{Binding Shell.I18n[close]}"/>
-
-        <!-- Crash recovery dialog (shown on startup after unclean shutdown) -->
-        <Grid Classes="dialog-overlay motion-overlay"
-              Classes.motion-enabled="{Binding IsMotionEnabled}"
-              controls:MotionVisibility.IsOpen="{Binding Dialogs.IsCrashRecoveryVisible}"
-              controls:MotionVisibility.IsMotionEnabled="{Binding IsMotionEnabled}">
-            <Border Classes="dialog confirm-panel motion-surface" MaxWidth="460">
-                <Border.RenderTransform>
-                    <TranslateTransform/>
-                </Border.RenderTransform>
-                <Grid RowDefinitions="Auto,Auto,Auto" Classes="confirm-layout motion-surface-content">
-                    <Grid Classes="dialog-heading" ColumnDefinitions="Auto,*,Auto">
-                        <Border Classes="dialog-icon" VerticalAlignment="Center">
-                            <materialIcons:MaterialIcon Kind="AlertCircle" Width="{StaticResource LauncherIconXl}" Height="{StaticResource LauncherIconXl}"
-                                                       Foreground="{DynamicResource LauncherDangerBrush}"
-                                                       HorizontalAlignment="Center" VerticalAlignment="Center"/>
-                        </Border>
-                        <StackPanel Grid.Column="1" Classes="dialog-heading-copy">
-                            <TextBlock Text="{Binding Shell.I18n[crashRecoveryTitle]}" Classes="dialog-title"/>
-                            <TextBlock Text="{Binding Shell.I18n[crashRecoveryDescription]}" Classes="caption"/>
-                        </StackPanel>
-                    </Grid>
-                    <Border Grid.Row="1" Classes="confirm-message" Background="{DynamicResource LauncherWarningBackgroundBrush}">
-                        <TextBlock Text="{Binding Dialogs.CrashRecoveryText}" Classes="confirm-message-text"/>
-                    </Border>
-                    <StackPanel Grid.Row="2" Classes="confirm-actions">
-                        <Button Classes="flat-action dialog-action" Command="{Binding Dialogs.ViewCrashLogCommand}">
-                            <StackPanel Classes="button-content">
-                                <materialIcons:MaterialIcon Kind="TextBoxOutline" Width="{StaticResource LauncherIconSm}" Height="{StaticResource LauncherIconSm}"/>
-                                <TextBlock Text="{Binding Shell.I18n[crashRecoveryViewLog]}"/>
-                            </StackPanel>
-                        </Button>
-                        <Button Classes="flat-action dialog-action" Command="{Binding Dialogs.ResetSettingsAfterCrashCommand}">
-                            <StackPanel Classes="button-content">
-                                <materialIcons:MaterialIcon Kind="CogRefreshOutline" Width="{StaticResource LauncherIconSm}" Height="{StaticResource LauncherIconSm}"/>
-                                <TextBlock Text="{Binding Shell.I18n[crashRecoveryResetSettings]}"/>
-                            </StackPanel>
-                        </Button>
-                        <Button Classes="primary-action dialog-action" Command="{Binding Dialogs.ContinueAfterCrashCommand}">
-                            <StackPanel Classes="button-content">
-                                <materialIcons:MaterialIcon Kind="Check" Width="{StaticResource LauncherIconSm}" Height="{StaticResource LauncherIconSm}"/>
-                                <TextBlock Text="{Binding Shell.I18n[crashRecoveryContinue]}"/>
-                            </StackPanel>
-                        </Button>
-                    </StackPanel>
-                </Grid>
-            </Border>
-        </Grid>
-
         <!-- Critical error dialog -->
         <Grid Classes="dialog-overlay motion-overlay"
               Classes.motion-enabled="{Binding IsMotionEnabled}"
               controls:MotionVisibility.IsOpen="{Binding Dialogs.IsErrorDialogVisible}"
               controls:MotionVisibility.IsMotionEnabled="{Binding IsMotionEnabled}">
-            <Border Classes="dialog confirm-panel motion-surface" MaxWidth="540">
+            <Border Classes="motion-surface"
+                    HorizontalAlignment="Center"
+                    VerticalAlignment="Center">
                 <Border.RenderTransform>
                     <TranslateTransform/>
                 </Border.RenderTransform>
-                <Grid RowDefinitions="Auto,*,Auto" Classes="confirm-layout motion-surface-content">
-                    <Grid Classes="dialog-heading" ColumnDefinitions="Auto,*,Auto">
-                        <Border Classes="dialog-icon" VerticalAlignment="Center">
-                            <materialIcons:MaterialIcon Kind="AlertCircle" Width="{StaticResource LauncherIconXl}" Height="{StaticResource LauncherIconXl}"
-                                                       Foreground="{DynamicResource LauncherDangerBrush}"
-                                                       HorizontalAlignment="Center" VerticalAlignment="Center"/>
-                        </Border>
-                        <StackPanel Grid.Column="1" Classes="dialog-heading-copy">
-                            <TextBlock Text="{Binding Shell.I18n[errorDialogTitle]}" Classes="dialog-title"/>
-                            <TextBlock Text="{Binding Shell.I18n[errorDialogDescription]}" Classes="caption"/>
-                        </StackPanel>
-                    </Grid>
-                    <ScrollViewer Grid.Row="1" MaxHeight="300" Classes="scroll-pad">
-                        <Border Classes="confirm-message" Background="{DynamicResource LauncherDangerSoftBrush}">
-                            <TextBlock Text="{Binding Dialogs.ErrorDialogMessage}" Classes="confirm-message-text" TextWrapping="Wrap"/>
-                        </Border>
-                    </ScrollViewer>
-                    <StackPanel Grid.Row="2" Classes="confirm-actions">
-                        <Button Classes="flat-action dialog-action" Command="{Binding Dialogs.ViewErrorLogCommand}"
-                                AutomationProperties.Name="{Binding Shell.I18n[errorDialogViewLog]}">
-                            <StackPanel Classes="button-content">
-                                <materialIcons:MaterialIcon Kind="TextBoxOutline" Width="{StaticResource LauncherIconSm}" Height="{StaticResource LauncherIconSm}"/>
-                                <TextBlock Text="{Binding Shell.I18n[errorDialogViewLog]}"/>
+                <Grid Classes="motion-surface-content">
+                    <controls:DialogFrame Title="{Binding Shell.I18n[errorDialogTitle]}"
+                                          Description="{Binding Shell.I18n[errorDialogDescription]}"
+                                          IconKind="AlertCircle"
+                                          IsDanger="True"
+                                          IsConfirmPanel="True"
+                                          MaxWidth="540"
+                                          MaxHeight="{StaticResource Cafe.Layout.Dialog.Confirm.MaxHeight}"
+                                          BodyMaxHeight="300"
+                                          ShowCloseButton="False">
+                        <controls:DialogFrame.BodyContent>
+                            <Border Classes="confirm-message" Background="{DynamicResource Cafe.Color.Surface.Danger}">
+                                <TextBlock Text="{Binding Dialogs.ErrorDialogMessage}"
+                                           Classes="confirm-message-text"
+                                           TextWrapping="Wrap"/>
+                            </Border>
+                        </controls:DialogFrame.BodyContent>
+                        <controls:DialogFrame.ActionsContent>
+                            <StackPanel Classes="confirm-actions">
+                                <Button Classes="flat-action dialog-action"
+                                        Command="{Binding Dialogs.ViewErrorLogCommand}"
+                                        AutomationProperties.Name="{Binding Shell.I18n[errorDialogViewLog]}">
+                                    <StackPanel Classes="button-content">
+                                        <materialIcons:MaterialIcon Kind="TextBoxOutline" Width="{StaticResource Cafe.Icon.Small}" Height="{StaticResource Cafe.Icon.Small}"/>
+                                        <TextBlock Text="{Binding Shell.I18n[errorDialogViewLog]}"/>
+                                    </StackPanel>
+                                </Button>
+                                <Button Classes="flat-action dialog-action"
+                                        Command="{Binding Dialogs.CopyErrorDetailsCommand}"
+                                        AutomationProperties.Name="{Binding Shell.I18n[errorDialogCopyDetails]}">
+                                    <StackPanel Classes="button-content">
+                                        <materialIcons:MaterialIcon Kind="ContentCopy" Width="{StaticResource Cafe.Icon.Small}" Height="{StaticResource Cafe.Icon.Small}"/>
+                                        <TextBlock Text="{Binding Shell.I18n[errorDialogCopyDetails]}"/>
+                                    </StackPanel>
+                                </Button>
+                                <Button Classes="primary-action dialog-action"
+                                        Command="{Binding Dialogs.ContinueAfterErrorCommand}"
+                                        AutomationProperties.Name="{Binding Shell.I18n[errorDialogContinue]}">
+                                    <StackPanel Classes="button-content">
+                                        <materialIcons:MaterialIcon Kind="Check" Width="{StaticResource Cafe.Icon.Small}" Height="{StaticResource Cafe.Icon.Small}"/>
+                                        <TextBlock Text="{Binding Shell.I18n[errorDialogContinue]}"/>
+                                    </StackPanel>
+                                </Button>
                             </StackPanel>
-                        </Button>
-                        <Button Classes="flat-action dialog-action" Command="{Binding Dialogs.CopyErrorDetailsCommand}"
-                                AutomationProperties.Name="{Binding Shell.I18n[errorDialogCopyDetails]}">
-                            <StackPanel Classes="button-content">
-                                <materialIcons:MaterialIcon Kind="ContentCopy" Width="{StaticResource LauncherIconSm}" Height="{StaticResource LauncherIconSm}"/>
-                                <TextBlock Text="{Binding Shell.I18n[errorDialogCopyDetails]}"/>
-                            </StackPanel>
-                        </Button>
-                        <Button Classes="primary-action dialog-action" Command="{Binding Dialogs.ContinueAfterErrorCommand}"
-                                AutomationProperties.Name="{Binding Shell.I18n[errorDialogContinue]}">
-                            <StackPanel Classes="button-content">
-                                <materialIcons:MaterialIcon Kind="Check" Width="{StaticResource LauncherIconSm}" Height="{StaticResource LauncherIconSm}"/>
-                                <TextBlock Text="{Binding Shell.I18n[errorDialogContinue]}"/>
-                            </StackPanel>
-                        </Button>
-                    </StackPanel>
+                        </controls:DialogFrame.ActionsContent>
+                    </controls:DialogFrame>
                 </Grid>
             </Border>
         </Grid>

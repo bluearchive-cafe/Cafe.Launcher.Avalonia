@@ -31,7 +31,7 @@
                             <Border Grid.Row="0" Classes="toast-content">
                                 <Grid Classes="toast-layout" ColumnDefinitions="Auto,*,Auto" RowDefinitions="Auto,Auto,Auto">
                                     <materialIcons:MaterialIcon Grid.Row="0" Grid.Column="0"
-                                                                Kind="{Binding IconKind}" Width="{StaticResource LauncherIconSm}" Height="{StaticResource LauncherIconSm}"
+                                                                Kind="{Binding IconKind}" Width="{StaticResource Cafe.Icon.Small}" Height="{StaticResource Cafe.Icon.Small}"
                                                                 Foreground="{Binding Severity, Converter={x:Static converters:ToastSeverityToBrushConverter.Instance}}"
                                                                 VerticalAlignment="Center"
                                                                 Classes="toast-icon"
@@ -69,17 +69,10 @@
                                             CommandParameter="{Binding Id}"
                                             ToolTip.Tip="{Binding #ToastOverlayRoot.((vm:MainWindowViewModel)DataContext).Shell.I18n[close]}"
                                             AutomationProperties.Name="{Binding #ToastOverlayRoot.((vm:MainWindowViewModel)DataContext).Shell.I18n[close]}">
-                                        <materialIcons:MaterialIcon Kind="Close" Width="{StaticResource LauncherIconSm}" Height="{StaticResource LauncherIconSm}"/>
+                                        <materialIcons:MaterialIcon Kind="Close" Width="{StaticResource Cafe.Icon.Small}" Height="{StaticResource Cafe.Icon.Small}"/>
                                     </Button>
                                 </Grid>
                             </Border>
-                            <ProgressBar Grid.Row="1"
-                                         Classes="toast-progress"
-                                         Minimum="0"
-                                         Maximum="100"
-                                         Value="{Binding AutoDismissProgress}"
-                                         IsVisible="{Binding HasAutoDismissProgress}"
-                                         Foreground="{Binding Severity, Converter={x:Static converters:ToastSeverityToBrushConverter.Instance}}"/>
                             <ProgressBar Grid.Row="1"
                                          Classes="toast-progress"
                                          IsVisible="{Binding IsActionExecuting}"

@@ -17,15 +17,18 @@ namespace Cafe.Launcher.Avalonia.ViewModels;
 
 public partial class RemoteContentViewModel : ViewModelBase, IDisposable
 {
-    private const int ManualNavResumeDelayMs = 5000;
+    private const int DefaultBannerIntervalMs = 6000;
     private const int MaxConcurrentBannerImageLoads = 4;
     private readonly LocalizationService localizer;
     private readonly ImageCacheService imageCacheService;
     private DispatcherTimer? carouselTimer;
-    private CancellationTokenSource? carouselDelayCts;
     private string proxyMode = ProxyModes.Auto;
     private bool showRemoteContentCard = true;
     private bool isMotionReduced;
+    private bool isCarouselUserPaused;
+    private bool isCarouselHoverPauseSuppressed;
+    private bool isBannerPointerOver;
+    private bool isWindowActive = true;
     private bool disposed;
 
     [ObservableProperty]
@@ -77,7 +80,7 @@ public partial class RemoteContentViewModel : ViewModelBase, IDisposable
     private bool hasMultipleBanners;
 
     [ObservableProperty]
-    private int bannerIntervalMs = 5000;
+    private int bannerIntervalMs = DefaultBannerIntervalMs;
 
     [ObservableProperty]
     private IPageTransition carouselTransition = new CrossFade(MotionTokens.NormalDuration);
@@ -121,9 +124,7 @@ public partial class RemoteContentViewModel : ViewModelBase, IDisposable
             reduceMotion ? TimeSpan.Zero : MotionTokens.NormalDuration);
         if (reduceMotion)
         {
-            carouselDelayCts?.Cancel();
-            StopCarouselTimer();
-            SetCarouselPausedState(true);
+            UpdateCarouselPlayback();
         }
     }
 
@@ -132,7 +133,6 @@ public partial class RemoteContentViewModel : ViewModelBase, IDisposable
         if (disposed) return;
         proxyMode = settings.ProxyMode;
         StopCarouselTimer();
-        carouselDelayCts?.Cancel();
         DisposeBannerBitmaps();
         BannerItems.Clear();
         NewsItems.Clear();
@@ -143,7 +143,7 @@ public partial class RemoteContentViewModel : ViewModelBase, IDisposable
         if (operations?.OperationsResourceOpen == true)
         {
             BannerIsLooping = operations.BannerLoop;
-            BannerIntervalMs = operations.TimeInterval > 0 ? operations.TimeInterval * 1000 : 5000;
+            BannerIntervalMs = DefaultBannerIntervalMs;
 
             foreach (var item in operations.OperationsBannerList)
             {
@@ -165,7 +165,8 @@ public partial class RemoteContentViewModel : ViewModelBase, IDisposable
             CarouselSelectedIndex = 0;
             HasMultipleBanners = BannerItems.Count > 1;
             UpdateCarouselPageText();
-            SetCarouselPausedState(isMotionReduced);
+            isCarouselUserPaused = false;
+            UpdateCarouselPlayback();
             _ = PreloadBannerImagesAsync(cancellationToken);
         }
         else
@@ -310,7 +311,7 @@ public partial class RemoteContentViewModel : ViewModelBase, IDisposable
     public void StartCarouselTimer()
     {
         StopCarouselTimer();
-        if (!BannerIsLooping || BannerItems.Count <= 1 || IsCarouselPaused)
+        if (!CanAutoAdvanceCarousel())
         {
             return;
         }
@@ -343,15 +344,18 @@ public partial class RemoteContentViewModel : ViewModelBase, IDisposable
     [RelayCommand]
     private void ToggleCarouselLoop()
     {
-        SetCarouselPausedState(!IsCarouselPaused);
         if (IsCarouselPaused)
         {
-            StopCarouselTimer();
+            isCarouselUserPaused = false;
+            isCarouselHoverPauseSuppressed = isBannerPointerOver;
         }
         else
         {
-            StartCarouselTimer();
+            isCarouselUserPaused = true;
+            isCarouselHoverPauseSuppressed = false;
         }
+
+        UpdateCarouselPlayback();
     }
 
     [RelayCommand]
@@ -410,8 +414,7 @@ public partial class RemoteContentViewModel : ViewModelBase, IDisposable
         if (index >= 0 && index < BannerItems.Count)
         {
             CarouselSelectedIndex = index;
-            StopCarouselTimer();
-            _ = ScheduleCarouselResumeAfterDelayAsync();
+            UpdateCarouselPlayback();
         }
     }
 
@@ -507,23 +510,31 @@ public partial class RemoteContentViewModel : ViewModelBase, IDisposable
         }
     }
 
-    private async Task ScheduleCarouselResumeAfterDelayAsync()
+    public void SetBannerPointerOver(bool isPointerOver)
     {
-        if (disposed) return;
-        carouselDelayCts?.Cancel();
-        carouselDelayCts = new CancellationTokenSource();
-        var token = carouselDelayCts.Token;
-        try
+        if (isBannerPointerOver == isPointerOver)
         {
-            await Task.Delay(ManualNavResumeDelayMs, token);
-            if (!IsCarouselPaused && BannerIsLooping && BannerItems.Count > 1)
-            {
-                StartCarouselTimer();
-            }
+            return;
         }
-        catch (OperationCanceledException)
+
+        isBannerPointerOver = isPointerOver;
+        if (!isPointerOver)
         {
+            isCarouselHoverPauseSuppressed = false;
         }
+
+        UpdateCarouselPlayback();
+    }
+
+    public void SetWindowActive(bool isActive)
+    {
+        if (isWindowActive == isActive)
+        {
+            return;
+        }
+
+        isWindowActive = isActive;
+        UpdateCarouselPlayback();
     }
 
     public static string FormatUnixMilliseconds(long value, string? typeLabel)
@@ -596,9 +607,6 @@ public partial class RemoteContentViewModel : ViewModelBase, IDisposable
         disposed = true;
 
         StopCarouselTimer();
-        carouselDelayCts?.Cancel();
-        carouselDelayCts?.Dispose();
-        carouselDelayCts = null;
         DisposeBannerBitmaps();
     }
 
@@ -618,5 +626,27 @@ public partial class RemoteContentViewModel : ViewModelBase, IDisposable
         CarouselPauseTooltip = paused
             ? localizer.T("resumeCarousel")
             : localizer.T("pauseCarousel");
+    }
+
+    private bool CanAutoAdvanceCarousel() =>
+        BannerIsLooping
+        && BannerItems.Count > 1
+        && !isMotionReduced
+        && !isCarouselUserPaused
+        && (!isBannerPointerOver || isCarouselHoverPauseSuppressed)
+        && isWindowActive;
+
+    private void UpdateCarouselPlayback()
+    {
+        var isPaused = !CanAutoAdvanceCarousel();
+        SetCarouselPausedState(isPaused);
+        if (isPaused)
+        {
+            StopCarouselTimer();
+        }
+        else
+        {
+            StartCarouselTimer();
+        }
     }
 }

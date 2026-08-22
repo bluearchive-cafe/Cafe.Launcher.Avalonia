@@ -24,10 +24,10 @@ public sealed class ToastSeverityToBrushConverter : IValueConverter
 
         var resourceKey = severity switch
         {
-            ToastSeverity.Success => "LauncherToastSuccessBrush",
-            ToastSeverity.Warning => "LauncherToastWarningBrush",
-            ToastSeverity.Error => "LauncherToastErrorBrush",
-            _ => "LauncherToastInfoBrush"
+            ToastSeverity.Success => "Cafe.Color.Success",
+            ToastSeverity.Warning => "Cafe.Color.Warning",
+            ToastSeverity.Error => "Cafe.Color.Danger",
+            _ => "Cafe.Color.Info"
         };
 
         var app = Application.Current;

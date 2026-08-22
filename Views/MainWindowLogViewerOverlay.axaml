@@ -12,32 +12,26 @@
           Classes.motion-enabled="{Binding IsMotionEnabled}"
           controls:MotionVisibility.IsOpen="{Binding LogViewer.IsVisible}"
           controls:MotionVisibility.IsMotionEnabled="{Binding IsMotionEnabled}">
-        <Border Width="{StaticResource LauncherLogViewerWidth}"
-                Height="{StaticResource LauncherLogViewerHeight}"
-                Classes="dialog overlay-dialog motion-surface">
+        <Border MaxWidth="920"
+                MaxHeight="620"
+                HorizontalAlignment="Stretch"
+                VerticalAlignment="Stretch"
+                Classes="overlay-dialog motion-surface">
             <Border.RenderTransform>
                 <TranslateTransform/>
             </Border.RenderTransform>
-            <Grid RowDefinitions="Auto,Auto,*,Auto" Classes="motion-surface-content">
-                <!-- Header -->
-                <Grid ColumnDefinitions="*,Auto" Classes="dialog-header">
-                    <StackPanel Classes="dialog-title-row">
-                        <Border Classes="dialog-icon">
-                            <materialIcons:MaterialIcon Kind="TextBoxOutline" Width="{StaticResource LauncherIconMd}" Height="{StaticResource LauncherIconMd}"
-                                                       Foreground="{DynamicResource LauncherAccentBrush}"
-                                                       HorizontalAlignment="Center" VerticalAlignment="Center"/>
-                        </Border>
-                        <TextBlock Text="{Binding Shell.I18n[logViewerTitle]}" Classes="dialog-title" VerticalAlignment="Center"/>
-                    </StackPanel>
-                    <Button Grid.Column="1" Classes="dialog-close header-action" Command="{Binding LogViewer.CloseCommand}"
-                            ToolTip.Tip="{Binding Shell.I18n[close]}"
-                            AutomationProperties.Name="{Binding Shell.I18n[close]}">
-                        <materialIcons:MaterialIcon Kind="Close" Width="{StaticResource LauncherIconMd}" Height="{StaticResource LauncherIconMd}"/>
-                    </Button>
-                </Grid>
-
+            <Grid Classes="motion-surface-content">
+                <controls:DialogFrame Title="{Binding Shell.I18n[logViewerTitle]}"
+                                      ShowIcon="False"
+                                      ShowDescription="False"
+                                      UseToolPanelChrome="True"
+                                      BodyVerticalScrollBarVisibility="Disabled"
+                                      CloseCommand="{Binding LogViewer.CloseCommand}"
+                                      CloseToolTip="{Binding Shell.I18n[close]}">
+                    <controls:DialogFrame.BodyContent>
+                        <Grid RowDefinitions="Auto,*">
                 <!-- Filter bar -->
-                <StackPanel Grid.Row="1" Orientation="Horizontal" Spacing="{StaticResource LauncherSpacingSm}" Classes="log-filter-bar">
+                <StackPanel Orientation="Horizontal" Spacing="{StaticResource Cafe.Space.2}" Classes="log-filter-bar">
                     <Button Classes="news-tab log-filter" Classes.active="{Binding LogViewer.IsFilterAllActive}"
                             Command="{Binding LogViewer.SetFilterAllCommand}">
                         <TextBlock Text="{Binding Shell.I18n[logFilterAll]}"/>
@@ -68,11 +62,11 @@
                     </Button>
                     <TextBox Text="{Binding LogViewer.FilterText, Mode=TwoWay}" PlaceholderText="{Binding Shell.I18n[logSearchPlaceholder]}"
                              Classes="uid-input log-search" MinWidth="160"
-                             Height="{StaticResource LauncherControlHeightSetting}" VerticalAlignment="Center"/>
+                             Height="{StaticResource Cafe.Control.Height.Setting}" VerticalAlignment="Center"/>
                 </StackPanel>
 
                 <!-- Log entries list -->
-                <Grid Grid.Row="2"
+                <Grid Grid.Row="1"
                       RowDefinitions="Auto,*"
                       Classes="log-content">
                     <Button Grid.Row="0"
@@ -90,16 +84,16 @@
                         <ListBox.ItemTemplate>
                             <DataTemplate x:DataType="feat:LogEntryDisplay">
                                 <Border Classes="dialog-card">
-                                    <StackPanel Spacing="{StaticResource LauncherSpacingXs}">
-                                        <StackPanel Orientation="Horizontal" Spacing="{StaticResource LauncherSpacingSm}">
+                                    <StackPanel Spacing="{StaticResource Cafe.Space.1}">
+                                        <StackPanel Orientation="Horizontal" Spacing="{StaticResource Cafe.Space.2}">
                                             <TextBlock Text="{Binding TimestampText}" Classes="caption" VerticalAlignment="Center"/>
                                             <TextBlock Text="{Binding SeverityLabel}" Classes="chip-text" VerticalAlignment="Center"
-                                                       Foreground="{DynamicResource LauncherAccentBrush}"/>
+                                                       Foreground="{DynamicResource Cafe.Color.Accent}"/>
                                         </StackPanel>
                                         <TextBlock Text="{Binding Title}" Classes="section-title" TextWrapping="Wrap"/>
                                         <TextBlock Text="{Binding Details}" Classes="caption" TextWrapping="Wrap"
                                                    IsVisible="{Binding Details, Converter={x:Static StringConverters.IsNotNullOrEmpty}}"
-                                                   FontFamily="{StaticResource LauncherFontFamilyMonospace}" MaxHeight="120"/>
+                                                   FontFamily="{StaticResource Cafe.Type.Family.Monospace}" MaxHeight="120"/>
                                     </StackPanel>
                                 </Border>
                             </DataTemplate>
@@ -112,26 +106,28 @@
                                    Classes="media-placeholder-text"/>
                     </Border>
                 </Grid>
+                        </Grid>
+                    </controls:DialogFrame.BodyContent>
 
-                <!-- Footer -->
-                <Border Grid.Row="3" Classes="dialog-footer">
+                    <controls:DialogFrame.ActionsContent>
                     <StackPanel Classes="confirm-actions">
                         <Button Classes="flat-action dialog-action" Command="{Binding LogViewer.ExportCommand}"
                                 AutomationProperties.Name="{Binding Shell.I18n[exportLogs]}">
                             <StackPanel Classes="button-content">
-                                <materialIcons:MaterialIcon Kind="Export" Width="{StaticResource LauncherIconSm}" Height="{StaticResource LauncherIconSm}"/>
+                                <materialIcons:MaterialIcon Kind="Export" Width="{StaticResource Cafe.Icon.Small}" Height="{StaticResource Cafe.Icon.Small}"/>
                                 <TextBlock Text="{Binding Shell.I18n[exportLogs]}"/>
                             </StackPanel>
                         </Button>
                         <Button Classes="flat-action dialog-action" Command="{Binding LogViewer.CloseCommand}"
                                 AutomationProperties.Name="{Binding Shell.I18n[close]}">
                             <StackPanel Classes="button-content">
-                                <materialIcons:MaterialIcon Kind="CloseCircleOutline" Width="{StaticResource LauncherIconSm}" Height="{StaticResource LauncherIconSm}"/>
+                                <materialIcons:MaterialIcon Kind="CloseCircleOutline" Width="{StaticResource Cafe.Icon.Small}" Height="{StaticResource Cafe.Icon.Small}"/>
                                 <TextBlock Text="{Binding Shell.I18n[close]}"/>
                             </StackPanel>
                         </Button>
                     </StackPanel>
-                </Border>
+                    </controls:DialogFrame.ActionsContent>
+                </controls:DialogFrame>
             </Grid>
         </Border>
     </Grid>

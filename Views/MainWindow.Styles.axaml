@@ -3,7 +3,18 @@
         xmlns:views="using:Cafe.Launcher.Avalonia.Views"
         xmlns:materialIcons="clr-namespace:Material.Icons.Avalonia;assembly=Material.Icons.Avalonia">
     <Styles.Resources>
-        <ControlTemplate x:Key="LauncherBorderButtonTemplate" TargetType="Button">
+        <x:Double x:Key="Cafe.Layout.TitleBar.Height">48</x:Double>
+        <Thickness x:Key="Cafe.Layout.TitleBar.Brand.Margin">20,0,0,0</Thickness>
+        <Thickness x:Key="Cafe.Layout.TitleBar.SettingsAction.Margin">0,0,4,0</Thickness>
+        <x:Double x:Key="Cafe.Control.Size.ChromeAction">36</x:Double>
+        <x:Double x:Key="Cafe.Icon.ChromeAction">18</x:Double>
+        <x:Double x:Key="Cafe.Type.ChromeBrand">16</x:Double>
+        <x:Double x:Key="Cafe.Layout.OperationDock.Action.Width">220</x:Double>
+        <x:Double x:Key="Cafe.Layout.OperationDock.Action.Height">58</x:Double>
+        <Thickness x:Key="Cafe.Layout.OperationDock.Action.Padding">20,0</Thickness>
+        <x:Double x:Key="Cafe.Layout.OperationDock.SectionSpacing">20</x:Double>
+        <Thickness x:Key="Cafe.Layout.OperationDock.Padding">40,20</Thickness>
+        <ControlTemplate x:Key="Cafe.Control.Template.BorderButton" TargetType="Button">
             <Border Background="{TemplateBinding Background}"
                     BorderBrush="{TemplateBinding BorderBrush}"
                     BorderThickness="{TemplateBinding BorderThickness}"
@@ -16,144 +27,132 @@
             </Border>
         </ControlTemplate>
         <ItemsPanelTemplate x:Key="HorizontalSpacingXsPanel">
-            <StackPanel Orientation="Horizontal" Spacing="{StaticResource LauncherSpacingXs}"/>
+            <StackPanel Orientation="Horizontal" Spacing="{StaticResource Cafe.Space.1}"/>
         </ItemsPanelTemplate>
         <ItemsPanelTemplate x:Key="HorizontalSpacingSmPanel">
-            <StackPanel Orientation="Horizontal" Spacing="{StaticResource LauncherSpacingSm}"/>
+            <StackPanel Orientation="Horizontal" Spacing="{StaticResource Cafe.Space.2}"/>
         </ItemsPanelTemplate>
     </Styles.Resources>
     <Style Selector="TextBlock.caption">
-        <Setter Property="FontSize" Value="{StaticResource LauncherFontSizeMd}"/>
-        <Setter Property="Foreground" Value="{DynamicResource LauncherTextSecondaryBrush}"/>
+        <Setter Property="FontSize" Value="{StaticResource Cafe.Type.Caption}"/>
+        <Setter Property="Foreground" Value="{DynamicResource Cafe.Color.Text.Muted}"/>
     </Style>
     <Style Selector="TextBlock.value">
-        <Setter Property="FontSize" Value="{StaticResource LauncherFontSizeLg}"/>
-        <Setter Property="Foreground" Value="{DynamicResource LauncherTextPrimaryBrush}"/>
+        <Setter Property="FontSize" Value="{StaticResource Cafe.Type.Body}"/>
+        <Setter Property="Foreground" Value="{DynamicResource Cafe.Color.Text}"/>
     </Style>
     <Style Selector="TextBlock.heading">
-        <Setter Property="FontSize" Value="{StaticResource LauncherFontSizeDisplay}"/>
-        <Setter Property="Foreground" Value="{DynamicResource LauncherTextPrimaryBrush}"/>
-        <Setter Property="FontWeight" Value="{StaticResource LauncherFontWeightStrong}"/>
+        <Setter Property="FontSize" Value="{StaticResource Cafe.Type.Display}"/>
+        <Setter Property="Foreground" Value="{DynamicResource Cafe.Color.Text}"/>
+        <Setter Property="FontWeight" Value="{StaticResource Cafe.Type.Weight.Strong}"/>
     </Style>
     <Style Selector="TextBlock.body">
-        <Setter Property="FontSize" Value="{StaticResource LauncherFontSizeLg}"/>
-        <Setter Property="Foreground" Value="{DynamicResource LauncherTextBodyBrush}"/>
+        <Setter Property="FontSize" Value="{StaticResource Cafe.Type.Body}"/>
+        <Setter Property="Foreground" Value="{DynamicResource Cafe.Color.Text.Body}"/>
         <Setter Property="TextWrapping" Value="Wrap"/>
     </Style>
     <Style Selector="TextBlock.dialog-title">
-        <Setter Property="FontSize" Value="{StaticResource LauncherFontSizeHeadingLg}"/>
-        <Setter Property="Foreground" Value="{DynamicResource LauncherTextPrimaryBrush}"/>
-        <Setter Property="FontWeight" Value="{StaticResource LauncherFontWeightStrong}"/>
+        <Setter Property="FontSize" Value="{StaticResource Cafe.Type.Title}"/>
+        <Setter Property="Foreground" Value="{DynamicResource Cafe.Color.Text}"/>
+        <Setter Property="FontWeight" Value="{StaticResource Cafe.Type.Weight.Strong}"/>
     </Style>
     <Style Selector="TextBlock.kicker">
-        <Setter Property="FontSize" Value="{StaticResource LauncherFontSizeXs}"/>
-        <Setter Property="Foreground" Value="{DynamicResource LauncherAccentBrush}"/>
+        <Setter Property="FontSize" Value="{StaticResource Cafe.Type.Caption}"/>
+        <Setter Property="Foreground" Value="{DynamicResource Cafe.Color.Accent}"/>
     </Style>
     <Style Selector="TextBlock.titlebar-brand">
-        <Setter Property="Foreground" Value="{DynamicResource LauncherOnChromeBrush}"/>
-        <Setter Property="FontSize" Value="{StaticResource LauncherFontSizeXxl}"/>
-        <Setter Property="FontWeight" Value="{StaticResource LauncherFontWeightStrong}"/>
+        <Setter Property="Foreground" Value="{DynamicResource Cafe.Color.OnChrome}"/>
+        <Setter Property="FontSize" Value="{StaticResource Cafe.Type.ChromeBrand}"/>
+        <Setter Property="FontWeight" Value="{StaticResource Cafe.Type.Weight.Strong}"/>
     </Style>
     <Style Selector="TextBlock.titlebar-status">
-        <Setter Property="Foreground" Value="{DynamicResource LauncherOnChromeMutedBrush}"/>
-        <Setter Property="FontSize" Value="{StaticResource LauncherFontSizeSm}"/>
+        <Setter Property="Foreground" Value="{DynamicResource Cafe.Color.OnChrome.Muted}"/>
+        <Setter Property="FontSize" Value="{StaticResource Cafe.Type.Caption}"/>
     </Style>
     <Style Selector="TextBlock.progress-title">
-        <Setter Property="Foreground" Value="{DynamicResource LauncherTextPrimaryBrush}"/>
-        <Setter Property="FontSize" Value="{StaticResource LauncherFontSizeXl}"/>
-        <Setter Property="FontWeight" Value="{StaticResource LauncherFontWeightStrong}"/>
+        <Setter Property="Foreground" Value="{DynamicResource Cafe.Color.Text}"/>
+        <Setter Property="FontSize" Value="{StaticResource Cafe.Type.Label}"/>
+        <Setter Property="FontWeight" Value="{StaticResource Cafe.Type.Weight.Strong}"/>
     </Style>
     <Style Selector="TextBlock.on-dark-caption">
-        <Setter Property="Foreground" Value="{DynamicResource LauncherOnDarkMutedBrush}"/>
-        <Setter Property="FontSize" Value="{StaticResource LauncherFontSizeLg}"/>
+        <Setter Property="Foreground" Value="{DynamicResource Cafe.Color.OnDark.Muted}"/>
+        <Setter Property="FontSize" Value="{StaticResource Cafe.Type.Body}"/>
     </Style>
     <Style Selector="StackPanel.titlebar-brand-row">
         <Setter Property="Orientation" Value="Horizontal"/>
-        <Setter Property="Margin" Value="20,0,0,0"/>
+        <Setter Property="Margin" Value="{StaticResource Cafe.Layout.TitleBar.Brand.Margin}"/>
         <Setter Property="VerticalAlignment" Value="Center"/>
     </Style>
     <Style Selector="StackPanel.titlebar-actions">
         <Setter Property="Orientation" Value="Horizontal"/>
-        <Setter Property="Margin" Value="0,0,8,0"/>
+        <Setter Property="Margin" Value="{StaticResource Cafe.Inset.Action.End}"/>
     </Style>
     <Style Selector="Button.chrome">
-        <Setter Property="Background" Value="{DynamicResource LauncherTransparentBrush}"/>
+        <Setter Property="Background" Value="{DynamicResource Cafe.Color.Transparent}"/>
         <Setter Property="BorderThickness" Value="0"/>
-        <Setter Property="Foreground" Value="{DynamicResource LauncherOnChromeBrush}"/>
-        <Setter Property="Width" Value="{StaticResource LauncherControlHeightSetting}"/>
-        <Setter Property="Height" Value="{StaticResource LauncherControlHeightSetting}"/>
+        <Setter Property="Foreground" Value="{DynamicResource Cafe.Color.OnChrome}"/>
+        <Setter Property="Width" Value="{StaticResource Cafe.Control.Size.ChromeAction}"/>
+        <Setter Property="Height" Value="{StaticResource Cafe.Control.Size.ChromeAction}"/>
         <Setter Property="Padding" Value="0"/>
-        <Setter Property="CornerRadius" Value="{StaticResource LauncherRadiusSm}"/>
+        <Setter Property="CornerRadius" Value="{StaticResource Cafe.Radius.Small}"/>
         <Setter Property="HorizontalContentAlignment" Value="Center"/>
         <Setter Property="VerticalContentAlignment" Value="Center"/>
-        <Setter Property="Template" Value="{StaticResource LauncherBorderButtonTemplate}"/>
+        <Setter Property="Template" Value="{StaticResource Cafe.Control.Template.BorderButton}"/>
     </Style>
     <Style Selector="Button.chrome.settings">
-        <Setter Property="Margin" Value="0,0,4,0"/>
+        <Setter Property="Margin" Value="{StaticResource Cafe.Layout.TitleBar.SettingsAction.Margin}"/>
     </Style>
     <Style Selector="Button.chrome:pointerover">
-        <Setter Property="Background" Value="{DynamicResource LauncherChromeHoverBrush}"/>
-        <Setter Property="Foreground" Value="{DynamicResource LauncherOnChromeBrush}"/>
+        <Setter Property="Background" Value="{DynamicResource Cafe.Color.Chrome.Hover}"/>
+        <Setter Property="Foreground" Value="{DynamicResource Cafe.Color.OnChrome}"/>
     </Style>
     <Style Selector="Button.chrome:pressed">
-        <Setter Property="Background" Value="{DynamicResource LauncherChromePressedBrush}"/>
-        <Setter Property="Foreground" Value="{DynamicResource LauncherOnChromeBrush}"/>
+        <Setter Property="Background" Value="{DynamicResource Cafe.Color.Chrome.Pressed}"/>
+        <Setter Property="Foreground" Value="{DynamicResource Cafe.Color.OnChrome}"/>
     </Style>
     <Style Selector="Button.chrome.close:pointerover">
-        <Setter Property="Background" Value="{DynamicResource LauncherDangerBrush}"/>
-        <Setter Property="Foreground" Value="{DynamicResource LauncherOnChromeBrush}"/>
+        <Setter Property="Background" Value="{DynamicResource Cafe.Color.Danger}"/>
+        <Setter Property="Foreground" Value="{DynamicResource Cafe.Color.OnDanger}"/>
     </Style>
     <Style Selector="Button.chrome.close:pressed">
-        <Setter Property="Background" Value="{DynamicResource LauncherDangerPressedBrush}"/>
-        <Setter Property="Foreground" Value="{DynamicResource LauncherOnChromeBrush}"/>
-    </Style>
-    <Style Selector="Button:focus-visible">
-        <Setter Property="BorderBrush" Value="{DynamicResource LauncherFocusRingBrush}"/>
-        <Setter Property="BorderThickness" Value="2"/>
-    </Style>
-    <Style Selector="ComboBox:focus-visible">
-        <Setter Property="BorderBrush" Value="{DynamicResource LauncherFocusRingBrush}"/>
-        <Setter Property="BorderThickness" Value="2"/>
-    </Style>
-    <Style Selector="ToggleSwitch:focus-visible">
-        <Setter Property="BorderBrush" Value="{DynamicResource LauncherFocusRingBrush}"/>
-        <Setter Property="BorderThickness" Value="2"/>
+        <Setter Property="Background" Value="{DynamicResource Cafe.Color.Danger.Pressed}"/>
+        <Setter Property="Foreground" Value="{DynamicResource Cafe.Color.OnDanger.Pressed}"/>
     </Style>
     <Style Selector="Button.text-link">
-        <Setter Property="Background" Value="{DynamicResource LauncherTransparentBrush}"/>
+        <Setter Property="Background" Value="{DynamicResource Cafe.Color.Transparent}"/>
         <Setter Property="BorderThickness" Value="0"/>
-        <Setter Property="Foreground" Value="{DynamicResource LauncherTextLinkBrush}"/>
+        <Setter Property="Foreground" Value="{DynamicResource Cafe.Color.Text.Link}"/>
         <Setter Property="Padding" Value="0"/>
-        <Setter Property="FontSize" Value="{StaticResource LauncherFontSizeLg}"/>
+        <Setter Property="FontSize" Value="{StaticResource Cafe.Type.Body}"/>
         <Setter Property="TextBlock.TextDecorations" Value="Underline"/>
     </Style>
     <Style Selector="Button.icon-link">
-        <Setter Property="Background" Value="{DynamicResource LauncherTransparentBrush}"/>
+        <Setter Property="Background" Value="{DynamicResource Cafe.Color.Transparent}"/>
         <Setter Property="BorderThickness" Value="0"/>
-        <Setter Property="Foreground" Value="{DynamicResource LauncherAccentBrush}"/>
-        <Setter Property="Padding" Value="8,4"/>
-        <Setter Property="CornerRadius" Value="{StaticResource LauncherRadiusSm}"/>
-        <Setter Property="FontSize" Value="{StaticResource LauncherFontSizeLg}"/>
+        <Setter Property="Foreground" Value="{DynamicResource Cafe.Color.Accent}"/>
+        <Setter Property="Padding" Value="{StaticResource Cafe.Inset.Tab}"/>
+        <Setter Property="CornerRadius" Value="{StaticResource Cafe.Radius.Small}"/>
+        <Setter Property="FontSize" Value="{StaticResource Cafe.Type.Body}"/>
         <Setter Property="HorizontalContentAlignment" Value="Center"/>
         <Setter Property="VerticalContentAlignment" Value="Center"/>
-        <Setter Property="Template" Value="{StaticResource LauncherBorderButtonTemplate}"/>
+        <Setter Property="Template" Value="{StaticResource Cafe.Control.Template.BorderButton}"/>
     </Style>
     <Style Selector="Button.icon-link:pointerover">
-        <Setter Property="Background" Value="{DynamicResource LauncherInfoBackgroundBrush}"/>
-        <Setter Property="Foreground" Value="{DynamicResource LauncherAccentBrush}"/>
+        <Setter Property="Background" Value="{DynamicResource Cafe.Color.Surface.Info}"/>
+        <Setter Property="Foreground" Value="{DynamicResource Cafe.Color.Accent}"/>
     </Style>
     <Style Selector="Button.icon-link:pressed">
-        <Setter Property="Background" Value="{DynamicResource LauncherFlatPressedBrush}"/>
-        <Setter Property="Foreground" Value="{DynamicResource LauncherAccentPressedBrush}"/>
+        <Setter Property="Background" Value="{DynamicResource Cafe.Color.Surface.QuietPressed}"/>
+        <Setter Property="Foreground" Value="{DynamicResource Cafe.Color.Accent.Pressed}"/>
     </Style>
     <Style Selector="Button.icon-button">
-        <Setter Property="Background" Value="{DynamicResource LauncherTransparentBrush}"/>
+        <Setter Property="Background" Value="{DynamicResource Cafe.Color.Transparent}"/>
         <Setter Property="BorderThickness" Value="0"/>
-        <Setter Property="Foreground" Value="{DynamicResource LauncherTextSecondaryBrush}"/>
-        <Setter Property="Width" Value="{StaticResource LauncherSwatchSize}"/>
-        <Setter Property="Height" Value="{StaticResource LauncherSwatchSize}"/>
+        <Setter Property="Foreground" Value="{DynamicResource Cafe.Color.Text.Muted}"/>
+        <Setter Property="Width" Value="{StaticResource Cafe.Control.Size.Swatch}"/>
+        <Setter Property="Height" Value="{StaticResource Cafe.Control.Size.Swatch}"/>
         <Setter Property="Padding" Value="0"/>
-        <Setter Property="CornerRadius" Value="{StaticResource LauncherRadiusSm}"/>
+        <Setter Property="CornerRadius" Value="{StaticResource Cafe.Radius.Small}"/>
         <Setter Property="HorizontalContentAlignment" Value="Center"/>
         <Setter Property="VerticalContentAlignment" Value="Center"/>
     </Style>
@@ -162,263 +161,311 @@
         <Setter Property="Height" Value="24"/>
     </Style>
     <Style Selector="Button.icon-button.carousel-navigation">
-        <Setter Property="Width" Value="{StaticResource LauncherControlHeightSetting}"/>
-        <Setter Property="Height" Value="{StaticResource LauncherControlHeightSetting}"/>
+        <Setter Property="Width" Value="{StaticResource Cafe.Control.Height.Setting}"/>
+        <Setter Property="Height" Value="{StaticResource Cafe.Control.Height.Setting}"/>
+        <Setter Property="Background" Value="{DynamicResource Cafe.Color.Overlay.Strong}"/>
+        <Setter Property="Foreground" Value="{DynamicResource Cafe.Color.OnChrome}"/>
+        <Setter Property="Template" Value="{StaticResource Cafe.Control.Template.BorderButton}"/>
+        <Setter Property="Margin" Value="{StaticResource Cafe.Space.2.Thickness}"/>
     </Style>
     <Style Selector="Button.icon-button.dot">
         <Setter Property="Width" Value="20"/>
         <Setter Property="Height" Value="20"/>
     </Style>
     <Style Selector="Button.icon-button:pointerover">
-        <Setter Property="Background" Value="{DynamicResource LauncherFlatHoverBrush}"/>
-        <Setter Property="Foreground" Value="{DynamicResource LauncherAccentBrush}"/>
+        <Setter Property="Background" Value="{DynamicResource Cafe.Color.Surface.QuietHover}"/>
+        <Setter Property="Foreground" Value="{DynamicResource Cafe.Color.Accent}"/>
     </Style>
     <Style Selector="Button.icon-button:pressed">
-        <Setter Property="Background" Value="{DynamicResource LauncherFlatPressedBrush}"/>
-        <Setter Property="Foreground" Value="{DynamicResource LauncherAccentPressedBrush}"/>
+        <Setter Property="Background" Value="{DynamicResource Cafe.Color.Surface.QuietPressed}"/>
+        <Setter Property="Foreground" Value="{DynamicResource Cafe.Color.Accent.Pressed}"/>
     </Style>
     <Style Selector="Button.icon-button.carousel-navigation:pointerover">
-        <Setter Property="Background" Value="{DynamicResource LauncherChromeHoverBrush}"/>
+        <Setter Property="Background" Value="{DynamicResource Cafe.Color.Chrome.ControlHover}"/>
     </Style>
     <Style Selector="Button.icon-button.carousel-navigation:pressed">
-        <Setter Property="Background" Value="{DynamicResource LauncherAccentSoftBrush}"/>
+        <Setter Property="Background" Value="{DynamicResource Cafe.Color.Accent.Soft}"/>
     </Style>
     <Style Selector="Button.primary-action">
-        <Setter Property="Background" Value="{DynamicResource LauncherAccentBrush}"/>
+        <Setter Property="Background" Value="{DynamicResource Cafe.Color.Accent}"/>
         <Setter Property="BorderThickness" Value="0"/>
-        <Setter Property="Foreground" Value="{DynamicResource LauncherOnAccentBrush}"/>
-        <Setter Property="FontSize" Value="{StaticResource LauncherFontSizeXxl}"/>
-        <Setter Property="FontWeight" Value="{StaticResource LauncherFontWeightStrong}"/>
+        <Setter Property="Foreground" Value="{DynamicResource Cafe.Color.OnAccent}"/>
+        <Setter Property="FontSize" Value="{StaticResource Cafe.Type.Label}"/>
+        <Setter Property="FontWeight" Value="{StaticResource Cafe.Type.Weight.Strong}"/>
         <Setter Property="MinWidth" Value="150"/>
-        <Setter Property="Height" Value="{StaticResource LauncherControlHeightBottom}"/>
+        <Setter Property="Height" Value="{StaticResource Cafe.Control.Height.Dock}"/>
         <Setter Property="Padding" Value="20,12"/>
-        <Setter Property="CornerRadius" Value="{StaticResource LauncherRadiusSm}"/>
+        <Setter Property="CornerRadius" Value="{StaticResource Cafe.Radius.Medium}"/>
         <Setter Property="HorizontalContentAlignment" Value="Center"/>
         <Setter Property="VerticalContentAlignment" Value="Center"/>
-        <Setter Property="Template" Value="{StaticResource LauncherBorderButtonTemplate}"/>
+        <Setter Property="Template" Value="{StaticResource Cafe.Control.Template.BorderButton}"/>
     </Style>
     <Style Selector="Button.primary-action:pointerover">
-        <Setter Property="Background" Value="{DynamicResource LauncherAccentHoverBrush}"/>
-        <Setter Property="Foreground" Value="{DynamicResource LauncherOnAccentBrush}"/>
+        <Setter Property="Background" Value="{DynamicResource Cafe.Color.Accent.Hover}"/>
+        <Setter Property="Foreground" Value="{DynamicResource Cafe.Color.OnAccent.Hover}"/>
     </Style>
     <Style Selector="Button.primary-action:pressed">
-        <Setter Property="Background" Value="{DynamicResource LauncherAccentPressedBrush}"/>
-        <Setter Property="Foreground" Value="{DynamicResource LauncherOnAccentBrush}"/>
+        <Setter Property="Background" Value="{DynamicResource Cafe.Color.Accent.Pressed}"/>
+        <Setter Property="Foreground" Value="{DynamicResource Cafe.Color.OnAccent.Pressed}"/>
     </Style>
     <Style Selector="Button.primary-action:disabled">
-        <Setter Property="Background" Value="{DynamicResource LauncherButtonBorderBrush}"/>
-        <Setter Property="Foreground" Value="{DynamicResource LauncherTextSecondaryBrush}"/>
+        <Setter Property="Background" Value="{DynamicResource Cafe.Color.Border.Button}"/>
+        <Setter Property="Foreground" Value="{DynamicResource Cafe.Color.Text.Muted}"/>
     </Style>
     <Style Selector="Button.flat-action">
-        <Setter Property="Background" Value="{DynamicResource LauncherTransparentBrush}"/>
-        <Setter Property="BorderBrush" Value="{DynamicResource LauncherButtonBorderBrush}"/>
+        <Setter Property="Background" Value="{DynamicResource Cafe.Color.Transparent}"/>
+        <Setter Property="BorderBrush" Value="{DynamicResource Cafe.Color.Border.Button}"/>
         <Setter Property="BorderThickness" Value="1"/>
-        <Setter Property="Foreground" Value="{DynamicResource LauncherTextPrimaryBrush}"/>
-        <Setter Property="Padding" Value="12,8"/>
-        <Setter Property="CornerRadius" Value="{StaticResource LauncherRadiusSm}"/>
-        <Setter Property="MinHeight" Value="{StaticResource LauncherControlHeightSetting}"/>
+        <Setter Property="Foreground" Value="{DynamicResource Cafe.Color.Text}"/>
+        <Setter Property="Padding" Value="{StaticResource Cafe.Inset.Control}"/>
+        <Setter Property="CornerRadius" Value="{StaticResource Cafe.Radius.Small}"/>
+        <Setter Property="MinHeight" Value="{StaticResource Cafe.Control.Height.Setting}"/>
         <Setter Property="HorizontalContentAlignment" Value="Center"/>
         <Setter Property="VerticalContentAlignment" Value="Center"/>
-        <Setter Property="Template" Value="{StaticResource LauncherBorderButtonTemplate}"/>
+        <Setter Property="Template" Value="{StaticResource Cafe.Control.Template.BorderButton}"/>
+    </Style>
+    <Style Selector="Button.flat-action.elevated">
+        <Setter Property="Background" Value="{DynamicResource Cafe.Color.Surface}"/>
+        <Setter Property="Foreground" Value="{DynamicResource Cafe.Color.Accent}"/>
     </Style>
     <Style Selector="Button.flat-action:pointerover">
-        <Setter Property="Background" Value="{DynamicResource LauncherFlatHoverBrush}"/>
-        <Setter Property="BorderBrush" Value="{DynamicResource LauncherAccentHoverBrush}"/>
-        <Setter Property="Foreground" Value="{DynamicResource LauncherAccentBrush}"/>
+        <Setter Property="Background" Value="{DynamicResource Cafe.Color.Surface.QuietHover}"/>
+        <Setter Property="BorderBrush" Value="{DynamicResource Cafe.Color.Accent.Hover}"/>
+        <Setter Property="Foreground" Value="{DynamicResource Cafe.Color.Accent}"/>
+    </Style>
+    <Style Selector="Button.flat-action.elevated:pointerover">
+        <Setter Property="Background" Value="{DynamicResource Cafe.Color.Surface}"/>
+        <Setter Property="BorderBrush" Value="{DynamicResource Cafe.Color.Accent.Hover}"/>
+        <Setter Property="Foreground" Value="{DynamicResource Cafe.Color.Accent}"/>
     </Style>
     <Style Selector="Button.flat-action:pressed">
-        <Setter Property="Background" Value="{DynamicResource LauncherFlatPressedBrush}"/>
-        <Setter Property="BorderBrush" Value="{DynamicResource LauncherAccentBrush}"/>
-        <Setter Property="Foreground" Value="{DynamicResource LauncherAccentBrush}"/>
+        <Setter Property="Background" Value="{DynamicResource Cafe.Color.Surface.QuietPressed}"/>
+        <Setter Property="BorderBrush" Value="{DynamicResource Cafe.Color.Accent}"/>
+        <Setter Property="Foreground" Value="{DynamicResource Cafe.Color.Accent}"/>
+    </Style>
+    <Style Selector="Button.flat-action.elevated:pressed">
+        <Setter Property="Background" Value="{DynamicResource Cafe.Color.Surface.Info}"/>
+        <Setter Property="BorderBrush" Value="{DynamicResource Cafe.Color.Accent}"/>
+        <Setter Property="Foreground" Value="{DynamicResource Cafe.Color.Accent}"/>
     </Style>
     <Style Selector="Button.flat-action:disabled">
-        <Setter Property="Background" Value="{DynamicResource LauncherContentRowBrush}"/>
-        <Setter Property="Foreground" Value="{DynamicResource LauncherTextSecondaryBrush}"/>
-        <Setter Property="BorderBrush" Value="{DynamicResource LauncherCardBorderBrush}"/>
+        <Setter Property="Background" Value="{DynamicResource Cafe.Color.Surface.Row}"/>
+        <Setter Property="Foreground" Value="{DynamicResource Cafe.Color.Text.Muted}"/>
+        <Setter Property="BorderBrush" Value="{DynamicResource Cafe.Color.Border}"/>
     </Style>
     <Style Selector="Button.flat-action.icon-only">
-        <Setter Property="Width" Value="{StaticResource LauncherControlHeightSetting}"/>
-        <Setter Property="Height" Value="{StaticResource LauncherControlHeightSetting}"/>
-        <Setter Property="MinWidth" Value="{StaticResource LauncherControlHeightSetting}"/>
+        <Setter Property="Width" Value="{StaticResource Cafe.Control.Height.Setting}"/>
+        <Setter Property="Height" Value="{StaticResource Cafe.Control.Height.Setting}"/>
+        <Setter Property="MinWidth" Value="{StaticResource Cafe.Control.Height.Setting}"/>
         <Setter Property="Padding" Value="0"/>
     </Style>
-    <Style Selector="Button.bottom-action">
-        <Setter Property="MinHeight" Value="{StaticResource LauncherControlHeightBottom}"/>
+    <Style Selector="StackPanel.operation-actions > Button">
+        <Setter Property="MinHeight" Value="{StaticResource Cafe.Control.Height.Dock}"/>
         <Setter Property="MinWidth" Value="156"/>
         <Setter Property="Padding" Value="20,12"/>
-        <Setter Property="FontSize" Value="{StaticResource LauncherFontSizeXl}"/>
+        <Setter Property="FontSize" Value="{StaticResource Cafe.Type.Label}"/>
     </Style>
-    <Style Selector="Button.primary-action.path-operation">
-        <Setter Property="Height" Value="{StaticResource LauncherFieldHeight}"/>
-        <Setter Property="MinHeight" Value="{StaticResource LauncherFieldHeight}"/>
-        <Setter Property="Padding" Value="{StaticResource LauncherThicknessSm}"/>
+    <Style Selector="StackPanel.operation-actions > Button.primary-action">
+        <Setter Property="Width" Value="220"/>
+        <Setter Property="Height" Value="{StaticResource Cafe.Control.Height.PrimaryAction}"/>
+        <Setter Property="CornerRadius" Value="{StaticResource Cafe.Radius.Medium}"/>
+        <Setter Property="FontSize" Value="{StaticResource Cafe.Type.Title}"/>
+    </Style>
+    <Style Selector="Border.control-panel StackPanel.operation-actions > Button">
+        <Setter Property="Width" Value="{StaticResource Cafe.Layout.OperationDock.Action.Width}"/>
+        <Setter Property="MinWidth" Value="{StaticResource Cafe.Layout.OperationDock.Action.Width}"/>
+        <Setter Property="Height" Value="{StaticResource Cafe.Layout.OperationDock.Action.Height}"/>
+        <Setter Property="MinHeight" Value="{StaticResource Cafe.Layout.OperationDock.Action.Height}"/>
+        <Setter Property="Padding" Value="{StaticResource Cafe.Layout.OperationDock.Action.Padding}"/>
+        <Setter Property="CornerRadius" Value="{StaticResource Cafe.Radius.Medium}"/>
+        <Setter Property="FontSize" Value="{StaticResource Cafe.Type.Title}"/>
+    </Style>
+    <Style Selector="Border.control-panel StackPanel.operation-actions > Button.primary-action">
+        <Setter Property="Foreground" Value="{DynamicResource Cafe.Color.OnAccent}"/>
+    </Style>
+    <Style Selector="Border.control-panel StackPanel.operation-actions > Button.primary-action:disabled">
+        <Setter Property="Background" Value="{DynamicResource Cafe.Color.Accent.Pressed}"/>
+        <Setter Property="Foreground" Value="{DynamicResource Cafe.Color.OnChrome.Muted}"/>
+    </Style>
+    <Style Selector="Border.control-panel StackPanel.operation-actions > Button.primary-action:pressed">
+        <Setter Property="Background" Value="{DynamicResource Cafe.Color.Accent.Pressed}"/>
+        <Setter Property="BorderBrush" Value="{DynamicResource Cafe.Color.Accent.Pressed}"/>
+        <Setter Property="BorderThickness" Value="1"/>
+        <Setter Property="Foreground" Value="{DynamicResource Cafe.Color.OnAccent.Pressed}"/>
+    </Style>
+    <Style Selector="Grid.install-path-row > Button.primary-action">
+        <Setter Property="Height" Value="{StaticResource Cafe.Control.Height.Field}"/>
+        <Setter Property="MinHeight" Value="{StaticResource Cafe.Control.Height.Field}"/>
+        <Setter Property="Padding" Value="{StaticResource Cafe.Inset.Small}"/>
     </Style>
     <Style Selector="StackPanel.confirm-actions">
         <Setter Property="Orientation" Value="Horizontal"/>
         <Setter Property="HorizontalAlignment" Value="Right"/>
-        <Setter Property="Spacing" Value="{StaticResource LauncherSpacingMd}"/>
+        <Setter Property="Spacing" Value="{StaticResource Cafe.Space.3}"/>
     </Style>
     <Style Selector="Button.danger-action">
-        <Setter Property="Background" Value="{DynamicResource LauncherDangerBrush}"/>
-        <Setter Property="Foreground" Value="{DynamicResource LauncherOnAccentBrush}"/>
+        <Setter Property="Background" Value="{DynamicResource Cafe.Color.Danger}"/>
+        <Setter Property="Foreground" Value="{DynamicResource Cafe.Color.OnDanger}"/>
         <Setter Property="BorderThickness" Value="0"/>
-        <Setter Property="FontWeight" Value="{StaticResource LauncherFontWeightStrong}"/>
-        <Setter Property="MinHeight" Value="{StaticResource LauncherControlHeightDialog}"/>
+        <Setter Property="FontWeight" Value="{StaticResource Cafe.Type.Weight.Strong}"/>
+        <Setter Property="MinHeight" Value="{StaticResource Cafe.Control.Height.Dialog}"/>
         <Setter Property="Padding" Value="20,12"/>
-        <Setter Property="CornerRadius" Value="{StaticResource LauncherRadiusSm}"/>
+        <Setter Property="CornerRadius" Value="{StaticResource Cafe.Radius.Medium}"/>
         <Setter Property="HorizontalContentAlignment" Value="Center"/>
         <Setter Property="VerticalContentAlignment" Value="Center"/>
-        <Setter Property="Template" Value="{StaticResource LauncherBorderButtonTemplate}"/>
+        <Setter Property="Template" Value="{StaticResource Cafe.Control.Template.BorderButton}"/>
     </Style>
     <Style Selector="Button.danger-action:pointerover">
-        <Setter Property="Background" Value="{DynamicResource LauncherDangerHoverBrush}"/>
-        <Setter Property="Foreground" Value="{DynamicResource LauncherOnAccentBrush}"/>
+        <Setter Property="Background" Value="{DynamicResource Cafe.Color.Danger.Hover}"/>
+        <Setter Property="Foreground" Value="{DynamicResource Cafe.Color.OnDanger.Hover}"/>
     </Style>
     <Style Selector="Button.danger-action:pressed">
-        <Setter Property="Background" Value="{DynamicResource LauncherDangerPressedBrush}"/>
-        <Setter Property="Foreground" Value="{DynamicResource LauncherOnAccentBrush}"/>
+        <Setter Property="Background" Value="{DynamicResource Cafe.Color.Danger.Pressed}"/>
+        <Setter Property="Foreground" Value="{DynamicResource Cafe.Color.OnDanger.Pressed}"/>
     </Style>
     <Style Selector="Button.dialog-action">
-        <Setter Property="Height" Value="{StaticResource LauncherControlHeightDialog}"/>
+        <Setter Property="Height" Value="{StaticResource Cafe.Control.Height.Dialog}"/>
         <Setter Property="MinWidth" Value="108"/>
         <Setter Property="Padding" Value="16,0"/>
-        <Setter Property="FontSize" Value="{StaticResource LauncherFontSizeLg}"/>
+        <Setter Property="FontSize" Value="{StaticResource Cafe.Type.Body}"/>
     </Style>
     <Style Selector="Button.primary-action.dialog-action:disabled">
-        <Setter Property="Background" Value="{DynamicResource LauncherContentRowBrush}"/>
-        <Setter Property="BorderBrush" Value="{DynamicResource LauncherCardBorderBrush}"/>
+        <Setter Property="Background" Value="{DynamicResource Cafe.Color.Surface.Row}"/>
+        <Setter Property="BorderBrush" Value="{DynamicResource Cafe.Color.Border}"/>
         <Setter Property="BorderThickness" Value="1"/>
-        <Setter Property="Foreground" Value="{DynamicResource LauncherTextSecondaryBrush}"/>
+        <Setter Property="Foreground" Value="{DynamicResource Cafe.Color.Text.Muted}"/>
     </Style>
     <Style Selector="Button.dialog-close">
-        <Setter Property="Background" Value="{DynamicResource LauncherTransparentBrush}"/>
+        <Setter Property="Background" Value="{DynamicResource Cafe.Color.Transparent}"/>
         <Setter Property="BorderThickness" Value="0"/>
-        <Setter Property="Foreground" Value="{DynamicResource LauncherTextSecondaryBrush}"/>
-        <Setter Property="Width" Value="{StaticResource LauncherControlHeightSetting}"/>
-        <Setter Property="Height" Value="{StaticResource LauncherControlHeightSetting}"/>
+        <Setter Property="Foreground" Value="{DynamicResource Cafe.Color.Text.Muted}"/>
+        <Setter Property="Width" Value="{StaticResource Cafe.Control.Height.Setting}"/>
+        <Setter Property="Height" Value="{StaticResource Cafe.Control.Height.Setting}"/>
         <Setter Property="Padding" Value="0"/>
-        <Setter Property="CornerRadius" Value="{StaticResource LauncherRadiusSm}"/>
+        <Setter Property="CornerRadius" Value="{StaticResource Cafe.Radius.Small}"/>
         <Setter Property="HorizontalContentAlignment" Value="Center"/>
         <Setter Property="VerticalContentAlignment" Value="Center"/>
-        <Setter Property="Template" Value="{StaticResource LauncherBorderButtonTemplate}"/>
+        <Setter Property="Template" Value="{StaticResource Cafe.Control.Template.BorderButton}"/>
     </Style>
     <Style Selector="Button.dialog-close:pointerover">
-        <Setter Property="Background" Value="{DynamicResource LauncherDialogCloseHoverBrush}"/>
-        <Setter Property="Foreground" Value="{DynamicResource LauncherTextPrimaryBrush}"/>
+        <Setter Property="Background" Value="{DynamicResource Cafe.Color.Surface.QuietHover}"/>
+        <Setter Property="Foreground" Value="{DynamicResource Cafe.Color.Text}"/>
     </Style>
     <Style Selector="Button.dialog-close:pressed">
-        <Setter Property="Background" Value="{DynamicResource LauncherDialogClosePressedBrush}"/>
-        <Setter Property="Foreground" Value="{DynamicResource LauncherTextPrimaryBrush}"/>
+        <Setter Property="Background" Value="{DynamicResource Cafe.Color.Surface.QuietPressed}"/>
+        <Setter Property="Foreground" Value="{DynamicResource Cafe.Color.Text}"/>
     </Style>
     <Style Selector="Button.dialog-close:focus-visible">
-        <Setter Property="Background" Value="{DynamicResource LauncherAccentSoftBrush}"/>
-        <Setter Property="BorderBrush" Value="{DynamicResource LauncherAccentBrush}"/>
+        <Setter Property="Background" Value="{DynamicResource Cafe.Color.Accent.Soft}"/>
+        <Setter Property="BorderBrush" Value="{DynamicResource Cafe.Color.Accent}"/>
         <Setter Property="BorderThickness" Value="1"/>
     </Style>
     <Style Selector="Button.dialog-close.header-action">
         <Setter Property="Margin" Value="0,0,16,0"/>
     </Style>
-    <Style Selector="Button.launcher-control">
-        <Setter Property="Width" Value="220"/>
-        <Setter Property="MinHeight" Value="{StaticResource LauncherControlHeightLaunch}"/>
-        <Setter Property="Height" Value="{StaticResource LauncherControlHeightLaunch}"/>
-        <Setter Property="Padding" Value="20,0"/>
-        <Setter Property="CornerRadius" Value="{StaticResource LauncherRadiusMd}"/>
-        <Setter Property="FontSize" Value="{StaticResource LauncherFontSizeHeadingSm}"/>
-        <Setter Property="Opacity" Value="1"/>
-        <Setter Property="HorizontalContentAlignment" Value="Center"/>
-        <Setter Property="VerticalContentAlignment" Value="Center"/>
-        <Setter Property="Template" Value="{StaticResource LauncherBorderButtonTemplate}"/>
-    </Style>
-    <Style Selector="Button.launcher-control.site">
-        <Setter Property="Background" Value="{DynamicResource LauncherSiteButtonBackgroundBrush}"/>
-        <Setter Property="BorderBrush" Value="{DynamicResource LauncherSiteButtonBorderBrush}"/>
-        <Setter Property="BorderThickness" Value="1"/>
-        <Setter Property="Foreground" Value="{DynamicResource LauncherAccentBrush}"/>
-        <Setter Property="Opacity" Value="1"/>
-    </Style>
-    <Style Selector="Button.launcher-control.site:pointerover">
-        <Setter Property="Background" Value="{DynamicResource LauncherSiteButtonBackgroundBrush}"/>
-        <Setter Property="BorderBrush" Value="{DynamicResource LauncherAccentHoverBrush}"/>
-        <Setter Property="Foreground" Value="{DynamicResource LauncherAccentBrush}"/>
-        <Setter Property="Opacity" Value="1"/>
-    </Style>
-    <Style Selector="Button.launcher-control.site:pressed">
-        <Setter Property="Background" Value="{DynamicResource LauncherInfoBackgroundBrush}"/>
-        <Setter Property="BorderBrush" Value="{DynamicResource LauncherAccentBrush}"/>
-        <Setter Property="Foreground" Value="{DynamicResource LauncherAccentBrush}"/>
-        <Setter Property="Opacity" Value="1"/>
-    </Style>
-    <Style Selector="Button.launcher-control.start">
-        <Setter Property="Background" Value="{DynamicResource LauncherAccentBrush}"/>
-        <Setter Property="BorderBrush" Value="{DynamicResource LauncherAccentBrush}"/>
-        <Setter Property="BorderThickness" Value="1"/>
-        <Setter Property="Foreground" Value="{DynamicResource LauncherOnAccentBrush}"/>
-        <Setter Property="FontWeight" Value="{StaticResource LauncherFontWeightStrong}"/>
-        <Setter Property="MinHeight" Value="{StaticResource LauncherControlHeightLaunch}"/>
-        <Setter Property="Opacity" Value="1"/>
-    </Style>
-    <Style Selector="Button.launcher-control.start:pointerover">
-        <Setter Property="Background" Value="{DynamicResource LauncherAccentHoverBrush}"/>
-        <Setter Property="BorderBrush" Value="{DynamicResource LauncherAccentHoverBrush}"/>
-        <Setter Property="Foreground" Value="{DynamicResource LauncherOnAccentBrush}"/>
-        <Setter Property="Opacity" Value="1"/>
-    </Style>
-    <Style Selector="Button.launcher-control.start:pressed">
-        <Setter Property="Background" Value="{DynamicResource LauncherAccentPressedBrush}"/>
-        <Setter Property="BorderBrush" Value="{DynamicResource LauncherAccentPressedBrush}"/>
-        <Setter Property="Foreground" Value="{DynamicResource LauncherOnAccentBrush}"/>
-        <Setter Property="Opacity" Value="1"/>
-    </Style>
     <Style Selector="TextBlock.operation-status-title">
-        <Setter Property="FontSize" Value="{StaticResource LauncherFontSizeHeadingSm}"/>
-        <Setter Property="FontWeight" Value="{StaticResource LauncherFontWeightStrong}"/>
-        <Setter Property="Foreground" Value="{DynamicResource LauncherTextPrimaryBrush}"/>
+        <Setter Property="FontSize" Value="{StaticResource Cafe.Type.Title}"/>
+        <Setter Property="FontWeight" Value="{StaticResource Cafe.Type.Weight.Strong}"/>
+        <Setter Property="Foreground" Value="{DynamicResource Cafe.Color.Text}"/>
     </Style>
     <Style Selector="TextBlock.operation-status-title.on-dark-title">
-        <Setter Property="Foreground" Value="{DynamicResource LauncherOnChromeBrush}"/>
+        <Setter Property="Foreground" Value="{DynamicResource Cafe.Color.OnChrome}"/>
     </Style>
     <Style Selector="TextBlock.panel-title">
-        <Setter Property="Foreground" Value="{DynamicResource LauncherTextPrimaryBrush}"/>
-        <Setter Property="FontSize" Value="{StaticResource LauncherFontSizeLg}"/>
-        <Setter Property="FontWeight" Value="{StaticResource LauncherFontWeightStrong}"/>
-    </Style>
-    <Style Selector="Border.surface">
-        <Setter Property="Background" Value="{DynamicResource LauncherPanelBackgroundBrush}"/>
-        <Setter Property="CornerRadius" Value="{StaticResource LauncherRadiusMd}"/>
-        <Setter Property="Padding" Value="16"/>
-        <Setter Property="BoxShadow" Value="0 12 32 0 #33000000"/>
+        <Setter Property="Foreground" Value="{DynamicResource Cafe.Color.Text}"/>
+        <Setter Property="FontSize" Value="{StaticResource Cafe.Type.Body}"/>
+        <Setter Property="FontWeight" Value="{StaticResource Cafe.Type.Weight.Strong}"/>
     </Style>
     <Style Selector="Border.remote-surface">
         <Setter Property="HorizontalAlignment" Value="Left"/>
-        <Setter Property="VerticalAlignment" Value="Top"/>
+        <Setter Property="VerticalAlignment" Value="Stretch"/>
         <Setter Property="ClipToBounds" Value="True"/>
-        <Setter Property="Padding" Value="{StaticResource LauncherThicknessNone}"/>
-        <Setter Property="Margin" Value="40,64,0,0"/>
-        <Setter Property="Width" Value="500"/>
-        <Setter Property="MinHeight" Value="360"/>
-        <Setter Property="MaxHeight" Value="480"/>
+        <Setter Property="Padding" Value="{StaticResource Cafe.Inset.None}"/>
+        <Setter Property="Margin" Value="{StaticResource Cafe.Layout.Home.ContentRail.Margin}"/>
+        <Setter Property="Width" Value="{StaticResource Cafe.Layout.Home.ContentRail.Width}"/>
+    </Style>
+    <Style Selector="Grid.home-stage.compact">
+        <Setter Property="Margin" Value="{StaticResource Cafe.Space.3.Thickness}"/>
+    </Style>
+    <Style Selector="Border.home-drawer.compact">
+        <Setter Property="Width" Value="390"/>
+        <Setter Property="ZIndex" Value="2"/>
+    </Style>
+    <Style Selector="Button.home-drawer-toggle">
+        <Setter Property="Width" Value="44"/>
+        <Setter Property="Height" Value="44"/>
+        <Setter Property="HorizontalAlignment" Value="Left"/>
+        <Setter Property="VerticalAlignment" Value="Top"/>
+        <Setter Property="ZIndex" Value="3"/>
+        <Setter Property="Background" Value="{DynamicResource Cafe.Color.Surface}"/>
+        <Setter Property="BorderBrush" Value="{DynamicResource Cafe.Color.Border}"/>
+        <Setter Property="BorderThickness" Value="1"/>
+        <Setter Property="CornerRadius" Value="{StaticResource Cafe.Radius.Medium}"/>
+    </Style>
+    <Style Selector="Border.social-rail.compact">
+        <Setter Property="IsVisible" Value="False"/>
     </Style>
     <Style Selector="Border.info-strip">
-        <Setter Property="Background" Value="{DynamicResource LauncherAccentSoftBrush}"/>
-        <Setter Property="CornerRadius" Value="{StaticResource LauncherRadiusSm}"/>
-        <Setter Property="Padding" Value="12"/>
+        <Setter Property="Background" Value="{DynamicResource Cafe.Color.Accent.Soft}"/>
+        <Setter Property="CornerRadius" Value="{StaticResource Cafe.Radius.Small}"/>
+        <Setter Property="Padding" Value="{StaticResource Cafe.Inset.Medium}"/>
     </Style>
     <Style Selector="Border.notice-card">
-        <Setter Property="Background" Value="{DynamicResource LauncherNoticeBackgroundBrush}"/>
-        <Setter Property="CornerRadius" Value="{StaticResource LauncherRadiusSm}"/>
-        <Setter Property="Padding" Value="12"/>
-        <Setter Property="MaxHeight" Value="160"/>
+        <Setter Property="Background" Value="{DynamicResource Cafe.Color.Surface.Row}"/>
+        <Setter Property="BorderBrush" Value="{DynamicResource Cafe.Color.Border}"/>
+        <Setter Property="BorderThickness" Value="1"/>
+        <Setter Property="CornerRadius" Value="{StaticResource Cafe.Radius.Medium}"/>
+        <Setter Property="Padding" Value="{StaticResource Cafe.Inset.Medium}"/>
+    </Style>
+    <Style Selector="Border.banner-shell">
+        <Setter Property="CornerRadius" Value="{StaticResource Cafe.Radius.Medium}"/>
+        <Setter Property="ClipToBounds" Value="True"/>
+        <Setter Property="Padding" Value="{StaticResource Cafe.Inset.None}"/>
+    </Style>
+    <Style Selector="Grid.banner-controls">
+        <Setter Property="Opacity" Value="0"/>
+        <Setter Property="IsHitTestVisible" Value="False"/>
+    </Style>
+    <Style Selector="Border.banner-shell:pointerover Grid.banner-controls">
+        <Setter Property="Opacity" Value="1"/>
+        <Setter Property="IsHitTestVisible" Value="True"/>
+    </Style>
+    <Style Selector="Border.banner-progress">
+        <Setter Property="Background" Value="{DynamicResource Cafe.Color.Overlay.Strong}"/>
+        <Setter Property="CornerRadius" Value="{StaticResource Cafe.Radius.Medium}"/>
+        <Setter Property="Padding" Value="{StaticResource Cafe.Inset.Small}"/>
+        <Setter Property="Margin" Value="{StaticResource Cafe.Space.2.Thickness}"/>
+    </Style>
+    <Style Selector="TextBlock.banner-page-text">
+        <Setter Property="Foreground" Value="{DynamicResource Cafe.Color.OnChrome.Muted}"/>
+        <Setter Property="FontSize" Value="{StaticResource Cafe.Type.Caption}"/>
+    </Style>
+    <Style Selector="StackPanel.news-panel">
+        <Setter Property="Background" Value="{DynamicResource Cafe.Color.Transparent}"/>
+    </Style>
+    <Style Selector="Border.news-card">
+        <Setter Property="CornerRadius" Value="{StaticResource Cafe.Radius.Medium}"/>
+        <Setter Property="Padding" Value="{StaticResource Cafe.Inset.Medium}"/>
+    </Style>
+    <Style Selector="Border.social-rail">
+        <Setter Property="Width" Value="{StaticResource Cafe.Layout.Home.SocialRail.Width}"/>
+        <Setter Property="Margin" Value="{StaticResource Cafe.Layout.Home.SocialRail.Margin}"/>
+        <Setter Property="Padding" Value="{StaticResource Cafe.Space.1.Thickness}"/>
+        <Setter Property="Background" Value="{DynamicResource Cafe.Color.Surface.Subtle}"/>
+        <Setter Property="BorderBrush" Value="{DynamicResource Cafe.Color.Border}"/>
+        <Setter Property="BorderThickness" Value="1"/>
+        <Setter Property="CornerRadius" Value="{StaticResource Cafe.Radius.Large}"/>
+        <Setter Property="BoxShadow" Value="0 12 32 0 #33000000"/>
     </Style>
     <Style Selector="Border.media-placeholder">
-        <Setter Property="Background" Value="{DynamicResource LauncherMediaPlaceholderBrush}"/>
-        <Setter Property="CornerRadius" Value="{StaticResource LauncherRadiusSm}"/>
+        <Setter Property="Background" Value="{DynamicResource Cafe.Color.Media.Placeholder}"/>
+        <Setter Property="CornerRadius" Value="{StaticResource Cafe.Radius.Medium}"/>
         <Setter Property="HorizontalAlignment" Value="Stretch"/>
         <Setter Property="VerticalAlignment" Value="Stretch"/>
     </Style>
     <Style Selector="Border.loading-overlay">
-        <Setter Property="Background" Value="{DynamicResource LauncherOverlayBrush}"/>
-        <Setter Property="CornerRadius" Value="{StaticResource LauncherRadiusSm}"/>
+        <Setter Property="Background" Value="{DynamicResource Cafe.Color.Overlay}"/>
+        <Setter Property="CornerRadius" Value="{StaticResource Cafe.Radius.Small}"/>
         <Setter Property="HorizontalAlignment" Value="Stretch"/>
         <Setter Property="VerticalAlignment" Value="Stretch"/>
     </Style>
@@ -426,33 +473,33 @@
         <Setter Property="VerticalAlignment" Value="Stretch"/>
     </Style>
     <Style Selector="Border.remote-content-scroll-host">
-        <Setter Property="Padding" Value="{StaticResource LauncherThicknessMd}"/>
+        <Setter Property="Padding" Value="{StaticResource Cafe.Inset.Medium}"/>
     </Style>
     <Style Selector="Border.remote-content-load-error">
-        <Setter Property="Padding" Value="{StaticResource LauncherSpacingXlThickness}"/>
+        <Setter Property="Padding" Value="{StaticResource Cafe.Space.5.Thickness}"/>
         <Setter Property="HorizontalAlignment" Value="Stretch"/>
         <Setter Property="VerticalAlignment" Value="Stretch"/>
     </Style>
     <Style Selector="TextBlock.media-placeholder-text">
-        <Setter Property="Foreground" Value="{DynamicResource LauncherMediaPlaceholderTextBrush}"/>
-        <Setter Property="FontSize" Value="{StaticResource LauncherFontSizeMd}"/>
+        <Setter Property="Foreground" Value="{DynamicResource Cafe.Color.Media.PlaceholderText}"/>
+        <Setter Property="FontSize" Value="{StaticResource Cafe.Type.Body}"/>
         <Setter Property="HorizontalAlignment" Value="Center"/>
         <Setter Property="VerticalAlignment" Value="Center"/>
     </Style>
     <Style Selector="Border.path-field">
-        <Setter Property="Background" Value="{DynamicResource LauncherFieldBackgroundBrush}"/>
-        <Setter Property="BorderBrush" Value="{DynamicResource LauncherFieldBorderBrush}"/>
+        <Setter Property="Background" Value="{DynamicResource Cafe.Color.Surface.Field}"/>
+        <Setter Property="BorderBrush" Value="{DynamicResource Cafe.Color.Border.Field}"/>
         <Setter Property="BorderThickness" Value="1"/>
-        <Setter Property="CornerRadius" Value="{StaticResource LauncherRadiusSm}"/>
-        <Setter Property="Height" Value="{StaticResource LauncherFieldHeight}"/>
-        <Setter Property="Padding" Value="{StaticResource LauncherPathFieldPadding}"/>
+        <Setter Property="CornerRadius" Value="{StaticResource Cafe.Radius.Medium}"/>
+        <Setter Property="Height" Value="{StaticResource Cafe.Control.Height.Field}"/>
+        <Setter Property="Padding" Value="{StaticResource Cafe.Inset.FieldPath}"/>
     </Style>
     <!-- Operation panels share 40px horizontal alignment and common padding. -->
     <Style Selector="Border.bottom-panel">
         <Setter Property="VerticalAlignment" Value="Bottom"/>
-        <Setter Property="MinHeight" Value="132"/>
-        <Setter Property="Background" Value="{DynamicResource LauncherBottomPanelBackgroundBrush}"/>
-        <Setter Property="Padding" Value="40,20,40,20"/>
+        <Setter Property="MinHeight" Value="{StaticResource Cafe.Layout.Home.Dock.MinHeight}"/>
+        <Setter Property="Background" Value="{DynamicResource Cafe.Color.Surface.Dock}"/>
+        <Setter Property="Padding" Value="{StaticResource Cafe.Layout.Home.Dock.Padding}"/>
     </Style>
     <Style Selector="Grid.motion-overlay">
         <Setter Property="IsVisible" Value="False"/>
@@ -475,21 +522,21 @@
     </Style>
     <Style Selector="Grid.motion-overlay.motion-enabled.motion-enter">
         <Style.Animations>
-            <Animation Duration="{StaticResource LauncherMotionFastDuration}" FillMode="Forward" Easing="{StaticResource LauncherMotionEnterEasing}">
+            <Animation Duration="{StaticResource Cafe.Motion.Fast}" FillMode="Forward" Easing="{StaticResource Cafe.Motion.Ease.Enter}">
                 <KeyFrame Cue="0%">
-                    <Setter Property="Background" Value="{DynamicResource LauncherTransparentBrush}"/>
+                    <Setter Property="Background" Value="{DynamicResource Cafe.Color.Transparent}"/>
                 </KeyFrame>
                 <KeyFrame Cue="100%">
-                    <Setter Property="Background" Value="{DynamicResource LauncherOverlayBrush}"/>
+                    <Setter Property="Background" Value="{DynamicResource Cafe.Color.Overlay}"/>
                 </KeyFrame>
             </Animation>
         </Style.Animations>
     </Style>
     <Style Selector="Grid.motion-overlay.motion-enabled.motion-enter > Border.motion-surface">
         <Style.Animations>
-            <Animation Duration="{StaticResource LauncherMotionNormalDuration}" FillMode="Forward" Easing="{StaticResource LauncherMotionEnterEasing}">
+            <Animation Duration="{StaticResource Cafe.Motion.Surface}" FillMode="Forward" Easing="{StaticResource Cafe.Motion.Ease.Enter}">
                 <KeyFrame Cue="0%">
-                    <Setter Property="TranslateTransform.Y" Value="{StaticResource LauncherMotionSurfaceOffset}"/>
+                    <Setter Property="TranslateTransform.Y" Value="{StaticResource Cafe.Motion.Offset.Medium}"/>
                 </KeyFrame>
                 <KeyFrame Cue="100%">
                     <Setter Property="TranslateTransform.Y" Value="0"/>
@@ -499,7 +546,7 @@
     </Style>
     <Style Selector="Grid.motion-overlay.motion-enabled.motion-enter > Border.motion-surface > Grid.motion-surface-content">
         <Style.Animations>
-            <Animation Duration="{StaticResource LauncherMotionNormalDuration}" FillMode="Forward" Easing="{StaticResource LauncherMotionEnterEasing}">
+            <Animation Duration="{StaticResource Cafe.Motion.Surface}" FillMode="Forward" Easing="{StaticResource Cafe.Motion.Ease.Enter}">
                 <KeyFrame Cue="0%">
                     <Setter Property="Opacity" Value="0"/>
                 </KeyFrame>
@@ -511,31 +558,31 @@
     </Style>
     <Style Selector="Grid.motion-overlay.motion-enabled.motion-exit">
         <Style.Animations>
-            <Animation Duration="{StaticResource LauncherMotionFastDuration}" FillMode="Forward" Easing="{StaticResource LauncherMotionExitEasing}">
+            <Animation Duration="{StaticResource Cafe.Motion.Fast}" FillMode="Forward" Easing="{StaticResource Cafe.Motion.Ease.Exit}">
                 <KeyFrame Cue="0%">
-                    <Setter Property="Background" Value="{DynamicResource LauncherOverlayBrush}"/>
+                    <Setter Property="Background" Value="{DynamicResource Cafe.Color.Overlay}"/>
                 </KeyFrame>
                 <KeyFrame Cue="100%">
-                    <Setter Property="Background" Value="{DynamicResource LauncherTransparentBrush}"/>
+                    <Setter Property="Background" Value="{DynamicResource Cafe.Color.Transparent}"/>
                 </KeyFrame>
             </Animation>
         </Style.Animations>
     </Style>
     <Style Selector="Grid.motion-overlay.motion-enabled.motion-exit > Border.motion-surface">
         <Style.Animations>
-            <Animation Duration="{StaticResource LauncherMotionFastDuration}" FillMode="Forward" Easing="{StaticResource LauncherMotionExitEasing}">
+            <Animation Duration="{StaticResource Cafe.Motion.Fast}" FillMode="Forward" Easing="{StaticResource Cafe.Motion.Ease.Exit}">
                 <KeyFrame Cue="0%">
                     <Setter Property="TranslateTransform.Y" Value="0"/>
                 </KeyFrame>
                 <KeyFrame Cue="100%">
-                    <Setter Property="TranslateTransform.Y" Value="{StaticResource LauncherMotionSurfaceOffset}"/>
+                    <Setter Property="TranslateTransform.Y" Value="{StaticResource Cafe.Motion.Offset.Medium}"/>
                 </KeyFrame>
             </Animation>
         </Style.Animations>
     </Style>
     <Style Selector="Grid.motion-overlay.motion-enabled.motion-exit > Border.motion-surface > Grid.motion-surface-content">
         <Style.Animations>
-            <Animation Duration="{StaticResource LauncherMotionFastDuration}" FillMode="Forward" Easing="{StaticResource LauncherMotionExitEasing}">
+            <Animation Duration="{StaticResource Cafe.Motion.Fast}" FillMode="Forward" Easing="{StaticResource Cafe.Motion.Ease.Exit}">
                 <KeyFrame Cue="0%">
                     <Setter Property="Opacity" Value="1"/>
                 </KeyFrame>
@@ -547,10 +594,10 @@
     </Style>
     <Style Selector=":is(UserControl).motion-content.motion-enabled.motion-enter">
         <Style.Animations>
-            <Animation Duration="{StaticResource LauncherMotionContentDuration}" FillMode="Forward" Easing="{StaticResource LauncherMotionEnterEasing}">
+            <Animation Duration="{StaticResource Cafe.Motion.Standard}" FillMode="Forward" Easing="{StaticResource Cafe.Motion.Ease.Enter}">
                 <KeyFrame Cue="0%">
                     <Setter Property="Opacity" Value="0"/>
-                    <Setter Property="TranslateTransform.Y" Value="{StaticResource LauncherMotionContentOffset}"/>
+                    <Setter Property="TranslateTransform.Y" Value="{StaticResource Cafe.Motion.Offset.Small}"/>
                 </KeyFrame>
                 <KeyFrame Cue="100%">
                     <Setter Property="Opacity" Value="1"/>
@@ -561,10 +608,10 @@
     </Style>
     <Style Selector="StackPanel.motion-content.motion-enabled.motion-enter">
         <Style.Animations>
-            <Animation Duration="{StaticResource LauncherMotionContentDuration}" FillMode="Forward" Easing="{StaticResource LauncherMotionEnterEasing}">
+            <Animation Duration="{StaticResource Cafe.Motion.Standard}" FillMode="Forward" Easing="{StaticResource Cafe.Motion.Ease.Enter}">
                 <KeyFrame Cue="0%">
                     <Setter Property="Opacity" Value="0"/>
-                    <Setter Property="TranslateTransform.Y" Value="{StaticResource LauncherMotionContentOffset}"/>
+                    <Setter Property="TranslateTransform.Y" Value="{StaticResource Cafe.Motion.Offset.Small}"/>
                 </KeyFrame>
                 <KeyFrame Cue="100%">
                     <Setter Property="Opacity" Value="1"/>
@@ -575,10 +622,10 @@
     </Style>
     <Style Selector="Border.motion-bottom.motion-enabled.motion-enter">
         <Style.Animations>
-            <Animation Duration="{StaticResource LauncherMotionNormalDuration}" FillMode="Forward" Easing="{StaticResource LauncherMotionEnterEasing}">
+            <Animation Duration="{StaticResource Cafe.Motion.Surface}" FillMode="Forward" Easing="{StaticResource Cafe.Motion.Ease.Enter}">
                 <KeyFrame Cue="0%">
                     <Setter Property="Opacity" Value="0"/>
-                    <Setter Property="TranslateTransform.Y" Value="{StaticResource LauncherMotionBottomOffset}"/>
+                    <Setter Property="TranslateTransform.Y" Value="{StaticResource Cafe.Motion.Offset.Large}"/>
                 </KeyFrame>
                 <KeyFrame Cue="100%">
                     <Setter Property="Opacity" Value="1"/>
@@ -588,7 +635,8 @@
         </Style.Animations>
     </Style>
     <Style Selector="Border.control-panel">
-        <Setter Property="MinHeight" Value="156"/>
+        <Setter Property="MinHeight" Value="{StaticResource Cafe.Layout.Home.Dock.MinHeight}"/>
+        <Setter Property="Padding" Value="{StaticResource Cafe.Layout.OperationDock.Padding}"/>
         <!-- Dark gradient overlay on top of wallpaper — intentionally theme-invariant (black transparency). -->
         <Setter Property="Background">
             <LinearGradientBrush StartPoint="0%,0%" EndPoint="0%,100%">
@@ -599,29 +647,29 @@
         </Setter>
     </Style>
     <Style Selector="Border.content-row">
-        <Setter Property="Background" Value="{DynamicResource LauncherContentRowBrush}"/>
-        <Setter Property="CornerRadius" Value="{StaticResource LauncherRadiusSm}"/>
-        <Setter Property="Padding" Value="12"/>
+        <Setter Property="Background" Value="{DynamicResource Cafe.Color.Surface.Row}"/>
+        <Setter Property="CornerRadius" Value="{StaticResource Cafe.Radius.Small}"/>
+        <Setter Property="Padding" Value="{StaticResource Cafe.Inset.Medium}"/>
         <Setter Property="Margin" Value="0,0,0,4"/>
     </Style>
     <Style Selector="Border.content-row.news-content-row">
-        <Setter Property="Padding" Value="{StaticResource LauncherThicknessSm}"/>
-        <Setter Property="Margin" Value="{StaticResource LauncherThicknessNone}"/>
+        <Setter Property="Padding" Value="{StaticResource Cafe.Inset.Small}"/>
+        <Setter Property="Margin" Value="{StaticResource Cafe.Inset.None}"/>
     </Style>
     <Style Selector="Button.content-link">
-        <Setter Property="Background" Value="{DynamicResource LauncherTransparentBrush}"/>
+        <Setter Property="Background" Value="{DynamicResource Cafe.Color.Transparent}"/>
         <Setter Property="BorderThickness" Value="0"/>
         <Setter Property="Padding" Value="0"/>
         <Setter Property="HorizontalAlignment" Value="Stretch"/>
         <Setter Property="HorizontalContentAlignment" Value="Stretch"/>
         <Setter Property="VerticalContentAlignment" Value="Stretch"/>
-        <Setter Property="Template" Value="{StaticResource LauncherBorderButtonTemplate}"/>
+        <Setter Property="Template" Value="{StaticResource Cafe.Control.Template.BorderButton}"/>
     </Style>
     <Style Selector="Button.content-link:pointerover">
-        <Setter Property="Background" Value="{DynamicResource LauncherContentRowHoverBrush}"/>
+        <Setter Property="Background" Value="{DynamicResource Cafe.Color.Surface.RowHover}"/>
     </Style>
     <Style Selector="Button.banner-link">
-        <Setter Property="Background" Value="{DynamicResource LauncherTransparentBrush}"/>
+        <Setter Property="Background" Value="{DynamicResource Cafe.Color.Transparent}"/>
         <Setter Property="BorderThickness" Value="0"/>
         <Setter Property="Padding" Value="0"/>
         <Setter Property="HorizontalAlignment" Value="Stretch"/>
@@ -630,11 +678,11 @@
         <Setter Property="VerticalContentAlignment" Value="Stretch"/>
     </Style>
     <Style Selector="Border.banner-media">
-        <Setter Property="CornerRadius" Value="{StaticResource LauncherRadiusSm}"/>
+        <Setter Property="CornerRadius" Value="{StaticResource Cafe.Radius.Medium}"/>
         <Setter Property="ClipToBounds" Value="True"/>
     </Style>
     <Style Selector="Grid.settings-overlay">
-        <Setter Property="Background" Value="{DynamicResource LauncherOverlayBrush}"/>
+        <Setter Property="Background" Value="{DynamicResource Cafe.Color.Overlay}"/>
         <Setter Property="ZIndex" Value="100"/>
         <Setter Property="KeyboardNavigation.TabNavigation" Value="Cycle"/>
         <Setter Property="views:OverlayFocusBehavior.IsEnabled" Value="True"/>
@@ -643,124 +691,171 @@
         <Setter Property="ColumnSpacing" Value="0"/>
         <Setter Property="Margin" Value="0"/>
     </Style>
+    <Style Selector="Grid.settings-navigation-pane">
+        <Setter Property="Background" Value="{DynamicResource Cafe.Color.Surface.Row}"/>
+    </Style>
+    <Style Selector="TextBlock.settings-navigation-title">
+        <Setter Property="FontSize" Value="{StaticResource Cafe.Type.Title}"/>
+        <Setter Property="FontWeight" Value="{StaticResource Cafe.Type.Weight.Strong}"/>
+        <Setter Property="Foreground" Value="{DynamicResource Cafe.Color.Text}"/>
+        <Setter Property="Margin" Value="16,24,16,16"/>
+    </Style>
     <Style Selector="ListBox.settings-navigation">
-        <Setter Property="Background" Value="{DynamicResource LauncherContentRowBrush}"/>
+        <Setter Property="Background" Value="{DynamicResource Cafe.Color.Surface.Row}"/>
         <Setter Property="BorderThickness" Value="0"/>
-        <Setter Property="Padding" Value="16,8,8,16"/>
+        <Setter Property="Padding" Value="10,14"/>
     </Style>
     <Style Selector="ListBox.settings-navigation > ListBoxItem">
-        <Setter Property="Background" Value="{DynamicResource LauncherTransparentBrush}"/>
-        <Setter Property="Foreground" Value="{DynamicResource LauncherTextBodyBrush}"/>
-        <Setter Property="BorderBrush" Value="{DynamicResource LauncherTransparentBrush}"/>
+        <Setter Property="Background" Value="{DynamicResource Cafe.Color.Transparent}"/>
+        <Setter Property="Foreground" Value="{DynamicResource Cafe.Color.Text.Body}"/>
+        <Setter Property="BorderBrush" Value="{DynamicResource Cafe.Color.Transparent}"/>
         <Setter Property="BorderThickness" Value="0"/>
-        <Setter Property="CornerRadius" Value="0"/>
-        <Setter Property="Padding" Value="8,12,12,12"/>
+        <Setter Property="CornerRadius" Value="{StaticResource Cafe.Radius.Small}"/>
+        <Setter Property="MinHeight" Value="38"/>
+        <Setter Property="Padding" Value="12,0"/>
         <Setter Property="HorizontalContentAlignment" Value="Stretch"/>
     </Style>
     <Style Selector="ListBox.settings-navigation > ListBoxItem:pointerover">
-        <Setter Property="Background" Value="{DynamicResource LauncherTransparentBrush}"/>
-        <Setter Property="Foreground" Value="{DynamicResource LauncherAccentBrush}"/>
-        <Setter Property="BorderBrush" Value="{DynamicResource LauncherTransparentBrush}"/>
+        <Setter Property="Background" Value="{DynamicResource Cafe.Color.Transparent}"/>
+        <Setter Property="Foreground" Value="{DynamicResource Cafe.Color.Accent}"/>
+        <Setter Property="BorderBrush" Value="{DynamicResource Cafe.Color.Transparent}"/>
         <Setter Property="BorderThickness" Value="0"/>
     </Style>
     <Style Selector="ListBox.settings-navigation > ListBoxItem:selected">
-        <Setter Property="Background" Value="{DynamicResource LauncherFlatPressedBrush}"/>
-        <Setter Property="Foreground" Value="{DynamicResource LauncherTextPrimaryBrush}"/>
-        <Setter Property="BorderBrush" Value="{DynamicResource LauncherAccentBrush}"/>
-        <Setter Property="BorderThickness" Value="3,0,0,0"/>
-        <Setter Property="FontWeight" Value="{StaticResource LauncherFontWeightStrong}"/>
+        <Setter Property="Background" Value="{DynamicResource Cafe.Color.Surface.QuietPressed}"/>
+        <Setter Property="Foreground" Value="{DynamicResource Cafe.Color.Accent.Pressed}"/>
+        <Setter Property="BorderBrush" Value="{DynamicResource Cafe.Color.Transparent}"/>
+        <Setter Property="BorderThickness" Value="0"/>
+        <Setter Property="FontWeight" Value="{StaticResource Cafe.Type.Weight.Strong}"/>
     </Style>
     <Style Selector="ListBox.settings-navigation > ListBoxItem:selected:not(:focus)">
-        <Setter Property="Background" Value="{DynamicResource LauncherFlatPressedBrush}"/>
-        <Setter Property="Foreground" Value="{DynamicResource LauncherTextPrimaryBrush}"/>
-        <Setter Property="BorderBrush" Value="{DynamicResource LauncherAccentBrush}"/>
-        <Setter Property="BorderThickness" Value="3,0,0,0"/>
+        <Setter Property="Background" Value="{DynamicResource Cafe.Color.Surface.QuietPressed}"/>
+        <Setter Property="Foreground" Value="{DynamicResource Cafe.Color.Accent.Pressed}"/>
+        <Setter Property="BorderBrush" Value="{DynamicResource Cafe.Color.Transparent}"/>
+        <Setter Property="BorderThickness" Value="0"/>
     </Style>
     <Style Selector="ListBox.settings-navigation > ListBoxItem:selected:pointerover">
-        <Setter Property="Background" Value="{DynamicResource LauncherFlatPressedBrush}"/>
-        <Setter Property="Foreground" Value="{DynamicResource LauncherTextPrimaryBrush}"/>
-        <Setter Property="BorderBrush" Value="{DynamicResource LauncherAccentBrush}"/>
-        <Setter Property="BorderThickness" Value="3,0,0,0"/>
+        <Setter Property="Background" Value="{DynamicResource Cafe.Color.Surface.QuietPressed}"/>
+        <Setter Property="Foreground" Value="{DynamicResource Cafe.Color.Accent.Pressed}"/>
+        <Setter Property="BorderBrush" Value="{DynamicResource Cafe.Color.Transparent}"/>
+        <Setter Property="BorderThickness" Value="0"/>
     </Style>
     <Style Selector="ListBox.settings-navigation > ListBoxItem:selected:pressed">
-        <Setter Property="Background" Value="{DynamicResource LauncherFlatPressedBrush}"/>
-        <Setter Property="Foreground" Value="{DynamicResource LauncherTextPrimaryBrush}"/>
-        <Setter Property="BorderBrush" Value="{DynamicResource LauncherAccentBrush}"/>
-        <Setter Property="BorderThickness" Value="3,0,0,0"/>
+        <Setter Property="Background" Value="{DynamicResource Cafe.Color.Surface.QuietPressed}"/>
+        <Setter Property="Foreground" Value="{DynamicResource Cafe.Color.Accent.Pressed}"/>
+        <Setter Property="BorderBrush" Value="{DynamicResource Cafe.Color.Transparent}"/>
+        <Setter Property="BorderThickness" Value="0"/>
     </Style>
     <Style Selector="ListBox.settings-navigation > ListBoxItem:disabled">
-        <Setter Property="Foreground" Value="{DynamicResource LauncherTextSecondaryBrush}"/>
-        <Setter Property="BorderBrush" Value="{DynamicResource LauncherTransparentBrush}"/>
+        <Setter Property="Foreground" Value="{DynamicResource Cafe.Color.Text.Muted}"/>
+        <Setter Property="BorderBrush" Value="{DynamicResource Cafe.Color.Transparent}"/>
         <Setter Property="BorderThickness" Value="0"/>
     </Style>
     <Style Selector="ListBox.settings-navigation > ListBoxItem:pointerover /template/ ContentPresenter#PART_ContentPresenter">
-        <Setter Property="Background" Value="{DynamicResource LauncherTransparentBrush}"/>
-        <Setter Property="Foreground" Value="{DynamicResource LauncherAccentBrush}"/>
+        <Setter Property="Background" Value="{DynamicResource Cafe.Color.Surface.QuietHover}"/>
+        <Setter Property="Foreground" Value="{DynamicResource Cafe.Color.Text}"/>
     </Style>
     <Style Selector="ListBox.settings-navigation > ListBoxItem:pressed /template/ ContentPresenter#PART_ContentPresenter">
-        <Setter Property="Background" Value="{DynamicResource LauncherFlatPressedBrush}"/>
-        <Setter Property="Foreground" Value="{DynamicResource LauncherTextPrimaryBrush}"/>
+        <Setter Property="Background" Value="{DynamicResource Cafe.Color.Surface.QuietPressed}"/>
+        <Setter Property="Foreground" Value="{DynamicResource Cafe.Color.Text}"/>
     </Style>
     <Style Selector="ListBox.settings-navigation > ListBoxItem:selected /template/ ContentPresenter#PART_ContentPresenter">
-        <Setter Property="Background" Value="{DynamicResource LauncherFlatPressedBrush}"/>
-        <Setter Property="Foreground" Value="{DynamicResource LauncherTextPrimaryBrush}"/>
+        <Setter Property="Background" Value="{DynamicResource Cafe.Color.Surface.QuietPressed}"/>
+        <Setter Property="Foreground" Value="{DynamicResource Cafe.Color.Accent.Pressed}"/>
     </Style>
     <Style Selector="ListBox.settings-navigation > ListBoxItem:selected:not(:focus) /template/ ContentPresenter#PART_ContentPresenter">
-        <Setter Property="Background" Value="{DynamicResource LauncherFlatPressedBrush}"/>
-        <Setter Property="Foreground" Value="{DynamicResource LauncherTextPrimaryBrush}"/>
+        <Setter Property="Background" Value="{DynamicResource Cafe.Color.Surface.QuietPressed}"/>
+        <Setter Property="Foreground" Value="{DynamicResource Cafe.Color.Accent.Pressed}"/>
     </Style>
     <Style Selector="ListBox.settings-navigation > ListBoxItem:selected:pointerover /template/ ContentPresenter#PART_ContentPresenter">
-        <Setter Property="Background" Value="{DynamicResource LauncherFlatPressedBrush}"/>
-        <Setter Property="Foreground" Value="{DynamicResource LauncherTextPrimaryBrush}"/>
+        <Setter Property="Background" Value="{DynamicResource Cafe.Color.Surface.QuietPressed}"/>
+        <Setter Property="Foreground" Value="{DynamicResource Cafe.Color.Accent.Pressed}"/>
     </Style>
     <Style Selector="ListBox.settings-navigation > ListBoxItem:selected:pressed /template/ ContentPresenter#PART_ContentPresenter">
-        <Setter Property="Background" Value="{DynamicResource LauncherFlatPressedBrush}"/>
-        <Setter Property="Foreground" Value="{DynamicResource LauncherTextPrimaryBrush}"/>
+        <Setter Property="Background" Value="{DynamicResource Cafe.Color.Surface.QuietPressed}"/>
+        <Setter Property="Foreground" Value="{DynamicResource Cafe.Color.Accent.Pressed}"/>
     </Style>
     <Style Selector="TextBlock.settings-navigation-item">
         <Setter Property="TextTrimming" Value="CharacterEllipsis"/>
         <Setter Property="VerticalAlignment" Value="Center"/>
     </Style>
     <Style Selector="Grid.settings-content">
-        <Setter Property="Background" Value="{DynamicResource LauncherDialogBackgroundBrush}"/>
-        <Setter Property="RowSpacing" Value="{StaticResource LauncherSpacingMd}"/>
+        <Setter Property="Background" Value="{DynamicResource Cafe.Color.Surface.Dialog}"/>
+        <Setter Property="RowSpacing" Value="{StaticResource Cafe.Space.3}"/>
     </Style>
     <Style Selector="StackPanel.settings-category-header">
         <Setter Property="Spacing" Value="0"/>
     </Style>
     <Style Selector="StackPanel.settings-group">
-        <Setter Property="Margin" Value="0,16,0,0"/>
+        <Setter Property="Margin" Value="0,24,0,0"/>
+    </Style>
+    <Style Selector="StackPanel.settings-group.first">
+        <Setter Property="Margin" Value="0"/>
     </Style>
     <Style Selector="Border.settings-status-summary">
-        <Setter Property="Background" Value="{DynamicResource LauncherTransparentBrush}"/>
-        <Setter Property="BorderBrush" Value="{DynamicResource LauncherCardBorderBrush}"/>
+        <Setter Property="Background" Value="{DynamicResource Cafe.Color.Transparent}"/>
+        <Setter Property="BorderBrush" Value="{DynamicResource Cafe.Color.Border}"/>
         <Setter Property="BorderThickness" Value="0,0,0,1"/>
         <Setter Property="Padding" Value="0,0,0,8"/>
         <Setter Property="Margin" Value="0,0,0,12"/>
     </Style>
+    <Style Selector="Border.settings-save-error">
+        <Setter Property="Background" Value="{DynamicResource Cafe.Color.Surface.Danger}"/>
+        <Setter Property="BorderBrush" Value="{DynamicResource Cafe.Color.Danger}"/>
+        <Setter Property="BorderThickness" Value="1"/>
+        <Setter Property="CornerRadius" Value="{StaticResource Cafe.Radius.Medium}"/>
+        <Setter Property="Padding" Value="10,10,12,10"/>
+        <Setter Property="Margin" Value="0,0,0,20"/>
+    </Style>
     <Style Selector="Border.settings-content-padding">
-        <Setter Property="Padding" Value="16,12,16,16"/>
+        <Setter Property="Padding" Value="{StaticResource Cafe.Inset.Settings.Content}"/>
+    </Style>
+    <Style Selector="Button.settings-floating-close">
+        <Setter Property="HorizontalAlignment" Value="Right"/>
+        <Setter Property="VerticalAlignment" Value="Top"/>
+        <Setter Property="Margin" Value="0,12,12,0"/>
+    </Style>
+    <Style Selector="TextBlock.settings-intro">
+        <Setter Property="FontSize" Value="{StaticResource Cafe.Type.Caption}"/>
+        <Setter Property="Foreground" Value="{DynamicResource Cafe.Color.Text.Muted}"/>
+        <Setter Property="Margin" Value="0,3,0,22"/>
+    </Style>
+    <Style Selector="Button.settings-retry-action">
+        <Setter Property="Background" Value="{DynamicResource Cafe.Color.Surface.Dialog}"/>
+        <Setter Property="BorderBrush" Value="{DynamicResource Cafe.Color.Transparent}"/>
+        <Setter Property="BorderThickness" Value="0"/>
+        <Setter Property="Foreground" Value="{DynamicResource Cafe.Color.Danger}"/>
+        <Setter Property="MinHeight" Value="32"/>
+        <Setter Property="Padding" Value="11,0"/>
+    </Style>
+    <Style Selector="Button.settings-retry-action:pointerover">
+        <Setter Property="Background" Value="{DynamicResource Cafe.Color.Surface.QuietHover}"/>
+        <Setter Property="Foreground" Value="{DynamicResource Cafe.Color.Danger}"/>
+    </Style>
+    <Style Selector="Button.settings-retry-action:pressed">
+        <Setter Property="Background" Value="{DynamicResource Cafe.Color.Surface.QuietPressed}"/>
+        <Setter Property="Foreground" Value="{DynamicResource Cafe.Color.Danger}"/>
     </Style>
     <Style Selector="Border.settings-content-divider">
-        <Setter Property="BorderBrush" Value="{DynamicResource LauncherCardBorderBrush}"/>
+        <Setter Property="BorderBrush" Value="{DynamicResource Cafe.Color.Border}"/>
         <Setter Property="BorderThickness" Value="1,0,0,0"/>
-        <Setter Property="Background" Value="{DynamicResource LauncherTransparentBrush}"/>
+        <Setter Property="Background" Value="{DynamicResource Cafe.Color.Transparent}"/>
     </Style>
     <Style Selector="Grid.dialog-overlay">
-        <Setter Property="Background" Value="{DynamicResource LauncherOverlayBrush}"/>
+        <Setter Property="Background" Value="{DynamicResource Cafe.Color.Overlay}"/>
         <Setter Property="ZIndex" Value="200"/>
         <Setter Property="KeyboardNavigation.TabNavigation" Value="Cycle"/>
         <Setter Property="views:OverlayFocusBehavior.IsEnabled" Value="True"/>
     </Style>
     <Style Selector="Grid.setup-wizard-overlay">
-        <Setter Property="Background" Value="{DynamicResource LauncherOverlayBrush}"/>
+        <Setter Property="Background" Value="{DynamicResource Cafe.Color.Overlay}"/>
         <Setter Property="ZIndex" Value="500"/>
         <Setter Property="KeyboardNavigation.TabNavigation" Value="Cycle"/>
         <Setter Property="views:OverlayFocusBehavior.IsEnabled" Value="True"/>
     </Style>
     <Style Selector="Border.dialog">
-        <Setter Property="Background" Value="{DynamicResource LauncherDialogBackgroundBrush}"/>
-        <Setter Property="CornerRadius" Value="{StaticResource LauncherRadiusLg}"/>
+        <Setter Property="Background" Value="{DynamicResource Cafe.Color.Surface.Dialog}"/>
+        <Setter Property="CornerRadius" Value="{StaticResource Cafe.Radius.Large}"/>
         <Setter Property="ClipToBounds" Value="True"/>
         <Setter Property="BoxShadow" Value="0 22 55 0 #66000000"/>
     </Style>
@@ -770,24 +865,25 @@
         <Setter Property="VerticalAlignment" Value="Center"/>
     </Style>
     <Style Selector="Grid.dialog-header">
-        <Setter Property="Background" Value="{DynamicResource LauncherDialogHeaderBrush}"/>
-        <Setter Property="Height" Value="{StaticResource LauncherDialogTitleHeight}"/>
+        <Setter Property="Background" Value="{DynamicResource Cafe.Color.Surface.Header}"/>
+        <Setter Property="Height" Value="{StaticResource Cafe.Layout.Dialog.Title.Height}"/>
         <Setter Property="ClipToBounds" Value="True"/>
     </Style>
     <Style Selector="StackPanel.dialog-title-row">
         <Setter Property="Orientation" Value="Horizontal"/>
-        <Setter Property="Spacing" Value="{StaticResource LauncherSpacingMd}"/>
+        <Setter Property="Spacing" Value="{StaticResource Cafe.Space.3}"/>
         <Setter Property="Margin" Value="16,0,0,0"/>
         <Setter Property="VerticalAlignment" Value="Center"/>
     </Style>
     <Style Selector="ScrollViewer.dialog-scroll">
         <Setter Property="Margin" Value="0"/>
+        <Setter Property="Padding" Value="{StaticResource Cafe.Inset.Settings.Scrollbar}"/>
     </Style>
     <Style Selector="Border.dialog-footer">
-        <Setter Property="Background" Value="{DynamicResource LauncherDialogFooterBrush}"/>
-        <Setter Property="BorderBrush" Value="{DynamicResource LauncherCardBorderBrush}"/>
+        <Setter Property="Background" Value="{DynamicResource Cafe.Color.Surface.Dialog}"/>
+        <Setter Property="BorderBrush" Value="{DynamicResource Cafe.Color.Border}"/>
         <Setter Property="BorderThickness" Value="0,1,0,0"/>
-        <Setter Property="Padding" Value="{StaticResource LauncherThicknessMd}"/>
+        <Setter Property="Padding" Value="{StaticResource Cafe.Inset.Medium}"/>
     </Style>
     <Style Selector="Border.confirm-panel">
         <Setter Property="MaxWidth" Value="540"/>
@@ -796,161 +892,179 @@
         <Setter Property="VerticalAlignment" Value="Center"/>
     </Style>
     <Style Selector="Grid.dialog-heading">
-        <Setter Property="ColumnSpacing" Value="{StaticResource LauncherSpacingMd}"/>
+        <Setter Property="ColumnSpacing" Value="{StaticResource Cafe.Space.3}"/>
+    </Style>
+    <Style Selector="Grid.dialog-heading.dialog-header">
+        <Setter Property="ColumnSpacing" Value="0"/>
     </Style>
     <Style Selector="StackPanel.dialog-heading-copy">
-        <Setter Property="Spacing" Value="{StaticResource LauncherSpacingXs}"/>
+        <Setter Property="Spacing" Value="{StaticResource Cafe.Space.1}"/>
         <Setter Property="VerticalAlignment" Value="Center"/>
     </Style>
     <Style Selector="Grid.confirm-layout">
-        <Setter Property="Margin" Value="16"/>
-        <Setter Property="RowSpacing" Value="{StaticResource LauncherSpacingLg}"/>
+        <Setter Property="Margin" Value="{StaticResource Cafe.Inset.Large}"/>
+        <Setter Property="RowSpacing" Value="{StaticResource Cafe.Space.4}"/>
     </Style>
     <Style Selector="Border.confirm-message">
-        <Setter Property="CornerRadius" Value="{StaticResource LauncherRadiusSm}"/>
-        <Setter Property="Padding" Value="12"/>
+        <Setter Property="CornerRadius" Value="{StaticResource Cafe.Radius.Small}"/>
+        <Setter Property="Padding" Value="{StaticResource Cafe.Inset.Medium}"/>
         <Setter Property="MinHeight" Value="74"/>
     </Style>
     <Style Selector="TextBlock.confirm-message-text">
         <Setter Property="TextWrapping" Value="Wrap"/>
-        <Setter Property="Foreground" Value="{DynamicResource LauncherTextBodyBrush}"/>
+        <Setter Property="Foreground" Value="{DynamicResource Cafe.Color.Text.Body}"/>
     </Style>
     <Style Selector="Border.dialog-card">
-        <Setter Property="Background" Value="{DynamicResource LauncherCardBackgroundBrush}"/>
-        <Setter Property="BorderBrush" Value="{DynamicResource LauncherCardBorderBrush}"/>
+        <Setter Property="Background" Value="{DynamicResource Cafe.Color.Surface}"/>
+        <Setter Property="BorderBrush" Value="{DynamicResource Cafe.Color.Border}"/>
         <Setter Property="BorderThickness" Value="1"/>
-        <Setter Property="CornerRadius" Value="{StaticResource LauncherRadiusSm}"/>
-        <Setter Property="Padding" Value="16"/>
+        <Setter Property="CornerRadius" Value="{StaticResource Cafe.Radius.Small}"/>
+        <Setter Property="Padding" Value="{StaticResource Cafe.Inset.Large}"/>
+    </Style>
+    <Style Selector="Border.dialog-card.resource-panel-item-card">
+        <Setter Property="Padding" Value="{StaticResource Cafe.Inset.Small}"/>
     </Style>
     <Style Selector="ListBox.update-file-list">
-        <Setter Property="Background" Value="{DynamicResource LauncherTransparentBrush}"/>
+        <Setter Property="Background" Value="{DynamicResource Cafe.Color.Transparent}"/>
         <Setter Property="BorderThickness" Value="0"/>
         <Setter Property="Padding" Value="0"/>
     </Style>
     <Style Selector="ListBox.update-file-list > ListBoxItem">
-        <Setter Property="Background" Value="{DynamicResource LauncherCardBackgroundBrush}"/>
-        <Setter Property="BorderBrush" Value="{DynamicResource LauncherCardBorderBrush}"/>
+        <Setter Property="Background" Value="{DynamicResource Cafe.Color.Surface}"/>
+        <Setter Property="BorderBrush" Value="{DynamicResource Cafe.Color.Border}"/>
         <Setter Property="BorderThickness" Value="1"/>
-        <Setter Property="CornerRadius" Value="{StaticResource LauncherRadiusMd}"/>
-        <Setter Property="Foreground" Value="{DynamicResource LauncherTextPrimaryBrush}"/>
-        <Setter Property="Padding" Value="12"/>
+        <Setter Property="CornerRadius" Value="{StaticResource Cafe.Radius.Medium}"/>
+        <Setter Property="Foreground" Value="{DynamicResource Cafe.Color.Text}"/>
+        <Setter Property="Padding" Value="{StaticResource Cafe.Inset.Medium}"/>
         <Setter Property="Margin" Value="0,0,0,8"/>
         <Setter Property="HorizontalContentAlignment" Value="Stretch"/>
     </Style>
     <Style Selector="ListBox.update-file-list > ListBoxItem:pointerover">
-        <Setter Property="BorderBrush" Value="{DynamicResource LauncherAccentHoverBrush}"/>
+        <Setter Property="BorderBrush" Value="{DynamicResource Cafe.Color.Accent.Hover}"/>
     </Style>
     <Style Selector="ListBox.update-file-list > ListBoxItem:selected">
-        <Setter Property="BorderBrush" Value="{DynamicResource LauncherAccentBrush}"/>
+        <Setter Property="BorderBrush" Value="{DynamicResource Cafe.Color.Accent}"/>
         <Setter Property="BorderThickness" Value="2"/>
         <Setter Property="Padding" Value="11"/>
     </Style>
     <Style Selector="ListBox.update-file-list > ListBoxItem:pointerover /template/ ContentPresenter#PART_ContentPresenter">
-        <Setter Property="Background" Value="{DynamicResource LauncherCardBackgroundBrush}"/>
-        <Setter Property="Foreground" Value="{DynamicResource LauncherTextPrimaryBrush}"/>
+        <Setter Property="Background" Value="{DynamicResource Cafe.Color.Surface}"/>
+        <Setter Property="Foreground" Value="{DynamicResource Cafe.Color.Text}"/>
     </Style>
     <Style Selector="ListBox.update-file-list > ListBoxItem:pressed /template/ ContentPresenter#PART_ContentPresenter">
-        <Setter Property="Background" Value="{DynamicResource LauncherCardBackgroundBrush}"/>
-        <Setter Property="Foreground" Value="{DynamicResource LauncherTextPrimaryBrush}"/>
+        <Setter Property="Background" Value="{DynamicResource Cafe.Color.Surface}"/>
+        <Setter Property="Foreground" Value="{DynamicResource Cafe.Color.Text}"/>
     </Style>
     <Style Selector="ListBox.update-file-list > ListBoxItem:selected /template/ ContentPresenter#PART_ContentPresenter">
-        <Setter Property="Background" Value="{DynamicResource LauncherCardBackgroundBrush}"/>
-        <Setter Property="Foreground" Value="{DynamicResource LauncherTextPrimaryBrush}"/>
+        <Setter Property="Background" Value="{DynamicResource Cafe.Color.Surface}"/>
+        <Setter Property="Foreground" Value="{DynamicResource Cafe.Color.Text}"/>
     </Style>
     <Style Selector="ListBox.update-file-list > ListBoxItem:selected:not(:focus) /template/ ContentPresenter#PART_ContentPresenter">
-        <Setter Property="Background" Value="{DynamicResource LauncherCardBackgroundBrush}"/>
-        <Setter Property="Foreground" Value="{DynamicResource LauncherTextPrimaryBrush}"/>
+        <Setter Property="Background" Value="{DynamicResource Cafe.Color.Surface}"/>
+        <Setter Property="Foreground" Value="{DynamicResource Cafe.Color.Text}"/>
     </Style>
     <Style Selector="ListBox.update-file-list > ListBoxItem:selected:pointerover /template/ ContentPresenter#PART_ContentPresenter">
-        <Setter Property="Background" Value="{DynamicResource LauncherCardBackgroundBrush}"/>
-        <Setter Property="Foreground" Value="{DynamicResource LauncherTextPrimaryBrush}"/>
+        <Setter Property="Background" Value="{DynamicResource Cafe.Color.Surface}"/>
+        <Setter Property="Foreground" Value="{DynamicResource Cafe.Color.Text}"/>
     </Style>
     <Style Selector="ListBox.update-file-list > ListBoxItem:selected:pressed /template/ ContentPresenter#PART_ContentPresenter">
-        <Setter Property="Background" Value="{DynamicResource LauncherCardBackgroundBrush}"/>
-        <Setter Property="Foreground" Value="{DynamicResource LauncherTextPrimaryBrush}"/>
+        <Setter Property="Background" Value="{DynamicResource Cafe.Color.Surface}"/>
+        <Setter Property="Foreground" Value="{DynamicResource Cafe.Color.Text}"/>
     </Style>
     <Style Selector="Border.update-file-icon">
-        <Setter Property="Width" Value="{StaticResource LauncherControlHeightSetting}"/>
-        <Setter Property="Height" Value="{StaticResource LauncherControlHeightSetting}"/>
-        <Setter Property="CornerRadius" Value="{StaticResource LauncherRadiusSm}"/>
-        <Setter Property="Background" Value="{DynamicResource LauncherAccentSoftBrush}"/>
+        <Setter Property="Width" Value="{StaticResource Cafe.Control.Height.Setting}"/>
+        <Setter Property="Height" Value="{StaticResource Cafe.Control.Height.Setting}"/>
+        <Setter Property="CornerRadius" Value="{StaticResource Cafe.Radius.Small}"/>
+        <Setter Property="Background" Value="{DynamicResource Cafe.Color.Accent.Soft}"/>
     </Style>
     <Style Selector="Border.update-file-size">
-        <Setter Property="Background" Value="{DynamicResource LauncherContentRowBrush}"/>
-        <Setter Property="CornerRadius" Value="{StaticResource LauncherRadiusSm}"/>
-        <Setter Property="Padding" Value="8,4"/>
+        <Setter Property="Background" Value="{DynamicResource Cafe.Color.Surface.Row}"/>
+        <Setter Property="CornerRadius" Value="{StaticResource Cafe.Radius.Small}"/>
+        <Setter Property="Padding" Value="{StaticResource Cafe.Inset.Tab}"/>
     </Style>
     <Style Selector="TextBlock.update-file-name">
-        <Setter Property="FontSize" Value="{StaticResource LauncherFontSizeMd}"/>
-        <Setter Property="Foreground" Value="{DynamicResource LauncherTextPrimaryBrush}"/>
+        <Setter Property="FontSize" Value="{StaticResource Cafe.Type.Body}"/>
+        <Setter Property="Foreground" Value="{DynamicResource Cafe.Color.Text}"/>
     </Style>
     <Style Selector="TextBlock.update-file-size-text">
-        <Setter Property="FontSize" Value="{StaticResource LauncherFontSizeSm}"/>
-        <Setter Property="Foreground" Value="{DynamicResource LauncherTextSecondaryBrush}"/>
+        <Setter Property="FontSize" Value="{StaticResource Cafe.Type.Caption}"/>
+        <Setter Property="Foreground" Value="{DynamicResource Cafe.Color.Text.Muted}"/>
     </Style>
     <Style Selector="Border.dialog-icon">
-        <Setter Property="Width" Value="{StaticResource LauncherControlHeightSetting}"/>
-        <Setter Property="Height" Value="{StaticResource LauncherControlHeightSetting}"/>
-        <Setter Property="CornerRadius" Value="{StaticResource LauncherRadiusSm}"/>
-        <Setter Property="Background" Value="{DynamicResource LauncherAccentSoftBrush}"/>
-        <Setter Property="BorderBrush" Value="{DynamicResource LauncherAccentBorderBrush}"/>
+        <Setter Property="Width" Value="{StaticResource Cafe.Control.Height.Setting}"/>
+        <Setter Property="Height" Value="{StaticResource Cafe.Control.Height.Setting}"/>
+        <Setter Property="CornerRadius" Value="{StaticResource Cafe.Radius.Small}"/>
+        <Setter Property="Background" Value="{DynamicResource Cafe.Color.Accent.Soft}"/>
+        <Setter Property="BorderBrush" Value="{DynamicResource Cafe.Color.Accent.Outline}"/>
         <Setter Property="BorderThickness" Value="1"/>
     </Style>
     <Style Selector="Border.dialog-icon.danger">
-        <Setter Property="Background" Value="{DynamicResource LauncherDangerSoftBrush}"/>
-        <Setter Property="BorderBrush" Value="{DynamicResource LauncherDangerBrush}"/>
+        <Setter Property="Background" Value="{DynamicResource Cafe.Color.Surface.Danger}"/>
+        <Setter Property="BorderBrush" Value="{DynamicResource Cafe.Color.Danger}"/>
+    </Style>
+    <Style Selector="materialIcons|MaterialIcon.dialog-heading-icon">
+        <Setter Property="Foreground" Value="{DynamicResource Cafe.Color.Accent}"/>
+    </Style>
+    <Style Selector="materialIcons|MaterialIcon.dialog-heading-icon.danger">
+        <Setter Property="Foreground" Value="{DynamicResource Cafe.Color.Danger}"/>
     </Style>
     <Style Selector="TextBlock.section-title">
-        <Setter Property="FontSize" Value="{StaticResource LauncherFontSizeLg}"/>
-        <Setter Property="FontWeight" Value="{StaticResource LauncherFontWeightStrong}"/>
-        <Setter Property="Foreground" Value="{DynamicResource LauncherTextPrimaryBrush}"/>
+        <Setter Property="FontSize" Value="{StaticResource Cafe.Type.Body}"/>
+        <Setter Property="FontWeight" Value="{StaticResource Cafe.Type.Weight.Strong}"/>
+        <Setter Property="Foreground" Value="{DynamicResource Cafe.Color.Text}"/>
     </Style>
     <Style Selector="TextBlock.group-title">
-        <Setter Property="FontSize" Value="{StaticResource LauncherFontSizeLg}"/>
-        <Setter Property="FontWeight" Value="{StaticResource LauncherFontWeightStrong}"/>
-        <Setter Property="Foreground" Value="{DynamicResource LauncherTextSecondaryBrush}"/>
+        <Setter Property="FontSize" Value="{StaticResource Cafe.Type.Caption}"/>
+        <Setter Property="FontWeight" Value="{StaticResource Cafe.Type.Weight.Strong}"/>
+        <Setter Property="Foreground" Value="{DynamicResource Cafe.Color.Text.Muted}"/>
+    </Style>
+    <Style Selector="TextBlock.settings-group-title">
+        <Setter Property="Margin" Value="0,0,0,6"/>
+    </Style>
+    <Style Selector="Border.settings-row-frame TextBlock.caption">
+        <Setter Property="FontSize" Value="{StaticResource Cafe.Type.Caption}"/>
     </Style>
     <Style Selector="TextBlock.category-title">
-        <Setter Property="FontSize" Value="{StaticResource LauncherFontSizeHeadingMd}"/>
-        <Setter Property="FontWeight" Value="{StaticResource LauncherFontWeightStrong}"/>
-        <Setter Property="Foreground" Value="{DynamicResource LauncherTextPrimaryBrush}"/>
+        <Setter Property="FontSize" Value="{StaticResource Cafe.Type.Display}"/>
+        <Setter Property="FontWeight" Value="{StaticResource Cafe.Type.Weight.Strong}"/>
+        <Setter Property="Foreground" Value="{DynamicResource Cafe.Color.Text}"/>
     </Style>
     <Style Selector="TextBlock.chip-text">
-        <Setter Property="FontSize" Value="{StaticResource LauncherFontSizeSm}"/>
-        <Setter Property="Foreground" Value="{DynamicResource LauncherTextPrimaryBrush}"/>
+        <Setter Property="FontSize" Value="{StaticResource Cafe.Type.Caption}"/>
+        <Setter Property="Foreground" Value="{DynamicResource Cafe.Color.Text}"/>
         <Setter Property="VerticalAlignment" Value="Center"/>
     </Style>
     <Style Selector="StackPanel.button-content">
         <Setter Property="Orientation" Value="Horizontal"/>
-        <Setter Property="Spacing" Value="{StaticResource LauncherSpacingSm}"/>
+        <Setter Property="Spacing" Value="{StaticResource Cafe.Space.2}"/>
     </Style>
     <Style Selector="StackPanel.button-content > TextBlock">
         <Setter Property="VerticalAlignment" Value="Center"/>
     </Style>
     <Style Selector="StackPanel.card-heading">
         <Setter Property="Orientation" Value="Horizontal"/>
-        <Setter Property="Spacing" Value="{StaticResource LauncherSpacingSm}"/>
+        <Setter Property="Spacing" Value="{StaticResource Cafe.Space.2}"/>
     </Style>
     <Style Selector="Grid.status-summary">
-        <Setter Property="ColumnSpacing" Value="{StaticResource LauncherSpacingMd}"/>
+        <Setter Property="ColumnSpacing" Value="{StaticResource Cafe.Space.3}"/>
     </Style>
     <Style Selector="TextBlock.status-summary-title">
-        <Setter Property="FontSize" Value="{StaticResource LauncherFontSizeXl}"/>
-        <Setter Property="FontWeight" Value="{StaticResource LauncherFontWeightStrong}"/>
-        <Setter Property="Foreground" Value="{DynamicResource LauncherTextPrimaryBrush}"/>
+        <Setter Property="FontSize" Value="{StaticResource Cafe.Type.Label}"/>
+        <Setter Property="FontWeight" Value="{StaticResource Cafe.Type.Weight.Strong}"/>
+        <Setter Property="Foreground" Value="{DynamicResource Cafe.Color.Text}"/>
     </Style>
     <Style Selector="TextBlock.status-summary-version">
-        <Setter Property="FontSize" Value="{StaticResource LauncherFontSizeXl}"/>
+        <Setter Property="FontSize" Value="{StaticResource Cafe.Type.Label}"/>
         <Setter Property="VerticalAlignment" Value="Center"/>
     </Style>
     <Style Selector="Grid.status-details">
-        <Setter Property="ColumnSpacing" Value="{StaticResource LauncherSpacingSm}"/>
-        <Setter Property="RowSpacing" Value="{StaticResource LauncherSpacingSm}"/>
+        <Setter Property="ColumnSpacing" Value="{StaticResource Cafe.Space.2}"/>
+        <Setter Property="RowSpacing" Value="{StaticResource Cafe.Space.2}"/>
     </Style>
     <Style Selector="Border.status-detail">
-        <Setter Property="Background" Value="{DynamicResource LauncherContentRowBrush}"/>
-        <Setter Property="CornerRadius" Value="{StaticResource LauncherRadiusSm}"/>
-        <Setter Property="Height" Value="{StaticResource LauncherChipHeight}"/>
+        <Setter Property="Background" Value="{DynamicResource Cafe.Color.Surface.Row}"/>
+        <Setter Property="CornerRadius" Value="{StaticResource Cafe.Radius.Small}"/>
+        <Setter Property="Height" Value="{StaticResource Cafe.Control.Size.Chip}"/>
         <Setter Property="Padding" Value="12,0"/>
         <Setter Property="MinWidth" Value="0"/>
     </Style>
@@ -958,122 +1072,187 @@
         <Setter Property="Margin" Value="0,8,0,0"/>
     </Style>
     <Style Selector="Border.settings-section">
-        <Setter Property="Background" Value="{DynamicResource LauncherCardBackgroundBrush}"/>
+        <Setter Property="Background" Value="{DynamicResource Cafe.Color.Surface}"/>
         <Setter Property="BorderThickness" Value="0"/>
-        <Setter Property="CornerRadius" Value="{StaticResource LauncherRadiusMd}"/>
-        <Setter Property="Padding" Value="{StaticResource LauncherThicknessLg}"/>
+        <Setter Property="CornerRadius" Value="{StaticResource Cafe.Radius.Medium}"/>
+        <Setter Property="Padding" Value="{StaticResource Cafe.Inset.Large}"/>
     </Style>
     <Style Selector="Border.settings-icon">
-        <Setter Property="Width" Value="{StaticResource LauncherChipHeight}"/>
-        <Setter Property="Height" Value="{StaticResource LauncherChipHeight}"/>
-        <Setter Property="CornerRadius" Value="{StaticResource LauncherRadiusSm}"/>
-        <Setter Property="Background" Value="{DynamicResource LauncherAccentSoftBrush}"/>
-        <Setter Property="BorderBrush" Value="{DynamicResource LauncherAccentBorderBrush}"/>
+        <Setter Property="Width" Value="{StaticResource Cafe.Control.Size.Chip}"/>
+        <Setter Property="Height" Value="{StaticResource Cafe.Control.Size.Chip}"/>
+        <Setter Property="CornerRadius" Value="{StaticResource Cafe.Radius.Small}"/>
+        <Setter Property="Background" Value="{DynamicResource Cafe.Color.Accent.Soft}"/>
+        <Setter Property="BorderBrush" Value="{DynamicResource Cafe.Color.Accent.Outline}"/>
         <Setter Property="BorderThickness" Value="1"/>
     </Style>
     <Style Selector="Border.settings-icon.danger">
-        <Setter Property="Background" Value="{DynamicResource LauncherDangerSoftBrush}"/>
-        <Setter Property="BorderBrush" Value="{DynamicResource LauncherDangerBrush}"/>
+        <Setter Property="Background" Value="{DynamicResource Cafe.Color.Surface.Danger}"/>
+        <Setter Property="BorderBrush" Value="{DynamicResource Cafe.Color.Danger}"/>
     </Style>
     <Style Selector="materialIcons|MaterialIcon.confirm-heading-icon">
-        <Setter Property="Foreground" Value="{DynamicResource LauncherAccentBrush}"/>
+        <Setter Property="Foreground" Value="{DynamicResource Cafe.Color.Accent}"/>
     </Style>
     <Style Selector="materialIcons|MaterialIcon.confirm-heading-icon.danger">
-        <Setter Property="Foreground" Value="{DynamicResource LauncherDangerBrush}"/>
+        <Setter Property="Foreground" Value="{DynamicResource Cafe.Color.Danger}"/>
     </Style>
     <Style Selector="Border.version-chip">
-        <Setter Property="Background" Value="{DynamicResource LauncherInfoBackgroundBrush}"/>
-        <Setter Property="BorderBrush" Value="{DynamicResource LauncherAccentBorderBrush}"/>
+        <Setter Property="Background" Value="{DynamicResource Cafe.Color.Surface.Info}"/>
+        <Setter Property="BorderBrush" Value="{DynamicResource Cafe.Color.Accent.Outline}"/>
         <Setter Property="BorderThickness" Value="1"/>
-        <Setter Property="CornerRadius" Value="{StaticResource LauncherRadiusMd}"/>
-        <Setter Property="Padding" Value="12,8"/>
-        <Setter Property="MinHeight" Value="{StaticResource LauncherChipHeight}"/>
+        <Setter Property="CornerRadius" Value="{StaticResource Cafe.Radius.Medium}"/>
+        <Setter Property="Padding" Value="{StaticResource Cafe.Inset.Control}"/>
+        <Setter Property="MinHeight" Value="{StaticResource Cafe.Control.Size.Chip}"/>
         <Setter Property="Margin" Value="0,0,8,8"/>
     </Style>
     <Style Selector="Grid.settings-row">
-        <Setter Property="MinHeight" Value="44"/>
-        <Setter Property="Margin" Value="0,12,0,0"/>
-        <Setter Property="ColumnSpacing" Value="{StaticResource LauncherSpacingMd}"/>
+        <Setter Property="MinHeight" Value="66"/>
+        <Setter Property="Margin" Value="0"/>
+        <Setter Property="ColumnSpacing" Value="{StaticResource Cafe.Space.5}"/>
+    </Style>
+    <Style Selector="Border.settings-row-frame">
+        <Setter Property="BorderBrush" Value="{DynamicResource Cafe.Color.Border}"/>
+        <Setter Property="BorderThickness" Value="0,1,0,0"/>
+        <Setter Property="MinHeight" Value="67"/>
+    </Style>
+    <Style Selector="Grid.settings-workspace.compact ComboBox.setting-control, Grid.settings-workspace.compact ColorPicker.setting-control">
+        <Setter Property="MinWidth" Value="0"/>
+        <Setter Property="HorizontalAlignment" Value="Stretch"/>
     </Style>
     <Style Selector="ComboBox.setting-control">
-        <Setter Property="MinWidth" Value="220"/>
-        <Setter Property="MinHeight" Value="{StaticResource LauncherControlHeightSetting}"/>
+        <Setter Property="MinWidth" Value="178"/>
+        <Setter Property="MinHeight" Value="{StaticResource Cafe.Control.Height.Setting}"/>
+        <Setter Property="CornerRadius" Value="{StaticResource Cafe.Radius.Medium}"/>
         <Setter Property="VerticalAlignment" Value="Center"/>
     </Style>
     <Style Selector="ColorPicker.setting-control">
-        <Setter Property="MinWidth" Value="220"/>
-        <Setter Property="Width" Value="220"/>
-        <Setter Property="MinHeight" Value="{StaticResource LauncherControlHeightSetting}"/>
+        <Setter Property="MinWidth" Value="178"/>
+        <Setter Property="Width" Value="178"/>
+        <Setter Property="MinHeight" Value="{StaticResource Cafe.Control.Height.Setting}"/>
+        <Setter Property="CornerRadius" Value="{StaticResource Cafe.Radius.Medium}"/>
         <Setter Property="HorizontalContentAlignment" Value="Center"/>
         <Setter Property="VerticalContentAlignment" Value="Center"/>
         <Setter Property="VerticalAlignment" Value="Center"/>
     </Style>
     <Style Selector="TextBox.uid-input">
-        <Setter Property="Background" Value="{DynamicResource LauncherFieldBackgroundBrush}"/>
-        <Setter Property="BorderBrush" Value="{DynamicResource LauncherFieldBorderBrush}"/>
+        <Setter Property="Background" Value="{DynamicResource Cafe.Color.Surface.Field}"/>
+        <Setter Property="BorderBrush" Value="{DynamicResource Cafe.Color.Border.Field}"/>
         <Setter Property="BorderThickness" Value="1"/>
-        <Setter Property="CornerRadius" Value="{StaticResource LauncherRadiusMd}"/>
-        <Setter Property="Padding" Value="12,8"/>
-        <Setter Property="FontSize" Value="{StaticResource LauncherFontSizeLg}"/>
-        <Setter Property="Foreground" Value="{DynamicResource LauncherTextPrimaryBrush}"/>
+        <Setter Property="CornerRadius" Value="{StaticResource Cafe.Radius.Medium}"/>
+        <Setter Property="Padding" Value="{StaticResource Cafe.Inset.Control}"/>
+        <Setter Property="FontSize" Value="{StaticResource Cafe.Type.Body}"/>
+        <Setter Property="Foreground" Value="{DynamicResource Cafe.Color.Text}"/>
         <Setter Property="MinWidth" Value="160"/>
-        <Setter Property="MinHeight" Value="{StaticResource LauncherFieldHeight}"/>
+        <Setter Property="MinHeight" Value="{StaticResource Cafe.Control.Height.Field}"/>
         <Setter Property="VerticalContentAlignment" Value="Center"/>
-        <Setter Property="CaretBrush" Value="{DynamicResource LauncherAccentBrush}"/>
+        <Setter Property="CaretBrush" Value="{DynamicResource Cafe.Color.Accent}"/>
     </Style>
     <Style Selector="TextBox.uid-input:focus">
-        <Setter Property="BorderBrush" Value="{DynamicResource LauncherAccentBrush}"/>
+        <Setter Property="BorderBrush" Value="{DynamicResource Cafe.Color.Accent}"/>
     </Style>
     <Style Selector="TextBox.uid-input:pointerover">
-        <Setter Property="BorderBrush" Value="{DynamicResource LauncherAccentHoverBrush}"/>
+        <Setter Property="BorderBrush" Value="{DynamicResource Cafe.Color.Accent.Hover}"/>
     </Style>
     <Style Selector="ToggleSwitch:checked /template/ Border#SwitchKnobBounds">
-        <Setter Property="Background" Value="{DynamicResource LauncherAccentBrush}"/>
-        <Setter Property="BorderBrush" Value="{DynamicResource LauncherAccentBrush}"/>
+        <Setter Property="Background" Value="{DynamicResource Cafe.Color.Accent}"/>
+        <Setter Property="BorderBrush" Value="{DynamicResource Cafe.Color.Accent}"/>
     </Style>
     <Style Selector="ToggleSwitch.setting-toggle">
-        <Setter Property="MinHeight" Value="{StaticResource LauncherControlHeightSetting}"/>
+        <Setter Property="MinHeight" Value="{StaticResource Cafe.Control.Height.Setting}"/>
+    </Style>
+    <Style Selector="ToggleSwitch.setting-toggle.design-toggle">
+        <Setter Property="Width" Value="42"/>
+        <Setter Property="MinWidth" Value="42"/>
+        <Setter Property="Height" Value="24"/>
+        <Setter Property="MinHeight" Value="24"/>
     </Style>
     <Style Selector="ToggleSwitch:checked:pointerover /template/ Border#SwitchKnobBounds">
-        <Setter Property="Background" Value="{DynamicResource LauncherAccentHoverBrush}"/>
-        <Setter Property="BorderBrush" Value="{DynamicResource LauncherAccentHoverBrush}"/>
+        <Setter Property="Background" Value="{DynamicResource Cafe.Color.Accent.Hover}"/>
+        <Setter Property="BorderBrush" Value="{DynamicResource Cafe.Color.Accent.Hover}"/>
     </Style>
     <Style Selector="ToggleSwitch:checked:pressed /template/ Border#SwitchKnobBounds">
-        <Setter Property="Background" Value="{DynamicResource LauncherAccentPressedBrush}"/>
-        <Setter Property="BorderBrush" Value="{DynamicResource LauncherAccentPressedBrush}"/>
+        <Setter Property="Background" Value="{DynamicResource Cafe.Color.Accent.Pressed}"/>
+        <Setter Property="BorderBrush" Value="{DynamicResource Cafe.Color.Accent.Pressed}"/>
     </Style>
     <Style Selector="ToggleSwitch:checked /template/ Ellipse#SwitchKnobOn">
-        <Setter Property="Fill" Value="{DynamicResource LauncherOnAccentBrush}"/>
+        <Setter Property="Fill" Value="{DynamicResource Cafe.Color.OnAccent}"/>
+    </Style>
+    <Style Selector="ToggleSwitch:checked:pointerover /template/ Ellipse#SwitchKnobOn">
+        <Setter Property="Fill" Value="{DynamicResource Cafe.Color.OnAccent.Hover}"/>
+    </Style>
+    <Style Selector="ToggleSwitch:checked:pressed /template/ Ellipse#SwitchKnobOn">
+        <Setter Property="Fill" Value="{DynamicResource Cafe.Color.OnAccent.Pressed}"/>
     </Style>
     <Style Selector="Border.color-swatch">
-        <Setter Property="Width" Value="{StaticResource LauncherSwatchSize}"/>
-        <Setter Property="Height" Value="{StaticResource LauncherSwatchSize}"/>
-        <Setter Property="CornerRadius" Value="{StaticResource LauncherRadiusSm}"/>
-        <Setter Property="BorderBrush" Value="{DynamicResource LauncherCardBorderBrush}"/>
-        <Setter Property="BorderThickness" Value="1"/>
+        <Setter Property="CornerRadius" Value="{StaticResource Cafe.Radius.Small}"/>
+        <Setter Property="BorderThickness" Value="0"/>
+    </Style>
+    <Style Selector="Border.color-swatch.palette-swatch">
+        <Setter Property="CornerRadius" Value="{StaticResource Cafe.Radius.Large}"/>
     </Style>
     <Style Selector="Button.color-swatch-button">
-        <Setter Property="Background" Value="{DynamicResource LauncherTransparentBrush}"/>
-        <Setter Property="BorderThickness" Value="0"/>
-        <Setter Property="Width" Value="{StaticResource LauncherControlHeightSetting}"/>
-        <Setter Property="Height" Value="{StaticResource LauncherControlHeightSetting}"/>
-        <Setter Property="Padding" Value="0"/>
-        <Setter Property="CornerRadius" Value="{StaticResource LauncherRadiusSm}"/>
+        <Setter Property="Background" Value="{DynamicResource Cafe.Color.Surface.Dialog}"/>
+        <Setter Property="BorderBrush" Value="{DynamicResource Cafe.Color.Border.Button}"/>
+        <Setter Property="BorderThickness" Value="1"/>
+        <Setter Property="Width" Value="{StaticResource Cafe.Control.Size.Swatch}"/>
+        <Setter Property="Height" Value="{StaticResource Cafe.Control.Size.Swatch}"/>
+        <Setter Property="Padding" Value="{StaticResource Cafe.Space.1.Thickness}"/>
+        <Setter Property="CornerRadius" Value="{StaticResource Cafe.Radius.Large}"/>
         <Setter Property="HorizontalContentAlignment" Value="Stretch"/>
         <Setter Property="VerticalContentAlignment" Value="Stretch"/>
+    </Style>
+    <Style Selector="Button.color-swatch-button.selected">
+        <Setter Property="BorderBrush" Value="{DynamicResource Cafe.Color.Accent}"/>
+        <Setter Property="BorderThickness" Value="2"/>
+        <Setter Property="Padding" Value="{StaticResource Cafe.Space.1.Thickness}"/>
     </Style>
     <Style Selector="Button.wrap-action">
         <Setter Property="Margin" Value="0,0,8,8"/>
     </Style>
+    <Style Selector="ListBox.setting-segmented">
+        <Setter Property="Background" Value="{DynamicResource Cafe.Color.Surface.Field}"/>
+        <Setter Property="BorderBrush" Value="{DynamicResource Cafe.Color.Border}"/>
+        <Setter Property="BorderThickness" Value="1"/>
+        <Setter Property="CornerRadius" Value="{StaticResource Cafe.Radius.Medium}"/>
+        <Setter Property="Padding" Value="3"/>
+        <Setter Property="HorizontalAlignment" Value="Right"/>
+        <Setter Property="VerticalAlignment" Value="Center"/>
+    </Style>
+    <Style Selector="ListBox.setting-segmented > ListBoxItem">
+        <Setter Property="Background" Value="{DynamicResource Cafe.Color.Transparent}"/>
+        <Setter Property="Foreground" Value="{DynamicResource Cafe.Color.Text.Muted}"/>
+        <Setter Property="BorderBrush" Value="{DynamicResource Cafe.Color.Transparent}"/>
+        <Setter Property="BorderThickness" Value="0"/>
+        <Setter Property="CornerRadius" Value="{StaticResource Cafe.Radius.Small}"/>
+        <Setter Property="MinHeight" Value="32"/>
+        <Setter Property="Padding" Value="11,0"/>
+        <Setter Property="HorizontalContentAlignment" Value="Center"/>
+        <Setter Property="VerticalContentAlignment" Value="Center"/>
+    </Style>
+    <Style Selector="ListBox.setting-segmented > ListBoxItem:pointerover">
+        <Setter Property="Background" Value="{DynamicResource Cafe.Color.Surface.QuietHover}"/>
+        <Setter Property="Foreground" Value="{DynamicResource Cafe.Color.Text}"/>
+    </Style>
+    <Style Selector="ListBox.setting-segmented > ListBoxItem:selected">
+        <Setter Property="Background" Value="{DynamicResource Cafe.Color.Surface.Dialog}"/>
+        <Setter Property="Foreground" Value="{DynamicResource Cafe.Color.Accent.Pressed}"/>
+        <Setter Property="FontWeight" Value="{StaticResource Cafe.Type.Weight.Strong}"/>
+    </Style>
+    <Style Selector="ListBox.setting-segmented > ListBoxItem:selected:pointerover">
+        <Setter Property="Background" Value="{DynamicResource Cafe.Color.Surface.Dialog}"/>
+        <Setter Property="Foreground" Value="{DynamicResource Cafe.Color.Accent.Pressed}"/>
+    </Style>
+    <Style Selector="Grid.settings-workspace.compact ListBox.setting-segmented">
+        <Setter Property="HorizontalAlignment" Value="Stretch"/>
+    </Style>
     <!-- Shared utility styles for repeated inline patterns -->
-    <Style Selector="ScrollViewer.scroll-pad">
+    <Style Selector="ScrollViewer.scroll-pad:not(.dialog-frame-body)">
         <Setter Property="Padding" Value="0,0,8,0"/>
     </Style>
     <Style Selector="Border.color-swatch-preview">
         <Setter Property="Width" Value="16"/>
         <Setter Property="Height" Value="16"/>
-        <Setter Property="CornerRadius" Value="{StaticResource LauncherRadiusSm}"/>
-        <Setter Property="BorderBrush" Value="{DynamicResource LauncherCardBorderBrush}"/>
+        <Setter Property="CornerRadius" Value="{StaticResource Cafe.Radius.Small}"/>
+        <Setter Property="BorderBrush" Value="{DynamicResource Cafe.Color.Border}"/>
         <Setter Property="BorderThickness" Value="1"/>
     </Style>
     <!-- Semantic marker classes used by layout and headless UI contracts. -->
@@ -1083,8 +1262,6 @@
     <Style Selector="StackPanel.operation-actions"/>
     <Style Selector="Grid.operation-layout"/>
     <Style Selector="Grid.operation-status"/>
-    <Style Selector="Button.primary-operation"/>
-    <Style Selector="Button.secondary-operation"/>
     <StyleInclude Source="avares://Cafe.Launcher.Avalonia/Views/Styles/Diagnostics.axaml"/>
     <StyleInclude Source="avares://Cafe.Launcher.Avalonia/Views/Styles/RemoteContent.axaml"/>
     <StyleInclude Source="avares://Cafe.Launcher.Avalonia/Views/Styles/SetupWizard.axaml"/>

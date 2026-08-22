@@ -1,0 +1,63 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:materialIcons="clr-namespace:Material.Icons.Avalonia;assembly=Material.Icons.Avalonia"
+             xmlns:controls="using:Cafe.Launcher.Avalonia.Controls"
+             x:Class="Cafe.Launcher.Avalonia.Controls.DialogFrame"
+             x:Name="Root"
+             x:DataType="controls:DialogFrame">
+    <Border Classes="dialog dialog-frame"
+            Classes.confirm-panel="{Binding IsConfirmPanel, ElementName=Root}"
+            Classes.panel-frame="{Binding UseToolPanelChrome, ElementName=Root}"
+            MaxWidth="{Binding MaxWidth, ElementName=Root}"
+            MaxHeight="{Binding MaxHeight, ElementName=Root}">
+        <Grid RowDefinitions="Auto,*,Auto"
+              Classes.confirm-layout="{Binding IsConfirmPanel, ElementName=Root}"
+              Classes.panel-content="{Binding UseToolPanelChrome, ElementName=Root}">
+            <Grid Classes="dialog-heading"
+                  Classes.dialog-header="{Binding UseToolPanelChrome, ElementName=Root}"
+                  Classes.panel-header="{Binding UseToolPanelChrome, ElementName=Root}"
+                  ColumnDefinitions="Auto,*,Auto">
+                <Border Classes="dialog-icon"
+                        Classes.danger="{Binding IsDanger, ElementName=Root}"
+                        IsVisible="{Binding ShowIcon, ElementName=Root}"
+                        VerticalAlignment="Center">
+                    <materialIcons:MaterialIcon Kind="{Binding IconKind, ElementName=Root}"
+                                                Classes="dialog-heading-icon"
+                                                Classes.danger="{Binding IsDanger, ElementName=Root}"
+                                                Width="{StaticResource Cafe.Icon.Large}"
+                                                Height="{StaticResource Cafe.Icon.Large}"
+                                                HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                </Border>
+                <StackPanel Grid.Column="1"
+                            Classes="dialog-heading-copy"
+                            Classes.dialog-title-row="{Binding UseToolPanelChrome, ElementName=Root}">
+                    <TextBlock Text="{Binding Title, ElementName=Root}" Classes="dialog-title"/>
+                    <TextBlock Text="{Binding Description, ElementName=Root}"
+                               Classes="caption"
+                               IsVisible="{Binding ShowDescription, ElementName=Root}"
+                               TextWrapping="Wrap"/>
+                </StackPanel>
+                <Button Grid.Column="2"
+                        Classes="dialog-close"
+                        Classes.header-action="{Binding UseToolPanelChrome, ElementName=Root}"
+                        Command="{Binding CloseCommand, ElementName=Root}"
+                        ToolTip.Tip="{Binding CloseToolTip, ElementName=Root}"
+                        AutomationProperties.Name="{Binding CloseToolTip, ElementName=Root}"
+                        IsVisible="{Binding ShowCloseButton, ElementName=Root}">
+                    <materialIcons:MaterialIcon Kind="Close" Width="{StaticResource Cafe.Icon.Medium}" Height="{StaticResource Cafe.Icon.Medium}"/>
+                </Button>
+            </Grid>
+            <ScrollViewer Grid.Row="1"
+                          Classes="dialog-frame-body scroll-pad"
+                          Classes.confirm-body="{Binding IsConfirmPanel, ElementName=Root}"
+                          MaxHeight="{Binding BodyMaxHeight, ElementName=Root}"
+                          VerticalScrollBarVisibility="{Binding BodyVerticalScrollBarVisibility, ElementName=Root}"
+                          HorizontalScrollBarVisibility="Disabled">
+                <ContentPresenter Content="{Binding BodyContent, ElementName=Root}"/>
+            </ScrollViewer>
+            <Border Grid.Row="2" Classes.dialog-footer="{Binding UseToolPanelChrome, ElementName=Root}">
+                <ContentPresenter Content="{Binding ActionsContent, ElementName=Root}"/>
+            </Border>
+        </Grid>
+    </Border>
+</UserControl>

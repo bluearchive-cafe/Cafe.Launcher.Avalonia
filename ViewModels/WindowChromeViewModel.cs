@@ -71,23 +71,30 @@ public partial class WindowChromeViewModel : ViewModelBase
     }
 
     [RelayCommand]
-    private void ShowSettings()
+    private async Task ShowSettingsAsync()
     {
-        if (settings.IsSaving)
+        if (settings.IsSaving && !IsSettingsVisible)
         {
             return;
         }
 
-        if (IsSettingsVisible && settings.IsSettingsDirty)
-        {
-            settings.IsUnsavedChangesVisible = true;
-            return;
-        }
-
-        IsSettingsVisible = !IsSettingsVisible;
-        if (IsSettingsVisible)
+        if (!IsSettingsVisible)
         {
             settings.LoadFromSnapshot(settings.Editor.GetSavedSnapshot());
+            settings.IsAutoSaveEnabled = true;
+            IsSettingsVisible = true;
+        }
+        else
+        {
+            // Hide synchronously so command consumers and the closing animation do not wait on disk I/O.
+            // Flush still owns the pending snapshot and completes before the edit session can be disposed.
+            var hasAutoSaveSession = settings.IsAutoSaveEnabled;
+            settings.IsAutoSaveEnabled = false;
+            IsSettingsVisible = false;
+            if (hasAutoSaveSession)
+            {
+                await settings.FlushPendingAutoSaveAsync();
+            }
         }
     }
 

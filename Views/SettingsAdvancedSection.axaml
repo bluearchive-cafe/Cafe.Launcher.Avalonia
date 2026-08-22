@@ -1,40 +1,28 @@
 <UserControl xmlns="https://github.com/avaloniaui"
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
              xmlns:vm="using:Cafe.Launcher.Avalonia.ViewModels"
-             xmlns:models="using:Cafe.Launcher.Avalonia.Models"
              xmlns:materialIcons="clr-namespace:Material.Icons.Avalonia;assembly=Material.Icons.Avalonia"
              xmlns:controls="using:Cafe.Launcher.Avalonia.Controls"
              x:Class="Cafe.Launcher.Avalonia.Views.SettingsAdvancedSection"
              x:Name="SettingsRoot"
              x:DataType="vm:MainWindowViewModel">
-    <UserControl.Resources>
-        <DataTemplate x:Key="SettingOptionTemplate" x:DataType="models:SettingOption">
-            <TextBlock Text="{Binding DisplayName}"/>
-        </DataTemplate>
-    </UserControl.Resources>
-    <StackPanel Classes="settings-group">
-        <TextBlock Text="{Binding Shell.I18n[settingsGroupDiagnostics]}" Classes="group-title"/>
+    <StackPanel Classes="settings-group first">
+        <TextBlock Text="{Binding Shell.I18n[settingsGroupDiagnostics]}" Classes="group-title settings-group-title"/>
 
-        <controls:SettingRow IconKind="Bug"
-                             Title="{Binding Shell.I18n[logLevel]}"
-                             Description="{Binding Shell.I18n[logLevelDescription]}">
-            <controls:SettingRow.Action>
-                <ComboBox Classes="setting-control"
-                          AutomationProperties.Name="{Binding Shell.I18n[logLevel]}"
-                          ItemsSource="{Binding Settings.Options.LogLevel}"
-                          SelectedValue="{Binding Settings.Editor.Current.LogLevel, Mode=TwoWay}"
-                          SelectedValueBinding="{Binding Code}"
-                          ItemTemplate="{StaticResource SettingOptionTemplate}"/>
-            </controls:SettingRow.Action>
-        </controls:SettingRow>
+        <controls:SettingComboRow
+                                  Title="{Binding Shell.I18n[logLevel]}"
+                                  Description="{Binding Shell.I18n[logLevelDescription]}"
+                                  ItemsSource="{Binding Settings.Options.LogLevel}"
+                                  SelectedValue="{Binding Settings.Editor.Current.LogLevel, Mode=TwoWay}"
+                                  ItemTemplate="{StaticResource SelectableOptionTextTemplate}"/>
 
-        <controls:SettingRow IconKind="FolderOpen"
+        <controls:SettingRow
                              Title="{Binding Shell.I18n[logFiles]}"
                              Description="{Binding Shell.I18n[logFilesDescription]}">
             <controls:SettingRow.Action>
-                <WrapPanel MaxWidth="{StaticResource LauncherSettingRowActionMaxWidth}"
-                           ItemSpacing="{StaticResource LauncherSpacingSm}"
-                           LineSpacing="{StaticResource LauncherSpacingSm}"
+                <WrapPanel MaxWidth="{StaticResource Cafe.Layout.Settings.RowAction.MaxWidth}"
+                           ItemSpacing="{StaticResource Cafe.Space.2}"
+                           LineSpacing="{StaticResource Cafe.Space.2}"
                            HorizontalAlignment="Right"
                            VerticalAlignment="Center">
                     <Button Classes="flat-action"
@@ -42,8 +30,8 @@
                             AutomationProperties.Name="{Binding Shell.I18n[viewLog]}">
                         <StackPanel Classes="button-content">
                             <materialIcons:MaterialIcon Kind="TextBoxOutline"
-                                                        Width="{StaticResource LauncherIconSm}"
-                                                        Height="{StaticResource LauncherIconSm}"/>
+                                                        Width="{StaticResource Cafe.Icon.Small}"
+                                                        Height="{StaticResource Cafe.Icon.Small}"/>
                             <TextBlock Text="{Binding Shell.I18n[viewLog]}"/>
                         </StackPanel>
                     </Button>
@@ -52,8 +40,8 @@
                             AutomationProperties.Name="{Binding Shell.I18n[exportLogs]}">
                         <StackPanel Classes="button-content">
                             <materialIcons:MaterialIcon Kind="Export"
-                                                        Width="{StaticResource LauncherIconSm}"
-                                                        Height="{StaticResource LauncherIconSm}"/>
+                                                        Width="{StaticResource Cafe.Icon.Small}"
+                                                        Height="{StaticResource Cafe.Icon.Small}"/>
                             <TextBlock Text="{Binding Shell.I18n[exportLogs]}"/>
                         </StackPanel>
                     </Button>
@@ -62,12 +50,30 @@
                             AutomationProperties.Name="{Binding Shell.I18n[openDataDirectory]}">
                         <StackPanel Classes="button-content">
                             <materialIcons:MaterialIcon Kind="FolderOpen"
-                                                        Width="{StaticResource LauncherIconSm}"
-                                                        Height="{StaticResource LauncherIconSm}"/>
+                                                        Width="{StaticResource Cafe.Icon.Small}"
+                                                        Height="{StaticResource Cafe.Icon.Small}"/>
                             <TextBlock Text="{Binding Shell.I18n[openDataDirectory]}"/>
                         </StackPanel>
                     </Button>
                 </WrapPanel>
+            </controls:SettingRow.Action>
+        </controls:SettingRow>
+
+        <controls:SettingRow
+                             Title="{Binding Shell.I18n[debugResetSettingsConfirm]}"
+                             Description="{Binding Shell.I18n[debugResetSettingsDescription]}">
+            <controls:SettingRow.Action>
+                <Button Classes="danger-action"
+                        Command="{Binding Settings.RequestResetSettingsCommand}"
+                        ToolTip.Tip="{Binding Shell.I18n[debugResetSettingsConfirm]}"
+                        AutomationProperties.Name="{Binding Shell.I18n[debugResetSettingsConfirm]}">
+                    <StackPanel Classes="button-content">
+                        <materialIcons:MaterialIcon Kind="Restore"
+                                                    Width="{StaticResource Cafe.Icon.Small}"
+                                                    Height="{StaticResource Cafe.Icon.Small}"/>
+                        <TextBlock Text="{Binding Shell.I18n[debugResetSettingsConfirm]}"/>
+                    </StackPanel>
+                </Button>
             </controls:SettingRow.Action>
         </controls:SettingRow>
     </StackPanel>

@@ -23,8 +23,8 @@ public sealed class ResourcePanelStatusToBrushConverter : IValueConverter
         }
 
         var resourceKey = status == ResourcePanelItemStatus.Failed
-            ? "LauncherDangerBrush"
-            : "LauncherTextSecondaryBrush";
+            ? "Cafe.Color.Danger"
+            : "Cafe.Color.Text.Muted";
 
         var app = Application.Current;
         return app?.TryGetResource(

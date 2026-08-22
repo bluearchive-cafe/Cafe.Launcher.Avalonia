@@ -26,10 +26,30 @@ public partial class MainWindowViewModel : ViewModelBase, IDisposable
     [ObservableProperty]
     private bool isBusy;
 
+    [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(IsHomeDrawerVisible))]
+    private bool isCompactHome;
+
+    [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(IsHomeDrawerVisible))]
+    private bool isHomeDrawerOpen;
+
     public bool IsMotionEnabled => !IsMotionReduced;
     public bool IsBottomPanelVisible => true;
-    public bool IsStatusDetailExpanded => Settings.Editor.Current.StatusDetailMode == StatusDetailModes.Detailed;
+    public bool IsHomeDrawerVisible => !IsCompactHome || IsHomeDrawerOpen;
     public bool IsStatusDetailHidden => Settings.Editor.Current.StatusDetailMode == StatusDetailModes.Hidden;
+
+    [RelayCommand]
+    private void ToggleHomeDrawer() => IsHomeDrawerOpen = !IsHomeDrawerOpen;
+
+    public void SetCompactHome(bool value)
+    {
+        IsCompactHome = value;
+        if (!value)
+        {
+            IsHomeDrawerOpen = false;
+        }
+    }
 
     public ShellViewModel Shell { get; }
     public BackgroundViewModel Background { get; }
@@ -188,7 +208,6 @@ public partial class MainWindowViewModel : ViewModelBase, IDisposable
 
     private void OnStatusDetailModeChanged()
     {
-        OnPropertyChanged(nameof(IsStatusDetailExpanded));
         OnPropertyChanged(nameof(IsStatusDetailHidden));
     }
 }

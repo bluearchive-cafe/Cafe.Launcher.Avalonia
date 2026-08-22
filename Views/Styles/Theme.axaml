@@ -1,0 +1,89 @@
+<ResourceDictionary xmlns="https://github.com/avaloniaui"
+                    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
+    <SolidColorBrush x:Key="Cafe.Color.Accent" Color="#FF2E7DF6"/>
+    <SolidColorBrush x:Key="Cafe.Color.Accent.Hover" Color="#FF5796F8"/>
+    <SolidColorBrush x:Key="Cafe.Color.Accent.Pressed" Color="#FF1C64D0"/>
+    <SolidColorBrush x:Key="Cafe.Color.Accent.Soft" Color="#1A2E7DF6"/>
+    <SolidColorBrush x:Key="Cafe.Color.Accent.Outline" Color="#662E7DF6"/>
+    <SolidColorBrush x:Key="Cafe.Color.OnAccent" Color="#FF121820"/>
+    <SolidColorBrush x:Key="Cafe.Color.OnAccent.Hover" Color="#FF121820"/>
+    <SolidColorBrush x:Key="Cafe.Color.OnAccent.Pressed" Color="#FFFFFFFF"/>
+    <SolidColorBrush x:Key="Cafe.Color.OnChrome" Color="#FFFFFFFF"/>
+    <SolidColorBrush x:Key="Cafe.Color.OnChrome.Muted" Color="#CCFFFFFF"/>
+    <SolidColorBrush x:Key="Cafe.Color.OnDark.Muted" Color="#B3FFFFFF"/>
+    <SolidColorBrush x:Key="Cafe.Color.Transparent" Color="#00000000"/>
+    <SolidColorBrush x:Key="Cafe.Color.Chrome.Hover" Color="#22FFFFFF"/>
+    <SolidColorBrush x:Key="Cafe.Color.Chrome.Pressed" Color="#33FFFFFF"/>
+    <SolidColorBrush x:Key="Cafe.Color.Chrome.ControlHover" Color="#CC000000"/>
+    <SolidColorBrush x:Key="Cafe.Color.Overlay" Color="#99000000"/>
+    <SolidColorBrush x:Key="Cafe.Color.Overlay.Strong" Color="#B8000000"/>
+    <SolidColorBrush x:Key="Cafe.Color.Focus" Color="#FF2E7DF6"/>
+    <SolidColorBrush x:Key="Cafe.Color.Danger" Color="#FFE5484D"/>
+    <SolidColorBrush x:Key="Cafe.Color.Danger.Hover" Color="#FFF15B60"/>
+    <SolidColorBrush x:Key="Cafe.Color.Danger.Pressed" Color="#FFC9353A"/>
+    <SolidColorBrush x:Key="Cafe.Color.OnDanger" Color="#FF121820"/>
+    <SolidColorBrush x:Key="Cafe.Color.OnDanger.Hover" Color="#FF121820"/>
+    <SolidColorBrush x:Key="Cafe.Color.OnDanger.Pressed" Color="#FFFFFFFF"/>
+    <SolidColorBrush x:Key="Cafe.Color.Success" Color="#FF22C55E"/>
+    <SolidColorBrush x:Key="Cafe.Color.Warning" Color="#FFF59E0B"/>
+    <SolidColorBrush x:Key="Cafe.Color.Info" Color="#FF2E7DF6"/>
+    <SolidColorBrush x:Key="Cafe.Color.Media.Placeholder" Color="#FF2A3A5C"/>
+    <SolidColorBrush x:Key="Cafe.Color.Media.PlaceholderText" Color="#88FFFFFF"/>
+    <SolidColorBrush x:Key="Cafe.Color.Indicator.Inactive" Color="#FFD0D4DA"/>
+    <LinearGradientBrush x:Key="Cafe.Color.Chrome.Gradient" StartPoint="0%,0%" EndPoint="0%,100%">
+        <GradientStop Color="#52000000" Offset="0"/>
+        <GradientStop Color="#00000000" Offset="1"/>
+    </LinearGradientBrush>
+
+    <ResourceDictionary.ThemeDictionaries>
+        <ResourceDictionary x:Key="Light">
+            <SolidColorBrush x:Key="Cafe.Color.Text" Color="#FF232A31"/>
+            <SolidColorBrush x:Key="Cafe.Color.Text.Muted" Color="#FF68717D"/>
+            <SolidColorBrush x:Key="Cafe.Color.Text.Body" Color="#FF3F4954"/>
+            <SolidColorBrush x:Key="Cafe.Color.Text.Link" Color="#FF313233"/>
+            <SolidColorBrush x:Key="Cafe.Color.Surface.Subtle" Color="#EAF6FAFE"/>
+            <SolidColorBrush x:Key="Cafe.Color.Surface.Dock" Color="#F2F8FBFF"/>
+            <SolidColorBrush x:Key="Cafe.Color.Surface" Color="#FFFAFCFF"/>
+            <SolidColorBrush x:Key="Cafe.Color.Surface.Dialog" Color="#FFFFFFFF"/>
+            <SolidColorBrush x:Key="Cafe.Color.Surface.Header" Color="#FFF4F8FD"/>
+            <SolidColorBrush x:Key="Cafe.Color.Surface.Field" Color="#FFF0F6FD"/>
+            <SolidColorBrush x:Key="Cafe.Color.Surface.Info" Color="#FFDCEFFF"/>
+            <SolidColorBrush x:Key="Cafe.Color.Surface.Notice" Color="#FFFFF6D8"/>
+            <SolidColorBrush x:Key="Cafe.Color.Surface.Warning" Color="#FFFFF2C2"/>
+            <SolidColorBrush x:Key="Cafe.Color.Surface.Danger" Color="#FFFFECEE"/>
+            <SolidColorBrush x:Key="Cafe.Color.Surface.Row" Color="#FFF1F5F9"/>
+            <SolidColorBrush x:Key="Cafe.Color.Surface.RowHover" Color="#0A000000"/>
+            <SolidColorBrush x:Key="Cafe.Color.Border" Color="#FFD6E2EE"/>
+            <SolidColorBrush x:Key="Cafe.Color.Border.Field" Color="#FFB8CADB"/>
+            <SolidColorBrush x:Key="Cafe.Color.Border.Button" Color="#FFC8D2DE"/>
+            <SolidColorBrush x:Key="Cafe.Color.Surface.QuietHover" Color="#FFEEF6FF"/>
+            <SolidColorBrush x:Key="Cafe.Color.Surface.QuietPressed" Color="#FFDCEFFF"/>
+            <SolidColorBrush x:Key="Cafe.Color.Text.Info" Color="#FF24415E"/>
+        </ResourceDictionary>
+        <ResourceDictionary x:Key="Dark">
+            <SolidColorBrush x:Key="Cafe.Color.Indicator.Inactive" Color="#FF5A6270"/>
+            <SolidColorBrush x:Key="Cafe.Color.Text" Color="#FFE8EEF6"/>
+            <SolidColorBrush x:Key="Cafe.Color.Text.Muted" Color="#FFA8B3C2"/>
+            <SolidColorBrush x:Key="Cafe.Color.Text.Body" Color="#FFC8D2DF"/>
+            <SolidColorBrush x:Key="Cafe.Color.Text.Link" Color="#FFDDE7F3"/>
+            <SolidColorBrush x:Key="Cafe.Color.Surface.Subtle" Color="#E819202A"/>
+            <SolidColorBrush x:Key="Cafe.Color.Surface.Dock" Color="#F219202A"/>
+            <SolidColorBrush x:Key="Cafe.Color.Surface" Color="#FF202733"/>
+            <SolidColorBrush x:Key="Cafe.Color.Surface.Dialog" Color="#FF161C26"/>
+            <SolidColorBrush x:Key="Cafe.Color.Surface.Header" Color="#FF1B2430"/>
+            <SolidColorBrush x:Key="Cafe.Color.Surface.Field" Color="#FF1E2834"/>
+            <SolidColorBrush x:Key="Cafe.Color.Surface.Info" Color="#FF19324D"/>
+            <SolidColorBrush x:Key="Cafe.Color.Surface.Notice" Color="#FF352D17"/>
+            <SolidColorBrush x:Key="Cafe.Color.Surface.Warning" Color="#FF463817"/>
+            <SolidColorBrush x:Key="Cafe.Color.Surface.Danger" Color="#FF3A1D22"/>
+            <SolidColorBrush x:Key="Cafe.Color.Surface.Row" Color="#FF202833"/>
+            <SolidColorBrush x:Key="Cafe.Color.Surface.RowHover" Color="#18FFFFFF"/>
+            <SolidColorBrush x:Key="Cafe.Color.Border" Color="#FF344150"/>
+            <SolidColorBrush x:Key="Cafe.Color.Border.Field" Color="#FF40516A"/>
+            <SolidColorBrush x:Key="Cafe.Color.Border.Button" Color="#FF4A5B73"/>
+            <SolidColorBrush x:Key="Cafe.Color.Surface.QuietHover" Color="#FF243653"/>
+            <SolidColorBrush x:Key="Cafe.Color.Surface.QuietPressed" Color="#FF1D426C"/>
+            <SolidColorBrush x:Key="Cafe.Color.Text.Info" Color="#FFD6E8FF"/>
+        </ResourceDictionary>
+    </ResourceDictionary.ThemeDictionaries>
+</ResourceDictionary>
