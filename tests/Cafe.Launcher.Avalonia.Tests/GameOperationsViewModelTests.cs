@@ -7,7 +7,7 @@ using Cafe.Launcher.Avalonia.ViewModels;
 
 namespace Cafe.Launcher.Avalonia.Tests;
 
-public sealed class GameOperationsViewModelTests
+public sealed class GameOperationsViewModelTests : LocalizationTestBase
 {
     static GameOperationsViewModelTests()
     {
@@ -554,13 +554,14 @@ public sealed class GameOperationsViewModelTests
     }
 
     [Theory]
-    [InlineData(GameOperationKind.Download, GameOperationStage.Downloading, "Download")]
-    [InlineData(GameOperationKind.Repair, GameOperationStage.RepairCheck, "Tools")]
-    [InlineData(GameOperationKind.Uninstall, GameOperationStage.Uninstalling, "DeleteOutline")]
-    [InlineData(GameOperationKind.Idle, GameOperationStage.Idle, "Sync")]
-    public void ApplyProgress_ForOperationKind_UsesSemanticProgressIcon(
+    [InlineData(GameOperationKind.Download, GameOperationStage.Downloading, "Downloading", "Download")]
+    [InlineData(GameOperationKind.Repair, GameOperationStage.RepairCheck, "Repairing", "Tools")]
+    [InlineData(GameOperationKind.Uninstall, GameOperationStage.Uninstalling, "Uninstalling", "DeleteOutline")]
+    [InlineData(GameOperationKind.Idle, GameOperationStage.Idle, "Working", "Sync")]
+    public void ApplyProgress_ForOperationKind_UsesSemanticProgressTitleAndIcon(
         GameOperationKind operationKind,
         GameOperationStage stage,
+        string expectedTitle,
         string expectedIconKind)
     {
         var context = CreateContext();
@@ -571,6 +572,7 @@ public sealed class GameOperationsViewModelTests
             Stage = stage
         });
 
+        Assert.Equal(expectedTitle, context.ViewModel.ProgressTitle);
         Assert.Equal(expectedIconKind, context.ViewModel.ProgressIconKind);
     }
 
@@ -623,6 +625,8 @@ public sealed class GameOperationsViewModelTests
     }
 
     [Theory]
+    [InlineData(GameOperationStage.RepairConfirmation, 0, null, 2, 0, 0, "2", null)]
+    [InlineData(GameOperationStage.Paused, 0, null, 0, 0, 0, "Paused", null)]
     [InlineData(GameOperationStage.DiskCheck, 10L, 20L, 0, 0, 0, "10B", "20B")]
     [InlineData(GameOperationStage.VerificationRetry, 0, null, 2, 1, 3, "2", "1/3")]
     [InlineData(GameOperationStage.VerificationFailed, 0, null, 2, 0, 0, "2", null)]
@@ -644,6 +648,7 @@ public sealed class GameOperationsViewModelTests
             Stage = stage,
             RequiredDiskBytes = requiredBytes,
             AvailableDiskBytes = availableBytes,
+            AffectedFileCount = failedFileCount,
             FailedFileCount = failedFileCount,
             RetryAttempt = retryAttempt,
             RetryLimit = retryLimit,

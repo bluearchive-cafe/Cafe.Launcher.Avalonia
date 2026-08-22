@@ -1,5 +1,6 @@
 using Cafe.Launcher.Avalonia.Services;
 using Cafe.Launcher.Avalonia.Services.Diagnostics;
+using Serilog.Sinks.Async;
 
 namespace Cafe.Launcher.Avalonia.Tests;
 
@@ -10,94 +11,6 @@ public sealed class DiagnosticsServicesTests : IDisposable
     public DiagnosticsServicesTests()
     {
         Directory.CreateDirectory(tempDir);
-    }
-
-    [Fact]
-    public async Task DetectCrashAsync_WhenLogGrowsAfterSessionStart_ReturnsTrue()
-    {
-        using var logger = new UnifiedLogger(tempDir);
-        var service = new CrashRecoveryService(logger);
-        await service.BeginSessionAsync();
-        await logger.LogAsync(LogEntrySeverity.Error, "Large failure", new string('x', 8192));
-
-        var crashed = await service.DetectCrashAsync();
-
-        Assert.True(crashed);
-    }
-
-    [Fact]
-    public async Task BeginSessionAsync_DetectsPreviousCrashBeforeWritingCurrentStart()
-    {
-        using var logger = new UnifiedLogger(tempDir);
-        var service = new CrashRecoveryService(logger);
-        var firstSessionCrashed = await service.BeginSessionAsync();
-
-        var crashed = await service.BeginSessionAsync();
-
-        Assert.False(firstSessionCrashed);
-        Assert.True(crashed);
-        logger.Dispose(); // release Serilog file handle before reading
-        Assert.Equal(
-            2,
-            File.ReadLines(logger.LogFilePath).Count(line => line.Contains("Session started", StringComparison.Ordinal)));
-    }
-
-    [Fact]
-    public async Task DetectCrashAsync_WhenSessionStartWasRotated_ReturnsTrue()
-    {
-        using var logger = new UnifiedLogger(tempDir);
-        var service = new CrashRecoveryService(logger);
-        await service.BeginSessionAsync();
-        await logger.LogAsync(
-            LogEntrySeverity.Error,
-            "Large failure",
-            new string('x', 5 * 1024 * 1024));
-
-        var crashed = await service.DetectCrashAsync();
-
-        Assert.True(crashed);
-    }
-
-    [Fact]
-    public async Task CompleteSessionAsync_RemovesActiveSessionMarker()
-    {
-        using var logger = new UnifiedLogger(tempDir);
-        var service = new CrashRecoveryService(logger);
-        await service.BeginSessionAsync();
-
-        await service.CompleteSessionAsync();
-
-        Assert.False(await service.DetectCrashAsync());
-        logger.Dispose(); // release Serilog file handle before reading
-        Assert.Contains(
-            "Session ended",
-            File.ReadAllText(logger.LogFilePath),
-            StringComparison.Ordinal);
-    }
-
-    [Fact]
-    public async Task RunSession_WhenApplicationReturns_CompletesSession()
-    {
-        using var logger = new UnifiedLogger(tempDir);
-        var service = new CrashRecoveryService(logger);
-
-        Program.RunSession(service, () => { });
-
-        Assert.False(await service.DetectCrashAsync());
-    }
-
-    [Fact]
-    public async Task RunSession_WhenApplicationThrows_LeavesActiveSessionMarker()
-    {
-        using var logger = new UnifiedLogger(tempDir);
-        var service = new CrashRecoveryService(logger);
-
-        Assert.Throws<InvalidOperationException>(
-            () => Program.RunSession(
-                service,
-                () => throw new InvalidOperationException("fatal")));
-
-        Assert.True(await service.DetectCrashAsync());
     }
 
     [Fact]
@@ -196,6 +109,41 @@ public sealed class DiagnosticsServicesTests : IDisposable
         // through the DI-resolved UnifiedLogger) is exercised by the instance-level facade tests.
         LocalDiagnostics.LogSync(LogEntrySeverity.Debug, "SyncDebug", "sync msg");
         LocalDiagnostics.LogSync("SyncInfo", "info msg");
+    }
+
+    [Fact]
+    public void AsyncLogBufferMonitor_WhenMessagesAreDropped_ReportsOnlyNewDrops()
+    {
+        var reports = new List<string>();
+        using var monitor = new AsyncLogBufferMonitor(
+            checkInterval: TimeSpan.FromHours(1),
+            report: reports.Add);
+        var inspector = new TestAsyncLogEventSinkInspector
+        {
+            BufferSize = 100,
+            Count = 12,
+            DroppedMessagesCount = 1
+        };
+
+        monitor.StartMonitoring(inspector);
+        monitor.CheckNow();
+        monitor.CheckNow();
+        inspector.DroppedMessagesCount = 2;
+        monitor.CheckNow();
+        monitor.StopMonitoring(inspector);
+
+        Assert.Equal(2, reports.Count);
+        Assert.Contains("dropped 1 messages", reports[0], StringComparison.Ordinal);
+        Assert.Contains("dropped 2 messages", reports[1], StringComparison.Ordinal);
+    }
+
+    private sealed class TestAsyncLogEventSinkInspector : IAsyncLogEventSinkInspector
+    {
+        public int BufferSize { get; init; }
+
+        public int Count { get; init; }
+
+        public long DroppedMessagesCount { get; set; }
     }
 
     public void Dispose()

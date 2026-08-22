@@ -27,7 +27,7 @@ internal sealed class FakeErrorHandlingService : IErrorHandlingService
     }
 }
 
-public sealed class SettingsOptionsDiskSpaceTests
+public sealed class SettingsOptionsDiskSpaceTests : LocalizationTestBase
 {
     static SettingsOptionsDiskSpaceTests()
     {

@@ -6,7 +6,7 @@ using Cafe.Launcher.Avalonia.ViewModels;
 
 namespace Cafe.Launcher.Avalonia.Tests;
 
-public sealed class DialogsViewModelTests
+public sealed class DialogsViewModelTests : LocalizationTestBase
 {
     static DialogsViewModelTests()
     {
@@ -85,46 +85,6 @@ public sealed class DialogsViewModelTests
         Assert.Equal(secondFiles, viewModel.UpdateAvailableFiles);
         Assert.Null(viewModel.SelectedUpdateFile);
         Assert.False(viewModel.HasSelectedUpdateFile);
-    }
-
-    [Fact]
-    public void CrashRecoveryCommands_HideDialogAndRaiseEvents()
-    {
-        var viewModel = CreateViewModel();
-        var continued = false;
-        var viewedLog = false;
-        viewModel.CrashRecoveryContinueRequested += () => continued = true;
-        viewModel.CrashRecoveryViewLogRequested += () => viewedLog = true;
-
-        viewModel.ShowCrashRecovery();
-        viewModel.ContinueAfterCrashCommand.Execute(null);
-
-        Assert.True(continued);
-        Assert.False(viewModel.IsCrashRecoveryVisible);
-
-        viewModel.ShowCrashRecovery();
-        viewModel.ViewCrashLogCommand.Execute(null);
-
-        Assert.True(viewedLog);
-        Assert.False(viewModel.IsCrashRecoveryVisible);
-    }
-
-    [Fact]
-    public async Task ResetSettingsAfterCrashCommand_RaisesAsyncEventAndHidesDialog()
-    {
-        var viewModel = CreateViewModel();
-        var reset = false;
-        viewModel.CrashRecoveryResetSettingsRequested += () =>
-        {
-            reset = true;
-            return Task.CompletedTask;
-        };
-        viewModel.ShowCrashRecovery();
-
-        await viewModel.ResetSettingsAfterCrashCommand.ExecuteAsync(null);
-
-        Assert.True(reset);
-        Assert.False(viewModel.IsCrashRecoveryVisible);
     }
 
     [Fact]

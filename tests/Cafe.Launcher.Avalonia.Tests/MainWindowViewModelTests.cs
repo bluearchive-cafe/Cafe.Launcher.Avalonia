@@ -17,7 +17,7 @@ using System.Text;
 
 namespace Cafe.Launcher.Avalonia.Tests;
 
-public sealed class MainWindowViewModelTests : IDisposable
+public sealed class MainWindowViewModelTests : LocalizationTestBase
 {
     [Fact]
     public async Task Dispose_UnsubscribesSettingsEditorNotifications()
@@ -902,7 +902,7 @@ public sealed class MainWindowViewModelTests : IDisposable
         viewModel.Settings.Editor.Current.ThemeMode = ThemeModes.Dark;
         viewModel.WindowChrome.ShowSettingsCommand.Execute(null);
 
-        Assert.True(viewModel.Settings.IsUnsavedChangesVisible);
+        Assert.False(viewModel.Settings.IsUnsavedChangesVisible);
 
         await viewModel.WindowChrome.DiscardSettingsChangesCommand.ExecuteAsync(null);
 
@@ -944,9 +944,73 @@ public sealed class MainWindowViewModelTests : IDisposable
     }
 
     [Fact]
+    public async Task SettingsAutoSave_QuickChanges_DebouncesAndPersistsLatestSnapshot()
+    {
+        var settingsPath = Path.Combine(tempDir, Guid.NewGuid().ToString("N"), "settings.json");
+        var settingsService = new LauncherSettingsService(settingsPath);
+        await settingsService.SaveAsync(new LauncherSettings { Language = LauncherLanguages.Auto });
+        using var viewModel = await CreateViewModelAsync(new CountingCoreService(CreateSnapshot()), settingsService);
+        viewModel.Settings.Editor.ApplySnapshot(await settingsService.ReadAsync());
+        viewModel.WindowChrome.ShowSettingsCommand.Execute(null);
+
+        viewModel.Settings.Editor.Current.Language = LauncherLanguages.Japanese;
+        await Task.Delay(100);
+        viewModel.Settings.Editor.Current.Language = LauncherLanguages.English;
+
+        await Task.Delay(250);
+
+        Assert.Equal(LauncherLanguages.Auto, (await settingsService.ReadAsync()).Language);
+
+        await WaitForConditionAsync(() => !viewModel.Settings.IsSettingsDirty);
+
+        Assert.Equal(LauncherLanguages.English, (await settingsService.ReadAsync()).Language);
+    }
+
+    [Fact]
+    public async Task SettingsAutoSave_WhenSettingsClose_FlushesLatestPendingSnapshot()
+    {
+        var settingsPath = Path.Combine(tempDir, Guid.NewGuid().ToString("N"), "settings.json");
+        var settingsService = new LauncherSettingsService(settingsPath);
+        await settingsService.SaveAsync(new LauncherSettings { Language = LauncherLanguages.Auto });
+        using var viewModel = await CreateViewModelAsync(new CountingCoreService(CreateSnapshot()), settingsService);
+        viewModel.Settings.Editor.ApplySnapshot(await settingsService.ReadAsync());
+        viewModel.WindowChrome.ShowSettingsCommand.Execute(null);
+
+        viewModel.Settings.Editor.Current.Language = LauncherLanguages.Japanese;
+
+        await viewModel.WindowChrome.ShowSettingsCommand.ExecuteAsync(null);
+
+        Assert.False(viewModel.WindowChrome.IsSettingsVisible);
+        Assert.False(viewModel.Settings.IsSettingsDirty);
+        Assert.Equal(LauncherLanguages.Japanese, (await settingsService.ReadAsync()).Language);
+    }
+
+    [Fact]
+    public async Task SettingsAutoSave_WhenLanguageChanges_AppliesRuntimeBeforePersistence()
+    {
+        using var viewModel = await CreateViewModelAsync(new CountingCoreService(CreateSnapshot()));
+        LauncherSettings? appliedSettings = null;
+        viewModel.Settings.ApplyLanguageAndTheme = settings =>
+        {
+            appliedSettings = settings;
+            return Task.CompletedTask;
+        };
+        viewModel.WindowChrome.ShowSettingsCommand.Execute(null);
+
+        viewModel.Settings.Editor.Current.Language = LauncherLanguages.Japanese;
+
+        await viewModel.Settings.PendingRuntimeApply;
+
+        Assert.Equal(LauncherLanguages.Japanese, Assert.IsType<LauncherSettings>(appliedSettings).Language);
+        Assert.True(viewModel.Settings.IsSettingsDirty);
+    }
+
+    [Fact]
     public async Task SaveSettingsAsync_WhenPersistenceFails_KeepsDirtyState()
     {
-        var settingsService = new LauncherSettingsService(tempDir);
+        var failedSavePath = Path.Combine(tempDir, Guid.NewGuid().ToString("N"));
+        Directory.CreateDirectory(failedSavePath);
+        var settingsService = new LauncherSettingsService(failedSavePath);
         var localizer = new LocalizationService();
         var toastService = new ToastService();
         var editor = new SettingsEditor();
@@ -982,7 +1046,16 @@ public sealed class MainWindowViewModelTests : IDisposable
 
         Assert.True(settings.IsSettingsDirty);
         Assert.True(settings.CanSaveSettings);
+        Assert.True(settings.HasAutoSaveFailure);
+        Assert.False(string.IsNullOrWhiteSpace(settings.AutoSaveFailureMessage));
         Assert.NotNull(errorToast);
+
+        Directory.Delete(failedSavePath);
+        await settings.RetryAutoSaveCommand.ExecuteAsync(null);
+
+        Assert.False(settings.IsSettingsDirty);
+        Assert.False(settings.HasAutoSaveFailure);
+        Assert.Equal(LauncherLanguages.Japanese, (await settingsService.ReadAsync()).Language);
     }
 
     [Fact]
@@ -1399,41 +1472,6 @@ public sealed class MainWindowViewModelTests : IDisposable
     }
 
     [Fact]
-    public async Task ResetSettingsAfterCrashCommand_PersistsDefaults()
-    {
-        var settingsPath = Path.Combine(tempDir, Guid.NewGuid().ToString("N"), "settings.json");
-        var settingsService = new LauncherSettingsService(settingsPath);
-        var modified = LauncherSettings.CreateDefaults();
-        modified.GamePath = Path.Combine(tempDir, "custom-game");
-        modified.ThemeMode = ThemeModes.Dark;
-        await settingsService.SaveAsync(modified);
-        using var viewModel = await CreateViewModelAsync(
-            new CountingCoreService(CreateSnapshot()),
-            settingsService);
-
-        viewModel.Dialogs.ShowCrashRecovery();
-        await viewModel.Dialogs.ResetSettingsAfterCrashCommand.ExecuteAsync(null);
-
-        var persisted = await settingsService.ReadAsync();
-        var defaults = LauncherSettings.CreateDefaults();
-        Assert.Equal(defaults.GamePath, persisted.GamePath);
-        Assert.Equal(defaults.ThemeMode, persisted.ThemeMode);
-        Assert.False(viewModel.Dialogs.IsCrashRecoveryVisible);
-    }
-
-    [Fact]
-    public async Task ViewCrashLogCommand_OpensLogViewer()
-    {
-        using var viewModel = await CreateViewModelAsync(new CountingCoreService(CreateSnapshot()));
-        viewModel.Dialogs.ShowCrashRecovery();
-
-        viewModel.Dialogs.ViewCrashLogCommand.Execute(null);
-
-        Assert.True(viewModel.LogViewer.IsVisible);
-        Assert.False(viewModel.Dialogs.IsCrashRecoveryVisible);
-    }
-
-    [Fact]
     public async Task TryHandleEscape_ForEveryModalKind_ClosesOnlyTopModal()
     {
         using var viewModel = await CreateViewModelAsync(new CountingCoreService(CreateSnapshot()));
@@ -1474,10 +1512,6 @@ public sealed class MainWindowViewModelTests : IDisposable
         viewModel.Dialogs.ShowUpdateAvailable("1.0.0", []);
         Assert.True(viewModel.TryHandleEscape());
         Assert.False(viewModel.Dialogs.IsUpdateAvailableVisible);
-
-        viewModel.Dialogs.ShowCrashRecovery();
-        Assert.True(viewModel.TryHandleEscape());
-        Assert.False(viewModel.Dialogs.IsCrashRecoveryVisible);
 
         viewModel.LogViewer.OpenCommand.Execute(null);
         Assert.True(viewModel.TryHandleEscape());
@@ -1521,6 +1555,42 @@ public sealed class MainWindowViewModelTests : IDisposable
 
         Assert.False(viewModel.IsMotionReduced);
         Assert.True(viewModel.IsMotionEnabled);
+    }
+
+    [Fact]
+    public async Task AppearanceMotionSwitch_MapsEnabledStateToPersistedMotionMode()
+    {
+        var snapshot = CreateSnapshot();
+        snapshot.Settings.MotionMode = MotionModes.System;
+        using var viewModel = await CreateViewModelAsync(new CountingCoreService(snapshot));
+
+        await viewModel.InitializeAsync();
+
+        Assert.True(viewModel.Settings.Appearance.IsMotionEnabled);
+
+        viewModel.Settings.Appearance.IsMotionEnabled = false;
+        Assert.Equal(MotionModes.Reduced, viewModel.Settings.Editor.Current.MotionMode);
+
+        viewModel.Settings.Appearance.IsMotionEnabled = true;
+        Assert.Equal(MotionModes.Full, viewModel.Settings.Editor.Current.MotionMode);
+    }
+
+    [Fact]
+    public async Task AppearanceMotionSwitch_AppliesRuntimeMotionBeforeSave()
+    {
+        var snapshot = CreateSnapshot();
+        snapshot.Settings.MotionMode = MotionModes.Reduced;
+        using var viewModel = await CreateViewModelAsync(
+            new CountingCoreService(snapshot),
+            windowsAnimationSettingsProvider: new WindowsAnimationSettingsProvider(() => (true, true)));
+
+        await viewModel.InitializeAsync();
+        Assert.True(viewModel.IsMotionReduced);
+
+        viewModel.Settings.Appearance.IsMotionEnabled = true;
+        await viewModel.Settings.PendingAppearancePreview;
+
+        Assert.False(viewModel.IsMotionReduced);
     }
 
     [Fact]
@@ -2180,7 +2250,7 @@ public sealed class MainWindowViewModelTests : IDisposable
         }
     }
 
-    public void Dispose()
+    public override void Dispose()
     {
         imageCacheService.Dispose();
         apiClient.Dispose();
@@ -2189,6 +2259,8 @@ public sealed class MainWindowViewModelTests : IDisposable
         {
             Directory.Delete(tempDir, recursive: true);
         }
+
+        base.Dispose();
     }
 
     private sealed class CountingCoreService : ILauncherCoreService

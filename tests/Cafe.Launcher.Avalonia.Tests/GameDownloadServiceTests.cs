@@ -12,7 +12,7 @@ using Cafe.Launcher.Avalonia.Services.Auth;
 
 namespace Cafe.Launcher.Avalonia.Tests;
 
-public sealed class GameDownloadServiceTests
+public sealed class GameDownloadServiceTests : LocalizationTestBase
 {
     static GameDownloadServiceTests()
     {

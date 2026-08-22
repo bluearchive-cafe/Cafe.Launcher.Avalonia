@@ -7,7 +7,7 @@ using Xunit;
 
 namespace Cafe.Launcher.Avalonia.Tests;
 
-public sealed class SetupWizardStepItemTests
+public sealed class SetupWizardStepItemTests : LocalizationTestBase
 {
     static SetupWizardStepItemTests() => TestLocalizationHelper.Initialize();
 

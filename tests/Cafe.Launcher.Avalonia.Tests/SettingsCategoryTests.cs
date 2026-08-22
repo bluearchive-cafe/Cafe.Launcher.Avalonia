@@ -10,7 +10,7 @@ using Microsoft.Extensions.DependencyInjection.Extensions;
 namespace Cafe.Launcher.Avalonia.Tests;
 
 [Collection("Settings category localization")]
-public sealed class SettingsCategoryTests
+public sealed class SettingsCategoryTests : LocalizationTestBase
 {
     private static readonly string ResourceDirectory = Path.Combine(
         TestLocalizationHelper.FindProjectRoot(), "Resources");
@@ -351,6 +351,7 @@ public sealed class SettingsCategoryTests
             secondSubscriberInvoked.SetResult();
             return Task.CompletedTask;
         };
+        scope.ViewModel.Editor.Current.Language = LauncherLanguages.Japanese;
 
         var saveTask = scope.ViewModel.SaveSettingsCommand.ExecuteAsync(null);
         await firstSubscriberInvoked.Task;

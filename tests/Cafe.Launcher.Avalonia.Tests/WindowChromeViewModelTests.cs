@@ -61,7 +61,7 @@ public sealed class WindowChromeViewModelTests : IDisposable
     }
 
     [Fact]
-    public void ShowSettingsCommand_WhenDirty_ShowsUnsavedChangesInsteadOfClosing()
+    public void ShowSettingsCommand_WhenDirty_ClosesWithoutAnUnsavedChangesPrompt()
     {
         using var context = CreateContext();
         context.Settings.ApplyLauncherSettings(new LauncherSettings());
@@ -70,8 +70,8 @@ public sealed class WindowChromeViewModelTests : IDisposable
 
         context.ViewModel.ShowSettingsCommand.Execute(null);
 
-        Assert.True(context.ViewModel.IsSettingsVisible);
-        Assert.True(context.Settings.IsUnsavedChangesVisible);
+        Assert.False(context.ViewModel.IsSettingsVisible);
+        Assert.False(context.Settings.IsUnsavedChangesVisible);
     }
 
     [Fact]

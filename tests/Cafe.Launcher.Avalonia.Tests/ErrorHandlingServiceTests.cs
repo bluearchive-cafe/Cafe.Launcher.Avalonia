@@ -3,7 +3,7 @@ using Cafe.Launcher.Avalonia.Services.Diagnostics;
 
 namespace Cafe.Launcher.Avalonia.Tests;
 
-public sealed class ErrorHandlingServiceTests
+public sealed class ErrorHandlingServiceTests : LocalizationTestBase
 {
     static ErrorHandlingServiceTests()
     {

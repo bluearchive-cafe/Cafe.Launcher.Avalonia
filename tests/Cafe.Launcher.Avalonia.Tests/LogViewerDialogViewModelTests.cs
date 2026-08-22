@@ -5,7 +5,7 @@ using Cafe.Launcher.Avalonia.ViewModels;
 
 namespace Cafe.Launcher.Avalonia.Tests;
 
-public sealed class LogViewerDialogViewModelTests : IDisposable
+public sealed class LogViewerDialogViewModelTests : LocalizationTestBase
 {
     private readonly string tempDir = Path.Combine(Path.GetTempPath(), Guid.NewGuid().ToString("N"));
     private readonly UnifiedLogger logger;
@@ -245,12 +245,14 @@ public sealed class LogViewerDialogViewModelTests : IDisposable
     private LogViewerDialogViewModel CreateViewModel() =>
         new(logger, null, null, null, null, null);
 
-    public void Dispose()
+    public override void Dispose()
     {
         logger.Dispose();
         if (Directory.Exists(tempDir))
         {
             Directory.Delete(tempDir, recursive: true);
         }
+
+        base.Dispose();
     }
 }

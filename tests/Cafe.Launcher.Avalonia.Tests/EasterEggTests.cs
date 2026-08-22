@@ -5,7 +5,7 @@ using Cafe.Launcher.Avalonia.ViewModels;
 
 namespace Cafe.Launcher.Avalonia.Tests;
 
-public sealed class EasterEggTests
+public sealed class EasterEggTests : LocalizationTestBase
 {
     [Theory]
     [InlineData(0, "Midori Launcher")]

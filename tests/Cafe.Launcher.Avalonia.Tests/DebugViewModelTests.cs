@@ -9,7 +9,7 @@ using Cafe.Launcher.Avalonia.ViewModels;
 
 namespace Cafe.Launcher.Avalonia.Tests;
 
-public sealed class DebugViewModelTests : IDisposable
+public sealed class DebugViewModelTests : LocalizationTestBase
 {
     private readonly string tempDir = Path.Combine(Path.GetTempPath(), Guid.NewGuid().ToString("N"));
 
@@ -180,12 +180,14 @@ public sealed class DebugViewModelTests : IDisposable
         Assert.Equal(["first-start", "first-end", "second"], sequence);
     }
 
-    public void Dispose()
+    public override void Dispose()
     {
         if (Directory.Exists(tempDir))
         {
             Directory.Delete(tempDir, recursive: true);
         }
+
+        base.Dispose();
     }
 
     private TestContext CreateContext(string language = LauncherLanguages.English)

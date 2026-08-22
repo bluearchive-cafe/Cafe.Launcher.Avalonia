@@ -8,7 +8,7 @@ using Cafe.Launcher.Avalonia.Services.Diagnostics;
 
 namespace Cafe.Launcher.Avalonia.Tests;
 
-public sealed class InstallationOperationStateTests : IDisposable
+public sealed class InstallationOperationStateTests : LocalizationTestBase
 {
     private readonly string tempDir = Path.Combine(Path.GetTempPath(), Guid.NewGuid().ToString("N"));
 
@@ -467,7 +467,7 @@ public sealed class InstallationOperationStateTests : IDisposable
         Assert.Equal(GameOperationErrorCode.InvalidState, result.ErrorCode);
     }
 
-    public void Dispose()
+    public override void Dispose()
     {
         if (Directory.Exists(tempDir))
         {
@@ -486,6 +486,8 @@ public sealed class InstallationOperationStateTests : IDisposable
                 }
             }
         }
+
+        base.Dispose();
     }
 
     private static string CreateTempDir()

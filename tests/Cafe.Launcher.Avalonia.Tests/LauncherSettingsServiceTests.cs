@@ -161,6 +161,7 @@ public sealed class LauncherSettingsServiceTests : IDisposable
               "closeBehavior": "invalid",
               "language": "invalid",
               "themeMode": "invalid",
+              "motionMode": "invalid",
               "themeColorMode": "invalid",
               "customThemeColor": "invalid",
               "themeColorPalette": ["#ff112233", "invalid", "#445566"],
@@ -170,7 +171,13 @@ public sealed class LauncherSettingsServiceTests : IDisposable
               "showRemoteContentCard": false,
               "patchUrlGroup": "invalid",
               "backgroundSource": "invalid",
-              "resourcePanelUid": "  UID123  "
+              "backgroundFit": "invalid",
+              "backgroundFillColor": "invalid",
+              "resourcePanelUid": "  UID123  ",
+              "resourcePanelUidSource": "invalid",
+              "statusDetailMode": "invalid",
+              "updateChannel": "invalid",
+              "logLevel": "invalid"
             }
             """);
         var service = new LauncherSettingsService(settingsPath);
@@ -183,6 +190,7 @@ public sealed class LauncherSettingsServiceTests : IDisposable
         Assert.Equal(CloseBehaviors.Minimize, settings.CloseBehavior);
         Assert.Equal(LauncherLanguages.Auto, settings.Language);
         Assert.Equal(ThemeModes.System, settings.ThemeMode);
+        Assert.Equal(MotionModes.System, settings.MotionMode);
         Assert.Equal(ThemeColorModes.Default, settings.ThemeColorMode);
         Assert.Equal(LauncherConstants.DefaultThemeColor, settings.CustomThemeColor);
         Assert.Equal(["#FF112233", "#FF445566"], settings.ThemeColorPalette);
@@ -191,7 +199,13 @@ public sealed class LauncherSettingsServiceTests : IDisposable
         Assert.False(settings.ShowRemoteContentCard);
         Assert.Equal(PatchUrlGroups.Official, settings.PatchUrlGroup);
         Assert.Equal(BackgroundSources.Bundled, settings.BackgroundSource);
+        Assert.Equal(BackgroundFits.UniformToFill, settings.BackgroundFit);
+        Assert.Equal(LauncherConstants.DefaultThemeColor, settings.BackgroundFillColor);
         Assert.Equal("UID123", settings.ResourcePanelUid);
+        Assert.Equal(ResourcePanelUidSources.Auto, settings.ResourcePanelUidSource);
+        Assert.Equal(StatusDetailModes.Compact, settings.StatusDetailMode);
+        Assert.Equal(UpdateChannels.Stable, settings.UpdateChannel);
+        Assert.Equal(LogLevels.Information, settings.LogLevel);
     }
 
     [Fact]

@@ -7,7 +7,7 @@ using Cafe.Launcher.Avalonia.Services.Auth;
 
 namespace Cafe.Launcher.Avalonia.Tests;
 
-public sealed class ManifestValidationServiceTests : IDisposable
+public sealed class ManifestValidationServiceTests : LocalizationTestBase
 {
     private readonly string tempDir = Path.Combine(Path.GetTempPath(), Guid.NewGuid().ToString("N"));
 
@@ -218,12 +218,14 @@ public sealed class ManifestValidationServiceTests : IDisposable
             localizer);
     }
 
-    public void Dispose()
+    public override void Dispose()
     {
         if (Directory.Exists(tempDir))
         {
             Directory.Delete(tempDir, recursive: true);
         }
+
+        base.Dispose();
     }
 
     private sealed class RemoteManifestHandler(

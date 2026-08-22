@@ -7,7 +7,7 @@ using Cafe.Launcher.Avalonia.ViewModels;
 
 namespace Cafe.Launcher.Avalonia.Tests;
 
-public sealed class LocalizationTerminologyTests
+public sealed class LocalizationTerminologyTests : LocalizationTestBase
 {
     static LocalizationTerminologyTests()
     {

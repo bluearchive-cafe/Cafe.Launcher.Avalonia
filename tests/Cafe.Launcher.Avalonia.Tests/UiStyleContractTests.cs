@@ -9,7 +9,7 @@ namespace Cafe.Launcher.Avalonia.Tests;
 public sealed partial class UiStyleContractTests
 {
     [Fact]
-    public void LauncherIcons_UserFacingActionsAndSettings_UseApprovedSemanticMappings()
+    public void LauncherIcons_UserFacingActionsUseApprovedSemanticMappings()
     {
         var mainWindow = XDocument.Load(ProjectFile("Views/MainWindow.axaml"));
         var generalSettings = XDocument.Load(ProjectFile("Views/SettingsGeneralSection.axaml"));
@@ -27,9 +27,12 @@ public sealed partial class UiStyleContractTests
             "FolderSearchOutline",
             detectButton.Descendants().Single(element => element.Name.LocalName == "MaterialIcon").Attribute("Kind")?.Value);
 
-        AssertSettingRowIcon(generalSettings, "{Binding Shell.I18n[closeBehavior]}", "WindowClose");
-        AssertSettingRowIcon(downloadNetworkSettings, "{Binding Shell.I18n[proxy]}", "serverNetworkOutline");
-        AssertSettingRowIcon(downloadNetworkSettings, "{Binding Shell.I18n[launcherUpdateChannel]}", "SourceBranch");
+        Assert.DoesNotContain(generalSettings.Descendants(), element =>
+            element.Name.LocalName is "SettingRow" or "SettingComboRow"
+            && element.Attribute("IconKind") is not null);
+        Assert.DoesNotContain(downloadNetworkSettings.Descendants(), element =>
+            element.Name.LocalName is "SettingRow" or "SettingComboRow"
+            && element.Attribute("IconKind") is not null);
 
         var resourcePanelButton = mainWindow
             .Descendants()
@@ -39,20 +42,13 @@ public sealed partial class UiStyleContractTests
         Assert.Equal(
             "Web",
             resourcePanelButton.Descendants().Single(element => element.Name.LocalName == "MaterialIcon").Attribute("Kind")?.Value);
-        AssertSettingRowIcon(downloadNetworkSettings, "{Binding Shell.I18n[downloadSource]}", "Web");
 
-        var resourcePanelHeadingIcon = dialogs
-            .Descendants()
-            .First(element => element.Name.LocalName == "MaterialIcon");
-        Assert.Equal("Web", resourcePanelHeadingIcon.Attribute("Kind")?.Value);
-
-        var settingsFooterIcons = settingsOverlay
-            .Descendants()
-            .Where(element => element.Name.LocalName == "MaterialIcon")
-            .Select(element => element.Attribute("Kind")?.Value)
-            .ToArray();
-        Assert.Contains("CloseCircleOutline", settingsFooterIcons);
-        Assert.Contains("ContentSave", settingsFooterIcons);
+        var settingsCloseButton = settingsOverlay.Descendants().Single(element =>
+            element.Name.LocalName == "Button"
+            && element.Attribute("Command")?.Value == "{Binding WindowChrome.ShowSettingsCommand}");
+        Assert.Equal(
+            "Close",
+            settingsCloseButton.Descendants().Single(element => element.Name.LocalName == "MaterialIcon").Attribute("Kind")?.Value);
     }
 
     [Fact]
@@ -66,19 +62,14 @@ public sealed partial class UiStyleContractTests
                 && HasClass(element, "operation-layout"))
             .ToArray();
 
-        // Detailed-mode layouts are wrapped in a <Panel> inside the Border.
-        // Filter to only the direct Border children (progress panel + detailed install + detailed control).
+        // Only the progress panel keeps the operation-layout status/action contract.
         var panelLayouts = operationLayouts
             .Where(l => !HasClass(l.Parent!, "operation-status"))
             .ToArray();
-        Assert.Equal(3, panelLayouts.Length);
+        Assert.Single(panelLayouts);
         Assert.All(panelLayouts, layout =>
         {
             Assert.Equal("*,Auto", layout.Attribute("ColumnDefinitions")?.Value);
-            Assert.Equal(
-                "{StaticResource LauncherSpacingXl}",
-                layout.Attribute("ColumnSpacing")?.Value);
-            // Compact-mode layouts are Grid children of a Panel; detailed and progress are Border children.
             Assert.True(
                 HasClass(layout.Parent!, "bottom-panel")
                 || layout.Parent?.Name.LocalName == "Panel");
@@ -93,11 +84,11 @@ public sealed partial class UiStyleContractTests
             Assert.Equal(2, statusColumns.Length);
             Assert.Equal("Auto", statusColumns[0].Attribute("Width")?.Value);
             Assert.Equal(
-                "{StaticResource LauncherIconXxl}",
+                "{StaticResource Cafe.Icon.Large}",
                 statusColumns[0].Attribute("MinWidth")?.Value);
             Assert.Equal("*", statusColumns[1].Attribute("Width")?.Value);
             Assert.Equal(
-                "{StaticResource LauncherSpacingMd}",
+                "{StaticResource Cafe.Space.3}",
                 status.Attribute("ColumnSpacing")?.Value);
             Assert.Contains(
                 status.Descendants(),
@@ -117,78 +108,56 @@ public sealed partial class UiStyleContractTests
     }
 
     [Fact]
-    public void MainWindow_InstallPanel_AlignsPathWithPrimaryActionAndKeepsRefreshInStatusHeader()
+    public void MainWindow_InstallPanel_UsesCompactPathAndActionLayout()
     {
         var document = XDocument.Load(ProjectFile("Views/MainWindow.axaml"));
         var installLayout = document
             .Descendants()
-            .First(element =>
+            .Single(element =>
                 element.Name.LocalName == "Grid"
-                && HasClass(element, "operation-layout"));
-        var status = installLayout.Elements().Single(element => HasClass(element, "operation-status"));
+                && element.Elements().Any(child => HasClass(child, "operation-actions"))
+                && element.Descendants().Any(descendant => HasClass(descendant, "install-path-row")));
         var actions = installLayout.Elements().Single(element => HasClass(element, "operation-actions"));
 
-        var refreshButton = status
+        var refreshButton = actions
             .Descendants()
             .Single(element =>
                 element.Name.LocalName == "Button"
                 && element.Attribute("Command")?.Value == "{Binding RefreshCommand}");
-        var pathRow = status
+        var installButton = actions
             .Descendants()
             .Single(element =>
-                element.Name.LocalName == "Grid"
-                && HasClass(element, "install-path-row"));
-        var pathField = pathRow
+                element.Name.LocalName == "Button"
+                && element.Attribute("Command")?.Value == "{Binding Operations.InstallOrUpdateCommand}");
+        var pathField = installLayout
             .Elements()
+            .SelectMany(element => element.Descendants())
             .Single(element =>
                 element.Name.LocalName == "Border"
                 && HasClass(element, "path-field"));
-        var pathLayout = pathField
+        var pathRow = pathField
             .Elements()
-            .Single(element => element.Name.LocalName == "Grid");
-        var pathContent = pathLayout
-            .Elements()
-            .Single(element => element.Name.LocalName == "Grid");
-        var changePathButton = pathContent
+            .Single(element =>
+                element.Name.LocalName == "Grid"
+                && HasClass(element, "install-path-row"));
+        var pathLayout = pathRow;
+        var changePathButton = pathLayout
             .Elements()
             .Single(element =>
                 element.Name.LocalName == "Button"
                 && element.Attribute("Command")?.Value == "{Binding Settings.ChangePersistedGamePathCommand}");
-        var pathButtons = pathRow
-            .Elements()
-            .Where(element => element.Name.LocalName == "Button")
-            .ToArray();
-        var detectButton = pathButtons
-            .Single(element =>
-                element.Attribute("Command")?.Value == "{Binding Settings.SelectInstalledGameCommand}");
-        var installButton = pathButtons
-            .Single(element =>
-                element.Attribute("Command")?.Value == "{Binding Operations.InstallOrUpdateCommand}");
 
-        Assert.Equal("1", refreshButton.Attribute("Grid.Column")?.Value);
-        Assert.Equal("*,Auto,Auto", pathRow.Attribute("ColumnDefinitions")?.Value);
-        Assert.Equal("{StaticResource LauncherSpacingSm}", pathRow.Attribute("ColumnSpacing")?.Value);
-        Assert.Equal(2, pathButtons.Length);
-        Assert.Equal("Auto,*", pathLayout.Attribute("ColumnDefinitions")?.Value);
-        Assert.Equal("{StaticResource LauncherSpacingSm}", pathLayout.Attribute("ColumnSpacing")?.Value);
-        Assert.Equal("*,Auto", pathContent.Attribute("ColumnDefinitions")?.Value);
-        Assert.Equal("{StaticResource LauncherSpacingMd}", pathContent.Attribute("ColumnSpacing")?.Value);
-        Assert.Equal("1", changePathButton.Attribute("Grid.Column")?.Value);
+        Assert.Equal("*,Auto", installLayout.Attribute("ColumnDefinitions")?.Value);
+        Assert.Equal("*,Auto", installLayout.Attribute("RowDefinitions")?.Value);
+        Assert.Equal("{StaticResource Cafe.Space.5}", installLayout.Attribute("ColumnSpacing")?.Value);
+        Assert.Equal("Auto,*,Auto,Auto", pathLayout.Attribute("ColumnDefinitions")?.Value);
+        Assert.Equal("{StaticResource Cafe.Space.2}", pathLayout.Attribute("ColumnSpacing")?.Value);
+        Assert.Equal("{Binding Shell.I18n[changePath]}", changePathButton.Attribute("AutomationProperties.Name")?.Value);
+        Assert.Equal("{Binding Shell.I18n[refresh]}", refreshButton.Attribute("AutomationProperties.Name")?.Value);
+        Assert.True(HasClass(installButton, "primary-action"));
         Assert.DoesNotContain(
             pathField.Descendants(),
             element => element.Name.LocalName == "Border");
-        Assert.Equal("1", detectButton.Attribute("Grid.Column")?.Value);
-        Assert.Equal("2", installButton.Attribute("Grid.Column")?.Value);
-        Assert.True(HasClass(installButton, "primary-operation"));
-        Assert.True(HasClass(installButton, "path-operation"));
-        // Compact-mode install button in the actions area is allowed.
-        var actionButtons = actions
-            .Descendants()
-            .Where(element => element.Name.LocalName == "Button")
-            .ToArray();
-        Assert.True(
-            actionButtons.Length <= 1,
-            "operation-actions should contain at most one compact-mode button");
         Assert.DoesNotContain(
             installLayout.DescendantsAndSelf().Attributes(),
             attribute => attribute.Name.LocalName == "Margin"
@@ -196,32 +165,48 @@ public sealed partial class UiStyleContractTests
     }
 
     [Fact]
+    public void MainWindow_StatusPanel_DoesNotExposeDetailedLayout()
+    {
+        var document = XDocument.Load(ProjectFile("Views/MainWindow.axaml"));
+
+        Assert.DoesNotContain(
+            document.Descendants().SelectMany(element => element.Attributes()),
+            attribute => attribute.Value.Contains("IsStatusDetailExpanded", StringComparison.Ordinal));
+        Assert.DoesNotContain(
+            document.Descendants(),
+            element => element.Name.LocalName == "TextBlock"
+                && element.Attribute("Text")?.Value == "{Binding Shell.I18n[launchCheckDescription]}");
+        Assert.DoesNotContain(
+            document.Descendants(),
+            element => HasClass(element, "operation-status-title")
+                && element.Attribute("Text")?.Value == "{Binding Shell.StatusText}");
+    }
+
+    [Fact]
     public void MainWindow_OperationButtons_ExposeLocalizedNamesAndActionPriority()
     {
         var document = XDocument.Load(ProjectFile("Views/MainWindow.axaml"));
-        Dictionary<string, (string Name, string Priority)> expectedButtons = new(StringComparer.Ordinal)
+        Dictionary<string, (string Name, bool IsPrimary)> expectedButtons = new(StringComparer.Ordinal)
         {
-            ["{Binding RefreshCommand}"] = ("{Binding Shell.I18n[refresh]}", "secondary-operation"),
-            ["{Binding Operations.InstallOrUpdateCommand}"] = ("{Binding Operations.InstallButtonText}", "primary-operation"),
-            ["{Binding Settings.ChangePersistedGamePathCommand}"] = ("{Binding Shell.I18n[changePath]}", "secondary-operation"),
-            ["{Binding Settings.SelectInstalledGameCommand}"] = ("{Binding Shell.I18n[selectInstalledGame]}", "secondary-operation"),
-            ["{Binding WindowChrome.OpenOfficialSiteCommand}"] = ("{Binding Shell.I18n[officialSite]}", "secondary-operation"),
-            ["{Binding Operations.StartGameCommand}"] = ("{Binding Shell.I18n[startGame]}", "primary-operation"),
-            ["{Binding Operations.PauseResumeCommand}"] = ("{Binding Operations.PauseResumeText}", "secondary-operation"),
-            ["{Binding Operations.StopOperationCommand}"] = ("{Binding Shell.I18n[stop]}", "secondary-operation")
+            ["{Binding RefreshCommand}"] = ("{Binding Shell.I18n[refresh]}", false),
+            ["{Binding Operations.InstallOrUpdateCommand}"] = ("{Binding Operations.InstallButtonText}", true),
+            ["{Binding Settings.ChangePersistedGamePathCommand}"] = ("{Binding Shell.I18n[changePath]}", false),
+            ["{Binding Settings.SelectInstalledGameCommand}"] = ("{Binding Shell.I18n[selectInstalledGame]}", false),
+            ["{Binding WindowChrome.OpenOfficialSiteCommand}"] = ("{Binding Shell.I18n[officialSite]}", false),
+            ["{Binding Operations.StartGameCommand}"] = ("{Binding Shell.I18n[startGame]}", true),
+            ["{Binding Operations.PauseResumeCommand}"] = ("{Binding Operations.PauseResumeText}", false),
+            ["{Binding Operations.StopOperationCommand}"] = ("{Binding Shell.I18n[stop]}", false)
         };
 
         foreach (var (command, expected) in expectedButtons)
         {
-            // .Single() would fail when compact-mode duplicate buttons exist; pick the
-            // first match, which is always the detailed-panel (primary) button.
             var button = document
                 .Descendants()
                 .First(element =>
                     element.Name.LocalName == "Button"
                     && element.Attribute("Command")?.Value == command);
 
-            Assert.True(HasClass(button, expected.Priority), $"{command} must be {expected.Priority}.");
+            Assert.Equal(expected.IsPrimary, HasClass(button, "primary-action"));
             Assert.Equal(
                 expected.Name,
                 button.Attributes()
@@ -229,6 +214,35 @@ public sealed partial class UiStyleContractTests
                     .Value);
             Assert.NotNull(button.Attributes().SingleOrDefault(attribute => attribute.Name.LocalName == "ToolTip.Tip"));
         }
+    }
+
+    [Fact]
+    public void MainWindow_OperationButtons_RestoreHistoricalPressedStateStyles()
+    {
+        var styles = XDocument.Load(ProjectFile("Views/MainWindow.Styles.axaml"));
+        var officialSitePressed = styles
+            .Descendants()
+            .Single(element => element.Name.LocalName == "Style"
+                && element.Attribute("Selector")?.Value == "Button.flat-action.elevated:pressed");
+        var primaryPressed = styles
+            .Descendants()
+            .Single(element => element.Name.LocalName == "Style"
+                && element.Attribute("Selector")?.Value == "Button.primary-action:pressed");
+
+        Assert.Equal(
+            "{DynamicResource Cafe.Color.Surface.Info}",
+            officialSitePressed
+                .Elements()
+                .Single(element => element.Name.LocalName == "Setter"
+                    && element.Attribute("Property")?.Value == "Background")
+                .Attribute("Value")?.Value);
+        Assert.Equal(
+            "{DynamicResource Cafe.Color.Accent.Pressed}",
+            primaryPressed
+                .Elements()
+                .Single(element => element.Name.LocalName == "Setter"
+                    && element.Attribute("Property")?.Value == "Background")
+                .Attribute("Value")?.Value);
     }
 
     [Fact]
@@ -240,14 +254,40 @@ public sealed partial class UiStyleContractTests
             .Single(element =>
                 element.Name.LocalName == "Border"
                 && HasClass(element, "control-panel"));
-        var status = controlPanel
+        var statusText = controlPanel
             .Descendants()
-            .Single(element => HasClass(element, "operation-status"));
+            .Single(element =>
+                element.Name.LocalName == "TextBlock"
+                && element.Attribute("Text")?.Value == "{Binding Shell.LaunchCheckText}");
 
-        Assert.Contains(
-            status.Descendants(),
+        Assert.NotNull(statusText);
+        Assert.DoesNotContain(
+            controlPanel.Descendants(),
             element => element.Name.LocalName == "TextBlock"
                 && element.Attribute("Text")?.Value == "{Binding Shell.I18n[launchCheckDescription]}");
+    }
+
+    [Fact]
+    public void MainWindow_ControlPanel_RightAlignsStatusSummaryAndCentersVertically()
+    {
+        var document = XDocument.Load(ProjectFile("Views/MainWindow.axaml"));
+        var controlPanel = document
+            .Descendants()
+            .Single(element =>
+                element.Name.LocalName == "Border"
+                && HasClass(element, "control-panel"));
+        var statusSummary = controlPanel
+            .Descendants()
+            .Single(element =>
+                element.Name.LocalName == "StackPanel"
+                && element.Attribute("Grid.Row")?.Value == "1"
+                && element.Attribute("Grid.ColumnSpan")?.Value == "2"
+                && element.Descendants().Any(descendant =>
+                    descendant.Name.LocalName == "TextBlock"
+                    && descendant.Attribute("Text")?.Value == "{Binding Shell.LaunchCheckText}"));
+
+        Assert.Equal("Right", statusSummary.Attribute("HorizontalAlignment")?.Value);
+        Assert.Equal("Center", statusSummary.Attribute("VerticalAlignment")?.Value);
     }
 
     [Fact]
@@ -270,76 +310,6 @@ public sealed partial class UiStyleContractTests
         Assert.Equal(
             "{Binding Operations.ProgressIconKind}",
             statusIcon.Attribute("Kind")?.Value);
-    }
-
-    [Fact]
-    public void MainWindow_TitleBarActions_ExposeAccessibleTokenizedPointerAndKeyboardFeedback()
-    {
-        var view = XDocument.Load(ProjectFile("Views/MainWindow.axaml"));
-        var styles = XDocument.Load(ProjectFile("Views/MainWindow.Styles.axaml"));
-        Dictionary<string, string> expectedNames = new(StringComparer.Ordinal)
-        {
-            ["{Binding WindowChrome.OpenDebugPanelCommand}"] = "{Binding Shell.I18n[debugPanel]}",
-            ["{Binding ResourcePanel.OpenResourcePanelCommand}"] = "{Binding Shell.I18n[resourcePanel]}",
-            ["{Binding WindowChrome.ShowSettingsCommand}"] = "{Binding Shell.I18n[settings]}",
-            ["{Binding WindowChrome.MinimizeCommand}"] = "{Binding Shell.I18n[minimize]}",
-            ["{Binding WindowChrome.CloseCommand}"] = "{Binding Shell.I18n[close]}"
-        };
-
-        var brandRow = view
-            .Descendants()
-            .Single(element => HasClass(element, "titlebar-brand-row"));
-        var titleBar = brandRow.Parent!;
-        Assert.Equal(
-            ["{Binding Shell.ProductName}"],
-            brandRow
-                .Descendants()
-                .Where(element => element.Name.LocalName == "TextBlock")
-                .Select(element => element.Attribute("Text")?.Value ?? "")
-                .ToArray());
-        Assert.DoesNotContain(
-            brandRow.Descendants(),
-            element => element.Name.LocalName == "Image");
-
-        var actionButtons = titleBar
-            .Descendants()
-            .Where(element =>
-                element.Name.LocalName == "Button"
-                && HasClass(element, "chrome"))
-            .ToArray();
-        Assert.Equal(expectedNames.Count, actionButtons.Length);
-
-        foreach (var (command, expectedName) in expectedNames)
-        {
-            var button = actionButtons
-                .Single(element =>
-                    element.Attribute("Command")?.Value == command);
-
-            Assert.True(HasClass(button, "chrome"));
-            Assert.Equal(expectedName, button.Attribute("ToolTip.Tip")?.Value);
-            Assert.Equal(
-                expectedName,
-                button.Attributes()
-                    .Single(attribute => attribute.Name.LocalName == "AutomationProperties.Name")
-                    .Value);
-        }
-
-        var chrome = GetStyleSetters(styles, "Button.chrome");
-        Assert.Equal("{StaticResource LauncherControlHeightSetting}", chrome["Width"]);
-        Assert.Equal("{StaticResource LauncherControlHeightSetting}", chrome["Height"]);
-        Assert.Equal(
-            "{DynamicResource LauncherChromeHoverBrush}",
-            GetStyleSetters(styles, "Button.chrome:pointerover")["Background"]);
-        Assert.Equal(
-            "{DynamicResource LauncherDangerBrush}",
-            GetStyleSetters(styles, "Button.chrome.close:pointerover")["Background"]);
-        Assert.Equal(
-            "{DynamicResource LauncherDangerPressedBrush}",
-            GetStyleSetters(styles, "Button.chrome.close:pressed")["Background"]);
-
-        var focus = GetStyleSetters(styles, "Button:focus-visible");
-        Assert.Equal("{DynamicResource LauncherFocusRingBrush}", focus["BorderBrush"]);
-        Assert.Equal("2", focus["BorderThickness"]);
     }
 
     [Fact]
@@ -467,9 +437,7 @@ public sealed partial class UiStyleContractTests
             "news-viewport",
             "operation-actions",
             "operation-layout",
-            "operation-status",
-            "primary-operation",
-            "secondary-operation"
+            "operation-status"
         ];
 
         foreach (var semanticClass in semanticClasses)
@@ -484,15 +452,41 @@ public sealed partial class UiStyleContractTests
     }
 
     [Fact]
+    public void MainWindow_ButtonsDoNotUseDeprecatedRoleAndPositionClasses()
+    {
+        var document = XDocument.Load(ProjectFile("Views/MainWindow.axaml"));
+        string[] deprecatedClasses =
+        [
+            "bottom-action",
+            "dock-icon-action",
+            "launcher-control",
+            "path-dock-action",
+            "path-operation",
+            "primary-operation",
+            "secondary-operation",
+            "start"
+        ];
+
+        Assert.All(
+            document.Descendants().Where(element => element.Name.LocalName == "Button"),
+            button =>
+            {
+                var classes = (button.Attribute("Classes")?.Value ?? "")
+                    .Split(' ', StringSplitOptions.RemoveEmptyEntries);
+                Assert.DoesNotContain(
+                    classes,
+                    className => deprecatedClasses.Contains(className, StringComparer.Ordinal));
+            });
+    }
+
+    [Fact]
     public void MainWindow_MultiRowGridChildren_DeclareTheirFirstRowExplicitly()
     {
         var document = XDocument.Load(ProjectFile("Views/MainWindow.axaml"));
         var expectedBindings = new[]
         {
-            "{Binding Shell.OperationNote}",
             "{Binding RefreshCommand}",
-            "{Binding Operations.ProgressTitle}",
-            "{Binding Shell.I18n[launchCheckDescription]}"
+            "{Binding Operations.ProgressTitle}"
         };
 
         foreach (var binding in expectedBindings)
@@ -516,139 +510,105 @@ public sealed partial class UiStyleContractTests
     }
 
     [Fact]
-    public void MainWindow_NewsList_UsesThreeRowScrollableViewportAndReadableRows()
+    public void MainWindow_BannerAndNews_UseSeparateCardSurfacesWithoutNewsHeading()
     {
         var document = XDocument.Load(ProjectFile("Views/MainWindow.axaml"));
-        var viewport = document
+        var remoteSurface = document
             .Descendants()
-            .Single(element =>
-                element.Name.LocalName == "ScrollViewer"
-                && HasClass(element, "news-viewport"));
-        var newsList = viewport.Elements().Single(element => element.Name.LocalName == "ItemsControl");
-        var itemsPanel = newsList
-            .Elements()
-            .Single(element => element.Name.LocalName == "ItemsControl.ItemsPanel")
+            .Single(element => element.Name.LocalName == "Border" && HasClass(element, "remote-surface"));
+        var bannerCard = document
             .Descendants()
-            .Where(element => element.Name.LocalName == "StackPanel")
-            .Single();
-        var rowButton = newsList.Descendants().Single(element =>
-            element.Name.LocalName == "Button"
-            && HasClass(element, "news-row"));
-        var rowBorder = rowButton.Elements().Single(element => element.Name.LocalName == "Border");
-        var title = rowButton.Descendants().Single(element =>
-            element.Name.LocalName == "TextBlock"
-            && element.Attribute("Text")?.Value == "{Binding Title}");
-        var date = rowButton.Descendants().Single(element =>
-            element.Name.LocalName == "TextBlock"
-            && element.Attribute("Text")?.Value == "{Binding Subtitle}");
+            .Single(element => element.Name.LocalName == "Border" && HasClass(element, "banner-shell"));
+        var newsCard = document
+            .Descendants()
+            .Single(element => element.Name.LocalName == "Border" && HasClass(element, "news-card"));
 
-        Assert.Equal("{StaticResource LauncherNewsViewportHeight}", viewport.Attribute("Height")?.Value);
-        Assert.Equal("Auto", viewport.Attribute("VerticalScrollBarVisibility")?.Value);
-        Assert.Equal("Disabled", viewport.Attribute("HorizontalScrollBarVisibility")?.Value);
-        Assert.Equal("StackPanel", itemsPanel.Name.LocalName);
-        Assert.Equal("{StaticResource LauncherSpacingSm}", itemsPanel.Attribute("Spacing")?.Value);
-        Assert.Equal("{StaticResource LauncherNewsRowHeight}", rowButton.Attribute("Height")?.Value);
-        Assert.True(HasClass(rowButton, "content-link"));
-        Assert.True(HasClass(rowBorder, "content-row"));
-        Assert.True(HasClass(rowBorder, "news-content-row"));
-        Assert.Equal("2", title.Attribute("MaxLines")?.Value);
-        Assert.Equal("Wrap", title.Attribute("TextWrapping")?.Value);
-        Assert.Equal("CharacterEllipsis", title.Attribute("TextTrimming")?.Value);
-        Assert.Equal("{Binding Title}", title.Attribute("ToolTip.Tip")?.Value);
-        Assert.Equal("Right", date.Attribute("HorizontalAlignment")?.Value);
-        Assert.Equal("Right", date.Attribute("TextAlignment")?.Value);
-
-        var styles = XDocument.Load(ProjectFile("Views/MainWindow.Styles.axaml"));
-        var newsContentRow = GetStyleSetters(styles, "Border.content-row.news-content-row");
-        Assert.Equal("{StaticResource LauncherThicknessSm}", newsContentRow["Padding"]);
-        Assert.Equal("{StaticResource LauncherThicknessNone}", newsContentRow["Margin"]);
+        Assert.False(HasClass(remoteSurface, "surface"));
+        Assert.True(HasClass(bannerCard, "surface"));
+        Assert.True(HasClass(newsCard, "surface"));
+        Assert.Same(bannerCard.Parent, newsCard.Parent);
+        Assert.DoesNotContain(
+            newsCard.Descendants(),
+            element =>
+                element.Name.LocalName == "TextBlock"
+                && element.Attribute("Text")?.Value == "{Binding Shell.I18n[news]}");
     }
 
     [Fact]
-    public void MainWindow_CarouselNavigation_UsesTokenizedHitTargetsAndLocalizedNames()
-    {
-        var view = XDocument.Load(ProjectFile("Views/MainWindow.axaml"));
-        var styles = XDocument.Load(ProjectFile("Views/MainWindow.Styles.axaml"));
-        Dictionary<string, string> expectedNames = new(StringComparer.Ordinal)
-        {
-            ["{Binding RemoteContent.SelectPreviousBannerCommand}"] = "{Binding Shell.I18n[previousBanner]}",
-            ["{Binding RemoteContent.SelectNextBannerCommand}"] = "{Binding Shell.I18n[nextBanner]}"
-        };
-
-        foreach (var (command, expectedName) in expectedNames)
-        {
-            var button = view
-                .Descendants()
-                .Single(element =>
-                    element.Name.LocalName == "Button"
-                    && element.Attribute("Command")?.Value == command);
-            var icon = button.Elements().Single(element => element.Name.LocalName == "MaterialIcon");
-
-            Assert.True(HasClass(button, "carousel-navigation"));
-            Assert.Equal(expectedName, button.Attribute("ToolTip.Tip")?.Value);
-            Assert.Equal(
-                expectedName,
-                button.Attributes()
-                    .Single(attribute => attribute.Name.LocalName == "AutomationProperties.Name")
-                    .Value);
-            Assert.Equal("{StaticResource LauncherIconMd}", icon.Attribute("Width")?.Value);
-            Assert.Equal("{StaticResource LauncherIconMd}", icon.Attribute("Height")?.Value);
-        }
-
-        var navigation = GetStyleSetters(styles, "Button.icon-button.carousel-navigation");
-        Assert.Equal("{StaticResource LauncherControlHeightSetting}", navigation["Width"]);
-        Assert.Equal("{StaticResource LauncherControlHeightSetting}", navigation["Height"]);
-        Assert.Equal(
-            "{DynamicResource LauncherChromeHoverBrush}",
-            GetStyleSetters(styles, "Button.icon-button.carousel-navigation:pointerover")["Background"]);
-        Assert.Equal(
-            "{DynamicResource LauncherAccentSoftBrush}",
-            GetStyleSetters(styles, "Button.icon-button.carousel-navigation:pressed")["Background"]);
-    }
-
-    [Fact]
-    public void MainWindow_CarouselPlayback_KeepsPauseIndependentFromPageText()
+    public void MainWindow_CarouselPlayback_RemovesTheManualPauseButton()
     {
         var document = XDocument.Load(ProjectFile("Views/MainWindow.axaml"));
-        var pauseButton = document
-            .Descendants()
-            .Single(element =>
-                element.Name.LocalName == "Button"
-                && element.Attribute("Command")?.Value == "{Binding RemoteContent.ToggleCarouselLoopCommand}");
         var pageText = document
             .Descendants()
             .Single(element =>
                 element.Name.LocalName == "TextBlock"
                 && element.Attribute("Text")?.Value == "{Binding RemoteContent.CarouselPageText}");
-        var pauseIcon = pauseButton.Elements().Single(element => element.Name.LocalName == "MaterialIcon");
-        var sharedLayout = pageText
-            .Ancestors()
-            .Intersect(pauseButton.Ancestors())
-            .First(element => element.Attributes().Any(attribute =>
-                (attribute.Name.LocalName == "ColumnSpacing" || attribute.Name.LocalName == "Spacing")
-                && attribute.Value.StartsWith("{StaticResource LauncherSpacing", StringComparison.Ordinal)));
-
-        Assert.NotSame(pageText, pauseButton);
-        Assert.NotNull(sharedLayout);
+        Assert.DoesNotContain(
+            document.Descendants(),
+            element => element.Name.LocalName == "Button"
+                && element.Attribute("Command")?.Value == "{Binding RemoteContent.ToggleCarouselLoopCommand}");
         Assert.Equal("{Binding RemoteContent.CarouselPageText}", pageText.Attribute("Text")?.Value);
+    }
+
+    [Fact]
+    public void MainWindow_CarouselNavigation_HoverUsesSemiTransparentChromeBackground()
+    {
+        var document = XDocument.Load(ProjectFile("Views/MainWindow.Styles.axaml"));
+        var hoverStyle = document
+            .Descendants()
+            .Single(element =>
+                element.Name.LocalName == "Style"
+                && element.Attribute("Selector")?.Value == "Button.icon-button.carousel-navigation:pointerover");
+
         Assert.Equal(
-            "{Binding RemoteContent.ToggleCarouselLoopCommand}",
-            pauseButton.Attribute("Command")?.Value);
-        Assert.Equal("{Binding RemoteContent.CarouselPauseTooltip}", pauseButton.Attribute("ToolTip.Tip")?.Value);
+            "{DynamicResource Cafe.Color.Chrome.ControlHover}",
+            hoverStyle
+                .Elements()
+                .Single(element => element.Name.LocalName == "Setter" && element.Attribute("Property")?.Value == "Background")
+                .Attribute("Value")?.Value);
+
+        var navigationStyle = document
+            .Descendants()
+            .Single(element =>
+                element.Name.LocalName == "Style"
+                && element.Attribute("Selector")?.Value == "Button.icon-button.carousel-navigation");
         Assert.Equal(
-            "{Binding RemoteContent.CarouselPauseTooltip}",
-            pauseButton.Attributes()
-                .Single(attribute => attribute.Name.LocalName == "AutomationProperties.Name")
-                .Value);
-        Assert.Equal("{Binding RemoteContent.CarouselPauseIcon}", pauseIcon.Attribute("Kind")?.Value);
+            "{StaticResource Cafe.Control.Template.BorderButton}",
+            navigationStyle
+                .Elements()
+                .Single(element => element.Name.LocalName == "Setter" && element.Attribute("Property")?.Value == "Template")
+                .Attribute("Value")?.Value);
+    }
+
+    [Fact]
+    public void MainWindow_SocialLinks_UseTheRightSideVerticalRail()
+    {
+        var document = XDocument.Load(ProjectFile("Views/MainWindow.axaml"));
+        var rail = document
+            .Descendants()
+            .Single(element => element.Name.LocalName == "Border" && HasClass(element, "social-rail"));
+
+        Assert.Equal("Right", rail.Attribute("HorizontalAlignment")?.Value);
+        Assert.Equal("Center", rail.Attribute("VerticalAlignment")?.Value);
+        Assert.Contains(
+            rail.Descendants(),
+            element => element.Name.LocalName == "ItemsPanelTemplate"
+                && element.Elements().Single().Name.LocalName == "StackPanel");
+        Assert.Contains(
+            rail.Descendants(),
+            element => element.Name.LocalName == "Button"
+                && element.Attribute("Command")?.Value == "{Binding WindowChrome.OpenOfficialSiteCommand}");
     }
 
     private static readonly string[] StyleFiles =
     [
         "Views/MainWindow.Styles.axaml",
+        "Views/Styles/Controls.axaml",
         "Views/Styles/Diagnostics.axaml",
+        "Views/Styles/Foundation.axaml",
         "Views/Styles/RemoteContent.axaml",
         "Views/Styles/SetupWizard.axaml",
+        "Views/Styles/Theme.axaml",
         "Views/Styles/Toast.axaml"
     ];
 
@@ -677,7 +637,7 @@ public sealed partial class UiStyleContractTests
             [
                 "Settings.Editor.Current.Language",
                 "Settings.Editor.Current.CloseBehavior",
-                "Settings.Editor.Current.MotionMode"
+                "Settings.Editor.Current.StatusDetailMode"
             ],
             ["SettingsGameSection"] =
             [
@@ -703,10 +663,10 @@ public sealed partial class UiStyleContractTests
                 "Settings.Appearance.ThemeColorPaletteItems",
                 "Settings.Appearance.SelectedCustomThemeColor",
                 "Settings.Appearance.SelectedBackgroundFillColor",
+                "Settings.Appearance.IsMotionEnabled",
                 "Settings.ChooseBackgroundImageCommand",
                 "Settings.ChooseBackgroundFolderCommand",
                 "Settings.ClearBackgroundCommand",
-                "Settings.Appearance.IsWallpaperThemeColorSelected",
                 "Settings.Appearance.IsCustomThemeColorSelected",
                 "Settings.Appearance.IsBackgroundFitSelected",
                 "Settings.Appearance.IsCustomBackgroundSelected"
@@ -788,20 +748,40 @@ public sealed partial class UiStyleContractTests
         Assert.Equal("960", dialog.Attribute("MaxWidth")?.Value);
         Assert.Equal("620", dialog.Attribute("MaxHeight")?.Value);
         var dialogLayout = dialog.Elements().Single(element => element.Name.LocalName == "Grid");
-        Assert.Equal("Auto,*,Auto", dialogLayout.Attribute("RowDefinitions")?.Value);
+        Assert.Equal("*", dialogLayout.Attribute("RowDefinitions")?.Value);
 
         var workspace = document
             .Descendants()
             .Single(element =>
                 element.Name.LocalName == "Grid"
                 && HasClass(element, "settings-workspace"));
-        Assert.Equal("184,*", workspace.Attribute("ColumnDefinitions")?.Value);
+        Assert.Equal("188,*", workspace.Attribute("ColumnDefinitions")?.Value);
 
         var navigation = workspace
             .Descendants()
             .Single(element =>
                 element.Name.LocalName == "ListBox"
                 && HasClass(element, "settings-navigation"));
+        var navigationPane = workspace
+            .Descendants()
+            .Single(element =>
+                element.Name.LocalName == "Grid"
+                && HasClass(element, "settings-navigation-pane"));
+        var settingsTitle = navigationPane
+            .Descendants()
+            .Single(element =>
+                element.Name.LocalName == "TextBlock"
+                && HasClass(element, "settings-navigation-title"));
+        Assert.Equal("{Binding Shell.I18n[settings]}", settingsTitle.Attribute("Text")?.Value);
+        var closeButton = workspace
+            .Descendants()
+            .Single(element =>
+                element.Name.LocalName == "Button"
+                && HasClass(element, "settings-floating-close"));
+        Assert.Equal("1", closeButton.Attribute("Grid.Column")?.Value);
+        Assert.DoesNotContain(
+            workspace.Descendants(),
+            element => HasClass(element, "settings-dialog-header"));
         Assert.Equal(
             "{Binding Settings.Options.SettingsCategories}",
             navigation.Attribute("ItemsSource")?.Value);
@@ -857,85 +837,8 @@ public sealed partial class UiStyleContractTests
         Assert.Single(
             content.Descendants(),
             element => element.Name.LocalName == "ScrollViewer");
-        Assert.Single(
-            content.Descendants(),
-            element =>
-                element.Name.LocalName == "Border"
-                && HasClass(element, "status-summary"));
-    }
-
-    [Fact]
-    public void SettingsWorkspaceStyles_UseSemanticBrushesAndDesignTokens()
-    {
-        var document = XDocument.Load(ProjectFile("Views/MainWindow.Styles.axaml"));
-
-        Assert.Equal(
-            "0",
-            GetStyleSetters(document, "Grid.settings-workspace")["ColumnSpacing"]);
-        Assert.Equal(
-            "0",
-            GetStyleSetters(document, "Grid.settings-workspace")["Margin"]);
-        Assert.Equal(
-            "{DynamicResource LauncherContentRowBrush}",
-            GetStyleSetters(document, "ListBox.settings-navigation")["Background"]);
-        Assert.Equal(
-            "0",
-            GetStyleSetters(document, "ListBox.settings-navigation")["BorderThickness"]);
-        Assert.Equal(
-            "16,8,8,16",
-            GetStyleSetters(document, "ListBox.settings-navigation")["Padding"]);
-        Assert.Equal(
-            "0",
-            GetStyleSetters(document, "ListBox.settings-navigation > ListBoxItem")["BorderThickness"]);
-        Assert.Equal(
-            "{DynamicResource LauncherTransparentBrush}",
-            GetStyleSetters(document, "ListBox.settings-navigation > ListBoxItem")["BorderBrush"]);
-        Assert.Equal(
-            "0",
-            GetStyleSetters(document, "ListBox.settings-navigation > ListBoxItem")["CornerRadius"]);
-        Assert.Equal(
-            "8,12,12,12",
-            GetStyleSetters(document, "ListBox.settings-navigation > ListBoxItem")["Padding"]);
-        Assert.Equal(
-            "3,0,0,0",
-            GetStyleSetters(document, "ListBox.settings-navigation > ListBoxItem:selected")["BorderThickness"]);
-        Assert.Equal(
-            "{DynamicResource LauncherAccentBrush}",
-            GetStyleSetters(document, "ListBox.settings-navigation > ListBoxItem:selected")["BorderBrush"]);
-        Assert.Equal(
-            "{DynamicResource LauncherFlatPressedBrush}",
-            GetStyleSetters(document, "ListBox.settings-navigation > ListBoxItem:selected:not(:focus)")["Background"]);
-        Assert.Equal(
-            "{DynamicResource LauncherTextPrimaryBrush}",
-            GetStyleSetters(document, "ListBox.settings-navigation > ListBoxItem:selected:not(:focus)")["Foreground"]);
-        Assert.Equal(
-            "{DynamicResource LauncherAccentBrush}",
-            GetStyleSetters(document, "ListBox.settings-navigation > ListBoxItem:selected:not(:focus)")["BorderBrush"]);
-        Assert.Equal(
-            "3,0,0,0",
-            GetStyleSetters(document, "ListBox.settings-navigation > ListBoxItem:selected:not(:focus)")["BorderThickness"]);
-        Assert.Equal(
-            "{StaticResource LauncherSpacingMd}",
-            GetStyleSetters(document, "Grid.settings-content")["RowSpacing"]);
-        Assert.Equal(
-            "0",
-            GetStyleSetters(document, "StackPanel.settings-category-header")["Spacing"]);
-        Assert.Equal(
-            "0,0,0,8",
-            GetStyleSetters(document, "Border.settings-status-summary")["Padding"]);
-        Assert.Equal(
-            "{StaticResource LauncherFontSizeLg}",
-            GetStyleSetters(document, "TextBlock.group-title")["FontSize"]);
-        Assert.Equal(
-            "0,12,0,0",
-            GetStyleSetters(document, "Grid.settings-row")["Margin"]);
-
-        var overlayDocument = XDocument.Load(ProjectFile("Views/MainWindowSettingsOverlay.axaml"));
-        var scrollViewer = overlayDocument
-            .Descendants()
-            .Single(element => element.Name.LocalName == "ScrollViewer");
-        Assert.Equal("Auto", scrollViewer.Attribute("VerticalScrollBarVisibility")?.Value);
-        Assert.Equal("Disabled", scrollViewer.Attribute("HorizontalScrollBarVisibility")?.Value);
+        Assert.DoesNotContain(content.Descendants(), element => HasClass(element, "status-summary"));
+        Assert.Contains(content.Descendants(), element => HasClass(element, "settings-save-error"));
     }
 
     [Fact]
@@ -972,7 +875,41 @@ public sealed partial class UiStyleContractTests
     }
 
     [Fact]
-    public void AppearancePalette_ReservesWidthForFiveInteractiveSwatches()
+    public void AppearanceSection_UsesCompactToggleTemplateSpacing()
+    {
+        var document = XDocument.Load(ProjectFile("Views/SettingsAppearanceSection.axaml"));
+        var resources = document.Root?
+            .Elements()
+            .Single(element => element.Name.LocalName == "UserControl.Resources");
+
+        Assert.NotNull(resources);
+        Assert.Equal(
+            "2",
+            resources!.Elements().Single(element =>
+                    element.Attributes().Single(attribute => attribute.Name.LocalName == "Key").Value
+                        == "ToggleSwitchPreContentMargin")
+                .Value);
+        Assert.Equal(
+            "2",
+            resources.Elements().Single(element =>
+                    element.Attributes().Single(attribute => attribute.Name.LocalName == "Key").Value
+                        == "ToggleSwitchPostContentMargin")
+                .Value);
+
+        var toggles = document
+            .Descendants()
+            .Where(element => element.Name.LocalName == "ToggleSwitch")
+            .ToArray();
+        Assert.Equal(2, toggles.Length);
+        Assert.All(toggles, toggle =>
+        {
+            Assert.Contains("design-toggle", toggle.Attribute("Classes")?.Value, StringComparison.Ordinal);
+            Assert.Equal("Center", toggle.Attribute("VerticalAlignment")?.Value);
+        });
+    }
+
+    [Fact]
+    public void AppearancePalette_ReservesWidthForFourDesignSwatches()
     {
         var document = XDocument.Load(ProjectFile("Views/SettingsAppearanceSection.axaml"));
         var palette = document
@@ -982,7 +919,91 @@ public sealed partial class UiStyleContractTests
                 && element.Attribute("ItemsSource")?.Value
                     == "{Binding Settings.Appearance.ThemeColorPaletteItems}");
 
-        Assert.Equal("212", palette.Attribute("Width")?.Value);
+        Assert.Equal("136", palette.Attribute("Width")?.Value);
+    }
+
+    [Fact]
+    public void AppearancePalette_IsOnlyVisibleForWallpaperAndRetainsRefreshAction()
+    {
+        var document = XDocument.Load(ProjectFile("Views/SettingsAppearanceSection.axaml"));
+        var paletteFrame = document
+            .Descendants()
+            .Single(element =>
+                element.Name.LocalName == "Border"
+                && HasClass(element, "settings-row-frame"));
+
+        Assert.Equal(
+            "{Binding Settings.Appearance.IsWallpaperThemeColorSelected}",
+            paletteFrame.Attribute("IsVisible")?.Value);
+
+        var refreshButton = paletteFrame
+            .Descendants()
+            .Single(element =>
+                element.Name.LocalName == "Button"
+                && element.Attribute("Command")?.Value
+                    == "{Binding Settings.Appearance.RefreshThemeColorPaletteCommand}");
+
+        Assert.Equal(
+            "{Binding Shell.I18n[refreshThemeColorPalette]}",
+            refreshButton.Attribute("AutomationProperties.Name")?.Value);
+        Assert.Equal(
+            "{Binding Shell.I18n[refreshThemeColorPalette]}",
+            refreshButton.Attribute("ToolTip.Tip")?.Value);
+    }
+
+    [Fact]
+    public void AppearancePalette_UsesPrototypeColorPickerMetrics()
+    {
+        var view = XDocument.Load(ProjectFile("Views/SettingsAppearanceSection.axaml"));
+        var paletteButton = view
+            .Descendants()
+            .Single(element =>
+                element.Name.LocalName == "Button"
+                && HasClass(element, "color-swatch-button"));
+
+        Assert.Equal("{Binding IsSelected}", paletteButton.Attribute("Classes.selected")?.Value);
+        Assert.DoesNotContain(
+            paletteButton.Descendants(),
+            element => element.Attribute("Classes.selected") is not null);
+
+        var styles = XDocument.Load(ProjectFile("Views/MainWindow.Styles.axaml"));
+        var colorPickerStyle = styles
+            .Descendants()
+            .Single(element =>
+                element.Name.LocalName == "Style"
+                && element.Attribute("Selector")?.Value == "ColorPicker.setting-control");
+        Assert.Equal(
+            "178",
+            colorPickerStyle.Elements().Single(element => element.Attribute("Property")?.Value == "Width")
+                .Attribute("Value")?.Value);
+
+        var paletteStyle = styles
+            .Descendants()
+            .Single(element =>
+                element.Name.LocalName == "Style"
+                && element.Attribute("Selector")?.Value == "Button.color-swatch-button");
+        Assert.Equal(
+            "{DynamicResource Cafe.Color.Surface.Dialog}",
+            paletteStyle.Elements().Single(element => element.Attribute("Property")?.Value == "Background")
+                .Attribute("Value")?.Value);
+        Assert.Equal(
+            "{DynamicResource Cafe.Color.Border.Button}",
+            paletteStyle.Elements().Single(element => element.Attribute("Property")?.Value == "BorderBrush")
+                .Attribute("Value")?.Value);
+
+        var selectedPaletteStyle = styles
+            .Descendants()
+            .Single(element =>
+                element.Name.LocalName == "Style"
+                && element.Attribute("Selector")?.Value == "Button.color-swatch-button.selected");
+        Assert.Equal(
+            "{DynamicResource Cafe.Color.Accent}",
+            selectedPaletteStyle.Elements().Single(element => element.Attribute("Property")?.Value == "BorderBrush")
+                .Attribute("Value")?.Value);
+        Assert.Equal(
+            "2",
+            selectedPaletteStyle.Elements().Single(element => element.Attribute("Property")?.Value == "BorderThickness")
+                .Attribute("Value")?.Value);
     }
 
     [Fact]
@@ -995,110 +1016,17 @@ public sealed partial class UiStyleContractTests
         Assert.True(HasClass(root!, "settings-group"));
     }
 
-    private static readonly HashSet<string> IconTokens =
-    [
-        "{StaticResource LauncherIconSm}",
-        "{StaticResource LauncherIconMd}",
-        "{StaticResource LauncherIconLg}",
-        "{StaticResource LauncherIconXl}",
-        "{StaticResource LauncherIconXxl}"
-    ];
-
     [Fact]
-    public void DesignTokens_ContainExactSpacingRadiusIconAndControlHeightValues()
+    public void AboutSection_DoesNotRenderDecorativeHeadingIcon()
     {
-        var document = XDocument.Load(ProjectFile("App.axaml"));
-        var resources = document
+        var document = XDocument.Load(ProjectFile("Views/SettingsAboutSection.axaml"));
+        var heading = document
             .Descendants()
-            .Where(element => element.Attributes().Any(attribute => attribute.Name.LocalName == "Key"))
-            .GroupBy(
-                element => element.Attributes().Single(attribute => attribute.Name.LocalName == "Key").Value,
-                StringComparer.Ordinal)
-            .ToDictionary(
-                group => group.Key,
-                group => group.First().Value.Trim(),
-                StringComparer.Ordinal);
+            .Single(element => element.Name.LocalName == "StackPanel" && HasClass(element, "card-heading"));
 
-        Assert.Equal("40", resources["LauncherSpacingSection"]);
-        Assert.Equal("16,0,4,0", resources["LauncherPathFieldPadding"]);
-        var pathFieldPadding = document
-            .Descendants()
-            .Single(element =>
-                element.Attributes().Any(attribute =>
-                    attribute.Name.LocalName == "Key"
-                    && attribute.Value == "LauncherPathFieldPadding"));
-        Assert.Equal("Thickness", pathFieldPadding.Name.LocalName);
-        Assert.Equal("8", resources["LauncherThicknessSm"]);
-        Assert.Equal("12", resources["LauncherThicknessMd"]);
-        Assert.Equal("16", resources["LauncherThicknessLg"]);
-        Assert.All(
-            document
-                .Descendants()
-                .Where(element =>
-                    element.Attributes().Any(attribute =>
-                        attribute.Name.LocalName == "Key"
-                        && (attribute.Value == "LauncherThicknessSm"
-                            || attribute.Value == "LauncherThicknessMd"
-                            || attribute.Value == "LauncherThicknessLg"))),
-            element => Assert.Equal("Thickness", element.Name.LocalName));
-        Assert.Equal("4", resources["LauncherRadiusSm"]);
-        Assert.Equal("6", resources["LauncherRadiusMd"]);
-        Assert.Equal("8", resources["LauncherRadiusLg"]);
-        Assert.Equal("16", resources["LauncherIconSm"]);
-        Assert.Equal("18", resources["LauncherIconMd"]);
-        Assert.Equal("20", resources["LauncherIconLg"]);
-        Assert.Equal("22", resources["LauncherIconXl"]);
-        Assert.Equal("24", resources["LauncherIconXxl"]);
-        Assert.Equal("36", resources["LauncherControlHeightSetting"]);
-        Assert.Equal("42", resources["LauncherControlHeightDialog"]);
-        Assert.Equal("48", resources["LauncherControlHeightBottom"]);
-        Assert.Equal("58", resources["LauncherControlHeightLaunch"]);
-    }
-
-    [Fact]
-    public void TypographyTokens_ContainExactScaleWeightAndFamilyValues()
-    {
-        var appDocument = XDocument.Load(ProjectFile("App.axaml"));
-        var resources = appDocument
-            .Descendants()
-            .Where(element => element.Attributes().Any(attribute => attribute.Name.LocalName == "Key"))
-            .GroupBy(
-                element => element.Attributes().Single(attribute => attribute.Name.LocalName == "Key").Value,
-                StringComparer.Ordinal)
-            .ToDictionary(
-                group => group.Key,
-                group => group.First().Value.Trim(),
-                StringComparer.Ordinal);
-
-        Assert.Equal("11", resources["LauncherFontSizeXs"]);
-        Assert.Equal("12", resources["LauncherFontSizeSm"]);
-        Assert.Equal("13", resources["LauncherFontSizeMd"]);
-        Assert.Equal("14", resources["LauncherFontSizeLg"]);
-        Assert.Equal("15", resources["LauncherFontSizeXl"]);
-        Assert.Equal("16", resources["LauncherFontSizeXxl"]);
-        Assert.Equal("17", resources["LauncherFontSizeHeadingSm"]);
-        Assert.Equal("18", resources["LauncherFontSizeHeadingMd"]);
-        Assert.Equal("19", resources["LauncherFontSizeHeadingLg"]);
-        Assert.Equal("22", resources["LauncherFontSizeDisplay"]);
-        Assert.Equal("Normal", resources["LauncherFontWeightNormal"]);
-        Assert.Equal("SemiBold", resources["LauncherFontWeightStrong"]);
-        Assert.Equal("Consolas", resources["LauncherFontFamilyMonospace"]);
-
-        var stylesDocument = XDocument.Load(ProjectFile("Views/MainWindow.Styles.axaml"));
-        var typographySetters = stylesDocument
-            .Descendants()
-            .Where(element =>
-                element.Name.LocalName == "Setter"
-                && element.Attribute("Property")?.Value is "FontSize" or "FontWeight")
-            .ToArray();
-
-        Assert.NotEmpty(typographySetters);
-        Assert.All(
-            typographySetters,
-            setter => Assert.StartsWith(
-                "{StaticResource LauncherFont",
-                setter.Attribute("Value")?.Value,
-                StringComparison.Ordinal));
+        Assert.DoesNotContain(
+            heading.Elements(),
+            element => element.Name.LocalName == "MaterialIcon");
     }
 
     [Fact]
@@ -1115,147 +1043,14 @@ public sealed partial class UiStyleContractTests
         Assert.DoesNotContain(".WithInterFont()", program, StringComparison.Ordinal);
         Assert.DoesNotContain("Avalonia.Fonts.Inter", packageNames);
 
-        var appDocument = XDocument.Load(ProjectFile("App.axaml"));
+        var appDocument = XDocument.Load(ProjectFile("Views/Styles/Foundation.axaml"));
         var monospace = appDocument
             .Descendants()
             .Single(element =>
                 element.Attributes().Any(attribute =>
                     attribute.Name.LocalName == "Key"
-                    && attribute.Value == "LauncherFontFamilyMonospace"));
+                    && attribute.Value == "Cafe.Type.Family.Monospace"));
         Assert.Equal("Consolas", monospace.Value.Trim());
-    }
-
-    [Fact]
-    public void FontWeight_StrongIsLimitedToConfirmedEmphasisScenarios()
-    {
-        var document = XDocument.Load(ProjectFile("Views/MainWindow.Styles.axaml"));
-        var strongSelectors = document
-            .Descendants()
-            .Where(element =>
-                element.Name.LocalName == "Style"
-                && element.Elements().Any(setter =>
-                    setter.Name.LocalName == "Setter"
-                    && setter.Attribute("Property")?.Value == "FontWeight"
-                    && setter.Attribute("Value")?.Value
-                        == "{StaticResource LauncherFontWeightStrong}"))
-            .Select(element => element.Attribute("Selector")?.Value)
-            .ToHashSet(StringComparer.Ordinal);
-
-        var expectedSelectors = new HashSet<string>(StringComparer.Ordinal)
-        {
-            "TextBlock.heading",
-            "TextBlock.dialog-title",
-            "TextBlock.titlebar-brand",
-            "TextBlock.progress-title",
-            "TextBlock.panel-title",
-            "TextBlock.section-title",
-            "TextBlock.group-title",
-            "TextBlock.category-title",
-            "TextBlock.status-summary-title",
-            "TextBlock.operation-status-title",
-            "ListBox.settings-navigation > ListBoxItem:selected",
-            "Button.primary-action",
-            "Button.danger-action",
-            "Button.launcher-control.start"
-        };
-
-        Assert.True(
-            strongSelectors.SetEquals(expectedSelectors),
-            $"Strong font weight selectors: {string.Join(", ", strongSelectors.Order())}");
-
-        Assert.DoesNotContain(
-            document.Descendants(),
-            element =>
-                element.Name.LocalName == "Style"
-                && element.Attribute("Selector")?.Value == "Window"
-                && element.Elements().Any(setter =>
-                    setter.Name.LocalName == "Setter"
-                    && setter.Attribute("Property")?.Value == "FontWeight"));
-    }
-
-    [Fact]
-    public void SemanticComponents_UseBalancedDensityTokens()
-    {
-        var document = XDocument.Load(ProjectFile("Views/MainWindow.Styles.axaml"));
-
-        var settingsSection = GetStyleSetters(document, "Border.settings-section");
-        Assert.Equal("{StaticResource LauncherThicknessLg}", settingsSection["Padding"]);
-        Assert.Equal("{StaticResource LauncherRadiusMd}", settingsSection["CornerRadius"]);
-
-        var contentRow = GetStyleSetters(document, "Border.content-row");
-        Assert.Equal("12", contentRow["Padding"]);
-        Assert.Equal("0,0,0,4", contentRow["Margin"]);
-        Assert.Equal("{StaticResource LauncherRadiusSm}", contentRow["CornerRadius"]);
-
-        var dialog = GetStyleSetters(document, "Border.dialog");
-        Assert.Equal("{StaticResource LauncherRadiusLg}", dialog["CornerRadius"]);
-
-        var settingControl = GetStyleSetters(document, "ComboBox.setting-control");
-        Assert.False(settingControl.ContainsKey("Width"));
-        Assert.Equal("220", settingControl["MinWidth"]);
-        Assert.Equal(
-            "{StaticResource LauncherControlHeightSetting}",
-            settingControl["MinHeight"]);
-        Assert.Equal("Center", settingControl["VerticalAlignment"]);
-
-        var colorPickerControl = GetStyleSetters(document, "ColorPicker.setting-control");
-        Assert.Equal("220", colorPickerControl["Width"]);
-        Assert.Equal("220", colorPickerControl["MinWidth"]);
-        Assert.Equal(
-            "{StaticResource LauncherControlHeightSetting}",
-            colorPickerControl["MinHeight"]);
-
-        var dialogAction = GetStyleSetters(document, "Button.dialog-action");
-        Assert.Equal(
-            "{StaticResource LauncherControlHeightDialog}",
-            dialogAction["Height"]);
-
-        var bottomAction = GetStyleSetters(document, "Button.bottom-action");
-        Assert.Equal(
-            "{StaticResource LauncherControlHeightBottom}",
-            bottomAction["MinHeight"]);
-
-        var launchAction = GetStyleSetters(document, "Button.launcher-control.start");
-        Assert.Equal(
-            "{StaticResource LauncherControlHeightLaunch}",
-            launchAction["MinHeight"]);
-    }
-
-    [Fact]
-    public void InteractiveControlStyles_UseSharedFocusAndHeightTokens()
-    {
-        var document = XDocument.Load(ProjectFile("Views/MainWindow.Styles.axaml"));
-
-        var iconLink = GetStyleSetters(document, "Button.icon-link");
-        Assert.Equal("{StaticResource LauncherRadiusSm}", iconLink["CornerRadius"]);
-        Assert.Equal("{StaticResource LauncherFontSizeLg}", iconLink["FontSize"]);
-        Assert.Equal("Center", iconLink["HorizontalContentAlignment"]);
-        Assert.Equal("Center", iconLink["VerticalContentAlignment"]);
-
-        var flatAction = GetStyleSetters(document, "Button.flat-action");
-        Assert.Equal(
-            "{StaticResource LauncherControlHeightSetting}",
-            flatAction["MinHeight"]);
-        Assert.Equal("{StaticResource LauncherRadiusSm}", flatAction["CornerRadius"]);
-        Assert.Equal("Center", flatAction["HorizontalContentAlignment"]);
-        Assert.Equal("Center", flatAction["VerticalContentAlignment"]);
-
-        var sharedButtonFocus = GetStyleSetters(document, "Button:focus-visible");
-        Assert.Equal(
-            "{DynamicResource LauncherFocusRingBrush}",
-            sharedButtonFocus["BorderBrush"]);
-        Assert.Equal("2", sharedButtonFocus["BorderThickness"]);
-
-        var pathField = GetStyleSetters(document, "Border.path-field");
-        Assert.Equal(
-            "{StaticResource LauncherFieldHeight}",
-            pathField["Height"]);
-        Assert.Equal(
-            "{StaticResource LauncherPathFieldPadding}",
-            pathField["Padding"]);
-        Assert.Equal(
-            "{StaticResource LauncherDialogTitleHeight}",
-            GetStyleSetters(document, "Grid.dialog-header")["Height"]);
     }
 
     [Fact]
@@ -1275,7 +1070,10 @@ public sealed partial class UiStyleContractTests
 
                 Assert.NotNull(width);
                 Assert.NotNull(height);
-                Assert.Contains(width, IconTokens);
+                Assert.True(
+                    width.StartsWith("{StaticResource Cafe.Icon.", StringComparison.Ordinal)
+                    && width.EndsWith('}'),
+                    $"MaterialIcon width must use a Cafe.Icon semantic token, but was '{width}'.");
                 Assert.Equal(width, height);
             }
 
@@ -1288,121 +1086,9 @@ public sealed partial class UiStyleContractTests
             Assert.All(
                 spacingValues,
                 value => Assert.True(
-                    value.StartsWith("{StaticResource LauncherSpacing", StringComparison.Ordinal),
-                    $"Spacing value must use a LauncherSpacing token: {value}"));
-        }
-    }
-
-    [Fact]
-    public void UpdateFileList_HoverAndSelectionKeepReadableItemColors()
-    {
-        var document = XDocument.Load(ProjectFile("Views/MainWindow.Styles.axaml"));
-        var styles = document
-            .Descendants()
-            .Where(element => element.Name.LocalName == "Style")
-            .ToDictionary(
-                element => element.Attribute("Selector")?.Value ?? "",
-                element => element,
-                StringComparer.Ordinal);
-
-        foreach (var selector in new[]
-                 {
-                     "ListBox.update-file-list > ListBoxItem:pointerover /template/ ContentPresenter#PART_ContentPresenter",
-                     "ListBox.update-file-list > ListBoxItem:pressed /template/ ContentPresenter#PART_ContentPresenter",
-                     "ListBox.update-file-list > ListBoxItem:selected /template/ ContentPresenter#PART_ContentPresenter",
-                     "ListBox.update-file-list > ListBoxItem:selected:not(:focus) /template/ ContentPresenter#PART_ContentPresenter",
-                     "ListBox.update-file-list > ListBoxItem:selected:pointerover /template/ ContentPresenter#PART_ContentPresenter",
-                     "ListBox.update-file-list > ListBoxItem:selected:pressed /template/ ContentPresenter#PART_ContentPresenter"
-                 })
-        {
-            var setters = styles[selector]
-                .Elements()
-                .Where(element => element.Name.LocalName == "Setter")
-                .ToDictionary(
-                    element => element.Attribute("Property")?.Value ?? "",
-                    element => element.Attribute("Value")?.Value ?? "",
-                    StringComparer.Ordinal);
-
-            Assert.Equal(
-                "{DynamicResource LauncherCardBackgroundBrush}",
-                setters["Background"]);
-            Assert.Equal(
-                "{DynamicResource LauncherTextPrimaryBrush}",
-                setters["Foreground"]);
-        }
-    }
-
-    [Fact]
-    public void SettingsNavigation_HoverAndSelectionOverrideFluentDefaultColors()
-    {
-        var document = XDocument.Load(ProjectFile("Views/MainWindow.Styles.axaml"));
-        var styles = document
-            .Descendants()
-            .Where(element => element.Name.LocalName == "Style")
-            .ToDictionary(
-                element => element.Attribute("Selector")?.Value ?? "",
-                element => element,
-                StringComparer.Ordinal);
-
-        foreach (var selector in new[]
-                 {
-                     "ListBox.settings-navigation > ListBoxItem:pointerover /template/ ContentPresenter#PART_ContentPresenter",
-                     "ListBox.settings-navigation > ListBoxItem:pressed /template/ ContentPresenter#PART_ContentPresenter",
-                     "ListBox.settings-navigation > ListBoxItem:selected /template/ ContentPresenter#PART_ContentPresenter",
-                     "ListBox.settings-navigation > ListBoxItem:selected:not(:focus) /template/ ContentPresenter#PART_ContentPresenter",
-                     "ListBox.settings-navigation > ListBoxItem:selected:pointerover /template/ ContentPresenter#PART_ContentPresenter",
-                     "ListBox.settings-navigation > ListBoxItem:selected:pressed /template/ ContentPresenter#PART_ContentPresenter"
-                 })
-        {
-            var setters = styles[selector]
-                .Elements()
-                .Where(element => element.Name.LocalName == "Setter")
-                .ToDictionary(
-                    element => element.Attribute("Property")?.Value ?? "",
-                    element => element.Attribute("Value")?.Value ?? "",
-                    StringComparer.Ordinal);
-
-            Assert.Contains("Background", setters.Keys);
-            Assert.Contains("Foreground", setters.Keys);
-        }
-
-        var hoverSetters = styles["ListBox.settings-navigation > ListBoxItem:pointerover /template/ ContentPresenter#PART_ContentPresenter"]
-            .Elements()
-            .Where(element => element.Name.LocalName == "Setter")
-            .ToDictionary(
-                element => element.Attribute("Property")?.Value ?? "",
-                element => element.Attribute("Value")?.Value ?? "",
-                StringComparer.Ordinal);
-        Assert.Equal(
-            "{DynamicResource LauncherTransparentBrush}",
-            hoverSetters["Background"]);
-        Assert.Equal(
-            "{DynamicResource LauncherAccentBrush}",
-            hoverSetters["Foreground"]);
-
-        foreach (var selector in new[]
-                 {
-                     "ListBox.settings-navigation > ListBoxItem:pressed /template/ ContentPresenter#PART_ContentPresenter",
-                     "ListBox.settings-navigation > ListBoxItem:selected /template/ ContentPresenter#PART_ContentPresenter",
-                     "ListBox.settings-navigation > ListBoxItem:selected:not(:focus) /template/ ContentPresenter#PART_ContentPresenter",
-                     "ListBox.settings-navigation > ListBoxItem:selected:pointerover /template/ ContentPresenter#PART_ContentPresenter",
-                     "ListBox.settings-navigation > ListBoxItem:selected:pressed /template/ ContentPresenter#PART_ContentPresenter"
-                 })
-        {
-            var setters = styles[selector]
-                .Elements()
-                .Where(element => element.Name.LocalName == "Setter")
-                .ToDictionary(
-                    element => element.Attribute("Property")?.Value ?? "",
-                    element => element.Attribute("Value")?.Value ?? "",
-                    StringComparer.Ordinal);
-
-            Assert.Equal(
-                "{DynamicResource LauncherFlatPressedBrush}",
-                setters["Background"]);
-            Assert.Equal(
-                "{DynamicResource LauncherTextPrimaryBrush}",
-                setters["Foreground"]);
+                    value.StartsWith("{StaticResource Cafe.Space.", StringComparison.Ordinal)
+                    || value.StartsWith("{StaticResource Cafe.Layout.", StringComparison.Ordinal),
+                    $"Spacing value must use a semantic Cafe token: {value}"));
         }
     }
 
@@ -1422,7 +1108,9 @@ public sealed partial class UiStyleContractTests
                 attribute => attribute.Name.LocalName is "FontSize" or "FontWeight");
             Assert.DoesNotContain(
                 attributes,
-                attribute => attribute.Name.LocalName == "Padding");
+                attribute =>
+                    attribute.Name.LocalName == "Padding"
+                    && !attribute.Value.StartsWith("{StaticResource Cafe.", StringComparison.Ordinal));
             Assert.DoesNotContain(
                 attributes,
                 attribute =>
@@ -1432,14 +1120,15 @@ public sealed partial class UiStyleContractTests
     }
 
     [Fact]
-    public void CornerRadii_UseTheThreeDeclaredHierarchyTokens()
+    public void CornerRadii_UseDeclaredHierarchyTokens()
     {
         var allowedTokens = new HashSet<string>(StringComparer.Ordinal)
         {
             "0",
-            "{StaticResource LauncherRadiusSm}",
-            "{StaticResource LauncherRadiusMd}",
-            "{StaticResource LauncherRadiusLg}",
+            "{StaticResource Cafe.Radius.Small}",
+            "{StaticResource Cafe.Radius.Medium}",
+            "{StaticResource Cafe.Radius.Large}",
+            "{StaticResource Cafe.Radius.None}",
             "{TemplateBinding CornerRadius}"
         };
 
@@ -1455,6 +1144,84 @@ public sealed partial class UiStyleContractTests
                 .Select(attribute => attribute.Value);
 
             Assert.All(radiusValues, value => Assert.Contains(value, allowedTokens));
+        }
+    }
+
+    [Fact]
+    public void NewsCategoryTab_FocusUsesAStraightUnderline()
+    {
+        var document = XDocument.Load(ProjectFile("Views/Styles/RemoteContent.axaml"));
+        var baseStyle = document
+            .Descendants()
+            .Single(element => element.Name.LocalName == "Style"
+                && element.Attribute("Selector")?.Value == "Button.news-category-tab");
+        var focusStyle = document
+            .Descendants()
+            .Single(element => element.Name.LocalName == "Style"
+                && element.Attribute("Selector")?.Value == "Button.news-category-tab:focus-visible");
+
+        Assert.Equal(
+            "{x:Null}",
+            baseStyle.Elements().Single(element => element.Name.LocalName == "Setter"
+                && element.Attribute("Property")?.Value == "FocusAdorner")
+                .Attribute("Value")?.Value);
+        Assert.Equal(
+            "{StaticResource Cafe.Radius.None}",
+            baseStyle.Elements().Single(element => element.Name.LocalName == "Setter"
+                && element.Attribute("Property")?.Value == "CornerRadius")
+                .Attribute("Value")?.Value);
+        Assert.Equal(
+            "{DynamicResource Cafe.Border.TabUnderline}",
+            focusStyle.Elements().Single(element => element.Name.LocalName == "Setter"
+                && element.Attribute("Property")?.Value == "BorderThickness")
+                .Attribute("Value")?.Value);
+    }
+
+    [Fact]
+    public void SharedControls_DeclareTheApplicationCornerRadiusDefaults()
+    {
+        var document = XDocument.Load(ProjectFile("Views/Styles/Controls.axaml"));
+        var expected = new Dictionary<string, string>(StringComparer.Ordinal)
+        {
+            ["Button"] = "{StaticResource Cafe.Radius.Small}",
+            ["TextBox"] = "{StaticResource Cafe.Radius.Medium}",
+            ["ComboBox"] = "{StaticResource Cafe.Radius.Medium}",
+            ["ColorPicker"] = "{StaticResource Cafe.Radius.Medium}",
+            ["ListBox"] = "{StaticResource Cafe.Radius.Medium}",
+            ["ListBoxItem"] = "{StaticResource Cafe.Radius.Small}",
+            ["ProgressBar"] = "{StaticResource Cafe.Radius.Small}"
+        };
+
+        foreach (var (selector, radius) in expected)
+        {
+            var style = document
+                .Descendants()
+                .Single(element => element.Name.LocalName == "Style"
+                    && element.Attribute("Selector")?.Value == selector);
+            Assert.Equal(
+                radius,
+                style.Elements().Single(element => element.Name.LocalName == "Setter"
+                    && element.Attribute("Property")?.Value == "CornerRadius")
+                    .Attribute("Value")?.Value);
+        }
+    }
+
+    [Fact]
+    public void PrimaryAndDangerActions_UseTheMediumRadius()
+    {
+        var document = XDocument.Load(ProjectFile("Views/MainWindow.Styles.axaml"));
+
+        foreach (var selector in new[] { "Button.primary-action", "Button.danger-action" })
+        {
+            var style = document
+                .Descendants()
+                .Single(element => element.Name.LocalName == "Style"
+                    && element.Attribute("Selector")?.Value == selector);
+            Assert.Equal(
+                "{StaticResource Cafe.Radius.Medium}",
+                style.Elements().Single(element => element.Name.LocalName == "Setter"
+                    && element.Attribute("Property")?.Value == "CornerRadius")
+                    .Attribute("Value")?.Value);
         }
     }
 
@@ -1553,20 +1320,24 @@ public sealed partial class UiStyleContractTests
             var document = XDocument.Load(ProjectFile(path));
             foreach (var (command, expectedName) in expectedByCommand)
             {
-                var matchingButtons = document
+                var matchingActions = document
                     .Descendants()
                     .Where(element =>
-                        element.Name.LocalName == "Button"
-                        && element.Attribute("Command")?.Value == command)
+                        (element.Name.LocalName == "Button"
+                         && element.Attribute("Command")?.Value == command)
+                        || (element.Name.LocalName == "DialogFrame"
+                            && element.Attribute("CloseCommand")?.Value == command))
                     .ToList();
 
-                Assert.NotEmpty(matchingButtons);
+                Assert.NotEmpty(matchingActions);
                 Assert.All(
-                    matchingButtons,
-                    button => Assert.Equal(
+                    matchingActions,
+                    action => Assert.Equal(
                         expectedName,
-                        button.Attributes().SingleOrDefault(attribute =>
-                            attribute.Name.LocalName == "AutomationProperties.Name")?.Value));
+                        action.Attribute(
+                            action.Name.LocalName == "DialogFrame"
+                                ? "CloseToolTip"
+                                : "AutomationProperties.Name")?.Value));
             }
         }
     }
@@ -1594,6 +1365,9 @@ public sealed partial class UiStyleContractTests
         var resourceSwitch = resourcePanel
             .Descendants()
             .Single(element => element.Name.LocalName == "CheckBox");
+        var resourceStatus = resourcePanel
+            .Descendants()
+            .Single(element => element.Name.LocalName == "Border" && HasClass(element, "resource-panel-status"));
 
         Assert.Equal(2, uidInputs.Count);
         Assert.All(uidInputs, input => Assert.Equal(
@@ -1608,6 +1382,15 @@ public sealed partial class UiStyleContractTests
             "{Binding DisplayName}",
             resourceSwitch.Attributes().SingleOrDefault(attribute =>
                 attribute.Name.LocalName == "AutomationProperties.Name")?.Value);
+        Assert.DoesNotContain(
+            resourceStatus.Descendants(),
+            element => element.Name.LocalName == "TextBlock"
+                && element.Attribute("Text")?.Value == "{Binding ResourcePanel.ResourcePanelUidText}");
+        Assert.Single(
+            resourceStatus.Descendants(),
+            element =>
+                element.Name.LocalName == "TextBlock"
+                && element.Attribute("Text")?.Value == "{Binding ResourcePanel.ResourcePanelMessage}");
     }
 
     [Fact]
@@ -1652,54 +1435,53 @@ public sealed partial class UiStyleContractTests
             .Single(element => element.Attributes().Any(attribute =>
                 attribute.Name.LocalName == "Name"
                 && attribute.Value == "ActionPresenter"));
-        var application = XDocument.Load(ProjectFile("App.axaml"));
+        var application = XDocument.Load(ProjectFile("Views/Styles/Foundation.axaml"));
         var minWidthToken = application
             .Descendants()
             .Single(element => element.Attributes().Any(attribute =>
                 attribute.Name.LocalName == "Key"
-                && attribute.Value == "LauncherSettingRowContentMinWidth"));
+                && attribute.Value == "Cafe.Layout.Settings.RowContent.MinWidth"));
 
-        Assert.Equal("Auto,*,Auto", layout.Attribute("ColumnDefinitions")?.Value);
-        Assert.Equal("1", copy.Attribute("Grid.Column")?.Value);
+        Assert.Equal("*,Auto", layout.Attribute("ColumnDefinitions")?.Value);
+        Assert.Null(copy.Attribute("Grid.Column"));
         Assert.True(double.Parse(minWidthToken.Value, CultureInfo.InvariantCulture) > 0);
         Assert.Equal(
-            "{StaticResource LauncherSettingRowContentMinWidth}",
+            "{StaticResource Cafe.Layout.Settings.RowContent.MinWidth}",
             copy.Attribute("MinWidth")?.Value);
         Assert.Equal(2, textBlocks.Count);
         Assert.All(textBlocks, text => Assert.Equal("Wrap", text.Attribute("TextWrapping")?.Value));
-        Assert.Equal("2", action.Attribute("Grid.Column")?.Value);
+        Assert.Equal("1", action.Attribute("Grid.Column")?.Value);
+        var codeBehind = File.ReadAllText(ProjectFile("Controls/SettingRow.axaml.cs"));
+        Assert.Contains("CompactBreakpoint = 600", codeBehind, StringComparison.Ordinal);
+        Assert.Contains("Grid.SetColumn(ActionPresenter, isCompact ? 0 : 1);", codeBehind, StringComparison.Ordinal);
+        Assert.Contains("new RowDefinitions(\"Auto,Auto\")", codeBehind, StringComparison.Ordinal);
     }
 
     [Fact]
     public void ConfirmDialog_LongContentScrollsWhileActionsRemainFixed()
     {
         var document = XDocument.Load(ProjectFile("Controls/ConfirmDialog.axaml"));
-        var panel = document
-            .Descendants()
-            .Single(element => element.Name.LocalName == "Border" && HasClass(element, "confirm-panel"));
-        var layout = panel
-            .Elements()
-            .Single(element => element.Name.LocalName == "Grid");
-        var messageScroller = layout
-            .Elements()
-            .Single(element => element.Name.LocalName == "ScrollViewer");
-        var actions = layout
-            .Elements()
-            .Single(element => element.Name.LocalName == "StackPanel" && HasClass(element, "confirm-actions"));
+        var frame = document.Descendants().Single(element => element.Name.LocalName == "DialogFrame");
+        var frameDocument = XDocument.Load(ProjectFile("Controls/DialogFrame.axaml"));
+        var layout = frameDocument.Descendants().Single(element =>
+            element.Name.LocalName == "Grid"
+            && element.Attribute("RowDefinitions")?.Value == "Auto,*,Auto");
+        var messageScroller = layout.Elements().Single(element => element.Name.LocalName == "ScrollViewer");
+        var actions = document.Descendants().Single(element => element.Name.LocalName == "StackPanel" && HasClass(element, "confirm-actions"));
 
         Assert.Equal(
-            "{StaticResource LauncherConfirmDialogMaxHeight}",
-            panel.Attribute("MaxHeight")?.Value);
-        var application = XDocument.Load(ProjectFile("App.axaml"));
+            "{StaticResource Cafe.Layout.Dialog.Confirm.MaxHeight}",
+            frame.Attribute("MaxHeight")?.Value);
+        var application = XDocument.Load(ProjectFile("Views/Styles/Foundation.axaml"));
         var maxHeightToken = application
             .Descendants()
             .Single(element => element.Attributes().Any(attribute =>
                 attribute.Name.LocalName == "Key"
-                && attribute.Value == "LauncherConfirmDialogMaxHeight"));
+                && attribute.Value == "Cafe.Layout.Dialog.Confirm.MaxHeight"));
         Assert.Equal("480", maxHeightToken.Value);
         Assert.Equal("Auto,*,Auto", layout.Attribute("RowDefinitions")?.Value);
         Assert.Equal("1", messageScroller.Attribute("Grid.Row")?.Value);
-        Assert.Equal("2", actions.Attribute("Grid.Row")?.Value);
+        Assert.Null(actions.Attribute("Grid.Row"));
     }
 
     [Fact]
@@ -1730,27 +1512,9 @@ public sealed partial class UiStyleContractTests
         }
 
         var settingsOverlay = XDocument.Load(ProjectFile("Views/MainWindowSettingsOverlay.axaml"));
-        Dictionary<string, string> settingsActions = new(StringComparer.Ordinal)
-        {
-            ["{Binding WindowChrome.ShowSettingsCommand}"] = "{Binding Shell.I18n[cancel]}",
-            ["{Binding Settings.SaveSettingsCommand}"] = "{Binding Shell.I18n[save]}"
-        };
-
-        foreach (var (command, expectedBinding) in settingsActions)
-        {
-            var button = settingsOverlay
-                .Descendants()
-                .Single(element =>
-                    element.Name.LocalName == "Button"
-                    && HasClass(element, "dialog-action")
-                    && element.Attribute("Command")?.Value == command);
-            Assert.Equal(expectedBinding, button.Attribute("ToolTip.Tip")?.Value);
-            Assert.Equal(
-                expectedBinding,
-                button.Attributes()
-                    .Single(attribute => attribute.Name.LocalName == "AutomationProperties.Name")
-                    .Value);
-        }
+        Assert.DoesNotContain(
+            settingsOverlay.Descendants(),
+            element => element.Name.LocalName == "Button" && HasClass(element, "dialog-action"));
     }
 
     [Theory]
@@ -1932,45 +1696,187 @@ public sealed partial class UiStyleContractTests
                 element.Name.LocalName == "Setter"
                 && element.Attribute("Property")?.Value == "Foreground"
                 && element.Attribute("Value")?.Value
-                    == "{DynamicResource LauncherTextSecondaryBrush}");
+                    == "{DynamicResource Cafe.Color.Text.Muted}");
     }
 
-    [Fact]
-    public void LogViewer_UsesFixedDialogDimensions()
+    [Theory]
+    [InlineData("Views/MainWindowDialogsOverlay.axaml", "{Binding ResourcePanel.CloseResourcePanelCommand}")]
+    [InlineData("Views/MainWindowLogViewerOverlay.axaml", "{Binding LogViewer.CloseCommand}")]
+    [InlineData("Views/MainWindowDebugOverlay.axaml", "{Binding Debug.CloseCommand}")]
+    public void ToolPanel_UsesSharedDialogFrame(string relativePath, string closeCommand)
     {
-        var document = XDocument.Load(ProjectFile("Views/MainWindowLogViewerOverlay.axaml"));
-        var dialog = document
+        var document = XDocument.Load(ProjectFile(relativePath));
+        var frame = document
             .Descendants()
             .Single(element =>
-                element.Name.LocalName == "Border"
-                && HasClass(element, "overlay-dialog"));
+                element.Name.LocalName == "DialogFrame"
+                && element.Attribute("UseToolPanelChrome")?.Value == "True");
 
-        Assert.Equal(
-            "{StaticResource LauncherLogViewerWidth}",
-            dialog.Attribute("Width")?.Value);
-        Assert.Equal(
-            "{StaticResource LauncherLogViewerHeight}",
-            dialog.Attribute("Height")?.Value);
-        Assert.Null(dialog.Attribute("MaxWidth"));
-        Assert.Null(dialog.Attribute("MaxHeight"));
+        Assert.Equal("False", frame.Attribute("ShowIcon")?.Value);
+        Assert.Equal(closeCommand, frame.Attribute("CloseCommand")?.Value);
+        Assert.NotNull(frame.Element(frame.Name.Namespace + "DialogFrame.BodyContent"));
+        Assert.NotNull(frame.Element(frame.Name.Namespace + "DialogFrame.ActionsContent"));
     }
 
     [Fact]
-    public void LocalizationManagement_UsesFixedDialogDimensions()
+    public void DebugPanel_UsesDialogBodyPaddingWithoutNestedMargin()
+    {
+        var document = XDocument.Load(ProjectFile("Views/MainWindowDebugOverlay.axaml"));
+        var frame = document
+            .Descendants()
+            .Single(element =>
+                element.Name.LocalName == "DialogFrame"
+                && element.Attribute("UseToolPanelChrome")?.Value == "True");
+        var bodyContent = frame.Element(frame.Name.Namespace + "DialogFrame.BodyContent");
+        Assert.NotNull(bodyContent);
+
+        var content = bodyContent!
+            .Elements()
+            .Single(element => element.Name.LocalName == "StackPanel");
+
+        Assert.Equal("{StaticResource Cafe.Space.3}", content.Attribute("Spacing")?.Value);
+        Assert.Null(content.Attribute("Margin"));
+    }
+
+    [Fact]
+    public void GenericDialogs_UseSharedDialogFrameShell()
     {
         var document = XDocument.Load(ProjectFile("Views/MainWindowDialogsOverlay.axaml"));
-        var dialog = FindMotionOverlay(
-                document,
-                "{Binding ResourcePanel.IsResourcePanelVisible}")
-            .Elements()
-            .Single(element =>
-                element.Name.LocalName == "Border"
-                && HasClass(element, "overlay-dialog"));
+        var titleBindings = new[]
+        {
+            "{Binding Shell.I18n[notice]}",
+            "{Binding Shell.I18n[launcherUpdateAvailableTitle]}",
+            "{Binding Shell.I18n[errorDialogTitle]}"
+        };
 
-        Assert.Equal("720", dialog.Attribute("Width")?.Value);
-        Assert.Equal("592", dialog.Attribute("Height")?.Value);
-        Assert.Null(dialog.Attribute("MaxWidth"));
-        Assert.Null(dialog.Attribute("MaxHeight"));
+        foreach (var titleBinding in titleBindings)
+        {
+            var frame = document
+                .Descendants()
+                .Single(element =>
+                    element.Name.LocalName == "DialogFrame"
+                    && element.Attribute("Title")?.Value == titleBinding);
+
+            Assert.Equal("True", frame.Attribute("IsConfirmPanel")?.Value);
+            Assert.NotNull(frame.Element(frame.Name.Namespace + "DialogFrame.BodyContent"));
+            Assert.NotNull(frame.Element(frame.Name.Namespace + "DialogFrame.ActionsContent"));
+        }
+
+        Assert.DoesNotContain(
+            document.Descendants(),
+            element =>
+                element.Name.LocalName == "Border"
+                && HasClass(element, "dialog")
+                && HasClass(element, "confirm-panel"));
+    }
+
+    [Fact]
+    public void DialogFrame_UsesSharedCloseAndBodyConstraints()
+    {
+        var document = XDocument.Load(ProjectFile("Controls/DialogFrame.axaml"));
+        var closeButton = document
+            .Descendants()
+            .Single(element => element.Name.LocalName == "Button" && HasClass(element, "dialog-close"));
+        var body = document
+            .Descendants()
+            .Single(element => element.Name.LocalName == "ScrollViewer" && HasClass(element, "dialog-frame-body"));
+
+        Assert.Equal("{Binding ShowCloseButton, ElementName=Root}", closeButton.Attribute("IsVisible")?.Value);
+        Assert.Equal("{Binding BodyMaxHeight, ElementName=Root}", body.Attribute("MaxHeight")?.Value);
+    }
+
+    [Fact]
+    public void DialogFrame_ConfirmPanelsKeepInnerContentMargin()
+    {
+        var document = XDocument.Load(ProjectFile("Controls/DialogFrame.axaml"));
+        var layout = document
+            .Descendants()
+            .Single(element =>
+                element.Name.LocalName == "Grid"
+                && element.Attribute("RowDefinitions")?.Value == "Auto,*,Auto");
+
+        Assert.Equal(
+            "{Binding IsConfirmPanel, ElementName=Root}",
+            layout.Attribute("Classes.confirm-layout")?.Value);
+    }
+
+    [Fact]
+    public void SharedStyles_UseCaptionAndInsetTokens()
+    {
+        var document = XDocument.Load(ProjectFile("Views/MainWindow.Styles.axaml"));
+        Dictionary<string, Dictionary<string, string>> expectedSetters = new(StringComparer.Ordinal)
+        {
+            ["TextBlock.caption"] = new(StringComparer.Ordinal)
+            {
+                ["FontSize"] = "{StaticResource Cafe.Type.Caption}"
+            },
+            ["Button.icon-link"] = new(StringComparer.Ordinal)
+            {
+                ["Padding"] = "{StaticResource Cafe.Inset.Tab}"
+            },
+            ["Button.flat-action"] = new(StringComparer.Ordinal)
+            {
+                ["Padding"] = "{StaticResource Cafe.Inset.Control}"
+            },
+            ["Grid.confirm-layout"] = new(StringComparer.Ordinal)
+            {
+                ["Margin"] = "{StaticResource Cafe.Inset.Large}"
+            },
+            ["Border.confirm-message"] = new(StringComparer.Ordinal)
+            {
+                ["Padding"] = "{StaticResource Cafe.Inset.Medium}"
+            },
+            ["TextBox.uid-input"] = new(StringComparer.Ordinal)
+            {
+                ["Padding"] = "{StaticResource Cafe.Inset.Control}"
+            }
+        };
+
+        foreach (var (selector, setters) in expectedSetters)
+        {
+            var style = document
+                .Descendants()
+                .Single(element =>
+                    element.Name.LocalName == "Style"
+                    && element.Attribute("Selector")?.Value == selector);
+
+            foreach (var (property, value) in setters)
+            {
+                Assert.Equal(
+                    value,
+                    style.Elements()
+                        .Single(element =>
+                            element.Name.LocalName == "Setter"
+                            && element.Attribute("Property")?.Value == property)
+                .Attribute("Value")?.Value);
+            }
+        }
+
+        var controls = XDocument.Load(ProjectFile("Views/Styles/Controls.axaml"));
+        var surfaceStyle = controls
+            .Descendants()
+            .Single(element =>
+                element.Name.LocalName == "Style"
+                && element.Attribute("Selector")?.Value == "Border.surface");
+        Assert.Equal(
+            "{StaticResource Cafe.Inset.Large}",
+            surfaceStyle.Elements()
+                .Single(element =>
+                    element.Name.LocalName == "Setter"
+                    && element.Attribute("Property")?.Value == "Padding")
+                .Attribute("Value")?.Value);
+
+        var diagnostics = XDocument.Load(ProjectFile("Views/Styles/Diagnostics.axaml"));
+        Assert.All(
+            diagnostics
+                .Descendants()
+                .Where(element =>
+                    element.Name.LocalName == "Style"
+                    && element.Attribute("Selector")?.Value is "Border.log-empty-state" or "ListBox.log-entry-list")
+                .SelectMany(style => style.Elements().Where(element =>
+                    element.Name.LocalName == "Setter"
+                    && element.Attribute("Property")?.Value == "Margin")),
+            setter => Assert.Equal("{StaticResource Cafe.Inset.Large}", setter.Attribute("Value")?.Value));
     }
 
     [Fact]
@@ -2004,16 +1910,6 @@ public sealed partial class UiStyleContractTests
     }
 
     [Fact]
-    public void ToastHost_AllowsHitTestingSoDismissButtonCanReceiveClicks()
-    {
-        var document = XDocument.Load(ProjectFile("Views/Styles/Toast.axaml"));
-
-        Assert.Equal(
-            "True",
-            GetStyleSetters(document, "Grid.toast-host")["IsHitTestVisible"]);
-    }
-
-    [Fact]
     public void BannerImage_UsesDistinctLoadingAndFailureStates()
     {
         var mainWindow = File.ReadAllText(ProjectFile("Views/MainWindow.axaml"));
@@ -2034,46 +1930,6 @@ public sealed partial class UiStyleContractTests
             "BannerBitmap, Converter={x:Static ObjectConverters.IsNull}",
             mainWindow,
             StringComparison.Ordinal);
-    }
-
-    [Fact]
-    public void RemoteContentPanel_UsesExplicitLoadingState()
-    {
-        var mainWindow = File.ReadAllText(ProjectFile("Views/MainWindow.axaml"));
-        var document = XDocument.Load(ProjectFile("Views/MainWindow.axaml"));
-        var styles = XDocument.Load(ProjectFile("Views/MainWindow.Styles.axaml"));
-        var app = XDocument.Load(ProjectFile("App.axaml"));
-
-        Assert.Contains(
-            "IsVisible=\"{Binding RemoteContent.IsPanelVisible}\"",
-            mainWindow,
-            StringComparison.Ordinal);
-        Assert.Contains(
-            "IsVisible=\"{Binding RemoteContent.IsLoading}\"",
-            mainWindow,
-            StringComparison.Ordinal);
-        Assert.Contains(
-            "Shell.I18n[remoteContentLoading]",
-            mainWindow,
-            StringComparison.Ordinal);
-        Assert.Contains(
-            "IsVisible=\"{Binding RemoteContent.HasLoadError}\"",
-            mainWindow,
-            StringComparison.Ordinal);
-        Assert.Contains(
-            "Shell.I18n[remoteContentLoadFailed]",
-            mainWindow,
-            StringComparison.Ordinal);
-        Assert.Equal("True", GetStyleSetters(styles, "Border.remote-surface")["ClipToBounds"]);
-        Assert.Equal("{StaticResource LauncherThicknessNone}", GetStyleSetters(styles, "Border.remote-surface")["Padding"]);
-        Assert.Equal("#99000000", app.Descendants().Single(element =>
-            element.Attribute(XName.Get("Key", "http://schemas.microsoft.com/winfx/2006/xaml"))?.Value == "LauncherOverlayBrush").Attribute("Color")?.Value);
-
-        var remoteSurface = document.Descendants().Single(element =>
-            element.Name.LocalName == "Border" && HasClass(element, "remote-surface"));
-        var panel = remoteSurface.Elements().Single(element => element.Name.LocalName == "Panel");
-        Assert.Equal(2, panel.Elements().Count(element => element.Name.LocalName == "Border"));
-        Assert.Single(panel.Elements(), element => element.Name.LocalName == "LoadingOverlay");
     }
 
     [Fact]
@@ -2141,29 +1997,6 @@ public sealed partial class UiStyleContractTests
     }
 
     [Fact]
-    public void SetupWizardNavigation_ReusesSettingsNavigationVisualStates()
-    {
-        var styles = XDocument.Load(ProjectFile("Views/MainWindow.Styles.axaml"));
-        var selected = GetStyleSetters(styles, "ListBox.settings-navigation > ListBoxItem:selected");
-        var disabled = GetStyleSetters(styles, "ListBox.settings-navigation > ListBoxItem:disabled");
-
-        Assert.Equal("3,0,0,0", selected["BorderThickness"]);
-        Assert.Equal("{DynamicResource LauncherAccentBrush}", selected["BorderBrush"]);
-        Assert.Equal("{DynamicResource LauncherTextSecondaryBrush}", disabled["Foreground"]);
-    }
-
-    [Fact]
-    public void SetupWizardNavigation_UsesSymmetricHorizontalPadding()
-    {
-        var styles = XDocument.Load(ProjectFile("Views/Styles/SetupWizard.axaml"));
-        var navigation = GetStyleSetters(
-            styles,
-            "ListBox.settings-navigation.wizard-navigation");
-
-        Assert.Equal("8,8,8,16", navigation["Padding"]);
-    }
-
-    [Fact]
     public void SetupWizardHeader_ShowsCurrentProgressBeforeTaskTitle()
     {
         var document = XDocument.Load(ProjectFile("Views/SetupWizardOverlay.axaml"));
@@ -2177,129 +2010,6 @@ public sealed partial class UiStyleContractTests
         Assert.Equal("{Binding Dialogs.SetupWizard.StepProgress}", textBlocks[0].Attribute("Text")?.Value);
         Assert.Equal("{Binding Dialogs.SetupWizard.StepTitle}", textBlocks[1].Attribute("Text")?.Value);
         Assert.True(HasClass(textBlocks[1], "dialog-title"));
-    }
-
-    [Fact]
-    public void SetupWizard_Review_UsesSeparatedCenteredRows()
-    {
-        var overlay = XDocument.Load(ProjectFile("Views/SetupWizardOverlay.axaml"));
-        var reviewStep = overlay
-            .Descendants()
-            .Single(element =>
-                element.Name.LocalName == "StackPanel"
-                && element.Attribute("IsVisible")?.Value
-                    == "{Binding Dialogs.SetupWizard.IsLastStep}");
-        var reviewContent = reviewStep
-            .Descendants()
-            .Single(element =>
-                element.Name.LocalName == "Border"
-                && HasClass(element, "info-strip"))
-            .Elements()
-            .Single(element => element.Name.LocalName == "StackPanel");
-        var reviewRows = reviewContent
-            .Elements()
-            .Where(element => element.Name.LocalName == "Grid")
-            .ToList();
-        var dividers = reviewContent
-            .Elements()
-            .Where(element =>
-                element.Name.LocalName == "Border"
-                && HasClass(element, "wizard-review-divider"))
-            .ToList();
-
-        Assert.Equal(4, reviewRows.Count);
-        Assert.All(reviewRows, row => Assert.True(HasClass(row, "wizard-review-row")));
-        Assert.Equal(3, dividers.Count);
-        Assert.Collection(
-            reviewContent.Elements(),
-            element => Assert.True(
-                element.Name.LocalName == "Grid" && HasClass(element, "wizard-review-row")),
-            element => Assert.True(
-                element.Name.LocalName == "Border" && HasClass(element, "wizard-review-divider")),
-            element => Assert.True(
-                element.Name.LocalName == "Grid" && HasClass(element, "wizard-review-row")),
-            element => Assert.True(
-                element.Name.LocalName == "Border" && HasClass(element, "wizard-review-divider")),
-            element => Assert.True(
-                element.Name.LocalName == "Grid" && HasClass(element, "wizard-review-row")),
-            element => Assert.True(
-                element.Name.LocalName == "Border" && HasClass(element, "wizard-review-divider")),
-            element => Assert.True(
-                element.Name.LocalName == "Grid" && HasClass(element, "wizard-review-row")));
-        Assert.All(
-            reviewRows,
-            row => Assert.All(
-                row.Elements().Where(element =>
-                    element.Name.LocalName is "TextBlock" or "Button"),
-                element => Assert.Equal("Center", element.Attribute("VerticalAlignment")?.Value)));
-
-        var styles = XDocument.Load(ProjectFile("Views/Styles/SetupWizard.axaml"));
-        var rowStyle = GetStyleSetters(styles, "Grid.wizard-review-row");
-        var dividerStyle = GetStyleSetters(styles, "Border.wizard-review-divider");
-
-        Assert.Equal("{StaticResource LauncherControlHeightDialog}", rowStyle["MinHeight"]);
-        Assert.Equal("Center", rowStyle["VerticalAlignment"]);
-        Assert.Equal("1", dividerStyle["Height"]);
-        Assert.Equal("{DynamicResource LauncherCardBorderBrush}", dividerStyle["Background"]);
-    }
-
-    [Fact]
-    public void SetupWizardGamePath_ShowsStatusWithSemanticStateStyles()
-    {
-        var overlay = XDocument.Load(ProjectFile("Views/SetupWizardOverlay.axaml"));
-        var gamePathInput = overlay
-            .Descendants()
-            .Single(element =>
-                element.Name.LocalName == "TextBox"
-                && element.Attribute("Text")?.Value
-                    == "{Binding Dialogs.SetupWizard.GamePath, Mode=TwoWay}")
-            .Parent;
-        Assert.NotNull(gamePathInput);
-        var status = gamePathInput
-            .ElementsAfterSelf()
-            .Single(element =>
-                element.Name.LocalName == "TextBlock"
-                && element.Attribute("Text")?.Value
-                    == "{Binding Dialogs.SetupWizard.GamePathStatusText}");
-
-        Assert.Equal(
-            "{Binding Dialogs.SetupWizard.GamePathStatusText}",
-            status.Attributes()
-                .Single(attribute => attribute.Name.LocalName == "AutomationProperties.Name")
-                .Value);
-        Assert.Equal(
-            "{Binding Dialogs.SetupWizard.IsGamePathEmpty, Converter={x:Static BoolConverters.Not}}",
-            status.Attribute("IsVisible")?.Value);
-        Assert.True(HasClass(status, "caption"));
-        Assert.True(HasClass(status, "wizard-game-path-status"));
-        Assert.Equal(
-            "{Binding Dialogs.SetupWizard.IsGamePathChecking}",
-            status.Attribute("Classes.checking")?.Value);
-        Assert.Equal(
-            "{Binding Dialogs.SetupWizard.IsGamePathReady}",
-            status.Attribute("Classes.ready")?.Value);
-        Assert.Equal(
-            "{Binding Dialogs.SetupWizard.IsGamePathCorruptedInstallation}",
-            status.Attribute("Classes.corrupted")?.Value);
-        Assert.Equal(
-            "{Binding Dialogs.SetupWizard.IsGamePathInaccessible}",
-            status.Attribute("Classes.inaccessible")?.Value);
-        Assert.Equal("CharacterEllipsis", status.Attribute("TextTrimming")?.Value);
-        Assert.Equal("1", status.Attribute("MaxLines")?.Value);
-
-        var styles = XDocument.Load(ProjectFile("Views/Styles/SetupWizard.axaml"));
-        Assert.Equal(
-            "{DynamicResource LauncherAccentBrush}",
-            GetStyleSetters(styles, "TextBlock.wizard-game-path-status.checking")["Foreground"]);
-        Assert.Equal(
-            "{DynamicResource LauncherSuccessBrush}",
-            GetStyleSetters(styles, "TextBlock.wizard-game-path-status.ready")["Foreground"]);
-        Assert.Equal(
-            "{DynamicResource LauncherDangerBrush}",
-            GetStyleSetters(styles, "TextBlock.wizard-game-path-status.corrupted")["Foreground"]);
-        Assert.Equal(
-            "{DynamicResource LauncherDangerBrush}",
-            GetStyleSetters(styles, "TextBlock.wizard-game-path-status.inaccessible")["Foreground"]);
     }
 
     [Fact]
@@ -2390,7 +2100,7 @@ public sealed partial class UiStyleContractTests
     }
 
     [Fact]
-    public void SettingsPanel_UsesTransactionalSaveAndCancelActions()
+    public void SettingsPanel_AutoSavesAndUsesOnlyTheHeaderCloseAction()
     {
         var settingsOverlay = File.ReadAllText(ProjectFile("Views/MainWindowSettingsOverlay.axaml"));
         var gameSection = File.ReadAllText(ProjectFile("Views/SettingsGameSection.axaml"));
@@ -2404,10 +2114,9 @@ public sealed partial class UiStyleContractTests
             "Command=\"{Binding WindowChrome.ShowSettingsCommand}\"",
             settingsOverlay,
             StringComparison.Ordinal);
-        Assert.Contains(
-            "IsEnabled=\"{Binding Settings.CanSaveSettings}\"",
-            settingsOverlay,
-            StringComparison.Ordinal);
+        Assert.DoesNotContain("Settings.RequestResetSettingsCommand", settingsOverlay, StringComparison.Ordinal);
+        Assert.DoesNotContain("Settings.SaveSettingsCommand", settingsOverlay, StringComparison.Ordinal);
+        Assert.Contains("RowDefinitions=\"Auto,*\"", settingsOverlay, StringComparison.Ordinal);
         var settingsDocument = XDocument.Parse(settingsOverlay);
         var settingsFooterButtons = settingsDocument
             .Descendants()
@@ -2418,11 +2127,7 @@ public sealed partial class UiStyleContractTests
                     is "{Binding WindowChrome.ShowSettingsCommand}"
                     or "{Binding Settings.SaveSettingsCommand}")
             .ToList();
-        Assert.Equal(2, settingsFooterButtons.Count);
-        Assert.DoesNotContain(
-            "Kind=\"ContentSave\" Width=\"{StaticResource LauncherIconMd}\" Height=\"{StaticResource LauncherIconMd}\" Foreground=",
-            settingsOverlay,
-            StringComparison.Ordinal);
+        Assert.Empty(settingsFooterButtons);
         // The escape-key resolution for the settings modal lives in ShellLifecycle
         // where modal coordination was consolidated from ShellCoordinator.
         var shellLifecycle = File.ReadAllText(ProjectFile("Features/Shell/ShellLifecycle.cs"));
@@ -2441,106 +2146,29 @@ public sealed partial class UiStyleContractTests
     }
 
     [Fact]
-    public void SettingsOverlay_UsesSingleRowStatusSummary()
+    public void SettingsOverlay_UsesPersistentAutoSaveFailureStateInsteadOfStatusSummary()
     {
         var document = XDocument.Load(ProjectFile("Views/MainWindowSettingsOverlay.axaml"));
-        var summaryGrid = document
-            .Descendants()
-            .Single(element =>
-                element.Name.LocalName == "Grid"
-                && element.Parent?.Name.LocalName == "Border"
-                && HasClass(element.Parent, "settings-status-summary"));
-
-        Assert.Equal("Auto,*,Auto,Auto", summaryGrid.Attribute("ColumnDefinitions")?.Value);
-        Assert.Null(summaryGrid.Attribute("RowDefinitions"));
-        Assert.DoesNotContain(
-            document.Descendants(),
-            element => element.Attribute("Text")?.Value == "{Binding Shell.OperationNote}");
-
-        var titleRow = summaryGrid
-            .Descendants()
-            .Single(element =>
-                element.Name.LocalName == "StackPanel"
-                && HasClass(element, "status-title-inline"));
-        Assert.Equal("Horizontal", titleRow.Attribute("Orientation")?.Value);
-        Assert.Equal(
-            ["{Binding Shell.CurrentViewTitle}", "{Binding Shell.VersionText}"],
-            titleRow
-                .Elements()
-                .Where(element => element.Name.LocalName == "TextBlock")
-                .Select(element => element.Attribute("Text")?.Value ?? "")
-                .ToArray());
-    }
-
-    [Fact]
-    public void SettingsStatusDetails_UseChipHeightWithoutVerticalPadding()
-    {
-        var document = XDocument.Load(ProjectFile("Views/MainWindow.Styles.axaml"));
-        var statusDetail = GetStyleSetters(document, "Border.status-detail");
-
-        Assert.Equal(
-            "{StaticResource LauncherChipHeight}",
-            statusDetail["Height"]);
-        Assert.Equal("12,0", statusDetail["Padding"]);
-    }
-
-    [Fact]
-    public void SettingsNavigation_SelectedItemUsesSemiboldText()
-    {
-        var document = XDocument.Load(ProjectFile("Views/MainWindow.Styles.axaml"));
-        var selected = GetStyleSetters(
-            document,
-            "ListBox.settings-navigation > ListBoxItem:selected");
-
-        Assert.Equal(
-            "{StaticResource LauncherFontWeightStrong}",
-            selected["FontWeight"]);
-        Assert.Equal(
-            "{DynamicResource LauncherFlatPressedBrush}",
-            selected["Background"]);
-    }
-
-    [Fact]
-    public void StatusSummary_TitleAndVersionUseMatchingTypography()
-    {
-        var document = XDocument.Load(ProjectFile("Views/MainWindow.Styles.axaml"));
-        var title = GetStyleSetters(document, "TextBlock.status-summary-title");
-        var version = GetStyleSetters(document, "TextBlock.status-summary-version");
-
-        Assert.Equal(title["FontSize"], version["FontSize"]);
-        Assert.Equal("Center", version["VerticalAlignment"]);
-    }
-
-    [Fact]
-    public void DialogClose_FocusUsesSubtleAccentTreatment()
-    {
-        var document = XDocument.Load(ProjectFile("Views/MainWindow.Styles.axaml"));
-        var focus = GetStyleSetters(document, "Button.dialog-close:focus-visible");
-
-        Assert.Equal("{DynamicResource LauncherAccentSoftBrush}", focus["Background"]);
-        Assert.Equal("{DynamicResource LauncherAccentBrush}", focus["BorderBrush"]);
-        Assert.Equal("1", focus["BorderThickness"]);
+        Assert.DoesNotContain(document.Descendants(), element => HasClass(element, "settings-status-summary"));
+        var error = document.Descendants().Single(element => HasClass(element, "settings-save-error"));
+        Assert.Equal("{Binding Settings.HasAutoSaveFailure}", error.Attribute("IsVisible")?.Value);
+        Assert.Contains(
+            error.Descendants(),
+            element => element.Name.LocalName == "Button"
+                && element.Attribute("Command")?.Value == "{Binding Settings.RetryAutoSaveCommand}");
     }
 
     [Fact]
     public void ConfirmDialogs_DangerousActionsUseDangerHeadingIcons()
     {
         var control = XDocument.Load(ProjectFile("Controls/ConfirmDialog.axaml"));
-        var icon = control
+        var frame = control
             .Descendants()
             .Single(element =>
-                element.Name.LocalName == "MaterialIcon"
-                && HasClass(element, "confirm-heading-icon"));
+                element.Name.LocalName == "DialogFrame");
         Assert.Equal(
             "{Binding IsDangerIcon, ElementName=Root}",
-            icon.Attribute("Classes.danger")?.Value);
-
-        var styles = XDocument.Load(ProjectFile("Views/MainWindow.Styles.axaml"));
-        Assert.Equal(
-            "{DynamicResource LauncherDangerBrush}",
-            GetStyleSetters(
-                styles,
-                "materialIcons|MaterialIcon.confirm-heading-icon.danger")["Foreground"]);
+            frame.Attribute("IsDanger")?.Value);
 
         var dialogs = XDocument.Load(ProjectFile("Views/MainWindowDialogsOverlay.axaml"));
         var dangerousConfirmDialogs = dialogs
@@ -2553,68 +2181,6 @@ public sealed partial class UiStyleContractTests
         Assert.All(
             dangerousConfirmDialogs,
             dialog => Assert.Equal("True", dialog.Attribute("IsDangerIcon")?.Value));
-    }
-
-    [Fact]
-    public void LogViewer_FilterControlsShareHeightAndSingleBottomGap()
-    {
-        var document = XDocument.Load(ProjectFile("Views/MainWindowLogViewerOverlay.axaml"));
-        var filterButtons = document
-            .Descendants()
-            .Where(element =>
-                element.Name.LocalName == "Button"
-                && HasClass(element, "log-filter"))
-            .ToList();
-        Assert.Equal(7, filterButtons.Count);
-
-        var search = document
-            .Descendants()
-            .Single(element =>
-                element.Name.LocalName == "TextBox"
-                && HasClass(element, "log-search"));
-        Assert.Equal(
-            "{StaticResource LauncherControlHeightSetting}",
-            search.Attribute("Height")?.Value);
-
-        var styles = XDocument.Load(ProjectFile("Views/MainWindow.Styles.axaml"));
-        Assert.Equal(
-            "{DynamicResource LauncherControlHeightSetting}",
-            GetStyleSetters(styles, "Button.news-tab.log-filter")["Height"]);
-        Assert.Equal(
-            "16,12,16,0",
-            GetStyleSetters(styles, "StackPanel.log-filter-bar")["Margin"]);
-    }
-
-    [Fact]
-    public void ResourcePanel_StatusStripHasVisibleSurfaceAndBorder()
-    {
-        var dialogs = XDocument.Load(ProjectFile("Views/MainWindowDialogsOverlay.axaml"));
-        var statusStrip = dialogs
-            .Descendants()
-            .Single(element =>
-                element.Name.LocalName == "Border"
-                && HasClass(element, "resource-panel-status"));
-        Assert.True(HasClass(statusStrip, "info-strip"));
-
-        var styles = XDocument.Load(ProjectFile("Views/MainWindow.Styles.axaml"));
-        var statusStyle = GetStyleSetters(styles, "Border.info-strip.resource-panel-status");
-        Assert.Equal(
-            "{DynamicResource LauncherContentRowBrush}",
-            statusStyle["Background"]);
-        Assert.Equal(
-            "{DynamicResource LauncherAccentBorderBrush}",
-            statusStyle["BorderBrush"]);
-        Assert.Equal("1", statusStyle["BorderThickness"]);
-    }
-
-    [Fact]
-    public void SettingsGroups_UseAvailableContentWidth()
-    {
-        var document = XDocument.Load(ProjectFile("Views/MainWindow.Styles.axaml"));
-        var settingsGroup = GetStyleSetters(document, "StackPanel.settings-group");
-
-        Assert.DoesNotContain("MaxWidth", settingsGroup.Keys);
-        Assert.DoesNotContain("HorizontalAlignment", settingsGroup.Keys);
     }
 
     [Fact]
@@ -2634,6 +2200,7 @@ public sealed partial class UiStyleContractTests
             "Button",
             "ColorPicker",
             "ComboBox",
+            "SettingComboRow",
             "TextBox",
             "ToggleSwitch"
         };
@@ -2651,10 +2218,13 @@ public sealed partial class UiStyleContractTests
                 controls,
                 control =>
                 {
+                    var nameAttribute = control.Name.LocalName == "SettingComboRow"
+                        ? "Title"
+                        : "AutomationProperties.Name";
                     var automationName = control
                         .Attributes()
                         .SingleOrDefault(attribute =>
-                            attribute.Name.LocalName == "AutomationProperties.Name")
+                            attribute.Name.LocalName == nameAttribute)
                         ?.Value;
 
                     Assert.False(
@@ -2666,21 +2236,14 @@ public sealed partial class UiStyleContractTests
     }
 
     [Fact]
-    public void AdvancedSettings_LogActionsBelongToDedicatedSettingRow()
+    public void AdvancedSettings_LogAndResetActionsBelongToDedicatedRows()
     {
         var document = XDocument.Load(ProjectFile("Views/SettingsAdvancedSection.axaml"));
-        var group = document
+        var logFilesRow = document
             .Descendants()
             .Single(element =>
-                element.Name.LocalName == "StackPanel"
-                && HasClass(element, "settings-group"));
-        var rows = group
-            .Elements()
-            .Where(element => element.Name.LocalName == "SettingRow")
-            .ToList();
-
-        Assert.Equal(2, rows.Count);
-        var logFilesRow = rows[1];
+                element.Name.LocalName == "SettingRow"
+                && element.Attribute("Title")?.Value == "{Binding Shell.I18n[logFiles]}");
         Assert.Equal(
             "{Binding Shell.I18n[logFiles]}",
             logFilesRow.Attribute("Title")?.Value);
@@ -2695,22 +2258,22 @@ public sealed partial class UiStyleContractTests
             .Elements()
             .Single(element => element.Name.LocalName == "WrapPanel");
         Assert.Equal(
-            "{StaticResource LauncherSpacingSm}",
+            "{StaticResource Cafe.Space.2}",
             actionPanel.Attribute("ItemSpacing")?.Value);
         Assert.Equal(
-            "{StaticResource LauncherSpacingSm}",
+            "{StaticResource Cafe.Space.2}",
             actionPanel.Attribute("LineSpacing")?.Value);
         Assert.Equal(
-            "{StaticResource LauncherSettingRowActionMaxWidth}",
+            "{StaticResource Cafe.Layout.Settings.RowAction.MaxWidth}",
             actionPanel.Attribute("MaxWidth")?.Value);
 
-        var app = XDocument.Load(ProjectFile("App.axaml"));
-        var actionMaxWidth = app
+        var foundation = XDocument.Load(ProjectFile("Views/Styles/Foundation.axaml"));
+        var actionMaxWidth = foundation
             .Descendants()
             .Single(element =>
                 element.Attributes().Any(attribute =>
                     attribute.Name.LocalName == "Key"
-                    && attribute.Value == "LauncherSettingRowActionMaxWidth"));
+                    && attribute.Value == "Cafe.Layout.Settings.RowAction.MaxWidth"));
         Assert.Equal("440", actionMaxWidth.Value);
 
         var commands = actionPanel
@@ -2728,8 +2291,29 @@ public sealed partial class UiStyleContractTests
             ],
             commands);
         Assert.DoesNotContain(
-            group.Elements(),
-            element => element.Name.LocalName == "WrapPanel");
+            document.Root!.Descendants(),
+            element => element.Name.LocalName == "WrapPanel" && element.Parent?.Name.LocalName == "StackPanel");
+
+        var resetRow = document
+            .Descendants()
+            .Single(element =>
+                element.Name.LocalName == "SettingRow"
+                && element.Attribute("Title")?.Value == "{Binding Shell.I18n[debugResetSettingsConfirm]}");
+        Assert.Equal(
+            "{Binding Shell.I18n[debugResetSettingsDescription]}",
+            resetRow.Attribute("Description")?.Value);
+        var resetButton = resetRow
+            .Descendants()
+            .Single(element =>
+                element.Name.LocalName == "Button"
+                && element.Attribute("Command")?.Value == "{Binding Settings.RequestResetSettingsCommand}");
+        Assert.True(HasClass(resetButton, "danger-action"));
+        Assert.Equal(
+            "{Binding Shell.I18n[debugResetSettingsConfirm]}",
+            resetButton.Attribute("AutomationProperties.Name")?.Value);
+        Assert.Equal(
+            "{Binding Shell.I18n[debugResetSettingsConfirm]}",
+            resetButton.Attribute("ToolTip.Tip")?.Value);
     }
 
     [Fact]
@@ -2758,13 +2342,15 @@ public sealed partial class UiStyleContractTests
             advancedText,
             "LogViewer.OpenCommand",
             "LogViewer.ExportCommand",
-            "WindowChrome.OpenDataDirectoryCommand");
+            "WindowChrome.OpenDataDirectoryCommand",
+            "Settings.RequestResetSettingsCommand");
 
         Assert.Contains("Shell.I18n[aboutActionsGeneral]", aboutText, StringComparison.Ordinal);
         Assert.DoesNotContain("LogViewer.OpenCommand", aboutText, StringComparison.Ordinal);
         Assert.DoesNotContain("LogViewer.ExportCommand", aboutText, StringComparison.Ordinal);
         Assert.DoesNotContain("WindowChrome.OpenDataDirectoryCommand", aboutText, StringComparison.Ordinal);
         Assert.Contains("Shell.I18n[settingsGroupDiagnostics]", advancedText, StringComparison.Ordinal);
+        Assert.DoesNotContain("Settings.RequestResetSettingsCommand", overlay, StringComparison.Ordinal);
 
         var document = XDocument.Parse(overlay);
         var footerButtons = document
@@ -2776,81 +2362,20 @@ public sealed partial class UiStyleContractTests
                     is "{Binding WindowChrome.ShowSettingsCommand}"
                     or "{Binding Settings.SaveSettingsCommand}")
             .ToList();
-        Assert.Equal(2, footerButtons.Count);
-        Assert.Equal(
-            "{Binding WindowChrome.ShowSettingsCommand}",
-            footerButtons[0].Attribute("Command")?.Value);
-        Assert.Equal(
-            "{Binding Settings.SaveSettingsCommand}",
-            footerButtons[1].Attribute("Command")?.Value);
+        Assert.Empty(footerButtons);
     }
 
     [Fact]
-    public void PrimaryActionButtons_NormalStateUsesNoBorderWhileFocusAndDisabledStatesKeepTheirBorders()
+    public void SettingComboRow_SelectedValueBinding_UsesSelectableOptionDataType()
     {
-        var mainStyles = XDocument.Load(ProjectFile("Views/MainWindow.Styles.axaml"));
-        var toastStyles = XDocument.Load(ProjectFile("Views/Styles/Toast.axaml"));
-
-        Assert.Equal("0", GetStyleSetters(mainStyles, "Button.primary-action")["BorderThickness"]);
-        Assert.Equal("0", GetStyleSetters(toastStyles, "Button.toast-primary-action")["BorderThickness"]);
-        Assert.Equal("2", GetStyleSetters(mainStyles, "Button:focus-visible")["BorderThickness"]);
-        Assert.Equal("1", GetStyleSetters(mainStyles, "Button.primary-action.dialog-action:disabled")["BorderThickness"]);
-    }
-
-    [Fact]
-    public void NewsCategoryTabs_UseNoThemeBorderForAccentStates()
-    {
-        var styles = XDocument.Load(ProjectFile("Views/Styles/RemoteContent.axaml"));
-
-        Assert.Equal("0", GetStyleSetters(styles, "Button.news-tab")["BorderThickness"]);
-        Assert.Equal("{DynamicResource LauncherAccentBrush}", GetStyleSetters(styles, "Button.news-tab.active")["Background"]);
-    }
-
-    [Fact]
-    public void SocialChips_UseCrispBorderTemplateAcrossInteractiveStates()
-    {
-        var styles = XDocument.Load(ProjectFile("Views/Styles/RemoteContent.axaml"));
-
-        var socialChip = GetStyleSetters(styles, "Button.social-chip");
-        Assert.Equal("{StaticResource LauncherBorderButtonTemplate}", socialChip["Template"]);
-        Assert.Equal("Center", socialChip["HorizontalContentAlignment"]);
-        Assert.Equal("Center", socialChip["VerticalContentAlignment"]);
-
-        var disabled = GetStyleSetters(styles, "Button.social-chip:disabled");
-        Assert.Equal("1", disabled["Opacity"]);
-        Assert.Equal("{DynamicResource LauncherButtonBorderBrush}", disabled["BorderBrush"]);
-    }
-
-    [Fact]
-    public void ToastAndDebugOverlay_NewMeasurements_UseLauncherTokens()
-    {
-        var debugOverlay = File.ReadAllText(ProjectFile("Views/MainWindowDebugOverlay.axaml"));
-        var toastStyles = File.ReadAllText(ProjectFile("Views/Styles/Toast.axaml"));
-
-        Assert.DoesNotContain("Width=\"720\"", debugOverlay, StringComparison.Ordinal);
-        Assert.DoesNotContain("Height=\"540\"", debugOverlay, StringComparison.Ordinal);
-        Assert.DoesNotContain("MaxWidth=\"300\"", debugOverlay, StringComparison.Ordinal);
-        Assert.DoesNotContain("MinWidth=\"110\"", debugOverlay, StringComparison.Ordinal);
-        Assert.DoesNotContain("MaxHeight=\"160\"", debugOverlay, StringComparison.Ordinal);
-        Assert.DoesNotContain("MinHeight\" Value=\"30\"", toastStyles, StringComparison.Ordinal);
-        Assert.DoesNotContain("Padding\" Value=\"12,8\"", toastStyles, StringComparison.Ordinal);
-    }
-
-    [Fact]
-    public void ToastCards_DoNotUseOverlappingBoxShadows()
-    {
-        var document = XDocument.Load(ProjectFile("Views/Styles/Toast.axaml"));
-        var toastCardStyle = document
+        var document = XDocument.Load(ProjectFile("Controls/SettingComboRow.axaml"));
+        var comboBox = document
             .Descendants()
-            .Single(element =>
-                element.Name.LocalName == "Style"
-                && element.Attribute("Selector")?.Value == "Border.toast-card");
+            .Single(element => element.Name.LocalName == "ComboBox");
 
-        Assert.DoesNotContain(
-            toastCardStyle.Elements(),
-            element =>
-                element.Name.LocalName == "Setter"
-                && element.Attribute("Property")?.Value == "BoxShadow");
+        Assert.Equal(
+            "{Binding Code, DataType={x:Type models:SelectableOption}}",
+            comboBox.Attribute("SelectedValueBinding")?.Value);
     }
 
     [Fact]
@@ -2892,66 +2417,20 @@ public sealed partial class UiStyleContractTests
         Assert.Equal("{Binding PrimaryActionLabel}", actionButtons[0].Attribute("AutomationProperties.Name")?.Value);
         Assert.Equal("{Binding SecondaryActionLabel}", actionButtons[1].Attribute("AutomationProperties.Name")?.Value);
 
-        var styles = XDocument.Load(ProjectFile("Views/Styles/Toast.axaml"));
-        var titleStyle = styles.Descendants().Single(element =>
-            element.Name.LocalName == "Style"
-            && element.Attribute("Selector")?.Value == "TextBlock.toast-title");
-        Assert.Contains(titleStyle.Elements(), element =>
-            element.Name.LocalName == "Setter"
-            && element.Attribute("Property")?.Value == "FontSize"
-            && element.Attribute("Value")?.Value == "{DynamicResource LauncherFontSizeLg}");
-        // toast-title no longer sets FontWeight (removed to match the lighter title + button styling).
     }
 
     [Fact]
-    public void ToastAutoDismissProgress_UsesSelectedBottomEdgeLayoutAndTokens()
+    public void ToastProgress_OnlyRepresentsExecutingActions()
     {
         var document = XDocument.Load(ProjectFile("Views/MainWindowToastOverlay.axaml"));
         var progressElements = document.Descendants()
             .Where(element => HasClass(element, "toast-progress")).ToArray();
-        Assert.Equal(2, progressElements.Length);
-
-        var autoDismiss = progressElements[0];
-        Assert.Equal("1", autoDismiss.Attribute("Grid.Row")?.Value);
-        Assert.Equal("{Binding AutoDismissProgress}", autoDismiss.Attribute("Value")?.Value);
-        Assert.Equal("{Binding HasAutoDismissProgress}", autoDismiss.Attribute("IsVisible")?.Value);
-        Assert.Equal(
-            "{Binding Severity, Converter={x:Static converters:ToastSeverityToBrushConverter.Instance}}",
-            autoDismiss.Attribute("Foreground")?.Value);
-
-        var actionExecuting = progressElements[1];
+        Assert.Single(progressElements);
+        var actionExecuting = progressElements[0];
         Assert.Equal("1", actionExecuting.Attribute("Grid.Row")?.Value);
         Assert.Equal("{Binding IsActionExecuting}", actionExecuting.Attribute("IsVisible")?.Value);
+        Assert.Null(actionExecuting.Attribute("Value"));
 
-        var styles = XDocument.Load(ProjectFile("Views/Styles/Toast.axaml"));
-        var progressStyle = styles.Descendants().Single(element =>
-            element.Name.LocalName == "Style"
-            && element.Attribute("Selector")?.Value == "ProgressBar.toast-progress");
-        Assert.Contains(progressStyle.Elements(), element =>
-            element.Name.LocalName == "Setter"
-            && element.Attribute("Property")?.Value == "Height"
-            && element.Attribute("Value")?.Value
-                == "{DynamicResource LauncherToastAutoDismissProgressHeight}");
-        var progressTransition = progressStyle.Descendants().Single(element =>
-            element.Name.LocalName == "DoubleTransition"
-            && element.Attribute("Property")?.Value == "Value");
-        Assert.Equal(
-            "{StaticResource LauncherMotionFasterDuration}",
-            progressTransition.Attribute("Duration")?.Value);
-        Assert.Equal(
-            "{StaticResource LauncherMotionLinearEasing}",
-            progressTransition.Attribute("Easing")?.Value);
-
-        var toastCardStyle = styles.Descendants().Single(element =>
-            element.Name.LocalName == "Style"
-            && element.Attribute("Selector")?.Value == "Border.toast-card");
-        foreach (var property in new[] { "MinWidth", "MaxWidth" })
-        {
-            Assert.Contains(toastCardStyle.Elements(), element =>
-                element.Name.LocalName == "Setter"
-                && element.Attribute("Property")?.Value == property
-                && element.Attribute("Value")?.Value == "{DynamicResource LauncherToastWidth}");
-        }
     }
 
     [Fact]
@@ -2970,66 +2449,6 @@ public sealed partial class UiStyleContractTests
     }
 
     [Fact]
-    public void ToastMotionAnimation_IsEnabledOnlyByRootMotionPreference()
-    {
-        var overlay = File.ReadAllText(ProjectFile("Views/MainWindowToastOverlay.axaml"));
-        Assert.Contains(
-            "Classes.motion-enabled=\"{Binding #ToastOverlayRoot.((vm:MainWindowViewModel)DataContext).IsMotionEnabled}\"",
-            overlay,
-            StringComparison.Ordinal);
-        var overlayDocument = XDocument.Load(ProjectFile("Views/MainWindowToastOverlay.axaml"));
-        var toastCard = overlayDocument
-            .Descendants()
-            .Single(element =>
-                element.Name.LocalName == "Border"
-                && HasClass(element, "toast-card"));
-        Assert.Equal("{Binding IsExiting}", toastCard.Attribute("Classes.motion-exit")?.Value);
-
-        var document = XDocument.Load(ProjectFile("Views/Styles/Toast.axaml"));
-        var toastStyles = document
-            .Descendants()
-            .Where(element =>
-                element.Name.LocalName == "Style"
-                && element.Attribute("Selector")?.Value?.StartsWith(
-                    "Border.toast-card",
-                    StringComparison.Ordinal) == true)
-            .ToList();
-        var baseStyle = Assert.Single(
-            toastStyles,
-            style => style.Attribute("Selector")?.Value == "Border.toast-card");
-        var enterMotionStyle = Assert.Single(
-            toastStyles,
-            style => style.Attribute("Selector")?.Value
-                == "Border.toast-card.motion-enabled:not(.motion-exit)");
-        var exitMotionStyle = Assert.Single(
-            toastStyles,
-            style => style.Attribute("Selector")?.Value
-                == "Border.toast-card.motion-enabled.motion-exit");
-
-        Assert.DoesNotContain(
-            baseStyle.Elements(),
-            element => element.Name.LocalName == "Style.Animations");
-        Assert.Contains(
-            enterMotionStyle.Elements(),
-            element => element.Name.LocalName == "Style.Animations");
-        Assert.Contains(
-            exitMotionStyle.Elements(),
-            element => element.Name.LocalName == "Style.Animations");
-
-        AssertMotionAnimation(
-            document,
-            "Border.toast-card.motion-enabled:not(.motion-exit)",
-            "{StaticResource LauncherMotionContentDuration}",
-            expectedStartOffset: "{StaticResource LauncherMotionToastOffset}",
-            expectedStartAxis: "TranslateTransform.X");
-        AssertExitMotionAnimation(
-            document,
-            "Border.toast-card.motion-enabled.motion-exit",
-            expectedEndOffset: "{StaticResource LauncherMotionToastOffset}",
-            expectedEndAxis: "TranslateTransform.X");
-    }
-
-    [Fact]
     public void ToastStack_UsesRootMotionPreference()
     {
         var document = XDocument.Load(ProjectFile("Views/MainWindowToastOverlay.axaml"));
@@ -3042,76 +2461,6 @@ public sealed partial class UiStyleContractTests
         Assert.Equal(
             "{Binding #ToastOverlayRoot.((vm:MainWindowViewModel)DataContext).IsMotionEnabled}",
             toastList.Attribute(controlsNamespace! + "ToastStackMotion.IsEnabled")?.Value);
-    }
-
-    [Fact]
-    public void CoreMotionStyles_DefineExactConditionalAnimations()
-    {
-        var document = XDocument.Load(ProjectFile("Views/MainWindow.Styles.axaml"));
-
-        AssertOverlayBrushAnimation(
-            document,
-            "Grid.motion-overlay.motion-enabled.motion-enter",
-            "{StaticResource LauncherMotionFastDuration}");
-        AssertMotionAnimation(
-            document,
-            "Grid.motion-overlay.motion-enabled.motion-enter > Border.motion-surface",
-            "{StaticResource LauncherMotionNormalDuration}",
-            expectedStartOffset: "{StaticResource LauncherMotionSurfaceOffset}",
-            expectsOpacity: false);
-        AssertMotionAnimation(
-            document,
-            "Grid.motion-overlay.motion-enabled.motion-enter > Border.motion-surface > Grid.motion-surface-content",
-            "{StaticResource LauncherMotionNormalDuration}",
-            expectedStartOffset: null);
-        AssertMotionAnimation(
-            document,
-            ":is(UserControl).motion-content.motion-enabled.motion-enter",
-            "{StaticResource LauncherMotionContentDuration}",
-            expectedStartOffset: "{StaticResource LauncherMotionContentOffset}");
-        AssertMotionAnimation(
-            document,
-            "StackPanel.motion-content.motion-enabled.motion-enter",
-            "{StaticResource LauncherMotionContentDuration}",
-            expectedStartOffset: "{StaticResource LauncherMotionContentOffset}");
-        AssertMotionAnimation(
-            document,
-            "Border.motion-bottom.motion-enabled.motion-enter",
-            "{StaticResource LauncherMotionNormalDuration}",
-            expectedStartOffset: "{StaticResource LauncherMotionBottomOffset}");
-        AssertOverlayBrushExitAnimation(
-            document,
-            "Grid.motion-overlay.motion-enabled.motion-exit");
-        AssertExitMotionAnimation(
-            document,
-            "Grid.motion-overlay.motion-enabled.motion-exit > Border.motion-surface",
-            expectedEndOffset: "{StaticResource LauncherMotionSurfaceOffset}",
-            expectsOpacity: false);
-        AssertExitMotionAnimation(
-            document,
-            "Grid.motion-overlay.motion-enabled.motion-exit > Border.motion-surface > Grid.motion-surface-content",
-            expectedEndOffset: null);
-
-        foreach (var selector in new[]
-                 {
-                     "Grid.motion-overlay",
-                     "Border.motion-surface",
-                     "Grid.motion-surface-content",
-                     ":is(UserControl).motion-content",
-                     "StackPanel.motion-content",
-                     "Border.motion-bottom",
-                     "ListBox.settings-navigation > ListBoxItem:selected"
-                 })
-        {
-            var style = document
-                .Descendants()
-                .Single(element =>
-                    element.Name.LocalName == "Style"
-                    && element.Attribute("Selector")?.Value == selector);
-            Assert.DoesNotContain(
-                style.Elements(),
-                element => element.Name.LocalName == "Style.Animations");
-        }
     }
 
     [Fact]
@@ -3138,7 +2487,7 @@ public sealed partial class UiStyleContractTests
                     .Select(element => (element, controlsNamespace)));
         }
 
-        Assert.Equal(9, overlays.Count);
+        Assert.Equal(8, overlays.Count);
         Assert.All(overlays, overlay =>
         {
             var element = overlay.Element;
@@ -3284,39 +2633,13 @@ public sealed partial class UiStyleContractTests
     }
 
     [Fact]
-    public void SettingsStatusPanel_UsesSummaryBindingsWithoutDuplicateStatusOrBrand()
+    public void SettingsPanel_ExposesOnlyAutoSaveRecoveryStatus()
     {
-        var document = XDocument.Load(ProjectFile("Views/MainWindowSettingsOverlay.axaml"));
-        var statusPanel = document
-            .Descendants()
-            .First(element =>
-                element.Name.LocalName == "Border"
-                && HasClass(element, "settings-status-summary"));
-        var markup = statusPanel.ToString(SaveOptions.DisableFormatting);
-        var detailsGrid = statusPanel
-            .Descendants()
-            .Single(element =>
-                element.Name.LocalName == "Grid"
-                && HasClass(element, "status-details"));
-        var detailCards = statusPanel
-            .Descendants()
-            .Where(element =>
-                element.Name.LocalName == "Border"
-                && HasClass(element, "status-detail"))
-            .ToList();
-        Assert.Contains("Shell.CurrentViewTitle", markup, StringComparison.Ordinal);
-        Assert.Contains("Shell.VersionText", markup, StringComparison.Ordinal);
-        Assert.Contains("Shell.NetworkStatusValueText", markup, StringComparison.Ordinal);
-        Assert.Contains("Shell.DiskSpaceText", markup, StringComparison.Ordinal);
-        Assert.DoesNotContain("Shell.OperationNote", markup, StringComparison.Ordinal);
-        Assert.Contains("Kind=\"{Binding Shell.StatusIconKind}\"", markup, StringComparison.Ordinal);
-        Assert.DoesNotContain("Shell.ExecutableText", markup, StringComparison.Ordinal);
-        Assert.DoesNotContain("Shell.StatusText", markup, StringComparison.Ordinal);
-        Assert.DoesNotContain("Shell.ProductName", markup, StringComparison.Ordinal);
-        Assert.Equal("Auto,*,Auto,Auto", detailsGrid.Attribute("ColumnDefinitions")?.Value);
-        Assert.Null(detailsGrid.Attribute("RowDefinitions"));
-        Assert.Equal(2, detailCards.Count);
-        Assert.DoesNotContain("MaxWidth=\"160\"", markup, StringComparison.Ordinal);
+        var markup = File.ReadAllText(ProjectFile("Views/MainWindowSettingsOverlay.axaml"));
+        Assert.DoesNotContain("settings-status-summary", markup, StringComparison.Ordinal);
+        Assert.DoesNotContain("status-details", markup, StringComparison.Ordinal);
+        Assert.Contains("Settings.HasAutoSaveFailure", markup, StringComparison.Ordinal);
+        Assert.Contains("Settings.RetryAutoSaveCommand", markup, StringComparison.Ordinal);
     }
 
     [Fact]
@@ -3325,7 +2648,7 @@ public sealed partial class UiStyleContractTests
         var settingsViewModel = File.ReadAllText(ProjectFile("Features/Settings/SettingsViewModel.cs"));
 
         Assert.DoesNotContain(
-            "SetBrush(application, \"LauncherInfoTextBrush\"",
+            "SetBrush(application, \"Cafe.Color.Text.Info\"",
             settingsViewModel,
             StringComparison.Ordinal);
     }
@@ -3382,180 +2705,6 @@ public sealed partial class UiStyleContractTests
             child => child.Name.LocalName == "TranslateTransform");
     }
 
-    private static void AssertOverlayBrushAnimation(
-        XDocument document,
-        string selector,
-        string expectedDuration)
-    {
-        var animation = GetMotionAnimation(document, selector);
-        Assert.Equal(expectedDuration, animation.Attribute("Duration")?.Value);
-        Assert.Equal("Forward", animation.Attribute("FillMode")?.Value);
-        Assert.Equal("{StaticResource LauncherMotionEnterEasing}", animation.Attribute("Easing")?.Value);
-
-        var keyFrames = GetAnimationKeyFrames(animation);
-        AssertAnimationProperty(
-            keyFrames,
-            "Background",
-            "{DynamicResource LauncherTransparentBrush}",
-            "{DynamicResource LauncherOverlayBrush}");
-        AssertAnimationProperty(keyFrames, "Opacity", null, null);
-    }
-
-    private static void AssertOverlayBrushExitAnimation(XDocument document, string selector)
-    {
-        var animation = GetMotionAnimation(document, selector);
-        Assert.Equal("{StaticResource LauncherMotionFastDuration}", animation.Attribute("Duration")?.Value);
-        Assert.Equal("Forward", animation.Attribute("FillMode")?.Value);
-        Assert.Equal("{StaticResource LauncherMotionExitEasing}", animation.Attribute("Easing")?.Value);
-
-        var keyFrames = GetAnimationKeyFrames(animation);
-        AssertAnimationProperty(
-            keyFrames,
-            "Background",
-            "{DynamicResource LauncherOverlayBrush}",
-            "{DynamicResource LauncherTransparentBrush}");
-        AssertAnimationProperty(keyFrames, "Opacity", null, null);
-    }
-
-    private static void AssertMotionAnimation(
-        XDocument document,
-        string selector,
-        string expectedDuration,
-        string? expectedStartOffset,
-        string expectedStartAxis = "TranslateTransform.Y",
-        bool expectsOpacity = true)
-    {
-        var animation = GetMotionAnimation(document, selector);
-        Assert.Equal(expectedDuration, animation.Attribute("Duration")?.Value);
-        Assert.Equal("Forward", animation.Attribute("FillMode")?.Value);
-        Assert.Equal("{StaticResource LauncherMotionEnterEasing}", animation.Attribute("Easing")?.Value);
-        Assert.Null(animation.Attribute("Delay"));
-
-        var keyFrames = GetAnimationKeyFrames(animation);
-        AssertAnimationProperty(
-            keyFrames,
-            "Opacity",
-            expectsOpacity ? "0" : null,
-            expectsOpacity ? "1" : null);
-
-        if (expectedStartOffset is null)
-        {
-            Assert.DoesNotContain(
-                keyFrames.SelectMany(pair => pair.Value.Elements()),
-                element => element.Attribute("Property")?.Value == expectedStartAxis);
-            return;
-        }
-
-        Assert.Equal(
-            expectedStartOffset,
-            keyFrames["0%"]
-                .Elements()
-                .Single(element => element.Attribute("Property")?.Value == expectedStartAxis)
-                .Attribute("Value")?.Value);
-        Assert.Equal(
-            "0",
-            keyFrames["100%"]
-                .Elements()
-                .Single(element => element.Attribute("Property")?.Value == expectedStartAxis)
-                .Attribute("Value")?.Value);
-    }
-
-    private static void AssertExitMotionAnimation(
-        XDocument document,
-        string selector,
-        string? expectedEndOffset,
-        string expectedEndAxis = "TranslateTransform.Y",
-        bool expectsOpacity = true)
-    {
-        var animation = GetMotionAnimation(document, selector);
-        Assert.Equal("{StaticResource LauncherMotionFastDuration}", animation.Attribute("Duration")?.Value);
-        Assert.Equal("Forward", animation.Attribute("FillMode")?.Value);
-        Assert.Equal("{StaticResource LauncherMotionExitEasing}", animation.Attribute("Easing")?.Value);
-
-        var keyFrames = GetAnimationKeyFrames(animation);
-        AssertAnimationProperty(
-            keyFrames,
-            "Opacity",
-            expectsOpacity ? "1" : null,
-            expectsOpacity ? "0" : null);
-
-        if (expectedEndOffset is null)
-        {
-            Assert.DoesNotContain(
-                keyFrames.SelectMany(pair => pair.Value.Elements()),
-                element => element.Attribute("Property")?.Value == expectedEndAxis);
-            return;
-        }
-
-        Assert.Equal(
-            "0",
-            keyFrames["0%"]
-                .Elements()
-                .Single(element => element.Attribute("Property")?.Value == expectedEndAxis)
-                .Attribute("Value")?.Value);
-        Assert.Equal(
-            expectedEndOffset,
-            keyFrames["100%"]
-                .Elements()
-                .Single(element => element.Attribute("Property")?.Value == expectedEndAxis)
-                .Attribute("Value")?.Value);
-    }
-
-    private static XElement GetMotionAnimation(XDocument document, string selector)
-    {
-        var style = document
-            .Descendants()
-            .Single(element =>
-                element.Name.LocalName == "Style"
-                && element.Attribute("Selector")?.Value == selector);
-        return style
-            .Descendants()
-            .Single(element => element.Name.LocalName == "Animation");
-    }
-
-    private static Dictionary<string, XElement> GetAnimationKeyFrames(XElement animation)
-    {
-        var keyFrames = animation
-            .Elements()
-            .Where(element => element.Name.LocalName == "KeyFrame")
-            .ToDictionary(
-                element => element.Attribute("Cue")?.Value ?? "",
-                element => element,
-                StringComparer.Ordinal);
-        Assert.Equal(2, keyFrames.Count);
-        return keyFrames;
-    }
-
-    private static void AssertAnimationProperty(
-        IReadOnlyDictionary<string, XElement> keyFrames,
-        string property,
-        string? expectedStartValue,
-        string? expectedEndValue)
-    {
-        var setters = keyFrames
-            .SelectMany(pair => pair.Value.Elements())
-            .Where(element => element.Attribute("Property")?.Value == property)
-            .ToList();
-        if (expectedStartValue is null || expectedEndValue is null)
-        {
-            Assert.Empty(setters);
-            return;
-        }
-
-        Assert.Equal(
-            expectedStartValue,
-            keyFrames["0%"]
-                .Elements()
-                .Single(element => element.Attribute("Property")?.Value == property)
-                .Attribute("Value")?.Value);
-        Assert.Equal(
-            expectedEndValue,
-            keyFrames["100%"]
-                .Elements()
-                .Single(element => element.Attribute("Property")?.Value == property)
-                .Attribute("Value")?.Value);
-    }
-
     private static void AssertSettingRowIcon(
         XDocument document,
         string titleBinding,
@@ -3564,7 +2713,7 @@ public sealed partial class UiStyleContractTests
         var settingRow = document
             .Descendants()
             .Single(element =>
-                element.Name.LocalName == "SettingRow"
+                element.Name.LocalName is "SettingRow" or "SettingComboRow"
                 && element.Attribute("Title")?.Value == titleBinding);
 
         Assert.Equal(expectedIconKind, settingRow.Attribute("IconKind")?.Value);
@@ -3603,30 +2752,4 @@ public sealed partial class UiStyleContractTests
     [GeneratedRegex("#[0-9A-Fa-f]{6,8}", RegexOptions.CultureInvariant)]
     private static partial Regex DirectColorRegex();
 
-    private static IReadOnlyDictionary<string, string> GetStyleSetters(
-        XDocument document,
-        string selector)
-    {
-        var matchingStyle = document
-            .Descendants()
-            .SingleOrDefault(element =>
-                element.Name.LocalName == "Style"
-                && element.Attribute("Selector")?.Value == selector);
-        matchingStyle ??= StyleFiles
-            .Select(path => XDocument.Load(ProjectFile(path)))
-            .SelectMany(styleDocument => styleDocument.Descendants())
-            .Single(element =>
-                element.Name.LocalName == "Style"
-                && element.Attribute("Selector")?.Value == selector);
-
-        return matchingStyle
-            .Elements()
-            .Where(element => element.Name.LocalName == "Setter")
-            .ToDictionary(
-                element => element.Attribute("Property")?.Value
-                    ?? throw new InvalidOperationException($"Setter in {selector} has no Property."),
-                element => element.Attribute("Value")?.Value
-                    ?? throw new InvalidOperationException($"Setter in {selector} has no Value."),
-                StringComparer.Ordinal);
-    }
 }

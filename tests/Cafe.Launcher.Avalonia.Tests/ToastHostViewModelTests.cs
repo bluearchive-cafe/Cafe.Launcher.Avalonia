@@ -44,7 +44,7 @@ public sealed class ToastHostViewModelTests : IDisposable
     }
 
     [Fact]
-    public async Task ToastRaised_WithFiniteDuration_UpdatesProgressThenExpires()
+    public async Task ToastRaised_WithFiniteDuration_ExpiresWithoutCountdownProgress()
     {
         await using var provider = CreateProvider();
         var toastService = provider.GetRequiredService<ToastService>();
@@ -64,17 +64,12 @@ public sealed class ToastHostViewModelTests : IDisposable
         await WaitUntilAsync(() => viewModel.ActiveToasts.Count == 1);
         var toast = viewModel.ActiveToasts.Single();
 
-        Assert.True(toast.HasAutoDismissProgress);
-        Assert.Equal(100d, toast.AutoDismissProgress);
-
-        await delays.ReleaseNextAsync();
-        await WaitUntilAsync(() => toast.AutoDismissProgress == 50d);
         await delays.ReleaseNextAsync();
         await WaitUntilAsync(() => viewModel.ActiveToasts.Count == 0);
     }
 
     [Fact]
-    public async Task ToastRaised_WithAction_DoesNotExposeAutoDismissProgress()
+    public async Task ToastRaised_WithAction_DoesNotCreateCountdownProgress()
     {
         await using var provider = CreateProvider();
         var toastService = provider.GetRequiredService<ToastService>();
@@ -90,12 +85,11 @@ public sealed class ToastHostViewModelTests : IDisposable
         await WaitUntilAsync(() => viewModel.ActiveToasts.Count == 1);
         var toast = viewModel.ActiveToasts.Single();
 
-        Assert.False(toast.HasAutoDismissProgress);
-        Assert.Equal(100d, toast.AutoDismissProgress);
+        Assert.False(toast.IsActionExecuting);
     }
 
     [Fact]
-    public async Task DismissToast_WhileCountdownIsWaiting_DoesNotScheduleAnotherProgressUpdate()
+    public async Task DismissToast_WhileDurationDelayIsWaiting_DoesNotScheduleAnotherDelay()
     {
         await using var provider = CreateProvider();
         var toastService = provider.GetRequiredService<ToastService>();
@@ -116,7 +110,6 @@ public sealed class ToastHostViewModelTests : IDisposable
         await Task.Delay(20);
 
         Assert.Empty(viewModel.ActiveToasts);
-        Assert.Equal(100d, toast.AutoDismissProgress);
         Assert.Equal(1, delays.RequestCount);
     }
 

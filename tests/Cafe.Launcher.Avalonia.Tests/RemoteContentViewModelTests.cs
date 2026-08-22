@@ -5,7 +5,7 @@ using Cafe.Launcher.Avalonia.ViewModels;
 
 namespace Cafe.Launcher.Avalonia.Tests;
 
-public sealed class RemoteContentViewModelTests
+public sealed class RemoteContentViewModelTests : LocalizationTestBase
 {
     static RemoteContentViewModelTests()
     {
@@ -308,6 +308,23 @@ public sealed class RemoteContentViewModelTests
     }
 
     [Fact]
+    public void ToggleCarouselLoopCommand_WhenHovered_ResumesAfterExplicitPlay()
+    {
+        using var context = CreateContext();
+        context.ViewModel.Apply(
+            CreateBannerState(2, loop: true),
+            new LauncherSettings(),
+            CancellationToken.None);
+
+        context.ViewModel.SetBannerPointerOver(true);
+        context.ViewModel.ToggleCarouselLoopCommand.Execute(null);
+
+        Assert.False(context.ViewModel.IsCarouselPaused);
+        Assert.True(context.ViewModel.IsCarouselTimerRunning);
+        Assert.Equal("Pause", context.ViewModel.CarouselPauseIcon);
+    }
+
+    [Fact]
     public void ApplyMotionPreference_ReducedPausesAutomaticCarouselAndRemovesTransition()
     {
         using var context = CreateContext();
@@ -328,7 +345,7 @@ public sealed class RemoteContentViewModelTests
     }
 
     [Fact]
-    public void ToggleCarouselLoopCommand_WhenReduced_AllowsManualPlaybackWithoutTransition()
+    public void ToggleCarouselLoopCommand_WhenReduced_KeepsAutomaticPlaybackPausedWithoutTransition()
     {
         using var context = CreateContext();
         context.ViewModel.Apply(
@@ -339,11 +356,50 @@ public sealed class RemoteContentViewModelTests
 
         context.ViewModel.ToggleCarouselLoopCommand.Execute(null);
 
-        Assert.False(context.ViewModel.IsCarouselPaused);
-        Assert.True(context.ViewModel.IsCarouselTimerRunning);
-        Assert.Equal("Pause", context.ViewModel.CarouselPauseIcon);
+        Assert.True(context.ViewModel.IsCarouselPaused);
+        Assert.False(context.ViewModel.IsCarouselTimerRunning);
+        Assert.Equal("Play", context.ViewModel.CarouselPauseIcon);
         Assert.Equal(TimeSpan.Zero, Assert.IsType<global::Avalonia.Animation.CrossFade>(
             context.ViewModel.CarouselTransition).Duration);
+    }
+
+    [Fact]
+    public void SetBannerPointerOver_PausesAndResumesTheSixSecondTimer()
+    {
+        using var context = CreateContext();
+        context.ViewModel.Apply(CreateBannerState(2, loop: true), new LauncherSettings(), CancellationToken.None);
+        context.ViewModel.StartCarouselTimer();
+
+        Assert.Equal(6000, context.ViewModel.BannerIntervalMs);
+        Assert.True(context.ViewModel.IsCarouselTimerRunning);
+
+        context.ViewModel.SetBannerPointerOver(true);
+
+        Assert.True(context.ViewModel.IsCarouselPaused);
+        Assert.False(context.ViewModel.IsCarouselTimerRunning);
+
+        context.ViewModel.SetBannerPointerOver(false);
+
+        Assert.False(context.ViewModel.IsCarouselPaused);
+        Assert.True(context.ViewModel.IsCarouselTimerRunning);
+    }
+
+    [Fact]
+    public void SetWindowActive_WhenDeactivated_PausesAndResumesTheTimer()
+    {
+        using var context = CreateContext();
+        context.ViewModel.Apply(CreateBannerState(2, loop: true), new LauncherSettings(), CancellationToken.None);
+        context.ViewModel.StartCarouselTimer();
+
+        context.ViewModel.SetWindowActive(false);
+
+        Assert.True(context.ViewModel.IsCarouselPaused);
+        Assert.False(context.ViewModel.IsCarouselTimerRunning);
+
+        context.ViewModel.SetWindowActive(true);
+
+        Assert.False(context.ViewModel.IsCarouselPaused);
+        Assert.True(context.ViewModel.IsCarouselTimerRunning);
     }
 
     [Fact]

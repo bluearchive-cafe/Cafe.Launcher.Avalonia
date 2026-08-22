@@ -4,7 +4,7 @@ using Cafe.Launcher.Avalonia.Services;
 
 namespace Cafe.Launcher.Avalonia.Tests;
 
-public sealed class LanguageFontFamilyServiceTests
+public sealed class LanguageFontFamilyServiceTests : LocalizationTestBase
 {
     [Theory]
     [InlineData(LauncherLanguages.English, "Segoe UI")]

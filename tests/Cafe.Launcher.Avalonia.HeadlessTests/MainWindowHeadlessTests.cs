@@ -4,6 +4,7 @@ using Avalonia.Automation;
 using Avalonia.Automation.Peers;
 using Avalonia.Controls;
 using Avalonia.Controls.Presenters;
+using Avalonia.Controls.Primitives;
 using Avalonia.Headless;
 using Avalonia.Headless.XUnit;
 using Avalonia.Input;
@@ -21,6 +22,7 @@ using Cafe.Launcher.Avalonia.Services.Diagnostics;
 using Cafe.Launcher.Avalonia.ViewModels;
 using Cafe.Launcher.Avalonia.Views;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.DependencyInjection.Extensions;
 
 namespace Cafe.Launcher.Avalonia.HeadlessTests;
 
@@ -207,8 +209,8 @@ public sealed class MainWindowHeadlessTests
             .ToArray();
         var closeButton = context.Window.GetVisualDescendants().OfType<Button>()
             .Single(control => control.Classes.Contains("toast-close"));
-        var autoDismissProgress = context.Window.GetVisualDescendants().OfType<ProgressBar>()
-            .Single(control => control.Classes.Contains("toast-progress") && !control.IsIndeterminate);
+        var actionProgress = context.Window.GetVisualDescendants().OfType<ProgressBar>()
+            .Single(control => control.Classes.Contains("toast-progress"));
 
         Assert.Equal("Install failed", title.Text);
         Assert.Equal(2, actionButtons.Length);
@@ -216,7 +218,7 @@ public sealed class MainWindowHeadlessTests
         Assert.Contains("toast-secondary-action", actionButtons[1].Classes);
         Assert.Equal("Retry", AutomationProperties.GetName(actionButtons[0]));
         Assert.Equal("View log", AutomationProperties.GetName(actionButtons[1]));
-        Assert.False(autoDismissProgress.IsVisible);
+        Assert.False(actionProgress.IsVisible);
 
         var executeTask = context.ViewModel.Toasts.ExecutePrimaryToastActionCommand.ExecuteAsync(
             context.ViewModel.Toasts.ActiveToasts.Single().Id);
@@ -224,6 +226,7 @@ public sealed class MainWindowHeadlessTests
 
         Assert.All(actionButtons, button => Assert.False(button.IsEffectivelyEnabled));
         Assert.True(closeButton.IsEffectivelyEnabled);
+        Assert.True(actionProgress.IsVisible);
 
         release.SetResult(ToastActionResult.Failure("Still offline", "Retry failed"));
         await executeTask;
@@ -231,7 +234,7 @@ public sealed class MainWindowHeadlessTests
     }
 
     [AvaloniaFact]
-    public void Toast_WithoutActions_RendersAutoDismissProgress()
+    public void Toast_WithoutActions_DoesNotRenderCountdownProgress()
     {
         using var context = CreateContext();
         var toastService = context.Provider.GetRequiredService<ToastService>();
@@ -244,12 +247,9 @@ public sealed class MainWindowHeadlessTests
         });
         Dispatcher.UIThread.RunJobs();
 
-        var progress = context.Window.GetVisualDescendants().OfType<ProgressBar>()
-            .Where(control => control.IsVisible)
-            .Single(control => control.Classes.Contains("toast-progress"));
-
-        Assert.True(progress.IsVisible);
-        Assert.InRange(progress.Value, 99d, 100d);
+        Assert.DoesNotContain(
+            context.Window.GetVisualDescendants().OfType<ProgressBar>(),
+            control => control.Classes.Contains("toast-progress") && control.IsVisible);
     }
 
     [AvaloniaFact]
@@ -282,19 +282,48 @@ public sealed class MainWindowHeadlessTests
     }
 
     [AvaloniaFact]
-    public void DebugEntry_VisibilityMatchesBuildConfiguration()
+    public void TitleBar_RestoresDirectActionOrderAndDebugVisibility()
     {
         using var context = CreateContext();
         context.Window.Show();
         Dispatcher.UIThread.RunJobs();
-        var button = context.Window.GetVisualDescendants().OfType<Button>().Single(control =>
-            ReferenceEquals(control.Command, context.ViewModel.WindowChrome.OpenDebugPanelCommand));
+        var actionBar = context.Window
+            .GetVisualDescendants()
+            .OfType<StackPanel>()
+            .Single(control => control.Classes.Contains("titlebar-actions"));
+        var brandBar = context.Window
+            .GetVisualDescendants()
+            .OfType<StackPanel>()
+            .Single(control => control.Classes.Contains("titlebar-brand-row"));
+        var buttons = actionBar.Children.OfType<Button>().ToArray();
+        var debugButton = buttons[0];
+
+        Assert.Equal(5, buttons.Length);
+        Assert.Same(context.ViewModel.WindowChrome.OpenDebugPanelCommand, debugButton.Command);
+        Assert.Same(context.ViewModel.ResourcePanel.OpenResourcePanelCommand, buttons[1].Command);
+        Assert.Same(context.ViewModel.WindowChrome.ShowSettingsCommand, buttons[2].Command);
+        Assert.Same(context.ViewModel.WindowChrome.MinimizeCommand, buttons[3].Command);
+        Assert.Same(context.ViewModel.WindowChrome.CloseCommand, buttons[4].Command);
+        Assert.Null(debugButton.Flyout);
 
 #if DEBUG
-        Assert.True(button.IsEffectivelyVisible);
+        Assert.True(debugButton.IsEffectivelyVisible);
 #else
-        Assert.False(button.IsEffectivelyVisible);
+        Assert.False(debugButton.IsEffectivelyVisible);
 #endif
+
+        var visibleButtons = buttons.Where(button => button.IsEffectivelyVisible).ToArray();
+        Assert.All(visibleButtons, button =>
+        {
+            Assert.Equal(visibleButtons[0].Bounds.Size, button.Bounds.Size);
+            var icon = Assert.IsAssignableFrom<Control>(button.Content);
+            Assert.True(icon.Bounds.Width < button.Bounds.Width);
+            Assert.True(icon.Bounds.Height < button.Bounds.Height);
+            AssertControlInsideWindow(button, context.Window);
+        });
+        Assert.True(brandBar.Margin.Left > 0);
+        Assert.True(actionBar.Margin.Right > 0);
+        Assert.True(buttons[2].Margin.Right > 0);
     }
 
     [AvaloniaFact]
@@ -309,7 +338,7 @@ public sealed class MainWindowHeadlessTests
     }
 
     [AvaloniaFact]
-    public void SettingsWorkspace_WhenShown_AppliesWorkspaceAndStatusSummaryStyles()
+    public void SettingsWorkspace_WhenShown_AppliesWorkspaceAndFailureRecoveryStyles()
     {
         using var context = CreateContext();
         context.ViewModel.WindowChrome.IsSettingsVisible = true;
@@ -321,38 +350,24 @@ public sealed class MainWindowHeadlessTests
             .GetVisualDescendants()
             .OfType<Grid>()
             .Single(control => control.Classes.Contains("settings-workspace"));
-        var statusSummary = context.Window
+        var saveError = context.Window
             .GetVisualDescendants()
             .OfType<Border>()
-            .Single(control => control.Classes.Contains("settings-status-summary"));
+            .Single(control => control.Classes.Contains("settings-save-error"));
 
         Assert.Equal(new Thickness(0), workspace.Margin);
-        Assert.Equal(new Thickness(0, 0, 0, 8), statusSummary.Padding);
+        Assert.False(saveError.IsEffectivelyVisible);
     }
 
     [AvaloniaFact]
-    public void SettingsStatusSummary_WhenShown_UsesUniformThirtyTwoPixelElements()
+    public void SettingsStatusRecovery_WhenShown_HasNoDecorativeStatusSummary()
     {
         using var context = CreateContext();
         OpenSettings(context);
 
-        var statusSummary = context.Window
-            .GetVisualDescendants()
-            .OfType<Border>()
-            .Single(control => control.Classes.Contains("settings-status-summary"));
-        var statusIcon = statusSummary
-            .GetVisualDescendants()
-            .OfType<Border>()
-            .Single(control => control.Classes.Contains("settings-icon"));
-        var statusDetails = statusSummary
-            .GetVisualDescendants()
-            .OfType<Border>()
-            .Where(control => control.Classes.Contains("status-detail"))
-            .ToArray();
-
-        Assert.Equal(32, statusIcon.Bounds.Height);
-        Assert.Equal(2, statusDetails.Length);
-        Assert.All(statusDetails, detail => Assert.Equal(32, detail.Bounds.Height));
+        var borders = context.Window.GetVisualDescendants().OfType<Border>().ToArray();
+        Assert.DoesNotContain(borders, control => control.Classes.Contains("settings-status-summary"));
+        Assert.Contains(borders, control => control.Classes.Contains("settings-save-error"));
     }
 
     [AvaloniaFact]
@@ -373,6 +388,12 @@ public sealed class MainWindowHeadlessTests
         Assert.All(
             textBlocks.Where(control => control.Classes.Contains("group-title")),
             control => Assert.Equal(FontWeight.SemiBold, control.FontWeight));
+        Assert.All(
+            textBlocks
+                .Where(control => control.Classes.Contains("group-title"))
+                .Where(control => control.Parent is StackPanel panel
+                    && panel.Classes.Contains("settings-group")),
+            control => Assert.Equal(6, control.Margin.Bottom));
         Assert.Equal(
             FontWeight.Normal,
             textBlocks.First(control => control.Classes.Contains("caption")).FontWeight);
@@ -468,7 +489,6 @@ public sealed class MainWindowHeadlessTests
         foreach (var (code, sectionType) in SettingsSections)
         {
             context.ViewModel.Settings.SelectedCategory = code;
-            Dispatcher.UIThread.RunJobs();
 
             Assert.Equal(code, context.ViewModel.Settings.SelectedCategory);
             AssertVisibleSettingsSection(context.Window, sectionType);
@@ -476,25 +496,24 @@ public sealed class MainWindowHeadlessTests
     }
 
     [AvaloniaFact]
-    public void SettingsNavigation_PreservesDraftDirtyStateWithoutSaving()
+    public async Task SettingsNavigation_PersistsChangesAutomatically()
     {
         using var context = CreateContext();
         OpenSettings(context);
-        var savedCount = 0;
-        context.ViewModel.Settings.SettingsSaved += () =>
-        {
-            savedCount++;
-            return Task.CompletedTask;
-        };
+        Assert.True(context.ViewModel.Settings.IsAutoSaveEnabled);
         context.ViewModel.Settings.Editor.Current.Language = LauncherLanguages.Japanese;
         Assert.True(context.ViewModel.Settings.IsSettingsDirty);
-
+        Assert.True(context.ViewModel.Settings.IsAutoSaveEnabled);
         context.ViewModel.Settings.SelectedCategory = SettingsCategoryCodes.Appearance;
         context.ViewModel.Settings.SelectedCategory = SettingsCategoryCodes.General;
 
+        await context.ViewModel.Settings.PendingAutoSave;
+
         Assert.Equal(LauncherLanguages.Japanese, context.ViewModel.Settings.Editor.Current.Language);
-        Assert.True(context.ViewModel.Settings.IsSettingsDirty);
-        Assert.Equal(0, savedCount);
+        var persisted = await context.Provider
+            .GetRequiredService<LauncherSettingsService>()
+            .ReadAsync();
+        Assert.Equal(LauncherLanguages.Japanese, persisted.Language);
     }
 
     [AvaloniaFact]
@@ -518,7 +537,6 @@ public sealed class MainWindowHeadlessTests
         using var context = CreateContext();
         OpenSettings(context);
         context.ViewModel.Settings.SelectedCategory = SettingsCategoryCodes.General;
-        Dispatcher.UIThread.RunJobs();
 
         var rows = context.Window.GetVisualDescendants().OfType<global::Cafe.Launcher.Avalonia.Controls.SettingRow>().ToArray();
         Assert.NotEmpty(rows);
@@ -536,13 +554,38 @@ public sealed class MainWindowHeadlessTests
             var actionPresenter = row.FindControl<ContentPresenter>("ActionPresenter");
             Assert.NotNull(actionPresenter);
             Assert.Equal(row.Action, actionPresenter!.Content);
+            Assert.Equal(1, Grid.GetColumn(actionPresenter));
         }
+    }
+
+    [AvaloniaFact]
+    public void CompactHome_DrawerStartsCollapsedAndKeepsOperationDockVisible()
+    {
+        using var context = CreateContext();
+        context.Window.Width = 1024;
+        context.Window.Height = 640;
+        context.ViewModel.SetCompactHome(true);
+        context.Window.Show();
+        Dispatcher.UIThread.RunJobs();
+
+        var drawer = context.Window.GetVisualDescendants().OfType<Border>()
+            .Single(control => control.Classes.Contains("home-drawer"));
+        var dock = context.Window.GetVisualDescendants().OfType<Border>()
+            .First(control => control.Classes.Contains("bottom-panel") && control.IsEffectivelyVisible);
+
+        Assert.False(drawer.IsEffectivelyVisible);
+        Assert.True(dock.IsEffectivelyVisible);
+
+        context.ViewModel.ToggleHomeDrawerCommand.Execute(null);
+        Dispatcher.UIThread.RunJobs();
+
+        Assert.True(drawer.IsEffectivelyVisible);
     }
 
     [AvaloniaTheory]
     [InlineData(1300, 754)]
     [InlineData(1024, 640)]
-    public void SettingsAdvanced_AtSupportedWindowSizes_AlignsDedicatedLogActionRow(
+    public void SettingsAdvanced_AtSupportedWindowSizes_KeepsLogAndResetActionsReachable(
         double width,
         double height)
     {
@@ -551,19 +594,19 @@ public sealed class MainWindowHeadlessTests
         context.Window.Height = height;
         OpenSettings(context);
         context.ViewModel.Settings.SelectedCategory = SettingsCategoryCodes.Advanced;
-        Dispatcher.UIThread.RunJobs();
 
         var section = context.Window
             .GetVisualDescendants()
             .OfType<SettingsAdvancedSection>()
             .Single();
+        section.IsVisible = true;
+        section.UpdateLayout();
         var rows = section
             .GetVisualDescendants()
             .OfType<global::Cafe.Launcher.Avalonia.Controls.SettingRow>()
-            .Where(row => row.IsEffectivelyVisible)
             .ToArray();
 
-        Assert.Equal(2, rows.Length);
+        Assert.Equal(3, rows.Length);
         var levelControl = rows[0]
             .GetVisualDescendants()
             .OfType<ComboBox>()
@@ -573,50 +616,48 @@ public sealed class MainWindowHeadlessTests
             .OfType<Button>()
             .ToArray();
         Assert.Equal(3, logButtons.Length);
-
-        var levelTopLeft = levelControl.TranslatePoint(default, context.Window);
-        Assert.NotNull(levelTopLeft);
-        var levelRight = levelTopLeft.Value.X + levelControl.Bounds.Width;
-        var logPresenter = rows[1].FindControl<ContentPresenter>("ActionPresenter");
-        Assert.NotNull(logPresenter);
-        var logPresenterTopLeft = logPresenter!.TranslatePoint(default, context.Window);
-        Assert.NotNull(logPresenterTopLeft);
-        var logPresenterRight = logPresenterTopLeft.Value.X + logPresenter.Bounds.Width;
-        Assert.InRange(Math.Abs(levelRight - logPresenterRight), 0, 1);
-
-        var description = rows[1].FindControl<TextBlock>("RowDescription");
-        Assert.NotNull(description);
-        var descriptionTopLeft = description!.TranslatePoint(default, context.Window);
-        var firstButtonTopLeft = logButtons[0].TranslatePoint(default, context.Window);
-        Assert.NotNull(descriptionTopLeft);
-        Assert.NotNull(firstButtonTopLeft);
-        Assert.True(
-            descriptionTopLeft.Value.X + description.Bounds.Width
-            <= firstButtonTopLeft.Value.X);
+        var resetButton = rows[2]
+            .GetVisualDescendants()
+            .OfType<Button>()
+            .Single(button => ReferenceEquals(
+                button.Command,
+                context.ViewModel.Settings.RequestResetSettingsCommand));
 
         AssertControlInsideWindow(levelControl, context.Window);
         Assert.All(logButtons, button => AssertControlInsideWindow(button, context.Window));
+
+        var settingsScroller = context.Window
+            .GetVisualDescendants()
+            .OfType<ScrollViewer>()
+            .Single(control => control.Classes.Contains("dialog-scroll") && control.IsEffectivelyVisible);
+        settingsScroller.Offset = new Vector(
+            settingsScroller.Offset.X,
+            Math.Max(0, settingsScroller.Extent.Height - settingsScroller.Viewport.Height));
+        Dispatcher.UIThread.RunJobs();
+
+        Assert.True(resetButton.IsEffectivelyVisible);
+        AssertControlInsideWindow(resetButton, context.Window);
     }
 
     [AvaloniaFact]
-    public void SettingsSaving_DisablesNavigationButKeepsSummaryAndFooterVisible()
+    public void SettingsSaving_DisablesNavigationWithoutSummaryOrFooter()
     {
         using var context = CreateContext();
         OpenSettings(context);
         var navigation = GetSettingsNavigation(context.Window);
-        var summary = context.Window.GetVisualDescendants().OfType<Border>()
-            .Single(control => control.Classes.Contains("settings-status-summary"));
         var settingsOverlay = context.Window.GetVisualDescendants()
             .OfType<MainWindowSettingsOverlay>().Single();
-        var footer = settingsOverlay.GetVisualDescendants().OfType<Border>()
-            .Single(control => control.Classes.Contains("dialog-footer"));
 
         context.ViewModel.Settings.IsSaving = true;
         Dispatcher.UIThread.RunJobs();
 
         Assert.False(navigation.IsEnabled);
-        Assert.True(summary.IsEffectivelyVisible);
-        Assert.True(footer.IsEffectivelyVisible);
+        Assert.DoesNotContain(
+            settingsOverlay.GetVisualDescendants().OfType<Border>(),
+            control => control.Classes.Contains("settings-status-summary"));
+        Assert.DoesNotContain(
+            settingsOverlay.GetVisualDescendants().OfType<Border>(),
+            control => control.Classes.Contains("dialog-footer"));
     }
 
     [AvaloniaFact]
@@ -639,7 +680,41 @@ public sealed class MainWindowHeadlessTests
     }
 
     [AvaloniaFact]
-    public void SettingsOverlay_AtMinimumWindowSize_KeepsDialogAndFooterVisible()
+    public void SettingsScrollViewer_WhenContentOverflows_AlignsWithContentDividerRightEdge()
+    {
+        using var context = CreateContext();
+        OpenSettings(context);
+        context.ViewModel.Settings.SelectedCategory = SettingsCategoryCodes.Appearance;
+        context.ViewModel.Settings.Editor.Current.ThemeColorMode = ThemeColorModes.Wallpaper;
+        context.ViewModel.Settings.Editor.Current.BackgroundSource = BackgroundSources.Custom;
+        context.ViewModel.Settings.Editor.Current.BackgroundFit = BackgroundFits.Uniform;
+        Dispatcher.UIThread.RunJobs();
+
+        var settingsOverlay = context.Window
+            .GetVisualDescendants()
+            .OfType<MainWindowSettingsOverlay>()
+            .Single();
+        var divider = settingsOverlay
+            .GetVisualDescendants()
+            .OfType<Border>()
+            .Single(control => control.Classes.Contains("settings-content-divider"));
+        var scrollViewer = settingsOverlay
+            .GetVisualDescendants()
+            .OfType<ScrollViewer>()
+            .Single(control => control.Classes.Contains("dialog-scroll"));
+
+        Assert.True(scrollViewer.Extent.Height > scrollViewer.Viewport.Height);
+        Assert.Equal(new Thickness(0, 0, 28, 0), scrollViewer.Padding);
+
+        var dividerRight = divider.TranslatePoint(new Point(divider.Bounds.Width, 0), context.Window);
+        var scrollViewerRight = scrollViewer.TranslatePoint(new Point(scrollViewer.Bounds.Width, 0), context.Window);
+        Assert.NotNull(dividerRight);
+        Assert.NotNull(scrollViewerRight);
+        Assert.InRange(Math.Abs(dividerRight!.Value.X - scrollViewerRight!.Value.X), 0, 0.5);
+    }
+
+    [AvaloniaFact]
+    public void SettingsOverlay_AtMinimumWindowSize_KeepsDialogVisible()
     {
         using var context = CreateContext();
         context.Window.Width = 1024;
@@ -654,16 +729,12 @@ public sealed class MainWindowHeadlessTests
             .GetVisualDescendants()
             .OfType<Border>()
             .Single(control => control.Classes.Contains("overlay-dialog"));
-        var footer = dialog
-            .GetVisualDescendants()
-            .OfType<Border>()
-            .Single(control => control.Classes.Contains("dialog-footer"));
-
         Assert.True(dialog.Bounds.Width <= context.Window.ClientSize.Width - 48);
         Assert.True(dialog.Bounds.Height <= context.Window.ClientSize.Height - 48);
         Assert.True(dialog.Bounds.Height > 0);
-        Assert.True(footer.IsEffectivelyVisible);
-        Assert.True(footer.Bounds.Bottom <= dialog.Bounds.Height);
+        Assert.DoesNotContain(
+            dialog.GetVisualDescendants().OfType<Border>(),
+            control => control.Classes.Contains("dialog-footer"));
     }
 
     [AvaloniaTheory]
@@ -698,6 +769,75 @@ public sealed class MainWindowHeadlessTests
     }
 
     [AvaloniaFact]
+    public void ResourcePanel_UsesCompactDialogTypographyAndPaddedBodyLayout()
+    {
+        using var context = CreateContext();
+        context.Window.Width = 1300;
+        context.Window.Height = 754;
+        context.Window.Show();
+        ShowResourcePanel(context);
+
+        var title = context.Window
+            .GetVisualDescendants()
+            .OfType<TextBlock>()
+            .Where(control => control.IsEffectivelyVisible)
+            .Single(control => control.Classes.Contains("dialog-title"));
+        var body = context.Window
+            .GetVisualDescendants()
+            .OfType<ScrollViewer>()
+            .Where(control => control.IsEffectivelyVisible)
+            .Single(control => control.Classes.Contains("dialog-frame-body"));
+        var status = context.Window
+            .GetVisualDescendants()
+            .OfType<Border>()
+            .Where(control => control.IsEffectivelyVisible)
+            .Single(control => control.Classes.Contains("resource-panel-status"));
+
+        Assert.Equal(18, title.FontSize);
+        Assert.Equal(new Thickness(16), body.Padding);
+
+        var titleTopLeft = title.TranslatePoint(default, context.Window);
+        var statusTopLeft = status.TranslatePoint(default, context.Window);
+        Assert.NotNull(titleTopLeft);
+        Assert.NotNull(statusTopLeft);
+        Assert.InRange(Math.Abs(titleTopLeft.Value.X - statusTopLeft.Value.X), 0, 0.5);
+    }
+
+    [AvaloniaFact]
+    public void ResourcePanel_InitialViewportKeepsResourceCardsAboveFooter()
+    {
+        using var context = CreateContext();
+        context.Window.Width = 1300;
+        context.Window.Height = 754;
+        context.Window.Show();
+        ShowResourcePanel(context);
+
+        var body = context.Window
+            .GetVisualDescendants()
+            .OfType<ScrollViewer>()
+            .Where(control => control.IsEffectivelyVisible)
+            .Single(control => control.Classes.Contains("dialog-frame-body"));
+        var bodyTopLeft = body.TranslatePoint(default, context.Window);
+        Assert.NotNull(bodyTopLeft);
+        var bodyBottom = bodyTopLeft.Value.Y + body.Bounds.Height;
+        var cards = context.Window
+            .GetVisualDescendants()
+            .OfType<Border>()
+            .Where(control =>
+                control.IsEffectivelyVisible
+                && control.Classes.Contains("resource-panel-item-card"))
+            .ToArray();
+
+        Assert.Equal(3, cards.Length);
+        Assert.All(cards, card =>
+        {
+            var topLeft = card.TranslatePoint(default, context.Window);
+            Assert.NotNull(topLeft);
+            Assert.True(topLeft.Value.Y + card.Bounds.Height <= bodyBottom);
+        });
+    }
+
+    [AvaloniaFact]
     public void SetupWizard_InJapaneseAtMinimumWindowSize_KeepsScrollableContentAndNavigationReachable()
     {
         using var context = CreateContext();
@@ -727,7 +867,7 @@ public sealed class MainWindowHeadlessTests
     [InlineData("install")]
     [InlineData("progress")]
     [InlineData("control")]
-    public void MainWindow_AtMinimumWindowSize_RemoteContentDoesNotOverlapOperationPanel(
+    public void MainWindow_AtMinimumWindowSize_RemoteContentStartsCollapsedAboveOperationPanel(
         string panelMode)
     {
         using var context = CreateContext();
@@ -751,10 +891,8 @@ public sealed class MainWindowHeadlessTests
             .Single(control => control.Classes.Contains(operationPanelClass)
                 && control.IsEffectivelyVisible);
 
-        Assert.True(remotePanel.IsEffectivelyVisible);
-        Assert.True(
-            remotePanel.Bounds.Bottom <= operationPanel.Bounds.Top,
-            $"Remote panel bottom {remotePanel.Bounds.Bottom} overlaps operation panel top {operationPanel.Bounds.Top}.");
+        Assert.False(remotePanel.IsEffectivelyVisible);
+        Assert.True(operationPanel.IsEffectivelyVisible);
     }
 
     [AvaloniaFact]
@@ -834,17 +972,167 @@ public sealed class MainWindowHeadlessTests
         Assert.InRange(lastRowTop.Value.Y, 0, viewport.Viewport.Height - rowButtons[^1].Bounds.Height);
     }
 
+    [AvaloniaFact]
+    public void MainWindow_BannerNavigationButtons_AreCenteredAcrossTheFullBanner()
+    {
+        using var context = CreateContext();
+        context.ViewModel.RemoteContent.Apply(
+            new LauncherRemoteState
+            {
+                OperationsResource = new OperationsResourceResponse
+                {
+                    OperationsResourceOpen = true,
+                    BannerLoop = false,
+                    OperationsBannerList =
+                    [
+                        new OperationsBannerItem { BannerImg = "", JumpUrl = "https://banner.example.invalid/1" },
+                        new OperationsBannerItem { BannerImg = "", JumpUrl = "https://banner.example.invalid/2" }
+                    ]
+                }
+            },
+            new LauncherSettings { ShowRemoteContentCard = true },
+            CancellationToken.None);
+        context.Window.Show();
+        Dispatcher.UIThread.RunJobs();
+
+        var bannerShell = context.Window.GetVisualDescendants().OfType<Border>().Single(control =>
+            control.Classes.Contains("banner-shell"));
+        var previous = context.Window.GetVisualDescendants().OfType<Button>().Single(button =>
+            ReferenceEquals(button.Command, context.ViewModel.RemoteContent.SelectPreviousBannerCommand));
+        var next = context.Window.GetVisualDescendants().OfType<Button>().Single(button =>
+            ReferenceEquals(button.Command, context.ViewModel.RemoteContent.SelectNextBannerCommand));
+
+        Assert.All(new[] { previous, next }, button =>
+        {
+            var topLeft = button.TranslatePoint(default, bannerShell);
+            Assert.NotNull(topLeft);
+            var center = topLeft.Value.Y + button.Bounds.Height / 2;
+            Assert.InRange(Math.Abs(center - bannerShell.Bounds.Height / 2), 0, 0.51);
+        });
+    }
+
+    [AvaloniaFact]
+    public void MainWindow_BannerNavigationButton_WhenHovered_UsesSemiTransparentChromeBackground()
+    {
+        using var context = CreateContext();
+        context.ViewModel.RemoteContent.Apply(
+            new LauncherRemoteState
+            {
+                OperationsResource = new OperationsResourceResponse
+                {
+                    OperationsResourceOpen = true,
+                    BannerLoop = false,
+                    OperationsBannerList =
+                    [
+                        new OperationsBannerItem { BannerImg = "", JumpUrl = "https://banner.example.invalid/1" },
+                        new OperationsBannerItem { BannerImg = "", JumpUrl = "https://banner.example.invalid/2" }
+                    ]
+                }
+            },
+            new LauncherSettings { ShowRemoteContentCard = true },
+            CancellationToken.None);
+        context.Window.Show();
+        Dispatcher.UIThread.RunJobs();
+
+        var bannerShell = context.Window.GetVisualDescendants().OfType<Border>().Single(control =>
+            control.Classes.Contains("banner-shell"));
+        var bannerControls = context.Window.GetVisualDescendants().OfType<Grid>().Single(control =>
+            control.Classes.Contains("banner-controls"));
+        var next = context.Window.GetVisualDescendants().OfType<Button>().Single(button =>
+            ReferenceEquals(button.Command, context.ViewModel.RemoteContent.SelectNextBannerCommand));
+
+        var bannerCenter = bannerShell.TranslatePoint(
+            new Point(bannerShell.Bounds.Width / 2, bannerShell.Bounds.Height / 2),
+            context.Window);
+        Assert.NotNull(bannerCenter);
+        context.Window.MouseMove(bannerCenter.Value);
+        Dispatcher.UIThread.RunJobs();
+
+        var nextCenter = next.TranslatePoint(
+            new Point(next.Bounds.Width / 2, next.Bounds.Height / 2),
+            context.Window);
+        Assert.NotNull(nextCenter);
+        context.Window.MouseMove(nextCenter.Value);
+        Dispatcher.UIThread.RunJobs();
+
+        Assert.True(next.IsPointerOver);
+        Assert.Equal(1, bannerControls.Opacity);
+        Assert.Equal(
+            Color.Parse("#CC000000"),
+            Assert.IsType<SolidColorBrush>(next.Background).Color);
+    }
+
+    [AvaloniaFact]
+    public void NewsCategoryTab_WhenKeyboardFocused_UsesUnderlineWithoutFocusAdorner()
+    {
+        using var context = CreateContext();
+        context.ViewModel.RemoteContent.Apply(
+            new LauncherRemoteState
+            {
+                OperationsResource = new OperationsResourceResponse
+                {
+                    OperationsResourceOpen = true,
+                    NewsList = new NewsListEnvelope
+                    {
+                        Code = 0,
+                        Data = new NewsListData
+                        {
+                            News =
+                            [
+                                new NewsTypeItem
+                                {
+                                    TypeLabel = "News",
+                                    Rows =
+                                    [
+                                        new NewsRowItem
+                                        {
+                                            Title = "Focus test",
+                                            Link = "https://news.example.invalid/focus",
+                                            PublishTime = 1_700_000_000_000
+                                        }
+                                    ]
+                                }
+                            ]
+                        }
+                    }
+                }
+            },
+            new LauncherSettings { ShowRemoteContentCard = true },
+            CancellationToken.None);
+        context.Window.Show();
+        Dispatcher.UIThread.RunJobs();
+
+        var tab = context.Window.GetVisualDescendants().OfType<Button>().Single(control =>
+            control.Classes.Contains("news-category-tab"));
+
+        Assert.Equal(new CornerRadius(0), tab.CornerRadius);
+
+        context.Window.Activate();
+        tab.Focus(NavigationMethod.Tab);
+        Dispatcher.UIThread.RunJobs();
+
+        Assert.True(tab.IsFocused);
+        Assert.Equal(new Thickness(0, 0, 0, 2), tab.BorderThickness);
+        Assert.Equal(new CornerRadius(0), tab.CornerRadius);
+
+        var adornerLayer = AdornerLayer.GetAdornerLayer(tab);
+        Assert.NotNull(adornerLayer);
+        Assert.DoesNotContain(
+            adornerLayer.Children,
+            child => ReferenceEquals(AdornerLayer.GetAdornedElement(child), tab));
+    }
+
     [AvaloniaTheory]
     [InlineData("install", 4, 1)]
     [InlineData("progress", 2, 0)]
     [InlineData("control", 2, 1)]
-    public void MainWindow_AtMinimumWindowSize_KeepsOperationStatusAndActionsInsideWindow(
+    public void MainWindow_AtMinimumWindowSize_KeepsOperationContentAndActionsInsideWindow(
         string panelMode,
         int expectedActionCount,
         int expectedPrimaryActionCount)
     {
         using var context = CreateContext();
-        context.ViewModel.Settings.Editor.Current.StatusDetailMode = StatusDetailModes.Detailed;
+        context.ViewModel.Settings.Editor.Current.StatusDetailMode = StatusDetailModes.Compact;
         context.Window.Width = 1024;
         context.Window.Height = 640;
         context.ViewModel.Operations.PanelMode = panelMode switch
@@ -858,36 +1146,193 @@ public sealed class MainWindowHeadlessTests
         context.Window.Show();
         Dispatcher.UIThread.RunJobs();
 
-        var layout = context.Window
+        var panel = context.Window
             .GetVisualDescendants()
-            .OfType<Grid>()
+            .OfType<Border>()
             .Single(control =>
-                control.Classes.Contains("operation-layout")
+                control.Classes.Contains("bottom-panel")
                 && control.IsEffectivelyVisible);
-        var title = layout
-            .GetVisualDescendants()
-            .OfType<TextBlock>()
-            .Single(control => control.Classes.Contains("operation-status-title"));
-        var actions = layout
+        var actions = panel
             .GetVisualDescendants()
             .OfType<Button>()
             .Where(control =>
                 control.IsEffectivelyVisible
-                && (control.Classes.Contains("primary-operation")
-                    || control.Classes.Contains("secondary-operation")))
+                && (ReferenceEquals(control.Command, context.ViewModel.RefreshCommand)
+                    || ReferenceEquals(control.Command, context.ViewModel.Operations.InstallOrUpdateCommand)
+                    || ReferenceEquals(control.Command, context.ViewModel.Settings.ChangePersistedGamePathCommand)
+                    || ReferenceEquals(control.Command, context.ViewModel.Settings.SelectInstalledGameCommand)
+                    || ReferenceEquals(control.Command, context.ViewModel.Operations.PauseResumeCommand)
+                    || ReferenceEquals(control.Command, context.ViewModel.Operations.StopOperationCommand)
+                    || ReferenceEquals(control.Command, context.ViewModel.WindowChrome.OpenOfficialSiteCommand)
+                    || ReferenceEquals(control.Command, context.ViewModel.Operations.StartGameCommand)))
             .ToArray();
 
-        Assert.True(title.IsEffectivelyVisible);
-        AssertControlInsideWindow(title, context.Window);
         Assert.Equal(expectedActionCount, actions.Length);
         Assert.Equal(
             expectedPrimaryActionCount,
-            actions.Count(control => control.Classes.Contains("primary-operation")));
+            actions.Count(control =>
+                ReferenceEquals(control.Command, context.ViewModel.Operations.InstallOrUpdateCommand)
+                || ReferenceEquals(control.Command, context.ViewModel.Operations.StartGameCommand)));
         Assert.All(actions, control =>
         {
             Assert.True(control.IsEffectivelyVisible);
             AssertControlInsideWindow(control, context.Window);
         });
+
+        if (panelMode == "progress")
+        {
+            var title = panel
+                .GetVisualDescendants()
+                .OfType<TextBlock>()
+                .Single(control => control.Classes.Contains("operation-status-title"));
+            Assert.True(title.IsEffectivelyVisible);
+            AssertControlInsideWindow(title, context.Window);
+        }
+    }
+
+    [AvaloniaTheory]
+    [InlineData(StatusDetailModes.Detailed)]
+    [InlineData(StatusDetailModes.Compact)]
+    [InlineData(StatusDetailModes.Hidden)]
+    public void MainWindow_ControlPanel_AllStatusModes_RestoresOfficialSiteAndStartActions(
+        string statusDetailMode)
+    {
+        using var context = CreateContext();
+        context.Window.Width = 1024;
+        context.Window.Height = 640;
+        var settings = context.ViewModel.Settings.Editor.GetSnapshot();
+        settings.StatusDetailMode = statusDetailMode;
+        context.ViewModel.Settings.Editor.ApplySnapshot(settings);
+        context.ViewModel.Operations.PanelMode = GameOperationPanelMode.Control;
+        context.ViewModel.Shell.IsBusy = false;
+        context.Window.Show();
+        Dispatcher.UIThread.RunJobs();
+
+        var controlPanel = context.Window
+            .GetVisualDescendants()
+            .OfType<Border>()
+            .Single(control =>
+                control.Classes.Contains("control-panel")
+                && control.IsEffectivelyVisible);
+        var visibleActions = controlPanel
+            .GetVisualDescendants()
+            .OfType<Button>()
+            .Where(button => button.IsEffectivelyVisible)
+            .ToArray();
+
+        Assert.Equal(2, visibleActions.Length);
+        var officialSiteButton = visibleActions.Single(button => ReferenceEquals(
+            button.Command,
+            context.ViewModel.WindowChrome.OpenOfficialSiteCommand));
+        var startButton = visibleActions.Single(button => ReferenceEquals(
+            button.Command,
+            context.ViewModel.Operations.StartGameCommand));
+        var startButtonText = startButton
+            .GetVisualDescendants()
+            .OfType<TextBlock>()
+            .Single();
+        var application = Application.Current!;
+        Assert.True(application.TryGetResource(
+            "Cafe.Color.OnAccent",
+            application.ActualThemeVariant,
+            out var onAccentBrush));
+        Assert.Equal(startButton.Bounds.Size, officialSiteButton.Bounds.Size);
+        Assert.Equal(startButton.Foreground, startButtonText.Foreground);
+        Assert.Same(onAccentBrush, startButtonText.Foreground);
+        Assert.DoesNotContain(
+            visibleActions,
+            button => ReferenceEquals(button.Command, context.ViewModel.RefreshCommand)
+                || ReferenceEquals(
+                    button.Command,
+                    context.ViewModel.Settings.ChangePersistedGamePathCommand));
+        Assert.All(visibleActions, button => AssertControlInsideWindow(button, context.Window));
+
+        context.ViewModel.Shell.IsBusy = true;
+        Dispatcher.UIThread.RunJobs();
+
+        Assert.False(startButton.IsEffectivelyEnabled);
+        Assert.True(application.TryGetResource(
+            "Cafe.Color.OnChrome.Muted",
+            application.ActualThemeVariant,
+            out var onChromeMutedBrush));
+        Assert.Same(onChromeMutedBrush, startButtonText.Foreground);
+    }
+
+    [AvaloniaFact]
+    public void MainWindow_ControlPanel_ActionButtons_ApplyPressedBrushesAtRuntime()
+    {
+        using var context = CreateContext();
+        context.Window.Width = 1024;
+        context.Window.Height = 640;
+        context.ViewModel.Operations.PanelMode = GameOperationPanelMode.Control;
+        context.ViewModel.Shell.IsBusy = false;
+        context.Window.Show();
+        Dispatcher.UIThread.RunJobs();
+
+        var controlPanel = context.Window
+            .GetVisualDescendants()
+            .OfType<Border>()
+            .Single(control =>
+                control.Classes.Contains("control-panel")
+                && control.IsEffectivelyVisible);
+        var officialSiteButton = controlPanel
+            .GetVisualDescendants()
+            .OfType<Button>()
+            .Where(button => button.IsEffectivelyVisible)
+            .Single(button => ReferenceEquals(
+                button.Command,
+                context.ViewModel.WindowChrome.OpenOfficialSiteCommand));
+        var startButton = controlPanel
+            .GetVisualDescendants()
+            .OfType<Button>()
+            .Where(button => button.IsEffectivelyVisible)
+            .Single(button => ReferenceEquals(
+                button.Command,
+                context.ViewModel.Operations.StartGameCommand));
+        var application = Application.Current!;
+
+        Assert.True(startButton.IsEffectivelyEnabled);
+        Assert.True(application.TryGetResource(
+            "Cafe.Color.Accent.Pressed",
+            application.ActualThemeVariant,
+            out var accentPressedBrush));
+        Assert.True(application.TryGetResource(
+            "Cafe.Color.Surface.Info",
+            application.ActualThemeVariant,
+            out var surfaceInfoBrush));
+        Assert.True(application.TryGetResource(
+            "Cafe.Color.Surface",
+            application.ActualThemeVariant,
+            out var surfaceBrush));
+        var surfaceInfoColor = Assert.IsType<SolidColorBrush>(surfaceInfoBrush).Color;
+        Assert.Equal(byte.MaxValue, surfaceInfoColor.A);
+
+        var startPoint = startButton.TranslatePoint(
+            new Point(startButton.Bounds.Width / 2, startButton.Bounds.Height / 2),
+            context.Window);
+        Assert.NotNull(startPoint);
+        context.Window.MouseMove(startPoint.Value);
+        context.Window.MouseDown(startPoint.Value, MouseButton.Left);
+        Dispatcher.UIThread.RunJobs();
+
+        Assert.Same(accentPressedBrush, startButton.Background);
+        Assert.Same(accentPressedBrush, startButton.BorderBrush);
+        Assert.Equal(new Thickness(1), startButton.BorderThickness);
+
+        context.Window.MouseUp(startPoint.Value, MouseButton.Left);
+        var officialSitePoint = officialSiteButton.TranslatePoint(
+            new Point(officialSiteButton.Bounds.Width / 2, officialSiteButton.Bounds.Height / 2),
+            context.Window);
+        Assert.NotNull(officialSitePoint);
+        context.Window.MouseMove(officialSitePoint.Value);
+        Dispatcher.UIThread.RunJobs();
+
+        Assert.Same(surfaceBrush, officialSiteButton.Background);
+
+        context.Window.MouseDown(officialSitePoint.Value, MouseButton.Left);
+        Dispatcher.UIThread.RunJobs();
+
+        Assert.Same(surfaceInfoBrush, officialSiteButton.Background);
     }
 
     [AvaloniaTheory]
@@ -908,48 +1353,68 @@ public sealed class MainWindowHeadlessTests
             .GetVisualDescendants()
             .OfType<Grid>()
             .Single(control => control.Classes.Contains("install-path-row"));
-        var pathField = pathRow.Children
-            .OfType<Border>()
-            .Single(control => control.Classes.Contains("path-field"));
+        var pathField = Assert.IsType<Border>(pathRow.Parent);
+        Assert.Contains("path-field", pathField.Classes);
         var changePathButton = pathField
             .GetVisualDescendants()
             .OfType<Button>()
-            .Single(control => control.Classes.Contains("secondary-operation"));
+            .Single(control => ReferenceEquals(
+                control.Command,
+                context.ViewModel.Settings.ChangePersistedGamePathCommand));
+        var detectButton = pathField
+            .GetVisualDescendants()
+            .OfType<Button>()
+            .Single(control => ReferenceEquals(
+                control.Command,
+                context.ViewModel.Settings.SelectInstalledGameCommand));
         var pathText = pathField
             .GetVisualDescendants()
             .OfType<TextBlock>()
             .Single(control => control.Classes.Contains("caption"));
-        var externalActions = pathRow.Children
+        var actionPanel = context.Window
+            .GetVisualDescendants()
+            .OfType<StackPanel>()
+            .Single(control =>
+                control.Classes.Contains("operation-actions")
+                && control.IsEffectivelyVisible);
+        var externalActions = actionPanel
+            .GetVisualDescendants()
             .OfType<Button>()
             .OrderBy(control => control.Bounds.Left)
             .ToArray();
         var changePathTopLeft = changePathButton.TranslatePoint(default, pathField);
+        var detectTopLeft = detectButton.TranslatePoint(default, pathField);
         var pathTextTopLeft = pathText.TranslatePoint(default, pathField);
+        var pathFieldTopLeft = pathField.TranslatePoint(default, context.Window);
+        var actionPanelTopLeft = actionPanel.TranslatePoint(default, context.Window);
 
         Assert.NotNull(changePathTopLeft);
+        Assert.NotNull(detectTopLeft);
         Assert.NotNull(pathTextTopLeft);
+        Assert.NotNull(pathFieldTopLeft);
+        Assert.NotNull(actionPanelTopLeft);
 
-        var changePathRightInset = pathField.Bounds.Width
-            - (changePathTopLeft.Value.X + changePathButton.Bounds.Width);
         var changePathTopInset = changePathTopLeft.Value.Y;
         var changePathBottomInset = pathField.Bounds.Height
             - (changePathTopLeft.Value.Y + changePathButton.Bounds.Height);
 
         Assert.Equal(2, externalActions.Length);
         Assert.True(pathField.Bounds.Width > 0);
-        Assert.True(pathField.Bounds.Right <= externalActions[0].Bounds.Left);
+        Assert.True(pathFieldTopLeft.Value.X + pathField.Bounds.Width <= actionPanelTopLeft.Value.X);
         Assert.True(externalActions[0].Bounds.Right <= externalActions[1].Bounds.Left);
         Assert.True(pathTextTopLeft.Value.X + pathText.Bounds.Width <= changePathTopLeft.Value.X);
         Assert.True(changePathTopLeft.Value.X >= 0);
-        Assert.True(changePathTopLeft.Value.X + changePathButton.Bounds.Width <= pathField.Bounds.Width);
+        Assert.True(changePathTopLeft.Value.X + changePathButton.Bounds.Width <= detectTopLeft.Value.X);
+        Assert.True(detectTopLeft.Value.X + detectButton.Bounds.Width <= pathField.Bounds.Width);
         Assert.True(changePathTopLeft.Value.Y >= 0);
         Assert.True(changePathTopLeft.Value.Y + changePathButton.Bounds.Height <= pathField.Bounds.Height);
-        Assert.InRange(Math.Abs(changePathRightInset - changePathTopInset), 0, 4);
-        Assert.InRange(Math.Abs(changePathRightInset - changePathBottomInset), 0, 4);
-        Assert.Contains("secondary-operation", externalActions[0].Classes);
-        Assert.Contains("primary-operation", externalActions[1].Classes);
+        Assert.InRange(Math.Abs(changePathTopInset - changePathBottomInset), 0, 4);
+        Assert.Same(context.ViewModel.RefreshCommand, externalActions[0].Command);
+        Assert.Same(context.ViewModel.Operations.InstallOrUpdateCommand, externalActions[1].Command);
+        Assert.Contains("primary-action", externalActions[1].Classes);
         AssertControlInsideWindow(pathField, context.Window);
         AssertControlInsideWindow(changePathButton, context.Window);
+        AssertControlInsideWindow(detectButton, context.Window);
         Assert.All(externalActions, action => AssertControlInsideWindow(action, context.Window));
     }
 
@@ -963,8 +1428,7 @@ public sealed class MainWindowHeadlessTests
         bool expectedEnabled)
     {
         using var context = CreateContext();
-        // Default to detailed mode so the primary install button in the path row is visible.
-        context.ViewModel.Settings.Editor.Current.StatusDetailMode = StatusDetailModes.Detailed;
+        context.ViewModel.Settings.Editor.Current.StatusDetailMode = StatusDetailModes.Compact;
         context.Window.Show();
         context.ViewModel.Shell.IsInstallBlockedByDiskSpace = isBlockedByDiskSpace;
         context.ViewModel.Shell.InstallDiskSpaceMessage = isBlockedByDiskSpace
@@ -977,17 +1441,34 @@ public sealed class MainWindowHeadlessTests
         });
         Dispatcher.UIThread.RunJobs();
 
-        // Find the path-row install button which includes the disk-space tooltip.
         var installButton = context.Window
             .GetVisualDescendants()
             .OfType<Button>()
-            .Where(button => ReferenceEquals(
+            .Single(button => ReferenceEquals(
                 button.Command,
-                context.ViewModel.Operations.InstallOrUpdateCommand))
-            .First(button =>
-                button.Classes.Contains("path-operation"));
+                context.ViewModel.Operations.InstallOrUpdateCommand));
 
         Assert.Equal(expectedEnabled, installButton.IsEffectivelyEnabled);
+    }
+
+    [AvaloniaFact]
+    public void Settings_WhenLegacyDetailedModeIsLoaded_RemainsRenderable()
+    {
+        using var context = CreateContext();
+        context.ViewModel.Settings.Editor.Current.StatusDetailMode = StatusDetailModes.Detailed;
+
+        Assert.Equal(StatusDetailModes.Compact, context.ViewModel.Settings.Editor.Current.StatusDetailMode);
+        OpenSettings(context);
+
+        var statusCombo = context.Window
+            .GetVisualDescendants()
+            .OfType<ComboBox>()
+            .Single(control =>
+                control.Classes.Contains("setting-control")
+                && control.SelectedValue?.ToString() == StatusDetailModes.Compact);
+
+        Assert.True(statusCombo.IsEffectivelyVisible);
+        Assert.Equal(2, statusCombo.ItemCount);
     }
 
     [AvaloniaFact]
@@ -1047,7 +1528,6 @@ public sealed class MainWindowHeadlessTests
         Assert.Equal(title.Text, AutomationProperties.GetName(title));
 
         context.ViewModel.Settings.SelectedCategory = SettingsCategoryCodes.Appearance;
-        Dispatcher.UIThread.RunJobs();
 
         Assert.Equal(
             context.ViewModel.Settings.Options.SettingsCategories.Single(
@@ -1097,12 +1577,11 @@ public sealed class MainWindowHeadlessTests
     }
 
     [AvaloniaFact]
-    public void SettingsFooter_BindsTransactionalSaveAndCancelCommands()
+    public void SettingsOverlay_AutoSavesWithoutFooterActions()
     {
         using var context = CreateContext();
         context.Window.Show();
-        context.ViewModel.WindowChrome.IsSettingsVisible = true;
-        context.ViewModel.Settings.Editor.Current.Language = LauncherLanguages.Japanese;
+        context.ViewModel.WindowChrome.ShowSettingsCommand.Execute(null);
         Dispatcher.UIThread.RunJobs();
         var footerButtons = context.Window
             .GetVisualDescendants()
@@ -1116,18 +1595,8 @@ public sealed class MainWindowHeadlessTests
                         control.Command,
                         context.ViewModel.WindowChrome.ShowSettingsCommand)))
             .ToArray();
-        Assert.Equal(2, footerButtons.Length);
-        var save = footerButtons.Single(button =>
-            ReferenceEquals(button.Command, context.ViewModel.Settings.SaveSettingsCommand));
-        var cancel = footerButtons.Single(button =>
-            ReferenceEquals(button.Command, context.ViewModel.WindowChrome.ShowSettingsCommand));
-
-        Assert.True(save.IsEnabled);
-        cancel.Command!.Execute(cancel.CommandParameter);
-        Dispatcher.UIThread.RunJobs();
-
+        Assert.Empty(footerButtons);
         Assert.True(context.ViewModel.WindowChrome.IsSettingsVisible);
-        Assert.True(context.ViewModel.Settings.IsUnsavedChangesVisible);
     }
 
     [AvaloniaFact]
@@ -1149,8 +1618,7 @@ public sealed class MainWindowHeadlessTests
             .GetVisualDescendants()
             .OfType<Button>()
             .First(button =>
-                button.Classes.Contains("primary-operation")
-                && ReferenceEquals(
+                ReferenceEquals(
                     button.Command,
                     context.ViewModel.Operations.StartGameCommand));
         var cancelButton = context.Window
@@ -1184,7 +1652,7 @@ public sealed class MainWindowHeadlessTests
             .GetVisualDescendants()
             .OfType<Button>()
             .Single(button =>
-                button.Classes.Contains("dialog-action")
+                button.Classes.Contains("dialog-close")
                 && ReferenceEquals(
                     button.Command,
                     context.ViewModel.WindowChrome.ShowSettingsCommand));
@@ -1699,6 +2167,8 @@ public sealed class MainWindowHeadlessTests
         Directory.CreateDirectory(tempDir);
         var services = new ServiceCollection();
         services.AddLauncherServices();
+        services.RemoveAll<LauncherSettingsService>();
+        services.AddSingleton(new LauncherSettingsService(Path.Combine(tempDir, "settings.json")));
         if (journeyFactory is not null)
         {
             services.AddSingleton(journeyFactory);
@@ -1726,6 +2196,7 @@ public sealed class MainWindowHeadlessTests
     private static void OpenSettings(TestContext context)
     {
         context.Window.Show();
+        context.ViewModel.RemoteContent.StopCarouselTimer();
         context.ViewModel.WindowChrome.ShowSettingsCommand.Execute(null);
         Dispatcher.UIThread.RunJobs();
     }
@@ -1781,8 +2252,8 @@ public sealed class MainWindowHeadlessTests
         var presenter = selectedItem.GetVisualDescendants().OfType<ContentPresenter>().Single();
 
         Assert.Equal(expectedCode, ((SettingOption)selectedItem.DataContext!).Code);
-        Assert.Equal(new Thickness(3, 0, 0, 0), selectedItem.BorderThickness);
-        Assert.Equal(Color.Parse("#FF2E7DF6"), Assert.IsType<SolidColorBrush>(selectedItem.BorderBrush).Color);
+        Assert.Equal(new Thickness(0), selectedItem.BorderThickness);
+        Assert.Equal(Color.Parse("#00000000"), Assert.IsType<SolidColorBrush>(selectedItem.BorderBrush).Color);
         Assert.Equal(Color.Parse("#302E7DF6"), Assert.IsType<SolidColorBrush>(selectedItem.Background).Color);
         Assert.Equal(Color.Parse("#302E7DF6"), Assert.IsType<SolidColorBrush>(presenter.Background).Color);
     }
