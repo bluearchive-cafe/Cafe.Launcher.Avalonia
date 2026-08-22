@@ -1,0 +1,96 @@
+<!doctype html>
+<html lang="zh-Hans">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Cafe Design System · 组件总览</title>
+  <link rel="icon" href="../../Assets/app-icon.ico">
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+  <main class="component-canvas">
+    <header class="component-header">
+      <div>
+        <h1>Cafe Design System</h1>
+        <p>一个服务启动器自身的轻量设计层：少量基础尺度、语义主题色、稳定组件状态，以及留在功能内部的页面布局。</p>
+      </div>
+      <span class="save-state"><svg class="icon small" data-icon="check-circle" aria-hidden="true"></svg>Default accent · #2E7DF6</span>
+    </header>
+
+    <div class="component-grid">
+      <section class="component-section full">
+        <h2>语义颜色</h2>
+        <div class="color-grid">
+          <div class="color-token" style="--color:#2e7df6"><strong>Primary</strong><span>#2E7DF6</span></div>
+          <div class="color-token" style="--color:#176ce9"><strong>Primary Hover</strong><span>#176CE9</span></div>
+          <div class="color-token" style="--color:#f9fbfe;--on-color:#1d2a3d"><strong>Surface</strong><span>#F9FBFE</span></div>
+          <div class="color-token" style="--color:#17233b"><strong>Surface Dark</strong><span>#17233B</span></div>
+          <div class="color-token" style="--color:#16875d"><strong>Success</strong><span>#16875D</span></div>
+          <div class="color-token" style="--color:#d68200"><strong>Warning</strong><span>#D68200</span></div>
+          <div class="color-token" style="--color:#d73f4c"><strong>Danger</strong><span>#D73F4C</span></div>
+          <div class="color-token" style="--color:#edf2f8;--on-color:#53647d"><strong>Canvas</strong><span>#EDF2F8</span></div>
+        </div>
+      </section>
+
+      <section class="component-section">
+        <h2>排版角色</h2>
+        <div class="type-sample display"><small>Display · 24</small><span>游戏已就绪</span></div>
+        <div class="type-sample title"><small>Title · 18</small><span>外观与个性化</span></div>
+        <div class="type-sample"><small>Label / Body · 14</small><span>下载完成后自动校验文件</span></div>
+        <div class="type-sample caption"><small>Caption · 12</small><span>更改会在约 400ms 后自动保存</span></div>
+      </section>
+
+      <section class="component-section">
+        <h2>间距与圆角</h2>
+        <div class="token-scale" aria-label="间距尺度">
+          <span class="token-step" style="--size:24px">4</span><span class="token-step" style="--size:28px">8</span><span class="token-step" style="--size:32px">12</span><span class="token-step" style="--size:38px">16</span><span class="token-step" style="--size:48px">24</span><span class="token-step" style="--size:58px">32</span>
+        </div>
+        <div class="component-row" style="margin-top:24px">
+          <span class="token-step" style="--size:70px;border-radius:6px">R6</span><span class="token-step" style="--size:70px;border-radius:10px">R10</span><span class="token-step" style="--size:70px;border-radius:16px">R16</span>
+        </div>
+      </section>
+
+      <section class="component-section full">
+        <h2>按钮与字段</h2>
+        <div class="component-row">
+          <button class="button primary" type="button"><svg class="icon" data-icon="play" aria-hidden="true"></svg>开始游戏</button>
+          <button class="button quiet" type="button"><svg class="icon small" data-icon="refresh" aria-hidden="true"></svg>重新检查</button>
+          <button class="button danger" type="button"><svg class="icon small" data-icon="stop" aria-hidden="true"></svg>停止下载</button>
+          <select class="select-control" aria-label="主题"><option>跟随系统</option><option>浅色</option><option>深色</option></select>
+          <label class="switch"><input type="checkbox" checked aria-label="启用动画"><span class="switch-track"></span></label>
+        </div>
+      </section>
+
+      <section class="component-section">
+        <h2>Toast</h2>
+        <article class="toast-card component-toast">
+          <div class="toast-layout">
+            <svg class="icon toast-icon" data-icon="check-circle" aria-hidden="true"></svg>
+            <div><h3 class="toast-title">设置已同步</h3><p class="toast-message">新的主题与背景已应用。</p></div>
+            <button class="toast-close" data-dismiss type="button" aria-label="关闭通知"><svg class="icon small" data-icon="close" aria-hidden="true"></svg></button>
+          </div>
+        </article>
+      </section>
+
+      <section class="component-section">
+        <h2>确认框</h2>
+        <div class="confirm-preview">
+          <div class="confirm-copy"><h3>停止当前下载？</h3><p>已完成的文件会保留，下次可以继续下载。</p></div>
+          <div class="dialog-actions"><button class="button quiet" type="button">继续下载</button><button class="button danger" type="button">停止</button></div>
+        </div>
+      </section>
+
+      <section class="component-section full">
+        <h2>本地化压力样例</h2>
+        <div class="long-copy">
+          <p><strong>English:</strong> Automatically verify downloaded files before starting the game, and retry only the resources that did not pass integrity validation.</p>
+          <p lang="ja"><strong>日本語:</strong> ゲームを開始する前にダウンロード済みファイルを自動的に確認し、整合性チェックに失敗したリソースのみ再試行します。</p>
+          <p><strong>简体中文：</strong>开始游戏前自动校验已下载文件，仅重新获取未通过完整性检查的资源。</p>
+        </div>
+      </section>
+    </div>
+  </main>
+  <p class="prototype-note">组件总览 · 共享结构与状态，不包含页面专属尺寸</p>
+  <script src="prototype.js"></script>
+</body>
+</html>

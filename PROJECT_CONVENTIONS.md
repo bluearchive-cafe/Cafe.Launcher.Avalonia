@@ -42,7 +42,7 @@ AI 辅助开发规范 —— 本文件为所有 AI 编码助手（Claude Code、
 ### 2.3 XAML 规范
 
 - 所有可视值使用 `StaticResource` 设计 token，**禁止**在 View XAML 中写裸色号、`Transparent`、裸图标尺寸、裸 `4`/`6`/`8` 圆角半径。
-- 主题无关的渐变和阴影定义仅允许在 `App.axaml` 或 `MainWindow.Styles.axaml` 中。
+- 基础尺度放在 `Views/Styles/Foundation.axaml`，主题语义色放在 `Views/Styles/Theme.axaml`，共享控件状态放在 `Views/Styles/Controls.axaml`；功能私有布局才放在对应 feature style 文件中。
 - `AutomationProperties.Name` 绑定到本地化字符串的**所有**交互控件都必须有。
 - 控件使用语义化的 `Classes` 属性而非内联 Style。
 - 大块 XAML（样式、覆盖层）提取为独立 `.axaml` 文件，`MainWindow.axaml` 只保留窗口外壳与内容网格。
@@ -197,8 +197,8 @@ AI 辅助开发规范 —— 本文件为所有 AI 编码助手（Claude Code、
 
 | 反模式 | 正确做法 |
 |---|---|
-| 在 View XAML 中写 `Foreground="#FF0000"` 等 | 使用 `{DynamicResource LauncherAccentBrush}` 等 |
-| 在非 App/Styles 文件中定义内联 Style | 提取到 `MainWindow.Styles.axaml` |
+| 在 View XAML 中写 `Foreground="#FF0000"` 等 | 使用 `{DynamicResource Cafe.Color.Accent}` 等语义色 |
+| 在非分层样式文件中定义内联 Style | 提取到 `Foundation.axaml`、`Theme.axaml`、`Controls.axaml` 或对应 feature style 文件 |
 | 用 `await task.Result` 代替 `await task` | 直接 `await task` |
 | 在 DI 构造中 `new` 一个 Service 而不是注入 | 通过构造函数注入 |
 | 用 `Thread.Sleep` 等待异步结果 | 用 `await` 或 `TaskCompletionSource` |

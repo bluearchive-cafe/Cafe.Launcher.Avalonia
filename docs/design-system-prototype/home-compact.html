@@ -1,0 +1,59 @@
+<!doctype html>
+<html lang="zh-Hans">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Cafe Launcher · 紧凑首页视觉稿</title>
+  <link rel="icon" href="../../Assets/app-icon.ico">
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body class="prototype-page">
+  <main class="launcher compact" aria-label="Cafe Launcher 紧凑首页">
+    <header class="titlebar">
+      <div class="brand-lockup" aria-label="Cafe Launcher"><span class="brand-mark">CAFE</span><span class="brand-product">LAUNCHER</span></div>
+      <div class="window-actions" aria-label="窗口操作">
+        <button class="chrome-button" type="button" data-tooltip="资源面板" aria-label="资源面板"><svg class="icon" data-icon="resource" aria-hidden="true"></svg></button>
+        <button class="chrome-button" type="button" data-tooltip="设置" aria-label="设置"><svg class="icon" data-icon="settings" aria-hidden="true"></svg></button>
+        <button class="chrome-button" type="button" data-tooltip="更多（含社交与调试入口）" aria-label="更多"><svg class="icon" data-icon="more" aria-hidden="true"></svg></button>
+        <button class="chrome-button" type="button" data-tooltip="最小化" aria-label="最小化"><svg class="icon" data-icon="minus" aria-hidden="true"></svg></button>
+        <button class="chrome-button close" type="button" data-tooltip="关闭" aria-label="关闭"><svg class="icon" data-icon="close" aria-hidden="true"></svg></button>
+      </div>
+    </header>
+
+    <div class="home-layout">
+      <section class="home-stage">
+        <button class="button quiet drawer-toggle" data-drawer-toggle type="button" aria-expanded="false" aria-controls="compact-content">
+          <svg class="icon small" data-icon="document" aria-hidden="true"></svg>内容
+        </button>
+        <div class="content-rail" id="compact-content">
+          <button class="notice-strip" type="button"><svg class="icon small" data-icon="bell" aria-hidden="true"></svg><span class="notice-copy"><span class="notice-label">重要公告</span>　8 月 21 日维护说明</span><svg class="icon small" data-icon="chevron-right" aria-hidden="true"></svg></button>
+          <section class="feature-banner" data-banner tabindex="0" role="group" aria-roledescription="轮播图" aria-label="精选横幅">
+            <div class="banner-slide scene-one active"></div><div class="banner-slide scene-two"></div><div class="banner-slide scene-three"></div><div class="banner-vignette"></div>
+            <button class="banner-control previous" data-banner-previous tabindex="-1" type="button" aria-label="上一张横幅"><svg class="icon" data-icon="chevron-left" aria-hidden="true"></svg></button>
+            <button class="banner-control next" data-banner-next tabindex="-1" type="button" aria-label="下一张横幅"><svg class="icon" data-icon="chevron-right" aria-hidden="true"></svg></button>
+            <div class="banner-dots" aria-label="横幅进度"><button class="banner-dot active" tabindex="-1" type="button" aria-label="第 1 张"></button><button class="banner-dot" tabindex="-1" type="button" aria-label="第 2 张"></button><button class="banner-dot" tabindex="-1" type="button" aria-label="第 3 张"></button></div>
+          </section>
+          <section class="news-panel" aria-labelledby="compact-news-heading">
+            <header class="section-heading"><h2 class="section-title" id="compact-news-heading">最新情报</h2><a class="section-link" href="#">查看全部</a></header>
+            <ul class="news-list"><li><a class="news-item" href="#"><span class="news-category">更新</span><span class="news-title">版本 1.0.0-beta.10 更新内容</span><time class="news-date">08-21</time></a></li><li><a class="news-item" href="#"><span class="news-category">活动</span><span class="news-title">限时活动与奖励领取说明</span><time class="news-date">08-19</time></a></li><li><a class="news-item" href="#"><span class="news-category">公告</span><span class="news-title">已知问题与临时解决方案</span><time class="news-date">08-17</time></a></li></ul>
+          </section>
+        </div>
+      </section>
+
+      <footer class="operation-dock">
+        <div class="operation-copy">
+          <div class="status-emblem"><svg class="icon large" data-icon="check-circle" aria-hidden="true"></svg></div>
+          <div><h2 class="operation-title">游戏已就绪</h2><p class="operation-subtitle">本地文件完整，可以开始游戏。</p><div class="meta-row"><span class="meta-item"><svg class="icon small" data-icon="document" aria-hidden="true"></svg>JP 1.52.3</span><span class="meta-item"><svg class="icon small" data-icon="disk" aria-hidden="true"></svg>186 GB</span><span class="meta-item"><svg class="icon small" data-icon="network" aria-hidden="true"></svg>正常</span></div></div>
+        </div>
+        <div class="dock-actions">
+          <button class="button quiet path-button" type="button"><svg class="icon small" data-icon="folder" aria-hidden="true"></svg><span>D:\\Games\\BlueArchive</span></button>
+          <button class="button quiet" type="button" aria-label="刷新状态"><svg class="icon small" data-icon="refresh" aria-hidden="true"></svg>刷新</button>
+          <button class="button primary" type="button"><svg class="icon large" data-icon="play" aria-hidden="true"></svg>开始游戏</button>
+        </div>
+      </footer>
+    </div>
+  </main>
+  <p class="prototype-note">1024×640 紧凑状态 · 点击“内容”展开摘要抽屉</p>
+  <script src="prototype.js"></script>
+</body>
+</html>

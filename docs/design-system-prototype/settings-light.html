@@ -1,0 +1,107 @@
+<!doctype html>
+<html lang="zh-Hans">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Cafe Launcher · 浅色设置视觉稿</title>
+  <link rel="icon" href="../../Assets/app-icon.ico">
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body class="prototype-page">
+  <main class="launcher light" aria-label="Cafe Launcher 浅色设置">
+    <header class="titlebar">
+      <div class="brand-lockup" aria-label="Cafe Launcher"><span class="brand-mark">CAFE</span><span class="brand-product">LAUNCHER</span></div>
+      <div class="window-actions" aria-label="窗口操作">
+        <button class="chrome-button" type="button" data-tooltip="资源面板" aria-label="资源面板"><svg class="icon" data-icon="resource" aria-hidden="true"></svg></button>
+        <button class="chrome-button" type="button" data-tooltip="设置" aria-label="设置"><svg class="icon" data-icon="settings" aria-hidden="true"></svg></button>
+        <button class="chrome-button" type="button" data-tooltip="更多" aria-label="更多"><svg class="icon" data-icon="more" aria-hidden="true"></svg></button>
+        <button class="chrome-button" type="button" data-tooltip="最小化" aria-label="最小化"><svg class="icon" data-icon="minus" aria-hidden="true"></svg></button>
+        <button class="chrome-button close" type="button" data-tooltip="关闭" aria-label="关闭"><svg class="icon" data-icon="close" aria-hidden="true"></svg></button>
+      </div>
+    </header>
+
+    <section class="modal-layer" data-settings-demo>
+      <div class="settings-dialog" role="dialog" aria-modal="true" aria-labelledby="settings-title">
+        <header class="settings-header">
+          <div class="settings-heading">
+            <h1 id="settings-title">设置</h1>
+            <span class="save-state error" data-save-state>有 1 项未同步</span>
+          </div>
+          <button class="settings-close" type="button" aria-label="关闭设置"><svg class="icon" data-icon="close" aria-hidden="true"></svg></button>
+        </header>
+
+        <div class="settings-workspace">
+          <nav class="settings-nav" aria-label="设置分类">
+            <button type="button">常规</button>
+            <button type="button">游戏</button>
+            <button type="button">下载与网络</button>
+            <button class="active" type="button" aria-current="page">外观</button>
+            <button type="button">高级</button>
+            <button type="button">关于</button>
+          </nav>
+
+          <div class="settings-content">
+            <h2>外观</h2>
+            <p class="settings-intro">调整启动器主题、强调色、背景和界面动态效果。更改会自动保存。</p>
+
+            <div class="sync-error" data-sync-error role="alert">
+              <svg class="icon" data-icon="warning" aria-hidden="true"></svg>
+              <span>无法写入设置文件。当前选择仍然有效，连接恢复后可以重试。</span>
+              <button class="retry-button" data-retry type="button">重试保存</button>
+            </div>
+
+            <section class="setting-group" aria-labelledby="theme-group">
+              <h3 id="theme-group">主题与颜色</h3>
+              <div class="setting-row">
+                <div class="setting-copy"><strong>应用主题</strong><span>跟随系统，或固定使用浅色、深色主题。</span></div>
+                <select class="setting-control select-control" aria-label="应用主题"><option selected>浅色</option><option>跟随系统</option><option>深色</option></select>
+              </div>
+              <div class="setting-row">
+                <div class="setting-copy"><strong>强调色来源</strong><span>默认颜色保持 #2E7DF6，其他来源会生成可访问色阶。</span></div>
+                <div class="setting-control segmented" role="group" aria-label="强调色来源">
+                  <button class="active" data-segment type="button">默认</button><button data-segment type="button">系统</button><button data-segment type="button">壁纸</button><button data-segment type="button">自定义</button>
+                </div>
+              </div>
+              <div class="setting-row">
+                <div class="setting-copy"><strong>壁纸取色</strong><span>从当前背景选择用于主操作和焦点状态的颜色。</span></div>
+                <div class="setting-control palette" aria-label="壁纸取色">
+                  <button class="active" data-swatch data-color="#2e7df6" style="--swatch:#2e7df6" type="button" aria-label="蓝色"></button>
+                  <button data-swatch data-color="#1687a7" style="--swatch:#1687a7" type="button" aria-label="青色"></button>
+                  <button data-swatch data-color="#6256a8" style="--swatch:#6256a8" type="button" aria-label="紫色"></button>
+                  <button data-swatch data-color="#b35679" style="--swatch:#b35679" type="button" aria-label="玫红"></button>
+                </div>
+              </div>
+            </section>
+
+            <section class="setting-group" aria-labelledby="background-group">
+              <h3 id="background-group">背景</h3>
+              <div class="setting-row">
+                <div class="setting-copy"><strong>背景来源</strong><span>使用随应用提供的背景，也可以选择远程或本地图片。</span></div>
+                <select class="setting-control select-control" aria-label="背景来源"><option selected>内置背景</option><option>远程背景</option><option>自定义图片</option></select>
+              </div>
+              <div class="setting-row">
+                <div class="setting-copy"><strong>图片适应方式</strong><span>保持比例并填满窗口，边缘内容可能被裁切。</span></div>
+                <select class="setting-control select-control" aria-label="图片适应方式"><option selected>统一填充</option><option>完整显示</option><option>拉伸</option></select>
+              </div>
+            </section>
+
+            <section class="setting-group" aria-labelledby="display-group">
+              <h3 id="display-group">显示</h3>
+              <div class="setting-row">
+                <div class="setting-copy"><strong>界面动画</strong><span>跟随系统减少动画设置；关闭时仍保留必要的进度反馈。</span></div>
+                <label class="setting-control switch"><input type="checkbox" checked aria-label="界面动画"><span class="switch-track"></span></label>
+              </div>
+              <div class="setting-row">
+                <div class="setting-copy"><strong>首页内容</strong><span>显示公告、横幅和新闻摘要。</span></div>
+                <label class="setting-control switch"><input type="checkbox" checked aria-label="首页内容"><span class="switch-track"></span></label>
+              </div>
+            </section>
+          </div>
+        </div>
+      </div>
+    </section>
+  </main>
+  <p class="prototype-note">浅色设置 · 点击“重试保存”或修改控件查看即时保存状态</p>
+  <script src="prototype.js"></script>
+</body>
+</html>

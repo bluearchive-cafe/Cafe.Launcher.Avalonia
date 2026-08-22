@@ -1,0 +1,86 @@
+<!doctype html>
+<html lang="zh-Hans">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Cafe Launcher · 下载进度视觉稿</title>
+  <link rel="icon" href="../../Assets/app-icon.ico">
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body class="prototype-page">
+  <main class="launcher" aria-label="Cafe Launcher 下载进度首页">
+    <header class="titlebar">
+      <div class="brand-lockup" aria-label="Cafe Launcher">
+        <span class="brand-mark">CAFE</span><span class="brand-product">LAUNCHER</span>
+      </div>
+      <div class="window-actions" aria-label="窗口操作">
+        <button class="chrome-button" type="button" data-tooltip="资源面板" aria-label="资源面板"><svg class="icon" data-icon="resource" aria-hidden="true"></svg></button>
+        <button class="chrome-button" type="button" data-tooltip="设置" aria-label="设置"><svg class="icon" data-icon="settings" aria-hidden="true"></svg></button>
+        <button class="chrome-button" type="button" data-tooltip="更多" aria-label="更多"><svg class="icon" data-icon="more" aria-hidden="true"></svg></button>
+        <button class="chrome-button" type="button" data-tooltip="最小化" aria-label="最小化"><svg class="icon" data-icon="minus" aria-hidden="true"></svg></button>
+        <button class="chrome-button close" type="button" data-tooltip="关闭" aria-label="关闭"><svg class="icon" data-icon="close" aria-hidden="true"></svg></button>
+      </div>
+    </header>
+
+    <div class="home-layout">
+      <section class="home-stage">
+        <div class="content-rail">
+          <button class="notice-strip" type="button">
+            <svg class="icon small" data-icon="bell" aria-hidden="true"></svg>
+            <span class="notice-copy"><span class="notice-label">维护完成</span>　最新客户端资源现已开放下载</span>
+            <svg class="icon small" data-icon="chevron-right" aria-hidden="true"></svg>
+          </button>
+          <section class="feature-banner" data-banner tabindex="0" role="group" aria-roledescription="轮播图" aria-label="精选横幅">
+            <div class="banner-slide scene-two active"></div><div class="banner-slide scene-three"></div><div class="banner-slide scene-one"></div>
+            <div class="banner-vignette"></div>
+            <button class="banner-control previous" data-banner-previous tabindex="-1" type="button" aria-label="上一张横幅"><svg class="icon" data-icon="chevron-left" aria-hidden="true"></svg></button>
+            <button class="banner-control next" data-banner-next tabindex="-1" type="button" aria-label="下一张横幅"><svg class="icon" data-icon="chevron-right" aria-hidden="true"></svg></button>
+            <div class="banner-dots" aria-label="横幅进度"><button class="banner-dot active" tabindex="-1" type="button" aria-label="第 1 张"></button><button class="banner-dot" tabindex="-1" type="button" aria-label="第 2 张"></button><button class="banner-dot" tabindex="-1" type="button" aria-label="第 3 张"></button></div>
+          </section>
+          <section class="news-panel" aria-labelledby="news-progress-heading">
+            <header class="section-heading"><h2 class="section-title" id="news-progress-heading">最新情报</h2><a class="section-link" href="#">查看全部</a></header>
+            <ul class="news-list">
+              <li><a class="news-item" href="#"><span class="news-category">更新</span><span class="news-title">客户端资源更新正在进行</span><time class="news-date">今天</time></a></li>
+              <li><a class="news-item" href="#"><span class="news-category">活动</span><span class="news-title">限时活动与奖励领取说明</span><time class="news-date">08-19</time></a></li>
+              <li><a class="news-item" href="#"><span class="news-category">公告</span><span class="news-title">已知问题与临时解决方案</span><time class="news-date">08-17</time></a></li>
+            </ul>
+          </section>
+        </div>
+        <nav class="social-rail" aria-label="社交媒体">
+          <a class="social-link" href="#" aria-label="官方网站"><svg class="icon" data-icon="globe" aria-hidden="true"></svg></a>
+          <a class="social-link" href="#" aria-label="视频频道"><svg class="icon" data-icon="video" aria-hidden="true"></svg></a>
+          <a class="social-link" href="#" aria-label="社区讨论"><svg class="icon" data-icon="chat" aria-hidden="true"></svg></a>
+          <a class="social-link" href="#" aria-label="最新动态"><svg class="icon" data-icon="x-social" aria-hidden="true"></svg></a>
+        </nav>
+      </section>
+
+      <footer class="operation-dock">
+        <div class="progress-layout">
+          <div class="status-emblem"><svg class="icon large" data-icon="download" aria-hidden="true"></svg></div>
+          <div class="progress-copy">
+            <div class="progress-heading"><div><h2 class="progress-title">正在更新游戏资源</h2><p class="progress-description">正在下载 patch_20260821_03.pak</p></div><strong class="progress-percent">68%</strong></div>
+            <div class="progress-track" role="progressbar" aria-valuemin="0" aria-valuemax="100" aria-valuenow="68"><div class="progress-fill"></div></div>
+            <div class="progress-meta"><span>4.82 GB / 7.06 GB</span><span>32.6 MB/s</span><span>预计剩余 1 分 12 秒</span></div>
+          </div>
+        </div>
+        <div class="dock-actions">
+          <button class="button quiet" type="button"><svg class="icon" data-icon="pause" aria-hidden="true"></svg>暂停</button>
+          <button class="button quiet" type="button"><svg class="icon" data-icon="stop" aria-hidden="true"></svg>停止</button>
+        </div>
+      </footer>
+    </div>
+
+    <div class="toast-layer" aria-live="polite">
+      <article class="toast-card">
+        <div class="toast-layout">
+          <svg class="icon toast-icon" data-icon="check-circle" aria-hidden="true"></svg>
+          <div><h2 class="toast-title">下载速度已恢复</h2><p class="toast-message">当前连接稳定，下载任务将继续使用最快可用节点。</p></div>
+          <button class="toast-close" data-dismiss type="button" aria-label="关闭通知"><svg class="icon small" data-icon="close" aria-hidden="true"></svg></button>
+        </div>
+      </article>
+    </div>
+  </main>
+  <p class="prototype-note">下载状态 · 进度原位替换主操作坞</p>
+  <script src="prototype.js"></script>
+</body>
+</html>
