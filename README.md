@@ -200,7 +200,7 @@ Program.Main()
 
 `ViewModelBase` 继承 `ObservableObject`（CommunityToolkit.Mvvm 源生成器）。不使用反射式 `ViewLocator`，所有视图-ViewModel 绑定通过显式 XAML 组合实现。
 
-主窗口为 1300×754 无系统边框窗口（MinWidth 1024 / MinHeight 640），ViewModel 拆分为多个子 ViewModel：
+主窗口为 1300×754 无系统边框窗口（MinWidth 1200 / MinHeight 720），远程内容栏与右侧社交媒体入口始终保持可见；ViewModel 拆分为多个子 ViewModel：
 
 | ViewModel | 职责 |
 |---|---|

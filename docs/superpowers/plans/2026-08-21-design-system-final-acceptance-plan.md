@@ -173,11 +173,11 @@
   - Modify: `tests/Cafe.Launcher.Avalonia.HeadlessTests/MainWindowHeadlessTests.cs`
   - Modify: `tests/Cafe.Launcher.Avalonia.Tests/UiStyleContractTests.cs`
 
-  **Step 1: Write failing layout tests.** At 1024px, assert a toggleable content drawer, hidden social rail with an accessible More route, visible operation dock, and exactly one `primary` operation. At normal width, assert the 424px content rail, separate social rail, and dock layouts for ready and progress states.
+  **Step 1: Write failing layout tests.** At 1200×720, assert the always-visible 424px content rail, independent social buttons with the right-edge gradient, visible operation dock, and exactly one `primary` operation. Assert the same dock layouts for ready and progress states.
 
   **Step 2: Restructure the shell.** Keep the transparent title bar and current commands, but replace duplicate operation layouts with one dock composition that switches presentation by runtime state. Render announcement/banner/news in the approved content rail and move social entries to a vertical right rail.
 
-  **Step 3: Add compact behavior.** Update compact state from window bounds, make the rail a 390px drawer at the approved threshold, and expose social actions through More without losing command/automation coverage.
+  **Step 3: Remove compact behavior.** Raise the minimum window size to 1200×720, remove the drawer state and toggle, and keep social actions visible without changing their command or automation coverage.
 
   **Step 4: Apply home-private styles.** Match approved token spacing, radius, hierarchy, progress, and elevation using `Home.axaml` plus shared controls; no raw visual values in the view.
 

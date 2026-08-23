@@ -86,12 +86,12 @@ feature-private but compose the shared resources and controls.
   the documented 400–440px range); it contains announcement, banner, and news
   in that order.
 - The social rail is separate and remains on the right in normal layout.
+- Each social action is an independent button; the right edge uses a horizontal
+  gradient derived from the title-bar gradient.
 - The bottom operation dock is always visible and contains exactly one visually
   primary action; the ready and in-progress states use the approved layouts.
-- At the compact threshold (the prototype's 1080px baseline, covering the
-  required 1024px acceptance case), the content rail becomes a toggleable
-  390px drawer. Social actions move into More, while the dock and unique primary
-  action remain visible.
+- The minimum supported window size is 1200×720. The content rail and social
+  rail remain visible without a compact drawer or More route.
 - Toasts render at the top right above the social rail and below modal/dialog
   layers only where modal semantics require it.
 
@@ -169,7 +169,8 @@ style system rather than the retired `Launcher*` system.
 
 ### Headless UI tests
 
-- Compact 1024px drawer, always-visible dock, and exactly one primary action.
+- Minimum 1200×720 layout with visible content/social rails, always-visible dock,
+  and exactly one primary action.
 - Responsive settings row wrapping.
 - Banner keyboard controls, pointer controls, and reduced-motion behavior.
 - Modal, toast, and social-rail layering.
