@@ -36,6 +36,7 @@ public partial class SettingsViewModel : ViewModelBase, IDisposable, IModalConte
     private CancellationTokenSource? autoSaveDelayCts;
     private bool isAutoSaveQueued;
     private bool isAutoSaveFlushRequested;
+    private bool suppressAutoSaveQueue;
     private bool disposed;
 
     // Coordination delegates — set by parent after construction.
@@ -95,7 +96,7 @@ public partial class SettingsViewModel : ViewModelBase, IDisposable, IModalConte
 
     private void OnCurrentSettingChanged(object? sender, PropertyChangedEventArgs e)
     {
-        if (IsAutoSaveEnabled && editor.IsDirty)
+        if (!suppressAutoSaveQueue && IsAutoSaveEnabled && editor.IsDirty)
         {
             QueueAutoSave();
         }
@@ -168,14 +169,14 @@ public partial class SettingsViewModel : ViewModelBase, IDisposable, IModalConte
 
     /// <summary>
     /// Persists the latest pending settings snapshot without waiting for the debounce delay.
-    /// Closing an edit session calls this method so a recent edit cannot be replaced by the
-    /// last saved snapshot when the panel is reopened.
+    /// Returns <see langword="false"/> when persistence failed, so callers can keep the edit
+    /// session open and expose the retry state instead of replacing the current value.
     /// </summary>
-    public async Task FlushPendingAutoSaveAsync()
+    public async Task<bool> FlushPendingAutoSaveAsync()
     {
         if (disposed || !editor.IsDirty)
         {
-            return;
+            return !disposed;
         }
 
         Task task;
@@ -193,6 +194,8 @@ public partial class SettingsViewModel : ViewModelBase, IDisposable, IModalConte
         }
 
         await task;
+
+        return !editor.IsDirty;
     }
 
     // ── Public API for parent VM ──────────────────────────────────────────
@@ -362,11 +365,19 @@ public partial class SettingsViewModel : ViewModelBase, IDisposable, IModalConte
                 Appearance.RefreshThemeColorPaletteFromCurrentBackground(markDirty: false);
             }
 
-            editor.Commit(current =>
+            suppressAutoSaveQueue = true;
+            try
             {
-                current.ThemeColorPalette = Appearance.GetThemeColorPaletteHexes();
-                current.SelectedThemeColorPaletteIndex = Appearance.SelectedThemeColorPaletteIndex;
-            });
+                editor.Commit(current =>
+                {
+                    current.ThemeColorPalette = Appearance.GetThemeColorPaletteHexes();
+                    current.SelectedThemeColorPaletteIndex = Appearance.SelectedThemeColorPaletteIndex;
+                });
+            }
+            finally
+            {
+                suppressAutoSaveQueue = false;
+            }
             var settings = editor.GetSnapshot();
             await settingsService.SaveAsync(settings);
             ApplyLogLevel(settings.LogLevel);

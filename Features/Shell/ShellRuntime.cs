@@ -156,7 +156,7 @@ public sealed class ShellRuntime : IShellRuntime, IShellLifecyclePresentation
         lifecycle.RefreshAsync(cancellationToken);
 
     /// <summary>Cancels lifecycle work and waits for active refreshes to finish before shutdown.</summary>
-    public Task PrepareForShutdownAsync() => lifecycle.PrepareForShutdownAsync();
+    public Task<bool> PrepareForShutdownAsync() => lifecycle.PrepareForShutdownAsync();
 
     /// <summary>Re-evaluates the system motion preference and updates presentation state.</summary>
     public void RefreshSystemMotionPreference() => lifecycle.RefreshSystemMotionPreference();

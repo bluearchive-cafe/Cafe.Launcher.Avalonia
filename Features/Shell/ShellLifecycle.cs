@@ -272,18 +272,27 @@ public sealed class ShellLifecycle : IDisposable
         }
     }
 
-    /// <summary>Cancels lifecycle work and waits until every active refresh has finished.</summary>
-    public async Task PrepareForShutdownAsync()
+    /// <summary>
+    /// Persists pending settings, cancels lifecycle work, and waits until every active refresh
+    /// has finished. Returns <see langword="false"/> when settings could not be persisted.
+    /// </summary>
+    public async Task<bool> PrepareForShutdownAsync()
     {
+        if (settings.IsAutoSaveEnabled)
+        {
+            if (!await settings.FlushPendingAutoSaveAsync())
+            {
+                return false;
+            }
+
+            settings.IsAutoSaveEnabled = false;
+        }
+
         Task pendingRefreshes = BeginShutdown();
         lifetimeCts.Cancel();
         operations.StopDownload(clearPersistedState: false);
-        if (settings.IsAutoSaveEnabled)
-        {
-            settings.IsAutoSaveEnabled = false;
-            await settings.FlushPendingAutoSaveAsync();
-        }
         await WaitForShutdownWorkAsync(pendingRefreshes);
+        return true;
     }
 
     /// <summary>Refreshes the shell after the settings editor saves a new snapshot.</summary>

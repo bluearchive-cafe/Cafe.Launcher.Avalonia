@@ -61,17 +61,39 @@ public sealed class WindowChromeViewModelTests : IDisposable
     }
 
     [Fact]
-    public void ShowSettingsCommand_WhenDirty_ClosesWithoutAnUnsavedChangesPrompt()
+    public async Task ShowSettingsCommand_WhenDirty_ClosesWithoutAnUnsavedChangesPrompt()
     {
         using var context = CreateContext();
         context.Settings.ApplyLauncherSettings(new LauncherSettings());
-        context.ViewModel.ShowSettingsCommand.Execute(null);
+        await context.ViewModel.ShowSettingsCommand.ExecuteAsync(null);
         context.Settings.Editor.Current.Language = LauncherLanguages.Japanese;
 
-        context.ViewModel.ShowSettingsCommand.Execute(null);
+        await context.ViewModel.ShowSettingsCommand.ExecuteAsync(null);
 
         Assert.False(context.ViewModel.IsSettingsVisible);
         Assert.False(context.Settings.IsUnsavedChangesVisible);
+    }
+
+    [Fact]
+    public async Task ShowSettingsCommand_WhenAutoSaveFails_KeepsEditSessionOpen()
+    {
+        var failedSavePath = Path.Combine(tempDir, Guid.NewGuid().ToString("N"));
+        Directory.CreateDirectory(failedSavePath);
+        using var context = CreateContext(failedSavePath);
+        context.Settings.ApplyLauncherSettings(new LauncherSettings
+        {
+            Language = LauncherLanguages.Auto
+        });
+        await context.ViewModel.ShowSettingsCommand.ExecuteAsync(null);
+        context.Settings.Editor.Current.Language = LauncherLanguages.Japanese;
+
+        await context.ViewModel.ShowSettingsCommand.ExecuteAsync(null)
+            .WaitAsync(TimeSpan.FromSeconds(2));
+
+        Assert.True(context.ViewModel.IsSettingsVisible);
+        Assert.True(context.Settings.IsSettingsDirty);
+        Assert.True(context.Settings.HasAutoSaveFailure);
+        Assert.Equal(LauncherLanguages.Japanese, context.Settings.Editor.Current.Language);
     }
 
     [Fact]
@@ -240,12 +262,16 @@ public sealed class WindowChromeViewModelTests : IDisposable
         Assert.False(context.RemoteContent.IsCarouselTimerRunning);
     }
 
-    private TestContext CreateContext()
+    private TestContext CreateContext(string? settingsPath = null)
     {
         Directory.CreateDirectory(tempDir);
         var services = new ServiceCollection();
         var logger = new UnifiedLogger(Path.Combine(tempDir, "logs"));
         services.AddLauncherServices(logger);
+        if (settingsPath is not null)
+        {
+            services.AddSingleton(new LauncherSettingsService(settingsPath));
+        }
         var provider = services.BuildServiceProvider();
         var settings = provider.GetRequiredService<SettingsViewModel>();
         var remoteContent = provider.GetRequiredService<RemoteContentViewModel>();

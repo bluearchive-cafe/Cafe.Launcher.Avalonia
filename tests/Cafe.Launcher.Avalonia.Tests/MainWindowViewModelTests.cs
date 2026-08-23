@@ -280,6 +280,47 @@ public sealed class MainWindowViewModelTests : LocalizationTestBase
     }
 
     [Fact]
+    public async Task PrepareForShutdownAsync_WhenAutoSaveSucceeds_DisablesAutoSaveAndCompletes()
+    {
+        var settingsPath = Path.Combine(tempDir, Guid.NewGuid().ToString("N"), "settings.json");
+        var settingsService = new LauncherSettingsService(settingsPath);
+        await settingsService.SaveAsync(new LauncherSettings());
+        using var viewModel = await CreateViewModelAsync(
+            new CountingCoreService(CreateSnapshot()),
+            settingsService);
+        viewModel.Settings.ApplyLauncherSettings(new LauncherSettings());
+        viewModel.Settings.IsAutoSaveEnabled = true;
+        viewModel.Settings.Editor.Current.Language = LauncherLanguages.Japanese;
+
+        var canShutdown = await viewModel.PrepareForShutdownAsync();
+
+        Assert.True(canShutdown);
+        Assert.False(viewModel.Settings.IsAutoSaveEnabled);
+        Assert.Equal(LauncherLanguages.Japanese, (await settingsService.ReadAsync()).Language);
+    }
+
+    [Fact]
+    public async Task PrepareForShutdownAsync_WhenAutoSaveFails_LeavesAutoSaveSessionActive()
+    {
+        var failedSavePath = Path.Combine(tempDir, Guid.NewGuid().ToString("N"));
+        Directory.CreateDirectory(failedSavePath);
+        var settingsService = new LauncherSettingsService(failedSavePath);
+        using var viewModel = await CreateViewModelAsync(
+            new CountingCoreService(CreateSnapshot()),
+            settingsService);
+        viewModel.Settings.ApplyLauncherSettings(new LauncherSettings());
+        viewModel.Settings.IsAutoSaveEnabled = true;
+        viewModel.Settings.Editor.Current.Language = LauncherLanguages.Japanese;
+
+        var canShutdown = await viewModel.PrepareForShutdownAsync();
+
+        Assert.False(canShutdown);
+        Assert.True(viewModel.Settings.IsAutoSaveEnabled);
+        Assert.True(viewModel.Settings.IsSettingsDirty);
+        Assert.True(viewModel.Settings.HasAutoSaveFailure);
+    }
+
+    [Fact]
     public async Task RefreshAsync_WhenRequestsOverlap_SerializesLoadsAndKeepsNewestSnapshot()
     {
         var initial = CreateSnapshot();
@@ -719,6 +760,26 @@ public sealed class MainWindowViewModelTests : LocalizationTestBase
     }
 
     [Fact]
+    public async Task SettingsPickerCommands_WhenUnavailableOrCanceled_LeaveDraftUntouched()
+    {
+        using var viewModel = await CreateViewModelAsync(new CountingCoreService(CreateSnapshot()));
+
+        await viewModel.Settings.ChooseGamePathCommand.ExecuteAsync(null);
+        await viewModel.Settings.ChooseBackgroundImageCommand.ExecuteAsync(null);
+        await viewModel.Settings.ChooseBackgroundFolderCommand.ExecuteAsync(null);
+
+        viewModel.Settings.PickGameFolderAsync = _ => Task.FromResult<string?>(null);
+        viewModel.Settings.PickBackgroundImageAsync = () => Task.FromResult<string?>(null);
+        viewModel.Settings.PickBackgroundFolderAsync = () => Task.FromResult<string?>(null);
+
+        await viewModel.Settings.ChooseGamePathCommand.ExecuteAsync(null);
+        await viewModel.Settings.ChooseBackgroundImageCommand.ExecuteAsync(null);
+        await viewModel.Settings.ChooseBackgroundFolderCommand.ExecuteAsync(null);
+
+        Assert.False(viewModel.Settings.IsSettingsDirty);
+    }
+
+    [Fact]
     public async Task SelectInstalledGameAsync_PersistsOnlyGamePathAndRefreshesShell()
     {
         var originalPath = Path.Combine(tempDir, "original", "YostarGames", "BlueArchive_JP");
@@ -1006,6 +1067,42 @@ public sealed class MainWindowViewModelTests : LocalizationTestBase
     }
 
     [Fact]
+    public async Task SettingsAutoSave_WhenRuntimeApplyFails_LeavesDraftAvailable()
+    {
+        using var viewModel = await CreateViewModelAsync(new CountingCoreService(CreateSnapshot()));
+        viewModel.Settings.ApplyLanguageAndTheme = _ =>
+            throw new InvalidOperationException("runtime apply failed");
+        viewModel.WindowChrome.ShowSettingsCommand.Execute(null);
+
+        viewModel.Settings.Editor.Current.Language = LauncherLanguages.Japanese;
+        await viewModel.Settings.PendingRuntimeApply;
+
+        Assert.True(viewModel.Settings.IsSettingsDirty);
+    }
+
+    [Fact]
+    public async Task CheckForUpdatesCommand_WhenServiceFails_ShowsErrorToast()
+    {
+        var toastService = new ToastService();
+        ToastNotification? errorToast = null;
+        toastService.ToastRaised += notification =>
+        {
+            if (notification.Severity == ToastSeverity.Error)
+            {
+                errorToast = notification;
+            }
+        };
+        using var viewModel = await CreateViewModelAsync(
+            new CountingCoreService(CreateSnapshot()),
+            toastService: toastService,
+            launcherUpdateService: new LauncherUpdateService(new LauncherUpdateHandler()));
+
+        await viewModel.Settings.CheckForUpdatesCommand.ExecuteAsync(null);
+
+        Assert.NotNull(errorToast);
+    }
+
+    [Fact]
     public async Task SaveSettingsAsync_WhenPersistenceFails_KeepsDirtyState()
     {
         var failedSavePath = Path.Combine(tempDir, Guid.NewGuid().ToString("N"));
@@ -1056,6 +1153,33 @@ public sealed class MainWindowViewModelTests : LocalizationTestBase
         Assert.False(settings.IsSettingsDirty);
         Assert.False(settings.HasAutoSaveFailure);
         Assert.Equal(LauncherLanguages.Japanese, (await settingsService.ReadAsync()).Language);
+    }
+
+    [Fact]
+    public async Task RequestResetSettingsCommand_ShowsConfirmationDialog()
+    {
+        using var viewModel = await CreateViewModelAsync(new CountingCoreService(CreateSnapshot()));
+
+        viewModel.Settings.RequestResetSettingsCommand.Execute(null);
+
+        Assert.True(viewModel.Dialogs.IsDebugResetConfirmationVisible);
+    }
+
+    [Fact]
+    public async Task SaveSettingsAsync_WhenWallpaperPaletteIsEmpty_RefreshesPaletteBeforeSave()
+    {
+        var settingsPath = Path.Combine(tempDir, Guid.NewGuid().ToString("N"), "settings.json");
+        var settingsService = new LauncherSettingsService(settingsPath);
+        await settingsService.SaveAsync(new LauncherSettings());
+        using var viewModel = await CreateViewModelAsync(
+            new CountingCoreService(CreateSnapshot()),
+            settingsService);
+        viewModel.Settings.Editor.Current.ThemeColorMode = ThemeColorModes.Wallpaper;
+        viewModel.Settings.Appearance.ThemeColorPaletteItems.Clear();
+
+        await SaveSettingsAsync(viewModel);
+
+        Assert.False(viewModel.Settings.IsSettingsDirty);
     }
 
     [Fact]

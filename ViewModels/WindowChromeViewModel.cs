@@ -86,15 +86,18 @@ public partial class WindowChromeViewModel : ViewModelBase
         }
         else
         {
-            // Hide synchronously so command consumers and the closing animation do not wait on disk I/O.
-            // Flush still owns the pending snapshot and completes before the edit session can be disposed.
             var hasAutoSaveSession = settings.IsAutoSaveEnabled;
-            settings.IsAutoSaveEnabled = false;
-            IsSettingsVisible = false;
             if (hasAutoSaveSession)
             {
-                await settings.FlushPendingAutoSaveAsync();
+                var saved = await settings.FlushPendingAutoSaveAsync();
+                if (!saved)
+                {
+                    return;
+                }
             }
+
+            settings.IsAutoSaveEnabled = false;
+            IsSettingsVisible = false;
         }
     }
 

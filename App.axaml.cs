@@ -73,9 +73,10 @@ public partial class App : Application
                 }
 
                 shutdownCts.Cancel();
-                Task shutdownTask = viewModel.PrepareForShutdownAsync();
+                Task<bool> shutdownTask = viewModel.PrepareForShutdownAsync();
                 if (shutdownTask.IsCompletedSuccessfully)
                 {
+                    eventArgs.Cancel = !shutdownTask.Result;
                     return;
                 }
 
@@ -83,15 +84,19 @@ public partial class App : Application
                 shutdownDeferred = true;
                 try
                 {
-                    await shutdownTask;
+                    shutdownDeferred = await shutdownTask;
                 }
                 catch (Exception exception)
                 {
+                    shutdownDeferred = false;
                     Debug.WriteLine($"Launcher shutdown coordination failed: {exception}");
                 }
                 finally
                 {
-                    desktop.Shutdown();
+                    if (shutdownDeferred)
+                    {
+                        desktop.Shutdown();
+                    }
                 }
             }
 

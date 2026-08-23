@@ -174,7 +174,7 @@ public partial class MainWindowViewModel : ViewModelBase, IDisposable
     public Task InitializeAsync(CancellationToken cancellationToken = default) =>
         runtime.InitializeAsync(cancellationToken);
 
-    internal Task PrepareForShutdownAsync() => runtime.PrepareForShutdownAsync();
+    internal Task<bool> PrepareForShutdownAsync() => runtime.PrepareForShutdownAsync();
 
     public void RefreshSystemMotionPreference() => runtime.RefreshSystemMotionPreference();
 
