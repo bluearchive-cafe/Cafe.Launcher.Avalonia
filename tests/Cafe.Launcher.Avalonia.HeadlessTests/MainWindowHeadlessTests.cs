@@ -21,6 +21,7 @@ using Cafe.Launcher.Avalonia.Services;
 using Cafe.Launcher.Avalonia.Services.Diagnostics;
 using Cafe.Launcher.Avalonia.ViewModels;
 using Cafe.Launcher.Avalonia.Views;
+using Material.Icons.Avalonia;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
 
@@ -558,33 +559,9 @@ public sealed class MainWindowHeadlessTests
         }
     }
 
-    [AvaloniaFact]
-    public void CompactHome_DrawerStartsCollapsedAndKeepsOperationDockVisible()
-    {
-        using var context = CreateContext();
-        context.Window.Width = 1024;
-        context.Window.Height = 640;
-        context.ViewModel.SetCompactHome(true);
-        context.Window.Show();
-        Dispatcher.UIThread.RunJobs();
-
-        var drawer = context.Window.GetVisualDescendants().OfType<Border>()
-            .Single(control => control.Classes.Contains("home-drawer"));
-        var dock = context.Window.GetVisualDescendants().OfType<Border>()
-            .First(control => control.Classes.Contains("bottom-panel") && control.IsEffectivelyVisible);
-
-        Assert.False(drawer.IsEffectivelyVisible);
-        Assert.True(dock.IsEffectivelyVisible);
-
-        context.ViewModel.ToggleHomeDrawerCommand.Execute(null);
-        Dispatcher.UIThread.RunJobs();
-
-        Assert.True(drawer.IsEffectivelyVisible);
-    }
-
     [AvaloniaTheory]
     [InlineData(1300, 754)]
-    [InlineData(1024, 640)]
+    [InlineData(1200, 720)]
     public void SettingsAdvanced_AtSupportedWindowSizes_KeepsLogAndResetActionsReachable(
         double width,
         double height)
@@ -717,8 +694,8 @@ public sealed class MainWindowHeadlessTests
     public void SettingsOverlay_AtMinimumWindowSize_KeepsDialogVisible()
     {
         using var context = CreateContext();
-        context.Window.Width = 1024;
-        context.Window.Height = 640;
+        context.Window.Width = 1200;
+        context.Window.Height = 720;
         OpenSettings(context);
 
         var settingsOverlay = context.Window
@@ -745,8 +722,8 @@ public sealed class MainWindowHeadlessTests
     public void SecondaryOverlay_AtMinimumWindowSize_KeepsCriticalActionsReachable(string overlay)
     {
         using var context = CreateContext();
-        context.Window.Width = 1024;
-        context.Window.Height = 640;
+        context.Window.Width = 1200;
+        context.Window.Height = 720;
         context.Window.Show();
 
         Button[] actions = overlay switch
@@ -841,8 +818,8 @@ public sealed class MainWindowHeadlessTests
     public void SetupWizard_InJapaneseAtMinimumWindowSize_KeepsScrollableContentAndNavigationReachable()
     {
         using var context = CreateContext();
-        context.Window.Width = 1024;
-        context.Window.Height = 640;
+        context.Window.Width = 1200;
+        context.Window.Height = 720;
         context.Window.Show();
         context.ViewModel.Dialogs.ShowSetupWizard();
         context.ViewModel.Shell.ApplyLanguage(
@@ -867,12 +844,12 @@ public sealed class MainWindowHeadlessTests
     [InlineData("install")]
     [InlineData("progress")]
     [InlineData("control")]
-    public void MainWindow_AtMinimumWindowSize_RemoteContentStartsCollapsedAboveOperationPanel(
+    public void MainWindow_AtMinimumWindowSize_RemoteContentRemainsVisibleAboveOperationPanel(
         string panelMode)
     {
         using var context = CreateContext();
-        context.Window.Width = 1024;
-        context.Window.Height = 640;
+        context.Window.Width = 1200;
+        context.Window.Height = 720;
         context.ViewModel.RemoteContent.IsPanelVisible = true;
         context.ViewModel.Operations.PanelMode = panelMode switch
         {
@@ -891,8 +868,67 @@ public sealed class MainWindowHeadlessTests
             .Single(control => control.Classes.Contains(operationPanelClass)
                 && control.IsEffectivelyVisible);
 
-        Assert.False(remotePanel.IsEffectivelyVisible);
+        Assert.True(remotePanel.IsEffectivelyVisible);
         Assert.True(operationPanel.IsEffectivelyVisible);
+    }
+
+    [AvaloniaFact]
+    public void MainWindow_AtMinimumWindowSize_SocialRailRemainsVisibleWithLargerButtons()
+    {
+        using var context = CreateContext();
+        context.Window.Width = 1200;
+        context.Window.Height = 720;
+        context.ViewModel.RemoteContent.IsPanelVisible = true;
+        context.Window.Show();
+        Dispatcher.UIThread.RunJobs();
+
+        var rail = context.Window.GetVisualDescendants().OfType<StackPanel>()
+            .Single(control => control.Classes.Contains("social-rail"));
+        var edgeGradient = context.Window.GetVisualDescendants().OfType<Border>()
+            .Single(control => control.Classes.Contains("home-edge-gradient"));
+        var officialSiteButton = rail.GetVisualDescendants().OfType<Button>()
+            .Single(button => ReferenceEquals(
+                button.Command,
+                context.ViewModel.WindowChrome.OpenOfficialSiteCommand));
+        var icon = officialSiteButton.GetVisualDescendants().OfType<MaterialIcon>().Single();
+        var buttonRight = officialSiteButton.TranslatePoint(
+            new Point(officialSiteButton.Bounds.Width, 0),
+            context.Window);
+
+        Assert.True(rail.IsEffectivelyVisible);
+        Assert.True(edgeGradient.IsEffectivelyVisible);
+        Assert.Equal(120, edgeGradient.Bounds.Width);
+        Assert.Equal(new Size(40, 40), officialSiteButton.Bounds.Size);
+        Assert.Equal(new Size(24, 24), icon.Bounds.Size);
+        Assert.NotNull(buttonRight);
+        Assert.True(buttonRight!.Value.X <= context.Window.ClientSize.Width - 8);
+        AssertControlInsideWindow(rail, context.Window);
+    }
+
+    [AvaloniaFact]
+    public void MainWindow_RemoteContentCardSetting_ControlsExpandedCardAndSocialRail()
+    {
+        using var context = CreateContext();
+        context.Window.Width = 1200;
+        context.Window.Height = 720;
+        context.ViewModel.RemoteContent.IsPanelVisible = true;
+        context.Window.Show();
+        Dispatcher.UIThread.RunJobs();
+
+        var remoteSurface = context.Window.GetVisualDescendants().OfType<Border>()
+            .Single(control => control.Classes.Contains("remote-surface"));
+        var rail = remoteSurface.GetVisualDescendants().OfType<StackPanel>()
+            .Single(control => control.Classes.Contains("social-rail"));
+
+        Assert.True(remoteSurface.IsEffectivelyVisible);
+        Assert.True(rail.IsEffectivelyVisible);
+        Assert.True(remoteSurface.Bounds.Width > 424);
+
+        context.ViewModel.RemoteContent.UpdateRemoteContentVisibility(showRemoteContentCard: false);
+        Dispatcher.UIThread.RunJobs();
+
+        Assert.False(remoteSurface.IsEffectivelyVisible);
+        Assert.False(rail.IsEffectivelyVisible);
     }
 
     [AvaloniaFact]
@@ -1133,8 +1169,8 @@ public sealed class MainWindowHeadlessTests
     {
         using var context = CreateContext();
         context.ViewModel.Settings.Editor.Current.StatusDetailMode = StatusDetailModes.Compact;
-        context.Window.Width = 1024;
-        context.Window.Height = 640;
+        context.Window.Width = 1200;
+        context.Window.Height = 720;
         context.ViewModel.Operations.PanelMode = panelMode switch
         {
             "install" => GameOperationPanelMode.Install,
@@ -1198,8 +1234,8 @@ public sealed class MainWindowHeadlessTests
         string statusDetailMode)
     {
         using var context = CreateContext();
-        context.Window.Width = 1024;
-        context.Window.Height = 640;
+        context.Window.Width = 1200;
+        context.Window.Height = 720;
         var settings = context.ViewModel.Settings.Editor.GetSnapshot();
         settings.StatusDetailMode = statusDetailMode;
         context.ViewModel.Settings.Editor.ApplySnapshot(settings);
@@ -1262,8 +1298,8 @@ public sealed class MainWindowHeadlessTests
     public void MainWindow_ControlPanel_ActionButtons_ApplyPressedBrushesAtRuntime()
     {
         using var context = CreateContext();
-        context.Window.Width = 1024;
-        context.Window.Height = 640;
+        context.Window.Width = 1200;
+        context.Window.Height = 720;
         context.ViewModel.Operations.PanelMode = GameOperationPanelMode.Control;
         context.ViewModel.Shell.IsBusy = false;
         context.Window.Show();
@@ -1337,7 +1373,7 @@ public sealed class MainWindowHeadlessTests
 
     [AvaloniaTheory]
     [InlineData(1300, 754)]
-    [InlineData(1024, 640)]
+    [InlineData(1200, 720)]
     public void MainWindow_InstallPathRow_AtDefaultAndMinimumWindowSizes_KeepsInlinePathActionAndExternalActionsReachable(
         double width,
         double height)

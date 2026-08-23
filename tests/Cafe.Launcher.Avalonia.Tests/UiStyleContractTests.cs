@@ -523,10 +523,17 @@ public sealed partial class UiStyleContractTests
             .Descendants()
             .Single(element => element.Name.LocalName == "Border" && HasClass(element, "news-card"));
 
+        Assert.Equal(
+            "{Binding RemoteContent.IsPanelVisible}",
+            remoteSurface.Attribute("IsVisible")?.Value);
         Assert.False(HasClass(remoteSurface, "surface"));
         Assert.True(HasClass(bannerCard, "surface"));
         Assert.True(HasClass(newsCard, "surface"));
         Assert.Same(bannerCard.Parent, newsCard.Parent);
+        Assert.Contains(
+            document.Descendants().Single(element =>
+                element.Name.LocalName == "StackPanel" && HasClass(element, "social-rail")).Ancestors(),
+            element => element.Name.LocalName == "Border" && HasClass(element, "remote-surface"));
         Assert.DoesNotContain(
             newsCard.Descendants(),
             element =>
@@ -586,7 +593,7 @@ public sealed partial class UiStyleContractTests
         var document = XDocument.Load(ProjectFile("Views/MainWindow.axaml"));
         var rail = document
             .Descendants()
-            .Single(element => element.Name.LocalName == "Border" && HasClass(element, "social-rail"));
+            .Single(element => element.Name.LocalName == "StackPanel" && HasClass(element, "social-rail"));
 
         Assert.Equal("Right", rail.Attribute("HorizontalAlignment")?.Value);
         Assert.Equal("Center", rail.Attribute("VerticalAlignment")?.Value);
@@ -598,6 +605,65 @@ public sealed partial class UiStyleContractTests
             rail.Descendants(),
             element => element.Name.LocalName == "Button"
                 && element.Attribute("Command")?.Value == "{Binding WindowChrome.OpenOfficialSiteCommand}");
+
+        var socialStyles = XDocument.Load(ProjectFile("Views/Styles/RemoteContent.axaml"));
+        var socialStyle = socialStyles
+            .Descendants()
+            .Single(element => element.Name.LocalName == "Style"
+                && element.Attribute("Selector")?.Value == "Button.social-chip");
+        Assert.Equal(
+            "{DynamicResource Cafe.Color.Chrome.ControlHover}",
+            socialStyle
+                .Elements()
+                .Single(element => element.Name.LocalName == "Setter"
+                    && element.Attribute("Property")?.Value == "Background")
+                .Attribute("Value")?.Value);
+        Assert.Equal(
+            "{DynamicResource Cafe.Color.OnChrome}",
+            socialStyle
+                .Elements()
+                .Single(element => element.Name.LocalName == "Setter"
+                    && element.Attribute("Property")?.Value == "Foreground")
+                .Attribute("Value")?.Value);
+
+        var foundation = XDocument.Load(ProjectFile("Views/Styles/Foundation.axaml"));
+        var margin = foundation
+            .Descendants()
+            .Single(element => element.Name.LocalName == "Thickness"
+                && element.Attributes().Any(attribute => attribute.Name.LocalName == "Key"
+                    && attribute.Value == "Cafe.Layout.Home.SocialRail.Margin"));
+        Assert.Equal("0,0,8,0", margin.Value);
+    }
+
+    [Fact]
+    public void MainWindow_RightEdgeGradient_UsesHorizontalChromeGradient()
+    {
+        var mainWindow = XDocument.Load(ProjectFile("Views/MainWindow.axaml"));
+        Assert.Contains(
+            mainWindow.Descendants(),
+            element => element.Name.LocalName == "Border" && HasClass(element, "home-edge-gradient"));
+
+        var styles = XDocument.Load(ProjectFile("Views/MainWindow.Styles.axaml"));
+        var edgeStyle = styles
+            .Descendants()
+            .Single(element => element.Name.LocalName == "Style"
+                && element.Attribute("Selector")?.Value == "Border.home-edge-gradient");
+        Assert.Equal(
+            "{DynamicResource Cafe.Color.Chrome.EdgeGradient}",
+            edgeStyle
+                .Elements()
+                .Single(element => element.Name.LocalName == "Setter"
+                    && element.Attribute("Property")?.Value == "Background")
+                .Attribute("Value")?.Value);
+
+        var theme = XDocument.Load(ProjectFile("Views/Styles/Theme.axaml"));
+        var gradient = theme
+            .Descendants()
+            .Single(element => element.Name.LocalName == "LinearGradientBrush"
+                && element.Attributes().Any(attribute => attribute.Name.LocalName == "Key"
+                    && attribute.Value == "Cafe.Color.Chrome.EdgeGradient"));
+        Assert.Equal("0%,0%", gradient.Attribute("StartPoint")?.Value);
+        Assert.Equal("100%,0%", gradient.Attribute("EndPoint")?.Value);
     }
 
     private static readonly string[] StyleFiles =
@@ -1940,8 +2006,8 @@ public sealed partial class UiStyleContractTests
 
         Assert.NotNull(window);
         Assert.Equal("True", window.Attribute("CanResize")?.Value);
-        Assert.Equal("1024", window.Attribute("MinWidth")?.Value);
-        Assert.Equal("640", window.Attribute("MinHeight")?.Value);
+        Assert.Equal("1200", window.Attribute("MinWidth")?.Value);
+        Assert.Equal("720", window.Attribute("MinHeight")?.Value);
     }
 
     [Fact]
