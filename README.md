@@ -28,7 +28,7 @@ Blue Archive 日服桌面启动器，基于 .NET 10 与 Avalonia 12 重写，替
 | Avalonia | `12.1.1` |
 | CommunityToolkit.Mvvm | `8.4.2` |
 | Material.Icons.Avalonia | `3.0.2` |
-| Microsoft.Extensions.DependencyInjection | `10.0.10` |
+| Microsoft.Extensions.DependencyInjection | `10.0.11` |
 | Serilog | `4.4.0` |
 | xUnit | `xunit.v3 3.2.2` |
 | Coverlet | `coverlet.msbuild 10.0.1` |

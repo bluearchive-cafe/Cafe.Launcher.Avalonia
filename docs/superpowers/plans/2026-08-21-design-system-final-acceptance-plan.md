@@ -36,7 +36,7 @@
 
   **Step 3: Apply runtime state at mutation time.** Preserve appearance preview behavior and apply language/theme/log-level effects without waiting for disk persistence. Expose localized pending/failure state and a retry command, and make the global restore-defaults command use the same edit/apply/save path.
 
-  **Step 4: Flush safely on close/disposal.** Replace the Boolean autosave toggle with an async close/flush path so `WindowChromeViewModel` cannot reload the saved snapshot over a pending edit. Cancellation only stops the debounce; it must not discard the latest snapshot.
+  **Step 4: Flush safely on close/disposal.** Replace the Boolean autosave toggle with an async close/flush path so `WindowChromeViewModel` cannot reload the saved snapshot over a pending edit. A failed flush keeps the panel/session open with its retry state; application shutdown is canceled until the pending snapshot is persisted. Cancellation only stops the debounce; it must not discard the latest snapshot.
 
   **Step 5: Run focused tests.**
 

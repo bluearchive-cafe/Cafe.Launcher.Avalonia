@@ -100,7 +100,7 @@ GitHub Actions uses .NET `10.0.x`. The build workflow runs on `windows-latest`: 
 
 ### Persistence and compatibility contracts
 
-- Launcher data lives in `%LOCALAPPDATA%\Cafe Launcher\`: settings, crash marker, unified log, persisted download state, shown notices, and click code. `LauncherSettingsService` must preserve compatibility with old or invalid `settings.json` content; settings apply immediately and persist through the debounced, atomic autosave path.
+- Launcher data lives in `%LOCALAPPDATA%\Cafe Launcher\`: settings, unified log, persisted download state, shown notices, and click code. `LauncherSettingsService` must preserve compatibility with old or invalid `settings.json` content; settings apply immediately and persist through the debounced, atomic autosave path. A failed autosave keeps the edit session open for retry, including when closing settings or exiting the application.
 - The game directory is normalized to `YostarGames\BlueArchive_JP`. All file operations must go through `GamePathValidator` so they remain inside that game directory.
 - `LocalInstallationStateStore` manages `game-launcher-config.json` and `manifest.json` as one coordinated installation state shared with the official launcher. Preserve the JSON/wire field order used by `OfficialHashService`—changing it makes launchers reject each other's manifest.
 - Launch validation intentionally fails open if a requested remote manifest cannot be retrieved; repair uses CRC64 whereas launch validation checks file size. These mirror the official launcher and are covered by contract tests.

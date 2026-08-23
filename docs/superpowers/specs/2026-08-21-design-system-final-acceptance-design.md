@@ -121,7 +121,9 @@ setting mutation
 - Every mutation, not merely an `IsDirty` transition, schedules persistence.
 - Snapshot versions prevent a save completion from marking later edits as saved.
 - Closing the settings overlay cancels only the waiting debounce and flushes the
-  newest pending snapshot before the edit session ends.
+  newest pending snapshot before the edit session ends; a failed flush keeps the
+  overlay/session open until the user retries or discards the edit. Application
+  shutdown follows the same rule.
 - Failure does not roll back already-applied theme/language/accent/background
   runtime effects. The settings content exposes localized unsynced state and a
   retry command until writing succeeds.
@@ -160,7 +162,8 @@ style system rather than the retired `Launcher*` system.
 ### Unit tests
 
 - Versioned 400ms debounce, mutation-during-save, write failure/retry, and
-  close-time flush for settings.
+  close-time flush for settings; failed close/exit flushes keep the edit session
+  open and cancel the shutdown path.
 - Accent scale and foreground contrast for every color source.
 - Banner timer and pause-state transitions.
 

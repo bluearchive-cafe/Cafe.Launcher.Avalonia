@@ -1,66 +1,71 @@
 # Repository Map
 
-Generated: 2026-08-21
+Generated: 2026-08-23
 
 ## Scope and repository state
 
-This map describes the current checkout of `Cafe.Launcher.Avalonia`. The working tree is substantially dirty: `git diff --stat` reported 54 tracked paths with changes, and additional untracked files are present. The audit therefore describes the working tree as observed, not only `HEAD` (`a4d9437`, also the current `origin/main`).
+This map describes branch `codex/design-system-redesign` at `73fe10c`, compared with `origin/main` at `4cfbaba`. The branch contains 6 commits and changes 114 files, with 8,236 additions and 4,618 deletions. The working-tree remediation adds explicit failed-flush handling, focused regression coverage, and synchronized repository guidance.
 
 ## Technology profile
 
-- Language: C# with nullable reference types enabled.
-- Runtime: .NET 10 (`net10.0`), SDK pinned through `global.json`.
-- UI: Avalonia 12.1.1, compiled bindings, Fluent theme and Material Icons.
-- Application shape: Windows desktop launcher (`WinExe`), with a Release `win-x64` self-contained publish path.
+- Language: C# with nullable reference types, compiled bindings, and warnings-as-errors.
+- Runtime: .NET 10 (`net10.0`), with a self-contained `win-x64` Release path.
+- UI: Avalonia 12.1.1, Fluent theme, Material Icons, and a layered `Cafe.*` design system.
+- Application shape: single-process Windows desktop launcher (`WinExe`).
 - Dependency injection: `Microsoft.Extensions.DependencyInjection`, composed in `Composition/ServiceConfiguration.cs`.
-- Logging: Serilog with asynchronous file sink; local diagnostics and logs are used rather than remote telemetry.
-- Testing: xUnit v3 unit tests and Avalonia Headless xUnit UI tests.
+- Logging: Serilog with an asynchronous file sink; diagnostics remain local.
+- Testing: xUnit v3 unit/contract tests and Avalonia Headless xUnit UI tests.
 
 ## Top-level structure
 
 | Area | Responsibility |
 | --- | --- |
-| `Program.cs`, `App.axaml`, `App.axaml.cs` | Process lifetime, application startup, Avalonia application setup, and shutdown wiring. |
+| `Program.cs`, `App.axaml`, `App.axaml.cs` | Process lifetime, application startup, Avalonia resources, and shutdown wiring. |
 | `Composition/` | Dependency-injection composition root and service registration. |
 | `Features/` | Vertical feature slices: Shell, GameOperations, Settings, SetupWizard, Diagnostics, and ResourcePanel. |
-| `Services/` | Core application services: HTTP, downloads, settings, installation state, localization, updates, paths, audio, and diagnostics. |
-| `ViewModels/` | Shared or cross-feature view models, including remote content and main-window orchestration. |
-| `Views/` | Avalonia views and merged style resources. |
-| `Controls/` | Reusable Avalonia controls and control-local styles. |
-| `Models/`, `Constants/`, `Helpers/`, `Converters/` | Shared domain/data contracts, constants, utility code, and binding converters. |
+| `Services/` | HTTP, downloads, settings, installation state, localization, updates, paths, audio, logging, and diagnostics. |
+| `ViewModels/` | Shared window projections and cross-feature view models. |
+| `Views/`, `Controls/` | Avalonia views, shared controls, and layered styles. |
+| `Models/`, `Constants/`, `Helpers/`, `Converters/` | Domain/data contracts, constants, utilities, and binding converters. |
 | `Resources/`, `Assets/` | Localized `.resx` resources and packaged runtime assets. |
-| `tests/Cafe.Launcher.Avalonia.Tests/` | Unit and contract tests. |
-| `tests/Cafe.Launcher.Avalonia.HeadlessTests/` | Headless Avalonia UI tests. |
-| `scripts/`, `installer/` | Build, localization, coverage, distribution, and NSIS packaging automation. |
-| `.github/workflows/` | Debug/Release CI, coverage, packaging, and release publication. |
+| `tests/Cafe.Launcher.Avalonia.Tests/` | Unit, persistence, security, localization, and style-contract tests. |
+| `tests/Cafe.Launcher.Avalonia.HeadlessTests/` | Headless Avalonia UI behavior tests. |
+| `scripts/`, `installer/`, `.github/workflows/` | Validation, localization, coverage, distribution, packaging, and CI automation. |
 
 ## Runtime and dependency flow
 
 ```text
 Program
   -> App / ServiceConfiguration
-       -> Shell and feature view models
-            -> application services
-                 -> HTTP, filesystem, settings, downloads, logging, and update boundaries
+       -> MainWindowViewModel / ShellLifecycle
+            -> feature view models
+                 -> settings, HTTP, filesystem, download, update, and diagnostic services
 ```
 
-`Program` owns the process-level single-instance and shutdown boundary. `App` creates the service provider. The Shell coordinates the window-level experience, while feature slices keep user journeys grouped by capability. Services own external effects and persistence. URL and filesystem validation helpers provide explicit security boundaries for remote content, game paths, downloads, and updates.
+`Program` owns the process-level single-instance and session-log boundary. `App` creates the service provider. The Shell coordinates window-level state and shutdown. Feature slices own user journeys, while services own persistence and external effects. URL and filesystem validation helpers define the main remote-content, game-path, download, and update security boundaries.
+
+## Branch hotspots
+
+- `Features/Settings/SettingsViewModel.cs`, `Services/SettingsEditor.cs`, and `ViewModels/WindowChromeViewModel.cs`: immediate settings application, 400 ms debounced autosave, retry state, and close/shutdown flush that preserves the edit session on failure.
+- `Features/Shell/ShellLifecycle.cs`: shell refresh, modal routing, runtime theme/language application, settings-saved reactions, and shutdown coordination that only begins after pending settings persist.
+- `Views/Styles/Foundation.axaml`, `Theme.axaml`, and `Controls.axaml`: layered design tokens and shared interaction states.
+- `Services/Diagnostics/AsyncLogBufferMonitor.cs` and `Services/Diagnostics/UnifiedLogger.cs`: local asynchronous logging and dropped-buffer diagnostics.
+- `Models/LauncherSettingsContract.cs` and `Models/SettingOptionDescriptors.cs`: persisted-settings equality and option metadata.
 
 ## Build and validation entry points
 
-- `build.ps1`: Debug restore/build with telemetry disabled.
-- `test.ps1`: runs both test projects.
-- `coverage.ps1`: runs Coverlet and enforces the repository coverage thresholds.
+- `build.ps1`: Debug restore/build with telemetry settings.
+- `test.ps1`: both test projects.
+- `coverage.ps1`: Coverlet plus 50% minimum and recorded baseline gates.
 - `verify.ps1`: Debug build, coverage, and Release build sequence.
 - `dev.ps1 ui`: UI style-contract and headless UI validation.
-- `scripts/Test-LocalizationContract.ps1`: validates resource keys and composite-format placeholders.
+- `scripts/Test-LocalizationContract.ps1`: localized key and placeholder contract.
 - `scripts/Build-Distribution.ps1` and `installer/`: publish and NSIS packaging.
 
 ## Important repository rules
 
-- Treat warnings as errors and preserve compiled bindings and nullable annotations.
-- Add UI strings to all four localized resource sets and regenerate `LauncherStrings.Designer.cs`.
-- Use semantic `Cafe.*` design-system tokens in XAML; style contracts cover these conventions.
-- Keep path operations behind the existing validators and preserve atomic/debounced settings persistence.
-- Run focused tests after changes, localization contract checks after resource changes, and the complete verification sequence before release.
-
+- Preserve warnings-as-errors, nullable annotations, compiled bindings, and four-locale resource parity.
+- Use semantic `Cafe.*` design-system tokens in view XAML and keep shared styles separated from feature layout.
+- Keep settings JSON backward-compatible and persistence atomic; settings changes are intended to apply immediately and autosave with retry on failure. Close and application exit must cancel when the pending snapshot cannot be persisted.
+- Keep path operations behind existing validators and diagnostics local; do not add remote telemetry.
+- Run focused tests after changes, localization checks after resource changes, and the complete verification sequence before release.
