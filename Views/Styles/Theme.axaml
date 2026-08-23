@@ -34,6 +34,10 @@
         <GradientStop Color="#52000000" Offset="0"/>
         <GradientStop Color="#00000000" Offset="1"/>
     </LinearGradientBrush>
+    <LinearGradientBrush x:Key="Cafe.Color.Chrome.EdgeGradient" StartPoint="0%,0%" EndPoint="100%,0%">
+        <GradientStop Color="#00000000" Offset="0"/>
+        <GradientStop Color="#52000000" Offset="1"/>
+    </LinearGradientBrush>
 
     <ResourceDictionary.ThemeDictionaries>
         <ResourceDictionary x:Key="Light">

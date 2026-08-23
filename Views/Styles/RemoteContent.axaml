@@ -11,16 +11,17 @@
     </Style>
     <Style Selector="Button.social-chip">
         <Setter Property="Template" Value="{StaticResource Cafe.Control.Template.BorderButton}"/>
-        <Setter Property="Background" Value="{DynamicResource Cafe.Color.Transparent}"/>
-        <Setter Property="BorderBrush" Value="{DynamicResource Cafe.Color.Transparent}"/>
-        <Setter Property="BorderThickness" Value="0"/>
-        <Setter Property="Foreground" Value="{DynamicResource Cafe.Color.Text.Muted}"/>
-        <Setter Property="Width" Value="{DynamicResource Cafe.Control.Height.Setting}"/>
-        <Setter Property="Height" Value="{DynamicResource Cafe.Control.Height.Setting}"/>
-        <Setter Property="Padding" Value="{DynamicResource Cafe.Inset.Small}"/>
+        <Setter Property="Background" Value="{DynamicResource Cafe.Color.Chrome.ControlHover}"/>
+        <Setter Property="BorderBrush" Value="{DynamicResource Cafe.Color.OnChrome.Muted}"/>
+        <Setter Property="BorderThickness" Value="1"/>
+        <Setter Property="Foreground" Value="{DynamicResource Cafe.Color.OnChrome}"/>
+        <Setter Property="Width" Value="{StaticResource Cafe.Control.Size.Social}"/>
+        <Setter Property="Height" Value="{StaticResource Cafe.Control.Size.Social}"/>
+        <Setter Property="Padding" Value="{DynamicResource Cafe.Inset.None}"/>
         <Setter Property="CornerRadius" Value="{DynamicResource Cafe.Radius.Small}"/>
         <Setter Property="HorizontalContentAlignment" Value="Center"/>
         <Setter Property="VerticalContentAlignment" Value="Center"/>
+        <Setter Property="HorizontalAlignment" Value="Center"/>
     </Style>
     <Style Selector="Button.social-chip:pointerover">
         <Setter Property="Background" Value="{DynamicResource Cafe.Color.Surface.QuietHover}"/>

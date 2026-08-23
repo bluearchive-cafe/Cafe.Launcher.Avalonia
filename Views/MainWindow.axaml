@@ -18,8 +18,8 @@
         FontFamily="{Binding Shell.FontFamily}"
         Width="1300"
         Height="754"
-        MinWidth="1024"
-        MinHeight="640"
+        MinWidth="1200"
+        MinHeight="720"
         CanResize="True"
         WindowDecorations="BorderOnly"
         ExtendClientAreaToDecorationsHint="True"
@@ -73,18 +73,14 @@
             </Grid>
 
             <Grid Grid.Row="1" RowDefinitions="*,Auto">
-                <Grid Classes="home-stage" Classes.compact="{Binding IsCompactHome}">
-                    <Button Classes="home-drawer-toggle"
-                            IsVisible="{Binding IsCompactHome}"
-                            Command="{Binding ToggleHomeDrawerCommand}"
-                            ToolTip.Tip="{Binding Shell.I18n[notice]}"
-                            AutomationProperties.Name="{Binding Shell.I18n[notice]}">
-                        <materialIcons:MaterialIcon Kind="Menu" Width="{StaticResource Cafe.Icon.Medium}" Height="{StaticResource Cafe.Icon.Medium}"/>
-                    </Button>
-                    <Border Classes="remote-surface home-drawer"
-                            Classes.compact="{Binding IsCompactHome}"
-                            IsVisible="{Binding IsHomeDrawerVisible}">
-                    <Panel>
+                <Grid Classes="home-stage">
+                    <Border Classes="home-edge-gradient"/>
+                    <Border Classes="remote-surface"
+                            IsVisible="{Binding RemoteContent.IsPanelVisible}">
+                        <Grid ColumnDefinitions="*,Auto">
+                    <Panel Grid.Column="0"
+                           Width="{StaticResource Cafe.Layout.Home.ContentRail.Width}"
+                           HorizontalAlignment="Left">
                         <Border Classes="remote-content-scroll-host">
                             <ScrollViewer Classes="scroll-pad">
                             <StackPanel Spacing="{StaticResource Cafe.Space.3}">
@@ -310,43 +306,43 @@
                                                   IsVisible="{Binding RemoteContent.IsLoading}"
                                                   Text="{Binding Shell.I18n[remoteContentLoading]}"/>
                     </Panel>
-                    </Border>
 
-                    <Border Classes="social-rail"
-                            Classes.compact="{Binding IsCompactHome}"
-                            HorizontalAlignment="Right"
-                            VerticalAlignment="Center">
-                        <StackPanel Spacing="{StaticResource Cafe.Space.1}">
-                            <Button Classes="social-chip"
-                                    Command="{Binding WindowChrome.OpenOfficialSiteCommand}"
-                                    ToolTip.Tip="{Binding Shell.I18n[officialSite]}"
-                                    AutomationProperties.Name="{Binding Shell.I18n[officialSite]}">
-                                <materialIcons:MaterialIcon Kind="Web"
-                                                            Width="{StaticResource Cafe.Icon.Medium}"
-                                                            Height="{StaticResource Cafe.Icon.Medium}"/>
-                            </Button>
-                            <ItemsControl ItemsSource="{Binding RemoteContent.SocialMediaItems}"
-                                          IsVisible="{Binding RemoteContent.HasSocialMediaItems}">
-                                <ItemsControl.ItemsPanel>
-                                    <ItemsPanelTemplate>
-                                        <StackPanel Spacing="{StaticResource Cafe.Space.1}"/>
-                                    </ItemsPanelTemplate>
-                                </ItemsControl.ItemsPanel>
-                                <ItemsControl.ItemTemplate>
-                                    <DataTemplate x:DataType="models:RemoteContentItem">
-                                        <Button Classes="social-chip"
-                                                Command="{Binding #Root.((vm:MainWindowViewModel)DataContext).RemoteContent.OpenExternalUrlCommand}"
-                                                CommandParameter="{Binding Url}"
-                                                ToolTip.Tip="{Binding Title}"
-                                                AutomationProperties.Name="{Binding Title}">
-                                            <materialIcons:MaterialIcon Kind="{Binding SocialIconKind}"
-                                                                        Width="{StaticResource Cafe.Icon.Medium}"
-                                                                        Height="{StaticResource Cafe.Icon.Medium}"/>
-                                        </Button>
-                                    </DataTemplate>
-                                </ItemsControl.ItemTemplate>
-                            </ItemsControl>
-                        </StackPanel>
+                    <StackPanel Grid.Column="1"
+                                Classes="social-rail"
+                                HorizontalAlignment="Right"
+                                VerticalAlignment="Center"
+                                Spacing="{StaticResource Cafe.Space.2}">
+                        <Button Classes="social-chip"
+                                Command="{Binding WindowChrome.OpenOfficialSiteCommand}"
+                                ToolTip.Tip="{Binding Shell.I18n[officialSite]}"
+                                AutomationProperties.Name="{Binding Shell.I18n[officialSite]}">
+                            <materialIcons:MaterialIcon Kind="Web"
+                                                        Width="{StaticResource Cafe.Icon.Large}"
+                                                        Height="{StaticResource Cafe.Icon.Large}"/>
+                        </Button>
+                        <ItemsControl ItemsSource="{Binding RemoteContent.SocialMediaItems}"
+                                      IsVisible="{Binding RemoteContent.HasSocialMediaItems}">
+                            <ItemsControl.ItemsPanel>
+                                <ItemsPanelTemplate>
+                                    <StackPanel Spacing="{StaticResource Cafe.Space.1}"/>
+                                </ItemsPanelTemplate>
+                            </ItemsControl.ItemsPanel>
+                            <ItemsControl.ItemTemplate>
+                                <DataTemplate x:DataType="models:RemoteContentItem">
+                                    <Button Classes="social-chip"
+                                            Command="{Binding #Root.((vm:MainWindowViewModel)DataContext).RemoteContent.OpenExternalUrlCommand}"
+                                            CommandParameter="{Binding Url}"
+                                            ToolTip.Tip="{Binding Title}"
+                                            AutomationProperties.Name="{Binding Title}">
+                                        <materialIcons:MaterialIcon Kind="{Binding SocialIconKind}"
+                                                                    Width="{StaticResource Cafe.Icon.Large}"
+                                                                    Height="{StaticResource Cafe.Icon.Large}"/>
+                                    </Button>
+                                </DataTemplate>
+                            </ItemsControl.ItemTemplate>
+                        </ItemsControl>
+                    </StackPanel>
+                        </Grid>
                     </Border>
                 </Grid>
 

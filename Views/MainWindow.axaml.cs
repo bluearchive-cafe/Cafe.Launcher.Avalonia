@@ -39,7 +39,6 @@ public partial class MainWindow : Window
         KeyDown += OnKeyDown;
         Activated += OnActivated;
         Deactivated += OnDeactivated;
-        SizeChanged += OnSizeChanged;
     }
 
     public void ConfigureViewModel(MainWindowViewModel viewModel)
@@ -60,7 +59,6 @@ public partial class MainWindow : Window
         viewModel.WindowChrome.CloseRequested += PerformClose;
         viewModel.WindowChrome.RestoreRequested += ShowWindow;
         viewModel.Dialogs.ErrorCopyDetailsRequested += CopyErrorDetailsToClipboard;
-        viewModel.SetCompactHome(Bounds.Width < 1080);
     }
 
     protected override void OnClosed(EventArgs e)
@@ -138,9 +136,6 @@ public partial class MainWindow : Window
 
     private void OnDeactivated(object? sender, EventArgs e) =>
         configuredViewModel?.RemoteContent.SetWindowActive(false);
-
-    private void OnSizeChanged(object? sender, SizeChangedEventArgs e) =>
-        configuredViewModel?.SetCompactHome(e.NewSize.Width < 1080);
 
     private void BannerHost_OnPointerEntered(object? sender, PointerEventArgs e) =>
         configuredViewModel?.RemoteContent.SetBannerPointerOver(true);
