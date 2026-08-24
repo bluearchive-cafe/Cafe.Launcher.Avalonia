@@ -292,7 +292,6 @@ GitHub Actions 使用 .NET 10.0.x：
 
 - [CLAUDE.md](./CLAUDE.md) — AI 辅助开发指引（Claude Code）
 - [AGENTS.md](./AGENTS.md) — AI 辅助开发指引（Codex）
-- [***REMOVED***.md](./***REMOVED***.md) — 原 Electron 启动器与本项目的详细对比分析
 
 ## 相关链接
 
