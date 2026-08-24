@@ -6,7 +6,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 Read [PROJECT_CONVENTIONS.md](PROJECT_CONVENTIONS.md) before changing production code. It is the authoritative source for the project's TDD, XAML, localization, diagnostics, DI, settings-compatibility, test, and commit requirements. Keep this file and [AGENTS.md](AGENTS.md) aligned when architecture or developer workflow changes.
 
-This repository contains no solution file. The primary application project is `Cafe.Launcher.Avalonia.csproj`; test projects must be addressed explicitly.
+The root `Cafe.Launcher.Avalonia.slnx` contains the application and both test projects. The primary application project is `src/Cafe.Launcher.Avalonia/Cafe.Launcher.Avalonia.csproj`.
 
 - Requires the .NET 10 SDK. The application is a `net10.0` Avalonia Windows GUI (`WinExe`); Release builds are self-contained for `win-x64`.
 - Builds enforce nullable references, code style, and warnings as errors. A successful build has zero warnings.
@@ -21,19 +21,19 @@ Restore before commands that use `--no-restore`:
 # Restore app dependencies for Windows builds
 $env:DOTNET_CLI_TELEMETRY_OPTOUT = '1'
 $env:AVALONIA_TELEMETRY_OPTOUT = '1'
-dotnet restore .\Cafe.Launcher.Avalonia.csproj -r win-x64
+dotnet restore .\src\Cafe.Launcher.Avalonia\Cafe.Launcher.Avalonia.csproj -r win-x64
 
 # Debug build; build.ps1 sets both telemetry variables above
 .\build.ps1
-dotnet build .\Cafe.Launcher.Avalonia.csproj -c Debug --no-restore
+dotnet build .\src\Cafe.Launcher.Avalonia\Cafe.Launcher.Avalonia.csproj -c Debug --no-restore
 
 # Run the desktop app
-dotnet run --project .\Cafe.Launcher.Avalonia.csproj
+dotnet run --project .\src\Cafe.Launcher.Avalonia\Cafe.Launcher.Avalonia.csproj
 
 # Release build and publish
 # Release is self-contained; supply the target RID explicitly for a distributable build.
-dotnet build .\Cafe.Launcher.Avalonia.csproj -c Release -r win-x64 --no-restore
-dotnet publish .\Cafe.Launcher.Avalonia.csproj -c Release -r win-x64 -o publish --no-restore
+dotnet build .\src\Cafe.Launcher.Avalonia\Cafe.Launcher.Avalonia.csproj -c Release -r win-x64 --no-restore
+dotnet publish .\src\Cafe.Launcher.Avalonia\Cafe.Launcher.Avalonia.csproj -c Release -r win-x64 -o publish --no-restore
 ```
 
 ```powershell

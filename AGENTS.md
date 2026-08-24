@@ -2,12 +2,12 @@
 
 ## Project Structure & Module Organization
 
-This is a .NET 10 Avalonia desktop launcher. Application entry points (`Program.cs`, `App.axaml`, and `App.axaml.cs`) live at the repository root. `Composition/ServiceConfiguration.cs` is the DI composition root. Major behaviour is organised vertically in `Features/` (`Shell`, `GameOperations`, `Settings`, `SetupWizard`, `Diagnostics`, and `ResourcePanel`); shared infrastructure remains in `Services/`, `Helpers/`, `Models/`, `Constants/`, `Controls/`, and `Converters/`. Views and their styles live in `Views/`. Static runtime assets are under `Assets/`; embedded UI resources are in `Resources/`. Unit tests live in `tests/Cafe.Launcher.Avalonia.Tests`; headless UI tests live in `tests/Cafe.Launcher.Avalonia.HeadlessTests`; packaging scripts are in `scripts/` and `installer/`.
+This is a .NET 10 Avalonia desktop launcher. The application project, including entry points (`Program.cs`, `App.axaml`, and `App.axaml.cs`), lives in `src/Cafe.Launcher.Avalonia/`. `Composition/ServiceConfiguration.cs` is the DI composition root. Major behaviour is organised vertically in `Features/` (`Shell`, `GameOperations`, `Settings`, `SetupWizard`, `Diagnostics`, and `ResourcePanel`); shared infrastructure remains in `Services/`, `Helpers/`, `Models/`, `Constants/`, `Controls/`, and `Converters/`. Views and their styles live in `Views/`. Static runtime assets are under `Assets/`; embedded UI resources are in `Resources/`. Unit tests live in `tests/Cafe.Launcher.Avalonia.Tests`; headless UI tests live in `tests/Cafe.Launcher.Avalonia.HeadlessTests`; packaging scripts are in `scripts/` and `installer/`.
 
 ## Build, Test, and Development Commands
 
 - `.\build.ps1` — restore and build the Debug configuration with telemetry disabled.
-- `dotnet run --project .\Cafe.Launcher.Avalonia.csproj` — run the launcher locally.
+- `dotnet run --project .\src\Cafe.Launcher.Avalonia\Cafe.Launcher.Avalonia.csproj` — run the launcher locally.
 - `.\test.ps1` — run both xUnit test projects.
 - `.\coverage.ps1` — run tests with Coverlet and enforce coverage thresholds.
 - `.\verify.ps1` — perform the complete Debug build, coverage, and Release build sequence.

@@ -34,10 +34,7 @@
   </PropertyGroup>
 
   <ItemGroup>
-    <Folder Include="Models\" />
     <AvaloniaResource Include="Assets\**" />
-    <Compile Remove="tests\**\*.cs" />
-    <None Remove="tests\**" />
     <EmbeddedResource Remove="Resources\LauncherStrings*" />
     <None Update="Assets\app-icon.ico">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>

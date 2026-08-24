@@ -51,8 +51,8 @@ Var DeleteApplicationDataCheckbox
 Var DeleteApplicationData
 
 !define MUI_ABORTWARNING
-!define MUI_ICON "..\Assets\app-icon.ico"
-!define MUI_UNICON "..\Assets\app-icon.ico"
+!define MUI_ICON "..\src\Cafe.Launcher.Avalonia\Assets\app-icon.ico"
+!define MUI_UNICON "..\src\Cafe.Launcher.Avalonia\Assets\app-icon.ico"
 !define MUI_FINISHPAGE_RUN "$INSTDIR\${EXECUTABLE_NAME}"
 !define MUI_LANGDLL_REGISTRY_ROOT "HKLM"
 !define MUI_LANGDLL_REGISTRY_KEY "${UNINSTALL_KEY}"

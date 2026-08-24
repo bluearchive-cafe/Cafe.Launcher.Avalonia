@@ -6,7 +6,7 @@
 
 .DESCRIPTION
     This script automates the local portion of the release workflow:
-    1. Reads the current version from Cafe.Launcher.Avalonia.csproj (<VersionPrefix>)
+    1. Reads the current version from src/Cafe.Launcher.Avalonia/Cafe.Launcher.Avalonia.csproj (<VersionPrefix>)
     2. Computes the new version based on the bump type
     3. Generates a Markdown changelog from git log since the last tag
     4. Writes the new version back to the .csproj
@@ -67,7 +67,8 @@ $ErrorActionPreference = 'Stop'
 
 # ── Paths ──────────────────────────────────────────────────────────────────
 $ScriptDir   = Split-Path -Parent $MyInvocation.MyCommand.Path
-$CsprojPath  = Join-Path $ScriptDir "Cafe.Launcher.Avalonia.csproj"
+$CsprojRelativePath = "src\Cafe.Launcher.Avalonia\Cafe.Launcher.Avalonia.csproj"
+$CsprojPath  = Join-Path $ScriptDir $CsprojRelativePath
 $CsprojName  = "Cafe.Launcher.Avalonia.csproj"
 $ChangelogFile = Join-Path $ScriptDir "CHANGELOG_RELEASE.md"
 $ChangelogScript = Join-Path $ScriptDir "scripts\New-ReleaseChangelog.ps1"
@@ -296,10 +297,10 @@ Write-OK "VersionPrefix updated: $currentVersion → $newVersion"
 Write-Step "Committing version bump"
 
 $commitMsg = "chore: bump version to $tagName"
-Invoke-External "git" @("-C", $ScriptDir, "add", $CsprojName) "git add $CsprojName" | Out-Null
+Invoke-External "git" @("-C", $ScriptDir, "add", $CsprojRelativePath) "git add $CsprojRelativePath" | Out-Null
 
 $global:LASTEXITCODE = 0
-& git -C $ScriptDir diff --cached --quiet -- $CsprojName
+& git -C $ScriptDir diff --cached --quiet -- $CsprojRelativePath
 $stagedDiffExitCode = $LASTEXITCODE
 if ($stagedDiffExitCode -eq 1) {
     Invoke-External "git" @("-C", $ScriptDir, "commit", "-m", $commitMsg) "git commit" | Out-Null

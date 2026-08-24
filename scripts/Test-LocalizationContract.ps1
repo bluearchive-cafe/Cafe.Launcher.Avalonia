@@ -1,5 +1,5 @@
 param(
-    [string]$ResourcesDirectory = (Join-Path $PSScriptRoot '..\Resources')
+    [string]$ResourcesDirectory = (Join-Path $PSScriptRoot '..\src\Cafe.Launcher.Avalonia\Resources')
 )
 
 $ErrorActionPreference = 'Stop'

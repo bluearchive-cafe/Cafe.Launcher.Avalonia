@@ -7,7 +7,7 @@
             "type": "process",
             "args": [
                 "build",
-                "${workspaceFolder}/Cafe.Launcher.Avalonia.csproj",
+                "${workspaceFolder}/src/Cafe.Launcher.Avalonia/Cafe.Launcher.Avalonia.csproj",
                 "/property:GenerateFullPaths=true",
                 "/consoleloggerparameters:NoSummary;ForceNoAlign"
             ],
@@ -19,7 +19,7 @@
             "type": "process",
             "args": [
                 "publish",
-                "${workspaceFolder}/Cafe.Launcher.Avalonia.csproj",
+                "${workspaceFolder}/src/Cafe.Launcher.Avalonia/Cafe.Launcher.Avalonia.csproj",
                 "/property:GenerateFullPaths=true",
                 "/consoleloggerparameters:NoSummary;ForceNoAlign"
             ],
@@ -33,7 +33,7 @@
                 "watch",
                 "run",
                 "--project",
-                "${workspaceFolder}/Cafe.Launcher.Avalonia.csproj"
+                "${workspaceFolder}/src/Cafe.Launcher.Avalonia/Cafe.Launcher.Avalonia.csproj"
             ],
             "problemMatcher": "$msCompile"
         }
