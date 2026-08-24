@@ -34,7 +34,7 @@
   </ItemGroup>
 
   <ItemGroup>
-    <ProjectReference Include="..\..\Cafe.Launcher.Avalonia.csproj" />
+    <ProjectReference Include="..\..\src\Cafe.Launcher.Avalonia\Cafe.Launcher.Avalonia.csproj" />
   </ItemGroup>
 
   <ItemGroup>

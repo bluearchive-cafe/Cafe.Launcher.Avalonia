@@ -134,7 +134,7 @@ public sealed class InstallerContractTests
         var directory = new DirectoryInfo(AppContext.BaseDirectory);
         while (directory is not null)
         {
-            if (File.Exists(Path.Combine(directory.FullName, "Cafe.Launcher.Avalonia.csproj")))
+            if (File.Exists(Path.Combine(directory.FullName, "Cafe.Launcher.Avalonia.slnx")))
             {
                 return directory.FullName;
             }
@@ -142,6 +142,6 @@ public sealed class InstallerContractTests
             directory = directory.Parent;
         }
 
-        throw new DirectoryNotFoundException("Cafe.Launcher.Avalonia.csproj was not found.");
+        throw new DirectoryNotFoundException("Cafe.Launcher.Avalonia.slnx was not found.");
     }
 }

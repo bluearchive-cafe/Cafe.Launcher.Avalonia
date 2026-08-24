@@ -1,6 +1,6 @@
 param(
-    [string]$ResourceFile = (Join-Path $PSScriptRoot '..\Resources\LauncherStrings.resx'),
-    [string]$OutputFile = (Join-Path $PSScriptRoot '..\Resources\LauncherStrings.Designer.cs')
+    [string]$ResourceFile = (Join-Path $PSScriptRoot '..\src\Cafe.Launcher.Avalonia\Resources\LauncherStrings.resx'),
+    [string]$OutputFile = (Join-Path $PSScriptRoot '..\src\Cafe.Launcher.Avalonia\Resources\LauncherStrings.Designer.cs')
 )
 
 $ErrorActionPreference = 'Stop'

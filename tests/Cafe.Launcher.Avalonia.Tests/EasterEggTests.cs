@@ -77,7 +77,7 @@ public sealed class EasterEggTests
     {
         var directory = new DirectoryInfo(AppContext.BaseDirectory);
         while (directory is not null &&
-               !File.Exists(Path.Combine(directory.FullName, "Cafe.Launcher.Avalonia.csproj")))
+               !File.Exists(Path.Combine(directory.FullName, "src", "Cafe.Launcher.Avalonia", "Cafe.Launcher.Avalonia.csproj")))
         {
             directory = directory.Parent;
         }
@@ -85,6 +85,8 @@ public sealed class EasterEggTests
         return Path.Combine(
             directory?.FullName
                 ?? throw new InvalidOperationException("Project root was not found."),
+            "src",
+            "Cafe.Launcher.Avalonia",
             relativePath);
     }
 }

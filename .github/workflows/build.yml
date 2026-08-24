@@ -15,7 +15,7 @@ jobs:
         shell: pwsh
 
     env:
-      Project_Path: Cafe.Launcher.Avalonia.csproj
+      Project_Path: src/Cafe.Launcher.Avalonia/Cafe.Launcher.Avalonia.csproj
       DOTNET_CLI_TELEMETRY_OPTOUT: 1
       AVALONIA_TELEMETRY_OPTOUT: 1
 

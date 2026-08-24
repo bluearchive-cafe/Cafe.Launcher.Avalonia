@@ -33,14 +33,15 @@ public sealed class InstallDiskSpaceUiContractTests
         var directory = new DirectoryInfo(AppContext.BaseDirectory);
         while (directory is not null)
         {
-            if (File.Exists(Path.Combine(directory.FullName, "Cafe.Launcher.Avalonia.csproj")))
+            var applicationProject = Path.Combine(directory.FullName, "src", "Cafe.Launcher.Avalonia", "Cafe.Launcher.Avalonia.csproj");
+            if (File.Exists(applicationProject))
             {
-                return directory.FullName;
+                return Path.GetDirectoryName(applicationProject)!;
             }
 
             directory = directory.Parent;
         }
 
-        throw new DirectoryNotFoundException("Cafe.Launcher.Avalonia.csproj was not found.");
+        throw new DirectoryNotFoundException("src/Cafe.Launcher.Avalonia/Cafe.Launcher.Avalonia.csproj was not found.");
     }
 }

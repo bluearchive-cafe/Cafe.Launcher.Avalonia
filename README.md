@@ -41,9 +41,9 @@ Release 分发目标为 `win-x64` 自包含 `WinExe`，无需用户额外安装 
 需要 .NET 10 SDK。克隆后在仓库根目录执行：
 
 ```powershell
-dotnet restore .\Cafe.Launcher.Avalonia.csproj -r win-x64
+dotnet restore .\src\Cafe.Launcher.Avalonia\Cafe.Launcher.Avalonia.csproj -r win-x64
 .\build.ps1
-dotnet run --project .\Cafe.Launcher.Avalonia.csproj
+dotnet run --project .\src\Cafe.Launcher.Avalonia\Cafe.Launcher.Avalonia.csproj
 ```
 
 `build.ps1` 自动关闭遥测：
@@ -58,9 +58,9 @@ $env:AVALONIA_TELEMETRY_OPTOUT = '1'
 ```powershell
 .\verify.ps1                                                             # 完整验证（Debug 构建、覆盖率门禁、Release 构建、本地化产物契约）
 .\build.ps1                                                              # Debug 构建（0 警告 0 错误）
-dotnet build .\Cafe.Launcher.Avalonia.csproj -c Debug --no-restore       # Debug 构建（跳过还原）
-dotnet build .\Cafe.Launcher.Avalonia.csproj -c Release --no-restore     # Release 构建
-dotnet publish .\Cafe.Launcher.Avalonia.csproj -c Release -r win-x64 -o publish # win-x64 自包含发布
+dotnet build .\src\Cafe.Launcher.Avalonia\Cafe.Launcher.Avalonia.csproj -c Debug --no-restore       # Debug 构建（跳过还原）
+dotnet build .\src\Cafe.Launcher.Avalonia\Cafe.Launcher.Avalonia.csproj -c Release --no-restore     # Release 构建
+dotnet publish .\src\Cafe.Launcher.Avalonia\Cafe.Launcher.Avalonia.csproj -c Release -r win-x64 -o publish # win-x64 自包含发布
 ```
 
 项目启用 `TreatWarningsAsErrors` + `EnforceCodeStyleInBuild`，分析级别 `latest-recommended`。Debug 构建期望 **0 警告 0 错误**。
@@ -145,23 +145,26 @@ dotnet test .\tests\Cafe.Launcher.Avalonia.Tests\Cafe.Launcher.Avalonia.Tests.cs
 
 ```text
 .
-├── App.axaml / App.axaml.cs    # 应用入口：主题字典、DI 容器构建、窗口创建
-├── Program.cs                  # 进程入口：单实例互斥、崩溃日志、会话恢复
-├── Cafe.Launcher.Avalonia.csproj
-├── Constants/                  # LauncherConstants / ApiConfig / BuildInfo / GamePaths
-├── Controls/                   # 共享 UI 控件（SettingRow、ConfirmDialog、LoadingOverlay）
-├── Converters/                 # 值转换器（URL→Bitmap、ToastSeverity→Brush）
-├── Helpers/                    # 工具类（FileSizeFormatter、GamePathValidator、HttpClientLease）
-├── Models/                     # 数据模型（API 合约、状态模型、安装状态、清单结构等）
-├── Composition/                # DI 组合根（ServiceConfiguration）
-├── Features/                   # Shell、游戏操作、设置、首次向导、诊断、资源面板
-├── Services/                   # 共享基础服务（HTTP、设置、本地化、日志、托盘等）
-│   ├── Auth/                   # AuthorizationHeaderFactory（MD5 签名认证头）
-│   └── Diagnostics/            # 日志、崩溃恢复、日志轮转、日志导出
-├── ViewModels/                 # 共享窗口投影（Shell、背景、远端内容、对话框等）
-├── Views/                      # 主窗口、六类设置区、覆盖层与功能样式
-├── Assets/                     # 图标、字体、音频与图片
-├── Resources/                  # .resx 原生本地化资源及生成的强类型访问器
+├── Cafe.Launcher.Avalonia.slnx # XML 解决方案（应用与测试项目）
+├── src/
+│   └── Cafe.Launcher.Avalonia/
+│       ├── App.axaml / App.axaml.cs # 应用入口：主题字典、DI 容器构建、窗口创建
+│       ├── Program.cs          # 进程入口：单实例互斥、崩溃日志、会话恢复
+│       ├── Cafe.Launcher.Avalonia.csproj
+│       ├── Constants/          # LauncherConstants / ApiConfig / BuildInfo / GamePaths
+│       ├── Controls/           # 共享 UI 控件（SettingRow、ConfirmDialog、LoadingOverlay）
+│       ├── Converters/         # 值转换器（URL→Bitmap、ToastSeverity→Brush）
+│       ├── Helpers/            # 工具类（FileSizeFormatter、GamePathValidator、HttpClientLease）
+│       ├── Models/             # 数据模型（API 合约、状态模型、安装状态、清单结构等）
+│       ├── Composition/        # DI 组合根（ServiceConfiguration）
+│       ├── Features/           # Shell、游戏操作、设置、首次向导、诊断、资源面板
+│       ├── Services/           # 共享基础服务（HTTP、设置、本地化、日志、托盘等）
+│       │   ├── Auth/           # AuthorizationHeaderFactory（MD5 签名认证头）
+│       │   └── Diagnostics/    # 日志、崩溃恢复、日志轮转、日志导出
+│       ├── ViewModels/         # 共享窗口投影（Shell、背景、远端内容、对话框等）
+│       ├── Views/              # 主窗口、六类设置区、覆盖层与功能样式
+│       ├── Assets/             # 图标、字体、音频与图片
+│       └── Resources/          # .resx 原生本地化资源及生成的强类型访问器
 ├── tests/                      # xUnit v3 单元测试与 Avalonia Headless UI 测试
 ├── scripts/                    # 分发、本地化校验与 changelog 脚本
 ├── release.ps1                 # 本地发布脚本

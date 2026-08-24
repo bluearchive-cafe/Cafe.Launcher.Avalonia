@@ -58,19 +58,20 @@ public static class TestLocalizationHelper
 
     /// <summary>
     /// Walks up from <see cref="AppContext.BaseDirectory"/> to find the
-    /// repository root containing <c>Cafe.Launcher.Avalonia.csproj</c>.
+    /// application root containing <c>Cafe.Launcher.Avalonia.csproj</c>.
     /// </summary>
     public static string FindProjectRoot()
     {
         var directory = new DirectoryInfo(AppContext.BaseDirectory);
         while (directory is not null)
         {
-            if (File.Exists(Path.Combine(directory.FullName, "Cafe.Launcher.Avalonia.csproj")))
-                return directory.FullName;
+            var applicationProject = Path.Combine(directory.FullName, "src", "Cafe.Launcher.Avalonia", "Cafe.Launcher.Avalonia.csproj");
+            if (File.Exists(applicationProject))
+                return Path.GetDirectoryName(applicationProject)!;
 
             directory = directory.Parent;
         }
 
-        throw new DirectoryNotFoundException("Cafe.Launcher.Avalonia.csproj was not found.");
+        throw new DirectoryNotFoundException("src/Cafe.Launcher.Avalonia/Cafe.Launcher.Avalonia.csproj was not found.");
     }
 }

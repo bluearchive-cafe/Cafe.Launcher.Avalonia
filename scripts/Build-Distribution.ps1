@@ -6,7 +6,7 @@ param(
 $ErrorActionPreference = "Stop"
 $ScriptDir = Split-Path -Parent $MyInvocation.MyCommand.Path
 $RootDir = Split-Path -Parent $ScriptDir
-$ProjectPath = Join-Path $RootDir "Cafe.Launcher.Avalonia.csproj"
+$ProjectPath = Join-Path $RootDir "src\Cafe.Launcher.Avalonia\Cafe.Launcher.Avalonia.csproj"
 $InstallerScript = Join-Path $RootDir "installer\Cafe.Launcher.Avalonia.nsi"
 $ArtifactsDir = Join-Path $RootDir "artifacts"
 $PublishDir = Join-Path $ArtifactsDir "publish"
