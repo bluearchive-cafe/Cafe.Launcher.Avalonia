@@ -28,7 +28,6 @@ public partial class MainWindowViewModel : ViewModelBase, IDisposable
 
     public bool IsMotionEnabled => !IsMotionReduced;
     public bool IsBottomPanelVisible => true;
-    public bool IsStatusDetailExpanded => Settings.Editor.Current.StatusDetailMode == StatusDetailModes.Detailed;
     public bool IsStatusDetailHidden => Settings.Editor.Current.StatusDetailMode == StatusDetailModes.Hidden;
 
     public ShellViewModel Shell { get; }
@@ -188,7 +187,6 @@ public partial class MainWindowViewModel : ViewModelBase, IDisposable
 
     private void OnStatusDetailModeChanged()
     {
-        OnPropertyChanged(nameof(IsStatusDetailExpanded));
         OnPropertyChanged(nameof(IsStatusDetailHidden));
     }
 }

@@ -248,11 +248,6 @@
         <Setter Property="Padding" Value="20,12"/>
         <Setter Property="FontSize" Value="{StaticResource LauncherFontSizeXl}"/>
     </Style>
-    <Style Selector="Button.primary-action.path-operation">
-        <Setter Property="Height" Value="{StaticResource LauncherFieldHeight}"/>
-        <Setter Property="MinHeight" Value="{StaticResource LauncherFieldHeight}"/>
-        <Setter Property="Padding" Value="{StaticResource LauncherThicknessSm}"/>
-    </Style>
     <Style Selector="StackPanel.confirm-actions">
         <Setter Property="Orientation" Value="Horizontal"/>
         <Setter Property="HorizontalAlignment" Value="Right"/>
@@ -1077,7 +1072,6 @@
         <Setter Property="BorderThickness" Value="1"/>
     </Style>
     <!-- Semantic marker classes used by layout and headless UI contracts. -->
-    <Style Selector="Grid.install-path-row"/>
     <Style Selector="Button.news-row"/>
     <Style Selector="ScrollViewer.news-viewport"/>
     <Style Selector="StackPanel.operation-actions"/>
