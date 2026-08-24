@@ -10,7 +10,6 @@ public enum ModalKind
     DebugResetConfirmation,
     Notice,
     Update,
-    CrashRecovery,
     Error,
     SetupWizard,
     SetupWizardExitConfirmation,

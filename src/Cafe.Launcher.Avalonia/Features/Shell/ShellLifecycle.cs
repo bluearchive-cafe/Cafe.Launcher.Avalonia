@@ -343,8 +343,8 @@ public sealed class ShellLifecycle : IDisposable
         }
     }
 
-    /// <summary>Restores default settings after crash recovery requests a reset.</summary>
-    public async Task ResetSettingsAfterCrashAsync()
+    /// <summary>Restores default settings from the debug panel.</summary>
+    public async Task ResetSettingsToDefaultsAsync()
     {
         await settingsService.SaveAsync(LauncherSettings.CreateDefaults());
         await RefreshAsync();
@@ -370,8 +370,8 @@ public sealed class ShellLifecycle : IDisposable
     /// <summary>Opens the log viewer from an operation failure action.</summary>
     internal Task OpenLogViewerAsync() => logViewer.OpenCommand.ExecuteAsync(null);
 
-    /// <summary>Opens the log viewer from crash-recovery UI.</summary>
-    internal void OpenCrashLog()
+    /// <summary>Opens the log viewer from a synchronous dialog action.</summary>
+    internal void OpenLogViewer()
     {
         logViewer.OpenCommand.Execute(null);
     }
@@ -431,12 +431,10 @@ public sealed class ShellLifecycle : IDisposable
         dialogs.CloseAfterStoppingDownloadRequested += windowChrome.CloseAfterStoppingDownload;
         dialogs.CloseRequested += windowChrome.RequestClose;
         dialogs.ConfirmUpdateAvailableRequested += OnUpdateAvailableConfirmed;
-        dialogs.CrashRecoveryResetSettingsRequested += ResetSettingsAfterCrashAsync;
-        dialogs.CrashRecoveryViewLogRequested += OpenCrashLog;
-        dialogs.ErrorViewLogRequested += OpenCrashLog;
+        dialogs.ErrorViewLogRequested += OpenLogViewer;
 
         debug.RefreshRequested += HandleDebugRefreshRequestedAsync;
-        debug.ResetSettingsRequested += ResetSettingsAfterCrashAsync;
+        debug.ResetSettingsRequested += ResetSettingsToDefaultsAsync;
         debug.ResetSettingsConfirmationRequested += dialogs.ShowDebugResetConfirmation;
         dialogs.ConfirmDebugResetRequested += debug.ConfirmResetSettingsAsync;
 
@@ -469,13 +467,11 @@ public sealed class ShellLifecycle : IDisposable
         dialogs.CloseAfterStoppingDownloadRequested -= windowChrome.CloseAfterStoppingDownload;
         dialogs.CloseRequested -= windowChrome.RequestClose;
         dialogs.ConfirmUpdateAvailableRequested -= OnUpdateAvailableConfirmed;
-        dialogs.CrashRecoveryResetSettingsRequested -= ResetSettingsAfterCrashAsync;
-        dialogs.CrashRecoveryViewLogRequested -= OpenCrashLog;
-        dialogs.ErrorViewLogRequested -= OpenCrashLog;
+        dialogs.ErrorViewLogRequested -= OpenLogViewer;
         dialogs.SetupWizard.LanguagePreviewRequested -= PreviewSetupWizardLanguage;
         dialogs.SetupWizard.SettingsApplied -= HandleSetupWizardSettingsAppliedAsync;
         debug.RefreshRequested -= HandleDebugRefreshRequestedAsync;
-        debug.ResetSettingsRequested -= ResetSettingsAfterCrashAsync;
+        debug.ResetSettingsRequested -= ResetSettingsToDefaultsAsync;
         debug.ResetSettingsConfirmationRequested -= dialogs.ShowDebugResetConfirmation;
         dialogs.ConfirmDebugResetRequested -= debug.ConfirmResetSettingsAsync;
         windowChrome.PropertyChanged -= OnWindowChromePropertyChanged;
@@ -540,9 +536,6 @@ public sealed class ShellLifecycle : IDisposable
                 break;
             case ModalKind.Update:
                 dialogs.CancelUpdateAvailableCommand.Execute(null);
-                break;
-            case ModalKind.CrashRecovery:
-                dialogs.ContinueAfterCrashCommand.Execute(null);
                 break;
             case ModalKind.Error:
                 dialogs.ContinueAfterErrorCommand.Execute(null);
@@ -855,9 +848,6 @@ public sealed class ShellLifecycle : IDisposable
                 break;
             case nameof(DialogsViewModel.IsUpdateAvailableVisible):
                 SyncModal(ModalKind.Update, dialogs.IsUpdateAvailableVisible, dialogs);
-                break;
-            case nameof(DialogsViewModel.IsCrashRecoveryVisible):
-                SyncModal(ModalKind.CrashRecovery, dialogs.IsCrashRecoveryVisible, dialogs);
                 break;
             case nameof(DialogsViewModel.IsErrorDialogVisible):
                 SyncModal(ModalKind.Error, dialogs.IsErrorDialogVisible, dialogs);

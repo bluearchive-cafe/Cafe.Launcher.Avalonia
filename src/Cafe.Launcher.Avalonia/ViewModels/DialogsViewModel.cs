@@ -97,14 +97,6 @@ public partial class DialogsViewModel : ViewModelBase, IModalContentViewModel
         }
     }
 
-    // ── Crash recovery ─────────────────────────────────────────────────
-
-    [ObservableProperty]
-    private bool isCrashRecoveryVisible;
-
-    [ObservableProperty]
-    private string crashRecoveryText = "";
-
     // ── Setup wizard ─────────────────────────────────────────────────────
 
     public SetupWizardViewModel SetupWizard { get; }
@@ -140,37 +132,6 @@ public partial class DialogsViewModel : ViewModelBase, IModalContentViewModel
     {
         IsSetupWizardExitConfirmVisible = false;
         await SetupWizard.SkipCommand.ExecuteAsync(null);
-    }
-
-    public event Action? CrashRecoveryContinueRequested;
-    public event Func<Task>? CrashRecoveryResetSettingsRequested;
-    public event Action? CrashRecoveryViewLogRequested;
-
-    public void ShowCrashRecovery()
-    {
-        CrashRecoveryText = localizer.T("crashRecoveryMessage");
-        IsCrashRecoveryVisible = true;
-    }
-
-    [RelayCommand]
-    private void ContinueAfterCrash()
-    {
-        IsCrashRecoveryVisible = false;
-        CrashRecoveryContinueRequested?.Invoke();
-    }
-
-    [RelayCommand]
-    private async Task ResetSettingsAfterCrashAsync()
-    {
-        await AsyncEvent.InvokeSequentiallyAsync(CrashRecoveryResetSettingsRequested);
-        IsCrashRecoveryVisible = false;
-    }
-
-    [RelayCommand]
-    private void ViewCrashLog()
-    {
-        IsCrashRecoveryVisible = false;
-        CrashRecoveryViewLogRequested?.Invoke();
     }
 
     // ── Critical error ────────────────────────────────────────────────────

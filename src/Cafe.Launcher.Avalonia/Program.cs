@@ -16,8 +16,6 @@ sealed class Program
     private const string MutexName = @"Local\Cafe_Launcher_SI";
     private const string SignalName = @"Local\Cafe_Launcher_SI_Show";
 
-    internal static bool PreviousSessionCrashed { get; private set; }
-
     /// <summary>
     /// True when the launcher settings file is missing at process startup.
     /// Used by <see cref="App"/> to show the first-launch setup wizard before normal refresh.
@@ -31,11 +29,7 @@ sealed class Program
     /// </summary>
     internal static UnifiedLogger? PreDiLogger { get; private set; }
 
-    /// <summary>
-    /// Set by <see cref="App"/> once the DI container is built so that
-    /// <see cref="RunSession"/> can dispose it after the session-end entry
-    /// has been written.
-    /// </summary>
+    /// <summary>Set by <see cref="App"/> once the DI container is built.</summary>
     internal static ServiceProvider? ServiceProvider { get; set; }
 
     [STAThread]
@@ -54,12 +48,11 @@ sealed class Program
         var crashLogger = new UnifiedLogger();
         PreDiLogger = crashLogger;
         FirstLaunch = DetectFirstLaunch();
-        var crashRecovery = new CrashRecoveryService(crashLogger);
         SetupCrashLogging(crashLogger);
         try
         {
             RunSession(
-                crashRecovery,
+                crashLogger,
                 () => BuildAvaloniaApp().StartWithClassicDesktopLifetime(args));
         }
         catch (Exception exception)
@@ -77,22 +70,17 @@ sealed class Program
         return !File.Exists(settingsPath);
     }
 
-    internal static void RunSession(CrashRecoveryService crashRecovery, Action runApplication)
+    internal static void RunSession(UnifiedLogger logger, Action runApplication)
     {
-        PreviousSessionCrashed = crashRecovery.BeginSessionAsync().GetAwaiter().GetResult();
+        logger.WriteSessionStartAsync().GetAwaiter().GetResult();
         try
         {
             runApplication();
-            // Normal exit — finalise the session cleanly.
-            crashRecovery.CompleteSessionAsync().GetAwaiter().GetResult();
+            logger.WriteSessionEndAsync().GetAwaiter().GetResult();
         }
         catch (Exception ex)
         {
-            // Log the crash before the logger is disposed, and intentionally
-            // skip CompleteSessionAsync so the crash marker survives for the
-            // next launch to detect. Main's catch block serves as a fallback
-            // for pre-DI-container crashes (ServiceProvider is null).
-            LogCrash(PreDiLogger!, "Main", ex);
+            LogCrash(logger, "Main", ex);
             throw;
         }
         finally

@@ -88,46 +88,6 @@ public sealed class DialogsViewModelTests
     }
 
     [Fact]
-    public void CrashRecoveryCommands_HideDialogAndRaiseEvents()
-    {
-        var viewModel = CreateViewModel();
-        var continued = false;
-        var viewedLog = false;
-        viewModel.CrashRecoveryContinueRequested += () => continued = true;
-        viewModel.CrashRecoveryViewLogRequested += () => viewedLog = true;
-
-        viewModel.ShowCrashRecovery();
-        viewModel.ContinueAfterCrashCommand.Execute(null);
-
-        Assert.True(continued);
-        Assert.False(viewModel.IsCrashRecoveryVisible);
-
-        viewModel.ShowCrashRecovery();
-        viewModel.ViewCrashLogCommand.Execute(null);
-
-        Assert.True(viewedLog);
-        Assert.False(viewModel.IsCrashRecoveryVisible);
-    }
-
-    [Fact]
-    public async Task ResetSettingsAfterCrashCommand_RaisesAsyncEventAndHidesDialog()
-    {
-        var viewModel = CreateViewModel();
-        var reset = false;
-        viewModel.CrashRecoveryResetSettingsRequested += () =>
-        {
-            reset = true;
-            return Task.CompletedTask;
-        };
-        viewModel.ShowCrashRecovery();
-
-        await viewModel.ResetSettingsAfterCrashCommand.ExecuteAsync(null);
-
-        Assert.True(reset);
-        Assert.False(viewModel.IsCrashRecoveryVisible);
-    }
-
-    [Fact]
     public async Task ConfirmationCommands_RaiseConfiguredEventsAndCloseDialogs()
     {
         var viewModel = CreateViewModel();

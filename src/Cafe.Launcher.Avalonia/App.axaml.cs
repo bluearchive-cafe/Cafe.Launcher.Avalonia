@@ -97,8 +97,6 @@ public partial class App : Application
 
             desktop.ShutdownRequested += HandleShutdownRequested;
             mainWindow.ConfigureViewModel(viewModel);
-            if (Program.PreviousSessionCrashed)
-                viewModel.Dialogs.ShowCrashRecovery();
 
             // Initialize system tray (depends on Window — kept outside DI)
             try
@@ -119,9 +117,7 @@ public partial class App : Application
                 Debug.WriteLine($"SystemTrayService init failed: {ex.Message}");
             }
 
-            // Clean up on app exit. The service provider is disposed by
-            // Program.RunSession after the session-end entry is written
-            // so the logger stays alive through CompleteSessionAsync.
+            // Clean up on app exit. The service provider is disposed by Program.RunSession.
             desktop.Exit += (_, _) =>
             {
                 desktop.ShutdownRequested -= HandleShutdownRequested;
@@ -129,7 +125,6 @@ public partial class App : Application
                 shutdownCts.Cancel();
                 viewModel.Dispose();
                 trayService?.Dispose();
-                // serviceProvider is disposed by Program.RunSession
                 shutdownCts.Dispose();
             };
 

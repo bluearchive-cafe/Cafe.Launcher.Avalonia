@@ -422,54 +422,6 @@
                                 IsDangerIcon="True"
                                 CloseToolTip="{Binding Shell.I18n[close]}"/>
 
-        <!-- Crash recovery dialog (shown on startup after unclean shutdown) -->
-        <Grid Classes="dialog-overlay motion-overlay"
-              Classes.motion-enabled="{Binding IsMotionEnabled}"
-              controls:MotionVisibility.IsOpen="{Binding Dialogs.IsCrashRecoveryVisible}"
-              controls:MotionVisibility.IsMotionEnabled="{Binding IsMotionEnabled}">
-            <Border Classes="dialog confirm-panel motion-surface" MaxWidth="460">
-                <Border.RenderTransform>
-                    <TranslateTransform/>
-                </Border.RenderTransform>
-                <Grid RowDefinitions="Auto,Auto,Auto" Classes="confirm-layout motion-surface-content">
-                    <Grid Classes="dialog-heading" ColumnDefinitions="Auto,*,Auto">
-                        <Border Classes="dialog-icon" VerticalAlignment="Center">
-                            <materialIcons:MaterialIcon Kind="AlertCircle" Width="{StaticResource LauncherIconXl}" Height="{StaticResource LauncherIconXl}"
-                                                       Foreground="{DynamicResource LauncherDangerBrush}"
-                                                       HorizontalAlignment="Center" VerticalAlignment="Center"/>
-                        </Border>
-                        <StackPanel Grid.Column="1" Classes="dialog-heading-copy">
-                            <TextBlock Text="{Binding Shell.I18n[crashRecoveryTitle]}" Classes="dialog-title"/>
-                            <TextBlock Text="{Binding Shell.I18n[crashRecoveryDescription]}" Classes="caption"/>
-                        </StackPanel>
-                    </Grid>
-                    <Border Grid.Row="1" Classes="confirm-message" Background="{DynamicResource LauncherWarningBackgroundBrush}">
-                        <TextBlock Text="{Binding Dialogs.CrashRecoveryText}" Classes="confirm-message-text"/>
-                    </Border>
-                    <StackPanel Grid.Row="2" Classes="confirm-actions">
-                        <Button Classes="flat-action dialog-action" Command="{Binding Dialogs.ViewCrashLogCommand}">
-                            <StackPanel Classes="button-content">
-                                <materialIcons:MaterialIcon Kind="TextBoxOutline" Width="{StaticResource LauncherIconSm}" Height="{StaticResource LauncherIconSm}"/>
-                                <TextBlock Text="{Binding Shell.I18n[crashRecoveryViewLog]}"/>
-                            </StackPanel>
-                        </Button>
-                        <Button Classes="flat-action dialog-action" Command="{Binding Dialogs.ResetSettingsAfterCrashCommand}">
-                            <StackPanel Classes="button-content">
-                                <materialIcons:MaterialIcon Kind="CogRefreshOutline" Width="{StaticResource LauncherIconSm}" Height="{StaticResource LauncherIconSm}"/>
-                                <TextBlock Text="{Binding Shell.I18n[crashRecoveryResetSettings]}"/>
-                            </StackPanel>
-                        </Button>
-                        <Button Classes="primary-action dialog-action" Command="{Binding Dialogs.ContinueAfterCrashCommand}">
-                            <StackPanel Classes="button-content">
-                                <materialIcons:MaterialIcon Kind="Check" Width="{StaticResource LauncherIconSm}" Height="{StaticResource LauncherIconSm}"/>
-                                <TextBlock Text="{Binding Shell.I18n[crashRecoveryContinue]}"/>
-                            </StackPanel>
-                        </Button>
-                    </StackPanel>
-                </Grid>
-            </Border>
-        </Grid>
-
         <!-- Critical error dialog -->
         <Grid Classes="dialog-overlay motion-overlay"
               Classes.motion-enabled="{Binding IsMotionEnabled}"
