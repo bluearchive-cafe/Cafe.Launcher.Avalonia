@@ -114,8 +114,7 @@ public sealed class SettingsOptionsViewModel
     public ObservableCollection<SettingOption> StatusDetailMode { get; } =
     [
         new() { Code = StatusDetailModes.Hidden },
-        new() { Code = StatusDetailModes.Compact },
-        new() { Code = StatusDetailModes.Detailed }
+        new() { Code = StatusDetailModes.Compact }
     ];
 
     public ObservableCollection<SettingOption> SettingsCategories { get; } = [];
@@ -148,8 +147,7 @@ public sealed class SettingsOptionsViewModel
         RefreshOptions(StatusDetailMode, code => code switch
         {
             StatusDetailModes.Hidden => localizer.T("statusDetailModeHidden"),
-            StatusDetailModes.Compact => localizer.T("statusDetailModeCompact"),
-            _ => localizer.T("statusDetailModeDetailed")
+            _ => localizer.T("statusDetailModeCompact")
         });
 
         RefreshOptions(ThemeColor, code => code switch

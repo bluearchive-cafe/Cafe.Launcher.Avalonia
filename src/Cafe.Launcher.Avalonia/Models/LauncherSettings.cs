@@ -36,7 +36,7 @@ public sealed class LauncherSettings : ObservableObject
 #endif
     ;
     private string resourcePanelUidSource = ResourcePanelUidSources.Auto;
-    private string statusDetailMode = StatusDetailModes.Detailed;
+    private string statusDetailMode = StatusDetailModes.Compact;
 
     [JsonPropertyName("gamePath")]
     public string GamePath { get => gamePath; set => SetProperty(ref gamePath, value); }

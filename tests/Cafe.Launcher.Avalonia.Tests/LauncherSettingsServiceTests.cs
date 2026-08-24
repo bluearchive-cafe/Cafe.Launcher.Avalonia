@@ -25,6 +25,12 @@ public sealed class LauncherSettingsServiceTests : IDisposable
     }
 
     [Fact]
+    public void LauncherSettings_DefaultStatusDetailModeIsCompact()
+    {
+        Assert.Equal(StatusDetailModes.Compact, new LauncherSettings().StatusDetailMode);
+    }
+
+    [Fact]
     public async Task MotionMode_RoundTripsAndInvalidValueFallsBackToSystem()
     {
         var service = new LauncherSettingsService(settingsPath);
@@ -170,7 +176,8 @@ public sealed class LauncherSettingsServiceTests : IDisposable
               "showRemoteContentCard": false,
               "patchUrlGroup": "invalid",
               "backgroundSource": "invalid",
-              "resourcePanelUid": "  UID123  "
+              "resourcePanelUid": "  UID123  ",
+              "statusDetailMode": "detailed"
             }
             """);
         var service = new LauncherSettingsService(settingsPath);
@@ -192,6 +199,7 @@ public sealed class LauncherSettingsServiceTests : IDisposable
         Assert.Equal(PatchUrlGroups.Official, settings.PatchUrlGroup);
         Assert.Equal(BackgroundSources.Bundled, settings.BackgroundSource);
         Assert.Equal("UID123", settings.ResourcePanelUid);
+        Assert.Equal(StatusDetailModes.Compact, settings.StatusDetailMode);
     }
 
     [Fact]

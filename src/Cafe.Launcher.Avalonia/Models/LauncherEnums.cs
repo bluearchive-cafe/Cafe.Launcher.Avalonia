@@ -122,5 +122,4 @@ public static class StatusDetailModes
 {
     public const string Hidden = "hidden";
     public const string Compact = "compact";
-    public const string Detailed = "detailed";
 }

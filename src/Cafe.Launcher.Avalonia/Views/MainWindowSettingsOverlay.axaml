@@ -58,41 +58,8 @@
 
                     <Border Grid.Column="1" Classes="settings-content-divider">
                       <Border Classes="settings-content-padding">
-                        <Grid Classes="settings-content" RowDefinitions="Auto,*">
-                        <Border Classes="status-summary settings-status-summary">
-                            <Grid Classes="status-details" ColumnDefinitions="Auto,*,Auto,Auto">
-                                <Border Classes="settings-icon">
-                                    <materialIcons:MaterialIcon Kind="{Binding Shell.StatusIconKind}"
-                                                                Width="{StaticResource LauncherIconMd}"
-                                                                Height="{StaticResource LauncherIconMd}"
-                                                                Foreground="{DynamicResource LauncherAccentBrush}"
-                                                                HorizontalAlignment="Center"
-                                                                VerticalAlignment="Center"/>
-                                </Border>
-                                <StackPanel Grid.Column="1"
-                                            Classes="status-title-inline"
-                                            Orientation="Horizontal"
-                                            Spacing="{StaticResource LauncherSpacingXs}"
-                                            VerticalAlignment="Center"
-                                            Margin="8,0,0,0">
-                                    <TextBlock Text="{Binding Shell.CurrentViewTitle}" Classes="status-summary-title"/>
-                                    <TextBlock Text="{Binding Shell.VersionText}" Classes="caption status-summary-version"/>
-                                </StackPanel>
-                                <Border Grid.Column="2" Classes="status-detail">
-                                    <TextBlock Text="{Binding Shell.NetworkStatusValueText}"
-                                               Classes="caption"
-                                               VerticalAlignment="Center"/>
-                                </Border>
-                                <Border Grid.Column="3" Classes="status-detail">
-                                    <TextBlock Text="{Binding Shell.DiskSpaceText}"
-                                               Classes="caption"
-                                               VerticalAlignment="Center"/>
-                                </Border>
-                            </Grid>
-                        </Border>
-
-                        <ScrollViewer Grid.Row="1"
-                                      Classes="dialog-scroll"
+                        <Grid Classes="settings-content">
+                        <ScrollViewer Classes="dialog-scroll"
                                       VerticalScrollBarVisibility="Auto"
                                       HorizontalScrollBarVisibility="Disabled"
                                       IsEnabled="{Binding Settings.IsSaving, Converter={x:Static BoolConverters.Not}}">

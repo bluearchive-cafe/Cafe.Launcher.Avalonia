@@ -248,11 +248,6 @@
         <Setter Property="Padding" Value="20,12"/>
         <Setter Property="FontSize" Value="{StaticResource LauncherFontSizeXl}"/>
     </Style>
-    <Style Selector="Button.primary-action.path-operation">
-        <Setter Property="Height" Value="{StaticResource LauncherFieldHeight}"/>
-        <Setter Property="MinHeight" Value="{StaticResource LauncherFieldHeight}"/>
-        <Setter Property="Padding" Value="{StaticResource LauncherThicknessSm}"/>
-    </Style>
     <Style Selector="StackPanel.confirm-actions">
         <Setter Property="Orientation" Value="Horizontal"/>
         <Setter Property="HorizontalAlignment" Value="Right"/>
@@ -731,13 +726,6 @@
     <Style Selector="StackPanel.settings-group">
         <Setter Property="Margin" Value="0,16,0,0"/>
     </Style>
-    <Style Selector="Border.settings-status-summary">
-        <Setter Property="Background" Value="{DynamicResource LauncherTransparentBrush}"/>
-        <Setter Property="BorderBrush" Value="{DynamicResource LauncherCardBorderBrush}"/>
-        <Setter Property="BorderThickness" Value="0,0,0,1"/>
-        <Setter Property="Padding" Value="0,0,0,8"/>
-        <Setter Property="Margin" Value="0,0,0,12"/>
-    </Style>
     <Style Selector="Border.settings-content-padding">
         <Setter Property="Padding" Value="16,12,16,16"/>
     </Style>
@@ -931,32 +919,6 @@
         <Setter Property="Orientation" Value="Horizontal"/>
         <Setter Property="Spacing" Value="{StaticResource LauncherSpacingSm}"/>
     </Style>
-    <Style Selector="Grid.status-summary">
-        <Setter Property="ColumnSpacing" Value="{StaticResource LauncherSpacingMd}"/>
-    </Style>
-    <Style Selector="TextBlock.status-summary-title">
-        <Setter Property="FontSize" Value="{StaticResource LauncherFontSizeXl}"/>
-        <Setter Property="FontWeight" Value="{StaticResource LauncherFontWeightStrong}"/>
-        <Setter Property="Foreground" Value="{DynamicResource LauncherTextPrimaryBrush}"/>
-    </Style>
-    <Style Selector="TextBlock.status-summary-version">
-        <Setter Property="FontSize" Value="{StaticResource LauncherFontSizeXl}"/>
-        <Setter Property="VerticalAlignment" Value="Center"/>
-    </Style>
-    <Style Selector="Grid.status-details">
-        <Setter Property="ColumnSpacing" Value="{StaticResource LauncherSpacingSm}"/>
-        <Setter Property="RowSpacing" Value="{StaticResource LauncherSpacingSm}"/>
-    </Style>
-    <Style Selector="Border.status-detail">
-        <Setter Property="Background" Value="{DynamicResource LauncherContentRowBrush}"/>
-        <Setter Property="CornerRadius" Value="{StaticResource LauncherRadiusSm}"/>
-        <Setter Property="Height" Value="{StaticResource LauncherChipHeight}"/>
-        <Setter Property="Padding" Value="12,0"/>
-        <Setter Property="MinWidth" Value="0"/>
-    </Style>
-    <Style Selector="Border.status-note">
-        <Setter Property="Margin" Value="0,8,0,0"/>
-    </Style>
     <Style Selector="Border.settings-section">
         <Setter Property="Background" Value="{DynamicResource LauncherCardBackgroundBrush}"/>
         <Setter Property="BorderThickness" Value="0"/>
@@ -1077,7 +1039,6 @@
         <Setter Property="BorderThickness" Value="1"/>
     </Style>
     <!-- Semantic marker classes used by layout and headless UI contracts. -->
-    <Style Selector="Grid.install-path-row"/>
     <Style Selector="Button.news-row"/>
     <Style Selector="ScrollViewer.news-viewport"/>
     <Style Selector="StackPanel.operation-actions"/>
