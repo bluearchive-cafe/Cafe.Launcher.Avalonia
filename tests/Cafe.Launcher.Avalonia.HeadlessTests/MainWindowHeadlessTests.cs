@@ -309,7 +309,7 @@ public sealed class MainWindowHeadlessTests
     }
 
     [AvaloniaFact]
-    public void SettingsWorkspace_WhenShown_AppliesWorkspaceAndStatusSummaryStyles()
+    public void SettingsWorkspace_WhenShown_AppliesWorkspaceStyle()
     {
         using var context = CreateContext();
         context.ViewModel.WindowChrome.IsSettingsVisible = true;
@@ -321,38 +321,7 @@ public sealed class MainWindowHeadlessTests
             .GetVisualDescendants()
             .OfType<Grid>()
             .Single(control => control.Classes.Contains("settings-workspace"));
-        var statusSummary = context.Window
-            .GetVisualDescendants()
-            .OfType<Border>()
-            .Single(control => control.Classes.Contains("settings-status-summary"));
-
         Assert.Equal(new Thickness(0), workspace.Margin);
-        Assert.Equal(new Thickness(0, 0, 0, 8), statusSummary.Padding);
-    }
-
-    [AvaloniaFact]
-    public void SettingsStatusSummary_WhenShown_UsesUniformThirtyTwoPixelElements()
-    {
-        using var context = CreateContext();
-        OpenSettings(context);
-
-        var statusSummary = context.Window
-            .GetVisualDescendants()
-            .OfType<Border>()
-            .Single(control => control.Classes.Contains("settings-status-summary"));
-        var statusIcon = statusSummary
-            .GetVisualDescendants()
-            .OfType<Border>()
-            .Single(control => control.Classes.Contains("settings-icon"));
-        var statusDetails = statusSummary
-            .GetVisualDescendants()
-            .OfType<Border>()
-            .Where(control => control.Classes.Contains("status-detail"))
-            .ToArray();
-
-        Assert.Equal(32, statusIcon.Bounds.Height);
-        Assert.Equal(2, statusDetails.Length);
-        Assert.All(statusDetails, detail => Assert.Equal(32, detail.Bounds.Height));
     }
 
     [AvaloniaFact]
@@ -599,13 +568,11 @@ public sealed class MainWindowHeadlessTests
     }
 
     [AvaloniaFact]
-    public void SettingsSaving_DisablesNavigationButKeepsSummaryAndFooterVisible()
+    public void SettingsSaving_DisablesNavigationButKeepsFooterVisible()
     {
         using var context = CreateContext();
         OpenSettings(context);
         var navigation = GetSettingsNavigation(context.Window);
-        var summary = context.Window.GetVisualDescendants().OfType<Border>()
-            .Single(control => control.Classes.Contains("settings-status-summary"));
         var settingsOverlay = context.Window.GetVisualDescendants()
             .OfType<MainWindowSettingsOverlay>().Single();
         var footer = settingsOverlay.GetVisualDescendants().OfType<Border>()
@@ -615,7 +582,6 @@ public sealed class MainWindowHeadlessTests
         Dispatcher.UIThread.RunJobs();
 
         Assert.False(navigation.IsEnabled);
-        Assert.True(summary.IsEffectivelyVisible);
         Assert.True(footer.IsEffectivelyVisible);
     }
 

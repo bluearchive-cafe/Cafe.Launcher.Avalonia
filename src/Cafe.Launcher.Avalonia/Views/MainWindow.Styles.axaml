@@ -726,13 +726,6 @@
     <Style Selector="StackPanel.settings-group">
         <Setter Property="Margin" Value="0,16,0,0"/>
     </Style>
-    <Style Selector="Border.settings-status-summary">
-        <Setter Property="Background" Value="{DynamicResource LauncherTransparentBrush}"/>
-        <Setter Property="BorderBrush" Value="{DynamicResource LauncherCardBorderBrush}"/>
-        <Setter Property="BorderThickness" Value="0,0,0,1"/>
-        <Setter Property="Padding" Value="0,0,0,8"/>
-        <Setter Property="Margin" Value="0,0,0,12"/>
-    </Style>
     <Style Selector="Border.settings-content-padding">
         <Setter Property="Padding" Value="16,12,16,16"/>
     </Style>
@@ -925,32 +918,6 @@
     <Style Selector="StackPanel.card-heading">
         <Setter Property="Orientation" Value="Horizontal"/>
         <Setter Property="Spacing" Value="{StaticResource LauncherSpacingSm}"/>
-    </Style>
-    <Style Selector="Grid.status-summary">
-        <Setter Property="ColumnSpacing" Value="{StaticResource LauncherSpacingMd}"/>
-    </Style>
-    <Style Selector="TextBlock.status-summary-title">
-        <Setter Property="FontSize" Value="{StaticResource LauncherFontSizeXl}"/>
-        <Setter Property="FontWeight" Value="{StaticResource LauncherFontWeightStrong}"/>
-        <Setter Property="Foreground" Value="{DynamicResource LauncherTextPrimaryBrush}"/>
-    </Style>
-    <Style Selector="TextBlock.status-summary-version">
-        <Setter Property="FontSize" Value="{StaticResource LauncherFontSizeXl}"/>
-        <Setter Property="VerticalAlignment" Value="Center"/>
-    </Style>
-    <Style Selector="Grid.status-details">
-        <Setter Property="ColumnSpacing" Value="{StaticResource LauncherSpacingSm}"/>
-        <Setter Property="RowSpacing" Value="{StaticResource LauncherSpacingSm}"/>
-    </Style>
-    <Style Selector="Border.status-detail">
-        <Setter Property="Background" Value="{DynamicResource LauncherContentRowBrush}"/>
-        <Setter Property="CornerRadius" Value="{StaticResource LauncherRadiusSm}"/>
-        <Setter Property="Height" Value="{StaticResource LauncherChipHeight}"/>
-        <Setter Property="Padding" Value="12,0"/>
-        <Setter Property="MinWidth" Value="0"/>
-    </Style>
-    <Style Selector="Border.status-note">
-        <Setter Property="Margin" Value="0,8,0,0"/>
     </Style>
     <Style Selector="Border.settings-section">
         <Setter Property="Background" Value="{DynamicResource LauncherCardBackgroundBrush}"/>

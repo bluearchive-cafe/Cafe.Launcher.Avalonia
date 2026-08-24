@@ -792,11 +792,11 @@ public sealed partial class UiStyleContractTests
         Assert.Single(
             content.Descendants(),
             element => element.Name.LocalName == "ScrollViewer");
-        Assert.Single(
+        Assert.DoesNotContain(
             content.Descendants(),
             element =>
                 element.Name.LocalName == "Border"
-                && HasClass(element, "status-summary"));
+                && HasClass(element, "settings-status-summary"));
     }
 
     [Fact]
@@ -855,9 +855,6 @@ public sealed partial class UiStyleContractTests
         Assert.Equal(
             "0",
             GetStyleSetters(document, "StackPanel.settings-category-header")["Spacing"]);
-        Assert.Equal(
-            "0,0,0,8",
-            GetStyleSetters(document, "Border.settings-status-summary")["Padding"]);
         Assert.Equal(
             "{StaticResource LauncherFontSizeLg}",
             GetStyleSetters(document, "TextBlock.group-title")["FontSize"]);
@@ -1086,7 +1083,6 @@ public sealed partial class UiStyleContractTests
             "TextBlock.section-title",
             "TextBlock.group-title",
             "TextBlock.category-title",
-            "TextBlock.status-summary-title",
             "TextBlock.operation-status-title",
             "ListBox.settings-navigation > ListBoxItem:selected",
             "Button.primary-action",
@@ -2376,47 +2372,19 @@ public sealed partial class UiStyleContractTests
     }
 
     [Fact]
-    public void SettingsOverlay_UsesSingleRowStatusSummary()
+    public void SettingsOverlay_RemovesTopStatusSummary()
     {
         var document = XDocument.Load(ProjectFile("Views/MainWindowSettingsOverlay.axaml"));
-        var summaryGrid = document
+        var settingsContent = document
             .Descendants()
             .Single(element =>
                 element.Name.LocalName == "Grid"
-                && element.Parent?.Name.LocalName == "Border"
-                && HasClass(element.Parent, "settings-status-summary"));
+                && HasClass(element, "settings-content"));
 
-        Assert.Equal("Auto,*,Auto,Auto", summaryGrid.Attribute("ColumnDefinitions")?.Value);
-        Assert.Null(summaryGrid.Attribute("RowDefinitions"));
+        Assert.Null(settingsContent.Attribute("RowDefinitions"));
         Assert.DoesNotContain(
             document.Descendants(),
-            element => element.Attribute("Text")?.Value == "{Binding Shell.OperationNote}");
-
-        var titleRow = summaryGrid
-            .Descendants()
-            .Single(element =>
-                element.Name.LocalName == "StackPanel"
-                && HasClass(element, "status-title-inline"));
-        Assert.Equal("Horizontal", titleRow.Attribute("Orientation")?.Value);
-        Assert.Equal(
-            ["{Binding Shell.CurrentViewTitle}", "{Binding Shell.VersionText}"],
-            titleRow
-                .Elements()
-                .Where(element => element.Name.LocalName == "TextBlock")
-                .Select(element => element.Attribute("Text")?.Value ?? "")
-                .ToArray());
-    }
-
-    [Fact]
-    public void SettingsStatusDetails_UseChipHeightWithoutVerticalPadding()
-    {
-        var document = XDocument.Load(ProjectFile("Views/MainWindow.Styles.axaml"));
-        var statusDetail = GetStyleSetters(document, "Border.status-detail");
-
-        Assert.Equal(
-            "{StaticResource LauncherChipHeight}",
-            statusDetail["Height"]);
-        Assert.Equal("12,0", statusDetail["Padding"]);
+            element => HasClass(element, "settings-status-summary"));
     }
 
     [Fact]
@@ -2433,17 +2401,6 @@ public sealed partial class UiStyleContractTests
         Assert.Equal(
             "{DynamicResource LauncherFlatPressedBrush}",
             selected["Background"]);
-    }
-
-    [Fact]
-    public void StatusSummary_TitleAndVersionUseMatchingTypography()
-    {
-        var document = XDocument.Load(ProjectFile("Views/MainWindow.Styles.axaml"));
-        var title = GetStyleSetters(document, "TextBlock.status-summary-title");
-        var version = GetStyleSetters(document, "TextBlock.status-summary-version");
-
-        Assert.Equal(title["FontSize"], version["FontSize"]);
-        Assert.Equal("Center", version["VerticalAlignment"]);
     }
 
     [Fact]
@@ -3216,42 +3173,6 @@ public sealed partial class UiStyleContractTests
                     button.Attributes(),
                     attribute => attribute.Name.LocalName == "AutomationProperties.Name"));
         }
-    }
-
-    [Fact]
-    public void SettingsStatusPanel_UsesSummaryBindingsWithoutDuplicateStatusOrBrand()
-    {
-        var document = XDocument.Load(ProjectFile("Views/MainWindowSettingsOverlay.axaml"));
-        var statusPanel = document
-            .Descendants()
-            .First(element =>
-                element.Name.LocalName == "Border"
-                && HasClass(element, "settings-status-summary"));
-        var markup = statusPanel.ToString(SaveOptions.DisableFormatting);
-        var detailsGrid = statusPanel
-            .Descendants()
-            .Single(element =>
-                element.Name.LocalName == "Grid"
-                && HasClass(element, "status-details"));
-        var detailCards = statusPanel
-            .Descendants()
-            .Where(element =>
-                element.Name.LocalName == "Border"
-                && HasClass(element, "status-detail"))
-            .ToList();
-        Assert.Contains("Shell.CurrentViewTitle", markup, StringComparison.Ordinal);
-        Assert.Contains("Shell.VersionText", markup, StringComparison.Ordinal);
-        Assert.Contains("Shell.NetworkStatusValueText", markup, StringComparison.Ordinal);
-        Assert.Contains("Shell.DiskSpaceText", markup, StringComparison.Ordinal);
-        Assert.DoesNotContain("Shell.OperationNote", markup, StringComparison.Ordinal);
-        Assert.Contains("Kind=\"{Binding Shell.StatusIconKind}\"", markup, StringComparison.Ordinal);
-        Assert.DoesNotContain("Shell.ExecutableText", markup, StringComparison.Ordinal);
-        Assert.DoesNotContain("Shell.StatusText", markup, StringComparison.Ordinal);
-        Assert.DoesNotContain("Shell.ProductName", markup, StringComparison.Ordinal);
-        Assert.Equal("Auto,*,Auto,Auto", detailsGrid.Attribute("ColumnDefinitions")?.Value);
-        Assert.Null(detailsGrid.Attribute("RowDefinitions"));
-        Assert.Equal(2, detailCards.Count);
-        Assert.DoesNotContain("MaxWidth=\"160\"", markup, StringComparison.Ordinal);
     }
 
     [Fact]
