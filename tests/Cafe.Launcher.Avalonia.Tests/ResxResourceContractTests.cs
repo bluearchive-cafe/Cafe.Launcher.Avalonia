@@ -32,9 +32,9 @@ public sealed class ResxResourceContractTests
     }
 
     [Fact]
-    public void Resx_NeutralContainsAll450Keys()
+    public void Resx_NeutralContainsAll447Keys()
     {
-        Assert.Equal(450, ResxValues["en"].Count);
+        Assert.Equal(447, ResxValues["en"].Count);
     }
 
     [Fact]

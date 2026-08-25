@@ -504,8 +504,6 @@ internal static class LauncherStrings
 
     internal static string Pause => GetRequiredString("pause");
 
-    internal static string PauseCarousel => GetRequiredString("pauseCarousel");
-
     internal static string Paused => GetRequiredString("paused");
 
     internal static string PauseRequested => GetRequiredString("pauseRequested");
@@ -631,8 +629,6 @@ internal static class LauncherStrings
     internal static string ResourcePanelWaiting => GetRequiredString("resourcePanelWaiting");
 
     internal static string Resume => GetRequiredString("resume");
-
-    internal static string ResumeCarousel => GetRequiredString("resumeCarousel");
 
     internal static string ResumeRequested => GetRequiredString("resumeRequested");
 
@@ -807,8 +803,6 @@ internal static class LauncherStrings
     internal static string StatusDetailModeCompact => GetRequiredString("statusDetailModeCompact");
 
     internal static string StatusDetailModeDescription => GetRequiredString("statusDetailModeDescription");
-
-    internal static string StatusDetailModeDetailed => GetRequiredString("statusDetailModeDetailed");
 
     internal static string StatusDetailModeHidden => GetRequiredString("statusDetailModeHidden");
 
