@@ -180,6 +180,50 @@ public sealed class InstallerContractTests
     }
 
     [Fact]
+    public void IssInstaller_ValidatesLegacyUninstallerBeforeExecutingIt()
+    {
+        var script = ReadProjectFile("installer/Cafe.Launcher.Avalonia.iss");
+
+        // The upgrade bridge must never run an unverified path read from the
+        // registry: it requires the known NSIS uninstaller name and a matching
+        // InstallLocation, and otherwise removes the stale registration.
+        Assert.Contains(
+            "CompareText(ExtractFileName(UninstallerPath), 'Uninstall.exe')",
+            script,
+            StringComparison.Ordinal);
+        Assert.Contains("LegacyInstallLocationMatches(InstallDir)", script, StringComparison.Ordinal);
+        Assert.Contains(
+            "RegQueryStringValue(HKLM, '{#LEGACY_NSIS_UNINSTALL_KEY}', 'InstallLocation'",
+            script,
+            StringComparison.Ordinal);
+        Assert.Contains("CompareText(Location, Expected) = 0", script, StringComparison.Ordinal);
+        // Only one execution site exists, and it sits behind the checks above.
+        Assert.Equal(1, CountOccurrences(script, "Exec(UninstallerPath"));
+        // A mismatched registration must be removed, not executed.
+        Assert.True(
+            script.IndexOf("RegDeleteKeyIncludingSubkeys", StringComparison.Ordinal)
+                < script.IndexOf("Exec(UninstallerPath", StringComparison.Ordinal),
+            "The stale-registration cleanup must precede the execution site.");
+    }
+
+    [Fact]
+    public void IssInstaller_UninstallMarkerIsClaimedInBothInstallAndUninstallPaths()
+    {
+        var script = ReadProjectFile("installer/Cafe.Launcher.Avalonia.iss");
+
+        // The ownership marker must be written at install time and removed at
+        // uninstall time under the same name so a rename can never strand it.
+        Assert.Contains(
+            "Type: files; Name: \"{app}\\.cafe-launcher-install\"",
+            script,
+            StringComparison.Ordinal);
+        Assert.Contains(
+            "ExpandConstant('{app}\\.cafe-launcher-install')",
+            script,
+            StringComparison.Ordinal);
+    }
+
+    [Fact]
     public void DistributionScript_UsesConfirmedArtifactNamesAndCompilesWithIscc()
     {
         var script = ReadProjectFile("scripts/Build-Distribution.ps1");
@@ -250,6 +294,9 @@ public sealed class InstallerContractTests
 
         return false;
     }
+
+    private static int CountOccurrences(string text, string value) =>
+        text.Split(value, StringSplitOptions.None).Length - 1;
 
     private static string ReadProjectFile(string relativePath) =>
         File.ReadAllText(GetProjectFilePath(relativePath));
