@@ -133,7 +133,8 @@ public sealed class RemoteContentViewModelTests
         Assert.True(context.ViewModel.HasNotice);
         Assert.Single(context.ViewModel.BannerItems);
         Assert.Equal(2, context.ViewModel.NewsCategories.Count);
-        Assert.Equal(2, context.ViewModel.NewsItems.Count);
+        Assert.Equal(2, context.ViewModel.NewsCategories.Sum(category => category.Items.Count));
+        Assert.Same(context.ViewModel.NewsCategories[0], context.ViewModel.SelectedNewsCategory);
         Assert.Equal(2, context.ViewModel.SocialMediaItems.Count);
         Assert.Equal("Youtube", context.ViewModel.SocialMediaItems[0].SocialIconKind);
         Assert.Equal("mailto:support@example.invalid", context.ViewModel.SocialMediaItems[1].Url);
@@ -175,7 +176,6 @@ public sealed class RemoteContentViewModelTests
             CancellationToken.None);
 
         Assert.Equal(50, context.ViewModel.NewsCategories[0].Items.Count);
-        Assert.Equal(50, context.ViewModel.NewsItems.Count);
     }
 
     [Fact]
@@ -286,7 +286,7 @@ public sealed class RemoteContentViewModelTests
     }
 
     [Fact]
-    public void ToggleCarouselLoopCommand_PausesAndResumesTimer()
+    public void BannerPointerHover_PausesAndResumesTimerImmediately()
     {
         using var context = CreateContext();
         context.ViewModel.Apply(
@@ -294,21 +294,41 @@ public sealed class RemoteContentViewModelTests
             new LauncherSettings(),
             CancellationToken.None);
 
-        context.ViewModel.ToggleCarouselLoopCommand.Execute(null);
+        context.ViewModel.SetBannerPointerOver(true);
 
         Assert.True(context.ViewModel.IsCarouselPaused);
         Assert.False(context.ViewModel.IsCarouselTimerRunning);
-        Assert.Equal("Play", context.ViewModel.CarouselPauseIcon);
 
-        context.ViewModel.ToggleCarouselLoopCommand.Execute(null);
+        context.ViewModel.SetBannerPointerOver(false);
 
         Assert.False(context.ViewModel.IsCarouselPaused);
         Assert.True(context.ViewModel.IsCarouselTimerRunning);
-        Assert.Equal("Pause", context.ViewModel.CarouselPauseIcon);
     }
 
     [Fact]
-    public void ApplyMotionPreference_ReducedPausesAutomaticCarouselAndRemovesTransition()
+    public void BannerFocusAndPointerPauseSourcesRemainActiveUntilBothLeave()
+    {
+        using var context = CreateContext();
+        context.ViewModel.Apply(
+            CreateBannerState(2, loop: true),
+            new LauncherSettings(),
+            CancellationToken.None);
+
+        context.ViewModel.SetBannerPointerOver(true);
+        context.ViewModel.SetBannerFocusWithin(true);
+        context.ViewModel.SetBannerPointerOver(false);
+
+        Assert.True(context.ViewModel.IsCarouselPaused);
+        Assert.False(context.ViewModel.IsCarouselTimerRunning);
+
+        context.ViewModel.SetBannerFocusWithin(false);
+
+        Assert.False(context.ViewModel.IsCarouselPaused);
+        Assert.True(context.ViewModel.IsCarouselTimerRunning);
+    }
+
+    [Fact]
+    public void ApplyMotionPreference_ReducedPausesAutomaticCarouselAndUsesZeroDurationSlide()
     {
         using var context = CreateContext();
         context.ViewModel.Apply(
@@ -319,16 +339,17 @@ public sealed class RemoteContentViewModelTests
         context.ViewModel.ApplyMotionPreference(true);
         Assert.False(context.ViewModel.IsCarouselTimerRunning);
         Assert.True(context.ViewModel.IsCarouselPaused);
-        Assert.Equal("Play", context.ViewModel.CarouselPauseIcon);
-        Assert.Equal(TimeSpan.Zero, Assert.IsType<global::Avalonia.Animation.CrossFade>(
-            context.ViewModel.CarouselTransition).Duration);
+        var transition = Assert.IsType<global::Avalonia.Animation.PageSlide>(
+            context.ViewModel.CarouselTransition);
+        Assert.Equal(TimeSpan.Zero, transition.Duration);
+        Assert.Equal(global::Avalonia.Animation.PageSlide.SlideAxis.Horizontal, transition.Orientation);
 
         context.ViewModel.SelectNextBannerCommand.Execute(null);
         Assert.Equal(1, context.ViewModel.CarouselSelectedIndex);
     }
 
     [Fact]
-    public void ToggleCarouselLoopCommand_WhenReduced_AllowsManualPlaybackWithoutTransition()
+    public void ApplyMotionPreference_WhenReduced_OverridesBannerInteraction()
     {
         using var context = CreateContext();
         context.ViewModel.Apply(
@@ -337,17 +358,19 @@ public sealed class RemoteContentViewModelTests
             CancellationToken.None);
         context.ViewModel.ApplyMotionPreference(true);
 
-        context.ViewModel.ToggleCarouselLoopCommand.Execute(null);
+        context.ViewModel.SetBannerPointerOver(true);
+        context.ViewModel.SetBannerPointerOver(false);
 
-        Assert.False(context.ViewModel.IsCarouselPaused);
-        Assert.True(context.ViewModel.IsCarouselTimerRunning);
-        Assert.Equal("Pause", context.ViewModel.CarouselPauseIcon);
-        Assert.Equal(TimeSpan.Zero, Assert.IsType<global::Avalonia.Animation.CrossFade>(
-            context.ViewModel.CarouselTransition).Duration);
+        Assert.True(context.ViewModel.IsCarouselPaused);
+        Assert.False(context.ViewModel.IsCarouselTimerRunning);
+        var transition = Assert.IsType<global::Avalonia.Animation.PageSlide>(
+            context.ViewModel.CarouselTransition);
+        Assert.Equal(TimeSpan.Zero, transition.Duration);
+        Assert.Equal(global::Avalonia.Animation.PageSlide.SlideAxis.Horizontal, transition.Orientation);
     }
 
     [Fact]
-    public void ApplyMotionPreference_FullAfterReduced_KeepsCarouselPausedUntilUserResumes()
+    public void ApplyMotionPreference_FullAfterReduced_ResumesCarouselWhenPointerIsOutside()
     {
         using var context = CreateContext();
         context.ViewModel.Apply(
@@ -358,16 +381,18 @@ public sealed class RemoteContentViewModelTests
 
         context.ViewModel.ApplyMotionPreference(false);
 
-        Assert.True(context.ViewModel.IsCarouselPaused);
-        Assert.False(context.ViewModel.IsCarouselTimerRunning);
-        Assert.Equal(TimeSpan.FromMilliseconds(250), Assert.IsType<global::Avalonia.Animation.CrossFade>(
-            context.ViewModel.CarouselTransition).Duration);
+        Assert.False(context.ViewModel.IsCarouselPaused);
+        Assert.True(context.ViewModel.IsCarouselTimerRunning);
+        var transition = Assert.IsType<global::Avalonia.Animation.PageSlide>(
+            context.ViewModel.CarouselTransition);
+        Assert.Equal(TimeSpan.FromMilliseconds(250), transition.Duration);
+        Assert.Equal(global::Avalonia.Animation.PageSlide.SlideAxis.Horizontal, transition.Orientation);
     }
 
     [Theory]
     [InlineData(MotionModes.Full, false)]
     [InlineData(MotionModes.System, true)]
-    public void ApplyMotionPreference_FullOrSystemEffectiveStateRestoresTransitionWithoutAutoResumingCarousel(
+    public void ApplyMotionPreference_FullOrSystemEffectiveStateRestoresTransitionAndCarousel(
         string motionMode,
         bool windowsAnimationsEnabled)
     {
@@ -381,16 +406,16 @@ public sealed class RemoteContentViewModelTests
         context.ViewModel.ApplyMotionPreference(
             MotionSettingsResolver.ShouldReduceMotion(motionMode, windowsAnimationsEnabled));
 
-        Assert.True(context.ViewModel.IsCarouselPaused);
-        Assert.False(context.ViewModel.IsCarouselTimerRunning);
+        Assert.False(context.ViewModel.IsCarouselPaused);
+        Assert.True(context.ViewModel.IsCarouselTimerRunning);
         Assert.Equal(
             TimeSpan.FromMilliseconds(250),
-            Assert.IsType<global::Avalonia.Animation.CrossFade>(
+            Assert.IsType<global::Avalonia.Animation.PageSlide>(
                 context.ViewModel.CarouselTransition).Duration);
     }
 
     [Fact]
-    public void SelectNewsCategoryCommand_UpdatesActiveCategory()
+    public void SelectedNewsCategory_CanBeChangedForTabControlSelection()
     {
         using var context = CreateContext();
         context.ViewModel.Apply(
@@ -417,11 +442,9 @@ public sealed class RemoteContentViewModelTests
             CancellationToken.None);
         var second = context.ViewModel.NewsCategories[1];
 
-        context.ViewModel.SelectNewsCategoryCommand.Execute(second);
+        context.ViewModel.SelectedNewsCategory = second;
 
         Assert.Same(second, context.ViewModel.SelectedNewsCategory);
-        Assert.False(context.ViewModel.NewsCategories[0].IsActive);
-        Assert.True(second.IsActive);
     }
 
     [Fact]

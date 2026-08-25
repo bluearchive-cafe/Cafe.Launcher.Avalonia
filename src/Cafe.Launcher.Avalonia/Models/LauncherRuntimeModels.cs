@@ -235,7 +235,6 @@ public sealed class RemoteContentItem : INotifyPropertyChanged
 public sealed class NewsCategory : INotifyPropertyChanged
 {
     private string label = "";
-    private bool isActive;
     private readonly ObservableCollection<RemoteContentItem> items = [];
 
     public event PropertyChangedEventHandler? PropertyChanged;
@@ -244,12 +243,6 @@ public sealed class NewsCategory : INotifyPropertyChanged
     {
         get => label;
         set => SetField(ref label, value);
-    }
-
-    public bool IsActive
-    {
-        get => isActive;
-        set => SetField(ref isActive, value);
     }
 
     public ObservableCollection<RemoteContentItem> Items { get => items; }

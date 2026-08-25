@@ -198,7 +198,7 @@ public sealed class MainWindowViewModelTests : IDisposable
     }
 
     [Fact]
-    public async Task InitializeAsync_WhenNewsAndNoticesExist_AddsBothToNewsItems()
+    public async Task InitializeAsync_WhenNewsAndNoticesExist_AddsBothToNewsCategories()
     {
         var snapshot = CreateSnapshot();
         snapshot.Remote.OperationsResource = CreateOperationsResource();
@@ -207,8 +207,9 @@ public sealed class MainWindowViewModelTests : IDisposable
 
         await viewModel.InitializeAsync();
 
-        Assert.Contains(viewModel.RemoteContent.NewsItems, item => item.Title == "news title");
-        Assert.Contains(viewModel.RemoteContent.NewsItems, item => item.Title == "notice title");
+        var items = viewModel.RemoteContent.NewsCategories.SelectMany(category => category.Items);
+        Assert.Contains(items, item => item.Title == "news title");
+        Assert.Contains(items, item => item.Title == "notice title");
     }
 
     [Fact]
@@ -222,8 +223,9 @@ public sealed class MainWindowViewModelTests : IDisposable
 
         await viewModel.InitializeAsync();
 
-        Assert.Contains(viewModel.RemoteContent.NewsItems, item => item.Title == "news title");
-        Assert.Contains(viewModel.RemoteContent.NewsItems, item => item.Title == "notice title");
+        var items = viewModel.RemoteContent.NewsCategories.SelectMany(category => category.Items);
+        Assert.Contains(items, item => item.Title == "news title");
+        Assert.Contains(items, item => item.Title == "notice title");
         Assert.True(viewModel.RemoteContent.HasNewsItems);
         Assert.False(viewModel.RemoteContent.HasRemoteContent);
         Assert.False(viewModel.RemoteContent.IsPanelVisible);
@@ -1704,7 +1706,7 @@ public sealed class MainWindowViewModelTests : IDisposable
         Assert.True(viewModel.IsMotionReduced);
         Assert.Equal(
             TimeSpan.Zero,
-            Assert.IsType<global::Avalonia.Animation.CrossFade>(
+            Assert.IsType<global::Avalonia.Animation.PageSlide>(
                 viewModel.RemoteContent.CarouselTransition).Duration);
         Assert.Empty(viewModel.Toasts.ActiveToasts);
         Assert.False(toast.IsExiting);
