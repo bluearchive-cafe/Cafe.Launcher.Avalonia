@@ -36,7 +36,7 @@
                                  Title="{Binding Shell.I18n[themeColor]}"
                                  Description="{Binding Shell.I18n[themeColorDescription]}">
                 <controls:SettingRow.Action>
-                    <StackPanel Orientation="Horizontal" Spacing="{StaticResource LauncherSpacingSm}" VerticalAlignment="Center">
+                    <StackPanel Orientation="Horizontal" Spacing="{StaticResource Launcher.Spacing.Sm}" VerticalAlignment="Center">
                         <Border Classes="color-swatch"
                                 Background="{Binding Settings.Appearance.ThemeColorPreviewBrush}"/>
                         <ComboBox Classes="setting-control"
@@ -52,13 +52,13 @@
             <Grid Classes="settings-row" ColumnDefinitions="Auto,*,Auto"
                   IsVisible="{Binding Settings.Appearance.IsWallpaperThemeColorSelected}">
                 <Border Classes="settings-icon">
-                    <materialIcons:MaterialIcon Kind="PaletteSwatchOutline" Width="{StaticResource LauncherIconMd}" Height="{StaticResource LauncherIconMd}" Foreground="{DynamicResource LauncherAccentBrush}" HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                    <materialIcons:MaterialIcon Kind="PaletteSwatchOutline" Width="{StaticResource Launcher.Icon.Md}" Height="{StaticResource Launcher.Icon.Md}" Foreground="{DynamicResource Launcher.Color.Primary}" HorizontalAlignment="Center" VerticalAlignment="Center"/>
                 </Border>
                 <StackPanel Grid.Column="1" Classes="dialog-heading-copy">
                     <TextBlock Text="{Binding Shell.I18n[themeColorPalette]}" Classes="section-title"/>
                     <TextBlock Text="{Binding Shell.I18n[themeColorPaletteDescription]}" Classes="caption" TextWrapping="Wrap"/>
                 </StackPanel>
-                <StackPanel Grid.Column="2" Orientation="Horizontal" Spacing="{StaticResource LauncherSpacingSm}" VerticalAlignment="Center">
+                <StackPanel Grid.Column="2" Orientation="Horizontal" Spacing="{StaticResource Launcher.Spacing.Sm}" VerticalAlignment="Center">
                     <ItemsControl Width="212"
                                   ItemsSource="{Binding Settings.Appearance.ThemeColorPaletteItems}">
                         <ItemsControl.ItemsPanel>
@@ -73,11 +73,11 @@
                                     <Border Classes="color-swatch"
                                             Background="{Binding Brush}">
                                         <materialIcons:MaterialIcon Kind="Check"
-                                                                    Width="{StaticResource LauncherIconSm}"
-                                                                    Height="{StaticResource LauncherIconSm}"
+                                                                    Width="{StaticResource Launcher.Icon.Sm}"
+                                                                    Height="{StaticResource Launcher.Icon.Sm}"
                                                                     HorizontalAlignment="Center"
                                                                     VerticalAlignment="Center"
-                                                                    Foreground="{DynamicResource LauncherOnAccentBrush}"
+                                                                    Foreground="{DynamicResource Launcher.Color.OnPrimary}"
                                                                     IsVisible="{Binding IsSelected}"/>
                                     </Border>
                                 </Button>
@@ -88,7 +88,7 @@
                             Command="{Binding Settings.Appearance.RefreshThemeColorPaletteCommand}"
                             ToolTip.Tip="{Binding Shell.I18n[refreshThemeColorPalette]}"
                             AutomationProperties.Name="{Binding Shell.I18n[refreshThemeColorPalette]}">
-                        <materialIcons:MaterialIcon Kind="Refresh" Width="{StaticResource LauncherIconSm}" Height="{StaticResource LauncherIconSm}"/>
+                        <materialIcons:MaterialIcon Kind="Refresh" Width="{StaticResource Launcher.Icon.Sm}" Height="{StaticResource Launcher.Icon.Sm}"/>
                     </Button>
                 </StackPanel>
             </Grid>
@@ -104,7 +104,7 @@
                         <StackPanel Classes="button-content">
                             <Border Classes="color-swatch-preview"
                                     Background="{Binding Settings.Appearance.ThemeColorPreviewBrush}"/>
-                            <materialIcons:MaterialIcon Kind="PaletteOutline" Width="{StaticResource LauncherIconSm}" Height="{StaticResource LauncherIconSm}"/>
+                            <materialIcons:MaterialIcon Kind="PaletteOutline" Width="{StaticResource Launcher.Icon.Sm}" Height="{StaticResource Launcher.Icon.Sm}"/>
                             <TextBlock Text="{Binding Shell.I18n[openColorPalette]}"/>
                         </StackPanel>
                     </ColorPicker>
@@ -152,7 +152,7 @@
                         <StackPanel Classes="button-content">
                             <Border Classes="color-swatch-preview"
                                     Background="{Binding Settings.Appearance.BackgroundFillColorPreviewBrush}"/>
-                            <materialIcons:MaterialIcon Kind="PaletteOutline" Width="{StaticResource LauncherIconSm}" Height="{StaticResource LauncherIconSm}"/>
+                            <materialIcons:MaterialIcon Kind="PaletteOutline" Width="{StaticResource Launcher.Icon.Sm}" Height="{StaticResource Launcher.Icon.Sm}"/>
                             <TextBlock Text="{Binding Shell.I18n[openColorPalette]}"/>
                         </StackPanel>
                     </ColorPicker>
@@ -164,12 +164,12 @@
                                  Description="{Binding Shell.I18n[customBackgroundDescription]}"
                                  IsVisible="{Binding Settings.Appearance.IsCustomBackgroundSelected}">
                 <controls:SettingRow.Action>
-                    <StackPanel Orientation="Horizontal" Spacing="{StaticResource LauncherSpacingSm}" VerticalAlignment="Center">
+                    <StackPanel Orientation="Horizontal" Spacing="{StaticResource Launcher.Spacing.Sm}" VerticalAlignment="Center">
                         <Button Classes="flat-action"
                                 Command="{Binding Settings.ChooseBackgroundImageCommand}"
                                 AutomationProperties.Name="{Binding Shell.I18n[chooseImage]}">
                             <StackPanel Classes="button-content">
-                                <materialIcons:MaterialIcon Kind="ImageOutline" Width="{StaticResource LauncherIconSm}" Height="{StaticResource LauncherIconSm}"/>
+                                <materialIcons:MaterialIcon Kind="ImageOutline" Width="{StaticResource Launcher.Icon.Sm}" Height="{StaticResource Launcher.Icon.Sm}"/>
                                 <TextBlock Text="{Binding Shell.I18n[chooseImage]}"/>
                             </StackPanel>
                         </Button>
@@ -177,7 +177,7 @@
                                 Command="{Binding Settings.ChooseBackgroundFolderCommand}"
                                 AutomationProperties.Name="{Binding Shell.I18n[chooseFolder]}">
                             <StackPanel Classes="button-content">
-                                <materialIcons:MaterialIcon Kind="FolderOpen" Width="{StaticResource LauncherIconSm}" Height="{StaticResource LauncherIconSm}"/>
+                                <materialIcons:MaterialIcon Kind="FolderOpen" Width="{StaticResource Launcher.Icon.Sm}" Height="{StaticResource Launcher.Icon.Sm}"/>
                                 <TextBlock Text="{Binding Shell.I18n[chooseFolder]}"/>
                             </StackPanel>
                         </Button>
@@ -185,7 +185,7 @@
                                 AutomationProperties.Name="{Binding Shell.I18n[clearBackground]}"
                                 IsVisible="{Binding Settings.Appearance.IsCustomBackground}">
                             <StackPanel Classes="button-content">
-                                <materialIcons:MaterialIcon Kind="DeleteOutline" Width="{StaticResource LauncherIconSm}" Height="{StaticResource LauncherIconSm}"/>
+                                <materialIcons:MaterialIcon Kind="DeleteOutline" Width="{StaticResource Launcher.Icon.Sm}" Height="{StaticResource Launcher.Icon.Sm}"/>
                                 <TextBlock Text="{Binding Shell.I18n[clearBackground]}"/>
                             </StackPanel>
                         </Button>

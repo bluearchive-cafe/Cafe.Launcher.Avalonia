@@ -31,7 +31,7 @@
                             <Border Grid.Row="0" Classes="toast-content">
                                 <Grid Classes="toast-layout" ColumnDefinitions="Auto,*,Auto" RowDefinitions="Auto,Auto,Auto">
                                     <materialIcons:MaterialIcon Grid.Row="0" Grid.Column="0"
-                                                                Kind="{Binding IconKind}" Width="{StaticResource LauncherIconSm}" Height="{StaticResource LauncherIconSm}"
+                                                                Kind="{Binding IconKind}" Width="{StaticResource Launcher.Icon.Sm}" Height="{StaticResource Launcher.Icon.Sm}"
                                                                 Foreground="{Binding Severity, Converter={x:Static converters:ToastSeverityToBrushConverter.Instance}}"
                                                                 VerticalAlignment="Center"
                                                                 Classes="toast-icon"
@@ -69,7 +69,7 @@
                                             CommandParameter="{Binding Id}"
                                             ToolTip.Tip="{Binding #ToastOverlayRoot.((vm:MainWindowViewModel)DataContext).Shell.I18n[close]}"
                                             AutomationProperties.Name="{Binding #ToastOverlayRoot.((vm:MainWindowViewModel)DataContext).Shell.I18n[close]}">
-                                        <materialIcons:MaterialIcon Kind="Close" Width="{StaticResource LauncherIconSm}" Height="{StaticResource LauncherIconSm}"/>
+                                        <materialIcons:MaterialIcon Kind="Close" Width="{StaticResource Launcher.Icon.Sm}" Height="{StaticResource Launcher.Icon.Sm}"/>
                                     </Button>
                                 </Grid>
                             </Border>

@@ -11,12 +11,12 @@ public sealed class DialogActionButtonContractTests
         var setters = GetStyleSetters(document, "Button.dialog-action");
 
         Assert.Equal(
-            "{StaticResource LauncherControlHeightDialog}",
+            "{StaticResource Launcher.Control.Height.Dialog}",
             setters["Height"]);
         Assert.Equal("108", setters["MinWidth"]);
         Assert.Equal("16,0", setters["Padding"]);
         Assert.Equal(
-            "{StaticResource LauncherFontSizeLg}",
+            "{StaticResource Launcher.Typography.FontSize.Body.Md}",
             setters["FontSize"]);
         Assert.DoesNotContain("FontWeight", setters);
         Assert.DoesNotContain(
@@ -103,10 +103,10 @@ public sealed class DialogActionButtonContractTests
                     icon =>
                     {
                         Assert.Equal(
-                            "{StaticResource LauncherIconSm}",
+                            "{StaticResource Launcher.Icon.Sm}",
                             icon.Attribute("Width")?.Value);
                         Assert.Equal(
-                            "{StaticResource LauncherIconSm}",
+                            "{StaticResource Launcher.Icon.Sm}",
                             icon.Attribute("Height")?.Value);
                     });
             });

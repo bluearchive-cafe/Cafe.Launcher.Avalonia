@@ -46,7 +46,7 @@
 - 格式：`Launcher.<Family>.<Role>[.<State>]`，点分层、字符串键、PascalCase 段。示例：`Launcher.Color.Primary`、`Launcher.Spacing.Md`、`Launcher.Motion.Duration.Normal`、`Launcher.Elevation.Shadow.Md`。
 - **P1 一次性重命名**全部既有 ~120 个 `Launcher*` 键（脚本 + 映射表，见 P1 计划 M1），不留别名层、不保留旧键；`UiStyleContractTests` 与全部消费方同步，编译零警告收口。
 - 引用规则：**静态 token 一律 `{StaticResource}`**；仅主题变体/运行时覆盖（scheme 角色、Dark/Light 分档）用 `{DynamicResource}`。P1 修复 `Views\Styles\{Toast,RemoteContent,SetupWizard}.axaml` 中 33 处静态 token 误用 `{DynamicResource}` 的漂移。
-- 原始色值只允许出现在 `App.axaml`（及未来主题字典文件）的 token 定义处；`MainWindow.Styles.axaml` 中 2 处 BoxShadow 与 1 处主题无关渐变（有注释声明）迁为 token 定义后再引用。
+- 原始色值只允许出现在 `App.axaml`（及未来主题字典文件）的 token 定义处；`MainWindow.Styles.axaml` 中 2 处 BoxShadow 与 1 处主题无关渐变（有注释声明）迁为 token 定义后再引用。**（M2 实测限制并记录：`BoxShadow` 是无 `TypeConverter` 的结构体，Avalonia 12.1.1 无法在 `Setter` 处经 `{StaticResource}` 做运行时字符串转换——字面量之所以可用是 XamlIl 编译期解析。故阴影值仍集中在 `Launcher.Elevation.Shadow.*` token（契约测试锁定），消费点暂用字面量 + 注释引用；待 Avalonia 提供转换器后改回 StaticResource。）**
 
 ### 3.2 家族清单
 
@@ -149,6 +149,18 @@
 ## 8. 无障碍（Q9/Q19）
 
 - **AA 契约（自动化）**：正文文本 ≥4.5:1、UI 组件/非文本 ≥3:1（WCAG 相对亮度计算）。实现为 `DesignTokenContrastTests`（token 对清单驱动），P1 调色不达标的现役 token（如发现）微调 Light/Dark 双档值。
+- **M2 静态 token 最小调色记录（before → after，均经契约测试锁定）**：
+
+  | Token | Light | Dark | 修复对象 |
+  |---|---|---|---|
+  | `Color.Danger` | `#E5484D` → `#D93840`（白标签 3.91→4.58） | 同单值 | danger-action 白字 ≥4.5 |
+  | `Color.Danger.Hover` | `#F15B60` → `#D32F35`（3.28→4.97） | 同单值 | 同上（hover 态） |
+  | `Color.Success` | 单值 `#22C55E` → 拆双档：Light `#15803D`（白底 2.22→5.02）/ Dark `#4ADE80`（暗底 9.8） | | 向导就绪状态文字；单值无法同时满足明暗 |
+  | `Color.Warning` | `#F59E0B` → `#B45309`（白底 2.15→5.03；暗底 3.07≥3） | 同单值 | toast 警告严重性 UI |
+  | `Text.Secondary`（Light） | `#68717D` → `#646D79`（警告面 4.41→4.69；ContentRow 4.51→4.80） | 不变 | 警告/提示底上的次级文字 |
+  | `Text.Media.Placeholder` | `#88FFFFFF` → `#99FFFFFF`（4.47→5.19） | 不变 | 媒体占位文字 ≥4.5 |
+
+  `Danger.Pressed` 保留 `#C9353A`（白标签 5.18；其填充态消费由标签对覆盖，不做表面图标对）。全部为同色相单阶加深/提亮，未改视觉意图；UI ≥3:1 额外覆盖 Danger×Card/Dialog 与 Toast 严重性四色。
 - **豁免区（显式声明 + 测试用例列出）**：自绘标题栏文字、标题栏按钮（chrome 态）、右侧社交列、底栏渐变/scrim 上的 `on-dark` 文字——豁免前提是叠加 scrim（现有 `LauncherTitleBarGradient` + 新增 `Color.Overlay.Scrim*` token，最小 scrim 语义：保证该区文字与当前壁纸任意色对比度可读，豁免在走查清单中逐项复核）。
 - 键盘：全表面 Tab 序、可见焦点环（`Button:focus-visible` 等既有规则随重命名迁移）、覆盖层焦点陷阱（`OverlayFocusBehavior` 保留）。
 - 动效：`IsMotionEnabled` 保留；文本缩放支持**有意搁置**（固定控件高度体系改造为 min-height 自适应，放入未来评估，不承诺）。

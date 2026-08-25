@@ -23,7 +23,7 @@
                         AutomationProperties.Name="{Binding Shell.I18n[choose]}"
                         IsEnabled="{Binding Shell.IsBusy, Converter={x:Static BoolConverters.Not}}">
                     <StackPanel Classes="button-content">
-                        <materialIcons:MaterialIcon Kind="FolderOpen" Width="{StaticResource LauncherIconSm}" Height="{StaticResource LauncherIconSm}"/>
+                        <materialIcons:MaterialIcon Kind="FolderOpen" Width="{StaticResource Launcher.Icon.Sm}" Height="{StaticResource Launcher.Icon.Sm}"/>
                         <TextBlock Text="{Binding Shell.I18n[choose]}"/>
                     </StackPanel>
                 </Button>
@@ -47,12 +47,12 @@
                              Title="{Binding Shell.I18n[gameManagement]}"
                              Description="{Binding Shell.I18n[gameManagementDescription]}">
             <controls:SettingRow.Action>
-                <StackPanel Orientation="Horizontal" Spacing="{StaticResource LauncherSpacingSm}" VerticalAlignment="Center">
+                <StackPanel Orientation="Horizontal" Spacing="{StaticResource Launcher.Spacing.Sm}" VerticalAlignment="Center">
                     <Button Classes="flat-action" Command="{Binding Operations.RequestRepairCommand}"
                             AutomationProperties.Name="{Binding Shell.I18n[repair]}"
                             IsEnabled="{Binding Shell.IsBusy, Converter={x:Static BoolConverters.Not}}">
                         <StackPanel Classes="button-content">
-                            <materialIcons:MaterialIcon Kind="Tools" Width="{StaticResource LauncherIconSm}" Height="{StaticResource LauncherIconSm}"/>
+                            <materialIcons:MaterialIcon Kind="Tools" Width="{StaticResource Launcher.Icon.Sm}" Height="{StaticResource Launcher.Icon.Sm}"/>
                             <TextBlock Text="{Binding Shell.I18n[repair]}"/>
                         </StackPanel>
                     </Button>
@@ -60,8 +60,8 @@
                             AutomationProperties.Name="{Binding Shell.I18n[uninstall]}"
                             IsEnabled="{Binding Shell.IsBusy, Converter={x:Static BoolConverters.Not}}">
                         <StackPanel Classes="button-content">
-                            <materialIcons:MaterialIcon Kind="TrashCanOutline" Width="{StaticResource LauncherIconSm}" Height="{StaticResource LauncherIconSm}" Foreground="{DynamicResource LauncherDangerBrush}"/>
-                            <TextBlock Text="{Binding Shell.I18n[uninstall]}" Foreground="{DynamicResource LauncherDangerBrush}"/>
+                            <materialIcons:MaterialIcon Kind="TrashCanOutline" Width="{StaticResource Launcher.Icon.Sm}" Height="{StaticResource Launcher.Icon.Sm}" Foreground="{DynamicResource Launcher.Color.Danger}"/>
+                            <TextBlock Text="{Binding Shell.I18n[uninstall]}" Foreground="{DynamicResource Launcher.Color.Danger}"/>
                         </StackPanel>
                     </Button>
                 </StackPanel>

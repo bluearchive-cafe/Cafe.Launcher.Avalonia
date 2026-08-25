@@ -7,14 +7,14 @@
              x:DataType="controls:ConfirmDialog">
     <Grid IsVisible="{Binding IsOpen, ElementName=Root}" Classes="dialog-overlay">
         <Border Classes="dialog confirm-panel" MaxWidth="{Binding DialogMaxWidth, ElementName=Root}"
-                MaxHeight="{StaticResource LauncherConfirmDialogMaxHeight}">
+                MaxHeight="{StaticResource Launcher.Component.Dialog.Confirm.MaxHeight}">
             <Grid RowDefinitions="Auto,*,Auto" Classes="confirm-layout">
                 <Grid Classes="dialog-heading" ColumnDefinitions="Auto,*,Auto">
                     <Border Classes="dialog-icon" Classes.danger="{Binding IsDangerIcon, ElementName=Root}" VerticalAlignment="Center">
                         <materialIcons:MaterialIcon Kind="{Binding IconKind, ElementName=Root}"
                                                     Classes="confirm-heading-icon"
                                                     Classes.danger="{Binding IsDangerIcon, ElementName=Root}"
-                                                    Width="{StaticResource LauncherIconXl}" Height="{StaticResource LauncherIconXl}"
+                                                    Width="{StaticResource Launcher.Icon.Xl}" Height="{StaticResource Launcher.Icon.Xl}"
                                                     HorizontalAlignment="Center" VerticalAlignment="Center"/>
                     </Border>
                     <StackPanel Grid.Column="1" Classes="dialog-heading-copy">
@@ -24,7 +24,7 @@
                     <Button Grid.Column="2" Classes="dialog-close" Command="{Binding CancelCommand, ElementName=Root}"
                             ToolTip.Tip="{Binding CloseToolTip, ElementName=Root}"
                             AutomationProperties.Name="{Binding CloseToolTip, ElementName=Root}">
-                        <materialIcons:MaterialIcon Kind="Close" Width="{StaticResource LauncherIconMd}" Height="{StaticResource LauncherIconMd}"/>
+                        <materialIcons:MaterialIcon Kind="Close" Width="{StaticResource Launcher.Icon.Md}" Height="{StaticResource Launcher.Icon.Md}"/>
                     </Button>
                 </Grid>
                 <ScrollViewer Grid.Row="1" Classes="scroll-pad">
@@ -37,7 +37,7 @@
                             ToolTip.Tip="{Binding CancelText, ElementName=Root}"
                             AutomationProperties.Name="{Binding CancelText, ElementName=Root}">
                         <StackPanel Classes="button-content">
-                            <materialIcons:MaterialIcon Kind="CloseCircle" Width="{StaticResource LauncherIconSm}" Height="{StaticResource LauncherIconSm}"/>
+                            <materialIcons:MaterialIcon Kind="CloseCircle" Width="{StaticResource Launcher.Icon.Sm}" Height="{StaticResource Launcher.Icon.Sm}"/>
                             <TextBlock Text="{Binding CancelText, ElementName=Root}"/>
                         </StackPanel>
                     </Button>
@@ -47,7 +47,7 @@
                             AutomationProperties.Name="{Binding ConfirmText, ElementName=Root}">
                         <StackPanel Classes="button-content">
                             <materialIcons:MaterialIcon Kind="{Binding ConfirmIconKind, ElementName=Root}"
-                                                        Width="{StaticResource LauncherIconSm}" Height="{StaticResource LauncherIconSm}"/>
+                                                        Width="{StaticResource Launcher.Icon.Sm}" Height="{StaticResource Launcher.Icon.Sm}"/>
                             <TextBlock Text="{Binding ConfirmText, ElementName=Root}"/>
                         </StackPanel>
                     </Button>
@@ -57,7 +57,7 @@
                             AutomationProperties.Name="{Binding ConfirmText, ElementName=Root}">
                         <StackPanel Classes="button-content">
                             <materialIcons:MaterialIcon Kind="{Binding ConfirmIconKind, ElementName=Root}"
-                                                        Width="{StaticResource LauncherIconSm}" Height="{StaticResource LauncherIconSm}"/>
+                                                        Width="{StaticResource Launcher.Icon.Sm}" Height="{StaticResource Launcher.Icon.Sm}"/>
                             <TextBlock Text="{Binding ConfirmText, ElementName=Root}"/>
                         </StackPanel>
                     </Button>

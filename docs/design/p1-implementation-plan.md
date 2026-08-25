@@ -26,6 +26,8 @@
 
 ## M2 — 新族 token + 对比度契约（2–3 天）
 
+> **状态：✅ 已执行（2026-08-25）**。新族落地（Elevation 4 档/StateLayer 4 档/Overlay.Scrim 三档/Spacing.Thickness 补齐/Typography.LetterSpacing）；2 处硬编码 BoxShadow 迁移为 token 引用；`DesignTokenContrastTests` + 新族/旧键回归/静态族规则契约全绿；最小调色 6 项（before/after 记录于 spec §8）。**M2 门禁通过**。
+
 - 新增族（`App.axaml` 按注释分区）：`Launcher.Elevation.*`（0–3 档阴影值：颜色/偏移/模糊；把 `MainWindow.Styles.axaml` 2 处硬编码 BoxShadow 迁为引用）、`Launcher.StateLayer.*`（8%/12%/16%/24%）、`Launcher.Color.Overlay.Scrim*`（3 档，替代/并列现有 overlay 用途）、`Launcher.Spacing.Thickness.*` 补齐全档、`Launcher.Typography.*` 角色键（P1 仅为别名/新增，消费方 P2 迁移）。
 - `UiStyleContractTests` 扩展：新族存在性、旧键清零（回归门）、`{StaticResource}` 规则（静态 token 不得被 DynamicResource 引用）、禁裸值规则覆盖新文件。
 - **新增 `DesignTokenContrastTests`**（`tests/Cafe.Launcher.Avalonia.Tests/`）：WCAG 相对亮度计算（`ColorUtils` 内部函数——注意提取可测试的纯函数）、token 对清单驱动断言（Text.Primary×Surface、Text.Secondary×Card、Text.Body×Dialog、OnAccent×Primary、Danger 系、Info/Notice/Warning/DangerSoft 底×文字、按钮文字×fill 等 ≥4.5:1 文本 / ≥3:1 UI）；豁免区清单显式列在测试中。

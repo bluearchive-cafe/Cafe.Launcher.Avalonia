@@ -32,9 +32,9 @@
                              Title="{Binding Shell.I18n[logFiles]}"
                              Description="{Binding Shell.I18n[logFilesDescription]}">
             <controls:SettingRow.Action>
-                <WrapPanel MaxWidth="{StaticResource LauncherSettingRowActionMaxWidth}"
-                           ItemSpacing="{StaticResource LauncherSpacingSm}"
-                           LineSpacing="{StaticResource LauncherSpacingSm}"
+                <WrapPanel MaxWidth="{StaticResource Launcher.Component.Settings.Row.Action.MaxWidth}"
+                           ItemSpacing="{StaticResource Launcher.Spacing.Sm}"
+                           LineSpacing="{StaticResource Launcher.Spacing.Sm}"
                            HorizontalAlignment="Right"
                            VerticalAlignment="Center">
                     <Button Classes="flat-action"
@@ -42,8 +42,8 @@
                             AutomationProperties.Name="{Binding Shell.I18n[viewLog]}">
                         <StackPanel Classes="button-content">
                             <materialIcons:MaterialIcon Kind="TextBoxOutline"
-                                                        Width="{StaticResource LauncherIconSm}"
-                                                        Height="{StaticResource LauncherIconSm}"/>
+                                                        Width="{StaticResource Launcher.Icon.Sm}"
+                                                        Height="{StaticResource Launcher.Icon.Sm}"/>
                             <TextBlock Text="{Binding Shell.I18n[viewLog]}"/>
                         </StackPanel>
                     </Button>
@@ -52,8 +52,8 @@
                             AutomationProperties.Name="{Binding Shell.I18n[exportLogs]}">
                         <StackPanel Classes="button-content">
                             <materialIcons:MaterialIcon Kind="Export"
-                                                        Width="{StaticResource LauncherIconSm}"
-                                                        Height="{StaticResource LauncherIconSm}"/>
+                                                        Width="{StaticResource Launcher.Icon.Sm}"
+                                                        Height="{StaticResource Launcher.Icon.Sm}"/>
                             <TextBlock Text="{Binding Shell.I18n[exportLogs]}"/>
                         </StackPanel>
                     </Button>
@@ -62,8 +62,8 @@
                             AutomationProperties.Name="{Binding Shell.I18n[openDataDirectory]}">
                         <StackPanel Classes="button-content">
                             <materialIcons:MaterialIcon Kind="FolderOpen"
-                                                        Width="{StaticResource LauncherIconSm}"
-                                                        Height="{StaticResource LauncherIconSm}"/>
+                                                        Width="{StaticResource Launcher.Icon.Sm}"
+                                                        Height="{StaticResource Launcher.Icon.Sm}"/>
                             <TextBlock Text="{Binding Shell.I18n[openDataDirectory]}"/>
                         </StackPanel>
                     </Button>
