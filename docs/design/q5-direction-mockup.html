@@ -1,0 +1,629 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Q5 · 设计语言方向对比稿 — Cafe Launcher</title>
+<style>
+  :root{
+    --page-bg:#0d1017;
+    --page-fg:#e8ecf5;
+    --page-fg-2:#9aa5bc;
+    --font:-apple-system,BlinkMacSystemFont,"Segoe UI","Microsoft YaHei","Noto Sans SC",Roboto,sans-serif;
+  }
+  *{box-sizing:border-box;margin:0;padding:0}
+  body{background:var(--page-bg);color:var(--page-fg);font-family:var(--font);padding:36px 28px 64px;-webkit-font-smoothing:antialiased}
+
+  header{max-width:1400px;margin:0 auto 8px}
+  h1{font-size:22px;font-weight:700;letter-spacing:.2px}
+  h1 small{font-weight:400;color:var(--page-fg-2);font-size:13px;margin-left:10px}
+  .lede{max-width:980px;margin:10px 0 28px;color:var(--page-fg-2);font-size:13.5px;line-height:1.7}
+  .lede b{color:var(--page-fg)}
+
+  /* ---------- 面板网格 ---------- */
+  .grid{max-width:1400px;margin:0 auto;display:grid;grid-template-columns:repeat(auto-fit,minmax(620px,1fr));gap:26px}
+  .panel{min-width:0}
+  .panel figcaption{display:flex;align-items:flex-start;justify-content:space-between;gap:12px;margin:0 2px 10px}
+  .panel .tag{font-size:15px;font-weight:700}
+  .panel .tag .idx{display:inline-grid;place-items:center;width:22px;height:22px;border-radius:6px;background:#232a3a;font-size:12px;margin-right:8px;vertical-align:-2px}
+  .panel .tag .name{font-weight:600}
+  .panel .rec{font-size:11px;font-weight:700;color:#0b1d43;background:#b8c6ff;padding:3px 9px;border-radius:999px;white-space:nowrap;margin-left:8px}
+  .panel .note{font-size:12px;color:var(--page-fg-2);line-height:1.6;margin-top:4px}
+  .shot-box{position:relative;width:624px;height:362px;overflow:hidden;border-radius:12px;box-shadow:0 18px 50px rgba(0,0,0,.5);border:1px solid rgba(255,255,255,.06)}
+  .shot{width:1300px;height:754px;transform:scale(.48);transform-origin:top left}
+
+  /* ---------- 组件对照 ---------- */
+  .cmpwrap{max-width:1400px;margin:44px auto 0}
+  .cmpwrap h2{font-size:16px;margin-bottom:4px}
+  .cmpwrap .sub{font-size:12.5px;color:var(--page-fg-2);margin-bottom:16px}
+  .cmpgrid{display:grid;grid-template-columns:repeat(auto-fit,minmax(300px,1fr));gap:18px}
+  .cmp{background:#141924;border:1px solid rgba(255,255,255,.06);border-radius:14px;padding:18px}
+  .cmp h3{font-size:13px;margin-bottom:2px}
+  .cmp .csub{font-size:11.5px;color:var(--page-fg-2);margin-bottom:14px}
+  .cidx{display:inline-block;width:16px;height:16px;border-radius:4px;background:#232a3a;text-align:center;line-height:16px;font-size:10px;margin-right:6px}
+  .citem{font-size:11px;color:var(--page-fg-2);margin:12px 0 5px}
+
+  /* ---------- 模拟窗口通用结构 ---------- */
+  .win{position:relative;width:1300px;height:754px;overflow:hidden;font-family:var(--font);user-select:none;cursor:default;background:#131a26}
+  .wallpaper{position:absolute;inset:0;background:linear-gradient(180deg,#cfe0ef 0%,#a9c0d9 26%,#7c9cc0 48%,#52749c 66%,#38506e 82%,#22344e 100%)}
+  .wallpaper::before{content:"";position:absolute;right:180px;top:70px;width:300px;height:300px;border-radius:50%;background:radial-gradient(circle,rgba(255,236,200,.85) 0%,rgba(255,236,200,0) 62%)}
+  .wallpaper::after{content:"";position:absolute;left:0;right:0;bottom:0;height:300px;background:linear-gradient(180deg,rgba(24,42,66,0) 0%,rgba(20,34,54,.55) 60%,rgba(14,24,40,.85) 100%)}
+  .hill{position:absolute;border-radius:50%}
+  .h1{left:-160px;bottom:-320px;width:900px;height:620px;background:#2e4a6b}
+  .h2{right:-220px;bottom:-360px;width:1100px;height:680px;background:#243d5c}
+  .h3{left:220px;bottom:-420px;width:1000px;height:700px;background:#1c3049;opacity:.9}
+
+  .chrome-bar{position:absolute;top:0;left:0;right:0;height:48px;z-index:9;display:flex;align-items:center;justify-content:space-between;padding:0 8px 0 20px;background:linear-gradient(180deg,rgba(0,0,0,.34),rgba(0,0,0,0))}
+  .brand{color:#fff;font-size:16px;font-weight:600;letter-spacing:.6px;text-shadow:0 1px 4px rgba(0,0,0,.45)}
+  .chrome-actions{display:flex;gap:4px}
+  .chrome-btn{width:36px;height:36px;border:none;background:transparent;color:#fff;border-radius:8px;display:grid;place-items:center;cursor:pointer}
+  .chrome-btn:hover{background:rgba(255,255,255,.16)}
+  .chrome-btn.close:hover{background:#e5484d}
+  .chrome-btn svg{width:18px;height:18px}
+
+  .remote-surface{position:absolute;left:40px;top:64px;width:500px;max-height:480px;z-index:5;display:flex;flex-direction:column;gap:16px}
+  .p-title{font-size:14px;font-weight:600;color:var(--text)}
+  .p-body{font-size:12.5px;color:var(--text-2);line-height:1.55;margin-top:3px}
+
+  .banner{position:relative;height:220px;border-radius:var(--r-card);overflow:hidden;box-shadow:var(--shadow-card)}
+  .banner-art{position:absolute;inset:0;display:flex;flex-direction:column;justify-content:flex-end;padding:18px 20px;background:linear-gradient(120deg,#5b4fb8 0%,#3a62b4 45%,#7fb0e8 100%)}
+  .banner-art::before{content:"";position:absolute;left:60px;top:26px;width:130px;height:130px;border-radius:50%;background:radial-gradient(circle,rgba(255,255,255,.5),rgba(255,255,255,0) 70%)}
+  .banner-art::after{content:"";position:absolute;right:150px;bottom:-60px;width:280px;height:190px;border-radius:50%;background:rgba(255,255,255,.14);transform:rotate(-12deg)}
+  .ba-t{position:relative;z-index:2;color:#fff;font-size:23px;font-weight:700;text-shadow:0 2px 10px rgba(0,0,0,.35)}
+  .ba-s{position:relative;z-index:2;color:rgba(255,255,255,.82);font-size:12.5px;margin-top:4px}
+  .page-ind{position:absolute;top:8px;right:8px;z-index:3;background:rgba(0,0,0,.55);color:#fff;font-size:11px;padding:2px 9px;border-radius:999px}
+  .chev{position:absolute;top:50%;transform:translateY(-50%);z-index:3;width:36px;height:36px;border:none;border-radius:50%;background:rgba(0,0,0,.45);color:#fff;display:grid;place-items:center;cursor:pointer;font-size:18px;line-height:1}
+  .chev.left{left:8px}.chev.right{right:8px}
+  .dots{position:absolute;bottom:8px;left:0;right:0;z-index:3;display:flex;gap:6px;justify-content:center}
+  .dots i{width:8px;height:8px;border-radius:50%;background:rgba(255,255,255,.5)}
+  .dots i.on{background:#fff}
+
+  .news{background:var(--card-bg);border:1px solid var(--card-border);border-radius:var(--r-card);padding:4px 0 12px;box-shadow:var(--shadow-card);backdrop-filter:var(--blur);-webkit-backdrop-filter:var(--blur)}
+  .tabs{display:flex;gap:14px;padding:6px 14px 0;border-bottom:1px solid rgba(255,255,255,.07)}
+  .tab{font-size:13px;color:var(--text-2);padding:9px 2px;cursor:pointer;position:relative}
+  .tab.on{color:var(--text);font-weight:600}
+  .tab.on::after{content:"";position:absolute;left:0;right:0;bottom:0;height:3px;border-radius:3px;background:var(--accent)}
+  .rows{display:flex;flex-direction:column;gap:5px;padding:10px 14px 0}
+  .row{display:flex;justify-content:space-between;align-items:center;gap:14px;padding:9px 12px;border-radius:var(--r-row);background:var(--row-bg);font-size:13px;color:var(--text)}
+  .row .cap{color:var(--text-2);font-size:12px;white-space:nowrap}
+
+  .social{position:absolute;right:20px;top:20px;z-index:6;display:flex;flex-direction:column;gap:8px}
+  .social a{width:36px;height:36px;border:none;border-radius:50%;background:rgba(0,0,0,.42);color:#fff;display:grid;place-items:center;text-decoration:none;backdrop-filter:blur(6px)}
+  .social a:hover{background:rgba(0,0,0,.6)}
+  .social svg{width:17px;height:17px}
+
+  .control-panel{position:absolute;left:0;right:0;bottom:0;z-index:4;min-height:156px;display:flex;align-items:center;justify-content:space-between;gap:28px;padding:20px 40px;border-top:1px solid var(--panel-border)}
+  .cp-left{display:flex;flex-direction:column;gap:12px;flex:1;min-width:0}
+  .captions{display:flex;gap:18px;font-size:12px;color:var(--cap-color)}
+  .path-field{display:flex;align-items:center;gap:10px;height:40px;padding:0 6px 0 16px;border-radius:var(--r-field);background:var(--field-bg);border:1px solid var(--field-border)}
+  .path-field .pl{font-size:13px;font-weight:600;color:var(--text)}
+  .path-field .pv{flex:1;font-size:12px;color:var(--text-2);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .pf-btn{display:flex;align-items:center;gap:6px;border:none;background:transparent;color:var(--accent);font-size:12px;font-family:inherit;cursor:pointer;padding:6px 9px;border-radius:6px;white-space:nowrap}
+  .pf-btn:hover{background:var(--hover-bg)}
+  .pf-btn svg{width:14px;height:14px}
+  .cp-right{display:flex;flex-direction:column;align-items:flex-end;gap:10px}
+  .cp-actions{display:flex;gap:16px;align-items:center}
+  .btn{height:58px;min-width:220px;padding:0 22px;border:none;border-radius:var(--r-btn);font-family:inherit;font-size:15px;display:flex;align-items:center;justify-content:center;gap:10px;cursor:pointer}
+  .btn svg{width:20px;height:20px}
+  .btn-outline{border:1px solid var(--btn-border);background:var(--btn2-bg);color:var(--btn2-fg);font-weight:600}
+  .btn-primary{background:var(--accent);color:var(--on-accent);font-weight:700}
+  .cp-captions{display:flex;gap:18px;font-size:12px;color:var(--cap-color)}
+
+  /* ==================== (a) Material Design 3 / Material You ==================== */
+  .lang-m3{
+    --font:-apple-system,BlinkMacSystemFont,"Segoe UI Variable Display","Segoe UI","Microsoft YaHei",sans-serif;
+    --accent:#b8c6ff; --on-accent:#0b1d43;
+    --text:#edf1ff; --text-2:#b9c1dc;
+    --card-bg:rgba(30,33,48,.88); --card-border:rgba(184,198,255,.14);
+    --r-card:16px; --r-row:12px; --r-btn:999px; --r-field:10px;
+    --blur:blur(18px);
+    --row-bg:rgba(147,158,199,.12);
+    --field-bg:rgba(23,26,39,.78); --field-border:rgba(184,198,255,.24);
+    --panel-bg:rgba(22,24,36,.9); --panel-border:rgba(255,255,255,.06);
+    --btn2-bg:rgba(184,198,255,.10); --btn2-fg:#c4cfff; --btn-border:rgba(184,198,255,.38);
+    --hover-bg:rgba(184,198,255,.12);
+    --cap-color:rgba(233,237,251,.72);
+    --shadow-card:0 12px 32px rgba(0,0,0,.38),inset 0 1px 0 rgba(255,255,255,.05);
+  }
+  .lang-m3 .control-panel{background:var(--panel-bg);backdrop-filter:blur(20px);-webkit-backdrop-filter:blur(20px)}
+  .lang-m3 .btn-primary{box-shadow:0 6px 18px rgba(120,140,245,.28)}
+  .lang-m3 .notice .p-title::before{content:"";display:inline-block;width:8px;height:8px;border-radius:50%;background:#ffcf86;margin-right:7px;vertical-align:1px}
+  .lang-m3 .btn-primary.dialog{min-width:0;height:40px;padding:0 24px;font-size:13.5px}
+
+  /* ==================== (b) Fluent 2 ==================== */
+  .lang-fluent{
+    --font:"Segoe UI Variable","Segoe UI","Microsoft YaHei",sans-serif;
+    --accent:#4cc2ff; --on-accent:#06233a;
+    --text:#ffffff; --text-2:#c3c8d1;
+    --card-bg:rgba(32,33,36,.86); --card-border:rgba(255,255,255,.09);
+    --r-card:8px; --r-row:6px; --r-btn:6px; --r-field:6px;
+    --blur:blur(30px);
+    --row-bg:rgba(255,255,255,.055);
+    --field-bg:rgba(26,26,28,.9); --field-border:rgba(255,255,255,.14);
+    --panel-bg:rgba(28,28,30,.84); --panel-border:rgba(255,255,255,.10);
+    --btn2-bg:rgba(255,255,255,.06); --btn2-fg:#dfe4ec; --btn-border:rgba(255,255,255,.22);
+    --hover-bg:rgba(255,255,255,.10);
+    --cap-color:rgba(214,220,229,.85);
+    --shadow-card:0 10px 28px rgba(0,0,0,.42),0 0 0 .5px rgba(255,255,255,.05);
+  }
+  .lang-fluent .control-panel{background:var(--panel-bg);backdrop-filter:blur(28px);-webkit-backdrop-filter:blur(28px)}
+  .lang-fluent .tab.on::after{height:2px}
+  .lang-fluent .btn-primary{font-weight:600}
+
+  /* ==================== (c) 自定义 Launcher 语言（Cafe 暖调玻璃） ==================== */
+  .lang-custom{
+    --font:-apple-system,BlinkMacSystemFont,"Segoe UI","Microsoft YaHei","Noto Sans SC",sans-serif;
+    --accent:#f5cf8b; --on-accent:#3a2c10;
+    --text:#f6e7c8; --text-2:#c9bfa9;
+    --card-bg:rgba(20,18,12,.58); --card-border:rgba(245,207,139,.28);
+    --r-card:22px; --r-row:14px; --r-btn:16px; --r-field:14px;
+    --blur:blur(26px) saturate(1.35);
+    --row-bg:rgba(245,207,139,.09);
+    --field-bg:rgba(16,14,10,.55); --field-border:rgba(245,207,139,.30);
+    --panel-bg:rgba(14,12,9,.55); --panel-border:rgba(245,207,139,.22);
+    --btn2-bg:rgba(245,207,139,.08); --btn2-fg:#f5cf8b; --btn-border:rgba(245,207,139,.45);
+    --hover-bg:rgba(245,207,139,.14);
+    --cap-color:rgba(246,231,200,.78);
+    --shadow-card:0 18px 42px rgba(0,0,0,.5),inset 0 1px 0 rgba(255,255,255,.10);
+  }
+  /* 浮动玻璃底栏 —— 演示 Q12 表现级布局自由度 */
+  .lang-custom .control-panel{left:20px;right:20px;bottom:16px;border-radius:26px;border:1px solid rgba(245,207,139,.26);background:var(--panel-bg);backdrop-filter:blur(28px) saturate(1.35);-webkit-backdrop-filter:blur(28px) saturate(1.35);box-shadow:0 26px 66px rgba(0,0,0,.55),inset 0 1px 0 rgba(255,255,255,.12)}
+  .lang-custom .btn-primary{background:linear-gradient(135deg,#f6dfae 0%,#f0c37b 100%);box-shadow:0 10px 26px rgba(240,196,120,.35)}
+  .lang-custom .btn-outline{border-radius:16px}
+  .lang-custom .news{background:linear-gradient(160deg,rgba(255,255,255,.10),rgba(255,255,255,.03))}
+  .lang-custom .brand{letter-spacing:2.5px;font-weight:600}
+  .lang-custom .banner-art{background:linear-gradient(120deg,#7a5a2e 0%,#a3763c 42%,#d9b06a 100%)}
+
+  /* ==================== (d) 官方 BA 风格锚定 ==================== */
+  .lang-ba{
+    --font:"Segoe UI","Microsoft YaHei",sans-serif;
+    --accent:#2e5fe8; --on-accent:#ffffff;
+    --text:#21304a; --text-2:#64779b;
+    --card-bg:rgba(252,253,255,.95); --card-border:rgba(148,175,215,.35);
+    --r-card:8px; --r-row:6px; --r-btn:8px; --r-field:6px;
+    --blur:blur(12px);
+    --row-bg:rgba(240,245,252,.9);
+    --field-bg:rgba(246,250,255,.95); --field-border:rgba(148,175,215,.55);
+    --panel-bg:rgba(250,252,255,.95); --panel-border:#d7e3f5;
+    --btn2-bg:rgba(255,255,255,.92); --btn2-fg:#2e5fe8; --btn-border:#b9cdec;
+    --hover-bg:rgba(46,95,232,.08);
+    --cap-color:#71809b;
+    --shadow-card:0 8px 22px rgba(50,80,140,.14);
+  }
+  .lang-ba .control-panel{background:var(--panel-bg);backdrop-filter:blur(10px);-webkit-backdrop-filter:blur(10px)}
+  .lang-ba .caption-strong{color:#5b6b85}
+  .lang-ba .tab.on::after{height:3px;border-radius:0}
+  .lang-ba .row{color:#38486a}
+
+  /* 各语言通用小样 */
+  .notice{background:var(--card-bg);border:1px solid var(--card-border);border-radius:var(--r-card);padding:10px 14px;box-shadow:var(--shadow-card);backdrop-filter:var(--blur);-webkit-backdrop-filter:var(--blur)}
+
+  /* ---------- 组件对照卡片内部 ---------- */
+  .cwin{background:#131a26;border-radius:10px;padding:16px;display:flex;flex-direction:column;gap:12px}
+  .cwin .btn{height:44px;min-width:0;font-size:13.5px;padding:0 18px}
+  .cwin .btn svg{width:17px;height:17px}
+  .cf-input{height:38px;border-radius:var(--r-field);background:var(--field-bg);border:1px solid var(--field-border);padding:0 12px;font-size:13px;color:var(--text);display:flex;align-items:center;justify-content:space-between;gap:8px}
+  .cf-input span{color:var(--text-2)}
+  .cf-switch{display:flex;align-items:center;gap:10px}
+  .cf-switch .lbl{font-size:13px;color:var(--text)}
+  .track{width:44px;height:24px;border-radius:999px;background:var(--track-bg,rgba(255,255,255,.18));position:relative;border:1px solid var(--track-border,transparent)}
+  .track::after{content:"";position:absolute;right:2px;top:2px;width:18px;height:18px;border-radius:50%;background:var(--track-knob,#fff)}
+  .cf-dialog{background:var(--card-bg);border:1px solid var(--card-border);border-radius:var(--r-dialog,14px);padding:16px;box-shadow:var(--shadow-card);backdrop-filter:var(--blur);-webkit-backdrop-filter:var(--blur)}
+  .cf-dialog .dt{font-size:13.5px;font-weight:700;color:var(--text)}
+  .cf-dialog .db{font-size:12px;color:var(--text-2);line-height:1.6;margin:6px 0 12px}
+  .cf-dialog .dbtns{display:flex;justify-content:flex-end;gap:10px}
+  .cf-dialog .btn{height:36px;min-width:0;font-size:12.5px;padding:0 16px}
+  .cf-toast{background:var(--toast-bg,rgba(40,42,50,.96));border:1px solid var(--toast-border,rgba(255,255,255,.1));border-radius:var(--r-toast,10px);padding:10px 12px;display:flex;align-items:center;gap:10px;color:var(--toast-fg,#fff);font-size:12.5px;box-shadow:var(--shadow-card)}
+  .cf-toast .ico{width:8px;height:8px;border-radius:50%;background:var(--toast-dot,#22c55e);flex:none}
+  .cf-progress{height:8px;border-radius:999px;background:var(--track-bg,rgba(255,255,255,.14));overflow:hidden}
+  .cf-progress i{display:block;height:100%;width:62%;border-radius:999px;background:var(--prog-fill,var(--accent))}
+  .cf-label{font-size:12px;color:var(--text-2);margin-top:2px}
+
+  /* 语言微调：对照区 */
+  .m3 .r-dialog{border-radius:20px}
+  .fluent .r-dialog{border-radius:8px}
+  .custom .r-dialog{border-radius:20px}
+  .ba .r-dialog{border-radius:8px}
+
+  @media (max-width:660px){.shot-box{width:100%;height:auto;aspect-ratio:624/362}.shot{transform:scale(.48)}body{padding:20px 12px}}
+</style>
+</head>
+<body>
+
+<header>
+  <h1>Q5 · 设计语言方向对比稿 <small>Cafe Launcher — 同一界面、四种设计语言（概念稿，非像素级）</small></h1>
+  <p class="lede">
+    四张图为同一结构（壁纸 + 自绘标题栏 + 远端内容卡[公告/轮播 Banner/新闻 Tab] + 社交列 + 底部控制面板），按 <b>MainWindow.axaml</b> 的 1300×754 真实几何绘制，仅视觉效果不同。
+    参考语义：按钮"启动游戏/官方网站"、路径字段、新闻行、轮播页指示器。字体为系统字体栈（不内嵌字体，避免演示环境差异）。
+  </p>
+</header>
+
+<section class="grid">
+
+  <!-- ============ (a) Material Design 3 ============ -->
+  <figure class="panel">
+    <figcaption>
+      <div>
+        <div class="tag"><span class="idx">a</span><span class="name">Material 3 / Material You 骨架</span><span class="rec">推荐</span></div>
+        <div class="note">动态色作为第一公民：accent 由壁纸计算（现有壁纸取色 → 完整 tonal palette 与 container 色阶）；圆角分级、状态层、M3 字阶/动效规范；保留现有 Material 图标词汇。实现上仍以 FluentTheme 为底座，不引入 Material.Avalonia。</div>
+      </div>
+    </figcaption>
+    <div class="shot-box"><div class="shot lang-m3">
+      <div class="wallpaper"><i class="hill h1"></i><i class="hill h2"></i><i class="hill h3"></i></div>
+      <div class="chrome-bar">
+        <div class="brand">Cafe Launcher</div>
+        <div class="chrome-actions">
+          <button class="chrome-btn" title="资源面板"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><rect x="6" y="4.5" width="12" height="16" rx="2"/><rect x="9.5" y="2.5" width="5" height="3.4" rx="1" fill="currentColor" stroke="none"/></svg></button>
+          <button class="chrome-btn" title="设置"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="12" cy="12" r="3.2" fill="currentColor" stroke="none"/><path d="M12 2.5v3M12 18.5v3M2.5 12h3M18.5 12h3M5.3 5.3l2.1 2.1M16.6 16.6l2.1 2.1M18.7 5.3l-2.1 2.1M7.4 16.6l-2.1 2.1"/></svg></button>
+          <button class="chrome-btn" title="最小化"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M5 12h14"/></svg></button>
+          <button class="chrome-btn close" title="关闭"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M6 6l12 12M18 6L6 18"/></svg></button>
+        </div>
+      </div>
+
+      <div class="remote-surface">
+        <div class="notice">
+          <div class="p-title">公告</div>
+          <div class="p-body">版本 1.4.0 已发布：支持断点续传与资源完整性校验，请保持启动器为最新版本。</div>
+        </div>
+        <div class="banner">
+          <div class="banner-art">
+            <div class="ba-t">夏日活动「阿拜多斯夏日祭」</div>
+            <div class="ba-s">限时招募开放中 · 7 月 15 日 04:00 截止</div>
+          </div>
+          <span class="page-ind">1 / 3</span>
+          <button class="chev left">‹</button><button class="chev right">›</button>
+          <div class="dots"><i class="on"></i><i></i><i></i></div>
+        </div>
+        <div class="news">
+          <div class="tabs"><div class="tab on">新闻</div><div class="tab">活动</div><div class="tab">维护</div></div>
+          <div class="rows">
+            <div class="row"><span>限时招募 阿露·星野</span><span class="cap">07-01</span></div>
+            <div class="row"><span>总力战「一之濑」开启</span><span class="cap">06-30</span></div>
+            <div class="row"><span>7 月 2 日维护通知</span><span class="cap">06-28</span></div>
+          </div>
+        </div>
+      </div>
+
+      <div class="social">
+        <a title="X"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M4 4h4l4 5.5L16.5 4H20l-6 8 6.5 8h-4l-4.6-6-4.9 6H2.5l6.6-8.4z"/></svg></a>
+        <a title="YouTube"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><rect x="3" y="6" width="18" height="12" rx="3"/><path d="M10.5 9.5l4.5 2.5-4.5 2.5z" fill="currentColor" stroke="none"/></svg></a>
+        <a title="公告"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M4 10v4h3l5 4V6l-5 4zM16 9a4 4 0 0 1 0 6"/></svg></a>
+      </div>
+
+      <div class="control-panel">
+        <div class="cp-left">
+          <div class="captions"><span>v1.4.0</span><span>磁盘剩余 12.4 GB</span><span>网络 在线</span></div>
+          <div class="path-field">
+            <span class="pl">路径</span><span class="pv">YostarGames\BlueArchive_JP</span>
+            <button class="pf-btn"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M4 7h6l2 2h8v10H4z"/></svg>更改路径</button>
+            <button class="pf-btn"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="11" cy="11" r="6.5"/><path d="M20 20l-4.4-4.4"/></svg>选择已安装游戏</button>
+          </div>
+        </div>
+        <div class="cp-right">
+          <div class="cp-actions">
+            <button class="btn btn-outline"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="12" cy="12" r="8"/><path d="M4 12h16M12 4c2.8 2.4 2.8 13.6 0 16M12 4c-2.8 2.4-2.8 13.6 0 16"/></svg>官方网站</button>
+            <button class="btn btn-primary"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M8 5l11 7-11 7z"/></svg>启动游戏</button>
+          </div>
+          <div class="cp-captions"><span>v1.4.0</span><span>启动检查已通过</span><span>网络 在线</span></div>
+        </div>
+      </div>
+    </div></div>
+  </figure>
+
+  <!-- ============ (b) Fluent 2 ============ -->
+  <figure class="panel">
+    <figcaption>
+      <div>
+        <div class="tag"><span class="idx">b</span><span class="name">Fluent 2 精修</span></div>
+        <div class="note">留在 FluentTheme 基座上按 Fluent 2 规范打磨：亚克力（acrylic）面板、1px 发丝描边、4–8px 圆角、Segoe UI Variable、增强的阴影分层。兼容成本最低，观感偏向"Windows 系统级"。</div>
+      </div>
+    </figcaption>
+    <div class="shot-box"><div class="shot lang-fluent">
+      <div class="wallpaper"><i class="hill h1"></i><i class="hill h2"></i><i class="hill h3"></i></div>
+      <div class="chrome-bar">
+        <div class="brand">Cafe Launcher</div>
+        <div class="chrome-actions">
+          <button class="chrome-btn" title="资源面板"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><rect x="6" y="4.5" width="12" height="16" rx="2"/><rect x="9.5" y="2.5" width="5" height="3.4" rx="1" fill="currentColor" stroke="none"/></svg></button>
+          <button class="chrome-btn" title="设置"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="12" cy="12" r="3.2" fill="currentColor" stroke="none"/><path d="M12 2.5v3M12 18.5v3M2.5 12h3M18.5 12h3M5.3 5.3l2.1 2.1M16.6 16.6l2.1 2.1M18.7 5.3l-2.1 2.1M7.4 16.6l-2.1 2.1"/></svg></button>
+          <button class="chrome-btn" title="最小化"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M5 12h14"/></svg></button>
+          <button class="chrome-btn close" title="关闭"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M6 6l12 12M18 6L6 18"/></svg></button>
+        </div>
+      </div>
+
+      <div class="remote-surface">
+        <div class="notice">
+          <div class="p-title">公告</div>
+          <div class="p-body">版本 1.4.0 已发布：支持断点续传与资源完整性校验，请保持启动器为最新版本。</div>
+        </div>
+        <div class="banner">
+          <div class="banner-art">
+            <div class="ba-t">夏日活动「阿拜多斯夏日祭」</div>
+            <div class="ba-s">限时招募开放中 · 7 月 15 日 04:00 截止</div>
+          </div>
+          <span class="page-ind">1 / 3</span>
+          <button class="chev left">‹</button><button class="chev right">›</button>
+          <div class="dots"><i class="on"></i><i></i><i></i></div>
+        </div>
+        <div class="news">
+          <div class="tabs"><div class="tab on">新闻</div><div class="tab">活动</div><div class="tab">维护</div></div>
+          <div class="rows">
+            <div class="row"><span>限时招募 阿露·星野</span><span class="cap">07-01</span></div>
+            <div class="row"><span>总力战「一之濑」开启</span><span class="cap">06-30</span></div>
+            <div class="row"><span>7 月 2 日维护通知</span><span class="cap">06-28</span></div>
+          </div>
+        </div>
+      </div>
+
+      <div class="social">
+        <a title="X"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M4 4h4l4 5.5L16.5 4H20l-6 8 6.5 8h-4l-4.6-6-4.9 6H2.5l6.6-8.4z"/></svg></a>
+        <a title="YouTube"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><rect x="3" y="6" width="18" height="12" rx="3"/><path d="M10.5 9.5l4.5 2.5-4.5 2.5z" fill="currentColor" stroke="none"/></svg></a>
+        <a title="公告"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M4 10v4h3l5 4V6l-5 4zM16 9a4 4 0 0 1 0 6"/></svg></a>
+      </div>
+
+      <div class="control-panel">
+        <div class="cp-left">
+          <div class="captions"><span>v1.4.0</span><span>磁盘剩余 12.4 GB</span><span>网络 在线</span></div>
+          <div class="path-field">
+            <span class="pl">路径</span><span class="pv">YostarGames\BlueArchive_JP</span>
+            <button class="pf-btn"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M4 7h6l2 2h8v10H4z"/></svg>更改路径</button>
+            <button class="pf-btn"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="11" cy="11" r="6.5"/><path d="M20 20l-4.4-4.4"/></svg>选择已安装游戏</button>
+          </div>
+        </div>
+        <div class="cp-right">
+          <div class="cp-actions">
+            <button class="btn btn-outline"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="12" cy="12" r="8"/><path d="M4 12h16M12 4c2.8 2.4 2.8 13.6 0 16M12 4c-2.8 2.4-2.8 13.6 0 16"/></svg>官方网站</button>
+            <button class="btn btn-primary"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M8 5l11 7-11 7z"/></svg>启动游戏</button>
+          </div>
+          <div class="cp-captions"><span>v1.4.0</span><span>启动检查已通过</span><span>网络 在线</span></div>
+        </div>
+      </div>
+    </div></div>
+  </figure>
+
+  <!-- ============ (c) 自定义 Launcher 语言 ============ -->
+  <figure class="panel">
+    <figcaption>
+      <div>
+        <div class="tag"><span class="idx">c</span><span class="name">自定义 Launcher 语言（Cafe 暖调玻璃）</span></div>
+        <div class="note">以品牌名"Cafe"为锚：暖奶油金 accent × 深蓝玻璃，栅格化玻璃拟态（blur+saturate）、22px 圆角、发光主按钮；底栏演示"浮动玻璃胶囊"（兼演示 Q12-b 表现级布局自由度）。表现力最强，但规范细节需全部自定。</div>
+      </div>
+    </figcaption>
+    <div class="shot-box"><div class="shot lang-custom">
+      <div class="wallpaper"><i class="hill h1"></i><i class="hill h2"></i><i class="hill h3"></i></div>
+      <div class="chrome-bar">
+        <div class="brand">Cafe Launcher</div>
+        <div class="chrome-actions">
+          <button class="chrome-btn" title="资源面板"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><rect x="6" y="4.5" width="12" height="16" rx="2"/><rect x="9.5" y="2.5" width="5" height="3.4" rx="1" fill="currentColor" stroke="none"/></svg></button>
+          <button class="chrome-btn" title="设置"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="12" cy="12" r="3.2" fill="currentColor" stroke="none"/><path d="M12 2.5v3M12 18.5v3M2.5 12h3M18.5 12h3M5.3 5.3l2.1 2.1M16.6 16.6l2.1 2.1M18.7 5.3l-2.1 2.1M7.4 16.6l-2.1 2.1"/></svg></button>
+          <button class="chrome-btn" title="最小化"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M5 12h14"/></svg></button>
+          <button class="chrome-btn close" title="关闭"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M6 6l12 12M18 6L6 18"/></svg></button>
+        </div>
+      </div>
+
+      <div class="remote-surface">
+        <div class="notice">
+          <div class="p-title">公告</div>
+          <div class="p-body">版本 1.4.0 已发布：支持断点续传与资源完整性校验，请保持启动器为最新版本。</div>
+        </div>
+        <div class="banner">
+          <div class="banner-art">
+            <div class="ba-t">夏日活动「阿拜多斯夏日祭」</div>
+            <div class="ba-s">限时招募开放中 · 7 月 15 日 04:00 截止</div>
+          </div>
+          <span class="page-ind">1 / 3</span>
+          <button class="chev left">‹</button><button class="chev right">›</button>
+          <div class="dots"><i class="on"></i><i></i><i></i></div>
+        </div>
+        <div class="news">
+          <div class="tabs"><div class="tab on">新闻</div><div class="tab">活动</div><div class="tab">维护</div></div>
+          <div class="rows">
+            <div class="row"><span>限时招募 阿露·星野</span><span class="cap">07-01</span></div>
+            <div class="row"><span>总力战「一之濑」开启</span><span class="cap">06-30</span></div>
+            <div class="row"><span>7 月 2 日维护通知</span><span class="cap">06-28</span></div>
+          </div>
+        </div>
+      </div>
+
+      <div class="social">
+        <a title="X"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M4 4h4l4 5.5L16.5 4H20l-6 8 6.5 8h-4l-4.6-6-4.9 6H2.5l6.6-8.4z"/></svg></a>
+        <a title="YouTube"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><rect x="3" y="6" width="18" height="12" rx="3"/><path d="M10.5 9.5l4.5 2.5-4.5 2.5z" fill="currentColor" stroke="none"/></svg></a>
+        <a title="公告"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M4 10v4h3l5 4V6l-5 4zM16 9a4 4 0 0 1 0 6"/></svg></a>
+      </div>
+
+      <div class="control-panel">
+        <div class="cp-left">
+          <div class="captions"><span>v1.4.0</span><span>磁盘剩余 12.4 GB</span><span>网络 在线</span></div>
+          <div class="path-field">
+            <span class="pl">路径</span><span class="pv">YostarGames\BlueArchive_JP</span>
+            <button class="pf-btn"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M4 7h6l2 2h8v10H4z"/></svg>更改路径</button>
+            <button class="pf-btn"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="11" cy="11" r="6.5"/><path d="M20 20l-4.4-4.4"/></svg>选择已安装游戏</button>
+          </div>
+        </div>
+        <div class="cp-right">
+          <div class="cp-actions">
+            <button class="btn btn-outline"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="12" cy="12" r="8"/><path d="M4 12h16M12 4c2.8 2.4 2.8 13.6 0 16M12 4c-2.8 2.4-2.8 13.6 0 16"/></svg>官方网站</button>
+            <button class="btn btn-primary"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M8 5l11 7-11 7z"/></svg>启动游戏</button>
+          </div>
+          <div class="cp-captions"><span>v1.4.0</span><span>启动检查已通过</span><span>网络 在线</span></div>
+        </div>
+      </div>
+    </div></div>
+  </figure>
+
+  <!-- ============ (d) 官方 BA 风格 ============ -->
+  <figure class="panel">
+    <figcaption>
+      <div>
+        <div class="tag"><span class="idx">d</span><span class="name">官方 Blue Archive 风格锚定</span></div>
+        <div class="note">蓝/白/黑：纸白表面、发丝浅蓝描边、6–8px 圆角、冷蓝 accent、轻阴影。识别度最高、最"官方"，但 BA 官方界面素净，与"现代化/高级感"目标存在张力；深色模式下需把整套浅色表面重做。</div>
+      </div>
+    </figcaption>
+    <div class="shot-box"><div class="shot lang-ba">
+      <div class="wallpaper"><i class="hill h1"></i><i class="hill h2"></i><i class="hill h3"></i></div>
+      <div class="chrome-bar">
+        <div class="brand">Cafe Launcher</div>
+        <div class="chrome-actions">
+          <button class="chrome-btn" title="资源面板"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><rect x="6" y="4.5" width="12" height="16" rx="2"/><rect x="9.5" y="2.5" width="5" height="3.4" rx="1" fill="currentColor" stroke="none"/></svg></button>
+          <button class="chrome-btn" title="设置"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="12" cy="12" r="3.2" fill="currentColor" stroke="none"/><path d="M12 2.5v3M12 18.5v3M2.5 12h3M18.5 12h3M5.3 5.3l2.1 2.1M16.6 16.6l2.1 2.1M18.7 5.3l-2.1 2.1M7.4 16.6l-2.1 2.1"/></svg></button>
+          <button class="chrome-btn" title="最小化"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M5 12h14"/></svg></button>
+          <button class="chrome-btn close" title="关闭"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M6 6l12 12M18 6L6 18"/></svg></button>
+        </div>
+      </div>
+
+      <div class="remote-surface">
+        <div class="notice">
+          <div class="p-title">公告</div>
+          <div class="p-body">版本 1.4.0 已发布：支持断点续传与资源完整性校验，请保持启动器为最新版本。</div>
+        </div>
+        <div class="banner">
+          <div class="banner-art">
+            <div class="ba-t">夏日活动「阿拜多斯夏日祭」</div>
+            <div class="ba-s">限时招募开放中 · 7 月 15 日 04:00 截止</div>
+          </div>
+          <span class="page-ind">1 / 3</span>
+          <button class="chev left">‹</button><button class="chev right">›</button>
+          <div class="dots"><i class="on"></i><i></i><i></i></div>
+        </div>
+        <div class="news">
+          <div class="tabs"><div class="tab on">新闻</div><div class="tab">活动</div><div class="tab">维护</div></div>
+          <div class="rows">
+            <div class="row"><span>限时招募 阿露·星野</span><span class="cap">07-01</span></div>
+            <div class="row"><span>总力战「一之濑」开启</span><span class="cap">06-30</span></div>
+            <div class="row"><span>7 月 2 日维护通知</span><span class="cap">06-28</span></div>
+          </div>
+        </div>
+      </div>
+
+      <div class="social">
+        <a title="X"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M4 4h4l4 5.5L16.5 4H20l-6 8 6.5 8h-4l-4.6-6-4.9 6H2.5l6.6-8.4z"/></svg></a>
+        <a title="YouTube"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><rect x="3" y="6" width="18" height="12" rx="3"/><path d="M10.5 9.5l4.5 2.5-4.5 2.5z" fill="currentColor" stroke="none"/></svg></a>
+        <a title="公告"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M4 10v4h3l5 4V6l-5 4zM16 9a4 4 0 0 1 0 6"/></svg></a>
+      </div>
+
+      <div class="control-panel">
+        <div class="cp-left">
+          <div class="captions"><span class="caption-strong">v1.4.0</span><span>磁盘剩余 12.4 GB</span><span>网络 在线</span></div>
+          <div class="path-field">
+            <span class="pl">路径</span><span class="pv">YostarGames\BlueArchive_JP</span>
+            <button class="pf-btn"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M4 7h6l2 2h8v10H4z"/></svg>更改路径</button>
+            <button class="pf-btn"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="11" cy="11" r="6.5"/><path d="M20 20l-4.4-4.4"/></svg>选择已安装游戏</button>
+          </div>
+        </div>
+        <div class="cp-right">
+          <div class="cp-actions">
+            <button class="btn btn-outline"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="12" cy="12" r="8"/><path d="M4 12h16M12 4c2.8 2.4 2.8 13.6 0 16M12 4c-2.8 2.4-2.8 13.6 0 16"/></svg>官方网站</button>
+            <button class="btn btn-primary"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M8 5l11 7-11 7z"/></svg>启动游戏</button>
+          </div>
+          <div class="cp-captions"><span>v1.4.0</span><span>启动检查已通过</span><span>网络 在线</span></div>
+        </div>
+      </div>
+    </div></div>
+  </figure>
+</section>
+
+<!-- ============ 组件质感对照 ============ -->
+<section class="cmpwrap">
+  <h2>组件质感对照 <span style="font-weight:400;font-size:12.5px;color:var(--page-fg-2)">— 同一语义，四种语言</span></h2>
+  <p class="sub">主按钮 / 次级按钮 / 文本输入 / 开关（开）/ 对话框 / Toast / 进度条：逐项对比形状、颜色、描边与层次。</p>
+  <div class="cmpgrid">
+
+    <div class="cmp lang-m3">
+      <h3><span class="cidx">a</span>M3 / Material You</h3>
+      <div class="csub">胶囊按钮 · tonal 状态层 · 16–20px 容器圆角 · 动态色</div>
+      <div class="citem">主按钮（容器色）</div>
+      <div class="cwin"><button class="btn btn-primary">启动游戏</button>
+        <div class="citem">次级按钮</div><button class="btn btn-outline">官方网站</button>
+        <div class="citem">文本输入</div>
+        <div class="cf-input">YostarGames\BlueArchive_JP<span>✕</span></div>
+        <div class="citem">开关（开）</div>
+        <div class="cf-switch"><div class="track" style="--track-bg:var(--accent);border-color:var(--accent);--track-knob:var(--on-accent)"></div><span class="lbl">显示远端内容卡</span></div>
+        <div class="citem">对话框</div>
+        <div class="cf-dialog" style="--r-dialog:20px">
+          <div class="dt">确认更新游戏？</div>
+          <div class="db">将下载 3.2 GB 更新文件，期间游戏无法启动。</div>
+          <div class="dbtns"><button class="btn btn-outline">取消</button><button class="btn btn-primary">确认</button></div>
+        </div>
+        <div class="citem">Toast（成功）</div>
+        <div class="cf-toast" style="--toast-bg:rgba(238,242,255,.96);--toast-fg:#0d1226;--toast-border:rgba(184,198,255,.4);--toast-dot:#22c55e;--r-toast:14px"><span class="ico"></span>更新完成，共 214 个文件</div>
+        <div class="citem">进度条</div>
+        <div class="cf-progress"><i></i></div><div class="cf-label">62% · 48.2 MB/s · 剩余 01:12</div>
+      </div>
+    </div>
+
+    <div class="cmp lang-fluent">
+      <h3><span class="cidx">b</span>Fluent 2</h3>
+      <div class="csub">4–8px 直角 · 1px 发丝描边 · 亚克力 · Segoe UI Variable</div>
+      <div class="citem">主按钮</div>
+      <div class="cwin"><button class="btn btn-primary">启动游戏</button>
+        <div class="citem">次级按钮</div><button class="btn btn-outline">官方网站</button>
+        <div class="citem">文本输入</div>
+        <div class="cf-input">YostarGames\BlueArchive_JP<span>✕</span></div>
+        <div class="citem">开关（开）</div>
+        <div class="cf-switch"><div class="track" style="--track-bg:#4cc2ff;border-color:#4cc2ff"></div><span class="lbl">显示远端内容卡</span></div>
+        <div class="citem">对话框</div>
+        <div class="cf-dialog" style="--r-dialog:8px">
+          <div class="dt">确认更新游戏？</div>
+          <div class="db">将下载 3.2 GB 更新文件，期间游戏无法启动。</div>
+          <div class="dbtns"><button class="btn btn-outline">取消</button><button class="btn btn-primary">确认</button></div>
+        </div>
+        <div class="citem">Toast（成功）</div>
+        <div class="cf-toast" style="--toast-bg:rgba(40,42,50,.96);--toast-border:rgba(255,255,255,.1);--r-toast:8px"><span class="ico"></span>更新完成，共 214 个文件</div>
+        <div class="citem">进度条</div>
+        <div class="cf-progress" style="--track-bg:rgba(255,255,255,.12)"><i></i></div><div class="cf-label">62% · 48.2 MB/s · 剩余 01:12</div>
+      </div>
+    </div>
+
+    <div class="cmp lang-custom">
+      <h3><span class="cidx">c</span>自定义 Launcher 语言</h3>
+      <div class="csub">暖奶油金 × 深蓝玻璃 · 14–22px 圆角 · 发光渐变主按钮</div>
+      <div class="citem">主按钮（渐变+辉光）</div>
+      <div class="cwin"><button class="btn btn-primary">启动游戏</button>
+        <div class="citem">次级按钮</div><button class="btn btn-outline">官方网站</button>
+        <div class="citem">文本输入</div>
+        <div class="cf-input">YostarGames\BlueArchive_JP<span>✕</span></div>
+        <div class="citem">开关（开）</div>
+        <div class="cf-switch"><div class="track" style="--track-bg:#f5cf8b;border-color:#f5cf8b;--track-knob:#3a2c10"></div><span class="lbl">显示远端内容卡</span></div>
+        <div class="citem">对话框</div>
+        <div class="cf-dialog" style="--r-dialog:20px;background:linear-gradient(160deg,rgba(255,255,255,.14),rgba(255,255,255,.04))">
+          <div class="dt">确认更新游戏？</div>
+          <div class="db">将下载 3.2 GB 更新文件，期间游戏无法启动。</div>
+          <div class="dbtns"><button class="btn btn-outline">取消</button><button class="btn btn-primary">确认</button></div>
+        </div>
+        <div class="citem">Toast（成功）</div>
+        <div class="cf-toast" style="--toast-bg:rgba(24,20,12,.82);--toast-border:rgba(245,207,139,.3);--toast-dot:#8fd48f;--r-toast:14px"><span class="ico"></span>更新完成，共 214 个文件</div>
+        <div class="citem">进度条</div>
+        <div class="cf-progress" style="--track-bg:rgba(245,207,139,.15)"><i style="background:linear-gradient(90deg,#f6dfae,#f0c37b)"></i></div><div class="cf-label">62% · 48.2 MB/s · 剩余 01:12</div>
+      </div>
+    </div>
+
+    <div class="cmp lang-ba">
+      <h3><span class="cidx">d</span>官方 BA 风格</h3>
+      <div class="csub">纸白表面 · 浅蓝发丝描边 · 冷蓝 accent · 轻阴影</div>
+      <div class="citem">主按钮</div>
+      <div class="cwin"><button class="btn btn-primary">启动游戏</button>
+        <div class="citem">次级按钮</div><button class="btn btn-outline">官方网站</button>
+        <div class="citem">文本输入</div>
+        <div class="cf-input">YostarGames\BlueArchive_JP<span>✕</span></div>
+        <div class="citem">开关（开）</div>
+        <div class="cf-switch"><div class="track" style="--track-bg:#2e5fe8;border-color:#2e5fe8;--track-knob:#fff"></div><span class="lbl">显示远端内容卡</span></div>
+        <div class="citem">对话框</div>
+        <div class="cf-dialog" style="--r-dialog:8px;background:#fff">
+          <div class="dt" style="color:#21304a">确认更新游戏？</div>
+          <div class="db" style="color:#64779b">将下载 3.2 GB 更新文件，期间游戏无法启动。</div>
+          <div class="dbtns"><button class="btn btn-outline">取消</button><button class="btn btn-primary">确认</button></div>
+        </div>
+        <div class="citem">Toast（成功）</div>
+        <div class="cf-toast" style="--toast-bg:#ffffff;--toast-fg:#21304a;--toast-border:#d7e3f5;--toast-dot:#22c55e;--r-toast:8px;--shadow-card:0 6px 16px rgba(50,80,140,.12)"><span class="ico"></span>更新完成，共 214 个文件</div>
+        <div class="citem">进度条</div>
+        <div class="cf-progress" style="--track-bg:#e4ecf8"><i style="background:#2e5fe8"></i></div><div class="cf-label">62% · 48.2 MB/s · 剩余 01:12</div>
+      </div>
+    </div>
+
+  </div>
+  <p class="sub" style="margin-top:18px">
+    说明：本稿为 Q5 决策演示的<b>概念稿</b>，结构与真实界面 1:1（1300×754），视觉为手绘近似而非像素级还原；壁纸以 CSS 渐变模拟（真实产品使用 Assets/launcher-background.png）；字体使用系统栈，未内嵌。图中受试元素：底栏玻璃/浮动形态（Q12 表现级自由度的预览）、accent 来源（M3 为壁纸动态色、c 为品牌暖金、b/d 为固定蓝）。
+  </p>
+</section>
+
+</body>
+</html>
