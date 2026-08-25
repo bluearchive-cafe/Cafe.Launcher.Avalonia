@@ -120,12 +120,14 @@
 - 按钮四型 M3 映射：`primary-action`→filled；`flat-action`→outlined（语境需要时可 tonal）；`text-link`→text；`danger-action`→error-filled。共享模板 `LauncherBorderButtonTemplate` 保留。
 - 新组件（Select、Chip、分页、滑块等）以 **ControlTheme + 新命名** 落地，token 走 `Launcher.Component.*`。
 - **状态矩阵**（画廊展示 + 走查清单共用）：normal / hover / pressed / disabled / focus-visible / invalid × 各组件；状态层按 `StateLayer.*` 不透明度。
+- **P2 组件执行决策**（详见 ADR）：四型规格 = ADR-004（值不动、语言统一）；批次 A→B→C = ADR-008；画廊矩阵范围 3×6 = ADR-007；状态层 Opacity 8/12/16/24% 见 `Launcher.StateLayer.*`。
 - 例外：诊断面板与日志查看器列表控件维持 Fluent 基础模板，仅 token 兼容（Q3/Q21 例外声明）。
 
 ## 5. 表面与布局（Q12/Q18）
 
 - 单窗口 + 覆盖层：Z 序 = 主内容 → 设置 100 → 对话框 200 → 向导 500 → Toast 1000，**不动**。
 - 功能分区（Shell / GameOperations / Settings / SetupWizard / Diagnostics / ResourcePanel）与"单窗口内选分类"模型不变；表现级布局自由（如设置页留白、卡片形态）。
+- **设置页重设计蓝图（P3 表面执行；** [ADR-013](adr/ADR-013-设置页重设计方向.md) **+ M3 审核定稿）**：标题栏拆分（「设置」并入导航列顶部 header；关闭 ✕ 并入内容区标题行右端）；导航列 = SecondaryContainer 激活填充 + leading icon（Material Symbols）+ 标签，无指示条；内容区 = 变体 B 纯列表 + 组间空档 + 行间 inset hairline（以 `Color.Card.Border` 为分隔色，不新增 token）；覆盖层 `Radius.Lg`(16) + `Elevation.Shadow.Lg`；控件统一 `Field` 形态。**修正清单（随 P2/P3 落地）**：`Field.Border` 双档对比度（浅 `#7E93AC`/深 `#5B7190`，≥3:1）、hairline inset 规则、抽屉 leading icons。
 - **底栏形态**：**Q18 已仲裁（2026-08-25，prototype/bottom-bar 双原型）→ M3 贴边**（浮动脉胶囊在浅色壁纸 scrim 下对比度仅 ≈4.8:1 落在 4.5 线边缘、且安装态高度自适应需额外验证；贴边实底对比度恒定 ≥7:1、三态天然一致）。P3 落地；浮动胶囊方案保留于原型分支备查。
 
 ## 6. 主题与壁纸
@@ -170,7 +172,7 @@
 
 - 位置：Debug 构建 `IsDebugFeaturesEnabled` 可见（与现有调试面板同门），`Views/` 新增 `DesignGallery.axaml`。
 - **M4 状态（已实现）**：`Views/DesignGalleryOverlay.axaml` + `ViewModels/DesignGalleryViewModel.cs`（Debug 面板「打开设计画廊」按钮进入，`dialog-overlay` 层，ZIndex 200，关闭同调试面板）；数据源 = 运行时枚举 `/Application.Resources` 中全部 `Launcher.*` 键 + `DesignTokenGrouping` 按 §3.2 十二家族分组（键段解析，零漂移；无法归类的键进「Other」），显示当前主题变体值（`TryGetResource` 默认变体）；色板 swatch + 键名 + 值文本；本地化标题/分组名（4 语言，`designGroup*` 键族）；`UiStyleContractTests` 已将画廊纳入 ViewFiles 规则扫描。P2 扩展点：组件状态矩阵 + 底栏双原型对比区（Q18 仲裁）。
-- 内容：P1 = token 总表（按 §3.2 家族分组：色板 swatch、字阶、间距/圆角/动效表）；P2 = 组件状态矩阵 + 底栏双原型对比区（Q18 仲裁）；组件状态矩阵同时是走查清单的实物载体。
+- 内容：P1 = token 总表（按 §3.2 家族分组：色板 swatch、字阶、间距/圆角/动效表）；P2 = 组件状态矩阵（3 组件 × 6 态，ADR-007）与底栏对比区（Q18 已仲裁 M3 贴边，ADR-012——矩阵区不再需要双原型对比）；组件状态矩阵同时是走查清单的实物载体。
 - 画廊文案走本地化契约（resx 4 语言）。
 
 ## 10. 验收与流程（Q10）
