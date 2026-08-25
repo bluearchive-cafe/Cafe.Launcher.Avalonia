@@ -37,7 +37,7 @@ public sealed partial class UiStyleContractTests
                 element.Name.LocalName == "Button"
                 && element.Attribute("Command")?.Value == "{Binding ResourcePanel.OpenResourcePanelCommand}");
         Assert.Equal(
-            "Web",
+            "ClipboardText",
             resourcePanelButton.Descendants().Single(element => element.Name.LocalName == "MaterialIcon").Attribute("Kind")?.Value);
         AssertSettingRowIcon(downloadNetworkSettings, "{Binding Shell.I18n[downloadSource]}", "Web");
 

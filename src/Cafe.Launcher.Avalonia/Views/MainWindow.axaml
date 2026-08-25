@@ -54,7 +54,7 @@
                     </Button>
                     <Button Classes="chrome" Command="{Binding ResourcePanel.OpenResourcePanelCommand}" ToolTip.Tip="{Binding Shell.I18n[resourcePanel]}"
                             AutomationProperties.Name="{Binding Shell.I18n[resourcePanel]}">
-                        <materialIcons:MaterialIcon Kind="Web" Width="{StaticResource LauncherIconMd}" Height="{StaticResource LauncherIconMd}" Foreground="{DynamicResource LauncherOnChromeBrush}"/>
+                        <materialIcons:MaterialIcon Kind="ClipboardText" Width="{StaticResource LauncherIconMd}" Height="{StaticResource LauncherIconMd}" Foreground="{DynamicResource LauncherOnChromeBrush}"/>
                     </Button>
                     <Button Classes="chrome settings" Command="{Binding WindowChrome.ShowSettingsCommand}" ToolTip.Tip="{Binding Shell.I18n[settings]}"
                             AutomationProperties.Name="{Binding Shell.I18n[settings]}">
