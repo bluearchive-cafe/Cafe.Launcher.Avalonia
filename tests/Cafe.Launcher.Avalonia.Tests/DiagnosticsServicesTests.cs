@@ -101,6 +101,38 @@ public sealed class DiagnosticsServicesTests : IDisposable
     }
 
     [Fact]
+    public void RunSession_WhenActionReturns_WritesSessionStartAndEnd()
+    {
+        using var logger = new UnifiedLogger(tempDir);
+        var ran = false;
+
+        Program.RunSession(logger, () => ran = true);
+
+        Assert.True(ran);
+        logger.Dispose();
+        var text = File.ReadAllText(logger.LogFilePath);
+        Assert.Contains("Session started", text, StringComparison.Ordinal);
+        Assert.Contains("Session ended", text, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public void RunSession_WhenActionThrows_LogsCrashAndRethrows()
+    {
+        using var logger = new UnifiedLogger(tempDir);
+
+        var exception = Assert.Throws<InvalidOperationException>(
+            () => Program.RunSession(logger, () => throw new InvalidOperationException("fatal")));
+
+        Assert.Equal("fatal", exception.Message);
+        logger.Dispose();
+        var text = File.ReadAllText(logger.LogFilePath);
+        Assert.Contains("Session started", text, StringComparison.Ordinal);
+        Assert.DoesNotContain("Session ended", text, StringComparison.Ordinal);
+        Assert.Contains("[Main]", text, StringComparison.Ordinal);
+        Assert.Contains("fatal", text, StringComparison.Ordinal);
+    }
+
+    [Fact]
     public void LogSyncSeverityOverload_DoesNotThrow()
     {
         // LogSync uses a Volatile-read static reference. This at minimum verifies the
