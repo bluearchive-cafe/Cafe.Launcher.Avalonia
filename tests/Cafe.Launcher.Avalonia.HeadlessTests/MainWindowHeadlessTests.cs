@@ -1966,6 +1966,27 @@ public sealed class MainWindowHeadlessTests
             .ToArray();
     }
 
+    [AvaloniaFact]
+    public void DesignGallery_WhenOpened_EnumeratesTokenGroupsFromResources()
+    {
+        using var context = CreateContext();
+        context.Window.Show();
+
+        context.ViewModel.Gallery.OpenCommand.Execute(null);
+        Dispatcher.UIThread.RunJobs();
+
+        Assert.True(context.ViewModel.Gallery.IsVisible);
+        Assert.True(context.ViewModel.Gallery.Groups.Count >= 12, $"Expected 12+ families, got {context.ViewModel.Gallery.Groups.Count}.");
+        var totalItems = context.ViewModel.Gallery.Groups.Sum(group => group.Items.Count);
+        Assert.True(totalItems >= 130, $"Expected 130+ tokens, got {totalItems}.");
+        Assert.Contains(context.ViewModel.Gallery.Groups, group => group.Family == "Color");
+        Assert.Contains(context.ViewModel.Gallery.Groups, group => group.Family == "Component");
+
+        context.ViewModel.Gallery.CloseCommand.Execute(null);
+        Dispatcher.UIThread.RunJobs();
+        Assert.False(context.ViewModel.Gallery.IsVisible);
+    }
+
     private static TestContext CreateContext(IGameOperationJourneyFactory? journeyFactory = null)
     {
         var tempDir = Path.Combine(Path.GetTempPath(), Guid.NewGuid().ToString("N"));

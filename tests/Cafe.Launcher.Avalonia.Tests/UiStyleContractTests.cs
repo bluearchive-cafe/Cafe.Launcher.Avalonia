@@ -790,6 +790,7 @@ public sealed partial class UiStyleContractTests
     [
         "Views/MainWindow.axaml",
         "Views/MainWindowSettingsOverlay.axaml",
+        "Views/DesignGalleryOverlay.axaml",
         "Views/SettingsGeneralSection.axaml",
         "Views/SettingsGameSection.axaml",
         "Views/SettingsDownloadNetworkSection.axaml",
