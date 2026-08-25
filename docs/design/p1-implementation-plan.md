@@ -56,6 +56,8 @@
 
 ## M5 — 黄金截图基建（1–2 天，小集）
 
+> **状态：✅ 已执行（2026-08-25）**。headless 平台切换 Skia（`UseHeadlessDrawing=false` + `UseSkia()`）；`GoldenScreenshot` 基建（`RenderTargetBitmap` 捕获、平铺基线、每通道容差 8/255 + ≤1% 失配阈值、`CAFE_GOLDEN_UPDATE=1` 重生成、缺失基线明确报错）；5 个基线（壳默认/进度/设置/确认对话框/Toast）已生成入库；真实字体度量校准：Tab 页头缺口断言语义化（≥3px，注释记录 Skia 与旧无头绘制的 ±1px 差异）；README 记录 CI 字体稳定性与重生成流程。门禁：0 警告、单测 1105 通过、headless 105 通过（含基线比对）。**M5 门禁通过 — P1 全部里程碑完成**。
+
 - `tests/Cafe.Launcher.Avalonia.HeadlessTests/`：`AvaloniaHeadlessPlatformOptions` 启用 Skia 渲染（`UseHeadlessDrawing=false`）+ `RenderTargetBitmap` 捕获；基线 3–5 个（壳默认、进度态、设置覆盖层、确认对话框、Toast）√ 与基线平铺存储 + 阈值 diff；字体稳定性：固定测试呈现字体、CI（windows-latest）字体集合风险记录进 README 注释。
 - 门禁：基线测试本地绿；CI 跑同环境验证。
 
