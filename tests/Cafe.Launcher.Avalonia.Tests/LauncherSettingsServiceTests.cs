@@ -31,6 +31,54 @@ public sealed class LauncherSettingsServiceTests : IDisposable
     }
 
     [Fact]
+    public void LauncherSettings_DynamicColorFields_DefaultToSpecValues()
+    {
+        var settings = new LauncherSettings();
+
+        Assert.Equal(ThemeColorExtractionAlgorithms.CelebiScore, settings.ThemeColorExtractionAlgorithm);
+        Assert.Equal(ThemeColorVariants.TonalSpot, settings.ThemeColorVariant);
+        Assert.Equal(NeutralColorStrategies.BrandBlue, settings.NeutralColorStrategy);
+    }
+
+    [Fact]
+    public async Task DynamicColorFields_RoundTripAndInvalidValuesFallbackToDefaults()
+    {
+        var service = new LauncherSettingsService(settingsPath);
+        var settings = new LauncherSettings
+        {
+            ThemeColorExtractionAlgorithm = ThemeColorExtractionAlgorithms.Wu,
+            ThemeColorVariant = ThemeColorVariants.Expressive,
+            NeutralColorStrategy = NeutralColorStrategies.SeedFollowing
+        };
+
+        await service.SaveAsync(settings);
+        var readBack = await service.ReadAsync();
+        Assert.Equal(ThemeColorExtractionAlgorithms.Wu, readBack.ThemeColorExtractionAlgorithm);
+        Assert.Equal(ThemeColorVariants.Expressive, readBack.ThemeColorVariant);
+        Assert.Equal(NeutralColorStrategies.SeedFollowing, readBack.NeutralColorStrategy);
+
+        await File.WriteAllTextAsync(
+            settingsPath,
+            """{"themeColorExtractionAlgorithm":"bogus","themeColorVariant":"bogus","neutralColorStrategy":"bogus"}""");
+        var normalized = await service.ReadAsync();
+        Assert.Equal(ThemeColorExtractionAlgorithms.CelebiScore, normalized.ThemeColorExtractionAlgorithm);
+        Assert.Equal(ThemeColorVariants.TonalSpot, normalized.ThemeColorVariant);
+        Assert.Equal(NeutralColorStrategies.BrandBlue, normalized.NeutralColorStrategy);
+    }
+
+    [Fact]
+    public async Task ReadAsync_WhenOldJsonMissingDynamicColorFields_AppliesDefaults()
+    {
+        await File.WriteAllTextAsync(settingsPath, """{"language":"ja"}""");
+
+        var settings = await new LauncherSettingsService(settingsPath).ReadAsync();
+
+        Assert.Equal(ThemeColorExtractionAlgorithms.CelebiScore, settings.ThemeColorExtractionAlgorithm);
+        Assert.Equal(ThemeColorVariants.TonalSpot, settings.ThemeColorVariant);
+        Assert.Equal(NeutralColorStrategies.BrandBlue, settings.NeutralColorStrategy);
+    }
+
+    [Fact]
     public async Task MotionMode_RoundTripsAndInvalidValueFallsBackToSystem()
     {
         var service = new LauncherSettingsService(settingsPath);
@@ -275,6 +323,9 @@ public sealed class LauncherSettingsServiceTests : IDisposable
             "themeMode",
             "motionMode",
             "themeColorMode",
+            "themeColorExtractionAlgorithm",
+            "themeColorVariant",
+            "neutralColorStrategy",
             "customThemeColor",
             "themeColorPalette",
             "selectedThemeColorPaletteIndex",
