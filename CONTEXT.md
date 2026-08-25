@@ -62,7 +62,9 @@ _Avoid_: 部分安装状态
 6. **设置页布局范围** → [ADR-006](docs/design/adr/ADR-006-设置页布局范围.md)：仅组件规格统一，骨架不动。
 7. **画廊状态矩阵范围** → [ADR-007](docs/design/adr/ADR-007-画廊矩阵范围.md)：3 组件 × 6 态。
 
-### ✅ 已定案（Round 2，2026-08-25）
+### ✅ 已定案（Round 2 + Q18 仲裁 + 设置页方向，2026-08-25）
+
+13. **设置页重设计方向** → [ADR-013](docs/design/adr/ADR-013-设置页重设计方向.md)：**变体 B（纯列表 + hairline 分隔线）**；导航选中态 = SecondaryContainer 底 + OnSecondaryContainer 字 + 3px Primary 指示条；设置页双主题原型进行中（`prototype/settings-page`）。
 
 8. **组件批次映射** → [ADR-008](docs/design/adr/ADR-008-组件批次映射.md)：A=模板+四型按钮，B=现存组件对齐，C=新组件+矩阵+清单。
 9. **设置三项 UI + 算法落地** → [ADR-009](docs/design/adr/ADR-009-设置三项UI与算法落地.md)：3×SettingRow(ComboBox)，次序算法→变体→中性；P2 实现 Celebi+Score 提取器接入。
@@ -72,8 +74,8 @@ _Avoid_: 部分安装状态
 
 ### 🔓 仍开放
 
-- **底栏形态本身**（Q18）：原型分支仲裁中（标准 = ADR-001）。
-- **spec §4/§5/§9 决策回写 + P2 计划更新**：全部 P2 决策定案后统一执行。
+- **设置页原型评审**（`prototype/settings-page`，2 主题 × 变体 B + 卡片分组参考条）→ 通过后折入 spec §5。
+- **spec §4/§5/§9 决策回写 + P2 计划更新**：全部 P2 决策定案后统一执行（Q18 已单独回写 §5）。
 - **P2 执行**：A→B→C 批次实施（每批门禁：契约/基线/对比度/零警告）。
 
 ## ADR 索引
@@ -91,5 +93,6 @@ _Avoid_: 部分安装状态
 | ADR-009 | 设置三项 UI + Celebi+Score 落地 | ✅ 已接受 |
 | ADR-010 | 中性色切换交互 | ✅ 已接受 |
 | ADR-011 | 字阶迁移随批次 | ✅ 已接受 |
-| ADR-012 | 底栏双原型启动 | ✅ 已接受 |
+| ADR-012 | 底栏双原型启动（已仲裁 → M3 贴边） | ✅ 已接受 |
+| ADR-013 | 设置页重设计方向（变体 B + SecondaryContainer 导航选中） | ✅ 已接受 |
 
