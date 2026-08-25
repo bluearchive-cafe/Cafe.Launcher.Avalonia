@@ -169,6 +169,7 @@
 ## 9. 设计画廊（Q11）
 
 - 位置：Debug 构建 `IsDebugFeaturesEnabled` 可见（与现有调试面板同门），`Views/` 新增 `DesignGallery.axaml`。
+- **M4 状态（已实现）**：`Views/DesignGalleryOverlay.axaml` + `ViewModels/DesignGalleryViewModel.cs`（Debug 面板「打开设计画廊」按钮进入，`dialog-overlay` 层，ZIndex 200，关闭同调试面板）；数据源 = 运行时枚举 `/Application.Resources` 中全部 `Launcher.*` 键 + `DesignTokenGrouping` 按 §3.2 十二家族分组（键段解析，零漂移；无法归类的键进「Other」），显示当前主题变体值（`TryGetResource` 默认变体）；色板 swatch + 键名 + 值文本；本地化标题/分组名（4 语言，`designGroup*` 键族）；`UiStyleContractTests` 已将画廊纳入 ViewFiles 规则扫描。P2 扩展点：组件状态矩阵 + 底栏双原型对比区（Q18 仲裁）。
 - 内容：P1 = token 总表（按 §3.2 家族分组：色板 swatch、字阶、间距/圆角/动效表）；P2 = 组件状态矩阵 + 底栏双原型对比区（Q18 仲裁）；组件状态矩阵同时是走查清单的实物载体。
 - 画廊文案走本地化契约（resx 4 语言）。
 

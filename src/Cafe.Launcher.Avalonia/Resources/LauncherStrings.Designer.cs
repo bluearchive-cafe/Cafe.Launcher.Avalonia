@@ -208,6 +208,36 @@ internal static class LauncherStrings
 
     internal static string DeletingManifestFiles => GetRequiredString("deletingManifestFiles");
 
+    internal static string DesignGalleryHint => GetRequiredString("designGalleryHint");
+
+    internal static string DesignGalleryTitle => GetRequiredString("designGalleryTitle");
+
+    internal static string DesignGroupColor => GetRequiredString("designGroupColor");
+
+    internal static string DesignGroupComponent => GetRequiredString("designGroupComponent");
+
+    internal static string DesignGroupControl => GetRequiredString("designGroupControl");
+
+    internal static string DesignGroupElevation => GetRequiredString("designGroupElevation");
+
+    internal static string DesignGroupIcon => GetRequiredString("designGroupIcon");
+
+    internal static string DesignGroupLayout => GetRequiredString("designGroupLayout");
+
+    internal static string DesignGroupMotion => GetRequiredString("designGroupMotion");
+
+    internal static string DesignGroupOther => GetRequiredString("designGroupOther");
+
+    internal static string DesignGroupRadius => GetRequiredString("designGroupRadius");
+
+    internal static string DesignGroupSpacing => GetRequiredString("designGroupSpacing");
+
+    internal static string DesignGroupStateLayer => GetRequiredString("designGroupStateLayer");
+
+    internal static string DesignGroupText => GetRequiredString("designGroupText");
+
+    internal static string DesignGroupTypography => GetRequiredString("designGroupTypography");
+
     internal static string DiscardChanges => GetRequiredString("discardChanges");
 
     internal static string DiskSpace => GetRequiredString("diskSpace");
@@ -491,6 +521,8 @@ internal static class LauncherStrings
     internal static string OpenColorPalette => GetRequiredString("openColorPalette");
 
     internal static string OpenDataDirectory => GetRequiredString("openDataDirectory");
+
+    internal static string OpenDesignGallery => GetRequiredString("openDesignGallery");
 
     internal static string OperationStopped => GetRequiredString("operationStopped");
 

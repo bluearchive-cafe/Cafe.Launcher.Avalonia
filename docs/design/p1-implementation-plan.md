@@ -48,6 +48,8 @@
 
 ## M4 — 画廊 token 表（1–2 天）
 
+> **状态：✅ 已执行（2026-08-25）**。`DesignGalleryOverlay` + `DesignGalleryViewModel` + `DesignTokenGrouping`（运行时资源枚举 + 键段分类，零漂移）；Debug 面板入口 + `dialog-overlay` 层接入；16 个本地化键（4 语言 + Designer 再生成）；契约测试纳入画廊 ViewFiles；headless 开合冒烟（≥12 族、≥130 token）。门禁：0 警告、单测 1105 通过、headless 100 通过、本地化契约绿。**M4 门禁通过**。
+
 - `Views/DesignGallery.axaml`（+ ViewModel）：按家族分组展示 token（色板 widget、字阶、间距/圆角/动效/elevation 表）；数据源从 `/Application.Resources` 枚举 + 分类元数据（避免手工同步漂移）。
 - 接入：`IsDebugFeaturesEnabled` 门（与调试面板同样式），Debug 构建可见；resx 4 语言（画廊标题/分组名）+ `AutomationProperties.Name`；`UiStyleContractTests` 若覆盖画廊 XAML 则补。
 - 门禁：Debug 构建画廊可打开、localization 契约绿。
