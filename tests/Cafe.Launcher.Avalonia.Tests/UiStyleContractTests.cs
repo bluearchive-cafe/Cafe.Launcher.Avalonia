@@ -422,7 +422,7 @@ public sealed partial class UiStyleContractTests
     }
 
     [Fact]
-    public void MainWindow_RemoteContent_UsesIndependentCardsWithNewsOnlyVerticalScroll()
+    public void MainWindow_RemoteContent_UsesIndependentCardsWithOuterVerticalScroll()
     {
         var document = XDocument.Load(ProjectFile("Views/MainWindow.axaml"));
         var remoteSurface = document
@@ -433,7 +433,7 @@ public sealed partial class UiStyleContractTests
         var layoutHost = remoteSurface
             .Descendants()
             .Single(element =>
-                element.Name.LocalName == "Border"
+                element.Name.LocalName == "ScrollViewer"
                 && HasClass(element, "remote-content-layout-host"));
         var cards = layoutHost
             .Descendants()
@@ -446,10 +446,11 @@ public sealed partial class UiStyleContractTests
             attribute.Name.LocalName == "Classes"
             && attribute.Value.Split(' ', StringSplitOptions.RemoveEmptyEntries)
                 .Contains("surface", StringComparer.Ordinal));
-        Assert.Equal(3, cards.Length);
+        Assert.Equal(2, cards.Length);
         Assert.All(
-            new[] { "notice-card", "news-card", "social-media-card" },
+            new[] { "notice-card", "news-card" },
             cardClass => Assert.Single(cards, card => HasClass(card, cardClass)));
+        Assert.DoesNotContain(cards, card => HasClass(card, "social-media-card"));
         var bannerStage = layoutHost
             .Descendants()
             .Single(element =>
@@ -465,11 +466,14 @@ public sealed partial class UiStyleContractTests
             .Descendants()
             .Single(element => HasClass(element, "news-viewport"));
         var newsCard = cards.Single(card => HasClass(card, "news-card"));
-        Assert.All(
-            layoutHost
-                .Descendants()
-                .Where(element => element.Name.LocalName == "ScrollViewer"),
-            scrollViewer => Assert.Contains(newsCard.Descendants(), element => element == scrollViewer));
+        var nestedScrollViewers = layoutHost
+            .Descendants()
+            .Where(element => element.Name.LocalName == "ScrollViewer")
+            .ToArray();
+        Assert.Equal(2, nestedScrollViewers.Length);
+        Assert.Single(nestedScrollViewers, element => HasClass(element, "news-viewport"));
+        Assert.Single(nestedScrollViewers, element => element.Attribute("Classes") is null);
+        Assert.Contains(newsCard.Descendants(), element => element == nestedScrollViewers.Single(e => HasClass(e, "news-viewport")));
         Assert.Equal("Auto", newsViewport.Attribute("VerticalScrollBarVisibility")?.Value);
         Assert.Equal("Disabled", newsViewport.Attribute("HorizontalScrollBarVisibility")?.Value);
 
@@ -478,6 +482,10 @@ public sealed partial class UiStyleContractTests
         Assert.Equal("{DynamicResource LauncherPanelBackgroundBrush}", cardStyle["Background"]);
         Assert.Equal("{StaticResource LauncherRadiusSm}", cardStyle["CornerRadius"]);
         Assert.Equal("{StaticResource LauncherThicknessMd}", cardStyle["Padding"]);
+        var layoutHostStyle = GetStyleSetters(styles, "ScrollViewer.remote-content-layout-host");
+        Assert.Equal("{StaticResource LauncherThicknessMd}", layoutHostStyle["Padding"]);
+        Assert.Equal("Auto", layoutHostStyle["VerticalScrollBarVisibility"]);
+        Assert.Equal("Disabled", layoutHostStyle["HorizontalScrollBarVisibility"]);
     }
 
     [Fact]
@@ -631,19 +639,21 @@ public sealed partial class UiStyleContractTests
         Assert.DoesNotContain(newsCard.Descendants(), element =>
             element.Name.LocalName == "Button"
             && HasClass(element, "news-tab"));
-        Assert.Equal("{StaticResource LauncherNewsViewportHeight}", viewport.Attribute("Height")?.Value);
+        Assert.Null(viewport.Attribute("Height"));
+        Assert.Equal("{StaticResource LauncherNewsViewportHeight}", viewport.Attribute("MaxHeight")?.Value);
         Assert.Equal("Auto", viewport.Attribute("VerticalScrollBarVisibility")?.Value);
         Assert.Equal("Disabled", viewport.Attribute("HorizontalScrollBarVisibility")?.Value);
         Assert.Equal("StackPanel", itemsPanel.Name.LocalName);
         Assert.Equal("{StaticResource LauncherSpacingSm}", itemsPanel.Attribute("Spacing")?.Value);
-        Assert.Equal("{StaticResource LauncherNewsRowHeight}", rowButton.Attribute("Height")?.Value);
+        Assert.Null(rowButton.Attribute("Height"));
+        Assert.Equal("{StaticResource LauncherControlHeightSetting}", rowButton.Attribute("MinHeight")?.Value);
         Assert.True(HasClass(rowButton, "content-link"));
         Assert.True(HasClass(rowBorder, "content-row"));
         Assert.True(HasClass(rowBorder, "news-content-row"));
-        Assert.Equal("2", title.Attribute("MaxLines")?.Value);
-        Assert.Equal("Wrap", title.Attribute("TextWrapping")?.Value);
+        Assert.Equal("1", title.Attribute("MaxLines")?.Value);
+        Assert.Equal("NoWrap", title.Attribute("TextWrapping")?.Value);
         Assert.Equal("CharacterEllipsis", title.Attribute("TextTrimming")?.Value);
-        Assert.Equal("{Binding Title}", title.Attribute("ToolTip.Tip")?.Value);
+        Assert.Equal("{Binding Title}", rowButton.Attribute("ToolTip.Tip")?.Value);
         Assert.Equal("Right", date.Attribute("HorizontalAlignment")?.Value);
         Assert.Equal("Right", date.Attribute("TextAlignment")?.Value);
 
@@ -2192,7 +2202,9 @@ public sealed partial class UiStyleContractTests
         var remoteSurface = document.Descendants().Single(element =>
             element.Name.LocalName == "Border" && HasClass(element, "remote-surface"));
         var panel = remoteSurface.Elements().Single(element => element.Name.LocalName == "Panel");
-        Assert.Equal(2, panel.Elements().Count(element => element.Name.LocalName == "Border"));
+        Assert.Single(panel.Elements(), element =>
+            element.Name.LocalName == "ScrollViewer" && HasClass(element, "remote-content-layout-host"));
+        Assert.Single(panel.Elements(), element => element.Name.LocalName == "Border");
         Assert.Single(panel.Elements(), element => element.Name.LocalName == "LoadingOverlay");
     }
 
@@ -2900,6 +2912,41 @@ public sealed partial class UiStyleContractTests
         var disabled = GetStyleSetters(styles, "Button.social-chip:disabled");
         Assert.Equal("1", disabled["Opacity"]);
         Assert.Equal("{DynamicResource LauncherButtonBorderBrush}", disabled["BorderBrush"]);
+    }
+
+    [Fact]
+    public void MainWindow_SocialActions_AddTopRightVerticalIconButtonsAndUseRemoteContentVisibilitySetting()
+    {
+        var document = XDocument.Load(ProjectFile("Views/MainWindow.axaml"));
+        var actions = document.Descendants().Single(element =>
+            element.Name.LocalName == "ItemsControl" && HasClass(element, "social-actions"));
+        var actionButton = actions.Descendants().Single(element =>
+            element.Name.LocalName == "Button" && HasClass(element, "social-action"));
+        var layoutPanel = document.Descendants().Single(element =>
+            element.Name.LocalName == "Panel"
+            && element.Elements().Any(child => child.Name.LocalName == "Border" && HasClass(child, "remote-surface"))
+            && element.Elements().Any(child => child.Name.LocalName == "ItemsControl" && HasClass(child, "social-actions")));
+
+        Assert.Contains(layoutPanel.Elements(), element =>
+            element.Name.LocalName == "Border" && HasClass(element, "remote-surface"));
+        Assert.Equal("{Binding RemoteContent.HasRemoteContent}", actions.Attribute("IsVisible")?.Value);
+        Assert.Equal("{Binding RemoteContent.SocialMediaItems}", actions.Attribute("ItemsSource")?.Value);
+        Assert.Equal("Vertical", actions.Descendants().Single(element => element.Name.LocalName == "StackPanel").Attribute("Orientation")?.Value);
+        Assert.True(HasClass(actionButton, "social-chip"));
+        Assert.Equal("{Binding Title}", actionButton.Attribute("ToolTip.Tip")?.Value);
+        Assert.Equal("{Binding Title}", actionButton.Attribute("AutomationProperties.Name")?.Value);
+        Assert.DoesNotContain(actionButton.Descendants(), element => element.Name.LocalName == "TextBlock");
+
+        var mainStyles = XDocument.Load(ProjectFile("Views/MainWindow.Styles.axaml"));
+        var remoteStyles = XDocument.Load(ProjectFile("Views/Styles/RemoteContent.axaml"));
+        var actionsStyle = GetStyleSetters(mainStyles, "ItemsControl.social-actions");
+        var actionButtonStyle = GetStyleSetters(remoteStyles, "Button.social-chip.social-action");
+        Assert.Equal("Right", actionsStyle["HorizontalAlignment"]);
+        Assert.Equal("Top", actionsStyle["VerticalAlignment"]);
+        Assert.Equal("{StaticResource LauncherSpacingXlThickness}", actionsStyle["Margin"]);
+        Assert.Equal("{StaticResource LauncherControlHeightSetting}", actionButtonStyle["Width"]);
+        Assert.Equal("{StaticResource LauncherControlHeightSetting}", actionButtonStyle["Height"]);
+        Assert.Equal("{StaticResource LauncherThicknessNone}", actionButtonStyle["Padding"]);
     }
 
     [Fact]

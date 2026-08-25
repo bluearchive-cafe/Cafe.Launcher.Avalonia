@@ -179,6 +179,77 @@ public sealed class MainWindowHeadlessTests
     }
 
     [AvaloniaFact]
+    public void MainWindow_SocialActions_AddTopRightVerticalButtonsInSourceOrder()
+    {
+        using var context = CreateContext();
+        context.ViewModel.RemoteContent.Apply(
+            new LauncherRemoteState
+            {
+                SocialMediaResource = new SocialMediaResourceResponse
+                {
+                    SocialMediaResourceOpen = true,
+                    SocialMediaResourceList =
+                    [
+                        new SocialMediaResourceItem
+                        {
+                            SocialMediaChannel = "YouTube",
+                            JumpUrl = "https://youtube.example.invalid"
+                        },
+                        new SocialMediaResourceItem
+                        {
+                            SocialMediaChannel = "Discord",
+                            JumpUrl = "https://discord.example.invalid"
+                        }
+                    ]
+                }
+            },
+            new LauncherSettings { ShowRemoteContentCard = true },
+            CancellationToken.None);
+        context.Window.Show();
+        Dispatcher.UIThread.RunJobs();
+
+        var actionButtons = context.Window
+            .GetVisualDescendants()
+            .OfType<Button>()
+            .Where(control => control.Classes.Contains("social-action"))
+            .ToArray();
+
+        Assert.Equal(2, actionButtons.Length);
+        Assert.Equal(["YouTube", "Discord"], actionButtons.Select(button => ((RemoteContentItem)button.DataContext!).Title));
+        Assert.DoesNotContain(
+            context.Window.GetVisualDescendants().OfType<Border>(),
+            control => control.Classes.Contains("social-media-card"));
+        Assert.All(actionButtons, button =>
+        {
+            Assert.Equal(36, button.Bounds.Width);
+            Assert.Equal(36, button.Bounds.Height);
+            AssertControlInsideWindow(button, context.Window);
+            Assert.True(AutomationProperties.GetName(button) is not null);
+        });
+
+        var firstTop = actionButtons[0].TranslatePoint(default, context.Window);
+        var secondTop = actionButtons[1].TranslatePoint(default, context.Window);
+        Assert.NotNull(firstTop);
+        Assert.NotNull(secondTop);
+        Assert.True(firstTop.Value.X > context.Window.ClientSize.Width / 2);
+        Assert.True(firstTop.Value.Y < secondTop.Value.Y);
+
+        var socialActions = context.Window
+            .GetVisualDescendants()
+            .OfType<ItemsControl>()
+            .Single(control => control.Classes.Contains("social-actions"));
+        Assert.True(socialActions.IsEffectivelyVisible);
+
+        context.ViewModel.RemoteContent.UpdateRemoteContentVisibility(false);
+        Dispatcher.UIThread.RunJobs();
+        Assert.False(socialActions.IsEffectivelyVisible);
+
+        context.ViewModel.RemoteContent.UpdateRemoteContentVisibility(true);
+        Dispatcher.UIThread.RunJobs();
+        Assert.True(socialActions.IsEffectivelyVisible);
+    }
+
+    [AvaloniaFact]
     public async Task Toast_WithActions_RendersTitlePrimaryFirstAndDisablesControlsWhileExecuting()
     {
         using var context = CreateContext();
@@ -728,7 +799,7 @@ public sealed class MainWindowHeadlessTests
     {
         using var context = CreateContext();
         const string longTitle =
-            "This deliberately long launcher news title must wrap onto exactly two visible lines without being clipped by the fixed-height clickable row";
+            "This deliberately long launcher news title must be truncated to one visible line without being clipped by the fixed-height clickable row";
         var rows = Enumerable.Range(1, 5)
             .Select(index => new NewsRowItem
             {
@@ -778,15 +849,16 @@ public sealed class MainWindowHeadlessTests
         Assert.Equal(5, context.ViewModel.RemoteContent.SelectedNewsCategory?.Items.Count);
         Assert.Equal(5, rowButtons.Length);
         Assert.Equal(184, viewport.Viewport.Height);
-        Assert.All(rowButtons, row => Assert.Equal(56, row.Bounds.Height));
+        Assert.All(rowButtons, row => Assert.Equal(36, row.Bounds.Height));
         Assert.True(viewport.Extent.Height > viewport.Viewport.Height);
+        Assert.Equal(longTitle, ToolTip.GetTip(rowButtons[0]));
 
         var longTitleText = rowButtons[0]
             .GetVisualDescendants()
             .OfType<TextBlock>()
             .Single(control => control.Text == longTitle);
         var longTitleTop = longTitleText.TranslatePoint(default, rowButtons[0]);
-        Assert.Equal(2, longTitleText.TextLayout.TextLines.Count);
+        Assert.Single(longTitleText.TextLayout.TextLines);
         Assert.True(longTitleText.TextLayout.Height <= longTitleText.Bounds.Height);
         Assert.NotNull(longTitleTop);
         Assert.True(longTitleTop.Value.Y >= 0);
@@ -798,6 +870,122 @@ public sealed class MainWindowHeadlessTests
         var lastRowTop = rowButtons[^1].TranslatePoint(default, viewport);
         Assert.NotNull(lastRowTop);
         Assert.InRange(lastRowTop.Value.Y, 0, viewport.Viewport.Height - rowButtons[^1].Bounds.Height);
+    }
+
+    [AvaloniaFact]
+    public void MainWindow_NewsList_WithThreeItems_SizesViewportToContent()
+    {
+        using var context = CreateContext();
+        var rows = Enumerable.Range(1, 3)
+            .Select(index => new NewsRowItem
+            {
+                Title = $"News item {index}",
+                Link = $"https://news.example.invalid/{index}",
+                PublishTime = 1_700_000_000_000 + index
+            })
+            .ToList();
+        context.ViewModel.RemoteContent.Apply(
+            new LauncherRemoteState
+            {
+                OperationsResource = new OperationsResourceResponse
+                {
+                    OperationsResourceOpen = true,
+                    NewsList = new NewsListEnvelope
+                    {
+                        Code = 0,
+                        Data = new NewsListData
+                        {
+                            News =
+                            [
+                                new NewsTypeItem
+                                {
+                                    TypeLabel = "News",
+                                    Rows = rows
+                                }
+                            ]
+                        }
+                    }
+                }
+            },
+            new LauncherSettings { ShowRemoteContentCard = true },
+            CancellationToken.None);
+        context.Window.Show();
+        Dispatcher.UIThread.RunJobs();
+
+        var viewport = context.Window
+            .GetVisualDescendants()
+            .OfType<ScrollViewer>()
+            .Single(control => control.Classes.Contains("news-viewport"));
+        var rowButtons = viewport
+            .GetVisualDescendants()
+            .OfType<Button>()
+            .Where(control => control.Classes.Contains("news-row"))
+            .ToArray();
+
+        Assert.Equal(3, rowButtons.Length);
+        Assert.All(rowButtons, row => Assert.Equal(36, row.Bounds.Height));
+        Assert.Equal(124, viewport.Viewport.Height);
+        Assert.Equal(viewport.Viewport.Height, viewport.Extent.Height);
+    }
+
+    [AvaloniaFact]
+    public void MainWindow_RemoteContent_WithOverflow_ScrollsOuterTransparentContainer()
+    {
+        using var context = CreateContext();
+        context.ViewModel.RemoteContent.Apply(
+            new LauncherRemoteState
+            {
+                BaseConfig = new BaseConfigResponse
+                {
+                    NoticePopOpen = true,
+                    NoticeContent = new string('N', 500)
+                },
+                OperationsResource = new OperationsResourceResponse
+                {
+                    OperationsResourceOpen = true,
+                    OperationsBannerList =
+                    [
+                        new OperationsBannerItem
+                        {
+                            BannerImg = "",
+                            JumpUrl = "https://news.example.invalid/banner"
+                        }
+                    ],
+                    NewsList = new NewsListEnvelope
+                    {
+                        Code = 0,
+                        Data = new NewsListData
+                        {
+                            News =
+                            [
+                                new NewsTypeItem
+                                {
+                                    TypeLabel = "News",
+                                    Rows = Enumerable.Range(1, 3)
+                                        .Select(index => new NewsRowItem
+                                        {
+                                            Title = $"News item {index}",
+                                            Link = $"https://news.example.invalid/{index}",
+                                            PublishTime = 1_700_000_000_000 + index
+                                        })
+                                        .ToList()
+                                }
+                            ]
+                        }
+                    }
+                }
+            },
+            new LauncherSettings { ShowRemoteContentCard = true },
+            CancellationToken.None);
+        context.Window.Show();
+        Dispatcher.UIThread.RunJobs();
+
+        var layoutHost = context.Window
+            .GetVisualDescendants()
+            .OfType<ScrollViewer>()
+            .Single(control => control.Classes.Contains("remote-content-layout-host"));
+
+        Assert.True(layoutHost.Extent.Height > layoutHost.Viewport.Height);
     }
 
     [AvaloniaFact]

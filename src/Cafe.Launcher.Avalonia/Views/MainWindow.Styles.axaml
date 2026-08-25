@@ -394,6 +394,11 @@
         <Setter Property="MinHeight" Value="360"/>
         <Setter Property="MaxHeight" Value="480"/>
     </Style>
+    <Style Selector="ItemsControl.social-actions">
+        <Setter Property="HorizontalAlignment" Value="Right"/>
+        <Setter Property="VerticalAlignment" Value="Top"/>
+        <Setter Property="Margin" Value="{StaticResource LauncherSpacingXlThickness}"/>
+    </Style>
     <Style Selector="Border.remote-content-card">
         <Setter Property="Background" Value="{DynamicResource LauncherPanelBackgroundBrush}"/>
         <Setter Property="CornerRadius" Value="{StaticResource LauncherRadiusSm}"/>
@@ -423,8 +428,10 @@
     <Style Selector="UserControl.remote-content-loading-overlay">
         <Setter Property="VerticalAlignment" Value="Stretch"/>
     </Style>
-    <Style Selector="Border.remote-content-layout-host">
+    <Style Selector="ScrollViewer.remote-content-layout-host">
         <Setter Property="Padding" Value="{StaticResource LauncherThicknessMd}"/>
+        <Setter Property="HorizontalScrollBarVisibility" Value="Disabled"/>
+        <Setter Property="VerticalScrollBarVisibility" Value="Auto"/>
     </Style>
     <Style Selector="Border.remote-content-load-error">
         <Setter Property="Padding" Value="{StaticResource LauncherSpacingXlThickness}"/>

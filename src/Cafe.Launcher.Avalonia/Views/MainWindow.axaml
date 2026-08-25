@@ -72,11 +72,12 @@
             </Grid>
 
             <Grid Grid.Row="1" RowDefinitions="*,Auto">
-                <Border Classes="remote-surface"
-                        IsVisible="{Binding RemoteContent.IsPanelVisible}">
+                <Panel>
+                    <Border Classes="remote-surface"
+                            IsVisible="{Binding RemoteContent.IsPanelVisible}">
                     <Panel>
-                        <Border Classes="remote-content-layout-host">
-                            <StackPanel Spacing="{StaticResource LauncherSpacingXxl}">
+                        <ScrollViewer Classes="remote-content-layout-host">
+                            <StackPanel Spacing="{StaticResource LauncherSpacingLg}">
                             <Border IsVisible="{Binding RemoteContent.HasNotice}"
                                     Classes="remote-content-card notice-card">
                                 <StackPanel Spacing="{StaticResource LauncherSpacingXs}">
@@ -281,8 +282,8 @@
                                     </TabControl.ItemTemplate>
                                     <TabControl.ContentTemplate>
                                         <DataTemplate x:DataType="models:NewsCategory">
-                                            <ScrollViewer Classes="news-viewport"
-                                                          Height="{StaticResource LauncherNewsViewportHeight}"
+                                                    <ScrollViewer Classes="news-viewport"
+                                                          MaxHeight="{StaticResource LauncherNewsViewportHeight}"
                                                           HorizontalScrollBarVisibility="Disabled"
                                                           VerticalScrollBarVisibility="Auto">
                                                 <ItemsControl ItemsSource="{Binding Items}">
@@ -295,17 +296,17 @@
                                                         <DataTemplate x:DataType="models:RemoteContentItem">
                                                             <Button Classes="content-link news-row"
                                                                     Cursor="Hand"
-                                                                    Height="{StaticResource LauncherNewsRowHeight}"
+                                                                    MinHeight="{StaticResource LauncherControlHeightSetting}"
+                                                                    ToolTip.Tip="{Binding Title}"
                                                                     Command="{Binding #Root.((vm:MainWindowViewModel)DataContext).RemoteContent.OpenExternalUrlCommand}"
                                                                     CommandParameter="{Binding Url}">
                                                                 <Border Classes="content-row news-content-row">
                                                                     <Grid ColumnDefinitions="*,Auto" ColumnSpacing="{StaticResource LauncherSpacingLg}">
                                                                         <TextBlock Text="{Binding Title}"
                                                                                    Classes="value"
-                                                                                   MaxLines="2"
-                                                                                   TextWrapping="Wrap"
-                                                                                   TextTrimming="CharacterEllipsis"
-                                                                                   ToolTip.Tip="{Binding Title}"/>
+                                                                                   MaxLines="1"
+                                                                                   TextWrapping="NoWrap"
+                                                                                   TextTrimming="CharacterEllipsis"/>
                                                                         <TextBlock Grid.Column="1"
                                                                                    Text="{Binding Subtitle}"
                                                                                    HorizontalAlignment="Right"
@@ -324,34 +325,8 @@
                                 </TabControl>
                             </Border>
 
-                            <Border Classes="remote-content-card social-media-card"
-                                    IsVisible="{Binding RemoteContent.HasSocialMediaItems}">
-                                <StackPanel Spacing="{StaticResource LauncherSpacingLg}">
-                                    <TextBlock Text="{Binding Shell.I18n[socialMedia]}" Classes="panel-title"/>
-                                    <ItemsControl ItemsSource="{Binding RemoteContent.SocialMediaItems}">
-                                    <ItemsControl.ItemsPanel>
-                                        <ItemsPanelTemplate>
-                                            <WrapPanel/>
-                                        </ItemsPanelTemplate>
-                                    </ItemsControl.ItemsPanel>
-                                    <ItemsControl.ItemTemplate>
-                                        <DataTemplate x:DataType="models:RemoteContentItem">
-                                            <Button Classes="social-chip"
-                                                    Command="{Binding #Root.((vm:MainWindowViewModel)DataContext).RemoteContent.OpenExternalUrlCommand}"
-                                                    CommandParameter="{Binding Url}">
-                                                <StackPanel Classes="button-content">
-                                                    <materialIcons:MaterialIcon Kind="{Binding SocialIconKind}" Width="{StaticResource LauncherIconSm}" Height="{StaticResource LauncherIconSm}"
-                                                                                Foreground="{DynamicResource LauncherTextSecondaryBrush}"/>
-                                                    <TextBlock Text="{Binding Title}"/>
-                                                </StackPanel>
-                                            </Button>
-                                        </DataTemplate>
-                                    </ItemsControl.ItemTemplate>
-                                    </ItemsControl>
-                                </StackPanel>
-                            </Border>
                             </StackPanel>
-                        </Border>
+                        </ScrollViewer>
                         <Border Classes="remote-content-load-error"
                                 IsVisible="{Binding RemoteContent.HasLoadError}">
                             <StackPanel HorizontalAlignment="Center"
@@ -371,7 +346,33 @@
                                                   IsVisible="{Binding RemoteContent.IsLoading}"
                                                   Text="{Binding Shell.I18n[remoteContentLoading]}"/>
                     </Panel>
-                </Border>
+                    </Border>
+                    <ItemsControl Classes="social-actions"
+                                  IsVisible="{Binding RemoteContent.HasRemoteContent}"
+                                  ItemsSource="{Binding RemoteContent.SocialMediaItems}">
+                        <ItemsControl.ItemsPanel>
+                            <ItemsPanelTemplate>
+                                <StackPanel Orientation="Vertical"
+                                            Spacing="{StaticResource LauncherSpacingSm}"/>
+                            </ItemsPanelTemplate>
+                        </ItemsControl.ItemsPanel>
+                        <ItemsControl.ItemTemplate>
+                            <DataTemplate x:DataType="models:RemoteContentItem">
+                                <Button Classes="social-chip social-action"
+                                        Cursor="Hand"
+                                        ToolTip.Tip="{Binding Title}"
+                                        AutomationProperties.Name="{Binding Title}"
+                                        Command="{Binding #Root.((vm:MainWindowViewModel)DataContext).RemoteContent.OpenExternalUrlCommand}"
+                                        CommandParameter="{Binding Url}">
+                                    <materialIcons:MaterialIcon Kind="{Binding SocialIconKind}"
+                                                                Width="{StaticResource LauncherIconMd}"
+                                                                Height="{StaticResource LauncherIconMd}"
+                                                                Foreground="{DynamicResource LauncherTextSecondaryBrush}"/>
+                                </Button>
+                            </DataTemplate>
+                        </ItemsControl.ItemTemplate>
+                    </ItemsControl>
+                </Panel>
 
                 <Border Grid.Row="1"
                         Classes="bottom-panel motion-bottom"
