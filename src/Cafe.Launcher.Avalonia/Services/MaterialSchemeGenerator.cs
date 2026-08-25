@@ -73,10 +73,14 @@ internal static class MaterialSchemeGenerator
         result["Launcher.Color.Info.Background"] = new SolidColorBrush(Color.FromArgb(0x24, primary.R, primary.G, primary.B));
 
         // M3 scheme roles.
+        var secondaryContainer = MaterialColorMapper.ToAvaloniaColor(scheme.SecondaryContainer);
+        var onSecondaryContainer = MaterialColorMapper.ToAvaloniaColor(scheme.OnSecondaryContainer);
         result["Launcher.Color.Secondary"] = MaterialColorMapper.ToBrush(scheme.Secondary);
         result["Launcher.Color.OnSecondary"] = MaterialColorMapper.ToBrush(scheme.OnSecondary);
-        result["Launcher.Color.SecondaryContainer"] = MaterialColorMapper.ToBrush(scheme.SecondaryContainer);
-        result["Launcher.Color.OnSecondaryContainer"] = MaterialColorMapper.ToBrush(scheme.OnSecondaryContainer);
+        result["Launcher.Color.SecondaryContainer"] = new SolidColorBrush(secondaryContainer);
+        result["Launcher.Color.OnSecondaryContainer"] = new SolidColorBrush(onSecondaryContainer);
+        result["Launcher.Color.SecondaryContainer.Hover"] = new SolidColorBrush(Blend(secondaryContainer, onSecondaryContainer, 0.08));
+        result["Launcher.Color.SecondaryContainer.Pressed"] = new SolidColorBrush(Blend(secondaryContainer, onSecondaryContainer, 0.16));
         result["Launcher.Color.Tertiary"] = MaterialColorMapper.ToBrush(scheme.Tertiary);
         result["Launcher.Color.OnTertiary"] = MaterialColorMapper.ToBrush(scheme.OnTertiary);
         result["Launcher.Color.TertiaryContainer"] = MaterialColorMapper.ToBrush(scheme.TertiaryContainer);
@@ -91,4 +95,10 @@ internal static class MaterialSchemeGenerator
 
         return result;
     }
+
+    private static Color Blend(Color background, Color foreground, double opacity) =>
+        Color.FromRgb(
+            (byte)Math.Round(background.R + ((foreground.R - background.R) * opacity)),
+            (byte)Math.Round(background.G + ((foreground.G - background.G) * opacity)),
+            (byte)Math.Round(background.B + ((foreground.B - background.B) * opacity)));
 }

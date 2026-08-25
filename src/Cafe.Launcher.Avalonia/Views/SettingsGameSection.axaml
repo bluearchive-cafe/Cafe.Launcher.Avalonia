@@ -15,7 +15,7 @@
     <StackPanel Classes="settings-group">
         <TextBlock Text="{Binding Shell.I18n[settingsGroupGameFiles]}" Classes="group-title"/>
 
-        <controls:SettingRow IconKind="FolderOpen"
+        <controls:SettingRow ShowTopDivider="False"
                              Title="{Binding Shell.I18n[gamePath]}"
                              Description="{Binding Settings.Editor.Current.GamePath}">
             <controls:SettingRow.Action>
@@ -30,8 +30,7 @@
             </controls:SettingRow.Action>
         </controls:SettingRow>
 
-        <controls:SettingRow IconKind="PlaylistCheck"
-                             Title="{Binding Shell.I18n[launchCheck]}"
+        <controls:SettingRow Title="{Binding Shell.I18n[launchCheck]}"
                              Description="{Binding Shell.I18n[launchCheckDescription]}">
             <controls:SettingRow.Action>
                 <ComboBox Classes="setting-control"
@@ -43,8 +42,7 @@
             </controls:SettingRow.Action>
         </controls:SettingRow>
 
-        <controls:SettingRow IconKind="GamepadSquareOutline"
-                             Title="{Binding Shell.I18n[gameManagement]}"
+        <controls:SettingRow Title="{Binding Shell.I18n[gameManagement]}"
                              Description="{Binding Shell.I18n[gameManagementDescription]}">
             <controls:SettingRow.Action>
                 <StackPanel Orientation="Horizontal" Spacing="{StaticResource Launcher.Spacing.Sm}" VerticalAlignment="Center">

@@ -21,54 +21,70 @@
             <Border.RenderTransform>
                 <TranslateTransform/>
             </Border.RenderTransform>
-            <Grid RowDefinitions="Auto,*,Auto" Classes="motion-surface-content">
-                <Grid ColumnDefinitions="*,Auto" Classes="dialog-header">
-                    <StackPanel Classes="dialog-title-row">
-                        <Border Classes="dialog-icon">
-                            <materialIcons:MaterialIcon Kind="CogOutline" Width="{StaticResource Launcher.Icon.Md}" Height="{StaticResource Launcher.Icon.Md}" Foreground="{DynamicResource Launcher.Color.Primary}" HorizontalAlignment="Center" VerticalAlignment="Center"/>
+            <Grid RowDefinitions="*,Auto" Classes="motion-surface-content">
+                <Grid Classes="settings-workspace" ColumnDefinitions="184,*">
+                    <Grid Classes="settings-navigation-pane" RowDefinitions="Auto,*">
+                        <Border Classes="settings-navigation-header">
+                            <StackPanel Classes="dialog-title-row">
+                                <TextBlock Text="{Binding Shell.I18n[settings]}" Classes="dialog-title" VerticalAlignment="Center"/>
+                            </StackPanel>
                         </Border>
-                        <TextBlock Text="{Binding Shell.I18n[settings]}" Classes="dialog-title" VerticalAlignment="Center"/>
-                    </StackPanel>
-                    <Button Grid.Column="1" Classes="dialog-close header-action" Command="{Binding WindowChrome.ShowSettingsCommand}"
-                            IsEnabled="{Binding Settings.IsSaving, Converter={x:Static BoolConverters.Not}}"
-                            VerticalAlignment="Center" ToolTip.Tip="{Binding Shell.I18n[close]}"
-                            AutomationProperties.Name="{Binding Shell.I18n[close]}">
-                        <materialIcons:MaterialIcon Kind="Close" Width="{StaticResource Launcher.Icon.Md}" Height="{StaticResource Launcher.Icon.Md}"/>
-                    </Button>
-                </Grid>
-
-                <Grid Grid.Row="1" Classes="settings-workspace" ColumnDefinitions="184,*">
-                    <ListBox Classes="settings-navigation"
+                        <ListBox Grid.Row="1" Classes="settings-navigation"
                              x:Name="SettingsNavigation"
                              AutomationProperties.AutomationId="SettingsNavigation"
                              Focusable="True"
+                             FocusAdorner="{x:Null}"
                              ItemsSource="{Binding Settings.Options.SettingsCategories}"
                              SelectedValue="{Binding Settings.SelectedCategory, Mode=TwoWay}"
                              SelectedValueBinding="{Binding Code}"
+                             ScrollViewer.VerticalScrollBarVisibility="Hidden"
+                             ScrollViewer.HorizontalScrollBarVisibility="Disabled"
                              IsEnabled="{Binding Settings.IsSaving, Converter={x:Static BoolConverters.Not}}">
                         <ListBox.ItemTemplate>
                             <DataTemplate x:DataType="models:SettingOption">
-                                <TextBlock Text="{Binding DisplayName}"
-                                           Classes="settings-navigation-item"
-                                           ToolTip.Tip="{Binding Description}"
-                                           AutomationProperties.Name="{Binding DisplayName}"/>
+                                <Grid ColumnDefinitions="Auto,*" ColumnSpacing="{StaticResource Launcher.Spacing.Sm}">
+                                    <materialIcons:MaterialIcon Kind="{Binding IconKind}"
+                                                                Width="{StaticResource Launcher.Icon.Md}"
+                                                                Height="{StaticResource Launcher.Icon.Md}"
+                                                                VerticalAlignment="Center"/>
+                                    <TextBlock Grid.Column="1"
+                                               Text="{Binding DisplayName}"
+                                               Classes="settings-navigation-item"
+                                               ToolTip.Tip="{Binding Description}"
+                                               AutomationProperties.Name="{Binding DisplayName}"/>
+                                </Grid>
                             </DataTemplate>
                         </ListBox.ItemTemplate>
-                    </ListBox>
+                        </ListBox>
+                    </Grid>
 
-                    <Border Grid.Column="1" Classes="settings-content-divider">
-                      <Border Classes="settings-content-padding">
-                        <Grid Classes="settings-content">
-                        <ScrollViewer Classes="dialog-scroll"
+                    <Grid Grid.Column="1" Classes="settings-content">
+                        <Border Classes="settings-content-padding">
+                                <ScrollViewer Classes="dialog-scroll"
                                       VerticalScrollBarVisibility="Auto"
                                       HorizontalScrollBarVisibility="Disabled"
                                       IsEnabled="{Binding Settings.IsSaving, Converter={x:Static BoolConverters.Not}}">
-                            <StackPanel Classes="category-header settings-category-header">
-                                <TextBlock Classes="category-title"
-                                           DataContext="{Binding SelectedItem, ElementName=SettingsNavigation}"
-                                           x:DataType="models:SettingOption"
-                                           Text="{Binding DisplayName}"
-                                           AutomationProperties.Name="{Binding DisplayName}"/>
+                                    <StackPanel Classes="category-header settings-category-header">
+                                        <Grid Classes="settings-content-heading" ColumnDefinitions="*,Auto" ColumnSpacing="{StaticResource Launcher.Spacing.Md}">
+                                            <StackPanel DataContext="{Binding SelectedItem, ElementName=SettingsNavigation}"
+                                                        x:DataType="models:SettingOption"
+                                                        Classes="settings-content-heading-copy">
+                                                <TextBlock Classes="category-title"
+                                                           Text="{Binding DisplayName}"
+                                                           AutomationProperties.Name="{Binding DisplayName}"/>
+                                                <TextBlock Classes="category-subtitle"
+                                                           Text="{Binding Description}"/>
+                                            </StackPanel>
+                                            <Button Grid.Column="1"
+                                                    Classes="dialog-close content-header-action"
+                                                    Command="{Binding WindowChrome.ShowSettingsCommand}"
+                                                    IsEnabled="{Binding Settings.IsSaving, Converter={x:Static BoolConverters.Not}}"
+                                                    ToolTip.Tip="{Binding Shell.I18n[close]}"
+                                                    AutomationProperties.Name="{Binding Shell.I18n[close]}"
+                                                    VerticalAlignment="Top">
+                                                <materialIcons:MaterialIcon Kind="Close" Width="{StaticResource Launcher.Icon.Md}" Height="{StaticResource Launcher.Icon.Md}"/>
+                                            </Button>
+                                        </Grid>
                                 <views:SettingsGeneralSection IsVisible="{Binding Settings.IsGeneralCategorySelected}"
                                                               Classes="motion-content"
                                                               Classes.motion-enabled="{Binding IsMotionEnabled}"
@@ -117,14 +133,13 @@
                                         <TranslateTransform/>
                                     </views:SettingsAboutSection.RenderTransform>
                                 </views:SettingsAboutSection>
-                            </StackPanel>
-                        </ScrollViewer>
-                      </Grid>
-                    </Border>
-                    </Border>
+                                    </StackPanel>
+                                </ScrollViewer>
+                        </Border>
+                    </Grid>
                 </Grid>
 
-                <Border Grid.Row="2" Classes="dialog-footer">
+                <Border Grid.Row="1" Classes="dialog-footer">
                     <StackPanel Orientation="Horizontal"
                                 Spacing="{StaticResource Launcher.Spacing.Sm}"
                                 HorizontalAlignment="Right"

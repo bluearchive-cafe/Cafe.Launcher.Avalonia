@@ -152,6 +152,8 @@ public sealed class MaterialSchemeGeneratorTests
         Assert.True(brushes.ContainsKey("Launcher.Color.Button.Flat.Hover"));
         Assert.True(brushes.ContainsKey("Launcher.Color.Button.Flat.Pressed"));
         Assert.True(brushes.ContainsKey("Launcher.Color.Info.Background"));
+        Assert.True(brushes.ContainsKey("Launcher.Color.SecondaryContainer.Hover"));
+        Assert.True(brushes.ContainsKey("Launcher.Color.SecondaryContainer.Pressed"));
 
         // Business colours are not dynamic-per-spec (spec §3.4).
         Assert.False(brushes.ContainsKey("Launcher.Color.Info"));

@@ -15,7 +15,7 @@
     <StackPanel Classes="settings-group">
         <TextBlock Text="{Binding Shell.I18n[settingsGroupDiagnostics]}" Classes="group-title"/>
 
-        <controls:SettingRow IconKind="Bug"
+        <controls:SettingRow ShowTopDivider="False"
                              Title="{Binding Shell.I18n[logLevel]}"
                              Description="{Binding Shell.I18n[logLevelDescription]}">
             <controls:SettingRow.Action>
@@ -28,8 +28,7 @@
             </controls:SettingRow.Action>
         </controls:SettingRow>
 
-        <controls:SettingRow IconKind="FolderOpen"
-                             Title="{Binding Shell.I18n[logFiles]}"
+        <controls:SettingRow Title="{Binding Shell.I18n[logFiles]}"
                              Description="{Binding Shell.I18n[logFilesDescription]}">
             <controls:SettingRow.Action>
                 <WrapPanel MaxWidth="{StaticResource Launcher.Component.Settings.Row.Action.MaxWidth}"

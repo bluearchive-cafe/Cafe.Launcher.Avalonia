@@ -18,7 +18,7 @@
     <StackPanel Classes="settings-group">
         <TextBlock Text="{Binding Shell.I18n[settingsGroupAppPreferences]}" Classes="group-title"/>
 
-        <controls:SettingRow IconKind="Translate"
+        <controls:SettingRow ShowTopDivider="False"
                              Title="{Binding Shell.I18n[language]}"
                              Description="{Binding Shell.I18n[languageDescription]}">
             <controls:SettingRow.Action>
@@ -31,8 +31,7 @@
             </controls:SettingRow.Action>
         </controls:SettingRow>
 
-        <controls:SettingRow IconKind="WindowClose"
-                             Title="{Binding Shell.I18n[closeBehavior]}"
+        <controls:SettingRow Title="{Binding Shell.I18n[closeBehavior]}"
                              Description="{Binding Shell.I18n[closeBehaviorDescription]}">
             <controls:SettingRow.Action>
                 <ComboBox Classes="setting-control"
@@ -44,8 +43,7 @@
             </controls:SettingRow.Action>
         </controls:SettingRow>
 
-        <controls:SettingRow IconKind="AnimationPlayOutline"
-                             Title="{Binding Shell.I18n[motionMode]}"
+        <controls:SettingRow Title="{Binding Shell.I18n[motionMode]}"
                              Description="{Binding Shell.I18n[motionModeDescription]}">
             <controls:SettingRow.Action>
                 <ComboBox Classes="setting-control"
@@ -57,8 +55,7 @@
             </controls:SettingRow.Action>
         </controls:SettingRow>
 
-        <controls:SettingRow IconKind="Update"
-                             Title="{Binding Shell.I18n[enableStartupUpdateCheck]}"
+        <controls:SettingRow Title="{Binding Shell.I18n[enableStartupUpdateCheck]}"
                              Description="{Binding Shell.I18n[enableStartupUpdateCheckDescription]}">
             <controls:SettingRow.Action>
                 <ToggleSwitch Classes="setting-toggle"

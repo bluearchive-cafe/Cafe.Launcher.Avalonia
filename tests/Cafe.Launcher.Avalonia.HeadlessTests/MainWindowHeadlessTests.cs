@@ -572,19 +572,19 @@ public sealed class MainWindowHeadlessTests
     }
 
     [AvaloniaFact]
-    public void SettingsNavigation_WhenOpened_KeepsGeneralItemVisuallySelectedWithoutFocus()
+    public void SettingsNavigation_WhenOpened_FocusesNavigationAndShowsSelectedState()
     {
         using var context = CreateContext();
         OpenSettings(context);
 
         var navigation = GetSettingsNavigation(context.Window);
         Assert.Equal(SettingsCategoryCodes.General, context.ViewModel.Settings.SelectedCategory);
-        Assert.False(navigation.IsKeyboardFocusWithin);
+        Assert.True(navigation.IsKeyboardFocusWithin);
         AssertNavigationSelectionVisual(navigation, SettingsCategoryCodes.General);
     }
 
     [AvaloniaFact]
-    public async Task SettingsNavigation_AfterSave_KeepsSelectedItemVisuallySelectedWithoutFocus()
+    public async Task SettingsNavigation_AfterSave_KeepsSelectedItemVisuallySelected()
     {
         using var context = CreateContext();
         OpenSettings(context);
@@ -1310,18 +1310,24 @@ public sealed class MainWindowHeadlessTests
     }
 
     [AvaloniaFact]
-    public void SettingsContent_ShowsLocalizedTitleForCurrentCategory()
+    public void SettingsContent_ShowsLocalizedTitleAndSubtitleForCurrentCategory()
     {
         using var context = CreateContext();
         OpenSettings(context);
         var title = context.Window.GetVisualDescendants().OfType<TextBlock>()
             .Single(control => control.Classes.Contains("category-title"));
+        var subtitle = context.Window.GetVisualDescendants().OfType<TextBlock>()
+            .Single(control => control.Classes.Contains("category-subtitle"));
 
         Assert.Equal(
             context.ViewModel.Settings.Options.SettingsCategories.Single(
                 option => option.Code == SettingsCategoryCodes.General).DisplayName,
             title.Text);
         Assert.Equal(title.Text, AutomationProperties.GetName(title));
+        Assert.Equal(
+            context.ViewModel.Settings.Options.SettingsCategories.Single(
+                option => option.Code == SettingsCategoryCodes.General).Description,
+            subtitle.Text);
 
         context.ViewModel.Settings.SelectedCategory = SettingsCategoryCodes.Appearance;
         Dispatcher.UIThread.RunJobs();
@@ -1331,6 +1337,10 @@ public sealed class MainWindowHeadlessTests
                 option => option.Code == SettingsCategoryCodes.Appearance).DisplayName,
             title.Text);
         Assert.Equal(title.Text, AutomationProperties.GetName(title));
+        Assert.Equal(
+            context.ViewModel.Settings.Options.SettingsCategories.Single(
+                option => option.Code == SettingsCategoryCodes.Appearance).Description,
+            subtitle.Text);
     }
 
     [AvaloniaFact]
@@ -1350,7 +1360,10 @@ public sealed class MainWindowHeadlessTests
         context.Window.KeyRelease(Key.Tab, RawInputModifiers.None, PhysicalKey.Tab, "");
         Dispatcher.UIThread.RunJobs();
 
-        Assert.True(generalSection.IsKeyboardFocusWithin);
+        var contentHeaderClose = context.Window.GetVisualDescendants()
+            .OfType<Button>()
+            .Single(control => control.Classes.Contains("content-header-action"));
+        Assert.True(contentHeaderClose.IsKeyboardFocusWithin);
     }
 
     [AvaloniaFact]
@@ -2139,16 +2152,14 @@ public sealed class MainWindowHeadlessTests
         var presenter = selectedItem.GetVisualDescendants().OfType<ContentPresenter>().Single();
 
         Assert.Equal(expectedCode, ((SettingOption)selectedItem.DataContext!).Code);
-        Assert.Equal(new Thickness(3, 0, 0, 0), selectedItem.BorderThickness);
-        // M3: selection visuals follow the applied dynamic scheme's Primary role and
-        // its flat-pressed derivative rather than the raw seed colour.
-        var primary = Assert.IsType<SolidColorBrush>(
-            Application.Current!.Resources["Launcher.Color.Primary"]).Color;
-        var flatPressed = Assert.IsType<SolidColorBrush>(
-            Application.Current!.Resources["Launcher.Color.Button.Flat.Pressed"]).Color;
-        Assert.Equal(primary, Assert.IsType<SolidColorBrush>(selectedItem.BorderBrush).Color);
-        Assert.Equal(flatPressed, Assert.IsType<SolidColorBrush>(selectedItem.Background).Color);
-        Assert.Equal(flatPressed, Assert.IsType<SolidColorBrush>(presenter.Background).Color);
+        Assert.Equal(new Thickness(0), selectedItem.BorderThickness);
+        var secondaryContainer = Assert.IsType<SolidColorBrush>(
+            Application.Current!.Resources["Launcher.Color.SecondaryContainer"]).Color;
+        var onSecondaryContainer = Assert.IsType<SolidColorBrush>(
+            Application.Current!.Resources["Launcher.Color.OnSecondaryContainer"]).Color;
+        Assert.Equal(secondaryContainer, Assert.IsType<SolidColorBrush>(selectedItem.Background).Color);
+        Assert.Equal(secondaryContainer, Assert.IsType<SolidColorBrush>(presenter.Background).Color);
+        Assert.Equal(onSecondaryContainer, Assert.IsType<SolidColorBrush>(selectedItem.Foreground).Color);
     }
 
     private static void AssertVisibleSettingsSection(MainWindow window, Type expectedType)

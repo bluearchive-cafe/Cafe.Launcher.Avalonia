@@ -300,12 +300,12 @@ public sealed class SettingsOptionsViewModel
             return;
         }
 
-        SettingsCategories.Add(new() { Code = SettingsCategoryCodes.General });
-        SettingsCategories.Add(new() { Code = SettingsCategoryCodes.Game });
-        SettingsCategories.Add(new() { Code = SettingsCategoryCodes.DownloadNetwork });
-        SettingsCategories.Add(new() { Code = SettingsCategoryCodes.Appearance });
-        SettingsCategories.Add(new() { Code = SettingsCategoryCodes.Advanced });
-        SettingsCategories.Add(new() { Code = SettingsCategoryCodes.About });
+        SettingsCategories.Add(new() { Code = SettingsCategoryCodes.General, IconKind = "CogOutline" });
+        SettingsCategories.Add(new() { Code = SettingsCategoryCodes.Game, IconKind = "GamepadSquareOutline" });
+        SettingsCategories.Add(new() { Code = SettingsCategoryCodes.DownloadNetwork, IconKind = "Download" });
+        SettingsCategories.Add(new() { Code = SettingsCategoryCodes.Appearance, IconKind = "PaletteOutline" });
+        SettingsCategories.Add(new() { Code = SettingsCategoryCodes.Advanced, IconKind = "Tune" });
+        SettingsCategories.Add(new() { Code = SettingsCategoryCodes.About, IconKind = "InformationOutline" });
     }
 
     private void UpdateSettingCategory(string code, string displayName, string description)

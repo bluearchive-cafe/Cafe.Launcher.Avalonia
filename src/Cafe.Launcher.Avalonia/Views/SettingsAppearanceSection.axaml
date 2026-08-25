@@ -19,7 +19,7 @@
         <StackPanel Classes="settings-group">
             <TextBlock Text="{Binding Shell.I18n[settingsGroupThemeColor]}" Classes="group-title"/>
 
-            <controls:SettingRow IconKind="ThemeLightDark"
+            <controls:SettingRow ShowTopDivider="False"
                                  Title="{Binding Shell.I18n[theme]}"
                                  Description="{Binding Shell.I18n[themeDescription]}">
                 <controls:SettingRow.Action>
@@ -32,8 +32,7 @@
                 </controls:SettingRow.Action>
             </controls:SettingRow>
 
-            <controls:SettingRow IconKind="PaletteOutline"
-                                 Title="{Binding Shell.I18n[themeColor]}"
+            <controls:SettingRow Title="{Binding Shell.I18n[themeColor]}"
                                  Description="{Binding Shell.I18n[themeColorDescription]}">
                 <controls:SettingRow.Action>
                     <StackPanel Orientation="Horizontal" Spacing="{StaticResource Launcher.Spacing.Sm}" VerticalAlignment="Center">
@@ -49,8 +48,7 @@
                 </controls:SettingRow.Action>
             </controls:SettingRow>
 
-            <controls:SettingRow IconKind="PaletteSwatchOutline"
-                                 Title="{Binding Shell.I18n[themeColorExtractionAlgorithm]}"
+            <controls:SettingRow Title="{Binding Shell.I18n[themeColorExtractionAlgorithm]}"
                                  Description="{Binding Shell.I18n[themeColorExtractionAlgorithmDescription]}">
                 <controls:SettingRow.Action>
                     <ComboBox Classes="setting-control"
@@ -62,8 +60,7 @@
                 </controls:SettingRow.Action>
             </controls:SettingRow>
 
-            <controls:SettingRow IconKind="PaletteOutline"
-                                 Title="{Binding Shell.I18n[themeColorVariant]}"
+            <controls:SettingRow Title="{Binding Shell.I18n[themeColorVariant]}"
                                  Description="{Binding Shell.I18n[themeColorVariantDescription]}">
                 <controls:SettingRow.Action>
                     <ComboBox Classes="setting-control"
@@ -75,16 +72,15 @@
                 </controls:SettingRow.Action>
             </controls:SettingRow>
 
-            <Grid Classes="settings-row" ColumnDefinitions="Auto,*,Auto"
+            <Grid Classes="settings-row" ColumnDefinitions="*,Auto"
                   IsVisible="{Binding Settings.Appearance.IsWallpaperThemeColorSelected}">
-                <Border Classes="settings-icon">
-                    <materialIcons:MaterialIcon Kind="PaletteSwatchOutline" Width="{StaticResource Launcher.Icon.Md}" Height="{StaticResource Launcher.Icon.Md}" Foreground="{DynamicResource Launcher.Color.Primary}" HorizontalAlignment="Center" VerticalAlignment="Center"/>
-                </Border>
-                <StackPanel Grid.Column="1" Classes="dialog-heading-copy">
+                <Border Classes="settings-row-divider" Grid.ColumnSpan="2"/>
+                <StackPanel Classes="dialog-heading-copy settings-row-copy"
+                            Margin="{StaticResource Launcher.Spacing.Thickness.None}">
                     <TextBlock Text="{Binding Shell.I18n[themeColorPalette]}" Classes="section-title"/>
                     <TextBlock Text="{Binding Shell.I18n[themeColorPaletteDescription]}" Classes="caption" TextWrapping="Wrap"/>
                 </StackPanel>
-                <StackPanel Grid.Column="2" Orientation="Horizontal" Spacing="{StaticResource Launcher.Spacing.Sm}" VerticalAlignment="Center">
+                <StackPanel Grid.Column="1" Orientation="Horizontal" Spacing="{StaticResource Launcher.Spacing.Sm}" VerticalAlignment="Center">
                     <ItemsControl Width="212"
                                   ItemsSource="{Binding Settings.Appearance.ThemeColorPaletteItems}">
                         <ItemsControl.ItemsPanel>
@@ -119,8 +115,7 @@
                 </StackPanel>
             </Grid>
 
-            <controls:SettingRow IconKind="FormatColorFill"
-                                 Title="{Binding Shell.I18n[themeColorCustom]}"
+            <controls:SettingRow Title="{Binding Shell.I18n[themeColorCustom]}"
                                  Description="{Binding Shell.I18n[themeColorDescription]}"
                                  IsVisible="{Binding Settings.Appearance.IsCustomThemeColorSelected}">
                 <controls:SettingRow.Action>
@@ -141,7 +136,7 @@
         <StackPanel Classes="settings-group">
             <TextBlock Text="{Binding Shell.I18n[settingsGroupBackground]}" Classes="group-title"/>
 
-            <controls:SettingRow IconKind="ImageOutline"
+            <controls:SettingRow ShowTopDivider="False"
                                  Title="{Binding Shell.I18n[backgroundSource]}"
                                  Description="{Binding Shell.I18n[backgroundSourceDescription]}">
                 <controls:SettingRow.Action>
@@ -154,8 +149,7 @@
                 </controls:SettingRow.Action>
             </controls:SettingRow>
 
-            <controls:SettingRow IconKind="ImageAspectRatio"
-                                 Title="{Binding Shell.I18n[backgroundFit]}"
+            <controls:SettingRow Title="{Binding Shell.I18n[backgroundFit]}"
                                  Description="{Binding Shell.I18n[backgroundFitDescription]}">
                 <controls:SettingRow.Action>
                     <ComboBox Classes="setting-control"
@@ -167,8 +161,7 @@
                 </controls:SettingRow.Action>
             </controls:SettingRow>
 
-            <controls:SettingRow IconKind="FormatColorFill"
-                                 Title="{Binding Shell.I18n[backgroundFillColor]}"
+            <controls:SettingRow Title="{Binding Shell.I18n[backgroundFillColor]}"
                                  Description="{Binding Shell.I18n[backgroundFillColorDescription]}"
                                  IsVisible="{Binding Settings.Appearance.IsBackgroundFitSelected}">
                 <controls:SettingRow.Action>
@@ -185,8 +178,7 @@
                 </controls:SettingRow.Action>
             </controls:SettingRow>
 
-            <controls:SettingRow IconKind="ImageEditOutline"
-                                 Title="{Binding Shell.I18n[customBackground]}"
+            <controls:SettingRow Title="{Binding Shell.I18n[customBackground]}"
                                  Description="{Binding Shell.I18n[customBackgroundDescription]}"
                                  IsVisible="{Binding Settings.Appearance.IsCustomBackgroundSelected}">
                 <controls:SettingRow.Action>
@@ -223,7 +215,7 @@
         <StackPanel Classes="settings-group">
             <TextBlock Text="{Binding Shell.I18n[settingsGroupDisplay]}" Classes="group-title"/>
 
-            <controls:SettingRow IconKind="listStatus"
+            <controls:SettingRow ShowTopDivider="False"
                                  Title="{Binding Shell.I18n[statusDetailMode]}"
                                  Description="{Binding Shell.I18n[statusDetailModeDescription]}">
                 <controls:SettingRow.Action>
@@ -236,8 +228,7 @@
                 </controls:SettingRow.Action>
             </controls:SettingRow>
 
-            <controls:SettingRow IconKind="ViewDashboardOutline"
-                                 Title="{Binding Shell.I18n[remoteContentCard]}"
+            <controls:SettingRow Title="{Binding Shell.I18n[remoteContentCard]}"
                                  Description="{Binding Shell.I18n[remoteContentCardDescription]}">
                 <controls:SettingRow.Action>
                     <ToggleSwitch Classes="setting-toggle"
