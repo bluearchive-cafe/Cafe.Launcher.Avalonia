@@ -338,35 +338,35 @@ public partial class SettingsAppearanceViewModel : ViewModelBase, IDisposable
 
         var accentColor = ColorUtils.NormalizeAccentColorForUi(color);
 
-        SetBrush(application, "LauncherAccentBrush", accentColor);
-        SetBrush(application, "LauncherAccentHoverBrush", ColorUtils.AdjustColor(accentColor, 1.15));
-        SetBrush(application, "LauncherAccentPressedBrush", ColorUtils.AdjustColor(accentColor, 0.85));
+        SetBrush(application, "Launcher.Color.Primary", accentColor);
+        SetBrush(application, "Launcher.Color.Primary.Hover", ColorUtils.AdjustColor(accentColor, 1.15));
+        SetBrush(application, "Launcher.Color.Primary.Pressed", ColorUtils.AdjustColor(accentColor, 0.85));
         SetBrush(
             application,
-            "LauncherAccentSoftBrush",
+            "Launcher.Color.Primary.Soft",
             Color.FromArgb(0x24, accentColor.R, accentColor.G, accentColor.B));
         SetBrush(
             application,
-            "LauncherAccentBorderBrush",
+            "Launcher.Color.Primary.Border",
             Color.FromArgb(0x80, accentColor.R, accentColor.G, accentColor.B));
         SetBrush(
             application,
-            "LauncherFocusRingBrush",
+            "Launcher.Color.FocusRing",
             Color.FromArgb(0x99, accentColor.R, accentColor.G, accentColor.B));
-        SetBrush(application, "LauncherCarouselDotActiveBrush", accentColor);
-        SetBrush(application, "LauncherToastInfoBrush", accentColor);
-        SetBrush(application, "LauncherOnAccentBrush", ColorUtils.GetReadableOnAccentColor(accentColor));
+        SetBrush(application, "Launcher.Color.Carousel.Dot.Active", accentColor);
+        SetBrush(application, "Launcher.Color.Info", accentColor);
+        SetBrush(application, "Launcher.Color.OnPrimary", ColorUtils.GetReadableOnAccentColor(accentColor));
         SetBrush(
             application,
-            "LauncherFlatHoverBrush",
+            "Launcher.Color.Button.Flat.Hover",
             Color.FromArgb(0x14, accentColor.R, accentColor.G, accentColor.B));
         SetBrush(
             application,
-            "LauncherFlatPressedBrush",
+            "Launcher.Color.Button.Flat.Pressed",
             Color.FromArgb(0x30, accentColor.R, accentColor.G, accentColor.B));
         SetBrush(
             application,
-            "LauncherInfoBackgroundBrush",
+            "Launcher.Color.Info.Background",
             Color.FromArgb(0x24, accentColor.R, accentColor.G, accentColor.B));
     }
 

@@ -25,7 +25,7 @@
                 <Grid ColumnDefinitions="*,Auto" Classes="dialog-header">
                     <StackPanel Classes="dialog-title-row">
                         <Border Classes="dialog-icon">
-                            <materialIcons:MaterialIcon Kind="CogOutline" Width="{StaticResource LauncherIconMd}" Height="{StaticResource LauncherIconMd}" Foreground="{DynamicResource LauncherAccentBrush}" HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                            <materialIcons:MaterialIcon Kind="CogOutline" Width="{StaticResource Launcher.Icon.Md}" Height="{StaticResource Launcher.Icon.Md}" Foreground="{DynamicResource Launcher.Color.Primary}" HorizontalAlignment="Center" VerticalAlignment="Center"/>
                         </Border>
                         <TextBlock Text="{Binding Shell.I18n[settings]}" Classes="dialog-title" VerticalAlignment="Center"/>
                     </StackPanel>
@@ -33,7 +33,7 @@
                             IsEnabled="{Binding Settings.IsSaving, Converter={x:Static BoolConverters.Not}}"
                             VerticalAlignment="Center" ToolTip.Tip="{Binding Shell.I18n[close]}"
                             AutomationProperties.Name="{Binding Shell.I18n[close]}">
-                        <materialIcons:MaterialIcon Kind="Close" Width="{StaticResource LauncherIconMd}" Height="{StaticResource LauncherIconMd}"/>
+                        <materialIcons:MaterialIcon Kind="Close" Width="{StaticResource Launcher.Icon.Md}" Height="{StaticResource Launcher.Icon.Md}"/>
                     </Button>
                 </Grid>
 
@@ -126,7 +126,7 @@
 
                 <Border Grid.Row="2" Classes="dialog-footer">
                     <StackPanel Orientation="Horizontal"
-                                Spacing="{StaticResource LauncherSpacingSm}"
+                                Spacing="{StaticResource Launcher.Spacing.Sm}"
                                 HorizontalAlignment="Right"
                                 VerticalAlignment="Center">
                         <Button Classes="flat-action dialog-action"
@@ -136,7 +136,7 @@
                                 AutomationProperties.Name="{Binding Shell.I18n[cancel]}">
                             <StackPanel Classes="button-content" HorizontalAlignment="Center">
                                 <materialIcons:MaterialIcon Kind="CloseCircleOutline"
-                                    Width="{StaticResource LauncherIconSm}" Height="{StaticResource LauncherIconSm}"/>
+                                    Width="{StaticResource Launcher.Icon.Sm}" Height="{StaticResource Launcher.Icon.Sm}"/>
                                 <TextBlock Text="{Binding Shell.I18n[cancel]}"/>
                             </StackPanel>
                         </Button>
@@ -147,7 +147,7 @@
                                 AutomationProperties.Name="{Binding Shell.I18n[save]}">
                             <StackPanel Classes="button-content" HorizontalAlignment="Center">
                                 <materialIcons:MaterialIcon Kind="ContentSave"
-                                    Width="{StaticResource LauncherIconSm}" Height="{StaticResource LauncherIconSm}"/>
+                                    Width="{StaticResource Launcher.Icon.Sm}" Height="{StaticResource Launcher.Icon.Sm}"/>
                                 <TextBlock Text="{Binding Shell.I18n[save]}"/>
                             </StackPanel>
                         </Button>

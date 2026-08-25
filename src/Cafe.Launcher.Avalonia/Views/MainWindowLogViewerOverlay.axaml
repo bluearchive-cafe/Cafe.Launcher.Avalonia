@@ -12,8 +12,8 @@
           Classes.motion-enabled="{Binding IsMotionEnabled}"
           controls:MotionVisibility.IsOpen="{Binding LogViewer.IsVisible}"
           controls:MotionVisibility.IsMotionEnabled="{Binding IsMotionEnabled}">
-        <Border Width="{StaticResource LauncherLogViewerWidth}"
-                Height="{StaticResource LauncherLogViewerHeight}"
+        <Border Width="{StaticResource Launcher.Layout.LogViewer.Width}"
+                Height="{StaticResource Launcher.Layout.LogViewer.Height}"
                 Classes="dialog overlay-dialog motion-surface">
             <Border.RenderTransform>
                 <TranslateTransform/>
@@ -23,8 +23,8 @@
                 <Grid ColumnDefinitions="*,Auto" Classes="dialog-header">
                     <StackPanel Classes="dialog-title-row">
                         <Border Classes="dialog-icon">
-                            <materialIcons:MaterialIcon Kind="TextBoxOutline" Width="{StaticResource LauncherIconMd}" Height="{StaticResource LauncherIconMd}"
-                                                       Foreground="{DynamicResource LauncherAccentBrush}"
+                            <materialIcons:MaterialIcon Kind="TextBoxOutline" Width="{StaticResource Launcher.Icon.Md}" Height="{StaticResource Launcher.Icon.Md}"
+                                                       Foreground="{DynamicResource Launcher.Color.Primary}"
                                                        HorizontalAlignment="Center" VerticalAlignment="Center"/>
                         </Border>
                         <TextBlock Text="{Binding Shell.I18n[logViewerTitle]}" Classes="dialog-title" VerticalAlignment="Center"/>
@@ -32,12 +32,12 @@
                     <Button Grid.Column="1" Classes="dialog-close header-action" Command="{Binding LogViewer.CloseCommand}"
                             ToolTip.Tip="{Binding Shell.I18n[close]}"
                             AutomationProperties.Name="{Binding Shell.I18n[close]}">
-                        <materialIcons:MaterialIcon Kind="Close" Width="{StaticResource LauncherIconMd}" Height="{StaticResource LauncherIconMd}"/>
+                        <materialIcons:MaterialIcon Kind="Close" Width="{StaticResource Launcher.Icon.Md}" Height="{StaticResource Launcher.Icon.Md}"/>
                     </Button>
                 </Grid>
 
                 <!-- Filter bar -->
-                <StackPanel Grid.Row="1" Orientation="Horizontal" Spacing="{StaticResource LauncherSpacingSm}" Classes="log-filter-bar">
+                <StackPanel Grid.Row="1" Orientation="Horizontal" Spacing="{StaticResource Launcher.Spacing.Sm}" Classes="log-filter-bar">
                     <Button Classes="news-tab log-filter" Classes.active="{Binding LogViewer.IsFilterAllActive}"
                             Command="{Binding LogViewer.SetFilterAllCommand}">
                         <TextBlock Text="{Binding Shell.I18n[logFilterAll]}"/>
@@ -68,7 +68,7 @@
                     </Button>
                     <TextBox Text="{Binding LogViewer.FilterText, Mode=TwoWay}" PlaceholderText="{Binding Shell.I18n[logSearchPlaceholder]}"
                              Classes="uid-input log-search" MinWidth="160"
-                             Height="{StaticResource LauncherControlHeightSetting}" VerticalAlignment="Center"/>
+                             Height="{StaticResource Launcher.Control.Height.Setting}" VerticalAlignment="Center"/>
                 </StackPanel>
 
                 <!-- Log entries list -->
@@ -90,16 +90,16 @@
                         <ListBox.ItemTemplate>
                             <DataTemplate x:DataType="feat:LogEntryDisplay">
                                 <Border Classes="dialog-card">
-                                    <StackPanel Spacing="{StaticResource LauncherSpacingXs}">
-                                        <StackPanel Orientation="Horizontal" Spacing="{StaticResource LauncherSpacingSm}">
+                                    <StackPanel Spacing="{StaticResource Launcher.Spacing.Xs}">
+                                        <StackPanel Orientation="Horizontal" Spacing="{StaticResource Launcher.Spacing.Sm}">
                                             <TextBlock Text="{Binding TimestampText}" Classes="caption" VerticalAlignment="Center"/>
                                             <TextBlock Text="{Binding SeverityLabel}" Classes="chip-text" VerticalAlignment="Center"
-                                                       Foreground="{DynamicResource LauncherAccentBrush}"/>
+                                                       Foreground="{DynamicResource Launcher.Color.Primary}"/>
                                         </StackPanel>
                                         <TextBlock Text="{Binding Title}" Classes="section-title" TextWrapping="Wrap"/>
                                         <TextBlock Text="{Binding Details}" Classes="caption" TextWrapping="Wrap"
                                                    IsVisible="{Binding Details, Converter={x:Static StringConverters.IsNotNullOrEmpty}}"
-                                                   FontFamily="{StaticResource LauncherFontFamilyMonospace}" MaxHeight="120"/>
+                                                   FontFamily="{StaticResource Launcher.Typography.FontFamily.Monospace}" MaxHeight="120"/>
                                     </StackPanel>
                                 </Border>
                             </DataTemplate>
@@ -119,14 +119,14 @@
                         <Button Classes="flat-action dialog-action" Command="{Binding LogViewer.ExportCommand}"
                                 AutomationProperties.Name="{Binding Shell.I18n[exportLogs]}">
                             <StackPanel Classes="button-content">
-                                <materialIcons:MaterialIcon Kind="Export" Width="{StaticResource LauncherIconSm}" Height="{StaticResource LauncherIconSm}"/>
+                                <materialIcons:MaterialIcon Kind="Export" Width="{StaticResource Launcher.Icon.Sm}" Height="{StaticResource Launcher.Icon.Sm}"/>
                                 <TextBlock Text="{Binding Shell.I18n[exportLogs]}"/>
                             </StackPanel>
                         </Button>
                         <Button Classes="flat-action dialog-action" Command="{Binding LogViewer.CloseCommand}"
                                 AutomationProperties.Name="{Binding Shell.I18n[close]}">
                             <StackPanel Classes="button-content">
-                                <materialIcons:MaterialIcon Kind="CloseCircleOutline" Width="{StaticResource LauncherIconSm}" Height="{StaticResource LauncherIconSm}"/>
+                                <materialIcons:MaterialIcon Kind="CloseCircleOutline" Width="{StaticResource Launcher.Icon.Sm}" Height="{StaticResource Launcher.Icon.Sm}"/>
                                 <TextBlock Text="{Binding Shell.I18n[close]}"/>
                             </StackPanel>
                         </Button>

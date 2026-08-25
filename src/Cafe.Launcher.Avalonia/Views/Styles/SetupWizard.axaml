@@ -9,40 +9,40 @@
         <Setter Property="VerticalAlignment" Value="Center"/>
     </Style>
     <Style Selector="Grid.wizard-review-row">
-        <Setter Property="MinHeight" Value="{StaticResource LauncherControlHeightDialog}"/>
+        <Setter Property="MinHeight" Value="{StaticResource Launcher.Control.Height.Dialog}"/>
         <Setter Property="VerticalAlignment" Value="Center"/>
     </Style>
     <Style Selector="Border.wizard-review-divider">
         <Setter Property="Height" Value="1"/>
-        <Setter Property="Background" Value="{DynamicResource LauncherCardBorderBrush}"/>
+        <Setter Property="Background" Value="{DynamicResource Launcher.Color.Card.Border}"/>
     </Style>
     <Style Selector="Button.wizard-choice">
-        <Setter Property="Background" Value="{DynamicResource LauncherContentRowBrush}"/>
-        <Setter Property="BorderBrush" Value="{DynamicResource LauncherCardBorderBrush}"/>
+        <Setter Property="Background" Value="{DynamicResource Launcher.Color.Content.Row}"/>
+        <Setter Property="BorderBrush" Value="{DynamicResource Launcher.Color.Card.Border}"/>
         <Setter Property="BorderThickness" Value="1"/>
-        <Setter Property="CornerRadius" Value="{DynamicResource LauncherRadiusMd}"/>
+        <Setter Property="CornerRadius" Value="{StaticResource Launcher.Radius.Md}"/>
         <Setter Property="Padding" Value="14"/>
         <Setter Property="MinHeight" Value="64"/>
         <Setter Property="HorizontalContentAlignment" Value="Stretch"/>
     </Style>
     <Style Selector="Button.wizard-choice:pointerover">
-        <Setter Property="Background" Value="{DynamicResource LauncherFlatHoverBrush}"/>
-        <Setter Property="BorderBrush" Value="{DynamicResource LauncherAccentHoverBrush}"/>
+        <Setter Property="Background" Value="{DynamicResource Launcher.Color.Button.Flat.Hover}"/>
+        <Setter Property="BorderBrush" Value="{DynamicResource Launcher.Color.Primary.Hover}"/>
     </Style>
     <Style Selector="Button.wizard-choice.active">
-        <Setter Property="Background" Value="{DynamicResource LauncherAccentSoftBrush}"/>
-        <Setter Property="BorderBrush" Value="{DynamicResource LauncherAccentBrush}"/>
+        <Setter Property="Background" Value="{DynamicResource Launcher.Color.Primary.Soft}"/>
+        <Setter Property="BorderBrush" Value="{DynamicResource Launcher.Color.Primary}"/>
     </Style>
     <Style Selector="TextBlock.wizard-game-path-status.checking">
-        <Setter Property="Foreground" Value="{DynamicResource LauncherAccentBrush}"/>
+        <Setter Property="Foreground" Value="{DynamicResource Launcher.Color.Primary}"/>
     </Style>
     <Style Selector="TextBlock.wizard-game-path-status.ready">
-        <Setter Property="Foreground" Value="{DynamicResource LauncherSuccessBrush}"/>
+        <Setter Property="Foreground" Value="{DynamicResource Launcher.Color.Success}"/>
     </Style>
     <Style Selector="TextBlock.wizard-game-path-status.corrupted">
-        <Setter Property="Foreground" Value="{DynamicResource LauncherDangerBrush}"/>
+        <Setter Property="Foreground" Value="{DynamicResource Launcher.Color.Danger}"/>
     </Style>
     <Style Selector="TextBlock.wizard-game-path-status.inaccessible">
-        <Setter Property="Foreground" Value="{DynamicResource LauncherDangerBrush}"/>
+        <Setter Property="Foreground" Value="{DynamicResource Launcher.Color.Danger}"/>
     </Style>
 </Styles>

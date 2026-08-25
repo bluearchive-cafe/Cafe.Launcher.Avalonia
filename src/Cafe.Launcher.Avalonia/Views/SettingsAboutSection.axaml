@@ -5,15 +5,15 @@
              xmlns:materialIcons="clr-namespace:Material.Icons.Avalonia;assembly=Material.Icons.Avalonia"
              x:Class="Cafe.Launcher.Avalonia.Views.SettingsAboutSection"
              x:Name="SettingsRoot"
-             x:DataType="vm:MainWindowViewModel"><StackPanel Classes="settings-group" Spacing="{StaticResource LauncherSpacingSm}">
+             x:DataType="vm:MainWindowViewModel"><StackPanel Classes="settings-group" Spacing="{StaticResource Launcher.Spacing.Sm}">
         <StackPanel Classes="card-heading">
-            <materialIcons:MaterialIcon Kind="InformationOutline" Width="{StaticResource LauncherIconLg}" Height="{StaticResource LauncherIconLg}" Foreground="{DynamicResource LauncherAccentBrush}"/>
+            <materialIcons:MaterialIcon Kind="InformationOutline" Width="{StaticResource Launcher.Icon.Lg}" Height="{StaticResource Launcher.Icon.Lg}" Foreground="{DynamicResource Launcher.Color.Primary}"/>
             <StackPanel>
                 <TextBlock Text="{Binding Shell.ProductName}" Classes="section-title"/>
                 <TextBlock Text="{Binding Shell.I18n[aboutDescription]}" Classes="caption" TextWrapping="Wrap"/>
             </StackPanel>
         </StackPanel>
-        <StackPanel Spacing="{StaticResource LauncherSpacingSm}">
+        <StackPanel Spacing="{StaticResource Launcher.Spacing.Sm}">
             <TextBlock Text="{Binding Shell.I18n[versionInfo]}" Classes="group-title"/>
             <WrapPanel>
                 <Border Classes="version-chip"
@@ -47,7 +47,7 @@
                     Command="{Binding Settings.CheckForUpdatesCommand}"
                     AutomationProperties.Name="{Binding Shell.I18n[checkUpdates]}">
                 <StackPanel Classes="button-content">
-                    <materialIcons:MaterialIcon Kind="Update" Width="{StaticResource LauncherIconSm}" Height="{StaticResource LauncherIconSm}"/>
+                    <materialIcons:MaterialIcon Kind="Update" Width="{StaticResource Launcher.Icon.Sm}" Height="{StaticResource Launcher.Icon.Sm}"/>
                     <TextBlock Text="{Binding Shell.I18n[checkUpdates]}"/>
                 </StackPanel>
             </Button>
@@ -55,7 +55,7 @@
                     Command="{Binding WindowChrome.OpenOfficialSiteCommand}"
                     AutomationProperties.Name="{Binding Shell.I18n[officialSite]}">
                 <StackPanel Classes="button-content">
-                    <materialIcons:MaterialIcon Kind="Web" Width="{StaticResource LauncherIconSm}" Height="{StaticResource LauncherIconSm}"/>
+                    <materialIcons:MaterialIcon Kind="Web" Width="{StaticResource Launcher.Icon.Sm}" Height="{StaticResource Launcher.Icon.Sm}"/>
                     <TextBlock Text="{Binding Shell.I18n[officialSite]}"/>
                 </StackPanel>
             </Button>
@@ -63,7 +63,7 @@
                     Command="{Binding WindowChrome.OpenHelpDocsCommand}"
                     AutomationProperties.Name="{Binding Shell.I18n[helpDocs]}">
                 <StackPanel Classes="button-content">
-                    <materialIcons:MaterialIcon Kind="HelpCircleOutline" Width="{StaticResource LauncherIconSm}" Height="{StaticResource LauncherIconSm}"/>
+                    <materialIcons:MaterialIcon Kind="HelpCircleOutline" Width="{StaticResource Launcher.Icon.Sm}" Height="{StaticResource Launcher.Icon.Sm}"/>
                     <TextBlock Text="{Binding Shell.I18n[helpDocs]}"/>
                 </StackPanel>
             </Button>
@@ -71,12 +71,12 @@
                     Command="{Binding WindowChrome.OpenGitHubRepositoryCommand}"
                     AutomationProperties.Name="{Binding Shell.I18n[gitHubRepository]}">
                 <StackPanel Classes="button-content">
-                    <materialIcons:MaterialIcon Kind="Github" Width="{StaticResource LauncherIconSm}" Height="{StaticResource LauncherIconSm}"/>
+                    <materialIcons:MaterialIcon Kind="Github" Width="{StaticResource Launcher.Icon.Sm}" Height="{StaticResource Launcher.Icon.Sm}"/>
                     <TextBlock Text="{Binding Shell.I18n[gitHubRepository]}"/>
                 </StackPanel>
             </Button>
         </WrapPanel>
-        <StackPanel Spacing="{StaticResource LauncherSpacingXs}">
+        <StackPanel Spacing="{StaticResource Launcher.Spacing.Xs}">
             <TextBlock Text="{Binding Shell.I18n[aboutLinks]}" Classes="group-title"/>
             <TextBlock Text="{Binding Shell.I18n[aboutCopyrightText]}" Classes="caption" TextWrapping="Wrap"/>
             <TextBlock Text="{Binding Shell.I18n[aboutDisclaimerText]}" Classes="caption" TextWrapping="Wrap"/>

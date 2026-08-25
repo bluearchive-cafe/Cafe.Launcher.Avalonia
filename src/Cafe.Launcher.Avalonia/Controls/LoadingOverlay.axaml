@@ -5,12 +5,12 @@
              x:Name="Root"
              x:DataType="controls:LoadingOverlay">
     <Border Classes="loading-overlay">
-        <StackPanel Spacing="{StaticResource LauncherSpacingSm}"
+        <StackPanel Spacing="{StaticResource Launcher.Spacing.Sm}"
                     HorizontalAlignment="Center"
                     VerticalAlignment="Center">
             <ProgressBar IsIndeterminate="True"
-                         Width="{StaticResource LauncherLoadingBarWidth}"
-                         Height="{StaticResource LauncherLoadingBarHeight}"/>
+                         Width="{StaticResource Launcher.Component.Loading.Bar.Width}"
+                         Height="{StaticResource Launcher.Component.Loading.Bar.Height}"/>
             <TextBlock Text="{Binding Text, ElementName=Root}"
                        Classes="media-placeholder-text"/>
         </StackPanel>

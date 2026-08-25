@@ -9,11 +9,11 @@
         <Setter Property="VerticalAlignment" Value="Stretch"/>
     </Style>
     <Style Selector="Border.log-empty-state TextBlock.media-placeholder-text">
-        <Setter Property="Foreground" Value="{DynamicResource LauncherTextSecondaryBrush}"/>
+        <Setter Property="Foreground" Value="{DynamicResource Launcher.Text.Secondary}"/>
     </Style>
     <Style Selector="ListBox.log-entry-list">
         <Setter Property="Margin" Value="16"/>
-        <Setter Property="Background" Value="{DynamicResource LauncherTransparentBrush}"/>
+        <Setter Property="Background" Value="{DynamicResource Launcher.Color.Transparent}"/>
         <Setter Property="BorderThickness" Value="0"/>
     </Style>
     <Style Selector="ListBox.log-entry-list > ListBoxItem">
@@ -22,9 +22,9 @@
         <Setter Property="HorizontalContentAlignment" Value="Stretch"/>
     </Style>
     <Style Selector="ListBox.log-entry-list > ListBoxItem:pointerover /template/ ContentPresenter#PART_ContentPresenter">
-        <Setter Property="Background" Value="{DynamicResource LauncherTransparentBrush}"/>
+        <Setter Property="Background" Value="{DynamicResource Launcher.Color.Transparent}"/>
     </Style>
     <Style Selector="ListBox.log-entry-list > ListBoxItem:selected /template/ ContentPresenter#PART_ContentPresenter">
-        <Setter Property="Background" Value="{DynamicResource LauncherTransparentBrush}"/>
+        <Setter Property="Background" Value="{DynamicResource Launcher.Color.Transparent}"/>
     </Style>
 </Styles>

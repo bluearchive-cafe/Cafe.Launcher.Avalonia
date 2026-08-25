@@ -35,7 +35,7 @@
                     </ListBox.Styles>
                     <ListBox.ItemTemplate>
                         <DataTemplate x:DataType="setup:SetupWizardStepItem">
-                            <Grid ColumnDefinitions="Auto,*" ColumnSpacing="{StaticResource LauncherSpacingSm}">
+                            <Grid ColumnDefinitions="Auto,*" ColumnSpacing="{StaticResource Launcher.Spacing.Sm}">
                                 <TextBlock Text="{Binding DisplayNumber}" Classes="wizard-step-number"/>
                                 <TextBlock Grid.Column="1"
                                            Text="{Binding Title}"
@@ -51,9 +51,9 @@
                 <Grid Classes="dialog-heading" ColumnDefinitions="Auto,*,Auto">
                     <Border Classes="dialog-icon" VerticalAlignment="Center">
                         <materialIcons:MaterialIcon Kind="StarOutline"
-                                                   Width="{StaticResource LauncherIconXl}"
-                                                   Height="{StaticResource LauncherIconXl}"
-                                                   Foreground="{DynamicResource LauncherAccentBrush}"
+                                                   Width="{StaticResource Launcher.Icon.Xl}"
+                                                   Height="{StaticResource Launcher.Icon.Xl}"
+                                                   Foreground="{DynamicResource Launcher.Color.Primary}"
                                                    HorizontalAlignment="Center"
                                                    VerticalAlignment="Center"/>
                     </Border>
@@ -68,8 +68,8 @@
                             AutomationProperties.Name="{Binding Shell.I18n[setupWizardSkip]}">
                         <StackPanel Classes="button-content">
                             <materialIcons:MaterialIcon Kind="Close"
-                                                       Width="{StaticResource LauncherIconSm}"
-                                                       Height="{StaticResource LauncherIconSm}"/>
+                                                       Width="{StaticResource Launcher.Icon.Sm}"
+                                                       Height="{StaticResource Launcher.Icon.Sm}"/>
                             <TextBlock Text="{Binding Shell.I18n[setupWizardSkip]}"/>
                         </StackPanel>
                     </Button>
@@ -77,10 +77,10 @@
 
                 <!-- Content row -->
                 <ScrollViewer Grid.Row="1" Classes="scroll-pad">
-                    <StackPanel Spacing="{StaticResource LauncherSpacingLg}">
+                    <StackPanel Spacing="{StaticResource Launcher.Spacing.Lg}">
 
                         <!-- Step 0: Welcome & Language -->
-                        <StackPanel Spacing="{StaticResource LauncherSpacingMd}"
+                        <StackPanel Spacing="{StaticResource Launcher.Spacing.Md}"
                                     IsVisible="{Binding Dialogs.SetupWizard.IsFirstStep}"
                                     Classes="motion-content"
                                     Classes.motion-enabled="{Binding IsMotionEnabled}"
@@ -110,7 +110,7 @@
                         </StackPanel>
 
                         <!-- Step 1: Game Path -->
-                        <StackPanel Spacing="{StaticResource LauncherSpacingMd}"
+                        <StackPanel Spacing="{StaticResource Launcher.Spacing.Md}"
                                     IsVisible="{Binding Dialogs.SetupWizard.IsStep1}"
                                     Classes="motion-content"
                                     Classes.motion-enabled="{Binding IsMotionEnabled}"
@@ -122,7 +122,7 @@
                             <TextBlock Text="{Binding Shell.I18n[setupWizardGamePathHint]}"
                                        Classes="body"
                                        TextWrapping="Wrap"/>
-                            <Grid ColumnDefinitions="*,Auto" ColumnSpacing="{StaticResource LauncherSpacingMd}">
+                            <Grid ColumnDefinitions="*,Auto" ColumnSpacing="{StaticResource Launcher.Spacing.Md}">
                                 <TextBox Classes="uid-input"
                                          Text="{Binding Dialogs.SetupWizard.GamePath, Mode=TwoWay}"
                                          AutomationProperties.Name="{Binding Shell.I18n[setupWizardGamePath]}"/>
@@ -132,8 +132,8 @@
                                         AutomationProperties.Name="{Binding Shell.I18n[setupWizardBrowse]}">
                                     <StackPanel Classes="button-content">
                                         <materialIcons:MaterialIcon Kind="FolderOpen"
-                                                                   Width="{StaticResource LauncherIconSm}"
-                                                                   Height="{StaticResource LauncherIconSm}"/>
+                                                                   Width="{StaticResource Launcher.Icon.Sm}"
+                                                                   Height="{StaticResource Launcher.Icon.Sm}"/>
                                         <TextBlock Text="{Binding Shell.I18n[setupWizardBrowse]}"/>
                                     </StackPanel>
                                 </Button>
@@ -150,12 +150,12 @@
                                        MaxLines="1"/>
                             <TextBlock Text="{Binding Shell.I18n[setupWizardGamePathEmpty]}"
                                        Classes="caption"
-                                       Foreground="{DynamicResource LauncherDangerBrush}"
+                                       Foreground="{DynamicResource Launcher.Color.Danger}"
                                        IsVisible="{Binding Dialogs.SetupWizard.IsGamePathEmpty}"/>
                         </StackPanel>
 
                         <!-- Step 2: Download Source -->
-                        <StackPanel Spacing="{StaticResource LauncherSpacingMd}"
+                        <StackPanel Spacing="{StaticResource Launcher.Spacing.Md}"
                                     IsVisible="{Binding Dialogs.SetupWizard.IsStep2}"
                                     Classes="motion-content"
                                     Classes.motion-enabled="{Binding IsMotionEnabled}"
@@ -167,7 +167,7 @@
                             <TextBlock Text="{Binding Shell.I18n[setupWizardDownloadSourceHint]}"
                                        Classes="body"
                                        TextWrapping="Wrap"/>
-                            <StackPanel Spacing="{StaticResource LauncherSpacingSm}">
+                            <StackPanel Spacing="{StaticResource Launcher.Spacing.Sm}">
                                 <RadioButton GroupName="SetupWizardDownloadSource"
                                         IsChecked="{Binding Dialogs.SetupWizard.IsPatchUrlGroupCafe, Mode=TwoWay}"
                                         AutomationProperties.Name="{Binding Shell.I18n[downloadSourceCafe]}">
@@ -188,7 +188,7 @@
                         </StackPanel>
 
                         <!-- Step 3: Proxy -->
-                        <StackPanel Spacing="{StaticResource LauncherSpacingMd}"
+                        <StackPanel Spacing="{StaticResource Launcher.Spacing.Md}"
                                     IsVisible="{Binding Dialogs.SetupWizard.IsStep3}"
                                     Classes="motion-content"
                                     Classes.motion-enabled="{Binding IsMotionEnabled}"
@@ -200,7 +200,7 @@
                             <TextBlock Text="{Binding Shell.I18n[setupWizardProxyHint]}"
                                        Classes="body"
                                        TextWrapping="Wrap"/>
-                            <StackPanel Spacing="{StaticResource LauncherSpacingSm}">
+                            <StackPanel Spacing="{StaticResource Launcher.Spacing.Sm}">
                                 <RadioButton GroupName="SetupWizardProxy"
                                         IsChecked="{Binding Dialogs.SetupWizard.IsProxyAuto, Mode=TwoWay}"
                                         AutomationProperties.Name="{Binding Shell.I18n[proxyAuto]}">
@@ -229,7 +229,7 @@
                         </StackPanel>
 
                         <!-- Step 4: Review -->
-                        <StackPanel Spacing="{StaticResource LauncherSpacingMd}"
+                        <StackPanel Spacing="{StaticResource Launcher.Spacing.Md}"
                                     IsVisible="{Binding Dialogs.SetupWizard.IsLastStep}"
                                     Classes="motion-content"
                                     Classes.motion-enabled="{Binding IsMotionEnabled}"
@@ -242,8 +242,8 @@
                                        Classes="body"
                                        TextWrapping="Wrap"/>
                             <Border Classes="info-strip">
-                                <StackPanel Spacing="{StaticResource LauncherSpacingMd}">
-                                    <Grid Classes="wizard-review-row" ColumnDefinitions="Auto,*,Auto" ColumnSpacing="{StaticResource LauncherSpacingMd}">
+                                <StackPanel Spacing="{StaticResource Launcher.Spacing.Md}">
+                                    <Grid Classes="wizard-review-row" ColumnDefinitions="Auto,*,Auto" ColumnSpacing="{StaticResource Launcher.Spacing.Md}">
                                         <TextBlock Text="{Binding Shell.I18n[setupWizardLanguage]}" Classes="caption" VerticalAlignment="Center"/>
                                         <TextBlock Grid.Column="1"
                                                    Text="{Binding Dialogs.SetupWizard.LanguageDisplayName}"
@@ -260,7 +260,7 @@
                                         </Button>
                                     </Grid>
                                     <Border Classes="wizard-review-divider"/>
-                                    <Grid Classes="wizard-review-row" ColumnDefinitions="Auto,*,Auto" ColumnSpacing="{StaticResource LauncherSpacingMd}">
+                                    <Grid Classes="wizard-review-row" ColumnDefinitions="Auto,*,Auto" ColumnSpacing="{StaticResource Launcher.Spacing.Md}">
                                         <TextBlock Text="{Binding Shell.I18n[setupWizardDownloadSource]}" Classes="caption" VerticalAlignment="Center"/>
                                         <TextBlock Grid.Column="1"
                                                    Text="{Binding Dialogs.SetupWizard.DownloadSourceDisplayName}"
@@ -277,7 +277,7 @@
                                         </Button>
                                     </Grid>
                                     <Border Classes="wizard-review-divider"/>
-                                    <Grid Classes="wizard-review-row" ColumnDefinitions="Auto,*,Auto" ColumnSpacing="{StaticResource LauncherSpacingMd}">
+                                    <Grid Classes="wizard-review-row" ColumnDefinitions="Auto,*,Auto" ColumnSpacing="{StaticResource Launcher.Spacing.Md}">
                                         <TextBlock Text="{Binding Shell.I18n[setupWizardGamePath]}" Classes="caption" VerticalAlignment="Center"/>
                                         <TextBlock Grid.Column="1"
                                                    Text="{Binding Dialogs.SetupWizard.GamePath}"
@@ -295,7 +295,7 @@
                                         </Button>
                                     </Grid>
                                     <Border Classes="wizard-review-divider"/>
-                                    <Grid Classes="wizard-review-row" ColumnDefinitions="Auto,*,Auto" ColumnSpacing="{StaticResource LauncherSpacingMd}">
+                                    <Grid Classes="wizard-review-row" ColumnDefinitions="Auto,*,Auto" ColumnSpacing="{StaticResource Launcher.Spacing.Md}">
                                         <TextBlock Text="{Binding Shell.I18n[setupWizardProxy]}" Classes="caption" VerticalAlignment="Center"/>
                                         <TextBlock Grid.Column="1"
                                                    Text="{Binding Dialogs.SetupWizard.ProxyDisplayName}"
@@ -326,8 +326,8 @@
                             AutomationProperties.Name="{Binding Shell.I18n[setupWizardPrevious]}">
                         <StackPanel Classes="button-content">
                             <materialIcons:MaterialIcon Kind="ChevronLeft"
-                                                       Width="{StaticResource LauncherIconSm}"
-                                                       Height="{StaticResource LauncherIconSm}"/>
+                                                       Width="{StaticResource Launcher.Icon.Sm}"
+                                                       Height="{StaticResource Launcher.Icon.Sm}"/>
                             <TextBlock Text="{Binding Shell.I18n[setupWizardPrevious]}"/>
                         </StackPanel>
                     </Button>
@@ -339,8 +339,8 @@
                         <StackPanel Classes="button-content">
                             <TextBlock Text="{Binding Shell.I18n[setupWizardNext]}"/>
                             <materialIcons:MaterialIcon Kind="ChevronRight"
-                                                       Width="{StaticResource LauncherIconSm}"
-                                                       Height="{StaticResource LauncherIconSm}"/>
+                                                       Width="{StaticResource Launcher.Icon.Sm}"
+                                                       Height="{StaticResource Launcher.Icon.Sm}"/>
                         </StackPanel>
                     </Button>
                     <Button Classes="primary-action dialog-action"
@@ -349,8 +349,8 @@
                             AutomationProperties.Name="{Binding Shell.I18n[setupWizardFinish]}">
                         <StackPanel Classes="button-content">
                             <materialIcons:MaterialIcon Kind="Check"
-                                                       Width="{StaticResource LauncherIconSm}"
-                                                       Height="{StaticResource LauncherIconSm}"/>
+                                                       Width="{StaticResource Launcher.Icon.Sm}"
+                                                       Height="{StaticResource Launcher.Icon.Sm}"/>
                             <TextBlock Text="{Binding Shell.I18n[setupWizardFinish]}"/>
                         </StackPanel>
                     </Button>
