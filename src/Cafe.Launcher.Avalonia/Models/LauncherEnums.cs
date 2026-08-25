@@ -57,6 +57,32 @@ public static class ThemeColorModes
     public const string Custom = "custom";
 }
 
+public static class ThemeColorExtractionAlgorithms
+{
+    public const string Octree = "octree";
+    public const string CelebiScore = "celebiScore";
+    public const string Wu = "wu";
+    public const string Wsmeans = "wsmeans";
+}
+
+public static class ThemeColorVariants
+{
+    public const string TonalSpot = "tonalSpot";
+    public const string Vibrant = "vibrant";
+    public const string Expressive = "expressive";
+    public const string Fidelity = "fidelity";
+    public const string Content = "content";
+    public const string Monochrome = "monochrome";
+    public const string Neutral = "neutral";
+    public const string Rainbow = "rainbow";
+}
+
+public static class NeutralColorStrategies
+{
+    public const string BrandBlue = "brandBlue";
+    public const string SeedFollowing = "seedFollowing";
+}
+
 public static class DownloadSpeedLimits
 {
     public const string Unlimited = "unlimited";

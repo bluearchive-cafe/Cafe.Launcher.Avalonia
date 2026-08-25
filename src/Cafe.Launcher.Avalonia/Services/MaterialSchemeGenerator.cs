@@ -1,0 +1,94 @@
+using System;
+using System.Collections.Generic;
+using Avalonia.Media;
+using Cafe.Launcher.Avalonia.Helpers;
+using Cafe.Launcher.Avalonia.Models;
+using MaterialColorUtilities.DynamicColors;
+using MaterialColorUtilities.HCT;
+using MaterialColorUtilities.Scheme;
+using MaterialColorUtilities.Utils;
+using CafeColorUtils = Cafe.Launcher.Avalonia.Helpers.ColorUtils;
+
+namespace Cafe.Launcher.Avalonia.Services;
+
+/// <summary>
+/// M3 dynamic-scheme generation (Q13/Q17/Q23, spec §3.4). Consumes the
+/// Shirasagi0012.MaterialColorUtilities core package directly (M0 spike: GO,
+/// Spec2021 default, Platform.Phone) and maps scheme roles onto the
+/// <c>Launcher.Color.*</c> brush keys consumed by the UI.
+/// </summary>
+internal static class MaterialSchemeGenerator
+{
+    /// <summary>
+    /// Creates an M3 <see cref="DynamicScheme"/> for a seed colour, variant and
+    /// brightness. The variant maps onto the eight Q24-approved variants and
+    /// falls back to TonalSpot for unknown codes (settings are normalized
+    /// before reaching this point).
+    /// </summary>
+    public static DynamicScheme CreateScheme(Color seed, string variant, bool isDark)
+    {
+        var seedHct = Hct.From(MaterialColorMapper.ToArgbColor(seed));
+        const ColorSpec.SpecVersion specVersion = ColorSpec.SpecVersion.Spec2021;
+        const DynamicScheme.Platform platform = DynamicScheme.Platform.Phone;
+
+        return variant switch
+        {
+            ThemeColorVariants.Vibrant => new SchemeVibrant(seedHct, isDark, 0.0, specVersion, platform),
+            ThemeColorVariants.Expressive => new SchemeExpressive(seedHct, isDark, 0.0, specVersion, platform),
+            ThemeColorVariants.Fidelity => new SchemeFidelity(seedHct, isDark, 0.0, specVersion, platform),
+            ThemeColorVariants.Content => new SchemeContent(seedHct, isDark, 0.0, specVersion, platform),
+            ThemeColorVariants.Monochrome => new SchemeMonochrome(seedHct, isDark, 0.0, specVersion, platform),
+            ThemeColorVariants.Neutral => new SchemeNeutral(seedHct, isDark, 0.0, specVersion, platform),
+            ThemeColorVariants.Rainbow => new SchemeRainbow(seedHct, isDark, 0.0, specVersion, platform),
+            _ => new SchemeTonalSpot(seedHct, isDark, 0.0, specVersion, platform)
+        };
+    }
+
+    /// <summary>
+    /// Maps scheme roles onto the <c>Launcher.Color.*</c> brush keys. The key set
+    /// preserves the pre-M3 override behaviour (accent family + flat/state/ring
+    /// derivatives + info background) as a subset and adds the M3 secondary/
+    /// tertiary role families; "Info" stays a fixed business colour and is not
+    /// overridden (spec §3.4). With the seed-following neutral strategy the
+    /// surface/outline roles replace the fixed brand-blue neutrals.
+    /// </summary>
+    public static IReadOnlyDictionary<string, SolidColorBrush> BuildRoleBrushes(
+        DynamicScheme scheme,
+        bool seedFollowingNeutrals)
+    {
+        var result = new Dictionary<string, SolidColorBrush>(StringComparer.Ordinal);
+        var primary = MaterialColorMapper.ToAvaloniaColor(scheme.Primary);
+
+        // Pre-existing override subset (previously ApplyAccentBrushes).
+        result["Launcher.Color.Primary"] = new SolidColorBrush(primary);
+        result["Launcher.Color.Primary.Hover"] = new SolidColorBrush(CafeColorUtils.AdjustColor(primary, 1.15));
+        result["Launcher.Color.Primary.Pressed"] = new SolidColorBrush(CafeColorUtils.AdjustColor(primary, 0.85));
+        result["Launcher.Color.Primary.Soft"] = new SolidColorBrush(Color.FromArgb(0x24, primary.R, primary.G, primary.B));
+        result["Launcher.Color.Primary.Border"] = new SolidColorBrush(Color.FromArgb(0x80, primary.R, primary.G, primary.B));
+        result["Launcher.Color.OnPrimary"] = new SolidColorBrush(CafeColorUtils.GetReadableOnAccentColor(primary));
+        result["Launcher.Color.FocusRing"] = new SolidColorBrush(Color.FromArgb(0x99, primary.R, primary.G, primary.B));
+        result["Launcher.Color.Carousel.Dot.Active"] = new SolidColorBrush(primary);
+        result["Launcher.Color.Button.Flat.Hover"] = new SolidColorBrush(Color.FromArgb(0x14, primary.R, primary.G, primary.B));
+        result["Launcher.Color.Button.Flat.Pressed"] = new SolidColorBrush(Color.FromArgb(0x30, primary.R, primary.G, primary.B));
+        result["Launcher.Color.Info.Background"] = new SolidColorBrush(Color.FromArgb(0x24, primary.R, primary.G, primary.B));
+
+        // M3 scheme roles.
+        result["Launcher.Color.Secondary"] = MaterialColorMapper.ToBrush(scheme.Secondary);
+        result["Launcher.Color.OnSecondary"] = MaterialColorMapper.ToBrush(scheme.OnSecondary);
+        result["Launcher.Color.SecondaryContainer"] = MaterialColorMapper.ToBrush(scheme.SecondaryContainer);
+        result["Launcher.Color.OnSecondaryContainer"] = MaterialColorMapper.ToBrush(scheme.OnSecondaryContainer);
+        result["Launcher.Color.Tertiary"] = MaterialColorMapper.ToBrush(scheme.Tertiary);
+        result["Launcher.Color.OnTertiary"] = MaterialColorMapper.ToBrush(scheme.OnTertiary);
+        result["Launcher.Color.TertiaryContainer"] = MaterialColorMapper.ToBrush(scheme.TertiaryContainer);
+        result["Launcher.Color.OnTertiaryContainer"] = MaterialColorMapper.ToBrush(scheme.OnTertiaryContainer);
+
+        if (seedFollowingNeutrals)
+        {
+            result["Launcher.Color.Surface"] = MaterialColorMapper.ToBrush(scheme.Surface);
+            result["Launcher.Color.OnSurface"] = MaterialColorMapper.ToBrush(scheme.OnSurface);
+            result["Launcher.Color.Outline"] = MaterialColorMapper.ToBrush(scheme.Outline);
+        }
+
+        return result;
+    }
+}

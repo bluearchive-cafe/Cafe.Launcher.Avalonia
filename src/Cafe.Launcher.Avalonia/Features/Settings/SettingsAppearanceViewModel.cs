@@ -126,7 +126,11 @@ public partial class SettingsAppearanceViewModel : ViewModelBase, IDisposable
 
         var color = ResolveThemeColor(themeColorMode, customColor);
         ThemeColorPreviewBrush = new SolidColorBrush(color);
-        ApplyAccentBrushes(color);
+        ApplyScheme(
+            color,
+            editor.Current.ThemeColorVariant,
+            IsDarkTheme(editor.Current.ThemeMode),
+            editor.Current.NeutralColorStrategy);
     }
 
     [RelayCommand]
@@ -312,6 +316,18 @@ public partial class SettingsAppearanceViewModel : ViewModelBase, IDisposable
         if (Application.Current is { } application)
         {
             application.RequestedThemeVariant = themeVariant;
+
+            // M3: scheme roles are theme-dependent; re-apply the last scheme so a
+            // theme-mode switch updates primary/secondary/tertiary and (optionally)
+            // surface roles without requiring a separate colour edit.
+            if (lastSchemeApplied)
+            {
+                ApplyScheme(
+                    lastSchemeSeed,
+                    lastSchemeVariant,
+                    IsDarkTheme(themeMode),
+                    lastSchemeStrategy);
+            }
         }
     }
 
@@ -329,46 +345,49 @@ public partial class SettingsAppearanceViewModel : ViewModelBase, IDisposable
         return Color.Parse(LauncherConstants.DefaultThemeColor);
     }
 
-    internal static void ApplyAccentBrushes(Color color)
+    private static bool lastSchemeApplied;
+    private static Color lastSchemeSeed = Color.Parse(LauncherConstants.DefaultThemeColor);
+    private static string lastSchemeVariant = ThemeColorVariants.TonalSpot;
+    private static string lastSchemeStrategy = NeutralColorStrategies.BrandBlue;
+
+    /// <summary>
+    /// Applies the M3 dynamic scheme derived from <paramref name="seed"/> onto the
+    /// <c>Launcher.Color.*</c> brush keys (spec §3.4). Replaces the pre-M3
+    /// <c>ApplyAccentBrushes</c>; the previous accent-family override remains a
+    /// subset of <see cref="Services.MaterialSchemeGenerator.BuildRoleBrushes"/>.
+    /// </summary>
+    internal static void ApplyScheme(
+        Color seed,
+        string variant = ThemeColorVariants.TonalSpot,
+        bool isDark = false,
+        string neutralStrategy = NeutralColorStrategies.BrandBlue)
     {
         if (Application.Current is not { } application)
         {
             return;
         }
 
-        var accentColor = ColorUtils.NormalizeAccentColorForUi(color);
+        var scheme = MaterialSchemeGenerator.CreateScheme(seed, variant, isDark);
+        var roleBrushes = MaterialSchemeGenerator.BuildRoleBrushes(
+            scheme,
+            seedFollowingNeutrals: neutralStrategy == NeutralColorStrategies.SeedFollowing);
+        foreach (var (key, brush) in roleBrushes)
+        {
+            SetBrush(application, key, brush.Color);
+        }
 
-        SetBrush(application, "Launcher.Color.Primary", accentColor);
-        SetBrush(application, "Launcher.Color.Primary.Hover", ColorUtils.AdjustColor(accentColor, 1.15));
-        SetBrush(application, "Launcher.Color.Primary.Pressed", ColorUtils.AdjustColor(accentColor, 0.85));
-        SetBrush(
-            application,
-            "Launcher.Color.Primary.Soft",
-            Color.FromArgb(0x24, accentColor.R, accentColor.G, accentColor.B));
-        SetBrush(
-            application,
-            "Launcher.Color.Primary.Border",
-            Color.FromArgb(0x80, accentColor.R, accentColor.G, accentColor.B));
-        SetBrush(
-            application,
-            "Launcher.Color.FocusRing",
-            Color.FromArgb(0x99, accentColor.R, accentColor.G, accentColor.B));
-        SetBrush(application, "Launcher.Color.Carousel.Dot.Active", accentColor);
-        SetBrush(application, "Launcher.Color.Info", accentColor);
-        SetBrush(application, "Launcher.Color.OnPrimary", ColorUtils.GetReadableOnAccentColor(accentColor));
-        SetBrush(
-            application,
-            "Launcher.Color.Button.Flat.Hover",
-            Color.FromArgb(0x14, accentColor.R, accentColor.G, accentColor.B));
-        SetBrush(
-            application,
-            "Launcher.Color.Button.Flat.Pressed",
-            Color.FromArgb(0x30, accentColor.R, accentColor.G, accentColor.B));
-        SetBrush(
-            application,
-            "Launcher.Color.Info.Background",
-            Color.FromArgb(0x24, accentColor.R, accentColor.G, accentColor.B));
+        lastSchemeApplied = true;
+        lastSchemeSeed = seed;
+        lastSchemeVariant = variant;
+        lastSchemeStrategy = neutralStrategy;
     }
+
+    /// <summary>Resolves whether the effective theme is dark for a theme mode.</summary>
+    internal static bool IsDarkTheme(string themeMode) =>
+        themeMode == ThemeModes.Dark
+        || (themeMode == ThemeModes.System
+            && Application.Current is { } application
+            && application.ActualThemeVariant == ThemeVariant.Dark);
 
     private static void SetBrush(Application application, string key, Color color)
     {

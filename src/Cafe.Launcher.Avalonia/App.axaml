@@ -135,6 +135,18 @@
             </LinearGradientBrush>
             <SolidColorBrush x:Key="Launcher.Color.Media.Placeholder" Color="#FF2A3A5C"/>
             <SolidColorBrush x:Key="Launcher.Text.Media.Placeholder" Color="#99FFFFFF"/>
+            <!-- M3 scheme 角色占位/回退值（运行时由 ApplyScheme 经 DynamicScheme 覆盖；spec §3.3：声明值仅为占位） -->
+            <SolidColorBrush x:Key="Launcher.Color.Secondary" Color="#FF625B71"/>
+            <SolidColorBrush x:Key="Launcher.Color.OnSecondary" Color="#FFFFFFFF"/>
+            <SolidColorBrush x:Key="Launcher.Color.SecondaryContainer" Color="#FFE8DEF8"/>
+            <SolidColorBrush x:Key="Launcher.Color.OnSecondaryContainer" Color="#FF1D192B"/>
+            <SolidColorBrush x:Key="Launcher.Color.Tertiary" Color="#FF7D5260"/>
+            <SolidColorBrush x:Key="Launcher.Color.OnTertiary" Color="#FFFFFFFF"/>
+            <SolidColorBrush x:Key="Launcher.Color.TertiaryContainer" Color="#FFFFD8E4"/>
+            <SolidColorBrush x:Key="Launcher.Color.OnTertiaryContainer" Color="#FF31111D"/>
+            <SolidColorBrush x:Key="Launcher.Color.Surface" Color="#FFFEF7FF"/>
+            <SolidColorBrush x:Key="Launcher.Color.OnSurface" Color="#FF1D1B20"/>
+            <SolidColorBrush x:Key="Launcher.Color.Outline" Color="#FF79747E"/>
 
             <ResourceDictionary.ThemeDictionaries>
                 <ResourceDictionary x:Key="Light">

@@ -15,6 +15,9 @@ public sealed class LauncherSettings : ObservableObject
     private string themeMode = ThemeModes.System;
     private string motionMode = MotionModes.System;
     private string themeColorMode = ThemeColorModes.Default;
+    private string themeColorExtractionAlgorithm = ThemeColorExtractionAlgorithms.CelebiScore;
+    private string themeColorVariant = ThemeColorVariants.TonalSpot;
+    private string neutralColorStrategy = NeutralColorStrategies.BrandBlue;
     private string customThemeColor = LauncherConstants.DefaultThemeColor;
     private List<string> themeColorPalette = [];
     private int selectedThemeColorPaletteIndex;
@@ -61,6 +64,15 @@ public sealed class LauncherSettings : ObservableObject
 
     [JsonPropertyName("themeColorMode")]
     public string ThemeColorMode { get => themeColorMode; set => SetProperty(ref themeColorMode, value); }
+
+    [JsonPropertyName("themeColorExtractionAlgorithm")]
+    public string ThemeColorExtractionAlgorithm { get => themeColorExtractionAlgorithm; set => SetProperty(ref themeColorExtractionAlgorithm, value); }
+
+    [JsonPropertyName("themeColorVariant")]
+    public string ThemeColorVariant { get => themeColorVariant; set => SetProperty(ref themeColorVariant, value); }
+
+    [JsonPropertyName("neutralColorStrategy")]
+    public string NeutralColorStrategy { get => neutralColorStrategy; set => SetProperty(ref neutralColorStrategy, value); }
 
     [JsonPropertyName("customThemeColor")]
     public string CustomThemeColor { get => customThemeColor; set => SetProperty(ref customThemeColor, value); }
@@ -136,6 +148,9 @@ public sealed class LauncherSettings : ObservableObject
         ThemeMode = other.ThemeMode;
         MotionMode = other.MotionMode;
         ThemeColorMode = other.ThemeColorMode;
+        ThemeColorExtractionAlgorithm = other.ThemeColorExtractionAlgorithm;
+        ThemeColorVariant = other.ThemeColorVariant;
+        NeutralColorStrategy = other.NeutralColorStrategy;
         CustomThemeColor = other.CustomThemeColor;
         ThemeColorPalette = [.. other.ThemeColorPalette];
         SelectedThemeColorPaletteIndex = other.SelectedThemeColorPaletteIndex;
