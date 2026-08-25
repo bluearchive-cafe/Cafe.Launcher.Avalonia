@@ -43,6 +43,32 @@ public sealed class SettingsOptionsViewModel
         new() { Code = ThemeColorModes.Custom }
     ];
 
+    public ObservableCollection<SettingOption> ThemeColorExtractionAlgorithm { get; } =
+    [
+        new() { Code = ThemeColorExtractionAlgorithms.Octree },
+        new() { Code = ThemeColorExtractionAlgorithms.CelebiScore },
+        new() { Code = ThemeColorExtractionAlgorithms.Wu },
+        new() { Code = ThemeColorExtractionAlgorithms.Wsmeans }
+    ];
+
+    public ObservableCollection<SettingOption> ThemeColorVariant { get; } =
+    [
+        new() { Code = ThemeColorVariants.TonalSpot },
+        new() { Code = ThemeColorVariants.Vibrant },
+        new() { Code = ThemeColorVariants.Expressive },
+        new() { Code = ThemeColorVariants.Fidelity },
+        new() { Code = ThemeColorVariants.Content },
+        new() { Code = ThemeColorVariants.Monochrome },
+        new() { Code = ThemeColorVariants.Neutral },
+        new() { Code = ThemeColorVariants.Rainbow }
+    ];
+
+    public ObservableCollection<SettingOption> NeutralColorStrategy { get; } =
+    [
+        new() { Code = NeutralColorStrategies.BrandBlue },
+        new() { Code = NeutralColorStrategies.SeedFollowing }
+    ];
+
     public ObservableCollection<SettingOption> LaunchCheckMode { get; } =
     [
         new() { Code = LaunchCheckModes.LocalManifest },
@@ -156,6 +182,32 @@ public sealed class SettingsOptionsViewModel
             ThemeColorModes.Wallpaper => localizer.T("themeColorWallpaper"),
             ThemeColorModes.Custom => localizer.T("themeColorCustom"),
             _ => localizer.T("themeColorDefault")
+        });
+
+        RefreshOptions(ThemeColorExtractionAlgorithm, code => code switch
+        {
+            ThemeColorExtractionAlgorithms.Octree => localizer.T("themeColorExtractionAlgorithmOctree"),
+            ThemeColorExtractionAlgorithms.Wu => localizer.T("themeColorExtractionAlgorithmWu"),
+            ThemeColorExtractionAlgorithms.Wsmeans => localizer.T("themeColorExtractionAlgorithmWsmeans"),
+            _ => localizer.T("themeColorExtractionAlgorithmCelebiScore")
+        });
+
+        RefreshOptions(ThemeColorVariant, code => code switch
+        {
+            ThemeColorVariants.Vibrant => localizer.T("themeColorVariantVibrant"),
+            ThemeColorVariants.Expressive => localizer.T("themeColorVariantExpressive"),
+            ThemeColorVariants.Fidelity => localizer.T("themeColorVariantFidelity"),
+            ThemeColorVariants.Content => localizer.T("themeColorVariantContent"),
+            ThemeColorVariants.Monochrome => localizer.T("themeColorVariantMonochrome"),
+            ThemeColorVariants.Neutral => localizer.T("themeColorVariantNeutral"),
+            ThemeColorVariants.Rainbow => localizer.T("themeColorVariantRainbow"),
+            _ => localizer.T("themeColorVariantTonalSpot")
+        });
+
+        RefreshOptions(NeutralColorStrategy, code => code switch
+        {
+            NeutralColorStrategies.SeedFollowing => localizer.T("neutralColorStrategySeedFollowing"),
+            _ => localizer.T("neutralColorStrategyBrandBlue")
         });
 
         RefreshOptions(LaunchCheckMode, code => code switch

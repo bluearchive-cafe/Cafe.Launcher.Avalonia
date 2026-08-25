@@ -97,7 +97,9 @@ public partial class SettingsAppearanceViewModel : ViewModelBase, IDisposable
             return;
         }
 
-        var colors = ThemeColorExtractionService.ExtractPalette(bitmap)
+        var colors = ThemeColorExtractionService.ExtractPalette(
+                bitmap,
+                editor.Current.ThemeColorExtractionAlgorithm)
             .Select(ThemeColorExtractionService.ToColorHex)
             .ToArray();
         var selectedIndex = SelectedThemeColorPaletteIndex < colors.Length
@@ -169,6 +171,24 @@ public partial class SettingsAppearanceViewModel : ViewModelBase, IDisposable
                 RefreshThemeColorPaletteFromCurrentBackground(markDirty: false);
             }
 
+            UpdateThemeColorPreview();
+            return;
+        }
+
+        if (e.PropertyName == nameof(LauncherSettings.ThemeColorExtractionAlgorithm))
+        {
+            if (editor.Current.ThemeColorMode == ThemeColorModes.Wallpaper)
+            {
+                RefreshThemeColorPaletteFromCurrentBackground(markDirty: true);
+            }
+
+            UpdateThemeColorPreview();
+            return;
+        }
+
+        if (e.PropertyName is nameof(LauncherSettings.ThemeColorVariant)
+            or nameof(LauncherSettings.NeutralColorStrategy))
+        {
             UpdateThemeColorPreview();
             return;
         }

@@ -59,6 +59,8 @@
             <x:Double x:Key="Launcher.Component.Dialog.Confirm.MaxHeight">480</x:Double>
             <x:Double x:Key="Launcher.Layout.LogViewer.Width">720</x:Double>
             <x:Double x:Key="Launcher.Layout.LogViewer.Height">592</x:Double>
+            <x:Double x:Key="Launcher.Layout.DesignGallery.Width">1000</x:Double>
+            <x:Double x:Key="Launcher.Layout.DesignGallery.Height">680</x:Double>
             <x:Double x:Key="Launcher.Component.Settings.Row.Content.MinWidth">240</x:Double>
             <x:Double x:Key="Launcher.Component.Settings.Row.Action.MaxWidth">440</x:Double>
             <x:Double x:Key="Launcher.Component.Loading.Bar.Width">120</x:Double>
@@ -164,7 +166,7 @@
                     <SolidColorBrush x:Key="Launcher.Color.Dialog.Close.Hover" Color="#FFEDF2F7"/>
                     <SolidColorBrush x:Key="Launcher.Color.Dialog.Close.Pressed" Color="#FFDDE6F0"/>
                     <SolidColorBrush x:Key="Launcher.Color.Field.Background" Color="#FFF0F6FD"/>
-                    <SolidColorBrush x:Key="Launcher.Color.Field.Border" Color="#FFB8CADB"/>
+                    <SolidColorBrush x:Key="Launcher.Color.Field.Border" Color="#FF788EA7"/>
                     <SolidColorBrush x:Key="Launcher.Color.Info.Background" Color="#FFDCEFFF"/>
                     <SolidColorBrush x:Key="Launcher.Color.Notice.Background" Color="#FFFFF6D8"/>
                     <SolidColorBrush x:Key="Launcher.Color.Warning.Background" Color="#FFFFF2C2"/>
@@ -196,7 +198,7 @@
                     <SolidColorBrush x:Key="Launcher.Color.Dialog.Close.Hover" Color="#FF2A3547"/>
                     <SolidColorBrush x:Key="Launcher.Color.Dialog.Close.Pressed" Color="#FF344156"/>
                     <SolidColorBrush x:Key="Launcher.Color.Field.Background" Color="#FF1E2834"/>
-                    <SolidColorBrush x:Key="Launcher.Color.Field.Border" Color="#FF40516A"/>
+                    <SolidColorBrush x:Key="Launcher.Color.Field.Border" Color="#FF5E7494"/>
                     <SolidColorBrush x:Key="Launcher.Color.Info.Background" Color="#FF19324D"/>
                     <SolidColorBrush x:Key="Launcher.Color.Notice.Background" Color="#FF352D17"/>
                     <SolidColorBrush x:Key="Launcher.Color.Warning.Background" Color="#FF463817"/>

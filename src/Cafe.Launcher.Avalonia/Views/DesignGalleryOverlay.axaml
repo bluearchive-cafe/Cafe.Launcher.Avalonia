@@ -11,7 +11,8 @@
           Classes.motion-enabled="{Binding IsMotionEnabled}"
           controls:MotionVisibility.IsOpen="{Binding Gallery.IsVisible}"
           controls:MotionVisibility.IsMotionEnabled="{Binding IsMotionEnabled}">
-        <Border Width="1000" Height="680"
+        <Border Width="{StaticResource Launcher.Layout.DesignGallery.Width}"
+                Height="{StaticResource Launcher.Layout.DesignGallery.Height}"
                 Classes="dialog overlay-dialog motion-surface">
             <Border.RenderTransform>
                 <TranslateTransform/>

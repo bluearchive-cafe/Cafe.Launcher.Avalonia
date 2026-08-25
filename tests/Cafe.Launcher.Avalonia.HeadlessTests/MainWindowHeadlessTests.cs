@@ -1985,6 +1985,9 @@ public sealed class MainWindowHeadlessTests
         Assert.True(totalItems >= 130, $"Expected 130+ tokens, got {totalItems}.");
         Assert.Contains(context.ViewModel.Gallery.Groups, group => group.Family == "Color");
         Assert.Contains(context.ViewModel.Gallery.Groups, group => group.Family == "Component");
+        Assert.Contains(
+            context.ViewModel.Gallery.Groups.SelectMany(group => group.Items),
+            item => item.Key == "Launcher.Text.Primary");
 
         context.ViewModel.Gallery.CloseCommand.Execute(null);
         Dispatcher.UIThread.RunJobs();

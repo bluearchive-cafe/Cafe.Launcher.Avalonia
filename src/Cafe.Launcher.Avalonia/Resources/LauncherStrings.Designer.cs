@@ -506,6 +506,14 @@ internal static class LauncherStrings
 
     internal static string NetworkWithMessage => GetRequiredString("networkWithMessage");
 
+    internal static string NeutralColorStrategy => GetRequiredString("neutralColorStrategy");
+
+    internal static string NeutralColorStrategyBrandBlue => GetRequiredString("neutralColorStrategyBrandBlue");
+
+    internal static string NeutralColorStrategyDescription => GetRequiredString("neutralColorStrategyDescription");
+
+    internal static string NeutralColorStrategySeedFollowing => GetRequiredString("neutralColorStrategySeedFollowing");
+
     internal static string News => GetRequiredString("news");
 
     internal static string NextBanner => GetRequiredString("nextBanner");
@@ -864,11 +872,43 @@ internal static class LauncherStrings
 
     internal static string ThemeColorDescription => GetRequiredString("themeColorDescription");
 
+    internal static string ThemeColorExtractionAlgorithm => GetRequiredString("themeColorExtractionAlgorithm");
+
+    internal static string ThemeColorExtractionAlgorithmCelebiScore => GetRequiredString("themeColorExtractionAlgorithmCelebiScore");
+
+    internal static string ThemeColorExtractionAlgorithmDescription => GetRequiredString("themeColorExtractionAlgorithmDescription");
+
+    internal static string ThemeColorExtractionAlgorithmOctree => GetRequiredString("themeColorExtractionAlgorithmOctree");
+
+    internal static string ThemeColorExtractionAlgorithmWsmeans => GetRequiredString("themeColorExtractionAlgorithmWsmeans");
+
+    internal static string ThemeColorExtractionAlgorithmWu => GetRequiredString("themeColorExtractionAlgorithmWu");
+
     internal static string ThemeColorPalette => GetRequiredString("themeColorPalette");
 
     internal static string ThemeColorPaletteDescription => GetRequiredString("themeColorPaletteDescription");
 
     internal static string ThemeColorSystem => GetRequiredString("themeColorSystem");
+
+    internal static string ThemeColorVariant => GetRequiredString("themeColorVariant");
+
+    internal static string ThemeColorVariantContent => GetRequiredString("themeColorVariantContent");
+
+    internal static string ThemeColorVariantDescription => GetRequiredString("themeColorVariantDescription");
+
+    internal static string ThemeColorVariantExpressive => GetRequiredString("themeColorVariantExpressive");
+
+    internal static string ThemeColorVariantFidelity => GetRequiredString("themeColorVariantFidelity");
+
+    internal static string ThemeColorVariantMonochrome => GetRequiredString("themeColorVariantMonochrome");
+
+    internal static string ThemeColorVariantNeutral => GetRequiredString("themeColorVariantNeutral");
+
+    internal static string ThemeColorVariantRainbow => GetRequiredString("themeColorVariantRainbow");
+
+    internal static string ThemeColorVariantTonalSpot => GetRequiredString("themeColorVariantTonalSpot");
+
+    internal static string ThemeColorVariantVibrant => GetRequiredString("themeColorVariantVibrant");
 
     internal static string ThemeColorWallpaper => GetRequiredString("themeColorWallpaper");
 

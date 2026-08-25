@@ -159,7 +159,7 @@ public sealed class MaterialSchemeGeneratorTests
     }
 
     [Fact]
-    public void OnPrimaryColor_FollowsLuminanceRule()
+    public void OnPrimaryColor_UsesHigherContrastOnColor()
     {
         var darkScheme = MaterialSchemeGenerator.CreateScheme(
             DefaultSeed,
@@ -182,9 +182,9 @@ public sealed class MaterialSchemeGeneratorTests
     [Theory]
     [InlineData("#FFFFFFFF", true)]
     [InlineData("#FFB8B8B8", true)]
-    [InlineData("#FFE5484D", false)]
+    [InlineData("#FFE5484D", true)]
     [InlineData("#FF000000", false)]
-    public void GetReadableOnAccentColor_LuminanceAboveThreshold_SelectsDarkText(string hex, bool expectsDark)
+    public void GetReadableOnAccentColor_SelectsHigherContrastText(string hex, bool expectsDark)
     {
         var source = Color.Parse(hex);
 
@@ -201,9 +201,9 @@ public sealed class MaterialSchemeGeneratorTests
     }
 
     [Fact]
-    public void GetReadableOnAccentColor_Boundary_JustAboveThresholdUsesDarkText()
+    public void GetReadableOnAccentColor_MediumGray_UsesHigherContrastDarkText()
     {
-        // #B8B8B8 relative luminance ≈ 0.479 > 0.45 threshold.
+        // Dark text provides the higher contrast for this medium-gray fill.
         var boundary = Color.Parse("#FFB8B8B8");
 
         Assert.Equal(Color.FromRgb(0x12, 0x18, 0x20), ColorUtils.GetReadableOnAccentColor(boundary));

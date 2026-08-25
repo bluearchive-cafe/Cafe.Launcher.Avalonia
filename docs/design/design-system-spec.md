@@ -127,7 +127,7 @@
 
 - 单窗口 + 覆盖层：Z 序 = 主内容 → 设置 100 → 对话框 200 → 向导 500 → Toast 1000，**不动**。
 - 功能分区（Shell / GameOperations / Settings / SetupWizard / Diagnostics / ResourcePanel）与"单窗口内选分类"模型不变；表现级布局自由（如设置页留白、卡片形态）。
-- **设置页重设计蓝图（P3 表面执行；** [ADR-013](adr/ADR-013-设置页重设计方向.md) **+ M3 审核定稿）**：标题栏拆分（「设置」并入导航列顶部 header；关闭 ✕ 并入内容区标题行右端）；导航列 = SecondaryContainer 激活填充 + leading icon（Material Symbols）+ 标签，无指示条；内容区 = 变体 B 纯列表 + 组间空档 + 行间 inset hairline（以 `Color.Card.Border` 为分隔色，不新增 token）；覆盖层 `Radius.Lg`(16) + `Elevation.Shadow.Lg`；控件统一 `Field` 形态。**修正清单（随 P2/P3 落地）**：`Field.Border` 双档对比度（浅 `#7E93AC`/深 `#5B7190`，≥3:1）、hairline inset 规则、抽屉 leading icons。
+- **设置页重设计蓝图（P3 表面执行；** [ADR-013](adr/ADR-013-设置页重设计方向.md) **+ M3 审核定稿）**：标题栏拆分（「设置」并入导航列顶部 header；关闭 ✕ 并入内容区标题行右端）；导航列 = SecondaryContainer 激活填充 + leading icon（Material Symbols）+ 标签，无指示条；内容区 = 变体 B 纯列表 + 组间空档 + 行间 inset hairline（以 `Color.Card.Border` 为分隔色，不新增 token）；覆盖层 `Radius.Lg`(16) + `Elevation.Shadow.Lg`；控件统一 `Field` 形态。**修正清单（随 P2/P3 落地）**：`Field.Border` 双档对比度（浅 `#788EA7`/深 `#5E7494`，≥3:1）、hairline inset 规则、抽屉 leading icons。
 - **底栏形态**：**Q18 仲裁结论已撤销（2026-08-25，用户决定放弃首页布局相关决策）——形态重新开放**。前期结论（M3 贴边：对比度恒定 ≥7:1、三态一致；浮动胶囊：浅壁纸 ≈4.8:1 边缘 + 安装态高度需验证）保留为决策素材，`prototype/bottom-bar` 分支保留；重新裁决时按 ADR-001 标准重走（走查/原型流程不变）。
 
 ## 6. 主题与壁纸
@@ -170,8 +170,8 @@
 
 ## 9. 设计画廊（Q11）
 
-- 位置：Debug 构建 `IsDebugFeaturesEnabled` 可见（与现有调试面板同门），`Views/` 新增 `DesignGallery.axaml`。
-- **M4 状态（已实现）**：`Views/DesignGalleryOverlay.axaml` + `ViewModels/DesignGalleryViewModel.cs`（Debug 面板「打开设计画廊」按钮进入，`dialog-overlay` 层，ZIndex 200，关闭同调试面板）；数据源 = 运行时枚举 `/Application.Resources` 中全部 `Launcher.*` 键 + `DesignTokenGrouping` 按 §3.2 十二家族分组（键段解析，零漂移；无法归类的键进「Other」），显示当前主题变体值（`TryGetResource` 默认变体）；色板 swatch + 键名 + 值文本；本地化标题/分组名（4 语言，`designGroup*` 键族）；`UiStyleContractTests` 已将画廊纳入 ViewFiles 规则扫描。P2 扩展点：组件状态矩阵 + 底栏双原型对比区（Q18 仲裁）。
+- 位置：Debug 构建 `IsDebugFeaturesEnabled` 可见（与现有调试面板同门），`Views/` 新增 `DesignGalleryOverlay.axaml`。
+- **M4 状态（已实现）**：`Views/DesignGalleryOverlay.axaml` + `ViewModels/DesignGalleryViewModel.cs`（Debug 面板「打开设计画廊」按钮进入，`dialog-overlay` 层，ZIndex 200，关闭同调试面板）；数据源 = 运行时枚举 `/Application.Resources` 根字典和 Light/Dark `ThemeDictionaries` 中全部 `Launcher.*` 键 + `DesignTokenGrouping` 按 §3.2 十二家族分组（键段解析，零漂移；无法归类的键进「Other」），显示当前主题变体值（`TryGetResource` 当前变体）；色板 swatch + 键名 + 值文本；本地化标题/分组名（4 语言，`designGroup*` 键族）；`UiStyleContractTests` 已将画廊纳入 ViewFiles 规则扫描。P2 扩展点：组件状态矩阵 + 底栏双原型对比区（Q18 仲裁）。
 - 内容：P1 = token 总表（按 §3.2 家族分组：色板 swatch、字阶、间距/圆角/动效表）；P2 = 组件状态矩阵（3 组件 × 6 态，ADR-007）与底栏双原型对比区（Q18 仲裁）；组件状态矩阵同时是走查清单的实物载体。
 - 画廊文案走本地化契约（resx 4 语言）。
 

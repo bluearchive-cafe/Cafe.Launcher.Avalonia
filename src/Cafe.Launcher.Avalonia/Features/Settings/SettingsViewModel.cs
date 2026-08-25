@@ -418,6 +418,9 @@ public partial class SettingsViewModel : ViewModelBase, IDisposable, IModalConte
     private static bool IsAppearanceSetting(string? propertyName) =>
         propertyName is nameof(LauncherSettings.ThemeMode)
             or nameof(LauncherSettings.ThemeColorMode)
+            or nameof(LauncherSettings.ThemeColorExtractionAlgorithm)
+            or nameof(LauncherSettings.ThemeColorVariant)
+            or nameof(LauncherSettings.NeutralColorStrategy)
             or nameof(LauncherSettings.CustomThemeColor)
             or nameof(LauncherSettings.ThemeColorPalette)
             or nameof(LauncherSettings.SelectedThemeColorPaletteIndex)

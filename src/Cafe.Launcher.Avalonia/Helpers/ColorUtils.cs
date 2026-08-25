@@ -61,14 +61,14 @@ internal static class ColorUtils
     }
 
     /// <summary>
-    /// Returns black or white, whichever offers the better contrast against <paramref name="color"/>.
+    /// Returns the light or dark on-colour with the better contrast against <paramref name="color"/>.
     /// </summary>
     public static Color GetReadableOnAccentColor(Color color)
     {
-        var luminance = GetRelativeLuminance(color);
-        return luminance > 0.45
-            ? Color.FromRgb(0x12, 0x18, 0x20)
-            : Colors.White;
+        var darkOnColor = Color.FromRgb(0x12, 0x18, 0x20);
+        var lightContrast = GetContrastRatio(Colors.White, color);
+        var darkContrast = GetContrastRatio(darkOnColor, color);
+        return darkContrast > lightContrast ? darkOnColor : Colors.White;
     }
 
     /// <summary>
