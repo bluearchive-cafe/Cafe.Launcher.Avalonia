@@ -78,6 +78,8 @@ public partial class MainWindow : Window
         viewModel.WindowChrome.CloseRequested -= PerformClose;
         viewModel.WindowChrome.RestoreRequested -= ShowWindow;
         viewModel.Dialogs.ErrorCopyDetailsRequested -= CopyErrorDetailsToClipboard;
+        viewModel.RemoteContent.SetBannerPointerOver(false);
+        viewModel.RemoteContent.SetBannerFocusWithin(false);
 
         if (viewModel.Settings.PickGameFolderAsync == pickGameFolderAsync)
         {
@@ -125,6 +127,23 @@ public partial class MainWindow : Window
         }
 
         configuredViewModel = null;
+    }
+
+    private void OnBannerPointerEntered(object? sender, PointerEventArgs e) => UpdateBannerInteractionState();
+
+    private void OnBannerPointerExited(object? sender, PointerEventArgs e) => UpdateBannerInteractionState();
+
+    private void OnBannerGotFocus(object? sender, FocusChangedEventArgs e) => UpdateBannerInteractionState();
+
+    private void OnBannerLostFocus(object? sender, FocusChangedEventArgs e) => UpdateBannerInteractionState();
+
+    private void UpdateBannerInteractionState()
+    {
+        var pointerOver = BannerStage.IsPointerOver;
+        var focusWithin = BannerStage.IsKeyboardFocusWithin;
+        BannerStage.Classes.Set("active", pointerOver || focusWithin);
+        configuredViewModel?.RemoteContent.SetBannerPointerOver(pointerOver);
+        configuredViewModel?.RemoteContent.SetBannerFocusWithin(focusWithin);
     }
 
     private void OnActivated(object? sender, EventArgs e)

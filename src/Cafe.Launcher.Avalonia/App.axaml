@@ -27,6 +27,8 @@
             <Thickness x:Key="LauncherToastActionRowMargin">0,8,0,0</Thickness>
             <Thickness x:Key="LauncherToastPrimaryActionMargin">0,0,8,0</Thickness>
             <Thickness x:Key="LauncherToastActionProgressMargin">8,0,0,0</Thickness>
+            <Thickness x:Key="LauncherTabHeaderMargin">0,0,0,4</Thickness>
+            <Thickness x:Key="LauncherTabIndicatorMargin">0,4,0,2</Thickness>
             <Thickness x:Key="LauncherToastContentPadding">12</Thickness>
             <Thickness x:Key="LauncherToastActionPadding">12,8</Thickness>
             <CornerRadius x:Key="LauncherRadiusSm">4</CornerRadius>

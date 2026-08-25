@@ -10,6 +10,13 @@ public sealed partial class BannerDot : CommunityToolkit.Mvvm.ComponentModel.Obs
 {
     public int Index { get; init; }
 
+    private string accessibleName = "";
+    public string AccessibleName
+    {
+        get => accessibleName;
+        set => SetProperty(ref accessibleName, value);
+    }
+
     private bool isActive;
     public bool IsActive
     {

@@ -296,7 +296,7 @@ public sealed partial class UiStyleContractTests
             bindingValues,
             value => value.Contains("ElementName=Root", StringComparison.Ordinal));
         Assert.Equal(
-            7,
+            8,
             bindingValues.Count(value =>
                 value.Contains(
                     "#Root.((vm:MainWindowViewModel)DataContext).",
@@ -422,6 +422,65 @@ public sealed partial class UiStyleContractTests
     }
 
     [Fact]
+    public void MainWindow_RemoteContent_UsesIndependentCardsWithNewsOnlyVerticalScroll()
+    {
+        var document = XDocument.Load(ProjectFile("Views/MainWindow.axaml"));
+        var remoteSurface = document
+            .Descendants()
+            .Single(element =>
+                element.Name.LocalName == "Border"
+                && HasClass(element, "remote-surface"));
+        var layoutHost = remoteSurface
+            .Descendants()
+            .Single(element =>
+                element.Name.LocalName == "Border"
+                && HasClass(element, "remote-content-layout-host"));
+        var cards = layoutHost
+            .Descendants()
+            .Where(element =>
+                element.Name.LocalName == "Border"
+                && HasClass(element, "remote-content-card"))
+            .ToArray();
+
+        Assert.DoesNotContain(remoteSurface.Attributes(), attribute =>
+            attribute.Name.LocalName == "Classes"
+            && attribute.Value.Split(' ', StringSplitOptions.RemoveEmptyEntries)
+                .Contains("surface", StringComparer.Ordinal));
+        Assert.Equal(3, cards.Length);
+        Assert.All(
+            new[] { "notice-card", "news-card", "social-media-card" },
+            cardClass => Assert.Single(cards, card => HasClass(card, cardClass)));
+        var bannerStage = layoutHost
+            .Descendants()
+            .Single(element =>
+                element.Name.LocalName == "Grid"
+                && HasClass(element, "banner-stage"));
+        Assert.DoesNotContain(bannerStage.Ancestors(), element => HasClass(element, "remote-content-card"));
+
+        var layoutStack = layoutHost.Elements().Single(element => element.Name.LocalName == "StackPanel");
+        Assert.DoesNotContain(layoutStack.Elements(), element => element.Name.LocalName == "ScrollViewer");
+
+        var newsViewport = cards
+            .Single(card => HasClass(card, "news-card"))
+            .Descendants()
+            .Single(element => HasClass(element, "news-viewport"));
+        var newsCard = cards.Single(card => HasClass(card, "news-card"));
+        Assert.All(
+            layoutHost
+                .Descendants()
+                .Where(element => element.Name.LocalName == "ScrollViewer"),
+            scrollViewer => Assert.Contains(newsCard.Descendants(), element => element == scrollViewer));
+        Assert.Equal("Auto", newsViewport.Attribute("VerticalScrollBarVisibility")?.Value);
+        Assert.Equal("Disabled", newsViewport.Attribute("HorizontalScrollBarVisibility")?.Value);
+
+        var styles = XDocument.Load(ProjectFile("Views/MainWindow.Styles.axaml"));
+        var cardStyle = GetStyleSetters(styles, "Border.remote-content-card");
+        Assert.Equal("{DynamicResource LauncherPanelBackgroundBrush}", cardStyle["Background"]);
+        Assert.Equal("{StaticResource LauncherRadiusSm}", cardStyle["CornerRadius"]);
+        Assert.Equal("{StaticResource LauncherThicknessMd}", cardStyle["Padding"]);
+    }
+
+    [Fact]
     public void MainWindow_MultiRowGridChildren_DeclareTheirFirstRowExplicitly()
     {
         var document = XDocument.Load(ProjectFile("Views/MainWindow.axaml"));
@@ -451,9 +510,17 @@ public sealed partial class UiStyleContractTests
     }
 
     [Fact]
-    public void MainWindow_NewsList_UsesThreeRowScrollableViewportAndReadableRows()
+    public void MainWindow_NewsTabs_UseNativeSelectionAndScrollableReadableRows()
     {
         var document = XDocument.Load(ProjectFile("Views/MainWindow.axaml"));
+        var newsCard = document
+            .Descendants()
+            .Single(element => HasClass(element, "news-card"));
+        var tabs = newsCard
+            .Descendants()
+            .Single(element =>
+                element.Name.LocalName == "TabControl"
+                && HasClass(element, "news-tabs"));
         var viewport = document
             .Descendants()
             .Single(element =>
@@ -473,10 +540,97 @@ public sealed partial class UiStyleContractTests
         var title = rowButton.Descendants().Single(element =>
             element.Name.LocalName == "TextBlock"
             && element.Attribute("Text")?.Value == "{Binding Title}");
-        var date = rowButton.Descendants().Single(element =>
+            var date = rowButton.Descendants().Single(element =>
             element.Name.LocalName == "TextBlock"
-            && element.Attribute("Text")?.Value == "{Binding Subtitle}");
+                && element.Attribute("Text")?.Value == "{Binding Subtitle}");
 
+        Assert.Equal("{Binding RemoteContent.NewsCategories}", tabs.Attribute("ItemsSource")?.Value);
+        Assert.Equal(
+            "{Binding RemoteContent.SelectedNewsCategory, Mode=TwoWay}",
+            tabs.Attribute("SelectedItem")?.Value);
+        Assert.Equal("{x:Null}", tabs.Attribute("PageTransition")?.Value);
+        var tabHeaderScrollViewer = tabs
+            .Descendants()
+            .Single(element =>
+                element.Name.LocalName == "ScrollViewer"
+                && element.Attribute("Classes") is null);
+        Assert.Equal("Auto", tabHeaderScrollViewer.Attribute("HorizontalScrollBarVisibility")?.Value);
+        Assert.Equal("Disabled", tabHeaderScrollViewer.Attribute("VerticalScrollBarVisibility")?.Value);
+        var tabItemTheme = tabs
+            .Elements()
+            .Single(element => element.Name.LocalName == "TabControl.ItemContainerTheme")
+            .Elements()
+            .Single(element => element.Name.LocalName == "ControlTheme");
+        Assert.Equal("TabItem", tabItemTheme.Attribute("TargetType")?.Value);
+        Assert.Equal("{StaticResource {x:Type TabItem}}", tabItemTheme.Attribute("BasedOn")?.Value);
+        Assert.Contains(
+            tabItemTheme.Elements(),
+            element =>
+                element.Name.LocalName == "Style"
+                && element.Attribute("Selector")?.Value == "^:selected");
+        var tabTheme = tabs
+            .Elements()
+            .Single(element => element.Name.LocalName == "TabControl.Theme")
+            .Elements()
+            .Single(element => element.Name.LocalName == "ControlTheme");
+        var tabItemsPanel = tabTheme
+            .Descendants()
+            .Single(element => element.Name.LocalName == "StackPanel");
+        Assert.Equal("Horizontal", tabItemsPanel.Attribute("Orientation")?.Value);
+        Assert.Equal("{StaticResource LauncherSpacingXs}", tabItemsPanel.Attribute("Spacing")?.Value);
+        var tabItemSetters = tabItemTheme
+            .Elements()
+            .Where(element => element.Name.LocalName == "Setter")
+            .ToDictionary(
+                element => element.Attribute("Property")?.Value ?? "",
+                element => element.Attribute("Value")?.Value ?? "",
+                StringComparer.Ordinal);
+        Assert.Equal("{DynamicResource LauncherTransparentBrush}", tabItemSetters["Background"]);
+        Assert.Equal(
+            "{DynamicResource LauncherTransparentBrush}",
+            tabItemTheme
+                .Elements()
+                .Single(element => element.Name.LocalName == "Style" && element.Attribute("Selector")?.Value == "^:selected")
+                .Elements()
+                .Single(element => element.Name.LocalName == "Setter" && element.Attribute("Property")?.Value == "Background")
+                .Attribute("Value")?.Value);
+        Assert.Equal(
+            "{DynamicResource LauncherAccentBrush}",
+            tabItemTheme
+                .Elements()
+                .Single(element => element.Name.LocalName == "Style" && element.Attribute("Selector")?.Value == "^:selected /template/ Border#PART_SelectedPipe")
+                .Elements()
+                .Single(element => element.Name.LocalName == "Setter")
+                .Attribute("Value")?.Value);
+        Assert.Equal(
+            "{StaticResource LauncherTabIndicatorMargin}",
+            tabItemTheme
+                .Elements()
+                .Single(element => element.Name.LocalName == "Style" && element.Attribute("Selector")?.Value == "^[TabStripPlacement=Top] /template/ Border#PART_SelectedPipe")
+                .Elements()
+                .Single(element => element.Name.LocalName == "Setter")
+                .Attribute("Value")?.Value);
+        var appResources = XDocument.Load(ProjectFile("App.axaml"));
+        var tabIndicatorMargin = appResources
+            .Descendants()
+            .Single(element => element.Name.LocalName == "Thickness"
+                && element.Attributes().Any(attribute =>
+                    attribute.Name.LocalName == "Key"
+                    && attribute.Value == "LauncherTabIndicatorMargin"));
+        Assert.Equal("0,4,0,2", tabIndicatorMargin.Value);
+        var tabHeaderMargin = appResources
+            .Descendants()
+            .Single(element => element.Name.LocalName == "Thickness"
+                && element.Attributes().Any(attribute =>
+                    attribute.Name.LocalName == "Key"
+                    && attribute.Value == "LauncherTabHeaderMargin"));
+        Assert.Equal("0,0,0,4", tabHeaderMargin.Value);
+        Assert.DoesNotContain(newsCard.Descendants(), element =>
+            element.Name.LocalName == "TextBlock"
+            && element.Attribute("Text")?.Value == "{Binding Shell.I18n[news]}");
+        Assert.DoesNotContain(newsCard.Descendants(), element =>
+            element.Name.LocalName == "Button"
+            && HasClass(element, "news-tab"));
         Assert.Equal("{StaticResource LauncherNewsViewportHeight}", viewport.Attribute("Height")?.Value);
         Assert.Equal("Auto", viewport.Attribute("VerticalScrollBarVisibility")?.Value);
         Assert.Equal("Disabled", viewport.Attribute("HorizontalScrollBarVisibility")?.Value);
@@ -542,40 +696,75 @@ public sealed partial class UiStyleContractTests
     }
 
     [Fact]
-    public void MainWindow_CarouselPlayback_KeepsPauseIndependentFromPageText()
+    public void MainWindow_CarouselControls_OverlayPageTextAndNavigationWithoutManualPause()
     {
         var document = XDocument.Load(ProjectFile("Views/MainWindow.axaml"));
-        var pauseButton = document
+        var bannerStage = document
             .Descendants()
             .Single(element =>
-                element.Name.LocalName == "Button"
-                && element.Attribute("Command")?.Value == "{Binding RemoteContent.ToggleCarouselLoopCommand}");
-        var pageText = document
-            .Descendants()
-            .Single(element =>
-                element.Name.LocalName == "TextBlock"
-                && element.Attribute("Text")?.Value == "{Binding RemoteContent.CarouselPageText}");
-        var pauseIcon = pauseButton.Elements().Single(element => element.Name.LocalName == "MaterialIcon");
-        var sharedLayout = pageText
-            .Ancestors()
-            .Intersect(pauseButton.Ancestors())
-            .First(element => element.Attributes().Any(attribute =>
-                (attribute.Name.LocalName == "ColumnSpacing" || attribute.Name.LocalName == "Spacing")
-                && attribute.Value.StartsWith("{StaticResource LauncherSpacing", StringComparison.Ordinal)));
+                element.Name.LocalName == "Grid"
+                && HasClass(element, "banner-stage"));
+        var pageText = bannerStage.Descendants().Single(element =>
+            element.Name.LocalName == "TextBlock"
+            && HasClass(element, "banner-page-indicator"));
+        var navigationButtons = bannerStage.Descendants().Where(element =>
+            element.Name.LocalName == "Button"
+            && HasClass(element, "carousel-navigation"))
+            .ToArray();
+        var dots = bannerStage.Descendants().Where(element =>
+            element.Name.LocalName == "Button"
+            && HasClass(element, "dot"))
+            .ToArray();
+        var bannerLink = bannerStage.Descendants().Single(element =>
+            element.Name.LocalName == "Button"
+            && HasClass(element, "banner-link"));
 
-        Assert.NotSame(pageText, pauseButton);
-        Assert.NotNull(sharedLayout);
         Assert.Equal("{Binding RemoteContent.CarouselPageText}", pageText.Attribute("Text")?.Value);
+        Assert.Equal("{Binding RemoteContent.CarouselPageText}", pageText.Attribute("AutomationProperties.Name")?.Value);
         Assert.Equal(
-            "{Binding RemoteContent.ToggleCarouselLoopCommand}",
-            pauseButton.Attribute("Command")?.Value);
-        Assert.Equal("{Binding RemoteContent.CarouselPauseTooltip}", pauseButton.Attribute("ToolTip.Tip")?.Value);
+            "{Binding #Root.((vm:MainWindowViewModel)DataContext).Shell.I18n[banner]}",
+            bannerLink.Attribute("AutomationProperties.Name")?.Value);
+        Assert.Equal(2, navigationButtons.Length);
+        Assert.All(navigationButtons, button =>
+        {
+            Assert.Equal("{Binding RemoteContent.HasMultipleBanners}", button.Attribute("IsEnabled")?.Value);
+            Assert.NotNull(button.Attribute("ToolTip.Tip"));
+            Assert.NotNull(button.Attribute("AutomationProperties.Name"));
+        });
+        Assert.NotEmpty(dots);
+        Assert.All(
+            dots,
+            dot =>
+            {
+                Assert.Equal(
+                    "{Binding #Root.((vm:MainWindowViewModel)DataContext).RemoteContent.HasMultipleBanners}",
+                    dot.Attribute("IsEnabled")?.Value);
+                Assert.Equal("{Binding AccessibleName}", dot.Attribute("ToolTip.Tip")?.Value);
+                Assert.Equal("{Binding AccessibleName}", dot.Attribute("AutomationProperties.Name")?.Value);
+            });
+        Assert.DoesNotContain(
+            document.Descendants(),
+            element => element.Attributes().Any(attribute =>
+                attribute.Value.Contains("ToggleCarouselLoop", StringComparison.Ordinal)
+                || attribute.Value.Contains("CarouselPause", StringComparison.Ordinal)));
+
+        var styles = XDocument.Load(ProjectFile("Views/MainWindow.Styles.axaml"));
+        var bannerControl = GetStyleSetters(styles, "Button.banner-control");
+        Assert.Equal("{DynamicResource LauncherOverlayBrush}", bannerControl["Background"]);
+        Assert.Equal("{DynamicResource LauncherOnChromeBrush}", bannerControl["Foreground"]);
+        Assert.Equal("0", bannerControl["Opacity"]);
+        Assert.Equal("False", bannerControl["IsHitTestVisible"]);
         Assert.Equal(
-            "{Binding RemoteContent.CarouselPauseTooltip}",
-            pauseButton.Attributes()
-                .Single(attribute => attribute.Name.LocalName == "AutomationProperties.Name")
-                .Value);
-        Assert.Equal("{Binding RemoteContent.CarouselPauseIcon}", pauseIcon.Attribute("Kind")?.Value);
+            "{StaticResource LauncherSpacingSmThickness}",
+            GetStyleSetters(styles, "Button.banner-control.carousel-navigation")["Margin"]);
+        var bannerDots = GetStyleSetters(styles, "Grid.banner-indicators Button.dot");
+        Assert.Equal("{DynamicResource LauncherOverlayBrush}", bannerDots["Background"]);
+        Assert.Equal("{DynamicResource LauncherOnChromeBrush}", bannerDots["Foreground"]);
+        Assert.Equal("1", GetStyleSetters(styles, "Grid.banner-stage.active > Button.banner-control")["Opacity"]);
+        Assert.Equal("True", GetStyleSetters(styles, "Grid.banner-stage.active > Button.banner-control")["IsHitTestVisible"]);
+        Assert.Equal("True", GetStyleSetters(styles, "Grid.banner-stage.active > Grid.banner-control")["IsHitTestVisible"]);
+        Assert.Equal("False", GetStyleSetters(styles, "Grid.banner-stage.active > TextBlock.banner-control")["IsHitTestVisible"]);
+        Assert.Equal("0.35", GetStyleSetters(styles, "Grid.banner-stage.active > Button.banner-control:disabled")["Opacity"]);
     }
 
     private static readonly string[] StyleFiles =
@@ -2690,7 +2879,7 @@ public sealed partial class UiStyleContractTests
     }
 
     [Fact]
-    public void NewsCategoryTabs_UseNoThemeBorderForAccentStates()
+    public void LogFilterTabs_UseNoThemeBorderForAccentStates()
     {
         var styles = XDocument.Load(ProjectFile("Views/Styles/RemoteContent.axaml"));
 

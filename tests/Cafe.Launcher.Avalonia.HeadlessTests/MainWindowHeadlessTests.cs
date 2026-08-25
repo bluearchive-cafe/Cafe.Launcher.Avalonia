@@ -800,6 +800,72 @@ public sealed class MainWindowHeadlessTests
         Assert.InRange(lastRowTop.Value.Y, 0, viewport.Viewport.Height - rowButtons[^1].Bounds.Height);
     }
 
+    [AvaloniaFact]
+    public void MainWindow_NewsTabs_KeepVisualGapBetweenHeaderAndSelectedIndicator()
+    {
+        using var context = CreateContext();
+        context.ViewModel.RemoteContent.Apply(
+            new LauncherRemoteState
+            {
+                OperationsResource = new OperationsResourceResponse
+                {
+                    OperationsResourceOpen = true,
+                    NewsList = new NewsListEnvelope
+                    {
+                        Code = 0,
+                        Data = new NewsListData
+                        {
+                            News =
+                            [
+                                new NewsTypeItem
+                                {
+                                    TypeLabel = "News",
+                                    Rows =
+                                    [
+                                        new NewsRowItem
+                                        {
+                                            Title = "News item",
+                                            Link = "https://news.example.invalid/1",
+                                            PublishTime = 1_700_000_000_000
+                                        }
+                                    ]
+                                },
+                                new NewsTypeItem
+                                {
+                                    TypeLabel = "Events",
+                                    Rows =
+                                    [
+                                        new NewsRowItem
+                                        {
+                                            Title = "Event item",
+                                            Link = "https://news.example.invalid/2",
+                                            PublishTime = 1_700_000_000_001
+                                        }
+                                    ]
+                                }
+                            ]
+                        }
+                    }
+                }
+            },
+            new LauncherSettings { ShowRemoteContentCard = true },
+            CancellationToken.None);
+        context.Window.Show();
+        Dispatcher.UIThread.RunJobs();
+
+        var selectedTab = context.Window.GetVisualDescendants().OfType<TabItem>().Single(tab => tab.IsSelected);
+        var header = selectedTab.GetVisualDescendants().OfType<TextBlock>().Single(text => text.Text == "News");
+        var indicator = selectedTab.GetVisualDescendants().OfType<Border>()
+            .Single(border => border.Name == "PART_SelectedPipe" && border.IsEffectivelyVisible);
+        var headerTop = header.TranslatePoint(default, selectedTab);
+        var indicatorTop = indicator.TranslatePoint(default, selectedTab);
+
+        Assert.NotNull(headerTop);
+        Assert.NotNull(indicatorTop);
+        var gap = indicatorTop.Value.Y - (headerTop.Value.Y + header.Bounds.Height);
+        Assert.True(gap >= 4, $"Expected at least 4 px between tab header and indicator, but measured {gap} px.");
+    }
+
     [AvaloniaTheory]
     [InlineData("install", 4, 1)]
     [InlineData("progress", 2, 0)]

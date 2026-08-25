@@ -53,6 +53,13 @@
         <Setter Property="Background" Value="{DynamicResource LauncherAccentBrush}"/>
         <Setter Property="Foreground" Value="{DynamicResource LauncherOnAccentBrush}"/>
     </Style>
+    <Style Selector="TabControl.news-tabs">
+        <Setter Property="Background" Value="{DynamicResource LauncherTransparentBrush}"/>
+        <Setter Property="BorderThickness" Value="{StaticResource LauncherThicknessNone}"/>
+        <Setter Property="HorizontalContentAlignment" Value="Stretch"/>
+        <Setter Property="Padding" Value="{StaticResource LauncherThicknessNone}"/>
+        <Setter Property="VerticalContentAlignment" Value="Stretch"/>
+    </Style>
     <Style Selector="Border.info-strip.resource-panel-status">
         <Setter Property="Background" Value="{DynamicResource LauncherContentRowBrush}"/>
         <Setter Property="BorderBrush" Value="{DynamicResource LauncherAccentBorderBrush}"/>

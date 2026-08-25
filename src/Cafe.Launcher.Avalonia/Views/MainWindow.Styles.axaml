@@ -394,6 +394,11 @@
         <Setter Property="MinHeight" Value="360"/>
         <Setter Property="MaxHeight" Value="480"/>
     </Style>
+    <Style Selector="Border.remote-content-card">
+        <Setter Property="Background" Value="{DynamicResource LauncherPanelBackgroundBrush}"/>
+        <Setter Property="CornerRadius" Value="{StaticResource LauncherRadiusSm}"/>
+        <Setter Property="Padding" Value="{StaticResource LauncherThicknessMd}"/>
+    </Style>
     <Style Selector="Border.info-strip">
         <Setter Property="Background" Value="{DynamicResource LauncherAccentSoftBrush}"/>
         <Setter Property="CornerRadius" Value="{StaticResource LauncherRadiusSm}"/>
@@ -401,8 +406,6 @@
     </Style>
     <Style Selector="Border.notice-card">
         <Setter Property="Background" Value="{DynamicResource LauncherNoticeBackgroundBrush}"/>
-        <Setter Property="CornerRadius" Value="{StaticResource LauncherRadiusSm}"/>
-        <Setter Property="Padding" Value="12"/>
         <Setter Property="MaxHeight" Value="160"/>
     </Style>
     <Style Selector="Border.media-placeholder">
@@ -420,7 +423,7 @@
     <Style Selector="UserControl.remote-content-loading-overlay">
         <Setter Property="VerticalAlignment" Value="Stretch"/>
     </Style>
-    <Style Selector="Border.remote-content-scroll-host">
+    <Style Selector="Border.remote-content-layout-host">
         <Setter Property="Padding" Value="{StaticResource LauncherThicknessMd}"/>
     </Style>
     <Style Selector="Border.remote-content-load-error">
@@ -627,6 +630,55 @@
     <Style Selector="Border.banner-media">
         <Setter Property="CornerRadius" Value="{StaticResource LauncherRadiusSm}"/>
         <Setter Property="ClipToBounds" Value="True"/>
+    </Style>
+    <Style Selector="Grid.banner-stage">
+        <Setter Property="ClipToBounds" Value="True"/>
+    </Style>
+    <Style Selector="Button.banner-control">
+        <Setter Property="Background" Value="{DynamicResource LauncherOverlayBrush}"/>
+        <Setter Property="Foreground" Value="{DynamicResource LauncherOnChromeBrush}"/>
+        <Setter Property="Opacity" Value="0"/>
+        <Setter Property="IsHitTestVisible" Value="False"/>
+        <Setter Property="ZIndex" Value="1"/>
+    </Style>
+    <Style Selector="Button.banner-control.carousel-navigation">
+        <Setter Property="Margin" Value="{StaticResource LauncherSpacingSmThickness}"/>
+    </Style>
+    <Style Selector="Grid.banner-indicators Button.dot">
+        <Setter Property="Background" Value="{DynamicResource LauncherOverlayBrush}"/>
+        <Setter Property="Foreground" Value="{DynamicResource LauncherOnChromeBrush}"/>
+    </Style>
+    <Style Selector="Grid.banner-control">
+        <Setter Property="Opacity" Value="0"/>
+        <Setter Property="ZIndex" Value="1"/>
+    </Style>
+    <Style Selector="TextBlock.banner-control">
+        <Setter Property="Opacity" Value="0"/>
+        <Setter Property="ZIndex" Value="1"/>
+    </Style>
+    <Style Selector="Grid.banner-stage.active > Button.banner-control">
+        <Setter Property="Opacity" Value="1"/>
+        <Setter Property="IsHitTestVisible" Value="True"/>
+    </Style>
+    <Style Selector="Grid.banner-stage.active > Grid.banner-control">
+        <Setter Property="Opacity" Value="1"/>
+        <Setter Property="IsHitTestVisible" Value="True"/>
+    </Style>
+    <Style Selector="Grid.banner-stage.active > TextBlock.banner-control">
+        <Setter Property="Opacity" Value="1"/>
+        <Setter Property="IsHitTestVisible" Value="False"/>
+    </Style>
+    <Style Selector="Button.banner-control:disabled">
+        <Setter Property="Opacity" Value="0"/>
+        <Setter Property="IsHitTestVisible" Value="False"/>
+    </Style>
+    <Style Selector="Grid.banner-stage.active > Button.banner-control:disabled">
+        <Setter Property="Opacity" Value="0.35"/>
+    </Style>
+    <Style Selector="TextBlock.banner-page-indicator">
+        <Setter Property="Background" Value="{DynamicResource LauncherOverlayBrush}"/>
+        <Setter Property="Foreground" Value="{DynamicResource LauncherOnChromeBrush}"/>
+        <Setter Property="Padding" Value="{StaticResource LauncherSpacingSmThickness}"/>
     </Style>
     <Style Selector="Grid.settings-overlay">
         <Setter Property="Background" Value="{DynamicResource LauncherOverlayBrush}"/>

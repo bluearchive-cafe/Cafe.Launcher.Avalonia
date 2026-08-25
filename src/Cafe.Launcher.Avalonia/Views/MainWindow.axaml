@@ -72,35 +72,31 @@
             </Grid>
 
             <Grid Grid.Row="1" RowDefinitions="*,Auto">
-                <Border Classes="surface remote-surface"
+                <Border Classes="remote-surface"
                         IsVisible="{Binding RemoteContent.IsPanelVisible}">
                     <Panel>
-                        <Border Classes="remote-content-scroll-host">
-                            <ScrollViewer Classes="scroll-pad">
+                        <Border Classes="remote-content-layout-host">
                             <StackPanel Spacing="{StaticResource LauncherSpacingXxl}">
-                            <Border IsVisible="{Binding RemoteContent.HasNotice}" Classes="notice-card">
+                            <Border IsVisible="{Binding RemoteContent.HasNotice}"
+                                    Classes="remote-content-card notice-card">
                                 <StackPanel Spacing="{StaticResource LauncherSpacingXs}">
                                     <TextBlock Text="{Binding Shell.I18n[notice]}" Classes="panel-title"/>
-                                    <ScrollViewer MaxHeight="110" Classes="scroll-pad">
-                                        <TextBlock Text="{Binding RemoteContent.NoticeText}" Classes="body" TextWrapping="Wrap"/>
-                                    </ScrollViewer>
+                                    <TextBlock Text="{Binding RemoteContent.NoticeText}"
+                                               Classes="body"
+                                               MaxHeight="110"
+                                               TextWrapping="Wrap"
+                                               TextTrimming="CharacterEllipsis"/>
                                 </StackPanel>
                             </Border>
 
-                            <StackPanel Spacing="{StaticResource LauncherSpacingLg}" IsVisible="{Binding RemoteContent.HasBannerItems}">
-                                <!-- L5/A3: Banner header with title, page indicator, and pause button -->
-                                <Grid ColumnDefinitions="Auto,*,Auto,Auto" ColumnSpacing="{StaticResource LauncherSpacingSm}">
-                                    <TextBlock Text="{Binding Shell.I18n[banners]}" Classes="panel-title" VerticalAlignment="Center"/>
-                                    <TextBlock Grid.Column="2" Text="{Binding RemoteContent.CarouselPageText}" Classes="caption" VerticalAlignment="Center"/>
-                                    <Button Grid.Column="3" Classes="icon-button compact" Cursor="Hand"
-                                            Command="{Binding RemoteContent.ToggleCarouselLoopCommand}"
-                                            ToolTip.Tip="{Binding RemoteContent.CarouselPauseTooltip}"
-                                            AutomationProperties.Name="{Binding RemoteContent.CarouselPauseTooltip}">
-                                        <materialIcons:MaterialIcon Kind="{Binding RemoteContent.CarouselPauseIcon}" Width="{StaticResource LauncherIconSm}" Height="{StaticResource LauncherIconSm}"
-                                                                    Foreground="{DynamicResource LauncherTextSecondaryBrush}"/>
-                                    </Button>
-                                </Grid>
-                                <!-- Banner Carousel with crossfade transition -->
+                            <Grid x:Name="BannerStage"
+                                  Classes="banner-stage"
+                                  IsVisible="{Binding RemoteContent.HasBannerItems}"
+                                  PointerEntered="OnBannerPointerEntered"
+                                  PointerExited="OnBannerPointerExited"
+                                  GotFocus="OnBannerGotFocus"
+                                  LostFocus="OnBannerLostFocus">
+                                <!-- Banner carousel with horizontal page-slide transition -->
                                 <Carousel x:Name="BannerCarousel"
                                           ItemsSource="{Binding RemoteContent.BannerItems}"
                                           SelectedIndex="{Binding RemoteContent.CarouselSelectedIndex, Mode=TwoWay}"
@@ -119,6 +115,7 @@
                                                     Cursor="Hand"
                                                     Width="{Binding #BannerCarousel.Bounds.Width}"
                                                     Height="{Binding #BannerCarousel.Bounds.Height}"
+                                                    AutomationProperties.Name="{Binding #Root.((vm:MainWindowViewModel)DataContext).Shell.I18n[banner]}"
                                                     Command="{Binding #Root.((vm:MainWindowViewModel)DataContext).RemoteContent.OpenExternalUrlCommand}"
                                                     CommandParameter="{Binding Url}">
                                                 <Border Classes="banner-media">
@@ -138,17 +135,28 @@
                                         </DataTemplate>
                                     </Carousel.ItemTemplate>
                                 </Carousel>
-                                <!-- L5: Carousel indicator dots + left/right arrows -->
-                                <Grid ColumnDefinitions="Auto,*,Auto">
-                                    <Button Grid.Column="0" Classes="icon-button carousel-navigation" Cursor="Hand"
-                                            Command="{Binding RemoteContent.SelectPreviousBannerCommand}"
-                                            IsVisible="{Binding RemoteContent.HasMultipleBanners}"
-                                            ToolTip.Tip="{Binding Shell.I18n[previousBanner]}"
-                                            AutomationProperties.Name="{Binding Shell.I18n[previousBanner]}">
-                                        <materialIcons:MaterialIcon Kind="ChevronLeft" Width="{StaticResource LauncherIconMd}" Height="{StaticResource LauncherIconMd}"
-                                                                    Foreground="{DynamicResource LauncherTextSecondaryBrush}"/>
-                                    </Button>
-                                    <ItemsControl Grid.Column="1" ItemsSource="{Binding RemoteContent.BannerDots}" HorizontalAlignment="Center">
+                                <TextBlock Classes="banner-control banner-page-indicator"
+                                           Text="{Binding RemoteContent.CarouselPageText}"
+                                           AutomationProperties.Name="{Binding RemoteContent.CarouselPageText}"
+                                           HorizontalAlignment="Right"
+                                           VerticalAlignment="Top"
+                                           Margin="{StaticResource LauncherSpacingSmThickness}"/>
+                                <Button Classes="icon-button banner-control carousel-navigation banner-previous"
+                                        Cursor="Hand"
+                                        HorizontalAlignment="Left"
+                                        VerticalAlignment="Center"
+                                        IsEnabled="{Binding RemoteContent.HasMultipleBanners}"
+                                        Command="{Binding RemoteContent.SelectPreviousBannerCommand}"
+                                        ToolTip.Tip="{Binding Shell.I18n[previousBanner]}"
+                                        AutomationProperties.Name="{Binding Shell.I18n[previousBanner]}">
+                                    <materialIcons:MaterialIcon Kind="ChevronLeft" Width="{StaticResource LauncherIconMd}" Height="{StaticResource LauncherIconMd}"
+                                                                Foreground="{DynamicResource LauncherTextSecondaryBrush}"/>
+                                </Button>
+                                <Grid Classes="banner-control banner-indicators"
+                                      HorizontalAlignment="Center"
+                                      VerticalAlignment="Bottom"
+                                      Margin="{StaticResource LauncherSpacingSmThickness}">
+                                    <ItemsControl ItemsSource="{Binding RemoteContent.BannerDots}">
                                         <ItemsControl.ItemsPanel>
                                             <StaticResource ResourceKey="HorizontalSpacingSmPanel"/>
                                         </ItemsControl.ItemsPanel>
@@ -156,6 +164,9 @@
                                             <DataTemplate x:DataType="models:BannerDot">
                                                 <Button Classes="icon-button dot"
                                                         Cursor="Hand"
+                                                        IsEnabled="{Binding #Root.((vm:MainWindowViewModel)DataContext).RemoteContent.HasMultipleBanners}"
+                                                        ToolTip.Tip="{Binding AccessibleName}"
+                                                        AutomationProperties.Name="{Binding AccessibleName}"
                                                         Command="{Binding #Root.((vm:MainWindowViewModel)DataContext).RemoteContent.SelectBannerCommand}"
                                                         CommandParameter="{Binding Index}">
                                                     <Border Classes="banner-dot"
@@ -164,85 +175,160 @@
                                             </DataTemplate>
                                         </ItemsControl.ItemTemplate>
                                     </ItemsControl>
-                                    <Button Grid.Column="2" Classes="icon-button carousel-navigation" Cursor="Hand"
-                                            Command="{Binding RemoteContent.SelectNextBannerCommand}"
-                                            IsVisible="{Binding RemoteContent.HasMultipleBanners}"
-                                            ToolTip.Tip="{Binding Shell.I18n[nextBanner]}"
-                                            AutomationProperties.Name="{Binding Shell.I18n[nextBanner]}">
-                                        <materialIcons:MaterialIcon Kind="ChevronRight" Width="{StaticResource LauncherIconMd}" Height="{StaticResource LauncherIconMd}"
-                                                                    Foreground="{DynamicResource LauncherTextSecondaryBrush}"/>
-                                    </Button>
                                 </Grid>
-                            </StackPanel>
+                                <Button Classes="icon-button banner-control carousel-navigation banner-next"
+                                        Cursor="Hand"
+                                        HorizontalAlignment="Right"
+                                        VerticalAlignment="Center"
+                                        IsEnabled="{Binding RemoteContent.HasMultipleBanners}"
+                                        Command="{Binding RemoteContent.SelectNextBannerCommand}"
+                                        ToolTip.Tip="{Binding Shell.I18n[nextBanner]}"
+                                        AutomationProperties.Name="{Binding Shell.I18n[nextBanner]}">
+                                    <materialIcons:MaterialIcon Kind="ChevronRight" Width="{StaticResource LauncherIconMd}" Height="{StaticResource LauncherIconMd}"
+                                                                Foreground="{DynamicResource LauncherTextSecondaryBrush}"/>
+                                </Button>
+                            </Grid>
 
-                            <StackPanel Spacing="{StaticResource LauncherSpacingLg}" IsVisible="{Binding RemoteContent.HasNewsItems}">
-                                <TextBlock Text="{Binding Shell.I18n[news]}" Classes="panel-title"/>
-                                <!-- Category tabs -->
-                                <ScrollViewer HorizontalScrollBarVisibility="Auto" VerticalScrollBarVisibility="Disabled">
-                                    <StackPanel Orientation="Horizontal" Spacing="{StaticResource LauncherSpacingXs}">
-                                        <ItemsControl ItemsSource="{Binding RemoteContent.NewsCategories}">
-                                            <ItemsControl.ItemsPanel>
-                                                <StaticResource ResourceKey="HorizontalSpacingXsPanel"/>
-                                            </ItemsControl.ItemsPanel>
-                                            <ItemsControl.ItemTemplate>
-                                                <DataTemplate x:DataType="models:NewsCategory">
-                                                    <Button Cursor="Hand"
-                                                            Classes="news-tab"
-                                                            Classes.active="{Binding IsActive}"
-                                                            Command="{Binding #Root.((vm:MainWindowViewModel)DataContext).RemoteContent.SelectNewsCategoryCommand}"
-                                                            CommandParameter="{Binding .}">
-                                                        <TextBlock Text="{Binding Label}" VerticalAlignment="Center"/>
-                                                    </Button>
-                                                </DataTemplate>
-                                            </ItemsControl.ItemTemplate>
-                                        </ItemsControl>
-                                    </StackPanel>
-                                </ScrollViewer>
-                                <!-- Filtered news items -->
-                                <ScrollViewer Classes="news-viewport"
-                                              Height="{StaticResource LauncherNewsViewportHeight}"
-                                              HorizontalScrollBarVisibility="Disabled"
-                                              VerticalScrollBarVisibility="Auto"
-                                              IsVisible="{Binding RemoteContent.SelectedNewsCategory, Converter={x:Static ObjectConverters.IsNotNull}}">
-                                    <ItemsControl ItemsSource="{Binding RemoteContent.SelectedNewsCategory.Items}">
-                                        <ItemsControl.ItemsPanel>
-                                            <ItemsPanelTemplate>
-                                                <StackPanel Spacing="{StaticResource LauncherSpacingSm}"/>
-                                            </ItemsPanelTemplate>
-                                        </ItemsControl.ItemsPanel>
-                                        <ItemsControl.ItemTemplate>
-                                            <DataTemplate x:DataType="models:RemoteContentItem">
-                                                <Button Classes="content-link news-row"
-                                                        Cursor="Hand"
-                                                        Height="{StaticResource LauncherNewsRowHeight}"
-                                                        Command="{Binding #Root.((vm:MainWindowViewModel)DataContext).RemoteContent.OpenExternalUrlCommand}"
-                                                        CommandParameter="{Binding Url}">
-                                                    <Border Classes="content-row news-content-row">
-                                                        <Grid ColumnDefinitions="*,Auto" ColumnSpacing="{StaticResource LauncherSpacingLg}">
-                                                            <TextBlock Text="{Binding Title}"
-                                                                       Classes="value"
-                                                                       MaxLines="2"
-                                                                       TextWrapping="Wrap"
-                                                                       TextTrimming="CharacterEllipsis"
-                                                                       ToolTip.Tip="{Binding Title}"/>
-                                                            <TextBlock Grid.Column="1"
-                                                                       Text="{Binding Subtitle}"
-                                                                       HorizontalAlignment="Right"
-                                                                       TextAlignment="Right"
-                                                                       TextTrimming="CharacterEllipsis"
-                                                                       Classes="caption"/>
-                                                        </Grid>
+                            <Border Classes="remote-content-card news-card"
+                                    IsVisible="{Binding RemoteContent.HasNewsItems}">
+                                <TabControl Classes="news-tabs"
+                                            ItemsSource="{Binding RemoteContent.NewsCategories}"
+                                            SelectedItem="{Binding RemoteContent.SelectedNewsCategory, Mode=TwoWay}"
+                                            TabStripPlacement="Top"
+                                            PageTransition="{x:Null}">
+                                    <TabControl.Theme>
+                                        <ControlTheme TargetType="TabControl"
+                                                      BasedOn="{StaticResource {x:Type TabControl}}">
+                                            <Setter Property="Template">
+                                                <ControlTemplate>
+                                                    <Border BorderBrush="{TemplateBinding BorderBrush}"
+                                                            BorderThickness="{TemplateBinding BorderThickness}"
+                                                            CornerRadius="{TemplateBinding CornerRadius}"
+                                                            Background="{TemplateBinding Background}"
+                                                            HorizontalAlignment="{TemplateBinding HorizontalAlignment}"
+                                                            VerticalAlignment="{TemplateBinding VerticalAlignment}">
+                                                        <DockPanel>
+                                                            <ScrollViewer DockPanel.Dock="{TemplateBinding TabStripPlacement}"
+                                                                          HorizontalScrollBarVisibility="Auto"
+                                                                          VerticalScrollBarVisibility="Disabled">
+                                                                <ItemsPresenter Name="PART_ItemsPresenter"
+                                                                                ItemsPanel="{TemplateBinding ItemsPanel}"/>
+                                                            </ScrollViewer>
+                                                            <Panel ClipToBounds="True">
+                                                                <ContentPresenter Name="PART_SelectedContentHost2"
+                                                                                  Margin="{TemplateBinding Padding}"
+                                                                                  HorizontalContentAlignment="{TemplateBinding HorizontalContentAlignment}"
+                                                                                  VerticalContentAlignment="{TemplateBinding VerticalContentAlignment}"
+                                                                                  IsVisible="False"/>
+                                                                <ContentPresenter Name="PART_SelectedContentHost"
+                                                                                  Margin="{TemplateBinding Padding}"
+                                                                                  HorizontalContentAlignment="{TemplateBinding HorizontalContentAlignment}"
+                                                                                  VerticalContentAlignment="{TemplateBinding VerticalContentAlignment}"/>
+                                                            </Panel>
+                                                        </DockPanel>
                                                     </Border>
-                                                </Button>
-                                            </DataTemplate>
-                                        </ItemsControl.ItemTemplate>
-                                    </ItemsControl>
-                                </ScrollViewer>
-                            </StackPanel>
+                                                </ControlTemplate>
+                                            </Setter>
+                                            <Setter Property="ItemsPanel">
+                                                <ItemsPanelTemplate>
+                                                    <StackPanel Orientation="Horizontal"
+                                                                Spacing="{StaticResource LauncherSpacingXs}"/>
+                                                </ItemsPanelTemplate>
+                                            </Setter>
+                                        </ControlTheme>
+                                    </TabControl.Theme>
+                                    <TabControl.ItemContainerTheme>
+                                        <ControlTheme TargetType="TabItem"
+                                                      BasedOn="{StaticResource {x:Type TabItem}}">
+                                            <Setter Property="Background" Value="{DynamicResource LauncherTransparentBrush}"/>
+                                            <Setter Property="BorderThickness" Value="{StaticResource LauncherThicknessNone}"/>
+                                            <Setter Property="Foreground" Value="{DynamicResource LauncherTextPrimaryBrush}"/>
+                                            <Setter Property="FontSize" Value="{DynamicResource LauncherFontSizeMd}"/>
+                                            <Setter Property="Padding" Value="{StaticResource LauncherSpacingXsThickness}"/>
+                                            <Setter Property="MinHeight" Value="{StaticResource LauncherControlHeightSetting}"/>
+                                            <Setter Property="VerticalContentAlignment" Value="Center"/>
+                                            <Style Selector="^ /template/ ContentPresenter#PART_ContentPresenter">
+                                                <Setter Property="Margin" Value="{StaticResource LauncherTabHeaderMargin}"/>
+                                            </Style>
+                                            <Style Selector="^:selected">
+                                                <Setter Property="Background" Value="{DynamicResource LauncherTransparentBrush}"/>
+                                                <Setter Property="Foreground" Value="{DynamicResource LauncherTextPrimaryBrush}"/>
+                                            </Style>
+                                            <Style Selector="^:selected /template/ Border#PART_LayoutRoot">
+                                                <Setter Property="Background" Value="{DynamicResource LauncherTransparentBrush}"/>
+                                                <Setter Property="TextElement.Foreground" Value="{DynamicResource LauncherTextPrimaryBrush}"/>
+                                            </Style>
+                                            <Style Selector="^:selected /template/ Border#PART_SelectedPipe">
+                                                <Setter Property="Background" Value="{DynamicResource LauncherAccentBrush}"/>
+                                            </Style>
+                                            <Style Selector="^[TabStripPlacement=Top] /template/ Border#PART_SelectedPipe">
+                                                <Setter Property="Margin" Value="{StaticResource LauncherTabIndicatorMargin}"/>
+                                            </Style>
+                                            <Style Selector="^:pointerover /template/ Border#PART_LayoutRoot">
+                                                <Setter Property="Background" Value="{DynamicResource LauncherTransparentBrush}"/>
+                                                <Setter Property="TextElement.Foreground" Value="{DynamicResource LauncherTextPrimaryBrush}"/>
+                                            </Style>
+                                            <Style Selector="^:selected:pointerover /template/ Border#PART_LayoutRoot">
+                                                <Setter Property="Background" Value="{DynamicResource LauncherTransparentBrush}"/>
+                                                <Setter Property="TextElement.Foreground" Value="{DynamicResource LauncherTextPrimaryBrush}"/>
+                                            </Style>
+                                        </ControlTheme>
+                                    </TabControl.ItemContainerTheme>
+                                    <TabControl.ItemTemplate>
+                                        <DataTemplate x:DataType="models:NewsCategory">
+                                            <TextBlock Text="{Binding Label}" VerticalAlignment="Center"/>
+                                        </DataTemplate>
+                                    </TabControl.ItemTemplate>
+                                    <TabControl.ContentTemplate>
+                                        <DataTemplate x:DataType="models:NewsCategory">
+                                            <ScrollViewer Classes="news-viewport"
+                                                          Height="{StaticResource LauncherNewsViewportHeight}"
+                                                          HorizontalScrollBarVisibility="Disabled"
+                                                          VerticalScrollBarVisibility="Auto">
+                                                <ItemsControl ItemsSource="{Binding Items}">
+                                                    <ItemsControl.ItemsPanel>
+                                                        <ItemsPanelTemplate>
+                                                            <StackPanel Spacing="{StaticResource LauncherSpacingSm}"/>
+                                                        </ItemsPanelTemplate>
+                                                    </ItemsControl.ItemsPanel>
+                                                    <ItemsControl.ItemTemplate>
+                                                        <DataTemplate x:DataType="models:RemoteContentItem">
+                                                            <Button Classes="content-link news-row"
+                                                                    Cursor="Hand"
+                                                                    Height="{StaticResource LauncherNewsRowHeight}"
+                                                                    Command="{Binding #Root.((vm:MainWindowViewModel)DataContext).RemoteContent.OpenExternalUrlCommand}"
+                                                                    CommandParameter="{Binding Url}">
+                                                                <Border Classes="content-row news-content-row">
+                                                                    <Grid ColumnDefinitions="*,Auto" ColumnSpacing="{StaticResource LauncherSpacingLg}">
+                                                                        <TextBlock Text="{Binding Title}"
+                                                                                   Classes="value"
+                                                                                   MaxLines="2"
+                                                                                   TextWrapping="Wrap"
+                                                                                   TextTrimming="CharacterEllipsis"
+                                                                                   ToolTip.Tip="{Binding Title}"/>
+                                                                        <TextBlock Grid.Column="1"
+                                                                                   Text="{Binding Subtitle}"
+                                                                                   HorizontalAlignment="Right"
+                                                                                   TextAlignment="Right"
+                                                                                   TextTrimming="CharacterEllipsis"
+                                                                                   Classes="caption"/>
+                                                                    </Grid>
+                                                                </Border>
+                                                            </Button>
+                                                        </DataTemplate>
+                                                    </ItemsControl.ItemTemplate>
+                                                </ItemsControl>
+                                            </ScrollViewer>
+                                        </DataTemplate>
+                                    </TabControl.ContentTemplate>
+                                </TabControl>
+                            </Border>
 
-                            <StackPanel Spacing="{StaticResource LauncherSpacingLg}" IsVisible="{Binding RemoteContent.HasSocialMediaItems}">
-                                <TextBlock Text="{Binding Shell.I18n[socialMedia]}" Classes="panel-title"/>
-                                <ItemsControl ItemsSource="{Binding RemoteContent.SocialMediaItems}">
+                            <Border Classes="remote-content-card social-media-card"
+                                    IsVisible="{Binding RemoteContent.HasSocialMediaItems}">
+                                <StackPanel Spacing="{StaticResource LauncherSpacingLg}">
+                                    <TextBlock Text="{Binding Shell.I18n[socialMedia]}" Classes="panel-title"/>
+                                    <ItemsControl ItemsSource="{Binding RemoteContent.SocialMediaItems}">
                                     <ItemsControl.ItemsPanel>
                                         <ItemsPanelTemplate>
                                             <WrapPanel/>
@@ -261,10 +347,10 @@
                                             </Button>
                                         </DataTemplate>
                                     </ItemsControl.ItemTemplate>
-                                </ItemsControl>
+                                    </ItemsControl>
+                                </StackPanel>
+                            </Border>
                             </StackPanel>
-                            </StackPanel>
-                            </ScrollViewer>
                         </Border>
                         <Border Classes="remote-content-load-error"
                                 IsVisible="{Binding RemoteContent.HasLoadError}">
