@@ -87,6 +87,7 @@
 - **角色集**：primary/secondary/tertiary + 各自 `On*`/`*Container`/`On*Container`；surface 族（Surface/SurfaceVariant/Container 档）、outline 族、error 族（映射现有 Danger/DangerSoft/危险图标底）；业务色 Success/Warning/Info（Toast 等，不参与动态色）。
 - **on-color 按亮度计算**（P1 必修）：`Launcher.OnAccent` 不再硬编码白；按背景色相对亮度选黑/白（浅种子时用深 on-color），写入 `ColorUtils` 并测试锁定。
 - **实现**：`ApplyAccentBrushes`（`Features/Settings/SettingsAppearanceViewModel.cs`）演进为 `ApplyScheme`（输入 seed/variant/theme/neutralStrategy → 覆盖 brush 组）；`ThemeColorExtractionService`（Octree）与新算法共存；`ColorUtils`（`Helpers/ColorUtils.cs`）承载归一化与 on-color 计算。非壁纸模式（系统/自定义/默认色）产出与现状一致或改善。
+- **M3 落地记录（已实现并测试锁定）**：`ApplyScheme` 已替换 `ApplyAccentBrushes`；转换层 = `Helpers/MaterialColorMapper.cs`（ArgbColor↔Avalonia Color/Brush），scheme 生成 = `Services/MaterialSchemeGenerator.cs`（8 变体 × Spec2021 × Platform.Phone；`BuildRoleBrushes` 保留既有 accent 族覆盖子集并新增 Secondary/Tertiary/容器角色键）。**行为变更**：① `Launcher.Color.Info` 不再跟随 accent（业务色固定，spec §3.4）；② accent 由"归一化种子"变为"scheme Primary（tone 40/80）"——非壁纸模式亦经统一管线，存在 M0 记录的小幅色相/彩度随动（±1 tone，ΔE≈15）；③ 主题模式切换时经 `ApplyTheme` 按实际明暗重放 scheme（`ActualThemeVariant`），System 模式随系统变体；④ 新角色键（Secondary/Tertiary/容器/Surface/Outline）在 App.axaml 中以占位值声明、运行时覆盖（§3.3）。
 - **HCT 管线**：`Shirasagi0012.MaterialColorUtilities`（NuGet 直用）；ArgbColor↔Avalonia `Color` 映射封装；±1 tone 漂移以包内上游单测 + 参考值断言为护栏。
 
 ### 3.5 字阶与字体（Q14）
@@ -144,7 +145,7 @@
 | 中性色 | **品牌蓝调（固定）** / 种子跟随 | 品牌蓝调 | surface/outline 是否随种子染色 |
 
 - 持久化：`LauncherSettings` 新增字段 + 规范化（默认值填充），向后兼容旧 `settings.json`；遵循 `SettingsEditor` 事务性保存。
-- 兼容说明：既有"壁纸模式"用户默认算法从 Octree 切换为 M3 后，accent 会有轻微变化——属视觉漂移，记录为可接受（与 P3 改版同期）。
+- **M3 状态**：三字段已持久化（`themeColorExtractionAlgorithm`/`themeColorVariant`/`neutralColorStrategy`，默认 CelebiScore/TonalSpot/BrandBlue）并接入 `ApplyScheme` 管线（variant/strategy 已生效）；**三个设置行的 UI 在 P2**。壁纸取色算法：**当前仍走 Octree**（field 默认值已记录，P2 UI 接入后生效）；既有壁纸模式用户默认算法从 Octree 切换为 M3 后，accent 会有轻微变化——属视觉漂移，记录为可接受（与 P3 改版同期）。
 
 ## 8. 无障碍（Q9/Q19）
 
