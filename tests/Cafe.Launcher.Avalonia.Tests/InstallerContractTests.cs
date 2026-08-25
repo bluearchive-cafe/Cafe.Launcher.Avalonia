@@ -3,90 +3,184 @@ namespace Cafe.Launcher.Avalonia.Tests;
 public sealed class InstallerContractTests
 {
     [Fact]
-    public void NsisInstaller_DeclaresUtf8SourceEncoding()
+    public void IssInstaller_IsUtf8WithBomForLocalizedStrings()
     {
-        var script = ReadProjectFile("installer/Cafe.Launcher.Avalonia.nsi");
+        // The installer script and every per-language file hold localized text.
+        foreach (var relativePath in new[]
+        {
+            "installer/Cafe.Launcher.Avalonia.iss",
+            "installer/lang/CustomMessages.en.isl",
+            "installer/lang/CustomMessages.zh.isl",
+            "installer/lang/CustomMessages.ja.isl",
+        })
+        {
+            var bytes = File.ReadAllBytes(GetProjectFilePath(relativePath));
 
-        Assert.StartsWith("# -*- coding: utf-8 -*-", script, StringComparison.Ordinal);
+            Assert.True(
+                bytes.Length >= 3 && bytes[0] == 0xEF && bytes[1] == 0xBB && bytes[2] == 0xBF,
+                $"{relativePath} must be UTF-8 with BOM because it contains localized strings.");
+        }
     }
 
     [Fact]
-    public void NsisInstaller_UsesConfirmedMachineWideIdentity()
+    public void IssInstaller_DeclaresRequiredDefines()
     {
-        var script = ReadProjectFile("installer/Cafe.Launcher.Avalonia.nsi");
+        var script = ReadProjectFile("installer/Cafe.Launcher.Avalonia.iss");
 
-        Assert.Contains("Name \"Cafe Launcher\"", script, StringComparison.Ordinal);
-        Assert.Contains("!define PUBLISHER \"BlueArchive Cafe\"", script, StringComparison.Ordinal);
-        Assert.Contains("RequestExecutionLevel admin", script, StringComparison.Ordinal);
-        Assert.Contains("InstallDir \"$PROGRAMFILES64\\Cafe Launcher\"", script, StringComparison.Ordinal);
-        Assert.Contains("SetShellVarContext all", script, StringComparison.Ordinal);
-        Assert.Contains("WriteRegStr HKLM", script, StringComparison.Ordinal);
-        Assert.DoesNotContain("InstallDirRegKey", script, StringComparison.Ordinal);
+        Assert.Contains("#ifndef APP_VERSION", script, StringComparison.Ordinal);
+        Assert.Contains("#error \"APP_VERSION is required.\"", script, StringComparison.Ordinal);
+        Assert.Contains("#ifndef APP_FILE_VERSION", script, StringComparison.Ordinal);
+        Assert.Contains("#error \"APP_FILE_VERSION is required.\"", script, StringComparison.Ordinal);
+        Assert.Contains("#ifndef PUBLISH_GLOB", script, StringComparison.Ordinal);
+        Assert.Contains("#error \"PUBLISH_GLOB is required.\"", script, StringComparison.Ordinal);
     }
 
     [Fact]
-    public void NsisInstaller_ProvidesASelectableDesktopShortcut()
+    public void IssInstaller_LocalizedMessagesLiveInPerLanguageTranslationFiles()
     {
-        var script = ReadProjectFile("installer/Cafe.Launcher.Avalonia.nsi");
+        var script = ReadProjectFile("installer/Cafe.Launcher.Avalonia.iss");
 
-        Assert.Contains("!insertmacro MUI_PAGE_COMPONENTS", script, StringComparison.Ordinal);
-        Assert.Contains("Section /o \"Desktop shortcut\" SEC_DESKTOP", script, StringComparison.Ordinal);
+        // Script-level [CustomMessages] is language-independent global text where
+        // the LAST entry wins for every language; no localized text may live in
+        // the script, and "Languages:" is not a supported [CustomMessages] scope.
+        Assert.DoesNotContain("[CustomMessages]", script, StringComparison.Ordinal);
+        Assert.DoesNotContain("; Languages:", script, StringComparison.Ordinal);
+        foreach (var rawLine in script.Split('\n'))
+        {
+            Assert.False(
+                ContainsCjk(rawLine.Trim()),
+                "The installer script must not contain localized text; use installer/lang/CustomMessages.*.isl.");
+        }
+
+        // The [Languages] section wires in the per-language translation files.
+        Assert.Contains("lang\\CustomMessages.en.isl", script, StringComparison.Ordinal);
+        Assert.Contains("lang\\CustomMessages.zh.isl", script, StringComparison.Ordinal);
+        Assert.Contains("lang\\CustomMessages.ja.isl", script, StringComparison.Ordinal);
+
+        foreach (var file in new[]
+        {
+            "installer/lang/CustomMessages.en.isl",
+            "installer/lang/CustomMessages.zh.isl",
+            "installer/lang/CustomMessages.ja.isl",
+        })
+        {
+            var content = ReadProjectFile(file);
+
+            Assert.Contains("DeleteDataQuestion=", content, StringComparison.Ordinal);
+            Assert.Contains("InvalidInstallLocation=", content, StringComparison.Ordinal);
+            Assert.Contains("PreviousUninstallFailed=", content, StringComparison.Ordinal);
+        }
     }
 
     [Fact]
-    public void NsisInstaller_UsesExplicitUninstallFileList()
+    public void IssInstaller_UsesConfirmedMachineWideIdentity()
     {
-        var script = ReadProjectFile("installer/Cafe.Launcher.Avalonia.nsi");
+        var script = ReadProjectFile("installer/Cafe.Launcher.Avalonia.iss");
 
-        Assert.DoesNotContain("RMDir /r \"$INSTDIR\"", script, StringComparison.Ordinal);
+        Assert.Contains("AppName=Cafe Launcher", script, StringComparison.Ordinal);
+        Assert.Contains("AppPublisher=BlueArchive Cafe", script, StringComparison.Ordinal);
+        Assert.Contains("PrivilegesRequired=admin", script, StringComparison.Ordinal);
+        Assert.Contains("DefaultDirName={autopf}\\Cafe Launcher", script, StringComparison.Ordinal);
+        Assert.Contains("ArchitecturesInstallIn64BitMode=x64compatible", script, StringComparison.Ordinal);
+        Assert.Contains("UninstallDisplayName=Cafe Launcher", script, StringComparison.Ordinal);
+        Assert.DoesNotContain("PrivilegesRequired=lowest", script, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public void IssInstaller_UsesStableGuidAppId()
+    {
+        var script = ReadProjectFile("installer/Cafe.Launcher.Avalonia.iss");
+
+        Assert.Matches(@"AppId=\{\{[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}\}", script);
+        Assert.Contains("NEVER change AppId", script, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public void IssInstaller_ProvidesASelectableDesktopShortcut()
+    {
+        var script = ReadProjectFile("installer/Cafe.Launcher.Avalonia.iss");
+
+        Assert.Contains("[Tasks]", script, StringComparison.Ordinal);
+        Assert.Contains("Name: \"desktopicon\"", script, StringComparison.Ordinal);
+        Assert.Contains("Flags: unchecked", script, StringComparison.Ordinal);
+        Assert.Contains("Tasks: desktopicon", script, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public void IssInstaller_AlwaysOverwritesPublishedFilesOnUpgrade()
+    {
+        var script = ReadProjectFile("installer/Cafe.Launcher.Avalonia.iss");
+
+        Assert.Contains(
+            "Source: \"{#PUBLISH_GLOB}\"; DestDir: \"{app}\"; Flags: recursesubdirs ignoreversion",
+            script,
+            StringComparison.Ordinal);
+        Assert.DoesNotContain("uninsneveruninstall", script, StringComparison.OrdinalIgnoreCase);
+    }
+
+    [Fact]
+    public void IssInstaller_CannotTouchSiblingGameDirectory()
+    {
+        var script = ReadProjectFile("installer/Cafe.Launcher.Avalonia.iss");
+
+        // The uninstaller only removes files it installed plus the ownership
+        // marker; there must be no [UninstallDelete] entry above {app} level.
         Assert.DoesNotContain("YostarGames", script, StringComparison.Ordinal);
-        Assert.Contains("!include \"${UNINSTALL_INCLUDE}\"", script, StringComparison.Ordinal);
-    }
-
-    [Fact]
-    public void NsisUninstaller_PreservesApplicationDataUnlessExplicitlySelected()
-    {
-        var script = ReadProjectFile("installer/Cafe.Launcher.Avalonia.nsi");
-
+        Assert.DoesNotContain("RMDir", script, StringComparison.Ordinal);
         Assert.Contains(
-            "${NSD_SetState} $DeleteApplicationDataCheckbox ${BST_UNCHECKED}",
-            script,
-            StringComparison.Ordinal);
-        Assert.Contains(
-            "StrCmp $DeleteApplicationData \"1\" 0 preserveApplicationData",
-            script,
-            StringComparison.Ordinal);
-        Assert.Contains(
-            "RMDir /r \"$LOCALAPPDATA\\Cafe Launcher\"",
+            "Type: files; Name: \"{app}\\.cafe-launcher-install\"",
             script,
             StringComparison.Ordinal);
     }
 
     [Fact]
-    public void NsisInstaller_BlocksFileChangesWhileLauncherIsRunning()
+    public void IssUninstaller_PreservesApplicationDataUnlessExplicitlySelected()
     {
-        var script = ReadProjectFile("installer/Cafe.Launcher.Avalonia.nsi");
+        var script = ReadProjectFile("installer/Cafe.Launcher.Avalonia.iss");
 
-        Assert.Contains("Call EnsureApplicationStopped", script, StringComparison.Ordinal);
-        Assert.Contains("Call un.EnsureApplicationStopped", script, StringComparison.Ordinal);
-        Assert.Contains("SetErrorLevel 1", script, StringComparison.Ordinal);
+        Assert.Contains("ShouldDeleteUserData", script, StringComparison.Ordinal);
+        Assert.Contains(
+            "Type: filesandordirs; Name: \"{localappdata}\\Cafe Launcher\"; Check: ShouldDeleteUserData",
+            script,
+            StringComparison.Ordinal);
+        Assert.Contains("DeleteApplicationData := False", script, StringComparison.Ordinal);
+        Assert.Contains("UninstallSilent", script, StringComparison.Ordinal);
+        Assert.Contains("MB_YESNO", script, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public void IssInstaller_BlocksFileChangesWhileLauncherIsRunning()
+    {
+        var script = ReadProjectFile("installer/Cafe.Launcher.Avalonia.iss");
+
+        Assert.Contains("Local\\Cafe_Launcher_SI", script, StringComparison.Ordinal);
+        Assert.Contains("AppMutex={#APP_MUTEX}", script, StringComparison.Ordinal);
+        Assert.Contains("CloseApplications=no", script, StringComparison.Ordinal);
         Assert.DoesNotContain("taskkill", script, StringComparison.OrdinalIgnoreCase);
+        Assert.DoesNotContain("CloseApplications=yes", script, StringComparison.Ordinal);
     }
 
     [Fact]
-    public void NsisInstaller_CleansStaleRegistrationWhenOldUninstallerIsMissing()
+    public void IssInstaller_CleansStaleRegistrationWhenOldUninstallerIsMissing()
     {
-        var script = ReadProjectFile("installer/Cafe.Launcher.Avalonia.nsi");
+        var script = ReadProjectFile("installer/Cafe.Launcher.Avalonia.iss");
 
-        Assert.Contains("IfFileExists \"$2\" 0 staleRegistration", script, StringComparison.Ordinal);
-        Assert.Contains("staleRegistration:", script, StringComparison.Ordinal);
-        Assert.Contains("DeleteRegKey HKLM \"${UNINSTALL_KEY}\"", script, StringComparison.Ordinal);
-        Assert.DoesNotContain("IfFileExists \"$2\" 0 failed", script, StringComparison.Ordinal);
-        Assert.Contains("IntCmp $1 0 cleanup failed failed", script, StringComparison.Ordinal);
+        Assert.Contains(
+            "Software\\Microsoft\\Windows\\CurrentVersion\\Uninstall\\Cafe.Launcher.Avalonia",
+            script,
+            StringComparison.Ordinal);
+        Assert.Contains("RegQueryStringValue(HKLM", script, StringComparison.Ordinal);
+        Assert.Contains("RegDeleteKeyIncludingSubkeys", script, StringComparison.Ordinal);
+        Assert.Contains("/S _?=", script, StringComparison.Ordinal);
+        // The retired NSIS upgrade path passes the _?= directory unquoted; the
+        // legacy uninstaller consumes the rest of its command line and would
+        // compare any quotes against the registry InstallLocation.
+        Assert.Contains("Format('/S _?=%s'", script, StringComparison.Ordinal);
+        Assert.DoesNotContain("/S _?=\"", script, StringComparison.Ordinal);
     }
 
     [Fact]
-    public void DistributionScript_UsesConfirmedArtifactNamesAndGeneratesUninstallList()
+    public void DistributionScript_UsesConfirmedArtifactNamesAndCompilesWithIscc()
     {
         var script = ReadProjectFile("scripts/Build-Distribution.ps1");
 
@@ -98,21 +192,38 @@ public sealed class InstallerContractTests
             "Cafe.Launcher.Avalonia_${Tag}_setup.exe",
             script,
             StringComparison.Ordinal);
-        Assert.Contains("UninstallFiles.nsh", script, StringComparison.Ordinal);
-        Assert.Contains("GetRelativePath", script, StringComparison.Ordinal);
+        Assert.Contains("Resolve-Iscc", script, StringComparison.Ordinal);
+        Assert.Contains("Inno Setup 7\\ISCC.exe", script, StringComparison.Ordinal);
+        Assert.Contains("[version]\"6.3\"", script, StringComparison.Ordinal);
+        Assert.DoesNotContain("UninstallFiles.nsh", script, StringComparison.Ordinal);
+        Assert.DoesNotContain("makensis", script, StringComparison.OrdinalIgnoreCase);
     }
 
     [Fact]
-    public void DistributionBuilder_UsesHostNativePublishGlobForCrossPlatformNsis()
+    public void DistributionBuilder_PassesPublishGlobAndOutputsToIscc()
     {
         var buildScript = ReadProjectFile("scripts/Build-Distribution.ps1");
-        var nsisScript = ReadProjectFile("installer/Cafe.Launcher.Avalonia.nsi");
+        var issScript = ReadProjectFile("installer/Cafe.Launcher.Avalonia.iss");
 
-        Assert.Contains("$publishGlob = Join-Path $PublishDir \"*\"", buildScript, StringComparison.Ordinal);
-        Assert.Contains("\"${definePrefix}PUBLISH_GLOB=$publishGlob\"", buildScript, StringComparison.Ordinal);
-        Assert.Contains("\"${definePrefix}UNINSTALL_INCLUDE=$uninstallInclude\"", buildScript, StringComparison.Ordinal);
-        Assert.Contains("\"${definePrefix}OUTPUT_FILE=$setupPath\"", buildScript, StringComparison.Ordinal);
-        Assert.Contains("File /r \"${PUBLISH_GLOB}\"", nsisScript, StringComparison.Ordinal);
+        Assert.Contains("$publishGlob = Join-Path $publishRoot \"*\"", buildScript, StringComparison.Ordinal);
+        Assert.Contains("\"-dPUBLISH_GLOB=$publishGlob\"", buildScript, StringComparison.Ordinal);
+        Assert.Contains("\"-dAPP_VERSION=$versionPrefix\"", buildScript, StringComparison.Ordinal);
+        Assert.Contains("\"-dAPP_FILE_VERSION=$fileVersion\"", buildScript, StringComparison.Ordinal);
+        Assert.Contains("\"-o$DistributionDir\"", buildScript, StringComparison.Ordinal);
+        Assert.Contains("\"-f$setupBaseName\"", buildScript, StringComparison.Ordinal);
+        Assert.Contains("\"installer\\Cafe.Launcher.Avalonia.iss\"", buildScript, StringComparison.Ordinal);
+        Assert.Contains("Source: \"{#PUBLISH_GLOB}\"", issScript, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public void ReleaseWorkflow_UsesWindowsRunnerAndInstallsInnoSetup()
+    {
+        var workflow = ReadProjectFile(".github/workflows/release.yml");
+
+        Assert.Contains("runs-on: windows-latest", workflow, StringComparison.Ordinal);
+        Assert.Contains("choco install innosetup", workflow, StringComparison.Ordinal);
+        Assert.DoesNotContain("makensis", workflow, StringComparison.OrdinalIgnoreCase);
+        Assert.DoesNotContain("apt-get", workflow, StringComparison.OrdinalIgnoreCase);
     }
 
     [Fact]
@@ -126,8 +237,25 @@ public sealed class InstallerContractTests
         Assert.Contains("${{ env.setup_name }}", workflow, StringComparison.Ordinal);
     }
 
+    private static bool ContainsCjk(string text)
+    {
+        foreach (var character in text)
+        {
+            if ((character >= '\u4E00' && character <= '\u9FFF') ||
+                (character >= '\u3040' && character <= '\u30FF'))
+            {
+                return true;
+            }
+        }
+
+        return false;
+    }
+
     private static string ReadProjectFile(string relativePath) =>
-        File.ReadAllText(Path.Combine(FindProjectRoot(), relativePath));
+        File.ReadAllText(GetProjectFilePath(relativePath));
+
+    private static string GetProjectFilePath(string relativePath) =>
+        Path.Combine(FindProjectRoot(), relativePath);
 
     private static string FindProjectRoot()
     {

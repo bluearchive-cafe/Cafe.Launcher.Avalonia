@@ -7,11 +7,10 @@ $ErrorActionPreference = "Stop"
 $ScriptDir = Split-Path -Parent $MyInvocation.MyCommand.Path
 $RootDir = Split-Path -Parent $ScriptDir
 $ProjectPath = Join-Path $RootDir "src\Cafe.Launcher.Avalonia\Cafe.Launcher.Avalonia.csproj"
-$InstallerScript = Join-Path $RootDir "installer\Cafe.Launcher.Avalonia.nsi"
+$InstallerScript = Join-Path $RootDir "installer\Cafe.Launcher.Avalonia.iss"
 $ArtifactsDir = Join-Path $RootDir "artifacts"
 $PublishDir = Join-Path $ArtifactsDir "publish"
 $DistributionDir = Join-Path $ArtifactsDir "distribution"
-$GeneratedDir = Join-Path $ArtifactsDir "generated"
 
 [xml]$project = Get-Content -Raw -LiteralPath $ProjectPath
 $versionNodes = @($project.SelectNodes("/Project/PropertyGroup/VersionPrefix"))
@@ -35,8 +34,7 @@ if ($Tag -cne "v$versionPrefix") {
 
 Remove-Item -LiteralPath $PublishDir -Recurse -Force -ErrorAction SilentlyContinue
 Remove-Item -LiteralPath $DistributionDir -Recurse -Force -ErrorAction SilentlyContinue
-Remove-Item -LiteralPath $GeneratedDir -Recurse -Force -ErrorAction SilentlyContinue
-New-Item -ItemType Directory -Path $PublishDir, $DistributionDir, $GeneratedDir | Out-Null
+New-Item -ItemType Directory -Path $PublishDir, $DistributionDir | Out-Null
 
 & dotnet restore $ProjectPath -r win-x64 | Out-Host
 if ($LASTEXITCODE -ne 0) {
@@ -48,75 +46,73 @@ if ($LASTEXITCODE -ne 0) {
     throw "dotnet publish failed."
 }
 
-function Assert-NsisSafeRelativePath {
+function Assert-InnoSafeDefineValue {
     param(
         [Parameter(Mandatory)]
-        [string]$RelativePath
+        [string]$Value
     )
 
-    if ($RelativePath.Contains('$') -or
-        $RelativePath.Contains('"') -or
-        $RelativePath.Contains("`r") -or
-        $RelativePath.Contains("`n")) {
-        throw "Publish path cannot be represented safely in NSIS: $RelativePath"
+    if ($Value.Contains('"') -or
+        $Value.Contains("`r") -or
+        $Value.Contains("`n")) {
+        throw "Publish path cannot be represented safely as an ISCC define: $Value"
     }
 }
 
+function Resolve-Iscc {
+    $fromPath = Get-Command ISCC.exe -ErrorAction SilentlyContinue
+    if ($null -ne $fromPath) {
+        return $fromPath.Source
+    }
+
+    $candidates = @(
+        (Join-Path $env:ProgramFiles "Inno Setup 7\ISCC.exe"),
+        (Join-Path ${env:ProgramFiles(x86)} "Inno Setup 7\ISCC.exe"),
+        (Join-Path $env:ProgramFiles "Inno Setup 6\ISCC.exe"),
+        (Join-Path ${env:ProgramFiles(x86)} "Inno Setup 6\ISCC.exe")
+    )
+
+    foreach ($candidate in $candidates) {
+        if (Test-Path -LiteralPath $candidate) {
+            return $candidate
+        }
+    }
+
+    throw "Inno Setup compiler (ISCC.exe) was not found. Install Inno Setup 6.3 or newer and add it to PATH."
+}
+
+$isccPath = Resolve-Iscc
+$isccVersionLine = (& $isccPath --version 2>$null | Select-Object -First 1)
+$isccVersion = $null
+if ($isccVersionLine -match '^(\d+\.\d+(?:\.\d+)?)') {
+    $isccVersion = [version]$Matches[1]
+}
+
+if ($null -eq $isccVersion -or $isccVersion -lt [version]"6.3") {
+    throw "Inno Setup 6.3 or newer is required (found: '$isccVersionLine')."
+}
+
 $publishRoot = [System.IO.Path]::GetFullPath($PublishDir)
-$files = Get-ChildItem -LiteralPath $publishRoot -File -Recurse | Sort-Object FullName
-$directories = Get-ChildItem -LiteralPath $publishRoot -Directory -Recurse |
-    Sort-Object { $_.FullName.Length } -Descending
-
-$uninstallLines = [System.Collections.Generic.List[string]]::new()
-foreach ($file in $files) {
-    $relative = [System.IO.Path]::GetRelativePath($publishRoot, $file.FullName)
-    Assert-NsisSafeRelativePath $relative
-    $uninstallLines.Add(('Delete "$INSTDIR\{0}"' -f $relative))
-}
-
-$uninstallLines.Add('Delete "$INSTDIR\.cafe-launcher-install"')
-$uninstallLines.Add('Delete "$INSTDIR\Uninstall.exe"')
-
-foreach ($directory in $directories) {
-    $relative = [System.IO.Path]::GetRelativePath($publishRoot, $directory.FullName)
-    Assert-NsisSafeRelativePath $relative
-    $uninstallLines.Add(('RMDir "$INSTDIR\{0}"' -f $relative))
-}
-
-$uninstallLines.Add('RMDir "$INSTDIR"')
-
-$uninstallInclude = Join-Path $GeneratedDir "UninstallFiles.nsh"
-Set-Content -LiteralPath $uninstallInclude -Value $uninstallLines -Encoding utf8NoBOM
+$publishGlob = Join-Path $publishRoot "*"
+Assert-InnoSafeDefineValue $publishGlob
 
 $standaloneName = "Cafe.Launcher.Avalonia_${Tag}_standalone.zip"
 $setupName = "Cafe.Launcher.Avalonia_${Tag}_setup.exe"
+$setupBaseName = "Cafe.Launcher.Avalonia_${Tag}_setup"
 $standalonePath = Join-Path $DistributionDir $standaloneName
 $setupPath = Join-Path $DistributionDir $setupName
 
 Compress-Archive -Path (Join-Path $PublishDir "*") -DestinationPath $standalonePath
 
-$makeNsis = Get-Command makensis.exe -ErrorAction SilentlyContinue
-if ($null -eq $makeNsis) {
-    $makeNsis = Get-Command makensis -ErrorAction SilentlyContinue
-}
-
-if ($null -eq $makeNsis) {
-    throw "NSIS compiler was not found. Install NSIS 3 and add makensis to PATH."
-}
-
-$publishGlob = Join-Path $PublishDir "*"
-
-$definePrefix = if ($IsWindows) { "/D" } else { "-D" }
-
-& $makeNsis.Source `
-    "${definePrefix}APP_VERSION=$versionPrefix" `
-    "${definePrefix}FILE_VERSION=$fileVersion" `
-    "${definePrefix}PUBLISH_GLOB=$publishGlob" `
-    "${definePrefix}UNINSTALL_INCLUDE=$uninstallInclude" `
-    "${definePrefix}OUTPUT_FILE=$setupPath" `
+& $isccPath `
+    "-dAPP_VERSION=$versionPrefix" `
+    "-dAPP_FILE_VERSION=$fileVersion" `
+    "-dPUBLISH_GLOB=$publishGlob" `
+    "-o$DistributionDir" `
+    "-f$setupBaseName" `
     $InstallerScript | Out-Host
 if ($LASTEXITCODE -ne 0) {
-    throw "NSIS compilation failed."
+    throw "Inno Setup compilation failed."
 }
 
 if (-not (Test-Path -LiteralPath $standalonePath -PathType Leaf)) {
