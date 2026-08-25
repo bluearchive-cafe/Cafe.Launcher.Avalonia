@@ -11,5 +11,11 @@ public static class HeadlessTestAppBuilder
     public static AppBuilder BuildAvaloniaApp() =>
         AppBuilder
             .Configure<Cafe.Launcher.Avalonia.App>()
-            .UseHeadless(new AvaloniaHeadlessPlatformOptions());
+            .UseHeadless(new AvaloniaHeadlessPlatformOptions
+            {
+                // M5: golden screenshots need real rendering (Skia) to capture
+                // pixel-accurate baselines (spec §10).
+                UseHeadlessDrawing = false
+            })
+            .UseSkia();
 }
