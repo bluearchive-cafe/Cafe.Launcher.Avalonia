@@ -17,8 +17,6 @@ internal interface IGameOperationJourneyHost
     void ApplyProgress(GameOperationProgress progress);
     /// <summary>Applies the latest launcher status snapshot.</summary>
     void ApplySnapshot(LauncherStatusSnapshot snapshot);
-    /// <summary>Sets the user-facing operation note.</summary>
-    void SetOperationNote(string note);
     /// <summary>Sets whether the host should present a busy state.</summary>
     void SetBusy(bool busy);
 }

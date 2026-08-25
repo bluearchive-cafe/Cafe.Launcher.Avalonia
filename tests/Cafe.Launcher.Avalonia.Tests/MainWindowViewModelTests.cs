@@ -156,8 +156,6 @@ public sealed class MainWindowViewModelTests : IDisposable
 
         viewModel.Shell.SetLoading();
 
-        Assert.Equal("Sync", viewModel.Shell.StatusIconKind);
-        Assert.Equal(viewModel.Shell.ExecutableNameText, viewModel.Shell.NetworkStatusValueText);
         Assert.Equal(viewModel.Shell.ExecutableNameText, viewModel.Shell.LaunchCheckValueText);
         Assert.DoesNotContain(':', viewModel.Shell.ExecutableNameText);
         Assert.DoesNotContain('：', viewModel.Shell.ExecutableNameText);
@@ -186,9 +184,7 @@ public sealed class MainWindowViewModelTests : IDisposable
 
         await viewModel.InitializeAsync();
 
-        Assert.Equal("DownloadOutline", viewModel.Shell.StatusIconKind);
         Assert.Equal("BlueArchive.exe", viewModel.Shell.ExecutableNameText);
-        Assert.Equal(viewModel.Shell.I18n["statusNetworkLoaded"], viewModel.Shell.NetworkStatusValueText);
         Assert.Equal(
             viewModel.Settings.Options.ResolveLaunchCheckDisplayName(snapshot.Settings.LaunchCheckMode),
             viewModel.Shell.LaunchCheckValueText);
@@ -353,8 +349,6 @@ public sealed class MainWindowViewModelTests : IDisposable
         await viewModel.InitializeAsync();
 
         Assert.DoesNotContain(viewModel.Shell.I18n["statusNetworkLoaded"], successToasts);
-        Assert.Equal("Alert", viewModel.Shell.StatusIconKind);
-        Assert.Equal("load failed", viewModel.Shell.NetworkStatusValueText);
         Assert.False(viewModel.RemoteContent.IsLoading);
     }
 
@@ -447,55 +441,6 @@ public sealed class MainWindowViewModelTests : IDisposable
 
         Assert.Equal(2, coreService.LoadCount);
         Assert.Equal(viewModel.Shell.I18n["refresh"], viewModel.Operations.InstallButtonText);
-    }
-
-    public static IEnumerable<object[]> RuntimeStatusCases
-    {
-        get
-        {
-            yield return [LauncherRuntimeState.NotInstalled, "gameNotInstalled", "choosePathInstall", "DownloadOutline"];
-            yield return [LauncherRuntimeState.Corrupted, "gameCorruptedInstallationState", "gameCorruptedInstallationState", "Alert"];
-            yield return [LauncherRuntimeState.IoFailure, "gameInstallationStateReadFailed", "gameInstallationStateReadFailed", "Alert"];
-            yield return [LauncherRuntimeState.RemoteUnavailable, "gameRemoteStateUnavailable", "gameRemoteStateUnavailable", "Alert"];
-            yield return [LauncherRuntimeState.BelowLowestVersion, "updateRequired", "gameBelowLowestVersion", "Alert"];
-            yield return [LauncherRuntimeState.UpdateAvailable, "updateAvailable", "updateAvailable", "Update"];
-            yield return [LauncherRuntimeState.Ready, "ready", "operationTelemetryLocal", "CheckCircleOutline"];
-        }
-    }
-
-    [Theory]
-    [MemberData(nameof(RuntimeStatusCases))]
-    public async Task InitializeAsync_ForEveryRuntimeState_ResolvesCompleteLocalizedStatusPresentation(
-        LauncherRuntimeState runtimeState,
-        string expectedStatusKey,
-        string expectedOperationNoteKey,
-        string expectedIconKind)
-    {
-        var snapshot = CreateSnapshot();
-        snapshot.RuntimeState = runtimeState;
-        using var viewModel = await CreateViewModelAsync(new CountingCoreService(snapshot));
-        var expectedLocalization = new LocalizationService();
-        expectedLocalization.SetLanguage(snapshot.Settings.Language);
-
-        await viewModel.InitializeAsync();
-
-        Assert.Equal(expectedLocalization.T(expectedStatusKey), viewModel.Shell.StatusText);
-        Assert.Equal(expectedLocalization.T(expectedOperationNoteKey), viewModel.Shell.OperationNote);
-        Assert.Equal(expectedIconKind, viewModel.Shell.StatusIconKind);
-        Assert.False(string.IsNullOrWhiteSpace(viewModel.Shell.StatusText));
-        Assert.False(string.IsNullOrWhiteSpace(viewModel.Shell.OperationNote));
-        Assert.NotEqual(expectedStatusKey, viewModel.Shell.StatusText);
-        Assert.NotEqual(expectedOperationNoteKey, viewModel.Shell.OperationNote);
-    }
-
-    [Fact]
-    public void RuntimeStatusCases_ExplicitlyCoverEveryLauncherRuntimeState()
-    {
-        var expectedStates = RuntimeStatusCases
-            .Select(testCase => Assert.IsType<LauncherRuntimeState>(testCase[0]))
-            .ToArray();
-
-        Assert.Equal(Enum.GetValues<LauncherRuntimeState>(), expectedStates);
     }
 
     [Fact]

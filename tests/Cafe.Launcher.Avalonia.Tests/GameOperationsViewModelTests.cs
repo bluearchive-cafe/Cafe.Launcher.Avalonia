@@ -236,7 +236,6 @@ public sealed class GameOperationsViewModelTests
         Assert.Equal(GameOperationsRefreshMode.SkipPersistedResume, refreshMode);
         Assert.True(context.ViewModel.IsControlPanelVisible);
         Assert.False(context.ViewModel.IsInstallPanelVisible);
-        Assert.Equal("installed", context.Shell.OperationNote);
         Assert.False(context.Shell.IsBusy);
     }
 
@@ -386,7 +385,6 @@ public sealed class GameOperationsViewModelTests
 
         Assert.Equal(1, context.Backend.RepairInvocationCount);
         Assert.Equal(1, refreshCount);
-        Assert.Equal("repaired", context.Shell.OperationNote);
     }
 
     [Fact]
@@ -720,7 +718,6 @@ public sealed class GameOperationsViewModelTests
 
         await context.ViewModel.StartGameCommand.ExecuteAsync(null);
 
-        Assert.Equal("blocked", context.Shell.OperationNote);
         Assert.Contains(notifications, item => item.Severity == ToastSeverity.Warning);
     }
 
@@ -733,7 +730,6 @@ public sealed class GameOperationsViewModelTests
         await context.ViewModel.InstallOrUpdateCommand.ExecuteAsync(null);
 
         Assert.Equal(0, context.Backend.InstallInvocationCount);
-        Assert.NotEmpty(context.Shell.OperationNote);
     }
 
     [Fact]
@@ -767,7 +763,7 @@ public sealed class GameOperationsViewModelTests
 
         var notification = Assert.Single(notifications);
         Assert.Equal(ToastSeverity.Warning, notification.Severity);
-        Assert.Equal(context.Shell.OperationNote, notification.Message);
+        Assert.Equal(context.Localizer.T("operationUnavailableForCurrentState"), notification.Message);
         Assert.False(context.Dialogs.IsRepairConfirmVisible);
     }
 
@@ -786,7 +782,7 @@ public sealed class GameOperationsViewModelTests
 
         var notification = Assert.Single(notifications);
         Assert.Equal(ToastSeverity.Warning, notification.Severity);
-        Assert.Equal(context.Shell.OperationNote, notification.Message);
+        Assert.Equal(context.Localizer.T("operationUnavailableForCurrentState"), notification.Message);
         Assert.False(context.Dialogs.IsUninstallConfirmVisible);
     }
 
@@ -825,7 +821,6 @@ public sealed class GameOperationsViewModelTests
         await context.ViewModel.RequestUninstallCommand.ExecuteAsync(null);
 
         Assert.False(context.Dialogs.IsUninstallConfirmVisible);
-        Assert.Equal("cannot uninstall", context.Shell.OperationNote);
     }
 
     [Fact]
@@ -848,9 +843,11 @@ public sealed class GameOperationsViewModelTests
     }
 
     [Fact]
-    public async Task BackendExceptions_AreConvertedToOperationNotes()
+    public async Task BackendExceptions_RaiseActionableFailureToast()
     {
         var context = CreateContext();
+        var notifications = new List<ToastNotification>();
+        context.ToastService.ToastRaised += notifications.Add;
         context.ViewModel.ApplySnapshot(new LauncherStatusSnapshot
         {
             RuntimeState = LauncherRuntimeState.NotInstalled
@@ -859,7 +856,14 @@ public sealed class GameOperationsViewModelTests
 
         await context.ViewModel.InstallOrUpdateCommand.ExecuteAsync(null);
 
-        Assert.Contains("install failed", context.Shell.OperationNote, StringComparison.Ordinal);
+        // The journey handles the backend exception through ErrorHandlingService
+        // (error toast) and then surfaces a retry-able failure toast.
+        Assert.Contains(
+            notifications,
+            toast => toast.Message.Contains("install failed", StringComparison.OrdinalIgnoreCase));
+        Assert.Contains(
+            notifications,
+            toast => toast.Title == context.Localizer.T("installUpdateFailedTitle"));
         Assert.False(context.Shell.IsBusy);
     }
 
@@ -877,7 +881,6 @@ public sealed class GameOperationsViewModelTests
             localizer,
             new LocalDiagnostics(),
             toastService);
-        errorHandling.OperationNoteRequested += note => shell.OperationNote = note;
         var viewModel = new GameOperationsViewModel(
             backend,
             backend,

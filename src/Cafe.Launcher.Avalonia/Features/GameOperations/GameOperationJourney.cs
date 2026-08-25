@@ -1,5 +1,4 @@
 using System;
-using System.IO;
 using System.Threading;
 using System.Threading.Tasks;
 using Cafe.Launcher.Avalonia.Helpers;
@@ -90,13 +89,11 @@ internal sealed class GameOperationJourney : IGameOperationJourney
         }
 
         host.SetBusy(true);
-        host.SetOperationNote(localizer.T("runningLaunchCheck"));
 
         try
         {
             var launchResult = await launchWorkflow.StartGameAsync(snapshot);
             shell.SetLaunchCheckResult(launchResult.Validation.Message);
-            host.SetOperationNote(launchResult.Message);
 
             if (launchResult.Success)
             {
@@ -112,8 +109,7 @@ internal sealed class GameOperationJourney : IGameOperationJourney
         }
         catch (Exception exception)
         {
-            await errorHandling.HandleErrorAsync("Game launch failed.", exception,
-                new ErrorHandlingOptions { OperationNoteKey = "gameLaunchFailed" });
+            await errorHandling.HandleErrorAsync("Game launch failed.", exception);
         }
         finally
         {
@@ -145,7 +141,6 @@ internal sealed class GameOperationJourney : IGameOperationJourney
     {
         if (snapshot.RuntimeState is not (LauncherRuntimeState.Corrupted or LauncherRuntimeState.Ready))
         {
-            host.SetOperationNote(localizer.T("operationUnavailableForCurrentState"));
             toastService.ShowWarning(localizer.T("operationUnavailableForCurrentState"));
             return;
         }
@@ -165,14 +160,12 @@ internal sealed class GameOperationJourney : IGameOperationJourney
         try
         {
             var result = await installationWorkflow.RepairAsync(snapshot, host.ApplyProgress);
-            host.SetOperationNote(result.Message);
             ShowOperationResult(result);
             refreshHandled = await RequestRefresh(GameOperationsRefreshMode.Normal);
         }
         catch (Exception exception)
         {
-            await errorHandling.HandleErrorAsync("Game repair failed.", exception,
-                new ErrorHandlingOptions { OperationNoteKey = "networkWithMessage" });
+            await errorHandling.HandleErrorAsync("Game repair failed.", exception);
         }
         finally
         {
@@ -189,7 +182,6 @@ internal sealed class GameOperationJourney : IGameOperationJourney
     {
         if (snapshot.RuntimeState != LauncherRuntimeState.Ready)
         {
-            host.SetOperationNote(localizer.T("operationUnavailableForCurrentState"));
             toastService.ShowWarning(localizer.T("operationUnavailableForCurrentState"));
             return;
         }
@@ -197,7 +189,6 @@ internal sealed class GameOperationJourney : IGameOperationJourney
         var validation = await uninstallWorkflow.ValidateUninstallAsync(snapshot.LocalGame.GamePath);
         if (!validation.Success)
         {
-            host.SetOperationNote(validation.Message);
             return;
         }
 
@@ -212,7 +203,6 @@ internal sealed class GameOperationJourney : IGameOperationJourney
     {
         if (snapshot.RuntimeState != LauncherRuntimeState.Ready)
         {
-            host.SetOperationNote(localizer.T("operationUnavailableForCurrentState"));
             return;
         }
 
@@ -224,13 +214,12 @@ internal sealed class GameOperationJourney : IGameOperationJourney
             // will set the correct icon. Call PrepareOperation to reset panel state.
             host.PrepareOperation();
             var result = await uninstallWorkflow.UninstallAsync(snapshot, host.ApplyProgress);
-            host.SetOperationNote(result.Message);
             await RequestRefresh(GameOperationsRefreshMode.Normal);
         }
         catch (Exception exception)
         {
             await errorHandling.HandleErrorAsync("Game uninstall failed.", exception,
-                new ErrorHandlingOptions { ShowToast = false, OperationNoteKey = "networkWithMessage" });
+                new ErrorHandlingOptions { ShowToast = false });
         }
         finally
         {
@@ -254,7 +243,6 @@ internal sealed class GameOperationJourney : IGameOperationJourney
     public void PerformStop()
     {
         installationWorkflow.Stop(clearPersistedState: true);
-        host.SetOperationNote(localizer.T("stopRequested"));
         try { toastService.ShowWarning(localizer.T("stopRequested")); }
         catch (Exception ex)
         {
@@ -285,7 +273,6 @@ internal sealed class GameOperationJourney : IGameOperationJourney
                 return;
             }
 
-            host.SetOperationNote(result.Message);
             ShowOperationResult(result);
             await RequestRefresh(GameOperationsRefreshMode.Normal);
         }
@@ -295,7 +282,7 @@ internal sealed class GameOperationJourney : IGameOperationJourney
         catch (Exception exception)
         {
             await errorHandling.HandleErrorAsync("Persisted game download resume failed.", exception,
-                new ErrorHandlingOptions { ShowToast = false, OperationNoteKey = "networkWithMessage" });
+                new ErrorHandlingOptions { ShowToast = false });
         }
         finally
         {
@@ -345,22 +332,16 @@ internal sealed class GameOperationJourney : IGameOperationJourney
 
             if (snapshot.RuntimeState == LauncherRuntimeState.Ready)
             {
-                host.SetOperationNote(localizer.T("operationUnavailableForCurrentState"));
                 return null;
             }
 
             var result = await installationWorkflow.InstallOrUpdateAsync(snapshot, host.ApplyProgress, cancellationToken);
-            host.SetOperationNote(result.Message);
             refreshHandled = await RequestRefresh(GameOperationsRefreshMode.SkipPersistedResume);
             return result;
         }
         catch (Exception exception)
         {
-            var key = exception is IOException or UnauthorizedAccessException
-                ? "fileOperationFailed"
-                : "networkWithMessage";
-            await errorHandling.HandleErrorAsync("Game install/update failed.", exception,
-                new ErrorHandlingOptions { OperationNoteKey = key });
+            await errorHandling.HandleErrorAsync("Game install/update failed.", exception);
             return new GameOperationResult
             {
                 Success = false,
@@ -474,13 +455,11 @@ internal sealed class GameOperationJourney : IGameOperationJourney
     {
         if (host.IsBusy)
         {
-            host.SetOperationNote(localizer.T("busy"));
             return false;
         }
 
         if (snapshot is null)
         {
-            host.SetOperationNote(localizer.T("launcherStateNotLoaded"));
             return false;
         }
 

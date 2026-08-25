@@ -201,7 +201,6 @@ public partial class GameOperationsViewModel : ViewModelBase, IGameOperationJour
             : GameOperationPanelMode.Install;
     }
 
-    void IGameOperationJourneyHost.SetOperationNote(string note) => shell.OperationNote = note;
     void IGameOperationJourneyHost.SetBusy(bool busy) => shell.IsBusy = busy;
     void IGameOperationJourneyHost.PrepareOperation()
     {
@@ -280,7 +279,6 @@ public partial class GameOperationsViewModel : ViewModelBase, IGameOperationJour
             PauseResumeText = localizer.T("pause");
             PauseResumeIcon = "Pause";
             ProgressDetail = localizer.T("downloading");
-            shell.OperationNote = localizer.T("resumeRequested");
         }
         else
         {
@@ -291,7 +289,6 @@ public partial class GameOperationsViewModel : ViewModelBase, IGameOperationJour
             ProgressDetail = localizer.T("paused");
             ProgressSpeed = "";
             ProgressEstimated = "";
-            shell.OperationNote = localizer.T("pauseRequested");
         }
     }
 
