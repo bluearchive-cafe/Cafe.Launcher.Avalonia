@@ -1390,6 +1390,136 @@ public sealed partial class UiStyleContractTests
     }
 
     [Fact]
+    public void ButtonVariants_CoverM3InteractiveAndDisabledStates()
+    {
+        var document = XDocument.Load(ProjectFile("Views/MainWindow.Styles.axaml"));
+
+        var textLinkHover = GetStyleSetters(document, "Button.text-link:pointerover");
+        Assert.Equal(
+            "{DynamicResource Launcher.Color.Button.Flat.Hover}",
+            textLinkHover["Background"]);
+        Assert.Equal(
+            "{DynamicResource Launcher.Color.Primary}",
+            textLinkHover["Foreground"]);
+
+        var textLinkDisabled = GetStyleSetters(document, "Button.text-link:disabled");
+        Assert.Equal(
+            "{DynamicResource Launcher.Text.Secondary}",
+            textLinkDisabled["Foreground"]);
+        Assert.Equal(
+            "{StaticResource Launcher.StateLayer.Disabled.Content}",
+            textLinkDisabled["Opacity"]);
+
+        var iconButtonDisabled = GetStyleSetters(document, "Button.icon-button:disabled");
+        Assert.Equal(
+            "{DynamicResource Launcher.Color.Transparent}",
+            iconButtonDisabled["Background"]);
+        Assert.Equal(
+            "{DynamicResource Launcher.Text.Secondary}",
+            iconButtonDisabled["Foreground"]);
+
+        var dangerDisabled = GetStyleSetters(document, "Button.danger-action:disabled");
+        Assert.Equal(
+            "{DynamicResource Launcher.Color.Content.Row}",
+            dangerDisabled["Background"]);
+        Assert.Equal(
+            "{DynamicResource Launcher.Color.Card.Border}",
+            dangerDisabled["BorderBrush"]);
+        Assert.Equal("1", dangerDisabled["BorderThickness"]);
+
+        var closeDisabled = GetStyleSetters(document, "Button.dialog-close:disabled");
+        Assert.Equal(
+            "{DynamicResource Launcher.Text.Secondary}",
+            closeDisabled["Foreground"]);
+    }
+
+    [Fact]
+    public void ExistingM3Components_CoverPressedFocusAndDisabledStates()
+    {
+        var remoteStyles = XDocument.Load(ProjectFile("Views/Styles/RemoteContent.axaml"));
+
+        var socialPressed = GetStyleSetters(remoteStyles, "Button.social-chip:pressed");
+        Assert.Equal(
+            "{DynamicResource Launcher.Color.Button.Flat.Pressed}",
+            socialPressed["Background"]);
+        Assert.Equal(
+            "{DynamicResource Launcher.Color.Primary.Pressed}",
+            socialPressed["BorderBrush"]);
+        Assert.Equal(
+            "{DynamicResource Launcher.Color.FocusRing}",
+            GetStyleSetters(remoteStyles, "Button.social-chip:focus-visible")["BorderBrush"]);
+
+        var newsTab = GetStyleSetters(remoteStyles, "Button.news-tab");
+        Assert.Equal("{StaticResource LauncherBorderButtonTemplate}", newsTab["Template"]);
+        Assert.Equal("{StaticResource Launcher.Radius.Sm}", newsTab["CornerRadius"]);
+        Assert.Equal(
+            "{DynamicResource Launcher.Color.Primary.Pressed}",
+            GetStyleSetters(remoteStyles, "Button.news-tab:pressed")["Background"]);
+        Assert.Equal(
+            "{StaticResource Launcher.StateLayer.Disabled.Content}",
+            GetStyleSetters(remoteStyles, "Button.news-tab:disabled")["Opacity"]);
+
+        var mainStyles = XDocument.Load(ProjectFile("Views/MainWindow.Styles.axaml"));
+        var settingRow = GetStyleSetters(mainStyles, "Grid.settings-row");
+        Assert.Equal("Center", settingRow["VerticalAlignment"]);
+    }
+
+    [Fact]
+    public void SelectControls_UseOutlinedFieldTokensAcrossStates()
+    {
+        var styles = XDocument.Load(ProjectFile("Views/MainWindow.Styles.axaml"));
+
+        var select = GetStyleSetters(styles, "ComboBox.setting-control");
+        Assert.Equal(
+            "{DynamicResource Launcher.Color.Field.Background}",
+            select["Background"]);
+        Assert.Equal(
+            "{DynamicResource Launcher.Color.Field.Border}",
+            select["BorderBrush"]);
+        Assert.Equal("1", select["BorderThickness"]);
+        Assert.Equal(
+            "{StaticResource Launcher.Radius.Md}",
+            select["CornerRadius"]);
+        Assert.Equal(
+            "{StaticResource Launcher.Component.Select.Padding}",
+            select["Padding"]);
+
+        Assert.Equal(
+            "{DynamicResource Launcher.Color.Primary.Hover}",
+            GetStyleSetters(styles, "ComboBox.setting-control:pointerover")["BorderBrush"]);
+        Assert.Equal(
+            "{DynamicResource Launcher.Color.Primary.Pressed}",
+            GetStyleSetters(styles, "ComboBox.setting-control:pressed")["BorderBrush"]);
+        Assert.Equal(
+            "{DynamicResource Launcher.Color.FocusRing}",
+            GetStyleSetters(styles, "ComboBox.setting-control:focus-visible")["BorderBrush"]);
+        Assert.Equal(
+            "{StaticResource Launcher.StateLayer.Disabled.Content}",
+            GetStyleSetters(styles, "ComboBox.setting-control:disabled")["Opacity"]);
+    }
+
+    [Fact]
+    public void DesignGallery_ProvidesThreeComponentRowsAndSixStateColumns()
+    {
+        var document = XDocument.Load(ProjectFile("Views/DesignGalleryOverlay.axaml"));
+        var matrix = document.Descendants().Single(element => HasClass(element, "design-state-matrix"));
+
+        Assert.Equal("Auto,*,*,*,*,*,*", matrix.Attribute("ColumnDefinitions")?.Value);
+        Assert.Equal("Auto,Auto,Auto,Auto", matrix.Attribute("RowDefinitions")?.Value);
+        Assert.Equal(7, matrix.Descendants().Count(element => HasClass(element, "design-state-header")));
+        Assert.Equal(6, matrix.Descendants().Count(element => HasClass(element, "gallery-button")));
+        Assert.Equal(6, matrix.Descendants().Count(element => HasClass(element, "gallery-select")));
+        Assert.Equal(6, matrix.Descendants().Count(element => HasClass(element, "gallery-card")));
+
+        var disabledButton = matrix.Descendants().Single(element =>
+            element.Name.LocalName == "Button" && HasClass(element, "state-disabled"));
+        Assert.Equal("False", disabledButton.Attribute("IsEnabled")?.Value);
+        var disabledSelect = matrix.Descendants().Single(element =>
+            element.Name.LocalName == "ComboBox" && HasClass(element, "state-disabled"));
+        Assert.Equal("False", disabledSelect.Attribute("IsEnabled")?.Value);
+    }
+
+    [Fact]
     public void Views_UseSemanticColorsAndTokenizedMaterialIconSizes()
     {
         foreach (var relativePath in ViewFiles)

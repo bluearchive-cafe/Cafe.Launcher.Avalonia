@@ -34,6 +34,87 @@
                 <ScrollViewer Grid.Row="1" Classes="scroll-pad">
                     <StackPanel Spacing="{StaticResource Launcher.Spacing.Md}" Margin="{StaticResource Launcher.Spacing.Thickness.Xl}">
                         <TextBlock Text="{Binding Shell.I18n[designGalleryHint]}" Classes="caption"/>
+                        <Border Classes="dialog-card design-state-matrix-card">
+                            <StackPanel Spacing="{StaticResource Launcher.Spacing.Sm}">
+                                <TextBlock Text="{Binding Shell.I18n[designGalleryTitle]}" Classes="section-title"/>
+                                <TextBlock Text="{Binding Shell.I18n[designGalleryHint]}" Classes="caption"/>
+                                <Grid Classes="design-state-matrix"
+                                      ColumnDefinitions="Auto,*,*,*,*,*,*"
+                                      RowDefinitions="Auto,Auto,Auto,Auto">
+                                    <TextBlock Grid.Row="0" Classes="design-state-header"
+                                               Text="{Binding Shell.I18n[designGalleryTitle]}"/>
+                                    <TextBlock Grid.Row="0" Grid.Column="1" Classes="design-state-header"
+                                               Text="{Binding Shell.I18n[themeColorDefault]}"/>
+                                    <TextBlock Grid.Row="0" Grid.Column="2" Classes="design-state-header"
+                                               Text="{Binding Shell.I18n[working]}"/>
+                                    <TextBlock Grid.Row="0" Grid.Column="3" Classes="design-state-header"
+                                               Text="{Binding Shell.I18n[startGame]}"/>
+                                    <TextBlock Grid.Row="0" Grid.Column="4" Classes="design-state-header"
+                                               Text="{Binding Shell.I18n[statusLaunchCheckNone]}"/>
+                                    <TextBlock Grid.Row="0" Grid.Column="5" Classes="design-state-header"
+                                               Text="{Binding Shell.I18n[settingsGroupDisplay]}"/>
+                                    <TextBlock Grid.Row="0" Grid.Column="6" Classes="design-state-header"
+                                               Text="{Binding Shell.I18n[toastError]}"/>
+
+                                    <TextBlock Grid.Row="1" Classes="design-state-component"
+                                               Text="{Binding Shell.I18n[startGame]}"/>
+                                    <Button Grid.Row="1" Grid.Column="1" Classes="gallery-button state-normal"
+                                            Content="{Binding Shell.I18n[startGame]}"/>
+                                    <Button Grid.Row="1" Grid.Column="2" Classes="gallery-button state-hover"
+                                            Content="{Binding Shell.I18n[startGame]}"/>
+                                    <Button Grid.Row="1" Grid.Column="3" Classes="gallery-button state-pressed"
+                                            Content="{Binding Shell.I18n[startGame]}"/>
+                                    <Button Grid.Row="1" Grid.Column="4" Classes="gallery-button state-disabled"
+                                            IsEnabled="False" Content="{Binding Shell.I18n[startGame]}"/>
+                                    <Button Grid.Row="1" Grid.Column="5" Classes="gallery-button state-focus"
+                                            Content="{Binding Shell.I18n[startGame]}"/>
+                                    <Button Grid.Row="1" Grid.Column="6" Classes="gallery-button state-invalid"
+                                            Content="{Binding Shell.I18n[startGame]}"/>
+
+                                    <TextBlock Grid.Row="2" Classes="design-state-component"
+                                               Text="{Binding Shell.I18n[themeColor]}"/>
+                                    <ComboBox Grid.Row="2" Grid.Column="1" Classes="gallery-select state-normal" SelectedIndex="0">
+                                        <ComboBoxItem Content="{Binding Shell.I18n[themeColorDefault]}"/>
+                                    </ComboBox>
+                                    <ComboBox Grid.Row="2" Grid.Column="2" Classes="gallery-select state-hover" SelectedIndex="0">
+                                        <ComboBoxItem Content="{Binding Shell.I18n[themeColorDefault]}"/>
+                                    </ComboBox>
+                                    <ComboBox Grid.Row="2" Grid.Column="3" Classes="gallery-select state-pressed" SelectedIndex="0">
+                                        <ComboBoxItem Content="{Binding Shell.I18n[themeColorDefault]}"/>
+                                    </ComboBox>
+                                    <ComboBox Grid.Row="2" Grid.Column="4" Classes="gallery-select state-disabled" IsEnabled="False" SelectedIndex="0">
+                                        <ComboBoxItem Content="{Binding Shell.I18n[themeColorDefault]}"/>
+                                    </ComboBox>
+                                    <ComboBox Grid.Row="2" Grid.Column="5" Classes="gallery-select state-focus" SelectedIndex="0">
+                                        <ComboBoxItem Content="{Binding Shell.I18n[themeColorDefault]}"/>
+                                    </ComboBox>
+                                    <ComboBox Grid.Row="2" Grid.Column="6" Classes="gallery-select state-invalid" SelectedIndex="0">
+                                        <ComboBoxItem Content="{Binding Shell.I18n[themeColorDefault]}"/>
+                                    </ComboBox>
+
+                                    <TextBlock Grid.Row="3" Classes="design-state-component"
+                                               Text="{Binding Shell.I18n[settingsGroupDisplay]}"/>
+                                    <Border Grid.Row="3" Grid.Column="1" Classes="gallery-card state-normal">
+                                        <TextBlock Text="{Binding Shell.I18n[settingsGroupDisplay]}" Classes="caption"/>
+                                    </Border>
+                                    <Border Grid.Row="3" Grid.Column="2" Classes="gallery-card state-hover">
+                                        <TextBlock Text="{Binding Shell.I18n[settingsGroupDisplay]}" Classes="caption"/>
+                                    </Border>
+                                    <Border Grid.Row="3" Grid.Column="3" Classes="gallery-card state-pressed">
+                                        <TextBlock Text="{Binding Shell.I18n[settingsGroupDisplay]}" Classes="caption"/>
+                                    </Border>
+                                    <Border Grid.Row="3" Grid.Column="4" Classes="gallery-card state-disabled">
+                                        <TextBlock Text="{Binding Shell.I18n[settingsGroupDisplay]}" Classes="caption"/>
+                                    </Border>
+                                    <Border Grid.Row="3" Grid.Column="5" Classes="gallery-card state-focus">
+                                        <TextBlock Text="{Binding Shell.I18n[settingsGroupDisplay]}" Classes="caption"/>
+                                    </Border>
+                                    <Border Grid.Row="3" Grid.Column="6" Classes="gallery-card state-invalid">
+                                        <TextBlock Text="{Binding Shell.I18n[settingsGroupDisplay]}" Classes="caption"/>
+                                    </Border>
+                                </Grid>
+                            </StackPanel>
+                        </Border>
                         <ItemsControl ItemsSource="{Binding Gallery.Groups}">
                             <ItemsControl.ItemsPanel>
                                 <ItemsPanelTemplate>
