@@ -67,7 +67,7 @@ dotnet publish .\src\Cafe.Launcher.Avalonia\Cafe.Launcher.Avalonia.csproj -c Rel
 
 ### Windows 安装程序
 
-安装程序使用 NSIS 3 构建。本地构建前需安装 NSIS，并确保 `makensis.exe` 可通过 `PATH` 调用：
+安装程序使用 Inno Setup 6.3+ 构建（仓库以 Inno Setup 7 验证）。本地构建前需安装 Inno Setup，并确保 `ISCC.exe` 可通过 `PATH`（或默认安装位置 `C:\Program Files\Inno Setup 7`）调用：
 
 ```powershell
 .\scripts\Build-Distribution.ps1
@@ -278,7 +278,7 @@ Launcher 自更新优先请求服务端代理 `ApiConfig.LauncherApiBaseUrl`；�
 GitHub Actions 使用 .NET 10.0.x：
 
 - **`build.yml`**（`windows-latest`，push / PR to `main`）：测试 → 覆盖率门禁 → Debug/Release `win-x64` 构建 → Release 发布 → 上传测试与覆盖率报告。
-- **`release.yml`**（`ubuntu-latest`，push `v*` tag）：测试 → Release 构建 → 构建 standalone ZIP 与 NSIS setup EXE → 生成 changelog → 在源仓库和分发仓库（`bluearchive-cafe/Cafe.Launcher.Avalonia_Release`）同时创建 GitHub Release。预发布版标签含 `-`。
+- **`release.yml`**（`windows-latest`，push `v*` tag）：测试 → Release 构建 → 构建 standalone ZIP 与 Inno Setup EXE → 生成 changelog → 在源仓库和分发仓库（`bluearchive-cafe/Cafe.Launcher.Avalonia_Release`）同时创建 GitHub Release。预发布版标签含 `-`。
 
 本地发布脚本：
 

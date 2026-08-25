@@ -1,0 +1,4 @@
+﻿[CustomMessages]
+DeleteDataQuestion=%1 内のアプリケーションデータを削除しますか？
+InvalidInstallLocation=登録されたインストール先が無効です。アンインストールを中止しました。
+PreviousUninstallFailed=以前のバージョンを削除できませんでした。セットアップを中止しました。

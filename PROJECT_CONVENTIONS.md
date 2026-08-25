@@ -220,4 +220,4 @@ AI 辅助开发规范 —— 本文件为所有 AI 编码助手（Claude Code、
 | xUnit v3 | 3.2.2 | Test framework |
 | Avalonia.Headless.XUnit | 12.1.1 | Headless UI testing |
 | coverlet.msbuild | 10.0.1 | Code coverage |
-| NSIS | 3.x | Windows installer |
+| Inno Setup | 6.3+ | Windows installer |

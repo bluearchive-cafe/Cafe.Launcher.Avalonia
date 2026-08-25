@@ -67,13 +67,13 @@ Tests use xUnit v3 and `coverlet.msbuild`; do not introduce a mocking framework.
 
 Test project internals are exposed through `Properties/AssemblyInfo.cs`. Keep tests near the class under test and name them `Method_State_ExpectedResult`. New services should cover: success path, typical failure path (exception/validation failure), and boundary conditions (null input, empty collection).
 
-To build the distributable ZIP and NSIS installer, install NSIS 3 and make `makensis`/`makensis.exe` available on `PATH`, then run:
+To build the distributable ZIP and Inno Setup installer, install Inno Setup 6.3 or newer (7.x recommended) and make `ISCC.exe` available on `PATH` or in the default install location (`C:\Program Files\Inno Setup 7`), then run:
 
 ```powershell
 .\scripts\Build-Distribution.ps1
 ```
 
-GitHub Actions uses .NET `10.0.x`. The build workflow runs on `windows-latest`: `test.ps1` executes both test projects, `coverage.ps1` enforces the merged coverage baseline, then Debug and Release `win-x64` builds and a Release publish run. The tag-triggered release workflow runs on `ubuntu-latest` and builds both distribution formats with NSIS. `release.ps1` creates commits, tags, and pushes, so run it only when explicitly asked to perform a release.
+GitHub Actions uses .NET `10.0.x`. The build workflow runs on `windows-latest`: `test.ps1` executes both test projects, `coverage.ps1` enforces the merged coverage baseline, then Debug and Release `win-x64` builds and a Release publish run. The tag-triggered release workflow runs on `windows-latest` (Inno Setup via Chocolatey) and builds both distribution formats with `scripts/Build-Distribution.ps1`. `release.ps1` creates commits, tags, and pushes, so run it only when explicitly asked to perform a release.
 
 ## Application architecture
 
