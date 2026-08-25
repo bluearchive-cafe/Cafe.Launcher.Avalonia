@@ -98,14 +98,20 @@ Type: filesandordirs; Name: "{localappdata}\Cafe Launcher"; Check: ShouldDeleteU
 var
   DeleteApplicationData: Boolean;
 
-{ Called by [UninstallDelete] during the uninstall process. }
+{ Called by [UninstallDelete] during the uninstall process. Belt-and-braces:
+  application data is only ever removed when the user explicitly opted in, and
+  never during a silent uninstall (e.g. an in-place upgrade). }
 function ShouldDeleteUserData: Boolean;
 begin
-  Result := DeleteApplicationData;
+  Result := (not UninstallSilent) and DeleteApplicationData;
 end;
 
 { One-time upgrade bridge: silently remove a legacy NSIS-based installation and
-  self-heal stale registrations, mirroring the retired NSIS upgrade logic. }
+  self-heal stale registrations, mirroring the retired NSIS upgrade logic.
+  The legacy registration is only trusted one way: its uninstaller must be
+  named Uninstall.exe, must exist, and must live in the directory recorded as
+  InstallLocation. Anything else is treated as stale and removed without
+  execution, so a tampered registration can never run an arbitrary path. }
 function RemoveLegacyInstallation(): Boolean;
 var
   UninstallString: String;
@@ -137,14 +143,16 @@ begin
       UninstallerPath := Copy(UninstallString, 1, SpacePos - 1);
   end;
 
-  if not FileExists(UninstallerPath) then
+  InstallDir := ExtractFileDir(UninstallerPath);
+  if (CompareText(ExtractFileName(UninstallerPath), 'Uninstall.exe') <> 0)
+      or (not FileExists(UninstallerPath))
+      or (not LegacyInstallLocationMatches(InstallDir)) then
   begin
-    { Stale registration left behind by an aborted legacy uninstall. }
+    { Stale or unrecognizable registration — never execute it. }
     RegDeleteKeyIncludingSubkeys(HKLM, '{#LEGACY_NSIS_UNINSTALL_KEY}');
     Exit;
   end;
 
-  InstallDir := ExtractFileDir(UninstallerPath);
   { Match the retired NSIS upgrade path exactly: _?= must be UNQUOTED, because
     the legacy uninstaller treats the rest of its command line as the path and
     any quotes would be compared against the registry InstallLocation. /S keeps
@@ -165,6 +173,32 @@ begin
   if FileExists(UninstallerPath) then
     DeleteFile(UninstallerPath);
   RemoveDir(InstallDir);
+end;
+
+{ Returns True while the legacy registration is consistent: a missing or empty
+  InstallLocation is tolerated, but a present value must match the uninstaller's
+  directory case-insensitively after dropping trailing separators. }
+function LegacyInstallLocationMatches(const InstallDir: String): Boolean;
+var
+  InstallLocation: String;
+  Location: String;
+  Expected: String;
+begin
+  Result := True;
+  if not RegQueryStringValue(HKLM, '{#LEGACY_NSIS_UNINSTALL_KEY}', 'InstallLocation', InstallLocation) then
+    Exit;
+  if InstallLocation = '' then
+    Exit;
+
+  Location := InstallLocation;
+  Expected := InstallDir;
+  { Keep drive roots (e.g. C:\) as-is. }
+  while (Length(Location) > 3) and (Location[Length(Location)] = '\') do
+    Delete(Location, Length(Location), 1);
+  while (Length(Expected) > 3) and (Expected[Length(Expected)] = '\') do
+    Delete(Expected, Length(Expected), 1);
+
+  Result := CompareText(Location, Expected) = 0;
 end;
 
 function InitializeSetup: Boolean;
