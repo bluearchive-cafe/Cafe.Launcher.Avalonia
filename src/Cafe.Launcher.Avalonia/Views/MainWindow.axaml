@@ -576,6 +576,7 @@
 
         <views:MainWindowSettingsOverlay/>
         <views:MainWindowDebugOverlay/>
+        <views:DesignGalleryOverlay/>
         <views:MainWindowLogViewerOverlay/>
         <views:MainWindowDialogsOverlay/>
         <views:MainWindowToastOverlay/>

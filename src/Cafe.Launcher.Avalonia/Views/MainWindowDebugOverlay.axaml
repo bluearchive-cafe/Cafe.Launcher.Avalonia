@@ -213,6 +213,10 @@
                                     <TextBlock Text="{Binding Debug.LastActionResult}" Classes="caption"/>
                                 </Border>
                                 <StackPanel Orientation="Horizontal" Spacing="{StaticResource Launcher.Spacing.Sm}">
+                                    <Button Classes="flat-action dialog-action" Command="{Binding Gallery.OpenCommand}"
+                                            AutomationProperties.Name="{Binding Shell.I18n[openDesignGallery]}">
+                                        <TextBlock Text="{Binding Shell.I18n[openDesignGallery]}" Classes="button-content"/>
+                                    </Button>
                                     <Button Classes="flat-action dialog-action" Command="{Binding Debug.ExportLogsCommand}"
                                             AutomationProperties.Name="{Binding Shell.I18n[exportLogs]}">
                                         <TextBlock Text="{Binding Shell.I18n[exportLogs]}" Classes="button-content"/>
