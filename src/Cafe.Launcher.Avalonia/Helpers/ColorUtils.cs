@@ -72,6 +72,18 @@ internal static class ColorUtils
     }
 
     /// <summary>
+    /// Computes WCAG contrast ratio between two sRGB colours (WCAG 2.x, 1.0–21.0).
+    /// </summary>
+    public static double GetContrastRatio(Color first, Color second)
+    {
+        var firstLuminance = GetRelativeLuminance(first);
+        var secondLuminance = GetRelativeLuminance(second);
+        var lighter = Math.Max(firstLuminance, secondLuminance);
+        var darker = Math.Min(firstLuminance, secondLuminance);
+        return (lighter + 0.05) / (darker + 0.05);
+    }
+
+    /// <summary>
     /// Computes WCAG relative luminance for an sRGB colour.
     /// </summary>
     public static double GetRelativeLuminance(Color color) =>

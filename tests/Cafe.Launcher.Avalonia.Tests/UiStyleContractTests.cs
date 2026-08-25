@@ -760,7 +760,7 @@ public sealed partial class UiStyleContractTests
 
         var styles = XDocument.Load(ProjectFile("Views/MainWindow.Styles.axaml"));
         var bannerControl = GetStyleSetters(styles, "Button.banner-control");
-        Assert.Equal("{DynamicResource Launcher.Color.Overlay.Scrim}", bannerControl["Background"]);
+        Assert.Equal("{DynamicResource Launcher.Color.Overlay.Scrim.Md}", bannerControl["Background"]);
         Assert.Equal("{DynamicResource Launcher.Text.OnChrome}", bannerControl["Foreground"]);
         Assert.Equal("0", bannerControl["Opacity"]);
         Assert.Equal("False", bannerControl["IsHitTestVisible"]);
@@ -768,7 +768,7 @@ public sealed partial class UiStyleContractTests
             "{StaticResource Launcher.Spacing.Thickness.Sm}",
             GetStyleSetters(styles, "Button.banner-control.carousel-navigation")["Margin"]);
         var bannerDots = GetStyleSetters(styles, "Grid.banner-indicators Button.dot");
-        Assert.Equal("{DynamicResource Launcher.Color.Overlay.Scrim}", bannerDots["Background"]);
+        Assert.Equal("{DynamicResource Launcher.Color.Overlay.Scrim.Md}", bannerDots["Background"]);
         Assert.Equal("{DynamicResource Launcher.Text.OnChrome}", bannerDots["Foreground"]);
         Assert.Equal("1", GetStyleSetters(styles, "Grid.banner-stage.active > Button.banner-control")["Opacity"]);
         Assert.Equal("True", GetStyleSetters(styles, "Grid.banner-stage.active > Button.banner-control")["IsHitTestVisible"]);
@@ -2197,7 +2197,7 @@ public sealed partial class UiStyleContractTests
         Assert.Equal("True", GetStyleSetters(styles, "Border.remote-surface")["ClipToBounds"]);
         Assert.Equal("{StaticResource Launcher.Spacing.Thickness.None}", GetStyleSetters(styles, "Border.remote-surface")["Padding"]);
         Assert.Equal("#99000000", app.Descendants().Single(element =>
-            element.Attribute(XName.Get("Key", "http://schemas.microsoft.com/winfx/2006/xaml"))?.Value == "Launcher.Color.Overlay.Scrim").Attribute("Color")?.Value);
+            element.Attribute(XName.Get("Key", "http://schemas.microsoft.com/winfx/2006/xaml"))?.Value == "Launcher.Color.Overlay.Scrim.Md").Attribute("Color")?.Value);
 
         var remoteSurface = document.Descendants().Single(element =>
             element.Name.LocalName == "Border" && HasClass(element, "remote-surface"));
@@ -3489,7 +3489,7 @@ public sealed partial class UiStyleContractTests
             keyFrames,
             "Background",
             "{DynamicResource Launcher.Color.Transparent}",
-            "{DynamicResource Launcher.Color.Overlay.Scrim}");
+            "{DynamicResource Launcher.Color.Overlay.Scrim.Md}");
         AssertAnimationProperty(keyFrames, "Opacity", null, null);
     }
 
@@ -3504,7 +3504,7 @@ public sealed partial class UiStyleContractTests
         AssertAnimationProperty(
             keyFrames,
             "Background",
-            "{DynamicResource Launcher.Color.Overlay.Scrim}",
+            "{DynamicResource Launcher.Color.Overlay.Scrim.Md}",
             "{DynamicResource Launcher.Color.Transparent}");
         AssertAnimationProperty(keyFrames, "Opacity", null, null);
     }

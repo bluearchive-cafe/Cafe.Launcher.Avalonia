@@ -21,6 +21,8 @@
             <Thickness x:Key="Launcher.Spacing.Thickness.None">0</Thickness>
             <Thickness x:Key="Launcher.Spacing.Thickness.Md">12</Thickness>
             <Thickness x:Key="Launcher.Spacing.Thickness.Lg">16</Thickness>
+            <Thickness x:Key="Launcher.Spacing.Thickness.Xxl">24</Thickness>
+            <Thickness x:Key="Launcher.Spacing.Thickness.Section">40</Thickness>
             <Thickness x:Key="Launcher.Component.PathField.Padding">16,0,4,0</Thickness>
             <Thickness x:Key="Launcher.Component.Toast.Message.Margin">0,4,0,0</Thickness>
             <Thickness x:Key="Launcher.Component.Toast.Action.RowMargin">0,8,0,0</Thickness>
@@ -74,6 +76,18 @@
             <ExponentialEaseOut x:Key="Launcher.Motion.Easing.Enter"/>
             <ExponentialEaseIn x:Key="Launcher.Motion.Easing.Exit"/>
             <LinearEasing x:Key="Launcher.Motion.Easing.Linear"/>
+            <!-- Elevation (阴影 0–3 档；颜色/偏移/模糊 token 化；P2 全面消费) -->
+            <!-- 注：BoxShadow 为值类型，只能经转换器加载（AVLN3000），故以 x:String 存储，
+                 由 Setter 的 BoxShadow 类型转换器解析（与既有硬编码字符串路径一致）。 -->
+            <x:String x:Key="Launcher.Elevation.Shadow.None">0 0 0 0 #00000000</x:String>
+            <x:String x:Key="Launcher.Elevation.Shadow.Sm">0 4 8 0 #26000000</x:String>
+            <x:String x:Key="Launcher.Elevation.Shadow.Md">0 12 32 0 #33000000</x:String>
+            <x:String x:Key="Launcher.Elevation.Shadow.Lg">0 22 55 0 #66000000</x:String>
+            <!-- StateLayer (状态层不透明度 8/12/16/24%；P2 状态矩阵消费) -->
+            <x:Double x:Key="Launcher.StateLayer.Hover">0.08</x:Double>
+            <x:Double x:Key="Launcher.StateLayer.Focus">0.12</x:Double>
+            <x:Double x:Key="Launcher.StateLayer.Pressed">0.16</x:Double>
+            <x:Double x:Key="Launcher.StateLayer.Selected">0.24</x:Double>
             <x:Double x:Key="Launcher.Typography.FontSize.Label.Sm">11</x:Double>
             <x:Double x:Key="Launcher.Typography.FontSize.Label.Md">12</x:Double>
             <x:Double x:Key="Launcher.Typography.FontSize.Body.Sm">13</x:Double>
@@ -87,6 +101,11 @@
             <FontWeight x:Key="Launcher.Typography.FontWeight.Normal">Normal</FontWeight>
             <FontWeight x:Key="Launcher.Typography.FontWeight.Strong">SemiBold</FontWeight>
             <FontFamily x:Key="Launcher.Typography.FontFamily.Monospace">Consolas</FontFamily>
+            <!-- LetterSpacing (字距角色键；P1 仅提供刻度，消费与取值校准随 P2 字阶) -->
+            <x:Double x:Key="Launcher.Typography.LetterSpacing.None">0</x:Double>
+            <x:Double x:Key="Launcher.Typography.LetterSpacing.Sm">0.5</x:Double>
+            <x:Double x:Key="Launcher.Typography.LetterSpacing.Md">1</x:Double>
+            <x:Double x:Key="Launcher.Typography.LetterSpacing.Lg">2</x:Double>
             <SolidColorBrush x:Key="Launcher.Color.Primary" Color="{DynamicResource SystemAccentColor}"/>
             <SolidColorBrush x:Key="Launcher.Color.Primary.Hover" Color="{DynamicResource SystemAccentColorLight1}"/>
             <SolidColorBrush x:Key="Launcher.Color.Primary.Pressed" Color="{DynamicResource SystemAccentColorDark1}"/>
@@ -99,27 +118,28 @@
             <SolidColorBrush x:Key="Launcher.Color.Transparent" Color="#00000000"/>
             <SolidColorBrush x:Key="Launcher.Color.Chrome.Hover" Color="#22FFFFFF"/>
             <SolidColorBrush x:Key="Launcher.Color.Chrome.Pressed" Color="#33FFFFFF"/>
-            <SolidColorBrush x:Key="Launcher.Color.Danger" Color="#FFE5484D"/>
-            <SolidColorBrush x:Key="Launcher.Color.Danger.Hover" Color="#FFF15B60"/>
+            <SolidColorBrush x:Key="Launcher.Color.Danger" Color="#FFD93840"/>
+            <SolidColorBrush x:Key="Launcher.Color.Danger.Hover" Color="#FFD32F35"/>
             <SolidColorBrush x:Key="Launcher.Color.Danger.Pressed" Color="#FFC9353A"/>
-            <SolidColorBrush x:Key="Launcher.Color.Overlay.Scrim" Color="#99000000"/>
+            <SolidColorBrush x:Key="Launcher.Color.Overlay.Scrim.Sm" Color="#40000000"/>
+            <SolidColorBrush x:Key="Launcher.Color.Overlay.Scrim.Md" Color="#99000000"/>
+            <SolidColorBrush x:Key="Launcher.Color.Overlay.Scrim.Lg" Color="#E6000000"/>
             <SolidColorBrush x:Key="Launcher.Color.FocusRing" Color="{DynamicResource SystemAccentColor}" Opacity="0.60"/>
             <SolidColorBrush x:Key="Launcher.Color.Carousel.Dot.Active" Color="{DynamicResource SystemAccentColor}"/>
             <SolidColorBrush x:Key="Launcher.Color.Carousel.Dot.Inactive" Color="#FFD0D4DA"/>
-            <SolidColorBrush x:Key="Launcher.Color.Success" Color="#FF22C55E"/>
-            <SolidColorBrush x:Key="Launcher.Color.Warning" Color="#FFF59E0B"/>
+            <SolidColorBrush x:Key="Launcher.Color.Warning" Color="#FFB45309"/>
             <SolidColorBrush x:Key="Launcher.Color.Info" Color="#FF2E7DF6"/>
             <LinearGradientBrush x:Key="Launcher.Color.TitleBar.Gradient" StartPoint="0%,0%" EndPoint="0%,100%">
                 <GradientStop Color="#52000000" Offset="0"/>
                 <GradientStop Color="#00000000" Offset="1"/>
             </LinearGradientBrush>
             <SolidColorBrush x:Key="Launcher.Color.Media.Placeholder" Color="#FF2A3A5C"/>
-            <SolidColorBrush x:Key="Launcher.Text.Media.Placeholder" Color="#88FFFFFF"/>
+            <SolidColorBrush x:Key="Launcher.Text.Media.Placeholder" Color="#99FFFFFF"/>
 
             <ResourceDictionary.ThemeDictionaries>
                 <ResourceDictionary x:Key="Light">
                     <SolidColorBrush x:Key="Launcher.Text.Primary" Color="#FF232A31"/>
-                    <SolidColorBrush x:Key="Launcher.Text.Secondary" Color="#FF68717D"/>
+                    <SolidColorBrush x:Key="Launcher.Text.Secondary" Color="#FF646D79"/>
                     <SolidColorBrush x:Key="Launcher.Text.Body" Color="#FF3F4954"/>
                     <SolidColorBrush x:Key="Launcher.Text.Link" Color="#FF313233"/>
                     <SolidColorBrush x:Key="Launcher.Color.Panel.Background" Color="#EAF6FAFE"/>
@@ -146,6 +166,7 @@
                     <SolidColorBrush x:Key="Launcher.Color.SiteButton.Border" Color="#FFD5E3F3"/>
                     <SolidColorBrush x:Key="Launcher.Color.Toast.Background" Color="#FFFFFFFF"/>
                     <SolidColorBrush x:Key="Launcher.Text.Info" Color="#FF24415E"/>
+                    <SolidColorBrush x:Key="Launcher.Color.Success" Color="#FF15803D"/>
                 </ResourceDictionary>
                 <ResourceDictionary x:Key="Dark">
                     <SolidColorBrush x:Key="Launcher.Color.Carousel.Dot.Inactive" Color="#FF5A6270"/>
@@ -177,6 +198,7 @@
                     <SolidColorBrush x:Key="Launcher.Color.SiteButton.Border" Color="#FF3D5B80"/>
                     <SolidColorBrush x:Key="Launcher.Color.Toast.Background" Color="#FF1C2533"/>
                     <SolidColorBrush x:Key="Launcher.Text.Info" Color="#FFD6E8FF"/>
+                    <SolidColorBrush x:Key="Launcher.Color.Success" Color="#FF4ADE80"/>
                 </ResourceDictionary>
             </ResourceDictionary.ThemeDictionaries>
         </ResourceDictionary>

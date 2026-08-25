@@ -382,6 +382,8 @@
         <Setter Property="Background" Value="{DynamicResource Launcher.Color.Panel.Background}"/>
         <Setter Property="CornerRadius" Value="{StaticResource Launcher.Radius.Md}"/>
         <Setter Property="Padding" Value="16"/>
+        <!-- 阴影值集中见 Launcher.Elevation.Shadow.Md；BoxShadow 为无 TypeConverter 的结构体，
+             无法经 {StaticResource} 在 Setter 处运行时转换（Avalonia 12.1.1 限制，详见 spec §3.1）。 -->
         <Setter Property="BoxShadow" Value="0 12 32 0 #33000000"/>
     </Style>
     <Style Selector="Border.remote-surface">
@@ -420,7 +422,7 @@
         <Setter Property="VerticalAlignment" Value="Stretch"/>
     </Style>
     <Style Selector="Border.loading-overlay">
-        <Setter Property="Background" Value="{DynamicResource Launcher.Color.Overlay.Scrim}"/>
+        <Setter Property="Background" Value="{DynamicResource Launcher.Color.Overlay.Scrim.Md}"/>
         <Setter Property="CornerRadius" Value="{StaticResource Launcher.Radius.Sm}"/>
         <Setter Property="HorizontalAlignment" Value="Stretch"/>
         <Setter Property="VerticalAlignment" Value="Stretch"/>
@@ -485,7 +487,7 @@
                     <Setter Property="Background" Value="{DynamicResource Launcher.Color.Transparent}"/>
                 </KeyFrame>
                 <KeyFrame Cue="100%">
-                    <Setter Property="Background" Value="{DynamicResource Launcher.Color.Overlay.Scrim}"/>
+                    <Setter Property="Background" Value="{DynamicResource Launcher.Color.Overlay.Scrim.Md}"/>
                 </KeyFrame>
             </Animation>
         </Style.Animations>
@@ -518,7 +520,7 @@
         <Style.Animations>
             <Animation Duration="{StaticResource Launcher.Motion.Duration.Fast}" FillMode="Forward" Easing="{StaticResource Launcher.Motion.Easing.Exit}">
                 <KeyFrame Cue="0%">
-                    <Setter Property="Background" Value="{DynamicResource Launcher.Color.Overlay.Scrim}"/>
+                    <Setter Property="Background" Value="{DynamicResource Launcher.Color.Overlay.Scrim.Md}"/>
                 </KeyFrame>
                 <KeyFrame Cue="100%">
                     <Setter Property="Background" Value="{DynamicResource Launcher.Color.Transparent}"/>
@@ -642,7 +644,7 @@
         <Setter Property="ClipToBounds" Value="True"/>
     </Style>
     <Style Selector="Button.banner-control">
-        <Setter Property="Background" Value="{DynamicResource Launcher.Color.Overlay.Scrim}"/>
+        <Setter Property="Background" Value="{DynamicResource Launcher.Color.Overlay.Scrim.Md}"/>
         <Setter Property="Foreground" Value="{DynamicResource Launcher.Text.OnChrome}"/>
         <Setter Property="Opacity" Value="0"/>
         <Setter Property="IsHitTestVisible" Value="False"/>
@@ -652,7 +654,7 @@
         <Setter Property="Margin" Value="{StaticResource Launcher.Spacing.Thickness.Sm}"/>
     </Style>
     <Style Selector="Grid.banner-indicators Button.dot">
-        <Setter Property="Background" Value="{DynamicResource Launcher.Color.Overlay.Scrim}"/>
+        <Setter Property="Background" Value="{DynamicResource Launcher.Color.Overlay.Scrim.Md}"/>
         <Setter Property="Foreground" Value="{DynamicResource Launcher.Text.OnChrome}"/>
     </Style>
     <Style Selector="Grid.banner-control">
@@ -683,12 +685,12 @@
         <Setter Property="Opacity" Value="0.35"/>
     </Style>
     <Style Selector="TextBlock.banner-page-indicator">
-        <Setter Property="Background" Value="{DynamicResource Launcher.Color.Overlay.Scrim}"/>
+        <Setter Property="Background" Value="{DynamicResource Launcher.Color.Overlay.Scrim.Md}"/>
         <Setter Property="Foreground" Value="{DynamicResource Launcher.Text.OnChrome}"/>
         <Setter Property="Padding" Value="{StaticResource Launcher.Spacing.Thickness.Sm}"/>
     </Style>
     <Style Selector="Grid.settings-overlay">
-        <Setter Property="Background" Value="{DynamicResource Launcher.Color.Overlay.Scrim}"/>
+        <Setter Property="Background" Value="{DynamicResource Launcher.Color.Overlay.Scrim.Md}"/>
         <Setter Property="ZIndex" Value="100"/>
         <Setter Property="KeyboardNavigation.TabNavigation" Value="Cycle"/>
         <Setter Property="views:OverlayFocusBehavior.IsEnabled" Value="True"/>
@@ -794,13 +796,13 @@
         <Setter Property="Background" Value="{DynamicResource Launcher.Color.Transparent}"/>
     </Style>
     <Style Selector="Grid.dialog-overlay">
-        <Setter Property="Background" Value="{DynamicResource Launcher.Color.Overlay.Scrim}"/>
+        <Setter Property="Background" Value="{DynamicResource Launcher.Color.Overlay.Scrim.Md}"/>
         <Setter Property="ZIndex" Value="200"/>
         <Setter Property="KeyboardNavigation.TabNavigation" Value="Cycle"/>
         <Setter Property="views:OverlayFocusBehavior.IsEnabled" Value="True"/>
     </Style>
     <Style Selector="Grid.setup-wizard-overlay">
-        <Setter Property="Background" Value="{DynamicResource Launcher.Color.Overlay.Scrim}"/>
+        <Setter Property="Background" Value="{DynamicResource Launcher.Color.Overlay.Scrim.Md}"/>
         <Setter Property="ZIndex" Value="500"/>
         <Setter Property="KeyboardNavigation.TabNavigation" Value="Cycle"/>
         <Setter Property="views:OverlayFocusBehavior.IsEnabled" Value="True"/>
@@ -809,6 +811,7 @@
         <Setter Property="Background" Value="{DynamicResource Launcher.Color.Dialog.Background}"/>
         <Setter Property="CornerRadius" Value="{StaticResource Launcher.Radius.Lg}"/>
         <Setter Property="ClipToBounds" Value="True"/>
+        <!-- 阴影值集中见 Launcher.Elevation.Shadow.Lg（BoxShadow 无 TypeConverter，同上限制）。 -->
         <Setter Property="BoxShadow" Value="0 22 55 0 #66000000"/>
     </Style>
     <Style Selector="Border.overlay-dialog">
