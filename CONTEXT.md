@@ -36,3 +36,64 @@ _Avoid_: 部分安装状态
 
 **远端状态不可用**:
 本地安装状态有效，但启动器无法取得判断版本兼容性所需的远端游戏配置。
+
+---
+
+# 设计系统（P2 决策会话）
+
+> 本段与 `docs/design/design-system-spec.md`（Q1–Q24 决策册）互为引用；P1（M0–M5）已全部完成并提交。
+> P2 待定决策在此逐轮定案；每项定案后追加 ADR 至 `docs/design/adr/`。偏好建议方 = 代理，最终选择权 = 用户。
+
+## 已定骨架（P1 落地，勿再开）
+
+- **M3 语义 / FluentTheme 底座**；点分层 token（`Launcher.*` 十二家族）；AA 契约自动化；动态色管线（ApplyScheme）；黄金截图基线；Debug 门画廊。
+- **组件四型映射**：`primary-action`→filled、`flat-action`→outlined（语境可 tonal）、`text-link`→text、`danger-action`→error-filled；共享模板 `LauncherBorderButtonTemplate` 保留；诊断/日志例外（Fluent 基础模板，仅 token 兼容）。
+- **表面与 Z 序**：单窗口 + 覆盖层（100/200/500/1000 不动）；P3 表面顺序 = 主壳→设置→对话框+Toast→向导→诊断/日志/资源面板（Q22）。
+
+## P2 决策前沿
+
+### ✅ 已定案（Round 1，2026-08-25）
+
+1. **底栏仲裁标准** → [ADR-001](docs/design/adr/ADR-001-底栏仲裁标准.md)：四标准等权 + 可读性一票否决；**形态本身待原型分支**。
+2. **圆角字阶一次性迁移** → [ADR-002](docs/design/adr/ADR-002-圆角字阶迁移.md)：Xs=4/Sm=8/Md=12/Lg=16，全量消费同步 + 基线重生成。
+3. **控件高度保持现值** → [ADR-003](docs/design/adr/ADR-003-控件高度保持.md)：P3 再评。
+4. **按钮四型规格** → [ADR-004](docs/design/adr/ADR-004-按钮四型规格.md)：「值不动、语言统一」+ 模板参数化。
+5. **字阶数值保持** → [ADR-005](docs/design/adr/ADR-005-字阶数值保持.md)：仅角色键消费迁移。
+6. **设置页布局范围** → [ADR-006](docs/design/adr/ADR-006-设置页布局范围.md)：仅组件规格统一，骨架不动。
+7. **画廊状态矩阵范围** → [ADR-007](docs/design/adr/ADR-007-画廊矩阵范围.md)：3 组件 × 6 态。
+
+### ✅ 已定案（Round 2 + Q18 仲裁 + 设置页方向，2026-08-25）
+
+13. **设置页重设计方向** → [ADR-013](docs/design/adr/ADR-013-设置页重设计方向.md)：**变体 B（纯列表 + hairline 分隔线）**；导航选中态 = SecondaryContainer 底 + OnSecondaryContainer 字 + 3px Primary 指示条；设置页双主题原型进行中（`prototype/settings-page`）。
+
+8. **组件批次映射** → [ADR-008](docs/design/adr/ADR-008-组件批次映射.md)：A=模板+四型按钮，B=现存组件对齐，C=新组件+矩阵+清单。
+9. **设置三项 UI + 算法落地** → [ADR-009](docs/design/adr/ADR-009-设置三项UI与算法落地.md)：3×SettingRow(ComboBox)，次序算法→变体→中性；P2 实现 Celebi+Score 提取器接入。
+10. **中性色切换交互** → [ADR-010](docs/design/adr/ADR-010-中性色切换交互.md)：一行 ComboBox + caption 提示，无阻断。
+11. **字阶迁移时机** → [ADR-011](docs/design/adr/ADR-011-字阶迁移时机.md)：随组件批次。
+12. **底栏原型启动** → [ADR-012](docs/design/adr/ADR-012-底栏原型启动.md)：**已撤销**（2026-08-25 用户放弃首页布局决策；Q18 形态重新开放，仲裁标准 ADR-001 保留）。
+
+### 🔓 仍开放
+
+- **底栏形态（Q18）**：仲裁结论已撤销，重新开放（ADR-001 标准保留；`prototype/bottom-bar` 素材保留）。
+- **首页（主壳）重设计**：已搁置（2026-08-25 用户放弃本轮设计稿与相关布局决策）；P3 主壳表面照旧包含，但无既定蓝图。
+- **P2 执行 ticket 拆分**（下一步：A→B→C 批次 + 设置三项 UI + Celebi+Score 接入，方案见交互记录）。
+- P2 各批次实现（每批门禁：契约/基线/对比度/零警告）。
+
+## ADR 索引
+
+| ADR | 决策 | 状态 |
+|---|---|---|
+| ADR-001 | 底栏仲裁标准（四标准 + 一票否决） | ✅ 已接受 |
+| ADR-002 | 圆角字阶一次性迁移（4/8/12/16） | ✅ 已接受 |
+| ADR-003 | 控件高度保持现值 | ✅ 已接受 |
+| ADR-004 | 按钮四型规格（值不动、语言统一） | ✅ 已接受 |
+| ADR-005 | 字阶数值保持现状 | ✅ 已接受 |
+| ADR-006 | 设置页布局自由度下限 | ✅ 已接受 |
+| ADR-007 | 画廊状态矩阵范围（3×6） | ✅ 已接受 |
+| ADR-008 | 组件批次 A→B→C 映射 | ✅ 已接受 |
+| ADR-009 | 设置三项 UI + Celebi+Score 落地 | ✅ 已接受 |
+| ADR-010 | 中性色切换交互 | ✅ 已接受 |
+| ADR-011 | 字阶迁移随批次 | ✅ 已接受 |
+| ADR-012 | 底栏双原型启动（Q18 仲裁结论已撤销，形态重新开放） | ⛔ 已撤销 |
+| ADR-013 | 设置页重设计方向（变体 B + SecondaryContainer 导航选中） | ✅ 已接受 |
+
