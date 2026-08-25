@@ -131,17 +131,18 @@ public partial class MainWindow : Window
 
     private void OnBannerPointerEntered(object? sender, PointerEventArgs e) => UpdateBannerInteractionState();
 
-    private void OnBannerPointerExited(object? sender, PointerEventArgs e) => UpdateBannerInteractionState();
+    private void OnBannerPointerExited(object? sender, PointerEventArgs e) =>
+        UpdateBannerInteractionState(forceHideControls: true);
 
     private void OnBannerGotFocus(object? sender, FocusChangedEventArgs e) => UpdateBannerInteractionState();
 
     private void OnBannerLostFocus(object? sender, FocusChangedEventArgs e) => UpdateBannerInteractionState();
 
-    private void UpdateBannerInteractionState()
+    private void UpdateBannerInteractionState(bool forceHideControls = false)
     {
         var pointerOver = BannerStage.IsPointerOver;
         var focusWithin = BannerStage.IsKeyboardFocusWithin;
-        BannerStage.Classes.Set("active", pointerOver || focusWithin);
+        BannerStage.Classes.Set("active", !forceHideControls && (pointerOver || focusWithin));
         configuredViewModel?.RemoteContent.SetBannerPointerOver(pointerOver);
         configuredViewModel?.RemoteContent.SetBannerFocusWithin(focusWithin);
     }

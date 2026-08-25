@@ -179,6 +179,62 @@ public sealed class MainWindowHeadlessTests
     }
 
     [AvaloniaFact]
+    public void MainWindow_BannerControls_HideAfterPointerLeavesBannerStage()
+    {
+        using var context = CreateContext();
+        context.ViewModel.RemoteContent.Apply(
+            new LauncherRemoteState
+            {
+                OperationsResource = new OperationsResourceResponse
+                {
+                    OperationsResourceOpen = true,
+                    BannerLoop = false,
+                    OperationsBannerList =
+                    [
+                        new OperationsBannerItem { BannerImg = "", JumpUrl = "https://banner.example.invalid/1" },
+                        new OperationsBannerItem { BannerImg = "", JumpUrl = "https://banner.example.invalid/2" }
+                    ]
+                }
+            },
+            new LauncherSettings { ShowRemoteContentCard = true },
+            CancellationToken.None);
+        context.Window.Show();
+        Dispatcher.UIThread.RunJobs();
+
+        var bannerStage = context.Window
+            .GetVisualDescendants()
+            .OfType<Grid>()
+            .Single(control => control.Classes.Contains("banner-stage"));
+        var navigationButtons = bannerStage
+            .GetVisualDescendants()
+            .OfType<Button>()
+            .Where(control => control.Classes.Contains("carousel-navigation"))
+            .ToArray();
+        Assert.Equal(2, navigationButtons.Length);
+        Assert.All(navigationButtons, button => Assert.Equal(0, button.Opacity));
+
+        var bannerTopLeft = bannerStage.TranslatePoint(default, context.Window);
+        Assert.NotNull(bannerTopLeft);
+        context.Window.MouseMove(
+            bannerTopLeft.Value + new Point(bannerStage.Bounds.Width / 2, bannerStage.Bounds.Height / 2),
+            RawInputModifiers.None);
+        Dispatcher.UIThread.RunJobs();
+        Assert.All(navigationButtons, button => Assert.Equal(1, button.Opacity));
+
+        var firstButtonTopLeft = navigationButtons[0].TranslatePoint(default, context.Window);
+        Assert.NotNull(firstButtonTopLeft);
+        var firstButtonCenter = firstButtonTopLeft.Value
+            + new Point(navigationButtons[0].Bounds.Width / 2, navigationButtons[0].Bounds.Height / 2);
+        context.Window.MouseDown(firstButtonCenter, MouseButton.Left, RawInputModifiers.None);
+        context.Window.MouseUp(firstButtonCenter, MouseButton.Left, RawInputModifiers.None);
+        Dispatcher.UIThread.RunJobs();
+
+        context.Window.MouseMove(new Point(0, 0), RawInputModifiers.None);
+        Dispatcher.UIThread.RunJobs();
+        Assert.All(navigationButtons, button => Assert.Equal(0, button.Opacity));
+    }
+
+    [AvaloniaFact]
     public void MainWindow_SocialActions_AddTopRightVerticalButtonsInSourceOrder()
     {
         using var context = CreateContext();
