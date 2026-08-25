@@ -9,6 +9,9 @@ $resultsRoot = Join-Path $PSScriptRoot 'TestResults\Coverage'
 $repositoryRoot = [IO.Path]::GetFullPath($PSScriptRoot)
 $repositoryRootPrefix = $repositoryRoot.TrimEnd([IO.Path]::DirectorySeparatorChar, [IO.Path]::AltDirectorySeparatorChar) + [IO.Path]::DirectorySeparatorChar
 
+# Coverlet reports class filenames relative to the instrumented project directory.
+$applicationProjectDirectory = [IO.Path]::GetFullPath((Join-Path $PSScriptRoot 'src\Cafe.Launcher.Avalonia'))
+
 if (Test-Path -LiteralPath $resultsRoot) {
     Remove-Item -LiteralPath $resultsRoot -Recurse -Force
 }
@@ -67,7 +70,7 @@ foreach ($reportPath in $reportPaths.Values) {
     foreach ($package in @($coverageXml.coverage.packages.package)) {
         foreach ($class in @($package.classes.class)) {
             $relativePath = $class.filename -replace '[\\/]', [string][IO.Path]::DirectorySeparatorChar
-            $fullPath = [IO.Path]::GetFullPath((Join-Path $PSScriptRoot $relativePath))
+            $fullPath = [IO.Path]::GetFullPath((Join-Path $applicationProjectDirectory $relativePath))
             $extension = [IO.Path]::GetExtension($fullPath)
 
             if (
