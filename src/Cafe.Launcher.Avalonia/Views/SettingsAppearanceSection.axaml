@@ -75,19 +75,6 @@
                 </controls:SettingRow.Action>
             </controls:SettingRow>
 
-            <controls:SettingRow IconKind="FormatColorFill"
-                                 Title="{Binding Shell.I18n[neutralColorStrategy]}"
-                                 Description="{Binding Shell.I18n[neutralColorStrategyDescription]}">
-                <controls:SettingRow.Action>
-                    <ComboBox Classes="setting-control"
-                              AutomationProperties.Name="{Binding Shell.I18n[neutralColorStrategy]}"
-                              ItemsSource="{Binding Settings.Options.NeutralColorStrategy}"
-                              SelectedValue="{Binding Settings.Editor.Current.NeutralColorStrategy, Mode=TwoWay}"
-                              SelectedValueBinding="{Binding Code}"
-                              ItemTemplate="{StaticResource SettingOptionTemplate}"/>
-                </controls:SettingRow.Action>
-            </controls:SettingRow>
-
             <Grid Classes="settings-row" ColumnDefinitions="Auto,*,Auto"
                   IsVisible="{Binding Settings.Appearance.IsWallpaperThemeColorSelected}">
                 <Border Classes="settings-icon">

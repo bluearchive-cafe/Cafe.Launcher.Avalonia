@@ -127,12 +127,13 @@ public partial class SettingsAppearanceViewModel : ViewModelBase, IDisposable
         }
 
         var color = ResolveThemeColor(themeColorMode, customColor);
-        ThemeColorPreviewBrush = new SolidColorBrush(color);
         ApplyScheme(
             color,
             editor.Current.ThemeColorVariant,
             IsDarkTheme(editor.Current.ThemeMode),
             editor.Current.NeutralColorStrategy);
+        RefreshThemeColorPaletteBrushes();
+        UpdateThemeColorPreview();
     }
 
     [RelayCommand]
@@ -186,9 +187,17 @@ public partial class SettingsAppearanceViewModel : ViewModelBase, IDisposable
             return;
         }
 
+        if (e.PropertyName == nameof(LauncherSettings.ThemeMode))
+        {
+            RefreshThemeColorPaletteBrushes();
+            UpdateThemeColorPreview();
+            return;
+        }
+
         if (e.PropertyName is nameof(LauncherSettings.ThemeColorVariant)
             or nameof(LauncherSettings.NeutralColorStrategy))
         {
+            RefreshThemeColorPaletteBrushes();
             UpdateThemeColorPreview();
             return;
         }
@@ -266,7 +275,7 @@ public partial class SettingsAppearanceViewModel : ViewModelBase, IDisposable
                 {
                     Index = i,
                     ColorHex = normalizedColors[i],
-                    Brush = new SolidColorBrush(color)
+                    Brush = new SolidColorBrush(GetGeneratedPrimaryColor(color))
                 });
             }
 
@@ -291,12 +300,33 @@ public partial class SettingsAppearanceViewModel : ViewModelBase, IDisposable
         }
     }
 
+    private void RefreshThemeColorPaletteBrushes()
+    {
+        foreach (var item in ThemeColorPaletteItems)
+        {
+            var seed = ParseThemeColorPaletteColor(item.ColorHex);
+            if (seed is { } color)
+            {
+                item.Brush = new SolidColorBrush(GetGeneratedPrimaryColor(color));
+            }
+        }
+    }
+
     private void UpdateThemeColorPreview()
     {
         var color = ResolveThemeColor(
             editor.Current.ThemeColorMode,
             SelectedCustomThemeColor);
-        ThemeColorPreviewBrush = new SolidColorBrush(color);
+        ThemeColorPreviewBrush = new SolidColorBrush(GetGeneratedPrimaryColor(color));
+    }
+
+    private Color GetGeneratedPrimaryColor(Color seed)
+    {
+        var scheme = MaterialSchemeGenerator.CreateScheme(
+            seed,
+            editor.Current.ThemeColorVariant,
+            IsDarkTheme(editor.Current.ThemeMode));
+        return MaterialColorMapper.ToAvaloniaColor(scheme.Primary);
     }
 
     private Color ResolveThemeColor(string themeColorMode, Color customColor) =>

@@ -116,7 +116,7 @@ public sealed class MaterialSchemeGeneratorTests
     }
 
     [Fact]
-    public void BuildRoleBrushes_SeedFollowingStrategy_IncludeSurfaceNeutralRoles()
+    public void BuildRoleBrushes_SeedFollowingStrategy_OnlyIncludesLegacyNeutralRoles()
     {
         var scheme = MaterialSchemeGenerator.CreateScheme(
             DefaultSeed,
