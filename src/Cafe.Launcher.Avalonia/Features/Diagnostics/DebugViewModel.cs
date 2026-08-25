@@ -301,8 +301,7 @@ public sealed partial class DebugViewModel : ViewModelBase, IModalContentViewMod
             "DebugPanel: test handled error", exception,
             new ErrorHandlingOptions
             {
-                ToastMessage = exception.Message,
-                OperationNoteKey = "networkWithMessage"
+                ToastMessage = exception.Message
             });
         LastActionResult = shell.I18n["debugHandledErrorSimulated"];
     }

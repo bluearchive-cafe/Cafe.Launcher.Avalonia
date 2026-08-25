@@ -245,7 +245,7 @@ public partial class ResourcePanelViewModel : ViewModelBase, IDisposable, IModal
         {
             ResourcePanelMessage = localizer.F("resourcePanelLoadFailed", exception.Message);
             await errorHandling.HandleErrorAsync("Resource panel manual UID save failed.", exception,
-                new ErrorHandlingOptions { ShowToast = false, OperationNoteKey = null });
+                new ErrorHandlingOptions { ShowToast = false });
         }
         finally
         {
@@ -284,7 +284,7 @@ public partial class ResourcePanelViewModel : ViewModelBase, IDisposable, IModal
             var message = localizer.F("resourcePanelSaveFailed", exception.Message);
             ResourcePanelMessage = message;
             await errorHandling.HandleErrorAsync("Resource panel save failed.", exception,
-                new ErrorHandlingOptions { ToastMessage = message, OperationNoteKey = null });
+                new ErrorHandlingOptions { ToastMessage = message });
         }
         finally
         {

@@ -92,6 +92,7 @@
 
                             <Grid x:Name="BannerStage"
                                   Classes="banner-stage"
+                                  Classes.active="{Binding RemoteContent.IsBannerInteractionActive}"
                                   IsVisible="{Binding RemoteContent.HasBannerItems}"
                                   PointerEntered="OnBannerPointerEntered"
                                   PointerExited="OnBannerPointerExited"
@@ -298,6 +299,7 @@
                                                                     Cursor="Hand"
                                                                     MinHeight="{StaticResource LauncherControlHeightSetting}"
                                                                     ToolTip.Tip="{Binding Title}"
+                                                                    AutomationProperties.Name="{Binding Title}"
                                                                     Command="{Binding #Root.((vm:MainWindowViewModel)DataContext).RemoteContent.OpenExternalUrlCommand}"
                                                                     CommandParameter="{Binding Url}">
                                                                 <Border Classes="content-row news-content-row">

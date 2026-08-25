@@ -126,7 +126,6 @@ public sealed class ShellLifecycle : IDisposable
         pickSetupWizardGameFolderAsync = PickSetupWizardGameFolderAsync;
 
         errorHandling.CriticalErrorRequested += OnCriticalError;
-        errorHandling.OperationNoteRequested += OnOperationNoteRequested;
         localizer.LocalizationFailure += OnLocalizationFailure;
     }
 
@@ -227,8 +226,7 @@ public sealed class ShellLifecycle : IDisposable
                 {
                     shell.SetRefreshError(exception);
                     operations.SetIdlePanels(currentSnapshot);
-                    await errorHandling.HandleErrorAsync("Launcher core refresh failed.", exception,
-                        new ErrorHandlingOptions { OperationNoteKey = "networkWithMessage" });
+                    await errorHandling.HandleErrorAsync("Launcher core refresh failed.", exception);
                 }
                 finally
                 {
@@ -591,7 +589,6 @@ public sealed class ShellLifecycle : IDisposable
         }
 
         errorHandling.CriticalErrorRequested -= OnCriticalError;
-        errorHandling.OperationNoteRequested -= OnOperationNoteRequested;
         localizer.LocalizationFailure -= OnLocalizationFailure;
 
         Task pendingWork = WaitForShutdownWorkAsync(pendingRefreshes);
@@ -765,8 +762,7 @@ public sealed class ShellLifecycle : IDisposable
             new ErrorHandlingOptions
             {
                 ToastMessage = "Localization unavailable.",
-                IncludeExceptionDetails = false,
-                OperationNoteKey = null
+                IncludeExceptionDetails = false
             });
     }
 
@@ -778,11 +774,6 @@ public sealed class ShellLifecycle : IDisposable
     private void OnCriticalError(CriticalErrorInfo info)
     {
         dialogs.ShowCriticalError(info.Message, info.Details);
-    }
-
-    private void OnOperationNoteRequested(string note)
-    {
-        shell.OperationNote = note;
     }
 
     private void OnSettingPropertyChanged(object? sender, PropertyChangedEventArgs e)

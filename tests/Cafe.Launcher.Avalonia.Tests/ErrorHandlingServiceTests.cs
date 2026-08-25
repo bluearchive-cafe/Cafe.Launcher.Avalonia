@@ -11,11 +11,9 @@ public sealed class ErrorHandlingServiceTests
     }
 
     [Fact]
-    public async Task HandleErrorAsync_WhenErrorOccurs_ShowsErrorToastWithoutChangingOperationNote()
+    public async Task HandleErrorAsync_WhenErrorOccurs_ShowsErrorToast()
     {
         var (service, toastService) = CreateService();
-        string? operationNote = null;
-        service.OperationNoteRequested += note => operationNote = note;
         var exception = new InvalidOperationException("test error");
         ToastNotification? toast = null;
         toastService.ToastRaised += t => toast = t;
@@ -25,7 +23,6 @@ public sealed class ErrorHandlingServiceTests
         Assert.NotNull(toast);
         Assert.Equal(ToastSeverity.Error, toast!.Severity);
         Assert.Equal("TestError（InvalidOperationException）：test error", toast.Message);
-        Assert.Null(operationNote);
     }
 
     [Fact]
@@ -101,39 +98,6 @@ public sealed class ErrorHandlingServiceTests
         });
 
         Assert.Null(toast);
-    }
-
-    [Fact]
-    public async Task HandleErrorAsync_WithNullOperationNoteKey_DoesNotRaiseOperationNoteEvent()
-    {
-        var (service, _) = CreateService();
-        string? operationNote = null;
-        service.OperationNoteRequested += note => operationNote = note;
-        var exception = new InvalidOperationException("test error");
-
-        await service.HandleErrorAsync("TestError", exception, new ErrorHandlingOptions
-        {
-            OperationNoteKey = null
-        });
-
-        Assert.Null(operationNote);
-    }
-
-    [Fact]
-    public async Task HandleErrorAsync_WithCustomOperationNoteKey_RaisesOperationNoteEvent()
-    {
-        var (service, _) = CreateService();
-        string? operationNote = null;
-        service.OperationNoteRequested += note => operationNote = note;
-        var exception = new InvalidOperationException("test error");
-
-        await service.HandleErrorAsync("TestError", exception, new ErrorHandlingOptions
-        {
-            OperationNoteKey = "gameLaunchFailed"
-        });
-
-        Assert.NotNull(operationNote);
-        Assert.StartsWith("Game launch failed:", operationNote!, StringComparison.Ordinal);
     }
 
     [Fact]

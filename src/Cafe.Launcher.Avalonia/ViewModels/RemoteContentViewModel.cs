@@ -23,11 +23,13 @@ public partial class RemoteContentViewModel : ViewModelBase, IDisposable
     private readonly ImageCacheService imageCacheService;
     private DispatcherTimer? carouselTimer;
     private CancellationTokenSource? carouselDelayCts;
+    private CancellationTokenSource? bannerPreloadCts;
     private string proxyMode = ProxyModes.Auto;
     private bool showRemoteContentCard = true;
     private bool isMotionReduced;
     private bool isBannerPointerOver;
     private bool isBannerFocused;
+    private bool isBannerControlsSuppressed;
     private bool disposed;
 
     [ObservableProperty]
@@ -67,6 +69,9 @@ public partial class RemoteContentViewModel : ViewModelBase, IDisposable
     private bool isCarouselPaused;
 
     [ObservableProperty]
+    private bool isBannerInteractionActive;
+
+    [ObservableProperty]
     private string carouselPageText = "";
 
     [ObservableProperty]
@@ -104,6 +109,7 @@ public partial class RemoteContentViewModel : ViewModelBase, IDisposable
     public void ApplyLanguage()
     {
         UpdateCarouselPageText();
+        UpdateBannerDotAccessibleNames();
     }
 
     public void ApplyMotionPreference(bool reduceMotion)
@@ -119,9 +125,11 @@ public partial class RemoteContentViewModel : ViewModelBase, IDisposable
     public void Apply(LauncherRemoteState remote, LauncherSettings settings, CancellationToken cancellationToken)
     {
         if (disposed) return;
+        cancellationToken.ThrowIfCancellationRequested();
         proxyMode = settings.ProxyMode;
         StopCarouselTimer();
-        carouselDelayCts?.Cancel();
+        CancelCarouselDelay();
+        var preloadToken = RestartBannerPreloadCancellation().Token;
         DisposeBannerBitmaps();
         BannerItems.Clear();
         SocialMediaItems.Clear();
@@ -158,7 +166,7 @@ public partial class RemoteContentViewModel : ViewModelBase, IDisposable
             CarouselSelectedIndex = 0;
             HasMultipleBanners = BannerItems.Count > 1;
             UpdateCarouselPageText();
-            _ = PreloadBannerImagesAsync(cancellationToken);
+            _ = PreloadBannerImagesAsync(preloadToken);
         }
         else
         {
@@ -279,8 +287,28 @@ public partial class RemoteContentViewModel : ViewModelBase, IDisposable
 
     public void StopCarouselTimer()
     {
-        carouselTimer?.Stop();
+        if (carouselTimer is null)
+        {
+            return;
+        }
+
+        carouselTimer.Stop();
         carouselTimer = null;
+    }
+
+    private void CancelCarouselDelay()
+    {
+        carouselDelayCts?.Cancel();
+        carouselDelayCts?.Dispose();
+        carouselDelayCts = null;
+    }
+
+    private CancellationTokenSource RestartBannerPreloadCancellation()
+    {
+        bannerPreloadCts?.Cancel();
+        bannerPreloadCts?.Dispose();
+        bannerPreloadCts = new CancellationTokenSource();
+        return bannerPreloadCts;
     }
 
     public void StartCarouselTimer()
@@ -316,7 +344,7 @@ public partial class RemoteContentViewModel : ViewModelBase, IDisposable
         return true;
     }
 
-    internal void SetBannerPointerOver(bool isPointerOver)
+    internal void SetBannerPointerOver(bool isPointerOver, bool hideControls = false)
     {
         if (disposed)
         {
@@ -324,6 +352,7 @@ public partial class RemoteContentViewModel : ViewModelBase, IDisposable
         }
 
         isBannerPointerOver = isPointerOver;
+        isBannerControlsSuppressed = hideControls;
         UpdateCarouselPauseState();
     }
 
@@ -335,6 +364,7 @@ public partial class RemoteContentViewModel : ViewModelBase, IDisposable
         }
 
         isBannerFocused = isFocused;
+        isBannerControlsSuppressed = false;
         UpdateCarouselPauseState();
     }
 
@@ -404,6 +434,10 @@ public partial class RemoteContentViewModel : ViewModelBase, IDisposable
         CarouselPageText = BannerItems.Count > 1
             ? localizer.F("carouselPage", CarouselSelectedIndex + 1, BannerItems.Count)
             : "";
+    }
+
+    private void UpdateBannerDotAccessibleNames()
+    {
         for (var i = 0; i < BannerDots.Count; i++)
         {
             BannerDots[i].AccessibleName = localizer.F("carouselPage", i + 1, BannerItems.Count);
@@ -453,7 +487,7 @@ public partial class RemoteContentViewModel : ViewModelBase, IDisposable
 
                 await Dispatcher.UIThread.InvokeAsync(() =>
                 {
-                    if (!BannerItems.Contains(item))
+                    if (disposed || !BannerItems.Contains(item))
                     {
                         return;
                     }
@@ -482,7 +516,7 @@ public partial class RemoteContentViewModel : ViewModelBase, IDisposable
     private async Task ScheduleCarouselResumeAfterDelayAsync()
     {
         if (disposed) return;
-        carouselDelayCts?.Cancel();
+        CancelCarouselDelay();
         carouselDelayCts = new CancellationTokenSource();
         var token = carouselDelayCts.Token;
         try
@@ -568,9 +602,10 @@ public partial class RemoteContentViewModel : ViewModelBase, IDisposable
         disposed = true;
 
         StopCarouselTimer();
-        carouselDelayCts?.Cancel();
-        carouselDelayCts?.Dispose();
-        carouselDelayCts = null;
+        CancelCarouselDelay();
+        bannerPreloadCts?.Cancel();
+        bannerPreloadCts?.Dispose();
+        bannerPreloadCts = null;
         DisposeBannerBitmaps();
     }
 
@@ -585,11 +620,13 @@ public partial class RemoteContentViewModel : ViewModelBase, IDisposable
 
     private void UpdateCarouselPauseState()
     {
+        IsBannerInteractionActive = !isBannerControlsSuppressed
+            && (isBannerPointerOver || isBannerFocused);
         var paused = isMotionReduced || isBannerPointerOver || isBannerFocused;
         IsCarouselPaused = paused;
         if (paused)
         {
-            carouselDelayCts?.Cancel();
+            CancelCarouselDelay();
             StopCarouselTimer();
         }
         else

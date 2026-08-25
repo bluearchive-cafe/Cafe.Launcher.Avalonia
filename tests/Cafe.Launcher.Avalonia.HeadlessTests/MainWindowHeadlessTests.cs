@@ -235,6 +235,49 @@ public sealed class MainWindowHeadlessTests
     }
 
     [AvaloniaFact]
+    public void MainWindow_BannerControls_ShowWhileBannerStageIsFocused()
+    {
+        using var context = CreateContext();
+        context.ViewModel.RemoteContent.Apply(
+            new LauncherRemoteState
+            {
+                OperationsResource = new OperationsResourceResponse
+                {
+                    OperationsResourceOpen = true,
+                    BannerLoop = false,
+                    OperationsBannerList =
+                    [
+                        new OperationsBannerItem { BannerImg = "", JumpUrl = "https://banner.example.invalid/1" },
+                        new OperationsBannerItem { BannerImg = "", JumpUrl = "https://banner.example.invalid/2" }
+                    ]
+                }
+            },
+            new LauncherSettings { ShowRemoteContentCard = true },
+            CancellationToken.None);
+        context.Window.Show();
+        Dispatcher.UIThread.RunJobs();
+
+        var bannerStage = context.Window
+            .GetVisualDescendants()
+            .OfType<Grid>()
+            .Single(control => control.Classes.Contains("banner-stage"));
+        var navigationButtons = bannerStage
+            .GetVisualDescendants()
+            .OfType<Button>()
+            .Where(control => control.Classes.Contains("carousel-navigation"))
+            .ToArray();
+        Assert.Equal(2, navigationButtons.Length);
+        Assert.All(navigationButtons, button => Assert.Equal(0, button.Opacity));
+
+        navigationButtons[0].Focus(NavigationMethod.Tab);
+        Dispatcher.UIThread.RunJobs();
+
+        Assert.True(context.ViewModel.RemoteContent.IsBannerInteractionActive);
+        Assert.True(context.ViewModel.RemoteContent.IsCarouselPaused);
+        Assert.All(navigationButtons, button => Assert.Equal(1, button.Opacity));
+    }
+
+    [AvaloniaFact]
     public void MainWindow_SocialActions_AddTopRightVerticalButtonsInSourceOrder()
     {
         using var context = CreateContext();

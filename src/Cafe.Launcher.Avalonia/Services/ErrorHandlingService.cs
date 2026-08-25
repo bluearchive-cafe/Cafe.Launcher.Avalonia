@@ -20,12 +20,6 @@ public sealed class ErrorHandlingOptions
     /// when the exception can expose an implementation detail such as a resource key.
     /// </summary>
     public bool IncludeExceptionDetails { get; init; } = true;
-
-    /// <summary>
-    /// Localization key for <see cref="IErrorHandlingService.OperationNoteRequested"/>.
-    /// When null, the event is not raised.
-    /// </summary>
-    public string? OperationNoteKey { get; init; }
 }
 
 /// <summary>Payload for the critical-error dialog requested event.</summary>
@@ -44,22 +38,19 @@ public sealed class CriticalErrorInfo
 public interface IErrorHandlingService
 {
     /// <summary>
-    /// Logs the error, optionally shows a toast, and optionally raises <see cref="OperationNoteRequested"/>.
+    /// Logs the error and optionally shows a toast.
     /// Use for recoverable failures where the user can continue.
     /// </summary>
     Task HandleErrorAsync(string context, Exception exception, ErrorHandlingOptions? options = null);
 
     /// <summary>
     /// Logs the error and raises <see cref="CriticalErrorRequested"/> so the shell
-    /// can present a modal error dialog. Does NOT show a toast or set OperationNote.
+    /// can present a modal error dialog. Does NOT show a toast.
     /// </summary>
     Task HandleCriticalErrorAsync(string context, Exception exception);
 
     /// <summary>Raised when a critical error requires a modal dialog.</summary>
     event Action<CriticalErrorInfo>? CriticalErrorRequested;
-
-    /// <summary>Raised when a recoverable error requests an operation note update.</summary>
-    event Action<string>? OperationNoteRequested;
 }
 
 /// <summary>
@@ -85,20 +76,12 @@ public sealed class ErrorHandlingService : IErrorHandlingService
     /// <summary>Raised when a critical failure must be presented in a modal dialog.</summary>
     public event Action<CriticalErrorInfo>? CriticalErrorRequested;
 
-    /// <summary>Raised when a recoverable error requests an operation note update.</summary>
-    public event Action<string>? OperationNoteRequested;
-
     /// <summary>Logs a recoverable failure and applies its requested shell notification behavior.</summary>
     public async Task HandleErrorAsync(string context, Exception exception, ErrorHandlingOptions? options = null)
     {
         options ??= new ErrorHandlingOptions();
 
         await diagnostics.ErrorAsync("ErrorHandling", exception, CancellationToken.None);
-
-        if (options.OperationNoteKey is { } key)
-        {
-            OperationNoteRequested?.Invoke(localizer.F(key, exception.Message));
-        }
 
         if (options.ShowToast)
         {

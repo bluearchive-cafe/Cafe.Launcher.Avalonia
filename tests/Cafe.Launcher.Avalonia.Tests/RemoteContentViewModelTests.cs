@@ -328,6 +328,51 @@ public sealed class RemoteContentViewModelTests
     }
 
     [Fact]
+    public void BannerPointerExited_WithSuppressedControls_HidesVisualsUntilNextFocusOrHover()
+    {
+        using var context = CreateContext();
+        context.ViewModel.Apply(
+            CreateBannerState(2, loop: true),
+            new LauncherSettings(),
+            CancellationToken.None);
+
+        context.ViewModel.SetBannerPointerOver(true);
+        context.ViewModel.SetBannerFocusWithin(true);
+        context.ViewModel.SetBannerPointerOver(false, hideControls: true);
+
+        Assert.True(context.ViewModel.IsCarouselPaused);
+        Assert.False(context.ViewModel.IsBannerInteractionActive);
+
+        context.ViewModel.SetBannerFocusWithin(true);
+
+        Assert.True(context.ViewModel.IsBannerInteractionActive);
+        Assert.True(context.ViewModel.IsCarouselPaused);
+
+        context.ViewModel.SetBannerFocusWithin(false);
+
+        Assert.False(context.ViewModel.IsBannerInteractionActive);
+        Assert.False(context.ViewModel.IsCarouselPaused);
+        Assert.True(context.ViewModel.IsCarouselTimerRunning);
+    }
+
+    [Fact]
+    public void BannerPointerExited_WhenNotFocused_ResumesCarouselAndHidesControls()
+    {
+        using var context = CreateContext();
+        context.ViewModel.Apply(
+            CreateBannerState(2, loop: true),
+            new LauncherSettings(),
+            CancellationToken.None);
+
+        context.ViewModel.SetBannerPointerOver(true);
+        context.ViewModel.SetBannerPointerOver(false, hideControls: true);
+
+        Assert.False(context.ViewModel.IsCarouselPaused);
+        Assert.False(context.ViewModel.IsBannerInteractionActive);
+        Assert.True(context.ViewModel.IsCarouselTimerRunning);
+    }
+
+    [Fact]
     public void ApplyMotionPreference_ReducedPausesAutomaticCarouselAndUsesZeroDurationSlide()
     {
         using var context = CreateContext();
