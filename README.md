@@ -95,6 +95,18 @@ dotnet test .\tests\Cafe.Launcher.Avalonia.Tests\Cafe.Launcher.Avalonia.Tests.cs
 
 `UiStyleContractTests` 强制执行设计标记契约：禁止视图 XAML 中出现裸色值，强制使用 `LauncherSpacing*` 标记，验证 Z-Index 分层顺序，确保动态主题色笔刷不替代主题字典笔刷。修改 XAML 或样式时务必运行此测试。
 
+### 黄金截图（Headless Skia 渲染）
+
+Headless 测试套件以 Skia 渲染（`UseHeadlessDrawing=false` + `UseSkia()`）运行，`MainWindowHeadlessTests.Golden_*` 对 5 个关键状态（壳默认 / 进度面板 / 设置覆盖层 / 确认对话框 / Toast）做像素级回归比对，基线与阈值 diff 见 `tests/Cafe.Launcher.Avalonia.HeadlessTests/Baselines/`。
+
+- **有意改动视觉后重新生成基线**（提交 PNG 与改动一起）：
+  ```powershell
+  $env:CAFE_GOLDEN_UPDATE = "1"
+  dotnet test .\tests\Cafe.Launcher.Avalonia.HeadlessTests\Cafe.Launcher.Avalonia.HeadlessTests.csproj --filter "FullyQualifiedName~Golden"
+  Remove-Item Env:CAFE_GOLDEN_UPDATE
+  ```
+- **CI（windows-latest）字体稳定性**：对比允许每通道容差（8/255）与 ≤1% 失配像素比例；基线在固定状态（英文、动效关闭、窗口字体固定 Segoe UI）下生成，但 CI 与本地机器的系统字体度量仍可能有亚像素差异——阈值已考虑该风险，若 CI 出现接近阈值的漂移，优先重生成基线而非放宽阈值。
+
 ## 配置与本地文件
 
 启动器使用 `%LOCALAPPDATA%\Cafe Launcher\` 保存本地数据：
