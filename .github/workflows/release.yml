@@ -23,12 +23,12 @@ jobs:
 
     steps:
       - name: Checkout
-        uses: actions/checkout@v6
+        uses: actions/checkout@v7
         with:
           fetch-depth: 0
 
       - name: Setup .NET
-        uses: actions/setup-dotnet@v5
+        uses: actions/setup-dotnet@v6
         with:
           dotnet-version: 10.0.x
 
@@ -74,7 +74,7 @@ jobs:
           }
 
       - name: Create source repository release
-        uses: softprops/action-gh-release@v2
+        uses: softprops/action-gh-release@v3
         with:
           name: ${{ github.ref_name }}
           body_path: changelog.md
@@ -85,7 +85,7 @@ jobs:
           fail_on_unmatched_files: true
 
       - name: Create distribution repository release
-        uses: softprops/action-gh-release@v2
+        uses: softprops/action-gh-release@v3
         with:
           # Keep in sync with LauncherConstants.GitHubReleaseRepositorySlug
           repository: bluearchive-cafe/Cafe.Launcher.Avalonia_Release
