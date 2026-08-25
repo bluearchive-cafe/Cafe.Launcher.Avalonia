@@ -36,6 +36,8 @@
 
 ## M3 — 动态色管线基座（2–4 天）
 
+> **状态：✅ 已执行（2026-08-25）**。core 包 0.2.0 接入产品 csproj；`MaterialColorMapper`/`MaterialSchemeGenerator` 落地；`ApplyScheme` 替换 `ApplyAccentBrushes`（保留覆盖子集 + Secondary/Tertiary/容器角色 + 可选 Surface/Outline）；on-color 亮度规则（0.45 阈值）测试锁定；三个设置字段持久化 + 规范化 + 旧 JSON 兼容（UI 在 P2）；headless 选择视觉断言改为语义化（对比运行时 Primary 资源）。门禁：0 警告、单测 1098 通过、headless 99 通过。**M3 门禁通过**（人工壁纸冒烟由 headless 选择/刷新流覆盖，完整人工冒烟建议 P2 UI 后统一执行）。
+
 - 依赖：产品 csproj 按 M0 结论加包（core 必加；集成包视 M0）。
 - 转换层：`Helpers/` 或 `Services/` 新增 `ArgbColor`↔Avalonia `Color`/`SolidColorBrush` 映射 + 参考值单测（M0 表复用）。
 - **`ApplyScheme`**（替代扩展 `SettingsAppearanceViewModel.ApplyAccentBrushes`，保留原 11 笔刷覆盖行为作为子集）：输入（seed、variant、theme、neutralStrategy）→ 输出 primary/secondary/tertiary + containers + （seed 策略时）surface/outline 覆盖；on-color 按亮度计算（替换硬编码 `Launcher.OnAccent` 使用点）。

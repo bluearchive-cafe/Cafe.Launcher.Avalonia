@@ -1987,9 +1987,9 @@ public sealed class MainWindowHeadlessTests
             hasSnapshot: false);
         viewModel.Settings.Editor.ApplySnapshot(
             viewModel.Settings.Editor.GetSnapshot());
-        // Apply default theme accent brushes so navigation selection visual
+        // Apply the default M3 dynamic scheme so navigation selection visual
         // matches the real app's initialization behavior.
-        SettingsAppearanceViewModel.ApplyAccentBrushes(
+        SettingsAppearanceViewModel.ApplyScheme(
             Color.Parse("#FF2E7DF6"));
         var window = new MainWindow { DataContext = viewModel };
         window.ConfigureViewModel(viewModel);
@@ -2055,9 +2055,15 @@ public sealed class MainWindowHeadlessTests
 
         Assert.Equal(expectedCode, ((SettingOption)selectedItem.DataContext!).Code);
         Assert.Equal(new Thickness(3, 0, 0, 0), selectedItem.BorderThickness);
-        Assert.Equal(Color.Parse("#FF2E7DF6"), Assert.IsType<SolidColorBrush>(selectedItem.BorderBrush).Color);
-        Assert.Equal(Color.Parse("#302E7DF6"), Assert.IsType<SolidColorBrush>(selectedItem.Background).Color);
-        Assert.Equal(Color.Parse("#302E7DF6"), Assert.IsType<SolidColorBrush>(presenter.Background).Color);
+        // M3: selection visuals follow the applied dynamic scheme's Primary role and
+        // its flat-pressed derivative rather than the raw seed colour.
+        var primary = Assert.IsType<SolidColorBrush>(
+            Application.Current!.Resources["Launcher.Color.Primary"]).Color;
+        var flatPressed = Assert.IsType<SolidColorBrush>(
+            Application.Current!.Resources["Launcher.Color.Button.Flat.Pressed"]).Color;
+        Assert.Equal(primary, Assert.IsType<SolidColorBrush>(selectedItem.BorderBrush).Color);
+        Assert.Equal(flatPressed, Assert.IsType<SolidColorBrush>(selectedItem.Background).Color);
+        Assert.Equal(flatPressed, Assert.IsType<SolidColorBrush>(presenter.Background).Color);
     }
 
     private static void AssertVisibleSettingsSection(MainWindow window, Type expectedType)
