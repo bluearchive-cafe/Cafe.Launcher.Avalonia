@@ -79,7 +79,7 @@ GitHub Actions uses .NET `10.0.x`. The build workflow runs on `windows-latest`: 
 
 ### Startup and composition
 
-- `Program.cs` owns process lifetime: Windows single-instance mutex/signaling, the logger created before DI, crash handlers, first-launch detection, and the `session.active` crash-recovery lifecycle. The pre-DI `UnifiedLogger` is passed into DI so the process has one Serilog pipeline and is disposed only after session completion logging.
+- `Program.cs` owns process lifetime: Windows single-instance mutex/signaling, the logger created before DI, crash handlers, first-launch detection, and the session start/end logging lifecycle. The pre-DI `UnifiedLogger` is passed into DI so the process has one Serilog pipeline and is disposed only after session completion logging.
 - `App.axaml.cs` is the composition root. It builds `ServiceCollection`, calls `ServiceConfiguration.AddLauncherServices(existingLogger:)`, constructs the single `MainWindow`, configures tray/single-instance restoration, and either shows the first-launch setup wizard or starts normal asynchronous initialization.
 - `Composition/ServiceConfiguration.cs` is the DI registration point. This is a single-window desktop app: services and view models are singletons. Microsoft DI disposes created services in reverse registration order, so position a new `IDisposable` service after the consumers that must release first. `Program.RunSession` explicitly disposes the shared pre-DI `UnifiedLogger` after all session-end logging has completed.
 - `App.axaml` defines Fluent/Material resources, theme dictionaries, and `Launcher*` design tokens.
@@ -100,7 +100,7 @@ GitHub Actions uses .NET `10.0.x`. The build workflow runs on `windows-latest`: 
 
 ### Persistence and compatibility contracts
 
-- Launcher data lives in `%LOCALAPPDATA%\Cafe Launcher\`: settings, crash marker, unified log, persisted download state, shown notices, and click code. `LauncherSettingsService` must preserve compatibility with old or invalid `settings.json` content; `SettingsEditor` gives the UI transactional save/discard behavior.
+- Launcher data lives in `%LOCALAPPDATA%\Cafe Launcher\`: settings, unified log, persisted download state, shown notices, and click code. `LauncherSettingsService` must preserve compatibility with old or invalid `settings.json` content; `SettingsEditor` gives the UI transactional save/discard behavior.
 - The game directory is normalized to `YostarGames\BlueArchive_JP`. All file operations must go through `GamePathValidator` so they remain inside that game directory.
 - `LocalInstallationStateStore` manages `game-launcher-config.json` and `manifest.json` as one coordinated installation state shared with the official launcher. Preserve the JSON/wire field order used by `OfficialHashService`—changing it makes launchers reject each other's manifest.
 - Launch validation intentionally fails open if a requested remote manifest cannot be retrieved; repair uses CRC64 whereas launch validation checks file size. These mirror the official launcher and are covered by contract tests.

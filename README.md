@@ -1,6 +1,6 @@
 # Cafe Launcher
 
-Blue Archive 日服桌面启动器，基于 .NET 10 与 Avalonia 12 重写，替代原 Yostar Electron 启动器。项目在保留官方启动器安装、更新与启动流程的同时，补齐了下载可靠性、CDN 切换、启动校验、崩溃恢复和本地诊断等实用能力。
+Blue Archive 日服桌面启动器，基于 .NET 10 与 Avalonia 12 重写，替代原 Yostar Electron 启动器。项目在保留官方启动器安装、更新与启动流程的同时，补齐了下载可靠性、CDN 切换、启动校验和本地诊断等实用能力。
 
 ## 特性
 
@@ -9,7 +9,6 @@ Blue Archive 日服桌面启动器，基于 .NET 10 与 Avalonia 12 重写，替
 - **下载可靠性** — 10 并发 CDN 下载、`.tmp` 临时文件、Range 断点续传、CRC64 校验、主备 CDN 自动回退
 - **下载控制** — 暂停 / 继续 / 停止，下载限速（`unlimited` ~ `50MB/s` 六档），进行中状态持久化到 `download_state.json`
 - **CDN 切换** — 支持 `official`（yo-star.com）和 `cafe`（bluearchive.cafe）两套下载源
-- **崩溃恢复** — 进程启动时通过 `session.active` 检测上一会话是否异常结束，异常统一写入轮转日志
 - **多语言** — `auto`（跟随系统）、`en`、`zh-Hans`、`zh-Hant`、`ja`
 - **原生 UI** — Avalonia Fluent Theme，系统 / 浅色 / 深色主题，支持系统托盘，关闭时最小化到托盘
 - **远端内容** — 公告、活动 Banner、新闻、社交媒体入口
@@ -103,7 +102,6 @@ dotnet test .\tests\Cafe.Launcher.Avalonia.Tests\Cafe.Launcher.Avalonia.Tests.cs
 | 文件 | 用途 |
 |---|---|
 | `settings.json` | 启动器设置 |
-| `session.active` | 活跃会话标记（启动时存在 = 上次崩溃） |
 | `unified.log` / `unified_*.log` | 统一运行与异常日志（单文件 5 MB，当前文件加 3 份轮转；查看器按 500 条分页） |
 | `download_state.json` | 下载任务状态（断点续传） |
 | `shown_notices.json` | 已展示公告 ID |
@@ -137,7 +135,7 @@ dotnet test .\tests\Cafe.Launcher.Avalonia.Tests\Cafe.Launcher.Avalonia.Tests.cs
 | 日志级别 | `logLevel` | `verbose` / `debug` / `information` / `warning` / `error` / `fatal` |
 | 资源面板 UID | `resourcePanelUid` | 玩家 UID 字符串 |
 | 资源面板 UID 来源 | `resourcePanelUidSource` | `auto` / `custom` |
-| 状态面板 | `statusDetailMode` | `hidden` / `compact` / `detailed` |
+| 状态面板 | `statusDetailMode` | `hidden` / `compact` |
 
 预发布构建默认使用 `beta` 更新频道；稳定构建默认使用 `stable`。中文系统界面首次启动时默认选择 `cafe` 下载源，其他语言环境默认选择 `official`。游戏目录规范化为 `YostarGames\BlueArchive_JP`，本地游戏状态从 `game-launcher-config.json` 和 `manifest.json` 读取。
 
@@ -149,7 +147,7 @@ dotnet test .\tests\Cafe.Launcher.Avalonia.Tests\Cafe.Launcher.Avalonia.Tests.cs
 ├── src/
 │   └── Cafe.Launcher.Avalonia/
 │       ├── App.axaml / App.axaml.cs # 应用入口：主题字典、DI 容器构建、窗口创建
-│       ├── Program.cs          # 进程入口：单实例互斥、崩溃日志、会话恢复
+│       ├── Program.cs          # 进程入口：单实例互斥、崩溃日志、会话起止日志
 │       ├── Cafe.Launcher.Avalonia.csproj
 │       ├── Constants/          # LauncherConstants / ApiConfig / BuildInfo / GamePaths
 │       ├── Controls/           # 共享 UI 控件（SettingRow、ConfirmDialog、LoadingOverlay）
@@ -160,7 +158,7 @@ dotnet test .\tests\Cafe.Launcher.Avalonia.Tests\Cafe.Launcher.Avalonia.Tests.cs
 │       ├── Features/           # Shell、游戏操作、设置、首次向导、诊断、资源面板
 │       ├── Services/           # 共享基础服务（HTTP、设置、本地化、日志、托盘等）
 │       │   ├── Auth/           # AuthorizationHeaderFactory（MD5 签名认证头）
-│       │   └── Diagnostics/    # 日志、崩溃恢复、日志轮转、日志导出
+│       │   └── Diagnostics/    # 日志、日志轮转、日志导出
 │       ├── ViewModels/         # 共享窗口投影（Shell、背景、远端内容、对话框等）
 │       ├── Views/              # 主窗口、六类设置区、覆盖层与功能样式
 │       ├── Assets/             # 图标、字体、音频与图片
@@ -180,8 +178,7 @@ dotnet test .\tests\Cafe.Launcher.Avalonia.Tests\Cafe.Launcher.Avalonia.Tests.cs
 Program.Main()
   ├─ Mutex(Local\Cafe_Launcher_SI) → 已是第二实例 → SignalFirstInstance() → return
   ├─ new UnifiedLogger() → 进程级日志
-  ├─ new CrashRecoveryService() → 检测上次崩溃（session.active）
-  ├─ CrashRecoveryService.BeginSessionAsync() → 写入 session.active
+  ├─ Program.RunSession(UnifiedLogger) → 写会话开始日志 → 运行应用 → 写会话结束日志
   └─ BuildAvaloniaApp().StartWithClassicDesktopLifetime(args)
        └─ App.OnFrameworkInitializationCompleted()
             ├─ ServiceConfiguration.AddLauncherServices() → 构建 DI 容器
