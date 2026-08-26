@@ -38,36 +38,45 @@
 
                 <!-- Filter bar -->
                 <StackPanel Grid.Row="1" Orientation="Horizontal" Spacing="{StaticResource Launcher.Spacing.Sm}" Classes="log-filter-bar">
-                    <Button Classes="news-tab log-filter" Classes.active="{Binding LogViewer.IsFilterAllActive}"
-                            Command="{Binding LogViewer.SetFilterAllCommand}">
+                    <Button Classes="filter-tab log-filter" Classes.active="{Binding LogViewer.IsFilterAllActive}"
+                            Command="{Binding LogViewer.SetFilterAllCommand}"
+                            AutomationProperties.Name="{Binding Shell.I18n[logFilterAll]}">
                         <TextBlock Text="{Binding Shell.I18n[logFilterAll]}"/>
                     </Button>
-                    <Button Classes="news-tab log-filter" Classes.active="{Binding LogViewer.IsFilterVerboseActive}"
-                            Command="{Binding LogViewer.SetFilterVerboseCommand}">
+                    <Button Classes="filter-tab log-filter" Classes.active="{Binding LogViewer.IsFilterVerboseActive}"
+                            Command="{Binding LogViewer.SetFilterVerboseCommand}"
+                            AutomationProperties.Name="{Binding Shell.I18n[logFilterVerbose]}">
                         <TextBlock Text="{Binding Shell.I18n[logFilterVerbose]}"/>
                     </Button>
-                    <Button Classes="news-tab log-filter" Classes.active="{Binding LogViewer.IsFilterDebugActive}"
-                            Command="{Binding LogViewer.SetFilterDebugCommand}">
+                    <Button Classes="filter-tab log-filter" Classes.active="{Binding LogViewer.IsFilterDebugActive}"
+                            Command="{Binding LogViewer.SetFilterDebugCommand}"
+                            AutomationProperties.Name="{Binding Shell.I18n[logFilterDebug]}">
                         <TextBlock Text="{Binding Shell.I18n[logFilterDebug]}"/>
                     </Button>
-                    <Button Classes="news-tab log-filter" Classes.active="{Binding LogViewer.IsFilterInfoActive}"
-                            Command="{Binding LogViewer.SetFilterInfoCommand}">
+                    <Button Classes="filter-tab log-filter" Classes.active="{Binding LogViewer.IsFilterInfoActive}"
+                            Command="{Binding LogViewer.SetFilterInfoCommand}"
+                            AutomationProperties.Name="{Binding Shell.I18n[logFilterInfo]}">
                         <TextBlock Text="{Binding Shell.I18n[logFilterInfo]}"/>
                     </Button>
-                    <Button Classes="news-tab log-filter" Classes.active="{Binding LogViewer.IsFilterWarnActive}"
-                            Command="{Binding LogViewer.SetFilterWarnCommand}">
+                    <Button Classes="filter-tab log-filter" Classes.active="{Binding LogViewer.IsFilterWarnActive}"
+                            Command="{Binding LogViewer.SetFilterWarnCommand}"
+                            AutomationProperties.Name="{Binding Shell.I18n[logFilterWarn]}">
                         <TextBlock Text="{Binding Shell.I18n[logFilterWarn]}"/>
                     </Button>
-                    <Button Classes="news-tab log-filter" Classes.active="{Binding LogViewer.IsFilterErrorActive}"
-                            Command="{Binding LogViewer.SetFilterErrorCommand}">
+                    <Button Classes="filter-tab log-filter" Classes.active="{Binding LogViewer.IsFilterErrorActive}"
+                            Command="{Binding LogViewer.SetFilterErrorCommand}"
+                            AutomationProperties.Name="{Binding Shell.I18n[logFilterError]}">
                         <TextBlock Text="{Binding Shell.I18n[logFilterError]}"/>
                     </Button>
-                    <Button Classes="news-tab log-filter" Classes.active="{Binding LogViewer.IsFilterFatalActive}"
-                            Command="{Binding LogViewer.SetFilterFatalCommand}">
+                    <Button Classes="filter-tab log-filter" Classes.active="{Binding LogViewer.IsFilterFatalActive}"
+                            Command="{Binding LogViewer.SetFilterFatalCommand}"
+                            AutomationProperties.Name="{Binding Shell.I18n[logFilterFatal]}">
                         <TextBlock Text="{Binding Shell.I18n[logFilterFatal]}"/>
                     </Button>
                     <TextBox Text="{Binding LogViewer.FilterText, Mode=TwoWay}" PlaceholderText="{Binding Shell.I18n[logSearchPlaceholder]}"
-                             Classes="uid-input log-search" MinWidth="160"
+                             Classes="uid-input log-search"
+                             MinWidth="{StaticResource Launcher.Component.LogViewer.Search.MinWidth}"
+                             AutomationProperties.Name="{Binding Shell.I18n[logSearchPlaceholder]}"
                              Height="{StaticResource Launcher.Control.Height.Setting}" VerticalAlignment="Center"/>
                 </StackPanel>
 
@@ -77,7 +86,7 @@
                       Classes="log-content">
                     <Button Grid.Row="0"
                             Classes="flat-action dialog-action log-load-earlier"
-                            Margin="16,12,16,0"
+                            Margin="{StaticResource Launcher.Component.LogViewer.LoadEarlier.Margin}"
                             Command="{Binding LogViewer.LoadEarlierCommand}"
                             IsVisible="{Binding LogViewer.HasEarlierEntries}"
                             AutomationProperties.Name="{Binding Shell.I18n[logLoadEarlier]}">
@@ -99,7 +108,8 @@
                                         <TextBlock Text="{Binding Title}" Classes="section-title" TextWrapping="Wrap"/>
                                         <TextBlock Text="{Binding Details}" Classes="caption" TextWrapping="Wrap"
                                                    IsVisible="{Binding Details, Converter={x:Static StringConverters.IsNotNullOrEmpty}}"
-                                                   FontFamily="{StaticResource Launcher.Typography.FontFamily.Monospace}" MaxHeight="120"/>
+                                                   FontFamily="{StaticResource Launcher.Typography.FontFamily.Monospace}"
+                                                   MaxHeight="{StaticResource Launcher.Component.LogViewer.EntryDetails.MaxHeight}"/>
                                     </StackPanel>
                                 </Border>
                             </DataTemplate>

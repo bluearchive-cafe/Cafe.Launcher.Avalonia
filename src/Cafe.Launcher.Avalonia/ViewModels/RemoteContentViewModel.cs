@@ -6,6 +6,7 @@ using System.Threading;
 using System.Threading.Tasks;
 using Avalonia.Media.Imaging;
 using Avalonia.Animation;
+using Avalonia.Animation.Easings;
 using Avalonia.Threading;
 using Cafe.Launcher.Avalonia.Helpers;
 using Cafe.Launcher.Avalonia.Models;
@@ -81,9 +82,7 @@ public partial class RemoteContentViewModel : ViewModelBase, IDisposable
     private int bannerIntervalMs = 5000;
 
     [ObservableProperty]
-    private IPageTransition carouselTransition = new PageSlide(
-        MotionTokens.NormalDuration,
-        PageSlide.SlideAxis.Horizontal);
+    private IPageTransition carouselTransition = CreateCarouselTransition(MotionTokens.NormalDuration);
 
     [ObservableProperty]
     private NewsCategory? selectedNewsCategory;
@@ -116,11 +115,18 @@ public partial class RemoteContentViewModel : ViewModelBase, IDisposable
     {
         if (disposed) return;
         isMotionReduced = reduceMotion;
-        CarouselTransition = new PageSlide(
-            reduceMotion ? TimeSpan.Zero : MotionTokens.NormalDuration,
-            PageSlide.SlideAxis.Horizontal);
+        CarouselTransition = CreateCarouselTransition(
+            reduceMotion ? TimeSpan.Zero : MotionTokens.NormalDuration);
         UpdateCarouselPauseState();
     }
+
+    private static PageSlide CreateCarouselTransition(TimeSpan duration) => new()
+    {
+        Duration = duration,
+        Orientation = PageSlide.SlideAxis.Horizontal,
+        SlideInEasing = new ExponentialEaseOut(),
+        SlideOutEasing = new ExponentialEaseIn()
+    };
 
     public void Apply(LauncherRemoteState remote, LauncherSettings settings, CancellationToken cancellationToken)
     {

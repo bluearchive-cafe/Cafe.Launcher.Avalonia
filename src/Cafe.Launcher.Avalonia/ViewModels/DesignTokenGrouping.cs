@@ -44,6 +44,7 @@ public static class DesignTokenGrouping
         "Elevation",
         "StateLayer",
         "Component",
+        "Border",
         "Other"
     ];
 

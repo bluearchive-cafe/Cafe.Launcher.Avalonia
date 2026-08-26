@@ -1108,6 +1108,27 @@ public sealed class MainWindowViewModelTests : IDisposable
     }
 
     [Fact]
+    public void NeutralStrategy_TogglingSeedFollowing_ReflectsHintVisibility() // ADR-010
+    {
+        var editor = new SettingsEditor();
+        var settings = new LauncherSettings
+        {
+            NeutralColorStrategy = NeutralColorStrategies.BrandBlue
+        };
+        editor.ApplySnapshot(settings);
+        using var appearance = new SettingsAppearanceViewModel(editor);
+
+        appearance.Load(settings);
+        Assert.False(appearance.IsSeedFollowingNeutralStrategySelected);
+
+        editor.Current.NeutralColorStrategy = NeutralColorStrategies.SeedFollowing;
+        Assert.True(appearance.IsSeedFollowingNeutralStrategySelected);
+
+        editor.Current.NeutralColorStrategy = NeutralColorStrategies.BrandBlue;
+        Assert.False(appearance.IsSeedFollowingNeutralStrategySelected);
+    }
+
+    [Fact]
     public async Task SaveSettingsAsync_WhenWallpaperPaletteSelected_PersistsPaletteAndIndex()
     {
         var settingsPath = Path.Combine(tempDir, Guid.NewGuid().ToString("N"), "settings.json");

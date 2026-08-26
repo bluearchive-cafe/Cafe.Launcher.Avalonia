@@ -32,7 +32,7 @@ public sealed class EasterEggTests
     }
 
     [Fact]
-    public void AboutLauncherVersionChip_RegistersPointerHandler()
+    public void AboutLauncherVersionChip_UsesIntentionalPointerOnlyHandler()
     {
         var document = XDocument.Load(ProjectFile("Views/SettingsAboutSection.axaml"));
         XNamespace avalonia = "https://github.com/avaloniaui";

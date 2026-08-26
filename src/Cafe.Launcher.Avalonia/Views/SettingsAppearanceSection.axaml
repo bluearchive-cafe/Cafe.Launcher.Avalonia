@@ -57,6 +57,13 @@
                                     ItemsSource="{Binding Settings.Options.NeutralColorStrategy}"
                                     SelectedValue="{Binding Settings.Editor.Current.NeutralColorStrategy, Mode=TwoWay}"/>
 
+            <!-- ADR-010: when "follow seed" is selected, explain the subtle dyeing effect. -->
+            <TextBlock Text="{Binding Shell.I18n[neutralColorStrategySeedFollowingHint]}"
+                       Classes="caption settings-neutral-hint"
+                       TextWrapping="Wrap"
+                       IsVisible="{Binding Settings.Appearance.IsSeedFollowingNeutralStrategySelected}"
+                       AutomationProperties.Name="{Binding Shell.I18n[neutralColorStrategySeedFollowingHint]}"/>
+
             <Grid Classes="settings-row" ColumnDefinitions="*,Auto"
                   IsVisible="{Binding Settings.Appearance.IsWallpaperThemeColorSelected}">
                 <Border Classes="settings-row-divider" Grid.ColumnSpan="2"/>
@@ -66,7 +73,7 @@
                     <TextBlock Text="{Binding Shell.I18n[themeColorPaletteDescription]}" Classes="caption" TextWrapping="Wrap"/>
                 </StackPanel>
                 <StackPanel Grid.Column="1" Orientation="Horizontal" Spacing="{StaticResource Launcher.Spacing.Sm}" VerticalAlignment="Center">
-                    <ItemsControl Width="212"
+                    <ItemsControl Width="{StaticResource Launcher.Layout.Appearance.Preview.Width}"
                                   ItemsSource="{Binding Settings.Appearance.ThemeColorPaletteItems}">
                         <ItemsControl.ItemsPanel>
                             <StaticResource ResourceKey="HorizontalSpacingSmPanel"/>
@@ -74,7 +81,8 @@
                         <ItemsControl.ItemTemplate>
                             <DataTemplate x:DataType="models:ThemeColorPaletteItem">
                                 <Button Classes="color-swatch-button"
-                                        AutomationProperties.Name="{Binding #SettingsRoot.((vm:MainWindowViewModel)DataContext).Shell.I18n[themeColorPalette]}"
+                                        AutomationProperties.Name="{Binding ColorHex}"
+                                        ToolTip.Tip="{Binding ColorHex}"
                                         Command="{Binding #SettingsRoot.((vm:MainWindowViewModel)DataContext).Settings.Appearance.SelectThemeColorPaletteCommand}"
                                         CommandParameter="{Binding Index}">
                                     <Border Classes="color-swatch"

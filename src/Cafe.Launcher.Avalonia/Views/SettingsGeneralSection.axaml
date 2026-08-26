@@ -28,6 +28,18 @@
                                 ItemsSource="{Binding Settings.Options.MotionMode}"
                                 SelectedValue="{Binding Settings.Editor.Current.MotionMode, Mode=TwoWay}"/>
 
+        <controls:SettingRow Title="{Binding Shell.I18n[rememberWindowPositionAndSize]}"
+                             Description="{Binding Shell.I18n[rememberWindowPositionAndSizeDescription]}">
+            <controls:SettingRow.Action>
+                <ToggleSwitch Classes="setting-toggle"
+                              AutomationProperties.Name="{Binding Shell.I18n[rememberWindowPositionAndSize]}"
+                              IsChecked="{Binding Settings.Editor.Current.RememberWindowPositionAndSize, Mode=TwoWay}"
+                              OnContent="{Binding Shell.I18n[toggleOn]}"
+                              OffContent="{Binding Shell.I18n[toggleOff]}"
+                              VerticalAlignment="Center"/>
+            </controls:SettingRow.Action>
+        </controls:SettingRow>
+
         <controls:SettingRow Title="{Binding Shell.I18n[enableStartupUpdateCheck]}"
                              Description="{Binding Shell.I18n[enableStartupUpdateCheckDescription]}">
             <controls:SettingRow.Action>

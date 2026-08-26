@@ -165,8 +165,21 @@ public sealed class LauncherSettingsService : IDisposable
         settings.GamePath ??= "";
         settings.ResourcePanelUid = settings.ResourcePanelUid?.Trim() ?? "";
 
+        if (settings.WindowWidth is not null && !IsValidWindowDimension(settings.WindowWidth.Value))
+        {
+            settings.WindowWidth = null;
+        }
+
+        if (settings.WindowHeight is not null && !IsValidWindowDimension(settings.WindowHeight.Value))
+        {
+            settings.WindowHeight = null;
+        }
+
         return settings;
     }
+
+    private static bool IsValidWindowDimension(double value) =>
+        double.IsFinite(value) && value > 0;
 
     private delegate string SettingGetter(LauncherSettings settings);
     private delegate void SettingSetter(LauncherSettings settings, string value);

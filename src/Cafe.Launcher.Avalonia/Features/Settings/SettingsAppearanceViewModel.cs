@@ -61,6 +61,9 @@ public partial class SettingsAppearanceViewModel : ViewModelBase, IDisposable
     private bool isWallpaperThemeColorSelected;
 
     [ObservableProperty]
+    private bool isSeedFollowingNeutralStrategySelected;
+
+    [ObservableProperty]
     private int selectedThemeColorPaletteIndex;
 
     public ObservableCollection<ThemeColorPaletteItem> ThemeColorPaletteItems { get; } = [];
@@ -74,6 +77,8 @@ public partial class SettingsAppearanceViewModel : ViewModelBase, IDisposable
             SelectedCustomThemeColor = ParseColorOrDefault(settings.CustomThemeColor);
             IsCustomThemeColorSelected = settings.ThemeColorMode == ThemeColorModes.Custom;
             IsWallpaperThemeColorSelected = settings.ThemeColorMode == ThemeColorModes.Wallpaper;
+            IsSeedFollowingNeutralStrategySelected =
+                settings.NeutralColorStrategy == NeutralColorStrategies.SeedFollowing;
             IsCustomBackground = !string.IsNullOrWhiteSpace(settings.CustomBackgroundPath);
             IsBackgroundFitSelected = settings.BackgroundFit == BackgroundFits.Uniform;
             SelectedBackgroundFillColor = ParseColorOrDefault(settings.BackgroundFillColor);
@@ -172,7 +177,8 @@ public partial class SettingsAppearanceViewModel : ViewModelBase, IDisposable
                 RefreshThemeColorPaletteFromCurrentBackground(markDirty: false);
             }
 
-            UpdateThemeColorPreview();
+            // ADR-009: 变更即预览 — mode changes repaint the main window immediately.
+            ApplyThemeColor(value, SelectedCustomThemeColor);
             return;
         }
 
@@ -181,6 +187,9 @@ public partial class SettingsAppearanceViewModel : ViewModelBase, IDisposable
             if (editor.Current.ThemeColorMode == ThemeColorModes.Wallpaper)
             {
                 RefreshThemeColorPaletteFromCurrentBackground(markDirty: true);
+                // ADR-009: ensure the regenerated seed is applied even when the
+                // selected palette index did not change.
+                ApplyThemeColor(editor.Current.ThemeColorMode, SelectedCustomThemeColor);
             }
 
             UpdateThemeColorPreview();
@@ -197,8 +206,12 @@ public partial class SettingsAppearanceViewModel : ViewModelBase, IDisposable
         if (e.PropertyName is nameof(LauncherSettings.ThemeColorVariant)
             or nameof(LauncherSettings.NeutralColorStrategy))
         {
-            RefreshThemeColorPaletteBrushes();
-            UpdateThemeColorPreview();
+            IsSeedFollowingNeutralStrategySelected =
+                editor.Current.NeutralColorStrategy == NeutralColorStrategies.SeedFollowing;
+            // ADR-009: 变更即预览 — variant/strategy changes repaint the main
+            // window immediately (ApplyThemeColor applies the scheme and refreshes
+            // the palette swatches and preview chip).
+            ApplyThemeColor(editor.Current.ThemeColorMode, SelectedCustomThemeColor);
             return;
         }
 
@@ -477,6 +490,24 @@ public partial class SettingsAppearanceViewModel : ViewModelBase, IDisposable
 
     private static void SetBrush(Application application, string key, Color color)
     {
+        // Mutate in place where a brush already exists (root or per-theme
+        // dictionaries), so {DynamicResource} consumers observe the change.
+        bool mutated = false;
+        foreach (var variant in new[] { ThemeVariant.Light, ThemeVariant.Dark })
+        {
+            if (application.Resources.TryGetResource(key, variant, out var themed)
+                && themed is SolidColorBrush themedBrush)
+            {
+                themedBrush.Color = color;
+                mutated = true;
+            }
+        }
+
+        if (mutated)
+        {
+            return;
+        }
+
         if (application.Resources.TryGetResource(
                 key,
                 ThemeVariant.Default,

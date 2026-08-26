@@ -212,6 +212,8 @@ internal static class LauncherStrings
 
     internal static string DesignGalleryTitle => GetRequiredString("designGalleryTitle");
 
+    internal static string DesignGroupBorder => GetRequiredString("designGroupBorder");
+
     internal static string DesignGroupColor => GetRequiredString("designGroupColor");
 
     internal static string DesignGroupComponent => GetRequiredString("designGroupComponent");
@@ -237,6 +239,30 @@ internal static class LauncherStrings
     internal static string DesignGroupText => GetRequiredString("designGroupText");
 
     internal static string DesignGroupTypography => GetRequiredString("designGroupTypography");
+
+    internal static string DesignMatrixCardWithToast => GetRequiredString("designMatrixCardWithToast");
+
+    internal static string DesignMatrixErrorButton => GetRequiredString("designMatrixErrorButton");
+
+    internal static string DesignMatrixFilledButton => GetRequiredString("designMatrixFilledButton");
+
+    internal static string DesignMatrixOutlinedButton => GetRequiredString("designMatrixOutlinedButton");
+
+    internal static string DesignMatrixSettingsRow => GetRequiredString("designMatrixSettingsRow");
+
+    internal static string DesignMatrixTextButton => GetRequiredString("designMatrixTextButton");
+
+    internal static string DesignStateDisabled => GetRequiredString("designStateDisabled");
+
+    internal static string DesignStateFocus => GetRequiredString("designStateFocus");
+
+    internal static string DesignStateHover => GetRequiredString("designStateHover");
+
+    internal static string DesignStateInvalid => GetRequiredString("designStateInvalid");
+
+    internal static string DesignStateNormal => GetRequiredString("designStateNormal");
+
+    internal static string DesignStatePressed => GetRequiredString("designStatePressed");
 
     internal static string DiscardChanges => GetRequiredString("discardChanges");
 
@@ -324,6 +350,8 @@ internal static class LauncherStrings
 
     internal static string GameInstallationStateReadFailed => GetRequiredString("gameInstallationStateReadFailed");
 
+    internal static string GameInstallOrUpdateFailed => GetRequiredString("gameInstallOrUpdateFailed");
+
     internal static string GameInstallPathNotConfigured => GetRequiredString("gameInstallPathNotConfigured");
 
     internal static string GameIsRunning => GetRequiredString("gameIsRunning");
@@ -353,6 +381,8 @@ internal static class LauncherStrings
     internal static string GameProcessStartFailed => GetRequiredString("gameProcessStartFailed");
 
     internal static string GameRemoteStateUnavailable => GetRequiredString("gameRemoteStateUnavailable");
+
+    internal static string GameRepairFailed => GetRequiredString("gameRepairFailed");
 
     internal static string GitHubRepository => GetRequiredString("gitHubRepository");
 
@@ -387,6 +417,10 @@ internal static class LauncherStrings
     internal static string LaunchCheckSkipped => GetRequiredString("launchCheckSkipped");
 
     internal static string LaunchCheckWithMessage => GetRequiredString("launchCheckWithMessage");
+
+    internal static string LauncherCoreRefreshFailed => GetRequiredString("launcherCoreRefreshFailed");
+
+    internal static string LauncherInitFailed => GetRequiredString("launcherInitFailed");
 
     internal static string LauncherLoadingStatus => GetRequiredString("launcherLoadingStatus");
 
@@ -514,6 +548,8 @@ internal static class LauncherStrings
 
     internal static string NeutralColorStrategySeedFollowing => GetRequiredString("neutralColorStrategySeedFollowing");
 
+    internal static string NeutralColorStrategySeedFollowingHint => GetRequiredString("neutralColorStrategySeedFollowingHint");
+
     internal static string News => GetRequiredString("news");
 
     internal static string NextBanner => GetRequiredString("nextBanner");
@@ -573,6 +609,10 @@ internal static class LauncherStrings
     internal static string RefreshThemeColorPalette => GetRequiredString("refreshThemeColorPalette");
 
     internal static string RefreshTooltip => GetRequiredString("refreshTooltip");
+
+    internal static string RememberWindowPositionAndSize => GetRequiredString("rememberWindowPositionAndSize");
+
+    internal static string RememberWindowPositionAndSizeDescription => GetRequiredString("rememberWindowPositionAndSizeDescription");
 
     internal static string RemoteContentCard => GetRequiredString("remoteContentCard");
 

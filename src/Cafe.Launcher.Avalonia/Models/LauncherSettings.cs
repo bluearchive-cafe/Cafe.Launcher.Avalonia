@@ -24,6 +24,11 @@ public sealed class LauncherSettings : ObservableObject
     private string downloadSpeedLimit = DownloadSpeedLimits.Unlimited;
     private bool enableStartupUpdateCheck = true;
     private bool showRemoteContentCard = true;
+    private bool rememberWindowPositionAndSize;
+    private int? windowPositionX;
+    private int? windowPositionY;
+    private double? windowWidth;
+    private double? windowHeight;
     private string patchUrlGroup = PatchUrlGroups.Official;
     private string customBackgroundPath = "";
     private string backgroundSource = BackgroundSources.Bundled;
@@ -92,6 +97,21 @@ public sealed class LauncherSettings : ObservableObject
     [JsonPropertyName("showRemoteContentCard")]
     public bool ShowRemoteContentCard { get => showRemoteContentCard; set => SetProperty(ref showRemoteContentCard, value); }
 
+    [JsonPropertyName("rememberWindowPositionAndSize")]
+    public bool RememberWindowPositionAndSize { get => rememberWindowPositionAndSize; set => SetProperty(ref rememberWindowPositionAndSize, value); }
+
+    [JsonPropertyName("windowPositionX")]
+    public int? WindowPositionX { get => windowPositionX; set => SetProperty(ref windowPositionX, value); }
+
+    [JsonPropertyName("windowPositionY")]
+    public int? WindowPositionY { get => windowPositionY; set => SetProperty(ref windowPositionY, value); }
+
+    [JsonPropertyName("windowWidth")]
+    public double? WindowWidth { get => windowWidth; set => SetProperty(ref windowWidth, value); }
+
+    [JsonPropertyName("windowHeight")]
+    public double? WindowHeight { get => windowHeight; set => SetProperty(ref windowHeight, value); }
+
     [JsonPropertyName("patchUrlGroup")]
     public string PatchUrlGroup { get => patchUrlGroup; set => SetProperty(ref patchUrlGroup, value); }
 
@@ -157,6 +177,11 @@ public sealed class LauncherSettings : ObservableObject
         DownloadSpeedLimit = other.DownloadSpeedLimit;
         EnableStartupUpdateCheck = other.EnableStartupUpdateCheck;
         ShowRemoteContentCard = other.ShowRemoteContentCard;
+        RememberWindowPositionAndSize = other.RememberWindowPositionAndSize;
+        WindowPositionX = other.WindowPositionX;
+        WindowPositionY = other.WindowPositionY;
+        WindowWidth = other.WindowWidth;
+        WindowHeight = other.WindowHeight;
         PatchUrlGroup = other.PatchUrlGroup;
         CustomBackgroundPath = other.CustomBackgroundPath;
         BackgroundSource = other.BackgroundSource;

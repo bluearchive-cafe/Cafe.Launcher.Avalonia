@@ -55,6 +55,11 @@ public partial class ConfirmDialog : UserControl
     public static readonly StyledProperty<string?> CloseToolTipProperty =
         AvaloniaProperty.Register<ConfirmDialog, string?>(nameof(CloseToolTip));
 
+    public static readonly DirectProperty<ConfirmDialog, string?> DisplayMessageProperty =
+        AvaloniaProperty.RegisterDirect<ConfirmDialog, string?>(nameof(DisplayMessage), dialog => dialog.DisplayMessage);
+
+    private string? displayMessage;
+
     public bool IsOpen { get => GetValue(IsOpenProperty); set => SetValue(IsOpenProperty, value); }
     public string? Title { get => GetValue(TitleProperty); set => SetValue(TitleProperty, value); }
     public string? Description { get => GetValue(DescriptionProperty); set => SetValue(DescriptionProperty, value); }
@@ -71,6 +76,7 @@ public partial class ConfirmDialog : UserControl
     public bool IsDangerConfirm { get => GetValue(IsDangerConfirmProperty); set => SetValue(IsDangerConfirmProperty, value); }
     public double DialogMaxWidth { get => GetValue(DialogMaxWidthProperty); set => SetValue(DialogMaxWidthProperty, value); }
     public string? CloseToolTip { get => GetValue(CloseToolTipProperty); set => SetValue(CloseToolTipProperty, value); }
+    public string? DisplayMessage => displayMessage;
 
     public ConfirmDialog()
     {
@@ -80,6 +86,14 @@ public partial class ConfirmDialog : UserControl
 
     private void OnPropertyChanged(object? sender, AvaloniaPropertyChangedEventArgs e)
     {
+        if (e.Property == MessageProperty || e.Property == DescriptionProperty)
+        {
+            SetAndRaise(
+                DisplayMessageProperty,
+                ref displayMessage,
+                string.IsNullOrWhiteSpace(Message) ? Description : Message);
+        }
+
         // M3 dialog guidance: the safe (cancel) action receives initial focus.
         if (e.Property == IsOpenProperty && e.NewValue is true)
         {

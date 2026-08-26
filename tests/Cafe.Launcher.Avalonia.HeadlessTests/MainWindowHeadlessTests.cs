@@ -4,9 +4,11 @@ using Avalonia.Automation;
 using Avalonia.Automation.Peers;
 using Avalonia.Controls;
 using Avalonia.Controls.Presenters;
+using Avalonia.Controls.Primitives;
 using Avalonia.Headless;
 using Avalonia.Headless.XUnit;
 using Avalonia.Input;
+using Avalonia.Layout;
 using Avalonia.Media;
 using Avalonia.Threading;
 using Avalonia.VisualTree;
@@ -179,6 +181,33 @@ public sealed class MainWindowHeadlessTests
     }
 
     [AvaloniaFact]
+    public void MainWindow_TitleBarDragHitTesting_ExcludesInteractiveControlsAndNonTitleContent()
+    {
+        using var context = CreateContext();
+        context.Window.Show();
+        Dispatcher.UIThread.RunJobs();
+
+        var titleBar = context.Window.GetVisualDescendants()
+            .OfType<Grid>()
+            .Single(control => control.Name == "TitleBar");
+        var settingsButton = titleBar.GetVisualDescendants()
+            .OfType<Button>()
+            .Single(control => control.Classes.Contains("settings"));
+        var title = titleBar.GetVisualDescendants()
+            .OfType<TextBlock>()
+            .Single(control => control.Classes.Contains("titlebar-brand"));
+        var outsideTitleBar = context.Window.GetVisualDescendants()
+            .OfType<Grid>()
+            .Single(control => control.Classes.Contains("operation-layout"));
+
+        Assert.True(context.Window.IsWithinTitleBar(settingsButton));
+        Assert.True(context.Window.IsWithinTitleBar(title));
+        Assert.True(MainWindow.IsInteractive(settingsButton));
+        Assert.False(MainWindow.IsInteractive(title));
+        Assert.False(context.Window.IsWithinTitleBar(outsideTitleBar));
+    }
+
+    [AvaloniaFact]
     public void MainWindow_BannerControls_HideAfterPointerLeavesBannerStage()
     {
         using var context = CreateContext();
@@ -210,8 +239,15 @@ public sealed class MainWindowHeadlessTests
             .OfType<Button>()
             .Where(control => control.Classes.Contains("carousel-navigation"))
             .ToArray();
+        var edgeGradients = bannerStage
+            .GetVisualDescendants()
+            .OfType<Border>()
+            .Where(control => control.Classes.Contains("banner-edge-gradient"))
+            .ToArray();
         Assert.Equal(2, navigationButtons.Length);
+        Assert.Equal(2, edgeGradients.Length);
         Assert.All(navigationButtons, button => Assert.Equal(0, button.Opacity));
+        Assert.All(edgeGradients, gradient => Assert.Equal(0, gradient.Opacity));
 
         var bannerTopLeft = bannerStage.TranslatePoint(default, context.Window);
         Assert.NotNull(bannerTopLeft);
@@ -220,6 +256,7 @@ public sealed class MainWindowHeadlessTests
             RawInputModifiers.None);
         Dispatcher.UIThread.RunJobs();
         Assert.All(navigationButtons, button => Assert.Equal(1, button.Opacity));
+        Assert.All(edgeGradients, gradient => Assert.Equal(1, gradient.Opacity));
 
         var firstButtonTopLeft = navigationButtons[0].TranslatePoint(default, context.Window);
         Assert.NotNull(firstButtonTopLeft);
@@ -232,6 +269,75 @@ public sealed class MainWindowHeadlessTests
         context.Window.MouseMove(new Point(0, 0), RawInputModifiers.None);
         Dispatcher.UIThread.RunJobs();
         Assert.All(navigationButtons, button => Assert.Equal(0, button.Opacity));
+        Assert.All(edgeGradients, gradient => Assert.Equal(0, gradient.Opacity));
+    }
+
+    [AvaloniaFact]
+    public void MainWindow_BannerIndicators_AreVisualOnlyAndFollowHoverVisibility()
+    {
+        using var context = CreateContext();
+        context.ViewModel.RemoteContent.Apply(
+            new LauncherRemoteState
+            {
+                OperationsResource = new OperationsResourceResponse
+                {
+                    OperationsResourceOpen = true,
+                    BannerLoop = false,
+                    OperationsBannerList =
+                    [
+                        new OperationsBannerItem { BannerImg = "", JumpUrl = "https://banner.example.invalid/1" },
+                        new OperationsBannerItem { BannerImg = "", JumpUrl = "https://banner.example.invalid/2" }
+                    ]
+                }
+            },
+            new LauncherSettings { ShowRemoteContentCard = true },
+            CancellationToken.None);
+        context.Window.Show();
+        Dispatcher.UIThread.RunJobs();
+
+        var bannerStage = context.Window
+            .GetVisualDescendants()
+            .OfType<Grid>()
+            .Single(control => control.Classes.Contains("banner-stage"));
+        var indicators = bannerStage
+            .GetVisualDescendants()
+            .OfType<Grid>()
+            .Single(control => control.Classes.Contains("banner-indicators"));
+        var dots = indicators
+            .GetVisualDescendants()
+            .OfType<Border>()
+            .Where(control => control.Classes.Contains("banner-dot"))
+            .ToArray();
+
+        Assert.Equal(2, dots.Length);
+        Assert.False(indicators.IsHitTestVisible);
+        Assert.All(dots, dot => Assert.False(dot.IsHitTestVisible));
+        Assert.DoesNotContain(
+            indicators.GetVisualDescendants().OfType<Button>(),
+            button => button.Classes.Contains("dot"));
+        Assert.Equal(0, indicators.Opacity);
+        Assert.Equal(12, dots[0].Bounds.Width);
+        Assert.Equal(4, dots[1].Bounds.Width);
+
+        var firstDotPosition = dots[0].TranslatePoint(default, indicators);
+        var secondDotPosition = dots[1].TranslatePoint(default, indicators);
+        Assert.NotNull(firstDotPosition);
+        Assert.NotNull(secondDotPosition);
+        Assert.Equal(
+            8,
+            secondDotPosition!.Value.X - (firstDotPosition!.Value.X + dots[0].Bounds.Width));
+
+        var bannerTopLeft = bannerStage.TranslatePoint(default, context.Window);
+        Assert.NotNull(bannerTopLeft);
+        context.Window.MouseMove(
+            bannerTopLeft!.Value + new Point(bannerStage.Bounds.Width / 2, bannerStage.Bounds.Height / 2),
+            RawInputModifiers.None);
+        Dispatcher.UIThread.RunJobs();
+        Assert.Equal(1, indicators.Opacity);
+
+        context.Window.MouseMove(new Point(0, 0), RawInputModifiers.None);
+        Dispatcher.UIThread.RunJobs();
+        Assert.Equal(0, indicators.Opacity);
     }
 
     [AvaloniaFact]
@@ -275,6 +381,65 @@ public sealed class MainWindowHeadlessTests
         Assert.True(context.ViewModel.RemoteContent.IsBannerInteractionActive);
         Assert.True(context.ViewModel.RemoteContent.IsCarouselPaused);
         Assert.All(navigationButtons, button => Assert.Equal(1, button.Opacity));
+    }
+
+    [AvaloniaFact]
+    public void MainWindow_BannerLink_WhenPressed_PreservesBannerCompositionBounds()
+    {
+        using var context = CreateContext();
+        context.ViewModel.RemoteContent.Apply(
+            new LauncherRemoteState
+            {
+                OperationsResource = new OperationsResourceResponse
+                {
+                    OperationsResourceOpen = true,
+                    BannerLoop = false,
+                    OperationsBannerList =
+                    [
+                        new OperationsBannerItem
+                        {
+                            BannerImg = "",
+                            JumpUrl = "https://banner.example.invalid/1"
+                        },
+                        new OperationsBannerItem
+                        {
+                            BannerImg = "",
+                            JumpUrl = "https://banner.example.invalid/2"
+                        }
+                    ]
+                }
+            },
+            new LauncherSettings { ShowRemoteContentCard = true },
+            CancellationToken.None);
+        context.Window.Show();
+        Dispatcher.UIThread.RunJobs();
+
+        var bannerStage = context.Window
+            .GetVisualDescendants()
+            .OfType<Grid>()
+            .Single(control => control.Classes.Contains("banner-stage"));
+        var bannerLink = bannerStage
+            .GetVisualDescendants()
+            .OfType<Button>()
+            .Single(control => control.Classes.Contains("banner-link"));
+        var bannerMedia = bannerStage
+            .GetVisualDescendants()
+            .OfType<Border>()
+            .Single(control => control.Classes.Contains("banner-media"));
+        Assert.Same(bannerLink.Parent, bannerMedia.Parent);
+        var bannerTopLeft = bannerLink.TranslatePoint(default, context.Window);
+        Assert.NotNull(bannerTopLeft);
+        var bannerCenter = bannerTopLeft.Value
+            + new Point(bannerLink.Bounds.Width / 2, bannerLink.Bounds.Height / 2);
+        var initialMediaBounds = bannerMedia.Bounds;
+
+        context.Window.MouseMove(bannerCenter, RawInputModifiers.None);
+        context.Window.MouseDown(bannerCenter, MouseButton.Left, RawInputModifiers.None);
+        Dispatcher.UIThread.RunJobs();
+
+        Assert.Equal(initialMediaBounds, bannerMedia.Bounds);
+
+        context.Window.MouseUp(bannerCenter, MouseButton.Left, RawInputModifiers.None);
     }
 
     [AvaloniaFact]
@@ -493,6 +658,47 @@ public sealed class MainWindowHeadlessTests
             .OfType<Grid>()
             .Single(control => control.Classes.Contains("settings-workspace"));
         Assert.Equal(new Thickness(0), workspace.Margin);
+    }
+
+    [AvaloniaFact]
+    public void SettingsWorkspace_HorizontalInsetsStayAligned()
+    {
+        using var context = CreateContext();
+        OpenSettings(context);
+
+        var settingsOverlay = context.Window.GetVisualDescendants()
+            .OfType<MainWindowSettingsOverlay>()
+            .Single();
+        var dialog = settingsOverlay.GetVisualDescendants()
+            .OfType<Border>()
+            .Single(control => control.Classes.Contains("overlay-dialog"));
+        var navigation = GetSettingsNavigation(context.Window);
+        var selectedItem = navigation.ContainerFromIndex(navigation.SelectedIndex)
+            ?? throw new InvalidOperationException("Selected settings item was not realized.");
+        var content = settingsOverlay.GetVisualDescendants()
+            .OfType<Grid>()
+            .Single(control => control.Classes.Contains("settings-content"));
+        var contentViewport = settingsOverlay.GetVisualDescendants()
+            .OfType<ScrollViewer>()
+            .Single(control => control.Classes.Contains("dialog-scroll"));
+
+        var dialogTopLeft = dialog.TranslatePoint(default, context.Window);
+        var selectedItemTopLeft = selectedItem.TranslatePoint(default, context.Window);
+        var contentTopLeft = content.TranslatePoint(default, context.Window);
+        var contentViewportTopLeft = contentViewport.TranslatePoint(default, context.Window);
+
+        Assert.NotNull(dialogTopLeft);
+        Assert.NotNull(selectedItemTopLeft);
+        Assert.NotNull(contentTopLeft);
+        Assert.NotNull(contentViewportTopLeft);
+
+        var dialogLeftInset = selectedItemTopLeft!.Value.X - dialogTopLeft!.Value.X;
+        var contentLeftInset = contentViewportTopLeft!.Value.X - contentTopLeft!.Value.X;
+        var contentRightInset = contentViewport.Padding.Right;
+
+        Assert.InRange(Math.Abs(dialogLeftInset - 16), 0, 1);
+        Assert.InRange(Math.Abs(contentLeftInset - dialogLeftInset), 0, 1);
+        Assert.InRange(Math.Abs(contentRightInset - dialogLeftInset), 0, 1);
     }
 
     [AvaloniaFact]
@@ -773,6 +979,26 @@ public sealed class MainWindowHeadlessTests
             .Single(control => control.Classes.Contains("dialog-scroll"));
 
         Assert.True(scrollViewer.Extent.Height > scrollViewer.Viewport.Height);
+
+        var verticalScrollBar = scrollViewer.GetVisualDescendants()
+            .OfType<ScrollBar>()
+            .Single(control => control.Orientation == Orientation.Vertical);
+        Assert.True(verticalScrollBar.IsEffectivelyVisible);
+
+        var settingsOverlay = context.Window.GetVisualDescendants()
+            .OfType<MainWindowSettingsOverlay>()
+            .Single();
+        var dialog = settingsOverlay.GetVisualDescendants()
+            .OfType<Border>()
+            .Single(control => control.Classes.Contains("overlay-dialog"));
+        var dialogTopLeft = dialog.TranslatePoint(default, context.Window);
+        var scrollBarTopLeft = verticalScrollBar.TranslatePoint(default, context.Window);
+        Assert.NotNull(dialogTopLeft);
+        Assert.NotNull(scrollBarTopLeft);
+
+        var dialogRight = dialogTopLeft!.Value.X + dialog.Bounds.Width;
+        var scrollBarRight = scrollBarTopLeft!.Value.X + verticalScrollBar.Bounds.Width;
+        Assert.InRange(Math.Abs(dialogRight - scrollBarRight), 0, 1);
     }
 
     [AvaloniaFact]
@@ -1583,6 +1809,64 @@ public sealed class MainWindowHeadlessTests
         Dispatcher.UIThread.RunJobs();
 
         Assert.Equal(WindowState.Minimized, context.Window.WindowState);
+    }
+
+    [AvaloniaFact]
+    public void MainWindow_WindowStateSetting_RestoresAndCapturesNormalWindowBounds()
+    {
+        using var context = CreateContext();
+        context.Window.Show();
+
+        context.Window.ApplySavedWindowState(new LauncherSettings
+        {
+            RememberWindowPositionAndSize = true,
+            WindowPositionX = 120,
+            WindowPositionY = 240,
+            WindowWidth = 1200,
+            WindowHeight = 700
+        });
+
+        Assert.Equal(new PixelPoint(120, 240), context.Window.Position);
+        Assert.Equal(1200, context.Window.Width);
+        Assert.Equal(700, context.Window.Height);
+
+        var captured = new LauncherSettings { RememberWindowPositionAndSize = true };
+        context.Window.CaptureWindowState(captured);
+
+        Assert.Equal(120, captured.WindowPositionX);
+        Assert.Equal(240, captured.WindowPositionY);
+        Assert.Equal(1200, captured.WindowWidth);
+        Assert.Equal(700, captured.WindowHeight);
+    }
+
+    [AvaloniaFact]
+    public void MainWindow_WindowStateSetting_WhenDisabledLeavesBoundsUnchanged()
+    {
+        using var context = CreateContext();
+        context.Window.Show();
+        var originalPosition = context.Window.Position;
+        var originalWidth = context.Window.Width;
+        var originalHeight = context.Window.Height;
+
+        context.Window.ApplySavedWindowState(new LauncherSettings
+        {
+            RememberWindowPositionAndSize = false,
+            WindowPositionX = 120,
+            WindowPositionY = 240,
+            WindowWidth = 1200,
+            WindowHeight = 700
+        });
+
+        var captured = new LauncherSettings { RememberWindowPositionAndSize = false };
+        context.Window.CaptureWindowState(captured);
+
+        Assert.Equal(originalPosition, context.Window.Position);
+        Assert.Equal(originalWidth, context.Window.Width);
+        Assert.Equal(originalHeight, context.Window.Height);
+        Assert.Null(captured.WindowPositionX);
+        Assert.Null(captured.WindowPositionY);
+        Assert.Null(captured.WindowWidth);
+        Assert.Null(captured.WindowHeight);
     }
 
     [AvaloniaFact]

@@ -15,10 +15,10 @@
         Icon="/Assets/app-icon.ico"
         Title="{Binding Shell.ProductName}"
         FontFamily="{Binding Shell.FontFamily}"
-        Width="1300"
-        Height="754"
-        MinWidth="1024"
-        MinHeight="640"
+             Width="{StaticResource Launcher.Layout.Window.Width}"
+             Height="{StaticResource Launcher.Layout.Window.Height}"
+             MinWidth="{StaticResource Launcher.Layout.Window.MinWidth}"
+             MinHeight="{StaticResource Launcher.Layout.Window.MinHeight}"
         CanResize="True"
         WindowDecorations="BorderOnly"
         ExtendClientAreaToDecorationsHint="True"
@@ -30,7 +30,9 @@
 
         <Grid RowDefinitions="Auto,*"
               IsEnabled="{Binding ModalHost.IsBaseLayerInteractive}">
-            <Grid ColumnDefinitions="*,Auto" Height="48">
+            <Grid x:Name="TitleBar"
+                  ColumnDefinitions="*,Auto"
+                  Height="{StaticResource Launcher.Layout.TitleBar.Height}">
                 <Grid.Background>
                     <StaticResource ResourceKey="Launcher.Color.TitleBar.Gradient"/>
                 </Grid.Background>
@@ -50,23 +52,23 @@
                     <Button Classes="chrome" Command="{Binding WindowChrome.OpenDebugPanelCommand}" ToolTip.Tip="{Binding Shell.I18n[debugPanel]}"
                             IsVisible="{Binding IsDebugFeaturesEnabled}"
                             AutomationProperties.Name="{Binding Shell.I18n[debugPanel]}">
-                        <materialIcons:MaterialIcon Kind="BugOutline" Width="{StaticResource Launcher.Icon.Md}" Height="{StaticResource Launcher.Icon.Md}" Foreground="{DynamicResource Launcher.Text.OnChrome}"/>
+                        <materialIcons:MaterialIcon Kind="BugOutline" Width="{StaticResource Launcher.Icon.Md}" Height="{StaticResource Launcher.Icon.Md}" Foreground="{StaticResource Launcher.Text.OnChrome}"/>
                     </Button>
                     <Button Classes="chrome" Command="{Binding ResourcePanel.OpenResourcePanelCommand}" ToolTip.Tip="{Binding Shell.I18n[resourcePanel]}"
                             AutomationProperties.Name="{Binding Shell.I18n[resourcePanel]}">
-                        <materialIcons:MaterialIcon Kind="ClipboardText" Width="{StaticResource Launcher.Icon.Md}" Height="{StaticResource Launcher.Icon.Md}" Foreground="{DynamicResource Launcher.Text.OnChrome}"/>
+                        <materialIcons:MaterialIcon Kind="ClipboardText" Width="{StaticResource Launcher.Icon.Md}" Height="{StaticResource Launcher.Icon.Md}" Foreground="{StaticResource Launcher.Text.OnChrome}"/>
                     </Button>
                     <Button Classes="chrome settings" Command="{Binding WindowChrome.ShowSettingsCommand}" ToolTip.Tip="{Binding Shell.I18n[settings]}"
                             AutomationProperties.Name="{Binding Shell.I18n[settings]}">
-                        <materialIcons:MaterialIcon Kind="CogOutline" Width="{StaticResource Launcher.Icon.Md}" Height="{StaticResource Launcher.Icon.Md}" Foreground="{DynamicResource Launcher.Text.OnChrome}"/>
+                        <materialIcons:MaterialIcon Kind="CogOutline" Width="{StaticResource Launcher.Icon.Md}" Height="{StaticResource Launcher.Icon.Md}" Foreground="{StaticResource Launcher.Text.OnChrome}"/>
                     </Button>
                     <Button Classes="chrome" Command="{Binding WindowChrome.MinimizeCommand}" ToolTip.Tip="{Binding Shell.I18n[minimize]}"
                             AutomationProperties.Name="{Binding Shell.I18n[minimize]}">
-                        <materialIcons:MaterialIcon Kind="Minus" Width="{StaticResource Launcher.Icon.Md}" Height="{StaticResource Launcher.Icon.Md}" Foreground="{DynamicResource Launcher.Text.OnChrome}"/>
+                        <materialIcons:MaterialIcon Kind="Minus" Width="{StaticResource Launcher.Icon.Md}" Height="{StaticResource Launcher.Icon.Md}" Foreground="{StaticResource Launcher.Text.OnChrome}"/>
                     </Button>
                     <Button Classes="chrome close" Command="{Binding WindowChrome.CloseCommand}" ToolTip.Tip="{Binding Shell.I18n[close]}"
                             AutomationProperties.Name="{Binding Shell.I18n[close]}">
-                        <materialIcons:MaterialIcon Kind="Close" Width="{StaticResource Launcher.Icon.Md}" Height="{StaticResource Launcher.Icon.Md}" Foreground="{DynamicResource Launcher.Text.OnChrome}"/>
+                        <materialIcons:MaterialIcon Kind="Close" Width="{StaticResource Launcher.Icon.Md}" Height="{StaticResource Launcher.Icon.Md}" Foreground="{StaticResource Launcher.Text.OnChrome}"/>
                     </Button>
                 </StackPanel>
             </Grid>
@@ -84,42 +86,34 @@
                                     <TextBlock Text="{Binding Shell.I18n[notice]}" Classes="panel-title"/>
                                     <TextBlock Text="{Binding RemoteContent.NoticeText}"
                                                Classes="body"
-                                               MaxHeight="110"
+                        MaxHeight="{StaticResource Launcher.Component.Dialog.Notice.MaxHeight}"
                                                TextWrapping="Wrap"
                                                TextTrimming="CharacterEllipsis"/>
                                 </StackPanel>
                             </Border>
 
-                            <Grid x:Name="BannerStage"
-                                  Classes="banner-stage"
-                                  Classes.active="{Binding RemoteContent.IsBannerInteractionActive}"
-                                  IsVisible="{Binding RemoteContent.HasBannerItems}"
-                                  PointerEntered="OnBannerPointerEntered"
-                                  PointerExited="OnBannerPointerExited"
-                                  GotFocus="OnBannerGotFocus"
-                                  LostFocus="OnBannerLostFocus">
+                            <Border Classes="banner-frame"
+                                    IsVisible="{Binding RemoteContent.HasBannerItems}">
+                                <Grid x:Name="BannerStage"
+                                      Classes="banner-stage"
+                                      Classes.active="{Binding RemoteContent.IsBannerInteractionActive}"
+                                      PointerEntered="OnBannerPointerEntered"
+                                      PointerExited="OnBannerPointerExited"
+                                      GotFocus="OnBannerGotFocus"
+                                      LostFocus="OnBannerLostFocus">
                                 <!-- Banner carousel with horizontal page-slide transition -->
                                 <Carousel x:Name="BannerCarousel"
+                                          Classes="banner-carousel"
                                           ItemsSource="{Binding RemoteContent.BannerItems}"
                                           SelectedIndex="{Binding RemoteContent.CarouselSelectedIndex, Mode=TwoWay}"
                                           PageTransition="{Binding RemoteContent.CarouselTransition}"
-                                          Height="220"
+                                          Height="{StaticResource Launcher.Layout.Banner.Height}"
                                           CornerRadius="{StaticResource Launcher.Radius.Sm}" ClipToBounds="True">
-                                    <Carousel.Styles>
-                                        <Style Selector="ContentControl">
-                                            <Setter Property="HorizontalContentAlignment" Value="Stretch"/>
-                                            <Setter Property="VerticalContentAlignment" Value="Stretch"/>
-                                        </Style>
-                                    </Carousel.Styles>
                                     <Carousel.ItemTemplate>
                                         <DataTemplate x:DataType="models:RemoteContentItem">
-                                            <Button Classes="banner-link"
-                                                    Cursor="Hand"
-                                                    Width="{Binding #BannerCarousel.Bounds.Width}"
-                                                    Height="{Binding #BannerCarousel.Bounds.Height}"
-                                                    AutomationProperties.Name="{Binding #Root.((vm:MainWindowViewModel)DataContext).Shell.I18n[banner]}"
-                                                    Command="{Binding #Root.((vm:MainWindowViewModel)DataContext).RemoteContent.OpenExternalUrlCommand}"
-                                                    CommandParameter="{Binding Url}">
+                                            <Grid Classes="banner-item"
+                                                  Width="{Binding #BannerCarousel.Bounds.Width}"
+                                                  Height="{Binding #BannerCarousel.Bounds.Height}">
                                                 <Border Classes="banner-media">
                                                     <Panel>
                                                         <Border Classes="media-placeholder"
@@ -133,16 +127,25 @@
                                                                                   Text="{Binding #Root.((vm:MainWindowViewModel)DataContext).Shell.I18n[bannerLoading]}"/>
                                                     </Panel>
                                                 </Border>
-                                            </Button>
+                                                <Button Classes="banner-link"
+                                                        Cursor="Hand"
+                                                        Width="{Binding #BannerCarousel.Bounds.Width}"
+                                                        Height="{Binding #BannerCarousel.Bounds.Height}"
+                                                        AutomationProperties.Name="{Binding #Root.((vm:MainWindowViewModel)DataContext).Shell.I18n[banner]}"
+                                                        Command="{Binding #Root.((vm:MainWindowViewModel)DataContext).RemoteContent.OpenExternalUrlCommand}"
+                                                        CommandParameter="{Binding Url}"/>
+                                            </Grid>
                                         </DataTemplate>
                                     </Carousel.ItemTemplate>
                                 </Carousel>
-                                <TextBlock Classes="banner-control banner-page-indicator"
-                                           Text="{Binding RemoteContent.CarouselPageText}"
-                                           AutomationProperties.Name="{Binding RemoteContent.CarouselPageText}"
-                                           HorizontalAlignment="Right"
-                                           VerticalAlignment="Top"
-                                           Margin="{StaticResource Launcher.Spacing.Thickness.Sm}"/>
+                                <Border Classes="banner-edge-gradient banner-edge-gradient-left"
+                                        IsHitTestVisible="False"
+                                        HorizontalAlignment="Left"
+                                        VerticalAlignment="Stretch"/>
+                                <Border Classes="banner-edge-gradient banner-edge-gradient-right"
+                                        IsHitTestVisible="False"
+                                        HorizontalAlignment="Right"
+                                        VerticalAlignment="Stretch"/>
                                 <Button Classes="icon-button banner-control carousel-navigation banner-previous"
                                         Cursor="Hand"
                                         HorizontalAlignment="Left"
@@ -151,29 +154,23 @@
                                         Command="{Binding RemoteContent.SelectPreviousBannerCommand}"
                                         ToolTip.Tip="{Binding Shell.I18n[previousBanner]}"
                                         AutomationProperties.Name="{Binding Shell.I18n[previousBanner]}">
-                                    <materialIcons:MaterialIcon Kind="ChevronLeft" Width="{StaticResource Launcher.Icon.Md}" Height="{StaticResource Launcher.Icon.Md}"
-                                                                Foreground="{DynamicResource Launcher.Text.Secondary}"/>
+                                    <materialIcons:MaterialIcon Kind="ChevronLeft" Width="{StaticResource Launcher.Icon.Xxl}" Height="{StaticResource Launcher.Icon.Xxl}"
+                                                                Foreground="{StaticResource Launcher.Text.OnChrome}"/>
                                 </Button>
                                 <Grid Classes="banner-control banner-indicators"
                                       HorizontalAlignment="Center"
                                       VerticalAlignment="Bottom"
-                                      Margin="{StaticResource Launcher.Spacing.Thickness.Sm}">
+                                      IsHitTestVisible="False"
+                                      Margin="{StaticResource Launcher.Component.Banner.Indicator.Margin}">
                                     <ItemsControl ItemsSource="{Binding RemoteContent.BannerDots}">
                                         <ItemsControl.ItemsPanel>
                                             <StaticResource ResourceKey="HorizontalSpacingSmPanel"/>
                                         </ItemsControl.ItemsPanel>
                                         <ItemsControl.ItemTemplate>
                                             <DataTemplate x:DataType="models:BannerDot">
-                                                <Button Classes="icon-button dot"
-                                                        Cursor="Hand"
-                                                        IsEnabled="{Binding #Root.((vm:MainWindowViewModel)DataContext).RemoteContent.HasMultipleBanners}"
-                                                        ToolTip.Tip="{Binding AccessibleName}"
-                                                        AutomationProperties.Name="{Binding AccessibleName}"
-                                                        Command="{Binding #Root.((vm:MainWindowViewModel)DataContext).RemoteContent.SelectBannerCommand}"
-                                                        CommandParameter="{Binding Index}">
-                                                    <Border Classes="banner-dot"
-                                                            Classes.active="{Binding IsActive}"/>
-                                                </Button>
+                                                <Border Classes="banner-dot"
+                                                        Classes.active="{Binding IsActive}"
+                                                        IsHitTestVisible="False"/>
                                             </DataTemplate>
                                         </ItemsControl.ItemTemplate>
                                     </ItemsControl>
@@ -186,10 +183,11 @@
                                         Command="{Binding RemoteContent.SelectNextBannerCommand}"
                                         ToolTip.Tip="{Binding Shell.I18n[nextBanner]}"
                                         AutomationProperties.Name="{Binding Shell.I18n[nextBanner]}">
-                                    <materialIcons:MaterialIcon Kind="ChevronRight" Width="{StaticResource Launcher.Icon.Md}" Height="{StaticResource Launcher.Icon.Md}"
-                                                                Foreground="{DynamicResource Launcher.Text.Secondary}"/>
+                                    <materialIcons:MaterialIcon Kind="ChevronRight" Width="{StaticResource Launcher.Icon.Xxl}" Height="{StaticResource Launcher.Icon.Xxl}"
+                                                                Foreground="{StaticResource Launcher.Text.OnChrome}"/>
                                 </Button>
-                            </Grid>
+                                </Grid>
+                            </Border>
 
                             <Border Classes="remote-content-card news-card"
                                     IsVisible="{Binding RemoteContent.HasNewsItems}">
@@ -197,85 +195,9 @@
                                             ItemsSource="{Binding RemoteContent.NewsCategories}"
                                             SelectedItem="{Binding RemoteContent.SelectedNewsCategory, Mode=TwoWay}"
                                             TabStripPlacement="Top"
-                                            PageTransition="{x:Null}">
-                                    <TabControl.Theme>
-                                        <ControlTheme TargetType="TabControl"
-                                                      BasedOn="{StaticResource {x:Type TabControl}}">
-                                            <Setter Property="Template">
-                                                <ControlTemplate>
-                                                    <Border BorderBrush="{TemplateBinding BorderBrush}"
-                                                            BorderThickness="{TemplateBinding BorderThickness}"
-                                                            CornerRadius="{TemplateBinding CornerRadius}"
-                                                            Background="{TemplateBinding Background}"
-                                                            HorizontalAlignment="{TemplateBinding HorizontalAlignment}"
-                                                            VerticalAlignment="{TemplateBinding VerticalAlignment}">
-                                                        <DockPanel>
-                                                            <ScrollViewer DockPanel.Dock="{TemplateBinding TabStripPlacement}"
-                                                                          HorizontalScrollBarVisibility="Auto"
-                                                                          VerticalScrollBarVisibility="Disabled">
-                                                                <ItemsPresenter Name="PART_ItemsPresenter"
-                                                                                ItemsPanel="{TemplateBinding ItemsPanel}"/>
-                                                            </ScrollViewer>
-                                                            <Panel ClipToBounds="True">
-                                                                <ContentPresenter Name="PART_SelectedContentHost2"
-                                                                                  Margin="{TemplateBinding Padding}"
-                                                                                  HorizontalContentAlignment="{TemplateBinding HorizontalContentAlignment}"
-                                                                                  VerticalContentAlignment="{TemplateBinding VerticalContentAlignment}"
-                                                                                  IsVisible="False"/>
-                                                                <ContentPresenter Name="PART_SelectedContentHost"
-                                                                                  Margin="{TemplateBinding Padding}"
-                                                                                  HorizontalContentAlignment="{TemplateBinding HorizontalContentAlignment}"
-                                                                                  VerticalContentAlignment="{TemplateBinding VerticalContentAlignment}"/>
-                                                            </Panel>
-                                                        </DockPanel>
-                                                    </Border>
-                                                </ControlTemplate>
-                                            </Setter>
-                                            <Setter Property="ItemsPanel">
-                                                <ItemsPanelTemplate>
-                                                    <StackPanel Orientation="Horizontal"
-                                                                Spacing="{StaticResource Launcher.Spacing.Xs}"/>
-                                                </ItemsPanelTemplate>
-                                            </Setter>
-                                        </ControlTheme>
-                                    </TabControl.Theme>
-                                    <TabControl.ItemContainerTheme>
-                                        <ControlTheme TargetType="TabItem"
-                                                      BasedOn="{StaticResource {x:Type TabItem}}">
-                                            <Setter Property="Background" Value="{DynamicResource Launcher.Color.Transparent}"/>
-                                            <Setter Property="BorderThickness" Value="{StaticResource Launcher.Spacing.Thickness.None}"/>
-                                            <Setter Property="Foreground" Value="{DynamicResource Launcher.Text.Primary}"/>
-                                            <Setter Property="FontSize" Value="{StaticResource Launcher.Typography.FontSize.Body.Sm}"/>
-                                            <Setter Property="Padding" Value="{StaticResource Launcher.Spacing.Thickness.Xs}"/>
-                                            <Setter Property="MinHeight" Value="{StaticResource Launcher.Control.Height.Setting}"/>
-                                            <Setter Property="VerticalContentAlignment" Value="Center"/>
-                                            <Style Selector="^ /template/ ContentPresenter#PART_ContentPresenter">
-                                                <Setter Property="Margin" Value="{StaticResource Launcher.Component.Tabs.Header.Margin}"/>
-                                            </Style>
-                                            <Style Selector="^:selected">
-                                                <Setter Property="Background" Value="{DynamicResource Launcher.Color.Transparent}"/>
-                                                <Setter Property="Foreground" Value="{DynamicResource Launcher.Text.Primary}"/>
-                                            </Style>
-                                            <Style Selector="^:selected /template/ Border#PART_LayoutRoot">
-                                                <Setter Property="Background" Value="{DynamicResource Launcher.Color.Transparent}"/>
-                                                <Setter Property="TextElement.Foreground" Value="{DynamicResource Launcher.Text.Primary}"/>
-                                            </Style>
-                                            <Style Selector="^:selected /template/ Border#PART_SelectedPipe">
-                                                <Setter Property="Background" Value="{DynamicResource Launcher.Color.Primary}"/>
-                                            </Style>
-                                            <Style Selector="^[TabStripPlacement=Top] /template/ Border#PART_SelectedPipe">
-                                                <Setter Property="Margin" Value="{StaticResource Launcher.Component.Tabs.Indicator.Margin}"/>
-                                            </Style>
-                                            <Style Selector="^:pointerover /template/ Border#PART_LayoutRoot">
-                                                <Setter Property="Background" Value="{DynamicResource Launcher.Color.Transparent}"/>
-                                                <Setter Property="TextElement.Foreground" Value="{DynamicResource Launcher.Text.Primary}"/>
-                                            </Style>
-                                            <Style Selector="^:selected:pointerover /template/ Border#PART_LayoutRoot">
-                                                <Setter Property="Background" Value="{DynamicResource Launcher.Color.Transparent}"/>
-                                                <Setter Property="TextElement.Foreground" Value="{DynamicResource Launcher.Text.Primary}"/>
-                                            </Style>
-                                        </ControlTheme>
-                                    </TabControl.ItemContainerTheme>
+                                            PageTransition="{x:Null}"
+                                            Theme="{StaticResource Launcher.RemoteContent.NewsTabControlTheme}"
+                                            ItemContainerTheme="{StaticResource Launcher.RemoteContent.NewsTabItemTheme}">
                                     <TabControl.ItemTemplate>
                                         <DataTemplate x:DataType="models:NewsCategory">
                                             <TextBlock Text="{Binding Label}" VerticalAlignment="Center"/>
@@ -338,7 +260,7 @@
                                                             Width="{StaticResource Launcher.Icon.Md}"
                                                             Height="{StaticResource Launcher.Icon.Md}"
                                                             HorizontalAlignment="Center"
-                                                            Foreground="{DynamicResource Launcher.Color.Danger}"/>
+                                                            Foreground="{StaticResource Launcher.Color.Danger}"/>
                                 <TextBlock Text="{Binding Shell.I18n[remoteContentLoadFailed]}"
                                            Classes="body"
                                            TextAlignment="Center"/>
@@ -379,13 +301,8 @@
                 <Border Grid.Row="1"
                         Classes="bottom-panel motion-bottom"
                         Classes.motion-enabled="{Binding IsMotionEnabled}"
-                        Classes.motion-enter="{Binding Operations.IsInstallPanelVisible}">
-                    <Border.IsVisible>
-                        <MultiBinding Converter="{x:Static BoolConverters.And}">
-                            <Binding Path="Operations.IsInstallPanelVisible"/>
-                            <Binding Path="IsBottomPanelVisible"/>
-                        </MultiBinding>
-                    </Border.IsVisible>
+                        Classes.motion-enter="{Binding Operations.IsInstallPanelVisible}"
+                        IsVisible="{Binding Operations.IsInstallPanelVisible}">
                     <Border.RenderTransform>
                         <TranslateTransform/>
                     </Border.RenderTransform>
@@ -474,7 +391,7 @@
                                            Foreground="{DynamicResource Launcher.Color.Primary}"/>
                             </Grid>
                             <!-- Progress bar -->
-                            <ProgressBar Grid.Row="1" Grid.Column="1" Value="{Binding Operations.ProgressValue}" Minimum="0" Maximum="100" Height="8"/>
+                            <ProgressBar Grid.Row="1" Grid.Column="1" Value="{Binding Operations.ProgressValue}" Minimum="0" Maximum="100" Height="{StaticResource Launcher.Component.Progress.Bar.Height}"/>
                             <!-- Stage | Speed | Size | ETA -->
                             <Grid Grid.Row="2" Grid.Column="1" ColumnDefinitions="Auto,*,Auto,Auto,Auto" ColumnSpacing="{StaticResource Launcher.Spacing.Md}">
                                 <TextBlock Text="{Binding Operations.ProgressDetail}" Classes="caption"/>
@@ -512,13 +429,8 @@
                 <Border Grid.Row="1"
                         Classes="bottom-panel control-panel motion-bottom"
                         Classes.motion-enabled="{Binding IsMotionEnabled}"
-                        Classes.motion-enter="{Binding Operations.IsControlPanelVisible}">
-                    <Border.IsVisible>
-                        <MultiBinding Converter="{x:Static BoolConverters.And}">
-                            <Binding Path="Operations.IsControlPanelVisible"/>
-                            <Binding Path="IsBottomPanelVisible"/>
-                        </MultiBinding>
-                    </Border.IsVisible>
+                        Classes.motion-enter="{Binding Operations.IsControlPanelVisible}"
+                        IsVisible="{Binding Operations.IsControlPanelVisible}">
                     <Border.RenderTransform>
                         <TranslateTransform/>
                     </Border.RenderTransform>

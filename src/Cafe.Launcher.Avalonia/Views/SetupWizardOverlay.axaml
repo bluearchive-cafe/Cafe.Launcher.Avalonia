@@ -14,16 +14,18 @@
           Classes.motion-enabled="{Binding IsMotionEnabled}"
           controls:MotionVisibility.IsOpen="{Binding Dialogs.IsSetupWizardVisible}"
           controls:MotionVisibility.IsMotionEnabled="{Binding IsMotionEnabled}">
-        <Border Width="920"
-                Height="560"
-                MaxWidth="920"
-                MaxHeight="560"
+            <Border HorizontalAlignment="Stretch"
+                VerticalAlignment="Stretch"
+                MaxWidth="{StaticResource Launcher.Layout.SetupWizard.Width}"
+                MaxHeight="{StaticResource Launcher.Layout.SetupWizard.Height}"
                 Classes="dialog overlay-dialog confirm-panel motion-surface">
             <Border.RenderTransform>
                 <TranslateTransform/>
             </Border.RenderTransform>
-            <Grid ColumnDefinitions="184,*" Classes="motion-surface-content">
-                <Grid Classes="settings-navigation-pane" RowDefinitions="Auto,*">
+            <Grid ColumnDefinitions="Auto,*" Classes="motion-surface-content">
+                <Grid Classes="settings-navigation-pane"
+                      Width="{StaticResource Launcher.Component.SetupWizard.Navigation.Width}"
+                      RowDefinitions="Auto,*">
                     <Border Classes="settings-navigation-header">
                         <StackPanel Classes="dialog-title-row">
                             <TextBlock Text="{Binding Shell.I18n[setupWizardStepTitle]}" Classes="dialog-title" VerticalAlignment="Center"/>
@@ -107,7 +109,7 @@
                                       SelectedValue="{Binding Dialogs.SetupWizard.Language, Mode=TwoWay}"
                                       SelectedValueBinding="{Binding Code}"
                                       HorizontalAlignment="Left"
-                                      MinWidth="200"
+                                      MinWidth="{StaticResource Launcher.Component.SetupWizard.Select.MinWidth}"
                                       AutomationProperties.Name="{Binding Shell.I18n[setupWizardLanguage]}">
                                 <ComboBox.ItemTemplate>
                                     <DataTemplate x:DataType="models:LanguageOption">
@@ -158,7 +160,7 @@
                                        MaxLines="1"/>
                             <TextBlock Text="{Binding Shell.I18n[setupWizardGamePathEmpty]}"
                                        Classes="caption"
-                                       Foreground="{DynamicResource Launcher.Color.Danger}"
+                                       Foreground="{StaticResource Launcher.Color.Danger}"
                                        IsVisible="{Binding Dialogs.SetupWizard.IsGamePathEmpty}"/>
                         </StackPanel>
 

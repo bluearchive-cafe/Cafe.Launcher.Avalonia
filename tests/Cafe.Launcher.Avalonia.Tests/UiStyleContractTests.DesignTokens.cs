@@ -31,6 +31,17 @@ public sealed partial class UiStyleContractTests
                      ["Launcher.Elevation.Shadow.Sm"] = "0 4 8 0 #26000000",
                      ["Launcher.Elevation.Shadow.Md"] = "0 12 32 0 #33000000",
                      ["Launcher.Elevation.Shadow.Lg"] = "0 22 55 0 #66000000",
+                     ["Launcher.Layout.Banner.Height"] = "220",
+                     ["Launcher.Layout.Banner.EdgeGradient.Width"] = "180",
+                     ["Launcher.Component.Banner.Indicator.CornerRadius"] = "1",
+                     ["Launcher.Layout.Window.Width"] = "1300",
+                     ["Launcher.Layout.Window.Height"] = "754",
+                     ["Launcher.Layout.Settings.MaxWidth"] = "960",
+                     ["Launcher.Layout.Settings.MaxHeight"] = "620",
+                     ["Launcher.Layout.SetupWizard.Width"] = "920",
+                     ["Launcher.Layout.SetupWizard.Height"] = "560",
+                     ["Launcher.Layout.ResourcePanel.Width"] = "720",
+                     ["Launcher.Layout.ResourcePanel.Height"] = "592",
                      ["Launcher.Layout.DesignGallery.Width"] = "1000",
                      ["Launcher.Layout.DesignGallery.Height"] = "680"
                  })
@@ -46,6 +57,7 @@ public sealed partial class UiStyleContractTests
                      ["Launcher.StateLayer.Selected"] = "0.24",
                      ["Launcher.Spacing.Thickness.Xxl"] = "24",
                      ["Launcher.Spacing.Thickness.Section"] = "40",
+                     ["Launcher.Component.Banner.Indicator.Margin"] = "0,0,0,16",
                      ["Launcher.Typography.LetterSpacing.None"] = "0",
                      ["Launcher.Typography.LetterSpacing.Sm"] = "0.5",
                      ["Launcher.Typography.LetterSpacing.Md"] = "1",
@@ -58,6 +70,12 @@ public sealed partial class UiStyleContractTests
         Assert.Equal("#40000000", keyed["Launcher.Color.Overlay.Scrim.Sm"].Attribute("Color")?.Value);
         Assert.Equal("#99000000", keyed["Launcher.Color.Overlay.Scrim.Md"].Attribute("Color")?.Value);
         Assert.Equal("#E6000000", keyed["Launcher.Color.Overlay.Scrim.Lg"].Attribute("Color")?.Value);
+        Assert.Equal(
+            "#FFFFFFFF",
+            keyed["Launcher.Color.Carousel.Dot.Active"].Attribute("Color")?.Value);
+        Assert.Equal(
+            "#99D0D4DA",
+            keyed["Launcher.Color.Carousel.Dot.Inactive"].Attribute("Color")?.Value);
     }
 
     [Fact]

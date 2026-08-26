@@ -116,6 +116,12 @@ public sealed class MaterialSchemeGeneratorTests
             MaterialColorMapper.ToArgbColor(brushes["Launcher.Color.Surface"].Color).Value);
         Assert.True(brushes.ContainsKey("Launcher.Color.Secondary"));
         Assert.True(brushes.ContainsKey("Launcher.Color.TertiaryContainer"));
+        Assert.True(brushes.ContainsKey("Launcher.Color.PrimaryContainer"));
+        Assert.True(brushes.ContainsKey("Launcher.Color.OnPrimaryContainer"));
+
+        // Visible solid surfaces stay on the fixed neutral business token under the
+        // Brand Blue strategy (Q13): no Dialog.Background override is produced.
+        Assert.False(brushes.ContainsKey("Launcher.Color.Dialog.Background"));
     }
 
     [Fact]
@@ -131,6 +137,15 @@ public sealed class MaterialSchemeGeneratorTests
         Assert.True(brushes.ContainsKey("Launcher.Color.Surface"));
         Assert.True(brushes.ContainsKey("Launcher.Color.OnSurface"));
         Assert.True(brushes.ContainsKey("Launcher.Color.Outline"));
+        Assert.True(brushes.ContainsKey("Launcher.Color.PrimaryContainer"));
+        Assert.True(brushes.ContainsKey("Launcher.Color.OnPrimaryContainer"));
+
+        // Seed-following dyes the visible solid dialog surfaces from the neutral
+        // scheme (Q23): the Dialog.Background override matches the scheme surface.
+        Assert.True(brushes.ContainsKey("Launcher.Color.Dialog.Background"));
+        Assert.Equal(
+            scheme.Surface.Value,
+            MaterialColorMapper.ToArgbColor(brushes["Launcher.Color.Dialog.Background"].Color).Value);
     }
 
     [Fact]
@@ -152,9 +167,14 @@ public sealed class MaterialSchemeGeneratorTests
         Assert.True(brushes.ContainsKey("Launcher.Color.OnPrimary"));
         Assert.True(brushes.ContainsKey("Launcher.Color.FocusRing"));
         Assert.True(brushes.ContainsKey("Launcher.Color.Carousel.Dot.Active"));
+        Assert.Equal(
+            Color.Parse("#FFFFFFFF"),
+            brushes["Launcher.Color.Carousel.Dot.Active"].Color);
         Assert.True(brushes.ContainsKey("Launcher.Color.Button.Flat.Hover"));
         Assert.True(brushes.ContainsKey("Launcher.Color.Button.Flat.Pressed"));
-        Assert.True(brushes.ContainsKey("Launcher.Color.Info.Background"));
+        // Info.Background is a fixed business surface (spec §3.4): the generator
+        // no longer tints it with the accent, so no key is produced.
+        Assert.False(brushes.ContainsKey("Launcher.Color.Info.Background"));
         Assert.True(brushes.ContainsKey("Launcher.Color.SecondaryContainer.Hover"));
         Assert.True(brushes.ContainsKey("Launcher.Color.SecondaryContainer.Pressed"));
 
@@ -182,6 +202,35 @@ public sealed class MaterialSchemeGeneratorTests
         Assert.Equal(Colors.White, lightBrushes["Launcher.Color.OnPrimary"].Color);
         // Dark scheme primary is light (tone 80) -> readable on-colour is near-black.
         Assert.Equal(Color.FromRgb(0x12, 0x18, 0x20), darkBrushes["Launcher.Color.OnPrimary"].Color);
+    }
+
+    [Fact]
+    public void BuildRoleBrushes_ProvidesReadableDynamicErrorRoles()
+    {
+        foreach (var isDark in new[] { false, true })
+        {
+            var scheme = MaterialSchemeGenerator.CreateScheme(
+                DefaultSeed,
+                ThemeColorVariants.TonalSpot,
+                isDark);
+            var brushes = MaterialSchemeGenerator.BuildRoleBrushes(
+                scheme,
+                seedFollowingNeutrals: false,
+                isDark);
+
+            Assert.Contains("Launcher.Color.Error", brushes.Keys);
+            Assert.Contains("Launcher.Color.Error.Hover", brushes.Keys);
+            Assert.Contains("Launcher.Color.Error.Pressed", brushes.Keys);
+            Assert.Contains("Launcher.Color.OnError", brushes.Keys);
+
+            foreach (var state in new[] { "", ".Hover", ".Pressed" })
+            {
+                var ratio = ColorUtils.GetContrastRatio(
+                    brushes["Launcher.Color.OnError"].Color,
+                    brushes[$"Launcher.Color.Error{state}"].Color);
+                Assert.True(ratio >= 4.5, $"Error{state} contrast was {ratio:F2}:1.");
+            }
+        }
     }
 
     [Theory]

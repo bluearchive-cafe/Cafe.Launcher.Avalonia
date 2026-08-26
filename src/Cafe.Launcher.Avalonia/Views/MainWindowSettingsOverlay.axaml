@@ -13,8 +13,8 @@
           Classes.motion-enabled="{Binding IsMotionEnabled}"
           controls:MotionVisibility.IsOpen="{Binding WindowChrome.IsSettingsVisible}"
           controls:MotionVisibility.IsMotionEnabled="{Binding IsMotionEnabled}">
-        <Border MaxWidth="960"
-                MaxHeight="620"
+        <Border MaxWidth="{StaticResource Launcher.Layout.Settings.MaxWidth}"
+                MaxHeight="{StaticResource Launcher.Layout.Settings.MaxHeight}"
                 HorizontalAlignment="Stretch"
                 VerticalAlignment="Stretch"
                 Classes="dialog overlay-dialog motion-surface">
@@ -22,8 +22,10 @@
                 <TranslateTransform/>
             </Border.RenderTransform>
             <Grid RowDefinitions="*,Auto" Classes="motion-surface-content">
-                <Grid Classes="settings-workspace" ColumnDefinitions="216,*">
-                    <Grid Classes="settings-navigation-pane" RowDefinitions="Auto,*">
+                <Grid Classes="settings-workspace" ColumnDefinitions="Auto,*">
+                    <Grid Classes="settings-navigation-pane"
+                          Width="{StaticResource Launcher.Component.Settings.Navigation.Width}"
+                          RowDefinitions="Auto,*">
                         <Border Classes="settings-navigation-header">
                             <StackPanel Classes="dialog-title-row">
                                 <TextBlock Text="{Binding Shell.I18n[settings]}" Classes="dialog-title" VerticalAlignment="Center"/>
@@ -60,7 +62,7 @@
 
                     <Grid Grid.Column="1" Classes="settings-content">
                         <Border Classes="settings-content-padding">
-                                <ScrollViewer Classes="dialog-scroll"
+                                <ScrollViewer Classes="dialog-scroll settings-content-scroll"
                                       VerticalScrollBarVisibility="Auto"
                                       HorizontalScrollBarVisibility="Disabled"
                                       IsEnabled="{Binding Settings.IsSaving, Converter={x:Static BoolConverters.Not}}">

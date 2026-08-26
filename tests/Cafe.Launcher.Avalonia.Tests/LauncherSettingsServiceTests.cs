@@ -139,6 +139,11 @@ public sealed class LauncherSettingsServiceTests : IDisposable
         Assert.Equal(DownloadSpeedLimits.Unlimited, settings.DownloadSpeedLimit);
         Assert.True(settings.EnableStartupUpdateCheck);
         Assert.True(settings.ShowRemoteContentCard);
+        Assert.False(settings.RememberWindowPositionAndSize);
+        Assert.Null(settings.WindowPositionX);
+        Assert.Null(settings.WindowPositionY);
+        Assert.Null(settings.WindowWidth);
+        Assert.Null(settings.WindowHeight);
         // PatchUrlGroup defaults to Cafe when UI culture is Chinese, otherwise Official.
         var expectedGroup = System.Globalization.CultureInfo.CurrentUICulture.Name is
             "zh-CN" or "zh-TW" or "zh-HK" or "zh-MO" or "zh-SG" or "zh-Hans" or "zh-Hant"
@@ -222,6 +227,8 @@ public sealed class LauncherSettingsServiceTests : IDisposable
               "downloadSpeedLimit": "invalid",
               "toastNotificationsEnabled": false,
               "showRemoteContentCard": false,
+              "windowWidth": 0,
+              "windowHeight": -1,
               "patchUrlGroup": "invalid",
               "backgroundSource": "invalid",
               "resourcePanelUid": "  UID123  ",
@@ -244,6 +251,8 @@ public sealed class LauncherSettingsServiceTests : IDisposable
         Assert.Equal(0, settings.SelectedThemeColorPaletteIndex);
         Assert.Equal(DownloadSpeedLimits.Unlimited, settings.DownloadSpeedLimit);
         Assert.False(settings.ShowRemoteContentCard);
+        Assert.Null(settings.WindowWidth);
+        Assert.Null(settings.WindowHeight);
         Assert.Equal(PatchUrlGroups.Official, settings.PatchUrlGroup);
         Assert.Equal(BackgroundSources.Bundled, settings.BackgroundSource);
         Assert.Equal("UID123", settings.ResourcePanelUid);
@@ -269,6 +278,11 @@ public sealed class LauncherSettingsServiceTests : IDisposable
             DownloadSpeedLimit = DownloadSpeedLimits.Speed10MBs,
             EnableStartupUpdateCheck = false,
             ShowRemoteContentCard = false,
+            RememberWindowPositionAndSize = true,
+            WindowPositionX = 120,
+            WindowPositionY = 240,
+            WindowWidth = 1400,
+            WindowHeight = 820,
             PatchUrlGroup = PatchUrlGroups.Cafe,
             CustomBackgroundPath = tempDir,
             BackgroundSource = BackgroundSources.Remote,
@@ -303,6 +317,12 @@ public sealed class LauncherSettingsServiceTests : IDisposable
         Assert.False(root.TryGetProperty("toastNotificationsEnabled", out _));
         Assert.True(root.TryGetProperty("enableStartupUpdateCheck", out _));
         Assert.True(root.TryGetProperty("showRemoteContentCard", out _));
+        Assert.True(root.TryGetProperty("rememberWindowPositionAndSize", out var rememberWindowPositionAndSize));
+        Assert.True(rememberWindowPositionAndSize.GetBoolean());
+        Assert.Equal(120, root.GetProperty("windowPositionX").GetInt32());
+        Assert.Equal(240, root.GetProperty("windowPositionY").GetInt32());
+        Assert.Equal(1400, root.GetProperty("windowWidth").GetDouble());
+        Assert.Equal(820, root.GetProperty("windowHeight").GetDouble());
         Assert.True(root.TryGetProperty("patchUrlGroup", out _));
         Assert.True(root.TryGetProperty("customBackgroundPath", out var customBackgroundPath));
         Assert.Equal(tempDir, customBackgroundPath.GetString());
@@ -332,6 +352,11 @@ public sealed class LauncherSettingsServiceTests : IDisposable
             "downloadSpeedLimit",
             "enableStartupUpdateCheck",
             "showRemoteContentCard",
+            "rememberWindowPositionAndSize",
+            "windowPositionX",
+            "windowPositionY",
+            "windowWidth",
+            "windowHeight",
             "patchUrlGroup",
             "customBackgroundPath",
             "backgroundSource",

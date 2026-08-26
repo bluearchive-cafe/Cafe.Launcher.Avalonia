@@ -153,6 +153,49 @@ public partial class MainWindow : Window
         systemTray = trayService;
     }
 
+    internal void ApplySavedWindowState(LauncherSettings settings)
+    {
+        if (!settings.RememberWindowPositionAndSize)
+        {
+            return;
+        }
+
+        if (settings.WindowWidth is double width && double.IsFinite(width) && width > 0)
+        {
+            Width = Math.Max(MinWidth, width);
+        }
+
+        if (settings.WindowHeight is double height && double.IsFinite(height) && height > 0)
+        {
+            Height = Math.Max(MinHeight, height);
+        }
+
+        if (settings.WindowPositionX is int x && settings.WindowPositionY is int y)
+        {
+            Position = new PixelPoint(x, y);
+        }
+    }
+
+    internal void CaptureWindowState(LauncherSettings settings)
+    {
+        if (!settings.RememberWindowPositionAndSize || WindowState != WindowState.Normal)
+        {
+            return;
+        }
+
+        settings.WindowPositionX = Position.X;
+        settings.WindowPositionY = Position.Y;
+        if (double.IsFinite(Width) && Width > 0)
+        {
+            settings.WindowWidth = Width;
+        }
+
+        if (double.IsFinite(Height) && Height > 0)
+        {
+            settings.WindowHeight = Height;
+        }
+    }
+
     private async Task<string?> PickGameFolderAsync(string currentPath)
     {
         if (!StorageProvider.CanPickFolder)
@@ -247,7 +290,8 @@ public partial class MainWindow : Window
 
     private void OnPointerPressed(object? sender, PointerPressedEventArgs e)
     {
-        if (IsInteractive(e.Source as Control))
+        if (!IsWithinTitleBar(e.Source as Control)
+            || IsInteractive(e.Source as Control))
         {
             return;
         }
@@ -256,6 +300,24 @@ public partial class MainWindow : Window
         {
             BeginMoveDrag(e);
         }
+    }
+
+    /// <summary>
+    /// Determines whether a pointer source belongs to the custom title bar.
+    /// </summary>
+    internal bool IsWithinTitleBar(Control? control)
+    {
+        while (control is not null)
+        {
+            if (ReferenceEquals(control, TitleBar))
+            {
+                return true;
+            }
+
+            control = control.Parent as Control;
+        }
+
+        return false;
     }
 
     private void OnKeyDown(object? sender, KeyEventArgs e)
@@ -271,11 +333,18 @@ public partial class MainWindow : Window
         }
     }
 
-    private static bool IsInteractive(Control? control)
+    /// <summary>
+    /// Determines whether a pointer source belongs to a focusable or scrolling control.
+    /// </summary>
+    internal static bool IsInteractive(Control? control)
     {
         while (control is not null)
         {
-            if (control is Button or TextBox or ComboBox or ScrollViewer)
+            // Controls that can receive keyboard focus are interactive even when
+            // their concrete type is a composite control (for example ColorPicker
+            // or ToggleSwitch). Keep ScrollViewer as an explicit exception because
+            // it is a pointer-interactive surface but is not normally focusable.
+            if (control.Focusable || control is ScrollViewer)
             {
                 return true;
             }

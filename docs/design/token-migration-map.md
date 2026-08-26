@@ -170,7 +170,7 @@
 | `LauncherToastActionRowMargin`(0,8,0,0) | `Launcher.Component.Toast.Action.RowMargin` |
 | `LauncherToastPrimaryActionMargin`(0,0,8,0) | `Launcher.Component.Toast.Action.Primary.Margin` |
 | `LauncherToastActionProgressMargin`(8,0,0,0) | `Launcher.Component.Toast.Action.Progress.Margin` |
-| `LauncherToastAutoDismissProgressHeight`(3) | `Launcher.Component.Toast.AutoDismiss.Progress.Height` |
+| `LauncherToastAutoDismissProgressHeight`(3) | `Launcher.Component.Toast.Action.Progress.Height`（自动消失进度条已按 ADR-014 删除；键由「操作执行中」indeterminate 进度条复用） |
 | `LauncherConfirmDialogMaxHeight`(480) | `Launcher.Component.Dialog.Confirm.MaxHeight` |
 | `LauncherDialogTitleHeight`(56) | `Launcher.Component.Dialog.Title.Height` |
 | `LauncherSettingRowContentMinWidth`(240) | `Launcher.Component.Settings.Row.Content.MinWidth` |
@@ -179,6 +179,9 @@
 | `LauncherTabHeaderMargin`(0,0,0,4) | `Launcher.Component.Tabs.Header.Margin` |
 | `LauncherTabIndicatorMargin`(0,4,0,2) | `Launcher.Component.Tabs.Indicator.Margin` |
 | `LauncherPathFieldPadding`(16,0,4,0) | `Launcher.Component.PathField.Padding` |
+| （新增，2026-08-26 确认对话框批次） | `Launcher.Component.Dialog.BasicAction.Padding`(12,0) |
+| （新增，同上） | `Launcher.Component.Dialog.BasicAction.MinWidth`(64) |
+| （新增，同上） | `Launcher.Component.Dialog.Confirm.MinWidth`(392) |
 
 ## 2. 变更范围与门禁记录
 
