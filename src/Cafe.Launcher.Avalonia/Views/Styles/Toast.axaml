@@ -75,6 +75,7 @@
         <Setter Property="VerticalContentAlignment" Value="Center"/>
         <Setter Property="Opacity" Value="1"/>
         <Setter Property="VerticalAlignment" Value="Top"/>
+        <Setter Property="Template" Value="{StaticResource LauncherBorderButtonTemplate}"/>
     </Style>
     <Style Selector="Button.toast-close:pointerover">
         <Setter Property="Opacity" Value="1"/>

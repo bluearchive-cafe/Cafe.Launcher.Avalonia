@@ -301,60 +301,64 @@
                             <materialIcons:MaterialIcon Kind="Close" Width="{StaticResource Launcher.Icon.Md}" Height="{StaticResource Launcher.Icon.Md}"/>
                         </Button>
                     </Grid>
-                    <StackPanel Grid.Row="1" Spacing="{StaticResource Launcher.Spacing.Md}">
-                        <StackPanel Classes="card-heading">
-                            <materialIcons:MaterialIcon Kind="InformationOutline"
-                                                       Width="{StaticResource Launcher.Icon.Sm}"
-                                                       Height="{StaticResource Launcher.Icon.Sm}"
-                                                       Foreground="{DynamicResource Launcher.Color.Primary}"
-                                                       VerticalAlignment="Center"/>
-                            <TextBlock Text="{Binding Shell.I18n[launcherUpdateSelectFile]}"
-                                       Classes="dialog-alert-content"
-                                       VerticalAlignment="Center"/>
-                        </StackPanel>
-                        <ListBox ItemsSource="{Binding Dialogs.UpdateAvailableFiles}"
-                                 SelectedItem="{Binding Dialogs.SelectedUpdateFile, Mode=TwoWay}"
-                                 Classes="update-file-list"
-                                 MaxHeight="{StaticResource Launcher.Component.Dialog.Update.FileList.MaxHeight}">
-                            <ListBox.ItemTemplate>
-                                <DataTemplate x:DataType="models:ReleaseFile">
-                                    <Grid ColumnDefinitions="Auto,*,Auto"
-                                          ColumnSpacing="{StaticResource Launcher.Spacing.Md}">
-                                        <Border Classes="update-file-icon">
-                                            <materialIcons:MaterialIcon Kind="Download"
-                                                                       Width="{StaticResource Launcher.Icon.Lg}"
-                                                                       Height="{StaticResource Launcher.Icon.Lg}"
-                                                                       Foreground="{DynamicResource Launcher.Color.Primary}"
-                                                                       HorizontalAlignment="Center"
-                                                                       VerticalAlignment="Center"/>
-                                        </Border>
-                                        <StackPanel Grid.Column="1"
-                                                    Spacing="{StaticResource Launcher.Spacing.Xs}"
-                                                    VerticalAlignment="Center">
-                                            <TextBlock Text="{Binding Name}"
-                                                       Classes="update-file-name"
-                                                       TextWrapping="Wrap"/>
-                                            <TextBlock Text="{Binding Url}"
-                                                       Classes="caption"
-                                                       TextTrimming="CharacterEllipsis"
-                                                       MaxLines="1"/>
-                                        </StackPanel>
-                                        <Border Grid.Column="2"
-                                                Classes="update-file-size"
-                                                VerticalAlignment="Center">
-                                            <StackPanel Orientation="Horizontal"
-                                                        Spacing="{StaticResource Launcher.Spacing.Xs}">
-                                                <TextBlock Text="{Binding #DialogsRoot.((vm:MainWindowViewModel)DataContext).Shell.I18n[launcherUpdateFileSize]}"
-                                                           Classes="caption"/>
-                                                <TextBlock Text="{Binding DisplaySize}"
-                                                           Classes="update-file-size-text"/>
+                    <ScrollViewer Grid.Row="1"
+                                  MaxHeight="{StaticResource Launcher.Component.Dialog.Content.MaxHeight}"
+                                  Classes="scroll-pad">
+                        <StackPanel Spacing="{StaticResource Launcher.Spacing.Md}">
+                            <StackPanel Classes="card-heading">
+                                <materialIcons:MaterialIcon Kind="InformationOutline"
+                                                           Width="{StaticResource Launcher.Icon.Sm}"
+                                                           Height="{StaticResource Launcher.Icon.Sm}"
+                                                           Foreground="{DynamicResource Launcher.Color.Primary}"
+                                                           VerticalAlignment="Center"/>
+                                <TextBlock Text="{Binding Shell.I18n[launcherUpdateSelectFile]}"
+                                           Classes="dialog-alert-content"
+                                           VerticalAlignment="Center"/>
+                            </StackPanel>
+                            <ListBox ItemsSource="{Binding Dialogs.UpdateAvailableFiles}"
+                                     SelectedItem="{Binding Dialogs.SelectedUpdateFile, Mode=TwoWay}"
+                                     Classes="update-file-list"
+                                     MaxHeight="{StaticResource Launcher.Component.Dialog.Update.FileList.MaxHeight}">
+                                <ListBox.ItemTemplate>
+                                    <DataTemplate x:DataType="models:ReleaseFile">
+                                        <Grid ColumnDefinitions="Auto,*,Auto"
+                                              ColumnSpacing="{StaticResource Launcher.Spacing.Md}">
+                                            <Border Classes="update-file-icon">
+                                                <materialIcons:MaterialIcon Kind="Download"
+                                                                           Width="{StaticResource Launcher.Icon.Lg}"
+                                                                           Height="{StaticResource Launcher.Icon.Lg}"
+                                                                           Foreground="{DynamicResource Launcher.Color.Primary}"
+                                                                           HorizontalAlignment="Center"
+                                                                           VerticalAlignment="Center"/>
+                                            </Border>
+                                            <StackPanel Grid.Column="1"
+                                                        Spacing="{StaticResource Launcher.Spacing.Xs}"
+                                                        VerticalAlignment="Center">
+                                                <TextBlock Text="{Binding Name}"
+                                                           Classes="update-file-name"
+                                                           TextWrapping="Wrap"/>
+                                                <TextBlock Text="{Binding Url}"
+                                                           Classes="caption"
+                                                           TextTrimming="CharacterEllipsis"
+                                                           MaxLines="1"/>
                                             </StackPanel>
-                                        </Border>
-                                    </Grid>
-                                </DataTemplate>
-                            </ListBox.ItemTemplate>
-                        </ListBox>
-                    </StackPanel>
+                                            <Border Grid.Column="2"
+                                                    Classes="update-file-size"
+                                                    VerticalAlignment="Center">
+                                                <StackPanel Orientation="Horizontal"
+                                                            Spacing="{StaticResource Launcher.Spacing.Xs}">
+                                                    <TextBlock Text="{Binding #DialogsRoot.((vm:MainWindowViewModel)DataContext).Shell.I18n[launcherUpdateFileSize]}"
+                                                               Classes="caption"/>
+                                                    <TextBlock Text="{Binding DisplaySize}"
+                                                               Classes="update-file-size-text"/>
+                                                </StackPanel>
+                                            </Border>
+                                        </Grid>
+                                    </DataTemplate>
+                                </ListBox.ItemTemplate>
+                            </ListBox>
+                        </StackPanel>
+                    </ScrollViewer>
                     <Border Grid.Row="2" Classes="dialog-footer">
                         <StackPanel Classes="confirm-actions">
                             <Button Classes="flat-action dialog-action" Command="{Binding Dialogs.CancelUpdateAvailableCommand}"
@@ -454,24 +458,27 @@
                     <TranslateTransform/>
                 </Border.RenderTransform>
                 <Grid RowDefinitions="Auto,*,Auto" Classes="confirm-layout motion-surface-content">
-                    <Grid Classes="dialog-heading">
+                    <Grid Classes="dialog-heading" ColumnDefinitions="*,Auto">
                         <StackPanel Classes="dialog-heading-copy">
-                            <TextBlock Text="{Binding Shell.I18n[errorDialogTitle]}" Classes="dialog-title"/>
+                            <StackPanel Orientation="Horizontal" Spacing="{StaticResource Launcher.Spacing.Sm}">
+                                <materialIcons:MaterialIcon Kind="AlertCircle" Classes="dialog-alert-icon danger"
+                                                            Width="{StaticResource Launcher.Icon.Sm}" Height="{StaticResource Launcher.Icon.Sm}"
+                                                            VerticalAlignment="Center"/>
+                                <TextBlock Text="{Binding Shell.I18n[errorDialogTitle]}" Classes="dialog-title" VerticalAlignment="Center"/>
+                            </StackPanel>
                             <TextBlock Text="{Binding Shell.I18n[errorDialogDescription]}" Classes="caption"/>
                         </StackPanel>
+                        <Button Grid.Column="1" Classes="dialog-close" Command="{Binding Dialogs.ContinueAfterErrorCommand}"
+                                ToolTip.Tip="{Binding Shell.I18n[close]}"
+                                AutomationProperties.Name="{Binding Shell.I18n[close]}">
+                            <materialIcons:MaterialIcon Kind="Close" Width="{StaticResource Launcher.Icon.Md}" Height="{StaticResource Launcher.Icon.Md}"/>
+                        </Button>
                     </Grid>
                     <ScrollViewer Grid.Row="1"
                                   MaxHeight="{StaticResource Launcher.Component.Dialog.Content.MaxHeight}"
                                   Classes="scroll-pad">
                         <Border Classes="dialog-alert danger">
-                            <StackPanel Spacing="{StaticResource Launcher.Spacing.Xs}">
-                                <StackPanel Classes="dialog-alert-heading danger">
-                                    <materialIcons:MaterialIcon Kind="AlertCircle" Classes="dialog-alert-icon danger"
-                                                                Width="{StaticResource Launcher.Icon.Sm}" Height="{StaticResource Launcher.Icon.Sm}"/>
-                                    <TextBlock Text="{Binding Shell.I18n[errorDialogTitle]}" Classes="dialog-alert-title danger"/>
-                                </StackPanel>
-                                <TextBlock Text="{Binding Dialogs.ErrorDialogMessage}" Classes="dialog-alert-content"/>
-                            </StackPanel>
+                            <TextBlock Text="{Binding Dialogs.ErrorDialogMessage}" Classes="dialog-alert-content"/>
                         </Border>
                     </ScrollViewer>
                     <Border Grid.Row="2" Classes="dialog-footer">

@@ -57,6 +57,13 @@
                                     ItemsSource="{Binding Settings.Options.NeutralColorStrategy}"
                                     SelectedValue="{Binding Settings.Editor.Current.NeutralColorStrategy, Mode=TwoWay}"/>
 
+            <!-- ADR-010: when "follow seed" is selected, explain the subtle dyeing effect. -->
+            <TextBlock Text="{Binding Shell.I18n[neutralColorStrategySeedFollowingHint]}"
+                       Classes="caption settings-neutral-hint"
+                       TextWrapping="Wrap"
+                       IsVisible="{Binding Settings.Appearance.IsSeedFollowingNeutralStrategySelected}"
+                       AutomationProperties.Name="{Binding Shell.I18n[neutralColorStrategySeedFollowingHint]}"/>
+
             <Grid Classes="settings-row" ColumnDefinitions="*,Auto"
                   IsVisible="{Binding Settings.Appearance.IsWallpaperThemeColorSelected}">
                 <Border Classes="settings-row-divider" Grid.ColumnSpan="2"/>

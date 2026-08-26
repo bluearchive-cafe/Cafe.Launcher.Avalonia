@@ -22,8 +22,10 @@
                 <TranslateTransform/>
             </Border.RenderTransform>
             <Grid RowDefinitions="*,Auto" Classes="motion-surface-content">
-                <Grid Classes="settings-workspace" ColumnDefinitions="216,*">
-                    <Grid Classes="settings-navigation-pane" RowDefinitions="Auto,*">
+                <Grid Classes="settings-workspace" ColumnDefinitions="Auto,*">
+                    <Grid Classes="settings-navigation-pane"
+                          Width="{StaticResource Launcher.Component.Settings.Navigation.Width}"
+                          RowDefinitions="Auto,*">
                         <Border Classes="settings-navigation-header">
                             <StackPanel Classes="dialog-title-row">
                                 <TextBlock Text="{Binding Shell.I18n[settings]}" Classes="dialog-title" VerticalAlignment="Center"/>
