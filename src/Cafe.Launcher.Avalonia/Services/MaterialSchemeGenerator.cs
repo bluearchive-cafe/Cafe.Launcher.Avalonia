@@ -70,7 +70,9 @@ internal static class MaterialSchemeGenerator
         result["Launcher.Color.Primary.Border"] = new SolidColorBrush(Color.FromArgb(0x80, primary.R, primary.G, primary.B));
         result["Launcher.Color.OnPrimary"] = new SolidColorBrush(CafeColorUtils.GetReadableOnAccentColor(primary));
         result["Launcher.Color.FocusRing"] = new SolidColorBrush(Color.FromArgb(0x99, primary.R, primary.G, primary.B));
-        result["Launcher.Color.Carousel.Dot.Active"] = new SolidColorBrush(primary);
+        // The active banner indicator is a fixed over-image chrome color, not a
+        // dynamic accent role. Keep it white across theme and seed changes.
+        result["Launcher.Color.Carousel.Dot.Active"] = new SolidColorBrush(Colors.White);
         result["Launcher.Color.Button.Flat.Hover"] = new SolidColorBrush(Color.FromArgb(0x14, primary.R, primary.G, primary.B));
         result["Launcher.Color.Button.Flat.Pressed"] = new SolidColorBrush(Color.FromArgb(0x30, primary.R, primary.G, primary.B));
 

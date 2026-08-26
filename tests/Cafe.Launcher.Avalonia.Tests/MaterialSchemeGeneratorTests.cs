@@ -167,6 +167,9 @@ public sealed class MaterialSchemeGeneratorTests
         Assert.True(brushes.ContainsKey("Launcher.Color.OnPrimary"));
         Assert.True(brushes.ContainsKey("Launcher.Color.FocusRing"));
         Assert.True(brushes.ContainsKey("Launcher.Color.Carousel.Dot.Active"));
+        Assert.Equal(
+            Color.Parse("#FFFFFFFF"),
+            brushes["Launcher.Color.Carousel.Dot.Active"].Color);
         Assert.True(brushes.ContainsKey("Launcher.Color.Button.Flat.Hover"));
         Assert.True(brushes.ContainsKey("Launcher.Color.Button.Flat.Pressed"));
         // Info.Background is a fixed business surface (spec §3.4): the generator

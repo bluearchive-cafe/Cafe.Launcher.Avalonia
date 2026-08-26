@@ -239,8 +239,15 @@ public sealed class MainWindowHeadlessTests
             .OfType<Button>()
             .Where(control => control.Classes.Contains("carousel-navigation"))
             .ToArray();
+        var edgeGradients = bannerStage
+            .GetVisualDescendants()
+            .OfType<Border>()
+            .Where(control => control.Classes.Contains("banner-edge-gradient"))
+            .ToArray();
         Assert.Equal(2, navigationButtons.Length);
+        Assert.Equal(2, edgeGradients.Length);
         Assert.All(navigationButtons, button => Assert.Equal(0, button.Opacity));
+        Assert.All(edgeGradients, gradient => Assert.Equal(0, gradient.Opacity));
 
         var bannerTopLeft = bannerStage.TranslatePoint(default, context.Window);
         Assert.NotNull(bannerTopLeft);
@@ -249,6 +256,7 @@ public sealed class MainWindowHeadlessTests
             RawInputModifiers.None);
         Dispatcher.UIThread.RunJobs();
         Assert.All(navigationButtons, button => Assert.Equal(1, button.Opacity));
+        Assert.All(edgeGradients, gradient => Assert.Equal(1, gradient.Opacity));
 
         var firstButtonTopLeft = navigationButtons[0].TranslatePoint(default, context.Window);
         Assert.NotNull(firstButtonTopLeft);
@@ -261,6 +269,75 @@ public sealed class MainWindowHeadlessTests
         context.Window.MouseMove(new Point(0, 0), RawInputModifiers.None);
         Dispatcher.UIThread.RunJobs();
         Assert.All(navigationButtons, button => Assert.Equal(0, button.Opacity));
+        Assert.All(edgeGradients, gradient => Assert.Equal(0, gradient.Opacity));
+    }
+
+    [AvaloniaFact]
+    public void MainWindow_BannerIndicators_AreVisualOnlyAndFollowHoverVisibility()
+    {
+        using var context = CreateContext();
+        context.ViewModel.RemoteContent.Apply(
+            new LauncherRemoteState
+            {
+                OperationsResource = new OperationsResourceResponse
+                {
+                    OperationsResourceOpen = true,
+                    BannerLoop = false,
+                    OperationsBannerList =
+                    [
+                        new OperationsBannerItem { BannerImg = "", JumpUrl = "https://banner.example.invalid/1" },
+                        new OperationsBannerItem { BannerImg = "", JumpUrl = "https://banner.example.invalid/2" }
+                    ]
+                }
+            },
+            new LauncherSettings { ShowRemoteContentCard = true },
+            CancellationToken.None);
+        context.Window.Show();
+        Dispatcher.UIThread.RunJobs();
+
+        var bannerStage = context.Window
+            .GetVisualDescendants()
+            .OfType<Grid>()
+            .Single(control => control.Classes.Contains("banner-stage"));
+        var indicators = bannerStage
+            .GetVisualDescendants()
+            .OfType<Grid>()
+            .Single(control => control.Classes.Contains("banner-indicators"));
+        var dots = indicators
+            .GetVisualDescendants()
+            .OfType<Border>()
+            .Where(control => control.Classes.Contains("banner-dot"))
+            .ToArray();
+
+        Assert.Equal(2, dots.Length);
+        Assert.False(indicators.IsHitTestVisible);
+        Assert.All(dots, dot => Assert.False(dot.IsHitTestVisible));
+        Assert.DoesNotContain(
+            indicators.GetVisualDescendants().OfType<Button>(),
+            button => button.Classes.Contains("dot"));
+        Assert.Equal(0, indicators.Opacity);
+        Assert.Equal(12, dots[0].Bounds.Width);
+        Assert.Equal(4, dots[1].Bounds.Width);
+
+        var firstDotPosition = dots[0].TranslatePoint(default, indicators);
+        var secondDotPosition = dots[1].TranslatePoint(default, indicators);
+        Assert.NotNull(firstDotPosition);
+        Assert.NotNull(secondDotPosition);
+        Assert.Equal(
+            8,
+            secondDotPosition!.Value.X - (firstDotPosition!.Value.X + dots[0].Bounds.Width));
+
+        var bannerTopLeft = bannerStage.TranslatePoint(default, context.Window);
+        Assert.NotNull(bannerTopLeft);
+        context.Window.MouseMove(
+            bannerTopLeft!.Value + new Point(bannerStage.Bounds.Width / 2, bannerStage.Bounds.Height / 2),
+            RawInputModifiers.None);
+        Dispatcher.UIThread.RunJobs();
+        Assert.Equal(1, indicators.Opacity);
+
+        context.Window.MouseMove(new Point(0, 0), RawInputModifiers.None);
+        Dispatcher.UIThread.RunJobs();
+        Assert.Equal(0, indicators.Opacity);
     }
 
     [AvaloniaFact]
@@ -304,6 +381,65 @@ public sealed class MainWindowHeadlessTests
         Assert.True(context.ViewModel.RemoteContent.IsBannerInteractionActive);
         Assert.True(context.ViewModel.RemoteContent.IsCarouselPaused);
         Assert.All(navigationButtons, button => Assert.Equal(1, button.Opacity));
+    }
+
+    [AvaloniaFact]
+    public void MainWindow_BannerLink_WhenPressed_PreservesBannerCompositionBounds()
+    {
+        using var context = CreateContext();
+        context.ViewModel.RemoteContent.Apply(
+            new LauncherRemoteState
+            {
+                OperationsResource = new OperationsResourceResponse
+                {
+                    OperationsResourceOpen = true,
+                    BannerLoop = false,
+                    OperationsBannerList =
+                    [
+                        new OperationsBannerItem
+                        {
+                            BannerImg = "",
+                            JumpUrl = "https://banner.example.invalid/1"
+                        },
+                        new OperationsBannerItem
+                        {
+                            BannerImg = "",
+                            JumpUrl = "https://banner.example.invalid/2"
+                        }
+                    ]
+                }
+            },
+            new LauncherSettings { ShowRemoteContentCard = true },
+            CancellationToken.None);
+        context.Window.Show();
+        Dispatcher.UIThread.RunJobs();
+
+        var bannerStage = context.Window
+            .GetVisualDescendants()
+            .OfType<Grid>()
+            .Single(control => control.Classes.Contains("banner-stage"));
+        var bannerLink = bannerStage
+            .GetVisualDescendants()
+            .OfType<Button>()
+            .Single(control => control.Classes.Contains("banner-link"));
+        var bannerMedia = bannerStage
+            .GetVisualDescendants()
+            .OfType<Border>()
+            .Single(control => control.Classes.Contains("banner-media"));
+        Assert.Same(bannerLink.Parent, bannerMedia.Parent);
+        var bannerTopLeft = bannerLink.TranslatePoint(default, context.Window);
+        Assert.NotNull(bannerTopLeft);
+        var bannerCenter = bannerTopLeft.Value
+            + new Point(bannerLink.Bounds.Width / 2, bannerLink.Bounds.Height / 2);
+        var initialMediaBounds = bannerMedia.Bounds;
+
+        context.Window.MouseMove(bannerCenter, RawInputModifiers.None);
+        context.Window.MouseDown(bannerCenter, MouseButton.Left, RawInputModifiers.None);
+        Dispatcher.UIThread.RunJobs();
+
+        Assert.Equal(initialMediaBounds, bannerMedia.Bounds);
+
+        context.Window.MouseUp(bannerCenter, MouseButton.Left, RawInputModifiers.None);
     }
 
     [AvaloniaFact]

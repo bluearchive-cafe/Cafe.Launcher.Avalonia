@@ -233,10 +233,10 @@
         <Setter Property="Opacity" Value="{StaticResource Launcher.StateLayer.Disabled.Content}"/>
     </Style>
     <Style Selector="Button.icon-button.carousel-navigation:pointerover">
-        <Setter Property="Background" Value="{DynamicResource Launcher.Color.Chrome.Hover}"/>
+        <Setter Property="Background" Value="{DynamicResource Launcher.Color.Transparent}"/>
     </Style>
     <Style Selector="Button.icon-button.carousel-navigation:pressed">
-        <Setter Property="Background" Value="{DynamicResource Launcher.Color.Primary.Soft}"/>
+        <Setter Property="Background" Value="{DynamicResource Launcher.Color.Transparent}"/>
     </Style>
     <Style Selector="Button.primary-action">
         <Setter Property="Background" Value="{DynamicResource Launcher.Color.Primary}"/>
@@ -702,9 +702,19 @@
         <Setter Property="VerticalAlignment" Value="Stretch"/>
         <Setter Property="HorizontalContentAlignment" Value="Stretch"/>
         <Setter Property="VerticalContentAlignment" Value="Stretch"/>
+        <Setter Property="ZIndex" Value="1"/>
         <Setter Property="Template" Value="{StaticResource LauncherBorderButtonTemplate}"/>
     </Style>
+    <Style Selector="Grid.banner-item">
+        <Setter Property="HorizontalAlignment" Value="Stretch"/>
+        <Setter Property="VerticalAlignment" Value="Stretch"/>
+        <Setter Property="ClipToBounds" Value="True"/>
+    </Style>
     <Style Selector="Border.banner-media">
+        <Setter Property="CornerRadius" Value="{StaticResource Launcher.Radius.Sm}"/>
+        <Setter Property="ClipToBounds" Value="True"/>
+    </Style>
+    <Style Selector="Border.banner-frame">
         <Setter Property="CornerRadius" Value="{StaticResource Launcher.Radius.Sm}"/>
         <Setter Property="ClipToBounds" Value="True"/>
     </Style>
@@ -712,7 +722,7 @@
         <Setter Property="ClipToBounds" Value="True"/>
     </Style>
     <Style Selector="Button.banner-control">
-        <Setter Property="Background" Value="{DynamicResource Launcher.Color.Overlay.Scrim.Md}"/>
+        <Setter Property="Background" Value="{DynamicResource Launcher.Color.Transparent}"/>
         <Setter Property="Foreground" Value="{DynamicResource Launcher.Text.OnChrome}"/>
         <Setter Property="Opacity" Value="0"/>
         <Setter Property="IsHitTestVisible" Value="False"/>
@@ -721,9 +731,17 @@
     <Style Selector="Button.banner-control.carousel-navigation">
         <Setter Property="Margin" Value="{StaticResource Launcher.Spacing.Thickness.Sm}"/>
     </Style>
-    <Style Selector="Grid.banner-indicators Button.dot">
-        <Setter Property="Background" Value="{DynamicResource Launcher.Color.Overlay.Scrim.Md}"/>
-        <Setter Property="Foreground" Value="{DynamicResource Launcher.Text.OnChrome}"/>
+    <Style Selector="Border.banner-edge-gradient">
+        <Setter Property="Width" Value="{StaticResource Launcher.Layout.Banner.EdgeGradient.Width}"/>
+        <Setter Property="CornerRadius" Value="{StaticResource Launcher.Radius.Sm}"/>
+        <Setter Property="Opacity" Value="0"/>
+        <Setter Property="ZIndex" Value="1"/>
+    </Style>
+    <Style Selector="Border.banner-edge-gradient-left">
+        <Setter Property="Background" Value="{StaticResource Launcher.Color.Banner.EdgeGradient.Left}"/>
+    </Style>
+    <Style Selector="Border.banner-edge-gradient-right">
+        <Setter Property="Background" Value="{StaticResource Launcher.Color.Banner.EdgeGradient.Right}"/>
     </Style>
     <Style Selector="Grid.banner-control">
         <Setter Property="Opacity" Value="0"/>
@@ -741,6 +759,9 @@
         <Setter Property="Opacity" Value="1"/>
         <Setter Property="IsHitTestVisible" Value="True"/>
     </Style>
+    <Style Selector="Grid.banner-stage.active > Border.banner-edge-gradient">
+        <Setter Property="Opacity" Value="1"/>
+    </Style>
     <Style Selector="Grid.banner-stage.active > TextBlock.banner-control">
         <Setter Property="Opacity" Value="1"/>
         <Setter Property="IsHitTestVisible" Value="False"/>
@@ -751,11 +772,6 @@
     </Style>
     <Style Selector="Grid.banner-stage.active > Button.banner-control:disabled">
         <Setter Property="Opacity" Value="0.35"/>
-    </Style>
-    <Style Selector="TextBlock.banner-page-indicator">
-        <Setter Property="Background" Value="{DynamicResource Launcher.Color.Overlay.Scrim.Md}"/>
-        <Setter Property="Foreground" Value="{DynamicResource Launcher.Text.OnChrome}"/>
-        <Setter Property="Padding" Value="{StaticResource Launcher.Spacing.Thickness.Sm}"/>
     </Style>
     <Style Selector="Grid.settings-overlay">
         <Setter Property="Background" Value="{DynamicResource Launcher.Color.Overlay.Scrim.Md}"/>

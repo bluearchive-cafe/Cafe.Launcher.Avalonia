@@ -92,14 +92,15 @@
                                 </StackPanel>
                             </Border>
 
-                            <Grid x:Name="BannerStage"
-                                  Classes="banner-stage"
-                                  Classes.active="{Binding RemoteContent.IsBannerInteractionActive}"
-                                  IsVisible="{Binding RemoteContent.HasBannerItems}"
-                                  PointerEntered="OnBannerPointerEntered"
-                                  PointerExited="OnBannerPointerExited"
-                                  GotFocus="OnBannerGotFocus"
-                                  LostFocus="OnBannerLostFocus">
+                            <Border Classes="banner-frame"
+                                    IsVisible="{Binding RemoteContent.HasBannerItems}">
+                                <Grid x:Name="BannerStage"
+                                      Classes="banner-stage"
+                                      Classes.active="{Binding RemoteContent.IsBannerInteractionActive}"
+                                      PointerEntered="OnBannerPointerEntered"
+                                      PointerExited="OnBannerPointerExited"
+                                      GotFocus="OnBannerGotFocus"
+                                      LostFocus="OnBannerLostFocus">
                                 <!-- Banner carousel with horizontal page-slide transition -->
                                 <Carousel x:Name="BannerCarousel"
                                           Classes="banner-carousel"
@@ -110,13 +111,9 @@
                                           CornerRadius="{StaticResource Launcher.Radius.Sm}" ClipToBounds="True">
                                     <Carousel.ItemTemplate>
                                         <DataTemplate x:DataType="models:RemoteContentItem">
-                                            <Button Classes="banner-link"
-                                                    Cursor="Hand"
-                                                    Width="{Binding #BannerCarousel.Bounds.Width}"
-                                                    Height="{Binding #BannerCarousel.Bounds.Height}"
-                                                    AutomationProperties.Name="{Binding #Root.((vm:MainWindowViewModel)DataContext).Shell.I18n[banner]}"
-                                                    Command="{Binding #Root.((vm:MainWindowViewModel)DataContext).RemoteContent.OpenExternalUrlCommand}"
-                                                    CommandParameter="{Binding Url}">
+                                            <Grid Classes="banner-item"
+                                                  Width="{Binding #BannerCarousel.Bounds.Width}"
+                                                  Height="{Binding #BannerCarousel.Bounds.Height}">
                                                 <Border Classes="banner-media">
                                                     <Panel>
                                                         <Border Classes="media-placeholder"
@@ -130,16 +127,25 @@
                                                                                   Text="{Binding #Root.((vm:MainWindowViewModel)DataContext).Shell.I18n[bannerLoading]}"/>
                                                     </Panel>
                                                 </Border>
-                                            </Button>
+                                                <Button Classes="banner-link"
+                                                        Cursor="Hand"
+                                                        Width="{Binding #BannerCarousel.Bounds.Width}"
+                                                        Height="{Binding #BannerCarousel.Bounds.Height}"
+                                                        AutomationProperties.Name="{Binding #Root.((vm:MainWindowViewModel)DataContext).Shell.I18n[banner]}"
+                                                        Command="{Binding #Root.((vm:MainWindowViewModel)DataContext).RemoteContent.OpenExternalUrlCommand}"
+                                                        CommandParameter="{Binding Url}"/>
+                                            </Grid>
                                         </DataTemplate>
                                     </Carousel.ItemTemplate>
                                 </Carousel>
-                                <TextBlock Classes="banner-control banner-page-indicator"
-                                           Text="{Binding RemoteContent.CarouselPageText}"
-                                           AutomationProperties.Name="{Binding RemoteContent.CarouselPageText}"
-                                           HorizontalAlignment="Right"
-                                           VerticalAlignment="Top"
-                                           Margin="{StaticResource Launcher.Spacing.Thickness.Sm}"/>
+                                <Border Classes="banner-edge-gradient banner-edge-gradient-left"
+                                        IsHitTestVisible="False"
+                                        HorizontalAlignment="Left"
+                                        VerticalAlignment="Stretch"/>
+                                <Border Classes="banner-edge-gradient banner-edge-gradient-right"
+                                        IsHitTestVisible="False"
+                                        HorizontalAlignment="Right"
+                                        VerticalAlignment="Stretch"/>
                                 <Button Classes="icon-button banner-control carousel-navigation banner-previous"
                                         Cursor="Hand"
                                         HorizontalAlignment="Left"
@@ -148,29 +154,23 @@
                                         Command="{Binding RemoteContent.SelectPreviousBannerCommand}"
                                         ToolTip.Tip="{Binding Shell.I18n[previousBanner]}"
                                         AutomationProperties.Name="{Binding Shell.I18n[previousBanner]}">
-                                    <materialIcons:MaterialIcon Kind="ChevronLeft" Width="{StaticResource Launcher.Icon.Md}" Height="{StaticResource Launcher.Icon.Md}"
-                                                                Foreground="{DynamicResource Launcher.Text.Secondary}"/>
+                                    <materialIcons:MaterialIcon Kind="ChevronLeft" Width="{StaticResource Launcher.Icon.Xxl}" Height="{StaticResource Launcher.Icon.Xxl}"
+                                                                Foreground="{DynamicResource Launcher.Text.OnChrome}"/>
                                 </Button>
                                 <Grid Classes="banner-control banner-indicators"
                                       HorizontalAlignment="Center"
                                       VerticalAlignment="Bottom"
-                                      Margin="{StaticResource Launcher.Spacing.Thickness.Sm}">
+                                      IsHitTestVisible="False"
+                                      Margin="{StaticResource Launcher.Component.Banner.Indicator.Margin}">
                                     <ItemsControl ItemsSource="{Binding RemoteContent.BannerDots}">
                                         <ItemsControl.ItemsPanel>
                                             <StaticResource ResourceKey="HorizontalSpacingSmPanel"/>
                                         </ItemsControl.ItemsPanel>
                                         <ItemsControl.ItemTemplate>
                                             <DataTemplate x:DataType="models:BannerDot">
-                                                <Button Classes="icon-button dot"
-                                                        Cursor="Hand"
-                                                        IsEnabled="{Binding #Root.((vm:MainWindowViewModel)DataContext).RemoteContent.HasMultipleBanners}"
-                                                        ToolTip.Tip="{Binding AccessibleName}"
-                                                        AutomationProperties.Name="{Binding AccessibleName}"
-                                                        Command="{Binding #Root.((vm:MainWindowViewModel)DataContext).RemoteContent.SelectBannerCommand}"
-                                                        CommandParameter="{Binding Index}">
-                                                    <Border Classes="banner-dot"
-                                                            Classes.active="{Binding IsActive}"/>
-                                                </Button>
+                                                <Border Classes="banner-dot"
+                                                        Classes.active="{Binding IsActive}"
+                                                        IsHitTestVisible="False"/>
                                             </DataTemplate>
                                         </ItemsControl.ItemTemplate>
                                     </ItemsControl>
@@ -183,10 +183,11 @@
                                         Command="{Binding RemoteContent.SelectNextBannerCommand}"
                                         ToolTip.Tip="{Binding Shell.I18n[nextBanner]}"
                                         AutomationProperties.Name="{Binding Shell.I18n[nextBanner]}">
-                                    <materialIcons:MaterialIcon Kind="ChevronRight" Width="{StaticResource Launcher.Icon.Md}" Height="{StaticResource Launcher.Icon.Md}"
-                                                                Foreground="{DynamicResource Launcher.Text.Secondary}"/>
+                                    <materialIcons:MaterialIcon Kind="ChevronRight" Width="{StaticResource Launcher.Icon.Xxl}" Height="{StaticResource Launcher.Icon.Xxl}"
+                                                                Foreground="{DynamicResource Launcher.Text.OnChrome}"/>
                                 </Button>
-                            </Grid>
+                                </Grid>
+                            </Border>
 
                             <Border Classes="remote-content-card news-card"
                                     IsVisible="{Binding RemoteContent.HasNewsItems}">

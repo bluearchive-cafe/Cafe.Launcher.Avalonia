@@ -288,7 +288,7 @@ public sealed partial class UiStyleContractTests
             bindingValues,
             value => value.Contains("ElementName=Root", StringComparison.Ordinal));
         Assert.Equal(
-            8,
+            6,
             bindingValues.Count(value =>
                 value.Contains(
                     "#Root.((vm:MainWindowViewModel)DataContext).",
@@ -683,23 +683,23 @@ public sealed partial class UiStyleContractTests
                 button.Attributes()
                     .Single(attribute => attribute.Name.LocalName == "AutomationProperties.Name")
                     .Value);
-            Assert.Equal("{StaticResource Launcher.Icon.Md}", icon.Attribute("Width")?.Value);
-            Assert.Equal("{StaticResource Launcher.Icon.Md}", icon.Attribute("Height")?.Value);
+            Assert.Equal("{StaticResource Launcher.Icon.Xxl}", icon.Attribute("Width")?.Value);
+            Assert.Equal("{StaticResource Launcher.Icon.Xxl}", icon.Attribute("Height")?.Value);
         }
 
         var navigation = GetStyleSetters(styles, "Button.icon-button.carousel-navigation");
         Assert.Equal("{StaticResource Launcher.Control.Height.Setting}", navigation["Width"]);
         Assert.Equal("{StaticResource Launcher.Control.Height.Setting}", navigation["Height"]);
         Assert.Equal(
-            "{DynamicResource Launcher.Color.Chrome.Hover}",
+            "{DynamicResource Launcher.Color.Transparent}",
             GetStyleSetters(styles, "Button.icon-button.carousel-navigation:pointerover")["Background"]);
         Assert.Equal(
-            "{DynamicResource Launcher.Color.Primary.Soft}",
+            "{DynamicResource Launcher.Color.Transparent}",
             GetStyleSetters(styles, "Button.icon-button.carousel-navigation:pressed")["Background"]);
     }
 
     [Fact]
-    public void MainWindow_CarouselControls_OverlayPageTextAndNavigationWithoutManualPause()
+    public void MainWindow_CarouselControls_OverlayNavigationWithoutPageText()
     {
         var document = XDocument.Load(ProjectFile("Views/MainWindow.axaml"));
         var bannerStage = document
@@ -707,27 +707,36 @@ public sealed partial class UiStyleContractTests
             .Single(element =>
                 element.Name.LocalName == "Grid"
                 && HasClass(element, "banner-stage"));
-        var pageText = bannerStage.Descendants().Single(element =>
-            element.Name.LocalName == "TextBlock"
-            && HasClass(element, "banner-page-indicator"));
+        var bannerFrame = bannerStage.Parent!;
+        Assert.Equal("Border", bannerFrame.Name.LocalName);
+        Assert.True(HasClass(bannerFrame, "banner-frame"));
         var navigationButtons = bannerStage.Descendants().Where(element =>
             element.Name.LocalName == "Button"
             && HasClass(element, "carousel-navigation"))
             .ToArray();
         var dots = bannerStage.Descendants().Where(element =>
-            element.Name.LocalName == "Button"
-            && HasClass(element, "dot"))
+            element.Name.LocalName == "Border"
+            && HasClass(element, "banner-dot"))
             .ToArray();
         var bannerLink = bannerStage.Descendants().Single(element =>
             element.Name.LocalName == "Button"
             && HasClass(element, "banner-link"));
 
-        Assert.Equal("{Binding RemoteContent.CarouselPageText}", pageText.Attribute("Text")?.Value);
-        Assert.Equal("{Binding RemoteContent.CarouselPageText}", pageText.Attribute("AutomationProperties.Name")?.Value);
+        Assert.DoesNotContain(
+            bannerStage.Descendants(),
+            element => HasClass(element, "banner-page-indicator"));
+        var edgeGradients = bannerStage.Descendants().Where(element =>
+            element.Name.LocalName == "Border"
+            && HasClass(element, "banner-edge-gradient"))
+            .ToArray();
         Assert.Equal(
             "{Binding #Root.((vm:MainWindowViewModel)DataContext).Shell.I18n[banner]}",
             bannerLink.Attribute("AutomationProperties.Name")?.Value);
         Assert.Equal(2, navigationButtons.Length);
+        Assert.Equal(2, edgeGradients.Length);
+        Assert.All(
+            edgeGradients,
+            gradient => Assert.Contains("banner-edge-gradient", gradient.Attribute("Classes")?.Value, StringComparison.Ordinal));
         Assert.All(navigationButtons, button =>
         {
             Assert.Equal("{Binding RemoteContent.HasMultipleBanners}", button.Attribute("IsEnabled")?.Value);
@@ -735,16 +744,19 @@ public sealed partial class UiStyleContractTests
             Assert.NotNull(button.Attribute("AutomationProperties.Name"));
         });
         Assert.NotEmpty(dots);
-        Assert.All(
-            dots,
-            dot =>
-            {
-                Assert.Equal(
-                    "{Binding #Root.((vm:MainWindowViewModel)DataContext).RemoteContent.HasMultipleBanners}",
-                    dot.Attribute("IsEnabled")?.Value);
-                Assert.Equal("{Binding AccessibleName}", dot.Attribute("ToolTip.Tip")?.Value);
-                Assert.Equal("{Binding AccessibleName}", dot.Attribute("AutomationProperties.Name")?.Value);
-            });
+        Assert.DoesNotContain(
+            bannerStage.Descendants(),
+            element => element.Name.LocalName == "Button" && HasClass(element, "dot"));
+        Assert.DoesNotContain(
+            bannerStage.Descendants(),
+            element => element.Attributes().Any(attribute =>
+                attribute.Value.Contains("SelectBannerCommand", StringComparison.Ordinal)));
+        var bannerIndicators = bannerStage.Descendants().Single(element =>
+            element.Name.LocalName == "Grid" && HasClass(element, "banner-indicators"));
+        Assert.Equal("False", bannerIndicators.Attribute("IsHitTestVisible")?.Value);
+        Assert.Equal(
+            "{StaticResource Launcher.Component.Banner.Indicator.Margin}",
+            bannerIndicators.Attribute("Margin")?.Value);
         Assert.DoesNotContain(
             document.Descendants(),
             element => element.Attributes().Any(attribute =>
@@ -752,17 +764,38 @@ public sealed partial class UiStyleContractTests
                 || attribute.Value.Contains("CarouselPause", StringComparison.Ordinal)));
 
         var styles = XDocument.Load(ProjectFile("Views/MainWindow.Styles.axaml"));
+        var bannerFrameStyle = GetStyleSetters(styles, "Border.banner-frame");
+        Assert.Equal("{StaticResource Launcher.Radius.Sm}", bannerFrameStyle["CornerRadius"]);
+        Assert.Equal("True", bannerFrameStyle["ClipToBounds"]);
         var bannerControl = GetStyleSetters(styles, "Button.banner-control");
-        Assert.Equal("{DynamicResource Launcher.Color.Overlay.Scrim.Md}", bannerControl["Background"]);
+        Assert.Equal("{DynamicResource Launcher.Color.Transparent}", bannerControl["Background"]);
         Assert.Equal("{DynamicResource Launcher.Text.OnChrome}", bannerControl["Foreground"]);
         Assert.Equal("0", bannerControl["Opacity"]);
         Assert.Equal("False", bannerControl["IsHitTestVisible"]);
         Assert.Equal(
             "{StaticResource Launcher.Spacing.Thickness.Sm}",
             GetStyleSetters(styles, "Button.banner-control.carousel-navigation")["Margin"]);
-        var bannerDots = GetStyleSetters(styles, "Grid.banner-indicators Button.dot");
-        Assert.Equal("{DynamicResource Launcher.Color.Overlay.Scrim.Md}", bannerDots["Background"]);
-        Assert.Equal("{DynamicResource Launcher.Text.OnChrome}", bannerDots["Foreground"]);
+        Assert.Equal(
+            "{StaticResource Launcher.Layout.Banner.EdgeGradient.Width}",
+            GetStyleSetters(styles, "Border.banner-edge-gradient")["Width"]);
+        Assert.Equal(
+            "{StaticResource Launcher.Radius.Sm}",
+            GetStyleSetters(styles, "Border.banner-edge-gradient")["CornerRadius"]);
+        Assert.Equal("0", GetStyleSetters(styles, "Border.banner-edge-gradient")["Opacity"]);
+        Assert.Equal(
+            "1",
+            GetStyleSetters(styles, "Grid.banner-stage.active > Border.banner-edge-gradient")["Opacity"]);
+        var remoteContentStyles = XDocument.Load(ProjectFile("Views/Styles/RemoteContent.axaml"));
+        var bannerDots = GetStyleSetters(remoteContentStyles, "Border.banner-dot");
+        Assert.Equal("{DynamicResource Launcher.Color.Carousel.Dot.Inactive}", bannerDots["Background"]);
+        Assert.Equal("{StaticResource Launcher.Spacing.Xs}", bannerDots["Width"]);
+        Assert.Equal("{StaticResource Launcher.Spacing.Xs}", bannerDots["Height"]);
+        Assert.Equal(
+            "{StaticResource Launcher.Component.Banner.Indicator.CornerRadius}",
+            bannerDots["CornerRadius"]);
+        var activeBannerDot = GetStyleSetters(remoteContentStyles, "Border.banner-dot.active");
+        Assert.Equal("{DynamicResource Launcher.Color.Carousel.Dot.Active}", activeBannerDot["Background"]);
+        Assert.Equal("{StaticResource Launcher.Spacing.Md}", activeBannerDot["Width"]);
         Assert.Equal("1", GetStyleSetters(styles, "Grid.banner-stage.active > Button.banner-control")["Opacity"]);
         Assert.Equal("True", GetStyleSetters(styles, "Grid.banner-stage.active > Button.banner-control")["IsHitTestVisible"]);
         Assert.Equal("True", GetStyleSetters(styles, "Grid.banner-stage.active > Grid.banner-control")["IsHitTestVisible"]);

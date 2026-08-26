@@ -84,12 +84,13 @@
     </Style>
     <Style Selector="Border.banner-dot">
         <Setter Property="Background" Value="{DynamicResource Launcher.Color.Carousel.Dot.Inactive}"/>
-        <Setter Property="Width" Value="{StaticResource Launcher.Spacing.Sm}"/>
-        <Setter Property="Height" Value="{StaticResource Launcher.Spacing.Sm}"/>
-        <Setter Property="CornerRadius" Value="{StaticResource Launcher.Radius.Sm}"/>
+        <Setter Property="Width" Value="{StaticResource Launcher.Spacing.Xs}"/>
+        <Setter Property="Height" Value="{StaticResource Launcher.Spacing.Xs}"/>
+        <Setter Property="CornerRadius" Value="{StaticResource Launcher.Component.Banner.Indicator.CornerRadius}"/>
     </Style>
     <Style Selector="Border.banner-dot.active">
         <Setter Property="Background" Value="{DynamicResource Launcher.Color.Carousel.Dot.Active}"/>
+        <Setter Property="Width" Value="{StaticResource Launcher.Spacing.Md}"/>
     </Style>
     <Style Selector="Button.social-chip">
         <Setter Property="Template" Value="{StaticResource LauncherBorderButtonTemplate}"/>
