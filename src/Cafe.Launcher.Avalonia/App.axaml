@@ -68,6 +68,7 @@
             <Thickness x:Key="Launcher.Component.Action.Primary.Padding">20,12</Thickness>
             <Thickness x:Key="Launcher.Component.Action.Outlined.Padding">12,8</Thickness>
             <Thickness x:Key="Launcher.Component.Action.Dialog.Padding">16,0</Thickness>
+            <Thickness x:Key="Launcher.Component.Dialog.BasicAction.Padding">12,0</Thickness>
             <Thickness x:Key="Launcher.Component.Action.Launcher.Padding">20,0</Thickness>
             <Thickness x:Key="Launcher.Component.Action.Compact.Padding">8,4</Thickness>
             <Thickness x:Key="Launcher.Component.Wizard.Navigation.Padding">8,8,8,16</Thickness>
@@ -118,6 +119,7 @@
             <x:Double x:Key="Launcher.Layout.News.Viewport.Height">184</x:Double>
             <x:Double x:Key="Launcher.Component.Dialog.Confirm.MaxHeight">480</x:Double>
             <x:Double x:Key="Launcher.Component.Dialog.Confirm.MaxWidth">540</x:Double>
+            <x:Double x:Key="Launcher.Component.Dialog.Confirm.MinWidth">392</x:Double>
             <x:Double x:Key="Launcher.Component.Dialog.Notice.MaxHeight">110</x:Double>
             <x:Double x:Key="Launcher.Component.Dialog.Update.MaxWidth">620</x:Double>
             <x:Double x:Key="Launcher.Component.Dialog.Update.FileList.MaxHeight">240</x:Double>
@@ -138,6 +140,7 @@
             <x:Double x:Key="Launcher.Component.Settings.Control.MinWidth">220</x:Double>
             <x:Double x:Key="Launcher.Component.Input.MinWidth">160</x:Double>
             <x:Double x:Key="Launcher.Component.Dialog.Action.MinWidth">108</x:Double>
+            <x:Double x:Key="Launcher.Component.Dialog.BasicAction.MinWidth">64</x:Double>
             <x:Double x:Key="Launcher.Component.PrimaryAction.MinWidth">150</x:Double>
             <x:Double x:Key="Launcher.Component.BottomAction.MinWidth">156</x:Double>
             <x:Double x:Key="Launcher.Component.LauncherControl.Width">220</x:Double>

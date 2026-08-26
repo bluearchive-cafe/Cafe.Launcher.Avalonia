@@ -109,7 +109,8 @@ internal sealed class GameOperationJourney : IGameOperationJourney
         }
         catch (Exception exception)
         {
-            await errorHandling.HandleErrorAsync("Game launch failed.", exception);
+            await errorHandling.HandleErrorAsync("Game launch failed.", exception,
+                new ErrorHandlingOptions { ToastMessage = localizer.F("gameLaunchFailed", exception.Message) });
         }
         finally
         {
@@ -165,7 +166,8 @@ internal sealed class GameOperationJourney : IGameOperationJourney
         }
         catch (Exception exception)
         {
-            await errorHandling.HandleErrorAsync("Game repair failed.", exception);
+            await errorHandling.HandleErrorAsync("Game repair failed.", exception,
+                new ErrorHandlingOptions { ToastMessage = localizer.F("gameRepairFailed", exception.Message) });
         }
         finally
         {
@@ -341,7 +343,8 @@ internal sealed class GameOperationJourney : IGameOperationJourney
         }
         catch (Exception exception)
         {
-            await errorHandling.HandleErrorAsync("Game install/update failed.", exception);
+            await errorHandling.HandleErrorAsync("Game install/update failed.", exception,
+                new ErrorHandlingOptions { ToastMessage = localizer.F("gameInstallOrUpdateFailed", exception.Message) });
             return new GameOperationResult
             {
                 Success = false,

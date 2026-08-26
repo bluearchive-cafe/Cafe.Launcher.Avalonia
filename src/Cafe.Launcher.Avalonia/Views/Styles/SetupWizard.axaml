@@ -29,6 +29,13 @@
         <Setter Property="Background" Value="{DynamicResource Launcher.Color.Button.Flat.Hover}"/>
         <Setter Property="BorderBrush" Value="{DynamicResource Launcher.Color.Primary.Hover}"/>
     </Style>
+    <Style Selector="Button.wizard-choice:pressed">
+        <Setter Property="Background" Value="{DynamicResource Launcher.Color.Button.Flat.Pressed}"/>
+        <Setter Property="BorderBrush" Value="{DynamicResource Launcher.Color.Primary.Pressed}"/>
+    </Style>
+    <Style Selector="Button.wizard-choice:disabled">
+        <Setter Property="Opacity" Value="{StaticResource Launcher.StateLayer.Disabled.Content}"/>
+    </Style>
     <Style Selector="Button.wizard-choice.active">
         <Setter Property="Background" Value="{DynamicResource Launcher.Color.Primary.Soft}"/>
         <Setter Property="BorderBrush" Value="{DynamicResource Launcher.Color.Primary}"/>
@@ -40,9 +47,9 @@
         <Setter Property="Foreground" Value="{DynamicResource Launcher.Color.Success}"/>
     </Style>
     <Style Selector="TextBlock.wizard-game-path-status.corrupted">
-        <Setter Property="Foreground" Value="{DynamicResource Launcher.Color.Danger}"/>
+        <Setter Property="Foreground" Value="{StaticResource Launcher.Color.Danger}"/>
     </Style>
     <Style Selector="TextBlock.wizard-game-path-status.inaccessible">
-        <Setter Property="Foreground" Value="{DynamicResource Launcher.Color.Danger}"/>
+        <Setter Property="Foreground" Value="{StaticResource Launcher.Color.Danger}"/>
     </Style>
 </Styles>

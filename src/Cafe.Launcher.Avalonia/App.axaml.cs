@@ -186,9 +186,24 @@ public partial class App : Application
             Debug.WriteLine($"MainWindowViewModel initialization failed: {exception}");
             try
             {
+                // Initialization itself failed, so localization may be unavailable; keep an
+                // English fallback so the toast never shows the raw "Localization unavailable." text.
+                var toastMessage = "Launcher initialization failed.";
+                try
+                {
+                    toastMessage = serviceProvider
+                        .GetRequiredService<LocalizationService>()
+                        .F("launcherInitFailed", exception.Message);
+                }
+                catch (Exception localizationException)
+                {
+                    Debug.WriteLine($"Failure-toast localization unavailable: {localizationException.Message}");
+                }
+
                 await serviceProvider
                     .GetRequiredService<IErrorHandlingService>()
-                    .HandleErrorAsync("Launcher initialization failed.", exception);
+                    .HandleErrorAsync("Launcher initialization failed.", exception,
+                        new ErrorHandlingOptions { ToastMessage = toastMessage });
             }
             catch (Exception diagnosticsException)
             {

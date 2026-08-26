@@ -212,6 +212,8 @@ internal static class LauncherStrings
 
     internal static string DesignGalleryTitle => GetRequiredString("designGalleryTitle");
 
+    internal static string DesignGroupBorder => GetRequiredString("designGroupBorder");
+
     internal static string DesignGroupColor => GetRequiredString("designGroupColor");
 
     internal static string DesignGroupComponent => GetRequiredString("designGroupComponent");
@@ -348,6 +350,8 @@ internal static class LauncherStrings
 
     internal static string GameInstallationStateReadFailed => GetRequiredString("gameInstallationStateReadFailed");
 
+    internal static string GameInstallOrUpdateFailed => GetRequiredString("gameInstallOrUpdateFailed");
+
     internal static string GameInstallPathNotConfigured => GetRequiredString("gameInstallPathNotConfigured");
 
     internal static string GameIsRunning => GetRequiredString("gameIsRunning");
@@ -377,6 +381,8 @@ internal static class LauncherStrings
     internal static string GameProcessStartFailed => GetRequiredString("gameProcessStartFailed");
 
     internal static string GameRemoteStateUnavailable => GetRequiredString("gameRemoteStateUnavailable");
+
+    internal static string GameRepairFailed => GetRequiredString("gameRepairFailed");
 
     internal static string GitHubRepository => GetRequiredString("gitHubRepository");
 
@@ -411,6 +417,10 @@ internal static class LauncherStrings
     internal static string LaunchCheckSkipped => GetRequiredString("launchCheckSkipped");
 
     internal static string LaunchCheckWithMessage => GetRequiredString("launchCheckWithMessage");
+
+    internal static string LauncherCoreRefreshFailed => GetRequiredString("launcherCoreRefreshFailed");
+
+    internal static string LauncherInitFailed => GetRequiredString("launcherInitFailed");
 
     internal static string LauncherLoadingStatus => GetRequiredString("launcherLoadingStatus");
 

@@ -1,6 +1,5 @@
 <UserControl xmlns="https://github.com/avaloniaui"
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
-             xmlns:materialIcons="clr-namespace:Material.Icons.Avalonia;assembly=Material.Icons.Avalonia"
              xmlns:controls="using:Cafe.Launcher.Avalonia.Controls"
              x:Class="Cafe.Launcher.Avalonia.Controls.ConfirmDialog"
              x:Name="Root"
@@ -9,73 +8,32 @@
         <Border Classes="dialog confirm-panel" MaxWidth="{Binding DialogMaxWidth, ElementName=Root}"
                 MaxHeight="{StaticResource Launcher.Component.Dialog.Confirm.MaxHeight}">
             <Grid RowDefinitions="Auto,*,Auto" Classes="confirm-layout">
-                <Grid Classes="dialog-heading" ColumnDefinitions="*,Auto">
-                    <StackPanel Classes="dialog-heading-copy">
-                        <TextBlock Text="{Binding Title, ElementName=Root}" Classes="dialog-title"/>
-                        <TextBlock Text="{Binding Description, ElementName=Root}" Classes="caption" TextWrapping="Wrap"/>
-                    </StackPanel>
-                    <Button Grid.Column="1" Classes="dialog-close" Command="{Binding CancelCommand, ElementName=Root}"
-                            ToolTip.Tip="{Binding CloseToolTip, ElementName=Root}"
-                            AutomationProperties.Name="{Binding CloseToolTip, ElementName=Root}">
-                        <materialIcons:MaterialIcon Kind="Close" Width="{StaticResource Launcher.Icon.Md}" Height="{StaticResource Launcher.Icon.Md}"/>
-                    </Button>
-                </Grid>
+                <TextBlock Text="{Binding Title, ElementName=Root}" Classes="dialog-title"/>
                 <ScrollViewer Grid.Row="1" Classes="scroll-pad"
-                              IsVisible="{Binding Message, ElementName=Root, Converter={x:Static StringConverters.IsNotNullOrEmpty}}">
-                    <Border Classes="dialog-alert"
-                            Classes.warning="{Binding IsWarningAlert, ElementName=Root}"
-                            Classes.danger="{Binding IsDangerAlert, ElementName=Root}">
-                        <StackPanel Spacing="{StaticResource Launcher.Spacing.Xs}">
-                            <StackPanel Classes="dialog-alert-heading"
-                                        Classes.warning="{Binding IsWarningAlert, ElementName=Root}"
-                                        Classes.danger="{Binding IsDangerAlert, ElementName=Root}">
-                                <materialIcons:MaterialIcon Kind="{Binding IconKind, ElementName=Root}"
-                                                            Classes="dialog-alert-icon"
-                                                            Classes.warning="{Binding IsWarningAlert, ElementName=Root}"
-                                                            Classes.danger="{Binding IsDangerAlert, ElementName=Root}"
-                                                            Width="{StaticResource Launcher.Icon.Sm}"
-                                                            Height="{StaticResource Launcher.Icon.Sm}"/>
-                                <TextBlock Text="{Binding AlertTitle, ElementName=Root}"
-                                           Classes="dialog-alert-title"
-                                           Classes.warning="{Binding IsWarningAlert, ElementName=Root}"
-                                           Classes.danger="{Binding IsDangerAlert, ElementName=Root}"/>
-                            </StackPanel>
-                            <TextBlock Text="{Binding Message, ElementName=Root}" Classes="dialog-alert-content"/>
-                        </StackPanel>
-                    </Border>
+                              IsVisible="{Binding DisplayMessage, ElementName=Root, Converter={x:Static StringConverters.IsNotNullOrEmpty}}">
+                    <TextBlock Text="{Binding DisplayMessage, ElementName=Root}"
+                               Classes="dialog-message"
+                               TextWrapping="Wrap"/>
                 </ScrollViewer>
-                <Border Grid.Row="2" Classes="dialog-footer">
-                    <StackPanel Classes="confirm-actions">
-                        <Button x:Name="SafeActionButton" Classes="flat-action dialog-action" Command="{Binding CancelCommand, ElementName=Root}"
-                                ToolTip.Tip="{Binding CancelText, ElementName=Root}"
-                                AutomationProperties.Name="{Binding CancelText, ElementName=Root}">
-                            <StackPanel Classes="button-content">
-                                <materialIcons:MaterialIcon Kind="CloseCircle" Width="{StaticResource Launcher.Icon.Sm}" Height="{StaticResource Launcher.Icon.Sm}"/>
-                                <TextBlock Text="{Binding CancelText, ElementName=Root}"/>
-                            </StackPanel>
-                        </Button>
-                        <Button Classes="primary-action dialog-action" Command="{Binding ConfirmCommand, ElementName=Root}"
-                                IsVisible="{Binding !IsDangerConfirm, ElementName=Root}"
-                                ToolTip.Tip="{Binding ConfirmText, ElementName=Root}"
-                                AutomationProperties.Name="{Binding ConfirmText, ElementName=Root}">
-                            <StackPanel Classes="button-content">
-                                <materialIcons:MaterialIcon Kind="{Binding ConfirmIconKind, ElementName=Root}"
-                                                            Width="{StaticResource Launcher.Icon.Sm}" Height="{StaticResource Launcher.Icon.Sm}"/>
-                                <TextBlock Text="{Binding ConfirmText, ElementName=Root}"/>
-                            </StackPanel>
-                        </Button>
-                        <Button Classes="danger-action dialog-action" Command="{Binding ConfirmCommand, ElementName=Root}"
-                                IsVisible="{Binding IsDangerConfirm, ElementName=Root}"
-                                ToolTip.Tip="{Binding ConfirmText, ElementName=Root}"
-                                AutomationProperties.Name="{Binding ConfirmText, ElementName=Root}">
-                            <StackPanel Classes="button-content">
-                                <materialIcons:MaterialIcon Kind="{Binding ConfirmIconKind, ElementName=Root}"
-                                                            Width="{StaticResource Launcher.Icon.Sm}" Height="{StaticResource Launcher.Icon.Sm}"/>
-                                <TextBlock Text="{Binding ConfirmText, ElementName=Root}"/>
-                            </StackPanel>
-                        </Button>
-                    </StackPanel>
-                </Border>
+                <StackPanel Grid.Row="2" Classes="confirm-actions">
+                    <Button x:Name="SafeActionButton" Classes="flat-action dialog-action confirm-dialog-action" Command="{Binding CancelCommand, ElementName=Root}"
+                            ToolTip.Tip="{Binding CancelText, ElementName=Root}"
+                            AutomationProperties.Name="{Binding CancelText, ElementName=Root}">
+                        <TextBlock Text="{Binding CancelText, ElementName=Root}"/>
+                    </Button>
+                    <Button Classes="primary-action dialog-action confirm-dialog-action" Command="{Binding ConfirmCommand, ElementName=Root}"
+                            IsVisible="{Binding !IsDangerConfirm, ElementName=Root}"
+                            ToolTip.Tip="{Binding ConfirmText, ElementName=Root}"
+                            AutomationProperties.Name="{Binding ConfirmText, ElementName=Root}">
+                        <TextBlock Text="{Binding ConfirmText, ElementName=Root}"/>
+                    </Button>
+                    <Button Classes="danger-action dialog-action confirm-dialog-action" Command="{Binding ConfirmCommand, ElementName=Root}"
+                            IsVisible="{Binding IsDangerConfirm, ElementName=Root}"
+                            ToolTip.Tip="{Binding ConfirmText, ElementName=Root}"
+                            AutomationProperties.Name="{Binding ConfirmText, ElementName=Root}">
+                        <TextBlock Text="{Binding ConfirmText, ElementName=Root}"/>
+                    </Button>
+                </StackPanel>
             </Grid>
         </Border>
     </Grid>

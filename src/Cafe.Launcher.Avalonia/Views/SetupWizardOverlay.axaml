@@ -160,7 +160,7 @@
                                        MaxLines="1"/>
                             <TextBlock Text="{Binding Shell.I18n[setupWizardGamePathEmpty]}"
                                        Classes="caption"
-                                       Foreground="{DynamicResource Launcher.Color.Danger}"
+                                       Foreground="{StaticResource Launcher.Color.Danger}"
                                        IsVisible="{Binding Dialogs.SetupWizard.IsGamePathEmpty}"/>
                         </StackPanel>
 

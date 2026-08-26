@@ -49,7 +49,7 @@
     </Style>
     <Style Selector="ListBox.log-entry-list">
         <Setter Property="Margin" Value="{StaticResource Launcher.Spacing.Thickness.Lg}"/>
-        <Setter Property="Background" Value="{DynamicResource Launcher.Color.Transparent}"/>
+        <Setter Property="Background" Value="{StaticResource Launcher.Color.Transparent}"/>
         <Setter Property="BorderThickness" Value="{StaticResource Launcher.Spacing.Thickness.None}"/>
     </Style>
     <Style Selector="ListBox.log-entry-list > ListBoxItem">
@@ -58,9 +58,9 @@
         <Setter Property="HorizontalContentAlignment" Value="Stretch"/>
     </Style>
     <Style Selector="ListBox.log-entry-list > ListBoxItem:pointerover /template/ ContentPresenter#PART_ContentPresenter">
-        <Setter Property="Background" Value="{DynamicResource Launcher.Color.Transparent}"/>
+        <Setter Property="Background" Value="{StaticResource Launcher.Color.Transparent}"/>
     </Style>
     <Style Selector="ListBox.log-entry-list > ListBoxItem:selected /template/ ContentPresenter#PART_ContentPresenter">
-        <Setter Property="Background" Value="{DynamicResource Launcher.Color.Transparent}"/>
+        <Setter Property="Background" Value="{StaticResource Launcher.Color.Transparent}"/>
     </Style>
 </Styles>

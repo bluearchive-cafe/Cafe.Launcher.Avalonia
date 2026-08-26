@@ -64,7 +64,7 @@
         <Setter Property="Margin" Value="{StaticResource Launcher.Component.Toast.Message.Margin}"/>
     </Style>
     <Style Selector="Button.toast-close">
-        <Setter Property="Background" Value="{DynamicResource Launcher.Color.Transparent}"/>
+        <Setter Property="Background" Value="{StaticResource Launcher.Color.Transparent}"/>
         <Setter Property="BorderThickness" Value="{StaticResource Launcher.Spacing.Thickness.None}"/>
         <Setter Property="Foreground" Value="{DynamicResource Launcher.Text.Secondary}"/>
         <Setter Property="Width" Value="{StaticResource Launcher.Control.Height.Setting}"/>
@@ -128,7 +128,7 @@
         <Setter Property="MinHeight" Value="{StaticResource Launcher.Component.Toast.Action.MinHeight}"/>
         <Setter Property="Padding" Value="{StaticResource Launcher.Component.Toast.Action.Padding}"/>
         <Setter Property="FontSize" Value="{StaticResource Launcher.Typography.FontSize.Label.Md}"/>
-        <Setter Property="Background" Value="{DynamicResource Launcher.Color.Transparent}"/>
+        <Setter Property="Background" Value="{StaticResource Launcher.Color.Transparent}"/>
         <Setter Property="BorderBrush" Value="{DynamicResource Launcher.Color.Button.Border}"/>
         <Setter Property="BorderThickness" Value="{StaticResource Launcher.Border.Thickness.Default}"/>
         <Setter Property="Foreground" Value="{DynamicResource Launcher.Text.Primary}"/>

@@ -226,7 +226,8 @@ public sealed class ShellLifecycle : IDisposable
                 {
                     shell.SetRefreshError(exception);
                     operations.SetIdlePanels(currentSnapshot);
-                    await errorHandling.HandleErrorAsync("Launcher core refresh failed.", exception);
+                    await errorHandling.HandleErrorAsync("Launcher core refresh failed.", exception,
+                        new ErrorHandlingOptions { ToastMessage = localizer.F("launcherCoreRefreshFailed", exception.Message) });
                 }
                 finally
                 {

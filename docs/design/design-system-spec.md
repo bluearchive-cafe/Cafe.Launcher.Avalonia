@@ -63,6 +63,7 @@
 | `Launcher.Motion.*` | 时长/缓动/偏移（见 §3.7） | `Motion.Duration.Normal` |
 | `Launcher.Elevation.*` | **新增**：阴影 0–3 档（颜色/偏移/模糊 token 化） | `Elevation.Shadow.Md`、`Elevation.Level.Card` |
 | `Launcher.StateLayer.*` | **新增**：状态层不透明度 8%/12%/16%/24% | `StateLayer.Hover` |
+| `Launcher.Border.*` | 边框厚度刻度（Default 1 / Focus 2，2026-08-26 补录） | `Border.Thickness.Default` |
 | `Launcher.Component.*` | 组件专属覆盖（Toast 宽度、对话框标题高度等） | `Component.Toast.Width` |
 
 ### 3.3 语义层级
@@ -111,7 +112,7 @@
 
 ### 3.7 动效
 
-- 时长：`Fastest` 50ms / `Fast` 167ms / `Content` 200ms / `Normal` 250ms；缓动：`Enter`=ExponentialEaseOut、`Exit`=ExponentialEaseIn、`Linear`；偏移：`Surface` 8 / `Content` 6 / `Bottom` 12 / `Toast` 6（沿用现有值，仅重命名）。
+- 时长：`Faster` 50ms / `Fast` 167ms / `Content` 200ms / `Normal` 250ms（键名以 `token-migration-map.md` 与代码为准）；缓动：`Enter`=ExponentialEaseOut、`Exit`=ExponentialEaseIn、`Linear`；偏移：`Surface` 8 / `Content` 6 / `Bottom` 12 / `Toast` 6（沿用现有值，仅重命名）。
 - 进度条厚度：主界面 `Component.Progress.Bar.Height` = 8px、Loading = 4px、Toast = 3px（M3 LinearProgressIndicator 4dp；主进度条 8px 为产品加粗值，记录性偏差）。
 - 全局 `IsMotionEnabled` 开关保留；**系统级 reduced-motion 检测暂不做**（记录为有意搁置）。
 

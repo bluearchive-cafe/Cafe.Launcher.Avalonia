@@ -46,8 +46,8 @@
                             AutomationProperties.Name="{Binding Shell.I18n[uninstall]}"
                             IsEnabled="{Binding Shell.IsBusy, Converter={x:Static BoolConverters.Not}}">
                         <StackPanel Classes="button-content">
-                            <materialIcons:MaterialIcon Kind="TrashCanOutline" Width="{StaticResource Launcher.Icon.Sm}" Height="{StaticResource Launcher.Icon.Sm}" Foreground="{DynamicResource Launcher.Color.Danger}"/>
-                            <TextBlock Text="{Binding Shell.I18n[uninstall]}" Foreground="{DynamicResource Launcher.Color.Danger}"/>
+                            <materialIcons:MaterialIcon Kind="TrashCanOutline" Width="{StaticResource Launcher.Icon.Sm}" Height="{StaticResource Launcher.Icon.Sm}" Foreground="{StaticResource Launcher.Color.Danger}"/>
+                            <TextBlock Text="{Binding Shell.I18n[uninstall]}" Foreground="{StaticResource Launcher.Color.Danger}"/>
                         </StackPanel>
                     </Button>
                 </StackPanel>

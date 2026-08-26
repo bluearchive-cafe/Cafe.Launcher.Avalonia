@@ -179,6 +179,9 @@
 | `LauncherTabHeaderMargin`(0,0,0,4) | `Launcher.Component.Tabs.Header.Margin` |
 | `LauncherTabIndicatorMargin`(0,4,0,2) | `Launcher.Component.Tabs.Indicator.Margin` |
 | `LauncherPathFieldPadding`(16,0,4,0) | `Launcher.Component.PathField.Padding` |
+| （新增，2026-08-26 确认对话框批次） | `Launcher.Component.Dialog.BasicAction.Padding`(12,0) |
+| （新增，同上） | `Launcher.Component.Dialog.BasicAction.MinWidth`(64) |
+| （新增，同上） | `Launcher.Component.Dialog.Confirm.MinWidth`(392) |
 
 ## 2. 变更范围与门禁记录
 

@@ -81,7 +81,8 @@
                         <ItemsControl.ItemTemplate>
                             <DataTemplate x:DataType="models:ThemeColorPaletteItem">
                                 <Button Classes="color-swatch-button"
-                                        AutomationProperties.Name="{Binding #SettingsRoot.((vm:MainWindowViewModel)DataContext).Shell.I18n[themeColorPalette]}"
+                                        AutomationProperties.Name="{Binding ColorHex}"
+                                        ToolTip.Tip="{Binding ColorHex}"
                                         Command="{Binding #SettingsRoot.((vm:MainWindowViewModel)DataContext).Settings.Appearance.SelectThemeColorPaletteCommand}"
                                         CommandParameter="{Binding Index}">
                                     <Border Classes="color-swatch"

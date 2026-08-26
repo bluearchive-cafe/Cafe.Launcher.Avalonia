@@ -52,23 +52,23 @@
                     <Button Classes="chrome" Command="{Binding WindowChrome.OpenDebugPanelCommand}" ToolTip.Tip="{Binding Shell.I18n[debugPanel]}"
                             IsVisible="{Binding IsDebugFeaturesEnabled}"
                             AutomationProperties.Name="{Binding Shell.I18n[debugPanel]}">
-                        <materialIcons:MaterialIcon Kind="BugOutline" Width="{StaticResource Launcher.Icon.Md}" Height="{StaticResource Launcher.Icon.Md}" Foreground="{DynamicResource Launcher.Text.OnChrome}"/>
+                        <materialIcons:MaterialIcon Kind="BugOutline" Width="{StaticResource Launcher.Icon.Md}" Height="{StaticResource Launcher.Icon.Md}" Foreground="{StaticResource Launcher.Text.OnChrome}"/>
                     </Button>
                     <Button Classes="chrome" Command="{Binding ResourcePanel.OpenResourcePanelCommand}" ToolTip.Tip="{Binding Shell.I18n[resourcePanel]}"
                             AutomationProperties.Name="{Binding Shell.I18n[resourcePanel]}">
-                        <materialIcons:MaterialIcon Kind="ClipboardText" Width="{StaticResource Launcher.Icon.Md}" Height="{StaticResource Launcher.Icon.Md}" Foreground="{DynamicResource Launcher.Text.OnChrome}"/>
+                        <materialIcons:MaterialIcon Kind="ClipboardText" Width="{StaticResource Launcher.Icon.Md}" Height="{StaticResource Launcher.Icon.Md}" Foreground="{StaticResource Launcher.Text.OnChrome}"/>
                     </Button>
                     <Button Classes="chrome settings" Command="{Binding WindowChrome.ShowSettingsCommand}" ToolTip.Tip="{Binding Shell.I18n[settings]}"
                             AutomationProperties.Name="{Binding Shell.I18n[settings]}">
-                        <materialIcons:MaterialIcon Kind="CogOutline" Width="{StaticResource Launcher.Icon.Md}" Height="{StaticResource Launcher.Icon.Md}" Foreground="{DynamicResource Launcher.Text.OnChrome}"/>
+                        <materialIcons:MaterialIcon Kind="CogOutline" Width="{StaticResource Launcher.Icon.Md}" Height="{StaticResource Launcher.Icon.Md}" Foreground="{StaticResource Launcher.Text.OnChrome}"/>
                     </Button>
                     <Button Classes="chrome" Command="{Binding WindowChrome.MinimizeCommand}" ToolTip.Tip="{Binding Shell.I18n[minimize]}"
                             AutomationProperties.Name="{Binding Shell.I18n[minimize]}">
-                        <materialIcons:MaterialIcon Kind="Minus" Width="{StaticResource Launcher.Icon.Md}" Height="{StaticResource Launcher.Icon.Md}" Foreground="{DynamicResource Launcher.Text.OnChrome}"/>
+                        <materialIcons:MaterialIcon Kind="Minus" Width="{StaticResource Launcher.Icon.Md}" Height="{StaticResource Launcher.Icon.Md}" Foreground="{StaticResource Launcher.Text.OnChrome}"/>
                     </Button>
                     <Button Classes="chrome close" Command="{Binding WindowChrome.CloseCommand}" ToolTip.Tip="{Binding Shell.I18n[close]}"
                             AutomationProperties.Name="{Binding Shell.I18n[close]}">
-                        <materialIcons:MaterialIcon Kind="Close" Width="{StaticResource Launcher.Icon.Md}" Height="{StaticResource Launcher.Icon.Md}" Foreground="{DynamicResource Launcher.Text.OnChrome}"/>
+                        <materialIcons:MaterialIcon Kind="Close" Width="{StaticResource Launcher.Icon.Md}" Height="{StaticResource Launcher.Icon.Md}" Foreground="{StaticResource Launcher.Text.OnChrome}"/>
                     </Button>
                 </StackPanel>
             </Grid>
@@ -155,7 +155,7 @@
                                         ToolTip.Tip="{Binding Shell.I18n[previousBanner]}"
                                         AutomationProperties.Name="{Binding Shell.I18n[previousBanner]}">
                                     <materialIcons:MaterialIcon Kind="ChevronLeft" Width="{StaticResource Launcher.Icon.Xxl}" Height="{StaticResource Launcher.Icon.Xxl}"
-                                                                Foreground="{DynamicResource Launcher.Text.OnChrome}"/>
+                                                                Foreground="{StaticResource Launcher.Text.OnChrome}"/>
                                 </Button>
                                 <Grid Classes="banner-control banner-indicators"
                                       HorizontalAlignment="Center"
@@ -184,7 +184,7 @@
                                         ToolTip.Tip="{Binding Shell.I18n[nextBanner]}"
                                         AutomationProperties.Name="{Binding Shell.I18n[nextBanner]}">
                                     <materialIcons:MaterialIcon Kind="ChevronRight" Width="{StaticResource Launcher.Icon.Xxl}" Height="{StaticResource Launcher.Icon.Xxl}"
-                                                                Foreground="{DynamicResource Launcher.Text.OnChrome}"/>
+                                                                Foreground="{StaticResource Launcher.Text.OnChrome}"/>
                                 </Button>
                                 </Grid>
                             </Border>
@@ -260,7 +260,7 @@
                                                             Width="{StaticResource Launcher.Icon.Md}"
                                                             Height="{StaticResource Launcher.Icon.Md}"
                                                             HorizontalAlignment="Center"
-                                                            Foreground="{DynamicResource Launcher.Color.Danger}"/>
+                                                            Foreground="{StaticResource Launcher.Color.Danger}"/>
                                 <TextBlock Text="{Binding Shell.I18n[remoteContentLoadFailed]}"
                                            Classes="body"
                                            TextAlignment="Center"/>

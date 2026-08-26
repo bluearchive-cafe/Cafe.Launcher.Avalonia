@@ -178,24 +178,26 @@
                         </StackPanel>
                     </ScrollViewer>
 
-                    <StackPanel Grid.Row="2" Classes="confirm-actions">
-                        <Button Classes="flat-action dialog-action" Command="{Binding ResourcePanel.RefreshResourcePanelCommand}"
-                                AutomationProperties.Name="{Binding Shell.I18n[resourcePanelRefresh]}"
-                                IsEnabled="{Binding ResourcePanel.IsResourcePanelBusy, Converter={x:Static BoolConverters.Not}}">
-                            <StackPanel Classes="button-content">
-                                <materialIcons:MaterialIcon Kind="Refresh" Width="{StaticResource Launcher.Icon.Sm}" Height="{StaticResource Launcher.Icon.Sm}"/>
-                                <TextBlock Text="{Binding Shell.I18n[resourcePanelRefresh]}"/>
-                            </StackPanel>
-                        </Button>
-                        <Button Classes="primary-action dialog-action" Command="{Binding ResourcePanel.SaveResourcePanelCommand}"
-                                AutomationProperties.Name="{Binding Shell.I18n[resourcePanelSave]}"
-                                IsEnabled="{Binding ResourcePanel.IsResourcePanelSaveEnabled}">
-                            <StackPanel Classes="button-content">
-                                <materialIcons:MaterialIcon Kind="ContentSave" Width="{StaticResource Launcher.Icon.Sm}" Height="{StaticResource Launcher.Icon.Sm}"/>
-                                <TextBlock Text="{Binding Shell.I18n[resourcePanelSave]}"/>
-                            </StackPanel>
-                        </Button>
-                    </StackPanel>
+                    <Border Grid.Row="2" Classes="dialog-footer">
+                        <StackPanel Classes="confirm-actions">
+                            <Button Classes="flat-action dialog-action" Command="{Binding ResourcePanel.RefreshResourcePanelCommand}"
+                                    AutomationProperties.Name="{Binding Shell.I18n[resourcePanelRefresh]}"
+                                    IsEnabled="{Binding ResourcePanel.IsResourcePanelBusy, Converter={x:Static BoolConverters.Not}}">
+                                <StackPanel Classes="button-content">
+                                    <materialIcons:MaterialIcon Kind="Refresh" Width="{StaticResource Launcher.Icon.Sm}" Height="{StaticResource Launcher.Icon.Sm}"/>
+                                    <TextBlock Text="{Binding Shell.I18n[resourcePanelRefresh]}"/>
+                                </StackPanel>
+                            </Button>
+                            <Button Classes="primary-action dialog-action" Command="{Binding ResourcePanel.SaveResourcePanelCommand}"
+                                    AutomationProperties.Name="{Binding Shell.I18n[resourcePanelSave]}"
+                                    IsEnabled="{Binding ResourcePanel.IsResourcePanelSaveEnabled}">
+                                <StackPanel Classes="button-content">
+                                    <materialIcons:MaterialIcon Kind="ContentSave" Width="{StaticResource Launcher.Icon.Sm}" Height="{StaticResource Launcher.Icon.Sm}"/>
+                                    <TextBlock Text="{Binding Shell.I18n[resourcePanelSave]}"/>
+                                </StackPanel>
+                            </Button>
+                        </StackPanel>
+                    </Border>
                 </Grid>
             </Border>
         </Grid>
@@ -212,11 +214,14 @@
                     <TranslateTransform/>
                 </Border.RenderTransform>
                 <Grid RowDefinitions="Auto,*,Auto" Classes="confirm-layout motion-surface-content">
-                    <Grid Classes="dialog-heading" ColumnDefinitions="*,Auto">
-                        <StackPanel Classes="dialog-heading-copy">
+                    <Grid Classes="dialog-heading" ColumnDefinitions="Auto,*,Auto">
+                        <Border Classes="dialog-icon" VerticalAlignment="Center">
+                            <materialIcons:MaterialIcon Kind="InformationOutline" Width="{StaticResource Launcher.Icon.Xl}" Height="{StaticResource Launcher.Icon.Xl}" Foreground="{DynamicResource Launcher.Color.Primary}" HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                        </Border>
+                        <StackPanel Grid.Column="1" Classes="dialog-heading-copy">
                             <TextBlock Text="{Binding Shell.I18n[notice]}" Classes="dialog-title"/>
                         </StackPanel>
-                        <Button Grid.Column="1" Classes="dialog-close" Command="{Binding Dialogs.DismissNoticeCommand}"
+                        <Button Grid.Column="2" Classes="dialog-close" Command="{Binding Dialogs.DismissNoticeCommand}"
                                 ToolTip.Tip="{Binding Shell.I18n[close]}"
                                 AutomationProperties.Name="{Binding Shell.I18n[close]}">
                             <materialIcons:MaterialIcon Kind="Close" Width="{StaticResource Launcher.Icon.Md}" Height="{StaticResource Launcher.Icon.Md}"/>
@@ -291,12 +296,15 @@
                     <TranslateTransform/>
                 </Border.RenderTransform>
                 <Grid RowDefinitions="Auto,*,Auto" Classes="confirm-layout motion-surface-content">
-                    <Grid Classes="dialog-heading" ColumnDefinitions="*,Auto">
-                        <StackPanel Classes="dialog-heading-copy">
+                    <Grid Classes="dialog-heading" ColumnDefinitions="Auto,*,Auto">
+                        <Border Classes="dialog-icon" VerticalAlignment="Center">
+                            <materialIcons:MaterialIcon Kind="Download" Width="{StaticResource Launcher.Icon.Xl}" Height="{StaticResource Launcher.Icon.Xl}" Foreground="{DynamicResource Launcher.Color.Primary}" HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                        </Border>
+                        <StackPanel Grid.Column="1" Classes="dialog-heading-copy">
                             <TextBlock Text="{Binding Shell.I18n[launcherUpdateAvailableTitle]}" Classes="dialog-title"/>
                             <TextBlock Text="{Binding Dialogs.UpdateAvailableText}" Classes="caption"/>
                         </StackPanel>
-                        <Button Grid.Column="1" Classes="dialog-close" Command="{Binding Dialogs.CancelUpdateAvailableCommand}" ToolTip.Tip="{Binding Shell.I18n[close]}"
+                        <Button Grid.Column="2" Classes="dialog-close" Command="{Binding Dialogs.CancelUpdateAvailableCommand}" ToolTip.Tip="{Binding Shell.I18n[close]}"
                                 AutomationProperties.Name="{Binding Shell.I18n[close]}">
                             <materialIcons:MaterialIcon Kind="Close" Width="{StaticResource Launcher.Icon.Md}" Height="{StaticResource Launcher.Icon.Md}"/>
                         </Button>
