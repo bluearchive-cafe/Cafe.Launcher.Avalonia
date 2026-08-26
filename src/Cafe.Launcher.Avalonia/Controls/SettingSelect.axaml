@@ -1,0 +1,25 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:controls="using:Cafe.Launcher.Avalonia.Controls"
+             xmlns:models="using:Cafe.Launcher.Avalonia.Models"
+             x:Class="Cafe.Launcher.Avalonia.Controls.SettingSelect"
+             x:Name="Root"
+             x:DataType="controls:SettingSelect">
+    <controls:SettingRow ShowTopDivider="{Binding ShowTopDivider, ElementName=Root}"
+                         Title="{Binding Title, ElementName=Root}"
+                         Description="{Binding Description, ElementName=Root}">
+        <controls:SettingRow.Action>
+            <ComboBox Classes="setting-control"
+                      AutomationProperties.Name="{Binding AutomationName, ElementName=Root}"
+                      ItemsSource="{Binding ItemsSource, ElementName=Root}"
+                      SelectedValue="{Binding SelectedValue, ElementName=Root, Mode=TwoWay}"
+                      SelectedValueBinding="{Binding Code, DataType={x:Type models:SelectableOption}}">
+                <ComboBox.ItemTemplate>
+                    <DataTemplate x:DataType="models:SelectableOption">
+                        <TextBlock Text="{Binding DisplayName}"/>
+                    </DataTemplate>
+                </ComboBox.ItemTemplate>
+            </ComboBox>
+        </controls:SettingRow.Action>
+    </controls:SettingRow>
+</UserControl>

@@ -2,6 +2,7 @@ using System;
 using System.Collections.ObjectModel;
 using System.Linq;
 using Avalonia;
+using Avalonia.Controls;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 
@@ -46,9 +47,19 @@ public sealed partial class DesignGalleryViewModel : ViewModelBase
             return;
         }
 
-        var pairs = application.Resources
-            .Where(pair => pair.Key is string key && key.StartsWith("Launcher.", StringComparison.Ordinal))
-            .Select(pair => ((string)pair.Key!, pair.Value));
+        var tokenKeys = application.Resources.Keys
+            .OfType<string>()
+            .Where(key => key.StartsWith("Launcher.", StringComparison.Ordinal))
+            .Concat(application.Resources.ThemeDictionaries.Values
+                .OfType<ResourceDictionary>()
+                .SelectMany(dictionary => dictionary.Keys.OfType<string>())
+                .Where(key => key.StartsWith("Launcher.", StringComparison.Ordinal)))
+            .Distinct(StringComparer.Ordinal);
+        var pairs = tokenKeys.Select(key =>
+        {
+            application.TryGetResource(key, application.ActualThemeVariant, out var value);
+            return (key, value);
+        });
         foreach (var group in DesignTokenGrouping.BuildGroups(pairs, localize))
         {
             Groups.Add(group);

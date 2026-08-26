@@ -30,7 +30,9 @@ public sealed partial class UiStyleContractTests
                      ["Launcher.Elevation.Shadow.None"] = "0 0 0 0 #00000000",
                      ["Launcher.Elevation.Shadow.Sm"] = "0 4 8 0 #26000000",
                      ["Launcher.Elevation.Shadow.Md"] = "0 12 32 0 #33000000",
-                     ["Launcher.Elevation.Shadow.Lg"] = "0 22 55 0 #66000000"
+                     ["Launcher.Elevation.Shadow.Lg"] = "0 22 55 0 #66000000",
+                     ["Launcher.Layout.DesignGallery.Width"] = "1000",
+                     ["Launcher.Layout.DesignGallery.Height"] = "680"
                  })
         {
             Assert.Equal(value, keyed[key].Value.Trim());

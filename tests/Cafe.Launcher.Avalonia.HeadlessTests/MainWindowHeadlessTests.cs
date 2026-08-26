@@ -377,8 +377,8 @@ public sealed class MainWindowHeadlessTests
             .ToArray();
         var closeButton = context.Window.GetVisualDescendants().OfType<Button>()
             .Single(control => control.Classes.Contains("toast-close"));
-        var autoDismissProgress = context.Window.GetVisualDescendants().OfType<ProgressBar>()
-            .Single(control => control.Classes.Contains("toast-progress") && !control.IsIndeterminate);
+        var actionProgress = context.Window.GetVisualDescendants().OfType<ProgressBar>()
+            .Single(control => control.Classes.Contains("toast-progress"));
 
         Assert.Equal("Install failed", title.Text);
         Assert.Equal(2, actionButtons.Length);
@@ -386,7 +386,8 @@ public sealed class MainWindowHeadlessTests
         Assert.Contains("toast-secondary-action", actionButtons[1].Classes);
         Assert.Equal("Retry", AutomationProperties.GetName(actionButtons[0]));
         Assert.Equal("View log", AutomationProperties.GetName(actionButtons[1]));
-        Assert.False(autoDismissProgress.IsVisible);
+        Assert.True(actionProgress.IsIndeterminate);
+        Assert.False(actionProgress.IsVisible);
 
         var executeTask = context.ViewModel.Toasts.ExecutePrimaryToastActionCommand.ExecuteAsync(
             context.ViewModel.Toasts.ActiveToasts.Single().Id);
@@ -394,6 +395,7 @@ public sealed class MainWindowHeadlessTests
 
         Assert.All(actionButtons, button => Assert.False(button.IsEffectivelyEnabled));
         Assert.True(closeButton.IsEffectivelyEnabled);
+        Assert.True(actionProgress.IsEffectivelyVisible);
 
         release.SetResult(ToastActionResult.Failure("Still offline", "Retry failed"));
         await executeTask;
@@ -401,7 +403,7 @@ public sealed class MainWindowHeadlessTests
     }
 
     [AvaloniaFact]
-    public void Toast_WithoutActions_RendersAutoDismissProgress()
+    public void Toast_WithoutActions_ShowsNoProgressBar()
     {
         using var context = CreateContext();
         var toastService = context.Provider.GetRequiredService<ToastService>();
@@ -414,12 +416,11 @@ public sealed class MainWindowHeadlessTests
         });
         Dispatcher.UIThread.RunJobs();
 
-        var progress = context.Window.GetVisualDescendants().OfType<ProgressBar>()
-            .Where(control => control.IsVisible)
-            .Single(control => control.Classes.Contains("toast-progress"));
+        var visibleProgress = context.Window.GetVisualDescendants().OfType<ProgressBar>()
+            .Where(control => control.Classes.Contains("toast-progress") && control.IsVisible)
+            .ToArray();
 
-        Assert.True(progress.IsVisible);
-        Assert.InRange(progress.Value, 99d, 100d);
+        Assert.Empty(visibleProgress);
     }
 
     [AvaloniaFact]
@@ -572,19 +573,19 @@ public sealed class MainWindowHeadlessTests
     }
 
     [AvaloniaFact]
-    public void SettingsNavigation_WhenOpened_KeepsGeneralItemVisuallySelectedWithoutFocus()
+    public void SettingsNavigation_WhenOpened_FocusesNavigationAndShowsSelectedState()
     {
         using var context = CreateContext();
         OpenSettings(context);
 
         var navigation = GetSettingsNavigation(context.Window);
         Assert.Equal(SettingsCategoryCodes.General, context.ViewModel.Settings.SelectedCategory);
-        Assert.False(navigation.IsKeyboardFocusWithin);
+        Assert.True(navigation.IsKeyboardFocusWithin);
         AssertNavigationSelectionVisual(navigation, SettingsCategoryCodes.General);
     }
 
     [AvaloniaFact]
-    public async Task SettingsNavigation_AfterSave_KeepsSelectedItemVisuallySelectedWithoutFocus()
+    public async Task SettingsNavigation_AfterSave_KeepsSelectedItemVisuallySelected()
     {
         using var context = CreateContext();
         OpenSettings(context);
@@ -1310,18 +1311,24 @@ public sealed class MainWindowHeadlessTests
     }
 
     [AvaloniaFact]
-    public void SettingsContent_ShowsLocalizedTitleForCurrentCategory()
+    public void SettingsContent_ShowsLocalizedTitleAndSubtitleForCurrentCategory()
     {
         using var context = CreateContext();
         OpenSettings(context);
         var title = context.Window.GetVisualDescendants().OfType<TextBlock>()
             .Single(control => control.Classes.Contains("category-title"));
+        var subtitle = context.Window.GetVisualDescendants().OfType<TextBlock>()
+            .Single(control => control.Classes.Contains("category-subtitle"));
 
         Assert.Equal(
             context.ViewModel.Settings.Options.SettingsCategories.Single(
                 option => option.Code == SettingsCategoryCodes.General).DisplayName,
             title.Text);
         Assert.Equal(title.Text, AutomationProperties.GetName(title));
+        Assert.Equal(
+            context.ViewModel.Settings.Options.SettingsCategories.Single(
+                option => option.Code == SettingsCategoryCodes.General).Description,
+            subtitle.Text);
 
         context.ViewModel.Settings.SelectedCategory = SettingsCategoryCodes.Appearance;
         Dispatcher.UIThread.RunJobs();
@@ -1331,6 +1338,10 @@ public sealed class MainWindowHeadlessTests
                 option => option.Code == SettingsCategoryCodes.Appearance).DisplayName,
             title.Text);
         Assert.Equal(title.Text, AutomationProperties.GetName(title));
+        Assert.Equal(
+            context.ViewModel.Settings.Options.SettingsCategories.Single(
+                option => option.Code == SettingsCategoryCodes.Appearance).Description,
+            subtitle.Text);
     }
 
     [AvaloniaFact]
@@ -1350,7 +1361,10 @@ public sealed class MainWindowHeadlessTests
         context.Window.KeyRelease(Key.Tab, RawInputModifiers.None, PhysicalKey.Tab, "");
         Dispatcher.UIThread.RunJobs();
 
-        Assert.True(generalSection.IsKeyboardFocusWithin);
+        var contentHeaderClose = context.Window.GetVisualDescendants()
+            .OfType<Button>()
+            .Single(control => control.Classes.Contains("content-header-action"));
+        Assert.True(contentHeaderClose.IsKeyboardFocusWithin);
     }
 
     [AvaloniaFact]
@@ -1985,6 +1999,9 @@ public sealed class MainWindowHeadlessTests
         Assert.True(totalItems >= 130, $"Expected 130+ tokens, got {totalItems}.");
         Assert.Contains(context.ViewModel.Gallery.Groups, group => group.Family == "Color");
         Assert.Contains(context.ViewModel.Gallery.Groups, group => group.Family == "Component");
+        Assert.Contains(
+            context.ViewModel.Gallery.Groups.SelectMany(group => group.Items),
+            item => item.Key == "Launcher.Text.Primary");
 
         context.ViewModel.Gallery.CloseCommand.Execute(null);
         Dispatcher.UIThread.RunJobs();
@@ -2136,16 +2153,14 @@ public sealed class MainWindowHeadlessTests
         var presenter = selectedItem.GetVisualDescendants().OfType<ContentPresenter>().Single();
 
         Assert.Equal(expectedCode, ((SettingOption)selectedItem.DataContext!).Code);
-        Assert.Equal(new Thickness(3, 0, 0, 0), selectedItem.BorderThickness);
-        // M3: selection visuals follow the applied dynamic scheme's Primary role and
-        // its flat-pressed derivative rather than the raw seed colour.
-        var primary = Assert.IsType<SolidColorBrush>(
-            Application.Current!.Resources["Launcher.Color.Primary"]).Color;
-        var flatPressed = Assert.IsType<SolidColorBrush>(
-            Application.Current!.Resources["Launcher.Color.Button.Flat.Pressed"]).Color;
-        Assert.Equal(primary, Assert.IsType<SolidColorBrush>(selectedItem.BorderBrush).Color);
-        Assert.Equal(flatPressed, Assert.IsType<SolidColorBrush>(selectedItem.Background).Color);
-        Assert.Equal(flatPressed, Assert.IsType<SolidColorBrush>(presenter.Background).Color);
+        Assert.Equal(new Thickness(0), selectedItem.BorderThickness);
+        var secondaryContainer = Assert.IsType<SolidColorBrush>(
+            Application.Current!.Resources["Launcher.Color.SecondaryContainer"]).Color;
+        var onSecondaryContainer = Assert.IsType<SolidColorBrush>(
+            Application.Current!.Resources["Launcher.Color.OnSecondaryContainer"]).Color;
+        Assert.Equal(secondaryContainer, Assert.IsType<SolidColorBrush>(selectedItem.Background).Color);
+        Assert.Equal(secondaryContainer, Assert.IsType<SolidColorBrush>(presenter.Background).Color);
+        Assert.Equal(onSecondaryContainer, Assert.IsType<SolidColorBrush>(selectedItem.Foreground).Color);
     }
 
     private static void AssertVisibleSettingsSection(MainWindow window, Type expectedType)

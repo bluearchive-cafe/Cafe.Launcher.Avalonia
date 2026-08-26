@@ -123,6 +123,9 @@ public sealed class SettingsEditor : ISettingsEditor
             && string.Equals(left.ThemeMode, right.ThemeMode, StringComparison.Ordinal)
             && string.Equals(left.MotionMode, right.MotionMode, StringComparison.Ordinal)
             && string.Equals(left.ThemeColorMode, right.ThemeColorMode, StringComparison.Ordinal)
+            && string.Equals(left.ThemeColorExtractionAlgorithm, right.ThemeColorExtractionAlgorithm, StringComparison.Ordinal)
+            && string.Equals(left.ThemeColorVariant, right.ThemeColorVariant, StringComparison.Ordinal)
+            && string.Equals(left.NeutralColorStrategy, right.NeutralColorStrategy, StringComparison.Ordinal)
             && string.Equals(left.CustomThemeColor, right.CustomThemeColor, StringComparison.Ordinal)
             && left.SelectedThemeColorPaletteIndex == right.SelectedThemeColorPaletteIndex
             && string.Equals(left.DownloadSpeedLimit, right.DownloadSpeedLimit, StringComparison.Ordinal)

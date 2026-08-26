@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using Avalonia.Media;
+using Cafe.Launcher.Avalonia.Constants;
 using Cafe.Launcher.Avalonia.Helpers;
 using Cafe.Launcher.Avalonia.Models;
 using MaterialColorUtilities.DynamicColors;
@@ -49,12 +50,13 @@ internal static class MaterialSchemeGenerator
     /// preserves the pre-M3 override behaviour (accent family + flat/state/ring
     /// derivatives + info background) as a subset and adds the M3 secondary/
     /// tertiary role families; "Info" stays a fixed business colour and is not
-    /// overridden (spec §3.4). With the seed-following neutral strategy the
-    /// surface/outline roles replace the fixed brand-blue neutrals.
+    /// overridden (spec §3.4). The neutral roles are always written so switching
+    /// away from seed-following cannot leave stale dynamic brushes behind.
     /// </summary>
     public static IReadOnlyDictionary<string, SolidColorBrush> BuildRoleBrushes(
         DynamicScheme scheme,
-        bool seedFollowingNeutrals)
+        bool seedFollowingNeutrals,
+        bool isDark = false)
     {
         var result = new Dictionary<string, SolidColorBrush>(StringComparer.Ordinal);
         var primary = MaterialColorMapper.ToAvaloniaColor(scheme.Primary);
@@ -73,22 +75,35 @@ internal static class MaterialSchemeGenerator
         result["Launcher.Color.Info.Background"] = new SolidColorBrush(Color.FromArgb(0x24, primary.R, primary.G, primary.B));
 
         // M3 scheme roles.
+        var secondaryContainer = MaterialColorMapper.ToAvaloniaColor(scheme.SecondaryContainer);
+        var onSecondaryContainer = MaterialColorMapper.ToAvaloniaColor(scheme.OnSecondaryContainer);
         result["Launcher.Color.Secondary"] = MaterialColorMapper.ToBrush(scheme.Secondary);
         result["Launcher.Color.OnSecondary"] = MaterialColorMapper.ToBrush(scheme.OnSecondary);
-        result["Launcher.Color.SecondaryContainer"] = MaterialColorMapper.ToBrush(scheme.SecondaryContainer);
-        result["Launcher.Color.OnSecondaryContainer"] = MaterialColorMapper.ToBrush(scheme.OnSecondaryContainer);
+        result["Launcher.Color.SecondaryContainer"] = new SolidColorBrush(secondaryContainer);
+        result["Launcher.Color.OnSecondaryContainer"] = new SolidColorBrush(onSecondaryContainer);
+        result["Launcher.Color.SecondaryContainer.Hover"] = new SolidColorBrush(Blend(secondaryContainer, onSecondaryContainer, 0.08));
+        result["Launcher.Color.SecondaryContainer.Pressed"] = new SolidColorBrush(Blend(secondaryContainer, onSecondaryContainer, 0.16));
         result["Launcher.Color.Tertiary"] = MaterialColorMapper.ToBrush(scheme.Tertiary);
         result["Launcher.Color.OnTertiary"] = MaterialColorMapper.ToBrush(scheme.OnTertiary);
         result["Launcher.Color.TertiaryContainer"] = MaterialColorMapper.ToBrush(scheme.TertiaryContainer);
         result["Launcher.Color.OnTertiaryContainer"] = MaterialColorMapper.ToBrush(scheme.OnTertiaryContainer);
 
-        if (seedFollowingNeutrals)
-        {
-            result["Launcher.Color.Surface"] = MaterialColorMapper.ToBrush(scheme.Surface);
-            result["Launcher.Color.OnSurface"] = MaterialColorMapper.ToBrush(scheme.OnSurface);
-            result["Launcher.Color.Outline"] = MaterialColorMapper.ToBrush(scheme.Outline);
-        }
+        var neutralScheme = seedFollowingNeutrals
+            ? scheme
+            : CreateScheme(
+                Color.Parse(LauncherConstants.DefaultThemeColor),
+                ThemeColorVariants.TonalSpot,
+                isDark);
+        result["Launcher.Color.Surface"] = MaterialColorMapper.ToBrush(neutralScheme.Surface);
+        result["Launcher.Color.OnSurface"] = MaterialColorMapper.ToBrush(neutralScheme.OnSurface);
+        result["Launcher.Color.Outline"] = MaterialColorMapper.ToBrush(neutralScheme.Outline);
 
         return result;
     }
+
+    private static Color Blend(Color background, Color foreground, double opacity) =>
+        Color.FromRgb(
+            (byte)Math.Round(background.R + ((foreground.R - background.R) * opacity)),
+            (byte)Math.Round(background.G + ((foreground.G - background.G) * opacity)),
+            (byte)Math.Round(background.B + ((foreground.B - background.B) * opacity)));
 }

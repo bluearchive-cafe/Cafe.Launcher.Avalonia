@@ -34,6 +34,15 @@
         <Setter Property="BorderBrush" Value="{DynamicResource Launcher.Color.Primary.Hover}"/>
         <Setter Property="Foreground" Value="{DynamicResource Launcher.Color.Primary}"/>
     </Style>
+    <Style Selector="Button.social-chip:pressed">
+        <Setter Property="Background" Value="{DynamicResource Launcher.Color.Button.Flat.Pressed}"/>
+        <Setter Property="BorderBrush" Value="{DynamicResource Launcher.Color.Primary.Pressed}"/>
+        <Setter Property="Foreground" Value="{DynamicResource Launcher.Color.Primary.Pressed}"/>
+    </Style>
+    <Style Selector="Button.social-chip:focus-visible">
+        <Setter Property="BorderBrush" Value="{DynamicResource Launcher.Color.FocusRing}"/>
+        <Setter Property="BorderThickness" Value="2"/>
+    </Style>
     <Style Selector="Button.social-chip:disabled">
         <Setter Property="Opacity" Value="1"/>
         <Setter Property="Background" Value="{DynamicResource Launcher.Color.Content.Row}"/>
@@ -41,12 +50,15 @@
         <Setter Property="Foreground" Value="{DynamicResource Launcher.Text.Secondary}"/>
     </Style>
     <Style Selector="Button.news-tab">
+        <Setter Property="Template" Value="{StaticResource LauncherBorderButtonTemplate}"/>
         <Setter Property="Background" Value="{DynamicResource Launcher.Color.Content.Row}"/>
         <Setter Property="BorderThickness" Value="0"/>
         <Setter Property="Foreground" Value="{DynamicResource Launcher.Text.Primary}"/>
         <Setter Property="FontSize" Value="{StaticResource Launcher.Typography.FontSize.Body.Sm}"/>
         <Setter Property="Padding" Value="10,4"/>
         <Setter Property="MinHeight" Value="32"/>
+        <Setter Property="CornerRadius" Value="{StaticResource Launcher.Radius.Sm}"/>
+        <Setter Property="HorizontalContentAlignment" Value="Center"/>
         <Setter Property="VerticalContentAlignment" Value="Center"/>
     </Style>
     <Style Selector="Button.news-tab.log-filter">
@@ -55,6 +67,19 @@
     <Style Selector="Button.news-tab:pointerover">
         <Setter Property="Background" Value="{DynamicResource Launcher.Color.Primary.Hover}"/>
         <Setter Property="Foreground" Value="{DynamicResource Launcher.Color.OnPrimary}"/>
+    </Style>
+    <Style Selector="Button.news-tab:pressed">
+        <Setter Property="Background" Value="{DynamicResource Launcher.Color.Primary.Pressed}"/>
+        <Setter Property="Foreground" Value="{DynamicResource Launcher.Color.OnPrimary}"/>
+    </Style>
+    <Style Selector="Button.news-tab:focus-visible">
+        <Setter Property="BorderBrush" Value="{DynamicResource Launcher.Color.FocusRing}"/>
+        <Setter Property="BorderThickness" Value="2"/>
+    </Style>
+    <Style Selector="Button.news-tab:disabled">
+        <Setter Property="Background" Value="{DynamicResource Launcher.Color.Content.Row}"/>
+        <Setter Property="Foreground" Value="{DynamicResource Launcher.Text.Secondary}"/>
+        <Setter Property="Opacity" Value="{StaticResource Launcher.StateLayer.Disabled.Content}"/>
     </Style>
     <Style Selector="Button.news-tab.active">
         <Setter Property="Background" Value="{DynamicResource Launcher.Color.Primary}"/>

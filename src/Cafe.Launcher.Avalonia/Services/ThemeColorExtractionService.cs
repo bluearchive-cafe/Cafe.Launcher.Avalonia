@@ -2,10 +2,14 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Runtime.InteropServices;
+using System.Threading.Tasks;
 using Avalonia;
 using Avalonia.Media;
 using Avalonia.Media.Imaging;
 using Avalonia.Platform;
+using Cafe.Launcher.Avalonia.Models;
+using MaterialColorUtilities.Quantize;
+using MaterialColorUtilities.Utils;
 
 namespace Cafe.Launcher.Avalonia.Services;
 
@@ -19,7 +23,10 @@ public static class ThemeColorExtractionService
     private const double MinimumValue = 0.18;
     private const byte MinimumAlpha = 32;
 
-    public static IReadOnlyList<Color> ExtractPalette(Bitmap bitmap)
+    public static IReadOnlyList<Color> ExtractPalette(Bitmap bitmap) =>
+        ExtractPalette(bitmap, ThemeColorExtractionAlgorithms.Octree);
+
+    public static IReadOnlyList<Color> ExtractPalette(Bitmap bitmap, string algorithm)
     {
         var sourceSize = bitmap.PixelSize;
         if (sourceSize.Width <= 0 || sourceSize.Height <= 0)
@@ -39,14 +46,37 @@ public static class ThemeColorExtractionService
         var buffer = new byte[frameBuffer.RowBytes * frameBuffer.Size.Height];
         Marshal.Copy(frameBuffer.Address, buffer, 0, buffer.Length);
 
-        return ExtractPaletteFromBgraBuffer(buffer, frameBuffer.Size.Width, frameBuffer.Size.Height, frameBuffer.RowBytes);
+        return ExtractPaletteFromBgraBuffer(
+            buffer,
+            frameBuffer.Size.Width,
+            frameBuffer.Size.Height,
+            frameBuffer.RowBytes,
+            algorithm);
     }
 
     public static IReadOnlyList<Color> ExtractPaletteFromBgraBuffer(byte[] buffer, int width, int height, int rowBytes)
+        => ExtractPaletteFromBgraBuffer(
+            buffer,
+            width,
+            height,
+            rowBytes,
+            ThemeColorExtractionAlgorithms.Octree);
+
+    public static IReadOnlyList<Color> ExtractPaletteFromBgraBuffer(
+        byte[] buffer,
+        int width,
+        int height,
+        int rowBytes,
+        string algorithm)
     {
         if (width <= 0 || height <= 0 || rowBytes <= 0)
         {
             return [];
+        }
+
+        if (algorithm != ThemeColorExtractionAlgorithms.Octree)
+        {
+            return ExtractPaletteWithMaterialQuantizer(buffer, width, height, rowBytes, algorithm);
         }
 
         var root = new ColorOctreeNode();
@@ -103,6 +133,86 @@ public static class ThemeColorExtractionService
 
     public static string ToColorHex(Color color) =>
         $"#{color.A:X2}{color.R:X2}{color.G:X2}{color.B:X2}";
+
+    private static IReadOnlyList<Color> ExtractPaletteWithMaterialQuantizer(
+        byte[] buffer,
+        int width,
+        int height,
+        int rowBytes,
+        string algorithm)
+    {
+        var pixels = new List<ArgbColor>(width * height);
+        for (var y = 0; y < height; y++)
+        {
+            var rowOffset = y * rowBytes;
+            for (var x = 0; x < width; x++)
+            {
+                var offset = rowOffset + (x * 4);
+                if (offset + 3 >= buffer.Length)
+                {
+                    continue;
+                }
+
+                var b = buffer[offset];
+                var g = buffer[offset + 1];
+                var r = buffer[offset + 2];
+                var a = buffer[offset + 3];
+                if (a < MinimumAlpha)
+                {
+                    continue;
+                }
+
+                if (a is > 0 and < 255)
+                {
+                    r = Unpremultiply(r, a);
+                    g = Unpremultiply(g, a);
+                    b = Unpremultiply(b, a);
+                }
+
+                var (saturation, value) = ToSv(r, g, b);
+                if (saturation < MinimumSaturation || value < MinimumValue)
+                {
+                    continue;
+                }
+
+                pixels.Add(new ArgbColor(0xFF, r, g, b));
+            }
+        }
+
+        if (pixels.Count == 0)
+        {
+            return [];
+        }
+
+        var result = algorithm switch
+        {
+            ThemeColorExtractionAlgorithms.Wu =>
+                Task.Run(() => new QuantizerWu().QuantizeAsync(pixels, MaxPaletteColors))
+                    .GetAwaiter()
+                    .GetResult(),
+            ThemeColorExtractionAlgorithms.Wsmeans =>
+                QuantizerWsmeans.Quantize(
+                    pixels,
+                    MaxPaletteColors,
+                    new List<ArgbColor>(),
+                    new PointProviderLab(),
+                    maxIterations: 10,
+                    returnInputPixelToClusterPixel: false),
+            _ => Task.Run(() => new QuantizerCelebi().QuantizeAsync(pixels, MaxPaletteColors))
+                .GetAwaiter()
+                .GetResult()
+        };
+
+        return result.ColorToCount
+            .OrderByDescending(item => Score(ToAvaloniaColor(item.Key), item.Value))
+            .ThenByDescending(item => item.Value)
+            .Take(MaxPaletteColors)
+            .Select(item => ToAvaloniaColor(item.Key))
+            .ToArray();
+    }
+
+    private static Color ToAvaloniaColor(ArgbColor color) =>
+        Color.FromArgb(color.Alpha, color.Red, color.Green, color.Blue);
 
     private static double Score(Color color, int count)
     {

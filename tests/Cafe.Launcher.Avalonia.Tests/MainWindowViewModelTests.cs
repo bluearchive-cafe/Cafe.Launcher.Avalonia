@@ -1072,7 +1072,39 @@ public sealed class MainWindowViewModelTests : IDisposable
         Assert.True(viewModel.Settings.Appearance.ThemeColorPaletteItems[1].IsSelected);
         var preview = Assert.IsType<SolidColorBrush>(
             viewModel.Settings.Appearance.ThemeColorPreviewBrush);
-        Assert.Equal(Color.FromArgb(0xFF, 0x20, 0x50, 0xD8), preview.Color);
+        var expectedPrimary = MaterialColorMapper.ToAvaloniaColor(
+            MaterialSchemeGenerator.CreateScheme(
+                Color.FromRgb(0x20, 0x50, 0xD8),
+                ThemeColorVariants.TonalSpot,
+                isDark: false).Primary);
+        Assert.Equal(expectedPrimary, preview.Color);
+    }
+
+    [Fact]
+    public void Load_WhenWallpaperPaletteHasSeeds_DisplaysGeneratedPrimaryColors()
+    {
+        var editor = new SettingsEditor();
+        var settings = new LauncherSettings
+        {
+            ThemeColorMode = ThemeColorModes.Wallpaper,
+            ThemeMode = ThemeModes.Light,
+            ThemeColorVariant = ThemeColorVariants.Expressive,
+            ThemeColorPalette = ["#FFC3A58E"],
+            SelectedThemeColorPaletteIndex = 0
+        };
+        editor.ApplySnapshot(settings);
+        using var appearance = new SettingsAppearanceViewModel(editor);
+
+        appearance.Load(settings);
+
+        var displayedBrush = Assert.IsType<SolidColorBrush>(
+            Assert.Single(appearance.ThemeColorPaletteItems).Brush);
+        var expectedPrimary = MaterialColorMapper.ToAvaloniaColor(
+            MaterialSchemeGenerator.CreateScheme(
+                Color.FromRgb(0xC3, 0xA5, 0x8E),
+                ThemeColorVariants.Expressive,
+                isDark: false).Primary);
+        Assert.Equal(expectedPrimary, displayedBrush.Color);
     }
 
     [Fact]

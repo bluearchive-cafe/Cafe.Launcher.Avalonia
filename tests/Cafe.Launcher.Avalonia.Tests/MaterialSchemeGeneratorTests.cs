@@ -99,7 +99,7 @@ public sealed class MaterialSchemeGeneratorTests
     }
 
     [Fact]
-    public void BuildRoleBrushes_BrandBlueStrategy_OmitSurfaceNeutralRoles()
+    public void BuildRoleBrushes_BrandBlueStrategy_ProvidesFixedSurfaceNeutralRoles()
     {
         var scheme = MaterialSchemeGenerator.CreateScheme(
             DefaultSeed,
@@ -108,15 +108,18 @@ public sealed class MaterialSchemeGeneratorTests
 
         var brushes = MaterialSchemeGenerator.BuildRoleBrushes(scheme, seedFollowingNeutrals: false);
 
-        Assert.False(brushes.ContainsKey("Launcher.Color.Surface"));
-        Assert.False(brushes.ContainsKey("Launcher.Color.OnSurface"));
-        Assert.False(brushes.ContainsKey("Launcher.Color.Outline"));
+        Assert.True(brushes.ContainsKey("Launcher.Color.Surface"));
+        Assert.True(brushes.ContainsKey("Launcher.Color.OnSurface"));
+        Assert.True(brushes.ContainsKey("Launcher.Color.Outline"));
+        Assert.NotEqual(
+            scheme.Surface.Value,
+            MaterialColorMapper.ToArgbColor(brushes["Launcher.Color.Surface"].Color).Value);
         Assert.True(brushes.ContainsKey("Launcher.Color.Secondary"));
         Assert.True(brushes.ContainsKey("Launcher.Color.TertiaryContainer"));
     }
 
     [Fact]
-    public void BuildRoleBrushes_SeedFollowingStrategy_IncludeSurfaceNeutralRoles()
+    public void BuildRoleBrushes_SeedFollowingStrategy_UsesSelectedNeutralRoles()
     {
         var scheme = MaterialSchemeGenerator.CreateScheme(
             DefaultSeed,
@@ -152,6 +155,8 @@ public sealed class MaterialSchemeGeneratorTests
         Assert.True(brushes.ContainsKey("Launcher.Color.Button.Flat.Hover"));
         Assert.True(brushes.ContainsKey("Launcher.Color.Button.Flat.Pressed"));
         Assert.True(brushes.ContainsKey("Launcher.Color.Info.Background"));
+        Assert.True(brushes.ContainsKey("Launcher.Color.SecondaryContainer.Hover"));
+        Assert.True(brushes.ContainsKey("Launcher.Color.SecondaryContainer.Pressed"));
 
         // Business colours are not dynamic-per-spec (spec §3.4).
         Assert.False(brushes.ContainsKey("Launcher.Color.Info"));
@@ -159,7 +164,7 @@ public sealed class MaterialSchemeGeneratorTests
     }
 
     [Fact]
-    public void OnPrimaryColor_FollowsLuminanceRule()
+    public void OnPrimaryColor_UsesHigherContrastOnColor()
     {
         var darkScheme = MaterialSchemeGenerator.CreateScheme(
             DefaultSeed,
@@ -182,9 +187,9 @@ public sealed class MaterialSchemeGeneratorTests
     [Theory]
     [InlineData("#FFFFFFFF", true)]
     [InlineData("#FFB8B8B8", true)]
-    [InlineData("#FFE5484D", false)]
+    [InlineData("#FFE5484D", true)]
     [InlineData("#FF000000", false)]
-    public void GetReadableOnAccentColor_LuminanceAboveThreshold_SelectsDarkText(string hex, bool expectsDark)
+    public void GetReadableOnAccentColor_SelectsHigherContrastText(string hex, bool expectsDark)
     {
         var source = Color.Parse(hex);
 
@@ -201,9 +206,9 @@ public sealed class MaterialSchemeGeneratorTests
     }
 
     [Fact]
-    public void GetReadableOnAccentColor_Boundary_JustAboveThresholdUsesDarkText()
+    public void GetReadableOnAccentColor_MediumGray_UsesHigherContrastDarkText()
     {
-        // #B8B8B8 relative luminance ≈ 0.479 > 0.45 threshold.
+        // Dark text provides the higher contrast for this medium-gray fill.
         var boundary = Color.Parse("#FFB8B8B8");
 
         Assert.Equal(Color.FromRgb(0x12, 0x18, 0x20), ColorUtils.GetReadableOnAccentColor(boundary));

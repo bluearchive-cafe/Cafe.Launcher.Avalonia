@@ -68,7 +68,8 @@ public sealed class DesignTokenContrastTests
         new("toast success severity", "Launcher.Color.Success", "Launcher.Color.Toast.Background", 3.0),
         new("toast warning severity", "Launcher.Color.Warning", "Launcher.Color.Toast.Background", 3.0),
         new("toast error severity", "Launcher.Color.Danger", "Launcher.Color.Toast.Background", 3.0),
-        new("toast info severity", "Launcher.Color.Info", "Launcher.Color.Toast.Background", 3.0)
+        new("toast info severity", "Launcher.Color.Info", "Launcher.Color.Toast.Background", 3.0),
+        new("field border on light/dark field", "Launcher.Color.Field.Border", "Launcher.Color.Field.Background", 3.0)
     ];
 
     // Explicit exemption list (design-system spec §8): over-wallpaper chrome/banner

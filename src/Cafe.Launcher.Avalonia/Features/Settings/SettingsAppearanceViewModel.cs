@@ -97,7 +97,9 @@ public partial class SettingsAppearanceViewModel : ViewModelBase, IDisposable
             return;
         }
 
-        var colors = ThemeColorExtractionService.ExtractPalette(bitmap)
+        var colors = ThemeColorExtractionService.ExtractPalette(
+                bitmap,
+                editor.Current.ThemeColorExtractionAlgorithm)
             .Select(ThemeColorExtractionService.ToColorHex)
             .ToArray();
         var selectedIndex = SelectedThemeColorPaletteIndex < colors.Length
@@ -125,12 +127,13 @@ public partial class SettingsAppearanceViewModel : ViewModelBase, IDisposable
         }
 
         var color = ResolveThemeColor(themeColorMode, customColor);
-        ThemeColorPreviewBrush = new SolidColorBrush(color);
         ApplyScheme(
             color,
             editor.Current.ThemeColorVariant,
             IsDarkTheme(editor.Current.ThemeMode),
             editor.Current.NeutralColorStrategy);
+        RefreshThemeColorPaletteBrushes();
+        UpdateThemeColorPreview();
     }
 
     [RelayCommand]
@@ -169,6 +172,32 @@ public partial class SettingsAppearanceViewModel : ViewModelBase, IDisposable
                 RefreshThemeColorPaletteFromCurrentBackground(markDirty: false);
             }
 
+            UpdateThemeColorPreview();
+            return;
+        }
+
+        if (e.PropertyName == nameof(LauncherSettings.ThemeColorExtractionAlgorithm))
+        {
+            if (editor.Current.ThemeColorMode == ThemeColorModes.Wallpaper)
+            {
+                RefreshThemeColorPaletteFromCurrentBackground(markDirty: true);
+            }
+
+            UpdateThemeColorPreview();
+            return;
+        }
+
+        if (e.PropertyName == nameof(LauncherSettings.ThemeMode))
+        {
+            RefreshThemeColorPaletteBrushes();
+            UpdateThemeColorPreview();
+            return;
+        }
+
+        if (e.PropertyName is nameof(LauncherSettings.ThemeColorVariant)
+            or nameof(LauncherSettings.NeutralColorStrategy))
+        {
+            RefreshThemeColorPaletteBrushes();
             UpdateThemeColorPreview();
             return;
         }
@@ -246,7 +275,7 @@ public partial class SettingsAppearanceViewModel : ViewModelBase, IDisposable
                 {
                     Index = i,
                     ColorHex = normalizedColors[i],
-                    Brush = new SolidColorBrush(color)
+                    Brush = new SolidColorBrush(GetGeneratedPrimaryColor(color))
                 });
             }
 
@@ -271,12 +300,33 @@ public partial class SettingsAppearanceViewModel : ViewModelBase, IDisposable
         }
     }
 
+    private void RefreshThemeColorPaletteBrushes()
+    {
+        foreach (var item in ThemeColorPaletteItems)
+        {
+            var seed = ParseThemeColorPaletteColor(item.ColorHex);
+            if (seed is { } color)
+            {
+                item.Brush = new SolidColorBrush(GetGeneratedPrimaryColor(color));
+            }
+        }
+    }
+
     private void UpdateThemeColorPreview()
     {
         var color = ResolveThemeColor(
             editor.Current.ThemeColorMode,
             SelectedCustomThemeColor);
-        ThemeColorPreviewBrush = new SolidColorBrush(color);
+        ThemeColorPreviewBrush = new SolidColorBrush(GetGeneratedPrimaryColor(color));
+    }
+
+    private Color GetGeneratedPrimaryColor(Color seed)
+    {
+        var scheme = MaterialSchemeGenerator.CreateScheme(
+            seed,
+            editor.Current.ThemeColorVariant,
+            IsDarkTheme(editor.Current.ThemeMode));
+        return MaterialColorMapper.ToAvaloniaColor(scheme.Primary);
     }
 
     private Color ResolveThemeColor(string themeColorMode, Color customColor) =>
@@ -315,6 +365,8 @@ public partial class SettingsAppearanceViewModel : ViewModelBase, IDisposable
 
         if (Application.Current is { } application)
         {
+            EnsureThemeSubscription(application);
+            lastThemeMode = themeMode;
             application.RequestedThemeVariant = themeVariant;
 
             // M3: scheme roles are theme-dependent; re-apply the last scheme so a
@@ -346,6 +398,7 @@ public partial class SettingsAppearanceViewModel : ViewModelBase, IDisposable
     }
 
     private static bool lastSchemeApplied;
+    private static string lastThemeMode = ThemeModes.System;
     private static Color lastSchemeSeed = Color.Parse(LauncherConstants.DefaultThemeColor);
     private static string lastSchemeVariant = ThemeColorVariants.TonalSpot;
     private static string lastSchemeStrategy = NeutralColorStrategies.BrandBlue;
@@ -370,7 +423,8 @@ public partial class SettingsAppearanceViewModel : ViewModelBase, IDisposable
         var scheme = MaterialSchemeGenerator.CreateScheme(seed, variant, isDark);
         var roleBrushes = MaterialSchemeGenerator.BuildRoleBrushes(
             scheme,
-            seedFollowingNeutrals: neutralStrategy == NeutralColorStrategies.SeedFollowing);
+            seedFollowingNeutrals: neutralStrategy == NeutralColorStrategies.SeedFollowing,
+            isDark: isDark);
         foreach (var (key, brush) in roleBrushes)
         {
             SetBrush(application, key, brush.Color);
@@ -380,6 +434,38 @@ public partial class SettingsAppearanceViewModel : ViewModelBase, IDisposable
         lastSchemeSeed = seed;
         lastSchemeVariant = variant;
         lastSchemeStrategy = neutralStrategy;
+    }
+
+    private static Application? themeApplication;
+
+    private static void EnsureThemeSubscription(Application application)
+    {
+        if (ReferenceEquals(themeApplication, application))
+        {
+            return;
+        }
+
+        if (themeApplication is not null)
+        {
+            themeApplication.ActualThemeVariantChanged -= OnActualThemeVariantChanged;
+        }
+
+        themeApplication = application;
+        themeApplication.ActualThemeVariantChanged += OnActualThemeVariantChanged;
+    }
+
+    private static void OnActualThemeVariantChanged(object? sender, EventArgs e)
+    {
+        if (lastThemeMode != ThemeModes.System || !lastSchemeApplied)
+        {
+            return;
+        }
+
+        ApplyScheme(
+            lastSchemeSeed,
+            lastSchemeVariant,
+            IsDarkTheme(ThemeModes.System),
+            lastSchemeStrategy);
     }
 
     /// <summary>Resolves whether the effective theme is dark for a theme mode.</summary>

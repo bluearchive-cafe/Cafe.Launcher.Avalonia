@@ -65,6 +65,9 @@ public sealed class SettingsEditorTests
             Language = LauncherLanguages.Japanese,
             ThemeMode = ThemeModes.Dark,
             ThemeColorMode = ThemeColorModes.Custom,
+            ThemeColorExtractionAlgorithm = ThemeColorExtractionAlgorithms.Wu,
+            ThemeColorVariant = ThemeColorVariants.Expressive,
+            NeutralColorStrategy = NeutralColorStrategies.SeedFollowing,
             CustomThemeColor = "#FF00FF00",
             DownloadSpeedLimit = DownloadSpeedLimits.Speed10MBs,
             EnableStartupUpdateCheck = false,
@@ -88,6 +91,9 @@ public sealed class SettingsEditorTests
         Assert.Equal(LauncherLanguages.Japanese, current.Language);
         Assert.Equal(ThemeModes.Dark, current.ThemeMode);
         Assert.Equal(ThemeColorModes.Custom, current.ThemeColorMode);
+        Assert.Equal(ThemeColorExtractionAlgorithms.Wu, current.ThemeColorExtractionAlgorithm);
+        Assert.Equal(ThemeColorVariants.Expressive, current.ThemeColorVariant);
+        Assert.Equal(NeutralColorStrategies.SeedFollowing, current.NeutralColorStrategy);
         Assert.Equal("#FF00FF00", current.CustomThemeColor);
         Assert.Equal(DownloadSpeedLimits.Speed10MBs, current.DownloadSpeedLimit);
         Assert.False(current.EnableStartupUpdateCheck);
@@ -112,6 +118,31 @@ public sealed class SettingsEditorTests
 
         Assert.Equal(LauncherLanguages.Japanese, editor.Current.Language);
         Assert.True(editor.IsDirty);
+    }
+
+    [Fact]
+    public void CurrentPropertyChange_WhenM3AppearanceSettingChanges_MarksDirtyAndDiscardRestoresSnapshot()
+    {
+        var editor = new SettingsEditor();
+        editor.ApplySnapshot(new LauncherSettings
+        {
+            ThemeColorExtractionAlgorithm = ThemeColorExtractionAlgorithms.CelebiScore,
+            ThemeColorVariant = ThemeColorVariants.TonalSpot,
+            NeutralColorStrategy = NeutralColorStrategies.BrandBlue
+        });
+
+        editor.Current.ThemeColorExtractionAlgorithm = ThemeColorExtractionAlgorithms.Wu;
+        editor.Current.ThemeColorVariant = ThemeColorVariants.Expressive;
+        editor.Current.NeutralColorStrategy = NeutralColorStrategies.SeedFollowing;
+
+        Assert.True(editor.IsDirty);
+
+        editor.Discard();
+
+        Assert.False(editor.IsDirty);
+        Assert.Equal(ThemeColorExtractionAlgorithms.CelebiScore, editor.Current.ThemeColorExtractionAlgorithm);
+        Assert.Equal(ThemeColorVariants.TonalSpot, editor.Current.ThemeColorVariant);
+        Assert.Equal(NeutralColorStrategies.BrandBlue, editor.Current.NeutralColorStrategy);
     }
 
     [Fact]

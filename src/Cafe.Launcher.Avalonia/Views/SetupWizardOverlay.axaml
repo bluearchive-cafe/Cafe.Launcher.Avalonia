@@ -23,29 +23,36 @@
                 <TranslateTransform/>
             </Border.RenderTransform>
             <Grid ColumnDefinitions="184,*" Classes="motion-surface-content">
-                <ListBox Classes="settings-navigation wizard-navigation"
-                         ItemsSource="{Binding Dialogs.SetupWizard.Steps}"
-                         SelectedValue="{Binding Dialogs.SetupWizard.SelectedStep, Mode=TwoWay}"
-                         SelectedValueBinding="{Binding Index}"
-                         AutomationProperties.Name="{Binding Shell.I18n[setupWizardStepTitle]}">
-                    <ListBox.Styles>
-                        <Style Selector="ListBoxItem" x:DataType="setup:SetupWizardStepItem">
-                            <Setter Property="IsEnabled" Value="{Binding CanNavigate}"/>
-                        </Style>
-                    </ListBox.Styles>
-                    <ListBox.ItemTemplate>
-                        <DataTemplate x:DataType="setup:SetupWizardStepItem">
-                            <Grid ColumnDefinitions="Auto,*" ColumnSpacing="{StaticResource Launcher.Spacing.Sm}">
-                                <TextBlock Text="{Binding DisplayNumber}" Classes="wizard-step-number"/>
-                                <TextBlock Grid.Column="1"
-                                           Text="{Binding Title}"
-                                           Classes="settings-navigation-item"
-                                           TextTrimming="CharacterEllipsis"
-                                           AutomationProperties.Name="{Binding Title}"/>
-                            </Grid>
-                        </DataTemplate>
-                    </ListBox.ItemTemplate>
-                </ListBox>
+                <Grid Classes="settings-navigation-pane" RowDefinitions="Auto,*">
+                    <Border Classes="settings-navigation-header">
+                        <StackPanel Classes="dialog-title-row">
+                            <TextBlock Text="{Binding Shell.I18n[setupWizardStepTitle]}" Classes="dialog-title" VerticalAlignment="Center"/>
+                        </StackPanel>
+                    </Border>
+                    <ListBox Grid.Row="1" Classes="settings-navigation wizard-navigation"
+                             ItemsSource="{Binding Dialogs.SetupWizard.Steps}"
+                             SelectedValue="{Binding Dialogs.SetupWizard.SelectedStep, Mode=TwoWay}"
+                             SelectedValueBinding="{Binding Index}"
+                             AutomationProperties.Name="{Binding Shell.I18n[setupWizardStepTitle]}">
+                        <ListBox.Styles>
+                            <Style Selector="ListBoxItem" x:DataType="setup:SetupWizardStepItem">
+                                <Setter Property="IsEnabled" Value="{Binding CanNavigate}"/>
+                            </Style>
+                        </ListBox.Styles>
+                        <ListBox.ItemTemplate>
+                            <DataTemplate x:DataType="setup:SetupWizardStepItem">
+                                <Grid ColumnDefinitions="Auto,*" ColumnSpacing="{StaticResource Launcher.Spacing.Sm}">
+                                    <TextBlock Text="{Binding DisplayNumber}" Classes="wizard-step-number"/>
+                                    <TextBlock Grid.Column="1"
+                                               Text="{Binding Title}"
+                                               Classes="settings-navigation-item"
+                                               TextTrimming="CharacterEllipsis"
+                                               AutomationProperties.Name="{Binding Title}"/>
+                                </Grid>
+                            </DataTemplate>
+                        </ListBox.ItemTemplate>
+                    </ListBox>
+                </Grid>
                 <Grid Grid.Column="1" RowDefinitions="Auto,*,Auto" Classes="confirm-layout">
                 <!-- Header row -->
                 <Grid Classes="dialog-heading" ColumnDefinitions="Auto,*,Auto">
@@ -95,7 +102,8 @@
                             </Border>
                             <TextBlock Text="{Binding Shell.I18n[setupWizardLanguage]}" Classes="section-title"/>
                             <TextBlock Text="{Binding Shell.I18n[setupWizardLanguageHint]}" Classes="caption"/>
-                            <ComboBox ItemsSource="{Binding Dialogs.LanguageOptions}"
+                            <ComboBox Classes="setting-control"
+                                      ItemsSource="{Binding Dialogs.LanguageOptions}"
                                       SelectedValue="{Binding Dialogs.SetupWizard.Language, Mode=TwoWay}"
                                       SelectedValueBinding="{Binding Code}"
                                       HorizontalAlignment="Left"
@@ -319,42 +327,44 @@
                 </ScrollViewer>
 
                 <!-- Footer row -->
-                <StackPanel Grid.Row="2" Classes="confirm-actions">
-                    <Button Classes="flat-action dialog-action"
-                            Command="{Binding Dialogs.SetupWizard.PreviousCommand}"
-                            IsVisible="{Binding Dialogs.SetupWizard.CanGoPrevious}"
-                            AutomationProperties.Name="{Binding Shell.I18n[setupWizardPrevious]}">
-                        <StackPanel Classes="button-content">
-                            <materialIcons:MaterialIcon Kind="ChevronLeft"
-                                                       Width="{StaticResource Launcher.Icon.Sm}"
-                                                       Height="{StaticResource Launcher.Icon.Sm}"/>
-                            <TextBlock Text="{Binding Shell.I18n[setupWizardPrevious]}"/>
-                        </StackPanel>
-                    </Button>
-                    <Button Classes="primary-action dialog-action"
-                            Command="{Binding Dialogs.SetupWizard.NextCommand}"
-                            IsVisible="{Binding Dialogs.SetupWizard.IsLastStep, Converter={x:Static BoolConverters.Not}}"
-                            IsEnabled="{Binding Dialogs.SetupWizard.CanGoNext}"
-                            AutomationProperties.Name="{Binding Shell.I18n[setupWizardNext]}">
-                        <StackPanel Classes="button-content">
-                            <TextBlock Text="{Binding Shell.I18n[setupWizardNext]}"/>
-                            <materialIcons:MaterialIcon Kind="ChevronRight"
-                                                       Width="{StaticResource Launcher.Icon.Sm}"
-                                                       Height="{StaticResource Launcher.Icon.Sm}"/>
-                        </StackPanel>
-                    </Button>
-                    <Button Classes="primary-action dialog-action"
-                            Command="{Binding Dialogs.SetupWizard.CompleteCommand}"
-                            IsVisible="{Binding Dialogs.SetupWizard.IsLastStep}"
-                            AutomationProperties.Name="{Binding Shell.I18n[setupWizardFinish]}">
-                        <StackPanel Classes="button-content">
-                            <materialIcons:MaterialIcon Kind="Check"
-                                                       Width="{StaticResource Launcher.Icon.Sm}"
-                                                       Height="{StaticResource Launcher.Icon.Sm}"/>
-                            <TextBlock Text="{Binding Shell.I18n[setupWizardFinish]}"/>
-                        </StackPanel>
-                    </Button>
-                </StackPanel>
+                <Border Grid.Row="2" Classes="dialog-footer">
+                    <StackPanel Classes="confirm-actions">
+                        <Button Classes="flat-action dialog-action"
+                                Command="{Binding Dialogs.SetupWizard.PreviousCommand}"
+                                IsVisible="{Binding Dialogs.SetupWizard.CanGoPrevious}"
+                                AutomationProperties.Name="{Binding Shell.I18n[setupWizardPrevious]}">
+                            <StackPanel Classes="button-content">
+                                <materialIcons:MaterialIcon Kind="ChevronLeft"
+                                                           Width="{StaticResource Launcher.Icon.Sm}"
+                                                           Height="{StaticResource Launcher.Icon.Sm}"/>
+                                <TextBlock Text="{Binding Shell.I18n[setupWizardPrevious]}"/>
+                            </StackPanel>
+                        </Button>
+                        <Button Classes="primary-action dialog-action"
+                                Command="{Binding Dialogs.SetupWizard.NextCommand}"
+                                IsVisible="{Binding Dialogs.SetupWizard.IsLastStep, Converter={x:Static BoolConverters.Not}}"
+                                IsEnabled="{Binding Dialogs.SetupWizard.CanGoNext}"
+                                AutomationProperties.Name="{Binding Shell.I18n[setupWizardNext]}">
+                            <StackPanel Classes="button-content">
+                                <TextBlock Text="{Binding Shell.I18n[setupWizardNext]}"/>
+                                <materialIcons:MaterialIcon Kind="ChevronRight"
+                                                           Width="{StaticResource Launcher.Icon.Sm}"
+                                                           Height="{StaticResource Launcher.Icon.Sm}"/>
+                            </StackPanel>
+                        </Button>
+                        <Button Classes="primary-action dialog-action"
+                                Command="{Binding Dialogs.SetupWizard.CompleteCommand}"
+                                IsVisible="{Binding Dialogs.SetupWizard.IsLastStep}"
+                                AutomationProperties.Name="{Binding Shell.I18n[setupWizardFinish]}">
+                            <StackPanel Classes="button-content">
+                                <materialIcons:MaterialIcon Kind="Check"
+                                                           Width="{StaticResource Launcher.Icon.Sm}"
+                                                           Height="{StaticResource Launcher.Icon.Sm}"/>
+                                <TextBlock Text="{Binding Shell.I18n[setupWizardFinish]}"/>
+                            </StackPanel>
+                        </Button>
+                    </StackPanel>
+                </Border>
 
                 </Grid>
             </Grid>

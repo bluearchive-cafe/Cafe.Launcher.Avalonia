@@ -62,9 +62,10 @@ _Avoid_: 部分安装状态
 6. **设置页布局范围** → [ADR-006](docs/design/adr/ADR-006-设置页布局范围.md)：仅组件规格统一，骨架不动。
 7. **画廊状态矩阵范围** → [ADR-007](docs/design/adr/ADR-007-画廊矩阵范围.md)：3 组件 × 6 态。
 
-### ✅ 已定案（Round 2 + Q18 仲裁 + 设置页方向，2026-08-25）
+### ✅ 已定案（Round 2 + 设置页方向，2026-08-25）
 
-13. **设置页重设计方向** → [ADR-013](docs/design/adr/ADR-013-设置页重设计方向.md)：**变体 B（纯列表 + hairline 分隔线）**；导航选中态 = SecondaryContainer 底 + OnSecondaryContainer 字 + 3px Primary 指示条；设置页双主题原型进行中（`prototype/settings-page`）。
+13. **设置页重设计方向** → [ADR-013](docs/design/adr/ADR-013-设置页重设计方向.md)：**变体 B（纯列表 + hairline 分隔线）**；导航选中态 = SecondaryContainer 底 + OnSecondaryContainer 字 + leading icon（无指示条）；设置页蓝图已定稿（原型见 `prototype/settings-page`）。
+14. **其余界面重设计方向** → [ADR-014](docs/design/adr/ADR-014-其余表面M3重设计方向.md)：对话框/Toast/设置向导；**主壳首页仍搁置**；资源面板/日志/调试仅 token 兼容（Q3）。
 
 8. **组件批次映射** → [ADR-008](docs/design/adr/ADR-008-组件批次映射.md)：A=模板+四型按钮，B=现存组件对齐，C=新组件+矩阵+清单。
 9. **设置三项 UI + 算法落地** → [ADR-009](docs/design/adr/ADR-009-设置三项UI与算法落地.md)：3×SettingRow(ComboBox)，次序算法→变体→中性；P2 实现 Celebi+Score 提取器接入。
@@ -96,4 +97,5 @@ _Avoid_: 部分安装状态
 | ADR-011 | 字阶迁移随批次 | ✅ 已接受 |
 | ADR-012 | 底栏双原型启动（Q18 仲裁结论已撤销，形态重新开放） | ⛔ 已撤销 |
 | ADR-013 | 设置页重设计方向（变体 B + SecondaryContainer 导航选中） | ✅ 已接受 |
+| ADR-014 | 对话框/Toast/设置向导 M3 重设计方向（主壳仍搁置） | ✅ 已接受 |
 
