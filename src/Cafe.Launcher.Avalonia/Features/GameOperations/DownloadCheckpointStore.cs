@@ -31,8 +31,10 @@ public sealed class DownloadCheckpointStore(string filePath)
 
         try
         {
-            var json = await File.ReadAllTextAsync(filePath, cancellationToken).ConfigureAwait(false);
-            return JsonSerializer.Deserialize<DownloadTaskState>(json);
+            return await AtomicJsonFileStore.ReadAsync<DownloadTaskState>(
+                filePath,
+                JsonOptions,
+                cancellationToken).ConfigureAwait(false);
         }
         catch (OperationCanceledException)
         {
@@ -47,11 +49,11 @@ public sealed class DownloadCheckpointStore(string filePath)
     /// <summary>Atomically replaces the current checkpoint with the supplied state.</summary>
     public async Task SaveAsync(DownloadTaskState state, CancellationToken cancellationToken = default)
     {
-        var directory = Path.GetDirectoryName(filePath) ?? ".";
-        Directory.CreateDirectory(directory);
-        var json = JsonSerializer.Serialize(state, JsonOptions);
-        await File.WriteAllTextAsync(temporaryFilePath, json, cancellationToken).ConfigureAwait(false);
-        File.Move(temporaryFilePath, filePath, overwrite: true);
+        await AtomicJsonFileStore.WriteAsync(
+            filePath,
+            state,
+            JsonOptions,
+            cancellationToken).ConfigureAwait(false);
     }
 
     /// <summary>Removes both the committed checkpoint and a leftover temporary checkpoint.</summary>

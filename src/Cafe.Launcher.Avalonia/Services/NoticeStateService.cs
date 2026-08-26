@@ -5,6 +5,7 @@ using System.Text.Json;
 using System.Threading;
 using System.Threading.Tasks;
 using Cafe.Launcher.Avalonia.Constants;
+using Cafe.Launcher.Avalonia.Helpers;
 
 namespace Cafe.Launcher.Avalonia.Services;
 
@@ -43,8 +44,10 @@ public sealed class NoticeStateService
                 return [];
             }
 
-            var json = await File.ReadAllTextAsync(path, cancellationToken).ConfigureAwait(false);
-            return JsonSerializer.Deserialize<HashSet<string>>(json) ?? [];
+            return await AtomicJsonFileStore.ReadAsync<HashSet<string>>(
+                path,
+                JsonDefaults.Strict,
+                cancellationToken).ConfigureAwait(false) ?? [];
         }
         catch (Exception exception) when (exception is JsonException or IOException or UnauthorizedAccessException)
         {
@@ -61,15 +64,11 @@ public sealed class NoticeStateService
             shown.Add(noticeHash);
 
             var path = StatePath;
-            var parentDir = Path.GetDirectoryName(path);
-            if (!string.IsNullOrWhiteSpace(parentDir))
-            {
-                Directory.CreateDirectory(parentDir);
-            }
-
-            var tempPath = $"{path}.tmp";
-            await File.WriteAllTextAsync(tempPath, JsonSerializer.Serialize(shown), cancellationToken).ConfigureAwait(false);
-            await Task.Run(() => File.Move(tempPath, path, overwrite: true), cancellationToken).ConfigureAwait(false);
+            await AtomicJsonFileStore.WriteAsync(
+                path,
+                shown,
+                JsonDefaults.Strict,
+                cancellationToken).ConfigureAwait(false);
         }
         catch (Exception exception) when (exception is JsonException or IOException or UnauthorizedAccessException)
         {

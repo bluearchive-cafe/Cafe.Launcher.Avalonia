@@ -91,25 +91,11 @@ public sealed class LauncherSettingsService : IDisposable
         {
             var normalized = NormalizeSettings(settings);
             var path = SettingsPath;
-            Directory.CreateDirectory(Path.GetDirectoryName(path)!);
-            var tempPath = $"{path}.{Guid.NewGuid():N}.tmp";
-            try
-            {
-                await using (var stream = File.Create(tempPath))
-                {
-                    await JsonSerializer.SerializeAsync(stream, normalized, jsonOptions, cancellationToken).ConfigureAwait(false);
-                    await stream.FlushAsync(cancellationToken).ConfigureAwait(false);
-                }
-
-                File.Move(tempPath, path, overwrite: true);
-            }
-            finally
-            {
-                if (File.Exists(tempPath))
-                {
-                    File.Delete(tempPath);
-                }
-            }
+            await AtomicJsonFileStore.WriteAsync(
+                path,
+                normalized,
+                jsonOptions,
+                cancellationToken).ConfigureAwait(false);
         }
         finally
         {
