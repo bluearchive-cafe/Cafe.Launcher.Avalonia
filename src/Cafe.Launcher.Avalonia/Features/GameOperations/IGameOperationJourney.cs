@@ -34,8 +34,14 @@ internal interface IGameOperationJourney
 
     /// <summary>Starts the game using the supplied status snapshot.</summary>
     Task StartGameAsync(LauncherStatusSnapshot snapshot);
+    /// <summary>Refreshes launcher state and reports whether a game update is available.</summary>
+    Task CheckForUpdateAsync(LauncherStatusSnapshot snapshot);
     /// <summary>Installs or updates the game using the supplied status snapshot.</summary>
     Task InstallOrUpdateAsync(LauncherStatusSnapshot snapshot);
+    /// <summary>Creates the desktop shortcut for the installed game and reports the outcome.</summary>
+    Task CreateDesktopShortcutAsync(LauncherStatusSnapshot snapshot);
+    /// <summary>Opens the installed game folder in the platform file manager.</summary>
+    void OpenGameFolder(LauncherStatusSnapshot snapshot);
     /// <summary>Requests repair confirmation for the supplied status snapshot.</summary>
     Task RequestRepairAsync(LauncherStatusSnapshot snapshot);
     /// <summary>Runs a confirmed repair for the supplied status snapshot.</summary>

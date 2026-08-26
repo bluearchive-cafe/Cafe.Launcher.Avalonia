@@ -478,8 +478,15 @@ public sealed class MainWindowHeadlessTests
             .Where(control => control.Classes.Contains("social-action"))
             .ToArray();
 
-        Assert.Equal(2, actionButtons.Length);
-        Assert.Equal(["YouTube", "Discord"], actionButtons.Select(button => ((RemoteContentItem)button.DataContext!).Title));
+        var officialSiteButton = Assert.Single(
+            actionButtons,
+            control => control.Classes.Contains("official-site"));
+        var itemButtons = actionButtons
+            .Where(control => control.DataContext is RemoteContentItem)
+            .ToArray();
+
+        Assert.Equal(2, itemButtons.Length);
+        Assert.Equal(["YouTube", "Discord"], itemButtons.Select(button => ((RemoteContentItem)button.DataContext!).Title));
         Assert.DoesNotContain(
             context.Window.GetVisualDescendants().OfType<Border>(),
             control => control.Classes.Contains("social-media-card"));
@@ -491,26 +498,36 @@ public sealed class MainWindowHeadlessTests
             Assert.True(AutomationProperties.GetName(button) is not null);
         });
 
-        var firstTop = actionButtons[0].TranslatePoint(default, context.Window);
-        var secondTop = actionButtons[1].TranslatePoint(default, context.Window);
+        var officialTop = officialSiteButton.TranslatePoint(default, context.Window);
+        var firstTop = itemButtons[0].TranslatePoint(default, context.Window);
+        var secondTop = itemButtons[1].TranslatePoint(default, context.Window);
+        Assert.NotNull(officialTop);
         Assert.NotNull(firstTop);
         Assert.NotNull(secondTop);
-        Assert.True(firstTop.Value.X > context.Window.ClientSize.Width / 2);
+        Assert.True(officialTop.Value.X > context.Window.ClientSize.Width / 2);
+        Assert.True(officialTop.Value.Y < firstTop.Value.Y);
         Assert.True(firstTop.Value.Y < secondTop.Value.Y);
 
         var socialActions = context.Window
             .GetVisualDescendants()
-            .OfType<ItemsControl>()
+            .OfType<StackPanel>()
             .Single(control => control.Classes.Contains("social-actions"));
+        var socialItems = socialActions
+            .GetVisualDescendants()
+            .OfType<ItemsControl>()
+            .Single(control => control.ItemsSource is not null);
         Assert.True(socialActions.IsEffectivelyVisible);
+        Assert.True(socialItems.IsEffectivelyVisible);
 
         context.ViewModel.RemoteContent.UpdateRemoteContentVisibility(false);
         Dispatcher.UIThread.RunJobs();
-        Assert.False(socialActions.IsEffectivelyVisible);
+        Assert.True(socialActions.IsEffectivelyVisible);
+        Assert.False(socialItems.IsEffectivelyVisible);
 
         context.ViewModel.RemoteContent.UpdateRemoteContentVisibility(true);
         Dispatcher.UIThread.RunJobs();
         Assert.True(socialActions.IsEffectivelyVisible);
+        Assert.True(socialItems.IsEffectivelyVisible);
     }
 
     [AvaloniaFact]
@@ -2541,7 +2558,12 @@ public sealed class MainWindowHeadlessTests
         public void RaiseStaleRunningChanged() => staleIsRunningChanged?.Invoke();
 
         public Task StartGameAsync(LauncherStatusSnapshot snapshot) => Task.CompletedTask;
+        public Task CheckForUpdateAsync(LauncherStatusSnapshot snapshot) => Task.CompletedTask;
         public Task InstallOrUpdateAsync(LauncherStatusSnapshot snapshot) => Task.CompletedTask;
+        public Task CreateDesktopShortcutAsync(LauncherStatusSnapshot snapshot) => Task.CompletedTask;
+        public void OpenGameFolder(LauncherStatusSnapshot snapshot)
+        {
+        }
         public Task RequestRepairAsync(LauncherStatusSnapshot snapshot) => Task.CompletedTask;
         public Task RepairAsync(LauncherStatusSnapshot snapshot) => Task.CompletedTask;
         public Task RequestUninstallAsync(LauncherStatusSnapshot snapshot) => Task.CompletedTask;

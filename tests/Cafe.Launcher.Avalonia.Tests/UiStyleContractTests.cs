@@ -142,7 +142,6 @@ public sealed partial class UiStyleContractTests
             ["{Binding Operations.InstallOrUpdateCommand}"] = ("{Binding Operations.InstallButtonText}", "primary-operation"),
             ["{Binding Settings.ChangePersistedGamePathCommand}"] = ("{Binding Shell.I18n[changePath]}", "secondary-operation"),
             ["{Binding Settings.SelectInstalledGameCommand}"] = ("{Binding Shell.I18n[selectInstalledGame]}", "secondary-operation"),
-            ["{Binding WindowChrome.OpenOfficialSiteCommand}"] = ("{Binding Shell.I18n[officialSite]}", "secondary-operation"),
             ["{Binding Operations.StartGameCommand}"] = ("{Binding Shell.I18n[startGame]}", "primary-operation"),
             ["{Binding Operations.PauseResumeCommand}"] = ("{Binding Operations.PauseResumeText}", "secondary-operation"),
             ["{Binding Operations.StopOperationCommand}"] = ("{Binding Shell.I18n[stop]}", "secondary-operation")
@@ -179,6 +178,70 @@ public sealed partial class UiStyleContractTests
             controlPanel.Descendants(),
             element => element.Name.LocalName == "TextBlock"
                 && element.Attribute("Text")?.Value == "{Binding Shell.LaunchCheckText}");
+    }
+
+    [Fact]
+    public void MainWindow_GameManageButtons_ExposeFlyoutMenuWithOperationBindings()
+    {
+        var document = XDocument.Load(ProjectFile("Views/MainWindow.axaml"));
+        var manageButtons = document
+            .Descendants()
+            .Where(element =>
+                element.Name.LocalName == "Button"
+                && HasClass(element, "manage"))
+            .ToArray();
+
+        Assert.Equal(2, manageButtons.Length);
+        Dictionary<string, string> expectedMenuItems = new(StringComparer.Ordinal)
+        {
+            ["{Binding Operations.CheckForGameUpdateCommand}"] = "{Binding Shell.I18n[gameCheckUpdate]}",
+            ["{Binding Operations.CreateGameShortcutCommand}"] = "{Binding Shell.I18n[gameCreateShortcut]}",
+            ["{Binding Operations.OpenGameFolderCommand}"] = "{Binding Shell.I18n[gameOpenFolder]}",
+            ["{Binding Operations.RequestRepairCommand}"] = "{Binding Shell.I18n[repair]}",
+            ["{Binding Operations.RequestUninstallCommand}"] = "{Binding Shell.I18n[uninstall]}"
+        };
+
+        foreach (var button in manageButtons)
+        {
+            Assert.True(HasClass(button, "secondary-operation"), "Manage button must be secondary-operation.");
+            Assert.Equal(
+                "{Binding Shell.I18n[gameManagement]}",
+                button.Attributes().Single(attribute => attribute.Name.LocalName == "AutomationProperties.Name").Value);
+            Assert.NotNull(button.Attributes().SingleOrDefault(attribute => attribute.Name.LocalName == "ToolTip.Tip"));
+            Assert.Equal(
+                "{StaticResource Launcher.Icon.Lg}",
+                button.Descendants()
+                    .Single(element => element.Name.LocalName == "MaterialIcon" && element.Parent == button)
+                    .Attribute("Width")?.Value);
+            Assert.Equal(
+                "Menu",
+                button.Descendants()
+                    .Single(element => element.Name.LocalName == "MaterialIcon" && element.Parent == button)
+                    .Attribute("Kind")?.Value);
+
+            var flyout = button
+                .Elements()
+                .Single(element => element.Name.LocalName == "Button.Flyout")
+                .Elements()
+                .Single(element => element.Name.LocalName == "MenuFlyout");
+            Assert.Equal("Top", flyout.Attribute("Placement")?.Value);
+
+            var menuItems = flyout
+                .Elements()
+                .Where(element => element.Name.LocalName == "MenuItem")
+                .ToArray();
+            Assert.Equal(expectedMenuItems.Count, menuItems.Length);
+            foreach (var (command, header) in expectedMenuItems)
+            {
+                var menuItem = menuItems.Single(element => element.Attribute("Command")?.Value == command);
+                Assert.Equal(header, menuItem.Attribute("Header")?.Value);
+                Assert.Equal(
+                    header,
+                    menuItem.Attributes().Single(attribute => attribute.Name.LocalName == "AutomationProperties.Name").Value);
+                var icon = menuItem.Descendants().Single(element => element.Name.LocalName == "MaterialIcon");
+                Assert.Equal("{StaticResource Launcher.Icon.Md}", icon.Attribute("Width")?.Value);
+            }
+        }
     }
 
     [Fact]
@@ -3540,27 +3603,49 @@ public sealed partial class UiStyleContractTests
     {
         var document = XDocument.Load(ProjectFile("Views/MainWindow.axaml"));
         var actions = document.Descendants().Single(element =>
-            element.Name.LocalName == "ItemsControl" && HasClass(element, "social-actions"));
-        var actionButton = actions.Descendants().Single(element =>
+            element.Name.LocalName == "StackPanel" && HasClass(element, "social-actions"));
+        var officialSiteButton = actions.Elements().Single(element =>
+            element.Name.LocalName == "Button" && HasClass(element, "official-site"));
+        var items = actions.Elements().Single(element => element.Name.LocalName == "ItemsControl");
+        var actionButton = items.Descendants().Single(element =>
             element.Name.LocalName == "Button" && HasClass(element, "social-action"));
         var layoutPanel = document.Descendants().Single(element =>
             element.Name.LocalName == "Panel"
             && element.Elements().Any(child => child.Name.LocalName == "Border" && HasClass(child, "remote-surface"))
-            && element.Elements().Any(child => child.Name.LocalName == "ItemsControl" && HasClass(child, "social-actions")));
+            && element.Elements().Any(child => child.Name.LocalName == "StackPanel" && HasClass(child, "social-actions")));
 
         Assert.Contains(layoutPanel.Elements(), element =>
             element.Name.LocalName == "Border" && HasClass(element, "remote-surface"));
-        Assert.Equal("{Binding RemoteContent.HasRemoteContent}", actions.Attribute("IsVisible")?.Value);
-        Assert.Equal("{Binding RemoteContent.SocialMediaItems}", actions.Attribute("ItemsSource")?.Value);
-        Assert.Equal("Vertical", actions.Descendants().Single(element => element.Name.LocalName == "StackPanel").Attribute("Orientation")?.Value);
+        Assert.Equal("{Binding RemoteContent.HasRemoteContent}", items.Attribute("IsVisible")?.Value);
+        Assert.Equal("{Binding RemoteContent.SocialMediaItems}", items.Attribute("ItemsSource")?.Value);
+        Assert.Equal("Vertical", items.Descendants().Single(element => element.Name.LocalName == "StackPanel").Attribute("Orientation")?.Value);
         Assert.True(HasClass(actionButton, "social-chip"));
         Assert.Equal("{Binding Title}", actionButton.Attribute("ToolTip.Tip")?.Value);
         Assert.Equal("{Binding Title}", actionButton.Attribute("AutomationProperties.Name")?.Value);
         Assert.DoesNotContain(actionButton.Descendants(), element => element.Name.LocalName == "TextBlock");
 
+        Assert.True(HasClass(officialSiteButton, "social-chip"));
+        Assert.True(HasClass(officialSiteButton, "social-action"));
+        Assert.Equal(
+            "{Binding Shell.I18n[officialSite]}",
+            officialSiteButton.Attribute("ToolTip.Tip")?.Value);
+        Assert.Equal(
+            "{Binding Shell.I18n[officialSite]}",
+            officialSiteButton.Attribute("AutomationProperties.Name")?.Value);
+        Assert.Equal(
+            "{Binding WindowChrome.OpenOfficialSiteCommand}",
+            officialSiteButton.Attribute("Command")?.Value);
+        Assert.DoesNotContain(officialSiteButton.Descendants(), element => element.Name.LocalName == "TextBlock");
+        Assert.Equal("Web",
+            officialSiteButton.Descendants().Single(element => element.Name.LocalName == "MaterialIcon").Attribute("Kind")?.Value);
+        Assert.Equal(
+            "Button",
+            actions.Elements().First().Name.LocalName);
+        Assert.True(HasClass(actions.Elements().First(), "official-site"));
+
         var mainStyles = XDocument.Load(ProjectFile("Views/MainWindow.Styles.axaml"));
         var remoteStyles = XDocument.Load(ProjectFile("Views/Styles/RemoteContent.axaml"));
-        var actionsStyle = GetStyleSetters(mainStyles, "ItemsControl.social-actions");
+        var actionsStyle = GetStyleSetters(mainStyles, "StackPanel.social-actions");
         var actionButtonStyle = GetStyleSetters(remoteStyles, "Button.social-chip.social-action");
         Assert.Equal("Right", actionsStyle["HorizontalAlignment"]);
         Assert.Equal("Top", actionsStyle["VerticalAlignment"]);

@@ -210,6 +210,7 @@ public sealed class DebugViewModelTests : IDisposable
             backend,
             backend,
             backend,
+            new TestGameShortcutService(),
             localizer,
             toastService,
             diagnostics,

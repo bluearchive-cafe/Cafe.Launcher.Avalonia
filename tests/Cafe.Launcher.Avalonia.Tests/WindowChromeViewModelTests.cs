@@ -255,6 +255,7 @@ public sealed class WindowChromeViewModelTests : IDisposable
             backend,
             backend,
             backend,
+            new TestGameShortcutService(),
             provider.GetRequiredService<LocalizationService>(),
             provider.GetRequiredService<ToastService>(),
             provider.GetRequiredService<LocalDiagnostics>(),

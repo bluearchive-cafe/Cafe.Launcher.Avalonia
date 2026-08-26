@@ -11,6 +11,9 @@ internal interface IGameOperationJourneyHost
     /// <summary>Gets whether the host is currently presenting a busy operation.</summary>
     bool IsBusy { get; }
 
+    /// <summary>Gets the latest status snapshot applied to the host, if any.</summary>
+    LauncherStatusSnapshot? CurrentSnapshot { get; }
+
     /// <summary>Resets the host before an operation begins.</summary>
     void PrepareOperation();
     /// <summary>Applies a progress update to the presentation state.</summary>

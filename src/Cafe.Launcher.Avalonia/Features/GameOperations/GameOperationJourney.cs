@@ -36,6 +36,7 @@ internal sealed class GameOperationJourney : IGameOperationJourney
     private readonly IGameLaunchWorkflow launchWorkflow;
     private readonly IGameInstallationWorkflow installationWorkflow;
     private readonly IGameUninstallWorkflow uninstallWorkflow;
+    private readonly IGameShortcutService shortcutService;
     private readonly Func<TimeSpan, Task> delayAsync;
     private readonly LocalizationService localizer;
     private readonly ToastService toastService;
@@ -52,6 +53,7 @@ internal sealed class GameOperationJourney : IGameOperationJourney
         IGameLaunchWorkflow launchWorkflow,
         IGameInstallationWorkflow installationWorkflow,
         IGameUninstallWorkflow uninstallWorkflow,
+        IGameShortcutService shortcutService,
         LocalizationService localizer,
         ToastService toastService,
         LocalDiagnostics diagnostics,
@@ -64,6 +66,7 @@ internal sealed class GameOperationJourney : IGameOperationJourney
         this.launchWorkflow = launchWorkflow;
         this.installationWorkflow = installationWorkflow;
         this.uninstallWorkflow = uninstallWorkflow;
+        this.shortcutService = shortcutService;
         this.delayAsync = delayAsync;
         this.localizer = localizer;
         this.toastService = toastService;
@@ -115,6 +118,96 @@ internal sealed class GameOperationJourney : IGameOperationJourney
         finally
         {
             host.SetBusy(false);
+        }
+    }
+
+    /// <summary>Refreshes launcher state and reports whether a game update is available.</summary>
+    public async Task CheckForUpdateAsync(LauncherStatusSnapshot snapshot)
+    {
+        if (!PrepareShellOnly(snapshot))
+        {
+            return;
+        }
+
+        host.SetBusy(true);
+
+        try
+        {
+            await RequestRefresh(GameOperationsRefreshMode.SkipPersistedResume);
+            ReportUpdateCheck(host.CurrentSnapshot ?? snapshot);
+        }
+        catch (Exception exception)
+        {
+            await errorHandling.HandleErrorAsync("Game update check failed.", exception,
+                new ErrorHandlingOptions { ToastMessage = localizer.F("gameCheckUpdateFailed", exception.Message) });
+        }
+        finally
+        {
+            host.SetBusy(false);
+        }
+    }
+
+    /// <summary>Creates the desktop shortcut for the installed game and reports the outcome.</summary>
+    public async Task CreateDesktopShortcutAsync(LauncherStatusSnapshot snapshot)
+    {
+        if (!PrepareShellOnly(snapshot))
+        {
+            return;
+        }
+
+        host.SetBusy(true);
+
+        try
+        {
+            var result = await shortcutService.CreateDesktopShortcutAsync(snapshot);
+            switch (result.Status)
+            {
+                case GameShortcutStatus.Created:
+                    toastService.ShowSuccess(localizer.T("gameShortcutCreated"));
+                    break;
+                case GameShortcutStatus.UnsupportedPlatform:
+                    toastService.ShowWarning(localizer.T("gameShortcutUnsupported"));
+                    break;
+                case GameShortcutStatus.GameNotResolved:
+                    toastService.ShowWarning(localizer.T("gameShortcutTargetMissing"));
+                    break;
+                case GameShortcutStatus.Failed:
+                    toastService.ShowError(localizer.F("gameShortcutFailed", result.Detail));
+                    break;
+                default:
+                    throw new ArgumentOutOfRangeException(nameof(snapshot), result.Status, null);
+            }
+        }
+        catch (Exception exception)
+        {
+            await errorHandling.HandleErrorAsync("Desktop shortcut creation failed.", exception,
+                new ErrorHandlingOptions { ToastMessage = localizer.F("gameShortcutFailed", exception.Message) });
+        }
+        finally
+        {
+            host.SetBusy(false);
+        }
+    }
+
+    /// <summary>Opens the installed game folder in the platform file manager.</summary>
+    public void OpenGameFolder(LauncherStatusSnapshot snapshot)
+    {
+        if (!PrepareShellOnly(snapshot))
+        {
+            return;
+        }
+
+        try
+        {
+            if (!shortcutService.TryOpenGameFolder(snapshot))
+            {
+                toastService.ShowWarning(localizer.T("gameFolderMissing"));
+            }
+        }
+        catch (Exception exception)
+        {
+            _ = errorHandling.HandleErrorAsync("Opening the game folder failed.", exception,
+                new ErrorHandlingOptions { ToastMessage = localizer.F("unexpectedError", exception.Message) });
         }
     }
 
@@ -436,6 +529,37 @@ internal sealed class GameOperationJourney : IGameOperationJourney
         else
         {
             toastService.ShowError(result.Message);
+        }
+    }
+
+    private void ReportUpdateCheck(LauncherStatusSnapshot snapshot)
+    {
+        var latestVersion = snapshot.Remote.GameConfig?.GameLatestVersion ?? localizer.T("unknown");
+        switch (snapshot.RuntimeState)
+        {
+            case LauncherRuntimeState.UpdateAvailable:
+                toastService.Show(localizer.F("gameCheckUpdateAvailable", latestVersion));
+                break;
+            case LauncherRuntimeState.Ready:
+                toastService.ShowSuccess(localizer.F("gameCheckUpdateUpToDate", latestVersion));
+                break;
+            case LauncherRuntimeState.RemoteUnavailable:
+                toastService.ShowWarning(localizer.T("gameRemoteStateUnavailable"));
+                break;
+            case LauncherRuntimeState.NotInstalled:
+                toastService.Show(localizer.T("gameNotInstalled"));
+                break;
+            case LauncherRuntimeState.BelowLowestVersion:
+                toastService.ShowWarning(localizer.T("gameBelowLowestVersion"));
+                break;
+            case LauncherRuntimeState.Corrupted:
+                toastService.ShowWarning(localizer.T("gameCorruptedInstallationState"));
+                break;
+            case LauncherRuntimeState.IoFailure:
+                toastService.ShowWarning(localizer.T("gameInstallationStateReadFailed"));
+                break;
+            default:
+                throw new ArgumentOutOfRangeException(nameof(snapshot), snapshot.RuntimeState, null);
         }
     }
 
