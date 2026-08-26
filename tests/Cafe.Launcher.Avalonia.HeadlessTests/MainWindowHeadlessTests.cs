@@ -377,8 +377,8 @@ public sealed class MainWindowHeadlessTests
             .ToArray();
         var closeButton = context.Window.GetVisualDescendants().OfType<Button>()
             .Single(control => control.Classes.Contains("toast-close"));
-        var autoDismissProgress = context.Window.GetVisualDescendants().OfType<ProgressBar>()
-            .Single(control => control.Classes.Contains("toast-progress") && !control.IsIndeterminate);
+        var actionProgress = context.Window.GetVisualDescendants().OfType<ProgressBar>()
+            .Single(control => control.Classes.Contains("toast-progress"));
 
         Assert.Equal("Install failed", title.Text);
         Assert.Equal(2, actionButtons.Length);
@@ -386,7 +386,8 @@ public sealed class MainWindowHeadlessTests
         Assert.Contains("toast-secondary-action", actionButtons[1].Classes);
         Assert.Equal("Retry", AutomationProperties.GetName(actionButtons[0]));
         Assert.Equal("View log", AutomationProperties.GetName(actionButtons[1]));
-        Assert.False(autoDismissProgress.IsVisible);
+        Assert.True(actionProgress.IsIndeterminate);
+        Assert.False(actionProgress.IsVisible);
 
         var executeTask = context.ViewModel.Toasts.ExecutePrimaryToastActionCommand.ExecuteAsync(
             context.ViewModel.Toasts.ActiveToasts.Single().Id);
@@ -394,6 +395,7 @@ public sealed class MainWindowHeadlessTests
 
         Assert.All(actionButtons, button => Assert.False(button.IsEffectivelyEnabled));
         Assert.True(closeButton.IsEffectivelyEnabled);
+        Assert.True(actionProgress.IsEffectivelyVisible);
 
         release.SetResult(ToastActionResult.Failure("Still offline", "Retry failed"));
         await executeTask;
@@ -401,7 +403,7 @@ public sealed class MainWindowHeadlessTests
     }
 
     [AvaloniaFact]
-    public void Toast_WithoutActions_RendersAutoDismissProgress()
+    public void Toast_WithoutActions_ShowsNoProgressBar()
     {
         using var context = CreateContext();
         var toastService = context.Provider.GetRequiredService<ToastService>();
@@ -414,12 +416,11 @@ public sealed class MainWindowHeadlessTests
         });
         Dispatcher.UIThread.RunJobs();
 
-        var progress = context.Window.GetVisualDescendants().OfType<ProgressBar>()
-            .Where(control => control.IsVisible)
-            .Single(control => control.Classes.Contains("toast-progress"));
+        var visibleProgress = context.Window.GetVisualDescendants().OfType<ProgressBar>()
+            .Where(control => control.Classes.Contains("toast-progress") && control.IsVisible)
+            .ToArray();
 
-        Assert.True(progress.IsVisible);
-        Assert.InRange(progress.Value, 99d, 100d);
+        Assert.Empty(visibleProgress);
     }
 
     [AvaloniaFact]

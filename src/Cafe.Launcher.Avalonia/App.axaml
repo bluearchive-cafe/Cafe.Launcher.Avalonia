@@ -28,6 +28,7 @@
             <Thickness x:Key="Launcher.Component.Toast.Action.RowMargin">0,8,0,0</Thickness>
             <Thickness x:Key="Launcher.Component.Toast.Action.Primary.Margin">0,0,8,0</Thickness>
             <Thickness x:Key="Launcher.Component.Toast.Action.Progress.Margin">8,0,0,0</Thickness>
+            <Thickness x:Key="Launcher.Component.Dialog.Alert.BorderThickness">3,0,0,0</Thickness>
             <Thickness x:Key="Launcher.Component.Tabs.Header.Margin">0,0,0,4</Thickness>
             <Thickness x:Key="Launcher.Component.Tabs.Indicator.Margin">0,4,0,2</Thickness>
             <Thickness x:Key="Launcher.Component.Toast.Content.Padding">12</Thickness>
@@ -74,7 +75,7 @@
             <x:Double x:Key="Launcher.Component.Settings.Row.Action.MaxWidth">440</x:Double>
             <x:Double x:Key="Launcher.Component.Loading.Bar.Width">120</x:Double>
             <x:Double x:Key="Launcher.Component.Loading.Bar.Height">4</x:Double>
-            <x:Double x:Key="Launcher.Component.Toast.AutoDismiss.Progress.Height">3</x:Double>
+            <x:Double x:Key="Launcher.Component.Toast.Action.Progress.Height">3</x:Double>
             <x:Double x:Key="Launcher.Component.Toast.Width">340</x:Double>
             <x:TimeSpan x:Key="Launcher.Motion.Duration.Faster">0:0:0.050</x:TimeSpan>
             <x:TimeSpan x:Key="Launcher.Motion.Duration.Fast">0:0:0.167</x:TimeSpan>

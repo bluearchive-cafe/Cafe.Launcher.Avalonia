@@ -73,13 +73,7 @@
                                     </Button>
                                 </Grid>
                             </Border>
-                            <ProgressBar Grid.Row="1"
-                                         Classes="toast-progress"
-                                         Minimum="0"
-                                         Maximum="100"
-                                         Value="{Binding AutoDismissProgress}"
-                                         IsVisible="{Binding HasAutoDismissProgress}"
-                                         Foreground="{Binding Severity, Converter={x:Static converters:ToastSeverityToBrushConverter.Instance}}"/>
+                            <!-- M3 toast: auto-dismiss is time-managed; only action progress is shown. -->
                             <ProgressBar Grid.Row="1"
                                          Classes="toast-progress"
                                          IsVisible="{Binding IsActionExecuting}"

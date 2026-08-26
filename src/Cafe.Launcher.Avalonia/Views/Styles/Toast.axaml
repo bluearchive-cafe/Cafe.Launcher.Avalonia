@@ -67,8 +67,8 @@
         <Setter Property="Background" Value="{DynamicResource Launcher.Color.Transparent}"/>
         <Setter Property="BorderThickness" Value="0"/>
         <Setter Property="Foreground" Value="{DynamicResource Launcher.Text.Secondary}"/>
-        <Setter Property="Width" Value="32"/>
-        <Setter Property="Height" Value="32"/>
+        <Setter Property="Width" Value="{StaticResource Launcher.Control.Height.Setting}"/>
+        <Setter Property="Height" Value="{StaticResource Launcher.Control.Height.Setting}"/>
         <Setter Property="Padding" Value="0"/>
         <Setter Property="CornerRadius" Value="{StaticResource Launcher.Radius.Sm}"/>
         <Setter Property="HorizontalContentAlignment" Value="Center"/>
@@ -152,13 +152,8 @@
         <Setter Property="BorderBrush" Value="{DynamicResource Launcher.Color.Card.Border}"/>
     </Style>
     <Style Selector="ProgressBar.toast-progress">
-        <Setter Property="Transitions">
-            <Transitions>
-                <DoubleTransition Property="Value" Duration="{StaticResource Launcher.Motion.Duration.Faster}" Easing="{StaticResource Launcher.Motion.Easing.Linear}"/>
-            </Transitions>
-        </Setter>
-        <Setter Property="Height" Value="{StaticResource Launcher.Component.Toast.AutoDismiss.Progress.Height}"/>
-        <Setter Property="MinHeight" Value="{StaticResource Launcher.Component.Toast.AutoDismiss.Progress.Height}"/>
+        <Setter Property="Height" Value="{StaticResource Launcher.Component.Toast.Action.Progress.Height}"/>
+        <Setter Property="MinHeight" Value="{StaticResource Launcher.Component.Toast.Action.Progress.Height}"/>
         <Setter Property="Background" Value="{DynamicResource Launcher.Color.Card.Border}"/>
         <Setter Property="HorizontalAlignment" Value="Stretch"/>
         <Setter Property="VerticalAlignment" Value="Bottom"/>

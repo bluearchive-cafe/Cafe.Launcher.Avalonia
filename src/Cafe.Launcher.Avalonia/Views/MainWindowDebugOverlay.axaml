@@ -191,7 +191,7 @@
                         <Border Classes="dialog-card">
                             <StackPanel Spacing="{StaticResource Launcher.Spacing.Sm}">
                                 <TextBlock Text="{Binding Shell.I18n[settings]}" Classes="section-title"/>
-                                <Border Classes="confirm-message" MaxHeight="{StaticResource Launcher.Layout.Debug.SettingsPreview.MaxHeight}" Background="{DynamicResource Launcher.Color.Info.Background}">
+                                <Border Classes="dialog-alert" MaxHeight="{StaticResource Launcher.Layout.Debug.SettingsPreview.MaxHeight}">
                                     <ScrollViewer>
                                         <TextBlock Text="{Binding Debug.SettingsJsonDisplay}" Classes="caption"
                                                    FontFamily="{StaticResource Launcher.Typography.FontFamily.Monospace}"

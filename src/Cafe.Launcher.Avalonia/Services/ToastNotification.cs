@@ -67,9 +67,6 @@ public sealed partial class ToastNotification : ObservableObject
     private bool isActionExecuting;
 
     [ObservableProperty]
-    private double autoDismissProgress = 100d;
-
-    [ObservableProperty]
     private string? title;
 
     [ObservableProperty]
@@ -90,7 +87,6 @@ public sealed partial class ToastNotification : ObservableObject
     public bool HasPrimaryAction => PrimaryAction is not null;
     public bool HasSecondaryAction => SecondaryAction is not null;
     public bool HasActions => HasPrimaryAction || HasSecondaryAction;
-    public bool HasAutoDismissProgress => !HasActions && DurationMs > 0;
     public string PrimaryActionLabel => PrimaryAction?.Label ?? "";
     public string SecondaryActionLabel => SecondaryAction?.Label ?? "";
 

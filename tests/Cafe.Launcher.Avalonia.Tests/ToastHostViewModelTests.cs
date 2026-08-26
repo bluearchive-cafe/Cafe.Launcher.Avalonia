@@ -44,7 +44,7 @@ public sealed class ToastHostViewModelTests : IDisposable
     }
 
     [Fact]
-    public async Task ToastRaised_WithFiniteDuration_UpdatesProgressThenExpires()
+    public async Task ToastRaised_WithFiniteDuration_ExpiresAfterDuration()
     {
         await using var provider = CreateProvider();
         var toastService = provider.GetRequiredService<ToastService>();
@@ -62,40 +62,38 @@ public sealed class ToastHostViewModelTests : IDisposable
             DurationMs = 100
         });
         await WaitUntilAsync(() => viewModel.ActiveToasts.Count == 1);
-        var toast = viewModel.ActiveToasts.Single();
-
-        Assert.True(toast.HasAutoDismissProgress);
-        Assert.Equal(100d, toast.AutoDismissProgress);
-
-        await delays.ReleaseNextAsync();
-        await WaitUntilAsync(() => toast.AutoDismissProgress == 50d);
         await delays.ReleaseNextAsync();
         await WaitUntilAsync(() => viewModel.ActiveToasts.Count == 0);
     }
 
     [Fact]
-    public async Task ToastRaised_WithAction_DoesNotExposeAutoDismissProgress()
+    public async Task ToastRaised_WithAction_DoesNotStartCountdown()
     {
         await using var provider = CreateProvider();
         var toastService = provider.GetRequiredService<ToastService>();
+        var delayCalls = 0;
 
         using var viewModel = new ToastHostViewModel(
             toastService,
             provider.GetRequiredService<LocalizationService>(),
             new LocalDiagnostics(),
             InvokeSerially,
-            static (_, _) => Task.CompletedTask);
+            (_, _) =>
+            {
+                delayCalls++;
+                return Task.CompletedTask;
+            });
 
         toastService.Show(CreateActionOptions());
         await WaitUntilAsync(() => viewModel.ActiveToasts.Count == 1);
         var toast = viewModel.ActiveToasts.Single();
 
-        Assert.False(toast.HasAutoDismissProgress);
-        Assert.Equal(100d, toast.AutoDismissProgress);
+        Assert.True(toast.HasActions);
+        Assert.Equal(0, delayCalls);
     }
 
     [Fact]
-    public async Task DismissToast_WhileCountdownIsWaiting_DoesNotScheduleAnotherProgressUpdate()
+    public async Task DismissToast_WhileDurationIsPending_CancelsPendingDelay()
     {
         await using var provider = CreateProvider();
         var toastService = provider.GetRequiredService<ToastService>();
@@ -116,7 +114,6 @@ public sealed class ToastHostViewModelTests : IDisposable
         await Task.Delay(20);
 
         Assert.Empty(viewModel.ActiveToasts);
-        Assert.Equal(100d, toast.AutoDismissProgress);
         Assert.Equal(1, delays.RequestCount);
     }
 

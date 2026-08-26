@@ -1367,6 +1367,7 @@ public sealed partial class UiStyleContractTests
         {
             "TextBlock.heading",
             "TextBlock.dialog-title",
+            "TextBlock.dialog-alert-title",
             "TextBlock.titlebar-brand",
             "TextBlock.progress-title",
             "TextBlock.panel-title",
@@ -1858,6 +1859,38 @@ public sealed partial class UiStyleContractTests
     }
 
     [Fact]
+    public void SetupWizardOverlay_ReusesSettingsNavigationHeaderAndM3Footer()
+    {
+        var document = XDocument.Load(ProjectFile("Views/SetupWizardOverlay.axaml"));
+        var pane = document
+            .Descendants()
+            .Single(element => HasClass(element, "settings-navigation-pane"));
+        Assert.Equal("Auto,*", pane.Attribute("RowDefinitions")?.Value);
+
+        var header = pane
+            .Descendants()
+            .Single(element => element.Name.LocalName == "Border" && HasClass(element, "settings-navigation-header"));
+        Assert.Contains(
+            header.Descendants(),
+            element => element.Name.LocalName == "TextBlock"
+                && element.Attribute("Text")?.Value == "{Binding Shell.I18n[setupWizardStepTitle]}");
+
+        var navigation = pane
+            .Descendants()
+            .Single(element => HasClass(element, "wizard-navigation"));
+        Assert.Equal("1", navigation.Attribute("Grid.Row")?.Value);
+
+        var footer = document
+            .Descendants()
+            .Single(element => element.Name.LocalName == "Border" && HasClass(element, "dialog-footer"));
+        Assert.Equal("2", footer.Attribute("Grid.Row")?.Value);
+        var actions = footer
+            .Elements()
+            .Single(element => element.Name.LocalName == "StackPanel" && HasClass(element, "confirm-actions"));
+        Assert.Null(actions.Attribute("Grid.Row"));
+    }
+
+    [Fact]
     public void SetupWizardOverlay_UsesSetupWizardLayerBetweenDialogsAndToast()
     {
         var overlay = XDocument.Load(ProjectFile("Views/SetupWizardOverlay.axaml"));
@@ -2046,7 +2079,10 @@ public sealed partial class UiStyleContractTests
         var messageScroller = layout
             .Elements()
             .Single(element => element.Name.LocalName == "ScrollViewer");
-        var actions = layout
+        var footer = layout
+            .Elements()
+            .Single(element => element.Name.LocalName == "Border" && HasClass(element, "dialog-footer"));
+        var actions = footer
             .Elements()
             .Single(element => element.Name.LocalName == "StackPanel" && HasClass(element, "confirm-actions"));
 
@@ -2062,7 +2098,31 @@ public sealed partial class UiStyleContractTests
         Assert.Equal("480", maxHeightToken.Value);
         Assert.Equal("Auto,*,Auto", layout.Attribute("RowDefinitions")?.Value);
         Assert.Equal("1", messageScroller.Attribute("Grid.Row")?.Value);
-        Assert.Equal("2", actions.Attribute("Grid.Row")?.Value);
+        Assert.Equal("2", footer.Attribute("Grid.Row")?.Value);
+        Assert.Null(actions.Attribute("Grid.Row"));
+    }
+
+    [Fact]
+    public void DialogsOverlay_NonResourceDialogsUseHairlineFooterForActions()
+    {
+        var document = XDocument.Load(ProjectFile("Views/MainWindowDialogsOverlay.axaml"));
+        var footers = document
+            .Descendants()
+            .Where(element => element.Name.LocalName == "Border" && HasClass(element, "dialog-footer"))
+            .ToArray();
+
+        Assert.Equal(3, footers.Length);
+        Assert.All(
+            footers,
+            footer =>
+            {
+                Assert.Equal("2", footer.Attribute("Grid.Row")?.Value);
+                var actions = footer
+                    .Elements()
+                    .Single(element =>
+                        element.Name.LocalName == "StackPanel" && HasClass(element, "confirm-actions"));
+                Assert.Null(actions.Attribute("Grid.Row"));
+            });
     }
 
     [Fact]
@@ -2850,36 +2910,50 @@ public sealed partial class UiStyleContractTests
     }
 
     [Fact]
-    public void ConfirmDialogs_DangerousActionsUseDangerHeadingIcons()
+    public void ConfirmDialogs_UseSemanticAlertCalloutsWithCustomTitles()
     {
         var control = XDocument.Load(ProjectFile("Controls/ConfirmDialog.axaml"));
         var icon = control
             .Descendants()
             .Single(element =>
                 element.Name.LocalName == "MaterialIcon"
-                && HasClass(element, "confirm-heading-icon"));
+                && HasClass(element, "dialog-alert-icon"));
         Assert.Equal(
-            "{Binding IsDangerIcon, ElementName=Root}",
+            "{Binding IsDangerAlert, ElementName=Root}",
             icon.Attribute("Classes.danger")?.Value);
+
+        var title = control
+            .Descendants()
+            .Single(element =>
+                element.Name.LocalName == "TextBlock"
+                && HasClass(element, "dialog-alert-title"));
+        Assert.Equal("{Binding AlertTitle, ElementName=Root}", title.Attribute("Text")?.Value);
+
+        Assert.DoesNotContain(
+            control.Descendants(),
+            element => HasClass(element, "confirm-heading-icon"));
 
         var styles = XDocument.Load(ProjectFile("Views/MainWindow.Styles.axaml"));
         Assert.Equal(
             "{DynamicResource Launcher.Color.Danger}",
             GetStyleSetters(
                 styles,
-                "materialIcons|MaterialIcon.confirm-heading-icon.danger")["Foreground"]);
+                "materialIcons|MaterialIcon.dialog-alert-icon.danger")["Foreground"]);
 
         var dialogs = XDocument.Load(ProjectFile("Views/MainWindowDialogsOverlay.axaml"));
-        var dangerousConfirmDialogs = dialogs
+        var warningAlertDialogs = dialogs
             .Descendants()
             .Where(element =>
                 element.Name.LocalName == "ConfirmDialog"
-                && element.Attribute("IsDangerConfirm")?.Value == "True")
+                && element.Attribute("IsWarningAlert")?.Value == "True")
             .ToList();
-        Assert.NotEmpty(dangerousConfirmDialogs);
-        Assert.All(
-            dangerousConfirmDialogs,
-            dialog => Assert.Equal("True", dialog.Attribute("IsDangerIcon")?.Value));
+        Assert.NotEmpty(warningAlertDialogs);
+        Assert.All(warningAlertDialogs, dialog => Assert.NotNull(dialog.Attribute("AlertTitle")));
+        Assert.Contains(
+            dialogs.Descendants(),
+            element => element.Name.LocalName == "ConfirmDialog"
+                && element.Attribute("IsDangerAlert")?.Value == "True"
+                && element.Attribute("AlertTitle") is not null);
     }
 
     [Fact]
@@ -3233,6 +3307,7 @@ public sealed partial class UiStyleContractTests
         Assert.Equal("0", icon.Attribute("Grid.Column")?.Value);
         Assert.Equal("Center", icon.Attribute("VerticalAlignment")?.Value);
         Assert.Null(icon.Attribute("Margin"));
+        Assert.DoesNotContain(document.Descendants(), element => HasClass(element, "toast-rail"));
 
         var actions = document.Descendants().Single(element => HasClass(element, "toast-actions"));
         Assert.Equal("2", actions.Attribute("Grid.Row")?.Value);
@@ -3266,24 +3341,17 @@ public sealed partial class UiStyleContractTests
     }
 
     [Fact]
-    public void ToastAutoDismissProgress_UsesSelectedBottomEdgeLayoutAndTokens()
+    public void ToastProgress_ShowsOnlyActionExecutingIndeterminateBar()
     {
         var document = XDocument.Load(ProjectFile("Views/MainWindowToastOverlay.axaml"));
         var progressElements = document.Descendants()
             .Where(element => HasClass(element, "toast-progress")).ToArray();
-        Assert.Equal(2, progressElements.Length);
+        Assert.Single(progressElements);
 
-        var autoDismiss = progressElements[0];
-        Assert.Equal("1", autoDismiss.Attribute("Grid.Row")?.Value);
-        Assert.Equal("{Binding AutoDismissProgress}", autoDismiss.Attribute("Value")?.Value);
-        Assert.Equal("{Binding HasAutoDismissProgress}", autoDismiss.Attribute("IsVisible")?.Value);
-        Assert.Equal(
-            "{Binding Severity, Converter={x:Static converters:ToastSeverityToBrushConverter.Instance}}",
-            autoDismiss.Attribute("Foreground")?.Value);
-
-        var actionExecuting = progressElements[1];
+        var actionExecuting = progressElements[0];
         Assert.Equal("1", actionExecuting.Attribute("Grid.Row")?.Value);
         Assert.Equal("{Binding IsActionExecuting}", actionExecuting.Attribute("IsVisible")?.Value);
+        Assert.Equal("True", actionExecuting.Attribute("IsIndeterminate")?.Value);
 
         var styles = XDocument.Load(ProjectFile("Views/Styles/Toast.axaml"));
         var progressStyle = styles.Descendants().Single(element =>
@@ -3293,16 +3361,10 @@ public sealed partial class UiStyleContractTests
             element.Name.LocalName == "Setter"
             && element.Attribute("Property")?.Value == "Height"
             && element.Attribute("Value")?.Value
-                == "{StaticResource Launcher.Component.Toast.AutoDismiss.Progress.Height}");
-        var progressTransition = progressStyle.Descendants().Single(element =>
+                == "{StaticResource Launcher.Component.Toast.Action.Progress.Height}");
+        Assert.DoesNotContain(progressStyle.Descendants(), element =>
             element.Name.LocalName == "DoubleTransition"
             && element.Attribute("Property")?.Value == "Value");
-        Assert.Equal(
-            "{StaticResource Launcher.Motion.Duration.Faster}",
-            progressTransition.Attribute("Duration")?.Value);
-        Assert.Equal(
-            "{StaticResource Launcher.Motion.Easing.Linear}",
-            progressTransition.Attribute("Easing")?.Value);
 
         var toastCardStyle = styles.Descendants().Single(element =>
             element.Name.LocalName == "Style"

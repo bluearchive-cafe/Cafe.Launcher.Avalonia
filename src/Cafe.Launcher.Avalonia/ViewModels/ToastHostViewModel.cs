@@ -14,7 +14,6 @@ namespace Cafe.Launcher.Avalonia.ViewModels;
 
 public partial class ToastHostViewModel : ViewModelBase, IDisposable
 {
-    private const int AutoDismissProgressIntervalMs = 50;
     private readonly ToastService toastService;
     private readonly LocalizationService localizer;
     private readonly LocalDiagnostics diagnostics;
@@ -125,12 +124,6 @@ public partial class ToastHostViewModel : ViewModelBase, IDisposable
                 return;
             }
 
-            if (notification.HasAutoDismissProgress)
-            {
-                await RunAutoDismissCountdownAsync(notification, cancellationToken);
-                return;
-            }
-
             await delayAsync(TimeSpan.FromMilliseconds(notification.DurationMs), cancellationToken);
             await ExitToastAsync(notification.Id, cancellationToken);
         }
@@ -151,44 +144,6 @@ public partial class ToastHostViewModel : ViewModelBase, IDisposable
                 "ToastLifecycleFailed",
                 $"ToastHost: toast notification lifecycle failed: {ex.Message}");
         }
-    }
-
-    private async Task RunAutoDismissCountdownAsync(
-        ToastNotification notification,
-        CancellationToken cancellationToken)
-    {
-        var totalMilliseconds = notification.DurationMs;
-        var remainingMilliseconds = totalMilliseconds;
-
-        while (remainingMilliseconds > 0)
-        {
-            var stepMilliseconds = Math.Min(
-                AutoDismissProgressIntervalMs,
-                remainingMilliseconds);
-            await delayAsync(
-                TimeSpan.FromMilliseconds(stepMilliseconds),
-                cancellationToken);
-            remainingMilliseconds -= stepMilliseconds;
-
-            var progress = remainingMilliseconds * 100d / totalMilliseconds;
-            var isStillActive = false;
-            await invokeOnUiAsync(() =>
-            {
-                isStillActive = ActiveToasts.Contains(notification)
-                    && !notification.IsExiting;
-                if (isStillActive)
-                {
-                    notification.AutoDismissProgress = progress;
-                }
-            });
-
-            if (!isStillActive)
-            {
-                return;
-            }
-        }
-
-        await ExitToastAsync(notification.Id, cancellationToken);
     }
 
     private async Task ExecuteToastActionAsync(

@@ -212,23 +212,37 @@
                     <TranslateTransform/>
                 </Border.RenderTransform>
                 <Grid RowDefinitions="Auto,*,Auto" Classes="confirm-layout motion-surface-content">
-                    <StackPanel Orientation="Horizontal" Spacing="{StaticResource Launcher.Spacing.Md}">
-                        <Border Classes="dialog-icon">
-                            <materialIcons:MaterialIcon Kind="InformationOutline" Width="{StaticResource Launcher.Icon.Xl}" Height="{StaticResource Launcher.Icon.Xl}" Foreground="{DynamicResource Launcher.Color.Primary}" HorizontalAlignment="Center" VerticalAlignment="Center"/>
-                        </Border>
-                        <TextBlock Text="{Binding Shell.I18n[notice]}" Classes="dialog-title" VerticalAlignment="Center"/>
-                    </StackPanel>
+                    <Grid Classes="dialog-heading" ColumnDefinitions="*,Auto">
+                        <StackPanel Classes="dialog-heading-copy">
+                            <TextBlock Text="{Binding Shell.I18n[notice]}" Classes="dialog-title"/>
+                        </StackPanel>
+                        <Button Grid.Column="1" Classes="dialog-close" Command="{Binding Dialogs.DismissNoticeCommand}"
+                                ToolTip.Tip="{Binding Shell.I18n[close]}"
+                                AutomationProperties.Name="{Binding Shell.I18n[close]}">
+                            <materialIcons:MaterialIcon Kind="Close" Width="{StaticResource Launcher.Icon.Md}" Height="{StaticResource Launcher.Icon.Md}"/>
+                        </Button>
+                    </Grid>
                     <ScrollViewer Grid.Row="1" MaxHeight="300" Classes="scroll-pad">
-                        <Border Classes="info-strip">
-                            <TextBlock Text="{Binding Dialogs.NoticeDialogContent}" TextWrapping="Wrap" Foreground="{DynamicResource Launcher.Text.Info}" Classes="caption"/>
+                        <Border Classes="dialog-alert">
+                            <StackPanel Spacing="{StaticResource Launcher.Spacing.Xs}">
+                                <StackPanel Classes="dialog-alert-heading">
+                                    <materialIcons:MaterialIcon Kind="InformationOutline" Classes="dialog-alert-icon"
+                                                                Width="{StaticResource Launcher.Icon.Sm}" Height="{StaticResource Launcher.Icon.Sm}"/>
+                                    <TextBlock Text="{Binding Shell.I18n[notice]}" Classes="dialog-alert-title"/>
+                                </StackPanel>
+                                <TextBlock Text="{Binding Dialogs.NoticeDialogContent}" Classes="dialog-alert-content"/>
+                            </StackPanel>
                         </Border>
                     </ScrollViewer>
-                    <Button Grid.Row="2" Classes="primary-action dialog-action" Command="{Binding Dialogs.DismissNoticeCommand}"
-                            HorizontalAlignment="Center">
-                        <StackPanel Classes="button-content" HorizontalAlignment="Center">
-                            <TextBlock Text="{Binding Dialogs.NoticeDialogConfirmText}"/>
+                    <Border Grid.Row="2" Classes="dialog-footer">
+                        <StackPanel Classes="confirm-actions">
+                            <Button Classes="primary-action dialog-action" Command="{Binding Dialogs.DismissNoticeCommand}">
+                                <StackPanel Classes="button-content" HorizontalAlignment="Center">
+                                    <TextBlock Text="{Binding Dialogs.NoticeDialogConfirmText}"/>
+                                </StackPanel>
+                            </Button>
                         </StackPanel>
-                    </Button>
+                    </Border>
                 </Grid>
             </Border>
         </Grid>
@@ -239,7 +253,8 @@
                                 Description="{Binding Shell.I18n[repairConfirmDescription]}"
                                 IconKind="Tools"
                                 Message="{Binding Dialogs.RepairConfirmText}"
-                                MessageBackground="{DynamicResource Launcher.Color.Warning.Background}"
+                                AlertTitle="{Binding Shell.I18n[repairConfirm]}"
+                                IsWarningAlert="True"
                                 CancelText="{Binding Shell.I18n[cancel]}"
                                 CancelCommand="{Binding Dialogs.CancelRepairCommand}"
                                 ConfirmText="{Binding Shell.I18n[repair]}"
@@ -253,7 +268,8 @@
                                 Description="{Binding Shell.I18n[resourcePanelCafeOnlyDescription]}"
                                 IconKind="Web"
                                 Message="{Binding Dialogs.ResourcePanelSourceConfirmText}"
-                                MessageBackground="{DynamicResource Launcher.Color.Warning.Background}"
+                                AlertTitle="{Binding Shell.I18n[resourcePanelCafeOnlyTitle]}"
+                                IsWarningAlert="True"
                                 CancelText="{Binding Shell.I18n[cancel]}"
                                 CancelCommand="{Binding Dialogs.CancelResourcePanelSourceSwitchCommand}"
                                 ConfirmText="{Binding Shell.I18n[resourcePanelCafeOnlySwitch]}"
@@ -271,15 +287,12 @@
                     <TranslateTransform/>
                 </Border.RenderTransform>
                 <Grid RowDefinitions="Auto,*,Auto" Classes="confirm-layout motion-surface-content">
-                    <Grid Classes="dialog-heading" ColumnDefinitions="Auto,*,Auto">
-                        <Border Classes="dialog-icon" VerticalAlignment="Center">
-                            <materialIcons:MaterialIcon Kind="Update" Width="{StaticResource Launcher.Icon.Xl}" Height="{StaticResource Launcher.Icon.Xl}" Foreground="{DynamicResource Launcher.Color.Primary}" HorizontalAlignment="Center" VerticalAlignment="Center"/>
-                        </Border>
-                        <StackPanel Grid.Column="1" Classes="dialog-heading-copy">
+                    <Grid Classes="dialog-heading" ColumnDefinitions="*,Auto">
+                        <StackPanel Classes="dialog-heading-copy">
                             <TextBlock Text="{Binding Shell.I18n[launcherUpdateAvailableTitle]}" Classes="dialog-title"/>
                             <TextBlock Text="{Binding Dialogs.UpdateAvailableText}" Classes="caption"/>
                         </StackPanel>
-                        <Button Grid.Column="2" Classes="dialog-close" Command="{Binding Dialogs.CancelUpdateAvailableCommand}" ToolTip.Tip="{Binding Shell.I18n[close]}"
+                        <Button Grid.Column="1" Classes="dialog-close" Command="{Binding Dialogs.CancelUpdateAvailableCommand}" ToolTip.Tip="{Binding Shell.I18n[close]}"
                                 AutomationProperties.Name="{Binding Shell.I18n[close]}">
                             <materialIcons:MaterialIcon Kind="Close" Width="{StaticResource Launcher.Icon.Md}" Height="{StaticResource Launcher.Icon.Md}"/>
                         </Button>
@@ -292,7 +305,7 @@
                                                        Foreground="{DynamicResource Launcher.Color.Primary}"
                                                        VerticalAlignment="Center"/>
                             <TextBlock Text="{Binding Shell.I18n[launcherUpdateSelectFile]}"
-                                       Classes="confirm-message-text"
+                                       Classes="dialog-alert-content"
                                        VerticalAlignment="Center"/>
                         </StackPanel>
                         <ListBox ItemsSource="{Binding Dialogs.UpdateAvailableFiles}"
@@ -338,22 +351,24 @@
                             </ListBox.ItemTemplate>
                         </ListBox>
                     </StackPanel>
-                    <StackPanel Grid.Row="2" Classes="confirm-actions">
-                        <Button Classes="flat-action dialog-action" Command="{Binding Dialogs.CancelUpdateAvailableCommand}">
-                            <StackPanel Classes="button-content">
-                                <materialIcons:MaterialIcon Kind="ClockOutline" Width="{StaticResource Launcher.Icon.Sm}" Height="{StaticResource Launcher.Icon.Sm}"/>
-                                <TextBlock Text="{Binding Shell.I18n[launcherUpdateLater]}"/>
-                            </StackPanel>
-                        </Button>
-                        <Button Classes="primary-action dialog-action"
-                                Command="{Binding Dialogs.ConfirmUpdateAvailableCommand}"
-                                IsEnabled="{Binding Dialogs.HasSelectedUpdateFile}">
-                            <StackPanel Classes="button-content">
-                                <materialIcons:MaterialIcon Kind="Download" Width="{StaticResource Launcher.Icon.Sm}" Height="{StaticResource Launcher.Icon.Sm}"/>
-                                <TextBlock Text="{Binding Shell.I18n[launcherUpdateDownload]}"/>
-                            </StackPanel>
-                        </Button>
-                    </StackPanel>
+                    <Border Grid.Row="2" Classes="dialog-footer">
+                        <StackPanel Classes="confirm-actions">
+                            <Button Classes="flat-action dialog-action" Command="{Binding Dialogs.CancelUpdateAvailableCommand}">
+                                <StackPanel Classes="button-content">
+                                    <materialIcons:MaterialIcon Kind="ClockOutline" Width="{StaticResource Launcher.Icon.Sm}" Height="{StaticResource Launcher.Icon.Sm}"/>
+                                    <TextBlock Text="{Binding Shell.I18n[launcherUpdateLater]}"/>
+                                </StackPanel>
+                            </Button>
+                            <Button Classes="primary-action dialog-action"
+                                    Command="{Binding Dialogs.ConfirmUpdateAvailableCommand}"
+                                    IsEnabled="{Binding Dialogs.HasSelectedUpdateFile}">
+                                <StackPanel Classes="button-content">
+                                    <materialIcons:MaterialIcon Kind="Download" Width="{StaticResource Launcher.Icon.Sm}" Height="{StaticResource Launcher.Icon.Sm}"/>
+                                    <TextBlock Text="{Binding Shell.I18n[launcherUpdateDownload]}"/>
+                                </StackPanel>
+                            </Button>
+                        </StackPanel>
+                    </Border>
                 </Grid>
             </Border>
         </Grid>
@@ -364,14 +379,14 @@
                                 Description="{Binding Shell.I18n[stopDownloadMessage]}"
                                 IconKind="Stop"
                                 Message="{Binding Dialogs.StopConfirmText}"
-                                MessageBackground="{DynamicResource Launcher.Color.Warning.Background}"
+                                AlertTitle="{Binding Shell.I18n[stopDownloadTitle]}"
+                                IsWarningAlert="True"
                                 CancelText="{Binding Shell.I18n[cancel]}"
                                 CancelCommand="{Binding Dialogs.CancelStopCommand}"
                                 ConfirmText="{Binding Shell.I18n[stop]}"
                                 ConfirmCommand="{Binding Dialogs.ConfirmStopCommand}"
                                 ConfirmIconKind="Stop"
                                 IsDangerConfirm="True"
-                                IsDangerIcon="True"
                                 CloseToolTip="{Binding Shell.I18n[close]}"/>
 
         <!-- Download running close confirmation dialog -->
@@ -380,14 +395,14 @@
                                 Description="{Binding Shell.I18n[stopDownloadMessage]}"
                                 IconKind="Stop"
                                 Message="{Binding Dialogs.DownloadRunningCloseConfirmText}"
-                                MessageBackground="{DynamicResource Launcher.Color.Warning.Background}"
+                                AlertTitle="{Binding Shell.I18n[stopDownloadTitle]}"
+                                IsWarningAlert="True"
                                 CancelText="{Binding Shell.I18n[cancel]}"
                                 CancelCommand="{Binding Dialogs.CancelCloseWhileDownloadingCommand}"
                                 ConfirmText="{Binding Shell.I18n[stop]}"
                                 ConfirmCommand="{Binding Dialogs.ConfirmCloseWhileDownloadingCommand}"
                                 ConfirmIconKind="Stop"
                                 IsDangerConfirm="True"
-                                IsDangerIcon="True"
                                 CloseToolTip="{Binding Shell.I18n[close]}"/>
 
         <!-- Uninstall confirmation dialog -->
@@ -395,9 +410,9 @@
                                 Title="{Binding Shell.I18n[confirmUninstall]}"
                                 Description="{Binding Shell.I18n[uninstallConfirmDescription]}"
                                 IconKind="AlertCircle"
-                                IsDangerIcon="True"
                                 Message="{Binding Dialogs.UninstallConfirmText}"
-                                MessageBackground="{DynamicResource Launcher.Color.Danger.Soft}"
+                                AlertTitle="{Binding Shell.I18n[confirmUninstall]}"
+                                IsDangerAlert="True"
                                 CancelText="{Binding Shell.I18n[cancel]}"
                                 CancelCommand="{Binding Dialogs.CancelUninstallCommand}"
                                 ConfirmText="{Binding Shell.I18n[uninstall]}"
@@ -412,14 +427,14 @@
                                 Description="{Binding Shell.I18n[unsavedChangesMessage]}"
                                 IconKind="AlertCircle"
                                 Message="{Binding Shell.I18n[unsavedChangesMessage]}"
-                                MessageBackground="{DynamicResource Launcher.Color.Warning.Background}"
+                                AlertTitle="{Binding Shell.I18n[unsavedChanges]}"
+                                IsWarningAlert="True"
                                 CancelText="{Binding Shell.I18n[keepEditing]}"
                                 CancelCommand="{Binding WindowChrome.KeepEditingSettingsCommand}"
                                 ConfirmText="{Binding Shell.I18n[discardChanges]}"
                                 ConfirmCommand="{Binding WindowChrome.DiscardSettingsChangesCommand}"
                                 ConfirmIconKind="DeleteOutline"
                                 IsDangerConfirm="True"
-                                IsDangerIcon="True"
                                 CloseToolTip="{Binding Shell.I18n[close]}"/>
 
         <!-- Critical error dialog -->
@@ -432,45 +447,49 @@
                     <TranslateTransform/>
                 </Border.RenderTransform>
                 <Grid RowDefinitions="Auto,*,Auto" Classes="confirm-layout motion-surface-content">
-                    <Grid Classes="dialog-heading" ColumnDefinitions="Auto,*,Auto">
-                        <Border Classes="dialog-icon" VerticalAlignment="Center">
-                            <materialIcons:MaterialIcon Kind="AlertCircle" Width="{StaticResource Launcher.Icon.Xl}" Height="{StaticResource Launcher.Icon.Xl}"
-                                                       Foreground="{DynamicResource Launcher.Color.Danger}"
-                                                       HorizontalAlignment="Center" VerticalAlignment="Center"/>
-                        </Border>
-                        <StackPanel Grid.Column="1" Classes="dialog-heading-copy">
+                    <Grid Classes="dialog-heading">
+                        <StackPanel Classes="dialog-heading-copy">
                             <TextBlock Text="{Binding Shell.I18n[errorDialogTitle]}" Classes="dialog-title"/>
                             <TextBlock Text="{Binding Shell.I18n[errorDialogDescription]}" Classes="caption"/>
                         </StackPanel>
                     </Grid>
                     <ScrollViewer Grid.Row="1" MaxHeight="300" Classes="scroll-pad">
-                        <Border Classes="confirm-message" Background="{DynamicResource Launcher.Color.Danger.Soft}">
-                            <TextBlock Text="{Binding Dialogs.ErrorDialogMessage}" Classes="confirm-message-text" TextWrapping="Wrap"/>
+                        <Border Classes="dialog-alert danger">
+                            <StackPanel Spacing="{StaticResource Launcher.Spacing.Xs}">
+                                <StackPanel Classes="dialog-alert-heading danger">
+                                    <materialIcons:MaterialIcon Kind="AlertCircle" Classes="dialog-alert-icon danger"
+                                                                Width="{StaticResource Launcher.Icon.Sm}" Height="{StaticResource Launcher.Icon.Sm}"/>
+                                    <TextBlock Text="{Binding Shell.I18n[errorDialogTitle]}" Classes="dialog-alert-title danger"/>
+                                </StackPanel>
+                                <TextBlock Text="{Binding Dialogs.ErrorDialogMessage}" Classes="dialog-alert-content"/>
+                            </StackPanel>
                         </Border>
                     </ScrollViewer>
-                    <StackPanel Grid.Row="2" Classes="confirm-actions">
-                        <Button Classes="flat-action dialog-action" Command="{Binding Dialogs.ViewErrorLogCommand}"
-                                AutomationProperties.Name="{Binding Shell.I18n[errorDialogViewLog]}">
-                            <StackPanel Classes="button-content">
-                                <materialIcons:MaterialIcon Kind="TextBoxOutline" Width="{StaticResource Launcher.Icon.Sm}" Height="{StaticResource Launcher.Icon.Sm}"/>
-                                <TextBlock Text="{Binding Shell.I18n[errorDialogViewLog]}"/>
-                            </StackPanel>
-                        </Button>
-                        <Button Classes="flat-action dialog-action" Command="{Binding Dialogs.CopyErrorDetailsCommand}"
-                                AutomationProperties.Name="{Binding Shell.I18n[errorDialogCopyDetails]}">
-                            <StackPanel Classes="button-content">
-                                <materialIcons:MaterialIcon Kind="ContentCopy" Width="{StaticResource Launcher.Icon.Sm}" Height="{StaticResource Launcher.Icon.Sm}"/>
-                                <TextBlock Text="{Binding Shell.I18n[errorDialogCopyDetails]}"/>
-                            </StackPanel>
-                        </Button>
-                        <Button Classes="primary-action dialog-action" Command="{Binding Dialogs.ContinueAfterErrorCommand}"
-                                AutomationProperties.Name="{Binding Shell.I18n[errorDialogContinue]}">
-                            <StackPanel Classes="button-content">
-                                <materialIcons:MaterialIcon Kind="Check" Width="{StaticResource Launcher.Icon.Sm}" Height="{StaticResource Launcher.Icon.Sm}"/>
-                                <TextBlock Text="{Binding Shell.I18n[errorDialogContinue]}"/>
-                            </StackPanel>
-                        </Button>
-                    </StackPanel>
+                    <Border Grid.Row="2" Classes="dialog-footer">
+                        <StackPanel Classes="confirm-actions">
+                            <Button Classes="flat-action dialog-action" Command="{Binding Dialogs.ViewErrorLogCommand}"
+                                    AutomationProperties.Name="{Binding Shell.I18n[errorDialogViewLog]}">
+                                <StackPanel Classes="button-content">
+                                    <materialIcons:MaterialIcon Kind="TextBoxOutline" Width="{StaticResource Launcher.Icon.Sm}" Height="{StaticResource Launcher.Icon.Sm}"/>
+                                    <TextBlock Text="{Binding Shell.I18n[errorDialogViewLog]}"/>
+                                </StackPanel>
+                            </Button>
+                            <Button Classes="flat-action dialog-action" Command="{Binding Dialogs.CopyErrorDetailsCommand}"
+                                    AutomationProperties.Name="{Binding Shell.I18n[errorDialogCopyDetails]}">
+                                <StackPanel Classes="button-content">
+                                    <materialIcons:MaterialIcon Kind="ContentCopy" Width="{StaticResource Launcher.Icon.Sm}" Height="{StaticResource Launcher.Icon.Sm}"/>
+                                    <TextBlock Text="{Binding Shell.I18n[errorDialogCopyDetails]}"/>
+                                </StackPanel>
+                            </Button>
+                            <Button Classes="primary-action dialog-action" Command="{Binding Dialogs.ContinueAfterErrorCommand}"
+                                    AutomationProperties.Name="{Binding Shell.I18n[errorDialogContinue]}">
+                                <StackPanel Classes="button-content">
+                                    <materialIcons:MaterialIcon Kind="Check" Width="{StaticResource Launcher.Icon.Sm}" Height="{StaticResource Launcher.Icon.Sm}"/>
+                                    <TextBlock Text="{Binding Shell.I18n[errorDialogContinue]}"/>
+                                </StackPanel>
+                            </Button>
+                        </StackPanel>
+                    </Border>
                 </Grid>
             </Border>
         </Grid>
@@ -490,7 +509,6 @@
                                 Title="{Binding Shell.I18n[debugResetSettingsTitle]}"
                                 Description="{Binding Shell.I18n[debugResetSettingsDescription]}"
                                 IconKind="AlertOutline"
-                                IsDangerIcon="True"
                                 CancelText="{Binding Shell.I18n[cancel]}"
                                 CancelCommand="{Binding Dialogs.CancelDebugResetCommand}"
                                 ConfirmText="{Binding Shell.I18n[debugResetSettingsConfirm]}"
