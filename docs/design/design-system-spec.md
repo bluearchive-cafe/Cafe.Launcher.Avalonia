@@ -55,7 +55,7 @@
 | `Launcher.Color.*` | M3 scheme 角色（primary/secondary/tertiary + containers + surface/outline/error 族）+ 业务语义色（Success/Warning/Info）+ 主题无关特殊色（Chrome/Overlay/scrim/媒体占位） | `Color.Primary`、`Color.OnPrimary`、`Color.PrimaryContainer`、`Color.Surface`、`Color.Outline`、`Color.Danger`、`Color.Success`、`Color.Overlay.Scrim` |
 | `Launcher.Text.*` | 应用文本专用角色（Primary/Secondary/Body/Link/OnChrome/OnDark/Placeholder 等） | `Text.Primary`、`Text.OnChrome` |
 | `Launcher.Spacing.*` | 间距 4/8/12/16/20/24/40 全档（Double）+ Thickness 全档（`Spacing.Thickness.*`） | `Spacing.Md`、`Spacing.Thickness.Lg` |
-| `Launcher.Radius.*` | 目标字阶 4/8/12/16/28（`Xs/Sm/Md/Lg/Xxl`）；P1 仅重命名保留现值，P2 统一取值（6→8 等） | `Radius.Md` |
+| `Launcher.Radius.*` | 目标字阶 4/8/12/16（`Xs/Sm/Md/Lg`，含全部四档 token）；28（`Xxl` 或 full）无消费面，暂不落地（ADR-002 只重标四档） | `Radius.Xs`、`Radius.Md` |
 | `Launcher.Typography.*` | M3 角色字阶（Display/Headline/Title/Body/Label × 字号/字重/字距）+ 字体族 | `Typography.FontSize.Body.Md`、`Typography.FontWeight.Strong`、`Typography.FontFamily.Monospace` |
 | `Launcher.Icon.*` | 图标尺寸 16/18/20/22/24 | `Icon.Md` |
 | `Launcher.Control.*` | 控件高度/宽度（Setting36/Dialog42/Bottom48/Launch58/Field40/Chip32/Swatch28 等） | `Control.Height.Setting` |
@@ -76,7 +76,7 @@
 壁纸/系统/自定义 种子 ──取色算法──┐
 （算法：Octree[保留] / Celebi+Score[默认] / Wu / Wsmeans）
                                  └──> 种子色 ──配色变体（Variant）──> 完整 M3 DynamicScheme
-                                  （TonalSpot[默认]/Vibrant/Expressive/Fidelity/Content/Monochrome/Neutral/Rainbow/FruitSalad）
+                                  （TonalSpot[默认]/Vibrant/Expressive/Fidelity/Content/Monochrome/Neutral/Rainbow，共 8 变体）
                                                                           │
                                                      ┌────────────────────┴────────────────────┐
                                     中性色策略=品牌蓝调（默认）                中性色策略=种子跟随
@@ -84,7 +84,7 @@
                                                                           （tone 档位固定，仅色相随种子→对比度仍安全）
 ```
 
-- **角色集**：primary/secondary/tertiary + 各自 `On*`/`*Container`/`On*Container`；surface 族（Surface/SurfaceVariant/Container 档）、outline 族、error 族（映射现有 Danger/DangerSoft/危险图标底）；业务色 Success/Warning/Info（Toast 等，不参与动态色）。
+- **角色集**：primary/secondary/tertiary + 各自 `On*`/`*Container`/`On*Container`（`PrimaryContainer`/`OnPrimaryContainer` 于 2026-08-26 补齐，占位+运行时覆盖）；surface 族（Surface/SurfaceVariant/Container 档）、outline 族、error 族（映射现有 Danger/DangerSoft/危险图标底）；业务色 Success/Warning/Info（Toast 等，不参与动态色）。**落地范围声明**：`SurfaceVariant`/`OutlineVariant` 由业务 token 承担（hairline 用 `Color.Card.Border`，ADR-013 M3 修正 2）；可见实心表面 = 对话框覆盖层（`Dialog.Background`，种子跟随时由 scheme neutral 覆盖——Q13/Q23 两决策合流）；`Surface/OnSurface/Outline` 保留为语义角色（`Outline` 由 `dialog-card` hairline 消费；`Surface/OnSurface` 为未来表面预留）。
 - **on-color 按亮度计算**（P1 必修）：`Launcher.OnAccent` 不再硬编码白；按背景色相对亮度选黑/白（浅种子时用深 on-color），写入 `ColorUtils` 并测试锁定。
 - **实现**：`ApplyAccentBrushes`（`Features/Settings/SettingsAppearanceViewModel.cs`）演进为 `ApplyScheme`（输入 seed/variant/theme/neutralStrategy → 覆盖 brush 组）；`ThemeColorExtractionService`（Octree）与新算法共存；`ColorUtils`（`Helpers/ColorUtils.cs`）承载归一化与 on-color 计算。非壁纸模式（系统/自定义/默认色）产出与现状一致或改善。
 - **M3 落地记录（已实现并测试锁定）**：`ApplyScheme` 已替换 `ApplyAccentBrushes`；转换层 = `Helpers/MaterialColorMapper.cs`（ArgbColor↔Avalonia Color/Brush），scheme 生成 = `Services/MaterialSchemeGenerator.cs`（8 变体 × Spec2021 × Platform.Phone；`BuildRoleBrushes` 保留既有 accent 族覆盖子集并新增 Secondary/Tertiary/容器角色键）。**行为变更**：① `Launcher.Color.Info` 不再跟随 accent（业务色固定，spec §3.4）；② accent 由"归一化种子"变为"scheme Primary（tone 40/80）"——非壁纸模式亦经统一管线，存在 M0 记录的小幅色相/彩度随动（±1 tone，ΔE≈15）；③ 主题模式切换时经 `ApplyTheme` 按实际明暗重放 scheme（`ActualThemeVariant`），System 模式随系统变体；④ 新角色键（Secondary/Tertiary/容器/Surface/Outline）在 App.axaml 中以占位值声明、运行时覆盖（§3.3）。
@@ -101,17 +101,18 @@
 | Label | 12 / 11 | Normal/SemiBold | `caption`、`chip-text`、`kicker` |
 
 - 字体栈：`Noto Sans`（若系统可用/安装）→ `Segoe UI` → `Microsoft YaHei`（CJK 回退）→ `sans-serif`；等宽 `Consolas`。沿用 `Shell.FontFamily` 机制；**不内嵌字体文件**（Q14-a）。
-- 现有 `LauncherFontSizeXs..Display`（11–22 共 9 档）具体归组见 P1 映射表。
+- 现有 `LauncherFontSizeXs..Display`（11–22 共 10 档）具体归组见 P1 映射表。
 
 ### 3.6 尺寸与形状
 
 - 间距：4/8/12/16/20/24/40；Thickness 补齐全档（现状仅 4/8/20 有 Thickness 变体）。
-- 圆角目标字阶：4（Xs）/ 8（Sm）/ 12（Md）/ 16（Lg）/ 28（Xxl 或 full）；P1 保持现值，P2 按字阶统一（注意 6→8 的视觉迁移记录）。
+- 圆角目标字阶：4（Xs）/ 8（Sm）/ 12（Md）/ 16（Lg）四档齐备（ADR-002 一次性重标；Xs=4 档已按目标值落地）；28（Xxl 或 full）无消费面，暂不落地。
 - 图标 16/18/20/22/24；控件高度 Setting36/Dialog42/Bottom48/Launch58/Field40/Chip32/Swatch28/DialogTitle56（P2 结合 M3 尺寸规范评审是否微调）。
 
 ### 3.7 动效
 
 - 时长：`Fastest` 50ms / `Fast` 167ms / `Content` 200ms / `Normal` 250ms；缓动：`Enter`=ExponentialEaseOut、`Exit`=ExponentialEaseIn、`Linear`；偏移：`Surface` 8 / `Content` 6 / `Bottom` 12 / `Toast` 6（沿用现有值，仅重命名）。
+- 进度条厚度：主界面 `Component.Progress.Bar.Height` = 8px、Loading = 4px、Toast = 3px（M3 LinearProgressIndicator 4dp；主进度条 8px 为产品加粗值，记录性偏差）。
 - 全局 `IsMotionEnabled` 开关保留；**系统级 reduced-motion 检测暂不做**（记录为有意搁置）。
 
 ## 4. 组件规范（P2，Q15/Q21）
@@ -127,7 +128,7 @@
 
 - 单窗口 + 覆盖层：Z 序 = 主内容 → 设置 100 → 对话框 200 → 向导 500 → Toast 1000，**不动**。
 - 功能分区（Shell / GameOperations / Settings / SetupWizard / Diagnostics / ResourcePanel）与"单窗口内选分类"模型不变；表现级布局自由（如设置页留白、卡片形态）。
-- **设置页重设计蓝图（P3 表面执行；** [ADR-013](adr/ADR-013-设置页重设计方向.md) **+ M3 审核定稿）**：标题栏拆分（「设置」并入导航列顶部 header；关闭 ✕ 并入内容区标题行右端）；导航列 = SecondaryContainer 激活填充 + leading icon（Material Symbols）+ 标签，无指示条；内容区 = 变体 B 纯列表 + 组间空档 + 行间 inset hairline（以 `Color.Card.Border` 为分隔色，不新增 token）；覆盖层 `Radius.Lg`(16) + `Elevation.Shadow.Lg`；控件统一 `Field` 形态。**修正清单（随 P2/P3 落地）**：`Field.Border` 双档对比度（浅 `#788EA7`/深 `#5E7494`，≥3:1）、hairline inset 规则、抽屉 leading icons。
+- **设置页重设计蓝图（P3 表面执行；** [ADR-013](adr/ADR-013-设置页重设计方向.md) **+ M3 审核定稿）**：标题栏拆分（「设置」并入导航列顶部 header；关闭 ✕ 并入内容区标题行右端）；导航列 = SecondaryContainer 激活填充 + leading icon（Material Symbols）+ 标签，无指示条；内容区 = 变体 B 纯列表 + 组间空档 + 行间 inset hairline（以 `Color.Card.Border` 为分隔色，不新增 token）；覆盖层 `Radius.Lg`(16) + `Elevation.Shadow.Lg` + `Dialog.Background`（Q13 表面中性；种子跟随时由 scheme neutral 覆盖，见 §3.4）；控件统一 `Field` 形态。**修正清单（随 P2/P3 落地）**：`Field.Border` 双档对比度（浅 `#788EA7`/深 `#5E7494`，≥3:1）、hairline inset 规则、抽屉 leading icons。
 - **其余表面蓝图（P3 执行；[ADR-014](adr/ADR-014-其余表面M3重设计方向.md)）**：对话框族（确认/通知/更新/错误）= 统一 `dialog` 表面 + 头部（icon+标题+关闭）+ 可滚动内容 + `dialog-footer` hairline 操作带（取消左、确认右，危险确认用 danger-action）；Toast = 删除自动消失进度条，仅保留操作执行中的 indeterminate 进度条，关闭命中区提升到 36px；设置向导 = 复用设置导航语言（`settings-navigation-pane` + header + SecondaryContainer 激活态）且底部动作带统一为 `dialog-footer`。资源面板/日志/调试与主壳首页/**底栏形态**保持本节既有状态。
 - **底栏形态**：**Q18 仲裁结论已撤销（2026-08-25，用户决定放弃首页布局相关决策）——形态重新开放**。前期结论（M3 贴边：对比度恒定 ≥7:1、三态一致；浮动胶囊：浅壁纸 ≈4.8:1 边缘 + 安装态高度需验证）保留为决策素材，`prototype/bottom-bar` 分支保留；重新裁决时按 ADR-001 标准重走（走查/原型流程不变）。
 
@@ -148,7 +149,7 @@
 | 中性色 | **品牌蓝调（固定）** / 种子跟随 | 品牌蓝调 | surface/outline 是否随种子染色 |
 
 - 持久化：`LauncherSettings` 新增字段 + 规范化（默认值填充），向后兼容旧 `settings.json`；遵循 `SettingsEditor` 事务性保存。
-- **M3 状态**：三字段已持久化（`themeColorExtractionAlgorithm`/`themeColorVariant`/`neutralColorStrategy`，默认 CelebiScore/TonalSpot/BrandBlue）并接入 `ApplyScheme` 管线（variant/strategy 已生效）；**三个设置行的 UI 在 P2**。壁纸取色算法：**当前仍走 Octree**（field 默认值已记录，P2 UI 接入后生效）；既有壁纸模式用户默认算法从 Octree 切换为 M3 后，accent 会有轻微变化——属视觉漂移，记录为可接受（与 P3 改版同期）。
+- **M3 状态**：三字段已持久化（`themeColorExtractionAlgorithm`/`themeColorVariant`/`neutralColorStrategy`，默认 CelebiScore/TonalSpot/BrandBlue）并接入 `ApplyScheme` 管线（variant/strategy 已生效）；三个设置行 UI 已落地（P2，`SettingSelect`，次序 = 取色算法 → 配色变体 → 中性色）；中性色「种子跟随」选中时显示条件 caption 提示（ADR-010，4 语言）。壁纸取色算法默认 = **M3（Celebi+Score）**，Octree/Wu/Wsmeans 可选（Octree 保留为降级/对照）；既有壁纸模式用户默认算法切换后 accent 轻微变化——属视觉漂移，记录为可接受（与 P3 改版同期，已记录于 spec §7）。**变更即预览**：三个设置行（模式/变体/中性）变更即时重绘主界面（ADR-009），保存时持久化。
 
 ## 8. 无障碍（Q9/Q19）
 
@@ -172,7 +173,7 @@
 ## 9. 设计画廊（Q11）
 
 - 位置：Debug 构建 `IsDebugFeaturesEnabled` 可见（与现有调试面板同门），`Views/` 新增 `DesignGalleryOverlay.axaml`。
-- **M4 状态（已实现）**：`Views/DesignGalleryOverlay.axaml` + `ViewModels/DesignGalleryViewModel.cs`（Debug 面板「打开设计画廊」按钮进入，`dialog-overlay` 层，ZIndex 200，关闭同调试面板）；数据源 = 运行时枚举 `/Application.Resources` 根字典和 Light/Dark `ThemeDictionaries` 中全部 `Launcher.*` 键 + `DesignTokenGrouping` 按 §3.2 十二家族分组（键段解析，零漂移；无法归类的键进「Other」），显示当前主题变体值（`TryGetResource` 当前变体）；色板 swatch + 键名 + 值文本；本地化标题/分组名（4 语言，`designGroup*` 键族）；`UiStyleContractTests` 已将画廊纳入 ViewFiles 规则扫描。P2 扩展点：组件状态矩阵 + 底栏双原型对比区（Q18 仲裁）。
+- **M4 状态（已实现）**：`Views/DesignGalleryOverlay.axaml` + `ViewModels/DesignGalleryViewModel.cs`（Debug 面板「打开设计画廊」按钮进入，`dialog-overlay` 层，ZIndex 200，关闭同调试面板）；数据源 = 运行时枚举 `/Application.Resources` 根字典和 Light/Dark `ThemeDictionaries` 中全部 `Launcher.*` 键 + `DesignTokenGrouping` 按 §3.2 十二家族分组（键段解析，零漂移；无法归类的键进「Other」），显示当前主题变体值（`TryGetResource` 当前变体）；色板 swatch + 键名 + 值文本；本地化标题/分组名（4 语言，`designGroup*` 键族）；`UiStyleContractTests` 已将画廊纳入 ViewFiles 规则扫描。**P2 扩展（已实现）**：组件状态矩阵 = 四型按钮（filled/outlined/text/error-filled）/ 卡片（Toast 卡）/ 设置行 × 6 态（normal/hover/pressed/disabled/focus-visible/invalid；invalid 仅设置行/输入类，按钮与卡片以空占位表达——ADR-007），状态列/行标签 4 语言（`designMatrix*`/`designState*` 键族）；矩阵同时是走查清单实物载体（见 `docs/design/design-walkthrough-checklist.md`）。底栏双原型对比区随 Q18 重新裁决再定。
 - 内容：P1 = token 总表（按 §3.2 家族分组：色板 swatch、字阶、间距/圆角/动效表）；P2 = 组件状态矩阵（3 组件 × 6 态，ADR-007）与底栏双原型对比区（Q18 仲裁）；组件状态矩阵同时是走查清单的实物载体。
 - 画廊文案走本地化契约（resx 4 语言）。
 
@@ -181,7 +182,7 @@
 - **每阶段门禁**：`UiStyleContractTests` 全绿（含新契约）+ 新增测试全绿 + 编译零警告 + `scripts/Test-LocalizationContract.ps1`（涉及新字符串时）+ `.\verify.ps1`；PR 附截图（可见 UI 变更）。
 - **契约测试扩展点**：token 存在性/旧键清零、禁裸色值与 `{StaticResource}` 规则、AA 对比度、覆盖层 Z 序（既有）。
 - **headless 黄金截图**：已接线（`UseHeadlessDrawing=false` + `UseSkia()` + `RenderTargetBitmap`），5 个基线（壳默认/进度面板/设置覆盖层/确认对话框/Toast）平铺存储于 `tests/Cafe.Launcher.Avalonia.HeadlessTests/Baselines/`，阈值 diff（每通道容差 8/255、失配 ≤1%）、`CAFE_GOLDEN_UPDATE=1` 重新生成；字体稳定性：基线固定英文/降动效/Segoe UI，CI（windows-latest）字体集合风险已在 README 记录，漂移时优先重生成基线。P3 视需要扩大。
-- **走查清单**：随本规范维护（§4 状态矩阵 + §8 豁免区逐项），P3 每表面完成时人工复核。
+- **走查清单**：已落地于 [`design-walkthrough-checklist.md`](./design-walkthrough-checklist.md)（状态矩阵 + §8 豁免区逐项 + P3 表面逐项），P3 每表面完成时人工复核；随本规范共同维护。
 
 ## 11. 有意搁置（Don't-do 清单）
 

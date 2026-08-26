@@ -170,7 +170,7 @@
 | `LauncherToastActionRowMargin`(0,8,0,0) | `Launcher.Component.Toast.Action.RowMargin` |
 | `LauncherToastPrimaryActionMargin`(0,0,8,0) | `Launcher.Component.Toast.Action.Primary.Margin` |
 | `LauncherToastActionProgressMargin`(8,0,0,0) | `Launcher.Component.Toast.Action.Progress.Margin` |
-| `LauncherToastAutoDismissProgressHeight`(3) | `Launcher.Component.Toast.AutoDismiss.Progress.Height` |
+| `LauncherToastAutoDismissProgressHeight`(3) | `Launcher.Component.Toast.Action.Progress.Height`（自动消失进度条已按 ADR-014 删除；键由「操作执行中」indeterminate 进度条复用） |
 | `LauncherConfirmDialogMaxHeight`(480) | `Launcher.Component.Dialog.Confirm.MaxHeight` |
 | `LauncherDialogTitleHeight`(56) | `Launcher.Component.Dialog.Title.Height` |
 | `LauncherSettingRowContentMinWidth`(240) | `Launcher.Component.Settings.Row.Content.MinWidth` |
