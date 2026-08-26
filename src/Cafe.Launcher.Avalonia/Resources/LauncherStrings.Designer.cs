@@ -574,6 +574,10 @@ internal static class LauncherStrings
 
     internal static string RefreshTooltip => GetRequiredString("refreshTooltip");
 
+    internal static string RememberWindowPositionAndSize => GetRequiredString("rememberWindowPositionAndSize");
+
+    internal static string RememberWindowPositionAndSizeDescription => GetRequiredString("rememberWindowPositionAndSizeDescription");
+
     internal static string RemoteContentCard => GetRequiredString("remoteContentCard");
 
     internal static string RemoteContentCardDescription => GetRequiredString("remoteContentCardDescription");

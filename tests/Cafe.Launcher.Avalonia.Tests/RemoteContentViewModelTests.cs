@@ -388,6 +388,8 @@ public sealed class RemoteContentViewModelTests
             context.ViewModel.CarouselTransition);
         Assert.Equal(TimeSpan.Zero, transition.Duration);
         Assert.Equal(global::Avalonia.Animation.PageSlide.SlideAxis.Horizontal, transition.Orientation);
+        Assert.IsType<global::Avalonia.Animation.Easings.ExponentialEaseOut>(transition.SlideInEasing);
+        Assert.IsType<global::Avalonia.Animation.Easings.ExponentialEaseIn>(transition.SlideOutEasing);
 
         context.ViewModel.SelectNextBannerCommand.Execute(null);
         Assert.Equal(1, context.ViewModel.CarouselSelectedIndex);
@@ -432,6 +434,8 @@ public sealed class RemoteContentViewModelTests
             context.ViewModel.CarouselTransition);
         Assert.Equal(TimeSpan.FromMilliseconds(250), transition.Duration);
         Assert.Equal(global::Avalonia.Animation.PageSlide.SlideAxis.Horizontal, transition.Orientation);
+        Assert.IsType<global::Avalonia.Animation.Easings.ExponentialEaseOut>(transition.SlideInEasing);
+        Assert.IsType<global::Avalonia.Animation.Easings.ExponentialEaseIn>(transition.SlideOutEasing);
     }
 
     [Theory]

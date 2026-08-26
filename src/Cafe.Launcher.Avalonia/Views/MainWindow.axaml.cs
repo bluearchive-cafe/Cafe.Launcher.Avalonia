@@ -153,6 +153,49 @@ public partial class MainWindow : Window
         systemTray = trayService;
     }
 
+    internal void ApplySavedWindowState(LauncherSettings settings)
+    {
+        if (!settings.RememberWindowPositionAndSize)
+        {
+            return;
+        }
+
+        if (settings.WindowWidth is double width && double.IsFinite(width) && width > 0)
+        {
+            Width = Math.Max(MinWidth, width);
+        }
+
+        if (settings.WindowHeight is double height && double.IsFinite(height) && height > 0)
+        {
+            Height = Math.Max(MinHeight, height);
+        }
+
+        if (settings.WindowPositionX is int x && settings.WindowPositionY is int y)
+        {
+            Position = new PixelPoint(x, y);
+        }
+    }
+
+    internal void CaptureWindowState(LauncherSettings settings)
+    {
+        if (!settings.RememberWindowPositionAndSize || WindowState != WindowState.Normal)
+        {
+            return;
+        }
+
+        settings.WindowPositionX = Position.X;
+        settings.WindowPositionY = Position.Y;
+        if (double.IsFinite(Width) && Width > 0)
+        {
+            settings.WindowWidth = Width;
+        }
+
+        if (double.IsFinite(Height) && Height > 0)
+        {
+            settings.WindowHeight = Height;
+        }
+    }
+
     private async Task<string?> PickGameFolderAsync(string currentPath)
     {
         if (!StorageProvider.CanPickFolder)

@@ -131,6 +131,11 @@ public sealed class SettingsEditor : ISettingsEditor
             && string.Equals(left.DownloadSpeedLimit, right.DownloadSpeedLimit, StringComparison.Ordinal)
             && left.EnableStartupUpdateCheck == right.EnableStartupUpdateCheck
             && left.ShowRemoteContentCard == right.ShowRemoteContentCard
+            && left.RememberWindowPositionAndSize == right.RememberWindowPositionAndSize
+            && left.WindowPositionX == right.WindowPositionX
+            && left.WindowPositionY == right.WindowPositionY
+            && left.WindowWidth == right.WindowWidth
+            && left.WindowHeight == right.WindowHeight
             && string.Equals(left.PatchUrlGroup, right.PatchUrlGroup, StringComparison.Ordinal)
             && string.Equals(left.CustomBackgroundPath, right.CustomBackgroundPath, StringComparison.Ordinal)
             && string.Equals(left.BackgroundSource, right.BackgroundSource, StringComparison.Ordinal)

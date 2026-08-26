@@ -42,7 +42,8 @@
             <Thickness x:Key="Launcher.Component.LogViewer.FilterBar.Margin">16,12,16,0</Thickness>
             <Thickness x:Key="Launcher.Component.Select.Padding">12,0</Thickness>
             <Thickness x:Key="Launcher.Component.Settings.Navigation.Header.Padding">16,20</Thickness>
-            <Thickness x:Key="Launcher.Component.Settings.Content.Padding">16,24,16,16</Thickness>
+            <Thickness x:Key="Launcher.Component.Settings.Content.Padding">16,24,0,16</Thickness>
+            <Thickness x:Key="Launcher.Component.Settings.Content.Scroll.Padding">0,0,16,0</Thickness>
             <Thickness x:Key="Launcher.Component.Settings.Navigation.List.Padding">16,8,16,16</Thickness>
             <Thickness x:Key="Launcher.Component.Settings.Navigation.Item.Margin">0,2</Thickness>
             <Thickness x:Key="Launcher.Component.Settings.Navigation.Item.Padding">12,0</Thickness>

@@ -146,6 +146,17 @@ public sealed class SettingsEditorTests
     }
 
     [Fact]
+    public void CurrentPropertyChange_WhenRememberWindowPositionAndSizeChanges_MarksDirty()
+    {
+        var editor = new SettingsEditor();
+        editor.ApplySnapshot(new LauncherSettings { RememberWindowPositionAndSize = false });
+
+        editor.Current.RememberWindowPositionAndSize = true;
+
+        Assert.True(editor.IsDirty);
+    }
+
+    [Fact]
     public void Commit_ModifiesMultipleFields_AllApplied()
     {
         var editor = new SettingsEditor();

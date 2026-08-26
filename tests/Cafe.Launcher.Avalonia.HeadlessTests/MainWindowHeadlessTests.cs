@@ -4,9 +4,11 @@ using Avalonia.Automation;
 using Avalonia.Automation.Peers;
 using Avalonia.Controls;
 using Avalonia.Controls.Presenters;
+using Avalonia.Controls.Primitives;
 using Avalonia.Headless;
 using Avalonia.Headless.XUnit;
 using Avalonia.Input;
+using Avalonia.Layout;
 using Avalonia.Media;
 using Avalonia.Threading;
 using Avalonia.VisualTree;
@@ -523,6 +525,47 @@ public sealed class MainWindowHeadlessTests
     }
 
     [AvaloniaFact]
+    public void SettingsWorkspace_HorizontalInsetsStayAligned()
+    {
+        using var context = CreateContext();
+        OpenSettings(context);
+
+        var settingsOverlay = context.Window.GetVisualDescendants()
+            .OfType<MainWindowSettingsOverlay>()
+            .Single();
+        var dialog = settingsOverlay.GetVisualDescendants()
+            .OfType<Border>()
+            .Single(control => control.Classes.Contains("overlay-dialog"));
+        var navigation = GetSettingsNavigation(context.Window);
+        var selectedItem = navigation.ContainerFromIndex(navigation.SelectedIndex)
+            ?? throw new InvalidOperationException("Selected settings item was not realized.");
+        var content = settingsOverlay.GetVisualDescendants()
+            .OfType<Grid>()
+            .Single(control => control.Classes.Contains("settings-content"));
+        var contentViewport = settingsOverlay.GetVisualDescendants()
+            .OfType<ScrollViewer>()
+            .Single(control => control.Classes.Contains("dialog-scroll"));
+
+        var dialogTopLeft = dialog.TranslatePoint(default, context.Window);
+        var selectedItemTopLeft = selectedItem.TranslatePoint(default, context.Window);
+        var contentTopLeft = content.TranslatePoint(default, context.Window);
+        var contentViewportTopLeft = contentViewport.TranslatePoint(default, context.Window);
+
+        Assert.NotNull(dialogTopLeft);
+        Assert.NotNull(selectedItemTopLeft);
+        Assert.NotNull(contentTopLeft);
+        Assert.NotNull(contentViewportTopLeft);
+
+        var dialogLeftInset = selectedItemTopLeft!.Value.X - dialogTopLeft!.Value.X;
+        var contentLeftInset = contentViewportTopLeft!.Value.X - contentTopLeft!.Value.X;
+        var contentRightInset = contentViewport.Padding.Right;
+
+        Assert.InRange(Math.Abs(dialogLeftInset - 16), 0, 1);
+        Assert.InRange(Math.Abs(contentLeftInset - dialogLeftInset), 0, 1);
+        Assert.InRange(Math.Abs(contentRightInset - dialogLeftInset), 0, 1);
+    }
+
+    [AvaloniaFact]
     public void SettingsTypography_WhenShown_AppliesNormalAndStrongWeights()
     {
         using var context = CreateContext();
@@ -800,6 +843,26 @@ public sealed class MainWindowHeadlessTests
             .Single(control => control.Classes.Contains("dialog-scroll"));
 
         Assert.True(scrollViewer.Extent.Height > scrollViewer.Viewport.Height);
+
+        var verticalScrollBar = scrollViewer.GetVisualDescendants()
+            .OfType<ScrollBar>()
+            .Single(control => control.Orientation == Orientation.Vertical);
+        Assert.True(verticalScrollBar.IsEffectivelyVisible);
+
+        var settingsOverlay = context.Window.GetVisualDescendants()
+            .OfType<MainWindowSettingsOverlay>()
+            .Single();
+        var dialog = settingsOverlay.GetVisualDescendants()
+            .OfType<Border>()
+            .Single(control => control.Classes.Contains("overlay-dialog"));
+        var dialogTopLeft = dialog.TranslatePoint(default, context.Window);
+        var scrollBarTopLeft = verticalScrollBar.TranslatePoint(default, context.Window);
+        Assert.NotNull(dialogTopLeft);
+        Assert.NotNull(scrollBarTopLeft);
+
+        var dialogRight = dialogTopLeft!.Value.X + dialog.Bounds.Width;
+        var scrollBarRight = scrollBarTopLeft!.Value.X + verticalScrollBar.Bounds.Width;
+        Assert.InRange(Math.Abs(dialogRight - scrollBarRight), 0, 1);
     }
 
     [AvaloniaFact]
@@ -1610,6 +1673,64 @@ public sealed class MainWindowHeadlessTests
         Dispatcher.UIThread.RunJobs();
 
         Assert.Equal(WindowState.Minimized, context.Window.WindowState);
+    }
+
+    [AvaloniaFact]
+    public void MainWindow_WindowStateSetting_RestoresAndCapturesNormalWindowBounds()
+    {
+        using var context = CreateContext();
+        context.Window.Show();
+
+        context.Window.ApplySavedWindowState(new LauncherSettings
+        {
+            RememberWindowPositionAndSize = true,
+            WindowPositionX = 120,
+            WindowPositionY = 240,
+            WindowWidth = 1200,
+            WindowHeight = 700
+        });
+
+        Assert.Equal(new PixelPoint(120, 240), context.Window.Position);
+        Assert.Equal(1200, context.Window.Width);
+        Assert.Equal(700, context.Window.Height);
+
+        var captured = new LauncherSettings { RememberWindowPositionAndSize = true };
+        context.Window.CaptureWindowState(captured);
+
+        Assert.Equal(120, captured.WindowPositionX);
+        Assert.Equal(240, captured.WindowPositionY);
+        Assert.Equal(1200, captured.WindowWidth);
+        Assert.Equal(700, captured.WindowHeight);
+    }
+
+    [AvaloniaFact]
+    public void MainWindow_WindowStateSetting_WhenDisabledLeavesBoundsUnchanged()
+    {
+        using var context = CreateContext();
+        context.Window.Show();
+        var originalPosition = context.Window.Position;
+        var originalWidth = context.Window.Width;
+        var originalHeight = context.Window.Height;
+
+        context.Window.ApplySavedWindowState(new LauncherSettings
+        {
+            RememberWindowPositionAndSize = false,
+            WindowPositionX = 120,
+            WindowPositionY = 240,
+            WindowWidth = 1200,
+            WindowHeight = 700
+        });
+
+        var captured = new LauncherSettings { RememberWindowPositionAndSize = false };
+        context.Window.CaptureWindowState(captured);
+
+        Assert.Equal(originalPosition, context.Window.Position);
+        Assert.Equal(originalWidth, context.Window.Width);
+        Assert.Equal(originalHeight, context.Window.Height);
+        Assert.Null(captured.WindowPositionX);
+        Assert.Null(captured.WindowPositionY);
+        Assert.Null(captured.WindowWidth);
+        Assert.Null(captured.WindowHeight);
     }
 
     [AvaloniaFact]

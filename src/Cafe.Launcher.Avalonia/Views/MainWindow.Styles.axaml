@@ -889,6 +889,9 @@
     <Style Selector="Border.settings-content-padding">
         <Setter Property="Padding" Value="{StaticResource Launcher.Component.Settings.Content.Padding}"/>
     </Style>
+    <Style Selector="ScrollViewer.settings-content-scroll">
+        <Setter Property="Padding" Value="{StaticResource Launcher.Component.Settings.Content.Scroll.Padding}"/>
+    </Style>
     <Style Selector="Grid.dialog-overlay">
         <Setter Property="Background" Value="{DynamicResource Launcher.Color.Overlay.Scrim.Md}"/>
         <Setter Property="ZIndex" Value="200"/>

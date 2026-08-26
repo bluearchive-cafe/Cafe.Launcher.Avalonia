@@ -60,7 +60,7 @@
 
                     <Grid Grid.Column="1" Classes="settings-content">
                         <Border Classes="settings-content-padding">
-                                <ScrollViewer Classes="dialog-scroll"
+                                <ScrollViewer Classes="dialog-scroll settings-content-scroll"
                                       VerticalScrollBarVisibility="Auto"
                                       HorizontalScrollBarVisibility="Disabled"
                                       IsEnabled="{Binding Settings.IsSaving, Converter={x:Static BoolConverters.Not}}">

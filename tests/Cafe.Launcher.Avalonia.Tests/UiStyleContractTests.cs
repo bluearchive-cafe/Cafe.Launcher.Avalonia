@@ -1151,12 +1151,20 @@ public sealed partial class UiStyleContractTests
                 element.Attributes().Any(attribute =>
                     attribute.Name.LocalName == "Key"
                     && attribute.Value == "Launcher.Component.Settings.Content.Padding"));
-        Assert.Equal("16,24,16,16", contentPadding.Value);
+        Assert.Equal("16,24,0,16", contentPadding.Value);
+        var contentScrollPadding = application
+            .Descendants()
+            .Single(element =>
+                element.Attributes().Any(attribute =>
+                    attribute.Name.LocalName == "Key"
+                    && attribute.Value == "Launcher.Component.Settings.Content.Scroll.Padding"));
+        Assert.Equal("0,0,16,0", contentScrollPadding.Value);
 
         var overlayDocument = XDocument.Load(ProjectFile("Views/MainWindowSettingsOverlay.axaml"));
         var scrollViewer = overlayDocument
             .Descendants()
             .Single(element => element.Name.LocalName == "ScrollViewer");
+        Assert.True(HasClass(scrollViewer, "settings-content-scroll"));
         Assert.Equal("Auto", scrollViewer.Attribute("VerticalScrollBarVisibility")?.Value);
         Assert.Equal("Disabled", scrollViewer.Attribute("HorizontalScrollBarVisibility")?.Value);
     }

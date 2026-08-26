@@ -79,7 +79,10 @@ public partial class App : Application
                 }
 
                 shutdownCts.Cancel();
-                Task shutdownTask = viewModel.PrepareForShutdownAsync();
+                Task shutdownTask = CompleteShutdownAsync(
+                    mainWindow,
+                    viewModel,
+                    serviceProvider);
                 if (shutdownTask.IsCompletedSuccessfully)
                 {
                     return;
@@ -152,7 +155,7 @@ public partial class App : Application
             {
                 mainWindow.Opened += (_, _) =>
                 {
-                    _ = InitializeViewModelAsync(viewModel, serviceProvider, shutdownCts.Token);
+                    _ = InitializeViewModelAsync(mainWindow, viewModel, serviceProvider, shutdownCts.Token);
                 };
             }
 
@@ -163,12 +166,16 @@ public partial class App : Application
     }
 
     private static async Task InitializeViewModelAsync(
+        MainWindow mainWindow,
         MainWindowViewModel viewModel,
         ServiceProvider serviceProvider,
         CancellationToken cancellationToken)
     {
         try
         {
+            var settingsService = serviceProvider.GetRequiredService<LauncherSettingsService>();
+            var savedSettings = await settingsService.ReadAsync(cancellationToken);
+            mainWindow.ApplySavedWindowState(savedSettings);
             await viewModel.InitializeAsync(cancellationToken);
         }
         catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
@@ -187,7 +194,35 @@ public partial class App : Application
             {
                 Debug.WriteLine($"Initialization diagnostics failed: {diagnosticsException.Message}");
             }
+        }
+        finally
+        {
+            if (!cancellationToken.IsCancellationRequested)
+            {
+                mainWindow.ApplySavedWindowState(viewModel.Settings.Editor.GetSavedSnapshot());
+            }
+        }
+    }
 
+    private static async Task CompleteShutdownAsync(
+        MainWindow mainWindow,
+        MainWindowViewModel viewModel,
+        ServiceProvider serviceProvider)
+    {
+        try
+        {
+            await viewModel.PrepareForShutdownAsync();
+
+            var settings = viewModel.Settings.Editor.GetSavedSnapshot();
+            if (settings.RememberWindowPositionAndSize)
+            {
+                mainWindow.CaptureWindowState(settings);
+                await serviceProvider.GetRequiredService<LauncherSettingsService>().SaveAsync(settings);
+            }
+        }
+        catch (Exception exception)
+        {
+            Debug.WriteLine($"Launcher shutdown persistence failed: {exception}");
         }
     }
 
