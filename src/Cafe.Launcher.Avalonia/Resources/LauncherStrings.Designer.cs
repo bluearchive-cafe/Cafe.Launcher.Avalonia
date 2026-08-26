@@ -238,6 +238,30 @@ internal static class LauncherStrings
 
     internal static string DesignGroupTypography => GetRequiredString("designGroupTypography");
 
+    internal static string DesignMatrixCardWithToast => GetRequiredString("designMatrixCardWithToast");
+
+    internal static string DesignMatrixErrorButton => GetRequiredString("designMatrixErrorButton");
+
+    internal static string DesignMatrixFilledButton => GetRequiredString("designMatrixFilledButton");
+
+    internal static string DesignMatrixOutlinedButton => GetRequiredString("designMatrixOutlinedButton");
+
+    internal static string DesignMatrixSettingsRow => GetRequiredString("designMatrixSettingsRow");
+
+    internal static string DesignMatrixTextButton => GetRequiredString("designMatrixTextButton");
+
+    internal static string DesignStateDisabled => GetRequiredString("designStateDisabled");
+
+    internal static string DesignStateFocus => GetRequiredString("designStateFocus");
+
+    internal static string DesignStateHover => GetRequiredString("designStateHover");
+
+    internal static string DesignStateInvalid => GetRequiredString("designStateInvalid");
+
+    internal static string DesignStateNormal => GetRequiredString("designStateNormal");
+
+    internal static string DesignStatePressed => GetRequiredString("designStatePressed");
+
     internal static string DiscardChanges => GetRequiredString("discardChanges");
 
     internal static string DiskSpace => GetRequiredString("diskSpace");
@@ -513,6 +537,8 @@ internal static class LauncherStrings
     internal static string NeutralColorStrategyDescription => GetRequiredString("neutralColorStrategyDescription");
 
     internal static string NeutralColorStrategySeedFollowing => GetRequiredString("neutralColorStrategySeedFollowing");
+
+    internal static string NeutralColorStrategySeedFollowingHint => GetRequiredString("neutralColorStrategySeedFollowingHint");
 
     internal static string News => GetRequiredString("news");
 

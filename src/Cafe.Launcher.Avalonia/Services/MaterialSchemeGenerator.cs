@@ -48,9 +48,10 @@ internal static class MaterialSchemeGenerator
     /// <summary>
     /// Maps scheme roles onto the <c>Launcher.Color.*</c> brush keys. The key set
     /// preserves the pre-M3 override behaviour (accent family + flat/state/ring
-    /// derivatives + info background) as a subset and adds the M3 secondary/
-    /// tertiary role families; "Info" stays a fixed business colour and is not
-    /// overridden (spec §3.4). The neutral roles are always written so switching
+    /// derivatives) as a subset and adds the M3 secondary/tertiary role families;
+    /// "Info" stays a fixed business colour and is never overridden (spec §3.4) —
+    /// including Info.Background, which keeps its static Light/Dark values and is
+    /// not tinted by the accent. The neutral roles are always written so switching
     /// away from seed-following cannot leave stale dynamic brushes behind.
     /// </summary>
     public static IReadOnlyDictionary<string, SolidColorBrush> BuildRoleBrushes(
@@ -72,7 +73,6 @@ internal static class MaterialSchemeGenerator
         result["Launcher.Color.Carousel.Dot.Active"] = new SolidColorBrush(primary);
         result["Launcher.Color.Button.Flat.Hover"] = new SolidColorBrush(Color.FromArgb(0x14, primary.R, primary.G, primary.B));
         result["Launcher.Color.Button.Flat.Pressed"] = new SolidColorBrush(Color.FromArgb(0x30, primary.R, primary.G, primary.B));
-        result["Launcher.Color.Info.Background"] = new SolidColorBrush(Color.FromArgb(0x24, primary.R, primary.G, primary.B));
 
         var error = MaterialColorMapper.ToAvaloniaColor(scheme.Error);
         var onError = MaterialColorMapper.ToAvaloniaColor(scheme.OnError);
@@ -94,6 +94,8 @@ internal static class MaterialSchemeGenerator
         result["Launcher.Color.OnTertiary"] = MaterialColorMapper.ToBrush(scheme.OnTertiary);
         result["Launcher.Color.TertiaryContainer"] = MaterialColorMapper.ToBrush(scheme.TertiaryContainer);
         result["Launcher.Color.OnTertiaryContainer"] = MaterialColorMapper.ToBrush(scheme.OnTertiaryContainer);
+        result["Launcher.Color.PrimaryContainer"] = MaterialColorMapper.ToBrush(scheme.PrimaryContainer);
+        result["Launcher.Color.OnPrimaryContainer"] = MaterialColorMapper.ToBrush(scheme.OnPrimaryContainer);
 
         var neutralScheme = seedFollowingNeutrals
             ? scheme
@@ -104,6 +106,15 @@ internal static class MaterialSchemeGenerator
         result["Launcher.Color.Surface"] = MaterialColorMapper.ToBrush(neutralScheme.Surface);
         result["Launcher.Color.OnSurface"] = MaterialColorMapper.ToBrush(neutralScheme.OnSurface);
         result["Launcher.Color.Outline"] = MaterialColorMapper.ToBrush(neutralScheme.Outline);
+
+        // The visible solid surfaces (dialogs/settings workspace) stay on the fixed
+        // neutral business token by default (Q13 "surface neutral"); only the
+        // seed-following strategy dyes them from the neutral scheme (Q23).
+        if (seedFollowingNeutrals)
+        {
+            result["Launcher.Color.Dialog.Background"] =
+                MaterialColorMapper.ToBrush(neutralScheme.Surface);
+        }
 
         return result;
     }

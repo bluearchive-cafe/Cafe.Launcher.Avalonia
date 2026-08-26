@@ -23,9 +23,6 @@ public static class ThemeColorExtractionService
     private const double MinimumValue = 0.18;
     private const byte MinimumAlpha = 32;
 
-    public static IReadOnlyList<Color> ExtractPalette(Bitmap bitmap) =>
-        ExtractPalette(bitmap, ThemeColorExtractionAlgorithms.Octree);
-
     public static IReadOnlyList<Color> ExtractPalette(Bitmap bitmap, string algorithm)
     {
         var sourceSize = bitmap.PixelSize;

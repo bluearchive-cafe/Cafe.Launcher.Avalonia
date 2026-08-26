@@ -42,7 +42,10 @@
             <Thickness x:Key="Launcher.Component.LogViewer.FilterBar.Margin">16,12,16,0</Thickness>
             <Thickness x:Key="Launcher.Component.Select.Padding">12,0</Thickness>
             <Thickness x:Key="Launcher.Component.Settings.Navigation.Header.Padding">16,20</Thickness>
+            <x:Double x:Key="Launcher.Component.Settings.Navigation.Width">216</x:Double>
+            <x:Double x:Key="Launcher.Component.SetupWizard.Navigation.Width">184</x:Double>
             <Thickness x:Key="Launcher.Component.Settings.Content.Padding">16,24,0,16</Thickness>
+            <Thickness x:Key="Launcher.Component.Settings.NeutralHint.Margin">0,8,0,0</Thickness>
             <Thickness x:Key="Launcher.Component.Settings.Content.Scroll.Padding">0,0,16,0</Thickness>
             <Thickness x:Key="Launcher.Component.Settings.Navigation.List.Padding">16,8,16,16</Thickness>
             <Thickness x:Key="Launcher.Component.Settings.Navigation.Item.Margin">0,2</Thickness>
@@ -70,6 +73,7 @@
             <Thickness x:Key="Launcher.Component.Wizard.Navigation.Padding">8,8,8,16</Thickness>
             <Thickness x:Key="Launcher.Component.Wizard.Choice.Padding">14</Thickness>
             <Thickness x:Key="Launcher.Component.Toast.Host.Margin">0,56,16,0</Thickness>
+            <CornerRadius x:Key="Launcher.Radius.Xs">4</CornerRadius>
             <CornerRadius x:Key="Launcher.Radius.Sm">8</CornerRadius>
             <CornerRadius x:Key="Launcher.Radius.Md">12</CornerRadius>
             <CornerRadius x:Key="Launcher.Radius.Lg">16</CornerRadius>
@@ -227,6 +231,12 @@
                 <GradientStop Color="#52000000" Offset="0"/>
                 <GradientStop Color="#00000000" Offset="1"/>
             </LinearGradientBrush>
+            <!-- 主题无关暗色渐变（主壳底部控制面板压在壁纸上；与 TitleBar.Gradient 同理不使用 Light/Dark 档）。 -->
+            <LinearGradientBrush x:Key="Launcher.Color.ControlPanel.Gradient" StartPoint="0%,0%" EndPoint="0%,100%">
+                <GradientStop Color="#00000000" Offset="0"/>
+                <GradientStop Color="#73000000" Offset="0.33"/>
+                <GradientStop Color="#A8000000" Offset="1"/>
+            </LinearGradientBrush>
             <SolidColorBrush x:Key="Launcher.Color.Media.Placeholder" Color="#FF2A3A5C"/>
             <SolidColorBrush x:Key="Launcher.Text.Media.Placeholder" Color="#99FFFFFF"/>
             <!-- M3 scheme 角色占位/回退值（运行时由 ApplyScheme 经 DynamicScheme 覆盖；spec §3.3：声明值仅为占位） -->
@@ -240,6 +250,8 @@
             <SolidColorBrush x:Key="Launcher.Color.OnTertiary" Color="#FFFFFFFF"/>
             <SolidColorBrush x:Key="Launcher.Color.TertiaryContainer" Color="#FFFFD8E4"/>
             <SolidColorBrush x:Key="Launcher.Color.OnTertiaryContainer" Color="#FF31111D"/>
+            <SolidColorBrush x:Key="Launcher.Color.PrimaryContainer" Color="#FFEADDFF"/>
+            <SolidColorBrush x:Key="Launcher.Color.OnPrimaryContainer" Color="#FF21005D"/>
             <SolidColorBrush x:Key="Launcher.Color.Surface" Color="#FFFEF7FF"/>
             <SolidColorBrush x:Key="Launcher.Color.OnSurface" Color="#FF1D1B20"/>
             <SolidColorBrush x:Key="Launcher.Color.Outline" Color="#FF79747E"/>
