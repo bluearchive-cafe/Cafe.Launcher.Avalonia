@@ -1,32 +1,20 @@
 <UserControl xmlns="https://github.com/avaloniaui"
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
              xmlns:vm="using:Cafe.Launcher.Avalonia.ViewModels"
-             xmlns:models="using:Cafe.Launcher.Avalonia.Models"
              xmlns:materialIcons="clr-namespace:Material.Icons.Avalonia;assembly=Material.Icons.Avalonia"
              xmlns:controls="using:Cafe.Launcher.Avalonia.Controls"
              x:Class="Cafe.Launcher.Avalonia.Views.SettingsAdvancedSection"
              x:Name="SettingsRoot"
              x:DataType="vm:MainWindowViewModel">
-    <UserControl.Resources>
-        <DataTemplate x:Key="SettingOptionTemplate" x:DataType="models:SettingOption">
-            <TextBlock Text="{Binding DisplayName}"/>
-        </DataTemplate>
-    </UserControl.Resources>
     <StackPanel Classes="settings-group">
         <TextBlock Text="{Binding Shell.I18n[settingsGroupDiagnostics]}" Classes="group-title"/>
 
-        <controls:SettingRow ShowTopDivider="False"
-                             Title="{Binding Shell.I18n[logLevel]}"
-                             Description="{Binding Shell.I18n[logLevelDescription]}">
-            <controls:SettingRow.Action>
-                <ComboBox Classes="setting-control"
-                          AutomationProperties.Name="{Binding Shell.I18n[logLevel]}"
-                          ItemsSource="{Binding Settings.Options.LogLevel}"
-                          SelectedValue="{Binding Settings.Editor.Current.LogLevel, Mode=TwoWay}"
-                          SelectedValueBinding="{Binding Code}"
-                          ItemTemplate="{StaticResource SettingOptionTemplate}"/>
-            </controls:SettingRow.Action>
-        </controls:SettingRow>
+        <controls:SettingSelect ShowTopDivider="False"
+                                Title="{Binding Shell.I18n[logLevel]}"
+                                Description="{Binding Shell.I18n[logLevelDescription]}"
+                                AutomationName="{Binding Shell.I18n[logLevel]}"
+                                ItemsSource="{Binding Settings.Options.LogLevel}"
+                                SelectedValue="{Binding Settings.Editor.Current.LogLevel, Mode=TwoWay}"/>
 
         <controls:SettingRow Title="{Binding Shell.I18n[logFiles]}"
                              Description="{Binding Shell.I18n[logFilesDescription]}">

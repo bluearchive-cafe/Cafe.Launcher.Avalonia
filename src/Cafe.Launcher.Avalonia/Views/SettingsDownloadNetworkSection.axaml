@@ -1,69 +1,39 @@
 <UserControl xmlns="https://github.com/avaloniaui"
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
              xmlns:vm="using:Cafe.Launcher.Avalonia.ViewModels"
-             xmlns:models="using:Cafe.Launcher.Avalonia.Models"
              xmlns:materialIcons="clr-namespace:Material.Icons.Avalonia;assembly=Material.Icons.Avalonia"
              xmlns:controls="using:Cafe.Launcher.Avalonia.Controls"
              x:Class="Cafe.Launcher.Avalonia.Views.SettingsDownloadNetworkSection"
              x:Name="SettingsRoot"
              x:DataType="vm:MainWindowViewModel">
-    <UserControl.Resources>
-        <DataTemplate x:Key="SettingOptionTemplate" x:DataType="models:SettingOption">
-            <TextBlock Text="{Binding DisplayName}"/>
-        </DataTemplate>
-    </UserControl.Resources>
     <StackPanel>
         <StackPanel Classes="settings-group">
             <TextBlock Text="{Binding Shell.I18n[settingsGroupConnection]}" Classes="group-title"/>
 
-            <controls:SettingRow ShowTopDivider="False"
-                                 Title="{Binding Shell.I18n[proxy]}"
-                                 Description="{Binding Shell.I18n[proxyDescription]}">
-                <controls:SettingRow.Action>
-                    <ComboBox Classes="setting-control"
-                              AutomationProperties.Name="{Binding Shell.I18n[proxy]}"
-                              ItemsSource="{Binding Settings.Options.ProxyMode}"
-                              SelectedValue="{Binding Settings.Editor.Current.ProxyMode, Mode=TwoWay}"
-                              SelectedValueBinding="{Binding Code}"
-                              ItemTemplate="{StaticResource SettingOptionTemplate}"/>
-                </controls:SettingRow.Action>
-            </controls:SettingRow>
+            <controls:SettingSelect ShowTopDivider="False"
+                                    Title="{Binding Shell.I18n[proxy]}"
+                                    Description="{Binding Shell.I18n[proxyDescription]}"
+                                    AutomationName="{Binding Shell.I18n[proxy]}"
+                                    ItemsSource="{Binding Settings.Options.ProxyMode}"
+                                    SelectedValue="{Binding Settings.Editor.Current.ProxyMode, Mode=TwoWay}"/>
 
-            <controls:SettingRow Title="{Binding Shell.I18n[downloadSource]}"
-                                 Description="{Binding Shell.I18n[downloadSourceDescription]}">
-                <controls:SettingRow.Action>
-                    <ComboBox Classes="setting-control"
-                              AutomationProperties.Name="{Binding Shell.I18n[downloadSource]}"
-                              ItemsSource="{Binding Settings.Options.PatchUrlGroup}"
-                              SelectedValue="{Binding Settings.Editor.Current.PatchUrlGroup, Mode=TwoWay}"
-                              SelectedValueBinding="{Binding Code}"
-                              ItemTemplate="{StaticResource SettingOptionTemplate}"/>
-                </controls:SettingRow.Action>
-            </controls:SettingRow>
+            <controls:SettingSelect Title="{Binding Shell.I18n[downloadSource]}"
+                                    Description="{Binding Shell.I18n[downloadSourceDescription]}"
+                                    AutomationName="{Binding Shell.I18n[downloadSource]}"
+                                    ItemsSource="{Binding Settings.Options.PatchUrlGroup}"
+                                    SelectedValue="{Binding Settings.Editor.Current.PatchUrlGroup, Mode=TwoWay}"/>
 
-            <controls:SettingRow Title="{Binding Shell.I18n[downloadSpeedLimit]}"
-                                 Description="{Binding Shell.I18n[downloadSpeedLimitDescription]}">
-                <controls:SettingRow.Action>
-                    <ComboBox Classes="setting-control"
-                              AutomationProperties.Name="{Binding Shell.I18n[downloadSpeedLimit]}"
-                              ItemsSource="{Binding Settings.Options.DownloadSpeedLimit}"
-                              SelectedValue="{Binding Settings.Editor.Current.DownloadSpeedLimit, Mode=TwoWay}"
-                              SelectedValueBinding="{Binding Code}"
-                              ItemTemplate="{StaticResource SettingOptionTemplate}"/>
-                </controls:SettingRow.Action>
-            </controls:SettingRow>
+            <controls:SettingSelect Title="{Binding Shell.I18n[downloadSpeedLimit]}"
+                                    Description="{Binding Shell.I18n[downloadSpeedLimitDescription]}"
+                                    AutomationName="{Binding Shell.I18n[downloadSpeedLimit]}"
+                                    ItemsSource="{Binding Settings.Options.DownloadSpeedLimit}"
+                                    SelectedValue="{Binding Settings.Editor.Current.DownloadSpeedLimit, Mode=TwoWay}"/>
 
-            <controls:SettingRow Title="{Binding Shell.I18n[launcherUpdateChannel]}"
-                                 Description="{Binding Shell.I18n[launcherUpdateChannelDescription]}">
-                <controls:SettingRow.Action>
-                    <ComboBox Classes="setting-control"
-                              AutomationProperties.Name="{Binding Shell.I18n[launcherUpdateChannel]}"
-                              ItemsSource="{Binding Settings.Options.UpdateChannel}"
-                              SelectedValue="{Binding Settings.Editor.Current.UpdateChannel, Mode=TwoWay}"
-                              SelectedValueBinding="{Binding Code}"
-                              ItemTemplate="{StaticResource SettingOptionTemplate}"/>
-                </controls:SettingRow.Action>
-            </controls:SettingRow>
+            <controls:SettingSelect Title="{Binding Shell.I18n[launcherUpdateChannel]}"
+                                    Description="{Binding Shell.I18n[launcherUpdateChannelDescription]}"
+                                    AutomationName="{Binding Shell.I18n[launcherUpdateChannel]}"
+                                    ItemsSource="{Binding Settings.Options.UpdateChannel}"
+                                    SelectedValue="{Binding Settings.Editor.Current.UpdateChannel, Mode=TwoWay}"/>
         </StackPanel>
 
     </StackPanel>

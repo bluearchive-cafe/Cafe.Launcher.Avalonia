@@ -11,26 +11,17 @@
         <DataTemplate x:Key="SettingOptionTemplate" x:DataType="models:SettingOption">
             <TextBlock Text="{Binding DisplayName}"/>
         </DataTemplate>
-        <DataTemplate x:Key="ThemeOptionTemplate" x:DataType="models:ThemeOption">
-            <TextBlock Text="{Binding DisplayName}"/>
-        </DataTemplate>
     </UserControl.Resources>
     <StackPanel>
         <StackPanel Classes="settings-group">
             <TextBlock Text="{Binding Shell.I18n[settingsGroupThemeColor]}" Classes="group-title"/>
 
-            <controls:SettingRow ShowTopDivider="False"
-                                 Title="{Binding Shell.I18n[theme]}"
-                                 Description="{Binding Shell.I18n[themeDescription]}">
-                <controls:SettingRow.Action>
-                    <ComboBox Classes="setting-control"
-                              AutomationProperties.Name="{Binding Shell.I18n[theme]}"
-                              ItemsSource="{Binding Settings.Options.Theme}"
-                              SelectedValue="{Binding Settings.Editor.Current.ThemeMode, Mode=TwoWay}"
-                              SelectedValueBinding="{Binding Code}"
-                              ItemTemplate="{StaticResource ThemeOptionTemplate}"/>
-                </controls:SettingRow.Action>
-            </controls:SettingRow>
+            <controls:SettingSelect ShowTopDivider="False"
+                                    Title="{Binding Shell.I18n[theme]}"
+                                    Description="{Binding Shell.I18n[themeDescription]}"
+                                    AutomationName="{Binding Shell.I18n[theme]}"
+                                    ItemsSource="{Binding Settings.Options.Theme}"
+                                    SelectedValue="{Binding Settings.Editor.Current.ThemeMode, Mode=TwoWay}"/>
 
             <controls:SettingRow Title="{Binding Shell.I18n[themeColor]}"
                                  Description="{Binding Shell.I18n[themeColorDescription]}">
@@ -48,29 +39,23 @@
                 </controls:SettingRow.Action>
             </controls:SettingRow>
 
-            <controls:SettingRow Title="{Binding Shell.I18n[themeColorExtractionAlgorithm]}"
-                                 Description="{Binding Shell.I18n[themeColorExtractionAlgorithmDescription]}">
-                <controls:SettingRow.Action>
-                    <ComboBox Classes="setting-control"
-                              AutomationProperties.Name="{Binding Shell.I18n[themeColorExtractionAlgorithm]}"
-                              ItemsSource="{Binding Settings.Options.ThemeColorExtractionAlgorithm}"
-                              SelectedValue="{Binding Settings.Editor.Current.ThemeColorExtractionAlgorithm, Mode=TwoWay}"
-                              SelectedValueBinding="{Binding Code}"
-                              ItemTemplate="{StaticResource SettingOptionTemplate}"/>
-                </controls:SettingRow.Action>
-            </controls:SettingRow>
+            <controls:SettingSelect Title="{Binding Shell.I18n[themeColorExtractionAlgorithm]}"
+                                    Description="{Binding Shell.I18n[themeColorExtractionAlgorithmDescription]}"
+                                    AutomationName="{Binding Shell.I18n[themeColorExtractionAlgorithm]}"
+                                    ItemsSource="{Binding Settings.Options.ThemeColorExtractionAlgorithm}"
+                                    SelectedValue="{Binding Settings.Editor.Current.ThemeColorExtractionAlgorithm, Mode=TwoWay}"/>
 
-            <controls:SettingRow Title="{Binding Shell.I18n[themeColorVariant]}"
-                                 Description="{Binding Shell.I18n[themeColorVariantDescription]}">
-                <controls:SettingRow.Action>
-                    <ComboBox Classes="setting-control"
-                              AutomationProperties.Name="{Binding Shell.I18n[themeColorVariant]}"
-                              ItemsSource="{Binding Settings.Options.ThemeColorVariant}"
-                              SelectedValue="{Binding Settings.Editor.Current.ThemeColorVariant, Mode=TwoWay}"
-                              SelectedValueBinding="{Binding Code}"
-                              ItemTemplate="{StaticResource SettingOptionTemplate}"/>
-                </controls:SettingRow.Action>
-            </controls:SettingRow>
+            <controls:SettingSelect Title="{Binding Shell.I18n[themeColorVariant]}"
+                                    Description="{Binding Shell.I18n[themeColorVariantDescription]}"
+                                    AutomationName="{Binding Shell.I18n[themeColorVariant]}"
+                                    ItemsSource="{Binding Settings.Options.ThemeColorVariant}"
+                                    SelectedValue="{Binding Settings.Editor.Current.ThemeColorVariant, Mode=TwoWay}"/>
+
+            <controls:SettingSelect Title="{Binding Shell.I18n[neutralColorStrategy]}"
+                                    Description="{Binding Shell.I18n[neutralColorStrategyDescription]}"
+                                    AutomationName="{Binding Shell.I18n[neutralColorStrategy]}"
+                                    ItemsSource="{Binding Settings.Options.NeutralColorStrategy}"
+                                    SelectedValue="{Binding Settings.Editor.Current.NeutralColorStrategy, Mode=TwoWay}"/>
 
             <Grid Classes="settings-row" ColumnDefinitions="*,Auto"
                   IsVisible="{Binding Settings.Appearance.IsWallpaperThemeColorSelected}">
@@ -136,30 +121,18 @@
         <StackPanel Classes="settings-group">
             <TextBlock Text="{Binding Shell.I18n[settingsGroupBackground]}" Classes="group-title"/>
 
-            <controls:SettingRow ShowTopDivider="False"
-                                 Title="{Binding Shell.I18n[backgroundSource]}"
-                                 Description="{Binding Shell.I18n[backgroundSourceDescription]}">
-                <controls:SettingRow.Action>
-                    <ComboBox Classes="setting-control"
-                              AutomationProperties.Name="{Binding Shell.I18n[backgroundSource]}"
-                              ItemsSource="{Binding Settings.Options.BackgroundSource}"
-                              SelectedValue="{Binding Settings.Editor.Current.BackgroundSource, Mode=TwoWay}"
-                              SelectedValueBinding="{Binding Code}"
-                              ItemTemplate="{StaticResource SettingOptionTemplate}"/>
-                </controls:SettingRow.Action>
-            </controls:SettingRow>
+            <controls:SettingSelect ShowTopDivider="False"
+                                    Title="{Binding Shell.I18n[backgroundSource]}"
+                                    Description="{Binding Shell.I18n[backgroundSourceDescription]}"
+                                    AutomationName="{Binding Shell.I18n[backgroundSource]}"
+                                    ItemsSource="{Binding Settings.Options.BackgroundSource}"
+                                    SelectedValue="{Binding Settings.Editor.Current.BackgroundSource, Mode=TwoWay}"/>
 
-            <controls:SettingRow Title="{Binding Shell.I18n[backgroundFit]}"
-                                 Description="{Binding Shell.I18n[backgroundFitDescription]}">
-                <controls:SettingRow.Action>
-                    <ComboBox Classes="setting-control"
-                              AutomationProperties.Name="{Binding Shell.I18n[backgroundFit]}"
-                              ItemsSource="{Binding Settings.Options.BackgroundFit}"
-                              SelectedValue="{Binding Settings.Editor.Current.BackgroundFit, Mode=TwoWay}"
-                              SelectedValueBinding="{Binding Code}"
-                              ItemTemplate="{StaticResource SettingOptionTemplate}"/>
-                </controls:SettingRow.Action>
-            </controls:SettingRow>
+            <controls:SettingSelect Title="{Binding Shell.I18n[backgroundFit]}"
+                                    Description="{Binding Shell.I18n[backgroundFitDescription]}"
+                                    AutomationName="{Binding Shell.I18n[backgroundFit]}"
+                                    ItemsSource="{Binding Settings.Options.BackgroundFit}"
+                                    SelectedValue="{Binding Settings.Editor.Current.BackgroundFit, Mode=TwoWay}"/>
 
             <controls:SettingRow Title="{Binding Shell.I18n[backgroundFillColor]}"
                                  Description="{Binding Shell.I18n[backgroundFillColorDescription]}"
@@ -215,18 +188,12 @@
         <StackPanel Classes="settings-group">
             <TextBlock Text="{Binding Shell.I18n[settingsGroupDisplay]}" Classes="group-title"/>
 
-            <controls:SettingRow ShowTopDivider="False"
-                                 Title="{Binding Shell.I18n[statusDetailMode]}"
-                                 Description="{Binding Shell.I18n[statusDetailModeDescription]}">
-                <controls:SettingRow.Action>
-                    <ComboBox Classes="setting-control"
-                              AutomationProperties.Name="{Binding Shell.I18n[statusDetailMode]}"
-                              ItemsSource="{Binding Settings.Options.StatusDetailMode}"
-                              SelectedValue="{Binding Settings.Editor.Current.StatusDetailMode, Mode=TwoWay}"
-                              SelectedValueBinding="{Binding Code}"
-                              ItemTemplate="{StaticResource SettingOptionTemplate}"/>
-                </controls:SettingRow.Action>
-            </controls:SettingRow>
+            <controls:SettingSelect ShowTopDivider="False"
+                                    Title="{Binding Shell.I18n[statusDetailMode]}"
+                                    Description="{Binding Shell.I18n[statusDetailModeDescription]}"
+                                    AutomationName="{Binding Shell.I18n[statusDetailMode]}"
+                                    ItemsSource="{Binding Settings.Options.StatusDetailMode}"
+                                    SelectedValue="{Binding Settings.Editor.Current.StatusDetailMode, Mode=TwoWay}"/>
 
             <controls:SettingRow Title="{Binding Shell.I18n[remoteContentCard]}"
                                  Description="{Binding Shell.I18n[remoteContentCardDescription]}">

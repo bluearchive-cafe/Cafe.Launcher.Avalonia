@@ -365,6 +365,8 @@ public partial class SettingsAppearanceViewModel : ViewModelBase, IDisposable
 
         if (Application.Current is { } application)
         {
+            EnsureThemeSubscription(application);
+            lastThemeMode = themeMode;
             application.RequestedThemeVariant = themeVariant;
 
             // M3: scheme roles are theme-dependent; re-apply the last scheme so a
@@ -396,6 +398,7 @@ public partial class SettingsAppearanceViewModel : ViewModelBase, IDisposable
     }
 
     private static bool lastSchemeApplied;
+    private static string lastThemeMode = ThemeModes.System;
     private static Color lastSchemeSeed = Color.Parse(LauncherConstants.DefaultThemeColor);
     private static string lastSchemeVariant = ThemeColorVariants.TonalSpot;
     private static string lastSchemeStrategy = NeutralColorStrategies.BrandBlue;
@@ -420,7 +423,8 @@ public partial class SettingsAppearanceViewModel : ViewModelBase, IDisposable
         var scheme = MaterialSchemeGenerator.CreateScheme(seed, variant, isDark);
         var roleBrushes = MaterialSchemeGenerator.BuildRoleBrushes(
             scheme,
-            seedFollowingNeutrals: neutralStrategy == NeutralColorStrategies.SeedFollowing);
+            seedFollowingNeutrals: neutralStrategy == NeutralColorStrategies.SeedFollowing,
+            isDark: isDark);
         foreach (var (key, brush) in roleBrushes)
         {
             SetBrush(application, key, brush.Color);
@@ -430,6 +434,38 @@ public partial class SettingsAppearanceViewModel : ViewModelBase, IDisposable
         lastSchemeSeed = seed;
         lastSchemeVariant = variant;
         lastSchemeStrategy = neutralStrategy;
+    }
+
+    private static Application? themeApplication;
+
+    private static void EnsureThemeSubscription(Application application)
+    {
+        if (ReferenceEquals(themeApplication, application))
+        {
+            return;
+        }
+
+        if (themeApplication is not null)
+        {
+            themeApplication.ActualThemeVariantChanged -= OnActualThemeVariantChanged;
+        }
+
+        themeApplication = application;
+        themeApplication.ActualThemeVariantChanged += OnActualThemeVariantChanged;
+    }
+
+    private static void OnActualThemeVariantChanged(object? sender, EventArgs e)
+    {
+        if (lastThemeMode != ThemeModes.System || !lastSchemeApplied)
+        {
+            return;
+        }
+
+        ApplyScheme(
+            lastSchemeSeed,
+            lastSchemeVariant,
+            IsDarkTheme(ThemeModes.System),
+            lastSchemeStrategy);
     }
 
     /// <summary>Resolves whether the effective theme is dark for a theme mode.</summary>

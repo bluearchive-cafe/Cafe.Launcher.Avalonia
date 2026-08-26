@@ -1,17 +1,11 @@
 <UserControl xmlns="https://github.com/avaloniaui"
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
              xmlns:vm="using:Cafe.Launcher.Avalonia.ViewModels"
-             xmlns:models="using:Cafe.Launcher.Avalonia.Models"
              xmlns:materialIcons="clr-namespace:Material.Icons.Avalonia;assembly=Material.Icons.Avalonia"
              xmlns:controls="using:Cafe.Launcher.Avalonia.Controls"
              x:Class="Cafe.Launcher.Avalonia.Views.SettingsGameSection"
              x:Name="SettingsRoot"
              x:DataType="vm:MainWindowViewModel">
-    <UserControl.Resources>
-        <DataTemplate x:Key="SettingOptionTemplate" x:DataType="models:SettingOption">
-            <TextBlock Text="{Binding DisplayName}"/>
-        </DataTemplate>
-    </UserControl.Resources>
     <StackPanel Classes="settings-group">
         <TextBlock Text="{Binding Shell.I18n[settingsGroupGameFiles]}" Classes="group-title"/>
 
@@ -30,17 +24,11 @@
             </controls:SettingRow.Action>
         </controls:SettingRow>
 
-        <controls:SettingRow Title="{Binding Shell.I18n[launchCheck]}"
-                             Description="{Binding Shell.I18n[launchCheckDescription]}">
-            <controls:SettingRow.Action>
-                <ComboBox Classes="setting-control"
-                          AutomationProperties.Name="{Binding Shell.I18n[launchCheck]}"
-                          ItemsSource="{Binding Settings.Options.LaunchCheckMode}"
-                          SelectedValue="{Binding Settings.Editor.Current.LaunchCheckMode, Mode=TwoWay}"
-                          SelectedValueBinding="{Binding Code}"
-                          ItemTemplate="{StaticResource SettingOptionTemplate}"/>
-            </controls:SettingRow.Action>
-        </controls:SettingRow>
+        <controls:SettingSelect Title="{Binding Shell.I18n[launchCheck]}"
+                                Description="{Binding Shell.I18n[launchCheckDescription]}"
+                                AutomationName="{Binding Shell.I18n[launchCheck]}"
+                                ItemsSource="{Binding Settings.Options.LaunchCheckMode}"
+                                SelectedValue="{Binding Settings.Editor.Current.LaunchCheckMode, Mode=TwoWay}"/>
 
         <controls:SettingRow Title="{Binding Shell.I18n[gameManagement]}"
                              Description="{Binding Shell.I18n[gameManagementDescription]}">

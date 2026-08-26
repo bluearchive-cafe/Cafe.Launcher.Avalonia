@@ -22,7 +22,7 @@
                 <TranslateTransform/>
             </Border.RenderTransform>
             <Grid RowDefinitions="*,Auto" Classes="motion-surface-content">
-                <Grid Classes="settings-workspace" ColumnDefinitions="184,*">
+                <Grid Classes="settings-workspace" ColumnDefinitions="216,*">
                     <Grid Classes="settings-navigation-pane" RowDefinitions="Auto,*">
                         <Border Classes="settings-navigation-header">
                             <StackPanel Classes="dialog-title-row">
@@ -50,7 +50,7 @@
                                     <TextBlock Grid.Column="1"
                                                Text="{Binding DisplayName}"
                                                Classes="settings-navigation-item"
-                                               ToolTip.Tip="{Binding Description}"
+                                               ToolTip.Tip="{Binding DisplayName}"
                                                AutomationProperties.Name="{Binding DisplayName}"/>
                                 </Grid>
                             </DataTemplate>

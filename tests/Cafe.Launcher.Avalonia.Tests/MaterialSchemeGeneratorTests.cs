@@ -99,7 +99,7 @@ public sealed class MaterialSchemeGeneratorTests
     }
 
     [Fact]
-    public void BuildRoleBrushes_BrandBlueStrategy_OmitSurfaceNeutralRoles()
+    public void BuildRoleBrushes_BrandBlueStrategy_ProvidesFixedSurfaceNeutralRoles()
     {
         var scheme = MaterialSchemeGenerator.CreateScheme(
             DefaultSeed,
@@ -108,15 +108,18 @@ public sealed class MaterialSchemeGeneratorTests
 
         var brushes = MaterialSchemeGenerator.BuildRoleBrushes(scheme, seedFollowingNeutrals: false);
 
-        Assert.False(brushes.ContainsKey("Launcher.Color.Surface"));
-        Assert.False(brushes.ContainsKey("Launcher.Color.OnSurface"));
-        Assert.False(brushes.ContainsKey("Launcher.Color.Outline"));
+        Assert.True(brushes.ContainsKey("Launcher.Color.Surface"));
+        Assert.True(brushes.ContainsKey("Launcher.Color.OnSurface"));
+        Assert.True(brushes.ContainsKey("Launcher.Color.Outline"));
+        Assert.NotEqual(
+            scheme.Surface.Value,
+            MaterialColorMapper.ToArgbColor(brushes["Launcher.Color.Surface"].Color).Value);
         Assert.True(brushes.ContainsKey("Launcher.Color.Secondary"));
         Assert.True(brushes.ContainsKey("Launcher.Color.TertiaryContainer"));
     }
 
     [Fact]
-    public void BuildRoleBrushes_SeedFollowingStrategy_OnlyIncludesLegacyNeutralRoles()
+    public void BuildRoleBrushes_SeedFollowingStrategy_UsesSelectedNeutralRoles()
     {
         var scheme = MaterialSchemeGenerator.CreateScheme(
             DefaultSeed,

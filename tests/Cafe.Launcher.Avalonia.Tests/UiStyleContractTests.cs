@@ -922,7 +922,7 @@ public sealed partial class UiStyleContractTests
             .Single(element =>
                 element.Name.LocalName == "Grid"
                 && HasClass(element, "settings-workspace"));
-        Assert.Equal("184,*", workspace.Attribute("ColumnDefinitions")?.Value);
+        Assert.Equal("216,*", workspace.Attribute("ColumnDefinitions")?.Value);
 
         var navigation = workspace
             .Descendants()
@@ -1185,6 +1185,13 @@ public sealed partial class UiStyleContractTests
                 .Elements()
                 .First(element => element.Name.LocalName == "TextBlock")
                 .Attribute("Text")?.Value);
+        var neutralStrategyRow = groups[0].Descendants().Single(element =>
+            element.Name.LocalName == "SettingSelect"
+            && element.Attribute("Title")?.Value
+                == "{Binding Shell.I18n[neutralColorStrategy]}");
+        Assert.Equal(
+            "{Binding Settings.Options.NeutralColorStrategy}",
+            neutralStrategyRow.Attribute("ItemsSource")?.Value);
         Assert.Equal(
             "{Binding Shell.I18n[settingsGroupDisplay]}",
             groups[2]
@@ -1510,6 +1517,15 @@ public sealed partial class UiStyleContractTests
             iconButtonDisabled["Foreground"]);
 
         var dangerDisabled = GetStyleSetters(document, "Button.danger-action:disabled");
+        Assert.Equal(
+            "{DynamicResource Launcher.Text.OnChrome}",
+            GetStyleSetters(document, "Button.danger-action")["Foreground"]);
+        Assert.Equal(
+            "{DynamicResource Launcher.Text.OnChrome}",
+            GetStyleSetters(document, "Button.danger-action:pointerover")["Foreground"]);
+        Assert.Equal(
+            "{DynamicResource Launcher.Text.OnChrome}",
+            GetStyleSetters(document, "Button.danger-action:pressed")["Foreground"]);
         Assert.Equal(
             "{DynamicResource Launcher.Color.Content.Row}",
             dangerDisabled["Background"]);
@@ -2434,6 +2450,7 @@ public sealed partial class UiStyleContractTests
         Assert.Equal(
             "True",
             GetStyleSetters(document, "Grid.toast-host")["IsHitTestVisible"]);
+        Assert.Equal("1", GetStyleSetters(document, "Button.toast-close")["Opacity"]);
     }
 
     [Fact]
@@ -3035,6 +3052,7 @@ public sealed partial class UiStyleContractTests
             "Button",
             "ColorPicker",
             "ComboBox",
+            "SettingSelect",
             "TextBox",
             "ToggleSwitch"
         };
@@ -3055,7 +3073,9 @@ public sealed partial class UiStyleContractTests
                     var automationName = control
                         .Attributes()
                         .SingleOrDefault(attribute =>
-                            attribute.Name.LocalName == "AutomationProperties.Name")
+                            attribute.Name.LocalName == (control.Name.LocalName == "SettingSelect"
+                                ? "AutomationName"
+                                : "AutomationProperties.Name"))
                         ?.Value;
 
                     Assert.False(
@@ -3077,7 +3097,7 @@ public sealed partial class UiStyleContractTests
                 && HasClass(element, "settings-group"));
         var rows = group
             .Elements()
-            .Where(element => element.Name.LocalName == "SettingRow")
+            .Where(element => element.Name.LocalName is "SettingRow" or "SettingSelect")
             .ToList();
 
         Assert.Equal(2, rows.Count);

@@ -73,7 +73,7 @@
         <Setter Property="CornerRadius" Value="{StaticResource Launcher.Radius.Sm}"/>
         <Setter Property="HorizontalContentAlignment" Value="Center"/>
         <Setter Property="VerticalContentAlignment" Value="Center"/>
-        <Setter Property="Opacity" Value="0.5"/>
+        <Setter Property="Opacity" Value="1"/>
         <Setter Property="VerticalAlignment" Value="Top"/>
     </Style>
     <Style Selector="Button.toast-close:pointerover">

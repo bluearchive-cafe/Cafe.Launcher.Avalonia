@@ -308,7 +308,7 @@
     </Style>
     <Style Selector="Button.danger-action">
         <Setter Property="Background" Value="{DynamicResource Launcher.Color.Danger}"/>
-        <Setter Property="Foreground" Value="{DynamicResource Launcher.Color.OnPrimary}"/>
+        <Setter Property="Foreground" Value="{DynamicResource Launcher.Text.OnChrome}"/>
         <Setter Property="BorderThickness" Value="0"/>
         <Setter Property="FontWeight" Value="{StaticResource Launcher.Typography.FontWeight.Strong}"/>
         <Setter Property="MinHeight" Value="{StaticResource Launcher.Control.Height.Dialog}"/>
@@ -320,11 +320,11 @@
     </Style>
     <Style Selector="Button.danger-action:pointerover">
         <Setter Property="Background" Value="{DynamicResource Launcher.Color.Danger.Hover}"/>
-        <Setter Property="Foreground" Value="{DynamicResource Launcher.Color.OnPrimary}"/>
+        <Setter Property="Foreground" Value="{DynamicResource Launcher.Text.OnChrome}"/>
     </Style>
     <Style Selector="Button.danger-action:pressed">
         <Setter Property="Background" Value="{DynamicResource Launcher.Color.Danger.Pressed}"/>
-        <Setter Property="Foreground" Value="{DynamicResource Launcher.Color.OnPrimary}"/>
+        <Setter Property="Foreground" Value="{DynamicResource Launcher.Text.OnChrome}"/>
     </Style>
     <Style Selector="Button.danger-action:disabled">
         <Setter Property="Background" Value="{DynamicResource Launcher.Color.Content.Row}"/>
@@ -450,7 +450,7 @@
         <Setter Property="FontWeight" Value="{StaticResource Launcher.Typography.FontWeight.Strong}"/>
     </Style>
     <Style Selector="Border.surface">
-        <Setter Property="Background" Value="{DynamicResource Launcher.Color.Panel.Background}"/>
+        <Setter Property="Background" Value="{DynamicResource Launcher.Color.Surface}"/>
         <Setter Property="CornerRadius" Value="{StaticResource Launcher.Radius.Md}"/>
         <Setter Property="Padding" Value="16"/>
         <!-- 阴影值集中见 Launcher.Elevation.Shadow.Md；BoxShadow 为无 TypeConverter 的结构体，
@@ -863,7 +863,8 @@
         <Setter Property="VerticalAlignment" Value="Center"/>
     </Style>
     <Style Selector="Grid.settings-content">
-        <Setter Property="Background" Value="{DynamicResource Launcher.Color.Dialog.Background}"/>
+        <Setter Property="Background" Value="{DynamicResource Launcher.Color.Surface}"/>
+        <Setter Property="TextElement.Foreground" Value="{DynamicResource Launcher.Color.OnSurface}"/>
     </Style>
     <Style Selector="Button.dialog-close.content-header-action">
         <Setter Property="Margin" Value="{StaticResource Launcher.Spacing.Thickness.None}"/>
@@ -901,7 +902,7 @@
         <Setter Property="views:OverlayFocusBehavior.IsEnabled" Value="True"/>
     </Style>
     <Style Selector="Border.dialog">
-        <Setter Property="Background" Value="{DynamicResource Launcher.Color.Dialog.Background}"/>
+        <Setter Property="Background" Value="{DynamicResource Launcher.Color.Surface}"/>
         <Setter Property="CornerRadius" Value="{StaticResource Launcher.Radius.Lg}"/>
         <Setter Property="ClipToBounds" Value="True"/>
         <!-- 阴影值集中见 Launcher.Elevation.Shadow.Lg（BoxShadow 无 TypeConverter，同上限制）。 -->
@@ -994,7 +995,7 @@
     </Style>
     <Style Selector="Border.dialog-card">
         <Setter Property="Background" Value="{DynamicResource Launcher.Color.Card.Background}"/>
-        <Setter Property="BorderBrush" Value="{DynamicResource Launcher.Color.Card.Border}"/>
+        <Setter Property="BorderBrush" Value="{DynamicResource Launcher.Color.Outline}"/>
         <Setter Property="BorderThickness" Value="1"/>
         <Setter Property="CornerRadius" Value="{StaticResource Launcher.Radius.Sm}"/>
         <Setter Property="Padding" Value="16"/>
