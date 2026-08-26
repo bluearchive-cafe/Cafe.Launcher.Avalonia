@@ -14,8 +14,8 @@
           Classes.motion-enabled="{Binding IsMotionEnabled}"
           controls:MotionVisibility.IsOpen="{Binding Dialogs.IsSetupWizardVisible}"
           controls:MotionVisibility.IsMotionEnabled="{Binding IsMotionEnabled}">
-        <Border Width="{StaticResource Launcher.Layout.SetupWizard.Width}"
-                Height="{StaticResource Launcher.Layout.SetupWizard.Height}"
+            <Border HorizontalAlignment="Stretch"
+                VerticalAlignment="Stretch"
                 MaxWidth="{StaticResource Launcher.Layout.SetupWizard.Width}"
                 MaxHeight="{StaticResource Launcher.Layout.SetupWizard.Height}"
                 Classes="dialog overlay-dialog confirm-panel motion-surface">

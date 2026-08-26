@@ -74,6 +74,13 @@ internal static class MaterialSchemeGenerator
         result["Launcher.Color.Button.Flat.Pressed"] = new SolidColorBrush(Color.FromArgb(0x30, primary.R, primary.G, primary.B));
         result["Launcher.Color.Info.Background"] = new SolidColorBrush(Color.FromArgb(0x24, primary.R, primary.G, primary.B));
 
+        var error = MaterialColorMapper.ToAvaloniaColor(scheme.Error);
+        var onError = MaterialColorMapper.ToAvaloniaColor(scheme.OnError);
+        result["Launcher.Color.Error"] = new SolidColorBrush(error);
+        result["Launcher.Color.Error.Hover"] = new SolidColorBrush(Blend(error, onError, 0.08));
+        result["Launcher.Color.Error.Pressed"] = new SolidColorBrush(Blend(error, onError, 0.16));
+        result["Launcher.Color.OnError"] = new SolidColorBrush(onError);
+
         // M3 scheme roles.
         var secondaryContainer = MaterialColorMapper.ToAvaloniaColor(scheme.SecondaryContainer);
         var onSecondaryContainer = MaterialColorMapper.ToAvaloniaColor(scheme.OnSecondaryContainer);

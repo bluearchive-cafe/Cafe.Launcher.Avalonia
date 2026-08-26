@@ -259,7 +259,10 @@ public partial class MainWindow : Window
         }
     }
 
-    private bool IsWithinTitleBar(Control? control)
+    /// <summary>
+    /// Determines whether a pointer source belongs to the custom title bar.
+    /// </summary>
+    internal bool IsWithinTitleBar(Control? control)
     {
         while (control is not null)
         {
@@ -287,7 +290,10 @@ public partial class MainWindow : Window
         }
     }
 
-    private static bool IsInteractive(Control? control)
+    /// <summary>
+    /// Determines whether a pointer source belongs to a focusable or scrolling control.
+    /// </summary>
+    internal static bool IsInteractive(Control? control)
     {
         while (control is not null)
         {

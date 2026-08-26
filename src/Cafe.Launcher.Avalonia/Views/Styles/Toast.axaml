@@ -4,7 +4,7 @@
     <Style Selector="Border.toast-card">
         <Setter Property="Background" Value="{DynamicResource Launcher.Color.Toast.Background}"/>
         <Setter Property="BorderBrush" Value="{DynamicResource Launcher.Color.Card.Border}"/>
-        <Setter Property="BorderThickness" Value="1"/>
+        <Setter Property="BorderThickness" Value="{StaticResource Launcher.Border.Thickness.Default}"/>
         <Setter Property="CornerRadius" Value="{StaticResource Launcher.Radius.Md}"/>
         <Setter Property="Padding" Value="{StaticResource Launcher.Spacing.Thickness.None}"/>
         <Setter Property="MinWidth" Value="{StaticResource Launcher.Component.Toast.Width}"/>
@@ -42,7 +42,7 @@
     </Style>
     <Style Selector="Grid.toast-host">
         <Setter Property="IsHitTestVisible" Value="True"/>
-        <Setter Property="Margin" Value="0,56,16,0"/>
+        <Setter Property="Margin" Value="{StaticResource Launcher.Component.Toast.Host.Margin}"/>
         <Setter Property="VerticalAlignment" Value="Top"/>
         <Setter Property="HorizontalAlignment" Value="Right"/>
     </Style>
@@ -60,16 +60,16 @@
         <Setter Property="FontSize" Value="{StaticResource Launcher.Typography.FontSize.Body.Sm}"/>
         <Setter Property="Foreground" Value="{DynamicResource Launcher.Text.Body}"/>
         <Setter Property="TextWrapping" Value="Wrap"/>
-        <Setter Property="MaxWidth" Value="282"/>
+        <Setter Property="MaxWidth" Value="{StaticResource Launcher.Component.Toast.Message.MaxWidth}"/>
         <Setter Property="Margin" Value="{StaticResource Launcher.Component.Toast.Message.Margin}"/>
     </Style>
     <Style Selector="Button.toast-close">
         <Setter Property="Background" Value="{DynamicResource Launcher.Color.Transparent}"/>
-        <Setter Property="BorderThickness" Value="0"/>
+        <Setter Property="BorderThickness" Value="{StaticResource Launcher.Spacing.Thickness.None}"/>
         <Setter Property="Foreground" Value="{DynamicResource Launcher.Text.Secondary}"/>
         <Setter Property="Width" Value="{StaticResource Launcher.Control.Height.Setting}"/>
         <Setter Property="Height" Value="{StaticResource Launcher.Control.Height.Setting}"/>
-        <Setter Property="Padding" Value="0"/>
+        <Setter Property="Padding" Value="{StaticResource Launcher.Spacing.Thickness.None}"/>
         <Setter Property="CornerRadius" Value="{StaticResource Launcher.Radius.Sm}"/>
         <Setter Property="HorizontalContentAlignment" Value="Center"/>
         <Setter Property="VerticalContentAlignment" Value="Center"/>
@@ -103,7 +103,7 @@
         <Setter Property="Margin" Value="{StaticResource Launcher.Component.Toast.Action.Primary.Margin}"/>
         <Setter Property="FontSize" Value="{StaticResource Launcher.Typography.FontSize.Label.Md}"/>
         <Setter Property="Background" Value="{DynamicResource Launcher.Color.Primary}"/>
-        <Setter Property="BorderThickness" Value="0"/>
+        <Setter Property="BorderThickness" Value="{StaticResource Launcher.Spacing.Thickness.None}"/>
         <Setter Property="Foreground" Value="{DynamicResource Launcher.Color.OnPrimary}"/>
         <Setter Property="CornerRadius" Value="{StaticResource Launcher.Radius.Sm}"/>
         <Setter Property="HorizontalContentAlignment" Value="Center"/>
@@ -129,7 +129,7 @@
         <Setter Property="FontSize" Value="{StaticResource Launcher.Typography.FontSize.Label.Md}"/>
         <Setter Property="Background" Value="{DynamicResource Launcher.Color.Transparent}"/>
         <Setter Property="BorderBrush" Value="{DynamicResource Launcher.Color.Button.Border}"/>
-        <Setter Property="BorderThickness" Value="1"/>
+        <Setter Property="BorderThickness" Value="{StaticResource Launcher.Border.Thickness.Default}"/>
         <Setter Property="Foreground" Value="{DynamicResource Launcher.Text.Primary}"/>
         <Setter Property="CornerRadius" Value="{StaticResource Launcher.Radius.Sm}"/>
         <Setter Property="HorizontalContentAlignment" Value="Center"/>

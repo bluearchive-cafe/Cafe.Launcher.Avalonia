@@ -69,27 +69,27 @@
     </Style>
     <Style Selector="StackPanel.titlebar-brand-row">
         <Setter Property="Orientation" Value="Horizontal"/>
-        <Setter Property="Margin" Value="20,0,0,0"/>
+        <Setter Property="Margin" Value="{StaticResource Launcher.Component.TitleBar.Brand.Margin}"/>
         <Setter Property="VerticalAlignment" Value="Center"/>
     </Style>
     <Style Selector="StackPanel.titlebar-actions">
         <Setter Property="Orientation" Value="Horizontal"/>
-        <Setter Property="Margin" Value="0,0,8,0"/>
+        <Setter Property="Margin" Value="{StaticResource Launcher.Component.TitleBar.Actions.Margin}"/>
     </Style>
     <Style Selector="Button.chrome">
         <Setter Property="Background" Value="{DynamicResource Launcher.Color.Transparent}"/>
-        <Setter Property="BorderThickness" Value="0"/>
+        <Setter Property="BorderThickness" Value="{StaticResource Launcher.Spacing.Thickness.None}"/>
         <Setter Property="Foreground" Value="{DynamicResource Launcher.Text.OnChrome}"/>
         <Setter Property="Width" Value="{StaticResource Launcher.Control.Height.Setting}"/>
         <Setter Property="Height" Value="{StaticResource Launcher.Control.Height.Setting}"/>
-        <Setter Property="Padding" Value="0"/>
+        <Setter Property="Padding" Value="{StaticResource Launcher.Spacing.Thickness.None}"/>
         <Setter Property="CornerRadius" Value="{StaticResource Launcher.Radius.Sm}"/>
         <Setter Property="HorizontalContentAlignment" Value="Center"/>
         <Setter Property="VerticalContentAlignment" Value="Center"/>
         <Setter Property="Template" Value="{StaticResource LauncherBorderButtonTemplate}"/>
     </Style>
     <Style Selector="Button.chrome.settings">
-        <Setter Property="Margin" Value="0,0,4,0"/>
+        <Setter Property="Margin" Value="{StaticResource Launcher.Component.TitleBar.Settings.Margin}"/>
     </Style>
     <Style Selector="Button.chrome:pointerover">
         <Setter Property="Background" Value="{DynamicResource Launcher.Color.Chrome.Hover}"/>
@@ -109,17 +109,17 @@
     </Style>
     <Style Selector="Button:focus-visible">
         <Setter Property="BorderBrush" Value="{DynamicResource Launcher.Color.FocusRing}"/>
-        <Setter Property="BorderThickness" Value="2"/>
+        <Setter Property="BorderThickness" Value="{StaticResource Launcher.Border.Thickness.Focus}"/>
     </Style>
     <Style Selector="ComboBox:focus-visible">
         <Setter Property="BorderBrush" Value="{DynamicResource Launcher.Color.FocusRing}"/>
-        <Setter Property="BorderThickness" Value="2"/>
+        <Setter Property="BorderThickness" Value="{StaticResource Launcher.Border.Thickness.Focus}"/>
     </Style>
     <Style Selector="ComboBox.setting-control">
-        <Setter Property="MinWidth" Value="220"/>
+        <Setter Property="MinWidth" Value="{StaticResource Launcher.Component.Settings.Control.MinWidth}"/>
         <Setter Property="Background" Value="{DynamicResource Launcher.Color.Field.Background}"/>
         <Setter Property="BorderBrush" Value="{DynamicResource Launcher.Color.Field.Border}"/>
-        <Setter Property="BorderThickness" Value="1"/>
+        <Setter Property="BorderThickness" Value="{StaticResource Launcher.Border.Thickness.Default}"/>
         <Setter Property="CornerRadius" Value="{StaticResource Launcher.Radius.Md}"/>
         <Setter Property="Padding" Value="{StaticResource Launcher.Component.Select.Padding}"/>
         <Setter Property="Foreground" Value="{DynamicResource Launcher.Text.Primary}"/>
@@ -138,7 +138,7 @@
     </Style>
     <Style Selector="ComboBox.setting-control:focus-visible">
         <Setter Property="BorderBrush" Value="{DynamicResource Launcher.Color.FocusRing}"/>
-        <Setter Property="BorderThickness" Value="2"/>
+        <Setter Property="BorderThickness" Value="{StaticResource Launcher.Border.Thickness.Focus}"/>
     </Style>
     <Style Selector="ComboBox.setting-control:disabled">
         <Setter Property="Background" Value="{DynamicResource Launcher.Color.Content.Row}"/>
@@ -148,13 +148,13 @@
     </Style>
     <Style Selector="ToggleSwitch:focus-visible">
         <Setter Property="BorderBrush" Value="{DynamicResource Launcher.Color.FocusRing}"/>
-        <Setter Property="BorderThickness" Value="2"/>
+        <Setter Property="BorderThickness" Value="{StaticResource Launcher.Border.Thickness.Focus}"/>
     </Style>
     <Style Selector="Button.text-link">
         <Setter Property="Background" Value="{DynamicResource Launcher.Color.Transparent}"/>
-        <Setter Property="BorderThickness" Value="0"/>
+        <Setter Property="BorderThickness" Value="{StaticResource Launcher.Spacing.Thickness.None}"/>
         <Setter Property="Foreground" Value="{DynamicResource Launcher.Text.Link}"/>
-        <Setter Property="Padding" Value="0"/>
+        <Setter Property="Padding" Value="{StaticResource Launcher.Spacing.Thickness.None}"/>
         <Setter Property="FontSize" Value="{StaticResource Launcher.Typography.FontSize.Body.Md}"/>
         <Setter Property="TextBlock.TextDecorations" Value="Underline"/>
     </Style>
@@ -172,9 +172,9 @@
     </Style>
     <Style Selector="Button.icon-link">
         <Setter Property="Background" Value="{DynamicResource Launcher.Color.Transparent}"/>
-        <Setter Property="BorderThickness" Value="0"/>
+        <Setter Property="BorderThickness" Value="{StaticResource Launcher.Spacing.Thickness.None}"/>
         <Setter Property="Foreground" Value="{DynamicResource Launcher.Color.Primary}"/>
-        <Setter Property="Padding" Value="8,4"/>
+        <Setter Property="Padding" Value="{StaticResource Launcher.Component.Action.Compact.Padding}"/>
         <Setter Property="CornerRadius" Value="{StaticResource Launcher.Radius.Sm}"/>
         <Setter Property="FontSize" Value="{StaticResource Launcher.Typography.FontSize.Body.Md}"/>
         <Setter Property="HorizontalContentAlignment" Value="Center"/>
@@ -196,26 +196,26 @@
     </Style>
     <Style Selector="Button.icon-button">
         <Setter Property="Background" Value="{DynamicResource Launcher.Color.Transparent}"/>
-        <Setter Property="BorderThickness" Value="0"/>
+        <Setter Property="BorderThickness" Value="{StaticResource Launcher.Spacing.Thickness.None}"/>
         <Setter Property="Foreground" Value="{DynamicResource Launcher.Text.Secondary}"/>
         <Setter Property="Width" Value="{StaticResource Launcher.Control.Size.Swatch}"/>
         <Setter Property="Height" Value="{StaticResource Launcher.Control.Size.Swatch}"/>
-        <Setter Property="Padding" Value="0"/>
+        <Setter Property="Padding" Value="{StaticResource Launcher.Spacing.Thickness.None}"/>
         <Setter Property="CornerRadius" Value="{StaticResource Launcher.Radius.Sm}"/>
         <Setter Property="HorizontalContentAlignment" Value="Center"/>
         <Setter Property="VerticalContentAlignment" Value="Center"/>
     </Style>
     <Style Selector="Button.icon-button.compact">
-        <Setter Property="Width" Value="24"/>
-        <Setter Property="Height" Value="24"/>
+        <Setter Property="Width" Value="{StaticResource Launcher.Control.Size.IconButton.Compact}"/>
+        <Setter Property="Height" Value="{StaticResource Launcher.Control.Size.IconButton.Compact}"/>
     </Style>
     <Style Selector="Button.icon-button.carousel-navigation">
         <Setter Property="Width" Value="{StaticResource Launcher.Control.Height.Setting}"/>
         <Setter Property="Height" Value="{StaticResource Launcher.Control.Height.Setting}"/>
     </Style>
     <Style Selector="Button.icon-button.dot">
-        <Setter Property="Width" Value="20"/>
-        <Setter Property="Height" Value="20"/>
+        <Setter Property="Width" Value="{StaticResource Launcher.Control.Size.IconButton.Dot}"/>
+        <Setter Property="Height" Value="{StaticResource Launcher.Control.Size.IconButton.Dot}"/>
     </Style>
     <Style Selector="Button.icon-button:pointerover">
         <Setter Property="Background" Value="{DynamicResource Launcher.Color.Button.Flat.Hover}"/>
@@ -238,13 +238,13 @@
     </Style>
     <Style Selector="Button.primary-action">
         <Setter Property="Background" Value="{DynamicResource Launcher.Color.Primary}"/>
-        <Setter Property="BorderThickness" Value="0"/>
+        <Setter Property="BorderThickness" Value="{StaticResource Launcher.Spacing.Thickness.None}"/>
         <Setter Property="Foreground" Value="{DynamicResource Launcher.Color.OnPrimary}"/>
         <Setter Property="FontSize" Value="{StaticResource Launcher.Typography.FontSize.Title.Md}"/>
         <Setter Property="FontWeight" Value="{StaticResource Launcher.Typography.FontWeight.Strong}"/>
-        <Setter Property="MinWidth" Value="150"/>
+        <Setter Property="MinWidth" Value="{StaticResource Launcher.Component.PrimaryAction.MinWidth}"/>
         <Setter Property="Height" Value="{StaticResource Launcher.Control.Height.Bottom}"/>
-        <Setter Property="Padding" Value="20,12"/>
+        <Setter Property="Padding" Value="{StaticResource Launcher.Component.Action.Primary.Padding}"/>
         <Setter Property="CornerRadius" Value="{StaticResource Launcher.Radius.Sm}"/>
         <Setter Property="HorizontalContentAlignment" Value="Center"/>
         <Setter Property="VerticalContentAlignment" Value="Center"/>
@@ -265,9 +265,9 @@
     <Style Selector="Button.flat-action">
         <Setter Property="Background" Value="{DynamicResource Launcher.Color.Transparent}"/>
         <Setter Property="BorderBrush" Value="{DynamicResource Launcher.Color.Button.Border}"/>
-        <Setter Property="BorderThickness" Value="1"/>
+        <Setter Property="BorderThickness" Value="{StaticResource Launcher.Border.Thickness.Default}"/>
         <Setter Property="Foreground" Value="{DynamicResource Launcher.Text.Primary}"/>
-        <Setter Property="Padding" Value="12,8"/>
+        <Setter Property="Padding" Value="{StaticResource Launcher.Component.Action.Outlined.Padding}"/>
         <Setter Property="CornerRadius" Value="{StaticResource Launcher.Radius.Sm}"/>
         <Setter Property="MinHeight" Value="{StaticResource Launcher.Control.Height.Setting}"/>
         <Setter Property="HorizontalContentAlignment" Value="Center"/>
@@ -293,12 +293,12 @@
         <Setter Property="Width" Value="{StaticResource Launcher.Control.Height.Setting}"/>
         <Setter Property="Height" Value="{StaticResource Launcher.Control.Height.Setting}"/>
         <Setter Property="MinWidth" Value="{StaticResource Launcher.Control.Height.Setting}"/>
-        <Setter Property="Padding" Value="0"/>
+        <Setter Property="Padding" Value="{StaticResource Launcher.Spacing.Thickness.None}"/>
     </Style>
     <Style Selector="Button.bottom-action">
         <Setter Property="MinHeight" Value="{StaticResource Launcher.Control.Height.Bottom}"/>
-        <Setter Property="MinWidth" Value="156"/>
-        <Setter Property="Padding" Value="20,12"/>
+        <Setter Property="MinWidth" Value="{StaticResource Launcher.Component.BottomAction.MinWidth}"/>
+        <Setter Property="Padding" Value="{StaticResource Launcher.Component.Action.Primary.Padding}"/>
         <Setter Property="FontSize" Value="{StaticResource Launcher.Typography.FontSize.Body.Lg}"/>
     </Style>
     <Style Selector="StackPanel.confirm-actions">
@@ -307,50 +307,50 @@
         <Setter Property="Spacing" Value="{StaticResource Launcher.Spacing.Md}"/>
     </Style>
     <Style Selector="Button.danger-action">
-        <Setter Property="Background" Value="{DynamicResource Launcher.Color.Danger}"/>
-        <Setter Property="Foreground" Value="{DynamicResource Launcher.Text.OnChrome}"/>
-        <Setter Property="BorderThickness" Value="0"/>
+        <Setter Property="Background" Value="{DynamicResource Launcher.Color.Error}"/>
+        <Setter Property="Foreground" Value="{DynamicResource Launcher.Color.OnError}"/>
+        <Setter Property="BorderThickness" Value="{StaticResource Launcher.Spacing.Thickness.None}"/>
         <Setter Property="FontWeight" Value="{StaticResource Launcher.Typography.FontWeight.Strong}"/>
         <Setter Property="MinHeight" Value="{StaticResource Launcher.Control.Height.Dialog}"/>
-        <Setter Property="Padding" Value="20,12"/>
+        <Setter Property="Padding" Value="{StaticResource Launcher.Component.Action.Primary.Padding}"/>
         <Setter Property="CornerRadius" Value="{StaticResource Launcher.Radius.Sm}"/>
         <Setter Property="HorizontalContentAlignment" Value="Center"/>
         <Setter Property="VerticalContentAlignment" Value="Center"/>
         <Setter Property="Template" Value="{StaticResource LauncherBorderButtonTemplate}"/>
     </Style>
     <Style Selector="Button.danger-action:pointerover">
-        <Setter Property="Background" Value="{DynamicResource Launcher.Color.Danger.Hover}"/>
-        <Setter Property="Foreground" Value="{DynamicResource Launcher.Text.OnChrome}"/>
+        <Setter Property="Background" Value="{DynamicResource Launcher.Color.Error.Hover}"/>
+        <Setter Property="Foreground" Value="{DynamicResource Launcher.Color.OnError}"/>
     </Style>
     <Style Selector="Button.danger-action:pressed">
-        <Setter Property="Background" Value="{DynamicResource Launcher.Color.Danger.Pressed}"/>
-        <Setter Property="Foreground" Value="{DynamicResource Launcher.Text.OnChrome}"/>
+        <Setter Property="Background" Value="{DynamicResource Launcher.Color.Error.Pressed}"/>
+        <Setter Property="Foreground" Value="{DynamicResource Launcher.Color.OnError}"/>
     </Style>
     <Style Selector="Button.danger-action:disabled">
         <Setter Property="Background" Value="{DynamicResource Launcher.Color.Content.Row}"/>
         <Setter Property="BorderBrush" Value="{DynamicResource Launcher.Color.Card.Border}"/>
-        <Setter Property="BorderThickness" Value="1"/>
+        <Setter Property="BorderThickness" Value="{StaticResource Launcher.Border.Thickness.Default}"/>
         <Setter Property="Foreground" Value="{DynamicResource Launcher.Text.Secondary}"/>
     </Style>
     <Style Selector="Button.dialog-action">
         <Setter Property="Height" Value="{StaticResource Launcher.Control.Height.Dialog}"/>
-        <Setter Property="MinWidth" Value="108"/>
-        <Setter Property="Padding" Value="16,0"/>
+        <Setter Property="MinWidth" Value="{StaticResource Launcher.Component.Dialog.Action.MinWidth}"/>
+        <Setter Property="Padding" Value="{StaticResource Launcher.Component.Action.Dialog.Padding}"/>
         <Setter Property="FontSize" Value="{StaticResource Launcher.Typography.FontSize.Body.Md}"/>
     </Style>
     <Style Selector="Button.primary-action.dialog-action:disabled">
         <Setter Property="Background" Value="{DynamicResource Launcher.Color.Content.Row}"/>
         <Setter Property="BorderBrush" Value="{DynamicResource Launcher.Color.Card.Border}"/>
-        <Setter Property="BorderThickness" Value="1"/>
+        <Setter Property="BorderThickness" Value="{StaticResource Launcher.Border.Thickness.Default}"/>
         <Setter Property="Foreground" Value="{DynamicResource Launcher.Text.Secondary}"/>
     </Style>
     <Style Selector="Button.dialog-close">
         <Setter Property="Background" Value="{DynamicResource Launcher.Color.Transparent}"/>
-        <Setter Property="BorderThickness" Value="0"/>
+        <Setter Property="BorderThickness" Value="{StaticResource Launcher.Spacing.Thickness.None}"/>
         <Setter Property="Foreground" Value="{DynamicResource Launcher.Text.Secondary}"/>
         <Setter Property="Width" Value="{StaticResource Launcher.Control.Height.Setting}"/>
         <Setter Property="Height" Value="{StaticResource Launcher.Control.Height.Setting}"/>
-        <Setter Property="Padding" Value="0"/>
+        <Setter Property="Padding" Value="{StaticResource Launcher.Spacing.Thickness.None}"/>
         <Setter Property="CornerRadius" Value="{StaticResource Launcher.Radius.Sm}"/>
         <Setter Property="HorizontalContentAlignment" Value="Center"/>
         <Setter Property="VerticalContentAlignment" Value="Center"/>
@@ -372,16 +372,16 @@
     <Style Selector="Button.dialog-close:focus-visible">
         <Setter Property="Background" Value="{DynamicResource Launcher.Color.Primary.Soft}"/>
         <Setter Property="BorderBrush" Value="{DynamicResource Launcher.Color.Primary}"/>
-        <Setter Property="BorderThickness" Value="1"/>
+        <Setter Property="BorderThickness" Value="{StaticResource Launcher.Border.Thickness.Default}"/>
     </Style>
     <Style Selector="Button.dialog-close.header-action">
-        <Setter Property="Margin" Value="0,0,16,0"/>
+        <Setter Property="Margin" Value="{StaticResource Launcher.Component.Dialog.HeaderAction.Margin}"/>
     </Style>
     <Style Selector="Button.launcher-control">
-        <Setter Property="Width" Value="220"/>
+        <Setter Property="Width" Value="{StaticResource Launcher.Component.LauncherControl.Width}"/>
         <Setter Property="MinHeight" Value="{StaticResource Launcher.Control.Height.Launch}"/>
         <Setter Property="Height" Value="{StaticResource Launcher.Control.Height.Launch}"/>
-        <Setter Property="Padding" Value="20,0"/>
+        <Setter Property="Padding" Value="{StaticResource Launcher.Component.Action.Launcher.Padding}"/>
         <Setter Property="CornerRadius" Value="{StaticResource Launcher.Radius.Md}"/>
         <Setter Property="FontSize" Value="{StaticResource Launcher.Typography.FontSize.Title.Lg}"/>
         <Setter Property="Opacity" Value="1"/>
@@ -392,7 +392,7 @@
     <Style Selector="Button.launcher-control.site">
         <Setter Property="Background" Value="{DynamicResource Launcher.Color.SiteButton.Background}"/>
         <Setter Property="BorderBrush" Value="{DynamicResource Launcher.Color.SiteButton.Border}"/>
-        <Setter Property="BorderThickness" Value="1"/>
+        <Setter Property="BorderThickness" Value="{StaticResource Launcher.Border.Thickness.Default}"/>
         <Setter Property="Foreground" Value="{DynamicResource Launcher.Color.Primary}"/>
         <Setter Property="Opacity" Value="1"/>
     </Style>
@@ -411,7 +411,7 @@
     <Style Selector="Button.launcher-control.start">
         <Setter Property="Background" Value="{DynamicResource Launcher.Color.Primary}"/>
         <Setter Property="BorderBrush" Value="{DynamicResource Launcher.Color.Primary}"/>
-        <Setter Property="BorderThickness" Value="1"/>
+        <Setter Property="BorderThickness" Value="{StaticResource Launcher.Border.Thickness.Default}"/>
         <Setter Property="Foreground" Value="{DynamicResource Launcher.Color.OnPrimary}"/>
         <Setter Property="FontWeight" Value="{StaticResource Launcher.Typography.FontWeight.Strong}"/>
         <Setter Property="MinHeight" Value="{StaticResource Launcher.Control.Height.Launch}"/>
@@ -432,7 +432,7 @@
     <Style Selector="Button.launcher-control:disabled">
         <Setter Property="Background" Value="{DynamicResource Launcher.Color.Content.Row}"/>
         <Setter Property="BorderBrush" Value="{DynamicResource Launcher.Color.Card.Border}"/>
-        <Setter Property="BorderThickness" Value="1"/>
+        <Setter Property="BorderThickness" Value="{StaticResource Launcher.Border.Thickness.Default}"/>
         <Setter Property="Foreground" Value="{DynamicResource Launcher.Text.Secondary}"/>
         <Setter Property="Opacity" Value="1"/>
     </Style>
@@ -452,7 +452,7 @@
     <Style Selector="Border.surface">
         <Setter Property="Background" Value="{DynamicResource Launcher.Color.Surface}"/>
         <Setter Property="CornerRadius" Value="{StaticResource Launcher.Radius.Md}"/>
-        <Setter Property="Padding" Value="16"/>
+        <Setter Property="Padding" Value="{StaticResource Launcher.Spacing.Thickness.Lg}"/>
         <!-- 阴影值集中见 Launcher.Elevation.Shadow.Md；BoxShadow 为无 TypeConverter 的结构体，
              无法经 {StaticResource} 在 Setter 处运行时转换（Avalonia 12.1.1 限制，详见 spec §3.1）。 -->
         <Setter Property="BoxShadow" Value="0 12 32 0 #33000000"/>
@@ -462,10 +462,10 @@
         <Setter Property="VerticalAlignment" Value="Top"/>
         <Setter Property="ClipToBounds" Value="True"/>
         <Setter Property="Padding" Value="{StaticResource Launcher.Spacing.Thickness.None}"/>
-        <Setter Property="Margin" Value="40,64,0,0"/>
-        <Setter Property="Width" Value="500"/>
-        <Setter Property="MinHeight" Value="360"/>
-        <Setter Property="MaxHeight" Value="480"/>
+        <Setter Property="Margin" Value="{StaticResource Launcher.Component.RemoteSurface.Margin}"/>
+        <Setter Property="Width" Value="{StaticResource Launcher.Component.RemoteSurface.Width}"/>
+        <Setter Property="MinHeight" Value="{StaticResource Launcher.Component.RemoteSurface.MinHeight}"/>
+        <Setter Property="MaxHeight" Value="{StaticResource Launcher.Component.RemoteSurface.MaxHeight}"/>
     </Style>
     <Style Selector="ItemsControl.social-actions">
         <Setter Property="HorizontalAlignment" Value="Right"/>
@@ -480,11 +480,11 @@
     <Style Selector="Border.info-strip">
         <Setter Property="Background" Value="{DynamicResource Launcher.Color.Primary.Soft}"/>
         <Setter Property="CornerRadius" Value="{StaticResource Launcher.Radius.Sm}"/>
-        <Setter Property="Padding" Value="12"/>
+        <Setter Property="Padding" Value="{StaticResource Launcher.Spacing.Thickness.Md}"/>
     </Style>
     <Style Selector="Border.notice-card">
         <Setter Property="Background" Value="{DynamicResource Launcher.Color.Notice.Background}"/>
-        <Setter Property="MaxHeight" Value="160"/>
+        <Setter Property="MaxHeight" Value="{StaticResource Launcher.Component.NoticeCard.MaxHeight}"/>
     </Style>
     <Style Selector="Border.media-placeholder">
         <Setter Property="Background" Value="{DynamicResource Launcher.Color.Media.Placeholder}"/>
@@ -520,7 +520,7 @@
     <Style Selector="Border.path-field">
         <Setter Property="Background" Value="{DynamicResource Launcher.Color.Field.Background}"/>
         <Setter Property="BorderBrush" Value="{DynamicResource Launcher.Color.Field.Border}"/>
-        <Setter Property="BorderThickness" Value="1"/>
+        <Setter Property="BorderThickness" Value="{StaticResource Launcher.Border.Thickness.Default}"/>
         <Setter Property="CornerRadius" Value="{StaticResource Launcher.Radius.Sm}"/>
         <Setter Property="Height" Value="{StaticResource Launcher.Control.Height.Field}"/>
         <Setter Property="Padding" Value="{StaticResource Launcher.Component.PathField.Padding}"/>
@@ -528,9 +528,9 @@
     <!-- Operation panels share 40px horizontal alignment and common padding. -->
     <Style Selector="Border.bottom-panel">
         <Setter Property="VerticalAlignment" Value="Bottom"/>
-        <Setter Property="MinHeight" Value="132"/>
+        <Setter Property="MinHeight" Value="{StaticResource Launcher.Component.BottomPanel.MinHeight}"/>
         <Setter Property="Background" Value="{DynamicResource Launcher.Color.Panel.Bottom.Background}"/>
-        <Setter Property="Padding" Value="40,20,40,20"/>
+        <Setter Property="Padding" Value="{StaticResource Launcher.Component.BottomPanel.Padding}"/>
     </Style>
     <Style Selector="Grid.motion-overlay">
         <Setter Property="IsVisible" Value="False"/>
@@ -666,7 +666,7 @@
         </Style.Animations>
     </Style>
     <Style Selector="Border.control-panel">
-        <Setter Property="MinHeight" Value="156"/>
+        <Setter Property="MinHeight" Value="{StaticResource Launcher.Component.ControlPanel.MinHeight}"/>
         <!-- Dark gradient overlay on top of wallpaper — intentionally theme-invariant (black transparency). -->
         <Setter Property="Background">
             <LinearGradientBrush StartPoint="0%,0%" EndPoint="0%,100%">
@@ -679,8 +679,8 @@
     <Style Selector="Border.content-row">
         <Setter Property="Background" Value="{DynamicResource Launcher.Color.Content.Row}"/>
         <Setter Property="CornerRadius" Value="{StaticResource Launcher.Radius.Sm}"/>
-        <Setter Property="Padding" Value="12"/>
-        <Setter Property="Margin" Value="0,0,0,4"/>
+        <Setter Property="Padding" Value="{StaticResource Launcher.Spacing.Thickness.Md}"/>
+        <Setter Property="Margin" Value="{StaticResource Launcher.Component.ContentRow.Margin}"/>
     </Style>
     <Style Selector="Border.content-row.news-content-row">
         <Setter Property="Padding" Value="{StaticResource Launcher.Spacing.Thickness.Sm}"/>
@@ -688,8 +688,8 @@
     </Style>
     <Style Selector="Button.content-link">
         <Setter Property="Background" Value="{DynamicResource Launcher.Color.Transparent}"/>
-        <Setter Property="BorderThickness" Value="0"/>
-        <Setter Property="Padding" Value="0"/>
+        <Setter Property="BorderThickness" Value="{StaticResource Launcher.Spacing.Thickness.None}"/>
+        <Setter Property="Padding" Value="{StaticResource Launcher.Spacing.Thickness.None}"/>
         <Setter Property="HorizontalAlignment" Value="Stretch"/>
         <Setter Property="HorizontalContentAlignment" Value="Stretch"/>
         <Setter Property="VerticalContentAlignment" Value="Stretch"/>
@@ -700,8 +700,8 @@
     </Style>
     <Style Selector="Button.banner-link">
         <Setter Property="Background" Value="{DynamicResource Launcher.Color.Transparent}"/>
-        <Setter Property="BorderThickness" Value="0"/>
-        <Setter Property="Padding" Value="0"/>
+        <Setter Property="BorderThickness" Value="{StaticResource Launcher.Spacing.Thickness.None}"/>
+        <Setter Property="Padding" Value="{StaticResource Launcher.Spacing.Thickness.None}"/>
         <Setter Property="HorizontalAlignment" Value="Stretch"/>
         <Setter Property="VerticalAlignment" Value="Stretch"/>
         <Setter Property="HorizontalContentAlignment" Value="Stretch"/>
@@ -768,12 +768,12 @@
     </Style>
     <Style Selector="Grid.settings-workspace">
         <Setter Property="ColumnSpacing" Value="0"/>
-        <Setter Property="Margin" Value="0"/>
+        <Setter Property="Margin" Value="{StaticResource Launcher.Spacing.Thickness.None}"/>
     </Style>
     <Style Selector="ListBox.settings-navigation">
         <Setter Property="Background" Value="{DynamicResource Launcher.Color.Content.Row}"/>
         <Setter Property="BorderBrush" Value="{DynamicResource Launcher.Color.Transparent}"/>
-        <Setter Property="BorderThickness" Value="0"/>
+        <Setter Property="BorderThickness" Value="{StaticResource Launcher.Spacing.Thickness.None}"/>
         <Setter Property="Padding" Value="{StaticResource Launcher.Component.Settings.Navigation.List.Padding}"/>
     </Style>
     <Style Selector="Grid.settings-navigation-pane">
@@ -791,7 +791,7 @@
         <Setter Property="Background" Value="{DynamicResource Launcher.Color.Transparent}"/>
         <Setter Property="Foreground" Value="{DynamicResource Launcher.Text.Body}"/>
         <Setter Property="BorderBrush" Value="{DynamicResource Launcher.Color.Transparent}"/>
-        <Setter Property="BorderThickness" Value="0"/>
+        <Setter Property="BorderThickness" Value="{StaticResource Launcher.Spacing.Thickness.None}"/>
         <Setter Property="CornerRadius" Value="{StaticResource Launcher.Radius.Md}"/>
         <Setter Property="Margin" Value="{StaticResource Launcher.Component.Settings.Navigation.Item.Margin}"/>
         <Setter Property="MinHeight" Value="{StaticResource Launcher.Control.Height.Setting}"/>
@@ -802,37 +802,37 @@
         <Setter Property="Background" Value="{DynamicResource Launcher.Color.Button.Flat.Hover}"/>
         <Setter Property="Foreground" Value="{DynamicResource Launcher.Text.Primary}"/>
         <Setter Property="BorderBrush" Value="{DynamicResource Launcher.Color.Transparent}"/>
-        <Setter Property="BorderThickness" Value="0"/>
+        <Setter Property="BorderThickness" Value="{StaticResource Launcher.Spacing.Thickness.None}"/>
     </Style>
     <Style Selector="ListBox.settings-navigation > ListBoxItem:selected">
         <Setter Property="Background" Value="{DynamicResource Launcher.Color.SecondaryContainer}"/>
         <Setter Property="Foreground" Value="{DynamicResource Launcher.Color.OnSecondaryContainer}"/>
         <Setter Property="BorderBrush" Value="{DynamicResource Launcher.Color.Transparent}"/>
-        <Setter Property="BorderThickness" Value="0"/>
+        <Setter Property="BorderThickness" Value="{StaticResource Launcher.Spacing.Thickness.None}"/>
         <Setter Property="FontWeight" Value="{StaticResource Launcher.Typography.FontWeight.Strong}"/>
     </Style>
     <Style Selector="ListBox.settings-navigation > ListBoxItem:selected:not(:focus)">
         <Setter Property="Background" Value="{DynamicResource Launcher.Color.SecondaryContainer}"/>
         <Setter Property="Foreground" Value="{DynamicResource Launcher.Color.OnSecondaryContainer}"/>
         <Setter Property="BorderBrush" Value="{DynamicResource Launcher.Color.Transparent}"/>
-        <Setter Property="BorderThickness" Value="0"/>
+        <Setter Property="BorderThickness" Value="{StaticResource Launcher.Spacing.Thickness.None}"/>
     </Style>
     <Style Selector="ListBox.settings-navigation > ListBoxItem:selected:pointerover">
         <Setter Property="Background" Value="{DynamicResource Launcher.Color.SecondaryContainer.Hover}"/>
         <Setter Property="Foreground" Value="{DynamicResource Launcher.Color.OnSecondaryContainer}"/>
         <Setter Property="BorderBrush" Value="{DynamicResource Launcher.Color.Transparent}"/>
-        <Setter Property="BorderThickness" Value="0"/>
+        <Setter Property="BorderThickness" Value="{StaticResource Launcher.Spacing.Thickness.None}"/>
     </Style>
     <Style Selector="ListBox.settings-navigation > ListBoxItem:selected:pressed">
         <Setter Property="Background" Value="{DynamicResource Launcher.Color.SecondaryContainer.Pressed}"/>
         <Setter Property="Foreground" Value="{DynamicResource Launcher.Color.OnSecondaryContainer}"/>
         <Setter Property="BorderBrush" Value="{DynamicResource Launcher.Color.Transparent}"/>
-        <Setter Property="BorderThickness" Value="0"/>
+        <Setter Property="BorderThickness" Value="{StaticResource Launcher.Spacing.Thickness.None}"/>
     </Style>
     <Style Selector="ListBox.settings-navigation > ListBoxItem:disabled">
         <Setter Property="Foreground" Value="{DynamicResource Launcher.Text.Secondary}"/>
         <Setter Property="BorderBrush" Value="{DynamicResource Launcher.Color.Transparent}"/>
-        <Setter Property="BorderThickness" Value="0"/>
+        <Setter Property="BorderThickness" Value="{StaticResource Launcher.Spacing.Thickness.None}"/>
     </Style>
     <Style Selector="ListBox.settings-navigation > ListBoxItem:pointerover /template/ ContentPresenter#PART_ContentPresenter">
         <Setter Property="Background" Value="{DynamicResource Launcher.Color.Button.Flat.Hover}"/>
@@ -859,7 +859,7 @@
         <Setter Property="Foreground" Value="{DynamicResource Launcher.Color.OnSecondaryContainer}"/>
     </Style>
     <Style Selector="TextBlock.settings-navigation-item">
-        <Setter Property="TextTrimming" Value="CharacterEllipsis"/>
+        <Setter Property="TextWrapping" Value="Wrap"/>
         <Setter Property="VerticalAlignment" Value="Center"/>
     </Style>
     <Style Selector="Grid.settings-content">
@@ -870,7 +870,7 @@
         <Setter Property="Margin" Value="{StaticResource Launcher.Spacing.Thickness.None}"/>
     </Style>
     <Style Selector="Grid.settings-content-heading">
-        <Setter Property="Margin" Value="0,0,0,4"/>
+        <Setter Property="Margin" Value="{StaticResource Launcher.Component.Settings.ContentHeading.Margin}"/>
     </Style>
     <Style Selector="StackPanel.settings-content-heading-copy">
         <Setter Property="Spacing" Value="{StaticResource Launcher.Spacing.Xs}"/>
@@ -884,7 +884,7 @@
         <Setter Property="Spacing" Value="0"/>
     </Style>
     <Style Selector="StackPanel.settings-group">
-        <Setter Property="Margin" Value="0,16,0,0"/>
+        <Setter Property="Margin" Value="{StaticResource Launcher.Component.Settings.Group.Margin}"/>
     </Style>
     <Style Selector="Border.settings-content-padding">
         <Setter Property="Padding" Value="{StaticResource Launcher.Component.Settings.Content.Padding}"/>
@@ -909,7 +909,7 @@
         <Setter Property="BoxShadow" Value="0 22 55 0 #66000000"/>
     </Style>
     <Style Selector="Border.overlay-dialog">
-        <Setter Property="Margin" Value="24"/>
+        <Setter Property="Margin" Value="{StaticResource Launcher.Spacing.Thickness.Xxl}"/>
         <Setter Property="HorizontalAlignment" Value="Center"/>
         <Setter Property="VerticalAlignment" Value="Center"/>
     </Style>
@@ -921,21 +921,21 @@
     <Style Selector="StackPanel.dialog-title-row">
         <Setter Property="Orientation" Value="Horizontal"/>
         <Setter Property="Spacing" Value="{StaticResource Launcher.Spacing.Md}"/>
-        <Setter Property="Margin" Value="16,0,0,0"/>
+        <Setter Property="Margin" Value="{StaticResource Launcher.Component.Dialog.Title.Margin}"/>
         <Setter Property="VerticalAlignment" Value="Center"/>
     </Style>
     <Style Selector="ScrollViewer.dialog-scroll">
-        <Setter Property="Margin" Value="0"/>
+        <Setter Property="Margin" Value="{StaticResource Launcher.Spacing.Thickness.None}"/>
     </Style>
     <Style Selector="Border.dialog-footer">
         <Setter Property="Background" Value="{DynamicResource Launcher.Color.Dialog.Footer}"/>
         <Setter Property="BorderBrush" Value="{DynamicResource Launcher.Color.Card.Border}"/>
-        <Setter Property="BorderThickness" Value="0,1,0,0"/>
+        <Setter Property="BorderThickness" Value="{StaticResource Launcher.Component.Dialog.Footer.BorderThickness}"/>
         <Setter Property="Padding" Value="{StaticResource Launcher.Spacing.Thickness.Md}"/>
     </Style>
     <Style Selector="Border.confirm-panel">
-        <Setter Property="MaxWidth" Value="540"/>
-        <Setter Property="Margin" Value="24"/>
+        <Setter Property="MaxWidth" Value="{StaticResource Launcher.Component.Dialog.Confirm.MaxWidth}"/>
+        <Setter Property="Margin" Value="{StaticResource Launcher.Spacing.Thickness.Xxl}"/>
         <Setter Property="HorizontalAlignment" Value="Center"/>
         <Setter Property="VerticalAlignment" Value="Center"/>
     </Style>
@@ -947,7 +947,7 @@
         <Setter Property="VerticalAlignment" Value="Center"/>
     </Style>
     <Style Selector="Grid.confirm-layout">
-        <Setter Property="Margin" Value="16"/>
+        <Setter Property="Margin" Value="{StaticResource Launcher.Spacing.Thickness.Lg}"/>
         <Setter Property="RowSpacing" Value="{StaticResource Launcher.Spacing.Lg}"/>
     </Style>
     <Style Selector="Border.dialog-alert">
@@ -996,23 +996,23 @@
     <Style Selector="Border.dialog-card">
         <Setter Property="Background" Value="{DynamicResource Launcher.Color.Card.Background}"/>
         <Setter Property="BorderBrush" Value="{DynamicResource Launcher.Color.Outline}"/>
-        <Setter Property="BorderThickness" Value="1"/>
+        <Setter Property="BorderThickness" Value="{StaticResource Launcher.Border.Thickness.Default}"/>
         <Setter Property="CornerRadius" Value="{StaticResource Launcher.Radius.Sm}"/>
-        <Setter Property="Padding" Value="16"/>
+        <Setter Property="Padding" Value="{StaticResource Launcher.Spacing.Thickness.Lg}"/>
     </Style>
     <Style Selector="ListBox.update-file-list">
         <Setter Property="Background" Value="{DynamicResource Launcher.Color.Transparent}"/>
-        <Setter Property="BorderThickness" Value="0"/>
-        <Setter Property="Padding" Value="0"/>
+        <Setter Property="BorderThickness" Value="{StaticResource Launcher.Spacing.Thickness.None}"/>
+        <Setter Property="Padding" Value="{StaticResource Launcher.Spacing.Thickness.None}"/>
     </Style>
     <Style Selector="ListBox.update-file-list > ListBoxItem">
         <Setter Property="Background" Value="{DynamicResource Launcher.Color.Card.Background}"/>
         <Setter Property="BorderBrush" Value="{DynamicResource Launcher.Color.Card.Border}"/>
-        <Setter Property="BorderThickness" Value="1"/>
+        <Setter Property="BorderThickness" Value="{StaticResource Launcher.Border.Thickness.Default}"/>
         <Setter Property="CornerRadius" Value="{StaticResource Launcher.Radius.Md}"/>
         <Setter Property="Foreground" Value="{DynamicResource Launcher.Text.Primary}"/>
-        <Setter Property="Padding" Value="12"/>
-        <Setter Property="Margin" Value="0,0,0,8"/>
+        <Setter Property="Padding" Value="{StaticResource Launcher.Spacing.Thickness.Md}"/>
+        <Setter Property="Margin" Value="{StaticResource Launcher.Component.UpdateFile.Margin}"/>
         <Setter Property="HorizontalContentAlignment" Value="Stretch"/>
     </Style>
     <Style Selector="ListBox.update-file-list > ListBoxItem:pointerover">
@@ -1020,8 +1020,8 @@
     </Style>
     <Style Selector="ListBox.update-file-list > ListBoxItem:selected">
         <Setter Property="BorderBrush" Value="{DynamicResource Launcher.Color.Primary}"/>
-        <Setter Property="BorderThickness" Value="2"/>
-        <Setter Property="Padding" Value="11"/>
+        <Setter Property="BorderThickness" Value="{StaticResource Launcher.Border.Thickness.Focus}"/>
+        <Setter Property="Padding" Value="{StaticResource Launcher.Component.UpdateFile.Selected.Padding}"/>
     </Style>
     <Style Selector="ListBox.update-file-list > ListBoxItem:pointerover /template/ ContentPresenter#PART_ContentPresenter">
         <Setter Property="Background" Value="{DynamicResource Launcher.Color.Card.Background}"/>
@@ -1056,7 +1056,7 @@
     <Style Selector="Border.update-file-size">
         <Setter Property="Background" Value="{DynamicResource Launcher.Color.Content.Row}"/>
         <Setter Property="CornerRadius" Value="{StaticResource Launcher.Radius.Sm}"/>
-        <Setter Property="Padding" Value="8,4"/>
+        <Setter Property="Padding" Value="{StaticResource Launcher.Component.UpdateFile.Size.Padding}"/>
     </Style>
     <Style Selector="TextBlock.update-file-name">
         <Setter Property="FontSize" Value="{StaticResource Launcher.Typography.FontSize.Body.Sm}"/>
@@ -1072,7 +1072,7 @@
         <Setter Property="CornerRadius" Value="{StaticResource Launcher.Radius.Sm}"/>
         <Setter Property="Background" Value="{DynamicResource Launcher.Color.Primary.Soft}"/>
         <Setter Property="BorderBrush" Value="{DynamicResource Launcher.Color.Primary.Border}"/>
-        <Setter Property="BorderThickness" Value="1"/>
+        <Setter Property="BorderThickness" Value="{StaticResource Launcher.Border.Thickness.Default}"/>
     </Style>
     <Style Selector="Border.dialog-icon.danger">
         <Setter Property="Background" Value="{DynamicResource Launcher.Color.Danger.Soft}"/>
@@ -1111,7 +1111,7 @@
     </Style>
     <Style Selector="Border.settings-section">
         <Setter Property="Background" Value="{DynamicResource Launcher.Color.Card.Background}"/>
-        <Setter Property="BorderThickness" Value="0"/>
+        <Setter Property="BorderThickness" Value="{StaticResource Launcher.Spacing.Thickness.None}"/>
         <Setter Property="CornerRadius" Value="{StaticResource Launcher.Radius.Md}"/>
         <Setter Property="Padding" Value="{StaticResource Launcher.Spacing.Thickness.Lg}"/>
     </Style>
@@ -1126,13 +1126,13 @@
     </Style>
     <Style Selector="Grid.settings-row">
         <Setter Property="MinHeight" Value="{StaticResource Launcher.Component.Settings.Row.MinHeight}"/>
-        <Setter Property="Margin" Value="0"/>
+        <Setter Property="Margin" Value="{StaticResource Launcher.Spacing.Thickness.None}"/>
         <Setter Property="ColumnSpacing" Value="{StaticResource Launcher.Spacing.Md}"/>
         <Setter Property="VerticalAlignment" Value="Center"/>
     </Style>
     <Style Selector="Border.settings-row-divider">
         <Setter Property="BorderBrush" Value="{DynamicResource Launcher.Color.Card.Border}"/>
-        <Setter Property="BorderThickness" Value="0,1,0,0"/>
+        <Setter Property="BorderThickness" Value="{StaticResource Launcher.Component.Dialog.Footer.BorderThickness}"/>
         <Setter Property="Margin" Value="{StaticResource Launcher.Spacing.Thickness.None}"/>
         <Setter Property="VerticalAlignment" Value="Top"/>
     </Style>
@@ -1164,7 +1164,7 @@
         <Setter Property="MinHeight" Value="{StaticResource Launcher.Control.Height.Setting}"/>
         <Setter Property="Padding" Value="{StaticResource Launcher.Component.DesignGallery.StateCell.Padding}"/>
         <Setter Property="Background" Value="{DynamicResource Launcher.Color.Primary}"/>
-        <Setter Property="BorderThickness" Value="0"/>
+        <Setter Property="BorderThickness" Value="{StaticResource Launcher.Spacing.Thickness.None}"/>
         <Setter Property="Foreground" Value="{DynamicResource Launcher.Color.OnPrimary}"/>
         <Setter Property="CornerRadius" Value="{StaticResource Launcher.Radius.Sm}"/>
         <Setter Property="HorizontalContentAlignment" Value="Center"/>
@@ -1183,7 +1183,7 @@
     </Style>
     <Style Selector="Button.gallery-button.state-focus">
         <Setter Property="BorderBrush" Value="{DynamicResource Launcher.Color.FocusRing}"/>
-        <Setter Property="BorderThickness" Value="2"/>
+        <Setter Property="BorderThickness" Value="{StaticResource Launcher.Border.Thickness.Focus}"/>
     </Style>
     <Style Selector="Button.gallery-button.state-invalid">
         <Setter Property="Background" Value="{DynamicResource Launcher.Color.Danger.Soft}"/>
@@ -1196,7 +1196,7 @@
         <Setter Property="MinHeight" Value="{StaticResource Launcher.Control.Height.Setting}"/>
         <Setter Property="Background" Value="{DynamicResource Launcher.Color.Field.Background}"/>
         <Setter Property="BorderBrush" Value="{DynamicResource Launcher.Color.Field.Border}"/>
-        <Setter Property="BorderThickness" Value="1"/>
+        <Setter Property="BorderThickness" Value="{StaticResource Launcher.Border.Thickness.Default}"/>
         <Setter Property="CornerRadius" Value="{StaticResource Launcher.Radius.Sm}"/>
         <Setter Property="Padding" Value="{StaticResource Launcher.Component.Select.Padding}"/>
         <Setter Property="Foreground" Value="{DynamicResource Launcher.Text.Primary}"/>
@@ -1218,7 +1218,7 @@
     </Style>
     <Style Selector="ComboBox.gallery-select.state-focus">
         <Setter Property="BorderBrush" Value="{DynamicResource Launcher.Color.FocusRing}"/>
-        <Setter Property="BorderThickness" Value="2"/>
+        <Setter Property="BorderThickness" Value="{StaticResource Launcher.Border.Thickness.Focus}"/>
     </Style>
     <Style Selector="ComboBox.gallery-select.state-invalid">
         <Setter Property="Background" Value="{DynamicResource Launcher.Color.Danger.Soft}"/>
@@ -1231,7 +1231,7 @@
         <Setter Property="Padding" Value="{StaticResource Launcher.Component.DesignGallery.StateCell.Padding}"/>
         <Setter Property="Background" Value="{DynamicResource Launcher.Color.Card.Background}"/>
         <Setter Property="BorderBrush" Value="{DynamicResource Launcher.Color.Card.Border}"/>
-        <Setter Property="BorderThickness" Value="1"/>
+        <Setter Property="BorderThickness" Value="{StaticResource Launcher.Border.Thickness.Default}"/>
         <Setter Property="CornerRadius" Value="{StaticResource Launcher.Radius.Sm}"/>
     </Style>
     <Style Selector="Border.gallery-card.state-hover">
@@ -1249,15 +1249,15 @@
     </Style>
     <Style Selector="Border.gallery-card.state-focus">
         <Setter Property="BorderBrush" Value="{DynamicResource Launcher.Color.FocusRing}"/>
-        <Setter Property="BorderThickness" Value="2"/>
+        <Setter Property="BorderThickness" Value="{StaticResource Launcher.Border.Thickness.Focus}"/>
     </Style>
     <Style Selector="Border.gallery-card.state-invalid">
         <Setter Property="Background" Value="{DynamicResource Launcher.Color.Danger.Soft}"/>
         <Setter Property="BorderBrush" Value="{DynamicResource Launcher.Color.Danger}"/>
     </Style>
     <Style Selector="ColorPicker.setting-control">
-        <Setter Property="MinWidth" Value="220"/>
-        <Setter Property="Width" Value="220"/>
+        <Setter Property="MinWidth" Value="{StaticResource Launcher.Component.Settings.Control.MinWidth}"/>
+        <Setter Property="Width" Value="{StaticResource Launcher.Component.Settings.Control.MinWidth}"/>
         <Setter Property="MinHeight" Value="{StaticResource Launcher.Control.Height.Field}"/>
         <Setter Property="HorizontalContentAlignment" Value="Center"/>
         <Setter Property="VerticalContentAlignment" Value="Center"/>
@@ -1266,12 +1266,12 @@
     <Style Selector="TextBox.uid-input">
         <Setter Property="Background" Value="{DynamicResource Launcher.Color.Field.Background}"/>
         <Setter Property="BorderBrush" Value="{DynamicResource Launcher.Color.Field.Border}"/>
-        <Setter Property="BorderThickness" Value="1"/>
+        <Setter Property="BorderThickness" Value="{StaticResource Launcher.Border.Thickness.Default}"/>
         <Setter Property="CornerRadius" Value="{StaticResource Launcher.Radius.Md}"/>
         <Setter Property="Padding" Value="{StaticResource Launcher.Component.Input.Padding}"/>
         <Setter Property="FontSize" Value="{StaticResource Launcher.Typography.FontSize.Body.Md}"/>
         <Setter Property="Foreground" Value="{DynamicResource Launcher.Text.Primary}"/>
-        <Setter Property="MinWidth" Value="160"/>
+        <Setter Property="MinWidth" Value="{StaticResource Launcher.Component.Input.MinWidth}"/>
         <Setter Property="MinHeight" Value="{StaticResource Launcher.Control.Height.Field}"/>
         <Setter Property="VerticalContentAlignment" Value="Center"/>
         <Setter Property="CaretBrush" Value="{DynamicResource Launcher.Color.Primary}"/>
@@ -1305,14 +1305,14 @@
         <Setter Property="Height" Value="{StaticResource Launcher.Control.Size.Swatch}"/>
         <Setter Property="CornerRadius" Value="{StaticResource Launcher.Radius.Sm}"/>
         <Setter Property="BorderBrush" Value="{DynamicResource Launcher.Color.Card.Border}"/>
-        <Setter Property="BorderThickness" Value="1"/>
+        <Setter Property="BorderThickness" Value="{StaticResource Launcher.Border.Thickness.Default}"/>
     </Style>
     <Style Selector="Button.color-swatch-button">
         <Setter Property="Background" Value="{DynamicResource Launcher.Color.Transparent}"/>
-        <Setter Property="BorderThickness" Value="0"/>
+        <Setter Property="BorderThickness" Value="{StaticResource Launcher.Spacing.Thickness.None}"/>
         <Setter Property="Width" Value="{StaticResource Launcher.Control.Height.Setting}"/>
         <Setter Property="Height" Value="{StaticResource Launcher.Control.Height.Setting}"/>
-        <Setter Property="Padding" Value="0"/>
+        <Setter Property="Padding" Value="{StaticResource Launcher.Spacing.Thickness.None}"/>
         <Setter Property="CornerRadius" Value="{StaticResource Launcher.Radius.Sm}"/>
         <Setter Property="HorizontalContentAlignment" Value="Stretch"/>
         <Setter Property="VerticalContentAlignment" Value="Stretch"/>
@@ -1322,14 +1322,14 @@
     </Style>
     <!-- Shared utility styles for repeated inline patterns -->
     <Style Selector="ScrollViewer.scroll-pad">
-        <Setter Property="Padding" Value="0,0,8,0"/>
+        <Setter Property="Padding" Value="{StaticResource Launcher.Component.Scroll.Pad}"/>
     </Style>
     <Style Selector="Border.color-swatch-preview">
-        <Setter Property="Width" Value="16"/>
-        <Setter Property="Height" Value="16"/>
+        <Setter Property="Width" Value="{StaticResource Launcher.Component.ColorSwatch.Preview.Size}"/>
+        <Setter Property="Height" Value="{StaticResource Launcher.Component.ColorSwatch.Preview.Size}"/>
         <Setter Property="CornerRadius" Value="{StaticResource Launcher.Radius.Sm}"/>
         <Setter Property="BorderBrush" Value="{DynamicResource Launcher.Color.Card.Border}"/>
-        <Setter Property="BorderThickness" Value="1"/>
+        <Setter Property="BorderThickness" Value="{StaticResource Launcher.Border.Thickness.Default}"/>
     </Style>
     <!-- Semantic marker classes used by layout and headless UI contracts. -->
     <Style Selector="Button.news-row"/>

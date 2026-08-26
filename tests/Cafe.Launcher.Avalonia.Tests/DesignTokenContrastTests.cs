@@ -56,6 +56,9 @@ public sealed class DesignTokenContrastTests
         new("danger action label", "Launcher.Color.OnPrimary", "Launcher.Color.Danger", 4.5),
         new("danger action label (hover)", "Launcher.Color.OnPrimary", "Launcher.Color.Danger.Hover", 4.5),
         new("danger action label (pressed)", "Launcher.Color.OnPrimary", "Launcher.Color.Danger.Pressed", 4.5),
+        new("error action label", "Launcher.Color.OnError", "Launcher.Color.Error", 4.5),
+        new("error action label (hover)", "Launcher.Color.OnError", "Launcher.Color.Error.Hover", 4.5),
+        new("error action label (pressed)", "Launcher.Color.OnError", "Launcher.Color.Error.Pressed", 4.5),
         new("success status text", "Launcher.Color.Success", "Launcher.Color.Dialog.Background", 4.5)
     ];
 

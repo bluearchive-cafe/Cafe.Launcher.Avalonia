@@ -102,17 +102,12 @@
                                   LostFocus="OnBannerLostFocus">
                                 <!-- Banner carousel with horizontal page-slide transition -->
                                 <Carousel x:Name="BannerCarousel"
+                                          Classes="banner-carousel"
                                           ItemsSource="{Binding RemoteContent.BannerItems}"
                                           SelectedIndex="{Binding RemoteContent.CarouselSelectedIndex, Mode=TwoWay}"
                                           PageTransition="{Binding RemoteContent.CarouselTransition}"
                                           Height="{StaticResource Launcher.Layout.Banner.Height}"
                                           CornerRadius="{StaticResource Launcher.Radius.Sm}" ClipToBounds="True">
-                                    <Carousel.Styles>
-                                        <Style Selector="ContentControl">
-                                            <Setter Property="HorizontalContentAlignment" Value="Stretch"/>
-                                            <Setter Property="VerticalContentAlignment" Value="Stretch"/>
-                                        </Style>
-                                    </Carousel.Styles>
                                     <Carousel.ItemTemplate>
                                         <DataTemplate x:DataType="models:RemoteContentItem">
                                             <Button Classes="banner-link"
@@ -199,85 +194,9 @@
                                             ItemsSource="{Binding RemoteContent.NewsCategories}"
                                             SelectedItem="{Binding RemoteContent.SelectedNewsCategory, Mode=TwoWay}"
                                             TabStripPlacement="Top"
-                                            PageTransition="{x:Null}">
-                                    <TabControl.Theme>
-                                        <ControlTheme TargetType="TabControl"
-                                                      BasedOn="{StaticResource {x:Type TabControl}}">
-                                            <Setter Property="Template">
-                                                <ControlTemplate>
-                                                    <Border BorderBrush="{TemplateBinding BorderBrush}"
-                                                            BorderThickness="{TemplateBinding BorderThickness}"
-                                                            CornerRadius="{TemplateBinding CornerRadius}"
-                                                            Background="{TemplateBinding Background}"
-                                                            HorizontalAlignment="{TemplateBinding HorizontalAlignment}"
-                                                            VerticalAlignment="{TemplateBinding VerticalAlignment}">
-                                                        <DockPanel>
-                                                            <ScrollViewer DockPanel.Dock="{TemplateBinding TabStripPlacement}"
-                                                                          HorizontalScrollBarVisibility="Auto"
-                                                                          VerticalScrollBarVisibility="Disabled">
-                                                                <ItemsPresenter Name="PART_ItemsPresenter"
-                                                                                ItemsPanel="{TemplateBinding ItemsPanel}"/>
-                                                            </ScrollViewer>
-                                                            <Panel ClipToBounds="True">
-                                                                <ContentPresenter Name="PART_SelectedContentHost2"
-                                                                                  Margin="{TemplateBinding Padding}"
-                                                                                  HorizontalContentAlignment="{TemplateBinding HorizontalContentAlignment}"
-                                                                                  VerticalContentAlignment="{TemplateBinding VerticalContentAlignment}"
-                                                                                  IsVisible="False"/>
-                                                                <ContentPresenter Name="PART_SelectedContentHost"
-                                                                                  Margin="{TemplateBinding Padding}"
-                                                                                  HorizontalContentAlignment="{TemplateBinding HorizontalContentAlignment}"
-                                                                                  VerticalContentAlignment="{TemplateBinding VerticalContentAlignment}"/>
-                                                            </Panel>
-                                                        </DockPanel>
-                                                    </Border>
-                                                </ControlTemplate>
-                                            </Setter>
-                                            <Setter Property="ItemsPanel">
-                                                <ItemsPanelTemplate>
-                                                    <StackPanel Orientation="Horizontal"
-                                                                Spacing="{StaticResource Launcher.Spacing.Xs}"/>
-                                                </ItemsPanelTemplate>
-                                            </Setter>
-                                        </ControlTheme>
-                                    </TabControl.Theme>
-                                    <TabControl.ItemContainerTheme>
-                                        <ControlTheme TargetType="TabItem"
-                                                      BasedOn="{StaticResource {x:Type TabItem}}">
-                                            <Setter Property="Background" Value="{DynamicResource Launcher.Color.Transparent}"/>
-                                            <Setter Property="BorderThickness" Value="{StaticResource Launcher.Spacing.Thickness.None}"/>
-                                            <Setter Property="Foreground" Value="{DynamicResource Launcher.Text.Primary}"/>
-                                            <Setter Property="FontSize" Value="{StaticResource Launcher.Typography.FontSize.Body.Sm}"/>
-                                            <Setter Property="Padding" Value="{StaticResource Launcher.Spacing.Thickness.Xs}"/>
-                                            <Setter Property="MinHeight" Value="{StaticResource Launcher.Control.Height.Setting}"/>
-                                            <Setter Property="VerticalContentAlignment" Value="Center"/>
-                                            <Style Selector="^ /template/ ContentPresenter#PART_ContentPresenter">
-                                                <Setter Property="Margin" Value="{StaticResource Launcher.Component.Tabs.Header.Margin}"/>
-                                            </Style>
-                                            <Style Selector="^:selected">
-                                                <Setter Property="Background" Value="{DynamicResource Launcher.Color.Transparent}"/>
-                                                <Setter Property="Foreground" Value="{DynamicResource Launcher.Text.Primary}"/>
-                                            </Style>
-                                            <Style Selector="^:selected /template/ Border#PART_LayoutRoot">
-                                                <Setter Property="Background" Value="{DynamicResource Launcher.Color.Transparent}"/>
-                                                <Setter Property="TextElement.Foreground" Value="{DynamicResource Launcher.Text.Primary}"/>
-                                            </Style>
-                                            <Style Selector="^:selected /template/ Border#PART_SelectedPipe">
-                                                <Setter Property="Background" Value="{DynamicResource Launcher.Color.Primary}"/>
-                                            </Style>
-                                            <Style Selector="^[TabStripPlacement=Top] /template/ Border#PART_SelectedPipe">
-                                                <Setter Property="Margin" Value="{StaticResource Launcher.Component.Tabs.Indicator.Margin}"/>
-                                            </Style>
-                                            <Style Selector="^:pointerover /template/ Border#PART_LayoutRoot">
-                                                <Setter Property="Background" Value="{DynamicResource Launcher.Color.Transparent}"/>
-                                                <Setter Property="TextElement.Foreground" Value="{DynamicResource Launcher.Text.Primary}"/>
-                                            </Style>
-                                            <Style Selector="^:selected:pointerover /template/ Border#PART_LayoutRoot">
-                                                <Setter Property="Background" Value="{DynamicResource Launcher.Color.Transparent}"/>
-                                                <Setter Property="TextElement.Foreground" Value="{DynamicResource Launcher.Text.Primary}"/>
-                                            </Style>
-                                        </ControlTheme>
-                                    </TabControl.ItemContainerTheme>
+                                            PageTransition="{x:Null}"
+                                            Theme="{StaticResource Launcher.RemoteContent.NewsTabControlTheme}"
+                                            ItemContainerTheme="{StaticResource Launcher.RemoteContent.NewsTabItemTheme}">
                                     <TabControl.ItemTemplate>
                                         <DataTemplate x:DataType="models:NewsCategory">
                                             <TextBlock Text="{Binding Label}" VerticalAlignment="Center"/>

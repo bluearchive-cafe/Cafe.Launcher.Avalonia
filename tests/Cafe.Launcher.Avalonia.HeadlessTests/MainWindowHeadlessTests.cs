@@ -179,6 +179,33 @@ public sealed class MainWindowHeadlessTests
     }
 
     [AvaloniaFact]
+    public void MainWindow_TitleBarDragHitTesting_ExcludesInteractiveControlsAndNonTitleContent()
+    {
+        using var context = CreateContext();
+        context.Window.Show();
+        Dispatcher.UIThread.RunJobs();
+
+        var titleBar = context.Window.GetVisualDescendants()
+            .OfType<Grid>()
+            .Single(control => control.Name == "TitleBar");
+        var settingsButton = titleBar.GetVisualDescendants()
+            .OfType<Button>()
+            .Single(control => control.Classes.Contains("settings"));
+        var title = titleBar.GetVisualDescendants()
+            .OfType<TextBlock>()
+            .Single(control => control.Classes.Contains("titlebar-brand"));
+        var outsideTitleBar = context.Window.GetVisualDescendants()
+            .OfType<Grid>()
+            .Single(control => control.Classes.Contains("operation-layout"));
+
+        Assert.True(context.Window.IsWithinTitleBar(settingsButton));
+        Assert.True(context.Window.IsWithinTitleBar(title));
+        Assert.True(MainWindow.IsInteractive(settingsButton));
+        Assert.False(MainWindow.IsInteractive(title));
+        Assert.False(context.Window.IsWithinTitleBar(outsideTitleBar));
+    }
+
+    [AvaloniaFact]
     public void MainWindow_BannerControls_HideAfterPointerLeavesBannerStage()
     {
         using var context = CreateContext();

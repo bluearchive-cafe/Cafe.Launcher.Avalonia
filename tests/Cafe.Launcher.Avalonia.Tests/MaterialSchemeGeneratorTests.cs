@@ -184,6 +184,35 @@ public sealed class MaterialSchemeGeneratorTests
         Assert.Equal(Color.FromRgb(0x12, 0x18, 0x20), darkBrushes["Launcher.Color.OnPrimary"].Color);
     }
 
+    [Fact]
+    public void BuildRoleBrushes_ProvidesReadableDynamicErrorRoles()
+    {
+        foreach (var isDark in new[] { false, true })
+        {
+            var scheme = MaterialSchemeGenerator.CreateScheme(
+                DefaultSeed,
+                ThemeColorVariants.TonalSpot,
+                isDark);
+            var brushes = MaterialSchemeGenerator.BuildRoleBrushes(
+                scheme,
+                seedFollowingNeutrals: false,
+                isDark);
+
+            Assert.Contains("Launcher.Color.Error", brushes.Keys);
+            Assert.Contains("Launcher.Color.Error.Hover", brushes.Keys);
+            Assert.Contains("Launcher.Color.Error.Pressed", brushes.Keys);
+            Assert.Contains("Launcher.Color.OnError", brushes.Keys);
+
+            foreach (var state in new[] { "", ".Hover", ".Pressed" })
+            {
+                var ratio = ColorUtils.GetContrastRatio(
+                    brushes["Launcher.Color.OnError"].Color,
+                    brushes[$"Launcher.Color.Error{state}"].Color);
+                Assert.True(ratio >= 4.5, $"Error{state} contrast was {ratio:F2}:1.");
+            }
+        }
+    }
+
     [Theory]
     [InlineData("#FFFFFFFF", true)]
     [InlineData("#FFB8B8B8", true)]

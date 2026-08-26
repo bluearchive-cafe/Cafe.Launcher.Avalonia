@@ -46,6 +46,29 @@
             <Thickness x:Key="Launcher.Component.Settings.Navigation.List.Padding">16,8,16,16</Thickness>
             <Thickness x:Key="Launcher.Component.Settings.Navigation.Item.Margin">0,2</Thickness>
             <Thickness x:Key="Launcher.Component.Settings.Navigation.Item.Padding">12,0</Thickness>
+            <Thickness x:Key="Launcher.Component.TitleBar.Brand.Margin">20,0,0,0</Thickness>
+            <Thickness x:Key="Launcher.Component.TitleBar.Actions.Margin">0,0,8,0</Thickness>
+            <Thickness x:Key="Launcher.Component.TitleBar.Settings.Margin">0,0,4,0</Thickness>
+            <Thickness x:Key="Launcher.Component.Dialog.Title.Margin">16,0,0,0</Thickness>
+            <Thickness x:Key="Launcher.Component.Dialog.HeaderAction.Margin">0,0,16,0</Thickness>
+            <Thickness x:Key="Launcher.Component.Dialog.Footer.BorderThickness">0,1,0,0</Thickness>
+            <Thickness x:Key="Launcher.Component.Settings.Group.Margin">0,16,0,0</Thickness>
+            <Thickness x:Key="Launcher.Component.Settings.ContentHeading.Margin">0,0,0,4</Thickness>
+            <Thickness x:Key="Launcher.Component.RemoteSurface.Margin">40,64,0,0</Thickness>
+            <Thickness x:Key="Launcher.Component.BottomPanel.Padding">40,20,40,20</Thickness>
+            <Thickness x:Key="Launcher.Component.ContentRow.Margin">0,0,0,4</Thickness>
+            <Thickness x:Key="Launcher.Component.UpdateFile.Margin">0,0,0,8</Thickness>
+            <Thickness x:Key="Launcher.Component.UpdateFile.Size.Padding">8,4</Thickness>
+            <Thickness x:Key="Launcher.Component.UpdateFile.Selected.Padding">11</Thickness>
+            <Thickness x:Key="Launcher.Component.Scroll.Pad">0,0,8,0</Thickness>
+            <Thickness x:Key="Launcher.Component.Action.Primary.Padding">20,12</Thickness>
+            <Thickness x:Key="Launcher.Component.Action.Outlined.Padding">12,8</Thickness>
+            <Thickness x:Key="Launcher.Component.Action.Dialog.Padding">16,0</Thickness>
+            <Thickness x:Key="Launcher.Component.Action.Launcher.Padding">20,0</Thickness>
+            <Thickness x:Key="Launcher.Component.Action.Compact.Padding">8,4</Thickness>
+            <Thickness x:Key="Launcher.Component.Wizard.Navigation.Padding">8,8,8,16</Thickness>
+            <Thickness x:Key="Launcher.Component.Wizard.Choice.Padding">14</Thickness>
+            <Thickness x:Key="Launcher.Component.Toast.Host.Margin">0,56,16,0</Thickness>
             <CornerRadius x:Key="Launcher.Radius.Sm">8</CornerRadius>
             <CornerRadius x:Key="Launcher.Radius.Md">12</CornerRadius>
             <CornerRadius x:Key="Launcher.Radius.Lg">16</CornerRadius>
@@ -79,6 +102,8 @@
             <x:Double x:Key="Launcher.Layout.Debug.Log.Level.MinWidth">110</x:Double>
             <x:Double x:Key="Launcher.Layout.Debug.SettingsPreview.MaxHeight">160</x:Double>
             <x:Double x:Key="Launcher.Control.Size.Swatch">28</x:Double>
+            <x:Double x:Key="Launcher.Control.Size.IconButton.Compact">24</x:Double>
+            <x:Double x:Key="Launcher.Control.Size.IconButton.Dot">20</x:Double>
             <x:Double x:Key="Launcher.Control.Height.Chip">32</x:Double>
             <x:Double x:Key="Launcher.Control.Height.Field">40</x:Double>
             <x:Double x:Key="Launcher.Component.Dialog.Title.Height">56</x:Double>
@@ -101,13 +126,31 @@
             <x:Double x:Key="Launcher.Layout.DesignGallery.Width">1000</x:Double>
             <x:Double x:Key="Launcher.Layout.DesignGallery.Height">680</x:Double>
             <x:Double x:Key="Launcher.Component.DesignGallery.StateCell.Width">132</x:Double>
-            <x:Double x:Key="Launcher.Component.Settings.Row.Content.MinWidth">240</x:Double>
+            <x:Double x:Key="Launcher.Component.Settings.Row.Content.MinWidth">0</x:Double>
+            <x:Double x:Key="Launcher.Component.Settings.Control.MinWidth">220</x:Double>
+            <x:Double x:Key="Launcher.Component.Input.MinWidth">160</x:Double>
+            <x:Double x:Key="Launcher.Component.Dialog.Action.MinWidth">108</x:Double>
+            <x:Double x:Key="Launcher.Component.PrimaryAction.MinWidth">150</x:Double>
+            <x:Double x:Key="Launcher.Component.BottomAction.MinWidth">156</x:Double>
+            <x:Double x:Key="Launcher.Component.LauncherControl.Width">220</x:Double>
+            <x:Double x:Key="Launcher.Component.RemoteSurface.Width">500</x:Double>
+            <x:Double x:Key="Launcher.Component.RemoteSurface.MinHeight">360</x:Double>
+            <x:Double x:Key="Launcher.Component.RemoteSurface.MaxHeight">480</x:Double>
+            <x:Double x:Key="Launcher.Component.NoticeCard.MaxHeight">160</x:Double>
+            <x:Double x:Key="Launcher.Component.BottomPanel.MinHeight">132</x:Double>
+            <x:Double x:Key="Launcher.Component.ControlPanel.MinHeight">156</x:Double>
+            <x:Double x:Key="Launcher.Component.ColorSwatch.Preview.Size">16</x:Double>
+            <x:Double x:Key="Launcher.Component.Toast.Message.MaxWidth">282</x:Double>
+            <x:Double x:Key="Launcher.Component.Wizard.StepNumber.MinWidth">20</x:Double>
+            <x:Double x:Key="Launcher.Component.Wizard.Divider.Height">1</x:Double>
+            <x:Double x:Key="Launcher.Component.Wizard.Choice.MinHeight">64</x:Double>
             <x:Double x:Key="Launcher.Component.Settings.Row.MinHeight">60</x:Double>
             <x:Double x:Key="Launcher.Component.Settings.Row.Action.MaxWidth">440</x:Double>
             <x:Double x:Key="Launcher.Component.Loading.Bar.Width">120</x:Double>
             <x:Double x:Key="Launcher.Component.Loading.Bar.Height">4</x:Double>
             <x:Double x:Key="Launcher.Component.Progress.Bar.Height">8</x:Double>
             <Thickness x:Key="Launcher.Border.Thickness.Default">1</Thickness>
+            <Thickness x:Key="Launcher.Border.Thickness.Focus">2</Thickness>
             <x:Double x:Key="Launcher.Component.Toast.Action.Progress.Height">3</x:Double>
             <x:Double x:Key="Launcher.Component.Toast.Width">340</x:Double>
             <x:TimeSpan x:Key="Launcher.Motion.Duration.Faster">0:0:0.050</x:TimeSpan>
@@ -167,6 +210,10 @@
             <SolidColorBrush x:Key="Launcher.Color.Danger" Color="#FFD93840"/>
             <SolidColorBrush x:Key="Launcher.Color.Danger.Hover" Color="#FFD32F35"/>
             <SolidColorBrush x:Key="Launcher.Color.Danger.Pressed" Color="#FFC9353A"/>
+            <SolidColorBrush x:Key="Launcher.Color.Error" Color="#FFD93840"/>
+            <SolidColorBrush x:Key="Launcher.Color.Error.Hover" Color="#FFD32F35"/>
+            <SolidColorBrush x:Key="Launcher.Color.Error.Pressed" Color="#FFC9353A"/>
+            <SolidColorBrush x:Key="Launcher.Color.OnError" Color="#FFFFFFFF"/>
             <SolidColorBrush x:Key="Launcher.Color.Overlay.Scrim.Sm" Color="#40000000"/>
             <SolidColorBrush x:Key="Launcher.Color.Overlay.Scrim.Md" Color="#99000000"/>
             <SolidColorBrush x:Key="Launcher.Color.Overlay.Scrim.Lg" Color="#E6000000"/>

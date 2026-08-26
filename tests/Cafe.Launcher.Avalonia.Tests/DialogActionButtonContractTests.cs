@@ -13,8 +13,8 @@ public sealed class DialogActionButtonContractTests
         Assert.Equal(
             "{StaticResource Launcher.Control.Height.Dialog}",
             setters["Height"]);
-        Assert.Equal("108", setters["MinWidth"]);
-        Assert.Equal("16,0", setters["Padding"]);
+        Assert.Equal("{StaticResource Launcher.Component.Dialog.Action.MinWidth}", setters["MinWidth"]);
+        Assert.Equal("{StaticResource Launcher.Component.Action.Dialog.Padding}", setters["Padding"]);
         Assert.Equal(
             "{StaticResource Launcher.Typography.FontSize.Body.Md}",
             setters["FontSize"]);
