@@ -116,6 +116,12 @@ public sealed class MaterialSchemeGeneratorTests
             MaterialColorMapper.ToArgbColor(brushes["Launcher.Color.Surface"].Color).Value);
         Assert.True(brushes.ContainsKey("Launcher.Color.Secondary"));
         Assert.True(brushes.ContainsKey("Launcher.Color.TertiaryContainer"));
+        Assert.True(brushes.ContainsKey("Launcher.Color.PrimaryContainer"));
+        Assert.True(brushes.ContainsKey("Launcher.Color.OnPrimaryContainer"));
+
+        // Visible solid surfaces stay on the fixed neutral business token under the
+        // Brand Blue strategy (Q13): no Dialog.Background override is produced.
+        Assert.False(brushes.ContainsKey("Launcher.Color.Dialog.Background"));
     }
 
     [Fact]
@@ -131,6 +137,15 @@ public sealed class MaterialSchemeGeneratorTests
         Assert.True(brushes.ContainsKey("Launcher.Color.Surface"));
         Assert.True(brushes.ContainsKey("Launcher.Color.OnSurface"));
         Assert.True(brushes.ContainsKey("Launcher.Color.Outline"));
+        Assert.True(brushes.ContainsKey("Launcher.Color.PrimaryContainer"));
+        Assert.True(brushes.ContainsKey("Launcher.Color.OnPrimaryContainer"));
+
+        // Seed-following dyes the visible solid dialog surfaces from the neutral
+        // scheme (Q23): the Dialog.Background override matches the scheme surface.
+        Assert.True(brushes.ContainsKey("Launcher.Color.Dialog.Background"));
+        Assert.Equal(
+            scheme.Surface.Value,
+            MaterialColorMapper.ToArgbColor(brushes["Launcher.Color.Dialog.Background"].Color).Value);
     }
 
     [Fact]
@@ -154,7 +169,9 @@ public sealed class MaterialSchemeGeneratorTests
         Assert.True(brushes.ContainsKey("Launcher.Color.Carousel.Dot.Active"));
         Assert.True(brushes.ContainsKey("Launcher.Color.Button.Flat.Hover"));
         Assert.True(brushes.ContainsKey("Launcher.Color.Button.Flat.Pressed"));
-        Assert.True(brushes.ContainsKey("Launcher.Color.Info.Background"));
+        // Info.Background is a fixed business surface (spec §3.4): the generator
+        // no longer tints it with the accent, so no key is produced.
+        Assert.False(brushes.ContainsKey("Launcher.Color.Info.Background"));
         Assert.True(brushes.ContainsKey("Launcher.Color.SecondaryContainer.Hover"));
         Assert.True(brushes.ContainsKey("Launcher.Color.SecondaryContainer.Pressed"));
 

@@ -53,9 +53,6 @@ public sealed class DesignTokenContrastTests
         new("info strip text", "Launcher.Text.Info", "Launcher.Color.Info.Background", 4.5),
         new("danger soft primary text", "Launcher.Text.Primary", "Launcher.Color.Danger.Soft", 4.5),
         new("warning surface primary text", "Launcher.Text.Primary", "Launcher.Color.Warning.Background", 4.5),
-        new("danger action label", "Launcher.Color.OnPrimary", "Launcher.Color.Danger", 4.5),
-        new("danger action label (hover)", "Launcher.Color.OnPrimary", "Launcher.Color.Danger.Hover", 4.5),
-        new("danger action label (pressed)", "Launcher.Color.OnPrimary", "Launcher.Color.Danger.Pressed", 4.5),
         new("error action label", "Launcher.Color.OnError", "Launcher.Color.Error", 4.5),
         new("error action label (hover)", "Launcher.Color.OnError", "Launcher.Color.Error.Hover", 4.5),
         new("error action label (pressed)", "Launcher.Color.OnError", "Launcher.Color.Error.Pressed", 4.5),
@@ -63,7 +60,9 @@ public sealed class DesignTokenContrastTests
     ];
 
     // Non-text/UI pairs: WCAG AA >= 3:1 (progress, icons, severity indicators, borders).
-    // Filled-button states (Danger.Hover/Pressed) are label pairs, covered above.
+    // Danger fills are consumed by the exempt chrome-close (Text.OnChrome, spec §8) and
+    // by the error-filled danger-action (OnError/Error label pairs above); the static
+    // white-on-danger guard lives in OnPrimaryContrastRule_WhiteOnDangerFillsMeetsAa...
     private static readonly TokenPair[] UiPairs =
     [
         new("danger icon on card", "Launcher.Color.Danger", "Launcher.Color.Card.Background", 3.0),

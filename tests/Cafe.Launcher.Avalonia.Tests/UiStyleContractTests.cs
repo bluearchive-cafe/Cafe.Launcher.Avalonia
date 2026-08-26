@@ -923,7 +923,16 @@ public sealed partial class UiStyleContractTests
             .Single(element =>
                 element.Name.LocalName == "Grid"
                 && HasClass(element, "settings-workspace"));
-        Assert.Equal("216,*", workspace.Attribute("ColumnDefinitions")?.Value);
+        Assert.Equal("Auto,*", workspace.Attribute("ColumnDefinitions")?.Value);
+
+        var navigationPane = workspace
+            .Descendants()
+            .Single(element =>
+                element.Name.LocalName == "Grid"
+                && HasClass(element, "settings-navigation-pane"));
+        Assert.Equal(
+            "{StaticResource Launcher.Component.Settings.Navigation.Width}",
+            navigationPane.Attribute("Width")?.Value);
 
         var navigation = workspace
             .Descendants()
@@ -1109,6 +1118,12 @@ public sealed partial class UiStyleContractTests
             "{StaticResource Launcher.Spacing.Thickness.None}",
             GetStyleSetters(document, "ListBox.settings-navigation > ListBoxItem:selected:not(:focus)")["BorderThickness"]);
         Assert.False(GetStyleSetters(document, "Grid.settings-content").ContainsKey("RowSpacing"));
+        Assert.Equal(
+            "{DynamicResource Launcher.Color.Dialog.Background}",
+            GetStyleSetters(document, "Grid.settings-content")["Background"]);
+        Assert.Equal(
+            "{StaticResource Launcher.Color.ControlPanel.Gradient}",
+            GetStyleSetters(document, "Border.control-panel")["Background"]);
         Assert.Equal(
             "{StaticResource Launcher.Spacing.Xs}",
             GetStyleSetters(document, "StackPanel.settings-content-heading-copy")["Spacing"]);
@@ -1429,6 +1444,9 @@ public sealed partial class UiStyleContractTests
 
         var dialog = GetStyleSetters(document, "Border.dialog");
         Assert.Equal("{StaticResource Launcher.Radius.Lg}", dialog["CornerRadius"]);
+        Assert.Equal(
+            "{DynamicResource Launcher.Color.Dialog.Background}",
+            dialog["Background"]);
 
         var settingControl = GetStyleSetters(document, "ComboBox.setting-control");
         Assert.False(settingControl.ContainsKey("Width"));
@@ -1471,6 +1489,28 @@ public sealed partial class UiStyleContractTests
         Assert.Equal("{StaticResource Launcher.Typography.FontSize.Body.Md}", iconLink["FontSize"]);
         Assert.Equal("Center", iconLink["HorizontalContentAlignment"]);
         Assert.Equal("Center", iconLink["VerticalContentAlignment"]);
+
+        // ADR-008 batch A: every button family routes through the shared template (ADR-004).
+        foreach (var selector in new[]
+                 {
+                     "Button.text-link",
+                     "Button.icon-button",
+                     "Button.banner-link",
+                     "Button.primary-action",
+                     "Button.flat-action",
+                     "Button.danger-action",
+                     "Button.dialog-close",
+                     "Button.chrome"
+                 })
+        {
+            Assert.Equal(
+                "{StaticResource LauncherBorderButtonTemplate}",
+                GetStyleSetters(document, selector)["Template"]);
+        }
+        var toastStyles = XDocument.Load(ProjectFile("Views/Styles/Toast.axaml"));
+        Assert.Equal(
+            "{StaticResource LauncherBorderButtonTemplate}",
+            GetStyleSetters(toastStyles, "Button.toast-close")["Template"]);
 
         var flatAction = GetStyleSetters(document, "Button.flat-action");
         Assert.Equal(
@@ -1618,21 +1658,50 @@ public sealed partial class UiStyleContractTests
     }
 
     [Fact]
-    public void DesignGallery_ProvidesThreeComponentRowsAndSixStateColumns()
+    public void DesignGallery_ProvidesFourButtonTypesCardAndSettingsRowAcrossSixStates()
     {
         var document = XDocument.Load(ProjectFile("Views/DesignGalleryOverlay.axaml"));
         var matrix = document.Descendants().Single(element => HasClass(element, "design-state-matrix"));
 
         Assert.Equal("Auto,*,*,*,*,*,*", matrix.Attribute("ColumnDefinitions")?.Value);
-        Assert.Equal("Auto,Auto,Auto,Auto", matrix.Attribute("RowDefinitions")?.Value);
+        Assert.Equal(
+            "Auto,Auto,Auto,Auto,Auto,Auto,Auto",
+            matrix.Attribute("RowDefinitions")?.Value);
         Assert.Equal(7, matrix.Descendants().Count(element => HasClass(element, "design-state-header")));
-        Assert.Equal(6, matrix.Descendants().Count(element => HasClass(element, "gallery-button")));
+        Assert.Equal(20, matrix.Descendants().Count(element => HasClass(element, "gallery-button")));
         Assert.Equal(6, matrix.Descendants().Count(element => HasClass(element, "gallery-select")));
-        Assert.Equal(6, matrix.Descendants().Count(element => HasClass(element, "gallery-card")));
+        Assert.Equal(5, matrix.Descendants().Count(element => HasClass(element, "gallery-card")));
 
-        var disabledButton = matrix.Descendants().Single(element =>
-            element.Name.LocalName == "Button" && HasClass(element, "state-disabled"));
-        Assert.Equal("False", disabledButton.Attribute("IsEnabled")?.Value);
+        // ADR-007: the matrix shows the four button types, a card (Toast) and a settings row.
+        Assert.Equal(5, matrix.Descendants().Count(element =>
+            HasClass(element, "gallery-button") && HasClass(element, "outlined")));
+        Assert.Equal(5, matrix.Descendants().Count(element =>
+            HasClass(element, "gallery-button") && HasClass(element, "text")));
+        Assert.Equal(5, matrix.Descendants().Count(element =>
+            HasClass(element, "gallery-button") && HasClass(element, "error")));
+        Assert.Equal(5, matrix.Descendants().Count(element =>
+            HasClass(element, "gallery-button") && !HasClass(element, "outlined")
+            && !HasClass(element, "text") && !HasClass(element, "error")));
+        Assert.Equal(5, matrix.Descendants().Count(element =>
+            HasClass(element, "gallery-card") && HasClass(element, "toast")));
+
+        // Invalid state applies only to the settings row / input classes (ADR-007);
+        // buttons and cards render an explicit unused placeholder instead.
+        Assert.Equal(5, matrix.Descendants().Count(element => HasClass(element, "gallery-invalid-unused")));
+        Assert.DoesNotContain(matrix.Descendants(), element =>
+            HasClass(element, "gallery-button") && HasClass(element, "state-invalid"));
+        Assert.DoesNotContain(matrix.Descendants(), element =>
+            HasClass(element, "gallery-card") && HasClass(element, "state-invalid"));
+        Assert.Single(matrix.Descendants(), element =>
+            HasClass(element, "gallery-select") && HasClass(element, "state-invalid"));
+
+        var disabledButtons = matrix.Descendants()
+            .Where(element =>
+                element.Name.LocalName == "Button" && HasClass(element, "state-disabled"))
+            .ToArray();
+        Assert.Equal(4, disabledButtons.Length);
+        Assert.All(disabledButtons, button =>
+            Assert.Equal("False", button.Attribute("IsEnabled")?.Value));
         var disabledSelect = matrix.Descendants().Single(element =>
             element.Name.LocalName == "ComboBox" && HasClass(element, "state-disabled"));
         Assert.Equal("False", disabledSelect.Attribute("IsEnabled")?.Value);
@@ -1641,10 +1710,24 @@ public sealed partial class UiStyleContractTests
     [Fact]
     public void Views_UseSemanticColorsAndTokenizedMaterialIconSizes()
     {
-        foreach (var relativePath in ViewFiles)
+        foreach (var relativePath in ViewFiles
+                     .Concat(StyleFiles)
+                     .Append("Views/MainWindowDebugOverlay.axaml"))
         {
             var text = File.ReadAllText(ProjectFile(relativePath));
-            Assert.DoesNotMatch(DirectColorRegex(), text);
+
+            // BoxShadow literals (Avalonia 12.1.1 has no TypeConverter) are
+            // contract-exempt; see StyleControlAndDebugFiles_DoNotDefineRawColorValues.
+            var colorText =
+                relativePath.StartsWith("Views/Styles/", StringComparison.Ordinal)
+                || relativePath == "Views/MainWindow.Styles.axaml"
+                    ? string.Join(
+                        Environment.NewLine,
+                        text.Replace("\r", "", StringComparison.Ordinal)
+                            .Split('\n')
+                            .Where(line => !line.Contains("BoxShadow", StringComparison.Ordinal)))
+                    : text;
+            Assert.DoesNotMatch(DirectColorRegex(), colorText);
             Assert.DoesNotContain("\"Transparent\"", text, StringComparison.Ordinal);
 
             var document = XDocument.Parse(text);
@@ -1670,6 +1753,67 @@ public sealed partial class UiStyleContractTests
                 value => Assert.True(
                     value.StartsWith("{StaticResource Launcher.Spacing", StringComparison.Ordinal),
                     $"Spacing value must use a LauncherSpacing token: {value}"));
+        }
+    }
+
+    [Fact]
+    public void StyleControlAndDebugFiles_DoNotDefineRawColorValues()
+    {
+        // Attribute-scoped scan: raw hex colors may only be defined in App.axaml
+        // (design-system spec §3.1). BoxShadow literals are exempt — they carry no
+        // TypeConverter in Avalonia 12.1.1 and are locked by token contract instead.
+        var colorAttributeNames = new HashSet<string>(StringComparer.Ordinal)
+        {
+            "Background",
+            "Foreground",
+            "BorderBrush",
+            "Fill",
+            "Stroke"
+        };
+
+        var controlFiles = Directory.GetFiles(
+            ProjectFile("Controls"),
+            "*.axaml",
+            SearchOption.TopDirectoryOnly);
+        var colorScannedFiles = StyleFiles
+            .Append("Views/MainWindowDebugOverlay.axaml")
+            .Concat(controlFiles)
+            .ToArray();
+
+        foreach (var relativePath in colorScannedFiles)
+        {
+            var document = XDocument.Load(ProjectFile(relativePath));
+            var rawValues = document
+                .Descendants()
+                .SelectMany(element => element.Attributes())
+                .Where(attribute =>
+                    colorAttributeNames.Contains(attribute.Name.LocalName)
+                    || attribute.Name.LocalName == "Color"
+                        && attribute.Parent?.Name.LocalName == "GradientStop")
+                .Select(attribute => attribute.Value)
+                .Where(value => !value.StartsWith('{'))
+                .ToArray();
+
+            Assert.DoesNotContain(rawValues, value => DirectColorRegex().IsMatch(value));
+        }
+    }
+
+    [Fact]
+    public void SettingsNavigationAndUpdateFileItems_TokenizeFocusVisibleRings() // spec §8 visible focus ring
+    {
+        var styles = XDocument.Load(ProjectFile("Views/MainWindow.Styles.axaml"));
+        foreach (var selector in new[]
+                 {
+                     "ListBox.settings-navigation > ListBoxItem:focus-visible",
+                     "ListBox.update-file-list > ListBoxItem:focus-visible"
+                 })
+        {
+            Assert.Equal(
+                "{DynamicResource Launcher.Color.FocusRing}",
+                GetStyleSetters(styles, selector)["BorderBrush"]);
+            Assert.Equal(
+                "{StaticResource Launcher.Border.Thickness.Focus}",
+                GetStyleSetters(styles, selector)["BorderThickness"]);
         }
     }
 
@@ -1855,11 +1999,12 @@ public sealed partial class UiStyleContractTests
     }
 
     [Fact]
-    public void CornerRadii_UseTheThreeDeclaredHierarchyTokens()
+    public void CornerRadii_UseTheFourDeclaredHierarchyTokens()
     {
         var allowedTokens = new HashSet<string>(StringComparer.Ordinal)
         {
             "0",
+            "{StaticResource Launcher.Radius.Xs}",
             "{StaticResource Launcher.Radius.Sm}",
             "{StaticResource Launcher.Radius.Md}",
             "{StaticResource Launcher.Radius.Lg}",
@@ -2063,6 +2208,37 @@ public sealed partial class UiStyleContractTests
             "{Binding DisplayName}",
             resourceSwitch.Attributes().SingleOrDefault(attribute =>
                 attribute.Name.LocalName == "AutomationProperties.Name")?.Value);
+    }
+
+    [Fact]
+    public void ErrorDialog_HeaderProvidesLocalizedCloseAction() // ADR-014 dialog family anatomy
+    {
+        var document = XDocument.Load(ProjectFile("Views/MainWindowDialogsOverlay.axaml"));
+        var close = document
+            .Descendants()
+            .Single(element =>
+                element.Name.LocalName == "Button"
+                && HasClass(element, "dialog-close")
+                && element.Attribute("Command")?.Value == "{Binding Dialogs.ContinueAfterErrorCommand}");
+        Assert.Equal(
+            "{Binding Shell.I18n[close]}",
+            close.Attributes().Single(attribute =>
+                attribute.Name.LocalName == "AutomationProperties.Name").Value);
+    }
+
+    [Fact]
+    public void AppearanceSection_NeutralStrategyHint_IsLocalizedAndConditionallyVisible() // ADR-010
+    {
+        var document = XDocument.Load(ProjectFile("Views/SettingsAppearanceSection.axaml"));
+        var hint = document
+            .Descendants()
+            .Single(element => HasClass(element, "settings-neutral-hint"));
+        Assert.Equal(
+            "{Binding Shell.I18n[neutralColorStrategySeedFollowingHint]}",
+            hint.Attribute("Text")?.Value);
+        Assert.Equal(
+            "{Binding Settings.Appearance.IsSeedFollowingNeutralStrategySelected}",
+            hint.Attribute("IsVisible")?.Value);
     }
 
     [Fact]

@@ -61,7 +61,7 @@ public sealed class UiAccessibilityContractTests
             .Where(element => HasClass(element, "gallery-button") || HasClass(element, "gallery-select"))
             .ToArray();
 
-        Assert.Equal(12, samples.Length);
+        Assert.Equal(26, samples.Length);
         Assert.All(samples, sample => Assert.Equal("False", sample.Attribute("IsTabStop")?.Value));
     }
 
