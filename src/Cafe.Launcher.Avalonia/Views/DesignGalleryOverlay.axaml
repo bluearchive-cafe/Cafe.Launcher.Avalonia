@@ -58,37 +58,37 @@
 
                                     <TextBlock Grid.Row="1" Classes="design-state-component"
                                                Text="{Binding Shell.I18n[startGame]}"/>
-                                    <Button Grid.Row="1" Grid.Column="1" Classes="gallery-button state-normal"
+                                    <Button Grid.Row="1" Grid.Column="1" Classes="gallery-button state-normal" IsTabStop="False"
                                             Content="{Binding Shell.I18n[startGame]}"/>
-                                    <Button Grid.Row="1" Grid.Column="2" Classes="gallery-button state-hover"
+                                    <Button Grid.Row="1" Grid.Column="2" Classes="gallery-button state-hover" IsTabStop="False"
                                             Content="{Binding Shell.I18n[startGame]}"/>
-                                    <Button Grid.Row="1" Grid.Column="3" Classes="gallery-button state-pressed"
+                                    <Button Grid.Row="1" Grid.Column="3" Classes="gallery-button state-pressed" IsTabStop="False"
                                             Content="{Binding Shell.I18n[startGame]}"/>
-                                    <Button Grid.Row="1" Grid.Column="4" Classes="gallery-button state-disabled"
+                                    <Button Grid.Row="1" Grid.Column="4" Classes="gallery-button state-disabled" IsTabStop="False"
                                             IsEnabled="False" Content="{Binding Shell.I18n[startGame]}"/>
-                                    <Button Grid.Row="1" Grid.Column="5" Classes="gallery-button state-focus"
+                                    <Button Grid.Row="1" Grid.Column="5" Classes="gallery-button state-focus" IsTabStop="False"
                                             Content="{Binding Shell.I18n[startGame]}"/>
-                                    <Button Grid.Row="1" Grid.Column="6" Classes="gallery-button state-invalid"
+                                    <Button Grid.Row="1" Grid.Column="6" Classes="gallery-button state-invalid" IsTabStop="False"
                                             Content="{Binding Shell.I18n[startGame]}"/>
 
                                     <TextBlock Grid.Row="2" Classes="design-state-component"
                                                Text="{Binding Shell.I18n[themeColor]}"/>
-                                    <ComboBox Grid.Row="2" Grid.Column="1" Classes="gallery-select state-normal" SelectedIndex="0">
+                                    <ComboBox Grid.Row="2" Grid.Column="1" Classes="gallery-select state-normal" IsTabStop="False" SelectedIndex="0">
                                         <ComboBoxItem Content="{Binding Shell.I18n[themeColorDefault]}"/>
                                     </ComboBox>
-                                    <ComboBox Grid.Row="2" Grid.Column="2" Classes="gallery-select state-hover" SelectedIndex="0">
+                                    <ComboBox Grid.Row="2" Grid.Column="2" Classes="gallery-select state-hover" IsTabStop="False" SelectedIndex="0">
                                         <ComboBoxItem Content="{Binding Shell.I18n[themeColorDefault]}"/>
                                     </ComboBox>
-                                    <ComboBox Grid.Row="2" Grid.Column="3" Classes="gallery-select state-pressed" SelectedIndex="0">
+                                    <ComboBox Grid.Row="2" Grid.Column="3" Classes="gallery-select state-pressed" IsTabStop="False" SelectedIndex="0">
                                         <ComboBoxItem Content="{Binding Shell.I18n[themeColorDefault]}"/>
                                     </ComboBox>
-                                    <ComboBox Grid.Row="2" Grid.Column="4" Classes="gallery-select state-disabled" IsEnabled="False" SelectedIndex="0">
+                                    <ComboBox Grid.Row="2" Grid.Column="4" Classes="gallery-select state-disabled" IsTabStop="False" IsEnabled="False" SelectedIndex="0">
                                         <ComboBoxItem Content="{Binding Shell.I18n[themeColorDefault]}"/>
                                     </ComboBox>
-                                    <ComboBox Grid.Row="2" Grid.Column="5" Classes="gallery-select state-focus" SelectedIndex="0">
+                                    <ComboBox Grid.Row="2" Grid.Column="5" Classes="gallery-select state-focus" IsTabStop="False" SelectedIndex="0">
                                         <ComboBoxItem Content="{Binding Shell.I18n[themeColorDefault]}"/>
                                     </ComboBox>
-                                    <ComboBox Grid.Row="2" Grid.Column="6" Classes="gallery-select state-invalid" SelectedIndex="0">
+                                    <ComboBox Grid.Row="2" Grid.Column="6" Classes="gallery-select state-invalid" IsTabStop="False" SelectedIndex="0">
                                         <ComboBoxItem Content="{Binding Shell.I18n[themeColorDefault]}"/>
                                     </ComboBox>
 
@@ -135,7 +135,7 @@
                                                                     CornerRadius="{StaticResource Launcher.Radius.Sm}"
                                                                     Background="{Binding Swatch}"
                                                                     BorderBrush="{DynamicResource Launcher.Color.Card.Border}"
-                                                                    BorderThickness="1"
+                                                                    BorderThickness="{StaticResource Launcher.Border.Thickness.Default}"
                                                                     VerticalAlignment="Center"/>
                                                             <TextBlock Grid.Column="1" Text="{Binding Key}"
                                                                        Classes="caption"

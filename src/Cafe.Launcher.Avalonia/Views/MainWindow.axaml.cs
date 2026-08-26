@@ -247,7 +247,8 @@ public partial class MainWindow : Window
 
     private void OnPointerPressed(object? sender, PointerPressedEventArgs e)
     {
-        if (IsInteractive(e.Source as Control))
+        if (!IsWithinTitleBar(e.Source as Control)
+            || IsInteractive(e.Source as Control))
         {
             return;
         }
@@ -256,6 +257,21 @@ public partial class MainWindow : Window
         {
             BeginMoveDrag(e);
         }
+    }
+
+    private bool IsWithinTitleBar(Control? control)
+    {
+        while (control is not null)
+        {
+            if (ReferenceEquals(control, TitleBar))
+            {
+                return true;
+            }
+
+            control = control.Parent as Control;
+        }
+
+        return false;
     }
 
     private void OnKeyDown(object? sender, KeyEventArgs e)
@@ -275,7 +291,11 @@ public partial class MainWindow : Window
     {
         while (control is not null)
         {
-            if (control is Button or TextBox or ComboBox or ScrollViewer)
+            // Controls that can receive keyboard focus are interactive even when
+            // their concrete type is a composite control (for example ColorPicker
+            // or ToggleSwitch). Keep ScrollViewer as an explicit exception because
+            // it is a pointer-interactive surface but is not normally focusable.
+            if (control.Focusable || control is ScrollViewer)
             {
                 return true;
             }

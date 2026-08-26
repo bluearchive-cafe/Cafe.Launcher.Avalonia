@@ -14,10 +14,10 @@
           Classes.motion-enabled="{Binding IsMotionEnabled}"
           controls:MotionVisibility.IsOpen="{Binding Dialogs.IsSetupWizardVisible}"
           controls:MotionVisibility.IsMotionEnabled="{Binding IsMotionEnabled}">
-        <Border Width="920"
-                Height="560"
-                MaxWidth="920"
-                MaxHeight="560"
+        <Border Width="{StaticResource Launcher.Layout.SetupWizard.Width}"
+                Height="{StaticResource Launcher.Layout.SetupWizard.Height}"
+                MaxWidth="{StaticResource Launcher.Layout.SetupWizard.Width}"
+                MaxHeight="{StaticResource Launcher.Layout.SetupWizard.Height}"
                 Classes="dialog overlay-dialog confirm-panel motion-surface">
             <Border.RenderTransform>
                 <TranslateTransform/>
@@ -107,7 +107,7 @@
                                       SelectedValue="{Binding Dialogs.SetupWizard.Language, Mode=TwoWay}"
                                       SelectedValueBinding="{Binding Code}"
                                       HorizontalAlignment="Left"
-                                      MinWidth="200"
+                                      MinWidth="{StaticResource Launcher.Component.SetupWizard.Select.MinWidth}"
                                       AutomationProperties.Name="{Binding Shell.I18n[setupWizardLanguage]}">
                                 <ComboBox.ItemTemplate>
                                     <DataTemplate x:DataType="models:LanguageOption">

@@ -13,8 +13,8 @@
           Classes.motion-enabled="{Binding IsMotionEnabled}"
           controls:MotionVisibility.IsOpen="{Binding WindowChrome.IsSettingsVisible}"
           controls:MotionVisibility.IsMotionEnabled="{Binding IsMotionEnabled}">
-        <Border MaxWidth="960"
-                MaxHeight="620"
+        <Border MaxWidth="{StaticResource Launcher.Layout.Settings.MaxWidth}"
+                MaxHeight="{StaticResource Launcher.Layout.Settings.MaxHeight}"
                 HorizontalAlignment="Stretch"
                 VerticalAlignment="Stretch"
                 Classes="dialog overlay-dialog motion-surface">

@@ -27,7 +27,6 @@ public partial class MainWindowViewModel : ViewModelBase, IDisposable
     private bool isBusy;
 
     public bool IsMotionEnabled => !IsMotionReduced;
-    public bool IsBottomPanelVisible => true;
     public bool IsStatusDetailHidden => Settings.Editor.Current.StatusDetailMode == StatusDetailModes.Hidden;
 
     public ShellViewModel Shell { get; }

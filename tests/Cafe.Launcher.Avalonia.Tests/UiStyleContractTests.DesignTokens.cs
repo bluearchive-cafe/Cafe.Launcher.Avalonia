@@ -31,6 +31,15 @@ public sealed partial class UiStyleContractTests
                      ["Launcher.Elevation.Shadow.Sm"] = "0 4 8 0 #26000000",
                      ["Launcher.Elevation.Shadow.Md"] = "0 12 32 0 #33000000",
                      ["Launcher.Elevation.Shadow.Lg"] = "0 22 55 0 #66000000",
+                     ["Launcher.Layout.Banner.Height"] = "220",
+                     ["Launcher.Layout.Window.Width"] = "1300",
+                     ["Launcher.Layout.Window.Height"] = "754",
+                     ["Launcher.Layout.Settings.MaxWidth"] = "960",
+                     ["Launcher.Layout.Settings.MaxHeight"] = "620",
+                     ["Launcher.Layout.SetupWizard.Width"] = "920",
+                     ["Launcher.Layout.SetupWizard.Height"] = "560",
+                     ["Launcher.Layout.ResourcePanel.Width"] = "720",
+                     ["Launcher.Layout.ResourcePanel.Height"] = "592",
                      ["Launcher.Layout.DesignGallery.Width"] = "1000",
                      ["Launcher.Layout.DesignGallery.Height"] = "680"
                  })

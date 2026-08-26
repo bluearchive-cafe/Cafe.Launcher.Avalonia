@@ -912,8 +912,8 @@ public sealed partial class UiStyleContractTests
                 && HasClass(element, "overlay-dialog"));
         Assert.Null(dialog.Attribute("Width"));
         Assert.Null(dialog.Attribute("Height"));
-        Assert.Equal("960", dialog.Attribute("MaxWidth")?.Value);
-        Assert.Equal("620", dialog.Attribute("MaxHeight")?.Value);
+        Assert.Equal("{StaticResource Launcher.Layout.Settings.MaxWidth}", dialog.Attribute("MaxWidth")?.Value);
+        Assert.Equal("{StaticResource Launcher.Layout.Settings.MaxHeight}", dialog.Attribute("MaxHeight")?.Value);
         var dialogLayout = dialog.Elements().Single(element => element.Name.LocalName == "Grid");
         Assert.Equal("*,Auto", dialogLayout.Attribute("RowDefinitions")?.Value);
 
@@ -1211,7 +1211,9 @@ public sealed partial class UiStyleContractTests
                 && element.Attribute("ItemsSource")?.Value
                     == "{Binding Settings.Appearance.ThemeColorPaletteItems}");
 
-        Assert.Equal("212", palette.Attribute("Width")?.Value);
+        Assert.Equal(
+            "{StaticResource Launcher.Layout.Appearance.Preview.Width}",
+            palette.Attribute("Width")?.Value);
     }
 
     [Fact]
@@ -1556,15 +1558,16 @@ public sealed partial class UiStyleContractTests
             "{DynamicResource Launcher.Color.FocusRing}",
             GetStyleSetters(remoteStyles, "Button.social-chip:focus-visible")["BorderBrush"]);
 
-        var newsTab = GetStyleSetters(remoteStyles, "Button.news-tab");
-        Assert.Equal("{StaticResource LauncherBorderButtonTemplate}", newsTab["Template"]);
-        Assert.Equal("{StaticResource Launcher.Radius.Sm}", newsTab["CornerRadius"]);
+        var filterTabStyles = XDocument.Load(ProjectFile("Views/Styles/Diagnostics.axaml"));
+        var filterTab = GetStyleSetters(filterTabStyles, "Button.filter-tab");
+        Assert.Equal("{StaticResource LauncherBorderButtonTemplate}", filterTab["Template"]);
+        Assert.Equal("{StaticResource Launcher.Radius.Sm}", filterTab["CornerRadius"]);
         Assert.Equal(
             "{DynamicResource Launcher.Color.Primary.Pressed}",
-            GetStyleSetters(remoteStyles, "Button.news-tab:pressed")["Background"]);
+            GetStyleSetters(filterTabStyles, "Button.filter-tab:pressed")["Background"]);
         Assert.Equal(
             "{StaticResource Launcher.StateLayer.Disabled.Content}",
-            GetStyleSetters(remoteStyles, "Button.news-tab:disabled")["Opacity"]);
+            GetStyleSetters(filterTabStyles, "Button.filter-tab:disabled")["Opacity"]);
 
         var mainStyles = XDocument.Load(ProjectFile("Views/MainWindow.Styles.axaml"));
         var settingRow = GetStyleSetters(mainStyles, "Grid.settings-row");
@@ -2406,8 +2409,8 @@ public sealed partial class UiStyleContractTests
                 element.Name.LocalName == "Border"
                 && HasClass(element, "overlay-dialog"));
 
-        Assert.Equal("720", dialog.Attribute("Width")?.Value);
-        Assert.Equal("592", dialog.Attribute("Height")?.Value);
+        Assert.Equal("{StaticResource Launcher.Layout.ResourcePanel.Width}", dialog.Attribute("Width")?.Value);
+        Assert.Equal("{StaticResource Launcher.Layout.ResourcePanel.Height}", dialog.Attribute("Height")?.Value);
         Assert.Null(dialog.Attribute("MaxWidth"));
         Assert.Null(dialog.Attribute("MaxHeight"));
     }
@@ -2526,8 +2529,8 @@ public sealed partial class UiStyleContractTests
 
         Assert.NotNull(window);
         Assert.Equal("True", window.Attribute("CanResize")?.Value);
-        Assert.Equal("1024", window.Attribute("MinWidth")?.Value);
-        Assert.Equal("640", window.Attribute("MinHeight")?.Value);
+        Assert.Equal("{StaticResource Launcher.Layout.Window.MinWidth}", window.Attribute("MinWidth")?.Value);
+        Assert.Equal("{StaticResource Launcher.Layout.Window.MinHeight}", window.Attribute("MinHeight")?.Value);
     }
 
     [Fact]
@@ -2537,8 +2540,8 @@ public sealed partial class UiStyleContractTests
         var dialog = document
             .Descendants()
             .Single(element => element.Name.LocalName == "Border" && HasClass(element, "overlay-dialog"));
-        Assert.Equal("920", dialog.Attribute("Width")?.Value);
-        Assert.Equal("560", dialog.Attribute("Height")?.Value);
+        Assert.Equal("{StaticResource Launcher.Layout.SetupWizard.Width}", dialog.Attribute("Width")?.Value);
+        Assert.Equal("{StaticResource Launcher.Layout.SetupWizard.Height}", dialog.Attribute("Height")?.Value);
 
         var navigation = document
             .Descendants()
@@ -2997,9 +3000,9 @@ public sealed partial class UiStyleContractTests
         var styles = XDocument.Load(ProjectFile("Views/MainWindow.Styles.axaml"));
         Assert.Equal(
             "{StaticResource Launcher.Control.Height.Setting}",
-            GetStyleSetters(styles, "Button.news-tab.log-filter")["Height"]);
+            GetStyleSetters(styles, "Button.filter-tab.log-filter")["Height"]);
         Assert.Equal(
-            "16,12,16,0",
+            "{StaticResource Launcher.Component.LogViewer.FilterBar.Margin}",
             GetStyleSetters(styles, "StackPanel.log-filter-bar")["Margin"]);
     }
 
@@ -3221,10 +3224,10 @@ public sealed partial class UiStyleContractTests
     [Fact]
     public void LogFilterTabs_UseNoThemeBorderForAccentStates()
     {
-        var styles = XDocument.Load(ProjectFile("Views/Styles/RemoteContent.axaml"));
+        var styles = XDocument.Load(ProjectFile("Views/Styles/Diagnostics.axaml"));
 
-        Assert.Equal("0", GetStyleSetters(styles, "Button.news-tab")["BorderThickness"]);
-        Assert.Equal("{DynamicResource Launcher.Color.Primary}", GetStyleSetters(styles, "Button.news-tab.active")["Background"]);
+        Assert.Equal("{StaticResource Launcher.Spacing.Thickness.None}", GetStyleSetters(styles, "Button.filter-tab")["BorderThickness"]);
+        Assert.Equal("{DynamicResource Launcher.Color.Primary}", GetStyleSetters(styles, "Button.filter-tab.active")["Background"]);
     }
 
     [Fact]

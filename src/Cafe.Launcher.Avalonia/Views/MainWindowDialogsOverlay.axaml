@@ -16,8 +16,8 @@
               Classes.motion-enabled="{Binding IsMotionEnabled}"
               controls:MotionVisibility.IsOpen="{Binding ResourcePanel.IsResourcePanelVisible}"
               controls:MotionVisibility.IsMotionEnabled="{Binding IsMotionEnabled}">
-            <Border Width="720"
-                    Height="592"
+            <Border Width="{StaticResource Launcher.Layout.ResourcePanel.Width}"
+                    Height="{StaticResource Launcher.Layout.ResourcePanel.Height}"
                     Classes="dialog overlay-dialog motion-surface">
                 <Border.RenderTransform>
                     <TranslateTransform/>
@@ -131,7 +131,7 @@
                                                   SelectedValueBinding="{Binding Code}"
                                                   IsEnabled="{Binding ResourcePanel.IsResourcePanelBusy, Converter={x:Static BoolConverters.Not}}"
                                                   HorizontalAlignment="Left"
-                                                  MinWidth="140"
+                                                  MinWidth="{StaticResource Launcher.Component.ResourcePanel.UidSource.MinWidth}"
                                                   AutomationProperties.Name="{Binding Shell.I18n[resourcePanelUidSource]}">
                                             <ComboBox.ItemTemplate>
                                                 <DataTemplate x:DataType="models:SettingOption">
@@ -146,7 +146,7 @@
                             <ItemsControl ItemsSource="{Binding ResourcePanel.ResourcePanelItems}">
                                 <ItemsControl.ItemTemplate>
                                     <DataTemplate x:DataType="models:ResourcePanelItem">
-                                        <Border Classes="dialog-card" Margin="0,0,0,8">
+                                        <Border Classes="dialog-card" Margin="{StaticResource Launcher.Component.Dialog.Content.BottomMargin}">
                                             <Grid ColumnDefinitions="*,Auto" RowDefinitions="Auto,Auto,Auto" RowSpacing="{StaticResource Launcher.Spacing.Sm}" ColumnSpacing="{StaticResource Launcher.Spacing.Lg}">
                                                 <StackPanel Spacing="{StaticResource Launcher.Spacing.Xs}">
                                                     <TextBlock Text="{Binding DisplayName}" Classes="section-title"/>
@@ -205,8 +205,8 @@
               Classes.motion-enabled="{Binding IsMotionEnabled}"
               controls:MotionVisibility.IsOpen="{Binding Dialogs.IsNoticeDialogVisible}"
               controls:MotionVisibility.IsMotionEnabled="{Binding IsMotionEnabled}">
-            <Border MaxWidth="540"
-                    MaxHeight="480"
+                <Border MaxWidth="{StaticResource Launcher.Component.Dialog.Confirm.MaxWidth}"
+                    MaxHeight="{StaticResource Launcher.Component.Dialog.Confirm.MaxHeight}"
                     Classes="dialog overlay-dialog motion-surface">
                 <Border.RenderTransform>
                     <TranslateTransform/>
@@ -222,7 +222,9 @@
                             <materialIcons:MaterialIcon Kind="Close" Width="{StaticResource Launcher.Icon.Md}" Height="{StaticResource Launcher.Icon.Md}"/>
                         </Button>
                     </Grid>
-                    <ScrollViewer Grid.Row="1" MaxHeight="300" Classes="scroll-pad">
+                    <ScrollViewer Grid.Row="1"
+                                  MaxHeight="{StaticResource Launcher.Component.ResourcePanel.Content.MaxHeight}"
+                                  Classes="scroll-pad">
                         <Border Classes="dialog-alert">
                             <StackPanel Spacing="{StaticResource Launcher.Spacing.Xs}">
                                 <StackPanel Classes="dialog-alert-heading">
@@ -236,7 +238,8 @@
                     </ScrollViewer>
                     <Border Grid.Row="2" Classes="dialog-footer">
                         <StackPanel Classes="confirm-actions">
-                            <Button Classes="primary-action dialog-action" Command="{Binding Dialogs.DismissNoticeCommand}">
+                            <Button Classes="primary-action dialog-action" Command="{Binding Dialogs.DismissNoticeCommand}"
+                                    AutomationProperties.Name="{Binding Shell.I18n[noticeConfirm]}">
                                 <StackPanel Classes="button-content" HorizontalAlignment="Center">
                                     <TextBlock Text="{Binding Dialogs.NoticeDialogConfirmText}"/>
                                 </StackPanel>
@@ -282,7 +285,8 @@
               Classes.motion-enabled="{Binding IsMotionEnabled}"
               controls:MotionVisibility.IsOpen="{Binding Dialogs.IsUpdateAvailableVisible}"
               controls:MotionVisibility.IsMotionEnabled="{Binding IsMotionEnabled}">
-            <Border Classes="dialog confirm-panel motion-surface" MaxWidth="620">
+            <Border Classes="dialog confirm-panel motion-surface"
+                    MaxWidth="{StaticResource Launcher.Component.Dialog.Update.MaxWidth}">
                 <Border.RenderTransform>
                     <TranslateTransform/>
                 </Border.RenderTransform>
@@ -311,7 +315,7 @@
                         <ListBox ItemsSource="{Binding Dialogs.UpdateAvailableFiles}"
                                  SelectedItem="{Binding Dialogs.SelectedUpdateFile, Mode=TwoWay}"
                                  Classes="update-file-list"
-                                 MaxHeight="240">
+                                 MaxHeight="{StaticResource Launcher.Component.Dialog.Update.FileList.MaxHeight}">
                             <ListBox.ItemTemplate>
                                 <DataTemplate x:DataType="models:ReleaseFile">
                                     <Grid ColumnDefinitions="Auto,*,Auto"
@@ -353,7 +357,8 @@
                     </StackPanel>
                     <Border Grid.Row="2" Classes="dialog-footer">
                         <StackPanel Classes="confirm-actions">
-                            <Button Classes="flat-action dialog-action" Command="{Binding Dialogs.CancelUpdateAvailableCommand}">
+                            <Button Classes="flat-action dialog-action" Command="{Binding Dialogs.CancelUpdateAvailableCommand}"
+                                    AutomationProperties.Name="{Binding Shell.I18n[launcherUpdateLater]}">
                                 <StackPanel Classes="button-content">
                                     <materialIcons:MaterialIcon Kind="ClockOutline" Width="{StaticResource Launcher.Icon.Sm}" Height="{StaticResource Launcher.Icon.Sm}"/>
                                     <TextBlock Text="{Binding Shell.I18n[launcherUpdateLater]}"/>
@@ -361,7 +366,8 @@
                             </Button>
                             <Button Classes="primary-action dialog-action"
                                     Command="{Binding Dialogs.ConfirmUpdateAvailableCommand}"
-                                    IsEnabled="{Binding Dialogs.HasSelectedUpdateFile}">
+                                    IsEnabled="{Binding Dialogs.HasSelectedUpdateFile}"
+                                    AutomationProperties.Name="{Binding Shell.I18n[launcherUpdateDownload]}">
                                 <StackPanel Classes="button-content">
                                     <materialIcons:MaterialIcon Kind="Download" Width="{StaticResource Launcher.Icon.Sm}" Height="{StaticResource Launcher.Icon.Sm}"/>
                                     <TextBlock Text="{Binding Shell.I18n[launcherUpdateDownload]}"/>
@@ -442,7 +448,8 @@
               Classes.motion-enabled="{Binding IsMotionEnabled}"
               controls:MotionVisibility.IsOpen="{Binding Dialogs.IsErrorDialogVisible}"
               controls:MotionVisibility.IsMotionEnabled="{Binding IsMotionEnabled}">
-            <Border Classes="dialog confirm-panel motion-surface" MaxWidth="540">
+            <Border Classes="dialog confirm-panel motion-surface"
+                    MaxWidth="{StaticResource Launcher.Component.Dialog.Confirm.MaxWidth}">
                 <Border.RenderTransform>
                     <TranslateTransform/>
                 </Border.RenderTransform>
@@ -453,7 +460,9 @@
                             <TextBlock Text="{Binding Shell.I18n[errorDialogDescription]}" Classes="caption"/>
                         </StackPanel>
                     </Grid>
-                    <ScrollViewer Grid.Row="1" MaxHeight="300" Classes="scroll-pad">
+                    <ScrollViewer Grid.Row="1"
+                                  MaxHeight="{StaticResource Launcher.Component.Dialog.Content.MaxHeight}"
+                                  Classes="scroll-pad">
                         <Border Classes="dialog-alert danger">
                             <StackPanel Spacing="{StaticResource Launcher.Spacing.Xs}">
                                 <StackPanel Classes="dialog-alert-heading danger">

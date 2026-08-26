@@ -15,10 +15,10 @@
         Icon="/Assets/app-icon.ico"
         Title="{Binding Shell.ProductName}"
         FontFamily="{Binding Shell.FontFamily}"
-        Width="1300"
-        Height="754"
-        MinWidth="1024"
-        MinHeight="640"
+             Width="{StaticResource Launcher.Layout.Window.Width}"
+             Height="{StaticResource Launcher.Layout.Window.Height}"
+             MinWidth="{StaticResource Launcher.Layout.Window.MinWidth}"
+             MinHeight="{StaticResource Launcher.Layout.Window.MinHeight}"
         CanResize="True"
         WindowDecorations="BorderOnly"
         ExtendClientAreaToDecorationsHint="True"
@@ -30,7 +30,9 @@
 
         <Grid RowDefinitions="Auto,*"
               IsEnabled="{Binding ModalHost.IsBaseLayerInteractive}">
-            <Grid ColumnDefinitions="*,Auto" Height="48">
+            <Grid x:Name="TitleBar"
+                  ColumnDefinitions="*,Auto"
+                  Height="{StaticResource Launcher.Layout.TitleBar.Height}">
                 <Grid.Background>
                     <StaticResource ResourceKey="Launcher.Color.TitleBar.Gradient"/>
                 </Grid.Background>
@@ -84,7 +86,7 @@
                                     <TextBlock Text="{Binding Shell.I18n[notice]}" Classes="panel-title"/>
                                     <TextBlock Text="{Binding RemoteContent.NoticeText}"
                                                Classes="body"
-                                               MaxHeight="110"
+                        MaxHeight="{StaticResource Launcher.Component.Dialog.Notice.MaxHeight}"
                                                TextWrapping="Wrap"
                                                TextTrimming="CharacterEllipsis"/>
                                 </StackPanel>
@@ -103,7 +105,7 @@
                                           ItemsSource="{Binding RemoteContent.BannerItems}"
                                           SelectedIndex="{Binding RemoteContent.CarouselSelectedIndex, Mode=TwoWay}"
                                           PageTransition="{Binding RemoteContent.CarouselTransition}"
-                                          Height="220"
+                                          Height="{StaticResource Launcher.Layout.Banner.Height}"
                                           CornerRadius="{StaticResource Launcher.Radius.Sm}" ClipToBounds="True">
                                     <Carousel.Styles>
                                         <Style Selector="ContentControl">
@@ -379,13 +381,8 @@
                 <Border Grid.Row="1"
                         Classes="bottom-panel motion-bottom"
                         Classes.motion-enabled="{Binding IsMotionEnabled}"
-                        Classes.motion-enter="{Binding Operations.IsInstallPanelVisible}">
-                    <Border.IsVisible>
-                        <MultiBinding Converter="{x:Static BoolConverters.And}">
-                            <Binding Path="Operations.IsInstallPanelVisible"/>
-                            <Binding Path="IsBottomPanelVisible"/>
-                        </MultiBinding>
-                    </Border.IsVisible>
+                        Classes.motion-enter="{Binding Operations.IsInstallPanelVisible}"
+                        IsVisible="{Binding Operations.IsInstallPanelVisible}">
                     <Border.RenderTransform>
                         <TranslateTransform/>
                     </Border.RenderTransform>
@@ -474,7 +471,7 @@
                                            Foreground="{DynamicResource Launcher.Color.Primary}"/>
                             </Grid>
                             <!-- Progress bar -->
-                            <ProgressBar Grid.Row="1" Grid.Column="1" Value="{Binding Operations.ProgressValue}" Minimum="0" Maximum="100" Height="8"/>
+                            <ProgressBar Grid.Row="1" Grid.Column="1" Value="{Binding Operations.ProgressValue}" Minimum="0" Maximum="100" Height="{StaticResource Launcher.Component.Progress.Bar.Height}"/>
                             <!-- Stage | Speed | Size | ETA -->
                             <Grid Grid.Row="2" Grid.Column="1" ColumnDefinitions="Auto,*,Auto,Auto,Auto" ColumnSpacing="{StaticResource Launcher.Spacing.Md}">
                                 <TextBlock Text="{Binding Operations.ProgressDetail}" Classes="caption"/>
@@ -512,13 +509,8 @@
                 <Border Grid.Row="1"
                         Classes="bottom-panel control-panel motion-bottom"
                         Classes.motion-enabled="{Binding IsMotionEnabled}"
-                        Classes.motion-enter="{Binding Operations.IsControlPanelVisible}">
-                    <Border.IsVisible>
-                        <MultiBinding Converter="{x:Static BoolConverters.And}">
-                            <Binding Path="Operations.IsControlPanelVisible"/>
-                            <Binding Path="IsBottomPanelVisible"/>
-                        </MultiBinding>
-                    </Border.IsVisible>
+                        Classes.motion-enter="{Binding Operations.IsControlPanelVisible}"
+                        IsVisible="{Binding Operations.IsControlPanelVisible}">
                     <Border.RenderTransform>
                         <TranslateTransform/>
                     </Border.RenderTransform>

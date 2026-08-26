@@ -1118,11 +1118,11 @@
     <Style Selector="Border.version-chip">
         <Setter Property="Background" Value="{DynamicResource Launcher.Color.Info.Background}"/>
         <Setter Property="BorderBrush" Value="{DynamicResource Launcher.Color.Primary.Border}"/>
-        <Setter Property="BorderThickness" Value="1"/>
+        <Setter Property="BorderThickness" Value="{StaticResource Launcher.Border.Thickness.Default}"/>
         <Setter Property="CornerRadius" Value="{StaticResource Launcher.Radius.Md}"/>
-        <Setter Property="Padding" Value="12,8"/>
+        <Setter Property="Padding" Value="{StaticResource Launcher.Component.VersionChip.Padding}"/>
         <Setter Property="MinHeight" Value="{StaticResource Launcher.Control.Height.Chip}"/>
-        <Setter Property="Margin" Value="0,0,8,8"/>
+        <Setter Property="Margin" Value="{StaticResource Launcher.Component.VersionChip.Margin}"/>
     </Style>
     <Style Selector="Grid.settings-row">
         <Setter Property="MinHeight" Value="{StaticResource Launcher.Component.Settings.Row.MinHeight}"/>
@@ -1188,7 +1188,7 @@
     <Style Selector="Button.gallery-button.state-invalid">
         <Setter Property="Background" Value="{DynamicResource Launcher.Color.Danger.Soft}"/>
         <Setter Property="BorderBrush" Value="{DynamicResource Launcher.Color.Danger}"/>
-        <Setter Property="BorderThickness" Value="1"/>
+        <Setter Property="BorderThickness" Value="{StaticResource Launcher.Border.Thickness.Default}"/>
         <Setter Property="Foreground" Value="{DynamicResource Launcher.Color.Danger}"/>
     </Style>
     <Style Selector="ComboBox.gallery-select">
@@ -1268,7 +1268,7 @@
         <Setter Property="BorderBrush" Value="{DynamicResource Launcher.Color.Field.Border}"/>
         <Setter Property="BorderThickness" Value="1"/>
         <Setter Property="CornerRadius" Value="{StaticResource Launcher.Radius.Md}"/>
-        <Setter Property="Padding" Value="12,8"/>
+        <Setter Property="Padding" Value="{StaticResource Launcher.Component.Input.Padding}"/>
         <Setter Property="FontSize" Value="{StaticResource Launcher.Typography.FontSize.Body.Md}"/>
         <Setter Property="Foreground" Value="{DynamicResource Launcher.Text.Primary}"/>
         <Setter Property="MinWidth" Value="160"/>
@@ -1318,7 +1318,7 @@
         <Setter Property="VerticalContentAlignment" Value="Stretch"/>
     </Style>
     <Style Selector="Button.wrap-action">
-        <Setter Property="Margin" Value="0,0,8,8"/>
+        <Setter Property="Margin" Value="{StaticResource Launcher.Component.WrapAction.Margin}"/>
     </Style>
     <!-- Shared utility styles for repeated inline patterns -->
     <Style Selector="ScrollViewer.scroll-pad">

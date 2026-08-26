@@ -1,7 +1,43 @@
 <Styles xmlns="https://github.com/avaloniaui"
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
     <Style Selector="StackPanel.log-filter-bar">
-        <Setter Property="Margin" Value="16,12,16,0"/>
+        <Setter Property="Margin" Value="{StaticResource Launcher.Component.LogViewer.FilterBar.Margin}"/>
+    </Style>
+    <Style Selector="Button.filter-tab">
+        <Setter Property="Template" Value="{StaticResource LauncherBorderButtonTemplate}"/>
+        <Setter Property="Background" Value="{DynamicResource Launcher.Color.Content.Row}"/>
+        <Setter Property="BorderThickness" Value="{StaticResource Launcher.Spacing.Thickness.None}"/>
+        <Setter Property="Foreground" Value="{DynamicResource Launcher.Text.Primary}"/>
+        <Setter Property="FontSize" Value="{StaticResource Launcher.Typography.FontSize.Body.Sm}"/>
+        <Setter Property="Padding" Value="{StaticResource Launcher.Component.FilterTab.Padding}"/>
+        <Setter Property="MinHeight" Value="{StaticResource Launcher.Control.Height.Chip}"/>
+        <Setter Property="CornerRadius" Value="{StaticResource Launcher.Radius.Sm}"/>
+        <Setter Property="HorizontalContentAlignment" Value="Center"/>
+        <Setter Property="VerticalContentAlignment" Value="Center"/>
+    </Style>
+    <Style Selector="Button.filter-tab.log-filter">
+        <Setter Property="Height" Value="{StaticResource Launcher.Control.Height.Setting}"/>
+    </Style>
+    <Style Selector="Button.filter-tab:pointerover">
+        <Setter Property="Background" Value="{DynamicResource Launcher.Color.Primary.Hover}"/>
+        <Setter Property="Foreground" Value="{DynamicResource Launcher.Color.OnPrimary}"/>
+    </Style>
+    <Style Selector="Button.filter-tab:pressed">
+        <Setter Property="Background" Value="{DynamicResource Launcher.Color.Primary.Pressed}"/>
+        <Setter Property="Foreground" Value="{DynamicResource Launcher.Color.OnPrimary}"/>
+    </Style>
+    <Style Selector="Button.filter-tab:focus-visible">
+        <Setter Property="BorderBrush" Value="{DynamicResource Launcher.Color.FocusRing}"/>
+        <Setter Property="BorderThickness" Value="2"/>
+    </Style>
+    <Style Selector="Button.filter-tab:disabled">
+        <Setter Property="Background" Value="{DynamicResource Launcher.Color.Content.Row}"/>
+        <Setter Property="Foreground" Value="{DynamicResource Launcher.Text.Secondary}"/>
+        <Setter Property="Opacity" Value="{StaticResource Launcher.StateLayer.Disabled.Content}"/>
+    </Style>
+    <Style Selector="Button.filter-tab.active">
+        <Setter Property="Background" Value="{DynamicResource Launcher.Color.Primary}"/>
+        <Setter Property="Foreground" Value="{DynamicResource Launcher.Color.OnPrimary}"/>
     </Style>
     <Style Selector="Border.log-empty-state">
         <Setter Property="Margin" Value="16"/>
