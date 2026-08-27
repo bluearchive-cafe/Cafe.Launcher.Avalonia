@@ -114,7 +114,7 @@
 
 - 本节旧有 M3 数值已由 [ADR-016](./adr/ADR-016-Fluent动效层.md) 取代；视觉层继续使用 M3 语义，行为型动效改用 Windows Fluent 原则并映射为 Avalonia 资源。
 - 时长收敛为 83ms（即时反馈）/ 167ms（快速转换）/ 250ms（标准转换）；仅较大的连续空间变化允许 333ms。进入、退出和点到点移动分别使用 Windows 减速、加速与点到点语义曲线，不再使用 `ExponentialEaseOut/In`。
-- 动效家族统一为即时反馈、内容切换、空间连续、临时表面与重要完成。常规控件不缩放、不弹跳；模态表面只移动外壳一次，内部内容不重复移动；自动轮播只淡化。
+- 动效家族统一为即时反馈、内容切换、空间连续、临时表面与重要完成。常规控件不缩放、不弹跳；模态表面只移动外壳一次，内部内容不重复移动；自动轮播只淡化。向导步骤切换属空间连续家族的方向变体：顺序两段换页（先退出加速淡出、后进入减速滑入 ±14px），由后置代码编排并可中断（ADR-017）。
 - `Full` 始终启用完整动效，`System` 跟随 Windows 动画开关，`Reduced` 关闭空间移动、自动轮播和大面积淡化，仅允许临时表面保留最多 83ms 的纯透明度变化。
 - 动画始终以最新状态为准且不得排队。连续容器变化无法保持流畅或正确中断时，降级为交叉淡化或立即切换。
 - 进度条厚度：主界面 `Component.Progress.Bar.Height` = 8px、Loading = 4px、Toast = 3px（M3 LinearProgressIndicator 4dp；主进度条 8px 为产品加粗值，记录性偏差）。
@@ -134,7 +134,7 @@
 - 单窗口 + 覆盖层：Z 序 = 主内容 → 设置 100 → 对话框 200 → 向导 500 → Toast 1000，**不动**。
 - 功能分区（Shell / GameOperations / Settings / SetupWizard / Diagnostics / ResourcePanel）与"单窗口内选分类"模型不变；表现级布局自由（如设置页留白、卡片形态）。
 - **设置页重设计蓝图（P3 表面执行；** [ADR-013](adr/ADR-013-设置页重设计方向.md) **+ M3 审核定稿）**：标题栏拆分（「设置」并入导航列顶部 header；关闭 ✕ 并入内容区标题行右端）；导航列 = SecondaryContainer 激活填充 + leading icon（Material Symbols）+ 标签，无指示条；内容区 = 变体 B 纯列表 + 组间空档 + 行间 inset hairline（以 `Color.Card.Border` 为分隔色，不新增 token）；覆盖层 `Radius.Lg`(16) + `Elevation.Shadow.Lg` + `Dialog.Background`（Q13 表面中性；种子跟随时由 scheme neutral 覆盖，见 §3.4）；控件统一 `Field` 形态。**修正清单（随 P2/P3 落地）**：`Field.Border` 双档对比度（浅 `#788EA7`/深 `#5E7494`，≥3:1）、hairline inset 规则、抽屉 leading icons。
-- **其余表面蓝图（P3 执行；[ADR-014](adr/ADR-014-其余表面M3重设计方向.md)）**：~~对话框族（确认/通知/更新/错误）= 统一 `dialog` 表面 + 头部（icon+标题+关闭）+ 可滚动内容 + `dialog-footer` hairline 操作带~~（对话框族部分已被 [ADR-015](adr/ADR-015-对话框家族v2统一框架.md) 取代）；Toast = 删除自动消失进度条，仅保留操作执行中的 indeterminate 进度条，关闭命中区提升到 36px；设置向导 = 复用设置导航语言（`settings-navigation-pane` + header + SecondaryContainer 激活态）且底部动作带统一为 `dialog-footer`。资源面板/日志/调试与主壳首页/**底栏形态**保持本节既有状态。
+- **其余表面蓝图（P3 执行；[ADR-014](adr/ADR-014-其余表面M3重设计方向.md)）**：~~对话框族（确认/通知/更新/错误）= 统一 `dialog` 表面 + 头部（icon+标题+关闭）+ 可滚动内容 + `dialog-footer` hairline 操作带~~（对话框族部分已被 [ADR-015](adr/ADR-015-对话框家族v2统一框架.md) 取代）；Toast = 删除自动消失进度条，仅保留操作执行中的 indeterminate 进度条，关闭命中区提升到 36px；~~设置向导 = 复用设置导航语言（`settings-navigation-pane` + header + SecondaryContainer 激活态）且底部动作带统一为 `dialog-footer`~~（已由 [ADR-017](adr/ADR-017-设置向导动效落地与M3界面细化.md) 重设计：模态面板内落地实验台居中单列解剖——进度行（向导标题 + 步骤进度 + 跳过）→ `wizard-step` 单列内容（`wizard-option` 选项行、`wizard-status-row` 图标+文本状态行、复核 hairline 列表、完成态标题 Success 色）→ Footer 结构不变；侧栏导航移除；步骤切换 = 后置代码顺序换页（先淡出后方向滑入），换面时滚动复位）。资源面板/日志/调试与主壳首页/**底栏形态**保持本节既有状态。
 - **底栏形态**：**Q18 仲裁结论已撤销（2026-08-25，用户决定放弃首页布局相关决策）——形态重新开放**。前期结论（M3 贴边：对比度恒定 ≥7:1、三态一致；浮动胶囊：浅壁纸 ≈4.8:1 边缘 + 安装态高度需验证）保留为决策素材，`prototype/bottom-bar` 分支保留；重新裁决时按 ADR-001 标准重走（走查/原型流程不变）。
 
 ## 6. 主题与壁纸

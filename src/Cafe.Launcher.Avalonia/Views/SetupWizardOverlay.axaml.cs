@@ -1,17 +1,292 @@
+using System;
+using System.ComponentModel;
+using System.Threading;
+using System.Threading.Tasks;
+using Avalonia;
+using Avalonia.Animation;
+using Avalonia.Animation.Easings;
 using Avalonia.Controls;
+using Avalonia.Media;
+using Avalonia.Styling;
+using Avalonia.Threading;
+using Cafe.Launcher.Avalonia.Features.SetupWizard;
+using Cafe.Launcher.Avalonia.Helpers;
+using Cafe.Launcher.Avalonia.ViewModels;
 
 namespace Cafe.Launcher.Avalonia.Views;
 
 /// <summary>
-/// First-launch setup wizard overlay.
+/// 设置向导覆盖层：步骤切换按实验台 <c>ChangeWizardAsync</c>/<c>FadeSwapAsync</c> 的顺序换页实现——
+/// 标准档 250ms 对半分，旧内容先以退出加速曲线淡出（无位移），中点瞬时换内容并把滚动复位到
+/// 顶部，新内容再以进入减速曲线淡入并按方向滑入 ±14px。最新状态优先、可中断、不排队；
+/// 降动效、未附着或无可见面板时直接换内容定格。
 /// </summary>
 public partial class SetupWizardOverlay : UserControl
 {
-    /// <summary>
-    /// Initializes a new setup wizard overlay control.
-    /// </summary>
+    private const string StepForwardOffsetKey = "Launcher.Motion.Offset.StepForward";
+    private const string StepBackwardOffsetKey = "Launcher.Motion.Offset.StepBackward";
+    private const string EnterEasingKey = "Launcher.Motion.Easing.Enter";
+    private const string ExitEasingKey = "Launcher.Motion.Easing.Exit";
+
+    private readonly StackPanel[] stepPanels;
+    private CancellationTokenSource? stepMotionCts;
+    private SetupWizardViewModel? wizard;
+    private MainWindowViewModel? mainWindow;
+    private bool attachedToVisualTree;
+
     public SetupWizardOverlay()
     {
         InitializeComponent();
+        stepPanels = [WizardStep0, WizardStep1, WizardStep2, WizardStep3, WizardStep4];
+        DataContextChanged += OnDataContextChanged;
+        AttachedToVisualTree += OnAttachedToVisualTree;
+        DetachedFromVisualTree += OnDetachedFromVisualTree;
     }
+
+    private void OnAttachedToVisualTree(object? sender, VisualTreeAttachmentEventArgs e)
+    {
+        attachedToVisualTree = true;
+        if (wizard is not null)
+        {
+            ShowStepInstantly(wizard.Step);
+        }
+    }
+
+    private void OnDetachedFromVisualTree(object? sender, VisualTreeAttachmentEventArgs e)
+    {
+        attachedToVisualTree = false;
+        CancelStepMotion();
+    }
+
+    private void OnDataContextChanged(object? sender, EventArgs e)
+    {
+        if (wizard is not null)
+        {
+            wizard.PropertyChanged -= OnWizardPropertyChanged;
+            wizard = null;
+        }
+
+        if (mainWindow is not null)
+        {
+            mainWindow.PropertyChanged -= OnRootPropertyChanged;
+            mainWindow = null;
+        }
+
+        mainWindow = DataContext as MainWindowViewModel;
+        wizard = mainWindow?.Dialogs.SetupWizard;
+
+        if (wizard is not null)
+        {
+            wizard.PropertyChanged += OnWizardPropertyChanged;
+        }
+
+        if (mainWindow is not null)
+        {
+            mainWindow.PropertyChanged += OnRootPropertyChanged;
+        }
+
+        ShowStepInstantly(wizard?.Step ?? 0);
+    }
+
+    private void OnRootPropertyChanged(object? sender, PropertyChangedEventArgs e)
+    {
+        if (e.PropertyName != nameof(MainWindowViewModel.IsMotionEnabled))
+        {
+            return;
+        }
+
+        // 动效偏好切换时立即落定，避免半程动画停留在中间视觉。
+        CancelStepMotion();
+        if (wizard is not null)
+        {
+            ShowStepInstantly(wizard.Step);
+        }
+    }
+
+    private void OnWizardPropertyChanged(object? sender, PropertyChangedEventArgs e)
+    {
+        if (e.PropertyName != nameof(SetupWizardViewModel.Step) || wizard is null)
+        {
+            return;
+        }
+
+        if (!Dispatcher.UIThread.CheckAccess())
+        {
+            var target = wizard.Step;
+            Dispatcher.UIThread.Post(() => RunStepTransition(target));
+            return;
+        }
+
+        RunStepTransition(wizard.Step);
+    }
+
+    private void RunStepTransition(int targetStep)
+    {
+        if (targetStep < 0 || targetStep >= stepPanels.Length)
+        {
+            return;
+        }
+
+        var toIndex = targetStep;
+        var fromIndex = Array.FindIndex(stepPanels, static panel => panel.IsVisible);
+        if (fromIndex == toIndex)
+        {
+            SettleStep(stepPanels[toIndex]);
+            return;
+        }
+
+        CancelStepMotion();
+        var isMotionEnabled = mainWindow?.IsMotionEnabled ?? false;
+        if (!isMotionEnabled || !attachedToVisualTree)
+        {
+            // 降动效/未附着：幂等换面（含滚动复位）后直接定格。
+            SwapToPanel(toIndex);
+            SettleStep(stepPanels[toIndex]);
+            return;
+        }
+
+        var cancellation = new CancellationTokenSource();
+        stepMotionCts = cancellation;
+        _ = RunStepTransitionAsync(fromIndex, toIndex, cancellation);
+    }
+
+    private async Task RunStepTransitionAsync(int fromIndex, int toIndex, CancellationTokenSource cancellation)
+    {
+        try
+        {
+            var token = cancellation.Token;
+            var half = TimeSpan.FromTicks(MotionTokens.NormalDuration.Ticks / 2);
+            var forward = toIndex > fromIndex;
+            var enterOffset = MotionResourceLookup.GetDouble(
+                forward ? StepForwardOffsetKey : StepBackwardOffsetKey,
+                forward ? 14d : -14d);
+            var enterEasing = MotionResourceLookup.GetEasing(
+                EnterEasingKey,
+                static () => new SplineEasing { X1 = 0, Y1 = 0, X2 = 0, Y2 = 1 });
+            var exitEasing = MotionResourceLookup.GetEasing(
+                ExitEasingKey,
+                static () => new SplineEasing { X1 = 1, Y1 = 0, X2 = 1, Y2 = 1 });
+
+            // 阶段一：旧内容淡出（无位移），期间禁用命中测试。
+            if (fromIndex >= 0)
+            {
+                var from = stepPanels[fromIndex];
+                from.IsHitTestVisible = false;
+                await CreateOpacityAnimation(from.Opacity, 0d, half, exitEasing).RunAsync(from, token);
+            }
+
+            // 中点瞬时换内容：不可见时翻转可见性，滚动复位到顶部。
+            SwapToPanel(toIndex);
+
+            // 阶段二：新内容淡入并按方向滑入。
+            var to = stepPanels[toIndex];
+            var toTransform = (TranslateTransform)to.RenderTransform!;
+            to.Opacity = 0d;
+            toTransform.X = enterOffset;
+            await Task.WhenAll(
+                CreateOpacityAnimation(0d, 1d, half, enterEasing).RunAsync(to, token),
+                CreateOffsetAnimation(enterOffset, 0d, half, enterEasing).RunAsync(toTransform, token));
+        }
+        catch (OperationCanceledException)
+        {
+            // 更新状态已接管或动效被关闭；视觉统一由所有权守卫结算。
+        }
+        finally
+        {
+            if (ReferenceEquals(stepMotionCts, cancellation))
+            {
+                stepMotionCts = null;
+                cancellation.Dispose();
+                SettleStep(stepPanels[toIndex]);
+            }
+        }
+    }
+
+    private void ShowStepInstantly(int stepIndex)
+    {
+        SwapToPanel(Math.Clamp(stepIndex, 0, stepPanels.Length - 1));
+    }
+
+    /// <summary>幂等换面：全部非目标面板隐藏并复位视觉，目标面板可见；滚动回到顶部。</summary>
+    private void SwapToPanel(int toIndex)
+    {
+        for (var i = 0; i < stepPanels.Length; i++)
+        {
+            var panel = stepPanels[i];
+            if (i == toIndex)
+            {
+                panel.IsVisible = true;
+            }
+            else
+            {
+                panel.IsVisible = false;
+                ResetStepVisual(panel);
+            }
+        }
+
+        StepScroll.Offset = Vector.Zero;
+    }
+
+    private void SettleStep(StackPanel panel)
+    {
+        panel.IsVisible = true;
+        ResetStepVisual(panel);
+    }
+
+    private static void ResetStepVisual(StackPanel panel)
+    {
+        panel.Opacity = 1d;
+        panel.IsHitTestVisible = true;
+        if (panel.RenderTransform is TranslateTransform transform)
+        {
+            transform.X = 0d;
+        }
+    }
+
+    private void CancelStepMotion()
+    {
+        stepMotionCts?.Cancel();
+        stepMotionCts?.Dispose();
+        stepMotionCts = null;
+    }
+
+    private static Animation CreateOpacityAnimation(double from, double to, TimeSpan duration, Easing easing) => new()
+    {
+        Duration = duration,
+        Easing = easing,
+        FillMode = FillMode.Forward,
+        Children =
+        {
+            new KeyFrame
+            {
+                Cue = new Cue(0),
+                Setters = { new Setter { Property = Visual.OpacityProperty, Value = from } },
+            },
+            new KeyFrame
+            {
+                Cue = new Cue(1),
+                Setters = { new Setter { Property = Visual.OpacityProperty, Value = to } },
+            },
+        },
+    };
+
+    private static Animation CreateOffsetAnimation(double from, double to, TimeSpan duration, Easing easing) => new()
+    {
+        Duration = duration,
+        Easing = easing,
+        FillMode = FillMode.Forward,
+        Children =
+        {
+            new KeyFrame
+            {
+                Cue = new Cue(0),
+                Setters = { new Setter { Property = TranslateTransform.XProperty, Value = from } },
+            },
+            new KeyFrame
+            {
+                Cue = new Cue(1),
+                Setters = { new Setter { Property = TranslateTransform.XProperty, Value = to } },
+            },
+        },
+    };
 }

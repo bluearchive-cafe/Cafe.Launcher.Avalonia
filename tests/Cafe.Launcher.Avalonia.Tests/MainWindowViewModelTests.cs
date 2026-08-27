@@ -103,7 +103,7 @@ public sealed class MainWindowViewModelTests : IDisposable
         viewModel.Dialogs.SetupWizard.Language = LauncherLanguages.Japanese;
 
         Assert.Equal("言語", viewModel.Shell.I18n["setupWizardLanguage"]);
-        Assert.Equal("言語", viewModel.Dialogs.SetupWizard.Steps[0].Title);
+        Assert.Equal("言語", viewModel.Dialogs.SetupWizard.StepTitle);
     }
 
     [Fact]

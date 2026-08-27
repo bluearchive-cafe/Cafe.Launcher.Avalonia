@@ -2263,12 +2263,114 @@ public sealed class MainWindowHeadlessTests
         Assert.True(system.IsChecked);
     }
 
+    [AvaloniaFact]
+    public void SetupWizard_StepSwitch_LeavesOnlyFinalStepVisible()
+    {
+        // ADR-017：步骤切换 = 顺序换页（后置代码编排）；降动效下瞬切换面。
+        // 快速连续切换后最新状态生效：任何时刻只有一个步骤面板可见且视觉已定格。
+        using var context = CreateContext();
+        context.ViewModel.IsMotionReduced = true;
+        context.Window.Show();
+        context.ViewModel.Dialogs.ShowSetupWizard();
+        Dispatcher.UIThread.RunJobs();
+
+        var overlay = context.Window.GetVisualDescendants()
+            .First(control => control.Classes.Contains("setup-wizard-overlay"));
+        var steps = overlay.GetVisualDescendants()
+            .OfType<StackPanel>()
+            .Where(control => control.Classes.Contains("wizard-step"))
+            .ToList();
+        Assert.Equal(5, steps.Count);
+
+        foreach (var stepIndex in new[] { 3, 1, 4 })
+        {
+            context.ViewModel.Dialogs.SetupWizard.Step = stepIndex;
+            Dispatcher.UIThread.RunJobs();
+
+            var visibleStep = Assert.Single(steps, control => control.IsVisible);
+            Assert.Equal(stepIndex, steps.IndexOf(visibleStep));
+            Assert.Equal(1d, visibleStep.Opacity);
+            var transform = Assert.IsType<TranslateTransform>(visibleStep.RenderTransform);
+            Assert.Equal(0d, transform.X);
+        }
+    }
+
+    [AvaloniaFact]
+    public async Task SetupWizard_StepSwitchWithMotion_SequentialSwapSettlesOnFinalStep()
+    {
+        // ADR-017 + FluentMotionLab ChangeWizardAsync：旧内容先淡出、新内容按方向滑入；
+        // 快速连点只保留最新状态，最终目标面板必须定格在 Opacity=1、X=0。
+        using var context = CreateContext();
+        context.ViewModel.IsMotionReduced = false;
+        context.Window.Show();
+        context.ViewModel.Dialogs.ShowSetupWizard();
+        Dispatcher.UIThread.RunJobs();
+
+        var overlay = context.Window.GetVisualDescendants()
+            .First(control => control.Classes.Contains("setup-wizard-overlay"));
+        var steps = overlay.GetVisualDescendants()
+            .OfType<StackPanel>()
+            .Where(control => control.Classes.Contains("wizard-step"))
+            .ToList();
+        Assert.Equal(5, steps.Count);
+
+        foreach (var stepIndex in new[] { 2, 0, 4 })
+        {
+            context.ViewModel.Dialogs.SetupWizard.Step = stepIndex;
+
+            var settled = false;
+            while (!settled)
+            {
+                await Dispatcher.UIThread.InvokeAsync(() => { });
+                await Task.Delay(10);
+                // 精确判定：动画完成后的所有权结算会精确置 Opacity=1、X=0，
+                // 容差判定会在最后一帧插值期间误报已定格。
+                settled = await Dispatcher.UIThread.InvokeAsync(() =>
+                    steps[stepIndex].IsVisible
+                    && steps[stepIndex].Opacity == 1d
+                    && steps[stepIndex].RenderTransform is TranslateTransform transform
+                    && transform.X == 0d);
+            }
+
+            Dispatcher.UIThread.RunJobs();
+            var visibleStep = Assert.Single(steps, control => control.IsVisible);
+            Assert.Equal(stepIndex, steps.IndexOf(visibleStep));
+            Assert.Equal(1d, visibleStep.Opacity);
+        }
+    }
+
+    [AvaloniaFact]
+    public void SetupWizard_StepSwitch_ResetsScrollToTop()
+    {
+        // 五步共用一个 ScrollViewer：换面时滚动必须复位到顶部，不得把旧偏移带入新步骤。
+        using var context = CreateContext();
+        context.Window.Show();
+        context.ViewModel.Dialogs.ShowSetupWizard();
+        Dispatcher.UIThread.RunJobs();
+
+        var overlay = context.Window.GetVisualDescendants()
+            .First(control => control.Classes.Contains("setup-wizard-overlay"));
+        var scroll = overlay.GetVisualDescendants().OfType<ScrollViewer>()
+            .Single(control => control.Classes.Contains("scroll-pad"));
+        // 压缩视口强制内容溢出，使偏移可被置为非零。
+        scroll.MaxHeight = 120;
+        Dispatcher.UIThread.RunJobs();
+        scroll.Offset = new Vector(0, 80);
+        Dispatcher.UIThread.RunJobs();
+        Assert.True(scroll.Offset.Y > 0, "测试前置：内容需在压缩视口内溢出以产生非零滚动偏移。");
+
+        context.ViewModel.Dialogs.SetupWizard.Step = 4;
+        Dispatcher.UIThread.RunJobs();
+
+        Assert.Equal(0d, scroll.Offset.Y);
+    }
+
     [AvaloniaTheory]
     [InlineData(LauncherLanguages.English)]
     [InlineData(LauncherLanguages.SimplifiedChinese)]
     [InlineData(LauncherLanguages.TraditionalChinese)]
     [InlineData(LauncherLanguages.Japanese)]
-    public async Task SetupWizard_WhenLanguageChanges_LocalizesStatusLineAndKeepsNavigationAccessible(
+    public async Task SetupWizard_WhenLanguageChanges_LocalizesStatusLineAndStepTitle(
         string language)
     {
         using var context = CreateContext();
@@ -2285,20 +2387,21 @@ public sealed class MainWindowHeadlessTests
         Dispatcher.UIThread.RunJobs();
 
         var statusLine = GetWizardGamePathStatus(context.Window);
-        var navigation = context.Window.GetVisualDescendants().OfType<ListBox>()
-            .Single(control => control.Classes.Contains("wizard-navigation"));
+        var stepHeadline = context.Window.GetVisualDescendants().OfType<TextBlock>()
+            .Single(control => control.Classes.Contains("wizard-step-title") && control.IsEffectivelyVisible);
+        var progress = context.Window.GetVisualDescendants().OfType<TextBlock>()
+            .Single(control => control.Text == context.ViewModel.Dialogs.SetupWizard.StepProgress
+                && control.IsEffectivelyVisible);
 
         Assert.Equal(
             context.ViewModel.Shell.I18n["setupWizardGamePathAvailable"],
             statusLine.Text);
         Assert.Equal(statusLine.Text, AutomationProperties.GetName(statusLine));
+        // 居中单列解剖：步骤标题随语言本地化，进度行始终可见。
         Assert.Equal(
-            context.ViewModel.Shell.I18n["setupWizardStepTitle"],
-            AutomationProperties.GetName(navigation));
-        Assert.All(
-            navigation.GetVisualDescendants().OfType<TextBlock>()
-                .Where(control => control.Classes.Contains("settings-navigation-item")),
-            control => Assert.Equal(control.Text, AutomationProperties.GetName(control)));
+            context.ViewModel.Shell.I18n["setupWizardGamePath"],
+            stepHeadline.Text);
+        Assert.Equal("2 / 5", progress.Text);
     }
 
     [AvaloniaFact]

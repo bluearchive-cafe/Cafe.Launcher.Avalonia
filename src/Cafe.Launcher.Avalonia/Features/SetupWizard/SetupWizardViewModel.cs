@@ -1,6 +1,5 @@
 using System;
 using System.Collections.Generic;
-using System.Collections.ObjectModel;
 using System.Threading;
 using System.Threading.Tasks;
 using Cafe.Launcher.Avalonia.Features.SetupWizard;
@@ -20,6 +19,8 @@ namespace Cafe.Launcher.Avalonia.Features.SetupWizard;
 /// </summary>
 public partial class SetupWizardViewModel : ViewModelBase, IModalContentViewModel, IDisposable
 {
+    private const int StepCount = 5;
+
     private readonly LocalizationService localizer;
     private readonly GameInstallationPath gameInstallationPath;
     private readonly LocalInstallationStateStore localInstallationStateStore;
@@ -47,24 +48,12 @@ public partial class SetupWizardViewModel : ViewModelBase, IModalContentViewMode
         patchUrlGroup = defaults.PatchUrlGroup;
         gamePath = defaults.GamePath;
         proxyMode = defaults.ProxyMode;
-        Steps =
-        [
-            CreateStep(0),
-            CreateStep(1),
-            CreateStep(2),
-            CreateStep(3),
-            CreateStep(4)
-        ];
         localizer.LanguageChanged += OnLocalizerLanguageChanged;
         RefreshDownloadSources();
-        RefreshSteps();
     }
 
     /// <summary>Folder picker delegate, set by MainWindowViewModel.WireChildren().</summary>
     public Func<string, Task<string?>>? PickGameFolderAsync { get; set; }
-
-    /// <summary>Gets the five ordered navigation steps and their current states.</summary>
-    public ObservableCollection<SetupWizardStepItem> Steps { get; }
 
     /// <summary>Gets the localized download source choices for the setup wizard.</summary>
     public IReadOnlyList<SetupWizardDownloadSourceItem> DownloadSources { get; private set; } = [];
@@ -81,7 +70,6 @@ public partial class SetupWizardViewModel : ViewModelBase, IModalContentViewMode
     [NotifyPropertyChangedFor(nameof(IsStep1))]
     [NotifyPropertyChangedFor(nameof(IsStep2))]
     [NotifyPropertyChangedFor(nameof(IsStep3))]
-    [NotifyPropertyChangedFor(nameof(SelectedStep))]
     private int step;
 
     partial void OnStepChanged(int value)
@@ -99,17 +87,6 @@ public partial class SetupWizardViewModel : ViewModelBase, IModalContentViewMode
         {
             RefreshGamePathStatus();
         }
-
-        RefreshSteps();
-    }
-
-    /// <summary>Gets whether the most recent step change moved forward, driving directional slide-in.</summary>
-    [ObservableProperty]
-    private bool wizardMovesForward = true;
-
-    partial void OnStepChanged(int oldValue, int newValue)
-    {
-        WizardMovesForward = newValue >= oldValue;
     }
 
     public bool IsFirstStep => Step == 0;
@@ -119,28 +96,7 @@ public partial class SetupWizardViewModel : ViewModelBase, IModalContentViewMode
     public bool IsStep3 => Step == 3;
 
     /// <summary>Gets the current step position for the wizard header.</summary>
-    public string StepProgress => $"{Step + 1} / {Steps.Count}";
-
-    /// <summary>Gets or sets the step selected through the navigation list.</summary>
-    public int SelectedStep
-    {
-        get => Step;
-        set
-        {
-            if (value == Step)
-            {
-                return;
-            }
-
-            if (value < 0 || value >= Steps.Count || value > Step)
-            {
-                OnPropertyChanged();
-                return;
-            }
-
-            Step = value;
-        }
-    }
+    public string StepProgress => $"{Step + 1} / {StepCount}";
 
     public bool CanGoNext => Step switch
     {
@@ -161,7 +117,6 @@ public partial class SetupWizardViewModel : ViewModelBase, IModalContentViewMode
     {
         LanguagePreviewRequested?.Invoke(value);
         RefreshDownloadSources();
-        RefreshSteps();
     }
 
     [ObservableProperty]
@@ -169,8 +124,6 @@ public partial class SetupWizardViewModel : ViewModelBase, IModalContentViewMode
     [NotifyPropertyChangedFor(nameof(IsPatchUrlGroupCafe))]
     [NotifyPropertyChangedFor(nameof(IsPatchUrlGroupOfficial))]
     private string patchUrlGroup;
-
-    partial void OnPatchUrlGroupChanged(string value) => RefreshSteps();
 
     [ObservableProperty]
     [NotifyPropertyChangedFor(nameof(CanGoNext))]
@@ -180,7 +133,6 @@ public partial class SetupWizardViewModel : ViewModelBase, IModalContentViewMode
     partial void OnGamePathChanged(string value)
     {
         RefreshGamePathStatus();
-        RefreshSteps();
     }
 
     [ObservableProperty]
@@ -231,8 +183,6 @@ public partial class SetupWizardViewModel : ViewModelBase, IModalContentViewMode
     [NotifyPropertyChangedFor(nameof(IsProxyDirect))]
     [NotifyPropertyChangedFor(nameof(IsProxySystem))]
     private string proxyMode;
-
-    partial void OnProxyModeChanged(string value) => RefreshSteps();
 
     // ── RadioButton helpers ───────────────────────────────────────
 
@@ -311,12 +261,12 @@ public partial class SetupWizardViewModel : ViewModelBase, IModalContentViewMode
     [RelayCommand]
     private void GoToStep(int targetStep)
     {
-        if (targetStep < 0 || targetStep >= Steps.Count || targetStep > Step)
+        if (targetStep < 0 || targetStep >= StepCount || targetStep > Step)
         {
             return;
         }
 
-        SelectedStep = targetStep;
+        Step = targetStep;
     }
 
     [RelayCommand]
@@ -470,12 +420,6 @@ public partial class SetupWizardViewModel : ViewModelBase, IModalContentViewMode
         _ => GamePathStatusText
     };
 
-    private SetupWizardStepItem CreateStep(int index) => new()
-    {
-        Index = index,
-        Title = ResolveStepTitle(index)
-    };
-
     private string ResolveStepTitle(int index) => index switch
     {
         0 => localizer.T("setupWizardLanguage"),
@@ -488,50 +432,15 @@ public partial class SetupWizardViewModel : ViewModelBase, IModalContentViewMode
 
     private void OnLocalizerLanguageChanged(object? sender, EventArgs e)
     {
-        foreach (var item in Steps)
-        {
-            item.Title = ResolveStepTitle(item.Index);
-        }
-
         OnPropertyChanged(nameof(StepTitle));
         OnPropertyChanged(nameof(GamePathStatusText));
         OnPropertyChanged(nameof(GamePathPresentation));
         RefreshDownloadSources();
-        RefreshSteps();
         if (IsLastStep)
         {
             RefreshSummaryDisplayNames();
         }
     }
-
-    private void RefreshSteps()
-    {
-        if (Steps is null)
-        {
-            return;
-        }
-
-        foreach (var item in Steps)
-        {
-            item.State = item.Index < Step
-                ? SetupWizardStepState.Completed
-                : item.Index == Step
-                    ? SetupWizardStepState.Current
-                    : SetupWizardStepState.Locked;
-            item.Summary = item.State == SetupWizardStepState.Completed
-                ? ResolveStepSummary(item.Index)
-                : string.Empty;
-        }
-    }
-
-    private string ResolveStepSummary(int index) => index switch
-    {
-        0 => ResolveLanguageDisplayName(),
-        1 => GamePath,
-        2 => ResolveDownloadSourceDisplayName(),
-        3 => ResolveProxyDisplayName(),
-        _ => string.Empty
-    };
 
     private string ResolveLanguageDisplayName() => Language switch
     {

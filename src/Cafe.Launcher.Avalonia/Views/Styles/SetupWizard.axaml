@@ -1,12 +1,27 @@
 <Styles xmlns="https://github.com/avaloniaui"
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
-    <Style Selector="ListBox.settings-navigation.wizard-navigation">
-        <Setter Property="Padding" Value="{StaticResource Launcher.Component.Wizard.Navigation.Padding}"/>
+    <!-- 实验台向导解剖（ADR-017）：步骤标题居中、完成态标题以 Success 色标识，
+         步骤面板的顺序换页由后置代码驱动，不使用声明式动画类。 -->
+    <Style Selector="TextBlock.wizard-step-title">
+        <Setter Property="FontSize" Value="{StaticResource Launcher.Typography.FontSize.Display}"/>
+        <Setter Property="FontWeight" Value="{StaticResource Launcher.Typography.FontWeight.Strong}"/>
+        <Setter Property="Foreground" Value="{DynamicResource Launcher.Text.Primary}"/>
+        <Setter Property="TextAlignment" Value="Center"/>
     </Style>
-    <Style Selector="TextBlock.wizard-step-number">
-        <Setter Property="MinWidth" Value="{StaticResource Launcher.Component.Wizard.StepNumber.MinWidth}"/>
-        <Setter Property="HorizontalAlignment" Value="Center"/>
-        <Setter Property="VerticalAlignment" Value="Center"/>
+    <Style Selector="TextBlock.wizard-step-title.wizard-complete">
+        <Setter Property="Foreground" Value="{DynamicResource Launcher.Color.Success}"/>
+    </Style>
+    <!-- M3 选项行：单选组按列表行呈现，整行为命中目标，悬停铺状态层圆角底。
+         选项语义仍由 RadioButton 承载（ADR-014：不用卡片按钮改写语义）。 -->
+    <Style Selector="RadioButton.wizard-option">
+        <Setter Property="MinHeight" Value="{StaticResource Launcher.Component.Wizard.Option.MinHeight}"/>
+        <Setter Property="Padding" Value="{StaticResource Launcher.Component.Wizard.Option.Padding}"/>
+        <Setter Property="CornerRadius" Value="{StaticResource Launcher.Radius.Md}"/>
+        <Setter Property="HorizontalContentAlignment" Value="Stretch"/>
+        <Setter Property="VerticalContentAlignment" Value="Center"/>
+    </Style>
+    <Style Selector="RadioButton.wizard-option:pointerover">
+        <Setter Property="Background" Value="{DynamicResource Launcher.Color.Content.Row.Hover}"/>
     </Style>
     <Style Selector="Grid.wizard-review-row">
         <Setter Property="MinHeight" Value="{StaticResource Launcher.Control.Height.Dialog}"/>
@@ -15,30 +30,6 @@
     <Style Selector="Border.wizard-review-divider">
         <Setter Property="Height" Value="{StaticResource Launcher.Component.Wizard.Divider.Height}"/>
         <Setter Property="Background" Value="{DynamicResource Launcher.Color.Card.Border}"/>
-    </Style>
-    <Style Selector="Button.wizard-choice">
-        <Setter Property="Background" Value="{DynamicResource Launcher.Color.Content.Row}"/>
-        <Setter Property="BorderBrush" Value="{DynamicResource Launcher.Color.Card.Border}"/>
-        <Setter Property="BorderThickness" Value="{StaticResource Launcher.Border.Thickness.Default}"/>
-        <Setter Property="CornerRadius" Value="{StaticResource Launcher.Radius.Md}"/>
-        <Setter Property="Padding" Value="{StaticResource Launcher.Component.Wizard.Choice.Padding}"/>
-        <Setter Property="MinHeight" Value="{StaticResource Launcher.Component.Wizard.Choice.MinHeight}"/>
-        <Setter Property="HorizontalContentAlignment" Value="Stretch"/>
-    </Style>
-    <Style Selector="Button.wizard-choice:pointerover">
-        <Setter Property="Background" Value="{DynamicResource Launcher.Color.Button.Flat.Hover}"/>
-        <Setter Property="BorderBrush" Value="{DynamicResource Launcher.Color.Primary.Hover}"/>
-    </Style>
-    <Style Selector="Button.wizard-choice:pressed">
-        <Setter Property="Background" Value="{DynamicResource Launcher.Color.Button.Flat.Pressed}"/>
-        <Setter Property="BorderBrush" Value="{DynamicResource Launcher.Color.Primary.Pressed}"/>
-    </Style>
-    <Style Selector="Button.wizard-choice:disabled">
-        <Setter Property="Opacity" Value="{StaticResource Launcher.StateLayer.Disabled.Content}"/>
-    </Style>
-    <Style Selector="Button.wizard-choice.active">
-        <Setter Property="Background" Value="{DynamicResource Launcher.Color.Primary.Soft}"/>
-        <Setter Property="BorderBrush" Value="{DynamicResource Launcher.Color.Primary}"/>
     </Style>
     <Style Selector="TextBlock.wizard-game-path-status.checking">
         <Setter Property="Foreground" Value="{DynamicResource Launcher.Color.Primary}"/>

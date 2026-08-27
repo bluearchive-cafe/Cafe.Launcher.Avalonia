@@ -2262,26 +2262,35 @@ public sealed partial class UiStyleContractTests
     }
 
     [Fact]
-    public void SetupWizardOverlay_ReusesSettingsNavigationHeaderAndM3Footer()
+    public void SetupWizardOverlay_UsesProgressRowAndM3Footer()
     {
         var document = XDocument.Load(ProjectFile("Views/SetupWizardOverlay.axaml"));
-        var pane = document
-            .Descendants()
-            .Single(element => HasClass(element, "settings-navigation-pane"));
-        Assert.Equal("Auto,*", pane.Attribute("RowDefinitions")?.Value);
 
-        var header = pane
+        // 实验台解剖（ADR-017）：无侧栏导航；进度行承载向导标题与步骤进度，跳过钮居右。
+        Assert.DoesNotContain(
+            document.Descendants(),
+            element => HasClass(element, "settings-navigation-pane"));
+        var skipButton = document
             .Descendants()
-            .Single(element => element.Name.LocalName == "Border" && HasClass(element, "settings-navigation-header"));
-        Assert.Contains(
-            header.Descendants(),
-            element => element.Name.LocalName == "TextBlock"
+            .Single(element =>
+                element.Name.LocalName == "Button"
+                && element.Attribute("Command")?.Value == "{Binding Dialogs.RequestSetupWizardExitCommand}");
+        var progressRow = skipButton.Parent!;
+        Assert.Equal("Grid", progressRow.Name.LocalName);
+        var heading = progressRow
+            .Elements()
+            .First(element => element.Name.LocalName == "StackPanel");
+        var title = heading
+            .Elements()
+            .Single(element =>
+                element.Name.LocalName == "TextBlock"
                 && element.Attribute("Text")?.Value == "{Binding Shell.I18n[setupWizardStepTitle]}");
-
-        var navigation = pane
-            .Descendants()
-            .Single(element => HasClass(element, "wizard-navigation"));
-        Assert.Equal("1", navigation.Attribute("Grid.Row")?.Value);
+        Assert.True(HasClass(title, "dialog-title"));
+        Assert.Contains(
+            heading.Elements(),
+            element => element.Name.LocalName == "TextBlock"
+                && element.Attribute("Text")?.Value == "{Binding Dialogs.SetupWizard.StepProgress}"
+                && HasClass(element, "caption"));
 
         // ADR-015：发丝底带内化为模板 Footer；视图文件只承载动作组。
         Assert.DoesNotContain(
@@ -2976,9 +2985,11 @@ public sealed partial class UiStyleContractTests
     }
 
     [Fact]
-    public void SetupWizard_UsesConstrainedFiveStepWorkspaceAndSettingsNavigation()
+    public void SetupWizard_UsesConstrainedSingleColumnWorkspace()
     {
         var document = XDocument.Load(ProjectFile("Views/SetupWizardOverlay.axaml"));
+        var xNamespace = document.Root?.GetNamespaceOfPrefix("x");
+        Assert.NotNull(xNamespace);
         var dialog = document
             .Descendants()
             .Single(element => element.Name.LocalName == "DialogSurface");
@@ -2988,100 +2999,157 @@ public sealed partial class UiStyleContractTests
         Assert.Equal("{StaticResource Launcher.Layout.SetupWizard.Height}", dialog.Attribute("MaxHeight")?.Value);
         Assert.Equal("Stretch", dialog.Attribute("HorizontalAlignment")?.Value);
         Assert.Equal("Stretch", dialog.Attribute("VerticalAlignment")?.Value);
-        // 无头带折叠：向导自绘步骤标题，跳过钮保留文字语义。
+        // 无头带折叠：向导自绘进度行，跳过钮保留文字语义。
         Assert.Null(dialog.Attribute("Title"));
 
-        var navigation = document
+        // 实验台解剖：居中单列内容，不再有侧栏导航列表。
+        Assert.DoesNotContain(
+            document.Descendants(),
+            element => element.Name.LocalName == "ListBox");
+
+        var container = document
             .Descendants()
             .Single(element =>
-                element.Name.LocalName == "ListBox"
-                && element.Attribute("ItemsSource")?.Value == "{Binding Dialogs.SetupWizard.Steps}");
-        Assert.Contains("settings-navigation", navigation.Attribute("Classes")?.Value, StringComparison.Ordinal);
+                element.Name.LocalName == "ScrollViewer"
+                && element.Attribute(xNamespace + "Name")?.Value == "StepScroll")
+            .Elements()
+            .Single(element => element.Name.LocalName == "Grid");
         Assert.Equal(
-            "{Binding Dialogs.SetupWizard.SelectedStep, Mode=TwoWay}",
-            navigation.Attribute("SelectedValue")?.Value);
-        Assert.Equal("{Binding Index}", navigation.Attribute("SelectedValueBinding")?.Value);
-        var template = navigation.Descendants().Single(element => element.Name.LocalName == "DataTemplate");
-        Assert.Equal("setup:SetupWizardStepItem", template.Attributes().Single(
-            attribute => attribute.Name.LocalName == "DataType").Value);
-        Assert.Equal(2, template.Descendants().Count(element => element.Name.LocalName == "TextBlock"));
-    }
+            "{Binding $parent[ScrollViewer].Viewport.Height}",
+            container.Attribute("MinHeight")?.Value);
 
-    [Fact]
-    public void SetupWizardNavigation_UsesSingleLineNumberAndTitle()
-    {
-        var document = XDocument.Load(ProjectFile("Views/SetupWizardOverlay.axaml"));
-        var navigation = document
-            .Descendants()
-            .Single(element =>
-                element.Name.LocalName == "ListBox"
-                && element.Attribute("ItemsSource")?.Value == "{Binding Dialogs.SetupWizard.Steps}");
-        var template = navigation.Descendants().Single(element => element.Name.LocalName == "DataTemplate");
-        var title = template
-            .Descendants()
-            .Single(element =>
-                element.Name.LocalName == "TextBlock"
-                && element.Attribute("Text")?.Value == "{Binding Title}");
-        var number = template
-            .Descendants()
-            .Single(element =>
-                element.Name.LocalName == "TextBlock"
-                && element.Attribute("Text")?.Value == "{Binding DisplayNumber}");
-
-        Assert.True(HasClass(title, "settings-navigation-item"));
-        Assert.Equal("CharacterEllipsis", title.Attribute("TextTrimming")?.Value);
-        Assert.Equal("{Binding DisplayNumber}", number.Attribute("Text")?.Value);
-    }
-
-    [Fact]
-    public void SetupWizardNavigation_ReusesSettingsNavigationVisualStates()
-    {
-        var styles = XDocument.Load(ProjectFile("Views/MainWindow.Styles.axaml"));
-        var selected = GetStyleSetters(styles, "ListBox.settings-navigation > ListBoxItem:selected");
-        var disabled = GetStyleSetters(styles, "ListBox.settings-navigation > ListBoxItem:disabled");
-
-        Assert.Equal("{StaticResource Launcher.Spacing.Thickness.None}", selected["BorderThickness"]);
-        Assert.Equal("{StaticResource Launcher.Color.Transparent}", selected["BorderBrush"]);
-        Assert.Equal("{DynamicResource Launcher.Text.Secondary}", disabled["Foreground"]);
-    }
-
-    [Fact]
-    public void SetupWizardNavigation_UsesSymmetricHorizontalPadding()
-    {
-        var styles = XDocument.Load(ProjectFile("Views/Styles/SetupWizard.axaml"));
-        var navigation = GetStyleSetters(
-            styles,
-            "ListBox.settings-navigation.wizard-navigation");
-
-        Assert.Equal("{StaticResource Launcher.Component.Wizard.Navigation.Padding}", navigation["Padding"]);
-    }
-
-    [Fact]
-    public void SetupWizardHeader_ShowsCurrentProgressBeforeTaskTitle()
-    {
-        var document = XDocument.Load(ProjectFile("Views/SetupWizardOverlay.axaml"));
-        var headerCopy = document
-            .Descendants()
-            .Single(element => element.Name.LocalName == "StackPanel" && HasClass(element, "dialog-heading-copy"));
-        var textBlocks = headerCopy.Elements()
-            .Where(element => element.Name.LocalName == "TextBlock")
+        var steps = container
+            .Elements()
+            .Where(element => element.Name.LocalName == "StackPanel" && HasClass(element, "wizard-step"))
             .ToList();
+        Assert.Equal(5, steps.Count);
+        Assert.Equal(
+            new[] { "WizardStep0", "WizardStep1", "WizardStep2", "WizardStep3", "WizardStep4" },
+            steps.Select(step => step.Attribute(xNamespace + "Name")?.Value));
+        Assert.All(steps, step =>
+        {
+            Assert.Equal("Center", step.Attribute("HorizontalAlignment")?.Value);
+            Assert.Equal("Center", step.Attribute("VerticalAlignment")?.Value);
+            Assert.Equal(
+                "{StaticResource Launcher.Component.Wizard.Content.MaxWidth}",
+                step.Attribute("MaxWidth")?.Value);
+        });
+    }
 
-        Assert.Equal("{Binding Dialogs.SetupWizard.StepProgress}", textBlocks[0].Attribute("Text")?.Value);
-        Assert.Equal("{Binding Dialogs.SetupWizard.StepTitle}", textBlocks[1].Attribute("Text")?.Value);
-        Assert.True(HasClass(textBlocks[1], "dialog-title"));
+    [Fact]
+    public void SetupWizard_StepsSwitchThroughSequentialFadeSwap()
+    {
+        // ADR-017：步骤切换 = 旧内容先淡出、新内容按方向滑入的顺序换页，由后置代码编排；
+        // 步骤面板不走 MotionVisibility 与声明式动画类，可见性完全由后置代码接管。
+        var document = XDocument.Load(ProjectFile("Views/SetupWizardOverlay.axaml"));
+        var xNamespace = document.Root?.GetNamespaceOfPrefix("x");
+        Assert.NotNull(xNamespace);
+        var controls = document.Root?.GetNamespaceOfPrefix("controls");
+        Assert.NotNull(controls);
+        var steps = document
+            .Descendants()
+            .Where(element =>
+                element.Name.LocalName == "StackPanel"
+                && HasClass(element, "wizard-step"))
+            .ToList();
+        Assert.Equal(5, steps.Count);
+
+        foreach (var step in steps)
+        {
+            Assert.Equal("False", step.Attribute("IsVisible")?.Value);
+            AssertHasLocalTranslateTransform(step);
+            Assert.Null(step.Attribute(controls + "MotionVisibility.IsOpen"));
+            Assert.Null(step.Attribute(controls + "MotionVisibility.IsMotionEnabled"));
+            Assert.Null(step.Attribute("Classes.motion-enter"));
+            Assert.Null(step.Attribute("Classes.motion-enabled"));
+            Assert.Null(step.Attribute("Classes.motion-forward"));
+            Assert.Null(step.Attribute("Classes.motion-backward"));
+        }
+
+        // 换面容器为单格 Grid（任意时刻仅一个步骤面板可见），内容列随视口垂直居中。
+        var container = Assert.Single(
+            steps
+                .Select(step => step.Parent)
+                .Cast<XElement>()
+                .Distinct());
+        Assert.Equal("Grid", container.Name.LocalName);
+        Assert.Null(container.Attribute("RowDefinitions"));
+        Assert.Null(container.Attribute("ColumnDefinitions"));
+        Assert.Equal(
+            "{Binding $parent[ScrollViewer].Viewport.Height}",
+            container.Attribute("MinHeight")?.Value);
+
+        // 共享 ScrollViewer 由后置代码在换面时复位滚动。
+        Assert.Contains(
+            document.Descendants(),
+            element => element.Name.LocalName == "ScrollViewer"
+                && element.Attribute(xNamespace + "Name")?.Value == "StepScroll");
+    }
+
+    [Fact]
+    public void SetupWizardHeader_ShowsWizardTitleAndProgress()
+    {
+        var document = XDocument.Load(ProjectFile("Views/SetupWizardOverlay.axaml"));
+        var skipButton = document
+            .Descendants()
+            .Single(element =>
+                element.Name.LocalName == "Button"
+                && element.Attribute("Command")?.Value == "{Binding Dialogs.RequestSetupWizardExitCommand}");
+        var heading = skipButton.Parent!
+            .Elements()
+            .First(element => element.Name.LocalName == "StackPanel");
+        var title = heading
+            .Elements()
+            .Single(element =>
+                element.Name.LocalName == "TextBlock"
+                && element.Attribute("Text")?.Value == "{Binding Shell.I18n[setupWizardStepTitle]}");
+
+        Assert.True(HasClass(title, "dialog-title"));
+        Assert.Contains(
+            heading.Elements(),
+            element => element.Name.LocalName == "TextBlock"
+                && element.Attribute("Text")?.Value == "{Binding Dialogs.SetupWizard.StepProgress}"
+                && HasClass(element, "caption"));
+    }
+
+    [Fact]
+    public void SetupWizardCompletion_StepTitleUsesSuccessColor()
+    {
+        // 实验台完成态语义：最后一步（复核）即完成确认，标题以 Success 色标识，无庆祝动画。
+        var document = XDocument.Load(ProjectFile("Views/SetupWizardOverlay.axaml"));
+        var xNamespace = document.Root?.GetNamespaceOfPrefix("x");
+        Assert.NotNull(xNamespace);
+        var headlines = document
+            .Descendants()
+            .Where(element =>
+                element.Name.LocalName == "TextBlock"
+                && element.Attribute("Text")?.Value == "{Binding Dialogs.SetupWizard.StepTitle}"
+                && HasClass(element, "wizard-step-title"))
+            .ToList();
+        Assert.Equal(5, headlines.Count);
+
+        var completionHeadline = Assert.Single(headlines, element =>
+            element.Attribute("Classes.wizard-complete")?.Value == "{Binding Dialogs.SetupWizard.IsLastStep}");
+        var reviewStep = completionHeadline.Ancestors().Single(element => HasClass(element, "wizard-step"));
+        Assert.Equal("WizardStep4", reviewStep.Attribute(xNamespace + "Name")?.Value);
+
+        var styles = XDocument.Load(ProjectFile("Views/Styles/SetupWizard.axaml"));
+        Assert.Equal(
+            "{DynamicResource Launcher.Color.Success}",
+            GetStyleSetters(styles, "TextBlock.wizard-step-title.wizard-complete")["Foreground"]);
     }
 
     [Fact]
     public void SetupWizard_Review_UsesSeparatedCenteredRows()
     {
         var overlay = XDocument.Load(ProjectFile("Views/SetupWizardOverlay.axaml"));
+        var xNamespace = overlay.Root?.GetNamespaceOfPrefix("x");
+        Assert.NotNull(xNamespace);
         var reviewStep = overlay
             .Descendants()
             .Single(element =>
                 element.Name.LocalName == "StackPanel"
-                && element.Attribute("IsVisible")?.Value
-                    == "{Binding Dialogs.SetupWizard.IsLastStep}");
+                && element.Attribute(xNamespace + "Name")?.Value == "WizardStep4");
         var reviewContent = reviewStep
             .Descendants()
             .Single(element =>
@@ -3148,8 +3216,17 @@ public sealed partial class UiStyleContractTests
                     == "{Binding Dialogs.SetupWizard.GamePath, Mode=TwoWay}")
             .Parent;
         Assert.NotNull(gamePathInput);
-        var status = gamePathInput
+        // M3 状态行：图标 + 文本承载同一状态，整行随路径为空一起隐藏。
+        var statusRow = gamePathInput
             .ElementsAfterSelf()
+            .Single(element =>
+                element.Name.LocalName == "StackPanel"
+                && HasClass(element, "wizard-status-row"));
+        Assert.Equal(
+            "{Binding Dialogs.SetupWizard.IsGamePathEmpty, Converter={x:Static BoolConverters.Not}}",
+            statusRow.Attribute("IsVisible")?.Value);
+        var status = statusRow
+            .Elements()
             .Single(element =>
                 element.Name.LocalName == "TextBlock"
                 && element.Attribute("Text")?.Value
@@ -3160,9 +3237,6 @@ public sealed partial class UiStyleContractTests
             status.Attributes()
                 .Single(attribute => attribute.Name.LocalName == "AutomationProperties.Name")
                 .Value);
-        Assert.Equal(
-            "{Binding Dialogs.SetupWizard.IsGamePathEmpty, Converter={x:Static BoolConverters.Not}}",
-            status.Attribute("IsVisible")?.Value);
         Assert.True(HasClass(status, "caption"));
         Assert.True(HasClass(status, "wizard-game-path-status"));
         Assert.Equal(
@@ -3193,24 +3267,72 @@ public sealed partial class UiStyleContractTests
         Assert.Equal(
             "{StaticResource Launcher.Color.Danger}",
             GetStyleSetters(styles, "TextBlock.wizard-game-path-status.inaccessible")["Foreground"]);
+
+        // 状态图标与文本共用语义色：检测中 Sync、就绪 CheckCircle、损坏/不可访问 Alert。
+        var icons = statusRow
+            .Elements()
+            .Where(element => element.Name.LocalName == "MaterialIcon")
+            .ToList();
+        Assert.Collection(
+            icons,
+            icon =>
+            {
+                Assert.Equal("Sync", icon.Attribute("Kind")?.Value);
+                Assert.Equal(
+                    "{Binding Dialogs.SetupWizard.IsGamePathChecking}",
+                    icon.Attribute("IsVisible")?.Value);
+                Assert.Equal(
+                    "{DynamicResource Launcher.Color.Primary}",
+                    icon.Attribute("Foreground")?.Value);
+            },
+            icon =>
+            {
+                Assert.Equal("CheckCircle", icon.Attribute("Kind")?.Value);
+                Assert.Equal(
+                    "{Binding Dialogs.SetupWizard.IsGamePathReady}",
+                    icon.Attribute("IsVisible")?.Value);
+                Assert.Equal(
+                    "{DynamicResource Launcher.Color.Success}",
+                    icon.Attribute("Foreground")?.Value);
+            },
+            icon =>
+            {
+                Assert.Equal("Alert", icon.Attribute("Kind")?.Value);
+                Assert.Equal(
+                    "{Binding Dialogs.SetupWizard.IsGamePathCorruptedInstallation}",
+                    icon.Attribute("IsVisible")?.Value);
+                Assert.Equal(
+                    "{StaticResource Launcher.Color.Danger}",
+                    icon.Attribute("Foreground")?.Value);
+            },
+            icon =>
+            {
+                Assert.Equal("Alert", icon.Attribute("Kind")?.Value);
+                Assert.Equal(
+                    "{Binding Dialogs.SetupWizard.IsGamePathInaccessible}",
+                    icon.Attribute("IsVisible")?.Value);
+                Assert.Equal(
+                    "{StaticResource Launcher.Color.Danger}",
+                    icon.Attribute("Foreground")?.Value);
+            });
     }
 
     [Fact]
     public void SetupWizard_ChoiceSteps_UseGroupedRadioButtons()
     {
         var document = XDocument.Load(ProjectFile("Views/SetupWizardOverlay.axaml"));
+        var xNamespace = document.Root?.GetNamespaceOfPrefix("x");
+        Assert.NotNull(xNamespace);
         var downloadSourceStep = document
             .Descendants()
             .Single(element =>
                 element.Name.LocalName == "StackPanel"
-                && element.Attribute("IsVisible")?.Value
-                    == "{Binding Dialogs.SetupWizard.IsStep2}");
+                && element.Attribute(xNamespace + "Name")?.Value == "WizardStep2");
         var proxyStep = document
             .Descendants()
             .Single(element =>
                 element.Name.LocalName == "StackPanel"
-                && element.Attribute("IsVisible")?.Value
-                    == "{Binding Dialogs.SetupWizard.IsStep3}");
+                && element.Attribute(xNamespace + "Name")?.Value == "WizardStep3");
         var downloadSourceRadioButtons = downloadSourceStep
             .Descendants()
             .Where(element => element.Name.LocalName == "RadioButton")
@@ -3255,12 +3377,42 @@ public sealed partial class UiStyleContractTests
             },
             radioButtons.Select(button =>
                 button.Attribute("AutomationProperties.Name")?.Value));
+        // M3 选项行：RadioButton 语义不变，整行以 wizard-option 呈现；不得用命令按钮改写选择语义。
+        var radioElements = downloadSourceRadioButtons.Concat(proxyRadioButtons).ToList();
+        Assert.All(
+            radioElements,
+            button => Assert.Contains("wizard-option", button.Attribute("Classes")?.Value, StringComparison.Ordinal));
         Assert.DoesNotContain(
             downloadSourceStep.Descendants().Concat(proxyStep.Descendants()),
             element =>
-                HasClass(element, "wizard-choice")
-                || element.Attribute("Classes.active") is not null
+                element.Attribute("Classes.active") is not null
                 || element.Attribute("Command") is not null);
+    }
+
+    [Fact]
+    public void SetupWizard_OptionRowsUseTokenizedMinimumTargets()
+    {
+        var styles = XDocument.Load(ProjectFile("Views/Styles/SetupWizard.axaml"));
+
+        // ADR-017：卡片按钮形态（wizard-choice）已被纯单选组 + M3 选项行取代，不得回归。
+        Assert.DoesNotContain(
+            styles.Descendants().Where(element => element.Name.LocalName == "Style"),
+            style => style.Attribute("Selector")?.Value?.Contains("wizard-choice") == true);
+
+        var option = GetStyleSetters(styles, "RadioButton.wizard-option");
+        Assert.Equal(
+            "{StaticResource Launcher.Component.Wizard.Option.MinHeight}",
+            option["MinHeight"]);
+        Assert.Equal(
+            "{StaticResource Launcher.Component.Wizard.Option.Padding}",
+            option["Padding"]);
+        Assert.Equal("{StaticResource Launcher.Radius.Md}", option["CornerRadius"]);
+        Assert.Equal("Stretch", option["HorizontalContentAlignment"]);
+        Assert.Equal("Center", option["VerticalContentAlignment"]);
+        var hover = GetStyleSetters(styles, "RadioButton.wizard-option:pointerover");
+        Assert.Equal(
+            "{DynamicResource Launcher.Color.Content.Row.Hover}",
+            hover["Background"]);
     }
 
     [Fact]
@@ -4094,14 +4246,6 @@ public sealed partial class UiStyleContractTests
             "StackPanel.motion-content.motion-enabled.motion-enter",
             "{StaticResource Launcher.Motion.Duration.Fast}",
             expectedStartOffset: null);
-        AssertDirectionalMotionAnimation(
-            document,
-            "StackPanel.motion-content.motion-enabled.motion-enter.motion-forward",
-            "{StaticResource Launcher.Motion.Offset.StepForward}");
-        AssertDirectionalMotionAnimation(
-            document,
-            "StackPanel.motion-content.motion-enabled.motion-enter.motion-backward",
-            "{StaticResource Launcher.Motion.Offset.StepBackward}");
         AssertMotionAnimation(
             document,
             "Border.motion-bottom.motion-enabled.motion-enter",
@@ -4207,14 +4351,14 @@ public sealed partial class UiStyleContractTests
         });
 
         var settings = XDocument.Load(ProjectFile("Views/MainWindowSettingsOverlay.axaml"));
-        var wizard = XDocument.Load(ProjectFile("Views/SetupWizardOverlay.axaml"));
         var contentTargets = settings
             .Descendants()
-            .Concat(wizard.Descendants())
             .Where(element => HasClass(element, "motion-content"))
             .ToList();
 
-        Assert.Equal(11, contentTargets.Count);
+        // ADR-017：向导步骤面板改由后置代码顺序换页（wizard-step），不再属于 motion-content
+        // 家族；设置页六个内容分区维持直接绑定驱动的纯淡化（motion-enter 与可见性同源）。
+        Assert.Equal(6, contentTargets.Count);
         Assert.All(contentTargets, element =>
         {
             Assert.Equal(
@@ -4525,33 +4669,6 @@ public sealed partial class UiStyleContractTests
             keyFrames["100%"]
                 .Elements()
                 .Single(element => element.Attribute("Property")?.Value == expectedStartAxis)
-                .Attribute("Value")?.Value);
-    }
-
-    private static void AssertDirectionalMotionAnimation(
-        XDocument document,
-        string selector,
-        string expectedStartOffsetX)
-    {
-        var animation = GetMotionAnimation(document, selector);
-        Assert.Equal("{StaticResource Launcher.Motion.Duration.Fast}", animation.Attribute("Duration")?.Value);
-        Assert.Equal("Forward", animation.Attribute("FillMode")?.Value);
-        Assert.Equal("{StaticResource Launcher.Motion.Easing.PointToPoint}", animation.Attribute("Easing")?.Value);
-        Assert.Null(animation.Attribute("Delay"));
-
-        var keyFrames = GetAnimationKeyFrames(animation);
-        AssertAnimationProperty(keyFrames, "Opacity", "0", "1");
-        Assert.Equal(
-            expectedStartOffsetX,
-            keyFrames["0%"]
-                .Elements()
-                .Single(element => element.Attribute("Property")?.Value == "TranslateTransform.X")
-                .Attribute("Value")?.Value);
-        Assert.Equal(
-            "0",
-            keyFrames["100%"]
-                .Elements()
-                .Single(element => element.Attribute("Property")?.Value == "TranslateTransform.X")
                 .Attribute("Value")?.Value);
     }
 

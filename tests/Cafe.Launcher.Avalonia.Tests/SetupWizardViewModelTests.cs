@@ -272,15 +272,28 @@ public sealed class SetupWizardViewModelTests
     }
 
     [Fact]
-    public void Steps_AfterLanguageSelectionAndAdvance_ShowsLanguageSummaryOnlyForCompletedStep()
+    public void GoToStepCommand_ToCompletedStep_NavigatesBack()
     {
         var vm = CreateViewModel();
-        vm.Language = LauncherLanguages.Japanese;
-
+        vm.GamePath = Path.Combine(Path.GetTempPath(), Guid.NewGuid().ToString("N"));
         vm.NextCommand.Execute(null);
+        vm.NextCommand.Execute(null);
+        Assert.Equal(2, vm.Step);
 
-        Assert.NotEmpty(vm.Steps[0].Summary);
-        Assert.Empty(vm.Steps[1].Summary);
+        vm.GoToStepCommand.Execute(0);
+
+        Assert.Equal(0, vm.Step);
+        Assert.True(vm.IsFirstStep);
+    }
+
+    [Fact]
+    public void GoToStepCommand_ToUnvisitedStep_DoesNotNavigate()
+    {
+        var vm = CreateViewModel();
+
+        vm.GoToStepCommand.Execute(2);
+
+        Assert.Equal(0, vm.Step);
     }
 
     [Fact]
