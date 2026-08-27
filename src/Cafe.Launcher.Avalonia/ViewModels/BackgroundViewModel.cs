@@ -8,6 +8,7 @@ using Avalonia.Media.Imaging;
 using Avalonia.Platform;
 using Avalonia.Threading;
 using Cafe.Launcher.Avalonia.Features.Settings;
+using Cafe.Launcher.Avalonia.Helpers;
 using Cafe.Launcher.Avalonia.Models;
 using Cafe.Launcher.Avalonia.Services;
 using Cafe.Launcher.Avalonia.Services.Diagnostics;
@@ -32,6 +33,16 @@ public partial class BackgroundViewModel : ViewModelBase, IDisposable
 
     [ObservableProperty]
     private IBrush? backgroundFillBrush;
+
+    /// <summary>Overlay layer showing the previous wallpaper while it fades out during a swap.</summary>
+    [ObservableProperty]
+    private IImage? wallpaperCrossFadeSource;
+
+    [ObservableProperty]
+    private double wallpaperCrossFadeOpacity;
+
+    private bool isMotionReduced;
+    private IDisposable? pendingCrossFadeBitmap;
 
     public Func<Task<string?>>? PickBackgroundImageAsync { get; set; }
 
@@ -149,6 +160,17 @@ public partial class BackgroundViewModel : ViewModelBase, IDisposable
         BackgroundFillBrush = settings.BackgroundFit == BackgroundFits.Uniform
             ? new SolidColorBrush(SettingsAppearanceViewModel.ParseColorOrDefault(settings.BackgroundFillColor))
             : null;
+    }
+
+    /// <summary>ADR-016: reduced motion finishes any in-flight wallpaper cross-fade instantly.</summary>
+    public void ApplyMotionPreference(bool reduceMotion)
+    {
+        if (disposed) return;
+        isMotionReduced = reduceMotion;
+        if (reduceMotion && WallpaperCrossFadeOpacity > 0)
+        {
+            FinishWallpaperCrossFade();
+        }
     }
 
     public Bitmap? GetBackgroundBitmap()
@@ -290,13 +312,73 @@ public partial class BackgroundViewModel : ViewModelBase, IDisposable
         BackgroundImageSource = bitmap;
         if (previewSettings.ThemeColorMode == ThemeColorModes.Wallpaper)
         {
+            // Theme tokens switch atomically with the wallpaper decision; only pixels fade.
             wallpaperChanged(previewSettings);
         }
 
-        if (old is not null)
+        if (!isMotionReduced && old is not null && bitmap is not null)
         {
-            Dispatcher.UIThread.Post(() => old.Dispose(), DispatcherPriority.Background);
+            StartWallpaperCrossFade(old);
         }
+        else
+        {
+            Dispatcher.UIThread.Post(() => old?.Dispose(), DispatcherPriority.Background);
+        }
+    }
+
+    /// <summary>
+    /// ADR-016 壁纸交叉淡化：逻辑源立即切换（主题采样同步），旧壁纸作为覆盖层淡出，
+    /// 用引用相等判断处理快速连续更换，不排队也不回滚。
+    /// </summary>
+    private void StartWallpaperCrossFade(IDisposable oldBitmap)
+    {
+        if (pendingCrossFadeBitmap is { } replaced
+            && !ReferenceEquals(replaced, oldBitmap))
+        {
+            replaced.Dispose();
+        }
+
+        pendingCrossFadeBitmap = oldBitmap;
+        WallpaperCrossFadeSource = oldBitmap as IImage;
+        WallpaperCrossFadeOpacity = 1;
+        _ = FinishWallpaperCrossFadeAfterDelayAsync(oldBitmap);
+    }
+
+    private async Task FinishWallpaperCrossFadeAfterDelayAsync(IDisposable oldBitmap)
+    {
+        try
+        {
+            await Task.Delay(MotionTokens.NormalDuration + TimeSpan.FromMilliseconds(80));
+        }
+        catch (OperationCanceledException)
+        {
+            return;
+        }
+
+        if (disposed || !ReferenceEquals(pendingCrossFadeBitmap, oldBitmap))
+        {
+            return;
+        }
+
+        FinishWallpaperCrossFade();
+    }
+
+    private void FinishWallpaperCrossFade()
+    {
+        WallpaperCrossFadeOpacity = 0;
+        var finished = pendingCrossFadeBitmap;
+        pendingCrossFadeBitmap = null;
+        Dispatcher.UIThread.Post(
+            () =>
+            {
+                if (!disposed)
+                {
+                    WallpaperCrossFadeSource = null;
+                }
+
+                finished?.Dispose();
+            },
+            DispatcherPriority.Background);
     }
 
     private static Bitmap? LoadBundledBackground()
@@ -332,5 +414,9 @@ public partial class BackgroundViewModel : ViewModelBase, IDisposable
 
         disposed = true;
         (BackgroundImageSource as IDisposable)?.Dispose();
+        (WallpaperCrossFadeSource as IDisposable)?.Dispose();
+        WallpaperCrossFadeSource = null;
+        WallpaperCrossFadeOpacity = 0;
+        pendingCrossFadeBitmap = null;
     }
 }

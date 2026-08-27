@@ -30,6 +30,11 @@
               Classes.motion-enabled="{Binding IsMotionEnabled}">
         <Rectangle Fill="{Binding Background.BackgroundFillBrush}"/>
         <Image Source="{Binding Background.BackgroundImageSource}" Stretch="{Binding Background.BackgroundStretch}"/>
+        <Image Classes="background-crossfade"
+               Classes.crossfade-enabled="{Binding IsMotionEnabled}"
+               Source="{Binding Background.WallpaperCrossFadeSource}"
+               Opacity="{Binding Background.WallpaperCrossFadeOpacity}"
+               Stretch="{Binding Background.BackgroundStretch}"/>
 
         <Grid RowDefinitions="Auto,*"
               IsEnabled="{Binding ModalHost.IsBaseLayerInteractive}">

@@ -124,6 +124,56 @@ public sealed class BackgroundViewModelTests : IDisposable
     }
 
     [Fact]
+    public async Task UpdateBackgroundImageAsync_WhenMotionEnabled_PreviousWallpaperFadesAsOverlay()
+    {
+        var hash = await ComputeHashAsync(PngBytes);
+        using var cache = CreateCache(new ImageHandler(PngBytes));
+        using var viewModel = new BackgroundViewModel(
+            cache,
+            new LocalDiagnostics(),
+            _ => { },
+            _ => new TestImage(),
+            () => new TestImage());
+
+        await viewModel.UpdateBackgroundImageAsync(
+            new LauncherSettings { BackgroundSource = BackgroundSources.Remote },
+            CreateRemoteSnapshot(hash),
+            CancellationToken.None);
+        var firstSwap = viewModel.BackgroundImageSource;
+
+        await viewModel.UpdateBackgroundImageAsync(
+            new LauncherSettings { BackgroundSource = BackgroundSources.Remote },
+            CreateRemoteSnapshot(hash),
+            CancellationToken.None);
+
+        Assert.NotSame(firstSwap, viewModel.BackgroundImageSource);
+        Assert.Same(firstSwap, viewModel.WallpaperCrossFadeSource);
+        Assert.Equal(1.0, viewModel.WallpaperCrossFadeOpacity);
+    }
+
+    [Fact]
+    public async Task UpdateBackgroundImageAsync_WhenMotionReduced_SkipsCrossFadeOverlay()
+    {
+        var bundled = new TestImage();
+        using var cache = CreateCache(new ImageHandler(PngBytes));
+        using var viewModel = new BackgroundViewModel(
+            cache,
+            new LocalDiagnostics(),
+            _ => { },
+            _ => new TestImage(),
+            () => bundled);
+        viewModel.ApplyMotionPreference(reduceMotion: true);
+
+        await viewModel.UpdateBackgroundImageAsync(
+            new LauncherSettings { BackgroundSource = BackgroundSources.Remote },
+            CreateRemoteSnapshot("1"),
+            CancellationToken.None);
+
+        Assert.Null(viewModel.WallpaperCrossFadeSource);
+        Assert.Equal(0.0, viewModel.WallpaperCrossFadeOpacity);
+    }
+
+    [Fact]
     public async Task UpdateBackgroundImageAsync_WhenRemoteDownloadIsCanceled_PropagatesCancellation()
     {
         using var cache = CreateCache(new CancellationHandler());

@@ -606,6 +606,17 @@
     <Style Selector="Grid.motion-shell">
         <Setter Property="Opacity" Value="1"/>
     </Style>
+    <!-- ADR-016 外观预览：壁纸作为单一视觉对象交叉淡化；降动效时无过渡类即瞬切。 -->
+    <Style Selector="Image.background-crossfade">
+        <Setter Property="Opacity" Value="0"/>
+    </Style>
+    <Style Selector="Image.background-crossfade.crossfade-enabled">
+        <Setter Property="Transitions">
+            <Transitions>
+                <DoubleTransition Property="Opacity" Duration="{StaticResource Launcher.Motion.Duration.Normal}" Easing="{StaticResource Launcher.Motion.Easing.Enter}"/>
+            </Transitions>
+        </Setter>
+    </Style>
     <Style Selector="Grid.motion-shell.motion-enabled.motion-enter">
         <Style.Animations>
             <Animation Duration="{StaticResource Launcher.Motion.Duration.Fast}" FillMode="Forward" Easing="{StaticResource Launcher.Motion.Easing.Enter}">
