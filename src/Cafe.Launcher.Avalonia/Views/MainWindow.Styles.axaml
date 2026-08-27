@@ -351,16 +351,29 @@
         <Setter Property="CornerRadius" Value="{StaticResource Launcher.Radius.Xs}"/>
         <Setter Property="Template" Value="{StaticResource LauncherBorderButtonTemplate}"/>
     </Style>
-    <Style Selector="Button.confirm-dialog-action:pointerover">
-        <Setter Property="Background" Value="{DynamicResource Launcher.Color.Primary.Soft}"/>
-        <Setter Property="Foreground" Value="{DynamicResource Launcher.Color.Primary.Hover}"/>
+    <Style Selector="Button.confirm-dialog-action.primary-action">
+        <Setter Property="Background" Value="{DynamicResource Launcher.Color.Primary}"/>
+        <Setter Property="Foreground" Value="{DynamicResource Launcher.Color.OnPrimary}"/>
     </Style>
-    <Style Selector="Button.confirm-dialog-action:pressed">
-        <Setter Property="Background" Value="{DynamicResource Launcher.Color.Primary.Soft}"/>
-        <Setter Property="Foreground" Value="{DynamicResource Launcher.Color.Primary.Pressed}"/>
+    <Style Selector="Button.confirm-dialog-action.primary-action:pointerover">
+        <Setter Property="Background" Value="{DynamicResource Launcher.Color.Primary.Hover}"/>
+        <Setter Property="Foreground" Value="{DynamicResource Launcher.Color.OnPrimary}"/>
+    </Style>
+    <Style Selector="Button.confirm-dialog-action.primary-action:pressed">
+        <Setter Property="Background" Value="{DynamicResource Launcher.Color.Primary.Pressed}"/>
+        <Setter Property="Foreground" Value="{DynamicResource Launcher.Color.OnPrimary}"/>
     </Style>
     <Style Selector="Button.confirm-dialog-action.danger-action">
-        <Setter Property="Foreground" Value="{StaticResource Launcher.Color.Danger}"/>
+        <Setter Property="Background" Value="{DynamicResource Launcher.Color.Error}"/>
+        <Setter Property="Foreground" Value="{DynamicResource Launcher.Color.OnError}"/>
+    </Style>
+    <Style Selector="Button.confirm-dialog-action.danger-action:pointerover">
+        <Setter Property="Background" Value="{DynamicResource Launcher.Color.Error.Hover}"/>
+        <Setter Property="Foreground" Value="{DynamicResource Launcher.Color.OnError}"/>
+    </Style>
+    <Style Selector="Button.confirm-dialog-action.danger-action:pressed">
+        <Setter Property="Background" Value="{DynamicResource Launcher.Color.Error.Pressed}"/>
+        <Setter Property="Foreground" Value="{DynamicResource Launcher.Color.OnError}"/>
     </Style>
     <Style Selector="Button.confirm-dialog-action:disabled">
         <Setter Property="Background" Value="{StaticResource Launcher.Color.Transparent}"/>
@@ -368,6 +381,12 @@
         <Setter Property="Foreground" Value="{DynamicResource Launcher.Text.Secondary}"/>
     </Style>
     <Style Selector="Button.primary-action.dialog-action:disabled">
+        <Setter Property="Background" Value="{DynamicResource Launcher.Color.Content.Row}"/>
+        <Setter Property="BorderBrush" Value="{DynamicResource Launcher.Color.Card.Border}"/>
+        <Setter Property="BorderThickness" Value="{StaticResource Launcher.Border.Thickness.Default}"/>
+        <Setter Property="Foreground" Value="{DynamicResource Launcher.Text.Secondary}"/>
+    </Style>
+    <Style Selector="Button.confirm-dialog-action.danger-action:disabled">
         <Setter Property="Background" Value="{DynamicResource Launcher.Color.Content.Row}"/>
         <Setter Property="BorderBrush" Value="{DynamicResource Launcher.Color.Card.Border}"/>
         <Setter Property="BorderThickness" Value="{StaticResource Launcher.Border.Thickness.Default}"/>

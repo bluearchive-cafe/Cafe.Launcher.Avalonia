@@ -3294,7 +3294,7 @@ public sealed partial class UiStyleContractTests
     }
 
     [Fact]
-    public void ConfirmDialogs_UseBasicMessageAndTextActions()
+    public void ConfirmDialogs_UseBasicMessageAndFilledPrimaryActions()
     {
         var control = XDocument.Load(ProjectFile("Controls/ConfirmDialog.axaml"));
         var message = control
@@ -3322,6 +3322,34 @@ public sealed partial class UiStyleContractTests
         Assert.Equal(
             "{DynamicResource Launcher.Color.Primary}",
             GetStyleSetters(styles, "Button.confirm-dialog-action")["Foreground"]);
+
+        var filledPrimary = GetStyleSetters(styles, "Button.confirm-dialog-action.primary-action");
+        Assert.Equal(
+            "{DynamicResource Launcher.Color.Primary}",
+            filledPrimary["Background"]);
+        Assert.Equal(
+            "{DynamicResource Launcher.Color.OnPrimary}",
+            filledPrimary["Foreground"]);
+        Assert.Equal(
+            "{DynamicResource Launcher.Color.Primary.Hover}",
+            GetStyleSetters(styles, "Button.confirm-dialog-action.primary-action:pointerover")["Background"]);
+        Assert.Equal(
+            "{DynamicResource Launcher.Color.Primary.Pressed}",
+            GetStyleSetters(styles, "Button.confirm-dialog-action.primary-action:pressed")["Background"]);
+
+        var filledDanger = GetStyleSetters(styles, "Button.confirm-dialog-action.danger-action");
+        Assert.Equal(
+            "{DynamicResource Launcher.Color.Error}",
+            filledDanger["Background"]);
+        Assert.Equal(
+            "{DynamicResource Launcher.Color.OnError}",
+            filledDanger["Foreground"]);
+        Assert.Equal(
+            "{DynamicResource Launcher.Color.Error.Hover}",
+            GetStyleSetters(styles, "Button.confirm-dialog-action.danger-action:pointerover")["Background"]);
+        Assert.Equal(
+            "{DynamicResource Launcher.Color.Error.Pressed}",
+            GetStyleSetters(styles, "Button.confirm-dialog-action.danger-action:pressed")["Background"]);
     }
 
     [Fact]
