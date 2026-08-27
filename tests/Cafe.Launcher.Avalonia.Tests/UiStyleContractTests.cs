@@ -4022,11 +4022,11 @@ public sealed partial class UiStyleContractTests
         AssertDirectionalMotionAnimation(
             document,
             "StackPanel.motion-content.motion-enabled.motion-enter.motion-forward",
-            "14");
+            "{StaticResource Launcher.Motion.Offset.StepForward}");
         AssertDirectionalMotionAnimation(
             document,
             "StackPanel.motion-content.motion-enabled.motion-enter.motion-backward",
-            "-14");
+            "{StaticResource Launcher.Motion.Offset.StepBackward}");
         AssertMotionAnimation(
             document,
             "Border.motion-bottom.motion-enabled.motion-enter",

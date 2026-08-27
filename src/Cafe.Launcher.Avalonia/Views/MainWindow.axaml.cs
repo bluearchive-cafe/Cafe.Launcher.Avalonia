@@ -1,9 +1,15 @@
 using Avalonia;
+using Avalonia.Animation;
+using Avalonia.Animation.Easings;
 using Avalonia.Controls;
 using Avalonia.Controls.ApplicationLifetimes;
 using Avalonia.Input;
 using Avalonia.Input.Platform;
+using Avalonia.Media;
 using Avalonia.Platform.Storage;
+using Avalonia.Styling;
+using Avalonia.Threading;
+using Cafe.Launcher.Avalonia.Helpers;
 using Cafe.Launcher.Avalonia.Models;
 using Cafe.Launcher.Avalonia.Services;
 using Cafe.Launcher.Avalonia.Services.Diagnostics;
@@ -13,6 +19,7 @@ using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
 using System.Linq;
+using System.Threading;
 using System.Threading.Tasks;
 
 namespace Cafe.Launcher.Avalonia.Views;
@@ -41,25 +48,21 @@ public partial class MainWindow : Window
         Opened += PlayShellEntranceOnce;
     }
 
-    private bool shellEntranceHandled;
-
     /// <summary>ADR-016: plays the one-shot whole-content fade-in; interactive from the first frame.</summary>
     private void PlayShellEntranceOnce(object? sender, EventArgs e)
     {
         Opened -= PlayShellEntranceOnce;
-        if (shellEntranceHandled)
-        {
-            return;
-        }
-
-        shellEntranceHandled = true;
         var viewModel = configuredViewModel ?? DataContext as MainWindowViewModel;
         if (viewModel is not { IsMotionEnabled: true })
         {
             return;
         }
 
-        ShellRoot.Classes.Add("motion-enter");
+        // 在首个渲染帧之前压暗，再进入动画，避免“先全亮一帧再变暗”的闪白。
+        ShellRoot.Opacity = 0;
+        Dispatcher.UIThread.Post(
+            () => ShellRoot.Classes.Add("motion-enter"),
+            DispatcherPriority.Loaded);
     }
 
     public void ConfigureViewModel(MainWindowViewModel viewModel)
@@ -80,6 +83,38 @@ public partial class MainWindow : Window
         viewModel.WindowChrome.CloseRequested += PerformClose;
         viewModel.WindowChrome.RestoreRequested += ShowWindow;
         viewModel.Dialogs.ErrorCopyDetailsRequested += CopyErrorDetailsToClipboard;
+        viewModel.Background.PreviousWallpaperFadingOut += FadeOutPreviousWallpaper;
+    }
+
+    /// <summary>
+    /// ADR-016 壁纸交叉淡化：旧图先整层写入覆盖区（不经过过渡，避免“反向淡入”），
+    /// 随后一次性淡出；取消令牌保证降动效切换立即停止。
+    /// </summary>
+    private void FadeOutPreviousWallpaper(IImage previousImage, CancellationToken cancellationToken)
+    {
+        BackgroundCrossFade.Source = previousImage;
+        BackgroundCrossFade.Opacity = 1;
+
+        var fadeOut = new Animation
+        {
+            Duration = MotionTokens.NormalDuration,
+            Easing = new SplineEasing { X1 = 0, Y1 = 0, X2 = 0, Y2 = 1 },
+            FillMode = FillMode.Forward,
+            Children =
+            {
+                new KeyFrame
+                {
+                    Cue = new Cue(0),
+                    Setters = { new Setter { Property = Visual.OpacityProperty, Value = 1d } },
+                },
+                new KeyFrame
+                {
+                    Cue = new Cue(1),
+                    Setters = { new Setter { Property = Visual.OpacityProperty, Value = 0d } },
+                },
+            },
+        };
+        _ = fadeOut.RunAsync(BackgroundCrossFade, cancellationToken);
     }
 
     protected override void OnClosed(EventArgs e)
@@ -95,6 +130,7 @@ public partial class MainWindow : Window
             return;
         }
 
+        viewModel.Background.PreviousWallpaperFadingOut -= FadeOutPreviousWallpaper;
         viewModel.Operations.MinimizeRequested -= MinimizeWindow;
         viewModel.WindowChrome.MinimizeRequested -= MinimizeWindow;
         viewModel.WindowChrome.CloseRequested -= PerformClose;

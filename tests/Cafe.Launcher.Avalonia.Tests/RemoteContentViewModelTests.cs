@@ -469,8 +469,9 @@ public sealed class RemoteContentViewModelTests
 
         var transition = Assert.IsType<global::Cafe.Launcher.Avalonia.Helpers.BannerCarouselTransition>(
             context.ViewModel.CarouselTransition);
-        Assert.True(transition.NextSlideIsDirectional);
-        Assert.False(transition.NextSlideIsBackward);
+        Assert.Equal(
+            global::Cafe.Launcher.Avalonia.Helpers.BannerCarouselTransition.CarouselSlideMode.Forward,
+            transition.PendingSlide);
     }
 
     [Fact]
@@ -486,8 +487,9 @@ public sealed class RemoteContentViewModelTests
 
         var transition = Assert.IsType<global::Cafe.Launcher.Avalonia.Helpers.BannerCarouselTransition>(
             context.ViewModel.CarouselTransition);
-        Assert.True(transition.NextSlideIsDirectional);
-        Assert.True(transition.NextSlideIsBackward);
+        Assert.Equal(
+            global::Cafe.Launcher.Avalonia.Helpers.BannerCarouselTransition.CarouselSlideMode.Backward,
+            transition.PendingSlide);
     }
 
     [Fact]
@@ -504,8 +506,9 @@ public sealed class RemoteContentViewModelTests
 
         var transition = Assert.IsType<global::Cafe.Launcher.Avalonia.Helpers.BannerCarouselTransition>(
             context.ViewModel.CarouselTransition);
-        Assert.False(transition.NextSlideIsDirectional);
-        Assert.False(transition.NextSlideIsBackward);
+        Assert.Equal(
+            global::Cafe.Launcher.Avalonia.Helpers.BannerCarouselTransition.CarouselSlideMode.Fade,
+            transition.PendingSlide);
     }
 
     [Fact]
@@ -522,8 +525,9 @@ public sealed class RemoteContentViewModelTests
 
         var transition = Assert.IsType<global::Cafe.Launcher.Avalonia.Helpers.BannerCarouselTransition>(
             context.ViewModel.CarouselTransition);
-        Assert.False(transition.NextSlideIsDirectional);
-        Assert.False(transition.NextSlideIsBackward);
+        Assert.Equal(
+            global::Cafe.Launcher.Avalonia.Helpers.BannerCarouselTransition.CarouselSlideMode.Fade,
+            transition.PendingSlide);
     }
 
     [Fact]

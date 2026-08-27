@@ -139,7 +139,10 @@ public sealed class BackgroundViewModelTests : IDisposable
             new LauncherSettings { BackgroundSource = BackgroundSources.Remote },
             CreateRemoteSnapshot(hash),
             CancellationToken.None);
-        var firstSwap = viewModel.BackgroundImageSource;
+        var firstSwap = (TestImage)viewModel.BackgroundImageSource!;
+        var fadingOut = new List<TestImage>();
+
+        viewModel.PreviousWallpaperFadingOut += (image, _) => fadingOut.Add((TestImage)image);
 
         await viewModel.UpdateBackgroundImageAsync(
             new LauncherSettings { BackgroundSource = BackgroundSources.Remote },
@@ -147,8 +150,7 @@ public sealed class BackgroundViewModelTests : IDisposable
             CancellationToken.None);
 
         Assert.NotSame(firstSwap, viewModel.BackgroundImageSource);
-        Assert.Same(firstSwap, viewModel.WallpaperCrossFadeSource);
-        Assert.Equal(1.0, viewModel.WallpaperCrossFadeOpacity);
+        Assert.Equal([firstSwap], fadingOut);
     }
 
     [Fact]
@@ -162,6 +164,8 @@ public sealed class BackgroundViewModelTests : IDisposable
             _ => { },
             _ => new TestImage(),
             () => bundled);
+        var fadingOut = new List<IImage>();
+        viewModel.PreviousWallpaperFadingOut += (image, _) => fadingOut.Add(image);
         viewModel.ApplyMotionPreference(reduceMotion: true);
 
         await viewModel.UpdateBackgroundImageAsync(
@@ -169,8 +173,7 @@ public sealed class BackgroundViewModelTests : IDisposable
             CreateRemoteSnapshot("1"),
             CancellationToken.None);
 
-        Assert.Null(viewModel.WallpaperCrossFadeSource);
-        Assert.Equal(0.0, viewModel.WallpaperCrossFadeOpacity);
+        Assert.Empty(fadingOut);
     }
 
     [Fact]

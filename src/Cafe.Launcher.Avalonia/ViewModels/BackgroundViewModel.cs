@@ -41,8 +41,18 @@ public partial class BackgroundViewModel : ViewModelBase, IDisposable
     [ObservableProperty]
     private double wallpaperCrossFadeOpacity;
 
+    /// <summary>
+    /// Raised right after the logical wallpaper source switches, carrying the previous image for
+    /// the view to fade out. Raised only under full motion; subscribers must not block.
+    /// </summary>
+    internal event Action<IImage, CancellationToken>? PreviousWallpaperFadingOut;
+
+    private static readonly TimeSpan WallpaperFadeDuration = MotionTokens.NormalDuration;
+    private const int WallpaperFadeDisposeGraceMs = 80;
+
     private bool isMotionReduced;
-    private IDisposable? pendingCrossFadeBitmap;
+    private IDisposable? fadingOutWallpaper;
+    private CancellationTokenSource? wallpaperFadeCancellation;
 
     public Func<Task<string?>>? PickBackgroundImageAsync { get; set; }
 
@@ -162,15 +172,18 @@ public partial class BackgroundViewModel : ViewModelBase, IDisposable
             : null;
     }
 
-    /// <summary>ADR-016: reduced motion finishes any in-flight wallpaper cross-fade instantly.</summary>
+    /// <summary>ADR-016: reduced motion cancels any in-flight wallpaper cross-fade immediately.</summary>
     public void ApplyMotionPreference(bool reduceMotion)
     {
         if (disposed) return;
         isMotionReduced = reduceMotion;
-        if (reduceMotion && WallpaperCrossFadeOpacity > 0)
+        if (!reduceMotion)
         {
-            FinishWallpaperCrossFade();
+            return;
         }
+
+        wallpaperFadeCancellation?.Cancel();
+        FinishWallpaperFade();
     }
 
     public Bitmap? GetBackgroundBitmap()
@@ -327,58 +340,54 @@ public partial class BackgroundViewModel : ViewModelBase, IDisposable
     }
 
     /// <summary>
-    /// ADR-016 壁纸交叉淡化：逻辑源立即切换（主题采样同步），旧壁纸作为覆盖层淡出，
-    /// 用引用相等判断处理快速连续更换，不排队也不回滚。
+    /// ADR-016 壁纸交叉淡化：逻辑源立即切换（主题采样同步），旧图交由视图层作为覆盖层淡出。
+    /// 快速连续更换时以“最新状态优先”直接释放上一张在途旧图，不排队也不回滚。
     /// </summary>
     private void StartWallpaperCrossFade(IDisposable oldBitmap)
     {
-        if (pendingCrossFadeBitmap is { } replaced
-            && !ReferenceEquals(replaced, oldBitmap))
+        var superseded = Interlocked.Exchange(ref fadingOutWallpaper, oldBitmap);
+        if (superseded is not null && !ReferenceEquals(superseded, oldBitmap))
         {
-            replaced.Dispose();
+            superseded.Dispose();
         }
 
-        pendingCrossFadeBitmap = oldBitmap;
-        WallpaperCrossFadeSource = oldBitmap as IImage;
-        WallpaperCrossFadeOpacity = 1;
-        _ = FinishWallpaperCrossFadeAfterDelayAsync(oldBitmap);
+        PreviousWallpaperFadingOut?.Invoke((IImage)oldBitmap, GetFadeToken());
+        _ = DisposeWhenFadeCompletesAsync(oldBitmap);
     }
 
-    private async Task FinishWallpaperCrossFadeAfterDelayAsync(IDisposable oldBitmap)
+    private CancellationToken GetFadeToken()
+    {
+        wallpaperFadeCancellation?.Cancel();
+        wallpaperFadeCancellation?.Dispose();
+        wallpaperFadeCancellation = new CancellationTokenSource();
+        return wallpaperFadeCancellation.Token;
+    }
+
+    private async Task DisposeWhenFadeCompletesAsync(IDisposable oldBitmap)
     {
         try
         {
-            await Task.Delay(MotionTokens.NormalDuration + TimeSpan.FromMilliseconds(80));
+            await Task.Delay(WallpaperFadeDuration + TimeSpan.FromMilliseconds(WallpaperFadeDisposeGraceMs));
         }
         catch (OperationCanceledException)
         {
             return;
         }
 
-        if (disposed || !ReferenceEquals(pendingCrossFadeBitmap, oldBitmap))
+        if (disposed || !ReferenceEquals(fadingOutWallpaper, oldBitmap))
         {
             return;
         }
 
-        FinishWallpaperCrossFade();
+        fadingOutWallpaper = null;
+        oldBitmap.Dispose();
     }
 
-    private void FinishWallpaperCrossFade()
+    private void FinishWallpaperFade()
     {
-        WallpaperCrossFadeOpacity = 0;
-        var finished = pendingCrossFadeBitmap;
-        pendingCrossFadeBitmap = null;
-        Dispatcher.UIThread.Post(
-            () =>
-            {
-                if (!disposed)
-                {
-                    WallpaperCrossFadeSource = null;
-                }
-
-                finished?.Dispose();
-            },
-            DispatcherPriority.Background);
+        var finished = fadingOutWallpaper;
+        fadingOutWallpaper = null;
+        Dispatcher.UIThread.Post(() => finished?.Dispose(), DispatcherPriority.Background);
     }
 
     private static Bitmap? LoadBundledBackground()
@@ -413,10 +422,9 @@ public partial class BackgroundViewModel : ViewModelBase, IDisposable
         }
 
         disposed = true;
+        wallpaperFadeCancellation?.Cancel();
         (BackgroundImageSource as IDisposable)?.Dispose();
-        (WallpaperCrossFadeSource as IDisposable)?.Dispose();
-        WallpaperCrossFadeSource = null;
-        WallpaperCrossFadeOpacity = 0;
-        pendingCrossFadeBitmap = null;
+        fadingOutWallpaper?.Dispose();
+        fadingOutWallpaper = null;
     }
 }

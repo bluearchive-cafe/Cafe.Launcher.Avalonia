@@ -4,9 +4,9 @@ using System.Threading;
 using System.Threading.Tasks;
 using Avalonia;
 using Avalonia.Animation;
-using Avalonia.Animation.Easings;
-using Avalonia.Media;
 using Avalonia.Styling;
+using Avalonia.Media.Transformation;
+using Easings = Avalonia.Animation.Easings;
 
 namespace Cafe.Launcher.Avalonia.Helpers;
 
@@ -16,23 +16,31 @@ namespace Cafe.Launcher.Avalonia.Helpers;
 /// </summary>
 public sealed class BannerCarouselTransition : IPageTransition
 {
-    private const double ManualSlideOffset = 18;
+    /// <summary>Slide mode consumed by the next <see cref="Start"/> call.</summary>
+    public enum CarouselSlideMode
+    {
+        Fade,
+        Forward,
+        Backward
+    }
+
+    private const string ManualSlideOffsetKey = "Launcher.Motion.Offset.CarouselManual";
+    private const double ManualSlideOffsetFallback = 18;
+    private const string EnterEasingKey = "Launcher.Motion.Easing.Enter";
+    private const string ExitEasingKey = "Launcher.Motion.Easing.Exit";
 
     public BannerCarouselTransition(TimeSpan duration) => Duration = duration;
 
     /// <summary>Gets the transition duration; reduced motion supplies <see cref="TimeSpan.Zero"/>.</summary>
     public TimeSpan Duration { get; }
 
-    // Set by the view model immediately before a manual navigation; consumed once by the next Start.
-    internal bool NextSlideIsDirectional { get; set; }
-    internal bool NextSlideIsBackward { get; set; }
+    /// <summary>Gets or sets how the next page change animates; manual navigation sets this before switching.</summary>
+    internal CarouselSlideMode PendingSlide { get; set; } = CarouselSlideMode.Fade;
 
     public async Task Start(Visual? from, Visual? to, bool forward, CancellationToken cancellationToken)
     {
-        var isDirectional = NextSlideIsDirectional;
-        var isBackward = NextSlideIsBackward;
-        NextSlideIsDirectional = false;
-        NextSlideIsBackward = false;
+        var slideMode = PendingSlide;
+        PendingSlide = CarouselSlideMode.Fade;
 
         if ((from is null && to is null)
             || Duration == TimeSpan.Zero
@@ -41,19 +49,24 @@ public sealed class BannerCarouselTransition : IPageTransition
             return;
         }
 
-        var offsetX = isDirectional
-            ? (isBackward ? -ManualSlideOffset : ManualSlideOffset)
-            : 0.0;
+        var offsetX = slideMode switch
+        {
+            CarouselSlideMode.Forward => MotionResourceLookup.GetDouble(
+                ManualSlideOffsetKey, ManualSlideOffsetFallback),
+            CarouselSlideMode.Backward => -MotionResourceLookup.GetDouble(
+                ManualSlideOffsetKey, ManualSlideOffsetFallback),
+            _ => 0.0,
+        };
 
         var animations = new List<Task>(2);
         if (to is not null)
         {
-            animations.Add(CreateEnterAnimation(Duration, offsetX).RunAsync(to, cancellationToken));
+            animations.Add(CreateEnterAnimation(offsetX).RunAsync(to, cancellationToken));
         }
 
         if (from is not null)
         {
-            animations.Add(CreateExitAnimation(Duration).RunAsync(from, cancellationToken));
+            animations.Add(CreateExitAnimation().RunAsync(from, cancellationToken));
         }
 
         try
@@ -66,12 +79,12 @@ public sealed class BannerCarouselTransition : IPageTransition
         }
     }
 
-    private static Animation CreateEnterAnimation(TimeSpan duration, double offsetX)
+    private Animation CreateEnterAnimation(double offsetX)
     {
         var animation = new Animation
         {
-            Duration = duration,
-            Easing = new SplineEasing { X1 = 0, Y1 = 0, X2 = 0, Y2 = 1 },
+            Duration = Duration,
+            Easing = MotionResourceLookup.GetEasing(EnterEasingKey, () => new Easings.SplineEasing { X1 = 0, Y1 = 0, X2 = 0, Y2 = 1 }),
             FillMode = FillMode.Forward,
         };
         var startFrame = new KeyFrame { Cue = new Cue(0) };
@@ -81,7 +94,7 @@ public sealed class BannerCarouselTransition : IPageTransition
             startFrame.Setters.Add(new Setter
             {
                 Property = Visual.RenderTransformProperty,
-                Value = global::Avalonia.Media.Transformation.TransformOperations.Parse(
+                Value = TransformOperations.Parse(
                     FormattableString.Invariant($"translateX({offsetX}px)")),
             });
         }
@@ -94,12 +107,12 @@ public sealed class BannerCarouselTransition : IPageTransition
         return animation;
     }
 
-    private static Animation CreateExitAnimation(TimeSpan duration)
+    private Animation CreateExitAnimation()
     {
         return new Animation
         {
-            Duration = duration,
-            Easing = new SplineEasing { X1 = 1, Y1 = 0, X2 = 1, Y2 = 1 },
+            Duration = Duration,
+            Easing = MotionResourceLookup.GetEasing(ExitEasingKey, () => new Easings.SplineEasing { X1 = 1, Y1 = 0, X2 = 1, Y2 = 1 }),
             FillMode = FillMode.Forward,
             Children =
             {

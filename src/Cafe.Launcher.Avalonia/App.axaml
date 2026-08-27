@@ -190,6 +190,9 @@
             <x:Double x:Key="Launcher.Motion.Offset.Toast">6</x:Double>
             <x:Double x:Key="Launcher.Motion.Offset.Surface">8</x:Double>
             <x:Double x:Key="Launcher.Motion.Offset.Bottom">12</x:Double>
+            <x:Double x:Key="Launcher.Motion.Offset.StepForward">14</x:Double>
+            <x:Double x:Key="Launcher.Motion.Offset.StepBackward">-14</x:Double>
+            <x:Double x:Key="Launcher.Motion.Offset.CarouselManual">18</x:Double>
             <!-- Windows 语义曲线（与已确认的原型一致）：进入减速 / 退出加速 / 点到点位移。 -->
             <SplineEasing x:Key="Launcher.Motion.Easing.Enter" X1="0" Y1="0" X2="0" Y2="1"/>
             <SplineEasing x:Key="Launcher.Motion.Easing.Exit" X1="1" Y1="0" X2="1" Y2="1"/>

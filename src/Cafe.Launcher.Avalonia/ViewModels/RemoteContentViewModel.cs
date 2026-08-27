@@ -341,14 +341,13 @@ public partial class RemoteContentViewModel : ViewModelBase, IDisposable
             return false;
         }
 
-        NavigateToBanner(next, directional: false, backward: false);
+        NavigateToBanner(next, BannerCarouselTransition.CarouselSlideMode.Fade);
         return true;
     }
 
-    private void NavigateToBanner(int index, bool directional, bool backward)
+    private void NavigateToBanner(int index, BannerCarouselTransition.CarouselSlideMode slideMode)
     {
-        bannerTransition.NextSlideIsDirectional = directional;
-        bannerTransition.NextSlideIsBackward = backward;
+        bannerTransition.PendingSlide = slideMode;
         CarouselSelectedIndex = index;
     }
 
@@ -419,9 +418,11 @@ public partial class RemoteContentViewModel : ViewModelBase, IDisposable
             return;
         }
 
-        bannerTransition.NextSlideIsDirectional = true;
-        bannerTransition.NextSlideIsBackward = backward;
-        CarouselSelectedIndex = index;
+        NavigateToBanner(
+            index,
+            backward
+                ? BannerCarouselTransition.CarouselSlideMode.Backward
+                : BannerCarouselTransition.CarouselSlideMode.Forward);
         StopCarouselTimer();
         _ = ScheduleCarouselResumeAfterDelayAsync();
     }
@@ -432,9 +433,7 @@ public partial class RemoteContentViewModel : ViewModelBase, IDisposable
         if (index >= 0 && index < BannerItems.Count)
         {
             // Dot navigation has no spatial neighbour relation; it always cross-fades.
-            bannerTransition.NextSlideIsDirectional = false;
-            bannerTransition.NextSlideIsBackward = false;
-            CarouselSelectedIndex = index;
+            NavigateToBanner(index, BannerCarouselTransition.CarouselSlideMode.Fade);
             StopCarouselTimer();
             _ = ScheduleCarouselResumeAfterDelayAsync();
         }

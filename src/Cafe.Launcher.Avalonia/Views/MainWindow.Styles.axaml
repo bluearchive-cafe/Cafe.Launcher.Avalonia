@@ -606,17 +606,8 @@
     <Style Selector="Grid.motion-shell">
         <Setter Property="Opacity" Value="1"/>
     </Style>
-    <!-- ADR-016 外观预览：壁纸作为单一视觉对象交叉淡化；降动效时无过渡类即瞬切。 -->
-    <Style Selector="Image.background-crossfade">
-        <Setter Property="Opacity" Value="0"/>
-    </Style>
-    <Style Selector="Image.background-crossfade.crossfade-enabled">
-        <Setter Property="Transitions">
-            <Transitions>
-                <DoubleTransition Property="Opacity" Duration="{StaticResource Launcher.Motion.Duration.Normal}" Easing="{StaticResource Launcher.Motion.Easing.Enter}"/>
-            </Transitions>
-        </Setter>
-    </Style>
+    <!-- ADR-016 壁纸淡出覆盖层：Source/Opacity 由视图后置代码在收到
+         Background.PreviousWallpaperFadingOut 事件时驱动，不用属性过渡以免“先淡入旧图”。 -->
     <Style Selector="Grid.motion-shell.motion-enabled.motion-enter">
         <Style.Animations>
             <Animation Duration="{StaticResource Launcher.Motion.Duration.Fast}" FillMode="Forward" Easing="{StaticResource Launcher.Motion.Easing.Enter}">
@@ -737,7 +728,7 @@
             <Animation Duration="{StaticResource Launcher.Motion.Duration.Fast}" FillMode="Forward" Easing="{StaticResource Launcher.Motion.Easing.PointToPoint}">
                 <KeyFrame Cue="0%">
                     <Setter Property="Opacity" Value="0"/>
-                    <Setter Property="TranslateTransform.X" Value="14"/>
+                    <Setter Property="TranslateTransform.X" Value="{StaticResource Launcher.Motion.Offset.StepForward}"/>
                 </KeyFrame>
                 <KeyFrame Cue="100%">
                     <Setter Property="Opacity" Value="1"/>
@@ -751,7 +742,7 @@
             <Animation Duration="{StaticResource Launcher.Motion.Duration.Fast}" FillMode="Forward" Easing="{StaticResource Launcher.Motion.Easing.PointToPoint}">
                 <KeyFrame Cue="0%">
                     <Setter Property="Opacity" Value="0"/>
-                    <Setter Property="TranslateTransform.X" Value="-14"/>
+                    <Setter Property="TranslateTransform.X" Value="{StaticResource Launcher.Motion.Offset.StepBackward}"/>
                 </KeyFrame>
                 <KeyFrame Cue="100%">
                     <Setter Property="Opacity" Value="1"/>
