@@ -12,15 +12,22 @@
         <Setter Property="Opacity" Value="1"/>
         <Setter Property="ClipToBounds" Value="True"/>
     </Style>
+    <!-- ADR-016 Toast 进入：透明度走进入减速曲线，右侧短距滑入走点到点曲线，均为 167ms 快速档。 -->
     <Style Selector="Border.toast-card.motion-enabled:not(.motion-exit)">
         <Style.Animations>
-            <Animation Duration="{StaticResource Launcher.Motion.Duration.Content}" FillMode="Forward" Easing="{StaticResource Launcher.Motion.Easing.Enter}">
+            <Animation Duration="{StaticResource Launcher.Motion.Duration.Fast}" FillMode="Forward" Easing="{StaticResource Launcher.Motion.Easing.Enter}">
                 <KeyFrame Cue="0%">
                     <Setter Property="Opacity" Value="0"/>
-                    <Setter Property="TranslateTransform.X" Value="{StaticResource Launcher.Motion.Offset.Toast}"/>
                 </KeyFrame>
                 <KeyFrame Cue="100%">
                     <Setter Property="Opacity" Value="1"/>
+                </KeyFrame>
+            </Animation>
+            <Animation Duration="{StaticResource Launcher.Motion.Duration.Fast}" FillMode="Forward" Easing="{StaticResource Launcher.Motion.Easing.PointToPoint}">
+                <KeyFrame Cue="0%">
+                    <Setter Property="TranslateTransform.X" Value="{StaticResource Launcher.Motion.Offset.Toast}"/>
+                </KeyFrame>
+                <KeyFrame Cue="100%">
                     <Setter Property="TranslateTransform.X" Value="0"/>
                 </KeyFrame>
             </Animation>

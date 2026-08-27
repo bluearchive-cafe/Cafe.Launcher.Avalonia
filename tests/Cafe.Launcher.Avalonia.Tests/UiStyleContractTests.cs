@@ -3961,12 +3961,44 @@ public sealed partial class UiStyleContractTests
             exitMotionStyle.Elements(),
             element => element.Name.LocalName == "Style.Animations");
 
-        AssertMotionAnimation(
-            document,
-            "Border.toast-card.motion-enabled:not(.motion-exit)",
-            "{StaticResource Launcher.Motion.Duration.Content}",
-            expectedStartOffset: "{StaticResource Launcher.Motion.Offset.Toast}",
-            expectedStartAxis: "TranslateTransform.X");
+        var enterAnimations = enterMotionStyle
+            .Descendants()
+            .Where(element => element.Name.LocalName == "Animation")
+            .ToList();
+        Assert.Equal(2, enterAnimations.Count);
+        foreach (var animation in enterAnimations)
+        {
+            Assert.Equal(
+                "{StaticResource Launcher.Motion.Duration.Fast}",
+                animation.Attribute("Duration")?.Value);
+            Assert.Equal("Forward", animation.Attribute("FillMode")?.Value);
+            Assert.Null(animation.Attribute("Delay"));
+        }
+
+        // ADR-016 Toast 进入：透明度走进入减速曲线，右侧滑入位移走点到点曲线（与已确认原型一致）。
+        var opacityEnterAnimation = Assert.Single(
+            enterAnimations,
+            animation => animation.Attribute("Easing")?.Value == "{StaticResource Launcher.Motion.Easing.Enter}");
+        var slideEnterAnimation = Assert.Single(
+            enterAnimations,
+            animation => animation.Attribute("Easing")?.Value == "{StaticResource Launcher.Motion.Easing.PointToPoint}");
+
+        var opacityEnterKeyFrames = GetAnimationKeyFrames(opacityEnterAnimation);
+        AssertAnimationProperty(opacityEnterKeyFrames, "Opacity", "0", "1");
+        Assert.DoesNotContain(
+            opacityEnterKeyFrames.SelectMany(pair => pair.Value.Elements()),
+            element => element.Attribute("Property")?.Value == "TranslateTransform.X");
+
+        var slideEnterKeyFrames = GetAnimationKeyFrames(slideEnterAnimation);
+        AssertAnimationProperty(
+            slideEnterKeyFrames,
+            "TranslateTransform.X",
+            "{StaticResource Launcher.Motion.Offset.Toast}",
+            "0");
+        Assert.DoesNotContain(
+            slideEnterKeyFrames.SelectMany(pair => pair.Value.Elements()),
+            element => element.Attribute("Property")?.Value == "Opacity");
+
         AssertExitMotionAnimation(
             document,
             "Border.toast-card.motion-enabled.motion-exit",
