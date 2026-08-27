@@ -626,18 +626,7 @@
             </Animation>
         </Style.Animations>
     </Style>
-    <Style Selector="Grid.motion-overlay.motion-enabled.motion-enter > Border.motion-surface > Grid.motion-surface-content">
-        <Style.Animations>
-            <Animation Duration="{StaticResource Launcher.Motion.Duration.Normal}" FillMode="Forward" Easing="{StaticResource Launcher.Motion.Easing.Enter}">
-                <KeyFrame Cue="0%">
-                    <Setter Property="Opacity" Value="0"/>
-                </KeyFrame>
-                <KeyFrame Cue="100%">
-                    <Setter Property="Opacity" Value="1"/>
-                </KeyFrame>
-            </Animation>
-        </Style.Animations>
-    </Style>
+    <!-- ADR-016：内部内容层不再二次运动；表面的单次进入/退出已由平行规则覆盖。 -->
     <Style Selector="Grid.motion-overlay.motion-enabled.motion-exit">
         <Style.Animations>
             <Animation Duration="{StaticResource Launcher.Motion.Duration.Fast}" FillMode="Forward" Easing="{StaticResource Launcher.Motion.Easing.Exit}">
@@ -658,18 +647,6 @@
                 </KeyFrame>
                 <KeyFrame Cue="100%">
                     <Setter Property="TranslateTransform.Y" Value="{StaticResource Launcher.Motion.Offset.Surface}"/>
-                </KeyFrame>
-            </Animation>
-        </Style.Animations>
-    </Style>
-    <Style Selector="Grid.motion-overlay.motion-enabled.motion-exit > Border.motion-surface > Grid.motion-surface-content">
-        <Style.Animations>
-            <Animation Duration="{StaticResource Launcher.Motion.Duration.Fast}" FillMode="Forward" Easing="{StaticResource Launcher.Motion.Easing.Exit}">
-                <KeyFrame Cue="0%">
-                    <Setter Property="Opacity" Value="1"/>
-                </KeyFrame>
-                <KeyFrame Cue="100%">
-                    <Setter Property="Opacity" Value="0"/>
                 </KeyFrame>
             </Animation>
         </Style.Animations>
@@ -703,30 +680,55 @@
             </Animation>
         </Style.Animations>
     </Style>
+    <!-- ADR-016 内容切换：同级目的地纯交叉淡化，无方向位移；向导等有前后关系的内容按下方向短距离移动。 -->
     <Style Selector=":is(UserControl).motion-content.motion-enabled.motion-enter">
         <Style.Animations>
-            <Animation Duration="{StaticResource Launcher.Motion.Duration.Content}" FillMode="Forward" Easing="{StaticResource Launcher.Motion.Easing.Enter}">
+            <Animation Duration="{StaticResource Launcher.Motion.Duration.Fast}" FillMode="Forward" Easing="{StaticResource Launcher.Motion.Easing.Enter}">
                 <KeyFrame Cue="0%">
                     <Setter Property="Opacity" Value="0"/>
-                    <Setter Property="TranslateTransform.Y" Value="{StaticResource Launcher.Motion.Offset.Content}"/>
                 </KeyFrame>
                 <KeyFrame Cue="100%">
                     <Setter Property="Opacity" Value="1"/>
-                    <Setter Property="TranslateTransform.Y" Value="0"/>
                 </KeyFrame>
             </Animation>
         </Style.Animations>
     </Style>
     <Style Selector="StackPanel.motion-content.motion-enabled.motion-enter">
         <Style.Animations>
-            <Animation Duration="{StaticResource Launcher.Motion.Duration.Content}" FillMode="Forward" Easing="{StaticResource Launcher.Motion.Easing.Enter}">
+            <Animation Duration="{StaticResource Launcher.Motion.Duration.Fast}" FillMode="Forward" Easing="{StaticResource Launcher.Motion.Easing.Enter}">
                 <KeyFrame Cue="0%">
                     <Setter Property="Opacity" Value="0"/>
-                    <Setter Property="TranslateTransform.Y" Value="{StaticResource Launcher.Motion.Offset.Content}"/>
                 </KeyFrame>
                 <KeyFrame Cue="100%">
                     <Setter Property="Opacity" Value="1"/>
-                    <Setter Property="TranslateTransform.Y" Value="0"/>
+                </KeyFrame>
+            </Animation>
+        </Style.Animations>
+    </Style>
+    <Style Selector="StackPanel.motion-content.motion-enabled.motion-enter.motion-forward">
+        <Style.Animations>
+            <Animation Duration="{StaticResource Launcher.Motion.Duration.Fast}" FillMode="Forward" Easing="{StaticResource Launcher.Motion.Easing.PointToPoint}">
+                <KeyFrame Cue="0%">
+                    <Setter Property="Opacity" Value="0"/>
+                    <Setter Property="TranslateTransform.X" Value="14"/>
+                </KeyFrame>
+                <KeyFrame Cue="100%">
+                    <Setter Property="Opacity" Value="1"/>
+                    <Setter Property="TranslateTransform.X" Value="0"/>
+                </KeyFrame>
+            </Animation>
+        </Style.Animations>
+    </Style>
+    <Style Selector="StackPanel.motion-content.motion-enabled.motion-enter.motion-backward">
+        <Style.Animations>
+            <Animation Duration="{StaticResource Launcher.Motion.Duration.Fast}" FillMode="Forward" Easing="{StaticResource Launcher.Motion.Easing.PointToPoint}">
+                <KeyFrame Cue="0%">
+                    <Setter Property="Opacity" Value="0"/>
+                    <Setter Property="TranslateTransform.X" Value="-14"/>
+                </KeyFrame>
+                <KeyFrame Cue="100%">
+                    <Setter Property="Opacity" Value="1"/>
+                    <Setter Property="TranslateTransform.X" Value="0"/>
                 </KeyFrame>
             </Animation>
         </Style.Animations>
