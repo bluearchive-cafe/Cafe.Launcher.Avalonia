@@ -17,7 +17,7 @@ namespace Cafe.Launcher.Avalonia.Views;
 
 /// <summary>
 /// 设置向导覆盖层：步骤切换按实验台 <c>ChangeWizardAsync</c>/<c>FadeSwapAsync</c> 的顺序换页实现——
-/// 标准档 250ms 对半分，旧内容先以退出加速曲线淡出（无位移），中点瞬时换内容并把滚动复位到
+/// 空间档 333ms 对半分，旧内容先以退出加速曲线淡出（无位移），中点瞬时换内容并把滚动复位到
 /// 顶部，起势帧消化目标面板的首次布局后，新内容再以进入减速曲线同步淡入并按方向滑入 ±14px，
 /// 收尾多留一拍缓冲再结算。最新状态优先、可中断、不排队；降动效、未附着或无可见面板时直接
 /// 换内容定格。
@@ -169,7 +169,9 @@ public partial class SetupWizardOverlay : UserControl
         try
         {
             var token = cancellation.Token;
-            var half = TimeSpan.FromTicks(MotionTokens.NormalDuration.Ticks / 2);
+            // 空间档 333ms 对半分（实验台 Fluent Profile.Normal=333，向导属空间连续家族）；
+            // 250ms 档的半程在前载 Enter 曲线下可见运动只摊约 3 帧，观感顿挫。
+            var half = TimeSpan.FromTicks(MotionTokens.SpatialDuration.Ticks / 2);
             var forward = toIndex > fromIndex;
             var enterOffset = MotionResourceLookup.GetDouble(
                 forward ? StepForwardOffsetKey : StepBackwardOffsetKey,
