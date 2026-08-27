@@ -2,39 +2,49 @@
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
              xmlns:controls="using:Cafe.Launcher.Avalonia.Controls"
              x:Class="Cafe.Launcher.Avalonia.Controls.ConfirmDialog"
-             x:Name="Root"
-             x:DataType="controls:ConfirmDialog">
-    <Grid IsVisible="{Binding IsOpen, ElementName=Root}" Classes="dialog-overlay">
-        <Border Classes="dialog confirm-panel" MaxWidth="{Binding DialogMaxWidth, ElementName=Root}"
-                MaxHeight="{StaticResource Launcher.Component.Dialog.Confirm.MaxHeight}">
-            <Grid RowDefinitions="Auto,*,Auto" Classes="confirm-layout">
-                <TextBlock Text="{Binding Title, ElementName=Root}" Classes="dialog-title"/>
-                <ScrollViewer Grid.Row="1" Classes="scroll-pad"
-                              IsVisible="{Binding DisplayMessage, ElementName=Root, Converter={x:Static StringConverters.IsNotNullOrEmpty}}">
-                    <TextBlock Text="{Binding DisplayMessage, ElementName=Root}"
-                               Classes="dialog-message"
-                               TextWrapping="Wrap"/>
-                </ScrollViewer>
-                <StackPanel Grid.Row="2" Classes="confirm-actions">
-                    <Button x:Name="SafeActionButton" Classes="flat-action dialog-action confirm-dialog-action" Command="{Binding CancelCommand, ElementName=Root}"
+             x:Name="Root">
+    <!-- M3 basic 对话框的标准门面：标题 + 支撑文案（Description） +
+         滚动正文（Message，可为空）+ 无装饰动作带。解剖由 DialogSurface 承载，
+         此处只做类型化归约；安全钮默认聚焦的规律由代码后置执行。 -->
+    <!-- B2 将统一迁移到 MotionVisibility 显隐通道；本批保持直接绑定以保证行为零回退。 -->
+    <Grid Classes="dialog-overlay" IsVisible="{Binding IsOpen, ElementName=Root}">
+        <controls:DialogSurface
+            Form="Basic"
+            MaxWidth="{StaticResource Launcher.Component.Dialog.Confirm.MaxWidth}"
+            MinWidth="{StaticResource Launcher.Component.Dialog.Confirm.MinWidth}"
+            MaxHeight="{StaticResource Launcher.Component.Dialog.Confirm.MaxHeight}"
+            Title="{Binding Title, ElementName=Root}"
+            Subtitle="{Binding Description, ElementName=Root}">
+            <controls:DialogSurface.Content>
+                <TextBlock Text="{Binding Message, ElementName=Root}"
+                           Classes="dialog-message"
+                           TextWrapping="Wrap"/>
+            </controls:DialogSurface.Content>
+            <controls:DialogSurface.Footer>
+                <StackPanel Classes="confirm-actions">
+                    <Button x:Name="SafeActionButton"
+                            Classes="flat-action dialog-action confirm-dialog-action"
+                            Command="{Binding CancelCommand, ElementName=Root}"
                             ToolTip.Tip="{Binding CancelText, ElementName=Root}"
                             AutomationProperties.Name="{Binding CancelText, ElementName=Root}">
                         <TextBlock Text="{Binding CancelText, ElementName=Root}"/>
                     </Button>
-                    <Button Classes="primary-action dialog-action confirm-dialog-action" Command="{Binding ConfirmCommand, ElementName=Root}"
+                    <Button Classes="primary-action dialog-action confirm-dialog-action"
+                            Command="{Binding ConfirmCommand, ElementName=Root}"
                             IsVisible="{Binding !IsDangerConfirm, ElementName=Root}"
                             ToolTip.Tip="{Binding ConfirmText, ElementName=Root}"
                             AutomationProperties.Name="{Binding ConfirmText, ElementName=Root}">
                         <TextBlock Text="{Binding ConfirmText, ElementName=Root}"/>
                     </Button>
-                    <Button Classes="danger-action dialog-action confirm-dialog-action" Command="{Binding ConfirmCommand, ElementName=Root}"
+                    <Button Classes="danger-action dialog-action confirm-dialog-action"
+                            Command="{Binding ConfirmCommand, ElementName=Root}"
                             IsVisible="{Binding IsDangerConfirm, ElementName=Root}"
                             ToolTip.Tip="{Binding ConfirmText, ElementName=Root}"
                             AutomationProperties.Name="{Binding ConfirmText, ElementName=Root}">
                         <TextBlock Text="{Binding ConfirmText, ElementName=Root}"/>
                     </Button>
                 </StackPanel>
-            </Grid>
-        </Border>
+            </controls:DialogSurface.Footer>
+        </controls:DialogSurface>
     </Grid>
 </UserControl>

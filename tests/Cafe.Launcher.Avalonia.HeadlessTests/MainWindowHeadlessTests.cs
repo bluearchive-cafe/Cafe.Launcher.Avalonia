@@ -1795,12 +1795,12 @@ public sealed class MainWindowHeadlessTests
             .GetVisualDescendants()
             .OfType<global::Cafe.Launcher.Avalonia.Controls.ConfirmDialog>()
             .Single(control => control.IsOpen);
-        var panel = dialog
+        var surface = dialog
             .GetVisualDescendants()
-            .OfType<Border>()
-            .Single(control => control.Classes.Contains("confirm-panel"));
+            .OfType<global::Cafe.Launcher.Avalonia.Controls.DialogSurface>()
+            .Single();
 
-        Assert.True(panel.Bounds.Width <= 540);
+        Assert.True(surface.Bounds.Width <= 540);
     }
 
     [AvaloniaFact]

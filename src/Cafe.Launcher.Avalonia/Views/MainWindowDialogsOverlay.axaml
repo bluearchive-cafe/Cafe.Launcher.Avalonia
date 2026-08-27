@@ -259,31 +259,21 @@
         <controls:ConfirmDialog IsOpen="{Binding Dialogs.IsRepairConfirmVisible}"
                                 Title="{Binding Shell.I18n[repairConfirm]}"
                                 Description="{Binding Shell.I18n[repairConfirmDescription]}"
-                                IconKind="Tools"
                                 Message="{Binding Dialogs.RepairConfirmText}"
-                                AlertTitle="{Binding Shell.I18n[repairConfirm]}"
-                                IsWarningAlert="True"
                                 CancelText="{Binding Shell.I18n[cancel]}"
                                 CancelCommand="{Binding Dialogs.CancelRepairCommand}"
                                 ConfirmText="{Binding Shell.I18n[repair]}"
-                                ConfirmCommand="{Binding Dialogs.ConfirmRepairCommand}"
-                                ConfirmIconKind="Tools"
-                                CloseToolTip="{Binding Shell.I18n[close]}"/>
+                                ConfirmCommand="{Binding Dialogs.ConfirmRepairCommand}"/>
 
         <!-- Resource Panel source confirmation dialog -->
         <controls:ConfirmDialog IsOpen="{Binding Dialogs.IsResourcePanelSourceConfirmVisible}"
                                 Title="{Binding Shell.I18n[resourcePanelCafeOnlyTitle]}"
                                 Description="{Binding Shell.I18n[resourcePanelCafeOnlyDescription]}"
-                                IconKind="Web"
                                 Message="{Binding Dialogs.ResourcePanelSourceConfirmText}"
-                                AlertTitle="{Binding Shell.I18n[resourcePanelCafeOnlyTitle]}"
-                                IsWarningAlert="True"
                                 CancelText="{Binding Shell.I18n[cancel]}"
                                 CancelCommand="{Binding Dialogs.CancelResourcePanelSourceSwitchCommand}"
                                 ConfirmText="{Binding Shell.I18n[resourcePanelCafeOnlySwitch]}"
-                                ConfirmCommand="{Binding Dialogs.ConfirmResourcePanelSourceSwitchCommand}"
-                                ConfirmIconKind="SwapHorizontal"
-                                CloseToolTip="{Binding Shell.I18n[close]}"/>
+                                ConfirmCommand="{Binding Dialogs.ConfirmResourcePanelSourceSwitchCommand}"/>
 
         <!-- Update available dialog -->
         <Grid Classes="dialog-overlay motion-overlay"
@@ -395,65 +385,44 @@
         <controls:ConfirmDialog IsOpen="{Binding Dialogs.IsStopConfirmVisible}"
                                 Title="{Binding Shell.I18n[stopDownloadTitle]}"
                                 Description="{Binding Shell.I18n[stopDownloadMessage]}"
-                                IconKind="Stop"
                                 Message="{Binding Dialogs.StopConfirmText}"
-                                AlertTitle="{Binding Shell.I18n[stopDownloadTitle]}"
-                                IsWarningAlert="True"
                                 CancelText="{Binding Shell.I18n[cancel]}"
                                 CancelCommand="{Binding Dialogs.CancelStopCommand}"
                                 ConfirmText="{Binding Shell.I18n[stop]}"
                                 ConfirmCommand="{Binding Dialogs.ConfirmStopCommand}"
-                                ConfirmIconKind="Stop"
-                                IsDangerConfirm="True"
-                                CloseToolTip="{Binding Shell.I18n[close]}"/>
+                                IsDangerConfirm="True"/>
 
         <!-- Download running close confirmation dialog -->
         <controls:ConfirmDialog IsOpen="{Binding Dialogs.IsDownloadRunningCloseConfirmVisible}"
                                 Title="{Binding Shell.I18n[stopDownloadTitle]}"
                                 Description="{Binding Shell.I18n[stopDownloadMessage]}"
-                                IconKind="Stop"
                                 Message="{Binding Dialogs.DownloadRunningCloseConfirmText}"
-                                AlertTitle="{Binding Shell.I18n[stopDownloadTitle]}"
-                                IsWarningAlert="True"
                                 CancelText="{Binding Shell.I18n[cancel]}"
                                 CancelCommand="{Binding Dialogs.CancelCloseWhileDownloadingCommand}"
                                 ConfirmText="{Binding Shell.I18n[stop]}"
                                 ConfirmCommand="{Binding Dialogs.ConfirmCloseWhileDownloadingCommand}"
-                                ConfirmIconKind="Stop"
-                                IsDangerConfirm="True"
-                                CloseToolTip="{Binding Shell.I18n[close]}"/>
+                                IsDangerConfirm="True"/>
 
         <!-- Uninstall confirmation dialog -->
         <controls:ConfirmDialog IsOpen="{Binding Dialogs.IsUninstallConfirmVisible}"
                                 Title="{Binding Shell.I18n[confirmUninstall]}"
                                 Description="{Binding Shell.I18n[uninstallConfirmDescription]}"
-                                IconKind="AlertCircle"
                                 Message="{Binding Dialogs.UninstallConfirmText}"
-                                AlertTitle="{Binding Shell.I18n[confirmUninstall]}"
-                                IsDangerAlert="True"
                                 CancelText="{Binding Shell.I18n[cancel]}"
                                 CancelCommand="{Binding Dialogs.CancelUninstallCommand}"
                                 ConfirmText="{Binding Shell.I18n[uninstall]}"
                                 ConfirmCommand="{Binding Dialogs.ConfirmUninstallCommand}"
-                                ConfirmIconKind="TrashCanOutline"
-                                IsDangerConfirm="True"
-                                CloseToolTip="{Binding Shell.I18n[close]}"/>
+                                IsDangerConfirm="True"/>
 
         <!-- Unsaved changes confirmation dialog -->
         <controls:ConfirmDialog IsOpen="{Binding Settings.IsUnsavedChangesVisible}"
                                 Title="{Binding Shell.I18n[unsavedChanges]}"
                                 Description="{Binding Shell.I18n[unsavedChangesMessage]}"
-                                IconKind="AlertCircle"
-                                Message="{Binding Shell.I18n[unsavedChangesMessage]}"
-                                AlertTitle="{Binding Shell.I18n[unsavedChanges]}"
-                                IsWarningAlert="True"
                                 CancelText="{Binding Shell.I18n[keepEditing]}"
                                 CancelCommand="{Binding WindowChrome.KeepEditingSettingsCommand}"
                                 ConfirmText="{Binding Shell.I18n[discardChanges]}"
                                 ConfirmCommand="{Binding WindowChrome.DiscardSettingsChangesCommand}"
-                                ConfirmIconKind="DeleteOutline"
-                                IsDangerConfirm="True"
-                                CloseToolTip="{Binding Shell.I18n[close]}"/>
+                                IsDangerConfirm="True"/>
 
         <!-- Critical error dialog -->
         <Grid Classes="dialog-overlay motion-overlay"
@@ -522,23 +491,17 @@
         <controls:ConfirmDialog IsOpen="{Binding Dialogs.IsSetupWizardExitConfirmVisible}"
                                 Title="{Binding Shell.I18n[setupWizardExitTitle]}"
                                 Description="{Binding Shell.I18n[setupWizardExitMessage]}"
-                                IconKind="AlertOutline"
                                 CancelText="{Binding Shell.I18n[cancel]}"
                                 CancelCommand="{Binding Dialogs.CancelSetupWizardExitCommand}"
                                 ConfirmText="{Binding Shell.I18n[setupWizardExitConfirm]}"
-                                ConfirmCommand="{Binding Dialogs.ConfirmSetupWizardExitCommand}"
-                                ConfirmIconKind="ExitToApp"
-                                CloseToolTip="{Binding Shell.I18n[close]}"/>
+                                ConfirmCommand="{Binding Dialogs.ConfirmSetupWizardExitCommand}"/>
         <controls:ConfirmDialog IsOpen="{Binding Dialogs.IsDebugResetConfirmationVisible}"
                                 Title="{Binding Shell.I18n[debugResetSettingsTitle]}"
                                 Description="{Binding Shell.I18n[debugResetSettingsDescription]}"
-                                IconKind="AlertOutline"
                                 CancelText="{Binding Shell.I18n[cancel]}"
                                 CancelCommand="{Binding Dialogs.CancelDebugResetCommand}"
                                 ConfirmText="{Binding Shell.I18n[debugResetSettingsConfirm]}"
                                 ConfirmCommand="{Binding Dialogs.ConfirmDebugResetCommand}"
-                                ConfirmIconKind="Restore"
-                                IsDangerConfirm="True"
-                                CloseToolTip="{Binding Shell.I18n[close]}"/>
+                                IsDangerConfirm="True"/>
     </Grid>
 </UserControl>

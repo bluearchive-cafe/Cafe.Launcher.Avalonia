@@ -2447,26 +2447,24 @@ public sealed partial class UiStyleContractTests
     public void ConfirmDialog_LongContentScrollsWhileActionsRemainFixed()
     {
         var document = XDocument.Load(ProjectFile("Controls/ConfirmDialog.axaml"));
-        var panel = document
+        var surface = document
             .Descendants()
-            .Single(element => element.Name.LocalName == "Border" && HasClass(element, "confirm-panel"));
-        var layout = panel
-            .Elements()
-            .Single(element => element.Name.LocalName == "Grid");
-        var messageScroller = layout
-            .Elements()
-            .Single(element => element.Name.LocalName == "ScrollViewer");
-        var actions = layout
-            .Elements()
-            .Single(element => element.Name.LocalName == "StackPanel" && HasClass(element, "confirm-actions"));
+            .Single(element => element.Name.LocalName == "DialogSurface");
 
+        // Basic 形态归约到 DialogSurface；尺寸由 Confirm token 家族背书。
+        Assert.Equal("Basic", surface.Attribute("Form")?.Value);
         Assert.Equal(
             "{StaticResource Launcher.Component.Dialog.Confirm.MaxHeight}",
-            panel.Attribute("MaxHeight")?.Value);
-        var styles = XDocument.Load(ProjectFile("Views/MainWindow.Styles.axaml"));
+            surface.Attribute("MaxHeight")?.Value);
         Assert.Equal(
             "{StaticResource Launcher.Component.Dialog.Confirm.MinWidth}",
-            GetStyleSetters(styles, "Border.confirm-panel")["MinWidth"]);
+            surface.Attribute("MinWidth")?.Value);
+
+        // Basic 动作带绝不出现 hairline footer；三按钮规律保留。
+        Assert.DoesNotContain(
+            document.Descendants(),
+            element => element.Name.LocalName == "Border" && HasClass(element, "dialog-footer"));
+
         var application = XDocument.Load(ProjectFile("App.axaml"));
         var maxHeightToken = application
             .Descendants()
@@ -2474,12 +2472,12 @@ public sealed partial class UiStyleContractTests
                 attribute.Name.LocalName == "Key"
                 && attribute.Value == "Launcher.Component.Dialog.Confirm.MaxHeight"));
         Assert.Equal("480", maxHeightToken.Value);
-        Assert.Equal("Auto,*,Auto", layout.Attribute("RowDefinitions")?.Value);
-        Assert.Equal("1", messageScroller.Attribute("Grid.Row")?.Value);
-        Assert.Equal("2", actions.Attribute("Grid.Row")?.Value);
-        Assert.DoesNotContain(
-            layout.Elements(),
-            element => element.Name.LocalName == "Border" && HasClass(element, "dialog-footer"));
+
+        var actions = document
+            .Descendants()
+            .Single(element =>
+                element.Name.LocalName == "StackPanel" && HasClass(element, "confirm-actions"));
+        Assert.Equal(3, actions.Elements().Count(element => element.Name.LocalName == "Button"));
     }
 
     [Fact]
@@ -3319,7 +3317,7 @@ public sealed partial class UiStyleContractTests
                 element.Name.LocalName == "TextBlock"
                 && HasClass(element, "dialog-message"));
         Assert.Equal(
-            "{Binding DisplayMessage, ElementName=Root}",
+            "{Binding Message, ElementName=Root}",
             message.Attribute("Text")?.Value);
 
         Assert.DoesNotContain(
@@ -3366,6 +3364,42 @@ public sealed partial class UiStyleContractTests
         Assert.Equal(
             "{DynamicResource Launcher.Color.Error.Pressed}",
             GetStyleSetters(styles, "Button.confirm-dialog-action.danger-action:pressed")["Background"]);
+    }
+
+    [Fact]
+    public void ConfirmDialogUsages_ExposeNoDeadAnatomyProperties()
+    {
+        // ADR-015：永不渲染的旧解剖属性整体退场，调用点不得再传。
+        var deadPropertyNames = new[]
+        {
+            "IconKind",
+            "AlertTitle",
+            "IsWarningAlert",
+            "IsDangerAlert",
+            "ConfirmIconKind",
+            "CloseToolTip",
+            "DialogMaxWidth"
+        };
+
+        var document = XDocument.Load(ProjectFile("Views/MainWindowDialogsOverlay.axaml"));
+        var usages = document
+            .Descendants()
+            .Where(element => element.Name.LocalName == "ConfirmDialog")
+            .ToArray();
+        Assert.Equal(8, usages.Length);
+
+        foreach (var usage in usages)
+        {
+            foreach (var deadPropertyName in deadPropertyNames)
+            {
+                Assert.Null(usage.Attribute(deadPropertyName));
+            }
+
+            // 调用点必须同时给出门面归约所需的最小语义集。
+            Assert.NotNull(usage.Attribute("Title"));
+            Assert.NotNull(usage.Attribute("CancelCommand"));
+            Assert.NotNull(usage.Attribute("ConfirmCommand"));
+        }
     }
 
     [Fact]
