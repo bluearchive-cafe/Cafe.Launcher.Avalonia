@@ -1,6 +1,7 @@
 <Styles xmlns="https://github.com/avaloniaui"
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
         xmlns:views="using:Cafe.Launcher.Avalonia.Views"
+        xmlns:helpers="using:Cafe.Launcher.Avalonia.Helpers"
         xmlns:materialIcons="clr-namespace:Material.Icons.Avalonia;assembly=Material.Icons.Avalonia">
     <Styles.Resources>
         <ControlTemplate x:Key="LauncherBorderButtonTemplate" TargetType="Button">
@@ -503,9 +504,8 @@
         <Setter Property="Background" Value="{DynamicResource Launcher.Color.Surface}"/>
         <Setter Property="CornerRadius" Value="{StaticResource Launcher.Radius.Md}"/>
         <Setter Property="Padding" Value="{StaticResource Launcher.Spacing.Thickness.Lg}"/>
-        <!-- 阴影值集中见 Launcher.Elevation.Shadow.Md；BoxShadow 为无 TypeConverter 的结构体，
-             无法经 {StaticResource} 在 Setter 处运行时转换（Avalonia 12.1.1 限制，详见 spec §3.1）。 -->
-        <Setter Property="BoxShadow" Value="0 12 32 0 #33000000"/>
+        <!-- 阴影经 BoxShadowsExtension 消费 token（BoxShadows 无 TypeConverter）。 -->
+        <Setter Property="BoxShadow" Value="{helpers:BoxShadows {StaticResource Launcher.Elevation.Shadow.Md}}"/>
     </Style>
     <Style Selector="Border.remote-surface">
         <Setter Property="HorizontalAlignment" Value="Left"/>
@@ -992,8 +992,8 @@
         <Setter Property="Background" Value="{DynamicResource Launcher.Color.Dialog.Background}"/>
         <Setter Property="CornerRadius" Value="{StaticResource Launcher.Radius.Lg}"/>
         <Setter Property="ClipToBounds" Value="True"/>
-        <!-- 阴影值集中见 Launcher.Elevation.Shadow.Lg（BoxShadow 无 TypeConverter，同上限制）。 -->
-        <Setter Property="BoxShadow" Value="0 22 55 0 #66000000"/>
+        <!-- 阴影经 BoxShadowsExtension 消费 token；对话框表面迁入 DialogSurface 后本类随批次退场。 -->
+        <Setter Property="BoxShadow" Value="{helpers:BoxShadows {StaticResource Launcher.Elevation.Shadow.Lg}}"/>
     </Style>
     <Style Selector="Border.overlay-dialog">
         <Setter Property="Margin" Value="{StaticResource Launcher.Spacing.Thickness.Xxl}"/>
@@ -1537,4 +1537,5 @@
     <StyleInclude Source="avares://Cafe.Launcher.Avalonia/Views/Styles/RemoteContent.axaml"/>
     <StyleInclude Source="avares://Cafe.Launcher.Avalonia/Views/Styles/SetupWizard.axaml"/>
     <StyleInclude Source="avares://Cafe.Launcher.Avalonia/Views/Styles/Toast.axaml"/>
+    <StyleInclude Source="avares://Cafe.Launcher.Avalonia/Views/Styles/DialogSurface.axaml"/>
 </Styles>

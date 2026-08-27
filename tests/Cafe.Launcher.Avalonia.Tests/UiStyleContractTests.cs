@@ -874,7 +874,8 @@ public sealed partial class UiStyleContractTests
         "Views/Styles/Diagnostics.axaml",
         "Views/Styles/RemoteContent.axaml",
         "Views/Styles/SetupWizard.axaml",
-        "Views/Styles/Toast.axaml"
+        "Views/Styles/Toast.axaml",
+        "Views/Styles/DialogSurface.axaml"
     ];
 
     private static readonly string[] ViewFiles =
@@ -4383,6 +4384,88 @@ public sealed partial class UiStyleContractTests
                 .Elements()
                 .Single(element => element.Attribute("Property")?.Value == property)
                 .Attribute("Value")?.Value);
+    }
+
+    [Fact]
+    public void DialogSurface_ControlTheme_CarriesAnatomyPartsAndProfileTokens()
+    {
+        var document = XDocument.Load(ProjectFile("Views/Styles/DialogSurface.axaml"));
+        var templateText = document.ToString();
+
+        foreach (var partName in new[]
+                 {
+                     "PART_PanelHead",
+                     "PART_BasicHead",
+                     "PART_CloseButton",
+                     "PART_ScrollViewer",
+                     "PART_ScrollContentPresenter",
+                     "PART_FooterBand",
+                     "PART_BadgePresenter",
+                     "PART_FooterLeadingPresenter"
+                 })
+        {
+            Assert.Contains(partName, templateText, StringComparison.Ordinal);
+        }
+
+        // ADR-015 表面档案：阴影必须经 BoxShadowsExtension 消费单一 token。
+        Assert.Contains(
+            "{helpers:BoxShadows {StaticResource Launcher.Elevation.Shadow.Dialog}}",
+            templateText,
+            StringComparison.Ordinal);
+
+        // 形态与状态的伪类解剖规则齐备。
+        var selectors = document
+            .Descendants()
+            .Where(element => element.Name.LocalName == "Style")
+            .Select(element => element.Attribute("Selector")?.Value ?? string.Empty)
+            .ToArray();
+        Assert.Contains("controls|DialogSurface /template/ Border#PART_PanelHead", selectors);
+        Assert.Contains("controls|DialogSurface:panel /template/ Border#PART_PanelHead", selectors);
+        Assert.Contains("controls|DialogSurface:panel /template/ Border#PART_FooterBand", selectors);
+        Assert.Contains("controls|DialogSurface:info /template/ ContentPresenter#PART_BadgePresenter", selectors);
+        Assert.Contains("controls|DialogSurface:warning /template/ ContentPresenter#PART_BadgePresenter", selectors);
+        Assert.Contains("controls|DialogSurface:danger /template/ ContentPresenter#PART_BadgePresenter", selectors);
+    }
+
+    [Fact]
+    public void DialogFamily_ProfileTokens_AreDeclaredOnceInAppResources()
+    {
+        var appResources = XDocument.Load(ProjectFile("App.axaml"));
+        var xKey = XNamespace.Get("http://schemas.microsoft.com/winfx/2006/xaml") + "Key";
+
+        string TokenValue(string key) => appResources
+            .Descendants()
+            .Single(element => (string?)element.Attribute(xKey) == key)
+            .Value;
+
+        Assert.Equal("20", TokenValue("Launcher.Component.Dialog.CornerRadius"));
+        Assert.Equal(2, TokenValue("Launcher.Elevation.Shadow.Dialog").Split(',').Length);
+        Assert.Equal("32", TokenValue("Launcher.Component.Dialog.Badge.Size"));
+        Assert.Equal("16", TokenValue("Launcher.Component.Dialog.Badge.CornerRadius"));
+        Assert.Equal("20,0,10,0", TokenValue("Launcher.Component.Dialog.Panel.Head.Padding"));
+        Assert.Equal("24,18,24,18", TokenValue("Launcher.Component.Dialog.Panel.Body.Padding"));
+        Assert.Equal("24,14,24,20", TokenValue("Launcher.Component.Dialog.Panel.Footer.Padding"));
+        Assert.Equal("28,28,28,8", TokenValue("Launcher.Component.Dialog.Basic.Head.Padding"));
+        Assert.Equal("28,0,28,0", TokenValue("Launcher.Component.Dialog.Basic.Content.Padding"));
+        Assert.Equal("28,16,28,24", TokenValue("Launcher.Component.Dialog.Basic.Actions.Padding"));
+    }
+
+    [Fact]
+    public void BoxShadowSetters_ConsumeElevationTokensInsteadOfLiterals()
+    {
+        var literalShadowValues = new List<string>();
+        foreach (var relativePath in StyleFiles)
+        {
+            var document = XDocument.Load(ProjectFile(relativePath));
+            literalShadowValues.AddRange(document
+                .Descendants()
+                .Where(element => element.Name.LocalName == "Setter"
+                    && element.Attribute("Property")?.Value == "BoxShadow")
+                .Select(element => element.Attribute("Value")?.Value ?? string.Empty)
+                .Where(value => value.Contains('#')));
+        }
+
+        Assert.Empty(literalShadowValues);
     }
 
     private static void AssertOrdered(string text, params string[] values)

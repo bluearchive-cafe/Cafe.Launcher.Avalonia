@@ -125,6 +125,18 @@
             <x:Double x:Key="Launcher.Component.Dialog.Update.MaxWidth">620</x:Double>
             <x:Double x:Key="Launcher.Component.Dialog.Update.FileList.MaxHeight">240</x:Double>
             <x:Double x:Key="Launcher.Component.Dialog.Content.MaxHeight">300</x:Double>
+            <!-- 对话框家族 v2 表面档案（ADR-015）：组件圆角 20 + 双层阴影，
+                 模态表面比页面常驻面板高一档；-padding 家族按形态区分。 -->
+            <x:String x:Key="Launcher.Elevation.Shadow.Dialog">0 26 68 0 #4D0F1222, 4 12 14 0 #240F1222</x:String>
+            <CornerRadius x:Key="Launcher.Component.Dialog.CornerRadius">20</CornerRadius>
+            <x:Double x:Key="Launcher.Component.Dialog.Badge.Size">32</x:Double>
+            <CornerRadius x:Key="Launcher.Component.Dialog.Badge.CornerRadius">16</CornerRadius>
+            <Thickness x:Key="Launcher.Component.Dialog.Panel.Head.Padding">20,0,10,0</Thickness>
+            <Thickness x:Key="Launcher.Component.Dialog.Panel.Body.Padding">24,18,24,18</Thickness>
+            <Thickness x:Key="Launcher.Component.Dialog.Panel.Footer.Padding">24,14,24,20</Thickness>
+            <Thickness x:Key="Launcher.Component.Dialog.Basic.Head.Padding">28,28,28,8</Thickness>
+            <Thickness x:Key="Launcher.Component.Dialog.Basic.Content.Padding">28,0,28,0</Thickness>
+            <Thickness x:Key="Launcher.Component.Dialog.Basic.Actions.Padding">28,16,28,24</Thickness>
             <x:Double x:Key="Launcher.Layout.LogViewer.Width">720</x:Double>
             <x:Double x:Key="Launcher.Layout.LogViewer.Height">592</x:Double>
             <x:Double x:Key="Launcher.Component.LogViewer.Search.MinWidth">160</x:Double>
@@ -178,7 +190,7 @@
             <LinearEasing x:Key="Launcher.Motion.Easing.Linear"/>
             <!-- Elevation (阴影 0–3 档；颜色/偏移/模糊 token 化；P2 全面消费) -->
             <!-- 注：BoxShadow 为值类型，只能经转换器加载（AVLN3000），故以 x:String 存储，
-                 由 Setter 的 BoxShadow 类型转换器解析（与既有硬编码字符串路径一致）。 -->
+                 由 Helpers.BoxShadowsExtension 在加载期解析（DialogSurface 主题已消费）。 -->
             <x:String x:Key="Launcher.Elevation.Shadow.None">0 0 0 0 #00000000</x:String>
             <x:String x:Key="Launcher.Elevation.Shadow.Sm">0 4 8 0 #26000000</x:String>
             <x:String x:Key="Launcher.Elevation.Shadow.Md">0 12 32 0 #33000000</x:String>

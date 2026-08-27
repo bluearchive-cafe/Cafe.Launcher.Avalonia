@@ -1,0 +1,167 @@
+<Styles xmlns="https://github.com/avaloniaui"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:controls="using:Cafe.Launcher.Avalonia.Controls"
+        xmlns:helpers="using:Cafe.Launcher.Avalonia.Helpers"
+        xmlns:materialIcons="clr-namespace:Material.Icons.Avalonia;assembly=Material.Icons.Avalonia">
+
+  <!-- 对话框家族 v2 的视觉契约（ADR-015）。表面档案：组件圆角 20 + 双层阴影，
+       模态表面比页面常驻面板高一档。两种形态共享同一模板骨架，解剖差异
+       全部由 :panel 与状态伪类驱动；使用方不得自带几何、色彩或阴影值。 -->
+
+  <Style Selector="controls|DialogSurface">
+    <Setter Property="Background" Value="{DynamicResource Launcher.Color.Dialog.Background}"/>
+    <Setter Property="Foreground" Value="{DynamicResource Launcher.Text.Primary}"/>
+    <Setter Property="CornerRadius" Value="{StaticResource Launcher.Component.Dialog.CornerRadius}"/>
+    <Setter Property="ClipToBounds" Value="True"/>
+    <Setter Property="Focusable" Value="False"/>
+    <!-- BoxShadows 缺少 TypeConverter，经 BoxShadowsExtension 消费单一 token。 -->
+    <Setter Property="BoxShadow" Value="{helpers:BoxShadows {StaticResource Launcher.Elevation.Shadow.Dialog}}"/>
+    <Setter Property="Template">
+      <ControlTemplate>
+        <Border Background="{TemplateBinding Background}"
+                CornerRadius="{TemplateBinding CornerRadius}"
+                BoxShadow="{TemplateBinding BoxShadow}">
+          <Grid RowDefinitions="Auto,*,Auto">
+
+            <!-- Panel 头带：徽章 + 标题列（副标题可选）+ ✕ 关闭钮 -->
+            <Border x:Name="PART_PanelHead"
+                    Background="{DynamicResource Launcher.Color.Dialog.Header}"
+                    MinHeight="{StaticResource Launcher.Component.Dialog.Title.Height}"
+                    Padding="{StaticResource Launcher.Component.Dialog.Panel.Head.Padding}">
+              <Grid ColumnDefinitions="Auto,*,Auto"
+                    ColumnSpacing="{StaticResource Launcher.Spacing.Md}">
+                <ContentPresenter x:Name="PART_BadgePresenter"
+                                  Grid.Column="0"
+                                  Width="{StaticResource Launcher.Component.Dialog.Badge.Size}"
+                                  Height="{StaticResource Launcher.Component.Dialog.Badge.Size}"
+                                  CornerRadius="{StaticResource Launcher.Component.Dialog.Badge.CornerRadius}"
+                                  HorizontalContentAlignment="Center"
+                                  VerticalContentAlignment="Center"
+                                  VerticalAlignment="Center"
+                                  Background="{DynamicResource Launcher.Color.Primary.Soft}"
+                                  Foreground="{DynamicResource Launcher.Color.Primary}"
+                                  Focusable="False"/>
+                <StackPanel Grid.Column="1"
+                            Spacing="{StaticResource Launcher.Spacing.Xs}"
+                            VerticalAlignment="Center">
+                  <TextBlock x:Name="PART_TitleTextBlock"
+                             Text="{TemplateBinding Title}"
+                             FontSize="{StaticResource Launcher.Typography.FontSize.Title.Lg}"
+                             FontWeight="{StaticResource Launcher.Typography.FontWeight.Strong}"
+                             Foreground="{DynamicResource Launcher.Text.Primary}"
+                             TextTrimming="CharacterEllipsis"/>
+                  <TextBlock x:Name="PART_SubtitleTextBlock"
+                             Text="{TemplateBinding Subtitle}"
+                             FontSize="{StaticResource Launcher.Typography.FontSize.Label.Md}"
+                             Foreground="{DynamicResource Launcher.Text.Secondary}"/>
+                </StackPanel>
+                <Button x:Name="PART_CloseButton"
+                        Grid.Column="2"
+                        Classes="dialog-close"
+                        VerticalAlignment="Center"
+                        Command="{TemplateBinding CloseCommand}"
+                        AutomationProperties.Name="{TemplateBinding CloseAutomationName}"
+                        ToolTip.Tip="{TemplateBinding CloseToolTip}">
+                  <materialIcons:MaterialIcon Kind="Close"
+                                              Width="{StaticResource Launcher.Icon.Lg}"
+                                              Height="{StaticResource Launcher.Icon.Lg}"/>
+                </Button>
+              </Grid>
+            </Border>
+
+            <!-- Basic 流式头部：裸图标（可选）+ 标题 + 支撑文案 -->
+            <Border x:Name="PART_BasicHead"
+                    Padding="{StaticResource Launcher.Component.Dialog.Basic.Head.Padding}">
+              <StackPanel Spacing="{StaticResource Launcher.Spacing.Sm}">
+                <ContentPresenter x:Name="PART_BasicIconPresenter"
+                                  HorizontalAlignment="Left"
+                                  Focusable="False"/>
+                <TextBlock x:Name="PART_BasicTitleTextBlock"
+                           Text="{TemplateBinding Title}"
+                           FontSize="{StaticResource Launcher.Typography.FontSize.Headline.Lg}"
+                           FontWeight="{StaticResource Launcher.Typography.FontWeight.Strong}"
+                           Foreground="{DynamicResource Launcher.Text.Primary}"
+                           TextWrapping="Wrap"/>
+                <TextBlock x:Name="PART_BasicSupportTextBlock"
+                           Text="{TemplateBinding Subtitle}"
+                           FontSize="{StaticResource Launcher.Typography.FontSize.Body.Md}"
+                           Foreground="{DynamicResource Launcher.Text.Secondary}"
+                           TextWrapping="Wrap"/>
+              </StackPanel>
+            </Border>
+
+            <!-- 共享滚动内容区：Basic 的支撑文案与 Panel 的正文都在此呈现 -->
+            <ScrollViewer x:Name="PART_ScrollViewer" Grid.Row="1"
+                          HorizontalScrollBarVisibility="Disabled"
+                          VerticalScrollBarVisibility="Auto">
+              <!-- 对象型插槽内容由 DialogSurface.SyncSlotContents() 装配，不走模板绑定。 -->
+              <ContentPresenter x:Name="PART_ScrollContentPresenter"/>
+            </ScrollViewer>
+
+            <!-- 动作带：Basic 为无装饰动作行，Panel 升级为发丝底带（含左侧辅助槽） -->
+            <Border x:Name="PART_FooterBand" Grid.Row="2">
+              <Grid ColumnDefinitions="Auto,*,Auto">
+                <ContentPresenter x:Name="PART_FooterLeadingPresenter"
+                                  Grid.Column="0"
+                                  VerticalAlignment="Center"
+                                  Focusable="False"/>
+                <ContentPresenter x:Name="PART_FooterPresenter"
+                                  Grid.Column="2"
+                                  VerticalAlignment="Center"
+                                  Focusable="False"/>
+              </Grid>
+            </Border>
+
+          </Grid>
+        </Border>
+      </ControlTemplate>
+    </Setter>
+  </Style>
+
+  <!-- 形态切换：默认 Basic 解剖可见、Panel 解剖隐藏；:panel 反转两者。 -->
+  <Style Selector="controls|DialogSurface /template/ Border#PART_PanelHead">
+    <Setter Property="IsVisible" Value="False"/>
+  </Style>
+  <Style Selector="controls|DialogSurface /template/ Border#PART_BasicHead">
+    <Setter Property="IsVisible" Value="True"/>
+  </Style>
+  <Style Selector="controls|DialogSurface /template/ ScrollViewer#PART_ScrollViewer">
+    <Setter Property="Padding" Value="{StaticResource Launcher.Component.Dialog.Basic.Content.Padding}"/>
+  </Style>
+  <Style Selector="controls|DialogSurface /template/ Border#PART_FooterBand">
+    <Setter Property="Background" Value="{StaticResource Launcher.Color.Transparent}"/>
+    <Setter Property="BorderThickness" Value="{StaticResource Launcher.Spacing.Thickness.None}"/>
+    <Setter Property="Padding" Value="{StaticResource Launcher.Component.Dialog.Basic.Actions.Padding}"/>
+  </Style>
+
+  <Style Selector="controls|DialogSurface:panel /template/ Border#PART_PanelHead">
+    <Setter Property="IsVisible" Value="True"/>
+  </Style>
+  <Style Selector="controls|DialogSurface:panel /template/ Border#PART_BasicHead">
+    <Setter Property="IsVisible" Value="False"/>
+  </Style>
+  <Style Selector="controls|DialogSurface:panel /template/ ScrollViewer#PART_ScrollViewer">
+    <Setter Property="Padding" Value="{StaticResource Launcher.Component.Dialog.Panel.Body.Padding}"/>
+  </Style>
+  <Style Selector="controls|DialogSurface:panel /template/ Border#PART_FooterBand">
+    <Setter Property="Background" Value="{DynamicResource Launcher.Color.Dialog.Footer}"/>
+    <Setter Property="BorderBrush" Value="{DynamicResource Launcher.Color.Card.Border}"/>
+    <Setter Property="BorderThickness" Value="{StaticResource Launcher.Component.Dialog.Footer.BorderThickness}"/>
+    <Setter Property="Padding" Value="{StaticResource Launcher.Component.Dialog.Panel.Footer.Padding}"/>
+  </Style>
+
+  <!-- 状态修饰：仅重染徽章语调，不改变几何。 -->
+  <Style Selector="controls|DialogSurface:info /template/ ContentPresenter#PART_BadgePresenter">
+    <Setter Property="Background" Value="{DynamicResource Launcher.Color.Info.Background}"/>
+    <Setter Property="Foreground" Value="{StaticResource Launcher.Color.Info}"/>
+  </Style>
+  <Style Selector="controls|DialogSurface:warning /template/ ContentPresenter#PART_BadgePresenter">
+    <Setter Property="Background" Value="{DynamicResource Launcher.Color.Warning.Background}"/>
+    <Setter Property="Foreground" Value="{StaticResource Launcher.Color.Warning}"/>
+  </Style>
+  <Style Selector="controls|DialogSurface:danger /template/ ContentPresenter#PART_BadgePresenter">
+    <Setter Property="Background" Value="{DynamicResource Launcher.Color.Danger.Soft}"/>
+    <Setter Property="Foreground" Value="{StaticResource Launcher.Color.Danger}"/>
+  </Style>
+
+</Styles>
