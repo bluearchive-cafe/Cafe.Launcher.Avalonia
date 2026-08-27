@@ -60,7 +60,6 @@
     "LauncherToastWidth": "Launcher.Component.Toast.Width",
     "LauncherMotionFasterDuration": "Launcher.Motion.Duration.Faster",
     "LauncherMotionFastDuration": "Launcher.Motion.Duration.Fast",
-    "LauncherMotionContentDuration": "Launcher.Motion.Duration.Content",
     "LauncherMotionNormalDuration": "Launcher.Motion.Duration.Normal",
     "LauncherMotionToastOffset": "Launcher.Motion.Offset.Toast",
     "LauncherMotionContentOffset": "Launcher.Motion.Offset.Content",

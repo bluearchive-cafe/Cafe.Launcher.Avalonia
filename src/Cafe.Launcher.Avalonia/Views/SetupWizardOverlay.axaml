@@ -99,6 +99,8 @@
                                     IsVisible="{Binding Dialogs.SetupWizard.IsFirstStep}"
                                     Classes="motion-content"
                                     Classes.motion-enabled="{Binding IsMotionEnabled}"
+                                    Classes.motion-forward="{Binding Dialogs.SetupWizard.WizardMovesForward}"
+                                    Classes.motion-backward="{Binding !Dialogs.SetupWizard.WizardMovesForward}"
                                     Classes.motion-enter="{Binding Dialogs.SetupWizard.IsFirstStep}">
                             <StackPanel.RenderTransform>
                                 <TranslateTransform/>
@@ -130,6 +132,8 @@
                                     IsVisible="{Binding Dialogs.SetupWizard.IsStep1}"
                                     Classes="motion-content"
                                     Classes.motion-enabled="{Binding IsMotionEnabled}"
+                                    Classes.motion-forward="{Binding Dialogs.SetupWizard.WizardMovesForward}"
+                                    Classes.motion-backward="{Binding !Dialogs.SetupWizard.WizardMovesForward}"
                                     Classes.motion-enter="{Binding Dialogs.SetupWizard.IsStep1}">
                             <StackPanel.RenderTransform>
                                 <TranslateTransform/>
@@ -175,6 +179,8 @@
                                     IsVisible="{Binding Dialogs.SetupWizard.IsStep2}"
                                     Classes="motion-content"
                                     Classes.motion-enabled="{Binding IsMotionEnabled}"
+                                    Classes.motion-forward="{Binding Dialogs.SetupWizard.WizardMovesForward}"
+                                    Classes.motion-backward="{Binding !Dialogs.SetupWizard.WizardMovesForward}"
                                     Classes.motion-enter="{Binding Dialogs.SetupWizard.IsStep2}">
                             <StackPanel.RenderTransform>
                                 <TranslateTransform/>
@@ -208,6 +214,8 @@
                                     IsVisible="{Binding Dialogs.SetupWizard.IsStep3}"
                                     Classes="motion-content"
                                     Classes.motion-enabled="{Binding IsMotionEnabled}"
+                                    Classes.motion-forward="{Binding Dialogs.SetupWizard.WizardMovesForward}"
+                                    Classes.motion-backward="{Binding !Dialogs.SetupWizard.WizardMovesForward}"
                                     Classes.motion-enter="{Binding Dialogs.SetupWizard.IsStep3}">
                             <StackPanel.RenderTransform>
                                 <TranslateTransform/>
@@ -249,6 +257,8 @@
                                     IsVisible="{Binding Dialogs.SetupWizard.IsLastStep}"
                                     Classes="motion-content"
                                     Classes.motion-enabled="{Binding IsMotionEnabled}"
+                                    Classes.motion-forward="{Binding Dialogs.SetupWizard.WizardMovesForward}"
+                                    Classes.motion-backward="{Binding !Dialogs.SetupWizard.WizardMovesForward}"
                                     Classes.motion-enter="{Binding Dialogs.SetupWizard.IsLastStep}">
                             <StackPanel.RenderTransform>
                                 <TranslateTransform/>

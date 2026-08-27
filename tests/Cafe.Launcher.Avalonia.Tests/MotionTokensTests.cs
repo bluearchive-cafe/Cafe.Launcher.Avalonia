@@ -12,19 +12,16 @@ public sealed class MotionTokensTests
 
         Assert.NotNull(tokenType);
         Assert.Equal(
-            TimeSpan.FromMilliseconds(50),
+            TimeSpan.FromMilliseconds(83),
             tokenType.GetField("FasterDuration")?.GetValue(null));
         Assert.Equal(
             TimeSpan.FromMilliseconds(167),
             tokenType.GetField("FastDuration")?.GetValue(null));
         Assert.Equal(
-            TimeSpan.FromMilliseconds(200),
-            tokenType.GetField("ContentDuration")?.GetValue(null));
-        Assert.Equal(
             TimeSpan.FromMilliseconds(250),
             tokenType.GetField("NormalDuration")?.GetValue(null));
         Assert.Equal(
-            TimeSpan.FromMilliseconds(50),
-            tokenType.GetField("OverlayDelay")?.GetValue(null));
+            TimeSpan.FromMilliseconds(333),
+            tokenType.GetField("SpatialDuration")?.GetValue(null));
     }
 }

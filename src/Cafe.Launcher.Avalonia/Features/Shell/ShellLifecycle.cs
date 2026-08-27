@@ -739,6 +739,7 @@ public sealed class ShellLifecycle : IDisposable
         presentation.IsMotionReduced = reduceMotion;
         remoteContent.ApplyMotionPreference(reduceMotion);
         toasts.ApplyMotionPreference(reduceMotion);
+        background.ApplyMotionPreference(reduceMotion);
     }
 
     private void ApplyLanguage(string language)

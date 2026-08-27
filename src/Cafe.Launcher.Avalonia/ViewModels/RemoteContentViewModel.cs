@@ -22,6 +22,7 @@ public partial class RemoteContentViewModel : ViewModelBase, IDisposable
     private const int MaxConcurrentBannerImageLoads = 4;
     private readonly LocalizationService localizer;
     private readonly ImageCacheService imageCacheService;
+    private BannerCarouselTransition bannerTransition = new(MotionTokens.NormalDuration);
     private DispatcherTimer? carouselTimer;
     private CancellationTokenSource? carouselDelayCts;
     private CancellationTokenSource? bannerPreloadCts;
@@ -82,7 +83,7 @@ public partial class RemoteContentViewModel : ViewModelBase, IDisposable
     private int bannerIntervalMs = 5000;
 
     [ObservableProperty]
-    private IPageTransition carouselTransition = CreateCarouselTransition(MotionTokens.NormalDuration);
+    private IPageTransition carouselTransition = null!;
 
     [ObservableProperty]
     private NewsCategory? selectedNewsCategory;
@@ -103,6 +104,7 @@ public partial class RemoteContentViewModel : ViewModelBase, IDisposable
     {
         this.localizer = localizer;
         this.imageCacheService = imageCacheService;
+        carouselTransition = bannerTransition;
     }
 
     public void ApplyLanguage()
@@ -115,18 +117,11 @@ public partial class RemoteContentViewModel : ViewModelBase, IDisposable
     {
         if (disposed) return;
         isMotionReduced = reduceMotion;
-        CarouselTransition = CreateCarouselTransition(
+        bannerTransition = new BannerCarouselTransition(
             reduceMotion ? TimeSpan.Zero : MotionTokens.NormalDuration);
+        CarouselTransition = bannerTransition;
         UpdateCarouselPauseState();
     }
-
-    private static PageSlide CreateCarouselTransition(TimeSpan duration) => new()
-    {
-        Duration = duration,
-        Orientation = PageSlide.SlideAxis.Horizontal,
-        SlideInEasing = new ExponentialEaseOut(),
-        SlideOutEasing = new ExponentialEaseIn()
-    };
 
     public void Apply(LauncherRemoteState remote, LauncherSettings settings, CancellationToken cancellationToken)
     {
@@ -346,8 +341,14 @@ public partial class RemoteContentViewModel : ViewModelBase, IDisposable
             return false;
         }
 
-        CarouselSelectedIndex = next;
+        NavigateToBanner(next, BannerCarouselTransition.CarouselSlideMode.Fade);
         return true;
+    }
+
+    private void NavigateToBanner(int index, BannerCarouselTransition.CarouselSlideMode slideMode)
+    {
+        bannerTransition.PendingSlide = slideMode;
+        CarouselSelectedIndex = index;
     }
 
     internal void SetBannerPointerOver(bool isPointerOver, bool hideControls = false)
@@ -388,7 +389,7 @@ public partial class RemoteContentViewModel : ViewModelBase, IDisposable
             prev = BannerItems.Count - 1;
         }
 
-        SelectBanner(prev);
+        NavigateManuallyTo(prev, backward: true);
     }
 
     [RelayCommand]
@@ -405,7 +406,25 @@ public partial class RemoteContentViewModel : ViewModelBase, IDisposable
             next = 0;
         }
 
-        SelectBanner(next);
+        NavigateManuallyTo(next, backward: false);
+    }
+
+    private void NavigateManuallyTo(int index, bool backward)
+    {
+        if (disposed
+            || index < 0
+            || index >= BannerItems.Count)
+        {
+            return;
+        }
+
+        NavigateToBanner(
+            index,
+            backward
+                ? BannerCarouselTransition.CarouselSlideMode.Backward
+                : BannerCarouselTransition.CarouselSlideMode.Forward);
+        StopCarouselTimer();
+        _ = ScheduleCarouselResumeAfterDelayAsync();
     }
 
     [RelayCommand]
@@ -413,7 +432,8 @@ public partial class RemoteContentViewModel : ViewModelBase, IDisposable
     {
         if (index >= 0 && index < BannerItems.Count)
         {
-            CarouselSelectedIndex = index;
+            // Dot navigation has no spatial neighbour relation; it always cross-fades.
+            NavigateToBanner(index, BannerCarouselTransition.CarouselSlideMode.Fade);
             StopCarouselTimer();
             _ = ScheduleCarouselResumeAfterDelayAsync();
         }

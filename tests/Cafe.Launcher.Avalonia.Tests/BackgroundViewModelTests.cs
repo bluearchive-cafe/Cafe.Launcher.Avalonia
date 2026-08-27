@@ -124,6 +124,59 @@ public sealed class BackgroundViewModelTests : IDisposable
     }
 
     [Fact]
+    public async Task UpdateBackgroundImageAsync_WhenMotionEnabled_PreviousWallpaperFadesAsOverlay()
+    {
+        var hash = await ComputeHashAsync(PngBytes);
+        using var cache = CreateCache(new ImageHandler(PngBytes));
+        using var viewModel = new BackgroundViewModel(
+            cache,
+            new LocalDiagnostics(),
+            _ => { },
+            _ => new TestImage(),
+            () => new TestImage());
+
+        await viewModel.UpdateBackgroundImageAsync(
+            new LauncherSettings { BackgroundSource = BackgroundSources.Remote },
+            CreateRemoteSnapshot(hash),
+            CancellationToken.None);
+        var firstSwap = (TestImage)viewModel.BackgroundImageSource!;
+        var fadingOut = new List<TestImage>();
+
+        viewModel.PreviousWallpaperFadingOut += (image, _) => fadingOut.Add((TestImage)image);
+
+        await viewModel.UpdateBackgroundImageAsync(
+            new LauncherSettings { BackgroundSource = BackgroundSources.Remote },
+            CreateRemoteSnapshot(hash),
+            CancellationToken.None);
+
+        Assert.NotSame(firstSwap, viewModel.BackgroundImageSource);
+        Assert.Equal([firstSwap], fadingOut);
+    }
+
+    [Fact]
+    public async Task UpdateBackgroundImageAsync_WhenMotionReduced_SkipsCrossFadeOverlay()
+    {
+        var bundled = new TestImage();
+        using var cache = CreateCache(new ImageHandler(PngBytes));
+        using var viewModel = new BackgroundViewModel(
+            cache,
+            new LocalDiagnostics(),
+            _ => { },
+            _ => new TestImage(),
+            () => bundled);
+        var fadingOut = new List<IImage>();
+        viewModel.PreviousWallpaperFadingOut += (image, _) => fadingOut.Add(image);
+        viewModel.ApplyMotionPreference(reduceMotion: true);
+
+        await viewModel.UpdateBackgroundImageAsync(
+            new LauncherSettings { BackgroundSource = BackgroundSources.Remote },
+            CreateRemoteSnapshot("1"),
+            CancellationToken.None);
+
+        Assert.Empty(fadingOut);
+    }
+
+    [Fact]
     public async Task UpdateBackgroundImageAsync_WhenRemoteDownloadIsCanceled_PropagatesCancellation()
     {
         using var cache = CreateCache(new CancellationHandler());

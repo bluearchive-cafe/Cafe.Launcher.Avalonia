@@ -4,11 +4,11 @@ using System.Linq;
 using System.Runtime.CompilerServices;
 using Avalonia;
 using Avalonia.Animation;
-using Avalonia.Animation.Easings;
 using Avalonia.Controls;
 using Avalonia.Media;
 using Avalonia.VisualTree;
 using Cafe.Launcher.Avalonia.Helpers;
+using Easings = Avalonia.Animation.Easings;
 
 namespace Cafe.Launcher.Avalonia.Controls;
 
@@ -20,6 +20,8 @@ public static class ToastStackMotion
     /// <summary>Attached property that enables vertical stack reflow animation for a panel.</summary>
     public static readonly AttachedProperty<bool> IsEnabledProperty =
         AvaloniaProperty.RegisterAttached<ToastStackMotionOwner, Panel, bool>("IsEnabled");
+
+    private const string ReflowEasingKey = "Launcher.Motion.Easing.PointToPoint";
 
     private static readonly ConditionalWeakTable<Panel, ToastStackState> States = new();
 
@@ -162,7 +164,9 @@ public static class ToastStackMotion
                 {
                     Property = TranslateTransform.YProperty,
                     Duration = MotionTokens.FastDuration,
-                    Easing = new ExponentialEaseOut()
+                    Easing = MotionResourceLookup.GetEasing(
+                        ReflowEasingKey,
+                        static () => new Easings.SplineEasing { X1 = 0.55, Y1 = 0.55, X2 = 0, Y2 = 1 })
                 }
             ];
             transform.Y = 0;

@@ -3961,12 +3961,44 @@ public sealed partial class UiStyleContractTests
             exitMotionStyle.Elements(),
             element => element.Name.LocalName == "Style.Animations");
 
-        AssertMotionAnimation(
-            document,
-            "Border.toast-card.motion-enabled:not(.motion-exit)",
-            "{StaticResource Launcher.Motion.Duration.Content}",
-            expectedStartOffset: "{StaticResource Launcher.Motion.Offset.Toast}",
-            expectedStartAxis: "TranslateTransform.X");
+        var enterAnimations = enterMotionStyle
+            .Descendants()
+            .Where(element => element.Name.LocalName == "Animation")
+            .ToList();
+        Assert.Equal(2, enterAnimations.Count);
+        foreach (var animation in enterAnimations)
+        {
+            Assert.Equal(
+                "{StaticResource Launcher.Motion.Duration.Fast}",
+                animation.Attribute("Duration")?.Value);
+            Assert.Equal("Forward", animation.Attribute("FillMode")?.Value);
+            Assert.Null(animation.Attribute("Delay"));
+        }
+
+        // ADR-016 Toast 进入：透明度走进入减速曲线，右侧滑入位移走点到点曲线（与已确认原型一致）。
+        var opacityEnterAnimation = Assert.Single(
+            enterAnimations,
+            animation => animation.Attribute("Easing")?.Value == "{StaticResource Launcher.Motion.Easing.Enter}");
+        var slideEnterAnimation = Assert.Single(
+            enterAnimations,
+            animation => animation.Attribute("Easing")?.Value == "{StaticResource Launcher.Motion.Easing.PointToPoint}");
+
+        var opacityEnterKeyFrames = GetAnimationKeyFrames(opacityEnterAnimation);
+        AssertAnimationProperty(opacityEnterKeyFrames, "Opacity", "0", "1");
+        Assert.DoesNotContain(
+            opacityEnterKeyFrames.SelectMany(pair => pair.Value.Elements()),
+            element => element.Attribute("Property")?.Value == "TranslateTransform.X");
+
+        var slideEnterKeyFrames = GetAnimationKeyFrames(slideEnterAnimation);
+        AssertAnimationProperty(
+            slideEnterKeyFrames,
+            "TranslateTransform.X",
+            "{StaticResource Launcher.Motion.Offset.Toast}",
+            "0");
+        Assert.DoesNotContain(
+            slideEnterKeyFrames.SelectMany(pair => pair.Value.Elements()),
+            element => element.Attribute("Property")?.Value == "Opacity");
+
         AssertExitMotionAnimation(
             document,
             "Border.toast-card.motion-enabled.motion-exit",
@@ -4000,25 +4032,33 @@ public sealed partial class UiStyleContractTests
             "{StaticResource Launcher.Motion.Duration.Fast}");
         AssertMotionAnimation(
             document,
+            "Grid.motion-shell.motion-enabled.motion-enter",
+            "{StaticResource Launcher.Motion.Duration.Fast}",
+            expectedStartOffset: null);
+        AssertMotionAnimation(
+            document,
             "Grid.motion-overlay.motion-enabled.motion-enter > Border.motion-surface",
             "{StaticResource Launcher.Motion.Duration.Normal}",
             expectedStartOffset: "{StaticResource Launcher.Motion.Offset.Surface}",
             expectsOpacity: false);
         AssertMotionAnimation(
             document,
-            "Grid.motion-overlay.motion-enabled.motion-enter > Border.motion-surface > Grid.motion-surface-content",
-            "{StaticResource Launcher.Motion.Duration.Normal}",
+            ":is(UserControl).motion-content.motion-enabled.motion-enter",
+            "{StaticResource Launcher.Motion.Duration.Fast}",
             expectedStartOffset: null);
         AssertMotionAnimation(
             document,
-            ":is(UserControl).motion-content.motion-enabled.motion-enter",
-            "{StaticResource Launcher.Motion.Duration.Content}",
-            expectedStartOffset: "{StaticResource Launcher.Motion.Offset.Content}");
-        AssertMotionAnimation(
-            document,
             "StackPanel.motion-content.motion-enabled.motion-enter",
-            "{StaticResource Launcher.Motion.Duration.Content}",
-            expectedStartOffset: "{StaticResource Launcher.Motion.Offset.Content}");
+            "{StaticResource Launcher.Motion.Duration.Fast}",
+            expectedStartOffset: null);
+        AssertDirectionalMotionAnimation(
+            document,
+            "StackPanel.motion-content.motion-enabled.motion-enter.motion-forward",
+            "{StaticResource Launcher.Motion.Offset.StepForward}");
+        AssertDirectionalMotionAnimation(
+            document,
+            "StackPanel.motion-content.motion-enabled.motion-enter.motion-backward",
+            "{StaticResource Launcher.Motion.Offset.StepBackward}");
         AssertMotionAnimation(
             document,
             "Border.motion-bottom.motion-enabled.motion-enter",
@@ -4032,10 +4072,19 @@ public sealed partial class UiStyleContractTests
             "Grid.motion-overlay.motion-enabled.motion-exit > Border.motion-surface",
             expectedEndOffset: "{StaticResource Launcher.Motion.Offset.Surface}",
             expectsOpacity: false);
-        AssertExitMotionAnimation(
-            document,
-            "Grid.motion-overlay.motion-enabled.motion-exit > Border.motion-surface > Grid.motion-surface-content",
-            expectedEndOffset: null);
+
+        // ADR-016：对话框内部内容层不得再有任何二次运动样式。
+        foreach (var removedSelector in new[]
+                 {
+                     "Grid.motion-overlay.motion-enabled.motion-enter > Border.motion-surface > Grid.motion-surface-content",
+                     "Grid.motion-overlay.motion-enabled.motion-exit > Border.motion-surface > Grid.motion-surface-content"
+                 })
+        {
+            Assert.DoesNotContain(
+                document.Descendants()
+                    .Where(element => element.Name.LocalName == "Style"),
+                style => style.Attribute("Selector")?.Value == removedSelector);
+        }
 
         foreach (var selector in new[]
                  {
@@ -4372,6 +4421,33 @@ public sealed partial class UiStyleContractTests
             keyFrames["100%"]
                 .Elements()
                 .Single(element => element.Attribute("Property")?.Value == expectedStartAxis)
+                .Attribute("Value")?.Value);
+    }
+
+    private static void AssertDirectionalMotionAnimation(
+        XDocument document,
+        string selector,
+        string expectedStartOffsetX)
+    {
+        var animation = GetMotionAnimation(document, selector);
+        Assert.Equal("{StaticResource Launcher.Motion.Duration.Fast}", animation.Attribute("Duration")?.Value);
+        Assert.Equal("Forward", animation.Attribute("FillMode")?.Value);
+        Assert.Equal("{StaticResource Launcher.Motion.Easing.PointToPoint}", animation.Attribute("Easing")?.Value);
+        Assert.Null(animation.Attribute("Delay"));
+
+        var keyFrames = GetAnimationKeyFrames(animation);
+        AssertAnimationProperty(keyFrames, "Opacity", "0", "1");
+        Assert.Equal(
+            expectedStartOffsetX,
+            keyFrames["0%"]
+                .Elements()
+                .Single(element => element.Attribute("Property")?.Value == "TranslateTransform.X")
+                .Attribute("Value")?.Value);
+        Assert.Equal(
+            "0",
+            keyFrames["100%"]
+                .Elements()
+                .Single(element => element.Attribute("Property")?.Value == "TranslateTransform.X")
                 .Attribute("Value")?.Value);
     }
 

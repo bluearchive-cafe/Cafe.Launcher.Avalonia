@@ -112,9 +112,12 @@
 
 ### 3.7 动效
 
-- 时长：`Faster` 50ms / `Fast` 167ms / `Content` 200ms / `Normal` 250ms（键名以 `token-migration-map.md` 与代码为准）；缓动：`Enter`=ExponentialEaseOut、`Exit`=ExponentialEaseIn、`Linear`；偏移：`Surface` 8 / `Content` 6 / `Bottom` 12 / `Toast` 6（沿用现有值，仅重命名）。
+- 本节旧有 M3 数值已由 [ADR-016](./adr/ADR-016-Fluent动效层.md) 取代；视觉层继续使用 M3 语义，行为型动效改用 Windows Fluent 原则并映射为 Avalonia 资源。
+- 时长收敛为 83ms（即时反馈）/ 167ms（快速转换）/ 250ms（标准转换）；仅较大的连续空间变化允许 333ms。进入、退出和点到点移动分别使用 Windows 减速、加速与点到点语义曲线，不再使用 `ExponentialEaseOut/In`。
+- 动效家族统一为即时反馈、内容切换、空间连续、临时表面与重要完成。常规控件不缩放、不弹跳；模态表面只移动外壳一次，内部内容不重复移动；自动轮播只淡化。
+- `Full` 始终启用完整动效，`System` 跟随 Windows 动画开关，`Reduced` 关闭空间移动、自动轮播和大面积淡化，仅允许临时表面保留最多 83ms 的纯透明度变化。
+- 动画始终以最新状态为准且不得排队。连续容器变化无法保持流畅或正确中断时，降级为交叉淡化或立即切换。
 - 进度条厚度：主界面 `Component.Progress.Bar.Height` = 8px、Loading = 4px、Toast = 3px（M3 LinearProgressIndicator 4dp；主进度条 8px 为产品加粗值，记录性偏差）。
-- 全局 `IsMotionEnabled` 开关保留；**系统级 reduced-motion 检测暂不做**（记录为有意搁置）。
 
 ## 4. 组件规范（P2，Q15/Q21）
 
@@ -188,7 +191,6 @@
 
 ## 11. 有意搁置（Don't-do 清单）
 
-- 系统级 reduced-motion 检测（Avalonia 暴露面待调研）。
 - 文本缩放 125–150% 支持（尺寸体系改造，评估期）。
 - 诊断/日志/资源面板的视觉重设计（仅 token 兼容）。
 - 独立"画廊预览窗口"（Q11-c 叠加项，暂不启用）。

@@ -103,6 +103,15 @@ public partial class SetupWizardViewModel : ViewModelBase, IModalContentViewMode
         RefreshSteps();
     }
 
+    /// <summary>Gets whether the most recent step change moved forward, driving directional slide-in.</summary>
+    [ObservableProperty]
+    private bool wizardMovesForward = true;
+
+    partial void OnStepChanged(int oldValue, int newValue)
+    {
+        WizardMovesForward = newValue >= oldValue;
+    }
+
     public bool IsFirstStep => Step == 0;
     public bool IsLastStep => Step == 4;
     public bool IsStep1 => Step == 1;
