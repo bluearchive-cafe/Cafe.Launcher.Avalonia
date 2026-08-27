@@ -11,28 +11,24 @@
           Classes.motion-enabled="{Binding IsMotionEnabled}"
           controls:MotionVisibility.IsOpen="{Binding Dialogs.Gallery.IsVisible}"
           controls:MotionVisibility.IsMotionEnabled="{Binding IsMotionEnabled}">
-        <Border Width="{StaticResource Launcher.Layout.DesignGallery.Width}"
-                Height="{StaticResource Launcher.Layout.DesignGallery.Height}"
-                Classes="dialog overlay-dialog motion-surface">
-            <Border.RenderTransform>
+        <!-- Panel 形态：调试工具同样走统一外壳；尺寸自适应（token 封顶）。 -->
+        <controls:DialogSurface
+            Form="Panel"
+            Classes="motion-surface"
+            HorizontalAlignment="Stretch"
+            VerticalAlignment="Center"
+            Margin="{StaticResource Launcher.Spacing.Thickness.Xxl}"
+            MaxWidth="{StaticResource Launcher.Layout.DesignGallery.Width}"
+            MaxHeight="{StaticResource Launcher.Layout.DesignGallery.Height}"
+            Title="{Binding Shell.I18n[designGalleryTitle]}"
+            CloseCommand="{Binding Dialogs.Gallery.CloseCommand}"
+            CloseAutomationName="{Binding Shell.I18n[close]}"
+            CloseToolTip="{Binding Shell.I18n[close]}">
+            <controls:DialogSurface.RenderTransform>
                 <TranslateTransform/>
-            </Border.RenderTransform>
-            <Grid RowDefinitions="Auto,*,Auto" Classes="motion-surface-content">
-                <!-- Header -->
-                <Grid ColumnDefinitions="*,Auto" Classes="dialog-header">
-                    <StackPanel Classes="dialog-title-row">
-                        <TextBlock Text="{Binding Shell.I18n[designGalleryTitle]}" Classes="dialog-title" VerticalAlignment="Center"/>
-                    </StackPanel>
-                    <Button Grid.Column="1" Classes="dialog-close header-action" Command="{Binding Dialogs.Gallery.CloseCommand}"
-                            ToolTip.Tip="{Binding Shell.I18n[close]}"
-                            AutomationProperties.Name="{Binding Shell.I18n[close]}">
-                        <materialIcons:MaterialIcon Kind="Close" Width="{StaticResource Launcher.Icon.Md}" Height="{StaticResource Launcher.Icon.Md}"/>
-                    </Button>
-                </Grid>
-
-                <!-- Scrollable token inventory -->
-                <ScrollViewer Grid.Row="1" Classes="scroll-pad">
-                    <StackPanel Spacing="{StaticResource Launcher.Spacing.Md}" Margin="{StaticResource Launcher.Spacing.Thickness.Xl}">
+            </controls:DialogSurface.RenderTransform>
+            <controls:DialogSurface.Content>
+            <StackPanel Spacing="{StaticResource Launcher.Spacing.Md}" Margin="{StaticResource Launcher.Spacing.Thickness.Xl}">
                         <TextBlock Text="{Binding Shell.I18n[designGalleryHint]}" Classes="caption"/>
                         <Border Classes="dialog-card design-state-matrix-card">
                             <StackPanel Spacing="{StaticResource Launcher.Spacing.Sm}">
@@ -209,21 +205,18 @@
                             </ItemsControl.ItemTemplate>
                         </ItemsControl>
                     </StackPanel>
-                </ScrollViewer>
-
-                <!-- Footer -->
-                <Border Grid.Row="2" Classes="dialog-footer">
-                    <StackPanel Classes="confirm-actions">
-                        <Button Classes="primary-action dialog-action" Command="{Binding Dialogs.Gallery.CloseCommand}"
-                                AutomationProperties.Name="{Binding Shell.I18n[close]}">
-                            <StackPanel Classes="button-content">
-                                <materialIcons:MaterialIcon Kind="Check" Width="{StaticResource Launcher.Icon.Sm}" Height="{StaticResource Launcher.Icon.Sm}"/>
-                                <TextBlock Text="{Binding Shell.I18n[close]}"/>
-                            </StackPanel>
-                        </Button>
-                    </StackPanel>
-                </Border>
-            </Grid>
-        </Border>
+            </controls:DialogSurface.Content>
+            <controls:DialogSurface.Footer>
+                <StackPanel Classes="confirm-actions">
+                    <Button Classes="primary-action dialog-action" Command="{Binding Dialogs.Gallery.CloseCommand}"
+                            AutomationProperties.Name="{Binding Shell.I18n[close]}">
+                        <StackPanel Classes="button-content">
+                            <materialIcons:MaterialIcon Kind="Check" Width="{StaticResource Launcher.Icon.Sm}" Height="{StaticResource Launcher.Icon.Sm}"/>
+                            <TextBlock Text="{Binding Shell.I18n[close]}"/>
+                        </StackPanel>
+                    </Button>
+                </StackPanel>
+            </controls:DialogSurface.Footer>
+        </controls:DialogSurface>
     </Grid>
 </UserControl>

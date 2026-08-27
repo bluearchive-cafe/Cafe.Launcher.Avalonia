@@ -687,8 +687,8 @@ public sealed class MainWindowHeadlessTests
             .OfType<MainWindowSettingsOverlay>()
             .Single();
         var dialog = settingsOverlay.GetVisualDescendants()
-            .OfType<Border>()
-            .Single(control => control.Classes.Contains("overlay-dialog"));
+            .OfType<global::Cafe.Launcher.Avalonia.Controls.DialogSurface>()
+            .Single();
         var navigation = GetSettingsNavigation(context.Window);
         var selectedItem = navigation.ContainerFromIndex(navigation.SelectedIndex)
             ?? throw new InvalidOperationException("Selected settings item was not realized.");
@@ -970,7 +970,7 @@ public sealed class MainWindowHeadlessTests
         var settingsOverlay = context.Window.GetVisualDescendants()
             .OfType<MainWindowSettingsOverlay>().Single();
         var footer = settingsOverlay.GetVisualDescendants().OfType<Border>()
-            .Single(control => control.Classes.Contains("dialog-footer"));
+            .Single(control => control.Name == "PART_FooterBand");
 
         context.ViewModel.Settings.IsSaving = true;
         Dispatcher.UIThread.RunJobs();
@@ -1006,8 +1006,8 @@ public sealed class MainWindowHeadlessTests
             .OfType<MainWindowSettingsOverlay>()
             .Single();
         var dialog = settingsOverlay.GetVisualDescendants()
-            .OfType<Border>()
-            .Single(control => control.Classes.Contains("overlay-dialog"));
+            .OfType<global::Cafe.Launcher.Avalonia.Controls.DialogSurface>()
+            .Single();
         var dialogTopLeft = dialog.TranslatePoint(default, context.Window);
         var scrollBarTopLeft = verticalScrollBar.TranslatePoint(default, context.Window);
         Assert.NotNull(dialogTopLeft);
@@ -1032,12 +1032,12 @@ public sealed class MainWindowHeadlessTests
             .Single();
         var dialog = settingsOverlay
             .GetVisualDescendants()
-            .OfType<Border>()
-            .Single(control => control.Classes.Contains("overlay-dialog"));
+            .OfType<global::Cafe.Launcher.Avalonia.Controls.DialogSurface>()
+            .Single();
         var footer = dialog
             .GetVisualDescendants()
             .OfType<Border>()
-            .Single(control => control.Classes.Contains("dialog-footer"));
+            .Single(control => control.Name == "PART_FooterBand");
 
         Assert.True(dialog.Bounds.Width <= context.Window.ClientSize.Width - 48);
         Assert.True(dialog.Bounds.Height <= context.Window.ClientSize.Height - 48);

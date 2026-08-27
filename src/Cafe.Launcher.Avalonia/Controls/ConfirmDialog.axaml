@@ -1,20 +1,29 @@
 <UserControl xmlns="https://github.com/avaloniaui"
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:vm="using:Cafe.Launcher.Avalonia.ViewModels"
              xmlns:controls="using:Cafe.Launcher.Avalonia.Controls"
              x:Class="Cafe.Launcher.Avalonia.Controls.ConfirmDialog"
-             x:Name="Root">
+             x:Name="Root"
+             x:DataType="vm:MainWindowViewModel">
     <!-- M3 basic 对话框的标准门面：标题 + 支撑文案（Description） +
          滚动正文（Message，可为空）+ 无装饰动作带。解剖由 DialogSurface 承载，
-         此处只做类型化归约；安全钮默认聚焦的规律由代码后置执行。 -->
-    <!-- B2 将统一迁移到 MotionVisibility 显隐通道；本批保持直接绑定以保证行为零回退。 -->
-    <Grid Classes="dialog-overlay" IsVisible="{Binding IsOpen, ElementName=Root}">
+         此处只做类型化归约；安全钮默认聚焦的规律由代码后置执行。
+         遮罩显隐走统一的 MotionVisibility 通道（ADR-015）。 -->
+    <Grid Classes="dialog-overlay motion-overlay"
+          Classes.motion-enabled="{Binding IsMotionEnabled}"
+          controls:MotionVisibility.IsOpen="{Binding IsOpen, ElementName=Root}"
+          controls:MotionVisibility.IsMotionEnabled="{Binding IsMotionEnabled}">
         <controls:DialogSurface
             Form="Basic"
+            Classes="motion-surface"
             MaxWidth="{StaticResource Launcher.Component.Dialog.Confirm.MaxWidth}"
             MinWidth="{StaticResource Launcher.Component.Dialog.Confirm.MinWidth}"
             MaxHeight="{StaticResource Launcher.Component.Dialog.Confirm.MaxHeight}"
             Title="{Binding Title, ElementName=Root}"
             Subtitle="{Binding Description, ElementName=Root}">
+            <controls:DialogSurface.RenderTransform>
+                <TranslateTransform/>
+            </controls:DialogSurface.RenderTransform>
             <controls:DialogSurface.Content>
                 <TextBlock Text="{Binding Message, ElementName=Root}"
                            Classes="dialog-message"

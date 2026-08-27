@@ -13,15 +13,20 @@
           Classes.motion-enabled="{Binding IsMotionEnabled}"
           controls:MotionVisibility.IsOpen="{Binding WindowChrome.IsSettingsVisible}"
           controls:MotionVisibility.IsMotionEnabled="{Binding IsMotionEnabled}">
-        <Border MaxWidth="{StaticResource Launcher.Layout.Settings.MaxWidth}"
-                MaxHeight="{StaticResource Launcher.Layout.Settings.MaxHeight}"
-                HorizontalAlignment="Stretch"
-                VerticalAlignment="Stretch"
-                Classes="dialog overlay-dialog motion-surface">
-            <Border.RenderTransform>
+        <!-- 纯表面外壳：无头带（身份区折叠），工作区与钉死的关闭钮保持原样；
+             表面档案（圆角/阴影/底色）由 DialogSurface 承载（ADR-015）。 -->
+        <controls:DialogSurface
+            Form="Panel"
+            Classes="motion-surface"
+            HorizontalAlignment="Stretch"
+            VerticalAlignment="Stretch"
+            Margin="{StaticResource Launcher.Spacing.Thickness.Xxl}"
+            MaxWidth="{StaticResource Launcher.Layout.Settings.MaxWidth}"
+            MaxHeight="{StaticResource Launcher.Layout.Settings.MaxHeight}">
+            <controls:DialogSurface.RenderTransform>
                 <TranslateTransform/>
-            </Border.RenderTransform>
-            <Grid RowDefinitions="*,Auto" Classes="motion-surface-content">
+            </controls:DialogSurface.RenderTransform>
+            <controls:DialogSurface.Content>
                 <Grid Classes="settings-workspace" ColumnDefinitions="Auto,*">
                     <Grid Classes="settings-navigation-pane"
                           Width="{StaticResource Launcher.Component.Settings.Navigation.Width}"
@@ -144,37 +149,36 @@
                         </Border>
                     </Grid>
                 </Grid>
-
-                <Border Grid.Row="1" Classes="dialog-footer">
-                    <StackPanel Orientation="Horizontal"
-                                Spacing="{StaticResource Launcher.Spacing.Sm}"
-                                HorizontalAlignment="Right"
-                                VerticalAlignment="Center">
-                        <Button Classes="flat-action dialog-action"
-                                Command="{Binding WindowChrome.ShowSettingsCommand}"
-                                IsEnabled="{Binding Settings.IsSaving, Converter={x:Static BoolConverters.Not}}"
-                                ToolTip.Tip="{Binding Shell.I18n[cancel]}"
-                                AutomationProperties.Name="{Binding Shell.I18n[cancel]}">
-                            <StackPanel Classes="button-content" HorizontalAlignment="Center">
-                                <materialIcons:MaterialIcon Kind="CloseCircleOutline"
-                                    Width="{StaticResource Launcher.Icon.Sm}" Height="{StaticResource Launcher.Icon.Sm}"/>
-                                <TextBlock Text="{Binding Shell.I18n[cancel]}"/>
-                            </StackPanel>
-                        </Button>
-                        <Button Classes="primary-action dialog-action"
-                                Command="{Binding Settings.SaveSettingsCommand}"
-                                IsEnabled="{Binding Settings.CanSaveSettings}"
-                                ToolTip.Tip="{Binding Shell.I18n[save]}"
-                                AutomationProperties.Name="{Binding Shell.I18n[save]}">
-                            <StackPanel Classes="button-content" HorizontalAlignment="Center">
-                                <materialIcons:MaterialIcon Kind="ContentSave"
-                                    Width="{StaticResource Launcher.Icon.Sm}" Height="{StaticResource Launcher.Icon.Sm}"/>
-                                <TextBlock Text="{Binding Shell.I18n[save]}"/>
-                            </StackPanel>
-                        </Button>
-                    </StackPanel>
-                </Border>
-            </Grid>
-        </Border>
+            </controls:DialogSurface.Content>
+            <controls:DialogSurface.Footer>
+                <StackPanel Orientation="Horizontal"
+                            Spacing="{StaticResource Launcher.Spacing.Sm}"
+                            HorizontalAlignment="Right"
+                            VerticalAlignment="Center">
+                    <Button Classes="flat-action dialog-action"
+                            Command="{Binding WindowChrome.ShowSettingsCommand}"
+                            IsEnabled="{Binding Settings.IsSaving, Converter={x:Static BoolConverters.Not}}"
+                            ToolTip.Tip="{Binding Shell.I18n[cancel]}"
+                            AutomationProperties.Name="{Binding Shell.I18n[cancel]}">
+                        <StackPanel Classes="button-content" HorizontalAlignment="Center">
+                            <materialIcons:MaterialIcon Kind="CloseCircleOutline"
+                                Width="{StaticResource Launcher.Icon.Sm}" Height="{StaticResource Launcher.Icon.Sm}"/>
+                            <TextBlock Text="{Binding Shell.I18n[cancel]}"/>
+                        </StackPanel>
+                    </Button>
+                    <Button Classes="primary-action dialog-action"
+                            Command="{Binding Settings.SaveSettingsCommand}"
+                            IsEnabled="{Binding Settings.CanSaveSettings}"
+                            ToolTip.Tip="{Binding Shell.I18n[save]}"
+                            AutomationProperties.Name="{Binding Shell.I18n[save]}">
+                        <StackPanel Classes="button-content" HorizontalAlignment="Center">
+                            <materialIcons:MaterialIcon Kind="ContentSave"
+                                Width="{StaticResource Launcher.Icon.Sm}" Height="{StaticResource Launcher.Icon.Sm}"/>
+                            <TextBlock Text="{Binding Shell.I18n[save]}"/>
+                        </StackPanel>
+                    </Button>
+                </StackPanel>
+            </controls:DialogSurface.Footer>
+        </controls:DialogSurface>
     </Grid>
 </UserControl>

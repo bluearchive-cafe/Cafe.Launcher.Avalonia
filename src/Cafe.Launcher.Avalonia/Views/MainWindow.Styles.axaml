@@ -1018,18 +1018,6 @@
         <Setter Property="KeyboardNavigation.TabNavigation" Value="Cycle"/>
         <Setter Property="views:OverlayFocusBehavior.IsEnabled" Value="True"/>
     </Style>
-    <Style Selector="Border.dialog">
-        <Setter Property="Background" Value="{DynamicResource Launcher.Color.Dialog.Background}"/>
-        <Setter Property="CornerRadius" Value="{StaticResource Launcher.Radius.Lg}"/>
-        <Setter Property="ClipToBounds" Value="True"/>
-        <!-- 阴影经 BoxShadowsExtension 消费 token；对话框表面迁入 DialogSurface 后本类随批次退场。 -->
-        <Setter Property="BoxShadow" Value="{helpers:BoxShadows {StaticResource Launcher.Elevation.Shadow.Lg}}"/>
-    </Style>
-    <Style Selector="Border.overlay-dialog">
-        <Setter Property="Margin" Value="{StaticResource Launcher.Spacing.Thickness.Xxl}"/>
-        <Setter Property="HorizontalAlignment" Value="Center"/>
-        <Setter Property="VerticalAlignment" Value="Center"/>
-    </Style>
     <Style Selector="Grid.dialog-header">
         <Setter Property="Background" Value="{DynamicResource Launcher.Color.Dialog.Header}"/>
         <Setter Property="Height" Value="{StaticResource Launcher.Component.Dialog.Title.Height}"/>
@@ -1050,23 +1038,12 @@
         <Setter Property="BorderThickness" Value="{StaticResource Launcher.Component.Dialog.Footer.BorderThickness}"/>
         <Setter Property="Padding" Value="{StaticResource Launcher.Spacing.Thickness.Md}"/>
     </Style>
-    <Style Selector="Border.confirm-panel">
-        <Setter Property="MaxWidth" Value="{StaticResource Launcher.Component.Dialog.Confirm.MaxWidth}"/>
-        <Setter Property="MinWidth" Value="{StaticResource Launcher.Component.Dialog.Confirm.MinWidth}"/>
-        <Setter Property="Margin" Value="{StaticResource Launcher.Spacing.Thickness.Xxl}"/>
-        <Setter Property="HorizontalAlignment" Value="Center"/>
-        <Setter Property="VerticalAlignment" Value="Center"/>
-    </Style>
     <Style Selector="Grid.dialog-heading">
         <Setter Property="ColumnSpacing" Value="{StaticResource Launcher.Spacing.Md}"/>
     </Style>
     <Style Selector="StackPanel.dialog-heading-copy">
         <Setter Property="Spacing" Value="{StaticResource Launcher.Spacing.Xs}"/>
         <Setter Property="VerticalAlignment" Value="Center"/>
-    </Style>
-    <Style Selector="Grid.confirm-layout">
-        <Setter Property="Margin" Value="{StaticResource Launcher.Spacing.Thickness.Xxl}"/>
-        <Setter Property="RowSpacing" Value="{StaticResource Launcher.Spacing.Lg}"/>
     </Style>
     <Style Selector="TextBlock.dialog-message">
         <Setter Property="FontSize" Value="{StaticResource Launcher.Typography.FontSize.Body.Lg}"/>

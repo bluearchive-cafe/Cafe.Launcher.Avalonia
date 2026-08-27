@@ -22,6 +22,8 @@ namespace Cafe.Launcher.Avalonia.Controls;
 public class DialogSurface : TemplatedControl
 {
     private Button? closeButton;
+    private Border? headerBorder;
+    private Border? basicHeadBorder;
     private ContentPresenter? badgePresenter;
     private ContentPresenter? basicIconPresenter;
     private ContentPresenter? scrollContentPresenter;
@@ -30,6 +32,8 @@ public class DialogSurface : TemplatedControl
     private TextBlock? basicSupportTextBlock;
     private ContentPresenter? leadingPresenter;
     private ContentPresenter? toolbarPresenter;
+    private ScrollViewer? scrollViewer;
+    private ContentPresenter? directContentPresenter;
 
     public static readonly StyledProperty<DialogSurfaceForm> FormProperty =
         AvaloniaProperty.Register<DialogSurface, DialogSurfaceForm>(nameof(Form));
@@ -178,6 +182,8 @@ public class DialogSurface : TemplatedControl
         base.OnApplyTemplate(e);
 
         closeButton = e.NameScope.Find<Button>("PART_CloseButton");
+        headerBorder = e.NameScope.Find<Border>("PART_PanelHead");
+        basicHeadBorder = e.NameScope.Find<Border>("PART_BasicHead");
         badgePresenter = e.NameScope.Find<ContentPresenter>("PART_BadgePresenter");
         basicIconPresenter = e.NameScope.Find<ContentPresenter>("PART_BasicIconPresenter");
         scrollContentPresenter = e.NameScope.Find<ContentPresenter>("PART_ScrollContentPresenter");
@@ -186,6 +192,8 @@ public class DialogSurface : TemplatedControl
         basicSupportTextBlock = e.NameScope.Find<TextBlock>("PART_BasicSupportTextBlock");
         leadingPresenter = e.NameScope.Find<ContentPresenter>("PART_FooterLeadingPresenter");
         toolbarPresenter = e.NameScope.Find<ContentPresenter>("PART_ToolbarPresenter");
+        scrollViewer = e.NameScope.Find<ScrollViewer>("PART_ScrollViewer");
+        directContentPresenter = e.NameScope.Find<ContentPresenter>("PART_DirectContentPresenter");
 
         SyncSlotContents();
     }
@@ -208,6 +216,7 @@ public class DialogSurface : TemplatedControl
         }
 
         if (change.Property == CloseCommandProperty ||
+            change.Property == TitleProperty ||
             change.Property == HeaderIconProperty ||
             change.Property == BasicIconProperty ||
             change.Property == FooterProperty ||
@@ -232,6 +241,14 @@ public class DialogSurface : TemplatedControl
     /// </summary>
     private void SyncSlotContents()
     {
+        // 正文按当前模式单路投递：同一可视元素不能同时挂到两个展示器。
+        var syncIsPanel = Form == DialogSurfaceForm.Panel;
+        var syncHasHeaderIdentity =
+            !string.IsNullOrEmpty(Title)
+            || !string.IsNullOrEmpty(Subtitle)
+            || HeaderIcon is not null;
+        var syncIsShellMode = !syncIsPanel || !syncHasHeaderIdentity;
+
         if (badgePresenter is not null)
         {
             badgePresenter.Content = HeaderIcon;
@@ -244,8 +261,14 @@ public class DialogSurface : TemplatedControl
 
         if (scrollContentPresenter is not null)
         {
-            scrollContentPresenter.Content = Content;
-            scrollContentPresenter.ContentTemplate = ContentTemplate;
+            scrollContentPresenter.Content = syncIsShellMode ? null : Content;
+            scrollContentPresenter.ContentTemplate = syncIsShellMode ? null : ContentTemplate;
+        }
+
+        if (directContentPresenter is not null)
+        {
+            directContentPresenter.Content = syncIsShellMode ? Content : null;
+            directContentPresenter.ContentTemplate = syncIsShellMode ? ContentTemplate : null;
         }
 
         if (footerPresenter is not null)
@@ -268,6 +291,11 @@ public class DialogSurface : TemplatedControl
         RefreshChrome();
     }
 
+    private Thickness GetThicknessToken(string key) =>
+        TryGetResource(key, ActualThemeVariant, out var value) && value is Thickness thickness
+            ? thickness
+            : default;
+
     private void ApplyPseudoClasses()
     {
         PseudoClasses.Set(":panel", Form == DialogSurfaceForm.Panel);
@@ -279,12 +307,49 @@ public class DialogSurface : TemplatedControl
     private void RefreshChrome()
     {
         var isPanel = Form == DialogSurfaceForm.Panel;
+        var hasHeaderIdentity =
+            !string.IsNullOrEmpty(Title)
+            || !string.IsNullOrEmpty(Subtitle)
+            || HeaderIcon is not null;
 
         if (closeButton is not null)
         {
             // 关闭钮仅属于 Panel 头带，且必须存在合法出口才有意义；
             // Basic 形态的动作即出口，永不渲染 ✕。
-            closeButton.IsVisible = isPanel && CloseCommand is not null;
+            closeButton.IsVisible = isPanel && CloseCommand is not null && hasHeaderIdentity;
+        }
+
+        // Panel 头带在没有任何身份内容（标题/副标题/徽章）时整行折叠，
+        // 正文边距同步归零：供设置/向导这类自带留白体系的外壳场景复用表面档案。
+        if (headerBorder is not null)
+        {
+            headerBorder.IsVisible = isPanel && hasHeaderIdentity;
+        }
+
+        if (basicHeadBorder is not null)
+        {
+            basicHeadBorder.IsVisible = !isPanel;
+        }
+
+        var isShellMode = !isPanel || !hasHeaderIdentity;
+
+        if (scrollViewer is not null)
+        {
+            // 常规形态经滚动脚手架并按形态取边距；外壳模式整体绕过，
+            // 让内容获得模板行高的有界高度，内部滚动区才能正常工作。
+            scrollViewer.IsVisible = !isShellMode;
+            if (!isShellMode)
+            {
+                scrollViewer.Padding = GetThicknessToken(
+                    isPanel
+                        ? "Launcher.Component.Dialog.Panel.Body.Padding"
+                        : "Launcher.Component.Dialog.Basic.Content.Padding");
+            }
+        }
+
+        if (directContentPresenter is not null)
+        {
+            directContentPresenter.IsVisible = isShellMode;
         }
 
         if (badgePresenter is not null)

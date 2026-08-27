@@ -93,13 +93,15 @@
             <!-- 固定工具行（可选）：位于头带与滚动区之间，如日志过滤栏 -->
             <ContentPresenter x:Name="PART_ToolbarPresenter" Grid.Row="1" Focusable="False"/>
 
-            <!-- 共享滚动内容区：Basic 的支撑文案与 Panel 的正文都在此呈现 -->
+            <!-- 共享内容区：常规形态经滚动脚手架；无头带外壳模式由直连
+                 展示器绕过无限高度，交给内部布局自管（如设置工作区）。 -->
             <ScrollViewer x:Name="PART_ScrollViewer" Grid.Row="2"
                           HorizontalScrollBarVisibility="Disabled"
                           VerticalScrollBarVisibility="Auto">
               <!-- 对象型插槽内容由 DialogSurface.SyncSlotContents() 装配，不走模板绑定。 -->
               <ContentPresenter x:Name="PART_ScrollContentPresenter"/>
             </ScrollViewer>
+            <ContentPresenter x:Name="PART_DirectContentPresenter" Grid.Row="2" Focusable="False"/>
 
             <!-- 动作带：Basic 为无装饰动作行，Panel 升级为发丝底带（含左侧辅助槽） -->
             <Border x:Name="PART_FooterBand" Grid.Row="3">
@@ -121,31 +123,14 @@
     </Setter>
   </Style>
 
-  <!-- 形态切换：默认 Basic 解剖可见、Panel 解剖隐藏；:panel 反转两者。 -->
-  <Style Selector="controls|DialogSurface /template/ Border#PART_PanelHead">
-    <Setter Property="IsVisible" Value="False"/>
-  </Style>
-  <Style Selector="controls|DialogSurface /template/ Border#PART_BasicHead">
-    <Setter Property="IsVisible" Value="True"/>
-  </Style>
-  <Style Selector="controls|DialogSurface /template/ ScrollViewer#PART_ScrollViewer">
-    <Setter Property="Padding" Value="{StaticResource Launcher.Component.Dialog.Basic.Content.Padding}"/>
-  </Style>
+  <!-- 形态切换：解剖可见性与滚动区边距全部由 DialogSurface.RefreshChrome()
+       以本地值管理（含头带折叠与自管留白外壳）。样式仅保留动作带皮肤差异。 -->
   <Style Selector="controls|DialogSurface /template/ Border#PART_FooterBand">
     <Setter Property="Background" Value="{StaticResource Launcher.Color.Transparent}"/>
     <Setter Property="BorderThickness" Value="{StaticResource Launcher.Spacing.Thickness.None}"/>
     <Setter Property="Padding" Value="{StaticResource Launcher.Component.Dialog.Basic.Actions.Padding}"/>
   </Style>
 
-  <Style Selector="controls|DialogSurface:panel /template/ Border#PART_PanelHead">
-    <Setter Property="IsVisible" Value="True"/>
-  </Style>
-  <Style Selector="controls|DialogSurface:panel /template/ Border#PART_BasicHead">
-    <Setter Property="IsVisible" Value="False"/>
-  </Style>
-  <Style Selector="controls|DialogSurface:panel /template/ ScrollViewer#PART_ScrollViewer">
-    <Setter Property="Padding" Value="{StaticResource Launcher.Component.Dialog.Panel.Body.Padding}"/>
-  </Style>
   <Style Selector="controls|DialogSurface:panel /template/ Border#PART_FooterBand">
     <Setter Property="Background" Value="{DynamicResource Launcher.Color.Dialog.Footer}"/>
     <Setter Property="BorderBrush" Value="{DynamicResource Launcher.Color.Card.Border}"/>
