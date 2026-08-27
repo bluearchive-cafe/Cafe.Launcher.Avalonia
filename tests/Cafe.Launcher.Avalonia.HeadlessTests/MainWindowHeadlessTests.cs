@@ -2264,6 +2264,37 @@ public sealed class MainWindowHeadlessTests
     }
 
     [AvaloniaFact]
+    public void SetupWizard_OptionRows_StretchToAlignRadioCircles()
+    {
+        // ADR-017：wizard-option 行等宽拉伸（HorizontalAlignment=Stretch）——
+        // 列宽大于行宽时行若按内容自适应，非左对齐排布会使圆圈左缘错位。
+        using var context = CreateContext();
+        context.Window.Show();
+        context.ViewModel.Dialogs.ShowSetupWizard();
+        context.ViewModel.Dialogs.SetupWizard.Step = 2;
+        Dispatcher.UIThread.RunJobs();
+
+        var radios = context.Window.GetVisualDescendants().OfType<RadioButton>()
+            .Where(control => control.Classes.Contains("wizard-option") && control.IsEffectivelyVisible)
+            .ToList();
+        Assert.Equal(2, radios.Count);
+        Assert.All(
+            radios,
+            radio => Assert.Equal(radios[0].Bounds.Width, radio.Bounds.Width));
+        Assert.All(
+            radios,
+            radio => Assert.Equal(radios[0].Bounds.X, radio.Bounds.X));
+
+        var circleOffsets = radios.Select(radio =>
+        {
+            var circle = radio.GetVisualDescendants()
+                .First(child => child.Name == "OuterEllipse");
+            return radio.TranslatePoint(circle.Bounds.Position, radio)!.Value.X;
+        }).ToList();
+        Assert.Equal(circleOffsets[0], circleOffsets[1]);
+    }
+
+    [AvaloniaFact]
     public void SetupWizard_StepSwitch_LeavesOnlyFinalStepVisible()
     {
         // ADR-017：步骤切换 = 顺序换页（后置代码编排）；降动效下瞬切换面。

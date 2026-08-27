@@ -3411,17 +3411,17 @@ public sealed partial class UiStyleContractTests
     [Fact]
     public void SetupWizard_ActionButtons_UseTonalAndFilledStyles()
     {
-        // ADR-017：向导动作钮 = tonal（SecondaryContainer 底色）+ filled 主按钮（primary-action 叠加）。
+        // ADR-017：向导动作钮 = 中性 tonal（Content.Row 底色）+ filled 主按钮（primary-action 叠加）。
         var styles = XDocument.Load(ProjectFile("Views/Styles/SetupWizard.axaml"));
         var tonal = GetStyleSetters(styles, "Button.wizard-action");
-        Assert.Equal("{DynamicResource Launcher.Color.SecondaryContainer}", tonal["Background"]);
-        Assert.Equal("{DynamicResource Launcher.Color.OnSecondaryContainer}", tonal["Foreground"]);
+        Assert.Equal("{DynamicResource Launcher.Color.Content.Row}", tonal["Background"]);
+        Assert.Equal("{DynamicResource Launcher.Text.Primary}", tonal["Foreground"]);
         Assert.Equal("{StaticResource Launcher.Radius.Xs}", tonal["CornerRadius"]);
         Assert.Equal(
-            "{DynamicResource Launcher.Color.SecondaryContainer.Hover}",
+            "{DynamicResource Launcher.Color.Dialog.Close.Hover}",
             GetStyleSetters(styles, "Button.wizard-action:pointerover")["Background"]);
         Assert.Equal(
-            "{DynamicResource Launcher.Color.SecondaryContainer.Pressed}",
+            "{DynamicResource Launcher.Color.Dialog.Close.Pressed}",
             GetStyleSetters(styles, "Button.wizard-action:pressed")["Background"]);
         Assert.Equal(
             "{DynamicResource Launcher.Color.Primary}",
@@ -3442,6 +3442,7 @@ public sealed partial class UiStyleContractTests
             style => style.Attribute("Selector")?.Value?.Contains("wizard-choice") == true);
 
         var option = GetStyleSetters(styles, "RadioButton.wizard-option");
+        Assert.Equal("Stretch", option["HorizontalAlignment"]);
         Assert.Equal(
             "{StaticResource Launcher.Component.Wizard.Option.MinHeight}",
             option["MinHeight"]);

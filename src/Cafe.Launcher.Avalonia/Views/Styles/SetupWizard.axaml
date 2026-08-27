@@ -4,12 +4,12 @@
     <Style Selector="Border.wizard-body">
         <Setter Property="Padding" Value="{StaticResource Launcher.Component.Dialog.Panel.Body.Padding}"/>
     </Style>
-    <!-- 实验台向导动作钮（ADR-017，并入内容区）：非主按钮为 M3 tonal
-         （SecondaryContainer 底色 + OnSecondaryContainer 前景），主按钮
-         叠加 primary-action 转为 filled；几何沿用 dialog-action，图标行经 button-content。 -->
+    <!-- 实验台向导动作钮（ADR-017，并入内容区）：非主按钮为中性 tonal
+         （Content.Row 底色 + Text.Primary 前景，悬停/按压取对话框表面中性变体），
+         主按钮叠加 primary-action 转为 filled；几何沿用 dialog-action，图标行经 button-content。 -->
     <Style Selector="Button.wizard-action">
-        <Setter Property="Background" Value="{DynamicResource Launcher.Color.SecondaryContainer}"/>
-        <Setter Property="Foreground" Value="{DynamicResource Launcher.Color.OnSecondaryContainer}"/>
+        <Setter Property="Background" Value="{DynamicResource Launcher.Color.Content.Row}"/>
+        <Setter Property="Foreground" Value="{DynamicResource Launcher.Text.Primary}"/>
         <Setter Property="BorderThickness" Value="{StaticResource Launcher.Spacing.Thickness.None}"/>
         <Setter Property="FontWeight" Value="{StaticResource Launcher.Typography.FontWeight.Strong}"/>
         <Setter Property="CornerRadius" Value="{StaticResource Launcher.Radius.Xs}"/>
@@ -18,12 +18,12 @@
         <Setter Property="Template" Value="{StaticResource LauncherBorderButtonTemplate}"/>
     </Style>
     <Style Selector="Button.wizard-action:pointerover">
-        <Setter Property="Background" Value="{DynamicResource Launcher.Color.SecondaryContainer.Hover}"/>
-        <Setter Property="Foreground" Value="{DynamicResource Launcher.Color.OnSecondaryContainer}"/>
+        <Setter Property="Background" Value="{DynamicResource Launcher.Color.Dialog.Close.Hover}"/>
+        <Setter Property="Foreground" Value="{DynamicResource Launcher.Text.Primary}"/>
     </Style>
     <Style Selector="Button.wizard-action:pressed">
-        <Setter Property="Background" Value="{DynamicResource Launcher.Color.SecondaryContainer.Pressed}"/>
-        <Setter Property="Foreground" Value="{DynamicResource Launcher.Color.OnSecondaryContainer}"/>
+        <Setter Property="Background" Value="{DynamicResource Launcher.Color.Dialog.Close.Pressed}"/>
+        <Setter Property="Foreground" Value="{DynamicResource Launcher.Text.Primary}"/>
     </Style>
     <Style Selector="Button.wizard-action:disabled">
         <Setter Property="Background" Value="{DynamicResource Launcher.Color.Content.Row}"/>
@@ -57,6 +57,7 @@
     <!-- M3 选项行：单选组按列表行呈现，整行为命中目标，悬停铺状态层圆角底。
          选项语义仍由 RadioButton 承载（ADR-014：不用卡片按钮改写语义）。 -->
     <Style Selector="RadioButton.wizard-option">
+        <Setter Property="HorizontalAlignment" Value="Stretch"/>
         <Setter Property="MinHeight" Value="{StaticResource Launcher.Component.Wizard.Option.MinHeight}"/>
         <Setter Property="Padding" Value="{StaticResource Launcher.Component.Wizard.Option.Padding}"/>
         <Setter Property="CornerRadius" Value="{StaticResource Launcher.Radius.Md}"/>
