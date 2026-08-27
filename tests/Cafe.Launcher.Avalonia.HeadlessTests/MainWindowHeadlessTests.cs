@@ -687,8 +687,8 @@ public sealed class MainWindowHeadlessTests
             .OfType<MainWindowSettingsOverlay>()
             .Single();
         var dialog = settingsOverlay.GetVisualDescendants()
-            .OfType<Border>()
-            .Single(control => control.Classes.Contains("overlay-dialog"));
+            .OfType<global::Cafe.Launcher.Avalonia.Controls.DialogSurface>()
+            .Single();
         var navigation = GetSettingsNavigation(context.Window);
         var selectedItem = navigation.ContainerFromIndex(navigation.SelectedIndex)
             ?? throw new InvalidOperationException("Selected settings item was not realized.");
@@ -970,7 +970,7 @@ public sealed class MainWindowHeadlessTests
         var settingsOverlay = context.Window.GetVisualDescendants()
             .OfType<MainWindowSettingsOverlay>().Single();
         var footer = settingsOverlay.GetVisualDescendants().OfType<Border>()
-            .Single(control => control.Classes.Contains("dialog-footer"));
+            .Single(control => control.Name == "PART_FooterBand");
 
         context.ViewModel.Settings.IsSaving = true;
         Dispatcher.UIThread.RunJobs();
@@ -1006,8 +1006,8 @@ public sealed class MainWindowHeadlessTests
             .OfType<MainWindowSettingsOverlay>()
             .Single();
         var dialog = settingsOverlay.GetVisualDescendants()
-            .OfType<Border>()
-            .Single(control => control.Classes.Contains("overlay-dialog"));
+            .OfType<global::Cafe.Launcher.Avalonia.Controls.DialogSurface>()
+            .Single();
         var dialogTopLeft = dialog.TranslatePoint(default, context.Window);
         var scrollBarTopLeft = verticalScrollBar.TranslatePoint(default, context.Window);
         Assert.NotNull(dialogTopLeft);
@@ -1032,18 +1032,44 @@ public sealed class MainWindowHeadlessTests
             .Single();
         var dialog = settingsOverlay
             .GetVisualDescendants()
-            .OfType<Border>()
-            .Single(control => control.Classes.Contains("overlay-dialog"));
+            .OfType<global::Cafe.Launcher.Avalonia.Controls.DialogSurface>()
+            .Single();
         var footer = dialog
             .GetVisualDescendants()
             .OfType<Border>()
-            .Single(control => control.Classes.Contains("dialog-footer"));
+            .Single(control => control.Name == "PART_FooterBand");
 
         Assert.True(dialog.Bounds.Width <= context.Window.ClientSize.Width - 48);
         Assert.True(dialog.Bounds.Height <= context.Window.ClientSize.Height - 48);
         Assert.True(dialog.Bounds.Height > 0);
         Assert.True(footer.IsEffectivelyVisible);
         Assert.True(footer.Bounds.Bottom <= dialog.Bounds.Height);
+    }
+
+    [AvaloniaFact]
+    public void SettingsFooterActions_AlignWithContentHeaderRightEdge()
+    {
+        using var context = CreateContext();
+        OpenSettings(context);
+
+        var headerCloseButton = context.Window
+            .GetVisualDescendants()
+            .OfType<Button>()
+            .Single(control => control.Classes.Contains("content-header-action"));
+        var saveButton = context.Window
+            .GetVisualDescendants()
+            .OfType<Button>()
+            .Single(control => ReferenceEquals(
+                control.Command,
+                context.ViewModel.Settings.SaveSettingsCommand));
+        var headerTopLeft = headerCloseButton.TranslatePoint(default, context.Window);
+        var saveTopLeft = saveButton.TranslatePoint(default, context.Window);
+
+        Assert.NotNull(headerTopLeft);
+        Assert.NotNull(saveTopLeft);
+        var headerRight = headerTopLeft.Value.X + headerCloseButton.Bounds.Width;
+        var saveRight = saveTopLeft.Value.X + saveButton.Bounds.Width;
+        Assert.InRange(Math.Abs(headerRight - saveRight), 0, 1);
     }
 
     [AvaloniaTheory]
@@ -1795,12 +1821,19 @@ public sealed class MainWindowHeadlessTests
             .GetVisualDescendants()
             .OfType<global::Cafe.Launcher.Avalonia.Controls.ConfirmDialog>()
             .Single(control => control.IsOpen);
-        var panel = dialog
+        var surface = dialog
             .GetVisualDescendants()
-            .OfType<Border>()
-            .Single(control => control.Classes.Contains("confirm-panel"));
+            .OfType<global::Cafe.Launcher.Avalonia.Controls.DialogSurface>()
+            .Single();
 
-        Assert.True(panel.Bounds.Width <= 540);
+        Assert.True(surface.Bounds.Width <= 540);
+        Assert.True(surface.Bounds.Height < 480);
+
+        var supportText = surface
+            .GetVisualDescendants()
+            .OfType<TextBlock>()
+            .Single(text => text.Name == "PART_BasicSupportTextBlock");
+        Assert.False(supportText.IsVisible);
     }
 
     [AvaloniaFact]
@@ -2325,22 +2358,45 @@ public sealed class MainWindowHeadlessTests
         using var context = CreateContext();
         context.Window.Show();
 
-        context.ViewModel.Gallery.OpenCommand.Execute(null);
+        context.ViewModel.Dialogs.Gallery.OpenCommand.Execute(null);
         Dispatcher.UIThread.RunJobs();
 
-        Assert.True(context.ViewModel.Gallery.IsVisible);
-        Assert.True(context.ViewModel.Gallery.Groups.Count >= 12, $"Expected 12+ families, got {context.ViewModel.Gallery.Groups.Count}.");
-        var totalItems = context.ViewModel.Gallery.Groups.Sum(group => group.Items.Count);
+        Assert.True(context.ViewModel.Dialogs.Gallery.IsVisible);
+        Assert.True(context.ViewModel.Dialogs.Gallery.Groups.Count >= 12, $"Expected 12+ families, got {context.ViewModel.Dialogs.Gallery.Groups.Count}.");
+        var totalItems = context.ViewModel.Dialogs.Gallery.Groups.Sum(group => group.Items.Count);
         Assert.True(totalItems >= 130, $"Expected 130+ tokens, got {totalItems}.");
-        Assert.Contains(context.ViewModel.Gallery.Groups, group => group.Family == "Color");
-        Assert.Contains(context.ViewModel.Gallery.Groups, group => group.Family == "Component");
+        Assert.Contains(context.ViewModel.Dialogs.Gallery.Groups, group => group.Family == "Color");
+        Assert.Contains(context.ViewModel.Dialogs.Gallery.Groups, group => group.Family == "Component");
         Assert.Contains(
-            context.ViewModel.Gallery.Groups.SelectMany(group => group.Items),
+            context.ViewModel.Dialogs.Gallery.Groups.SelectMany(group => group.Items),
             item => item.Key == "Launcher.Text.Primary");
 
-        context.ViewModel.Gallery.CloseCommand.Execute(null);
+        var gallerySurface = context.Window
+            .GetVisualDescendants()
+            .OfType<global::Cafe.Launcher.Avalonia.Controls.DialogSurface>()
+            .Single(surface => ReferenceEquals(
+                surface.CloseCommand,
+                context.ViewModel.Dialogs.Gallery.CloseCommand));
+        var scrollViewer = gallerySurface
+            .GetVisualDescendants()
+            .OfType<ScrollViewer>()
+            .Single(control => control.Name == "PART_ScrollViewer");
+        var contentPresenter = gallerySurface
+            .GetVisualDescendants()
+            .OfType<ContentPresenter>()
+            .Single(control => control.Name == "PART_ScrollContentPresenter");
+        var galleryContent = Assert.IsType<StackPanel>(contentPresenter.Content);
+        var scrollTopLeft = scrollViewer.TranslatePoint(default, gallerySurface);
+        var contentTopLeft = galleryContent.TranslatePoint(default, gallerySurface);
+        Assert.NotNull(scrollTopLeft);
+        Assert.NotNull(contentTopLeft);
+        Assert.Equal(
+            scrollTopLeft.Value.X + scrollViewer.Padding.Left,
+            contentTopLeft.Value.X);
+
+        context.ViewModel.Dialogs.Gallery.CloseCommand.Execute(null);
         Dispatcher.UIThread.RunJobs();
-        Assert.False(context.ViewModel.Gallery.IsVisible);
+        Assert.False(context.ViewModel.Dialogs.Gallery.IsVisible);
     }
 
     [AvaloniaFact]

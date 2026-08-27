@@ -874,7 +874,8 @@ public sealed partial class UiStyleContractTests
         "Views/Styles/Diagnostics.axaml",
         "Views/Styles/RemoteContent.axaml",
         "Views/Styles/SetupWizard.axaml",
-        "Views/Styles/Toast.axaml"
+        "Views/Styles/Toast.axaml",
+        "Views/Styles/DialogSurface.axaml"
     ];
 
     private static readonly string[] ViewFiles =
@@ -1004,17 +1005,18 @@ public sealed partial class UiStyleContractTests
     public void SettingsOverlay_UsesResponsiveTwoColumnCategoryWorkspace()
     {
         var document = XDocument.Load(ProjectFile("Views/MainWindowSettingsOverlay.axaml"));
-        var dialog = document
+        // ADR-015：外壳为无头带 DialogSurface（身份区折叠），token 仅作 Max 封顶。
+        var surface = document
             .Descendants()
-            .Single(element =>
-                element.Name.LocalName == "Border"
-                && HasClass(element, "overlay-dialog"));
-        Assert.Null(dialog.Attribute("Width"));
-        Assert.Null(dialog.Attribute("Height"));
-        Assert.Equal("{StaticResource Launcher.Layout.Settings.MaxWidth}", dialog.Attribute("MaxWidth")?.Value);
-        Assert.Equal("{StaticResource Launcher.Layout.Settings.MaxHeight}", dialog.Attribute("MaxHeight")?.Value);
-        var dialogLayout = dialog.Elements().Single(element => element.Name.LocalName == "Grid");
-        Assert.Equal("*,Auto", dialogLayout.Attribute("RowDefinitions")?.Value);
+            .Single(element => element.Name.LocalName == "DialogSurface");
+        Assert.Equal("Panel", surface.Attribute("Form")?.Value);
+        Assert.True(HasClass(surface, "settings-surface"));
+        Assert.Null(surface.Attribute("Width"));
+        Assert.Null(surface.Attribute("Height"));
+        Assert.Null(surface.Attribute("Title"));
+        Assert.Null(surface.Attribute("HeaderIcon"));
+        Assert.Equal("{StaticResource Launcher.Layout.Settings.MaxWidth}", surface.Attribute("MaxWidth")?.Value);
+        Assert.Equal("{StaticResource Launcher.Layout.Settings.MaxHeight}", surface.Attribute("MaxHeight")?.Value);
 
         var workspace = document
             .Descendants()
@@ -1119,11 +1121,10 @@ public sealed partial class UiStyleContractTests
     public void SettingsOverlay_UsesFinalM3SurfaceBlueprint()
     {
         var document = XDocument.Load(ProjectFile("Views/MainWindowSettingsOverlay.axaml"));
-        var layout = document.Descendants().Single(element =>
-            element.Name.LocalName == "Grid"
-            && element.Attribute("Classes")?.Value == "motion-surface-content");
-
-        Assert.Equal("*,Auto", layout.Attribute("RowDefinitions")?.Value);
+        // ADR-015：外壳表面自带滑移动效类；内容层不再拆分。
+        var surface = document.Descendants().Single(element =>
+            element.Name.LocalName == "DialogSurface");
+        Assert.True(HasClass(surface, "motion-surface"));
         Assert.Single(document.Descendants(), element => HasClass(element, "settings-navigation-header"));
 
         var navigationIcon = document
@@ -1148,6 +1149,7 @@ public sealed partial class UiStyleContractTests
     public void SettingsWorkspaceStyles_UseSemanticBrushesAndDesignTokens()
     {
         var document = XDocument.Load(ProjectFile("Views/MainWindow.Styles.axaml"));
+        var dialogSurfaceStyles = XDocument.Load(ProjectFile("Views/Styles/DialogSurface.axaml"));
 
         Assert.Equal(
             "0",
@@ -1173,6 +1175,11 @@ public sealed partial class UiStyleContractTests
         Assert.Equal(
             "{StaticResource Launcher.Component.Settings.Content.Padding}",
             GetStyleSetters(document, "Border.settings-content-padding")["Padding"]);
+        Assert.Equal(
+            "{StaticResource Launcher.Component.Settings.Footer.Padding}",
+            GetStyleSetters(
+                dialogSurfaceStyles,
+                "controls|DialogSurface.settings-surface:panel /template/ Border#PART_FooterBand")["Padding"]);
         Assert.Equal(
             "{StaticResource Launcher.Spacing.Thickness.None}",
             GetStyleSetters(document, "Button.dialog-close.content-header-action")["Margin"]);
@@ -1541,11 +1548,16 @@ public sealed partial class UiStyleContractTests
         Assert.Equal("{StaticResource Launcher.Component.ContentRow.Margin}", contentRow["Margin"]);
         Assert.Equal("{StaticResource Launcher.Radius.Sm}", contentRow["CornerRadius"]);
 
-        var dialog = GetStyleSetters(document, "Border.dialog");
-        Assert.Equal("{StaticResource Launcher.Radius.Lg}", dialog["CornerRadius"]);
-        Assert.Equal(
+        // ADR-015：Border.dialog 退役，表面档案（圆角/底色）由 DialogSurface 主题承载。
+        var dialogTheme = File.ReadAllText(ProjectFile("Views/Styles/DialogSurface.axaml"));
+        Assert.Contains(
+            "{StaticResource Launcher.Component.Dialog.CornerRadius}",
+            dialogTheme,
+            StringComparison.Ordinal);
+        Assert.Contains(
             "{DynamicResource Launcher.Color.Dialog.Background}",
-            dialog["Background"]);
+            dialogTheme,
+            StringComparison.Ordinal);
 
         var settingControl = GetStyleSetters(document, "ComboBox.setting-control");
         Assert.False(settingControl.ContainsKey("Width"));
@@ -1795,6 +1807,11 @@ public sealed partial class UiStyleContractTests
     public void DesignGallery_ProvidesFourButtonTypesCardAndSettingsRowAcrossSixStates()
     {
         var document = XDocument.Load(ProjectFile("Views/DesignGalleryOverlay.axaml"));
+        var dialogContent = document
+            .Descendants()
+            .Single(element => element.Name.LocalName == "DialogSurface.Content");
+        var contentStack = dialogContent.Elements().Single();
+        Assert.Null(contentStack.Attribute("Margin"));
         var matrix = document.Descendants().Single(element => HasClass(element, "design-state-matrix"));
 
         Assert.Equal("Auto,*,*,*,*,*,*", matrix.Attribute("ColumnDefinitions")?.Value);
@@ -2224,14 +2241,22 @@ public sealed partial class UiStyleContractTests
             .Single(element => HasClass(element, "wizard-navigation"));
         Assert.Equal("1", navigation.Attribute("Grid.Row")?.Value);
 
+        // ADR-015：发丝底带内化为模板 Footer；视图文件只承载动作组。
+        Assert.DoesNotContain(
+            document.Descendants(),
+            element => element.Name.LocalName == "Border" && HasClass(element, "dialog-footer"));
         var footer = document
             .Descendants()
-            .Single(element => element.Name.LocalName == "Border" && HasClass(element, "dialog-footer"));
-        Assert.Equal("2", footer.Attribute("Grid.Row")?.Value);
+            .Single(element => element.Name.LocalName == "DialogSurface.Footer");
         var actions = footer
             .Elements()
             .Single(element => element.Name.LocalName == "StackPanel" && HasClass(element, "confirm-actions"));
-        Assert.Null(actions.Attribute("Grid.Row"));
+        Assert.Contains(actions.Descendants(), element =>
+            element.Name.LocalName == "Button"
+            && element.Attribute("Command")?.Value == "{Binding Dialogs.SetupWizard.PreviousCommand}");
+        Assert.Contains(actions.Descendants(), element =>
+            element.Name.LocalName == "Button"
+            && element.Attribute("Command")?.Value == "{Binding Dialogs.SetupWizard.CompleteCommand}");
     }
 
     [Fact]
@@ -2255,7 +2280,7 @@ public sealed partial class UiStyleContractTests
         {
             ["Views/MainWindowDialogsOverlay.axaml"] = new(StringComparer.Ordinal)
             {
-                ["{Binding ResourcePanel.CloseResourcePanelCommand}"] = "{Binding Shell.I18n[close]}",
+                // 头带 ✕ 迁入模板后经 CloseAutomationName 传递，不再出现在文件中。
                 ["{Binding ResourcePanel.SaveManualResourcePanelUidCommand}"] = "{Binding Shell.I18n[resourcePanelSaveUid]}",
                 ["{Binding ResourcePanel.CancelEditResourcePanelUidCommand}"] = "{Binding Shell.I18n[cancel]}",
                 ["{Binding ResourcePanel.BeginEditResourcePanelUidCommand}"] = "{Binding Shell.I18n[resourcePanelChangeUid]}",
@@ -2345,19 +2370,25 @@ public sealed partial class UiStyleContractTests
     }
 
     [Fact]
-    public void ErrorDialog_HeaderProvidesLocalizedCloseAction() // ADR-014 dialog family anatomy
+    public void ErrorDialog_HeaderProvidesLocalizedCloseAction() // ADR-015 dialog surface anatomy
     {
         var document = XDocument.Load(ProjectFile("Views/MainWindowDialogsOverlay.axaml"));
-        var close = document
+        var errorSurface = document
             .Descendants()
             .Single(element =>
-                element.Name.LocalName == "Button"
-                && HasClass(element, "dialog-close")
-                && element.Attribute("Command")?.Value == "{Binding Dialogs.ContinueAfterErrorCommand}");
+                element.Name.LocalName == "DialogSurface"
+                && element.Attribute("Status")?.Value == "Danger");
+
+        // 头带 ✕ 由模板渲染，命令与本地化名称经表面属性传入。
+        Assert.Equal(
+            "{Binding Dialogs.ContinueAfterErrorCommand}",
+            errorSurface.Attribute("CloseCommand")?.Value);
         Assert.Equal(
             "{Binding Shell.I18n[close]}",
-            close.Attributes().Single(attribute =>
-                attribute.Name.LocalName == "AutomationProperties.Name").Value);
+            errorSurface.Attribute("CloseAutomationName")?.Value);
+        Assert.Equal(
+            "{Binding Shell.I18n[close]}",
+            errorSurface.Attribute("CloseToolTip")?.Value);
     }
 
     [Fact]
@@ -2446,26 +2477,26 @@ public sealed partial class UiStyleContractTests
     public void ConfirmDialog_LongContentScrollsWhileActionsRemainFixed()
     {
         var document = XDocument.Load(ProjectFile("Controls/ConfirmDialog.axaml"));
-        var panel = document
+        var surface = document
             .Descendants()
-            .Single(element => element.Name.LocalName == "Border" && HasClass(element, "confirm-panel"));
-        var layout = panel
-            .Elements()
-            .Single(element => element.Name.LocalName == "Grid");
-        var messageScroller = layout
-            .Elements()
-            .Single(element => element.Name.LocalName == "ScrollViewer");
-        var actions = layout
-            .Elements()
-            .Single(element => element.Name.LocalName == "StackPanel" && HasClass(element, "confirm-actions"));
+            .Single(element => element.Name.LocalName == "DialogSurface");
 
+        // Basic 形态归约到 DialogSurface；尺寸由 Confirm token 家族背书。
+        Assert.Equal("Basic", surface.Attribute("Form")?.Value);
         Assert.Equal(
             "{StaticResource Launcher.Component.Dialog.Confirm.MaxHeight}",
-            panel.Attribute("MaxHeight")?.Value);
-        var styles = XDocument.Load(ProjectFile("Views/MainWindow.Styles.axaml"));
+            surface.Attribute("MaxHeight")?.Value);
         Assert.Equal(
             "{StaticResource Launcher.Component.Dialog.Confirm.MinWidth}",
-            GetStyleSetters(styles, "Border.confirm-panel")["MinWidth"]);
+            surface.Attribute("MinWidth")?.Value);
+        Assert.Equal("Center", surface.Attribute("VerticalAlignment")?.Value);
+        Assert.Null(surface.Attribute("Subtitle"));
+
+        // Basic 动作带绝不出现 hairline footer；三按钮规律保留。
+        Assert.DoesNotContain(
+            document.Descendants(),
+            element => element.Name.LocalName == "Border" && HasClass(element, "dialog-footer"));
+
         var application = XDocument.Load(ProjectFile("App.axaml"));
         var maxHeightToken = application
             .Descendants()
@@ -2473,35 +2504,41 @@ public sealed partial class UiStyleContractTests
                 attribute.Name.LocalName == "Key"
                 && attribute.Value == "Launcher.Component.Dialog.Confirm.MaxHeight"));
         Assert.Equal("480", maxHeightToken.Value);
-        Assert.Equal("Auto,*,Auto", layout.Attribute("RowDefinitions")?.Value);
-        Assert.Equal("1", messageScroller.Attribute("Grid.Row")?.Value);
-        Assert.Equal("2", actions.Attribute("Grid.Row")?.Value);
-        Assert.DoesNotContain(
-            layout.Elements(),
-            element => element.Name.LocalName == "Border" && HasClass(element, "dialog-footer"));
+
+        var actions = document
+            .Descendants()
+            .Single(element =>
+                element.Name.LocalName == "StackPanel" && HasClass(element, "confirm-actions"));
+        Assert.Equal(3, actions.Elements().Count(element => element.Name.LocalName == "Button"));
     }
 
     [Fact]
     public void DialogsOverlay_DialogsUseHairlineFooterForActions()
     {
-        var document = XDocument.Load(ProjectFile("Views/MainWindowDialogsOverlay.axaml"));
-        var footers = document
-            .Descendants()
-            .Where(element => element.Name.LocalName == "Border" && HasClass(element, "dialog-footer"))
-            .ToArray();
+        // ADR-015：发丝动作带内化为 DialogSurface Panel 模板；视图文件只承载
+        // 四个表面实例（三 Panel + 一 Basic 公告），辅助动作进左槽。
+        var text = File.ReadAllText(ProjectFile("Views/MainWindowDialogsOverlay.axaml"));
 
-        Assert.Equal(4, footers.Length);
-        Assert.All(
-            footers,
-            footer =>
+        Assert.Equal(3, Regex.Count(text, @"Form=""Panel""", RegexOptions.CultureInvariant));
+        Assert.Equal(1, Regex.Count(text, @"Form=""Basic""", RegexOptions.CultureInvariant));
+        Assert.Equal(4, Regex.Count(text, @"Classes=""motion-surface""", RegexOptions.CultureInvariant));
+
+        // 发丝底带不再由调用方摆放：文件里不允许残留 legacy footer 标记。
+        Assert.DoesNotContain("dialog-footer", text, StringComparison.Ordinal);
+
+        var panels = 0;
+        foreach (Match match in Regex.Matches(text, @"<controls:DialogSurface\b[^>]*>", RegexOptions.CultureInvariant))
+        {
+            if (match.Value.Contains(@"Form=""Panel""", StringComparison.Ordinal))
             {
-                Assert.Equal("2", footer.Attribute("Grid.Row")?.Value);
-                var actions = footer
-                    .Elements()
-                    .Single(element =>
-                        element.Name.LocalName == "StackPanel" && HasClass(element, "confirm-actions"));
-                Assert.Null(actions.Attribute("Grid.Row"));
-            });
+                panels++;
+            }
+        }
+
+        Assert.Equal(3, panels);
+        Assert.Matches(
+            """(?s)<controls:DialogSurface\b[^>]*Form="Panel"[^>]*>.*?<controls:DialogSurface\.FooterLeading>.*?</controls:DialogSurface\.FooterLeading>.*?</controls:DialogSurface>""",
+            text);
     }
 
     [Fact]
@@ -2740,39 +2777,42 @@ public sealed partial class UiStyleContractTests
     [Fact]
     public void LogViewer_UsesFixedDialogDimensions()
     {
+        // ADR-015 尺寸律：自适应优先，固定宽高退场；token 仅作 Max 上限背书。
         var document = XDocument.Load(ProjectFile("Views/MainWindowLogViewerOverlay.axaml"));
         var dialog = document
             .Descendants()
-            .Single(element =>
-                element.Name.LocalName == "Border"
-                && HasClass(element, "overlay-dialog"));
+            .Single(element => element.Name.LocalName == "DialogSurface");
 
         Assert.Equal(
             "{StaticResource Launcher.Layout.LogViewer.Width}",
-            dialog.Attribute("Width")?.Value);
+            dialog.Attribute("MaxWidth")?.Value);
         Assert.Equal(
             "{StaticResource Launcher.Layout.LogViewer.Height}",
-            dialog.Attribute("Height")?.Value);
-        Assert.Null(dialog.Attribute("MaxWidth"));
-        Assert.Null(dialog.Attribute("MaxHeight"));
+            dialog.Attribute("MaxHeight")?.Value);
+        Assert.Null(dialog.Attribute("Width"));
+        Assert.Null(dialog.Attribute("Height"));
+
+        // 过滤栏固定于头带之下：工具行插槽必须由 Toolbar 属性承载。
+        Assert.Contains(
+            dialog.Elements(),
+            element => element.Name.LocalName == "DialogSurface.Toolbar");
     }
 
     [Fact]
     public void LocalizationManagement_UsesFixedDialogDimensions()
     {
+        // ADR-015 尺寸律：自适应优先，固定宽高退场；token 仅作 Max 上限背书。
         var document = XDocument.Load(ProjectFile("Views/MainWindowDialogsOverlay.axaml"));
         var dialog = FindMotionOverlay(
                 document,
                 "{Binding ResourcePanel.IsResourcePanelVisible}")
             .Elements()
-            .Single(element =>
-                element.Name.LocalName == "Border"
-                && HasClass(element, "overlay-dialog"));
+            .Single(element => element.Name.LocalName == "DialogSurface");
 
-        Assert.Equal("{StaticResource Launcher.Layout.ResourcePanel.Width}", dialog.Attribute("Width")?.Value);
-        Assert.Equal("{StaticResource Launcher.Layout.ResourcePanel.Height}", dialog.Attribute("Height")?.Value);
-        Assert.Null(dialog.Attribute("MaxWidth"));
-        Assert.Null(dialog.Attribute("MaxHeight"));
+        Assert.Equal("{StaticResource Launcher.Layout.ResourcePanel.Width}", dialog.Attribute("MaxWidth")?.Value);
+        Assert.Equal("{StaticResource Launcher.Layout.ResourcePanel.Height}", dialog.Attribute("MaxHeight")?.Value);
+        Assert.Null(dialog.Attribute("Width"));
+        Assert.Null(dialog.Attribute("Height"));
     }
 
     [Fact]
@@ -2899,13 +2939,15 @@ public sealed partial class UiStyleContractTests
         var document = XDocument.Load(ProjectFile("Views/SetupWizardOverlay.axaml"));
         var dialog = document
             .Descendants()
-            .Single(element => element.Name.LocalName == "Border" && HasClass(element, "overlay-dialog"));
+            .Single(element => element.Name.LocalName == "DialogSurface");
         Assert.Null(dialog.Attribute("Width"));
         Assert.Null(dialog.Attribute("Height"));
         Assert.Equal("{StaticResource Launcher.Layout.SetupWizard.Width}", dialog.Attribute("MaxWidth")?.Value);
         Assert.Equal("{StaticResource Launcher.Layout.SetupWizard.Height}", dialog.Attribute("MaxHeight")?.Value);
         Assert.Equal("Stretch", dialog.Attribute("HorizontalAlignment")?.Value);
         Assert.Equal("Stretch", dialog.Attribute("VerticalAlignment")?.Value);
+        // 无头带折叠：向导自绘步骤标题，跳过钮保留文字语义。
+        Assert.Null(dialog.Attribute("Title"));
 
         var navigation = document
             .Descendants()
@@ -3318,7 +3360,7 @@ public sealed partial class UiStyleContractTests
                 element.Name.LocalName == "TextBlock"
                 && HasClass(element, "dialog-message"));
         Assert.Equal(
-            "{Binding DisplayMessage, ElementName=Root}",
+            "{Binding Message, ElementName=Root}",
             message.Attribute("Text")?.Value);
 
         Assert.DoesNotContain(
@@ -3365,6 +3407,44 @@ public sealed partial class UiStyleContractTests
         Assert.Equal(
             "{DynamicResource Launcher.Color.Error.Pressed}",
             GetStyleSetters(styles, "Button.confirm-dialog-action.danger-action:pressed")["Background"]);
+    }
+
+    [Fact]
+    public void ConfirmDialogUsages_ExposeNoDeadAnatomyProperties()
+    {
+        // ADR-015：永不渲染的旧解剖属性整体退场，调用点不得再传。
+        var deadPropertyNames = new[]
+        {
+            "IconKind",
+            "AlertTitle",
+            "IsWarningAlert",
+            "IsDangerAlert",
+            "ConfirmIconKind",
+            "CloseToolTip",
+            "DialogMaxWidth",
+            "Description"
+        };
+
+        var document = XDocument.Load(ProjectFile("Views/MainWindowDialogsOverlay.axaml"));
+        var usages = document
+            .Descendants()
+            .Where(element => element.Name.LocalName == "ConfirmDialog")
+            .ToArray();
+        Assert.Equal(8, usages.Length);
+
+        foreach (var usage in usages)
+        {
+            foreach (var deadPropertyName in deadPropertyNames)
+            {
+                Assert.Null(usage.Attribute(deadPropertyName));
+            }
+
+            // 调用点必须同时给出门面归约所需的最小语义集。
+            Assert.NotNull(usage.Attribute("Title"));
+            Assert.NotNull(usage.Attribute("Message"));
+            Assert.NotNull(usage.Attribute("CancelCommand"));
+            Assert.NotNull(usage.Attribute("ConfirmCommand"));
+        }
     }
 
     [Fact]
@@ -4022,10 +4102,16 @@ public sealed partial class UiStyleContractTests
             var surface = element.Elements().First();
             Assert.True(HasClass(surface, "motion-surface"));
             AssertHasLocalTranslateTransform(surface);
-            var surfaceContent = surface
-                .Elements()
-                .Single(child => child.Name.LocalName == "Grid");
-            Assert.True(HasClass(surfaceContent, "motion-surface-content"));
+
+            if (surface.Name.LocalName != "DialogSurface")
+            {
+                // ADR-015 之前的三层结构（Border > Grid）保留内容层淡出检查；
+                // 模板控件表面合并了内容层，滑移与整体淡入淡出由平行规则驱动。
+                var surfaceContent = surface
+                    .Elements()
+                    .Single(child => child.Name.LocalName == "Grid");
+                Assert.True(HasClass(surfaceContent, "motion-surface-content"));
+            }
         });
 
         var settings = XDocument.Load(ProjectFile("Views/MainWindowSettingsOverlay.axaml"));
@@ -4383,6 +4469,124 @@ public sealed partial class UiStyleContractTests
                 .Elements()
                 .Single(element => element.Attribute("Property")?.Value == property)
                 .Attribute("Value")?.Value);
+    }
+
+    [Fact]
+    public void DialogSurface_ControlTheme_CarriesAnatomyPartsAndProfileTokens()
+    {
+        var document = XDocument.Load(ProjectFile("Views/Styles/DialogSurface.axaml"));
+        var templateText = document.ToString();
+
+        foreach (var partName in new[]
+                 {
+                     "PART_PanelHead",
+                     "PART_SurfaceBorder",
+                     "PART_BasicHead",
+                     "PART_CloseButton",
+                     "PART_ScrollViewer",
+                     "PART_DirectContentPresenter",
+                     "PART_ScrollContentPresenter",
+                     "PART_FooterBand",
+                     "PART_BadgePresenter",
+                     "PART_FooterLeadingPresenter"
+                 })
+        {
+            Assert.Contains(partName, templateText, StringComparison.Ordinal);
+        }
+
+        // ADR-015 表面档案：阴影必须经 BoxShadowsExtension 消费单一 token。
+        Assert.Contains(
+            "{helpers:BoxShadows {StaticResource Launcher.Elevation.Shadow.Dialog}}",
+            templateText,
+            StringComparison.Ordinal);
+
+        // 形态与状态的伪类解剖规则齐备。
+        // 形态可见性由 RefreshChrome 以本地值管理；样式仅保留动作带皮肤差异。
+        var selectors = document
+            .Descendants()
+            .Where(element => element.Name.LocalName == "Style")
+            .Select(element => element.Attribute("Selector")?.Value ?? string.Empty)
+            .ToArray();
+        Assert.DoesNotContain(selectors, selector =>
+            selector.Contains("PART_PanelHead", StringComparison.Ordinal)
+            || selector.Contains("PART_BasicHead", StringComparison.Ordinal));
+        Assert.Contains("controls|DialogSurface /template/ Border#PART_FooterBand", selectors);
+        Assert.Contains("controls|DialogSurface:panel /template/ Border#PART_FooterBand", selectors);
+        Assert.Contains("controls|DialogSurface /template/ ScrollViewer#PART_ScrollViewer", selectors);
+        Assert.Contains("controls|DialogSurface:panel /template/ ScrollViewer#PART_ScrollViewer", selectors);
+        Assert.Contains("controls|DialogSurface:info /template/ ContentPresenter#PART_BadgePresenter", selectors);
+        Assert.Contains("controls|DialogSurface:warning /template/ ContentPresenter#PART_BadgePresenter", selectors);
+        Assert.Contains("controls|DialogSurface:danger /template/ ContentPresenter#PART_BadgePresenter", selectors);
+
+        var surfaceBorder = document
+            .Descendants()
+            .Single(element => element.Attribute(XName.Get("Name", "http://schemas.microsoft.com/winfx/2006/xaml"))?.Value == "PART_SurfaceBorder");
+        Assert.Equal("{TemplateBinding ClipToBounds}", surfaceBorder.Attribute("ClipToBounds")?.Value);
+
+        var badgePresenter = document
+            .Descendants()
+            .Single(element => element.Attribute(XName.Get("Name", "http://schemas.microsoft.com/winfx/2006/xaml"))?.Value == "PART_BadgePresenter");
+        Assert.Equal(
+            "{StaticResource Launcher.Component.Dialog.Badge.Margin}",
+            badgePresenter.Attribute("Margin")?.Value);
+        Assert.Null(badgePresenter.Parent?.Attribute("ColumnSpacing"));
+
+        var footerLeadingPresenter = document
+            .Descendants()
+            .Single(element => element.Attribute(XName.Get("Name", "http://schemas.microsoft.com/winfx/2006/xaml"))?.Value == "PART_FooterLeadingPresenter");
+        Assert.Equal(
+            "{StaticResource Launcher.Component.Dialog.FooterLeading.Margin}",
+            footerLeadingPresenter.Attribute("Margin")?.Value);
+
+        Assert.Equal(
+            "{StaticResource Launcher.Component.Dialog.Basic.Content.Padding}",
+            GetStyleSetters(document, "controls|DialogSurface /template/ ScrollViewer#PART_ScrollViewer")["Padding"]);
+        Assert.Equal(
+            "{StaticResource Launcher.Component.Dialog.Panel.Body.Padding}",
+            GetStyleSetters(document, "controls|DialogSurface:panel /template/ ScrollViewer#PART_ScrollViewer")["Padding"]);
+    }
+
+    [Fact]
+    public void DialogFamily_ProfileTokens_AreDeclaredOnceInAppResources()
+    {
+        var appResources = XDocument.Load(ProjectFile("App.axaml"));
+        var xKey = XNamespace.Get("http://schemas.microsoft.com/winfx/2006/xaml") + "Key";
+
+        string TokenValue(string key) => appResources
+            .Descendants()
+            .Single(element => (string?)element.Attribute(xKey) == key)
+            .Value;
+
+        Assert.Equal("20", TokenValue("Launcher.Component.Dialog.CornerRadius"));
+        Assert.Equal(2, TokenValue("Launcher.Elevation.Shadow.Dialog").Split(',').Length);
+        Assert.Equal("32", TokenValue("Launcher.Component.Dialog.Badge.Size"));
+        Assert.Equal("16", TokenValue("Launcher.Component.Dialog.Badge.CornerRadius"));
+        Assert.Equal("0,0,12,0", TokenValue("Launcher.Component.Dialog.Badge.Margin"));
+        Assert.Equal("20,0,10,0", TokenValue("Launcher.Component.Dialog.Panel.Head.Padding"));
+        Assert.Equal("24,18,24,18", TokenValue("Launcher.Component.Dialog.Panel.Body.Padding"));
+        Assert.Equal("24,14,24,20", TokenValue("Launcher.Component.Dialog.Panel.Footer.Padding"));
+        Assert.Equal("0,0,12,0", TokenValue("Launcher.Component.Dialog.FooterLeading.Margin"));
+        Assert.Equal("28,28,28,8", TokenValue("Launcher.Component.Dialog.Basic.Head.Padding"));
+        Assert.Equal("28,0,28,0", TokenValue("Launcher.Component.Dialog.Basic.Content.Padding"));
+        Assert.Equal("28,16,28,24", TokenValue("Launcher.Component.Dialog.Basic.Actions.Padding"));
+    }
+
+    [Fact]
+    public void BoxShadowSetters_ConsumeElevationTokensInsteadOfLiterals()
+    {
+        var literalShadowValues = new List<string>();
+        foreach (var relativePath in StyleFiles)
+        {
+            var document = XDocument.Load(ProjectFile(relativePath));
+            literalShadowValues.AddRange(document
+                .Descendants()
+                .Where(element => element.Name.LocalName == "Setter"
+                    && element.Attribute("Property")?.Value == "BoxShadow")
+                .Select(element => element.Attribute("Value")?.Value ?? string.Empty)
+                .Where(value => value.Contains('#')));
+        }
+
+        Assert.Empty(literalShadowValues);
     }
 
     private static void AssertOrdered(string text, params string[] values)

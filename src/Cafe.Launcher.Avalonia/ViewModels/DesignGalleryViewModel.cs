@@ -3,6 +3,7 @@ using System.Collections.ObjectModel;
 using System.Linq;
 using Avalonia;
 using Avalonia.Controls;
+using Cafe.Launcher.Avalonia.Features.Shell;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 
@@ -14,7 +15,7 @@ namespace Cafe.Launcher.Avalonia.ViewModels;
 /// <see cref="DesignTokenGrouping"/>, so the gallery never drifts from the token
 /// set. Visibility is gated like the debug panel (Debug builds only).
 /// </summary>
-public sealed partial class DesignGalleryViewModel : ViewModelBase
+public sealed partial class DesignGalleryViewModel : ViewModelBase, IModalContentViewModel
 {
     private readonly Func<string, string> localize;
 

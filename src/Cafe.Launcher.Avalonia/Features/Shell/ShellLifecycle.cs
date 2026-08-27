@@ -449,6 +449,7 @@ public sealed class ShellLifecycle : IDisposable
         resourcePanel.PropertyChanged += OnResourcePanelPropertyChanged;
         logViewer.PropertyChanged += OnLogViewerPropertyChanged;
         debug.PropertyChanged += OnDebugPropertyChanged;
+        dialogs.Gallery.PropertyChanged += OnGalleryPropertyChanged;
         dialogs.PropertyChanged += OnDialogsPropertyChanged;
     }
 
@@ -479,6 +480,7 @@ public sealed class ShellLifecycle : IDisposable
         resourcePanel.PropertyChanged -= OnResourcePanelPropertyChanged;
         logViewer.PropertyChanged -= OnLogViewerPropertyChanged;
         debug.PropertyChanged -= OnDebugPropertyChanged;
+        dialogs.Gallery.PropertyChanged -= OnGalleryPropertyChanged;
         dialogs.PropertyChanged -= OnDialogsPropertyChanged;
 
         if (settings.Appearance.GetBackgroundBitmap == getBackgroundBitmap)
@@ -544,6 +546,9 @@ public sealed class ShellLifecycle : IDisposable
                 break;
             case ModalKind.Debug:
                 debug.CloseCommand.Execute(null);
+                break;
+            case ModalKind.DesignGallery:
+                dialogs.Gallery.CloseCommand.Execute(null);
                 break;
             case ModalKind.DebugResetConfirmation:
                 dialogs.CancelDebugResetCommand.Execute(null);
@@ -828,6 +833,17 @@ public sealed class ShellLifecycle : IDisposable
         if (e.PropertyName == nameof(DebugViewModel.IsVisible))
         {
             SyncModal(ModalKind.Debug, debug.IsVisible, debug);
+        }
+    }
+
+    private void OnGalleryPropertyChanged(object? sender, PropertyChangedEventArgs e)
+    {
+        if (e.PropertyName == nameof(DesignGalleryViewModel.IsVisible))
+        {
+            SyncModal(
+                ModalKind.DesignGallery,
+                dialogs.Gallery.IsVisible,
+                dialogs.Gallery);
         }
     }
 

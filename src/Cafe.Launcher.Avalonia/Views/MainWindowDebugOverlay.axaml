@@ -11,33 +11,27 @@
           Classes.motion-enabled="{Binding IsMotionEnabled}"
           controls:MotionVisibility.IsOpen="{Binding Debug.IsVisible}"
           controls:MotionVisibility.IsMotionEnabled="{Binding IsMotionEnabled}">
-        <Border Width="{StaticResource Launcher.Layout.Debug.Width}"
-                Height="{StaticResource Launcher.Layout.Debug.Height}"
-                Classes="dialog overlay-dialog motion-surface">
-            <Border.RenderTransform>
+        <!-- Panel 形态：尺寸自适应（token 封顶），诊断动作全部留在滚动正文内。 -->
+        <controls:DialogSurface
+            Form="Panel"
+            Classes="motion-surface"
+            HorizontalAlignment="Stretch"
+            VerticalAlignment="Center"
+            Margin="{StaticResource Launcher.Spacing.Thickness.Xxl}"
+            MaxWidth="{StaticResource Launcher.Layout.Debug.Width}"
+            MaxHeight="{StaticResource Launcher.Layout.Debug.Height}"
+            Title="{Binding Shell.I18n[debugPanel]}"
+            CloseCommand="{Binding Debug.CloseCommand}"
+            CloseAutomationName="{Binding Shell.I18n[close]}"
+            CloseToolTip="{Binding Shell.I18n[close]}">
+            <controls:DialogSurface.RenderTransform>
                 <TranslateTransform/>
-            </Border.RenderTransform>
-            <Grid RowDefinitions="Auto,*,Auto" Classes="motion-surface-content">
-                <!-- Header -->
-                <Grid ColumnDefinitions="*,Auto" Classes="dialog-header">
-                    <StackPanel Classes="dialog-title-row">
-                        <Border Classes="dialog-icon">
-                            <materialIcons:MaterialIcon Kind="BugOutline" Width="{StaticResource Launcher.Icon.Md}" Height="{StaticResource Launcher.Icon.Md}"
-                                                       Foreground="{DynamicResource Launcher.Color.Primary}"
-                                                       HorizontalAlignment="Center" VerticalAlignment="Center"/>
-                        </Border>
-                        <TextBlock Text="{Binding Shell.I18n[debugPanel]}" Classes="dialog-title" VerticalAlignment="Center"/>
-                    </StackPanel>
-                    <Button Grid.Column="1" Classes="dialog-close header-action" Command="{Binding Debug.CloseCommand}"
-                            ToolTip.Tip="{Binding Shell.I18n[close]}"
-                            AutomationProperties.Name="{Binding Shell.I18n[close]}">
-                        <materialIcons:MaterialIcon Kind="Close" Width="{StaticResource Launcher.Icon.Md}" Height="{StaticResource Launcher.Icon.Md}"/>
-                    </Button>
-                </Grid>
-
-                <!-- Scrollable content -->
-                <ScrollViewer Grid.Row="1" Classes="scroll-pad">
-                    <StackPanel Spacing="{StaticResource Launcher.Spacing.Md}" Margin="{StaticResource Launcher.Spacing.Thickness.Xl}">
+            </controls:DialogSurface.RenderTransform>
+            <controls:DialogSurface.HeaderIcon>
+                <materialIcons:MaterialIcon Kind="BugOutline" Width="{StaticResource Launcher.Icon.Md}" Height="{StaticResource Launcher.Icon.Md}"/>
+            </controls:DialogSurface.HeaderIcon>
+            <controls:DialogSurface.Content>
+                <StackPanel Spacing="{StaticResource Launcher.Spacing.Md}">
 
                         <!-- System Info -->
                         <Border Classes="dialog-card">
@@ -213,7 +207,7 @@
                                     <TextBlock Text="{Binding Debug.LastActionResult}" Classes="caption"/>
                                 </Border>
                                 <StackPanel Orientation="Horizontal" Spacing="{StaticResource Launcher.Spacing.Sm}">
-                                    <Button Classes="flat-action dialog-action" Command="{Binding Gallery.OpenCommand}"
+                                    <Button Classes="flat-action dialog-action" Command="{Binding Dialogs.Gallery.OpenCommand}"
                                             AutomationProperties.Name="{Binding Shell.I18n[openDesignGallery]}">
                                         <TextBlock Text="{Binding Shell.I18n[openDesignGallery]}" Classes="button-content"/>
                                     </Button>
@@ -229,22 +223,19 @@
                             </StackPanel>
                         </Border>
 
-                    </StackPanel>
-                </ScrollViewer>
-
-                <!-- Footer -->
-                <Border Grid.Row="2" Classes="dialog-footer">
-                    <StackPanel Classes="confirm-actions">
-                        <Button Classes="primary-action dialog-action" Command="{Binding Debug.CloseCommand}"
-                                AutomationProperties.Name="{Binding Shell.I18n[close]}">
-                            <StackPanel Classes="button-content">
-                                <materialIcons:MaterialIcon Kind="Check" Width="{StaticResource Launcher.Icon.Sm}" Height="{StaticResource Launcher.Icon.Sm}"/>
-                                <TextBlock Text="{Binding Shell.I18n[close]}"/>
-                            </StackPanel>
-                        </Button>
-                    </StackPanel>
-                </Border>
-            </Grid>
-        </Border>
+            </StackPanel>
+            </controls:DialogSurface.Content>
+            <controls:DialogSurface.Footer>
+                <StackPanel Classes="confirm-actions">
+                    <Button Classes="primary-action dialog-action" Command="{Binding Debug.CloseCommand}"
+                            AutomationProperties.Name="{Binding Shell.I18n[close]}">
+                        <StackPanel Classes="button-content">
+                            <materialIcons:MaterialIcon Kind="Check" Width="{StaticResource Launcher.Icon.Sm}" Height="{StaticResource Launcher.Icon.Sm}"/>
+                            <TextBlock Text="{Binding Shell.I18n[close]}"/>
+                        </StackPanel>
+                    </Button>
+                </StackPanel>
+            </controls:DialogSurface.Footer>
+        </controls:DialogSurface>
     </Grid>
 </UserControl>

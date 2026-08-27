@@ -1,6 +1,8 @@
 <Styles xmlns="https://github.com/avaloniaui"
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
         xmlns:views="using:Cafe.Launcher.Avalonia.Views"
+        xmlns:helpers="using:Cafe.Launcher.Avalonia.Helpers"
+        xmlns:controls="using:Cafe.Launcher.Avalonia.Controls"
         xmlns:materialIcons="clr-namespace:Material.Icons.Avalonia;assembly=Material.Icons.Avalonia">
     <Styles.Resources>
         <ControlTemplate x:Key="LauncherBorderButtonTemplate" TargetType="Button">
@@ -503,9 +505,8 @@
         <Setter Property="Background" Value="{DynamicResource Launcher.Color.Surface}"/>
         <Setter Property="CornerRadius" Value="{StaticResource Launcher.Radius.Md}"/>
         <Setter Property="Padding" Value="{StaticResource Launcher.Spacing.Thickness.Lg}"/>
-        <!-- 阴影值集中见 Launcher.Elevation.Shadow.Md；BoxShadow 为无 TypeConverter 的结构体，
-             无法经 {StaticResource} 在 Setter 处运行时转换（Avalonia 12.1.1 限制，详见 spec §3.1）。 -->
-        <Setter Property="BoxShadow" Value="0 12 32 0 #33000000"/>
+        <!-- 阴影经 BoxShadowsExtension 消费 token（BoxShadows 无 TypeConverter）。 -->
+        <Setter Property="BoxShadow" Value="{helpers:BoxShadows {StaticResource Launcher.Elevation.Shadow.Md}}"/>
     </Style>
     <Style Selector="Border.remote-surface">
         <Setter Property="HorizontalAlignment" Value="Left"/>
@@ -668,6 +669,35 @@
                     <Setter Property="Opacity" Value="1"/>
                 </KeyFrame>
                 <KeyFrame Cue="100%">
+                    <Setter Property="Opacity" Value="0"/>
+                </KeyFrame>
+            </Animation>
+        </Style.Animations>
+    </Style>
+    <!-- DialogSurface 模板控件版本：整面滑移 + 整体淡入淡出（不再拆分内容层）。 -->
+    <Style Selector="Grid.motion-overlay.motion-enabled.motion-enter > controls|DialogSurface.motion-surface">
+        <Style.Animations>
+            <Animation Duration="{StaticResource Launcher.Motion.Duration.Normal}" FillMode="Forward" Easing="{StaticResource Launcher.Motion.Easing.Enter}">
+                <KeyFrame Cue="0%">
+                    <Setter Property="TranslateTransform.Y" Value="{StaticResource Launcher.Motion.Offset.Surface}"/>
+                    <Setter Property="Opacity" Value="0"/>
+                </KeyFrame>
+                <KeyFrame Cue="100%">
+                    <Setter Property="TranslateTransform.Y" Value="0"/>
+                    <Setter Property="Opacity" Value="1"/>
+                </KeyFrame>
+            </Animation>
+        </Style.Animations>
+    </Style>
+    <Style Selector="Grid.motion-overlay.motion-enabled.motion-exit > controls|DialogSurface.motion-surface">
+        <Style.Animations>
+            <Animation Duration="{StaticResource Launcher.Motion.Duration.Fast}" FillMode="Forward" Easing="{StaticResource Launcher.Motion.Easing.Exit}">
+                <KeyFrame Cue="0%">
+                    <Setter Property="TranslateTransform.Y" Value="0"/>
+                    <Setter Property="Opacity" Value="1"/>
+                </KeyFrame>
+                <KeyFrame Cue="100%">
+                    <Setter Property="TranslateTransform.Y" Value="{StaticResource Launcher.Motion.Offset.Surface}"/>
                     <Setter Property="Opacity" Value="0"/>
                 </KeyFrame>
             </Animation>
@@ -988,18 +1018,6 @@
         <Setter Property="KeyboardNavigation.TabNavigation" Value="Cycle"/>
         <Setter Property="views:OverlayFocusBehavior.IsEnabled" Value="True"/>
     </Style>
-    <Style Selector="Border.dialog">
-        <Setter Property="Background" Value="{DynamicResource Launcher.Color.Dialog.Background}"/>
-        <Setter Property="CornerRadius" Value="{StaticResource Launcher.Radius.Lg}"/>
-        <Setter Property="ClipToBounds" Value="True"/>
-        <!-- 阴影值集中见 Launcher.Elevation.Shadow.Lg（BoxShadow 无 TypeConverter，同上限制）。 -->
-        <Setter Property="BoxShadow" Value="0 22 55 0 #66000000"/>
-    </Style>
-    <Style Selector="Border.overlay-dialog">
-        <Setter Property="Margin" Value="{StaticResource Launcher.Spacing.Thickness.Xxl}"/>
-        <Setter Property="HorizontalAlignment" Value="Center"/>
-        <Setter Property="VerticalAlignment" Value="Center"/>
-    </Style>
     <Style Selector="Grid.dialog-header">
         <Setter Property="Background" Value="{DynamicResource Launcher.Color.Dialog.Header}"/>
         <Setter Property="Height" Value="{StaticResource Launcher.Component.Dialog.Title.Height}"/>
@@ -1020,23 +1038,12 @@
         <Setter Property="BorderThickness" Value="{StaticResource Launcher.Component.Dialog.Footer.BorderThickness}"/>
         <Setter Property="Padding" Value="{StaticResource Launcher.Spacing.Thickness.Md}"/>
     </Style>
-    <Style Selector="Border.confirm-panel">
-        <Setter Property="MaxWidth" Value="{StaticResource Launcher.Component.Dialog.Confirm.MaxWidth}"/>
-        <Setter Property="MinWidth" Value="{StaticResource Launcher.Component.Dialog.Confirm.MinWidth}"/>
-        <Setter Property="Margin" Value="{StaticResource Launcher.Spacing.Thickness.Xxl}"/>
-        <Setter Property="HorizontalAlignment" Value="Center"/>
-        <Setter Property="VerticalAlignment" Value="Center"/>
-    </Style>
     <Style Selector="Grid.dialog-heading">
         <Setter Property="ColumnSpacing" Value="{StaticResource Launcher.Spacing.Md}"/>
     </Style>
     <Style Selector="StackPanel.dialog-heading-copy">
         <Setter Property="Spacing" Value="{StaticResource Launcher.Spacing.Xs}"/>
         <Setter Property="VerticalAlignment" Value="Center"/>
-    </Style>
-    <Style Selector="Grid.confirm-layout">
-        <Setter Property="Margin" Value="{StaticResource Launcher.Spacing.Thickness.Xxl}"/>
-        <Setter Property="RowSpacing" Value="{StaticResource Launcher.Spacing.Lg}"/>
     </Style>
     <Style Selector="TextBlock.dialog-message">
         <Setter Property="FontSize" Value="{StaticResource Launcher.Typography.FontSize.Body.Lg}"/>
@@ -1537,4 +1544,5 @@
     <StyleInclude Source="avares://Cafe.Launcher.Avalonia/Views/Styles/RemoteContent.axaml"/>
     <StyleInclude Source="avares://Cafe.Launcher.Avalonia/Views/Styles/SetupWizard.axaml"/>
     <StyleInclude Source="avares://Cafe.Launcher.Avalonia/Views/Styles/Toast.axaml"/>
+    <StyleInclude Source="avares://Cafe.Launcher.Avalonia/Views/Styles/DialogSurface.axaml"/>
 </Styles>
