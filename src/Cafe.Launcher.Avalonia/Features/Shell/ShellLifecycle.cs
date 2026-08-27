@@ -160,6 +160,16 @@ public sealed class ShellLifecycle : IDisposable
     /// <summary>Applies the initial automatic language before a launcher snapshot exists.</summary>
     public void ApplyInitialLanguage() => ApplyLanguage(LauncherLanguages.Auto);
 
+    /// <summary>
+    /// 首启分支不执行 RefreshAsync（设置快照由向导驱动后再加载），但动效偏好必须
+    /// 在向导显示前按默认配置（System 档跟随 Windows 动画开关）先行应用，
+    /// 否则 IsMotionReduced 停留在字段默认的 true，首启向导全程处于降动效。
+    /// </summary>
+    public void ApplyFirstLaunchMotionPreference()
+    {
+        ApplyMotionSettings(LauncherSettings.CreateDefaults());
+    }
+
     /// <summary>Reloads launcher state and updates all dependent presentation models.</summary>
     public async Task RefreshAsync(CancellationToken cancellationToken = default)
     {

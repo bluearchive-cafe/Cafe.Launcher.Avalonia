@@ -2264,6 +2264,27 @@ public sealed class MainWindowHeadlessTests
     }
 
     [AvaloniaFact]
+    public void ShellRuntime_FirstLaunchMotionPreference_AppliesSystemResolution()
+    {
+        // 首启分支不执行完整初始化（快照由向导驱动后再加载）：动效偏好必须按默认
+        // System 档先行解析并应用，否则 IsMotionReduced 停留在默认 true，首启向导全程瞬切。
+        using var context = CreateContext();
+        var runtime = context.Provider
+            .GetRequiredService<Cafe.Launcher.Avalonia.Features.Shell.IShellRuntime>();
+        var windowsAnimationsEnabled = new WindowsAnimationSettingsProvider()
+            .GetWindowsAnimationsEnabled();
+        var expectedReduced = Cafe.Launcher.Avalonia.Helpers.MotionSettingsResolver.ShouldReduceMotion(
+            MotionModes.System,
+            windowsAnimationsEnabled);
+
+        runtime.ApplyFirstLaunchMotionPreference();
+        Dispatcher.UIThread.RunJobs();
+
+        Assert.Equal(expectedReduced, runtime.IsMotionReduced);
+        Assert.Equal(!expectedReduced, context.ViewModel.IsMotionEnabled);
+    }
+
+    [AvaloniaFact]
     public void SetupWizard_OptionRows_StretchToAlignRadioCircles()
     {
         // ADR-017：wizard-option 行等宽拉伸（HorizontalAlignment=Stretch）——

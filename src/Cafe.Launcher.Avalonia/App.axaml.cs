@@ -148,7 +148,13 @@ public partial class App : Application
                 {
                     // Post at a priority that ensures layout/render/bindings are complete
                     // before we toggle visibility.
-                    Dispatcher.UIThread.Post(() => viewModel.Dialogs.ShowSetupWizard(), DispatcherPriority.Background);
+                    Dispatcher.UIThread.Post(() =>
+                    {
+                        // 首启不做完整初始化（快照由向导驱动后再加载），但动效偏好必须先行
+                        // 应用，否则 IsMotionReduced 停留在字段默认 true，首启向导全程瞬切。
+                        viewModel.ApplyFirstLaunchMotionPreference();
+                        viewModel.Dialogs.ShowSetupWizard();
+                    }, DispatcherPriority.Background);
                 };
             }
             else

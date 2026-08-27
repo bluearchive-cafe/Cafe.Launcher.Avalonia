@@ -152,6 +152,10 @@ public partial class MainWindowViewModel : ViewModelBase, IDisposable
     public Task InitializeAsync(CancellationToken cancellationToken = default) =>
         runtime.InitializeAsync(cancellationToken);
 
+    /// <inheritdoc cref="IShellRuntime.ApplyFirstLaunchMotionPreference" />
+    public void ApplyFirstLaunchMotionPreference() =>
+        runtime.ApplyFirstLaunchMotionPreference();
+
     internal Task PrepareForShutdownAsync() => runtime.PrepareForShutdownAsync();
 
     public void RefreshSystemMotionPreference() => runtime.RefreshSystemMotionPreference();
