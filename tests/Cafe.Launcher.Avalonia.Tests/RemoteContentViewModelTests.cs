@@ -384,12 +384,9 @@ public sealed class RemoteContentViewModelTests
         context.ViewModel.ApplyMotionPreference(true);
         Assert.False(context.ViewModel.IsCarouselTimerRunning);
         Assert.True(context.ViewModel.IsCarouselPaused);
-        var transition = Assert.IsType<global::Avalonia.Animation.PageSlide>(
+        var transition = Assert.IsType<global::Cafe.Launcher.Avalonia.Helpers.BannerCarouselTransition>(
             context.ViewModel.CarouselTransition);
         Assert.Equal(TimeSpan.Zero, transition.Duration);
-        Assert.Equal(global::Avalonia.Animation.PageSlide.SlideAxis.Horizontal, transition.Orientation);
-        Assert.IsType<global::Avalonia.Animation.Easings.ExponentialEaseOut>(transition.SlideInEasing);
-        Assert.IsType<global::Avalonia.Animation.Easings.ExponentialEaseIn>(transition.SlideOutEasing);
 
         context.ViewModel.SelectNextBannerCommand.Execute(null);
         Assert.Equal(1, context.ViewModel.CarouselSelectedIndex);
@@ -410,10 +407,9 @@ public sealed class RemoteContentViewModelTests
 
         Assert.True(context.ViewModel.IsCarouselPaused);
         Assert.False(context.ViewModel.IsCarouselTimerRunning);
-        var transition = Assert.IsType<global::Avalonia.Animation.PageSlide>(
+        var transition = Assert.IsType<global::Cafe.Launcher.Avalonia.Helpers.BannerCarouselTransition>(
             context.ViewModel.CarouselTransition);
         Assert.Equal(TimeSpan.Zero, transition.Duration);
-        Assert.Equal(global::Avalonia.Animation.PageSlide.SlideAxis.Horizontal, transition.Orientation);
     }
 
     [Fact]
@@ -430,12 +426,9 @@ public sealed class RemoteContentViewModelTests
 
         Assert.False(context.ViewModel.IsCarouselPaused);
         Assert.True(context.ViewModel.IsCarouselTimerRunning);
-        var transition = Assert.IsType<global::Avalonia.Animation.PageSlide>(
+        var transition = Assert.IsType<global::Cafe.Launcher.Avalonia.Helpers.BannerCarouselTransition>(
             context.ViewModel.CarouselTransition);
         Assert.Equal(TimeSpan.FromMilliseconds(250), transition.Duration);
-        Assert.Equal(global::Avalonia.Animation.PageSlide.SlideAxis.Horizontal, transition.Orientation);
-        Assert.IsType<global::Avalonia.Animation.Easings.ExponentialEaseOut>(transition.SlideInEasing);
-        Assert.IsType<global::Avalonia.Animation.Easings.ExponentialEaseIn>(transition.SlideOutEasing);
     }
 
     [Theory]
@@ -459,8 +452,78 @@ public sealed class RemoteContentViewModelTests
         Assert.True(context.ViewModel.IsCarouselTimerRunning);
         Assert.Equal(
             TimeSpan.FromMilliseconds(250),
-            Assert.IsType<global::Avalonia.Animation.PageSlide>(
+            Assert.IsType<global::Cafe.Launcher.Avalonia.Helpers.BannerCarouselTransition>(
                 context.ViewModel.CarouselTransition).Duration);
+    }
+
+    [Fact]
+    public void SelectNextBanner_MarksNextTransitionAsDirectionalForward()
+    {
+        using var context = CreateContext();
+        context.ViewModel.Apply(
+            CreateBannerState(2, loop: true),
+            new LauncherSettings(),
+            CancellationToken.None);
+
+        context.ViewModel.SelectNextBannerCommand.Execute(null);
+
+        var transition = Assert.IsType<global::Cafe.Launcher.Avalonia.Helpers.BannerCarouselTransition>(
+            context.ViewModel.CarouselTransition);
+        Assert.True(transition.NextSlideIsDirectional);
+        Assert.False(transition.NextSlideIsBackward);
+    }
+
+    [Fact]
+    public void SelectPreviousBanner_MarksNextTransitionAsDirectionalBackward()
+    {
+        using var context = CreateContext();
+        context.ViewModel.Apply(
+            CreateBannerState(2, loop: true),
+            new LauncherSettings(),
+            CancellationToken.None);
+
+        context.ViewModel.SelectPreviousBannerCommand.Execute(null);
+
+        var transition = Assert.IsType<global::Cafe.Launcher.Avalonia.Helpers.BannerCarouselTransition>(
+            context.ViewModel.CarouselTransition);
+        Assert.True(transition.NextSlideIsDirectional);
+        Assert.True(transition.NextSlideIsBackward);
+    }
+
+    [Fact]
+    public void TryAdvanceCarousel_AutomaticTick_ClearsDirectionalSlide()
+    {
+        using var context = CreateContext();
+        context.ViewModel.Apply(
+            CreateBannerState(2, loop: true),
+            new LauncherSettings(),
+            CancellationToken.None);
+        context.ViewModel.SelectNextBannerCommand.Execute(null);
+
+        Assert.True(context.ViewModel.TryAdvanceCarousel());
+
+        var transition = Assert.IsType<global::Cafe.Launcher.Avalonia.Helpers.BannerCarouselTransition>(
+            context.ViewModel.CarouselTransition);
+        Assert.False(transition.NextSlideIsDirectional);
+        Assert.False(transition.NextSlideIsBackward);
+    }
+
+    [Fact]
+    public void SelectBanner_DotNavigation_ClearsDirectionalSlide()
+    {
+        using var context = CreateContext();
+        context.ViewModel.Apply(
+            CreateBannerState(2, loop: true),
+            new LauncherSettings(),
+            CancellationToken.None);
+        context.ViewModel.SelectNextBannerCommand.Execute(null);
+
+        context.ViewModel.SelectBannerCommand.Execute(0);
+
+        var transition = Assert.IsType<global::Cafe.Launcher.Avalonia.Helpers.BannerCarouselTransition>(
+            context.ViewModel.CarouselTransition);
+        Assert.False(transition.NextSlideIsDirectional);
+        Assert.False(transition.NextSlideIsBackward);
     }
 
     [Fact]
