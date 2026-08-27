@@ -2349,21 +2349,39 @@ public sealed class MainWindowHeadlessTests
         {
             context.ViewModel.Dialogs.SetupWizard.Step = stepIndex;
 
+            var sawFade = false;
+            var sawSlide = false;
             var settled = false;
             while (!settled)
             {
                 await Dispatcher.UIThread.InvokeAsync(() => { });
                 await Task.Delay(10);
                 // 精确判定：动画完成后的所有权结算会精确置 Opacity=1、X=0，
-                // 容差判定会在最后一帧插值期间误报已定格。
+                // 容差判定会在最后一帧插值期间误报已定格。同时采样中间帧，
+                // 保证淡入与方向滑入确实经历过渡而不是瞬变。
                 settled = await Dispatcher.UIThread.InvokeAsync(() =>
-                    steps[stepIndex].IsVisible
-                    && steps[stepIndex].Opacity == 1d
-                    && steps[stepIndex].RenderTransform is TranslateTransform transform
-                    && transform.X == 0d);
+                {
+                    if (steps[stepIndex].IsVisible && steps[stepIndex].Opacity is > 0.05 and < 0.95)
+                    {
+                        sawFade = true;
+                    }
+
+                    if (steps[stepIndex].RenderTransform is TranslateTransform movingTransform
+                        && Math.Abs(movingTransform.X) is > 0.5 and < 13.5)
+                    {
+                        sawSlide = true;
+                    }
+
+                    return steps[stepIndex].IsVisible
+                        && steps[stepIndex].Opacity == 1d
+                        && steps[stepIndex].RenderTransform is TranslateTransform settledTransform
+                        && settledTransform.X == 0d;
+                });
             }
 
             Dispatcher.UIThread.RunJobs();
+            Assert.True(sawFade, "未观察到淡入中间帧，入场透明度疑似瞬变。");
+            Assert.True(sawSlide, "未观察到方向滑入中间帧，位移疑似瞬变。");
             var visibleStep = Assert.Single(steps, control => control.IsVisible);
             Assert.Equal(stepIndex, steps.IndexOf(visibleStep));
             Assert.Equal(1d, visibleStep.Opacity);

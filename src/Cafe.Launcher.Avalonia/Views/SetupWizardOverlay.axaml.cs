@@ -178,14 +178,25 @@ public partial class SetupWizardOverlay : UserControl
             // 中点瞬时换内容：不可见时翻转可见性，滚动复位到顶部。
             SwapToPanel(toIndex);
 
-            // 阶段二：新内容淡入并按方向滑入。
+            // 阶段二：新内容淡入并按方向滑入。透明度经 Animation.RunAsync；位移经
+            // DoubleTransition 驱动 TranslateTransform——Animation.RunAsync 在非
+            // Visual 的 Transform 上不产生动画（与实验台/ToastStackMotion 同机制）。
             var to = stepPanels[toIndex];
             var toTransform = (TranslateTransform)to.RenderTransform!;
             to.Opacity = 0d;
             toTransform.X = enterOffset;
-            await Task.WhenAll(
-                CreateOpacityAnimation(0d, 1d, half, enterEasing).RunAsync(to, token),
-                CreateOffsetAnimation(enterOffset, 0d, half, enterEasing).RunAsync(toTransform, token));
+            var opacityTask = CreateOpacityAnimation(0d, 1d, half, enterEasing).RunAsync(to, token);
+            toTransform.Transitions =
+            [
+                new DoubleTransition
+                {
+                    Property = TranslateTransform.XProperty,
+                    Duration = half,
+                    Easing = enterEasing,
+                },
+            ];
+            toTransform.X = 0d;
+            await Task.WhenAll(opacityTask, Task.Delay(half, token));
         }
         catch (OperationCanceledException)
         {
@@ -239,6 +250,7 @@ public partial class SetupWizardOverlay : UserControl
         panel.IsHitTestVisible = true;
         if (panel.RenderTransform is TranslateTransform transform)
         {
+            transform.Transitions = null;
             transform.X = 0d;
         }
     }
@@ -266,26 +278,6 @@ public partial class SetupWizardOverlay : UserControl
             {
                 Cue = new Cue(1),
                 Setters = { new Setter { Property = Visual.OpacityProperty, Value = to } },
-            },
-        },
-    };
-
-    private static Animation CreateOffsetAnimation(double from, double to, TimeSpan duration, Easing easing) => new()
-    {
-        Duration = duration,
-        Easing = easing,
-        FillMode = FillMode.Forward,
-        Children =
-        {
-            new KeyFrame
-            {
-                Cue = new Cue(0),
-                Setters = { new Setter { Property = TranslateTransform.XProperty, Value = from } },
-            },
-            new KeyFrame
-            {
-                Cue = new Cue(1),
-                Setters = { new Setter { Property = TranslateTransform.XProperty, Value = to } },
             },
         },
     };

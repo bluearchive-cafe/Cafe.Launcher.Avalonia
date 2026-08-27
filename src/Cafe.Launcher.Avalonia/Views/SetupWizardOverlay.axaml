@@ -350,7 +350,7 @@
                             IsVisible="{Binding Dialogs.SetupWizard.CanGoPrevious}"
                             AutomationProperties.Name="{Binding Shell.I18n[setupWizardPrevious]}">
                         <StackPanel Classes="button-content">
-                            <materialIcons:MaterialIcon Kind="ChevronLeft"
+                            <materialIcons:MaterialIcon Kind="ArrowLeft"
                                                        Width="{StaticResource Launcher.Icon.Sm}"
                                                        Height="{StaticResource Launcher.Icon.Sm}"/>
                             <TextBlock Text="{Binding Shell.I18n[setupWizardPrevious]}"/>
@@ -364,7 +364,7 @@
                             AutomationProperties.Name="{Binding Shell.I18n[setupWizardNext]}">
                         <StackPanel Classes="button-content">
                             <TextBlock Text="{Binding Shell.I18n[setupWizardNext]}"/>
-                            <materialIcons:MaterialIcon Kind="ChevronRight"
+                            <materialIcons:MaterialIcon Kind="ArrowRight"
                                                        Width="{StaticResource Launcher.Icon.Sm}"
                                                        Height="{StaticResource Launcher.Icon.Sm}"/>
                         </StackPanel>
