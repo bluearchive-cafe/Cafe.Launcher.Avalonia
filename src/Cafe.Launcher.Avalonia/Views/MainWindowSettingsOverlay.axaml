@@ -17,7 +17,7 @@
              表面档案（圆角/阴影/底色）由 DialogSurface 承载（ADR-015）。 -->
         <controls:DialogSurface
             Form="Panel"
-            Classes="motion-surface"
+            Classes="motion-surface settings-surface"
             HorizontalAlignment="Stretch"
             VerticalAlignment="Stretch"
             Margin="{StaticResource Launcher.Spacing.Thickness.Xxl}"

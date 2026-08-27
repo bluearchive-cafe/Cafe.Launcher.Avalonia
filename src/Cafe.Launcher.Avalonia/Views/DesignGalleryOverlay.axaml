@@ -28,7 +28,7 @@
                 <TranslateTransform/>
             </controls:DialogSurface.RenderTransform>
             <controls:DialogSurface.Content>
-            <StackPanel Spacing="{StaticResource Launcher.Spacing.Md}" Margin="{StaticResource Launcher.Spacing.Thickness.Xl}">
+            <StackPanel Spacing="{StaticResource Launcher.Spacing.Md}">
                         <TextBlock Text="{Binding Shell.I18n[designGalleryHint]}" Classes="caption"/>
                         <Border Classes="dialog-card design-state-matrix-card">
                             <StackPanel Spacing="{StaticResource Launcher.Spacing.Sm}">

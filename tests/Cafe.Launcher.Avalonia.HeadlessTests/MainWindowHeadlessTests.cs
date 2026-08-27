@@ -1046,6 +1046,32 @@ public sealed class MainWindowHeadlessTests
         Assert.True(footer.Bounds.Bottom <= dialog.Bounds.Height);
     }
 
+    [AvaloniaFact]
+    public void SettingsFooterActions_AlignWithContentHeaderRightEdge()
+    {
+        using var context = CreateContext();
+        OpenSettings(context);
+
+        var headerCloseButton = context.Window
+            .GetVisualDescendants()
+            .OfType<Button>()
+            .Single(control => control.Classes.Contains("content-header-action"));
+        var saveButton = context.Window
+            .GetVisualDescendants()
+            .OfType<Button>()
+            .Single(control => ReferenceEquals(
+                control.Command,
+                context.ViewModel.Settings.SaveSettingsCommand));
+        var headerTopLeft = headerCloseButton.TranslatePoint(default, context.Window);
+        var saveTopLeft = saveButton.TranslatePoint(default, context.Window);
+
+        Assert.NotNull(headerTopLeft);
+        Assert.NotNull(saveTopLeft);
+        var headerRight = headerTopLeft.Value.X + headerCloseButton.Bounds.Width;
+        var saveRight = saveTopLeft.Value.X + saveButton.Bounds.Width;
+        Assert.InRange(Math.Abs(headerRight - saveRight), 0, 1);
+    }
+
     [AvaloniaTheory]
     [InlineData("resource-panel")]
     [InlineData("log-viewer")]
@@ -1801,6 +1827,13 @@ public sealed class MainWindowHeadlessTests
             .Single();
 
         Assert.True(surface.Bounds.Width <= 540);
+        Assert.True(surface.Bounds.Height < 480);
+
+        var supportText = surface
+            .GetVisualDescendants()
+            .OfType<TextBlock>()
+            .Single(text => text.Name == "PART_BasicSupportTextBlock");
+        Assert.False(supportText.IsVisible);
     }
 
     [AvaloniaFact]
@@ -2337,6 +2370,29 @@ public sealed class MainWindowHeadlessTests
         Assert.Contains(
             context.ViewModel.Dialogs.Gallery.Groups.SelectMany(group => group.Items),
             item => item.Key == "Launcher.Text.Primary");
+
+        var gallerySurface = context.Window
+            .GetVisualDescendants()
+            .OfType<global::Cafe.Launcher.Avalonia.Controls.DialogSurface>()
+            .Single(surface => ReferenceEquals(
+                surface.CloseCommand,
+                context.ViewModel.Dialogs.Gallery.CloseCommand));
+        var scrollViewer = gallerySurface
+            .GetVisualDescendants()
+            .OfType<ScrollViewer>()
+            .Single(control => control.Name == "PART_ScrollViewer");
+        var contentPresenter = gallerySurface
+            .GetVisualDescendants()
+            .OfType<ContentPresenter>()
+            .Single(control => control.Name == "PART_ScrollContentPresenter");
+        var galleryContent = Assert.IsType<StackPanel>(contentPresenter.Content);
+        var scrollTopLeft = scrollViewer.TranslatePoint(default, gallerySurface);
+        var contentTopLeft = galleryContent.TranslatePoint(default, gallerySurface);
+        Assert.NotNull(scrollTopLeft);
+        Assert.NotNull(contentTopLeft);
+        Assert.Equal(
+            scrollTopLeft.Value.X + scrollViewer.Padding.Left,
+            contentTopLeft.Value.X);
 
         context.ViewModel.Dialogs.Gallery.CloseCommand.Execute(null);
         Dispatcher.UIThread.RunJobs();

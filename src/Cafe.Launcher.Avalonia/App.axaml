@@ -56,9 +56,11 @@
             <Thickness x:Key="Launcher.Component.Dialog.Title.Margin">16,0,0,0</Thickness>
             <Thickness x:Key="Launcher.Component.Dialog.HeaderAction.Margin">0,0,16,0</Thickness>
             <Thickness x:Key="Launcher.Component.Dialog.Footer.BorderThickness">0,1,0,0</Thickness>
+            <Thickness x:Key="Launcher.Component.Dialog.FooterLeading.Margin">0,0,12,0</Thickness>
             <Thickness x:Key="Launcher.Component.Settings.Group.Margin">0,16,0,0</Thickness>
             <!-- 右缩进与 Content.Scroll.Padding 的滚动条槽位同宽，标题行在滚动区之外。 -->
             <Thickness x:Key="Launcher.Component.Settings.ContentHeading.Margin">0,0,16,4</Thickness>
+            <Thickness x:Key="Launcher.Component.Settings.Footer.Padding">24,14,16,20</Thickness>
             <Thickness x:Key="Launcher.Component.RemoteSurface.Margin">40,64,0,0</Thickness>
             <Thickness x:Key="Launcher.Component.BottomPanel.Padding">40,20,40,20</Thickness>
             <Thickness x:Key="Launcher.Component.ContentRow.Margin">0,0,0,4</Thickness>
@@ -131,6 +133,7 @@
             <CornerRadius x:Key="Launcher.Component.Dialog.CornerRadius">20</CornerRadius>
             <x:Double x:Key="Launcher.Component.Dialog.Badge.Size">32</x:Double>
             <CornerRadius x:Key="Launcher.Component.Dialog.Badge.CornerRadius">16</CornerRadius>
+            <Thickness x:Key="Launcher.Component.Dialog.Badge.Margin">0,0,12,0</Thickness>
             <Thickness x:Key="Launcher.Component.Dialog.Panel.Head.Padding">20,0,10,0</Thickness>
             <Thickness x:Key="Launcher.Component.Dialog.Panel.Body.Padding">24,18,24,18</Thickness>
             <Thickness x:Key="Launcher.Component.Dialog.Panel.Footer.Padding">24,14,24,20</Thickness>

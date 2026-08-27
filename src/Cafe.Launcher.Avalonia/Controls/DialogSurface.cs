@@ -247,7 +247,7 @@ public class DialogSurface : TemplatedControl
             !string.IsNullOrEmpty(Title)
             || !string.IsNullOrEmpty(Subtitle)
             || HeaderIcon is not null;
-        var syncIsShellMode = !syncIsPanel || !syncHasHeaderIdentity;
+        var syncIsShellMode = syncIsPanel && !syncHasHeaderIdentity;
 
         if (badgePresenter is not null)
         {
@@ -291,11 +291,6 @@ public class DialogSurface : TemplatedControl
         RefreshChrome();
     }
 
-    private Thickness GetThicknessToken(string key) =>
-        TryGetResource(key, ActualThemeVariant, out var value) && value is Thickness thickness
-            ? thickness
-            : default;
-
     private void ApplyPseudoClasses()
     {
         PseudoClasses.Set(":panel", Form == DialogSurfaceForm.Panel);
@@ -331,20 +326,13 @@ public class DialogSurface : TemplatedControl
             basicHeadBorder.IsVisible = !isPanel;
         }
 
-        var isShellMode = !isPanel || !hasHeaderIdentity;
+        var isShellMode = isPanel && !hasHeaderIdentity;
 
         if (scrollViewer is not null)
         {
             // 常规形态经滚动脚手架并按形态取边距；外壳模式整体绕过，
             // 让内容获得模板行高的有界高度，内部滚动区才能正常工作。
             scrollViewer.IsVisible = !isShellMode;
-            if (!isShellMode)
-            {
-                scrollViewer.Padding = GetThicknessToken(
-                    isPanel
-                        ? "Launcher.Component.Dialog.Panel.Body.Padding"
-                        : "Launcher.Component.Dialog.Basic.Content.Padding");
-            }
         }
 
         if (directContentPresenter is not null)

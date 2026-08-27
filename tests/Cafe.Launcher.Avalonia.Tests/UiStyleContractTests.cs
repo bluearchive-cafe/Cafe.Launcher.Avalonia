@@ -1010,6 +1010,7 @@ public sealed partial class UiStyleContractTests
             .Descendants()
             .Single(element => element.Name.LocalName == "DialogSurface");
         Assert.Equal("Panel", surface.Attribute("Form")?.Value);
+        Assert.True(HasClass(surface, "settings-surface"));
         Assert.Null(surface.Attribute("Width"));
         Assert.Null(surface.Attribute("Height"));
         Assert.Null(surface.Attribute("Title"));
@@ -1148,6 +1149,7 @@ public sealed partial class UiStyleContractTests
     public void SettingsWorkspaceStyles_UseSemanticBrushesAndDesignTokens()
     {
         var document = XDocument.Load(ProjectFile("Views/MainWindow.Styles.axaml"));
+        var dialogSurfaceStyles = XDocument.Load(ProjectFile("Views/Styles/DialogSurface.axaml"));
 
         Assert.Equal(
             "0",
@@ -1173,6 +1175,11 @@ public sealed partial class UiStyleContractTests
         Assert.Equal(
             "{StaticResource Launcher.Component.Settings.Content.Padding}",
             GetStyleSetters(document, "Border.settings-content-padding")["Padding"]);
+        Assert.Equal(
+            "{StaticResource Launcher.Component.Settings.Footer.Padding}",
+            GetStyleSetters(
+                dialogSurfaceStyles,
+                "controls|DialogSurface.settings-surface:panel /template/ Border#PART_FooterBand")["Padding"]);
         Assert.Equal(
             "{StaticResource Launcher.Spacing.Thickness.None}",
             GetStyleSetters(document, "Button.dialog-close.content-header-action")["Margin"]);
@@ -1800,6 +1807,11 @@ public sealed partial class UiStyleContractTests
     public void DesignGallery_ProvidesFourButtonTypesCardAndSettingsRowAcrossSixStates()
     {
         var document = XDocument.Load(ProjectFile("Views/DesignGalleryOverlay.axaml"));
+        var dialogContent = document
+            .Descendants()
+            .Single(element => element.Name.LocalName == "DialogSurface.Content");
+        var contentStack = dialogContent.Elements().Single();
+        Assert.Null(contentStack.Attribute("Margin"));
         var matrix = document.Descendants().Single(element => HasClass(element, "design-state-matrix"));
 
         Assert.Equal("Auto,*,*,*,*,*,*", matrix.Attribute("ColumnDefinitions")?.Value);
@@ -2477,6 +2489,8 @@ public sealed partial class UiStyleContractTests
         Assert.Equal(
             "{StaticResource Launcher.Component.Dialog.Confirm.MinWidth}",
             surface.Attribute("MinWidth")?.Value);
+        Assert.Equal("Center", surface.Attribute("VerticalAlignment")?.Value);
+        Assert.Null(surface.Attribute("Subtitle"));
 
         // Basic 动作带绝不出现 hairline footer；三按钮规律保留。
         Assert.DoesNotContain(
@@ -3407,7 +3421,8 @@ public sealed partial class UiStyleContractTests
             "IsDangerAlert",
             "ConfirmIconKind",
             "CloseToolTip",
-            "DialogMaxWidth"
+            "DialogMaxWidth",
+            "Description"
         };
 
         var document = XDocument.Load(ProjectFile("Views/MainWindowDialogsOverlay.axaml"));
@@ -3426,6 +3441,7 @@ public sealed partial class UiStyleContractTests
 
             // 调用点必须同时给出门面归约所需的最小语义集。
             Assert.NotNull(usage.Attribute("Title"));
+            Assert.NotNull(usage.Attribute("Message"));
             Assert.NotNull(usage.Attribute("CancelCommand"));
             Assert.NotNull(usage.Attribute("ConfirmCommand"));
         }
@@ -4464,6 +4480,7 @@ public sealed partial class UiStyleContractTests
         foreach (var partName in new[]
                  {
                      "PART_PanelHead",
+                     "PART_SurfaceBorder",
                      "PART_BasicHead",
                      "PART_CloseButton",
                      "PART_ScrollViewer",
@@ -4495,9 +4512,38 @@ public sealed partial class UiStyleContractTests
             || selector.Contains("PART_BasicHead", StringComparison.Ordinal));
         Assert.Contains("controls|DialogSurface /template/ Border#PART_FooterBand", selectors);
         Assert.Contains("controls|DialogSurface:panel /template/ Border#PART_FooterBand", selectors);
+        Assert.Contains("controls|DialogSurface /template/ ScrollViewer#PART_ScrollViewer", selectors);
+        Assert.Contains("controls|DialogSurface:panel /template/ ScrollViewer#PART_ScrollViewer", selectors);
         Assert.Contains("controls|DialogSurface:info /template/ ContentPresenter#PART_BadgePresenter", selectors);
         Assert.Contains("controls|DialogSurface:warning /template/ ContentPresenter#PART_BadgePresenter", selectors);
         Assert.Contains("controls|DialogSurface:danger /template/ ContentPresenter#PART_BadgePresenter", selectors);
+
+        var surfaceBorder = document
+            .Descendants()
+            .Single(element => element.Attribute(XName.Get("Name", "http://schemas.microsoft.com/winfx/2006/xaml"))?.Value == "PART_SurfaceBorder");
+        Assert.Equal("{TemplateBinding ClipToBounds}", surfaceBorder.Attribute("ClipToBounds")?.Value);
+
+        var badgePresenter = document
+            .Descendants()
+            .Single(element => element.Attribute(XName.Get("Name", "http://schemas.microsoft.com/winfx/2006/xaml"))?.Value == "PART_BadgePresenter");
+        Assert.Equal(
+            "{StaticResource Launcher.Component.Dialog.Badge.Margin}",
+            badgePresenter.Attribute("Margin")?.Value);
+        Assert.Null(badgePresenter.Parent?.Attribute("ColumnSpacing"));
+
+        var footerLeadingPresenter = document
+            .Descendants()
+            .Single(element => element.Attribute(XName.Get("Name", "http://schemas.microsoft.com/winfx/2006/xaml"))?.Value == "PART_FooterLeadingPresenter");
+        Assert.Equal(
+            "{StaticResource Launcher.Component.Dialog.FooterLeading.Margin}",
+            footerLeadingPresenter.Attribute("Margin")?.Value);
+
+        Assert.Equal(
+            "{StaticResource Launcher.Component.Dialog.Basic.Content.Padding}",
+            GetStyleSetters(document, "controls|DialogSurface /template/ ScrollViewer#PART_ScrollViewer")["Padding"]);
+        Assert.Equal(
+            "{StaticResource Launcher.Component.Dialog.Panel.Body.Padding}",
+            GetStyleSetters(document, "controls|DialogSurface:panel /template/ ScrollViewer#PART_ScrollViewer")["Padding"]);
     }
 
     [Fact]
@@ -4515,9 +4561,11 @@ public sealed partial class UiStyleContractTests
         Assert.Equal(2, TokenValue("Launcher.Elevation.Shadow.Dialog").Split(',').Length);
         Assert.Equal("32", TokenValue("Launcher.Component.Dialog.Badge.Size"));
         Assert.Equal("16", TokenValue("Launcher.Component.Dialog.Badge.CornerRadius"));
+        Assert.Equal("0,0,12,0", TokenValue("Launcher.Component.Dialog.Badge.Margin"));
         Assert.Equal("20,0,10,0", TokenValue("Launcher.Component.Dialog.Panel.Head.Padding"));
         Assert.Equal("24,18,24,18", TokenValue("Launcher.Component.Dialog.Panel.Body.Padding"));
         Assert.Equal("24,14,24,20", TokenValue("Launcher.Component.Dialog.Panel.Footer.Padding"));
+        Assert.Equal("0,0,12,0", TokenValue("Launcher.Component.Dialog.FooterLeading.Margin"));
         Assert.Equal("28,28,28,8", TokenValue("Launcher.Component.Dialog.Basic.Head.Padding"));
         Assert.Equal("28,0,28,0", TokenValue("Launcher.Component.Dialog.Basic.Content.Padding"));
         Assert.Equal("28,16,28,24", TokenValue("Launcher.Component.Dialog.Basic.Actions.Padding"));

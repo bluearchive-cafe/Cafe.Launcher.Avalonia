@@ -254,7 +254,6 @@
         <!-- Repair confirmation dialog -->
         <controls:ConfirmDialog IsOpen="{Binding Dialogs.IsRepairConfirmVisible}"
                                 Title="{Binding Shell.I18n[repairConfirm]}"
-                                Description="{Binding Shell.I18n[repairConfirmDescription]}"
                                 Message="{Binding Dialogs.RepairConfirmText}"
                                 CancelText="{Binding Shell.I18n[cancel]}"
                                 CancelCommand="{Binding Dialogs.CancelRepairCommand}"
@@ -264,7 +263,6 @@
         <!-- Resource Panel source confirmation dialog -->
         <controls:ConfirmDialog IsOpen="{Binding Dialogs.IsResourcePanelSourceConfirmVisible}"
                                 Title="{Binding Shell.I18n[resourcePanelCafeOnlyTitle]}"
-                                Description="{Binding Shell.I18n[resourcePanelCafeOnlyDescription]}"
                                 Message="{Binding Dialogs.ResourcePanelSourceConfirmText}"
                                 CancelText="{Binding Shell.I18n[cancel]}"
                                 CancelCommand="{Binding Dialogs.CancelResourcePanelSourceSwitchCommand}"
@@ -377,7 +375,6 @@
         <!-- Stop download confirmation dialog -->
         <controls:ConfirmDialog IsOpen="{Binding Dialogs.IsStopConfirmVisible}"
                                 Title="{Binding Shell.I18n[stopDownloadTitle]}"
-                                Description="{Binding Shell.I18n[stopDownloadMessage]}"
                                 Message="{Binding Dialogs.StopConfirmText}"
                                 CancelText="{Binding Shell.I18n[cancel]}"
                                 CancelCommand="{Binding Dialogs.CancelStopCommand}"
@@ -388,7 +385,6 @@
         <!-- Download running close confirmation dialog -->
         <controls:ConfirmDialog IsOpen="{Binding Dialogs.IsDownloadRunningCloseConfirmVisible}"
                                 Title="{Binding Shell.I18n[stopDownloadTitle]}"
-                                Description="{Binding Shell.I18n[stopDownloadMessage]}"
                                 Message="{Binding Dialogs.DownloadRunningCloseConfirmText}"
                                 CancelText="{Binding Shell.I18n[cancel]}"
                                 CancelCommand="{Binding Dialogs.CancelCloseWhileDownloadingCommand}"
@@ -399,7 +395,6 @@
         <!-- Uninstall confirmation dialog -->
         <controls:ConfirmDialog IsOpen="{Binding Dialogs.IsUninstallConfirmVisible}"
                                 Title="{Binding Shell.I18n[confirmUninstall]}"
-                                Description="{Binding Shell.I18n[uninstallConfirmDescription]}"
                                 Message="{Binding Dialogs.UninstallConfirmText}"
                                 CancelText="{Binding Shell.I18n[cancel]}"
                                 CancelCommand="{Binding Dialogs.CancelUninstallCommand}"
@@ -410,7 +405,7 @@
         <!-- Unsaved changes confirmation dialog -->
         <controls:ConfirmDialog IsOpen="{Binding Settings.IsUnsavedChangesVisible}"
                                 Title="{Binding Shell.I18n[unsavedChanges]}"
-                                Description="{Binding Shell.I18n[unsavedChangesMessage]}"
+                                Message="{Binding Shell.I18n[unsavedChangesMessage]}"
                                 CancelText="{Binding Shell.I18n[keepEditing]}"
                                 CancelCommand="{Binding WindowChrome.KeepEditingSettingsCommand}"
                                 ConfirmText="{Binding Shell.I18n[discardChanges]}"
@@ -482,14 +477,14 @@
         <views:SetupWizardOverlay/>
         <controls:ConfirmDialog IsOpen="{Binding Dialogs.IsSetupWizardExitConfirmVisible}"
                                 Title="{Binding Shell.I18n[setupWizardExitTitle]}"
-                                Description="{Binding Shell.I18n[setupWizardExitMessage]}"
+                                Message="{Binding Shell.I18n[setupWizardExitMessage]}"
                                 CancelText="{Binding Shell.I18n[cancel]}"
                                 CancelCommand="{Binding Dialogs.CancelSetupWizardExitCommand}"
                                 ConfirmText="{Binding Shell.I18n[setupWizardExitConfirm]}"
                                 ConfirmCommand="{Binding Dialogs.ConfirmSetupWizardExitCommand}"/>
         <controls:ConfirmDialog IsOpen="{Binding Dialogs.IsDebugResetConfirmationVisible}"
                                 Title="{Binding Shell.I18n[debugResetSettingsTitle]}"
-                                Description="{Binding Shell.I18n[debugResetSettingsDescription]}"
+                                Message="{Binding Shell.I18n[debugResetSettingsDescription]}"
                                 CancelText="{Binding Shell.I18n[cancel]}"
                                 CancelCommand="{Binding Dialogs.CancelDebugResetCommand}"
                                 ConfirmText="{Binding Shell.I18n[debugResetSettingsConfirm]}"

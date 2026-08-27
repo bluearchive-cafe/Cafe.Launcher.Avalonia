@@ -18,10 +18,7 @@ public partial class ConfirmDialog : UserControl
     public static readonly StyledProperty<string?> TitleProperty =
         AvaloniaProperty.Register<ConfirmDialog, string?>(nameof(Title));
 
-    public static readonly StyledProperty<string?> DescriptionProperty =
-        AvaloniaProperty.Register<ConfirmDialog, string?>(nameof(Description));
-
-    /// <summary>滚动区正文；为空时仅保留标题与支撑文案。</summary>
+    /// <summary>滚动区正文；为空时仅保留标题。</summary>
     public static readonly StyledProperty<string?> MessageProperty =
         AvaloniaProperty.Register<ConfirmDialog, string?>(nameof(Message));
 
@@ -42,7 +39,6 @@ public partial class ConfirmDialog : UserControl
 
     public bool IsOpen { get => GetValue(IsOpenProperty); set => SetValue(IsOpenProperty, value); }
     public string? Title { get => GetValue(TitleProperty); set => SetValue(TitleProperty, value); }
-    public string? Description { get => GetValue(DescriptionProperty); set => SetValue(DescriptionProperty, value); }
     public string? Message { get => GetValue(MessageProperty); set => SetValue(MessageProperty, value); }
     public string CancelText { get => GetValue(CancelTextProperty); set => SetValue(CancelTextProperty, value); }
     public ICommand? CancelCommand { get => GetValue(CancelCommandProperty); set => SetValue(CancelCommandProperty, value); }

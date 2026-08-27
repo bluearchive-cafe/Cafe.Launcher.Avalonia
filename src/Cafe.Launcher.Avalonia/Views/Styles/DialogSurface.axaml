@@ -18,8 +18,10 @@
     <Setter Property="BoxShadow" Value="{helpers:BoxShadows {StaticResource Launcher.Elevation.Shadow.Dialog}}"/>
     <Setter Property="Template">
       <ControlTemplate>
-        <Border Background="{TemplateBinding Background}"
+        <Border x:Name="PART_SurfaceBorder"
+                Background="{TemplateBinding Background}"
                 CornerRadius="{TemplateBinding CornerRadius}"
+                ClipToBounds="{TemplateBinding ClipToBounds}"
                 BoxShadow="{TemplateBinding BoxShadow}">
           <Grid RowDefinitions="Auto,Auto,*,Auto">
 
@@ -28,12 +30,12 @@
                     Background="{DynamicResource Launcher.Color.Dialog.Header}"
                     MinHeight="{StaticResource Launcher.Component.Dialog.Title.Height}"
                     Padding="{StaticResource Launcher.Component.Dialog.Panel.Head.Padding}">
-              <Grid ColumnDefinitions="Auto,*,Auto"
-                    ColumnSpacing="{StaticResource Launcher.Spacing.Md}">
+              <Grid ColumnDefinitions="Auto,*,Auto">
                 <ContentPresenter x:Name="PART_BadgePresenter"
                                   Grid.Column="0"
                                   Width="{StaticResource Launcher.Component.Dialog.Badge.Size}"
                                   Height="{StaticResource Launcher.Component.Dialog.Badge.Size}"
+                                  Margin="{StaticResource Launcher.Component.Dialog.Badge.Margin}"
                                   CornerRadius="{StaticResource Launcher.Component.Dialog.Badge.CornerRadius}"
                                   HorizontalContentAlignment="Center"
                                   VerticalContentAlignment="Center"
@@ -108,6 +110,7 @@
               <Grid ColumnDefinitions="Auto,*,Auto">
                 <ContentPresenter x:Name="PART_FooterLeadingPresenter"
                                   Grid.Column="0"
+                                  Margin="{StaticResource Launcher.Component.Dialog.FooterLeading.Margin}"
                                   VerticalAlignment="Center"
                                   Focusable="False"/>
                 <ContentPresenter x:Name="PART_FooterPresenter"
@@ -123,8 +126,16 @@
     </Setter>
   </Style>
 
-  <!-- 形态切换：解剖可见性与滚动区边距全部由 DialogSurface.RefreshChrome()
-       以本地值管理（含头带折叠与自管留白外壳）。样式仅保留动作带皮肤差异。 -->
+  <!-- 形态切换：解剖可见性由 DialogSurface.RefreshChrome() 管理
+       （含头带折叠与自管留白外壳）；正文内边距由形态样式直接消费 token。 -->
+  <Style Selector="controls|DialogSurface /template/ ScrollViewer#PART_ScrollViewer">
+    <Setter Property="Padding" Value="{StaticResource Launcher.Component.Dialog.Basic.Content.Padding}"/>
+  </Style>
+
+  <Style Selector="controls|DialogSurface:panel /template/ ScrollViewer#PART_ScrollViewer">
+    <Setter Property="Padding" Value="{StaticResource Launcher.Component.Dialog.Panel.Body.Padding}"/>
+  </Style>
+
   <Style Selector="controls|DialogSurface /template/ Border#PART_FooterBand">
     <Setter Property="Background" Value="{StaticResource Launcher.Color.Transparent}"/>
     <Setter Property="BorderThickness" Value="{StaticResource Launcher.Spacing.Thickness.None}"/>
@@ -136,6 +147,10 @@
     <Setter Property="BorderBrush" Value="{DynamicResource Launcher.Color.Card.Border}"/>
     <Setter Property="BorderThickness" Value="{StaticResource Launcher.Component.Dialog.Footer.BorderThickness}"/>
     <Setter Property="Padding" Value="{StaticResource Launcher.Component.Dialog.Panel.Footer.Padding}"/>
+  </Style>
+
+  <Style Selector="controls|DialogSurface.settings-surface:panel /template/ Border#PART_FooterBand">
+    <Setter Property="Padding" Value="{StaticResource Launcher.Component.Settings.Footer.Padding}"/>
   </Style>
 
   <!-- 状态修饰：仅重染徽章语调，不改变几何。 -->
