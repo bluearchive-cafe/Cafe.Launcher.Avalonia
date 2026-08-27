@@ -1611,6 +1611,40 @@ public sealed class MainWindowHeadlessTests
     }
 
     [AvaloniaFact]
+    public void SettingsContent_WhenScrolledToEnd_KeepsCloseButtonInsideDialog()
+    {
+        using var context = CreateContext();
+        OpenSettings(context);
+        var closeButton = context.Window.GetVisualDescendants()
+            .OfType<Button>()
+            .Single(control => control.Classes.Contains("content-header-action"));
+        var contentScroll = context.Window.GetVisualDescendants()
+            .OfType<ScrollViewer>()
+            .Single(control => control.Classes.Contains("settings-content-scroll"));
+        var maxScrollOffset = 0d;
+        foreach (var option in context.ViewModel.Settings.Options.SettingsCategories)
+        {
+            context.ViewModel.Settings.SelectedCategory = option.Code;
+            Dispatcher.UIThread.RunJobs();
+            maxScrollOffset = Math.Max(
+                maxScrollOffset,
+                Math.Max(0, contentScroll.Extent.Height - contentScroll.Viewport.Height));
+        }
+
+        Assert.True(maxScrollOffset > 0);
+        contentScroll.Offset = new Vector(contentScroll.Offset.X, maxScrollOffset);
+        Dispatcher.UIThread.RunJobs();
+
+        var closeTransform = closeButton.TransformToVisual(context.Window);
+        Assert.NotNull(closeTransform);
+        var closeTopLeft = closeTransform.Value.Transform(closeButton.Bounds.TopLeft);
+        var closeBottomRight = closeTransform.Value.Transform(closeButton.Bounds.BottomRight);
+        Assert.True(closeButton.IsEffectivelyVisible);
+        Assert.True(closeTopLeft.Y >= 0);
+        Assert.True(closeBottomRight.Y <= context.Window.Bounds.Height);
+    }
+
+    [AvaloniaFact]
     public void MainWindow_SettingsButtonHasBoundCommandAndAutomationName()
     {
         using var context = CreateContext();

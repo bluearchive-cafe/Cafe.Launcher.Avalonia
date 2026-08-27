@@ -964,7 +964,7 @@
     <Style Selector="TextBlock.settings-neutral-hint">
         <Setter Property="Margin" Value="{StaticResource Launcher.Component.Settings.NeutralHint.Margin}"/>
     </Style>
-    <Style Selector="StackPanel.settings-category-header">
+    <Style Selector="StackPanel.settings-sections">
         <Setter Property="Spacing" Value="0"/>
     </Style>
     <Style Selector="StackPanel.settings-group">

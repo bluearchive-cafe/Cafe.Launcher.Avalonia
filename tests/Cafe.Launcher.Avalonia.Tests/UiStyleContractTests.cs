@@ -1233,7 +1233,7 @@ public sealed partial class UiStyleContractTests
             element => HasClass(element, "settings-content-divider"));
         Assert.Equal(
             "0",
-            GetStyleSetters(document, "StackPanel.settings-category-header")["Spacing"]);
+            GetStyleSetters(document, "StackPanel.settings-sections")["Spacing"]);
         Assert.Equal(
             "{StaticResource Launcher.Typography.FontSize.Body.Md}",
             GetStyleSetters(document, "TextBlock.group-title")["FontSize"]);
@@ -3260,6 +3260,21 @@ public sealed partial class UiStyleContractTests
                 && HasClass(element, "settings-content"));
 
         Assert.Null(settingsContent.Attribute("RowDefinitions"));
+        var contentHeading = settingsContent.Descendants().Single(element =>
+            HasClass(element, "settings-content-heading"));
+        // 标题行含关闭按钮，必须固定在滚动区之外，滚动到末尾也不消失。
+        Assert.Equal(
+            "Auto,*",
+            contentHeading.Parent!.Attribute("RowDefinitions")?.Value);
+        var contentScrollViewer = settingsContent.Descendants().Single(element =>
+            element.Name.LocalName == "ScrollViewer");
+        Assert.DoesNotContain(contentScrollViewer.Descendants(), element =>
+            HasClass(element, "settings-content-heading"));
+        Assert.DoesNotContain(
+            contentScrollViewer.Descendants(),
+            element => element.Name.LocalName == "Button" && HasClass(element, "dialog-close"));
+        Assert.Single(contentScrollViewer.Descendants(), element =>
+            HasClass(element, "settings-sections"));
         Assert.Single(settingsContent.Descendants(), element => HasClass(element, "settings-content-heading"));
         Assert.DoesNotContain(
             document.Descendants(),
