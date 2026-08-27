@@ -57,7 +57,8 @@
             <Thickness x:Key="Launcher.Component.Dialog.HeaderAction.Margin">0,0,16,0</Thickness>
             <Thickness x:Key="Launcher.Component.Dialog.Footer.BorderThickness">0,1,0,0</Thickness>
             <Thickness x:Key="Launcher.Component.Settings.Group.Margin">0,16,0,0</Thickness>
-            <Thickness x:Key="Launcher.Component.Settings.ContentHeading.Margin">0,0,0,4</Thickness>
+            <!-- 右缩进与 Content.Scroll.Padding 的滚动条槽位同宽，标题行在滚动区之外。 -->
+            <Thickness x:Key="Launcher.Component.Settings.ContentHeading.Margin">0,0,16,4</Thickness>
             <Thickness x:Key="Launcher.Component.RemoteSurface.Margin">40,64,0,0</Thickness>
             <Thickness x:Key="Launcher.Component.BottomPanel.Padding">40,20,40,20</Thickness>
             <Thickness x:Key="Launcher.Component.ContentRow.Margin">0,0,0,4</Thickness>

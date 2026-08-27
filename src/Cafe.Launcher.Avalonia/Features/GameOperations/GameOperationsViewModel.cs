@@ -95,10 +95,13 @@ public partial class GameOperationsViewModel : ViewModelBase, IGameOperationJour
 
     bool IGameOperationJourneyHost.IsBusy => shell.IsBusy;
 
+    LauncherStatusSnapshot? IGameOperationJourneyHost.CurrentSnapshot => currentSnapshot;
+
     internal GameOperationsViewModel(
         GameLaunchService gameLaunchService,
         GameDownloadService gameDownloadService,
         GameUninstallService gameUninstallService,
+        GameShortcutService gameShortcutService,
         LocalizationService localizer,
         ToastService toastService,
         LocalDiagnostics diagnostics,
@@ -110,6 +113,7 @@ public partial class GameOperationsViewModel : ViewModelBase, IGameOperationJour
                 new GameLaunchWorkflow(gameLaunchService),
                 new GameInstallationWorkflow(gameDownloadService),
                 new GameUninstallWorkflow(gameUninstallService),
+                gameShortcutService,
                 localizer,
                 toastService,
                 diagnostics,
@@ -126,6 +130,7 @@ public partial class GameOperationsViewModel : ViewModelBase, IGameOperationJour
         IGameLaunchWorkflow launchWorkflow,
         IGameInstallationWorkflow installationWorkflow,
         IGameUninstallWorkflow uninstallWorkflow,
+        IGameShortcutService shortcutService,
         LocalizationService localizer,
         ToastService toastService,
         LocalDiagnostics diagnostics,
@@ -138,6 +143,7 @@ public partial class GameOperationsViewModel : ViewModelBase, IGameOperationJour
                 launchWorkflow,
                 installationWorkflow,
                 uninstallWorkflow,
+                shortcutService,
                 localizer,
                 toastService,
                 diagnostics,
@@ -229,6 +235,29 @@ public partial class GameOperationsViewModel : ViewModelBase, IGameOperationJour
     {
         if (currentSnapshot is not null)
             await journey.StartGameAsync(currentSnapshot);
+    }
+
+    [RelayCommand]
+    private async Task CheckForGameUpdateAsync()
+    {
+        if (currentSnapshot is not null)
+            await journey.CheckForUpdateAsync(currentSnapshot);
+    }
+
+    [RelayCommand]
+    private async Task CreateGameShortcutAsync()
+    {
+        if (currentSnapshot is not null)
+            await journey.CreateDesktopShortcutAsync(currentSnapshot);
+    }
+
+    [RelayCommand]
+    private void OpenGameFolder()
+    {
+        if (currentSnapshot is not null)
+        {
+            journey.OpenGameFolder(currentSnapshot);
+        }
     }
 
     private bool CanInstallOrUpdate() => !shell.IsInstallBlockedByDiskSpace;

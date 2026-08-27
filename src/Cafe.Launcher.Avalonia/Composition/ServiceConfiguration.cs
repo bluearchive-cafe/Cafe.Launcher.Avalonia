@@ -62,6 +62,7 @@ public static class ServiceConfiguration
         services.AddSingleton<SettingsAppearanceViewModel>();
         services.AddSingleton<GameLaunchService>();
         services.AddSingleton<GameUninstallService>();
+        services.AddSingleton<IGameShortcutService, GameShortcutService>();
         services.AddSingleton<IGameLaunchWorkflow, GameLaunchWorkflow>();
         services.AddSingleton<IGameInstallationWorkflow, GameInstallationWorkflow>();
         services.AddSingleton<IGameUninstallWorkflow, GameUninstallWorkflow>();

@@ -62,32 +62,35 @@
 
                     <Grid Grid.Column="1" Classes="settings-content">
                         <Border Classes="settings-content-padding">
-                                <ScrollViewer Classes="dialog-scroll settings-content-scroll"
-                                      VerticalScrollBarVisibility="Auto"
-                                      HorizontalScrollBarVisibility="Disabled"
-                                      IsEnabled="{Binding Settings.IsSaving, Converter={x:Static BoolConverters.Not}}">
-                                    <StackPanel Classes="category-header settings-category-header">
-                                        <Grid Classes="settings-content-heading" ColumnDefinitions="*,Auto" ColumnSpacing="{StaticResource Launcher.Spacing.Md}">
-                                            <StackPanel DataContext="{Binding SelectedItem, ElementName=SettingsNavigation}"
-                                                        x:DataType="models:SettingOption"
-                                                        Classes="settings-content-heading-copy">
-                                                <TextBlock Classes="category-title"
-                                                           Text="{Binding DisplayName}"
-                                                           AutomationProperties.Name="{Binding DisplayName}"/>
-                                                <TextBlock Classes="category-subtitle"
-                                                           Text="{Binding Description}"/>
-                                            </StackPanel>
-                                            <Button Grid.Column="1"
-                                                    Classes="dialog-close content-header-action"
-                                                    Command="{Binding WindowChrome.ShowSettingsCommand}"
-                                                    IsEnabled="{Binding Settings.IsSaving, Converter={x:Static BoolConverters.Not}}"
-                                                    ToolTip.Tip="{Binding Shell.I18n[close]}"
-                                                    AutomationProperties.Name="{Binding Shell.I18n[close]}"
-                                                    VerticalAlignment="Top">
-                                                <materialIcons:MaterialIcon Kind="Close" Width="{StaticResource Launcher.Icon.Md}" Height="{StaticResource Launcher.Icon.Md}"/>
-                                            </Button>
-                                        </Grid>
-                                <views:SettingsGeneralSection IsVisible="{Binding Settings.IsGeneralCategorySelected}"
+                                <Grid RowDefinitions="Auto,*">
+                                    <!-- 标题行与关闭按钮固定在内容区顶部，不随下方内容滚动。 -->
+                                    <Grid Classes="settings-content-heading" ColumnDefinitions="*,Auto" ColumnSpacing="{StaticResource Launcher.Spacing.Md}">
+                                        <StackPanel DataContext="{Binding SelectedItem, ElementName=SettingsNavigation}"
+                                                    x:DataType="models:SettingOption"
+                                                    Classes="settings-content-heading-copy">
+                                            <TextBlock Classes="category-title"
+                                                       Text="{Binding DisplayName}"
+                                                       AutomationProperties.Name="{Binding DisplayName}"/>
+                                            <TextBlock Classes="category-subtitle"
+                                                       Text="{Binding Description}"/>
+                                        </StackPanel>
+                                        <Button Grid.Column="1"
+                                                Classes="dialog-close content-header-action"
+                                                Command="{Binding WindowChrome.ShowSettingsCommand}"
+                                                IsEnabled="{Binding Settings.IsSaving, Converter={x:Static BoolConverters.Not}}"
+                                                ToolTip.Tip="{Binding Shell.I18n[close]}"
+                                                AutomationProperties.Name="{Binding Shell.I18n[close]}"
+                                                VerticalAlignment="Top">
+                                            <materialIcons:MaterialIcon Kind="Close" Width="{StaticResource Launcher.Icon.Md}" Height="{StaticResource Launcher.Icon.Md}"/>
+                                        </Button>
+                                    </Grid>
+                                    <ScrollViewer Grid.Row="1"
+                                                  Classes="dialog-scroll settings-content-scroll"
+                                                  VerticalScrollBarVisibility="Auto"
+                                                  HorizontalScrollBarVisibility="Disabled"
+                                                  IsEnabled="{Binding Settings.IsSaving, Converter={x:Static BoolConverters.Not}}">
+                                    <StackPanel Classes="settings-sections">
+                                    <views:SettingsGeneralSection IsVisible="{Binding Settings.IsGeneralCategorySelected}"
                                                               Classes="motion-content"
                                                               Classes.motion-enabled="{Binding IsMotionEnabled}"
                                                               Classes.motion-enter="{Binding Settings.IsGeneralCategorySelected}">
@@ -136,7 +139,8 @@
                                     </views:SettingsAboutSection.RenderTransform>
                                 </views:SettingsAboutSection>
                                     </StackPanel>
-                                </ScrollViewer>
+                                    </ScrollViewer>
+                                </Grid>
                         </Border>
                     </Grid>
                 </Grid>

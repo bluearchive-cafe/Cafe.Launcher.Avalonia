@@ -18,6 +18,7 @@ internal sealed class GameOperationJourneyFactory : IGameOperationJourneyFactory
     private readonly IGameLaunchWorkflow launchWorkflow;
     private readonly IGameInstallationWorkflow installationWorkflow;
     private readonly IGameUninstallWorkflow uninstallWorkflow;
+    private readonly IGameShortcutService shortcutService;
     private readonly LocalizationService localizer;
     private readonly ToastService toastService;
     private readonly LocalDiagnostics diagnostics;
@@ -30,6 +31,7 @@ internal sealed class GameOperationJourneyFactory : IGameOperationJourneyFactory
         IGameLaunchWorkflow launchWorkflow,
         IGameInstallationWorkflow installationWorkflow,
         IGameUninstallWorkflow uninstallWorkflow,
+        IGameShortcutService shortcutService,
         LocalizationService localizer,
         ToastService toastService,
         LocalDiagnostics diagnostics,
@@ -41,6 +43,7 @@ internal sealed class GameOperationJourneyFactory : IGameOperationJourneyFactory
         this.launchWorkflow = launchWorkflow;
         this.installationWorkflow = installationWorkflow;
         this.uninstallWorkflow = uninstallWorkflow;
+        this.shortcutService = shortcutService;
         this.localizer = localizer;
         this.toastService = toastService;
         this.diagnostics = diagnostics;
@@ -55,6 +58,7 @@ internal sealed class GameOperationJourneyFactory : IGameOperationJourneyFactory
             launchWorkflow,
             installationWorkflow,
             uninstallWorkflow,
+            shortcutService,
             localizer,
             toastService,
             diagnostics,

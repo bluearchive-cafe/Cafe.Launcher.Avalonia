@@ -240,6 +240,146 @@ public sealed class GameOperationsViewModelTests
     }
 
     [Fact]
+    public async Task CheckForGameUpdateCommand_WhenUpdateAvailable_RefreshesAndRaisesInfoToast()
+    {
+        var context = CreateContext();
+        var snapshot = ReadySnapshot();
+        ToastNotification? raised = null;
+        context.ToastService.ToastRaised += toast => raised = toast;
+        context.ViewModel.ApplySnapshot(snapshot);
+        GameOperationsRefreshMode? refreshMode = null;
+        context.ViewModel.RefreshRequested += mode =>
+        {
+            refreshMode = mode;
+            context.ViewModel.ApplySnapshot(new LauncherStatusSnapshot
+            {
+                RuntimeState = LauncherRuntimeState.UpdateAvailable,
+                Remote = new LauncherRemoteState
+                {
+                    GameConfig = new GameConfigResponse { GameLatestVersion = "1.73.0" }
+                }
+            });
+            return Task.CompletedTask;
+        };
+
+        await context.ViewModel.CheckForGameUpdateCommand.ExecuteAsync(null);
+
+        Assert.Equal(GameOperationsRefreshMode.SkipPersistedResume, refreshMode);
+        Assert.NotNull(raised);
+        Assert.Equal(
+            context.Localizer.F("gameCheckUpdateAvailable", "1.73.0"),
+            raised!.Message);
+        Assert.False(context.Shell.IsBusy);
+    }
+
+    [Fact]
+    public async Task CheckForGameUpdateCommand_WhenReady_ReportsUpToDate()
+    {
+        var context = CreateContext();
+        var snapshot = ReadySnapshot();
+        var raised = new List<ToastNotification>();
+        context.ToastService.ToastRaised += raised.Add;
+        context.ViewModel.ApplySnapshot(snapshot);
+        context.ViewModel.RefreshRequested += _ =>
+        {
+            context.ViewModel.ApplySnapshot(new LauncherStatusSnapshot
+            {
+                RuntimeState = LauncherRuntimeState.Ready,
+                Remote = new LauncherRemoteState
+                {
+                    GameConfig = new GameConfigResponse { GameLatestVersion = "1.72.0" }
+                }
+            });
+            return Task.CompletedTask;
+        };
+
+        await context.ViewModel.CheckForGameUpdateCommand.ExecuteAsync(null);
+
+        Assert.Contains(
+            raised,
+            toast => toast.Message == context.Localizer.F("gameCheckUpdateUpToDate", "1.72.0"));
+        Assert.False(context.Shell.IsBusy);
+    }
+
+    [Fact]
+    public async Task CreateGameShortcutCommand_WhenCreated_ShowsSuccessToast()
+    {
+        var context = CreateContext();
+        ToastNotification? raised = null;
+        context.ToastService.ToastRaised += toast => raised = toast;
+        context.ViewModel.ApplySnapshot(ReadySnapshot());
+
+        await context.ViewModel.CreateGameShortcutCommand.ExecuteAsync(null);
+
+        Assert.NotNull(context.ShortcutService.LastSnapshot);
+        Assert.NotNull(raised);
+        Assert.Equal(context.Localizer.T("gameShortcutCreated"), raised!.Message);
+        Assert.False(context.Shell.IsBusy);
+    }
+
+    [Fact]
+    public async Task CreateGameShortcutCommand_WhenUnsupported_ShowsWarningToast()
+    {
+        var context = CreateContext();
+        ToastNotification? raised = null;
+        context.ToastService.ToastRaised += toast => raised = toast;
+        context.ShortcutService.CreationResult = new GameShortcutResult(GameShortcutStatus.UnsupportedPlatform);
+        context.ViewModel.ApplySnapshot(ReadySnapshot());
+
+        await context.ViewModel.CreateGameShortcutCommand.ExecuteAsync(null);
+
+        Assert.NotNull(raised);
+        Assert.Equal(context.Localizer.T("gameShortcutUnsupported"), raised!.Message);
+    }
+
+    [Fact]
+    public async Task CreateGameShortcutCommand_WhenResolutionFails_ShowsTargetWarningToast()
+    {
+        var context = CreateContext();
+        ToastNotification? raised = null;
+        context.ToastService.ToastRaised += toast => raised = toast;
+        context.ShortcutService.CreationResult = new GameShortcutResult(GameShortcutStatus.GameNotResolved);
+        context.ViewModel.ApplySnapshot(ReadySnapshot());
+
+        await context.ViewModel.CreateGameShortcutCommand.ExecuteAsync(null);
+
+        Assert.NotNull(raised);
+        Assert.Equal(context.Localizer.T("gameShortcutTargetMissing"), raised!.Message);
+    }
+
+    [Fact]
+    public async Task CreateGameShortcutCommand_WhenCreationFails_ShowsErrorToastWithDetail()
+    {
+        var context = CreateContext();
+        ToastNotification? raised = null;
+        context.ToastService.ToastRaised += toast => raised = toast;
+        context.ShortcutService.CreationResult = new GameShortcutResult(GameShortcutStatus.Failed, "access denied");
+        context.ViewModel.ApplySnapshot(ReadySnapshot());
+
+        await context.ViewModel.CreateGameShortcutCommand.ExecuteAsync(null);
+
+        Assert.NotNull(raised);
+        Assert.Contains("access denied", raised!.Message, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public void OpenGameFolderCommand_WhenFolderMissing_ShowsWarningToast()
+    {
+        var context = CreateContext();
+        ToastNotification? raised = null;
+        context.ToastService.ToastRaised += toast => raised = toast;
+        context.ShortcutService.OpenDirectory = _ => false;
+        var snapshot = ReadySnapshot(@"C:\games\missing");
+        context.ViewModel.ApplySnapshot(snapshot);
+
+        context.ViewModel.OpenGameFolderCommand.Execute(null);
+
+        Assert.Equal(snapshot, context.ShortcutService.LastSnapshot);
+        Assert.NotNull(raised);
+        Assert.Equal(context.Localizer.T("gameFolderMissing"), raised!.Message);
+    }
+
+    [Fact]
     public async Task InstallOrUpdateCommand_WhenBackendFails_RaisesActionableToast()
     {
         var context = CreateContext();
@@ -877,6 +1017,7 @@ public sealed class GameOperationsViewModelTests
             Path.Combine(Path.GetTempPath(), Guid.NewGuid().ToString("N"), "notices.json")),
             new SetupWizardViewModel(localizer, new GameInstallationPath(), new LocalInstallationStateStore(), new LocalDiagnostics()));
         var backend = new TestBackend();
+        var shortcutService = new TestGameShortcutService();
         var errorHandling = new ErrorHandlingService(
             localizer,
             new LocalDiagnostics(),
@@ -885,6 +1026,7 @@ public sealed class GameOperationsViewModelTests
             backend,
             backend,
             backend,
+            shortcutService,
             localizer,
             toastService,
             new LocalDiagnostics(),
@@ -892,7 +1034,7 @@ public sealed class GameOperationsViewModelTests
             dialogs,
             _ => Task.CompletedTask,
             errorHandling);
-        return new TestContext(viewModel, backend, shell, dialogs, toastService, localizer);
+        return new TestContext(viewModel, backend, shortcutService, shell, dialogs, toastService, localizer);
     }
 
     private static LauncherStatusSnapshot ReadySnapshot(string gamePath = "") =>
@@ -905,6 +1047,7 @@ public sealed class GameOperationsViewModelTests
     private sealed record TestContext(
         GameOperationsViewModel ViewModel,
         TestBackend Backend,
+        TestGameShortcutService ShortcutService,
         ShellViewModel Shell,
         DialogsViewModel Dialogs,
         ToastService ToastService,

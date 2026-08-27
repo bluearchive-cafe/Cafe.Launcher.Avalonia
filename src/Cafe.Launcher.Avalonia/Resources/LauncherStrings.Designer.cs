@@ -334,11 +334,23 @@ internal static class LauncherStrings
 
     internal static string GameBelowLowestVersion => GetRequiredString("gameBelowLowestVersion");
 
+    internal static string GameCheckUpdate => GetRequiredString("gameCheckUpdate");
+
+    internal static string GameCheckUpdateAvailable => GetRequiredString("gameCheckUpdateAvailable");
+
+    internal static string GameCheckUpdateFailed => GetRequiredString("gameCheckUpdateFailed");
+
+    internal static string GameCheckUpdateUpToDate => GetRequiredString("gameCheckUpdateUpToDate");
+
     internal static string GameConfigMetadataMissing => GetRequiredString("gameConfigMetadataMissing");
 
     internal static string GameCorruptedInstallationState => GetRequiredString("gameCorruptedInstallationState");
 
+    internal static string GameCreateShortcut => GetRequiredString("gameCreateShortcut");
+
     internal static string GameDirectoryNameInvalid => GetRequiredString("gameDirectoryNameInvalid");
+
+    internal static string GameDisplayName => GetRequiredString("gameDisplayName");
 
     internal static string GameExecutableMissing => GetRequiredString("gameExecutableMissing");
 
@@ -347,6 +359,8 @@ internal static class LauncherStrings
     internal static string GameExecutableNameInvalid => GetRequiredString("gameExecutableNameInvalid");
 
     internal static string GameExecutableRunning => GetRequiredString("gameExecutableRunning");
+
+    internal static string GameFolderMissing => GetRequiredString("gameFolderMissing");
 
     internal static string GameInstallationStateReadFailed => GetRequiredString("gameInstallationStateReadFailed");
 
@@ -366,6 +380,8 @@ internal static class LauncherStrings
 
     internal static string GameNotInstalled => GetRequiredString("gameNotInstalled");
 
+    internal static string GameOpenFolder => GetRequiredString("gameOpenFolder");
+
     internal static string GamePath => GetRequiredString("gamePath");
 
     internal static string GamePathMissing => GetRequiredString("gamePathMissing");
@@ -383,6 +399,14 @@ internal static class LauncherStrings
     internal static string GameRemoteStateUnavailable => GetRequiredString("gameRemoteStateUnavailable");
 
     internal static string GameRepairFailed => GetRequiredString("gameRepairFailed");
+
+    internal static string GameShortcutCreated => GetRequiredString("gameShortcutCreated");
+
+    internal static string GameShortcutFailed => GetRequiredString("gameShortcutFailed");
+
+    internal static string GameShortcutTargetMissing => GetRequiredString("gameShortcutTargetMissing");
+
+    internal static string GameShortcutUnsupported => GetRequiredString("gameShortcutUnsupported");
 
     internal static string GitHubRepository => GetRequiredString("gitHubRepository");
 
