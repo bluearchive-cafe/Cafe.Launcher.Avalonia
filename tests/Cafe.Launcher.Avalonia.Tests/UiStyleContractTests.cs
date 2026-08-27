@@ -4000,6 +4000,11 @@ public sealed partial class UiStyleContractTests
             "{StaticResource Launcher.Motion.Duration.Fast}");
         AssertMotionAnimation(
             document,
+            "Grid.motion-shell.motion-enabled.motion-enter",
+            "{StaticResource Launcher.Motion.Duration.Fast}",
+            expectedStartOffset: null);
+        AssertMotionAnimation(
+            document,
             "Grid.motion-overlay.motion-enabled.motion-enter > Border.motion-surface",
             "{StaticResource Launcher.Motion.Duration.Normal}",
             expectedStartOffset: "{StaticResource Launcher.Motion.Offset.Surface}",

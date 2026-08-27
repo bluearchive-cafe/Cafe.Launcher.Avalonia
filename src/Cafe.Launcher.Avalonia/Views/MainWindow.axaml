@@ -24,7 +24,10 @@
         ExtendClientAreaToDecorationsHint="True"
         ExtendClientAreaTitleBarHeightHint="0"
         Background="{DynamicResource Launcher.Color.Media.Placeholder}">
-    <Grid KeyboardNavigation.TabNavigation="Cycle">
+        <Grid x:Name="ShellRoot"
+              KeyboardNavigation.TabNavigation="Cycle"
+              Classes="motion-shell"
+              Classes.motion-enabled="{Binding IsMotionEnabled}">
         <Rectangle Fill="{Binding Background.BackgroundFillBrush}"/>
         <Image Source="{Binding Background.BackgroundImageSource}" Stretch="{Binding Background.BackgroundStretch}"/>
 

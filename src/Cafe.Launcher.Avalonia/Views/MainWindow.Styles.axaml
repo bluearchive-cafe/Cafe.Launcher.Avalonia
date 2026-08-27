@@ -602,6 +602,22 @@
     <Style Selector="Border.motion-bottom">
         <Setter Property="Opacity" Value="1"/>
     </Style>
+    <!-- ADR-016 壳层入场：窗口内容整体快速淡入一次，首帧即可交互；不分段错峰。 -->
+    <Style Selector="Grid.motion-shell">
+        <Setter Property="Opacity" Value="1"/>
+    </Style>
+    <Style Selector="Grid.motion-shell.motion-enabled.motion-enter">
+        <Style.Animations>
+            <Animation Duration="{StaticResource Launcher.Motion.Duration.Fast}" FillMode="Forward" Easing="{StaticResource Launcher.Motion.Easing.Enter}">
+                <KeyFrame Cue="0%">
+                    <Setter Property="Opacity" Value="0"/>
+                </KeyFrame>
+                <KeyFrame Cue="100%">
+                    <Setter Property="Opacity" Value="1"/>
+                </KeyFrame>
+            </Animation>
+        </Style.Animations>
+    </Style>
     <Style Selector="Grid.motion-overlay.motion-enabled.motion-enter">
         <Style.Animations>
             <Animation Duration="{StaticResource Launcher.Motion.Duration.Fast}" FillMode="Forward" Easing="{StaticResource Launcher.Motion.Easing.Enter}">

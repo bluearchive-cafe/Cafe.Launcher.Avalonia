@@ -38,6 +38,28 @@ public partial class MainWindow : Window
         PointerPressed += OnPointerPressed;
         KeyDown += OnKeyDown;
         Activated += OnActivated;
+        Opened += PlayShellEntranceOnce;
+    }
+
+    private bool shellEntranceHandled;
+
+    /// <summary>ADR-016: plays the one-shot whole-content fade-in; interactive from the first frame.</summary>
+    private void PlayShellEntranceOnce(object? sender, EventArgs e)
+    {
+        Opened -= PlayShellEntranceOnce;
+        if (shellEntranceHandled)
+        {
+            return;
+        }
+
+        shellEntranceHandled = true;
+        var viewModel = configuredViewModel ?? DataContext as MainWindowViewModel;
+        if (viewModel is not { IsMotionEnabled: true })
+        {
+            return;
+        }
+
+        ShellRoot.Classes.Add("motion-enter");
     }
 
     public void ConfigureViewModel(MainWindowViewModel viewModel)
