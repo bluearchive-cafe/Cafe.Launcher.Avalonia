@@ -2286,11 +2286,14 @@ public sealed partial class UiStyleContractTests
                 element.Name.LocalName == "TextBlock"
                 && element.Attribute("Text")?.Value == "{Binding Shell.I18n[setupWizardStepTitle]}");
         Assert.True(HasClass(title, "dialog-title"));
-        Assert.Contains(
-            heading.Elements(),
-            element => element.Name.LocalName == "TextBlock"
-                && element.Attribute("Text")?.Value == "{Binding Dialogs.SetupWizard.StepProgress}"
-                && HasClass(element, "caption"));
+        // 步骤进度由后置代码在换面中点翻转（ApplyChromeState），不得绑定 Step 先于内容跳变。
+        var progressXNamespace = document.Root?.GetNamespaceOfPrefix("x");
+        Assert.NotNull(progressXNamespace);
+        var progressText = Assert.Single(heading.Elements(), element =>
+            element.Name.LocalName == "TextBlock"
+            && element.Attribute(progressXNamespace + "Name")?.Value == "StepProgressText");
+        Assert.True(HasClass(progressText, "caption"));
+        Assert.Null(progressText.Attribute("Text"));
 
         // 外壳模式自管留白：wizard-body 消费 Panel 正文内边距（Padding 禁止内联于视图）。
         var paddingBorder = skipButton.Ancestors().Single(element =>
@@ -3122,13 +3125,15 @@ public sealed partial class UiStyleContractTests
             .Single(element =>
                 element.Name.LocalName == "TextBlock"
                 && element.Attribute("Text")?.Value == "{Binding Shell.I18n[setupWizardStepTitle]}");
-
         Assert.True(HasClass(title, "dialog-title"));
-        Assert.Contains(
-            heading.Elements(),
-            element => element.Name.LocalName == "TextBlock"
-                && element.Attribute("Text")?.Value == "{Binding Dialogs.SetupWizard.StepProgress}"
-                && HasClass(element, "caption"));
+        // 步骤进度由后置代码在换面中点翻转（ApplyChromeState），不得绑定 Step 先于内容跳变。
+        var xNamespace = document.Root?.GetNamespaceOfPrefix("x");
+        Assert.NotNull(xNamespace);
+        var progressText = Assert.Single(heading.Elements(), element =>
+            element.Name.LocalName == "TextBlock"
+            && element.Attribute(xNamespace + "Name")?.Value == "StepProgressText");
+        Assert.True(HasClass(progressText, "caption"));
+        Assert.Null(progressText.Attribute("Text"));
     }
 
     [Fact]

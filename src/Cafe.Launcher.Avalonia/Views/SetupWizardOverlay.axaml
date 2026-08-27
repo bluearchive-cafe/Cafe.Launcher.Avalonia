@@ -34,7 +34,8 @@
                 <Grid ColumnDefinitions="*,Auto" ColumnSpacing="{StaticResource Launcher.Spacing.Md}">
                     <StackPanel Spacing="{StaticResource Launcher.Spacing.Xs}">
                         <TextBlock Text="{Binding Shell.I18n[setupWizardStepTitle]}" Classes="dialog-title"/>
-                        <TextBlock Text="{Binding Dialogs.SetupWizard.StepProgress}" Classes="caption"/>
+                        <!-- 步骤进度由后置代码在换面中点翻转（ApplyChromeState），不得绑定 Step。 -->
+                        <TextBlock x:Name="StepProgressText" Classes="caption"/>
                     </StackPanel>
                     <Button Grid.Column="1"
                             Classes="flat-action dialog-action"
@@ -345,9 +346,10 @@
                 <!-- Actions row：动作带并入内容区（ADR-017）——上一步 tonal 底色，
                      下一步/完成 filled 主按钮；图标行经 button-content。 -->
                 <Grid Grid.Row="2" ColumnDefinitions="Auto,*,Auto" ColumnSpacing="{StaticResource Launcher.Spacing.Md}">
-                    <Button Classes="wizard-action dialog-action"
+                    <Button x:Name="PreviousButton"
+                            Classes="wizard-action dialog-action"
+                            IsVisible="False"
                             Command="{Binding Dialogs.SetupWizard.PreviousCommand}"
-                            IsVisible="{Binding Dialogs.SetupWizard.CanGoPrevious}"
                             AutomationProperties.Name="{Binding Shell.I18n[setupWizardPrevious]}">
                         <StackPanel Classes="button-content">
                             <materialIcons:MaterialIcon Kind="ArrowLeft"
@@ -356,10 +358,9 @@
                             <TextBlock Text="{Binding Shell.I18n[setupWizardPrevious]}"/>
                         </StackPanel>
                     </Button>
-                    <Button Grid.Column="2"
+                    <Button x:Name="NextButton" Grid.Column="2"
                             Classes="wizard-action primary-action dialog-action"
                             Command="{Binding Dialogs.SetupWizard.NextCommand}"
-                            IsVisible="{Binding Dialogs.SetupWizard.IsLastStep, Converter={x:Static BoolConverters.Not}}"
                             IsEnabled="{Binding Dialogs.SetupWizard.CanGoNext}"
                             AutomationProperties.Name="{Binding Shell.I18n[setupWizardNext]}">
                         <StackPanel Classes="button-content">
@@ -369,10 +370,10 @@
                                                        Height="{StaticResource Launcher.Icon.Sm}"/>
                         </StackPanel>
                     </Button>
-                    <Button Grid.Column="2"
+                    <Button x:Name="FinishButton" Grid.Column="2"
                             Classes="wizard-action primary-action dialog-action"
                             Command="{Binding Dialogs.SetupWizard.CompleteCommand}"
-                            IsVisible="{Binding Dialogs.SetupWizard.IsLastStep}"
+                            IsVisible="False"
                             AutomationProperties.Name="{Binding Shell.I18n[setupWizardFinish]}">
                         <StackPanel Classes="button-content">
                             <materialIcons:MaterialIcon Kind="Check"

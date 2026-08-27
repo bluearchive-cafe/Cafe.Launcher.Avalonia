@@ -19,8 +19,8 @@ namespace Cafe.Launcher.Avalonia.Views;
 /// 设置向导覆盖层：步骤切换按实验台 <c>ChangeWizardAsync</c>/<c>FadeSwapAsync</c> 的顺序换页实现——
 /// 空间档 333ms 对半分，旧内容先以退出加速曲线淡出（无位移），中点瞬时换内容并把滚动复位到
 /// 顶部，起势帧消化目标面板的首次布局后，新内容再以进入减速曲线同步淡入并按方向滑入 ±14px，
-/// 收尾多留一拍缓冲再结算。最新状态优先、可中断、不排队；降动效、未附着或无可见面板时直接
-/// 换内容定格。
+/// 收尾多留一拍缓冲再结算；壳层（步骤进度与动作钮）在换面中点随显示步翻转，不先于内容跳变。
+/// 最新状态优先、可中断、不排队；降动效、未附着或无可见面板时直接换内容定格。
 /// </summary>
 public partial class SetupWizardOverlay : UserControl
 {
@@ -191,7 +191,8 @@ public partial class SetupWizardOverlay : UserControl
                 await CreateOpacityAnimation(from.Opacity, 0d, half, exitEasing).RunAsync(from, token);
             }
 
-            // 中点瞬时换内容：不可见时翻转可见性，滚动复位到顶部。
+            // 中点瞬时换内容：不可见时翻转可见性，滚动复位到顶部；壳层（进度与动作钮）
+            // 同帧随显示步翻转，保证文本与内容同步切换。
             SwapToPanel(toIndex);
 
             // 起势帧（实验台 NextFrameAsync 同机制）：先把入场 pose（透明 0 / 位移 ±14）
@@ -254,7 +255,7 @@ public partial class SetupWizardOverlay : UserControl
         SettleStep(stepPanels[target]);
     }
 
-    /// <summary>幂等换面：全部非目标面板隐藏并复位视觉，目标面板可见；滚动回到顶部。</summary>
+    /// <summary>幂等换面：全部非目标面板隐藏并复位视觉，目标面板可见；滚动回到顶部；壳层随显示步翻转。</summary>
     private void SwapToPanel(int toIndex)
     {
         for (var i = 0; i < stepPanels.Length; i++)
@@ -272,6 +273,26 @@ public partial class SetupWizardOverlay : UserControl
         }
 
         StepScroll.Offset = Vector.Zero;
+        ApplyChromeState();
+    }
+
+    /// <summary>
+    /// 壳层按显示步翻转：步骤进度文本与动作钮可见集（上一步出现、下一步↔完成切换）在换面
+    /// 中点与内容面板同帧切换——实验台 <c>ChangeWizardAsync</c> 的 swap 回调同语义。若绑定
+    /// 逻辑 <c>Step</c>，文本会在退场前就跳到新步骤，形成"先变标题、后过渡"的两段感。
+    /// 下一步的启用态不在此列：<c>CanGoNext</c> 是当前步校验的实时反馈，保持绑定即时生效。
+    /// </summary>
+    private void ApplyChromeState()
+    {
+        if (wizard is null)
+        {
+            return;
+        }
+
+        StepProgressText.Text = wizard.StepProgress;
+        PreviousButton.IsVisible = wizard.CanGoPrevious;
+        NextButton.IsVisible = !wizard.IsLastStep;
+        FinishButton.IsVisible = wizard.IsLastStep;
     }
 
     private void SettleStep(StackPanel panel)
