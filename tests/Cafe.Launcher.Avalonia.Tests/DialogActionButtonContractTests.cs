@@ -88,7 +88,9 @@ public sealed class DialogActionButtonContractTests
                     "danger-action"))
             .ToArray();
 
-        Assert.Equal(29, actionButtons.Length);
+        // ADR-017：向导"上一步"改用 wizard-action tonal 族离开本计数；
+        // 向导"下一步/完成"仍为 primary-action + dialog-action，继续受本契约约束。
+        Assert.Equal(28, actionButtons.Length);
         Assert.All(
             actionButtons,
             button =>

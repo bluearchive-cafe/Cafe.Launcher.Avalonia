@@ -698,7 +698,7 @@
             </Animation>
         </Style.Animations>
     </Style>
-    <!-- ADR-016 内容切换：同级目的地纯交叉淡化，无方向位移；向导等有前后关系的内容按下方向短距离移动。 -->
+    <!-- ADR-016 内容切换：同级目的地纯交叉淡化，无方向位移。 -->
     <Style Selector=":is(UserControl).motion-content.motion-enabled.motion-enter">
         <Style.Animations>
             <Animation Duration="{StaticResource Launcher.Motion.Duration.Fast}" FillMode="Forward" Easing="{StaticResource Launcher.Motion.Easing.Enter}">
@@ -719,34 +719,6 @@
                 </KeyFrame>
                 <KeyFrame Cue="100%">
                     <Setter Property="Opacity" Value="1"/>
-                </KeyFrame>
-            </Animation>
-        </Style.Animations>
-    </Style>
-    <Style Selector="StackPanel.motion-content.motion-enabled.motion-enter.motion-forward">
-        <Style.Animations>
-            <Animation Duration="{StaticResource Launcher.Motion.Duration.Fast}" FillMode="Forward" Easing="{StaticResource Launcher.Motion.Easing.PointToPoint}">
-                <KeyFrame Cue="0%">
-                    <Setter Property="Opacity" Value="0"/>
-                    <Setter Property="TranslateTransform.X" Value="{StaticResource Launcher.Motion.Offset.StepForward}"/>
-                </KeyFrame>
-                <KeyFrame Cue="100%">
-                    <Setter Property="Opacity" Value="1"/>
-                    <Setter Property="TranslateTransform.X" Value="0"/>
-                </KeyFrame>
-            </Animation>
-        </Style.Animations>
-    </Style>
-    <Style Selector="StackPanel.motion-content.motion-enabled.motion-enter.motion-backward">
-        <Style.Animations>
-            <Animation Duration="{StaticResource Launcher.Motion.Duration.Fast}" FillMode="Forward" Easing="{StaticResource Launcher.Motion.Easing.PointToPoint}">
-                <KeyFrame Cue="0%">
-                    <Setter Property="Opacity" Value="0"/>
-                    <Setter Property="TranslateTransform.X" Value="{StaticResource Launcher.Motion.Offset.StepBackward}"/>
-                </KeyFrame>
-                <KeyFrame Cue="100%">
-                    <Setter Property="Opacity" Value="1"/>
-                    <Setter Property="TranslateTransform.X" Value="0"/>
                 </KeyFrame>
             </Animation>
         </Style.Animations>

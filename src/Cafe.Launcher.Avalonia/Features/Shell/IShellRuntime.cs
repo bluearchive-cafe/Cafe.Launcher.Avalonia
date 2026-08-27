@@ -28,6 +28,12 @@ public interface IShellRuntime : IDisposable
     /// <summary>Initializes the shell state after the main window opens.</summary>
     Task InitializeAsync(CancellationToken cancellationToken = default);
 
+    /// <summary>
+    /// 首启分支不执行完整初始化（快照由向导驱动后再加载）；动效偏好需在向导显示前
+    /// 按默认配置先行应用，否则首启向导全程处于降动效。
+    /// </summary>
+    void ApplyFirstLaunchMotionPreference();
+
     /// <summary>Refreshes launcher state and its shell presentation.</summary>
     Task RefreshAsync(CancellationToken cancellationToken = default);
 

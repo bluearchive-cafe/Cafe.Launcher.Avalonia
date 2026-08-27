@@ -132,6 +132,10 @@ public sealed class ShellRuntime : IShellRuntime, IShellLifecyclePresentation
     /// <summary>Gets whether reduced motion is currently effective.</summary>
     public bool IsMotionReduced => isMotionReduced;
 
+    /// <inheritdoc />
+    public void ApplyFirstLaunchMotionPreference() =>
+        lifecycle.ApplyFirstLaunchMotionPreference();
+
     /// <summary>Gets the startup update-check task, if one was scheduled.</summary>
     public Task PendingStartupUpdateCheck => lifecycle.PendingStartupUpdateCheck;
 

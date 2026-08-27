@@ -161,10 +161,14 @@ public sealed class LocalizationTerminologyTests
             Language = LauncherLanguages.Auto
         };
 
-        viewModel.NextCommand.Execute(null);
+        viewModel.GamePath = @"D:\Test\Path";
+        while (!viewModel.IsLastStep)
+        {
+            viewModel.NextCommand.Execute(null);
+        }
 
-        Assert.Equal(localizer.T("languageAuto"), viewModel.Steps[0].Summary);
-        Assert.DoesNotContain("Auto", viewModel.Steps[0].Summary, StringComparison.Ordinal);
+        Assert.Equal(localizer.T("languageAuto"), viewModel.LanguageDisplayName);
+        Assert.DoesNotContain("Auto", viewModel.LanguageDisplayName, StringComparison.Ordinal);
     }
 
     [Fact]
