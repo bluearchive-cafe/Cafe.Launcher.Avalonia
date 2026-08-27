@@ -24,6 +24,7 @@ public class DialogSurface : TemplatedControl
     private Button? closeButton;
     private Border? headerBorder;
     private Border? basicHeadBorder;
+    private Border? footerBand;
     private ContentPresenter? badgePresenter;
     private ContentPresenter? basicIconPresenter;
     private ContentPresenter? scrollContentPresenter;
@@ -184,6 +185,7 @@ public class DialogSurface : TemplatedControl
         closeButton = e.NameScope.Find<Button>("PART_CloseButton");
         headerBorder = e.NameScope.Find<Border>("PART_PanelHead");
         basicHeadBorder = e.NameScope.Find<Border>("PART_BasicHead");
+        footerBand = e.NameScope.Find<Border>("PART_FooterBand");
         badgePresenter = e.NameScope.Find<ContentPresenter>("PART_BadgePresenter");
         basicIconPresenter = e.NameScope.Find<ContentPresenter>("PART_BasicIconPresenter");
         scrollContentPresenter = e.NameScope.Find<ContentPresenter>("PART_ScrollContentPresenter");
@@ -363,6 +365,13 @@ public class DialogSurface : TemplatedControl
         if (leadingPresenter is not null)
         {
             leadingPresenter.IsVisible = FooterLeading is not null;
+        }
+
+        if (footerBand is not null)
+        {
+            // 动作带两个插槽全空时整体折叠：外壳模式（设置/向导）自绘动作区，
+            // 不应在表面底部残留一条空发丝带。
+            footerBand.IsVisible = Footer is not null || FooterLeading is not null;
         }
     }
 }

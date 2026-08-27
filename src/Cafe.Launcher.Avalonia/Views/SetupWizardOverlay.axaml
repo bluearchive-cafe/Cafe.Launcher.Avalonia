@@ -26,6 +26,9 @@
                 <TranslateTransform/>
             </controls:DialogSurface.RenderTransform>
             <controls:DialogSurface.Content>
+                <!-- 外壳模式自管留白：wizard-body 消费 Panel 正文内边距（样式表承载），
+                     内部三行为进度行 / 步骤内容 / 动作行（动作带并入内容区，不用 Footer 插槽）。 -->
+                <Border Classes="wizard-body">
                 <Grid RowDefinitions="Auto,*,Auto" RowSpacing="{StaticResource Launcher.Spacing.Lg}">
                 <!-- Progress row -->
                 <Grid ColumnDefinitions="*,Auto" ColumnSpacing="{StaticResource Launcher.Spacing.Md}">
@@ -339,11 +342,10 @@
                     </Grid>
                 </ScrollViewer>
 
-                </Grid>
-            </controls:DialogSurface.Content>
-            <controls:DialogSurface.Footer>
-                <StackPanel Classes="confirm-actions">
-                    <Button Classes="flat-action dialog-action"
+                <!-- Actions row：动作带并入内容区（ADR-017）——上一步 tonal 底色，
+                     下一步/完成 filled 主按钮；图标行经 button-content。 -->
+                <Grid Grid.Row="2" ColumnDefinitions="Auto,*,Auto" ColumnSpacing="{StaticResource Launcher.Spacing.Md}">
+                    <Button Classes="wizard-action dialog-action"
                             Command="{Binding Dialogs.SetupWizard.PreviousCommand}"
                             IsVisible="{Binding Dialogs.SetupWizard.CanGoPrevious}"
                             AutomationProperties.Name="{Binding Shell.I18n[setupWizardPrevious]}">
@@ -354,7 +356,8 @@
                             <TextBlock Text="{Binding Shell.I18n[setupWizardPrevious]}"/>
                         </StackPanel>
                     </Button>
-                    <Button Classes="primary-action dialog-action"
+                    <Button Grid.Column="2"
+                            Classes="wizard-action primary-action dialog-action"
                             Command="{Binding Dialogs.SetupWizard.NextCommand}"
                             IsVisible="{Binding Dialogs.SetupWizard.IsLastStep, Converter={x:Static BoolConverters.Not}}"
                             IsEnabled="{Binding Dialogs.SetupWizard.CanGoNext}"
@@ -366,7 +369,8 @@
                                                        Height="{StaticResource Launcher.Icon.Sm}"/>
                         </StackPanel>
                     </Button>
-                    <Button Classes="primary-action dialog-action"
+                    <Button Grid.Column="2"
+                            Classes="wizard-action primary-action dialog-action"
                             Command="{Binding Dialogs.SetupWizard.CompleteCommand}"
                             IsVisible="{Binding Dialogs.SetupWizard.IsLastStep}"
                             AutomationProperties.Name="{Binding Shell.I18n[setupWizardFinish]}">
@@ -377,8 +381,10 @@
                             <TextBlock Text="{Binding Shell.I18n[setupWizardFinish]}"/>
                         </StackPanel>
                     </Button>
-                </StackPanel>
-            </controls:DialogSurface.Footer>
+                    </Grid>
+                </Grid>
+                </Border>
+            </controls:DialogSurface.Content>
             </controls:DialogSurface>
     </Grid>
 </UserControl>

@@ -2262,7 +2262,7 @@ public sealed partial class UiStyleContractTests
     }
 
     [Fact]
-    public void SetupWizardOverlay_UsesProgressRowAndM3Footer()
+    public void SetupWizardOverlay_UsesProgressRowAndContentActions()
     {
         var document = XDocument.Load(ProjectFile("Views/SetupWizardOverlay.axaml"));
 
@@ -2292,21 +2292,40 @@ public sealed partial class UiStyleContractTests
                 && element.Attribute("Text")?.Value == "{Binding Dialogs.SetupWizard.StepProgress}"
                 && HasClass(element, "caption"));
 
-        // ADR-015：发丝底带内化为模板 Footer；视图文件只承载动作组。
+        // 外壳模式自管留白：wizard-body 消费 Panel 正文内边距（Padding 禁止内联于视图）。
+        var paddingBorder = skipButton.Ancestors().Single(element =>
+            element.Name.LocalName == "Border"
+            && HasClass(element, "wizard-body"));
+        var contentBlock = paddingBorder
+            .Elements()
+            .Single(element => element.Name.LocalName == "Grid");
+        Assert.Equal("Auto,*,Auto", contentBlock.Attribute("RowDefinitions")?.Value);
+        var wizardStyles = XDocument.Load(ProjectFile("Views/Styles/SetupWizard.axaml"));
+        Assert.Equal(
+            "{StaticResource Launcher.Component.Dialog.Panel.Body.Padding}",
+            GetStyleSetters(wizardStyles, "Border.wizard-body")["Padding"]);
+
+        // 动作带并入内容区：不再使用 DialogSurface.Footer（空动作带会残留发丝线）。
         Assert.DoesNotContain(
             document.Descendants(),
-            element => element.Name.LocalName == "Border" && HasClass(element, "dialog-footer"));
-        var footer = document
-            .Descendants()
-            .Single(element => element.Name.LocalName == "DialogSurface.Footer");
-        var actions = footer
+            element => element.Name.LocalName == "DialogSurface.Footer");
+        var actionsRow = contentBlock
             .Elements()
-            .Single(element => element.Name.LocalName == "StackPanel" && HasClass(element, "confirm-actions"));
-        Assert.Contains(actions.Descendants(), element =>
+            .Last(element => element.Name.LocalName == "Grid");
+        Assert.All(
+            actionsRow.Descendants().Where(element => element.Name.LocalName == "Button"),
+            button => Assert.True(HasClass(button, "wizard-action")));
+        Assert.Contains(actionsRow.Descendants(), element =>
             element.Name.LocalName == "Button"
+            && !HasClass(element, "primary-action")
             && element.Attribute("Command")?.Value == "{Binding Dialogs.SetupWizard.PreviousCommand}");
-        Assert.Contains(actions.Descendants(), element =>
+        Assert.Contains(actionsRow.Descendants(), element =>
             element.Name.LocalName == "Button"
+            && HasClass(element, "primary-action")
+            && element.Attribute("Command")?.Value == "{Binding Dialogs.SetupWizard.NextCommand}");
+        Assert.Contains(actionsRow.Descendants(), element =>
+            element.Name.LocalName == "Button"
+            && HasClass(element, "primary-action")
             && element.Attribute("Command")?.Value == "{Binding Dialogs.SetupWizard.CompleteCommand}");
     }
 
@@ -3387,6 +3406,29 @@ public sealed partial class UiStyleContractTests
             element =>
                 element.Attribute("Classes.active") is not null
                 || element.Attribute("Command") is not null);
+    }
+
+    [Fact]
+    public void SetupWizard_ActionButtons_UseTonalAndFilledStyles()
+    {
+        // ADR-017：向导动作钮 = tonal（SecondaryContainer 底色）+ filled 主按钮（primary-action 叠加）。
+        var styles = XDocument.Load(ProjectFile("Views/Styles/SetupWizard.axaml"));
+        var tonal = GetStyleSetters(styles, "Button.wizard-action");
+        Assert.Equal("{DynamicResource Launcher.Color.SecondaryContainer}", tonal["Background"]);
+        Assert.Equal("{DynamicResource Launcher.Color.OnSecondaryContainer}", tonal["Foreground"]);
+        Assert.Equal("{StaticResource Launcher.Radius.Xs}", tonal["CornerRadius"]);
+        Assert.Equal(
+            "{DynamicResource Launcher.Color.SecondaryContainer.Hover}",
+            GetStyleSetters(styles, "Button.wizard-action:pointerover")["Background"]);
+        Assert.Equal(
+            "{DynamicResource Launcher.Color.SecondaryContainer.Pressed}",
+            GetStyleSetters(styles, "Button.wizard-action:pressed")["Background"]);
+        Assert.Equal(
+            "{DynamicResource Launcher.Color.Primary}",
+            GetStyleSetters(styles, "Button.wizard-action.primary-action")["Background"]);
+        Assert.Equal(
+            "{DynamicResource Launcher.Color.Primary.Hover}",
+            GetStyleSetters(styles, "Button.wizard-action.primary-action:pointerover")["Background"]);
     }
 
     [Fact]

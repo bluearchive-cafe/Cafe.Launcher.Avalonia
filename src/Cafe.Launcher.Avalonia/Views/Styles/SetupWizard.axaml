@@ -1,5 +1,48 @@
 <Styles xmlns="https://github.com/avaloniaui"
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
+    <!-- 外壳模式自管留白：内容三行块消费 Panel 正文内边距（视图禁止内联 Padding）。 -->
+    <Style Selector="Border.wizard-body">
+        <Setter Property="Padding" Value="{StaticResource Launcher.Component.Dialog.Panel.Body.Padding}"/>
+    </Style>
+    <!-- 实验台向导动作钮（ADR-017，并入内容区）：非主按钮为 M3 tonal
+         （SecondaryContainer 底色 + OnSecondaryContainer 前景），主按钮
+         叠加 primary-action 转为 filled；几何沿用 dialog-action，图标行经 button-content。 -->
+    <Style Selector="Button.wizard-action">
+        <Setter Property="Background" Value="{DynamicResource Launcher.Color.SecondaryContainer}"/>
+        <Setter Property="Foreground" Value="{DynamicResource Launcher.Color.OnSecondaryContainer}"/>
+        <Setter Property="BorderThickness" Value="{StaticResource Launcher.Spacing.Thickness.None}"/>
+        <Setter Property="FontWeight" Value="{StaticResource Launcher.Typography.FontWeight.Strong}"/>
+        <Setter Property="CornerRadius" Value="{StaticResource Launcher.Radius.Xs}"/>
+        <Setter Property="HorizontalContentAlignment" Value="Center"/>
+        <Setter Property="VerticalContentAlignment" Value="Center"/>
+        <Setter Property="Template" Value="{StaticResource LauncherBorderButtonTemplate}"/>
+    </Style>
+    <Style Selector="Button.wizard-action:pointerover">
+        <Setter Property="Background" Value="{DynamicResource Launcher.Color.SecondaryContainer.Hover}"/>
+        <Setter Property="Foreground" Value="{DynamicResource Launcher.Color.OnSecondaryContainer}"/>
+    </Style>
+    <Style Selector="Button.wizard-action:pressed">
+        <Setter Property="Background" Value="{DynamicResource Launcher.Color.SecondaryContainer.Pressed}"/>
+        <Setter Property="Foreground" Value="{DynamicResource Launcher.Color.OnSecondaryContainer}"/>
+    </Style>
+    <Style Selector="Button.wizard-action:disabled">
+        <Setter Property="Background" Value="{DynamicResource Launcher.Color.Content.Row}"/>
+        <Setter Property="BorderBrush" Value="{DynamicResource Launcher.Color.Card.Border}"/>
+        <Setter Property="BorderThickness" Value="{StaticResource Launcher.Border.Thickness.Default}"/>
+        <Setter Property="Foreground" Value="{DynamicResource Launcher.Text.Secondary}"/>
+    </Style>
+    <Style Selector="Button.wizard-action.primary-action">
+        <Setter Property="Background" Value="{DynamicResource Launcher.Color.Primary}"/>
+        <Setter Property="Foreground" Value="{DynamicResource Launcher.Color.OnPrimary}"/>
+    </Style>
+    <Style Selector="Button.wizard-action.primary-action:pointerover">
+        <Setter Property="Background" Value="{DynamicResource Launcher.Color.Primary.Hover}"/>
+        <Setter Property="Foreground" Value="{DynamicResource Launcher.Color.OnPrimary}"/>
+    </Style>
+    <Style Selector="Button.wizard-action.primary-action:pressed">
+        <Setter Property="Background" Value="{DynamicResource Launcher.Color.Primary.Pressed}"/>
+        <Setter Property="Foreground" Value="{DynamicResource Launcher.Color.OnPrimary}"/>
+    </Style>
     <!-- 实验台向导解剖（ADR-017）：步骤标题居中、完成态标题以 Success 色标识，
          步骤面板的顺序换页由后置代码驱动，不使用声明式动画类。 -->
     <Style Selector="TextBlock.wizard-step-title">
