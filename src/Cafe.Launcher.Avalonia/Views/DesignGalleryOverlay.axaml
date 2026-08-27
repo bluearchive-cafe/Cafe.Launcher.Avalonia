@@ -7,9 +7,9 @@
              x:Name="GalleryRoot"
              x:DataType="vm:MainWindowViewModel">
     <Grid Classes="dialog-overlay motion-overlay"
-          IsEnabled="{Binding ModalHost.IsDebugInteractive}"
+          IsEnabled="{Binding ModalHost.IsDesignGalleryInteractive}"
           Classes.motion-enabled="{Binding IsMotionEnabled}"
-          controls:MotionVisibility.IsOpen="{Binding Gallery.IsVisible}"
+          controls:MotionVisibility.IsOpen="{Binding Dialogs.Gallery.IsVisible}"
           controls:MotionVisibility.IsMotionEnabled="{Binding IsMotionEnabled}">
         <Border Width="{StaticResource Launcher.Layout.DesignGallery.Width}"
                 Height="{StaticResource Launcher.Layout.DesignGallery.Height}"
@@ -23,7 +23,7 @@
                     <StackPanel Classes="dialog-title-row">
                         <TextBlock Text="{Binding Shell.I18n[designGalleryTitle]}" Classes="dialog-title" VerticalAlignment="Center"/>
                     </StackPanel>
-                    <Button Grid.Column="1" Classes="dialog-close header-action" Command="{Binding Gallery.CloseCommand}"
+                    <Button Grid.Column="1" Classes="dialog-close header-action" Command="{Binding Dialogs.Gallery.CloseCommand}"
                             ToolTip.Tip="{Binding Shell.I18n[close]}"
                             AutomationProperties.Name="{Binding Shell.I18n[close]}">
                         <materialIcons:MaterialIcon Kind="Close" Width="{StaticResource Launcher.Icon.Md}" Height="{StaticResource Launcher.Icon.Md}"/>
@@ -169,7 +169,7 @@
                                 </Grid>
                             </StackPanel>
                         </Border>
-                        <ItemsControl ItemsSource="{Binding Gallery.Groups}">
+                        <ItemsControl ItemsSource="{Binding Dialogs.Gallery.Groups}">
                             <ItemsControl.ItemsPanel>
                                 <ItemsPanelTemplate>
                                     <StackPanel Spacing="{StaticResource Launcher.Spacing.Lg}"/>
@@ -214,7 +214,7 @@
                 <!-- Footer -->
                 <Border Grid.Row="2" Classes="dialog-footer">
                     <StackPanel Classes="confirm-actions">
-                        <Button Classes="primary-action dialog-action" Command="{Binding Gallery.CloseCommand}"
+                        <Button Classes="primary-action dialog-action" Command="{Binding Dialogs.Gallery.CloseCommand}"
                                 AutomationProperties.Name="{Binding Shell.I18n[close]}">
                             <StackPanel Classes="button-content">
                                 <materialIcons:MaterialIcon Kind="Check" Width="{StaticResource Launcher.Icon.Sm}" Height="{StaticResource Launcher.Icon.Sm}"/>

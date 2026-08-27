@@ -101,6 +101,9 @@ public partial class DialogsViewModel : ViewModelBase, IModalContentViewModel
 
     public SetupWizardViewModel SetupWizard { get; }
 
+    /// <summary>调试用设计画廊；归属对话框族以便经 ModalHost 栈管理（ADR-015）。</summary>
+    public DesignGalleryViewModel Gallery { get; }
+
     [ObservableProperty]
     private bool isSetupWizardVisible;
 
@@ -241,6 +244,7 @@ public partial class DialogsViewModel : ViewModelBase, IModalContentViewModel
         this.invokeOnUiAsync = invokeOnUiAsync;
         LanguageOptions = LocalizationService.GetLanguageOptions(localizer);
         SetupWizard = setupWizard;
+        Gallery = new DesignGalleryViewModel(key => localizer.T(key));
         CancelDebugResetCommand = new RelayCommand(CancelDebugReset);
         ConfirmDebugResetCommand = new AsyncRelayCommand(ConfirmDebugResetAsync);
     }

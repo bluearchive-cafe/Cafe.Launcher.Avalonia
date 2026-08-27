@@ -7,6 +7,7 @@ public enum ModalKind
     ResourcePanel,
     LogViewer,
     Debug,
+    DesignGallery,
     DebugResetConfirmation,
     Notice,
     Update,

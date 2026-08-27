@@ -29,6 +29,7 @@ public class DialogSurface : TemplatedControl
     private TextBlock? subtitleTextBlock;
     private TextBlock? basicSupportTextBlock;
     private ContentPresenter? leadingPresenter;
+    private ContentPresenter? toolbarPresenter;
 
     public static readonly StyledProperty<DialogSurfaceForm> FormProperty =
         AvaloniaProperty.Register<DialogSurface, DialogSurfaceForm>(nameof(Form));
@@ -68,6 +69,10 @@ public class DialogSurface : TemplatedControl
     /// <summary>左侧辅助动作槽，仅 Panel 的发丝底带消费。</summary>
     public static readonly StyledProperty<object?> FooterLeadingProperty =
         AvaloniaProperty.Register<DialogSurface, object?>(nameof(FooterLeading));
+
+    /// <summary>头带与滚动区之间的固定工具行（如日志过滤栏）；为空时不渲染。</summary>
+    public static readonly StyledProperty<object?> ToolbarProperty =
+        AvaloniaProperty.Register<DialogSurface, object?>(nameof(Toolbar));
 
     public static readonly StyledProperty<ICommand?> CloseCommandProperty =
         AvaloniaProperty.Register<DialogSurface, ICommand?>(nameof(CloseCommand));
@@ -144,6 +149,12 @@ public class DialogSurface : TemplatedControl
         set => SetValue(FooterLeadingProperty, value);
     }
 
+    public object? Toolbar
+    {
+        get => GetValue(ToolbarProperty);
+        set => SetValue(ToolbarProperty, value);
+    }
+
     public ICommand? CloseCommand
     {
         get => GetValue(CloseCommandProperty);
@@ -174,6 +185,7 @@ public class DialogSurface : TemplatedControl
         subtitleTextBlock = e.NameScope.Find<TextBlock>("PART_SubtitleTextBlock");
         basicSupportTextBlock = e.NameScope.Find<TextBlock>("PART_BasicSupportTextBlock");
         leadingPresenter = e.NameScope.Find<ContentPresenter>("PART_FooterLeadingPresenter");
+        toolbarPresenter = e.NameScope.Find<ContentPresenter>("PART_ToolbarPresenter");
 
         SyncSlotContents();
     }
@@ -200,6 +212,7 @@ public class DialogSurface : TemplatedControl
             change.Property == BasicIconProperty ||
             change.Property == FooterProperty ||
             change.Property == FooterLeadingProperty ||
+            change.Property == ToolbarProperty ||
             change.Property == ContentProperty ||
             change.Property == ContentTemplateProperty)
         {
@@ -243,6 +256,13 @@ public class DialogSurface : TemplatedControl
         if (leadingPresenter is not null)
         {
             leadingPresenter.Content = FooterLeading;
+            leadingPresenter.IsVisible = FooterLeading is not null;
+        }
+
+        if (toolbarPresenter is not null)
+        {
+            toolbarPresenter.Content = Toolbar;
+            toolbarPresenter.IsVisible = Toolbar is not null;
         }
 
         RefreshChrome();

@@ -2325,22 +2325,22 @@ public sealed class MainWindowHeadlessTests
         using var context = CreateContext();
         context.Window.Show();
 
-        context.ViewModel.Gallery.OpenCommand.Execute(null);
+        context.ViewModel.Dialogs.Gallery.OpenCommand.Execute(null);
         Dispatcher.UIThread.RunJobs();
 
-        Assert.True(context.ViewModel.Gallery.IsVisible);
-        Assert.True(context.ViewModel.Gallery.Groups.Count >= 12, $"Expected 12+ families, got {context.ViewModel.Gallery.Groups.Count}.");
-        var totalItems = context.ViewModel.Gallery.Groups.Sum(group => group.Items.Count);
+        Assert.True(context.ViewModel.Dialogs.Gallery.IsVisible);
+        Assert.True(context.ViewModel.Dialogs.Gallery.Groups.Count >= 12, $"Expected 12+ families, got {context.ViewModel.Dialogs.Gallery.Groups.Count}.");
+        var totalItems = context.ViewModel.Dialogs.Gallery.Groups.Sum(group => group.Items.Count);
         Assert.True(totalItems >= 130, $"Expected 130+ tokens, got {totalItems}.");
-        Assert.Contains(context.ViewModel.Gallery.Groups, group => group.Family == "Color");
-        Assert.Contains(context.ViewModel.Gallery.Groups, group => group.Family == "Component");
+        Assert.Contains(context.ViewModel.Dialogs.Gallery.Groups, group => group.Family == "Color");
+        Assert.Contains(context.ViewModel.Dialogs.Gallery.Groups, group => group.Family == "Component");
         Assert.Contains(
-            context.ViewModel.Gallery.Groups.SelectMany(group => group.Items),
+            context.ViewModel.Dialogs.Gallery.Groups.SelectMany(group => group.Items),
             item => item.Key == "Launcher.Text.Primary");
 
-        context.ViewModel.Gallery.CloseCommand.Execute(null);
+        context.ViewModel.Dialogs.Gallery.CloseCommand.Execute(null);
         Dispatcher.UIThread.RunJobs();
-        Assert.False(context.ViewModel.Gallery.IsVisible);
+        Assert.False(context.ViewModel.Dialogs.Gallery.IsVisible);
     }
 
     [AvaloniaFact]

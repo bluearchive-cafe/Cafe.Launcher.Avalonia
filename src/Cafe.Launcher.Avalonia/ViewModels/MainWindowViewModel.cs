@@ -42,8 +42,6 @@ public partial class MainWindowViewModel : ViewModelBase, IDisposable
     public DebugViewModel Debug { get; }
     public ModalHostViewModel ModalHost { get; }
 
-    public DesignGalleryViewModel Gallery { get; }
-
     public bool IsDebugFeaturesEnabled
     {
         get
@@ -75,7 +73,6 @@ public partial class MainWindowViewModel : ViewModelBase, IDisposable
     {
         this.runtime = runtime;
         Shell = shell;
-        Gallery = new DesignGalleryViewModel(key => Shell.I18n[key]);
         Background = background;
         RemoteContent = remoteContent;
         Dialogs = dialogs;

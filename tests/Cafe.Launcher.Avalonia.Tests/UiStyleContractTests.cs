@@ -2751,21 +2751,25 @@ public sealed partial class UiStyleContractTests
     [Fact]
     public void LogViewer_UsesFixedDialogDimensions()
     {
+        // ADR-015 尺寸律：自适应优先，固定宽高退场；token 仅作 Max 上限背书。
         var document = XDocument.Load(ProjectFile("Views/MainWindowLogViewerOverlay.axaml"));
         var dialog = document
             .Descendants()
-            .Single(element =>
-                element.Name.LocalName == "Border"
-                && HasClass(element, "overlay-dialog"));
+            .Single(element => element.Name.LocalName == "DialogSurface");
 
         Assert.Equal(
             "{StaticResource Launcher.Layout.LogViewer.Width}",
-            dialog.Attribute("Width")?.Value);
+            dialog.Attribute("MaxWidth")?.Value);
         Assert.Equal(
             "{StaticResource Launcher.Layout.LogViewer.Height}",
-            dialog.Attribute("Height")?.Value);
-        Assert.Null(dialog.Attribute("MaxWidth"));
-        Assert.Null(dialog.Attribute("MaxHeight"));
+            dialog.Attribute("MaxHeight")?.Value);
+        Assert.Null(dialog.Attribute("Width"));
+        Assert.Null(dialog.Attribute("Height"));
+
+        // 过滤栏固定于头带之下：工具行插槽必须由 Toolbar 属性承载。
+        Assert.Contains(
+            dialog.Elements(),
+            element => element.Name.LocalName == "DialogSurface.Toolbar");
     }
 
     [Fact]

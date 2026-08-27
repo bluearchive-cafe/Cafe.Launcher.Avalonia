@@ -21,7 +21,7 @@
         <Border Background="{TemplateBinding Background}"
                 CornerRadius="{TemplateBinding CornerRadius}"
                 BoxShadow="{TemplateBinding BoxShadow}">
-          <Grid RowDefinitions="Auto,*,Auto">
+          <Grid RowDefinitions="Auto,Auto,*,Auto">
 
             <!-- Panel 头带：徽章 + 标题列（副标题可选）+ ✕ 关闭钮 -->
             <Border x:Name="PART_PanelHead"
@@ -90,8 +90,11 @@
               </StackPanel>
             </Border>
 
+            <!-- 固定工具行（可选）：位于头带与滚动区之间，如日志过滤栏 -->
+            <ContentPresenter x:Name="PART_ToolbarPresenter" Grid.Row="1" Focusable="False"/>
+
             <!-- 共享滚动内容区：Basic 的支撑文案与 Panel 的正文都在此呈现 -->
-            <ScrollViewer x:Name="PART_ScrollViewer" Grid.Row="1"
+            <ScrollViewer x:Name="PART_ScrollViewer" Grid.Row="2"
                           HorizontalScrollBarVisibility="Disabled"
                           VerticalScrollBarVisibility="Auto">
               <!-- 对象型插槽内容由 DialogSurface.SyncSlotContents() 装配，不走模板绑定。 -->
@@ -99,7 +102,7 @@
             </ScrollViewer>
 
             <!-- 动作带：Basic 为无装饰动作行，Panel 升级为发丝底带（含左侧辅助槽） -->
-            <Border x:Name="PART_FooterBand" Grid.Row="2">
+            <Border x:Name="PART_FooterBand" Grid.Row="3">
               <Grid ColumnDefinitions="Auto,*,Auto">
                 <ContentPresenter x:Name="PART_FooterLeadingPresenter"
                                   Grid.Column="0"
