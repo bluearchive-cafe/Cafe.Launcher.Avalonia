@@ -1704,7 +1704,7 @@ public sealed class MainWindowViewModelTests : IDisposable
         Assert.True(viewModel.IsMotionReduced);
         Assert.Equal(
             TimeSpan.Zero,
-            Assert.IsType<global::Avalonia.Animation.PageSlide>(
+            Assert.IsType<global::Cafe.Launcher.Avalonia.Helpers.BannerCarouselTransition>(
                 viewModel.RemoteContent.CarouselTransition).Duration);
         Assert.Empty(viewModel.Toasts.ActiveToasts);
         Assert.False(toast.IsExiting);
