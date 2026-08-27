@@ -67,7 +67,9 @@
                             <StackPanel.RenderTransform>
                                 <TranslateTransform/>
                             </StackPanel.RenderTransform>
-                            <TextBlock Text="{Binding Dialogs.SetupWizard.StepTitle}" Classes="wizard-step-title"/>
+                            <!-- 各面板标题静态绑定自身资源键：共享 StepTitle 会在 Step 变化的
+                                 t=0 让五块标题（含淡出中的旧面板）同时跳到新步骤标题。 -->
+                            <TextBlock Text="{Binding Shell.I18n[setupWizardLanguage]}" Classes="wizard-step-title"/>
                             <TextBlock Text="{Binding Shell.I18n[setupWizardWelcomeText]}"
                                        Classes="body"
                                        TextAlignment="Center"/>
@@ -102,7 +104,7 @@
                             <StackPanel.RenderTransform>
                                 <TranslateTransform/>
                             </StackPanel.RenderTransform>
-                            <TextBlock Text="{Binding Dialogs.SetupWizard.StepTitle}" Classes="wizard-step-title"/>
+                            <TextBlock Text="{Binding Shell.I18n[setupWizardGamePath]}" Classes="wizard-step-title"/>
                             <TextBlock Text="{Binding Shell.I18n[setupWizardGamePathHint]}"
                                        Classes="body"
                                        TextAlignment="Center"/>
@@ -177,7 +179,7 @@
                             <StackPanel.RenderTransform>
                                 <TranslateTransform/>
                             </StackPanel.RenderTransform>
-                            <TextBlock Text="{Binding Dialogs.SetupWizard.StepTitle}" Classes="wizard-step-title"/>
+                            <TextBlock Text="{Binding Shell.I18n[setupWizardDownloadSource]}" Classes="wizard-step-title"/>
                             <TextBlock Text="{Binding Shell.I18n[setupWizardDownloadSourceHint]}"
                                        Classes="body"
                                        TextAlignment="Center"/>
@@ -214,7 +216,7 @@
                             <StackPanel.RenderTransform>
                                 <TranslateTransform/>
                             </StackPanel.RenderTransform>
-                            <TextBlock Text="{Binding Dialogs.SetupWizard.StepTitle}" Classes="wizard-step-title"/>
+                            <TextBlock Text="{Binding Shell.I18n[setupWizardProxy]}" Classes="wizard-step-title"/>
                             <TextBlock Text="{Binding Shell.I18n[setupWizardProxyHint]}"
                                        Classes="body"
                                        TextAlignment="Center"/>
@@ -260,9 +262,9 @@
                             <StackPanel.RenderTransform>
                                 <TranslateTransform/>
                             </StackPanel.RenderTransform>
-                            <TextBlock Text="{Binding Dialogs.SetupWizard.StepTitle}"
-                                       Classes="wizard-step-title"
-                                       Classes.wizard-complete="{Binding Dialogs.SetupWizard.IsLastStep}"/>
+                            <!-- 复核面板即完成态：Success 色为该面板固有语义，不再绑定 IsLastStep。 -->
+                            <TextBlock Text="{Binding Shell.I18n[setupWizardReview]}"
+                                       Classes="wizard-step-title wizard-complete"/>
                             <TextBlock Text="{Binding Shell.I18n[setupWizardReviewHint]}"
                                        Classes="body"
                                        TextAlignment="Center"/>

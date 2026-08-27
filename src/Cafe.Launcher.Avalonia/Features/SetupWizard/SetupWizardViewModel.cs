@@ -65,7 +65,6 @@ public partial class SetupWizardViewModel : ViewModelBase, IModalContentViewMode
     [NotifyPropertyChangedFor(nameof(IsLastStep))]
     [NotifyPropertyChangedFor(nameof(CanGoNext))]
     [NotifyPropertyChangedFor(nameof(CanGoPrevious))]
-    [NotifyPropertyChangedFor(nameof(StepTitle))]
     [NotifyPropertyChangedFor(nameof(StepProgress))]
     [NotifyPropertyChangedFor(nameof(IsStep1))]
     [NotifyPropertyChangedFor(nameof(IsStep2))]
@@ -105,8 +104,6 @@ public partial class SetupWizardViewModel : ViewModelBase, IModalContentViewMode
     };
 
     public bool CanGoPrevious => Step > 0;
-
-    public string StepTitle => ResolveStepTitle(Step);
 
     // ── Settings ──────────────────────────────────────────────────
 
@@ -420,19 +417,8 @@ public partial class SetupWizardViewModel : ViewModelBase, IModalContentViewMode
         _ => GamePathStatusText
     };
 
-    private string ResolveStepTitle(int index) => index switch
-    {
-        0 => localizer.T("setupWizardLanguage"),
-        1 => localizer.T("setupWizardGamePath"),
-        2 => localizer.T("setupWizardDownloadSource"),
-        3 => localizer.T("setupWizardProxy"),
-        4 => localizer.T("setupWizardReview"),
-        _ => ""
-    };
-
     private void OnLocalizerLanguageChanged(object? sender, EventArgs e)
     {
-        OnPropertyChanged(nameof(StepTitle));
         OnPropertyChanged(nameof(GamePathStatusText));
         OnPropertyChanged(nameof(GamePathPresentation));
         RefreshDownloadSources();

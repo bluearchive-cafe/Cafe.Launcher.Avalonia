@@ -137,22 +137,6 @@ public sealed class SetupWizardViewModelTests
     }
 
     [Fact]
-    public async Task StepTitle_AtEachStep_ReturnsNonEmpty()
-    {
-        var vm = CreateViewModel();
-        Assert.NotEmpty(vm.StepTitle);
-        vm.GamePath = Path.Combine(Path.GetTempPath(), Guid.NewGuid().ToString("N"));
-        vm.NextCommand.Execute(null);
-        await WaitForGamePathStatusAsync(vm, SetupWizardGamePathStatus.AvailableForInstallation);
-        Assert.NotEmpty(vm.StepTitle);
-        for (var i = 0; i < 3; i++)
-        {
-            vm.NextCommand.Execute(null);
-            Assert.NotEmpty(vm.StepTitle);
-        }
-    }
-
-    [Fact]
     public async Task CanGoNext_Step1WithEmptyPath_ReturnsFalse()
     {
         var vm = CreateViewModel();

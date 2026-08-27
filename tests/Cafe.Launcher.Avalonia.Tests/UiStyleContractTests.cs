@@ -3140,22 +3140,31 @@ public sealed partial class UiStyleContractTests
     public void SetupWizardCompletion_StepTitleUsesSuccessColor()
     {
         // 实验台完成态语义：最后一步（复核）即完成确认，标题以 Success 色标识，无庆祝动画。
-        var document = XDocument.Load(ProjectFile("Views/SetupWizardOverlay.axaml"));
-        var xNamespace = document.Root?.GetNamespaceOfPrefix("x");
-        Assert.NotNull(xNamespace);
-        var headlines = document
-            .Descendants()
-            .Where(element =>
+        // 各面板标题静态绑定自身资源键——共享 StepTitle 绑定会在 Step 变化的 t=0 让全部
+        // 标题（含淡出中的旧面板）同帧跳到新标题，破坏中点换面的次序语义。
+        var overlay = XDocument.Load(ProjectFile("Views/SetupWizardOverlay.axaml"));
+        var expectedTitleKeys = new[]
+        {
+            "setupWizardLanguage",
+            "setupWizardGamePath",
+            "setupWizardDownloadSource",
+            "setupWizardProxy",
+            "setupWizardReview",
+        };
+        foreach (var key in expectedTitleKeys)
+        {
+            var headline = Assert.Single(overlay.Descendants(), element =>
                 element.Name.LocalName == "TextBlock"
-                && element.Attribute("Text")?.Value == "{Binding Dialogs.SetupWizard.StepTitle}"
-                && HasClass(element, "wizard-step-title"))
-            .ToList();
-        Assert.Equal(5, headlines.Count);
+                && element.Attribute("Text")?.Value == $"{{Binding Shell.I18n[{key}]}}"
+                && HasClass(element, "wizard-step-title"));
+            Assert.Null(headline.Attribute("Classes.wizard-complete"));
+            Assert.Equal(key == "setupWizardReview", HasClass(headline, "wizard-complete"));
+        }
 
-        var completionHeadline = Assert.Single(headlines, element =>
-            element.Attribute("Classes.wizard-complete")?.Value == "{Binding Dialogs.SetupWizard.IsLastStep}");
-        var reviewStep = completionHeadline.Ancestors().Single(element => HasClass(element, "wizard-step"));
-        Assert.Equal("WizardStep4", reviewStep.Attribute(xNamespace + "Name")?.Value);
+        Assert.DoesNotContain(
+            overlay.Descendants(),
+            element => element.Name.LocalName == "TextBlock"
+                && (element.Attribute("Text")?.Value.Contains("SetupWizard.StepTitle") ?? false));
 
         var styles = XDocument.Load(ProjectFile("Views/Styles/SetupWizard.axaml"));
         Assert.Equal(
