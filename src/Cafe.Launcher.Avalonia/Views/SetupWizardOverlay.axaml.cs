@@ -18,8 +18,9 @@ namespace Cafe.Launcher.Avalonia.Views;
 /// <summary>
 /// 设置向导覆盖层：步骤切换按实验台 <c>ChangeWizardAsync</c>/<c>FadeSwapAsync</c> 的顺序换页实现——
 /// 标准档 250ms 对半分，旧内容先以退出加速曲线淡出（无位移），中点瞬时换内容并把滚动复位到
-/// 顶部，新内容再以进入减速曲线淡入并按方向滑入 ±14px。最新状态优先、可中断、不排队；
-/// 降动效、未附着或无可见面板时直接换内容定格。
+/// 顶部，起势帧消化目标面板的首次布局后，新内容再以进入减速曲线同步淡入并按方向滑入 ±14px，
+/// 收尾多留一拍缓冲再结算。最新状态优先、可中断、不排队；降动效、未附着或无可见面板时直接
+/// 换内容定格。
 /// </summary>
 public partial class SetupWizardOverlay : UserControl
 {
@@ -27,6 +28,12 @@ public partial class SetupWizardOverlay : UserControl
     private const string StepBackwardOffsetKey = "Launcher.Motion.Offset.StepBackward";
     private const string EnterEasingKey = "Launcher.Motion.Easing.Enter";
     private const string ExitEasingKey = "Launcher.Motion.Easing.Exit";
+
+    /// <summary>起势帧额外让出的时间：Render 优先级排空后再等约一帧，保证 pose 已呈现（实验台 NextFrameAsync）。</summary>
+    private static readonly TimeSpan PoseFrameDelay = TimeSpan.FromMilliseconds(16);
+
+    /// <summary>收尾缓冲：超出名义时长的额外等待，保证动画最后一拍落完再结算（实验台 WaitAsync）。</summary>
+    private static readonly TimeSpan SettleGrace = TimeSpan.FromMilliseconds(20);
 
     private readonly StackPanel[] stepPanels;
     private CancellationTokenSource? stepMotionCts;
@@ -140,14 +147,21 @@ public partial class SetupWizardOverlay : UserControl
         if (!isMotionEnabled || !attachedToVisualTree)
         {
             // 降动效/未附着：幂等换面（含滚动复位）后直接定格。
-            SwapToPanel(toIndex);
-            SettleStep(stepPanels[toIndex]);
+            ShowStepInstantly(toIndex);
             return;
         }
 
         var cancellation = new CancellationTokenSource();
         stepMotionCts = cancellation;
         _ = RunStepTransitionAsync(fromIndex, toIndex, cancellation);
+    }
+
+    /// <summary>等待一个渲染帧：Render 优先级任务排空后再让出约一帧时间（实验台 NextFrameAsync 同机制）。</summary>
+    private static async Task WaitPoseFrameAsync(CancellationToken token)
+    {
+        // Render 排空是纯队列操作，无长时等待，不参与取消（None 为有意传递）。
+        await Dispatcher.UIThread.InvokeAsync(() => { }, DispatcherPriority.Render, CancellationToken.None);
+        await Task.Delay(PoseFrameDelay, token);
     }
 
     private async Task RunStepTransitionAsync(int fromIndex, int toIndex, CancellationTokenSource cancellation)
@@ -178,14 +192,28 @@ public partial class SetupWizardOverlay : UserControl
             // 中点瞬时换内容：不可见时翻转可见性，滚动复位到顶部。
             SwapToPanel(toIndex);
 
-            // 阶段二：新内容淡入并按方向滑入。透明度经 Animation.RunAsync；位移经
-            // DoubleTransition 驱动 TranslateTransform——Animation.RunAsync 在非
-            // Visual 的 Transform 上不产生动画（与实验台/ToastStackMotion 同机制）。
+            // 起势帧（实验台 NextFrameAsync 同机制）：先把入场 pose（透明 0 / 位移 ±14）
+            // 渲染出来，令目标面板首次可见引发的全量布局与文本 shaping 消化在这一不可见帧
+            // 内，动画再从安静的 UI 线程起播。Enter 曲线极端前载，缺这一帧时首拍时序误差
+            // 会被放大成肉眼可见的跳变。
             var to = stepPanels[toIndex];
             var toTransform = (TranslateTransform)to.RenderTransform!;
             to.Opacity = 0d;
             toTransform.X = enterOffset;
-            var opacityTask = CreateOpacityAnimation(0d, 1d, half, enterEasing).RunAsync(to, token);
+            await WaitPoseFrameAsync(token);
+
+            // 阶段二：透明度与位移都经 DoubleTransition 驱动（实验台 AnimateEntranceAsync
+            // 同机制；Animation.RunAsync 在非 Visual 的 Transform 上不产生动画），同一批
+            // 注册保证淡入与滑入逐帧同步。
+            to.Transitions =
+            [
+                new DoubleTransition
+                {
+                    Property = Visual.OpacityProperty,
+                    Duration = half,
+                    Easing = enterEasing,
+                },
+            ];
             toTransform.Transitions =
             [
                 new DoubleTransition
@@ -195,8 +223,12 @@ public partial class SetupWizardOverlay : UserControl
                     Easing = enterEasing,
                 },
             ];
+            to.Opacity = 1d;
             toTransform.X = 0d;
-            await Task.WhenAll(opacityTask, Task.Delay(half, token));
+
+            // 收尾缓冲（实验台 WaitAsync 同机制）：多等一拍再交由所有权守卫结算，避免
+            // 最后一拍未落完就被清 transitions 截断。
+            await Task.Delay(half + SettleGrace, token);
         }
         catch (OperationCanceledException)
         {
@@ -215,7 +247,9 @@ public partial class SetupWizardOverlay : UserControl
 
     private void ShowStepInstantly(int stepIndex)
     {
-        SwapToPanel(Math.Clamp(stepIndex, 0, stepPanels.Length - 1));
+        var target = Math.Clamp(stepIndex, 0, stepPanels.Length - 1);
+        SwapToPanel(target);
+        SettleStep(stepPanels[target]);
     }
 
     /// <summary>幂等换面：全部非目标面板隐藏并复位视觉，目标面板可见；滚动回到顶部。</summary>
@@ -246,6 +280,8 @@ public partial class SetupWizardOverlay : UserControl
 
     private static void ResetStepVisual(StackPanel panel)
     {
+        // 先清过渡再写终值（实验台 SetFinalVisual 同序），避免残留的插值拍覆盖终值。
+        panel.Transitions = null;
         panel.Opacity = 1d;
         panel.IsHitTestVisible = true;
         if (panel.RenderTransform is TranslateTransform transform)

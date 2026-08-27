@@ -61,7 +61,7 @@
 - 模态 `DialogSurface`（920×560）内实验台居中单列解剖：进度行（向导标题 + `StepProgress` caption + 跳过钮）→ 居中单列内容（`wizard-step` ×5，标题 22px 居中，`Wizard.Content.MaxWidth` 520）→ 动作行并入内容区（三行块消费 `Dialog.Panel.Body.Padding`：上一步 tonal 底色、下一步·完成 filled，均 `wizard-action`）。
 - 下载源/代理选项 = `wizard-option` 单选列表行（最小行高 56、整行等宽拉伸命中、悬停状态层、可见选中态、圆圈左缘跨行对齐）；路径状态 = `wizard-status-row`（图标 + 语义色文本，色彩非唯一信号）；复核 = `wizard-review-row` + hairline 分隔；语言 ComboBox 走 `ComboBox.setting-control` Field 形态（宽 280）。
 - 完成确认态：最后一步（复核）即完成态，标题 Success 色，Footer 切"完成"，无庆祝动画、不缩放。
-- 动效（ADR-016/017）：步骤切换 = 顺序换页——旧内容 125ms 加速淡出（禁命中）→ 中点换内容并复位滚动 → 新内容 125ms 减速淡入 + ±14px 方向滑入；快速连点最新状态生效；外壳遮罩 Fast 淡入、表面单次进出场；降动效瞬切换面并定格。
+- 动效（ADR-016/017）：步骤切换 = 顺序换页——旧内容 125ms 加速淡出（禁命中）→ 中点换内容并复位滚动 → 起势帧渲染入场 pose（消化首次布局）→ 新内容 125ms 减速淡入 + ±14px 方向滑入（透明度与位移同批 `DoubleTransition`，收尾留缓冲再结算）；快速连点最新状态生效；外壳遮罩 Fast 淡入、表面单次进出场；降动效瞬切换面并定格。
 
 ### 3.6 诊断/日志/资源面板（Q3 例外声明）
 - 仅 token 兼容；列表维持 Fluent 基础模板；不做 M3 视觉重设计。
