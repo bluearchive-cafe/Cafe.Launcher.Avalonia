@@ -490,5 +490,13 @@
                                 ConfirmText="{Binding Shell.I18n[debugResetSettingsConfirm]}"
                                 ConfirmCommand="{Binding Dialogs.ConfirmDebugResetCommand}"
                                 IsDangerConfirm="True"/>
+        <controls:ConfirmDialog IsOpen="{Binding Dialogs.IsResetSettingsConfirmationVisible}"
+                                Title="{Binding Shell.I18n[debugResetSettingsTitle]}"
+                                Message="{Binding Shell.I18n[debugResetSettingsDescription]}"
+                                CancelText="{Binding Shell.I18n[cancel]}"
+                                CancelCommand="{Binding Dialogs.CancelSettingsResetCommand}"
+                                ConfirmText="{Binding Shell.I18n[debugResetSettingsConfirm]}"
+                                ConfirmCommand="{Binding Dialogs.ConfirmSettingsResetCommand}"
+                                IsDangerConfirm="True"/>
     </Grid>
 </UserControl>

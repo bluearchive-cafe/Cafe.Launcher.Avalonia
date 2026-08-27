@@ -213,6 +213,10 @@ public partial class SettingsViewModel : ViewModelBase, IDisposable, IModalConte
         dialogs.ShowUpdateAvailable(result.LatestVersion, result.Files);
     }
 
+    /// <summary>Opens the shared launcher-settings reset confirmation (shell performs the reset).</summary>
+    [RelayCommand]
+    private void RequestResetSettings() => dialogs.ShowSettingsResetConfirmation();
+
     [RelayCommand(CanExecute = nameof(CanSaveSettings))]
     private async Task SaveSettingsAsync()
     {

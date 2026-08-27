@@ -926,12 +926,12 @@ public sealed class MainWindowHeadlessTests
             .Where(row => row.IsEffectivelyVisible)
             .ToArray();
 
-        Assert.Equal(2, rows.Length);
-        var levelControl = rows[0]
-            .GetVisualDescendants()
-            .OfType<ComboBox>()
-            .Single();
-        var logButtons = rows[1]
+        // 日志级别 / 日志文件操作 / 重置设置三行；重置行属破坏性确认入口，不参与本对齐契约。
+        Assert.Equal(3, rows.Length);
+        var levelRow = Assert.Single(rows, row => row.GetVisualDescendants().OfType<ComboBox>().Any());
+        var levelControl = levelRow.GetVisualDescendants().OfType<ComboBox>().Single();
+        var logRow = Assert.Single(rows, row => row.GetVisualDescendants().OfType<Button>().Count() == 3);
+        var logButtons = logRow
             .GetVisualDescendants()
             .OfType<Button>()
             .ToArray();
@@ -940,7 +940,7 @@ public sealed class MainWindowHeadlessTests
         var levelTopLeft = levelControl.TranslatePoint(default, context.Window);
         Assert.NotNull(levelTopLeft);
         var levelRight = levelTopLeft.Value.X + levelControl.Bounds.Width;
-        var logPresenter = rows[1].FindControl<ContentPresenter>("ActionPresenter");
+        var logPresenter = logRow.FindControl<ContentPresenter>("ActionPresenter");
         Assert.NotNull(logPresenter);
         var logPresenterTopLeft = logPresenter!.TranslatePoint(default, context.Window);
         Assert.NotNull(logPresenterTopLeft);

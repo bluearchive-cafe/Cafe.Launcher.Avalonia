@@ -184,6 +184,45 @@ public sealed partial class UiStyleContractTests
     }
 
     [Fact]
+    public void MainWindow_SettingsAdvancedSection_ExposesLauncherSettingsReset()
+    {
+        var document = XDocument.Load(ProjectFile("Views/SettingsAdvancedSection.axaml"));
+        var resetButton = document
+            .Descendants()
+            .Single(element =>
+                element.Name.LocalName == "Button"
+                && element.Attribute("Command")?.Value == "{Binding Settings.RequestResetSettingsCommand}");
+
+        Assert.Equal(
+            "{Binding Shell.I18n[debugResetSettingsTitle]}",
+            resetButton.Attribute("AutomationProperties.Name")?.Value);
+        Assert.Contains(
+            resetButton.Descendants(),
+            element => element.Name.LocalName == "TextBlock"
+                && element.Attribute("Text")?.Value == "{Binding Shell.I18n[debugResetSettingsConfirm]}");
+
+        // 复用 ADR-014 确认对话框族：设置页重置拥有独立可见性通道，但共享同一套文案键。
+        var overlay = XDocument.Load(ProjectFile("Views/MainWindowDialogsOverlay.axaml"));
+        var dialog = overlay
+            .Descendants()
+            .Single(element =>
+                element.Name.LocalName == "ConfirmDialog"
+                && element.Attribute("IsOpen")?.Value == "{Binding Dialogs.IsResetSettingsConfirmationVisible}");
+        Assert.Equal(
+            "{Binding Shell.I18n[debugResetSettingsTitle]}",
+            dialog.Attribute("Title")?.Value);
+        Assert.Equal(
+            "{Binding Shell.I18n[debugResetSettingsConfirm]}",
+            dialog.Attribute("ConfirmText")?.Value);
+        Assert.Equal(
+            "{Binding Dialogs.ConfirmSettingsResetCommand}",
+            dialog.Attribute("ConfirmCommand")?.Value);
+        Assert.Equal(
+            "{Binding Dialogs.CancelSettingsResetCommand}",
+            dialog.Attribute("CancelCommand")?.Value);
+    }
+
+    [Fact]
     public void MainWindow_GameManageButtons_ExposeFlyoutMenuWithOperationBindings()
     {
         var document = XDocument.Load(ProjectFile("Views/MainWindow.axaml"));
@@ -3433,7 +3472,8 @@ public sealed partial class UiStyleContractTests
             .Descendants()
             .Where(element => element.Name.LocalName == "ConfirmDialog")
             .ToArray();
-        Assert.Equal(8, usages.Length);
+        // 调试重置 / 设置页重置共享同一对话框控件，各自独立实例。
+        Assert.Equal(9, usages.Length);
 
         foreach (var usage in usages)
         {
@@ -3582,11 +3622,11 @@ public sealed partial class UiStyleContractTests
             .Where(element => element.Name.LocalName is "SettingRow" or "SettingSelect")
             .ToList();
 
-        Assert.Equal(2, rows.Count);
-        var logFilesRow = rows[1];
-        Assert.Equal(
-            "{Binding Shell.I18n[logFiles]}",
-            logFilesRow.Attribute("Title")?.Value);
+        // 重置设置行加入后共三行；日志行动作按标题定位，避免对行顺序的脆弱依赖。
+        Assert.Equal(3, rows.Count);
+        var logFilesRow = Assert.Single(
+            rows,
+            row => row.Attribute("Title")?.Value == "{Binding Shell.I18n[logFiles]}");
         Assert.Equal(
             "{Binding Shell.I18n[logFilesDescription]}",
             logFilesRow.Attribute("Description")?.Value);

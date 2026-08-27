@@ -259,6 +259,52 @@ public sealed class DialogsViewModelTests
         Assert.Contains("1.2.0", viewModel.UpdateAvailableText, StringComparison.Ordinal);
     }
 
+    [Fact]
+    public void ShowSettingsResetConfirmation_ShowsSharedResetDialog()
+    {
+        var viewModel = CreateViewModel();
+
+        viewModel.ShowSettingsResetConfirmation();
+
+        Assert.True(viewModel.IsResetSettingsConfirmationVisible);
+    }
+
+    [Fact]
+    public void CancelSettingsReset_ClosesConfirmationWithoutRequest()
+    {
+        var viewModel = CreateViewModel();
+        var requested = false;
+        viewModel.ConfirmSettingsResetRequested += () =>
+        {
+            requested = true;
+            return Task.CompletedTask;
+        };
+        viewModel.ShowSettingsResetConfirmation();
+
+        viewModel.CancelSettingsResetCommand.Execute(null);
+
+        Assert.False(viewModel.IsResetSettingsConfirmationVisible);
+        Assert.False(requested);
+    }
+
+    [Fact]
+    public async Task ConfirmSettingsReset_WhenConfirmed_RaisesRequestOnceAndCloses()
+    {
+        var viewModel = CreateViewModel();
+        var requestCount = 0;
+        viewModel.ConfirmSettingsResetRequested += () =>
+        {
+            requestCount++;
+            return Task.CompletedTask;
+        };
+        viewModel.ShowSettingsResetConfirmation();
+
+        await viewModel.ConfirmSettingsResetCommand.ExecuteAsync(null);
+
+        Assert.Equal(1, requestCount);
+        Assert.False(viewModel.IsResetSettingsConfirmationVisible);
+    }
+
     private static DialogsViewModel CreateViewModel()
     {
         var noticePath = Path.Combine(
