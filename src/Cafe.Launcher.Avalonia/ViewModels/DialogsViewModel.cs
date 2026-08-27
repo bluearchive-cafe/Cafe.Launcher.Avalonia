@@ -97,6 +97,51 @@ public partial class DialogsViewModel : ViewModelBase, IModalContentViewModel
         }
     }
 
+    private bool isResetSettingsConfirmationVisible;
+
+    public bool IsResetSettingsConfirmationVisible
+    {
+        get => isResetSettingsConfirmationVisible;
+        set => SetProperty(ref isResetSettingsConfirmationVisible, value);
+    }
+
+    public IRelayCommand CancelSettingsResetCommand { get; }
+
+    public IAsyncRelayCommand ConfirmSettingsResetCommand { get; }
+
+    /// <summary>Raised after the user confirms a settings-page reset of all launcher settings.</summary>
+    public event Func<Task>? ConfirmSettingsResetRequested;
+
+    /// <summary>Presents the launcher-settings reset confirmation from the settings page.</summary>
+    public void ShowSettingsResetConfirmation()
+    {
+        IsResetSettingsConfirmationVisible = true;
+    }
+
+    private void CancelSettingsReset()
+    {
+        IsResetSettingsConfirmationVisible = false;
+    }
+
+    private async Task ConfirmSettingsResetAsync()
+    {
+        try
+        {
+            await AsyncEvent.InvokeSequentiallyAsync(ConfirmSettingsResetRequested);
+        }
+        catch (Exception ex)
+        {
+            LocalDiagnostics.LogSync(
+                LogEntrySeverity.Error,
+                "SettingsResetFailed",
+                $"Failed to reset settings: {ex.Message}");
+        }
+        finally
+        {
+            IsResetSettingsConfirmationVisible = false;
+        }
+    }
+
     // ── Setup wizard ─────────────────────────────────────────────────────
 
     public SetupWizardViewModel SetupWizard { get; }
@@ -247,6 +292,8 @@ public partial class DialogsViewModel : ViewModelBase, IModalContentViewModel
         Gallery = new DesignGalleryViewModel(key => localizer.T(key));
         CancelDebugResetCommand = new RelayCommand(CancelDebugReset);
         ConfirmDebugResetCommand = new AsyncRelayCommand(ConfirmDebugResetAsync);
+        CancelSettingsResetCommand = new RelayCommand(CancelSettingsReset);
+        ConfirmSettingsResetCommand = new AsyncRelayCommand(ConfirmSettingsResetAsync);
     }
 
     public void ApplyLanguage()

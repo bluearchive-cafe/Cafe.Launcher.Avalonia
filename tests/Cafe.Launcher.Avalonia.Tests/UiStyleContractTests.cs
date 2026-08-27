@@ -70,7 +70,10 @@ public sealed partial class UiStyleContractTests
             Assert.Equal(
                 "{StaticResource Launcher.Spacing.Xl}",
                 layout.Attribute("ColumnSpacing")?.Value);
-            Assert.True(HasClass(layout.Parent!, "bottom-panel"));
+            // ADR-016：状态布局属于单一任务容器，不再直接挂在各自 bottom-panel Border 下。
+            Assert.Contains(
+                layout.Ancestors(),
+                element => HasClass(element, "operation-surface"));
 
             var status = layout.Elements().Single(element => HasClass(element, "operation-status"));
             Assert.Equal("Grid", status.Name.LocalName);
@@ -114,7 +117,7 @@ public sealed partial class UiStyleContractTests
             .Single(element =>
                 element.Name.LocalName == "Grid"
                 && element.Attribute("RowDefinitions")?.Value == "*,Auto"
-                && HasClass(element.Parent!, "bottom-panel")
+                && element.Ancestors().Any(ancestor => HasClass(ancestor, "operation-surface"))
                 && element.Descendants().Any(descendant =>
                     descendant.Name.LocalName == "Button"
                     && descendant.Attribute("Command")?.Value == "{Binding Operations.InstallOrUpdateCommand}"));
@@ -178,6 +181,45 @@ public sealed partial class UiStyleContractTests
             controlPanel.Descendants(),
             element => element.Name.LocalName == "TextBlock"
                 && element.Attribute("Text")?.Value == "{Binding Shell.LaunchCheckText}");
+    }
+
+    [Fact]
+    public void MainWindow_SettingsAdvancedSection_ExposesLauncherSettingsReset()
+    {
+        var document = XDocument.Load(ProjectFile("Views/SettingsAdvancedSection.axaml"));
+        var resetButton = document
+            .Descendants()
+            .Single(element =>
+                element.Name.LocalName == "Button"
+                && element.Attribute("Command")?.Value == "{Binding Settings.RequestResetSettingsCommand}");
+
+        Assert.Equal(
+            "{Binding Shell.I18n[debugResetSettingsTitle]}",
+            resetButton.Attribute("AutomationProperties.Name")?.Value);
+        Assert.Contains(
+            resetButton.Descendants(),
+            element => element.Name.LocalName == "TextBlock"
+                && element.Attribute("Text")?.Value == "{Binding Shell.I18n[debugResetSettingsConfirm]}");
+
+        // 复用 ADR-014 确认对话框族：设置页重置拥有独立可见性通道，但共享同一套文案键。
+        var overlay = XDocument.Load(ProjectFile("Views/MainWindowDialogsOverlay.axaml"));
+        var dialog = overlay
+            .Descendants()
+            .Single(element =>
+                element.Name.LocalName == "ConfirmDialog"
+                && element.Attribute("IsOpen")?.Value == "{Binding Dialogs.IsResetSettingsConfirmationVisible}");
+        Assert.Equal(
+            "{Binding Shell.I18n[debugResetSettingsTitle]}",
+            dialog.Attribute("Title")?.Value);
+        Assert.Equal(
+            "{Binding Shell.I18n[debugResetSettingsConfirm]}",
+            dialog.Attribute("ConfirmText")?.Value);
+        Assert.Equal(
+            "{Binding Dialogs.ConfirmSettingsResetCommand}",
+            dialog.Attribute("ConfirmCommand")?.Value);
+        Assert.Equal(
+            "{Binding Dialogs.CancelSettingsResetCommand}",
+            dialog.Attribute("CancelCommand")?.Value);
     }
 
     [Fact]
@@ -3430,7 +3472,8 @@ public sealed partial class UiStyleContractTests
             .Descendants()
             .Where(element => element.Name.LocalName == "ConfirmDialog")
             .ToArray();
-        Assert.Equal(8, usages.Length);
+        // 调试重置 / 设置页重置共享同一对话框控件，各自独立实例。
+        Assert.Equal(9, usages.Length);
 
         foreach (var usage in usages)
         {
@@ -3579,11 +3622,11 @@ public sealed partial class UiStyleContractTests
             .Where(element => element.Name.LocalName is "SettingRow" or "SettingSelect")
             .ToList();
 
-        Assert.Equal(2, rows.Count);
-        var logFilesRow = rows[1];
-        Assert.Equal(
-            "{Binding Shell.I18n[logFiles]}",
-            logFilesRow.Attribute("Title")?.Value);
+        // 重置设置行加入后共三行；日志行动作按标题定位，避免对行顺序的脆弱依赖。
+        Assert.Equal(3, rows.Count);
+        var logFilesRow = Assert.Single(
+            rows,
+            row => row.Attribute("Title")?.Value == "{Binding Shell.I18n[logFiles]}");
         Assert.Equal(
             "{Binding Shell.I18n[logFilesDescription]}",
             logFilesRow.Attribute("Description")?.Value);
@@ -4189,19 +4232,80 @@ public sealed partial class UiStyleContractTests
             .Where(element => HasClass(element, "motion-bottom"))
             .ToList();
 
-        Assert.Equal(2, bottomTargets.Count);
-        Assert.All(bottomTargets, element =>
+        // ADR-016 游戏操作表面：安装/进度/控制收敛为同一任务容器，motion-bottom 仅剩容器本身。
+        var operationSurface = Assert.Single(bottomTargets);
+        Assert.Equal(
+            "OperationSurface",
+            operationSurface
+                .Attributes()
+                .Single(attribute => attribute.Name.LocalName == "Name"
+                    && attribute.Name.NamespaceName.EndsWith("/2006/xaml", StringComparison.Ordinal))
+                .Value);
+        Assert.Equal(
+            "{Binding IsMotionEnabled}",
+            operationSurface.Attribute("Classes.motion-enabled")?.Value);
+        // 容器的 motion-enter 是一次性入场锚点（任何状态可见即成立），不随状态切换重放。
+        Assert.Equal(
+            "{Binding Operations.IsAnyPanelVisible}",
+            operationSurface.Attribute("Classes.motion-enter")?.Value);
+        Assert.Null(operationSurface.Attribute("IsVisible"));
+        AssertHasLocalTranslateTransform(operationSurface);
+    }
+
+    [Fact]
+    public void MainWindow_OperationStates_TransformInsideSingleTaskContainer()
+    {
+        var document = XDocument.Load(ProjectFile("Views/MainWindow.axaml"));
+
+        var surface = document
+            .Descendants()
+            .Single(element =>
+                element.Name.LocalName == "Border"
+                && HasClass(element, "operation-surface"));
+        var host = surface.Elements().Single(element => element.Name.LocalName == "Panel");
+
+        var states = host
+            .Elements()
+            .Where(element => element.Name.LocalName == "Border" && HasClass(element, "operation-state"))
+            .ToList();
+        Assert.Equal(3, states.Count);
+
+        var expectedVisibility = new Dictionary<string, string>(StringComparer.Ordinal)
         {
-            Assert.Equal(
-                "{Binding IsMotionEnabled}",
-                element.Attribute("Classes.motion-enabled")?.Value);
-            Assert.Equal(
-                element.Attribute("Classes.motion-enter")?.Value,
-                element.Attribute("Classes.motion-enter")?.Value);
-            // Bottom panels now use MultiBinding for IsVisible (AND of panel mode + status detail mode),
-            // so IsVisible is no longer a direct binding.
-            AssertHasLocalTranslateTransform(element);
-        });
+            ["OperationInstallState"] = "{Binding Operations.IsInstallPanelVisible}",
+            ["OperationProgressState"] = "{Binding Operations.IsProgressPanelVisible}",
+            ["OperationControlState"] = "{Binding Operations.IsControlPanelVisible}",
+        };
+        static string? XamlName(XElement element) => element
+            .Attributes()
+            .SingleOrDefault(attribute => attribute.Name.LocalName == "Name"
+                && attribute.Name.NamespaceName.EndsWith("/2006/xaml", StringComparison.Ordinal))
+            ?.Value;
+        foreach (var state in states)
+        {
+            // 状态在任务容器内原地交换：不再作为独立面板直接绑定 motion 入场动画。
+            Assert.Null(state.Attribute("Classes.motion-enter"));
+            Assert.Null(state.Attribute("Classes.motion-enabled"));
+            if (XamlName(state) is { } name)
+            {
+                Assert.Contains(name, expectedVisibility.Keys);
+                Assert.Equal(expectedVisibility[name], state.Attribute("IsVisible")?.Value);
+            }
+        }
+
+        // 三个状态各自具名，逐一锁定可见性绑定。
+        foreach (var stateName in expectedVisibility.Keys)
+        {
+            Assert.Single(states, state => XamlName(state) == stateName);
+        }
+
+        // 底栏外观（内边距与两档最小高度）由各状态自行承载，控制态叠加专属渐变。
+        Assert.All(states, state => Assert.True(HasClass(state, "bottom-panel")));
+        Assert.Single(states, state => HasClass(state, "control-panel"));
+        // 外壳仅承载定位与形变，不带任何外观类，避免高度双重计入。
+        Assert.DoesNotContain(surface.Attributes(), attribute =>
+            attribute.Name.LocalName.StartsWith("Classes", StringComparison.Ordinal)
+            && attribute.Value?.Contains("bottom-panel") == true);
     }
 
     [Fact]

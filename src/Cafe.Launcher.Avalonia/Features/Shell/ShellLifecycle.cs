@@ -349,6 +349,13 @@ public sealed class ShellLifecycle : IDisposable
         await RefreshAsync();
     }
 
+    /// <summary>Restores default settings from the settings page and reports the outcome.</summary>
+    public async Task ResetSettingsFromSettingsPageAsync()
+    {
+        await ResetSettingsToDefaultsAsync();
+        toastService.ShowSuccess(localizer.T("debugSettingsReset"));
+    }
+
     private void OnResourcePanelSourceSwitchConfirmed() => _ = SwitchSourceThenOpenPanelAsync();
 
     private static void OnUpdateAvailableConfirmed(string downloadUrl) => ExternalLinkService.Open(downloadUrl);
@@ -436,6 +443,7 @@ public sealed class ShellLifecycle : IDisposable
         debug.ResetSettingsRequested += ResetSettingsToDefaultsAsync;
         debug.ResetSettingsConfirmationRequested += dialogs.ShowDebugResetConfirmation;
         dialogs.ConfirmDebugResetRequested += debug.ConfirmResetSettingsAsync;
+        dialogs.ConfirmSettingsResetRequested += ResetSettingsFromSettingsPageAsync;
 
         remoteContent.OpenExternalUrlRequested = openExternalUrl;
 
@@ -474,6 +482,7 @@ public sealed class ShellLifecycle : IDisposable
         debug.ResetSettingsRequested -= ResetSettingsToDefaultsAsync;
         debug.ResetSettingsConfirmationRequested -= dialogs.ShowDebugResetConfirmation;
         dialogs.ConfirmDebugResetRequested -= debug.ConfirmResetSettingsAsync;
+        dialogs.ConfirmSettingsResetRequested -= ResetSettingsFromSettingsPageAsync;
         windowChrome.PropertyChanged -= OnWindowChromePropertyChanged;
         settings.PropertyChanged -= OnSettingsPropertyChanged;
         settings.Editor.CurrentPropertyChanged -= OnSettingPropertyChanged;

@@ -57,5 +57,22 @@
                 </WrapPanel>
             </controls:SettingRow.Action>
         </controls:SettingRow>
+
+        <!-- ADR-014 对话框族：破坏性操作须经确认；重置执行与反馈由 Shell 接线（复用调试重置核心）。 -->
+        <controls:SettingRow Title="{Binding Shell.I18n[debugResetSettingsConfirm]}"
+                             Description="{Binding Shell.I18n[debugResetSettingsDescription]}">
+            <controls:SettingRow.Action>
+                <Button Classes="flat-action"
+                        Command="{Binding Settings.RequestResetSettingsCommand}"
+                        AutomationProperties.Name="{Binding Shell.I18n[debugResetSettingsTitle]}">
+                    <StackPanel Classes="button-content">
+                        <materialIcons:MaterialIcon Kind="Restore"
+                                                    Width="{StaticResource Launcher.Icon.Sm}"
+                                                    Height="{StaticResource Launcher.Icon.Sm}"/>
+                        <TextBlock Text="{Binding Shell.I18n[debugResetSettingsConfirm]}"/>
+                    </StackPanel>
+                </Button>
+            </controls:SettingRow.Action>
+        </controls:SettingRow>
     </StackPanel>
 </UserControl>

@@ -315,14 +315,22 @@
             </Panel>
 
 
+                <!-- ADR-016 游戏操作表面：安装/进度/控制共用同一任务容器，状态在容器内原地切换；
+                     切换时由 code-behind 驱动高度点到点过渡与短暂透明度下沉表达任务延续，
+                     降动效直接瞬切。容器自身的 motion-enter 仅作一次性入场锚点。
+                     外壳只承担定位与形变，底栏外观（含内边距与两档最小高度）仍由各状态
+                     自行承载，确保与重构前单面板的盒子几何完全一致。 -->
                 <Border Grid.Row="1"
-                        Classes="bottom-panel motion-bottom"
+                        x:Name="OperationSurface"
+                        Classes="operation-surface motion-bottom"
                         Classes.motion-enabled="{Binding IsMotionEnabled}"
-                        Classes.motion-enter="{Binding Operations.IsInstallPanelVisible}"
-                        IsVisible="{Binding Operations.IsInstallPanelVisible}">
+                        Classes.motion-enter="{Binding Operations.IsAnyPanelVisible}">
                     <Border.RenderTransform>
                         <TranslateTransform/>
                     </Border.RenderTransform>
+                    <Panel>
+                        <Border x:Name="OperationInstallState" Classes="operation-state bottom-panel"
+                                IsVisible="{Binding Operations.IsInstallPanelVisible}">
                     <!-- Compact layout -->
                     <Grid ColumnDefinitions="*,Auto" RowDefinitions="*,Auto" ColumnSpacing="{StaticResource Launcher.Spacing.Xl}"
                           IsVisible="{Binding IsStatusDetailHidden, Converter={x:Static BoolConverters.Not}}">
@@ -380,11 +388,10 @@
                             </Button>
                         </StackPanel>
                     </Grid>
-                </Border>
+                        </Border>
 
-                <Border Grid.Row="1"
-                        IsVisible="{Binding Operations.IsProgressPanelVisible}"
-                        Classes="bottom-panel">
+                        <Border x:Name="OperationProgressState" Classes="operation-state bottom-panel"
+                                IsVisible="{Binding Operations.IsProgressPanelVisible}">
                     <Grid Classes="operation-layout" ColumnDefinitions="*,Auto" ColumnSpacing="{StaticResource Launcher.Spacing.Xl}" VerticalAlignment="Center">
                         <Grid Classes="operation-status"
                               RowDefinitions="Auto,Auto,Auto"
@@ -441,16 +448,10 @@
                             </Button>
                         </StackPanel>
                     </Grid>
-                </Border>
+                        </Border>
 
-                <Border Grid.Row="1"
-                        Classes="bottom-panel control-panel motion-bottom"
-                        Classes.motion-enabled="{Binding IsMotionEnabled}"
-                        Classes.motion-enter="{Binding Operations.IsControlPanelVisible}"
-                        IsVisible="{Binding Operations.IsControlPanelVisible}">
-                    <Border.RenderTransform>
-                        <TranslateTransform/>
-                    </Border.RenderTransform>
+                        <Border x:Name="OperationControlState" Classes="operation-state bottom-panel control-panel"
+                                IsVisible="{Binding Operations.IsControlPanelVisible}">
                     <Panel>
                     <!-- Compact layout -->
                     <Grid ColumnDefinitions="*,Auto" RowDefinitions="*,Auto" ColumnSpacing="{StaticResource Launcher.Spacing.Xxl}"
@@ -577,6 +578,8 @@
                             </Button.Flyout>
                         </Button>
                     </StackPanel>
+                    </Panel>
+                        </Border>
                     </Panel>
                 </Border>
             </Grid>
