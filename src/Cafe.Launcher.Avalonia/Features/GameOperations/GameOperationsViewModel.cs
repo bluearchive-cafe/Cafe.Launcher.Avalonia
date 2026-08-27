@@ -28,6 +28,7 @@ public partial class GameOperationsViewModel : ViewModelBase, IGameOperationJour
     [NotifyPropertyChangedFor(nameof(IsInstallPanelVisible))]
     [NotifyPropertyChangedFor(nameof(IsControlPanelVisible))]
     [NotifyPropertyChangedFor(nameof(IsProgressPanelVisible))]
+    [NotifyPropertyChangedFor(nameof(IsAnyPanelVisible))]
     private GameOperationPanelMode panelMode = GameOperationPanelMode.Install;
 
     public bool IsInstallPanelVisible => PanelMode == GameOperationPanelMode.Install;
@@ -35,6 +36,15 @@ public partial class GameOperationsViewModel : ViewModelBase, IGameOperationJour
     public bool IsControlPanelVisible => PanelMode == GameOperationPanelMode.Control;
 
     public bool IsProgressPanelVisible => PanelMode == GameOperationPanelMode.Progress;
+
+    /// <summary>
+    /// Entrance anchor for the single operation task surface (ADR-016): stays true whenever
+    /// any state occupies the container so the one-shot rise never replays on state switches.
+    /// </summary>
+    public bool IsAnyPanelVisible =>
+        PanelMode is GameOperationPanelMode.Install
+            or GameOperationPanelMode.Control
+            or GameOperationPanelMode.Progress;
 
     [ObservableProperty]
     private string installButtonText = "";

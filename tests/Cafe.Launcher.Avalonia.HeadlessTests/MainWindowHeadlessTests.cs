@@ -1152,15 +1152,112 @@ public sealed class MainWindowHeadlessTests
 
         var remotePanel = context.Window.GetVisualDescendants().OfType<Border>()
             .Single(control => control.Classes.Contains("remote-surface"));
-        var operationPanelClass = panelMode == "control" ? "control-panel" : "bottom-panel";
+        // ADR-016：三种状态共享同一任务容器，底栏对遥测面板的让位约束对所有模式一致。
         var operationPanel = context.Window.GetVisualDescendants().OfType<Border>()
-            .Single(control => control.Classes.Contains(operationPanelClass)
-                && control.IsEffectivelyVisible);
+            .Single(control => control.Classes.Contains("operation-surface"));
 
         Assert.True(remotePanel.IsEffectivelyVisible);
         Assert.True(
             remotePanel.Bounds.Bottom <= operationPanel.Bounds.Top,
             $"Remote panel bottom {remotePanel.Bounds.Bottom} overlaps operation panel top {operationPanel.Bounds.Top}.");
+    }
+
+    [AvaloniaFact]
+    public async Task MainWindow_WhenPanelModeChanges_TaskSurfaceAnimatesThenSettles()
+    {
+        using var context = CreateContext();
+        context.ViewModel.Operations.PanelMode = GameOperationPanelMode.Install;
+        context.Window.Show();
+        Dispatcher.UIThread.RunJobs();
+
+        var surface = context.Window.GetVisualDescendants().OfType<Border>()
+            .Single(control => control.Classes.Contains("operation-surface"));
+        Assert.True(surface.Bounds.Height > 0);
+        var installedHeight = surface.Bounds.Height;
+
+        context.ViewModel.Operations.PanelMode = GameOperationPanelMode.Control;
+        // 形变完成后回到自动尺寸、恢复全不透明，且控制态自然高度大于安装态（156 对 132），
+        // 证明转换走过了"测新状态自然高度"的管线而非瞬切。
+        var settled = false;
+        var deadline = DateTime.UtcNow.AddSeconds(3);
+        while (DateTime.UtcNow < deadline)
+        {
+            await Dispatcher.UIThread.InvokeAsync(() => { });
+            await Task.Delay(10);
+            if (double.IsNaN(surface.Height) && surface.Opacity >= 1d)
+            {
+                settled = true;
+                break;
+            }
+        }
+
+        Assert.True(settled, "Operation surface did not settle back to auto height and full opacity.");
+        Assert.True(
+            surface.Bounds.Height > installedHeight,
+            $"Control state height {surface.Bounds.Height} did not grow past install state {installedHeight}.");
+    }
+
+    [AvaloniaFact]
+    public void MainWindow_WhenMotionReduced_TaskSurfaceSwitchesWithoutAnimation()
+    {
+        using var context = CreateContext();
+        context.ViewModel.IsMotionReduced = true;
+        context.ViewModel.Operations.PanelMode = GameOperationPanelMode.Install;
+        context.Window.Show();
+        Dispatcher.UIThread.RunJobs();
+
+        var surface = context.Window.GetVisualDescendants().OfType<Border>()
+            .Single(control => control.Classes.Contains("operation-surface"));
+        Assert.True(surface.Bounds.Height > 0);
+
+        context.ViewModel.Operations.PanelMode = GameOperationPanelMode.Control;
+        Dispatcher.UIThread.RunJobs();
+
+        Assert.True(double.IsNaN(surface.Height));
+        Assert.Equal(1d, surface.Opacity);
+    }
+
+    [AvaloniaFact]
+    public async Task MainWindow_BackgroundThreadSwitchAndRuntimeMotionReduction_KeepTaskSurfaceConsistent()
+    {
+        using var context = CreateContext();
+        context.ViewModel.Operations.PanelMode = GameOperationPanelMode.Install;
+        context.Window.Show();
+        Dispatcher.UIThread.RunJobs();
+
+        // 后台线程（真实应用中进度回调的常见来源）触发面板切换，须经 Dispatcher 汇入 UI 线程。
+        await Task.Run(() => context.ViewModel.Operations.PanelMode = GameOperationPanelMode.Control);
+        var controlState = default(Border);
+        var deadline = DateTime.UtcNow.AddSeconds(3);
+        while (DateTime.UtcNow < deadline)
+        {
+            await Dispatcher.UIThread.InvokeAsync(() => { });
+            controlState = context.Window.GetVisualDescendants().OfType<Border>()
+                .FirstOrDefault(control => control.Classes.Contains("operation-state")
+                    && control.Classes.Contains("control-panel"));
+            if (controlState?.IsVisible == true)
+            {
+                break;
+            }
+
+            await Task.Delay(10);
+        }
+
+        Assert.True(controlState?.IsVisible == true, "Control state did not surface after background switch.");
+
+        // 运行期关闭动效：形变立即落定（自动高度、全不透明），状态本身不受影响。
+        context.ViewModel.IsMotionReduced = true;
+        Dispatcher.UIThread.RunJobs();
+
+        var surface = context.Window.GetVisualDescendants().OfType<Border>()
+            .Single(control => control.Classes.Contains("operation-surface"));
+        Assert.True(double.IsNaN(surface.Height));
+        Assert.Equal(1d, surface.Opacity);
+        Assert.True(controlState.IsVisible);
+
+        // 关闭窗口触发退订与表面落定，保证无泄漏的取消源残留。
+        context.Window.Close();
+        Dispatcher.UIThread.RunJobs();
     }
 
     [AvaloniaFact]

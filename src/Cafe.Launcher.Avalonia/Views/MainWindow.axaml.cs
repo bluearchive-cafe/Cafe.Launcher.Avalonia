@@ -5,10 +5,13 @@ using Avalonia.Controls;
 using Avalonia.Controls.ApplicationLifetimes;
 using Avalonia.Input;
 using Avalonia.Input.Platform;
+using Avalonia.Layout;
 using Avalonia.Media;
 using Avalonia.Platform.Storage;
 using Avalonia.Styling;
 using Avalonia.Threading;
+using Avalonia.VisualTree;
+using Cafe.Launcher.Avalonia.Features.GameOperations;
 using Cafe.Launcher.Avalonia.Helpers;
 using Cafe.Launcher.Avalonia.Models;
 using Cafe.Launcher.Avalonia.Services;
@@ -16,6 +19,7 @@ using Cafe.Launcher.Avalonia.Services.Diagnostics;
 using Cafe.Launcher.Avalonia.ViewModels;
 using System;
 using System.Collections.Generic;
+using System.ComponentModel;
 using System.Diagnostics;
 using System.IO;
 using System.Linq;
@@ -26,8 +30,12 @@ namespace Cafe.Launcher.Avalonia.Views;
 
 public partial class MainWindow : Window
 {
+    /// <summary>内容更替提示的透明度下沉值（对齐 FluentMotionLab 场景 6 的 Fluent 分支）。</summary>
+    private const double OperationSurfaceDipOpacity = 0.58;
+
     private SystemTrayService? systemTray;
     private MainWindowViewModel? configuredViewModel;
+    private CancellationTokenSource? operationSurfaceMotionCts;
     private readonly Func<string, Task<string?>> pickGameFolderAsync;
     private readonly Func<Task<string?>> pickBackgroundImageAsync;
     private readonly Func<Task<string?>> pickBackgroundFolderAsync;
@@ -84,6 +92,8 @@ public partial class MainWindow : Window
         viewModel.WindowChrome.RestoreRequested += ShowWindow;
         viewModel.Dialogs.ErrorCopyDetailsRequested += CopyErrorDetailsToClipboard;
         viewModel.Background.PreviousWallpaperFadingOut += FadeOutPreviousWallpaper;
+        viewModel.Operations.PropertyChanged += OnOperationsPropertyChanged;
+        viewModel.PropertyChanged += OnRootMotionPreferenceChanged;
     }
 
     /// <summary>
@@ -117,6 +127,156 @@ public partial class MainWindow : Window
         _ = fadeOut.RunAsync(BackgroundCrossFade, cancellationToken);
     }
 
+    private void OnOperationsPropertyChanged(object? sender, PropertyChangedEventArgs e)
+    {
+        if (e.PropertyName != nameof(GameOperationsViewModel.PanelMode))
+        {
+            return;
+        }
+
+        if (!Dispatcher.UIThread.CheckAccess())
+        {
+            Dispatcher.UIThread.Post(AnimateOperationSurfaceTransition);
+            return;
+        }
+
+        AnimateOperationSurfaceTransition();
+    }
+
+    private void OnRootMotionPreferenceChanged(object? sender, PropertyChangedEventArgs e)
+    {
+        if (e.PropertyName == nameof(MainWindowViewModel.IsMotionEnabled))
+        {
+            SettleOperationSurface(OperationSurface);
+        }
+    }
+
+    /// <summary>
+    /// ADR-016 游戏操作表面连续转换：状态在单一任务容器内原地交换后，先把容器临时固定在
+    /// 旧高度并测得新状态的自然高度，再以点到点曲线把高度连续过渡过去，同时用短暂透明度
+    /// 下沉提示内容更替。新状态触发时立即取消前一段动画并以最新布局为准，不排队；降动效、
+    /// 未附着或首帧无尺寸时直接落定。
+    /// </summary>
+    private void AnimateOperationSurfaceTransition()
+    {
+        var surface = OperationSurface;
+        var fromHeight = surface.Bounds.Height;
+        if (configuredViewModel is not { IsMotionEnabled: true }
+            || !surface.IsAttachedToVisualTree()
+            || !double.IsFinite(fromHeight)
+            || fromHeight <= 0)
+        {
+            SettleOperationSurface(surface);
+            return;
+        }
+
+        // 冻结旧视觉尺寸后让可见性绑定推过一轮布局，测得新状态的自然容器高度。
+        // 三个状态各自携带 bottom-panel 的 MinHeight（≥132），布局后目标高度必有下界。
+        surface.Height = double.NaN;
+        surface.UpdateLayout();
+        var targetHeight = surface.Bounds.Height;
+
+        surface.Height = fromHeight;
+        surface.UpdateLayout();
+
+        operationSurfaceMotionCts?.Cancel();
+        operationSurfaceMotionCts?.Dispose();
+        var cts = new CancellationTokenSource();
+        operationSurfaceMotionCts = cts;
+        _ = RunOperationSurfaceTransitionAsync(surface, fromHeight, targetHeight, cts);
+    }
+
+    private async Task RunOperationSurfaceTransitionAsync(
+        Border surface,
+        double fromHeight,
+        double targetHeight,
+        CancellationTokenSource cancellation)
+    {
+        try
+        {
+            var token = cancellation.Token;
+            await Task.WhenAll(
+                CreateOperationHeightAnimation(fromHeight, targetHeight).RunAsync(surface, token),
+                CreateOperationDipAnimation().RunAsync(surface, token));
+        }
+        catch (OperationCanceledException)
+        {
+            // 更新状态已接管或动效被关闭；几何统一由 finally 的所有权守卫结算。
+        }
+        finally
+        {
+            if (ReferenceEquals(operationSurfaceMotionCts, cancellation))
+            {
+                operationSurfaceMotionCts = null;
+                cancellation.Dispose();
+                surface.Opacity = 1;
+                surface.Height = double.NaN;
+            }
+        }
+    }
+
+    private static Animation CreateOperationHeightAnimation(double fromHeight, double targetHeight) => new()
+    {
+        Duration = MotionTokens.NormalDuration,
+        Easing = MotionResourceLookup.GetEasing(
+            "Launcher.Motion.Easing.PointToPoint",
+            static () => new SplineEasing { X1 = 0.55, Y1 = 0.55, X2 = 0, Y2 = 1 }),
+        FillMode = FillMode.Forward,
+        Children =
+        {
+            new KeyFrame
+            {
+                Cue = new Cue(0),
+                Setters = { new Setter { Property = Layoutable.HeightProperty, Value = fromHeight } },
+            },
+            new KeyFrame
+            {
+                Cue = new Cue(1),
+                Setters = { new Setter { Property = Layoutable.HeightProperty, Value = targetHeight } },
+            },
+        },
+    };
+
+    /// <summary>透明度快速下沉再回弹，表达"同一对象的内容更替"，非独立对象的入场/退场。</summary>
+    private static Animation CreateOperationDipAnimation() => new()
+    {
+        Duration = MotionTokens.NormalDuration,
+        Easing = MotionResourceLookup.GetEasing(
+            "Launcher.Motion.Easing.Enter",
+            static () => new SplineEasing { X1 = 0, Y1 = 0, X2 = 0, Y2 = 1 }),
+        FillMode = FillMode.Forward,
+        Children =
+        {
+            new KeyFrame
+            {
+                Cue = new Cue(0),
+                Setters = { new Setter { Property = Visual.OpacityProperty, Value = 1d } },
+            },
+            new KeyFrame
+            {
+                Cue = new Cue(25),
+                Setters = { new Setter { Property = Visual.OpacityProperty, Value = OperationSurfaceDipOpacity } },
+            },
+            new KeyFrame
+            {
+                Cue = new Cue(100),
+                Setters = { new Setter { Property = Visual.OpacityProperty, Value = 1d } },
+            },
+        },
+    };
+
+    private void SettleOperationSurface(Border? surface)
+    {
+        operationSurfaceMotionCts?.Cancel();
+        operationSurfaceMotionCts?.Dispose();
+        operationSurfaceMotionCts = null;
+        if (surface is not null)
+        {
+            surface.Opacity = 1;
+            surface.Height = double.NaN;
+        }
+    }
+
     protected override void OnClosed(EventArgs e)
     {
         UnconfigureViewModel();
@@ -136,6 +296,9 @@ public partial class MainWindow : Window
         viewModel.WindowChrome.CloseRequested -= PerformClose;
         viewModel.WindowChrome.RestoreRequested -= ShowWindow;
         viewModel.Dialogs.ErrorCopyDetailsRequested -= CopyErrorDetailsToClipboard;
+        viewModel.Operations.PropertyChanged -= OnOperationsPropertyChanged;
+        viewModel.PropertyChanged -= OnRootMotionPreferenceChanged;
+        SettleOperationSurface(OperationSurface);
         viewModel.RemoteContent.SetBannerPointerOver(false);
         viewModel.RemoteContent.SetBannerFocusWithin(false);
 

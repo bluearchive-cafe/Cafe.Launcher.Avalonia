@@ -70,7 +70,10 @@ public sealed partial class UiStyleContractTests
             Assert.Equal(
                 "{StaticResource Launcher.Spacing.Xl}",
                 layout.Attribute("ColumnSpacing")?.Value);
-            Assert.True(HasClass(layout.Parent!, "bottom-panel"));
+            // ADR-016：状态布局属于单一任务容器，不再直接挂在各自 bottom-panel Border 下。
+            Assert.Contains(
+                layout.Ancestors(),
+                element => HasClass(element, "operation-surface"));
 
             var status = layout.Elements().Single(element => HasClass(element, "operation-status"));
             Assert.Equal("Grid", status.Name.LocalName);
@@ -114,7 +117,7 @@ public sealed partial class UiStyleContractTests
             .Single(element =>
                 element.Name.LocalName == "Grid"
                 && element.Attribute("RowDefinitions")?.Value == "*,Auto"
-                && HasClass(element.Parent!, "bottom-panel")
+                && element.Ancestors().Any(ancestor => HasClass(ancestor, "operation-surface"))
                 && element.Descendants().Any(descendant =>
                     descendant.Name.LocalName == "Button"
                     && descendant.Attribute("Command")?.Value == "{Binding Operations.InstallOrUpdateCommand}"));
@@ -4189,19 +4192,80 @@ public sealed partial class UiStyleContractTests
             .Where(element => HasClass(element, "motion-bottom"))
             .ToList();
 
-        Assert.Equal(2, bottomTargets.Count);
-        Assert.All(bottomTargets, element =>
+        // ADR-016 游戏操作表面：安装/进度/控制收敛为同一任务容器，motion-bottom 仅剩容器本身。
+        var operationSurface = Assert.Single(bottomTargets);
+        Assert.Equal(
+            "OperationSurface",
+            operationSurface
+                .Attributes()
+                .Single(attribute => attribute.Name.LocalName == "Name"
+                    && attribute.Name.NamespaceName.EndsWith("/2006/xaml", StringComparison.Ordinal))
+                .Value);
+        Assert.Equal(
+            "{Binding IsMotionEnabled}",
+            operationSurface.Attribute("Classes.motion-enabled")?.Value);
+        // 容器的 motion-enter 是一次性入场锚点（任何状态可见即成立），不随状态切换重放。
+        Assert.Equal(
+            "{Binding Operations.IsAnyPanelVisible}",
+            operationSurface.Attribute("Classes.motion-enter")?.Value);
+        Assert.Null(operationSurface.Attribute("IsVisible"));
+        AssertHasLocalTranslateTransform(operationSurface);
+    }
+
+    [Fact]
+    public void MainWindow_OperationStates_TransformInsideSingleTaskContainer()
+    {
+        var document = XDocument.Load(ProjectFile("Views/MainWindow.axaml"));
+
+        var surface = document
+            .Descendants()
+            .Single(element =>
+                element.Name.LocalName == "Border"
+                && HasClass(element, "operation-surface"));
+        var host = surface.Elements().Single(element => element.Name.LocalName == "Panel");
+
+        var states = host
+            .Elements()
+            .Where(element => element.Name.LocalName == "Border" && HasClass(element, "operation-state"))
+            .ToList();
+        Assert.Equal(3, states.Count);
+
+        var expectedVisibility = new Dictionary<string, string>(StringComparer.Ordinal)
         {
-            Assert.Equal(
-                "{Binding IsMotionEnabled}",
-                element.Attribute("Classes.motion-enabled")?.Value);
-            Assert.Equal(
-                element.Attribute("Classes.motion-enter")?.Value,
-                element.Attribute("Classes.motion-enter")?.Value);
-            // Bottom panels now use MultiBinding for IsVisible (AND of panel mode + status detail mode),
-            // so IsVisible is no longer a direct binding.
-            AssertHasLocalTranslateTransform(element);
-        });
+            ["OperationInstallState"] = "{Binding Operations.IsInstallPanelVisible}",
+            ["OperationProgressState"] = "{Binding Operations.IsProgressPanelVisible}",
+            ["OperationControlState"] = "{Binding Operations.IsControlPanelVisible}",
+        };
+        static string? XamlName(XElement element) => element
+            .Attributes()
+            .SingleOrDefault(attribute => attribute.Name.LocalName == "Name"
+                && attribute.Name.NamespaceName.EndsWith("/2006/xaml", StringComparison.Ordinal))
+            ?.Value;
+        foreach (var state in states)
+        {
+            // 状态在任务容器内原地交换：不再作为独立面板直接绑定 motion 入场动画。
+            Assert.Null(state.Attribute("Classes.motion-enter"));
+            Assert.Null(state.Attribute("Classes.motion-enabled"));
+            if (XamlName(state) is { } name)
+            {
+                Assert.Contains(name, expectedVisibility.Keys);
+                Assert.Equal(expectedVisibility[name], state.Attribute("IsVisible")?.Value);
+            }
+        }
+
+        // 三个状态各自具名，逐一锁定可见性绑定。
+        foreach (var stateName in expectedVisibility.Keys)
+        {
+            Assert.Single(states, state => XamlName(state) == stateName);
+        }
+
+        // 底栏外观（内边距与两档最小高度）由各状态自行承载，控制态叠加专属渐变。
+        Assert.All(states, state => Assert.True(HasClass(state, "bottom-panel")));
+        Assert.Single(states, state => HasClass(state, "control-panel"));
+        // 外壳仅承载定位与形变，不带任何外观类，避免高度双重计入。
+        Assert.DoesNotContain(surface.Attributes(), attribute =>
+            attribute.Name.LocalName.StartsWith("Classes", StringComparison.Ordinal)
+            && attribute.Value?.Contains("bottom-panel") == true);
     }
 
     [Fact]
