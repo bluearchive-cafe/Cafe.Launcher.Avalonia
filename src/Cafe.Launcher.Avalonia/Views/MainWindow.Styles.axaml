@@ -2,6 +2,7 @@
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
         xmlns:views="using:Cafe.Launcher.Avalonia.Views"
         xmlns:helpers="using:Cafe.Launcher.Avalonia.Helpers"
+        xmlns:controls="using:Cafe.Launcher.Avalonia.Controls"
         xmlns:materialIcons="clr-namespace:Material.Icons.Avalonia;assembly=Material.Icons.Avalonia">
     <Styles.Resources>
         <ControlTemplate x:Key="LauncherBorderButtonTemplate" TargetType="Button">
@@ -668,6 +669,35 @@
                     <Setter Property="Opacity" Value="1"/>
                 </KeyFrame>
                 <KeyFrame Cue="100%">
+                    <Setter Property="Opacity" Value="0"/>
+                </KeyFrame>
+            </Animation>
+        </Style.Animations>
+    </Style>
+    <!-- DialogSurface 模板控件版本：整面滑移 + 整体淡入淡出（不再拆分内容层）。 -->
+    <Style Selector="Grid.motion-overlay.motion-enabled.motion-enter > controls|DialogSurface.motion-surface">
+        <Style.Animations>
+            <Animation Duration="{StaticResource Launcher.Motion.Duration.Normal}" FillMode="Forward" Easing="{StaticResource Launcher.Motion.Easing.Enter}">
+                <KeyFrame Cue="0%">
+                    <Setter Property="TranslateTransform.Y" Value="{StaticResource Launcher.Motion.Offset.Surface}"/>
+                    <Setter Property="Opacity" Value="0"/>
+                </KeyFrame>
+                <KeyFrame Cue="100%">
+                    <Setter Property="TranslateTransform.Y" Value="0"/>
+                    <Setter Property="Opacity" Value="1"/>
+                </KeyFrame>
+            </Animation>
+        </Style.Animations>
+    </Style>
+    <Style Selector="Grid.motion-overlay.motion-enabled.motion-exit > controls|DialogSurface.motion-surface">
+        <Style.Animations>
+            <Animation Duration="{StaticResource Launcher.Motion.Duration.Fast}" FillMode="Forward" Easing="{StaticResource Launcher.Motion.Easing.Exit}">
+                <KeyFrame Cue="0%">
+                    <Setter Property="TranslateTransform.Y" Value="0"/>
+                    <Setter Property="Opacity" Value="1"/>
+                </KeyFrame>
+                <KeyFrame Cue="100%">
+                    <Setter Property="TranslateTransform.Y" Value="{StaticResource Launcher.Motion.Offset.Surface}"/>
                     <Setter Property="Opacity" Value="0"/>
                 </KeyFrame>
             </Animation>

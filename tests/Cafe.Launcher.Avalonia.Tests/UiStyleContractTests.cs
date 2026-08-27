@@ -2256,7 +2256,7 @@ public sealed partial class UiStyleContractTests
         {
             ["Views/MainWindowDialogsOverlay.axaml"] = new(StringComparer.Ordinal)
             {
-                ["{Binding ResourcePanel.CloseResourcePanelCommand}"] = "{Binding Shell.I18n[close]}",
+                // 头带 ✕ 迁入模板后经 CloseAutomationName 传递，不再出现在文件中。
                 ["{Binding ResourcePanel.SaveManualResourcePanelUidCommand}"] = "{Binding Shell.I18n[resourcePanelSaveUid]}",
                 ["{Binding ResourcePanel.CancelEditResourcePanelUidCommand}"] = "{Binding Shell.I18n[cancel]}",
                 ["{Binding ResourcePanel.BeginEditResourcePanelUidCommand}"] = "{Binding Shell.I18n[resourcePanelChangeUid]}",
@@ -2346,19 +2346,25 @@ public sealed partial class UiStyleContractTests
     }
 
     [Fact]
-    public void ErrorDialog_HeaderProvidesLocalizedCloseAction() // ADR-014 dialog family anatomy
+    public void ErrorDialog_HeaderProvidesLocalizedCloseAction() // ADR-015 dialog surface anatomy
     {
         var document = XDocument.Load(ProjectFile("Views/MainWindowDialogsOverlay.axaml"));
-        var close = document
+        var errorSurface = document
             .Descendants()
             .Single(element =>
-                element.Name.LocalName == "Button"
-                && HasClass(element, "dialog-close")
-                && element.Attribute("Command")?.Value == "{Binding Dialogs.ContinueAfterErrorCommand}");
+                element.Name.LocalName == "DialogSurface"
+                && element.Attribute("Status")?.Value == "Danger");
+
+        // 头带 ✕ 由模板渲染，命令与本地化名称经表面属性传入。
+        Assert.Equal(
+            "{Binding Dialogs.ContinueAfterErrorCommand}",
+            errorSurface.Attribute("CloseCommand")?.Value);
         Assert.Equal(
             "{Binding Shell.I18n[close]}",
-            close.Attributes().Single(attribute =>
-                attribute.Name.LocalName == "AutomationProperties.Name").Value);
+            errorSurface.Attribute("CloseAutomationName")?.Value);
+        Assert.Equal(
+            "{Binding Shell.I18n[close]}",
+            errorSurface.Attribute("CloseToolTip")?.Value);
     }
 
     [Fact]
@@ -2483,24 +2489,30 @@ public sealed partial class UiStyleContractTests
     [Fact]
     public void DialogsOverlay_DialogsUseHairlineFooterForActions()
     {
-        var document = XDocument.Load(ProjectFile("Views/MainWindowDialogsOverlay.axaml"));
-        var footers = document
-            .Descendants()
-            .Where(element => element.Name.LocalName == "Border" && HasClass(element, "dialog-footer"))
-            .ToArray();
+        // ADR-015：发丝动作带内化为 DialogSurface Panel 模板；视图文件只承载
+        // 四个表面实例（三 Panel + 一 Basic 公告），辅助动作进左槽。
+        var text = File.ReadAllText(ProjectFile("Views/MainWindowDialogsOverlay.axaml"));
 
-        Assert.Equal(4, footers.Length);
-        Assert.All(
-            footers,
-            footer =>
+        Assert.Equal(3, Regex.Count(text, @"Form=""Panel""", RegexOptions.CultureInvariant));
+        Assert.Equal(1, Regex.Count(text, @"Form=""Basic""", RegexOptions.CultureInvariant));
+        Assert.Equal(4, Regex.Count(text, @"Classes=""motion-surface""", RegexOptions.CultureInvariant));
+
+        // 发丝底带不再由调用方摆放：文件里不允许残留 legacy footer 标记。
+        Assert.DoesNotContain("dialog-footer", text, StringComparison.Ordinal);
+
+        var panels = 0;
+        foreach (Match match in Regex.Matches(text, @"<controls:DialogSurface\b[^>]*>", RegexOptions.CultureInvariant))
+        {
+            if (match.Value.Contains(@"Form=""Panel""", StringComparison.Ordinal))
             {
-                Assert.Equal("2", footer.Attribute("Grid.Row")?.Value);
-                var actions = footer
-                    .Elements()
-                    .Single(element =>
-                        element.Name.LocalName == "StackPanel" && HasClass(element, "confirm-actions"));
-                Assert.Null(actions.Attribute("Grid.Row"));
-            });
+                panels++;
+            }
+        }
+
+        Assert.Equal(3, panels);
+        Assert.Matches(
+            """(?s)<controls:DialogSurface\b[^>]*Form="Panel"[^>]*>.*?<controls:DialogSurface\.FooterLeading>.*?</controls:DialogSurface\.FooterLeading>.*?</controls:DialogSurface>""",
+            text);
     }
 
     [Fact]
@@ -2759,19 +2771,18 @@ public sealed partial class UiStyleContractTests
     [Fact]
     public void LocalizationManagement_UsesFixedDialogDimensions()
     {
+        // ADR-015 尺寸律：自适应优先，固定宽高退场；token 仅作 Max 上限背书。
         var document = XDocument.Load(ProjectFile("Views/MainWindowDialogsOverlay.axaml"));
         var dialog = FindMotionOverlay(
                 document,
                 "{Binding ResourcePanel.IsResourcePanelVisible}")
             .Elements()
-            .Single(element =>
-                element.Name.LocalName == "Border"
-                && HasClass(element, "overlay-dialog"));
+            .Single(element => element.Name.LocalName == "DialogSurface");
 
-        Assert.Equal("{StaticResource Launcher.Layout.ResourcePanel.Width}", dialog.Attribute("Width")?.Value);
-        Assert.Equal("{StaticResource Launcher.Layout.ResourcePanel.Height}", dialog.Attribute("Height")?.Value);
-        Assert.Null(dialog.Attribute("MaxWidth"));
-        Assert.Null(dialog.Attribute("MaxHeight"));
+        Assert.Equal("{StaticResource Launcher.Layout.ResourcePanel.Width}", dialog.Attribute("MaxWidth")?.Value);
+        Assert.Equal("{StaticResource Launcher.Layout.ResourcePanel.Height}", dialog.Attribute("MaxHeight")?.Value);
+        Assert.Null(dialog.Attribute("Width"));
+        Assert.Null(dialog.Attribute("Height"));
     }
 
     [Fact]
@@ -4057,10 +4068,16 @@ public sealed partial class UiStyleContractTests
             var surface = element.Elements().First();
             Assert.True(HasClass(surface, "motion-surface"));
             AssertHasLocalTranslateTransform(surface);
-            var surfaceContent = surface
-                .Elements()
-                .Single(child => child.Name.LocalName == "Grid");
-            Assert.True(HasClass(surfaceContent, "motion-surface-content"));
+
+            if (surface.Name.LocalName != "DialogSurface")
+            {
+                // ADR-015 之前的三层结构（Border > Grid）保留内容层淡出检查；
+                // 模板控件表面合并了内容层，滑移与整体淡入淡出由平行规则驱动。
+                var surfaceContent = surface
+                    .Elements()
+                    .Single(child => child.Name.LocalName == "Grid");
+                Assert.True(HasClass(surfaceContent, "motion-surface-content"));
+            }
         });
 
         var settings = XDocument.Load(ProjectFile("Views/MainWindowSettingsOverlay.axaml"));
