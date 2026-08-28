@@ -47,9 +47,6 @@ public partial class BackgroundViewModel : ViewModelBase, IDisposable
     /// </summary>
     internal event Action<IImage, CancellationToken>? PreviousWallpaperFadingOut;
 
-    private static readonly TimeSpan WallpaperFadeDuration = MotionTokens.NormalDuration;
-    private const int WallpaperFadeDisposeGraceMs = 80;
-
     private bool isMotionReduced;
     private IDisposable? fadingOutWallpaper;
     private CancellationTokenSource? wallpaperFadeCancellation;
@@ -329,7 +326,7 @@ public partial class BackgroundViewModel : ViewModelBase, IDisposable
             wallpaperChanged(previewSettings);
         }
 
-        if (!isMotionReduced && old is not null && bitmap is not null)
+        if (!isMotionReduced && old is not null && bitmap is not null && PreviousWallpaperFadingOut is not null)
         {
             StartWallpaperCrossFade(old);
         }
@@ -340,8 +337,10 @@ public partial class BackgroundViewModel : ViewModelBase, IDisposable
     }
 
     /// <summary>
-    /// ADR-016 壁纸交叉淡化：逻辑源立即切换（主题采样同步），旧图交由视图层作为覆盖层淡出。
-    /// 快速连续更换时以“最新状态优先”直接释放上一张在途旧图，不排队也不回滚。
+    /// ADR-016 壁纸交叉淡化：逻辑源立即切换（主题采样同步），旧图所有权移交视图层作为
+    /// 覆盖层淡出，视图在摘除引用后经 <see cref="OnWallpaperOverlayReleased"/> 归还释放权。
+    /// 快速连续更换时以“最新状态优先”直接释放上一张在途旧图（此刻同一调度回调内
+    /// 覆盖层 Source 会被新事件同步替换，不存在残留引用的渲染帧）。
     /// </summary>
     private void StartWallpaperCrossFade(IDisposable oldBitmap)
     {
@@ -352,7 +351,24 @@ public partial class BackgroundViewModel : ViewModelBase, IDisposable
         }
 
         PreviousWallpaperFadingOut?.Invoke((IImage)oldBitmap, GetFadeToken());
-        _ = DisposeWhenFadeCompletesAsync(oldBitmap);
+    }
+
+    /// <summary>
+    /// 视图层在覆盖层已摘除旧图引用（Source 置空）后回调；只有此刻释放才保证没有
+    /// 任何视觉树引用残留——否则渲染帧会在 Image.Render 读取已释放位图抛
+    /// ObjectDisposedException 使进程崩溃。禁止用固定延时“宽限”替代该确认。
+    /// </summary>
+    internal void OnWallpaperOverlayReleased(IImage previousImage)
+    {
+        if (disposed
+            || previousImage is not IDisposable fading
+            || !ReferenceEquals(fadingOutWallpaper, fading))
+        {
+            return;
+        }
+
+        fadingOutWallpaper = null;
+        fading.Dispose();
     }
 
     private CancellationToken GetFadeToken()
@@ -363,31 +379,10 @@ public partial class BackgroundViewModel : ViewModelBase, IDisposable
         return wallpaperFadeCancellation.Token;
     }
 
-    private async Task DisposeWhenFadeCompletesAsync(IDisposable oldBitmap)
-    {
-        try
-        {
-            await Task.Delay(WallpaperFadeDuration + TimeSpan.FromMilliseconds(WallpaperFadeDisposeGraceMs));
-        }
-        catch (OperationCanceledException)
-        {
-            return;
-        }
-
-        if (disposed || !ReferenceEquals(fadingOutWallpaper, oldBitmap))
-        {
-            return;
-        }
-
-        fadingOutWallpaper = null;
-        oldBitmap.Dispose();
-    }
-
+    /// <summary>ADR-016：降动效切换时取消在途淡化动画；释放仍由视图摘除引用后回调完成。</summary>
     private void FinishWallpaperFade()
     {
-        var finished = fadingOutWallpaper;
-        fadingOutWallpaper = null;
-        Dispatcher.UIThread.Post(() => finished?.Dispose(), DispatcherPriority.Background);
+        wallpaperFadeCancellation?.Cancel();
     }
 
     private static Bitmap? LoadBundledBackground()
@@ -423,8 +418,13 @@ public partial class BackgroundViewModel : ViewModelBase, IDisposable
 
         disposed = true;
         wallpaperFadeCancellation?.Cancel();
-        (BackgroundImageSource as IDisposable)?.Dispose();
-        fadingOutWallpaper?.Dispose();
+        // 先摘除属性引用（绑定同步清空 Image.Source），再释放位图：即使窗口尚在收尾
+        // 渲染，视觉树也不会拿到已释放的位图实现。
+        var current = BackgroundImageSource as IDisposable;
+        BackgroundImageSource = null;
+        var fading = fadingOutWallpaper;
         fadingOutWallpaper = null;
+        current?.Dispose();
+        fading?.Dispose();
     }
 }
