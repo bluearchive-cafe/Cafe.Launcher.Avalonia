@@ -61,15 +61,55 @@ function Resolve-Iscc {
     throw "Inno Setup compiler (ISCC.exe) was not found. Install Inno Setup 6.3 or newer and add it to PATH."
 }
 
-$isccPath = Resolve-Iscc
-$isccVersionLine = (& $isccPath --version 2>$null | Select-Object -First 1)
-$isccVersion = $null
-if ($isccVersionLine -match '^(\d+\.\d+(?:\.\d+)?)') {
-    $isccVersion = [version]$Matches[1]
+function Get-IsccVersion {
+    param(
+        [Parameter(Mandatory)]
+        [string]$IsccPath
+    )
+
+    # Inno Setup 7+ supports --version and prints just the version number.
+    # Inno Setup 6 does not support the flag: it prints its banner and exits
+    # non-zero, so fall back to the DisplayVersion recorded in the uninstall
+    # registry entry that the Inno Setup installer always creates.
+    $versionLine = (& $IsccPath --version 2>$null | Select-Object -First 1)
+    if ($versionLine -match '^(\d+\.\d+(?:\.\d+)?)') {
+        return [version]$Matches[1]
+    }
+
+    $installMajor = $null
+    $installDir = Split-Path -Leaf (Split-Path -Parent $IsccPath)
+    if ($installDir -match '^Inno Setup (\d+)$') {
+        $installMajor = $Matches[1]
+    }
+
+    foreach ($uninstallRoot in @(
+        "HKLM:\SOFTWARE\Microsoft\Windows\CurrentVersion\Uninstall",
+        "HKLM:\SOFTWARE\WOW6432Node\Microsoft\Windows\CurrentVersion\Uninstall")) {
+        if (-not (Test-Path -LiteralPath $uninstallRoot)) {
+            continue
+        }
+        foreach ($key in Get-ChildItem -LiteralPath $uninstallRoot -ErrorAction SilentlyContinue) {
+            if ($key.PSChildName -notmatch '^Inno Setup (\d+)_is1$') {
+                continue
+            }
+            if ($null -ne $installMajor -and $installMajor -ne $Matches[1]) {
+                continue
+            }
+            $displayVersion = (Get-ItemProperty -LiteralPath $key.PSPath -ErrorAction SilentlyContinue).DisplayVersion
+            if ($displayVersion -match '^(\d+\.\d+(?:\.\d+)?)') {
+                return [version]$Matches[1]
+            }
+        }
+    }
+
+    return $null
 }
 
+$isccPath = Resolve-Iscc
+$isccVersion = Get-IsccVersion -IsccPath $isccPath
+
 if ($null -eq $isccVersion -or $isccVersion -lt [version]"6.3") {
-    throw "Inno Setup 6.3 or newer is required (found: '$isccVersionLine')."
+    throw "Inno Setup 6.3 or newer is required (found: '$isccPath')."
 }
 
 $publishRoot = [System.IO.Path]::GetFullPath($PublishDir)
