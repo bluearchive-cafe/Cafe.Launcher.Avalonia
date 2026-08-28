@@ -300,12 +300,12 @@ public sealed class SettingsOptionsViewModel
             return;
         }
 
-        SettingsCategories.Add(new() { Code = SettingsCategoryCodes.General, IconKind = "CogOutline" });
-        SettingsCategories.Add(new() { Code = SettingsCategoryCodes.Game, IconKind = "GamepadSquareOutline" });
-        SettingsCategories.Add(new() { Code = SettingsCategoryCodes.DownloadNetwork, IconKind = "Download" });
-        SettingsCategories.Add(new() { Code = SettingsCategoryCodes.Appearance, IconKind = "PaletteOutline" });
-        SettingsCategories.Add(new() { Code = SettingsCategoryCodes.Advanced, IconKind = "Tune" });
-        SettingsCategories.Add(new() { Code = SettingsCategoryCodes.About, IconKind = "InformationOutline" });
+        SettingsCategories.Add(new() { Code = SettingsCategoryCodes.General, IconKind = "CogOutline", SelectedIconKind = "Cog" });
+        SettingsCategories.Add(new() { Code = SettingsCategoryCodes.Game, IconKind = "GamepadSquareOutline", SelectedIconKind = "GamepadSquare" });
+        SettingsCategories.Add(new() { Code = SettingsCategoryCodes.DownloadNetwork, IconKind = "DownloadOutline", SelectedIconKind = "Download" });
+        SettingsCategories.Add(new() { Code = SettingsCategoryCodes.Appearance, IconKind = "PaletteOutline", SelectedIconKind = "Palette" });
+        SettingsCategories.Add(new() { Code = SettingsCategoryCodes.Advanced, IconKind = "Tune", SelectedIconKind = "Tune" });
+        SettingsCategories.Add(new() { Code = SettingsCategoryCodes.About, IconKind = "InformationOutline", SelectedIconKind = "Information" });
     }
 
     private void UpdateSettingCategory(string code, string displayName, string description)

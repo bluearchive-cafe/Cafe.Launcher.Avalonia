@@ -1172,11 +1172,23 @@ public sealed partial class UiStyleContractTests
         Assert.True(HasClass(surface, "motion-surface"));
         Assert.Single(document.Descendants(), element => HasClass(element, "settings-navigation-header"));
 
-        var navigationIcon = document
+        var unselectedNavigationIcon = document
             .Descendants()
             .Single(element => element.Name.LocalName == "MaterialIcon" && element.Attribute("Kind")?.Value == "{Binding IconKind}");
-        Assert.Equal("{StaticResource Launcher.Icon.Md}", navigationIcon.Attribute("Width")?.Value);
-        Assert.Equal("{StaticResource Launcher.Icon.Md}", navigationIcon.Attribute("Height")?.Value);
+        Assert.Equal("{StaticResource Launcher.Icon.Md}", unselectedNavigationIcon.Attribute("Width")?.Value);
+        Assert.Equal("{StaticResource Launcher.Icon.Md}", unselectedNavigationIcon.Attribute("Height")?.Value);
+        Assert.Equal(
+            "settings-navigation-icon-outline",
+            unselectedNavigationIcon.Attribute("Classes")?.Value);
+
+        var selectedNavigationIcon = document
+            .Descendants()
+            .Single(element => element.Name.LocalName == "MaterialIcon" && element.Attribute("Kind")?.Value == "{Binding SelectedIconKind}");
+        Assert.Equal("{StaticResource Launcher.Icon.Md}", selectedNavigationIcon.Attribute("Width")?.Value);
+        Assert.Equal("{StaticResource Launcher.Icon.Md}", selectedNavigationIcon.Attribute("Height")?.Value);
+        Assert.Equal(
+            "settings-navigation-icon-filled",
+            selectedNavigationIcon.Attribute("Classes")?.Value);
 
         var navigationHeader = document.Descendants().Single(element => HasClass(element, "settings-navigation-header"));
         Assert.DoesNotContain(
@@ -1203,8 +1215,14 @@ public sealed partial class UiStyleContractTests
             "{StaticResource Launcher.Spacing.Thickness.None}",
             GetStyleSetters(document, "Grid.settings-workspace")["Margin"]);
         Assert.Equal(
-            "{DynamicResource Launcher.Color.Content.Row}",
+            "{DynamicResource Launcher.Color.Surface}",
             GetStyleSetters(document, "ListBox.settings-navigation")["Background"]);
+        Assert.Equal(
+            "{DynamicResource Launcher.Color.Surface}",
+            GetStyleSetters(document, "Grid.settings-navigation-pane")["Background"]);
+        Assert.Equal(
+            "{DynamicResource Launcher.Color.Surface}",
+            GetStyleSetters(document, "Border.settings-navigation-header")["Background"]);
         Assert.Equal(
             "{StaticResource Launcher.Color.Transparent}",
             GetStyleSetters(document, "ListBox.settings-navigation")["BorderBrush"]);
@@ -1249,6 +1267,21 @@ public sealed partial class UiStyleContractTests
         Assert.Equal(
             "{StaticResource Launcher.Component.Settings.Navigation.Item.Padding}",
             GetStyleSetters(document, "ListBox.settings-navigation > ListBoxItem")["Padding"]);
+        Assert.Equal(
+            "False",
+            GetStyleSetters(
+                document,
+                "ListBox.settings-navigation > ListBoxItem materialIcons|MaterialIcon.settings-navigation-icon-filled")["IsVisible"]);
+        Assert.Equal(
+            "False",
+            GetStyleSetters(
+                document,
+                "ListBox.settings-navigation > ListBoxItem:selected materialIcons|MaterialIcon.settings-navigation-icon-outline")["IsVisible"]);
+        Assert.Equal(
+            "True",
+            GetStyleSetters(
+                document,
+                "ListBox.settings-navigation > ListBoxItem:selected materialIcons|MaterialIcon.settings-navigation-icon-filled")["IsVisible"]);
         Assert.Equal(
             "{StaticResource Launcher.Spacing.Thickness.None}",
             GetStyleSetters(document, "ListBox.settings-navigation > ListBoxItem:selected")["BorderThickness"]);

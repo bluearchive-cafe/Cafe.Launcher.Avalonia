@@ -46,6 +46,8 @@ public abstract class SelectableOption : INotifyPropertyChanged
 public sealed class SettingOption : SelectableOption
 {
     public string IconKind { get; init; } = "CogOutline";
+
+    public string SelectedIconKind { get; init; } = "Cog";
 }
 
 public sealed class LanguageOption : SelectableOption
