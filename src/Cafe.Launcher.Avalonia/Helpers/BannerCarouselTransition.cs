@@ -4,8 +4,8 @@ using System.Threading;
 using System.Threading.Tasks;
 using Avalonia;
 using Avalonia.Animation;
+using Avalonia.Media;
 using Avalonia.Styling;
-using Avalonia.Media.Transformation;
 using Easings = Avalonia.Animation.Easings;
 
 namespace Cafe.Launcher.Avalonia.Helpers;
@@ -59,8 +59,17 @@ public sealed class BannerCarouselTransition : IPageTransition
         };
 
         var animations = new List<Task>(2);
+        if (from is not null)
+        {
+            from.ZIndex = 0;
+        }
+
         if (to is not null)
         {
+            // Recycled previous-page containers can sit below the outgoing container in visual order.
+            // Keep the moving banner on top so backward and forward transitions reveal identically.
+            to.ZIndex = 1;
+            to.IsVisible = true;
             animations.Add(CreateEnterAnimation(offsetX).RunAsync(to, cancellationToken));
         }
 
@@ -72,6 +81,10 @@ public sealed class BannerCarouselTransition : IPageTransition
         try
         {
             await Task.WhenAll(animations);
+            if (!cancellationToken.IsCancellationRequested && to is not null && offsetX != 0.0)
+            {
+                to.RenderTransform = null;
+            }
         }
         catch (OperationCanceledException)
         {
@@ -93,14 +106,21 @@ public sealed class BannerCarouselTransition : IPageTransition
         {
             startFrame.Setters.Add(new Setter
             {
-                Property = Visual.RenderTransformProperty,
-                Value = TransformOperations.Parse(
-                    FormattableString.Invariant($"translateX({offsetX}px)")),
+                Property = TranslateTransform.XProperty,
+                Value = offsetX,
             });
         }
 
         var endFrame = new KeyFrame { Cue = new Cue(1) };
         endFrame.Setters.Add(new Setter { Property = Visual.OpacityProperty, Value = 1d });
+        if (offsetX != 0.0)
+        {
+            endFrame.Setters.Add(new Setter
+            {
+                Property = TranslateTransform.XProperty,
+                Value = 0d,
+            });
+        }
 
         animation.Children.Add(startFrame);
         animation.Children.Add(endFrame);
