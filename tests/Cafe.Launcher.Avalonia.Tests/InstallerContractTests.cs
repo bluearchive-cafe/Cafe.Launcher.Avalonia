@@ -322,6 +322,9 @@ public sealed class InstallerContractTests
 
         Assert.Contains("runs-on: windows-latest", workflow, StringComparison.Ordinal);
         Assert.Contains("choco install innosetup", workflow, StringComparison.Ordinal);
+        Assert.Contains("$tagArguments = @{}", workflow, StringComparison.Ordinal);
+        Assert.Contains("$tagArguments.Tag = '${{ github.ref_name }}'", workflow, StringComparison.Ordinal);
+        Assert.DoesNotContain("@('-Tag', '${{ github.ref_name }}')", workflow, StringComparison.Ordinal);
         Assert.DoesNotContain("makensis", workflow, StringComparison.OrdinalIgnoreCase);
         Assert.DoesNotContain("apt-get", workflow, StringComparison.OrdinalIgnoreCase);
     }

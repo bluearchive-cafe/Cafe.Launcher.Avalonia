@@ -158,9 +158,9 @@ jobs:
 
       - name: Build Windows installer
         run: |
-          $tagArguments = @()
+          $tagArguments = @{}
           if ($env:GITHUB_EVENT_NAME -eq 'push') {
-              $tagArguments = @('-Tag', '${{ github.ref_name }}')
+              $tagArguments.Tag = '${{ github.ref_name }}'
           }
           ./scripts/New-WindowsInstaller.ps1 @tagArguments
 
