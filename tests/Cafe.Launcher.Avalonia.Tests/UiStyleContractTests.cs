@@ -4482,10 +4482,11 @@ public sealed partial class UiStyleContractTests
         Assert.Equal(
             "{Binding IsMotionEnabled}",
             operationSurface.Attribute("Classes.motion-enabled")?.Value);
-        // 容器的 motion-enter 是一次性入场锚点（任何状态可见即成立），不随状态切换重放。
-        Assert.Equal(
-            "{Binding Operations.IsAnyPanelVisible}",
-            operationSurface.Attribute("Classes.motion-enter")?.Value);
+        // 容器的 motion-enter 是一次性入场锚点，静态类声明（任何面板可见即成立），
+        // 入场窗期后由后置代码摘除，不随状态切换重放；不得改回绑定表达式——
+        // 摘除后绑定回流会重放入场（枚举值恒真时绑定等价于常量 true，掩盖摘除语义）。
+        Assert.True(HasClass(operationSurface, "motion-enter"));
+        Assert.Null(operationSurface.Attribute("Classes.motion-enter"));
         Assert.Null(operationSurface.Attribute("IsVisible"));
         AssertHasLocalTranslateTransform(operationSurface);
     }

@@ -33,8 +33,12 @@ public partial class MainWindow : Window
     /// <summary>内容更替提示的透明度下沉值（对齐 FluentMotionLab 场景 6 的 Fluent 分支）。</summary>
     private const double OperationSurfaceDipOpacity = 0.58;
 
-    /// <summary>下沉恢复完成的进度点：快速档 167ms / 标准档 250ms，其后平尾保持到收尾。</summary>
-    private const double OperationSurfaceDipRecoveryCue = 0.668;
+    /// <summary>
+    /// 下沉恢复完成的进度点 = 快速档/标准档时长比（167ms/250ms），其后平尾保持到收尾。
+    /// 由动效 token 派生，时长档调整时恢复点自动跟随。
+    /// </summary>
+    private static readonly double OperationSurfaceDipRecoveryCue =
+        MotionTokens.FastDuration.TotalMilliseconds / MotionTokens.NormalDuration.TotalMilliseconds;
 
     private SystemTrayService? systemTray;
     private MainWindowViewModel? configuredViewModel;
@@ -64,6 +68,7 @@ public partial class MainWindow : Window
     {
         Opened -= PlayShellEntranceOnce;
         RetireOperationSurfaceEntranceAnchor();
+        RetireShellEntranceAnchor();
         var viewModel = configuredViewModel ?? DataContext as MainWindowViewModel;
         if (viewModel is not { IsMotionEnabled: true })
         {
@@ -95,13 +100,50 @@ public partial class MainWindow : Window
                 oneShot.Stop();
             }
 
-            OperationSurface.Classes.Remove("motion-enter");
-            if (OperationSurface.RenderTransform is TranslateTransform entranceTranslate)
-            {
-                entranceTranslate.Y = 0;
-            }
+            RetireOperationSurfaceEntranceAnchorNow();
         };
         timer.Start();
+    }
+
+    /// <summary>摘除操作表面入场锚点类并把上升位移归零；可重复调用（幂等）。</summary>
+    private void RetireOperationSurfaceEntranceAnchorNow()
+    {
+        OperationSurface.Classes.Remove("motion-enter");
+        if (OperationSurface.RenderTransform is TranslateTransform entranceTranslate)
+        {
+            entranceTranslate.Y = 0;
+        }
+    }
+
+    /// <summary>
+    /// ADR-016：壳层 motion-enter 与操作表面锚点同理，仅作一次性入场。入场窗期（快速档
+    /// 时长）结束后摘除，避免运行期重启动效偏好时 motion-shell.motion-enabled.motion-enter
+    /// 选择器重新匹配而重放整壳淡入。
+    /// </summary>
+    private void RetireShellEntranceAnchor()
+    {
+        var timer = new DispatcherTimer { Interval = MotionTokens.FastDuration };
+        timer.Tick += (sender, _) =>
+        {
+            if (sender is DispatcherTimer oneShot)
+            {
+                oneShot.Stop();
+            }
+
+            RetireShellEntranceAnchorNow();
+        };
+        timer.Start();
+    }
+
+    /// <summary>
+    /// 摘除壳层入场锚点类并恢复透明度。PlayShellEntranceOnce 在入场前把 ShellRoot.Opacity
+    /// 压到 0，摘类移除动画后若不显式回到 1，壳层会停留在全透明（如入场窗期内关闭动效）。
+    /// 可重复调用（幂等）。
+    /// </summary>
+    private void RetireShellEntranceAnchorNow()
+    {
+        ShellRoot.Classes.Remove("motion-enter");
+        ShellRoot.Opacity = 1;
     }
 
     public void ConfigureViewModel(MainWindowViewModel viewModel)
@@ -204,10 +246,20 @@ public partial class MainWindow : Window
 
     private void OnRootMotionPreferenceChanged(object? sender, PropertyChangedEventArgs e)
     {
-        if (e.PropertyName == nameof(MainWindowViewModel.IsMotionEnabled))
+        if (e.PropertyName != nameof(MainWindowViewModel.IsMotionEnabled))
         {
-            SettleOperationSurface(OperationSurface);
+            return;
         }
+
+        // 运行期关闭动效时立即结算壳层入场：入场动画随选择器失配被移除，必须同步清掉
+        // 锚点类并恢复本地透明度，否则壳层停留在 PlayShellEntranceOnce 写入的透明度 0。
+        // 摘类同时保证之后重开动效时 motion-shell 选择器不会重新匹配而重放入场。
+        if (configuredViewModel is { IsMotionEnabled: false })
+        {
+            RetireShellEntranceAnchorNow();
+        }
+
+        SettleOperationSurface(OperationSurface);
     }
 
     /// <summary>
@@ -232,6 +284,11 @@ public partial class MainWindow : Window
         // 最新状态立即接管：先取消在途动画、交还本地值，否则在途动画以 Animation 优先级
         // 持有 Height，下面的测量会被旧动画的当前帧高度污染（ADR-016：不排队，最新为准）。
         CancelOperationSurfaceMotion();
+
+        // 入场窗期内发生状态切换时立即摘除一次性入场锚点：锚点的类动画持有 Opacity，会与
+        // 下面写入的下沉值及恢复段互相覆盖；先摘除让本次转换的下沉/恢复段独占透明度，
+        // 摘除同时把上升位移归零。锚点已摘除时此调用幂等无副作用。
+        RetireOperationSurfaceEntranceAnchorNow();
 
         // 冻结旧视觉尺寸后让可见性绑定推过一轮布局，测得新状态的自然容器高度。
         // 三个状态各自携带 bottom-panel 的 MinHeight（≥132），布局后目标高度必有下界。

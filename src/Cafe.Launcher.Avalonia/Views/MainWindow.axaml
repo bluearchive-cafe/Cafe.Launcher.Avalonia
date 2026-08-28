@@ -317,14 +317,14 @@
 
                 <!-- ADR-016 游戏操作表面：安装/进度/控制共用同一任务容器，状态在容器内原地切换；
                      切换时由 code-behind 驱动高度点到点过渡与短暂透明度下沉表达任务延续，
-                     降动效直接瞬切。容器自身的 motion-enter 仅作一次性入场锚点。
+                     降动效直接瞬切。容器自身的 motion-enter 以静态类声明为一次性入场锚点，
+                     入场窗期后由 code-behind 摘除（任何面板可见即成立，不随状态切换重放）。
                      外壳只承担定位与形变，底栏外观（含内边距与两档最小高度）仍由各状态
                      自行承载，确保与重构前单面板的盒子几何完全一致。 -->
                 <Border Grid.Row="1"
                         x:Name="OperationSurface"
-                        Classes="operation-surface motion-bottom"
-                        Classes.motion-enabled="{Binding IsMotionEnabled}"
-                        Classes.motion-enter="{Binding Operations.IsAnyPanelVisible}">
+                        Classes="operation-surface motion-bottom motion-enter"
+                        Classes.motion-enabled="{Binding IsMotionEnabled}">
                     <Border.RenderTransform>
                         <TranslateTransform/>
                     </Border.RenderTransform>

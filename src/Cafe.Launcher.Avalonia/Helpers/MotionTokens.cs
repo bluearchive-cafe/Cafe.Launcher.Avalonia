@@ -14,6 +14,6 @@ public static class MotionTokens
     /// <summary>Gets the default duration used for standard motion such as dialog surfaces.</summary>
     public static readonly TimeSpan NormalDuration = TimeSpan.FromMilliseconds(250);
 
-    /// <summary>Gets the cap for larger continuous spatial changes, such as operation surface resizing.</summary>
+    /// <summary>Gets the cap for larger continuous spatial changes, such as the setup wizard step page transition.</summary>
     public static readonly TimeSpan SpatialDuration = TimeSpan.FromMilliseconds(333);
 }

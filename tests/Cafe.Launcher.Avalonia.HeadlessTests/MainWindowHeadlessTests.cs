@@ -1345,6 +1345,116 @@ public sealed class MainWindowHeadlessTests
             $"Height after rapid switches {finalHeight} deviates from control natural height {controlHeight}.");
     }
 
+    [AvaloniaFact]
+    public async Task MainWindow_AfterEntranceWindow_EntranceAnchorsAreRetired()
+    {
+        using var context = CreateContext();
+        context.ViewModel.IsMotionReduced = false;
+        context.Window.Show();
+        Dispatcher.UIThread.RunJobs();
+
+        var surface = FindOperationSurface(context.Window);
+        var shellRoot = FindShellRoot(context.Window);
+        Assert.Contains("motion-enter", surface.Classes);
+        Assert.Contains("motion-enter", shellRoot.Classes);
+
+        // 入场窗期（快速档/标准档时长）结束后两类锚点必须摘除：壳层恢复全不透明，
+        // 操作表面上升位移归零；此后重启动效偏好时 motion-* 选择器不会重新匹配而重放入场。
+        var deadline = DateTime.UtcNow.AddSeconds(3);
+        while (DateTime.UtcNow < deadline
+            && (surface.Classes.Contains("motion-enter") || shellRoot.Classes.Contains("motion-enter")))
+        {
+            await Dispatcher.UIThread.InvokeAsync(() => { });
+            await Task.Delay(10);
+        }
+
+        Assert.DoesNotContain("motion-enter", surface.Classes);
+        Assert.DoesNotContain("motion-enter", shellRoot.Classes);
+        Assert.Equal(1d, shellRoot.Opacity);
+        var translate = Assert.IsType<TranslateTransform>(surface.RenderTransform);
+        Assert.Equal(0, translate.Y);
+    }
+
+    [AvaloniaFact]
+    public void MainWindow_WhenMotionDisabledDuringEntranceWindow_ShellAnchorRetiresAndOpacityRestores()
+    {
+        using var context = CreateContext();
+        context.ViewModel.IsMotionReduced = false;
+        context.Window.Show();
+        Dispatcher.UIThread.RunJobs();
+
+        var shellRoot = FindShellRoot(context.Window);
+        Assert.Contains("motion-enter", shellRoot.Classes);
+
+        // 入场窗期内关闭动效：壳层锚点立即摘除、透明度回到 1，
+        // 不得停留在 PlayShellEntranceOnce 入场前写入的 0（否则整壳不可见）。
+        context.ViewModel.IsMotionReduced = true;
+        Dispatcher.UIThread.RunJobs();
+
+        Assert.DoesNotContain("motion-enter", shellRoot.Classes);
+        Assert.Equal(1d, shellRoot.Opacity);
+    }
+
+    [AvaloniaFact]
+    public async Task MainWindow_AfterAnchorsRetired_MotionPreferenceToggleDoesNotRestoreEntranceClasses()
+    {
+        using var context = CreateContext();
+        context.ViewModel.IsMotionReduced = false;
+        context.Window.Show();
+        Dispatcher.UIThread.RunJobs();
+
+        var surface = FindOperationSurface(context.Window);
+        var shellRoot = FindShellRoot(context.Window);
+        var deadline = DateTime.UtcNow.AddSeconds(3);
+        while (DateTime.UtcNow < deadline
+            && (surface.Classes.Contains("motion-enter") || shellRoot.Classes.Contains("motion-enter")))
+        {
+            await Dispatcher.UIThread.InvokeAsync(() => { });
+            await Task.Delay(10);
+        }
+
+        // 运行期关闭再重开动效偏好：锚点类不得回流，否则 motion-enabled 重新匹配会重放入场。
+        context.ViewModel.IsMotionReduced = true;
+        Dispatcher.UIThread.RunJobs();
+        context.ViewModel.IsMotionReduced = false;
+        Dispatcher.UIThread.RunJobs();
+
+        Assert.DoesNotContain("motion-enter", surface.Classes);
+        Assert.DoesNotContain("motion-enter", shellRoot.Classes);
+        Assert.Equal(1d, surface.Opacity);
+        Assert.Equal(1d, shellRoot.Opacity);
+    }
+
+    [AvaloniaFact]
+    public async Task MainWindow_WhenPanelModeChangesDuringEntranceWindow_AnchorRetiresEarlyAndSurfaceSettles()
+    {
+        using var context = CreateContext();
+        context.ViewModel.IsMotionReduced = false;
+        context.Window.Show();
+        Dispatcher.UIThread.RunJobs();
+
+        var surface = FindOperationSurface(context.Window);
+        Assert.Contains("motion-enter", surface.Classes);
+
+        // 入场窗期内的状态切换必须立即摘除锚点：锚点类动画持有 Opacity，会与转换的
+        // 下沉写入/恢复段互相覆盖；摘除后由转换动画独占透明度并正常结算。
+        context.ViewModel.Operations.PanelMode = GameOperationPanelMode.Control;
+        Dispatcher.UIThread.RunJobs();
+
+        Assert.DoesNotContain("motion-enter", surface.Classes);
+
+        await WaitUntilOperationSurfaceSettledAsync(surface);
+        Assert.Equal(1d, surface.Opacity);
+    }
+
+    private static Border FindOperationSurface(Window window) =>
+        window.GetVisualDescendants().OfType<Border>()
+            .Single(control => control.Classes.Contains("operation-surface"));
+
+    private static Grid FindShellRoot(Window window) =>
+        window.GetVisualDescendants().OfType<Grid>()
+            .Single(control => control.Name == "ShellRoot");
+
     private static async Task<double> WaitUntilOperationSurfaceSettledAsync(Border surface)
     {
         var deadline = DateTime.UtcNow.AddSeconds(3);
