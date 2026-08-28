@@ -14,10 +14,12 @@
           controls:MotionVisibility.IsOpen="{Binding WindowChrome.IsSettingsVisible}"
           controls:MotionVisibility.IsMotionEnabled="{Binding IsMotionEnabled}">
         <!-- 纯表面外壳：无头带（身份区折叠），工作区与钉死的关闭钮保持原样；
-             表面档案（圆角/阴影/底色）由 DialogSurface 承载（ADR-015）。 -->
+             表面档案（圆角/阴影/底色）由 DialogSurface 承载（ADR-015）。
+             外壳模式无标题，表面对外语义由 §8 的本地化名显式给出。 -->
         <controls:DialogSurface
             Form="Panel"
             Classes="motion-surface settings-surface"
+            AutomationProperties.Name="{Binding Shell.I18n[settings]}"
             HorizontalAlignment="Stretch"
             VerticalAlignment="Stretch"
             Margin="{StaticResource Launcher.Spacing.Thickness.Xxl}"
@@ -99,49 +101,31 @@
                                                               Classes="motion-content"
                                                               Classes.motion-enabled="{Binding IsMotionEnabled}"
                                                               Classes.motion-enter="{Binding Settings.IsGeneralCategorySelected}">
-                                    <views:SettingsGeneralSection.RenderTransform>
-                                        <TranslateTransform/>
-                                    </views:SettingsGeneralSection.RenderTransform>
                                 </views:SettingsGeneralSection>
                                 <views:SettingsGameSection IsVisible="{Binding Settings.IsGameCategorySelected}"
                                                            Classes="motion-content"
                                                            Classes.motion-enabled="{Binding IsMotionEnabled}"
                                                            Classes.motion-enter="{Binding Settings.IsGameCategorySelected}">
-                                    <views:SettingsGameSection.RenderTransform>
-                                        <TranslateTransform/>
-                                    </views:SettingsGameSection.RenderTransform>
                                 </views:SettingsGameSection>
                                 <views:SettingsDownloadNetworkSection IsVisible="{Binding Settings.IsDownloadNetworkCategorySelected}"
                                                                       Classes="motion-content"
                                                                       Classes.motion-enabled="{Binding IsMotionEnabled}"
                                                                       Classes.motion-enter="{Binding Settings.IsDownloadNetworkCategorySelected}">
-                                    <views:SettingsDownloadNetworkSection.RenderTransform>
-                                        <TranslateTransform/>
-                                    </views:SettingsDownloadNetworkSection.RenderTransform>
                                 </views:SettingsDownloadNetworkSection>
                                 <views:SettingsAppearanceSection IsVisible="{Binding Settings.IsAppearanceCategorySelected}"
                                                                  Classes="motion-content"
                                                                  Classes.motion-enabled="{Binding IsMotionEnabled}"
                                                                  Classes.motion-enter="{Binding Settings.IsAppearanceCategorySelected}">
-                                    <views:SettingsAppearanceSection.RenderTransform>
-                                        <TranslateTransform/>
-                                    </views:SettingsAppearanceSection.RenderTransform>
                                 </views:SettingsAppearanceSection>
                                 <views:SettingsAdvancedSection IsVisible="{Binding Settings.IsAdvancedCategorySelected}"
                                                                Classes="motion-content"
                                                                Classes.motion-enabled="{Binding IsMotionEnabled}"
                                                                Classes.motion-enter="{Binding Settings.IsAdvancedCategorySelected}">
-                                    <views:SettingsAdvancedSection.RenderTransform>
-                                        <TranslateTransform/>
-                                    </views:SettingsAdvancedSection.RenderTransform>
                                 </views:SettingsAdvancedSection>
                                 <views:SettingsAboutSection IsVisible="{Binding Settings.IsAboutCategorySelected}"
                                                             Classes="motion-content"
                                                             Classes.motion-enabled="{Binding IsMotionEnabled}"
                                                             Classes.motion-enter="{Binding Settings.IsAboutCategorySelected}">
-                                    <views:SettingsAboutSection.RenderTransform>
-                                        <TranslateTransform/>
-                                    </views:SettingsAboutSection.RenderTransform>
                                 </views:SettingsAboutSection>
                                     </StackPanel>
                                     </ScrollViewer>

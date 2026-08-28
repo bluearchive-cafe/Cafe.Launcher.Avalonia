@@ -8,6 +8,8 @@
         <StackPanel Spacing="{StaticResource Launcher.Spacing.Sm}"
                     HorizontalAlignment="Center"
                     VerticalAlignment="Center">
+            <!-- indeterminate 循环为 Fluent 基础模板内建、不随动效偏好关闭——进行中语义
+                 必需且无空间/淡化运动，属 spec §3.7 的显式豁免（同 Toast 操作进度条）。 -->
             <ProgressBar IsIndeterminate="True"
                          Width="{StaticResource Launcher.Component.Loading.Bar.Width}"
                          Height="{StaticResource Launcher.Component.Loading.Bar.Height}"/>

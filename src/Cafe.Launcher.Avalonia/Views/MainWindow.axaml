@@ -169,7 +169,7 @@
                                       Margin="{StaticResource Launcher.Component.Banner.Indicator.Margin}">
                                     <ItemsControl ItemsSource="{Binding RemoteContent.BannerDots}">
                                         <ItemsControl.ItemsPanel>
-                                            <StaticResource ResourceKey="HorizontalSpacingSmPanel"/>
+                                            <StaticResource ResourceKey="Launcher.Component.RowPanel.Sm"/>
                                         </ItemsControl.ItemsPanel>
                                         <ItemsControl.ItemTemplate>
                                             <DataTemplate x:DataType="models:BannerDot">

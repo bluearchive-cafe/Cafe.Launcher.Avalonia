@@ -43,6 +43,14 @@
         <Setter Property="Background" Value="{DynamicResource Launcher.Color.Primary.Pressed}"/>
         <Setter Property="Foreground" Value="{DynamicResource Launcher.Color.OnPrimary}"/>
     </Style>
+    <!-- filled 型禁用态须后置覆盖 primary 填充（与主样式 Button.primary-action:disabled 同配方：
+         Content.Row 预混底 + Card.Border 描边 + Text.Secondary 前景）。 -->
+    <Style Selector="Button.wizard-action.primary-action:disabled">
+        <Setter Property="Background" Value="{DynamicResource Launcher.Color.Content.Row}"/>
+        <Setter Property="BorderBrush" Value="{DynamicResource Launcher.Color.Card.Border}"/>
+        <Setter Property="BorderThickness" Value="{StaticResource Launcher.Border.Thickness.Default}"/>
+        <Setter Property="Foreground" Value="{DynamicResource Launcher.Text.Secondary}"/>
+    </Style>
     <!-- 实验台向导解剖（ADR-017）：步骤标题居中、完成态标题以 Success 色标识，
          步骤面板的顺序换页由后置代码驱动，不使用声明式动画类。 -->
     <Style Selector="TextBlock.wizard-step-title">
@@ -66,6 +74,11 @@
     </Style>
     <Style Selector="RadioButton.wizard-option:pointerover">
         <Setter Property="Background" Value="{DynamicResource Launcher.Color.Content.Row.Hover}"/>
+    </Style>
+    <!-- §8: 选项行经键盘聚焦时铺 token 焦点环（根 Border 承载描边，与导航列表行同配方）。 -->
+    <Style Selector="RadioButton.wizard-option:focus-visible">
+        <Setter Property="BorderBrush" Value="{DynamicResource Launcher.Color.FocusRing}"/>
+        <Setter Property="BorderThickness" Value="{StaticResource Launcher.Border.Thickness.Focus}"/>
     </Style>
     <Style Selector="Grid.wizard-review-row">
         <Setter Property="MinHeight" Value="{StaticResource Launcher.Control.Height.Dialog}"/>

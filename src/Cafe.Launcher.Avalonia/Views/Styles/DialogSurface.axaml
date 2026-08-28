@@ -8,9 +8,11 @@
        模态表面比页面常驻面板高一档。两种形态共享同一模板骨架，解剖差异
        全部由 :panel 与状态伪类驱动；使用方不得自带几何、色彩或阴影值。 -->
 
-  <Style Selector="controls|DialogSurface">
+  <!-- 表面对外语义 = 标题文本（§8）；无标题外壳（设置/向导/调试）由使用方显式给名。 -->
+  <Style Selector="controls|DialogSurface" x:DataType="controls:DialogSurface">
     <Setter Property="Background" Value="{DynamicResource Launcher.Color.Dialog.Background}"/>
     <Setter Property="Foreground" Value="{DynamicResource Launcher.Text.Primary}"/>
+    <Setter Property="AutomationProperties.Name" Value="{Binding Title, RelativeSource={RelativeSource Self}}"/>
     <Setter Property="CornerRadius" Value="{StaticResource Launcher.Component.Dialog.CornerRadius}"/>
     <Setter Property="ClipToBounds" Value="True"/>
     <Setter Property="Focusable" Value="False"/>

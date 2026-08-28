@@ -108,7 +108,9 @@ public partial class MainWindow : Window
         var fadeOut = new Animation
         {
             Duration = MotionTokens.NormalDuration,
-            Easing = new SplineEasing { X1 = 0, Y1 = 0, X2 = 0, Y2 = 1 },
+            Easing = MotionResourceLookup.GetEasing(
+                "Launcher.Motion.Easing.Enter",
+                static () => new SplineEasing { X1 = 0, Y1 = 0, X2 = 0, Y2 = 1 }),
             FillMode = FillMode.Forward,
             Children =
             {

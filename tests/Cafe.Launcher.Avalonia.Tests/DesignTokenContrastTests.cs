@@ -50,13 +50,25 @@ public sealed class DesignTokenContrastTests
         new("toast body text", "Launcher.Text.Body", "Launcher.Color.Toast.Background", 4.5),
         new("notice body text", "Launcher.Text.Body", "Launcher.Color.Notice.Background", 4.5),
         new("card link text", "Launcher.Text.Link", "Launcher.Color.Card.Background", 4.5),
+        new("panel link text", "Launcher.Text.Link", "Launcher.Color.Panel.Background", 4.5),
+        new("dialog link text", "Launcher.Text.Link", "Launcher.Color.Dialog.Background", 4.5),
+        new("toast link text", "Launcher.Text.Link", "Launcher.Color.Toast.Background", 4.5),
+        new("dialog header primary text", "Launcher.Text.Primary", "Launcher.Color.Dialog.Header", 4.5),
+        new("dialog header secondary text", "Launcher.Text.Secondary", "Launcher.Color.Dialog.Header", 4.5),
+        new("dialog footer primary text", "Launcher.Text.Primary", "Launcher.Color.Dialog.Footer", 4.5),
+        new("dialog footer body text", "Launcher.Text.Body", "Launcher.Color.Dialog.Footer", 4.5),
+        new("bottom panel primary text", "Launcher.Text.Primary", "Launcher.Color.Panel.Bottom.Background", 4.5),
+        new("bottom panel secondary text", "Launcher.Text.Secondary", "Launcher.Color.Panel.Bottom.Background", 4.5),
         new("info strip text", "Launcher.Text.Info", "Launcher.Color.Info.Background", 4.5),
+        new("info surface primary text", "Launcher.Text.Primary", "Launcher.Color.Info.Background", 4.5),
+        new("notice surface primary text", "Launcher.Text.Primary", "Launcher.Color.Notice.Background", 4.5),
         new("danger soft primary text", "Launcher.Text.Primary", "Launcher.Color.Danger.Soft", 4.5),
         new("warning surface primary text", "Launcher.Text.Primary", "Launcher.Color.Warning.Background", 4.5),
         new("error action label", "Launcher.Color.OnError", "Launcher.Color.Error", 4.5),
         new("error action label (hover)", "Launcher.Color.OnError", "Launcher.Color.Error.Hover", 4.5),
         new("error action label (pressed)", "Launcher.Color.OnError", "Launcher.Color.Error.Pressed", 4.5),
-        new("success status text", "Launcher.Color.Success", "Launcher.Color.Dialog.Background", 4.5)
+        new("success status text", "Launcher.Color.Success", "Launcher.Color.Dialog.Background", 4.5),
+        new("card success status text", "Launcher.Color.Success", "Launcher.Color.Card.Background", 4.5)
     ];
 
     // Non-text/UI pairs: WCAG AA >= 3:1 (progress, icons, severity indicators, borders).
@@ -77,6 +89,11 @@ public sealed class DesignTokenContrastTests
     // Explicit exemption list (design-system spec §8): over-wallpaper chrome/banner
     // content and runtime-dynamic scheme roles are covered by rule/walkthrough, not
     // static pair assertions. M3 adds runtime on-color luminance for scheme roles.
+    // - FocusRing is accent-derived (SystemAccentColor @ 0.60); focus-indicator
+    //   visibility is reviewed per surface in the walkthrough checklist (§2).
+    // - SecondaryContainer family is written at runtime by ApplyScheme from the M3
+    //   DynamicScheme (container tone 90 / on-container tone 10 pairing); the App.axaml
+    //   values are placeholders only, so static assertions would test placeholders.
     private static readonly string[] ExemptedKeys =
     [
         "Launcher.Text.OnChrome",
@@ -95,7 +112,12 @@ public sealed class DesignTokenContrastTests
         "Launcher.Color.Primary.Border",
         "Launcher.Color.OnPrimary",
         "Launcher.Color.Carousel.Dot.Active",
-        "Launcher.Color.Carousel.Dot.Inactive"
+        "Launcher.Color.Carousel.Dot.Inactive",
+        "Launcher.Color.FocusRing",
+        "Launcher.Color.SecondaryContainer",
+        "Launcher.Color.SecondaryContainer.Hover",
+        "Launcher.Color.SecondaryContainer.Pressed",
+        "Launcher.Color.OnSecondaryContainer"
     ];
 
     [Fact]

@@ -13,10 +13,12 @@
           controls:MotionVisibility.IsOpen="{Binding Dialogs.IsSetupWizardVisible}"
           controls:MotionVisibility.IsMotionEnabled="{Binding IsMotionEnabled}">
             <!-- 纯表面外壳：进度行（标题 + 进度 + 跳过）承载全部头部语义；
-                 内容区为实验台解剖的居中单列，步骤面板由后置代码顺序换页（ADR-017）。 -->
+                 内容区为实验台解剖的居中单列，步骤面板由后置代码顺序换页（ADR-017）。
+                 外壳模式无标题，表面对外语义复用「Setup Wizard」本地化键。 -->
             <controls:DialogSurface
                 Form="Panel"
                 Classes="motion-surface"
+                AutomationProperties.Name="{Binding Shell.I18n[setupWizardStepTitle]}"
                 HorizontalAlignment="Stretch"
                 VerticalAlignment="Stretch"
                 Margin="{StaticResource Launcher.Spacing.Thickness.Xxl}"
