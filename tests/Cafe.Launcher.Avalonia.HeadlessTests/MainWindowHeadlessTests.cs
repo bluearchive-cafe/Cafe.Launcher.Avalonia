@@ -1261,6 +1261,144 @@ public sealed class MainWindowHeadlessTests
     }
 
     [AvaloniaFact]
+    public async Task MainWindow_WhenWallpaperCrossFadeEnds_CrossFadeSourceIsCleared()
+    {
+        using var context = CreateContext();
+        context.Window.Show();
+        Dispatcher.UIThread.RunJobs();
+
+        var crossFade = context.Window.GetVisualDescendants().OfType<Image>()
+            .Single(image => image.Name == "BackgroundCrossFade");
+
+        // 切换到自定义壁纸触发 ADR-016 交叉淡化：旧图所有权在 ViewModel（宽限期后释放），
+        // 视图层必须在淡化结束后摘除引用，否则视觉树残留已释放位图——DevTools 悬停/选择
+        // 元素读取 Image.Source 的 PixelSize 会抛 ObjectDisposedException 使进程崩溃。
+        var wallpaperPath = Path.Combine(
+            Path.GetTempPath(),
+            $"launcher-wallpaper-{Guid.NewGuid():N}.png");
+        await File.WriteAllBytesAsync(
+            wallpaperPath,
+            Convert.FromBase64String(
+                "iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNkYPhfDwAChwGA60e6kgAAAABJRU5ErkJggg=="));
+        try
+        {
+            var settings = new LauncherSettings
+            {
+                BackgroundSource = BackgroundSources.Custom,
+                CustomBackgroundPath = wallpaperPath,
+                BackgroundFit = BackgroundFits.UniformToFill,
+                ThemeColorMode = ThemeColorModes.Default
+            };
+            await context.ViewModel.Background.UpdateBackgroundImageAsync(
+                settings,
+                snapshot: null,
+                CancellationToken.None);
+
+            var deadline = DateTime.UtcNow.AddSeconds(3);
+            while (crossFade.Source is not null && DateTime.UtcNow < deadline)
+            {
+                await Dispatcher.UIThread.InvokeAsync(() => { });
+                await Task.Delay(10);
+            }
+
+            Assert.Null(crossFade.Source);
+        }
+        finally
+        {
+            File.Delete(wallpaperPath);
+        }
+    }
+
+    [AvaloniaFact]
+    public async Task MainWindow_WhenPanelModeSwitchesRapidly_SurfaceSettlesAtLatestStateNaturalHeight()
+    {
+        using var context = CreateContext();
+        context.ViewModel.Operations.PanelMode = GameOperationPanelMode.Install;
+        context.Window.Show();
+        Dispatcher.UIThread.RunJobs();
+
+        var surface = context.Window.GetVisualDescendants().OfType<Border>()
+            .Single(control => control.Classes.Contains("operation-surface"));
+        var installHeight = surface.Bounds.Height;
+        Assert.True(installHeight > 0);
+
+        // 单次切换参考值：控制态自然高度大于安装态，落定后回到自动高度与全不透明。
+        context.ViewModel.Operations.PanelMode = GameOperationPanelMode.Control;
+        var controlHeight = await WaitUntilOperationSurfaceSettledAsync(surface);
+        Assert.True(controlHeight > installHeight,
+            $"Control state height {controlHeight} did not grow past install state {installHeight}.");
+
+        context.ViewModel.Operations.PanelMode = GameOperationPanelMode.Install;
+        var reSettledHeight = await WaitUntilOperationSurfaceSettledAsync(surface);
+        Assert.True(Math.Abs(reSettledHeight - installHeight) < 0.5,
+            $"Re-settled install height {reSettledHeight} deviates from initial {installHeight}.");
+
+        // 快速连续切换（ADR-016：高频变化以最新状态为准，不排队）：Headless 动画不按墙钟
+        // 推进、无法采样形变中途，但最终几何必须收敛到最新状态，且不得残留冻结高度或
+        // 下沉透明度。
+        context.ViewModel.Operations.PanelMode = GameOperationPanelMode.Control;
+        context.ViewModel.Operations.PanelMode = GameOperationPanelMode.Install;
+        context.ViewModel.Operations.PanelMode = GameOperationPanelMode.Control;
+
+        var finalHeight = await WaitUntilOperationSurfaceSettledAsync(surface);
+        Assert.True(Math.Abs(finalHeight - controlHeight) < 0.5,
+            $"Height after rapid switches {finalHeight} deviates from control natural height {controlHeight}.");
+    }
+
+    private static async Task<double> WaitUntilOperationSurfaceSettledAsync(Border surface)
+    {
+        var deadline = DateTime.UtcNow.AddSeconds(3);
+        while (DateTime.UtcNow < deadline)
+        {
+            await Dispatcher.UIThread.InvokeAsync(() => { });
+            await Task.Delay(10);
+            if (double.IsNaN(surface.Height) && surface.Opacity >= 1d)
+            {
+                return surface.Bounds.Height;
+            }
+        }
+
+        Assert.Fail("Operation surface did not settle back to auto height and full opacity.");
+        return double.NaN;
+    }
+
+    [AvaloniaFact]
+    public async Task MainWindow_BackgroundThreadSwitch_MorphsToLatestStateNaturalHeight()
+    {
+        using var context = CreateContext();
+        context.ViewModel.Operations.PanelMode = GameOperationPanelMode.Install;
+        context.Window.Show();
+        Dispatcher.UIThread.RunJobs();
+
+        var surface = context.Window.GetVisualDescendants().OfType<Border>()
+            .Single(control => control.Classes.Contains("operation-surface"));
+        var installHeight = surface.Bounds.Height;
+        Assert.True(installHeight > 0);
+
+        // 后台线程（真实进度回调的常见来源）触发切换时，posted 转换必须在可见性绑定
+        // 刷新之后测量，收敛高度应落在控制态自然高度而非起飞前高度。
+        await Task.Run(() => context.ViewModel.Operations.PanelMode = GameOperationPanelMode.Control);
+
+        var settled = false;
+        var deadline = DateTime.UtcNow.AddSeconds(3);
+        while (DateTime.UtcNow < deadline)
+        {
+            await Dispatcher.UIThread.InvokeAsync(() => { });
+            await Task.Delay(10);
+            if (double.IsNaN(surface.Height) && surface.Opacity >= 1d)
+            {
+                settled = true;
+                break;
+            }
+        }
+
+        Assert.True(settled, "Operation surface did not settle after background switch.");
+        Assert.True(
+            surface.Bounds.Height > installHeight,
+            $"Control state height {surface.Bounds.Height} did not grow past install state {installHeight}.");
+    }
+
+    [AvaloniaFact]
     public void MainWindow_NewsList_WithMoreThanThreeItems_KeepsAllItemsAccessibleByScrolling()
     {
         using var context = CreateContext();

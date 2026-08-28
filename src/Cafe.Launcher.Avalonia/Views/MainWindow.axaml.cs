@@ -33,6 +33,9 @@ public partial class MainWindow : Window
     /// <summary>内容更替提示的透明度下沉值（对齐 FluentMotionLab 场景 6 的 Fluent 分支）。</summary>
     private const double OperationSurfaceDipOpacity = 0.58;
 
+    /// <summary>下沉恢复完成的进度点：快速档 167ms / 标准档 250ms，其后平尾保持到收尾。</summary>
+    private const double OperationSurfaceDipRecoveryCue = 0.668;
+
     private SystemTrayService? systemTray;
     private MainWindowViewModel? configuredViewModel;
     private CancellationTokenSource? operationSurfaceMotionCts;
@@ -60,6 +63,7 @@ public partial class MainWindow : Window
     private void PlayShellEntranceOnce(object? sender, EventArgs e)
     {
         Opened -= PlayShellEntranceOnce;
+        RetireOperationSurfaceEntranceAnchor();
         var viewModel = configuredViewModel ?? DataContext as MainWindowViewModel;
         if (viewModel is not { IsMotionEnabled: true })
         {
@@ -71,6 +75,33 @@ public partial class MainWindow : Window
         Dispatcher.UIThread.Post(
             () => ShellRoot.Classes.Add("motion-enter"),
             DispatcherPriority.Loaded);
+    }
+
+    /// <summary>
+    /// ADR-016：底部操作表面的 motion-enter 仅作一次性入场锚点。入场窗期（Normal 档时长，
+    /// 自窗口打开起必已覆盖入场全程）结束后摘除该类，避免运行期开启动效偏好时
+    /// motion-bottom.motion-enabled.motion-enter 选择器重新匹配而重放入场。
+    /// 摘除时同时把上升位移归零：若窗口在首帧渲染前被遮挡/合成暂停，动画可能只应用了
+    /// 起势帧（Y=+12）就随摘类停止且不回退，表面会整体渲染在布局位置之下、底缘溢出
+    /// 客户区被窗口裁切。归零对正在升入或已落定的动画均无副作用（动画值优先级更高）。
+    /// </summary>
+    private void RetireOperationSurfaceEntranceAnchor()
+    {
+        var timer = new DispatcherTimer { Interval = MotionTokens.NormalDuration };
+        timer.Tick += (sender, _) =>
+        {
+            if (sender is DispatcherTimer oneShot)
+            {
+                oneShot.Stop();
+            }
+
+            OperationSurface.Classes.Remove("motion-enter");
+            if (OperationSurface.RenderTransform is TranslateTransform entranceTranslate)
+            {
+                entranceTranslate.Y = 0;
+            }
+        };
+        timer.Start();
     }
 
     public void ConfigureViewModel(MainWindowViewModel viewModel)
@@ -126,7 +157,36 @@ public partial class MainWindow : Window
                 },
             },
         };
-        _ = fadeOut.RunAsync(BackgroundCrossFade, cancellationToken);
+        _ = RunPreviousWallpaperFadeAsync(fadeOut, previousImage, cancellationToken);
+    }
+
+    /// <summary>
+    /// 淡出结束（完成或被取消）后立即摘除旧图引用：位图所有权在 ViewModel（宽限期后或
+    /// 降动效即时释放），视觉树不得残留已释放位图——DevTools 悬停/选择元素时读取
+    /// Image.Source 的 PixelSize 会对已释放位图抛 ObjectDisposedException 使进程崩溃。
+    /// 仅当覆盖层仍归属本次旧图时才清理，避免竞态清掉快速连续切换时新一轮写入的旧图。
+    /// </summary>
+    private async Task RunPreviousWallpaperFadeAsync(
+        Animation fadeOut,
+        IImage previousImage,
+        CancellationToken cancellationToken)
+    {
+        try
+        {
+            await fadeOut.RunAsync(BackgroundCrossFade, cancellationToken);
+        }
+        catch (OperationCanceledException)
+        {
+            // 降动效切换或新一轮淡化取消本段动画；清理仍需进行，落入 finally。
+        }
+        finally
+        {
+            if (ReferenceEquals(BackgroundCrossFade.Source, previousImage))
+            {
+                BackgroundCrossFade.Source = null;
+                BackgroundCrossFade.Opacity = 1;
+            }
+        }
     }
 
     private void OnOperationsPropertyChanged(object? sender, PropertyChangedEventArgs e)
@@ -136,13 +196,10 @@ public partial class MainWindow : Window
             return;
         }
 
-        if (!Dispatcher.UIThread.CheckAccess())
-        {
-            Dispatcher.UIThread.Post(AnimateOperationSurfaceTransition);
-            return;
-        }
-
-        AnimateOperationSurfaceTransition();
+        // PanelMode 是 setter 里最先抛出的属性：同步执行会在 IsXxxPanelVisible 绑定刷新前
+        // 测量（此刻旧状态仍可见，量得的是旧自然高度）。统一推迟一拍，让新状态的可见性
+        // 先落位再测量；后台线程变更本就须经 Dispatcher 汇入，同走此路径。
+        Dispatcher.UIThread.Post(AnimateOperationSurfaceTransition);
     }
 
     private void OnRootMotionPreferenceChanged(object? sender, PropertyChangedEventArgs e)
@@ -155,9 +212,9 @@ public partial class MainWindow : Window
 
     /// <summary>
     /// ADR-016 游戏操作表面连续转换：状态在单一任务容器内原地交换后，先把容器临时固定在
-    /// 旧高度并测得新状态的自然高度，再以点到点曲线把高度连续过渡过去，同时用短暂透明度
-    /// 下沉提示内容更替。新状态触发时立即取消前一段动画并以最新布局为准，不排队；降动效、
-    /// 未附着或首帧无尺寸时直接落定。
+    /// 旧高度并测得新状态的自然高度，再以点到点曲线把高度连续过渡过去，同时用瞬时透明度
+    /// 下沉与快速恢复提示内容更替。新状态触发时先取消在途动画再测量与起播，始终以最新
+    /// 布局为准，不排队；降动效、未附着或首帧无尺寸时直接落定。
     /// </summary>
     private void AnimateOperationSurfaceTransition()
     {
@@ -172,6 +229,10 @@ public partial class MainWindow : Window
             return;
         }
 
+        // 最新状态立即接管：先取消在途动画、交还本地值，否则在途动画以 Animation 优先级
+        // 持有 Height，下面的测量会被旧动画的当前帧高度污染（ADR-016：不排队，最新为准）。
+        CancelOperationSurfaceMotion();
+
         // 冻结旧视觉尺寸后让可见性绑定推过一轮布局，测得新状态的自然容器高度。
         // 三个状态各自携带 bottom-panel 的 MinHeight（≥132），布局后目标高度必有下界。
         surface.Height = double.NaN;
@@ -181,11 +242,20 @@ public partial class MainWindow : Window
         surface.Height = fromHeight;
         surface.UpdateLayout();
 
-        operationSurfaceMotionCts?.Cancel();
-        operationSurfaceMotionCts?.Dispose();
+        // 瞬时写入下沉值，保证首个渲染帧即处于下沉态（对齐 FluentMotionLab 场景 6 的
+        // Fluent 分支），随后的恢复段动画负责拉回。
+        surface.Opacity = OperationSurfaceDipOpacity;
+
         var cts = new CancellationTokenSource();
         operationSurfaceMotionCts = cts;
         _ = RunOperationSurfaceTransitionAsync(surface, fromHeight, targetHeight, cts);
+    }
+
+    /// <summary>取消在途动画并把令牌源移出所有权槽；释放与几何结算由各任务收尾或落定路径负责。</summary>
+    private void CancelOperationSurfaceMotion()
+    {
+        operationSurfaceMotionCts?.Cancel();
+        operationSurfaceMotionCts = null;
     }
 
     private async Task RunOperationSurfaceTransitionAsync(
@@ -205,15 +275,25 @@ public partial class MainWindow : Window
         {
             // 更新状态已接管或动效被关闭；几何统一由 finally 的所有权守卫结算。
         }
+        catch (Exception exception)
+        {
+            // 形变失败不得阻断状态切换本身；几何仍由 finally 结算，异常落日志而非静默丢弃。
+            LocalDiagnostics.LogSync(
+                LogEntrySeverity.Warn,
+                "OperationSurfaceMotion",
+                $"Operation surface transition failed: {exception.Message}");
+        }
         finally
         {
             if (ReferenceEquals(operationSurfaceMotionCts, cancellation))
             {
                 operationSurfaceMotionCts = null;
-                cancellation.Dispose();
                 surface.Opacity = 1;
                 surface.Height = double.NaN;
             }
+
+            // 令牌源只由持有它的任务收尾释放，取消方仅负责 Cancel，避免与在途取消回调竞态。
+            cancellation.Dispose();
         }
     }
 
@@ -239,7 +319,12 @@ public partial class MainWindow : Window
         },
     };
 
-    /// <summary>透明度快速下沉再回弹，表达"同一对象的内容更替"，非独立对象的入场/退场。</summary>
+    /// <summary>
+    /// 透明度下沉的恢复段：切换瞬间容器已写入 0.58 下沉值（见
+    /// <see cref="AnimateOperationSurfaceTransition"/>），本动画以 167ms 进入曲线拉回全
+    /// 不透明，随后保持到标准档收尾，使恢复段与高度形变同拍结算，避免动画提前释放后
+    /// 回落为下沉值。对齐 FluentMotionLab 场景 6 的 Fluent 分支。
+    /// </summary>
     private static Animation CreateOperationDipAnimation() => new()
     {
         Duration = MotionTokens.NormalDuration,
@@ -252,16 +337,17 @@ public partial class MainWindow : Window
             new KeyFrame
             {
                 Cue = new Cue(0),
-                Setters = { new Setter { Property = Visual.OpacityProperty, Value = 1d } },
-            },
-            new KeyFrame
-            {
-                Cue = new Cue(25),
                 Setters = { new Setter { Property = Visual.OpacityProperty, Value = OperationSurfaceDipOpacity } },
             },
             new KeyFrame
             {
-                Cue = new Cue(100),
+                // 167ms/250ms：快速档处即恢复完成，其后平尾保持。
+                Cue = new Cue(OperationSurfaceDipRecoveryCue),
+                Setters = { new Setter { Property = Visual.OpacityProperty, Value = 1d } },
+            },
+            new KeyFrame
+            {
+                Cue = new Cue(1),
                 Setters = { new Setter { Property = Visual.OpacityProperty, Value = 1d } },
             },
         },
@@ -269,9 +355,7 @@ public partial class MainWindow : Window
 
     private void SettleOperationSurface(Border? surface)
     {
-        operationSurfaceMotionCts?.Cancel();
-        operationSurfaceMotionCts?.Dispose();
-        operationSurfaceMotionCts = null;
+        CancelOperationSurfaceMotion();
         if (surface is not null)
         {
             surface.Opacity = 1;
