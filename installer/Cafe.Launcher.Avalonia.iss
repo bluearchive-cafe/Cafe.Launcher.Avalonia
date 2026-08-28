@@ -106,6 +106,32 @@ begin
   Result := (not UninstallSilent) and DeleteApplicationData;
 end;
 
+{ Returns True while the legacy registration is consistent: a missing or empty
+  InstallLocation is tolerated, but a present value must match the uninstaller's
+  directory case-insensitively after dropping trailing separators. }
+function LegacyInstallLocationMatches(const InstallDir: String): Boolean;
+var
+  InstallLocation: String;
+  Location: String;
+  Expected: String;
+begin
+  Result := True;
+  if not RegQueryStringValue(HKLM, '{#LEGACY_NSIS_UNINSTALL_KEY}', 'InstallLocation', InstallLocation) then
+    Exit;
+  if InstallLocation = '' then
+    Exit;
+
+  Location := InstallLocation;
+  Expected := InstallDir;
+  { Keep drive roots (e.g. C:\) as-is. }
+  while (Length(Location) > 3) and (Location[Length(Location)] = '\') do
+    Delete(Location, Length(Location), 1);
+  while (Length(Expected) > 3) and (Expected[Length(Expected)] = '\') do
+    Delete(Expected, Length(Expected), 1);
+
+  Result := CompareText(Location, Expected) = 0;
+end;
+
 { One-time upgrade bridge: silently remove a legacy NSIS-based installation and
   self-heal stale registrations, mirroring the retired NSIS upgrade logic.
   The legacy registration is only trusted one way: its uninstaller must be
@@ -173,32 +199,6 @@ begin
   if FileExists(UninstallerPath) then
     DeleteFile(UninstallerPath);
   RemoveDir(InstallDir);
-end;
-
-{ Returns True while the legacy registration is consistent: a missing or empty
-  InstallLocation is tolerated, but a present value must match the uninstaller's
-  directory case-insensitively after dropping trailing separators. }
-function LegacyInstallLocationMatches(const InstallDir: String): Boolean;
-var
-  InstallLocation: String;
-  Location: String;
-  Expected: String;
-begin
-  Result := True;
-  if not RegQueryStringValue(HKLM, '{#LEGACY_NSIS_UNINSTALL_KEY}', 'InstallLocation', InstallLocation) then
-    Exit;
-  if InstallLocation = '' then
-    Exit;
-
-  Location := InstallLocation;
-  Expected := InstallDir;
-  { Keep drive roots (e.g. C:\) as-is. }
-  while (Length(Location) > 3) and (Location[Length(Location)] = '\') do
-    Delete(Location, Length(Location), 1);
-  while (Length(Expected) > 3) and (Expected[Length(Expected)] = '\') do
-    Delete(Expected, Length(Expected), 1);
-
-  Result := CompareText(Location, Expected) = 0;
 end;
 
 function InitializeSetup: Boolean;

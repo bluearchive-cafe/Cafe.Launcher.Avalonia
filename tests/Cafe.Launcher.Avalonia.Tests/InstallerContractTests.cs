@@ -197,6 +197,12 @@ public sealed class InstallerContractTests
             script,
             StringComparison.Ordinal);
         Assert.Contains("CompareText(Location, Expected) = 0", script, StringComparison.Ordinal);
+        // Pascal Script resolves identifiers only after their definition; the
+        // helper must therefore precede the upgrade bridge that calls it.
+        Assert.True(
+            script.IndexOf("function LegacyInstallLocationMatches", StringComparison.Ordinal)
+                < script.IndexOf("LegacyInstallLocationMatches(InstallDir)", StringComparison.Ordinal),
+            "LegacyInstallLocationMatches must be defined before RemoveLegacyInstallation calls it.");
         // Only one execution site exists, and it sits behind the checks above.
         Assert.Equal(1, CountOccurrences(script, "Exec(UninstallerPath"));
         // A mismatched registration must be removed, not executed.
@@ -224,14 +230,35 @@ public sealed class InstallerContractTests
     }
 
     [Fact]
-    public void DistributionScript_UsesConfirmedArtifactNamesAndCompilesWithIscc()
+    public void DistributionScript_UsesConfirmedPerPlatformArtifactNames()
     {
         var script = ReadProjectFile("scripts/Build-Distribution.ps1");
 
         Assert.Contains(
-            "Cafe.Launcher.Avalonia_${Tag}_standalone.zip",
+            "Cafe.Launcher.Avalonia_${Tag}_win-x64.zip",
             script,
             StringComparison.Ordinal);
+        Assert.Contains(
+            "Cafe.Launcher.Avalonia_${Tag}_osx-arm64.zip",
+            script,
+            StringComparison.Ordinal);
+        Assert.Contains(
+            "Cafe.Launcher.Avalonia_${Tag}_linux-x64.tar.gz",
+            script,
+            StringComparison.Ordinal);
+        Assert.Contains(
+            "Cafe.Launcher.Avalonia_${Tag}_linux-x64.AppImage",
+            script,
+            StringComparison.Ordinal);
+        Assert.DoesNotContain("UninstallFiles.nsh", script, StringComparison.Ordinal);
+        Assert.DoesNotContain("makensis", script, StringComparison.OrdinalIgnoreCase);
+    }
+
+    [Fact]
+    public void WindowsInstallerScript_UsesConfirmedArtifactNameAndCompilesWithIscc()
+    {
+        var script = ReadProjectFile("scripts/New-WindowsInstaller.ps1");
+
         Assert.Contains(
             "Cafe.Launcher.Avalonia_${Tag}_setup.exe",
             script,
@@ -239,24 +266,53 @@ public sealed class InstallerContractTests
         Assert.Contains("Resolve-Iscc", script, StringComparison.Ordinal);
         Assert.Contains("Inno Setup 7\\ISCC.exe", script, StringComparison.Ordinal);
         Assert.Contains("[version]\"6.3\"", script, StringComparison.Ordinal);
-        Assert.DoesNotContain("UninstallFiles.nsh", script, StringComparison.Ordinal);
         Assert.DoesNotContain("makensis", script, StringComparison.OrdinalIgnoreCase);
     }
 
     [Fact]
-    public void DistributionBuilder_PassesPublishGlobAndOutputsToIscc()
+    public void WindowsInstallerScript_PassesPublishGlobAndOutputsToIscc()
     {
-        var buildScript = ReadProjectFile("scripts/Build-Distribution.ps1");
+        var installerScript = ReadProjectFile("scripts/New-WindowsInstaller.ps1");
         var issScript = ReadProjectFile("installer/Cafe.Launcher.Avalonia.iss");
 
-        Assert.Contains("$publishGlob = Join-Path $publishRoot \"*\"", buildScript, StringComparison.Ordinal);
-        Assert.Contains("\"-dPUBLISH_GLOB=$publishGlob\"", buildScript, StringComparison.Ordinal);
-        Assert.Contains("\"-dAPP_VERSION=$versionPrefix\"", buildScript, StringComparison.Ordinal);
-        Assert.Contains("\"-dAPP_FILE_VERSION=$fileVersion\"", buildScript, StringComparison.Ordinal);
-        Assert.Contains("\"-o$DistributionDir\"", buildScript, StringComparison.Ordinal);
-        Assert.Contains("\"-f$setupBaseName\"", buildScript, StringComparison.Ordinal);
-        Assert.Contains("\"installer\\Cafe.Launcher.Avalonia.iss\"", buildScript, StringComparison.Ordinal);
+        Assert.Contains("$publishGlob = Join-Path $publishRoot \"*\"", installerScript, StringComparison.Ordinal);
+        Assert.Contains("\"-dPUBLISH_GLOB=$publishGlob\"", installerScript, StringComparison.Ordinal);
+        Assert.Contains("\"-dAPP_VERSION=$($version.VersionPrefix)\"", installerScript, StringComparison.Ordinal);
+        Assert.Contains("\"-dAPP_FILE_VERSION=$($version.FileVersion)\"", installerScript, StringComparison.Ordinal);
+        Assert.Contains("\"-o$OutputDir\"", installerScript, StringComparison.Ordinal);
+        Assert.Contains("\"-f$setupBaseName\"", installerScript, StringComparison.Ordinal);
+        Assert.Contains("\"installer/Cafe.Launcher.Avalonia.iss\"", installerScript, StringComparison.Ordinal);
         Assert.Contains("Source: \"{#PUBLISH_GLOB}\"", issScript, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public void MacOsBundle_AssetsArePresentAndVersioned()
+    {
+        var plist = ReadProjectFile("installer/macos/Info.plist");
+
+        // The bundle identity is user-visible; it must stay aligned with the
+        // published .app name and the .NET assembly name it executes.
+        Assert.Contains("CFBundleName", plist, StringComparison.Ordinal);
+        Assert.Contains("Cafe Launcher", plist, StringComparison.Ordinal);
+        Assert.Contains("cafe.bluearchive.Cafe-Launcher-Avalonia", plist, StringComparison.Ordinal);
+        Assert.Contains("<string>Cafe.Launcher.Avalonia</string>", plist, StringComparison.Ordinal);
+        Assert.Contains("<string>app-icon</string>", plist, StringComparison.Ordinal);
+        Assert.Contains("{VERSION}", plist, StringComparison.Ordinal);
+        Assert.Contains("{FILE_VERSION}", plist, StringComparison.Ordinal);
+        Assert.Contains("NSHighResolutionCapable", plist, StringComparison.Ordinal);
+
+        var icns = File.ReadAllBytes(GetProjectFilePath("installer/macos/app-icon.icns"));
+        Assert.True(icns.Length > 8 && icns.AsSpan(0, 4).SequenceEqual("icns"u8), "app-icon.icns must be a valid icns container.");
+
+        foreach (var size in new[] { 256, 512 })
+        {
+            var png = File.ReadAllBytes(GetProjectFilePath($"installer/linux/app-icon-{size}.png"));
+            Assert.True(png.Length > 4 && png.AsSpan(0, 4).SequenceEqual(new byte[] { 0x89, 0x50, 0x4E, 0x47 }), $"app-icon-{size}.png must be a valid PNG.");
+        }
+
+        var desktop = ReadProjectFile("installer/linux/cafe-launcher.desktop");
+        Assert.Contains("Exec=Cafe.Launcher.Avalonia", desktop, StringComparison.Ordinal);
+        Assert.Contains("Icon=cafe-launcher", desktop, StringComparison.Ordinal);
     }
 
     [Fact]
@@ -271,14 +327,29 @@ public sealed class InstallerContractTests
     }
 
     [Fact]
-    public void ReleaseWorkflow_UploadsBothArtifacts()
+    public void ReleaseWorkflow_AttachesAllPlatformPackagesToBothReleases()
     {
         var workflow = ReadProjectFile(".github/workflows/release.yml");
 
-        Assert.Contains("standalone_name=", workflow, StringComparison.Ordinal);
-        Assert.Contains("setup_name=", workflow, StringComparison.Ordinal);
-        Assert.Contains("${{ env.standalone_name }}", workflow, StringComparison.Ordinal);
-        Assert.Contains("${{ env.setup_name }}", workflow, StringComparison.Ordinal);
+        // Every release must carry the full cross-platform artifact set, and
+        // both release targets (source + distribution repository) stay in sync.
+        foreach (var artifactName in new[]
+        {
+            "Cafe.Launcher.Avalonia_${{ github.ref_name }}_win-x64.zip",
+            "Cafe.Launcher.Avalonia_${{ github.ref_name }}_setup.exe",
+            "Cafe.Launcher.Avalonia_${{ github.ref_name }}_osx-arm64.zip",
+            "Cafe.Launcher.Avalonia_${{ github.ref_name }}_linux-x64.tar.gz",
+            "Cafe.Launcher.Avalonia_${{ github.ref_name }}_linux-x64.AppImage",
+        })
+        {
+            Assert.Equal(2, CountOccurrences(workflow, artifactName));
+        }
+
+        Assert.Contains(
+            "repository: bluearchive-cafe/Cafe.Launcher.Avalonia_Release",
+            workflow,
+            StringComparison.Ordinal);
+        Assert.Contains("secrets.RELEASE_REPOSITORY_TOKEN", workflow, StringComparison.Ordinal);
     }
 
     private static bool ContainsCjk(string text)

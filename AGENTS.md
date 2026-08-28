@@ -13,6 +13,9 @@ This is a .NET 10 Avalonia desktop launcher. The application project, including 
 - `.\verify.ps1` — perform the complete Debug build, coverage, and Release build sequence.
 - `.\dev.ps1 ui` — run UI style-contract and headless UI tests after localized UI changes.
 - `.\scripts\Test-LocalizationContract.ps1` — verify resource keys and composite-format placeholders across all localized `.resx` files.
+- `.\scripts\Build-Distribution.ps1` — publish and package self-contained archives; pass `-Rids win-x64,osx-arm64,linux-x64` for the full cross-platform set (the Windows Inno Setup installer is a separate script).
+- `.\scripts\New-WindowsInstaller.ps1` — build the Inno Setup installer from `artifacts/publish/win-x64` (requires Inno Setup 6.3+).
+- `.\scripts\New-AppIconAssets.ps1` — regenerate the committed macOS `.icns` and Linux `.png` icon assets after changing `Assets/app-icon-source.jpg`; run on Windows and commit the outputs.
 - `dotnet test .\tests\Cafe.Launcher.Avalonia.Tests\Cafe.Launcher.Avalonia.Tests.csproj --filter "FullyQualifiedName~VersionComparerTests"` — run one test class.
 
 ## Coding Style & Naming Conventions
