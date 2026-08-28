@@ -4038,6 +4038,9 @@ public sealed partial class UiStyleContractTests
         Assert.True(HasClass(officialSiteButton, "social-chip"));
         Assert.True(HasClass(officialSiteButton, "social-action"));
         Assert.Equal(
+            "{Binding RemoteContent.HasRemoteContent}",
+            officialSiteButton.Attribute("IsVisible")?.Value);
+        Assert.Equal(
             "{Binding Shell.I18n[officialSite]}",
             officialSiteButton.Attribute("ToolTip.Tip")?.Value);
         Assert.Equal(
