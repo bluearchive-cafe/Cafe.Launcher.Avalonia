@@ -518,8 +518,11 @@ public partial class RemoteContentViewModel : ViewModelBase, IDisposable
                         return;
                     }
 
-                    item.BannerBitmap?.Dispose();
+                    // 先替换绑定引用再释放旧位图：绑定同步清空 Image.Source，保证任何
+                    // 渲染帧都不会读到已释放的位图实现（ObjectDisposedException 崩溃面）。
+                    var previous = item.BannerBitmap;
                     item.BannerBitmap = new Bitmap(new MemoryStream(bytes));
+                    previous?.Dispose();
                     item.MarkImageLoaded();
                 });
             }
@@ -639,8 +642,9 @@ public partial class RemoteContentViewModel : ViewModelBase, IDisposable
     {
         foreach (var item in BannerItems)
         {
-            item.BannerBitmap?.Dispose();
+            var previous = item.BannerBitmap;
             item.BannerBitmap = null;
+            previous?.Dispose();
         }
     }
 

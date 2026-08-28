@@ -154,6 +154,43 @@ public sealed class BackgroundViewModelTests : IDisposable
     }
 
     [Fact]
+    public async Task UpdateBackgroundImageAsync_WhileOverlayStillHoldsPreviousImage_DefersDisposalUntilOverlayReleases()
+    {
+        using var cache = CreateCache(new ImageHandler(PngBytes));
+        using var viewModel = new BackgroundViewModel(
+            cache,
+            new LocalDiagnostics(),
+            _ => { },
+            _ => new TestImage(),
+            () => new TestImage());
+
+        await viewModel.UpdateBackgroundImageAsync(
+            new LauncherSettings { BackgroundSource = BackgroundSources.Remote },
+            CreateRemoteSnapshot("1"),
+            CancellationToken.None);
+
+        var fadingOut = new List<TestImage>();
+        viewModel.PreviousWallpaperFadingOut += (image, _) => fadingOut.Add((TestImage)image);
+
+        await viewModel.UpdateBackgroundImageAsync(
+            new LauncherSettings { BackgroundSource = BackgroundSources.Remote },
+            CreateRemoteSnapshot("1"),
+            CancellationToken.None);
+        var fading = Assert.Single(fadingOut);
+
+        // 模拟合成器停滞：视图层在宽限期过后仍未摘除覆盖层引用。此时释放位图会让
+        // 下一渲染帧在 Image.Render 读取已释放实现，抛 ObjectDisposedException 崩溃。
+        await Task.Delay(TimeSpan.FromMilliseconds(700));
+
+        Assert.False(
+            fading.IsDisposed,
+            "ViewModel 在覆盖层仍持有旧图时释放了位图；渲染帧会读到已释放位图。");
+
+        viewModel.OnWallpaperOverlayReleased(fading);
+        Assert.True(fading.IsDisposed);
+    }
+
+    [Fact]
     public async Task UpdateBackgroundImageAsync_WhenMotionReduced_SkipsCrossFadeOverlay()
     {
         var bundled = new TestImage();
@@ -392,6 +429,9 @@ public sealed class BackgroundViewModelTests : IDisposable
 
         public void Dispose()
         {
+            IsDisposed = true;
         }
+
+        public bool IsDisposed { get; private set; }
     }
 }

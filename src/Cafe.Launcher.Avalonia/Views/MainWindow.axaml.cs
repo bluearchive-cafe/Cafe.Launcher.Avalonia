@@ -203,10 +203,11 @@ public partial class MainWindow : Window
     }
 
     /// <summary>
-    /// 淡出结束（完成或被取消）后立即摘除旧图引用：位图所有权在 ViewModel（宽限期后或
-    /// 降动效即时释放），视觉树不得残留已释放位图——DevTools 悬停/选择元素时读取
-    /// Image.Source 的 PixelSize 会对已释放位图抛 ObjectDisposedException 使进程崩溃。
-    /// 仅当覆盖层仍归属本次旧图时才清理，避免竞态清掉快速连续切换时新一轮写入的旧图。
+    /// 淡出结束（完成或被取消）后立即摘除旧图引用，并把释放权归还 ViewModel：只有视图
+    /// 确认 Source 已置空（Background.OnWallpaperOverlayReleased），ViewModel 才释放位图。
+    /// 视觉树残留已释放位图时，渲染帧读取 Image.Source 的 PixelSize 会抛
+    /// ObjectDisposedException 使进程崩溃。仅当覆盖层仍归属本次旧图时才清理，
+    /// 避免竞态清掉快速连续切换时新一轮写入的旧图。
     /// </summary>
     private async Task RunPreviousWallpaperFadeAsync(
         Animation fadeOut,
@@ -228,6 +229,8 @@ public partial class MainWindow : Window
                 BackgroundCrossFade.Source = null;
                 BackgroundCrossFade.Opacity = 1;
             }
+
+            configuredViewModel?.Background.OnWallpaperOverlayReleased(previousImage);
         }
     }
 
