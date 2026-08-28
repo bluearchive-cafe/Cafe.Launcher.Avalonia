@@ -1,0 +1,8 @@
+[Desktop Entry]
+Type=Application
+Name=Cafe Launcher
+Exec=Cafe.Launcher.Avalonia
+Icon=cafe-launcher
+Categories=Game;
+Terminal=false
+StartupWMClass=Cafe.Launcher.Avalonia

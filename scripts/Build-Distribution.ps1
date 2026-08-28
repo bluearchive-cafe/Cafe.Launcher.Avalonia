@@ -1,131 +1,212 @@
 [CmdletBinding()]
 param(
-    [string]$Tag
+    [string]$Tag,
+    [string[]]$Rids = @("win-x64"),
+    [switch]$SkipPublish,
+    [string]$AppImageToolPath
 )
 
 $ErrorActionPreference = "Stop"
 $ScriptDir = Split-Path -Parent $MyInvocation.MyCommand.Path
 $RootDir = Split-Path -Parent $ScriptDir
-$ProjectPath = Join-Path $RootDir "src\Cafe.Launcher.Avalonia\Cafe.Launcher.Avalonia.csproj"
-$InstallerScript = Join-Path $RootDir "installer\Cafe.Launcher.Avalonia.iss"
 $ArtifactsDir = Join-Path $RootDir "artifacts"
-$PublishDir = Join-Path $ArtifactsDir "publish"
+$PublishRoot = Join-Path $ArtifactsDir "publish"
 $DistributionDir = Join-Path $ArtifactsDir "distribution"
+$BundleRoot = Join-Path $ArtifactsDir "bundle"
+$MacOSAssetsDir = Join-Path $RootDir "installer/macos"
+$LinuxAssetsDir = Join-Path $RootDir "installer/linux"
 
-[xml]$project = Get-Content -Raw -LiteralPath $ProjectPath
-$versionNodes = @($project.SelectNodes("/Project/PropertyGroup/VersionPrefix"))
-$fileVersionNodes = @($project.SelectNodes("/Project/PropertyGroup/FileVersion"))
+$version = & (Join-Path $ScriptDir "Read-LauncherVersion.ps1") -Tag $Tag
+$ProjectPath = $version.ProjectPath
+$Tag = $version.Tag
 
-if ($versionNodes.Count -ne 1 -or [string]::IsNullOrWhiteSpace($versionNodes[0].InnerText)) {
-    throw "Exactly one non-empty VersionPrefix is required."
+$allowedRids = @("win-x64", "osx-arm64", "linux-x64")
+# Normalize "a,b,c" into separate RIDs: pwsh -File passes comma lists as one literal string.
+$Rids = @($Rids | ForEach-Object { $_ -split ',' } | ForEach-Object { $_.Trim() } | Where-Object { $_ })
+$unknownRids = @($Rids | Where-Object { $allowedRids -notcontains $_ })
+if ($unknownRids.Count -gt 0) {
+    throw "Unsupported RID(s): $($unknownRids -join ', '). Allowed RIDs: $($allowedRids -join ', ')."
 }
+$Rids = @($Rids | Select-Object -Unique)
+$IsUnixHost = $IsLinux -or $IsMacOS
 
-if ($fileVersionNodes.Count -ne 1 -or [string]::IsNullOrWhiteSpace($fileVersionNodes[0].InnerText)) {
-    throw "Exactly one non-empty FileVersion is required."
-}
-
-$versionPrefix = $versionNodes[0].InnerText.Trim()
-$fileVersion = $fileVersionNodes[0].InnerText.Trim()
-$Tag = if ([string]::IsNullOrWhiteSpace($Tag)) { "v$versionPrefix" } else { $Tag }
-
-if ($Tag -cne "v$versionPrefix") {
-    throw "Tag '$Tag' does not exactly match VersionPrefix '$versionPrefix'."
-}
-
-Remove-Item -LiteralPath $PublishDir -Recurse -Force -ErrorAction SilentlyContinue
-Remove-Item -LiteralPath $DistributionDir -Recurse -Force -ErrorAction SilentlyContinue
-New-Item -ItemType Directory -Path $PublishDir, $DistributionDir | Out-Null
-
-& dotnet restore $ProjectPath -r win-x64 | Out-Host
-if ($LASTEXITCODE -ne 0) {
-    throw "dotnet restore failed."
-}
-
-& dotnet publish $ProjectPath -c Release -r win-x64 --no-restore -o $PublishDir | Out-Host
-if ($LASTEXITCODE -ne 0) {
-    throw "dotnet publish failed."
-}
-
-function Assert-InnoSafeDefineValue {
-    param(
-        [Parameter(Mandatory)]
-        [string]$Value
-    )
-
-    if ($Value.Contains('"') -or
-        $Value.Contains("`r") -or
-        $Value.Contains("`n")) {
-        throw "Publish path cannot be represented safely as an ISCC define: $Value"
-    }
-}
-
-function Resolve-Iscc {
-    $fromPath = Get-Command ISCC.exe -ErrorAction SilentlyContinue
-    if ($null -ne $fromPath) {
-        return $fromPath.Source
-    }
-
-    $candidates = @(
-        (Join-Path $env:ProgramFiles "Inno Setup 7\ISCC.exe"),
-        (Join-Path ${env:ProgramFiles(x86)} "Inno Setup 7\ISCC.exe"),
-        (Join-Path $env:ProgramFiles "Inno Setup 6\ISCC.exe"),
-        (Join-Path ${env:ProgramFiles(x86)} "Inno Setup 6\ISCC.exe")
-    )
-
-    foreach ($candidate in $candidates) {
-        if (Test-Path -LiteralPath $candidate) {
-            return $candidate
+if ($SkipPublish) {
+    foreach ($rid in $Rids) {
+        $existingPublishDir = Join-Path $PublishRoot $rid
+        if (-not (Test-Path -LiteralPath $existingPublishDir -PathType Container) -or
+            -not (@(Get-ChildItem -LiteralPath $existingPublishDir -Force).Count -gt 0)) {
+            throw "SkipPublish requires an existing publish output at '$existingPublishDir'."
         }
     }
-
-    throw "Inno Setup compiler (ISCC.exe) was not found. Install Inno Setup 6.3 or newer and add it to PATH."
 }
 
-$isccPath = Resolve-Iscc
-$isccVersionLine = (& $isccPath --version 2>$null | Select-Object -First 1)
-$isccVersion = $null
-if ($isccVersionLine -match '^(\d+\.\d+(?:\.\d+)?)') {
-    $isccVersion = [version]$Matches[1]
+function Invoke-Checked {
+    param(
+        [Parameter(Mandatory)]
+        [string]$FilePath,
+        [Parameter(Mandatory)]
+        [AllowEmptyCollection()]
+        [string[]]$Arguments,
+        [Parameter(Mandatory)]
+        [string]$FailureMessage
+    )
+
+    & $FilePath @Arguments | Out-Host
+    if ($LASTEXITCODE -ne 0) {
+        throw $FailureMessage
+    }
 }
 
-if ($null -eq $isccVersion -or $isccVersion -lt [version]"6.3") {
-    throw "Inno Setup 6.3 or newer is required (found: '$isccVersionLine')."
+function Set-UnixExecutableBit {
+    param(
+        [Parameter(Mandatory)]
+        [string[]]$Paths
+    )
+
+    foreach ($path in $Paths) {
+        if (Test-Path -LiteralPath $path -PathType Leaf) {
+            & chmod +x $path
+            if ($LASTEXITCODE -ne 0) {
+                throw "chmod +x failed for '$path'."
+            }
+        }
+    }
 }
 
-$publishRoot = [System.IO.Path]::GetFullPath($PublishDir)
-$publishGlob = Join-Path $publishRoot "*"
-Assert-InnoSafeDefineValue $publishGlob
+Remove-Item -LiteralPath $DistributionDir -Recurse -Force -ErrorAction SilentlyContinue
+Remove-Item -LiteralPath $BundleRoot -Recurse -Force -ErrorAction SilentlyContinue
+[void][System.IO.Directory]::CreateDirectory($DistributionDir)
+[void][System.IO.Directory]::CreateDirectory($BundleRoot)
 
-$standaloneName = "Cafe.Launcher.Avalonia_${Tag}_standalone.zip"
-$setupName = "Cafe.Launcher.Avalonia_${Tag}_setup.exe"
-$setupBaseName = "Cafe.Launcher.Avalonia_${Tag}_setup"
-$standalonePath = Join-Path $DistributionDir $standaloneName
-$setupPath = Join-Path $DistributionDir $setupName
+if (-not $SkipPublish) {
+    Remove-Item -LiteralPath $PublishRoot -Recurse -Force -ErrorAction SilentlyContinue
 
-Compress-Archive -Path (Join-Path $PublishDir "*") -DestinationPath $standalonePath
-
-& $isccPath `
-    "-dAPP_VERSION=$versionPrefix" `
-    "-dAPP_FILE_VERSION=$fileVersion" `
-    "-dPUBLISH_GLOB=$publishGlob" `
-    "-o$DistributionDir" `
-    "-f$setupBaseName" `
-    $InstallerScript | Out-Host
-if ($LASTEXITCODE -ne 0) {
-    throw "Inno Setup compilation failed."
+    foreach ($rid in $Rids) {
+        $publishDir = Join-Path $PublishRoot $rid
+        [void][System.IO.Directory]::CreateDirectory($publishDir)
+        Invoke-Checked "dotnet" @("publish", $ProjectPath, "-c", "Release", "-r", $rid, "-o", $publishDir) "dotnet publish failed for RID '$rid'."
+    }
 }
 
-if (-not (Test-Path -LiteralPath $standalonePath -PathType Leaf)) {
-    throw "Standalone archive was not created: $standalonePath"
+$artifacts = @()
+
+if ($Rids -contains "win-x64") {
+    $winZipPath = Join-Path $DistributionDir "Cafe.Launcher.Avalonia_${Tag}_win-x64.zip"
+    Compress-Archive -Path (Join-Path $PublishRoot "win-x64/*") -DestinationPath $winZipPath -Force
+    $artifacts += [pscustomobject]@{ Rid = "win-x64"; Kind = "zip"; Path = $winZipPath }
 }
 
-if (-not (Test-Path -LiteralPath $setupPath -PathType Leaf)) {
-    throw "Setup executable was not created: $setupPath"
+if ($Rids -contains "osx-arm64") {
+    $bundleParent = Join-Path $BundleRoot "osx-arm64"
+    $appDirectory = Join-Path $bundleParent "Cafe Launcher.app"
+    $contentsDir = Join-Path $appDirectory "Contents"
+    $macOsDir = Join-Path $contentsDir "MacOS"
+    $resourcesDir = Join-Path $contentsDir "Resources"
+    [void][System.IO.Directory]::CreateDirectory($macOsDir)
+    [void][System.IO.Directory]::CreateDirectory($resourcesDir)
+
+    Copy-Item -Path (Join-Path $PublishRoot "osx-arm64/*") -Destination $macOsDir -Recurse -Force
+
+    $plistTemplate = Get-Content -Raw -LiteralPath (Join-Path $MacOSAssetsDir "Info.plist")
+    $plist = $plistTemplate.Replace("{VERSION}", $version.VersionPrefix).Replace("{FILE_VERSION}", $version.FileVersion)
+    [System.IO.File]::WriteAllText((Join-Path $contentsDir "Info.plist"), $plist, [System.Text.UTF8Encoding]::new($false))
+
+    $icnsSource = Join-Path $MacOSAssetsDir "app-icon.icns"
+    if (Test-Path -LiteralPath $icnsSource) {
+        Copy-Item -LiteralPath $icnsSource -Destination (Join-Path $resourcesDir "app-icon.icns") -Force
+    }
+    else {
+        Write-Warning "installer/macos/app-icon.icns is missing; the bundle will have no Dock icon. Run scripts/New-AppIconAssets.ps1 to generate it."
+    }
+
+    if ($IsUnixHost) {
+        Set-UnixExecutableBit -Paths @(
+            (Join-Path $macOsDir "Cafe.Launcher.Avalonia"),
+            (Join-Path $macOsDir "createdump")
+        )
+
+        $osxZipPath = Join-Path $DistributionDir "Cafe.Launcher.Avalonia_${Tag}_osx-arm64.zip"
+        Push-Location $bundleParent
+        try {
+            & zip -ry $osxZipPath "Cafe Launcher.app"
+            if ($LASTEXITCODE -ne 0) {
+                throw "zip failed for the macOS bundle."
+            }
+        }
+        finally {
+            Pop-Location
+        }
+    }
+    else {
+        Write-Warning "Non-Unix host: the macOS bundle is created without executable bits and falls back to Compress-Archive. Build the macOS archive from Linux/macOS for release (the release workflow does this)."
+        $osxZipPath = Join-Path $DistributionDir "Cafe.Launcher.Avalonia_${Tag}_osx-arm64.zip"
+        Compress-Archive -Path $appDirectory -DestinationPath $osxZipPath -Force
+    }
+
+    $artifacts += [pscustomobject]@{ Rid = "osx-arm64"; Kind = "app-bundle-zip"; Path = $osxZipPath }
 }
 
-[pscustomobject]@{
-    Tag = $Tag
-    Version = $versionPrefix
-    StandalonePath = $standalonePath
-    SetupPath = $setupPath
+if ($Rids -contains "linux-x64") {
+    $linuxPublishDir = Join-Path $PublishRoot "linux-x64"
+    $linuxTarName = "Cafe.Launcher.Avalonia_${Tag}_linux-x64.tar.gz"
+    $linuxTarPath = Join-Path $DistributionDir $linuxTarName
+    if (-not $IsUnixHost) {
+        Write-Warning "Non-Unix host: the tar.gz may lose executable bits. Build the Linux archive from Linux for release (the release workflow does this)."
+    }
+    # Pack with a relative archive name: GNU tar reads "E:\...\x.tar.gz" as a remote host path.
+    Push-Location $DistributionDir
+    try {
+        & tar -czf $linuxTarName -C $linuxPublishDir .
+        if ($LASTEXITCODE -ne 0) {
+            throw "tar failed for the Linux package."
+        }
+    }
+    finally {
+        Pop-Location
+    }
+    $artifacts += [pscustomobject]@{ Rid = "linux-x64"; Kind = "tar-gz"; Path = $linuxTarPath }
+
+    if ($IsLinux) {
+        if ([string]::IsNullOrWhiteSpace($AppImageToolPath)) {
+            Write-Warning "AppImage packaging skipped: pass -AppImageToolPath pointing at a Linux appimagetool build to produce the AppImage."
+        }
+        else {
+            $appDirRoot = Join-Path $BundleRoot "linux-x64/AppDir"
+            $appBinDir = Join-Path $appDirRoot "usr/bin"
+            $hicolorDir = Join-Path $appDirRoot "usr/share/icons/hicolor/256x256/apps"
+            [void][System.IO.Directory]::CreateDirectory($appBinDir)
+            [void][System.IO.Directory]::CreateDirectory($hicolorDir)
+
+            Copy-Item -Path (Join-Path $linuxPublishDir "*") -Destination $appBinDir -Recurse -Force
+            Set-UnixExecutableBit -Paths @(
+                (Join-Path $appBinDir "Cafe.Launcher.Avalonia"),
+                (Join-Path $appBinDir "createdump")
+            )
+
+            Copy-Item -LiteralPath (Join-Path $LinuxAssetsDir "cafe-launcher.desktop") -Destination (Join-Path $appDirRoot "cafe-launcher.desktop") -Force
+
+            $iconSource = Join-Path $LinuxAssetsDir "app-icon-256.png"
+            if (Test-Path -LiteralPath $iconSource) {
+                Copy-Item -LiteralPath $iconSource -Destination (Join-Path $hicolorDir "cafe-launcher.png") -Force
+                Copy-Item -LiteralPath $iconSource -Destination (Join-Path $appDirRoot "cafe-launcher.png") -Force
+                New-Item -ItemType SymbolicLink -Path (Join-Path $appDirRoot ".DirIcon") -Target "cafe-launcher.png" -Force | Out-Null
+            }
+            else {
+                Write-Warning "installer/linux/app-icon-256.png is missing; the AppImage will have no icon. Run scripts/New-AppIconAssets.ps1 to generate it."
+            }
+
+            $appImagePath = Join-Path $DistributionDir "Cafe.Launcher.Avalonia_${Tag}_linux-x64.AppImage"
+            Invoke-Checked $AppImageToolPath @("--appimage-extract-and-run", $appDirRoot, $appImagePath) "appimagetool failed for the Linux AppImage."
+            Set-UnixExecutableBit -Paths @($appImagePath)
+            $artifacts += [pscustomobject]@{ Rid = "linux-x64"; Kind = "AppImage"; Path = $appImagePath }
+        }
+    }
 }
+
+foreach ($artifact in $artifacts) {
+    if (-not (Test-Path -LiteralPath $artifact.Path -PathType Leaf)) {
+        throw "Expected artifact was not created: $($artifact.Path)"
+    }
+}
+
+$artifacts

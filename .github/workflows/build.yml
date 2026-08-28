@@ -6,9 +6,14 @@ on:
   pull_request:
     branches: [ "main" ]
 
+concurrency:
+  group: build-${{ github.ref }}
+  cancel-in-progress: true
+
 jobs:
   build:
     runs-on: windows-latest
+    timeout-minutes: 40
 
     defaults:
       run:
@@ -17,18 +22,21 @@ jobs:
     env:
       Project_Path: src/Cafe.Launcher.Avalonia/Cafe.Launcher.Avalonia.csproj
       DOTNET_CLI_TELEMETRY_OPTOUT: 1
+      DOTNET_NOLOGO: 1
       AVALONIA_TELEMETRY_OPTOUT: 1
 
     steps:
       - name: Checkout
         uses: actions/checkout@v7
         with:
-          fetch-depth: 0
+          fetch-depth: 1
 
       - name: Setup .NET
         uses: actions/setup-dotnet@v6
         with:
           dotnet-version: 10.0.x
+          cache: true
+          cache-dependency-path: '**/*.csproj'
 
       - name: Test
         run: .\test.ps1 -Configuration Debug
@@ -41,21 +49,13 @@ jobs:
         uses: actions/upload-artifact@v7
         with:
           name: test-and-coverage-reports
+          retention-days: 14
           path: |
             TestResults/**/*.trx
             TestResults/Coverage/**/coverage.cobertura.xml
 
-      - name: Restore (Debug, win-x64)
+      - name: Restore (win-x64)
         run: dotnet restore $env:Project_Path -r win-x64
-
-      - name: Build (Debug, win-x64)
-        run: dotnet build $env:Project_Path -c Debug -r win-x64 --no-restore
-
-      - name: Restore (Release, win-x64)
-        run: dotnet restore $env:Project_Path -r win-x64
-
-      - name: Build (Release, win-x64)
-        run: dotnet build $env:Project_Path -c Release -r win-x64 --no-restore
 
       - name: Publish (Release, win-x64)
         run: dotnet publish $env:Project_Path -c Release -r win-x64 -o publish --no-restore

@@ -4,13 +4,19 @@ on:
   push:
     tags:
       - 'v*'
+  workflow_dispatch:
 
 permissions:
-  contents: write
+  contents: read
+
+concurrency:
+  group: release-${{ github.ref }}
 
 jobs:
-  release:
-    runs-on: windows-latest
+  build:
+    name: Build platform packages
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
 
     defaults:
       run:
@@ -19,6 +25,7 @@ jobs:
     env:
       Project_Path: src/Cafe.Launcher.Avalonia/Cafe.Launcher.Avalonia.csproj
       DOTNET_CLI_TELEMETRY_OPTOUT: 1
+      DOTNET_NOLOGO: 1
       AVALONIA_TELEMETRY_OPTOUT: 1
 
     steps:
@@ -31,28 +38,32 @@ jobs:
         uses: actions/setup-dotnet@v6
         with:
           dotnet-version: 10.0.x
+          cache: true
+          cache-dependency-path: '**/*.csproj'
 
-      - name: Install Inno Setup
-        run: choco install innosetup --no-progress -y
-
-      - name: Test
-        run: .\test.ps1 -Configuration Release
-
-      - name: Restore (Release, win-x64)
-        run: dotnet restore $env:Project_Path -r win-x64
-
-      - name: Build (Release, win-x64)
-        run: dotnet build $env:Project_Path -c Release -r win-x64 --no-restore
-
-      - name: Build distribution artifacts
+      - name: Acquire appimagetool
+        env:
+          # Pinned by sha256 because the upstream "continuous" tag is mutable.
+          # To update: download the asset, recompute `sha256sum`, replace the hash.
+          APPIMAGETOOL_SHA256: 'a6d71e2b6cd66f8e8d16c37ad164658985e0cf5fcaa950c90a482890cb9d13e0'
         run: |
-          $result = .\scripts\Build-Distribution.ps1 -Tag "${{ github.ref_name }}"
-          $standaloneName = Split-Path -Leaf $result.StandalonePath
-          $setupName = Split-Path -Leaf $result.SetupPath
-          "standalone_name=$standaloneName" >> $env:GITHUB_ENV
-          "setup_name=$setupName" >> $env:GITHUB_ENV
+          curl -fL --retry 3 -o appimagetool-x86_64.AppImage "https://github.com/AppImage/appimagetool/releases/download/continuous/appimagetool-x86_64.AppImage"
+          echo "${APPIMAGETOOL_SHA256}  appimagetool-x86_64.AppImage" | sha256sum -c -
+          chmod +x appimagetool-x86_64.AppImage
+
+      - name: Build distribution packages
+        run: |
+          $buildArguments = @{
+              Rids = 'win-x64', 'osx-arm64', 'linux-x64'
+              AppImageToolPath = './appimagetool-x86_64.AppImage'
+          }
+          if ($env:GITHUB_EVENT_NAME -eq 'push') {
+              $buildArguments.Tag = '${{ github.ref_name }}'
+          }
+          ./scripts/Build-Distribution.ps1 @buildArguments
 
       - name: Prepare changelog
+        if: github.event_name == 'push'
         run: |
           if (Test-Path "CHANGELOG_RELEASE.md") {
             Copy-Item "CHANGELOG_RELEASE.md" "changelog.md"
@@ -69,18 +80,129 @@ jobs:
             } else {
               Write-Host "No previous tag — using all commits"
             }
-            .\scripts\New-ReleaseChangelog.ps1 @parameters
+            ./scripts/New-ReleaseChangelog.ps1 @parameters
             Write-Host "Fallback changelog generated"
           }
+
+      - name: Upload platform packages
+        uses: actions/upload-artifact@v7
+        with:
+          name: distribution-packages
+          path: artifacts/distribution/*
+          retention-days: 1
+
+      - name: Upload win-x64 publish output
+        uses: actions/upload-artifact@v7
+        with:
+          name: publish-win-x64
+          path: artifacts/publish/win-x64/
+          retention-days: 1
+
+      - name: Upload changelog
+        if: github.event_name == 'push'
+        uses: actions/upload-artifact@v7
+        with:
+          name: changelog
+          path: changelog.md
+          retention-days: 1
+
+  installer:
+    name: Release tests and Windows installer
+    runs-on: windows-latest
+    needs: build
+    timeout-minutes: 25
+
+    defaults:
+      run:
+        shell: pwsh
+
+    env:
+      Project_Path: src/Cafe.Launcher.Avalonia/Cafe.Launcher.Avalonia.csproj
+      DOTNET_CLI_TELEMETRY_OPTOUT: 1
+      DOTNET_NOLOGO: 1
+      AVALONIA_TELEMETRY_OPTOUT: 1
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v7
+        with:
+          fetch-depth: 1
+
+      - name: Setup .NET
+        uses: actions/setup-dotnet@v6
+        with:
+          dotnet-version: 10.0.x
+          cache: true
+          cache-dependency-path: '**/*.csproj'
+
+      - name: Install Inno Setup
+        run: choco install innosetup --no-progress -y
+
+      - name: Test
+        run: .\test.ps1 -Configuration Release
+
+      - name: Download win-x64 publish output
+        uses: actions/download-artifact@v7
+        with:
+          name: publish-win-x64
+          path: artifacts/publish/win-x64
+
+      - name: Build Windows installer
+        run: |
+          $tagArguments = @()
+          if ($env:GITHUB_EVENT_NAME -eq 'push') {
+              $tagArguments = @('-Tag', '${{ github.ref_name }}')
+          }
+          ./scripts/New-WindowsInstaller.ps1 @tagArguments
+
+      - name: Upload Windows installer
+        uses: actions/upload-artifact@v7
+        with:
+          name: installer-package
+          path: artifacts/distribution/Cafe.Launcher.Avalonia_*_setup.exe
+          retention-days: 1
+
+  release:
+    name: Publish GitHub releases
+    runs-on: ubuntu-latest
+    needs: [ build, installer ]
+    if: github.event_name == 'push'
+    timeout-minutes: 10
+
+    permissions:
+      contents: write
+
+    steps:
+      - name: Download platform packages
+        uses: actions/download-artifact@v7
+        with:
+          name: distribution-packages
+          path: artifacts/distribution
+
+      - name: Download Windows installer
+        uses: actions/download-artifact@v7
+        with:
+          name: installer-package
+          path: artifacts/distribution
+
+      - name: Download changelog
+        uses: actions/download-artifact@v7
+        with:
+          name: changelog
+          path: .
 
       - name: Create source repository release
         uses: softprops/action-gh-release@v3
         with:
+          tag_name: ${{ github.ref_name }}
           name: ${{ github.ref_name }}
           body_path: changelog.md
           files: |
-            artifacts/distribution/${{ env.standalone_name }}
-            artifacts/distribution/${{ env.setup_name }}
+            artifacts/distribution/Cafe.Launcher.Avalonia_${{ github.ref_name }}_win-x64.zip
+            artifacts/distribution/Cafe.Launcher.Avalonia_${{ github.ref_name }}_setup.exe
+            artifacts/distribution/Cafe.Launcher.Avalonia_${{ github.ref_name }}_osx-arm64.zip
+            artifacts/distribution/Cafe.Launcher.Avalonia_${{ github.ref_name }}_linux-x64.tar.gz
+            artifacts/distribution/Cafe.Launcher.Avalonia_${{ github.ref_name }}_linux-x64.AppImage
           prerelease: ${{ contains(github.ref_name, '-') }}
           fail_on_unmatched_files: true
 
@@ -94,7 +216,10 @@ jobs:
           name: ${{ github.ref_name }}
           body_path: changelog.md
           files: |
-            artifacts/distribution/${{ env.standalone_name }}
-            artifacts/distribution/${{ env.setup_name }}
+            artifacts/distribution/Cafe.Launcher.Avalonia_${{ github.ref_name }}_win-x64.zip
+            artifacts/distribution/Cafe.Launcher.Avalonia_${{ github.ref_name }}_setup.exe
+            artifacts/distribution/Cafe.Launcher.Avalonia_${{ github.ref_name }}_osx-arm64.zip
+            artifacts/distribution/Cafe.Launcher.Avalonia_${{ github.ref_name }}_linux-x64.tar.gz
+            artifacts/distribution/Cafe.Launcher.Avalonia_${{ github.ref_name }}_linux-x64.AppImage
           prerelease: ${{ contains(github.ref_name, '-') }}
           fail_on_unmatched_files: true
