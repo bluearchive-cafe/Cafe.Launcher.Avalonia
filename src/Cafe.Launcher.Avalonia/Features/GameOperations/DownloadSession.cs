@@ -114,6 +114,7 @@ internal sealed class DownloadSession : IDisposable
     {
         var activeToken = CancellationTokenSource.Token;
         var operationKind = repair ? GameOperationKind.Repair : GameOperationKind.Download;
+        string? gamePath = null;
 
         try
         {
@@ -130,7 +131,7 @@ internal sealed class DownloadSession : IDisposable
             var speedLimitBytesPerSec = DownloadSpeedLimits.ToBytesPerSecond(settings.DownloadSpeedLimit);
             if (string.IsNullOrWhiteSpace(settings.GamePath))
                 return Failed(localizer.T("gameInstallPathNotConfigured"), GameOperationErrorCode.PathMissing);
-            var gamePath = installationPath.NormalizeGamePath(settings.GamePath);
+            gamePath = installationPath.NormalizeGamePath(settings.GamePath);
             EnsureGamePath(gamePath);
             Directory.CreateDirectory(gamePath);
 
@@ -243,6 +244,21 @@ internal sealed class DownloadSession : IDisposable
                     affectedCount);
             }
 
+            // 下载前探测目录可写性：权限不足时立即失败并给出明确指引，
+            // 避免大流量下载完成后才在落盘阶段报 UnauthorizedAccessException。
+            if (!TryProbeWriteAccess(gamePath))
+            {
+                await diagnostics.MessageAsync(
+                    "GameDownload",
+                    $"Write probe failed: {gamePath}",
+                    activeToken);
+                checkpointStore.Clear();
+                return Failed(
+                    localizer.F("fileAccessDenied", gamePath),
+                    GameOperationErrorCode.System,
+                    affectedCount);
+            }
+
             for (var retry = 0; retry <= MaxInstallVerificationRetry; retry++)
             {
                 await diagnostics.DebugAsync(
@@ -349,7 +365,13 @@ internal sealed class DownloadSession : IDisposable
             checkpointStore.Clear();
             return Failed(localizer.T("diskSpaceInsufficient"), GameOperationErrorCode.InsufficientDiskSpace);
         }
-        catch (Exception exception) when (exception is IOException or UnauthorizedAccessException)
+        catch (UnauthorizedAccessException exception)
+        {
+            await diagnostics.ErrorAsync("GameDownload", exception, CancellationToken.None).ConfigureAwait(false);
+            checkpointStore.Clear();
+            return Failed(localizer.F("fileAccessDenied", gamePath), GameOperationErrorCode.System);
+        }
+        catch (IOException exception)
         {
             await diagnostics.ErrorAsync("GameDownload", exception, CancellationToken.None).ConfigureAwait(false);
             checkpointStore.Clear();
@@ -369,6 +391,26 @@ internal sealed class DownloadSession : IDisposable
                 CancellationToken.None);
             checkpointStore.Clear();
             return Failed(localizer.F("unexpectedError", exception.Message), GameOperationErrorCode.System);
+        }
+    }
+
+    /// <summary>Probes that the game directory accepts file creation (write permission).</summary>
+    private static bool TryProbeWriteAccess(string gamePath)
+    {
+        try
+        {
+            using var probe = new FileStream(
+                Path.Combine(gamePath, ".launcher-write-probe.tmp"),
+                FileMode.Create,
+                FileAccess.Write,
+                FileShare.None,
+                bufferSize: 1,
+                FileOptions.DeleteOnClose);
+            return true;
+        }
+        catch (Exception exception) when (exception is IOException or UnauthorizedAccessException)
+        {
+            return false;
         }
     }
 

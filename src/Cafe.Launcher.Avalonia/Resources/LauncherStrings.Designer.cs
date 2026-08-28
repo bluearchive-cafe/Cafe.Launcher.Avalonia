@@ -326,6 +326,8 @@ internal static class LauncherStrings
 
     internal static string ExportLogs => GetRequiredString("exportLogs");
 
+    internal static string FileAccessDenied => GetRequiredString("fileAccessDenied");
+
     internal static string FileOperationFailed => GetRequiredString("fileOperationFailed");
 
     internal static string FolderPickerUnavailable => GetRequiredString("folderPickerUnavailable");
