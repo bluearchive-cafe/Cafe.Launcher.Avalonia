@@ -1,9 +1,13 @@
 ## v1.1.0-beta.1
 
+![Cafe Launcher v1.1.0-beta.1 更新概览](https://github.com/bluearchive-cafe/Cafe.Launcher.Avalonia_Release/releases/download/v1.1.0-beta.1/cafe-launcher-v1.1.0-beta.1-release-banner.png)
+
 > [!NOTE]
 > 本版本完成了启动器视觉系统的整体升级，并新增游戏快捷操作、窗口状态记忆和更完整的动态配色能力。发布流程也扩展为 Windows、macOS 与 Linux 三平台产物。
 >
 > 由于这些变化属于向后兼容的功能扩展而非补丁修复，版本按 SemVer 从 `1.0.1-beta.1` 提升至 `1.1.0-beta.1`；当前仍为 Beta 预发布版本。
+>
+> macOS 与 Linux 版本目前仅作为实验性构建提供，尚未完成针对性适配与充分测试，可能存在兼容性或功能异常，暂不保证运行效果。
 
 ### 界面与交互
 

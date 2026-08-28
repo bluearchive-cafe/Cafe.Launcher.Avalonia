@@ -345,6 +345,16 @@ public sealed class InstallerContractTests
             Assert.Equal(2, CountOccurrences(workflow, artifactName));
         }
 
+        const string releaseBannerName = "cafe-launcher-${{ github.ref_name }}-release-banner.png";
+        Assert.Contains(
+            $"path: docs/assets/release-banners/{releaseBannerName}",
+            workflow,
+            StringComparison.Ordinal);
+        Assert.Contains("if-no-files-found: error", workflow, StringComparison.Ordinal);
+        Assert.Equal(
+            2,
+            CountOccurrences(workflow, $"artifacts/release-banner/{releaseBannerName}"));
+
         Assert.Contains(
             "repository: bluearchive-cafe/Cafe.Launcher.Avalonia_Release",
             workflow,

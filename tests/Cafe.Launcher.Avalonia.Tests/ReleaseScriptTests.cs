@@ -53,6 +53,21 @@ public sealed class ReleaseScriptTests
             StringComparison.Ordinal);
     }
 
+    [Fact]
+    public void ReleaseChangelog_EmbedsBannerFromPublicDistributionRelease()
+    {
+        var changelog = File.ReadAllText(ProjectFile("CHANGELOG_RELEASE.md"));
+
+        Assert.Contains(
+            "https://github.com/bluearchive-cafe/Cafe.Launcher.Avalonia_Release/releases/download/",
+            changelog,
+            StringComparison.Ordinal);
+        Assert.DoesNotContain(
+            "raw.githubusercontent.com/bluearchive-cafe/Cafe.Launcher.Avalonia/",
+            changelog,
+            StringComparison.Ordinal);
+    }
+
     private static string ProjectFile(string relativePath) =>
         Path.Combine(FindProjectRoot(), relativePath);
 
