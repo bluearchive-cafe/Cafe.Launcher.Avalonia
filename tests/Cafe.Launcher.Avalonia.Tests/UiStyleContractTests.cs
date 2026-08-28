@@ -3,6 +3,7 @@ using System.Text.RegularExpressions;
 using System.Text.Json;
 using System.Xml;
 using System.Xml.Linq;
+using Cafe.Launcher.Avalonia.Services;
 
 namespace Cafe.Launcher.Avalonia.Tests;
 
@@ -2501,6 +2502,20 @@ public sealed partial class UiStyleContractTests
     }
 
     [Fact]
+    public void AppDialogSurfaceTokens_MatchGeneratorDeclaredDefaults() // ADR-010
+    {
+        // The Brand Blue neutral strategy resets the dialog surface family to the
+        // values declared here; this pin keeps the XAML and the reset table from
+        // drifting apart.
+        var document = XDocument.Load(ProjectFile("App.axaml"));
+        foreach (var (key, light, dark) in MaterialSchemeGenerator.DialogSurfaceDefaults)
+        {
+            Assert.Equal(light, ReadThemeBrushColor(document, "Light", key));
+            Assert.Equal(dark, ReadThemeBrushColor(document, "Dark", key));
+        }
+    }
+
+    [Fact]
     public void ToastCloseButton_WhenRendered_UsesLocalizedAutomationNameAndToolTip()
     {
         var document = XDocument.Load(ProjectFile("Views/MainWindowToastOverlay.axaml"));
@@ -4650,6 +4665,21 @@ public sealed partial class UiStyleContractTests
         element.Attribute("Classes")?.Value
             .Split(' ', StringSplitOptions.RemoveEmptyEntries)
             .Contains(className, StringComparer.Ordinal) == true;
+
+    private static string ReadThemeBrushColor(XDocument document, string theme, string key)
+    {
+        const string avaloniaNamespace = "https://github.com/avaloniaui";
+        var xKey = XName.Get("Key", "http://schemas.microsoft.com/winfx/2006/xaml");
+        var brush = document
+            .Descendants(XName.Get("SolidColorBrush", avaloniaNamespace))
+            .Single(element =>
+                element.Attribute(xKey)?.Value == key
+                && element
+                    .Ancestors(XName.Get("ResourceDictionary", avaloniaNamespace))
+                    .Any(ancestor => ancestor.Attribute(xKey)?.Value == theme));
+        return brush.Attribute("Color")?.Value
+            ?? throw new InvalidOperationException($"'{key}' declares no Color in the {theme} theme.");
+    }
 
     private static XElement FindMotionOverlay(XDocument document, string isOpenBinding)
     {

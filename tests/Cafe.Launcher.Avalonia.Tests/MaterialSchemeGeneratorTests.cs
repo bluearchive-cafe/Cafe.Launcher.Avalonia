@@ -119,9 +119,36 @@ public sealed class MaterialSchemeGeneratorTests
         Assert.True(brushes.ContainsKey("Launcher.Color.PrimaryContainer"));
         Assert.True(brushes.ContainsKey("Launcher.Color.OnPrimaryContainer"));
 
-        // Visible solid surfaces stay on the fixed neutral business token under the
-        // Brand Blue strategy (Q13): no Dialog.Background override is produced.
-        Assert.False(brushes.ContainsKey("Launcher.Color.Dialog.Background"));
+        // Visible solid surfaces stay on the declared neutral business tokens
+        // under the Brand Blue strategy (Q13): the dialog family is written with
+        // the declared App.axaml defaults so no seed-following override lingers.
+        Assert.Equal(
+            Color.Parse("#FFFFFFFF"),
+            brushes["Launcher.Color.Dialog.Background"].Color);
+    }
+
+    [Theory]
+    [InlineData(false)]
+    [InlineData(true)]
+    public void BuildRoleBrushes_BrandBlueStrategy_RestoresDeclaredDialogSurfaceFamily(bool isDark)
+    {
+        var scheme = MaterialSchemeGenerator.CreateScheme(
+            DefaultSeed,
+            ThemeColorVariants.TonalSpot,
+            isDark);
+
+        var brushes = MaterialSchemeGenerator.BuildRoleBrushes(
+            scheme,
+            seedFollowingNeutrals: false,
+            isDark);
+
+        foreach (var (key, light, dark) in MaterialSchemeGenerator.DialogSurfaceDefaults)
+        {
+            Assert.True(brushes.ContainsKey(key));
+            Assert.Equal(
+                Color.Parse(isDark ? dark : light),
+                brushes[key].Color);
+        }
     }
 
     [Fact]
@@ -146,6 +173,75 @@ public sealed class MaterialSchemeGeneratorTests
         Assert.Equal(
             scheme.Surface.Value,
             MaterialColorMapper.ToArgbColor(brushes["Launcher.Color.Dialog.Background"].Color).Value);
+    }
+
+    [Theory]
+    [InlineData(false)]
+    [InlineData(true)]
+    public void BuildRoleBrushes_SeedFollowingStrategy_TintsEntireDialogSurfaceFamily(bool isDark)
+    {
+        var scheme = MaterialSchemeGenerator.CreateScheme(
+            DefaultSeed,
+            ThemeColorVariants.TonalSpot,
+            isDark);
+
+        var brushes = MaterialSchemeGenerator.BuildRoleBrushes(
+            scheme,
+            seedFollowingNeutrals: true,
+            isDark);
+
+        // The whole dialog family follows the scheme's neutral surface ladder:
+        // Background/Footer sit on Surface, the header and close states step up
+        // the SurfaceContainer tones.
+        Assert.Equal(
+            scheme.Surface.Value,
+            MaterialColorMapper.ToArgbColor(brushes["Launcher.Color.Dialog.Background"].Color).Value);
+        Assert.Equal(
+            scheme.Surface.Value,
+            MaterialColorMapper.ToArgbColor(brushes["Launcher.Color.Dialog.Footer"].Color).Value);
+        Assert.Equal(
+            scheme.SurfaceContainerLow.Value,
+            MaterialColorMapper.ToArgbColor(brushes["Launcher.Color.Dialog.Header"].Color).Value);
+        Assert.Equal(
+            scheme.SurfaceContainerHigh.Value,
+            MaterialColorMapper.ToArgbColor(brushes["Launcher.Color.Dialog.Close.Hover"].Color).Value);
+        Assert.Equal(
+            scheme.SurfaceContainerHighest.Value,
+            MaterialColorMapper.ToArgbColor(brushes["Launcher.Color.Dialog.Close.Pressed"].Color).Value);
+
+        // The ladder produces visibly distinct chrome steps in both themes.
+        Assert.NotEqual(
+            brushes["Launcher.Color.Dialog.Background"].Color,
+            brushes["Launcher.Color.Dialog.Header"].Color);
+        Assert.NotEqual(
+            brushes["Launcher.Color.Dialog.Header"].Color,
+            brushes["Launcher.Color.Dialog.Close.Hover"].Color);
+        Assert.NotEqual(
+            brushes["Launcher.Color.Dialog.Close.Hover"].Color,
+            brushes["Launcher.Color.Dialog.Close.Pressed"].Color);
+    }
+
+    [Fact]
+    public void BuildRoleBrushes_SeedFollowingStrategy_DialogFamilyHueFollowsSeed()
+    {
+        var blue = MaterialSchemeGenerator.CreateScheme(
+            Color.Parse("#FF2E7DF6"),
+            ThemeColorVariants.TonalSpot,
+            isDark: false);
+        var green = MaterialSchemeGenerator.CreateScheme(
+            Color.Parse("#FF2E9E46"),
+            ThemeColorVariants.TonalSpot,
+            isDark: false);
+
+        var blueBrushes = MaterialSchemeGenerator.BuildRoleBrushes(blue, seedFollowingNeutrals: true);
+        var greenBrushes = MaterialSchemeGenerator.BuildRoleBrushes(green, seedFollowingNeutrals: true);
+
+        Assert.NotEqual(
+            blueBrushes["Launcher.Color.Dialog.Header"].Color,
+            greenBrushes["Launcher.Color.Dialog.Header"].Color);
+        Assert.NotEqual(
+            blueBrushes["Launcher.Color.Dialog.Close.Pressed"].Color,
+            greenBrushes["Launcher.Color.Dialog.Close.Pressed"].Color);
     }
 
     [Fact]

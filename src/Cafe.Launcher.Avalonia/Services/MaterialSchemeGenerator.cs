@@ -51,8 +51,13 @@ internal static class MaterialSchemeGenerator
     /// derivatives) as a subset and adds the M3 secondary/tertiary role families;
     /// "Info" stays a fixed business colour and is never overridden (spec §3.4) —
     /// including Info.Background, which keeps its static Light/Dark values and is
-    /// not tinted by the accent. The neutral roles are always written so switching
-    /// away from seed-following cannot leave stale dynamic brushes behind.
+    /// not tinted by the accent. The neutral roles and the whole dialog surface
+    /// family (<c>Dialog.Background/Header/Footer/Close.Hover/Close.Pressed</c>)
+    /// are always written for every strategy, so toggling seed-following can
+    /// never leave stale in-place brush overrides behind (ADR-010): Brand Blue
+    /// resets the family to the declared App.axaml defaults
+    /// (<see cref="DialogSurfaceDefaults"/>), seed-following dyes it from the
+    /// scheme's neutral surface ladder.
     /// </summary>
     public static IReadOnlyDictionary<string, SolidColorBrush> BuildRoleBrushes(
         DynamicScheme scheme,
@@ -109,17 +114,50 @@ internal static class MaterialSchemeGenerator
         result["Launcher.Color.OnSurface"] = MaterialColorMapper.ToBrush(neutralScheme.OnSurface);
         result["Launcher.Color.Outline"] = MaterialColorMapper.ToBrush(neutralScheme.Outline);
 
-        // The visible solid surfaces (dialogs/settings workspace) stay on the fixed
-        // neutral business token by default (Q13 "surface neutral"); only the
-        // seed-following strategy dyes them from the neutral scheme (Q23).
+        // Dialog surface family (Q13/Q23): Brand Blue resets to the declared
+        // App.axaml values (UiStyleContractTests pins the table to the XAML);
+        // seed-following dyes the whole family from the scheme's neutral surface
+        // ladder — Background/Footer on Surface, Header/Close states stepping up
+        // the SurfaceContainer tones. Tone steps stay fixed, only the hue drifts,
+        // so the fixed Text.Primary contrast remains AA-safe.
         if (seedFollowingNeutrals)
         {
             result["Launcher.Color.Dialog.Background"] =
                 MaterialColorMapper.ToBrush(neutralScheme.Surface);
+            result["Launcher.Color.Dialog.Footer"] =
+                MaterialColorMapper.ToBrush(neutralScheme.Surface);
+            result["Launcher.Color.Dialog.Header"] =
+                MaterialColorMapper.ToBrush(neutralScheme.SurfaceContainerLow);
+            result["Launcher.Color.Dialog.Close.Hover"] =
+                MaterialColorMapper.ToBrush(neutralScheme.SurfaceContainerHigh);
+            result["Launcher.Color.Dialog.Close.Pressed"] =
+                MaterialColorMapper.ToBrush(neutralScheme.SurfaceContainerHighest);
+        }
+        else
+        {
+            foreach (var (key, light, dark) in DialogSurfaceDefaults)
+            {
+                result[key] = new SolidColorBrush(Color.Parse(isDark ? dark : light));
+            }
         }
 
         return result;
     }
+
+    /// <summary>
+    /// Declared App.axaml dialog-surface defaults as (key, light, dark) rows.
+    /// The Brand Blue strategy resets the dialog family to these values, and
+    /// UiStyleContractTests asserts the XAML declarations against this table so
+    /// the two cannot drift apart.
+    /// </summary>
+    internal static readonly (string Key, string Light, string Dark)[] DialogSurfaceDefaults =
+    [
+        ("Launcher.Color.Dialog.Background", "#FFFFFFFF", "#FF161C26"),
+        ("Launcher.Color.Dialog.Header", "#FFF4F8FD", "#FF1B2430"),
+        ("Launcher.Color.Dialog.Footer", "#FFFFFFFF", "#FF161C26"),
+        ("Launcher.Color.Dialog.Close.Hover", "#FFEDF2F7", "#FF2A3547"),
+        ("Launcher.Color.Dialog.Close.Pressed", "#FFDDE6F0", "#FF344156"),
+    ];
 
     private static Color Blend(Color background, Color foreground, double opacity) =>
         Color.FromRgb(
