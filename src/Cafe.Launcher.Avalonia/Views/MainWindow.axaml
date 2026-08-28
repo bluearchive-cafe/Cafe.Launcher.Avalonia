@@ -279,6 +279,7 @@
                 <StackPanel Classes="social-actions" Spacing="{StaticResource Launcher.Spacing.Sm}">
                     <Button Classes="social-chip social-action official-site"
                             Cursor="Hand"
+                            IsVisible="{Binding RemoteContent.HasRemoteContent}"
                             ToolTip.Tip="{Binding Shell.I18n[officialSite]}"
                             AutomationProperties.Name="{Binding Shell.I18n[officialSite]}"
                             Command="{Binding WindowChrome.OpenOfficialSiteCommand}">

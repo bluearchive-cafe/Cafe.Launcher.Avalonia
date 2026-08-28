@@ -55,7 +55,13 @@
                                     <materialIcons:MaterialIcon Kind="{Binding IconKind}"
                                                                 Width="{StaticResource Launcher.Icon.Md}"
                                                                 Height="{StaticResource Launcher.Icon.Md}"
-                                                                VerticalAlignment="Center"/>
+                                                                VerticalAlignment="Center"
+                                                                Classes="settings-navigation-icon-outline"/>
+                                    <materialIcons:MaterialIcon Kind="{Binding SelectedIconKind}"
+                                                                Width="{StaticResource Launcher.Icon.Md}"
+                                                                Height="{StaticResource Launcher.Icon.Md}"
+                                                                VerticalAlignment="Center"
+                                                                Classes="settings-navigation-icon-filled"/>
                                     <TextBlock Grid.Column="1"
                                                Text="{Binding DisplayName}"
                                                Classes="settings-navigation-item"

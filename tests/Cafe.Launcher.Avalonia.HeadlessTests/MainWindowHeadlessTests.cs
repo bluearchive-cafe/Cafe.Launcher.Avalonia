@@ -523,11 +523,13 @@ public sealed class MainWindowHeadlessTests
         Dispatcher.UIThread.RunJobs();
         Assert.True(socialActions.IsEffectivelyVisible);
         Assert.False(socialItems.IsEffectivelyVisible);
+        Assert.False(officialSiteButton.IsEffectivelyVisible);
 
         context.ViewModel.RemoteContent.UpdateRemoteContentVisibility(true);
         Dispatcher.UIThread.RunJobs();
         Assert.True(socialActions.IsEffectivelyVisible);
         Assert.True(socialItems.IsEffectivelyVisible);
+        Assert.True(officialSiteButton.IsEffectivelyVisible);
     }
 
     [AvaloniaFact]

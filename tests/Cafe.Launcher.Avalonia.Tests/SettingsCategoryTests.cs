@@ -129,6 +129,24 @@ public sealed class SettingsCategoryTests
         Assert.All(options.SettingsCategories, option => Assert.False(string.IsNullOrWhiteSpace(option.DisplayName)));
     }
 
+    [Fact]
+    public void CategoryIcons_UseOutlinedAndFilledPairs()
+    {
+        var options = new SettingsOptionsViewModel(new LocalizationService(), new DiskSpaceService());
+        options.RefreshDisplayNames();
+
+        Assert.Equal(
+            [
+                ("CogOutline", "Cog"),
+                ("GamepadSquareOutline", "GamepadSquare"),
+                ("DownloadOutline", "Download"),
+                ("PaletteOutline", "Palette"),
+                ("Tune", "Tune"),
+                ("InformationOutline", "Information")
+            ],
+            options.SettingsCategories.Select(option => (option.IconKind, option.SelectedIconKind)));
+    }
+
     [Theory]
     [InlineData(LauncherLanguages.English)]
     [InlineData(LauncherLanguages.SimplifiedChinese)]
