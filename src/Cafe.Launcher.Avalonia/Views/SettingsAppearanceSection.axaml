@@ -76,7 +76,7 @@
                     <ItemsControl Width="{StaticResource Launcher.Layout.Appearance.Preview.Width}"
                                   ItemsSource="{Binding Settings.Appearance.ThemeColorPaletteItems}">
                         <ItemsControl.ItemsPanel>
-                            <StaticResource ResourceKey="HorizontalSpacingSmPanel"/>
+                            <StaticResource ResourceKey="Launcher.Component.RowPanel.Sm"/>
                         </ItemsControl.ItemsPanel>
                         <ItemsControl.ItemTemplate>
                             <DataTemplate x:DataType="models:ThemeColorPaletteItem">

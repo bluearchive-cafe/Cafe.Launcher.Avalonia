@@ -65,6 +65,47 @@ public sealed class UiAccessibilityContractTests
         Assert.All(samples, sample => Assert.Equal("False", sample.Attribute("IsTabStop")?.Value));
     }
 
+    [Fact]
+    public void ModalSurfaces_ExposeLocalizedAutomationNames()
+    {
+        // §8（2026-08-28 审计修复）：DialogSurface 表面名 = 标题文本；
+        // 无标题外壳（设置/向导）由使用方显式给名；Toast 宿主命名并声明 live region。
+        var dialogTheme = XDocument.Load(ProjectFile("Views/Styles/DialogSurface.axaml"));
+        var surfaceStyle = dialogTheme
+            .Descendants(Avalonia + "Style")
+            .Single(element => element.Attribute("Selector")?.Value == "controls|DialogSurface");
+        Assert.Equal(
+            "{Binding Title, RelativeSource={RelativeSource Self}}",
+            surfaceStyle.Elements(Avalonia + "Setter")
+                .Single(setter => setter.Attribute("Property")?.Value == "AutomationProperties.Name")
+                .Attribute("Value")?.Value);
+
+        var settings = XDocument.Load(ProjectFile("Views/MainWindowSettingsOverlay.axaml"));
+        var settingsSurface = settings
+            .Descendants()
+            .Single(element => element.Name.LocalName == "DialogSurface");
+        Assert.Equal(
+            "{Binding Shell.I18n[settings]}",
+            settingsSurface.Attribute("AutomationProperties.Name")?.Value);
+
+        var wizard = XDocument.Load(ProjectFile("Views/SetupWizardOverlay.axaml"));
+        var wizardSurface = wizard
+            .Descendants()
+            .Single(element => element.Name.LocalName == "DialogSurface");
+        Assert.Equal(
+            "{Binding Shell.I18n[setupWizardStepTitle]}",
+            wizardSurface.Attribute("AutomationProperties.Name")?.Value);
+
+        var toast = XDocument.Load(ProjectFile("Views/MainWindowToastOverlay.axaml"));
+        var toastHost = toast
+            .Descendants(Avalonia + "Grid")
+            .Single(element => HasClass(element, "toast-host"));
+        Assert.Equal(
+            "{Binding Shell.I18n[toastRegionName]}",
+            toastHost.Attribute("AutomationProperties.Name")?.Value);
+        Assert.Equal("Polite", toastHost.Attribute("AutomationProperties.LiveSetting")?.Value);
+    }
+
     private static bool HasClass(XElement element, string className) =>
         (element.Attribute("Classes")?.Value ?? string.Empty)
             .Split(' ', StringSplitOptions.RemoveEmptyEntries)

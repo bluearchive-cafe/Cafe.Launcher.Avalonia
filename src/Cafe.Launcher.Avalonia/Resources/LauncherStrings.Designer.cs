@@ -992,6 +992,8 @@ internal static class LauncherStrings
 
     internal static string ToastInfo => GetRequiredString("toastInfo");
 
+    internal static string ToastRegionName => GetRequiredString("toastRegionName");
+
     internal static string ToastSuccess => GetRequiredString("toastSuccess");
 
     internal static string ToastWarning => GetRequiredString("toastWarning");

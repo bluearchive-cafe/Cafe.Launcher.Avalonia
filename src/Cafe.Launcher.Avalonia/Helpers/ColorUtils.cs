@@ -61,14 +61,19 @@ internal static class ColorUtils
     }
 
     /// <summary>
+    /// 深色 on-color 候选（近黑蓝灰）：浅色种子背景上比纯黑更协调的可读前景，与白色竞争。
+    /// 算法内部参考值，非 UI token；对比度契约见 DesignTokenContrastTests。
+    /// </summary>
+    private static readonly Color DarkOnColorCandidate = Color.FromRgb(0x12, 0x18, 0x20);
+
+    /// <summary>
     /// Returns the light or dark on-colour with the better contrast against <paramref name="color"/>.
     /// </summary>
     public static Color GetReadableOnAccentColor(Color color)
     {
-        var darkOnColor = Color.FromRgb(0x12, 0x18, 0x20);
         var lightContrast = GetContrastRatio(Colors.White, color);
-        var darkContrast = GetContrastRatio(darkOnColor, color);
-        return darkContrast > lightContrast ? darkOnColor : Colors.White;
+        var darkContrast = GetContrastRatio(DarkOnColorCandidate, color);
+        return darkContrast > lightContrast ? DarkOnColorCandidate : Colors.White;
     }
 
     /// <summary>

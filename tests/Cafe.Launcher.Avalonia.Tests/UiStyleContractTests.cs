@@ -3,6 +3,7 @@ using System.Text.RegularExpressions;
 using System.Text.Json;
 using System.Xml;
 using System.Xml.Linq;
+using Cafe.Launcher.Avalonia.Services;
 
 namespace Cafe.Launcher.Avalonia.Tests;
 
@@ -795,11 +796,13 @@ public sealed partial class UiStyleContractTests
         var navigation = GetStyleSetters(styles, "Button.icon-button.carousel-navigation");
         Assert.Equal("{StaticResource Launcher.Control.Height.Setting}", navigation["Width"]);
         Assert.Equal("{StaticResource Launcher.Control.Height.Setting}", navigation["Height"]);
+        // 箭头压在壁纸上，hover/pressed 反馈走 chrome 态层（与 banner-link 同配方），
+        // 图标前景保持 OnChrome 豁免（spec §8）。
         Assert.Equal(
-            "{StaticResource Launcher.Color.Transparent}",
+            "{StaticResource Launcher.Color.Chrome.Hover}",
             GetStyleSetters(styles, "Button.icon-button.carousel-navigation:pointerover")["Background"]);
         Assert.Equal(
-            "{StaticResource Launcher.Color.Transparent}",
+            "{StaticResource Launcher.Color.Chrome.Pressed}",
             GetStyleSetters(styles, "Button.icon-button.carousel-navigation:pressed")["Background"]);
     }
 
@@ -1777,6 +1780,25 @@ public sealed partial class UiStyleContractTests
     }
 
     [Fact]
+    public void SetupWizardStyles_CoverFilledDisabledAndOptionFocusStates()
+    {
+        // 2026-08-28 审计修复：wizard filled 型禁用态组合须声明在 primary 之后，
+        // 与主样式 filled 型家族（primary-action.dialog-action:disabled 等）同一预混配方；
+        // 选项行（wizard-option）键盘聚焦时铺 token 焦点环（spec §8）。
+        var wizardStyles = XDocument.Load(ProjectFile("Views/Styles/SetupWizard.axaml"));
+
+        var primaryDisabled = GetStyleSetters(wizardStyles, "Button.wizard-action.primary-action:disabled");
+        Assert.Equal("{DynamicResource Launcher.Color.Content.Row}", primaryDisabled["Background"]);
+        Assert.Equal("{DynamicResource Launcher.Color.Card.Border}", primaryDisabled["BorderBrush"]);
+        Assert.Equal("{StaticResource Launcher.Border.Thickness.Default}", primaryDisabled["BorderThickness"]);
+        Assert.Equal("{DynamicResource Launcher.Text.Secondary}", primaryDisabled["Foreground"]);
+
+        var optionFocus = GetStyleSetters(wizardStyles, "RadioButton.wizard-option:focus-visible");
+        Assert.Equal("{DynamicResource Launcher.Color.FocusRing}", optionFocus["BorderBrush"]);
+        Assert.Equal("{StaticResource Launcher.Border.Thickness.Focus}", optionFocus["BorderThickness"]);
+    }
+
+    [Fact]
     public void SelectControls_UseOutlinedFieldTokensAcrossStates()
     {
         var styles = XDocument.Load(ProjectFile("Views/MainWindow.Styles.axaml"));
@@ -2477,6 +2499,20 @@ public sealed partial class UiStyleContractTests
         Assert.Equal(
             "{Binding Settings.Appearance.IsSeedFollowingNeutralStrategySelected}",
             hint.Attribute("IsVisible")?.Value);
+    }
+
+    [Fact]
+    public void AppDialogSurfaceTokens_MatchGeneratorDeclaredDefaults() // ADR-010
+    {
+        // The Brand Blue neutral strategy resets the dialog surface family to the
+        // values declared here; this pin keeps the XAML and the reset table from
+        // drifting apart.
+        var document = XDocument.Load(ProjectFile("App.axaml"));
+        foreach (var (key, light, dark) in MaterialSchemeGenerator.DialogSurfaceDefaults)
+        {
+            Assert.Equal(light, ReadThemeBrushColor(document, "Light", key));
+            Assert.Equal(dark, ReadThemeBrushColor(document, "Dark", key));
+        }
     }
 
     [Fact]
@@ -4415,6 +4451,7 @@ public sealed partial class UiStyleContractTests
 
         // ADR-017：向导步骤面板改由后置代码顺序换页（wizard-step），不再属于 motion-content
         // 家族；设置页六个内容分区维持直接绑定驱动的纯淡化（motion-enter 与可见性同源）。
+        // 审计-0828：淡化家族不承载位移，仅表面（motion-surface）保留本地 TranslateTransform。
         Assert.Equal(6, contentTargets.Count);
         Assert.All(contentTargets, element =>
         {
@@ -4424,7 +4461,7 @@ public sealed partial class UiStyleContractTests
             Assert.Equal(
                 element.Attribute("IsVisible")?.Value,
                 element.Attribute("Classes.motion-enter")?.Value);
-            AssertHasLocalTranslateTransform(element);
+            Assert.Null(element.Attribute("RenderTransform"));
         });
 
         var mainWindow = XDocument.Load(ProjectFile("Views/MainWindow.axaml"));
@@ -4445,10 +4482,11 @@ public sealed partial class UiStyleContractTests
         Assert.Equal(
             "{Binding IsMotionEnabled}",
             operationSurface.Attribute("Classes.motion-enabled")?.Value);
-        // 容器的 motion-enter 是一次性入场锚点（任何状态可见即成立），不随状态切换重放。
-        Assert.Equal(
-            "{Binding Operations.IsAnyPanelVisible}",
-            operationSurface.Attribute("Classes.motion-enter")?.Value);
+        // 容器的 motion-enter 是一次性入场锚点，静态类声明（任何面板可见即成立），
+        // 入场窗期后由后置代码摘除，不随状态切换重放；不得改回绑定表达式——
+        // 摘除后绑定回流会重放入场（枚举值恒真时绑定等价于常量 true，掩盖摘除语义）。
+        Assert.True(HasClass(operationSurface, "motion-enter"));
+        Assert.Null(operationSurface.Attribute("Classes.motion-enter"));
         Assert.Null(operationSurface.Attribute("IsVisible"));
         AssertHasLocalTranslateTransform(operationSurface);
     }
@@ -4628,6 +4666,21 @@ public sealed partial class UiStyleContractTests
         element.Attribute("Classes")?.Value
             .Split(' ', StringSplitOptions.RemoveEmptyEntries)
             .Contains(className, StringComparer.Ordinal) == true;
+
+    private static string ReadThemeBrushColor(XDocument document, string theme, string key)
+    {
+        const string avaloniaNamespace = "https://github.com/avaloniaui";
+        var xKey = XName.Get("Key", "http://schemas.microsoft.com/winfx/2006/xaml");
+        var brush = document
+            .Descendants(XName.Get("SolidColorBrush", avaloniaNamespace))
+            .Single(element =>
+                element.Attribute(xKey)?.Value == key
+                && element
+                    .Ancestors(XName.Get("ResourceDictionary", avaloniaNamespace))
+                    .Any(ancestor => ancestor.Attribute(xKey)?.Value == theme));
+        return brush.Attribute("Color")?.Value
+            ?? throw new InvalidOperationException($"'{key}' declares no Color in the {theme} theme.");
+    }
 
     private static XElement FindMotionOverlay(XDocument document, string isOpenBinding)
     {

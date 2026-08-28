@@ -17,12 +17,6 @@
                                   VerticalContentAlignment="{TemplateBinding VerticalContentAlignment}"/>
             </Border>
         </ControlTemplate>
-        <ItemsPanelTemplate x:Key="HorizontalSpacingXsPanel">
-            <StackPanel Orientation="Horizontal" Spacing="{StaticResource Launcher.Spacing.Xs}"/>
-        </ItemsPanelTemplate>
-        <ItemsPanelTemplate x:Key="HorizontalSpacingSmPanel">
-            <StackPanel Orientation="Horizontal" Spacing="{StaticResource Launcher.Spacing.Sm}"/>
-        </ItemsPanelTemplate>
     </Styles.Resources>
     <Style Selector="TextBlock.caption">
         <Setter Property="FontSize" Value="{StaticResource Launcher.Typography.FontSize.Body.Sm}"/>
@@ -209,17 +203,9 @@
         <Setter Property="VerticalContentAlignment" Value="Center"/>
         <Setter Property="Template" Value="{StaticResource LauncherBorderButtonTemplate}"/>
     </Style>
-    <Style Selector="Button.icon-button.compact">
-        <Setter Property="Width" Value="{StaticResource Launcher.Control.Size.IconButton.Compact}"/>
-        <Setter Property="Height" Value="{StaticResource Launcher.Control.Size.IconButton.Compact}"/>
-    </Style>
     <Style Selector="Button.icon-button.carousel-navigation">
         <Setter Property="Width" Value="{StaticResource Launcher.Control.Height.Setting}"/>
         <Setter Property="Height" Value="{StaticResource Launcher.Control.Height.Setting}"/>
-    </Style>
-    <Style Selector="Button.icon-button.dot">
-        <Setter Property="Width" Value="{StaticResource Launcher.Control.Size.IconButton.Dot}"/>
-        <Setter Property="Height" Value="{StaticResource Launcher.Control.Size.IconButton.Dot}"/>
     </Style>
     <Style Selector="Button.icon-button:pointerover">
         <Setter Property="Background" Value="{DynamicResource Launcher.Color.Button.Flat.Hover}"/>
@@ -234,11 +220,13 @@
         <Setter Property="Foreground" Value="{DynamicResource Launcher.Text.Secondary}"/>
         <Setter Property="Opacity" Value="{StaticResource Launcher.StateLayer.Disabled.Content}"/>
     </Style>
+    <!-- carousel 箭头压在壁纸上，状态反馈走 chrome 态（与 banner-link 同配方）；
+         图标前景保持 OnChrome 豁免（spec §8），反馈由背景状态层承担。 -->
     <Style Selector="Button.icon-button.carousel-navigation:pointerover">
-        <Setter Property="Background" Value="{StaticResource Launcher.Color.Transparent}"/>
+        <Setter Property="Background" Value="{StaticResource Launcher.Color.Chrome.Hover}"/>
     </Style>
     <Style Selector="Button.icon-button.carousel-navigation:pressed">
-        <Setter Property="Background" Value="{StaticResource Launcher.Color.Transparent}"/>
+        <Setter Property="Background" Value="{StaticResource Launcher.Color.Chrome.Pressed}"/>
     </Style>
     <Style Selector="Button.primary-action">
         <Setter Property="Background" Value="{DynamicResource Launcher.Color.Primary}"/>

@@ -10,7 +10,11 @@
              x:Name="ToastOverlayRoot"
              x:DataType="vm:MainWindowViewModel">
     <!-- Toast notification overlay -->
-    <Grid Classes="toast-host" ZIndex="{x:Static constants:LauncherConstants.ZIndexToast}">
+    <!-- Toast 通知层：区域命名 + LiveSetting 让辅助技术感知卡片增删（§8）。 -->
+    <Grid Classes="toast-host"
+          ZIndex="{x:Static constants:LauncherConstants.ZIndexToast}"
+          AutomationProperties.Name="{Binding Shell.I18n[toastRegionName]}"
+          AutomationProperties.LiveSetting="Polite">
         <ItemsControl ItemsSource="{Binding Toasts.ActiveToasts}">
             <ItemsControl.ItemsPanel>
                 <ItemsPanelTemplate>
@@ -73,7 +77,9 @@
                                     </Button>
                                 </Grid>
                             </Border>
-                            <!-- M3 toast: auto-dismiss is time-managed; only action progress is shown. -->
+                            <!-- M3 toast: auto-dismiss is time-managed; only action progress is shown.
+                                 indeterminate 循环为 Fluent 基础模板内建、不随动效偏好关闭——进行中语义
+                                 必需且无空间/淡化运动，属 spec §3.7 的显式豁免（同 LoadingOverlay）。 -->
                             <ProgressBar Grid.Row="1"
                                          Classes="toast-progress"
                                          IsVisible="{Binding IsActionExecuting}"
