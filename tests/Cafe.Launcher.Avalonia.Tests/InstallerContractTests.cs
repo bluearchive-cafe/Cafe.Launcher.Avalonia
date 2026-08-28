@@ -286,6 +286,51 @@ public sealed class InstallerContractTests
     }
 
     [Fact]
+    public void WindowsInstallerScript_DetectsIsccVersionOnBothMajorVersions()
+    {
+        var script = ReadProjectFile("scripts/New-WindowsInstaller.ps1");
+
+        // ISCC 7+ answers --version with a bare version number; ISCC 6 does not
+        // support the flag (banner + non-zero exit), so the script must fall back
+        // to the DisplayVersion of the installer's uninstall registration.
+        Assert.Contains("$IsccPath --version", script, StringComparison.Ordinal);
+        Assert.Contains(
+            "HKLM:\\SOFTWARE\\Microsoft\\Windows\\CurrentVersion\\Uninstall",
+            script,
+            StringComparison.Ordinal);
+        Assert.Contains(
+            "HKLM:\\SOFTWARE\\WOW6432Node\\Microsoft\\Windows\\CurrentVersion\\Uninstall",
+            script,
+            StringComparison.Ordinal);
+        Assert.Contains("DisplayVersion", script, StringComparison.Ordinal);
+        Assert.Contains("Inno Setup 6.3 or newer is required", script, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public void IssInstaller_ChineseLanguageFileIsVendoredForInnoSetupSix()
+    {
+        var script = ReadProjectFile("installer/Cafe.Launcher.Avalonia.iss");
+
+        // Official Inno Setup ships Chinese translations only in 7.x, while the
+        // release workflow installs the Chocolatey package (Inno Setup 6.x), so
+        // the base Chinese messages must be referenced repo-relative.
+        Assert.Contains("lang\\ChineseSimplified.isl", script, StringComparison.Ordinal);
+        Assert.DoesNotContain(
+            "compiler:Languages\\ChineseSimplified.isl",
+            script,
+            StringComparison.Ordinal);
+
+        var chineseMessages = ReadProjectFile("installer/lang/ChineseSimplified.isl");
+        Assert.Contains("Chinese Simplified messages", chineseMessages, StringComparison.Ordinal);
+        // The vendored translation is redistributed under the Inno Setup license;
+        // its attribution header must be retained.
+        Assert.Contains(
+            "https://github.com/kira-96/Inno-Setup-Chinese-Simplified-Translation",
+            chineseMessages,
+            StringComparison.Ordinal);
+    }
+
+    [Fact]
     public void MacOsBundle_AssetsArePresentAndVersioned()
     {
         var plist = ReadProjectFile("installer/macos/Info.plist");
@@ -322,6 +367,9 @@ public sealed class InstallerContractTests
 
         Assert.Contains("runs-on: windows-latest", workflow, StringComparison.Ordinal);
         Assert.Contains("choco install innosetup", workflow, StringComparison.Ordinal);
+        Assert.Contains("$tagArguments = @{}", workflow, StringComparison.Ordinal);
+        Assert.Contains("$tagArguments.Tag = '${{ github.ref_name }}'", workflow, StringComparison.Ordinal);
+        Assert.DoesNotContain("@('-Tag', '${{ github.ref_name }}')", workflow, StringComparison.Ordinal);
         Assert.DoesNotContain("makensis", workflow, StringComparison.OrdinalIgnoreCase);
         Assert.DoesNotContain("apt-get", workflow, StringComparison.OrdinalIgnoreCase);
     }
@@ -344,6 +392,16 @@ public sealed class InstallerContractTests
         {
             Assert.Equal(2, CountOccurrences(workflow, artifactName));
         }
+
+        const string releaseBannerName = "cafe-launcher-${{ github.ref_name }}-release-banner.png";
+        Assert.Contains(
+            $"path: docs/assets/release-banners/{releaseBannerName}",
+            workflow,
+            StringComparison.Ordinal);
+        Assert.Contains("if-no-files-found: error", workflow, StringComparison.Ordinal);
+        Assert.Equal(
+            2,
+            CountOccurrences(workflow, $"artifacts/release-banner/{releaseBannerName}"));
 
         Assert.Contains(
             "repository: bluearchive-cafe/Cafe.Launcher.Avalonia_Release",

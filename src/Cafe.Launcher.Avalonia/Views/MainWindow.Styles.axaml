@@ -966,6 +966,9 @@
         <Setter Property="Background" Value="{DynamicResource Launcher.Color.Dialog.Background}"/>
         <Setter Property="TextElement.Foreground" Value="{DynamicResource Launcher.Color.OnSurface}"/>
     </Style>
+    <Style Selector="Border.settings-content-actions">
+        <Setter Property="Padding" Value="{StaticResource Launcher.Component.Settings.Footer.Padding}"/>
+    </Style>
     <Style Selector="Button.dialog-close.content-header-action">
         <Setter Property="Margin" Value="{StaticResource Launcher.Spacing.Thickness.None}"/>
     </Style>

@@ -65,8 +65,11 @@ SetupLogging=yes
 ; language-independent message text in the script would apply globally (the
 ; last entry wins for every language), so localized messages are supplied
 ; through each language's translation files instead.
+; ChineseSimplified.isl is vendored in installer/lang/ because official Inno
+; Setup ships Chinese translations only in 7.x; Inno Setup 6.x (the current
+; Chocolatey package) has none, and this script must compile on 6.3+.
 Name: "english"; MessagesFile: "compiler:Default.isl, lang\CustomMessages.en.isl"
-Name: "chinesesimplified"; MessagesFile: "compiler:Languages\ChineseSimplified.isl, lang\CustomMessages.zh.isl"
+Name: "chinesesimplified"; MessagesFile: "lang\ChineseSimplified.isl, lang\CustomMessages.zh.isl"
 Name: "japanese"; MessagesFile: "compiler:Languages\Japanese.isl, lang\CustomMessages.ja.isl"
 
 [Tasks]

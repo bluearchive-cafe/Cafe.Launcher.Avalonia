@@ -1240,9 +1240,12 @@ public sealed partial class UiStyleContractTests
             GetStyleSetters(document, "Border.settings-content-padding")["Padding"]);
         Assert.Equal(
             "{StaticResource Launcher.Component.Settings.Footer.Padding}",
+            GetStyleSetters(document, "Border.settings-content-actions")["Padding"]);
+        Assert.Equal(
+            "False",
             GetStyleSetters(
                 dialogSurfaceStyles,
-                "controls|DialogSurface.settings-surface:panel /template/ Border#PART_FooterBand")["Padding"]);
+                "controls|DialogSurface.settings-surface:panel /template/ Border#PART_FooterBand")["IsVisible"]);
         Assert.Equal(
             "{StaticResource Launcher.Spacing.Thickness.None}",
             GetStyleSetters(document, "Button.dialog-close.content-header-action")["Margin"]);
@@ -1357,6 +1360,13 @@ public sealed partial class UiStyleContractTests
                     attribute.Name.LocalName == "Key"
                     && attribute.Value == "Launcher.Component.Settings.Content.Scroll.Padding"));
         Assert.Equal("0,0,16,0", contentScrollPadding.Value);
+        var contentActionsPadding = application
+            .Descendants()
+            .Single(element =>
+                element.Attributes().Any(attribute =>
+                    attribute.Name.LocalName == "Key"
+                    && attribute.Value == "Launcher.Component.Settings.Footer.Padding"));
+        Assert.Equal("24,8,16,20", contentActionsPadding.Value);
 
         var overlayDocument = XDocument.Load(ProjectFile("Views/MainWindowSettingsOverlay.axaml"));
         var scrollViewer = overlayDocument
@@ -3591,6 +3601,22 @@ public sealed partial class UiStyleContractTests
             .ToList();
         Assert.Equal(2, settingsFooterButtons.Count);
         Assert.DoesNotContain(
+            settingsDocument.Descendants(),
+            element => element.Name.LocalName == "DialogSurface.Footer");
+        var settingsContentActions = settingsDocument
+            .Descendants()
+            .Single(element => element.Name.LocalName == "Border" && HasClass(element, "settings-content-actions"));
+        Assert.Equal("1", settingsContentActions.Attribute("Grid.Row")?.Value);
+        Assert.DoesNotContain(
+            settingsContentActions.Ancestors(),
+            element => HasClass(element, "settings-content-padding"));
+        Assert.Equal(
+            2,
+            settingsContentActions.Descendants()
+                .Count(element =>
+                    element.Name.LocalName == "Button"
+                    && HasClass(element, "dialog-action")));
+        Assert.DoesNotContain(
             "Kind=\"ContentSave\" Width=\"{StaticResource Launcher.Icon.Md}\" Height=\"{StaticResource Launcher.Icon.Md}\" Foreground=",
             settingsOverlay,
             StringComparison.Ordinal);
@@ -3621,7 +3647,7 @@ public sealed partial class UiStyleContractTests
                 element.Name.LocalName == "Grid"
                 && HasClass(element, "settings-content"));
 
-        Assert.Null(settingsContent.Attribute("RowDefinitions"));
+        Assert.Equal("*,Auto", settingsContent.Attribute("RowDefinitions")?.Value);
         var contentHeading = settingsContent.Descendants().Single(element =>
             HasClass(element, "settings-content-heading"));
         // 标题行含关闭按钮，必须固定在滚动区之外，滚动到末尾也不消失。
