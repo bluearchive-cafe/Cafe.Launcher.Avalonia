@@ -972,7 +972,7 @@ public sealed class MainWindowHeadlessTests
         var settingsOverlay = context.Window.GetVisualDescendants()
             .OfType<MainWindowSettingsOverlay>().Single();
         var footer = settingsOverlay.GetVisualDescendants().OfType<Border>()
-            .Single(control => control.Name == "PART_FooterBand");
+            .Single(control => control.Classes.Contains("settings-content-actions"));
 
         context.ViewModel.Settings.IsSaving = true;
         Dispatcher.UIThread.RunJobs();
@@ -1039,13 +1039,15 @@ public sealed class MainWindowHeadlessTests
         var footer = dialog
             .GetVisualDescendants()
             .OfType<Border>()
-            .Single(control => control.Name == "PART_FooterBand");
+            .Single(control => control.Classes.Contains("settings-content-actions"));
+        var footerTopLeft = footer.TranslatePoint(default, dialog);
 
         Assert.True(dialog.Bounds.Width <= context.Window.ClientSize.Width - 48);
         Assert.True(dialog.Bounds.Height <= context.Window.ClientSize.Height - 48);
         Assert.True(dialog.Bounds.Height > 0);
         Assert.True(footer.IsEffectivelyVisible);
-        Assert.True(footer.Bounds.Bottom <= dialog.Bounds.Height);
+        Assert.NotNull(footerTopLeft);
+        Assert.True(footerTopLeft.Value.Y + footer.Bounds.Height <= dialog.Bounds.Height);
     }
 
     [AvaloniaFact]

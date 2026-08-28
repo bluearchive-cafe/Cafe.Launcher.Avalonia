@@ -73,8 +73,8 @@
                         </ListBox>
                     </Grid>
 
-                    <Grid Grid.Column="1" Classes="settings-content">
-                        <Border Classes="settings-content-padding">
+                    <Grid Grid.Column="1" Classes="settings-content" RowDefinitions="*,Auto">
+                        <Border Grid.Row="0" Classes="settings-content-padding">
                                 <Grid RowDefinitions="Auto,*">
                                     <!-- 标题行与关闭按钮固定在内容区顶部，不随下方内容滚动。 -->
                                     <Grid Classes="settings-content-heading" ColumnDefinitions="*,Auto" ColumnSpacing="{StaticResource Launcher.Spacing.Md}">
@@ -137,38 +137,38 @@
                                     </ScrollViewer>
                                 </Grid>
                         </Border>
+                        <Border Grid.Row="1" Classes="settings-content-actions">
+                            <StackPanel Orientation="Horizontal"
+                                        Spacing="{StaticResource Launcher.Spacing.Sm}"
+                                        HorizontalAlignment="Right"
+                                        VerticalAlignment="Center">
+                                <Button Classes="flat-action dialog-action"
+                                        Command="{Binding WindowChrome.ShowSettingsCommand}"
+                                        IsEnabled="{Binding Settings.IsSaving, Converter={x:Static BoolConverters.Not}}"
+                                        ToolTip.Tip="{Binding Shell.I18n[cancel]}"
+                                        AutomationProperties.Name="{Binding Shell.I18n[cancel]}">
+                                    <StackPanel Classes="button-content" HorizontalAlignment="Center">
+                                        <materialIcons:MaterialIcon Kind="CloseCircleOutline"
+                                            Width="{StaticResource Launcher.Icon.Sm}" Height="{StaticResource Launcher.Icon.Sm}"/>
+                                        <TextBlock Text="{Binding Shell.I18n[cancel]}"/>
+                                    </StackPanel>
+                                </Button>
+                                <Button Classes="primary-action dialog-action"
+                                        Command="{Binding Settings.SaveSettingsCommand}"
+                                        IsEnabled="{Binding Settings.CanSaveSettings}"
+                                        ToolTip.Tip="{Binding Shell.I18n[save]}"
+                                        AutomationProperties.Name="{Binding Shell.I18n[save]}">
+                                    <StackPanel Classes="button-content" HorizontalAlignment="Center">
+                                        <materialIcons:MaterialIcon Kind="ContentSave"
+                                            Width="{StaticResource Launcher.Icon.Sm}" Height="{StaticResource Launcher.Icon.Sm}"/>
+                                        <TextBlock Text="{Binding Shell.I18n[save]}"/>
+                                    </StackPanel>
+                                </Button>
+                            </StackPanel>
+                        </Border>
                     </Grid>
                 </Grid>
             </controls:DialogSurface.Content>
-            <controls:DialogSurface.Footer>
-                <StackPanel Orientation="Horizontal"
-                            Spacing="{StaticResource Launcher.Spacing.Sm}"
-                            HorizontalAlignment="Right"
-                            VerticalAlignment="Center">
-                    <Button Classes="flat-action dialog-action"
-                            Command="{Binding WindowChrome.ShowSettingsCommand}"
-                            IsEnabled="{Binding Settings.IsSaving, Converter={x:Static BoolConverters.Not}}"
-                            ToolTip.Tip="{Binding Shell.I18n[cancel]}"
-                            AutomationProperties.Name="{Binding Shell.I18n[cancel]}">
-                        <StackPanel Classes="button-content" HorizontalAlignment="Center">
-                            <materialIcons:MaterialIcon Kind="CloseCircleOutline"
-                                Width="{StaticResource Launcher.Icon.Sm}" Height="{StaticResource Launcher.Icon.Sm}"/>
-                            <TextBlock Text="{Binding Shell.I18n[cancel]}"/>
-                        </StackPanel>
-                    </Button>
-                    <Button Classes="primary-action dialog-action"
-                            Command="{Binding Settings.SaveSettingsCommand}"
-                            IsEnabled="{Binding Settings.CanSaveSettings}"
-                            ToolTip.Tip="{Binding Shell.I18n[save]}"
-                            AutomationProperties.Name="{Binding Shell.I18n[save]}">
-                        <StackPanel Classes="button-content" HorizontalAlignment="Center">
-                            <materialIcons:MaterialIcon Kind="ContentSave"
-                                Width="{StaticResource Launcher.Icon.Sm}" Height="{StaticResource Launcher.Icon.Sm}"/>
-                            <TextBlock Text="{Binding Shell.I18n[save]}"/>
-                        </StackPanel>
-                    </Button>
-                </StackPanel>
-            </controls:DialogSurface.Footer>
         </controls:DialogSurface>
     </Grid>
 </UserControl>
