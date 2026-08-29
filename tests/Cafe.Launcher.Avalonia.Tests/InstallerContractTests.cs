@@ -370,7 +370,7 @@ public sealed class InstallerContractTests
             StringComparison.Ordinal);
         Assert.Contains("Resolve-Iscc", script, StringComparison.Ordinal);
         Assert.Contains("Inno Setup 7\\ISCC.exe", script, StringComparison.Ordinal);
-        Assert.Contains("[version]\"6.3\"", script, StringComparison.Ordinal);
+        Assert.Contains("[version]\"7.0\"", script, StringComparison.Ordinal);
         Assert.DoesNotContain("makensis", script, StringComparison.OrdinalIgnoreCase);
     }
 
@@ -408,17 +408,30 @@ public sealed class InstallerContractTests
             script,
             StringComparison.Ordinal);
         Assert.Contains("DisplayVersion", script, StringComparison.Ordinal);
-        Assert.Contains("Inno Setup 6.3 or newer is required", script, StringComparison.Ordinal);
+        Assert.Contains("Inno Setup 7.0 or newer is required", script, StringComparison.Ordinal);
     }
 
     [Fact]
-    public void IssInstaller_ChineseLanguageFileIsVendoredForInnoSetupSix()
+    public void WindowsInstallerScript_PrefersInstalledInnoSetupSevenOverPath()
+    {
+        var script = ReadProjectFile("scripts/New-WindowsInstaller.ps1");
+
+        var innoSevenLookup = script.IndexOf("$innoSevenCandidates", StringComparison.Ordinal);
+        var pathLookup = script.IndexOf("Get-Command ISCC.exe", StringComparison.Ordinal);
+        var innoSixLookup = script.IndexOf("$innoSixCandidates", StringComparison.Ordinal);
+
+        Assert.True(innoSevenLookup >= 0, "The standard Inno Setup 7 locations must be checked.");
+        Assert.True(pathLookup > innoSevenLookup, "A preinstalled Inno Setup 6 on PATH must not override Inno Setup 7.");
+        Assert.True(innoSixLookup > pathLookup, "Inno Setup 6 remains the final local fallback.");
+    }
+
+    [Fact]
+    public void IssInstaller_ChineseLanguageFileIsVendored()
     {
         var script = ReadProjectFile("installer/Cafe.Launcher.Avalonia.iss");
 
-        // Official Inno Setup ships Chinese translations only in 7.x. The
-        // release workflow uses 7.x, while the vendored file keeps local builds
-        // compatible with Inno Setup 6.3+.
+        // Vendoring keeps compilation independent of the translations bundled
+        // with a particular Inno Setup release.
         Assert.Contains("lang\\ChineseSimplified.isl", script, StringComparison.Ordinal);
         Assert.DoesNotContain(
             "compiler:Languages\\ChineseSimplified.isl",
@@ -491,7 +504,7 @@ public sealed class InstallerContractTests
     }
 
     [Fact]
-    public void ReleaseWorkflow_AttachesAllPlatformPackagesToBothReleases()
+    public void ReleaseWorkflow_AttachesPackagesAndKeepsBannerInSourceRepository()
     {
         var workflow = ReadProjectFile(".github/workflows/release.yml");
 
@@ -511,13 +524,13 @@ public sealed class InstallerContractTests
 
         const string releaseBannerName = "cafe-launcher-${{ github.ref_name }}-release-banner.png";
         Assert.Contains(
-            $"path: docs/assets/release-banners/{releaseBannerName}",
+            $"$bannerPath = \"docs/assets/release-banners/{releaseBannerName}\"",
             workflow,
             StringComparison.Ordinal);
-        Assert.Contains("if-no-files-found: error", workflow, StringComparison.Ordinal);
-        Assert.Equal(
-            2,
-            CountOccurrences(workflow, $"artifacts/release-banner/{releaseBannerName}"));
+        Assert.Contains("Test-Path $bannerPath -PathType Leaf", workflow, StringComparison.Ordinal);
+        Assert.Equal(1, CountOccurrences(workflow, releaseBannerName));
+        Assert.DoesNotContain("name: release-banner", workflow, StringComparison.Ordinal);
+        Assert.DoesNotContain("artifacts/release-banner", workflow, StringComparison.Ordinal);
 
         Assert.Contains(
             "repository: bluearchive-cafe/Cafe.Launcher.Avalonia_Release",

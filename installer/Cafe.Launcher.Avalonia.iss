@@ -1,6 +1,6 @@
 ﻿; Cafe Launcher — Inno Setup installer script.
 ; Replaces the retired NSIS script (installer/Cafe.Launcher.Avalonia.nsi).
-; Build through scripts/Build-Distribution.ps1. Requires Inno Setup 6.3+ (ISCC).
+; Build through scripts/Build-Distribution.ps1. Requires Inno Setup 7.x (ISCC).
 ;
 ; Required ISCC /D defines (enforced by the preprocessor below):
 ;   APP_VERSION       e.g. 1.0.1-beta.1  — the <VersionPrefix> from the main .csproj
@@ -79,9 +79,8 @@ UsedUserAreasWarning=no
 ; language-independent message text in the script would apply globally (the
 ; last entry wins for every language), so localized messages are supplied
 ; through each language's translation files instead.
-; ChineseSimplified.isl is vendored in installer/lang/ because official Inno
-; Setup ships Chinese translations only in 7.x. The release workflow uses 7.x,
-; while the vendored file keeps local compilation compatible with 6.3+.
+; ChineseSimplified.isl is vendored in installer/lang/ so compilation does not
+; depend on the translations bundled with a particular Inno Setup release.
 Name: "english"; MessagesFile: "compiler:Default.isl, lang\CustomMessages.en.isl"
 Name: "chinesesimplified"; MessagesFile: "lang\ChineseSimplified.isl, lang\CustomMessages.zh.isl"
 Name: "japanese"; MessagesFile: "compiler:Languages\Japanese.isl, lang\CustomMessages.ja.isl"

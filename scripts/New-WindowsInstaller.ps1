@@ -5,7 +5,7 @@ param(
     [string]$OutputDir
 )
 
-$ErrorActionPreference = "Stop"
+$ErrorActionPreference = "Stop"
 
 # Emit and decode console output as UTF-8 so Chinese text (commit messages,
 # resx values, tool output) survives the system's active code page.
@@ -44,25 +44,34 @@ function Assert-InnoSafeDefineValue {
 }
 
 function Resolve-Iscc {
-    $fromPath = Get-Command ISCC.exe -ErrorAction SilentlyContinue
-    if ($null -ne $fromPath) {
-        return $fromPath.Source
-    }
-
-    $candidates = @(
+    $innoSevenCandidates = @(
         (Join-Path $env:ProgramFiles "Inno Setup 7\ISCC.exe"),
-        (Join-Path ${env:ProgramFiles(x86)} "Inno Setup 7\ISCC.exe"),
-        (Join-Path $env:ProgramFiles "Inno Setup 6\ISCC.exe"),
-        (Join-Path ${env:ProgramFiles(x86)} "Inno Setup 6\ISCC.exe")
+        (Join-Path ${env:ProgramFiles(x86)} "Inno Setup 7\ISCC.exe")
     )
 
-    foreach ($candidate in $candidates) {
+    foreach ($candidate in $innoSevenCandidates) {
         if (Test-Path -LiteralPath $candidate) {
             return $candidate
         }
     }
 
-    throw "Inno Setup compiler (ISCC.exe) was not found. Install Inno Setup 6.3 or newer and add it to PATH."
+    $fromPath = Get-Command ISCC.exe -ErrorAction SilentlyContinue
+    if ($null -ne $fromPath) {
+        return $fromPath.Source
+    }
+
+    $innoSixCandidates = @(
+        (Join-Path $env:ProgramFiles "Inno Setup 6\ISCC.exe"),
+        (Join-Path ${env:ProgramFiles(x86)} "Inno Setup 6\ISCC.exe")
+    )
+
+    foreach ($candidate in $innoSixCandidates) {
+        if (Test-Path -LiteralPath $candidate) {
+            return $candidate
+        }
+    }
+
+    throw "Inno Setup compiler (ISCC.exe) was not found. Install Inno Setup 7.x and add it to PATH."
 }
 
 function Get-IsccVersion {
@@ -112,8 +121,9 @@ function Get-IsccVersion {
 $isccPath = Resolve-Iscc
 $isccVersion = Get-IsccVersion -IsccPath $isccPath
 
-if ($null -eq $isccVersion -or $isccVersion -lt [version]"6.3") {
-    throw "Inno Setup 6.3 or newer is required (found: '$isccPath')."
+if ($null -eq $isccVersion -or $isccVersion -lt [version]"7.0") {
+    throw ("Inno Setup 7.0 or newer is required (found: '$isccPath'). " +
+        "The installer script uses Inno Setup 7 PascalScript types (NativeInt) that Inno Setup 6 cannot compile.")
 }
 
 $publishRoot = [System.IO.Path]::GetFullPath($PublishDir)

@@ -106,6 +106,15 @@ jobs:
             Write-Host "Fallback changelog generated"
           }
 
+      - name: Verify release banner
+        if: github.event_name == 'push'
+        run: |
+          $bannerPath = "docs/assets/release-banners/cafe-launcher-${{ github.ref_name }}-release-banner.png"
+          if (-not (Test-Path $bannerPath -PathType Leaf)) {
+            throw "Release banner must be committed to the source repository: $bannerPath"
+          }
+          Write-Host "Using repository release banner: $bannerPath"
+
       - name: Upload platform packages
         uses: actions/upload-artifact@v7
         with:
@@ -126,15 +135,6 @@ jobs:
         with:
           name: changelog
           path: changelog.md
-          retention-days: 1
-
-      - name: Upload release banner
-        if: github.event_name == 'push'
-        uses: actions/upload-artifact@v7
-        with:
-          name: release-banner
-          path: docs/assets/release-banners/cafe-launcher-${{ github.ref_name }}-release-banner.png
-          if-no-files-found: error
           retention-days: 1
 
   installer:
@@ -257,12 +257,6 @@ jobs:
           name: changelog
           path: .
 
-      - name: Download release banner
-        uses: actions/download-artifact@v8
-        with:
-          name: release-banner
-          path: artifacts/release-banner
-
       - name: Create source repository release
         uses: softprops/action-gh-release@v3
         with:
@@ -275,7 +269,6 @@ jobs:
             artifacts/distribution/Cafe.Launcher.Avalonia_${{ github.ref_name }}_osx-arm64.zip
             artifacts/distribution/Cafe.Launcher.Avalonia_${{ github.ref_name }}_linux-x64.tar.gz
             artifacts/distribution/Cafe.Launcher.Avalonia_${{ github.ref_name }}_linux-x64.AppImage
-            artifacts/release-banner/cafe-launcher-${{ github.ref_name }}-release-banner.png
           prerelease: ${{ contains(github.ref_name, '-') }}
           fail_on_unmatched_files: true
 
@@ -294,6 +287,5 @@ jobs:
             artifacts/distribution/Cafe.Launcher.Avalonia_${{ github.ref_name }}_osx-arm64.zip
             artifacts/distribution/Cafe.Launcher.Avalonia_${{ github.ref_name }}_linux-x64.tar.gz
             artifacts/distribution/Cafe.Launcher.Avalonia_${{ github.ref_name }}_linux-x64.AppImage
-            artifacts/release-banner/cafe-launcher-${{ github.ref_name }}-release-banner.png
           prerelease: ${{ contains(github.ref_name, '-') }}
           fail_on_unmatched_files: true
