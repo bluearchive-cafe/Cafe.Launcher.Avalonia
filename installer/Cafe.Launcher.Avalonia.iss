@@ -66,8 +66,8 @@ SetupLogging=yes
 ; last entry wins for every language), so localized messages are supplied
 ; through each language's translation files instead.
 ; ChineseSimplified.isl is vendored in installer/lang/ because official Inno
-; Setup ships Chinese translations only in 7.x; Inno Setup 6.x (the current
-; Chocolatey package) has none, and this script must compile on 6.3+.
+; Setup ships Chinese translations only in 7.x. The release workflow uses 7.x,
+; while the vendored file keeps local compilation compatible with 6.3+.
 Name: "english"; MessagesFile: "compiler:Default.isl, lang\CustomMessages.en.isl"
 Name: "chinesesimplified"; MessagesFile: "lang\ChineseSimplified.isl, lang\CustomMessages.zh.isl"
 Name: "japanese"; MessagesFile: "compiler:Languages\Japanese.isl, lang\CustomMessages.ja.isl"
@@ -101,12 +101,13 @@ Type: filesandordirs; Name: "{localappdata}\Cafe Launcher"; Check: ShouldDeleteU
 var
   DeleteApplicationData: Boolean;
 
-{ Called by [UninstallDelete] during the uninstall process. Belt-and-braces:
-  application data is only ever removed when the user explicitly opted in, and
-  never during a silent uninstall (e.g. an in-place upgrade). }
+{ Called by [UninstallDelete] while Setup records the uninstall entry and again
+  during uninstall. Do not call uninstall-only support functions here: Setup
+  evaluates this check before an uninstaller exists. InitializeUninstall keeps
+  this False for silent uninstalls and only sets it after explicit user consent. }
 function ShouldDeleteUserData: Boolean;
 begin
-  Result := (not UninstallSilent) and DeleteApplicationData;
+  Result := DeleteApplicationData;
 end;
 
 { Returns True while the legacy registration is consistent: a missing or empty

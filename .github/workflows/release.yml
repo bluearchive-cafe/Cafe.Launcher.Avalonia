@@ -127,6 +127,7 @@ jobs:
 
     env:
       Project_Path: src/Cafe.Launcher.Avalonia/Cafe.Launcher.Avalonia.csproj
+      INNO_SETUP_VERSION: 7.1.0
       DOTNET_CLI_TELEMETRY_OPTOUT: 1
       DOTNET_NOLOGO: 1
       AVALONIA_TELEMETRY_OPTOUT: 1
@@ -144,8 +145,42 @@ jobs:
           cache: true
           cache-dependency-path: '**/*.csproj'
 
-      - name: Install Inno Setup
-        run: choco install innosetup --no-progress -y
+      - name: Install Inno Setup 7
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          $assetName = "innosetup-$env:INNO_SETUP_VERSION-x64.exe"
+          $releaseTag = "is-$($env:INNO_SETUP_VERSION.Replace('.', '_'))"
+          $installerPath = Join-Path $env:RUNNER_TEMP $assetName
+
+          gh release download $releaseTag `
+              --repo jrsoftware/issrc `
+              --pattern $assetName `
+              --dir $env:RUNNER_TEMP `
+              --clobber
+          if ($LASTEXITCODE -ne 0) {
+              throw "Failed to download Inno Setup $env:INNO_SETUP_VERSION."
+          }
+
+          gh release verify-asset $releaseTag $installerPath --repo jrsoftware/issrc
+          if ($LASTEXITCODE -ne 0) {
+              throw "GitHub release attestation verification failed for $assetName."
+          }
+
+          $process = Start-Process -FilePath $installerPath `
+              -ArgumentList '/VERYSILENT', '/SUPPRESSMSGBOXES', '/NORESTART' `
+              -Wait `
+              -PassThru
+          if ($process.ExitCode -ne 0) {
+              throw "Inno Setup installation failed with exit code $($process.ExitCode)."
+          }
+
+          $isccPath = Join-Path $env:ProgramFiles 'Inno Setup 7\ISCC.exe'
+          $installedVersion = (& $isccPath --version | Select-Object -First 1)
+          if ($LASTEXITCODE -ne 0 -or $installedVersion -notmatch '^7\.') {
+              throw "Expected Inno Setup 7.x, found '$installedVersion'."
+          }
+          Write-Host "Using Inno Setup $installedVersion"
 
       - name: Test
         run: .\test.ps1 -Configuration Release

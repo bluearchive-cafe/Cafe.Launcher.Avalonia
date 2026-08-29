@@ -146,6 +146,12 @@ public sealed class InstallerContractTests
         Assert.Contains("DeleteApplicationData := False", script, StringComparison.Ordinal);
         Assert.Contains("UninstallSilent", script, StringComparison.Ordinal);
         Assert.Contains("MB_YESNO", script, StringComparison.Ordinal);
+
+        var checkStart = script.IndexOf("function ShouldDeleteUserData", StringComparison.Ordinal);
+        var checkEnd = script.IndexOf("end;", checkStart, StringComparison.Ordinal);
+        var checkFunction = script[checkStart..(checkEnd + "end;".Length)];
+        Assert.DoesNotContain("UninstallSilent", checkFunction, StringComparison.Ordinal);
+        Assert.Contains("Result := DeleteApplicationData", checkFunction, StringComparison.Ordinal);
     }
 
     [Fact]
@@ -311,9 +317,9 @@ public sealed class InstallerContractTests
     {
         var script = ReadProjectFile("installer/Cafe.Launcher.Avalonia.iss");
 
-        // Official Inno Setup ships Chinese translations only in 7.x, while the
-        // release workflow installs the Chocolatey package (Inno Setup 6.x), so
-        // the base Chinese messages must be referenced repo-relative.
+        // Official Inno Setup ships Chinese translations only in 7.x. The
+        // release workflow uses 7.x, while the vendored file keeps local builds
+        // compatible with Inno Setup 6.3+.
         Assert.Contains("lang\\ChineseSimplified.isl", script, StringComparison.Ordinal);
         Assert.DoesNotContain(
             "compiler:Languages\\ChineseSimplified.isl",
@@ -361,15 +367,26 @@ public sealed class InstallerContractTests
     }
 
     [Fact]
-    public void ReleaseWorkflow_UsesWindowsRunnerAndInstallsInnoSetup()
+    public void ReleaseWorkflow_UsesWindowsRunnerAndInstallsVerifiedInnoSetupSeven()
     {
         var workflow = ReadProjectFile(".github/workflows/release.yml");
+        var installerJobStart = workflow.IndexOf("  installer:", StringComparison.Ordinal);
+        var installerJobEnd = workflow.IndexOf("\n  release:", installerJobStart, StringComparison.Ordinal);
+        var installerJob = workflow[installerJobStart..installerJobEnd];
 
-        Assert.Contains("runs-on: windows-latest", workflow, StringComparison.Ordinal);
-        Assert.Contains("choco install innosetup", workflow, StringComparison.Ordinal);
-        Assert.Contains("$tagArguments = @{}", workflow, StringComparison.Ordinal);
-        Assert.Contains("$tagArguments.Tag = '${{ github.ref_name }}'", workflow, StringComparison.Ordinal);
-        Assert.DoesNotContain("@('-Tag', '${{ github.ref_name }}')", workflow, StringComparison.Ordinal);
+        Assert.Contains("runs-on: windows-latest", installerJob, StringComparison.Ordinal);
+        Assert.Contains("INNO_SETUP_VERSION: 7.1.0", installerJob, StringComparison.Ordinal);
+        Assert.Contains("innosetup-$env:INNO_SETUP_VERSION-x64.exe", installerJob, StringComparison.Ordinal);
+        Assert.Contains("--repo jrsoftware/issrc", installerJob, StringComparison.Ordinal);
+        Assert.Contains(
+            "gh release verify-asset $releaseTag $installerPath",
+            installerJob,
+            StringComparison.Ordinal);
+        Assert.Contains("$installedVersion -notmatch '^7\\.'", installerJob, StringComparison.Ordinal);
+        Assert.DoesNotContain("choco install innosetup", workflow, StringComparison.OrdinalIgnoreCase);
+        Assert.Contains("$tagArguments = @{}", installerJob, StringComparison.Ordinal);
+        Assert.Contains("$tagArguments.Tag = '${{ github.ref_name }}'", installerJob, StringComparison.Ordinal);
+        Assert.DoesNotContain("@('-Tag', '${{ github.ref_name }}')", installerJob, StringComparison.Ordinal);
         Assert.DoesNotContain("makensis", workflow, StringComparison.OrdinalIgnoreCase);
         Assert.DoesNotContain("apt-get", workflow, StringComparison.OrdinalIgnoreCase);
     }
