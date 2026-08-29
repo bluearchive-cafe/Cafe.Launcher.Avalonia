@@ -15,10 +15,17 @@ namespace Cafe.Launcher.Avalonia.Services.GameRuntime;
 public sealed class GameRunnerResolver
 {
     private readonly IReadOnlyList<IGameRunner> runners;
+    private readonly LocalizationService localizer;
 
     public GameRunnerResolver(IEnumerable<IGameRunner> runners)
+        : this(runners, new LocalizationService())
+    {
+    }
+
+    public GameRunnerResolver(IEnumerable<IGameRunner> runners, LocalizationService localizer)
     {
         this.runners = runners.ToArray();
+        this.localizer = localizer;
     }
 
     /// <summary>
@@ -28,6 +35,15 @@ public sealed class GameRunnerResolver
     /// </summary>
     public async Task<IGameRunner?> ResolveAsync(
         string? preferredRunnerId = null,
+        CancellationToken cancellationToken = default) =>
+        (await ResolveWithDiagnosticsAsync(preferredRunnerId, cancellationToken).ConfigureAwait(false)).Runner;
+
+    /// <summary>
+    /// Resolves a usable runner while retaining the availability evidence needed to
+    /// diagnose why a launch environment could not be selected.
+    /// </summary>
+    internal async Task<GameRunnerResolution> ResolveWithDiagnosticsAsync(
+        string? preferredRunnerId = null,
         CancellationToken cancellationToken = default)
     {
         if (!string.IsNullOrWhiteSpace(preferredRunnerId))
@@ -36,19 +52,32 @@ public sealed class GameRunnerResolver
                 string.Equals(runner.Id, preferredRunnerId, StringComparison.OrdinalIgnoreCase));
             if (preferred is null)
             {
-                return null;
+                return new GameRunnerResolution(
+                    null,
+                    $"{localizer.T("gameRuntimeRunner")}: {preferredRunnerId}{Environment.NewLine}" +
+                    localizer.T("unknown"));
             }
 
             var availability = await preferred
                 .CheckAvailabilityAsync(cancellationToken)
                 .ConfigureAwait(false);
-            return availability.Available ? preferred : null;
+            return availability.Available
+                ? new GameRunnerResolution(preferred, $"{localizer.T("gameRuntimeRunner")}: {preferred.Id}")
+                : new GameRunnerResolution(
+                    null,
+                    $"{localizer.T("gameRuntimeRunner")}: {preferredRunnerId}{Environment.NewLine}" +
+                    $"{preferred.Id}: {AvailabilityReason(availability)}");
         }
 
+        var candidates = new List<string>();
         foreach (var runner in runners)
         {
             if (!runner.IsSupportedPlatform)
             {
+                var unsupportedAvailability = await runner
+                    .CheckAvailabilityAsync(cancellationToken)
+                    .ConfigureAwait(false);
+                candidates.Add($"{runner.Id}: {AvailabilityReason(unsupportedAvailability)}");
                 continue;
             }
 
@@ -57,10 +86,25 @@ public sealed class GameRunnerResolver
                 .ConfigureAwait(false);
             if (availability.Available)
             {
-                return runner;
+                return new GameRunnerResolution(runner, $"{localizer.T("gameRuntimeRunner")}: {runner.Id}");
             }
+
+            candidates.Add($"{runner.Id}: {AvailabilityReason(availability)}");
         }
 
-        return null;
+        var details = candidates.Count == 0
+            ? localizer.T("unknown")
+            : string.Join(Environment.NewLine, candidates.Select(candidate => $"- {candidate}"));
+        return new GameRunnerResolution(
+            null,
+            $"{localizer.T("gameRuntimeRunner")}: {localizer.T("gameRuntimeRunnerAuto")}{Environment.NewLine}{details}");
     }
+
+    private string AvailabilityReason(GameRunnerAvailability availability) =>
+        string.IsNullOrWhiteSpace(availability.Message)
+            ? localizer.T("unknown")
+            : availability.Message;
 }
+
+/// <summary>Resolved runner and the evidence collected while choosing it.</summary>
+internal sealed record GameRunnerResolution(IGameRunner? Runner, string DiagnosticMessage);

@@ -232,6 +232,80 @@ public sealed class InstallationOperationStateTests : IDisposable
     }
 
     [Fact]
+    public async Task StartAsync_WhenNoRunnerIsAvailable_IncludesAvailabilityReasonsInFailure()
+    {
+        var gamePath = Path.Combine(tempDir, "YostarGames", "BlueArchive_JP");
+        Directory.CreateDirectory(gamePath);
+        await File.WriteAllTextAsync(Path.Combine(gamePath, "BlueArchive.exe"), "");
+        using var apiClient = new LauncherApiClient(
+            new HttpClientHandler(),
+            new AuthorizationHeaderFactory(),
+            new PatchUrlGroupService());
+        var localizer = new LocalizationService();
+        var service = new GameLaunchService(
+            new ManifestValidationService(apiClient, new RemoteManifestService(apiClient), localizer),
+            new ClickCodeService(),
+            new GameRunnerResolver([new UnavailableGameRunner("umu", "umu-run was not found on PATH.")]),
+            new GameProcessTracker(),
+            localizer);
+
+        var result = await service.StartAsync(new LauncherStatusSnapshot
+        {
+            RuntimeState = LauncherRuntimeState.Ready,
+            LocalGame = new LocalInstallationState
+            {
+                Kind = LocalInstallationStateKind.Valid,
+                GamePath = gamePath,
+                GameConfig = new GameLauncherConfig { Name = "BlueArchive", Version = "1.0.0" }
+            },
+            Settings = new LauncherSettings { LaunchCheckMode = LaunchCheckModes.None }
+        });
+
+        Assert.False(result.Success);
+        Assert.Equal(localizer.T("gameProcessStartFailed"), result.Message);
+        Assert.Contains("umu-run was not found on PATH.", result.DiagnosticMessage, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public async Task StartAsync_WhenRunnerStartFails_ThrowsWithLaunchContext()
+    {
+        var gamePath = Path.Combine(tempDir, "YostarGames", "BlueArchive_JP");
+        Directory.CreateDirectory(gamePath);
+        var executablePath = Path.Combine(gamePath, "BlueArchive.exe");
+        await File.WriteAllTextAsync(executablePath, "");
+        using var apiClient = new LauncherApiClient(
+            new HttpClientHandler(),
+            new AuthorizationHeaderFactory(),
+            new PatchUrlGroupService());
+        var localizer = new LocalizationService();
+        var service = new GameLaunchService(
+            new ManifestValidationService(apiClient, new RemoteManifestService(apiClient), localizer),
+            new ClickCodeService(),
+            new GameRunnerResolver([new FailingGameRunner("umu")]),
+            new GameProcessTracker(),
+            localizer);
+
+        var result = await service.StartAsync(
+            new LauncherStatusSnapshot
+            {
+                RuntimeState = LauncherRuntimeState.Ready,
+                LocalGame = new LocalInstallationState
+                {
+                    Kind = LocalInstallationStateKind.Valid,
+                    GamePath = gamePath,
+                    GameConfig = new GameLauncherConfig { Name = "BlueArchive", Version = "1.0.0" }
+                },
+                Settings = new LauncherSettings { LaunchCheckMode = LaunchCheckModes.None }
+            });
+
+        Assert.False(result.Success);
+        Assert.Contains($"{localizer.T("gameRuntimeRunner")}: umu", result.DiagnosticMessage, StringComparison.Ordinal);
+        Assert.Contains(executablePath, result.DiagnosticMessage, StringComparison.Ordinal);
+        Assert.Contains(gamePath, result.DiagnosticMessage, StringComparison.Ordinal);
+        Assert.IsType<InvalidOperationException>(result.DiagnosticException);
+    }
+
+    [Fact]
     public async Task StartAsync_WhenInstallationIsReady_StartsConfiguredExecutable()
     {
         Assert.SkipUnless(OperatingSystem.IsWindows(), "ComSpec (cmd.exe) is only available on Windows.");
@@ -521,5 +595,37 @@ public sealed class InstallationOperationStateTests : IDisposable
         {
             Directory.Delete(path, recursive: true);
         }
+    }
+
+    private sealed class UnavailableGameRunner(string id, string reason) : IGameRunner
+    {
+        public string Id => id;
+
+        public bool IsSupportedPlatform => true;
+
+        public Task<GameRunnerAvailability> CheckAvailabilityAsync(CancellationToken cancellationToken = default) =>
+            Task.FromResult(new GameRunnerAvailability(Available: false, Message: reason));
+
+        public Task<GameProcess> StartAsync(
+            GameLaunchRequest request,
+            GameRuntimeOptions options,
+            CancellationToken cancellationToken = default) =>
+            throw new InvalidOperationException("An unavailable runner must not start a process.");
+    }
+
+    private sealed class FailingGameRunner(string id) : IGameRunner
+    {
+        public string Id => id;
+
+        public bool IsSupportedPlatform => true;
+
+        public Task<GameRunnerAvailability> CheckAvailabilityAsync(CancellationToken cancellationToken = default) =>
+            Task.FromResult(new GameRunnerAvailability(Available: true));
+
+        public Task<GameProcess> StartAsync(
+            GameLaunchRequest request,
+            GameRuntimeOptions options,
+            CancellationToken cancellationToken = default) =>
+            throw new InvalidOperationException("umu failed to create a process.");
     }
 }

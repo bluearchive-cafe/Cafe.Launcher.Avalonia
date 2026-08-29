@@ -97,17 +97,23 @@ internal sealed class GameOperationJourney : IGameOperationJourney
         {
             var launchResult = await launchWorkflow.StartGameAsync(snapshot);
             shell.SetLaunchCheckResult(launchResult.Validation.Message);
+            var launchDiagnostic = BuildLaunchDiagnostic(launchResult);
 
             if (launchResult.Success)
             {
+                await diagnostics.MessageAsync("GameLaunch", launchDiagnostic);
                 toastService.ShowSuccess(localizer.T("gameLaunchedMinimized"));
                 await delayAsync(TimeSpan.FromMilliseconds(600));
                 MinimizeRequested?.Invoke();
             }
             else
             {
-                toastService.ShowWarning(launchResult.Message);
-                await diagnostics.MessageAsync("GameLaunch", launchResult.Message);
+                toastService.ShowWarning(launchDiagnostic);
+                await diagnostics.WarningAsync("GameLaunch", launchDiagnostic);
+                if (launchResult.DiagnosticException is not null)
+                {
+                    await diagnostics.ErrorAsync("GameLaunch", launchResult.DiagnosticException);
+                }
             }
         }
         catch (Exception exception)
@@ -607,5 +613,16 @@ internal sealed class GameOperationJourney : IGameOperationJourney
     private void ApplySnapshotSafe(LauncherStatusSnapshot snapshot)
     {
         host.ApplySnapshot(snapshot);
+    }
+
+    private static string BuildLaunchDiagnostic(GameLaunchResult launchResult)
+    {
+        if (string.IsNullOrWhiteSpace(launchResult.DiagnosticMessage)
+            || string.Equals(launchResult.Message, launchResult.DiagnosticMessage, StringComparison.Ordinal))
+        {
+            return launchResult.Message;
+        }
+
+        return $"{launchResult.Message}{Environment.NewLine}{launchResult.DiagnosticMessage}";
     }
 }

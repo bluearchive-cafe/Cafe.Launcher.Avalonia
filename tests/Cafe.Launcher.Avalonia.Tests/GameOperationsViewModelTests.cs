@@ -862,6 +862,42 @@ public sealed class GameOperationsViewModelTests
     }
 
     [Fact]
+    public async Task StartGameCommand_WhenLaunchIsBlocked_WritesDiagnosticDetailsAsWarning()
+    {
+        var logDirectory = Path.Combine(Path.GetTempPath(), Guid.NewGuid().ToString("N"));
+        Directory.CreateDirectory(logDirectory);
+        try
+        {
+            using var logger = new UnifiedLogger(logDirectory);
+            var context = CreateContext(new LocalDiagnostics(logger));
+            var notifications = new List<ToastNotification>();
+            context.ToastService.ToastRaised += notifications.Add;
+            context.ViewModel.ApplySnapshot(ReadySnapshot());
+            context.Backend.LaunchResult = new GameLaunchResult
+            {
+                Success = false,
+                Message = "The game process did not start.",
+                DiagnosticMessage = "Requested runner: auto\n- umu: unavailable — umu-run was not found on PATH.",
+                Validation = new ManifestValidationResult { Success = false, Message = "invalid" }
+            };
+
+            await context.ViewModel.StartGameCommand.ExecuteAsync(null);
+
+            logger.Dispose();
+            var log = File.ReadAllText(logger.LogFilePath);
+            Assert.Contains("[WRN] [GameLaunch]", log, StringComparison.Ordinal);
+            Assert.Contains("umu-run was not found on PATH.", log, StringComparison.Ordinal);
+            var notification = Assert.Single(notifications);
+            Assert.Contains("The game process did not start.", notification.Message, StringComparison.Ordinal);
+            Assert.Contains("umu-run was not found on PATH.", notification.Message, StringComparison.Ordinal);
+        }
+        finally
+        {
+            Directory.Delete(logDirectory, recursive: true);
+        }
+    }
+
+    [Fact]
     public async Task InstallOrUpdateCommand_WhenStateIsReady_ReturnsUnavailable()
     {
         var context = CreateContext();
@@ -1007,20 +1043,21 @@ public sealed class GameOperationsViewModelTests
         Assert.False(context.Shell.IsBusy);
     }
 
-    private static TestContext CreateContext()
+    private static TestContext CreateContext(LocalDiagnostics? diagnostics = null)
     {
+        diagnostics ??= new LocalDiagnostics();
         var localizer = new LocalizationService();
         var toastService = new ToastService();
         var shell = new ShellViewModel(localizer);
         shell.IsBusy = false;
         var dialogs = new DialogsViewModel(localizer, new NoticeStateService(
             Path.Combine(Path.GetTempPath(), Guid.NewGuid().ToString("N"), "notices.json")),
-            new SetupWizardViewModel(localizer, new GameInstallationPath(), new LocalInstallationStateStore(), new LocalDiagnostics()));
+            new SetupWizardViewModel(localizer, new GameInstallationPath(), new LocalInstallationStateStore(), diagnostics));
         var backend = new TestBackend();
         var shortcutService = new TestGameShortcutService();
         var errorHandling = new ErrorHandlingService(
             localizer,
-            new LocalDiagnostics(),
+            diagnostics,
             toastService);
         var viewModel = new GameOperationsViewModel(
             backend,
@@ -1029,7 +1066,7 @@ public sealed class GameOperationsViewModelTests
             shortcutService,
             localizer,
             toastService,
-            new LocalDiagnostics(),
+            diagnostics,
             shell,
             dialogs,
             _ => Task.CompletedTask,
