@@ -311,6 +311,7 @@ GitHub Actions 使用 .NET 10.0.x：
 ## 相关文档
 
 - [隐私政策](./PRIVACY.md) — Cafe Launcher 的数据处理与隐私说明
+- [第三方许可](./THIRD-PARTY-NOTICES.md) — 随发行版分发的 NuGet 依赖及其许可
 - [CLAUDE.md](./CLAUDE.md) — AI 辅助开发指引（Claude Code）
 - [AGENTS.md](./AGENTS.md) — AI 辅助开发指引（Codex）
 
