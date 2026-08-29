@@ -20,6 +20,8 @@
 ; The launcher's Windows single-instance mutex (Program.cs: MutexName).
 #define APP_MUTEX "Local\Cafe_Launcher_SI"
 #define EXECUTABLE_NAME "Cafe.Launcher.Avalonia.exe"
+; Uninstall registration key written by this installer (AppId + "_is1").
+#define INNO_UNINSTALL_KEY "Software\Microsoft\Windows\CurrentVersion\Uninstall\{803fa671-62db-49fd-b99b-85635f5118ba}_is1"
 ; Uninstall registration key of the retired NSIS installer, used for the one-time
 ; upgrade bridge in [Code]. The Inno installer registers under {AppId}_is1 instead.
 #define LEGACY_NSIS_UNINSTALL_KEY "Software\Microsoft\Windows\CurrentVersion\Uninstall\Cafe.Launcher.Avalonia"
@@ -33,7 +35,14 @@ AppName=Cafe Launcher
 AppVersion={#APP_VERSION}
 AppVerName=Cafe Launcher {#APP_VERSION}
 AppPublisher=BlueArchive Cafe
-DefaultDirName={autopf}\Cafe Launcher
+; Resolved by ResolveDefaultDir: the previous installation's directory when a
+; registry record exists (Inno upgrade or trusted legacy NSIS bridge), otherwise
+; the machine-wide default.
+DefaultDirName={code:ResolveDefaultDir}
+; Upgrading into the existing directory is the normal path (the default
+; directory above is the detected previous install), so the "folder already
+; exists — are you sure?" prompt would fire on every upgrade. Skip it.
+DirExistsWarning=no
 DefaultGroupName=Cafe Launcher
 DisableProgramGroupPage=yes
 PrivilegesRequired=admin
@@ -58,6 +67,11 @@ CloseApplications=no
 RestartApplications=no
 AppMutex={#APP_MUTEX}
 SetupLogging=yes
+; The launcher writes its per-user data to {localappdata}\Cafe Launcher while the
+; install itself is machine-wide (PrivilegesRequired=admin). The uninstaller
+; touches that per-user path only after explicit user consent (see
+; InitializeUninstall), which is intended; silence Inno's UsedUserAreasWarning.
+UsedUserAreasWarning=no
 
 [Languages]
 ; Per-language custom messages (DeleteDataQuestion, InvalidInstallLocation,
@@ -100,6 +114,46 @@ Type: filesandordirs; Name: "{localappdata}\Cafe Launcher"; Check: ShouldDeleteU
 [Code]
 var
   DeleteApplicationData: Boolean;
+  InitialInstallDir: String;
+
+{ Reads InstallLocation from an uninstall registry key when present and non-empty. }
+function TryReadInstallLocation(const Root: Integer; const Key: String): Boolean;
+var
+  Location: String;
+begin
+  Result := False;
+  if RegQueryStringValue(Root, Key, 'InstallLocation', Location) and (Location <> '') then
+  begin
+    InitialInstallDir := RemoveBackslashUnlessRoot(Location);
+    Result := True;
+  end;
+end;
+
+{ Locate an existing installation so the directory page defaults to it.
+  Inno-to-Inno upgrades are normally covered by UsePreviousAppDir, which reads
+  the current-hive uninstall key; the explicit lookups also recover the path
+  when that default lookup misses (e.g. the record lives in another registry
+  view). The legacy NSIS registration is adopted only by the validated upgrade
+  bridge below, never here, so a stale record can never seed the default. }
+procedure ResolveInitialInstallDir;
+begin
+  if TryReadInstallLocation(HKLM64, '{#INNO_UNINSTALL_KEY}') then
+    Exit;
+  if TryReadInstallLocation(HKLM32, '{#INNO_UNINSTALL_KEY}') then
+    Exit;
+  if TryReadInstallLocation(HKCU, '{#INNO_UNINSTALL_KEY}') then
+    Exit;
+  TryReadInstallLocation(HKCU32, '{#INNO_UNINSTALL_KEY}');
+end;
+
+{ DefaultDirName callback: reuse the detected installation, else the default. }
+function ResolveDefaultDir(const Param: String): String;
+begin
+  if InitialInstallDir <> '' then
+    Result := InitialInstallDir
+  else
+    Result := ExpandConstant('{autopf}\Cafe Launcher');
+end;
 
 { Called by [UninstallDelete] while Setup records the uninstall entry and again
   during uninstall. Do not call uninstall-only support functions here: Setup
@@ -136,22 +190,20 @@ begin
   Result := CompareText(Location, Expected) = 0;
 end;
 
-{ One-time upgrade bridge: silently remove a legacy NSIS-based installation and
-  self-heal stale registrations, mirroring the retired NSIS upgrade logic.
-  The legacy registration is only trusted one way: its uninstaller must be
-  named Uninstall.exe, must exist, and must live in the directory recorded as
-  InstallLocation. Anything else is treated as stale and removed without
-  execution, so a tampered registration can never run an arbitrary path. }
-function RemoveLegacyInstallation(): Boolean;
+{ One-time upgrade bridge support: reads the legacy NSIS uninstaller path and
+  validates the registration. Returns the install directory when the record is
+  trusted (uninstaller named Uninstall.exe, existing, and living in the
+  directory recorded as InstallLocation); anything else is treated as stale and
+  returns ''. This function never modifies or executes anything. }
+function TryGetValidatedLegacyInstall(var UninstallerPath: String): String;
 var
   UninstallString: String;
-  UninstallerPath: String;
   InstallDir: String;
   QuotePos: Integer;
   SpacePos: Integer;
-  ResultCode: Integer;
 begin
-  Result := True;
+  Result := '';
+  UninstallerPath := '';
   if not RegQueryStringValue(HKLM, '{#LEGACY_NSIS_UNINSTALL_KEY}', 'UninstallString', UninstallString) then
     Exit;
   if UninstallString = '' then
@@ -178,8 +230,30 @@ begin
       or (not FileExists(UninstallerPath))
       or (not LegacyInstallLocationMatches(InstallDir)) then
   begin
-    { Stale or unrecognizable registration — never execute it. }
-    RegDeleteKeyIncludingSubkeys(HKLM, '{#LEGACY_NSIS_UNINSTALL_KEY}');
+    UninstallerPath := '';
+    Exit;
+  end;
+
+  Result := RemoveBackslashUnlessRoot(InstallDir);
+end;
+
+{ One-time upgrade bridge, run from PrepareToInstall — i.e. only after the user
+  completed the wizard and chose to install — so cancelling setup can never
+  remove the old version. Stale or tampered registrations are removed without
+  execution (the validation above), so they can never run an arbitrary path. }
+function RemoveLegacyInstallation(): Boolean;
+var
+  InstallDir: String;
+  UninstallerPath: String;
+  ResultCode: Integer;
+begin
+  Result := True;
+  InstallDir := TryGetValidatedLegacyInstall(UninstallerPath);
+  if InstallDir = '' then
+  begin
+    { Absent or stale registration — clean up the key, never execute it. }
+    if RegKeyExists(HKLM, '{#LEGACY_NSIS_UNINSTALL_KEY}') then
+      RegDeleteKeyIncludingSubkeys(HKLM, '{#LEGACY_NSIS_UNINSTALL_KEY}');
     Exit;
   end;
 
@@ -190,13 +264,11 @@ begin
   if not Exec(UninstallerPath, Format('/S _?=%s', [InstallDir]), InstallDir,
       SW_HIDE, ewWaitUntilTerminated, ResultCode) then
   begin
-    MsgBox(ExpandConstant('{cm:PreviousUninstallFailed}'), mbError, MB_OK);
     Result := False;
     Exit;
   end;
   if ResultCode <> 0 then
   begin
-    MsgBox(ExpandConstant('{cm:PreviousUninstallFailed}'), mbError, MB_OK);
     Result := False;
     Exit;
   end;
@@ -206,10 +278,23 @@ begin
 end;
 
 function InitializeSetup: Boolean;
+var
+  LegacyUninstallerPath: String;
 begin
   Result := True;
+  ResolveInitialInstallDir;
+  { Only read the legacy registration here (as the directory-page default when
+    no Inno Setup record exists); the actual uninstall happens in
+    PrepareToInstall, after the user chose to install. }
+  if InitialInstallDir = '' then
+    InitialInstallDir := TryGetValidatedLegacyInstall(LegacyUninstallerPath);
+end;
+
+function PrepareToInstall(var NeedsRestart: Boolean): String;
+begin
+  Result := '';
   if not RemoveLegacyInstallation() then
-    Result := False;
+    Result := ExpandConstant('{cm:PreviousUninstallFailed}');
 end;
 
 procedure CurStepChanged(CurStep: TSetupStep);
@@ -249,3 +334,4 @@ begin
     DeleteApplicationData := MsgBox(QuestionText, mbConfirmation, MB_YESNO) = IDYES;
   end;
 end;
+
