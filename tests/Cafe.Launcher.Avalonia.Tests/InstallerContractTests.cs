@@ -576,6 +576,14 @@ public sealed class InstallerContractTests
             workflow,
             StringComparison.Ordinal);
         Assert.Contains("secrets.RELEASE_REPOSITORY_TOKEN", workflow, StringComparison.Ordinal);
+
+        // Release bodies are the maintained changelog plus generated per-platform
+        // download links; each target repository links to its own assets.
+        Assert.Contains("name: Append platform download links", workflow, StringComparison.Ordinal);
+        Assert.Contains("## 下载", workflow, StringComparison.Ordinal);
+        Assert.Contains("releases/download/${tag}", workflow, StringComparison.Ordinal);
+        Assert.Contains("body_path: changelog.md", workflow, StringComparison.Ordinal);
+        Assert.Contains("body_path: changelog-distribution.md", workflow, StringComparison.Ordinal);
     }
 
     private static bool ContainsCjk(string text)

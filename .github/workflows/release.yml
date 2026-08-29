@@ -276,6 +276,45 @@ jobs:
           name: changelog
           path: .
 
+      - name: Append platform download links
+        shell: bash
+        run: |
+          tag="${{ github.ref_name }}"
+          source_base="${{ github.server_url }}/${{ github.repository }}/releases/download/${tag}"
+          # Keep in sync with LauncherConstants.GitHubReleaseRepositorySlug
+          distribution_base="${{ github.server_url }}/bluearchive-cafe/Cafe.Launcher.Avalonia_Release/releases/download/${tag}"
+
+          download_section() {
+            local base="$1" output="$2"
+            {
+              echo ""
+              echo "## 下载"
+              echo ""
+              local entry name
+              while IFS='|' read -r suffix label; do
+                for entry in artifacts/distribution/Cafe.Launcher.Avalonia_*_"${suffix}"; do
+                  if [[ -f "$entry" ]]; then
+                    name="$(basename "$entry")"
+                    echo "- ${label}：[${name}](${base}/${name})"
+                  fi
+                done
+              done <<'ORDER'
+          setup.exe|Windows 安装器（x64）
+          win-x64.zip|Windows 便携版（x64）
+          osx-arm64.zip|macOS 便携版（Apple Silicon）
+          linux-x64.tar.gz|Linux 便携压缩包（x64）
+          linux-x64.AppImage|Linux AppImage（x64）
+          linux-x64.deb|Linux deb 安装包（x64）
+          ORDER
+            } >> "$output"
+          }
+
+          cp changelog.md changelog-source.md
+          cp changelog.md changelog-distribution.md
+          download_section "$source_base" changelog-source.md
+          download_section "$distribution_base" changelog-distribution.md
+          mv changelog-source.md changelog.md
+
       - name: Create source repository release
         uses: softprops/action-gh-release@v3
         with:
@@ -300,7 +339,7 @@ jobs:
           token: ${{ secrets.RELEASE_REPOSITORY_TOKEN }}
           tag_name: ${{ github.ref_name }}
           name: ${{ github.ref_name }}
-          body_path: changelog.md
+          body_path: changelog-distribution.md
           files: |
             artifacts/distribution/Cafe.Launcher.Avalonia_${{ github.ref_name }}_win-x64.zip
             artifacts/distribution/Cafe.Launcher.Avalonia_${{ github.ref_name }}_setup.exe
