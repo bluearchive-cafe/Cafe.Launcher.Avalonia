@@ -126,3 +126,16 @@ public sealed class GamePathValidatorTests
         }
     }
 }
+
+public sealed class GamePathValidatorPlatformTests
+{
+    [Fact]
+    public void PathComparison_IsCaseInsensitiveOnlyOnWindows()
+    {
+        var expected = OperatingSystem.IsWindows()
+            ? StringComparison.OrdinalIgnoreCase
+            : StringComparison.Ordinal;
+
+        Assert.Equal(expected, GamePathValidator.PathComparison);
+    }
+}

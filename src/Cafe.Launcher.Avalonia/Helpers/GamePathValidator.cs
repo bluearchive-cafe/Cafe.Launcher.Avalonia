@@ -9,6 +9,14 @@ namespace Cafe.Launcher.Avalonia.Helpers;
 /// </summary>
 public static class GamePathValidator
 {
+    // Windows filesystems are typically case-insensitive; Linux/macOS are
+    // case-sensitive, so a case-insensitive root check there would let a
+    // differently-cased path bypass the escape validation.
+    internal static StringComparison PathComparison =>
+        OperatingSystem.IsWindows()
+            ? StringComparison.OrdinalIgnoreCase
+            : StringComparison.Ordinal;
+
     /// <summary>
     /// Resolves a relative file path against the game root directory, throwing
     /// <see cref="InvalidOperationException"/> if the resulting path escapes the root.
@@ -30,8 +38,8 @@ public static class GamePathValidator
         // "C:\data\file.bin" (single backslash).
         var rootWithSep = root.TrimEnd(Path.DirectorySeparatorChar) + Path.DirectorySeparatorChar;
 
-        if (!target.StartsWith(rootWithSep, StringComparison.OrdinalIgnoreCase)
-            && !string.Equals(target, root, StringComparison.OrdinalIgnoreCase))
+        if (!target.StartsWith(rootWithSep, PathComparison)
+            && !string.Equals(target, root, PathComparison))
         {
             throw new InvalidOperationException($"Path escapes game directory: {relativePath}");
         }
