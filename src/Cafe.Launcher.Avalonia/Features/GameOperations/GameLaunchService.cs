@@ -96,8 +96,12 @@ public sealed class GameLaunchService
         // Write clickCode attribution to game directory before launch
         clickCodeService.WriteClickCodeToGamePath(localGame.GamePath);
 
+        var runtime = snapshot.Settings.GameRuntime;
+        var preferredRunnerId = runtime.Runner is GameRuntimeRunners.Auto or ""
+            ? null
+            : runtime.Runner;
         var runner = await gameRunnerResolver
-            .ResolveAsync(cancellationToken: cancellationToken)
+            .ResolveAsync(preferredRunnerId, cancellationToken)
             .ConfigureAwait(false);
         if (runner is null)
         {
@@ -111,7 +115,10 @@ public sealed class GameLaunchService
             Arguments: gameConfig.Params);
 
         var gameProcess = await runner
-            .StartAsync(request, new GameRuntimeOptions(), cancellationToken)
+            .StartAsync(
+                request,
+                new GameRuntimeOptions(runtime.RunnerPath, runtime.PrefixPath, runtime.ProtonPath),
+                cancellationToken)
             .ConfigureAwait(false);
 
         // The tracker owns the host process from here: it keeps the handle alive

@@ -20,6 +20,14 @@ public static class ProxyModes
     public const string System = "system";
 }
 
+public static class GameRuntimeRunners
+{
+    public const string Auto = "auto";
+    public const string Native = "native";
+    public const string Umu = "umu";
+    public const string Wine = "wine";
+}
+
 public static class CloseBehaviors
 {
     public const string Minimize = "minimize";

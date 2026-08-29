@@ -44,6 +44,7 @@ public sealed class LauncherSettings : ObservableObject
 #endif
     ;
     private string resourcePanelUidSource = ResourcePanelUidSources.Auto;
+    private GameRuntimeSettings gameRuntime = new();
     private string statusDetailMode = StatusDetailModes.Compact;
 
     [JsonPropertyName("gamePath")]
@@ -139,6 +140,9 @@ public sealed class LauncherSettings : ObservableObject
     [JsonPropertyName("resourcePanelUidSource")]
     public string ResourcePanelUidSource { get => resourcePanelUidSource; set => SetProperty(ref resourcePanelUidSource, value); }
 
+    [JsonPropertyName("gameRuntime")]
+    public GameRuntimeSettings GameRuntime { get => gameRuntime; set => SetProperty(ref gameRuntime, value); }
+
     [JsonPropertyName("statusDetailMode")]
     public string StatusDetailMode { get => statusDetailMode; set => SetProperty(ref statusDetailMode, value); }
 
@@ -192,6 +196,7 @@ public sealed class LauncherSettings : ObservableObject
         StatusDetailMode = other.StatusDetailMode;
         UpdateChannel = other.UpdateChannel;
         LogLevel = other.LogLevel;
+        GameRuntime = other.GameRuntime.DeepClone();
     }
 
     /// <summary>

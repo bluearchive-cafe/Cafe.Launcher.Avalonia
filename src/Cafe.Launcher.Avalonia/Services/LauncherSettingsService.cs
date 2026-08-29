@@ -165,6 +165,18 @@ public sealed class LauncherSettingsService : IDisposable
         settings.GamePath ??= "";
         settings.ResourcePanelUid = settings.ResourcePanelUid?.Trim() ?? "";
 
+        settings.GameRuntime ??= new GameRuntimeSettings();
+        settings.GameRuntime.Runner = settings.GameRuntime.Runner switch
+        {
+            GameRuntimeRunners.Native => GameRuntimeRunners.Native,
+            GameRuntimeRunners.Umu => GameRuntimeRunners.Umu,
+            GameRuntimeRunners.Wine => GameRuntimeRunners.Wine,
+            _ => GameRuntimeRunners.Auto
+        };
+        settings.GameRuntime.RunnerPath = NormalizeOptionalPath(settings.GameRuntime.RunnerPath);
+        settings.GameRuntime.PrefixPath = NormalizeOptionalPath(settings.GameRuntime.PrefixPath);
+        settings.GameRuntime.ProtonPath = NormalizeOptionalPath(settings.GameRuntime.ProtonPath);
+
         if (settings.WindowWidth is not null && !IsValidWindowDimension(settings.WindowWidth.Value))
         {
             settings.WindowWidth = null;
@@ -180,6 +192,12 @@ public sealed class LauncherSettingsService : IDisposable
 
     private static bool IsValidWindowDimension(double value) =>
         double.IsFinite(value) && value > 0;
+
+    private static string? NormalizeOptionalPath(string? path)
+    {
+        path = path?.Trim();
+        return string.IsNullOrEmpty(path) ? null : path;
+    }
 
     private delegate string SettingGetter(LauncherSettings settings);
     private delegate void SettingSetter(LauncherSettings settings, string value);

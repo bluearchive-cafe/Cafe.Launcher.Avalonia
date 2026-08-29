@@ -364,6 +364,7 @@ public sealed class LauncherSettingsServiceTests : IDisposable
             "backgroundFillColor",
             "resourcePanelUid",
             "resourcePanelUidSource",
+            "gameRuntime",
             "statusDetailMode",
             "updateChannel",
             "logLevel"
@@ -404,6 +405,37 @@ public sealed class LauncherSettingsServiceTests : IDisposable
         Assert.NotNull(resourcePanelUid);
         Assert.Equal(gamePath!["D:\\Games\\".Length..], resourcePanelUid!["UID".Length..]);
         Assert.Empty(Directory.EnumerateFiles(tempDir, "*.tmp"));
+    }
+
+    [Fact]
+    public async Task SaveAsync_GameRuntimeSettings_RoundTripsAndNormalizesInvalidValues()
+    {
+        var service = new LauncherSettingsService(settingsPath);
+        var settings = new LauncherSettings();
+        settings.GameRuntime.Runner = "not-a-runner";
+        settings.GameRuntime.RunnerPath = "  /usr/bin/umu-run  ";
+        settings.GameRuntime.PrefixPath = "   ";
+        await service.SaveAsync(settings);
+
+        var reloaded = await new LauncherSettingsService(settingsPath).ReadAsync();
+
+        Assert.Equal(GameRuntimeRunners.Auto, reloaded.GameRuntime.Runner);
+        Assert.Equal("/usr/bin/umu-run", reloaded.GameRuntime.RunnerPath);
+        Assert.Null(reloaded.GameRuntime.PrefixPath);
+    }
+
+    [Fact]
+    public async Task ReadAsync_WhenGameRuntimeIsMissing_UsesDefaults()
+    {
+        var service = new LauncherSettingsService(settingsPath);
+        await service.SaveAsync(new LauncherSettings());
+
+        var reloaded = await new LauncherSettingsService(settingsPath).ReadAsync();
+
+        Assert.Equal(GameRuntimeRunners.Auto, reloaded.GameRuntime.Runner);
+        Assert.Null(reloaded.GameRuntime.RunnerPath);
+        Assert.Null(reloaded.GameRuntime.PrefixPath);
+        Assert.Null(reloaded.GameRuntime.ProtonPath);
     }
 
     public void Dispose()
