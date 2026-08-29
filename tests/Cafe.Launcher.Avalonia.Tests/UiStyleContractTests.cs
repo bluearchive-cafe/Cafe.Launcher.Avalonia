@@ -2561,15 +2561,21 @@ public sealed partial class UiStyleContractTests
     public void AppearanceSection_NeutralStrategyHint_IsLocalizedAndConditionallyVisible() // ADR-010
     {
         var document = XDocument.Load(ProjectFile("Views/SettingsAppearanceSection.axaml"));
-        var hint = document
+        // The hint renders inside the neutral-strategy row (SettingRow.Hint) so
+        // multi-line copy keeps the row's internal spacing instead of an
+        // out-of-row margin stacking on the row's min-height padding.
+        var neutralRow = document
             .Descendants()
-            .Single(element => HasClass(element, "settings-neutral-hint"));
+            .Single(element => element.Name.LocalName == "SettingSelect"
+                && element.Attribute("AutomationName")?.Value
+                    == "{Binding Shell.I18n[neutralColorStrategy]}");
         Assert.Equal(
             "{Binding Shell.I18n[neutralColorStrategySeedFollowingHint]}",
-            hint.Attribute("Text")?.Value);
+            neutralRow.Attribute("Hint")?.Value);
         Assert.Equal(
             "{Binding Settings.Appearance.IsSeedFollowingNeutralStrategySelected}",
-            hint.Attribute("IsVisible")?.Value);
+            neutralRow.Attribute("IsHintVisible")?.Value);
+        Assert.DoesNotContain(document.Descendants(), element => HasClass(element, "settings-neutral-hint"));
     }
 
     [Fact]
@@ -2642,10 +2648,11 @@ public sealed partial class UiStyleContractTests
             "{StaticResource Launcher.Component.Settings.Row.Content.MinWidth}",
             copy.Attribute("MinWidth")?.Value);
         Assert.Equal("Stretch", copy.Attribute("HorizontalAlignment")?.Value);
+        // 行内容垂直内边距保证多行文案（如 ADR-010 提示）不贴住上下分隔线。
         Assert.Equal(
-            "{StaticResource Launcher.Spacing.Thickness.None}",
+            "{StaticResource Launcher.Component.Settings.Row.Content.Padding}",
             copy.Attribute("Margin")?.Value);
-        Assert.Equal(2, textBlocks.Count);
+        Assert.Equal(3, textBlocks.Count);
         Assert.All(textBlocks, text => Assert.Equal("Wrap", text.Attribute("TextWrapping")?.Value));
         Assert.Equal("1", action.Attribute("Grid.Column")?.Value);
         Assert.DoesNotContain(

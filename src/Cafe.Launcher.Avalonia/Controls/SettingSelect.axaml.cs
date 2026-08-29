@@ -30,6 +30,12 @@ public partial class SettingSelect : UserControl
     public static readonly StyledProperty<bool> ShowTopDividerProperty =
         AvaloniaProperty.Register<SettingSelect, bool>(nameof(ShowTopDivider), true);
 
+    public static readonly StyledProperty<string?> HintProperty =
+        AvaloniaProperty.Register<SettingSelect, string?>(nameof(Hint));
+
+    public static readonly StyledProperty<bool> IsHintVisibleProperty =
+        AvaloniaProperty.Register<SettingSelect, bool>(nameof(IsHintVisible));
+
     public string? Title
     {
         get => GetValue(TitleProperty);
@@ -64,6 +70,18 @@ public partial class SettingSelect : UserControl
     {
         get => GetValue(ShowTopDividerProperty);
         set => SetValue(ShowTopDividerProperty, value);
+    }
+
+    public string? Hint
+    {
+        get => GetValue(HintProperty);
+        set => SetValue(HintProperty, value);
+    }
+
+    public bool IsHintVisible
+    {
+        get => GetValue(IsHintVisibleProperty);
+        set => SetValue(IsHintVisibleProperty, value);
     }
 
     public SettingSelect()

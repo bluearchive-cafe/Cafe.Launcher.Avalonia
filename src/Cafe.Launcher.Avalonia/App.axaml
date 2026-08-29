@@ -44,7 +44,6 @@
             <Thickness x:Key="Launcher.Component.Settings.Navigation.Header.Padding">16,20</Thickness>
             <x:Double x:Key="Launcher.Component.Settings.Navigation.Width">216</x:Double>
             <Thickness x:Key="Launcher.Component.Settings.Content.Padding">16,24,0,16</Thickness>
-            <Thickness x:Key="Launcher.Component.Settings.NeutralHint.Margin">0,8,0,0</Thickness>
             <Thickness x:Key="Launcher.Component.Settings.Content.Scroll.Padding">0,0,16,0</Thickness>
             <Thickness x:Key="Launcher.Component.Settings.Navigation.List.Padding">16,8,16,16</Thickness>
             <Thickness x:Key="Launcher.Component.Settings.Navigation.Item.Margin">0,2</Thickness>
@@ -175,6 +174,7 @@
             <x:Double x:Key="Launcher.Component.Wizard.Option.MinHeight">56</x:Double>
             <Thickness x:Key="Launcher.Component.Wizard.Option.Padding">4,0</Thickness>
             <x:Double x:Key="Launcher.Component.Settings.Row.MinHeight">60</x:Double>
+            <Thickness x:Key="Launcher.Component.Settings.Row.Content.Padding">0,8</Thickness>
             <x:Double x:Key="Launcher.Component.Settings.Row.Action.MaxWidth">440</x:Double>
             <x:Double x:Key="Launcher.Component.Loading.Bar.Width">120</x:Double>
             <x:Double x:Key="Launcher.Component.Loading.Bar.Height">4</x:Double>

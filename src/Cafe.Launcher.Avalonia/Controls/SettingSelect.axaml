@@ -7,7 +7,9 @@
              x:DataType="controls:SettingSelect">
     <controls:SettingRow ShowTopDivider="{Binding ShowTopDivider, ElementName=Root}"
                          Title="{Binding Title, ElementName=Root}"
-                         Description="{Binding Description, ElementName=Root}">
+                         Description="{Binding Description, ElementName=Root}"
+                         Hint="{Binding Hint, ElementName=Root}"
+                         IsHintVisible="{Binding IsHintVisible, ElementName=Root}">
         <controls:SettingRow.Action>
             <ComboBox Classes="setting-control"
                       AutomationProperties.Name="{Binding AutomationName, ElementName=Root}"

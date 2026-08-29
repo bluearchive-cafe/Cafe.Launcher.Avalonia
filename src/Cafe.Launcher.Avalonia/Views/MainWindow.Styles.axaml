@@ -1008,9 +1008,6 @@
         <Setter Property="Foreground" Value="{DynamicResource Launcher.Text.Secondary}"/>
         <Setter Property="TextWrapping" Value="Wrap"/>
     </Style>
-    <Style Selector="TextBlock.settings-neutral-hint">
-        <Setter Property="Margin" Value="{StaticResource Launcher.Component.Settings.NeutralHint.Margin}"/>
-    </Style>
     <Style Selector="StackPanel.settings-sections">
         <Setter Property="Spacing" Value="0"/>
     </Style>
