@@ -80,6 +80,9 @@ Windows 安装程序使用 Inno Setup 6.3+ 构建（仓库以 Inno Setup 7 验�
 - `Cafe.Launcher.Avalonia_v<version>_setup.exe`（Inno Setup 安装器，仅 Windows 宿主）
 - `Cafe.Launcher.Avalonia_v<version>_osx-arm64.zip`（内含 `Cafe Launcher.app`，建议在 Linux/macOS 宿主打包以保留可执行位）
 - `Cafe.Launcher.Avalonia_v<version>_linux-x64.tar.gz`（建议在 Linux 宿主打包以保留可执行位）
+- `Cafe.Launcher.Avalonia_v<version>_linux-x64.AppImage`（CI 在 Ubuntu 24.04 上使用固定版本的 `appimagetool` 与 Type 2 runtime 构建，并通过 Xvfb 执行桌面启动烟测）
+
+AppImage 是自包含的 .NET 应用，但仍依赖目标 Linux 系统提供 glibc、libgcc、libstdc++、zlib、ICU、OpenSSL、Kerberos，以及 Avalonia 桌面后端所需的 X11/XWayland、libICE、libSM 和 fontconfig。首次运行前请确认发行版已经安装这些基础运行库；AppImage 环境下默认游戏目录会放在用户主目录的 `YostarGames/BlueArchive_JP`，不会写入只读的临时挂载目录。
 
 Setup 安装范围为所有用户，默认目录为 `C:\Program Files\Cafe Launcher`，安装、升级和卸载均需要管理员权限。升级会删除旧版本中由安装器管理、但新版本不再发布的文件；安装目录内的其他文件会保留。
 
@@ -295,7 +298,7 @@ Launcher 自更新优先请求服务端代理 `ApiConfig.LauncherApiBaseUrl`；�
 GitHub Actions 使用 .NET 10.0.x：
 
 - **`build.yml`**（`windows-latest`，push / PR to `main`）：测试 → 覆盖率门禁 → Release `win-x64` 发布冒烟 → 上传测试与覆盖率报告。NuGet 缓存 + concurrency 取消排队运行。
-- **`release.yml`**（push `v*` tag / 手动 dispatch 演练）：**`build`** job（`ubuntu-latest`，交叉编译 win-x64 / osx-arm64 / linux-x64 并打包 zip、`.app`、tar.gz、AppImage）→ **`installer`** job（`windows-latest`，Release 测试 + Inno Setup EXE）→ **`release`** job（生成 changelog 并在源仓库和分发仓库 `bluearchive-cafe/Cafe.Launcher.Avalonia_Release` 同时创建 GitHub Release）。预发布版标签含 `-`。
+- **`release.yml`**（push `v*` tag / 手动 dispatch 演练）：**`build`** job（`ubuntu-24.04`，交叉编译 win-x64 / osx-arm64 / linux-x64，使用固定且校验过的 AppImage 工具链打包并烟测 zip、`.app`、tar.gz、AppImage）→ **`installer`** job（`windows-latest`，Release 测试 + Inno Setup EXE）→ **`release`** job（生成 changelog 并在源仓库和分发仓库 `bluearchive-cafe/Cafe.Launcher.Avalonia_Release` 同时创建 GitHub Release）。预发布版标签含 `-`。
 
 本地发布脚本：
 

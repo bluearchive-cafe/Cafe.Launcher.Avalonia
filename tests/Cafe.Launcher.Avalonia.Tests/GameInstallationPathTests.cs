@@ -26,6 +26,26 @@ public sealed class GameInstallationPathTests
     }
 
     [Fact]
+    public void GetDefaultGamePath_WhenRunningAsAppImage_UsesWritableUserProfile()
+    {
+        var testRoot = Path.Combine(Path.GetTempPath(), Guid.NewGuid().ToString("N"));
+        var applicationBaseDirectory = Path.Combine(testRoot, ".mount_cafe", "usr", "bin");
+        var userProfileDirectory = Path.Combine(testRoot, "home");
+        var expected = Path.GetFullPath(Path.Combine(
+            userProfileDirectory,
+            GamePaths.RootFolderName,
+            GamePaths.GameFolderName));
+
+        var result = installationPath.GetDefaultGamePath(
+            applicationBaseDirectory,
+            Path.Combine(userProfileDirectory, "Cafe.Launcher.AppImage"),
+            userProfileDirectory);
+
+        Assert.Equal(expected, result);
+        Assert.DoesNotContain(".mount_cafe", result, StringComparison.Ordinal);
+    }
+
+    [Fact]
     public void NormalizeGamePath_WhenParentPathProvided_AppendsLauncherFolders()
     {
         var input = Path.Combine(Path.GetTempPath(), Guid.NewGuid().ToString("N"));
