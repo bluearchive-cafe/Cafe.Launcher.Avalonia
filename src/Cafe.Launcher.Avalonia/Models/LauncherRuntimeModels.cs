@@ -77,6 +77,12 @@ public sealed class GameLaunchResult
 
     public string Message { get; set; } = "";
 
+    /// <summary>Technical details for local diagnostics, kept separate from the user-facing message.</summary>
+    public string DiagnosticMessage { get; set; } = "";
+
+    /// <summary>Original launch exception retained for local diagnostic logging only.</summary>
+    public Exception? DiagnosticException { get; set; }
+
     public ManifestValidationResult Validation { get; set; } = new();
 }
 

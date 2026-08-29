@@ -4,6 +4,7 @@ using System.Threading.Tasks;
 using Cafe.Launcher.Avalonia.Models;
 using Cafe.Launcher.Avalonia.Services;
 using Cafe.Launcher.Avalonia.Services.Diagnostics;
+using Cafe.Launcher.Avalonia.Services.GameRuntime;
 
 namespace Cafe.Launcher.Avalonia.Features.GameOperations;
 
@@ -29,6 +30,7 @@ internal static class DownloadSessionFactory
         LocalizationService localizer,
         GameInstallationPath installationPath,
         DownloadCheckpointStore checkpointStore,
+        IGameProcessTracker gameProcessTracker,
         LauncherStatusSnapshot snapshot,
         bool repair,
         Action<GameOperationProgress> progress,
@@ -47,6 +49,7 @@ internal static class DownloadSessionFactory
             localizer,
             installationPath,
             checkpointStore,
+            gameProcessTracker,
             snapshot,
             repair,
             progress,
@@ -70,6 +73,7 @@ internal static class DownloadSessionFactory
         LocalizationService localizer,
         GameInstallationPath installationPath,
         DownloadCheckpointStore checkpointStore,
+        IGameProcessTracker gameProcessTracker,
         LauncherStatusSnapshot snapshot,
         Action<GameOperationProgress> progress,
         CancellationToken cancellationToken)
@@ -106,6 +110,7 @@ internal static class DownloadSessionFactory
             localizer,
             installationPath,
             checkpointStore,
+            gameProcessTracker,
             snapshot,
             state.IsRepair,
             progress,

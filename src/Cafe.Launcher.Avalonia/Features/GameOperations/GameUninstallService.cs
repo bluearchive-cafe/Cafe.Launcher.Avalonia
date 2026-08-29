@@ -8,6 +8,7 @@ using Cafe.Launcher.Avalonia.Helpers;
 using Cafe.Launcher.Avalonia.Services;
 using Cafe.Launcher.Avalonia.Models;
 using Cafe.Launcher.Avalonia.Services.Diagnostics;
+using Cafe.Launcher.Avalonia.Services.GameRuntime;
 
 namespace Cafe.Launcher.Avalonia.Features.GameOperations;
 
@@ -18,18 +19,21 @@ public sealed class GameUninstallService
     private readonly LocalDiagnostics diagnostics;
     private readonly LocalizationService localizer;
     private readonly DownloadCheckpointStore checkpointStore;
+    private readonly IGameProcessTracker gameProcessTracker;
 
     public GameUninstallService(
         LocalInstallationStateStore localInstallationStateStore,
         LocalDiagnostics diagnostics,
         LocalizationService localizer,
-        GameInstallationPath installationPath)
+        GameInstallationPath installationPath,
+        IGameProcessTracker gameProcessTracker)
         : this(
             localInstallationStateStore,
             diagnostics,
             localizer,
             installationPath,
-            DownloadCheckpointStore.CreateDefault())
+            DownloadCheckpointStore.CreateDefault(),
+            gameProcessTracker)
     {
     }
 
@@ -38,13 +42,15 @@ public sealed class GameUninstallService
         LocalDiagnostics diagnostics,
         LocalizationService localizer,
         GameInstallationPath installationPath,
-        DownloadCheckpointStore checkpointStore)
+        DownloadCheckpointStore checkpointStore,
+        IGameProcessTracker gameProcessTracker)
     {
         this.localInstallationStateStore = localInstallationStateStore;
         this.installationPath = installationPath;
         this.diagnostics = diagnostics;
         this.localizer = localizer;
         this.checkpointStore = checkpointStore;
+        this.gameProcessTracker = gameProcessTracker;
     }
 
     public async Task<GameOperationResult> UninstallAsync(
@@ -168,7 +174,7 @@ public sealed class GameUninstallService
             return DownloadSession.Failed(localizer.F("gameConfigMetadataMissing", GamePaths.GameConfigFileName), GameOperationErrorCode.Uninstall);
         }
 
-        if (await ProcessService.IsExeRunningAsync($"{localGame.GameConfig.Name}.exe", cancellationToken))
+        if (await gameProcessTracker.IsGameRunningAsync($"{localGame.GameConfig.Name}.exe", cancellationToken))
         {
             return DownloadSession.Failed(localizer.F("gameIsRunning", $"{localGame.GameConfig.Name}.exe"), GameOperationErrorCode.GameRunning);
         }

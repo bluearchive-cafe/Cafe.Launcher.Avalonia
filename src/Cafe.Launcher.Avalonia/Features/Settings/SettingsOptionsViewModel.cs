@@ -76,6 +76,14 @@ public sealed class SettingsOptionsViewModel
         new() { Code = LaunchCheckModes.None }
     ];
 
+    public ObservableCollection<SettingOption> GameRuntimeRunner { get; } =
+    [
+        new() { Code = GameRuntimeRunners.Auto },
+        new() { Code = GameRuntimeRunners.Native },
+        new() { Code = GameRuntimeRunners.Umu },
+        new() { Code = GameRuntimeRunners.Wine }
+    ];
+
     public ObservableCollection<SettingOption> ProxyMode { get; } =
     [
         new() { Code = ProxyModes.Auto },
@@ -215,6 +223,14 @@ public sealed class SettingsOptionsViewModel
             LaunchCheckModes.RemoteManifest => localizer.T("launchCheckRemoteManifest"),
             LaunchCheckModes.None => localizer.T("launchCheckNone"),
             _ => localizer.T("launchCheckLocalManifest")
+        });
+
+        RefreshOptions(GameRuntimeRunner, code => code switch
+        {
+            GameRuntimeRunners.Native => localizer.T("gameRuntimeRunnerNative"),
+            GameRuntimeRunners.Umu => localizer.T("gameRuntimeRunnerUmu"),
+            GameRuntimeRunners.Wine => localizer.T("gameRuntimeRunnerWine"),
+            _ => localizer.T("gameRuntimeRunnerAuto")
         });
 
         RefreshOptions(ProxyMode, code => code switch

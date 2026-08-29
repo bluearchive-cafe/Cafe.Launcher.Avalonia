@@ -5,12 +5,16 @@ using Cafe.Launcher.Avalonia.Models;
 using Cafe.Launcher.Avalonia.Services;
 using Cafe.Launcher.Avalonia.Services.Auth;
 using Cafe.Launcher.Avalonia.Services.Diagnostics;
+using Cafe.Launcher.Avalonia.Services.GameRuntime;
 
 namespace Cafe.Launcher.Avalonia.Tests;
 
 public sealed class InstallationOperationStateTests : IDisposable
 {
     private readonly string tempDir = Path.Combine(Path.GetTempPath(), Guid.NewGuid().ToString("N"));
+
+    private static GameRunnerResolver CreateGameRunnerResolver() =>
+        new([new NativeGameRunner(new DefaultProcessLauncher())]);
 
     static InstallationOperationStateTests()
     {
@@ -28,6 +32,8 @@ public sealed class InstallationOperationStateTests : IDisposable
         var service = new GameLaunchService(
             new ManifestValidationService(apiClient, new RemoteManifestService(apiClient), localizer),
             new ClickCodeService(),
+            CreateGameRunnerResolver(),
+            new GameProcessTracker(),
             localizer);
 
         var result = await service.StartAsync(new LauncherStatusSnapshot
@@ -50,6 +56,8 @@ public sealed class InstallationOperationStateTests : IDisposable
         var service = new GameLaunchService(
             new ManifestValidationService(apiClient, new RemoteManifestService(apiClient), localizer),
             new ClickCodeService(),
+            CreateGameRunnerResolver(),
+            new GameProcessTracker(),
             localizer);
 
         var result = await service.StartAsync(new LauncherStatusSnapshot
@@ -72,6 +80,8 @@ public sealed class InstallationOperationStateTests : IDisposable
         var service = new GameLaunchService(
             new ManifestValidationService(apiClient, new RemoteManifestService(apiClient), localizer),
             new ClickCodeService(),
+            CreateGameRunnerResolver(),
+            new GameProcessTracker(),
             localizer);
 
         var result = await service.StartAsync(new LauncherStatusSnapshot
@@ -94,6 +104,8 @@ public sealed class InstallationOperationStateTests : IDisposable
         var service = new GameLaunchService(
             new ManifestValidationService(apiClient, new RemoteManifestService(apiClient), localizer),
             new ClickCodeService(),
+            CreateGameRunnerResolver(),
+            new GameProcessTracker(),
             localizer);
 
         var result = await service.StartAsync(new LauncherStatusSnapshot
@@ -116,6 +128,8 @@ public sealed class InstallationOperationStateTests : IDisposable
         var service = new GameLaunchService(
             new ManifestValidationService(apiClient, new RemoteManifestService(apiClient), localizer),
             new ClickCodeService(),
+            CreateGameRunnerResolver(),
+            new GameProcessTracker(),
             localizer);
 
         var result = await service.StartAsync(new LauncherStatusSnapshot
@@ -153,6 +167,8 @@ public sealed class InstallationOperationStateTests : IDisposable
             var service = new GameLaunchService(
                 new ManifestValidationService(apiClient, new RemoteManifestService(apiClient), localizer),
                 new ClickCodeService(),
+                CreateGameRunnerResolver(),
+                new GameProcessTracker(),
                 localizer);
 
             var result = await service.StartAsync(new LauncherStatusSnapshot
@@ -196,6 +212,8 @@ public sealed class InstallationOperationStateTests : IDisposable
             var service = new GameLaunchService(
                 new ManifestValidationService(apiClient, new RemoteManifestService(apiClient), localizer),
                 new ClickCodeService(),
+                CreateGameRunnerResolver(),
+                new GameProcessTracker(),
                 localizer);
 
             var result = await service.StartAsync(new LauncherStatusSnapshot
@@ -211,6 +229,80 @@ public sealed class InstallationOperationStateTests : IDisposable
         {
             DeleteTempDir(tempDir);
         }
+    }
+
+    [Fact]
+    public async Task StartAsync_WhenNoRunnerIsAvailable_IncludesAvailabilityReasonsInFailure()
+    {
+        var gamePath = Path.Combine(tempDir, "YostarGames", "BlueArchive_JP");
+        Directory.CreateDirectory(gamePath);
+        await File.WriteAllTextAsync(Path.Combine(gamePath, "BlueArchive.exe"), "");
+        using var apiClient = new LauncherApiClient(
+            new HttpClientHandler(),
+            new AuthorizationHeaderFactory(),
+            new PatchUrlGroupService());
+        var localizer = new LocalizationService();
+        var service = new GameLaunchService(
+            new ManifestValidationService(apiClient, new RemoteManifestService(apiClient), localizer),
+            new ClickCodeService(),
+            new GameRunnerResolver([new UnavailableGameRunner("umu", "umu-run was not found on PATH.")]),
+            new GameProcessTracker(),
+            localizer);
+
+        var result = await service.StartAsync(new LauncherStatusSnapshot
+        {
+            RuntimeState = LauncherRuntimeState.Ready,
+            LocalGame = new LocalInstallationState
+            {
+                Kind = LocalInstallationStateKind.Valid,
+                GamePath = gamePath,
+                GameConfig = new GameLauncherConfig { Name = "BlueArchive", Version = "1.0.0" }
+            },
+            Settings = new LauncherSettings { LaunchCheckMode = LaunchCheckModes.None }
+        });
+
+        Assert.False(result.Success);
+        Assert.Equal(localizer.T("gameProcessStartFailed"), result.Message);
+        Assert.Contains("umu-run was not found on PATH.", result.DiagnosticMessage, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public async Task StartAsync_WhenRunnerStartFails_ThrowsWithLaunchContext()
+    {
+        var gamePath = Path.Combine(tempDir, "YostarGames", "BlueArchive_JP");
+        Directory.CreateDirectory(gamePath);
+        var executablePath = Path.Combine(gamePath, "BlueArchive.exe");
+        await File.WriteAllTextAsync(executablePath, "");
+        using var apiClient = new LauncherApiClient(
+            new HttpClientHandler(),
+            new AuthorizationHeaderFactory(),
+            new PatchUrlGroupService());
+        var localizer = new LocalizationService();
+        var service = new GameLaunchService(
+            new ManifestValidationService(apiClient, new RemoteManifestService(apiClient), localizer),
+            new ClickCodeService(),
+            new GameRunnerResolver([new FailingGameRunner("umu")]),
+            new GameProcessTracker(),
+            localizer);
+
+        var result = await service.StartAsync(
+            new LauncherStatusSnapshot
+            {
+                RuntimeState = LauncherRuntimeState.Ready,
+                LocalGame = new LocalInstallationState
+                {
+                    Kind = LocalInstallationStateKind.Valid,
+                    GamePath = gamePath,
+                    GameConfig = new GameLauncherConfig { Name = "BlueArchive", Version = "1.0.0" }
+                },
+                Settings = new LauncherSettings { LaunchCheckMode = LaunchCheckModes.None }
+            });
+
+        Assert.False(result.Success);
+        Assert.Contains($"{localizer.T("gameRuntimeRunner")}: umu", result.DiagnosticMessage, StringComparison.Ordinal);
+        Assert.Contains(executablePath, result.DiagnosticMessage, StringComparison.Ordinal);
+        Assert.Contains(gamePath, result.DiagnosticMessage, StringComparison.Ordinal);
+        Assert.IsType<InvalidOperationException>(result.DiagnosticException);
     }
 
     [Fact]
@@ -243,6 +335,8 @@ public sealed class InstallationOperationStateTests : IDisposable
         var service = new GameLaunchService(
             new ManifestValidationService(apiClient, new RemoteManifestService(apiClient), localizer),
             new ClickCodeService(),
+            CreateGameRunnerResolver(),
+            new GameProcessTracker(),
             localizer);
         var snapshot = new LauncherStatusSnapshot
         {
@@ -274,7 +368,7 @@ public sealed class InstallationOperationStateTests : IDisposable
             new LocalInstallationStateStore(),
             new LocalDiagnostics(),
             new LocalizationService(),
-            new GameInstallationPath());
+            new GameInstallationPath(), new GameProcessTracker());
 
         var result = await service.ValidateAsync(gamePath);
 
@@ -290,7 +384,7 @@ public sealed class InstallationOperationStateTests : IDisposable
             new LocalInstallationStateStore(),
             new LocalDiagnostics(),
             localizer,
-            new GameInstallationPath());
+            new GameInstallationPath(), new GameProcessTracker());
         var protectedPath = Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData);
         Assert.False(string.IsNullOrWhiteSpace(protectedPath));
 
@@ -314,7 +408,7 @@ public sealed class InstallationOperationStateTests : IDisposable
                 new LocalInstallationStateStore(),
                 new LocalDiagnostics(),
                 localizer,
-                new GameInstallationPath());
+                new GameInstallationPath(), new GameProcessTracker());
 
             var result = await service.ValidateAsync(invalidGamePath);
 
@@ -362,7 +456,7 @@ public sealed class InstallationOperationStateTests : IDisposable
                 new LocalInstallationStateStore(),
                 new LocalDiagnostics(),
                 localizer,
-                new GameInstallationPath());
+                new GameInstallationPath(), new GameProcessTracker());
 
             var result = await service.ValidateAsync(gamePath);
 
@@ -400,7 +494,7 @@ public sealed class InstallationOperationStateTests : IDisposable
             store,
             new LocalDiagnostics(),
             new LocalizationService(),
-            new GameInstallationPath());
+            new GameInstallationPath(), new GameProcessTracker());
         var snapshot = new LauncherStatusSnapshot
         {
             RuntimeState = LauncherRuntimeState.Ready,
@@ -437,7 +531,7 @@ public sealed class InstallationOperationStateTests : IDisposable
             new DiskSpaceService(),
             new LocalDiagnostics(),
             new LocalizationService(),
-            new GameInstallationPath());
+            new GameInstallationPath(), new GameProcessTracker());
 
         var result = await service.RepairAsync(
             new LauncherStatusSnapshot { RuntimeState = LauncherRuntimeState.NotInstalled },
@@ -454,7 +548,7 @@ public sealed class InstallationOperationStateTests : IDisposable
             new LocalInstallationStateStore(),
             new LocalDiagnostics(),
             new LocalizationService(),
-            new GameInstallationPath());
+            new GameInstallationPath(), new GameProcessTracker());
 
         var result = await service.UninstallAsync(
             new LauncherStatusSnapshot
@@ -501,5 +595,37 @@ public sealed class InstallationOperationStateTests : IDisposable
         {
             Directory.Delete(path, recursive: true);
         }
+    }
+
+    private sealed class UnavailableGameRunner(string id, string reason) : IGameRunner
+    {
+        public string Id => id;
+
+        public bool IsSupportedPlatform => true;
+
+        public Task<GameRunnerAvailability> CheckAvailabilityAsync(CancellationToken cancellationToken = default) =>
+            Task.FromResult(new GameRunnerAvailability(Available: false, Message: reason));
+
+        public Task<GameProcess> StartAsync(
+            GameLaunchRequest request,
+            GameRuntimeOptions options,
+            CancellationToken cancellationToken = default) =>
+            throw new InvalidOperationException("An unavailable runner must not start a process.");
+    }
+
+    private sealed class FailingGameRunner(string id) : IGameRunner
+    {
+        public string Id => id;
+
+        public bool IsSupportedPlatform => true;
+
+        public Task<GameRunnerAvailability> CheckAvailabilityAsync(CancellationToken cancellationToken = default) =>
+            Task.FromResult(new GameRunnerAvailability(Available: true));
+
+        public Task<GameProcess> StartAsync(
+            GameLaunchRequest request,
+            GameRuntimeOptions options,
+            CancellationToken cancellationToken = default) =>
+            throw new InvalidOperationException("umu failed to create a process.");
     }
 }

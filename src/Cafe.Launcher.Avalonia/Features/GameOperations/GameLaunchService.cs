@@ -1,10 +1,10 @@
 using System;
-using System.Diagnostics;
 using System.IO;
 using System.Threading;
 using System.Threading.Tasks;
 using Cafe.Launcher.Avalonia.Models;
 using Cafe.Launcher.Avalonia.Services;
+using Cafe.Launcher.Avalonia.Services.GameRuntime;
 
 namespace Cafe.Launcher.Avalonia.Features.GameOperations;
 
@@ -12,15 +12,21 @@ public sealed class GameLaunchService
 {
     private readonly ManifestValidationService manifestValidationService;
     private readonly ClickCodeService clickCodeService;
+    private readonly GameRunnerResolver gameRunnerResolver;
+    private readonly IGameProcessTracker gameProcessTracker;
     private readonly LocalizationService localizer;
 
     public GameLaunchService(
         ManifestValidationService manifestValidationService,
         ClickCodeService clickCodeService,
+        GameRunnerResolver gameRunnerResolver,
+        IGameProcessTracker gameProcessTracker,
         LocalizationService localizer)
     {
         this.manifestValidationService = manifestValidationService;
         this.clickCodeService = clickCodeService;
+        this.gameRunnerResolver = gameRunnerResolver;
+        this.gameProcessTracker = gameProcessTracker;
         this.localizer = localizer;
     }
 
@@ -87,38 +93,74 @@ public sealed class GameLaunchService
             };
         }
 
-        var startInfo = new ProcessStartInfo
-        {
-            FileName = exePath,
-            WorkingDirectory = localGame.GamePath,
-            UseShellExecute = false
-        };
-
-        foreach (var parameter in gameConfig.Params)
-        {
-            startInfo.ArgumentList.Add(parameter);
-        }
-
         // Write clickCode attribution to game directory before launch
         clickCodeService.WriteClickCodeToGamePath(localGame.GamePath);
 
-        using var process = Process.Start(startInfo);
-        return process is null
-            ? Failed(localizer.T("gameProcessStartFailed"))
-            : new GameLaunchResult
+        var runtime = snapshot.Settings.GameRuntime;
+        var preferredRunnerId = runtime.Runner is GameRuntimeRunners.Auto or ""
+            ? null
+            : runtime.Runner;
+        var runnerResolution = await gameRunnerResolver
+            .ResolveWithDiagnosticsAsync(preferredRunnerId, cancellationToken)
+            .ConfigureAwait(false);
+        var runner = runnerResolution.Runner;
+        if (runner is null)
+        {
+            return Failed(localizer.T("gameProcessStartFailed"), runnerResolution.DiagnosticMessage);
+        }
+
+        var request = new GameLaunchRequest(
+            GameId: gameConfig.Name,
+            ExecutablePath: exePath,
+            WorkingDirectory: localGame.GamePath,
+            Arguments: gameConfig.Params);
+
+        GameProcess gameProcess;
+        try
+        {
+            gameProcess = await runner
+                .StartAsync(
+                    request,
+                    new GameRuntimeOptions(runtime.RunnerPath, runtime.PrefixPath, runtime.ProtonPath),
+                    cancellationToken)
+                .ConfigureAwait(false);
+        }
+        catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
+        {
+            throw;
+        }
+        catch (Exception exception)
+        {
+            return new GameLaunchResult
             {
-                Success = true,
-                Message = localizer.T("gameProcessStarted"),
+                Success = false,
+                Message = localizer.F("gameLaunchFailed", exception.Message),
+                DiagnosticMessage = $"{BuildLaunchContext(runnerResolution, request)}{Environment.NewLine}{exception.Message}",
+                DiagnosticException = exception,
                 Validation = validation
             };
+        }
+
+        // The tracker owns the host process from here: it keeps the handle alive
+        // as the authoritative running-state source and records exit details.
+        gameProcessTracker.Register(gameProcess);
+
+        return new GameLaunchResult
+        {
+            Success = true,
+            Message = localizer.T("gameProcessStarted"),
+            DiagnosticMessage = BuildLaunchContext(runnerResolution, request),
+            Validation = validation
+        };
     }
 
-    private static GameLaunchResult Failed(string message)
+    private static GameLaunchResult Failed(string message, string? diagnosticMessage = null)
     {
         return new GameLaunchResult
         {
             Success = false,
             Message = message,
+            DiagnosticMessage = diagnosticMessage ?? message,
             Validation = new ManifestValidationResult
             {
                 Success = false,
@@ -126,4 +168,11 @@ public sealed class GameLaunchService
             }
         };
     }
+
+    private string BuildLaunchContext(
+        GameRunnerResolution runnerResolution,
+        GameLaunchRequest request) =>
+        $"{runnerResolution.DiagnosticMessage}{Environment.NewLine}" +
+        $"{localizer.T("executable")}: {request.ExecutablePath}{Environment.NewLine}" +
+        $"{localizer.T("path")}: {request.WorkingDirectory}";
 }

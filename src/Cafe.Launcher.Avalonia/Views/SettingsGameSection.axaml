@@ -6,52 +6,65 @@
              x:Class="Cafe.Launcher.Avalonia.Views.SettingsGameSection"
              x:Name="SettingsRoot"
              x:DataType="vm:MainWindowViewModel">
-    <StackPanel Classes="settings-group">
-        <TextBlock Text="{Binding Shell.I18n[settingsGroupGameFiles]}" Classes="group-title"/>
+    <StackPanel>
+        <StackPanel Classes="settings-group">
+            <TextBlock Text="{Binding Shell.I18n[settingsGroupGameFiles]}" Classes="group-title"/>
 
-        <controls:SettingRow ShowTopDivider="False"
-                             Title="{Binding Shell.I18n[gamePath]}"
-                             Description="{Binding Settings.Editor.Current.GamePath}">
-            <controls:SettingRow.Action>
-                <Button Classes="flat-action" Command="{Binding Settings.ChooseGamePathCommand}"
-                        AutomationProperties.Name="{Binding Shell.I18n[choose]}"
-                        IsEnabled="{Binding Shell.IsBusy, Converter={x:Static BoolConverters.Not}}">
-                    <StackPanel Classes="button-content">
-                        <materialIcons:MaterialIcon Kind="FolderOpen" Width="{StaticResource Launcher.Icon.Sm}" Height="{StaticResource Launcher.Icon.Sm}"/>
-                        <TextBlock Text="{Binding Shell.I18n[choose]}"/>
+            <controls:SettingRow ShowTopDivider="False"
+                                 Title="{Binding Shell.I18n[gamePath]}"
+                                 Description="{Binding Settings.Editor.Current.GamePath}">
+                <controls:SettingRow.Action>
+                    <Button Classes="flat-action" Command="{Binding Settings.ChooseGamePathCommand}"
+                            AutomationProperties.Name="{Binding Shell.I18n[choose]}"
+                            IsEnabled="{Binding Shell.IsBusy, Converter={x:Static BoolConverters.Not}}">
+                        <StackPanel Classes="button-content">
+                            <materialIcons:MaterialIcon Kind="FolderOpen" Width="{StaticResource Launcher.Icon.Sm}" Height="{StaticResource Launcher.Icon.Sm}"/>
+                            <TextBlock Text="{Binding Shell.I18n[choose]}"/>
+                        </StackPanel>
+                    </Button>
+                </controls:SettingRow.Action>
+            </controls:SettingRow>
+
+            <controls:SettingSelect Title="{Binding Shell.I18n[launchCheck]}"
+                                    Description="{Binding Shell.I18n[launchCheckDescription]}"
+                                    AutomationName="{Binding Shell.I18n[launchCheck]}"
+                                    ItemsSource="{Binding Settings.Options.LaunchCheckMode}"
+                                    SelectedValue="{Binding Settings.Editor.Current.LaunchCheckMode, Mode=TwoWay}"/>
+
+            <controls:SettingRow Title="{Binding Shell.I18n[gameManagement]}"
+                                 Description="{Binding Shell.I18n[gameManagementDescription]}">
+                <controls:SettingRow.Action>
+                    <StackPanel Orientation="Horizontal" Spacing="{StaticResource Launcher.Spacing.Sm}" VerticalAlignment="Center">
+                        <Button Classes="flat-action" Command="{Binding Operations.RequestRepairCommand}"
+                                AutomationProperties.Name="{Binding Shell.I18n[repair]}"
+                                IsEnabled="{Binding Shell.IsBusy, Converter={x:Static BoolConverters.Not}}">
+                            <StackPanel Classes="button-content">
+                                <materialIcons:MaterialIcon Kind="Tools" Width="{StaticResource Launcher.Icon.Sm}" Height="{StaticResource Launcher.Icon.Sm}"/>
+                                <TextBlock Text="{Binding Shell.I18n[repair]}"/>
+                            </StackPanel>
+                        </Button>
+                        <Button Classes="flat-action" Command="{Binding Operations.RequestUninstallCommand}"
+                                AutomationProperties.Name="{Binding Shell.I18n[uninstall]}"
+                                IsEnabled="{Binding Shell.IsBusy, Converter={x:Static BoolConverters.Not}}">
+                            <StackPanel Classes="button-content">
+                                <materialIcons:MaterialIcon Kind="TrashCanOutline" Width="{StaticResource Launcher.Icon.Sm}" Height="{StaticResource Launcher.Icon.Sm}" Foreground="{StaticResource Launcher.Color.Danger}"/>
+                                <TextBlock Text="{Binding Shell.I18n[uninstall]}" Foreground="{StaticResource Launcher.Color.Danger}"/>
+                            </StackPanel>
+                        </Button>
                     </StackPanel>
-                </Button>
-            </controls:SettingRow.Action>
-        </controls:SettingRow>
+                </controls:SettingRow.Action>
+            </controls:SettingRow>
+        </StackPanel>
 
-        <controls:SettingSelect Title="{Binding Shell.I18n[launchCheck]}"
-                                Description="{Binding Shell.I18n[launchCheckDescription]}"
-                                AutomationName="{Binding Shell.I18n[launchCheck]}"
-                                ItemsSource="{Binding Settings.Options.LaunchCheckMode}"
-                                SelectedValue="{Binding Settings.Editor.Current.LaunchCheckMode, Mode=TwoWay}"/>
+        <StackPanel Classes="settings-group" IsVisible="{Binding Shell.IsLinuxPlatform}">
+            <TextBlock Text="{Binding Shell.I18n[settingsGroupGameRuntime]}" Classes="group-title"/>
 
-        <controls:SettingRow Title="{Binding Shell.I18n[gameManagement]}"
-                             Description="{Binding Shell.I18n[gameManagementDescription]}">
-            <controls:SettingRow.Action>
-                <StackPanel Orientation="Horizontal" Spacing="{StaticResource Launcher.Spacing.Sm}" VerticalAlignment="Center">
-                    <Button Classes="flat-action" Command="{Binding Operations.RequestRepairCommand}"
-                            AutomationProperties.Name="{Binding Shell.I18n[repair]}"
-                            IsEnabled="{Binding Shell.IsBusy, Converter={x:Static BoolConverters.Not}}">
-                        <StackPanel Classes="button-content">
-                            <materialIcons:MaterialIcon Kind="Tools" Width="{StaticResource Launcher.Icon.Sm}" Height="{StaticResource Launcher.Icon.Sm}"/>
-                            <TextBlock Text="{Binding Shell.I18n[repair]}"/>
-                        </StackPanel>
-                    </Button>
-                    <Button Classes="flat-action" Command="{Binding Operations.RequestUninstallCommand}"
-                            AutomationProperties.Name="{Binding Shell.I18n[uninstall]}"
-                            IsEnabled="{Binding Shell.IsBusy, Converter={x:Static BoolConverters.Not}}">
-                        <StackPanel Classes="button-content">
-                            <materialIcons:MaterialIcon Kind="TrashCanOutline" Width="{StaticResource Launcher.Icon.Sm}" Height="{StaticResource Launcher.Icon.Sm}" Foreground="{StaticResource Launcher.Color.Danger}"/>
-                            <TextBlock Text="{Binding Shell.I18n[uninstall]}" Foreground="{StaticResource Launcher.Color.Danger}"/>
-                        </StackPanel>
-                    </Button>
-                </StackPanel>
-            </controls:SettingRow.Action>
-        </controls:SettingRow>
+            <controls:SettingSelect ShowTopDivider="False"
+                                    Title="{Binding Shell.I18n[gameRuntimeRunner]}"
+                                    Description="{Binding Shell.I18n[gameRuntimeRunnerDescription]}"
+                                    AutomationName="{Binding Shell.I18n[gameRuntimeRunner]}"
+                                    ItemsSource="{Binding Settings.Options.GameRuntimeRunner}"
+                                    SelectedValue="{Binding Settings.Editor.Current.GameRuntime.Runner, Mode=TwoWay}"/>
+        </StackPanel>
     </StackPanel>
 </UserControl>

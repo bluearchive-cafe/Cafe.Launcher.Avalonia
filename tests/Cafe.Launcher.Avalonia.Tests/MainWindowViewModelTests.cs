@@ -9,6 +9,7 @@ using Cafe.Launcher.Avalonia.Features.SetupWizard;
 using Cafe.Launcher.Avalonia.Services;
 using Cafe.Launcher.Avalonia.Services.Auth;
 using Cafe.Launcher.Avalonia.Services.Diagnostics;
+using Cafe.Launcher.Avalonia.Services.GameRuntime;
 using Cafe.Launcher.Avalonia.ViewModels;
 using Avalonia.Media;
 using System.Net;
@@ -1872,6 +1873,8 @@ public sealed class MainWindowViewModelTests : IDisposable
         var gameLaunchService = new GameLaunchService(
             manifestValidationService,
             new ClickCodeService(),
+            new GameRunnerResolver([new NativeGameRunner(new DefaultProcessLauncher())]),
+            new GameProcessTracker(),
             localizationService);
         var gameDownloadService = new GameDownloadService(
             apiClient,
@@ -1885,6 +1888,7 @@ public sealed class MainWindowViewModelTests : IDisposable
             diagnostics,
             localizationService,
             new GameInstallationPath(),
+            new GameProcessTracker(),
             Path.Combine(tempDir, Guid.NewGuid().ToString("N"), "download_state.json"));
         resourcePanelUidService ??= new ResourcePanelUidService(
             new BestHttpCookieLibraryService(),
@@ -1917,7 +1921,8 @@ public sealed class MainWindowViewModelTests : IDisposable
             localInstallationStateStore,
             diagnostics,
             localizationService,
-            new GameInstallationPath());
+            new GameInstallationPath(),
+            new GameProcessTracker());
 
         var remoteContentViewModel = new RemoteContentViewModel(localizationService, imageCacheService);
         var backgroundViewModel = new BackgroundViewModel(imageCacheService, diagnostics, settingsViewModel);
