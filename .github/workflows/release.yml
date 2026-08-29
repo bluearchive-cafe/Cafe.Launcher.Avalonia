@@ -41,6 +41,12 @@ jobs:
           cache: true
           cache-dependency-path: '**/*.csproj'
 
+      - name: Install Linux packaging and smoke-test dependencies
+        shell: bash
+        run: |
+          sudo apt-get update
+          sudo apt-get install --no-install-recommends -y dpkg xvfb xauth libx11-6 libice6 libsm6 libfontconfig1 libxkbcommon0
+
       - name: Acquire pinned AppImage tools
         env:
           APPIMAGETOOL_SHA256: 'ed4ce84f0d9caff66f50bcca6ff6f35aae54ce8135408b3fa33abfc3cb384eb0'
@@ -64,11 +70,24 @@ jobs:
           }
           ./scripts/Build-Distribution.ps1 @buildArguments
 
-      - name: Smoke test AppImage desktop startup
+      - name: Verify Debian package and smoke test AppImage
         shell: bash
         run: |
-          sudo apt-get update
-          sudo apt-get install --no-install-recommends -y xvfb xauth libx11-6 libice6 libsm6 libfontconfig1
+          debs=(artifacts/distribution/*_linux-x64.deb)
+          if [[ ${#debs[@]} -ne 1 || ! -f "${debs[0]}" ]]; then
+            echo "Expected exactly one Linux Debian package." >&2
+            exit 1
+          fi
+          [[ $(dpkg-deb --field "${debs[0]}" Package) == cafe-launcher ]]
+          [[ $(dpkg-deb --field "${debs[0]}" Architecture) == amd64 ]]
+          mkdir -p "$RUNNER_TEMP/deb-root"
+          dpkg-deb --extract "${debs[0]}" "$RUNNER_TEMP/deb-root"
+          test -x "$RUNNER_TEMP/deb-root/usr/bin/cafe-launcher"
+          test -x "$RUNNER_TEMP/deb-root/opt/cafe-launcher/Cafe.Launcher.Avalonia"
+          sudo apt-get install --no-install-recommends -y "./${debs[0]}"
+          test "$(command -v cafe-launcher)" = /usr/bin/cafe-launcher
+          cafe-launcher --version
+
           appimages=(artifacts/distribution/*_linux-x64.AppImage)
           if [[ ${#appimages[@]} -ne 1 || ! -f "${appimages[0]}" ]]; then
             echo "Expected exactly one Linux AppImage artifact." >&2
@@ -269,6 +288,7 @@ jobs:
             artifacts/distribution/Cafe.Launcher.Avalonia_${{ github.ref_name }}_osx-arm64.zip
             artifacts/distribution/Cafe.Launcher.Avalonia_${{ github.ref_name }}_linux-x64.tar.gz
             artifacts/distribution/Cafe.Launcher.Avalonia_${{ github.ref_name }}_linux-x64.AppImage
+            artifacts/distribution/Cafe.Launcher.Avalonia_${{ github.ref_name }}_linux-x64.deb
           prerelease: ${{ contains(github.ref_name, '-') }}
           fail_on_unmatched_files: true
 
@@ -287,5 +307,6 @@ jobs:
             artifacts/distribution/Cafe.Launcher.Avalonia_${{ github.ref_name }}_osx-arm64.zip
             artifacts/distribution/Cafe.Launcher.Avalonia_${{ github.ref_name }}_linux-x64.tar.gz
             artifacts/distribution/Cafe.Launcher.Avalonia_${{ github.ref_name }}_linux-x64.AppImage
+            artifacts/distribution/Cafe.Launcher.Avalonia_${{ github.ref_name }}_linux-x64.deb
           prerelease: ${{ contains(github.ref_name, '-') }}
           fail_on_unmatched_files: true

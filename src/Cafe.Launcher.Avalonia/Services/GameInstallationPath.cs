@@ -11,12 +11,14 @@ public sealed class GameInstallationPath
         return GetDefaultGamePath(
             AppContext.BaseDirectory,
             Environment.GetEnvironmentVariable("APPIMAGE"),
+            Environment.GetEnvironmentVariable("CAFE_LAUNCHER_PACKAGE_FORMAT"),
             Environment.GetFolderPath(Environment.SpecialFolder.UserProfile));
     }
 
     internal string GetDefaultGamePath(
         string applicationBaseDirectory,
         string? appImagePath,
+        string? packageFormat,
         string userProfileDirectory)
     {
         // Match the official launcher's request-default-download-path (index.js:742-743):
@@ -25,10 +27,13 @@ public sealed class GameInstallationPath
         // (not inside) the launcher folder, keeping it safe from launcher self-update
         // overwrites. NormalizeGamePath is a faithful port of the official checkPath,
         // so the only requirement is feeding it the same base — the parent directory.
-        // AppImage is the exception: AppContext.BaseDirectory lives under APPDIR,
-        // which is a temporary read-only mount. Use the user's home directory as a
-        // stable writable base instead of suggesting a path that cannot be created.
-        var baseDirectory = !string.IsNullOrWhiteSpace(appImagePath) &&
+        // Packaged Linux installs are the exception: AppImage uses a temporary
+        // read-only mount, while system packages install under a protected prefix
+        // such as /opt. Use the user's home directory instead of suggesting a path
+        // that cannot be created without elevated permissions.
+        var isPackagedInstall = !string.IsNullOrWhiteSpace(appImagePath)
+            || !string.IsNullOrWhiteSpace(packageFormat);
+        var baseDirectory = isPackagedInstall &&
             !string.IsNullOrWhiteSpace(userProfileDirectory)
             ? userProfileDirectory
             : Path.Combine(applicationBaseDirectory, "..");

@@ -74,15 +74,16 @@ Windows 安装程序使用 Inno Setup 6.3+ 构建（仓库以 Inno Setup 7 验�
 .\scripts\New-WindowsInstaller.ps1                                  # 依据 artifacts/publish/win-x64 构建 Inno Setup 安装器
 ```
 
-输出（`artifacts/distribution/`，CI 发版额外产出 AppImage）：
+输出（`artifacts/distribution/`，CI 发版额外产出 AppImage 与 deb）：
 
 - `Cafe.Launcher.Avalonia_v<version>_win-x64.zip`（Windows 自包含 zip）
 - `Cafe.Launcher.Avalonia_v<version>_setup.exe`（Inno Setup 安装器，仅 Windows 宿主）
 - `Cafe.Launcher.Avalonia_v<version>_osx-arm64.zip`（内含 `Cafe Launcher.app`，建议在 Linux/macOS 宿主打包以保留可执行位）
 - `Cafe.Launcher.Avalonia_v<version>_linux-x64.tar.gz`（建议在 Linux 宿主打包以保留可执行位）
 - `Cafe.Launcher.Avalonia_v<version>_linux-x64.AppImage`（CI 在 Ubuntu 24.04 上使用固定版本的 `appimagetool` 与 Type 2 runtime 构建，并通过 Xvfb 执行桌面启动烟测）
+- `Cafe.Launcher.Avalonia_v<version>_linux-x64.deb`（CI 在 Ubuntu 24.04 上使用 `dpkg-deb` 构建；安装到 `/opt/cafe-launcher`，并提供 `cafe-launcher` 命令与桌面入口）
 
-AppImage 是自包含的 .NET 应用，但仍依赖目标 Linux 系统提供 glibc、libgcc、libstdc++、zlib、ICU、OpenSSL、Kerberos，以及 Avalonia 桌面后端所需的 X11/XWayland、libICE、libSM 和 fontconfig。首次运行前请确认发行版已经安装这些基础运行库；AppImage 环境下默认游戏目录会放在用户主目录的 `YostarGames/BlueArchive_JP`，不会写入只读的临时挂载目录。
+AppImage 和 `.deb` 均包含自包含的 .NET 应用，但仍依赖目标 Linux 系统提供 glibc、libgcc、libstdc++、zlib、ICU、OpenSSL、Kerberos，以及 Avalonia 桌面后端所需的 X11/XWayland、libICE、libSM、libxkbcommon 和 fontconfig。首次运行前请确认发行版已经安装这些基础运行库；包管理器安装与 AppImage 环境下的默认游戏目录会放在用户主目录的 `YostarGames/BlueArchive_JP`，不会写入只读挂载目录或受保护的 `/opt`。
 
 Setup 安装范围为所有用户，默认目录为 `C:\Program Files\Cafe Launcher`，安装、升级和卸载均需要管理员权限。升级会删除旧版本中由安装器管理、但新版本不再发布的文件；安装目录内的其他文件会保留。
 
