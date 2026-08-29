@@ -4,6 +4,7 @@ using System.Threading.Tasks;
 using Cafe.Launcher.Avalonia.Models;
 using Cafe.Launcher.Avalonia.Services;
 using Cafe.Launcher.Avalonia.Services.Diagnostics;
+using Cafe.Launcher.Avalonia.Services.GameRuntime;
 
 namespace Cafe.Launcher.Avalonia.Features.GameOperations;
 
@@ -27,6 +28,7 @@ public sealed class GameDownloadService : IDisposable
     private readonly LocalizationService localizer;
     private readonly GameInstallationPath installationPath;
     private readonly DownloadCheckpointStore checkpointStore;
+    private readonly IGameProcessTracker gameProcessTracker;
     private readonly object activeDownloadLock = new();
     private DownloadSession? activeSession;
     private bool disposed;
@@ -42,7 +44,8 @@ public sealed class GameDownloadService : IDisposable
         DiskSpaceService diskSpaceService,
         LocalDiagnostics diagnostics,
         LocalizationService localizer,
-        GameInstallationPath installationPath)
+        GameInstallationPath installationPath,
+        IGameProcessTracker gameProcessTracker)
     {
         this.apiClient = apiClient;
         this.remoteManifestService = remoteManifestService;
@@ -55,6 +58,7 @@ public sealed class GameDownloadService : IDisposable
         this.diagnostics = diagnostics;
         this.localizer = localizer;
         this.installationPath = installationPath;
+        this.gameProcessTracker = gameProcessTracker;
         checkpointStore = DownloadCheckpointStore.CreateDefault();
     }
 
@@ -70,6 +74,7 @@ public sealed class GameDownloadService : IDisposable
         LocalDiagnostics diagnostics,
         LocalizationService localizer,
         GameInstallationPath installationPath,
+        IGameProcessTracker gameProcessTracker,
         string downloadStateFilePath)
         : this(
             apiClient,
@@ -82,7 +87,8 @@ public sealed class GameDownloadService : IDisposable
             diskSpaceService,
             diagnostics,
             localizer,
-            installationPath)
+            installationPath,
+            gameProcessTracker)
     {
         checkpointStore = new DownloadCheckpointStore(downloadStateFilePath);
     }
@@ -163,6 +169,7 @@ public sealed class GameDownloadService : IDisposable
             localizer,
             installationPath,
             checkpointStore,
+            gameProcessTracker,
             snapshot,
             progress,
             cancellationToken).ConfigureAwait(false);
@@ -240,6 +247,7 @@ public sealed class GameDownloadService : IDisposable
             localizer,
             installationPath,
             checkpointStore,
+            gameProcessTracker,
             snapshot,
             repair,
             progress,

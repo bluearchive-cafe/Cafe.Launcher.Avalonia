@@ -9,6 +9,7 @@ using Cafe.Launcher.Avalonia.Services;
 using Cafe.Launcher.Avalonia.Services.Diagnostics;
 using Cafe.Launcher.Avalonia.Models;
 using Cafe.Launcher.Avalonia.Services.Auth;
+using Cafe.Launcher.Avalonia.Services.GameRuntime;
 
 namespace Cafe.Launcher.Avalonia.Tests;
 
@@ -1363,6 +1364,7 @@ public sealed class GameDownloadServiceTests
             diagnostics,
             new LocalizationService(),
             new GameInstallationPath(),
+            new GameProcessTracker(),
             downloadStateFilePath);
     }
 

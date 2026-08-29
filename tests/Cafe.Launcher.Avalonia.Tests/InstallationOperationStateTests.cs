@@ -33,6 +33,7 @@ public sealed class InstallationOperationStateTests : IDisposable
             new ManifestValidationService(apiClient, new RemoteManifestService(apiClient), localizer),
             new ClickCodeService(),
             CreateGameRunnerResolver(),
+            new GameProcessTracker(),
             localizer);
 
         var result = await service.StartAsync(new LauncherStatusSnapshot
@@ -56,6 +57,7 @@ public sealed class InstallationOperationStateTests : IDisposable
             new ManifestValidationService(apiClient, new RemoteManifestService(apiClient), localizer),
             new ClickCodeService(),
             CreateGameRunnerResolver(),
+            new GameProcessTracker(),
             localizer);
 
         var result = await service.StartAsync(new LauncherStatusSnapshot
@@ -79,6 +81,7 @@ public sealed class InstallationOperationStateTests : IDisposable
             new ManifestValidationService(apiClient, new RemoteManifestService(apiClient), localizer),
             new ClickCodeService(),
             CreateGameRunnerResolver(),
+            new GameProcessTracker(),
             localizer);
 
         var result = await service.StartAsync(new LauncherStatusSnapshot
@@ -102,6 +105,7 @@ public sealed class InstallationOperationStateTests : IDisposable
             new ManifestValidationService(apiClient, new RemoteManifestService(apiClient), localizer),
             new ClickCodeService(),
             CreateGameRunnerResolver(),
+            new GameProcessTracker(),
             localizer);
 
         var result = await service.StartAsync(new LauncherStatusSnapshot
@@ -125,6 +129,7 @@ public sealed class InstallationOperationStateTests : IDisposable
             new ManifestValidationService(apiClient, new RemoteManifestService(apiClient), localizer),
             new ClickCodeService(),
             CreateGameRunnerResolver(),
+            new GameProcessTracker(),
             localizer);
 
         var result = await service.StartAsync(new LauncherStatusSnapshot
@@ -163,6 +168,7 @@ public sealed class InstallationOperationStateTests : IDisposable
                 new ManifestValidationService(apiClient, new RemoteManifestService(apiClient), localizer),
                 new ClickCodeService(),
                 CreateGameRunnerResolver(),
+                new GameProcessTracker(),
                 localizer);
 
             var result = await service.StartAsync(new LauncherStatusSnapshot
@@ -207,6 +213,7 @@ public sealed class InstallationOperationStateTests : IDisposable
                 new ManifestValidationService(apiClient, new RemoteManifestService(apiClient), localizer),
                 new ClickCodeService(),
                 CreateGameRunnerResolver(),
+                new GameProcessTracker(),
                 localizer);
 
             var result = await service.StartAsync(new LauncherStatusSnapshot
@@ -255,6 +262,7 @@ public sealed class InstallationOperationStateTests : IDisposable
             new ManifestValidationService(apiClient, new RemoteManifestService(apiClient), localizer),
             new ClickCodeService(),
             CreateGameRunnerResolver(),
+            new GameProcessTracker(),
             localizer);
         var snapshot = new LauncherStatusSnapshot
         {
@@ -286,7 +294,7 @@ public sealed class InstallationOperationStateTests : IDisposable
             new LocalInstallationStateStore(),
             new LocalDiagnostics(),
             new LocalizationService(),
-            new GameInstallationPath());
+            new GameInstallationPath(), new GameProcessTracker());
 
         var result = await service.ValidateAsync(gamePath);
 
@@ -302,7 +310,7 @@ public sealed class InstallationOperationStateTests : IDisposable
             new LocalInstallationStateStore(),
             new LocalDiagnostics(),
             localizer,
-            new GameInstallationPath());
+            new GameInstallationPath(), new GameProcessTracker());
         var protectedPath = Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData);
         Assert.False(string.IsNullOrWhiteSpace(protectedPath));
 
@@ -326,7 +334,7 @@ public sealed class InstallationOperationStateTests : IDisposable
                 new LocalInstallationStateStore(),
                 new LocalDiagnostics(),
                 localizer,
-                new GameInstallationPath());
+                new GameInstallationPath(), new GameProcessTracker());
 
             var result = await service.ValidateAsync(invalidGamePath);
 
@@ -374,7 +382,7 @@ public sealed class InstallationOperationStateTests : IDisposable
                 new LocalInstallationStateStore(),
                 new LocalDiagnostics(),
                 localizer,
-                new GameInstallationPath());
+                new GameInstallationPath(), new GameProcessTracker());
 
             var result = await service.ValidateAsync(gamePath);
 
@@ -412,7 +420,7 @@ public sealed class InstallationOperationStateTests : IDisposable
             store,
             new LocalDiagnostics(),
             new LocalizationService(),
-            new GameInstallationPath());
+            new GameInstallationPath(), new GameProcessTracker());
         var snapshot = new LauncherStatusSnapshot
         {
             RuntimeState = LauncherRuntimeState.Ready,
@@ -449,7 +457,7 @@ public sealed class InstallationOperationStateTests : IDisposable
             new DiskSpaceService(),
             new LocalDiagnostics(),
             new LocalizationService(),
-            new GameInstallationPath());
+            new GameInstallationPath(), new GameProcessTracker());
 
         var result = await service.RepairAsync(
             new LauncherStatusSnapshot { RuntimeState = LauncherRuntimeState.NotInstalled },
@@ -466,7 +474,7 @@ public sealed class InstallationOperationStateTests : IDisposable
             new LocalInstallationStateStore(),
             new LocalDiagnostics(),
             new LocalizationService(),
-            new GameInstallationPath());
+            new GameInstallationPath(), new GameProcessTracker());
 
         var result = await service.UninstallAsync(
             new LauncherStatusSnapshot

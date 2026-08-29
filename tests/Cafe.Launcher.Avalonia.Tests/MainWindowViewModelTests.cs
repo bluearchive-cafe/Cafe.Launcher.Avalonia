@@ -1874,6 +1874,7 @@ public sealed class MainWindowViewModelTests : IDisposable
             manifestValidationService,
             new ClickCodeService(),
             new GameRunnerResolver([new NativeGameRunner(new DefaultProcessLauncher())]),
+            new GameProcessTracker(),
             localizationService);
         var gameDownloadService = new GameDownloadService(
             apiClient,
@@ -1887,6 +1888,7 @@ public sealed class MainWindowViewModelTests : IDisposable
             diagnostics,
             localizationService,
             new GameInstallationPath(),
+            new GameProcessTracker(),
             Path.Combine(tempDir, Guid.NewGuid().ToString("N"), "download_state.json"));
         resourcePanelUidService ??= new ResourcePanelUidService(
             new BestHttpCookieLibraryService(),
@@ -1919,7 +1921,8 @@ public sealed class MainWindowViewModelTests : IDisposable
             localInstallationStateStore,
             diagnostics,
             localizationService,
-            new GameInstallationPath());
+            new GameInstallationPath(),
+            new GameProcessTracker());
 
         var remoteContentViewModel = new RemoteContentViewModel(localizationService, imageCacheService);
         var backgroundViewModel = new BackgroundViewModel(imageCacheService, diagnostics, settingsViewModel);

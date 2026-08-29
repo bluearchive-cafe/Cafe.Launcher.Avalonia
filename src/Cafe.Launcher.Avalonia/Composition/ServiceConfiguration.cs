@@ -63,6 +63,7 @@ public static class ServiceConfiguration
         services.AddSingleton<IProcessLauncher, DefaultProcessLauncher>();
         services.AddSingleton<IGameRunner, NativeGameRunner>();
         services.AddSingleton<GameRunnerResolver>();
+        services.AddSingleton<IGameProcessTracker, GameProcessTracker>();
         services.AddSingleton<GameLaunchService>();
         services.AddSingleton<GameUninstallService>();
         services.AddSingleton<IGameShortcutService, GameShortcutService>();
@@ -91,7 +92,8 @@ public static class ServiceConfiguration
             sp.GetRequiredService<DiskSpaceService>(),
             sp.GetRequiredService<LocalDiagnostics>(),
             sp.GetRequiredService<LocalizationService>(),
-            sp.GetRequiredService<GameInstallationPath>()));
+            sp.GetRequiredService<GameInstallationPath>(),
+            sp.GetRequiredService<IGameProcessTracker>()));
 
         // ── ViewModels (all singleton — single-window desktop app) ─────────
         services.AddSingleton<SettingsViewModel>();

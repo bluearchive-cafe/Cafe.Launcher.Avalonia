@@ -13,17 +13,20 @@ public sealed class GameLaunchService
     private readonly ManifestValidationService manifestValidationService;
     private readonly ClickCodeService clickCodeService;
     private readonly GameRunnerResolver gameRunnerResolver;
+    private readonly IGameProcessTracker gameProcessTracker;
     private readonly LocalizationService localizer;
 
     public GameLaunchService(
         ManifestValidationService manifestValidationService,
         ClickCodeService clickCodeService,
         GameRunnerResolver gameRunnerResolver,
+        IGameProcessTracker gameProcessTracker,
         LocalizationService localizer)
     {
         this.manifestValidationService = manifestValidationService;
         this.clickCodeService = clickCodeService;
         this.gameRunnerResolver = gameRunnerResolver;
+        this.gameProcessTracker = gameProcessTracker;
         this.localizer = localizer;
     }
 
@@ -111,17 +114,16 @@ public sealed class GameLaunchService
             .StartAsync(request, new GameRuntimeOptions(), cancellationToken)
             .ConfigureAwait(false);
 
-        // Phase 1 keeps the existing fire-and-forget behavior: dispose the handle
-        // immediately without waiting. Lifecycle tracking lands in a later phase.
-        using (gameProcess.HostProcess)
+        // The tracker owns the host process from here: it keeps the handle alive
+        // as the authoritative running-state source and records exit details.
+        gameProcessTracker.Register(gameProcess);
+
+        return new GameLaunchResult
         {
-            return new GameLaunchResult
-            {
-                Success = true,
-                Message = localizer.T("gameProcessStarted"),
-                Validation = validation
-            };
-        }
+            Success = true,
+            Message = localizer.T("gameProcessStarted"),
+            Validation = validation
+        };
     }
 
     private static GameLaunchResult Failed(string message)

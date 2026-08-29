@@ -11,6 +11,7 @@ using Cafe.Launcher.Avalonia.Helpers;
 using Cafe.Launcher.Avalonia.Models;
 using Cafe.Launcher.Avalonia.Services;
 using Cafe.Launcher.Avalonia.Services.Diagnostics;
+using Cafe.Launcher.Avalonia.Services.GameRuntime;
 
 namespace Cafe.Launcher.Avalonia.Features.GameOperations;
 
@@ -33,6 +34,7 @@ internal sealed class DownloadSession : IDisposable
     private readonly ManifestDiffCalculator diffCalculator;
     private readonly DownloadExecutor downloadExecutor;
     private readonly DownloadCheckpointStore checkpointStore;
+    private readonly IGameProcessTracker gameProcessTracker;
     private readonly LauncherStatusSnapshot snapshot;
     private readonly bool repair;
     private readonly Action<GameOperationProgress> progress;
@@ -79,6 +81,7 @@ internal sealed class DownloadSession : IDisposable
         LocalizationService localizer,
         GameInstallationPath installationPath,
         DownloadCheckpointStore checkpointStore,
+        IGameProcessTracker gameProcessTracker,
         LauncherStatusSnapshot snapshot,
         bool repair,
         Action<GameOperationProgress> progress,
@@ -92,6 +95,7 @@ internal sealed class DownloadSession : IDisposable
         this.diagnostics = diagnostics;
         this.localizer = localizer;
         this.checkpointStore = checkpointStore;
+        this.gameProcessTracker = gameProcessTracker;
         this.snapshot = snapshot;
         this.repair = repair;
         this.progress = progress;
@@ -137,7 +141,7 @@ internal sealed class DownloadSession : IDisposable
 
             var localGame = await localInstallationStateStore.ReadAsync(gamePath, activeToken).ConfigureAwait(false);
             if (localGame.GameConfig?.Name is { Length: > 0 }
-                && await ProcessService.IsExeRunningAsync($"{localGame.GameConfig.Name}.exe", activeToken))
+                && await gameProcessTracker.IsGameRunningAsync($"{localGame.GameConfig.Name}.exe", activeToken))
             {
                 checkpointStore.Clear();
                 return Failed(localizer.T("gameExecutableRunning"), GameOperationErrorCode.GameRunning);
