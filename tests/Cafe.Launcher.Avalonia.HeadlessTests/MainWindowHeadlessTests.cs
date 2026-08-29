@@ -159,6 +159,35 @@ public sealed class MainWindowHeadlessTests
     }
 
     [AvaloniaFact]
+    public void SettingsAbout_InlineLegalLinks_DoNotExpandCaptionLineHeight()
+    {
+        using var context = CreateContext();
+        OpenSettings(context);
+        context.ViewModel.Settings.SelectedCategory = SettingsCategoryCodes.About;
+        Dispatcher.UIThread.RunJobs();
+
+        var links = context.Window
+            .GetVisualDescendants()
+            .OfType<HyperlinkButton>()
+            .Where(control => control.Classes.Contains("inline-legal-link"))
+            .ToArray();
+
+        Assert.Equal(2, links.Length);
+        Assert.All(links, link =>
+        {
+            Assert.InRange(link.Bounds.Height, 1, 20);
+            Assert.False(string.IsNullOrWhiteSpace(AutomationProperties.GetName(link)));
+
+            var caption = link
+                .GetVisualAncestors()
+                .OfType<TextBlock>()
+                .Single();
+
+            Assert.Equal(caption.FontSize, link.FontSize);
+        });
+    }
+
+    [AvaloniaFact]
     public void MainWindow_WhenShown_LoadsRealXamlAndOverlayBindings()
     {
         using var context = CreateContext();

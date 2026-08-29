@@ -2,6 +2,7 @@
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
              xmlns:vm="using:Cafe.Launcher.Avalonia.ViewModels"
              xmlns:models="using:Cafe.Launcher.Avalonia.Models"
+             xmlns:documents="using:Avalonia.Controls.Documents"
              xmlns:materialIcons="clr-namespace:Material.Icons.Avalonia;assembly=Material.Icons.Avalonia"
              x:Class="Cafe.Launcher.Avalonia.Views.SettingsAboutSection"
              x:Name="SettingsRoot"
@@ -79,7 +80,24 @@
         </WrapPanel>
         <StackPanel Spacing="{StaticResource Launcher.Spacing.Xs}">
             <TextBlock Text="{Binding Shell.I18n[aboutLinks]}" Classes="group-title"/>
-            <TextBlock Text="{Binding Shell.I18n[aboutCopyrightText]}" Classes="caption" TextWrapping="Wrap"/>
+            <TextBlock Classes="caption" TextWrapping="Wrap">
+                <Run Text="{Binding Shell.I18n[aboutCopyrightText]}"/><Run Text=" "/>
+                <documents:InlineUIContainer>
+                    <HyperlinkButton Classes="inline-legal-link"
+                                     Content="{Binding Shell.I18n[privacyPolicy]}"
+                                     Command="{Binding WindowChrome.OpenPrivacyPolicyCommand}"
+                                     AutomationProperties.Name="{Binding Shell.I18n[privacyPolicy]}"/>
+                </documents:InlineUIContainer>
+            </TextBlock>
+            <TextBlock Classes="caption" TextWrapping="Wrap">
+                <Run Text="{Binding Shell.I18n[defaultBackgroundCopyrightText]}"/><Run Text=" "/>
+                <documents:InlineUIContainer>
+                    <HyperlinkButton Classes="inline-legal-link"
+                                     Content="{Binding Shell.I18n[defaultBackgroundArtwork]}"
+                                     Command="{Binding WindowChrome.OpenDefaultBackgroundArtworkCommand}"
+                                     AutomationProperties.Name="{Binding Shell.I18n[defaultBackgroundArtwork]}"/>
+                </documents:InlineUIContainer>
+            </TextBlock>
             <TextBlock Text="{Binding Shell.I18n[aboutDisclaimerText]}" Classes="caption" TextWrapping="Wrap"/>
         </StackPanel>
     </StackPanel>

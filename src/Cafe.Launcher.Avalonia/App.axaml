@@ -114,6 +114,7 @@
             <x:Double x:Key="Launcher.Layout.Debug.Log.Path.MaxWidth">300</x:Double>
             <x:Double x:Key="Launcher.Layout.Debug.Log.Level.MinWidth">110</x:Double>
             <x:Double x:Key="Launcher.Layout.Debug.SettingsPreview.MaxHeight">160</x:Double>
+            <x:Double x:Key="Launcher.Control.Size.None">0</x:Double>
             <x:Double x:Key="Launcher.Control.Size.Swatch">28</x:Double>
             <x:Double x:Key="Launcher.Control.Height.Chip">32</x:Double>
             <x:Double x:Key="Launcher.Control.Height.Field">40</x:Double>

@@ -21,6 +21,10 @@ public static class LauncherConstants
     public const string OfficialGameWebsiteUrl = "https://bluearchive.jp/";
     public const string CafeWebsiteUrl = "https://bluearchive.cafe/";
     public const string HelpDocsUrl = "https://docs.bluearchive.cafe/cafe-launcher/";
+    public const string PrivacyPolicyUrl =
+        "https://github.com/bluearchive-cafe/Cafe.Launcher.Avalonia/blob/main/PRIVACY.md";
+    public const string DefaultBackgroundArtworkUrl =
+        "https://www.pixiv.net/artworks/142932674";
     /// <summary>
     /// Full GitHub release repository URL.
     /// Redundant with <see cref="ApiConfig.GitHubReleaseRepositoryUrl"/>;
