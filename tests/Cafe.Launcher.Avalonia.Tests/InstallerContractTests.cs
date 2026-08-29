@@ -209,7 +209,7 @@ public sealed class InstallerContractTests
         Assert.Contains("TryReadInstallLocation(HKCU32, '{#INNO_UNINSTALL_KEY}')", script, StringComparison.Ordinal);
         Assert.Contains("#define INNO_UNINSTALL_KEY", script, StringComparison.Ordinal);
         Assert.Contains(
-            "if InitialInstallDir = '' then\r\n    InitialInstallDir := TryGetValidatedLegacyInstall(LegacyUninstallerPath);",
+            "if InitialInstallDir = '' then\n    InitialInstallDir := TryGetValidatedLegacyInstall(LegacyUninstallerPath);",
             script,
             StringComparison.Ordinal);
         // The default must be resolved before the legacy bridge runs, because
@@ -556,8 +556,10 @@ public sealed class InstallerContractTests
     private static int CountOccurrences(string text, string value) =>
         text.Split(value, StringSplitOptions.None).Length - 1;
 
+    // Contract assertions are line-ending agnostic: the repository stores
+    // installer scripts with LF, while a fresh checkout may produce CRLF.
     private static string ReadProjectFile(string relativePath) =>
-        File.ReadAllText(GetProjectFilePath(relativePath));
+        File.ReadAllText(GetProjectFilePath(relativePath)).Replace("\r\n", "\n", StringComparison.Ordinal);
 
     private static string GetProjectFilePath(string relativePath) =>
         Path.Combine(FindProjectRoot(), relativePath);
