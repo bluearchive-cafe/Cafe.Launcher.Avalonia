@@ -54,18 +54,19 @@ public sealed class ReleaseScriptTests
     }
 
     [Fact]
-    public void ReleaseChangelog_EmbedsBannerFromPublicDistributionRelease()
+    public void ReleaseChangelog_EmbedsBannerFromTaggedSourceRepository()
     {
         var changelog = File.ReadAllText(ProjectFile("CHANGELOG_RELEASE.md"));
 
         Assert.Contains(
-            "https://github.com/bluearchive-cafe/Cafe.Launcher.Avalonia_Release/releases/download/",
+            "https://raw.githubusercontent.com/bluearchive-cafe/Cafe.Launcher.Avalonia/v",
             changelog,
             StringComparison.Ordinal);
-        Assert.DoesNotContain(
-            "raw.githubusercontent.com/bluearchive-cafe/Cafe.Launcher.Avalonia/",
+        Assert.Contains(
+            "/docs/assets/release-banners/",
             changelog,
             StringComparison.Ordinal);
+        Assert.DoesNotContain("/releases/download/", changelog, StringComparison.Ordinal);
     }
 
     private static string ProjectFile(string relativePath) =>

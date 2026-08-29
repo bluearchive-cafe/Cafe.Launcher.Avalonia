@@ -309,7 +309,7 @@ GitHub Actions 使用 .NET 10.0.x：
 .\release.ps1 patch -SkipPush    # 仅本地 commit + tag，不推送
 ```
 
-版本号读取自 `.csproj` 的 `<VersionPrefix>`。发布说明优先复用仓库中的 `CHANGELOG_RELEASE.md`，缺失时回退到 `scripts/New-ReleaseChangelog.ps1` 自动生成。commit 消息请遵循 conventional commits 格式（`feat:` / `fix:` / `refactor:` / `perf:`），以确保 changelog 正确分组。
+版本号读取自 `.csproj` 的 `<VersionPrefix>`。发布说明优先复用仓库中的 `CHANGELOG_RELEASE.md`，缺失时回退到 `scripts/New-ReleaseChangelog.ps1` 自动生成。Release Banner 必须按 `docs/assets/release-banners/cafe-launcher-v<version>-release-banner.png` 命名并随版本提交到源代码仓库，发布说明通过对应标签的仓库文件地址嵌入图片；Banner 不附加到 GitHub Release Assets。commit 消息请遵循 conventional commits 格式（`feat:` / `fix:` / `refactor:` / `perf:`），以确保 changelog 正确分组。
 
 ## 相关文档
 

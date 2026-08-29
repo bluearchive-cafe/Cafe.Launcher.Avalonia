@@ -491,7 +491,7 @@ public sealed class InstallerContractTests
     }
 
     [Fact]
-    public void ReleaseWorkflow_AttachesAllPlatformPackagesToBothReleases()
+    public void ReleaseWorkflow_AttachesPackagesAndKeepsBannerInSourceRepository()
     {
         var workflow = ReadProjectFile(".github/workflows/release.yml");
 
@@ -511,13 +511,13 @@ public sealed class InstallerContractTests
 
         const string releaseBannerName = "cafe-launcher-${{ github.ref_name }}-release-banner.png";
         Assert.Contains(
-            $"path: docs/assets/release-banners/{releaseBannerName}",
+            $"$bannerPath = \"docs/assets/release-banners/{releaseBannerName}\"",
             workflow,
             StringComparison.Ordinal);
-        Assert.Contains("if-no-files-found: error", workflow, StringComparison.Ordinal);
-        Assert.Equal(
-            2,
-            CountOccurrences(workflow, $"artifacts/release-banner/{releaseBannerName}"));
+        Assert.Contains("Test-Path $bannerPath -PathType Leaf", workflow, StringComparison.Ordinal);
+        Assert.Equal(1, CountOccurrences(workflow, releaseBannerName));
+        Assert.DoesNotContain("name: release-banner", workflow, StringComparison.Ordinal);
+        Assert.DoesNotContain("artifacts/release-banner", workflow, StringComparison.Ordinal);
 
         Assert.Contains(
             "repository: bluearchive-cafe/Cafe.Launcher.Avalonia_Release",
