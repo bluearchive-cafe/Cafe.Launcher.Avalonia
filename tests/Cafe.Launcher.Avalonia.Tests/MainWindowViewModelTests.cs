@@ -1128,6 +1128,27 @@ public sealed class MainWindowViewModelTests : IDisposable
     }
 
     [Fact]
+    public void ThemeColorMode_SwitchingAwayFromWallpaper_HidesExtractionAlgorithmOption()
+    {
+        var editor = new SettingsEditor();
+        var settings = new LauncherSettings
+        {
+            ThemeColorMode = ThemeColorModes.Wallpaper
+        };
+        editor.ApplySnapshot(settings);
+        using var appearance = new SettingsAppearanceViewModel(editor);
+
+        appearance.Load(settings);
+        Assert.True(appearance.IsThemeColorExtractionAlgorithmVisible);
+
+        editor.Current.ThemeColorMode = ThemeColorModes.Default;
+        Assert.False(appearance.IsThemeColorExtractionAlgorithmVisible);
+
+        editor.Current.ThemeColorMode = ThemeColorModes.Wallpaper;
+        Assert.True(appearance.IsThemeColorExtractionAlgorithmVisible);
+    }
+
+    [Fact]
     public async Task SaveSettingsAsync_WhenWallpaperPaletteSelected_PersistsPaletteAndIndex()
     {
         var settingsPath = Path.Combine(tempDir, Guid.NewGuid().ToString("N"), "settings.json");

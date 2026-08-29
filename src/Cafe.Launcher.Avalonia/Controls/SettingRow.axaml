@@ -12,9 +12,14 @@
         <StackPanel Classes="dialog-heading-copy settings-row-copy"
                     MinWidth="{StaticResource Launcher.Component.Settings.Row.Content.MinWidth}"
                     HorizontalAlignment="Stretch"
-                    Margin="{StaticResource Launcher.Spacing.Thickness.None}">
+                    Margin="{StaticResource Launcher.Component.Settings.Row.Content.Padding}">
             <TextBlock x:Name="RowTitle" Text="{Binding Title, ElementName=Root}" Classes="section-title" TextWrapping="Wrap"/>
             <TextBlock x:Name="RowDescription" Text="{Binding Description, ElementName=Root}" Classes="caption" TextWrapping="Wrap"/>
+            <TextBlock x:Name="RowHint"
+                       Text="{Binding Hint, ElementName=Root}"
+                       Classes="caption"
+                       TextWrapping="Wrap"
+                       IsVisible="{Binding IsHintVisible, ElementName=Root}"/>
         </StackPanel>
         <ContentPresenter Grid.Column="1"
                           x:Name="ActionPresenter"
