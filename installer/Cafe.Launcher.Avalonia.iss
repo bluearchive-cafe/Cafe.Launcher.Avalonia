@@ -335,3 +335,169 @@ begin
   end;
 end;
 
+{ --- Modern directory picker -------------------------------------------------
+  Inno Setup's built-in directory picker is its own SelectFolderForm tree
+  dialog. Replace the Browse button with the Vista+ IFileOpenDialog
+  (FOS_PICKFOLDERS), the same approach as the official CodeAutomation2.iss
+  example: declare the COM interfaces with dummy methods for unused vtable
+  slots and create the object with CreateComObject. The dialog title comes
+  from each language's SelectInstallFolderTitle custom message. }
+
+const
+  CLSID_FileOpenDialog = '{DC1C5A9C-E88A-4DDE-A5A1-60F82A20AEF7}';
+  IID_IShellItem = '{43826D1E-E718-42EE-BC55-A1E261C37BFE}';
+
+  { FILEOPENDIALOGOPTIONS }
+  FOS_NOCHANGEDIR = $00000008;
+  FOS_PICKFOLDERS = $00000020;
+  FOS_FORCEFILESYSTEM = $00000040;
+  FOS_PATHMUSTEXIST = $00000800;
+
+  { SIGDN }
+  SIGDN_FILESYSPATH = $80058000;
+
+type
+  IShellItem = interface(IUnknown)
+    '{43826D1E-E718-42EE-BC55-A1E261C37BFE}'
+    procedure DummyBindToHandler;
+    procedure DummyGetParent;
+    function GetDisplayName(sigdnName: DWORD; out ppszName: NativeInt): HResult;
+    procedure DummyGetAttributes;
+    procedure DummyCompare;
+  end;
+
+  IFileOpenDialog = interface(IUnknown)
+    '{D57C7288-D4AD-4768-BE02-9D969532D960}'
+    { IModalWindow }
+    function Show(hwndOwner: HWND): HResult;
+    { IFileDialog - unused members keep their vtable slots as dummies. }
+    procedure DummySetFileTypes;
+    procedure DummySetFileTypeIndex;
+    procedure DummyGetFileTypeIndex;
+    procedure DummyAdvise;
+    procedure DummyUnadvise;
+    function SetOptions(fos: DWORD): HResult;
+    function GetOptions(out pfos: DWORD): HResult;
+    procedure DummySetDefaultFolder;
+    function SetFolder(psi: IShellItem): HResult;
+    procedure DummyGetFolder;
+    procedure DummyGetCurrentSelection;
+    function SetFileName(pszName: String): HResult;
+    procedure DummyGetFileName;
+    function SetTitle(pszTitle: String): HResult;
+    procedure DummySetOkButtonLabel;
+    procedure DummySetFileNameLabel;
+    function GetResult(out ppsi: IShellItem): HResult;
+  end;
+
+procedure CoTaskMemFree(P: NativeInt);
+  external 'CoTaskMemFree@ole32.dll stdcall';
+
+function SHCreateItemFromParsingName(
+  Path: String; pbc: NativeInt; const riid: TGUID; out Item: IShellItem): HResult;
+  external 'SHCreateItemFromParsingName@shell32.dll stdcall';
+
+{ Opens the Explorer-style folder picker. Returns 0 when the user picked a
+  folder (written to Directory), 1 when the dialog was closed without a
+  choice, and 2 when the modern dialog is unavailable. }
+function ShowModernFolderDialog(const Title: String; var Directory: String): Integer;
+var
+  Unknown: IUnknown;
+  OpenDialog: IFileOpenDialog;
+  InitialItem: IShellItem;
+  ResultItem: IShellItem;
+  Options: DWORD;
+  PathPointer: NativeInt;
+  InitialPath: String;
+  HR: HResult;
+begin
+  Result := 2;
+  try
+    Unknown := CreateComObject(StringToGUID(CLSID_FileOpenDialog));
+    OpenDialog := IFileOpenDialog(Unknown);
+
+    HR := OpenDialog.GetOptions(Options);
+    if HR <> 0 then
+      Exit;
+
+    Options := Options or FOS_PICKFOLDERS or FOS_FORCEFILESYSTEM or
+      FOS_PATHMUSTEXIST or FOS_NOCHANGEDIR;
+    HR := OpenDialog.SetOptions(Options);
+    if HR <> 0 then
+      Exit;
+
+    if Title <> '' then
+      OpenDialog.SetTitle(Title);
+
+    { Seed the dialog with the directory page's current value. On a fresh
+      install the path does not exist yet, so navigate to its parent and
+      pre-fill the folder name instead. Failures here are not fatal: the
+      dialog then simply opens at its default location. }
+    InitialPath := RemoveBackslashUnlessRoot(Directory);
+    if DirExists(InitialPath) then
+      HR := SHCreateItemFromParsingName(
+        InitialPath, 0, StringToGUID(IID_IShellItem), InitialItem)
+    else
+    begin
+      HR := SHCreateItemFromParsingName(
+        ExtractFileDir(InitialPath), 0, StringToGUID(IID_IShellItem), InitialItem);
+      if HR = 0 then
+        OpenDialog.SetFileName(ExtractFileName(InitialPath));
+    end;
+    if HR = 0 then
+      OpenDialog.SetFolder(InitialItem);
+
+    HR := OpenDialog.Show(WizardForm.Handle);
+    if HR <> 0 then
+    begin
+      { Cancellation also arrives as a failed HRESULT. }
+      Result := 1;
+      Exit;
+    end;
+
+    HR := OpenDialog.GetResult(ResultItem);
+    if HR <> 0 then
+      Exit;
+
+    PathPointer := 0;
+    HR := ResultItem.GetDisplayName(SIGDN_FILESYSPATH, PathPointer);
+    if (HR <> 0) or (PathPointer = 0) then
+      Exit;
+
+    try
+      Directory := CastIntegerToString(PathPointer);
+      Result := 0;
+    finally
+      CoTaskMemFree(PathPointer);
+    end;
+  except
+    Log('IFileOpenDialog failed: ' + GetExceptionMessage);
+  end;
+end;
+
+function ModernBrowseForFolder(const Title: String; var Directory: String): Boolean;
+var
+  Outcome: Integer;
+begin
+  Outcome := ShowModernFolderDialog(Title, Directory);
+  if Outcome = 2 then
+    { The modern dialog is unavailable - fall back to Inno's own picker so the
+      Browse button keeps working. }
+    Result := BrowseForFolder(Title, Directory, True)
+  else
+    Result := Outcome = 0;
+end;
+
+procedure ModernDirBrowseButtonClick(Sender: TObject);
+var
+  Directory: String;
+begin
+  Directory := WizardForm.DirEdit.Text;
+  if ModernBrowseForFolder(ExpandConstant('{cm:SelectInstallFolderTitle}'), Directory) then
+    WizardForm.DirEdit.Text := RemoveBackslashUnlessRoot(Directory);
+end;
+
+procedure InitializeWizard;
+begin
+  WizardForm.DirBrowseButton.OnClick := @ModernDirBrowseButtonClick;
+end;
