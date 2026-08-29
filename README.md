@@ -33,7 +33,7 @@ Blue Archive 日服桌面启动器，基于 .NET 10 与 Avalonia 12 重写，替
 | xUnit | `xunit.v3 3.2.2` |
 | Coverlet | `coverlet.msbuild 10.0.1` |
 
-Release 分发目标为 `win-x64` 自包含 `WinExe`，无需用户额外安装 .NET Runtime。Release 配置关闭调试器、EventSource、元数据热更新等非必要运行时能力；当前未启用 Native AOT 或程序集裁剪。
+Release 分发目标为 `win-x64`、`osx-arm64` 与 `linux-x64` 自包含桌面应用，无需用户额外安装 .NET Runtime。Windows 为正式支持平台；macOS 与 Linux 当前提供实验性构建，尚未完成针对性适配与充分测试。Release 配置关闭调试器、EventSource、元数据热更新等非必要运行时能力；当前未启用 Native AOT 或程序集裁剪。
 
 ## 快速开始
 
@@ -141,12 +141,16 @@ Headless 测试套件以 Skia 渲染（`UseHeadlessDrawing=false` + `UseSkia()`�
 | 壁纸契合度 | `backgroundFit` | `fill` / `uniform` / `uniformToFill` |
 | 壁纸背景色 | `backgroundFillColor` | 十六进制颜色（如 `#FF000000`） |
 | 主题色模式 | `themeColorMode` | `default` / `system` / `wallpaper` / `custom` |
+| 壁纸取色算法 | `themeColorExtractionAlgorithm` | `celebiScore` / `wu` / `wsmeans` / `octree` |
+| M3 配色变体 | `themeColorVariant` | `tonalSpot` / `vibrant` / `expressive` / `fidelity` / `content` / `monochrome` / `neutral` / `rainbow` |
+| 中性色策略 | `neutralColorStrategy` | `brandBlue` / `seedFollowing` |
 | 自定义主题色 | `customThemeColor` | 十六进制颜色 |
 | 主题色调色板 | `themeColorPalette` | JSON 十六进制数组 |
 | 调色板选中索引 | `selectedThemeColorPaletteIndex` | 整数 |
 | 游戏路径 | `gamePath` | 绝对路径 |
 | 自定义背景 | `customBackgroundPath` | 绝对文件路径 |
 | 远端内容卡片 | `showRemoteContentCard` | `true` / `false` |
+| 记住窗口位置和大小 | `rememberWindowPositionAndSize` | `true` / `false` |
 | 更新频道 | `updateChannel` | `stable` / `beta` |
 | 日志级别 | `logLevel` | `verbose` / `debug` / `information` / `warning` / `error` / `fatal` |
 | 资源面板 UID | `resourcePanelUid` | 玩家 UID 字符串 |
@@ -322,4 +326,4 @@ GitHub Actions 使用 .NET 10.0.x：
 
 ## 源代码
 
-Cafe Launcher 为闭源项目，源代码不向公众发布。公开 GitHub 仓库仅用于发布安装包、文档和问题反馈。
+Cafe Launcher 源代码已在本仓库公开，并采用 [MIT License](./LICENSE)。安装包与各平台自包含归档由独立的 [Release 分发仓库](https://github.com/bluearchive-cafe/Cafe.Launcher.Avalonia_Release/releases) 提供。

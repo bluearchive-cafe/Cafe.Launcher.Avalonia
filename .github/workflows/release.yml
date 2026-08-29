@@ -151,7 +151,7 @@ jobs:
         run: .\test.ps1 -Configuration Release
 
       - name: Download win-x64 publish output
-        uses: actions/download-artifact@v7
+        uses: actions/download-artifact@v8
         with:
           name: publish-win-x64
           path: artifacts/publish/win-x64
@@ -183,25 +183,25 @@ jobs:
 
     steps:
       - name: Download platform packages
-        uses: actions/download-artifact@v7
+        uses: actions/download-artifact@v8
         with:
           name: distribution-packages
           path: artifacts/distribution
 
       - name: Download Windows installer
-        uses: actions/download-artifact@v7
+        uses: actions/download-artifact@v8
         with:
           name: installer-package
           path: artifacts/distribution
 
       - name: Download changelog
-        uses: actions/download-artifact@v7
+        uses: actions/download-artifact@v8
         with:
           name: changelog
           path: .
 
       - name: Download release banner
-        uses: actions/download-artifact@v7
+        uses: actions/download-artifact@v8
         with:
           name: release-banner
           path: artifacts/release-banner
