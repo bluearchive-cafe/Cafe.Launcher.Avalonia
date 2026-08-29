@@ -167,6 +167,31 @@
         <Setter Property="Foreground" Value="{DynamicResource Launcher.Text.Secondary}"/>
         <Setter Property="Opacity" Value="{StaticResource Launcher.StateLayer.Disabled.Content}"/>
     </Style>
+    <Style Selector="HyperlinkButton.inline-legal-link">
+        <Setter Property="Background" Value="{StaticResource Launcher.Color.Transparent}"/>
+        <Setter Property="BorderThickness" Value="{StaticResource Launcher.Spacing.Thickness.None}"/>
+        <Setter Property="Foreground" Value="{DynamicResource Launcher.Text.Link}"/>
+        <Setter Property="Padding" Value="{StaticResource Launcher.Spacing.Thickness.None}"/>
+        <Setter Property="MinWidth" Value="{StaticResource Launcher.Control.Size.None}"/>
+        <Setter Property="MinHeight" Value="{StaticResource Launcher.Control.Size.None}"/>
+        <Setter Property="FontSize" Value="{StaticResource Launcher.Typography.FontSize.Body.Sm}"/>
+        <Setter Property="TextBlock.TextDecorations" Value="Underline"/>
+        <Setter Property="Template" Value="{StaticResource LauncherBorderButtonTemplate}"/>
+    </Style>
+    <Style Selector="HyperlinkButton.inline-legal-link:pointerover">
+        <Setter Property="Foreground" Value="{DynamicResource Launcher.Color.Primary}"/>
+    </Style>
+    <Style Selector="HyperlinkButton.inline-legal-link:pressed">
+        <Setter Property="Foreground" Value="{DynamicResource Launcher.Color.Primary.Pressed}"/>
+    </Style>
+    <Style Selector="HyperlinkButton.inline-legal-link:disabled">
+        <Setter Property="Foreground" Value="{DynamicResource Launcher.Text.Secondary}"/>
+        <Setter Property="Opacity" Value="{StaticResource Launcher.StateLayer.Disabled.Content}"/>
+    </Style>
+    <Style Selector="HyperlinkButton.inline-legal-link:focus-visible">
+        <Setter Property="BorderBrush" Value="{DynamicResource Launcher.Color.FocusRing}"/>
+        <Setter Property="BorderThickness" Value="{StaticResource Launcher.Border.Thickness.Focus}"/>
+    </Style>
     <Style Selector="Button.icon-link">
         <Setter Property="Background" Value="{StaticResource Launcher.Color.Transparent}"/>
         <Setter Property="BorderThickness" Value="{StaticResource Launcher.Spacing.Thickness.None}"/>

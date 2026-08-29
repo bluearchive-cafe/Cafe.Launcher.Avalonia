@@ -14,8 +14,6 @@ namespace Cafe.Launcher.Avalonia.ViewModels;
 public partial class ShellViewModel : ViewModelBase, IDisposable
 {
     private readonly LocalizationService localizer;
-    private readonly EasterEggAudioService? easterEggAudioService;
-    private int launcherVersionClickCount;
 
     private static readonly string FrameworkVersion = RuntimeInformation.FrameworkDescription;
     private static readonly string PlatformName = OperatingSystem.IsWindows() ? "Windows"
@@ -91,12 +89,9 @@ public partial class ShellViewModel : ViewModelBase, IDisposable
 
     public string GameFolderPickerTitle { get; private set; } = "";
 
-    public ShellViewModel(
-        LocalizationService localizer,
-        EasterEggAudioService? easterEggAudioService = null)
+    public ShellViewModel(LocalizationService localizer)
     {
         this.localizer = localizer;
-        this.easterEggAudioService = easterEggAudioService;
         I18n = new LocalizedTextCatalog(localizer);
     }
 
@@ -113,19 +108,6 @@ public partial class ShellViewModel : ViewModelBase, IDisposable
             1 => "Momoi Launcher",
             _ => throw new ArgumentOutOfRangeException(nameof(randomIndex)),
         };
-    }
-
-    public bool RegisterLauncherVersionClick()
-    {
-        launcherVersionClickCount++;
-        if (launcherVersionClickCount != 8)
-        {
-            return false;
-        }
-
-        launcherVersionClickCount = 0;
-        easterEggAudioService?.PlayKuyashi();
-        return true;
     }
 
     public void ApplyLanguage(

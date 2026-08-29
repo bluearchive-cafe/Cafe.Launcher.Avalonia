@@ -101,20 +101,74 @@ public sealed class LocalizationServiceTests
     }
 
     [Theory]
-    [InlineData(LauncherLanguages.English, "GitHub Repository", "Check for Updates")]
-    [InlineData(LauncherLanguages.SimplifiedChinese, "GitHub 仓库", "检查更新")]
-    [InlineData(LauncherLanguages.TraditionalChinese, "GitHub 儲存庫", "檢查更新")]
-    [InlineData(LauncherLanguages.Japanese, "GitHub リポジトリ", "更新を確認")]
+    [InlineData(LauncherLanguages.English, "GitHub Repository", "Check for Updates", "Privacy Policy")]
+    [InlineData(LauncherLanguages.SimplifiedChinese, "GitHub 仓库", "检查更新", "隐私政策")]
+    [InlineData(LauncherLanguages.TraditionalChinese, "GitHub 儲存庫", "檢查更新", "隱私政策")]
+    [InlineData(LauncherLanguages.Japanese, "GitHub リポジトリ", "更新を確認", "プライバシーポリシー")]
     public void T_WhenAboutActionKeysRequested_ReturnsLocalizedText(
         string language,
         string expectedRepositoryText,
-        string expectedCheckUpdatesText)
+        string expectedCheckUpdatesText,
+        string expectedPrivacyPolicyText)
     {
         var service = new LocalizationService();
         service.SetLanguage(language);
 
         Assert.Equal(expectedRepositoryText, service.T("gitHubRepository"));
         Assert.Equal(expectedCheckUpdatesText, service.T("checkUpdates"));
+        Assert.Equal(expectedPrivacyPolicyText, service.T("privacyPolicy"));
+    }
+
+    [Theory]
+    [InlineData(
+        LauncherLanguages.English,
+        "Cafe Launcher source code Copyright © 2026 BlueArchive.Cafe. Licensed under the MIT License.")]
+    [InlineData(
+        LauncherLanguages.SimplifiedChinese,
+        "Cafe Launcher 源代码版权所有 © 2026 蔚蓝咖啡厅，采用 MIT 许可证授权。")]
+    [InlineData(
+        LauncherLanguages.TraditionalChinese,
+        "Cafe Launcher 原始碼版權所有 © 2026 蔚藍咖啡廳，採用 MIT 授權條款。")]
+    [InlineData(
+        LauncherLanguages.Japanese,
+        "Cafe Launcher のソースコード Copyright © 2026 BlueArchive.Cafe。MIT License に基づいて提供されています。")]
+    public void T_WhenAboutCopyrightRequested_ReturnsLocalizedText(
+        string language,
+        string expectedCopyrightText)
+    {
+        var service = new LocalizationService();
+        service.SetLanguage(language);
+
+        Assert.Equal(expectedCopyrightText, service.T("aboutCopyrightText"));
+    }
+
+    [Theory]
+    [InlineData(
+        LauncherLanguages.English,
+        "View Original Artwork",
+        "The default background is cropped from \"初めてのゲーム\" by Pixiv artist めるき (Meruki). The artwork copyright belongs to the original artist.")]
+    [InlineData(
+        LauncherLanguages.SimplifiedChinese,
+        "查看原始作品",
+        "默认背景图裁剪自 Pixiv 画师 めるき（Meruki）的作品《初めてのゲーム》，插画版权归原作者所有。")]
+    [InlineData(
+        LauncherLanguages.TraditionalChinese,
+        "查看原始作品",
+        "預設背景圖裁剪自 Pixiv 畫師 めるき（Meruki）的作品《初めてのゲーム》，插畫版權歸原作者所有。")]
+    [InlineData(
+        LauncherLanguages.Japanese,
+        "元作品を見る",
+        "デフォルト背景画像は、Pixiv 作家 めるき（Meruki）による「初めてのゲーム」をトリミングしたものです。イラストの著作権は原作者に帰属します。")]
+    public void T_WhenDefaultBackgroundCreditRequested_ReturnsLocalizedText(
+        string language,
+        string expectedArtworkLinkText,
+        string expectedCopyrightText)
+    {
+        var service = new LocalizationService();
+        service.SetLanguage(language);
+
+        Assert.Equal(expectedArtworkLinkText, service.T("defaultBackgroundArtwork"));
+        Assert.Equal(expectedCopyrightText, service.T("defaultBackgroundCopyrightText"));
     }
 
     [Theory]

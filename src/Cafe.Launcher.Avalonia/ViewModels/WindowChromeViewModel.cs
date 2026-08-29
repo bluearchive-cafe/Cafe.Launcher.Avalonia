@@ -147,6 +147,18 @@ public partial class WindowChromeViewModel : ViewModelBase
     }
 
     [RelayCommand]
+    private void OpenPrivacyPolicy()
+    {
+        openExternalUrl(LauncherConstants.PrivacyPolicyUrl);
+    }
+
+    [RelayCommand]
+    private void OpenDefaultBackgroundArtwork()
+    {
+        openExternalUrl(LauncherConstants.DefaultBackgroundArtworkUrl);
+    }
+
+    [RelayCommand]
     private void OpenDataDirectory()
     {
         openDirectory(LauncherUserDataDirectory.Root);

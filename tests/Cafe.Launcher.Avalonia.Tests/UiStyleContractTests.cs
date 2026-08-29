@@ -995,7 +995,9 @@ public sealed partial class UiStyleContractTests
                 "Settings.CheckForUpdatesCommand",
                 "WindowChrome.OpenOfficialSiteCommand",
                 "WindowChrome.OpenHelpDocsCommand",
-                "WindowChrome.OpenGitHubRepositoryCommand"
+                "WindowChrome.OpenGitHubRepositoryCommand",
+                "WindowChrome.OpenPrivacyPolicyCommand",
+                "WindowChrome.OpenDefaultBackgroundArtworkCommand"
             ]
         };
 
@@ -1443,6 +1445,30 @@ public sealed partial class UiStyleContractTests
         Assert.True(HasClass(root!, "settings-group"));
     }
 
+    [Fact]
+    public void AboutSection_LegalLinks_AreInlineHyperlinks()
+    {
+        var document = XDocument.Load(ProjectFile("Views/SettingsAboutSection.axaml"));
+        var links = document
+            .Descendants()
+            .Where(element => element.Name.LocalName == "HyperlinkButton")
+            .ToList();
+
+        Assert.Equal(2, links.Count);
+        Assert.All(links, link =>
+        {
+            Assert.True(HasClass(link, "inline-legal-link"));
+            Assert.False(HasClass(link, "text-link"));
+            Assert.Equal("InlineUIContainer", link.Parent?.Name.LocalName);
+        });
+        Assert.Equal(
+            [
+                "{Binding WindowChrome.OpenPrivacyPolicyCommand}",
+                "{Binding WindowChrome.OpenDefaultBackgroundArtworkCommand}"
+            ],
+            links.Select(link => link.Attribute("Command")?.Value));
+    }
+
     private static readonly HashSet<string> IconTokens =
     [
         "{StaticResource Launcher.Icon.Sm}",
@@ -1497,6 +1523,7 @@ public sealed partial class UiStyleContractTests
         Assert.Equal("20", resources["Launcher.Icon.Lg"]);
         Assert.Equal("22", resources["Launcher.Icon.Xl"]);
         Assert.Equal("24", resources["Launcher.Icon.Xxl"]);
+        Assert.Equal("0", resources["Launcher.Control.Size.None"]);
         Assert.Equal("36", resources["Launcher.Control.Height.Setting"]);
         Assert.Equal("42", resources["Launcher.Control.Height.Dialog"]);
         Assert.Equal("48", resources["Launcher.Control.Height.Bottom"]);
@@ -4000,7 +4027,12 @@ public sealed partial class UiStyleContractTests
             "Settings.CheckForUpdatesCommand",
             "WindowChrome.OpenOfficialSiteCommand",
             "WindowChrome.OpenHelpDocsCommand",
-            "WindowChrome.OpenGitHubRepositoryCommand");
+            "WindowChrome.OpenGitHubRepositoryCommand",
+            "Shell.I18n[aboutCopyrightText]",
+            "WindowChrome.OpenPrivacyPolicyCommand",
+            "Shell.I18n[defaultBackgroundCopyrightText]",
+            "WindowChrome.OpenDefaultBackgroundArtworkCommand",
+            "Shell.I18n[aboutDisclaimerText]");
         AssertOrdered(
             advancedText,
             "LogViewer.OpenCommand",

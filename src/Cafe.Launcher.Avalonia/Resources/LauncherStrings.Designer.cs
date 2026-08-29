@@ -206,6 +206,10 @@ internal static class LauncherStrings
 
     internal static string DebugToastShown => GetRequiredString("debugToastShown");
 
+    internal static string DefaultBackgroundArtwork => GetRequiredString("defaultBackgroundArtwork");
+
+    internal static string DefaultBackgroundCopyrightText => GetRequiredString("defaultBackgroundCopyrightText");
+
     internal static string DeletingManifestFiles => GetRequiredString("deletingManifestFiles");
 
     internal static string DesignGalleryHint => GetRequiredString("designGalleryHint");
@@ -615,6 +619,8 @@ internal static class LauncherStrings
     internal static string Preparing => GetRequiredString("preparing");
 
     internal static string PreviousBanner => GetRequiredString("previousBanner");
+
+    internal static string PrivacyPolicy => GetRequiredString("privacyPolicy");
 
     internal static string Proxy => GetRequiredString("proxy");
 
