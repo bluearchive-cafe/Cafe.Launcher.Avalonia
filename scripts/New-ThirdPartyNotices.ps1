@@ -10,6 +10,10 @@ param(
 # or upgrading a dependency and commit the result.
 
 $ErrorActionPreference = "Stop"
+
+# Emit and decode console output as UTF-8 so Chinese text (commit messages,
+# resx values, tool output) survives the system's active code page.
+try { [Console]::OutputEncoding = [System.Text.Encoding]::UTF8 } catch { }
 $ScriptDir = Split-Path -Parent $MyInvocation.MyCommand.Path
 $RootDir = Split-Path -Parent $ScriptDir
 
