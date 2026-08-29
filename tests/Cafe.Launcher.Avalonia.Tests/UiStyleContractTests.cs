@@ -979,6 +979,7 @@ public sealed partial class UiStyleContractTests
                 "Settings.ChooseBackgroundFolderCommand",
                 "Settings.ClearBackgroundCommand",
                 "Settings.Appearance.IsWallpaperThemeColorSelected",
+                "Settings.Appearance.IsThemeColorExtractionAlgorithmVisible",
                 "Settings.Appearance.IsCustomThemeColorSelected",
                 "Settings.Appearance.IsBackgroundFitSelected",
                 "Settings.Appearance.IsCustomBackgroundSelected"

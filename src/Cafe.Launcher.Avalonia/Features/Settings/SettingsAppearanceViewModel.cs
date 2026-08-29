@@ -60,6 +60,10 @@ public partial class SettingsAppearanceViewModel : ViewModelBase, IDisposable
     [ObservableProperty]
     private bool isWallpaperThemeColorSelected;
 
+    // 取色算法仅作用于壁纸取色，其余主题色来源下该行不生效，直接隐藏。
+    [ObservableProperty]
+    private bool isThemeColorExtractionAlgorithmVisible;
+
     [ObservableProperty]
     private bool isSeedFollowingNeutralStrategySelected;
 
@@ -77,6 +81,7 @@ public partial class SettingsAppearanceViewModel : ViewModelBase, IDisposable
             SelectedCustomThemeColor = ParseColorOrDefault(settings.CustomThemeColor);
             IsCustomThemeColorSelected = settings.ThemeColorMode == ThemeColorModes.Custom;
             IsWallpaperThemeColorSelected = settings.ThemeColorMode == ThemeColorModes.Wallpaper;
+            IsThemeColorExtractionAlgorithmVisible = IsWallpaperThemeColorSelected;
             IsSeedFollowingNeutralStrategySelected =
                 settings.NeutralColorStrategy == NeutralColorStrategies.SeedFollowing;
             IsCustomBackground = !string.IsNullOrWhiteSpace(settings.CustomBackgroundPath);
@@ -172,6 +177,7 @@ public partial class SettingsAppearanceViewModel : ViewModelBase, IDisposable
             var value = editor.Current.ThemeColorMode;
             IsCustomThemeColorSelected = value == ThemeColorModes.Custom;
             IsWallpaperThemeColorSelected = value == ThemeColorModes.Wallpaper;
+            IsThemeColorExtractionAlgorithmVisible = IsWallpaperThemeColorSelected;
             if (IsWallpaperThemeColorSelected && ThemeColorPaletteItems.Count == 0)
             {
                 RefreshThemeColorPaletteFromCurrentBackground(markDirty: false);

@@ -42,6 +42,7 @@
             <controls:SettingSelect Title="{Binding Shell.I18n[themeColorExtractionAlgorithm]}"
                                     Description="{Binding Shell.I18n[themeColorExtractionAlgorithmDescription]}"
                                     AutomationName="{Binding Shell.I18n[themeColorExtractionAlgorithm]}"
+                                    IsVisible="{Binding Settings.Appearance.IsThemeColorExtractionAlgorithmVisible}"
                                     ItemsSource="{Binding Settings.Options.ThemeColorExtractionAlgorithm}"
                                     SelectedValue="{Binding Settings.Editor.Current.ThemeColorExtractionAlgorithm, Mode=TwoWay}"/>
 
