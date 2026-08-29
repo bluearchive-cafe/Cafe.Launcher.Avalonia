@@ -406,6 +406,18 @@ internal static class LauncherStrings
 
     internal static string GameRepairFailed => GetRequiredString("gameRepairFailed");
 
+    internal static string GameRuntimeRunner => GetRequiredString("gameRuntimeRunner");
+
+    internal static string GameRuntimeRunnerAuto => GetRequiredString("gameRuntimeRunnerAuto");
+
+    internal static string GameRuntimeRunnerDescription => GetRequiredString("gameRuntimeRunnerDescription");
+
+    internal static string GameRuntimeRunnerNative => GetRequiredString("gameRuntimeRunnerNative");
+
+    internal static string GameRuntimeRunnerUmu => GetRequiredString("gameRuntimeRunnerUmu");
+
+    internal static string GameRuntimeRunnerWine => GetRequiredString("gameRuntimeRunnerWine");
+
     internal static string GameShortcutCreated => GetRequiredString("gameShortcutCreated");
 
     internal static string GameShortcutFailed => GetRequiredString("gameShortcutFailed");
@@ -795,6 +807,8 @@ internal static class LauncherStrings
     internal static string SettingsGroupDisplay => GetRequiredString("settingsGroupDisplay");
 
     internal static string SettingsGroupGameFiles => GetRequiredString("settingsGroupGameFiles");
+
+    internal static string SettingsGroupGameRuntime => GetRequiredString("settingsGroupGameRuntime");
 
     internal static string SettingsGroupThemeColor => GetRequiredString("settingsGroupThemeColor");
 

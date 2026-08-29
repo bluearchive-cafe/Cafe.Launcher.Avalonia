@@ -39,6 +39,9 @@ public partial class ShellViewModel : ViewModelBase, IDisposable
     [ObservableProperty]
     private string platformText = "";
 
+    /// <summary>Whether the host platform is Linux; gates Linux-only settings such as the game runtime.</summary>
+    public bool IsLinuxPlatform => OperatingSystem.IsLinux();
+
     [ObservableProperty]
     private string buildConfigText = "";
 
