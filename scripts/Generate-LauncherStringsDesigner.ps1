@@ -3,7 +3,11 @@ param(
     [string]$OutputFile = (Join-Path $PSScriptRoot '..\src\Cafe.Launcher.Avalonia\Resources\LauncherStrings.Designer.cs')
 )
 
-$ErrorActionPreference = 'Stop'
+$ErrorActionPreference = 'Stop'
+
+# Emit and decode console output as UTF-8 so Chinese text (commit messages,
+# resx values, tool output) survives the system's active code page.
+try { [Console]::OutputEncoding = [System.Text.Encoding]::UTF8 } catch { }
 
 if (-not (Test-Path -LiteralPath $ResourceFile)) {
     throw "Neutral resource file was not found: $ResourceFile"

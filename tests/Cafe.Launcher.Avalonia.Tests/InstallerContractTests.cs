@@ -80,7 +80,14 @@ public sealed class InstallerContractTests
         Assert.Contains("AppName=Cafe Launcher", script, StringComparison.Ordinal);
         Assert.Contains("AppPublisher=BlueArchive Cafe", script, StringComparison.Ordinal);
         Assert.Contains("PrivilegesRequired=admin", script, StringComparison.Ordinal);
-        Assert.Contains("DefaultDirName={autopf}\\Cafe Launcher", script, StringComparison.Ordinal);
+        // Per-user data deletion on uninstall is intended (with explicit consent);
+        // UsedUserAreasWarning=no documents that choice and keeps ISCC output clean.
+        Assert.Contains("UsedUserAreasWarning=no", script, StringComparison.Ordinal);
+        Assert.Contains("DefaultDirName={code:ResolveDefaultDir}", script, StringComparison.Ordinal);
+        // The default directory is the detected previous install, so the
+        // "folder already exists" confirmation would fire on every upgrade.
+        Assert.Contains("DirExistsWarning=no", script, StringComparison.Ordinal);
+        Assert.Contains("Result := ExpandConstant('{autopf}\\Cafe Launcher')", script, StringComparison.Ordinal);
         Assert.Contains("ArchitecturesInstallIn64BitMode=x64compatible", script, StringComparison.Ordinal);
         Assert.Contains("UninstallDisplayName=Cafe Launcher", script, StringComparison.Ordinal);
         Assert.DoesNotContain("PrivilegesRequired=lowest", script, StringComparison.Ordinal);
@@ -183,6 +190,61 @@ public sealed class InstallerContractTests
         // compare any quotes against the registry InstallLocation.
         Assert.Contains("Format('/S _?=%s'", script, StringComparison.Ordinal);
         Assert.DoesNotContain("/S _?=\"", script, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public void IssInstaller_AdoptsExistingInstallPathOnUpgrade()
+    {
+        var script = ReadProjectFile("installer/Cafe.Launcher.Avalonia.iss");
+
+        // The directory page must default to the existing installation instead
+        // of falling back to Program Files: previous Inno Setup records are
+        // read across registry views, and the validated legacy NSIS bridge
+        // contributes its InstallLocation as a fallback.
+        Assert.Contains("procedure ResolveInitialInstallDir", script, StringComparison.Ordinal);
+        Assert.Contains("function ResolveDefaultDir(const Param: String): String", script, StringComparison.Ordinal);
+        Assert.Contains("TryReadInstallLocation(HKLM64, '{#INNO_UNINSTALL_KEY}')", script, StringComparison.Ordinal);
+        Assert.Contains("TryReadInstallLocation(HKLM32, '{#INNO_UNINSTALL_KEY}')", script, StringComparison.Ordinal);
+        Assert.Contains("TryReadInstallLocation(HKCU, '{#INNO_UNINSTALL_KEY}')", script, StringComparison.Ordinal);
+        Assert.Contains("TryReadInstallLocation(HKCU32, '{#INNO_UNINSTALL_KEY}')", script, StringComparison.Ordinal);
+        Assert.Contains("#define INNO_UNINSTALL_KEY", script, StringComparison.Ordinal);
+        Assert.Contains(
+            "if InitialInstallDir = '' then\r\n    InitialInstallDir := TryGetValidatedLegacyInstall(LegacyUninstallerPath);",
+            script,
+            StringComparison.Ordinal);
+        // The default must be resolved before the legacy bridge runs, because
+        // RemoveLegacyInstallation deletes the legacy registration it validates.
+        Assert.True(
+            script.IndexOf("  ResolveInitialInstallDir;", StringComparison.Ordinal)
+                < script.IndexOf("if not RemoveLegacyInstallation() then", StringComparison.Ordinal),
+            "InitializeSetup must capture the previous install dir before the legacy bridge removes it.");
+    }
+
+    [Fact]
+    public void IssInstaller_UninstallsLegacyVersionOnlyAfterUserConfirms()
+    {
+        var script = ReadProjectFile("installer/Cafe.Launcher.Avalonia.iss");
+
+        // InitializeSetup runs before the wizard is shown; uninstalling there
+        // would remove the old version even when the user cancels setup. The
+        // legacy bridge must therefore run from PrepareToInstall, which fires
+        // only after the user chose to install.
+        var initializeStart = script.IndexOf("function InitializeSetup", StringComparison.Ordinal);
+        Assert.True(initializeStart >= 0, "InitializeSetup must exist.");
+        var initializeEnd = script.IndexOf("\nfunction ", initializeStart + 1, StringComparison.Ordinal);
+        var initializeSetup = script[initializeStart..initializeEnd];
+
+        Assert.DoesNotContain("RemoveLegacyInstallation", initializeSetup, StringComparison.Ordinal);
+        Assert.DoesNotContain("Exec(", initializeSetup, StringComparison.Ordinal);
+        Assert.Contains("TryGetValidatedLegacyInstall", initializeSetup, StringComparison.Ordinal);
+
+        Assert.Contains("function PrepareToInstall(var NeedsRestart: Boolean): String", script, StringComparison.Ordinal);
+        var prepareStart = script.IndexOf("function PrepareToInstall", StringComparison.Ordinal);
+        var prepareEnd = script.IndexOf("\nfunction ", prepareStart + 1, StringComparison.Ordinal);
+        var prepareToInstall = script[prepareStart..prepareEnd];
+        Assert.Contains("if not RemoveLegacyInstallation() then", prepareToInstall, StringComparison.Ordinal);
+        // A failed legacy uninstall aborts the install with the localized message.
+        Assert.Contains("Result := ExpandConstant('{cm:PreviousUninstallFailed}')", prepareToInstall, StringComparison.Ordinal);
     }
 
     [Fact]

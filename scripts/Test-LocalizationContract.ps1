@@ -2,7 +2,11 @@ param(
     [string]$ResourcesDirectory = (Join-Path $PSScriptRoot '..\src\Cafe.Launcher.Avalonia\Resources')
 )
 
-$ErrorActionPreference = 'Stop'
+$ErrorActionPreference = 'Stop'
+
+# Emit and decode console output as UTF-8 so Chinese text (commit messages,
+# resx values, tool output) survives the system's active code page.
+try { [Console]::OutputEncoding = [System.Text.Encoding]::UTF8 } catch { }
 $env:DOTNET_CLI_TELEMETRY_OPTOUT = '1'
 $env:AVALONIA_TELEMETRY_OPTOUT = '1'
 
