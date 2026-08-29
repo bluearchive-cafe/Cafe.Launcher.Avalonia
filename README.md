@@ -315,6 +315,11 @@ GitHub Actions 使用 .NET 10.0.x：
 - [Releases](https://github.com/bluearchive-cafe/Cafe.Launcher.Avalonia_Release)
 - [Issues](https://github.com/bluearchive-cafe/Cafe.Launcher.Avalonia/issues)
 
+## 致谢
+
+- 默认壁纸裁剪自 Pixiv 画师 [めるき（Meruki）](https://www.pixiv.net/users/15737611) 的插画 [初めてのゲーム](https://www.pixiv.net/artworks/142932674)，插画版权归原作者所有。
+- 壁纸原始素材存档于 [docs/assets/art-sources/](./docs/assets/art-sources/)。
+
 ## 源代码
 
 Cafe Launcher 为闭源项目，源代码不向公众发布。公开 GitHub 仓库仅用于发布安装包、文档和问题反馈。
