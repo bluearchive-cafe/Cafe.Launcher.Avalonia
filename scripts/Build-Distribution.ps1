@@ -3,7 +3,8 @@ param(
     [string]$Tag,
     [string[]]$Rids = @("win-x64"),
     [switch]$SkipPublish,
-    [string]$AppImageToolPath
+    [string]$AppImageToolPath,
+    [string]$AppImageRuntimePath
 )
 
 $ErrorActionPreference = "Stop"
@@ -175,6 +176,11 @@ if ($Rids -contains "linux-x64") {
             Write-Warning "AppImage packaging skipped: pass -AppImageToolPath pointing at a Linux appimagetool build to produce the AppImage."
         }
         else {
+            if ([string]::IsNullOrWhiteSpace($AppImageRuntimePath) -or
+                -not (Test-Path -LiteralPath $AppImageRuntimePath -PathType Leaf)) {
+                throw "AppImage packaging requires -AppImageRuntimePath pointing at a pinned type2 runtime file."
+            }
+
             $appDirRoot = Join-Path $BundleRoot "linux-x64/AppDir"
             $appBinDir = Join-Path $appDirRoot "usr/bin"
             $hicolorDir = Join-Path $appDirRoot "usr/share/icons/hicolor/256x256/apps"
@@ -187,7 +193,11 @@ if ($Rids -contains "linux-x64") {
                 (Join-Path $appBinDir "createdump")
             )
 
+            $appRunPath = Join-Path $appDirRoot "AppRun"
+            Copy-Item -LiteralPath (Join-Path $LinuxAssetsDir "AppRun") -Destination $appRunPath -Force
             Copy-Item -LiteralPath (Join-Path $LinuxAssetsDir "cafe-launcher.desktop") -Destination (Join-Path $appDirRoot "cafe-launcher.desktop") -Force
+            Set-UnixExecutableBit -Paths @($appRunPath)
+            Invoke-Checked "test" @("-x", $appRunPath) "AppDir/AppRun is missing or is not executable."
 
             $iconSource = Join-Path $LinuxAssetsDir "app-icon-256.png"
             if (Test-Path -LiteralPath $iconSource) {
@@ -200,8 +210,22 @@ if ($Rids -contains "linux-x64") {
             }
 
             $appImagePath = Join-Path $DistributionDir "Cafe.Launcher.Avalonia_${Tag}_linux-x64.AppImage"
-            Invoke-Checked $AppImageToolPath @("--appimage-extract-and-run", $appDirRoot, $appImagePath) "appimagetool failed for the Linux AppImage."
+            Invoke-Checked $AppImageToolPath @(
+                "--appimage-extract-and-run",
+                "--runtime-file",
+                $AppImageRuntimePath,
+                $appDirRoot,
+                $appImagePath
+            ) "appimagetool failed for the Linux AppImage."
             Set-UnixExecutableBit -Paths @($appImagePath)
+
+            # Exercise the AppImage runtime and its root AppRun entry point. The
+            # --version path exits before Avalonia starts, so this works on a
+            # headless CI runner while still loading the packaged .NET apphost.
+            Invoke-Checked $appImagePath @(
+                "--appimage-extract-and-run",
+                "--version"
+            ) "The generated AppImage failed its startup smoke test."
             $artifacts += [pscustomobject]@{ Rid = "linux-x64"; Kind = "AppImage"; Path = $appImagePath }
         }
     }

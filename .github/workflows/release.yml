@@ -15,7 +15,7 @@ concurrency:
 jobs:
   build:
     name: Build platform packages
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     timeout-minutes: 30
 
     defaults:
@@ -41,14 +41,15 @@ jobs:
           cache: true
           cache-dependency-path: '**/*.csproj'
 
-      - name: Acquire appimagetool
+      - name: Acquire pinned AppImage tools
         env:
-          # Pinned by sha256 because the upstream "continuous" tag is mutable.
-          # To update: download the asset, recompute `sha256sum`, replace the hash.
-          APPIMAGETOOL_SHA256: 'a6d71e2b6cd66f8e8d16c37ad164658985e0cf5fcaa950c90a482890cb9d13e0'
+          APPIMAGETOOL_SHA256: 'ed4ce84f0d9caff66f50bcca6ff6f35aae54ce8135408b3fa33abfc3cb384eb0'
+          APPIMAGE_RUNTIME_SHA256: '2fca8b443c92510f1483a883f60061ad09b46b978b2631c807cd873a47ec260d'
         run: |
-          curl -fL --retry 3 -o appimagetool-x86_64.AppImage "https://github.com/AppImage/appimagetool/releases/download/continuous/appimagetool-x86_64.AppImage"
+          curl -fL --retry 3 -o appimagetool-x86_64.AppImage "https://github.com/AppImage/appimagetool/releases/download/1.9.1/appimagetool-x86_64.AppImage"
+          curl -fL --retry 3 -o runtime-x86_64 "https://github.com/AppImage/type2-runtime/releases/download/20251108/runtime-x86_64"
           echo "${APPIMAGETOOL_SHA256}  appimagetool-x86_64.AppImage" | sha256sum -c -
+          echo "${APPIMAGE_RUNTIME_SHA256}  runtime-x86_64" | sha256sum -c -
           chmod +x appimagetool-x86_64.AppImage
 
       - name: Build distribution packages
@@ -56,11 +57,32 @@ jobs:
           $buildArguments = @{
               Rids = 'win-x64', 'osx-arm64', 'linux-x64'
               AppImageToolPath = './appimagetool-x86_64.AppImage'
+              AppImageRuntimePath = './runtime-x86_64'
           }
           if ($env:GITHUB_EVENT_NAME -eq 'push') {
               $buildArguments.Tag = '${{ github.ref_name }}'
           }
           ./scripts/Build-Distribution.ps1 @buildArguments
+
+      - name: Smoke test AppImage desktop startup
+        shell: bash
+        run: |
+          sudo apt-get update
+          sudo apt-get install --no-install-recommends -y xvfb xauth libx11-6 libice6 libsm6 libfontconfig1
+          appimages=(artifacts/distribution/*_linux-x64.AppImage)
+          if [[ ${#appimages[@]} -ne 1 || ! -f "${appimages[0]}" ]]; then
+            echo "Expected exactly one Linux AppImage artifact." >&2
+            exit 1
+          fi
+
+          set +e
+          timeout --kill-after=5s 10s xvfb-run -a -s "-screen 0 1280x720x24" "${appimages[0]}"
+          status=$?
+          set -e
+          if [[ $status -ne 124 ]]; then
+            echo "AppImage exited before the desktop startup smoke-test timeout (status $status)." >&2
+            exit 1
+          fi
 
       - name: Prepare changelog
         if: github.event_name == 'push'

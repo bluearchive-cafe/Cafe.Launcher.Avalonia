@@ -323,6 +323,43 @@ public sealed class InstallerContractTests
     }
 
     [Fact]
+    public void LinuxAppImage_HasStandardAppRunAndStartupSmokeTest()
+    {
+        var script = ReadProjectFile("scripts/Build-Distribution.ps1");
+        var appRun = ReadProjectFile("installer/linux/AppRun");
+        var workflow = ReadProjectFile(".github/workflows/release.yml");
+
+        Assert.StartsWith("#!/bin/sh", appRun, StringComparison.Ordinal);
+        Assert.Contains(
+            "exec \"$APPDIR/usr/bin/Cafe.Launcher.Avalonia\" \"$@\"",
+            appRun,
+            StringComparison.Ordinal);
+        Assert.Contains("$appDirRoot \"AppRun\"", script, StringComparison.Ordinal);
+        Assert.Contains("\"--runtime-file\"", script, StringComparison.Ordinal);
+        Assert.Contains(
+            "\"--appimage-extract-and-run\",\n                \"--version\"",
+            script.Replace("\r\n", "\n", StringComparison.Ordinal),
+            StringComparison.Ordinal);
+        Assert.Contains(
+            "AppImage/appimagetool/releases/download/1.9.1/",
+            workflow,
+            StringComparison.Ordinal);
+        Assert.Contains(
+            "AppImage/type2-runtime/releases/download/20251108/",
+            workflow,
+            StringComparison.Ordinal);
+        Assert.Contains("AppImageRuntimePath = './runtime-x86_64'", workflow, StringComparison.Ordinal);
+        Assert.Contains(
+            "timeout --kill-after=5s 10s xvfb-run",
+            workflow,
+            StringComparison.Ordinal);
+        Assert.DoesNotContain(
+            "AppImage/appimagetool/releases/download/continuous/",
+            workflow,
+            StringComparison.Ordinal);
+    }
+
+    [Fact]
     public void WindowsInstallerScript_UsesConfirmedArtifactNameAndCompilesWithIscc()
     {
         var script = ReadProjectFile("scripts/New-WindowsInstaller.ps1");
@@ -450,7 +487,7 @@ public sealed class InstallerContractTests
         Assert.Contains("$tagArguments.Tag = '${{ github.ref_name }}'", installerJob, StringComparison.Ordinal);
         Assert.DoesNotContain("@('-Tag', '${{ github.ref_name }}')", installerJob, StringComparison.Ordinal);
         Assert.DoesNotContain("makensis", workflow, StringComparison.OrdinalIgnoreCase);
-        Assert.DoesNotContain("apt-get", workflow, StringComparison.OrdinalIgnoreCase);
+        Assert.DoesNotContain("apt-get", installerJob, StringComparison.OrdinalIgnoreCase);
     }
 
     [Fact]

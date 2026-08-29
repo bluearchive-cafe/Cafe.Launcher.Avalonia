@@ -1,6 +1,7 @@
 using Avalonia;
 using System;
 using System.IO;
+using System.Reflection;
 using System.Threading;
 using System.Threading.Tasks;
 using Cafe.Launcher.Avalonia.Constants;
@@ -35,6 +36,11 @@ sealed class Program
     [STAThread]
     public static void Main(string[] args)
     {
+        if (TryHandleCommandLine(args, Console.Out))
+        {
+            return;
+        }
+
         using var mutex = new Mutex(true, MutexName, out var createdNew);
         if (!createdNew)
         {
@@ -60,6 +66,21 @@ sealed class Program
             LogCrash(crashLogger, "Main", exception);
             throw;
         }
+    }
+
+    internal static bool TryHandleCommandLine(string[] args, TextWriter output)
+    {
+        if (args.Length != 1 ||
+            !string.Equals(args[0], "--version", StringComparison.Ordinal))
+        {
+            return false;
+        }
+
+        var informationalVersion = typeof(Program).Assembly
+            .GetCustomAttribute<AssemblyInformationalVersionAttribute>()?
+            .InformationalVersion;
+        output.WriteLine(informationalVersion ?? typeof(Program).Assembly.GetName().Version?.ToString());
+        return true;
     }
 
     private static bool DetectFirstLaunch()
