@@ -370,7 +370,7 @@ public sealed class InstallerContractTests
             StringComparison.Ordinal);
         Assert.Contains("Resolve-Iscc", script, StringComparison.Ordinal);
         Assert.Contains("Inno Setup 7\\ISCC.exe", script, StringComparison.Ordinal);
-        Assert.Contains("[version]\"6.3\"", script, StringComparison.Ordinal);
+        Assert.Contains("[version]\"7.0\"", script, StringComparison.Ordinal);
         Assert.DoesNotContain("makensis", script, StringComparison.OrdinalIgnoreCase);
     }
 
@@ -408,17 +408,30 @@ public sealed class InstallerContractTests
             script,
             StringComparison.Ordinal);
         Assert.Contains("DisplayVersion", script, StringComparison.Ordinal);
-        Assert.Contains("Inno Setup 6.3 or newer is required", script, StringComparison.Ordinal);
+        Assert.Contains("Inno Setup 7.0 or newer is required", script, StringComparison.Ordinal);
     }
 
     [Fact]
-    public void IssInstaller_ChineseLanguageFileIsVendoredForInnoSetupSix()
+    public void WindowsInstallerScript_PrefersInstalledInnoSetupSevenOverPath()
+    {
+        var script = ReadProjectFile("scripts/New-WindowsInstaller.ps1");
+
+        var innoSevenLookup = script.IndexOf("$innoSevenCandidates", StringComparison.Ordinal);
+        var pathLookup = script.IndexOf("Get-Command ISCC.exe", StringComparison.Ordinal);
+        var innoSixLookup = script.IndexOf("$innoSixCandidates", StringComparison.Ordinal);
+
+        Assert.True(innoSevenLookup >= 0, "The standard Inno Setup 7 locations must be checked.");
+        Assert.True(pathLookup > innoSevenLookup, "A preinstalled Inno Setup 6 on PATH must not override Inno Setup 7.");
+        Assert.True(innoSixLookup > pathLookup, "Inno Setup 6 remains the final local fallback.");
+    }
+
+    [Fact]
+    public void IssInstaller_ChineseLanguageFileIsVendored()
     {
         var script = ReadProjectFile("installer/Cafe.Launcher.Avalonia.iss");
 
-        // Official Inno Setup ships Chinese translations only in 7.x. The
-        // release workflow uses 7.x, while the vendored file keeps local builds
-        // compatible with Inno Setup 6.3+.
+        // Vendoring keeps compilation independent of the translations bundled
+        // with a particular Inno Setup release.
         Assert.Contains("lang\\ChineseSimplified.isl", script, StringComparison.Ordinal);
         Assert.DoesNotContain(
             "compiler:Languages\\ChineseSimplified.isl",
