@@ -20,6 +20,7 @@ $DistributionDir = Join-Path $ArtifactsDir "distribution"
 $BundleRoot = Join-Path $ArtifactsDir "bundle"
 $MacOSAssetsDir = Join-Path $RootDir "installer/macos"
 $LinuxAssetsDir = Join-Path $RootDir "installer/linux"
+$DebianAssetsDir = Join-Path $LinuxAssetsDir "debian"
 
 $version = & (Join-Path $ScriptDir "Read-LauncherVersion.ps1") -Tag $Tag
 $ProjectPath = $version.ProjectPath
@@ -172,6 +173,62 @@ if ($Rids -contains "linux-x64") {
     $artifacts += [pscustomobject]@{ Rid = "linux-x64"; Kind = "tar-gz"; Path = $linuxTarPath }
 
     if ($IsLinux) {
+        $debRoot = Join-Path $BundleRoot "linux-x64/deb-root"
+        $debControlDir = Join-Path $debRoot "DEBIAN"
+        $debAppDir = Join-Path $debRoot "opt/cafe-launcher"
+        $debBinDir = Join-Path $debRoot "usr/bin"
+        $debApplicationsDir = Join-Path $debRoot "usr/share/applications"
+        $debIcon256Dir = Join-Path $debRoot "usr/share/icons/hicolor/256x256/apps"
+        $debIcon512Dir = Join-Path $debRoot "usr/share/icons/hicolor/512x512/apps"
+        foreach ($directory in @(
+            $debControlDir,
+            $debAppDir,
+            $debBinDir,
+            $debApplicationsDir,
+            $debIcon256Dir,
+            $debIcon512Dir
+        )) {
+            [void][System.IO.Directory]::CreateDirectory($directory)
+        }
+
+        Copy-Item -Path (Join-Path $linuxPublishDir "*") -Destination $debAppDir -Recurse -Force
+        Copy-Item -LiteralPath (Join-Path $DebianAssetsDir "cafe-launcher") -Destination (Join-Path $debBinDir "cafe-launcher") -Force
+        Copy-Item -LiteralPath (Join-Path $DebianAssetsDir "cafe-launcher.desktop") -Destination (Join-Path $debApplicationsDir "cafe-launcher.desktop") -Force
+
+        foreach ($size in @(256, 512)) {
+            $iconSource = Join-Path $LinuxAssetsDir "app-icon-$size.png"
+            if (-not (Test-Path -LiteralPath $iconSource -PathType Leaf)) {
+                throw "Debian packaging requires installer/linux/app-icon-$size.png. Run scripts/New-AppIconAssets.ps1 to regenerate it."
+            }
+
+            $iconDestinationDir = if ($size -eq 256) { $debIcon256Dir } else { $debIcon512Dir }
+            Copy-Item -LiteralPath $iconSource -Destination (Join-Path $iconDestinationDir "cafe-launcher.png") -Force
+        }
+
+        $debianVersion = [regex]::Replace($version.VersionPrefix, "-", "~", 1)
+        $controlTemplate = Get-Content -Raw -LiteralPath (Join-Path $DebianAssetsDir "control")
+        $control = $controlTemplate.Replace("{VERSION}", $debianVersion)
+        [System.IO.File]::WriteAllText(
+            (Join-Path $debControlDir "control"),
+            $control,
+            [System.Text.UTF8Encoding]::new($false))
+
+        Set-UnixExecutableBit -Paths @(
+            (Join-Path $debAppDir "Cafe.Launcher.Avalonia"),
+            (Join-Path $debAppDir "createdump"),
+            (Join-Path $debBinDir "cafe-launcher")
+        )
+
+        $debPath = Join-Path $DistributionDir "Cafe.Launcher.Avalonia_${Tag}_linux-x64.deb"
+        Invoke-Checked "dpkg-deb" @(
+            "--root-owner-group",
+            "--build",
+            $debRoot,
+            $debPath
+        ) "dpkg-deb failed for the Linux Debian package."
+        Invoke-Checked "dpkg-deb" @("--info", $debPath) "The generated Debian package metadata is invalid."
+        $artifacts += [pscustomobject]@{ Rid = "linux-x64"; Kind = "deb"; Path = $debPath }
+
         if ([string]::IsNullOrWhiteSpace($AppImageToolPath)) {
             Write-Warning "AppImage packaging skipped: pass -AppImageToolPath pointing at a Linux appimagetool build to produce the AppImage."
         }

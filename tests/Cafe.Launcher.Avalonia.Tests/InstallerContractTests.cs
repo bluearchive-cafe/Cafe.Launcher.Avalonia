@@ -318,8 +318,46 @@ public sealed class InstallerContractTests
             "Cafe.Launcher.Avalonia_${Tag}_linux-x64.AppImage",
             script,
             StringComparison.Ordinal);
+        Assert.Contains(
+            "Cafe.Launcher.Avalonia_${Tag}_linux-x64.deb",
+            script,
+            StringComparison.Ordinal);
         Assert.DoesNotContain("UninstallFiles.nsh", script, StringComparison.Ordinal);
         Assert.DoesNotContain("makensis", script, StringComparison.OrdinalIgnoreCase);
+    }
+
+    [Fact]
+    public void LinuxDebPackage_UsesPackageManagerLayoutAndValidatedMetadata()
+    {
+        var script = ReadProjectFile("scripts/Build-Distribution.ps1");
+        var control = ReadProjectFile("installer/linux/debian/control");
+        var launcher = ReadProjectFile("installer/linux/debian/cafe-launcher");
+        var desktop = ReadProjectFile("installer/linux/debian/cafe-launcher.desktop");
+
+        Assert.Contains("linux-x64/deb-root", script, StringComparison.Ordinal);
+        Assert.Contains("opt/cafe-launcher", script, StringComparison.Ordinal);
+        Assert.Contains("usr/bin", script, StringComparison.Ordinal);
+        Assert.Contains("usr/share/applications", script, StringComparison.Ordinal);
+        Assert.Contains("--root-owner-group", script, StringComparison.Ordinal);
+        Assert.Contains("Invoke-Checked \"dpkg-deb\"", script, StringComparison.Ordinal);
+        Assert.Contains(
+            "Invoke-Checked \"dpkg-deb\" @(\"--info\", $debPath)",
+            script,
+            StringComparison.Ordinal);
+        Assert.Contains("Version: {VERSION}", control, StringComparison.Ordinal);
+        Assert.Contains("Architecture: amd64", control, StringComparison.Ordinal);
+        Assert.Contains("CAFE_LAUNCHER_PACKAGE_FORMAT=deb", launcher, StringComparison.Ordinal);
+        Assert.Contains("exec /opt/cafe-launcher/Cafe.Launcher.Avalonia", launcher, StringComparison.Ordinal);
+        Assert.Contains("Exec=cafe-launcher", desktop, StringComparison.Ordinal);
+        Assert.Contains("TryExec=cafe-launcher", desktop, StringComparison.Ordinal);
+
+        var workflow = ReadProjectFile(".github/workflows/release.yml");
+        Assert.Contains("Install Linux packaging and smoke-test dependencies", workflow, StringComparison.Ordinal);
+        Assert.Contains("dpkg-deb --extract", workflow, StringComparison.Ordinal);
+        Assert.Contains("deb-root/usr/bin/cafe-launcher", workflow, StringComparison.Ordinal);
+        Assert.Contains("deb-root/opt/cafe-launcher/Cafe.Launcher.Avalonia", workflow, StringComparison.Ordinal);
+        Assert.Contains("apt-get install --no-install-recommends -y \"./${debs[0]}\"", workflow, StringComparison.Ordinal);
+        Assert.Contains("cafe-launcher --version", workflow, StringComparison.Ordinal);
     }
 
     [Fact]
@@ -517,6 +555,7 @@ public sealed class InstallerContractTests
             "Cafe.Launcher.Avalonia_${{ github.ref_name }}_osx-arm64.zip",
             "Cafe.Launcher.Avalonia_${{ github.ref_name }}_linux-x64.tar.gz",
             "Cafe.Launcher.Avalonia_${{ github.ref_name }}_linux-x64.AppImage",
+            "Cafe.Launcher.Avalonia_${{ github.ref_name }}_linux-x64.deb",
         })
         {
             Assert.Equal(2, CountOccurrences(workflow, artifactName));

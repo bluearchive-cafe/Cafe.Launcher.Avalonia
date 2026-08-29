@@ -1,0 +1,8 @@
+#!/bin/sh
+set -eu
+
+# Package-managed installs live under /opt. Tell the launcher to choose a
+# writable user-home default for game files instead of a sibling of /opt.
+export CAFE_LAUNCHER_PACKAGE_FORMAT=deb
+
+exec /opt/cafe-launcher/Cafe.Launcher.Avalonia "$@"

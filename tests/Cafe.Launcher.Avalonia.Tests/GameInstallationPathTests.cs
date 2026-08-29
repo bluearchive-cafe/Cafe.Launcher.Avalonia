@@ -39,10 +39,33 @@ public sealed class GameInstallationPathTests
         var result = installationPath.GetDefaultGamePath(
             applicationBaseDirectory,
             Path.Combine(userProfileDirectory, "Cafe.Launcher.AppImage"),
-            userProfileDirectory);
+            packageFormat: null,
+            userProfileDirectory: userProfileDirectory);
 
         Assert.Equal(expected, result);
         Assert.DoesNotContain(".mount_cafe", result, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public void GetDefaultGamePath_WhenInstalledByPackageManager_UsesWritableUserProfile()
+    {
+        var testRoot = Path.Combine(Path.GetTempPath(), Guid.NewGuid().ToString("N"));
+        var packageRoot = Path.Combine(testRoot, "opt");
+        var applicationBaseDirectory = Path.Combine(packageRoot, "cafe-launcher");
+        var userProfileDirectory = Path.Combine(testRoot, "home");
+        var expected = Path.GetFullPath(Path.Combine(
+            userProfileDirectory,
+            GamePaths.RootFolderName,
+            GamePaths.GameFolderName));
+
+        var result = installationPath.GetDefaultGamePath(
+            applicationBaseDirectory,
+            appImagePath: null,
+            packageFormat: "deb",
+            userProfileDirectory: userProfileDirectory);
+
+        Assert.Equal(expected, result);
+        Assert.DoesNotContain(packageRoot, result, StringComparison.Ordinal);
     }
 
     [Fact]

@@ -1,0 +1,10 @@
+Package: cafe-launcher
+Version: {VERSION}
+Section: games
+Priority: optional
+Architecture: amd64
+Maintainer: BlueArchive Cafe contributors <bluearchive-cafe@users.noreply.github.com>
+Homepage: https://github.com/bluearchive-cafe/Cafe.Launcher.Avalonia
+Depends: libx11-6, libice6, libsm6, libfontconfig1, libxkbcommon0
+Description: Cross-platform launcher for Blue Archive
+ Experimental Linux package of Cafe Launcher with UMU/Proton and Wine runtime selection.
