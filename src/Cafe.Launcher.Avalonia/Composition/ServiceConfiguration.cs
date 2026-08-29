@@ -63,6 +63,7 @@ public static class ServiceConfiguration
         services.AddSingleton<IProcessLauncher, DefaultProcessLauncher>();
         services.AddSingleton<IGameRunner, NativeGameRunner>();
         services.AddSingleton<IGameRunner, UmuGameRunner>();
+        services.AddSingleton<IGameRunner, WineGameRunner>();
         services.AddSingleton<GameRunnerResolver>();
         services.AddSingleton<IGameProcessTracker, GameProcessTracker>();
         services.AddSingleton<GameLaunchService>();
