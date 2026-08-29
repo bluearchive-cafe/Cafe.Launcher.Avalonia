@@ -9,6 +9,7 @@ using Cafe.Launcher.Avalonia.Features.SetupWizard;
 using Cafe.Launcher.Avalonia.Services;
 using Cafe.Launcher.Avalonia.Services.Auth;
 using Cafe.Launcher.Avalonia.Services.Diagnostics;
+using Cafe.Launcher.Avalonia.Services.GameRuntime;
 using Cafe.Launcher.Avalonia.ViewModels;
 using Avalonia.Media;
 using System.Net;
@@ -1872,6 +1873,7 @@ public sealed class MainWindowViewModelTests : IDisposable
         var gameLaunchService = new GameLaunchService(
             manifestValidationService,
             new ClickCodeService(),
+            new GameRunnerResolver([new NativeGameRunner(new DefaultProcessLauncher())]),
             localizationService);
         var gameDownloadService = new GameDownloadService(
             apiClient,

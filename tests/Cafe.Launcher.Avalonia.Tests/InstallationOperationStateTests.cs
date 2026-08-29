@@ -5,12 +5,16 @@ using Cafe.Launcher.Avalonia.Models;
 using Cafe.Launcher.Avalonia.Services;
 using Cafe.Launcher.Avalonia.Services.Auth;
 using Cafe.Launcher.Avalonia.Services.Diagnostics;
+using Cafe.Launcher.Avalonia.Services.GameRuntime;
 
 namespace Cafe.Launcher.Avalonia.Tests;
 
 public sealed class InstallationOperationStateTests : IDisposable
 {
     private readonly string tempDir = Path.Combine(Path.GetTempPath(), Guid.NewGuid().ToString("N"));
+
+    private static GameRunnerResolver CreateGameRunnerResolver() =>
+        new([new NativeGameRunner(new DefaultProcessLauncher())]);
 
     static InstallationOperationStateTests()
     {
@@ -28,6 +32,7 @@ public sealed class InstallationOperationStateTests : IDisposable
         var service = new GameLaunchService(
             new ManifestValidationService(apiClient, new RemoteManifestService(apiClient), localizer),
             new ClickCodeService(),
+            CreateGameRunnerResolver(),
             localizer);
 
         var result = await service.StartAsync(new LauncherStatusSnapshot
@@ -50,6 +55,7 @@ public sealed class InstallationOperationStateTests : IDisposable
         var service = new GameLaunchService(
             new ManifestValidationService(apiClient, new RemoteManifestService(apiClient), localizer),
             new ClickCodeService(),
+            CreateGameRunnerResolver(),
             localizer);
 
         var result = await service.StartAsync(new LauncherStatusSnapshot
@@ -72,6 +78,7 @@ public sealed class InstallationOperationStateTests : IDisposable
         var service = new GameLaunchService(
             new ManifestValidationService(apiClient, new RemoteManifestService(apiClient), localizer),
             new ClickCodeService(),
+            CreateGameRunnerResolver(),
             localizer);
 
         var result = await service.StartAsync(new LauncherStatusSnapshot
@@ -94,6 +101,7 @@ public sealed class InstallationOperationStateTests : IDisposable
         var service = new GameLaunchService(
             new ManifestValidationService(apiClient, new RemoteManifestService(apiClient), localizer),
             new ClickCodeService(),
+            CreateGameRunnerResolver(),
             localizer);
 
         var result = await service.StartAsync(new LauncherStatusSnapshot
@@ -116,6 +124,7 @@ public sealed class InstallationOperationStateTests : IDisposable
         var service = new GameLaunchService(
             new ManifestValidationService(apiClient, new RemoteManifestService(apiClient), localizer),
             new ClickCodeService(),
+            CreateGameRunnerResolver(),
             localizer);
 
         var result = await service.StartAsync(new LauncherStatusSnapshot
@@ -153,6 +162,7 @@ public sealed class InstallationOperationStateTests : IDisposable
             var service = new GameLaunchService(
                 new ManifestValidationService(apiClient, new RemoteManifestService(apiClient), localizer),
                 new ClickCodeService(),
+                CreateGameRunnerResolver(),
                 localizer);
 
             var result = await service.StartAsync(new LauncherStatusSnapshot
@@ -196,6 +206,7 @@ public sealed class InstallationOperationStateTests : IDisposable
             var service = new GameLaunchService(
                 new ManifestValidationService(apiClient, new RemoteManifestService(apiClient), localizer),
                 new ClickCodeService(),
+                CreateGameRunnerResolver(),
                 localizer);
 
             var result = await service.StartAsync(new LauncherStatusSnapshot
@@ -243,6 +254,7 @@ public sealed class InstallationOperationStateTests : IDisposable
         var service = new GameLaunchService(
             new ManifestValidationService(apiClient, new RemoteManifestService(apiClient), localizer),
             new ClickCodeService(),
+            CreateGameRunnerResolver(),
             localizer);
         var snapshot = new LauncherStatusSnapshot
         {

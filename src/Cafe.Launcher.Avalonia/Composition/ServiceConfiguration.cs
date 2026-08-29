@@ -8,6 +8,7 @@ using Cafe.Launcher.Avalonia.Features.Shell;
 using Cafe.Launcher.Avalonia.Services;
 using Cafe.Launcher.Avalonia.Services.Auth;
 using Cafe.Launcher.Avalonia.Services.Diagnostics;
+using Cafe.Launcher.Avalonia.Services.GameRuntime;
 using Cafe.Launcher.Avalonia.ViewModels;
 
 namespace Cafe.Launcher.Avalonia.Composition;
@@ -59,6 +60,9 @@ public static class ServiceConfiguration
         services.AddSingleton<ISettingsEditor, SettingsEditor>();
         services.AddSingleton<SettingsOptionsViewModel>();
         services.AddSingleton<SettingsAppearanceViewModel>();
+        services.AddSingleton<IProcessLauncher, DefaultProcessLauncher>();
+        services.AddSingleton<IGameRunner, NativeGameRunner>();
+        services.AddSingleton<GameRunnerResolver>();
         services.AddSingleton<GameLaunchService>();
         services.AddSingleton<GameUninstallService>();
         services.AddSingleton<IGameShortcutService, GameShortcutService>();

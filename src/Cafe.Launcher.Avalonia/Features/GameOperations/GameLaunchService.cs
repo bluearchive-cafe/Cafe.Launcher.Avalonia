@@ -1,10 +1,10 @@
 using System;
-using System.Diagnostics;
 using System.IO;
 using System.Threading;
 using System.Threading.Tasks;
 using Cafe.Launcher.Avalonia.Models;
 using Cafe.Launcher.Avalonia.Services;
+using Cafe.Launcher.Avalonia.Services.GameRuntime;
 
 namespace Cafe.Launcher.Avalonia.Features.GameOperations;
 
@@ -12,15 +12,18 @@ public sealed class GameLaunchService
 {
     private readonly ManifestValidationService manifestValidationService;
     private readonly ClickCodeService clickCodeService;
+    private readonly GameRunnerResolver gameRunnerResolver;
     private readonly LocalizationService localizer;
 
     public GameLaunchService(
         ManifestValidationService manifestValidationService,
         ClickCodeService clickCodeService,
+        GameRunnerResolver gameRunnerResolver,
         LocalizationService localizer)
     {
         this.manifestValidationService = manifestValidationService;
         this.clickCodeService = clickCodeService;
+        this.gameRunnerResolver = gameRunnerResolver;
         this.localizer = localizer;
     }
 
@@ -87,30 +90,38 @@ public sealed class GameLaunchService
             };
         }
 
-        var startInfo = new ProcessStartInfo
-        {
-            FileName = exePath,
-            WorkingDirectory = localGame.GamePath,
-            UseShellExecute = false
-        };
-
-        foreach (var parameter in gameConfig.Params)
-        {
-            startInfo.ArgumentList.Add(parameter);
-        }
-
         // Write clickCode attribution to game directory before launch
         clickCodeService.WriteClickCodeToGamePath(localGame.GamePath);
 
-        using var process = Process.Start(startInfo);
-        return process is null
-            ? Failed(localizer.T("gameProcessStartFailed"))
-            : new GameLaunchResult
+        var runner = await gameRunnerResolver
+            .ResolveAsync(cancellationToken: cancellationToken)
+            .ConfigureAwait(false);
+        if (runner is null)
+        {
+            return Failed(localizer.T("gameProcessStartFailed"));
+        }
+
+        var request = new GameLaunchRequest(
+            GameId: gameConfig.Name,
+            ExecutablePath: exePath,
+            WorkingDirectory: localGame.GamePath,
+            Arguments: gameConfig.Params);
+
+        var gameProcess = await runner
+            .StartAsync(request, new GameRuntimeOptions(), cancellationToken)
+            .ConfigureAwait(false);
+
+        // Phase 1 keeps the existing fire-and-forget behavior: dispose the handle
+        // immediately without waiting. Lifecycle tracking lands in a later phase.
+        using (gameProcess.HostProcess)
+        {
+            return new GameLaunchResult
             {
                 Success = true,
                 Message = localizer.T("gameProcessStarted"),
                 Validation = validation
             };
+        }
     }
 
     private static GameLaunchResult Failed(string message)
