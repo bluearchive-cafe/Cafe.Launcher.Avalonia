@@ -17,9 +17,7 @@
         <StackPanel Spacing="{StaticResource Launcher.Spacing.Sm}">
             <TextBlock Text="{Binding Shell.I18n[versionInfo]}" Classes="group-title"/>
             <WrapPanel>
-                <!-- Intentional pointer-only Easter egg; it is not keyboard accessible. -->
-                <Border Classes="version-chip"
-                        PointerPressed="LauncherVersionChip_OnPointerPressed">
+                <Border Classes="version-chip">
                     <TextBlock Text="{Binding Shell.LauncherVersionText}" Classes="chip-text"/>
                 </Border>
                 <Border Classes="version-chip"
