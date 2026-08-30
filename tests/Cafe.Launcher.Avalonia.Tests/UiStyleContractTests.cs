@@ -3672,6 +3672,34 @@ public sealed partial class UiStyleContractTests
             StringComparison.Ordinal);
     }
 
+    [Theory]
+    [InlineData("Views/SettingsGameSection.axaml", "{Binding Operations.RequestUninstallCommand}")]
+    [InlineData("Views/SettingsAdvancedSection.axaml", "{Binding Settings.RequestResetSettingsCommand}")]
+    public void SettingsDangerActions_UseDangerActionStyle(string sectionPath, string command)
+    {
+        var document = XDocument.Load(ProjectFile(sectionPath));
+        var button = document
+            .Descendants()
+            .Single(element =>
+                element.Name.LocalName == "Button"
+                && element.Attribute("Command")?.Value == command);
+
+        Assert.True(HasClass(button, "flat-action"), $"{command} must inherit flat-action geometry.");
+        Assert.True(HasClass(button, "danger-action"), $"{command} must use danger-action.");
+    }
+
+    [Fact]
+    public void SettingsDangerActionStyle_RestoresFlatActionGeometryAfterDangerOverrides()
+    {
+        var styles = XDocument.Load(ProjectFile("Views/MainWindow.Styles.axaml"));
+        var settingDanger = GetStyleSetters(styles, "Button.flat-action.danger-action");
+
+        Assert.Equal("{DynamicResource Launcher.Color.Error}", settingDanger["BorderBrush"]);
+        Assert.Equal("{StaticResource Launcher.Border.Thickness.Default}", settingDanger["BorderThickness"]);
+        Assert.Equal("{StaticResource Launcher.Control.Height.Setting}", settingDanger["MinHeight"]);
+        Assert.Equal("{StaticResource Launcher.Component.Action.Outlined.Padding}", settingDanger["Padding"]);
+    }
+
     [Fact]
     public void SettingsOverlay_RemovesTopStatusSummaryAndUsesInlineContentHeading()
     {

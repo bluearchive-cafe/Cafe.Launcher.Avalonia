@@ -43,12 +43,12 @@
                                 <TextBlock Text="{Binding Shell.I18n[repair]}"/>
                             </StackPanel>
                         </Button>
-                        <Button Classes="flat-action" Command="{Binding Operations.RequestUninstallCommand}"
+                        <Button Classes="flat-action danger-action" Command="{Binding Operations.RequestUninstallCommand}"
                                 AutomationProperties.Name="{Binding Shell.I18n[uninstall]}"
                                 IsEnabled="{Binding Shell.IsBusy, Converter={x:Static BoolConverters.Not}}">
                             <StackPanel Classes="button-content">
-                                <materialIcons:MaterialIcon Kind="TrashCanOutline" Width="{StaticResource Launcher.Icon.Sm}" Height="{StaticResource Launcher.Icon.Sm}" Foreground="{StaticResource Launcher.Color.Danger}"/>
-                                <TextBlock Text="{Binding Shell.I18n[uninstall]}" Foreground="{StaticResource Launcher.Color.Danger}"/>
+                                <materialIcons:MaterialIcon Kind="TrashCanOutline" Width="{StaticResource Launcher.Icon.Sm}" Height="{StaticResource Launcher.Icon.Sm}"/>
+                                <TextBlock Text="{Binding Shell.I18n[uninstall]}"/>
                             </StackPanel>
                         </Button>
                     </StackPanel>

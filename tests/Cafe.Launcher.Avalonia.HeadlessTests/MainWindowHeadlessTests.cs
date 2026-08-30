@@ -957,7 +957,7 @@ public sealed class MainWindowHeadlessTests
             .Where(row => row.IsEffectivelyVisible)
             .ToArray();
 
-        // 日志级别 / 日志文件操作 / 重置设置三行；重置行属破坏性确认入口，不参与本对齐契约。
+        // 日志级别 / 日志文件操作 / 重置设置三行。
         Assert.Equal(3, rows.Length);
         var levelRow = Assert.Single(rows, row => row.GetVisualDescendants().OfType<ComboBox>().Any());
         var levelControl = levelRow.GetVisualDescendants().OfType<ComboBox>().Single();
@@ -967,6 +967,11 @@ public sealed class MainWindowHeadlessTests
             .OfType<Button>()
             .ToArray();
         Assert.Equal(3, logButtons.Length);
+        var resetButton = rows
+            .SelectMany(row => row.GetVisualDescendants().OfType<Button>())
+            .Single(button => button.Classes.Contains("danger-action"));
+        Assert.Contains("flat-action", resetButton.Classes);
+        Assert.Equal(logButtons[0].Bounds.Height, resetButton.Bounds.Height);
 
         var levelTopLeft = levelControl.TranslatePoint(default, context.Window);
         Assert.NotNull(levelTopLeft);
@@ -990,6 +995,32 @@ public sealed class MainWindowHeadlessTests
 
         AssertControlInsideWindow(levelControl, context.Window);
         Assert.All(logButtons, button => AssertControlInsideWindow(button, context.Window));
+    }
+
+    [AvaloniaFact]
+    public void SettingsGame_DangerAction_MatchesSiblingFlatActionHeight()
+    {
+        using var context = CreateContext();
+        OpenSettings(context);
+        context.ViewModel.Settings.SelectedCategory = SettingsCategoryCodes.Game;
+        Dispatcher.UIThread.RunJobs();
+
+        var section = context.Window
+            .GetVisualDescendants()
+            .OfType<SettingsGameSection>()
+            .Single();
+        var managementRow = section
+            .GetVisualDescendants()
+            .OfType<global::Cafe.Launcher.Avalonia.Controls.SettingRow>()
+            .Single(row => row.GetVisualDescendants().OfType<Button>().Count() == 2);
+        var buttons = managementRow.GetVisualDescendants().OfType<Button>().ToArray();
+        var repairButton = Assert.Single(
+            buttons,
+            button => button.Classes.Contains("flat-action") && !button.Classes.Contains("danger-action"));
+        var uninstallButton = Assert.Single(buttons, button => button.Classes.Contains("danger-action"));
+
+        Assert.Contains("flat-action", uninstallButton.Classes);
+        Assert.Equal(repairButton.Bounds.Height, uninstallButton.Bounds.Height);
     }
 
     [AvaloniaFact]
@@ -1391,8 +1422,9 @@ public sealed class MainWindowHeadlessTests
         Assert.Contains("motion-enter", surface.Classes);
         Assert.Contains("motion-enter", shellRoot.Classes);
 
-        // 入场窗期（快速档/标准档时长）结束后两类锚点必须摘除：壳层恢复全不透明，
-        // 操作表面上升位移归零；此后重启动效偏好时 motion-* 选择器不会重新匹配而重放入场。
+        // 入场窗期（快速档/标准档时长）结束后两类锚点必须摘除：壳层与操作表面恢复
+        // 全不透明，且操作表面上升位移归零；此后重启动效偏好时 motion-* 选择器不会
+        // 重新匹配而重放入场。
         var deadline = DateTime.UtcNow.AddSeconds(3);
         while (DateTime.UtcNow < deadline
             && (surface.Classes.Contains("motion-enter") || shellRoot.Classes.Contains("motion-enter")))
@@ -1403,6 +1435,7 @@ public sealed class MainWindowHeadlessTests
 
         Assert.DoesNotContain("motion-enter", surface.Classes);
         Assert.DoesNotContain("motion-enter", shellRoot.Classes);
+        Assert.Equal(1d, surface.Opacity);
         Assert.Equal(1d, shellRoot.Opacity);
         var translate = Assert.IsType<TranslateTransform>(surface.RenderTransform);
         Assert.Equal(0, translate.Y);

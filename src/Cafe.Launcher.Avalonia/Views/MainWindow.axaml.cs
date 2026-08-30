@@ -86,9 +86,9 @@ public partial class MainWindow : Window
     /// ADR-016：底部操作表面的 motion-enter 仅作一次性入场锚点。入场窗期（Normal 档时长，
     /// 自窗口打开起必已覆盖入场全程）结束后摘除该类，避免运行期开启动效偏好时
     /// motion-bottom.motion-enabled.motion-enter 选择器重新匹配而重放入场。
-    /// 摘除时同时把上升位移归零：若窗口在首帧渲染前被遮挡/合成暂停，动画可能只应用了
-    /// 起势帧（Y=+12）就随摘类停止且不回退，表面会整体渲染在布局位置之下、底缘溢出
-    /// 客户区被窗口裁切。归零对正在升入或已落定的动画均无副作用（动画值优先级更高）。
+    /// 摘除时同时恢复不透明度并把上升位移归零：若窗口在首帧渲染前被遮挡/合成暂停，动画
+    /// 可能只应用了起势帧（Opacity=0、Y=+12）就随摘类停止且不回退，表面会不可见或整体
+    /// 渲染在布局位置之下、底缘溢出客户区被窗口裁切。复位对正在升入或已落定的动画均无副作用。
     /// </summary>
     private void RetireOperationSurfaceEntranceAnchor()
     {
@@ -105,10 +105,11 @@ public partial class MainWindow : Window
         timer.Start();
     }
 
-    /// <summary>摘除操作表面入场锚点类并把上升位移归零；可重复调用（幂等）。</summary>
+    /// <summary>摘除操作表面入场锚点类，恢复不透明度并把上升位移归零；可重复调用（幂等）。</summary>
     private void RetireOperationSurfaceEntranceAnchorNow()
     {
         OperationSurface.Classes.Remove("motion-enter");
+        OperationSurface.Opacity = 1;
         if (OperationSurface.RenderTransform is TranslateTransform entranceTranslate)
         {
             entranceTranslate.Y = 0;

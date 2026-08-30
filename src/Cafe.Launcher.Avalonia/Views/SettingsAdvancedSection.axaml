@@ -62,7 +62,7 @@
         <controls:SettingRow Title="{Binding Shell.I18n[debugResetSettingsConfirm]}"
                              Description="{Binding Shell.I18n[debugResetSettingsDescription]}">
             <controls:SettingRow.Action>
-                <Button Classes="flat-action"
+                <Button Classes="flat-action danger-action"
                         Command="{Binding Settings.RequestResetSettingsCommand}"
                         AutomationProperties.Name="{Binding Shell.I18n[debugResetSettingsTitle]}">
                     <StackPanel Classes="button-content">
