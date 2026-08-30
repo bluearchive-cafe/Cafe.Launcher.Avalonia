@@ -65,6 +65,42 @@
                                     AutomationName="{Binding Shell.I18n[gameRuntimeRunner]}"
                                     ItemsSource="{Binding Settings.Options.GameRuntimeRunner}"
                                     SelectedValue="{Binding Settings.Editor.Current.GameRuntime.Runner, Mode=TwoWay}"/>
+
+            <controls:SettingRow Title="{Binding Shell.I18n[gameRuntimeStatusTitle]}"
+                                 Description="{Binding Settings.GameRuntimeStatusSummary}"/>
+
+            <controls:SettingRow Title="{Binding Shell.I18n[gameRuntimeRunnerPath]}"
+                                 Description="{Binding Shell.I18n[gameRuntimeRunnerPathDescription]}">
+                <controls:SettingRow.Action>
+                    <TextBox Classes="uid-input"
+                             Width="{StaticResource Launcher.Component.Settings.Row.Action.MaxWidth}"
+                             Text="{Binding Settings.Editor.Current.GameRuntime.RunnerPath, Mode=TwoWay}"
+                             PlaceholderText="{Binding Shell.I18n[gameRuntimeRunnerPathPlaceholder]}"
+                             AutomationProperties.Name="{Binding Shell.I18n[gameRuntimeRunnerPath]}"/>
+                </controls:SettingRow.Action>
+            </controls:SettingRow>
+
+            <controls:SettingRow Title="{Binding Shell.I18n[gameRuntimePrefixPath]}"
+                                 Description="{Binding Shell.I18n[gameRuntimePrefixPathDescription]}">
+                <controls:SettingRow.Action>
+                    <TextBox Classes="uid-input"
+                             Width="{StaticResource Launcher.Component.Settings.Row.Action.MaxWidth}"
+                             Text="{Binding Settings.Editor.Current.GameRuntime.PrefixPath, Mode=TwoWay}"
+                             PlaceholderText="{Binding Shell.I18n[gameRuntimePrefixPathPlaceholder]}"
+                             AutomationProperties.Name="{Binding Shell.I18n[gameRuntimePrefixPath]}"/>
+                </controls:SettingRow.Action>
+            </controls:SettingRow>
+
+            <controls:SettingRow Title="{Binding Shell.I18n[gameRuntimeProtonPath]}"
+                                 Description="{Binding Shell.I18n[gameRuntimeProtonPathDescription]}">
+                <controls:SettingRow.Action>
+                    <TextBox Classes="uid-input"
+                             Width="{StaticResource Launcher.Component.Settings.Row.Action.MaxWidth}"
+                             Text="{Binding Settings.Editor.Current.GameRuntime.ProtonPath, Mode=TwoWay}"
+                             PlaceholderText="{Binding Shell.I18n[gameRuntimeProtonPathPlaceholder]}"
+                             AutomationProperties.Name="{Binding Shell.I18n[gameRuntimeProtonPath]}"/>
+                </controls:SettingRow.Action>
+            </controls:SettingRow>
         </StackPanel>
     </StackPanel>
 </UserControl>

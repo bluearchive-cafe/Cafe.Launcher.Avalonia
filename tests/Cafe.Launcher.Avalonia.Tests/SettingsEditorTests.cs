@@ -320,4 +320,50 @@ public sealed class SettingsEditorTests
 
         Assert.NotNull(changedProperty);
     }
+
+    [Fact]
+    public void GameRuntimeRunnerChange_MarksDirtyAndDiscardRestoresSnapshot()
+    {
+        var editor = new SettingsEditor();
+        editor.ApplySnapshot(new LauncherSettings());
+
+        editor.Current.GameRuntime.Runner = GameRuntimeRunners.Umu;
+
+        Assert.True(editor.IsDirty);
+
+        editor.Discard();
+
+        Assert.False(editor.IsDirty);
+        Assert.Equal(GameRuntimeRunners.Auto, editor.Current.GameRuntime.Runner);
+    }
+
+    [Fact]
+    public void GameRuntimePathChange_MarksDirtyAndRevertingClearsIt()
+    {
+        var editor = new SettingsEditor();
+        editor.ApplySnapshot(new LauncherSettings());
+
+        editor.Current.GameRuntime.RunnerPath = "/opt/umu/bin/umu-run";
+        Assert.True(editor.IsDirty);
+
+        editor.Current.GameRuntime.PrefixPath = "/home/user/prefixes/ba";
+        Assert.True(editor.IsDirty);
+
+        editor.Current.GameRuntime.RunnerPath = null;
+        editor.Current.GameRuntime.PrefixPath = null;
+        Assert.False(editor.IsDirty);
+    }
+
+    [Fact]
+    public void GameRuntimePropertyChange_RaisesCurrentPropertyChanged()
+    {
+        var editor = new SettingsEditor();
+        editor.ApplySnapshot(new LauncherSettings());
+        var propertyNames = new List<string>();
+        editor.CurrentPropertyChanged += (_, e) => propertyNames.Add(e.PropertyName ?? string.Empty);
+
+        editor.Current.GameRuntime.ProtonPath = "/home/user/Proton";
+
+        Assert.Contains(nameof(GameRuntimeSettings.ProtonPath), propertyNames);
+    }
 }

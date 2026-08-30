@@ -416,6 +416,18 @@ internal static class LauncherStrings
 
     internal static string GameRepairFailed => GetRequiredString("gameRepairFailed");
 
+    internal static string GameRuntimePrefixPath => GetRequiredString("gameRuntimePrefixPath");
+
+    internal static string GameRuntimePrefixPathDescription => GetRequiredString("gameRuntimePrefixPathDescription");
+
+    internal static string GameRuntimePrefixPathPlaceholder => GetRequiredString("gameRuntimePrefixPathPlaceholder");
+
+    internal static string GameRuntimeProtonPath => GetRequiredString("gameRuntimeProtonPath");
+
+    internal static string GameRuntimeProtonPathDescription => GetRequiredString("gameRuntimeProtonPathDescription");
+
+    internal static string GameRuntimeProtonPathPlaceholder => GetRequiredString("gameRuntimeProtonPathPlaceholder");
+
     internal static string GameRuntimeRunner => GetRequiredString("gameRuntimeRunner");
 
     internal static string GameRuntimeRunnerAuto => GetRequiredString("gameRuntimeRunnerAuto");
@@ -424,9 +436,33 @@ internal static class LauncherStrings
 
     internal static string GameRuntimeRunnerNative => GetRequiredString("gameRuntimeRunnerNative");
 
+    internal static string GameRuntimeRunnerPath => GetRequiredString("gameRuntimeRunnerPath");
+
+    internal static string GameRuntimeRunnerPathDescription => GetRequiredString("gameRuntimeRunnerPathDescription");
+
+    internal static string GameRuntimeRunnerPathPlaceholder => GetRequiredString("gameRuntimeRunnerPathPlaceholder");
+
     internal static string GameRuntimeRunnerUmu => GetRequiredString("gameRuntimeRunnerUmu");
 
     internal static string GameRuntimeRunnerWine => GetRequiredString("gameRuntimeRunnerWine");
+
+    internal static string GameRuntimeStatusAvailable => GetRequiredString("gameRuntimeStatusAvailable");
+
+    internal static string GameRuntimeStatusBroken => GetRequiredString("gameRuntimeStatusBroken");
+
+    internal static string GameRuntimeStatusChecking => GetRequiredString("gameRuntimeStatusChecking");
+
+    internal static string GameRuntimeStatusDetailFormat => GetRequiredString("gameRuntimeStatusDetailFormat");
+
+    internal static string GameRuntimeStatusEntryDetailFormat => GetRequiredString("gameRuntimeStatusEntryDetailFormat");
+
+    internal static string GameRuntimeStatusEntryFormat => GetRequiredString("gameRuntimeStatusEntryFormat");
+
+    internal static string GameRuntimeStatusNotFound => GetRequiredString("gameRuntimeStatusNotFound");
+
+    internal static string GameRuntimeStatusTitle => GetRequiredString("gameRuntimeStatusTitle");
+
+    internal static string GameRuntimeStatusUnsupported => GetRequiredString("gameRuntimeStatusUnsupported");
 
     internal static string GameShortcutCreated => GetRequiredString("gameShortcutCreated");
 

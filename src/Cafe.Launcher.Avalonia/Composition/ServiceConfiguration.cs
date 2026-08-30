@@ -65,6 +65,7 @@ public static class ServiceConfiguration
         services.AddSingleton<IGameRunner, UmuGameRunner>();
         services.AddSingleton<IGameRunner, WineGameRunner>();
         services.AddSingleton<GameRunnerResolver>();
+        services.AddSingleton<GameRuntimeStatusService>();
         services.AddSingleton<IGameProcessTracker, GameProcessTracker>();
         services.AddSingleton<GameLaunchService>();
         services.AddSingleton<GameUninstallService>();

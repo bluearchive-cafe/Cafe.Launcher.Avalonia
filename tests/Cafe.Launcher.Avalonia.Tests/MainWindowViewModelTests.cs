@@ -913,7 +913,8 @@ public sealed class MainWindowViewModelTests : IDisposable
             new GameInstallationPath(),
             new SettingsOptionsViewModel(localizer, new DiskSpaceService()),
             appearance,
-            new ErrorHandlingService(localizer, new LocalDiagnostics(testLogger), toastService));
+            new ErrorHandlingService(localizer, new LocalDiagnostics(testLogger), toastService),
+            new GameRuntimeStatusService(Array.Empty<IGameRunner>()));
         ToastNotification? errorToast = null;
         toastService.ToastRaised += notification =>
         {
@@ -1912,7 +1913,8 @@ public sealed class MainWindowViewModelTests : IDisposable
             launcherUpdateSvc, dialogsViewModel,
             settingsLogger,
             new GameInstallationPath(),
-            settingsOptions, settingsAppearance, errorHandling);
+            settingsOptions, settingsAppearance, errorHandling,
+            new GameRuntimeStatusService(Array.Empty<IGameRunner>()));
         var resourcePanelService = new ResourcePanelService(
             resourcePanelUidService, resourcePanelApiClient, diagnostics);
         var resourcePanelViewModel = new ResourcePanelViewModel(

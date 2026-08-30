@@ -465,6 +465,28 @@ public sealed class LauncherSettingsServiceTests : IDisposable
         Assert.Equal(GameRuntimeRunners.Auto, clone.GameRuntime.Runner);
     }
 
+    [Fact]
+    public async Task ReadAsync_WhenNativeRunnerOnLinux_NormalizesToAuto()
+    {
+        await File.WriteAllTextAsync(settingsPath, """{"gameRuntime":{"runner":"native"}}""");
+        var service = new LauncherSettingsService(settingsPath, isLinuxPlatform: () => true);
+
+        var reloaded = await service.ReadAsync();
+
+        Assert.Equal(GameRuntimeRunners.Auto, reloaded.GameRuntime.Runner);
+    }
+
+    [Fact]
+    public async Task ReadAsync_WhenNativeRunnerOnWindows_KeepsNative()
+    {
+        await File.WriteAllTextAsync(settingsPath, """{"gameRuntime":{"runner":"native"}}""");
+        var service = new LauncherSettingsService(settingsPath, isLinuxPlatform: () => false);
+
+        var reloaded = await service.ReadAsync();
+
+        Assert.Equal(GameRuntimeRunners.Native, reloaded.GameRuntime.Runner);
+    }
+
     public void Dispose()
     {
         if (Directory.Exists(tempDir))

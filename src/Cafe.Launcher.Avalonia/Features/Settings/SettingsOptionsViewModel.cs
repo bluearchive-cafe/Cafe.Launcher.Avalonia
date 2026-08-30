@@ -76,10 +76,11 @@ public sealed class SettingsOptionsViewModel
         new() { Code = LaunchCheckModes.None }
     ];
 
+    // Native is intentionally absent: the runtime section only renders on Linux,
+    // where native PE execution can never work (see the cross-platform runtime design).
     public ObservableCollection<SettingOption> GameRuntimeRunner { get; } =
     [
         new() { Code = GameRuntimeRunners.Auto },
-        new() { Code = GameRuntimeRunners.Native },
         new() { Code = GameRuntimeRunners.Umu },
         new() { Code = GameRuntimeRunners.Wine }
     ];
@@ -227,7 +228,6 @@ public sealed class SettingsOptionsViewModel
 
         RefreshOptions(GameRuntimeRunner, code => code switch
         {
-            GameRuntimeRunners.Native => localizer.T("gameRuntimeRunnerNative"),
             GameRuntimeRunners.Umu => localizer.T("gameRuntimeRunnerUmu"),
             GameRuntimeRunners.Wine => localizer.T("gameRuntimeRunnerWine"),
             _ => localizer.T("gameRuntimeRunnerAuto")

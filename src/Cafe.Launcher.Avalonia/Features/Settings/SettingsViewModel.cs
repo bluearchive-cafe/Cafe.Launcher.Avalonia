@@ -1,5 +1,8 @@
 using System;
+using System.Collections.Generic;
 using System.ComponentModel;
+using System.Diagnostics;
+using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
 using CommunityToolkit.Mvvm.ComponentModel;
@@ -10,6 +13,7 @@ using Cafe.Launcher.Avalonia.Helpers;
 using Cafe.Launcher.Avalonia.Models;
 using Cafe.Launcher.Avalonia.Services;
 using Cafe.Launcher.Avalonia.Services.Diagnostics;
+using Cafe.Launcher.Avalonia.Services.GameRuntime;
 using Cafe.Launcher.Avalonia.ViewModels;
 using Serilog.Events;
 
@@ -26,8 +30,12 @@ public partial class SettingsViewModel : ViewModelBase, IDisposable, IModalConte
     private readonly UnifiedLogger unifiedLogger;
     private readonly GameInstallationPath gameInstallationPath;
     private readonly IErrorHandlingService errorHandling;
+    private readonly GameRuntimeStatusService gameRuntimeStatusService;
     private CancellationTokenSource? appearancePreviewCts;
     private Task appearancePreviewTask = Task.CompletedTask;
+    private CancellationTokenSource? gameRuntimeStatusCts;
+    private Task gameRuntimeStatusRefreshTask = Task.CompletedTask;
+    private IReadOnlyList<GameRuntimeStatusEntry>? gameRuntimeStatusEntries;
     private bool disposed;
 
     // Coordination delegates — set by parent after construction.
@@ -58,7 +66,8 @@ public partial class SettingsViewModel : ViewModelBase, IDisposable, IModalConte
         GameInstallationPath gameInstallationPath,
         SettingsOptionsViewModel options,
         SettingsAppearanceViewModel appearance,
-        IErrorHandlingService errorHandling)
+        IErrorHandlingService errorHandling,
+        GameRuntimeStatusService gameRuntimeStatusService)
     {
         this.settingsService = settingsService;
         this.localizer = localizer;
@@ -71,6 +80,7 @@ public partial class SettingsViewModel : ViewModelBase, IDisposable, IModalConte
         Options = options;
         Appearance = appearance;
         this.errorHandling = errorHandling;
+        this.gameRuntimeStatusService = gameRuntimeStatusService;
         editor.PropertyChanged += OnEditorPropertyChanged;
         editor.CurrentPropertyChanged += OnCurrentSettingChanged;
     }
@@ -107,6 +117,15 @@ public partial class SettingsViewModel : ViewModelBase, IDisposable, IModalConte
     [ObservableProperty]
     private bool isSaving;
 
+    /// <summary>
+    /// Multi-line per-runner availability summary for the Linux runtime section,
+    /// e.g. "UMU / Proton: Available · /usr/bin/umu-run · 1.4.4".
+    /// </summary>
+    [ObservableProperty]
+    private string gameRuntimeStatusSummary = string.Empty;
+
+    internal Task? PendingGameRuntimeStatusRefresh => gameRuntimeStatusRefreshTask;
+
     private string selectedCategory = SettingsCategoryCodes.General;
 
     public string SelectedCategory
@@ -125,6 +144,10 @@ public partial class SettingsViewModel : ViewModelBase, IDisposable, IModalConte
             OnPropertyChanged(nameof(IsAppearanceCategorySelected));
             OnPropertyChanged(nameof(IsAdvancedCategorySelected));
             OnPropertyChanged(nameof(IsAboutCategorySelected));
+            if (selectedCategory == SettingsCategoryCodes.Game)
+            {
+                RefreshGameRuntimeStatus();
+            }
         }
     }
 
@@ -165,12 +188,17 @@ public partial class SettingsViewModel : ViewModelBase, IDisposable, IModalConte
             }
         }
 
+        RefreshGameRuntimeStatus();
     }
 
     /// <summary>Called by parent ApplyLanguage to refresh display names.</summary>
     public void RefreshOptionDisplayNames()
     {
         Options.RefreshDisplayNames();
+        if (gameRuntimeStatusEntries is not null)
+        {
+            GameRuntimeStatusSummary = BuildGameRuntimeStatusSummary(gameRuntimeStatusEntries);
+        }
     }
 
     /// <summary>Loads a persisted settings snapshot into the active edit session.</summary>
@@ -249,6 +277,7 @@ public partial class SettingsViewModel : ViewModelBase, IDisposable, IModalConte
 
             editor.ApplySnapshot(settings);
             toastService.ShowSuccess(localizer.T("settingsSaved"));
+            RefreshGameRuntimeStatus();
 
             await AsyncEvent.InvokeSequentiallyAsync(SettingsSaved);
         }
@@ -366,6 +395,88 @@ public partial class SettingsViewModel : ViewModelBase, IDisposable, IModalConte
         editor.Current.BackgroundSource = BackgroundSources.Bundled;
     }
 
+    // ── Game runtime status (Linux section) ───────────────────────────────
+
+    /// <summary>
+    /// Kicks off a fire-and-forget availability refresh for the runtime status row.
+    /// Runs the real version probes, so it must stay off the save/open critical path.
+    /// </summary>
+    public void RefreshGameRuntimeStatus()
+    {
+        if (disposed)
+        {
+            return;
+        }
+
+        gameRuntimeStatusCts?.Cancel();
+        gameRuntimeStatusCts?.Dispose();
+        gameRuntimeStatusCts = new CancellationTokenSource();
+        var cancellationToken = gameRuntimeStatusCts.Token;
+        gameRuntimeStatusRefreshTask = RefreshGameRuntimeStatusAsync(cancellationToken);
+    }
+
+    private async Task RefreshGameRuntimeStatusAsync(CancellationToken cancellationToken)
+    {
+        GameRuntimeStatusSummary = localizer.T("gameRuntimeStatusChecking");
+        try
+        {
+            var runtime = editor.GetSnapshot().GameRuntime;
+            var options = new GameRuntimeOptions(runtime.RunnerPath, runtime.PrefixPath, runtime.ProtonPath);
+            var entries = await gameRuntimeStatusService
+                .GetStatusesAsync(options, cancellationToken)
+                .ConfigureAwait(true);
+            gameRuntimeStatusEntries = entries;
+            GameRuntimeStatusSummary = BuildGameRuntimeStatusSummary(entries);
+        }
+        catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
+        {
+        }
+        catch (Exception exception)
+        {
+            // Status is informational; launch diagnostics remain the authoritative
+            // runtime failure report, so a refresh failure only degrades this row.
+            Debug.WriteLine($"Settings: game runtime status refresh failed: {exception.Message}");
+        }
+    }
+
+    internal string BuildGameRuntimeStatusSummary(IReadOnlyList<GameRuntimeStatusEntry> entries)
+    {
+        var visibleRunnerIds = Options.GameRuntimeRunner.Select(option => option.Code).ToHashSet();
+        return string.Join(
+            Environment.NewLine,
+            entries.Where(entry => visibleRunnerIds.Contains(entry.RunnerId))
+                .Select(FormatGameRuntimeStatusEntry));
+    }
+
+    private string FormatGameRuntimeStatusEntry(GameRuntimeStatusEntry entry)
+    {
+        var name = entry.RunnerId switch
+        {
+            GameRuntimeRunners.Umu => localizer.T("gameRuntimeRunnerUmu"),
+            GameRuntimeRunners.Wine => localizer.T("gameRuntimeRunnerWine"),
+            GameRuntimeRunners.Native => localizer.T("gameRuntimeRunnerNative"),
+            _ => entry.RunnerId
+        };
+        var status = entry.Availability.Status switch
+        {
+            GameRunnerAvailabilityStatus.Available => localizer.T("gameRuntimeStatusAvailable"),
+            GameRunnerAvailabilityStatus.NotFound => localizer.T("gameRuntimeStatusNotFound"),
+            GameRunnerAvailabilityStatus.Broken => localizer.T("gameRuntimeStatusBroken"),
+            _ => localizer.T("gameRuntimeStatusUnsupported")
+        };
+
+        var path = entry.Availability.ExecutablePath;
+        if (string.IsNullOrWhiteSpace(path))
+        {
+            return localizer.F("gameRuntimeStatusEntryFormat", name, status);
+        }
+
+        var detail = string.IsNullOrWhiteSpace(entry.Availability.Version)
+            ? path
+            : localizer.F("gameRuntimeStatusDetailFormat", path, entry.Availability.Version);
+        return localizer.F("gameRuntimeStatusEntryDetailFormat", name, status, detail);
+    }
+
     public async Task DiscardChangesAsync()
     {
         IsUnsavedChangesVisible = false;
@@ -471,6 +582,9 @@ public partial class SettingsViewModel : ViewModelBase, IDisposable, IModalConte
 
         disposed = true;
         CancelAppearancePreview();
+        gameRuntimeStatusCts?.Cancel();
+        gameRuntimeStatusCts?.Dispose();
+        gameRuntimeStatusCts = null;
         editor.PropertyChanged -= OnEditorPropertyChanged;
         editor.CurrentPropertyChanged -= OnCurrentSettingChanged;
         Appearance.Dispose();
