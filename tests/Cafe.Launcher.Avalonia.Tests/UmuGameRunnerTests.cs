@@ -1,6 +1,7 @@
 using System;
 using System.Diagnostics;
 using System.IO;
+using System.Threading;
 using System.Threading.Tasks;
 using Cafe.Launcher.Avalonia.Services.GameRuntime;
 using Cafe.Launcher.Avalonia.Services;
@@ -50,11 +51,11 @@ public sealed class UmuGameRunnerTests : IDisposable
 
         var startInfo = runner.BuildStartInfo("umu-run", request, new GameRuntimeOptions());
 
-        var expectedPrefix = GameCompatibilityPaths.GetDefaultPrefixPath("blue-archive");
+        var expectedPrefix = GameCompatibilityPaths.GetDefaultPrefixPath("blue-archive", "umu");
         Assert.Equal(expectedPrefix, startInfo.Environment["WINEPREFIX"]);
         Assert.StartsWith(LauncherUserDataDirectory.Root, expectedPrefix);
         Assert.EndsWith(
-            Path.Combine("compatibility", "blue-archive", "prefix"),
+            Path.Combine("compatibility", "blue-archive", "umu", "prefix"),
             expectedPrefix);
         Assert.False(startInfo.Environment.ContainsKey("PROTONPATH"));
     }
@@ -69,9 +70,10 @@ public sealed class UmuGameRunnerTests : IDisposable
             isSupportedPlatform: true,
             pathVariable: tempDir);
 
-        var availability = await runner.CheckAvailabilityAsync();
+        var availability = await runner.CheckAvailabilityAsync(new GameRuntimeOptions());
 
-        Assert.True(availability.Available);
+        Assert.Equal(GameRunnerAvailabilityStatus.Available, availability.Status);
+        Assert.Equal("1.4.4", availability.Version);
         Assert.Equal(umuPath, availability.ExecutablePath);
     }
 
@@ -84,20 +86,75 @@ public sealed class UmuGameRunnerTests : IDisposable
             isSupportedPlatform: true,
             pathVariable: emptyDir);
 
-        var availability = await runner.CheckAvailabilityAsync();
+        var availability = await runner.CheckAvailabilityAsync(new GameRuntimeOptions());
 
         Assert.False(availability.Available);
         Assert.Contains("umu-run", availability.Message);
     }
 
     [Fact]
-    public async Task CheckAvailabilityAsync_OnUnsupportedPlatform_ReportsUnavailable()
+    public async Task CheckAvailabilityAsync_WhenConfiguredRunnerPathValid_ReportsAvailableEvenIfMissingFromPath()
+    {
+        Directory.CreateDirectory(tempDir);
+        var umuPath = Path.Combine(tempDir, "umu-run");
+        File.WriteAllText(umuPath, "#!/bin/sh\n");
+        var emptyDir = Path.Combine(tempDir, "empty");
+        Directory.CreateDirectory(emptyDir);
+        var runner = CreateRunner(
+            isSupportedPlatform: true,
+            pathVariable: emptyDir);
+
+        var availability = await runner.CheckAvailabilityAsync(
+            new GameRuntimeOptions(RunnerPath: umuPath));
+
+        Assert.True(availability.Available);
+        Assert.Equal(umuPath, availability.ExecutablePath);
+    }
+
+    [Fact]
+    public async Task CheckAvailabilityAsync_WhenConfiguredRunnerPathInvalid_DoesNotFallBackToPath()
+    {
+        Directory.CreateDirectory(tempDir);
+        var umuPath = Path.Combine(tempDir, "umu-run");
+        File.WriteAllText(umuPath, "#!/bin/sh\n");
+        var missingPath = Path.Combine(tempDir, "missing", "umu-run");
+        var runner = CreateRunner(
+            isSupportedPlatform: true,
+            pathVariable: tempDir);
+
+        var availability = await runner.CheckAvailabilityAsync(
+            new GameRuntimeOptions(RunnerPath: missingPath));
+
+        Assert.Equal(GameRunnerAvailabilityStatus.NotFound, availability.Status);
+        Assert.Contains(missingPath, availability.Message);
+    }
+
+    [Fact]
+    public async Task CheckAvailabilityAsync_WhenVersionProbeFails_ReportsBrokenWithExecutableEvidence()
+    {
+        Directory.CreateDirectory(tempDir);
+        var umuPath = Path.Combine(tempDir, "umu-run");
+        File.WriteAllText(umuPath, "#!/bin/sh\n");
+        var runner = CreateRunner(
+            isSupportedPlatform: true,
+            pathVariable: tempDir,
+            probeVersion: (_, _) => Task.FromResult<string?>(null));
+
+        var availability = await runner.CheckAvailabilityAsync(new GameRuntimeOptions());
+
+        Assert.Equal(GameRunnerAvailabilityStatus.Broken, availability.Status);
+        Assert.Equal(umuPath, availability.ExecutablePath);
+        Assert.NotNull(availability.TechnicalDetail);
+    }
+
+    [Fact]
+    public async Task CheckAvailabilityAsync_OnUnsupportedPlatform_ReportsUnsupportedStatus()
     {
         var runner = CreateRunner(isSupportedPlatform: false);
 
-        var availability = await runner.CheckAvailabilityAsync();
+        var availability = await runner.CheckAvailabilityAsync(new GameRuntimeOptions());
 
-        Assert.False(availability.Available);
+        Assert.Equal(GameRunnerAvailabilityStatus.Unsupported, availability.Status);
     }
 
     [Fact]
@@ -155,11 +212,13 @@ public sealed class UmuGameRunnerTests : IDisposable
     private UmuGameRunner CreateRunner(
         bool isSupportedPlatform,
         string? pathVariable = null,
-        IProcessLauncher? processLauncher = null) =>
+        IProcessLauncher? processLauncher = null,
+        Func<string, CancellationToken, Task<string?>>? probeVersion = null) =>
         new(
             processLauncher ?? new StubProcessLauncher(null),
             () => isSupportedPlatform,
-            explicitPath => ExecutableLocator.FindInPath("umu-run", explicitPath, pathVariable));
+            explicitPath => ExecutableLocator.FindInPath("umu-run", explicitPath, pathVariable),
+            probeVersion ?? ((_, _) => Task.FromResult<string?>("1.4.4")));
 
     private static Process StartTrivialProcess()
     {

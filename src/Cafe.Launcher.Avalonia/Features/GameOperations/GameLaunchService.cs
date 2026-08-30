@@ -100,8 +100,11 @@ public sealed class GameLaunchService
         var preferredRunnerId = runtime.Runner is GameRuntimeRunners.Auto or ""
             ? null
             : runtime.Runner;
+        // Resolution and launch must share one options instance: availability checks
+        // honor the configured runner/prefix/proton paths exactly like StartAsync does.
+        var runtimeOptions = new GameRuntimeOptions(runtime.RunnerPath, runtime.PrefixPath, runtime.ProtonPath);
         var runnerResolution = await gameRunnerResolver
-            .ResolveWithDiagnosticsAsync(preferredRunnerId, cancellationToken)
+            .ResolveWithDiagnosticsAsync(preferredRunnerId, runtimeOptions, cancellationToken)
             .ConfigureAwait(false);
         var runner = runnerResolution.Runner;
         if (runner is null)
@@ -109,8 +112,11 @@ public sealed class GameLaunchService
             return Failed(localizer.T("gameProcessStartFailed"), runnerResolution.DiagnosticMessage);
         }
 
+        // A stable runtime id decouples compatibility state (prefix layout, UMU
+        // GAMEID) from the game executable name, so renaming the EXE cannot orphan
+        // an existing environment.
         var request = new GameLaunchRequest(
-            GameId: gameConfig.Name,
+            GameId: GameRuntimeIds.BlueArchiveJapan,
             ExecutablePath: exePath,
             WorkingDirectory: localGame.GamePath,
             Arguments: gameConfig.Params);
@@ -119,10 +125,7 @@ public sealed class GameLaunchService
         try
         {
             gameProcess = await runner
-                .StartAsync(
-                    request,
-                    new GameRuntimeOptions(runtime.RunnerPath, runtime.PrefixPath, runtime.ProtonPath),
-                    cancellationToken)
+                .StartAsync(request, runtimeOptions, cancellationToken)
                 .ConfigureAwait(false);
         }
         catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
@@ -135,7 +138,8 @@ public sealed class GameLaunchService
             {
                 Success = false,
                 Message = localizer.F("gameLaunchFailed", exception.Message),
-                DiagnosticMessage = $"{BuildLaunchContext(runnerResolution, request)}{Environment.NewLine}{exception.Message}",
+                DiagnosticMessage =
+                    $"{BuildLaunchContext(runner, runnerResolution.Availability, runnerResolution.DiagnosticMessage, request, runtimeOptions)}{Environment.NewLine}{exception.Message}",
                 DiagnosticException = exception,
                 Validation = validation
             };
@@ -149,7 +153,12 @@ public sealed class GameLaunchService
         {
             Success = true,
             Message = localizer.T("gameProcessStarted"),
-            DiagnosticMessage = BuildLaunchContext(runnerResolution, request),
+            DiagnosticMessage = BuildLaunchContext(
+                runner,
+                runnerResolution.Availability,
+                runnerResolution.DiagnosticMessage,
+                request,
+                runtimeOptions),
             Validation = validation
         };
     }
@@ -170,9 +179,28 @@ public sealed class GameLaunchService
     }
 
     private string BuildLaunchContext(
-        GameRunnerResolution runnerResolution,
-        GameLaunchRequest request) =>
-        $"{runnerResolution.DiagnosticMessage}{Environment.NewLine}" +
+        IGameRunner runner,
+        GameRunnerAvailability? availability,
+        string runnerSelectionDiagnostic,
+        GameLaunchRequest request,
+        GameRuntimeOptions runtimeOptions) =>
+        $"{runnerSelectionDiagnostic}{Environment.NewLine}" +
         $"{localizer.T("executable")}: {request.ExecutablePath}{Environment.NewLine}" +
-        $"{localizer.T("path")}: {request.WorkingDirectory}";
+        $"{localizer.T("path")}: {request.WorkingDirectory}{Environment.NewLine}" +
+        BuildDiagnosticSnapshot(runner, availability, request, runtimeOptions).Describe();
+
+    private static GameRuntimeDiagnosticSnapshot BuildDiagnosticSnapshot(
+        IGameRunner runner,
+        GameRunnerAvailability? availability,
+        GameLaunchRequest request,
+        GameRuntimeOptions runtimeOptions) =>
+        new(
+            RunnerId: runner.Id,
+            RunnerVersion: availability?.Version,
+            RunnerExecutable: availability?.ExecutablePath,
+            PrefixPath: runner.GetEffectivePrefixPath(request, runtimeOptions),
+            ProtonPath: runner.GetEffectiveProtonPath(runtimeOptions),
+            GameId: request.GameId,
+            GameExecutable: request.ExecutablePath,
+            WorkingDirectory: request.WorkingDirectory);
 }

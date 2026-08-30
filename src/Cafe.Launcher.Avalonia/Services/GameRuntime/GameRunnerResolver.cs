@@ -35,17 +35,22 @@ public sealed class GameRunnerResolver
     /// </summary>
     public async Task<IGameRunner?> ResolveAsync(
         string? preferredRunnerId = null,
+        GameRuntimeOptions? options = null,
         CancellationToken cancellationToken = default) =>
-        (await ResolveWithDiagnosticsAsync(preferredRunnerId, cancellationToken).ConfigureAwait(false)).Runner;
+        (await ResolveWithDiagnosticsAsync(preferredRunnerId, options, cancellationToken).ConfigureAwait(false)).Runner;
 
     /// <summary>
     /// Resolves a usable runner while retaining the availability evidence needed to
-    /// diagnose why a launch environment could not be selected.
+    /// diagnose why a launch environment could not be selected. Availability checks
+    /// run against the same <paramref name="options"/> the launch itself will use.
     /// </summary>
     internal async Task<GameRunnerResolution> ResolveWithDiagnosticsAsync(
         string? preferredRunnerId = null,
+        GameRuntimeOptions? options = null,
         CancellationToken cancellationToken = default)
     {
+        var runtimeOptions = options ?? new GameRuntimeOptions();
+
         if (!string.IsNullOrWhiteSpace(preferredRunnerId))
         {
             var preferred = runners.FirstOrDefault(runner =>
@@ -59,34 +64,33 @@ public sealed class GameRunnerResolver
             }
 
             var availability = await preferred
-                .CheckAvailabilityAsync(cancellationToken)
+                .CheckAvailabilityAsync(runtimeOptions, cancellationToken)
                 .ConfigureAwait(false);
             return availability.Available
-                ? new GameRunnerResolution(preferred, $"{localizer.T("gameRuntimeRunner")}: {preferred.Id}")
+                ? new GameRunnerResolution(preferred, $"{localizer.T("gameRuntimeRunner")}: {preferred.Id}", availability)
                 : new GameRunnerResolution(
                     null,
                     $"{localizer.T("gameRuntimeRunner")}: {preferredRunnerId}{Environment.NewLine}" +
-                    $"{preferred.Id}: {AvailabilityReason(availability)}");
+                    $"{preferred.Id}: {AvailabilityReason(availability)}",
+                    availability);
         }
 
         var candidates = new List<string>();
         foreach (var runner in runners)
         {
-            if (!runner.IsSupportedPlatform)
-            {
-                var unsupportedAvailability = await runner
-                    .CheckAvailabilityAsync(cancellationToken)
-                    .ConfigureAwait(false);
-                candidates.Add($"{runner.Id}: {AvailabilityReason(unsupportedAvailability)}");
-                continue;
-            }
-
             var availability = await runner
-                .CheckAvailabilityAsync(cancellationToken)
+                .CheckAvailabilityAsync(runtimeOptions, cancellationToken)
                 .ConfigureAwait(false);
-            if (availability.Available)
+
+            // A runner is only selectable when it both supports the current platform
+            // and reports an available runtime — an unsupported runner must never be
+            // chosen, even if its availability record were to claim otherwise.
+            if (runner.IsSupportedPlatform && availability.Available)
             {
-                return new GameRunnerResolution(runner, $"{localizer.T("gameRuntimeRunner")}: {runner.Id}");
+                return new GameRunnerResolution(
+                    runner,
+                    $"{localizer.T("gameRuntimeRunner")}: {runner.Id}",
+                    availability);
             }
 
             candidates.Add($"{runner.Id}: {AvailabilityReason(availability)}");
@@ -106,5 +110,11 @@ public sealed class GameRunnerResolver
             : availability.Message;
 }
 
-/// <summary>Resolved runner and the evidence collected while choosing it.</summary>
-internal sealed record GameRunnerResolution(IGameRunner? Runner, string DiagnosticMessage);
+/// <summary>
+/// Resolved runner and the evidence collected while choosing it. Availability is
+/// null only when no runner was checked at all (unknown preferred id).
+/// </summary>
+internal sealed record GameRunnerResolution(
+    IGameRunner? Runner,
+    string DiagnosticMessage,
+    GameRunnerAvailability? Availability = null);

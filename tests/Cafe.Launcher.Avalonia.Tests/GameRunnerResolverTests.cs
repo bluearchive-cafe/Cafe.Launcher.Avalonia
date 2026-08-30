@@ -77,19 +77,74 @@ public sealed class GameRunnerResolverTests
         Assert.Null(resolved);
     }
 
+    [Fact]
+    public async Task ResolveAsync_ForwardsSameOptionsToAvailabilityChecks()
+    {
+        var runner = new FakeGameRunner("umu", isSupportedPlatform: true, isAvailable: true);
+        var resolver = new GameRunnerResolver([runner]);
+        var options = new GameRuntimeOptions(RunnerPath: "/opt/umu/bin/umu-run");
+
+        await resolver.ResolveAsync(options: options);
+        Assert.Same(options, runner.LastAvailabilityOptions);
+
+        await resolver.ResolveAsync(preferredRunnerId: "umu", options: options);
+        Assert.Same(options, runner.LastAvailabilityOptions);
+    }
+
+    [Fact]
+    public async Task ResolveWithDiagnosticsAsync_AutoMode_CarriesWinningRunnerAvailability()
+    {
+        var unavailable = new FakeGameRunner("umu", isSupportedPlatform: true, isAvailable: false);
+        var available = new FakeGameRunner("wine", isSupportedPlatform: true, isAvailable: true);
+        var resolver = new GameRunnerResolver([unavailable, available]);
+
+        var resolution = await resolver.ResolveWithDiagnosticsAsync();
+
+        Assert.Same(available, resolution.Runner);
+        Assert.NotNull(resolution.Availability);
+        Assert.True(resolution.Availability!.Available);
+    }
+
+    [Fact]
+    public async Task ResolveWithDiagnosticsAsync_WithUnavailablePreferredId_CarriesFailureEvidence()
+    {
+        var runner = new FakeGameRunner("umu", isSupportedPlatform: true, isAvailable: false);
+        var resolver = new GameRunnerResolver([runner]);
+
+        var resolution = await resolver.ResolveWithDiagnosticsAsync(preferredRunnerId: "umu");
+
+        Assert.Null(resolution.Runner);
+        Assert.NotNull(resolution.Availability);
+        Assert.False(resolution.Availability!.Available);
+    }
+
     private sealed class FakeGameRunner(string id, bool isSupportedPlatform, bool isAvailable) : IGameRunner
     {
+        public GameRuntimeOptions? LastAvailabilityOptions { get; private set; }
+
         public string Id => id;
 
         public bool IsSupportedPlatform => isSupportedPlatform;
 
-        public Task<GameRunnerAvailability> CheckAvailabilityAsync(CancellationToken cancellationToken = default) =>
-            Task.FromResult(new GameRunnerAvailability(isAvailable));
+        public Task<GameRunnerAvailability> CheckAvailabilityAsync(
+            GameRuntimeOptions options,
+            CancellationToken cancellationToken = default)
+        {
+            LastAvailabilityOptions = options;
+            return Task.FromResult(new GameRunnerAvailability(
+                isAvailable
+                    ? GameRunnerAvailabilityStatus.Available
+                    : GameRunnerAvailabilityStatus.NotFound));
+        }
 
         public Task<GameProcess> StartAsync(
             GameLaunchRequest request,
             GameRuntimeOptions options,
             CancellationToken cancellationToken = default) =>
             throw new NotSupportedException("FakeGameRunner never starts processes.");
+
+        public string? GetEffectivePrefixPath(GameLaunchRequest request, GameRuntimeOptions options) => null;
+
+        public string? GetEffectiveProtonPath(GameRuntimeOptions options) => null;
     }
 }

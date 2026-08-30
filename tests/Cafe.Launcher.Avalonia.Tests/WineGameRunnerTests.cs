@@ -1,6 +1,7 @@
 using System;
 using System.Diagnostics;
 using System.IO;
+using System.Threading;
 using System.Threading.Tasks;
 using Cafe.Launcher.Avalonia.Services;
 using Cafe.Launcher.Avalonia.Services.GameRuntime;
@@ -48,7 +49,7 @@ public sealed class WineGameRunnerTests : IDisposable
         var startInfo = runner.BuildStartInfo("wine", request, new GameRuntimeOptions());
 
         Assert.Equal(
-            GameCompatibilityPaths.GetDefaultPrefixPath("blue-archive"),
+            GameCompatibilityPaths.GetDefaultPrefixPath("blue-archive", "wine"),
             startInfo.Environment["WINEPREFIX"]);
     }
 
@@ -60,9 +61,10 @@ public sealed class WineGameRunnerTests : IDisposable
         File.WriteAllText(winePath, "#!/bin/sh\n");
         var runner = CreateRunner(isSupportedPlatform: true, pathVariable: tempDir);
 
-        var availability = await runner.CheckAvailabilityAsync();
+        var availability = await runner.CheckAvailabilityAsync(new GameRuntimeOptions());
 
-        Assert.True(availability.Available);
+        Assert.Equal(GameRunnerAvailabilityStatus.Available, availability.Status);
+        Assert.Equal("9.0", availability.Version);
         Assert.Equal(winePath, availability.ExecutablePath);
     }
 
@@ -73,20 +75,71 @@ public sealed class WineGameRunnerTests : IDisposable
         Directory.CreateDirectory(emptyDir);
         var runner = CreateRunner(isSupportedPlatform: true, pathVariable: emptyDir);
 
-        var availability = await runner.CheckAvailabilityAsync();
+        var availability = await runner.CheckAvailabilityAsync(new GameRuntimeOptions());
 
         Assert.False(availability.Available);
         Assert.Contains("wine", availability.Message);
     }
 
     [Fact]
-    public async Task CheckAvailabilityAsync_OnUnsupportedPlatform_ReportsUnavailable()
+    public async Task CheckAvailabilityAsync_WhenConfiguredRunnerPathValid_ReportsAvailableEvenIfMissingFromPath()
+    {
+        Directory.CreateDirectory(tempDir);
+        var winePath = Path.Combine(tempDir, "wine");
+        File.WriteAllText(winePath, "#!/bin/sh\n");
+        var emptyDir = Path.Combine(tempDir, "empty");
+        Directory.CreateDirectory(emptyDir);
+        var runner = CreateRunner(isSupportedPlatform: true, pathVariable: emptyDir);
+
+        var availability = await runner.CheckAvailabilityAsync(
+            new GameRuntimeOptions(RunnerPath: winePath));
+
+        Assert.True(availability.Available);
+        Assert.Equal(winePath, availability.ExecutablePath);
+    }
+
+    [Fact]
+    public async Task CheckAvailabilityAsync_WhenConfiguredRunnerPathInvalid_DoesNotFallBackToPath()
+    {
+        Directory.CreateDirectory(tempDir);
+        var winePath = Path.Combine(tempDir, "wine");
+        File.WriteAllText(winePath, "#!/bin/sh\n");
+        var missingPath = Path.Combine(tempDir, "missing", "wine");
+        var runner = CreateRunner(isSupportedPlatform: true, pathVariable: tempDir);
+
+        var availability = await runner.CheckAvailabilityAsync(
+            new GameRuntimeOptions(RunnerPath: missingPath));
+
+        Assert.Equal(GameRunnerAvailabilityStatus.NotFound, availability.Status);
+        Assert.Contains(missingPath, availability.Message);
+    }
+
+    [Fact]
+    public async Task CheckAvailabilityAsync_WhenVersionProbeFails_ReportsBrokenWithExecutableEvidence()
+    {
+        Directory.CreateDirectory(tempDir);
+        var winePath = Path.Combine(tempDir, "wine");
+        File.WriteAllText(winePath, "#!/bin/sh\n");
+        var runner = CreateRunner(
+            isSupportedPlatform: true,
+            pathVariable: tempDir,
+            probeVersion: (_, _) => Task.FromResult<string?>(null));
+
+        var availability = await runner.CheckAvailabilityAsync(new GameRuntimeOptions());
+
+        Assert.Equal(GameRunnerAvailabilityStatus.Broken, availability.Status);
+        Assert.Equal(winePath, availability.ExecutablePath);
+        Assert.NotNull(availability.TechnicalDetail);
+    }
+
+    [Fact]
+    public async Task CheckAvailabilityAsync_OnUnsupportedPlatform_ReportsUnsupportedStatus()
     {
         var runner = CreateRunner(isSupportedPlatform: false);
 
-        var availability = await runner.CheckAvailabilityAsync();
+        var availability = await runner.CheckAvailabilityAsync(new GameRuntimeOptions());
 
-        Assert.False(availability.Available);
+        Assert.Equal(GameRunnerAvailabilityStatus.Unsupported, availability.Status);
     }
 
     [Fact]
@@ -144,11 +197,13 @@ public sealed class WineGameRunnerTests : IDisposable
     private WineGameRunner CreateRunner(
         bool isSupportedPlatform,
         string? pathVariable = null,
-        IProcessLauncher? processLauncher = null) =>
+        IProcessLauncher? processLauncher = null,
+        Func<string, CancellationToken, Task<string?>>? probeVersion = null) =>
         new(
             processLauncher ?? new StubProcessLauncher(null),
             () => isSupportedPlatform,
-            explicitPath => ExecutableLocator.FindInPath("wine", explicitPath, pathVariable));
+            explicitPath => ExecutableLocator.FindInPath("wine", explicitPath, pathVariable),
+            probeVersion ?? ((_, _) => Task.FromResult<string?>("9.0")));
 
     private static Process StartTrivialProcess()
     {

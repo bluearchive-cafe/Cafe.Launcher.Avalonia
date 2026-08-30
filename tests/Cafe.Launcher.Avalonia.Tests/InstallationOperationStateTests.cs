@@ -306,6 +306,49 @@ public sealed class InstallationOperationStateTests : IDisposable
     }
 
     [Fact]
+    public async Task StartAsync_WhenRunnerStartFails_IncludesRuntimeDiagnosticSnapshot()
+    {
+        var gamePath = Path.Combine(tempDir, "YostarGames", "BlueArchive_JP");
+        Directory.CreateDirectory(gamePath);
+        var executablePath = Path.Combine(gamePath, "BlueArchive.exe");
+        await File.WriteAllTextAsync(executablePath, "");
+        using var apiClient = new LauncherApiClient(
+            new HttpClientHandler(),
+            new AuthorizationHeaderFactory(),
+            new PatchUrlGroupService());
+        var localizer = new LocalizationService();
+        var service = new GameLaunchService(
+            new ManifestValidationService(apiClient, new RemoteManifestService(apiClient), localizer),
+            new ClickCodeService(),
+            new GameRunnerResolver([new FailingGameRunner("umu")]),
+            new GameProcessTracker(),
+            localizer);
+
+        var result = await service.StartAsync(
+            new LauncherStatusSnapshot
+            {
+                RuntimeState = LauncherRuntimeState.Ready,
+                LocalGame = new LocalInstallationState
+                {
+                    Kind = LocalInstallationStateKind.Valid,
+                    GamePath = gamePath,
+                    GameConfig = new GameLauncherConfig { Name = "BlueArchive", Version = "1.0.0" }
+                },
+                Settings = new LauncherSettings { LaunchCheckMode = LaunchCheckModes.None }
+            });
+
+        Assert.False(result.Success);
+        Assert.Contains("[GameRuntime]", result.DiagnosticMessage, StringComparison.Ordinal);
+        Assert.Contains("Runner: umu", result.DiagnosticMessage, StringComparison.Ordinal);
+        Assert.Contains($"GameId: {GameRuntimeIds.BlueArchiveJapan}", result.DiagnosticMessage, StringComparison.Ordinal);
+        Assert.Contains("Proton: auto", result.DiagnosticMessage, StringComparison.Ordinal);
+        Assert.Contains(
+            GameCompatibilityPaths.GetDefaultPrefixPath(GameRuntimeIds.BlueArchiveJapan, "umu"),
+            result.DiagnosticMessage,
+            StringComparison.Ordinal);
+    }
+
+    [Fact]
     public async Task StartAsync_WhenInstallationIsReady_StartsConfiguredExecutable()
     {
         Assert.SkipUnless(OperatingSystem.IsWindows(), "ComSpec (cmd.exe) is only available on Windows.");
@@ -603,14 +646,22 @@ public sealed class InstallationOperationStateTests : IDisposable
 
         public bool IsSupportedPlatform => true;
 
-        public Task<GameRunnerAvailability> CheckAvailabilityAsync(CancellationToken cancellationToken = default) =>
-            Task.FromResult(new GameRunnerAvailability(Available: false, Message: reason));
+        public Task<GameRunnerAvailability> CheckAvailabilityAsync(
+            GameRuntimeOptions options,
+            CancellationToken cancellationToken = default) =>
+            Task.FromResult(new GameRunnerAvailability(
+                GameRunnerAvailabilityStatus.NotFound,
+                Message: reason));
 
         public Task<GameProcess> StartAsync(
             GameLaunchRequest request,
             GameRuntimeOptions options,
             CancellationToken cancellationToken = default) =>
             throw new InvalidOperationException("An unavailable runner must not start a process.");
+
+        public string? GetEffectivePrefixPath(GameLaunchRequest request, GameRuntimeOptions options) => null;
+
+        public string? GetEffectiveProtonPath(GameRuntimeOptions options) => null;
     }
 
     private sealed class FailingGameRunner(string id) : IGameRunner
@@ -619,13 +670,20 @@ public sealed class InstallationOperationStateTests : IDisposable
 
         public bool IsSupportedPlatform => true;
 
-        public Task<GameRunnerAvailability> CheckAvailabilityAsync(CancellationToken cancellationToken = default) =>
-            Task.FromResult(new GameRunnerAvailability(Available: true));
+        public Task<GameRunnerAvailability> CheckAvailabilityAsync(
+            GameRuntimeOptions options,
+            CancellationToken cancellationToken = default) =>
+            Task.FromResult(new GameRunnerAvailability(GameRunnerAvailabilityStatus.Available));
 
         public Task<GameProcess> StartAsync(
             GameLaunchRequest request,
             GameRuntimeOptions options,
             CancellationToken cancellationToken = default) =>
             throw new InvalidOperationException("umu failed to create a process.");
+
+        public string? GetEffectivePrefixPath(GameLaunchRequest request, GameRuntimeOptions options) =>
+            GameCompatibilityPaths.GetDefaultPrefixPath(request.GameId, id);
+
+        public string? GetEffectiveProtonPath(GameRuntimeOptions options) => "auto";
     }
 }
