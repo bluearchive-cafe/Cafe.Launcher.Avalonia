@@ -1391,8 +1391,9 @@ public sealed class MainWindowHeadlessTests
         Assert.Contains("motion-enter", surface.Classes);
         Assert.Contains("motion-enter", shellRoot.Classes);
 
-        // 入场窗期（快速档/标准档时长）结束后两类锚点必须摘除：壳层恢复全不透明，
-        // 操作表面上升位移归零；此后重启动效偏好时 motion-* 选择器不会重新匹配而重放入场。
+        // 入场窗期（快速档/标准档时长）结束后两类锚点必须摘除：壳层与操作表面恢复
+        // 全不透明，且操作表面上升位移归零；此后重启动效偏好时 motion-* 选择器不会
+        // 重新匹配而重放入场。
         var deadline = DateTime.UtcNow.AddSeconds(3);
         while (DateTime.UtcNow < deadline
             && (surface.Classes.Contains("motion-enter") || shellRoot.Classes.Contains("motion-enter")))
@@ -1403,6 +1404,7 @@ public sealed class MainWindowHeadlessTests
 
         Assert.DoesNotContain("motion-enter", surface.Classes);
         Assert.DoesNotContain("motion-enter", shellRoot.Classes);
+        Assert.Equal(1d, surface.Opacity);
         Assert.Equal(1d, shellRoot.Opacity);
         var translate = Assert.IsType<TranslateTransform>(surface.RenderTransform);
         Assert.Equal(0, translate.Y);
