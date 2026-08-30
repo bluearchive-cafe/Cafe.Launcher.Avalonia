@@ -8,6 +8,7 @@ using System.Threading;
 using System.Threading.Tasks;
 using Microsoft.Extensions.DependencyInjection;
 using Cafe.Launcher.Avalonia.Composition;
+using Cafe.Launcher.Avalonia.Features.GameOperations;
 using Cafe.Launcher.Avalonia.Services;
 using Cafe.Launcher.Avalonia.ViewModels;
 using Cafe.Launcher.Avalonia.Views;
@@ -21,6 +22,7 @@ public partial class App : Application
     private ServiceProvider? serviceProvider;
     private SystemTrayService? trayService;
     private ShowWindowSignalListener? showWindowListener;
+    private LaunchGameSignalListener? launchGameListener;
 
     public override void Initialize()
     {
@@ -131,6 +133,7 @@ public partial class App : Application
             {
                 desktop.ShutdownRequested -= HandleShutdownRequested;
                 showWindowListener?.Dispose();
+                launchGameListener?.Dispose();
                 shutdownCts.Cancel();
                 viewModel.Dispose();
                 trayService?.Dispose();
@@ -139,6 +142,10 @@ public partial class App : Application
 
             // Listen for show-window signal from second instances
             showWindowListener = ShowWindowSignalListener.Start(mainWindow, trayService, SignalName);
+
+            // Listen for --launch-game forwards from second instances (cross-platform:
+            // the Linux .desktop shortcut relies on it).
+            launchGameListener = new LaunchGameSignalListener(viewModel.Operations, Program.LaunchGameSignalName);
 
             // Register Opened handler BEFORE desktop.MainWindow is set — that assignment
             // may trigger the window to show and fire Opened synchronously.
@@ -183,6 +190,17 @@ public partial class App : Application
             var savedSettings = await settingsService.ReadAsync(cancellationToken);
             mainWindow.ApplySavedWindowState(savedSettings);
             await viewModel.InitializeAsync(cancellationToken);
+            if (Program.LaunchGameRequested && !Program.FirstLaunch)
+            {
+                // --launch-game first-instance flow: the initial state refresh has
+                // finished, so the launch runs through the same command the UI
+                // button uses (validation, clickCode, runner selection, toasts).
+                // First-launch installs are deliberately excluded: the setup wizard
+                // owns that session and the game cannot be installed yet, so an
+                // auto-launch would only fire a "not installed" toast over the wizard.
+                await Dispatcher.UIThread.InvokeAsync(
+                    () => viewModel.Operations.StartGameCommand.Execute(null));
+            }
         }
         catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
         {
@@ -247,34 +265,27 @@ public partial class App : Application
         }
     }
 
-    private sealed class ShowWindowSignalListener : IDisposable
+    /// <summary>
+    /// Shared plumbing for named EventWaitHandle listeners: a 250ms poll loop on a
+    /// background task that dispatches each raised signal to the UI thread, with
+    /// best-effort cleanup.
+    /// </summary>
+    private abstract class EventWaitHandleListener : IDisposable
     {
-        private readonly MainWindow mainWindow;
-        private readonly SystemTrayService? trayService;
         private readonly EventWaitHandle signal;
         private readonly CancellationTokenSource cancellationTokenSource = new();
         private readonly CancellationToken cancellationToken;
         private readonly Task listenerTask;
         private bool disposed;
 
-        private ShowWindowSignalListener(MainWindow mainWindow, SystemTrayService? trayService, string signalName)
+        protected EventWaitHandleListener(string signalName)
         {
-            this.mainWindow = mainWindow;
-            this.trayService = trayService;
-            cancellationToken = cancellationTokenSource.Token;
             signal = new EventWaitHandle(false, EventResetMode.AutoReset, signalName);
+            cancellationToken = cancellationTokenSource.Token;
             listenerTask = Task.Run(Listen, cancellationToken);
         }
 
-        public static ShowWindowSignalListener? Start(
-            MainWindow mainWindow,
-            SystemTrayService? trayService,
-            string signalName)
-        {
-            return OperatingSystem.IsWindows()
-                ? new ShowWindowSignalListener(mainWindow, trayService, signalName)
-                : null;
-        }
+        protected bool IsCancellationRequested => cancellationToken.IsCancellationRequested;
 
         private void Listen()
         {
@@ -292,34 +303,17 @@ public partial class App : Application
                         return;
                     }
 
-                    Dispatcher.UIThread.InvokeAsync(() =>
-                    {
-                        if (cancellationToken.IsCancellationRequested)
-                        {
-                            return;
-                        }
-
-                        try
-                        {
-                            if (trayService is not null)
-                                trayService.ShowWindow();
-                            else
-                                mainWindow.ShowWindow();
-                        }
-                        catch (Exception ex)
-                        {
-                            // Restore is best-effort.
-                            Debug.WriteLine($"Window restore dispatch failed: {ex.Message}");
-                        }
-                    });
+                    OnSignalRaised();
                 }
             }
             catch (Exception ex)
             {
                 // Listener stopped — non-critical.
-                Debug.WriteLine($"ShowWindowSignalListener loop exited: {ex.Message}");
+                Debug.WriteLine($"{GetType().Name} loop exited: {ex.Message}");
             }
         }
+
+        protected abstract void OnSignalRaised();
 
         public void Dispose()
         {
@@ -344,6 +338,89 @@ public partial class App : Application
 
             signal.Dispose();
             cancellationTokenSource.Dispose();
+        }
+    }
+
+    private sealed class ShowWindowSignalListener : EventWaitHandleListener
+    {
+        private readonly MainWindow mainWindow;
+        private readonly SystemTrayService? trayService;
+
+        private ShowWindowSignalListener(MainWindow mainWindow, SystemTrayService? trayService, string signalName)
+            : base(signalName)
+        {
+            this.mainWindow = mainWindow;
+            this.trayService = trayService;
+        }
+
+        public static ShowWindowSignalListener? Start(
+            MainWindow mainWindow,
+            SystemTrayService? trayService,
+            string signalName)
+        {
+            return OperatingSystem.IsWindows()
+                ? new ShowWindowSignalListener(mainWindow, trayService, signalName)
+                : null;
+        }
+
+        protected override void OnSignalRaised()
+        {
+            Dispatcher.UIThread.InvokeAsync(() =>
+            {
+                if (IsCancellationRequested)
+                {
+                    return;
+                }
+
+                try
+                {
+                    if (trayService is not null)
+                        trayService.ShowWindow();
+                    else
+                        mainWindow.ShowWindow();
+                }
+                catch (Exception ex)
+                {
+                    // Restore is best-effort.
+                    Debug.WriteLine($"Window restore dispatch failed: {ex.Message}");
+                }
+            });
+        }
+    }
+
+    /// <summary>
+    /// Receives the --launch-game forward from a second process and starts the game
+    /// through the regular UI command, so busy-state, validation, and toasts all apply.
+    /// </summary>
+    private sealed class LaunchGameSignalListener : EventWaitHandleListener
+    {
+        private readonly GameOperationsViewModel operations;
+
+        public LaunchGameSignalListener(GameOperationsViewModel operations, string signalName)
+            : base(signalName)
+        {
+            this.operations = operations;
+        }
+
+        protected override void OnSignalRaised()
+        {
+            Dispatcher.UIThread.InvokeAsync(() =>
+            {
+                if (IsCancellationRequested)
+                {
+                    return;
+                }
+
+                try
+                {
+                    operations.StartGameCommand.Execute(null);
+                }
+                catch (Exception ex)
+                {
+                    // The launch journey reports its own failures; this only guards dispatch.
+                    Debug.WriteLine($"Launch-game signal dispatch failed: {ex.Message}");
+                }
+            });
         }
     }
 }

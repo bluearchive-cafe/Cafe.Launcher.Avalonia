@@ -25,4 +25,27 @@ public sealed class ProgramCommandLineTests
         Assert.False(handled);
         Assert.Equal(string.Empty, output.ToString());
     }
+
+    [Fact]
+    public void TryHandleCommandLine_WhenLaunchGameRequested_DoesNotSwallowIt()
+    {
+        using var output = new StringWriter(CultureInfo.InvariantCulture);
+
+        var handled = Program.TryHandleCommandLine([Program.LaunchGameArgument], output);
+
+        // --launch-game must reach the normal startup path, not the short-circuit output.
+        Assert.False(handled);
+        Assert.Equal(string.Empty, output.ToString());
+    }
+
+    [Fact]
+    public void HasLaunchGameArgument_MatchesExactArgumentOnly()
+    {
+        Assert.True(Program.HasLaunchGameArgument([Program.LaunchGameArgument]));
+        Assert.True(Program.HasLaunchGameArgument(["--other", Program.LaunchGameArgument]));
+        Assert.False(Program.HasLaunchGameArgument([]));
+        Assert.False(Program.HasLaunchGameArgument(["--launch-games"]));
+        Assert.False(Program.HasLaunchGameArgument(["--Launch-Game"]));
+        Assert.False(Program.HasLaunchGameArgument(["launch-game"]));
+    }
 }
