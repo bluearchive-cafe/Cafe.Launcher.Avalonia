@@ -1,335 +1,119 @@
 # Cafe Launcher
 
-Blue Archive 日服桌面启动器，基于 .NET 10 与 Avalonia 12 重写，替代原 Yostar Electron 启动器。项目在保留官方启动器安装、更新与启动流程的同时，补齐了下载可靠性、CDN 切换、启动校验和本地诊断等实用能力。
+面向 Blue Archive 日服的第三方桌面启动器。使用 .NET 10 与 Avalonia 构建，提供游戏安装、更新、修复、启动和本地诊断，并兼容官方启动器使用的游戏目录与清单。
 
-## 特性
+[![Build](https://github.com/bluearchive-cafe/Cafe.Launcher.Avalonia/actions/workflows/build.yml/badge.svg)](https://github.com/bluearchive-cafe/Cafe.Launcher.Avalonia/actions/workflows/build.yml)
+[![Release](https://img.shields.io/github/v/release/bluearchive-cafe/Cafe.Launcher.Avalonia_Release?include_prereleases&label=release)](https://github.com/bluearchive-cafe/Cafe.Launcher.Avalonia_Release/releases)
+[![License](https://img.shields.io/github/license/bluearchive-cafe/Cafe.Launcher.Avalonia)](./LICENSE)
 
-- **完整游戏流程** — 安装、更新、修复、启动、卸载 Blue Archive 日服游戏文件
-- **启动校验** — 支持本地清单校验、远端清单校验、跳过校验三种模式
-- **下载可靠性** — 10 并发 CDN 下载、`.tmp` 临时文件、Range 断点续传、CRC64 校验、主备 CDN 自动回退
-- **下载控制** — 暂停 / 继续 / 停止，下载限速（`unlimited` ~ `50MB/s` 六档），进行中状态持久化到 `download_state.json`
-- **CDN 切换** — 支持 `official`（yo-star.com）和 `cafe`（bluearchive.cafe）两套下载源
-- **多语言** — `auto`（跟随系统）、`en`、`zh-Hans`、`zh-Hant`、`ja`
-- **原生 UI** — Avalonia Fluent Theme，系统 / 浅色 / 深色主题，支持系统托盘，关闭时最小化到托盘
-- **远端内容** — 公告、活动 Banner、新闻、社交媒体入口
-- **背景定制** — 内置 / 远端 / 自定义壁纸，三档契合度（`fill` / `uniform` / `uniformToFill`），染色主题色提取
-- **主题色** — 四种模式：默认（`#FF2E7DF6`） / 跟随系统 / 壁纸提取 / 自定义取色
-- **自更新** — 服务端代理优先、GitHub Releases API 回退，支持 `stable` / `beta` 频道与启动时后台检查
-- **本地诊断** — 运行与异常诊断统一写入 `unified.log`，支持日志轮转、查看与 ZIP 导出
-- **Toast 通知**：即时展示操作状态（含运动淡入动画）
-- **无障碍**：设置控件和对话框按钮均配有 `AutomationProperties.Name` 标注
+[下载](https://github.com/bluearchive-cafe/Cafe.Launcher.Avalonia_Release/releases) · [使用文档](https://docs.bluearchive.cafe/cafe-launcher/) · [问题反馈](https://github.com/bluearchive-cafe/Cafe.Launcher.Avalonia/issues) · [官网](https://bluearchive.cafe/)
 
-## 技术栈
+> [!IMPORTANT]
+> Cafe Launcher 是社区维护的第三方项目，与 Nexon、Nexon Games、Yostar 及 Blue Archive 官方无隶属或合作关系。使用前请阅读[隐私政策](./PRIVACY.md)。
 
-| 项 | 版本 |
-|---|---|
-| .NET | `net10.0` |
-| .NET SDK（仓库固定版本） | `10.0.302` |
-| Avalonia | `12.1.1` |
-| CommunityToolkit.Mvvm | `8.4.2` |
-| Material.Icons.Avalonia | `3.0.2` |
-| Microsoft.Extensions.DependencyInjection | `10.0.10` |
-| Serilog | `4.4.0` |
-| xUnit | `xunit.v3 3.2.2` |
-| Coverlet | `coverlet.msbuild 10.0.1` |
+## 能做什么
 
-Release 分发目标为 `win-x64`、`osx-arm64` 与 `linux-x64` 自包含桌面应用，无需用户额外安装 .NET Runtime。Windows 为正式支持平台；macOS 与 Linux 当前提供实验性构建，尚未完成针对性适配与充分测试。Release 配置关闭调试器、EventSource、元数据热更新等非必要运行时能力；当前未启用 Native AOT 或程序集裁剪。
+- 安装、增量更新、修复、启动和卸载游戏
+- 并发下载、断点续传、暂停与恢复、速度限制和 CRC64 完整性校验
+- 在官方 CDN 与 Cafe CDN 之间切换，并在下载失败时尝试备用地址
+- 使用本地清单、远程清单或跳过检查三种启动验证模式
+- 使用系统、浅色或深色主题，自定义背景、主题色和动态效果
+- 使用 English、简体中文、繁體中文和日本語界面
+- 查看公告与运营内容，并通过 UID 使用 Cafe 资源面板
+- 检查稳定版或测试版更新，导出日志和系统信息用于故障排查
 
-## 快速开始
+下载任务状态和应用设置保存在本地。启动器不会修改游戏进程，也不会向游戏注入代码。
 
-需要 .NET 10 SDK。克隆后在仓库根目录执行：
+## 平台与发行包
+
+| 平台 | 支持状态 | 发行包 |
+| --- | --- | --- |
+| Windows x64 | 正式支持 | 安装程序、便携 ZIP |
+| macOS Apple Silicon | 实验性 | `.app` 压缩包 |
+| Linux x64 | 实验性 | `.deb`、AppImage、`tar.gz` |
+
+所有发行包均为自包含应用，无需另外安装 .NET Runtime。macOS 与 Linux 构建尚未完成与 Windows 同等程度的适配和测试，请以具体 Release 说明为准。
+
+面向普通用户的安装、首次设置和故障排查说明统一维护在[文档站](https://docs.bluearchive.cafe/cafe-launcher/)。本仓库 README 主要面向参与开发和审阅源码的贡献者。
+
+## 本地开发
+
+### 环境要求
+
+- .NET SDK `10.0.302`（由 `global.json` 固定）
+- Windows、macOS 或 Linux 桌面环境
+- 构建 Windows 安装程序时需要 Inno Setup 6.3 或更高版本
+
+克隆仓库后，在 PowerShell 中运行：
 
 ```powershell
-dotnet restore .\src\Cafe.Launcher.Avalonia\Cafe.Launcher.Avalonia.csproj -r win-x64
 .\build.ps1
 dotnet run --project .\src\Cafe.Launcher.Avalonia\Cafe.Launcher.Avalonia.csproj
 ```
 
-`build.ps1` 自动关闭遥测：
+仓库脚本会关闭 .NET CLI 与 Avalonia 遥测。项目启用可空引用类型、编译绑定、代码风格检查和 warnings-as-errors。
+
+### 常用命令
+
+| 命令 | 用途 |
+| --- | --- |
+| `.\build.ps1` | 还原并构建 Debug 配置 |
+| `.\test.ps1` | 运行单元测试与 Headless UI 测试 |
+| `.\coverage.ps1` | 运行覆盖率门禁 |
+| `.\verify.ps1` | 执行 Debug 构建、覆盖率和 Release 构建 |
+| `.\dev.ps1 ui` | 验证 XAML 样式契约与 Headless UI |
+| `.\scripts\Test-LocalizationContract.ps1` | 验证所有本地化资源键和格式占位符 |
+
+只运行一个测试类：
 
 ```powershell
-$env:DOTNET_CLI_TELEMETRY_OPTOUT = '1'
-$env:AVALONIA_TELEMETRY_OPTOUT = '1'
+dotnet test .\tests\Cafe.Launcher.Avalonia.Tests\Cafe.Launcher.Avalonia.Tests.csproj --filter "FullyQualifiedName~VersionComparerTests"
 ```
 
-## 构建
-
-```powershell
-.\verify.ps1                                                             # 完整验证（Debug 构建、覆盖率门禁、Release 构建、本地化产物契约）
-.\build.ps1                                                              # Debug 构建（0 警告 0 错误）
-dotnet build .\src\Cafe.Launcher.Avalonia\Cafe.Launcher.Avalonia.csproj -c Debug --no-restore       # Debug 构建（跳过还原）
-dotnet build .\src\Cafe.Launcher.Avalonia\Cafe.Launcher.Avalonia.csproj -c Release --no-restore     # Release 构建
-dotnet publish .\src\Cafe.Launcher.Avalonia\Cafe.Launcher.Avalonia.csproj -c Release -r win-x64 -o publish # win-x64 自包含发布
-```
-
-项目启用 `TreatWarningsAsErrors` + `EnforceCodeStyleInBuild`，分析级别 `latest-recommended`。Debug 构建期望 **0 警告 0 错误**。
-
-### 桌面分发产物
-
-Windows 安装程序使用 Inno Setup 6.3+ 构建（仓库以 Inno Setup 7 验证）。本地构建前需安装 Inno Setup，并确保 `ISCC.exe` 可通过 `PATH`（或默认安装位置 `C:\Program Files\Inno Setup 7`）调用：
-
-```powershell
-.\scripts\Build-Distribution.ps1                                    # 发布 win-x64 并打包 zip
-.\scripts\Build-Distribution.ps1 -Rids win-x64,osx-arm64,linux-x64  # 跨平台三 RID（CI 在 Linux 上执行）
-.\scripts\New-WindowsInstaller.ps1                                  # 依据 artifacts/publish/win-x64 构建 Inno Setup 安装器
-```
-
-输出（`artifacts/distribution/`，CI 发版额外产出 AppImage 与 deb）：
-
-- `Cafe.Launcher.Avalonia_v<version>_win-x64.zip`（Windows 自包含 zip）
-- `Cafe.Launcher.Avalonia_v<version>_setup.exe`（Inno Setup 安装器，仅 Windows 宿主）
-- `Cafe.Launcher.Avalonia_v<version>_osx-arm64.zip`（内含 `Cafe Launcher.app`，建议在 Linux/macOS 宿主打包以保留可执行位）
-- `Cafe.Launcher.Avalonia_v<version>_linux-x64.tar.gz`（建议在 Linux 宿主打包以保留可执行位）
-- `Cafe.Launcher.Avalonia_v<version>_linux-x64.AppImage`（CI 在 Ubuntu 24.04 上使用固定版本的 `appimagetool` 与 Type 2 runtime 构建，并通过 Xvfb 执行桌面启动烟测）
-- `Cafe.Launcher.Avalonia_v<version>_linux-x64.deb`（CI 在 Ubuntu 24.04 上使用 `dpkg-deb` 构建；安装到 `/opt/cafe-launcher`，并提供 `cafe-launcher` 命令与桌面入口）
-
-AppImage 和 `.deb` 均包含自包含的 .NET 应用，但仍依赖目标 Linux 系统提供 glibc、libgcc、libstdc++、zlib、ICU、OpenSSL、Kerberos，以及 Avalonia 桌面后端所需的 X11/XWayland、libICE、libSM、libxkbcommon 和 fontconfig。首次运行前请确认发行版已经安装这些基础运行库；包管理器安装与 AppImage 环境下的默认游戏目录会放在用户主目录的 `YostarGames/BlueArchive_JP`，不会写入只读挂载目录或受保护的 `/opt`。
-
-Setup 安装范围为所有用户，默认目录为 `C:\Program Files\Cafe Launcher`，安装、升级和卸载均需要管理员权限。升级会删除旧版本中由安装器管理、但新版本不再发布的文件；安装目录内的其他文件会保留。
-
-交互式卸载可选择删除执行卸载用户的 `%LOCALAPPDATA%\Cafe Launcher`，该选项默认关闭。静默卸载始终保留应用程序数据。安装器不会管理或删除游戏目录。
-
-## 测试
-
-```powershell
-dotnet test .\tests\Cafe.Launcher.Avalonia.Tests\Cafe.Launcher.Avalonia.Tests.csproj -c Debug --no-restore                 # 运行单元测试
-dotnet test .\tests\Cafe.Launcher.Avalonia.HeadlessTests\Cafe.Launcher.Avalonia.HeadlessTests.csproj -c Debug --no-restore # 运行无头测试
-dotnet test .\tests\Cafe.Launcher.Avalonia.Tests\Cafe.Launcher.Avalonia.Tests.csproj --filter "FullyQualifiedName~VersionComparerTests" # 运行单个测试类
-```
-
-测试工程位于 `tests/Cafe.Launcher.Avalonia.Tests/`，不引入 Moq/NSubstitute 等模拟框架——所有测试通过手写 `HttpMessageHandler` 子类和手动桩实现。源码项目通过 `InternalsVisibleTo` 向测试暴露 `internal` 成员。
-
-当前测试树包含 66 个单元测试类文件和 7 个 Headless UI 测试类文件，覆盖启动器 API、设置规范化、本地安装状态、下载与校验、安全路径、Shell 生命周期、模态栈、本地化资源契约、设置与对话框交互、发布脚本等关键路径。`coverage.ps1` 合并两个测试工程的手写 C# 覆盖率，要求行/分支覆盖率均不低于 50%，且不得低于仓库记录的行 84.43% / 分支 88.99% 基线。
-
-`UiStyleContractTests` 强制执行设计标记契约：禁止视图 XAML 中出现裸色值，强制使用 `LauncherSpacing*` 标记，验证 Z-Index 分层顺序，确保动态主题色笔刷不替代主题字典笔刷。修改 XAML 或样式时务必运行此测试。
-
-### 黄金截图（Headless Skia 渲染）
-
-Headless 测试套件以 Skia 渲染（`UseHeadlessDrawing=false` + `UseSkia()`）运行，`MainWindowHeadlessTests.Golden_*` 对 5 个关键状态（壳默认 / 进度面板 / 设置覆盖层 / 确认对话框 / Toast）做像素级回归比对，基线与阈值 diff 见 `tests/Cafe.Launcher.Avalonia.HeadlessTests/Baselines/`。
-
-- **有意改动视觉后重新生成基线**（提交 PNG 与改动一起）：
-  ```powershell
-  $env:CAFE_GOLDEN_UPDATE = "1"
-  dotnet test .\tests\Cafe.Launcher.Avalonia.HeadlessTests\Cafe.Launcher.Avalonia.HeadlessTests.csproj --filter "FullyQualifiedName~Golden"
-  Remove-Item Env:CAFE_GOLDEN_UPDATE
-  ```
-- **CI（windows-latest）字体稳定性**：对比允许每通道容差（8/255）与 ≤1% 失配像素比例；基线在固定状态（英文、动效关闭、窗口字体固定 Segoe UI）下生成，但 CI 与本地机器的系统字体度量仍可能有亚像素差异——阈值已考虑该风险，若 CI 出现接近阈值的漂移，优先重生成基线而非放宽阈值。
-
-## 配置与本地文件
-
-启动器使用 `%LOCALAPPDATA%\Cafe Launcher\` 保存本地数据：
-
-| 文件 | 用途 |
-|---|---|
-| `settings.json` | 启动器设置 |
-| `unified.log` / `unified_*.log` | 统一运行与异常日志（单文件 5 MB，当前文件加 3 份轮转；查看器按 500 条分页） |
-| `download_state.json` | 下载任务状态（断点续传） |
-| `shown_notices.json` | 已展示公告 ID |
-| `clickCode` | 安装归因码 |
-| `log-exports/` | 日志 ZIP 的默认导出目录（导出时可另选位置） |
-
-### 设置项
-
-| 设置 | JSON 键 | 有效值 |
-|---|---|---|
-| 语言 | `language` | `auto` / `en` / `zh-Hans` / `zh-Hant` / `ja` |
-| 主题 | `themeMode` | `system` / `light` / `dark` |
-| 动效 | `motionMode` | `system` / `full` / `reduced` |
-| 下载源 | `patchUrlGroup` | `official` / `cafe` |
-| 启动校验 | `launchCheckMode` | `localManifest` / `remoteManifest` / `none` |
-| 下载限速 | `downloadSpeedLimit` | `unlimited` / `1MB/s` / `5MB/s` / `10MB/s` / `25MB/s` / `50MB/s` |
-| 启动时检查更新 | `enableStartupUpdateCheck` | `true` / `false` |
-| 关闭行为 | `closeBehavior` | `minimize` / `exit` |
-| 代理 | `proxyMode` | `auto` / `direct` / `system` |
-| 背景来源 | `backgroundSource` | `bundled` / `remote` / `custom` |
-| 壁纸契合度 | `backgroundFit` | `fill` / `uniform` / `uniformToFill` |
-| 壁纸背景色 | `backgroundFillColor` | 十六进制颜色（如 `#FF000000`） |
-| 主题色模式 | `themeColorMode` | `default` / `system` / `wallpaper` / `custom` |
-| 壁纸取色算法 | `themeColorExtractionAlgorithm` | `celebiScore` / `wu` / `wsmeans` / `octree` |
-| M3 配色变体 | `themeColorVariant` | `tonalSpot` / `vibrant` / `expressive` / `fidelity` / `content` / `monochrome` / `neutral` / `rainbow` |
-| 中性色策略 | `neutralColorStrategy` | `brandBlue` / `seedFollowing` |
-| 自定义主题色 | `customThemeColor` | 十六进制颜色 |
-| 主题色调色板 | `themeColorPalette` | JSON 十六进制数组 |
-| 调色板选中索引 | `selectedThemeColorPaletteIndex` | 整数 |
-| 游戏路径 | `gamePath` | 绝对路径 |
-| 自定义背景 | `customBackgroundPath` | 绝对文件路径 |
-| 远端内容卡片 | `showRemoteContentCard` | `true` / `false` |
-| 记住窗口位置和大小 | `rememberWindowPositionAndSize` | `true` / `false` |
-| 更新频道 | `updateChannel` | `stable` / `beta` |
-| 日志级别 | `logLevel` | `verbose` / `debug` / `information` / `warning` / `error` / `fatal` |
-| 资源面板 UID | `resourcePanelUid` | 玩家 UID 字符串 |
-| 资源面板 UID 来源 | `resourcePanelUidSource` | `auto` / `custom` |
-| 状态面板 | `statusDetailMode` | `hidden` / `compact` |
-
-预发布构建默认使用 `beta` 更新频道；稳定构建默认使用 `stable`。中文系统界面首次启动时默认选择 `cafe` 下载源，其他语言环境默认选择 `official`。游戏目录规范化为 `YostarGames\BlueArchive_JP`，本地游戏状态从 `game-launcher-config.json` 和 `manifest.json` 读取。
-
-## 项目结构
+## 代码结构
 
 ```text
-.
-├── Cafe.Launcher.Avalonia.slnx # XML 解决方案（应用与测试项目）
-├── src/
-│   └── Cafe.Launcher.Avalonia/
-│       ├── App.axaml / App.axaml.cs # 应用入口：主题字典、DI 容器构建、窗口创建
-│       ├── Program.cs          # 进程入口：单实例互斥、崩溃日志、会话起止日志
-│       ├── Cafe.Launcher.Avalonia.csproj
-│       ├── Constants/          # LauncherConstants / ApiConfig / BuildInfo / GamePaths
-│       ├── Controls/           # 共享 UI 控件（SettingRow、ConfirmDialog、LoadingOverlay）
-│       ├── Converters/         # 值转换器（URL→Bitmap、ToastSeverity→Brush）
-│       ├── Helpers/            # 工具类（FileSizeFormatter、GamePathValidator、HttpClientLease）
-│       ├── Models/             # 数据模型（API 合约、状态模型、安装状态、清单结构等）
-│       ├── Composition/        # DI 组合根（ServiceConfiguration）
-│       ├── Features/           # Shell、游戏操作、设置、首次向导、诊断、资源面板
-│       ├── Services/           # 共享基础服务（HTTP、设置、本地化、日志、托盘等）
-│       │   ├── Auth/           # AuthorizationHeaderFactory（MD5 签名认证头）
-│       │   └── Diagnostics/    # 日志、日志轮转、日志导出
-│       ├── ViewModels/         # 共享窗口投影（Shell、背景、远端内容、对话框等）
-│       ├── Views/              # 主窗口、六类设置区、覆盖层与功能样式
-│       ├── Assets/             # 图标、字体、音频与图片
-│       └── Resources/          # .resx 原生本地化资源及生成的强类型访问器
-├── tests/                      # xUnit v3 单元测试与 Avalonia Headless UI 测试
-├── scripts/                    # 分发、本地化校验与 changelog 脚本
-├── release.ps1                 # 本地发布脚本
-├── build.ps1                   # Debug 构建脚本
-└── CLAUDE.md                   # AI 辅助开发指引
+src/Cafe.Launcher.Avalonia/
+├── Composition/     # 依赖注入组合根
+├── Features/        # Shell、游戏操作、设置、向导、诊断和资源面板
+├── Services/        # 网络、下载、清单、设置、本地化、日志等基础服务
+├── Models/          # 设置、API、清单和运行状态模型
+├── ViewModels/      # 主窗口及共享界面投影
+├── Views/           # Avalonia 视图、覆盖层与样式
+├── Resources/       # 多语言 .resx 资源
+└── Assets/          # 图标、字体、音频与图片
+
+tests/
+├── Cafe.Launcher.Avalonia.Tests/          # xUnit 单元测试
+└── Cafe.Launcher.Avalonia.HeadlessTests/  # Avalonia Headless UI 与黄金截图测试
 ```
 
-## 架构
+应用以 `ServiceConfiguration.AddLauncherServices()` 为组合根。`LauncherCoreService` 汇总远端配置和本地安装状态；游戏安装、更新、修复与卸载由独立操作旅程编排；`MainWindowViewModel` 负责组合各功能 ViewModel，而不是直接承载底层业务流程。
 
-### 入口流程
+更完整的目录约定、代码风格和验证要求见 [AGENTS.md](./AGENTS.md) 与 [PROJECT_CONVENTIONS.md](./PROJECT_CONVENTIONS.md)。
 
-```
-Program.Main()
-  ├─ Mutex(Local\Cafe_Launcher_SI) → 已是第二实例 → SignalFirstInstance() → return
-  ├─ new UnifiedLogger() → 进程级日志
-  ├─ Program.RunSession(UnifiedLogger) → 写会话开始日志 → 运行应用 → 写会话结束日志
-  └─ BuildAvaloniaApp().StartWithClassicDesktopLifetime(args)
-       └─ App.OnFrameworkInitializationCompleted()
-            ├─ ServiceConfiguration.AddLauncherServices() → 构建 DI 容器
-            ├─ 解析 MainWindowViewModel → 创建 MainWindow
-            ├─ 注册 ClickCodeService / SystemTrayService / 单实例信号监听
-            └─ MainWindowViewModel.InitializeAsync()
-                 ├─ LauncherCoreService.LoadAsync() → 并行 API + 本地状态
-                 └─ 更新 UI 状态
-```
+## 本地数据
 
-### 核心数据流
+Windows 默认将设置和诊断数据写入 `%LOCALAPPDATA%\Cafe Launcher\`，包括 `settings.json`、`download_state.json`、`unified.log` 和日志导出文件。游戏目录中的 `manifest.json` 与 `game-launcher-config.json` 用于记录游戏安装状态，并与官方启动器保持兼容。
 
-`LauncherCoreService.LoadAsync()` 是核心编排器：
+卸载启动器不会默认删除游戏文件。详细的数据保留规则见[卸载与数据](https://docs.bluearchive.cafe/cafe-launcher/uninstall)。
 
-1. 读取 `settings.json`（`LauncherSettingsService`）
-2. 并行调用 6 个远端 API：game config / base config / CDN config（必选） + operations / social media / installation config（可选）
-3. 读取本地 `game-launcher-config.json` + `manifest.json`（`LocalInstallationStateStore`）
-4. 结合本地分类与远端版本比对，计算 `LauncherRuntimeState`
-5. 返回 `LauncherStatusSnapshot`，由 ViewModel 消费
-
-### MVVM 架构
-
-`ViewModelBase` 继承 `ObservableObject`（CommunityToolkit.Mvvm 源生成器）。不使用反射式 `ViewLocator`，所有视图-ViewModel 绑定通过显式 XAML 组合实现。
-
-主窗口为 1300×754 无系统边框窗口（MinWidth 1024 / MinHeight 640），ViewModel 拆分为多个子 ViewModel：
-
-| ViewModel | 职责 |
-|---|---|
-| `ShellViewModel` | 产品名、版本、运行时信息、状态文本、游戏路径显示 |
-| `BackgroundViewModel` | 壁纸（内置 / 远端 / 自定义）、主题色提取 |
-| `RemoteContentViewModel` | 公告、Banner、新闻、社交媒体 |
-| `DialogsViewModel` | 通知弹窗、修复 / 卸载确认 |
-| `GameOperationsViewModel` | 安装 / 更新 / 修复 / 启动 / 卸载命令与进度 |
-| `ToastHostViewModel` | 即时通知队列 |
-| `WindowChromeViewModel` | 标题栏、最小化 / 关闭按钮、窗口拖拽状态 |
-| `SettingsViewModel` | 六类设置协调、持久化、更新检查、保存 / 放弃生命周期 |
-| `SettingsAppearanceViewModel` | 主题色与背景 UI 投影 |
-| `SettingsOptionsViewModel` | 本地化选项集合与摘要显示 |
-| `ResourcePanelViewModel` | 资源面板（基于 UID） |
-
-`MainWindowViewModel` 主要聚合各 UI 投影；跨功能生命周期、模态栈、Esc 路由和状态刷新集中在 `ShellRuntime` / `ShellLifecycle`。游戏安装、启动、修复与卸载通过 `IGameOperationJourneyFactory` 组装独立旅程，避免让窗口 ViewModel 直接编排底层服务。
-
-视图文件按职责拆分：
-- `MainWindow.axaml` — 窗口壳、标题栏、远端内容、底部面板
-- `MainWindow.Styles.axaml` — 共享样式与功能样式入口
-- `Views/Styles/` — Diagnostics、RemoteContent、SetupWizard、Toast 功能样式
-- `MainWindowSettingsOverlay.axaml` — 设置覆盖层（Z-Index 100）
-- `MainWindowDialogsOverlay.axaml` — 对话框覆盖层（Z-Index 200）
-- `MainWindowToastOverlay.axaml` — Toast 覆盖层（Z-Index 1000）
-
-### 下载流程
-
-`GameDownloadService` 实现完整的安装 / 更新 / 修复流程：
-
-1. 获取远端清单（`RemoteManifestService`）→ 与本地清单比对差异
-2. 通过 `IFileDownloadService` 并行下载（10 并发）
-3. 写入 `.tmp` 临时文件，支持 `Range` 断点续传
-4. 下载完成后 CRC64 校验
-5. 校验通过后 `.tmp` → 最终文件名
-6. 全部完成 → 写入 `game-launcher-config.json` + `manifest.json`
-7. 安装后最多重试 3 次验证
-
-所有文件操作通过 `GamePathValidator.GetSafePath()` 约束在游戏目录内，拒绝路径穿越。
-
-### DI 注册要点
-
-`ServiceConfiguration.AddLauncherServices()` 统一注册：
-- 服务与 ViewModel 全部 `AddSingleton`（单窗口桌面应用，无 Scope 边界）
-- `GameDownloadService` 在组合根中显式组装下载、清单、设置、磁盘空间与诊断依赖
-- `IDisposable` 服务按反向注册顺序释放，确保使用方先于共享 HTTP 与日志基础设施结束
-
-## 远端接口
-
-`LauncherApiClient` 使用 `https://api-launcher-jp.yo-star.com` 作为 API 基址，通过 `AuthorizationHeaderFactory` 生成 Yostar 风格的 MD5 签名认证头。
-
-调用路径：
-
-| 路径 | 用途 |
-|---|---|
-| `/api/launcher/game/config` | 游戏配置 |
-| `/api/launcher/base/config` | 基础配置 |
-| `/api/launcher/advanced/game/download/cdn` | CDN 下载配置 |
-| `/api/launcher/operations/resource` | 运营资源（可选） |
-| `/api/launcher/social/media/resource` | 社交媒体资源（可选） |
-| `/api/launcher/installation/config` | 安装配置（可选） |
-| `/api/launcher/game/config/json?version=...&file_path=...` | 按路径获取配置 |
-
-CDN 切换由 `PatchUrlGroupService` 实现：`cafe` 源仅将 `launcher-pkg-ba-jp.yo-star.com` 重写为 `launcher-pkg-ba-jp.bluearchive.cafe`，不影响其他端点。
-
-Launcher 自更新优先请求服务端代理 `ApiConfig.LauncherApiBaseUrl`；代理路径发生 HTTP 错误时回退 GitHub Releases API。返回的下载地址仅接受分发仓库的 HTTPS Release 资产。
-
-## CI 与发布
-
-GitHub Actions 使用 .NET 10.0.x：
-
-- **`build.yml`**（`windows-latest`，push / PR to `main`）：测试 → 覆盖率门禁 → Release `win-x64` 发布冒烟 → 上传测试与覆盖率报告。NuGet 缓存 + concurrency 取消排队运行。
-- **`release.yml`**（push `v*` tag / 手动 dispatch 演练）：**`build`** job（`ubuntu-24.04`，交叉编译 win-x64 / osx-arm64 / linux-x64，使用固定且校验过的 AppImage 工具链打包并烟测 zip、`.app`、tar.gz、AppImage）→ **`installer`** job（`windows-latest`，Release 测试 + Inno Setup EXE）→ **`release`** job（生成 changelog 并在源仓库和分发仓库 `bluearchive-cafe/Cafe.Launcher.Avalonia_Release` 同时创建 GitHub Release）。预发布版标签含 `-`。
-
-本地发布脚本：
+## 构建发行包
 
 ```powershell
-.\release.ps1 patch              # 递增 patch 版本，生成 changelog，commit，tag，push
-.\release.ps1 minor -DryRun      # 预览 minor 版本提升（不修改文件）
-.\release.ps1 2.0.0-beta.1       # 指定版本（含 - 为预发布）
-.\release.ps1 patch -SkipPush    # 仅本地 commit + tag，不推送
+.\scripts\Build-Distribution.ps1
+.\scripts\Build-Distribution.ps1 -Rids win-x64,osx-arm64,linux-x64
+.\scripts\New-WindowsInstaller.ps1
 ```
 
-版本号读取自 `.csproj` 的 `<VersionPrefix>`。发布说明优先复用仓库中的 `CHANGELOG_RELEASE.md`，缺失时回退到 `scripts/New-ReleaseChangelog.ps1` 自动生成。Release Banner 必须按 `docs/assets/release-banners/cafe-launcher-v<version>-release-banner.png` 命名并随版本提交到源代码仓库，发布说明通过对应标签的仓库文件地址嵌入图片；Banner 不附加到 GitHub Release Assets。commit 消息请遵循 conventional commits 格式（`feat:` / `fix:` / `refactor:` / `perf:`），以确保 changelog 正确分组。
+分发产物写入 `artifacts/distribution/`。正式发布由 `.github/workflows/release.yml` 处理，并同步到独立的 [Release 仓库](https://github.com/bluearchive-cafe/Cafe.Launcher.Avalonia_Release)。
 
-## 相关文档
+## 参与贡献
 
-- [隐私政策](./PRIVACY.md) — Cafe Launcher 的数据处理与隐私说明
-- [第三方许可](./THIRD-PARTY-NOTICES.md) — 随发行版分发的 NuGet 依赖及其许可
-- [CLAUDE.md](./CLAUDE.md) — AI 辅助开发指引（Claude Code）
-- [AGENTS.md](./AGENTS.md) — AI 辅助开发指引（Codex）
+提交问题前，请先搜索现有 [Issues](https://github.com/bluearchive-cafe/Cafe.Launcher.Avalonia/issues)，并在可能的情况下附上版本、复现步骤和通过“设置 → 高级 → 导出日志”生成的诊断包。
 
-## 相关链接
+代码贡献请保持改动聚焦，遵循 Conventional Commits，并在提交前运行与改动范围匹配的验证。UI 改动应附截图，本地化改动应同时更新所有语言资源。
 
-- [Blue Archive Cafe](https://bluearchive.cafe/)
-- [Releases](https://github.com/bluearchive-cafe/Cafe.Launcher.Avalonia_Release)
-- [Issues](https://github.com/bluearchive-cafe/Cafe.Launcher.Avalonia/issues)
+## 许可
 
-## 致谢
-
-- 默认壁纸裁剪自 Pixiv 画师 [めるき（Meruki）](https://www.pixiv.net/users/15737611) 的插画 [初めてのゲーム](https://www.pixiv.net/artworks/142932674)，插画版权归原作者所有。
-- 壁纸原始素材存档于 [docs/assets/art-sources/](./docs/assets/art-sources/)。
-
-## 源代码
-
-Cafe Launcher 源代码已在本仓库公开，并采用 [MIT License](./LICENSE)。安装包与各平台自包含归档由独立的 [Release 分发仓库](https://github.com/bluearchive-cafe/Cafe.Launcher.Avalonia_Release/releases) 提供。
+源代码基于 [MIT License](./LICENSE) 发布。第三方组件及其许可见 [THIRD-PARTY-NOTICES.md](./THIRD-PARTY-NOTICES.md)。

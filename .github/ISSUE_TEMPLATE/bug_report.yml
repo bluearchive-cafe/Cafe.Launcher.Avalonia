@@ -1,0 +1,106 @@
+name: Bug 反馈
+description: 报告可复现的 Cafe Launcher 功能、兼容性或界面问题
+title: "[Bug] "
+body:
+  - type: markdown
+    attributes:
+      value: |
+        感谢反馈。请尽量填写完整信息，并通过“设置 → 高级 → 导出日志”生成诊断包。
+        日志和截图可能包含本地路径、UID 等信息，上传前请先检查并移除敏感内容。
+
+  - type: input
+    id: version
+    attributes:
+      label: Cafe Launcher 版本
+      description: 可在“设置 → 关于”中查看，建议同时填写 Git 提交和构建配置。
+      placeholder: 例如：1.1.0-beta.3 / abc1234 / Release
+    validations:
+      required: true
+
+  - type: dropdown
+    id: package
+    attributes:
+      label: 安装方式
+      options:
+        - Windows 安装版
+        - Windows 便携版
+        - macOS Apple Silicon
+        - Linux deb
+        - Linux AppImage
+        - Linux tar.gz
+        - 本地源码构建
+    validations:
+      required: true
+
+  - type: input
+    id: system
+    attributes:
+      label: 操作系统
+      description: 请填写系统版本和架构；Linux 用户请同时填写桌面环境与显示协议。
+      placeholder: 例如：Windows 11 24H2 x64
+    validations:
+      required: true
+
+  - type: textarea
+    id: problem
+    attributes:
+      label: 问题描述
+      description: 说明发生了什么，以及问题对使用造成的影响。
+      placeholder: 请避免只填写“无法使用”或粘贴没有上下文的错误文本。
+    validations:
+      required: true
+
+  - type: textarea
+    id: steps
+    attributes:
+      label: 复现步骤
+      description: 从一个明确的初始状态开始，逐步列出可以稳定触发问题的操作。
+      placeholder: |
+        1. 打开……
+        2. 进入……
+        3. 点击……
+        4. 出现……
+    validations:
+      required: true
+
+  - type: textarea
+    id: expected
+    attributes:
+      label: 预期结果
+      placeholder: 说明你认为正确的行为应该是什么。
+    validations:
+      required: true
+
+  - type: textarea
+    id: actual
+    attributes:
+      label: 实际结果
+      description: 请提供完整错误文本；如为偶发问题，请说明发生频率。
+    validations:
+      required: true
+
+  - type: textarea
+    id: environment
+    attributes:
+      label: 相关环境与设置
+      description: 下载或网络问题请填写下载源、代理模式和游戏目录所在磁盘；Linux 启动问题请填写兼容运行时。
+      placeholder: 没有相关信息时可填写“无”。
+
+  - type: textarea
+    id: attachments
+    attributes:
+      label: 日志与截图
+      description: 可将导出的日志 ZIP、截图或录屏直接拖入此处。请勿上传账号凭据或其他敏感信息。
+
+  - type: checkboxes
+    id: checks
+    attributes:
+      label: 提交前确认
+      options:
+        - label: 我已搜索现有 Issue，确认没有内容相同的未解决问题。
+          required: true
+        - label: 我已阅读 Cafe Launcher 文档和常见问题。
+          required: true
+        - label: 我已确认附件中不包含账号凭据、Cookie、访问令牌等敏感信息。
+          required: true
+

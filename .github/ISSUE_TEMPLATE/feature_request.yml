@@ -1,0 +1,66 @@
+name: 功能建议
+description: 提议一个适合 Cafe Launcher 的新能力或体验改进
+title: "[Feature] "
+body:
+  - type: markdown
+    attributes:
+      value: |
+        请先说明要解决的问题，再描述期望方案。与游戏修改、进程注入或绕过反作弊相关的请求不属于本项目范围。
+
+  - type: textarea
+    id: problem
+    attributes:
+      label: 使用场景与问题
+      description: 谁会在什么情况下遇到什么问题？现有行为为什么不足？
+      placeholder: 当……时，我需要……，因为……
+    validations:
+      required: true
+
+  - type: textarea
+    id: proposal
+    attributes:
+      label: 建议方案
+      description: 描述入口、交互和预期结果；如涉及兼容性，请说明已有数据或行为应如何保留。
+    validations:
+      required: true
+
+  - type: textarea
+    id: alternatives
+    attributes:
+      label: 考虑过的替代方案
+      description: 说明当前如何绕过，以及为什么仍需要新增能力。
+
+  - type: dropdown
+    id: area
+    attributes:
+      label: 功能范围
+      options:
+        - 游戏安装、更新或修复
+        - 下载与网络
+        - 设置与本地化
+        - 界面与无障碍
+        - 诊断与日志
+        - 启动器更新与分发
+        - 跨平台兼容
+        - 其他
+    validations:
+      required: true
+
+  - type: textarea
+    id: context
+    attributes:
+      label: 补充材料
+      description: 可附上截图、流程示意、相关 Issue 或其他项目的参考实现。
+
+  - type: checkboxes
+    id: checks
+    attributes:
+      label: 提交前确认
+      options:
+        - label: 我已搜索现有 Issue，确认没有相同建议。
+          required: true
+        - label: 该建议与 Cafe Launcher 的游戏管理或桌面启动器职责直接相关。
+          required: true
+        - label: 该建议不要求修改游戏进程、注入代码或绕过反作弊。
+          required: true
+
