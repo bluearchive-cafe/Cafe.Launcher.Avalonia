@@ -35,8 +35,9 @@
             <Thickness x:Key="Launcher.Component.Toast.Action.Padding">12,8</Thickness>
             <Thickness x:Key="Launcher.Component.DesignGallery.StateCell.Padding">8,4</Thickness>
             <Thickness x:Key="Launcher.Component.FilterTab.Padding">10,4</Thickness>
-            <Thickness x:Key="Launcher.Component.VersionChip.Padding">12,8</Thickness>
-            <Thickness x:Key="Launcher.Component.VersionChip.Margin">0,0,8,8</Thickness>
+            <!-- 关于分区解剖（ADR-018 融合变体）：key-value/链接行密度。 -->
+            <x:Double x:Key="Launcher.Component.About.KvRow.MinHeight">40</x:Double>
+            <Thickness x:Key="Launcher.Component.About.KvRow.Margin">16,0,16,0</Thickness>
             <Thickness x:Key="Launcher.Component.Input.Padding">12,8</Thickness>
             <Thickness x:Key="Launcher.Component.WrapAction.Margin">0,0,8,8</Thickness>
             <Thickness x:Key="Launcher.Component.LogViewer.FilterBar.Margin">16,12,16,0</Thickness>

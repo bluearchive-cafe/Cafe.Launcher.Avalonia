@@ -26,8 +26,6 @@ internal static class LauncherStrings
 
     internal static string About => GetRequiredString("about");
 
-    internal static string AboutActionsGeneral => GetRequiredString("aboutActionsGeneral");
-
     internal static string AboutCopyrightText => GetRequiredString("aboutCopyrightText");
 
     internal static string AboutDescription => GetRequiredString("aboutDescription");
@@ -35,6 +33,24 @@ internal static class LauncherStrings
     internal static string AboutDisclaimerText => GetRequiredString("aboutDisclaimerText");
 
     internal static string AboutLinks => GetRequiredString("aboutLinks");
+
+    internal static string AboutQuickLinks => GetRequiredString("aboutQuickLinks");
+
+    internal static string AboutRowAvalonia => GetRequiredString("aboutRowAvalonia");
+
+    internal static string AboutRowBuildConfig => GetRequiredString("aboutRowBuildConfig");
+
+    internal static string AboutRowBuildTime => GetRequiredString("aboutRowBuildTime");
+
+    internal static string AboutRowCommit => GetRequiredString("aboutRowCommit");
+
+    internal static string AboutRowPlatform => GetRequiredString("aboutRowPlatform");
+
+    internal static string AboutRowRuntime => GetRequiredString("aboutRowRuntime");
+
+    internal static string AboutRowVersion => GetRequiredString("aboutRowVersion");
+
+    internal static string AboutVersionCaption => GetRequiredString("aboutVersionCaption");
 
     internal static string ApiFailedNoFileChange => GetRequiredString("apiFailedNoFileChange");
 
@@ -72,13 +88,9 @@ internal static class LauncherStrings
 
     internal static string Banners => GetRequiredString("banners");
 
-    internal static string BuildConfigurationLabel => GetRequiredString("buildConfigurationLabel");
-
     internal static string BuildInfo => GetRequiredString("buildInfo");
 
     internal static string BuildingFileList => GetRequiredString("buildingFileList");
-
-    internal static string BuildTimeLabel => GetRequiredString("buildTimeLabel");
 
     internal static string Busy => GetRequiredString("busy");
 
@@ -117,8 +129,6 @@ internal static class LauncherStrings
     internal static string CloseBehaviorExit => GetRequiredString("closeBehaviorExit");
 
     internal static string CloseBehaviorMinimize => GetRequiredString("closeBehaviorMinimize");
-
-    internal static string CommitLabel => GetRequiredString("commitLabel");
 
     internal static string ConfirmUninstall => GetRequiredString("confirmUninstall");
 
@@ -436,6 +446,8 @@ internal static class LauncherStrings
 
     internal static string InstallUpdateFailedTitle => GetRequiredString("installUpdateFailedTitle");
 
+    internal static string IssueTracker => GetRequiredString("issueTracker");
+
     internal static string KeepEditing => GetRequiredString("keepEditing");
 
     internal static string Language => GetRequiredString("language");
@@ -625,8 +637,6 @@ internal static class LauncherStrings
     internal static string Paused => GetRequiredString("paused");
 
     internal static string PauseRequested => GetRequiredString("pauseRequested");
-
-    internal static string PlatformLabel => GetRequiredString("platformLabel");
 
     internal static string Preparing => GetRequiredString("preparing");
 

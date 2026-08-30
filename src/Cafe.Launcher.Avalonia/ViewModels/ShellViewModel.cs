@@ -15,11 +15,10 @@ public partial class ShellViewModel : ViewModelBase, IDisposable
 {
     private readonly LocalizationService localizer;
 
-    private static readonly string FrameworkVersion = RuntimeInformation.FrameworkDescription;
-    private static readonly string PlatformName = OperatingSystem.IsWindows() ? "Windows"
-        : OperatingSystem.IsLinux() ? "Linux"
-        : OperatingSystem.IsMacOS() ? "macOS"
-        : "Unknown";
+    private static readonly string RuntimeDescription =
+        $"{RuntimeInformation.FrameworkDescription} · {RuntimeInformation.RuntimeIdentifier}";
+    private static readonly string PlatformDescription =
+        $"{RuntimeInformation.OSDescription} · {RuntimeInformation.OSArchitecture}";
 
     [ObservableProperty]
     private string productName = ResolveProductName(DateTime.Now, Random.Shared.Next(2));
@@ -28,25 +27,26 @@ public partial class ShellViewModel : ViewModelBase, IDisposable
     private string launcherVersionText = "";
 
     [ObservableProperty]
-    private string commitShaText = "";
-
-    [ObservableProperty]
     private string frameworkVersionText = "";
 
     [ObservableProperty]
     private string avaloniaVersionText = "";
 
-    [ObservableProperty]
-    private string platformText = "";
-
     /// <summary>Whether the host platform is Linux; gates Linux-only settings such as the game runtime.</summary>
     public bool IsLinuxPlatform => OperatingSystem.IsLinux();
 
+    // 关于分区（ADR-018 融合变体）：身份卡版本 caption 与 key-value 行的值。
     [ObservableProperty]
-    private string buildConfigText = "";
+    private string versionCaptionText = "";
 
     [ObservableProperty]
-    private string buildTimeText = "";
+    private string commitShaValue = "";
+
+    [ObservableProperty]
+    private string buildConfigValue = "";
+
+    [ObservableProperty]
+    private string platformValue = "";
 
     [ObservableProperty]
     private string pathText = "";
@@ -122,12 +122,14 @@ public partial class ShellViewModel : ViewModelBase, IDisposable
         var effectiveLanguage = localizer.SetLanguage(language);
         FontFamily = LanguageFontFamilyService.GetForEffectiveLanguage(effectiveLanguage);
         LauncherVersionText = localizer.F("launcherVersionLabel", BuildInfo.LauncherVersion);
-        CommitShaText = localizer.F("commitLabel", BuildInfo.CommitSha);
-        FrameworkVersionText = FrameworkVersion;
-        AvaloniaVersionText = $"Avalonia {BuildInfo.AvaloniaVersion}";
-        PlatformText = localizer.F("platformLabel", PlatformName);
-        BuildConfigText = localizer.F("buildConfigurationLabel", BuildInfo.BuildConfiguration);
-        BuildTimeText = localizer.F("buildTimeLabel", BuildInfo.BuildTime);
+        FrameworkVersionText = RuntimeDescription;
+        AvaloniaVersionText = BuildInfo.AvaloniaVersion;
+        VersionCaptionText = string.IsNullOrWhiteSpace(BuildInfo.BuildTime)
+            ? localizer.F("launcherVersionLabel", BuildInfo.LauncherVersion)
+            : localizer.F("aboutVersionCaption", BuildInfo.LauncherVersion, BuildInfo.BuildTime);
+        CommitShaValue = BuildInfo.CommitSha;
+        BuildConfigValue = BuildInfo.BuildConfiguration;
+        PlatformValue = PlatformDescription;
         settings.RefreshOptionDisplayNames();
         resourcePanel.RefreshDisplayNames();
         if (!string.IsNullOrWhiteSpace(resourcePanel.ResourcePanelUid))

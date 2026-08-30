@@ -33,4 +33,6 @@ public static class LauncherConstants
     /// </summary>
     public const string GitHubReleaseRepositoryUrl =
         "https://github.com/bluearchive-cafe/Cafe.Launcher.Avalonia_Release";
+    public const string IssueTrackerUrl =
+        "https://github.com/bluearchive-cafe/Cafe.Launcher.Avalonia/issues";
 }
