@@ -997,6 +997,7 @@ public sealed partial class UiStyleContractTests
                 "WindowChrome.OpenOfficialSiteCommand",
                 "WindowChrome.OpenHelpDocsCommand",
                 "WindowChrome.OpenGitHubRepositoryCommand",
+                "WindowChrome.OpenIssueTrackerCommand",
                 "WindowChrome.OpenPrivacyPolicyCommand",
                 "WindowChrome.OpenDefaultBackgroundArtworkCommand"
             ]
@@ -1470,6 +1471,41 @@ public sealed partial class UiStyleContractTests
             links.Select(link => link.Attribute("Command")?.Value));
     }
 
+    [Fact]
+    public void AboutSection_RendersIdentityCardAndKeyValueRows()
+    {
+        var document = XDocument.Load(ProjectFile("Views/SettingsAboutSection.axaml"));
+
+        // ADR-018 融合变体：身份卡 = 产品名 + 版本 caption + 副标题，操作行内收。
+        Assert.Single(document.Descendants(), element =>
+            element.Name.LocalName == "Border" && HasClass(element, "about-identity-card"));
+        Assert.DoesNotContain(document.Descendants(), element =>
+            element.Name.LocalName == "Image" || HasClass(element, "about-app-icon"));
+        Assert.Single(document.Descendants(), element =>
+            element.Name.LocalName == "TextBlock" && HasClass(element, "about-product-name"));
+
+        // 版本详细信息 = 5 个 key-value 行（版本/构建时间已在身份卡 caption，不重复）。
+        var kvRows = document.Descendants()
+            .Where(element => element.Name.LocalName == "Grid" && HasClass(element, "about-kv-row"))
+            .ToList();
+        Assert.Equal(5, kvRows.Count);
+        Assert.All(kvRows, row => Assert.Single(
+            row.Elements(),
+            element => HasClass(element, "about-kv-value")));
+        Assert.Equal(
+            [
+                "{Binding Shell.CommitShaValue}",
+                "{Binding Shell.BuildConfigValue}",
+                "{Binding Shell.FrameworkVersionText}",
+                "{Binding Shell.AvaloniaVersionText}",
+                "{Binding Shell.PlatformValue}"
+            ],
+            kvRows.SelectMany(row => row.Elements())
+                .Where(element => HasClass(element, "about-kv-value"))
+                .Select(element => element.Attribute("Text")?.Value));
+
+    }
+
     private static readonly HashSet<string> IconTokens =
     [
         "{StaticResource Launcher.Icon.Sm}",
@@ -1628,6 +1664,7 @@ public sealed partial class UiStyleContractTests
             "TextBlock.section-title",
             "TextBlock.group-title",
             "TextBlock.category-title",
+            "TextBlock.about-product-name",
             "TextBlock.operation-status-title",
             "ListBox.settings-navigation > ListBoxItem:selected",
             "Button.primary-action",
@@ -4049,21 +4086,27 @@ public sealed partial class UiStyleContractTests
         var advancedText = File.ReadAllText(ProjectFile("Views/SettingsAdvancedSection.axaml"));
         var overlay = File.ReadAllText(ProjectFile("Views/MainWindowSettingsOverlay.axaml"));
 
+        // ADR-018 融合变体顺序：身份卡（版本 caption + 操作行）→ 版本信息 kv（5 行详情）
+        // → 链接行（仓库/问题反馈）→ 法律信息（版权/署名/免责声明）。
         AssertOrdered(
             aboutText,
-            "Shell.LauncherVersionText",
-            "Shell.BuildTimeText",
-            "Shell.CommitShaText",
-            "Shell.BuildConfigText",
+            "Shell.VersionCaptionText",
+            "Settings.CheckForUpdatesCommand",
+            "WindowChrome.OpenOfficialSiteCommand",
+            "WindowChrome.OpenHelpDocsCommand",
+            "Shell.I18n[versionInfo]",
+            "Shell.CommitShaValue",
+            "Shell.BuildConfigValue",
             "Shell.FrameworkVersionText",
             "Shell.AvaloniaVersionText",
-            "Shell.PlatformText");
+            "Shell.PlatformValue");
         AssertOrdered(
             aboutText,
             "Settings.CheckForUpdatesCommand",
             "WindowChrome.OpenOfficialSiteCommand",
             "WindowChrome.OpenHelpDocsCommand",
             "WindowChrome.OpenGitHubRepositoryCommand",
+            "WindowChrome.OpenIssueTrackerCommand",
             "Shell.I18n[aboutCopyrightText]",
             "WindowChrome.OpenPrivacyPolicyCommand",
             "Shell.I18n[defaultBackgroundCopyrightText]",
@@ -4075,7 +4118,6 @@ public sealed partial class UiStyleContractTests
             "LogViewer.ExportCommand",
             "WindowChrome.OpenDataDirectoryCommand");
 
-        Assert.Contains("Shell.I18n[aboutActionsGeneral]", aboutText, StringComparison.Ordinal);
         Assert.DoesNotContain("LogViewer.OpenCommand", aboutText, StringComparison.Ordinal);
         Assert.DoesNotContain("LogViewer.ExportCommand", aboutText, StringComparison.Ordinal);
         Assert.DoesNotContain("WindowChrome.OpenDataDirectoryCommand", aboutText, StringComparison.Ordinal);
