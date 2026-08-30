@@ -141,6 +141,12 @@ public partial class WindowChromeViewModel : ViewModelBase
     }
 
     [RelayCommand]
+    private void OpenIssueTracker()
+    {
+        openExternalUrl(LauncherConstants.IssueTrackerUrl);
+    }
+
+    [RelayCommand]
     private void OpenHelpDocs()
     {
         openExternalUrl(LauncherConstants.HelpDocsUrl);

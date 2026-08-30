@@ -279,6 +279,13 @@
         <Setter Property="Background" Value="{DynamicResource Launcher.Color.Button.Border}"/>
         <Setter Property="Foreground" Value="{DynamicResource Launcher.Text.Secondary}"/>
     </Style>
+    <!-- 紧凑 filled 变体（ADR-018 关于分区）：与 flat-action 同密度，供分区内唯一最高强调操作。 -->
+    <Style Selector="Button.primary-action.compact-action">
+        <Setter Property="Height" Value="{StaticResource Launcher.Control.Height.Setting}"/>
+        <Setter Property="MinWidth" Value="{StaticResource Launcher.Control.MinWidth.None}"/>
+        <Setter Property="Padding" Value="{StaticResource Launcher.Component.Action.Outlined.Padding}"/>
+        <Setter Property="FontSize" Value="{StaticResource Launcher.Typography.FontSize.Body.Sm}"/>
+    </Style>
     <Style Selector="Button.flat-action">
         <Setter Property="Background" Value="{StaticResource Launcher.Color.Transparent}"/>
         <Setter Property="BorderBrush" Value="{DynamicResource Launcher.Color.Button.Border}"/>
@@ -1239,15 +1246,6 @@
         <Setter Property="CornerRadius" Value="{StaticResource Launcher.Radius.Md}"/>
         <Setter Property="Padding" Value="{StaticResource Launcher.Spacing.Thickness.Lg}"/>
     </Style>
-    <Style Selector="Border.version-chip">
-        <Setter Property="Background" Value="{DynamicResource Launcher.Color.Info.Background}"/>
-        <Setter Property="BorderBrush" Value="{DynamicResource Launcher.Color.Primary.Border}"/>
-        <Setter Property="BorderThickness" Value="{StaticResource Launcher.Border.Thickness.Default}"/>
-        <Setter Property="CornerRadius" Value="{StaticResource Launcher.Radius.Md}"/>
-        <Setter Property="Padding" Value="{StaticResource Launcher.Component.VersionChip.Padding}"/>
-        <Setter Property="MinHeight" Value="{StaticResource Launcher.Control.Height.Chip}"/>
-        <Setter Property="Margin" Value="{StaticResource Launcher.Component.VersionChip.Margin}"/>
-    </Style>
     <Style Selector="Grid.settings-row">
         <Setter Property="MinHeight" Value="{StaticResource Launcher.Component.Settings.Row.MinHeight}"/>
         <Setter Property="Margin" Value="{StaticResource Launcher.Spacing.Thickness.None}"/>
@@ -1262,6 +1260,68 @@
     </Style>
     <Style Selector="StackPanel.settings-row-copy">
         <Setter Property="VerticalAlignment" Value="Center"/>
+    </Style>
+    <!-- 关于分区（ADR-018 融合变体）：左对齐身份卡 + key-value 详情行 + chevron 链接行。 -->
+    <Style Selector="Border.about-identity-card">
+        <Setter Property="Background" Value="{DynamicResource Launcher.Color.Card.Background}"/>
+        <Setter Property="BorderBrush" Value="{DynamicResource Launcher.Color.Card.Border}"/>
+        <Setter Property="BorderThickness" Value="{StaticResource Launcher.Border.Thickness.Default}"/>
+        <Setter Property="CornerRadius" Value="{StaticResource Launcher.Radius.Md}"/>
+        <Setter Property="Padding" Value="{StaticResource Launcher.Spacing.Thickness.Lg}"/>
+    </Style>
+    <Style Selector="TextBlock.about-product-name">
+        <Setter Property="FontSize" Value="{StaticResource Launcher.Typography.FontSize.Headline.Lg}"/>
+        <Setter Property="FontWeight" Value="{StaticResource Launcher.Typography.FontWeight.Strong}"/>
+        <Setter Property="Foreground" Value="{DynamicResource Launcher.Text.Primary}"/>
+    </Style>
+    <Style Selector="Border.about-kv-list">
+        <Setter Property="Background" Value="{DynamicResource Launcher.Color.Card.Background}"/>
+        <Setter Property="BorderBrush" Value="{DynamicResource Launcher.Color.Card.Border}"/>
+        <Setter Property="BorderThickness" Value="{StaticResource Launcher.Border.Thickness.Default}"/>
+        <Setter Property="CornerRadius" Value="{StaticResource Launcher.Radius.Md}"/>
+        <Setter Property="ClipToBounds" Value="True"/>
+    </Style>
+    <Style Selector="Grid.about-kv-row">
+        <Setter Property="MinHeight" Value="{StaticResource Launcher.Component.About.KvRow.MinHeight}"/>
+        <Setter Property="Margin" Value="{StaticResource Launcher.Component.About.KvRow.Margin}"/>
+        <Setter Property="ColumnSpacing" Value="{StaticResource Launcher.Spacing.Md}"/>
+    </Style>
+    <Style Selector="Grid.about-kv-row > TextBlock">
+        <Setter Property="VerticalAlignment" Value="Center"/>
+    </Style>
+    <Style Selector="TextBlock.about-kv-value">
+        <Setter Property="FontSize" Value="{StaticResource Launcher.Typography.FontSize.Body.Sm}"/>
+        <Setter Property="FontFamily" Value="{StaticResource Launcher.Typography.FontFamily.Monospace}"/>
+        <Setter Property="Foreground" Value="{DynamicResource Launcher.Text.Primary}"/>
+        <Setter Property="HorizontalAlignment" Value="Right"/>
+        <Setter Property="TextAlignment" Value="Right"/>
+    </Style>
+    <Style Selector="ItemsControl.about-link-list">
+        <Setter Property="Background" Value="{StaticResource Launcher.Color.Transparent}"/>
+        <Setter Property="BorderThickness" Value="{StaticResource Launcher.Spacing.Thickness.None}"/>
+        <Setter Property="Padding" Value="{StaticResource Launcher.Spacing.Thickness.None}"/>
+    </Style>
+    <Style Selector="Button.about-link-item">
+        <Setter Property="Template" Value="{StaticResource LauncherBorderButtonTemplate}"/>
+        <Setter Property="Background" Value="{StaticResource Launcher.Color.Transparent}"/>
+        <Setter Property="BorderBrush" Value="{StaticResource Launcher.Color.Transparent}"/>
+        <Setter Property="BorderThickness" Value="{StaticResource Launcher.Spacing.Thickness.None}"/>
+        <Setter Property="CornerRadius" Value="{StaticResource Launcher.Radius.Sm}"/>
+        <Setter Property="Padding" Value="{StaticResource Launcher.Component.About.KvRow.Margin}"/>
+        <Setter Property="MinHeight" Value="{StaticResource Launcher.Component.About.KvRow.MinHeight}"/>
+        <Setter Property="HorizontalAlignment" Value="Stretch"/>
+        <Setter Property="HorizontalContentAlignment" Value="Stretch"/>
+        <Setter Property="VerticalContentAlignment" Value="Center"/>
+    </Style>
+    <Style Selector="Button.about-link-item:pointerover">
+        <Setter Property="Background" Value="{DynamicResource Launcher.Color.Button.Flat.Hover}"/>
+    </Style>
+    <Style Selector="Button.about-link-item:pressed">
+        <Setter Property="Background" Value="{DynamicResource Launcher.Color.Button.Flat.Pressed}"/>
+        <Setter Property="RenderTransform" Value="none"/>
+    </Style>
+    <Style Selector="Button.about-link-item:disabled">
+        <Setter Property="Opacity" Value="{StaticResource Launcher.StateLayer.Disabled.Content}"/>
     </Style>
     <!-- Debug design gallery: a compact 3×6 M3 component state matrix. -->
     <Style Selector="Border.design-state-matrix-card">

@@ -1,0 +1,558 @@
+<!doctype html>
+<html lang="zh-Hans" data-theme="light">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Cafe Launcher — 关于分区重设计原型（ADR-018）</title>
+  <style>
+    /* =====================================================================
+       Token 镜像：CSS 变量 ↔ App.axaml 的 Launcher.* 键（仅声明处允许原始值）。
+       Accent 为运行时派生（SystemAccentColor → M3 scheme Primary，tone 40/80），
+       此处取代表性品牌蓝（品牌蓝调中性策略默认），仅用于原型演示。
+       ===================================================================== */
+    :root {
+      color-scheme: light;
+      --ink: #232a31;               /* Launcher.Text.Primary (Light) */
+      --body-ink: #3f4954;          /* Launcher.Text.Body (Light) */
+      --muted: #646d79;             /* Launcher.Text.Secondary (Light) */
+      --link: #313233;              /* Launcher.Text.Link (Light) */
+      --card-bg: #fafcff;           /* Launcher.Color.Card.Background (Light) */
+      --hairline: #d6e2ee;          /* Launcher.Color.Card.Border (Light) — hairline 分隔色 */
+      --dialog-bg: #ffffff;         /* Launcher.Color.Dialog.Background (Light) */
+      --dialog-header: #f4f8fd;     /* Launcher.Color.Dialog.Header (Light) */
+      --dialog-footer: #ffffff;     /* Launcher.Color.Dialog.Footer (Light) */
+      --chip-bg: #dcefff;           /* Launcher.Color.Info.Background (Light) */
+      --info-text: #24415e;         /* Launcher.Text.Info (Light) */
+      --button-border: #c8d2de;     /* Launcher.Color.Button.Border (Light) */
+      --flat-hover: #eef6ff;        /* Launcher.Color.Button.Flat.Hover (Light) */
+      --flat-pressed: #dcefff;      /* Launcher.Color.Button.Flat.Pressed (Light) */
+      --content-row: #f1f5f9;       /* Launcher.Color.Content.Row (Light) */
+      --row-hover: rgba(0, 0, 0, .04);      /* Launcher.Color.Content.Row.Hover (Light) */
+      --on-primary: #ffffff;        /* Launcher.Color.OnPrimary */
+      --secondary-container: #e8def8; /* Launcher.Color.SecondaryContainer（占位值；运行时覆盖） */
+      --on-secondary-container: #1d192b; /* Launcher.Color.OnSecondaryContainer（占位值） */
+      --focus-ring: rgba(61, 107, 198, .6); /* Launcher.Color.FocusRing（accent @60%） */
+      --primary: #3d6bc6;           /* 代表性 scheme Primary（tone 40；运行时派生） */
+      --primary-strong: #3159a8;    /* 代表性 Primary 按压态 */
+      --danger: #d93840;            /* Launcher.Color.Danger */
+      --shadow-overlay: 0 22px 55px rgba(0, 0, 0, .40), 0 12px 32px rgba(0, 0, 0, .20); /* Elevation.Shadow.Lg (Light) */
+      --scrim: rgba(0, 0, 0, .40);  /* Launcher.Color.Overlay.Scrim.Sm */
+    }
+
+    html[data-theme="dark"] {
+      color-scheme: dark;
+      --ink: #e8eef6;               /* Launcher.Text.Primary (Dark) */
+      --body-ink: #c8d2df;          /* Launcher.Text.Body (Dark) */
+      --muted: #a8b3c2;             /* Launcher.Text.Secondary (Dark) */
+      --link: #dde7f3;              /* Launcher.Text.Link (Dark) */
+      --card-bg: #202733;           /* Launcher.Color.Card.Background (Dark) */
+      --hairline: #344150;          /* Launcher.Color.Card.Border (Dark) */
+      --dialog-bg: #161c26;         /* Launcher.Color.Dialog.Background (Dark) */
+      --dialog-header: #1b2430;     /* Launcher.Color.Dialog.Header (Dark) */
+      --dialog-footer: #161c26;     /* Launcher.Color.Dialog.Footer (Dark) */
+      --chip-bg: #19324d;           /* Launcher.Color.Info.Background (Dark) */
+      --info-text: #d6e8ff;         /* Launcher.Text.Info (Dark) */
+      --button-border: #4a5b73;     /* Launcher.Color.Button.Border (Dark) */
+      --flat-hover: #243653;        /* Launcher.Color.Button.Flat.Hover (Dark) */
+      --flat-pressed: #1d426c;      /* Launcher.Color.Button.Flat.Pressed (Dark) */
+      --content-row: #202833;       /* Launcher.Color.Content.Row (Dark) */
+      --row-hover: rgba(255, 255, 255, .09); /* Launcher.Color.Content.Row.Hover (Dark) */
+      --on-primary: #10182c;
+      --secondary-container: #4a4458;
+      --on-secondary-container: #e8def8;
+      --focus-ring: rgba(140, 180, 240, .6);
+      --primary: #8cb4f0;           /* 代表性 scheme Primary（tone 80；运行时派生） */
+      --primary-strong: #a7c5f4;
+      --danger: #d93840;
+      --shadow-overlay: 0 22px 55px rgba(0, 0, 0, .55), 0 12px 32px rgba(0, 0, 0, .35);
+      --scrim: rgba(0, 0, 0, .50);
+    }
+
+    /* 字阶（Launcher.Typography.*）：Display 22 / Headline 19 / Title 17 / Body 15·14·13 / Label 12·11 */
+    :root {
+      --font-display: 22px;
+      --font-headline: 19px;
+      --font-title: 17px;
+      --font-body-lg: 15px;
+      --font-body: 14px;
+      --font-body-sm: 13px;
+      --font-label: 12px;
+      --font-label-sm: 11px;
+      --font-mono: Consolas, "Cascadia Mono", ui-monospace, monospace; /* Typography.FontFamily.Monospace */
+      /* 间距（Launcher.Spacing.*）：4/8/12/16/20/24/40 */
+      --sp-xs: 4px; --sp-sm: 8px; --sp-md: 12px; --sp-lg: 16px;
+      --sp-xl: 20px; --sp-xxl: 24px; --sp-section: 40px;
+      /* 形状 / 控件高度 / 动效（ADR-016：167ms 快速 / 250ms 标准） */
+      --radius-xs: 4px; --radius-sm: 8px; --radius-md: 12px; --radius-lg: 16px;
+      --height-setting: 36px; --height-chip: 32px;
+      --motion-fast: 167ms cubic-bezier(.2, .8, .2, 1);
+      --motion-normal: 250ms cubic-bezier(.2, .8, .2, 1);
+      --state-hover: .08;   /* Launcher.StateLayer.Hover */
+      --state-pressed: .16; /* Launcher.StateLayer.Pressed */
+    }
+
+    * { box-sizing: border-box; }
+    body {
+      min-width: 320px;
+      min-height: 100vh;
+      margin: 0;
+      color: var(--ink);
+      background: #171a2d;
+      font: var(--font-body)/1.45 "Segoe UI", "Microsoft YaHei", system-ui, sans-serif;
+    }
+    button { font: inherit; cursor: pointer; }
+    button:focus-visible, a:focus-visible {
+      outline: 2px solid var(--focus-ring); /* Launcher.Border.Thickness.Focus */
+      outline-offset: 2px;
+    }
+
+    /* ---- 原型外框（非产品 UI）：壁纸底 + 工具条 ---- */
+    .prototype-frame {
+      position: relative;
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      padding: 24px 16px 48px;
+      background:
+        linear-gradient(110deg, rgba(17, 20, 39, .86) 0%, rgba(36, 31, 63, .46) 53%, rgba(77, 58, 89, .26) 100%),
+        url("../../src/Cafe.Launcher.Avalonia/Assets/launcher-background.png") center / cover;
+    }
+    .prototype-bar {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: var(--sp-lg);
+      width: min(960px, 100%);
+      margin-bottom: var(--sp-xl);
+    }
+    .prototype-title {
+      color: #fff;
+      font-size: var(--font-body-sm);
+      letter-spacing: .5px; /* Typography.LetterSpacing.Sm */
+      opacity: .85;
+    }
+    .theme-toggle { display: flex; gap: var(--sp-sm); }
+    .theme-toggle button {
+      height: var(--height-setting);
+      padding: 0 var(--sp-lg);
+      border: 1px solid rgba(255, 255, 255, .35);
+      border-radius: var(--radius-sm);
+      background: rgba(255, 255, 255, .08);
+      color: #fff;
+      transition: background var(--motion-fast);
+    }
+    .theme-toggle button:hover { background: rgba(255, 255, 255, .16); }
+    .theme-toggle button[aria-pressed="true"] {
+      background: rgba(255, 255, 255, .92);
+      border-color: transparent;
+      color: #1a1b22;
+    }
+
+    /* ---- 设置浮层（DialogSurface Panel 语境：Radius.Lg 16 + Shadow.Lg + Dialog.Background，ADR-013） ---- */
+    .settings-overlay {
+      display: flex;
+      width: min(960px, 100%);   /* Launcher.Layout.Settings.MaxWidth */
+      max-height: 620px;         /* Launcher.Layout.Settings.MaxHeight */
+      border-radius: var(--radius-lg);
+      background: var(--dialog-bg);
+      box-shadow: var(--shadow-overlay);
+      overflow: hidden;
+    }
+
+    /* ---- 导航列（ADR-013：SecondaryContainer 激活填充 + leading icon，无指示条） ---- */
+    .settings-nav {
+      flex: 0 0 216px;           /* Launcher.Component.Settings.Navigation.Width */
+      display: flex;
+      flex-direction: column;
+      background: var(--dialog-bg);
+    }
+    .settings-nav-header {
+      padding: var(--sp-xl) var(--sp-lg); /* Navigation.Header.Padding 16,20 */
+      font-size: var(--font-title);
+      font-weight: 600;          /* Typography.FontWeight.Strong */
+    }
+    .settings-nav ul {
+      margin: 0;
+      padding: var(--sp-sm) var(--sp-lg) var(--sp-lg); /* Navigation.List.Padding 16,8,16,16 */
+      list-style: none;
+    }
+    .settings-nav li + li { margin-top: 2px; } /* Navigation.Item.Margin 0,2 */
+    .settings-nav button {
+      display: flex;
+      align-items: center;
+      gap: var(--sp-md);
+      width: 100%;
+      height: 36px;
+      padding: 0 var(--sp-md);   /* Navigation.Item.Padding 12,0 */
+      border: 0;
+      border-radius: var(--radius-sm);
+      background: transparent;
+      color: var(--body-ink);
+      text-align: left;
+      transition: background var(--motion-fast);
+    }
+    .settings-nav button:hover { background: var(--row-hover); } /* StateLayer 8% */
+    .settings-nav button:active { background: var(--row-hover); }
+    .settings-nav button[aria-current="true"] {
+      background: var(--secondary-container);
+      color: var(--on-secondary-container);
+      font-weight: 600;
+    }
+    .settings-nav .nav-icon { flex: 0 0 auto; width: 18px; height: 18px; } /* Icon.Md */
+    .settings-nav .nav-label { font-size: var(--font-body-sm); }
+
+    /* ---- 内容区 ---- */
+    .settings-content {
+      display: flex;
+      flex-direction: column;
+      flex: 1 1 auto;
+      min-width: 0;
+    }
+    .content-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: var(--sp-xxl) 0 0 var(--sp-xxl); /* Settings.Content.Padding 16,24,0,16 之纵向 */
+      margin-right: var(--sp-lg);
+      margin-bottom: var(--sp-xs); /* Settings.ContentHeading.Margin 0,0,16,4 */
+    }
+    .content-header h1 {
+      margin: 0;
+      font-size: var(--font-headline);
+      font-weight: 600;
+    }
+    .close-button {
+      display: grid;
+      place-items: center;
+      width: 36px;
+      height: 36px;              /* Control.Height.Setting */
+      border: 0;
+      border-radius: 50%;
+      background: transparent;
+      color: var(--muted);
+      transition: background var(--motion-fast), color var(--motion-fast);
+    }
+    .close-button:hover { background: var(--dialog-header); }
+    .close-button:active { background: var(--hairline); }
+    .content-scroll {
+      flex: 1 1 auto;
+      overflow-y: auto;
+      padding: 0 var(--sp-lg) var(--sp-lg) var(--sp-xxl); /* Content.Scroll.Padding + 左缘 */
+    }
+
+    /* ---- 关于分区根：settings-group（契约要求根类节奏 0,16,0,0） ---- */
+    .settings-group { margin: var(--sp-lg) 0 0; }
+
+    /* ---- 身份 Hero ---- */
+    .about-hero {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: var(--sp-sm);
+      padding: var(--sp-section) var(--sp-lg) var(--sp-xl); /* Spacing.Section 40 顶部留白 */
+      text-align: center;
+    }
+    .about-hero .app-icon {
+      width: 72px;
+      height: 72px;
+      border-radius: var(--radius-lg); /* Radius.Lg 16 */
+      box-shadow: 0 4px 8px rgba(0, 0, 0, .15); /* Elevation.Shadow.Sm */
+    }
+    .about-hero h2 {
+      margin: var(--sp-xs) 0 0;
+      font-size: var(--font-display); /* Display 22 */
+      font-weight: 600;
+      letter-spacing: .5px;
+    }
+    .about-hero .tagline {
+      max-width: 520px;
+      margin: 0;
+      color: var(--muted);
+      font-size: var(--font-body-sm); /* Body.Sm 13 */
+    }
+    .hero-chips { display: flex; flex-wrap: wrap; justify-content: center; gap: var(--sp-sm); margin-top: var(--sp-sm); }
+    .version-chip {
+      display: inline-flex;
+      align-items: center;
+      min-height: var(--height-chip); /* Control.Height.Chip 32 */
+      padding: var(--sp-sm) var(--sp-md);   /* VersionChip.Padding 12,8 */
+      border: 1px solid var(--primary);     /* Primary.Border（accent @40%）：原型取实色示意 */
+      border-radius: var(--radius-md);
+      background: var(--chip-bg);
+      color: var(--info-text);
+      font-size: var(--font-label);         /* Label.Md 12 */
+    }
+
+    /* ---- 分组标题（group-title：Body.Md 14 SemiBold Secondary） ---- */
+    .group-title {
+      margin: var(--sp-lg) 0 var(--sp-sm);
+      color: var(--muted);
+      font-size: var(--font-body);
+      font-weight: 600;
+    }
+
+    /* ---- 常规操作：filled 唯一最高强调 + outlined（flat-action） ---- */
+    .action-row { display: flex; flex-wrap: wrap; gap: var(--sp-sm); }
+    .action {
+      display: inline-flex;
+      align-items: center;
+      gap: var(--sp-sm);          /* button-content Spacing 8 */
+      height: var(--height-setting); /* Control.Height.Setting 36 */
+      padding: 0 var(--sp-md);    /* Action.Outlined.Padding 12,8（横向 12） */
+      border-radius: var(--radius-sm);
+      font-size: var(--font-body-sm);
+      transition: background var(--motion-fast), border-color var(--motion-fast);
+    }
+    .action .action-icon { width: 16px; height: 16px; } /* Icon.Sm */
+    .action.filled {                /* 按钮四型：filled（primary-action 语义） */
+      border: 0;
+      background: var(--primary);
+      color: var(--on-primary);
+      font-weight: 600;
+      padding: 0 var(--sp-xl);    /* Action.Primary.Padding 20,12（横向 20） */
+    }
+    .action.filled:hover { background: color-mix(in srgb, var(--on-primary) 8%, var(--primary)); }
+    .action.filled:active { background: var(--primary-strong); }
+    .action.outlined {              /* 按钮四型：outlined（flat-action 语义） */
+      border: 1px solid var(--button-border);
+      background: transparent;
+      color: var(--ink);
+    }
+    .action.outlined:hover { background: var(--flat-hover); border-color: var(--primary); }
+    .action.outlined:active { background: var(--flat-pressed); }
+
+    /* ---- 版本详细信息：key-value 行 + inset hairline ---- */
+    .kv-list {
+      border-radius: var(--radius-sm);
+      background: var(--card-bg); /* Color.Card.Background */
+    }
+    .kv-row {
+      display: flex;
+      align-items: baseline;
+      justify-content: space-between;
+      gap: var(--sp-lg);
+      min-height: 40px;
+      padding: var(--sp-sm) var(--sp-lg);
+    }
+    .kv-row + .kv-row { border-top: 1px solid var(--hairline); } /* Color.Card.Border hairline，与文本左缘对齐（行内边距即 16） */
+    .kv-label { color: var(--muted); font-size: var(--font-body-sm); }
+    .kv-value {
+      color: var(--ink);
+      font-family: var(--font-mono);
+      font-size: var(--font-body-sm);
+      text-align: right;
+      overflow-wrap: anywhere;
+    }
+
+    /* ---- 法律信息：内联 HyperlinkButton 语义（契约要求 2 个 inline 链接） ---- */
+    .legal-text {
+      margin: 0 0 var(--sp-xs);
+      color: var(--muted);
+      font-size: var(--font-body-sm); /* caption 语义 */
+    }
+    .legal-text:last-child { margin-bottom: 0; }
+    .legal-link {
+      display: inline;
+      padding: 0;
+      border: 0;
+      background: none;
+      color: var(--link);
+      font-size: var(--font-body-sm);
+      text-decoration: underline;
+      text-underline-offset: 2px;
+      transition: color var(--motion-fast);
+    }
+    .legal-link:hover { color: var(--primary); }
+
+    /* ---- 底部操作带（Settings.Footer 24,8,16,20） ---- */
+    .settings-footer {
+      display: flex;
+      justify-content: flex-end;
+      gap: var(--sp-sm);
+      padding: var(--sp-xxl) var(--sp-lg) var(--sp-xl) var(--sp-xxl); /* Footer.Padding 24,8,16,20 */
+      border-top: 1px solid var(--hairline);
+      background: var(--dialog-footer);
+    }
+    .footer-button {
+      height: 36px;
+      padding: 0 var(--sp-xl);
+      border-radius: var(--radius-sm);
+      font-size: var(--font-body-sm);
+      transition: background var(--motion-fast), border-color var(--motion-fast);
+    }
+    .footer-button.secondary {
+      border: 1px solid var(--button-border);
+      background: transparent;
+      color: var(--ink);
+    }
+    .footer-button.secondary:hover { background: var(--flat-hover); border-color: var(--primary); }
+    .footer-button.filled { border: 0; background: var(--primary); color: var(--on-primary); font-weight: 600; }
+    .footer-button.filled:hover { background: color-mix(in srgb, var(--on-primary) 8%, var(--primary)); }
+    .footer-button.filled:active { background: var(--primary-strong); }
+
+    /* ---- 原型注释区（非产品 UI）：token 映射速查 ---- */
+    .prototype-notes {
+      width: min(960px, 100%);
+      margin-top: var(--sp-xl);
+      color: rgba(255, 255, 255, .75);
+      font-size: var(--font-label);
+    }
+    .prototype-notes summary { cursor: pointer; font-size: var(--font-body-sm); }
+    .prototype-notes table { border-collapse: collapse; margin-top: var(--sp-sm); }
+    .prototype-notes th, .prototype-notes td {
+      padding: var(--sp-xs) var(--sp-md);
+      border: 1px solid rgba(255, 255, 255, .2);
+      text-align: left;
+    }
+
+    @media (prefers-reduced-motion: reduce) {
+      * { transition-duration: 0.01ms !important; }
+    }
+  </style>
+</head>
+<body>
+  <div class="prototype-frame">
+    <div class="prototype-bar">
+      <span class="prototype-title">Cafe Launcher — 关于分区重设计原型（ADR-018 · 变体 A：身份 Hero + 分组行）</span>
+      <div class="theme-toggle" role="group" aria-label="主题切换">
+        <button type="button" id="btn-light" aria-pressed="true">浅色</button>
+        <button type="button" id="btn-dark" aria-pressed="false">深色</button>
+      </div>
+    </div>
+
+    <!-- 设置浮层：双列（导航 216 + 内容），MaxWidth 960 / MaxHeight 620 -->
+    <div class="settings-overlay" role="dialog" aria-label="设置">
+      <nav class="settings-nav" aria-label="设置分类">
+        <div class="settings-nav-header">设置</div>
+        <ul>
+          <li><button type="button">
+            <svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="3"/><path d="M19 12a7 7 0 0 0-.1-1.2l2-1.6-2-3.4-2.4 1a7 7 0 0 0-2-1.2L14 3h-4l-.5 2.6a7 7 0 0 0-2 1.2l-2.4-1-2 3.4 2 1.6A7 7 0 0 0 5 12c0 .4 0 .8.1 1.2l-2 1.6 2 3.4 2.4-1a7 7 0 0 0 2 1.2L10 21h4l.5-2.6a7 7 0 0 0 2-1.2l2.4 1 2-3.4-2-1.6c.1-.4.1-.8.1-1.2Z"/></svg>
+            <span class="nav-label">常规</span></button></li>
+          <li><button type="button">
+            <svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="2" y="8" width="20" height="10" rx="5"/><path d="M7 11v4M5 13h4"/><circle cx="16" cy="12" r="1"/><circle cx="19" cy="14" r="1"/></svg>
+            <span class="nav-label">游戏</span></button></li>
+          <li><button type="button">
+            <svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 4v10m0 0 4-4m-4 4-4-4"/><path d="M4 18h16"/></svg>
+            <span class="nav-label">下载</span></button></li>
+          <li><button type="button">
+            <svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 3a9 9 0 1 0 0 18c1.5 0 2-1 2-2s-1-1.5-1-2.5 1-1.5 2.5-1.5H18a4 4 0 0 0 4-4c0-4.4-4.5-8-10-8Z"/><circle cx="7.5" cy="11.5" r="1"/><circle cx="11" cy="7.5" r="1"/><circle cx="15.5" cy="8.5" r="1"/></svg>
+            <span class="nav-label">外观</span></button></li>
+          <li><button type="button">
+            <svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 8h10M18 8h2M4 16h2M10 16h10"/><circle cx="16" cy="8" r="2"/><circle cx="8" cy="16" r="2"/></svg>
+            <span class="nav-label">高级</span></button></li>
+          <li><button type="button" aria-current="true">
+            <svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="9"/><path d="M12 11v5"/><circle cx="12" cy="8" r="0.6" fill="currentColor"/></svg>
+            <span class="nav-label">关于</span></button></li>
+        </ul>
+      </nav>
+
+      <div class="settings-content">
+        <div class="content-header">
+          <h1>关于</h1>
+          <button type="button" class="close-button" aria-label="关闭设置">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="m6 6 12 12M18 6 6 18"/></svg>
+          </button>
+        </div>
+
+        <div class="content-scroll">
+          <!-- ═══ 关于分区（SettingsAboutSection 重设计） ═══ -->
+          <section class="settings-group">
+
+            <!-- 1. 身份 Hero：图标 + 产品名 + 副标题 + 版本/构建徽章 -->
+            <div class="about-hero">
+              <img class="app-icon" src="../../src/Cafe.Launcher.Avalonia/Assets/app-icon-source.jpg" alt="Cafe Launcher 应用图标" />
+              <h2>Cafe Launcher</h2>
+              <p class="tagline">Cafe Launcher - 统一、原生、跨平台的 Blue Archive 游戏启动器，内置多项实用功能。</p>
+              <div class="hero-chips">
+                <span class="version-chip">版本 1.0.0</span>
+                <span class="version-chip">构建于 2026-08-30 12:00 (UTC+8)</span>
+              </div>
+            </div>
+
+            <!-- 2. 常规操作：检查更新（filled 唯一最高强调）+ 三个 outlined -->
+            <h3 class="group-title">常规</h3>
+            <div class="action-row">
+              <button type="button" class="action filled">
+                <svg class="action-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20 12a8 8 0 1 1-2.3-5.6M20 4v4h-4"/></svg>
+                检查更新
+              </button>
+              <button type="button" class="action outlined">
+                <svg class="action-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="9"/><path d="M3 12h18M12 3c2.5 2.5 3.8 5.6 3.8 9S14.5 18.5 12 21c-2.5-2.5-3.8-5.6-3.8-9S9.5 5.5 12 3Z"/></svg>
+                官方网站
+              </button>
+              <button type="button" class="action outlined">
+                <svg class="action-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="9"/><path d="M9.5 9.5a2.5 2.5 0 1 1 3.4 2.3c-.8.3-.9 1-.9 1.7"/><circle cx="12" cy="16.8" r="0.6" fill="currentColor"/></svg>
+                帮助文档
+              </button>
+              <button type="button" class="action outlined">
+                <!-- 仓库语义示意：git branch（产品内为 Material Github 图标） -->
+                <svg class="action-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="6" cy="6" r="2.5"/><circle cx="6" cy="18" r="2.5"/><circle cx="18" cy="8" r="2.5"/><path d="M6 8.5v7M18 10.5c0 3-2.5 4-5.5 4H9"/></svg>
+                GitHub 仓库
+              </button>
+            </div>
+
+            <!-- 3. 版本详细信息：key-value 行 + inset hairline（值用等宽字体） -->
+            <h3 class="group-title">版本信息</h3>
+            <div class="kv-list">
+              <div class="kv-row"><span class="kv-label">版本</span><span class="kv-value">1.0.0</span></div>
+              <div class="kv-row"><span class="kv-label">构建于</span><span class="kv-value">2026-08-30 12:00 (UTC+8)</span></div>
+              <div class="kv-row"><span class="kv-label">提交</span><span class="kv-value">fa6d2f5</span></div>
+              <div class="kv-row"><span class="kv-label">构建</span><span class="kv-value">Release</span></div>
+              <div class="kv-row"><span class="kv-label">运行时</span><span class="kv-value">.NET 10.0.8</span></div>
+              <div class="kv-row"><span class="kv-label">Avalonia</span><span class="kv-value">12.1.1</span></div>
+              <div class="kv-row"><span class="kv-label">系统</span><span class="kv-value">Windows 10.0.19045</span></div>
+            </div>
+
+            <!-- 4. 法律信息：2 个内联链接（隐私政策 / 查看原始作品）+ 免责声明 -->
+            <h3 class="group-title">法律信息</h3>
+            <p class="legal-text">Cafe Launcher 源代码版权所有 © 2026 蔚蓝咖啡厅，采用 MIT 许可证授权。
+              <button type="button" class="legal-link">隐私政策</button>
+            </p>
+            <p class="legal-text">默认背景图裁剪自 Pixiv 画师 めるき（Meruki）的作品《初めてのゲーム》，插画版权归原作者所有。
+              <button type="button" class="legal-link">查看原始作品</button>
+            </p>
+            <p class="legal-text">“Cafe Launcher”是由“蔚蓝咖啡厅”开发组开发的第三方 Blue Archive 启动器，与游戏《ブルーアーカイブ》（中文名“蔚蓝档案”）及相关公司并无官方关联。</p>
+          </section>
+        </div>
+
+        <div class="settings-footer">
+          <button type="button" class="footer-button secondary">取消</button>
+          <button type="button" class="footer-button filled">保存</button>
+        </div>
+      </div>
+    </div>
+
+    <details class="prototype-notes">
+      <summary>Token 映射速查（原型 CSS 变量 ↔ Launcher.* 键）</summary>
+      <table>
+        <tr><th>CSS 变量</th><th>Launcher.* 键</th><th>备注</th></tr>
+        <tr><td>--ink / --muted / --link</td><td>Text.Primary / Text.Secondary / Text.Link</td><td>Light/Dark 双档随主题切换</td></tr>
+        <tr><td>--hairline</td><td>Color.Card.Border</td><td>key-value 行 hairline（ADR-013 M3 修正 2）</td></tr>
+        <tr><td>--dialog-bg / --dialog-header / --dialog-footer</td><td>Color.Dialog.*</td><td>设置浮层表面（ADR-013）</td></tr>
+        <tr><td>--chip-bg</td><td>Color.Info.Background</td><td>Hero 徽章底色</td></tr>
+        <tr><td>--button-border / --flat-hover / --flat-pressed</td><td>Color.Button.*</td><td>outlined 按钮（flat-action）状态</td></tr>
+        <tr><td>--primary / --primary-strong</td><td>Color.Primary（运行时 scheme 派生）</td><td>原型取代表性 tone 40/80</td></tr>
+        <tr><td>--secondary-container</td><td>Color.SecondaryContainer</td><td>导航激活态（占位值，运行时覆盖）</td></tr>
+        <tr><td>--focus-ring</td><td>Color.FocusRing</td><td>accent @60%，2px 焦点环</td></tr>
+        <tr><td>--radius-* / --sp-* / 字号</td><td>Radius.* / Spacing.* / Typography.FontSize.*</td><td>4/8/12/16；4/8/12/16/20/24/40；22/19/17/15/14/13/12/11</td></tr>
+        <tr><td>--motion-fast / --motion-normal</td><td>Motion.Duration.Fast / Normal</td><td>ADR-016：167ms / 250ms</td></tr>
+      </table>
+      <p>文案取自 LauncherStrings.zh-Hans.resx（aboutDescription / aboutActionsGeneral / versionInfo / aboutLinks 等 key）；实施阶段 XAML 经 Shell.I18n 绑定，4 语言同步。</p>
+    </details>
+  </div>
+
+  <script>
+    const root = document.documentElement;
+    const lightBtn = document.getElementById("btn-light");
+    const darkBtn = document.getElementById("btn-dark");
+    function applyTheme(theme) {
+      root.dataset.theme = theme;
+      lightBtn.setAttribute("aria-pressed", String(theme === "light"));
+      darkBtn.setAttribute("aria-pressed", String(theme === "dark"));
+    }
+    lightBtn.addEventListener("click", () => applyTheme("light"));
+    darkBtn.addEventListener("click", () => applyTheme("dark"));
+  </script>
+</body>
+</html>

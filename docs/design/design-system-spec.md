@@ -39,6 +39,7 @@
 | Q23 | 中性色策略**可切换**：默认品牌蓝调（固定），可选种子跟随（tone 固定、只漂色相） | §3.4 |
 | Q24 | 新增设置项（外观组「主题颜色」）：**取色算法**（octree 保留 / M3 Celebi+Score 默认 / Wu·Wsmeans 可选）+ **配色变体**（8 变体，默认 TonalSpot）+ **中性色策略** | §7 |
 | 审计-0828 | 2026-08-28 设计系统一致性核查修复：向导 filled 型补 `:disabled` 组合、carousel 箭头 hover/pressed 改 chrome 态层、`wizard-option` 补 token 焦点环、DialogSurface 表面名 = 标题（无标题外壳显式给名 + Toast 宿主 live region）、对比度契约 +12 对并显式豁免 FocusRing/SecondaryContainer 族、时长双源同步测试、清理死 token（`Easing.Linear`/`IconButton.Compact/.Dot`，RowPanel 面板迁入 App.axaml） | 状态矩阵闭环；静态契约与运行时 M3 配对的分工显式化 |
+| ADR-018 | 2026-08-30 关于分区重设计（变体 A：身份 Hero + 分组行）：Hero（图标/产品名/副标题/版本+构建时间双徽章）→ 常规操作（检查更新唯一 compact filled + 3 outlined）→ 版本信息 key-value 行（7 项，等宽值，hairline）→ 法律信息不变；已落地并同步契约测试 | 设置浮层内身份表面获得与 ADR-013/014 一致的 M3 语言；原型 `prototypes/about-page/index.html` |
 
 ## 3. Token 体系
 
