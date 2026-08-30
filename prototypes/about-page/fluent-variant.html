@@ -1,0 +1,555 @@
+<!doctype html>
+<html lang="zh-Hans" data-theme="light">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Cafe Launcher — 关于分区 Fluent 变体（对照探索）</title>
+  <style>
+    /* =====================================================================
+       Fluent 2 / Windows 11 变体（what-if 对照，非现行 M3 决策的替换）。
+       CSS 变量取值对照 Fluent 2 Windows 规范：
+       - 字阶：Subtitle 20/28 SemiBold · Body 14/20 · Body Strong 14 SemiBold · Caption 12/16
+       - 形状：控件 4px · 卡片/浮层 8px（OverlayCornerRadius）
+       - 密度：控件高 32px · 设置行高 40px · 4px 间距系统
+       - 颜色：中性优先（Layer/Card + CardStroke + DividerStroke），
+               accent 仅用于 1 个 AccentFilled 主按钮与超链接文本
+       - 焦点：Windows 双环（外 2px 反色 + 内 1px 正色）
+       宿主外壳（导航列/浮层）与 ADR-013 现状一致，仅内容区为 Fluent 探索。
+       ===================================================================== */
+    :root {
+      color-scheme: light;
+      --text-primary: #1b1b1b;        /* Text.Primary */
+      --text-secondary: rgba(0, 0, 0, .606); /* Text.Secondary */
+      --text-tertiary: rgba(0, 0, 0, .446);  /* Text.Tertiary */
+      --layer: rgba(255, 255, 255, .7);      /* Layer fill color default */
+      --card: #ffffff;                       /* Card fill (solid fallback) */
+      --surface-solid: #ffffff;              /* 浮层底：不透明（Fluent 分层要求不透明基底；对应应用 Dialog.Background） */
+      --card-stroke: rgba(0, 0, 0, .08);     /* CardStroke #14000000 */
+      --divider: rgba(0, 0, 0, .083);        /* DividerStroke */
+      --control-fill: rgba(255, 255, 255, .7);   /* Control fill default */
+      --control-stroke: rgba(0, 0, 0, .12);  /* ControlElevationBorder */
+      --subtle-hover: rgba(0, 0, 0, .037);   /* Subtle fill secondary */
+      --subtle-pressed: rgba(0, 0, 0, .024);
+      --accent: #005fb8;                     /* SystemAccentColor (Win11 默认) */
+      --accent-hover: #1a73c3;
+      --accent-pressed: #004f92;
+      --on-accent: #ffffff;
+      --link: #005fb8;                       /* Hyperlink = accent 派生 */
+      --focus-outer: #1b1b1b;
+      --focus-inner: #ffffff;
+      --shadow-dialog: 0 32px 64px rgba(0, 0, 0, .28), 0 2px 8px rgba(0, 0, 0, .16); /* Window/Dialog 档 */
+      --radius-control: 4px;   /* ControlCornerRadius */
+      --radius-overlay: 8px;   /* OverlayCornerRadius */
+    }
+    html[data-theme="dark"] {
+      color-scheme: dark;
+      --text-primary: #ffffff;
+      --text-secondary: rgba(255, 255, 255, .786);
+      --text-tertiary: rgba(255, 255, 255, .544);
+      --layer: rgba(255, 255, 255, .051);
+      --card: rgba(255, 255, 255, .051);
+      --surface-solid: #1b202b;   /* 近不透明中性底：半透明 Layer 只能叠在不透明基底上，不能直接压壁纸 */
+      --card-stroke: rgba(255, 255, 255, .07);  /* #12FFFFFF */
+      --divider: rgba(255, 255, 255, .083);
+      --control-fill: rgba(255, 255, 255, .06);
+      --control-stroke: rgba(255, 255, 255, .14);
+      --subtle-hover: rgba(255, 255, 255, .061);
+      --subtle-pressed: rgba(255, 255, 255, .039);
+      --accent: #4cc2ff;
+      --accent-hover: #47b4e9;
+      --accent-pressed: #3e9ec9;
+      --on-accent: #001322;
+      --link: #4cc2ff;
+      --focus-outer: #ffffff;
+      --focus-inner: #000000;
+      --shadow-dialog: 0 32px 64px rgba(0, 0, 0, .56), 0 2px 8px rgba(0, 0, 0, .32);
+    }
+
+    /* 密度与字阶（Windows ramp + 4px 系统） */
+    :root {
+      --font-stack: "Segoe UI Variable Text", "Segoe UI Variable", "Segoe UI", "Microsoft YaHei", system-ui, sans-serif;
+      --fs-subtitle: 20px; --lh-subtitle: 28px;
+      --fs-body: 14px;     --lh-body: 20px;
+      --fs-caption: 12px;  --lh-caption: 16px;
+      --height-control: 32px;   /* 标准控件高（M3 版为 36/42） */
+      --height-row: 40px;       /* Win11 设置行高 */
+      --icon-sm: 16px;          /* Fluent system icon 16 */
+      --icon-hero: 48px;
+      --motion: 150ms cubic-bezier(.16, 1, .3, 1); /* FastInvoke 近似 */
+    }
+
+    * { box-sizing: border-box; }
+    body {
+      min-width: 320px;
+      min-height: 100vh;
+      margin: 0;
+      color: var(--text-primary);
+      background: #171a2d;
+      font: var(--fs-body)/var(--lh-body) var(--font-stack);
+    }
+    button { font: inherit; cursor: pointer; }
+    /* Windows 双环焦点：外 2px 反色 + 内 1px 正色 */
+    button:focus-visible, a:focus-visible {
+      outline: 2px solid var(--focus-outer);
+      outline-offset: 1px;
+      box-shadow: 0 0 0 3px var(--focus-inner) inset;
+    }
+
+    /* ---- 原型外框（非产品 UI） ---- */
+    .prototype-frame {
+      position: relative;
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      padding: 24px 16px 48px;
+      background:
+        linear-gradient(110deg, rgba(17, 20, 39, .86) 0%, rgba(36, 31, 63, .46) 53%, rgba(77, 58, 89, .26) 100%),
+        url("../../src/Cafe.Launcher.Avalonia/Assets/launcher-background.png") center / cover;
+    }
+    .prototype-bar {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 16px;
+      width: min(960px, 100%);
+      margin-bottom: 20px;
+    }
+    .prototype-title {
+      color: #fff;
+      font-size: var(--fs-caption);
+      opacity: .85;
+    }
+    .theme-toggle { display: flex; gap: 8px; }
+    .theme-toggle button {
+      height: var(--height-control);
+      padding: 0 16px;
+      border: 1px solid rgba(255, 255, 255, .35);
+      border-radius: var(--radius-control);
+      background: rgba(255, 255, 255, .08);
+      color: #fff;
+      transition: background var(--motion);
+    }
+    .theme-toggle button:hover { background: rgba(255, 255, 255, .16); }
+    .theme-toggle button[aria-pressed="true"] {
+      background: rgba(255, 255, 255, .92);
+      border-color: transparent;
+      color: #1b1b1b;
+    }
+
+    /* ---- 设置浮层外壳：与现行方案一致（仅对照内容区） ---- */
+    .settings-overlay {
+      display: flex;
+      width: min(960px, 100%);
+      max-height: 620px;
+      border-radius: var(--radius-overlay);
+      background: var(--surface-solid);
+      border: 1px solid var(--card-stroke);
+      box-shadow: var(--shadow-dialog);
+      overflow: hidden;
+    }
+    .settings-nav {
+      flex: 0 0 216px;
+      display: flex;
+      flex-direction: column;
+      background: var(--surface-solid);
+    }
+    .settings-nav-header { padding: 20px 16px; font-size: var(--fs-body); font-weight: 600; }
+    .settings-nav ul { margin: 0; padding: 4px 8px 16px; list-style: none; }
+    .settings-nav button {
+      position: relative;
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      width: 100%;
+      height: 36px;
+      padding: 0 12px;
+      border: 0;
+      border-radius: var(--radius-control);
+      background: transparent;
+      color: var(--text-primary);
+      text-align: left;
+      transition: background var(--motion);
+    }
+    .settings-nav button:hover { background: var(--subtle-hover); }
+    /* Win11 导航激活：左侧 3×16px 圆角指示条 + Subtle 填充 */
+    .settings-nav button[aria-current="true"] {
+      background: var(--subtle-hover);
+      font-weight: 600;
+    }
+    .settings-nav button[aria-current="true"]::before {
+      content: "";
+      position: absolute;
+      left: 0;
+      top: 50%;
+      width: 3px;
+      height: 16px;
+      border-radius: 2px;
+      background: var(--accent);
+      transform: translateY(-50%);
+    }
+    .settings-nav .nav-icon { flex: 0 0 auto; width: var(--icon-sm); height: var(--icon-sm); }
+    .settings-nav .nav-label { font-size: var(--fs-body); }
+
+    .settings-content { display: flex; flex-direction: column; flex: 1 1 auto; min-width: 0; }
+    .content-header {
+      display: flex;
+      align-items: flex-start;
+      justify-content: space-between;
+      padding: 20px 16px 4px 24px;
+    }
+    .content-header h1 {
+      margin: 0;
+      font-size: var(--fs-subtitle);   /* Subtitle 20 */
+      line-height: var(--lh-subtitle);
+      font-weight: 600;
+    }
+    .close-button {
+      display: grid;
+      place-items: center;
+      width: var(--height-control);
+      height: var(--height-control);
+      border: 0;
+      border-radius: var(--radius-control);
+      background: transparent;
+      color: var(--text-primary);
+      transition: background var(--motion);
+    }
+    .close-button:hover { background: var(--subtle-hover); }
+    .close-button:active { background: var(--subtle-pressed); }
+    .content-scroll {
+      flex: 1 1 auto;
+      overflow-y: auto;
+      padding: 0 24px 24px 24px;
+    }
+
+    /* ---- Fluent 分组标题：Body Strong，左对齐（不用 tinted 组头） ---- */
+    .group-title {
+      margin: 24px 0 8px;
+      font-size: var(--fs-body);
+      font-weight: 600;
+      color: var(--text-primary);
+    }
+    .group-title:first-child { margin-top: 16px; }
+
+    /* ---- 卡 1：应用身份（Layer 卡，8px 圆角，1px CardStroke；无 tint） ---- */
+    .about-card {
+      background: var(--layer);
+      border: 1px solid var(--card-stroke);
+      border-radius: var(--radius-overlay);
+      padding: 16px;
+    }
+    .app-head { display: flex; align-items: flex-start; gap: 16px; }
+    .app-icon {
+      flex: 0 0 auto;
+      width: var(--icon-hero);
+      height: var(--icon-hero);
+      border-radius: var(--radius-overlay);
+      border: 1px solid var(--card-stroke);
+    }
+    .app-copy { min-width: 0; }
+    .app-copy h2 {
+      margin: 0;
+      font-size: var(--fs-subtitle);
+      line-height: var(--lh-subtitle);
+      font-weight: 600;
+    }
+    .app-copy .version { margin: 2px 0 0; color: var(--text-secondary); font-size: var(--fs-caption); line-height: var(--lh-caption); }
+    .app-copy .tagline { margin: 8px 0 0; color: var(--text-secondary); }
+
+    /* ---- 按钮：AccentFilled 唯一主操作 + Standard 中性次操作（高 32，圆角 4） ---- */
+    .action-row { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 16px; }
+    .btn {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      height: var(--height-control);
+      padding: 0 12px;
+      border-radius: var(--radius-control);
+      font-size: var(--fs-body);
+      transition: background var(--motion), border-color var(--motion);
+    }
+    .btn .action-icon { width: var(--icon-sm); height: var(--icon-sm); }
+    .btn.accent {
+      border: 1px solid transparent;
+      background: var(--accent);
+      color: var(--on-accent);
+      font-weight: 600;
+    }
+    .btn.accent:hover { background: var(--accent-hover); }
+    .btn.accent:active { background: var(--accent-pressed); color: var(--on-accent); }
+    .btn.standard {
+      border: 1px solid var(--control-stroke);
+      background: var(--control-fill);
+      color: var(--text-primary);
+    }
+    .btn.standard:hover { background: var(--subtle-hover); }
+    .btn.standard:active { background: var(--subtle-pressed); }
+
+    /* ---- 卡 2：版本详细信息 = Win11 设置 About 的 kv 行范式 ---- */
+    .kv-row {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 16px;
+      min-height: var(--height-row);
+      padding: 4px 0;
+    }
+    .kv-row + .kv-row { border-top: 1px solid var(--divider); }
+    .kv-label { color: var(--text-secondary); }
+    .kv-value {
+      color: var(--text-primary);
+      text-align: right;
+      overflow-wrap: anywhere;
+      font-variant-numeric: tabular-nums; /* Fluent 数字对齐惯例 */
+    }
+
+    /* ---- 链接行：Hyperlink 语义（accent 文本，hover 下划线 + backplate），chevron 指示导航 ---- */
+    .link-row {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      width: 100%;
+      min-height: var(--height-row);
+      padding: 4px 12px;
+      margin: 0 -12px;
+      width: calc(100% + 24px);
+      border: 0;
+      border-radius: var(--radius-control);
+      background: transparent;
+      color: var(--link);
+      text-align: left;
+      text-decoration: none;
+      transition: background var(--motion);
+    }
+    .link-row:hover { background: var(--subtle-hover); text-decoration: underline; }
+    .link-row:active { background: var(--subtle-pressed); color: var(--accent-pressed); }
+    .link-row .action-icon { flex: 0 0 auto; width: var(--icon-sm); height: var(--icon-sm); }
+    .link-row .link-label { flex: 1 1 auto; }
+    .link-row .chevron { flex: 0 0 auto; width: var(--icon-sm); height: var(--icon-sm); color: var(--text-secondary); }
+    .link-row + .link-row { border-top: 1px solid var(--divider); }
+
+    /* ---- 法律信息：Caption + 内联超链接（契约要求 2 个内联链接语义） ---- */
+    .legal-text {
+      margin: 0 0 4px;
+      color: var(--text-secondary);
+      font-size: var(--fs-caption);
+      line-height: var(--lh-caption);
+    }
+    .legal-text:last-child { margin-bottom: 0; }
+    .legal-link {
+      display: inline;
+      padding: 0;
+      border: 0;
+      background: none;
+      color: var(--link);
+      font-size: var(--fs-caption);
+      line-height: var(--lh-caption);
+      text-decoration: none;
+    }
+    .legal-link:hover { text-decoration: underline; }
+
+    /* ---- 底部操作带（宿主不变） ---- */
+    .settings-footer {
+      display: flex;
+      justify-content: flex-end;
+      gap: 8px;
+      padding: 16px 24px 20px;
+      border-top: 1px solid var(--divider);
+    }
+    .footer-button {
+      min-width: 108px;
+      height: var(--height-control);
+      padding: 0 12px;
+      border-radius: var(--radius-control);
+      font-size: var(--fs-body);
+      transition: background var(--motion), border-color var(--motion);
+    }
+    .footer-button.secondary {
+      border: 1px solid var(--control-stroke);
+      background: var(--control-fill);
+      color: var(--text-primary);
+    }
+    .footer-button.secondary:hover { background: var(--subtle-hover); }
+    .footer-button.accent { border: 1px solid transparent; background: var(--accent); color: var(--on-accent); font-weight: 600; }
+    .footer-button.accent:hover { background: var(--accent-hover); }
+
+    .prototype-notes {
+      width: min(960px, 100%);
+      margin-top: 20px;
+      color: rgba(255, 255, 255, .75);
+      font-size: var(--fs-caption);
+    }
+    .prototype-notes summary { cursor: pointer; font-size: var(--fs-body); }
+    .prototype-notes table { border-collapse: collapse; margin-top: 8px; }
+    .prototype-notes th, .prototype-notes td {
+      padding: 4px 12px;
+      border: 1px solid rgba(255, 255, 255, .2);
+      text-align: left;
+    }
+
+    @media (prefers-reduced-motion: reduce) {
+      * { transition-duration: 0.01ms !important; }
+    }
+  </style>
+</head>
+<body>
+  <div class="prototype-frame">
+    <div class="prototype-bar">
+      <span class="prototype-title">Cafe Launcher — 关于分区 Fluent 2 / Windows 11 变体（对照探索；宿主外壳与现行一致）</span>
+      <div class="theme-toggle" role="group" aria-label="主题切换">
+        <button type="button" id="btn-light" aria-pressed="true">浅色</button>
+        <button type="button" id="btn-dark" aria-pressed="false">深色</button>
+      </div>
+    </div>
+
+    <div class="settings-overlay" role="dialog" aria-label="设置">
+      <nav class="settings-nav" aria-label="设置分类">
+        <div class="settings-nav-header">设置</div>
+        <ul>
+          <li><button type="button">
+            <svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="3"/><path d="M19 12a7 7 0 0 0-.1-1.2l2-1.6-2-3.4-2.4 1a7 7 0 0 0-2-1.2L14 3h-4l-.5 2.6a7 7 0 0 0-2 1.2l-2.4-1-2 3.4 2 1.6A7 7 0 0 0 5 12c0 .4 0 .8.1 1.2l-2 1.6 2 3.4 2.4-1a7 7 0 0 0 2 1.2L10 21h4l.5-2.6a7 7 0 0 0 2-1.2l2.4 1 2-3.4-2-1.6c.1-.4.1-.8.1-1.2Z"/></svg>
+            <span class="nav-label">常规</span></button></li>
+          <li><button type="button">
+            <svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="2" y="8" width="20" height="10" rx="5"/><path d="M7 11v4M5 13h4"/><circle cx="16" cy="12" r="1"/><circle cx="19" cy="14" r="1"/></svg>
+            <span class="nav-label">游戏</span></button></li>
+          <li><button type="button">
+            <svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 4v10m0 0 4-4m-4 4-4-4"/><path d="M4 18h16"/></svg>
+            <span class="nav-label">下载</span></button></li>
+          <li><button type="button">
+            <svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 3a9 9 0 1 0 0 18c1.5 0 2-1 2-2s-1-1.5-1-2.5 1-1.5 2.5-1.5H18a4 4 0 0 0 4-4c0-4.4-4.5-8-10-8Z"/><circle cx="7.5" cy="11.5" r="1"/><circle cx="11" cy="7.5" r="1"/><circle cx="15.5" cy="8.5" r="1"/></svg>
+            <span class="nav-label">外观</span></button></li>
+          <li><button type="button">
+            <svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 8h10M18 8h2M4 16h2M10 16h10"/><circle cx="16" cy="8" r="2"/><circle cx="8" cy="16" r="2"/></svg>
+            <span class="nav-label">高级</span></button></li>
+          <li><button type="button" aria-current="true">
+            <svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="9"/><path d="M12 11v5"/><circle cx="12" cy="8" r="0.6" fill="currentColor"/></svg>
+            <span class="nav-label">关于</span></button></li>
+        </ul>
+      </nav>
+
+      <div class="settings-content">
+        <div class="content-header">
+          <h1>关于</h1>
+          <button type="button" class="close-button" aria-label="关闭设置">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="m6 6 12 12M18 6 6 18"/></svg>
+          </button>
+        </div>
+
+        <div class="content-scroll">
+          <!-- ═══ 关于分区（Fluent 变体） ═══ -->
+
+          <!-- 卡 1：应用身份。左对齐（Fluent 不居中长内容）；accent 只出现在主按钮 -->
+          <div class="about-card">
+            <div class="app-head">
+              <img class="app-icon" src="../../src/Cafe.Launcher.Avalonia/Assets/app-icon-source.jpg" alt="Cafe Launcher 应用图标" />
+              <div class="app-copy">
+                <h2>Cafe Launcher</h2>
+                <p class="version">版本 1.0.0</p>
+                <p class="tagline">Cafe Launcher - 统一、原生、跨平台的 Blue Archive 游戏启动器，内置多项实用功能。</p>
+              </div>
+            </div>
+            <div class="action-row">
+              <button type="button" class="btn accent">
+                <svg class="action-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20 12a8 8 0 1 1-2.3-5.6M20 4v4h-4"/></svg>
+                检查更新
+              </button>
+              <button type="button" class="btn standard">
+                <svg class="action-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="9"/><path d="M3 12h18M12 3c2.5 2.5 3.8 5.6 3.8 9S14.5 18.5 12 21c-2.5-2.5-3.8-5.6-3.8-9S9.5 5.5 12 3Z"/></svg>
+                官方网站
+              </button>
+              <button type="button" class="btn standard">
+                <svg class="action-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="9"/><path d="M9.5 9.5a2.5 2.5 0 1 1 3.4 2.3c-.8.3-.9 1-.9 1.7"/><circle cx="12" cy="16.8" r="0.6" fill="currentColor"/></svg>
+                帮助文档
+              </button>
+              <button type="button" class="btn standard">
+                <!-- 仓库语义示意（产品内为 Material Github 图标） -->
+                <svg class="action-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="6" cy="6" r="2.5"/><circle cx="6" cy="18" r="2.5"/><circle cx="18" cy="8" r="2.5"/><path d="M6 8.5v7M18 10.5c0 3-2.5 4-5.5 4H9"/></svg>
+                GitHub 仓库
+              </button>
+            </div>
+          </div>
+
+          <!-- 卡 2：版本详细信息 = Win11 设置“关于”的 kv 行范式（40px 行 + inset divider + tabular 数字） -->
+          <h3 class="group-title">版本信息</h3>
+          <div class="about-card">
+            <div class="kv-row"><span class="kv-label">版本</span><span class="kv-value">1.0.0</span></div>
+            <div class="kv-row"><span class="kv-label">构建于</span><span class="kv-value">2026-08-30 12:00 (UTC+8)</span></div>
+            <div class="kv-row"><span class="kv-label">提交</span><span class="kv-value">fa6d2f5</span></div>
+            <div class="kv-row"><span class="kv-label">构建</span><span class="kv-value">Release</span></div>
+            <div class="kv-row"><span class="kv-label">运行时</span><span class="kv-value">.NET 10.0.8</span></div>
+            <div class="kv-row"><span class="kv-label">Avalonia</span><span class="kv-value">12.1.1</span></div>
+            <div class="kv-row"><span class="kv-label">系统</span><span class="kv-value">Windows 10.0.19045</span></div>
+          </div>
+
+          <!-- 链接行：Hyperlink 语义（无卡，避免 card soup），chevron = 离开当前上下文 -->
+          <h3 class="group-title">链接</h3>
+          <div>
+            <button type="button" class="link-row">
+              <svg class="action-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="9"/><path d="M3 12h18M12 3c2.5 2.5 3.8 5.6 3.8 9S14.5 18.5 12 21c-2.5-2.5-3.8-5.6-3.8-9S9.5 5.5 12 3Z"/></svg>
+              <span class="link-label">官方网站</span>
+              <svg class="chevron" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="m9 6 6 6-6 6"/></svg>
+            </button>
+            <button type="button" class="link-row">
+              <svg class="action-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="9"/><path d="M9.5 9.5a2.5 2.5 0 1 1 3.4 2.3c-.8.3-.9 1-.9 1.7"/><circle cx="12" cy="16.8" r="0.6" fill="currentColor"/></svg>
+              <span class="link-label">帮助文档</span>
+              <svg class="chevron" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="m9 6 6 6-6 6"/></svg>
+            </button>
+            <button type="button" class="link-row">
+              <svg class="action-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="6" cy="6" r="2.5"/><circle cx="6" cy="18" r="2.5"/><circle cx="18" cy="8" r="2.5"/><path d="M6 8.5v7M18 10.5c0 3-2.5 4-5.5 4H9"/></svg>
+              <span class="link-label">GitHub 仓库</span>
+              <svg class="chevron" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="m9 6 6 6-6 6"/></svg>
+            </button>
+          </div>
+
+          <!-- 法律信息：Caption + 2 个内联超链接（契约语义保留） -->
+          <h3 class="group-title">法律信息</h3>
+          <p class="legal-text">Cafe Launcher 源代码版权所有 © 2026 蔚蓝咖啡厅，采用 MIT 许可证授权。
+            <button type="button" class="legal-link">隐私政策</button>
+          </p>
+          <p class="legal-text">默认背景图裁剪自 Pixiv 画师 めるき（Meruki）的作品《初めてのゲーム》，插画版权归原作者所有。
+            <button type="button" class="legal-link">查看原始作品</button>
+          </p>
+          <p class="legal-text">“Cafe Launcher”是由“蔚蓝咖啡厅”开发组开发的第三方 Blue Archive 启动器，与游戏《ブルーアーカイブ》（中文名“蔚蓝档案”）及相关公司并无官方关联。</p>
+        </div>
+
+        <div class="settings-footer">
+          <button type="button" class="footer-button secondary">取消</button>
+          <button type="button" class="footer-button accent">保存</button>
+        </div>
+      </div>
+    </div>
+
+    <details class="prototype-notes">
+      <summary>Fluent token 映射与 M3 版差异要点</summary>
+      <table>
+        <tr><th>维度</th><th>Fluent 2 / Windows 11 取值</th><th>与现行 M3 版的差异</th></tr>
+        <tr><td>字阶</td><td>Subtitle 20/28 · Body 14/20 · Caption 12/16，Segoe UI Variable</td><td>M3：Display 22 / Body 13 · Noto Sans 栈</td></tr>
+        <tr><td>圆角</td><td>控件 4px · 卡片/浮层 8px（Control/OverlayCornerRadius）</td><td>M3 字阶 4/8/12/16 + 对话框 20</td></tr>
+        <tr><td>密度</td><td>控件高 32px · 设置行高 40px · 4px 间距系统</td><td>控件 36/42 · 行最小 40/60 · 8px 基距</td></tr>
+        <tr><td>颜色</td><td>中性优先：Layer/Card + CardStroke + DividerStroke；accent 仅主按钮与超链接</td><td>M3：PrimaryContainer/SecondaryContainer 等彩色容器角色参与层级</td></tr>
+        <tr><td>对齐</td><td>全部左对齐（不居中长内容/表单）</td><td>M3 版 Hero 居中</td></tr>
+        <tr><td>主操作</td><td>AccentFilled 每组唯一，reading order 在前</td><td>M3 filled 强调 + tonal 可能性</td></tr>
+        <tr><td>导航激活</td><td>3×16px 圆角 SelectionIndicator + Subtle 填充</td><td>ADR-013 定案：SecondaryContainer 填充、无指示条</td></tr>
+        <tr><td>焦点</td><td>Windows 双环（外 2px 反色 + 内 1px 正色）</td><td>accent @60% 单环</td></tr>
+        <tr><td>层级表达</td><td>间距 + 分组标题优先，卡片克制（避免 card soup）</td><td>M3 版双卡并列</td></tr>
+        <tr><td>材质</td><td>Layer 半透明（Mica 语境），常态不叠 Acrylic</td><td>Dialog.Background 中性表面（同为半透明）</td></tr>
+      </table>
+      <p>文案同 LauncherStrings.zh-Hans.resx；本变体为规范对照探索——仓库 Q5 决策仍以 M3 为规范骨架（spec §1.2），Fluent 目前仅承载动效层（ADR-016）。若采纳此方向需新增方向 ADR。</p>
+    </details>
+  </div>
+
+  <script>
+    const root = document.documentElement;
+    const lightBtn = document.getElementById("btn-light");
+    const darkBtn = document.getElementById("btn-dark");
+    function applyTheme(theme) {
+      root.dataset.theme = theme;
+      lightBtn.setAttribute("aria-pressed", String(theme === "light"));
+      darkBtn.setAttribute("aria-pressed", String(theme === "dark"));
+    }
+    lightBtn.addEventListener("click", () => applyTheme("light"));
+    darkBtn.addEventListener("click", () => applyTheme("dark"));
+  </script>
+</body>
+</html>
