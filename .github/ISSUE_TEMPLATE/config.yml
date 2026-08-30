@@ -1,0 +1,9 @@
+blank_issues_enabled: false
+contact_links:
+  - name: Cafe Launcher 使用文档
+    url: https://docs.bluearchive.cafe/cafe-launcher/
+    about: 安装、设置、游戏操作和常见问题说明
+  - name: 汉化客户端常见问题
+    url: https://docs.bluearchive.cafe/guide/qa
+    about: 汉化未生效、资源异常等非启动器问题
+
