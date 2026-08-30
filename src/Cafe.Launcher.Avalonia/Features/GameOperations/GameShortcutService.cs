@@ -1,5 +1,6 @@
 using System;
 using System.Diagnostics;
+using System.Globalization;
 using System.IO;
 using System.Runtime.InteropServices;
 using System.Runtime.InteropServices.ComTypes;
@@ -37,21 +38,53 @@ public sealed class GameShortcutService : IGameShortcutService
 {
     private readonly LocalizationService localizer;
     private readonly Func<string, bool> openDirectory;
+    private readonly Func<bool> isWindowsPlatform;
+    private readonly Func<bool> isLinuxPlatform;
+    private readonly Func<string?> launcherExecutablePath;
+
+    /// <summary>
+    /// Injectable seams for platform selection and external effects, kept together
+    /// so adding the next seam cannot grow the constructor again.
+    /// </summary>
+    internal sealed record Seams(
+        Func<string, bool> OpenDirectory,
+        Func<bool> IsWindowsPlatform,
+        Func<bool> IsLinuxPlatform,
+        Func<string?> LauncherExecutablePath)
+    {
+        public static Seams ForCurrentPlatform() => new(
+            OpenDirectoryInFileManager,
+            OperatingSystem.IsWindows,
+            OperatingSystem.IsLinux,
+            () => Environment.ProcessPath);
+    }
 
     public GameShortcutService(LocalizationService localizer)
-        : this(localizer, OpenDirectoryInFileManager)
+        : this(localizer, Seams.ForCurrentPlatform())
     {
     }
 
     internal GameShortcutService(LocalizationService localizer, Func<string, bool> openDirectory)
+        : this(localizer, new Seams(
+            openDirectory,
+            OperatingSystem.IsWindows,
+            OperatingSystem.IsLinux,
+            () => Environment.ProcessPath))
+    {
+    }
+
+    internal GameShortcutService(LocalizationService localizer, Seams seams)
     {
         this.localizer = localizer;
-        this.openDirectory = openDirectory;
+        openDirectory = seams.OpenDirectory;
+        isWindowsPlatform = seams.IsWindowsPlatform;
+        isLinuxPlatform = seams.IsLinuxPlatform;
+        launcherExecutablePath = seams.LauncherExecutablePath;
     }
 
     public Task<GameShortcutResult> CreateDesktopShortcutAsync(LauncherStatusSnapshot snapshot)
     {
-        var desktopDirectory = OperatingSystem.IsWindows()
+        var desktopDirectory = OperatingSystem.IsWindows() || OperatingSystem.IsLinux()
             ? Environment.GetFolderPath(Environment.SpecialFolder.DesktopDirectory)
             : null;
         return CreateShortcutInDirectoryAsync(snapshot, desktopDirectory);
@@ -61,7 +94,16 @@ public sealed class GameShortcutService : IGameShortcutService
         LauncherStatusSnapshot snapshot,
         string? targetDirectory)
     {
-        if (!OperatingSystem.IsWindows() || string.IsNullOrWhiteSpace(targetDirectory))
+        if (isLinuxPlatform())
+        {
+            return CreateLinuxDesktopEntry(snapshot, targetDirectory);
+        }
+
+        // The OperatingSystem check satisfies the platform analyzer in front of the
+        // COM call; the seam only exists so tests can pin the selected branch.
+        if (!isWindowsPlatform()
+            || !OperatingSystem.IsWindows()
+            || string.IsNullOrWhiteSpace(targetDirectory))
         {
             return new GameShortcutResult(GameShortcutStatus.UnsupportedPlatform);
         }
@@ -71,12 +113,22 @@ public sealed class GameShortcutService : IGameShortcutService
             return new GameShortcutResult(GameShortcutStatus.GameNotResolved);
         }
 
+        // The shortcut deliberately bypasses the launcher (unlike the Linux .desktop,
+        // which routes through --launch-game): double-clicking must behave like a
+        // direct game start. Running the game executable alone does not start the
+        // game, so the target is the distribution's own run.bat start script.
+        var startScriptPath = Path.Combine(workingDirectory, GamePaths.GameStartScriptFileName);
+        if (!File.Exists(startScriptPath))
+        {
+            return new GameShortcutResult(GameShortcutStatus.GameNotResolved);
+        }
+
         var shortcutFileName = ResolveShortcutFileName(executablePath);
         var shortcutPath = Path.Combine(targetDirectory, $"{shortcutFileName}.lnk");
         var iconPath = ResolveShortcutIconPath(snapshot, executablePath);
         try
         {
-            CreateShortcut(executablePath, workingDirectory, iconPath, shortcutPath);
+            CreateShortcut(startScriptPath, workingDirectory, iconPath, shortcutPath);
             return new GameShortcutResult(GameShortcutStatus.Created, shortcutPath);
         }
         catch (Exception exception)
@@ -84,6 +136,95 @@ public sealed class GameShortcutService : IGameShortcutService
             return new GameShortcutResult(GameShortcutStatus.Failed, exception.Message);
         }
     }
+
+    /// <summary>
+    /// Linux desktop entry. Unlike the Windows .lnk (which points straight at the
+    /// game executable), the entry always goes through the launcher with
+    /// --launch-game so manifest validation, update checks, clickCode, runner
+    /// selection, and diagnostics all apply (cross-platform runtime design §13/§14).
+    /// </summary>
+    internal GameShortcutResult CreateLinuxDesktopEntry(
+        LauncherStatusSnapshot snapshot,
+        string? targetDirectory)
+    {
+        if (!isLinuxPlatform() || string.IsNullOrWhiteSpace(targetDirectory))
+        {
+            return new GameShortcutResult(GameShortcutStatus.UnsupportedPlatform);
+        }
+
+        var launcherPath = launcherExecutablePath();
+        if (string.IsNullOrWhiteSpace(launcherPath) || !File.Exists(launcherPath))
+        {
+            return new GameShortcutResult(
+                GameShortcutStatus.Failed,
+                "Launcher executable could not be resolved.");
+        }
+
+        if (!TryResolveGameExecutable(snapshot, out _, out _, out _))
+        {
+            return new GameShortcutResult(GameShortcutStatus.GameNotResolved);
+        }
+
+        var entryName = ResolveShortcutFileName(launcherPath);
+        var entryPath = Path.Combine(targetDirectory, $"{entryName}.desktop");
+        var iconPath = ResolveLinuxIconPath(launcherPath);
+        try
+        {
+            WriteDesktopEntry(entryPath, localizer.T("gameDisplayName"), launcherPath, iconPath);
+            if (OperatingSystem.IsLinux())
+            {
+                // Desktop environments only launch entries marked executable.
+                File.SetUnixFileMode(
+                    entryPath,
+                    UnixFileMode.UserRead | UnixFileMode.UserWrite | UnixFileMode.UserExecute
+                    | UnixFileMode.GroupRead | UnixFileMode.GroupExecute
+                    | UnixFileMode.OtherRead | UnixFileMode.OtherExecute);
+            }
+
+            return new GameShortcutResult(GameShortcutStatus.Created, entryPath);
+        }
+        catch (Exception exception)
+        {
+            return new GameShortcutResult(GameShortcutStatus.Failed, exception.Message);
+        }
+    }
+
+    /// <summary>
+    /// Renders the desktop-entry file content for one launch point. The entry goes
+    /// through the launcher with --launch-game (never the game executable directly)
+    /// so manifest validation, update checks, clickCode, runner selection, and
+    /// diagnostics all apply, per the cross-platform runtime design §13/§14.
+    /// Exposed for tests: asserts the documented entry shape byte-for-byte.
+    /// </summary>
+    internal static string BuildDesktopEntry(string displayName, string launcherPath, string? iconPath)
+    {
+        var builder = new System.Text.StringBuilder();
+        builder.AppendLine("[Desktop Entry]");
+        builder.AppendLine("Type=Application");
+        builder.AppendLine(CultureInfo.InvariantCulture, $"Name={displayName}");
+        builder.AppendLine(CultureInfo.InvariantCulture, $"Exec=\"{launcherPath}\" {Program.LaunchGameArgument}");
+        if (!string.IsNullOrWhiteSpace(iconPath))
+        {
+            builder.AppendLine(CultureInfo.InvariantCulture, $"Icon={iconPath}");
+        }
+
+        builder.AppendLine("Terminal=false");
+        builder.Append("Categories=Game;");
+        return builder.ToString();
+    }
+
+    /// <summary>
+    /// The launcher icon copied next to the executable (Assets/app-icon.ico). No icon
+    /// line when it is missing — desktops fall back to a generic icon.
+    /// </summary>
+    private static string? ResolveLinuxIconPath(string launcherPath)
+    {
+        var candidate = Path.Combine(Path.GetDirectoryName(launcherPath) ?? "", "Assets", "app-icon.ico");
+        return File.Exists(candidate) ? candidate : null;
+    }
+
+    private void WriteDesktopEntry(string entryPath, string displayName, string launcherPath, string? iconPath) =>
+        File.WriteAllText(entryPath, BuildDesktopEntry(displayName, launcherPath, iconPath), new System.Text.UTF8Encoding(encoderShouldEmitUTF8Identifier: false));
 
     public bool TryOpenGameFolder(LauncherStatusSnapshot snapshot)
     {

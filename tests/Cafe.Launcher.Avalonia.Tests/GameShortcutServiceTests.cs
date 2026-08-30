@@ -189,6 +189,7 @@ public sealed class GameShortcutServiceTests : IDisposable
         var gameDirectory = Directory.CreateDirectory(Path.Combine(tempDirectory, "game")).FullName;
         var executablePath = Path.Combine(gameDirectory, "CafeTestGame.exe");
         File.WriteAllText(executablePath, string.Empty);
+        CreateStartScript(gameDirectory);
         var shortcutDirectory = Directory.CreateDirectory(Path.Combine(tempDirectory, "desktop")).FullName;
         var service = new GameShortcutService(new LocalizationService());
         var snapshot = new LauncherStatusSnapshot
@@ -209,10 +210,61 @@ public sealed class GameShortcutServiceTests : IDisposable
     }
 
     [WindowsFact]
+    public async Task CreateShortcutInDirectoryAsync_TargetsRunBatWithGameFolderWorkingDirectory()
+    {
+        var gameDirectory = Directory.CreateDirectory(Path.Combine(tempDirectory, "game")).FullName;
+        File.WriteAllText(Path.Combine(gameDirectory, "CafeTestGame.exe"), string.Empty);
+        var startScriptPath = CreateStartScript(gameDirectory);
+        var shortcutDirectory = Directory.CreateDirectory(Path.Combine(tempDirectory, "desktop")).FullName;
+        var service = new GameShortcutService(new LocalizationService());
+        var snapshot = new LauncherStatusSnapshot
+        {
+            LocalGame = new LocalInstallationState
+            {
+                GamePath = gameDirectory,
+                GameConfig = new GameLauncherConfig { Name = "CafeTestGame" }
+            }
+        };
+
+        var result = await service.CreateShortcutInDirectoryAsync(snapshot, shortcutDirectory);
+
+        Assert.Equal(GameShortcutStatus.Created, result.Status);
+        var (targetPath, workingDirectory, arguments) = ReadShortcutTarget(result.Detail);
+        // Direct game start, deliberately not routed through the launcher.
+        Assert.Equal(startScriptPath, targetPath, ignoreCase: true);
+        Assert.Equal(gameDirectory, workingDirectory, ignoreCase: true);
+        Assert.Equal(string.Empty, arguments);
+        Assert.DoesNotContain("--launch-game", targetPath, StringComparison.OrdinalIgnoreCase);
+    }
+
+    [WindowsFact]
+    public async Task CreateShortcutInDirectoryAsync_WhenStartScriptMissing_ReturnsGameNotResolved()
+    {
+        var gameDirectory = Directory.CreateDirectory(Path.Combine(tempDirectory, "game")).FullName;
+        File.WriteAllText(Path.Combine(gameDirectory, "CafeTestGame.exe"), string.Empty);
+        var shortcutDirectory = Directory.CreateDirectory(Path.Combine(tempDirectory, "desktop")).FullName;
+        var service = new GameShortcutService(new LocalizationService());
+        var snapshot = new LauncherStatusSnapshot
+        {
+            LocalGame = new LocalInstallationState
+            {
+                GamePath = gameDirectory,
+                GameConfig = new GameLauncherConfig { Name = "CafeTestGame" }
+            }
+        };
+
+        var result = await service.CreateShortcutInDirectoryAsync(snapshot, shortcutDirectory);
+
+        Assert.Equal(GameShortcutStatus.GameNotResolved, result.Status);
+        Assert.False(File.Exists(Path.Combine(shortcutDirectory, "Blue Archive.lnk")));
+    }
+
+    [WindowsFact]
     public async Task CreateShortcutInDirectoryAsync_WhenGameClientPresent_PinsIconToGameClient()
     {
         var gameDirectory = Directory.CreateDirectory(Path.Combine(tempDirectory, "game")).FullName;
         File.WriteAllText(Path.Combine(gameDirectory, "CafeTestGame.exe"), string.Empty);
+        CreateStartScript(gameDirectory);
         var gameClientPath = Path.Combine(gameDirectory, GamePaths.GameExecutableFileName);
         File.WriteAllText(gameClientPath, string.Empty);
         var shortcutDirectory = Directory.CreateDirectory(Path.Combine(tempDirectory, "desktop")).FullName;
@@ -240,6 +292,7 @@ public sealed class GameShortcutServiceTests : IDisposable
         var gameDirectory = Directory.CreateDirectory(Path.Combine(tempDirectory, "game")).FullName;
         var executablePath = Path.Combine(gameDirectory, "CafeTestGame.exe");
         File.WriteAllText(executablePath, string.Empty);
+        CreateStartScript(gameDirectory);
         var shortcutDirectory = Directory.CreateDirectory(Path.Combine(tempDirectory, "desktop")).FullName;
         var service = new GameShortcutService(new LocalizationService());
         var snapshot = new LauncherStatusSnapshot
@@ -327,6 +380,31 @@ public sealed class GameShortcutServiceTests : IDisposable
         }
     }
 
+    private static (string TargetPath, string WorkingDirectory, string Arguments) ReadShortcutTarget(string shortcutPath)
+    {
+        if (!OperatingSystem.IsWindows())
+        {
+            return ("", "", "");
+        }
+
+        var shellLink = (TestShellLinkW)new ShellLinkCom();
+        try
+        {
+            ((IPersistFile)shellLink).Load(shortcutPath, 0);
+            var targetPath = new StringBuilder(260);
+            shellLink.GetPath(targetPath, targetPath.Capacity, IntPtr.Zero, 0);
+            var workingDirectory = new StringBuilder(260);
+            shellLink.GetWorkingDirectory(workingDirectory, workingDirectory.Capacity);
+            var arguments = new StringBuilder(260);
+            shellLink.GetArguments(arguments, arguments.Capacity);
+            return (targetPath.ToString(), workingDirectory.ToString(), arguments.ToString());
+        }
+        finally
+        {
+            _ = Marshal.ReleaseComObject(shellLink);
+        }
+    }
+
     [ComImport]
     [Guid("00021401-0000-0000-C000-000000000046")]
     private class ShellLinkCom
@@ -393,6 +471,175 @@ public sealed class GameShortcutServiceTests : IDisposable
         var result = await service.CreateShortcutInDirectoryAsync(snapshot, shortcutDirectory);
 
         Assert.Equal(GameShortcutStatus.GameNotResolved, result.Status);
+    }
+
+    [Fact]
+    public void BuildDesktopEntry_LaunchesThroughTheLauncherWithLaunchGameArgument()
+    {
+        var content = GameShortcutService.BuildDesktopEntry(
+            "Blue Archive",
+            @"/opt/cafe-launcher/Cafe.Launcher",
+            "/opt/cafe-launcher/Assets/app-icon.ico");
+
+        var lines = content.Split('\n', StringSplitOptions.TrimEntries | StringSplitOptions.RemoveEmptyEntries);
+        Assert.Equal(
+            [
+                "[Desktop Entry]",
+                "Type=Application",
+                "Name=Blue Archive",
+                $"Exec=\"/opt/cafe-launcher/Cafe.Launcher\" {Program.LaunchGameArgument}",
+                "Icon=/opt/cafe-launcher/Assets/app-icon.ico",
+                "Terminal=false",
+                "Categories=Game;"
+            ],
+            lines);
+    }
+
+    [Fact]
+    public void BuildDesktopEntry_WhenIconMissing_OmitsIconLine()
+    {
+        var content = GameShortcutService.BuildDesktopEntry(
+            "Blue Archive",
+            @"/opt/cafe-launcher/Cafe.Launcher",
+            iconPath: null);
+
+        Assert.DoesNotContain("Icon=", content, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public async Task CreateShortcutInDirectoryAsync_OnLinux_WritesDesktopEntryThatLaunchesThroughLauncher()
+    {
+        var launcherDirectory = Directory.CreateDirectory(Path.Combine(tempDirectory, "launcher")).FullName;
+        var launcherPath = Path.Combine(launcherDirectory, "Cafe.Launcher");
+        File.WriteAllText(launcherPath, string.Empty);
+        var gameDirectory = Directory.CreateDirectory(Path.Combine(tempDirectory, "game")).FullName;
+        File.WriteAllText(Path.Combine(gameDirectory, "CafeTestGame.exe"), string.Empty);
+        var shortcutDirectory = Directory.CreateDirectory(Path.Combine(tempDirectory, "desktop")).FullName;
+        var service = CreateLinuxService(launcherPath);
+        var snapshot = new LauncherStatusSnapshot
+        {
+            LocalGame = new LocalInstallationState
+            {
+                GamePath = gameDirectory,
+                GameConfig = new GameLauncherConfig { Name = "CafeTestGame" }
+            }
+        };
+
+        var result = await service.CreateShortcutInDirectoryAsync(snapshot, shortcutDirectory);
+
+        Assert.Equal(GameShortcutStatus.Created, result.Status);
+        var entryPath = Path.Combine(shortcutDirectory, "Blue Archive.desktop");
+        Assert.True(File.Exists(entryPath));
+        Assert.Equal(entryPath, result.Detail);
+        var content = File.ReadAllText(entryPath);
+        Assert.Contains("[Desktop Entry]", content, StringComparison.Ordinal);
+        Assert.Contains("Type=Application", content, StringComparison.Ordinal);
+        Assert.Contains("Name=Blue Archive", content, StringComparison.Ordinal);
+        Assert.Contains($"Exec=\"{launcherPath}\" {Program.LaunchGameArgument}", content, StringComparison.Ordinal);
+        Assert.Contains("Terminal=false", content, StringComparison.Ordinal);
+        Assert.Contains("Categories=Game;", content, StringComparison.Ordinal);
+        Assert.DoesNotContain(".exe\"", content, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public async Task CreateShortcutInDirectoryAsync_OnLinux_WhenIconAssetPresent_ReferencesIt()
+    {
+        var launcherDirectory = Directory.CreateDirectory(Path.Combine(tempDirectory, "launcher")).FullName;
+        var launcherPath = Path.Combine(launcherDirectory, "Cafe.Launcher");
+        File.WriteAllText(launcherPath, string.Empty);
+        Directory.CreateDirectory(Path.Combine(launcherDirectory, "Assets"));
+        var iconPath = Path.Combine(launcherDirectory, "Assets", "app-icon.ico");
+        File.WriteAllText(iconPath, string.Empty);
+        var gameDirectory = Directory.CreateDirectory(Path.Combine(tempDirectory, "game")).FullName;
+        File.WriteAllText(Path.Combine(gameDirectory, "CafeTestGame.exe"), string.Empty);
+        var shortcutDirectory = Directory.CreateDirectory(Path.Combine(tempDirectory, "desktop")).FullName;
+        var service = CreateLinuxService(launcherPath);
+        var snapshot = new LauncherStatusSnapshot
+        {
+            LocalGame = new LocalInstallationState
+            {
+                GamePath = gameDirectory,
+                GameConfig = new GameLauncherConfig { Name = "CafeTestGame" }
+            }
+        };
+
+        var result = await service.CreateShortcutInDirectoryAsync(snapshot, shortcutDirectory);
+
+        Assert.Equal(GameShortcutStatus.Created, result.Status);
+        Assert.Contains(
+            $"Icon={iconPath}",
+            File.ReadAllText(result.Detail),
+            StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public async Task CreateShortcutInDirectoryAsync_OnLinux_WhenLauncherExecutableMissing_ReturnsFailed()
+    {
+        var shortcutDirectory = Directory.CreateDirectory(Path.Combine(tempDirectory, "desktop")).FullName;
+        var service = CreateLinuxService(Path.Combine(tempDirectory, "missing", "Cafe.Launcher"));
+        var snapshot = new LauncherStatusSnapshot
+        {
+            LocalGame = new LocalInstallationState { GamePath = tempDirectory }
+        };
+
+        var result = await service.CreateShortcutInDirectoryAsync(snapshot, shortcutDirectory);
+
+        Assert.Equal(GameShortcutStatus.Failed, result.Status);
+        Assert.Contains("Launcher executable", result.Detail, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public async Task CreateShortcutInDirectoryAsync_OnLinux_WhenGameUnresolved_ReturnsGameNotResolved()
+    {
+        var launcherDirectory = Directory.CreateDirectory(Path.Combine(tempDirectory, "launcher")).FullName;
+        var launcherPath = Path.Combine(launcherDirectory, "Cafe.Launcher");
+        File.WriteAllText(launcherPath, string.Empty);
+        var shortcutDirectory = Directory.CreateDirectory(Path.Combine(tempDirectory, "desktop")).FullName;
+        var service = CreateLinuxService(launcherPath);
+        var snapshot = new LauncherStatusSnapshot
+        {
+            LocalGame = new LocalInstallationState { GamePath = tempDirectory }
+        };
+
+        var result = await service.CreateShortcutInDirectoryAsync(snapshot, shortcutDirectory);
+
+        Assert.Equal(GameShortcutStatus.GameNotResolved, result.Status);
+    }
+
+    [Fact]
+    public async Task CreateShortcutInDirectoryAsync_OnUnsupportedPlatform_ReturnsUnsupportedPlatform()
+    {
+        var shortcutDirectory = Directory.CreateDirectory(Path.Combine(tempDirectory, "desktop")).FullName;
+        var service = new GameShortcutService(
+            new LocalizationService(),
+            new GameShortcutService.Seams(
+                OpenDirectory: _ => true,
+                IsWindowsPlatform: () => false,
+                IsLinuxPlatform: () => false,
+                LauncherExecutablePath: () => null));
+
+        var result = await service.CreateShortcutInDirectoryAsync(
+            new LauncherStatusSnapshot(),
+            shortcutDirectory);
+
+        Assert.Equal(GameShortcutStatus.UnsupportedPlatform, result.Status);
+    }
+
+    private GameShortcutService CreateLinuxService(string launcherPath) =>
+        new(
+            new LocalizationService(),
+            new GameShortcutService.Seams(
+                OpenDirectory: _ => true,
+                IsWindowsPlatform: () => false,
+                IsLinuxPlatform: () => true,
+                LauncherExecutablePath: () => launcherPath));
+
+    /// <summary>Creates the run.bat start script every valid game folder ships with.</summary>
+    private static string CreateStartScript(string gameDirectory)
+    {
+        var startScriptPath = Path.Combine(gameDirectory, GamePaths.GameStartScriptFileName);
+        File.WriteAllText(startScriptPath, string.Empty);
+        return startScriptPath;
     }
 
     [AttributeUsage(AttributeTargets.Method, AllowMultiple = false)]

@@ -18,6 +18,14 @@ public static class GamePaths
     /// </summary>
     public const string GameExecutableFileName = "BlueArchive.exe";
 
+    /// <summary>
+    /// The start script shipped in the game folder. Running the game executable
+    /// directly does not start the game — the entry the Yostar distribution itself
+    /// uses is this script, so out-of-launcher start points (desktop shortcuts)
+    /// must target it with the game folder as the working directory.
+    /// </summary>
+    public const string GameStartScriptFileName = "run.bat";
+
     public const string ManifestFileName = "manifest.json";
     public const string GameConfigFileName = "game-launcher-config.json";
     public const string LauncherSettingsFileName = "settings.json";
