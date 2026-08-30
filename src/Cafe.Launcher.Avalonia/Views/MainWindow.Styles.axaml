@@ -335,6 +335,12 @@
         <Setter Property="VerticalContentAlignment" Value="Center"/>
         <Setter Property="Template" Value="{StaticResource LauncherBorderButtonTemplate}"/>
     </Style>
+    <Style Selector="Button.flat-action.danger-action">
+        <Setter Property="BorderBrush" Value="{DynamicResource Launcher.Color.Error}"/>
+        <Setter Property="BorderThickness" Value="{StaticResource Launcher.Border.Thickness.Default}"/>
+        <Setter Property="MinHeight" Value="{StaticResource Launcher.Control.Height.Setting}"/>
+        <Setter Property="Padding" Value="{StaticResource Launcher.Component.Action.Outlined.Padding}"/>
+    </Style>
     <Style Selector="Button.danger-action:pointerover">
         <Setter Property="Background" Value="{DynamicResource Launcher.Color.Error.Hover}"/>
         <Setter Property="Foreground" Value="{DynamicResource Launcher.Color.OnError}"/>
