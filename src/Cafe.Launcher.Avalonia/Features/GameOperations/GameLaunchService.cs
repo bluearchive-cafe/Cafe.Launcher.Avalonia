@@ -130,7 +130,10 @@ public sealed class GameLaunchService
                 Success = false,
                 Message = localizer.F("gameLaunchFailed", exception.Message),
                 DiagnosticMessage =
-                    $"{request.ExecutablePath}{Environment.NewLine}{localizer.T("path")}: {request.WorkingDirectory}{Environment.NewLine}{exception.Message}",
+                    $"{localizer.T("gameRuntimeRunner")}: {preferredRunnerId ?? localizer.T("gameRuntimeRunnerAuto")}{Environment.NewLine}" +
+                    $"{localizer.T("executable")}: {request.ExecutablePath}{Environment.NewLine}" +
+                    $"{localizer.T("path")}: {request.WorkingDirectory}{Environment.NewLine}" +
+                    $"{exception.Message}",
                 DiagnosticException = exception,
                 Validation = validation
             };
@@ -138,8 +141,7 @@ public sealed class GameLaunchService
 
         if (!launchResult.Success)
         {
-            if (launchResult.Failure == GameRuntimeLaunchFailure.StartFailed
-                && launchResult.FailureException is not null)
+            if (launchResult.FailureException is not null)
             {
                 var exception = launchResult.FailureException;
                 return new GameLaunchResult
@@ -182,11 +184,22 @@ public sealed class GameLaunchService
         };
     }
 
-    private string BuildLaunchContext(GameRuntimeLaunchResult launchResult, GameLaunchRequest request) =>
-        $"{localizer.T("gameRuntimeRunner")}: {launchResult.RunnerId}{Environment.NewLine}" +
-        $"{localizer.T("executable")}: {request.ExecutablePath}{Environment.NewLine}" +
-        $"{localizer.T("path")}: {request.WorkingDirectory}{Environment.NewLine}" +
-        launchResult.Diagnostic.Describe();
+    private string BuildLaunchContext(GameRuntimeLaunchResult launchResult, GameLaunchRequest request)
+    {
+        var runnerLine = string.IsNullOrWhiteSpace(launchResult.RunnerId)
+            ? $"{localizer.T("gameRuntimeRunner")}: {localizer.T("gameRuntimeRunnerAuto")}"
+            : $"{localizer.T("gameRuntimeRunner")}: {launchResult.RunnerId}";
+        var candidates = launchResult.Candidates.Count == 0
+            ? ""
+            : Environment.NewLine + string.Join(
+                Environment.NewLine,
+                launchResult.Candidates.Select(candidate =>
+                    $"- {candidate.RunnerId}: {AvailabilityReason(candidate.Availability)}"));
+        return runnerLine + candidates + Environment.NewLine +
+            $"{localizer.T("executable")}: {request.ExecutablePath}{Environment.NewLine}" +
+            $"{localizer.T("path")}: {request.WorkingDirectory}{Environment.NewLine}" +
+            launchResult.Diagnostic.Describe();
+    }
 
     private string BuildRunnerSelectionFailure(
         GameRuntimeLaunchResult launchResult,
