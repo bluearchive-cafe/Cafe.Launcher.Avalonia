@@ -79,7 +79,7 @@ GitHub Actions uses .NET `10.0.x`. The build workflow runs on `windows-latest`: 
 
 ### Startup and composition
 
-- `Program.cs` owns process lifetime: Windows single-instance mutex/signaling, the logger created before DI, crash handlers, first-launch detection, and the session start/end logging lifecycle. The pre-DI `UnifiedLogger` is passed into DI so the process has one Serilog pipeline and is disposed only after session completion logging.
+- `Program.cs` owns process lifetime: the single-instance mutex and the cross-platform `--launch-game` forwarding signal (named event on Windows, local socket on Unix — .NET has no named events off Windows), the logger created before DI, crash handlers, first-launch detection, and the session start/end logging lifecycle. The pre-DI `UnifiedLogger` is passed into DI so the process has one Serilog pipeline and is disposed only after session completion logging.
 - `App.axaml.cs` is the composition root. It builds `ServiceCollection`, calls `ServiceConfiguration.AddLauncherServices(existingLogger:)`, constructs the single `MainWindow`, configures tray/single-instance restoration, and either shows the first-launch setup wizard or starts normal asynchronous initialization.
 - `Composition/ServiceConfiguration.cs` is the DI registration point. This is a single-window desktop app: services and view models are singletons. Microsoft DI disposes created services in reverse registration order, so position a new `IDisposable` service after the consumers that must release first. `Program.RunSession` explicitly disposes the shared pre-DI `UnifiedLogger` after all session-end logging has completed.
 - `App.axaml` defines Fluent/Material resources, theme dictionaries, and `Launcher*` design tokens.

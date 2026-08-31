@@ -144,8 +144,9 @@ public partial class App : Application
             showWindowListener = ShowWindowSignalListener.Start(mainWindow, trayService, SignalName);
 
             // Listen for --launch-game forwards from second instances (cross-platform:
-            // the Linux .desktop shortcut relies on it).
-            launchGameListener = new LaunchGameSignalListener(viewModel.Operations, Program.LaunchGameSignalName);
+            // the Linux .desktop shortcut relies on it; on Unix the transport is a
+            // local socket, since .NET has no named events outside Windows).
+            launchGameListener = new LaunchGameSignalListener(viewModel.Operations, Program.LaunchGameSignal!);
 
             // Register Opened handler BEFORE desktop.MainWindow is set — that assignment
             // may trigger the window to show and fire Opened synchronously.
@@ -266,21 +267,20 @@ public partial class App : Application
     }
 
     /// <summary>
-    /// Shared plumbing for named EventWaitHandle listeners: a 250ms poll loop on a
-    /// background task that dispatches each raised signal to the UI thread, with
-    /// best-effort cleanup.
+    /// 共享的跨进程信号轮询基类：后台任务以 250ms 间隔探测一次信号，
+    /// 命中后把处理调度到 UI 线程，退出时做尽力而为的清理。
     /// </summary>
-    private abstract class EventWaitHandleListener : IDisposable
+    private abstract class SignalListenerBase : IDisposable
     {
-        private readonly EventWaitHandle signal;
+        private static readonly TimeSpan PollInterval = TimeSpan.FromMilliseconds(250);
+
         private readonly CancellationTokenSource cancellationTokenSource = new();
         private readonly CancellationToken cancellationToken;
         private readonly Task listenerTask;
         private bool disposed;
 
-        protected EventWaitHandleListener(string signalName)
+        protected SignalListenerBase()
         {
-            signal = new EventWaitHandle(false, EventResetMode.AutoReset, signalName);
             cancellationToken = cancellationTokenSource.Token;
             listenerTask = Task.Run(Listen, cancellationToken);
         }
@@ -293,7 +293,7 @@ public partial class App : Application
             {
                 while (!cancellationToken.IsCancellationRequested)
                 {
-                    if (!signal.WaitOne(TimeSpan.FromMilliseconds(250)))
+                    if (!WaitForSignal(PollInterval))
                     {
                         continue;
                     }
@@ -313,7 +313,18 @@ public partial class App : Application
             }
         }
 
+        /// <summary>返回 true 表示信号已就绪（AutoReset 语义，读取即消费）。</summary>
+        protected abstract bool WaitForSignal(TimeSpan timeout);
+
         protected abstract void OnSignalRaised();
+
+        /// <summary>
+        /// 释放本监听器独占的一次性资源。共享的跨进程端点由
+        /// <see cref="Program"/> 持有，并随进程存活，子类通常无需处理。
+        /// </summary>
+        protected virtual void DisposeResource()
+        {
+        }
 
         public void Dispose()
         {
@@ -336,9 +347,26 @@ public partial class App : Application
                 // Exit cleanup is best-effort.
             }
 
-            signal.Dispose();
+            DisposeResource();
             cancellationTokenSource.Dispose();
         }
+    }
+
+    /// <summary>
+    /// 基于命名事件的监听器（仅 Windows 使用）：第二个实例通过同名内核事件唤醒本监听器。
+    /// </summary>
+    private abstract class EventWaitHandleListener : SignalListenerBase
+    {
+        private readonly EventWaitHandle signal;
+
+        protected EventWaitHandleListener(string signalName)
+        {
+            signal = new EventWaitHandle(false, EventResetMode.AutoReset, signalName);
+        }
+
+        protected override bool WaitForSignal(TimeSpan timeout) => signal.WaitOne(timeout);
+
+        protected override void DisposeResource() => signal.Dispose();
     }
 
     private sealed class ShowWindowSignalListener : EventWaitHandleListener
@@ -391,16 +419,21 @@ public partial class App : Application
     /// <summary>
     /// Receives the --launch-game forward from a second process and starts the game
     /// through the regular UI command, so busy-state, validation, and toasts all apply.
+    /// On Windows the transport is a named EventWaitHandle; on Unix it is a local
+    /// socket (CrossProcessLaunchSignal), because .NET has no named events there.
     /// </summary>
-    private sealed class LaunchGameSignalListener : EventWaitHandleListener
+    private sealed class LaunchGameSignalListener : SignalListenerBase
     {
         private readonly GameOperationsViewModel operations;
+        private readonly CrossProcessLaunchSignal signal;
 
-        public LaunchGameSignalListener(GameOperationsViewModel operations, string signalName)
-            : base(signalName)
+        public LaunchGameSignalListener(GameOperationsViewModel operations, CrossProcessLaunchSignal signal)
         {
             this.operations = operations;
+            this.signal = signal;
         }
+
+        protected override bool WaitForSignal(TimeSpan timeout) => signal.WaitOne(timeout);
 
         protected override void OnSignalRaised()
         {
