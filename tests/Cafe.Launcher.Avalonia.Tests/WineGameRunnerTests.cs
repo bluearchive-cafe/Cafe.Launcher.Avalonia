@@ -123,13 +123,17 @@ public sealed class WineGameRunnerTests : IDisposable
         var runner = CreateRunner(
             isSupportedPlatform: true,
             pathVariable: tempDir,
-            probeVersion: (_, _) => Task.FromResult<string?>(null));
+            probeVersion: (_, _) => Task.FromResult(new RuntimeProbeResult(
+                RuntimeProbeFailureKind.NonZeroExit,
+                ExitCode: 9,
+                StandardError: "wine probe failed")));
 
         var availability = await runner.CheckAvailabilityAsync(new GameRuntimeOptions());
 
         Assert.Equal(GameRunnerAvailabilityStatus.Broken, availability.Status);
         Assert.Equal(winePath, availability.ExecutablePath);
-        Assert.NotNull(availability.TechnicalDetail);
+        Assert.Contains("ExitCode: 9", availability.TechnicalDetail, StringComparison.Ordinal);
+        Assert.Contains("wine probe failed", availability.TechnicalDetail, StringComparison.Ordinal);
     }
 
     [Fact]
@@ -198,12 +202,16 @@ public sealed class WineGameRunnerTests : IDisposable
         bool isSupportedPlatform,
         string? pathVariable = null,
         IProcessLauncher? processLauncher = null,
-        Func<string, CancellationToken, Task<string?>>? probeVersion = null) =>
+        Func<string, CancellationToken, Task<RuntimeProbeResult>>? probeVersion = null) =>
         new(
             processLauncher ?? new StubProcessLauncher(null),
             () => isSupportedPlatform,
             explicitPath => ExecutableLocator.FindInPath("wine", explicitPath, pathVariable),
-            probeVersion ?? ((_, _) => Task.FromResult<string?>("9.0")));
+            probeVersion ?? ((_, _) => Task.FromResult(RuntimeProbeResult.Success(
+                "9.0",
+                0,
+                "wine-9.0",
+                ""))));
 
     private static Process StartTrivialProcess()
     {

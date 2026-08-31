@@ -1,6 +1,7 @@
 using System;
 using System.ComponentModel;
 using System.Diagnostics;
+using System.IO;
 using System.Text.RegularExpressions;
 using System.Threading;
 using System.Threading.Tasks;
@@ -11,8 +12,8 @@ namespace Cafe.Launcher.Avalonia.Services.GameRuntime;
 /// Proves a runtime executable actually works by running its version command
 /// (e.g. "umu-run --version") and capturing the output. A file merely existing on
 /// disk says nothing about whether the runtime can launch a game; this probe turns
-/// "file exists" into "runtime responds". Returns the parsed version string, or
-/// null when the process fails to start, exits non-zero, or times out.
+/// "file exists" into "runtime responds" and returns structured evidence containing
+/// either the parsed version or precise failure details.
 /// </summary>
 public static class RuntimeVersionProbe
 {
@@ -21,7 +22,7 @@ public static class RuntimeVersionProbe
 
     private static readonly Regex VersionTokenPattern = new("""\d+(\.\d+)+""", RegexOptions.Compiled);
 
-    public static async Task<string?> ProbeAsync(
+    public static async Task<RuntimeProbeResult> ProbeAsync(
         string executablePath,
         string versionArgument,
         TimeSpan timeout,
@@ -45,12 +46,16 @@ public static class RuntimeVersionProbe
         catch (Exception exception)
             when (exception is InvalidOperationException or Win32Exception or PlatformNotSupportedException)
         {
-            return null;
+            return new RuntimeProbeResult(
+                RuntimeProbeFailureKind.ProcessStartFailed,
+                ErrorMessage: exception.Message);
         }
 
         if (process is null)
         {
-            return null;
+            return new RuntimeProbeResult(
+                RuntimeProbeFailureKind.ProcessStartFailed,
+                ErrorMessage: "Process.Start returned null.");
         }
 
         using (process)
@@ -69,22 +74,36 @@ public static class RuntimeVersionProbe
                 {
                     KillProcessTree(process);
                     cancellationToken.ThrowIfCancellationRequested();
-                    // Observe the abandoned pipe reads so a late cancellation cannot
-                    // surface as an unobserved task exception; after the kill they
-                    // complete (or fault immediately) instead of lingering.
-                    await Task.WhenAll(outputTask, errorTask).ConfigureAwait(false);
-                    return null;
+                    var timedOutOutput = await ReadCapturedOutputAsync(outputTask).ConfigureAwait(false);
+                    var timedOutError = await ReadCapturedOutputAsync(errorTask).ConfigureAwait(false);
+                    return new RuntimeProbeResult(
+                        RuntimeProbeFailureKind.TimedOut,
+                        StandardOutput: timedOutOutput,
+                        StandardError: timedOutError,
+                        ErrorMessage: $"The version probe exceeded {timeout}.");
                 }
 
                 await exitTask.ConfigureAwait(false);
-                if (TryReadExitCode(process) is not 0)
+                var output = await ReadCapturedOutputAsync(outputTask).ConfigureAwait(false);
+                var error = await ReadCapturedOutputAsync(errorTask).ConfigureAwait(false);
+                var exitCode = TryReadExitCode(process);
+                if (exitCode is not 0)
                 {
-                    return null;
+                    return new RuntimeProbeResult(
+                        RuntimeProbeFailureKind.NonZeroExit,
+                        ExitCode: exitCode,
+                        StandardOutput: output,
+                        StandardError: error);
                 }
 
-                var output = await outputTask.ConfigureAwait(false);
-                var error = await errorTask.ConfigureAwait(false);
-                return ParseVersion(output, error);
+                var version = ParseVersion(output, error);
+                return version is null
+                    ? new RuntimeProbeResult(
+                        RuntimeProbeFailureKind.EmptyOutput,
+                        ExitCode: exitCode,
+                        StandardOutput: output,
+                        StandardError: error)
+                    : RuntimeProbeResult.Success(version, exitCode.Value, output, error);
             }
             catch (OperationCanceledException)
             {
@@ -109,14 +128,6 @@ public static class RuntimeVersionProbe
             ? match.Value
             : firstLine;
     }
-
-    /// <summary>
-    /// Standard technical explanation attached when a runtime's version probe
-    /// fails — single source of truth so runners cannot drift from the probe's
-    /// actual failure modes.
-    /// </summary>
-    internal static string DescribeProbeFailure(string executablePath) =>
-        $"\"{executablePath} --version\" failed to start, exited non-zero, or timed out.";
 
     private static string? FirstNonEmptyLine(string text)
     {
@@ -143,6 +154,19 @@ public static class RuntimeVersionProbe
         {
             // e.g. terminated by a signal on Unix — treat as probe failure.
             return null;
+        }
+    }
+
+    private static async Task<string> ReadCapturedOutputAsync(Task<string> outputTask)
+    {
+        try
+        {
+            return await outputTask.ConfigureAwait(false);
+        }
+        catch (Exception exception)
+            when (exception is IOException or InvalidOperationException or ObjectDisposedException)
+        {
+            return $"<capture failed: {exception.Message}>";
         }
     }
 

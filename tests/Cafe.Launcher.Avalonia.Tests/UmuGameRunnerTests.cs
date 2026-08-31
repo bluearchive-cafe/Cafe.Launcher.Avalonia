@@ -138,13 +138,17 @@ public sealed class UmuGameRunnerTests : IDisposable
         var runner = CreateRunner(
             isSupportedPlatform: true,
             pathVariable: tempDir,
-            probeVersion: (_, _) => Task.FromResult<string?>(null));
+            probeVersion: (_, _) => Task.FromResult(new RuntimeProbeResult(
+                RuntimeProbeFailureKind.NonZeroExit,
+                ExitCode: 7,
+                StandardError: "umu probe failed")));
 
         var availability = await runner.CheckAvailabilityAsync(new GameRuntimeOptions());
 
         Assert.Equal(GameRunnerAvailabilityStatus.Broken, availability.Status);
         Assert.Equal(umuPath, availability.ExecutablePath);
-        Assert.NotNull(availability.TechnicalDetail);
+        Assert.Contains("ExitCode: 7", availability.TechnicalDetail, StringComparison.Ordinal);
+        Assert.Contains("umu probe failed", availability.TechnicalDetail, StringComparison.Ordinal);
     }
 
     [Fact]
@@ -213,12 +217,16 @@ public sealed class UmuGameRunnerTests : IDisposable
         bool isSupportedPlatform,
         string? pathVariable = null,
         IProcessLauncher? processLauncher = null,
-        Func<string, CancellationToken, Task<string?>>? probeVersion = null) =>
+        Func<string, CancellationToken, Task<RuntimeProbeResult>>? probeVersion = null) =>
         new(
             processLauncher ?? new StubProcessLauncher(null),
             () => isSupportedPlatform,
             explicitPath => ExecutableLocator.FindInPath("umu-run", explicitPath, pathVariable),
-            probeVersion ?? ((_, _) => Task.FromResult<string?>("1.4.4")));
+            probeVersion ?? ((_, _) => Task.FromResult(RuntimeProbeResult.Success(
+                "1.4.4",
+                0,
+                "umu-launcher 1.4.4",
+                ""))));
 
     private static Process StartTrivialProcess()
     {

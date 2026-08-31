@@ -78,17 +78,32 @@ public sealed class GameRunnerResolverTests
     }
 
     [Fact]
-    public async Task ResolveAsync_ForwardsSameOptionsToAvailabilityChecks()
+    public async Task ResolveAsync_WithPreferredRunner_ForwardsSameOptionsToAvailabilityCheck()
     {
         var runner = new FakeGameRunner("umu", isSupportedPlatform: true, isAvailable: true);
         var resolver = new GameRunnerResolver([runner]);
         var options = new GameRuntimeOptions(RunnerPath: "/opt/umu/bin/umu-run");
 
-        await resolver.ResolveAsync(options: options);
-        Assert.Same(options, runner.LastAvailabilityOptions);
-
         await resolver.ResolveAsync(preferredRunnerId: "umu", options: options);
         Assert.Same(options, runner.LastAvailabilityOptions);
+    }
+
+    [Fact]
+    public async Task ResolveAsync_InAutoMode_IgnoresSharedCustomRunnerPath()
+    {
+        var runner = new FakeGameRunner("umu", isSupportedPlatform: true, isAvailable: true);
+        var resolver = new GameRunnerResolver([runner]);
+        var options = new GameRuntimeOptions(
+            RunnerPath: "/usr/bin/wine",
+            PrefixPath: "/home/user/prefix");
+
+        var resolution = await resolver.ResolveWithDiagnosticsAsync(options: options);
+
+        Assert.NotNull(runner.LastAvailabilityOptions);
+        Assert.Null(runner.LastAvailabilityOptions!.RunnerPath);
+        Assert.Equal(options.PrefixPath, runner.LastAvailabilityOptions.PrefixPath);
+        Assert.Null(resolution.Options.RunnerPath);
+        Assert.Equal(options.PrefixPath, resolution.Options.PrefixPath);
     }
 
     [Fact]

@@ -49,7 +49,8 @@ public sealed class GameRunnerResolver
         GameRuntimeOptions? options = null,
         CancellationToken cancellationToken = default)
     {
-        var runtimeOptions = options ?? new GameRuntimeOptions();
+        var runtimeOptions = (options ?? new GameRuntimeOptions())
+            .ForRunnerSelection(preferredRunnerId);
 
         if (!string.IsNullOrWhiteSpace(preferredRunnerId))
         {
@@ -60,18 +61,24 @@ public sealed class GameRunnerResolver
                 return new GameRunnerResolution(
                     null,
                     $"{localizer.T("gameRuntimeRunner")}: {preferredRunnerId}{Environment.NewLine}" +
-                    localizer.T("unknown"));
+                    localizer.T("unknown"),
+                    runtimeOptions);
             }
 
             var availability = await preferred
                 .CheckAvailabilityAsync(runtimeOptions, cancellationToken)
                 .ConfigureAwait(false);
             return availability.Available
-                ? new GameRunnerResolution(preferred, $"{localizer.T("gameRuntimeRunner")}: {preferred.Id}", availability)
+                ? new GameRunnerResolution(
+                    preferred,
+                    $"{localizer.T("gameRuntimeRunner")}: {preferred.Id}",
+                    runtimeOptions,
+                    availability)
                 : new GameRunnerResolution(
                     null,
                     $"{localizer.T("gameRuntimeRunner")}: {preferredRunnerId}{Environment.NewLine}" +
                     $"{preferred.Id}: {AvailabilityReason(availability)}",
+                    runtimeOptions,
                     availability);
         }
 
@@ -90,6 +97,7 @@ public sealed class GameRunnerResolver
                 return new GameRunnerResolution(
                     runner,
                     $"{localizer.T("gameRuntimeRunner")}: {runner.Id}",
+                    runtimeOptions,
                     availability);
             }
 
@@ -101,13 +109,16 @@ public sealed class GameRunnerResolver
             : string.Join(Environment.NewLine, candidates.Select(candidate => $"- {candidate}"));
         return new GameRunnerResolution(
             null,
-            $"{localizer.T("gameRuntimeRunner")}: {localizer.T("gameRuntimeRunnerAuto")}{Environment.NewLine}{details}");
+            $"{localizer.T("gameRuntimeRunner")}: {localizer.T("gameRuntimeRunnerAuto")}{Environment.NewLine}{details}",
+            runtimeOptions);
     }
 
     private string AvailabilityReason(GameRunnerAvailability availability) =>
         string.IsNullOrWhiteSpace(availability.Message)
             ? localizer.T("unknown")
-            : availability.Message;
+            : string.IsNullOrWhiteSpace(availability.TechnicalDetail)
+                ? availability.Message
+                : $"{availability.Message}{Environment.NewLine}{availability.TechnicalDetail}";
 }
 
 /// <summary>
@@ -117,4 +128,5 @@ public sealed class GameRunnerResolver
 internal sealed record GameRunnerResolution(
     IGameRunner? Runner,
     string DiagnosticMessage,
+    GameRuntimeOptions Options,
     GameRunnerAvailability? Availability = null);

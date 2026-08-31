@@ -102,15 +102,20 @@ public sealed class GameLaunchService
             : runtime.Runner;
         // Resolution and launch must share one options instance: availability checks
         // honor the configured runner/prefix/proton paths exactly like StartAsync does.
-        var runtimeOptions = new GameRuntimeOptions(runtime.RunnerPath, runtime.PrefixPath, runtime.ProtonPath);
+        var configuredRuntimeOptions = new GameRuntimeOptions(
+            runtime.RunnerPath,
+            runtime.PrefixPath,
+            runtime.ProtonPath);
         var runnerResolution = await gameRunnerResolver
-            .ResolveWithDiagnosticsAsync(preferredRunnerId, runtimeOptions, cancellationToken)
+            .ResolveWithDiagnosticsAsync(preferredRunnerId, configuredRuntimeOptions, cancellationToken)
             .ConfigureAwait(false);
         var runner = runnerResolution.Runner;
         if (runner is null)
         {
             return Failed(localizer.T("gameProcessStartFailed"), runnerResolution.DiagnosticMessage);
         }
+
+        var runtimeOptions = runnerResolution.Options;
 
         // A stable runtime id decouples compatibility state (prefix layout, UMU
         // GAMEID) from the game executable name, so renaming the EXE cannot orphan

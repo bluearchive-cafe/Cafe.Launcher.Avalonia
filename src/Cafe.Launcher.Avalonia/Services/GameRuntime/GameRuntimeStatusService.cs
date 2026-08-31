@@ -25,14 +25,16 @@ public sealed class GameRuntimeStatusService
     }
 
     public async Task<IReadOnlyList<GameRuntimeStatusEntry>> GetStatusesAsync(
+        string? preferredRunnerId,
         GameRuntimeOptions options,
         CancellationToken cancellationToken = default)
     {
         var entries = new List<GameRuntimeStatusEntry>(runners.Count);
         foreach (var runner in runners)
         {
+            var runnerOptions = options.ForStatusCheck(preferredRunnerId, runner.Id);
             var availability = await runner
-                .CheckAvailabilityAsync(options, cancellationToken)
+                .CheckAvailabilityAsync(runnerOptions, cancellationToken)
                 .ConfigureAwait(false);
             entries.Add(new GameRuntimeStatusEntry(runner.Id, availability));
         }

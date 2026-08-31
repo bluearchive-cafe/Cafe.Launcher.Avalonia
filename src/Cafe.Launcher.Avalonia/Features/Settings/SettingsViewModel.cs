@@ -93,10 +93,20 @@ public partial class SettingsViewModel : ViewModelBase, IDisposable, IModalConte
             OnPropertyChanged(nameof(CanSaveSettings));
             SaveSettingsCommand.NotifyCanExecuteChanged();
         }
+
+        if (e.PropertyName == nameof(ISettingsEditor.Current))
+        {
+            OnPropertyChanged(nameof(IsGameRuntimeRunnerPathEnabled));
+        }
     }
 
     private void OnCurrentSettingChanged(object? sender, PropertyChangedEventArgs e)
     {
+        if (e.PropertyName == nameof(GameRuntimeSettings.Runner))
+        {
+            OnPropertyChanged(nameof(IsGameRuntimeRunnerPathEnabled));
+        }
+
         if (!IsAppearanceSetting(e.PropertyName))
         {
             return;
@@ -110,6 +120,10 @@ public partial class SettingsViewModel : ViewModelBase, IDisposable, IModalConte
     public bool IsSettingsDirty => editor.IsDirty;
 
     public bool CanSaveSettings => IsSettingsDirty && !IsSaving;
+
+    /// <summary>A custom executable path is only applied to an explicitly selected runner.</summary>
+    public bool IsGameRuntimeRunnerPathEnabled =>
+        editor.Current.GameRuntime.Runner is GameRuntimeRunners.Umu or GameRuntimeRunners.Wine;
 
     [ObservableProperty]
     private bool isUnsavedChangesVisible;
@@ -423,7 +437,10 @@ public partial class SettingsViewModel : ViewModelBase, IDisposable, IModalConte
             var runtime = editor.GetSnapshot().GameRuntime;
             var options = new GameRuntimeOptions(runtime.RunnerPath, runtime.PrefixPath, runtime.ProtonPath);
             var entries = await gameRuntimeStatusService
-                .GetStatusesAsync(options, cancellationToken)
+                .GetStatusesAsync(
+                    runtime.Runner is GameRuntimeRunners.Auto or "" ? null : runtime.Runner,
+                    options,
+                    cancellationToken)
                 .ConfigureAwait(true);
             gameRuntimeStatusEntries = entries;
             GameRuntimeStatusSummary = BuildGameRuntimeStatusSummary(entries);

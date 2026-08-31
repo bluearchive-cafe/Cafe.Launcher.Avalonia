@@ -6,73 +6,114 @@
              x:Class="Cafe.Launcher.Avalonia.Views.SettingsAdvancedSection"
              x:Name="SettingsRoot"
              x:DataType="vm:MainWindowViewModel">
-    <StackPanel Classes="settings-group">
-        <TextBlock Text="{Binding Shell.I18n[settingsGroupDiagnostics]}" Classes="group-title"/>
+    <StackPanel>
+        <StackPanel Classes="settings-group" IsVisible="{Binding Shell.IsLinuxPlatform}">
+            <TextBlock Text="{Binding Shell.I18n[settingsGroupGameRuntime]}" Classes="group-title"/>
 
-        <controls:SettingSelect ShowTopDivider="False"
-                                Title="{Binding Shell.I18n[logLevel]}"
-                                Description="{Binding Shell.I18n[logLevelDescription]}"
-                                AutomationName="{Binding Shell.I18n[logLevel]}"
-                                ItemsSource="{Binding Settings.Options.LogLevel}"
-                                SelectedValue="{Binding Settings.Editor.Current.LogLevel, Mode=TwoWay}"/>
+            <controls:SettingRow ShowTopDivider="False"
+                                 Title="{Binding Shell.I18n[gameRuntimeRunnerPath]}"
+                                 Description="{Binding Shell.I18n[gameRuntimeRunnerPathDescription]}">
+                <controls:SettingRow.Action>
+                    <TextBox Classes="uid-input"
+                             Width="{StaticResource Launcher.Component.Settings.Row.Action.MaxWidth}"
+                             Text="{Binding Settings.Editor.Current.GameRuntime.RunnerPath, Mode=TwoWay}"
+                             PlaceholderText="{Binding Shell.I18n[gameRuntimeRunnerPathPlaceholder]}"
+                             AutomationProperties.Name="{Binding Shell.I18n[gameRuntimeRunnerPath]}"
+                             IsEnabled="{Binding Settings.IsGameRuntimeRunnerPathEnabled}"/>
+                </controls:SettingRow.Action>
+            </controls:SettingRow>
 
-        <controls:SettingRow Title="{Binding Shell.I18n[logFiles]}"
-                             Description="{Binding Shell.I18n[logFilesDescription]}">
-            <controls:SettingRow.Action>
-                <WrapPanel MaxWidth="{StaticResource Launcher.Component.Settings.Row.Action.MaxWidth}"
-                           ItemSpacing="{StaticResource Launcher.Spacing.Sm}"
-                           LineSpacing="{StaticResource Launcher.Spacing.Sm}"
-                           HorizontalAlignment="Right"
-                           VerticalAlignment="Center">
-                    <Button Classes="flat-action"
-                            Command="{Binding LogViewer.OpenCommand}"
-                            AutomationProperties.Name="{Binding Shell.I18n[viewLog]}">
+            <controls:SettingRow Title="{Binding Shell.I18n[gameRuntimePrefixPath]}"
+                                 Description="{Binding Shell.I18n[gameRuntimePrefixPathDescription]}">
+                <controls:SettingRow.Action>
+                    <TextBox Classes="uid-input"
+                             Width="{StaticResource Launcher.Component.Settings.Row.Action.MaxWidth}"
+                             Text="{Binding Settings.Editor.Current.GameRuntime.PrefixPath, Mode=TwoWay}"
+                             PlaceholderText="{Binding Shell.I18n[gameRuntimePrefixPathPlaceholder]}"
+                             AutomationProperties.Name="{Binding Shell.I18n[gameRuntimePrefixPath]}"/>
+                </controls:SettingRow.Action>
+            </controls:SettingRow>
+
+            <controls:SettingRow Title="{Binding Shell.I18n[gameRuntimeProtonPath]}"
+                                 Description="{Binding Shell.I18n[gameRuntimeProtonPathDescription]}">
+                <controls:SettingRow.Action>
+                    <TextBox Classes="uid-input"
+                             Width="{StaticResource Launcher.Component.Settings.Row.Action.MaxWidth}"
+                             Text="{Binding Settings.Editor.Current.GameRuntime.ProtonPath, Mode=TwoWay}"
+                             PlaceholderText="{Binding Shell.I18n[gameRuntimeProtonPathPlaceholder]}"
+                             AutomationProperties.Name="{Binding Shell.I18n[gameRuntimeProtonPath]}"/>
+                </controls:SettingRow.Action>
+            </controls:SettingRow>
+        </StackPanel>
+
+        <StackPanel Classes="settings-group">
+            <TextBlock Text="{Binding Shell.I18n[settingsGroupDiagnostics]}" Classes="group-title"/>
+
+            <controls:SettingSelect ShowTopDivider="False"
+                                    Title="{Binding Shell.I18n[logLevel]}"
+                                    Description="{Binding Shell.I18n[logLevelDescription]}"
+                                    AutomationName="{Binding Shell.I18n[logLevel]}"
+                                    ItemsSource="{Binding Settings.Options.LogLevel}"
+                                    SelectedValue="{Binding Settings.Editor.Current.LogLevel, Mode=TwoWay}"/>
+
+            <controls:SettingRow Title="{Binding Shell.I18n[logFiles]}"
+                                 Description="{Binding Shell.I18n[logFilesDescription]}">
+                <controls:SettingRow.Action>
+                    <WrapPanel MaxWidth="{StaticResource Launcher.Component.Settings.Row.Action.MaxWidth}"
+                               ItemSpacing="{StaticResource Launcher.Spacing.Sm}"
+                               LineSpacing="{StaticResource Launcher.Spacing.Sm}"
+                               HorizontalAlignment="Right"
+                               VerticalAlignment="Center">
+                        <Button Classes="flat-action"
+                                Command="{Binding LogViewer.OpenCommand}"
+                                AutomationProperties.Name="{Binding Shell.I18n[viewLog]}">
+                            <StackPanel Classes="button-content">
+                                <materialIcons:MaterialIcon Kind="TextBoxOutline"
+                                                            Width="{StaticResource Launcher.Icon.Sm}"
+                                                            Height="{StaticResource Launcher.Icon.Sm}"/>
+                                <TextBlock Text="{Binding Shell.I18n[viewLog]}"/>
+                            </StackPanel>
+                        </Button>
+                        <Button Classes="flat-action"
+                                Command="{Binding LogViewer.ExportCommand}"
+                                AutomationProperties.Name="{Binding Shell.I18n[exportLogs]}">
+                            <StackPanel Classes="button-content">
+                                <materialIcons:MaterialIcon Kind="Export"
+                                                            Width="{StaticResource Launcher.Icon.Sm}"
+                                                            Height="{StaticResource Launcher.Icon.Sm}"/>
+                                <TextBlock Text="{Binding Shell.I18n[exportLogs]}"/>
+                            </StackPanel>
+                        </Button>
+                        <Button Classes="flat-action"
+                                Command="{Binding WindowChrome.OpenDataDirectoryCommand}"
+                                AutomationProperties.Name="{Binding Shell.I18n[openDataDirectory]}">
+                            <StackPanel Classes="button-content">
+                                <materialIcons:MaterialIcon Kind="FolderOpen"
+                                                            Width="{StaticResource Launcher.Icon.Sm}"
+                                                            Height="{StaticResource Launcher.Icon.Sm}"/>
+                                <TextBlock Text="{Binding Shell.I18n[openDataDirectory]}"/>
+                            </StackPanel>
+                        </Button>
+                    </WrapPanel>
+                </controls:SettingRow.Action>
+            </controls:SettingRow>
+
+            <!-- ADR-014 对话框族：破坏性操作须经确认；重置执行与反馈由 Shell 接线（复用调试重置核心）。 -->
+            <controls:SettingRow Title="{Binding Shell.I18n[debugResetSettingsConfirm]}"
+                                 Description="{Binding Shell.I18n[debugResetSettingsDescription]}">
+                <controls:SettingRow.Action>
+                    <Button Classes="flat-action danger-action"
+                            Command="{Binding Settings.RequestResetSettingsCommand}"
+                            AutomationProperties.Name="{Binding Shell.I18n[debugResetSettingsTitle]}">
                         <StackPanel Classes="button-content">
-                            <materialIcons:MaterialIcon Kind="TextBoxOutline"
+                            <materialIcons:MaterialIcon Kind="Restore"
                                                         Width="{StaticResource Launcher.Icon.Sm}"
                                                         Height="{StaticResource Launcher.Icon.Sm}"/>
-                            <TextBlock Text="{Binding Shell.I18n[viewLog]}"/>
+                            <TextBlock Text="{Binding Shell.I18n[debugResetSettingsConfirm]}"/>
                         </StackPanel>
                     </Button>
-                    <Button Classes="flat-action"
-                            Command="{Binding LogViewer.ExportCommand}"
-                            AutomationProperties.Name="{Binding Shell.I18n[exportLogs]}">
-                        <StackPanel Classes="button-content">
-                            <materialIcons:MaterialIcon Kind="Export"
-                                                        Width="{StaticResource Launcher.Icon.Sm}"
-                                                        Height="{StaticResource Launcher.Icon.Sm}"/>
-                            <TextBlock Text="{Binding Shell.I18n[exportLogs]}"/>
-                        </StackPanel>
-                    </Button>
-                    <Button Classes="flat-action"
-                            Command="{Binding WindowChrome.OpenDataDirectoryCommand}"
-                            AutomationProperties.Name="{Binding Shell.I18n[openDataDirectory]}">
-                        <StackPanel Classes="button-content">
-                            <materialIcons:MaterialIcon Kind="FolderOpen"
-                                                        Width="{StaticResource Launcher.Icon.Sm}"
-                                                        Height="{StaticResource Launcher.Icon.Sm}"/>
-                            <TextBlock Text="{Binding Shell.I18n[openDataDirectory]}"/>
-                        </StackPanel>
-                    </Button>
-                </WrapPanel>
-            </controls:SettingRow.Action>
-        </controls:SettingRow>
-
-        <!-- ADR-014 对话框族：破坏性操作须经确认；重置执行与反馈由 Shell 接线（复用调试重置核心）。 -->
-        <controls:SettingRow Title="{Binding Shell.I18n[debugResetSettingsConfirm]}"
-                             Description="{Binding Shell.I18n[debugResetSettingsDescription]}">
-            <controls:SettingRow.Action>
-                <Button Classes="flat-action danger-action"
-                        Command="{Binding Settings.RequestResetSettingsCommand}"
-                        AutomationProperties.Name="{Binding Shell.I18n[debugResetSettingsTitle]}">
-                    <StackPanel Classes="button-content">
-                        <materialIcons:MaterialIcon Kind="Restore"
-                                                    Width="{StaticResource Launcher.Icon.Sm}"
-                                                    Height="{StaticResource Launcher.Icon.Sm}"/>
-                        <TextBlock Text="{Binding Shell.I18n[debugResetSettingsConfirm]}"/>
-                    </StackPanel>
-                </Button>
-            </controls:SettingRow.Action>
-        </controls:SettingRow>
+                </controls:SettingRow.Action>
+            </controls:SettingRow>
+        </StackPanel>
     </StackPanel>
 </UserControl>

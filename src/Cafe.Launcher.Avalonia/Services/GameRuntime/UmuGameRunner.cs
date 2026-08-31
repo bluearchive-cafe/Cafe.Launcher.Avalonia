@@ -18,7 +18,7 @@ public sealed class UmuGameRunner : IGameRunner
     private readonly IProcessLauncher processLauncher;
     private readonly Func<bool> isSupportedPlatform;
     private readonly Func<string?, string?> locateExecutable;
-    private readonly Func<string, CancellationToken, Task<string?>> probeVersion;
+    private readonly Func<string, CancellationToken, Task<RuntimeProbeResult>> probeVersion;
 
     public UmuGameRunner(IProcessLauncher processLauncher)
         : this(
@@ -33,7 +33,7 @@ public sealed class UmuGameRunner : IGameRunner
         IProcessLauncher processLauncher,
         Func<bool> isSupportedPlatform,
         Func<string?, string?> locateExecutable,
-        Func<string, CancellationToken, Task<string?>> probeVersion)
+        Func<string, CancellationToken, Task<RuntimeProbeResult>> probeVersion)
     {
         this.processLauncher = processLauncher;
         this.isSupportedPlatform = isSupportedPlatform;
@@ -45,47 +45,18 @@ public sealed class UmuGameRunner : IGameRunner
 
     public bool IsSupportedPlatform => isSupportedPlatform();
 
-    public async Task<GameRunnerAvailability> CheckAvailabilityAsync(
+    public Task<GameRunnerAvailability> CheckAvailabilityAsync(
         GameRuntimeOptions options,
-        CancellationToken cancellationToken = default)
-    {
-        if (!IsSupportedPlatform)
-        {
-            return new GameRunnerAvailability(
-                GameRunnerAvailabilityStatus.Unsupported,
-                Message: "UMU requires Linux.");
-        }
-
-        // Availability must honor the configured runner path exactly like StartAsync
-        // does: an explicit but invalid path fails here instead of silently falling
-        // back to PATH, so resolution never disagrees with the actual launch.
-        var executablePath = locateExecutable(options.RunnerPath);
-        if (executablePath is null)
-        {
-            return new GameRunnerAvailability(
-                GameRunnerAvailabilityStatus.NotFound,
-                Message: options.RunnerPath is null
-                    ? $"{UmuExecutableName} was not found on PATH."
-                    : $"{UmuExecutableName} was not found at the configured path: {options.RunnerPath}");
-        }
-
-        // Finding the file proves nothing about the runtime working; run its version
-        // command so broken installations surface before an actual launch attempt.
-        var version = await probeVersion(executablePath, cancellationToken).ConfigureAwait(false);
-        if (version is null)
-        {
-            return new GameRunnerAvailability(
-                GameRunnerAvailabilityStatus.Broken,
-                ExecutablePath: executablePath,
-                Message: $"{UmuExecutableName} exists but did not respond to its version probe.",
-                TechnicalDetail: RuntimeVersionProbe.DescribeProbeFailure(executablePath));
-        }
-
-        return new GameRunnerAvailability(
-            GameRunnerAvailabilityStatus.Available,
-            Version: version,
-            ExecutablePath: executablePath);
-    }
+        CancellationToken cancellationToken = default) =>
+        GameRuntimeAvailabilityProbe.CheckAsync(
+            IsSupportedPlatform,
+            "UMU",
+            "Linux",
+            UmuExecutableName,
+            options.RunnerPath,
+            locateExecutable,
+            probeVersion,
+            cancellationToken);
 
     public Task<GameProcess> StartAsync(
         GameLaunchRequest request,
@@ -150,6 +121,6 @@ public sealed class UmuGameRunner : IGameRunner
         // surface that as "auto" so the effective choice is never reported blank.
         string.IsNullOrWhiteSpace(options.ProtonPath) ? "auto" : options.ProtonPath;
 
-    private static Task<string?> ProbeVersion(string executablePath, CancellationToken cancellationToken) =>
+    private static Task<RuntimeProbeResult> ProbeVersion(string executablePath, CancellationToken cancellationToken) =>
         RuntimeVersionProbe.ProbeAsync(executablePath, "--version", RuntimeVersionProbe.DefaultTimeout, cancellationToken);
 }

@@ -16,7 +16,7 @@ public sealed class GameRuntimeSettingsUiTests
     }
 
     [Fact]
-    public void GameRuntimeRunnerOptions_ExcludeNative()
+    public void GameRuntimeRunnerOptions_OnLinux_ExcludeNative()
     {
         var localizer = new LocalizationService();
         var options = new SettingsOptionsViewModel(localizer, new DiskSpaceService());
@@ -30,24 +30,41 @@ public sealed class GameRuntimeSettingsUiTests
     }
 
     [Fact]
-    public async Task GetStatusesAsync_QueriesEveryRegisteredRunnerWithSameOptions()
+    public async Task GetStatusesAsync_WithPreferredUmu_AppliesCustomPathOnlyToUmu()
     {
         var options = new GameRuntimeOptions(RunnerPath: "/opt/umu/bin/umu-run");
         var umu = new StubRunner("umu", GameRunnerAvailabilityStatus.Available, "1.4.4", "/usr/bin/umu-run");
         var wine = new StubRunner("wine", GameRunnerAvailabilityStatus.NotFound, null, null);
         var service = new GameRuntimeStatusService([umu, wine]);
 
-        var entries = await service.GetStatusesAsync(options);
+        var entries = await service.GetStatusesAsync("umu", options);
 
         Assert.Equal(2, entries.Count);
         Assert.Equal("umu", entries[0].RunnerId);
         Assert.Equal("wine", entries[1].RunnerId);
         Assert.Same(options, umu.LastOptions);
-        Assert.Same(options, wine.LastOptions);
+        Assert.NotNull(wine.LastOptions);
+        Assert.Null(wine.LastOptions!.RunnerPath);
     }
 
     [Fact]
-    public async Task RefreshGameRuntimeStatus_BuildsSummaryForVisibleRunnersOnly()
+    public async Task GetStatusesAsync_InAutoMode_IgnoresCustomPathForEveryRunner()
+    {
+        var options = new GameRuntimeOptions(RunnerPath: "/usr/bin/wine");
+        var umu = new StubRunner("umu", GameRunnerAvailabilityStatus.Available, "1.4.4", "/usr/bin/umu-run");
+        var wine = new StubRunner("wine", GameRunnerAvailabilityStatus.Available, "9.0", "/usr/bin/wine");
+        var service = new GameRuntimeStatusService([umu, wine]);
+
+        await service.GetStatusesAsync(preferredRunnerId: null, options: options);
+
+        Assert.NotNull(umu.LastOptions);
+        Assert.NotNull(wine.LastOptions);
+        Assert.Null(umu.LastOptions!.RunnerPath);
+        Assert.Null(wine.LastOptions!.RunnerPath);
+    }
+
+    [Fact]
+    public async Task RefreshGameRuntimeStatus_WithVisibleRunners_BuildsFilteredSummary()
     {
         var localizer = new LocalizationService();
         var options = new SettingsOptionsViewModel(localizer, new DiskSpaceService());
@@ -96,7 +113,7 @@ public sealed class GameRuntimeSettingsUiTests
     }
 
     [Fact]
-    public async Task RefreshOptionDisplayNames_RebuildsSummaryFromCachedEntries()
+    public async Task RefreshOptionDisplayNames_WithCachedEntries_RebuildsSummary()
     {
         var localizer = new LocalizationService();
         var options = new SettingsOptionsViewModel(localizer, new DiskSpaceService());

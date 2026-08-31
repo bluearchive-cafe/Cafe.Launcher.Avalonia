@@ -108,7 +108,7 @@ internal sealed class GameOperationJourney : IGameOperationJourney
             }
             else
             {
-                toastService.ShowWarning(launchDiagnostic);
+                toastService.ShowWarning(launchResult.Message);
                 await diagnostics.WarningAsync("GameLaunch", launchDiagnostic);
                 if (launchResult.DiagnosticException is not null)
                 {
