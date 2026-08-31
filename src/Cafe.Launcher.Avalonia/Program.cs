@@ -36,6 +36,13 @@ sealed class Program
     internal static bool LaunchGameRequested { get; private set; }
 
     /// <summary>
+    /// The cross-process launch-game signal endpoint owned by the first instance.
+    /// Set by <see cref="Main"/> after the single-instance mutex is won and bound,
+    /// then polled by the <see cref="App"/> launch-game listener. Disposed with <see cref="Main"/>.
+    /// </summary>
+    internal static CrossProcessLaunchSignal? LaunchGameSignal { get; private set; }
+
+    /// <summary>
     /// True when the launcher settings file is missing at process startup.
     /// Used by <see cref="App"/> to show the first-launch setup wizard before normal refresh.
     /// </summary>
@@ -59,15 +66,15 @@ sealed class Program
             return;
         }
 
-        // The launch-game signal MUST be created before the mutex: a second
-        // --launch-game instance only forwards its request once it observes the
-        // mutex held, so holding this handle open for the whole process guarantees
-        // the forwarded request always finds a live signal to arrive on. Constructing
-        // it with a name opens the first instance's signal when one is already running.
-        using var launchGameSignal = new EventWaitHandle(
-            false,
-            EventResetMode.AutoReset,
-            LaunchGameSignalName);
+        // The launch-game signal transport must be created before the mutex on
+        // Windows: a second --launch-game instance only forwards its request once
+        // it observes the mutex held, and the named event must already exist for
+        // that raise to land on the first instance's listener. On Unix, .NET throws
+        // PlatformNotSupportedException for a named EventWaitHandle (a Windows
+        // kernel-object feature), so Listen() resolves the transport up front and
+        // defers the actual Unix socket binding to EnsureBound() below, after the
+        // mutex is won — stale socket files from a previous run are recovered there.
+        using var launchSignal = CrossProcessLaunchSignal.Listen(LaunchGameSignalName);
         using var mutex = new Mutex(true, MutexName, out var createdNew);
         if (!createdNew)
         {
@@ -75,12 +82,15 @@ sealed class Program
             // requested) and exit instead of starting a duplicate process.
             if (HasLaunchGameArgument(args))
             {
-                launchGameSignal.Set();
+                CrossProcessLaunchSignal.Raise(LaunchGameSignalName);
             }
 
             SignalShowInstance();
             return;
         }
+
+        launchSignal.EnsureBound();
+        LaunchGameSignal = launchSignal;
 
         LaunchGameRequested = HasLaunchGameArgument(args);
 
@@ -189,8 +199,8 @@ sealed class Program
     /// <summary>
     /// Raises the pre-existing Windows-only show-window signal so a forwarded
     /// launch (or a plain second start) also brings the running launcher up.
-    /// The launch-game forward itself is delivered by setting the shared
-    /// <see cref="LaunchGameSignalName"/> handle Main already opened.
+    /// The launch-game forward itself is delivered by
+    /// <see cref="CrossProcessLaunchSignal.Raise"/>.
     /// </summary>
     private static void SignalShowInstance()
     {
