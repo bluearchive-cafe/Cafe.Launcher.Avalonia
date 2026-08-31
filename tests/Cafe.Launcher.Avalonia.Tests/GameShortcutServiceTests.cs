@@ -210,7 +210,7 @@ public sealed class GameShortcutServiceTests : IDisposable
     }
 
     [WindowsFact]
-    public async Task CreateShortcutInDirectoryAsync_TargetsRunBatWithGameFolderWorkingDirectory()
+    public async Task CreateShortcutInDirectoryAsync_OnWindows_TargetsRunBatWithGameFolderWorkingDirectory()
     {
         var gameDirectory = Directory.CreateDirectory(Path.Combine(tempDirectory, "game")).FullName;
         File.WriteAllText(Path.Combine(gameDirectory, "CafeTestGame.exe"), string.Empty);
@@ -474,7 +474,7 @@ public sealed class GameShortcutServiceTests : IDisposable
     }
 
     [Fact]
-    public void BuildDesktopEntry_LaunchesThroughTheLauncherWithLaunchGameArgument()
+    public void BuildDesktopEntry_WithLauncherPath_IncludesLaunchGameArgument()
     {
         var content = GameShortcutService.BuildDesktopEntry(
             "Blue Archive",
@@ -573,7 +573,7 @@ public sealed class GameShortcutServiceTests : IDisposable
     }
 
     [Fact]
-    public async Task CreateShortcutInDirectoryAsync_OnLinux_WhenLauncherExecutableMissing_ReturnsFailed()
+    public async Task CreateShortcutInDirectoryAsync_OnLinuxWithMissingLauncher_ReturnsGameNotResolved()
     {
         var shortcutDirectory = Directory.CreateDirectory(Path.Combine(tempDirectory, "desktop")).FullName;
         var service = CreateLinuxService(Path.Combine(tempDirectory, "missing", "Cafe.Launcher"));
@@ -584,8 +584,8 @@ public sealed class GameShortcutServiceTests : IDisposable
 
         var result = await service.CreateShortcutInDirectoryAsync(snapshot, shortcutDirectory);
 
-        Assert.Equal(GameShortcutStatus.Failed, result.Status);
-        Assert.Contains("Launcher executable", result.Detail, StringComparison.Ordinal);
+        Assert.Equal(GameShortcutStatus.GameNotResolved, result.Status);
+        Assert.Empty(result.Detail);
     }
 
     [Fact]
@@ -612,7 +612,7 @@ public sealed class GameShortcutServiceTests : IDisposable
         var shortcutDirectory = Directory.CreateDirectory(Path.Combine(tempDirectory, "desktop")).FullName;
         var service = new GameShortcutService(
             new LocalizationService(),
-            new GameShortcutService.Seams(
+            new GameShortcutService.ShortcutEnvironment(
                 OpenDirectory: _ => true,
                 IsWindowsPlatform: () => false,
                 IsLinuxPlatform: () => false,
@@ -628,7 +628,7 @@ public sealed class GameShortcutServiceTests : IDisposable
     private GameShortcutService CreateLinuxService(string launcherPath) =>
         new(
             new LocalizationService(),
-            new GameShortcutService.Seams(
+            new GameShortcutService.ShortcutEnvironment(
                 OpenDirectory: _ => true,
                 IsWindowsPlatform: () => false,
                 IsLinuxPlatform: () => true,

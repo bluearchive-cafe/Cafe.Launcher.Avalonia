@@ -43,16 +43,16 @@ public sealed class GameShortcutService : IGameShortcutService
     private readonly Func<string?> launcherExecutablePath;
 
     /// <summary>
-    /// Injectable seams for platform selection and external effects, kept together
-    /// so adding the next seam cannot grow the constructor again.
+    /// Platform and external-effect dependencies, kept together so adding the next
+    /// dependency cannot grow the constructor again.
     /// </summary>
-    internal sealed record Seams(
+    internal sealed record ShortcutEnvironment(
         Func<string, bool> OpenDirectory,
         Func<bool> IsWindowsPlatform,
         Func<bool> IsLinuxPlatform,
         Func<string?> LauncherExecutablePath)
     {
-        public static Seams ForCurrentPlatform() => new(
+        public static ShortcutEnvironment ForCurrentPlatform() => new(
             OpenDirectoryInFileManager,
             OperatingSystem.IsWindows,
             OperatingSystem.IsLinux,
@@ -60,12 +60,12 @@ public sealed class GameShortcutService : IGameShortcutService
     }
 
     public GameShortcutService(LocalizationService localizer)
-        : this(localizer, Seams.ForCurrentPlatform())
+        : this(localizer, ShortcutEnvironment.ForCurrentPlatform())
     {
     }
 
     internal GameShortcutService(LocalizationService localizer, Func<string, bool> openDirectory)
-        : this(localizer, new Seams(
+        : this(localizer, new ShortcutEnvironment(
             openDirectory,
             OperatingSystem.IsWindows,
             OperatingSystem.IsLinux,
@@ -73,13 +73,13 @@ public sealed class GameShortcutService : IGameShortcutService
     {
     }
 
-    internal GameShortcutService(LocalizationService localizer, Seams seams)
+    internal GameShortcutService(LocalizationService localizer, ShortcutEnvironment environment)
     {
         this.localizer = localizer;
-        openDirectory = seams.OpenDirectory;
-        isWindowsPlatform = seams.IsWindowsPlatform;
-        isLinuxPlatform = seams.IsLinuxPlatform;
-        launcherExecutablePath = seams.LauncherExecutablePath;
+        openDirectory = environment.OpenDirectory;
+        isWindowsPlatform = environment.IsWindowsPlatform;
+        isLinuxPlatform = environment.IsLinuxPlatform;
+        launcherExecutablePath = environment.LauncherExecutablePath;
     }
 
     public Task<GameShortcutResult> CreateDesktopShortcutAsync(LauncherStatusSnapshot snapshot)
@@ -155,9 +155,9 @@ public sealed class GameShortcutService : IGameShortcutService
         var launcherPath = launcherExecutablePath();
         if (string.IsNullOrWhiteSpace(launcherPath) || !File.Exists(launcherPath))
         {
-            return new GameShortcutResult(
-                GameShortcutStatus.Failed,
-                "Launcher executable could not be resolved.");
+            // Keep the service result structured. The journey maps this status to
+            // the existing localized "shortcut target missing" message.
+            return new GameShortcutResult(GameShortcutStatus.GameNotResolved);
         }
 
         if (!TryResolveGameExecutable(snapshot, out _, out _, out _))
