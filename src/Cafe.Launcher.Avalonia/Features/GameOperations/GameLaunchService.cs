@@ -1,5 +1,6 @@
 using System;
 using System.IO;
+using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
 using Cafe.Launcher.Avalonia.Models;
@@ -12,21 +13,18 @@ public sealed class GameLaunchService
 {
     private readonly ManifestValidationService manifestValidationService;
     private readonly ClickCodeService clickCodeService;
-    private readonly GameRunnerResolver gameRunnerResolver;
-    private readonly IGameProcessTracker gameProcessTracker;
+    private readonly IGameRuntime gameRuntime;
     private readonly LocalizationService localizer;
 
     public GameLaunchService(
         ManifestValidationService manifestValidationService,
         ClickCodeService clickCodeService,
-        GameRunnerResolver gameRunnerResolver,
-        IGameProcessTracker gameProcessTracker,
+        IGameRuntime gameRuntime,
         LocalizationService localizer)
     {
         this.manifestValidationService = manifestValidationService;
         this.clickCodeService = clickCodeService;
-        this.gameRunnerResolver = gameRunnerResolver;
-        this.gameProcessTracker = gameProcessTracker;
+        this.gameRuntime = gameRuntime;
         this.localizer = localizer;
     }
 
@@ -100,22 +98,10 @@ public sealed class GameLaunchService
         var preferredRunnerId = runtime.Runner is GameRuntimeRunners.Auto or ""
             ? null
             : runtime.Runner;
-        // Resolution and launch must share one options instance: availability checks
-        // honor the configured runner/prefix/proton paths exactly like StartAsync does.
         var configuredRuntimeOptions = new GameRuntimeOptions(
             runtime.RunnerPath,
             runtime.PrefixPath,
             runtime.ProtonPath);
-        var runnerResolution = await gameRunnerResolver
-            .ResolveWithDiagnosticsAsync(preferredRunnerId, configuredRuntimeOptions, cancellationToken)
-            .ConfigureAwait(false);
-        var runner = runnerResolution.Runner;
-        if (runner is null)
-        {
-            return Failed(localizer.T("gameProcessStartFailed"), runnerResolution.DiagnosticMessage);
-        }
-
-        var runtimeOptions = runnerResolution.Options;
 
         // A stable runtime id decouples compatibility state (prefix layout, UMU
         // GAMEID) from the game executable name, so renaming the EXE cannot orphan
@@ -126,11 +112,11 @@ public sealed class GameLaunchService
             WorkingDirectory: localGame.GamePath,
             Arguments: gameConfig.Params);
 
-        GameProcess gameProcess;
+        GameRuntimeLaunchResult launchResult;
         try
         {
-            gameProcess = await runner
-                .StartAsync(request, runtimeOptions, cancellationToken)
+            launchResult = await gameRuntime
+                .LaunchAsync(request, configuredRuntimeOptions, preferredRunnerId, cancellationToken)
                 .ConfigureAwait(false);
         }
         catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
@@ -144,26 +130,39 @@ public sealed class GameLaunchService
                 Success = false,
                 Message = localizer.F("gameLaunchFailed", exception.Message),
                 DiagnosticMessage =
-                    $"{BuildLaunchContext(runner, runnerResolution.Availability, runnerResolution.DiagnosticMessage, request, runtimeOptions)}{Environment.NewLine}{exception.Message}",
+                    $"{request.ExecutablePath}{Environment.NewLine}{localizer.T("path")}: {request.WorkingDirectory}{Environment.NewLine}{exception.Message}",
                 DiagnosticException = exception,
                 Validation = validation
             };
         }
 
-        // The tracker owns the host process from here: it keeps the handle alive
-        // as the authoritative running-state source and records exit details.
-        gameProcessTracker.Register(gameProcess);
+        if (!launchResult.Success)
+        {
+            if (launchResult.Failure == GameRuntimeLaunchFailure.StartFailed
+                && launchResult.FailureException is not null)
+            {
+                var exception = launchResult.FailureException;
+                return new GameLaunchResult
+                {
+                    Success = false,
+                    Message = localizer.F("gameLaunchFailed", exception.Message),
+                    DiagnosticMessage =
+                        $"{BuildLaunchContext(launchResult, request)}{Environment.NewLine}{exception.Message}",
+                    DiagnosticException = exception,
+                    Validation = validation
+                };
+            }
+
+            return Failed(
+                localizer.T("gameProcessStartFailed"),
+                BuildRunnerSelectionFailure(launchResult, preferredRunnerId));
+        }
 
         return new GameLaunchResult
         {
             Success = true,
             Message = localizer.T("gameProcessStarted"),
-            DiagnosticMessage = BuildLaunchContext(
-                runner,
-                runnerResolution.Availability,
-                runnerResolution.DiagnosticMessage,
-                request,
-                runtimeOptions),
+            DiagnosticMessage = BuildLaunchContext(launchResult, request),
             Validation = validation
         };
     }
@@ -183,29 +182,46 @@ public sealed class GameLaunchService
         };
     }
 
-    private string BuildLaunchContext(
-        IGameRunner runner,
-        GameRunnerAvailability? availability,
-        string runnerSelectionDiagnostic,
-        GameLaunchRequest request,
-        GameRuntimeOptions runtimeOptions) =>
-        $"{runnerSelectionDiagnostic}{Environment.NewLine}" +
+    private string BuildLaunchContext(GameRuntimeLaunchResult launchResult, GameLaunchRequest request) =>
+        $"{localizer.T("gameRuntimeRunner")}: {launchResult.RunnerId}{Environment.NewLine}" +
         $"{localizer.T("executable")}: {request.ExecutablePath}{Environment.NewLine}" +
         $"{localizer.T("path")}: {request.WorkingDirectory}{Environment.NewLine}" +
-        BuildDiagnosticSnapshot(runner, availability, request, runtimeOptions).Describe();
+        launchResult.Diagnostic.Describe();
 
-    private static GameRuntimeDiagnosticSnapshot BuildDiagnosticSnapshot(
-        IGameRunner runner,
-        GameRunnerAvailability? availability,
-        GameLaunchRequest request,
-        GameRuntimeOptions runtimeOptions) =>
-        new(
-            RunnerId: runner.Id,
-            RunnerVersion: availability?.Version,
-            RunnerExecutable: availability?.ExecutablePath,
-            PrefixPath: runner.GetEffectivePrefixPath(request, runtimeOptions),
-            ProtonPath: runner.GetEffectiveProtonPath(runtimeOptions),
-            GameId: request.GameId,
-            GameExecutable: request.ExecutablePath,
-            WorkingDirectory: request.WorkingDirectory);
+    private string BuildRunnerSelectionFailure(
+        GameRuntimeLaunchResult launchResult,
+        string? preferredRunnerId)
+    {
+        if (!string.IsNullOrWhiteSpace(preferredRunnerId))
+        {
+            if (launchResult.Candidates.Count == 0)
+            {
+                return $"{localizer.T("gameRuntimeRunner")}: {preferredRunnerId}{Environment.NewLine}" +
+                    localizer.T("unknown");
+            }
+
+            var candidate = launchResult.Candidates[0];
+            return $"{localizer.T("gameRuntimeRunner")}: {preferredRunnerId}{Environment.NewLine}" +
+                $"{candidate.RunnerId}: {AvailabilityReason(candidate.Availability)}";
+        }
+
+        if (launchResult.Candidates.Count == 0)
+        {
+            return $"{localizer.T("gameRuntimeRunner")}: {localizer.T("gameRuntimeRunnerAuto")}{Environment.NewLine}" +
+                localizer.T("unknown");
+        }
+
+        var details = string.Join(
+            Environment.NewLine,
+            launchResult.Candidates.Select(candidate =>
+                $"- {candidate.RunnerId}: {AvailabilityReason(candidate.Availability)}"));
+        return $"{localizer.T("gameRuntimeRunner")}: {localizer.T("gameRuntimeRunnerAuto")}{Environment.NewLine}{details}";
+    }
+
+    private string AvailabilityReason(GameRunnerAvailability availability) =>
+        string.IsNullOrWhiteSpace(availability.Message)
+            ? localizer.T("unknown")
+            : string.IsNullOrWhiteSpace(availability.TechnicalDetail)
+                ? availability.Message
+                : $"{availability.Message}{Environment.NewLine}{availability.TechnicalDetail}";
 }

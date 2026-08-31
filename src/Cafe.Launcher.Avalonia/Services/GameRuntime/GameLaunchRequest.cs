@@ -5,7 +5,7 @@ namespace Cafe.Launcher.Avalonia.Services.GameRuntime;
 /// <summary>
 /// Platform-agnostic description of a single game launch: what to start,
 /// where, and with which arguments. Carries no compatibility-layer details
-/// (Proton, Wine, prefix, bottle) — those belong to <see cref="IGameRunner"/> implementations.
+/// (Proton, Wine, prefix, bottle) — those belong to the <see cref="GameRuntime"/> module.
 /// </summary>
 public sealed record GameLaunchRequest(
     string GameId,

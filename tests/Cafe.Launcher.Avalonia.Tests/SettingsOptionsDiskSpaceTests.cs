@@ -170,7 +170,10 @@ public sealed class SettingsOptionsDiskSpaceTests
             options,
             new SettingsAppearanceViewModel(editor),
             errorHandling,
-            new GameRuntimeStatusService(Array.Empty<IGameRunner>()));
+            new GameRuntime(
+                [],
+                new DefaultProcessLauncher(),
+                new GameProcessTracker()));
         var snapshot = new LauncherStatusSnapshot
         {
             RuntimeState = LauncherRuntimeState.NotInstalled,

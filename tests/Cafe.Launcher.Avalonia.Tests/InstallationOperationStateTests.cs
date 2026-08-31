@@ -1,3 +1,4 @@
+using System.Diagnostics;
 using System.Net.Http;
 using System.Threading;
 using Cafe.Launcher.Avalonia.Features.GameOperations;
@@ -13,8 +14,39 @@ public sealed class InstallationOperationStateTests : IDisposable
 {
     private readonly string tempDir = Path.Combine(Path.GetTempPath(), Guid.NewGuid().ToString("N"));
 
-    private static GameRunnerResolver CreateGameRunnerResolver() =>
-        new([new NativeGameRunner(new DefaultProcessLauncher())]);
+    private static IGameRuntime CreateGameRuntime() =>
+        new GameRuntime(
+            [GameRunnerDefinition.Native],
+            new DefaultProcessLauncher(),
+            new GameProcessTracker());
+
+    private static GameRunnerDefinition SupportedUmuDefinition() =>
+        new(
+            "umu",
+            IsSupportedPlatform: true,
+            RequiredPlatformName: "Linux",
+            DisplayName: "UMU",
+            ExecutableName: "umu-run",
+            VersionArgument: "--version",
+            EnvironmentStyle: GameRuntimeEnvironmentStyle.Umu);
+
+    private static IGameRuntime CreateUnavailableRunnerRuntime() =>
+        new GameRuntime(
+            [SupportedUmuDefinition()],
+            new DefaultProcessLauncher(),
+            new GameProcessTracker(),
+            locateExecutable: (_, _) => null,
+            probeVersion: (_, _, _, _) =>
+                Task.FromResult(RuntimeProbeResult.Success("9.0", 0, "", "")));
+
+    private static IGameRuntime CreateFailingRunnerRuntime() =>
+        new GameRuntime(
+            [SupportedUmuDefinition()],
+            new FailingProcessLauncher(),
+            new GameProcessTracker(),
+            locateExecutable: (_, _) => "/usr/bin/umu-run",
+            probeVersion: (_, _, _, _) =>
+                Task.FromResult(RuntimeProbeResult.Success("1.4.4", 0, "", "")));
 
     static InstallationOperationStateTests()
     {
@@ -32,8 +64,7 @@ public sealed class InstallationOperationStateTests : IDisposable
         var service = new GameLaunchService(
             new ManifestValidationService(apiClient, new RemoteManifestService(apiClient), localizer),
             new ClickCodeService(),
-            CreateGameRunnerResolver(),
-            new GameProcessTracker(),
+            CreateGameRuntime(),
             localizer);
 
         var result = await service.StartAsync(new LauncherStatusSnapshot
@@ -56,8 +87,7 @@ public sealed class InstallationOperationStateTests : IDisposable
         var service = new GameLaunchService(
             new ManifestValidationService(apiClient, new RemoteManifestService(apiClient), localizer),
             new ClickCodeService(),
-            CreateGameRunnerResolver(),
-            new GameProcessTracker(),
+            CreateGameRuntime(),
             localizer);
 
         var result = await service.StartAsync(new LauncherStatusSnapshot
@@ -80,8 +110,7 @@ public sealed class InstallationOperationStateTests : IDisposable
         var service = new GameLaunchService(
             new ManifestValidationService(apiClient, new RemoteManifestService(apiClient), localizer),
             new ClickCodeService(),
-            CreateGameRunnerResolver(),
-            new GameProcessTracker(),
+            CreateGameRuntime(),
             localizer);
 
         var result = await service.StartAsync(new LauncherStatusSnapshot
@@ -104,8 +133,7 @@ public sealed class InstallationOperationStateTests : IDisposable
         var service = new GameLaunchService(
             new ManifestValidationService(apiClient, new RemoteManifestService(apiClient), localizer),
             new ClickCodeService(),
-            CreateGameRunnerResolver(),
-            new GameProcessTracker(),
+            CreateGameRuntime(),
             localizer);
 
         var result = await service.StartAsync(new LauncherStatusSnapshot
@@ -128,8 +156,7 @@ public sealed class InstallationOperationStateTests : IDisposable
         var service = new GameLaunchService(
             new ManifestValidationService(apiClient, new RemoteManifestService(apiClient), localizer),
             new ClickCodeService(),
-            CreateGameRunnerResolver(),
-            new GameProcessTracker(),
+            CreateGameRuntime(),
             localizer);
 
         var result = await service.StartAsync(new LauncherStatusSnapshot
@@ -167,8 +194,7 @@ public sealed class InstallationOperationStateTests : IDisposable
             var service = new GameLaunchService(
                 new ManifestValidationService(apiClient, new RemoteManifestService(apiClient), localizer),
                 new ClickCodeService(),
-                CreateGameRunnerResolver(),
-                new GameProcessTracker(),
+                CreateGameRuntime(),
                 localizer);
 
             var result = await service.StartAsync(new LauncherStatusSnapshot
@@ -212,8 +238,7 @@ public sealed class InstallationOperationStateTests : IDisposable
             var service = new GameLaunchService(
                 new ManifestValidationService(apiClient, new RemoteManifestService(apiClient), localizer),
                 new ClickCodeService(),
-                CreateGameRunnerResolver(),
-                new GameProcessTracker(),
+                CreateGameRuntime(),
                 localizer);
 
             var result = await service.StartAsync(new LauncherStatusSnapshot
@@ -245,8 +270,7 @@ public sealed class InstallationOperationStateTests : IDisposable
         var service = new GameLaunchService(
             new ManifestValidationService(apiClient, new RemoteManifestService(apiClient), localizer),
             new ClickCodeService(),
-            new GameRunnerResolver([new UnavailableGameRunner("umu", "umu-run was not found on PATH.")]),
-            new GameProcessTracker(),
+            CreateUnavailableRunnerRuntime(),
             localizer);
 
         var result = await service.StartAsync(new LauncherStatusSnapshot
@@ -281,8 +305,7 @@ public sealed class InstallationOperationStateTests : IDisposable
         var service = new GameLaunchService(
             new ManifestValidationService(apiClient, new RemoteManifestService(apiClient), localizer),
             new ClickCodeService(),
-            new GameRunnerResolver([new FailingGameRunner("umu")]),
-            new GameProcessTracker(),
+            CreateFailingRunnerRuntime(),
             localizer);
 
         var result = await service.StartAsync(
@@ -320,8 +343,7 @@ public sealed class InstallationOperationStateTests : IDisposable
         var service = new GameLaunchService(
             new ManifestValidationService(apiClient, new RemoteManifestService(apiClient), localizer),
             new ClickCodeService(),
-            new GameRunnerResolver([new FailingGameRunner("umu")]),
-            new GameProcessTracker(),
+            CreateFailingRunnerRuntime(),
             localizer);
 
         var result = await service.StartAsync(
@@ -378,8 +400,7 @@ public sealed class InstallationOperationStateTests : IDisposable
         var service = new GameLaunchService(
             new ManifestValidationService(apiClient, new RemoteManifestService(apiClient), localizer),
             new ClickCodeService(),
-            CreateGameRunnerResolver(),
-            new GameProcessTracker(),
+            CreateGameRuntime(),
             localizer);
         var snapshot = new LauncherStatusSnapshot
         {
@@ -640,50 +661,9 @@ public sealed class InstallationOperationStateTests : IDisposable
         }
     }
 
-    private sealed class UnavailableGameRunner(string id, string reason) : IGameRunner
+    private sealed class FailingProcessLauncher : IProcessLauncher
     {
-        public string Id => id;
-
-        public bool IsSupportedPlatform => true;
-
-        public Task<GameRunnerAvailability> CheckAvailabilityAsync(
-            GameRuntimeOptions options,
-            CancellationToken cancellationToken = default) =>
-            Task.FromResult(new GameRunnerAvailability(
-                GameRunnerAvailabilityStatus.NotFound,
-                Message: reason));
-
-        public Task<GameProcess> StartAsync(
-            GameLaunchRequest request,
-            GameRuntimeOptions options,
-            CancellationToken cancellationToken = default) =>
-            throw new InvalidOperationException("An unavailable runner must not start a process.");
-
-        public string? GetEffectivePrefixPath(GameLaunchRequest request, GameRuntimeOptions options) => null;
-
-        public string? GetEffectiveProtonPath(GameRuntimeOptions options) => null;
-    }
-
-    private sealed class FailingGameRunner(string id) : IGameRunner
-    {
-        public string Id => id;
-
-        public bool IsSupportedPlatform => true;
-
-        public Task<GameRunnerAvailability> CheckAvailabilityAsync(
-            GameRuntimeOptions options,
-            CancellationToken cancellationToken = default) =>
-            Task.FromResult(new GameRunnerAvailability(GameRunnerAvailabilityStatus.Available));
-
-        public Task<GameProcess> StartAsync(
-            GameLaunchRequest request,
-            GameRuntimeOptions options,
-            CancellationToken cancellationToken = default) =>
+        public Process? Start(ProcessStartInfo startInfo) =>
             throw new InvalidOperationException("umu failed to create a process.");
-
-        public string? GetEffectivePrefixPath(GameLaunchRequest request, GameRuntimeOptions options) =>
-            GameCompatibilityPaths.GetDefaultPrefixPath(request.GameId, id);
-
-        public string? GetEffectiveProtonPath(GameRuntimeOptions options) => "auto";
     }
 }

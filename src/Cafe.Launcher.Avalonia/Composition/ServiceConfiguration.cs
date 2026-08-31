@@ -61,11 +61,10 @@ public static class ServiceConfiguration
         services.AddSingleton<SettingsOptionsViewModel>();
         services.AddSingleton<SettingsAppearanceViewModel>();
         services.AddSingleton<IProcessLauncher, DefaultProcessLauncher>();
-        services.AddSingleton<IGameRunner, NativeGameRunner>();
-        services.AddSingleton<IGameRunner, UmuGameRunner>();
-        services.AddSingleton<IGameRunner, WineGameRunner>();
-        services.AddSingleton<GameRunnerResolver>();
-        services.AddSingleton<GameRuntimeStatusService>();
+        services.AddSingleton<IGameRuntime>(sp => new GameRuntime(
+            [GameRunnerDefinition.Native, GameRunnerDefinition.Umu, GameRunnerDefinition.Wine],
+            sp.GetRequiredService<IProcessLauncher>(),
+            sp.GetRequiredService<IGameProcessTracker>()));
         services.AddSingleton<IGameProcessTracker, GameProcessTracker>();
         services.AddSingleton<GameLaunchService>();
         services.AddSingleton<GameUninstallService>();

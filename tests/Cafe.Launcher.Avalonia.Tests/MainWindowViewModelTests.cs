@@ -914,7 +914,7 @@ public sealed class MainWindowViewModelTests : IDisposable
             new SettingsOptionsViewModel(localizer, new DiskSpaceService()),
             appearance,
             new ErrorHandlingService(localizer, new LocalDiagnostics(testLogger), toastService),
-            new GameRuntimeStatusService(Array.Empty<IGameRunner>()));
+            new GameRuntime([], new DefaultProcessLauncher(), new GameProcessTracker()));
         ToastNotification? errorToast = null;
         toastService.ToastRaised += notification =>
         {
@@ -1871,11 +1871,14 @@ public sealed class MainWindowViewModelTests : IDisposable
             diagnosticsVal,
             RemoteHttpUrlValidator.CreateForTesting());
         var manifestValidationService = new ManifestValidationService(apiClient, remoteManifestService, localizationService);
+        var gameRuntime = new GameRuntime(
+            [GameRunnerDefinition.Native],
+            new DefaultProcessLauncher(),
+            new GameProcessTracker());
         var gameLaunchService = new GameLaunchService(
             manifestValidationService,
             new ClickCodeService(),
-            new GameRunnerResolver([new NativeGameRunner(new DefaultProcessLauncher())]),
-            new GameProcessTracker(),
+            gameRuntime,
             localizationService);
         var gameDownloadService = new GameDownloadService(
             apiClient,
@@ -1914,7 +1917,7 @@ public sealed class MainWindowViewModelTests : IDisposable
             settingsLogger,
             new GameInstallationPath(),
             settingsOptions, settingsAppearance, errorHandling,
-            new GameRuntimeStatusService(Array.Empty<IGameRunner>()));
+            gameRuntime);
         var resourcePanelService = new ResourcePanelService(
             resourcePanelUidService, resourcePanelApiClient, diagnostics);
         var resourcePanelViewModel = new ResourcePanelViewModel(
