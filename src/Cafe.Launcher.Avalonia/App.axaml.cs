@@ -267,139 +267,44 @@ public partial class App : Application
     }
 
     /// <summary>
-    /// 共享的跨进程信号轮询基类：后台任务以 250ms 间隔探测一次信号，
-    /// 命中后把处理调度到 UI 线程，退出时做尽力而为的清理。
+    /// 基于命名事件的监听器(仅 Windows 使用):第二个实例通过同名内核事件唤醒本监听器。
+    /// 轮询循环交给 <see cref="CrossProcessPollingListener"/> 承载。
     /// </summary>
-    private abstract class SignalListenerBase : IDisposable
+    private class EventWaitHandleListener : IDisposable
     {
-        private static readonly TimeSpan PollInterval = TimeSpan.FromMilliseconds(250);
+        private readonly EventWaitHandle signal;
+        private readonly CrossProcessPollingListener pollingListener;
+        private bool stopped;
 
-        private readonly CancellationTokenSource cancellationTokenSource = new();
-        private readonly CancellationToken cancellationToken;
-        private readonly Task listenerTask;
-        private bool disposed;
-
-        protected SignalListenerBase()
+        protected EventWaitHandleListener(string signalName, Action onSignalRaised)
         {
-            cancellationToken = cancellationTokenSource.Token;
-            listenerTask = Task.Run(Listen, cancellationToken);
-        }
-
-        protected bool IsCancellationRequested => cancellationToken.IsCancellationRequested;
-
-        private void Listen()
-        {
-            try
-            {
-                while (!cancellationToken.IsCancellationRequested)
+            signal = new EventWaitHandle(false, EventResetMode.AutoReset, signalName);
+            pollingListener = new CrossProcessPollingListener(
+                signal.WaitOne,
+                () => Dispatcher.UIThread.InvokeAsync(() =>
                 {
-                    if (!WaitForSignal(PollInterval))
-                    {
-                        continue;
-                    }
-
-                    if (cancellationToken.IsCancellationRequested)
+                    if (stopped)
                     {
                         return;
                     }
 
-                    OnSignalRaised();
-                }
-            }
-            catch (Exception ex)
-            {
-                // Listener stopped — non-critical.
-                Debug.WriteLine($"{GetType().Name} loop exited: {ex.Message}");
-            }
-        }
-
-        /// <summary>返回 true 表示信号已就绪（AutoReset 语义，读取即消费）。</summary>
-        protected abstract bool WaitForSignal(TimeSpan timeout);
-
-        protected abstract void OnSignalRaised();
-
-        /// <summary>
-        /// 释放本监听器独占的一次性资源。共享的跨进程端点由
-        /// <see cref="Program"/> 持有，并随进程存活，子类通常无需处理。
-        /// </summary>
-        protected virtual void DisposeResource()
-        {
+                    onSignalRaised();
+                }));
         }
 
         public void Dispose()
         {
-            if (disposed)
-            {
-                return;
-            }
-
-            disposed = true;
-            cancellationTokenSource.Cancel();
-
-            try
-            {
-                // The listener polls every 250ms; after cancellation it exits within ~250ms.
-                // Using a matching timeout avoids needlessly blocking the cleanup thread.
-                listenerTask.Wait(TimeSpan.FromMilliseconds(300));
-            }
-            catch
-            {
-                // Exit cleanup is best-effort.
-            }
-
-            DisposeResource();
-            cancellationTokenSource.Dispose();
+            stopped = true;
+            pollingListener.Dispose();
+            signal.Dispose();
         }
-    }
-
-    /// <summary>
-    /// 基于命名事件的监听器（仅 Windows 使用）：第二个实例通过同名内核事件唤醒本监听器。
-    /// </summary>
-    private abstract class EventWaitHandleListener : SignalListenerBase
-    {
-        private readonly EventWaitHandle signal;
-
-        protected EventWaitHandleListener(string signalName)
-        {
-            signal = new EventWaitHandle(false, EventResetMode.AutoReset, signalName);
-        }
-
-        protected override bool WaitForSignal(TimeSpan timeout) => signal.WaitOne(timeout);
-
-        protected override void DisposeResource() => signal.Dispose();
     }
 
     private sealed class ShowWindowSignalListener : EventWaitHandleListener
     {
-        private readonly MainWindow mainWindow;
-        private readonly SystemTrayService? trayService;
-
         private ShowWindowSignalListener(MainWindow mainWindow, SystemTrayService? trayService, string signalName)
-            : base(signalName)
-        {
-            this.mainWindow = mainWindow;
-            this.trayService = trayService;
-        }
-
-        public static ShowWindowSignalListener? Start(
-            MainWindow mainWindow,
-            SystemTrayService? trayService,
-            string signalName)
-        {
-            return OperatingSystem.IsWindows()
-                ? new ShowWindowSignalListener(mainWindow, trayService, signalName)
-                : null;
-        }
-
-        protected override void OnSignalRaised()
-        {
-            Dispatcher.UIThread.InvokeAsync(() =>
+            : base(signalName, () =>
             {
-                if (IsCancellationRequested)
-                {
-                    return;
-                }
-
                 try
                 {
                     if (trayService is not null)
@@ -412,7 +317,18 @@ public partial class App : Application
                     // Restore is best-effort.
                     Debug.WriteLine($"Window restore dispatch failed: {ex.Message}");
                 }
-            });
+            })
+        {
+        }
+
+        public static ShowWindowSignalListener? Start(
+            MainWindow mainWindow,
+            SystemTrayService? trayService,
+            string signalName)
+        {
+            return OperatingSystem.IsWindows()
+                ? new ShowWindowSignalListener(mainWindow, trayService, signalName)
+                : null;
         }
     }
 
@@ -421,39 +337,40 @@ public partial class App : Application
     /// through the regular UI command, so busy-state, validation, and toasts all apply.
     /// On Windows the transport is a named EventWaitHandle; on Unix it is a local
     /// socket (CrossProcessLaunchSignal), because .NET has no named events there.
+    /// The polling loop is delegated to <see cref="CrossProcessPollingListener"/>.
     /// </summary>
-    private sealed class LaunchGameSignalListener : SignalListenerBase
+    private sealed class LaunchGameSignalListener : IDisposable
     {
-        private readonly GameOperationsViewModel operations;
-        private readonly CrossProcessLaunchSignal signal;
+        private readonly CrossProcessPollingListener pollingListener;
+        private volatile bool stopped;
 
         public LaunchGameSignalListener(GameOperationsViewModel operations, CrossProcessLaunchSignal signal)
         {
-            this.operations = operations;
-            this.signal = signal;
+            pollingListener = new CrossProcessPollingListener(
+                signal.WaitOne,
+                () => Dispatcher.UIThread.InvokeAsync(() =>
+                {
+                    if (stopped)
+                    {
+                        return;
+                    }
+
+                    try
+                    {
+                        operations.StartGameCommand.Execute(null);
+                    }
+                    catch (Exception ex)
+                    {
+                        // The launch journey reports its own failures; this only guards dispatch.
+                        Debug.WriteLine($"Launch-game signal dispatch failed: {ex.Message}");
+                    }
+                }));
         }
 
-        protected override bool WaitForSignal(TimeSpan timeout) => signal.WaitOne(timeout);
-
-        protected override void OnSignalRaised()
+        public void Dispose()
         {
-            Dispatcher.UIThread.InvokeAsync(() =>
-            {
-                if (IsCancellationRequested)
-                {
-                    return;
-                }
-
-                try
-                {
-                    operations.StartGameCommand.Execute(null);
-                }
-                catch (Exception ex)
-                {
-                    // The launch journey reports its own failures; this only guards dispatch.
-                    Debug.WriteLine($"Launch-game signal dispatch failed: {ex.Message}");
-                }
-            });
+            stopped = true;
+            pollingListener.Dispose();
         }
     }
 }
