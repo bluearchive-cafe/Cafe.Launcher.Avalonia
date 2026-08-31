@@ -267,37 +267,71 @@ public partial class App : Application
     }
 
     /// <summary>
-    /// 基于命名事件的监听器(仅 Windows 使用):第二个实例通过同名内核事件唤醒本监听器。
-    /// 轮询循环交给 <see cref="CrossProcessPollingListener"/> 承载。
+    /// Base for cross-process signal listeners: owns the polling loop
+    /// (<see cref="CrossProcessPollingListener"/>) and marshals every consumed
+    /// signal onto the UI thread, dropping signals that arrive after disposal
+    /// so a late dispatch never acts on a stopped listener.
     /// </summary>
-    private class EventWaitHandleListener : IDisposable
+    private abstract class CrossProcessSignalListener : IDisposable
+    {
+        private readonly CrossProcessPollingListener pollingListener;
+        private readonly Action onSignalRaised;
+
+        protected CrossProcessSignalListener(Func<TimeSpan, bool> waitForSignal, Action onSignalRaised)
+        {
+            this.onSignalRaised = onSignalRaised;
+            pollingListener = new CrossProcessPollingListener(waitForSignal, OnSignalConsumed);
+        }
+
+        public virtual void Dispose() => pollingListener.Dispose();
+
+        private void OnSignalConsumed()
+        {
+            Dispatcher.UIThread.InvokeAsync(() =>
+            {
+                if (pollingListener.IsCancellationRequested)
+                {
+                    return;
+                }
+
+                onSignalRaised();
+            });
+        }
+    }
+
+    /// <summary>
+    /// 基于命名事件的监听器(仅 Windows 使用):第二个实例通过同名内核事件唤醒本监听器。
+    /// 轮询循环与 UI 编组由 <see cref="CrossProcessSignalListener"/> 承载。
+    /// </summary>
+    private class EventWaitHandleListener : CrossProcessSignalListener
     {
         private readonly EventWaitHandle signal;
-        private readonly CrossProcessPollingListener pollingListener;
-        private bool stopped;
 
         protected EventWaitHandleListener(string signalName, Action onSignalRaised)
+            : this(CreateEndpoint(signalName), onSignalRaised)
         {
-            signal = new EventWaitHandle(false, EventResetMode.AutoReset, signalName);
-            pollingListener = new CrossProcessPollingListener(
-                signal.WaitOne,
-                () => Dispatcher.UIThread.InvokeAsync(() =>
-                {
-                    if (stopped)
-                    {
-                        return;
-                    }
-
-                    onSignalRaised();
-                }));
         }
 
-        public void Dispose()
+        private EventWaitHandleListener(SignalEndpoint endpoint, Action onSignalRaised)
+            : base(endpoint.WaitOne, onSignalRaised)
         {
-            stopped = true;
-            pollingListener.Dispose();
+            signal = endpoint.Handle;
+        }
+
+        public override void Dispose()
+        {
+            base.Dispose();
             signal.Dispose();
         }
+
+        /// <summary>Owns the named event created before the mutex probe so a raise never misses the listener.</summary>
+        private sealed record SignalEndpoint(EventWaitHandle Handle)
+        {
+            public bool WaitOne(TimeSpan timeout) => Handle.WaitOne(timeout);
+        }
+
+        private static SignalEndpoint CreateEndpoint(string signalName) =>
+            new(new EventWaitHandle(false, EventResetMode.AutoReset, signalName));
     }
 
     private sealed class ShowWindowSignalListener : EventWaitHandleListener
@@ -337,40 +371,25 @@ public partial class App : Application
     /// through the regular UI command, so busy-state, validation, and toasts all apply.
     /// On Windows the transport is a named EventWaitHandle; on Unix it is a local
     /// socket (CrossProcessLaunchSignal), because .NET has no named events there.
-    /// The polling loop is delegated to <see cref="CrossProcessPollingListener"/>.
+    /// The polling loop and UI marshaling are delegated to
+    /// <see cref="CrossProcessSignalListener"/>.
     /// </summary>
-    private sealed class LaunchGameSignalListener : IDisposable
+    private sealed class LaunchGameSignalListener : CrossProcessSignalListener
     {
-        private readonly CrossProcessPollingListener pollingListener;
-        private volatile bool stopped;
-
         public LaunchGameSignalListener(GameOperationsViewModel operations, CrossProcessLaunchSignal signal)
-        {
-            pollingListener = new CrossProcessPollingListener(
-                signal.WaitOne,
-                () => Dispatcher.UIThread.InvokeAsync(() =>
+            : base(signal.WaitOne, () =>
+            {
+                try
                 {
-                    if (stopped)
-                    {
-                        return;
-                    }
-
-                    try
-                    {
-                        operations.StartGameCommand.Execute(null);
-                    }
-                    catch (Exception ex)
-                    {
-                        // The launch journey reports its own failures; this only guards dispatch.
-                        Debug.WriteLine($"Launch-game signal dispatch failed: {ex.Message}");
-                    }
-                }));
-        }
-
-        public void Dispose()
+                    operations.StartGameCommand.Execute(null);
+                }
+                catch (Exception ex)
+                {
+                    // The launch journey reports its own failures; this only guards dispatch.
+                    Debug.WriteLine($"Launch-game signal dispatch failed: {ex.Message}");
+                }
+            })
         {
-            stopped = true;
-            pollingListener.Dispose();
         }
     }
 }

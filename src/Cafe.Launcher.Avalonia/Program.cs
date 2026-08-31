@@ -66,32 +66,17 @@ sealed class Program
             return;
         }
 
-        // The launch-game signal transport must be created before the mutex on
-        // Windows: a second --launch-game instance only forwards its request once
-        // it observes the mutex held, and the named event must already exist for
-        // that raise to land on the first instance's listener. On Unix, .NET throws
-        // PlatformNotSupportedException for a named EventWaitHandle (a Windows
-        // kernel-object feature), so Listen() resolves the transport up front and
-        // defers the actual Unix socket binding to EnsureBound() below, after the
-        // mutex is won — stale socket files from a previous run are recovered there.
-        using var launchSignal = CrossProcessLaunchSignal.Listen(LaunchGameSignalName);
-        using var mutex = new Mutex(true, MutexName, out var createdNew);
-        if (!createdNew)
+        // The single-instance handshake (signal endpoint before mutex probing,
+        // forward-on-lose, bound endpoint handoff) is owned by the launch bridge.
+        using var launchBridge = new CrossProcessLaunchBridge(LaunchGameSignalName, SignalName);
+        if (!launchBridge.TryEnterSingleInstance(MutexName, args))
         {
-            // A launcher is already running: forward --launch-game to it (when
-            // requested) and exit instead of starting a duplicate process.
-            if (HasLaunchGameArgument(args))
-            {
-                CrossProcessLaunchSignal.Raise(LaunchGameSignalName);
-            }
-
-            SignalShowInstance();
+            // A launcher is already running: forwarded --launch-game (when
+            // requested) and exited instead of starting a duplicate process.
             return;
         }
 
-        launchSignal.EnsureBound();
-        LaunchGameSignal = launchSignal;
-
+        LaunchGameSignal = launchBridge.Signal;
         LaunchGameRequested = HasLaunchGameArgument(args);
 
         // Create standalone diagnostics before DI is available. This instance
@@ -197,10 +182,9 @@ sealed class Program
     }
 
     /// <summary>
-    /// Raises the pre-existing Windows-only show-window signal so a forwarded
-    /// launch (or a plain second start) also brings the running launcher up.
-    /// The launch-game forward itself is delivered by
-    /// <see cref="CrossProcessLaunchSignal.Raise"/>.
+    /// Raises the pre-existing Windows-only show-window signal — superseded by
+    /// <see cref="Services.CrossProcessLaunchBridge"/> which owns the whole
+    /// single-instance handshake.
     /// </summary>
     private static void SignalShowInstance()
     {
