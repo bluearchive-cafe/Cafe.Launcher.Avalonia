@@ -103,4 +103,3 @@ body:
           required: true
         - label: 我已确认附件中不包含账号凭据、Cookie、访问令牌等敏感信息。
           required: true
-

@@ -63,4 +63,3 @@ body:
           required: true
         - label: 该建议不要求修改游戏进程、注入代码或绕过反作弊。
           required: true
-
