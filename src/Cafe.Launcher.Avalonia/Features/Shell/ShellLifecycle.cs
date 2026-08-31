@@ -55,7 +55,8 @@ public sealed class ShellLifecycle : IDisposable
     private readonly Func<string, Task<string?>> pickSetupWizardGameFolderAsync;
     private readonly bool ownsPresentationCollaborators;
     private readonly ShellRefreshCoordinator refreshCoordinator;
-    private int initialized;
+    private readonly ShellStartup startup;
+    private readonly SettingsChangeFanout settingsChangeFanout;
     private bool disposed;
     private bool motionSettingsApplied;
     private bool settingsSnapshotInitialized;
@@ -124,18 +125,34 @@ public sealed class ShellLifecycle : IDisposable
         refreshCoordinator = new ShellRefreshCoordinator(
             LoadHostStateAsync,
             AfterLoadAsync);
+        startup = new ShellStartup(
+            RefreshAsync,
+            ApplyMotionSettings,
+            ApplyLanguage,
+            settings => settingsService.SaveAsync(settings),
+            () => dialogs.IsSetupWizardVisible = false,
+            PickSetupWizardGameFolderAsync,
+            () => dialogs.IsSetupWizardVisible,
+            dialogs.SetupWizard);
+        settingsChangeFanout = new SettingsChangeFanout(
+            () => settings.Editor.Current,
+            () => currentSnapshot?.Settings.PatchUrlGroup,
+            () => currentSnapshot,
+            saved =>
+            {
+                remoteContent.UpdateRemoteContentVisibility(saved.ShowRemoteContentCard);
+                ApplyMotionSettings(saved);
+            },
+            () => operations.IsDownloadRunning,
+            () => settingsService.ReadAsync(),
+            () => RefreshAsync(),
+            () => localizer.T("downloadSourceChangedRepairPrompt"),
+            dialogs.ShowRepairConfirm);
     }
 
     /// <summary>Initializes the shell once by loading settings and launcher state.</summary>
-    public async Task InitializeAsync(CancellationToken cancellationToken = default)
-    {
-        if (Interlocked.Exchange(ref initialized, 1) == 1)
-        {
-            return;
-        }
-
-        await RefreshAsync(cancellationToken);
-    }
+    public Task InitializeAsync(CancellationToken cancellationToken = default) =>
+        startup.InitializeAsync(cancellationToken);
 
     /// <summary>Reapplies the system motion preference when the user chose the system option.</summary>
     public void RefreshSystemMotionPreference()
@@ -155,17 +172,14 @@ public sealed class ShellLifecycle : IDisposable
     }
 
     /// <summary>Applies the initial automatic language before a launcher snapshot exists.</summary>
-    public void ApplyInitialLanguage() => ApplyLanguage(LauncherLanguages.Auto);
+    public void ApplyInitialLanguage() => startup.ApplyInitialLanguage();
 
     /// <summary>
-    /// 首启分支不执行 RefreshAsync（设置快照由向导驱动后再加载），但动效偏好必须
-    /// 在向导显示前按默认配置（System 档跟随 Windows 动画开关）先行应用，
-    /// 否则 IsMotionReduced 停留在字段默认的 true，首启向导全程处于降动效。
+    /// 首启分支的动效偏好由 <see cref="ShellStartup"/> 在向导显示前按默认配置应用,
+    /// 参见该模块的规则说明。
     /// </summary>
-    public void ApplyFirstLaunchMotionPreference()
-    {
-        ApplyMotionSettings(LauncherSettings.CreateDefaults());
-    }
+    public void ApplyFirstLaunchMotionPreference() =>
+        startup.ApplyFirstLaunchMotionPreference();
 
     /// <summary>Reloads launcher state and updates all dependent presentation models.</summary>
     public async Task RefreshAsync(CancellationToken cancellationToken = default)
@@ -253,40 +267,11 @@ public sealed class ShellLifecycle : IDisposable
     }
 
     /// <summary>Refreshes the shell after the settings editor saves a new snapshot.</summary>
-    public async Task HandleSettingsSavedAsync()
-    {
-        var previousPatchUrlGroup = currentSnapshot?.Settings.PatchUrlGroup;
-        var savedPatchUrlGroup = settings.Editor.Current.PatchUrlGroup;
-        remoteContent.UpdateRemoteContentVisibility(
-            settings.Editor.Current.ShowRemoteContentCard);
-        ApplyMotionSettings(settings.Editor.Current);
-
-        if (operations.IsDownloadRunning)
-        {
-            if (currentSnapshot is not null)
-            {
-                currentSnapshot.Settings = await settingsService.ReadAsync();
-            }
-
-            return;
-        }
-
-        await RefreshAsync();
-        if (currentSnapshot?.RuntimeState is LauncherRuntimeState.Ready or LauncherRuntimeState.UpdateAvailable
-            && !string.Equals(previousPatchUrlGroup, savedPatchUrlGroup, StringComparison.Ordinal))
-        {
-            dialogs.ShowRepairConfirm(localizer.T("downloadSourceChangedRepairPrompt"));
-        }
-    }
+    public Task HandleSettingsSavedAsync() => settingsChangeFanout.ApplySavedChangesAsync();
 
     /// <summary>Saves completed wizard settings, applies their language, and refreshes the shell.</summary>
-    public async Task HandleSetupWizardCompletedAsync(LauncherSettings newSettings)
-    {
-        await settingsService.SaveAsync(newSettings);
-        ApplyLanguage(newSettings.Language);
-        dialogs.IsSetupWizardVisible = false;
-        await RefreshAsync();
-    }
+    public Task HandleSetupWizardCompletedAsync(LauncherSettings newSettings) =>
+        startup.HandleSetupWizardCompletedAsync(newSettings);
 
     /// <summary>Shows confirmation before switching the resource-panel source.</summary>
     public void ShowResourcePanelSourceConfirmDialog()
@@ -331,9 +316,6 @@ public sealed class ShellLifecycle : IDisposable
     private void OnResourcePanelSourceSwitchConfirmed() => _ = SwitchSourceThenOpenPanelAsync();
 
     private static void OnUpdateAvailableConfirmed(string downloadUrl) => ExternalLinkService.Open(downloadUrl);
-
-    private Task HandleSetupWizardSettingsAppliedAsync(LauncherSettings newSettings) =>
-        HandleSetupWizardCompletedAsync(newSettings);
 
     /// <summary>Refreshes shell state after a game operation and records resume behavior.</summary>
     internal async Task HandleOperationsRefreshRequestedAsync(GameOperationsRefreshMode mode)
@@ -419,9 +401,7 @@ public sealed class ShellLifecycle : IDisposable
 
         remoteContent.OpenExternalUrlRequested = openExternalUrl;
 
-        dialogs.SetupWizard.PickGameFolderAsync = pickSetupWizardGameFolderAsync;
-        dialogs.SetupWizard.LanguagePreviewRequested += PreviewSetupWizardLanguage;
-        dialogs.SetupWizard.SettingsApplied += HandleSetupWizardSettingsAppliedAsync;
+        startup.Wire();
 
         windowChrome.PropertyChanged += OnWindowChromePropertyChanged;
         settings.PropertyChanged += OnSettingsPropertyChanged;
@@ -448,8 +428,6 @@ public sealed class ShellLifecycle : IDisposable
         dialogs.CloseRequested -= windowChrome.RequestClose;
         dialogs.ConfirmUpdateAvailableRequested -= OnUpdateAvailableConfirmed;
         dialogs.ErrorViewLogRequested -= OpenLogViewer;
-        dialogs.SetupWizard.LanguagePreviewRequested -= PreviewSetupWizardLanguage;
-        dialogs.SetupWizard.SettingsApplied -= HandleSetupWizardSettingsAppliedAsync;
         debug.RefreshRequested -= HandleDebugRefreshRequestedAsync;
         debug.ResetSettingsRequested -= ResetSettingsToDefaultsAsync;
         debug.ResetSettingsConfirmationRequested -= dialogs.ShowDebugResetConfirmation;
@@ -484,10 +462,7 @@ public sealed class ShellLifecycle : IDisposable
             remoteContent.OpenExternalUrlRequested = null;
         }
 
-        if (dialogs.SetupWizard.PickGameFolderAsync == pickSetupWizardGameFolderAsync)
-        {
-            dialogs.SetupWizard.PickGameFolderAsync = null;
-        }
+        startup.Unwire();
     }
 
     /// <summary>Handles Escape for the active modal and returns whether a modal consumed it.</summary>
@@ -681,14 +656,6 @@ public sealed class ShellLifecycle : IDisposable
         dialogs.ApplyLanguage();
         operations.ApplyLanguage();
         debug.ApplyLanguage();
-    }
-
-    private void PreviewSetupWizardLanguage(string language)
-    {
-        if (dialogs.IsSetupWizardVisible)
-        {
-            ApplyLanguage(language);
-        }
     }
 
     private void OnLocalizationFailure(object? sender, LocalizationFailureEventArgs eventArgs)
