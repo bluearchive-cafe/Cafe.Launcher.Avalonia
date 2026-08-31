@@ -18,6 +18,7 @@ public partial class GameOperationsViewModel : ViewModelBase, IGameOperationJour
 {
     private readonly IGameOperationJourney journey;
     private readonly LocalizationService localizer;
+    private readonly ToastService toastService;
     private readonly DialogsViewModel dialogs;
     private readonly ShellViewModel shell;
     private LauncherStatusSnapshot? currentSnapshot;
@@ -108,75 +109,29 @@ public partial class GameOperationsViewModel : ViewModelBase, IGameOperationJour
     LauncherStatusSnapshot? IGameOperationJourneyHost.CurrentSnapshot => currentSnapshot;
 
     internal GameOperationsViewModel(
-        GameLaunchService gameLaunchService,
-        GameDownloadService gameDownloadService,
-        GameUninstallService gameUninstallService,
-        GameShortcutService gameShortcutService,
+        IGameOperationExecutor executor,
+        IGameShortcutService gameShortcutService,
         LocalizationService localizer,
         ToastService toastService,
         LocalDiagnostics diagnostics,
         ShellViewModel shell,
         DialogsViewModel dialogs,
-        IErrorHandlingService errorHandling)
-        : this(
-            new GameOperationJourneyFactory(
-                new GameLaunchWorkflow(gameLaunchService),
-                new GameInstallationWorkflow(gameDownloadService),
-                new GameUninstallWorkflow(gameUninstallService),
-                gameShortcutService,
-                localizer,
-                toastService,
-                diagnostics,
-                shell,
-                dialogs,
-                errorHandling),
-            localizer,
-            shell,
-            dialogs)
-    {
-    }
-
-    internal GameOperationsViewModel(
-        IGameLaunchWorkflow launchWorkflow,
-        IGameInstallationWorkflow installationWorkflow,
-        IGameUninstallWorkflow uninstallWorkflow,
-        IGameShortcutService shortcutService,
-        LocalizationService localizer,
-        ToastService toastService,
-        LocalDiagnostics diagnostics,
-        ShellViewModel shell,
-        DialogsViewModel dialogs,
-        Func<TimeSpan, Task> delayAsync,
-        IErrorHandlingService errorHandling)
-        : this(
-            new GameOperationJourneyFactory(
-                launchWorkflow,
-                installationWorkflow,
-                uninstallWorkflow,
-                shortcutService,
-                localizer,
-                toastService,
-                diagnostics,
-                shell,
-                dialogs,
-                errorHandling,
-                delayAsync),
-            localizer,
-            shell,
-            dialogs)
-    {
-    }
-
-    internal GameOperationsViewModel(
-        IGameOperationJourneyFactory journeyFactory,
-        LocalizationService localizer,
-        ShellViewModel shell,
-        DialogsViewModel dialogs)
+        IErrorHandlingService errorHandling,
+        Func<TimeSpan, Task>? delayAsync = null)
     {
         this.localizer = localizer;
+        this.toastService = toastService;
         this.dialogs = dialogs;
         this.shell = shell;
-        journey = journeyFactory.Create(this);
+        journey = new GameOperationJourney(
+            executor,
+            gameShortcutService,
+            localizer,
+            toastService,
+            diagnostics,
+            errorHandling,
+            delayAsync ?? Task.Delay,
+            this);
         journey.IsRunningChanged += OnInstallationIsRunningChanged;
         dialogs.ConfirmRepairRequested += RepairAsync;
         dialogs.ConfirmUninstallRequested += ConfirmUninstallAsync;
@@ -240,6 +195,12 @@ public partial class GameOperationsViewModel : ViewModelBase, IGameOperationJour
         ApplySnapshot(snapshot);
     }
 
+    void IGameOperationJourneyHost.SetLaunchCheckResult(string message) =>
+        shell.SetLaunchCheckResult(message);
+
+    void IGameOperationJourneyHost.ShowRepairConfirmation(string message) =>
+        dialogs.ShowRepairConfirm(message);
+
     [RelayCommand]
     private async Task StartGameAsync()
     {
@@ -282,8 +243,18 @@ public partial class GameOperationsViewModel : ViewModelBase, IGameOperationJour
     [RelayCommand]
     private async Task RequestRepairAsync()
     {
-        if (currentSnapshot is not null)
-            await journey.RequestRepairAsync(currentSnapshot);
+        if (currentSnapshot is null)
+        {
+            return;
+        }
+
+        if (currentSnapshot.RuntimeState is not (LauncherRuntimeState.Corrupted or LauncherRuntimeState.Ready))
+        {
+            toastService.ShowWarning(localizer.T("operationUnavailableForCurrentState"));
+            return;
+        }
+
+        dialogs.ShowRepairConfirm(localizer.T("repairWarning"));
     }
 
     public async Task RepairAsync()
@@ -295,7 +266,13 @@ public partial class GameOperationsViewModel : ViewModelBase, IGameOperationJour
     [RelayCommand]
     private void StopOperation()
     {
-        journey.RequestStop();
+        if (journey.IsDownloadRunning)
+        {
+            dialogs.ShowStopConfirm();
+            return;
+        }
+
+        journey.PerformStop();
     }
 
     public void PerformStop()
@@ -334,8 +311,27 @@ public partial class GameOperationsViewModel : ViewModelBase, IGameOperationJour
     [RelayCommand]
     private async Task RequestUninstallAsync()
     {
-        if (currentSnapshot is not null)
-            await journey.RequestUninstallAsync(currentSnapshot);
+        if (currentSnapshot is null)
+        {
+            return;
+        }
+
+        if (currentSnapshot.RuntimeState != LauncherRuntimeState.Ready)
+        {
+            toastService.ShowWarning(localizer.T("operationUnavailableForCurrentState"));
+            return;
+        }
+
+        var validation = await journey.ValidateUninstallAsync(currentSnapshot);
+        if (validation is null)
+        {
+            return;
+        }
+
+        dialogs.ShowUninstallConfirm(localizer.F(
+            "uninstallConfirmText",
+            currentSnapshot.LocalGame.GamePath,
+            Math.Max(0, validation.AffectedFileCount - 2)));
     }
 
     public async Task ConfirmUninstallAsync()

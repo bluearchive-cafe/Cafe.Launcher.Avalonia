@@ -22,4 +22,8 @@ internal interface IGameOperationJourneyHost
     void ApplySnapshot(LauncherStatusSnapshot snapshot);
     /// <summary>Sets whether the host should present a busy state.</summary>
     void SetBusy(bool busy);
+    /// <summary>Reports the launch-check outcome message on the shell.</summary>
+    void SetLaunchCheckResult(string message);
+    /// <summary>Opens a repair confirmation surface on the host.</summary>
+    void ShowRepairConfirmation(string message);
 }

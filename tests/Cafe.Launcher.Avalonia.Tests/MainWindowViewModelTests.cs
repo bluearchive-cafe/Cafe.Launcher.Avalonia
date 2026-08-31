@@ -1930,9 +1930,7 @@ public sealed class MainWindowViewModelTests : IDisposable
         var backgroundViewModel = new BackgroundViewModel(imageCacheService, diagnostics, settingsViewModel);
         var gameOperationsViewModel = gameOperationsBackend is null
             ? new GameOperationsViewModel(
-                gameLaunchService,
-                gameDownloadService,
-                gameUninstallService,
+                new GameOperationExecutor(gameLaunchService, gameDownloadService, gameUninstallService),
                 new GameShortcutService(localizationService),
                 localizationService,
                 toastService,
@@ -1942,16 +1940,14 @@ public sealed class MainWindowViewModelTests : IDisposable
                 errorHandling)
             : new GameOperationsViewModel(
                 gameOperationsBackend,
-                gameOperationsBackend,
-                gameOperationsBackend,
                 new TestGameShortcutService(),
                 localizationService,
                 toastService,
                 diagnostics,
                 shellViewModel,
                 dialogsViewModel,
-                _ => Task.CompletedTask,
-                errorHandling);
+                errorHandling,
+                _ => Task.CompletedTask);
         var toastHostViewModel = toastDelayAsync is null
             ? new ToastHostViewModel(toastService, localizationService, diagnostics)
             : new ToastHostViewModel(
@@ -2221,10 +2217,7 @@ public sealed class MainWindowViewModelTests : IDisposable
         }
     }
 
-    private sealed class CountingGameOperationsBackend :
-        IGameLaunchWorkflow,
-        IGameInstallationWorkflow,
-        IGameUninstallWorkflow
+    private sealed class CountingGameOperationsBackend : IGameOperationExecutor
     {
         private readonly bool isDownloadRunning;
 
@@ -2242,11 +2235,12 @@ public sealed class MainWindowViewModelTests : IDisposable
         public GameOperationResult ValidateUninstallResult { get; set; } = new();
         public GameOperationResult UninstallResult { get; set; } = new();
         public bool IsDownloadRunning => isDownloadRunning;
-        public bool IsRunning => IsDownloadRunning;
         public bool IsPaused => false;
         public event Action? IsRunningChanged { add { } remove { } }
 
-        public Task<GameLaunchResult> StartGameAsync(LauncherStatusSnapshot snapshot) =>
+        public Task<GameLaunchResult> LaunchAsync(
+            LauncherStatusSnapshot snapshot,
+            CancellationToken cancellationToken = default) =>
             throw new NotSupportedException();
 
         public Task<GameOperationResult> InstallOrUpdateAsync(

@@ -75,7 +75,7 @@ public sealed class DebugViewModelTests : IDisposable
 
         Assert.True(context.ViewModel.IsDownloadRunning);
 
-        context.Backend.IsRunning = false;
+        context.Backend.IsDownloadRunning = false;
 
         Assert.False(context.ViewModel.IsDownloadRunning);
         Assert.Equal(context.Localizer.T("debugIdle"), context.ViewModel.DownloadStatusText);
@@ -204,11 +204,9 @@ public sealed class DebugViewModelTests : IDisposable
                 new GameInstallationPath(),
                 new LocalInstallationStateStore(),
                 diagnostics));
-        var backend = new TestBackend { IsRunning = true };
+        var backend = new TestBackend { IsDownloadRunning = true };
         var errorHandling = new ErrorHandlingService(localizer, diagnostics, toastService);
         var operations = new GameOperationsViewModel(
-            backend,
-            backend,
             backend,
             new TestGameShortcutService(),
             localizer,
@@ -216,8 +214,8 @@ public sealed class DebugViewModelTests : IDisposable
             diagnostics,
             shell,
             dialogs,
-            _ => Task.CompletedTask,
-            errorHandling);
+            errorHandling,
+            _ => Task.CompletedTask);
         var logger = new UnifiedLogger(Path.Combine(tempDir, "logs"));
         var viewModel = new DebugViewModel(
             toastService,
@@ -243,13 +241,10 @@ public sealed class DebugViewModelTests : IDisposable
         }
     }
 
-    private sealed class TestBackend :
-        IGameLaunchWorkflow,
-        IGameInstallationWorkflow,
-        IGameUninstallWorkflow
+    private sealed class TestBackend : IGameOperationExecutor
     {
         private bool isRunning;
-        public bool IsRunning
+        public bool IsDownloadRunning
         {
             get => isRunning;
             set
@@ -266,7 +261,9 @@ public sealed class DebugViewModelTests : IDisposable
         public bool IsPaused { get; private set; }
         public event Action? IsRunningChanged;
 
-        public Task<GameLaunchResult> StartGameAsync(LauncherStatusSnapshot snapshot) =>
+        public Task<GameLaunchResult> LaunchAsync(
+            LauncherStatusSnapshot snapshot,
+            CancellationToken cancellationToken = default) =>
             Task.FromResult(new GameLaunchResult { Validation = new ManifestValidationResult() });
 
         public Task<GameOperationResult> InstallOrUpdateAsync(
@@ -288,7 +285,7 @@ public sealed class DebugViewModelTests : IDisposable
 
         public void Stop(bool clearPersistedState)
         {
-            IsRunning = false;
+            IsDownloadRunning = false;
         }
 
         public void Pause()

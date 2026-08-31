@@ -5,7 +5,6 @@ using Cafe.Launcher.Avalonia.Helpers;
 using Cafe.Launcher.Avalonia.Models;
 using Cafe.Launcher.Avalonia.Services;
 using Cafe.Launcher.Avalonia.Services.Diagnostics;
-using Cafe.Launcher.Avalonia.ViewModels;
 
 namespace Cafe.Launcher.Avalonia.Features.GameOperations;
 
@@ -29,59 +28,47 @@ internal sealed class GameOperationJourney : IGameOperationJourney
     /// <summary>Forwards installation running-state changes to the presentation host.</summary>
     public event Action? IsRunningChanged
     {
-        add => installationWorkflow.IsRunningChanged += value;
-        remove => installationWorkflow.IsRunningChanged -= value;
+        add => executor.IsRunningChanged += value;
+        remove => executor.IsRunningChanged -= value;
     }
 
-    private readonly IGameLaunchWorkflow launchWorkflow;
-    private readonly IGameInstallationWorkflow installationWorkflow;
-    private readonly IGameUninstallWorkflow uninstallWorkflow;
+    private readonly IGameOperationExecutor executor;
     private readonly IGameShortcutService shortcutService;
     private readonly Func<TimeSpan, Task> delayAsync;
     private readonly LocalizationService localizer;
     private readonly ToastService toastService;
     private readonly LocalDiagnostics diagnostics;
-    private readonly ShellViewModel shell;
-    private readonly DialogsViewModel dialogs;
     private readonly IErrorHandlingService errorHandling;
     private readonly IGameOperationJourneyHost host;
 
     private LauncherStatusSnapshot? lastInstallSnapshot;
 
-    /// <summary>Initializes the workflow collaborators and presentation host for game operations.</summary>
+    /// <summary>Initializes the execution seam and presentation host for game operations.</summary>
     public GameOperationJourney(
-        IGameLaunchWorkflow launchWorkflow,
-        IGameInstallationWorkflow installationWorkflow,
-        IGameUninstallWorkflow uninstallWorkflow,
+        IGameOperationExecutor executor,
         IGameShortcutService shortcutService,
         LocalizationService localizer,
         ToastService toastService,
         LocalDiagnostics diagnostics,
-        ShellViewModel shell,
-        DialogsViewModel dialogs,
         IErrorHandlingService errorHandling,
         Func<TimeSpan, Task> delayAsync,
         IGameOperationJourneyHost host)
     {
-        this.launchWorkflow = launchWorkflow;
-        this.installationWorkflow = installationWorkflow;
-        this.uninstallWorkflow = uninstallWorkflow;
+        this.executor = executor;
         this.shortcutService = shortcutService;
         this.delayAsync = delayAsync;
         this.localizer = localizer;
         this.toastService = toastService;
         this.diagnostics = diagnostics;
-        this.shell = shell;
-        this.dialogs = dialogs;
         this.errorHandling = errorHandling;
         this.host = host;
     }
 
     /// <summary>Gets whether a download or repair workflow is currently running.</summary>
-    public bool IsDownloadRunning => installationWorkflow.IsRunning;
+    public bool IsDownloadRunning => executor.IsDownloadRunning;
 
     /// <summary>Gets whether the active download workflow is paused.</summary>
-    public bool IsPaused => installationWorkflow.IsPaused;
+    public bool IsPaused => executor.IsPaused;
 
     /// <summary>Starts the game after validating the supplied launcher state.</summary>
     public async Task StartGameAsync(LauncherStatusSnapshot snapshot)
@@ -95,8 +82,8 @@ internal sealed class GameOperationJourney : IGameOperationJourney
 
         try
         {
-            var launchResult = await launchWorkflow.StartGameAsync(snapshot);
-            shell.SetLaunchCheckResult(launchResult.Validation.Message);
+            var launchResult = await executor.LaunchAsync(snapshot);
+            host.SetLaunchCheckResult(launchResult.Validation.Message);
             var launchDiagnostic = BuildLaunchDiagnostic(launchResult);
 
             if (launchResult.Success)
@@ -236,18 +223,6 @@ internal sealed class GameOperationJourney : IGameOperationJourney
         ShowInstallUpdateFailureToast(result.Message, result.ErrorCode);
     }
 
-    /// <summary>Validates whether repair can be requested and opens its confirmation dialog.</summary>
-    public async Task RequestRepairAsync(LauncherStatusSnapshot snapshot)
-    {
-        if (snapshot.RuntimeState is not (LauncherRuntimeState.Corrupted or LauncherRuntimeState.Ready))
-        {
-            toastService.ShowWarning(localizer.T("operationUnavailableForCurrentState"));
-            return;
-        }
-
-        dialogs.ShowRepairConfirm(localizer.T("repairWarning"));
-    }
-
     /// <summary>Runs a confirmed repair and refreshes launcher state afterward.</summary>
     public async Task RepairAsync(LauncherStatusSnapshot snapshot)
     {
@@ -259,7 +234,7 @@ internal sealed class GameOperationJourney : IGameOperationJourney
         var refreshHandled = false;
         try
         {
-            var result = await installationWorkflow.RepairAsync(snapshot, host.ApplyProgress);
+            var result = await executor.RepairAsync(snapshot, host.ApplyProgress);
             ShowOperationResult(result);
             refreshHandled = await RequestRefresh(GameOperationsRefreshMode.Normal);
         }
@@ -278,25 +253,11 @@ internal sealed class GameOperationJourney : IGameOperationJourney
         }
     }
 
-    /// <summary>Validates uninstall eligibility and opens its confirmation dialog.</summary>
-    public async Task RequestUninstallAsync(LauncherStatusSnapshot snapshot)
+    /// <summary>Validates uninstall eligibility and reports the affected file count.</summary>
+    public async Task<GameOperationResult?> ValidateUninstallAsync(LauncherStatusSnapshot snapshot)
     {
-        if (snapshot.RuntimeState != LauncherRuntimeState.Ready)
-        {
-            toastService.ShowWarning(localizer.T("operationUnavailableForCurrentState"));
-            return;
-        }
-
-        var validation = await uninstallWorkflow.ValidateUninstallAsync(snapshot.LocalGame.GamePath);
-        if (!validation.Success)
-        {
-            return;
-        }
-
-        dialogs.ShowUninstallConfirm(localizer.F(
-            "uninstallConfirmText",
-            snapshot.LocalGame.GamePath,
-            Math.Max(0, validation.AffectedFileCount - 2)));
+        var validation = await executor.ValidateUninstallAsync(snapshot.LocalGame.GamePath);
+        return validation.Success ? validation : null;
     }
 
     /// <summary>Runs a confirmed uninstall and refreshes launcher state afterward.</summary>
@@ -314,7 +275,7 @@ internal sealed class GameOperationJourney : IGameOperationJourney
             // Prepare for uninstall — the first progress update from the workflow
             // will set the correct icon. Call PrepareOperation to reset panel state.
             host.PrepareOperation();
-            var result = await uninstallWorkflow.UninstallAsync(snapshot, host.ApplyProgress);
+            var result = await executor.UninstallAsync(snapshot, host.ApplyProgress);
             await RequestRefresh(GameOperationsRefreshMode.Normal);
         }
         catch (Exception exception)
@@ -328,22 +289,10 @@ internal sealed class GameOperationJourney : IGameOperationJourney
         }
     }
 
-    /// <summary>Requests a stop confirmation when work is active, or stops immediately otherwise.</summary>
-    public void RequestStop()
-    {
-        if (installationWorkflow.IsRunning)
-        {
-            dialogs.ShowStopConfirm();
-            return;
-        }
-
-        PerformStop();
-    }
-
     /// <summary>Executes the stop after the confirmation flow has completed.</summary>
     public void PerformStop()
     {
-        installationWorkflow.Stop(clearPersistedState: true);
+        executor.Stop(clearPersistedState: true);
         try { toastService.ShowWarning(localizer.T("stopRequested")); }
         catch (Exception ex)
         {
@@ -365,7 +314,7 @@ internal sealed class GameOperationJourney : IGameOperationJourney
         try
         {
             host.SetBusy(true);
-            var result = await installationWorkflow.ResumePersistedAsync(
+            var result = await executor.ResumePersistedAsync(
                 snapshot,
                 host.ApplyProgress,
                 cancellationToken);
@@ -394,19 +343,19 @@ internal sealed class GameOperationJourney : IGameOperationJourney
     /// <summary>Stops the active workflow, optionally clearing its persisted checkpoint.</summary>
     public void Stop(bool clearPersistedState)
     {
-        installationWorkflow.Stop(clearPersistedState);
+        executor.Stop(clearPersistedState);
     }
 
     /// <summary>Pauses the active download workflow.</summary>
     public void Pause()
     {
-        installationWorkflow.Pause();
+        executor.Pause();
     }
 
     /// <summary>Resumes the active download workflow.</summary>
     public void Resume()
     {
-        installationWorkflow.Resume();
+        executor.Resume();
     }
 
     private async Task<GameOperationResult?> RunInstallOrUpdateAttemptAsync(LauncherStatusSnapshot snapshot, CancellationToken cancellationToken = default)
@@ -421,7 +370,7 @@ internal sealed class GameOperationJourney : IGameOperationJourney
         {
             if (snapshot.RuntimeState == LauncherRuntimeState.Corrupted)
             {
-                dialogs.ShowRepairConfirm(localizer.T("repairWarning"));
+                host.ShowRepairConfirmation(localizer.T("repairWarning"));
                 return null;
             }
 
@@ -436,7 +385,7 @@ internal sealed class GameOperationJourney : IGameOperationJourney
                 return null;
             }
 
-            var result = await installationWorkflow.InstallOrUpdateAsync(snapshot, host.ApplyProgress, cancellationToken);
+            var result = await executor.InstallOrUpdateAsync(snapshot, host.ApplyProgress, cancellationToken);
             refreshHandled = await RequestRefresh(GameOperationsRefreshMode.SkipPersistedResume);
             return result;
         }
