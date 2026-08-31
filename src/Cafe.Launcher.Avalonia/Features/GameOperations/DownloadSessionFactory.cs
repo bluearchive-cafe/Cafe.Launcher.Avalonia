@@ -2,15 +2,13 @@ using System;
 using System.Threading;
 using System.Threading.Tasks;
 using Cafe.Launcher.Avalonia.Models;
-using Cafe.Launcher.Avalonia.Services;
-using Cafe.Launcher.Avalonia.Services.Diagnostics;
-using Cafe.Launcher.Avalonia.Services.GameRuntime;
 
 namespace Cafe.Launcher.Avalonia.Features.GameOperations;
 
 /// <summary>
-/// Assembles DownloadSession instances from the module's collaborators.
-/// The single place where manifest diff, download execution, and checkpoint store wiring is expressed.
+/// Creates download/repair sessions from the module's collaborator context.
+/// The context is the single wiring object; these methods take a handful of
+/// per-run inputs instead of forwarding a positional dependency list.
 /// </summary>
 internal static class DownloadSessionFactory
 {
@@ -18,66 +16,24 @@ internal static class DownloadSessionFactory
     /// Creates a ready-to-run download or repair session.
     /// </summary>
     internal static DownloadSession Create(
-        LauncherApiClient apiClient,
-        RemoteManifestService remoteManifestService,
-        IFileDownloadService fileDownloadService,
-        HttpClientFactory httpClientFactory,
-        Crc64Service crc64Service,
-        LocalInstallationStateStore localInstallationStateStore,
-        LauncherSettingsService settingsService,
-        DiskSpaceService diskSpaceService,
-        LocalDiagnostics diagnostics,
-        LocalizationService localizer,
-        GameInstallationPath installationPath,
-        DownloadCheckpointStore checkpointStore,
-        IGameProcessTracker gameProcessTracker,
+        DownloadSessionContext context,
         LauncherStatusSnapshot snapshot,
         bool repair,
         Action<GameOperationProgress> progress,
-        CancellationToken cancellationToken)
-    {
-        return new DownloadSession(
-            apiClient,
-            remoteManifestService,
-            fileDownloadService,
-            httpClientFactory,
-            crc64Service,
-            localInstallationStateStore,
-            settingsService,
-            diskSpaceService,
-            diagnostics,
-            localizer,
-            installationPath,
-            checkpointStore,
-            gameProcessTracker,
-            snapshot,
-            repair,
-            progress,
-            cancellationToken);
-    }
+        CancellationToken cancellationToken) =>
+        new(context, snapshot, repair, progress, cancellationToken);
 
     /// <summary>
     /// Attempts to create a session from a persisted checkpoint.
     /// Returns null when no checkpoint exists or it's stale (wrong version/basis/path/group).
     /// </summary>
     internal static async Task<DownloadSession?> TryCreateForResumeAsync(
-        LauncherApiClient apiClient,
-        RemoteManifestService remoteManifestService,
-        IFileDownloadService fileDownloadService,
-        HttpClientFactory httpClientFactory,
-        Crc64Service crc64Service,
-        LocalInstallationStateStore localInstallationStateStore,
-        LauncherSettingsService settingsService,
-        DiskSpaceService diskSpaceService,
-        LocalDiagnostics diagnostics,
-        LocalizationService localizer,
-        GameInstallationPath installationPath,
-        DownloadCheckpointStore checkpointStore,
-        IGameProcessTracker gameProcessTracker,
+        DownloadSessionContext context,
         LauncherStatusSnapshot snapshot,
         Action<GameOperationProgress> progress,
         CancellationToken cancellationToken)
     {
+        var checkpointStore = context.CheckpointStore;
         var state = await checkpointStore.LoadAsync(cancellationToken).ConfigureAwait(false);
         if (state is null)
         {
@@ -85,8 +41,8 @@ internal static class DownloadSessionFactory
         }
 
         var gameConfig = snapshot.Remote.GameConfig;
-        var settingsPath = installationPath.NormalizeGamePath(snapshot.Settings.GamePath);
-        var statePath = installationPath.NormalizeGamePath(state.GamePath);
+        var settingsPath = context.InstallationPath.NormalizeGamePath(snapshot.Settings.GamePath);
+        var statePath = context.InstallationPath.NormalizeGamePath(state.GamePath);
         if (gameConfig is null
             || !string.Equals(state.Version, gameConfig.GameLatestVersion, StringComparison.Ordinal)
             || !string.Equals(state.Basis, gameConfig.GameLatestFilePath, StringComparison.Ordinal)
@@ -97,23 +53,6 @@ internal static class DownloadSessionFactory
             return null;
         }
 
-        return Create(
-            apiClient,
-            remoteManifestService,
-            fileDownloadService,
-            httpClientFactory,
-            crc64Service,
-            localInstallationStateStore,
-            settingsService,
-            diskSpaceService,
-            diagnostics,
-            localizer,
-            installationPath,
-            checkpointStore,
-            gameProcessTracker,
-            snapshot,
-            state.IsRepair,
-            progress,
-            cancellationToken);
+        return Create(context, snapshot, state.IsRepair, progress, cancellationToken);
     }
 }

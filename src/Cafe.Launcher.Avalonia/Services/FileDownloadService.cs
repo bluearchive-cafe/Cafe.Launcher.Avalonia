@@ -189,34 +189,6 @@ public sealed class FileDownloadService : IFileDownloadService
         throw new HttpRequestException($"Download failed: {filePath}", lastError);
     }
 
-    /// <summary>Compatibility entry point used by focused transfer tests.</summary>
-    internal Task DownloadAsync(
-        string targetTempPath,
-        CdnConfigResponse cdnConfig,
-        string source,
-        long expectedSize,
-        string expectedHash,
-        string filePath,
-        HttpClient httpClient,
-        Func<Task> pauseAwaiter,
-        Func<long, CancellationToken, Task> onProgressAsync,
-        bool connectionUsesProxy,
-        CancellationToken cancellationToken) => DownloadAsync(
-            new FileDownloadRequest(
-                targetTempPath,
-                cdnConfig,
-                source,
-                expectedSize,
-                expectedHash,
-                filePath),
-            new FileDownloadOperationControl(
-                httpClient,
-                pauseAwaiter,
-                onProgressAsync,
-                ct => onProgressAsync(0, ct),
-                connectionUsesProxy),
-            cancellationToken);
-
     /// <summary>Build the full download URL from a CDN domain, source path, and file path.</summary>
     internal static string BuildDownloadUrl(string? domain, string source, string filePath)
     {

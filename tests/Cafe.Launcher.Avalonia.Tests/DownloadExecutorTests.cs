@@ -82,14 +82,89 @@ public sealed class DownloadExecutorTests : IDisposable
         Assert.False(File.Exists(filePath));
     }
 
+    [Fact]
+    public async Task DownloadFilesAsync_RespectsParallelConcurrencyLimit()
+    {
+        var gamePath = Path.Combine(tempDir, "YostarGames", "BlueArchive_JP");
+        Directory.CreateDirectory(gamePath);
+        var files = Enumerable.Range(0, 15)
+            .Select(index => new ManifestFile { Path = $"file{index}.bin", Size = "10", Hash = "hash" })
+            .ToArray();
+        var transferService = new TrackingFileDownloadService();
+        using var leaseSource = new FixedHttpClientLeaseSource(new HttpClientHandler(), null, null);
+        var progressCount = 0;
+        var executor = new DownloadExecutor(
+            transferService,
+            new Crc64Service(),
+            leaseSource,
+            new LocalDiagnostics(),
+            () => Task.CompletedTask,
+            () => false);
+
+        await executor.DownloadFilesAsync(
+            gamePath,
+            new CdnConfigResponse
+            {
+                PrimaryCdn = "https://primary.example.invalid",
+                BackUpCdn = "https://backup.example.invalid"
+            },
+            "source",
+            files,
+            ProxyModes.Direct,
+            speedLimitBytesPerSec: 0,
+            GameOperationKind.Download,
+            _ => progressCount++,
+            CancellationToken.None);
+
+        Assert.True(transferService.MaximumConcurrency > 1);
+        Assert.True(transferService.MaximumConcurrency <= 10);
+        Assert.True(progressCount > 0);
+    }
+
     private DownloadExecutor CreateExecutor() =>
         new(
             new NoOpFileDownloadService(),
             new Crc64Service(),
-            new HttpClientFactory(new ProxySettingsService()),
+            new FixedHttpClientLeaseSource(new HttpClientHandler(), null, null),
             new LocalDiagnostics(),
             () => Task.CompletedTask,
             () => false);
+
+    private sealed class TrackingFileDownloadService : IFileDownloadService
+    {
+        private int currentConcurrency;
+        private int maximumConcurrency;
+        public int MaximumConcurrency => Volatile.Read(ref maximumConcurrency);
+
+        public async Task DownloadAsync(
+            FileDownloadRequest request,
+            FileDownloadOperationControl operationControl,
+            CancellationToken cancellationToken)
+        {
+            var value = Interlocked.Increment(ref currentConcurrency);
+            while (true)
+            {
+                var current = Volatile.Read(ref maximumConcurrency);
+                if (current >= value
+                    || Interlocked.CompareExchange(ref maximumConcurrency, value, current) == current)
+                {
+                    break;
+                }
+            }
+
+            try
+            {
+                // A shared lease client is supplied through the control object.
+                Assert.NotNull(operationControl.HttpClient);
+                await operationControl.ReportProgressAsync(10, cancellationToken);
+                await Task.Delay(50, cancellationToken);
+            }
+            finally
+            {
+                Interlocked.Decrement(ref currentConcurrency);
+            }
+        }
+    }
 
     public void Dispose()
     {

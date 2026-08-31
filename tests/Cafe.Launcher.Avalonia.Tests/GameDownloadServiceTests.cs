@@ -1459,20 +1459,27 @@ public sealed class GameDownloadServiceTests
             diagnostics,
             RemoteHttpUrlValidator.CreateForTesting());
         await downloader.DownloadAsync(
-            targetPath,
-            cdnConfig,
-            source,
-            long.Parse(file.Size, CultureInfo.InvariantCulture),
-            file.Hash,
-            file.Path,
-            client,
-            () => Task.CompletedTask,
-            (bytes, _) =>
-            {
-                reportProgress?.Invoke(bytes);
-                return Task.CompletedTask;
-            },
-            false,
+            new FileDownloadRequest(
+                targetPath,
+                cdnConfig,
+                source,
+                long.Parse(file.Size, CultureInfo.InvariantCulture),
+                file.Hash,
+                file.Path),
+            new FileDownloadOperationControl(
+                client,
+                () => Task.CompletedTask,
+                (bytes, _) =>
+                {
+                    reportProgress?.Invoke(bytes);
+                    return Task.CompletedTask;
+                },
+                _ =>
+                {
+                    reportProgress?.Invoke(0);
+                    return Task.CompletedTask;
+                },
+                false),
             CancellationToken.None);
     }
 
