@@ -8,21 +8,13 @@ namespace Cafe.Launcher.Avalonia.Features.GameOperations;
 /// <summary>
 /// Drives a game operation from user intent to terminal outcome —
 /// validation, execution, retry, refresh, and notification — while the
-/// presentation only renders strong-typed state. Confirmation and stopping
-/// presentation flows live with the host; this interface exposes operations
-/// and their terminal effects only.
+/// presentation only renders strong-typed state. Confirmation, stopping,
+/// refresh, log-viewer, and minimize presentation flows live with the host
+/// (<see cref="IGameOperationJourneyHost"/>); this interface exposes
+/// operations and their terminal effects only.
 /// </summary>
 internal interface IGameOperationJourney
 {
-    /// <summary>Raised when shell state must be refreshed after an operation.</summary>
-    event Func<GameOperationsRefreshMode, Task>? RefreshRequested;
-
-    /// <summary>Raised when a failure action should open the log viewer.</summary>
-    event Func<Task>? OpenLogViewerRequested;
-
-    /// <summary>Raised when a successful launch should minimize the launcher.</summary>
-    event Action? MinimizeRequested;
-
     /// <summary>Raised when the underlying installation workflow starts or stops running.</summary>
     event Action? IsRunningChanged;
 

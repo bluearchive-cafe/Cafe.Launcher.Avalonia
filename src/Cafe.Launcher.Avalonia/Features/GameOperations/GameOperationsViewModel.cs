@@ -86,23 +86,14 @@ public partial class GameOperationsViewModel : ViewModelBase, IGameOperationJour
     [ObservableProperty]
     private string pauseResumeIcon = "Pause";
 
-    public event Func<GameOperationsRefreshMode, Task>? RefreshRequested
-    {
-        add => journey.RefreshRequested += value;
-        remove => journey.RefreshRequested -= value;
-    }
+    /// <summary>Raised when shell state must be refreshed after an operation (driven by the journey host).</summary>
+    public event Func<GameOperationsRefreshMode, Task>? RefreshRequested;
 
-    public event Func<Task>? OpenLogViewerRequested
-    {
-        add => journey.OpenLogViewerRequested += value;
-        remove => journey.OpenLogViewerRequested -= value;
-    }
+    /// <summary>Raised when a failure action should open the log viewer (driven by the journey host).</summary>
+    public event Func<Task>? OpenLogViewerRequested;
 
-    public event Action? MinimizeRequested
-    {
-        add => journey.MinimizeRequested += value;
-        remove => journey.MinimizeRequested -= value;
-    }
+    /// <summary>Raised when a successful launch should minimize the launcher (driven by the journey host).</summary>
+    public event Action? MinimizeRequested;
 
     bool IGameOperationJourneyHost.IsBusy => shell.IsBusy;
 
@@ -200,6 +191,27 @@ public partial class GameOperationsViewModel : ViewModelBase, IGameOperationJour
 
     void IGameOperationJourneyHost.ShowRepairConfirmation(string message) =>
         dialogs.ShowRepairConfirm(message);
+
+    Task<bool> IGameOperationJourneyHost.RefreshAsync(GameOperationsRefreshMode mode)
+    {
+        if (RefreshRequested is null)
+        {
+            return Task.FromResult(false);
+        }
+
+        return RefreshAndReportAsync(mode);
+    }
+
+    private async Task<bool> RefreshAndReportAsync(GameOperationsRefreshMode mode)
+    {
+        await AsyncEvent.InvokeSequentiallyAsync(RefreshRequested, mode);
+        return true;
+    }
+
+    Task IGameOperationJourneyHost.ShowLogViewerAsync() =>
+        AsyncEvent.InvokeSequentiallyAsync(OpenLogViewerRequested);
+
+    void IGameOperationJourneyHost.RequestMinimize() => MinimizeRequested?.Invoke();
 
     [RelayCommand]
     private async Task StartGameAsync()

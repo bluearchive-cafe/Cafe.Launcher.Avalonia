@@ -8,23 +8,15 @@ using Cafe.Launcher.Avalonia.Services.Diagnostics;
 
 namespace Cafe.Launcher.Avalonia.Features.GameOperations;
 
-/// <summary>
-/// Owns the journey rules for launch, install, repair, and uninstall:
-/// state validation, confirmations, retry, refresh fan-out, and notifications.
-/// The presentation module (GameOperationsViewModel) stays pure — state binding,
-/// progress mapping, and thin command delegation.
-/// </summary>
-internal sealed class GameOperationJourney : IGameOperationJourney
+    /// <summary>
+    /// Owns the journey rules for launch, install, repair, and uninstall:
+    /// state validation, confirmations, retry, refresh, and notifications.
+    /// The presentation module (GameOperationsViewModel) stays pure — state
+    /// binding, progress mapping, and thin command delegation — and drives
+    /// refresh / log-viewer / minimize through the host interface.
+    /// </summary>
+    internal sealed class GameOperationJourney : IGameOperationJourney
 {
-    /// <summary>Raised after an operation needs the shell state refreshed.</summary>
-    public event Func<GameOperationsRefreshMode, Task>? RefreshRequested;
-
-    /// <summary>Raised when an operation failure asks the shell to open its log viewer.</summary>
-    public event Func<Task>? OpenLogViewerRequested;
-
-    /// <summary>Raised after a successful game launch requests window minimization.</summary>
-    public event Action? MinimizeRequested;
-
     /// <summary>Forwards installation running-state changes to the presentation host.</summary>
     public event Action? IsRunningChanged
     {
@@ -91,7 +83,7 @@ internal sealed class GameOperationJourney : IGameOperationJourney
                 await diagnostics.MessageAsync("GameLaunch", launchDiagnostic);
                 toastService.ShowSuccess(localizer.T("gameLaunchedMinimized"));
                 await delayAsync(TimeSpan.FromMilliseconds(600));
-                MinimizeRequested?.Invoke();
+                host.RequestMinimize();
             }
             else
             {
@@ -467,7 +459,7 @@ internal sealed class GameOperationJourney : IGameOperationJourney
     private async Task<ToastActionResult> OpenLogViewerAsync(CancellationToken cancellationToken)
     {
         cancellationToken.ThrowIfCancellationRequested();
-        await AsyncEvent.InvokeSequentiallyAsync(OpenLogViewerRequested);
+        await host.ShowLogViewerAsync();
         return ToastActionResult.Success();
     }
 
@@ -518,20 +510,8 @@ internal sealed class GameOperationJourney : IGameOperationJourney
         }
     }
 
-    private async Task<bool> RequestRefresh(GameOperationsRefreshMode mode)
-    {
-        if (RefreshRequested is null)
-        {
-            return false;
-        }
-
-        foreach (Func<GameOperationsRefreshMode, Task> subscriber in RefreshRequested.GetInvocationList())
-        {
-            await subscriber(mode);
-        }
-
-        return true;
-    }
+    private Task<bool> RequestRefresh(GameOperationsRefreshMode mode) =>
+        host.RefreshAsync(mode);
 
     private bool PrepareShellOnly(LauncherStatusSnapshot? snapshot)
     {
