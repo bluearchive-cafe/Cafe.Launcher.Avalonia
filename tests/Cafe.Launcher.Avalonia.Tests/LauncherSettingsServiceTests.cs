@@ -438,6 +438,55 @@ public sealed class LauncherSettingsServiceTests : IDisposable
         Assert.Null(reloaded.GameRuntime.ProtonPath);
     }
 
+    [Fact]
+    public async Task ReadAsync_WhenGameRuntimeIsNull_RecoversWithDefaults()
+    {
+        await File.WriteAllTextAsync(settingsPath, """{"gameRuntime":null}""");
+
+        var reloaded = await new LauncherSettingsService(settingsPath).ReadAsync();
+
+        Assert.NotNull(reloaded.GameRuntime);
+        Assert.Equal(GameRuntimeRunners.Auto, reloaded.GameRuntime.Runner);
+        Assert.Null(reloaded.GameRuntime.RunnerPath);
+        Assert.Null(reloaded.GameRuntime.PrefixPath);
+        Assert.Null(reloaded.GameRuntime.ProtonPath);
+    }
+
+    [Fact]
+    public void DeepClone_WhenGameRuntimeIsNull_ProducesDefaultRuntime()
+    {
+        var source = JsonSerializer.Deserialize<LauncherSettings>("""{"gameRuntime":null}""");
+
+        Assert.Null(source!.GameRuntime);
+
+        var clone = source.DeepClone();
+
+        Assert.NotNull(clone.GameRuntime);
+        Assert.Equal(GameRuntimeRunners.Auto, clone.GameRuntime.Runner);
+    }
+
+    [Fact]
+    public async Task ReadAsync_WhenNativeRunnerOnLinux_NormalizesToAuto()
+    {
+        await File.WriteAllTextAsync(settingsPath, """{"gameRuntime":{"runner":"native"}}""");
+        var service = new LauncherSettingsService(settingsPath, isLinuxPlatform: () => true);
+
+        var reloaded = await service.ReadAsync();
+
+        Assert.Equal(GameRuntimeRunners.Auto, reloaded.GameRuntime.Runner);
+    }
+
+    [Fact]
+    public async Task ReadAsync_WhenNativeRunnerOnWindows_KeepsNative()
+    {
+        await File.WriteAllTextAsync(settingsPath, """{"gameRuntime":{"runner":"native"}}""");
+        var service = new LauncherSettingsService(settingsPath, isLinuxPlatform: () => false);
+
+        var reloaded = await service.ReadAsync();
+
+        Assert.Equal(GameRuntimeRunners.Native, reloaded.GameRuntime.Runner);
+    }
+
     public void Dispose()
     {
         if (Directory.Exists(tempDir))

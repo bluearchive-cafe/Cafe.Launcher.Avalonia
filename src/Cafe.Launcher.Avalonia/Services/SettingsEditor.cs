@@ -35,7 +35,7 @@ public sealed class SettingsEditor : ISettingsEditor
         var defaults = LauncherSettings.CreateDefaults();
         current = defaults;
         snapshot = defaults.DeepClone();
-        current.PropertyChanged += OnCurrentPropertyChanged;
+        AttachCurrentListeners();
     }
 
     public LauncherSettings Current => current;
@@ -51,9 +51,9 @@ public sealed class SettingsEditor : ISettingsEditor
 
     public void ApplySnapshot(LauncherSettings settings)
     {
-        current.PropertyChanged -= OnCurrentPropertyChanged;
+        DetachCurrentListeners();
         current = settings.DeepClone();
-        current.PropertyChanged += OnCurrentPropertyChanged;
+        AttachCurrentListeners();
         snapshot = settings.DeepClone();
         isDirty = false;
         OnPropertyChanged(nameof(Current));
@@ -72,12 +72,27 @@ public sealed class SettingsEditor : ISettingsEditor
             return;
         }
 
-        current.PropertyChanged -= OnCurrentPropertyChanged;
+        DetachCurrentListeners();
         current = snapshot.DeepClone();
-        current.PropertyChanged += OnCurrentPropertyChanged;
+        AttachCurrentListeners();
         isDirty = false;
         OnPropertyChanged(nameof(Current));
         OnPropertyChanged(nameof(IsDirty));
+    }
+
+    // GameRuntime is a nested ObservableObject: edits like Current.GameRuntime.RunnerPath
+    // never fire on LauncherSettings itself, so the editor must listen on the child too
+    // or those changes would neither mark the session dirty nor notify CurrentPropertyChanged.
+    private void AttachCurrentListeners()
+    {
+        current.PropertyChanged += OnCurrentPropertyChanged;
+        current.GameRuntime.PropertyChanged += OnCurrentPropertyChanged;
+    }
+
+    private void DetachCurrentListeners()
+    {
+        current.PropertyChanged -= OnCurrentPropertyChanged;
+        current.GameRuntime.PropertyChanged -= OnCurrentPropertyChanged;
     }
 
     private void OnPropertyChanged(string propertyName)
@@ -145,6 +160,10 @@ public sealed class SettingsEditor : ISettingsEditor
             && string.Equals(left.ResourcePanelUidSource, right.ResourcePanelUidSource, StringComparison.Ordinal)
             && string.Equals(left.StatusDetailMode, right.StatusDetailMode, StringComparison.Ordinal)
             && string.Equals(left.UpdateChannel, right.UpdateChannel, StringComparison.Ordinal)
-            && string.Equals(left.LogLevel, right.LogLevel, StringComparison.Ordinal);
+            && string.Equals(left.LogLevel, right.LogLevel, StringComparison.Ordinal)
+            && string.Equals(left.GameRuntime.Runner, right.GameRuntime.Runner, StringComparison.Ordinal)
+            && string.Equals(left.GameRuntime.RunnerPath, right.GameRuntime.RunnerPath, StringComparison.Ordinal)
+            && string.Equals(left.GameRuntime.PrefixPath, right.GameRuntime.PrefixPath, StringComparison.Ordinal)
+            && string.Equals(left.GameRuntime.ProtonPath, right.GameRuntime.ProtonPath, StringComparison.Ordinal);
     }
 }

@@ -257,8 +257,16 @@ public sealed class SettingsCategoryTests
 
             viewModel.PropertyChanged -= handler;
             var changedProperties = changed.ToHashSet(StringComparer.Ordinal);
-            Assert.Equal(7, changedProperties.Count);
+            // Selecting the Game category additionally refreshes the runtime status
+            // row, raising GameRuntimeStatusSummary alongside the seven selection
+            // notifications; other categories raise exactly the selection set.
+            var expectedCount = code == SettingsCategoryCodes.Game ? 8 : 7;
+            Assert.Equal(expectedCount, changedProperties.Count);
             Assert.Contains(nameof(SettingsViewModel.SelectedCategory), changedProperties);
+            if (code == SettingsCategoryCodes.Game)
+            {
+                Assert.Contains(nameof(SettingsViewModel.GameRuntimeStatusSummary), changedProperties);
+            }
             foreach (var propertyName in CategoryPropertyNames)
             {
                 Assert.Contains(propertyName, changedProperties);

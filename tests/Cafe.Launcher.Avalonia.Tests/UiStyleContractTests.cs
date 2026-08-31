@@ -1472,7 +1472,7 @@ public sealed partial class UiStyleContractTests
     }
 
     [Fact]
-    public void AboutSection_RendersIdentityCardAndKeyValueRows()
+    public void AboutSection_WithRedesignedLayout_RendersIdentityCardAndKeyValueRows()
     {
         var document = XDocument.Load(ProjectFile("Views/SettingsAboutSection.axaml"));
 
@@ -1504,6 +1504,38 @@ public sealed partial class UiStyleContractTests
                 .Where(element => HasClass(element, "about-kv-value"))
                 .Select(element => element.Attribute("Text")?.Value));
 
+    }
+
+    [Fact]
+    public void SettingsRuntimePaths_OnLinux_LiveOnlyInAdvancedSection()
+    {
+        var gameDocument = XDocument.Load(ProjectFile("Views/SettingsGameSection.axaml"));
+        var advancedDocument = XDocument.Load(ProjectFile("Views/SettingsAdvancedSection.axaml"));
+        var runtimeBindings = new[]
+        {
+            "{Binding Settings.Editor.Current.GameRuntime.RunnerPath, Mode=TwoWay}",
+            "{Binding Settings.Editor.Current.GameRuntime.PrefixPath, Mode=TwoWay}",
+            "{Binding Settings.Editor.Current.GameRuntime.ProtonPath, Mode=TwoWay}"
+        };
+
+        foreach (var binding in runtimeBindings)
+        {
+            Assert.DoesNotContain(
+                gameDocument.Descendants(),
+                element => element.Attribute("Text")?.Value == binding);
+            Assert.Contains(
+                advancedDocument.Descendants(),
+                element => element.Attribute("Text")?.Value == binding);
+        }
+
+        var runnerPathInput = advancedDocument
+            .Descendants()
+            .Single(element =>
+                element.Name.LocalName == "TextBox"
+                && element.Attribute("Text")?.Value == runtimeBindings[0]);
+        Assert.Equal(
+            "{Binding Settings.IsGameRuntimeRunnerPathEnabled}",
+            runnerPathInput.Attribute("IsEnabled")?.Value);
     }
 
     private static readonly HashSet<string> IconTokens =
@@ -3712,7 +3744,7 @@ public sealed partial class UiStyleContractTests
     [Theory]
     [InlineData("Views/SettingsGameSection.axaml", "{Binding Operations.RequestUninstallCommand}")]
     [InlineData("Views/SettingsAdvancedSection.axaml", "{Binding Settings.RequestResetSettingsCommand}")]
-    public void SettingsDangerActions_UseDangerActionStyle(string sectionPath, string command)
+    public void SettingsDangerActions_WithDestructiveCommands_UseDangerActionStyle(string sectionPath, string command)
     {
         var document = XDocument.Load(ProjectFile(sectionPath));
         var button = document
@@ -3726,7 +3758,7 @@ public sealed partial class UiStyleContractTests
     }
 
     [Fact]
-    public void SettingsDangerActionStyle_RestoresFlatActionGeometryAfterDangerOverrides()
+    public void SettingsDangerActionStyle_WithDangerOverrides_RestoresFlatActionGeometry()
     {
         var styles = XDocument.Load(ProjectFile("Views/MainWindow.Styles.axaml"));
         var settingDanger = GetStyleSetters(styles, "Button.flat-action.danger-action");
@@ -4013,14 +4045,17 @@ public sealed partial class UiStyleContractTests
     }
 
     [Fact]
-    public void AdvancedSettings_LogActionsBelongToDedicatedSettingRow()
+    public void AdvancedSettings_WithMultipleGroups_KeepsLogActionsInDiagnosticsRow()
     {
         var document = XDocument.Load(ProjectFile("Views/SettingsAdvancedSection.axaml"));
         var group = document
             .Descendants()
             .Single(element =>
                 element.Name.LocalName == "StackPanel"
-                && HasClass(element, "settings-group"));
+                && HasClass(element, "settings-group")
+                && element.Elements().Any(child =>
+                    child.Name.LocalName == "TextBlock"
+                    && child.Attribute("Text")?.Value == "{Binding Shell.I18n[settingsGroupDiagnostics]}"));
         var rows = group
             .Elements()
             .Where(element => element.Name.LocalName is "SettingRow" or "SettingSelect")

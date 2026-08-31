@@ -17,9 +17,17 @@ public static class GameCompatibilityPaths
     public static string GetDefaultCompatibilityRoot() =>
         Path.Combine(GetLauncherDataRoot(), "compatibility");
 
-    /// <summary>Default Wine prefix for a game, e.g. &lt;dataRoot&gt;/compatibility/&lt;gameId&gt;/prefix.</summary>
-    public static string GetDefaultPrefixPath(string gameId) =>
-        Path.Combine(GetDefaultCompatibilityRoot(), gameId, "prefix");
+    /// <summary>
+    /// Default Wine prefix for a game, isolated per runner, e.g.
+    /// &lt;dataRoot&gt;/compatibility/&lt;gameId&gt;/&lt;runnerId&gt;/prefix.
+    /// UMU and Wine keep separate prefixes so switching runners cannot corrupt the
+    /// other environment. Prefixes from the earlier shared layout
+    /// (compatibility/&lt;gameId&gt;/prefix) are NOT migrated automatically — moving
+    /// compatibility state requires explicit user confirmation, so existing
+    /// prefixes stay in place and the new default applies going forward.
+    /// </summary>
+    public static string GetDefaultPrefixPath(string gameId, string runnerId) =>
+        Path.Combine(GetDefaultCompatibilityRoot(), gameId, runnerId, "prefix");
 
     private static string GetLauncherDataRoot() =>
         OperatingSystem.IsWindows()

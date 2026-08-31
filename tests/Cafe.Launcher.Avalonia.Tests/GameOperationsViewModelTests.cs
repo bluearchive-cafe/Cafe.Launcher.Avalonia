@@ -888,8 +888,8 @@ public sealed class GameOperationsViewModelTests
             Assert.Contains("[WRN] [GameLaunch]", log, StringComparison.Ordinal);
             Assert.Contains("umu-run was not found on PATH.", log, StringComparison.Ordinal);
             var notification = Assert.Single(notifications);
-            Assert.Contains("The game process did not start.", notification.Message, StringComparison.Ordinal);
-            Assert.Contains("umu-run was not found on PATH.", notification.Message, StringComparison.Ordinal);
+            Assert.Equal("The game process did not start.", notification.Message);
+            Assert.DoesNotContain("umu-run was not found on PATH.", notification.Message, StringComparison.Ordinal);
         }
         finally
         {

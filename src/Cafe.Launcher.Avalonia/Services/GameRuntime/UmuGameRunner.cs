@@ -18,47 +18,45 @@ public sealed class UmuGameRunner : IGameRunner
     private readonly IProcessLauncher processLauncher;
     private readonly Func<bool> isSupportedPlatform;
     private readonly Func<string?, string?> locateExecutable;
+    private readonly Func<string, CancellationToken, Task<RuntimeProbeResult>> probeVersion;
 
     public UmuGameRunner(IProcessLauncher processLauncher)
         : this(
             processLauncher,
             OperatingSystem.IsLinux,
-            explicitPath => ExecutableLocator.FindInPath(UmuExecutableName, explicitPath))
+            explicitPath => ExecutableLocator.FindInPath(UmuExecutableName, explicitPath),
+            ProbeVersion)
     {
     }
 
     internal UmuGameRunner(
         IProcessLauncher processLauncher,
         Func<bool> isSupportedPlatform,
-        Func<string?, string?> locateExecutable)
+        Func<string?, string?> locateExecutable,
+        Func<string, CancellationToken, Task<RuntimeProbeResult>> probeVersion)
     {
         this.processLauncher = processLauncher;
         this.isSupportedPlatform = isSupportedPlatform;
         this.locateExecutable = locateExecutable;
+        this.probeVersion = probeVersion;
     }
 
     public string Id => "umu";
 
     public bool IsSupportedPlatform => isSupportedPlatform();
 
-    public Task<GameRunnerAvailability> CheckAvailabilityAsync(CancellationToken cancellationToken = default)
-    {
-        if (!IsSupportedPlatform)
-        {
-            return Task.FromResult(new GameRunnerAvailability(
-                Available: false,
-                Message: "UMU requires Linux."));
-        }
-
-        var executablePath = locateExecutable(null);
-        return Task.FromResult(executablePath is null
-            ? new GameRunnerAvailability(
-                Available: false,
-                Message: $"{UmuExecutableName} was not found on PATH.")
-            : new GameRunnerAvailability(
-                Available: true,
-                ExecutablePath: executablePath));
-    }
+    public Task<GameRunnerAvailability> CheckAvailabilityAsync(
+        GameRuntimeOptions options,
+        CancellationToken cancellationToken = default) =>
+        GameRuntimeAvailabilityProbe.CheckAsync(
+            IsSupportedPlatform,
+            "UMU",
+            "Linux",
+            UmuExecutableName,
+            options.RunnerPath,
+            locateExecutable,
+            probeVersion,
+            cancellationToken);
 
     public Task<GameProcess> StartAsync(
         GameLaunchRequest request,
@@ -103,10 +101,7 @@ public sealed class UmuGameRunner : IGameRunner
 
         // A launcher-managed prefix keeps game files, manifests, and the
         // compatibility environment decoupled even when the user did not configure one.
-        startInfo.Environment["WINEPREFIX"] =
-            string.IsNullOrWhiteSpace(options.PrefixPath)
-                ? GameCompatibilityPaths.GetDefaultPrefixPath(request.GameId)
-                : options.PrefixPath;
+        startInfo.Environment["WINEPREFIX"] = GetEffectivePrefixPath(request, options)!;
 
         if (!string.IsNullOrWhiteSpace(options.ProtonPath))
         {
@@ -115,4 +110,17 @@ public sealed class UmuGameRunner : IGameRunner
 
         return startInfo;
     }
+
+    public string? GetEffectivePrefixPath(GameLaunchRequest request, GameRuntimeOptions options) =>
+        string.IsNullOrWhiteSpace(options.PrefixPath)
+            ? GameCompatibilityPaths.GetDefaultPrefixPath(request.GameId, Id)
+            : options.PrefixPath;
+
+    public string? GetEffectiveProtonPath(GameRuntimeOptions options) =>
+        // UMU selects a Proton build itself when none is configured; diagnostics
+        // surface that as "auto" so the effective choice is never reported blank.
+        string.IsNullOrWhiteSpace(options.ProtonPath) ? "auto" : options.ProtonPath;
+
+    private static Task<RuntimeProbeResult> ProbeVersion(string executablePath, CancellationToken cancellationToken) =>
+        RuntimeVersionProbe.ProbeAsync(executablePath, "--version", RuntimeVersionProbe.DefaultTimeout, cancellationToken);
 }

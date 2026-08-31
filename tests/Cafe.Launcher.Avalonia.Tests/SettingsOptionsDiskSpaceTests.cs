@@ -2,6 +2,7 @@ using Cafe.Launcher.Avalonia.Helpers;
 using Cafe.Launcher.Avalonia.Features.Settings;
 using Cafe.Launcher.Avalonia.Models;
 using Cafe.Launcher.Avalonia.Services;
+using Cafe.Launcher.Avalonia.Services.GameRuntime;
 using Cafe.Launcher.Avalonia.ViewModels;
 
 namespace Cafe.Launcher.Avalonia.Tests;
@@ -168,7 +169,8 @@ public sealed class SettingsOptionsDiskSpaceTests
             null!,
             options,
             new SettingsAppearanceViewModel(editor),
-            errorHandling);
+            errorHandling,
+            new GameRuntimeStatusService(Array.Empty<IGameRunner>()));
         var snapshot = new LauncherStatusSnapshot
         {
             RuntimeState = LauncherRuntimeState.NotInstalled,

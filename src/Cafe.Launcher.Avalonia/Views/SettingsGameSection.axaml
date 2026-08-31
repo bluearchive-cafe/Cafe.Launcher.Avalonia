@@ -65,6 +65,9 @@
                                     AutomationName="{Binding Shell.I18n[gameRuntimeRunner]}"
                                     ItemsSource="{Binding Settings.Options.GameRuntimeRunner}"
                                     SelectedValue="{Binding Settings.Editor.Current.GameRuntime.Runner, Mode=TwoWay}"/>
+
+            <controls:SettingRow Title="{Binding Shell.I18n[gameRuntimeStatusTitle]}"
+                                 Description="{Binding Settings.GameRuntimeStatusSummary}"/>
         </StackPanel>
     </StackPanel>
 </UserControl>

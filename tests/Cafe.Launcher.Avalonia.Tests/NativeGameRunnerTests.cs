@@ -31,7 +31,7 @@ public sealed class NativeGameRunnerTests
     {
         var runner = new NativeGameRunner(new DefaultProcessLauncher());
 
-        var availability = await runner.CheckAvailabilityAsync();
+        var availability = await runner.CheckAvailabilityAsync(new GameRuntimeOptions());
 
         Assert.Equal(OperatingSystem.IsWindows(), availability.Available);
     }

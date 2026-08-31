@@ -196,7 +196,10 @@ public sealed class LauncherSettings : ObservableObject
         StatusDetailMode = other.StatusDetailMode;
         UpdateChannel = other.UpdateChannel;
         LogLevel = other.LogLevel;
-        GameRuntime = other.GameRuntime.DeepClone();
+        // A hand-edited or corrupted settings file can carry "gameRuntime": null;
+        // NormalizeSettings deep-clones before its own ??= guard runs, so the copy
+        // constructor must tolerate null without crashing the load path.
+        GameRuntime = other.GameRuntime?.DeepClone() ?? new GameRuntimeSettings();
     }
 
     /// <summary>

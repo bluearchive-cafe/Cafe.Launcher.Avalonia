@@ -1,6 +1,7 @@
 using Avalonia;
 using System;
 using System.IO;
+using System.Linq;
 using System.Reflection;
 using System.Threading;
 using System.Threading.Tasks;
@@ -16,6 +17,23 @@ sealed class Program
 {
     private const string MutexName = @"Local\Cafe_Launcher_SI";
     private const string SignalName = @"Local\Cafe_Launcher_SI_Show";
+
+    /// <summary>
+    /// Signal the first instance raises its launch-game listener on, so a second
+    /// <c>--launch-game</c> invocation forwards the request instead of starting
+    /// a duplicate process.
+    /// </summary>
+    internal const string LaunchGameSignalName = @"Local\Cafe_Launcher_SI_LaunchGame";
+
+    /// <summary>CLI argument that launches the game through the full launcher pipeline.</summary>
+    internal const string LaunchGameArgument = "--launch-game";
+
+    /// <summary>
+    /// True when this process itself was started with <see cref="LaunchGameArgument"/>
+    /// and won the single-instance mutex: the app auto-launches the game after its
+    /// initial state refresh. Managed by <see cref="Main"/>.
+    /// </summary>
+    internal static bool LaunchGameRequested { get; private set; }
 
     /// <summary>
     /// True when the launcher settings file is missing at process startup.
@@ -41,12 +59,30 @@ sealed class Program
             return;
         }
 
+        // The launch-game signal MUST be created before the mutex: a second
+        // --launch-game instance only forwards its request once it observes the
+        // mutex held, so holding this handle open for the whole process guarantees
+        // the forwarded request always finds a live signal to arrive on. Constructing
+        // it with a name opens the first instance's signal when one is already running.
+        using var launchGameSignal = new EventWaitHandle(
+            false,
+            EventResetMode.AutoReset,
+            LaunchGameSignalName);
         using var mutex = new Mutex(true, MutexName, out var createdNew);
         if (!createdNew)
         {
-            SignalFirstInstance();
+            // A launcher is already running: forward --launch-game to it (when
+            // requested) and exit instead of starting a duplicate process.
+            if (HasLaunchGameArgument(args))
+            {
+                launchGameSignal.Set();
+            }
+
+            SignalShowInstance();
             return;
         }
+
+        LaunchGameRequested = HasLaunchGameArgument(args);
 
         // Create standalone diagnostics before DI is available. This instance
         // is shared with the DI container so there is a single Serilog pipeline
@@ -82,6 +118,10 @@ sealed class Program
         output.WriteLine(informationalVersion ?? typeof(Program).Assembly.GetName().Version?.ToString());
         return true;
     }
+
+    /// <summary>Matches <see cref="LaunchGameArgument"/> exactly; no prefixes, no casing tricks.</summary>
+    internal static bool HasLaunchGameArgument(string[] args) =>
+        args.Any(argument => string.Equals(argument, LaunchGameArgument, StringComparison.Ordinal));
 
     private static bool DetectFirstLaunch()
     {
@@ -146,7 +186,13 @@ sealed class Program
         }
     }
 
-    private static void SignalFirstInstance()
+    /// <summary>
+    /// Raises the pre-existing Windows-only show-window signal so a forwarded
+    /// launch (or a plain second start) also brings the running launcher up.
+    /// The launch-game forward itself is delivered by setting the shared
+    /// <see cref="LaunchGameSignalName"/> handle Main already opened.
+    /// </summary>
+    private static void SignalShowInstance()
     {
         if (!OperatingSystem.IsWindows())
         {

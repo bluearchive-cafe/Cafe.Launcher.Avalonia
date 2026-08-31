@@ -17,24 +17,34 @@ public sealed class LauncherSettingsService : IDisposable
     private readonly SemaphoreSlim writeLock = new(1, 1);
     private readonly string? settingsPath;
     private readonly LocalDiagnostics? diagnostics;
+    private readonly Func<bool> isLinuxPlatform;
     private static readonly JsonSerializerOptions jsonOptions = JsonDefaults.Indented;
 
-    public LauncherSettingsService() : this(null, null)
+    public LauncherSettingsService() : this(null, null, null)
     {
     }
 
-    public LauncherSettingsService(LocalDiagnostics diagnostics) : this(diagnostics, null)
+    public LauncherSettingsService(LocalDiagnostics diagnostics) : this(diagnostics, null, null)
     {
     }
 
-    public LauncherSettingsService(string settingsPath) : this(null, settingsPath)
+    public LauncherSettingsService(string settingsPath) : this(null, settingsPath, null)
     {
     }
 
-    private LauncherSettingsService(LocalDiagnostics? diagnostics, string? settingsPath)
+    internal LauncherSettingsService(string settingsPath, Func<bool> isLinuxPlatform)
+        : this(null, settingsPath, isLinuxPlatform)
+    {
+    }
+
+    private LauncherSettingsService(
+        LocalDiagnostics? diagnostics,
+        string? settingsPath,
+        Func<bool>? isLinuxPlatform)
     {
         this.diagnostics = diagnostics;
         this.settingsPath = settingsPath;
+        this.isLinuxPlatform = isLinuxPlatform ?? OperatingSystem.IsLinux;
     }
 
     public string SettingsPath
@@ -129,7 +139,7 @@ public sealed class LauncherSettingsService : IDisposable
     /// Normalize all setting values to valid codes, apply defaults for invalid values,
     /// normalize colors, trim UIDs, and return a deep-cloned copy.
     /// </summary>
-    private static LauncherSettings NormalizeSettings(LauncherSettings settings)
+    private LauncherSettings NormalizeSettings(LauncherSettings settings)
     {
         settings = settings.DeepClone();
         settings.LaunchCheckMode = settings.LaunchCheckMode switch
@@ -166,8 +176,11 @@ public sealed class LauncherSettingsService : IDisposable
         settings.ResourcePanelUid = settings.ResourcePanelUid?.Trim() ?? "";
 
         settings.GameRuntime ??= new GameRuntimeSettings();
+        // Native execution cannot work on Linux; a persisted "native" there (legacy or
+        // hand-edited) would leave the runner dropdown with no matching selection.
         settings.GameRuntime.Runner = settings.GameRuntime.Runner switch
         {
+            GameRuntimeRunners.Native when isLinuxPlatform() => GameRuntimeRunners.Auto,
             GameRuntimeRunners.Native => GameRuntimeRunners.Native,
             GameRuntimeRunners.Umu => GameRuntimeRunners.Umu,
             GameRuntimeRunners.Wine => GameRuntimeRunners.Wine,

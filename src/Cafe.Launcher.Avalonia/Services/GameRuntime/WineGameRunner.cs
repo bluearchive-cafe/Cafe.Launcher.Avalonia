@@ -17,47 +17,45 @@ public sealed class WineGameRunner : IGameRunner
     private readonly IProcessLauncher processLauncher;
     private readonly Func<bool> isSupportedPlatform;
     private readonly Func<string?, string?> locateExecutable;
+    private readonly Func<string, CancellationToken, Task<RuntimeProbeResult>> probeVersion;
 
     public WineGameRunner(IProcessLauncher processLauncher)
         : this(
             processLauncher,
             OperatingSystem.IsLinux,
-            explicitPath => ExecutableLocator.FindInPath(WineExecutableName, explicitPath))
+            explicitPath => ExecutableLocator.FindInPath(WineExecutableName, explicitPath),
+            ProbeVersion)
     {
     }
 
     internal WineGameRunner(
         IProcessLauncher processLauncher,
         Func<bool> isSupportedPlatform,
-        Func<string?, string?> locateExecutable)
+        Func<string?, string?> locateExecutable,
+        Func<string, CancellationToken, Task<RuntimeProbeResult>> probeVersion)
     {
         this.processLauncher = processLauncher;
         this.isSupportedPlatform = isSupportedPlatform;
         this.locateExecutable = locateExecutable;
+        this.probeVersion = probeVersion;
     }
 
     public string Id => "wine";
 
     public bool IsSupportedPlatform => isSupportedPlatform();
 
-    public Task<GameRunnerAvailability> CheckAvailabilityAsync(CancellationToken cancellationToken = default)
-    {
-        if (!IsSupportedPlatform)
-        {
-            return Task.FromResult(new GameRunnerAvailability(
-                Available: false,
-                Message: "Wine requires Linux."));
-        }
-
-        var executablePath = locateExecutable(null);
-        return Task.FromResult(executablePath is null
-            ? new GameRunnerAvailability(
-                Available: false,
-                Message: $"{WineExecutableName} was not found on PATH.")
-            : new GameRunnerAvailability(
-                Available: true,
-                ExecutablePath: executablePath));
-    }
+    public Task<GameRunnerAvailability> CheckAvailabilityAsync(
+        GameRuntimeOptions options,
+        CancellationToken cancellationToken = default) =>
+        GameRuntimeAvailabilityProbe.CheckAsync(
+            IsSupportedPlatform,
+            "Wine",
+            "Linux",
+            WineExecutableName,
+            options.RunnerPath,
+            locateExecutable,
+            probeVersion,
+            cancellationToken);
 
     public Task<GameProcess> StartAsync(
         GameLaunchRequest request,
@@ -98,11 +96,18 @@ public sealed class WineGameRunner : IGameRunner
             startInfo.ArgumentList.Add(argument);
         }
 
-        startInfo.Environment["WINEPREFIX"] =
-            string.IsNullOrWhiteSpace(options.PrefixPath)
-                ? GameCompatibilityPaths.GetDefaultPrefixPath(request.GameId)
-                : options.PrefixPath;
+        startInfo.Environment["WINEPREFIX"] = GetEffectivePrefixPath(request, options)!;
 
         return startInfo;
     }
+
+    public string? GetEffectivePrefixPath(GameLaunchRequest request, GameRuntimeOptions options) =>
+        string.IsNullOrWhiteSpace(options.PrefixPath)
+            ? GameCompatibilityPaths.GetDefaultPrefixPath(request.GameId, Id)
+            : options.PrefixPath;
+
+    public string? GetEffectiveProtonPath(GameRuntimeOptions options) => null;
+
+    private static Task<RuntimeProbeResult> ProbeVersion(string executablePath, CancellationToken cancellationToken) =>
+        RuntimeVersionProbe.ProbeAsync(executablePath, "--version", RuntimeVersionProbe.DefaultTimeout, cancellationToken);
 }

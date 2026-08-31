@@ -19,9 +19,13 @@ public sealed class NativeGameRunner : IGameRunner
 
     public bool IsSupportedPlatform => OperatingSystem.IsWindows();
 
-    public Task<GameRunnerAvailability> CheckAvailabilityAsync(CancellationToken cancellationToken = default) =>
+    public Task<GameRunnerAvailability> CheckAvailabilityAsync(
+        GameRuntimeOptions options,
+        CancellationToken cancellationToken = default) =>
         Task.FromResult(new GameRunnerAvailability(
-            Available: IsSupportedPlatform,
+            IsSupportedPlatform
+                ? GameRunnerAvailabilityStatus.Available
+                : GameRunnerAvailabilityStatus.Unsupported,
             Message: IsSupportedPlatform ? null : "Native execution requires Windows."));
 
     public Task<GameProcess> StartAsync(
@@ -39,6 +43,10 @@ public sealed class NativeGameRunner : IGameRunner
 
         return Task.FromResult(new GameProcess(process, Id));
     }
+
+    public string? GetEffectivePrefixPath(GameLaunchRequest request, GameRuntimeOptions options) => null;
+
+    public string? GetEffectiveProtonPath(GameRuntimeOptions options) => null;
 
     /// <summary>Exposed for tests: verifies launch construction without spawning a process.</summary>
     internal ProcessStartInfo BuildStartInfo(GameLaunchRequest request)
