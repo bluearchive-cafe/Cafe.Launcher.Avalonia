@@ -5,8 +5,8 @@ namespace Cafe.Launcher.Avalonia.Services.GameRuntime;
 /// <summary>How a runner injects compatibility environment variables into a launch.</summary>
 public enum GameRuntimeEnvironmentStyle
 {
-    /// <summary>The game executable is the host process (Windows native).</summary>
-    None,
+    /// <summary>No compatibility environment variables: the game executable is the host process (Windows native).</summary>
+    Native,
 
     /// <summary>Wine: a compatibility prefix is applied (WINEPREFIX).</summary>
     Wine,
@@ -37,7 +37,7 @@ public sealed record GameRunnerDefinition(
         "Native execution",
         ExecutableName: null,
         VersionArgument: "",
-        GameRuntimeEnvironmentStyle.None);
+        GameRuntimeEnvironmentStyle.Native);
 
     /// <summary>Linux: umu-run provides a standardized Proton environment.</summary>
     public static GameRunnerDefinition Umu { get; } = new(

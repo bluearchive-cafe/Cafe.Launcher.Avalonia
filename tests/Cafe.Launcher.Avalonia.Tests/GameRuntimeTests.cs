@@ -52,12 +52,30 @@ public sealed class GameRuntimeTests
     }
 
     [Fact]
+    public async Task LaunchAsync_WhenAvailabilityCheckThrows_ReturnsFailedResultWithException()
+    {
+        var launcher = new RecordingProcessLauncher();
+        var runtime = CreateRuntime(
+            [Definition("umu")],
+            launcher,
+            probe: (_, _, _, _) => throw new InvalidOperationException("probe boom"));
+
+        var result = await runtime.LaunchAsync(CreateRequest(), new GameRuntimeOptions(), preferredRunnerId: null);
+
+        Assert.False(result.Success);
+        Assert.Equal(GameRuntimeLaunchFailure.AvailabilityCheckFailed, result.Failure);
+        Assert.IsType<InvalidOperationException>(result.FailureException);
+        Assert.Null(result.Process);
+        Assert.Empty(result.Candidates);
+    }
+
+    [Fact]
     public async Task LaunchAsync_AutoMode_StartsFirstAvailableSupportedRunner()
     {
         var launcher = new RecordingProcessLauncher();
         var runtime = CreateRuntime(
             [
-                Definition("native", false, null, GameRuntimeEnvironmentStyle.None, "Native execution"),
+                Definition("native", false, null, GameRuntimeEnvironmentStyle.Native, "Native execution"),
                 Definition("umu"),
                 Definition("wine", true, "wine", GameRuntimeEnvironmentStyle.Wine, "Wine")
             ],
@@ -285,7 +303,7 @@ public sealed class GameRuntimeTests
     {
         var launcher = new RecordingProcessLauncher();
         var runtime = CreateRuntime(
-            [Definition("native", supported: true, executableName: null, GameRuntimeEnvironmentStyle.None, "Native execution")],
+            [Definition("native", supported: true, executableName: null, GameRuntimeEnvironmentStyle.Native, "Native execution")],
             launcher);
 
         await runtime.LaunchAsync(CreateRequest(), new GameRuntimeOptions(), preferredRunnerId: null);

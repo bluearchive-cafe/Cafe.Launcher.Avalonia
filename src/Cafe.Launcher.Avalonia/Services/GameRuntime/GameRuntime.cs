@@ -55,8 +55,32 @@ public sealed class GameRuntime : IGameRuntime
         CancellationToken cancellationToken = default)
     {
         var runtimeOptions = options ?? new GameRuntimeOptions();
-        var statuses = await CollectStatusesAsync(preferredRunnerId, runtimeOptions, cancellationToken)
-            .ConfigureAwait(false);
+        IReadOnlyList<(GameRunnerDefinition Runner, GameRunnerAvailability Availability)> statuses;
+        try
+        {
+            statuses = await CollectStatusesAsync(preferredRunnerId, runtimeOptions, cancellationToken)
+                .ConfigureAwait(false);
+        }
+        catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
+        {
+            throw;
+        }
+        catch (Exception exception)
+        {
+            // The deep module owns every launch rule, so a failing availability
+            // check still reports a launch outcome with the exception attached
+            // instead of throwing past the launch boundary — callers keep full
+            // diagnostics (runner line, snapshot, candidate evidence).
+            return new GameRuntimeLaunchResult(
+                Success: false,
+                RunnerId: null,
+                Process: null,
+                Diagnostic: BuildDiagnostic(null, null, request, runtimeOptions),
+                Candidates: Array.Empty<GameRuntimeStatusEntry>(),
+                Failure: GameRuntimeLaunchFailure.AvailabilityCheckFailed,
+                FailureException: exception);
+        }
+
         var candidates = statuses
             .Select(status => new GameRuntimeStatusEntry(status.Runner.Id, status.Availability))
             .ToArray();
@@ -72,7 +96,7 @@ public sealed class GameRuntime : IGameRuntime
             GameProcess process;
             try
             {
-                var startOptions = ScopedOptions(preferredRunnerId, runner.Id, runtimeOptions);
+                var startOptions = ForSelectedRunner(preferredRunnerId, runner.Id, runtimeOptions);
                 process = Start(runner, request, startOptions);
             }
             catch (Exception exception) when (exception is not OperationCanceledException)
@@ -125,7 +149,7 @@ public sealed class GameRuntime : IGameRuntime
         var statuses = new List<(GameRunnerDefinition, GameRunnerAvailability)>(runners.Count);
         foreach (var runner in SelectionOrder(preferredRunnerId))
         {
-            var runnerOptions = ScopedOptions(preferredRunnerId, runner.Id, options);
+            var runnerOptions = ForSelectedRunner(preferredRunnerId, runner.Id, options);
             var availability = await CheckAvailabilityAsync(runner, runnerOptions, cancellationToken)
                 .ConfigureAwait(false);
             statuses.Add((runner, availability));
@@ -140,7 +164,7 @@ public sealed class GameRuntime : IGameRuntime
     /// executable could satisfy UMU's generic version probe (or vice versa) and
     /// the resolver would report the wrong runtime. One rule, everywhere.
     /// </summary>
-    private static GameRuntimeOptions ScopedOptions(
+    private static GameRuntimeOptions ForSelectedRunner(
         string? preferredRunnerId,
         string runnerId,
         GameRuntimeOptions options) =>
@@ -250,7 +274,7 @@ public sealed class GameRuntime : IGameRuntime
 
         switch (runner.EnvironmentStyle)
         {
-            case GameRuntimeEnvironmentStyle.None:
+            case GameRuntimeEnvironmentStyle.Native:
                 break;
             case GameRuntimeEnvironmentStyle.Wine:
                 startInfo.Environment["WINEPREFIX"] = GetEffectivePrefixPath(request, runner.Id, options)!;
@@ -272,7 +296,7 @@ public sealed class GameRuntime : IGameRuntime
     }
 
     private static string StartFailureMessage(GameRunnerDefinition runner) =>
-        runner.EnvironmentStyle == GameRuntimeEnvironmentStyle.None
+        runner.EnvironmentStyle == GameRuntimeEnvironmentStyle.Native
             ? "Failed to start game."
             : $"Failed to start {runner.DisplayName}.";
 

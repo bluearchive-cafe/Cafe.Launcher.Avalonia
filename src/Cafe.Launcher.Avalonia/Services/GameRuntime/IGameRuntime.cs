@@ -13,7 +13,10 @@ public enum GameRuntimeLaunchFailure
 {
     None,
     NoRunnerSelected,
-    StartFailed
+    StartFailed,
+
+    /// <summary>Availability collection failed before any runner could be chosen.</summary>
+    AvailabilityCheckFailed
 }
 
 /// <summary>One runner's current availability, as reported by the settings status display.</summary>
