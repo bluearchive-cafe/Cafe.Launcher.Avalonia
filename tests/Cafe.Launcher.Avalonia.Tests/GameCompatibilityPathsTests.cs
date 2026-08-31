@@ -7,7 +7,7 @@ namespace Cafe.Launcher.Avalonia.Tests;
 public sealed class GameCompatibilityPathsTests
 {
     [Fact]
-    public void GetDefaultPrefixPath_IsolatesPrefixesPerRunner()
+    public void GetDefaultPrefixPath_WithDifferentRunners_IsolatesPrefixes()
     {
         var umuPrefix = GameCompatibilityPaths.GetDefaultPrefixPath(GameRuntimeIds.BlueArchiveJapan, "umu");
         var winePrefix = GameCompatibilityPaths.GetDefaultPrefixPath(GameRuntimeIds.BlueArchiveJapan, "wine");
@@ -22,7 +22,7 @@ public sealed class GameCompatibilityPathsTests
     }
 
     [Fact]
-    public void GetDefaultPrefixPath_KeepsGamesSeparate()
+    public void GetDefaultPrefixPath_WithDifferentGames_KeepsGamesSeparate()
     {
         var japanPrefix = GameCompatibilityPaths.GetDefaultPrefixPath(GameRuntimeIds.BlueArchiveJapan, "umu");
         var globalPrefix = GameCompatibilityPaths.GetDefaultPrefixPath("blue-archive-global", "umu");

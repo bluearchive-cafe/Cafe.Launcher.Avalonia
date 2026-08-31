@@ -39,7 +39,7 @@ public sealed class ProgramCommandLineTests
     }
 
     [Fact]
-    public void HasLaunchGameArgument_MatchesExactArgumentOnly()
+    public void HasLaunchGameArgument_WithMixedArguments_MatchesExactArgumentOnly()
     {
         Assert.True(Program.HasLaunchGameArgument([Program.LaunchGameArgument]));
         Assert.True(Program.HasLaunchGameArgument(["--other", Program.LaunchGameArgument]));

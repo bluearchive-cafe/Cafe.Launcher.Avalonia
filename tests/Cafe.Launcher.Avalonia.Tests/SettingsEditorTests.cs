@@ -322,7 +322,7 @@ public sealed class SettingsEditorTests
     }
 
     [Fact]
-    public void GameRuntimeRunnerChange_MarksDirtyAndDiscardRestoresSnapshot()
+    public void GameRuntimeRunnerChange_WhenDiscarded_MarksDirtyThenRestoresSnapshot()
     {
         var editor = new SettingsEditor();
         editor.ApplySnapshot(new LauncherSettings());
@@ -338,7 +338,7 @@ public sealed class SettingsEditorTests
     }
 
     [Fact]
-    public void GameRuntimePathChange_MarksDirtyAndRevertingClearsIt()
+    public void GameRuntimePathChange_WhenReverted_MarksDirtyThenClearsIt()
     {
         var editor = new SettingsEditor();
         editor.ApplySnapshot(new LauncherSettings());
@@ -355,7 +355,7 @@ public sealed class SettingsEditorTests
     }
 
     [Fact]
-    public void GameRuntimePropertyChange_RaisesCurrentPropertyChanged()
+    public void GameRuntimePropertyChange_WhenNestedValueChanges_RaisesCurrentPropertyChanged()
     {
         var editor = new SettingsEditor();
         editor.ApplySnapshot(new LauncherSettings());

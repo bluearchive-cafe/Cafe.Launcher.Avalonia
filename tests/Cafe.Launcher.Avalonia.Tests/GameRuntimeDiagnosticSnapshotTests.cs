@@ -6,7 +6,7 @@ namespace Cafe.Launcher.Avalonia.Tests;
 public sealed class GameRuntimeDiagnosticSnapshotTests
 {
     [Fact]
-    public void Describe_IncludesAllProvidedRuntimeFacts()
+    public void Describe_WithAllRuntimeFacts_IncludesEveryFact()
     {
         var snapshot = new GameRuntimeDiagnosticSnapshot(
             RunnerId: "umu",
@@ -36,7 +36,7 @@ public sealed class GameRuntimeDiagnosticSnapshotTests
     }
 
     [Fact]
-    public void Describe_OmitsEntriesThatDoNotApplyToTheRunner()
+    public void Describe_WithNonApplicableFacts_OmitsThoseEntries()
     {
         var snapshot = new GameRuntimeDiagnosticSnapshot(
             RunnerId: "native",
