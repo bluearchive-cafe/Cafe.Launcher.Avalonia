@@ -4,6 +4,8 @@
 
 This is a .NET 10 Avalonia desktop launcher. The application project, including entry points (`Program.cs`, `App.axaml`, and `App.axaml.cs`), lives in `src/Cafe.Launcher.Avalonia/`. `Composition/ServiceConfiguration.cs` is the DI composition root. Major behaviour is organised vertically in `Features/` (`Shell`, `GameOperations`, `Settings`, `SetupWizard`, `Diagnostics`, and `ResourcePanel`); shared infrastructure remains in `Services/`, `Helpers/`, `Models/`, `Constants/`, `Controls/`, and `Converters/`. Views and their styles live in `Views/`. Static runtime assets are under `Assets/`; embedded UI resources are in `Resources/`. Unit tests live in `tests/Cafe.Launcher.Avalonia.Tests`; headless UI tests live in `tests/Cafe.Launcher.Avalonia.HeadlessTests`; packaging scripts are in `scripts/` and `installer/`.
 
+ViewModel placement rule: a ViewModel that belongs to one feature lives beside that feature (`Features/*/`, e.g. `Features/Settings/SettingsViewModel`); the root `ViewModels/` folder is reserved for window-level, cross-feature ViewModels (`MainWindowViewModel`, `ShellViewModel`, `DialogsViewModel`, etc.). Do not place non-ViewModel helper types under `ViewModels/`. Features must not reference each other's concrete types; extract a narrow abstraction into shared `Services/` and have the composition root bind it (see `IGameOperationActivity`).
+
 ## Build, Test, and Development Commands
 
 - `.\build.ps1` — restore and build the Debug configuration with telemetry disabled.

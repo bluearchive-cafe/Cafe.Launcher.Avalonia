@@ -2028,7 +2028,7 @@ public sealed partial class UiStyleContractTests
                 $"Missing designGroup{family} resource for token family '{family}'.");
         }
 
-        foreach (var family in Cafe.Launcher.Avalonia.ViewModels.DesignTokenGrouping.FamilyOrder)
+        foreach (var family in Cafe.Launcher.Avalonia.Helpers.DesignTokenGrouping.FamilyOrder)
         {
             Assert.Contains($"designGroup{family}", groupKeys);
         }

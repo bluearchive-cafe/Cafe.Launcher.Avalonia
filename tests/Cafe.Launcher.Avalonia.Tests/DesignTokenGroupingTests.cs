@@ -1,6 +1,6 @@
 using Avalonia;
 using Avalonia.Media;
-using Cafe.Launcher.Avalonia.ViewModels;
+using Cafe.Launcher.Avalonia.Helpers;
 
 namespace Cafe.Launcher.Avalonia.Tests;
 

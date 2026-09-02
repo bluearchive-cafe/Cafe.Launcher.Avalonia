@@ -7,7 +7,6 @@ using System.Threading.Tasks;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 using Cafe.Launcher.Avalonia.Constants;
-using Cafe.Launcher.Avalonia.Features.GameOperations;
 using Cafe.Launcher.Avalonia.Features.Shell;
 using Cafe.Launcher.Avalonia.Helpers;
 using Cafe.Launcher.Avalonia.Models;
@@ -27,7 +26,7 @@ public sealed partial class DebugViewModel : ViewModelBase, IModalContentViewMod
     private readonly UnifiedLogger unifiedLogger;
     private readonly IErrorHandlingService errorHandling;
     private readonly LauncherSettingsService settingsService;
-    private readonly GameOperationsViewModel operations;
+    private readonly IGameOperationActivity operations;
     private readonly ShellViewModel shell;
     private readonly LogExportService? logExportService;
     private bool disposed;
@@ -86,7 +85,7 @@ public sealed partial class DebugViewModel : ViewModelBase, IModalContentViewMod
         UnifiedLogger unifiedLogger,
         IErrorHandlingService errorHandling,
         LauncherSettingsService settingsService,
-        GameOperationsViewModel operations,
+        IGameOperationActivity operations,
         ShellViewModel shell,
         LogExportService? logExportService = null)
     {
@@ -98,7 +97,7 @@ public sealed partial class DebugViewModel : ViewModelBase, IModalContentViewMod
         this.shell = shell;
         this.logExportService = logExportService;
 
-        operations.PropertyChanged += OnOperationsPropertyChanged;
+        operations.ActivityPropertyChanged += OnOperationsPropertyChanged;
     }
 
     [RelayCommand]
@@ -310,8 +309,8 @@ public sealed partial class DebugViewModel : ViewModelBase, IModalContentViewMod
 
     private void OnOperationsPropertyChanged(object? sender, PropertyChangedEventArgs e)
     {
-        if (e.PropertyName is nameof(GameOperationsViewModel.IsDownloadRunning)
-            or nameof(GameOperationsViewModel.IsPaused))
+        if (e.PropertyName is nameof(IGameOperationActivity.IsDownloadRunning)
+            or nameof(IGameOperationActivity.IsPaused))
         {
             RefreshDownloadStatus();
         }
@@ -326,7 +325,7 @@ public sealed partial class DebugViewModel : ViewModelBase, IModalContentViewMod
         }
 
         disposed = true;
-        operations.PropertyChanged -= OnOperationsPropertyChanged;
+        operations.ActivityPropertyChanged -= OnOperationsPropertyChanged;
     }
 
     private void RefreshDownloadStatus()
@@ -346,7 +345,7 @@ public sealed partial class DebugViewModel : ViewModelBase, IModalContentViewMod
             return;
         }
 
-        operations.PauseResumeCommand.Execute(null);
+        operations.PauseResume();
         LastActionResult = operations.IsPaused ? shell.I18n["pauseRequested"] : shell.I18n["resumeRequested"];
     }
 
@@ -358,7 +357,7 @@ public sealed partial class DebugViewModel : ViewModelBase, IModalContentViewMod
             return;
         }
 
-        operations.StopOperationCommand.Execute(null);
+        operations.StopOperation();
         LastActionResult = shell.I18n["stopRequested"];
     }
 
