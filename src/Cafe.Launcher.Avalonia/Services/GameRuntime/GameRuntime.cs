@@ -50,19 +50,18 @@ public sealed class GameRuntime : IGameRuntime
 
     public async Task<GameRuntimeLaunchResult> LaunchAsync(
         GameLaunchRequest request,
-        GameRuntimeOptions options,
-        string? preferredRunnerId,
+        GameRuntimeConfiguration configuration,
         CancellationToken cancellationToken = default)
     {
-        var runtimeOptions = options ?? new GameRuntimeOptions();
+        ArgumentNullException.ThrowIfNull(configuration);
         var candidates = new List<GameRuntimeStatusEntry>();
-        foreach (var runner in SelectionOrder(preferredRunnerId))
+        foreach (var runner in SelectionOrder(configuration.PreferredRunnerId))
         {
             GameRunnerAvailability availability;
             try
             {
-                var runnerOptions = ForSelectedRunner(preferredRunnerId, runner.Id, runtimeOptions);
-                availability = await CheckAvailabilityAsync(runner, runnerOptions, cancellationToken)
+                var runnerConfiguration = ForSelectedRunner(configuration, runner.Id);
+                availability = await CheckAvailabilityAsync(runner, runnerConfiguration, cancellationToken)
                     .ConfigureAwait(false);
             }
             catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
@@ -77,7 +76,7 @@ public sealed class GameRuntime : IGameRuntime
                     Success: false,
                     RunnerId: null,
                     Process: null,
-                    Diagnostic: BuildDiagnostic(null, null, request, runtimeOptions),
+                    Diagnostic: BuildDiagnostic(null, null, request, configuration),
                     Candidates: candidates,
                     Failure: GameRuntimeLaunchFailure.AvailabilityCheckFailed,
                     FailureException: exception);
@@ -95,8 +94,8 @@ public sealed class GameRuntime : IGameRuntime
             GameProcess process;
             try
             {
-                var startOptions = ForSelectedRunner(preferredRunnerId, runner.Id, runtimeOptions);
-                process = Start(runner, request, startOptions);
+                var runnerConfiguration = ForSelectedRunner(configuration, runner.Id);
+                process = Start(runner, request, runnerConfiguration);
             }
             catch (Exception exception) when (exception is not OperationCanceledException)
             {
@@ -104,7 +103,7 @@ public sealed class GameRuntime : IGameRuntime
                     Success: false,
                     RunnerId: runner.Id,
                     Process: null,
-                    Diagnostic: BuildDiagnostic(runner, availability, request, runtimeOptions),
+                    Diagnostic: BuildDiagnostic(runner, availability, request, configuration),
                     Candidates: candidates,
                     Failure: GameRuntimeLaunchFailure.StartFailed,
                     FailureException: exception);
@@ -115,7 +114,7 @@ public sealed class GameRuntime : IGameRuntime
                 Success: true,
                 RunnerId: runner.Id,
                 Process: process,
-                Diagnostic: BuildDiagnostic(runner, availability, request, runtimeOptions),
+                Diagnostic: BuildDiagnostic(runner, availability, request, configuration),
                 Candidates: candidates);
         }
 
@@ -123,17 +122,17 @@ public sealed class GameRuntime : IGameRuntime
             Success: false,
             RunnerId: null,
             Process: null,
-            Diagnostic: BuildDiagnostic(null, null, request, runtimeOptions),
+            Diagnostic: BuildDiagnostic(null, null, request, configuration),
             Candidates: candidates,
             Failure: GameRuntimeLaunchFailure.NoRunnerSelected);
     }
 
     public async Task<IReadOnlyList<GameRuntimeStatusEntry>> GetStatusesAsync(
-        string? preferredRunnerId,
-        GameRuntimeOptions options,
+        GameRuntimeConfiguration configuration,
         CancellationToken cancellationToken = default)
     {
-        var statuses = await CollectStatusesAsync(preferredRunnerId, options ?? new GameRuntimeOptions(), cancellationToken)
+        ArgumentNullException.ThrowIfNull(configuration);
+        var statuses = await CollectStatusesAsync(configuration, cancellationToken)
             .ConfigureAwait(false);
         return statuses
             .Select(status => new GameRuntimeStatusEntry(status.Runner.Id, status.Availability))
@@ -141,8 +140,7 @@ public sealed class GameRuntime : IGameRuntime
     }
 
     private async Task<IReadOnlyList<(GameRunnerDefinition Runner, GameRunnerAvailability Availability)>> CollectStatusesAsync(
-        string? preferredRunnerId,
-        GameRuntimeOptions options,
+        GameRuntimeConfiguration configuration,
         CancellationToken cancellationToken)
     {
         var statuses = new List<(GameRunnerDefinition, GameRunnerAvailability)>(runners.Count);
@@ -151,8 +149,8 @@ public sealed class GameRuntime : IGameRuntime
         // fallback status rows from the settings surface.
         foreach (var runner in runners)
         {
-            var runnerOptions = ForSelectedRunner(preferredRunnerId, runner.Id, options);
-            var availability = await CheckAvailabilityAsync(runner, runnerOptions, cancellationToken)
+            var runnerConfiguration = ForSelectedRunner(configuration, runner.Id);
+            var availability = await CheckAvailabilityAsync(runner, runnerConfiguration, cancellationToken)
                 .ConfigureAwait(false);
             statuses.Add((runner, availability));
         }
@@ -166,14 +164,13 @@ public sealed class GameRuntime : IGameRuntime
     /// executable could satisfy UMU's generic version probe (or vice versa) and
     /// the resolver would report the wrong runtime. One rule, everywhere.
     /// </summary>
-    private static GameRuntimeOptions ForSelectedRunner(
-        string? preferredRunnerId,
-        string runnerId,
-        GameRuntimeOptions options) =>
-        !string.IsNullOrWhiteSpace(preferredRunnerId)
-        && string.Equals(preferredRunnerId, runnerId, StringComparison.OrdinalIgnoreCase)
-            ? options
-            : options with { RunnerPath = null };
+    private static GameRuntimeConfiguration ForSelectedRunner(
+        GameRuntimeConfiguration configuration,
+        string runnerId) =>
+        !string.IsNullOrWhiteSpace(configuration.PreferredRunnerId)
+        && string.Equals(configuration.PreferredRunnerId, runnerId, StringComparison.OrdinalIgnoreCase)
+            ? configuration
+            : configuration with { RunnerPath = null };
 
     private IEnumerable<GameRunnerDefinition> SelectionOrder(string? preferredRunnerId)
     {
@@ -188,7 +185,7 @@ public sealed class GameRuntime : IGameRuntime
 
     private async Task<GameRunnerAvailability> CheckAvailabilityAsync(
         GameRunnerDefinition runner,
-        GameRuntimeOptions options,
+        GameRuntimeConfiguration configuration,
         CancellationToken cancellationToken)
     {
         if (!runner.IsSupportedPlatform)
@@ -203,14 +200,14 @@ public sealed class GameRuntime : IGameRuntime
             return new GameRunnerAvailability(GameRunnerAvailabilityStatus.Available);
         }
 
-        var executablePath = locateExecutable(runner.ExecutableName, options.RunnerPath);
+        var executablePath = locateExecutable(runner.ExecutableName, configuration.RunnerPath);
         if (executablePath is null)
         {
             return new GameRunnerAvailability(
                 GameRunnerAvailabilityStatus.NotFound,
-                Message: options.RunnerPath is null
+                Message: configuration.RunnerPath is null
                     ? $"{runner.ExecutableName} was not found on PATH."
-                    : $"{runner.ExecutableName} was not found at the configured path: {options.RunnerPath}");
+                    : $"{runner.ExecutableName} was not found at the configured path: {configuration.RunnerPath}");
         }
 
         var probeResult = await probeVersion(
@@ -237,15 +234,15 @@ public sealed class GameRuntime : IGameRuntime
     private GameProcess Start(
         GameRunnerDefinition runner,
         GameLaunchRequest request,
-        GameRuntimeOptions options)
+        GameRuntimeConfiguration configuration)
     {
         var executable = runner.ExecutableName is null
             ? request.ExecutablePath
-            : locateExecutable(runner.ExecutableName, options.RunnerPath)
+            : locateExecutable(runner.ExecutableName, configuration.RunnerPath)
                 ?? throw new InvalidOperationException(
                     $"{runner.ExecutableName} was not found. Install {runner.DisplayName} or configure its path.");
 
-        var process = processLauncher.Start(BuildStartInfo(runner, executable, request, options))
+        var process = processLauncher.Start(BuildStartInfo(runner, executable, request, configuration))
             ?? throw new InvalidOperationException(StartFailureMessage(runner));
 
         return new GameProcess(process, runner.Id);
@@ -255,7 +252,7 @@ public sealed class GameRuntime : IGameRuntime
         GameRunnerDefinition runner,
         string executable,
         GameLaunchRequest request,
-        GameRuntimeOptions options)
+        GameRuntimeConfiguration configuration)
     {
         var startInfo = new ProcessStartInfo
         {
@@ -279,14 +276,14 @@ public sealed class GameRuntime : IGameRuntime
             case GameRuntimeEnvironmentStyle.Native:
                 break;
             case GameRuntimeEnvironmentStyle.Wine:
-                startInfo.Environment["WINEPREFIX"] = GetEffectivePrefixPath(request, runner.Id, options)!;
+                startInfo.Environment["WINEPREFIX"] = GetEffectivePrefixPath(request, runner.Id, configuration)!;
                 break;
             case GameRuntimeEnvironmentStyle.Umu:
                 startInfo.Environment["GAMEID"] = request.GameId;
-                startInfo.Environment["WINEPREFIX"] = GetEffectivePrefixPath(request, runner.Id, options)!;
-                if (!string.IsNullOrWhiteSpace(options.ProtonPath))
+                startInfo.Environment["WINEPREFIX"] = GetEffectivePrefixPath(request, runner.Id, configuration)!;
+                if (!string.IsNullOrWhiteSpace(configuration.ProtonPath))
                 {
-                    startInfo.Environment["PROTONPATH"] = options.ProtonPath;
+                    startInfo.Environment["PROTONPATH"] = configuration.ProtonPath;
                 }
 
                 break;
@@ -306,36 +303,36 @@ public sealed class GameRuntime : IGameRuntime
     /// The compatibility prefix a launch targets: the configured path when set,
     /// otherwise the runner-managed default isolated per game and runner.
     /// </summary>
-    private static string GetEffectivePrefixPath(GameLaunchRequest request, string runnerId, GameRuntimeOptions options) =>
-        string.IsNullOrWhiteSpace(options.PrefixPath)
+    private static string GetEffectivePrefixPath(GameLaunchRequest request, string runnerId, GameRuntimeConfiguration configuration) =>
+        string.IsNullOrWhiteSpace(configuration.PrefixPath)
             ? GameCompatibilityPaths.GetDefaultPrefixPath(request.GameId, runnerId)
-            : options.PrefixPath;
+            : configuration.PrefixPath;
 
     /// <summary>
     /// The Proton build a launch targets; UMU reports "auto" when it selects a
     /// build itself so the effective choice is never blank in diagnostics.
     /// </summary>
-    private static string? GetEffectiveProtonPath(string runnerId, GameRuntimeOptions options)
+    private static string? GetEffectiveProtonPath(string runnerId, GameRuntimeConfiguration configuration)
     {
-        if (string.IsNullOrWhiteSpace(options.ProtonPath))
+        if (string.IsNullOrWhiteSpace(configuration.ProtonPath))
         {
             return string.Equals(runnerId, "umu", StringComparison.Ordinal) ? "auto" : null;
         }
 
-        return options.ProtonPath;
+        return configuration.ProtonPath;
     }
 
     private static GameRuntimeDiagnosticSnapshot BuildDiagnostic(
         GameRunnerDefinition? runner,
         GameRunnerAvailability? availability,
         GameLaunchRequest request,
-        GameRuntimeOptions options) =>
+        GameRuntimeConfiguration configuration) =>
         new(
             RunnerId: runner?.Id ?? "",
             RunnerVersion: availability?.Version,
             RunnerExecutable: availability?.ExecutablePath,
-            PrefixPath: runner is null ? null : GetEffectivePrefixPath(request, runner.Id, options),
-            ProtonPath: runner is null ? null : GetEffectiveProtonPath(runner.Id, options),
+            PrefixPath: runner is null ? null : GetEffectivePrefixPath(request, runner.Id, configuration),
+            ProtonPath: runner is null ? null : GetEffectiveProtonPath(runner.Id, configuration),
             GameId: request.GameId,
             GameExecutable: request.ExecutablePath,
             WorkingDirectory: request.WorkingDirectory);

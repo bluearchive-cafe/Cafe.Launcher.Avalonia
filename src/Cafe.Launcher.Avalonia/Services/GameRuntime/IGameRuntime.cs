@@ -45,19 +45,17 @@ public sealed record GameRuntimeLaunchResult(
 public interface IGameRuntime
 {
     /// <summary>
-    /// Launches the game through the first available runner. <paramref name="preferredRunnerId"/>
-    /// pins one runner automatically selected otherwise; a custom runner path
-    /// applies only to that pinned runner.
+    /// Launches the game through the configured or first available runner. The
+    /// configuration owns selection and paths; a custom runner path applies only
+    /// to an explicitly selected runner.
     /// </summary>
     Task<GameRuntimeLaunchResult> LaunchAsync(
         GameLaunchRequest request,
-        GameRuntimeOptions options,
-        string? preferredRunnerId,
+        GameRuntimeConfiguration configuration,
         CancellationToken cancellationToken = default);
 
-    /// <summary>Collects every runner's availability against one options set (settings status row).</summary>
+    /// <summary>Collects every runner's availability against one configuration (settings status row).</summary>
     Task<IReadOnlyList<GameRuntimeStatusEntry>> GetStatusesAsync(
-        string? preferredRunnerId,
-        GameRuntimeOptions options,
+        GameRuntimeConfiguration configuration,
         CancellationToken cancellationToken = default);
 }

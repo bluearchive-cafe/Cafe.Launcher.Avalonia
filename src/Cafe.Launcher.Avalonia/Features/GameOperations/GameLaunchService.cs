@@ -94,14 +94,7 @@ public sealed class GameLaunchService
         // Write clickCode attribution to game directory before launch
         clickCodeService.WriteClickCodeToGamePath(localGame.GamePath);
 
-        var runtime = snapshot.Settings.GameRuntime;
-        var preferredRunnerId = runtime.Runner is GameRuntimeRunners.Auto or ""
-            ? null
-            : runtime.Runner;
-        var configuredRuntimeOptions = new GameRuntimeOptions(
-            runtime.RunnerPath,
-            runtime.PrefixPath,
-            runtime.ProtonPath);
+        var runtimeConfiguration = GameRuntimeConfiguration.FromSettings(snapshot.Settings.GameRuntime);
 
         // A stable runtime id decouples compatibility state (prefix layout, UMU
         // GAMEID) from the game executable name, so renaming the EXE cannot orphan
@@ -116,7 +109,7 @@ public sealed class GameLaunchService
         try
         {
             launchResult = await gameRuntime
-                .LaunchAsync(request, configuredRuntimeOptions, preferredRunnerId, cancellationToken)
+                .LaunchAsync(request, runtimeConfiguration, cancellationToken)
                 .ConfigureAwait(false);
         }
         catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
@@ -130,7 +123,7 @@ public sealed class GameLaunchService
                 Success = false,
                 Message = localizer.F("gameLaunchFailed", exception.Message),
                 DiagnosticMessage =
-                    $"{localizer.T("gameRuntimeRunner")}: {preferredRunnerId ?? localizer.T("gameRuntimeRunnerAuto")}{Environment.NewLine}" +
+                    $"{localizer.T("gameRuntimeRunner")}: {runtimeConfiguration.PreferredRunnerId ?? localizer.T("gameRuntimeRunnerAuto")}{Environment.NewLine}" +
                     $"{localizer.T("executable")}: {request.ExecutablePath}{Environment.NewLine}" +
                     $"{localizer.T("path")}: {request.WorkingDirectory}{Environment.NewLine}" +
                     $"{exception.Message}",
@@ -157,7 +150,7 @@ public sealed class GameLaunchService
 
             return Failed(
                 localizer.T("gameProcessStartFailed"),
-                BuildRunnerSelectionFailure(launchResult, preferredRunnerId));
+                BuildRunnerSelectionFailure(launchResult, runtimeConfiguration.PreferredRunnerId));
         }
 
         return new GameLaunchResult

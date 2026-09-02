@@ -153,14 +153,12 @@ public sealed class GameRuntimeSettingsUiTests
 
         public Task<GameRuntimeLaunchResult> LaunchAsync(
             GameLaunchRequest request,
-            GameRuntimeOptions options,
-            string? preferredRunnerId,
+            GameRuntimeConfiguration configuration,
             CancellationToken cancellationToken = default) =>
             throw new NotSupportedException("StubGameRuntime never launches games.");
 
         public Task<IReadOnlyList<GameRuntimeStatusEntry>> GetStatusesAsync(
-            string? preferredRunnerId,
-            GameRuntimeOptions options,
+            GameRuntimeConfiguration configuration,
             CancellationToken cancellationToken = default) =>
             Task.FromResult(Entries);
     }
