@@ -796,7 +796,7 @@ public sealed partial class UiStyleContractTests
         var navigation = GetStyleSetters(styles, "Button.icon-button.carousel-navigation");
         Assert.Equal("{StaticResource Launcher.Control.Height.Setting}", navigation["Width"]);
         Assert.Equal("{StaticResource Launcher.Control.Height.Setting}", navigation["Height"]);
-        // 箭头压在壁纸上，hover/pressed 反馈走 chrome 态层（与 banner-link 同配方），
+        // 箭头压在壁纸上，hover/pressed 反馈走 chrome 态层，
         // 图标前景保持 OnChrome 豁免（spec §8）。
         Assert.Equal(
             "{StaticResource Launcher.Color.Chrome.Hover}",
@@ -872,6 +872,12 @@ public sealed partial class UiStyleContractTests
                 || attribute.Value.Contains("CarouselPause", StringComparison.Ordinal)));
 
         var styles = XDocument.Load(ProjectFile("Views/MainWindow.Styles.axaml"));
+        var bannerLinkStyle = GetStyleSetters(styles, "Button.banner-link");
+        Assert.Equal("{StaticResource Launcher.Color.Transparent}", bannerLinkStyle["Background"]);
+        Assert.DoesNotContain(
+            styles.Descendants(),
+            element => element.Name.LocalName == "Style"
+                && element.Attribute("Selector")?.Value is "Button.banner-link:pointerover" or "Button.banner-link:pressed");
         var bannerFrameStyle = GetStyleSetters(styles, "Border.banner-frame");
         Assert.Equal("{StaticResource Launcher.Radius.Sm}", bannerFrameStyle["CornerRadius"]);
         Assert.Equal("True", bannerFrameStyle["ClipToBounds"]);

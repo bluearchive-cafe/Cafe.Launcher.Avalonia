@@ -807,12 +807,6 @@
         <Setter Property="ZIndex" Value="1"/>
         <Setter Property="Template" Value="{StaticResource LauncherBorderButtonTemplate}"/>
     </Style>
-    <Style Selector="Button.banner-link:pointerover">
-        <Setter Property="Background" Value="{StaticResource Launcher.Color.Chrome.Hover}"/>
-    </Style>
-    <Style Selector="Button.banner-link:pressed">
-        <Setter Property="Background" Value="{StaticResource Launcher.Color.Chrome.Pressed}"/>
-    </Style>
     <Style Selector="Button.banner-link:disabled">
         <Setter Property="Opacity" Value="{StaticResource Launcher.StateLayer.Disabled.Content}"/>
     </Style>
