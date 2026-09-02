@@ -145,3 +145,21 @@
 2. **P1 — 流程加固**：启用 CPM + lock file + NuGetAudit；评估 vendor `MaterialColorUtilities`。
 3. **P2 — 结构**：拆分 `ShellLifecycle`（协作者分组）与 `MainWindow.axaml.cs`（统一 PickAsync、动效外移）；收敛 4 处 shell-open 逻辑；补 `GameOperationJourney`/`DownloadSession`/`CrossProcessPollingListener` 测试。
 4. **P3 — 规范**：在 AGENTS.md 明文 ViewModel 归属规则；本地化键常量化；断开 Diagnostics → GameOperations 横向依赖。
+
+## 修复执行状态（2026-09-02）
+
+上述 P1–P3 各项已全部按阶段实施并逐阶段提交，验证为全量构建 + 单元/Headless 测试通过：
+
+| 阶段 | 提交内容 | 关键产物 |
+|---|---|---|
+| P1 低成本 | 移除 `AllowUnsafeBlocks`（`LibraryImport` 改经典 `DllImport`）、`async void` 修复、`LocalDiagnostics.LogAsync` 静态异步入口、5 处异步上下文阻塞日志改 await、背景图 `Task.Run` 离线解码 | `WindowsAnimationSettingsProvider`、`LocalDiagnostics`、`BackgroundViewModel` 等 |
+| P1 流程 | `Directory.Packages.props`（CPM）、`Directory.Build.props`（lock file + NuGetAudit all）、提交 3 份 `packages.lock.json`；`dotnet list package --vulnerable` 确认无漏洞包 | CPM + 锁定 + 审计 |
+| P2 结构 | `ShellPresentationFamily` 聚合 12 个呈现协作者（`ShellLifecycle`/`MainWindowViewModel` 构造器 20→9 参）；MainWindow 四选择器收敛为 `PickFolderAsync`/`PickImageFileAsync`；`ShellFolderOpener` 统一 3 处 shell-open；新增 24 个测试（`GameOperationJourneyTests` 13、`DownloadSessionTests` 8、`CrossProcessPollingListenerTests` 3） | 编排层测试盲区补齐 |
+| P3 规范 | 共享 `Services/IGameOperationActivity` 断开 Diagnostics→GameOperations；`DesignTokenGrouping` 移入 Helpers；AGENTS.md 明文 ViewModel 归属规则；`LocalizationKeys` 551 常量 + 生成脚本，重写 392 处裸键字面量并把契约测试反转为"生产源码禁止裸键字面量" | 编译期键拼写保证 |
+
+### 审计修正（实施中发现）
+
+- **发现 3.1（移除 AllowUnsafeBlocks）的原始证据有误**：初审计称"代码无 unsafe 用法"，实际 `WindowsAnimationSettingsProvider` 的 `[LibraryImport]` 源生成 P/Invoke 需要编译器允许 unsafe（初审计的 grep 因工作目录问题漏检）。修复方式为将该 P/Invoke 改为经典 `DllImport`（bool 封送无需 unsafe），结论不变、证据修正。
+- **发现 5.4（xunit.runner.visualstudio 3.1.5 与 xunit.v3 3.2.2 版本错位）不可操作**：NuGet 上不存在 runner 3.2.x 版本线（3.x 线最新即 3.1.5，之后直接跳到 4.0.0 主版本），两者本就不共享版本线，维持现状。
+- **发现 5.3（MaterialColorUtilities 供应链）处置决议**：其 Quantize/HCT/Scheme/DynamicColors 是整套色彩科学核心（估算数千行算法），vendor 移植风险大于收益；采用 lock file + NuGetAudit(all) + CPM 集中锁版作为缓解。
+- **发现 7.6（GameShortcutService 三构造器重复）暂缓**：中间 `Func<string,bool>` 重载被 10+ 处测试用作注入缝，收益/改动比偏低，未纳入本次范围。
