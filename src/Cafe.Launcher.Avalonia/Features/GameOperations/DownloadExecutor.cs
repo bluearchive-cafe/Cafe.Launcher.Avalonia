@@ -22,7 +22,7 @@ internal sealed class DownloadExecutor
 
     private readonly IFileDownloadService fileDownloadService;
     private readonly Crc64Service crc64Service;
-    private readonly HttpClientFactory httpClientFactory;
+    private readonly IHttpClientLeaseSource leaseSource;
     private readonly LocalDiagnostics diagnostics;
     private readonly Func<Task> getPauseTask;
     private readonly Func<bool> isPaused;
@@ -30,14 +30,14 @@ internal sealed class DownloadExecutor
     internal DownloadExecutor(
         IFileDownloadService fileDownloadService,
         Crc64Service crc64Service,
-        HttpClientFactory httpClientFactory,
+        IHttpClientLeaseSource leaseSource,
         LocalDiagnostics diagnostics,
         Func<Task> getPauseTask,
         Func<bool> isPaused)
     {
         this.fileDownloadService = fileDownloadService;
         this.crc64Service = crc64Service;
-        this.httpClientFactory = httpClientFactory;
+        this.leaseSource = leaseSource;
         this.diagnostics = diagnostics;
         this.getPauseTask = getPauseTask;
         this.isPaused = isPaused;
@@ -63,8 +63,9 @@ internal sealed class DownloadExecutor
             return;
         }
 
-        using var lease = await httpClientFactory.CreateLeaseAsync(
-            proxyMode, timeout: TimeSpan.FromMinutes(10), cancellationToken: cancellationToken).ConfigureAwait(false);
+        using var lease = await leaseSource
+            .CreateLeaseAsync(proxyMode, cancellationToken)
+            .ConfigureAwait(false);
         var client = lease.Client;
         using var semaphore = new SemaphoreSlim(MaxParallelDownloads, MaxParallelDownloads);
         var totalSize = fileList.Sum(item => item.SizeBytes);

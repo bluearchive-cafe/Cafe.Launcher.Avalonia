@@ -30,51 +30,26 @@ public sealed class GameRuntimeSettingsUiTests
     }
 
     [Fact]
-    public async Task GetStatusesAsync_WithPreferredUmu_AppliesCustomPathOnlyToUmu()
-    {
-        var options = new GameRuntimeOptions(RunnerPath: "/opt/umu/bin/umu-run");
-        var umu = new StubRunner("umu", GameRunnerAvailabilityStatus.Available, "1.4.4", "/usr/bin/umu-run");
-        var wine = new StubRunner("wine", GameRunnerAvailabilityStatus.NotFound, null, null);
-        var service = new GameRuntimeStatusService([umu, wine]);
-
-        var entries = await service.GetStatusesAsync("umu", options);
-
-        Assert.Equal(2, entries.Count);
-        Assert.Equal("umu", entries[0].RunnerId);
-        Assert.Equal("wine", entries[1].RunnerId);
-        Assert.Same(options, umu.LastOptions);
-        Assert.NotNull(wine.LastOptions);
-        Assert.Null(wine.LastOptions!.RunnerPath);
-    }
-
-    [Fact]
-    public async Task GetStatusesAsync_InAutoMode_IgnoresCustomPathForEveryRunner()
-    {
-        var options = new GameRuntimeOptions(RunnerPath: "/usr/bin/wine");
-        var umu = new StubRunner("umu", GameRunnerAvailabilityStatus.Available, "1.4.4", "/usr/bin/umu-run");
-        var wine = new StubRunner("wine", GameRunnerAvailabilityStatus.Available, "9.0", "/usr/bin/wine");
-        var service = new GameRuntimeStatusService([umu, wine]);
-
-        await service.GetStatusesAsync(preferredRunnerId: null, options: options);
-
-        Assert.NotNull(umu.LastOptions);
-        Assert.NotNull(wine.LastOptions);
-        Assert.Null(umu.LastOptions!.RunnerPath);
-        Assert.Null(wine.LastOptions!.RunnerPath);
-    }
-
-    [Fact]
     public async Task RefreshGameRuntimeStatus_WithVisibleRunners_BuildsFilteredSummary()
     {
         var localizer = new LocalizationService();
         var options = new SettingsOptionsViewModel(localizer, new DiskSpaceService());
-        var statusService = new GameRuntimeStatusService(new IGameRunner[]
-        {
-            new StubRunner("native", GameRunnerAvailabilityStatus.Available, null, null),
-            new StubRunner("umu", GameRunnerAvailabilityStatus.Available, "1.4.4", "/usr/bin/umu-run"),
-            new StubRunner("wine", GameRunnerAvailabilityStatus.NotFound, null, null),
-        });
-        using var settings = CreateSettingsViewModel(localizer, options, statusService);
+        var runtime = new StubGameRuntime(
+        [
+            new GameRuntimeStatusEntry(
+                "native",
+                new GameRunnerAvailability(GameRunnerAvailabilityStatus.Available)),
+            new GameRuntimeStatusEntry(
+                "umu",
+                new GameRunnerAvailability(
+                    GameRunnerAvailabilityStatus.Available,
+                    Version: "1.4.4",
+                    ExecutablePath: "/usr/bin/umu-run")),
+            new GameRuntimeStatusEntry(
+                "wine",
+                new GameRunnerAvailability(GameRunnerAvailabilityStatus.NotFound, Message: "wine was not found on PATH."))
+        ]);
+        using var settings = CreateSettingsViewModel(localizer, options, runtime);
 
         settings.LoadFromSnapshot(new LauncherSettings());
         await settings.PendingGameRuntimeStatusRefresh!;
@@ -98,7 +73,7 @@ public sealed class GameRuntimeSettingsUiTests
         using var settings = CreateSettingsViewModel(
             localizer,
             options,
-            new GameRuntimeStatusService(Array.Empty<IGameRunner>()));
+            new StubGameRuntime([]));
         var entries = new[]
         {
             new GameRuntimeStatusEntry(
@@ -117,11 +92,13 @@ public sealed class GameRuntimeSettingsUiTests
     {
         var localizer = new LocalizationService();
         var options = new SettingsOptionsViewModel(localizer, new DiskSpaceService());
-        var stub = new StubRunner("umu", GameRunnerAvailabilityStatus.NotFound, null, null);
-        using var settings = CreateSettingsViewModel(
-            localizer,
-            options,
-            new GameRuntimeStatusService(new IGameRunner[] { stub }));
+        var runtime = new StubGameRuntime(
+        [
+            new GameRuntimeStatusEntry(
+                "umu",
+                new GameRunnerAvailability(GameRunnerAvailabilityStatus.NotFound, Message: "umu-run was not found on PATH."))
+        ]);
+        using var settings = CreateSettingsViewModel(localizer, options, runtime);
 
         settings.LoadFromSnapshot(new LauncherSettings());
         await settings.PendingGameRuntimeStatusRefresh!;
@@ -130,10 +107,15 @@ public sealed class GameRuntimeSettingsUiTests
             settings.GameRuntimeStatusSummary,
             StringComparison.Ordinal);
 
-        stub.NextAvailability = new GameRunnerAvailability(
-            GameRunnerAvailabilityStatus.Available,
-            Version: "1.4.4",
-            ExecutablePath: "/usr/bin/umu-run");
+        runtime.Entries =
+        [
+            new GameRuntimeStatusEntry(
+                "umu",
+                new GameRunnerAvailability(
+                    GameRunnerAvailabilityStatus.Available,
+                    Version: "1.4.4",
+                    ExecutablePath: "/usr/bin/umu-run"))
+        ];
         settings.RefreshGameRuntimeStatus();
         await settings.PendingGameRuntimeStatusRefresh!;
         Assert.Contains("1.4.4", settings.GameRuntimeStatusSummary, StringComparison.Ordinal);
@@ -151,7 +133,7 @@ public sealed class GameRuntimeSettingsUiTests
     private static SettingsViewModel CreateSettingsViewModel(
         LocalizationService localizer,
         SettingsOptionsViewModel options,
-        GameRuntimeStatusService statusService) =>
+        IGameRuntime gameRuntime) =>
         new(
             null!,
             localizer,
@@ -163,41 +145,23 @@ public sealed class GameRuntimeSettingsUiTests
             options,
             new SettingsAppearanceViewModel(new SettingsEditor()),
             new FakeErrorHandlingService(),
-            statusService);
+            gameRuntime);
 
-    private sealed class StubRunner(
-        string id,
-        GameRunnerAvailabilityStatus status,
-        string? version,
-        string? executablePath) : IGameRunner
+    private sealed class StubGameRuntime(IReadOnlyList<GameRuntimeStatusEntry> entries) : IGameRuntime
     {
-        public GameRuntimeOptions? LastOptions { get; private set; }
+        public IReadOnlyList<GameRuntimeStatusEntry> Entries { get; set; } = entries;
 
-        public GameRunnerAvailability? NextAvailability { get; set; }
-
-        public string Id => id;
-
-        public bool IsSupportedPlatform => true;
-
-        public Task<GameRunnerAvailability> CheckAvailabilityAsync(
-            GameRuntimeOptions options,
-            CancellationToken cancellationToken = default)
-        {
-            LastOptions = options;
-            return Task.FromResult(NextAvailability ?? new GameRunnerAvailability(
-                status,
-                Version: version,
-                ExecutablePath: executablePath));
-        }
-
-        public Task<GameProcess> StartAsync(
+        public Task<GameRuntimeLaunchResult> LaunchAsync(
             GameLaunchRequest request,
             GameRuntimeOptions options,
+            string? preferredRunnerId,
             CancellationToken cancellationToken = default) =>
-            throw new NotSupportedException("StubRunner never starts processes.");
+            throw new NotSupportedException("StubGameRuntime never launches games.");
 
-        public string? GetEffectivePrefixPath(GameLaunchRequest request, GameRuntimeOptions options) => null;
-
-        public string? GetEffectiveProtonPath(GameRuntimeOptions options) => null;
+        public Task<IReadOnlyList<GameRuntimeStatusEntry>> GetStatusesAsync(
+            string? preferredRunnerId,
+            GameRuntimeOptions options,
+            CancellationToken cancellationToken = default) =>
+            Task.FromResult(Entries);
     }
 }

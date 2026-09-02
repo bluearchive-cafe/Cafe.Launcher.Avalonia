@@ -61,19 +61,18 @@ public static class ServiceConfiguration
         services.AddSingleton<SettingsOptionsViewModel>();
         services.AddSingleton<SettingsAppearanceViewModel>();
         services.AddSingleton<IProcessLauncher, DefaultProcessLauncher>();
-        services.AddSingleton<IGameRunner, NativeGameRunner>();
-        services.AddSingleton<IGameRunner, UmuGameRunner>();
-        services.AddSingleton<IGameRunner, WineGameRunner>();
-        services.AddSingleton<GameRunnerResolver>();
-        services.AddSingleton<GameRuntimeStatusService>();
+        services.AddSingleton<IGameRuntime>(sp => new GameRuntime(
+            [GameRunnerDefinition.Native, GameRunnerDefinition.Umu, GameRunnerDefinition.Wine],
+            sp.GetRequiredService<IProcessLauncher>(),
+            sp.GetRequiredService<IGameProcessTracker>()));
         services.AddSingleton<IGameProcessTracker, GameProcessTracker>();
         services.AddSingleton<GameLaunchService>();
         services.AddSingleton<GameUninstallService>();
         services.AddSingleton<IGameShortcutService, GameShortcutService>();
-        services.AddSingleton<IGameLaunchWorkflow, GameLaunchWorkflow>();
-        services.AddSingleton<IGameInstallationWorkflow, GameInstallationWorkflow>();
-        services.AddSingleton<IGameUninstallWorkflow, GameUninstallWorkflow>();
-        services.AddSingleton<IGameOperationJourneyFactory, GameOperationJourneyFactory>();
+        services.AddSingleton<IGameOperationExecutor>(sp => new GameOperationExecutor(
+            sp.GetRequiredService<GameLaunchService>(),
+            sp.GetRequiredService<GameDownloadService>(),
+            sp.GetRequiredService<GameUninstallService>()));
         services.AddSingleton<LauncherUpdateService>();
         services.AddSingleton<ILauncherCoreService, LauncherCoreService>();
         services.AddSingleton<IErrorHandlingService, ErrorHandlingService>();
@@ -106,10 +105,14 @@ public static class ServiceConfiguration
         services.AddSingleton<RemoteContentViewModel>();
         services.AddSingleton<DialogsViewModel>();
         services.AddSingleton(sp => new GameOperationsViewModel(
-            sp.GetRequiredService<IGameOperationJourneyFactory>(),
+            sp.GetRequiredService<IGameOperationExecutor>(),
+            sp.GetRequiredService<IGameShortcutService>(),
             sp.GetRequiredService<LocalizationService>(),
+            sp.GetRequiredService<ToastService>(),
+            sp.GetRequiredService<LocalDiagnostics>(),
             sp.GetRequiredService<ShellViewModel>(),
-            sp.GetRequiredService<DialogsViewModel>()));
+            sp.GetRequiredService<DialogsViewModel>(),
+            sp.GetRequiredService<IErrorHandlingService>()));
         services.AddSingleton<DebugViewModel>();
         services.AddSingleton<ToastHostViewModel>();
         services.AddSingleton<WindowChromeViewModel>();

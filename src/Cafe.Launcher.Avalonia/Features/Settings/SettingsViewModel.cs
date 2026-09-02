@@ -30,7 +30,7 @@ public partial class SettingsViewModel : ViewModelBase, IDisposable, IModalConte
     private readonly UnifiedLogger unifiedLogger;
     private readonly GameInstallationPath gameInstallationPath;
     private readonly IErrorHandlingService errorHandling;
-    private readonly GameRuntimeStatusService gameRuntimeStatusService;
+    private readonly IGameRuntime gameRuntime;
     private CancellationTokenSource? appearancePreviewCts;
     private Task appearancePreviewTask = Task.CompletedTask;
     private CancellationTokenSource? gameRuntimeStatusCts;
@@ -67,7 +67,7 @@ public partial class SettingsViewModel : ViewModelBase, IDisposable, IModalConte
         SettingsOptionsViewModel options,
         SettingsAppearanceViewModel appearance,
         IErrorHandlingService errorHandling,
-        GameRuntimeStatusService gameRuntimeStatusService)
+        IGameRuntime gameRuntime)
     {
         this.settingsService = settingsService;
         this.localizer = localizer;
@@ -80,7 +80,7 @@ public partial class SettingsViewModel : ViewModelBase, IDisposable, IModalConte
         Options = options;
         Appearance = appearance;
         this.errorHandling = errorHandling;
-        this.gameRuntimeStatusService = gameRuntimeStatusService;
+        this.gameRuntime = gameRuntime;
         editor.PropertyChanged += OnEditorPropertyChanged;
         editor.CurrentPropertyChanged += OnCurrentSettingChanged;
     }
@@ -436,7 +436,7 @@ public partial class SettingsViewModel : ViewModelBase, IDisposable, IModalConte
         {
             var runtime = editor.GetSnapshot().GameRuntime;
             var options = new GameRuntimeOptions(runtime.RunnerPath, runtime.PrefixPath, runtime.ProtonPath);
-            var entries = await gameRuntimeStatusService
+            var entries = await gameRuntime
                 .GetStatusesAsync(
                     runtime.Runner is GameRuntimeRunners.Auto or "" ? null : runtime.Runner,
                     options,

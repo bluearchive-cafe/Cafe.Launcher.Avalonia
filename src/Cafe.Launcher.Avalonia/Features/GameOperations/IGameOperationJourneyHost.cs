@@ -1,3 +1,4 @@
+using System.Threading.Tasks;
 using Cafe.Launcher.Avalonia.Models;
 
 namespace Cafe.Launcher.Avalonia.Features.GameOperations;
@@ -22,4 +23,14 @@ internal interface IGameOperationJourneyHost
     void ApplySnapshot(LauncherStatusSnapshot snapshot);
     /// <summary>Sets whether the host should present a busy state.</summary>
     void SetBusy(bool busy);
+    /// <summary>Reports the launch-check outcome message on the shell.</summary>
+    void SetLaunchCheckResult(string message);
+    /// <summary>Opens a repair confirmation surface on the host.</summary>
+    void ShowRepairConfirmation(string message);
+    /// <summary>Refreshes shell state after an operation; returns whether a refresh was initiated.</summary>
+    Task<bool> RefreshAsync(GameOperationsRefreshMode mode);
+    /// <summary>Asks the host to show its log viewer after a failure action.</summary>
+    Task ShowLogViewerAsync();
+    /// <summary>Asks the host to minimize the window after a successful game launch.</summary>
+    void RequestMinimize();
 }

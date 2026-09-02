@@ -69,46 +69,34 @@ internal sealed class DownloadSession : IDisposable
 
     /// <summary>Initializes the session and its isolated pause and cancellation state.</summary>
     public DownloadSession(
-        LauncherApiClient apiClient,
-        RemoteManifestService remoteManifestService,
-        IFileDownloadService fileDownloadService,
-        HttpClientFactory httpClientFactory,
-        Crc64Service crc64Service,
-        LocalInstallationStateStore localInstallationStateStore,
-        LauncherSettingsService settingsService,
-        DiskSpaceService diskSpaceService,
-        LocalDiagnostics diagnostics,
-        LocalizationService localizer,
-        GameInstallationPath installationPath,
-        DownloadCheckpointStore checkpointStore,
-        IGameProcessTracker gameProcessTracker,
+        DownloadSessionContext context,
         LauncherStatusSnapshot snapshot,
         bool repair,
         Action<GameOperationProgress> progress,
         CancellationToken cancellationToken)
     {
-        this.apiClient = apiClient;
-        this.localInstallationStateStore = localInstallationStateStore;
-        this.installationPath = installationPath;
-        this.settingsService = settingsService;
-        this.diskSpaceService = diskSpaceService;
-        this.diagnostics = diagnostics;
-        this.localizer = localizer;
-        this.checkpointStore = checkpointStore;
-        this.gameProcessTracker = gameProcessTracker;
+        apiClient = context.ApiClient;
+        localInstallationStateStore = context.LocalInstallationStateStore;
+        installationPath = context.InstallationPath;
+        settingsService = context.SettingsService;
+        diskSpaceService = context.DiskSpaceService;
+        diagnostics = context.Diagnostics;
+        localizer = context.Localizer;
+        checkpointStore = context.CheckpointStore;
+        gameProcessTracker = context.GameProcessTracker;
         this.snapshot = snapshot;
         this.repair = repair;
         this.progress = progress;
         CancellationTokenSource = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
         diffCalculator = new ManifestDiffCalculator(
-            remoteManifestService,
-            localInstallationStateStore,
-            crc64Service);
+            context.RemoteManifestService,
+            context.LocalInstallationStateStore,
+            context.Crc64Service);
         downloadExecutor = new DownloadExecutor(
-            fileDownloadService,
-            crc64Service,
-            httpClientFactory,
-            diagnostics,
+            context.FileDownloadService,
+            context.Crc64Service,
+            context.LeaseSource,
+            context.Diagnostics,
             GetPauseTaskSnapshot,
             () => IsPaused);
     }

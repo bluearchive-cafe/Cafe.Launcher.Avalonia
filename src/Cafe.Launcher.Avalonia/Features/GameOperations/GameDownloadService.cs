@@ -31,6 +31,7 @@ public sealed class GameDownloadService : IDisposable
     private readonly IGameProcessTracker gameProcessTracker;
     private readonly object activeDownloadLock = new();
     private DownloadSession? activeSession;
+    private readonly DownloadSessionContext sessionContext;
     private bool disposed;
 
     public GameDownloadService(
@@ -60,6 +61,7 @@ public sealed class GameDownloadService : IDisposable
         this.installationPath = installationPath;
         this.gameProcessTracker = gameProcessTracker;
         checkpointStore = DownloadCheckpointStore.CreateDefault();
+        sessionContext = BuildSessionContext(checkpointStore);
     }
 
     internal GameDownloadService(
@@ -91,6 +93,7 @@ public sealed class GameDownloadService : IDisposable
             gameProcessTracker)
     {
         checkpointStore = new DownloadCheckpointStore(downloadStateFilePath);
+        sessionContext = BuildSessionContext(checkpointStore);
     }
 
     public async Task<GameOperationResult> InstallOrUpdateAsync(
@@ -157,19 +160,7 @@ public sealed class GameDownloadService : IDisposable
         }
 
         var session = await DownloadSessionFactory.TryCreateForResumeAsync(
-            apiClient,
-            remoteManifestService,
-            fileDownloadService,
-            httpClientFactory,
-            crc64Service,
-            localInstallationStateStore,
-            settingsService,
-            diskSpaceService,
-            diagnostics,
-            localizer,
-            installationPath,
-            checkpointStore,
-            gameProcessTracker,
+            sessionContext,
             snapshot,
             progress,
             cancellationToken).ConfigureAwait(false);
@@ -227,18 +218,15 @@ public sealed class GameDownloadService : IDisposable
         }
     }
 
-    private async Task<GameOperationResult> RunSessionAsync(
-        LauncherStatusSnapshot snapshot,
-        bool repair,
-        Action<GameOperationProgress> progress,
-        CancellationToken cancellationToken)
-    {
-        ThrowIfDisposed();
-        var session = DownloadSessionFactory.Create(
+    private DownloadSessionContext BuildSessionContext(DownloadCheckpointStore checkpointStore) =>
+        new(
             apiClient,
             remoteManifestService,
             fileDownloadService,
-            httpClientFactory,
+            new ProxyAwareHttpClientLeaseSource(
+                httpClientFactory,
+                baseAddress: null,
+                timeout: TimeSpan.FromMinutes(10)),
             crc64Service,
             localInstallationStateStore,
             settingsService,
@@ -247,7 +235,17 @@ public sealed class GameDownloadService : IDisposable
             localizer,
             installationPath,
             checkpointStore,
-            gameProcessTracker,
+            gameProcessTracker);
+
+    private async Task<GameOperationResult> RunSessionAsync(
+        LauncherStatusSnapshot snapshot,
+        bool repair,
+        Action<GameOperationProgress> progress,
+        CancellationToken cancellationToken)
+    {
+        ThrowIfDisposed();
+        var session = DownloadSessionFactory.Create(
+            sessionContext,
             snapshot,
             repair,
             progress,

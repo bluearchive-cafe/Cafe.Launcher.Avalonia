@@ -41,8 +41,8 @@ public sealed class MainWindowHeadlessTests
     [AvaloniaFact]
     public void DownloadRunningChanged_FromWorkerThread_NotifiesOnUiThread()
     {
-        var journey = new ThreadAwareGameOperationJourney();
-        using var context = CreateContext(new FixedGameOperationJourneyFactory(journey));
+        var executor = new ThreadAwareGameOperationExecutor();
+        using var context = CreateContext(executor);
         bool? notificationHasUiAccess = null;
         context.ViewModel.Operations.PropertyChanged += (_, eventArgs) =>
         {
@@ -52,7 +52,7 @@ public sealed class MainWindowHeadlessTests
             }
         };
 
-        var worker = Task.Run(() => journey.SetDownloadRunning(true));
+        var worker = Task.Run(() => executor.SetDownloadRunning(true));
         Assert.True(worker.Wait(TimeSpan.FromSeconds(5)));
 
         Assert.Null(notificationHasUiAccess);
@@ -64,8 +64,8 @@ public sealed class MainWindowHeadlessTests
     [AvaloniaFact]
     public void DownloadRunningChanged_WhenNewerStateArrives_DropsStaleWorkerNotification()
     {
-        var journey = new ThreadAwareGameOperationJourney();
-        using var context = CreateContext(new FixedGameOperationJourneyFactory(journey));
+        var executor = new ThreadAwareGameOperationExecutor();
+        using var context = CreateContext(executor);
         using var workerRaisedNotification = new ManualResetEventSlim();
         using var completeWorker = new ManualResetEventSlim();
         var notificationCount = 0;
@@ -79,12 +79,12 @@ public sealed class MainWindowHeadlessTests
 
         var worker = Task.Run(() =>
         {
-            journey.SetDownloadRunning(true);
+            executor.SetDownloadRunning(true);
             workerRaisedNotification.Set();
             completeWorker.Wait();
         });
         Assert.True(workerRaisedNotification.Wait(TimeSpan.FromSeconds(5)));
-        journey.SetDownloadRunning(false);
+        executor.SetDownloadRunning(false);
         completeWorker.Set();
         Assert.True(worker.Wait(TimeSpan.FromSeconds(5)));
         Dispatcher.UIThread.RunJobs();
@@ -96,8 +96,8 @@ public sealed class MainWindowHeadlessTests
     [AvaloniaFact]
     public void DownloadRunningChanged_AfterOperationsDisposed_IgnoresStaleJourneyCallback()
     {
-        var journey = new ThreadAwareGameOperationJourney();
-        using var context = CreateContext(new FixedGameOperationJourneyFactory(journey));
+        var executor = new ThreadAwareGameOperationExecutor();
+        using var context = CreateContext(executor);
         var notificationCount = 0;
         context.ViewModel.Operations.PropertyChanged += (_, eventArgs) =>
         {
@@ -109,7 +109,7 @@ public sealed class MainWindowHeadlessTests
 
         context.ViewModel.Operations.Dispose();
         context.ViewModel.Operations.Dispose();
-        journey.RaiseStaleRunningChanged();
+        executor.RaiseStaleRunningChanged();
         Dispatcher.UIThread.RunJobs();
 
         Assert.Equal(0, notificationCount);
@@ -3040,15 +3040,15 @@ public sealed class MainWindowHeadlessTests
         context.Window.FontFamily = new FontFamily("Segoe UI");
     }
 
-    private static TestContext CreateContext(IGameOperationJourneyFactory? journeyFactory = null)
+    private static TestContext CreateContext(IGameOperationExecutor? executor = null)
     {
         var tempDir = Path.Combine(Path.GetTempPath(), Guid.NewGuid().ToString("N"));
         Directory.CreateDirectory(tempDir);
         var services = new ServiceCollection();
         services.AddLauncherServices();
-        if (journeyFactory is not null)
+        if (executor is not null)
         {
-            services.AddSingleton(journeyFactory);
+            services.AddSingleton(executor);
         }
 
         services.AddSingleton(_ => new UnifiedLogger(Path.Combine(tempDir, "logs")));
@@ -3195,21 +3195,15 @@ public sealed class MainWindowHeadlessTests
         }
     }
 
-    private sealed class FixedGameOperationJourneyFactory(IGameOperationJourney journey)
-        : IGameOperationJourneyFactory
-    {
-        public IGameOperationJourney Create(IGameOperationJourneyHost host) => journey;
-    }
-
-    private sealed class ThreadAwareGameOperationJourney : IGameOperationJourney
+    private sealed class ThreadAwareGameOperationExecutor : IGameOperationExecutor
     {
         private bool isDownloadRunning;
         private Action? isRunningChanged;
         private Action? staleIsRunningChanged;
 
-        public event Func<GameOperationsRefreshMode, Task>? RefreshRequested { add { } remove { } }
-        public event Func<Task>? OpenLogViewerRequested { add { } remove { } }
-        public event Action? MinimizeRequested { add { } remove { } }
+        public bool IsDownloadRunning => isDownloadRunning;
+        public bool IsPaused => false;
+
         public event Action? IsRunningChanged
         {
             add
@@ -3220,9 +3214,6 @@ public sealed class MainWindowHeadlessTests
             remove => isRunningChanged -= value;
         }
 
-        public bool IsDownloadRunning => isDownloadRunning;
-        public bool IsPaused => false;
-
         public void SetDownloadRunning(bool value)
         {
             isDownloadRunning = value;
@@ -3231,28 +3222,30 @@ public sealed class MainWindowHeadlessTests
 
         public void RaiseStaleRunningChanged() => staleIsRunningChanged?.Invoke();
 
-        public Task StartGameAsync(LauncherStatusSnapshot snapshot) => Task.CompletedTask;
-        public Task CheckForUpdateAsync(LauncherStatusSnapshot snapshot) => Task.CompletedTask;
-        public Task InstallOrUpdateAsync(LauncherStatusSnapshot snapshot) => Task.CompletedTask;
-        public Task CreateDesktopShortcutAsync(LauncherStatusSnapshot snapshot) => Task.CompletedTask;
-        public void OpenGameFolder(LauncherStatusSnapshot snapshot)
-        {
-        }
-        public Task RequestRepairAsync(LauncherStatusSnapshot snapshot) => Task.CompletedTask;
-        public Task RepairAsync(LauncherStatusSnapshot snapshot) => Task.CompletedTask;
-        public Task RequestUninstallAsync(LauncherStatusSnapshot snapshot) => Task.CompletedTask;
-        public Task ConfirmUninstallAsync(LauncherStatusSnapshot snapshot) => Task.CompletedTask;
-        public Task ResumePersistedAsync(
+        public Task<GameLaunchResult> LaunchAsync(
             LauncherStatusSnapshot snapshot,
-            CancellationToken cancellationToken) => Task.CompletedTask;
-
-        public void RequestStop()
-        {
-        }
-
-        public void PerformStop()
-        {
-        }
+            CancellationToken cancellationToken = default) =>
+            throw new NotSupportedException();
+        public Task<GameOperationResult> InstallOrUpdateAsync(
+            LauncherStatusSnapshot snapshot,
+            Action<GameOperationProgress> progress,
+            CancellationToken cancellationToken = default) =>
+            throw new NotSupportedException();
+        public Task<GameOperationResult> RepairAsync(
+            LauncherStatusSnapshot snapshot,
+            Action<GameOperationProgress> progress) =>
+            throw new NotSupportedException();
+        public Task<GameOperationResult?> ResumePersistedAsync(
+            LauncherStatusSnapshot snapshot,
+            Action<GameOperationProgress> progress,
+            CancellationToken cancellationToken) =>
+            throw new NotSupportedException();
+        public Task<GameOperationResult> ValidateUninstallAsync(string gamePath) =>
+            throw new NotSupportedException();
+        public Task<GameOperationResult> UninstallAsync(
+            LauncherStatusSnapshot snapshot,
+            Action<GameOperationProgress> progress) =>
+            throw new NotSupportedException();
 
         public void Stop(bool clearPersistedState)
         {

@@ -257,16 +257,14 @@ public sealed class WindowChromeViewModelTests : IDisposable
         var backend = new TestBackend();
         var operations = new GameOperationsViewModel(
             backend,
-            backend,
-            backend,
             new TestGameShortcutService(),
             provider.GetRequiredService<LocalizationService>(),
             provider.GetRequiredService<ToastService>(),
             provider.GetRequiredService<LocalDiagnostics>(),
             provider.GetRequiredService<ShellViewModel>(),
             dialogs,
-            _ => Task.CompletedTask,
-            provider.GetRequiredService<IErrorHandlingService>());
+            provider.GetRequiredService<IErrorHandlingService>(),
+            _ => Task.CompletedTask);
         var debug = new DebugViewModel(
             provider.GetRequiredService<ToastService>(),
             logger,
@@ -318,18 +316,16 @@ public sealed class WindowChromeViewModelTests : IDisposable
         }
     }
 
-    private sealed class TestBackend :
-        IGameLaunchWorkflow,
-        IGameInstallationWorkflow,
-        IGameUninstallWorkflow
+    private sealed class TestBackend : IGameOperationExecutor
     {
         public bool IsDownloadRunning { get; set; }
-        public bool IsRunning => IsDownloadRunning;
         public bool IsPaused { get; private set; }
         public event Action? IsRunningChanged { add { } remove { } }
         public bool LastClearPersistedState { get; private set; }
 
-        public Task<GameLaunchResult> StartGameAsync(LauncherStatusSnapshot snapshot) =>
+        public Task<GameLaunchResult> LaunchAsync(
+            LauncherStatusSnapshot snapshot,
+            CancellationToken cancellationToken = default) =>
             Task.FromResult(new GameLaunchResult());
 
         public Task<GameOperationResult> InstallOrUpdateAsync(

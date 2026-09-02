@@ -11,7 +11,7 @@ namespace Cafe.Launcher.Avalonia.Services.GameRuntime;
 /// </summary>
 public interface IGameProcessTracker
 {
-    /// <summary>Starts tracking a host process returned by an <see cref="IGameRunner"/>.</summary>
+    /// <summary>Starts tracking a host process returned by the game run-time module.</summary>
     void Register(GameProcess process);
 
     /// <summary>Whether a process registered in this session is still alive.</summary>

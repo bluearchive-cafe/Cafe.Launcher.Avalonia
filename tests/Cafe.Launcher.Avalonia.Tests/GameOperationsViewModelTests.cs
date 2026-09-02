@@ -1061,16 +1061,14 @@ public sealed class GameOperationsViewModelTests
             toastService);
         var viewModel = new GameOperationsViewModel(
             backend,
-            backend,
-            backend,
             shortcutService,
             localizer,
             toastService,
             diagnostics,
             shell,
             dialogs,
-            _ => Task.CompletedTask,
-            errorHandling);
+            errorHandling,
+            _ => Task.CompletedTask);
         return new TestContext(viewModel, backend, shortcutService, shell, dialogs, toastService, localizer);
     }
 
@@ -1090,10 +1088,7 @@ public sealed class GameOperationsViewModelTests
         ToastService ToastService,
         LocalizationService Localizer);
 
-    private sealed class TestBackend :
-        IGameLaunchWorkflow,
-        IGameInstallationWorkflow,
-        IGameUninstallWorkflow
+    private sealed class TestBackend : IGameOperationExecutor
     {
         public event Action? IsRunningChanged;
         private bool isDownloadRunning;
@@ -1111,7 +1106,6 @@ public sealed class GameOperationsViewModelTests
                 IsRunningChanged?.Invoke();
             }
         }
-        public bool IsRunning => IsDownloadRunning;
         public bool IsPaused { get; set; }
         public int InstallInvocationCount { get; private set; }
         public int LaunchInvocationCount { get; private set; }
@@ -1132,7 +1126,9 @@ public sealed class GameOperationsViewModelTests
         public TaskCompletionSource<GameOperationResult>? InstallCompletion { get; set; }
         public TaskCompletionSource<GameOperationResult>? UninstallCompletion { get; set; }
 
-        public Task<GameLaunchResult> StartGameAsync(LauncherStatusSnapshot snapshot)
+        public Task<GameLaunchResult> LaunchAsync(
+            LauncherStatusSnapshot snapshot,
+            CancellationToken cancellationToken = default)
         {
             LaunchInvocationCount++;
             return Task.FromResult(LaunchResult);
