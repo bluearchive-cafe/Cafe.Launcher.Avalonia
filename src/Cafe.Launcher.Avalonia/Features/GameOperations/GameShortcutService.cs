@@ -1,5 +1,4 @@
 using System;
-using System.Diagnostics;
 using System.Globalization;
 using System.IO;
 using System.Runtime.InteropServices;
@@ -53,7 +52,7 @@ public sealed class GameShortcutService : IGameShortcutService
         Func<string?> LauncherExecutablePath)
     {
         public static ShortcutEnvironment ForCurrentPlatform() => new(
-            OpenDirectoryInFileManager,
+            ShellFolderOpener.OpenInFileManager,
             OperatingSystem.IsWindows,
             OperatingSystem.IsLinux,
             () => Environment.ProcessPath);
@@ -275,24 +274,6 @@ public sealed class GameShortcutService : IGameShortcutService
         }
 
         return builder.ToString().Trim();
-    }
-
-    private static bool OpenDirectoryInFileManager(string directory)
-    {
-        var startInfo = OperatingSystem.IsWindows()
-            ? new ProcessStartInfo
-            {
-                FileName = "explorer.exe",
-                ArgumentList = { directory },
-                UseShellExecute = true
-            }
-            : new ProcessStartInfo
-            {
-                FileName = directory,
-                UseShellExecute = true
-            };
-
-        return Process.Start(startInfo) is not null;
     }
 
     [SupportedOSPlatform("windows")]

@@ -116,9 +116,12 @@ public static class ServiceConfiguration
             sp.GetRequiredService<DialogsViewModel>(),
             sp.GetRequiredService<IErrorHandlingService>()));
         services.AddSingleton<DebugViewModel>();
+        services.AddSingleton<IGameOperationActivity>(sp =>
+            sp.GetRequiredService<GameOperationsViewModel>());
         services.AddSingleton<ToastHostViewModel>();
         services.AddSingleton<WindowChromeViewModel>();
         services.AddSingleton<ModalHostViewModel>();
+        services.AddSingleton<ShellPresentationFamily>();
         services.AddSingleton<IShellRuntime, ShellLifecycle>();
         services.AddSingleton<MainWindowViewModel>();
 

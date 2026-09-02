@@ -1,6 +1,7 @@
 <UserControl xmlns="https://github.com/avaloniaui"
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
              xmlns:vm="using:Cafe.Launcher.Avalonia.ViewModels"
+             xmlns:h="using:Cafe.Launcher.Avalonia.Helpers"
              xmlns:controls="using:Cafe.Launcher.Avalonia.Controls"
              xmlns:materialIcons="clr-namespace:Material.Icons.Avalonia;assembly=Material.Icons.Avalonia"
              x:Class="Cafe.Launcher.Avalonia.Views.DesignGalleryOverlay"
@@ -172,13 +173,13 @@
                                 </ItemsPanelTemplate>
                             </ItemsControl.ItemsPanel>
                             <ItemsControl.ItemTemplate>
-                                <DataTemplate x:DataType="vm:DesignTokenGroup">
+                                <DataTemplate x:DataType="h:DesignTokenGroup">
                                     <Border Classes="dialog-card">
                                         <StackPanel Spacing="{StaticResource Launcher.Spacing.Sm}">
                                             <TextBlock Text="{Binding DisplayName}" Classes="section-title"/>
                                             <ItemsControl ItemsSource="{Binding Items}">
                                                 <ItemsControl.ItemTemplate>
-                                                    <DataTemplate x:DataType="vm:DesignTokenItem">
+                                                    <DataTemplate x:DataType="h:DesignTokenItem">
                                                         <Grid ColumnDefinitions="Auto,*,Auto">
                                                             <Border Width="{StaticResource Launcher.Control.Size.Swatch}"
                                                                     Height="{StaticResource Launcher.Control.Size.Swatch}"

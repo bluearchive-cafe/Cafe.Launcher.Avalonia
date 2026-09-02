@@ -1,4 +1,5 @@
 using System;
+using System.ComponentModel;
 using System.IO;
 using System.Threading;
 using System.Threading.Tasks;
@@ -14,7 +15,7 @@ using CommunityToolkit.Mvvm.Input;
 
 namespace Cafe.Launcher.Avalonia.Features.GameOperations;
 
-public partial class GameOperationsViewModel : ViewModelBase, IGameOperationJourneyHost, IDisposable
+public partial class GameOperationsViewModel : ViewModelBase, IGameOperationJourneyHost, IGameOperationActivity, IDisposable
 {
     private readonly IGameOperationJourney journey;
     private readonly LocalizationService localizer;
@@ -276,7 +277,7 @@ public partial class GameOperationsViewModel : ViewModelBase, IGameOperationJour
     }
 
     [RelayCommand]
-    private void StopOperation()
+    public void StopOperation()
     {
         if (journey.IsDownloadRunning)
         {
@@ -293,7 +294,7 @@ public partial class GameOperationsViewModel : ViewModelBase, IGameOperationJour
     }
 
     [RelayCommand]
-    private void PauseResume()
+    public void PauseResume()
     {
         if (!CanPauseOperation)
         {
@@ -485,6 +486,13 @@ public partial class GameOperationsViewModel : ViewModelBase, IGameOperationJour
         }
 
         OnPropertyChanged(nameof(IsDownloadRunning));
+    }
+
+    /// <inheritdoc />
+    public event PropertyChangedEventHandler? ActivityPropertyChanged
+    {
+        add => PropertyChanged += value;
+        remove => PropertyChanged -= value;
     }
 
     public void Dispose()

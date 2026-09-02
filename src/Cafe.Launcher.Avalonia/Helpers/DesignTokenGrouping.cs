@@ -5,7 +5,7 @@ using System.Linq;
 using Avalonia;
 using Avalonia.Media;
 
-namespace Cafe.Launcher.Avalonia.ViewModels;
+namespace Cafe.Launcher.Avalonia.Helpers;
 
 public sealed class DesignTokenItem
 {

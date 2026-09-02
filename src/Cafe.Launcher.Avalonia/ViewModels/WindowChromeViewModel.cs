@@ -1,5 +1,4 @@
 using System;
-using System.Diagnostics;
 using System.IO;
 using System.Threading.Tasks;
 using Cafe.Launcher.Avalonia.Constants;
@@ -44,11 +43,7 @@ public partial class WindowChromeViewModel : ViewModelBase
             operations,
             debug,
             ExternalLinkService.Open,
-            static path => Process.Start(new ProcessStartInfo
-            {
-                FileName = path,
-                UseShellExecute = true
-            }))
+            static path => ShellFolderOpener.OpenInFileManager(path))
     {
     }
 
