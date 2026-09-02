@@ -126,7 +126,7 @@ public partial class MainWindowViewModel : ViewModelBase, IDisposable
             logViewer,
             debug,
             modalHost,
-            new ShellRuntime(
+            new ShellLifecycle(
                 launcherCoreService,
                 settingsService,
                 localizer,

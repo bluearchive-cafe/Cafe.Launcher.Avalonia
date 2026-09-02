@@ -20,8 +20,11 @@ namespace Cafe.Launcher.Avalonia.Features.Shell;
 /// resource-panel switching, and every cross-feature subscription.
 /// The window (MainWindowViewModel) only presents shell state.
 /// </summary>
-public sealed class ShellLifecycle : IDisposable
+public sealed class ShellLifecycle : IShellRuntime
 {
+    /// <summary>Raised when shell presentation state changes.</summary>
+    public event Action? PresentationChanged;
+
     /// <summary>Raised after a saved status-detail setting changes the shell presentation mode.</summary>
     public event Action? StatusDetailModeChanged;
 
@@ -36,7 +39,6 @@ public sealed class ShellLifecycle : IDisposable
     private readonly LocalDiagnostics diagnostics;
     private readonly IErrorHandlingService errorHandling;
     private readonly WindowsAnimationSettingsProvider windowsAnimationSettingsProvider;
-    private readonly IShellLifecyclePresentation presentation;
     private readonly ShellViewModel shell;
     private readonly BackgroundViewModel background;
     private readonly RemoteContentViewModel remoteContent;
@@ -56,15 +58,16 @@ public sealed class ShellLifecycle : IDisposable
     private readonly bool ownsPresentationCollaborators;
     private readonly ShellRefreshCoordinator refreshCoordinator;
     private readonly ShellStartup startup;
-    private readonly SettingsChangeFanout settingsChangeFanout;
     private bool disposed;
+    private bool isBusy;
+    private bool isMotionReduced = true;
     private bool motionSettingsApplied;
     private bool settingsSnapshotInitialized;
     private LauncherStatusSnapshot? currentSnapshot;
     private bool isWired;
 
     /// <summary>Gets the active startup update check so tests can coordinate without timing delays.</summary>
-    internal Task PendingStartupUpdateCheck => refreshCoordinator.PendingAfterLoadWork;
+    public Task PendingStartupUpdateCheck => refreshCoordinator.PendingAfterLoadWork;
 
     /// <summary>Initializes shell lifecycle dependencies and subscribes error handling callbacks.</summary>
     public ShellLifecycle(
@@ -76,7 +79,52 @@ public sealed class ShellLifecycle : IDisposable
         LocalDiagnostics diagnostics,
         IErrorHandlingService errorHandling,
         WindowsAnimationSettingsProvider windowsAnimationSettingsProvider,
-        IShellLifecyclePresentation presentation,
+        ShellViewModel shell,
+        BackgroundViewModel background,
+        RemoteContentViewModel remoteContent,
+        DialogsViewModel dialogs,
+        GameOperationsViewModel operations,
+        ToastHostViewModel toasts,
+        WindowChromeViewModel windowChrome,
+        SettingsViewModel settingsViewModel,
+        ResourcePanelViewModel resourcePanelViewModel,
+        LogViewerDialogViewModel logViewer,
+        DebugViewModel debug,
+        ModalHostViewModel modalHost)
+        : this(
+            launcherCoreService,
+            settingsService,
+            localizer,
+            toastService,
+            launcherUpdateService,
+            diagnostics,
+            errorHandling,
+            windowsAnimationSettingsProvider,
+            shell,
+            background,
+            remoteContent,
+            dialogs,
+            operations,
+            toasts,
+            windowChrome,
+            settingsViewModel,
+            resourcePanelViewModel,
+            logViewer,
+            debug,
+            modalHost,
+            ownsPresentationCollaborators: false)
+    {
+    }
+
+    internal ShellLifecycle(
+        ILauncherCoreService launcherCoreService,
+        LauncherSettingsService settingsService,
+        LocalizationService localizer,
+        ToastService toastService,
+        LauncherUpdateService launcherUpdateService,
+        LocalDiagnostics diagnostics,
+        IErrorHandlingService errorHandling,
+        WindowsAnimationSettingsProvider windowsAnimationSettingsProvider,
         ShellViewModel shell,
         BackgroundViewModel background,
         RemoteContentViewModel remoteContent,
@@ -99,7 +147,6 @@ public sealed class ShellLifecycle : IDisposable
         this.diagnostics = diagnostics;
         this.errorHandling = errorHandling;
         this.windowsAnimationSettingsProvider = windowsAnimationSettingsProvider;
-        this.presentation = presentation;
         this.shell = shell;
         this.background = background;
         this.remoteContent = remoteContent;
@@ -134,21 +181,16 @@ public sealed class ShellLifecycle : IDisposable
             PickSetupWizardGameFolderAsync,
             () => dialogs.IsSetupWizardVisible,
             dialogs.SetupWizard);
-        settingsChangeFanout = new SettingsChangeFanout(
-            () => settings.Editor.Current,
-            () => currentSnapshot?.Settings.PatchUrlGroup,
-            () => currentSnapshot,
-            saved =>
-            {
-                remoteContent.UpdateRemoteContentVisibility(saved.ShowRemoteContentCard);
-                ApplyMotionSettings(saved);
-            },
-            () => operations.IsDownloadRunning,
-            () => settingsService.ReadAsync(),
-            () => RefreshAsync(),
-            () => localizer.T("downloadSourceChangedRepairPrompt"),
-            dialogs.ShowRepairConfirm);
+
+        Wire();
+        ApplyInitialLanguage();
     }
+
+    /// <summary>Gets whether the shell is currently processing an operation.</summary>
+    public bool IsBusy => isBusy;
+
+    /// <summary>Gets whether reduced motion is currently effective.</summary>
+    public bool IsMotionReduced => isMotionReduced;
 
     /// <summary>Initializes the shell once by loading settings and launcher state.</summary>
     public Task InitializeAsync(CancellationToken cancellationToken = default) =>
@@ -193,7 +235,7 @@ public sealed class ShellLifecycle : IDisposable
     /// </summary>
     private async Task<bool> LoadHostStateAsync(CancellationToken refreshToken)
     {
-        presentation.IsBusy = true;
+        SetPresentationState(ref isBusy, true);
         shell.IsBusy = true;
         try
         {
@@ -236,7 +278,7 @@ public sealed class ShellLifecycle : IDisposable
             {
                 remoteContent.EndLoading();
                 shell.IsBusy = false;
-                presentation.IsBusy = false;
+                SetPresentationState(ref isBusy, false);
             }
         }
     }
@@ -266,8 +308,32 @@ public sealed class ShellLifecycle : IDisposable
         await refreshCoordinator.WaitForShutdownWorkAsync(pendingRefreshes);
     }
 
-    /// <summary>Refreshes the shell after the settings editor saves a new snapshot.</summary>
-    public Task HandleSettingsSavedAsync() => settingsChangeFanout.ApplySavedChangesAsync();
+    /// <summary>Applies the follow-through of one saved settings snapshot.</summary>
+    public async Task HandleSettingsSavedAsync()
+    {
+        var savedSettings = settings.Editor.Current;
+        var previousPatchUrlGroup = currentSnapshot?.Settings.PatchUrlGroup;
+        remoteContent.UpdateRemoteContentVisibility(savedSettings.ShowRemoteContentCard);
+        ApplyMotionSettings(savedSettings);
+
+        if (operations.IsDownloadRunning)
+        {
+            if (currentSnapshot is not null)
+            {
+                currentSnapshot.Settings = await settingsService.ReadAsync();
+            }
+
+            return;
+        }
+
+        await RefreshAsync();
+        var runtimeState = currentSnapshot?.RuntimeState;
+        if (runtimeState is LauncherRuntimeState.Ready or LauncherRuntimeState.UpdateAvailable
+            && !string.Equals(previousPatchUrlGroup, savedSettings.PatchUrlGroup, StringComparison.Ordinal))
+        {
+            dialogs.ShowRepairConfirm(localizer.T("downloadSourceChangedRepairPrompt"));
+        }
+    }
 
     /// <summary>Saves completed wizard settings, applies their language, and refreshes the shell.</summary>
     public Task HandleSetupWizardCompletedAsync(LauncherSettings newSettings) =>
@@ -318,7 +384,7 @@ public sealed class ShellLifecycle : IDisposable
     private static void OnUpdateAvailableConfirmed(string downloadUrl) => ExternalLinkService.Open(downloadUrl);
 
     /// <summary>Refreshes shell state after a game operation and records resume behavior.</summary>
-    internal async Task HandleOperationsRefreshRequestedAsync(GameOperationsRefreshMode mode)
+    public async Task HandleOperationsRefreshRequestedAsync(GameOperationsRefreshMode mode)
     {
         await refreshCoordinator.RefreshAsync(
             resumePersistedDownload: mode != GameOperationsRefreshMode.SkipPersistedResume);
@@ -635,13 +701,13 @@ public sealed class ShellLifecycle : IDisposable
         var reduceMotion = MotionSettingsResolver.ShouldReduceMotion(
             savedSettings.MotionMode,
             windowsAnimationsEnabled);
-        if (motionSettingsApplied && reduceMotion == presentation.IsMotionReduced)
+        if (motionSettingsApplied && reduceMotion == isMotionReduced)
         {
             return;
         }
 
         motionSettingsApplied = true;
-        presentation.IsMotionReduced = reduceMotion;
+        SetPresentationState(ref isMotionReduced, reduceMotion);
         remoteContent.ApplyMotionPreference(reduceMotion);
         toasts.ApplyMotionPreference(reduceMotion);
         background.ApplyMotionPreference(reduceMotion);
@@ -673,6 +739,17 @@ public sealed class ShellLifecycle : IDisposable
     private void OnStatusDetailModeChanged()
     {
         StatusDetailModeChanged?.Invoke();
+    }
+
+    private void SetPresentationState(ref bool field, bool value)
+    {
+        if (field == value)
+        {
+            return;
+        }
+
+        field = value;
+        PresentationChanged?.Invoke();
     }
 
     private void OnCriticalError(CriticalErrorInfo info)
