@@ -86,7 +86,7 @@ public partial class DialogsViewModel : ViewModelBase, IModalContentViewModel
         }
         catch (Exception ex)
         {
-            LocalDiagnostics.LogSync(
+            await LocalDiagnostics.LogAsync(
                 LogEntrySeverity.Error,
                 "DebugResetFailed",
                 $"Failed to reset settings: {ex.Message}");
@@ -131,7 +131,7 @@ public partial class DialogsViewModel : ViewModelBase, IModalContentViewModel
         }
         catch (Exception ex)
         {
-            LocalDiagnostics.LogSync(
+            await LocalDiagnostics.LogAsync(
                 LogEntrySeverity.Error,
                 "SettingsResetFailed",
                 $"Failed to reset settings: {ex.Message}");
@@ -496,7 +496,7 @@ public partial class DialogsViewModel : ViewModelBase, IModalContentViewModel
         }
         catch (Exception ex)
         {
-            LocalDiagnostics.LogSync(LogEntrySeverity.Warn, "NoticeDialogLoadFailed", ex.Message);
+            await LocalDiagnostics.LogAsync(LogEntrySeverity.Warn, "NoticeDialogLoadFailed", ex.Message);
         }
     }
 

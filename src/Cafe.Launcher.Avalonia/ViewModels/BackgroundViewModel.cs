@@ -124,7 +124,8 @@ public partial class BackgroundViewModel : ViewModelBase, IDisposable
                         var cachedPath = await imageCacheService.GetCachedPathAsync(crc64, cancellationToken)
                             ?? await imageCacheService.CacheImageAsync(bgImg, crc64, proxyMode, cancellationToken);
                         cancellationToken.ThrowIfCancellationRequested();
-                        SetBackgroundImage(imageLoader(cachedPath), settings);
+                        // 远端背景图可能很大；解码放线程池，避免续体回到 UI 线程后卡帧。
+                        SetBackgroundImage(await Task.Run(() => imageLoader(cachedPath)), settings);
                         return;
                     }
                     catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
@@ -202,7 +203,8 @@ public partial class BackgroundViewModel : ViewModelBase, IDisposable
         {
             try
             {
-                var bitmap = imageLoader(path);
+                // 自定义背景图在 UI 线程外解码，避免大图卡帧。
+                var bitmap = await Task.Run(() => imageLoader(path));
                 if (bitmap is null)
                 {
                     return null;
@@ -257,7 +259,8 @@ public partial class BackgroundViewModel : ViewModelBase, IDisposable
 
             try
             {
-                var bitmap = imageLoader(imagePath);
+                // 随机选中的背景图同样在 UI 线程外解码。
+                var bitmap = await Task.Run(() => imageLoader(imagePath));
                 if (bitmap is null)
                 {
                     return null;

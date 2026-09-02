@@ -197,7 +197,7 @@ public sealed partial class DebugViewModel : ViewModelBase, IModalContentViewMod
     // ── Log writes ───────────────────────────────────────────────────────
 
     [RelayCommand]
-    private void WriteTestLog(string severity)
+    private async Task WriteTestLog(string severity)
     {
         var sev = severity switch
         {
@@ -220,7 +220,7 @@ public sealed partial class DebugViewModel : ViewModelBase, IModalContentViewMod
             _ => shell.I18n["logLevelInformation"]
         };
         var message = Format(shell.I18n["debugTestLogMessage"], DateTimeOffset.Now.ToString("HH:mm:ss.fff", CultureInfo.CurrentCulture));
-        LocalDiagnostics.LogSync(sev, "DebugPanel", message);
+        await unifiedLogger.LogAsync(sev, "DebugPanel", message: message);
         LastActionResult = Format(shell.I18n["debugLogEntryWritten"], severityDisplay);
     }
 

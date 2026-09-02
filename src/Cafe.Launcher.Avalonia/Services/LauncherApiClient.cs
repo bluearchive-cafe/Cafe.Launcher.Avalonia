@@ -247,7 +247,7 @@ public sealed class LauncherApiClient : IDisposable
 
                 using var response = await lease.Client.SendAsync(request, ct).ConfigureAwait(false);
                 response.EnsureSuccessStatusCode();
-                LocalDiagnostics.LogSync(
+                await LocalDiagnostics.LogAsync(
                     LogEntrySeverity.Debug,
                     "ApiClient",
                     $"GET {path} -> {(int)response.StatusCode}, {sw.ElapsedMilliseconds}ms (attempt N/A)");

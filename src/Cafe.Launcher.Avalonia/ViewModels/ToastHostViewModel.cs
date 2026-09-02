@@ -139,10 +139,11 @@ public partial class ToastHostViewModel : ViewModelBase, IDisposable
         }
         catch (Exception ex)
         {
-            LocalDiagnostics.LogSync(
-                LogEntrySeverity.Warn,
+            // 取消已在上方过滤分支中重抛；此处为真实失败，需确保日志不被取消吞掉。
+            await diagnostics.WarningAsync(
                 "ToastLifecycleFailed",
-                $"ToastHost: toast notification lifecycle failed: {ex.Message}");
+                $"ToastHost: toast notification lifecycle failed: {ex.Message}",
+                CancellationToken.None);
         }
     }
 
