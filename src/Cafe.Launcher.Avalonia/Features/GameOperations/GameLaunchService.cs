@@ -1,5 +1,4 @@
 using System;
-using System.IO;
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
@@ -54,28 +53,23 @@ public sealed class GameLaunchService
             });
         }
 
-        var localGame = snapshot.LocalGame;
-        var gameConfig = localGame.GameConfig;
-        if (string.IsNullOrWhiteSpace(gameConfig?.Name))
+        var targetResolution = GameLaunchTargetResolution.Resolve(snapshot);
+        if (!targetResolution.Resolved)
         {
-            return Failed(localizer.T("gameExecutableNameEmpty"));
+            return Failed(targetResolution.Status switch
+            {
+                GameLaunchTargetStatus.ExecutableNameInvalid => localizer.T("gameExecutableNameInvalid"),
+                GameLaunchTargetStatus.ExecutableMissing => localizer.F(
+                    "gameExecutableMissing", targetResolution.ExpectedExecutablePath),
+                _ => localizer.T("gameExecutableNameEmpty")
+            });
         }
 
-        // Defense-in-depth: reject executable names containing path separators
-        if (gameConfig.Name.Contains('/') || gameConfig.Name.Contains('\\'))
-        {
-            return Failed(localizer.T("gameExecutableNameInvalid"));
-        }
-
-        var exePath = Path.Combine(localGame.GamePath, $"{gameConfig.Name}.exe");
-        if (!File.Exists(exePath))
-        {
-            return Failed(localizer.F("gameExecutableMissing", exePath));
-        }
+        var target = targetResolution.Target!;
 
         var validation = await manifestValidationService.ValidateAsync(
-            localGame.GamePath,
-            localGame,
+            target.WorkingDirectory,
+            snapshot.LocalGame,
             snapshot.Settings.LaunchCheckMode,
             snapshot.Settings.PatchUrlGroup,
             snapshot.Settings.ProxyMode,
@@ -92,31 +86,24 @@ public sealed class GameLaunchService
         }
 
         // Write clickCode attribution to game directory before launch
-        clickCodeService.WriteClickCodeToGamePath(localGame.GamePath);
+        clickCodeService.WriteClickCodeToGamePath(target.WorkingDirectory);
 
-        var runtime = snapshot.Settings.GameRuntime;
-        var preferredRunnerId = runtime.Runner is GameRuntimeRunners.Auto or ""
-            ? null
-            : runtime.Runner;
-        var configuredRuntimeOptions = new GameRuntimeOptions(
-            runtime.RunnerPath,
-            runtime.PrefixPath,
-            runtime.ProtonPath);
+        var runtimeConfiguration = GameRuntimeConfiguration.FromSettings(snapshot.Settings.GameRuntime);
 
         // A stable runtime id decouples compatibility state (prefix layout, UMU
         // GAMEID) from the game executable name, so renaming the EXE cannot orphan
         // an existing environment.
         var request = new GameLaunchRequest(
             GameId: GameRuntimeIds.BlueArchiveJapan,
-            ExecutablePath: exePath,
-            WorkingDirectory: localGame.GamePath,
-            Arguments: gameConfig.Params);
+            ExecutablePath: target.ExecutablePath,
+            WorkingDirectory: target.WorkingDirectory,
+            Arguments: target.Arguments);
 
         GameRuntimeLaunchResult launchResult;
         try
         {
             launchResult = await gameRuntime
-                .LaunchAsync(request, configuredRuntimeOptions, preferredRunnerId, cancellationToken)
+                .LaunchAsync(request, runtimeConfiguration, cancellationToken)
                 .ConfigureAwait(false);
         }
         catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
@@ -130,7 +117,7 @@ public sealed class GameLaunchService
                 Success = false,
                 Message = localizer.F("gameLaunchFailed", exception.Message),
                 DiagnosticMessage =
-                    $"{localizer.T("gameRuntimeRunner")}: {preferredRunnerId ?? localizer.T("gameRuntimeRunnerAuto")}{Environment.NewLine}" +
+                    $"{localizer.T("gameRuntimeRunner")}: {runtimeConfiguration.PreferredRunnerId ?? localizer.T("gameRuntimeRunnerAuto")}{Environment.NewLine}" +
                     $"{localizer.T("executable")}: {request.ExecutablePath}{Environment.NewLine}" +
                     $"{localizer.T("path")}: {request.WorkingDirectory}{Environment.NewLine}" +
                     $"{exception.Message}",
@@ -157,7 +144,7 @@ public sealed class GameLaunchService
 
             return Failed(
                 localizer.T("gameProcessStartFailed"),
-                BuildRunnerSelectionFailure(launchResult, preferredRunnerId));
+                BuildRunnerSelectionFailure(launchResult, runtimeConfiguration.PreferredRunnerId));
         }
 
         return new GameLaunchResult

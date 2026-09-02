@@ -33,40 +33,13 @@ public sealed class GameShortcutServiceTests : IDisposable
     }
 
     [Fact]
-    public void TryResolveGameExecutable_WhenLocalNamePresent_PrefersLocalName()
-    {
-        var gameDirectory = Directory.CreateDirectory(Path.Combine(tempDirectory, "game")).FullName;
-        File.WriteAllText(Path.Combine(gameDirectory, "LocalGame.exe"), string.Empty);
-        var snapshot = new LauncherStatusSnapshot
-        {
-            LocalGame = new LocalInstallationState
-            {
-                GamePath = gameDirectory,
-                GameConfig = new GameLauncherConfig { Name = "LocalGame" }
-            },
-            Remote = new LauncherRemoteState
-            {
-                GameConfig = new GameConfigResponse { GameStartExeName = "RemoteGame" }
-            }
-        };
-
-        var resolved = GameShortcutService.TryResolveGameExecutable(
-            snapshot,
-            out var executablePath,
-            out var workingDirectory,
-            out var shortcutName);
-
-        Assert.True(resolved);
-        Assert.Equal(Path.Combine(gameDirectory, "LocalGame.exe"), executablePath);
-        Assert.Equal(gameDirectory, workingDirectory);
-        Assert.Equal("LocalGame", shortcutName);
-    }
-
-    [Fact]
-    public void TryResolveGameExecutable_WhenLocalNameMissing_FallsBackToRemoteStartExeName()
+    public async Task CreateShortcutInDirectoryAsync_WhenOnlyRemoteNameAvailable_ReturnsGameNotResolved()
     {
         var gameDirectory = Directory.CreateDirectory(Path.Combine(tempDirectory, "game")).FullName;
         File.WriteAllText(Path.Combine(gameDirectory, "RemoteGame.exe"), string.Empty);
+        CreateStartScript(gameDirectory);
+        var shortcutDirectory = Directory.CreateDirectory(Path.Combine(tempDirectory, "desktop")).FullName;
+        var service = new GameShortcutService(new LocalizationService());
         var snapshot = new LauncherStatusSnapshot
         {
             LocalGame = new LocalInstallationState
@@ -80,51 +53,10 @@ public sealed class GameShortcutServiceTests : IDisposable
             }
         };
 
-        var resolved = GameShortcutService.TryResolveGameExecutable(
-            snapshot,
-            out var executablePath,
-            out _,
-            out var shortcutName);
+        var result = await service.CreateShortcutInDirectoryAsync(snapshot, shortcutDirectory);
 
-        Assert.True(resolved);
-        Assert.Equal(Path.Combine(gameDirectory, "RemoteGame.exe"), executablePath);
-        Assert.Equal("RemoteGame", shortcutName);
-    }
-
-    [Fact]
-    public void TryResolveGameExecutable_WhenNameContainsSeparator_RejectsResolution()
-    {
-        var gameDirectory = Directory.CreateDirectory(Path.Combine(tempDirectory, "game")).FullName;
-        var snapshot = new LauncherStatusSnapshot
-        {
-            LocalGame = new LocalInstallationState
-            {
-                GamePath = gameDirectory,
-                GameConfig = new GameLauncherConfig { Name = "..\\evil" }
-            }
-        };
-
-        var resolved = GameShortcutService.TryResolveGameExecutable(snapshot, out _, out _, out _);
-
-        Assert.False(resolved);
-    }
-
-    [Fact]
-    public void TryResolveGameExecutable_WhenExecutableMissing_RejectsResolution()
-    {
-        var gameDirectory = Directory.CreateDirectory(Path.Combine(tempDirectory, "game")).FullName;
-        var snapshot = new LauncherStatusSnapshot
-        {
-            LocalGame = new LocalInstallationState
-            {
-                GamePath = gameDirectory,
-                GameConfig = new GameLauncherConfig { Name = "AbsentGame" }
-            }
-        };
-
-        var resolved = GameShortcutService.TryResolveGameExecutable(snapshot, out _, out _, out _);
-
-        Assert.False(resolved);
+        Assert.Equal(GameShortcutStatus.GameNotResolved, result.Status);
+        Assert.False(File.Exists(Path.Combine(shortcutDirectory, "Blue Archive.lnk")));
     }
 
     [Fact]

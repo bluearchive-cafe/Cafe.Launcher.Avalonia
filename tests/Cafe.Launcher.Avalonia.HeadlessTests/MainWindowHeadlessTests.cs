@@ -2578,7 +2578,7 @@ public sealed class MainWindowHeadlessTests
     }
 
     [AvaloniaFact]
-    public void ShellRuntime_FirstLaunchMotionPreference_AppliesSystemResolution()
+    public void ShellLifecycle_FirstLaunchMotionPreference_AppliesSystemResolution()
     {
         // 首启分支不执行完整初始化（快照由向导驱动后再加载）：动效偏好必须按默认
         // System 档先行解析并应用，否则 IsMotionReduced 停留在默认 true，首启向导全程瞬切。

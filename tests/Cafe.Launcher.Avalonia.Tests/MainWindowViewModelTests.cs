@@ -634,6 +634,33 @@ public sealed class MainWindowViewModelTests : IDisposable
     }
 
     [Fact]
+    public async Task SaveSettingsAsync_WhenDownloadIsRunning_UpdatesCurrentSnapshotWithoutRefreshing()
+    {
+        var snapshot = CreateSnapshot();
+        snapshot.Settings.PatchUrlGroup = PatchUrlGroups.Official;
+        var settingsPath = Path.Combine(tempDir, Guid.NewGuid().ToString("N"), "settings.json");
+        var settingsService = new LauncherSettingsService(settingsPath);
+        await settingsService.SaveAsync(new LauncherSettings
+        {
+            GamePath = snapshot.Settings.GamePath,
+            PatchUrlGroup = PatchUrlGroups.Official
+        });
+        var coreService = new CountingCoreService(snapshot);
+        using var viewModel = await CreateViewModelAsync(
+            coreService,
+            settingsService,
+            gameOperationsBackend: new CountingGameOperationsBackend(isDownloadRunning: true));
+        await viewModel.InitializeAsync();
+
+        viewModel.Settings.Editor.Current.PatchUrlGroup = PatchUrlGroups.Cafe;
+        await SaveSettingsAsync(viewModel);
+
+        Assert.Equal(1, coreService.LoadCount);
+        Assert.Equal(PatchUrlGroups.Cafe, snapshot.Settings.PatchUrlGroup);
+        Assert.False(viewModel.Dialogs.IsRepairConfirmVisible);
+    }
+
+    [Fact]
     public async Task ChooseGamePathAsync_UpdatesEditorWithoutPersistingUntilSave()
     {
         var pickedPath = Path.Combine(tempDir, "installed-game");

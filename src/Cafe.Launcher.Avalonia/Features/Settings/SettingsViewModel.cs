@@ -434,13 +434,9 @@ public partial class SettingsViewModel : ViewModelBase, IDisposable, IModalConte
         GameRuntimeStatusSummary = localizer.T("gameRuntimeStatusChecking");
         try
         {
-            var runtime = editor.GetSnapshot().GameRuntime;
-            var options = new GameRuntimeOptions(runtime.RunnerPath, runtime.PrefixPath, runtime.ProtonPath);
+            var runtimeConfiguration = GameRuntimeConfiguration.FromSettings(editor.GetSnapshot().GameRuntime);
             var entries = await gameRuntime
-                .GetStatusesAsync(
-                    runtime.Runner is GameRuntimeRunners.Auto or "" ? null : runtime.Runner,
-                    options,
-                    cancellationToken)
+                .GetStatusesAsync(runtimeConfiguration, cancellationToken)
                 .ConfigureAwait(true);
             gameRuntimeStatusEntries = entries;
             GameRuntimeStatusSummary = BuildGameRuntimeStatusSummary(entries);

@@ -98,7 +98,7 @@ public sealed class ServiceConfigurationTests : IDisposable
     }
 
     [Fact]
-    public void AddLauncherServices_RegistersShellRuntimeThroughOneDisposableServiceDescriptor()
+    public void AddLauncherServices_RegistersShellLifecycleThroughOneDisposableServiceDescriptor()
     {
         var services = CreateServices();
 
@@ -106,10 +106,10 @@ public sealed class ServiceConfigurationTests : IDisposable
             services,
             descriptor => descriptor.ServiceType == typeof(IShellRuntime));
 
-        Assert.Equal(typeof(ShellRuntime), runtimeDescriptor.ImplementationType);
+        Assert.Equal(typeof(ShellLifecycle), runtimeDescriptor.ImplementationType);
         Assert.DoesNotContain(
             services,
-            descriptor => descriptor.ServiceType == typeof(ShellRuntime));
+            descriptor => descriptor.ServiceType == typeof(ShellLifecycle));
     }
 
     [Fact]

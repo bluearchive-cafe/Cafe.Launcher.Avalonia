@@ -108,27 +108,30 @@ public sealed class GameShortcutService : IGameShortcutService
             return new GameShortcutResult(GameShortcutStatus.UnsupportedPlatform);
         }
 
-        if (!TryResolveGameExecutable(snapshot, out var executablePath, out var workingDirectory, out _))
+        var targetResolution = GameLaunchTargetResolution.Resolve(snapshot);
+        if (!targetResolution.Resolved)
         {
             return new GameShortcutResult(GameShortcutStatus.GameNotResolved);
         }
+
+        var target = targetResolution.Target!;
 
         // The shortcut deliberately bypasses the launcher (unlike the Linux .desktop,
         // which routes through --launch-game): double-clicking must behave like a
         // direct game start. Running the game executable alone does not start the
         // game, so the target is the distribution's own run.bat start script.
-        var startScriptPath = Path.Combine(workingDirectory, GamePaths.GameStartScriptFileName);
+        var startScriptPath = Path.Combine(target.WorkingDirectory, GamePaths.GameStartScriptFileName);
         if (!File.Exists(startScriptPath))
         {
             return new GameShortcutResult(GameShortcutStatus.GameNotResolved);
         }
 
-        var shortcutFileName = ResolveShortcutFileName(executablePath);
+        var shortcutFileName = ResolveShortcutFileName(target.ExecutablePath);
         var shortcutPath = Path.Combine(targetDirectory, $"{shortcutFileName}.lnk");
-        var iconPath = ResolveShortcutIconPath(snapshot, executablePath);
+        var iconPath = ResolveShortcutIconPath(snapshot, target.ExecutablePath);
         try
         {
-            CreateShortcut(startScriptPath, workingDirectory, iconPath, shortcutPath);
+            CreateShortcut(startScriptPath, target.WorkingDirectory, iconPath, shortcutPath);
             return new GameShortcutResult(GameShortcutStatus.Created, shortcutPath);
         }
         catch (Exception exception)
@@ -160,7 +163,7 @@ public sealed class GameShortcutService : IGameShortcutService
             return new GameShortcutResult(GameShortcutStatus.GameNotResolved);
         }
 
-        if (!TryResolveGameExecutable(snapshot, out _, out _, out _))
+        if (!GameLaunchTargetResolution.Resolve(snapshot).Resolved)
         {
             return new GameShortcutResult(GameShortcutStatus.GameNotResolved);
         }
@@ -272,47 +275,6 @@ public sealed class GameShortcutService : IGameShortcutService
         }
 
         return builder.ToString().Trim();
-    }
-
-    /// <summary>Resolves the game executable the same way the launch flow does: local name first, remote fallback.</summary>
-    internal static bool TryResolveGameExecutable(
-        LauncherStatusSnapshot snapshot,
-        out string executablePath,
-        out string workingDirectory,
-        out string shortcutName)
-    {
-        executablePath = "";
-        workingDirectory = "";
-        shortcutName = "";
-
-        var gamePath = snapshot.LocalGame.GamePath;
-        if (string.IsNullOrWhiteSpace(gamePath))
-        {
-            return false;
-        }
-
-        var localName = snapshot.LocalGame.GameConfig?.Name;
-        var remoteName = snapshot.Remote.GameConfig?.GameStartExeName;
-        var executableName = !string.IsNullOrWhiteSpace(localName) ? localName : remoteName;
-
-        // Defense-in-depth: reject executable names containing path separators.
-        if (string.IsNullOrWhiteSpace(executableName)
-            || executableName.Contains('/')
-            || executableName.Contains('\\'))
-        {
-            return false;
-        }
-
-        var candidate = Path.Combine(gamePath, $"{executableName}.exe");
-        if (!File.Exists(candidate))
-        {
-            return false;
-        }
-
-        executablePath = candidate;
-        workingDirectory = gamePath;
-        shortcutName = Path.GetFileNameWithoutExtension(executableName);
-        return true;
     }
 
     private static bool OpenDirectoryInFileManager(string directory)

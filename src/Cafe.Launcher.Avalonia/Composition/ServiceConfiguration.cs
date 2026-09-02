@@ -119,7 +119,7 @@ public static class ServiceConfiguration
         services.AddSingleton<ToastHostViewModel>();
         services.AddSingleton<WindowChromeViewModel>();
         services.AddSingleton<ModalHostViewModel>();
-        services.AddSingleton<IShellRuntime, ShellRuntime>();
+        services.AddSingleton<IShellRuntime, ShellLifecycle>();
         services.AddSingleton<MainWindowViewModel>();
 
         return services;

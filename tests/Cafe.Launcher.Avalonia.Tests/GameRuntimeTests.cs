@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Diagnostics;
 using System.Threading;
 using System.Threading.Tasks;
+using Cafe.Launcher.Avalonia.Models;
 using Cafe.Launcher.Avalonia.Services.GameRuntime;
 
 namespace Cafe.Launcher.Avalonia.Tests;
@@ -52,6 +53,36 @@ public sealed class GameRuntimeTests
     }
 
     [Fact]
+    public void FromSettings_WhenAutoRunnerSelected_MapsAllFieldsAndLeavesRunnerUnpinned()
+    {
+        var settings = new GameRuntimeSettings
+        {
+            Runner = GameRuntimeRunners.Auto,
+            RunnerPath = "/opt/umu/bin/umu-run",
+            PrefixPath = "/home/user/prefix",
+            ProtonPath = "/home/user/proton"
+        };
+
+        var configuration = GameRuntimeConfiguration.FromSettings(settings);
+
+        Assert.Null(configuration.PreferredRunnerId);
+        Assert.Equal(settings.RunnerPath, configuration.RunnerPath);
+        Assert.Equal(settings.PrefixPath, configuration.PrefixPath);
+        Assert.Equal(settings.ProtonPath, configuration.ProtonPath);
+    }
+
+    [Fact]
+    public void FromSettings_WhenRunnerIsPinned_PreservesItsIdentifier()
+    {
+        var configuration = GameRuntimeConfiguration.FromSettings(new GameRuntimeSettings
+        {
+            Runner = GameRuntimeRunners.Wine
+        });
+
+        Assert.Equal(GameRuntimeRunners.Wine, configuration.PreferredRunnerId);
+    }
+
+    [Fact]
     public async Task LaunchAsync_WhenAvailabilityCheckThrows_ReturnsFailedResultWithException()
     {
         var launcher = new RecordingProcessLauncher();
@@ -60,7 +91,7 @@ public sealed class GameRuntimeTests
             launcher,
             probe: (_, _, _, _) => throw new InvalidOperationException("probe boom"));
 
-        var result = await runtime.LaunchAsync(CreateRequest(), new GameRuntimeOptions(), preferredRunnerId: null);
+        var result = await runtime.LaunchAsync(CreateRequest(), new GameRuntimeConfiguration());
 
         Assert.False(result.Success);
         Assert.Equal(GameRuntimeLaunchFailure.AvailabilityCheckFailed, result.Failure);
@@ -81,7 +112,7 @@ public sealed class GameRuntimeTests
             ],
             launcher);
 
-        var result = await runtime.LaunchAsync(CreateRequest(), new GameRuntimeOptions(), preferredRunnerId: null);
+        var result = await runtime.LaunchAsync(CreateRequest(), new GameRuntimeConfiguration());
 
         Assert.True(result.Success);
         Assert.Equal("umu", result.RunnerId);
@@ -101,7 +132,7 @@ public sealed class GameRuntimeTests
                 ? throw new InvalidOperationException("Wine probe should not run after UMU is selected.")
                 : Task.FromResult(RuntimeProbeResult.Success("9.0", 0, "", "")));
 
-        var result = await runtime.LaunchAsync(CreateRequest(), new GameRuntimeOptions(), preferredRunnerId: null);
+        var result = await runtime.LaunchAsync(CreateRequest(), new GameRuntimeConfiguration());
 
         Assert.True(result.Success);
         Assert.Equal("umu", result.RunnerId);
@@ -119,7 +150,7 @@ public sealed class GameRuntimeTests
                 RuntimeProbeFailureKind.NonZeroExit,
                 ExitCode: 1)));
 
-        var result = await runtime.LaunchAsync(CreateRequest(), new GameRuntimeOptions(), preferredRunnerId: null);
+        var result = await runtime.LaunchAsync(CreateRequest(), new GameRuntimeConfiguration());
 
         Assert.False(result.Success);
         Assert.Equal(GameRuntimeLaunchFailure.NoRunnerSelected, result.Failure);
@@ -136,7 +167,7 @@ public sealed class GameRuntimeTests
             [Definition("umu"), Definition("wine", true, "wine", GameRuntimeEnvironmentStyle.Wine, "Wine")],
             launcher);
 
-        var result = await runtime.LaunchAsync(CreateRequest(), new GameRuntimeOptions(), preferredRunnerId: "wine");
+        var result = await runtime.LaunchAsync(CreateRequest(), new GameRuntimeConfiguration(PreferredRunnerId: "wine"));
 
         Assert.True(result.Success);
         Assert.Equal("wine", result.RunnerId);
@@ -152,7 +183,7 @@ public sealed class GameRuntimeTests
             launcher,
             probe: (_, _, _, _) => Task.FromResult(new RuntimeProbeResult(RuntimeProbeFailureKind.TimedOut)));
 
-        var result = await runtime.LaunchAsync(CreateRequest(), new GameRuntimeOptions(), preferredRunnerId: "wine");
+        var result = await runtime.LaunchAsync(CreateRequest(), new GameRuntimeConfiguration(PreferredRunnerId: "wine"));
 
         Assert.False(result.Success);
         Assert.Equal(GameRuntimeLaunchFailure.NoRunnerSelected, result.Failure);
@@ -167,7 +198,7 @@ public sealed class GameRuntimeTests
         var launcher = new RecordingProcessLauncher();
         var runtime = CreateRuntime([Definition("umu")], launcher);
 
-        var result = await runtime.LaunchAsync(CreateRequest(), new GameRuntimeOptions(), preferredRunnerId: "crossover");
+        var result = await runtime.LaunchAsync(CreateRequest(), new GameRuntimeConfiguration(PreferredRunnerId: "crossover"));
 
         Assert.False(result.Success);
         Assert.Equal(GameRuntimeLaunchFailure.NoRunnerSelected, result.Failure);
@@ -184,9 +215,9 @@ public sealed class GameRuntimeTests
             [Definition("umu"), Definition("wine", true, "wine", GameRuntimeEnvironmentStyle.Wine, "Wine")],
             launcher,
             locateCalls: locateCalls);
-        var options = new GameRuntimeOptions(RunnerPath: "/opt/wine/bin/wine");
+        var configuration = new GameRuntimeConfiguration(RunnerPath: "/opt/wine/bin/wine");
 
-        await runtime.LaunchAsync(CreateRequest(), options, preferredRunnerId: null);
+        await runtime.LaunchAsync(CreateRequest(), configuration);
 
         // Auto mode clears the shared custom path for the selected runner's
         // availability check and start; fallback runners are not probed after
@@ -204,9 +235,11 @@ public sealed class GameRuntimeTests
             [Definition("umu"), Definition("wine", true, "wine", GameRuntimeEnvironmentStyle.Wine, "Wine")],
             launcher,
             locateCalls: locateCalls);
-        var options = new GameRuntimeOptions(RunnerPath: "/opt/umu/bin/umu-run");
+        var configuration = new GameRuntimeConfiguration(
+            PreferredRunnerId: "umu",
+            RunnerPath: "/opt/umu/bin/umu-run");
 
-        await runtime.LaunchAsync(CreateRequest(), options, preferredRunnerId: "umu");
+        await runtime.LaunchAsync(CreateRequest(), configuration);
 
         Assert.True(launcher.StartInfos.Count == 1);
         Assert.Equal("/opt/umu/bin/umu-run", Assert.Single(launcher.StartInfos).FileName);
@@ -227,7 +260,7 @@ public sealed class GameRuntimeTests
             [Definition("umu"), Definition("wine", true, "wine", GameRuntimeEnvironmentStyle.Wine, "Wine")],
             launcher);
 
-        var entries = await runtime.GetStatusesAsync(preferredRunnerId: null, new GameRuntimeOptions());
+        var entries = await runtime.GetStatusesAsync(new GameRuntimeConfiguration());
 
         Assert.Collection(
             entries,
@@ -246,9 +279,9 @@ public sealed class GameRuntimeTests
             launcher,
             locateCalls: locateCalls);
 
-        var entries = await runtime.GetStatusesAsync(
-            "wine",
-            new GameRuntimeOptions(RunnerPath: "/opt/wine/bin/wine"));
+        var entries = await runtime.GetStatusesAsync(new GameRuntimeConfiguration(
+            PreferredRunnerId: "wine",
+            RunnerPath: "/opt/wine/bin/wine"));
 
         Assert.Collection(
             entries,
@@ -277,7 +310,7 @@ public sealed class GameRuntimeTests
             launcher,
             locate: (_, _) => null);
 
-        var entries = await runtime.GetStatusesAsync(preferredRunnerId: null, new GameRuntimeOptions());
+        var entries = await runtime.GetStatusesAsync(new GameRuntimeConfiguration());
 
         var entry = Assert.Single(entries);
         Assert.Equal(GameRunnerAvailabilityStatus.NotFound, entry.Availability.Status);
@@ -291,7 +324,7 @@ public sealed class GameRuntimeTests
         var runtime = CreateRuntime([Definition("wine", true, "wine", GameRuntimeEnvironmentStyle.Wine, "Wine")], launcher);
         var request = CreateRequest();
 
-        await runtime.LaunchAsync(request, new GameRuntimeOptions(), preferredRunnerId: null);
+        await runtime.LaunchAsync(request, new GameRuntimeConfiguration());
 
         var startInfo = Assert.Single(launcher.StartInfos);
         Assert.Equal(
@@ -307,8 +340,7 @@ public sealed class GameRuntimeTests
 
         await runtime.LaunchAsync(
             CreateRequest(),
-            new GameRuntimeOptions(PrefixPath: "/home/user/prefix"),
-            preferredRunnerId: null);
+            new GameRuntimeConfiguration(PrefixPath: "/home/user/prefix"));
 
         Assert.Equal(
             "/home/user/prefix",
@@ -323,8 +355,7 @@ public sealed class GameRuntimeTests
 
         await runtime.LaunchAsync(
             CreateRequest(),
-            new GameRuntimeOptions(ProtonPath: "/usr/lib/proton"),
-            preferredRunnerId: null);
+            new GameRuntimeConfiguration(ProtonPath: "/usr/lib/proton"));
 
         var startInfo = Assert.Single(launcher.StartInfos);
         Assert.Equal("blue-archive-jp", startInfo.Environment["GAMEID"]);
@@ -339,7 +370,7 @@ public sealed class GameRuntimeTests
             [Definition("native", supported: true, executableName: null, GameRuntimeEnvironmentStyle.Native, "Native execution")],
             launcher);
 
-        await runtime.LaunchAsync(CreateRequest(), new GameRuntimeOptions(), preferredRunnerId: null);
+        await runtime.LaunchAsync(CreateRequest(), new GameRuntimeConfiguration());
 
         var startInfo = Assert.Single(launcher.StartInfos);
         Assert.Equal(@"C:\Games\BlueArchive_JP\BlueArchive.exe", startInfo.FileName);
@@ -353,7 +384,7 @@ public sealed class GameRuntimeTests
         var launcher = new RecordingProcessLauncher { FailStart = true };
         var runtime = CreateRuntime([Definition("umu")], launcher);
 
-        var result = await runtime.LaunchAsync(CreateRequest(), new GameRuntimeOptions(), preferredRunnerId: null);
+        var result = await runtime.LaunchAsync(CreateRequest(), new GameRuntimeConfiguration());
 
         Assert.False(result.Success);
         Assert.Equal(GameRuntimeLaunchFailure.StartFailed, result.Failure);
@@ -372,7 +403,7 @@ public sealed class GameRuntimeTests
         var tracker = new RecordingProcessTracker();
         var runtime = CreateRuntime([Definition("umu")], launcher, tracker: tracker);
 
-        var result = await runtime.LaunchAsync(CreateRequest(), new GameRuntimeOptions(), preferredRunnerId: null);
+        var result = await runtime.LaunchAsync(CreateRequest(), new GameRuntimeConfiguration());
 
         Assert.True(result.Success);
         Assert.Equal(1, tracker.RegisterCount);
