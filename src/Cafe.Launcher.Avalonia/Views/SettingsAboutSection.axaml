@@ -89,6 +89,16 @@
             </Button>
             <Border Classes="settings-row-divider"/>
             <Button Classes="about-link-item"
+                    Command="{Binding WindowChrome.OpenGitHubReleaseRepositoryCommand}"
+                    AutomationProperties.Name="{Binding Shell.I18n[gitHubReleaseRepository]}">
+                <Grid ColumnDefinitions="Auto,*,Auto" ColumnSpacing="{StaticResource Launcher.Spacing.Md}">
+                    <materialIcons:MaterialIcon Kind="Github" Width="{StaticResource Launcher.Icon.Sm}" Height="{StaticResource Launcher.Icon.Sm}" Foreground="{DynamicResource Launcher.Text.Body}"/>
+                    <TextBlock Grid.Column="1" Text="{Binding Shell.I18n[gitHubReleaseRepository]}" VerticalAlignment="Center"/>
+                    <materialIcons:MaterialIcon Grid.Column="2" Kind="ChevronRight" Width="{StaticResource Launcher.Icon.Sm}" Height="{StaticResource Launcher.Icon.Sm}" Foreground="{DynamicResource Launcher.Text.Secondary}"/>
+                </Grid>
+            </Button>
+            <Border Classes="settings-row-divider"/>
+            <Button Classes="about-link-item"
                     Command="{Binding WindowChrome.OpenIssueTrackerCommand}"
                     AutomationProperties.Name="{Binding Shell.I18n[issueTracker]}">
                 <Grid ColumnDefinitions="Auto,*,Auto" ColumnSpacing="{StaticResource Launcher.Spacing.Md}">

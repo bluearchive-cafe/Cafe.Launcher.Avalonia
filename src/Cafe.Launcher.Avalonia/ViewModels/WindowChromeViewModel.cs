@@ -137,6 +137,12 @@ public partial class WindowChromeViewModel : ViewModelBase
     [RelayCommand]
     private void OpenGitHubRepository()
     {
+        openExternalUrl(LauncherConstants.GitHubRepositoryUrl);
+    }
+
+    [RelayCommand]
+    private void OpenGitHubReleaseRepository()
+    {
         openExternalUrl(LauncherConstants.GitHubReleaseRepositoryUrl);
     }
 

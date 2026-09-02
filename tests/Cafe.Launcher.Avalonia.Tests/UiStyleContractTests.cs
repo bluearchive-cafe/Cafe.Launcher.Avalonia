@@ -997,6 +997,7 @@ public sealed partial class UiStyleContractTests
                 "WindowChrome.OpenOfficialSiteCommand",
                 "WindowChrome.OpenHelpDocsCommand",
                 "WindowChrome.OpenGitHubRepositoryCommand",
+                "WindowChrome.OpenGitHubReleaseRepositoryCommand",
                 "WindowChrome.OpenIssueTrackerCommand",
                 "WindowChrome.OpenPrivacyPolicyCommand",
                 "WindowChrome.OpenDefaultBackgroundArtworkCommand"
@@ -4161,6 +4162,7 @@ public sealed partial class UiStyleContractTests
             "WindowChrome.OpenOfficialSiteCommand",
             "WindowChrome.OpenHelpDocsCommand",
             "WindowChrome.OpenGitHubRepositoryCommand",
+            "WindowChrome.OpenGitHubReleaseRepositoryCommand",
             "WindowChrome.OpenIssueTrackerCommand",
             "Shell.I18n[aboutCopyrightText]",
             "WindowChrome.OpenPrivacyPolicyCommand",
