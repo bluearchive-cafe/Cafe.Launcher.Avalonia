@@ -3,7 +3,7 @@ using System.Runtime.InteropServices;
 
 namespace Cafe.Launcher.Avalonia.Services;
 
-public sealed partial class WindowsAnimationSettingsProvider
+public sealed class WindowsAnimationSettingsProvider
 {
     private const uint SpiGetClientAreaAnimation = 0x1042;
     private readonly Func<(bool Success, bool Enabled)> readAnimationsEnabled;
@@ -35,9 +35,10 @@ public sealed partial class WindowsAnimationSettingsProvider
         return (success, enabled);
     }
 
-    [LibraryImport("user32.dll", SetLastError = true)]
+    // 经典 DllImport：bool 封送不需要 unsafe，允许项目保持 AllowUnsafeBlocks=false。
+    [DllImport("user32.dll", SetLastError = true)]
     [return: MarshalAs(UnmanagedType.Bool)]
-    private static partial bool SystemParametersInfoW(
+    private static extern bool SystemParametersInfoW(
         uint uiAction,
         uint uiParam,
         [MarshalAs(UnmanagedType.Bool)] out bool pvParam,

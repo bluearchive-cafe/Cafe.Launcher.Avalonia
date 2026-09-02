@@ -134,9 +134,38 @@ public sealed class LocalDiagnostics
     }
 
     /// <summary>
+    /// Asynchronous log write for use inside async methods, including catch/finally blocks.
+    /// Preferred over the blocking <see cref="LogSync(LogEntrySeverity,string,string?)"/>:
+    /// sync-over-async stalls the UI thread whenever the Serilog async sink buffer is full
+    /// or the log file is contended (e.g. held open by the log viewer).
+    /// Falls back to Debug.WriteLine when no logger has been registered yet or after disposal.
+    /// </summary>
+    public static async Task LogAsync(LogEntrySeverity severity, string title, string? message = null)
+    {
+        try
+        {
+            var logger = Volatile.Read(ref syncLogger);
+            if (logger is not null)
+            {
+                await logger.LogAsync(severity, title, message: message).ConfigureAwait(false);
+                return;
+            }
+        }
+        catch
+        {
+            // Best-effort — diagnostic logging must never crash the app.
+        }
+
+        System.Diagnostics.Debug.WriteLine(
+            $"{DateTimeOffset.Now:O} [{severity}] [{title}] {message}");
+    }
+
+    /// <summary>
     /// Synchronous log write for use in synchronous contexts (e.g. static methods).
     /// Writes through the DI-resolved UnifiedLogger when available, falling back to
     /// Debug.WriteLine if no DI logger has been registered yet or after disposal.
+    /// Inside async methods prefer <see cref="LogAsync(LogEntrySeverity,string,string?)"/>
+    /// to avoid blocking the calling thread on sink backpressure.
     /// </summary>
     public static void LogSync(string title, string message)
     {

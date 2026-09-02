@@ -339,7 +339,7 @@ public partial class MainWindow : Window
         catch (Exception exception)
         {
             // 形变失败不得阻断状态切换本身；几何仍由 finally 结算，异常落日志而非静默丢弃。
-            LocalDiagnostics.LogSync(
+            await LocalDiagnostics.LogAsync(
                 LogEntrySeverity.Warn,
                 "OperationSurfaceMotion",
                 $"Operation surface transition failed: {exception.Message}");
@@ -758,7 +758,14 @@ public partial class MainWindow : Window
         Activate();
     }
 
-    private async void CopyErrorDetailsToClipboard(string details)
+    private void CopyErrorDetailsToClipboard(string details)
+    {
+        // ErrorCopyDetailsRequested 是 Action<string> 事件；异步主体自带 try/catch，
+        // 丢弃 Task 不会产生未观察异常。
+        _ = CopyErrorDetailsToClipboardAsync(details);
+    }
+
+    private async Task CopyErrorDetailsToClipboardAsync(string details)
     {
         if (Clipboard is not null)
         {
@@ -768,7 +775,7 @@ public partial class MainWindow : Window
             }
             catch (Exception ex)
             {
-                LocalDiagnostics.LogSync(
+                await LocalDiagnostics.LogAsync(
                     LogEntrySeverity.Warn,
                     "ClipboardCopyFailed",
                     $"Failed to copy error details to clipboard: {ex.Message}");
