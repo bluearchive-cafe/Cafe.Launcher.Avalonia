@@ -205,6 +205,7 @@ public sealed class WindowChromeViewModelTests : IDisposable
         });
 
         viewModel.OpenOfficialSiteCommand.Execute(null);
+        viewModel.OpenAboutOfficialSiteCommand.Execute(null);
         viewModel.OpenHelpDocsCommand.Execute(null);
         viewModel.OpenGitHubRepositoryCommand.Execute(null);
         viewModel.OpenGitHubReleaseRepositoryCommand.Execute(null);
@@ -214,12 +215,13 @@ public sealed class WindowChromeViewModelTests : IDisposable
         viewModel.OpenDataDirectoryCommand.Execute(null);
 
         Assert.Equal(LauncherConstants.CafeWebsiteUrl, openedUrls[0]);
-        Assert.Equal(LauncherConstants.HelpDocsUrl, openedUrls[1]);
-        Assert.Equal(LauncherConstants.GitHubRepositoryUrl, openedUrls[2]);
-        Assert.Equal(LauncherConstants.GitHubReleaseRepositoryUrl, openedUrls[3]);
-        Assert.Equal(LauncherConstants.PrivacyPolicyUrl, openedUrls[4]);
-        Assert.Equal(LauncherConstants.DefaultBackgroundArtworkUrl, openedUrls[5]);
-        Assert.Equal("mailto:support@example.invalid", openedUrls[6]);
+        Assert.Equal(LauncherConstants.CafeWebsiteUrl, openedUrls[1]);
+        Assert.Equal(LauncherConstants.HelpDocsUrl, openedUrls[2]);
+        Assert.Equal(LauncherConstants.GitHubRepositoryUrl, openedUrls[3]);
+        Assert.Equal(LauncherConstants.GitHubReleaseRepositoryUrl, openedUrls[4]);
+        Assert.Equal(LauncherConstants.PrivacyPolicyUrl, openedUrls[5]);
+        Assert.Equal(LauncherConstants.DefaultBackgroundArtworkUrl, openedUrls[6]);
+        Assert.Equal("mailto:support@example.invalid", openedUrls[7]);
         Assert.Equal(LauncherUserDataDirectory.Root, openedDirectory);
     }
 

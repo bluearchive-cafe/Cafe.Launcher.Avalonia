@@ -25,7 +25,7 @@
                         </StackPanel>
                     </Button>
                     <Button Classes="flat-action"
-                            Command="{Binding WindowChrome.OpenOfficialSiteCommand}"
+                            Command="{Binding WindowChrome.OpenAboutOfficialSiteCommand}"
                             AutomationProperties.Name="{Binding Shell.I18n[officialSite]}">
                         <StackPanel Classes="button-content">
                             <materialIcons:MaterialIcon Kind="Web" Width="{StaticResource Launcher.Icon.Sm}" Height="{StaticResource Launcher.Icon.Sm}"/>
