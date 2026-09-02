@@ -1536,6 +1536,26 @@ public sealed partial class UiStyleContractTests
         Assert.Equal(
             "{Binding Settings.IsGameRuntimeRunnerPathEnabled}",
             runnerPathInput.Attribute("IsEnabled")?.Value);
+
+        var runtimeInputs = advancedDocument
+            .Descendants()
+            .Where(element =>
+                element.Name.LocalName == "TextBox"
+                && runtimeBindings.Contains(element.Attribute("Text")?.Value))
+            .ToArray();
+        Assert.Equal(3, runtimeInputs.Length);
+        Assert.All(
+            runtimeInputs,
+            input => Assert.Equal(
+                "{StaticResource Launcher.Component.Settings.Control.MinWidth}",
+                input.Attribute("Width")?.Value));
+
+        var styles = XDocument.Load(ProjectFile("Views/MainWindow.Styles.axaml"));
+        var uidInputStyle = GetStyleSetters(styles, "TextBox.uid-input");
+        Assert.Equal(
+            "{StaticResource Launcher.Control.Height.Field}",
+            uidInputStyle["MinHeight"]);
+        Assert.Equal("Center", uidInputStyle["VerticalAlignment"]);
     }
 
     private static readonly HashSet<string> IconTokens =
