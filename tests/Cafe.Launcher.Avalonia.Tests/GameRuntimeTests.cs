@@ -91,6 +91,24 @@ public sealed class GameRuntimeTests
     }
 
     [Fact]
+    public async Task LaunchAsync_AutoMode_DoesNotProbeFallbackAfterFirstAvailableRunner()
+    {
+        var launcher = new RecordingProcessLauncher();
+        var runtime = CreateRuntime(
+            [Definition("umu"), Definition("wine", true, "wine", GameRuntimeEnvironmentStyle.Wine, "Wine")],
+            launcher,
+            probe: (executablePath, _, _, _) => executablePath.EndsWith("wine", StringComparison.Ordinal)
+                ? throw new InvalidOperationException("Wine probe should not run after UMU is selected.")
+                : Task.FromResult(RuntimeProbeResult.Success("9.0", 0, "", "")));
+
+        var result = await runtime.LaunchAsync(CreateRequest(), new GameRuntimeOptions(), preferredRunnerId: null);
+
+        Assert.True(result.Success);
+        Assert.Equal("umu", result.RunnerId);
+        Assert.Single(launcher.StartInfos);
+    }
+
+    [Fact]
     public async Task LaunchAsync_AutoMode_NoAvailableRunner_ReturnsNoRunnerSelectedWithCandidates()
     {
         var launcher = new RecordingProcessLauncher();
@@ -170,9 +188,10 @@ public sealed class GameRuntimeTests
 
         await runtime.LaunchAsync(CreateRequest(), options, preferredRunnerId: null);
 
-        // Availability is checked for every runner, then the winner re-locates
-        // its executable for start — all with the shared custom path cleared.
-        Assert.Equal(3, locateCalls.Count);
+        // Auto mode clears the shared custom path for the selected runner's
+        // availability check and start; fallback runners are not probed after
+        // the first usable runner is selected.
+        Assert.Equal(2, locateCalls.Count);
         Assert.All(locateCalls, call => Assert.Null(call.Item2));
     }
 
@@ -218,7 +237,7 @@ public sealed class GameRuntimeTests
     }
 
     [Fact]
-    public async Task GetStatusesAsync_WithPreferredRunner_ChecksOnlyThatRunner()
+    public async Task GetStatusesAsync_WithPreferredRunner_ChecksEveryRunnerAndScopesCustomPath()
     {
         var launcher = new RecordingProcessLauncher();
         var locateCalls = new List<(string, string?)>();
@@ -227,12 +246,26 @@ public sealed class GameRuntimeTests
             launcher,
             locateCalls: locateCalls);
 
-        var entries = await runtime.GetStatusesAsync("wine", new GameRuntimeOptions());
+        var entries = await runtime.GetStatusesAsync(
+            "wine",
+            new GameRuntimeOptions(RunnerPath: "/opt/wine/bin/wine"));
 
-        var entry = Assert.Single(entries);
-        Assert.Equal("wine", entry.RunnerId);
-        var call = Assert.Single(locateCalls);
-        Assert.Equal("wine", call.Item1);
+        Assert.Collection(
+            entries,
+            entry => Assert.Equal("umu", entry.RunnerId),
+            entry => Assert.Equal("wine", entry.RunnerId));
+        Assert.Collection(
+            locateCalls,
+            call =>
+            {
+                Assert.Equal("umu-run", call.Item1);
+                Assert.Null(call.Item2);
+            },
+            call =>
+            {
+                Assert.Equal("wine", call.Item1);
+                Assert.Equal("/opt/wine/bin/wine", call.Item2);
+            });
     }
 
     [Fact]

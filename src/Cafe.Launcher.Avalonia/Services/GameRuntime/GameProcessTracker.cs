@@ -14,6 +14,7 @@ public sealed class GameProcessTracker : IGameProcessTracker
     private readonly Func<Process, ITrackedProcess> processAdapter;
 
     private ITrackedProcess? trackedProcess;
+    private Action? trackedProcessExitedHandler;
     private string trackedRunnerId = "";
     private DateTimeOffset startedAt;
     private GameLaunchExitInfo? lastExit;
@@ -45,22 +46,29 @@ public sealed class GameProcessTracker : IGameProcessTracker
     {
         ArgumentNullException.ThrowIfNull(process);
 
-        ITrackedProcess tracked;
+        var tracked = processAdapter(process.HostProcess);
+        Action? exitedHandler = null;
+        exitedHandler = () => CaptureExit(tracked, exitedHandler!);
+        ITrackedProcess? previous;
+        Action? previousExitedHandler;
         lock (gate)
         {
-            tracked = processAdapter(process.HostProcess);
+            previous = trackedProcess;
+            previousExitedHandler = trackedProcessExitedHandler;
             trackedProcess = tracked;
+            trackedProcessExitedHandler = exitedHandler;
             trackedRunnerId = process.RunnerId;
             startedAt = DateTimeOffset.Now;
+            tracked.Exited += exitedHandler;
+            tracked.StartObserving();
         }
 
-        tracked.Exited += OnTrackedProcessExited;
-        tracked.StartObserving();
+        ReleaseTracking(previous, previousExitedHandler);
 
         // The process may have exited between registration and observation hookup.
         if (tracked.HasExited)
         {
-            CaptureExit(tracked);
+            CaptureExit(tracked, exitedHandler);
         }
     }
 
@@ -96,24 +104,8 @@ public sealed class GameProcessTracker : IGameProcessTracker
         return await exeRunningProbe(exeName, cancellationToken).ConfigureAwait(false);
     }
 
-    private void OnTrackedProcessExited()
+    private void CaptureExit(ITrackedProcess process, Action exitedHandler)
     {
-        ITrackedProcess? tracked;
-        lock (gate)
-        {
-            tracked = trackedProcess;
-        }
-
-        CaptureExit(tracked);
-    }
-
-    private void CaptureExit(ITrackedProcess? process)
-    {
-        if (process is null)
-        {
-            return;
-        }
-
         var exitCode = process.ExitCode;
         var exitedAt = DateTimeOffset.Now;
 
@@ -125,6 +117,7 @@ public sealed class GameProcessTracker : IGameProcessTracker
             }
 
             trackedProcess = null;
+            trackedProcessExitedHandler = null;
             lastExit = new GameLaunchExitInfo(
                 exitCode,
                 exitedAt - startedAt,
@@ -132,7 +125,21 @@ public sealed class GameProcessTracker : IGameProcessTracker
                 trackedRunnerId);
         }
 
-        process.Exited -= OnTrackedProcessExited;
+        ReleaseTracking(process, exitedHandler);
+    }
+
+    private static void ReleaseTracking(ITrackedProcess? process, Action? exitedHandler)
+    {
+        if (process is null)
+        {
+            return;
+        }
+
+        if (exitedHandler is not null)
+        {
+            process.Exited -= exitedHandler;
+        }
+
         process.Dispose();
     }
 }

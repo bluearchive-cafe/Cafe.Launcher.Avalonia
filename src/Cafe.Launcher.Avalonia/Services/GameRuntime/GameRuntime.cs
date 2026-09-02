@@ -55,39 +55,38 @@ public sealed class GameRuntime : IGameRuntime
         CancellationToken cancellationToken = default)
     {
         var runtimeOptions = options ?? new GameRuntimeOptions();
-        IReadOnlyList<(GameRunnerDefinition Runner, GameRunnerAvailability Availability)> statuses;
-        try
+        var candidates = new List<GameRuntimeStatusEntry>();
+        foreach (var runner in SelectionOrder(preferredRunnerId))
         {
-            statuses = await CollectStatusesAsync(preferredRunnerId, runtimeOptions, cancellationToken)
-                .ConfigureAwait(false);
-        }
-        catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
-        {
-            throw;
-        }
-        catch (Exception exception)
-        {
-            // The deep module owns every launch rule, so a failing availability
-            // check still reports a launch outcome with the exception attached
-            // instead of throwing past the launch boundary — callers keep full
-            // diagnostics (runner line, snapshot, candidate evidence).
-            return new GameRuntimeLaunchResult(
-                Success: false,
-                RunnerId: null,
-                Process: null,
-                Diagnostic: BuildDiagnostic(null, null, request, runtimeOptions),
-                Candidates: Array.Empty<GameRuntimeStatusEntry>(),
-                Failure: GameRuntimeLaunchFailure.AvailabilityCheckFailed,
-                FailureException: exception);
-        }
+            GameRunnerAvailability availability;
+            try
+            {
+                var runnerOptions = ForSelectedRunner(preferredRunnerId, runner.Id, runtimeOptions);
+                availability = await CheckAvailabilityAsync(runner, runnerOptions, cancellationToken)
+                    .ConfigureAwait(false);
+            }
+            catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
+            {
+                throw;
+            }
+            catch (Exception exception)
+            {
+                // A launch boundary returns a diagnostic result rather than
+                // throwing availability failures through the UI pipeline.
+                return new GameRuntimeLaunchResult(
+                    Success: false,
+                    RunnerId: null,
+                    Process: null,
+                    Diagnostic: BuildDiagnostic(null, null, request, runtimeOptions),
+                    Candidates: candidates,
+                    Failure: GameRuntimeLaunchFailure.AvailabilityCheckFailed,
+                    FailureException: exception);
+            }
 
-        var candidates = statuses
-            .Select(status => new GameRuntimeStatusEntry(status.Runner.Id, status.Availability))
-            .ToArray();
+            candidates.Add(new GameRuntimeStatusEntry(runner.Id, availability));
 
-        foreach (var (runner, availability) in statuses)
-        {
-            // An unsupported platform must never be chosen even if its record claims otherwise.
+            // Auto selection deliberately stops at the first usable runner.
+            // A broken fallback must not block a launch that UMU/native can run.
             if (!runner.IsSupportedPlatform || !availability.Available)
             {
                 continue;
@@ -147,7 +146,10 @@ public sealed class GameRuntime : IGameRuntime
         CancellationToken cancellationToken)
     {
         var statuses = new List<(GameRunnerDefinition, GameRunnerAvailability)>(runners.Count);
-        foreach (var runner in SelectionOrder(preferredRunnerId))
+        // Status rows always represent every registered runner. The preferred
+        // runner only scopes a configured custom path; it does not hide the
+        // fallback status rows from the settings surface.
+        foreach (var runner in runners)
         {
             var runnerOptions = ForSelectedRunner(preferredRunnerId, runner.Id, options);
             var availability = await CheckAvailabilityAsync(runner, runnerOptions, cancellationToken)

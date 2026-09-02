@@ -113,6 +113,26 @@ public sealed class GameProcessTrackerTests
         Assert.Equal("umu", tracker.LastExit!.RunnerId);
     }
 
+    [Fact]
+    public void Register_WhenReplacedProcessExits_KeepsLatestProcessTracked()
+    {
+        var first = new FakeTrackedProcess { ExitCode = 7 };
+        var second = new FakeTrackedProcess();
+        var processes = new List<ITrackedProcess> { first, second };
+        var tracker = new GameProcessTracker(
+            StubProbe(returnValue: false),
+            _ => processes[0]);
+
+        tracker.Register(new GameProcess(new Process(), "wine"));
+        processes.RemoveAt(0);
+        tracker.Register(new GameProcess(new Process(), "umu"));
+        first.RaiseExited();
+
+        Assert.True(first.DisposeSucceeded);
+        Assert.True(tracker.HasLiveTrackedProcess);
+        Assert.Null(tracker.LastExit);
+    }
+
     private sealed class FakeTrackedProcess : ITrackedProcess
     {
         public bool HasExited { get; set; }
