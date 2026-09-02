@@ -1,0 +1,14 @@
+<Project>
+  <!--
+    仓库级 NuGet 供应链配置：
+    - packages.lock.json 随源码提交，锁定完整依赖闭包（含传递依赖）；
+      CI 中 ContinuousIntegrationBuild=true 时 restore 自动进入 locked mode。
+    - NuGetAudit 审计直接与传递依赖的已知漏洞；配合 TreatWarningsAsErrors，
+      任何已披露漏洞（audit level 低及以上）都会导致构建失败。
+  -->
+  <PropertyGroup>
+    <RestorePackagesWithLockFile>true</RestorePackagesWithLockFile>
+    <NuGetAudit>true</NuGetAudit>
+    <NuGetAuditMode>all</NuGetAuditMode>
+  </PropertyGroup>
+</Project>
