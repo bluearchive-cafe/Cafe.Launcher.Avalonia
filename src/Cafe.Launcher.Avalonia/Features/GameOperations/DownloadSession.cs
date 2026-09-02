@@ -117,12 +117,12 @@ internal sealed class DownloadSession : IDisposable
                 || string.IsNullOrWhiteSpace(gameConfig.GameLatestFilePath)
                 || string.IsNullOrWhiteSpace(gameConfig.GameStartExeName))
             {
-                return Failed(localizer.T("downloadRemoteConfigIncomplete"), GameOperationErrorCode.RemoteConfiguration);
+                return Failed(localizer.T(LocalizationKeys.DownloadRemoteConfigIncomplete), GameOperationErrorCode.RemoteConfiguration);
             }
 
             var speedLimitBytesPerSec = DownloadSpeedLimits.ToBytesPerSecond(settings.DownloadSpeedLimit);
             if (string.IsNullOrWhiteSpace(settings.GamePath))
-                return Failed(localizer.T("gameInstallPathNotConfigured"), GameOperationErrorCode.PathMissing);
+                return Failed(localizer.T(LocalizationKeys.GameInstallPathNotConfigured), GameOperationErrorCode.PathMissing);
             gamePath = installationPath.NormalizeGamePath(settings.GamePath);
             EnsureGamePath(gamePath);
             Directory.CreateDirectory(gamePath);
@@ -132,7 +132,7 @@ internal sealed class DownloadSession : IDisposable
                 && await gameProcessTracker.IsGameRunningAsync($"{localGame.GameConfig.Name}.exe", activeToken))
             {
                 checkpointStore.Clear();
-                return Failed(localizer.T("gameExecutableRunning"), GameOperationErrorCode.GameRunning);
+                return Failed(localizer.T(LocalizationKeys.GameExecutableRunning), GameOperationErrorCode.GameRunning);
             }
 
             await checkpointStore.SaveAsync(new DownloadTaskState
@@ -158,7 +158,7 @@ internal sealed class DownloadSession : IDisposable
             if (string.IsNullOrWhiteSpace(cdnConfig.PrimaryCdn) || string.IsNullOrWhiteSpace(cdnConfig.BackUpCdn))
             {
                 checkpointStore.Clear();
-                return Failed(localizer.T("cdnConfigIncomplete"), GameOperationErrorCode.CdnConfiguration);
+                return Failed(localizer.T(LocalizationKeys.CdnConfigIncomplete), GameOperationErrorCode.CdnConfiguration);
             }
 
             var downloadPlan = repair
@@ -193,8 +193,8 @@ internal sealed class DownloadSession : IDisposable
                 {
                     Success = true,
                     Message = repair
-                        ? localizer.T("repairNoChanges")
-                        : localizer.T("gameAlreadyCurrent")
+                        ? localizer.T(LocalizationKeys.RepairNoChanges)
+                        : localizer.T(LocalizationKeys.GameAlreadyCurrent)
                 };
             }
 
@@ -246,7 +246,7 @@ internal sealed class DownloadSession : IDisposable
                     activeToken);
                 checkpointStore.Clear();
                 return Failed(
-                    localizer.F("fileAccessDenied", gamePath),
+                    localizer.F(LocalizationKeys.FileAccessDenied, gamePath),
                     GameOperationErrorCode.System,
                     affectedCount);
             }
@@ -298,8 +298,8 @@ internal sealed class DownloadSession : IDisposable
                     {
                         Success = true,
                         Message = repair
-                            ? localizer.T("repairCompleted")
-                            : localizer.T("installUpdateCompleted"),
+                            ? localizer.T(LocalizationKeys.RepairCompleted)
+                            : localizer.T(LocalizationKeys.InstallUpdateCompleted),
                         AffectedFileCount = affectedCount
                     };
                 }
@@ -336,7 +336,7 @@ internal sealed class DownloadSession : IDisposable
             });
             checkpointStore.Clear();
             return Failed(
-                localizer.F("verificationFailed", currentDownloadList.Count),
+                localizer.F(LocalizationKeys.VerificationFailed, currentDownloadList.Count),
                 GameOperationErrorCode.Network,
                 affectedCount,
                 currentDownloadList.Count);
@@ -349,31 +349,31 @@ internal sealed class DownloadSession : IDisposable
             }
 
             progress(CreateProgress(operationKind, GameOperationStage.Stopped, 0));
-            return Failed(localizer.T("operationStopped"), GameOperationErrorCode.Stopped);
+            return Failed(localizer.T(LocalizationKeys.OperationStopped), GameOperationErrorCode.Stopped);
         }
         catch (IOException exception) when (exception.HResult == unchecked((int)0x80070070))
         {
             await diagnostics.ErrorAsync("GameDownload", exception, CancellationToken.None).ConfigureAwait(false);
             checkpointStore.Clear();
-            return Failed(localizer.T("diskSpaceInsufficient"), GameOperationErrorCode.InsufficientDiskSpace);
+            return Failed(localizer.T(LocalizationKeys.DiskSpaceInsufficient), GameOperationErrorCode.InsufficientDiskSpace);
         }
         catch (UnauthorizedAccessException exception)
         {
             await diagnostics.ErrorAsync("GameDownload", exception, CancellationToken.None).ConfigureAwait(false);
             checkpointStore.Clear();
-            return Failed(localizer.F("fileAccessDenied", gamePath), GameOperationErrorCode.System);
+            return Failed(localizer.F(LocalizationKeys.FileAccessDenied, gamePath), GameOperationErrorCode.System);
         }
         catch (IOException exception)
         {
             await diagnostics.ErrorAsync("GameDownload", exception, CancellationToken.None).ConfigureAwait(false);
             checkpointStore.Clear();
-            return Failed(localizer.F("fileOperationFailed", exception.Message), GameOperationErrorCode.System);
+            return Failed(localizer.F(LocalizationKeys.FileOperationFailed, exception.Message), GameOperationErrorCode.System);
         }
         catch (Exception exception) when (exception is HttpRequestException or TaskCanceledException or JsonException)
         {
             await diagnostics.ErrorAsync("GameDownload", exception, CancellationToken.None).ConfigureAwait(false);
             checkpointStore.Clear();
-            return Failed(localizer.F("networkErrorDetail", exception.Message), GameOperationErrorCode.Network);
+            return Failed(localizer.F(LocalizationKeys.NetworkErrorDetail, exception.Message), GameOperationErrorCode.Network);
         }
         catch (Exception exception)
         {
@@ -382,7 +382,7 @@ internal sealed class DownloadSession : IDisposable
                 exception,
                 CancellationToken.None);
             checkpointStore.Clear();
-            return Failed(localizer.F("unexpectedError", exception.Message), GameOperationErrorCode.System);
+            return Failed(localizer.F(LocalizationKeys.UnexpectedError, exception.Message), GameOperationErrorCode.System);
         }
     }
 

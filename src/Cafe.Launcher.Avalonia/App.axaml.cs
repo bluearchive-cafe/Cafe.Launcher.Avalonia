@@ -8,6 +8,7 @@ using System.Threading;
 using System.Threading.Tasks;
 using Microsoft.Extensions.DependencyInjection;
 using Cafe.Launcher.Avalonia.Composition;
+using Cafe.Launcher.Avalonia.Constants;
 using Cafe.Launcher.Avalonia.Features.GameOperations;
 using Cafe.Launcher.Avalonia.Services;
 using Cafe.Launcher.Avalonia.ViewModels;
@@ -218,7 +219,7 @@ public partial class App : Application
                 {
                     toastMessage = serviceProvider
                         .GetRequiredService<LocalizationService>()
-                        .F("launcherInitFailed", exception.Message);
+                        .F(LocalizationKeys.LauncherInitFailed, exception.Message);
                 }
                 catch (Exception localizationException)
                 {

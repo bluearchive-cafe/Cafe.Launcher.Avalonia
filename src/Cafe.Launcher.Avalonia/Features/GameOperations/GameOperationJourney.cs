@@ -1,6 +1,7 @@
 using System;
 using System.Threading;
 using System.Threading.Tasks;
+using Cafe.Launcher.Avalonia.Constants;
 using Cafe.Launcher.Avalonia.Helpers;
 using Cafe.Launcher.Avalonia.Models;
 using Cafe.Launcher.Avalonia.Services;
@@ -81,7 +82,7 @@ namespace Cafe.Launcher.Avalonia.Features.GameOperations;
             if (launchResult.Success)
             {
                 await diagnostics.MessageAsync("GameLaunch", launchDiagnostic);
-                toastService.ShowSuccess(localizer.T("gameLaunchedMinimized"));
+                toastService.ShowSuccess(localizer.T(LocalizationKeys.GameLaunchedMinimized));
                 await delayAsync(TimeSpan.FromMilliseconds(600));
                 host.RequestMinimize();
             }
@@ -98,7 +99,7 @@ namespace Cafe.Launcher.Avalonia.Features.GameOperations;
         catch (Exception exception)
         {
             await errorHandling.HandleErrorAsync("Game launch failed.", exception,
-                new ErrorHandlingOptions { ToastMessage = localizer.F("gameLaunchFailed", exception.Message) });
+                new ErrorHandlingOptions { ToastMessage = localizer.F(LocalizationKeys.GameLaunchFailed, exception.Message) });
         }
         finally
         {
@@ -124,7 +125,7 @@ namespace Cafe.Launcher.Avalonia.Features.GameOperations;
         catch (Exception exception)
         {
             await errorHandling.HandleErrorAsync("Game update check failed.", exception,
-                new ErrorHandlingOptions { ToastMessage = localizer.F("gameCheckUpdateFailed", exception.Message) });
+                new ErrorHandlingOptions { ToastMessage = localizer.F(LocalizationKeys.GameCheckUpdateFailed, exception.Message) });
         }
         finally
         {
@@ -148,16 +149,16 @@ namespace Cafe.Launcher.Avalonia.Features.GameOperations;
             switch (result.Status)
             {
                 case GameShortcutStatus.Created:
-                    toastService.ShowSuccess(localizer.T("gameShortcutCreated"));
+                    toastService.ShowSuccess(localizer.T(LocalizationKeys.GameShortcutCreated));
                     break;
                 case GameShortcutStatus.UnsupportedPlatform:
-                    toastService.ShowWarning(localizer.T("gameShortcutUnsupported"));
+                    toastService.ShowWarning(localizer.T(LocalizationKeys.GameShortcutUnsupported));
                     break;
                 case GameShortcutStatus.GameNotResolved:
-                    toastService.ShowWarning(localizer.T("gameShortcutTargetMissing"));
+                    toastService.ShowWarning(localizer.T(LocalizationKeys.GameShortcutTargetMissing));
                     break;
                 case GameShortcutStatus.Failed:
-                    toastService.ShowError(localizer.F("gameShortcutFailed", result.Detail));
+                    toastService.ShowError(localizer.F(LocalizationKeys.GameShortcutFailed, result.Detail));
                     break;
                 default:
                     throw new ArgumentOutOfRangeException(nameof(snapshot), result.Status, null);
@@ -166,7 +167,7 @@ namespace Cafe.Launcher.Avalonia.Features.GameOperations;
         catch (Exception exception)
         {
             await errorHandling.HandleErrorAsync("Desktop shortcut creation failed.", exception,
-                new ErrorHandlingOptions { ToastMessage = localizer.F("gameShortcutFailed", exception.Message) });
+                new ErrorHandlingOptions { ToastMessage = localizer.F(LocalizationKeys.GameShortcutFailed, exception.Message) });
         }
         finally
         {
@@ -186,13 +187,13 @@ namespace Cafe.Launcher.Avalonia.Features.GameOperations;
         {
             if (!shortcutService.TryOpenGameFolder(snapshot))
             {
-                toastService.ShowWarning(localizer.T("gameFolderMissing"));
+                toastService.ShowWarning(localizer.T(LocalizationKeys.GameFolderMissing));
             }
         }
         catch (Exception exception)
         {
             _ = errorHandling.HandleErrorAsync("Opening the game folder failed.", exception,
-                new ErrorHandlingOptions { ToastMessage = localizer.F("unexpectedError", exception.Message) });
+                new ErrorHandlingOptions { ToastMessage = localizer.F(LocalizationKeys.UnexpectedError, exception.Message) });
         }
     }
 
@@ -233,7 +234,7 @@ namespace Cafe.Launcher.Avalonia.Features.GameOperations;
         catch (Exception exception)
         {
             await errorHandling.HandleErrorAsync("Game repair failed.", exception,
-                new ErrorHandlingOptions { ToastMessage = localizer.F("gameRepairFailed", exception.Message) });
+                new ErrorHandlingOptions { ToastMessage = localizer.F(LocalizationKeys.GameRepairFailed, exception.Message) });
         }
         finally
         {
@@ -285,7 +286,7 @@ namespace Cafe.Launcher.Avalonia.Features.GameOperations;
     public void PerformStop()
     {
         executor.Stop(clearPersistedState: true);
-        try { toastService.ShowWarning(localizer.T("stopRequested")); }
+        try { toastService.ShowWarning(localizer.T(LocalizationKeys.StopRequested)); }
         catch (Exception ex)
         {
             LocalDiagnostics.LogSync(
@@ -362,7 +363,7 @@ namespace Cafe.Launcher.Avalonia.Features.GameOperations;
         {
             if (snapshot.RuntimeState == LauncherRuntimeState.Corrupted)
             {
-                host.ShowRepairConfirmation(localizer.T("repairWarning"));
+                host.ShowRepairConfirmation(localizer.T(LocalizationKeys.RepairWarning));
                 return null;
             }
 
@@ -384,11 +385,11 @@ namespace Cafe.Launcher.Avalonia.Features.GameOperations;
         catch (Exception exception)
         {
             await errorHandling.HandleErrorAsync("Game install/update failed.", exception,
-                new ErrorHandlingOptions { ToastMessage = localizer.F("gameInstallOrUpdateFailed", exception.Message) });
+                new ErrorHandlingOptions { ToastMessage = localizer.F(LocalizationKeys.GameInstallOrUpdateFailed, exception.Message) });
             return new GameOperationResult
             {
                 Success = false,
-                Message = localizer.T("launcherStateNotLoaded"),
+                Message = localizer.T(LocalizationKeys.LauncherStateNotLoaded),
                 ErrorCode = GameOperationErrorCode.System
             };
         }
@@ -420,11 +421,11 @@ namespace Cafe.Launcher.Avalonia.Features.GameOperations;
 
         toastService.Show(new ToastOptions
         {
-            Title = localizer.T("installUpdateFailedTitle"),
+            Title = localizer.T(LocalizationKeys.InstallUpdateFailedTitle),
             Message = message,
             Severity = ToastSeverity.Error,
-            PrimaryAction = new ToastAction(localizer.T("retry"), RetryInstallOrUpdateAsync, Timeout: null),
-            SecondaryAction = new ToastAction(localizer.T("viewLog"), OpenLogViewerAsync)
+            PrimaryAction = new ToastAction(localizer.T(LocalizationKeys.Retry), RetryInstallOrUpdateAsync, Timeout: null),
+            SecondaryAction = new ToastAction(localizer.T(LocalizationKeys.ViewLog), OpenLogViewerAsync)
         });
     }
 
@@ -434,7 +435,7 @@ namespace Cafe.Launcher.Avalonia.Features.GameOperations;
         var snapshot = lastInstallSnapshot;
         if (snapshot is null)
         {
-            return ToastActionResult.Failure(localizer.T("launcherStateNotLoaded"), localizer.T("installUpdateFailedTitle"));
+            return ToastActionResult.Failure(localizer.T(LocalizationKeys.LauncherStateNotLoaded), localizer.T(LocalizationKeys.InstallUpdateFailedTitle));
         }
 
         var result = await RunInstallOrUpdateAttemptAsync(snapshot, cancellationToken);
@@ -449,11 +450,11 @@ namespace Cafe.Launcher.Avalonia.Features.GameOperations;
         if (string.IsNullOrWhiteSpace(message))
         {
             message = result?.ErrorCode == GameOperationErrorCode.Stopped
-                ? localizer.T("operationStopped")
-                : localizer.T("operationUnavailableForCurrentState");
+                ? localizer.T(LocalizationKeys.OperationStopped)
+                : localizer.T(LocalizationKeys.OperationUnavailableForCurrentState);
         }
 
-        return ToastActionResult.Failure(message, localizer.T("installUpdateFailedTitle"));
+        return ToastActionResult.Failure(message, localizer.T(LocalizationKeys.InstallUpdateFailedTitle));
     }
 
     private async Task<ToastActionResult> OpenLogViewerAsync(CancellationToken cancellationToken)
@@ -481,29 +482,29 @@ namespace Cafe.Launcher.Avalonia.Features.GameOperations;
 
     private void ReportUpdateCheck(LauncherStatusSnapshot snapshot)
     {
-        var latestVersion = snapshot.Remote.GameConfig?.GameLatestVersion ?? localizer.T("unknown");
+        var latestVersion = snapshot.Remote.GameConfig?.GameLatestVersion ?? localizer.T(LocalizationKeys.Unknown);
         switch (snapshot.RuntimeState)
         {
             case LauncherRuntimeState.UpdateAvailable:
-                toastService.Show(localizer.F("gameCheckUpdateAvailable", latestVersion));
+                toastService.Show(localizer.F(LocalizationKeys.GameCheckUpdateAvailable, latestVersion));
                 break;
             case LauncherRuntimeState.Ready:
-                toastService.ShowSuccess(localizer.F("gameCheckUpdateUpToDate", latestVersion));
+                toastService.ShowSuccess(localizer.F(LocalizationKeys.GameCheckUpdateUpToDate, latestVersion));
                 break;
             case LauncherRuntimeState.RemoteUnavailable:
-                toastService.ShowWarning(localizer.T("gameRemoteStateUnavailable"));
+                toastService.ShowWarning(localizer.T(LocalizationKeys.GameRemoteStateUnavailable));
                 break;
             case LauncherRuntimeState.NotInstalled:
-                toastService.Show(localizer.T("gameNotInstalled"));
+                toastService.Show(localizer.T(LocalizationKeys.GameNotInstalled));
                 break;
             case LauncherRuntimeState.BelowLowestVersion:
-                toastService.ShowWarning(localizer.T("gameBelowLowestVersion"));
+                toastService.ShowWarning(localizer.T(LocalizationKeys.GameBelowLowestVersion));
                 break;
             case LauncherRuntimeState.Corrupted:
-                toastService.ShowWarning(localizer.T("gameCorruptedInstallationState"));
+                toastService.ShowWarning(localizer.T(LocalizationKeys.GameCorruptedInstallationState));
                 break;
             case LauncherRuntimeState.IoFailure:
-                toastService.ShowWarning(localizer.T("gameInstallationStateReadFailed"));
+                toastService.ShowWarning(localizer.T(LocalizationKeys.GameInstallationStateReadFailed));
                 break;
             default:
                 throw new ArgumentOutOfRangeException(nameof(snapshot), snapshot.RuntimeState, null);

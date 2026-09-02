@@ -236,7 +236,7 @@ public partial class SettingsViewModel : ViewModelBase, IDisposable, IModalConte
 
         if (!result.IsSuccessful)
         {
-            var operationMessage = localizer.T("launcherUpdateCheckFailed");
+            var operationMessage = localizer.T(LocalizationKeys.LauncherUpdateCheckFailed);
             var message = result.FailureException is not null
                 ? ErrorHandlingService.FormatToastMessage(operationMessage, result.FailureException)
                 : string.IsNullOrWhiteSpace(result.FailureMessage)
@@ -248,7 +248,7 @@ public partial class SettingsViewModel : ViewModelBase, IDisposable, IModalConte
 
         if (!result.IsUpdateAvailable)
         {
-            toastService.ShowSuccess(localizer.F("launcherUpdateUpToDate", BuildInfo.LauncherVersion));
+            toastService.ShowSuccess(localizer.F(LocalizationKeys.LauncherUpdateUpToDate, BuildInfo.LauncherVersion));
             return;
         }
 
@@ -290,7 +290,7 @@ public partial class SettingsViewModel : ViewModelBase, IDisposable, IModalConte
                     SettingsAppearanceViewModel.ParseColorOrDefault(settings.CustomThemeColor));
 
             editor.ApplySnapshot(settings);
-            toastService.ShowSuccess(localizer.T("settingsSaved"));
+            toastService.ShowSuccess(localizer.T(LocalizationKeys.SettingsSaved));
             RefreshGameRuntimeStatus();
 
             await AsyncEvent.InvokeSequentiallyAsync(SettingsSaved);
@@ -298,7 +298,7 @@ public partial class SettingsViewModel : ViewModelBase, IDisposable, IModalConte
         catch (Exception exception)
         {
             await errorHandling.HandleErrorAsync("Settings save failed.", exception,
-                new ErrorHandlingOptions { ToastMessage = localizer.F("settingsSaveFailed", exception.Message) });
+                new ErrorHandlingOptions { ToastMessage = localizer.F(LocalizationKeys.SettingsSaveFailed, exception.Message) });
         }
         finally
         {
@@ -311,7 +311,7 @@ public partial class SettingsViewModel : ViewModelBase, IDisposable, IModalConte
     {
         if (PickGameFolderAsync is null)
         {
-            toastService.ShowWarning(localizer.T("folderPickerUnavailable"));
+            toastService.ShowWarning(localizer.T(LocalizationKeys.FolderPickerUnavailable));
             return;
         }
 
@@ -344,7 +344,7 @@ public partial class SettingsViewModel : ViewModelBase, IDisposable, IModalConte
     {
         if (PickGameFolderAsync is null)
         {
-            toastService.ShowWarning(localizer.T("folderPickerUnavailable"));
+            toastService.ShowWarning(localizer.T(LocalizationKeys.FolderPickerUnavailable));
             return;
         }
 
@@ -363,14 +363,14 @@ public partial class SettingsViewModel : ViewModelBase, IDisposable, IModalConte
             settings.GamePath = pickedPath;
             await settingsService.SaveAsync(settings);
             editor.ApplySnapshot(settings);
-            toastService.ShowSuccess(localizer.T("gamePathUpdated"));
+            toastService.ShowSuccess(localizer.T(LocalizationKeys.GamePathUpdated));
 
             await AsyncEvent.InvokeSequentiallyAsync(SettingsSaved);
         }
         catch (Exception exception)
         {
             await errorHandling.HandleErrorAsync("Settings game path update failed.", exception,
-                new ErrorHandlingOptions { ToastMessage = localizer.F("gamePathUpdateFailed", exception.Message) });
+                new ErrorHandlingOptions { ToastMessage = localizer.F(LocalizationKeys.GamePathUpdateFailed, exception.Message) });
         }
     }
 
@@ -431,7 +431,7 @@ public partial class SettingsViewModel : ViewModelBase, IDisposable, IModalConte
 
     private async Task RefreshGameRuntimeStatusAsync(CancellationToken cancellationToken)
     {
-        GameRuntimeStatusSummary = localizer.T("gameRuntimeStatusChecking");
+        GameRuntimeStatusSummary = localizer.T(LocalizationKeys.GameRuntimeStatusChecking);
         try
         {
             var runtimeConfiguration = GameRuntimeConfiguration.FromSettings(editor.GetSnapshot().GameRuntime);
@@ -465,29 +465,29 @@ public partial class SettingsViewModel : ViewModelBase, IDisposable, IModalConte
     {
         var name = entry.RunnerId switch
         {
-            GameRuntimeRunners.Umu => localizer.T("gameRuntimeRunnerUmu"),
-            GameRuntimeRunners.Wine => localizer.T("gameRuntimeRunnerWine"),
-            GameRuntimeRunners.Native => localizer.T("gameRuntimeRunnerNative"),
+            GameRuntimeRunners.Umu => localizer.T(LocalizationKeys.GameRuntimeRunnerUmu),
+            GameRuntimeRunners.Wine => localizer.T(LocalizationKeys.GameRuntimeRunnerWine),
+            GameRuntimeRunners.Native => localizer.T(LocalizationKeys.GameRuntimeRunnerNative),
             _ => entry.RunnerId
         };
         var status = entry.Availability.Status switch
         {
-            GameRunnerAvailabilityStatus.Available => localizer.T("gameRuntimeStatusAvailable"),
-            GameRunnerAvailabilityStatus.NotFound => localizer.T("gameRuntimeStatusNotFound"),
-            GameRunnerAvailabilityStatus.Broken => localizer.T("gameRuntimeStatusBroken"),
-            _ => localizer.T("gameRuntimeStatusUnsupported")
+            GameRunnerAvailabilityStatus.Available => localizer.T(LocalizationKeys.GameRuntimeStatusAvailable),
+            GameRunnerAvailabilityStatus.NotFound => localizer.T(LocalizationKeys.GameRuntimeStatusNotFound),
+            GameRunnerAvailabilityStatus.Broken => localizer.T(LocalizationKeys.GameRuntimeStatusBroken),
+            _ => localizer.T(LocalizationKeys.GameRuntimeStatusUnsupported)
         };
 
         var path = entry.Availability.ExecutablePath;
         if (string.IsNullOrWhiteSpace(path))
         {
-            return localizer.F("gameRuntimeStatusEntryFormat", name, status);
+            return localizer.F(LocalizationKeys.GameRuntimeStatusEntryFormat, name, status);
         }
 
         var detail = string.IsNullOrWhiteSpace(entry.Availability.Version)
             ? path
-            : localizer.F("gameRuntimeStatusDetailFormat", path, entry.Availability.Version);
-        return localizer.F("gameRuntimeStatusEntryDetailFormat", name, status, detail);
+            : localizer.F(LocalizationKeys.GameRuntimeStatusDetailFormat, path, entry.Availability.Version);
+        return localizer.F(LocalizationKeys.GameRuntimeStatusEntryDetailFormat, name, status, detail);
     }
 
     public async Task DiscardChangesAsync()
@@ -539,7 +539,7 @@ public partial class SettingsViewModel : ViewModelBase, IDisposable, IModalConte
         catch (Exception exception)
         {
             await errorHandling.HandleErrorAsync("Settings appearance preview failed.", exception,
-                new ErrorHandlingOptions { ToastMessage = localizer.F("appearancePreviewFailed", exception.Message) });
+                new ErrorHandlingOptions { ToastMessage = localizer.F(LocalizationKeys.AppearancePreviewFailed, exception.Message) });
         }
     }
 

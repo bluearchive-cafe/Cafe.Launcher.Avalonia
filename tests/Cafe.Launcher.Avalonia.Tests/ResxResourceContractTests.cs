@@ -2,6 +2,7 @@ using System.Globalization;
 using System.Reflection;
 using System.Resources;
 using System.Text.RegularExpressions;
+using Cafe.Launcher.Avalonia.Constants;
 using Cafe.Launcher.Avalonia.Resources;
 
 namespace Cafe.Launcher.Avalonia.Tests;
@@ -192,24 +193,45 @@ public sealed class ResxResourceContractTests
     }
 
     [Fact]
-    public void ProductionLiteralResourceKeys_ExistInNeutralResources()
+    public void ProductionCallSites_DoNotUseRawResourceKeyLiterals()
     {
         var root = TestLocalizationHelper.FindProjectRoot();
-        var keyPattern = new Regex("\\.(?:T|F)\\(\\\"(?<key>[^\\\"]+)\\\"", RegexOptions.Compiled);
+        var tCallPattern = new Regex("\\.(?:T|F)\\(\\\"(?<key>[^\\\"]+)\\\"", RegexOptions.Compiled);
+        var i18nIndexPattern = new Regex("\\bI18n\\[\\\"(?<key>[^\\\"]+)\\\"\\]", RegexOptions.Compiled);
         var productionFiles = Directory.GetFiles(root, "*.cs", SearchOption.AllDirectories)
             .Where(path => !path.Contains($"{Path.DirectorySeparatorChar}tests{Path.DirectorySeparatorChar}", StringComparison.OrdinalIgnoreCase))
             .Where(path => !path.Contains($"{Path.DirectorySeparatorChar}bin{Path.DirectorySeparatorChar}", StringComparison.OrdinalIgnoreCase))
             .Where(path => !path.Contains($"{Path.DirectorySeparatorChar}obj{Path.DirectorySeparatorChar}", StringComparison.OrdinalIgnoreCase));
 
-        var referencedKeys = productionFiles
-            .SelectMany(path => keyPattern.Matches(File.ReadAllText(path))
-                .Select(match => match.Groups["key"].Value))
+        var rawLiterals = productionFiles
+            .SelectMany(path => tCallPattern.Matches(File.ReadAllText(path))
+                .Select(match => match.Groups["key"].Value)
+                .Concat(i18nIndexPattern.Matches(File.ReadAllText(path))
+                    .Select(match => match.Groups["key"].Value)))
             .Distinct(StringComparer.Ordinal)
             .ToArray();
 
-        Assert.NotEmpty(referencedKeys);
-        Assert.All(referencedKeys, key => Assert.True(
-            ResxValues["en"].ContainsKey(key), $"Missing neutral resource key: {key}"));
+        Assert.True(
+            rawLiterals.Length == 0,
+            "Production code must reference LocalizationKeys constants instead of raw " +
+            "resource-key literals (see AGENTS.md). Raw keys found: " +
+            string.Join(", ", rawLiterals));
+    }
+
+    [Fact]
+    public void LocalizationKeys_Constants_CoverEveryNeutralResourceKey()
+    {
+        var constants = typeof(LocalizationKeys)
+            .GetFields(BindingFlags.Public | BindingFlags.Static)
+            .Where(field => field.IsLiteral && field.FieldType == typeof(string))
+            .Select(field => (string)field.GetValue(null)!)
+            .ToHashSet(StringComparer.Ordinal);
+
+        Assert.Equal(ResxValues["en"].Count, constants.Count);
+        foreach (var key in ResxValues["en"].Keys)
+        {
+            Assert.True(constants.Contains(key), $"LocalizationKeys is missing constant for resource key: {key}");
+        }
     }
 
     [Fact]

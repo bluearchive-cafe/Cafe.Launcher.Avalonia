@@ -5,6 +5,7 @@ using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
 using Avalonia.Threading;
+using Cafe.Launcher.Avalonia.Constants;
 using Cafe.Launcher.Avalonia.Helpers;
 using Cafe.Launcher.Avalonia.Services;
 using Cafe.Launcher.Avalonia.Services.Diagnostics;
@@ -96,10 +97,10 @@ public partial class ToastHostViewModel : ViewModelBase, IDisposable
     {
         notification.SeverityLabel = notification.Severity switch
         {
-            ToastSeverity.Success => localizer.T("toastSuccess"),
-            ToastSeverity.Warning => localizer.T("toastWarning"),
-            ToastSeverity.Error => localizer.T("toastError"),
-            _ => localizer.T("toastInfo")
+            ToastSeverity.Success => localizer.T(LocalizationKeys.ToastSuccess),
+            ToastSeverity.Warning => localizer.T(LocalizationKeys.ToastWarning),
+            ToastSeverity.Error => localizer.T(LocalizationKeys.ToastError),
+            _ => localizer.T(LocalizationKeys.ToastInfo)
         };
         if (string.IsNullOrWhiteSpace(notification.Title))
         {
@@ -213,8 +214,8 @@ public partial class ToastHostViewModel : ViewModelBase, IDisposable
             await diagnostics.ErrorAsync("Toast action failed.", exception, CancellationToken.None);
             await ApplyActionFailureAsync(
                 toast,
-                localizer.T("toastActionFailedMessage"),
-                localizer.T("toastActionFailedTitle"));
+                localizer.T(LocalizationKeys.ToastActionFailedMessage),
+                localizer.T(LocalizationKeys.ToastActionFailedTitle));
         }
         finally
         {
@@ -241,7 +242,7 @@ public partial class ToastHostViewModel : ViewModelBase, IDisposable
             }
 
             toast.Severity = ToastSeverity.Error;
-            toast.SeverityLabel = localizer.T("toastError");
+            toast.SeverityLabel = localizer.T(LocalizationKeys.ToastError);
             if (!string.IsNullOrWhiteSpace(title))
             {
                 toast.Title = title;

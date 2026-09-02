@@ -9,6 +9,7 @@ using System.Threading;
 using System.Threading.Tasks;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
+using Cafe.Launcher.Avalonia.Constants;
 using Cafe.Launcher.Avalonia.Features.Shell;
 using Cafe.Launcher.Avalonia.Services;
 using Cafe.Launcher.Avalonia.Services.Diagnostics;
@@ -217,7 +218,7 @@ public sealed partial class LogViewerDialogViewModel : ViewModelBase, IModalCont
 
             var zipPath = await exportService.ExportAsync(selectedDirectory);
             toastService?.ShowSuccess(
-                localizer?.F("logExportSucceeded", zipPath)
+                localizer?.F(LocalizationKeys.LogExportSucceeded, zipPath)
                 ?? $"Logs exported to {zipPath}");
             try
             {
@@ -237,7 +238,7 @@ public sealed partial class LogViewerDialogViewModel : ViewModelBase, IModalCont
         catch (Exception exception)
         {
             toastService?.ShowError(ErrorHandlingService.FormatToastMessage(
-                localizer?.T("logExportFailed") ?? "Log export failed",
+                localizer?.T(LocalizationKeys.LogExportFailed) ?? "Log export failed",
                 exception));
             if (diagnostics is not null)
             {

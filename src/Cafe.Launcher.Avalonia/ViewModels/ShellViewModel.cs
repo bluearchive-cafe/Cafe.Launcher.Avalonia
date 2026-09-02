@@ -123,12 +123,12 @@ public partial class ShellViewModel : ViewModelBase, IDisposable
     {
         var effectiveLanguage = localizer.SetLanguage(language);
         FontFamily = LanguageFontFamilyService.GetForEffectiveLanguage(effectiveLanguage);
-        LauncherVersionText = localizer.F("launcherVersionLabel", BuildInfo.LauncherVersion);
+        LauncherVersionText = localizer.F(LocalizationKeys.LauncherVersionLabel, BuildInfo.LauncherVersion);
         FrameworkVersionText = RuntimeDescription;
         AvaloniaVersionText = BuildInfo.AvaloniaVersion;
         VersionCaptionText = string.IsNullOrWhiteSpace(BuildInfo.BuildTime)
-            ? localizer.F("launcherVersionLabel", BuildInfo.LauncherVersion)
-            : localizer.F("aboutVersionCaption", BuildInfo.LauncherVersion, BuildInfo.BuildTime);
+            ? localizer.F(LocalizationKeys.LauncherVersionLabel, BuildInfo.LauncherVersion)
+            : localizer.F(LocalizationKeys.AboutVersionCaption, BuildInfo.LauncherVersion, BuildInfo.BuildTime);
         CommitShaValue = BuildInfo.CommitSha;
         BuildConfigValue = BuildInfo.BuildConfiguration;
         PlatformValue = PlatformDescription;
@@ -136,41 +136,41 @@ public partial class ShellViewModel : ViewModelBase, IDisposable
         resourcePanel.RefreshDisplayNames();
         if (!string.IsNullOrWhiteSpace(resourcePanel.ResourcePanelUid))
         {
-            resourcePanel.ResourcePanelUidText = localizer.F("resourcePanelCurrentUid", resourcePanel.ResourcePanelUid);
+            resourcePanel.ResourcePanelUidText = localizer.F(LocalizationKeys.ResourcePanelCurrentUid, resourcePanel.ResourcePanelUid);
         }
 
         settings.Editor.Current.Language = language;
-        DiskSpaceText = localizer.T("diskSpaceEmpty");
-        GameFolderPickerTitle = localizer.T("chooseInstallFolder");
-        LogExportFolderPickerTitle = localizer.T("logExportFolderPickerTitle");
+        DiskSpaceText = localizer.T(LocalizationKeys.DiskSpaceEmpty);
+        GameFolderPickerTitle = localizer.T(LocalizationKeys.ChooseInstallFolder);
+        LogExportFolderPickerTitle = localizer.T(LocalizationKeys.LogExportFolderPickerTitle);
 
         if (!hasSnapshot)
         {
-            PathText = localizer.T("pathLoading");
-            VersionText = localizer.T("versionLoading");
-            NetworkText = localizer.T("networkLoading");
-            LaunchCheckText = localizer.T("launchCheckLoading");
-            ExecutableText = localizer.T("executableLoading");
-            ExecutableNameText = localizer.T("launcherLoadingValue");
-            LaunchCheckValueText = localizer.T("launcherLoadingValue");
-            SettingsSummary = localizer.T("settings");
+            PathText = localizer.T(LocalizationKeys.PathLoading);
+            VersionText = localizer.T(LocalizationKeys.VersionLoading);
+            NetworkText = localizer.T(LocalizationKeys.NetworkLoading);
+            LaunchCheckText = localizer.T(LocalizationKeys.LaunchCheckLoading);
+            ExecutableText = localizer.T(LocalizationKeys.ExecutableLoading);
+            ExecutableNameText = localizer.T(LocalizationKeys.LauncherLoadingValue);
+            LaunchCheckValueText = localizer.T(LocalizationKeys.LauncherLoadingValue);
+            SettingsSummary = localizer.T(LocalizationKeys.Settings);
         }
     }
 
     public void SetLoading()
     {
-        ExecutableNameText = localizer.T("launcherLoadingValue");
-        LaunchCheckValueText = localizer.T("launcherLoadingValue");
+        ExecutableNameText = localizer.T(LocalizationKeys.LauncherLoadingValue);
+        LaunchCheckValueText = localizer.T(LocalizationKeys.LauncherLoadingValue);
     }
 
     public void SetRefreshError(Exception exception)
     {
-        NetworkText = localizer.F("networkWithMessage", exception.Message);
-        VersionText = localizer.T("versionUnavailable");
-        PathText = localizer.T("pathLoading");
-        ExecutableText = localizer.T("executableLoading");
-        ExecutableNameText = localizer.T("launcherLoadingValue");
-        LaunchCheckValueText = localizer.T("launcherLoadingValue");
+        NetworkText = localizer.F(LocalizationKeys.NetworkWithMessage, exception.Message);
+        VersionText = localizer.T(LocalizationKeys.VersionUnavailable);
+        PathText = localizer.T(LocalizationKeys.PathLoading);
+        ExecutableText = localizer.T(LocalizationKeys.ExecutableLoading);
+        ExecutableNameText = localizer.T(LocalizationKeys.LauncherLoadingValue);
+        LaunchCheckValueText = localizer.T(LocalizationKeys.LauncherLoadingValue);
     }
 
     public void ApplySnapshot(LauncherStatusSnapshot snapshot, SettingsViewModel settings)
@@ -181,19 +181,19 @@ public partial class ShellViewModel : ViewModelBase, IDisposable
 
         PathText = snapshot.Settings.GamePath;
         VersionText = snapshot.RuntimeState != LauncherRuntimeState.NotInstalled
-            ? localizer.F("versionInstalled", localConfig?.Version, gameConfig?.GameLatestVersion ?? localizer.T("unknown"))
-            : localizer.F("versionLatest", gameConfig?.GameLatestVersion ?? localizer.T("unknown"));
+            ? localizer.F(LocalizationKeys.VersionInstalled, localConfig?.Version, gameConfig?.GameLatestVersion ?? localizer.T(LocalizationKeys.Unknown))
+            : localizer.F(LocalizationKeys.VersionLatest, gameConfig?.GameLatestVersion ?? localizer.T(LocalizationKeys.Unknown));
         var networkStatus = snapshot.RuntimeState == LauncherRuntimeState.RemoteUnavailable
-            ? localizer.T("gameRemoteStateUnavailable")
-            : localizer.T("statusNetworkLoaded");
+            ? localizer.T(LocalizationKeys.GameRemoteStateUnavailable)
+            : localizer.T(LocalizationKeys.StatusNetworkLoaded);
         NetworkText = networkStatus;
         var launchCheckValue = settings.Options.ResolveLaunchCheckDisplayName(snapshot.Settings.LaunchCheckMode);
         SetLaunchCheckResult(launchCheckValue);
         var executableName = string.IsNullOrWhiteSpace(localConfig?.Name)
-            ? gameConfig?.GameStartExeName ?? localizer.T("unknown")
+            ? gameConfig?.GameStartExeName ?? localizer.T(LocalizationKeys.Unknown)
             : localConfig.Name;
-        ExecutableText = localizer.F("executableValue", executableName);
-        ExecutableNameText = localizer.F("executableNameValue", executableName);
+        ExecutableText = localizer.F(LocalizationKeys.ExecutableValue, executableName);
+        ExecutableNameText = localizer.F(LocalizationKeys.ExecutableNameValue, executableName);
         var diskCheck = settings.Options.ResolveDiskSpaceCheck(localGame.GamePath, gameConfig?.DecompressionSize);
         DiskSpaceText = settings.Options.ResolveDiskSpaceText(gameConfig?.DecompressionSize, diskCheck);
         IsInstallBlockedByDiskSpace = snapshot.RuntimeState == LauncherRuntimeState.NotInstalled
@@ -216,7 +216,7 @@ public partial class ShellViewModel : ViewModelBase, IDisposable
 
     public void SetLaunchCheckResult(string value)
     {
-        LaunchCheckText = localizer.F("launchCheckWithMessage", value);
+        LaunchCheckText = localizer.F(LocalizationKeys.LaunchCheckWithMessage, value);
         LaunchCheckValueText = value;
     }
 

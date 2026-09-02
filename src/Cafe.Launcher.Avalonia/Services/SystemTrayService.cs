@@ -84,10 +84,10 @@ public sealed class SystemTrayService : IDisposable
     private SystemTrayMenuText CreateMenuText() =>
         new(
             LauncherConstants.ProductName,
-            localizer.T("showLauncher"),
-            localizer.T("trayOpenLauncher"),
-            localizer.T("exitLauncher"),
-            localizer.T("trayExitLauncher"));
+            localizer.T(LocalizationKeys.ShowLauncher),
+            localizer.T(LocalizationKeys.TrayOpenLauncher),
+            localizer.T(LocalizationKeys.ExitLauncher),
+            localizer.T(LocalizationKeys.TrayExitLauncher));
 
     public void ShowWindow()
     {

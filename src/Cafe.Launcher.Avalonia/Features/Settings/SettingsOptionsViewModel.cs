@@ -1,6 +1,7 @@
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using System.Linq;
+using Cafe.Launcher.Avalonia.Constants;
 using Cafe.Launcher.Avalonia.Helpers;
 using Cafe.Launcher.Avalonia.Models;
 using Cafe.Launcher.Avalonia.Services;
@@ -156,140 +157,140 @@ public sealed class SettingsOptionsViewModel
 
     public void RefreshDisplayNames()
     {
-        Language.First(option => option.Code == LauncherLanguages.Auto).DisplayName = localizer.T("languageAuto");
+        Language.First(option => option.Code == LauncherLanguages.Auto).DisplayName = localizer.T(LocalizationKeys.LanguageAuto);
         EnsureSettingCategories();
-        UpdateSettingCategory(SettingsCategoryCodes.General, localizer.T("settingsCategoryGeneral"), localizer.T("settingsCategoryGeneralDescription"));
-        UpdateSettingCategory(SettingsCategoryCodes.Game, localizer.T("settingsCategoryGame"), localizer.T("settingsCategoryGameDescription"));
-        UpdateSettingCategory(SettingsCategoryCodes.DownloadNetwork, localizer.T("settingsCategoryDownloadNetwork"), localizer.T("settingsCategoryDownloadNetworkDescription"));
-        UpdateSettingCategory(SettingsCategoryCodes.Appearance, localizer.T("settingsCategoryAppearance"), localizer.T("settingsCategoryAppearanceDescription"));
-        UpdateSettingCategory(SettingsCategoryCodes.Advanced, localizer.T("settingsCategoryAdvanced"), localizer.T("settingsCategoryAdvancedDescription"));
-        UpdateSettingCategory(SettingsCategoryCodes.About, localizer.T("settingsCategoryAbout"), localizer.T("settingsCategoryAboutDescription"));
+        UpdateSettingCategory(SettingsCategoryCodes.General, localizer.T(LocalizationKeys.SettingsCategoryGeneral), localizer.T(LocalizationKeys.SettingsCategoryGeneralDescription));
+        UpdateSettingCategory(SettingsCategoryCodes.Game, localizer.T(LocalizationKeys.SettingsCategoryGame), localizer.T(LocalizationKeys.SettingsCategoryGameDescription));
+        UpdateSettingCategory(SettingsCategoryCodes.DownloadNetwork, localizer.T(LocalizationKeys.SettingsCategoryDownloadNetwork), localizer.T(LocalizationKeys.SettingsCategoryDownloadNetworkDescription));
+        UpdateSettingCategory(SettingsCategoryCodes.Appearance, localizer.T(LocalizationKeys.SettingsCategoryAppearance), localizer.T(LocalizationKeys.SettingsCategoryAppearanceDescription));
+        UpdateSettingCategory(SettingsCategoryCodes.Advanced, localizer.T(LocalizationKeys.SettingsCategoryAdvanced), localizer.T(LocalizationKeys.SettingsCategoryAdvancedDescription));
+        UpdateSettingCategory(SettingsCategoryCodes.About, localizer.T(LocalizationKeys.SettingsCategoryAbout), localizer.T(LocalizationKeys.SettingsCategoryAboutDescription));
 
         RefreshOptions(Theme, code => code switch
         {
-            ThemeModes.Light => localizer.T("themeLight"),
-            ThemeModes.Dark => localizer.T("themeDark"),
-            _ => localizer.T("themeSystem")
+            ThemeModes.Light => localizer.T(LocalizationKeys.ThemeLight),
+            ThemeModes.Dark => localizer.T(LocalizationKeys.ThemeDark),
+            _ => localizer.T(LocalizationKeys.ThemeSystem)
         });
 
         RefreshOptions(MotionMode, code => code switch
         {
-            MotionModes.Full => localizer.T("motionModeFull"),
-            MotionModes.Reduced => localizer.T("motionModeReduced"),
-            _ => localizer.T("motionModeSystem")
+            MotionModes.Full => localizer.T(LocalizationKeys.MotionModeFull),
+            MotionModes.Reduced => localizer.T(LocalizationKeys.MotionModeReduced),
+            _ => localizer.T(LocalizationKeys.MotionModeSystem)
         });
 
         RefreshOptions(StatusDetailMode, code => code switch
         {
-            StatusDetailModes.Hidden => localizer.T("statusDetailModeHidden"),
-            _ => localizer.T("statusDetailModeCompact")
+            StatusDetailModes.Hidden => localizer.T(LocalizationKeys.StatusDetailModeHidden),
+            _ => localizer.T(LocalizationKeys.StatusDetailModeCompact)
         });
 
         RefreshOptions(ThemeColor, code => code switch
         {
-            ThemeColorModes.System => localizer.T("themeColorSystem"),
-            ThemeColorModes.Wallpaper => localizer.T("themeColorWallpaper"),
-            ThemeColorModes.Custom => localizer.T("themeColorCustom"),
-            _ => localizer.T("themeColorDefault")
+            ThemeColorModes.System => localizer.T(LocalizationKeys.ThemeColorSystem),
+            ThemeColorModes.Wallpaper => localizer.T(LocalizationKeys.ThemeColorWallpaper),
+            ThemeColorModes.Custom => localizer.T(LocalizationKeys.ThemeColorCustom),
+            _ => localizer.T(LocalizationKeys.ThemeColorDefault)
         });
 
         RefreshOptions(ThemeColorExtractionAlgorithm, code => code switch
         {
-            ThemeColorExtractionAlgorithms.Octree => localizer.T("themeColorExtractionAlgorithmOctree"),
-            ThemeColorExtractionAlgorithms.Wu => localizer.T("themeColorExtractionAlgorithmWu"),
-            ThemeColorExtractionAlgorithms.Wsmeans => localizer.T("themeColorExtractionAlgorithmWsmeans"),
-            _ => localizer.T("themeColorExtractionAlgorithmCelebiScore")
+            ThemeColorExtractionAlgorithms.Octree => localizer.T(LocalizationKeys.ThemeColorExtractionAlgorithmOctree),
+            ThemeColorExtractionAlgorithms.Wu => localizer.T(LocalizationKeys.ThemeColorExtractionAlgorithmWu),
+            ThemeColorExtractionAlgorithms.Wsmeans => localizer.T(LocalizationKeys.ThemeColorExtractionAlgorithmWsmeans),
+            _ => localizer.T(LocalizationKeys.ThemeColorExtractionAlgorithmCelebiScore)
         });
 
         RefreshOptions(ThemeColorVariant, code => code switch
         {
-            ThemeColorVariants.Vibrant => localizer.T("themeColorVariantVibrant"),
-            ThemeColorVariants.Expressive => localizer.T("themeColorVariantExpressive"),
-            ThemeColorVariants.Fidelity => localizer.T("themeColorVariantFidelity"),
-            ThemeColorVariants.Content => localizer.T("themeColorVariantContent"),
-            ThemeColorVariants.Monochrome => localizer.T("themeColorVariantMonochrome"),
-            ThemeColorVariants.Neutral => localizer.T("themeColorVariantNeutral"),
-            ThemeColorVariants.Rainbow => localizer.T("themeColorVariantRainbow"),
-            _ => localizer.T("themeColorVariantTonalSpot")
+            ThemeColorVariants.Vibrant => localizer.T(LocalizationKeys.ThemeColorVariantVibrant),
+            ThemeColorVariants.Expressive => localizer.T(LocalizationKeys.ThemeColorVariantExpressive),
+            ThemeColorVariants.Fidelity => localizer.T(LocalizationKeys.ThemeColorVariantFidelity),
+            ThemeColorVariants.Content => localizer.T(LocalizationKeys.ThemeColorVariantContent),
+            ThemeColorVariants.Monochrome => localizer.T(LocalizationKeys.ThemeColorVariantMonochrome),
+            ThemeColorVariants.Neutral => localizer.T(LocalizationKeys.ThemeColorVariantNeutral),
+            ThemeColorVariants.Rainbow => localizer.T(LocalizationKeys.ThemeColorVariantRainbow),
+            _ => localizer.T(LocalizationKeys.ThemeColorVariantTonalSpot)
         });
 
         RefreshOptions(NeutralColorStrategy, code => code switch
         {
-            NeutralColorStrategies.SeedFollowing => localizer.T("neutralColorStrategySeedFollowing"),
-            _ => localizer.T("neutralColorStrategyBrandBlue")
+            NeutralColorStrategies.SeedFollowing => localizer.T(LocalizationKeys.NeutralColorStrategySeedFollowing),
+            _ => localizer.T(LocalizationKeys.NeutralColorStrategyBrandBlue)
         });
 
         RefreshOptions(LaunchCheckMode, code => code switch
         {
-            LaunchCheckModes.RemoteManifest => localizer.T("launchCheckRemoteManifest"),
-            LaunchCheckModes.None => localizer.T("launchCheckNone"),
-            _ => localizer.T("launchCheckLocalManifest")
+            LaunchCheckModes.RemoteManifest => localizer.T(LocalizationKeys.LaunchCheckRemoteManifest),
+            LaunchCheckModes.None => localizer.T(LocalizationKeys.LaunchCheckNone),
+            _ => localizer.T(LocalizationKeys.LaunchCheckLocalManifest)
         });
 
         RefreshOptions(GameRuntimeRunner, code => code switch
         {
-            GameRuntimeRunners.Umu => localizer.T("gameRuntimeRunnerUmu"),
-            GameRuntimeRunners.Wine => localizer.T("gameRuntimeRunnerWine"),
-            _ => localizer.T("gameRuntimeRunnerAuto")
+            GameRuntimeRunners.Umu => localizer.T(LocalizationKeys.GameRuntimeRunnerUmu),
+            GameRuntimeRunners.Wine => localizer.T(LocalizationKeys.GameRuntimeRunnerWine),
+            _ => localizer.T(LocalizationKeys.GameRuntimeRunnerAuto)
         });
 
         RefreshOptions(ProxyMode, code => code switch
         {
-            ProxyModes.Auto => localizer.T("proxyAuto"),
-            ProxyModes.System => localizer.T("proxySystem"),
-            _ => localizer.T("proxyDirect")
+            ProxyModes.Auto => localizer.T(LocalizationKeys.ProxyAuto),
+            ProxyModes.System => localizer.T(LocalizationKeys.ProxySystem),
+            _ => localizer.T(LocalizationKeys.ProxyDirect)
         });
 
         RefreshOptions(PatchUrlGroup, code => code switch
         {
-            PatchUrlGroups.Cafe => localizer.T("downloadSourceCafe"),
-            _ => localizer.T("downloadSourceOfficial")
+            PatchUrlGroups.Cafe => localizer.T(LocalizationKeys.DownloadSourceCafe),
+            _ => localizer.T(LocalizationKeys.DownloadSourceOfficial)
         });
 
         RefreshOptions(CloseBehavior, code => code switch
         {
-            CloseBehaviors.Exit => localizer.T("closeBehaviorExit"),
-            _ => localizer.T("closeBehaviorMinimize")
+            CloseBehaviors.Exit => localizer.T(LocalizationKeys.CloseBehaviorExit),
+            _ => localizer.T(LocalizationKeys.CloseBehaviorMinimize)
         });
 
         RefreshOptions(DownloadSpeedLimit, code => code switch
         {
-            DownloadSpeedLimits.Speed1MBs => localizer.T("speed1MBs"),
-            DownloadSpeedLimits.Speed5MBs => localizer.T("speed5MBs"),
-            DownloadSpeedLimits.Speed10MBs => localizer.T("speed10MBs"),
-            DownloadSpeedLimits.Speed25MBs => localizer.T("speed25MBs"),
-            DownloadSpeedLimits.Speed50MBs => localizer.T("speed50MBs"),
-            _ => localizer.T("speedUnlimited")
+            DownloadSpeedLimits.Speed1MBs => localizer.T(LocalizationKeys.Speed1MBs),
+            DownloadSpeedLimits.Speed5MBs => localizer.T(LocalizationKeys.Speed5MBs),
+            DownloadSpeedLimits.Speed10MBs => localizer.T(LocalizationKeys.Speed10MBs),
+            DownloadSpeedLimits.Speed25MBs => localizer.T(LocalizationKeys.Speed25MBs),
+            DownloadSpeedLimits.Speed50MBs => localizer.T(LocalizationKeys.Speed50MBs),
+            _ => localizer.T(LocalizationKeys.SpeedUnlimited)
         });
 
         RefreshOptions(BackgroundSource, code => code switch
         {
-            BackgroundSources.Remote => localizer.T("backgroundSourceRemote"),
-            BackgroundSources.Custom => localizer.T("backgroundSourceCustom"),
-            _ => localizer.T("backgroundSourceBundled")
+            BackgroundSources.Remote => localizer.T(LocalizationKeys.BackgroundSourceRemote),
+            BackgroundSources.Custom => localizer.T(LocalizationKeys.BackgroundSourceCustom),
+            _ => localizer.T(LocalizationKeys.BackgroundSourceBundled)
         });
 
         RefreshOptions(BackgroundFit, code => code switch
         {
-            BackgroundFits.Fill => localizer.T("backgroundFitFill"),
-            BackgroundFits.Uniform => localizer.T("backgroundFitUniform"),
-            _ => localizer.T("backgroundFitUniformToFill")
+            BackgroundFits.Fill => localizer.T(LocalizationKeys.BackgroundFitFill),
+            BackgroundFits.Uniform => localizer.T(LocalizationKeys.BackgroundFitUniform),
+            _ => localizer.T(LocalizationKeys.BackgroundFitUniformToFill)
         });
 
         RefreshOptions(UpdateChannel, code => code switch
         {
-            UpdateChannels.Beta => localizer.T("launcherUpdateChannelBeta"),
-            _ => localizer.T("launcherUpdateChannelStable")
+            UpdateChannels.Beta => localizer.T(LocalizationKeys.LauncherUpdateChannelBeta),
+            _ => localizer.T(LocalizationKeys.LauncherUpdateChannelStable)
         });
 
         RefreshOptions(LogLevel, code => code switch
         {
-            LogLevels.Verbose => localizer.T("logLevelVerbose"),
-            LogLevels.Debug => localizer.T("logLevelDebug"),
-            LogLevels.Warning => localizer.T("logLevelWarning"),
-            LogLevels.Error => localizer.T("logLevelError"),
-            LogLevels.Fatal => localizer.T("logLevelFatal"),
-            _ => localizer.T("logLevelInformation")
+            LogLevels.Verbose => localizer.T(LocalizationKeys.LogLevelVerbose),
+            LogLevels.Debug => localizer.T(LocalizationKeys.LogLevelDebug),
+            LogLevels.Warning => localizer.T(LocalizationKeys.LogLevelWarning),
+            LogLevels.Error => localizer.T(LocalizationKeys.LogLevelError),
+            LogLevels.Fatal => localizer.T(LocalizationKeys.LogLevelFatal),
+            _ => localizer.T(LocalizationKeys.LogLevelInformation)
         });
     }
 
@@ -337,14 +338,14 @@ public sealed class SettingsOptionsViewModel
 
     public string ResolveThemeDisplayName(string themeMode) =>
         Theme.FirstOrDefault(option => option.Code == themeMode)?.DisplayName
-        ?? localizer.T("themeSystem");
+        ?? localizer.T(LocalizationKeys.ThemeSystem);
 
     public string ResolveLaunchCheckDisplayName(string launchCheckMode) =>
         launchCheckMode switch
         {
-            LaunchCheckModes.RemoteManifest => localizer.T("statusLaunchCheckRemote"),
-            LaunchCheckModes.None => localizer.T("statusLaunchCheckNone"),
-            _ => localizer.T("statusLaunchCheckLocal")
+            LaunchCheckModes.RemoteManifest => localizer.T(LocalizationKeys.StatusLaunchCheckRemote),
+            LaunchCheckModes.None => localizer.T(LocalizationKeys.StatusLaunchCheckNone),
+            _ => localizer.T(LocalizationKeys.StatusLaunchCheckLocal)
         };
 
     public DiskSpaceCheckResult ResolveDiskSpaceCheck(string gamePath, string? requiredSize)
@@ -361,7 +362,7 @@ public sealed class SettingsOptionsViewModel
         var availableDisplay = check.AvailableBytes.HasValue
             ? FileSizeFormatter.Format(check.AvailableBytes.Value)
             : "--";
-        var baseText = localizer.F("diskSpace", requiredDisplay, availableDisplay);
+        var baseText = localizer.F(LocalizationKeys.DiskSpace, requiredDisplay, availableDisplay);
 
         // Only append a conclusion when both required and available are known.
         if (!check.IsAvailableKnown
@@ -373,11 +374,11 @@ public sealed class SettingsOptionsViewModel
 
         if (check.HasEnoughSpace)
         {
-            return baseText + " " + localizer.T("diskSpaceOkSuffix");
+            return baseText + " " + localizer.T(LocalizationKeys.DiskSpaceOkSuffix);
         }
 
         var difference = check.RequiredBytes - check.AvailableBytes!.Value;
-        return baseText + " " + localizer.F("diskSpaceShortSuffix", FileSizeFormatter.Format(difference));
+        return baseText + " " + localizer.F(LocalizationKeys.DiskSpaceShortSuffix, FileSizeFormatter.Format(difference));
     }
 
     public string ResolveDiskSpaceText(string gamePath, string? requiredSize)

@@ -2,6 +2,7 @@ using System;
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
+using Cafe.Launcher.Avalonia.Constants;
 using Cafe.Launcher.Avalonia.Models;
 using Cafe.Launcher.Avalonia.Services;
 using Cafe.Launcher.Avalonia.Services.GameRuntime;
@@ -33,23 +34,23 @@ public sealed class GameLaunchService
     {
         if (snapshot.RuntimeState == LauncherRuntimeState.NotInstalled)
         {
-            return Failed(localizer.T("gameNotInstalled"));
+            return Failed(localizer.T(LocalizationKeys.GameNotInstalled));
         }
 
         if (snapshot.RuntimeState == LauncherRuntimeState.BelowLowestVersion)
         {
-            return Failed(localizer.T("gameBelowLowestVersion"));
+            return Failed(localizer.T(LocalizationKeys.GameBelowLowestVersion));
         }
 
         if (snapshot.RuntimeState != LauncherRuntimeState.Ready)
         {
             return Failed(snapshot.RuntimeState switch
             {
-                LauncherRuntimeState.Corrupted => localizer.T("gameCorruptedInstallationState"),
-                LauncherRuntimeState.IoFailure => localizer.T("gameInstallationStateReadFailed"),
-                LauncherRuntimeState.RemoteUnavailable => localizer.T("gameRemoteStateUnavailable"),
-                LauncherRuntimeState.UpdateAvailable => localizer.T("updateAvailable"),
-                _ => localizer.T("gameNotInstalled")
+                LauncherRuntimeState.Corrupted => localizer.T(LocalizationKeys.GameCorruptedInstallationState),
+                LauncherRuntimeState.IoFailure => localizer.T(LocalizationKeys.GameInstallationStateReadFailed),
+                LauncherRuntimeState.RemoteUnavailable => localizer.T(LocalizationKeys.GameRemoteStateUnavailable),
+                LauncherRuntimeState.UpdateAvailable => localizer.T(LocalizationKeys.UpdateAvailable),
+                _ => localizer.T(LocalizationKeys.GameNotInstalled)
             });
         }
 
@@ -58,10 +59,10 @@ public sealed class GameLaunchService
         {
             return Failed(targetResolution.Status switch
             {
-                GameLaunchTargetStatus.ExecutableNameInvalid => localizer.T("gameExecutableNameInvalid"),
+                GameLaunchTargetStatus.ExecutableNameInvalid => localizer.T(LocalizationKeys.GameExecutableNameInvalid),
                 GameLaunchTargetStatus.ExecutableMissing => localizer.F(
                     "gameExecutableMissing", targetResolution.ExpectedExecutablePath),
-                _ => localizer.T("gameExecutableNameEmpty")
+                _ => localizer.T(LocalizationKeys.GameExecutableNameEmpty)
             });
         }
 
@@ -115,11 +116,11 @@ public sealed class GameLaunchService
             return new GameLaunchResult
             {
                 Success = false,
-                Message = localizer.F("gameLaunchFailed", exception.Message),
+                Message = localizer.F(LocalizationKeys.GameLaunchFailed, exception.Message),
                 DiagnosticMessage =
-                    $"{localizer.T("gameRuntimeRunner")}: {runtimeConfiguration.PreferredRunnerId ?? localizer.T("gameRuntimeRunnerAuto")}{Environment.NewLine}" +
-                    $"{localizer.T("executable")}: {request.ExecutablePath}{Environment.NewLine}" +
-                    $"{localizer.T("path")}: {request.WorkingDirectory}{Environment.NewLine}" +
+                    $"{localizer.T(LocalizationKeys.GameRuntimeRunner)}: {runtimeConfiguration.PreferredRunnerId ?? localizer.T(LocalizationKeys.GameRuntimeRunnerAuto)}{Environment.NewLine}" +
+                    $"{localizer.T(LocalizationKeys.Executable)}: {request.ExecutablePath}{Environment.NewLine}" +
+                    $"{localizer.T(LocalizationKeys.Path)}: {request.WorkingDirectory}{Environment.NewLine}" +
                     $"{exception.Message}",
                 DiagnosticException = exception,
                 Validation = validation
@@ -134,7 +135,7 @@ public sealed class GameLaunchService
                 return new GameLaunchResult
                 {
                     Success = false,
-                    Message = localizer.F("gameLaunchFailed", exception.Message),
+                    Message = localizer.F(LocalizationKeys.GameLaunchFailed, exception.Message),
                     DiagnosticMessage =
                         $"{BuildLaunchContext(launchResult, request)}{Environment.NewLine}{exception.Message}",
                     DiagnosticException = exception,
@@ -143,14 +144,14 @@ public sealed class GameLaunchService
             }
 
             return Failed(
-                localizer.T("gameProcessStartFailed"),
+                localizer.T(LocalizationKeys.GameProcessStartFailed),
                 BuildRunnerSelectionFailure(launchResult, runtimeConfiguration.PreferredRunnerId));
         }
 
         return new GameLaunchResult
         {
             Success = true,
-            Message = localizer.T("gameProcessStarted"),
+            Message = localizer.T(LocalizationKeys.GameProcessStarted),
             DiagnosticMessage = BuildLaunchContext(launchResult, request),
             Validation = validation
         };
@@ -174,8 +175,8 @@ public sealed class GameLaunchService
     private string BuildLaunchContext(GameRuntimeLaunchResult launchResult, GameLaunchRequest request)
     {
         var runnerLine = string.IsNullOrWhiteSpace(launchResult.RunnerId)
-            ? $"{localizer.T("gameRuntimeRunner")}: {localizer.T("gameRuntimeRunnerAuto")}"
-            : $"{localizer.T("gameRuntimeRunner")}: {launchResult.RunnerId}";
+            ? $"{localizer.T(LocalizationKeys.GameRuntimeRunner)}: {localizer.T(LocalizationKeys.GameRuntimeRunnerAuto)}"
+            : $"{localizer.T(LocalizationKeys.GameRuntimeRunner)}: {launchResult.RunnerId}";
         var candidates = launchResult.Candidates.Count == 0
             ? ""
             : Environment.NewLine + string.Join(
@@ -183,8 +184,8 @@ public sealed class GameLaunchService
                 launchResult.Candidates.Select(candidate =>
                     $"- {candidate.RunnerId}: {AvailabilityReason(candidate.Availability)}"));
         return runnerLine + candidates + Environment.NewLine +
-            $"{localizer.T("executable")}: {request.ExecutablePath}{Environment.NewLine}" +
-            $"{localizer.T("path")}: {request.WorkingDirectory}{Environment.NewLine}" +
+            $"{localizer.T(LocalizationKeys.Executable)}: {request.ExecutablePath}{Environment.NewLine}" +
+            $"{localizer.T(LocalizationKeys.Path)}: {request.WorkingDirectory}{Environment.NewLine}" +
             launchResult.Diagnostic.Describe();
     }
 
@@ -196,31 +197,31 @@ public sealed class GameLaunchService
         {
             if (launchResult.Candidates.Count == 0)
             {
-                return $"{localizer.T("gameRuntimeRunner")}: {preferredRunnerId}{Environment.NewLine}" +
-                    localizer.T("unknown");
+                return $"{localizer.T(LocalizationKeys.GameRuntimeRunner)}: {preferredRunnerId}{Environment.NewLine}" +
+                    localizer.T(LocalizationKeys.Unknown);
             }
 
             var candidate = launchResult.Candidates[0];
-            return $"{localizer.T("gameRuntimeRunner")}: {preferredRunnerId}{Environment.NewLine}" +
+            return $"{localizer.T(LocalizationKeys.GameRuntimeRunner)}: {preferredRunnerId}{Environment.NewLine}" +
                 $"{candidate.RunnerId}: {AvailabilityReason(candidate.Availability)}";
         }
 
         if (launchResult.Candidates.Count == 0)
         {
-            return $"{localizer.T("gameRuntimeRunner")}: {localizer.T("gameRuntimeRunnerAuto")}{Environment.NewLine}" +
-                localizer.T("unknown");
+            return $"{localizer.T(LocalizationKeys.GameRuntimeRunner)}: {localizer.T(LocalizationKeys.GameRuntimeRunnerAuto)}{Environment.NewLine}" +
+                localizer.T(LocalizationKeys.Unknown);
         }
 
         var details = string.Join(
             Environment.NewLine,
             launchResult.Candidates.Select(candidate =>
                 $"- {candidate.RunnerId}: {AvailabilityReason(candidate.Availability)}"));
-        return $"{localizer.T("gameRuntimeRunner")}: {localizer.T("gameRuntimeRunnerAuto")}{Environment.NewLine}{details}";
+        return $"{localizer.T(LocalizationKeys.GameRuntimeRunner)}: {localizer.T(LocalizationKeys.GameRuntimeRunnerAuto)}{Environment.NewLine}{details}";
     }
 
     private string AvailabilityReason(GameRunnerAvailability availability) =>
         string.IsNullOrWhiteSpace(availability.Message)
-            ? localizer.T("unknown")
+            ? localizer.T(LocalizationKeys.Unknown)
             : string.IsNullOrWhiteSpace(availability.TechnicalDetail)
                 ? availability.Message
                 : $"{availability.Message}{Environment.NewLine}{availability.TechnicalDetail}";

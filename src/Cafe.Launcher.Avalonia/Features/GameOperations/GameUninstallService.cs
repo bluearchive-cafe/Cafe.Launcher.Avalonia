@@ -60,7 +60,7 @@ public sealed class GameUninstallService
     {
         if (snapshot.RuntimeState != LauncherRuntimeState.Ready)
         {
-            return DownloadSession.Failed(localizer.T("operationUnavailableForCurrentState"), GameOperationErrorCode.InvalidState);
+            return DownloadSession.Failed(localizer.T(LocalizationKeys.OperationUnavailableForCurrentState), GameOperationErrorCode.InvalidState);
         }
 
         var gamePath = installationPath.NormalizeGamePath(snapshot.LocalGame.GamePath ?? "");
@@ -124,7 +124,7 @@ public sealed class GameUninstallService
             return new GameOperationResult
             {
                 Success = true,
-                Message = localizer.T("uninstallCompleted"),
+                Message = localizer.T(LocalizationKeys.UninstallCompleted),
                 AffectedFileCount = files.Count + 2
             };
         }
@@ -134,7 +134,7 @@ public sealed class GameUninstallService
             return new GameOperationResult
             {
                 Success = false,
-                Message = localizer.F("uninstallFailed", exception.Message),
+                Message = localizer.F(LocalizationKeys.UninstallFailed, exception.Message),
                 ErrorCode = GameOperationErrorCode.System
             };
         }
@@ -146,12 +146,12 @@ public sealed class GameUninstallService
     {
         if (!Directory.Exists(gamePath))
         {
-            return DownloadSession.Failed(localizer.F("gamePathMissing", gamePath), GameOperationErrorCode.Uninstall);
+            return DownloadSession.Failed(localizer.F(LocalizationKeys.GamePathMissing, gamePath), GameOperationErrorCode.Uninstall);
         }
 
         if (IsSystemProtectPath(gamePath))
         {
-            return DownloadSession.Failed(localizer.F("gamePathProtected", gamePath), GameOperationErrorCode.Uninstall);
+            return DownloadSession.Failed(localizer.F(LocalizationKeys.GamePathProtected, gamePath), GameOperationErrorCode.Uninstall);
         }
 
         try
@@ -160,29 +160,29 @@ public sealed class GameUninstallService
         }
         catch (InvalidOperationException)
         {
-            return DownloadSession.Failed(localizer.F("gameDirectoryNameInvalid", GamePaths.GameFolderName), GameOperationErrorCode.Uninstall);
+            return DownloadSession.Failed(localizer.F(LocalizationKeys.GameDirectoryNameInvalid, GamePaths.GameFolderName), GameOperationErrorCode.Uninstall);
         }
 
         var localGame = await localInstallationStateStore.ReadAsync(gamePath, cancellationToken).ConfigureAwait(false);
         if (localGame.Kind != LocalInstallationStateKind.Valid)
         {
-            return DownloadSession.Failed(localizer.F("gameConfigMetadataMissing", GamePaths.GameConfigFileName), GameOperationErrorCode.Uninstall);
+            return DownloadSession.Failed(localizer.F(LocalizationKeys.GameConfigMetadataMissing, GamePaths.GameConfigFileName), GameOperationErrorCode.Uninstall);
         }
 
         if (string.IsNullOrWhiteSpace(localGame.GameConfig?.Version) || string.IsNullOrWhiteSpace(localGame.GameConfig?.Name))
         {
-            return DownloadSession.Failed(localizer.F("gameConfigMetadataMissing", GamePaths.GameConfigFileName), GameOperationErrorCode.Uninstall);
+            return DownloadSession.Failed(localizer.F(LocalizationKeys.GameConfigMetadataMissing, GamePaths.GameConfigFileName), GameOperationErrorCode.Uninstall);
         }
 
         if (await gameProcessTracker.IsGameRunningAsync($"{localGame.GameConfig.Name}.exe", cancellationToken))
         {
-            return DownloadSession.Failed(localizer.F("gameIsRunning", $"{localGame.GameConfig.Name}.exe"), GameOperationErrorCode.GameRunning);
+            return DownloadSession.Failed(localizer.F(LocalizationKeys.GameIsRunning, $"{localGame.GameConfig.Name}.exe"), GameOperationErrorCode.GameRunning);
         }
 
         return new GameOperationResult
         {
             Success = true,
-            Message = localizer.F("readyToUninstall", localGame.Manifest?.Files.Count ?? 0),
+            Message = localizer.F(LocalizationKeys.ReadyToUninstall, localGame.Manifest?.Files.Count ?? 0),
             AffectedFileCount = (localGame.Manifest?.Files.Count ?? 0) + 2
         };
     }

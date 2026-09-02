@@ -6,6 +6,7 @@ using System.Security.Cryptography;
 using System.Threading;
 using System.Threading.Tasks;
 using Avalonia.Threading;
+using Cafe.Launcher.Avalonia.Constants;
 using Cafe.Launcher.Avalonia.Features.SetupWizard;
 using Cafe.Launcher.Avalonia.Features.Shell;
 using Cafe.Launcher.Avalonia.Helpers;
@@ -298,20 +299,20 @@ public partial class DialogsViewModel : ViewModelBase, IModalContentViewModel
 
     public void ApplyLanguage()
     {
-        LanguageOptions.First(option => option.Code == LauncherLanguages.Auto).DisplayName = localizer.T("languageAuto");
+        LanguageOptions.First(option => option.Code == LauncherLanguages.Auto).DisplayName = localizer.T(LocalizationKeys.LanguageAuto);
         if (IsStopConfirmVisible)
         {
-            StopConfirmText = localizer.T("stopDownloadMessage");
+            StopConfirmText = localizer.T(LocalizationKeys.StopDownloadMessage);
         }
 
         if (IsDownloadRunningCloseConfirmVisible)
         {
-            DownloadRunningCloseConfirmText = localizer.T("stopDownloadMessage");
+            DownloadRunningCloseConfirmText = localizer.T(LocalizationKeys.StopDownloadMessage);
         }
 
         if (IsUpdateAvailableVisible)
         {
-            UpdateAvailableText = localizer.F("launcherUpdateAvailableMessage", UpdateAvailableVersion);
+            UpdateAvailableText = localizer.F(LocalizationKeys.LauncherUpdateAvailableMessage, UpdateAvailableVersion);
         }
     }
 
@@ -329,13 +330,13 @@ public partial class DialogsViewModel : ViewModelBase, IModalContentViewModel
 
     public void ShowStopConfirm()
     {
-        StopConfirmText = localizer.T("stopDownloadMessage");
+        StopConfirmText = localizer.T(LocalizationKeys.StopDownloadMessage);
         IsStopConfirmVisible = true;
     }
 
     public void ShowDownloadRunningCloseConfirm()
     {
-        DownloadRunningCloseConfirmText = localizer.T("stopDownloadMessage");
+        DownloadRunningCloseConfirmText = localizer.T(LocalizationKeys.StopDownloadMessage);
         IsDownloadRunningCloseConfirmVisible = true;
     }
 
@@ -413,7 +414,7 @@ public partial class DialogsViewModel : ViewModelBase, IModalContentViewModel
     public void ShowUpdateAvailable(string version, IReadOnlyList<ReleaseFile> files)
     {
         UpdateAvailableVersion = version;
-        UpdateAvailableText = localizer.F("launcherUpdateAvailableMessage", version);
+        UpdateAvailableText = localizer.F(LocalizationKeys.LauncherUpdateAvailableMessage, version);
         SelectedUpdateFile = null;
         UpdateAvailableFiles.Clear();
         foreach (var file in files)
@@ -483,8 +484,8 @@ public partial class DialogsViewModel : ViewModelBase, IModalContentViewModel
             {
                 NoticeDialogContent = baseConfig.NoticeContent;
                 NoticeDialogConfirmText = baseConfig.ExitLauncherOpen
-                    ? localizer.T("noticeExit")
-                    : localizer.T("noticeConfirm");
+                    ? localizer.T(LocalizationKeys.NoticeExit)
+                    : localizer.T(LocalizationKeys.NoticeConfirm);
                 closeOnNoticeDismiss = baseConfig.ExitLauncherOpen;
                 IsNoticeDialogVisible = true;
             });

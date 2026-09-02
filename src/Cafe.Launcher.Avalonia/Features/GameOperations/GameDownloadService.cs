@@ -1,6 +1,7 @@
 using System;
 using System.Threading;
 using System.Threading.Tasks;
+using Cafe.Launcher.Avalonia.Constants;
 using Cafe.Launcher.Avalonia.Models;
 using Cafe.Launcher.Avalonia.Services;
 using Cafe.Launcher.Avalonia.Services.Diagnostics;
@@ -106,7 +107,7 @@ public sealed class GameDownloadService : IDisposable
             LauncherRuntimeState.BelowLowestVersion or
             LauncherRuntimeState.UpdateAvailable))
         {
-            return DownloadSession.Failed(localizer.T("operationUnavailableForCurrentState"), GameOperationErrorCode.InvalidState);
+            return DownloadSession.Failed(localizer.T(LocalizationKeys.OperationUnavailableForCurrentState), GameOperationErrorCode.InvalidState);
         }
 
         return await RunSessionAsync(snapshot, repair: false, progress, cancellationToken).ConfigureAwait(false);
@@ -121,7 +122,7 @@ public sealed class GameDownloadService : IDisposable
             LauncherRuntimeState.Corrupted or
             LauncherRuntimeState.Ready))
         {
-            return DownloadSession.Failed(localizer.T("operationUnavailableForCurrentState"), GameOperationErrorCode.InvalidState);
+            return DownloadSession.Failed(localizer.T(LocalizationKeys.OperationUnavailableForCurrentState), GameOperationErrorCode.InvalidState);
         }
 
         return await RunSessionAsync(snapshot, repair: true, progress, cancellationToken).ConfigureAwait(false);

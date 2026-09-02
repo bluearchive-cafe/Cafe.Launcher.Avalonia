@@ -5,6 +5,7 @@ using System.Threading;
 using System.Threading.Tasks;
 using Avalonia;
 using Avalonia.Threading;
+using Cafe.Launcher.Avalonia.Constants;
 using Cafe.Launcher.Avalonia.Helpers;
 using Cafe.Launcher.Avalonia.Models;
 using Cafe.Launcher.Avalonia.Services;
@@ -132,10 +133,10 @@ public partial class GameOperationsViewModel : ViewModelBase, IGameOperationJour
 
     public void ApplyLanguage()
     {
-        PauseResumeText = IsPaused ? localizer.T("resume") : localizer.T("pause");
+        PauseResumeText = IsPaused ? localizer.T(LocalizationKeys.Resume) : localizer.T(LocalizationKeys.Pause);
         if (string.IsNullOrWhiteSpace(ProgressTitle))
         {
-            ProgressTitle = localizer.T("preparing");
+            ProgressTitle = localizer.T(LocalizationKeys.Preparing);
         }
     }
 
@@ -144,10 +145,10 @@ public partial class GameOperationsViewModel : ViewModelBase, IGameOperationJour
         currentSnapshot = snapshot;
         InstallButtonText = snapshot.RuntimeState switch
         {
-            LauncherRuntimeState.NotInstalled => localizer.T("installGame"),
-            LauncherRuntimeState.Corrupted => localizer.T("repair"),
-            LauncherRuntimeState.IoFailure or LauncherRuntimeState.RemoteUnavailable => localizer.T("refresh"),
-            _ => localizer.T("updateGame")
+            LauncherRuntimeState.NotInstalled => localizer.T(LocalizationKeys.InstallGame),
+            LauncherRuntimeState.Corrupted => localizer.T(LocalizationKeys.Repair),
+            LauncherRuntimeState.IoFailure or LauncherRuntimeState.RemoteUnavailable => localizer.T(LocalizationKeys.Refresh),
+            _ => localizer.T(LocalizationKeys.UpdateGame)
         };
         InstallButtonToolTip = shell.IsInstallBlockedByDiskSpace
             ? shell.InstallDiskSpaceMessage
@@ -169,16 +170,16 @@ public partial class GameOperationsViewModel : ViewModelBase, IGameOperationJour
     {
         shell.IsBusy = true;
         PanelMode = GameOperationPanelMode.Progress;
-        ProgressTitle = localizer.T("preparing");
+        ProgressTitle = localizer.T(LocalizationKeys.Preparing);
         ProgressIconKind = ResolveProgressPresentation(GameOperationKind.Idle).IconKind;
         ProgressValue = 0;
-        ProgressDetail = localizer.T("buildingFileList");
+        ProgressDetail = localizer.T(LocalizationKeys.BuildingFileList);
         ProgressSpeed = "";
         ProgressSize = "";
         ProgressEstimated = "";
         IsPaused = false;
         CanPauseOperation = false;
-        PauseResumeText = localizer.T("pause");
+        PauseResumeText = localizer.T(LocalizationKeys.Pause);
         PauseResumeIcon = "Pause";
     }
 
@@ -263,11 +264,11 @@ public partial class GameOperationsViewModel : ViewModelBase, IGameOperationJour
 
         if (currentSnapshot.RuntimeState is not (LauncherRuntimeState.Corrupted or LauncherRuntimeState.Ready))
         {
-            toastService.ShowWarning(localizer.T("operationUnavailableForCurrentState"));
+            toastService.ShowWarning(localizer.T(LocalizationKeys.OperationUnavailableForCurrentState));
             return;
         }
 
-        dialogs.ShowRepairConfirm(localizer.T("repairWarning"));
+        dialogs.ShowRepairConfirm(localizer.T(LocalizationKeys.RepairWarning));
     }
 
     public async Task RepairAsync()
@@ -305,17 +306,17 @@ public partial class GameOperationsViewModel : ViewModelBase, IGameOperationJour
         {
             journey.Resume();
             IsPaused = false;
-            PauseResumeText = localizer.T("pause");
+            PauseResumeText = localizer.T(LocalizationKeys.Pause);
             PauseResumeIcon = "Pause";
-            ProgressDetail = localizer.T("downloading");
+            ProgressDetail = localizer.T(LocalizationKeys.Downloading);
         }
         else
         {
             journey.Pause();
             IsPaused = true;
-            PauseResumeText = localizer.T("resume");
+            PauseResumeText = localizer.T(LocalizationKeys.Resume);
             PauseResumeIcon = "Play";
-            ProgressDetail = localizer.T("paused");
+            ProgressDetail = localizer.T(LocalizationKeys.Paused);
             ProgressSpeed = "";
             ProgressEstimated = "";
         }
@@ -331,7 +332,7 @@ public partial class GameOperationsViewModel : ViewModelBase, IGameOperationJour
 
         if (currentSnapshot.RuntimeState != LauncherRuntimeState.Ready)
         {
-            toastService.ShowWarning(localizer.T("operationUnavailableForCurrentState"));
+            toastService.ShowWarning(localizer.T(LocalizationKeys.OperationUnavailableForCurrentState));
             return;
         }
 
@@ -401,11 +402,11 @@ public partial class GameOperationsViewModel : ViewModelBase, IGameOperationJour
                     "repairFilesNeeded",
                     progress.AffectedFileCount,
                     FileSizeFormatter.Format(progress.DownloadedSize))
-                : localizer.T("repairNoFilesNeeded"),
-            GameOperationStage.Paused => localizer.T("paused"),
-            GameOperationStage.RepairCheck => localizer.T("repairCheckingFiles"),
-            GameOperationStage.UpdateCheck => localizer.T("updateCheckingFiles"),
-            GameOperationStage.FileCheck => localizer.T("verifyingDownloadedFiles"),
+                : localizer.T(LocalizationKeys.RepairNoFilesNeeded),
+            GameOperationStage.Paused => localizer.T(LocalizationKeys.Paused),
+            GameOperationStage.RepairCheck => localizer.T(LocalizationKeys.RepairCheckingFiles),
+            GameOperationStage.UpdateCheck => localizer.T(LocalizationKeys.UpdateCheckingFiles),
+            GameOperationStage.FileCheck => localizer.T(LocalizationKeys.VerifyingDownloadedFiles),
             GameOperationStage.DiskCheck => localizer.F(
                 "diskSpaceCheck",
                 FileSizeFormatter.Format(progress.RequiredDiskBytes),
@@ -417,13 +418,13 @@ public partial class GameOperationsViewModel : ViewModelBase, IGameOperationJour
                 progress.FailedFileCount,
                 progress.RetryAttempt,
                 progress.RetryLimit),
-            GameOperationStage.VerificationFailed => localizer.F("verificationFailed", progress.FailedFileCount),
-            GameOperationStage.RepairCompleted => localizer.T("repairCompleted"),
-            GameOperationStage.DownloadCompleted => localizer.T("installUpdateCompleted"),
-            GameOperationStage.Stopped => localizer.T("operationStopped"),
-            GameOperationStage.Downloading => localizer.T("downloading"),
-            GameOperationStage.Uninstalling => localizer.T("uninstalling"),
-            GameOperationStage.Idle => localizer.T("working"),
+            GameOperationStage.VerificationFailed => localizer.F(LocalizationKeys.VerificationFailed, progress.FailedFileCount),
+            GameOperationStage.RepairCompleted => localizer.T(LocalizationKeys.RepairCompleted),
+            GameOperationStage.DownloadCompleted => localizer.T(LocalizationKeys.InstallUpdateCompleted),
+            GameOperationStage.Stopped => localizer.T(LocalizationKeys.OperationStopped),
+            GameOperationStage.Downloading => localizer.T(LocalizationKeys.Downloading),
+            GameOperationStage.Uninstalling => localizer.T(LocalizationKeys.Uninstalling),
+            GameOperationStage.Idle => localizer.T(LocalizationKeys.Working),
             _ => throw new ArgumentOutOfRangeException(nameof(progress), progress.Stage, null)
         };
         var clearsDownloadMetrics = progress.Stage is
@@ -445,7 +446,7 @@ public partial class GameOperationsViewModel : ViewModelBase, IGameOperationJour
             : "";
         IsPaused = progress.IsPaused;
         CanPauseOperation = progress.CanPause;
-        PauseResumeText = progress.IsPaused ? localizer.T("resume") : localizer.T("pause");
+        PauseResumeText = progress.IsPaused ? localizer.T(LocalizationKeys.Resume) : localizer.T(LocalizationKeys.Pause);
         PauseResumeIcon = progress.IsPaused ? "Play" : "Pause";
     }
 
@@ -453,10 +454,10 @@ public partial class GameOperationsViewModel : ViewModelBase, IGameOperationJour
     {
         return operationKind switch
         {
-            GameOperationKind.Repair => (localizer.T("repairing"), "Tools"),
-            GameOperationKind.Uninstall => (localizer.T("uninstalling"), "DeleteOutline"),
-            GameOperationKind.Download => (localizer.T("downloading"), "Download"),
-            GameOperationKind.Idle => (localizer.T("working"), "Sync"),
+            GameOperationKind.Repair => (localizer.T(LocalizationKeys.Repairing), "Tools"),
+            GameOperationKind.Uninstall => (localizer.T(LocalizationKeys.Uninstalling), "DeleteOutline"),
+            GameOperationKind.Download => (localizer.T(LocalizationKeys.Downloading), "Download"),
+            GameOperationKind.Idle => (localizer.T(LocalizationKeys.Working), "Sync"),
             _ => throw new ArgumentOutOfRangeException(nameof(operationKind), operationKind, null)
         };
     }

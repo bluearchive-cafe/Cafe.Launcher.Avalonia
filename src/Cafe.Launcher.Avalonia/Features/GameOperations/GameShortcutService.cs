@@ -172,7 +172,7 @@ public sealed class GameShortcutService : IGameShortcutService
         var iconPath = ResolveLinuxIconPath(launcherPath);
         try
         {
-            WriteDesktopEntry(entryPath, localizer.T("gameDisplayName"), launcherPath, iconPath);
+            WriteDesktopEntry(entryPath, localizer.T(LocalizationKeys.GameDisplayName), launcherPath, iconPath);
             if (OperatingSystem.IsLinux())
             {
                 // Desktop environments only launch entries marked executable.
@@ -258,7 +258,7 @@ public sealed class GameShortcutService : IGameShortcutService
     /// <summary>Names the desktop shortcut after the localized game display name, sanitized for file systems.</summary>
     internal string ResolveShortcutFileName(string executablePath)
     {
-        var displayName = SanitizeFileName(localizer.T("gameDisplayName"));
+        var displayName = SanitizeFileName(localizer.T(LocalizationKeys.GameDisplayName));
         return displayName.Length > 0
             ? displayName
             : Path.GetFileNameWithoutExtension(executablePath);

@@ -26,7 +26,7 @@ Follow `.editorconfig`: C# uses UTF-8, CRLF, four-space indentation, file-scoped
 
 ## Localization & Configuration
 
-Add every UI string to the neutral `Resources/LauncherStrings.resx` file and its `zh-Hans`, `zh-Hant`, and `ja` counterparts. Bind UI text through `Shell.I18n[resourceKey]` and use `LocalizationService.T()` / `F()` in C#. Regenerate `Resources/LauncherStrings.Designer.cs` with `scripts/Generate-LauncherStringsDesigner.ps1` after adding or renaming a key, then run `scripts/Test-LocalizationContract.ps1`. Preserve resource-key spelling, casing, and composite-format placeholders. Never infer identifier spelling, casing, paths, or payload structure; inspect the defining code, tests, logs, or captured data first.
+Add every UI string to the neutral `Resources/LauncherStrings.resx` file and its `zh-Hans`, `zh-Hant`, and `ja` counterparts. Bind UI text through `Shell.I18n[resourceKey]` and use `LocalizationService.T()` / `F()` in C#. In C# source, never pass raw key string literals to `T()`/`F()`/`I18n[...]` — reference the compile-time constants on `Constants/LocalizationKeys` instead. Regenerate `Resources/LauncherStrings.Designer.cs` with `scripts/Generate-LauncherStringsDesigner.ps1` and `Constants/LocalizationKeys.cs` with `scripts/Generate-LocalizationKeys.ps1` after adding or renaming a key, then run `scripts/Test-LocalizationContract.ps1`. Preserve resource-key spelling, casing, and composite-format placeholders. Never infer identifier spelling, casing, paths, or payload structure; inspect the defining code, tests, logs, or captured data first.
 
 ## Testing Guidelines
 
