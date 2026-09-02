@@ -275,7 +275,8 @@ public sealed class WindowChromeViewModelTests : IDisposable
             provider.GetRequiredService<IErrorHandlingService>(),
             provider.GetRequiredService<LauncherSettingsService>(),
             operations,
-            provider.GetRequiredService<ShellViewModel>());
+            provider.GetRequiredService<ShellViewModel>(),
+            new StubFilePickerService());
         var viewModel = new WindowChromeViewModel(
             settings,
             remoteContent,

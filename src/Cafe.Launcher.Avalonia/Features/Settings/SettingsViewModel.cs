@@ -31,6 +31,7 @@ public partial class SettingsViewModel : ViewModelBase, IDisposable, IModalConte
     private readonly GameInstallationPath gameInstallationPath;
     private readonly IErrorHandlingService errorHandling;
     private readonly IGameRuntime gameRuntime;
+    private readonly IFilePickerService filePickerService;
     private CancellationTokenSource? appearancePreviewCts;
     private Task appearancePreviewTask = Task.CompletedTask;
     private CancellationTokenSource? gameRuntimeStatusCts;
@@ -39,9 +40,6 @@ public partial class SettingsViewModel : ViewModelBase, IDisposable, IModalConte
     private bool disposed;
 
     // Coordination delegates — set by parent after construction.
-    public Func<string, Task<string?>>? PickGameFolderAsync { get; set; }
-    public Func<Task<string?>>? PickBackgroundImageAsync { get; set; }
-    public Func<Task<string?>>? PickBackgroundFolderAsync { get; set; }
     public Func<LauncherSettings, Task>? ApplyLanguageAndTheme { get; set; }
     public Func<LauncherSettings, string?, CancellationToken, Task>? PreviewAppearanceAsync { get; set; }
 
@@ -67,7 +65,8 @@ public partial class SettingsViewModel : ViewModelBase, IDisposable, IModalConte
         SettingsOptionsViewModel options,
         SettingsAppearanceViewModel appearance,
         IErrorHandlingService errorHandling,
-        IGameRuntime gameRuntime)
+        IGameRuntime gameRuntime,
+        IFilePickerService filePickerService)
     {
         this.settingsService = settingsService;
         this.localizer = localizer;
@@ -81,6 +80,7 @@ public partial class SettingsViewModel : ViewModelBase, IDisposable, IModalConte
         Appearance = appearance;
         this.errorHandling = errorHandling;
         this.gameRuntime = gameRuntime;
+        this.filePickerService = filePickerService;
         editor.PropertyChanged += OnEditorPropertyChanged;
         editor.CurrentPropertyChanged += OnCurrentSettingChanged;
     }
@@ -309,13 +309,9 @@ public partial class SettingsViewModel : ViewModelBase, IDisposable, IModalConte
     [RelayCommand]
     private async Task ChooseGamePathAsync()
     {
-        if (PickGameFolderAsync is null)
-        {
-            toastService.ShowWarning(localizer.T(LocalizationKeys.FolderPickerUnavailable));
-            return;
-        }
-
-        var pickedPath = await PickGameFolderAsync(editor.Current.GamePath);
+        var pickedPath = await filePickerService.PickFolderAsync(
+            localizer.T(LocalizationKeys.ChooseInstallFolder),
+            editor.Current.GamePath);
         if (string.IsNullOrWhiteSpace(pickedPath))
         {
             return;
@@ -342,13 +338,9 @@ public partial class SettingsViewModel : ViewModelBase, IDisposable, IModalConte
 
     private async Task PickAndPersistGamePathAsync(string startPath)
     {
-        if (PickGameFolderAsync is null)
-        {
-            toastService.ShowWarning(localizer.T(LocalizationKeys.FolderPickerUnavailable));
-            return;
-        }
-
-        var pickedPath = await PickGameFolderAsync(startPath);
+        var pickedPath = await filePickerService.PickFolderAsync(
+            localizer.T(LocalizationKeys.ChooseInstallFolder),
+            startPath);
         if (string.IsNullOrWhiteSpace(pickedPath))
         {
             return;
@@ -377,10 +369,8 @@ public partial class SettingsViewModel : ViewModelBase, IDisposable, IModalConte
     [RelayCommand]
     private async Task ChooseBackgroundImageAsync()
     {
-        if (PickBackgroundImageAsync is null)
-            return;
-
-        var pickedPath = await PickBackgroundImageAsync();
+        var pickedPath = await filePickerService.PickImageFileAsync(
+            localizer.T(LocalizationKeys.ChooseBackgroundImageTitle));
         if (string.IsNullOrWhiteSpace(pickedPath))
             return;
 
@@ -391,10 +381,8 @@ public partial class SettingsViewModel : ViewModelBase, IDisposable, IModalConte
     [RelayCommand]
     private async Task ChooseBackgroundFolderAsync()
     {
-        if (PickBackgroundFolderAsync is null)
-            return;
-
-        var pickedPath = await PickBackgroundFolderAsync();
+        var pickedPath = await filePickerService.PickFolderAsync(
+            localizer.T(LocalizationKeys.ChooseBackgroundFolderTitle));
         if (string.IsNullOrWhiteSpace(pickedPath))
             return;
 

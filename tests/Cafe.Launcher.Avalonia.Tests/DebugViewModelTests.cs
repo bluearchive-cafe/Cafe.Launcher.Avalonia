@@ -203,7 +203,7 @@ public sealed class DebugViewModelTests : IDisposable
                 localizer,
                 new GameInstallationPath(),
                 new LocalInstallationStateStore(),
-                diagnostics));
+                diagnostics, new StubFilePickerService()));
         var backend = new TestBackend { IsDownloadRunning = true };
         var errorHandling = new ErrorHandlingService(localizer, diagnostics, toastService);
         var operations = new GameOperationsViewModel(
@@ -223,7 +223,8 @@ public sealed class DebugViewModelTests : IDisposable
             errorHandling,
             new LauncherSettingsService(tempDir),
             operations,
-            shell);
+            shell,
+            new StubFilePickerService());
         return new TestContext(viewModel, operations, backend, logger, toastService, localizer);
     }
 

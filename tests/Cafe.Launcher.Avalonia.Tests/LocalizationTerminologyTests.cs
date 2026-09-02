@@ -156,7 +156,7 @@ public sealed class LocalizationTerminologyTests
             localizer,
             new GameInstallationPath(),
             new LocalInstallationStateStore(),
-            new LocalDiagnostics())
+            new LocalDiagnostics(), new StubFilePickerService())
         {
             Language = LauncherLanguages.Auto
         };
@@ -181,7 +181,7 @@ public sealed class LocalizationTerminologyTests
             localizer,
             new GameInstallationPath(),
             new LocalInstallationStateStore(),
-            new LocalDiagnostics());
+            new LocalDiagnostics(), new StubFilePickerService());
         var dialogs = new DialogsViewModel(
             localizer,
             new NoticeStateService(Path.Combine(Path.GetTempPath(), Guid.NewGuid().ToString("N"), "notice.json")),

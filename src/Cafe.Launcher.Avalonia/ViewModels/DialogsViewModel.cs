@@ -160,7 +160,8 @@ public partial class DialogsViewModel : ViewModelBase, IModalContentViewModel
 
     public void ShowSetupWizard()
     {
-        LocalDiagnostics.LogSync(LogEntrySeverity.Info, "SetupWizardShow", "Setup wizard visibility requested.");
+        // UI 线程上不能阻塞等待日志写入；LogAsync 自吞异常，丢弃 Task 是安全的。
+        _ = LocalDiagnostics.LogAsync(LogEntrySeverity.Info, "SetupWizardShow", "Setup wizard visibility requested.");
         IsSetupWizardVisible = true;
     }
 

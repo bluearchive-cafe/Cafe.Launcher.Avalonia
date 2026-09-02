@@ -148,9 +148,9 @@ public partial class RemoteContentViewModel : ViewModelBase, IDisposable
                 BannerItems.Add(new RemoteContentItem
                 {
                     Title = localizer.T(LocalizationKeys.Banner),
-                    Subtitle = item.BannerImg ?? "",
-                    Url = item.JumpUrl ?? "",
-                    ImageUrl = item.BannerImg ?? ""
+                    Subtitle = SanitizeImageUrl(item.BannerImg),
+                    Url = SanitizeLinkUrl(item.JumpUrl),
+                    ImageUrl = SanitizeImageUrl(item.BannerImg)
                 });
             }
 
@@ -190,7 +190,7 @@ public partial class RemoteContentViewModel : ViewModelBase, IDisposable
                     {
                         Title = row.Title ?? "",
                         Subtitle = FormatUnixMilliseconds(row.PublishTime, null),
-                        Url = row.Link ?? ""
+                        Url = SanitizeLinkUrl(row.Link)
                     });
                 }
 
@@ -211,7 +211,7 @@ public partial class RemoteContentViewModel : ViewModelBase, IDisposable
                 {
                     Title = notice.NoticeTitle ?? "",
                     Subtitle = notice.NoticeTime ?? "",
-                    Url = notice.JumpUrl ?? ""
+                    Url = SanitizeLinkUrl(notice.JumpUrl)
                 });
             }
 
@@ -231,9 +231,11 @@ public partial class RemoteContentViewModel : ViewModelBase, IDisposable
                 SocialMediaItems.Add(new RemoteContentItem
                 {
                     Title = item.SocialMediaChannel ?? "",
-                    Subtitle = string.IsNullOrWhiteSpace(item.QrImg) ? item.JumpUrl ?? "" : item.QrImg,
-                    Url = item.JumpUrl ?? "",
-                    ImageUrl = item.QrImg ?? "",
+                    Subtitle = string.IsNullOrWhiteSpace(item.QrImg)
+                        ? SanitizeLinkUrl(item.JumpUrl)
+                        : SanitizeImageUrl(item.QrImg),
+                    Url = SanitizeLinkUrl(item.JumpUrl),
+                    ImageUrl = SanitizeImageUrl(item.QrImg),
                     SocialIconKind = ResolveSocialIconKind(item.SocialMediaChannel)
                 });
             }
@@ -245,7 +247,7 @@ public partial class RemoteContentViewModel : ViewModelBase, IDisposable
             {
                 Title = localizer.T(LocalizationKeys.ContactCustomerSupport),
                 Subtitle = ResolveContactSubtitle(social),
-                Url = ResolveContactUrl(social),
+                Url = SanitizeLinkUrl(ResolveContactUrl(social)),
                 SocialIconKind = "Headset"
             });
         }
@@ -444,6 +446,32 @@ public partial class RemoteContentViewModel : ViewModelBase, IDisposable
     private void OpenExternalUrl(string? url)
     {
         OpenExternalUrlRequested?.Invoke(url);
+    }
+
+    /// <summary>
+    /// Remote content URLs come straight from the operations API; only whitelisted
+    /// absolute schemes may reach the UI so nothing can trigger non-web handlers
+    /// downstream. ExternalLinkService keeps its own whitelist as defense in depth.
+    /// Link targets follow the ExternalLinkService policy (http/https/mailto);
+    /// image targets are download-only and restricted to http/https.
+    /// </summary>
+    internal static string SanitizeLinkUrl(string? value) =>
+        SanitizeUrl(value, scheme => scheme is "http" or "https" or "mailto");
+
+    internal static string SanitizeImageUrl(string? value) =>
+        SanitizeUrl(value, scheme => scheme is "http" or "https");
+
+    private static string SanitizeUrl(string? value, Func<string, bool> isSchemeAllowed)
+    {
+        if (string.IsNullOrWhiteSpace(value))
+        {
+            return "";
+        }
+
+        return Uri.TryCreate(value, UriKind.Absolute, out var uri)
+            && isSchemeAllowed(uri.Scheme)
+                ? value
+                : "";
     }
 
     partial void OnCarouselSelectedIndexChanged(int value)

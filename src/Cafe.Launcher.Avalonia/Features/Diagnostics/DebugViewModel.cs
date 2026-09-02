@@ -27,6 +27,7 @@ public sealed partial class DebugViewModel : ViewModelBase, IModalContentViewMod
     private readonly IErrorHandlingService errorHandling;
     private readonly LauncherSettingsService settingsService;
     private readonly IGameOperationActivity operations;
+    private readonly IFilePickerService filePickerService;
     private readonly ShellViewModel shell;
     private readonly LogExportService? logExportService;
     private bool disposed;
@@ -73,12 +74,6 @@ public sealed partial class DebugViewModel : ViewModelBase, IModalContentViewMod
     /// <summary>Raised when the debug panel needs the shell to present reset confirmation.</summary>
     public event Action? ResetSettingsConfirmationRequested;
 
-    /// <summary>Gets or sets the action used to open a local directory.</summary>
-    public Action<string>? OpenDirectory { get; set; }
-
-    /// <summary>Gets or sets the picker used to select a directory for exported logs.</summary>
-    public Func<string, Task<string?>>? PickExportDirectoryAsync { get; set; }
-
     /// <summary>Initializes the debug overlay and observes game-operation state.</summary>
     public DebugViewModel(
         ToastService toastService,
@@ -87,6 +82,7 @@ public sealed partial class DebugViewModel : ViewModelBase, IModalContentViewMod
         LauncherSettingsService settingsService,
         IGameOperationActivity operations,
         ShellViewModel shell,
+        IFilePickerService filePickerService,
         LogExportService? logExportService = null)
     {
         this.toastService = toastService;
@@ -95,6 +91,7 @@ public sealed partial class DebugViewModel : ViewModelBase, IModalContentViewMod
         this.settingsService = settingsService;
         this.operations = operations;
         this.shell = shell;
+        this.filePickerService = filePickerService;
         this.logExportService = logExportService;
 
         operations.ActivityPropertyChanged += OnOperationsPropertyChanged;
@@ -413,13 +410,16 @@ public sealed partial class DebugViewModel : ViewModelBase, IModalContentViewMod
     [RelayCommand]
     private async Task ExportLogsAsync()
     {
-        if (logExportService is null || PickExportDirectoryAsync is null)
+        if (logExportService is null)
         {
             LastActionResult = shell.I18n[LocalizationKeys.DebugLogExportUnavailable];
             return;
         }
 
-        var dir = await PickExportDirectoryAsync(LauncherUserDataDirectory.Root);
+        Directory.CreateDirectory(LauncherUserDataDirectory.Root);
+        var dir = await filePickerService.PickFolderAsync(
+            shell.I18n[LocalizationKeys.LogExportFolderPickerTitle],
+            LauncherUserDataDirectory.Root);
         if (string.IsNullOrWhiteSpace(dir))
         {
             LastActionResult = shell.I18n[LocalizationKeys.DebugExportCancelled];
@@ -435,7 +435,7 @@ public sealed partial class DebugViewModel : ViewModelBase, IModalContentViewMod
             var folder = Path.GetDirectoryName(zipPath);
             if (folder is not null)
             {
-                OpenDirectory?.Invoke(folder);
+                ShellFolderOpener.OpenInFileManager(folder);
             }
         }
         catch (Exception ex)
@@ -447,7 +447,7 @@ public sealed partial class DebugViewModel : ViewModelBase, IModalContentViewMod
     [RelayCommand]
     private void OpenDataDirectory()
     {
-        OpenDirectory?.Invoke(DataDirectoryPath);
+        ShellFolderOpener.OpenInFileManager(DataDirectoryPath);
     }
 
     private static string Format(string template, params object[] values)

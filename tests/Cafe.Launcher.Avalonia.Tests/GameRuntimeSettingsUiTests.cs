@@ -145,7 +145,8 @@ public sealed class GameRuntimeSettingsUiTests
             options,
             new SettingsAppearanceViewModel(new SettingsEditor()),
             new FakeErrorHandlingService(),
-            gameRuntime);
+            gameRuntime,
+            new StubFilePickerService());
 
     private sealed class StubGameRuntime(IReadOnlyList<GameRuntimeStatusEntry> entries) : IGameRuntime
     {

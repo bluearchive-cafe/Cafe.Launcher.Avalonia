@@ -85,6 +85,32 @@ public sealed class ProxySettingsService
             .Replace("\\?", ".", StringComparison.Ordinal);
     }
 
+    /// <summary>
+    /// Returns a stable identity string for the proxy configuration behind the given
+    /// proxy mode, used by <see cref="HttpClientFactory"/> to decide whether a cached
+    /// proxy handler can be reused. The Windows registry snapshot is re-read on every
+    /// call, so a mid-session system-proxy change produces a new fingerprint and
+    /// invalidates the cache.
+    /// </summary>
+    public Task<string> GetProxyFingerprintAsync(
+        string proxyMode,
+        CancellationToken cancellationToken = default)
+    {
+        if (proxyMode == ProxyModes.Direct)
+        {
+            return Task.FromResult(ProxyModes.Direct);
+        }
+
+        // Both Auto and System ultimately resolve from the same system proxy settings
+        // source; the mode prefix keeps their caches distinct because Auto falls back
+        // to default detection while System only falls back when the snapshot is empty.
+        var settings = systemProxySettingsProvider();
+        var identity = settings is null || string.IsNullOrWhiteSpace(settings.ProxyUrl)
+            ? "system-default"
+            : $"{settings.ProxyUrl}|{string.Join(",", settings.NoProxy)}";
+        return Task.FromResult($"{proxyMode}:{identity}");
+    }
+
     public async Task<SocketsHttpHandler> CreateHttpHandlerAsync(
         string proxyMode,
         CancellationToken cancellationToken = default)

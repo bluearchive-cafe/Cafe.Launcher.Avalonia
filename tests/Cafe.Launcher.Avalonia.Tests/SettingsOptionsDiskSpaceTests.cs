@@ -173,7 +173,7 @@ public sealed class SettingsOptionsDiskSpaceTests
             new GameRuntime(
                 [],
                 new DefaultProcessLauncher(),
-                new GameProcessTracker()));
+                new GameProcessTracker()), new StubFilePickerService());
         var snapshot = new LauncherStatusSnapshot
         {
             RuntimeState = LauncherRuntimeState.NotInstalled,

@@ -42,20 +42,17 @@ public partial class MainWindow : Window
     private SystemTrayService? systemTray;
     private MainWindowViewModel? configuredViewModel;
     private CancellationTokenSource? operationSurfaceMotionCts;
-    private readonly Func<string, Task<string?>> pickGameFolderAsync;
-    private readonly Func<Task<string?>> pickBackgroundImageAsync;
-    private readonly Func<Task<string?>> pickBackgroundFolderAsync;
-    private readonly Func<string, Task<string?>> pickLogExportDirectoryAsync;
-    private readonly Action<string> openDirectory;
+    private readonly WindowFilePickerService? filePickerService;
 
-    public MainWindow()
+    /// <summary>
+    /// <paramref name="filePickerService"/> 可空以兼容无头测试的默认构造；
+    /// 生产入口（App.axaml.cs）注入 WindowFilePickerService 并在本构造器中挂接本窗口。
+    /// </summary>
+    public MainWindow(WindowFilePickerService? filePickerService = null)
     {
         InitializeComponent();
-        pickGameFolderAsync = PickGameFolderAsync;
-        pickBackgroundImageAsync = PickBackgroundImageAsync;
-        pickBackgroundFolderAsync = PickBackgroundFolderAsync;
-        pickLogExportDirectoryAsync = PickLogExportDirectoryAsync;
-        openDirectory = OpenDirectory;
+        this.filePickerService = filePickerService;
+        filePickerService?.Attach(this);
         PointerPressed += OnPointerPressed;
         KeyDown += OnKeyDown;
         Activated += OnActivated;
@@ -150,15 +147,6 @@ public partial class MainWindow : Window
     {
         UnconfigureViewModel();
         configuredViewModel = viewModel;
-        viewModel.Settings.PickGameFolderAsync = pickGameFolderAsync;
-        viewModel.Settings.PickBackgroundImageAsync = pickBackgroundImageAsync;
-        viewModel.Settings.PickBackgroundFolderAsync = pickBackgroundFolderAsync;
-        viewModel.Background.PickBackgroundImageAsync = pickBackgroundImageAsync;
-        viewModel.Background.PickBackgroundFolderAsync = pickBackgroundFolderAsync;
-        viewModel.LogViewer.PickExportDirectoryAsync = pickLogExportDirectoryAsync;
-        viewModel.LogViewer.OpenExportDirectory = openDirectory;
-        viewModel.Debug.PickExportDirectoryAsync = pickLogExportDirectoryAsync;
-        viewModel.Debug.OpenDirectory = openDirectory;
         viewModel.Operations.MinimizeRequested += MinimizeWindow;
         viewModel.WindowChrome.MinimizeRequested += MinimizeWindow;
         viewModel.WindowChrome.CloseRequested += PerformClose;
@@ -426,6 +414,7 @@ public partial class MainWindow : Window
     protected override void OnClosed(EventArgs e)
     {
         UnconfigureViewModel();
+        filePickerService?.Detach(this);
         base.OnClosed(e);
     }
 
@@ -447,51 +436,6 @@ public partial class MainWindow : Window
         SettleOperationSurface(OperationSurface);
         viewModel.RemoteContent.SetBannerPointerOver(false);
         viewModel.RemoteContent.SetBannerFocusWithin(false);
-
-        if (viewModel.Settings.PickGameFolderAsync == pickGameFolderAsync)
-        {
-            viewModel.Settings.PickGameFolderAsync = null;
-        }
-
-        if (viewModel.Settings.PickBackgroundImageAsync == pickBackgroundImageAsync)
-        {
-            viewModel.Settings.PickBackgroundImageAsync = null;
-        }
-
-        if (viewModel.Settings.PickBackgroundFolderAsync == pickBackgroundFolderAsync)
-        {
-            viewModel.Settings.PickBackgroundFolderAsync = null;
-        }
-
-        if (viewModel.Background.PickBackgroundImageAsync == pickBackgroundImageAsync)
-        {
-            viewModel.Background.PickBackgroundImageAsync = null;
-        }
-
-        if (viewModel.Background.PickBackgroundFolderAsync == pickBackgroundFolderAsync)
-        {
-            viewModel.Background.PickBackgroundFolderAsync = null;
-        }
-
-        if (viewModel.LogViewer.PickExportDirectoryAsync == pickLogExportDirectoryAsync)
-        {
-            viewModel.LogViewer.PickExportDirectoryAsync = null;
-        }
-
-        if (viewModel.LogViewer.OpenExportDirectory == openDirectory)
-        {
-            viewModel.LogViewer.OpenExportDirectory = null;
-        }
-
-        if (viewModel.Debug.PickExportDirectoryAsync == pickLogExportDirectoryAsync)
-        {
-            viewModel.Debug.PickExportDirectoryAsync = null;
-        }
-
-        if (viewModel.Debug.OpenDirectory == openDirectory)
-        {
-            viewModel.Debug.OpenDirectory = null;
-        }
 
         configuredViewModel = null;
     }
@@ -561,90 +505,6 @@ public partial class MainWindow : Window
         {
             settings.WindowHeight = Height;
         }
-    }
-
-    private async Task<string?> PickGameFolderAsync(string currentPath)
-    {
-        var pickerTitle = (DataContext as MainWindowViewModel)?.Shell.GameFolderPickerTitle ?? "";
-        return await PickFolderAsync(pickerTitle, currentPath);
-    }
-
-    private async Task<string?> PickBackgroundImageAsync()
-    {
-        var imagePickerTitle = (DataContext as MainWindowViewModel)?.Background.BackgroundImagePickerTitle ?? "";
-        return await PickImageFileAsync(imagePickerTitle);
-    }
-
-    private async Task<string?> PickBackgroundFolderAsync()
-    {
-        var folderPickerTitle = (DataContext as MainWindowViewModel)?.Background.BackgroundFolderPickerTitle ?? "";
-        return await PickFolderAsync(folderPickerTitle, startLocation: null);
-    }
-
-    private async Task<string?> PickLogExportDirectoryAsync(string defaultPath)
-    {
-        Directory.CreateDirectory(defaultPath);
-        if (!StorageProvider.CanPickFolder)
-        {
-            return defaultPath;
-        }
-
-        var pickerTitle = (DataContext as MainWindowViewModel)?.Shell.LogExportFolderPickerTitle ?? "";
-        return await PickFolderAsync(pickerTitle, defaultPath);
-    }
-
-    /// <summary>
-    /// 统一的目录选择脚手架：能力守卫、起点定位、单选与本地路径转换。
-    /// 调用方只提供本地化标题与可选起点目录。
-    /// </summary>
-    private async Task<string?> PickFolderAsync(string title, string? startLocation)
-    {
-        if (!StorageProvider.CanPickFolder)
-        {
-            return null;
-        }
-
-        var start = string.IsNullOrWhiteSpace(startLocation)
-            ? null
-            : await StorageProvider.TryGetFolderFromPathAsync(startLocation);
-
-        var folders = await StorageProvider.OpenFolderPickerAsync(new FolderPickerOpenOptions
-        {
-            Title = title,
-            AllowMultiple = false,
-            SuggestedStartLocation = start
-        });
-
-        return folders.FirstOrDefault()?.TryGetLocalPath();
-    }
-
-    /// <summary>统一的图片文件选择脚手架：能力守卫、单选与本地路径转换。</summary>
-    private async Task<string?> PickImageFileAsync(string title)
-    {
-        if (!StorageProvider.CanOpen)
-        {
-            return null;
-        }
-
-        var files = await StorageProvider.OpenFilePickerAsync(new FilePickerOpenOptions
-        {
-            Title = title,
-            AllowMultiple = false,
-            FileTypeFilter = new List<FilePickerFileType>
-            {
-                new("Images")
-                {
-                    Patterns = new[] { "*.png", "*.jpg", "*.jpeg", "*.bmp", "*.webp" },
-                }
-            }
-        });
-
-        return files.FirstOrDefault()?.TryGetLocalPath();
-    }
-
-    private static void OpenDirectory(string path)
-    {
-        ShellFolderOpener.OpenInFileManager(path);
     }
 
     private void OnPointerPressed(object? sender, PointerPressedEventArgs e)

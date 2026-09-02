@@ -62,7 +62,8 @@ public sealed class LogViewerDialogViewModelTests : IDisposable
             null,
             null,
             null,
-            _ => entriesLoaded.Task);
+            _ => entriesLoaded.Task,
+            new StubFilePickerService());
 
         var openTask = viewModel.OpenCommand.ExecuteAsync(null);
         Assert.True(viewModel.IsVisible);
@@ -230,8 +231,11 @@ public sealed class LogViewerDialogViewModelTests : IDisposable
             new LogExportService(logger),
             toastService,
             new LocalizationService(),
-            diagnostics);
-        viewModel.PickExportDirectoryAsync = _ => Task.FromResult<string?>("\0");
+            diagnostics,
+            filePickerService: new StubFilePickerService
+            {
+                FolderPicker = (_, _) => Task.FromResult<string?>("\0")
+            });
 
         await viewModel.ExportCommand.ExecuteAsync(null);
 
@@ -243,7 +247,7 @@ public sealed class LogViewerDialogViewModelTests : IDisposable
     }
 
     private LogViewerDialogViewModel CreateViewModel() =>
-        new(logger, null, null, null, null, null);
+        new(logger, null, null, null, null, null, new StubFilePickerService());
 
     public void Dispose()
     {

@@ -27,6 +27,7 @@ public sealed partial class LogViewerDialogViewModel : ViewModelBase, IModalCont
     private readonly LocalizationService? localizer;
     private readonly LocalDiagnostics? diagnostics;
     private readonly Func<CancellationToken, Task<IReadOnlyList<LogEntryDisplay>>> entryLoader;
+    private readonly IFilePickerService filePickerService;
     private IReadOnlyList<LogEntryDisplay> allEntries = [];
     private CancellationTokenSource? filterCancellationTokenSource;
     private int loadedPageCount = 1;
@@ -37,10 +38,6 @@ public sealed partial class LogViewerDialogViewModel : ViewModelBase, IModalCont
 
     /// <summary>Gets whether another 500-entry page is available before the loaded entries.</summary>
     public bool HasEarlierEntries => allEntries.Count < totalEntryCount;
-
-    public Func<string, Task<string?>>? PickExportDirectoryAsync { get; set; }
-
-    public Action<string>? OpenExportDirectory { get; set; }
 
     [ObservableProperty]
     private bool isVisible;
@@ -78,8 +75,9 @@ public sealed partial class LogViewerDialogViewModel : ViewModelBase, IModalCont
         LogExportService exportService,
         ToastService toastService,
         LocalizationService localizer,
-        LocalDiagnostics diagnostics)
-        : this(logger, exportService, toastService, localizer, diagnostics, null)
+        LocalDiagnostics diagnostics,
+        IFilePickerService filePickerService)
+        : this(logger, exportService, toastService, localizer, diagnostics, null, filePickerService)
     {
     }
 
@@ -89,13 +87,15 @@ public sealed partial class LogViewerDialogViewModel : ViewModelBase, IModalCont
         ToastService? toastService,
         LocalizationService? localizer,
         LocalDiagnostics? diagnostics,
-        Func<CancellationToken, Task<IReadOnlyList<LogEntryDisplay>>>? entryLoader)
+        Func<CancellationToken, Task<IReadOnlyList<LogEntryDisplay>>>? entryLoader,
+        IFilePickerService filePickerService)
     {
         this.logger = logger;
         this.exportService = exportService;
         this.toastService = toastService;
         this.localizer = localizer;
         this.diagnostics = diagnostics;
+        this.filePickerService = filePickerService;
         this.entryLoader = entryLoader ?? LoadEntriesAsync;
     }
 
@@ -205,13 +205,14 @@ public sealed partial class LogViewerDialogViewModel : ViewModelBase, IModalCont
     [RelayCommand]
     private async Task ExportAsync()
     {
-        if (exportService is null || PickExportDirectoryAsync is null)
+        if (exportService is null)
             return;
 
         try
         {
             Directory.CreateDirectory(LogExportService.DefaultExportDirectory);
-            var selectedDirectory = await PickExportDirectoryAsync(
+            var selectedDirectory = await filePickerService.PickFolderAsync(
+                localizer?.T(LocalizationKeys.LogExportFolderPickerTitle) ?? "",
                 LogExportService.DefaultExportDirectory);
             if (string.IsNullOrWhiteSpace(selectedDirectory))
                 return;
@@ -222,7 +223,7 @@ public sealed partial class LogViewerDialogViewModel : ViewModelBase, IModalCont
                 ?? $"Logs exported to {zipPath}");
             try
             {
-                OpenExportDirectory?.Invoke(selectedDirectory);
+                ShellFolderOpener.OpenInFileManager(selectedDirectory);
             }
             catch (Exception exception)
             {

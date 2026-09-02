@@ -644,6 +644,31 @@ public sealed class RemoteContentViewModelTests
         Assert.Equal(expected, RemoteContentViewModel.ResolveContactUrl(social));
     }
 
+    [Theory]
+    [InlineData("https://example.invalid/page", "https://example.invalid/page")]
+    [InlineData("http://example.invalid/page", "http://example.invalid/page")]
+    [InlineData("mailto:support@example.invalid", "mailto:support@example.invalid")]
+    [InlineData("file:///C:/Windows/System32/cmd.exe", "")]
+    [InlineData("cmd://calc", "")]
+    [InlineData("javascript:alert(1)", "")]
+    [InlineData("not a url", "")]
+    [InlineData("", "")]
+    [InlineData(null, "")]
+    public void SanitizeLinkUrl_AllowsOnlyWebAndMailtoSchemes(string? input, string expected)
+    {
+        Assert.Equal(expected, RemoteContentViewModel.SanitizeLinkUrl(input));
+    }
+
+    [Theory]
+    [InlineData("https://example.invalid/banner.png", "https://example.invalid/banner.png")]
+    [InlineData("mailto:support@example.invalid", "")]
+    [InlineData("file:///C:/Windows/System32/cmd.exe", "")]
+    [InlineData(null, "")]
+    public void SanitizeImageUrl_AllowsOnlyHttpSchemes(string? input, string expected)
+    {
+        Assert.Equal(expected, RemoteContentViewModel.SanitizeImageUrl(input));
+    }
+
     [Fact]
     public void FormatUnixMilliseconds_WhenValueIsInvalid_ReturnsTypeLabel()
     {
