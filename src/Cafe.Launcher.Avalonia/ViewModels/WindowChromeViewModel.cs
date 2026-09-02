@@ -135,7 +135,19 @@ public partial class WindowChromeViewModel : ViewModelBase
             : LauncherConstants.OfficialGameWebsiteUrl;
 
     [RelayCommand]
+    private void OpenAboutOfficialSite()
+    {
+        openExternalUrl(LauncherConstants.CafeWebsiteUrl);
+    }
+
+    [RelayCommand]
     private void OpenGitHubRepository()
+    {
+        openExternalUrl(LauncherConstants.GitHubRepositoryUrl);
+    }
+
+    [RelayCommand]
+    private void OpenGitHubReleaseRepository()
     {
         openExternalUrl(LauncherConstants.GitHubReleaseRepositoryUrl);
     }

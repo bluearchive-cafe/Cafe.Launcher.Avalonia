@@ -25,6 +25,8 @@ public static class LauncherConstants
         "https://github.com/bluearchive-cafe/Cafe.Launcher.Avalonia/blob/main/PRIVACY.md";
     public const string DefaultBackgroundArtworkUrl =
         "https://www.pixiv.net/artworks/142932674";
+    public const string GitHubRepositoryUrl =
+        "https://github.com/bluearchive-cafe/Cafe.Launcher.Avalonia";
     /// <summary>
     /// Full GitHub release repository URL.
     /// Redundant with <see cref="ApiConfig.GitHubReleaseRepositoryUrl"/>;

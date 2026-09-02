@@ -994,9 +994,10 @@ public sealed partial class UiStyleContractTests
             ["SettingsAboutSection"] =
             [
                 "Settings.CheckForUpdatesCommand",
-                "WindowChrome.OpenOfficialSiteCommand",
+                "WindowChrome.OpenAboutOfficialSiteCommand",
                 "WindowChrome.OpenHelpDocsCommand",
                 "WindowChrome.OpenGitHubRepositoryCommand",
+                "WindowChrome.OpenGitHubReleaseRepositoryCommand",
                 "WindowChrome.OpenIssueTrackerCommand",
                 "WindowChrome.OpenPrivacyPolicyCommand",
                 "WindowChrome.OpenDefaultBackgroundArtworkCommand"
@@ -4147,7 +4148,7 @@ public sealed partial class UiStyleContractTests
             aboutText,
             "Shell.VersionCaptionText",
             "Settings.CheckForUpdatesCommand",
-            "WindowChrome.OpenOfficialSiteCommand",
+            "WindowChrome.OpenAboutOfficialSiteCommand",
             "WindowChrome.OpenHelpDocsCommand",
             "Shell.I18n[versionInfo]",
             "Shell.CommitShaValue",
@@ -4158,9 +4159,10 @@ public sealed partial class UiStyleContractTests
         AssertOrdered(
             aboutText,
             "Settings.CheckForUpdatesCommand",
-            "WindowChrome.OpenOfficialSiteCommand",
+            "WindowChrome.OpenAboutOfficialSiteCommand",
             "WindowChrome.OpenHelpDocsCommand",
             "WindowChrome.OpenGitHubRepositoryCommand",
+            "WindowChrome.OpenGitHubReleaseRepositoryCommand",
             "WindowChrome.OpenIssueTrackerCommand",
             "Shell.I18n[aboutCopyrightText]",
             "WindowChrome.OpenPrivacyPolicyCommand",

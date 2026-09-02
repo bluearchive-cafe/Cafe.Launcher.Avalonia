@@ -472,6 +472,8 @@ internal static class LauncherStrings
 
     internal static string GameShortcutUnsupported => GetRequiredString("gameShortcutUnsupported");
 
+    internal static string GitHubReleaseRepository => GetRequiredString("gitHubReleaseRepository");
+
     internal static string GitHubRepository => GetRequiredString("gitHubRepository");
 
     internal static string HelpDocs => GetRequiredString("helpDocs");
