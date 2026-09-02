@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.Threading;
 using System.Threading.Tasks;
+using Cafe.Launcher.Avalonia.Constants;
 using Cafe.Launcher.Avalonia.Features.SetupWizard;
 using Cafe.Launcher.Avalonia.Features.Shell;
 using Cafe.Launcher.Avalonia.Helpers;
@@ -146,17 +147,17 @@ public partial class SetupWizardViewModel : ViewModelBase, IModalContentViewMode
 
     public string GamePathStatusText => GamePathStatus switch
     {
-        SetupWizardGamePathStatus.Checking => localizer.T("setupWizardGamePathChecking"),
-        SetupWizardGamePathStatus.AvailableForInstallation => localizer.T("setupWizardGamePathAvailable"),
-        SetupWizardGamePathStatus.ValidInstallation => localizer.T("setupWizardGamePathInstalled"),
-        SetupWizardGamePathStatus.CorruptedInstallation => localizer.T("setupWizardGamePathCorrupted"),
-        SetupWizardGamePathStatus.Inaccessible => localizer.T("setupWizardGamePathInaccessible"),
+        SetupWizardGamePathStatus.Checking => localizer.T(LocalizationKeys.SetupWizardGamePathChecking),
+        SetupWizardGamePathStatus.AvailableForInstallation => localizer.T(LocalizationKeys.SetupWizardGamePathAvailable),
+        SetupWizardGamePathStatus.ValidInstallation => localizer.T(LocalizationKeys.SetupWizardGamePathInstalled),
+        SetupWizardGamePathStatus.CorruptedInstallation => localizer.T(LocalizationKeys.SetupWizardGamePathCorrupted),
+        SetupWizardGamePathStatus.Inaccessible => localizer.T(LocalizationKeys.SetupWizardGamePathInaccessible),
         _ => string.Empty
     };
 
     /// <summary>Gets the localized title and description for the current game path status.</summary>
     public SetupWizardGamePathPresentation GamePathPresentation => new(
-        localizer.T("setupWizardGamePathStatusTitle"),
+        localizer.T(LocalizationKeys.SetupWizardGamePathStatusTitle),
         ResolveGamePathPresentationDescription());
 
     public bool IsGamePathChecking => GamePathStatus == SetupWizardGamePathStatus.Checking;
@@ -397,14 +398,14 @@ public partial class SetupWizardViewModel : ViewModelBase, IModalContentViewMode
         [
             new SetupWizardDownloadSourceItem(
                 PatchUrlGroups.Cafe,
-                localizer.T("downloadSourceCafe"),
+                localizer.T(LocalizationKeys.DownloadSourceCafe),
                 isCafeRecommended,
                 isCafeRecommended
-                    ? localizer.T("setupWizardDownloadSourceCafeRecommendationReason")
+                    ? localizer.T(LocalizationKeys.SetupWizardDownloadSourceCafeRecommendationReason)
                     : string.Empty),
             new SetupWizardDownloadSourceItem(
                 PatchUrlGroups.Official,
-                localizer.T("downloadSourceOfficial"),
+                localizer.T(LocalizationKeys.DownloadSourceOfficial),
                 false,
                 string.Empty)
         ];
@@ -413,7 +414,7 @@ public partial class SetupWizardViewModel : ViewModelBase, IModalContentViewMode
 
     private string ResolveGamePathPresentationDescription() => GamePathStatus switch
     {
-        SetupWizardGamePathStatus.NotSelected => localizer.T("setupWizardGamePathEmpty"),
+        SetupWizardGamePathStatus.NotSelected => localizer.T(LocalizationKeys.SetupWizardGamePathEmpty),
         _ => GamePathStatusText
     };
 
@@ -434,20 +435,20 @@ public partial class SetupWizardViewModel : ViewModelBase, IModalContentViewMode
         LauncherLanguages.SimplifiedChinese => "简体中文",
         LauncherLanguages.TraditionalChinese => "繁體中文",
         LauncherLanguages.Japanese => "日本語",
-        _ => localizer.T("languageAuto")
+        _ => localizer.T(LocalizationKeys.LanguageAuto)
     };
 
     private string ResolveDownloadSourceDisplayName() => PatchUrlGroup switch
     {
-        PatchUrlGroups.Cafe => localizer.T("downloadSourceCafe"),
-        _ => localizer.T("downloadSourceOfficial")
+        PatchUrlGroups.Cafe => localizer.T(LocalizationKeys.DownloadSourceCafe),
+        _ => localizer.T(LocalizationKeys.DownloadSourceOfficial)
     };
 
     private string ResolveProxyDisplayName() => ProxyMode switch
     {
-        ProxyModes.Direct => localizer.T("proxyDirect"),
-        ProxyModes.Auto => localizer.T("proxyAuto"),
-        ProxyModes.System => localizer.T("proxySystem"),
+        ProxyModes.Direct => localizer.T(LocalizationKeys.ProxyDirect),
+        ProxyModes.Auto => localizer.T(LocalizationKeys.ProxyAuto),
+        ProxyModes.System => localizer.T(LocalizationKeys.ProxySystem),
         _ => ProxyMode
     };
 

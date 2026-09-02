@@ -3,6 +3,7 @@ using System.ComponentModel;
 using System.Threading;
 using System.Threading.Tasks;
 using Avalonia.Media.Imaging;
+using Cafe.Launcher.Avalonia.Constants;
 using Cafe.Launcher.Avalonia.Features.Diagnostics;
 using Cafe.Launcher.Avalonia.Features.GameOperations;
 using Cafe.Launcher.Avalonia.Helpers;
@@ -236,7 +237,7 @@ public sealed class ShellLifecycle : IShellRuntime
             shell.SetRefreshError(exception);
             operations.SetIdlePanels(currentSnapshot);
             await errorHandling.HandleErrorAsync("Launcher core refresh failed.", exception,
-                new ErrorHandlingOptions { ToastMessage = localizer.F("launcherCoreRefreshFailed", exception.Message) });
+                new ErrorHandlingOptions { ToastMessage = localizer.F(LocalizationKeys.LauncherCoreRefreshFailed, exception.Message) });
             return false;
         }
         finally
@@ -298,7 +299,7 @@ public sealed class ShellLifecycle : IShellRuntime
         if (runtimeState is LauncherRuntimeState.Ready or LauncherRuntimeState.UpdateAvailable
             && !string.Equals(previousPatchUrlGroup, savedSettings.PatchUrlGroup, StringComparison.Ordinal))
         {
-            dialogs.ShowRepairConfirm(localizer.T("downloadSourceChangedRepairPrompt"));
+            dialogs.ShowRepairConfirm(localizer.T(LocalizationKeys.DownloadSourceChangedRepairPrompt));
         }
     }
 
@@ -309,7 +310,7 @@ public sealed class ShellLifecycle : IShellRuntime
     /// <summary>Shows confirmation before switching the resource-panel source.</summary>
     public void ShowResourcePanelSourceConfirmDialog()
     {
-        dialogs.ShowResourcePanelSourceConfirm(localizer.T("resourcePanelCafeOnlyMessage"));
+        dialogs.ShowResourcePanelSourceConfirm(localizer.T(LocalizationKeys.ResourcePanelCafeOnlyMessage));
     }
 
     /// <summary>Switches the confirmed resource-panel source and opens its panel.</summary>
@@ -328,7 +329,7 @@ public sealed class ShellLifecycle : IShellRuntime
         catch (Exception exception)
         {
             await errorHandling.HandleErrorAsync("Resource panel source switch failed.", exception,
-                new ErrorHandlingOptions { ToastMessage = localizer.F("resourcePanelLoadFailed", exception.Message) });
+                new ErrorHandlingOptions { ToastMessage = localizer.F(LocalizationKeys.ResourcePanelLoadFailed, exception.Message) });
         }
     }
 
@@ -343,7 +344,7 @@ public sealed class ShellLifecycle : IShellRuntime
     public async Task ResetSettingsFromSettingsPageAsync()
     {
         await ResetSettingsToDefaultsAsync();
-        toastService.ShowSuccess(localizer.T("debugSettingsReset"));
+        toastService.ShowSuccess(localizer.T(LocalizationKeys.DebugSettingsReset));
     }
 
     private void OnResourcePanelSourceSwitchConfirmed() => _ = SwitchSourceThenOpenPanelAsync();
@@ -616,7 +617,7 @@ public sealed class ShellLifecycle : IShellRuntime
             if (result.IsSuccessful && result.IsUpdateAvailable)
             {
                 toastService.Show(
-                    localizer.F("startupUpdateAvailable", result.LatestVersion),
+                    localizer.F(LocalizationKeys.StartupUpdateAvailable, result.LatestVersion),
                     ToastSeverity.Info,
                     durationMs: 8000);
             }
@@ -683,8 +684,8 @@ public sealed class ShellLifecycle : IShellRuntime
     private void ApplyLanguage(string language)
     {
         shell.ApplyLanguage(language, settings, resourcePanel, currentSnapshot is not null);
-        background.BackgroundImagePickerTitle = localizer.T("chooseBackgroundImageTitle");
-        background.BackgroundFolderPickerTitle = localizer.T("chooseBackgroundFolderTitle");
+        background.BackgroundImagePickerTitle = localizer.T(LocalizationKeys.ChooseBackgroundImageTitle);
+        background.BackgroundFolderPickerTitle = localizer.T(LocalizationKeys.ChooseBackgroundFolderTitle);
         remoteContent.ApplyLanguage();
         dialogs.ApplyLanguage();
         operations.ApplyLanguage();

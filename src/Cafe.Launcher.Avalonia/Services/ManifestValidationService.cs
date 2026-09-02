@@ -5,6 +5,7 @@ using System.Net.Http;
 using System.Text.Json;
 using System.Threading;
 using System.Threading.Tasks;
+using Cafe.Launcher.Avalonia.Constants;
 using Cafe.Launcher.Avalonia.Helpers;
 using Cafe.Launcher.Avalonia.Models;
 
@@ -39,7 +40,7 @@ public sealed class ManifestValidationService
             return new ManifestValidationResult
             {
                 Success = true,
-                Message = localizer.T("launchCheckSkipped")
+                Message = localizer.T(LocalizationKeys.LaunchCheckSkipped)
             };
         }
 
@@ -49,7 +50,7 @@ public sealed class ManifestValidationService
             var basis = localGame.Manifest?.Basis;
             if (string.IsNullOrWhiteSpace(version) || string.IsNullOrWhiteSpace(basis))
             {
-                return Failed(localizer.T("localManifestMetadataMissing"));
+                return Failed(localizer.T(LocalizationKeys.LocalManifestMetadataMissing));
             }
 
             try
@@ -73,19 +74,19 @@ public sealed class ManifestValidationService
                 return new ManifestValidationResult
                 {
                     Success = true,
-                    Message = localizer.T("launchCheckSkipped")
+                    Message = localizer.T(LocalizationKeys.LaunchCheckSkipped)
                 };
             }
         }
 
         if (localGame.Kind == LocalInstallationStateKind.NotInstalled)
         {
-            return Failed(localizer.F("localManifestMissing", localGame.ManifestPath));
+            return Failed(localizer.F(LocalizationKeys.LocalManifestMissing, localGame.ManifestPath));
         }
 
         if (localGame.Manifest is null)
         {
-            return Failed(localizer.F("localManifestUnreadable", localGame.ManifestPath));
+            return Failed(localizer.F(LocalizationKeys.LocalManifestUnreadable, localGame.ManifestPath));
         }
 
         return await Task.Run(() => ValidateFiles(gamePath, localGame.Manifest.Files)).ConfigureAwait(false);
@@ -102,7 +103,7 @@ public sealed class ManifestValidationService
             MissingFileCount = fileCounts.MissingFileCount,
             SizeMismatchFileCount = fileCounts.SizeMismatchFileCount,
             Message = damagedCount == 0
-                ? localizer.T("manifestValidationPassed")
+                ? localizer.T(LocalizationKeys.ManifestValidationPassed)
                 : localizer.F(
                     "manifestValidationFailed",
                     fileCounts.MissingFileCount,

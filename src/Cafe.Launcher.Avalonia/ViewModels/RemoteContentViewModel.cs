@@ -8,6 +8,7 @@ using Avalonia.Media.Imaging;
 using Avalonia.Animation;
 using Avalonia.Animation.Easings;
 using Avalonia.Threading;
+using Cafe.Launcher.Avalonia.Constants;
 using Cafe.Launcher.Avalonia.Helpers;
 using Cafe.Launcher.Avalonia.Models;
 using Cafe.Launcher.Avalonia.Services;
@@ -146,7 +147,7 @@ public partial class RemoteContentViewModel : ViewModelBase, IDisposable
             {
                 BannerItems.Add(new RemoteContentItem
                 {
-                    Title = localizer.T("banner"),
+                    Title = localizer.T(LocalizationKeys.Banner),
                     Subtitle = item.BannerImg ?? "",
                     Url = item.JumpUrl ?? "",
                     ImageUrl = item.BannerImg ?? ""
@@ -159,7 +160,7 @@ public partial class RemoteContentViewModel : ViewModelBase, IDisposable
                 BannerDots.Add(new BannerDot
                 {
                     Index = i,
-                    AccessibleName = localizer.F("carouselPage", i + 1, BannerItems.Count),
+                    AccessibleName = localizer.F(LocalizationKeys.CarouselPage, i + 1, BannerItems.Count),
                     IsActive = i == 0
                 });
             }
@@ -242,7 +243,7 @@ public partial class RemoteContentViewModel : ViewModelBase, IDisposable
         {
             SocialMediaItems.Add(new RemoteContentItem
             {
-                Title = localizer.T("contactCustomerSupport"),
+                Title = localizer.T(LocalizationKeys.ContactCustomerSupport),
                 Subtitle = ResolveContactSubtitle(social),
                 Url = ResolveContactUrl(social),
                 SocialIconKind = "Headset"
@@ -458,7 +459,7 @@ public partial class RemoteContentViewModel : ViewModelBase, IDisposable
     private void UpdateCarouselPageText()
     {
         CarouselPageText = BannerItems.Count > 1
-            ? localizer.F("carouselPage", CarouselSelectedIndex + 1, BannerItems.Count)
+            ? localizer.F(LocalizationKeys.CarouselPage, CarouselSelectedIndex + 1, BannerItems.Count)
             : "";
     }
 
@@ -466,7 +467,7 @@ public partial class RemoteContentViewModel : ViewModelBase, IDisposable
     {
         for (var i = 0; i < BannerDots.Count; i++)
         {
-            BannerDots[i].AccessibleName = localizer.F("carouselPage", i + 1, BannerItems.Count);
+            BannerDots[i].AccessibleName = localizer.F(LocalizationKeys.CarouselPage, i + 1, BannerItems.Count);
         }
     }
 

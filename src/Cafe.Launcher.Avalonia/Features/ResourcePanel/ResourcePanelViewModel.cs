@@ -5,6 +5,7 @@ using System.Threading;
 using System.Threading.Tasks;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
+using Cafe.Launcher.Avalonia.Constants;
 using Cafe.Launcher.Avalonia.Features.Shell;
 using Cafe.Launcher.Avalonia.Models;
 using Cafe.Launcher.Avalonia.Services;
@@ -102,12 +103,12 @@ public partial class ResourcePanelViewModel : ViewModelBase, IDisposable, IModal
     /// <summary>Called by parent ApplyLanguage to refresh display names.</summary>
     public void RefreshDisplayNames()
     {
-        GetResourcePanelItem(ResourcePanelResourceCodes.Text).DisplayName = localizer.T("resourcePanelGameText");
-        GetResourcePanelItem(ResourcePanelResourceCodes.Voice).DisplayName = localizer.T("resourcePanelMainVoice");
-        GetResourcePanelItem(ResourcePanelResourceCodes.Media).DisplayName = localizer.T("resourcePanelMedia");
+        GetResourcePanelItem(ResourcePanelResourceCodes.Text).DisplayName = localizer.T(LocalizationKeys.ResourcePanelGameText);
+        GetResourcePanelItem(ResourcePanelResourceCodes.Voice).DisplayName = localizer.T(LocalizationKeys.ResourcePanelMainVoice);
+        GetResourcePanelItem(ResourcePanelResourceCodes.Media).DisplayName = localizer.T(LocalizationKeys.ResourcePanelMedia);
         if (ResourcePanelItems.All(item => string.IsNullOrWhiteSpace(item.StatusText)))
         {
-            SetResourcePanelStatusText(localizer.T("resourcePanelLoading"));
+            SetResourcePanelStatusText(localizer.T(LocalizationKeys.ResourcePanelLoading));
         }
 
         PopulateUidSourceOptions();
@@ -115,8 +116,8 @@ public partial class ResourcePanelViewModel : ViewModelBase, IDisposable, IModal
 
     private void PopulateUidSourceOptions()
     {
-        var autoDisplay = localizer.T("resourcePanelUidSourceAuto");
-        var customDisplay = localizer.T("resourcePanelUidSourceCustom");
+        var autoDisplay = localizer.T(LocalizationKeys.ResourcePanelUidSourceAuto);
+        var customDisplay = localizer.T(LocalizationKeys.ResourcePanelUidSourceCustom);
         if (ResourcePanelUidSourceOptions.Count == 0)
         {
             ResourcePanelUidSourceOptions.Add(new SettingOption { Code = ResourcePanelUidSources.Auto, DisplayName = autoDisplay });
@@ -192,7 +193,7 @@ public partial class ResourcePanelViewModel : ViewModelBase, IDisposable, IModal
         }
         catch (Exception exception)
         {
-            ResourcePanelMessage = localizer.F("resourcePanelLoadFailed", exception.Message);
+            ResourcePanelMessage = localizer.F(LocalizationKeys.ResourcePanelLoadFailed, exception.Message);
             await resourcePanelService.LogErrorAsync("Resource panel source switch failed.", exception);
         }
         finally
@@ -213,13 +214,13 @@ public partial class ResourcePanelViewModel : ViewModelBase, IDisposable, IModal
         var uid = ManualResourcePanelUid.Trim();
         if (string.IsNullOrWhiteSpace(uid))
         {
-            ResourcePanelMessage = localizer.T("resourcePanelUidEmpty");
+            ResourcePanelMessage = localizer.T(LocalizationKeys.ResourcePanelUidEmpty);
             return;
         }
 
         if (!ResourcePanelUidService.IsValidUid(uid))
         {
-            ResourcePanelMessage = localizer.T("resourcePanelUidInvalidFormat");
+            ResourcePanelMessage = localizer.T(LocalizationKeys.ResourcePanelUidInvalidFormat);
             return;
         }
 
@@ -232,10 +233,10 @@ public partial class ResourcePanelViewModel : ViewModelBase, IDisposable, IModal
             SelectedResourcePanelUidSource = ResourcePanelUidSources.Custom;
             isSettingUidSource = false;
             ResourcePanelUid = uid;
-            ResourcePanelUidText = localizer.F("resourcePanelCurrentUid", uid);
+            ResourcePanelUidText = localizer.F(LocalizationKeys.ResourcePanelCurrentUid, uid);
             IsResourcePanelUidMissing = false;
             IsResourcePanelUidEditing = false;
-            ResourcePanelMessage = localizer.T("resourcePanelUidSaved");
+            ResourcePanelMessage = localizer.T(LocalizationKeys.ResourcePanelUidSaved);
             await LoadResourcePanelDataAsync(uid, lifetimeCts.Token);
         }
         catch (OperationCanceledException) when (lifetimeCts.IsCancellationRequested)
@@ -243,7 +244,7 @@ public partial class ResourcePanelViewModel : ViewModelBase, IDisposable, IModal
         }
         catch (Exception exception)
         {
-            ResourcePanelMessage = localizer.F("resourcePanelLoadFailed", exception.Message);
+            ResourcePanelMessage = localizer.F(LocalizationKeys.ResourcePanelLoadFailed, exception.Message);
             await errorHandling.HandleErrorAsync("Resource panel manual UID save failed.", exception,
                 new ErrorHandlingOptions { ShowToast = false });
         }
@@ -259,7 +260,7 @@ public partial class ResourcePanelViewModel : ViewModelBase, IDisposable, IModal
         if (string.IsNullOrWhiteSpace(ResourcePanelUid))
         {
             IsResourcePanelUidMissing = true;
-            ResourcePanelMessage = localizer.F("resourcePanelUidMissing", resourcePanelService.CookieLibraryPath);
+            ResourcePanelMessage = localizer.F(LocalizationKeys.ResourcePanelUidMissing, resourcePanelService.CookieLibraryPath);
             return;
         }
 
@@ -273,15 +274,15 @@ public partial class ResourcePanelViewModel : ViewModelBase, IDisposable, IModal
                 GetResourcePanelItem(ResourcePanelResourceCodes.Media).IsEnabled,
                 proxyMode,
                 lifetimeCts.Token);
-            ResourcePanelMessage = localizer.T("resourcePanelSaved");
-            toastService.ShowSuccess(localizer.T("resourcePanelSaved"));
+            ResourcePanelMessage = localizer.T(LocalizationKeys.ResourcePanelSaved);
+            toastService.ShowSuccess(localizer.T(LocalizationKeys.ResourcePanelSaved));
         }
         catch (OperationCanceledException) when (lifetimeCts.IsCancellationRequested)
         {
         }
         catch (Exception exception)
         {
-            var message = localizer.F("resourcePanelSaveFailed", exception.Message);
+            var message = localizer.F(LocalizationKeys.ResourcePanelSaveFailed, exception.Message);
             ResourcePanelMessage = message;
             await errorHandling.HandleErrorAsync("Resource panel save failed.", exception,
                 new ErrorHandlingOptions { ToastMessage = message });
@@ -316,8 +317,8 @@ public partial class ResourcePanelViewModel : ViewModelBase, IDisposable, IModal
     {
         IsResourcePanelBusy = true;
         IsResourcePanelUidEditing = false;
-        ResourcePanelMessage = localizer.T("resourcePanelLoading");
-        SetResourcePanelStatusText(localizer.T("resourcePanelLoading"));
+        ResourcePanelMessage = localizer.T(LocalizationKeys.ResourcePanelLoading);
+        SetResourcePanelStatusText(localizer.T(LocalizationKeys.ResourcePanelLoading));
         try
         {
             try
@@ -336,13 +337,13 @@ public partial class ResourcePanelViewModel : ViewModelBase, IDisposable, IModal
             ResourcePanelUid = uid;
             ResourcePanelUidText = string.IsNullOrWhiteSpace(uid)
                 ? ""
-                : localizer.F("resourcePanelCurrentUid", uid);
+                : localizer.F(LocalizationKeys.ResourcePanelCurrentUid, uid);
             ManualResourcePanelUid = uid;
             if (string.IsNullOrWhiteSpace(uid))
             {
                 IsResourcePanelUidMissing = true;
-                ResourcePanelMessage = localizer.F("resourcePanelUidMissing", resourcePanelService.CookieLibraryPath);
-                SetResourcePanelStatusText(localizer.T("resourcePanelFailed"));
+                ResourcePanelMessage = localizer.F(LocalizationKeys.ResourcePanelUidMissing, resourcePanelService.CookieLibraryPath);
+                SetResourcePanelStatusText(localizer.T(LocalizationKeys.ResourcePanelFailed));
                 return;
             }
 
@@ -355,8 +356,8 @@ public partial class ResourcePanelViewModel : ViewModelBase, IDisposable, IModal
         catch (Exception exception)
         {
             IsResourcePanelBusy = false;
-            ResourcePanelMessage = localizer.F("resourcePanelLoadFailed", exception.Message);
-            SetResourcePanelStatusText(localizer.T("resourcePanelFailed"));
+            ResourcePanelMessage = localizer.F(LocalizationKeys.ResourcePanelLoadFailed, exception.Message);
+            SetResourcePanelStatusText(localizer.T(LocalizationKeys.ResourcePanelFailed));
             await resourcePanelService.LogErrorAsync("Resource panel load failed.", exception);
         }
         finally
@@ -378,11 +379,11 @@ public partial class ResourcePanelViewModel : ViewModelBase, IDisposable, IModal
 
     private async Task LoadResourcePanelDataAsync(string uid, CancellationToken cancellationToken)
     {
-        ResourcePanelMessage = localizer.T("resourcePanelLoading");
-        SetResourcePanelStatusText(localizer.T("resourcePanelLoading"));
+        ResourcePanelMessage = localizer.T(LocalizationKeys.ResourcePanelLoading);
+        SetResourcePanelStatusText(localizer.T(LocalizationKeys.ResourcePanelLoading));
         var result = await resourcePanelService.LoadDataAsync(uid, proxyMode, cancellationToken);
         ApplyResult(result);
-        ResourcePanelMessage = localizer.T("statusNetworkLoaded");
+        ResourcePanelMessage = localizer.T(LocalizationKeys.StatusNetworkLoaded);
     }
 
     private void ApplyResult(ResourcePanelLoadResult result)
@@ -401,13 +402,13 @@ public partial class ResourcePanelViewModel : ViewModelBase, IDisposable, IModal
         {
             item.Status = ResourcePanelItemStatus.Ready;
             item.StatusIconKind = "CheckCircle";
-            item.StatusText = localizer.T("resourcePanelReady");
+            item.StatusText = localizer.T(LocalizationKeys.ResourcePanelReady);
         }
         else
         {
             item.Status = ResourcePanelItemStatus.Waiting;
             item.StatusIconKind = "ClockOutline";
-            item.StatusText = localizer.T("resourcePanelWaiting");
+            item.StatusText = localizer.T(LocalizationKeys.ResourcePanelWaiting);
         }
     }
 

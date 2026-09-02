@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.ComponentModel;
 using System.Globalization;
 using System.Resources;
+using Cafe.Launcher.Avalonia.Constants;
 using Cafe.Launcher.Avalonia.Models;
 using Cafe.Launcher.Avalonia.Services.Diagnostics;
 
@@ -179,7 +180,7 @@ public sealed class LocalizationService
 
     public static IReadOnlyList<LanguageOption> GetLanguageOptions(LocalizationService localizer) =>
     [
-        new LanguageOption { Code = LauncherLanguages.Auto, DisplayName = localizer.T("languageAuto") },
+        new LanguageOption { Code = LauncherLanguages.Auto, DisplayName = localizer.T(LocalizationKeys.LanguageAuto) },
         new LanguageOption { Code = LauncherLanguages.English, DisplayName = "English" },
         new LanguageOption { Code = LauncherLanguages.SimplifiedChinese, DisplayName = "简体中文" },
         new LanguageOption { Code = LauncherLanguages.TraditionalChinese, DisplayName = "繁體中文" },
