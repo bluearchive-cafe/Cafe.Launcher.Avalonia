@@ -79,18 +79,7 @@ public sealed class ShellLifecycle : IShellRuntime
         LocalDiagnostics diagnostics,
         IErrorHandlingService errorHandling,
         WindowsAnimationSettingsProvider windowsAnimationSettingsProvider,
-        ShellViewModel shell,
-        BackgroundViewModel background,
-        RemoteContentViewModel remoteContent,
-        DialogsViewModel dialogs,
-        GameOperationsViewModel operations,
-        ToastHostViewModel toasts,
-        WindowChromeViewModel windowChrome,
-        SettingsViewModel settingsViewModel,
-        ResourcePanelViewModel resourcePanelViewModel,
-        LogViewerDialogViewModel logViewer,
-        DebugViewModel debug,
-        ModalHostViewModel modalHost)
+        ShellPresentationFamily family)
         : this(
             launcherCoreService,
             settingsService,
@@ -100,18 +89,7 @@ public sealed class ShellLifecycle : IShellRuntime
             diagnostics,
             errorHandling,
             windowsAnimationSettingsProvider,
-            shell,
-            background,
-            remoteContent,
-            dialogs,
-            operations,
-            toasts,
-            windowChrome,
-            settingsViewModel,
-            resourcePanelViewModel,
-            logViewer,
-            debug,
-            modalHost,
+            family,
             ownsPresentationCollaborators: false)
     {
     }
@@ -125,18 +103,7 @@ public sealed class ShellLifecycle : IShellRuntime
         LocalDiagnostics diagnostics,
         IErrorHandlingService errorHandling,
         WindowsAnimationSettingsProvider windowsAnimationSettingsProvider,
-        ShellViewModel shell,
-        BackgroundViewModel background,
-        RemoteContentViewModel remoteContent,
-        DialogsViewModel dialogs,
-        GameOperationsViewModel operations,
-        ToastHostViewModel toasts,
-        WindowChromeViewModel windowChrome,
-        SettingsViewModel settingsViewModel,
-        ResourcePanelViewModel resourcePanelViewModel,
-        LogViewerDialogViewModel logViewer,
-        DebugViewModel debug,
-        ModalHostViewModel modalHost,
+        ShellPresentationFamily family,
         bool ownsPresentationCollaborators)
     {
         this.launcherCoreService = launcherCoreService;
@@ -147,19 +114,19 @@ public sealed class ShellLifecycle : IShellRuntime
         this.diagnostics = diagnostics;
         this.errorHandling = errorHandling;
         this.windowsAnimationSettingsProvider = windowsAnimationSettingsProvider;
-        this.shell = shell;
-        this.background = background;
-        this.remoteContent = remoteContent;
-        this.dialogs = dialogs;
-        this.operations = operations;
-        this.toasts = toasts;
-        this.windowChrome = windowChrome;
-        settings = settingsViewModel;
-        resourcePanel = resourcePanelViewModel;
-        this.logViewer = logViewer;
-        this.debug = debug;
+        shell = family.Shell;
+        background = family.Background;
+        remoteContent = family.RemoteContent;
+        dialogs = family.Dialogs;
+        operations = family.Operations;
+        toasts = family.Toasts;
+        windowChrome = family.WindowChrome;
+        settings = family.Settings;
+        resourcePanel = family.ResourcePanel;
+        logViewer = family.LogViewer;
+        debug = family.Debug;
         this.ownsPresentationCollaborators = ownsPresentationCollaborators;
-        ModalHost = modalHost;
+        ModalHost = family.ModalHost;
 
         getBackgroundBitmap = background.GetBackgroundBitmap;
         previewAppearanceAsync = PreviewAppearanceAsync;

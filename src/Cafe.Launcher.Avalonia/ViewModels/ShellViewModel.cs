@@ -92,6 +92,8 @@ public partial class ShellViewModel : ViewModelBase, IDisposable
 
     public string GameFolderPickerTitle { get; private set; } = "";
 
+    public string LogExportFolderPickerTitle { get; private set; } = "";
+
     public ShellViewModel(LocalizationService localizer)
     {
         this.localizer = localizer;
@@ -140,6 +142,7 @@ public partial class ShellViewModel : ViewModelBase, IDisposable
         settings.Editor.Current.Language = language;
         DiskSpaceText = localizer.T("diskSpaceEmpty");
         GameFolderPickerTitle = localizer.T("chooseInstallFolder");
+        LogExportFolderPickerTitle = localizer.T("logExportFolderPickerTitle");
 
         if (!hasSnapshot)
         {

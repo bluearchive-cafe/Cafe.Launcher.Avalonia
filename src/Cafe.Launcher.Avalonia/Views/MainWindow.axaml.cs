@@ -20,7 +20,6 @@ using Cafe.Launcher.Avalonia.ViewModels;
 using System;
 using System.Collections.Generic;
 using System.ComponentModel;
-using System.Diagnostics;
 using System.IO;
 using System.Linq;
 using System.Threading;
@@ -566,37 +565,70 @@ public partial class MainWindow : Window
 
     private async Task<string?> PickGameFolderAsync(string currentPath)
     {
+        var pickerTitle = (DataContext as MainWindowViewModel)?.Shell.GameFolderPickerTitle ?? "";
+        return await PickFolderAsync(pickerTitle, currentPath);
+    }
+
+    private async Task<string?> PickBackgroundImageAsync()
+    {
+        var imagePickerTitle = (DataContext as MainWindowViewModel)?.Background.BackgroundImagePickerTitle ?? "";
+        return await PickImageFileAsync(imagePickerTitle);
+    }
+
+    private async Task<string?> PickBackgroundFolderAsync()
+    {
+        var folderPickerTitle = (DataContext as MainWindowViewModel)?.Background.BackgroundFolderPickerTitle ?? "";
+        return await PickFolderAsync(folderPickerTitle, startLocation: null);
+    }
+
+    private async Task<string?> PickLogExportDirectoryAsync(string defaultPath)
+    {
+        Directory.CreateDirectory(defaultPath);
+        if (!StorageProvider.CanPickFolder)
+        {
+            return defaultPath;
+        }
+
+        var pickerTitle = (DataContext as MainWindowViewModel)?.Shell.LogExportFolderPickerTitle ?? "";
+        return await PickFolderAsync(pickerTitle, defaultPath);
+    }
+
+    /// <summary>
+    /// 统一的目录选择脚手架：能力守卫、起点定位、单选与本地路径转换。
+    /// 调用方只提供本地化标题与可选起点目录。
+    /// </summary>
+    private async Task<string?> PickFolderAsync(string title, string? startLocation)
+    {
         if (!StorageProvider.CanPickFolder)
         {
             return null;
         }
 
-        var startLocation = string.IsNullOrWhiteSpace(currentPath)
+        var start = string.IsNullOrWhiteSpace(startLocation)
             ? null
-            : await StorageProvider.TryGetFolderFromPathAsync(currentPath);
+            : await StorageProvider.TryGetFolderFromPathAsync(startLocation);
 
-        var pickerTitle = (DataContext as MainWindowViewModel)?.Shell.GameFolderPickerTitle ?? "";
         var folders = await StorageProvider.OpenFolderPickerAsync(new FolderPickerOpenOptions
         {
-            Title = pickerTitle,
+            Title = title,
             AllowMultiple = false,
-            SuggestedStartLocation = startLocation
+            SuggestedStartLocation = start
         });
 
         return folders.FirstOrDefault()?.TryGetLocalPath();
     }
 
-    private async Task<string?> PickBackgroundImageAsync()
+    /// <summary>统一的图片文件选择脚手架：能力守卫、单选与本地路径转换。</summary>
+    private async Task<string?> PickImageFileAsync(string title)
     {
         if (!StorageProvider.CanOpen)
         {
             return null;
         }
 
-        var imagePickerTitle = (DataContext as MainWindowViewModel)?.Background.BackgroundImagePickerTitle ?? "";
         var files = await StorageProvider.OpenFilePickerAsync(new FilePickerOpenOptions
         {
-            Title = imagePickerTitle,
+            Title = title,
             AllowMultiple = false,
             FileTypeFilter = new List<FilePickerFileType>
             {
@@ -610,50 +642,9 @@ public partial class MainWindow : Window
         return files.FirstOrDefault()?.TryGetLocalPath();
     }
 
-    private async Task<string?> PickBackgroundFolderAsync()
-    {
-        if (!StorageProvider.CanPickFolder)
-        {
-            return null;
-        }
-
-        var folderPickerTitle = (DataContext as MainWindowViewModel)?.Background.BackgroundFolderPickerTitle ?? "";
-        var folders = await StorageProvider.OpenFolderPickerAsync(new FolderPickerOpenOptions
-        {
-            Title = folderPickerTitle,
-            AllowMultiple = false
-        });
-
-        return folders.FirstOrDefault()?.TryGetLocalPath();
-    }
-
-    private async Task<string?> PickLogExportDirectoryAsync(string defaultPath)
-    {
-        Directory.CreateDirectory(defaultPath);
-        if (!StorageProvider.CanPickFolder)
-        {
-            return defaultPath;
-        }
-
-        var startLocation = await StorageProvider.TryGetFolderFromPathAsync(defaultPath);
-        var pickerTitle = (DataContext as MainWindowViewModel)?.Shell.I18n["logExportFolderPickerTitle"] ?? "";
-        var folders = await StorageProvider.OpenFolderPickerAsync(new FolderPickerOpenOptions
-        {
-            Title = pickerTitle,
-            AllowMultiple = false,
-            SuggestedStartLocation = startLocation
-        });
-
-        return folders.FirstOrDefault()?.TryGetLocalPath();
-    }
-
     private static void OpenDirectory(string path)
     {
-        Process.Start(new ProcessStartInfo
-        {
-            FileName = path,
-            UseShellExecute = true
-        });
+        ShellFolderOpener.OpenInFileManager(path);
     }
 
     private void OnPointerPressed(object? sender, PointerPressedEventArgs e)

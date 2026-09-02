@@ -59,33 +59,22 @@ public partial class MainWindowViewModel : ViewModelBase, IDisposable
     internal Task PendingStartupUpdateCheck => runtime.PendingStartupUpdateCheck;
 
     public MainWindowViewModel(
-        ShellViewModel shell,
-        BackgroundViewModel background,
-        RemoteContentViewModel remoteContent,
-        DialogsViewModel dialogs,
-        GameOperationsViewModel operations,
-        ToastHostViewModel toasts,
-        WindowChromeViewModel windowChrome,
-        SettingsViewModel settings,
-        ResourcePanelViewModel resourcePanel,
-        LogViewerDialogViewModel logViewer,
-        DebugViewModel debug,
-        ModalHostViewModel modalHost,
+        ShellPresentationFamily family,
         IShellRuntime runtime)
     {
         this.runtime = runtime;
-        Shell = shell;
-        Background = background;
-        RemoteContent = remoteContent;
-        Dialogs = dialogs;
-        Operations = operations;
-        Toasts = toasts;
-        WindowChrome = windowChrome;
-        Settings = settings;
-        ResourcePanel = resourcePanel;
-        LogViewer = logViewer;
-        Debug = debug;
-        ModalHost = modalHost;
+        Shell = family.Shell;
+        Background = family.Background;
+        RemoteContent = family.RemoteContent;
+        Dialogs = family.Dialogs;
+        Operations = family.Operations;
+        Toasts = family.Toasts;
+        WindowChrome = family.WindowChrome;
+        Settings = family.Settings;
+        ResourcePanel = family.ResourcePanel;
+        LogViewer = family.LogViewer;
+        Debug = family.Debug;
+        ModalHost = family.ModalHost;
 
         runtime.PresentationChanged += OnRuntimePresentationChanged;
         runtime.StatusDetailModeChanged += OnStatusDetailModeChanged;
@@ -99,33 +88,11 @@ public partial class MainWindowViewModel : ViewModelBase, IDisposable
         ToastService toastService,
         LauncherUpdateService launcherUpdateService,
         LocalDiagnostics diagnostics,
-        ShellViewModel shell,
-        BackgroundViewModel background,
-        RemoteContentViewModel remoteContent,
-        DialogsViewModel dialogs,
-        GameOperationsViewModel operations,
-        ToastHostViewModel toasts,
-        WindowChromeViewModel windowChrome,
-        SettingsViewModel settings,
-        ResourcePanelViewModel resourcePanel,
+        ShellPresentationFamily family,
         IErrorHandlingService errorHandling,
-        LogViewerDialogViewModel logViewer,
-        DebugViewModel debug,
-        ModalHostViewModel modalHost,
         WindowsAnimationSettingsProvider windowsAnimationSettingsProvider)
         : this(
-            shell,
-            background,
-            remoteContent,
-            dialogs,
-            operations,
-            toasts,
-            windowChrome,
-            settings,
-            resourcePanel,
-            logViewer,
-            debug,
-            modalHost,
+            family,
             new ShellLifecycle(
                 launcherCoreService,
                 settingsService,
@@ -135,18 +102,7 @@ public partial class MainWindowViewModel : ViewModelBase, IDisposable
                 diagnostics,
                 errorHandling,
                 windowsAnimationSettingsProvider,
-                shell,
-                background,
-                remoteContent,
-                dialogs,
-                operations,
-                toasts,
-                windowChrome,
-                settings,
-                resourcePanel,
-                logViewer,
-                debug,
-                modalHost,
+                family,
                 ownsPresentationCollaborators: true))
     {
     }
