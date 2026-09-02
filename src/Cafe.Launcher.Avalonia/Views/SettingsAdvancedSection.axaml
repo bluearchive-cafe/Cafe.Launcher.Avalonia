@@ -7,7 +7,7 @@
              x:Name="SettingsRoot"
              x:DataType="vm:MainWindowViewModel">
     <StackPanel>
-        <StackPanel Classes="settings-group" IsVisible="{Binding Shell.IsLinuxPlatform}">
+        <StackPanel Classes="settings-group" IsVisible="{Binding IsPlatformSpecificSettingsVisible}">
             <TextBlock Text="{Binding Shell.I18n[settingsGroupGameRuntime]}" Classes="group-title"/>
 
             <controls:SettingRow ShowTopDivider="False"

@@ -42,7 +42,7 @@
             <controls:SettingSelect Title="{Binding Shell.I18n[themeColorExtractionAlgorithm]}"
                                     Description="{Binding Shell.I18n[themeColorExtractionAlgorithmDescription]}"
                                     AutomationName="{Binding Shell.I18n[themeColorExtractionAlgorithm]}"
-                                    IsVisible="{Binding Settings.Appearance.IsThemeColorExtractionAlgorithmVisible}"
+                                    IsVisible="{Binding Settings.Appearance.IsThemeColorExtractionAlgorithmSettingsVisible}"
                                     ItemsSource="{Binding Settings.Options.ThemeColorExtractionAlgorithm}"
                                     SelectedValue="{Binding Settings.Editor.Current.ThemeColorExtractionAlgorithm, Mode=TwoWay}"/>
 
@@ -62,7 +62,7 @@
                                     SelectedValue="{Binding Settings.Editor.Current.NeutralColorStrategy, Mode=TwoWay}"/>
 
             <Grid Classes="settings-row" ColumnDefinitions="*,Auto"
-                  IsVisible="{Binding Settings.Appearance.IsWallpaperThemeColorSelected}">
+                  IsVisible="{Binding Settings.Appearance.IsThemeColorPaletteVisible}">
                 <Border Classes="settings-row-divider" Grid.ColumnSpan="2"/>
                 <StackPanel Classes="dialog-heading-copy settings-row-copy"
                             Margin="{StaticResource Launcher.Spacing.Thickness.None}">
@@ -107,7 +107,7 @@
 
             <controls:SettingRow Title="{Binding Shell.I18n[themeColorCustom]}"
                                  Description="{Binding Shell.I18n[themeColorDescription]}"
-                                 IsVisible="{Binding Settings.Appearance.IsCustomThemeColorSelected}">
+                                 IsVisible="{Binding Settings.Appearance.IsCustomThemeColorPickerVisible}">
                 <controls:SettingRow.Action>
                     <ColorPicker Classes="setting-control"
                                  AutomationProperties.Name="{Binding Shell.I18n[themeColorCustom]}"
@@ -141,7 +141,7 @@
 
             <controls:SettingRow Title="{Binding Shell.I18n[backgroundFillColor]}"
                                  Description="{Binding Shell.I18n[backgroundFillColorDescription]}"
-                                 IsVisible="{Binding Settings.Appearance.IsBackgroundFitSelected}">
+                                 IsVisible="{Binding Settings.Appearance.IsBackgroundFillColorVisible}">
                 <controls:SettingRow.Action>
                     <ColorPicker Classes="setting-control"
                                  AutomationProperties.Name="{Binding Shell.I18n[backgroundFillColor]}"
@@ -158,7 +158,7 @@
 
             <controls:SettingRow Title="{Binding Shell.I18n[customBackground]}"
                                  Description="{Binding Shell.I18n[customBackgroundDescription]}"
-                                 IsVisible="{Binding Settings.Appearance.IsCustomBackgroundSelected}">
+                                 IsVisible="{Binding Settings.Appearance.IsCustomBackgroundSettingsVisible}">
                 <controls:SettingRow.Action>
                     <StackPanel Orientation="Horizontal" Spacing="{StaticResource Launcher.Spacing.Sm}" VerticalAlignment="Center">
                         <Button Classes="flat-action"

@@ -978,11 +978,11 @@ public sealed partial class UiStyleContractTests
                 "Settings.ChooseBackgroundImageCommand",
                 "Settings.ChooseBackgroundFolderCommand",
                 "Settings.ClearBackgroundCommand",
-                "Settings.Appearance.IsWallpaperThemeColorSelected",
-                "Settings.Appearance.IsThemeColorExtractionAlgorithmVisible",
-                "Settings.Appearance.IsCustomThemeColorSelected",
-                "Settings.Appearance.IsBackgroundFitSelected",
-                "Settings.Appearance.IsCustomBackgroundSelected"
+                "Settings.Appearance.IsThemeColorPaletteVisible",
+                "Settings.Appearance.IsThemeColorExtractionAlgorithmSettingsVisible",
+                "Settings.Appearance.IsCustomThemeColorPickerVisible",
+                "Settings.Appearance.IsBackgroundFillColorVisible",
+                "Settings.Appearance.IsCustomBackgroundSettingsVisible"
             ],
             ["SettingsAdvancedSection"] =
             [

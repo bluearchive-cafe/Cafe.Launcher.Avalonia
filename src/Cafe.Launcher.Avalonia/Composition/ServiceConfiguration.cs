@@ -59,7 +59,9 @@ public static class ServiceConfiguration
         services.AddSingleton<WindowsAnimationSettingsProvider>();
         services.AddSingleton<ISettingsEditor, SettingsEditor>();
         services.AddSingleton<SettingsOptionsViewModel>();
-        services.AddSingleton<SettingsAppearanceViewModel>();
+        services.AddSingleton(sp => new SettingsAppearanceViewModel(
+            sp.GetRequiredService<ISettingsEditor>(),
+            Program.ShowHiddenSettings));
         services.AddSingleton<IProcessLauncher, DefaultProcessLauncher>();
         services.AddSingleton<IGameRuntime>(sp => new GameRuntime(
             [GameRunnerDefinition.Native, GameRunnerDefinition.Umu, GameRunnerDefinition.Wine],
