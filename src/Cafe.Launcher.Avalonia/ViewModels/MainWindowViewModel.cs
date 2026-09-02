@@ -28,6 +28,8 @@ public partial class MainWindowViewModel : ViewModelBase, IDisposable
 
     public bool IsMotionEnabled => !IsMotionReduced;
     public bool IsStatusDetailHidden => Settings.Editor.Current.StatusDetailMode == StatusDetailModes.Hidden;
+    public bool IsPlatformSpecificSettingsVisible =>
+        Shell.IsLinuxPlatform || Program.ShowHiddenSettings;
 
     public ShellViewModel Shell { get; }
     public BackgroundViewModel Background { get; }

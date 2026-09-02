@@ -1544,6 +1544,7 @@
         <Setter Property="Foreground" Value="{DynamicResource Launcher.Text.Primary}"/>
         <Setter Property="MinWidth" Value="{StaticResource Launcher.Component.Input.MinWidth}"/>
         <Setter Property="MinHeight" Value="{StaticResource Launcher.Control.Height.Field}"/>
+        <Setter Property="VerticalAlignment" Value="Center"/>
         <Setter Property="VerticalContentAlignment" Value="Center"/>
         <Setter Property="CaretBrush" Value="{DynamicResource Launcher.Color.Primary}"/>
     </Style>

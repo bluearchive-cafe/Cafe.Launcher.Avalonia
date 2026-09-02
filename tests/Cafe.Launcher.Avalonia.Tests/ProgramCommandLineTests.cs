@@ -48,4 +48,15 @@ public sealed class ProgramCommandLineTests
         Assert.False(Program.HasLaunchGameArgument(["--Launch-Game"]));
         Assert.False(Program.HasLaunchGameArgument(["launch-game"]));
     }
+
+    [Fact]
+    public void HasShowHiddenSettingsArgument_WithMixedArguments_MatchesExactArgumentOnly()
+    {
+        Assert.True(Program.HasShowHiddenSettingsArgument([Program.ShowHiddenSettingsArgument]));
+        Assert.True(Program.HasShowHiddenSettingsArgument(["--other", Program.ShowHiddenSettingsArgument]));
+        Assert.False(Program.HasShowHiddenSettingsArgument([]));
+        Assert.False(Program.HasShowHiddenSettingsArgument(["--show-hidden-setting"]));
+        Assert.False(Program.HasShowHiddenSettingsArgument(["--Show-Hidden-Settings"]));
+        Assert.False(Program.HasShowHiddenSettingsArgument(["show-hidden-settings"]));
+    }
 }

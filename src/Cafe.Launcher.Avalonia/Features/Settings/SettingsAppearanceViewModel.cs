@@ -20,12 +20,14 @@ namespace Cafe.Launcher.Avalonia.Features.Settings;
 public partial class SettingsAppearanceViewModel : ViewModelBase, IDisposable
 {
     private readonly ISettingsEditor editor;
+    private readonly bool showHiddenSettings;
     private bool suppressEditorUpdates;
     private bool disposed;
 
-    public SettingsAppearanceViewModel(ISettingsEditor editor)
+    public SettingsAppearanceViewModel(ISettingsEditor editor, bool showHiddenSettings = false)
     {
         this.editor = editor;
+        this.showHiddenSettings = showHiddenSettings;
         editor.CurrentPropertyChanged += OnCurrentSettingChanged;
     }
 
@@ -42,9 +44,11 @@ public partial class SettingsAppearanceViewModel : ViewModelBase, IDisposable
     private IBrush backgroundFillColorPreviewBrush = new SolidColorBrush(Colors.Black);
 
     [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(IsCustomBackgroundSettingsVisible))]
     private bool isCustomBackgroundSelected;
 
     [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(IsBackgroundFillColorVisible))]
     private bool isBackgroundFitSelected;
 
     [ObservableProperty]
@@ -55,17 +59,35 @@ public partial class SettingsAppearanceViewModel : ViewModelBase, IDisposable
         new SolidColorBrush(Color.Parse(LauncherConstants.DefaultThemeColor));
 
     [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(IsCustomThemeColorPickerVisible))]
     private bool isCustomThemeColorSelected;
 
     [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(IsThemeColorPaletteVisible))]
     private bool isWallpaperThemeColorSelected;
 
     // 取色算法仅作用于壁纸取色，其余主题色来源下该行不生效，直接隐藏。
     [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(IsThemeColorExtractionAlgorithmSettingsVisible))]
     private bool isThemeColorExtractionAlgorithmVisible;
 
     [ObservableProperty]
     private bool isSeedFollowingNeutralStrategySelected;
+
+    public bool IsThemeColorExtractionAlgorithmSettingsVisible =>
+        showHiddenSettings || IsThemeColorExtractionAlgorithmVisible;
+
+    public bool IsThemeColorPaletteVisible =>
+        showHiddenSettings || IsWallpaperThemeColorSelected;
+
+    public bool IsCustomThemeColorPickerVisible =>
+        showHiddenSettings || IsCustomThemeColorSelected;
+
+    public bool IsBackgroundFillColorVisible =>
+        showHiddenSettings || IsBackgroundFitSelected;
+
+    public bool IsCustomBackgroundSettingsVisible =>
+        showHiddenSettings || IsCustomBackgroundSelected;
 
     [ObservableProperty]
     private int selectedThemeColorPaletteIndex;

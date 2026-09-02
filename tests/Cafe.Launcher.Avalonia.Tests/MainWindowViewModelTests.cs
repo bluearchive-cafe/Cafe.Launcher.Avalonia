@@ -1151,6 +1151,28 @@ public sealed class MainWindowViewModelTests : IDisposable
     }
 
     [Fact]
+    public void AppearanceSettings_WhenShowHiddenSettingsEnabled_ShowsConditionalSettings()
+    {
+        var editor = new SettingsEditor();
+        var settings = new LauncherSettings
+        {
+            ThemeColorMode = ThemeColorModes.Default,
+            BackgroundFit = BackgroundFits.Fill,
+            BackgroundSource = BackgroundSources.Remote
+        };
+        editor.ApplySnapshot(settings);
+        using var appearance = new SettingsAppearanceViewModel(editor, showHiddenSettings: true);
+
+        appearance.Load(settings);
+
+        Assert.True(appearance.IsThemeColorExtractionAlgorithmSettingsVisible);
+        Assert.True(appearance.IsThemeColorPaletteVisible);
+        Assert.True(appearance.IsCustomThemeColorPickerVisible);
+        Assert.True(appearance.IsBackgroundFillColorVisible);
+        Assert.True(appearance.IsCustomBackgroundSettingsVisible);
+    }
+
+    [Fact]
     public async Task SaveSettingsAsync_WhenWallpaperPaletteSelected_PersistsPaletteAndIndex()
     {
         var settingsPath = Path.Combine(tempDir, Guid.NewGuid().ToString("N"), "settings.json");

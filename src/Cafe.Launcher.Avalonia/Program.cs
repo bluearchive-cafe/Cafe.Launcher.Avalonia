@@ -29,11 +29,22 @@ sealed class Program
     internal const string LaunchGameArgument = "--launch-game";
 
     /// <summary>
+    /// CLI argument that exposes conditional settings controls for diagnostics.
+    /// This only affects the current process and is never persisted.
+    /// </summary>
+    internal const string ShowHiddenSettingsArgument = "--show-hidden-settings";
+
+    /// <summary>
     /// True when this process itself was started with <see cref="LaunchGameArgument"/>
     /// and won the single-instance mutex: the app auto-launches the game after its
     /// initial state refresh. Managed by <see cref="Main"/>.
     /// </summary>
     internal static bool LaunchGameRequested { get; private set; }
+
+    /// <summary>
+    /// True when the launcher was started with <see cref="ShowHiddenSettingsArgument"/>.
+    /// </summary>
+    internal static bool ShowHiddenSettings { get; private set; }
 
     /// <summary>
     /// The cross-process launch-game signal endpoint owned by the first instance.
@@ -78,6 +89,7 @@ sealed class Program
 
         LaunchGameSignal = launchBridge.Signal;
         LaunchGameRequested = HasLaunchGameArgument(args);
+        ShowHiddenSettings = HasShowHiddenSettingsArgument(args);
 
         // Create standalone diagnostics before DI is available. This instance
         // is shared with the DI container so there is a single Serilog pipeline
@@ -117,6 +129,10 @@ sealed class Program
     /// <summary>Matches <see cref="LaunchGameArgument"/> exactly; no prefixes, no casing tricks.</summary>
     internal static bool HasLaunchGameArgument(string[] args) =>
         args.Any(argument => string.Equals(argument, LaunchGameArgument, StringComparison.Ordinal));
+
+    /// <summary>Matches <see cref="ShowHiddenSettingsArgument"/> exactly.</summary>
+    internal static bool HasShowHiddenSettingsArgument(string[] args) =>
+        args.Any(argument => string.Equals(argument, ShowHiddenSettingsArgument, StringComparison.Ordinal));
 
     private static bool DetectFirstLaunch()
     {
