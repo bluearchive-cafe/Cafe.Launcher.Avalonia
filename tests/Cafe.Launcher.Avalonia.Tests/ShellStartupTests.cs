@@ -25,7 +25,8 @@ public sealed class ShellStartupTests : IDisposable
             new LocalizationService(),
             new GameInstallationPath(),
             new LocalInstallationStateStore(),
-            new LocalDiagnostics());
+            new LocalDiagnostics(),
+            new StubFilePickerService());
     }
 
     public void Dispose() => wizard.Dispose();
@@ -107,7 +108,6 @@ public sealed class ShellStartupTests : IDisposable
         await wizard.CompleteCommand.ExecuteAsync(null);
 
         Assert.Equal(1, refreshCount);
-        Assert.NotNull(wizard.PickGameFolderAsync);
     }
 
     [Fact]
@@ -126,20 +126,6 @@ public sealed class ShellStartupTests : IDisposable
         await wizard.CompleteCommand.ExecuteAsync(null);
 
         Assert.Equal(0, refreshCount);
-        Assert.Null(wizard.PickGameFolderAsync);
-    }
-
-    [Fact]
-    public void Unwire_WhenWizardPickerNotOwned_LeavesForeignPickerAssigned()
-    {
-        var foreignPicker = new Func<string, Task<string?>>(_ => Task.FromResult<string?>(null));
-        var startup = CreateStartup(picker: _ => Task.FromResult<string?>(null));
-
-        startup.Wire();
-        wizard.PickGameFolderAsync = foreignPicker;
-        startup.Unwire();
-
-        Assert.Same(foreignPicker, wizard.PickGameFolderAsync);
     }
 
     private ShellStartup CreateStartup(
@@ -148,7 +134,6 @@ public sealed class ShellStartupTests : IDisposable
         Func<LauncherSettings, Task>? save = null,
         Action? hide = null,
         Func<CancellationToken, Task>? refresh = null,
-        Func<string, Task<string?>>? picker = null,
         Func<bool>? isWizardVisible = null) =>
         new(
             refresh ?? (_ => Task.CompletedTask),
@@ -156,7 +141,6 @@ public sealed class ShellStartupTests : IDisposable
             applyLanguage ?? (_ => { }),
             save ?? (_ => Task.CompletedTask),
             hide ?? (() => { }),
-            picker ?? (_ => Task.FromResult<string?>(null)),
             isWizardVisible ?? (() => true),
             wizard);
 }

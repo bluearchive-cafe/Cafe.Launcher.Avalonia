@@ -50,7 +50,6 @@ public sealed class MainWindowViewModelTests : IDisposable
         Assert.NotNull(viewModel.Settings.PreviewAppearanceAsync);
         Assert.NotNull(viewModel.Settings.ApplyLanguageAndTheme);
         Assert.NotNull(viewModel.RemoteContent.OpenExternalUrlRequested);
-        Assert.NotNull(viewModel.Dialogs.SetupWizard.PickGameFolderAsync);
 
         viewModel.Dispose();
 
@@ -58,7 +57,6 @@ public sealed class MainWindowViewModelTests : IDisposable
         Assert.Null(viewModel.Settings.PreviewAppearanceAsync);
         Assert.Null(viewModel.Settings.ApplyLanguageAndTheme);
         Assert.Null(viewModel.RemoteContent.OpenExternalUrlRequested);
-        Assert.Null(viewModel.Dialogs.SetupWizard.PickGameFolderAsync);
     }
 
     static MainWindowViewModelTests()
@@ -674,10 +672,13 @@ public sealed class MainWindowViewModelTests : IDisposable
         snapshot.Settings.GamePath = "";
         snapshot.LocalGame = new LocalInstallationState();
         var coreService = new CountingCoreService(snapshot);
-        using var viewModel = await CreateViewModelAsync(coreService, settingsService);
+        var filePicker = new StubFilePickerService
+        {
+            FolderPicker = (_, _) => Task.FromResult<string?>(pickedPath)
+        };
+        using var viewModel = await CreateViewModelAsync(coreService, settingsService, filePickerService: filePicker);
         await viewModel.InitializeAsync();
         viewModel.WindowChrome.IsSettingsVisible = true;
-        viewModel.Settings.PickGameFolderAsync = _ => Task.FromResult<string?>(pickedPath);
 
         await viewModel.Settings.ChooseGamePathCommand.ExecuteAsync(null);
 
@@ -711,10 +712,13 @@ public sealed class MainWindowViewModelTests : IDisposable
         snapshot.Settings.ThemeMode = ThemeModes.Light;
         snapshot.LocalGame = CopyLocalGameWithPath(snapshot.LocalGame, originalPath);
         var coreService = new SettingsBackedCoreService(settingsService, snapshot);
-        using var viewModel = await CreateViewModelAsync(coreService, settingsService);
+        var filePicker = new StubFilePickerService
+        {
+            FolderPicker = (_, _) => Task.FromResult<string?>(selectedRoot)
+        };
+        using var viewModel = await CreateViewModelAsync(coreService, settingsService, filePickerService: filePicker);
         await viewModel.InitializeAsync();
         viewModel.Settings.Editor.Current.ThemeMode = ThemeModes.Dark;
-        viewModel.Settings.PickGameFolderAsync = _ => Task.FromResult<string?>(selectedRoot);
 
         await viewModel.Settings.SelectInstalledGameCommand.ExecuteAsync(null);
 
@@ -734,9 +738,12 @@ public sealed class MainWindowViewModelTests : IDisposable
         var settingsService = new LauncherSettingsService(settingsPath);
         await settingsService.SaveAsync(new LauncherSettings());
         var coreService = new CountingCoreService(CreateSnapshot());
-        using var viewModel = await CreateViewModelAsync(coreService, settingsService);
+        var filePicker = new StubFilePickerService
+        {
+            ImagePicker = _ => Task.FromResult<string?>(pickedPath)
+        };
+        using var viewModel = await CreateViewModelAsync(coreService, settingsService, filePickerService: filePicker);
         await viewModel.InitializeAsync();
-        viewModel.Settings.PickBackgroundImageAsync = () => Task.FromResult<string?>(pickedPath);
 
         await viewModel.Settings.ChooseBackgroundImageCommand.ExecuteAsync(null);
 
@@ -813,11 +820,14 @@ public sealed class MainWindowViewModelTests : IDisposable
         };
         await settingsService.SaveAsync(persistedSettings);
         var coreService = new CountingCoreService(CreateSnapshot());
-        using var viewModel = await CreateViewModelAsync(coreService, settingsService);
+        var filePicker = new StubFilePickerService
+        {
+            FolderPicker = (_, _) => Task.FromResult<string?>(pickedFolder)
+        };
+        using var viewModel = await CreateViewModelAsync(coreService, settingsService, filePickerService: filePicker);
         await viewModel.InitializeAsync();
         viewModel.Settings.Editor.ApplySnapshot(persistedSettings);
         viewModel.Settings.Appearance.Load(persistedSettings);
-        viewModel.Settings.PickBackgroundFolderAsync = () => Task.FromResult<string?>(pickedFolder);
 
         await viewModel.Settings.ChooseBackgroundFolderCommand.ExecuteAsync(null);
 
@@ -928,7 +938,7 @@ public sealed class MainWindowViewModelTests : IDisposable
         var dialogs = new DialogsViewModel(
             localizer,
             new NoticeStateService(Path.Combine(tempDir, "save-failure-notices.json")),
-            new SetupWizardViewModel(localizer, new GameInstallationPath(), new LocalInstallationStateStore(), new LocalDiagnostics()));
+            new SetupWizardViewModel(localizer, new GameInstallationPath(), new LocalInstallationStateStore(), new LocalDiagnostics(), new StubFilePickerService()));
         using var testLogger = new UnifiedLogger(tempDir);
         using var settings = new SettingsViewModel(
             settingsService,
@@ -941,7 +951,7 @@ public sealed class MainWindowViewModelTests : IDisposable
             new SettingsOptionsViewModel(localizer, new DiskSpaceService()),
             appearance,
             new ErrorHandlingService(localizer, new LocalDiagnostics(testLogger), toastService),
-            new GameRuntime([], new DefaultProcessLauncher(), new GameProcessTracker()));
+            new GameRuntime([], new DefaultProcessLauncher(), new GameProcessTracker()), new StubFilePickerService());
         ToastNotification? errorToast = null;
         toastService.ToastRaised += notification =>
         {
@@ -1906,8 +1916,10 @@ public sealed class MainWindowViewModelTests : IDisposable
         LauncherUpdateService? launcherUpdateService = null,
         CountingGameOperationsBackend? gameOperationsBackend = null,
         WindowsAnimationSettingsProvider? windowsAnimationSettingsProvider = null,
-        Func<TimeSpan, CancellationToken, Task>? toastDelayAsync = null)
+        Func<TimeSpan, CancellationToken, Task>? toastDelayAsync = null,
+        StubFilePickerService? filePickerService = null)
     {
+        filePickerService ??= new StubFilePickerService();
         settingsService ??= new LauncherSettingsService(
             Path.Combine(tempDir, Guid.NewGuid().ToString("N"), "settings.json"));
         var localInstallationStateStore = new LocalInstallationStateStore();
@@ -1958,7 +1970,7 @@ public sealed class MainWindowViewModelTests : IDisposable
         var shellViewModel = new ShellViewModel(localizationService);
         var errorHandling = new ErrorHandlingService(localizationService, diagnostics, toastService);
         var noticeStateService = new NoticeStateService(Path.Combine(tempDir, Guid.NewGuid().ToString("N"), "shown_notices.json"));
-        var dialogsViewModel = new DialogsViewModel(localizationService, noticeStateService, new SetupWizardViewModel(localizationService, new GameInstallationPath(), new LocalInstallationStateStore(), new LocalDiagnostics()));
+        var dialogsViewModel = new DialogsViewModel(localizationService, noticeStateService, new SetupWizardViewModel(localizationService, new GameInstallationPath(), new LocalInstallationStateStore(), new LocalDiagnostics(), filePickerService));
         using var settingsLogger = new UnifiedLogger(Path.Combine(tempDir, Guid.NewGuid().ToString("N")));
         var settingsViewModel = new SettingsViewModel(
             settingsService, localizationService, toastService,
@@ -1966,7 +1978,7 @@ public sealed class MainWindowViewModelTests : IDisposable
             settingsLogger,
             new GameInstallationPath(),
             settingsOptions, settingsAppearance, errorHandling,
-            gameRuntime);
+            gameRuntime, filePickerService);
         var resourcePanelService = new ResourcePanelService(
             resourcePanelUidService, resourcePanelApiClient, diagnostics);
         var resourcePanelViewModel = new ResourcePanelViewModel(
@@ -2012,7 +2024,7 @@ public sealed class MainWindowViewModelTests : IDisposable
                     return Task.CompletedTask;
                 },
                 toastDelayAsync);
-        var debugViewModel = new DebugViewModel(toastService, new UnifiedLogger(Path.Combine(tempDir, Guid.NewGuid().ToString("N"))), errorHandling, settingsService, gameOperationsViewModel, shellViewModel);
+        var debugViewModel = new DebugViewModel(toastService, new UnifiedLogger(Path.Combine(tempDir, Guid.NewGuid().ToString("N"))), errorHandling, settingsService, gameOperationsViewModel, shellViewModel, filePickerService);
         var windowChromeViewModel = new WindowChromeViewModel(
             settingsViewModel, remoteContentViewModel, dialogsViewModel, gameOperationsViewModel,
             debugViewModel);
@@ -2035,11 +2047,12 @@ public sealed class MainWindowViewModelTests : IDisposable
                 windowChromeViewModel,
                 settingsViewModel,
                 resourcePanelViewModel,
-                new LogViewerDialogViewModel(testLogger, null, null, null, null, null),
+                new LogViewerDialogViewModel(testLogger, null, null, null, null, null, filePickerService),
                 debugViewModel,
                 new ModalHostViewModel()),
             errorHandling,
-            windowsAnimationSettingsProvider ?? new WindowsAnimationSettingsProvider());
+            windowsAnimationSettingsProvider ?? new WindowsAnimationSettingsProvider(),
+            filePickerService);
     }
 
     private LauncherStatusSnapshot CreateSnapshot()

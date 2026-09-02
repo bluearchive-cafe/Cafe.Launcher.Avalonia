@@ -51,14 +51,6 @@ public partial class BackgroundViewModel : ViewModelBase, IDisposable
     private IDisposable? fadingOutWallpaper;
     private CancellationTokenSource? wallpaperFadeCancellation;
 
-    public Func<Task<string?>>? PickBackgroundImageAsync { get; set; }
-
-    public Func<Task<string?>>? PickBackgroundFolderAsync { get; set; }
-
-    public string BackgroundImagePickerTitle { get; set; } = "";
-
-    public string BackgroundFolderPickerTitle { get; set; } = "";
-
     public BackgroundViewModel(
         ImageCacheService imageCacheService,
         LocalDiagnostics diagnostics,

@@ -55,9 +55,9 @@ public sealed class ShellLifecycle : IShellRuntime
     private readonly Func<LauncherSettings, string?, CancellationToken, Task> previewAppearanceAsync;
     private readonly Func<LauncherSettings, Task> applyLanguageAndThemeAsync;
     private readonly Action<string?> openExternalUrl;
-    private readonly Func<string, Task<string?>> pickSetupWizardGameFolderAsync;
     private readonly bool ownsPresentationCollaborators;
     private readonly ShellRefreshCoordinator refreshCoordinator;
+    private readonly IFilePickerService filePickerService;
     private readonly ShellStartup startup;
     private bool disposed;
     private bool isBusy;
@@ -80,7 +80,8 @@ public sealed class ShellLifecycle : IShellRuntime
         LocalDiagnostics diagnostics,
         IErrorHandlingService errorHandling,
         WindowsAnimationSettingsProvider windowsAnimationSettingsProvider,
-        ShellPresentationFamily family)
+        ShellPresentationFamily family,
+        IFilePickerService filePickerService)
         : this(
             launcherCoreService,
             settingsService,
@@ -91,6 +92,7 @@ public sealed class ShellLifecycle : IShellRuntime
             errorHandling,
             windowsAnimationSettingsProvider,
             family,
+            filePickerService,
             ownsPresentationCollaborators: false)
     {
     }
@@ -105,8 +107,10 @@ public sealed class ShellLifecycle : IShellRuntime
         IErrorHandlingService errorHandling,
         WindowsAnimationSettingsProvider windowsAnimationSettingsProvider,
         ShellPresentationFamily family,
+        IFilePickerService filePickerService,
         bool ownsPresentationCollaborators)
     {
+        this.filePickerService = filePickerService;
         this.launcherCoreService = launcherCoreService;
         this.settingsService = settingsService;
         this.localizer = localizer;
@@ -133,7 +137,6 @@ public sealed class ShellLifecycle : IShellRuntime
         previewAppearanceAsync = PreviewAppearanceAsync;
         applyLanguageAndThemeAsync = ApplyLanguageAndThemeAsync;
         openExternalUrl = windowChrome.OpenExternalUrl;
-        pickSetupWizardGameFolderAsync = PickSetupWizardGameFolderAsync;
 
         errorHandling.CriticalErrorRequested += OnCriticalError;
         localizer.LocalizationFailure += OnLocalizationFailure;
@@ -146,7 +149,6 @@ public sealed class ShellLifecycle : IShellRuntime
             ApplyLanguage,
             settings => settingsService.SaveAsync(settings),
             () => dialogs.IsSetupWizardVisible = false,
-            PickSetupWizardGameFolderAsync,
             () => dialogs.IsSetupWizardVisible,
             dialogs.SetupWizard);
 
@@ -401,9 +403,6 @@ public sealed class ShellLifecycle : IShellRuntime
             SettingsAppearanceViewModel.ParseColorOrDefault(launcherSettings.CustomThemeColor));
         return Task.CompletedTask;
     }
-
-    private Task<string?> PickSetupWizardGameFolderAsync(string currentPath) =>
-        settings.PickGameFolderAsync?.Invoke(currentPath) ?? Task.FromResult<string?>(null);
 
     /// <summary>Subscribes cross-feature events once for the active shell lifecycle.</summary>
     public void Wire()
@@ -684,8 +683,6 @@ public sealed class ShellLifecycle : IShellRuntime
     private void ApplyLanguage(string language)
     {
         shell.ApplyLanguage(language, settings, resourcePanel, currentSnapshot is not null);
-        background.BackgroundImagePickerTitle = localizer.T(LocalizationKeys.ChooseBackgroundImageTitle);
-        background.BackgroundFolderPickerTitle = localizer.T(LocalizationKeys.ChooseBackgroundFolderTitle);
         remoteContent.ApplyLanguage();
         dialogs.ApplyLanguage();
         operations.ApplyLanguage();

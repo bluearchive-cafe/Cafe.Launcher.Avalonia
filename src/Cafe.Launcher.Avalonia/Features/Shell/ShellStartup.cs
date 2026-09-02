@@ -18,7 +18,6 @@ internal sealed class ShellStartup
     private readonly Action<string> applyLanguage;
     private readonly Func<LauncherSettings, Task> saveSettingsAsync;
     private readonly Action hideSetupWizard;
-    private readonly Func<string, Task<string?>> getGameFolderPicker;
     private readonly Func<bool> isSetupWizardVisible;
     private readonly SetupWizardViewModel setupWizard;
     private int initialized;
@@ -29,7 +28,6 @@ internal sealed class ShellStartup
         Action<string> applyLanguage,
         Func<LauncherSettings, Task> saveSettingsAsync,
         Action hideSetupWizard,
-        Func<string, Task<string?>> getGameFolderPicker,
         Func<bool> isSetupWizardVisible,
         SetupWizardViewModel setupWizard)
     {
@@ -38,7 +36,6 @@ internal sealed class ShellStartup
         this.applyLanguage = applyLanguage;
         this.saveSettingsAsync = saveSettingsAsync;
         this.hideSetupWizard = hideSetupWizard;
-        this.getGameFolderPicker = getGameFolderPicker;
         this.isSetupWizardVisible = isSetupWizardVisible;
         this.setupWizard = setupWizard;
     }
@@ -79,7 +76,6 @@ internal sealed class ShellStartup
     /// <summary>Subscribes the first-run wizard events this module owns.</summary>
     public void Wire()
     {
-        setupWizard.PickGameFolderAsync = getGameFolderPicker;
         setupWizard.LanguagePreviewRequested += HandleLanguagePreviewRequested;
         setupWizard.SettingsApplied += HandleSettingsApplied;
     }
@@ -89,11 +85,6 @@ internal sealed class ShellStartup
     {
         setupWizard.LanguagePreviewRequested -= HandleLanguagePreviewRequested;
         setupWizard.SettingsApplied -= HandleSettingsApplied;
-
-        if (setupWizard.PickGameFolderAsync == getGameFolderPicker)
-        {
-            setupWizard.PickGameFolderAsync = null;
-        }
     }
 
     private void HandleLanguagePreviewRequested(string language)

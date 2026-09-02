@@ -26,6 +26,7 @@ public partial class SetupWizardViewModel : ViewModelBase, IModalContentViewMode
     private readonly GameInstallationPath gameInstallationPath;
     private readonly LocalInstallationStateStore localInstallationStateStore;
     private readonly LocalDiagnostics diagnostics;
+    private readonly IFilePickerService filePickerService;
     private bool hasInitializedGamePath;
     private CancellationTokenSource? gamePathStatusCancellationTokenSource;
     private int gamePathStatusVersion;
@@ -37,12 +38,14 @@ public partial class SetupWizardViewModel : ViewModelBase, IModalContentViewMode
         LocalizationService localizer,
         GameInstallationPath gameInstallationPath,
         LocalInstallationStateStore localInstallationStateStore,
-        LocalDiagnostics diagnostics)
+        LocalDiagnostics diagnostics,
+        IFilePickerService filePickerService)
     {
         this.localizer = localizer;
         this.gameInstallationPath = gameInstallationPath;
         this.localInstallationStateStore = localInstallationStateStore;
         this.diagnostics = diagnostics;
+        this.filePickerService = filePickerService;
 
         var defaults = LauncherSettings.CreateDefaults();
         language = defaults.Language;
@@ -52,9 +55,6 @@ public partial class SetupWizardViewModel : ViewModelBase, IModalContentViewMode
         localizer.LanguageChanged += OnLocalizerLanguageChanged;
         RefreshDownloadSources();
     }
-
-    /// <summary>Folder picker delegate, set by MainWindowViewModel.WireChildren().</summary>
-    public Func<string, Task<string?>>? PickGameFolderAsync { get; set; }
 
     /// <summary>Gets the localized download source choices for the setup wizard.</summary>
     public IReadOnlyList<SetupWizardDownloadSourceItem> DownloadSources { get; private set; } = [];
@@ -276,8 +276,9 @@ public partial class SetupWizardViewModel : ViewModelBase, IModalContentViewMode
     [RelayCommand]
     private async Task BrowseGamePathAsync()
     {
-        if (PickGameFolderAsync is null) return;
-        var picked = await PickGameFolderAsync(GamePath);
+        var picked = await filePickerService.PickFolderAsync(
+            localizer.T(LocalizationKeys.ChooseInstallFolder),
+            GamePath);
         if (string.IsNullOrWhiteSpace(picked)) return;
         GamePath = gameInstallationPath.NormalizeGamePath(picked);
     }

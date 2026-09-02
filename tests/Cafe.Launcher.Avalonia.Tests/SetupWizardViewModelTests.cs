@@ -18,7 +18,8 @@ public sealed class SetupWizardViewModelTests
         new LocalizationService(),
         new GameInstallationPath(),
         new LocalInstallationStateStore(),
-        new LocalDiagnostics());
+        new LocalDiagnostics(),
+        new StubFilePickerService());
 
     [Fact]
     public void InitialState_IsStep0_CanGoNext_CannotGoPrevious()
@@ -51,7 +52,7 @@ public sealed class SetupWizardViewModelTests
             new LocalizationService(),
             installationPath,
             new LocalInstallationStateStore(),
-            new LocalDiagnostics());
+            new LocalDiagnostics(), new StubFilePickerService());
 
         vm.NextCommand.Execute(null);
 
@@ -168,7 +169,7 @@ public sealed class SetupWizardViewModelTests
             new LocalizationService(),
             new GameInstallationPath(),
             new LocalInstallationStateStore(),
-            new LocalDiagnostics());
+            new LocalDiagnostics(), new StubFilePickerService());
         vm.GamePath = path;
         vm.NextCommand.Execute(null);
         await WaitForGamePathStatusAsync(vm, SetupWizardGamePathStatus.AvailableForInstallation);
@@ -301,7 +302,7 @@ public sealed class SetupWizardViewModelTests
         var store = new LocalInstallationStateStore();
         Directory.CreateDirectory(normalizedGamePath);
         await store.CommitAsync(normalizedGamePath, CreateCommit());
-        var vm = new SetupWizardViewModel(new LocalizationService(), new GameInstallationPath(), store, new LocalDiagnostics())
+        var vm = new SetupWizardViewModel(new LocalizationService(), new GameInstallationPath(), store, new LocalDiagnostics(), new StubFilePickerService())
         {
             GamePath = gamePath
         };
@@ -342,7 +343,7 @@ public sealed class SetupWizardViewModelTests
             localizer,
             new GameInstallationPath(),
             new LocalInstallationStateStore(),
-            new LocalDiagnostics());
+            new LocalDiagnostics(), new StubFilePickerService());
         vm.GamePath = gamePath;
         vm.NextCommand.Execute(null);
 
@@ -362,7 +363,7 @@ public sealed class SetupWizardViewModelTests
         await store.CommitAsync(normalizedGamePath, CreateCommit());
         await using var locked = new FileStream(
             Path.Combine(normalizedGamePath, "manifest.json"), FileMode.Open, FileAccess.ReadWrite, FileShare.None);
-        var vm = new SetupWizardViewModel(new LocalizationService(), new GameInstallationPath(), store, new LocalDiagnostics())
+        var vm = new SetupWizardViewModel(new LocalizationService(), new GameInstallationPath(), store, new LocalDiagnostics(), new StubFilePickerService())
         {
             GamePath = gamePath
         };
@@ -402,7 +403,7 @@ public sealed class SetupWizardViewModelTests
         });
         var commitTask = store.CommitAsync(normalizedGamePath, CreateCommit());
         await tempFilesWritten.Task.WaitAsync(TimeSpan.FromSeconds(2));
-        var vm = new SetupWizardViewModel(new LocalizationService(), new GameInstallationPath(), store, new LocalDiagnostics())
+        var vm = new SetupWizardViewModel(new LocalizationService(), new GameInstallationPath(), store, new LocalDiagnostics(), new StubFilePickerService())
         {
             GamePath = gamePath
         };
@@ -433,7 +434,7 @@ public sealed class SetupWizardViewModelTests
         });
         var commitTask = store.CommitAsync(normalizedOldGamePath, CreateCommit());
         await tempFilesWritten.Task.WaitAsync(TimeSpan.FromSeconds(2));
-        var vm = new SetupWizardViewModel(new LocalizationService(), new GameInstallationPath(), store, new LocalDiagnostics())
+        var vm = new SetupWizardViewModel(new LocalizationService(), new GameInstallationPath(), store, new LocalDiagnostics(), new StubFilePickerService())
         {
             GamePath = oldGamePath
         };
@@ -456,7 +457,7 @@ public sealed class SetupWizardViewModelTests
             localizer,
             new GameInstallationPath(),
             new LocalInstallationStateStore(),
-            new LocalDiagnostics())
+            new LocalDiagnostics(), new StubFilePickerService())
         {
             GamePath = Path.Combine(Path.GetTempPath(), Guid.NewGuid().ToString("N"))
         };
