@@ -1,6 +1,9 @@
 $ErrorActionPreference = 'Stop'
 $env:DOTNET_CLI_TELEMETRY_OPTOUT = '1'
 $env:AVALONIA_TELEMETRY_OPTOUT = '1'
+# MSBuild 常驻复用节点会跨构建持有刚拷贝文件的句柄，coverlet 紧随其后的插桩重写
+# 会因 "file is being used by another process" 偶发失败并静默降级为无覆盖数据。
+$env:MSBUILDDISABLENODEREUSE = '1'
 $threshold = 0.50
 # ADR-016 游戏操作表面连续转换（435 系列）：净增独立形变管线，实测手写行覆盖地板 84.35%–84.41%
 # （三次全量 verify；分支覆盖升至 91.01%）。行基线随之棘轮至 0.8430，禁止继续下探。
@@ -35,6 +38,58 @@ $projects = @(
 
 $reportPaths = @{}
 
+function Invoke-CoverageRun {
+    param($ProjectInfo)
+
+    $project = $ProjectInfo.Project
+    $projectResults = $ProjectInfo.ResultsDirectory
+    $coverletOutput = Join-Path $projectResults 'coverage'
+    $collectArgs = @(
+        '-p:CollectCoverage=true',
+        '-p:CoverletOutputFormat=cobertura',
+        '-p:ExcludeByFile=**/Resources/LauncherStrings.Designer.cs',
+        "-p:CoverletOutput=$coverletOutput"
+    )
+
+    # coverlet.msbuild 是编译期插桩，但它在同一构建里对刚拷贝到 bin 的被测 DLL 做
+    # 插桩重写时，会与 MSBuild 自身的文件拷贝句柄竞争（"file is being used by
+    # another process"，仅告警并静默降级为无覆盖数据）。拆成两步：先普通构建完成
+    # 编译与拷贝，再带 CollectCoverage 参数做一次增量构建——此时编译/拷贝全部
+    # up-to-date 跳过，coverlet 独占改写 DLL，插桩不再有竞争窗口。
+    dotnet build $project -c Debug --no-restore | Out-Host
+    if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+
+    dotnet build $project -c Debug --no-restore -nodeReuse:false @collectArgs | Out-Host
+    if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+
+    dotnet test $project -c Debug --no-build --no-restore `
+        --results-directory $projectResults `
+        --logger "trx;LogFileName=$($ProjectInfo.Name).trx" `
+        @collectArgs | Out-Host
+    if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+
+    $reports = @(Get-ChildItem -LiteralPath $projectResults -Filter 'coverage.cobertura.xml')
+    if ($reports.Count -ne 1) {
+        throw "Expected exactly one Cobertura report in '$projectResults', found $($reports.Count)."
+    }
+
+    return $reports[0].FullName
+}
+
+function Test-ReportHasData {
+    param($ReportPath)
+
+    [xml]$coverageXml = Get-Content -LiteralPath $ReportPath -Raw
+    $lineCount = 0
+    foreach ($package in @($coverageXml.coverage.packages.package)) {
+        foreach ($class in @($package.classes.class)) {
+            $lineCount += @($class.lines.line).Count
+        }
+    }
+
+    return $lineCount -ge 1000
+}
+
 foreach ($projectInfo in $projects) {
     $project = $projectInfo.Project
     $projectResults = $projectInfo.ResultsDirectory
@@ -44,33 +99,17 @@ foreach ($projectInfo in $projects) {
 
     New-Item -ItemType Directory -Path $projectResults -Force | Out-Null
 
-    $coverletOutput = Join-Path $projectResults 'coverage'
-
-    # coverlet.msbuild 是编译期插桩。若被测依赖（src）刚被普通构建过，增量编译会在
-    # CollectCoverage 上下文中跳过重编译，插桩不生效，产出几乎全空的覆盖率报告
-    # （阈值被低估误报）。先以相同参数显式构建，保证插桩确定性生效。
-    dotnet build $project -c Debug --no-restore `
-        -p:CollectCoverage=true `
-        -p:CoverletOutputFormat=cobertura `
-        -p:ExcludeByFile=**/Resources/LauncherStrings.Designer.cs `
-        -p:CoverletOutput=$coverletOutput
-    if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
-
-    dotnet test $project -c Debug --no-restore `
-        --results-directory $projectResults `
-        --logger "trx;LogFileName=$($projectInfo.Name).trx" `
-        -p:CollectCoverage=true `
-        -p:CoverletOutputFormat=cobertura `
-        -p:ExcludeByFile=**/Resources/LauncherStrings.Designer.cs `
-        -p:CoverletOutput=$coverletOutput
-    if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
-
-    $reports = @(Get-ChildItem -LiteralPath $projectResults -Filter 'coverage.cobertura.xml')
-    if ($reports.Count -ne 1) {
-        throw "Expected exactly one Cobertura report in '$projectResults', found $($reports.Count)."
+    $reportPath = Invoke-CoverageRun $projectInfo
+    if (-not (Test-ReportHasData $reportPath)) {
+        # unit/headless 共享同一 src 插桩 DLL：前一个 testhost 的文件句柄在 Windows 上
+        # 延迟释放时，下一个项目的插桩重写会偶发锁冲突（coverlet 仅告警），产出空壳
+        # 报告。等待句柄释放后重试一次，把偶发抖动从验证失败降级为多一次运行。
+        Write-Output "Coverage report for $($projectInfo.Name) has no data; retrying once."
+        Start-Sleep -Seconds 2
+        $reportPath = Invoke-CoverageRun $projectInfo
     }
 
-    $reportPaths[$projectInfo.Name] = $reports[0].FullName
+    $reportPaths[$projectInfo.Name] = $reportPath
 }
 
 $lineCoverage = @{}
