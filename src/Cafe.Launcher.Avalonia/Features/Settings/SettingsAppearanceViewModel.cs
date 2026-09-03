@@ -6,6 +6,7 @@ using System.Linq;
 using Avalonia;
 using Avalonia.Media;
 using Avalonia.Media.Imaging;
+using Avalonia.Platform;
 using Avalonia.Styling;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
@@ -20,6 +21,7 @@ namespace Cafe.Launcher.Avalonia.Features.Settings;
 public partial class SettingsAppearanceViewModel : ViewModelBase, IDisposable
 {
     private readonly ISettingsEditor editor;
+    private readonly IPlatformSettings? platformSettings;
     private readonly bool showHiddenSettings;
     private bool suppressEditorUpdates;
     private bool disposed;
@@ -29,6 +31,11 @@ public partial class SettingsAppearanceViewModel : ViewModelBase, IDisposable
         this.editor = editor;
         this.showHiddenSettings = showHiddenSettings;
         editor.CurrentPropertyChanged += OnCurrentSettingChanged;
+        platformSettings = Application.Current?.PlatformSettings;
+        if (platformSettings is not null)
+        {
+            platformSettings.ColorValuesChanged += OnPlatformColorValuesChanged;
+        }
     }
 
     public ISettingsEditor Editor => editor;
@@ -341,14 +348,17 @@ public partial class SettingsAppearanceViewModel : ViewModelBase, IDisposable
         }
     }
 
-    private void RefreshThemeColorPaletteBrushes()
+    private void RefreshThemeColorPaletteBrushes(bool? isDark = null)
     {
         foreach (var item in ThemeColorPaletteItems)
         {
             var seed = ParseThemeColorPaletteColor(item.ColorHex);
             if (seed is { } color)
             {
-                item.Brush = new SolidColorBrush(GetGeneratedPrimaryColor(color));
+                item.Brush = new SolidColorBrush(
+                    isDark is { } value
+                        ? GetGeneratedPrimaryColor(color, value)
+                        : GetGeneratedPrimaryColor(color));
             }
         }
     }
@@ -363,11 +373,41 @@ public partial class SettingsAppearanceViewModel : ViewModelBase, IDisposable
 
     private Color GetGeneratedPrimaryColor(Color seed)
     {
+        return GetGeneratedPrimaryColor(seed, IsDarkTheme(editor.Current.ThemeMode));
+    }
+
+    private Color GetGeneratedPrimaryColor(Color seed, bool isDark)
+    {
         var scheme = MaterialSchemeGenerator.CreateScheme(
             seed,
             editor.Current.ThemeColorVariant,
-            IsDarkTheme(editor.Current.ThemeMode));
+            isDark);
         return MaterialColorMapper.ToAvaloniaColor(scheme.Primary);
+    }
+
+    private void OnPlatformColorValuesChanged(object? sender, PlatformColorValues values)
+    {
+        ApplyPlatformColorValues(values);
+    }
+
+    internal void ApplyPlatformColorValues(PlatformColorValues values)
+    {
+        if (editor.Current.ThemeColorMode != ThemeColorModes.System)
+        {
+            return;
+        }
+
+        var isDark = editor.Current.ThemeMode == ThemeModes.Dark
+            || (editor.Current.ThemeMode == ThemeModes.System
+                && values.ThemeVariant == PlatformThemeVariant.Dark);
+        ApplyScheme(
+            values.AccentColor1,
+            editor.Current.ThemeColorVariant,
+            isDark,
+            editor.Current.NeutralColorStrategy);
+        RefreshThemeColorPaletteBrushes(isDark);
+        ThemeColorPreviewBrush = new SolidColorBrush(
+            GetGeneratedPrimaryColor(values.AccentColor1, isDark));
     }
 
     private Color ResolveThemeColor(string themeColorMode, Color customColor) =>
@@ -580,5 +620,9 @@ public partial class SettingsAppearanceViewModel : ViewModelBase, IDisposable
 
         disposed = true;
         editor.CurrentPropertyChanged -= OnCurrentSettingChanged;
+        if (platformSettings is not null)
+        {
+            platformSettings.ColorValuesChanged -= OnPlatformColorValuesChanged;
+        }
     }
 }
