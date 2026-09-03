@@ -113,6 +113,18 @@ public sealed class ServiceConfigurationTests : IDisposable
     }
 
     [Fact]
+    public void AddLauncherServices_RegistersFilePickerThroughSharedConcreteAndInterfaceInstance()
+    {
+        var services = CreateServices();
+        using var provider = services.BuildServiceProvider();
+
+        var concreteService = provider.GetRequiredService<WindowFilePickerService>();
+        var interfaceService = provider.GetRequiredService<IFilePickerService>();
+
+        Assert.Same(concreteService, interfaceService);
+    }
+
+    [Fact]
     public async Task MainWindowViewModel_Dispose_LeavesContainerOwnedViewModelsForProvider()
     {
         var services = CreateServices();
