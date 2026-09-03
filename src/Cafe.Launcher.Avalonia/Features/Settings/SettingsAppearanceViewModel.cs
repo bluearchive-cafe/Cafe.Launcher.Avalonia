@@ -2,7 +2,6 @@ using System;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using System.ComponentModel;
-using System.Diagnostics;
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
@@ -18,6 +17,7 @@ using Cafe.Launcher.Avalonia.Constants;
 using Cafe.Launcher.Avalonia.Helpers;
 using Cafe.Launcher.Avalonia.Models;
 using Cafe.Launcher.Avalonia.Services;
+using Cafe.Launcher.Avalonia.Services.Diagnostics;
 using Cafe.Launcher.Avalonia.ViewModels;
 
 namespace Cafe.Launcher.Avalonia.Features.Settings;
@@ -133,7 +133,7 @@ public partial class SettingsAppearanceViewModel : ViewModelBase, IDisposable
         }
     }
 
-    /// <summary>最近一次在途取色任务；供调用方与测试等待取色落定。</summary>
+    /// <summary>最近一次在途取色任务；测试观察钩子，生产调用方应直接 await 返回的 Task。</summary>
     internal Task PendingThemeRefresh => inFlightThemeRefresh ?? Task.CompletedTask;
 
     /// <summary>
@@ -183,8 +183,11 @@ public partial class SettingsAppearanceViewModel : ViewModelBase, IDisposable
         }
         catch (Exception ex)
         {
-            // 提取失败不允许打断调用方（含 fire-and-forget）：保留现有色板。
-            Debug.WriteLine($"Theme color extraction failed: {ex.Message}");
+            // 提取失败不允许打断调用方（含 fire-and-forget）：保留现有色板并记录诊断。
+            LocalDiagnostics.LogSync(
+                LogEntrySeverity.Warn,
+                "ThemeColor",
+                $"Theme color extraction failed: {ex.Message}");
             return;
         }
 
