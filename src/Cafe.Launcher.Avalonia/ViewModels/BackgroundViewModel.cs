@@ -3,6 +3,7 @@ using System.IO;
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
+using Avalonia;
 using Avalonia.Media;
 using Avalonia.Media.Imaging;
 using Avalonia.Platform;
@@ -26,7 +27,7 @@ public partial class BackgroundViewModel : ViewModelBase, IDisposable
     private readonly IWindowMetricsService? windowMetrics;
     private LauncherSettings? lastBackgroundSettings;
     private LauncherStatusSnapshot? lastBackgroundSnapshot;
-    private int lastDecodeTargetWidth;
+    private PixelSize lastDecodeTarget;
     private int resizeReloadVersion;
     private bool disposed;
 
@@ -118,6 +119,14 @@ public partial class BackgroundViewModel : ViewModelBase, IDisposable
     /// <summary>窗口显著变大后的壁纸重解码去抖窗口；测试可调小。</summary>
     internal static TimeSpan ResizeReloadDebounce = TimeSpan.FromMilliseconds(500);
 
+    /// <summary>解码目标（按面积）增长超过该比例才触发重解码，吸收亚像素抖动与小幅调整。</summary>
+    private const double SignificantGrowRatio = 1.2;
+
+    /// <summary>当前窗口物理尺寸对应的解码目标框（钳制策略见 <see cref="BackgroundImageDecoder.GetTargetBox"/>）。</summary>
+    private PixelSize GetDecodeTarget() =>
+        BackgroundImageDecoder.GetTargetBox(
+            windowMetrics?.GetPhysicalClientSize() ?? BackgroundImageDecoder.FallbackTarget);
+
     public async Task UpdateBackgroundImageAsync(
         LauncherSettings settings,
         LauncherStatusSnapshot? snapshot,
@@ -129,14 +138,9 @@ public partial class BackgroundViewModel : ViewModelBase, IDisposable
             lastBackgroundSnapshot = snapshot;
         }
 
-        // 记录本次解码使用的目标宽：窗口变大后的重解码以它为基准比较，
-        // 而不是位图实际宽（竖图按高钳制后宽必然小于目标宽，会造成误判死循环）。
-        lastDecodeTargetWidth = windowMetrics is null
-            ? 0
-            : Math.Clamp(
-                windowMetrics.GetPhysicalClientSize().Width,
-                BackgroundImageDecoder.MinDecodeWidthPixels,
-                BackgroundImageDecoder.MaxDecodeSidePixels);
+        // 记录本次解码使用的目标框：窗口变大后的重解码以它为基准按面积比较，
+        // 而不是位图实际尺寸（竖图按高钳制后必然小于目标框，会造成误判死循环）。
+        lastDecodeTarget = GetDecodeTarget();
 
         ApplyBackgroundPresentation(settings);
 
@@ -243,17 +247,16 @@ public partial class BackgroundViewModel : ViewModelBase, IDisposable
             return;
         }
 
-        var targetWidth = Math.Clamp(
-            windowMetrics.GetPhysicalClientSize().Width,
-            BackgroundImageDecoder.MinDecodeWidthPixels,
-            BackgroundImageDecoder.MaxDecodeSidePixels);
-        if (targetWidth <= lastDecodeTargetWidth * 1.2)
+        var target = GetDecodeTarget();
+        var targetArea = (long)target.Width * target.Height;
+        var lastArea = (long)lastDecodeTarget.Width * lastDecodeTarget.Height;
+        if (targetArea <= lastArea * SignificantGrowRatio)
         {
             return;
         }
 
-        // 窗口显著变大：按新目标重放当前壁纸加载。事件在 UI 线程触发，
-        // continuation 回到 UI 上下文，满足 SetBackgroundImage 的线程要求。
+        // 窗口显著变大（宽度、高度或 DPI 任一增长）：按新目标重放当前壁纸加载。
+        // 事件在 UI 线程触发，continuation 回到 UI 上下文，满足 SetBackgroundImage 的线程要求。
         await UpdateBackgroundImageAsync(
             lastBackgroundSettings,
             lastBackgroundSnapshot,

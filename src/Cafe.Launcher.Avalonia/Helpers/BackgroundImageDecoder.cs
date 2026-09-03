@@ -21,6 +21,17 @@ public static class BackgroundImageDecoder
     /// <summary>未附加窗口时（无头测试、启动早期）使用的默认目标框。</summary>
     public static readonly PixelSize FallbackTarget = new(1920, 1080);
 
+    /// <summary>
+    /// 计算给定物理尺寸对应的解码目标框。与原 spec（目标边钳制 [1280, 4096]）的
+    /// 有意偏差：下限只约束宽度——矮窗口不应把壁纸强行放大到 1280 高；高度仅设上限。
+    /// </summary>
+    public static PixelSize GetTargetBox(PixelSize targetPhysicalSize)
+    {
+        return new PixelSize(
+            Math.Clamp(targetPhysicalSize.Width, MinDecodeWidthPixels, MaxDecodeSidePixels),
+            Math.Clamp(targetPhysicalSize.Height, 1, MaxDecodeSidePixels));
+    }
+
     public static Bitmap Decode(string path, PixelSize targetPhysicalSize)
     {
         using var stream = File.OpenRead(path);
@@ -29,22 +40,21 @@ public static class BackgroundImageDecoder
 
     public static Bitmap Decode(Stream stream, PixelSize targetPhysicalSize)
     {
-        var maxWidth = Math.Clamp(targetPhysicalSize.Width, MinDecodeWidthPixels, MaxDecodeSidePixels);
-        var maxHeight = Math.Clamp(targetPhysicalSize.Height, 1, MaxDecodeSidePixels);
+        var target = GetTargetBox(targetPhysicalSize);
 
-        var bitmap = Bitmap.DecodeToWidth(stream, maxWidth, BitmapInterpolationMode.HighQuality);
-        if (bitmap.PixelSize.Height <= maxHeight)
+        var bitmap = Bitmap.DecodeToWidth(stream, target.Width, BitmapInterpolationMode.HighQuality);
+        if (bitmap.PixelSize.Height <= target.Height)
         {
             return bitmap;
         }
 
         // 极端竖图按宽解码后高度仍超框：对结果二次缩放到钳制框内。
         // 不能复用同一个流做第二次解码——流被首个 codec 消费后再解码的输出尺寸不可靠。
-        var heightRatio = maxHeight / (double)bitmap.PixelSize.Height;
+        var heightRatio = target.Height / (double)bitmap.PixelSize.Height;
         var scaled = bitmap.CreateScaledBitmap(
             new PixelSize(
                 Math.Max(1, (int)Math.Round(bitmap.PixelSize.Width * heightRatio)),
-                maxHeight),
+                target.Height),
             BitmapInterpolationMode.HighQuality);
         bitmap.Dispose();
         return scaled;

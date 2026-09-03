@@ -245,6 +245,64 @@ public sealed class BackgroundDecodeCapHeadlessTests
     }
 
     [AvaloniaFact]
+    public async Task UpdateBackgroundImageAsync_WhenWindowGrowsInHeightOnly_ReloadsAtLargerTarget()
+    {
+        var originalDebounce = BackgroundViewModel.ResizeReloadDebounce;
+        BackgroundViewModel.ResizeReloadDebounce = TimeSpan.FromMilliseconds(50);
+        try
+        {
+            using var context = HeadlessTestHost.CreateContext();
+            var metrics = new MutableWindowMetrics(new PixelSize(1300, 400));
+            var wallpaperPath = Path.Combine(context.TempDir, "grow-height-wallpaper.png");
+            HeadlessTestHost.WriteSolidPng(wallpaperPath, Brushes.DarkSlateBlue, 3000, 1600);
+            var viewModel = new BackgroundViewModel(
+                context.Provider.GetRequiredService<ImageCacheService>(),
+                context.Provider.GetRequiredService<LocalDiagnostics>(),
+                _ => { },
+                path => BackgroundImageDecoder.Decode(path, metrics.GetPhysicalClientSize()),
+                () => null,
+                metrics);
+            try
+            {
+                var settings = new LauncherSettings
+                {
+                    BackgroundSource = BackgroundSources.Custom,
+                    CustomBackgroundPath = wallpaperPath,
+                    ThemeColorMode = ThemeColorModes.Default
+                };
+                await viewModel.UpdateBackgroundImageAsync(settings, snapshot: null, CancellationToken.None);
+                var initial = Assert.IsType<Bitmap>(viewModel.BackgroundImageSource);
+                var initialWidth = initial.PixelSize.Width;
+                // 3000×1600 源按宽解码到 1300×693，超高 400 后二次缩放，宽度必然小于 1300。
+                Assert.True(
+                    initialWidth < 1300,
+                    $"Initial width {initialWidth} should be height-capped below 1300.");
+
+                // 纯高度增长（宽度不变，DPI 升高同理）也必须触发重解码：只比较宽度会漏检。
+                // 注意换图后旧位图会被释放，比较只能用提前捕获的宽度值。
+                metrics.ResizeTo(new PixelSize(1300, 1500));
+                await WaitUntilAsync(
+                    () => viewModel.BackgroundImageSource is Bitmap reloaded
+                        && reloaded.PixelSize.Width > initialWidth,
+                    TimeSpan.FromSeconds(5));
+
+                var reloaded = (Bitmap)viewModel.BackgroundImageSource!;
+                Assert.Equal(1300, reloaded.PixelSize.Width);
+                Assert.True(reloaded.PixelSize.Height <= 1500, $"Height {reloaded.PixelSize.Height} exceeds 1500.");
+            }
+            finally
+            {
+                viewModel.Dispose();
+                File.Delete(wallpaperPath);
+            }
+        }
+        finally
+        {
+            BackgroundViewModel.ResizeReloadDebounce = originalDebounce;
+        }
+    }
+
+    [AvaloniaFact]
     public void WindowMetricsService_WithoutAttachedWindow_ReturnsFallbackAndRecoversAfterDetach()
     {
         var service = new WindowMetricsService();
