@@ -23,6 +23,11 @@ public partial class BackgroundViewModel : ViewModelBase, IDisposable
     private readonly Action<LauncherSettings> wallpaperChanged;
     private readonly Func<string, IImage?> imageLoader;
     private readonly Func<IImage?> bundledImageLoader;
+    private readonly IWindowMetricsService? windowMetrics;
+    private LauncherSettings? lastBackgroundSettings;
+    private LauncherStatusSnapshot? lastBackgroundSnapshot;
+    private int lastDecodeTargetWidth;
+    private int resizeReloadVersion;
     private bool disposed;
 
     [ObservableProperty]
@@ -91,21 +96,48 @@ public partial class BackgroundViewModel : ViewModelBase, IDisposable
         LocalDiagnostics diagnostics,
         Action<LauncherSettings> wallpaperChanged,
         Func<string, IImage?> imageLoader,
-        Func<IImage?> bundledImageLoader)
+        Func<IImage?> bundledImageLoader,
+        IWindowMetricsService? windowMetrics = null)
     {
         this.imageCacheService = imageCacheService;
         this.diagnostics = diagnostics;
         this.wallpaperChanged = wallpaperChanged;
         this.imageLoader = imageLoader;
         this.bundledImageLoader = bundledImageLoader;
+        this.windowMetrics = windowMetrics;
+        if (windowMetrics is not null)
+        {
+            // 首次解码可能发生在窗口达到最终尺寸（布局/恢复保存状态/最大化）之前；
+            // 尺寸随后显著变大时按需重解码，否则驻留位图被放大采样显示为模糊。
+            windowMetrics.PhysicalSizeChanged += OnPhysicalSizeChanged;
+        }
+
         backgroundImageSource = bundledImageLoader();
     }
+
+    /// <summary>窗口显著变大后的壁纸重解码去抖窗口；测试可调小。</summary>
+    internal static TimeSpan ResizeReloadDebounce = TimeSpan.FromMilliseconds(500);
 
     public async Task UpdateBackgroundImageAsync(
         LauncherSettings settings,
         LauncherStatusSnapshot? snapshot,
         CancellationToken cancellationToken)
     {
+        lastBackgroundSettings = settings;
+        if (snapshot is not null)
+        {
+            lastBackgroundSnapshot = snapshot;
+        }
+
+        // 记录本次解码使用的目标宽：窗口变大后的重解码以它为基准比较，
+        // 而不是位图实际宽（竖图按高钳制后宽必然小于目标宽，会造成误判死循环）。
+        lastDecodeTargetWidth = windowMetrics is null
+            ? 0
+            : Math.Clamp(
+                windowMetrics.GetPhysicalClientSize().Width,
+                BackgroundImageDecoder.MinDecodeWidthPixels,
+                BackgroundImageDecoder.MaxDecodeSidePixels);
+
         ApplyBackgroundPresentation(settings);
 
         switch (settings.BackgroundSource)
@@ -179,6 +211,53 @@ public partial class BackgroundViewModel : ViewModelBase, IDisposable
 
         wallpaperFadeCancellation?.Cancel();
         FinishWallpaperFade();
+    }
+
+    private void OnPhysicalSizeChanged()
+    {
+        if (disposed)
+        {
+            return;
+        }
+
+        var version = ++resizeReloadVersion;
+        _ = ReloadAtNewSizeAfterDebounceAsync(version);
+    }
+
+    private async Task ReloadAtNewSizeAfterDebounceAsync(int version)
+    {
+        try
+        {
+            await Task.Delay(ResizeReloadDebounce);
+        }
+        catch (TaskCanceledException)
+        {
+            return;
+        }
+
+        if (disposed
+            || version != resizeReloadVersion
+            || windowMetrics is null
+            || lastBackgroundSettings is null)
+        {
+            return;
+        }
+
+        var targetWidth = Math.Clamp(
+            windowMetrics.GetPhysicalClientSize().Width,
+            BackgroundImageDecoder.MinDecodeWidthPixels,
+            BackgroundImageDecoder.MaxDecodeSidePixels);
+        if (targetWidth <= lastDecodeTargetWidth * 1.2)
+        {
+            return;
+        }
+
+        // 窗口显著变大：按新目标重放当前壁纸加载。事件在 UI 线程触发，
+        // continuation 回到 UI 上下文，满足 SetBackgroundImage 的线程要求。
+        await UpdateBackgroundImageAsync(
+            lastBackgroundSettings,
+            lastBackgroundSnapshot,
+            CancellationToken.None);
     }
 
     public Bitmap? GetBackgroundBitmap()
@@ -418,6 +497,8 @@ public partial class BackgroundViewModel : ViewModelBase, IDisposable
         }
 
         disposed = true;
+        resizeReloadVersion++;
+        windowMetrics?.PhysicalSizeChanged -= OnPhysicalSizeChanged;
         wallpaperFadeCancellation?.Cancel();
         // 先摘除属性引用（绑定同步清空 Image.Source），再释放位图：即使窗口尚在收尾
         // 渲染，视觉树也不会拿到已释放的位图实现。

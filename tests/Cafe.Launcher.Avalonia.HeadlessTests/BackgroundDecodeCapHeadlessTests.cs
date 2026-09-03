@@ -146,18 +146,137 @@ public sealed class BackgroundDecodeCapHeadlessTests
     }
 
     [AvaloniaFact]
+    public async Task UpdateBackgroundImageAsync_WhenWindowGrowsAfterLoad_ReloadsAtLargerTarget()
+    {
+        var originalDebounce = BackgroundViewModel.ResizeReloadDebounce;
+        BackgroundViewModel.ResizeReloadDebounce = TimeSpan.FromMilliseconds(50);
+        try
+        {
+            using var context = CreateBackgroundContext();
+            var metrics = new MutableWindowMetrics(new PixelSize(1300, 754));
+            var wallpaperPath = Path.Combine(context.TempDir, "grow-wallpaper.png");
+            WriteTestImage(wallpaperPath, 3000, 1600);
+            var viewModel = new BackgroundViewModel(
+                context.Provider.GetRequiredService<ImageCacheService>(),
+                context.Provider.GetRequiredService<LocalDiagnostics>(),
+                _ => { },
+                path => BackgroundImageDecoder.Decode(path, metrics.GetPhysicalClientSize()),
+                () => null,
+                metrics);
+            try
+            {
+                var settings = new LauncherSettings
+                {
+                    BackgroundSource = BackgroundSources.Custom,
+                    CustomBackgroundPath = wallpaperPath,
+                    ThemeColorMode = ThemeColorModes.Default
+                };
+                await viewModel.UpdateBackgroundImageAsync(settings, snapshot: null, CancellationToken.None);
+                var initial = Assert.IsType<Bitmap>(viewModel.BackgroundImageSource);
+                Assert.True(initial.PixelSize.Width <= 1300, $"Initial width {initial.PixelSize.Width} exceeds 1300.");
+
+                // 首次解码发生在小窗口；窗口随后显著变大必须按新目标重解码，
+                // 否则驻留位图被放大采样显示为模糊。
+                metrics.ResizeTo(new PixelSize(2600, 1500));
+                await WaitUntilAsync(
+                    () => viewModel.BackgroundImageSource is Bitmap reloaded
+                        && reloaded.PixelSize.Width > 1300,
+                    TimeSpan.FromSeconds(5));
+
+                var reloaded = (Bitmap)viewModel.BackgroundImageSource!;
+                Assert.True(reloaded.PixelSize.Width <= 2600, $"Reloaded width {reloaded.PixelSize.Width} exceeds 2600.");
+            }
+            finally
+            {
+                viewModel.Dispose();
+                File.Delete(wallpaperPath);
+            }
+        }
+        finally
+        {
+            BackgroundViewModel.ResizeReloadDebounce = originalDebounce;
+        }
+    }
+
+    [AvaloniaFact]
+    public async Task UpdateBackgroundImageAsync_WhenWindowShrinksAfterLoad_DoesNotReload()
+    {
+        var originalDebounce = BackgroundViewModel.ResizeReloadDebounce;
+        BackgroundViewModel.ResizeReloadDebounce = TimeSpan.FromMilliseconds(50);
+        try
+        {
+            using var context = CreateBackgroundContext();
+            var metrics = new MutableWindowMetrics(new PixelSize(1300, 754));
+            var wallpaperPath = Path.Combine(context.TempDir, "shrink-wallpaper.png");
+            WriteTestImage(wallpaperPath, 3000, 1600);
+            var viewModel = new BackgroundViewModel(
+                context.Provider.GetRequiredService<ImageCacheService>(),
+                context.Provider.GetRequiredService<LocalDiagnostics>(),
+                _ => { },
+                path => BackgroundImageDecoder.Decode(path, metrics.GetPhysicalClientSize()),
+                () => null,
+                metrics);
+            try
+            {
+                var settings = new LauncherSettings
+                {
+                    BackgroundSource = BackgroundSources.Custom,
+                    CustomBackgroundPath = wallpaperPath,
+                    ThemeColorMode = ThemeColorModes.Default
+                };
+                await viewModel.UpdateBackgroundImageAsync(settings, snapshot: null, CancellationToken.None);
+                var initial = Assert.IsType<Bitmap>(viewModel.BackgroundImageSource);
+
+                // 窗口变小：现有位图已足够清晰，不应触发重解码。
+                metrics.ResizeTo(new PixelSize(1000, 600));
+                await Task.Delay(300);
+
+                Assert.Same(initial, viewModel.BackgroundImageSource);
+            }
+            finally
+            {
+                viewModel.Dispose();
+                File.Delete(wallpaperPath);
+            }
+        }
+        finally
+        {
+            BackgroundViewModel.ResizeReloadDebounce = originalDebounce;
+        }
+    }
+
+    [AvaloniaFact]
     public void WindowMetricsService_WithoutAttachedWindow_ReturnsFallbackAndRecoversAfterDetach()
     {
         var service = new WindowMetricsService();
         Assert.Equal(BackgroundImageDecoder.FallbackTarget, service.GetPhysicalClientSize());
 
+        // 窗口构造后未布局也有默认 ClientSize（headless 下 1024×768）：
+        // 快照应反映窗口当前实际物理尺寸（这正是"启动时快照 ≠ 最终窗口"的来源，
+        // 由 PhysicalSizeChanged 事件驱动的按需重解码兜底）。
         var window = new Window();
         service.Attach(window);
         var attachedSize = service.GetPhysicalClientSize();
-        Assert.True(attachedSize.Width >= 1 && attachedSize.Height >= 1);
+        Assert.Equal(
+            (int)Math.Ceiling(window.ClientSize.Width * window.RenderScaling),
+            attachedSize.Width);
+        Assert.Equal(
+            (int)Math.Ceiling(window.ClientSize.Height * window.RenderScaling),
+            attachedSize.Height);
 
         service.Detach(window);
         Assert.Equal(BackgroundImageDecoder.FallbackTarget, service.GetPhysicalClientSize());
+    }
+
+    private static async Task WaitUntilAsync(Func<bool> condition, TimeSpan timeout)
+    {
+        var deadline = DateTime.UtcNow + timeout;
+        while (!condition() && DateTime.UtcNow < deadline)
+        {
+            await Task.Delay(25);
+        }
+
+        Assert.True(condition(), "Condition was not met within the timeout.");
     }
 
     private static BackgroundTestContext CreateBackgroundContext()
@@ -206,6 +325,33 @@ public sealed class BackgroundDecodeCapHeadlessTests
 
     private sealed class FixedWindowMetrics(PixelSize size) : IWindowMetricsService
     {
+        // 固定尺寸 fake 永不触发尺寸变化。
+        public event Action? PhysicalSizeChanged
+        {
+            add { }
+            remove { }
+        }
+
         public PixelSize GetPhysicalClientSize() => size;
+    }
+
+    private sealed class MutableWindowMetrics : IWindowMetricsService
+    {
+        private PixelSize size;
+
+        public MutableWindowMetrics(PixelSize initialSize)
+        {
+            size = initialSize;
+        }
+
+        public event Action? PhysicalSizeChanged;
+
+        public PixelSize GetPhysicalClientSize() => size;
+
+        public void ResizeTo(PixelSize newSize)
+        {
+            size = newSize;
+            PhysicalSizeChanged?.Invoke();
+        }
     }
 }

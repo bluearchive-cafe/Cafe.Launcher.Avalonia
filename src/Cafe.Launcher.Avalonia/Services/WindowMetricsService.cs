@@ -19,6 +19,9 @@ public sealed class WindowMetricsService : IWindowMetricsService
     private TopLevel? owner;
     private PixelSize physicalClientSize = FallbackClientSize;
 
+    /// <inheritdoc />
+    public event Action? PhysicalSizeChanged;
+
     /// <summary>Registers the window whose client size backs metric queries.</summary>
     public void Attach(TopLevel topLevel)
     {
@@ -82,12 +85,23 @@ public sealed class WindowMetricsService : IWindowMetricsService
 
     private void RefreshSnapshot(object? sender)
     {
+        bool sizeChanged;
         lock (attachLock)
         {
-            if (sender is TopLevel topLevel && ReferenceEquals(topLevel, owner))
+            if (sender is not TopLevel topLevel || !ReferenceEquals(topLevel, owner))
             {
-                physicalClientSize = Measure(topLevel);
+                return;
             }
+
+            var previous = physicalClientSize;
+            physicalClientSize = Measure(topLevel);
+            sizeChanged = previous != physicalClientSize;
+        }
+
+        // 订阅方（壁纸按需重解码）依赖此通知；锁外触发避免回调重入锁。
+        if (sizeChanged)
+        {
+            PhysicalSizeChanged?.Invoke();
         }
     }
 
@@ -95,6 +109,12 @@ public sealed class WindowMetricsService : IWindowMetricsService
     {
         var scaling = topLevel.RenderScaling;
         var client = topLevel.ClientSize;
+        if (client.Width <= 0 || client.Height <= 0)
+        {
+            // 布局尚未发生（窗口构造后、Show 前）：返回默认目标而非 1×1 坏快照。
+            return FallbackClientSize;
+        }
+
         return new PixelSize(
             Math.Max(1, (int)Math.Ceiling(client.Width * scaling)),
             Math.Max(1, (int)Math.Ceiling(client.Height * scaling)));
