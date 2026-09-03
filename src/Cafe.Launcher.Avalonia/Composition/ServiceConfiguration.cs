@@ -49,7 +49,9 @@ public static class ServiceConfiguration
 
         // ── HttpClient factory (shared pool, proxy-aware) ────────────────
         services.AddSingleton<HttpClientFactory>();
-        services.AddSingleton<IFilePickerService, WindowFilePickerService>();
+        services.AddSingleton<WindowFilePickerService>();
+        services.AddSingleton<IFilePickerService>(sp =>
+            sp.GetRequiredService<WindowFilePickerService>());
 
         // ── Services with dependencies ────────────────────────────────────
         services.AddSingleton<ProxySettingsService>();
