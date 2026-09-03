@@ -43,16 +43,21 @@ public partial class MainWindow : Window
     private MainWindowViewModel? configuredViewModel;
     private CancellationTokenSource? operationSurfaceMotionCts;
     private readonly WindowFilePickerService? filePickerService;
+    private readonly WindowMetricsService? windowMetrics;
 
     /// <summary>
-    /// <paramref name="filePickerService"/> 可空以兼容无头测试的默认构造；
-    /// 生产入口（App.axaml.cs）注入 WindowFilePickerService 并在本构造器中挂接本窗口。
+    /// <paramref name="filePickerService"/> 与 <paramref name="windowMetrics"/> 可空以兼容
+    /// 无头测试的默认构造；生产入口（App.axaml.cs）注入并在本构造器中挂接本窗口。
     /// </summary>
-    public MainWindow(WindowFilePickerService? filePickerService = null)
+    public MainWindow(
+        WindowFilePickerService? filePickerService = null,
+        WindowMetricsService? windowMetrics = null)
     {
         InitializeComponent();
         this.filePickerService = filePickerService;
+        this.windowMetrics = windowMetrics;
         filePickerService?.Attach(this);
+        windowMetrics?.Attach(this);
         PointerPressed += OnPointerPressed;
         KeyDown += OnKeyDown;
         Activated += OnActivated;
@@ -415,6 +420,7 @@ public partial class MainWindow : Window
     {
         UnconfigureViewModel();
         filePickerService?.Detach(this);
+        windowMetrics?.Detach(this);
         base.OnClosed(e);
     }
 

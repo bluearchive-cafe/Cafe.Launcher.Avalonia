@@ -54,29 +54,34 @@ public partial class BackgroundViewModel : ViewModelBase, IDisposable
     public BackgroundViewModel(
         ImageCacheService imageCacheService,
         LocalDiagnostics diagnostics,
-        SettingsViewModel settings)
+        SettingsViewModel settings,
+        IWindowMetricsService? windowMetrics = null)
         : this(
             imageCacheService,
             diagnostics,
             previewSettings =>
             {
-                settings.Appearance.RefreshThemeColorPaletteFromCurrentBackground(markDirty: false);
-                settings.Appearance.ApplyThemeColor(
-                    previewSettings.ThemeColorMode,
-                    settings.Appearance.SelectedCustomThemeColor);
-            })
+                // 壁纸像素立即切换；主题取色在后台线程执行，完成后主题 tokens 跟进。
+                _ = settings.Appearance.RefreshThemeColorPaletteFromCurrentBackgroundAsync(
+                    markDirty: false,
+                    applySchemeAfter: true);
+            },
+            windowMetrics)
     {
     }
 
     internal BackgroundViewModel(
         ImageCacheService imageCacheService,
         LocalDiagnostics diagnostics,
-        Action<LauncherSettings> wallpaperChanged)
+        Action<LauncherSettings> wallpaperChanged,
+        IWindowMetricsService? windowMetrics = null)
         : this(
             imageCacheService,
             diagnostics,
             wallpaperChanged,
-            static path => new Bitmap(path),
+            path => BackgroundImageDecoder.Decode(
+                path,
+                windowMetrics?.GetPhysicalClientSize() ?? BackgroundImageDecoder.FallbackTarget),
             LoadBundledBackground)
     {
     }
@@ -317,7 +322,8 @@ public partial class BackgroundViewModel : ViewModelBase, IDisposable
         BackgroundImageSource = bitmap;
         if (previewSettings.ThemeColorMode == ThemeColorModes.Wallpaper)
         {
-            // Theme tokens switch atomically with the wallpaper decision; only pixels fade.
+            // 主题取色在后台执行（不再阻塞 UI 线程），完成后 tokens 落色；
+            // 期间沿用旧色板渲染，不会闪到默认色。
             wallpaperChanged(previewSettings);
         }
 
@@ -332,7 +338,7 @@ public partial class BackgroundViewModel : ViewModelBase, IDisposable
     }
 
     /// <summary>
-    /// ADR-016 壁纸交叉淡化：逻辑源立即切换（主题采样同步），旧图所有权移交视图层作为
+    /// ADR-016 壁纸交叉淡化：逻辑源立即切换（主题取色后台进行），旧图所有权移交视图层作为
     /// 覆盖层淡出，视图在摘除引用后经 <see cref="OnWallpaperOverlayReleased"/> 归还释放权。
     /// 快速连续更换时以“最新状态优先”直接释放上一张在途旧图（此刻同一调度回调内
     /// 覆盖层 Source 会被新事件同步替换，不存在残留引用的渲染帧）。

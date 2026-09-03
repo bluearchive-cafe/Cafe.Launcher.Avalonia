@@ -67,7 +67,9 @@ public partial class App : Application
             }
 
             var viewModel = serviceProvider.GetRequiredService<MainWindowViewModel>();
-            var mainWindow = new MainWindow(serviceProvider.GetRequiredService<WindowFilePickerService>())
+            var mainWindow = new MainWindow(
+                serviceProvider.GetRequiredService<WindowFilePickerService>(),
+                serviceProvider.GetRequiredService<WindowMetricsService>())
             {
                 DataContext = viewModel,
             };

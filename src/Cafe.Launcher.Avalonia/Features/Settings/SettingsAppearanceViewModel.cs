@@ -2,12 +2,16 @@ using System;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using System.ComponentModel;
+using System.Diagnostics;
 using System.Linq;
+using System.Threading;
+using System.Threading.Tasks;
 using Avalonia;
 using Avalonia.Media;
 using Avalonia.Media.Imaging;
 using Avalonia.Platform;
 using Avalonia.Styling;
+using Avalonia.Threading;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 using Cafe.Launcher.Avalonia.Constants;
@@ -25,6 +29,8 @@ public partial class SettingsAppearanceViewModel : ViewModelBase, IDisposable
     private readonly bool showHiddenSettings;
     private bool suppressEditorUpdates;
     private bool disposed;
+    private int themeRefreshGeneration;
+    private Task? inFlightThemeRefresh;
 
     public SettingsAppearanceViewModel(ISettingsEditor editor, bool showHiddenSettings = false)
     {
@@ -127,31 +133,99 @@ public partial class SettingsAppearanceViewModel : ViewModelBase, IDisposable
         }
     }
 
-    public void RefreshThemeColorPaletteFromCurrentBackground(bool markDirty)
+    /// <summary>最近一次在途取色任务；供调用方与测试等待取色落定。</summary>
+    internal Task PendingThemeRefresh => inFlightThemeRefresh ?? Task.CompletedTask;
+
+    /// <summary>
+    /// 从当前壁纸重新提取主题色板。提取（含整幅源图降采样与量化）在线程池执行，
+    /// 结果经代数校验后回到 UI 线程应用；期间壁纸可能再次切换并释放旧位图，
+    /// 陈旧结果与已释放位图都被静默丢弃，不会覆盖较新的色板。
+    /// </summary>
+    public Task RefreshThemeColorPaletteFromCurrentBackgroundAsync(
+        bool markDirty,
+        bool applySchemeAfter = false)
     {
         var bitmap = GetBackgroundBitmap?.Invoke();
+        var generation = Interlocked.Increment(ref themeRefreshGeneration);
+        var refresh = ApplyExtractedPaletteAsync(bitmap, generation, markDirty, applySchemeAfter);
+        inFlightThemeRefresh = refresh;
+        return refresh;
+    }
+
+    private async Task ApplyExtractedPaletteAsync(
+        Bitmap? bitmap,
+        int generation,
+        bool markDirty,
+        bool applySchemeAfter)
+    {
         if (bitmap is null)
         {
             ReplaceThemeColorPalette([], 0);
+            if (applySchemeAfter)
+            {
+                ApplyResolvedTheme();
+            }
+
             return;
         }
 
-        var colors = ThemeColorExtractionService.ExtractPalette(
+        IReadOnlyList<Color> colors;
+        try
+        {
+            colors = await Task.Run(() => ThemeColorExtractionService.ExtractPalette(
                 bitmap,
-                editor.Current.ThemeColorExtractionAlgorithm)
-            .Select(ThemeColorExtractionService.ToColorHex)
-            .ToArray();
-        var selectedIndex = SelectedThemeColorPaletteIndex < colors.Length
+                editor.Current.ThemeColorExtractionAlgorithm));
+        }
+        catch (ObjectDisposedException)
+        {
+            // 提取期间壁纸再次切换会释放旧位图；丢弃本轮即可。
+            return;
+        }
+        catch (Exception ex)
+        {
+            // 提取失败不允许打断调用方（含 fire-and-forget）：保留现有色板。
+            Debug.WriteLine($"Theme color extraction failed: {ex.Message}");
+            return;
+        }
+
+        if (generation != Volatile.Read(ref themeRefreshGeneration))
+        {
+            return;
+        }
+
+        var hexes = colors.Select(ThemeColorExtractionService.ToColorHex).ToArray();
+        var selectedIndex = SelectedThemeColorPaletteIndex < hexes.Length
             ? SelectedThemeColorPaletteIndex
             : 0;
-        ReplaceThemeColorPalette(colors, selectedIndex);
-        if (markDirty)
+        await RunOnUiAsync(() =>
         {
-            editor.Commit(settings =>
+            ReplaceThemeColorPalette(hexes, selectedIndex);
+            if (markDirty)
             {
-                settings.ThemeColorPalette = GetThemeColorPaletteHexes();
-                settings.SelectedThemeColorPaletteIndex = SelectedThemeColorPaletteIndex;
-            });
+                editor.Commit(settings =>
+                {
+                    settings.ThemeColorPalette = GetThemeColorPaletteHexes();
+                    settings.SelectedThemeColorPaletteIndex = SelectedThemeColorPaletteIndex;
+                });
+            }
+
+            if (applySchemeAfter)
+            {
+                // 直接落色而非走 ApplyThemeColor：空结果（如纯透明图）不会再次触发提取。
+                ApplyResolvedTheme();
+            }
+        });
+    }
+
+    private static async Task RunOnUiAsync(Action action)
+    {
+        if (Dispatcher.UIThread.CheckAccess())
+        {
+            action();
+        }
+        else
+        {
+            await Dispatcher.UIThread.InvokeAsync(action);
         }
     }
 
@@ -162,10 +236,22 @@ public partial class SettingsAppearanceViewModel : ViewModelBase, IDisposable
     {
         if (themeColorMode == ThemeColorModes.Wallpaper && ThemeColorPaletteItems.Count == 0)
         {
-            RefreshThemeColorPaletteFromCurrentBackground(markDirty: false);
+            // 色板尚未提取：后台取色完成后经 applySchemeAfter 落色；
+            // 此处直接返回，避免先落一次默认色再跳变。
+            _ = RefreshThemeColorPaletteFromCurrentBackgroundAsync(
+                markDirty: false,
+                applySchemeAfter: true);
+            return;
         }
 
-        var color = ResolveThemeColor(themeColorMode, customColor);
+        ApplyResolvedTheme();
+    }
+
+    private void ApplyResolvedTheme()
+    {
+        var color = ResolveThemeColor(
+            editor.Current.ThemeColorMode,
+            SelectedCustomThemeColor);
         ApplyScheme(
             color,
             editor.Current.ThemeColorVariant,
@@ -176,9 +262,9 @@ public partial class SettingsAppearanceViewModel : ViewModelBase, IDisposable
     }
 
     [RelayCommand]
-    private void RefreshThemeColorPalette()
+    private async Task RefreshThemeColorPaletteAsync()
     {
-        RefreshThemeColorPaletteFromCurrentBackground(markDirty: true);
+        await RefreshThemeColorPaletteFromCurrentBackgroundAsync(markDirty: true);
         if (editor.Current.ThemeColorMode == ThemeColorModes.Wallpaper)
         {
             ApplyThemeColor(editor.Current.ThemeColorMode, SelectedCustomThemeColor);
@@ -207,12 +293,9 @@ public partial class SettingsAppearanceViewModel : ViewModelBase, IDisposable
             IsCustomThemeColorSelected = value == ThemeColorModes.Custom;
             IsWallpaperThemeColorSelected = value == ThemeColorModes.Wallpaper;
             IsThemeColorExtractionAlgorithmVisible = IsWallpaperThemeColorSelected;
-            if (IsWallpaperThemeColorSelected && ThemeColorPaletteItems.Count == 0)
-            {
-                RefreshThemeColorPaletteFromCurrentBackground(markDirty: false);
-            }
 
             // ADR-009: 变更即预览 — mode changes repaint the main window immediately.
+            // 壁纸模式且色板缺失时由 ApplyThemeColor 触发后台提取，完成后自动落色。
             ApplyThemeColor(value, SelectedCustomThemeColor);
             return;
         }
@@ -221,10 +304,11 @@ public partial class SettingsAppearanceViewModel : ViewModelBase, IDisposable
         {
             if (editor.Current.ThemeColorMode == ThemeColorModes.Wallpaper)
             {
-                RefreshThemeColorPaletteFromCurrentBackground(markDirty: true);
-                // ADR-009: ensure the regenerated seed is applied even when the
-                // selected palette index did not change.
-                ApplyThemeColor(editor.Current.ThemeColorMode, SelectedCustomThemeColor);
+                // ADR-009: 算法变更需要按新算法重新提取；提取完成后自动落色，
+                // 保证选中的色板索引未变时配色仍被刷新。
+                _ = RefreshThemeColorPaletteFromCurrentBackgroundAsync(
+                    markDirty: true,
+                    applySchemeAfter: true);
             }
 
             UpdateThemeColorPreview();

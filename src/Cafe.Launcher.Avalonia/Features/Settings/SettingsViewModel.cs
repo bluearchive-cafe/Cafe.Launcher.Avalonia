@@ -198,7 +198,8 @@ public partial class SettingsViewModel : ViewModelBase, IDisposable, IModalConte
             }
             else
             {
-                Appearance.RefreshThemeColorPaletteFromCurrentBackground(markDirty: false);
+                // 后台取色；色板就绪前外观页暂显示空色板，就绪后自动填充。
+                _ = Appearance.RefreshThemeColorPaletteFromCurrentBackgroundAsync(markDirty: false);
             }
         }
 
@@ -269,7 +270,8 @@ public partial class SettingsViewModel : ViewModelBase, IDisposable, IModalConte
             if (editor.Current.ThemeColorMode == ThemeColorModes.Wallpaper
                 && Appearance.ThemeColorPaletteItems.Count == 0)
             {
-                Appearance.RefreshThemeColorPaletteFromCurrentBackground(markDirty: false);
+                // 保存前必须拿到色板：提交内容就是提取结果，等待落定再提交。
+                await Appearance.RefreshThemeColorPaletteFromCurrentBackgroundAsync(markDirty: false);
             }
 
             editor.Commit(s =>
