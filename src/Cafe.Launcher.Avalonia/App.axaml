@@ -367,5 +367,8 @@
         <StyleInclude Source="avares://Avalonia.Controls.ColorPicker/Themes/Fluent/Fluent.xaml" />
         <materialIcons:MaterialIconStyles />
         <StyleInclude Source="avares://Cafe.Launcher.Avalonia/Views/MainWindow.Styles.axaml"/>
+        <Style Selector="ProgressBar">
+            <Setter Property="Foreground" Value="{DynamicResource Launcher.Color.Primary}"/>
+        </Style>
     </Application.Styles>
 </Application>
