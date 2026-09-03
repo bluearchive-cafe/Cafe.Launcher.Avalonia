@@ -20,6 +20,7 @@
             VerticalAlignment="Center"
             Margin="{StaticResource Launcher.Spacing.Thickness.Xxl}"
             MaxWidth="{StaticResource Launcher.Layout.LogViewer.Width}"
+            Height="{StaticResource Launcher.Layout.LogViewer.Height}"
             MaxHeight="{StaticResource Launcher.Layout.LogViewer.Height}"
             Title="{Binding Shell.I18n[logViewerTitle]}"
             CloseCommand="{Binding LogViewer.CloseCommand}"

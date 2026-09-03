@@ -3058,9 +3058,8 @@ public sealed partial class UiStyleContractTests
     }
 
     [Fact]
-    public void LogViewer_UsesFixedDialogDimensions()
+    public void LogViewer_UsesStableHeightAndBoundedWidth()
     {
-        // ADR-015 尺寸律：自适应优先，固定宽高退场；token 仅作 Max 上限背书。
         var document = XDocument.Load(ProjectFile("Views/MainWindowLogViewerOverlay.axaml"));
         var dialog = document
             .Descendants()
@@ -3072,8 +3071,10 @@ public sealed partial class UiStyleContractTests
         Assert.Equal(
             "{StaticResource Launcher.Layout.LogViewer.Height}",
             dialog.Attribute("MaxHeight")?.Value);
+        Assert.Equal(
+            "{StaticResource Launcher.Layout.LogViewer.Height}",
+            dialog.Attribute("Height")?.Value);
         Assert.Null(dialog.Attribute("Width"));
-        Assert.Null(dialog.Attribute("Height"));
 
         // 过滤栏固定于头带之下：工具行插槽必须由 Toolbar 属性承载。
         Assert.Contains(
