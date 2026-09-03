@@ -1,4 +1,4 @@
-$ErrorActionPreference = 'Stop'
+﻿$ErrorActionPreference = 'Stop'
 $env:DOTNET_CLI_TELEMETRY_OPTOUT = '1'
 $env:AVALONIA_TELEMETRY_OPTOUT = '1'
 # MSBuild 常驻复用节点会跨构建持有刚拷贝文件的句柄，coverlet 紧随其后的插桩重写
@@ -76,6 +76,10 @@ function Invoke-CoverageRun {
     return $reports[0].FullName
 }
 
+# 甄别"插桩未生效"的空壳报告：真实报告有数万条 line 记录，空壳只有个位到百位，
+# 阈值取 1000 与两侧均差数量级——只用于退化检测，不是覆盖率度量。
+$minimumReportedLines = 1000
+
 function Test-ReportHasData {
     param($ReportPath)
 
@@ -87,7 +91,7 @@ function Test-ReportHasData {
         }
     }
 
-    return $lineCount -ge 1000
+    return $lineCount -ge $minimumReportedLines
 }
 
 foreach ($projectInfo in $projects) {
