@@ -3058,9 +3058,8 @@ public sealed partial class UiStyleContractTests
     }
 
     [Fact]
-    public void LogViewer_UsesFixedDialogDimensions()
+    public void LogViewer_UsesStableHeightAndBoundedWidth()
     {
-        // ADR-015 尺寸律：自适应优先，固定宽高退场；token 仅作 Max 上限背书。
         var document = XDocument.Load(ProjectFile("Views/MainWindowLogViewerOverlay.axaml"));
         var dialog = document
             .Descendants()
@@ -3072,8 +3071,10 @@ public sealed partial class UiStyleContractTests
         Assert.Equal(
             "{StaticResource Launcher.Layout.LogViewer.Height}",
             dialog.Attribute("MaxHeight")?.Value);
+        Assert.Equal(
+            "{StaticResource Launcher.Layout.LogViewer.Height}",
+            dialog.Attribute("Height")?.Value);
         Assert.Null(dialog.Attribute("Width"));
-        Assert.Null(dialog.Attribute("Height"));
 
         // 过滤栏固定于头带之下：工具行插槽必须由 Toolbar 属性承载。
         Assert.Contains(
@@ -3981,6 +3982,40 @@ public sealed partial class UiStyleContractTests
         Assert.Equal(
             "{StaticResource Launcher.Component.LogViewer.FilterBar.Margin}",
             GetStyleSetters(styles, "StackPanel.log-filter-bar")["Margin"]);
+
+        var app = XDocument.Load(ProjectFile("App.axaml"));
+        var xKey = XNamespace.Get("http://schemas.microsoft.com/winfx/2006/xaml") + "Key";
+        string TokenValue(string key) => app
+            .Descendants()
+            .Single(element => (string?)element.Attribute(xKey) == key)
+            .Value
+            .Trim();
+        var filterMargin = TokenValue("Launcher.Component.LogViewer.FilterBar.Margin").Split(',');
+        var bodyPadding = TokenValue("Launcher.Component.Dialog.Panel.Body.Padding").Split(',');
+        Assert.Equal(bodyPadding[0], filterMargin[0]);
+        Assert.Equal(bodyPadding[2], filterMargin[2]);
+    }
+
+    [Fact]
+    public void LogViewer_ContentUsesSingleDialogBodyInset()
+    {
+        var document = XDocument.Load(ProjectFile("Views/MainWindowLogViewerOverlay.axaml"));
+        var loadEarlier = document
+            .Descendants()
+            .Single(element =>
+                element.Name.LocalName == "Button"
+                && HasClass(element, "log-load-earlier"));
+        Assert.Equal(
+            "{StaticResource Launcher.Component.Dialog.Content.BottomMargin}",
+            loadEarlier.Attribute("Margin")?.Value);
+
+        var styles = XDocument.Load(ProjectFile("Views/Styles/Diagnostics.axaml"));
+        Assert.Equal(
+            "{StaticResource Launcher.Spacing.Thickness.None}",
+            GetStyleSetters(styles, "ListBox.log-entry-list")["Margin"]);
+        Assert.Equal(
+            "{StaticResource Launcher.Spacing.Thickness.None}",
+            GetStyleSetters(styles, "Border.log-empty-state")["Margin"]);
     }
 
     [Fact]

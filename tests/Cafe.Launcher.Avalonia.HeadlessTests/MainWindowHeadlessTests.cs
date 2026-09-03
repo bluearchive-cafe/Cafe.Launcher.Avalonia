@@ -1125,6 +1125,28 @@ public sealed class MainWindowHeadlessTests
         Assert.InRange(Math.Abs(headerRight - saveRight), 0, 1);
     }
 
+    [AvaloniaFact]
+    public void LogViewer_EmptyState_KeepsConfiguredHeight()
+    {
+        using var context = CreateContext();
+        context.Window.Show();
+        ShowLogViewer(context);
+
+        var dialog = context.Window
+            .GetVisualDescendants()
+            .OfType<global::Cafe.Launcher.Avalonia.Controls.DialogSurface>()
+            .Single(surface => ReferenceEquals(
+                surface.CloseCommand,
+                context.ViewModel.LogViewer.CloseCommand));
+        var application = Application.Current
+            ?? throw new InvalidOperationException("Headless application is not initialised.");
+        Assert.True(application.TryGetResource(
+            "Launcher.Layout.LogViewer.Height",
+            application.ActualThemeVariant,
+            out var configuredHeight));
+        Assert.Equal(Assert.IsType<double>(configuredHeight), dialog.Bounds.Height);
+    }
+
     [AvaloniaTheory]
     [InlineData("resource-panel")]
     [InlineData("log-viewer")]

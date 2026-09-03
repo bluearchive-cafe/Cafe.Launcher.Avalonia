@@ -40,7 +40,7 @@
         <Setter Property="Foreground" Value="{DynamicResource Launcher.Color.OnPrimary}"/>
     </Style>
     <Style Selector="Border.log-empty-state">
-        <Setter Property="Margin" Value="{StaticResource Launcher.Spacing.Thickness.Lg}"/>
+        <Setter Property="Margin" Value="{StaticResource Launcher.Spacing.Thickness.None}"/>
         <Setter Property="HorizontalAlignment" Value="Stretch"/>
         <Setter Property="VerticalAlignment" Value="Stretch"/>
     </Style>
@@ -48,7 +48,7 @@
         <Setter Property="Foreground" Value="{DynamicResource Launcher.Text.Secondary}"/>
     </Style>
     <Style Selector="ListBox.log-entry-list">
-        <Setter Property="Margin" Value="{StaticResource Launcher.Spacing.Thickness.Lg}"/>
+        <Setter Property="Margin" Value="{StaticResource Launcher.Spacing.Thickness.None}"/>
         <Setter Property="Background" Value="{StaticResource Launcher.Color.Transparent}"/>
         <Setter Property="BorderThickness" Value="{StaticResource Launcher.Spacing.Thickness.None}"/>
     </Style>
