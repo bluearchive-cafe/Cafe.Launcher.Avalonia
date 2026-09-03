@@ -80,7 +80,7 @@
                       Classes="log-content">
                     <Button Grid.Row="0"
                             Classes="flat-action dialog-action log-load-earlier"
-                            Margin="{StaticResource Launcher.Component.LogViewer.LoadEarlier.Margin}"
+                            Margin="{StaticResource Launcher.Component.Dialog.Content.BottomMargin}"
                             Command="{Binding LogViewer.LoadEarlierCommand}"
                             IsVisible="{Binding LogViewer.HasEarlierEntries}"
                             AutomationProperties.Name="{Binding Shell.I18n[logLoadEarlier]}">
