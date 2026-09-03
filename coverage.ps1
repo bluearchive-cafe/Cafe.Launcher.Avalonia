@@ -46,6 +46,16 @@ foreach ($projectInfo in $projects) {
 
     $coverletOutput = Join-Path $projectResults 'coverage'
 
+    # coverlet.msbuild 是编译期插桩。若被测依赖（src）刚被普通构建过，增量编译会在
+    # CollectCoverage 上下文中跳过重编译，插桩不生效，产出几乎全空的覆盖率报告
+    # （阈值被低估误报）。先以相同参数显式构建，保证插桩确定性生效。
+    dotnet build $project -c Debug --no-restore `
+        -p:CollectCoverage=true `
+        -p:CoverletOutputFormat=cobertura `
+        -p:ExcludeByFile=**/Resources/LauncherStrings.Designer.cs `
+        -p:CoverletOutput=$coverletOutput
+    if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+
     dotnet test $project -c Debug --no-restore `
         --results-directory $projectResults `
         --logger "trx;LogFileName=$($projectInfo.Name).trx" `
