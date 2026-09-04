@@ -34,6 +34,13 @@ public partial class SettingsViewModel : ViewModelBase, IDisposable, IModalConte
     private readonly IFilePickerService filePickerService;
     private CancellationTokenSource? appearancePreviewCts;
     private Task appearancePreviewTask = Task.CompletedTask;
+
+    /// <summary>
+    /// 保存前等待在途外观预览落定的总预算。预览链路含远端图下载（受 HttpClient
+    /// 默认超时约束）属有界等待，但仍设上限防止未来加入无超时操作后保存被无限挂起；
+    /// 超时后按当前状态继续保存。测试可调小。
+    /// </summary>
+    internal static TimeSpan AppearancePreviewSettleTimeout = TimeSpan.FromMinutes(2);
     private CancellationTokenSource? gameRuntimeStatusCts;
     private Task gameRuntimeStatusRefreshTask = Task.CompletedTask;
     private IReadOnlyList<GameRuntimeStatusEntry>? gameRuntimeStatusEntries;
@@ -263,15 +270,23 @@ public partial class SettingsViewModel : ViewModelBase, IDisposable, IModalConte
     [RelayCommand(CanExecute = nameof(CanSaveSettings))]
     private async Task SaveSettingsAsync()
     {
-        CancelAppearancePreview();
         IsSaving = true;
         try
         {
-            if (editor.Current.ThemeColorMode == ThemeColorModes.Wallpaper
-                && Appearance.ThemeColorPaletteItems.Count == 0)
+            // 先让当前设置快照对应的壁纸预览完成；若此处先取消，新的壁纸可能尚未
+            // 落入 BackgroundViewModel，随后取色会错误地读取上一张壁纸。
+            await WaitForAppearancePreviewToSettleAsync();
+            CancelAppearancePreview();
+
+            if (editor.Current.ThemeColorMode == ThemeColorModes.Wallpaper)
             {
-                // 保存前必须拿到色板：提交内容就是提取结果，等待落定再提交。
-                await Appearance.RefreshThemeColorPaletteFromCurrentBackgroundAsync(markDirty: false);
+                // 新壁纸取色期间会有意保留旧色板，因此不能以 Count == 0 判断是否仍
+                // 在取色。始终等待最新任务，必要时再主动提取一次，确保提交的是当前图。
+                await Appearance.WaitForThemeRefreshToSettleAsync();
+                if (Appearance.ThemeColorPaletteItems.Count == 0)
+                {
+                    await Appearance.RefreshThemeColorPaletteFromCurrentBackgroundAsync(markDirty: false);
+                }
             }
 
             editor.Commit(s =>
@@ -508,6 +523,29 @@ public partial class SettingsViewModel : ViewModelBase, IDisposable, IModalConte
         appearancePreviewCts?.Cancel();
         appearancePreviewCts?.Dispose();
         appearancePreviewCts = null;
+    }
+
+    private async Task WaitForAppearancePreviewToSettleAsync()
+    {
+        using var settleBudget = new CancellationTokenSource(AppearancePreviewSettleTimeout);
+        while (true)
+        {
+            var pending = appearancePreviewTask;
+            try
+            {
+                await pending.WaitAsync(settleBudget.Token);
+            }
+            catch (OperationCanceledException) when (settleBudget.IsCancellationRequested)
+            {
+                // 超出预算：按当前状态继续保存，不再等待更新的预览。
+                return;
+            }
+
+            if (ReferenceEquals(pending, appearancePreviewTask))
+            {
+                return;
+            }
+        }
     }
 
     private async Task PreviewCurrentAppearanceAsync(

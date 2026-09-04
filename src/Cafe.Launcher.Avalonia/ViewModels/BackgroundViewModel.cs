@@ -22,12 +22,12 @@ public partial class BackgroundViewModel : ViewModelBase, IDisposable
     private readonly ImageCacheService imageCacheService;
     private readonly LocalDiagnostics diagnostics;
     private readonly Action<LauncherSettings> wallpaperChanged;
-    private readonly Func<string, IImage?> imageLoader;
+    private readonly Func<string, PixelSize, IImage?> imageLoader;
     private readonly Func<IImage?> bundledImageLoader;
     private readonly IWindowMetricsService? windowMetrics;
-    private LauncherSettings? lastBackgroundSettings;
-    private LauncherStatusSnapshot? lastBackgroundSnapshot;
+    private string? currentDecodedImagePath;
     private PixelSize lastDecodeTarget;
+    private int backgroundLoadGeneration;
     private int resizeReloadVersion;
     private bool disposed;
 
@@ -85,18 +85,23 @@ public partial class BackgroundViewModel : ViewModelBase, IDisposable
             imageCacheService,
             diagnostics,
             wallpaperChanged,
-            path => BackgroundImageDecoder.Decode(
-                path,
-                windowMetrics?.GetPhysicalClientSize() ?? BackgroundImageDecoder.FallbackTarget),
+            (path, targetPhysicalSize) => BackgroundImageDecoder.Decode(path, targetPhysicalSize),
             LoadBundledBackground)
     {
     }
 
+    /// <param name="imageLoader">
+    /// Receives the image path and the window physical-size snapshot to decode against;
+    /// implementations derive the constrained decode box from it (see
+    /// <see cref="BackgroundImageDecoder.GetTargetBox"/>). Passing the snapshot the load
+    /// decision was made on keeps <see cref="lastDecodeTarget"/> equal to the box the
+    /// bitmap was actually decoded for.
+    /// </param>
     internal BackgroundViewModel(
         ImageCacheService imageCacheService,
         LocalDiagnostics diagnostics,
         Action<LauncherSettings> wallpaperChanged,
-        Func<string, IImage?> imageLoader,
+        Func<string, PixelSize, IImage?> imageLoader,
         Func<IImage?> bundledImageLoader,
         IWindowMetricsService? windowMetrics = null)
     {
@@ -119,28 +124,24 @@ public partial class BackgroundViewModel : ViewModelBase, IDisposable
     /// <summary>窗口显著变大后的壁纸重解码去抖窗口；测试可调小。</summary>
     internal static TimeSpan ResizeReloadDebounce = TimeSpan.FromMilliseconds(500);
 
-    /// <summary>解码目标（按面积）增长超过该比例才触发重解码，吸收亚像素抖动与小幅调整。</summary>
+    /// <summary>任一边（按维度）增长超过该比例才触发重解码：按维度而非面积，
+    /// 覆盖纯高度、DPI 变化与竖长↔横宽的宽高比翻转（后者面积可能不变）。</summary>
     private const double SignificantGrowRatio = 1.2;
 
-    /// <summary>当前窗口物理尺寸对应的解码目标框（钳制策略见 <see cref="BackgroundImageDecoder.GetTargetBox"/>）。</summary>
-    private PixelSize GetDecodeTarget() =>
-        BackgroundImageDecoder.GetTargetBox(
-            windowMetrics?.GetPhysicalClientSize() ?? BackgroundImageDecoder.FallbackTarget);
+    /// <summary>当前窗口物理客户区尺寸；无窗口时退回默认目标。</summary>
+    private PixelSize GetPhysicalSize() =>
+        windowMetrics?.GetPhysicalClientSize() ?? BackgroundImageDecoder.FallbackTarget;
 
     public async Task UpdateBackgroundImageAsync(
         LauncherSettings settings,
         LauncherStatusSnapshot? snapshot,
         CancellationToken cancellationToken)
     {
-        lastBackgroundSettings = settings;
-        if (snapshot is not null)
-        {
-            lastBackgroundSnapshot = snapshot;
-        }
-
-        // 记录本次解码使用的目标框：窗口变大后的重解码以它为基准按面积比较，
-        // 而不是位图实际尺寸（竖图按高钳制后必然小于目标框，会造成误判死循环）。
-        lastDecodeTarget = GetDecodeTarget();
+        var loadGeneration = Interlocked.Increment(ref backgroundLoadGeneration);
+        // 入口快照：解码与 lastDecodeTarget 记录共用同一份窗口尺寸，中途 resize
+        // 不会让“已记录目标”与“位图实际解码目标”脱节（由重解码路径兜底）。
+        var decodeSize = GetPhysicalSize();
+        var decodeTarget = BackgroundImageDecoder.GetTargetBox(decodeSize);
 
         ApplyBackgroundPresentation(settings);
 
@@ -158,7 +159,14 @@ public partial class BackgroundViewModel : ViewModelBase, IDisposable
                             ?? await imageCacheService.CacheImageAsync(bgImg, crc64, proxyMode, cancellationToken);
                         cancellationToken.ThrowIfCancellationRequested();
                         // 远端背景图可能很大；解码放线程池，避免续体回到 UI 线程后卡帧。
-                        SetBackgroundImage(await Task.Run(() => imageLoader(cachedPath)), settings);
+                        var remoteImage = await Task.Run(() => imageLoader(cachedPath, decodeSize));
+                        ThrowIfCancellationRequested(remoteImage, cancellationToken);
+                        TrySetBackgroundImage(
+                            remoteImage,
+                            settings,
+                            loadGeneration,
+                            cachedPath,
+                            decodeTarget);
                         return;
                     }
                     catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
@@ -178,13 +186,19 @@ public partial class BackgroundViewModel : ViewModelBase, IDisposable
             case BackgroundSources.Custom:
                 if (!string.IsNullOrWhiteSpace(settings.CustomBackgroundPath))
                 {
-                    var customBitmap = await LoadCustomBackgroundImageAsync(
+                    var customBackground = await LoadCustomBackgroundImageResultAsync(
                         settings.CustomBackgroundPath,
+                        decodeSize,
                         cancellationToken);
-                    if (customBitmap is not null)
+                    if (customBackground.Image is not null)
                     {
-                        cancellationToken.ThrowIfCancellationRequested();
-                        SetBackgroundImage(customBitmap, settings);
+                        ThrowIfCancellationRequested(customBackground.Image, cancellationToken);
+                        TrySetBackgroundImage(
+                            customBackground.Image,
+                            settings,
+                            loadGeneration,
+                            customBackground.DecodedPath,
+                            decodeTarget);
                         return;
                     }
                 }
@@ -192,7 +206,12 @@ public partial class BackgroundViewModel : ViewModelBase, IDisposable
         }
 
         cancellationToken.ThrowIfCancellationRequested();
-        SetBackgroundImage(bundledImageLoader(), settings);
+        TrySetBackgroundImage(
+            bundledImageLoader(),
+            settings,
+            loadGeneration,
+            decodedPath: null,
+            decodeTarget);
     }
 
     public void ApplyBackgroundPresentation(LauncherSettings settings)
@@ -242,25 +261,53 @@ public partial class BackgroundViewModel : ViewModelBase, IDisposable
         if (disposed
             || version != resizeReloadVersion
             || windowMetrics is null
-            || lastBackgroundSettings is null)
+            || currentDecodedImagePath is null)
         {
             return;
         }
 
-        var target = GetDecodeTarget();
-        var targetArea = (long)target.Width * target.Height;
-        var lastArea = (long)lastDecodeTarget.Width * lastDecodeTarget.Height;
-        if (targetArea <= lastArea * SignificantGrowRatio)
+        var decodeSize = GetPhysicalSize();
+        var target = BackgroundImageDecoder.GetTargetBox(decodeSize);
+        if (target.Width <= lastDecodeTarget.Width * SignificantGrowRatio
+            && target.Height <= lastDecodeTarget.Height * SignificantGrowRatio)
         {
             return;
         }
 
-        // 窗口显著变大（宽度、高度或 DPI 任一增长）：按新目标重放当前壁纸加载。
-        // 事件在 UI 线程触发，continuation 回到 UI 上下文，满足 SetBackgroundImage 的线程要求。
-        await UpdateBackgroundImageAsync(
-            lastBackgroundSettings,
-            lastBackgroundSnapshot,
-            CancellationToken.None);
+        // 只重解码当前已解析到的具体文件，不重放完整来源解析。这样文件夹壁纸不会因
+        // resize / DPI 变化重新随机选图，远端来源也不会重复进入缓存与下载链路。
+        var decodedPath = currentDecodedImagePath;
+        var sourceGeneration = Volatile.Read(ref backgroundLoadGeneration);
+        IImage? reloaded;
+        try
+        {
+            reloaded = await Task.Run(() => imageLoader(decodedPath, decodeSize));
+        }
+        catch (Exception ex)
+        {
+            await diagnostics.MessageAsync(
+                "Background image resize reload failed",
+                $"path: {decodedPath}\nexception: {ex.Message}",
+                CancellationToken.None);
+            return;
+        }
+
+        if (reloaded is null)
+        {
+            return;
+        }
+
+        if (disposed
+            || version != resizeReloadVersion
+            || sourceGeneration != Volatile.Read(ref backgroundLoadGeneration)
+            || !string.Equals(decodedPath, currentDecodedImagePath, StringComparison.Ordinal))
+        {
+            (reloaded as IDisposable)?.Dispose();
+            return;
+        }
+
+        lastDecodeTarget = target;
+        ReplaceBackgroundImageAfterResize(reloaded);
     }
 
     public Bitmap? GetBackgroundBitmap()
@@ -271,10 +318,14 @@ public partial class BackgroundViewModel : ViewModelBase, IDisposable
     public async Task<Bitmap?> LoadCustomBackgroundAsync(
         string path,
         CancellationToken cancellationToken = default) =>
-        await LoadCustomBackgroundImageAsync(path, cancellationToken) as Bitmap;
+        (await LoadCustomBackgroundImageResultAsync(
+            path,
+            GetPhysicalSize(),
+            cancellationToken)).Image as Bitmap;
 
-    private async Task<IImage?> LoadCustomBackgroundImageAsync(
+    private async Task<BackgroundLoadResult> LoadCustomBackgroundImageResultAsync(
         string path,
+        PixelSize decodeSize,
         CancellationToken cancellationToken = default)
     {
         cancellationToken.ThrowIfCancellationRequested();
@@ -283,10 +334,10 @@ public partial class BackgroundViewModel : ViewModelBase, IDisposable
             try
             {
                 // 自定义背景图在 UI 线程外解码，避免大图卡帧。
-                var bitmap = await Task.Run(() => imageLoader(path));
+                var bitmap = await Task.Run(() => imageLoader(path, decodeSize));
                 if (bitmap is null)
                 {
-                    return null;
+                    return default;
                 }
                 if (cancellationToken.IsCancellationRequested)
                 {
@@ -294,7 +345,7 @@ public partial class BackgroundViewModel : ViewModelBase, IDisposable
                     cancellationToken.ThrowIfCancellationRequested();
                 }
 
-                return bitmap;
+                return new BackgroundLoadResult(bitmap, path);
             }
             catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
             {
@@ -306,7 +357,7 @@ public partial class BackgroundViewModel : ViewModelBase, IDisposable
                     "Custom background image load failed",
                     $"path: {path}\nexception: {ex.Message}",
                     CancellationToken.None);
-                return null;
+                return default;
             }
         }
 
@@ -324,7 +375,7 @@ public partial class BackgroundViewModel : ViewModelBase, IDisposable
                     "Custom background folder scan failed",
                     $"path: {path}\nexception: {ex.Message}",
                     CancellationToken.None);
-                return null;
+                return default;
             }
 
             if (imagePath is null)
@@ -333,16 +384,16 @@ public partial class BackgroundViewModel : ViewModelBase, IDisposable
                     "Custom background folder contains no supported images",
                     $"path: {path}",
                     CancellationToken.None);
-                return null;
+                return default;
             }
 
             try
             {
                 // 随机选中的背景图同样在 UI 线程外解码。
-                var bitmap = await Task.Run(() => imageLoader(imagePath));
+                var bitmap = await Task.Run(() => imageLoader(imagePath, decodeSize));
                 if (bitmap is null)
                 {
-                    return null;
+                    return default;
                 }
                 if (cancellationToken.IsCancellationRequested)
                 {
@@ -350,7 +401,7 @@ public partial class BackgroundViewModel : ViewModelBase, IDisposable
                     cancellationToken.ThrowIfCancellationRequested();
                 }
 
-                return bitmap;
+                return new BackgroundLoadResult(bitmap, imagePath);
             }
             catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
             {
@@ -362,7 +413,7 @@ public partial class BackgroundViewModel : ViewModelBase, IDisposable
                     "Custom background folder image load failed",
                     $"folder: {path}\npath: {imagePath}\nexception: {ex.Message}",
                     CancellationToken.None);
-                return null;
+                return default;
             }
         }
 
@@ -370,7 +421,20 @@ public partial class BackgroundViewModel : ViewModelBase, IDisposable
             "Custom background path does not exist",
             $"path: {path}",
             CancellationToken.None);
-        return null;
+        return default;
+    }
+
+    private readonly record struct BackgroundLoadResult(IImage? Image, string? DecodedPath);
+
+    private static void ThrowIfCancellationRequested(IImage? image, CancellationToken cancellationToken)
+    {
+        if (!cancellationToken.IsCancellationRequested)
+        {
+            return;
+        }
+
+        (image as IDisposable)?.Dispose();
+        cancellationToken.ThrowIfCancellationRequested();
     }
 
     public static string? ResolveRandomBackgroundImage(string folderPath)
@@ -417,6 +481,35 @@ public partial class BackgroundViewModel : ViewModelBase, IDisposable
         {
             Dispatcher.UIThread.Post(() => old?.Dispose(), DispatcherPriority.Background);
         }
+    }
+
+    private bool TrySetBackgroundImage(
+        IImage? bitmap,
+        LauncherSettings previewSettings,
+        int loadGeneration,
+        string? decodedPath,
+        PixelSize decodeTarget)
+    {
+        if (disposed || loadGeneration != Volatile.Read(ref backgroundLoadGeneration))
+        {
+            (bitmap as IDisposable)?.Dispose();
+            return false;
+        }
+
+        currentDecodedImagePath = decodedPath;
+        // 记录解码实际使用的目标框（与 imageLoader 收到的同一快照），而不是位图尺寸；
+        // 竖图按高解码后宽度可能小于目标框，以位图尺寸为基准会造成重复重解码。
+        lastDecodeTarget = decodeTarget;
+        SetBackgroundImage(bitmap, previewSettings);
+        return true;
+    }
+
+    private void ReplaceBackgroundImageAfterResize(IImage? bitmap)
+    {
+        var old = BackgroundImageSource as IDisposable;
+        BackgroundImageSource = bitmap;
+        // 分辨率刷新没有改变逻辑壁纸，不重放交叉淡化或主题取色。
+        Dispatcher.UIThread.Post(() => old?.Dispose(), DispatcherPriority.Background);
     }
 
     /// <summary>
@@ -500,6 +593,7 @@ public partial class BackgroundViewModel : ViewModelBase, IDisposable
         }
 
         disposed = true;
+        Interlocked.Increment(ref backgroundLoadGeneration);
         resizeReloadVersion++;
         windowMetrics?.PhysicalSizeChanged -= OnPhysicalSizeChanged;
         wallpaperFadeCancellation?.Cancel();

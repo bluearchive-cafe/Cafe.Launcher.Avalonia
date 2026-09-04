@@ -16,7 +16,7 @@ namespace Cafe.Launcher.Avalonia.HeadlessTests;
 public sealed class ThemeColorExtractionAsyncHeadlessTests
 {
     [AvaloniaFact]
-    public async Task RefreshThemeColorPaletteAsync_WhenBackgroundBitmapPresent_FillsPalette()
+    public async Task RefreshThemeColorPaletteFromCurrentBackgroundAsync_WhenBackgroundBitmapPresent_FillsPalette()
     {
         using var context = HeadlessTestHost.CreateContext();
         using var bitmap = HeadlessTestHost.WriteSolidPngBitmap(
@@ -31,7 +31,7 @@ public sealed class ThemeColorExtractionAsyncHeadlessTests
     }
 
     [AvaloniaFact]
-    public async Task RefreshThemeColorPaletteAsync_WhenBitmapIsNull_ClearsPalette()
+    public async Task RefreshThemeColorPaletteFromCurrentBackgroundAsync_WhenBitmapIsNull_ClearsPalette()
     {
         using var context = HeadlessTestHost.CreateContext();
         context.Appearance.GetBackgroundBitmap = () => null;
@@ -42,7 +42,20 @@ public sealed class ThemeColorExtractionAsyncHeadlessTests
     }
 
     [AvaloniaFact]
-    public async Task PendingThemeRefresh_WhenStaleExtractionLands_DoesNotOverrideNewerDecision()
+    public async Task RefreshThemeColorPaletteFromCurrentBackgroundAsync_WhenSourceAccessorThrows_DoesNotLeakException()
+    {
+        using var context = HeadlessTestHost.CreateContext();
+        context.Appearance.GetBackgroundBitmap = () =>
+            throw new InvalidOperationException("simulated source failure");
+
+        var exception = await Record.ExceptionAsync(() =>
+            context.Appearance.RefreshThemeColorPaletteFromCurrentBackgroundAsync(markDirty: false));
+
+        Assert.Null(exception);
+    }
+
+    [AvaloniaFact]
+    public async Task RefreshThemeColorPaletteFromCurrentBackgroundAsync_WhenStaleExtractionLands_DoesNotOverrideNewerDecision()
     {
         using var context = HeadlessTestHost.CreateContext();
         using var bitmap = HeadlessTestHost.WriteSolidPngBitmap(

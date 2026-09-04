@@ -14,6 +14,23 @@ namespace Cafe.Launcher.Avalonia.HeadlessTests;
 /// </summary>
 public sealed class BackgroundImageDecoderTests
 {
+    [AvaloniaFact]
+    public void GetTargetBox_WhenBelowGlobalCap_AddsQualityHeadroom()
+    {
+        var target = BackgroundImageDecoder.GetTargetBox(
+            BackgroundImageDecoder.FallbackTarget);
+
+        Assert.Equal(new PixelSize(2400, 1350), target);
+    }
+
+    [AvaloniaFact]
+    public void GetTargetBox_WhenQualityHeadroomWouldExceedGlobalCap_ClampsProportionally()
+    {
+        var target = BackgroundImageDecoder.GetTargetBox(new PixelSize(3840, 2160));
+
+        Assert.Equal(new PixelSize(4096, 2304), target);
+    }
+
     [AvaloniaTheory]
     [InlineData(3200, 1800)]
     [InlineData(640, 480)]
@@ -50,9 +67,9 @@ public sealed class BackgroundImageDecoderTests
                 imagePath,
                 BackgroundImageDecoder.FallbackTarget);
 
-            // UniformToFill 需要 1920×1440 后裁掉上下，而非 1920×1080 后放大。
-            Assert.Equal(1920, decoded.PixelSize.Width);
-            Assert.Equal(1440, decoded.PixelSize.Height);
+            // UniformToFill 需要 2400×1800 后裁掉上下；1.25× 质量余量避免渲染时二次放大。
+            Assert.Equal(2400, decoded.PixelSize.Width);
+            Assert.Equal(1800, decoded.PixelSize.Height);
         }
         finally
         {
@@ -71,8 +88,8 @@ public sealed class BackgroundImageDecoderTests
                 stream,
                 BackgroundImageDecoder.FallbackTarget);
 
-            Assert.Equal(1920, decoded.PixelSize.Width);
-            Assert.Equal(1440, decoded.PixelSize.Height);
+            Assert.Equal(2400, decoded.PixelSize.Width);
+            Assert.Equal(1800, decoded.PixelSize.Height);
         }
         finally
         {
