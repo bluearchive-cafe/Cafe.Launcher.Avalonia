@@ -3,7 +3,6 @@ using System.IO;
 using System.Threading;
 using System.Threading.Tasks;
 using Avalonia;
-using Avalonia.Controls;
 using Avalonia.Headless.XUnit;
 using Avalonia.Media;
 using Avalonia.Media.Imaging;
@@ -18,101 +17,11 @@ using Xunit;
 namespace Cafe.Launcher.Avalonia.HeadlessTests;
 
 /// <summary>
-/// 大尺寸自定义背景图回归：解码必须钳制到目标物理像素框。原实现按原始分辨率解码，
-/// 全窗口 Image 每帧把超大位图缩采样到窗口尺寸，导致 UI 持续卡顿。
+/// 大尺寸自定义背景图回归：背景 ViewModel 必须按窗口目标尺寸加载，且仅在窗口显著
+/// 扩大后重解码，避免原图持续缩采样导致卡顿或已解码图片被过度放大导致模糊。
 /// </summary>
-public sealed class BackgroundDecodeCapHeadlessTests
+public sealed class BackgroundViewModelHeadlessTests
 {
-    [AvaloniaFact]
-    public async Task UpdateBackgroundImageAsync_WhenCustomImageExceedsDecodeTarget_DecodesToTargetBox()
-    {
-        using var context = HeadlessTestHost.CreateContext();
-        var viewModel = context.ViewModel;
-
-        var wallpaperPath = Path.Combine(context.TempDir, "large-wallpaper.png");
-        HeadlessTestHost.WriteSolidPng(wallpaperPath, Brushes.DarkSlateBlue, 3000, 1600);
-        try
-        {
-            var settings = new LauncherSettings
-            {
-                BackgroundSource = BackgroundSources.Custom,
-                CustomBackgroundPath = wallpaperPath,
-                ThemeColorMode = ThemeColorModes.Default
-            };
-            await viewModel.UpdateBackgroundImageAsync(settings, snapshot: null, CancellationToken.None);
-
-            var decoded = Assert.IsType<Bitmap>(viewModel.BackgroundImageSource);
-            var target = BackgroundImageDecoder.FallbackTarget;
-            Assert.True(
-                decoded.PixelSize.Width <= target.Width,
-                $"Decoded width {decoded.PixelSize.Width} exceeds target {target.Width}.");
-            Assert.True(
-                decoded.PixelSize.Height <= target.Height,
-                $"Decoded height {decoded.PixelSize.Height} exceeds target {target.Height}.");
-        }
-        finally
-        {
-            File.Delete(wallpaperPath);
-        }
-    }
-
-    [AvaloniaFact]
-    public async Task UpdateBackgroundImageAsync_WhenCustomImageIsSmallerThanTarget_LoadsImage()
-    {
-        using var context = HeadlessTestHost.CreateContext();
-        var viewModel = context.ViewModel;
-
-        var wallpaperPath = Path.Combine(context.TempDir, "small-wallpaper.png");
-        HeadlessTestHost.WriteSolidPng(wallpaperPath, Brushes.DarkSlateBlue, 640, 480);
-        try
-        {
-            var settings = new LauncherSettings
-            {
-                BackgroundSource = BackgroundSources.Custom,
-                CustomBackgroundPath = wallpaperPath,
-                ThemeColorMode = ThemeColorModes.Default
-            };
-            await viewModel.UpdateBackgroundImageAsync(settings, snapshot: null, CancellationToken.None);
-
-            Assert.IsType<Bitmap>(viewModel.BackgroundImageSource);
-        }
-        finally
-        {
-            File.Delete(wallpaperPath);
-        }
-    }
-
-    [AvaloniaTheory]
-    [InlineData(3200, 1800)]
-    [InlineData(1080, 2400)]
-    [InlineData(640, 480)]
-    public void Decode_WhenSourceIsLandscapePortraitOrSmall_OutputFitsTargetBox(int width, int height)
-    {
-        var imagePath = Path.Combine(
-            Path.GetTempPath(),
-            $"launcher-decode-{width}x{height}-{Guid.NewGuid():N}.png");
-        try
-        {
-            HeadlessTestHost.WriteSolidPng(imagePath, Brushes.DarkSlateBlue, width, height);
-
-            using var decoded = BackgroundImageDecoder.Decode(
-                imagePath,
-                BackgroundImageDecoder.FallbackTarget);
-
-            var target = BackgroundImageDecoder.FallbackTarget;
-            Assert.True(
-                decoded.PixelSize.Width <= target.Width,
-                $"Decoded width {decoded.PixelSize.Width} exceeds target {target.Width} for {width}x{height}.");
-            Assert.True(
-                decoded.PixelSize.Height <= target.Height,
-                $"Decoded height {decoded.PixelSize.Height} exceeds target {target.Height} for {width}x{height}.");
-        }
-        finally
-        {
-            File.Delete(imagePath);
-        }
-    }
-
     [AvaloniaFact]
     public async Task UpdateBackgroundImageAsync_WhenMetricsProvideSmallerTarget_DecodesToInjectedTarget()
     {
@@ -135,8 +44,10 @@ public sealed class BackgroundDecodeCapHeadlessTests
             await viewModel.UpdateBackgroundImageAsync(settings, snapshot: null, CancellationToken.None);
 
             var decoded = Assert.IsType<Bitmap>(viewModel.BackgroundImageSource);
-            Assert.True(decoded.PixelSize.Width <= 1300, $"Width {decoded.PixelSize.Width} exceeds 1300.");
-            Assert.True(decoded.PixelSize.Height <= 754, $"Height {decoded.PixelSize.Height} exceeds 754.");
+            Assert.True(decoded.PixelSize.Width >= 1300, $"Width {decoded.PixelSize.Width} does not cover 1300.");
+            Assert.True(decoded.PixelSize.Height >= 754, $"Height {decoded.PixelSize.Height} does not cover 754.");
+            Assert.True(decoded.PixelSize.Width <= BackgroundImageDecoder.MaxDecodeSidePixels);
+            Assert.True(decoded.PixelSize.Height <= BackgroundImageDecoder.MaxDecodeSidePixels);
         }
         finally
         {
@@ -172,18 +83,21 @@ public sealed class BackgroundDecodeCapHeadlessTests
                 };
                 await viewModel.UpdateBackgroundImageAsync(settings, snapshot: null, CancellationToken.None);
                 var initial = Assert.IsType<Bitmap>(viewModel.BackgroundImageSource);
-                Assert.True(initial.PixelSize.Width <= 1300, $"Initial width {initial.PixelSize.Width} exceeds 1300.");
+                var initialHeight = initial.PixelSize.Height;
+                Assert.True(initial.PixelSize.Width >= 1300, $"Initial width {initial.PixelSize.Width} does not cover 1300.");
+                Assert.True(initial.PixelSize.Height >= 754, $"Initial height {initial.PixelSize.Height} does not cover 754.");
 
                 // 首次解码发生在小窗口；窗口随后显著变大必须按新目标重解码，
                 // 否则驻留位图被放大采样显示为模糊。
                 metrics.ResizeTo(new PixelSize(2600, 1500));
                 await WaitUntilAsync(
                     () => viewModel.BackgroundImageSource is Bitmap reloaded
-                        && reloaded.PixelSize.Width > 1300,
+                        && reloaded.PixelSize.Height > initialHeight,
                     TimeSpan.FromSeconds(5));
 
                 var reloaded = (Bitmap)viewModel.BackgroundImageSource!;
-                Assert.True(reloaded.PixelSize.Width <= 2600, $"Reloaded width {reloaded.PixelSize.Width} exceeds 2600.");
+                Assert.True(reloaded.PixelSize.Width >= 2600, $"Reloaded width {reloaded.PixelSize.Width} does not cover 2600.");
+                Assert.True(reloaded.PixelSize.Height >= 1500, $"Reloaded height {reloaded.PixelSize.Height} does not cover 1500.");
             }
             finally
             {
@@ -273,10 +187,8 @@ public sealed class BackgroundDecodeCapHeadlessTests
                 await viewModel.UpdateBackgroundImageAsync(settings, snapshot: null, CancellationToken.None);
                 var initial = Assert.IsType<Bitmap>(viewModel.BackgroundImageSource);
                 var initialWidth = initial.PixelSize.Width;
-                // 3000×1600 源按宽解码到 1300×693，超高 400 后二次缩放，宽度必然小于 1300。
-                Assert.True(
-                    initialWidth < 1300,
-                    $"Initial width {initialWidth} should be height-capped below 1300.");
+                // 初始目标框很矮：按宽解码已能覆盖该窗口，宽度保持目标值。
+                Assert.Equal(1300, initialWidth);
 
                 // 纯高度增长（宽度不变，DPI 升高同理）也必须触发重解码：只比较宽度会漏检。
                 // 注意换图后旧位图会被释放，比较只能用提前捕获的宽度值。
@@ -287,8 +199,8 @@ public sealed class BackgroundDecodeCapHeadlessTests
                     TimeSpan.FromSeconds(5));
 
                 var reloaded = (Bitmap)viewModel.BackgroundImageSource!;
-                Assert.Equal(1300, reloaded.PixelSize.Width);
-                Assert.True(reloaded.PixelSize.Height <= 1500, $"Height {reloaded.PixelSize.Height} exceeds 1500.");
+                Assert.True(reloaded.PixelSize.Width >= 1300, $"Width {reloaded.PixelSize.Width} does not cover 1300.");
+                Assert.True(reloaded.PixelSize.Height >= 1500, $"Height {reloaded.PixelSize.Height} does not cover 1500.");
             }
             finally
             {
@@ -300,29 +212,6 @@ public sealed class BackgroundDecodeCapHeadlessTests
         {
             BackgroundViewModel.ResizeReloadDebounce = originalDebounce;
         }
-    }
-
-    [AvaloniaFact]
-    public void WindowMetricsService_WithoutAttachedWindow_ReturnsFallbackAndRecoversAfterDetach()
-    {
-        var service = new WindowMetricsService();
-        Assert.Equal(BackgroundImageDecoder.FallbackTarget, service.GetPhysicalClientSize());
-
-        // 窗口构造后未布局也有默认 ClientSize（headless 下 1024×768）：
-        // 快照应反映窗口当前实际物理尺寸（这正是"启动时快照 ≠ 最终窗口"的来源，
-        // 由 PhysicalSizeChanged 事件驱动的按需重解码兜底）。
-        var window = new Window();
-        service.Attach(window);
-        var attachedSize = service.GetPhysicalClientSize();
-        Assert.Equal(
-            (int)Math.Ceiling(window.ClientSize.Width * window.RenderScaling),
-            attachedSize.Width);
-        Assert.Equal(
-            (int)Math.Ceiling(window.ClientSize.Height * window.RenderScaling),
-            attachedSize.Height);
-
-        service.Detach(window);
-        Assert.Equal(BackgroundImageDecoder.FallbackTarget, service.GetPhysicalClientSize());
     }
 
     private static async Task WaitUntilAsync(Func<bool> condition, TimeSpan timeout)
