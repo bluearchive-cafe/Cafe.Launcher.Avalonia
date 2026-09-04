@@ -3218,6 +3218,28 @@ public sealed partial class UiStyleContractTests
     }
 
     [Fact]
+    public void MainWindow_BackgroundImages_UseHighQualityInterpolation()
+    {
+        var document = XDocument.Load(ProjectFile("Views/MainWindow.axaml"));
+        var backgroundImages = document
+            .Descendants()
+            .Where(element =>
+                element.Name.LocalName == "Image"
+                && (element.Attribute("Source")?.Value == "{Binding Background.BackgroundImageSource}"
+                    || element.Attributes().Any(attribute =>
+                        attribute.Name.LocalName == "Name"
+                        && attribute.Value == "BackgroundCrossFade")))
+            .ToArray();
+
+        Assert.Equal(2, backgroundImages.Length);
+        Assert.All(
+            backgroundImages,
+            image => Assert.Equal(
+                "HighQuality",
+                image.Attribute("RenderOptions.BitmapInterpolationMode")?.Value));
+    }
+
+    [Fact]
     public void SetupWizard_UsesConstrainedSingleColumnWorkspace()
     {
         var document = XDocument.Load(ProjectFile("Views/SetupWizardOverlay.axaml"));

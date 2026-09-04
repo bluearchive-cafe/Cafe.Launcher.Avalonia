@@ -155,8 +155,8 @@ public sealed class BackgroundViewModelHeadlessTests
                 await viewModel.UpdateBackgroundImageAsync(settings, snapshot: null, CancellationToken.None);
                 var initial = Assert.IsType<Bitmap>(viewModel.BackgroundImageSource);
                 var initialWidth = initial.PixelSize.Width;
-                // 初始目标框很矮：按宽解码已能覆盖该窗口，宽度保持目标值。
-                Assert.Equal(1300, initialWidth);
+                // 初始目标框很矮：按宽解码已能覆盖该窗口，并保留 1.25× 清晰度余量。
+                Assert.Equal(1625, initialWidth);
 
                 // 纯高度增长（宽度不变，DPI 升高同理）也必须触发重解码：只比较宽度会漏检。
                 // 注意换图后旧位图会被释放，比较只能用提前捕获的宽度值。

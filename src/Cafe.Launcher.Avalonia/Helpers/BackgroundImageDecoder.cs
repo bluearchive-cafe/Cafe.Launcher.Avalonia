@@ -16,6 +16,12 @@ public static class BackgroundImageDecoder
     /// <summary>宽度钳制下限：窗口再小也不把壁纸解码得更小，避免窗口放大后明显模糊。</summary>
     public const int MinDecodeWidthPixels = 1280;
 
+    /// <summary>
+    /// 解码尺寸相对窗口物理像素的质量余量。避免与窗口等大的位图在布局取整或缩放时被
+    /// 再次放大，从而产生肉眼可见的模糊。
+    /// </summary>
+    public const double DecodeQualityScale = 1.25;
+
     /// <summary>钳制上限：即便 8K 显示器也限制驻留位图的最大绘制成本。</summary>
     public const int MaxDecodeSidePixels = 4096;
 
@@ -28,9 +34,14 @@ public static class BackgroundImageDecoder
     /// </summary>
     public static PixelSize GetTargetBox(PixelSize targetPhysicalSize)
     {
+        var width = Math.Clamp(targetPhysicalSize.Width, MinDecodeWidthPixels, MaxDecodeSidePixels);
+        var height = Math.Clamp(targetPhysicalSize.Height, 1, MaxDecodeSidePixels);
+        var availableScale = MaxDecodeSidePixels / (double)Math.Max(width, height);
+        var qualityScale = Math.Min(DecodeQualityScale, availableScale);
+
         return new PixelSize(
-            Math.Clamp(targetPhysicalSize.Width, MinDecodeWidthPixels, MaxDecodeSidePixels),
-            Math.Clamp(targetPhysicalSize.Height, 1, MaxDecodeSidePixels));
+            Math.Clamp((int)Math.Round(width * qualityScale), 1, MaxDecodeSidePixels),
+            Math.Clamp((int)Math.Round(height * qualityScale), 1, MaxDecodeSidePixels));
     }
 
     /// <summary>

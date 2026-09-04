@@ -29,9 +29,12 @@
               Classes="motion-shell"
               Classes.motion-enabled="{Binding IsMotionEnabled}">
         <Rectangle Fill="{Binding Background.BackgroundFillBrush}"/>
-        <Image Source="{Binding Background.BackgroundImageSource}" Stretch="{Binding Background.BackgroundStretch}"/>
+        <Image Source="{Binding Background.BackgroundImageSource}"
+               Stretch="{Binding Background.BackgroundStretch}"
+               RenderOptions.BitmapInterpolationMode="HighQuality"/>
         <Image x:Name="BackgroundCrossFade"
-               Stretch="{Binding Background.BackgroundStretch}"/>
+               Stretch="{Binding Background.BackgroundStretch}"
+               RenderOptions.BitmapInterpolationMode="HighQuality"/>
 
         <Grid RowDefinitions="Auto,*"
               IsEnabled="{Binding ModalHost.IsBaseLayerInteractive}">
