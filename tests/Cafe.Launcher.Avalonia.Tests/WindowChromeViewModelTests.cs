@@ -6,6 +6,7 @@ using Cafe.Launcher.Avalonia.Features.GameOperations;
 using Cafe.Launcher.Avalonia.Features.Settings;
 using Cafe.Launcher.Avalonia.Services;
 using Cafe.Launcher.Avalonia.Services.Diagnostics;
+using Cafe.Launcher.Avalonia.Testing;
 using Cafe.Launcher.Avalonia.ViewModels;
 using Microsoft.Extensions.DependencyInjection;
 
@@ -160,7 +161,7 @@ public sealed class WindowChromeViewModelTests : IDisposable
 
         context.ViewModel.CloseAfterStoppingDownload();
 
-        Assert.True(context.Backend.LastClearPersistedState);
+Assert.True(context.Backend.LastStopClearPersistedState);
         Assert.True(closed);
     }
 
@@ -259,7 +260,7 @@ public sealed class WindowChromeViewModelTests : IDisposable
         var settings = provider.GetRequiredService<SettingsViewModel>();
         var remoteContent = provider.GetRequiredService<RemoteContentViewModel>();
         var dialogs = provider.GetRequiredService<DialogsViewModel>();
-        var backend = new TestBackend();
+        var backend = new StubGameOperationExecutor();
         var operations = new GameOperationsViewModel(
             backend,
             new TestGameShortcutService(),
@@ -311,7 +312,7 @@ public sealed class WindowChromeViewModelTests : IDisposable
         RemoteContentViewModel RemoteContent,
         DialogsViewModel Dialogs,
         GameOperationsViewModel Operations,
-        TestBackend Backend,
+        StubGameOperationExecutor Backend,
         ServiceProvider Provider,
         UnifiedLogger Logger) : IDisposable
     {
@@ -320,53 +321,5 @@ public sealed class WindowChromeViewModelTests : IDisposable
             Provider.Dispose();
             Logger.Dispose();
         }
-    }
-
-    private sealed class TestBackend : IGameOperationExecutor
-    {
-        public bool IsDownloadRunning { get; set; }
-        public bool IsPaused { get; private set; }
-        public event Action? IsRunningChanged { add { } remove { } }
-        public bool LastClearPersistedState { get; private set; }
-
-        public Task<GameLaunchResult> LaunchAsync(
-            LauncherStatusSnapshot snapshot,
-            CancellationToken cancellationToken = default) =>
-            Task.FromResult(new GameLaunchResult());
-
-        public Task<GameOperationResult> InstallOrUpdateAsync(
-            LauncherStatusSnapshot snapshot,
-            Action<GameOperationProgress> progress,
-            CancellationToken cancellationToken = default) =>
-            Task.FromResult(new GameOperationResult());
-
-        public Task<GameOperationResult> RepairAsync(
-            LauncherStatusSnapshot snapshot,
-            Action<GameOperationProgress> progress) =>
-            Task.FromResult(new GameOperationResult());
-
-        public Task<GameOperationResult> ValidateUninstallAsync(string gamePath) =>
-            Task.FromResult(new GameOperationResult());
-
-        public Task<GameOperationResult> UninstallAsync(
-            LauncherStatusSnapshot snapshot,
-            Action<GameOperationProgress> progress) =>
-            Task.FromResult(new GameOperationResult());
-
-        public Task<GameOperationResult?> ResumePersistedAsync(
-            LauncherStatusSnapshot snapshot,
-            Action<GameOperationProgress> progress,
-            CancellationToken cancellationToken) =>
-            Task.FromResult<GameOperationResult?>(null);
-
-        public void Stop(bool clearPersistedState)
-        {
-            LastClearPersistedState = clearPersistedState;
-            IsDownloadRunning = false;
-        }
-
-        public void Pause() => IsPaused = true;
-
-        public void Resume() => IsPaused = false;
     }
 }

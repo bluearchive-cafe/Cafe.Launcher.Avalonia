@@ -2,6 +2,7 @@ using Cafe.Launcher.Avalonia.Features.GameOperations;
 using Cafe.Launcher.Avalonia.Models;
 using Cafe.Launcher.Avalonia.Services;
 using Cafe.Launcher.Avalonia.Services.Diagnostics;
+using Cafe.Launcher.Avalonia.Testing;
 using Xunit;
 
 namespace Cafe.Launcher.Avalonia.Tests;
@@ -217,7 +218,9 @@ public sealed class GameOperationJourneyTests
 
     private static JourneyTestContext CreateContext()
     {
-        var executor = new RecordingOperationExecutor();
+        // Succeeding 预设与原 RecordingOperationExecutor 一致：所有操作默认成功，
+        // 让旅程测试直接走成功分支，只有显式改写结果的用例才关心失败路径。
+        var executor = StubGameOperationExecutor.Succeeding();
         var host = new RecordingJourneyHost();
         var errorHandling = new RecordingErrorHandlingService();
         var toastService = new ToastService();
@@ -235,7 +238,7 @@ public sealed class GameOperationJourneyTests
 
     private sealed record JourneyTestContext(
         GameOperationJourney Journey,
-        RecordingOperationExecutor Executor,
+        StubGameOperationExecutor Executor,
         RecordingJourneyHost Host,
         RecordingErrorHandlingService ErrorHandling,
         ToastService ToastService)
@@ -297,109 +300,6 @@ public sealed class GameOperationJourneyTests
         public Task ShowLogViewerAsync() => Task.CompletedTask;
 
         public void RequestMinimize() => MinimizeRequested = true;
-    }
-
-    private sealed class RecordingOperationExecutor : IGameOperationExecutor
-    {
-        public bool IsDownloadRunning { get; set; }
-
-        public bool IsPaused { get; set; }
-
-#pragma warning disable CS0067
-        public event Action? IsRunningChanged;
-#pragma warning restore CS0067
-
-        public GameLaunchResult LaunchResult { get; set; } = new() { Success = true, Message = "launched" };
-
-        public Exception? LaunchException { get; set; }
-
-        public int LaunchCallCount { get; private set; }
-
-        public GameOperationResult InstallResult { get; set; } = new() { Success = true, Message = "done" };
-
-        public int InstallCallCount { get; private set; }
-
-        public GameOperationResult RepairResult { get; set; } = new() { Success = true, Message = "repaired" };
-
-        public int RepairCallCount { get; private set; }
-
-        public GameOperationResult UninstallResult { get; set; } = new() { Success = true, Message = "uninstalled" };
-
-        public int UninstallCallCount { get; private set; }
-
-        public GameOperationResult ValidateUninstallResult { get; set; } = new() { Success = true, Message = "ok" };
-
-        public GameOperationResult? ResumeResult { get; set; }
-
-        public int ResumeCallCount { get; private set; }
-
-        public int StopCallCount { get; private set; }
-
-        public bool? LastStopClearPersistedState { get; private set; }
-
-        public Task<GameLaunchResult> LaunchAsync(
-            LauncherStatusSnapshot snapshot,
-            CancellationToken cancellationToken = default)
-        {
-            LaunchCallCount++;
-            if (LaunchException is not null)
-            {
-                throw LaunchException;
-            }
-
-            return Task.FromResult(LaunchResult);
-        }
-
-        public Task<GameOperationResult> InstallOrUpdateAsync(
-            LauncherStatusSnapshot snapshot,
-            Action<GameOperationProgress> progress,
-            CancellationToken cancellationToken = default)
-        {
-            InstallCallCount++;
-            return Task.FromResult(InstallResult);
-        }
-
-        public Task<GameOperationResult> RepairAsync(
-            LauncherStatusSnapshot snapshot,
-            Action<GameOperationProgress> progress)
-        {
-            RepairCallCount++;
-            return Task.FromResult(RepairResult);
-        }
-
-        public Task<GameOperationResult?> ResumePersistedAsync(
-            LauncherStatusSnapshot snapshot,
-            Action<GameOperationProgress> progress,
-            CancellationToken cancellationToken)
-        {
-            ResumeCallCount++;
-            return Task.FromResult(ResumeResult);
-        }
-
-        public Task<GameOperationResult> ValidateUninstallAsync(string gamePath) =>
-            Task.FromResult(ValidateUninstallResult);
-
-        public Task<GameOperationResult> UninstallAsync(
-            LauncherStatusSnapshot snapshot,
-            Action<GameOperationProgress> progress)
-        {
-            UninstallCallCount++;
-            return Task.FromResult(UninstallResult);
-        }
-
-        public void Stop(bool clearPersistedState)
-        {
-            StopCallCount++;
-            LastStopClearPersistedState = clearPersistedState;
-        }
-
-        public void Pause()
-        {
-        }
-
-        public void Resume()
-        {
-        }
     }
 
     private sealed class RecordingErrorHandlingService : IErrorHandlingService

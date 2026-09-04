@@ -2,6 +2,7 @@ using System;
 using System.IO;
 using Avalonia;
 using Avalonia.Controls;
+using Avalonia.Threading;
 using Avalonia.Media;
 using Avalonia.Media.Imaging;
 using Cafe.Launcher.Avalonia.Composition;
@@ -18,15 +19,28 @@ namespace Cafe.Launcher.Avalonia.HeadlessTests;
 /// </summary>
 internal static class HeadlessTestHost
 {
+    /// <summary>
+    /// 构造共享 DI 容器：真实 AddLauncherServices + 独立临时目录日志（tempDir 仅供日志
+    /// 落盘使用）。configure 在注册日志之前执行，用于追加或覆盖服务（如注入测试用
+    /// IGameOperationExecutor）。MainWindowHeadlessTests 的上下文构造也复用此方法。
+    /// </summary>
+    public static ServiceProvider CreateServiceProvider(
+        string tempDir,
+        Action<ServiceCollection>? configure = null)
+    {
+        var services = new ServiceCollection();
+        services.AddLauncherServices();
+        configure?.Invoke(services);
+        services.AddSingleton(_ => new UnifiedLogger(Path.Combine(tempDir, "logs")));
+        return services.BuildServiceProvider();
+    }
+
     /// <summary>建立带真实 DI 的测试上下文；日志写入独立临时目录，不污染用户目录。</summary>
     public static LauncherHeadlessContext CreateContext()
     {
         var tempDir = Path.Combine(Path.GetTempPath(), Guid.NewGuid().ToString("N"));
         Directory.CreateDirectory(tempDir);
-        var services = new ServiceCollection();
-        services.AddLauncherServices();
-        services.AddSingleton(_ => new UnifiedLogger(Path.Combine(tempDir, "logs")));
-        var provider = services.BuildServiceProvider();
+        var provider = CreateServiceProvider(tempDir);
         return new LauncherHeadlessContext(tempDir, provider);
     }
 
@@ -52,6 +66,30 @@ internal static class HeadlessTestHost
         var path = Path.Combine(tempDir, fileName);
         WriteSolidPng(path, brush, width, height);
         return new Bitmap(path);
+    }
+
+    /// <summary>
+    /// 有界轮询等待：每轮先泵一次 UI 线程（InvokeAsync + Task.Delay(10)）再评估条件，
+    /// 条件满足即返回；超时抛 TimeoutException（failureMessage 用于说明被等待的语义）。
+    /// </summary>
+    public static async Task WaitUntilAsync(
+        Func<bool> condition,
+        TimeSpan timeout,
+        string? failureMessage = null)
+    {
+        var deadline = DateTime.UtcNow.Add(timeout);
+        while (DateTime.UtcNow < deadline)
+        {
+            await Dispatcher.UIThread.InvokeAsync(() => { });
+            await Task.Delay(10);
+            if (condition())
+            {
+                return;
+            }
+        }
+
+        throw new TimeoutException(
+            failureMessage ?? $"Condition was not met within {timeout.TotalSeconds:0.#} seconds.");
     }
 }
 

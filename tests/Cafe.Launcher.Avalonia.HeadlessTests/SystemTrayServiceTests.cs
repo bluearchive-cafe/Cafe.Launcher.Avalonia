@@ -82,39 +82,4 @@ public sealed class SystemTrayServiceTests
 
         Assert.Equal(1, platform.UpdateCount);
     }
-
-    private sealed class TestTrayPlatform : ISystemTrayPlatform
-    {
-        public bool InitializeResult { get; set; } = true;
-        public int InitializeCount { get; private set; }
-        public int UpdateCount { get; private set; }
-        public bool Disposed { get; private set; }
-        public SystemTrayMenuText Text { get; private set; } =
-            new("", "", "", "", "");
-        public Action? ShowWindow { get; private set; }
-        public Action? ExitApplication { get; private set; }
-
-        public bool Initialize(
-            SystemTrayMenuText text,
-            Action showWindow,
-            Action exitApplication)
-        {
-            InitializeCount++;
-            Text = text;
-            ShowWindow = showWindow;
-            ExitApplication = exitApplication;
-            return InitializeResult;
-        }
-
-        public void UpdateText(SystemTrayMenuText text)
-        {
-            UpdateCount++;
-            Text = text;
-        }
-
-        public void Dispose()
-        {
-            Disposed = true;
-        }
-    }
 }

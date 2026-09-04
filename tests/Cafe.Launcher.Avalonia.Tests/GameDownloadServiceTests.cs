@@ -10,6 +10,7 @@ using Cafe.Launcher.Avalonia.Services.Diagnostics;
 using Cafe.Launcher.Avalonia.Models;
 using Cafe.Launcher.Avalonia.Services.Auth;
 using Cafe.Launcher.Avalonia.Services.GameRuntime;
+using Cafe.Launcher.Avalonia.Testing;
 
 namespace Cafe.Launcher.Avalonia.Tests;
 
@@ -512,7 +513,7 @@ public sealed class GameDownloadServiceTests
                 Size = fileBytes.Length.ToString(CultureInfo.InvariantCulture),
                 Hash = expectedHash
             });
-        var downloader = new WritingFileDownloadService(fileBytes);
+        var downloader = CreateWritingFileDownloadService(fileBytes);
         using var service = CreateService(apiClient, settingsService, statePath, downloader);
         var progress = new List<GameOperationProgress>();
         var runningStates = new List<bool>();
@@ -631,7 +632,7 @@ public sealed class GameDownloadServiceTests
             Hash = "0"
         };
         using var apiClient = CreateManifestApiClient(manifestFile);
-        var downloader = new RecordingFileDownloadService();
+        var downloader = new StubFileDownloadService();
         using var service = CreateService(
             apiClient,
             settingsService,
@@ -666,7 +667,7 @@ public sealed class GameDownloadServiceTests
             Hash = "0"
         };
         using var apiClient = CreateManifestApiClient(manifestFile);
-        var downloader = new RecordingFileDownloadService();
+        var downloader = new StubFileDownloadService();
         var diskSpaceService = new DiskSpaceService
         {
             GetAvailableBytesOverride = _ => availableBytes
@@ -717,7 +718,7 @@ public sealed class GameDownloadServiceTests
             apiClient,
             settingsService,
             Path.Combine(tempDir, "download_state.json"),
-            new RecordingFileDownloadService(),
+            new StubFileDownloadService(),
             diskSpaceService,
             new LocalDiagnostics(logger));
         var snapshot = CreateSnapshot(gamePath);
@@ -753,7 +754,7 @@ public sealed class GameDownloadServiceTests
             apiClient,
             settingsService,
             Path.Combine(tempDir, "download_state.json"),
-            new WritingFileDownloadService(fileBytes),
+            CreateWritingFileDownloadService(fileBytes),
             diskSpaceService);
         var progress = new List<GameOperationProgress>();
         var snapshot = CreateSnapshot(gamePath);
@@ -790,7 +791,7 @@ public sealed class GameDownloadServiceTests
             apiClient,
             settingsService,
             Path.Combine(tempDir, "download_state.json"),
-            new WritingFileDownloadService(fileBytes),
+            CreateWritingFileDownloadService(fileBytes),
             diskSpaceService);
         var progress = new List<GameOperationProgress>();
         var snapshot = CreateSnapshot(gamePath);
@@ -865,7 +866,7 @@ public sealed class GameDownloadServiceTests
             apiClient,
             settingsService,
             Path.Combine(tempDir, "download_state.json"),
-            new WritingFileDownloadService(fileBytes),
+            CreateWritingFileDownloadService(fileBytes),
             diskSpaceService);
         var progress = new List<GameOperationProgress>();
         var snapshot = CreateSnapshot(gamePath);
@@ -983,7 +984,7 @@ public sealed class GameDownloadServiceTests
             apiClient,
             settingsService,
             Path.Combine(tempDir, "download_state.json"),
-            new WritingFileDownloadService(fileBytes));
+            CreateWritingFileDownloadService(fileBytes));
         var snapshot = CreateSnapshot(gamePath);
         snapshot.RuntimeState = LauncherRuntimeState.NotInstalled;
         var watch = System.Diagnostics.Stopwatch.StartNew();
@@ -1370,6 +1371,20 @@ public sealed class GameDownloadServiceTests
             downloadStateFilePath);
     }
 
+    /// <summary>
+    /// 用共享替身模拟「整文件写入临时目录并上报进度」的下载器（原
+    /// WritingFileDownloadService 的行为）。
+    /// </summary>
+    private static StubFileDownloadService CreateWritingFileDownloadService(byte[] content) =>
+        new(async (request, control, cancellationToken) =>
+        {
+            await control.WaitWhilePausedAsync();
+            cancellationToken.ThrowIfCancellationRequested();
+            Directory.CreateDirectory(Path.GetDirectoryName(request.TargetTempPath)!);
+            await File.WriteAllBytesAsync(request.TargetTempPath, content, cancellationToken);
+            await control.ReportProgressAsync(content.Length, cancellationToken);
+        });
+
     private static LauncherStatusSnapshot CreateSnapshot(string gamePath)
     {
         return new LauncherStatusSnapshot
@@ -1504,21 +1519,6 @@ public sealed class GameDownloadServiceTests
         }
     }
 
-    private sealed class WritingFileDownloadService(byte[] content) : IFileDownloadService
-    {
-        public async Task DownloadAsync(
-            FileDownloadRequest request,
-            FileDownloadOperationControl control,
-            CancellationToken cancellationToken)
-        {
-            await control.WaitWhilePausedAsync();
-            cancellationToken.ThrowIfCancellationRequested();
-            Directory.CreateDirectory(Path.GetDirectoryName(request.TargetTempPath)!);
-            await File.WriteAllBytesAsync(request.TargetTempPath, content, cancellationToken);
-            await control.ReportProgressAsync(content.Length, cancellationToken);
-        }
-    }
-
     private sealed class ChunkedFileDownloadService(
         byte[] content,
         int chunkSize) : IFileDownloadService
@@ -1589,20 +1589,6 @@ public sealed class GameDownloadServiceTests
             Directory.CreateDirectory(Path.GetDirectoryName(request.TargetTempPath)!);
             await File.WriteAllBytesAsync(request.TargetTempPath, content, cancellationToken);
             await control.ReportProgressAsync(content.Length, cancellationToken);
-        }
-    }
-
-    private sealed class RecordingFileDownloadService : IFileDownloadService
-    {
-        public int InvocationCount { get; private set; }
-
-        public Task DownloadAsync(
-            FileDownloadRequest request,
-            FileDownloadOperationControl control,
-            CancellationToken cancellationToken)
-        {
-            InvocationCount++;
-            return Task.CompletedTask;
         }
     }
 

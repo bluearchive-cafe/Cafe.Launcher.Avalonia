@@ -5,6 +5,7 @@ using Cafe.Launcher.Avalonia.Features.Diagnostics;
 using Cafe.Launcher.Avalonia.Models;
 using Cafe.Launcher.Avalonia.Services;
 using Cafe.Launcher.Avalonia.Services.Diagnostics;
+using Cafe.Launcher.Avalonia.Testing;
 using Cafe.Launcher.Avalonia.ViewModels;
 
 namespace Cafe.Launcher.Avalonia.Tests;
@@ -205,7 +206,7 @@ public sealed class DebugViewModelTests : IDisposable
                 new GameInstallationPath(),
                 new LocalInstallationStateStore(),
                 diagnostics, new StubFilePickerService()));
-        var backend = new TestBackend { IsDownloadRunning = true };
+        var backend = new StubGameOperationExecutor { IsDownloadRunning = true };
         var errorHandling = new ErrorHandlingService(localizer, diagnostics, toastService);
         var operations = new GameOperationsViewModel(
             backend,
@@ -232,7 +233,7 @@ public sealed class DebugViewModelTests : IDisposable
     private sealed record TestContext(
         DebugViewModel ViewModel,
         GameOperationsViewModel Operations,
-        TestBackend Backend,
+        StubGameOperationExecutor Backend,
         UnifiedLogger Logger,
         ToastService ToastService,
         LocalizationService Localizer) : IDisposable
@@ -241,71 +242,5 @@ public sealed class DebugViewModelTests : IDisposable
         {
             Logger.Dispose();
         }
-    }
-
-    private sealed class TestBackend : IGameOperationExecutor
-    {
-        private bool isRunning;
-        public bool IsDownloadRunning
-        {
-            get => isRunning;
-            set
-            {
-                if (isRunning == value)
-                {
-                    return;
-                }
-
-                isRunning = value;
-                IsRunningChanged?.Invoke();
-            }
-        }
-        public bool IsPaused { get; private set; }
-        public event Action? IsRunningChanged;
-
-        public Task<GameLaunchResult> LaunchAsync(
-            LauncherStatusSnapshot snapshot,
-            CancellationToken cancellationToken = default) =>
-            Task.FromResult(new GameLaunchResult { Validation = new ManifestValidationResult() });
-
-        public Task<GameOperationResult> InstallOrUpdateAsync(
-            LauncherStatusSnapshot snapshot,
-            Action<GameOperationProgress> progress,
-            CancellationToken cancellationToken = default) =>
-            Task.FromResult(new GameOperationResult());
-
-        public Task<GameOperationResult> RepairAsync(
-            LauncherStatusSnapshot snapshot,
-            Action<GameOperationProgress> progress) =>
-            Task.FromResult(new GameOperationResult());
-
-        public Task<GameOperationResult?> ResumePersistedAsync(
-            LauncherStatusSnapshot snapshot,
-            Action<GameOperationProgress> progress,
-            CancellationToken cancellationToken) =>
-            Task.FromResult<GameOperationResult?>(null);
-
-        public void Stop(bool clearPersistedState)
-        {
-            IsDownloadRunning = false;
-        }
-
-        public void Pause()
-        {
-            IsPaused = true;
-        }
-
-        public void Resume()
-        {
-            IsPaused = false;
-        }
-
-        public Task<GameOperationResult> ValidateUninstallAsync(string gamePath) =>
-            Task.FromResult(new GameOperationResult());
-
-        public Task<GameOperationResult> UninstallAsync(
-            LauncherStatusSnapshot snapshot,
-            Action<GameOperationProgress> progress) =>
-            Task.FromResult(new GameOperationResult());
     }
 }

@@ -2,6 +2,7 @@ using Cafe.Launcher.Avalonia.Features.GameOperations;
 using Cafe.Launcher.Avalonia.Models;
 using Cafe.Launcher.Avalonia.Services;
 using Cafe.Launcher.Avalonia.Services.Diagnostics;
+using Cafe.Launcher.Avalonia.Testing;
 
 namespace Cafe.Launcher.Avalonia.Tests;
 
@@ -90,7 +91,34 @@ public sealed class DownloadExecutorTests : IDisposable
         var files = Enumerable.Range(0, 15)
             .Select(index => new ManifestFile { Path = $"file{index}.bin", Size = "10", Hash = "hash" })
             .ToArray();
-        var transferService = new TrackingFileDownloadService();
+        // 用共享替身 + 闭包统计并发峰值，等价于原先的 TrackingFileDownloadService。
+        var currentConcurrency = 0;
+        var maximumConcurrency = 0;
+        var transferService = new StubFileDownloadService(async (request, operationControl, cancellationToken) =>
+        {
+            var value = Interlocked.Increment(ref currentConcurrency);
+            while (true)
+            {
+                var current = Volatile.Read(ref maximumConcurrency);
+                if (current >= value
+                    || Interlocked.CompareExchange(ref maximumConcurrency, value, current) == current)
+                {
+                    break;
+                }
+            }
+
+            try
+            {
+                // A shared lease client is supplied through the control object.
+                Assert.NotNull(operationControl.HttpClient);
+                await operationControl.ReportProgressAsync(10, cancellationToken);
+                await Task.Delay(50, cancellationToken);
+            }
+            finally
+            {
+                Interlocked.Decrement(ref currentConcurrency);
+            }
+        });
         using var leaseSource = new FixedHttpClientLeaseSource(new HttpClientHandler(), null, null);
         var progressCount = 0;
         var executor = new DownloadExecutor(
@@ -116,55 +144,19 @@ public sealed class DownloadExecutorTests : IDisposable
             _ => progressCount++,
             CancellationToken.None);
 
-        Assert.True(transferService.MaximumConcurrency > 1);
-        Assert.True(transferService.MaximumConcurrency <= 10);
+        Assert.True(maximumConcurrency > 1);
+        Assert.True(maximumConcurrency <= 10);
         Assert.True(progressCount > 0);
     }
 
     private DownloadExecutor CreateExecutor() =>
         new(
-            new NoOpFileDownloadService(),
+            new StubFileDownloadService(),
             new Crc64Service(),
             new FixedHttpClientLeaseSource(new HttpClientHandler(), null, null),
             new LocalDiagnostics(),
             () => Task.CompletedTask,
             () => false);
-
-    private sealed class TrackingFileDownloadService : IFileDownloadService
-    {
-        private int currentConcurrency;
-        private int maximumConcurrency;
-        public int MaximumConcurrency => Volatile.Read(ref maximumConcurrency);
-
-        public async Task DownloadAsync(
-            FileDownloadRequest request,
-            FileDownloadOperationControl operationControl,
-            CancellationToken cancellationToken)
-        {
-            var value = Interlocked.Increment(ref currentConcurrency);
-            while (true)
-            {
-                var current = Volatile.Read(ref maximumConcurrency);
-                if (current >= value
-                    || Interlocked.CompareExchange(ref maximumConcurrency, value, current) == current)
-                {
-                    break;
-                }
-            }
-
-            try
-            {
-                // A shared lease client is supplied through the control object.
-                Assert.NotNull(operationControl.HttpClient);
-                await operationControl.ReportProgressAsync(10, cancellationToken);
-                await Task.Delay(50, cancellationToken);
-            }
-            finally
-            {
-                Interlocked.Decrement(ref currentConcurrency);
-            }
-        }
-    }
 
     public void Dispose()
     {
@@ -172,13 +164,5 @@ public sealed class DownloadExecutorTests : IDisposable
         {
             Directory.Delete(tempDir, recursive: true);
         }
-    }
-
-    private sealed class NoOpFileDownloadService : IFileDownloadService
-    {
-        public Task DownloadAsync(
-            FileDownloadRequest request,
-            FileDownloadOperationControl operationControl,
-            CancellationToken cancellationToken) => Task.CompletedTask;
     }
 }

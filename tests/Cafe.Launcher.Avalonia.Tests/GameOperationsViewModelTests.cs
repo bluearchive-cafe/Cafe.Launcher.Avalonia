@@ -3,6 +3,7 @@ using Cafe.Launcher.Avalonia.Features.GameOperations;
 using Cafe.Launcher.Avalonia.Features.SetupWizard;
 using Cafe.Launcher.Avalonia.Services;
 using Cafe.Launcher.Avalonia.Services.Diagnostics;
+using Cafe.Launcher.Avalonia.Testing;
 using Cafe.Launcher.Avalonia.ViewModels;
 
 namespace Cafe.Launcher.Avalonia.Tests;
@@ -184,7 +185,7 @@ public sealed class GameOperationsViewModelTests
         await context.ViewModel.InstallOrUpdateCommand.ExecuteAsync(null);
 
         Assert.True(context.Dialogs.IsRepairConfirmVisible);
-        Assert.Equal(0, context.Backend.InstallInvocationCount);
+        Assert.Equal(0, context.Backend.InstallCallCount);
         Assert.False(context.Shell.IsBusy);
     }
 
@@ -206,7 +207,7 @@ public sealed class GameOperationsViewModelTests
         await context.ViewModel.InstallOrUpdateCommand.ExecuteAsync(null);
 
         Assert.Equal(GameOperationsRefreshMode.Normal, refreshMode);
-        Assert.Equal(0, context.Backend.InstallInvocationCount);
+        Assert.Equal(0, context.Backend.InstallCallCount);
     }
 
     [Fact]
@@ -233,7 +234,7 @@ public sealed class GameOperationsViewModelTests
 
         await context.ViewModel.InstallOrUpdateCommand.ExecuteAsync(null);
 
-        Assert.Equal(1, context.Backend.InstallInvocationCount);
+        Assert.Equal(1, context.Backend.InstallCallCount);
         Assert.Equal(GameOperationsRefreshMode.SkipPersistedResume, refreshMode);
         Assert.True(context.ViewModel.IsControlPanelVisible);
         Assert.False(context.ViewModel.IsInstallPanelVisible);
@@ -434,7 +435,7 @@ public sealed class GameOperationsViewModelTests
         Assert.False(result.IsSuccess);
         Assert.Equal("second failure", result.Message);
         Assert.Single(notifications);
-        Assert.Equal(2, context.Backend.InstallInvocationCount);
+        Assert.Equal(2, context.Backend.InstallCallCount);
     }
 
     [Fact]
@@ -462,7 +463,7 @@ public sealed class GameOperationsViewModelTests
         var result = await raised!.PrimaryAction!.ExecuteAsync(CancellationToken.None);
 
         Assert.True(result.IsSuccess);
-        Assert.Equal(2, context.Backend.InstallInvocationCount);
+        Assert.Equal(2, context.Backend.InstallCallCount);
     }
 
     [Fact]
@@ -524,7 +525,7 @@ public sealed class GameOperationsViewModelTests
 
         await context.ViewModel.RepairAsync();
 
-        Assert.Equal(1, context.Backend.RepairInvocationCount);
+        Assert.Equal(1, context.Backend.RepairCallCount);
         Assert.Equal(1, refreshCount);
     }
 
@@ -561,7 +562,7 @@ public sealed class GameOperationsViewModelTests
         context.ViewModel.StopOperationCommand.Execute(null);
 
         Assert.True(context.Dialogs.IsStopConfirmVisible);
-        Assert.Equal(0, context.Backend.StopInvocationCount);
+        Assert.Equal(0, context.Backend.StopCallCount);
     }
 
     [Fact]
@@ -624,7 +625,7 @@ public sealed class GameOperationsViewModelTests
 
         await context.ViewModel.ConfirmUninstallAsync();
 
-        Assert.Equal(1, context.Backend.UninstallInvocationCount);
+        Assert.Equal(1, context.Backend.UninstallCallCount);
         Assert.Equal(1, refreshCount);
         Assert.False(context.Shell.IsBusy);
     }
@@ -649,7 +650,7 @@ public sealed class GameOperationsViewModelTests
 
         await context.ViewModel.ResumePersistedDownloadAsync(CancellationToken.None);
 
-        Assert.Equal(1, context.Backend.ResumeInvocationCount);
+        Assert.Equal(1, context.Backend.ResumeCallCount);
         Assert.Equal(1, refreshCount);
         Assert.False(context.ViewModel.CanPauseOperation);
         Assert.False(context.Shell.IsBusy);
@@ -831,12 +832,12 @@ public sealed class GameOperationsViewModelTests
 
         await context.ViewModel.StartGameCommand.ExecuteAsync(null);
 
-        Assert.Equal(0, context.Backend.LaunchInvocationCount);
+        Assert.Equal(0, context.Backend.LaunchCallCount);
 
         var missingStateContext = CreateContext();
         await missingStateContext.ViewModel.StartGameCommand.ExecuteAsync(null);
 
-        Assert.Equal(0, missingStateContext.Backend.LaunchInvocationCount);
+        Assert.Equal(0, missingStateContext.Backend.LaunchCallCount);
     }
 
     [Fact]
@@ -906,7 +907,7 @@ public sealed class GameOperationsViewModelTests
 
         await context.ViewModel.InstallOrUpdateCommand.ExecuteAsync(null);
 
-        Assert.Equal(0, context.Backend.InstallInvocationCount);
+        Assert.Equal(0, context.Backend.InstallCallCount);
     }
 
     [Fact]
@@ -922,7 +923,7 @@ public sealed class GameOperationsViewModelTests
         await context.ViewModel.RepairAsync();
 
         Assert.False(context.Dialogs.IsRepairConfirmVisible);
-        Assert.Equal(0, context.Backend.RepairInvocationCount);
+        Assert.Equal(0, context.Backend.RepairCallCount);
     }
 
     [Fact]
@@ -970,7 +971,7 @@ public sealed class GameOperationsViewModelTests
 
         context.ViewModel.StopOperationCommand.Execute(null);
 
-        Assert.Equal(1, context.Backend.StopInvocationCount);
+        Assert.Equal(1, context.Backend.StopCallCount);
         Assert.False(context.Dialogs.IsStopConfirmVisible);
     }
 
@@ -1054,7 +1055,7 @@ public sealed class GameOperationsViewModelTests
         var dialogs = new DialogsViewModel(localizer, new NoticeStateService(
             Path.Combine(Path.GetTempPath(), Guid.NewGuid().ToString("N"), "notices.json")),
             new SetupWizardViewModel(localizer, new GameInstallationPath(), new LocalInstallationStateStore(), diagnostics, new StubFilePickerService()));
-        var backend = new TestBackend();
+        var backend = new StubGameOperationExecutor();
         var shortcutService = new TestGameShortcutService();
         var errorHandling = new ErrorHandlingService(
             localizer,
@@ -1082,109 +1083,10 @@ public sealed class GameOperationsViewModelTests
 
     private sealed record TestContext(
         GameOperationsViewModel ViewModel,
-        TestBackend Backend,
+        StubGameOperationExecutor Backend,
         TestGameShortcutService ShortcutService,
         ShellViewModel Shell,
         DialogsViewModel Dialogs,
         ToastService ToastService,
         LocalizationService Localizer);
-
-    private sealed class TestBackend : IGameOperationExecutor
-    {
-        public event Action? IsRunningChanged;
-        private bool isDownloadRunning;
-        public bool IsDownloadRunning
-        {
-            get => isDownloadRunning;
-            set
-            {
-                if (isDownloadRunning == value)
-                {
-                    return;
-                }
-
-                isDownloadRunning = value;
-                IsRunningChanged?.Invoke();
-            }
-        }
-        public bool IsPaused { get; set; }
-        public int InstallInvocationCount { get; private set; }
-        public int LaunchInvocationCount { get; private set; }
-        public int RepairInvocationCount { get; private set; }
-        public int UninstallInvocationCount { get; private set; }
-        public int ResumeInvocationCount { get; private set; }
-        public int StopInvocationCount { get; private set; }
-        public GameLaunchResult LaunchResult { get; set; } = new()
-        {
-            Validation = new ManifestValidationResult()
-        };
-        public GameOperationResult InstallResult { get; set; } = new();
-        public GameOperationResult RepairResult { get; set; } = new();
-        public GameOperationResult ValidateUninstallResult { get; set; } = new();
-        public GameOperationResult UninstallResult { get; set; } = new();
-        public GameOperationResult? ResumeResult { get; set; }
-        public Exception? InstallException { get; set; }
-        public TaskCompletionSource<GameOperationResult>? InstallCompletion { get; set; }
-        public TaskCompletionSource<GameOperationResult>? UninstallCompletion { get; set; }
-
-        public Task<GameLaunchResult> LaunchAsync(
-            LauncherStatusSnapshot snapshot,
-            CancellationToken cancellationToken = default)
-        {
-            LaunchInvocationCount++;
-            return Task.FromResult(LaunchResult);
-        }
-
-        public Task<GameOperationResult> InstallOrUpdateAsync(
-            LauncherStatusSnapshot snapshot,
-            Action<GameOperationProgress> progress,
-            CancellationToken cancellationToken = default)
-        {
-            InstallInvocationCount++;
-            if (InstallException is not null)
-            {
-                throw InstallException;
-            }
-
-            return InstallCompletion?.Task ?? Task.FromResult(InstallResult);
-        }
-
-        public Task<GameOperationResult> RepairAsync(
-            LauncherStatusSnapshot snapshot,
-            Action<GameOperationProgress> progress)
-        {
-            RepairInvocationCount++;
-            return Task.FromResult(RepairResult);
-        }
-
-        public Task<GameOperationResult> ValidateUninstallAsync(string gamePath) =>
-            Task.FromResult(ValidateUninstallResult);
-
-        public Task<GameOperationResult> UninstallAsync(
-            LauncherStatusSnapshot snapshot,
-            Action<GameOperationProgress> progress)
-        {
-            UninstallInvocationCount++;
-            return UninstallCompletion?.Task ?? Task.FromResult(UninstallResult);
-        }
-
-        public Task<GameOperationResult?> ResumePersistedAsync(
-            LauncherStatusSnapshot snapshot,
-            Action<GameOperationProgress> progress,
-            CancellationToken cancellationToken)
-        {
-            ResumeInvocationCount++;
-            return Task.FromResult(ResumeResult);
-        }
-
-        public void Stop(bool clearPersistedState)
-        {
-            StopInvocationCount++;
-            IsDownloadRunning = false;
-        }
-
-        public void Pause() => IsPaused = true;
-
-        public void Resume() => IsPaused = false;
-    }
 }
