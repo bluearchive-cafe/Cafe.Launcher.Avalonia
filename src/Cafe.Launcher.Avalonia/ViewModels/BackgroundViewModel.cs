@@ -3,6 +3,7 @@ using System.IO;
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
+using Avalonia;
 using Avalonia.Media;
 using Avalonia.Media.Imaging;
 using Avalonia.Platform;
@@ -23,6 +24,11 @@ public partial class BackgroundViewModel : ViewModelBase, IDisposable
     private readonly Action<LauncherSettings> wallpaperChanged;
     private readonly Func<string, IImage?> imageLoader;
     private readonly Func<IImage?> bundledImageLoader;
+    private readonly IWindowMetricsService? windowMetrics;
+    private LauncherSettings? lastBackgroundSettings;
+    private LauncherStatusSnapshot? lastBackgroundSnapshot;
+    private PixelSize lastDecodeTarget;
+    private int resizeReloadVersion;
     private bool disposed;
 
     [ObservableProperty]
@@ -54,29 +60,34 @@ public partial class BackgroundViewModel : ViewModelBase, IDisposable
     public BackgroundViewModel(
         ImageCacheService imageCacheService,
         LocalDiagnostics diagnostics,
-        SettingsViewModel settings)
+        SettingsViewModel settings,
+        IWindowMetricsService? windowMetrics = null)
         : this(
             imageCacheService,
             diagnostics,
             previewSettings =>
             {
-                settings.Appearance.RefreshThemeColorPaletteFromCurrentBackground(markDirty: false);
-                settings.Appearance.ApplyThemeColor(
-                    previewSettings.ThemeColorMode,
-                    settings.Appearance.SelectedCustomThemeColor);
-            })
+                // 壁纸像素立即切换；主题取色在后台线程执行，完成后主题 tokens 跟进。
+                _ = settings.Appearance.RefreshThemeColorPaletteFromCurrentBackgroundAsync(
+                    markDirty: false,
+                    applySchemeAfter: true);
+            },
+            windowMetrics)
     {
     }
 
     internal BackgroundViewModel(
         ImageCacheService imageCacheService,
         LocalDiagnostics diagnostics,
-        Action<LauncherSettings> wallpaperChanged)
+        Action<LauncherSettings> wallpaperChanged,
+        IWindowMetricsService? windowMetrics = null)
         : this(
             imageCacheService,
             diagnostics,
             wallpaperChanged,
-            static path => new Bitmap(path),
+            path => BackgroundImageDecoder.Decode(
+                path,
+                windowMetrics?.GetPhysicalClientSize() ?? BackgroundImageDecoder.FallbackTarget),
             LoadBundledBackground)
     {
     }
@@ -86,21 +97,51 @@ public partial class BackgroundViewModel : ViewModelBase, IDisposable
         LocalDiagnostics diagnostics,
         Action<LauncherSettings> wallpaperChanged,
         Func<string, IImage?> imageLoader,
-        Func<IImage?> bundledImageLoader)
+        Func<IImage?> bundledImageLoader,
+        IWindowMetricsService? windowMetrics = null)
     {
         this.imageCacheService = imageCacheService;
         this.diagnostics = diagnostics;
         this.wallpaperChanged = wallpaperChanged;
         this.imageLoader = imageLoader;
         this.bundledImageLoader = bundledImageLoader;
+        this.windowMetrics = windowMetrics;
+        if (windowMetrics is not null)
+        {
+            // 首次解码可能发生在窗口达到最终尺寸（布局/恢复保存状态/最大化）之前；
+            // 尺寸随后显著变大时按需重解码，否则驻留位图被放大采样显示为模糊。
+            windowMetrics.PhysicalSizeChanged += OnPhysicalSizeChanged;
+        }
+
         backgroundImageSource = bundledImageLoader();
     }
+
+    /// <summary>窗口显著变大后的壁纸重解码去抖窗口；测试可调小。</summary>
+    internal static TimeSpan ResizeReloadDebounce = TimeSpan.FromMilliseconds(500);
+
+    /// <summary>解码目标（按面积）增长超过该比例才触发重解码，吸收亚像素抖动与小幅调整。</summary>
+    private const double SignificantGrowRatio = 1.2;
+
+    /// <summary>当前窗口物理尺寸对应的解码目标框（钳制策略见 <see cref="BackgroundImageDecoder.GetTargetBox"/>）。</summary>
+    private PixelSize GetDecodeTarget() =>
+        BackgroundImageDecoder.GetTargetBox(
+            windowMetrics?.GetPhysicalClientSize() ?? BackgroundImageDecoder.FallbackTarget);
 
     public async Task UpdateBackgroundImageAsync(
         LauncherSettings settings,
         LauncherStatusSnapshot? snapshot,
         CancellationToken cancellationToken)
     {
+        lastBackgroundSettings = settings;
+        if (snapshot is not null)
+        {
+            lastBackgroundSnapshot = snapshot;
+        }
+
+        // 记录本次解码使用的目标框：窗口变大后的重解码以它为基准按面积比较，
+        // 而不是位图实际尺寸（竖图按高钳制后必然小于目标框，会造成误判死循环）。
+        lastDecodeTarget = GetDecodeTarget();
+
         ApplyBackgroundPresentation(settings);
 
         switch (settings.BackgroundSource)
@@ -174,6 +215,52 @@ public partial class BackgroundViewModel : ViewModelBase, IDisposable
 
         wallpaperFadeCancellation?.Cancel();
         FinishWallpaperFade();
+    }
+
+    private void OnPhysicalSizeChanged()
+    {
+        if (disposed)
+        {
+            return;
+        }
+
+        var version = ++resizeReloadVersion;
+        _ = ReloadAtNewSizeAfterDebounceAsync(version);
+    }
+
+    private async Task ReloadAtNewSizeAfterDebounceAsync(int version)
+    {
+        try
+        {
+            await Task.Delay(ResizeReloadDebounce);
+        }
+        catch (TaskCanceledException)
+        {
+            return;
+        }
+
+        if (disposed
+            || version != resizeReloadVersion
+            || windowMetrics is null
+            || lastBackgroundSettings is null)
+        {
+            return;
+        }
+
+        var target = GetDecodeTarget();
+        var targetArea = (long)target.Width * target.Height;
+        var lastArea = (long)lastDecodeTarget.Width * lastDecodeTarget.Height;
+        if (targetArea <= lastArea * SignificantGrowRatio)
+        {
+            return;
+        }
+
+        // 窗口显著变大（宽度、高度或 DPI 任一增长）：按新目标重放当前壁纸加载。
+        // 事件在 UI 线程触发，continuation 回到 UI 上下文，满足 SetBackgroundImage 的线程要求。
+        await UpdateBackgroundImageAsync(
+            lastBackgroundSettings,
+            lastBackgroundSnapshot,
+            CancellationToken.None);
     }
 
     public Bitmap? GetBackgroundBitmap()
@@ -317,7 +404,8 @@ public partial class BackgroundViewModel : ViewModelBase, IDisposable
         BackgroundImageSource = bitmap;
         if (previewSettings.ThemeColorMode == ThemeColorModes.Wallpaper)
         {
-            // Theme tokens switch atomically with the wallpaper decision; only pixels fade.
+            // 主题取色在后台执行（不再阻塞 UI 线程），完成后 tokens 落色；
+            // 期间沿用旧色板渲染，不会闪到默认色。
             wallpaperChanged(previewSettings);
         }
 
@@ -332,7 +420,7 @@ public partial class BackgroundViewModel : ViewModelBase, IDisposable
     }
 
     /// <summary>
-    /// ADR-016 壁纸交叉淡化：逻辑源立即切换（主题采样同步），旧图所有权移交视图层作为
+    /// ADR-016 壁纸交叉淡化：逻辑源立即切换（主题取色后台进行），旧图所有权移交视图层作为
     /// 覆盖层淡出，视图在摘除引用后经 <see cref="OnWallpaperOverlayReleased"/> 归还释放权。
     /// 快速连续更换时以“最新状态优先”直接释放上一张在途旧图（此刻同一调度回调内
     /// 覆盖层 Source 会被新事件同步替换，不存在残留引用的渲染帧）。
@@ -412,6 +500,8 @@ public partial class BackgroundViewModel : ViewModelBase, IDisposable
         }
 
         disposed = true;
+        resizeReloadVersion++;
+        windowMetrics?.PhysicalSizeChanged -= OnPhysicalSizeChanged;
         wallpaperFadeCancellation?.Cancel();
         // 先摘除属性引用（绑定同步清空 Image.Source），再释放位图：即使窗口尚在收尾
         // 渲染，视觉树也不会拿到已释放的位图实现。

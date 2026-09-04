@@ -52,6 +52,9 @@ public static class ServiceConfiguration
         services.AddSingleton<WindowFilePickerService>();
         services.AddSingleton<IFilePickerService>(sp =>
             sp.GetRequiredService<WindowFilePickerService>());
+        services.AddSingleton<WindowMetricsService>();
+        services.AddSingleton<IWindowMetricsService>(sp =>
+            sp.GetRequiredService<WindowMetricsService>());
 
         // ── Services with dependencies ────────────────────────────────────
         services.AddSingleton<ProxySettingsService>();
