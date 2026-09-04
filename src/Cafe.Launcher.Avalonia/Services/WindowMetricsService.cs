@@ -1,6 +1,7 @@
 using System;
 using Avalonia;
 using Avalonia.Controls;
+using Cafe.Launcher.Avalonia.Helpers;
 
 namespace Cafe.Launcher.Avalonia.Services;
 
@@ -13,11 +14,9 @@ namespace Cafe.Launcher.Avalonia.Services;
 /// </summary>
 public sealed class WindowMetricsService : IWindowMetricsService
 {
-    private static readonly PixelSize FallbackClientSize = new(1920, 1080);
-
     private readonly object attachLock = new();
     private TopLevel? owner;
-    private PixelSize physicalClientSize = FallbackClientSize;
+    private PixelSize physicalClientSize = BackgroundImageDecoder.FallbackTarget;
 
     /// <inheritdoc />
     public event Action? PhysicalSizeChanged;
@@ -59,7 +58,7 @@ public sealed class WindowMetricsService : IWindowMetricsService
             owner.PropertyChanged -= OnOwnerPropertyChanged;
             owner.ScalingChanged -= OnOwnerScalingChanged;
             owner = null;
-            physicalClientSize = FallbackClientSize;
+            physicalClientSize = BackgroundImageDecoder.FallbackTarget;
         }
     }
 
@@ -112,7 +111,7 @@ public sealed class WindowMetricsService : IWindowMetricsService
         if (client.Width <= 0 || client.Height <= 0)
         {
             // 布局尚未发生（窗口构造后、Show 前）：返回默认目标而非 1×1 坏快照。
-            return FallbackClientSize;
+            return BackgroundImageDecoder.FallbackTarget;
         }
 
         return new PixelSize(

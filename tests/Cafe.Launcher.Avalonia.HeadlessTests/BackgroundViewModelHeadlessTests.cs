@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 using System.IO;
 using System.Threading;
 using System.Threading.Tasks;
@@ -66,21 +67,10 @@ public sealed class BackgroundViewModelHeadlessTests
             var metrics = new MutableWindowMetrics(new PixelSize(1300, 754));
             var wallpaperPath = Path.Combine(context.TempDir, "grow-wallpaper.png");
             HeadlessTestHost.WriteSolidPng(wallpaperPath, Brushes.DarkSlateBlue, 3000, 1600);
-            var viewModel = new BackgroundViewModel(
-                context.Provider.GetRequiredService<ImageCacheService>(),
-                context.Provider.GetRequiredService<LocalDiagnostics>(),
-                _ => { },
-                path => BackgroundImageDecoder.Decode(path, metrics.GetPhysicalClientSize()),
-                () => null,
-                metrics);
+            var viewModel = CreateResizeAwareViewModel(context, metrics);
             try
             {
-                var settings = new LauncherSettings
-                {
-                    BackgroundSource = BackgroundSources.Custom,
-                    CustomBackgroundPath = wallpaperPath,
-                    ThemeColorMode = ThemeColorModes.Default
-                };
+                var settings = CreateCustomBackgroundSettings(wallpaperPath);
                 await viewModel.UpdateBackgroundImageAsync(settings, snapshot: null, CancellationToken.None);
                 var initial = Assert.IsType<Bitmap>(viewModel.BackgroundImageSource);
                 var initialHeight = initial.PixelSize.Height;
@@ -122,21 +112,10 @@ public sealed class BackgroundViewModelHeadlessTests
             var metrics = new MutableWindowMetrics(new PixelSize(1300, 754));
             var wallpaperPath = Path.Combine(context.TempDir, "shrink-wallpaper.png");
             HeadlessTestHost.WriteSolidPng(wallpaperPath, Brushes.DarkSlateBlue, 3000, 1600);
-            var viewModel = new BackgroundViewModel(
-                context.Provider.GetRequiredService<ImageCacheService>(),
-                context.Provider.GetRequiredService<LocalDiagnostics>(),
-                _ => { },
-                path => BackgroundImageDecoder.Decode(path, metrics.GetPhysicalClientSize()),
-                () => null,
-                metrics);
+            var viewModel = CreateResizeAwareViewModel(context, metrics);
             try
             {
-                var settings = new LauncherSettings
-                {
-                    BackgroundSource = BackgroundSources.Custom,
-                    CustomBackgroundPath = wallpaperPath,
-                    ThemeColorMode = ThemeColorModes.Default
-                };
+                var settings = CreateCustomBackgroundSettings(wallpaperPath);
                 await viewModel.UpdateBackgroundImageAsync(settings, snapshot: null, CancellationToken.None);
                 var initial = Assert.IsType<Bitmap>(viewModel.BackgroundImageSource);
 
@@ -169,21 +148,10 @@ public sealed class BackgroundViewModelHeadlessTests
             var metrics = new MutableWindowMetrics(new PixelSize(1300, 400));
             var wallpaperPath = Path.Combine(context.TempDir, "grow-height-wallpaper.png");
             HeadlessTestHost.WriteSolidPng(wallpaperPath, Brushes.DarkSlateBlue, 3000, 1600);
-            var viewModel = new BackgroundViewModel(
-                context.Provider.GetRequiredService<ImageCacheService>(),
-                context.Provider.GetRequiredService<LocalDiagnostics>(),
-                _ => { },
-                path => BackgroundImageDecoder.Decode(path, metrics.GetPhysicalClientSize()),
-                () => null,
-                metrics);
+            var viewModel = CreateResizeAwareViewModel(context, metrics);
             try
             {
-                var settings = new LauncherSettings
-                {
-                    BackgroundSource = BackgroundSources.Custom,
-                    CustomBackgroundPath = wallpaperPath,
-                    ThemeColorMode = ThemeColorModes.Default
-                };
+                var settings = CreateCustomBackgroundSettings(wallpaperPath);
                 await viewModel.UpdateBackgroundImageAsync(settings, snapshot: null, CancellationToken.None);
                 var initial = Assert.IsType<Bitmap>(viewModel.BackgroundImageSource);
                 var initialWidth = initial.PixelSize.Width;
@@ -214,6 +182,136 @@ public sealed class BackgroundViewModelHeadlessTests
         }
     }
 
+    [AvaloniaFact]
+    public async Task UpdateBackgroundImageAsync_WhenFolderWallpaperReloadsForResize_ReusesResolvedImage()
+    {
+        var originalDebounce = BackgroundViewModel.ResizeReloadDebounce;
+        BackgroundViewModel.ResizeReloadDebounce = TimeSpan.FromMilliseconds(50);
+        try
+        {
+            using var context = HeadlessTestHost.CreateContext();
+            var metrics = new MutableWindowMetrics(new PixelSize(1300, 754));
+            var wallpaperFolder = Path.Combine(context.TempDir, "wallpapers");
+            Directory.CreateDirectory(wallpaperFolder);
+            HeadlessTestHost.WriteSolidPng(
+                Path.Combine(wallpaperFolder, "first.png"),
+                Brushes.DarkSlateBlue,
+                3000,
+                1600);
+            HeadlessTestHost.WriteSolidPng(
+                Path.Combine(wallpaperFolder, "second.png"),
+                Brushes.IndianRed,
+                3000,
+                1600);
+            var loadedPaths = new List<string>();
+            var viewModel = new BackgroundViewModel(
+                context.Provider.GetRequiredService<ImageCacheService>(),
+                context.Provider.GetRequiredService<LocalDiagnostics>(),
+                _ => { },
+                path =>
+                {
+                    lock (loadedPaths)
+                    {
+                        loadedPaths.Add(path);
+                    }
+
+                    return BackgroundImageDecoder.Decode(path, metrics.GetPhysicalClientSize());
+                },
+                () => null,
+                metrics);
+            try
+            {
+                var settings = CreateCustomBackgroundSettings(wallpaperFolder);
+                await viewModel.UpdateBackgroundImageAsync(settings, snapshot: null, CancellationToken.None);
+                metrics.ResizeTo(new PixelSize(2600, 1500));
+                await WaitUntilAsync(
+                    () =>
+                    {
+                        lock (loadedPaths)
+                        {
+                            return loadedPaths.Count >= 2;
+                        }
+                    },
+                    TimeSpan.FromSeconds(5));
+
+                string[] paths;
+                lock (loadedPaths)
+                {
+                    paths = loadedPaths.ToArray();
+                }
+
+                Assert.Equal(paths[0], paths[1]);
+            }
+            finally
+            {
+                viewModel.Dispose();
+            }
+        }
+        finally
+        {
+            BackgroundViewModel.ResizeReloadDebounce = originalDebounce;
+        }
+    }
+
+    [AvaloniaFact]
+    public async Task UpdateBackgroundImageAsync_WhenOlderDecodeFinishesLast_DoesNotReplaceNewerWallpaper()
+    {
+        using var context = HeadlessTestHost.CreateContext();
+        var firstPath = Path.Combine(context.TempDir, "first-wallpaper.png");
+        var secondPath = Path.Combine(context.TempDir, "second-wallpaper.png");
+        HeadlessTestHost.WriteSolidPng(firstPath, Brushes.DarkSlateBlue, 320, 200);
+        HeadlessTestHost.WriteSolidPng(secondPath, Brushes.IndianRed, 320, 200);
+        var firstStarted = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
+        var releaseFirst = new ManualResetEventSlim(initialState: false);
+        Bitmap? secondBitmap = null;
+        var viewModel = new BackgroundViewModel(
+            context.Provider.GetRequiredService<ImageCacheService>(),
+            context.Provider.GetRequiredService<LocalDiagnostics>(),
+            _ => { },
+            path =>
+            {
+                if (string.Equals(path, firstPath, StringComparison.Ordinal))
+                {
+                    firstStarted.TrySetResult();
+                    Assert.True(releaseFirst.Wait(TimeSpan.FromSeconds(5)), "Timed out waiting to release first decode.");
+                }
+
+                var bitmap = BackgroundImageDecoder.Decode(path, new PixelSize(1300, 754));
+                if (string.Equals(path, secondPath, StringComparison.Ordinal))
+                {
+                    secondBitmap = bitmap;
+                }
+
+                return bitmap;
+            },
+            () => null);
+        try
+        {
+            var firstSettings = CreateCustomBackgroundSettings(firstPath);
+            var secondSettings = CreateCustomBackgroundSettings(secondPath);
+
+            var firstLoad = viewModel.UpdateBackgroundImageAsync(
+                firstSettings,
+                snapshot: null,
+                CancellationToken.None);
+            await firstStarted.Task.WaitAsync(TimeSpan.FromSeconds(5));
+            await viewModel.UpdateBackgroundImageAsync(
+                secondSettings,
+                snapshot: null,
+                CancellationToken.None);
+            releaseFirst.Set();
+            await firstLoad;
+
+            Assert.Same(secondBitmap, viewModel.BackgroundImageSource);
+        }
+        finally
+        {
+            releaseFirst.Set();
+            releaseFirst.Dispose();
+            viewModel.Dispose();
+        }
+    }
+
     private static async Task WaitUntilAsync(Func<bool> condition, TimeSpan timeout)
     {
         var deadline = DateTime.UtcNow + timeout;
@@ -224,6 +322,24 @@ public sealed class BackgroundViewModelHeadlessTests
 
         Assert.True(condition(), "Condition was not met within the timeout.");
     }
+
+    private static LauncherSettings CreateCustomBackgroundSettings(string path) => new()
+    {
+        BackgroundSource = BackgroundSources.Custom,
+        CustomBackgroundPath = path,
+        ThemeColorMode = ThemeColorModes.Default
+    };
+
+    private static BackgroundViewModel CreateResizeAwareViewModel(
+        LauncherHeadlessContext context,
+        IWindowMetricsService metrics) =>
+        new(
+            context.Provider.GetRequiredService<ImageCacheService>(),
+            context.Provider.GetRequiredService<LocalDiagnostics>(),
+            _ => { },
+            path => BackgroundImageDecoder.Decode(path, metrics.GetPhysicalClientSize()),
+            () => null,
+            metrics);
 
     private sealed class FixedWindowMetrics(PixelSize size) : IWindowMetricsService
     {
