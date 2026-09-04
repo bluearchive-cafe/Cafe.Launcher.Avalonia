@@ -34,6 +34,13 @@ public partial class SettingsViewModel : ViewModelBase, IDisposable, IModalConte
     private readonly IFilePickerService filePickerService;
     private CancellationTokenSource? appearancePreviewCts;
     private Task appearancePreviewTask = Task.CompletedTask;
+
+    /// <summary>
+    /// 保存前等待在途外观预览落定的总预算。预览链路含远端图下载（受 HttpClient
+    /// 默认超时约束）属有界等待，但仍设上限防止未来加入无超时操作后保存被无限挂起；
+    /// 超时后按当前状态继续保存。测试可调小。
+    /// </summary>
+    internal static TimeSpan AppearancePreviewSettleTimeout = TimeSpan.FromMinutes(2);
     private CancellationTokenSource? gameRuntimeStatusCts;
     private Task gameRuntimeStatusRefreshTask = Task.CompletedTask;
     private IReadOnlyList<GameRuntimeStatusEntry>? gameRuntimeStatusEntries;
@@ -520,10 +527,20 @@ public partial class SettingsViewModel : ViewModelBase, IDisposable, IModalConte
 
     private async Task WaitForAppearancePreviewToSettleAsync()
     {
+        using var settleBudget = new CancellationTokenSource(AppearancePreviewSettleTimeout);
         while (true)
         {
             var pending = appearancePreviewTask;
-            await pending;
+            try
+            {
+                await pending.WaitAsync(settleBudget.Token);
+            }
+            catch (OperationCanceledException) when (settleBudget.IsCancellationRequested)
+            {
+                // 超出预算：按当前状态继续保存，不再等待更新的预览。
+                return;
+            }
+
             if (ReferenceEquals(pending, appearancePreviewTask))
             {
                 return;

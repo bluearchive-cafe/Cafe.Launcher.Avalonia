@@ -837,6 +837,35 @@ public sealed class MainWindowViewModelTests : IDisposable
     }
 
     [Fact]
+    public async Task SaveSettingsAsync_WhenPreviewNeverSettles_CompletesAfterSettleTimeout()
+    {
+        var coreService = new CountingCoreService(CreateSnapshot());
+        using var viewModel = await CreateViewModelAsync(coreService);
+        await viewModel.InitializeAsync();
+        var originalTimeout = SettingsViewModel.AppearancePreviewSettleTimeout;
+        SettingsViewModel.AppearancePreviewSettleTimeout = TimeSpan.FromMilliseconds(50);
+        var releasePreview = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
+        viewModel.Settings.PreviewAppearanceAsync = async (_, _, cancellationToken) =>
+        {
+            await releasePreview.Task.WaitAsync(cancellationToken);
+        };
+
+        try
+        {
+            viewModel.Settings.Editor.Current.CustomBackgroundPath = "stuck-preview";
+            var saveTask = viewModel.Settings.SaveSettingsCommand.ExecuteAsync(null);
+
+            // 预览永不完成：保存必须在预算超时后自行完成，而不是被无限挂起。
+            await saveTask.WaitAsync(TimeSpan.FromSeconds(5));
+        }
+        finally
+        {
+            SettingsViewModel.AppearancePreviewSettleTimeout = originalTimeout;
+            releasePreview.TrySetResult();
+        }
+    }
+
+    [Fact]
     public async Task BackgroundFolderAndClearCommands_DoNotPersistUntilSave()
     {
         var savedPath = Path.Combine(tempDir, "saved-background.png");

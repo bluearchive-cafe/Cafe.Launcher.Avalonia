@@ -136,12 +136,27 @@ public partial class SettingsAppearanceViewModel : ViewModelBase, IDisposable
     /// <summary>最近一次取色任务；保存流程用它等待当前壁纸色板落定，测试也可观察。</summary>
     internal Task PendingThemeRefresh => inFlightThemeRefresh ?? Task.CompletedTask;
 
+    /// <summary>
+    /// 等待最新取色任务落定的总预算；超时按当前色板继续，取色本身降采样到 64px 后
+    /// 量化属快速有界操作，该上限只防御理论上无界的刷新链。测试可调小。
+    /// </summary>
+    internal static TimeSpan ThemeRefreshSettleTimeout = TimeSpan.FromMinutes(2);
+
     internal async Task WaitForThemeRefreshToSettleAsync()
     {
+        using var settleBudget = new CancellationTokenSource(ThemeRefreshSettleTimeout);
         while (true)
         {
             var pending = PendingThemeRefresh;
-            await pending;
+            try
+            {
+                await pending.WaitAsync(settleBudget.Token);
+            }
+            catch (OperationCanceledException) when (settleBudget.IsCancellationRequested)
+            {
+                return;
+            }
+
             if (ReferenceEquals(pending, inFlightThemeRefresh)
                 || inFlightThemeRefresh is null)
             {
