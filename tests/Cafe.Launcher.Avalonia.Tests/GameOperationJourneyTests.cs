@@ -6,6 +6,7 @@ using Xunit;
 
 namespace Cafe.Launcher.Avalonia.Tests;
 
+[Collection(nameof(LocalizationServiceTestIsolation))]
 public sealed class GameOperationJourneyTests
 {
     static GameOperationJourneyTests()

@@ -7,6 +7,7 @@ using Avalonia;
 using Avalonia.Headless.XUnit;
 using Avalonia.Media;
 using Avalonia.Media.Imaging;
+using Avalonia.Threading;
 using Cafe.Launcher.Avalonia.Helpers;
 using Cafe.Launcher.Avalonia.Models;
 using Cafe.Launcher.Avalonia.Services;
@@ -121,7 +122,14 @@ public sealed class BackgroundViewModelHeadlessTests
 
                 // 窗口变小：现有位图已足够清晰，不应触发重解码。
                 metrics.ResizeTo(new PixelSize(1000, 600));
-                await Task.Delay(300);
+                // 负向断言给出远超 debounce 的观察窗并持续泵帧：若缩小误触发重解码，
+                // 它必然（50ms debounce + 调度余量）在该窗口内出现并被即时捕获。
+                var observationEnd = DateTime.UtcNow.AddMilliseconds(500);
+                while (DateTime.UtcNow < observationEnd)
+                {
+                    await Dispatcher.UIThread.InvokeAsync(() => { });
+                    await Task.Delay(25);
+                }
 
                 Assert.Same(initial, viewModel.BackgroundImageSource);
             }

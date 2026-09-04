@@ -10,6 +10,7 @@ using Microsoft.Extensions.DependencyInjection;
 
 namespace Cafe.Launcher.Avalonia.Tests;
 
+[Collection(nameof(LocalizationServiceTestIsolation))]
 public sealed class ToastHostViewModelTests : IDisposable
 {
     private readonly object invokeGate = new();
@@ -111,9 +112,8 @@ public sealed class ToastHostViewModelTests : IDisposable
 
         await viewModel.DismissToastCommand.ExecuteAsync(toast.Id);
         await delays.ReleaseNextAsync();
-        await Task.Delay(20);
+        await WaitUntilAsync(() => viewModel.ActiveToasts.Count == 0);
 
-        Assert.Empty(viewModel.ActiveToasts);
         Assert.Equal(1, delays.RequestCount);
     }
 
@@ -633,18 +633,28 @@ public sealed class ToastHostViewModelTests : IDisposable
         await using var provider = CreateProvider();
         var settings = provider.GetRequiredService<SettingsViewModel>();
         var toastService = provider.GetRequiredService<ToastService>();
-        var viewModel = new ToastHostViewModel(
+        var delays = new ControlledDelay();
+        using var viewModel = new ToastHostViewModel(
             toastService,
             provider.GetRequiredService<LocalizationService>(),
             new LocalDiagnostics(),
             InvokeSerially,
-            static (_, _) => Task.CompletedTask);
+            delays.WaitAsync);
         viewModel.Dispose();
 
         toastService.Show("after-dispose");
-        await Task.Delay(20);
+        // 负向断言给出可观察窗口：若仍订阅，Show 会同步登记 duration delay（RequestCount=1）
+        // 并进入 ActiveToasts，轮询中即时失败；持续 250ms 无出现即证明已退订。
+        var observationEnd = DateTime.UtcNow.AddMilliseconds(250);
+        while (DateTime.UtcNow < observationEnd)
+        {
+            Assert.Empty(viewModel.ActiveToasts);
+            Assert.Equal(0, delays.RequestCount);
+            await Task.Delay(10);
+        }
 
         Assert.Empty(viewModel.ActiveToasts);
+        Assert.Equal(0, delays.RequestCount);
     }
 
     private ServiceProvider CreateProvider()

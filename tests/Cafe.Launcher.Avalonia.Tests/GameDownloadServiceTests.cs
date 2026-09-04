@@ -13,6 +13,7 @@ using Cafe.Launcher.Avalonia.Services.GameRuntime;
 
 namespace Cafe.Launcher.Avalonia.Tests;
 
+[Collection(nameof(LocalizationServiceTestIsolation))]
 public sealed class GameDownloadServiceTests
 {
     static GameDownloadServiceTests()
@@ -1282,8 +1283,9 @@ public sealed class GameDownloadServiceTests
 
         try
         {
-            var completed = await Task.WhenAny(resumeTask, Task.Delay(TimeSpan.FromMilliseconds(250)));
-            Assert.Same(resumeTask, completed);
+            // repairTask 被 handler.Release 门控、必然仍在执行；resumeTask 在 5 秒预算内
+            // 完成（预算放宽以免慢机误报）即证明续传持久化不等待正在进行的修复。
+            await resumeTask.WaitAsync(TimeSpan.FromSeconds(5));
             Assert.Null(await resumeTask);
             Assert.False(repairTask.IsCompleted);
         }

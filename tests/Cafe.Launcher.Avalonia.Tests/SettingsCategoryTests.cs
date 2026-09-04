@@ -9,7 +9,7 @@ using Microsoft.Extensions.DependencyInjection.Extensions;
 
 namespace Cafe.Launcher.Avalonia.Tests;
 
-[Collection("Settings category localization")]
+[Collection(nameof(LocalizationServiceTestIsolation))]
 public sealed class SettingsCategoryTests
 {
     private static readonly string ResourceDirectory = Path.Combine(
@@ -422,6 +422,3 @@ public sealed class SettingsCategoryTests
         }
     }
 }
-
-[CollectionDefinition("Settings category localization", DisableParallelization = true)]
-public sealed class SettingsCategoryLocalizationGroup;

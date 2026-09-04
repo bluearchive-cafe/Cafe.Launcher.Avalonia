@@ -2500,9 +2500,17 @@ public sealed class MainWindowHeadlessTests
         context.ViewModel.Dialogs.ShowSetupWizard();
         wizard.NextCommand.Execute(null);
         await WaitForGamePathStatusAsync(wizard, SetupWizardGamePathStatus.AvailableForInstallation);
+        // 循环体本身无 await：命令一旦被门控卡住即为死循环，预算兜底快速失败。
+        var advanceDeadline = DateTime.UtcNow.AddSeconds(5);
         while (!wizard.IsLastStep)
         {
+            if (DateTime.UtcNow >= advanceDeadline)
+            {
+                Assert.Fail("向导未在 5 秒预算内推进到最后一步。");
+            }
+
             wizard.NextCommand.Execute(null);
+            Dispatcher.UIThread.RunJobs();
         }
         Dispatcher.UIThread.RunJobs();
 
@@ -2522,8 +2530,15 @@ public sealed class MainWindowHeadlessTests
 
             Assert.Equal(expectedStep, wizard.Step);
 
+            // 内层 WaitForGamePathStatusAsync 每次自带 2 秒预算，外层给足整体预算。
+            var stepAdvanceDeadline = DateTime.UtcNow.AddSeconds(10);
             while (!wizard.IsLastStep)
             {
+                if (DateTime.UtcNow >= stepAdvanceDeadline)
+                {
+                    Assert.Fail("向导未在 10 秒预算内推进到最后一步。");
+                }
+
                 if (wizard.IsStep1)
                 {
                     await WaitForGamePathStatusAsync(
@@ -2698,8 +2713,15 @@ public sealed class MainWindowHeadlessTests
             var sawFade = false;
             var sawSlide = false;
             var settled = false;
+            // 入场动画由真实帧时钟驱动：给出硬性预算，调度异常时快速失败而非挂死测试进程。
+            var settleDeadline = DateTime.UtcNow.AddSeconds(5);
             while (!settled)
             {
+                if (DateTime.UtcNow >= settleDeadline)
+                {
+                    Assert.Fail($"步骤 {stepIndex} 的入场动画未在 5 秒预算内落定。");
+                }
+
                 await Dispatcher.UIThread.InvokeAsync(() => { });
                 await Task.Delay(10);
                 // 精确判定：动画完成后的所有权结算会精确置 Opacity=1、X=0，
@@ -3183,9 +3205,19 @@ public sealed class MainWindowHeadlessTests
         {
             Window.Close();
             Provider.Dispose();
-            if (Directory.Exists(TempDir))
+            if (!Directory.Exists(TempDir))
             {
+                return;
+            }
+
+            try
+            {
+                // 与 HeadlessTestHost 的上下文清理一致：句柄延迟释放导致的删除失败
+                // 只残留临时目录，不让清理问题掩盖测试结果。
                 Directory.Delete(TempDir, recursive: true);
+            }
+            catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
+            {
             }
         }
     }

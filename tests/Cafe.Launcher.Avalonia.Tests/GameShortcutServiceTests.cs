@@ -12,6 +12,7 @@ using Cafe.Launcher.Avalonia.Services;
 
 namespace Cafe.Launcher.Avalonia.Tests;
 
+[Collection(nameof(LocalizationServiceTestIsolation))]
 public sealed class GameShortcutServiceTests : IDisposable
 {
     private readonly string tempDirectory;

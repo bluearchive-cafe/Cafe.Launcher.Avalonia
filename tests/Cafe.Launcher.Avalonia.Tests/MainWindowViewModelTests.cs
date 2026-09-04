@@ -18,6 +18,7 @@ using System.Text;
 
 namespace Cafe.Launcher.Avalonia.Tests;
 
+[Collection(nameof(LocalizationServiceTestIsolation))]
 public sealed class MainWindowViewModelTests : IDisposable
 {
     [Fact]
@@ -825,7 +826,15 @@ public sealed class MainWindowViewModelTests : IDisposable
         var saveTask = viewModel.Settings.SaveSettingsCommand.ExecuteAsync(null);
         try
         {
-            await Task.Delay(50);
+            // 预览被 releasePreview 门控、尚未释放，期间保存不可能完成；
+            // 持续泵一小段时间，让（若实现有缺陷的）提前完成有机会暴露并即时失败。
+            var observationEnd = DateTime.UtcNow.AddMilliseconds(100);
+            while (DateTime.UtcNow < observationEnd)
+            {
+                Assert.False(saveTask.IsCompleted);
+                await Task.Delay(10);
+            }
+
             Assert.False(saveTask.IsCompleted);
         }
         finally
