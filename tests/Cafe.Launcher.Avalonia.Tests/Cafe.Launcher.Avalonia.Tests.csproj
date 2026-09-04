@@ -17,6 +17,12 @@
     <AnalysisMode>Minimum</AnalysisMode>
     <EnforceCodeStyleInBuild>true</EnforceCodeStyleInBuild>
     <TreatWarningsAsErrors>true</TreatWarningsAsErrors>
+    <!--
+      xUnit1051 要求所有带可选 CancellationToken 的调用（含全部文件 IO）显式传
+      TestContext.Current.CancellationToken，全项目约 1100+ 处；测试等待已全部
+      有界（WaitAsync/预算轮询，见 P0 审计修复），该规则的悬挂防护价值由设计保证，
+      故按项目整体抑制。
+    -->
     <NoWarn>$(NoWarn);xUnit1051</NoWarn>
     <IsPackable>false</IsPackable>
     <ValidateExecutableReferencesMatchSelfContained>false</ValidateExecutableReferencesMatchSelfContained>

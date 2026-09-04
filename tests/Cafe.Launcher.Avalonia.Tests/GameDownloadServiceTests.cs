@@ -15,11 +15,32 @@ using Cafe.Launcher.Avalonia.Testing;
 namespace Cafe.Launcher.Avalonia.Tests;
 
 [Collection(nameof(LocalizationServiceTestIsolation))]
-public sealed class GameDownloadServiceTests
+public sealed class GameDownloadServiceTests : IDisposable
 {
     static GameDownloadServiceTests()
     {
         TestLocalizationHelper.Initialize();
+    }
+
+    // xUnit 为每个测试方法创建新实例：实例字段即每测试独立的临时目录，
+    // 断言失败时由 Dispose 统一清理，不再泄漏 %TEMP% 垃圾。
+    private readonly string tempDir = Path.Combine(Path.GetTempPath(), Guid.NewGuid().ToString("N"));
+
+    public GameDownloadServiceTests()
+    {
+        Directory.CreateDirectory(tempDir);
+    }
+
+    public void Dispose()
+    {
+        try
+        {
+            Directory.Delete(tempDir, recursive: true);
+        }
+        catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
+        {
+            // 句柄延迟释放导致的删除失败只残留临时目录，不让清理问题掩盖测试结果。
+        }
     }
 
     [Fact]
@@ -127,8 +148,6 @@ public sealed class GameDownloadServiceTests
     [Fact]
     public async Task DownloadFileAsync_WhenTemporaryFileAlreadyMatchesExpectedSize_SkipsHttpRequest()
     {
-        var tempDir = Path.Combine(Path.GetTempPath(), Guid.NewGuid().ToString("N"));
-        Directory.CreateDirectory(tempDir);
         try
         {
             var targetPath = Path.Combine(tempDir, "file.bin.tmp");
@@ -173,8 +192,6 @@ public sealed class GameDownloadServiceTests
     [Fact]
     public async Task DownloadFileAsync_WhenTemporaryFileIsLargerThanExpected_DownloadsFreshCopyWithoutRangeHeader()
     {
-        var tempDir = Path.Combine(Path.GetTempPath(), Guid.NewGuid().ToString("N"));
-        Directory.CreateDirectory(tempDir);
         try
         {
             var targetPath = Path.Combine(tempDir, "file.bin.tmp");
@@ -219,7 +236,6 @@ public sealed class GameDownloadServiceTests
     [Fact]
     public async Task DownloadFileAsync_WhenDownloadedHashMismatches_TriesNextRetryDomain()
     {
-        var tempDir = Path.Combine(Path.GetTempPath(), Guid.NewGuid().ToString("N"));
         var gamePath = Path.Combine(tempDir, "YostarGames", "BlueArchive_JP");
         Directory.CreateDirectory(gamePath);
         var expectedBytes = Encoding.UTF8.GetBytes("correct-content");
@@ -269,7 +285,6 @@ public sealed class GameDownloadServiceTests
     [Fact]
     public async Task DownloadFileAsync_WhenEveryHashMismatches_ThrowsAndRemovesTemporaryFile()
     {
-        var tempDir = Path.Combine(Path.GetTempPath(), Guid.NewGuid().ToString("N"));
         var gamePath = Path.Combine(tempDir, "YostarGames", "BlueArchive_JP");
         Directory.CreateDirectory(gamePath);
         var expectedBytes = Encoding.UTF8.GetBytes("correct-content");
@@ -303,8 +318,6 @@ public sealed class GameDownloadServiceTests
     [Fact]
     public async Task DownloadFileAsync_WhenRangeIsIgnored_ReplacesTemporaryFile()
     {
-        var tempDir = Path.Combine(Path.GetTempPath(), Guid.NewGuid().ToString("N"));
-        Directory.CreateDirectory(tempDir);
         var targetPath = Path.Combine(tempDir, "file.bin.tmp");
         var expectedBytes = Encoding.UTF8.GetBytes("complete-content");
         await File.WriteAllBytesAsync(targetPath, expectedBytes[..4]);
@@ -343,8 +356,6 @@ public sealed class GameDownloadServiceTests
     [Fact]
     public async Task DownloadFileAsync_WhenContentRangeStartsAtWrongOffset_RetriesWithoutCorruptingFile()
     {
-        var tempDir = Path.Combine(Path.GetTempPath(), Guid.NewGuid().ToString("N"));
-        Directory.CreateDirectory(tempDir);
         var targetPath = Path.Combine(tempDir, "file.bin.tmp");
         var expectedBytes = Encoding.UTF8.GetBytes("complete-content");
         await File.WriteAllBytesAsync(targetPath, expectedBytes[..4]);
@@ -383,8 +394,6 @@ public sealed class GameDownloadServiceTests
     [Fact]
     public async Task DownloadFileAsync_WhenContentRangeTotalLengthMismatches_RetriesWithoutCorruptingFile()
     {
-        var tempDir = Path.Combine(Path.GetTempPath(), Guid.NewGuid().ToString("N"));
-        Directory.CreateDirectory(tempDir);
         try
         {
             var targetPath = Path.Combine(tempDir, "file.bin.tmp");
@@ -429,8 +438,6 @@ public sealed class GameDownloadServiceTests
     [Fact]
     public async Task DownloadFileAsync_WhenTransferFails_ResumesFromWrittenBytes()
     {
-        var tempDir = Path.Combine(Path.GetTempPath(), Guid.NewGuid().ToString("N"));
-        Directory.CreateDirectory(tempDir);
         try
         {
             var targetPath = Path.Combine(tempDir, "file.bin.tmp");
@@ -475,7 +482,6 @@ public sealed class GameDownloadServiceTests
     [Fact]
     public async Task InstallOrUpdateAsync_WhenNoFilesNeedChanges_ClearsDownloadState()
     {
-        var tempDir = Path.Combine(Path.GetTempPath(), Guid.NewGuid().ToString("N"));
         var gamePath = Path.Combine(tempDir, "YostarGames", "BlueArchive_JP");
         Directory.CreateDirectory(gamePath);
         var settingsPath = Path.Combine(tempDir, "settings.json");
@@ -496,14 +502,12 @@ public sealed class GameDownloadServiceTests
     [Fact]
     public async Task InstallOrUpdateAsync_WhenFileIsRequired_InstallsFileAndCommitsInstallationState()
     {
-        var tempDir = Path.Combine(Path.GetTempPath(), Guid.NewGuid().ToString("N"));
         var gamePath = Path.Combine(tempDir, "YostarGames", "BlueArchive_JP");
         var settingsService = new LauncherSettingsService(Path.Combine(tempDir, "settings.json"));
         await settingsService.SaveAsync(new LauncherSettings { GamePath = gamePath });
         var statePath = Path.Combine(tempDir, "download_state.json");
         var fileBytes = Encoding.UTF8.GetBytes("installed-content");
         var hashPath = Path.Combine(tempDir, "hash-source.bin");
-        Directory.CreateDirectory(tempDir);
         await File.WriteAllBytesAsync(hashPath, fileBytes);
         var expectedHash = await new Crc64Service().ComputeFileAsync(hashPath);
         using var apiClient = CreateManifestApiClient(
@@ -542,7 +546,6 @@ public sealed class GameDownloadServiceTests
     [Fact]
     public async Task InstallOrUpdateAsync_WhenPaused_WaitsUntilResumeBeforeCompleting()
     {
-        var tempDir = Path.Combine(Path.GetTempPath(), Guid.NewGuid().ToString("N"));
         var gamePath = Path.Combine(tempDir, "YostarGames", "BlueArchive_JP");
         var settingsService = new LauncherSettingsService(Path.Combine(tempDir, "settings.json"));
         await settingsService.SaveAsync(new LauncherSettings { GamePath = gamePath });
@@ -583,7 +586,6 @@ public sealed class GameDownloadServiceTests
         bool clearPersistedState,
         bool expectedStateFileExists)
     {
-        var tempDir = Path.Combine(Path.GetTempPath(), Guid.NewGuid().ToString("N"));
         var gamePath = Path.Combine(tempDir, "YostarGames", "BlueArchive_JP");
         var settingsService = new LauncherSettingsService(Path.Combine(tempDir, "settings.json"));
         await settingsService.SaveAsync(new LauncherSettings { GamePath = gamePath });
@@ -621,7 +623,6 @@ public sealed class GameDownloadServiceTests
     [Fact]
     public async Task InstallOrUpdateAsync_WhenDiskSpaceIsInsufficient_DoesNotStartDownloads()
     {
-        var tempDir = Path.Combine(Path.GetTempPath(), Guid.NewGuid().ToString("N"));
         var gamePath = Path.Combine(tempDir, "YostarGames", "BlueArchive_JP");
         var settingsService = new LauncherSettingsService(Path.Combine(tempDir, "settings.json"));
         await settingsService.SaveAsync(new LauncherSettings { GamePath = gamePath });
@@ -653,7 +654,6 @@ public sealed class GameDownloadServiceTests
     [Fact]
     public async Task InstallOrUpdateAsync_WhenFreshInstallNeedsDecompressionSpace_BlocksBeforeDownload()
     {
-        var tempDir = Path.Combine(Path.GetTempPath(), Guid.NewGuid().ToString("N"));
         var gamePath = Path.Combine(tempDir, "YostarGames", "BlueArchive_JP");
         var settingsService = new LauncherSettingsService(Path.Combine(tempDir, "settings.json"));
         await settingsService.SaveAsync(new LauncherSettings { GamePath = gamePath });
@@ -702,7 +702,6 @@ public sealed class GameDownloadServiceTests
         long? availableBytes,
         string expectedAvailable)
     {
-        var tempDir = Path.Combine(Path.GetTempPath(), Guid.NewGuid().ToString("N"));
         var gamePath = Path.Combine(tempDir, "YostarGames", "BlueArchive_JP");
         var settingsService = new LauncherSettingsService(Path.Combine(tempDir, "settings.json"));
         await settingsService.SaveAsync(new LauncherSettings { GamePath = gamePath });
@@ -737,7 +736,6 @@ public sealed class GameDownloadServiceTests
     [Fact]
     public async Task InstallOrUpdateAsync_WhenUpdating_UsesPendingDownloadBytesOnly()
     {
-        var tempDir = Path.Combine(Path.GetTempPath(), Guid.NewGuid().ToString("N"));
         var gamePath = Path.Combine(tempDir, "YostarGames", "BlueArchive_JP");
         Directory.CreateDirectory(gamePath);
         await WriteLocalGameFilesAsync(gamePath);
@@ -774,7 +772,6 @@ public sealed class GameDownloadServiceTests
     [Fact]
     public async Task RepairAsync_WhenPendingDownloadFitsButDecompressionDoesNot_UsesPendingDownloadBytesOnly()
     {
-        var tempDir = Path.Combine(Path.GetTempPath(), Guid.NewGuid().ToString("N"));
         var gamePath = Path.Combine(tempDir, "YostarGames", "BlueArchive_JP");
         Directory.CreateDirectory(gamePath);
         await WriteLocalGameFilesAsync(gamePath);
@@ -812,7 +809,6 @@ public sealed class GameDownloadServiceTests
     [Fact]
     public async Task InstallOrUpdateAsync_WhenDiskSpaceIsInsufficient_ClearsDownloadState()
     {
-        var tempDir = Path.Combine(Path.GetTempPath(), Guid.NewGuid().ToString("N"));
         var gamePath = Path.Combine(tempDir, "YostarGames", "BlueArchive_JP");
         var settingsService = new LauncherSettingsService(Path.Combine(tempDir, "settings.json"));
         await settingsService.SaveAsync(new LauncherSettings { GamePath = gamePath });
@@ -846,7 +842,6 @@ public sealed class GameDownloadServiceTests
         long? availableBytes,
         bool expectedSuccess)
     {
-        var tempDir = Path.Combine(Path.GetTempPath(), Guid.NewGuid().ToString("N"));
         var gamePath = Path.Combine(tempDir, "YostarGames", "BlueArchive_JP");
         var settingsService = new LauncherSettingsService(Path.Combine(tempDir, "settings.json"));
         await settingsService.SaveAsync(new LauncherSettings { GamePath = gamePath });
@@ -894,7 +889,6 @@ public sealed class GameDownloadServiceTests
     [Fact]
     public async Task InstallOrUpdateAsync_WhenMoreThanTenFilesAreRequired_LimitsParallelDownloadsToTen()
     {
-        var tempDir = Path.Combine(Path.GetTempPath(), Guid.NewGuid().ToString("N"));
         var gamePath = Path.Combine(tempDir, "YostarGames", "BlueArchive_JP");
         var settingsService = new LauncherSettingsService(Path.Combine(tempDir, "settings.json"));
         await settingsService.SaveAsync(new LauncherSettings { GamePath = gamePath });
@@ -939,7 +933,6 @@ public sealed class GameDownloadServiceTests
     [Fact]
     public async Task InstallOrUpdateAsync_WhenInstallVerificationFails_RedownloadsFailedFile()
     {
-        var tempDir = Path.Combine(Path.GetTempPath(), Guid.NewGuid().ToString("N"));
         var gamePath = Path.Combine(tempDir, "YostarGames", "BlueArchive_JP");
         var settingsService = new LauncherSettingsService(Path.Combine(tempDir, "settings.json"));
         await settingsService.SaveAsync(new LauncherSettings { GamePath = gamePath });
@@ -968,7 +961,6 @@ public sealed class GameDownloadServiceTests
     [Fact]
     public async Task InstallOrUpdateAsync_WhenSpeedLimitIsOneMegabytePerSecond_ThrottlesReportedBytes()
     {
-        var tempDir = Path.Combine(Path.GetTempPath(), Guid.NewGuid().ToString("N"));
         var gamePath = Path.Combine(tempDir, "YostarGames", "BlueArchive_JP");
         var settingsService = new LauncherSettingsService(Path.Combine(tempDir, "settings.json"));
         await settingsService.SaveAsync(new LauncherSettings
@@ -1002,7 +994,6 @@ public sealed class GameDownloadServiceTests
     [Fact]
     public async Task InstallOrUpdateAsync_WhenChunksArriveInsideProgressInterval_ReportsEveryTransferredByte()
     {
-        var tempDir = Path.Combine(Path.GetTempPath(), Guid.NewGuid().ToString("N"));
         var gamePath = Path.Combine(tempDir, "YostarGames", "BlueArchive_JP");
         var settingsService = new LauncherSettingsService(Path.Combine(tempDir, "settings.json"));
         await settingsService.SaveAsync(new LauncherSettings { GamePath = gamePath });
@@ -1036,7 +1027,6 @@ public sealed class GameDownloadServiceTests
     [Fact]
     public async Task InstallOrUpdateAsync_WhenTemporaryFileExists_StartsProgressFromExistingBytes()
     {
-        var tempDir = Path.Combine(Path.GetTempPath(), Guid.NewGuid().ToString("N"));
         var gamePath = Path.Combine(tempDir, "YostarGames", "BlueArchive_JP");
         var settingsService = new LauncherSettingsService(Path.Combine(tempDir, "settings.json"));
         await settingsService.SaveAsync(new LauncherSettings { GamePath = gamePath });
@@ -1170,7 +1160,6 @@ public sealed class GameDownloadServiceTests
     [Fact]
     public async Task InstallOrUpdateAsync_WhenInstallVerificationAlwaysFails_StopsAfterThreeRetries()
     {
-        var tempDir = Path.Combine(Path.GetTempPath(), Guid.NewGuid().ToString("N"));
         var gamePath = Path.Combine(tempDir, "YostarGames", "BlueArchive_JP");
         var settingsService = new LauncherSettingsService(Path.Combine(tempDir, "settings.json"));
         await settingsService.SaveAsync(new LauncherSettings { GamePath = gamePath });
@@ -1212,8 +1201,6 @@ public sealed class GameDownloadServiceTests
     [Fact]
     public async Task ResumePersistedAsync_WhenStateDoesNotMatchCurrentVersion_ClearsDownloadState()
     {
-        var tempDir = Path.Combine(Path.GetTempPath(), Guid.NewGuid().ToString("N"));
-        Directory.CreateDirectory(tempDir);
         var statePath = Path.Combine(tempDir, "download_state.json");
         await File.WriteAllTextAsync(statePath, JsonSerializer.Serialize(new DownloadTaskState
         {
@@ -1235,8 +1222,6 @@ public sealed class GameDownloadServiceTests
     [Fact]
     public async Task ResumePersistedAsync_WhenStateUsesDifferentPatchUrlGroup_ClearsDownloadState()
     {
-        var tempDir = Path.Combine(Path.GetTempPath(), Guid.NewGuid().ToString("N"));
-        Directory.CreateDirectory(tempDir);
         var gamePath = Path.Combine(tempDir, "YostarGames", "BlueArchive_JP");
         var statePath = Path.Combine(tempDir, "download_state.json");
         await File.WriteAllTextAsync(statePath, JsonSerializer.Serialize(new DownloadTaskState
@@ -1262,7 +1247,6 @@ public sealed class GameDownloadServiceTests
     [Fact]
     public async Task ResumePersistedAsync_WhenOperationIsRunning_DoesNotReplaceActiveOperation()
     {
-        var tempDir = Path.Combine(Path.GetTempPath(), Guid.NewGuid().ToString("N"));
         var gamePath = Path.Combine(tempDir, "YostarGames", "BlueArchive_JP");
         Directory.CreateDirectory(gamePath);
         await WriteLocalGameFilesAsync(gamePath);
@@ -1302,7 +1286,6 @@ public sealed class GameDownloadServiceTests
     [Fact]
     public async Task RepairAsync_WhenInstallationStateIsCorrupted_UsesOnlyLatestManifestAndKeepsUnknownFiles()
     {
-        var tempDir = Path.Combine(Path.GetTempPath(), Guid.NewGuid().ToString("N"));
         var gamePath = Path.Combine(tempDir, "YostarGames", "BlueArchive_JP");
         Directory.CreateDirectory(gamePath);
         await File.WriteAllTextAsync(Path.Combine(gamePath, "manifest.json"), "{}");
@@ -1432,7 +1415,6 @@ public sealed class GameDownloadServiceTests
         string path,
         byte[] content)
     {
-        Directory.CreateDirectory(tempDir);
         var hashPath = Path.Combine(tempDir, $"{Guid.NewGuid():N}.bin");
         await File.WriteAllBytesAsync(hashPath, content);
         return new ManifestFile
