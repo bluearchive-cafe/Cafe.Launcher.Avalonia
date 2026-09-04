@@ -133,8 +133,22 @@ public partial class SettingsAppearanceViewModel : ViewModelBase, IDisposable
         }
     }
 
-    /// <summary>最近一次在途取色任务；测试观察钩子，生产调用方应直接 await 返回的 Task。</summary>
+    /// <summary>最近一次取色任务；保存流程用它等待当前壁纸色板落定，测试也可观察。</summary>
     internal Task PendingThemeRefresh => inFlightThemeRefresh ?? Task.CompletedTask;
+
+    internal async Task WaitForThemeRefreshToSettleAsync()
+    {
+        while (true)
+        {
+            var pending = PendingThemeRefresh;
+            await pending;
+            if (ReferenceEquals(pending, inFlightThemeRefresh)
+                || inFlightThemeRefresh is null)
+            {
+                return;
+            }
+        }
+    }
 
     /// <summary>
     /// 从当前壁纸重新提取主题色板。提取（含整幅源图降采样与量化）在线程池执行，
@@ -145,84 +159,99 @@ public partial class SettingsAppearanceViewModel : ViewModelBase, IDisposable
         bool markDirty,
         bool applySchemeAfter = false)
     {
-        var bitmap = GetBackgroundBitmap?.Invoke();
+        if (disposed)
+        {
+            return Task.CompletedTask;
+        }
+
         var generation = Interlocked.Increment(ref themeRefreshGeneration);
-        var refresh = ApplyExtractedPaletteAsync(bitmap, generation, markDirty, applySchemeAfter);
+        var refresh = RefreshThemeColorPaletteSafelyAsync(generation, markDirty, applySchemeAfter);
         inFlightThemeRefresh = refresh;
         return refresh;
     }
 
-    private async Task ApplyExtractedPaletteAsync(
-        Bitmap? bitmap,
+    private async Task RefreshThemeColorPaletteSafelyAsync(
         int generation,
         bool markDirty,
         bool applySchemeAfter)
     {
-        if (bitmap is null)
-        {
-            ReplaceThemeColorPalette([], 0);
-            if (applySchemeAfter)
-            {
-                ApplyResolvedTheme();
-            }
-
-            return;
-        }
-
-        IReadOnlyList<Color> colors;
         try
         {
-            colors = await Task.Run(() => ThemeColorExtractionService.ExtractPalette(
+            var bitmap = GetBackgroundBitmap?.Invoke();
+            if (bitmap is null)
+            {
+                await RunOnUiAsync(() =>
+                {
+                    if (generation != Volatile.Read(ref themeRefreshGeneration) || disposed)
+                    {
+                        return;
+                    }
+
+                    ReplaceThemeColorPalette([], 0);
+                    if (applySchemeAfter)
+                    {
+                        ApplyResolvedTheme();
+                    }
+                });
+                return;
+            }
+
+            var algorithm = editor.Current.ThemeColorExtractionAlgorithm;
+            var colors = await Task.Run(() => ThemeColorExtractionService.ExtractPalette(
                 bitmap,
-                editor.Current.ThemeColorExtractionAlgorithm));
+                algorithm));
+
+            if (generation != Volatile.Read(ref themeRefreshGeneration) || disposed)
+            {
+                return;
+            }
+
+            var hexes = colors.Select(ThemeColorExtractionService.ToColorHex).ToArray();
+            var selectedIndex = SelectedThemeColorPaletteIndex < hexes.Length
+                ? SelectedThemeColorPaletteIndex
+                : 0;
+            await RunOnUiAsync(() =>
+            {
+                if (generation != Volatile.Read(ref themeRefreshGeneration) || disposed)
+                {
+                    return;
+                }
+
+                ReplaceThemeColorPalette(hexes, selectedIndex);
+                if (markDirty)
+                {
+                    editor.Commit(settings =>
+                    {
+                        settings.ThemeColorPalette = GetThemeColorPaletteHexes();
+                        settings.SelectedThemeColorPaletteIndex = SelectedThemeColorPaletteIndex;
+                    });
+                }
+
+                if (applySchemeAfter)
+                {
+                    // 直接落色而非走 ApplyThemeColor：空结果（如纯透明图）不会再次触发提取。
+                    ApplyResolvedTheme();
+                }
+            });
         }
         catch (ObjectDisposedException)
         {
             // 提取期间壁纸再次切换会释放旧位图；丢弃本轮即可。
-            return;
         }
         catch (Exception ex)
         {
-            // 提取失败不允许打断调用方（含 fire-and-forget）：保留现有色板并记录诊断。
+            // 覆盖图片读取、后台提取、UI 调度与结果应用的完整边界，保证所有
+            // fire-and-forget 调用都不会泄漏未观察异常。
             LocalDiagnostics.LogSync(
                 LogEntrySeverity.Warn,
                 "ThemeColor",
-                $"Theme color extraction failed: {ex.Message}");
-            return;
+                $"Theme color refresh failed: {ex.Message}");
         }
-
-        if (generation != Volatile.Read(ref themeRefreshGeneration))
-        {
-            return;
-        }
-
-        var hexes = colors.Select(ThemeColorExtractionService.ToColorHex).ToArray();
-        var selectedIndex = SelectedThemeColorPaletteIndex < hexes.Length
-            ? SelectedThemeColorPaletteIndex
-            : 0;
-        await RunOnUiAsync(() =>
-        {
-            ReplaceThemeColorPalette(hexes, selectedIndex);
-            if (markDirty)
-            {
-                editor.Commit(settings =>
-                {
-                    settings.ThemeColorPalette = GetThemeColorPaletteHexes();
-                    settings.SelectedThemeColorPaletteIndex = SelectedThemeColorPaletteIndex;
-                });
-            }
-
-            if (applySchemeAfter)
-            {
-                // 直接落色而非走 ApplyThemeColor：空结果（如纯透明图）不会再次触发提取。
-                ApplyResolvedTheme();
-            }
-        });
     }
 
     private static async Task RunOnUiAsync(Action action)
     {
-        if (Dispatcher.UIThread.CheckAccess())
+        if (Application.Current is null || Dispatcher.UIThread.CheckAccess())
         {
             action();
         }
@@ -706,6 +735,7 @@ public partial class SettingsAppearanceViewModel : ViewModelBase, IDisposable
         }
 
         disposed = true;
+        Interlocked.Increment(ref themeRefreshGeneration);
         editor.CurrentPropertyChanged -= OnCurrentSettingChanged;
         if (platformSettings is not null)
         {

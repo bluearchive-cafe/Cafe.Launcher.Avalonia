@@ -806,6 +806,37 @@ public sealed class MainWindowViewModelTests : IDisposable
     }
 
     [Fact]
+    public async Task SaveSettingsAsync_WhenAppearancePreviewIsRunning_WaitsForCurrentPreview()
+    {
+        var coreService = new CountingCoreService(CreateSnapshot());
+        using var viewModel = await CreateViewModelAsync(coreService);
+        await viewModel.InitializeAsync();
+        var previewStarted = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
+        var releasePreview = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
+        viewModel.Settings.PreviewAppearanceAsync = async (_, _, cancellationToken) =>
+        {
+            previewStarted.TrySetResult();
+            await releasePreview.Task.WaitAsync(cancellationToken);
+        };
+
+        viewModel.Settings.Editor.Current.CustomBackgroundPath = "pending-wallpaper";
+        await previewStarted.Task.WaitAsync(TimeSpan.FromSeconds(2));
+
+        var saveTask = viewModel.Settings.SaveSettingsCommand.ExecuteAsync(null);
+        try
+        {
+            await Task.Delay(50);
+            Assert.False(saveTask.IsCompleted);
+        }
+        finally
+        {
+            releasePreview.TrySetResult();
+        }
+
+        await saveTask;
+    }
+
+    [Fact]
     public async Task BackgroundFolderAndClearCommands_DoNotPersistUntilSave()
     {
         var savedPath = Path.Combine(tempDir, "saved-background.png");

@@ -263,15 +263,23 @@ public partial class SettingsViewModel : ViewModelBase, IDisposable, IModalConte
     [RelayCommand(CanExecute = nameof(CanSaveSettings))]
     private async Task SaveSettingsAsync()
     {
-        CancelAppearancePreview();
         IsSaving = true;
         try
         {
-            if (editor.Current.ThemeColorMode == ThemeColorModes.Wallpaper
-                && Appearance.ThemeColorPaletteItems.Count == 0)
+            // 先让当前设置快照对应的壁纸预览完成；若此处先取消，新的壁纸可能尚未
+            // 落入 BackgroundViewModel，随后取色会错误地读取上一张壁纸。
+            await WaitForAppearancePreviewToSettleAsync();
+            CancelAppearancePreview();
+
+            if (editor.Current.ThemeColorMode == ThemeColorModes.Wallpaper)
             {
-                // 保存前必须拿到色板：提交内容就是提取结果，等待落定再提交。
-                await Appearance.RefreshThemeColorPaletteFromCurrentBackgroundAsync(markDirty: false);
+                // 新壁纸取色期间会有意保留旧色板，因此不能以 Count == 0 判断是否仍
+                // 在取色。始终等待最新任务，必要时再主动提取一次，确保提交的是当前图。
+                await Appearance.WaitForThemeRefreshToSettleAsync();
+                if (Appearance.ThemeColorPaletteItems.Count == 0)
+                {
+                    await Appearance.RefreshThemeColorPaletteFromCurrentBackgroundAsync(markDirty: false);
+                }
             }
 
             editor.Commit(s =>
@@ -508,6 +516,19 @@ public partial class SettingsViewModel : ViewModelBase, IDisposable, IModalConte
         appearancePreviewCts?.Cancel();
         appearancePreviewCts?.Dispose();
         appearancePreviewCts = null;
+    }
+
+    private async Task WaitForAppearancePreviewToSettleAsync()
+    {
+        while (true)
+        {
+            var pending = appearancePreviewTask;
+            await pending;
+            if (ReferenceEquals(pending, appearancePreviewTask))
+            {
+                return;
+            }
+        }
     }
 
     private async Task PreviewCurrentAppearanceAsync(
