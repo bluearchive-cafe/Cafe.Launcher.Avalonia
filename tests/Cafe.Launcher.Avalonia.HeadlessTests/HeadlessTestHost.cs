@@ -77,5 +77,14 @@ internal sealed class LauncherHeadlessContext : IDisposable
     {
         ViewModel.Dispose();
         Provider.Dispose();
+        try
+        {
+            // DI 容器释放后日志句柄已关闭；删除失败（如句柄延迟释放）仅残留临时目录，
+            // 不让清理问题掩盖测试结果。
+            Directory.Delete(TempDir, recursive: true);
+        }
+        catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
+        {
+        }
     }
 }
