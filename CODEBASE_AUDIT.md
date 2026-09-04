@@ -6,6 +6,24 @@
 - 范围：以 Testing Audit 为重点；其余维度仅在与测试交叉处覆盖
 - 历史报告：全仓库六维审计（2026-09-02）已归档至 `.repository-audit/2026-09-02-audit.md`
 
+## 整改状态（2026-09-04 更新）
+
+报告中全部 P0–P3 建议已按阶段实施并分阶段提交，阶段验收均为全量测试通过：
+
+| 阶段 | 提交 | 内容 |
+|---|---|---|
+| P0 | `4a1ca91` | 无界轮询加预算、时间竞态改确定性门控、Dispose 清理容错、串行化护栏注释、21 个本地化测试类纳入隔离 Collection |
+| P1 | `c110e3e` | 共享 TestDoubles（合并 5+5 份重复 fake）、TestAnimationSetup/FindProjectRoot/TestTrayPlatform 去重、三个巨石测试文件按域拆分（净 −10.8k 行重构）、Headless 轮询收敛 |
+| P2 | `f862337` | 补 68 个用例：ShellRefreshCoordinator/RetryPolicy（零→14）、FileDownloadService 缺口、GameUninstallService 部分失败、ShellLifecycle 失败路径、跨进程竞态、ManifestDiff 边界、ResourcePanelService/ViewModel（零→18） |
+| P3 | `9c0d78b` | Golden 失败输出 actual+diff 图、非 Windows 显式 Skip、`test.ps1 -UpdateGolden`、GameDownloadServiceTests tempDir 统一 Dispose、MotionTokens 强类型断言、AGENTS.md 命名规范拍板 |
+
+与报告建议的偏差（有意决策）：
+- **xUnit1051 抑制保留**（原建议移除）：实测该规则对全部带可选 CancellationToken 的调用报警（约 1100+ 处文件 IO），远超"裸延迟"范畴；悬挂防护已由 P0 的有界等待设计保证，抑制理由已写入 csproj 注释。
+- P2 期间发现的两个疑似 UX 缺陷已上报未修复（属产品决策）：①向导完成持久化失败无用户可见反馈（`SetupWizardViewModel.CompleteAsync` 经 fire-and-forget 命令吞异常）；②两个"恢复默认设置"入口失败仅写日志（`DialogsViewModel.ConfirmSettingsResetAsync`/`ConfirmDebugResetAsync`）。
+
+整改后规模：单元 1412 通过/2 跳过 + Headless 161 通过；测试基础设施净减约 11k 行重复/巨石代码。
+
+
 ## 摘要
 
 测试体系健康度**高于绝大多数同类仓库**：测试代码 34.1k 行超过生产代码 28.6k 行（1.19:1）；1015 个 `[Fact]/[Theory]`（theory 展开后 **1505 个用例**，本机实测全绿，单元 30s + Headless 52s）；手写行/分支覆盖率棘轮基线 84.30% / 88.99%；无真实网络/注册表/托盘依赖；用户数据目录进程级隔离；契约测试（样式/本地化/安装器脚本）成体系；xUnit 分析器 + `TreatWarningsAsErrors` 全开。
