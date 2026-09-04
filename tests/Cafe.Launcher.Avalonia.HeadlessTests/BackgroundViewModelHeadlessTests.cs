@@ -183,6 +183,106 @@ public sealed class BackgroundViewModelHeadlessTests
     }
 
     [AvaloniaFact]
+    public async Task UpdateBackgroundImageAsync_WhenAspectFlipsAtEqualArea_ReloadsAtLargerTarget()
+    {
+        var originalDebounce = BackgroundViewModel.ResizeReloadDebounce;
+        BackgroundViewModel.ResizeReloadDebounce = TimeSpan.FromMilliseconds(50);
+        try
+        {
+            using var context = HeadlessTestHost.CreateContext();
+            var metrics = new MutableWindowMetrics(new PixelSize(1300, 2000));
+            var wallpaperPath = Path.Combine(context.TempDir, "aspect-flip-wallpaper.png");
+            HeadlessTestHost.WriteSolidPng(wallpaperPath, Brushes.DarkSlateBlue, 3000, 1600);
+            var viewModel = CreateResizeAwareViewModel(context, metrics);
+            try
+            {
+                var settings = CreateCustomBackgroundSettings(wallpaperPath);
+                await viewModel.UpdateBackgroundImageAsync(settings, snapshot: null, CancellationToken.None);
+                var initial = Assert.IsType<Bitmap>(viewModel.BackgroundImageSource);
+
+                // 竖长→横宽：目标框面积不变，按面积比较会漏检；按维度比较宽度增长
+                // 超过阈值，必须触发重解码。
+                metrics.ResizeTo(new PixelSize(2000, 1300));
+                await WaitUntilAsync(
+                    () => !ReferenceEquals(viewModel.BackgroundImageSource, initial),
+                    TimeSpan.FromSeconds(5));
+
+                var reloaded = (Bitmap)viewModel.BackgroundImageSource!;
+                Assert.True(reloaded.PixelSize.Width >= 2000, $"Reloaded width {reloaded.PixelSize.Width} does not cover 2000.");
+                Assert.True(reloaded.PixelSize.Height >= 1300, $"Reloaded height {reloaded.PixelSize.Height} does not cover 1300.");
+            }
+            finally
+            {
+                viewModel.Dispose();
+                File.Delete(wallpaperPath);
+            }
+        }
+        finally
+        {
+            BackgroundViewModel.ResizeReloadDebounce = originalDebounce;
+        }
+    }
+
+    [AvaloniaFact]
+    public async Task UpdateBackgroundImageAsync_WhenWindowShrinksBeforeDecodeFinishes_DecodesAtRequestedTarget()
+    {
+        using var context = HeadlessTestHost.CreateContext();
+        var metrics = new MutableWindowMetrics(new PixelSize(2600, 1500));
+        var wallpaperPath = Path.Combine(context.TempDir, "shrink-midflight-wallpaper.png");
+        HeadlessTestHost.WriteSolidPng(wallpaperPath, Brushes.DarkSlateBlue, 3000, 1600);
+        var decodeStarted = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
+        var releaseDecode = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
+        var requestedTargets = new List<PixelSize>();
+        var viewModel = new BackgroundViewModel(
+            context.Provider.GetRequiredService<ImageCacheService>(),
+            context.Provider.GetRequiredService<LocalDiagnostics>(),
+            _ => { },
+            (path, target) =>
+            {
+                lock (requestedTargets)
+                {
+                    requestedTargets.Add(target);
+                }
+
+                decodeStarted.TrySetResult();
+                Assert.True(releaseDecode.Task.Wait(TimeSpan.FromSeconds(5)), "Timed out waiting to release decode.");
+                return BackgroundImageDecoder.Decode(path, target);
+            },
+            () => null,
+            metrics);
+        try
+        {
+            var settings = CreateCustomBackgroundSettings(wallpaperPath);
+            var load = viewModel.UpdateBackgroundImageAsync(settings, snapshot: null, CancellationToken.None);
+            await decodeStarted.Task.WaitAsync(TimeSpan.FromSeconds(5));
+
+            // 解码进行中窗口缩小：解码与 lastDecodeTarget 记录必须共用发起时的
+            // 同一尺寸快照，不能改成解码时刻的实时窗口尺寸。
+            metrics.ResizeTo(new PixelSize(1300, 754));
+            releaseDecode.TrySetResult();
+            await load;
+
+            PixelSize requested;
+            lock (requestedTargets)
+            {
+                Assert.Single(requestedTargets);
+                requested = requestedTargets[0];
+            }
+
+            Assert.Equal(new PixelSize(2600, 1500), requested);
+            var decoded = Assert.IsType<Bitmap>(viewModel.BackgroundImageSource);
+            Assert.True(decoded.PixelSize.Width >= 2600, $"Width {decoded.PixelSize.Width} does not cover 2600.");
+            Assert.True(decoded.PixelSize.Height >= 1500, $"Height {decoded.PixelSize.Height} does not cover 1500.");
+        }
+        finally
+        {
+            releaseDecode.TrySetResult();
+            viewModel.Dispose();
+            File.Delete(wallpaperPath);
+        }
+    }
+
+    [AvaloniaFact]
     public async Task UpdateBackgroundImageAsync_WhenFolderWallpaperReloadsForResize_ReusesResolvedImage()
     {
         var originalDebounce = BackgroundViewModel.ResizeReloadDebounce;
@@ -208,14 +308,14 @@ public sealed class BackgroundViewModelHeadlessTests
                 context.Provider.GetRequiredService<ImageCacheService>(),
                 context.Provider.GetRequiredService<LocalDiagnostics>(),
                 _ => { },
-                path =>
+                (path, target) =>
                 {
                     lock (loadedPaths)
                     {
                         loadedPaths.Add(path);
                     }
 
-                    return BackgroundImageDecoder.Decode(path, metrics.GetPhysicalClientSize());
+                    return BackgroundImageDecoder.Decode(path, target);
                 },
                 () => null,
                 metrics);
@@ -268,7 +368,7 @@ public sealed class BackgroundViewModelHeadlessTests
             context.Provider.GetRequiredService<ImageCacheService>(),
             context.Provider.GetRequiredService<LocalDiagnostics>(),
             _ => { },
-            path =>
+            (path, target) =>
             {
                 if (string.Equals(path, firstPath, StringComparison.Ordinal))
                 {
@@ -276,7 +376,7 @@ public sealed class BackgroundViewModelHeadlessTests
                     Assert.True(releaseFirst.Wait(TimeSpan.FromSeconds(5)), "Timed out waiting to release first decode.");
                 }
 
-                var bitmap = BackgroundImageDecoder.Decode(path, new PixelSize(1300, 754));
+                var bitmap = BackgroundImageDecoder.Decode(path, target);
                 if (string.Equals(path, secondPath, StringComparison.Ordinal))
                 {
                     secondBitmap = bitmap;
@@ -337,7 +437,7 @@ public sealed class BackgroundViewModelHeadlessTests
             context.Provider.GetRequiredService<ImageCacheService>(),
             context.Provider.GetRequiredService<LocalDiagnostics>(),
             _ => { },
-            path => BackgroundImageDecoder.Decode(path, metrics.GetPhysicalClientSize()),
+            (path, target) => BackgroundImageDecoder.Decode(path, target),
             () => null,
             metrics);
 

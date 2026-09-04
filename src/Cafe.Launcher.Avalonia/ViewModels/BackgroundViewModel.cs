@@ -22,7 +22,7 @@ public partial class BackgroundViewModel : ViewModelBase, IDisposable
     private readonly ImageCacheService imageCacheService;
     private readonly LocalDiagnostics diagnostics;
     private readonly Action<LauncherSettings> wallpaperChanged;
-    private readonly Func<string, IImage?> imageLoader;
+    private readonly Func<string, PixelSize, IImage?> imageLoader;
     private readonly Func<IImage?> bundledImageLoader;
     private readonly IWindowMetricsService? windowMetrics;
     private string? currentDecodedImagePath;
@@ -85,18 +85,23 @@ public partial class BackgroundViewModel : ViewModelBase, IDisposable
             imageCacheService,
             diagnostics,
             wallpaperChanged,
-            path => BackgroundImageDecoder.Decode(
-                path,
-                windowMetrics?.GetPhysicalClientSize() ?? BackgroundImageDecoder.FallbackTarget),
+            (path, targetPhysicalSize) => BackgroundImageDecoder.Decode(path, targetPhysicalSize),
             LoadBundledBackground)
     {
     }
 
+    /// <param name="imageLoader">
+    /// Receives the image path and the window physical-size snapshot to decode against;
+    /// implementations derive the constrained decode box from it (see
+    /// <see cref="BackgroundImageDecoder.GetTargetBox"/>). Passing the snapshot the load
+    /// decision was made on keeps <see cref="lastDecodeTarget"/> equal to the box the
+    /// bitmap was actually decoded for.
+    /// </param>
     internal BackgroundViewModel(
         ImageCacheService imageCacheService,
         LocalDiagnostics diagnostics,
         Action<LauncherSettings> wallpaperChanged,
-        Func<string, IImage?> imageLoader,
+        Func<string, PixelSize, IImage?> imageLoader,
         Func<IImage?> bundledImageLoader,
         IWindowMetricsService? windowMetrics = null)
     {
@@ -119,13 +124,13 @@ public partial class BackgroundViewModel : ViewModelBase, IDisposable
     /// <summary>窗口显著变大后的壁纸重解码去抖窗口；测试可调小。</summary>
     internal static TimeSpan ResizeReloadDebounce = TimeSpan.FromMilliseconds(500);
 
-    /// <summary>解码目标（按面积）增长超过该比例才触发重解码，吸收亚像素抖动与小幅调整。</summary>
+    /// <summary>任一边（按维度）增长超过该比例才触发重解码：按维度而非面积，
+    /// 覆盖纯高度、DPI 变化与竖长↔横宽的宽高比翻转（后者面积可能不变）。</summary>
     private const double SignificantGrowRatio = 1.2;
 
-    /// <summary>当前窗口物理尺寸对应的解码目标框（钳制策略见 <see cref="BackgroundImageDecoder.GetTargetBox"/>）。</summary>
-    private PixelSize GetDecodeTarget() =>
-        BackgroundImageDecoder.GetTargetBox(
-            windowMetrics?.GetPhysicalClientSize() ?? BackgroundImageDecoder.FallbackTarget);
+    /// <summary>当前窗口物理客户区尺寸；无窗口时退回默认目标。</summary>
+    private PixelSize GetPhysicalSize() =>
+        windowMetrics?.GetPhysicalClientSize() ?? BackgroundImageDecoder.FallbackTarget;
 
     public async Task UpdateBackgroundImageAsync(
         LauncherSettings settings,
@@ -133,7 +138,10 @@ public partial class BackgroundViewModel : ViewModelBase, IDisposable
         CancellationToken cancellationToken)
     {
         var loadGeneration = Interlocked.Increment(ref backgroundLoadGeneration);
-        var decodeTarget = GetDecodeTarget();
+        // 入口快照：解码与 lastDecodeTarget 记录共用同一份窗口尺寸，中途 resize
+        // 不会让“已记录目标”与“位图实际解码目标”脱节（由重解码路径兜底）。
+        var decodeSize = GetPhysicalSize();
+        var decodeTarget = BackgroundImageDecoder.GetTargetBox(decodeSize);
 
         ApplyBackgroundPresentation(settings);
 
@@ -151,7 +159,7 @@ public partial class BackgroundViewModel : ViewModelBase, IDisposable
                             ?? await imageCacheService.CacheImageAsync(bgImg, crc64, proxyMode, cancellationToken);
                         cancellationToken.ThrowIfCancellationRequested();
                         // 远端背景图可能很大；解码放线程池，避免续体回到 UI 线程后卡帧。
-                        var remoteImage = await Task.Run(() => imageLoader(cachedPath));
+                        var remoteImage = await Task.Run(() => imageLoader(cachedPath, decodeSize));
                         ThrowIfCancellationRequested(remoteImage, cancellationToken);
                         TrySetBackgroundImage(
                             remoteImage,
@@ -180,6 +188,7 @@ public partial class BackgroundViewModel : ViewModelBase, IDisposable
                 {
                     var customBackground = await LoadCustomBackgroundImageResultAsync(
                         settings.CustomBackgroundPath,
+                        decodeSize,
                         cancellationToken);
                     if (customBackground.Image is not null)
                     {
@@ -257,10 +266,10 @@ public partial class BackgroundViewModel : ViewModelBase, IDisposable
             return;
         }
 
-        var target = GetDecodeTarget();
-        var targetArea = (long)target.Width * target.Height;
-        var lastArea = (long)lastDecodeTarget.Width * lastDecodeTarget.Height;
-        if (targetArea <= lastArea * SignificantGrowRatio)
+        var decodeSize = GetPhysicalSize();
+        var target = BackgroundImageDecoder.GetTargetBox(decodeSize);
+        if (target.Width <= lastDecodeTarget.Width * SignificantGrowRatio
+            && target.Height <= lastDecodeTarget.Height * SignificantGrowRatio)
         {
             return;
         }
@@ -272,7 +281,7 @@ public partial class BackgroundViewModel : ViewModelBase, IDisposable
         IImage? reloaded;
         try
         {
-            reloaded = await Task.Run(() => imageLoader(decodedPath));
+            reloaded = await Task.Run(() => imageLoader(decodedPath, decodeSize));
         }
         catch (Exception ex)
         {
@@ -309,10 +318,14 @@ public partial class BackgroundViewModel : ViewModelBase, IDisposable
     public async Task<Bitmap?> LoadCustomBackgroundAsync(
         string path,
         CancellationToken cancellationToken = default) =>
-        (await LoadCustomBackgroundImageResultAsync(path, cancellationToken)).Image as Bitmap;
+        (await LoadCustomBackgroundImageResultAsync(
+            path,
+            GetPhysicalSize(),
+            cancellationToken)).Image as Bitmap;
 
     private async Task<BackgroundLoadResult> LoadCustomBackgroundImageResultAsync(
         string path,
+        PixelSize decodeSize,
         CancellationToken cancellationToken = default)
     {
         cancellationToken.ThrowIfCancellationRequested();
@@ -321,7 +334,7 @@ public partial class BackgroundViewModel : ViewModelBase, IDisposable
             try
             {
                 // 自定义背景图在 UI 线程外解码，避免大图卡帧。
-                var bitmap = await Task.Run(() => imageLoader(path));
+                var bitmap = await Task.Run(() => imageLoader(path, decodeSize));
                 if (bitmap is null)
                 {
                     return default;
@@ -377,7 +390,7 @@ public partial class BackgroundViewModel : ViewModelBase, IDisposable
             try
             {
                 // 随机选中的背景图同样在 UI 线程外解码。
-                var bitmap = await Task.Run(() => imageLoader(imagePath));
+                var bitmap = await Task.Run(() => imageLoader(imagePath, decodeSize));
                 if (bitmap is null)
                 {
                     return default;
@@ -484,8 +497,8 @@ public partial class BackgroundViewModel : ViewModelBase, IDisposable
         }
 
         currentDecodedImagePath = decodedPath;
-        // 记录实际加载决策使用的目标框，而不是位图尺寸；竖图按高解码后宽度可能小于
-        // 目标框，以位图尺寸为基准会造成重复重解码。
+        // 记录解码实际使用的目标框（与 imageLoader 收到的同一快照），而不是位图尺寸；
+        // 竖图按高解码后宽度可能小于目标框，以位图尺寸为基准会造成重复重解码。
         lastDecodeTarget = decodeTarget;
         SetBackgroundImage(bitmap, previewSettings);
         return true;

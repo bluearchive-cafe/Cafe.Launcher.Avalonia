@@ -32,7 +32,7 @@ public sealed class BackgroundViewModelTests : IDisposable
             cache,
             new LocalDiagnostics(),
             _ => themeRefreshCount++,
-            _ => new TestImage(),
+            (path, _) => new TestImage(),
             () => new TestImage());
         var settings = new LauncherSettings
         {
@@ -58,7 +58,7 @@ public sealed class BackgroundViewModelTests : IDisposable
             cache,
             new LocalDiagnostics(),
             _ => { },
-            _ => new TestImage(),
+            (path, _) => new TestImage(),
             () => new TestImage());
         var initialImage = viewModel.BackgroundImageSource;
         var settings = new LauncherSettings
@@ -132,7 +132,7 @@ public sealed class BackgroundViewModelTests : IDisposable
             cache,
             new LocalDiagnostics(),
             _ => { },
-            _ => new TestImage(),
+            (path, _) => new TestImage(),
             () => new TestImage());
 
         await viewModel.UpdateBackgroundImageAsync(
@@ -161,7 +161,7 @@ public sealed class BackgroundViewModelTests : IDisposable
             cache,
             new LocalDiagnostics(),
             _ => { },
-            _ => new TestImage(),
+            (path, _) => new TestImage(),
             () => new TestImage());
 
         await viewModel.UpdateBackgroundImageAsync(
@@ -199,7 +199,7 @@ public sealed class BackgroundViewModelTests : IDisposable
             cache,
             new LocalDiagnostics(),
             _ => { },
-            _ => new TestImage(),
+            (path, _) => new TestImage(),
             () => bundled);
         var fadingOut = new List<IImage>();
         viewModel.PreviousWallpaperFadingOut += (image, _) => fadingOut.Add(image);
@@ -221,7 +221,7 @@ public sealed class BackgroundViewModelTests : IDisposable
             cache,
             new LocalDiagnostics(),
             _ => { },
-            _ => new TestImage(),
+            (path, _) => new TestImage(),
             () => new TestImage());
         using var cts = new CancellationTokenSource();
         cts.Cancel();
@@ -242,7 +242,7 @@ public sealed class BackgroundViewModelTests : IDisposable
             cache,
             new LocalDiagnostics(),
             _ => { },
-            _ => new TestImage(),
+            (path, _) => new TestImage(),
             () => bundled);
 
         await viewModel.UpdateBackgroundImageAsync(
@@ -264,7 +264,7 @@ public sealed class BackgroundViewModelTests : IDisposable
             cache,
             new LocalDiagnostics(),
             _ => { },
-            _ => custom,
+            (path, _) => custom,
             () => new TestImage());
 
         await viewModel.UpdateBackgroundImageAsync(
@@ -307,7 +307,7 @@ public sealed class BackgroundViewModelTests : IDisposable
             cache,
             new LocalDiagnostics(),
             _ => { },
-            _ => new TestImage(),
+            (path, _) => new TestImage(),
             () => new TestImage());
 
         viewModel.Dispose();
