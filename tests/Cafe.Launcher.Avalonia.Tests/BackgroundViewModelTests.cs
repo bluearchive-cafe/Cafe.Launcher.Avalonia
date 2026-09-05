@@ -124,7 +124,7 @@ public sealed class BackgroundViewModelTests : IDisposable
     }
 
     [Fact]
-    public async Task UpdateBackgroundImageAsync_WhenMotionEnabled_PreviousWallpaperFadesAsOverlay()
+    public async Task UpdateBackgroundImageAsync_WhenSourceUnchanged_SkipsReloadWithoutFade()
     {
         var hash = await ComputeHashAsync(PngBytes);
         using var cache = CreateCache(new ImageHandler(PngBytes));
@@ -144,9 +144,40 @@ public sealed class BackgroundViewModelTests : IDisposable
 
         viewModel.PreviousWallpaperFadingOut += (image, _) => fadingOut.Add((TestImage)image);
 
+        // 同一来源与同一解码目标再次刷新：跳过整条重载管线（缓存校验/解码/
+        // 交叉淡化/取色），保留现有壁纸实例——这是刷新路径的性能契约。
         await viewModel.UpdateBackgroundImageAsync(
             new LauncherSettings { BackgroundSource = BackgroundSources.Remote },
             CreateRemoteSnapshot(hash),
+            CancellationToken.None);
+
+        Assert.Same(firstSwap, viewModel.BackgroundImageSource);
+        Assert.Empty(fadingOut);
+    }
+
+    [Fact]
+    public async Task UpdateBackgroundImageAsync_WhenSourceChangedToBundled_FadesPreviousWallpaper()
+    {
+        using var cache = CreateCache(new ImageHandler(PngBytes));
+        using var viewModel = new BackgroundViewModel(
+            cache,
+            new LocalDiagnostics(),
+            _ => { },
+            (path, _) => new TestImage(),
+            () => new TestImage());
+
+        await viewModel.UpdateBackgroundImageAsync(
+            new LauncherSettings { BackgroundSource = BackgroundSources.Remote },
+            CreateRemoteSnapshot(await ComputeHashAsync(PngBytes)),
+            CancellationToken.None);
+        var firstSwap = (TestImage)viewModel.BackgroundImageSource!;
+        var fadingOut = new List<TestImage>();
+
+        viewModel.PreviousWallpaperFadingOut += (image, _) => fadingOut.Add((TestImage)image);
+
+        await viewModel.UpdateBackgroundImageAsync(
+            new LauncherSettings { BackgroundSource = BackgroundSources.Bundled },
+            CreateRemoteSnapshot(await ComputeHashAsync(PngBytes)),
             CancellationToken.None);
 
         Assert.NotSame(firstSwap, viewModel.BackgroundImageSource);
