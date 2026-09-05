@@ -23,7 +23,8 @@ public sealed class BannerCarouselTransitionTests
         var transitionTask = transition.Start(from, to, forward: true, CancellationToken.None);
 
         // 轮询采样直到观察到位移进行中：单点定时采样（如固定 50ms）在慢机上
-        // 会错过过渡窗口，导致动画已结算而误报。
+        // 会错过过渡窗口，导致动画已结算而误报。首轮采样先于任何异步等待，
+        // 避免高负载（coverage 插桩）下首帧采样晚于动画结算。
         var sawIntermediateFrame = false;
         var samplingDeadline = DateTime.UtcNow.AddSeconds(2);
         while (!sawIntermediateFrame)
@@ -33,9 +34,14 @@ public sealed class BannerCarouselTransitionTests
                 Assert.Fail("未在 2 秒预算内观察到方向滑入的中间帧，过渡疑似瞬变。");
             }
 
-            await Task.Delay(10);
             sawIntermediateFrame = to.RenderTransform is not null
                 && Math.Abs(to.RenderTransform.Value.M31) > 0.5d;
+            if (sawIntermediateFrame)
+            {
+                break;
+            }
+
+            await Task.Delay(1);
         }
 
         Assert.True(to.IsVisible);

@@ -310,6 +310,29 @@ public sealed partial class MainWindowHeadlessTests
             var settled = false;
             // 入场动画由真实帧时钟驱动：给出硬性预算，调度异常时快速失败而非挂死测试进程。
             var settleDeadline = DateTime.UtcNow.AddSeconds(5);
+
+            void SampleIntermediateFrame()
+            {
+                // 精确判定：动画完成后的所有权结算会精确置 Opacity=1、X=0，
+                // 容差判定会在最后一帧插值期间误报已定格。同时采样中间帧，
+                // 保证淡入与方向滑入确实经历过渡而不是瞬变。
+                if (steps[stepIndex].IsVisible && steps[stepIndex].Opacity is > 0.05 and < 0.95)
+                {
+                    sawFade = true;
+                }
+
+                if (steps[stepIndex].RenderTransform is TranslateTransform movingTransform
+                    && Math.Abs(movingTransform.X) is > 0.5 and < 13.5)
+                {
+                    sawSlide = true;
+                }
+            }
+
+            // 高负载环境（如 coverage 插桩）下首轮采样可能晚于动画结束而漏掉
+            // 全部中间帧：先同步采样一次再进入轮询，并把轮询间隔压到 1ms。
+            Dispatcher.UIThread.RunJobs();
+            SampleIntermediateFrame();
+
             while (!settled)
             {
                 if (DateTime.UtcNow >= settleDeadline)
@@ -317,29 +340,17 @@ public sealed partial class MainWindowHeadlessTests
                     Assert.Fail($"步骤 {stepIndex} 的入场动画未在 5 秒预算内落定。");
                 }
 
-                await Dispatcher.UIThread.InvokeAsync(() => { });
-                await Task.Delay(10);
-                // 精确判定：动画完成后的所有权结算会精确置 Opacity=1、X=0，
-                // 容差判定会在最后一帧插值期间误报已定格。同时采样中间帧，
-                // 保证淡入与方向滑入确实经历过渡而不是瞬变。
                 settled = await Dispatcher.UIThread.InvokeAsync(() =>
                 {
-                    if (steps[stepIndex].IsVisible && steps[stepIndex].Opacity is > 0.05 and < 0.95)
-                    {
-                        sawFade = true;
-                    }
-
-                    if (steps[stepIndex].RenderTransform is TranslateTransform movingTransform
-                        && Math.Abs(movingTransform.X) is > 0.5 and < 13.5)
-                    {
-                        sawSlide = true;
-                    }
+                    SampleIntermediateFrame();
 
                     return steps[stepIndex].IsVisible
                         && steps[stepIndex].Opacity == 1d
                         && steps[stepIndex].RenderTransform is TranslateTransform settledTransform
                         && settledTransform.X == 0d;
                 });
+                await Dispatcher.UIThread.InvokeAsync(() => { });
+                await Task.Delay(1);
             }
 
             Dispatcher.UIThread.RunJobs();
