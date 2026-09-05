@@ -343,7 +343,7 @@ public partial class GameOperationsViewModel : ViewModelBase, IGameOperationJour
         }
 
         dialogs.ShowUninstallConfirm(localizer.F(
-            "uninstallConfirmText",
+            LocalizationKeys.UninstallConfirmText,
             currentSnapshot.LocalGame.GamePath,
             Math.Max(0, validation.AffectedFileCount - 2)));
     }
@@ -399,7 +399,7 @@ public partial class GameOperationsViewModel : ViewModelBase, IGameOperationJour
         {
             GameOperationStage.RepairConfirmation => progress.AffectedFileCount > 0
                 ? localizer.F(
-                    "repairFilesNeeded",
+                    LocalizationKeys.RepairFilesNeeded,
                     progress.AffectedFileCount,
                     FileSizeFormatter.Format(progress.DownloadedSize))
                 : localizer.T(LocalizationKeys.RepairNoFilesNeeded),
@@ -408,13 +408,13 @@ public partial class GameOperationsViewModel : ViewModelBase, IGameOperationJour
             GameOperationStage.UpdateCheck => localizer.T(LocalizationKeys.UpdateCheckingFiles),
             GameOperationStage.FileCheck => localizer.T(LocalizationKeys.VerifyingDownloadedFiles),
             GameOperationStage.DiskCheck => localizer.F(
-                "diskSpaceCheck",
+                LocalizationKeys.DiskSpaceCheck,
                 FileSizeFormatter.Format(progress.RequiredDiskBytes),
                 progress.AvailableDiskBytes.HasValue
                     ? FileSizeFormatter.Format(progress.AvailableDiskBytes.Value)
                     : "--"),
             GameOperationStage.VerificationRetry => localizer.F(
-                "verificationRetry",
+                LocalizationKeys.VerificationRetry,
                 progress.FailedFileCount,
                 progress.RetryAttempt,
                 progress.RetryLimit),
@@ -441,7 +441,7 @@ public partial class GameOperationsViewModel : ViewModelBase, IGameOperationJour
             && progress.Stage == GameOperationStage.Downloading
             && progress.EstimatedRemaining.HasValue
             ? localizer.F(
-                "estimatedTimeRemaining",
+                LocalizationKeys.EstimatedTimeRemaining,
                 progress.EstimatedRemaining.Value.ToString(@"hh\:mm\:ss", System.Globalization.CultureInfo.InvariantCulture))
             : "";
         IsPaused = progress.IsPaused;

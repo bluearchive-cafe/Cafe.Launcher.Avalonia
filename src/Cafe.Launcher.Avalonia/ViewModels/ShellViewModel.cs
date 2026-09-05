@@ -202,12 +202,12 @@ public partial class ShellViewModel : ViewModelBase, IDisposable
             && !diskCheck.HasEnoughSpace;
         InstallDiskSpaceMessage = IsInstallBlockedByDiskSpace
             ? localizer.F(
-                "diskSpaceInsufficientDetail",
+                LocalizationKeys.DiskSpaceInsufficientDetail,
                 FileSizeFormatter.Format(diskCheck.RequiredBytes),
                 FileSizeFormatter.Format(diskCheck.AvailableBytes!.Value))
             : "";
         SettingsSummary = localizer.F(
-            "settingsSummaryWithTheme",
+            LocalizationKeys.SettingsSummaryWithTheme,
             snapshot.Settings.ProxyMode,
             snapshot.Settings.CloseBehavior,
             settings.Options.ResolveLanguageDisplayName(snapshot.Settings.Language),

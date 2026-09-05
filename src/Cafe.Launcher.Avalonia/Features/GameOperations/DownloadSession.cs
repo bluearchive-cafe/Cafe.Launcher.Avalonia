@@ -229,7 +229,7 @@ internal sealed class DownloadSession : IDisposable
                 checkpointStore.Clear();
                 return Failed(
                     localizer.F(
-                        "diskSpaceInsufficientDetail",
+                        LocalizationKeys.DiskSpaceInsufficientDetail,
                         FileSizeFormatter.Format(diskCheck.RequiredBytes),
                         diskCheck.AvailableBytes.HasValue ? FileSizeFormatter.Format(diskCheck.AvailableBytes.Value) : "--"),
                     GameOperationErrorCode.InsufficientDiskSpace,
