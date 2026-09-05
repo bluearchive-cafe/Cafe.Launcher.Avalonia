@@ -34,12 +34,12 @@ jobs:
 
     steps:
       - name: Checkout
-        uses: actions/checkout@v7
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
         with:
           fetch-depth: 0
 
       - name: Setup .NET
-        uses: actions/setup-dotnet@v6
+        uses: actions/setup-dotnet@a98b56852c35b8e3190ac28c8c2271da59106c68 # v6
         with:
           dotnet-version: 10.0.x
           cache: true
@@ -68,6 +68,8 @@ jobs:
           # runtimeIdentifier 字段），因此提交的 lock 固定的是无 RID 的
           # net10.0 依赖图；三个 RID 的发布还原无法使用 locked mode，显式豁免。
           RestoreLockedMode: 'false'
+          # tag 名经 env 传递而非文本插值，消除 run 脚本的注入面。
+          Release_Tag: ${{ github.ref_name }}
         run: |
           $buildArguments = @{
               Rids = 'win-x64', 'osx-arm64', 'linux-x64'
@@ -75,7 +77,7 @@ jobs:
               AppImageRuntimePath = './runtime-x86_64'
           }
           if ($env:GITHUB_EVENT_NAME -eq 'push') {
-              $buildArguments.Tag = '${{ github.ref_name }}'
+              $buildArguments.Tag = $env:Release_Tag
           }
           ./scripts/Build-Distribution.ps1 @buildArguments
 
@@ -114,14 +116,16 @@ jobs:
 
       - name: Prepare changelog
         if: github.event_name == 'push'
+        env:
+          Ref: ${{ github.ref }}
         run: |
           if (Test-Path "CHANGELOG_RELEASE.md") {
             Copy-Item "CHANGELOG_RELEASE.md" "changelog.md"
             Write-Host "Using maintained CHANGELOG_RELEASE.md"
           } else {
-            $lastTag = git describe --tags --abbrev=0 ${{ github.ref }}^ 2>$null
+            $lastTag = git describe --tags --abbrev=0 "$env:Ref^" 2>$null
             $parameters = @{
-              CurrentRef = "${{ github.ref }}^"
+              CurrentRef = "$env:Ref^"
               OutputPath = "changelog.md"
             }
             if ($lastTag) {
@@ -136,22 +140,24 @@ jobs:
 
       - name: Verify release banner
         if: github.event_name == 'push'
+        env:
+          Release_Tag: ${{ github.ref_name }}
         run: |
-          $bannerPath = "docs/assets/release-banners/cafe-launcher-${{ github.ref_name }}-release-banner.png"
+          $bannerPath = "docs/assets/release-banners/cafe-launcher-$env:Release_Tag-release-banner.png"
           if (-not (Test-Path $bannerPath -PathType Leaf)) {
             throw "Release banner must be committed to the source repository: $bannerPath"
           }
           Write-Host "Using repository release banner: $bannerPath"
 
       - name: Upload platform packages
-        uses: actions/upload-artifact@v7
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7
         with:
           name: distribution-packages
           path: artifacts/distribution/*
           retention-days: 1
 
       - name: Upload win-x64 publish output
-        uses: actions/upload-artifact@v7
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7
         with:
           name: publish-win-x64
           path: artifacts/publish/win-x64/
@@ -159,7 +165,7 @@ jobs:
 
       - name: Upload changelog
         if: github.event_name == 'push'
-        uses: actions/upload-artifact@v7
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7
         with:
           name: changelog
           path: changelog.md
@@ -187,12 +193,12 @@ jobs:
 
     steps:
       - name: Checkout
-        uses: actions/checkout@v7
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
         with:
           fetch-depth: 1
 
       - name: Setup .NET
-        uses: actions/setup-dotnet@v6
+        uses: actions/setup-dotnet@a98b56852c35b8e3190ac28c8c2271da59106c68 # v6
         with:
           dotnet-version: 10.0.x
           cache: true
@@ -239,21 +245,23 @@ jobs:
         run: .\test.ps1 -Configuration Release
 
       - name: Download win-x64 publish output
-        uses: actions/download-artifact@v8
+        uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8
         with:
           name: publish-win-x64
           path: artifacts/publish/win-x64
 
       - name: Build Windows installer
+        env:
+          Release_Tag: ${{ github.ref_name }}
         run: |
           $tagArguments = @{}
           if ($env:GITHUB_EVENT_NAME -eq 'push') {
-              $tagArguments.Tag = '${{ github.ref_name }}'
+              $tagArguments.Tag = $env:Release_Tag
           }
           ./scripts/New-WindowsInstaller.ps1 @tagArguments
 
       - name: Upload Windows installer
-        uses: actions/upload-artifact@v7
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7
         with:
           name: installer-package
           path: artifacts/distribution/Cafe.Launcher.Avalonia_*_setup.exe
@@ -271,27 +279,29 @@ jobs:
 
     steps:
       - name: Download platform packages
-        uses: actions/download-artifact@v8
+        uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8
         with:
           name: distribution-packages
           path: artifacts/distribution
 
       - name: Download Windows installer
-        uses: actions/download-artifact@v8
+        uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8
         with:
           name: installer-package
           path: artifacts/distribution
 
       - name: Download changelog
-        uses: actions/download-artifact@v8
+        uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8
         with:
           name: changelog
           path: .
 
       - name: Append platform download links
         shell: bash
+        env:
+          Release_Tag: ${{ github.ref_name }}
         run: |
-          tag="${{ github.ref_name }}"
+          tag="$Release_Tag"
           source_base="${{ github.server_url }}/${{ github.repository }}/releases/download/${tag}"
           # Keep in sync with LauncherConstants.GitHubReleaseRepositorySlug
           distribution_base="${{ github.server_url }}/bluearchive-cafe/Cafe.Launcher.Avalonia_Release/releases/download/${tag}"
@@ -328,7 +338,7 @@ jobs:
           mv changelog-source.md changelog.md
 
       - name: Create source repository release
-        uses: softprops/action-gh-release@v3
+        uses: softprops/action-gh-release@efb35369e0ad2afab669f228072c1b0d510eae64 # v3
         with:
           tag_name: ${{ github.ref_name }}
           name: ${{ github.ref_name }}
@@ -344,7 +354,7 @@ jobs:
           fail_on_unmatched_files: true
 
       - name: Create distribution repository release
-        uses: softprops/action-gh-release@v3
+        uses: softprops/action-gh-release@efb35369e0ad2afab669f228072c1b0d510eae64 # v3
         with:
           # Keep in sync with LauncherConstants.GitHubReleaseRepositorySlug
           repository: bluearchive-cafe/Cafe.Launcher.Avalonia_Release
