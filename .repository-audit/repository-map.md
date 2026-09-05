@@ -1,7 +1,7 @@
 # Repository Map
 
-- 审计日期：2026-09-04（全维度复审时更新）
-- HEAD：4ed11c3 `docs(audit): 记录 P0-P3 整改状态与验收结果`
+- 审计日期：2026-09-05（delta 复审 + 当日整改后更新）
+- HEAD：4395b9c `chore(deps): 注明依赖升级需同步再生 lock 文件并关闭原型项目 lock 生成`
 
 ## Language / Framework
 

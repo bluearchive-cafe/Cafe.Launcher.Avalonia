@@ -1,5 +1,26 @@
 # 仓库审计报告（全维度复审）
 
+## 当前状态速览（2026-09-05 Delta 复审，HEAD 259e217 → 整改后）
+
+完整报告：`.repository-audit/history/2026-09-05-delta-audit.md`。范围 `4ed11c3..259e217`（19 提交，即下方基线报告 P0–P3 整改的全部落地代码）。
+
+**Delta 复审发现的全部问题已于 2026-09-05 当日修复**（验证基线：单元 1427 过/2 跳 + Headless 164/164 + `verify.ps1` 全量通过）：
+
+| 发现 | 严重度 | 修复提交 |
+|---|---|---|
+| `Directory.Build.props` XML 注释含 `--` 致 HEAD 全部构建失败（CI 红灯实证） | Critical | `13d0d80` |
+| CI 缓存键块状标量引号致三模式零匹配（setup-dotnet 缓存报错，6d32c28 引入）+ installer job 缓存键漏改 | Low | `9b96738` |
+| 裸 key 守卫未接入自动门禁且不覆盖 `I18n["…"]` 索引器 → 接入 verify.ps1 + CI 步骤，正则扩为两形态 | Low | `d093834` |
+| 自定义壁纸同路径换内容被跳过守卫误判 → key 并入内容指纹（长度+写入时间），补 2 个行为测试 | Low | `ff59fd9` |
+| 横幅解码无驻留上限 → 新增 BannerImageDecoder（常规图不放大不降采样，超限等比缩小），补 3 个无头测试 | Low | `6e54a9a` |
+| Dependabot CPM+lock 缺口 × locked mode 的运维须知 → AGENTS.md 注明；原型项目关 lock 生成 | Low | `4395b9c` |
+
+**整改核验结论：2026-09-04 报告 P0–P3 全部属实。** 供应链闭环（locked mode 经真实命令路径证实生效、17 处 Actions SHA 经上游逐一实证、Dependabot nuget 接入、三 lock 无 RID 段与决策一致）、CRC64 slicing-by-8（规范校验值独立向量 + 主审逐位推导核验正确）、哈希复用契约（仅 `crc64 == expectedHash` 才入表，跳过条件精确等价）、UI 解码线程化（世代号并发模型有无头测试覆盖）、裸 key / 静默失败 / Debug.WriteLine / 有界等待 / FindProjectRoot 收敛——全部按声称落地，无一虚报。
+
+**仍维持开放的暂缓项（均有意、已文档化，留待独立 PR）**：DispatcherTimer 注入抽象（基线 2.3）、IModalPresenter 查表 / RemoteContentViewModel 拆分（基线 7.5 部分）、THIRD-PARTY-NOTICES 两行占位许可证（基线 5.6）、Shirasagi 包年度重审（基线 5.4）、GameDownloadServiceTests 真实限速断言（基线 T3）。advisory 级：壁纸 resize 重解码 Post 释放与淡化所有权未打通（低概率，pre-existing）；单实例 show 端点创建晚于 mutex 获胜的毫秒级窗口（pre-existing）。
+
+---
+
 - 审计日期：2026-09-04
 - HEAD：4ed11c3
 - 审计方式：repository-audit 流程（仓库发现 → 规则加载 → 六路并行专项审计：架构 / 可维护性 / 安全 / 依赖 / 测试 / 性能 → 高影响项逐条人工核验源码）
@@ -34,7 +55,7 @@
 ## 摘要
 
 - 分析规模：src 201 个 .cs（约 29.8k 行）+ 25 个 .axaml；tests 157 个 .cs（约 37.2k 行，1082 个 Fact/Theory）；scripts 10 个、installer、2 个 CI workflow。
-- **无 Critical 问题。** 高置信度发现（置信度 ≥80）28 项，其中影响为 High 的 4 项；另有约 19 项 advisory（置信度 60–79）。
+- **无 Critical 问题**（2026-09-04 基线时点；当前状态见顶部速览——2026-09-05 Delta 复审发现 1 项新 Critical 构建破坏）。高置信度发现（置信度 ≥80）28 项，其中影响为 High 的 4 项；另有约 19 项 advisory（置信度 60–79）。
 - 总体评价：**工程质量显著高于同类桌面开源项目**。分层纪律近乎完美（共享层零反向依赖、无 Service Locator、disposal 有守卫有测试）；安全五大高危类别（路径穿越/进程注入/反序列化/TLS/遥测）均未发现可利用问题；性能基础设施（进度节流、HttpClient 池化、异步日志、原子写盘）到位；测试体系经整改后 flake 面基本清零。
 - 4 项 High 影响发现集中在两个主题：**CI 供应链闭环未完成**（lock 文件从未被强制执行 + Actions 浮动 tag 持有发版权限）和**下载验证管线的重复 IO**（每文件双重 CRC64 + 全清单重哈希 + 逐字节查表实现）。
 - 一项需要架构裁决的结构性债务：Shell 作为「根 Feature」系统性反向持有全部其他 Feature 的具体 ViewModel，与仓库自身的 Feature 边界规则冲突（见第 2 节）。
