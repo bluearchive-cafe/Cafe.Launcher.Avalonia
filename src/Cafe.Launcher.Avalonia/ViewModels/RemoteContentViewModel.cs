@@ -540,17 +540,28 @@ public partial class RemoteContentViewModel : ViewModelBase, IDisposable
                     return;
                 }
 
+                // 全尺寸解码放线程池：横幅每轮刷新全部重建，UI 线程解码会造成
+                // 可感知卡顿（位图显示用 UniformToFill 全宽，不在解码端降采样）。
+                var banner = await Task.Run(() => new Bitmap(new MemoryStream(bytes)));
+                if (cancellationToken.IsCancellationRequested)
+                {
+                    banner.Dispose();
+                    return;
+                }
+
                 await Dispatcher.UIThread.InvokeAsync(() =>
                 {
                     if (disposed || !BannerItems.Contains(item))
                     {
+                        // 条目已被下一轮刷新丢弃：解码产物无人接收，就地释放。
+                        banner.Dispose();
                         return;
                     }
 
                     // 先替换绑定引用再释放旧位图：绑定同步清空 Image.Source，保证任何
                     // 渲染帧都不会读到已释放的位图实现（ObjectDisposedException 崩溃面）。
                     var previous = item.BannerBitmap;
-                    item.BannerBitmap = new Bitmap(new MemoryStream(bytes));
+                    item.BannerBitmap = banner;
                     previous?.Dispose();
                     item.MarkImageLoaded();
                 });

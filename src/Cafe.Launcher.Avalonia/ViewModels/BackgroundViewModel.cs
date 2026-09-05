@@ -27,6 +27,7 @@ public partial class BackgroundViewModel : ViewModelBase, IDisposable
     private readonly IWindowMetricsService? windowMetrics;
     private string? currentDecodedImagePath;
     private PixelSize lastDecodeTarget;
+    private string? lastBackgroundSourceKey;
     private int backgroundLoadGeneration;
     private int resizeReloadVersion;
     private bool disposed;
@@ -145,6 +146,19 @@ public partial class BackgroundViewModel : ViewModelBase, IDisposable
 
         ApplyBackgroundPresentation(settings);
 
+        // 来源与解码目标均未变化时跳过整条「缓存校验 + 解码 + 交叉淡化 + 取色」
+        // 管线：此前每次刷新（启动、保存设置、每个游戏操作完成后）都会重解码
+        // 壁纸并重放交叉淡化与主题取色，用户可感知卡顿。仅稳定来源可跳过——
+        // 文件夹壁纸每次随机选图、遥源失败回落均不可跳过（见下）。
+        var sourceKey = ResolveStableBackgroundSourceKey(settings, snapshot);
+        if (sourceKey is not null
+            && sourceKey == lastBackgroundSourceKey
+            && decodeTarget == lastDecodeTarget
+            && BackgroundImageSource is not null)
+        {
+            return;
+        }
+
         switch (settings.BackgroundSource)
         {
             case BackgroundSources.Remote:
@@ -161,12 +175,16 @@ public partial class BackgroundViewModel : ViewModelBase, IDisposable
                         // 远端背景图可能很大；解码放线程池，避免续体回到 UI 线程后卡帧。
                         var remoteImage = await Task.Run(() => imageLoader(cachedPath, decodeSize));
                         ThrowIfCancellationRequested(remoteImage, cancellationToken);
-                        TrySetBackgroundImage(
-                            remoteImage,
-                            settings,
-                            loadGeneration,
-                            cachedPath,
-                            decodeTarget);
+                        if (TrySetBackgroundImage(
+                                remoteImage,
+                                settings,
+                                loadGeneration,
+                                cachedPath,
+                                decodeTarget))
+                        {
+                            lastBackgroundSourceKey = sourceKey;
+                        }
+
                         return;
                     }
                     catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
@@ -193,12 +211,16 @@ public partial class BackgroundViewModel : ViewModelBase, IDisposable
                     if (customBackground.Image is not null)
                     {
                         ThrowIfCancellationRequested(customBackground.Image, cancellationToken);
-                        TrySetBackgroundImage(
-                            customBackground.Image,
-                            settings,
-                            loadGeneration,
-                            customBackground.DecodedPath,
-                            decodeTarget);
+                        if (TrySetBackgroundImage(
+                                customBackground.Image,
+                                settings,
+                                loadGeneration,
+                                customBackground.DecodedPath,
+                                decodeTarget))
+                        {
+                            lastBackgroundSourceKey = sourceKey;
+                        }
+
                         return;
                     }
                 }
@@ -206,12 +228,48 @@ public partial class BackgroundViewModel : ViewModelBase, IDisposable
         }
 
         cancellationToken.ThrowIfCancellationRequested();
+        // 内置图与远端图同为全屏大图：解码同样放线程池，避免默认壁纸下每次
+        // 回落都在 UI 线程重解码整图。
+        var bundledImage = await Task.Run(() => bundledImageLoader());
+        ThrowIfCancellationRequested(bundledImage, cancellationToken);
         TrySetBackgroundImage(
-            bundledImageLoader(),
+            bundledImage,
             settings,
             loadGeneration,
             decodedPath: null,
             decodeTarget);
+        if (settings.BackgroundSource == BackgroundSources.Bundled)
+        {
+            // 仅当内置图是用户选择的来源（而非遥源/自定义失败回落）时才记录：
+            // 回落保持 key 为空，下次刷新仍会重试原来源。
+            lastBackgroundSourceKey = sourceKey;
+        }
+    }
+
+    /// <summary>
+    /// 稳定来源的可跳过标识：相同标识 + 相同解码目标即可复用现有壁纸。
+    /// 文件夹自定义壁纸每次随机选图、遥源配置缺失时返回 null（永不跳过）。
+    /// </summary>
+    private static string? ResolveStableBackgroundSourceKey(
+        LauncherSettings settings,
+        LauncherStatusSnapshot? snapshot)
+    {
+        switch (settings.BackgroundSource)
+        {
+            case BackgroundSources.Remote:
+                var bgImg = snapshot?.Remote.BaseConfig?.LauncherBackgroundImg;
+                var crc64 = snapshot?.Remote.BaseConfig?.LauncherBackgroundImgCrc64;
+                return string.IsNullOrWhiteSpace(bgImg) || string.IsNullOrWhiteSpace(crc64)
+                    ? null
+                    : $"{BackgroundSources.Remote}|{bgImg}|{crc64}";
+            case BackgroundSources.Custom:
+                // 文件夹来源每次刷新随机选图是有意行为，不参与跳过。
+                return File.Exists(settings.CustomBackgroundPath)
+                    ? $"{BackgroundSources.Custom}|{settings.CustomBackgroundPath}"
+                    : null;
+            default:
+                return BackgroundSources.Bundled;
+        }
     }
 
     public void ApplyBackgroundPresentation(LauncherSettings settings)
