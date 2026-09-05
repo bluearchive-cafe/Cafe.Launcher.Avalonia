@@ -114,28 +114,32 @@ internal static class MaterialSchemeGenerator
         result["Launcher.Color.OnSurface"] = MaterialColorMapper.ToBrush(neutralScheme.OnSurface);
         result["Launcher.Color.Outline"] = MaterialColorMapper.ToBrush(neutralScheme.Outline);
 
-        // Dialog surface family (Q13/Q23): Brand Blue resets to the declared
-        // App.axaml values (UiStyleContractTests pins the table to the XAML);
-        // seed-following dyes the whole family from the scheme's neutral surface
-        // ladder — Background/Footer on Surface, Header/Close states stepping up
-        // the SurfaceContainer tones. Tone steps stay fixed, only the hue drifts,
-        // so the fixed Text.Primary contrast remains AA-safe.
+        // M3 dialogs share SurfaceContainerHigh across body, header and footer.
+        // Close states layer OnSurface over this base. Reset all neutral overrides
+        // when leaving seed-following mode, including text and input fields.
         if (seedFollowingNeutrals)
         {
-            result["Launcher.Color.Dialog.Background"] =
-                MaterialColorMapper.ToBrush(neutralScheme.Surface);
-            result["Launcher.Color.Dialog.Footer"] =
-                MaterialColorMapper.ToBrush(neutralScheme.Surface);
-            result["Launcher.Color.Dialog.Header"] =
-                MaterialColorMapper.ToBrush(neutralScheme.SurfaceContainerLow);
-            result["Launcher.Color.Dialog.Close.Hover"] =
-                MaterialColorMapper.ToBrush(neutralScheme.SurfaceContainerHigh);
-            result["Launcher.Color.Dialog.Close.Pressed"] =
-                MaterialColorMapper.ToBrush(neutralScheme.SurfaceContainerHighest);
+            var container = MaterialColorMapper.ToAvaloniaColor(neutralScheme.SurfaceContainerHigh);
+            var onSurface = MaterialColorMapper.ToAvaloniaColor(neutralScheme.OnSurface);
+            result["Launcher.Color.Dialog.Background"] = new SolidColorBrush(container);
+            result["Launcher.Color.Dialog.Footer"] = new SolidColorBrush(container);
+            result["Launcher.Color.Dialog.Header"] = new SolidColorBrush(container);
+            result["Launcher.Color.Dialog.Close.Hover"] = new SolidColorBrush(Blend(container, onSurface, 0.08));
+            result["Launcher.Color.Dialog.Close.Pressed"] = new SolidColorBrush(Blend(container, onSurface, 0.12));
+            result["Launcher.Text.Primary"] = MaterialColorMapper.ToBrush(neutralScheme.OnSurface);
+            result["Launcher.Text.Secondary"] = MaterialColorMapper.ToBrush(neutralScheme.OnSurfaceVariant);
+            result["Launcher.Text.Body"] = MaterialColorMapper.ToBrush(neutralScheme.OnSurfaceVariant);
+            result["Launcher.Color.Field.Background"] = MaterialColorMapper.ToBrush(neutralScheme.SurfaceContainerHighest);
+            result["Launcher.Color.Field.Border"] = MaterialColorMapper.ToBrush(neutralScheme.Outline);
         }
         else
         {
             foreach (var (key, light, dark) in DialogSurfaceDefaults)
+            {
+                result[key] = new SolidColorBrush(Color.Parse(isDark ? dark : light));
+            }
+
+            foreach (var (key, light, dark) in NeutralContentDefaults)
             {
                 result[key] = new SolidColorBrush(Color.Parse(isDark ? dark : light));
             }
@@ -157,6 +161,15 @@ internal static class MaterialSchemeGenerator
         ("Launcher.Color.Dialog.Footer", "#FFFFFFFF", "#FF161C26"),
         ("Launcher.Color.Dialog.Close.Hover", "#FFEDF2F7", "#FF2A3547"),
         ("Launcher.Color.Dialog.Close.Pressed", "#FFDDE6F0", "#FF344156"),
+    ];
+
+    internal static readonly (string Key, string Light, string Dark)[] NeutralContentDefaults =
+    [
+        ("Launcher.Text.Primary", "#FF232A31", "#FFE8EEF6"),
+        ("Launcher.Text.Secondary", "#FF646D79", "#FFA8B3C2"),
+        ("Launcher.Text.Body", "#FF3F4954", "#FFC8D2DF"),
+        ("Launcher.Color.Field.Background", "#FFF0F6FD", "#FF1E2834"),
+        ("Launcher.Color.Field.Border", "#FF788EA7", "#FF5E7494"),
     ];
 
     private static Color Blend(Color background, Color foreground, double opacity) =>
