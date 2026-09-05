@@ -205,6 +205,69 @@ public sealed class FileDownloadServiceTests : IDisposable
         Assert.Equal(expectedBytes, await File.ReadAllBytesAsync(targetPath));
     }
 
+    [Fact]
+    public async Task DownloadAsync_WhenTransferVerified_ReturnsComputedCrc64()
+    {
+        // 下载即校验：返回本次计算的 CRC64，安装阶段据此跳过重复整读哈希。
+        Directory.CreateDirectory(tempDir);
+        var targetPath = Path.Combine(tempDir, "file.bin.tmp");
+        var expectedBytes = Encoding.UTF8.GetBytes("complete-content");
+        var hashPath = Path.Combine(tempDir, "hash-source.bin");
+        await File.WriteAllBytesAsync(hashPath, expectedBytes);
+        var expectedHash = await new Crc64Service().ComputeFileAsync(hashPath);
+        var handler = new FullContentHandler(expectedBytes);
+        using var client = new HttpClient(handler);
+        var downloader = CreateService();
+
+        var verifiedCrc = await downloader.DownloadAsync(
+            targetPath,
+            CreateCdnConfig(),
+            "source",
+            expectedBytes.Length,
+            expectedHash,
+            "file.bin",
+            client,
+            () => Task.CompletedTask,
+            (_, _) => Task.CompletedTask,
+            false,
+            CancellationToken.None);
+
+        Assert.Equal(expectedHash, verifiedCrc);
+        Assert.Equal(1, handler.RequestCount);
+    }
+
+    [Fact]
+    public async Task DownloadAsync_WhenTempFileAlreadyComplete_SkipsTransferAndReturnsNull()
+    {
+        // 断点续传「已下满」早退路径不做哈希：返回 null，安装阶段必须自行校验。
+        Directory.CreateDirectory(tempDir);
+        var targetPath = Path.Combine(tempDir, "file.bin.tmp");
+        var expectedBytes = Encoding.UTF8.GetBytes("complete-content");
+        await File.WriteAllBytesAsync(targetPath, expectedBytes);
+        var hashPath = Path.Combine(tempDir, "hash-source.bin");
+        await File.WriteAllBytesAsync(hashPath, expectedBytes);
+        var expectedHash = await new Crc64Service().ComputeFileAsync(hashPath);
+        var handler = new FullContentHandler(expectedBytes);
+        using var client = new HttpClient(handler);
+        var downloader = CreateService();
+
+        var verifiedCrc = await downloader.DownloadAsync(
+            targetPath,
+            CreateCdnConfig(),
+            "source",
+            expectedBytes.Length,
+            expectedHash,
+            "file.bin",
+            client,
+            () => Task.CompletedTask,
+            (_, _) => Task.CompletedTask,
+            false,
+            CancellationToken.None);
+
+        Assert.Null(verifiedCrc);
+        Assert.Equal(0, handler.RequestCount);
+    }
+
     private static FileDownloadService CreateService() => new(
         new Crc64Service(),
         new LocalDiagnostics(),
@@ -298,6 +361,23 @@ public sealed class FileDownloadServiceTests : IDisposable
         public override void SetLength(long value) => throw new NotSupportedException();
 
         public override void Write(byte[] buffer, int offset, int count) => throw new NotSupportedException();
+    }
+
+    /// <summary>一次性交付完整内容并记录请求次数。</summary>
+    private sealed class FullContentHandler(byte[] content) : HttpMessageHandler
+    {
+        public int RequestCount { get; private set; }
+
+        protected override Task<HttpResponseMessage> SendAsync(
+            HttpRequestMessage request,
+            CancellationToken cancellationToken)
+        {
+            RequestCount++;
+            return Task.FromResult(new HttpResponseMessage(HttpStatusCode.OK)
+            {
+                Content = new ByteArrayContent(content)
+            });
+        }
     }
 
     /// <summary>声明完整 Content-Length 但只提供前 N 字节，模拟被截断的响应体。</summary>

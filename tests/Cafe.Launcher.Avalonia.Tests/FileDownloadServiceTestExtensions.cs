@@ -14,7 +14,7 @@ namespace Cafe.Launcher.Avalonia.Tests;
 /// </summary>
 internal static class FileDownloadServiceTestExtensions
 {
-    internal static Task DownloadAsync(
+    internal static Task<string?> DownloadAsync(
         this FileDownloadService service,
         string targetTempPath,
         CdnConfigResponse cdnConfig,

@@ -1505,7 +1505,7 @@ public sealed class GameDownloadServiceTests : IDisposable
         byte[] content,
         int chunkSize) : IFileDownloadService
     {
-        public async Task DownloadAsync(
+        public async Task<string?> DownloadAsync(
             FileDownloadRequest request,
             FileDownloadOperationControl control,
             CancellationToken cancellationToken)
@@ -1523,12 +1523,15 @@ public sealed class GameDownloadServiceTests : IDisposable
                 await output.FlushAsync(cancellationToken);
                 await control.ReportProgressAsync(bytes, cancellationToken);
             }
+
+            // 与真实实现语义对齐由测试按需覆盖；默认 null 保持安装期校验。
+            return null;
         }
     }
 
     private sealed class ResumingFileDownloadService(byte[] content) : IFileDownloadService
     {
-        public async Task DownloadAsync(
+        public async Task<string?> DownloadAsync(
             FileDownloadRequest request,
             FileDownloadOperationControl control,
             CancellationToken cancellationToken)
@@ -1544,6 +1547,7 @@ public sealed class GameDownloadServiceTests : IDisposable
             await output.WriteAsync(remaining, cancellationToken);
             await output.FlushAsync(cancellationToken);
             await control.ReportProgressAsync(remaining.Length, cancellationToken);
+            return null;
         }
     }
 
@@ -1558,7 +1562,7 @@ public sealed class GameDownloadServiceTests : IDisposable
         public TaskCompletionSource PauseCheckStarted { get; } =
             new(TaskCreationOptions.RunContinuationsAsynchronously);
 
-        public async Task DownloadAsync(
+        public async Task<string?> DownloadAsync(
             FileDownloadRequest request,
             FileDownloadOperationControl control,
             CancellationToken cancellationToken)
@@ -1571,6 +1575,7 @@ public sealed class GameDownloadServiceTests : IDisposable
             Directory.CreateDirectory(Path.GetDirectoryName(request.TargetTempPath)!);
             await File.WriteAllBytesAsync(request.TargetTempPath, content, cancellationToken);
             await control.ReportProgressAsync(content.Length, cancellationToken);
+            return null;
         }
     }
 
@@ -1592,7 +1597,7 @@ public sealed class GameDownloadServiceTests : IDisposable
         public TaskCompletionSource Release { get; } =
             new(TaskCreationOptions.RunContinuationsAsynchronously);
 
-        public async Task DownloadAsync(
+        public async Task<string?> DownloadAsync(
             FileDownloadRequest request,
             FileDownloadOperationControl control,
             CancellationToken cancellationToken)
@@ -1612,6 +1617,7 @@ public sealed class GameDownloadServiceTests : IDisposable
                 Directory.CreateDirectory(Path.GetDirectoryName(request.TargetTempPath)!);
                 await File.WriteAllBytesAsync(request.TargetTempPath, content, cancellationToken);
                 await control.ReportProgressAsync(content.Length, cancellationToken);
+                return null;
             }
             finally
             {
@@ -1639,7 +1645,7 @@ public sealed class GameDownloadServiceTests : IDisposable
     {
         public int InvocationCount { get; private set; }
 
-        public async Task DownloadAsync(
+        public async Task<string?> DownloadAsync(
             FileDownloadRequest request,
             FileDownloadOperationControl control,
             CancellationToken cancellationToken)
@@ -1649,6 +1655,7 @@ public sealed class GameDownloadServiceTests : IDisposable
             Directory.CreateDirectory(Path.GetDirectoryName(request.TargetTempPath)!);
             await File.WriteAllBytesAsync(request.TargetTempPath, content, cancellationToken);
             await control.ReportProgressAsync(content.Length, cancellationToken);
+            return null;
         }
     }
 

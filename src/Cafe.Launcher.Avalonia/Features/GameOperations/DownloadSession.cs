@@ -251,13 +251,16 @@ internal sealed class DownloadSession : IDisposable
                     affectedCount);
             }
 
+            // 跨验证轮次累积的已验证哈希：安装阶段据此跳过对已验证文件的
+            // 重复整读哈希（失败重试时此前每轮都会重哈希全部文件）。
+            var verifiedHashes = new Dictionary<string, string>(StringComparer.Ordinal);
             for (var retry = 0; retry <= MaxInstallVerificationRetry; retry++)
             {
                 await diagnostics.DebugAsync(
                     "GameDownload",
                     $"Install verification retry {retry + 1}/{MaxInstallVerificationRetry}, {currentDownloadList.Count} files", CancellationToken.None).ConfigureAwait(false);
                 activeToken.ThrowIfCancellationRequested();
-                await downloadExecutor.DownloadFilesAsync(
+                var roundVerified = await downloadExecutor.DownloadFilesAsync(
                     gamePath,
                     cdnConfig,
                     downloadPlan.Source,
@@ -267,6 +270,10 @@ internal sealed class DownloadSession : IDisposable
                     operationKind,
                     progress,
                     activeToken).ConfigureAwait(false);
+                foreach (var entry in roundVerified)
+                {
+                    verifiedHashes[entry.Key] = entry.Value;
+                }
 
                 DownloadExecutor.RemoveFiles(gamePath, downloadPlan.NeedDelete, null);
 
@@ -275,6 +282,7 @@ internal sealed class DownloadSession : IDisposable
                     gamePath,
                     downloadPlan.ManifestFiles,
                     currentDownloadList,
+                    verifiedHashes,
                     value => progress(CreateProgress(operationKind, GameOperationStage.FileCheck, value)),
                     activeToken).ConfigureAwait(false);
 

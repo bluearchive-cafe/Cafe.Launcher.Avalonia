@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
@@ -46,8 +47,11 @@ internal sealed class DownloadExecutor
     /// <summary>
     /// Downloads the given files concurrently (up to <see cref="MaxParallelDownloads"/>
     /// at once), applying the configured speed limit and cooperative pause/cancel.
+    /// Returns the per-file CRC64 values verified during this call (files whose
+    /// temp file was already complete on entry are absent — the caller must
+    /// still verify those at install time).
     /// </summary>
-    internal async Task DownloadFilesAsync(
+    internal async Task<IReadOnlyDictionary<string, string>> DownloadFilesAsync(
         string gamePath,
         CdnConfigResponse cdnConfig,
         string source,
@@ -60,8 +64,12 @@ internal sealed class DownloadExecutor
     {
         if (fileList.Count == 0)
         {
-            return;
+            return new Dictionary<string, string>();
         }
+
+        // 下载完成后即完成校验的文件记录在此，安装阶段据此跳过对同一字节的
+        // 重复整读哈希（此前每个文件在下载后与安装前各被完整读盘哈希一次）。
+        var verifiedHashes = new ConcurrentDictionary<string, string>(StringComparer.Ordinal);
 
         using var lease = await leaseSource
             .CreateLeaseAsync(proxyMode, cancellationToken)
@@ -177,7 +185,7 @@ internal sealed class DownloadExecutor
             await semaphore.WaitAsync(cancellationToken).ConfigureAwait(false);
             try
             {
-                await fileDownloadService.DownloadAsync(
+                var verifiedCrc = await fileDownloadService.DownloadAsync(
                     new FileDownloadRequest(
                         downloadFile.TargetPath,
                         cdnConfig,
@@ -207,7 +215,11 @@ internal sealed class DownloadExecutor
                             return Task.CompletedTask;
                         },
                         proxyMode != ProxyModes.Direct),
-                    cancellationToken);
+                    cancellationToken).ConfigureAwait(false);
+                if (verifiedCrc is not null)
+                {
+                    verifiedHashes[downloadFile.File.Path] = verifiedCrc;
+                }
             }
             finally
             {
@@ -216,17 +228,23 @@ internal sealed class DownloadExecutor
         });
 
         await Task.WhenAll(tasks).ConfigureAwait(false);
+        return verifiedHashes;
     }
 
     /// <summary>
     /// Verifies downloaded files against the manifest (CRC64), deletes invalid
     /// .tmp files, installs the passed files, and returns the failed files so
-    /// the caller can retry them.
+    /// the caller can retry them. Files present in <paramref name="verifiedHashes"/>
+    /// with a matching manifest hash skip the re-read (they were verified during
+    /// download or in an earlier install round). Untouched installed files are
+    /// still hashed: this is the only content-corruption self-heal for files an
+    /// update does not rewrite — the launch check only compares size/existence.
     /// </summary>
     internal async Task<IReadOnlyList<ManifestFile>> InstallDownloadedFilesAsync(
         string gamePath,
         IReadOnlyList<ManifestFile> manifestFiles,
         IReadOnlyList<ManifestFile> downloadedFiles,
+        IReadOnlyDictionary<string, string> verifiedHashes,
         Action<int> progress,
         CancellationToken cancellationToken)
     {
@@ -245,7 +263,8 @@ internal sealed class DownloadExecutor
             {
                 failedFiles.Add(new ManifestFile { Path = file.Path, Size = file.Size, Hash = file.Hash });
             }
-            else
+            else if (!(verifiedHashes.TryGetValue(file.Path, out var verifiedHash)
+                && verifiedHash == file.Hash))
             {
                 var crc64 = await crc64Service.ComputeFileAsync(checkPath, null, cancellationToken).ConfigureAwait(false);
                 if (crc64 != file.Hash)
