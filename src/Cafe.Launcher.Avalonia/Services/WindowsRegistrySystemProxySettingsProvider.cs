@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Diagnostics;
 using System.Linq;
 using Microsoft.Win32;
+using Cafe.Launcher.Avalonia.Services.Diagnostics;
 
 namespace Cafe.Launcher.Avalonia.Services;
 
@@ -48,7 +49,7 @@ internal static class WindowsRegistrySystemProxySettingsProvider
         }
         catch (Exception ex)
         {
-            Debug.WriteLine($"Failed to read system proxy settings from registry: {ex.Message}");
+            LocalDiagnostics.LogSync(LogEntrySeverity.Warn, "Proxy", $"failed to read system proxy settings from registry: {ex.Message}");
             return null;
         }
     }

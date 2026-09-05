@@ -61,7 +61,7 @@ public sealed class TestUserDataIsolationTests
     [Fact]
     public void PersistentUserDataPaths_UseCentralDirectoryProvider()
     {
-        var projectRoot = FindProjectRoot();
+        var projectRoot = TestLocalizationHelper.FindProjectRoot();
         var allowedFiles = new HashSet<string>(StringComparer.OrdinalIgnoreCase)
         {
             Path.Combine(projectRoot, "Services", "LauncherUserDataDirectory.cs"),
@@ -101,20 +101,4 @@ public sealed class TestUserDataIsolationTests
             || relativePath.Contains($"{Path.DirectorySeparatorChar}obj{Path.DirectorySeparatorChar}", StringComparison.OrdinalIgnoreCase);
     }
 
-    private static string FindProjectRoot()
-    {
-        var directory = new DirectoryInfo(AppContext.BaseDirectory);
-        while (directory is not null)
-        {
-            var applicationProject = Path.Combine(directory.FullName, "src", "Cafe.Launcher.Avalonia", "Cafe.Launcher.Avalonia.csproj");
-            if (File.Exists(applicationProject))
-            {
-                return Path.GetDirectoryName(applicationProject)!;
-            }
-
-            directory = directory.Parent;
-        }
-
-        throw new DirectoryNotFoundException("src/Cafe.Launcher.Avalonia/Cafe.Launcher.Avalonia.csproj was not found.");
-    }
 }

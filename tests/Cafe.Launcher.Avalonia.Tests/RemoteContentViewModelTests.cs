@@ -1,6 +1,7 @@
 using Cafe.Launcher.Avalonia.Helpers;
 using Cafe.Launcher.Avalonia.Models;
 using Cafe.Launcher.Avalonia.Services;
+using Cafe.Launcher.Avalonia.Services.Diagnostics;
 using Cafe.Launcher.Avalonia.ViewModels;
 
 namespace Cafe.Launcher.Avalonia.Tests;
@@ -23,7 +24,8 @@ public sealed class RemoteContentViewModelTests
             RemoteHttpUrlValidator.CreateForTesting());
         using var viewModel = new RemoteContentViewModel(
             new LocalizationService(),
-            imageCacheService);
+            imageCacheService,
+            new LocalDiagnostics());
         var settings = new LauncherSettings();
 
         viewModel.Apply(
@@ -706,7 +708,7 @@ public sealed class RemoteContentViewModelTests
         }
 
         return new TestContext(
-            new RemoteContentViewModel(localizer, cache),
+            new RemoteContentViewModel(localizer, cache, new LocalDiagnostics()),
             cache,
             factory);
     }

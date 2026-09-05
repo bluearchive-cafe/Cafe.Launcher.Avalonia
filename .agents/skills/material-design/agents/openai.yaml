@@ -1,0 +1,4 @@
+interface:
+  display_name: Material Design System
+  short_description: Design, compare, audit, and implement Material 2, Material 3, and M3 Expressive interfaces with version-aware guidance.
+  default_prompt: Review this UI using Material Design principles and suggest improvements for component selection, usage/anti-patterns, token usage, accessibility, and state coverage.

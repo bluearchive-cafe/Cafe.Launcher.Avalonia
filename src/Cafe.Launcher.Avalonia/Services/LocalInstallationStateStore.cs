@@ -13,6 +13,11 @@ using Cafe.Launcher.Avalonia.Models;
 
 namespace Cafe.Launcher.Avalonia.Services;
 
+/// <summary>
+/// 游戏目录内安装状态（game_config.json + manifest 副本）的唯一读写入口。
+/// 同一路径的所有操作经引用计数信号量串行（见 <c>pathLocks</c>），跨线程安全；
+/// 写入先落临时文件再原子替换，进程中断不会留下半写的状态文件。
+/// </summary>
 public sealed class LocalInstallationStateStore
 {
     private static readonly JsonSerializerOptions JsonOptions = JsonDefaults.Indented;
@@ -31,6 +36,7 @@ public sealed class LocalInstallationStateStore
         this.beforeTempValidation = beforeTempValidation;
     }
 
+    /// <summary>读取安装状态；文件缺失或损坏时返回 <c>NotInstalled</c> 态而非抛错。</summary>
     public async Task<LocalInstallationState> ReadAsync(
         string gamePath,
         CancellationToken cancellationToken = default)
@@ -46,6 +52,10 @@ public sealed class LocalInstallationStateStore
             cancellationToken).ConfigureAwait(false);
     }
 
+    /// <summary>
+    /// 校验并提交新的安装状态（临时文件 + 原子替换）。同一 <paramref name="gamePath"/>
+    /// 上的并发提交按获取锁顺序串行执行。
+    /// </summary>
     public async Task<LocalInstallationState> CommitAsync(
         string gamePath,
         LocalInstallationStateCommit commit,
@@ -147,6 +157,7 @@ public sealed class LocalInstallationStateStore
         }
     }
 
+    /// <summary>删除安装状态文件并返回卸载前的最终状态快照。</summary>
     public async Task<LocalInstallationState> DeleteAsync(
         string gamePath,
         CancellationToken cancellationToken = default)

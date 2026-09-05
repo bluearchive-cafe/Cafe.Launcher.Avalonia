@@ -2,6 +2,7 @@ using System.Globalization;
 using Avalonia.Headless.XUnit;
 using Avalonia.Media;
 using Cafe.Launcher.Avalonia.Converters;
+using Cafe.Launcher.Avalonia.Models;
 using Cafe.Launcher.Avalonia.Services;
 
 namespace Cafe.Launcher.Avalonia.HeadlessTests;

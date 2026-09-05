@@ -130,7 +130,7 @@ public sealed partial class MainWindowViewModelTests : IDisposable
             new GameInstallationPath(),
             new GameProcessTracker());
 
-        var remoteContentViewModel = new RemoteContentViewModel(localizationService, imageCacheService);
+        var remoteContentViewModel = new RemoteContentViewModel(localizationService, imageCacheService, diagnostics);
         var backgroundViewModel = new BackgroundViewModel(imageCacheService, diagnostics, settingsViewModel);
         var gameOperationsViewModel = gameOperationsBackend is null
             ? new GameOperationsViewModel(

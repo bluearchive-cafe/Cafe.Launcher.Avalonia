@@ -25,22 +25,6 @@ public sealed class InstallDiskSpaceUiContractTests
     }
 
     private static string ProjectFile(string relativePath) =>
-        Path.Combine(FindProjectRoot(), relativePath.Replace('/', Path.DirectorySeparatorChar));
+        Path.Combine(TestLocalizationHelper.FindProjectRoot(), relativePath.Replace('/', Path.DirectorySeparatorChar));
 
-    private static string FindProjectRoot()
-    {
-        var directory = new DirectoryInfo(AppContext.BaseDirectory);
-        while (directory is not null)
-        {
-            var applicationProject = Path.Combine(directory.FullName, "src", "Cafe.Launcher.Avalonia", "Cafe.Launcher.Avalonia.csproj");
-            if (File.Exists(applicationProject))
-            {
-                return Path.GetDirectoryName(applicationProject)!;
-            }
-
-            directory = directory.Parent;
-        }
-
-        throw new DirectoryNotFoundException("src/Cafe.Launcher.Avalonia/Cafe.Launcher.Avalonia.csproj was not found.");
-    }
 }

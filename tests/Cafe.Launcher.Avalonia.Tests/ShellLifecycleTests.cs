@@ -371,7 +371,7 @@ public sealed class ShellLifecycleTests : IDisposable
             new ResourcePanelApiClient(new NotFoundHttpHandler()),
             diagnostics);
         var resourcePanel = new ResourcePanelViewModel(resourcePanelService, localizer, toastService, errorHandling);
-        var remoteContent = new RemoteContentViewModel(localizer, imageCacheService);
+        var remoteContent = new RemoteContentViewModel(localizer, imageCacheService, diagnostics);
         var background = new BackgroundViewModel(imageCacheService, diagnostics, settings);
         var operations = new GameOperationsViewModel(
             operationsBackend,

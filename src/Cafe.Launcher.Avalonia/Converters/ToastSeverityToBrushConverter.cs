@@ -3,7 +3,7 @@ using System.Globalization;
 using Avalonia;
 using Avalonia.Data.Converters;
 using Avalonia.Media;
-using Cafe.Launcher.Avalonia.Services;
+using Cafe.Launcher.Avalonia.Models;
 
 namespace Cafe.Launcher.Avalonia.Converters;
 

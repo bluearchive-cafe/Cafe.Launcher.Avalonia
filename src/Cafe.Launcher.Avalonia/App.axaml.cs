@@ -64,7 +64,7 @@ public partial class App : Application
             }
             catch (Exception ex)
             {
-                Debug.WriteLine($"ClickCodeService.SaveClickCode failed: {ex.Message}");
+                LocalDiagnostics.LogSync(LogEntrySeverity.Warn, "App", $"ClickCodeService.SaveClickCode failed: {ex.Message}");
             }
 
             var viewModel = serviceProvider.GetRequiredService<MainWindowViewModel>();
@@ -102,7 +102,7 @@ public partial class App : Application
                 }
                 catch (Exception exception)
                 {
-                    Debug.WriteLine($"Launcher shutdown coordination failed: {exception}");
+                    LocalDiagnostics.LogSync(LogEntrySeverity.Error, "App", $"Launcher shutdown coordination failed: {exception}");
                 }
                 finally
                 {
@@ -129,7 +129,7 @@ public partial class App : Application
             }
             catch (Exception ex)
             {
-                Debug.WriteLine($"SystemTrayService init failed: {ex.Message}");
+                LocalDiagnostics.LogSync(LogEntrySeverity.Warn, "App", $"SystemTrayService init failed: {ex.Message}");
             }
 
             // Clean up on app exit. The service provider is disposed by Program.RunSession.
@@ -212,7 +212,7 @@ public partial class App : Application
         }
         catch (Exception exception)
         {
-            Debug.WriteLine($"MainWindowViewModel initialization failed: {exception}");
+            // 初始化失败本身由下方 HandleErrorAsync 记录，不在此重复打点。
             try
             {
                 // Initialization itself failed, so localization may be unavailable; keep an
@@ -226,6 +226,8 @@ public partial class App : Application
                 }
                 catch (Exception localizationException)
                 {
+                    // 豁免：本地化失败的兜底路径——此时诊断/本地化本身不可用，
+                    // Debug 输出是最后一级无依赖通道。
                     Debug.WriteLine($"Failure-toast localization unavailable: {localizationException.Message}");
                 }
 
@@ -236,6 +238,7 @@ public partial class App : Application
             }
             catch (Exception diagnosticsException)
             {
+                // 豁免：诊断管道自身失败的兜底路径，不得再回调诊断。
                 Debug.WriteLine($"Initialization diagnostics failed: {diagnosticsException.Message}");
             }
         }
@@ -360,7 +363,7 @@ public partial class App : Application
                 catch (Exception ex)
                 {
                     // Restore is best-effort.
-                    Debug.WriteLine($"Window restore dispatch failed: {ex.Message}");
+                    LocalDiagnostics.LogSync(LogEntrySeverity.Warn, "App", $"Window restore dispatch failed: {ex.Message}");
                 }
             })
         {
@@ -397,7 +400,7 @@ public partial class App : Application
                 catch (Exception ex)
                 {
                     // The launch journey reports its own failures; this only guards dispatch.
-                    Debug.WriteLine($"Launch-game signal dispatch failed: {ex.Message}");
+                    LocalDiagnostics.LogSync(LogEntrySeverity.Warn, "App", $"Launch-game signal dispatch failed: {ex.Message}");
                 }
             })
         {

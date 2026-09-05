@@ -1,0 +1,185 @@
+{
+  "skill_name": "material-design",
+  "evals": [
+    {
+      "id": 1,
+      "prompt": "I'm building a settings page for my Android app using Jetpack Compose. I want it to follow Material Design 3 properly. The settings include: toggle for dark mode, toggle for notifications, a language selector (English, Chinese, Japanese), and a delete account button at the bottom. How should I structure this page and which components should I use?",
+      "expected_output": "Use M3 settings/list structure with Switch for immediate toggles and a suitable visible selector (radio/segmented/menu depending space) for language. Delete account must be clearly destructive, but the answer must NOT claim destructive actions are always Outlined/Text or always require confirmation; confirmation/undo depends on irreversibility and risk. Include accessible labels and touch targets.",
+      "files": []
+    },
+    {
+      "id": 2,
+      "prompt": "I need to set up a design token system for our web app. We're using React but want to use CSS custom properties so any framework can consume them. Can you help me define the color tokens and typography tokens following Material Design 3? Our brand color is #1B5E20 (dark green).",
+      "expected_output": "Define reference → system → component token layering with CSS custom properties. Include current M3 semantic roles, including surfaceDim/surfaceBright, surfaceContainer levels, and fixed primary/secondary/tertiary role families where relevant. Generate/authenticate light and dark values from the #1B5E20 source rather than inventing an ad-hoc palette. Include the 15-role M3 type scale and contrast verification.",
+      "files": []
+    },
+    {
+      "id": 3,
+      "prompt": "Our React app uses MUI v5 and we're designing a dark theme. I know MUI is based on Material Design 2 but we want to align with Material Design 3 color roles and surface hierarchy. What are the key differences in how M3 handles dark theme vs M2, and how should we map M3 surface container levels to MUI's theme?",
+      "expected_output": "Explain M2-vs-M3 dark-theme semantics: M2 commonly used #121212 plus elevation overlays; M3 uses semantic surface/container roles while still allowing elevation/shadow. Show an explicit project mapping into MUI rather than claiming MUI theme keys are native M3. State that current MUI specification support must be verified.",
+      "files": []
+    },
+    {
+      "id": 4,
+      "prompt": "I'm designing a data table for our enterprise admin panel using Ant Design. Can you help me pick the right column configuration and color scheme?",
+      "expected_output": "This should NOT trigger Material Design skill. The user is asking about Ant Design specifically. Should either decline to use Material Design guidance, or note that Ant Design is a different design system and ask if they want Material Design alignment.",
+      "files": []
+    },
+    {
+      "id": 5,
+      "prompt": "Our app was built 3 years ago following Material Design 2 with Angular Material. The team wants to update the look and feel. We're not ready for a full M3 migration — we just want to fix the most outdated-looking parts. What should we focus on?",
+      "expected_output": "Stay in M2 maintenance mode for changes that must remain M2: use M2 palette/type/elevation/component semantics. It may improve consistency, accessibility, spacing, content, and states without silently importing M3-only tokens. Mention that Navigation Rail does exist in later M2 guidance if navigation is relevant.",
+      "files": []
+    },
+    {
+      "id": 6,
+      "prompt": "We're planning to migrate our Android app from Material Design 2 (MDC Views) to Material Design 3 (Jetpack Compose). What's the best approach — should we just rewrite all screens at once, or is there a phased strategy?",
+      "expected_output": "Provide phased M2→M3 migration. State there is no 1:1 color mapping (especially primaryVariant is NOT simply primaryContainer), typography taxonomy changes, and M2 dark overlays/surface elevation need semantic redesign. Migrate bounded component families/screens and test both light and dark at each slice rather than requiring a light-first migration.",
+      "files": []
+    },
+    {
+      "id": 7,
+      "prompt": "I'm building a banking app for a major financial institution. The design team wants to use Material 3 Expressive with spring animations and bold shapes to make it feel modern and engaging. The app handles account balances, transfers, bill payments, and investment tracking. Is M3 Expressive appropriate here?",
+      "expected_output": "Do NOT categorically ban M3 Expressive because this is banking. Evaluate each flow: account/transfer/payment flows may benefit from restrained standard motion and stable hierarchy, while selective expressive treatment can be appropriate in low-risk/hero/onboarding moments. Respect reduced motion and verify platform support.",
+      "files": []
+    },
+    {
+      "id": 8,
+      "prompt": "We're starting a new web project and considering Material Web Components. Are they production-ready for a customer-facing app with 50k+ daily users? What should we check before committing?",
+      "expected_output": "State that Material Web's repository is in maintenance mode at the verification date; verify latest release activity, component coverage, accessibility, browser/framework needs, and Expressive support. Do not infer current M3 Expressive parity from the project name.",
+      "files": []
+    },
+    {
+      "id": 9,
+      "prompt": "Design an icon button component for our design system. It's a 24dp icon inside a 40dp circular container, used for common actions like close, settings, and more options. What accessibility requirements should it meet?",
+      "expected_output": "Require an accessible name (aria-label/contentDescription as appropriate), visible focus on keyboard-capable platforms, semantic button behavior, and a Material/Android touch target around 48×48dp even if the visible circle is 40dp. Do not claim the visible container itself must be 48dp high on every platform.",
+      "files": []
+    },
+    {
+      "id": 10,
+      "prompt": "Audit this login form for Material Design compliance: email field with red border on error but no error text, password field with placeholder 'Enter password' as the only label, a disabled 'Sign In' button with no explanation, and a 'Forgot Password?' text link that's the same color as body text.",
+      "expected_output": "Identify color-only error, placeholder-only labeling, unexplained disabled action, and weak link affordance. Recommend visible/programmatic error text and field association, persistent label, nearby prerequisite/status or enabled-submit validation strategy, and a distinguishable accessible link. Tooltip-only explanation must not be required.",
+      "files": []
+    },
+    {
+      "id": 11,
+      "prompt": "We use MUI v5 in our React app. Our designer just gave us a Figma file that uses Material Design 3 tokens and components. Can I just map the M3 tokens directly to MUI's theme and call it a day?",
+      "expected_output": "Explain M3 tokens do not map 1:1 to a library theme. Explicitly reject primaryVariant≈primaryContainer as a direct semantic mapping. Map by use-case/role, account for M3 surface hierarchy and typography changes, and verify the current MUI release's declared Material generation/support.",
+      "files": []
+    },
+    {
+      "id": 12,
+      "prompt": "I want to build a better design system for our startup. We have 3 products — a mobile app, a web dashboard, and a marketing site. What approach should I take?",
+      "expected_output": "This says 'design system' without specifying Material Design. Should ask which design system they want to follow before applying Material Design rules. Should NOT automatically assume Material Design unless the user mentions it.",
+      "files": []
+    },
+    {
+      "id": 13,
+      "prompt": "We're maintaining a Material Design 2 tablet app. Someone on the team says Navigation Rail is a Material 3 component, so we must replace it with a drawer to stay M2-compliant. Is that true?",
+      "expected_output": "Must correct the claim: the archived Material 2 specification includes Navigation Rail, intended for medium/large displays with three to seven primary destinations. Should not force replacement solely because the project is M2.",
+      "files": []
+    },
+    {
+      "id": 14,
+      "prompt": "For a standard Material 3 app (not Expressive), can I use Segmented Buttons and a Large FAB, or are both exclusive to M3 Expressive?",
+      "expected_output": "Must say both are not Expressive-only inventions: Segmented Button is part of M3 and Large FAB is part of standard M3. Expressive may update styling/behavior and adds other new/updated components.",
+      "files": []
+    },
+    {
+      "id": 15,
+      "prompt": "I'm using Jetpack Compose and want M3 Expressive. What Gradle dependency and theme/motion APIs should I use today?",
+      "expected_output": "Must instruct current verification. As of the skill verification date, Expressive APIs including MaterialExpressiveTheme and MotionScheme are in the regular androidx.compose.material3:material3 artifact, not a made-up material3-expressive artifact. Mention MotionScheme.standard()/expressive() and experimental/alpha stability caveats.",
+      "files": []
+    },
+    {
+      "id": 16,
+      "prompt": "My design lead says Material requires exactly one Filled Button on every screen and every destructive button must be Outlined with a confirmation dialog. Is that a Material 3 rule?",
+      "expected_output": "Must reject both as universal specification rules. Explain clear action hierarchy as a heuristic and destructive treatment based on semantics, risk, reversibility, undo, and platform conventions.",
+      "files": []
+    },
+    {
+      "id": 17,
+      "prompt": "Create our M3 system color token list. We need every current role family used by modern Compose Material3, including newer surface and fixed roles.",
+      "expected_output": "Should include primary/secondary/tertiary containers and on-colors, error roles, surface/onSurface/onSurfaceVariant, surfaceDim, surfaceBright, surfaceContainerLowest/Low/Default/High/Highest, outline/outlineVariant, inverse roles, scrim/shadow, and primary/secondary/tertiary Fixed/FixedDim/onFixed/onFixedVariant families. Exact values are scheme-dependent.",
+      "files": []
+    },
+    {
+      "id": 18,
+      "prompt": "We're building an adaptive Android M3 layout. What are the current Material/Android window width classes and how should navigation respond?",
+      "expected_output": "Should give Compact <600dp, Medium 600–839dp, Expanded 840–1199dp, Large 1200–1599dp, Extra-large >=1600dp, treating them as dynamic window classes rather than device labels. Navigation bar/rail/expanded navigation choices are guidance based on structure, not mandatory one-to-one breakpoint laws.",
+      "files": []
+    },
+    {
+      "id": 19,
+      "prompt": "For prefers-reduced-motion: reduce, should our M3 Expressive theme set every animation duration to 0ms?",
+      "expected_output": "Must say no universal zero-duration rule. Reduce/remove unnecessary travel, scale, parallax, overshoot and shape morph while preserving state change and causality; follow platform reduced-motion APIs and keep necessary transitions understandable.",
+      "files": []
+    },
+    {
+      "id": 20,
+      "prompt": "Our M3 Snackbar sometimes needs two short lines. A reviewer says Material allows exactly one line and must auto-dismiss in 4–10 seconds. Who is right?",
+      "expected_output": "Should reject the hard-coded universal rule. M3 snackbars can accommodate short one- or two-line content depending on implementation; timing depends on platform APIs, message length, actionability and accessibility. Keep feedback brief and non-obscuring.",
+      "files": []
+    },
+    {
+      "id": 21,
+      "prompt": "I'm designing an M3 form. A reviewer says every TextField must have a floating label inside the field and an adjacent visible label is non-compliant. Is that true?",
+      "expected_output": "Reject the universal claim. Require a persistent visible/programmatic labeling mechanism and reject placeholder-only labeling. Note archived M2 explicitly allows a clear adjacent/independent label instead of an integrated label; verify current target component semantics rather than inventing a floating-label-only law.",
+      "files": []
+    },
+    {
+      "id": 22,
+      "prompt": "Our snackbar has an Undo action. Should we always dismiss it after 6 seconds because Material says snackbars last 4–10 seconds?",
+      "expected_output": "Distinguish versions. Explain the 4–10 second language comes from archived M2 guidance and must not be applied as a universal M3 rule. Current M3/Compose action snackbars need enough time and should not self-dismiss in a way that prevents the action; account for accessibility/platform timeout behavior.",
+      "files": []
+    },
+    {
+      "id": 23,
+      "prompt": "We have four top-level destinations on phones and the same app runs on tablets/desktops. What Material navigation components should we consider?",
+      "expected_output": "Recommend NavigationBar for compact layouts with 3–5 equal top-level destinations and NavigationRail for wider/tablet/desktop layouts where 3–7 main destinations stay persistent; consider a drawer when hierarchy broadens. Preserve destination taxonomy/state across adaptive forms and do not label rail as M3-only.",
+      "files": []
+    },
+    {
+      "id": 24,
+      "prompt": "Can I use a Card where the entire card opens details but it also contains a Favorite icon button and an overflow menu? Material says a card must be either fully clickable or contain clickable children, never both, right?",
+      "expected_output": "Reject that as an overly absolute rule. Cards can have a primary action region plus supplementary actions if hit regions, focus, semantics and state behavior are distinct. Warn against overlapping/nested competing interactive regions and keep actions related to the card subject.",
+      "files": []
+    },
+    {
+      "id": 25,
+      "prompt": "Which M3 chip should I use for contacts already entered in a To field, filters like Vegetarian, contextual help actions, and recommendations beneath an input?",
+      "expected_output": "Map by semantics: Input chip for user-provided contacts/tags, Filter chip for selectable refinements, Assist chip for contextual task assistance, Suggestion chip for recommendations. Do not map M2 Choice/Action chip names 1:1 by appearance.",
+      "files": []
+    },
+    {
+      "id": 26,
+      "prompt": "Search is only used occasionally in a settings screen. Should I place a large persistent Material 3 SearchBar at the top because that's the M3 search component?",
+      "expected_output": "Do not recommend SearchBar just because it exists. Current guidance recommends a persistent search bar when search is a primary focus. For occasional search, consider a less dominant app-bar action/contextual field appropriate to the flow; keep accessible naming and query state.",
+      "files": []
+    },
+    {
+      "id": 27,
+      "prompt": "My app has a binary notification preference that applies immediately, a one-of-three language choice, and multiple content filters. Which Material controls fit?",
+      "expected_output": "Use Switch for immediate binary preference, radio/segmented/menu depending visibility/space for one-of-three language, and checkboxes or FilterChips for independent multi-select filters. Explain semantics rather than choosing controls only by visual style.",
+      "files": []
+    },
+    {
+      "id": 28,
+      "prompt": "When should I use a dialog instead of a snackbar or bottom sheet for an important user flow?",
+      "expected_output": "Use Dialog for focused interruption when acknowledgement/input/decision is needed before safe continuation; Snackbar for brief non-blocking feedback; BottomSheet for richer contextual actions/content that benefit from preserving source context. Do not demand confirmation dialogs for every destructive action; use risk/reversibility/undo to decide.",
+      "files": []
+    },
+    {
+      "id": 29,
+      "prompt": "We're migrating an M2 Compose app using BackdropScaffold and ModalBottomSheetLayout to M3. What should we do?",
+      "expected_output": "State current Compose migration guidance: BackdropScaffold has no direct M3 equivalent and should be re-evaluated toward Scaffold or BottomSheetScaffold depending the task; ModalBottomSheetLayout maps toward ModalBottomSheet. Preserve interaction purpose rather than mechanically renaming APIs.",
+      "files": []
+    },
+    {
+      "id": 30,
+      "prompt": "I need a loading pattern. Is a circular indeterminate spinner always correct for network loading, and a linear indicator only for uploads?",
+      "expected_output": "Reject fixed semantic pairing by operation type. Choose determinate when real progress is known and indeterminate when completion fraction is unknown; linear vs circular depends on layout/context. Keep indicator near the process when useful, provide failure/retry state, and avoid fake percentages/endless blocking.",
+      "files": []
+    }
+  ]
+}

@@ -1,5 +1,7 @@
 using System;
 
+using Cafe.Launcher.Avalonia.Models;
+
 namespace Cafe.Launcher.Avalonia.Services;
 
 /// <summary>

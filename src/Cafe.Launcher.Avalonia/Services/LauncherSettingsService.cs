@@ -12,6 +12,10 @@ using Cafe.Launcher.Avalonia.Services.Diagnostics;
 
 namespace Cafe.Launcher.Avalonia.Services;
 
+/// <summary>
+/// settings.json 的唯一读写入口：信号量串行化读写、原子写盘、
+/// 未知/非法字段经 <c>NormalizeSettings</c> 兜底为有效默认值（向后兼容契约）。
+/// </summary>
 public sealed class LauncherSettingsService : IDisposable
 {
     private readonly SemaphoreSlim writeLock = new(1, 1);
@@ -78,8 +82,6 @@ public sealed class LauncherSettingsService : IDisposable
         }
         catch (Exception exception) when (exception is JsonException or IOException or UnauthorizedAccessException)
         {
-            var message = $"LauncherSettingsService.ReadAsync: failed to read settings from {SettingsPath}: {exception.Message}";
-            Debug.WriteLine(message);
             if (diagnostics is not null)
             {
                 await diagnostics.ErrorAsync("Settings read failed", exception, CancellationToken.None).ConfigureAwait(false);

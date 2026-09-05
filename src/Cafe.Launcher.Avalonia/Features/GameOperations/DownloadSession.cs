@@ -113,241 +113,27 @@ internal sealed class DownloadSession : IDisposable
             var settings = await settingsService.ReadAsync(activeToken).ConfigureAwait(false);
             var gameConfig = snapshot.Remote.GameConfig
                 ?? await apiClient.GetGameConfigAsync(settings.ProxyMode, activeToken).ConfigureAwait(false);
-            if (string.IsNullOrWhiteSpace(gameConfig.GameLatestVersion)
-                || string.IsNullOrWhiteSpace(gameConfig.GameLatestFilePath)
-                || string.IsNullOrWhiteSpace(gameConfig.GameStartExeName))
-            {
-                return Failed(localizer.T(LocalizationKeys.DownloadRemoteConfigIncomplete), GameOperationErrorCode.RemoteConfiguration);
-            }
-
-            var speedLimitBytesPerSec = DownloadSpeedLimits.ToBytesPerSecond(settings.DownloadSpeedLimit);
-            if (string.IsNullOrWhiteSpace(settings.GamePath))
-                return Failed(localizer.T(LocalizationKeys.GameInstallPathNotConfigured), GameOperationErrorCode.PathMissing);
-            gamePath = installationPath.NormalizeGamePath(settings.GamePath);
-            EnsureGamePath(gamePath);
-            Directory.CreateDirectory(gamePath);
-
-            var localGame = await localInstallationStateStore.ReadAsync(gamePath, activeToken).ConfigureAwait(false);
-            if (localGame.GameConfig?.Name is { Length: > 0 }
-                && await gameProcessTracker.IsGameRunningAsync($"{localGame.GameConfig.Name}.exe", activeToken))
-            {
-                checkpointStore.Clear();
-                return Failed(localizer.T(LocalizationKeys.GameExecutableRunning), GameOperationErrorCode.GameRunning);
-            }
-
-            await checkpointStore.SaveAsync(new DownloadTaskState
-            {
-                Version = gameConfig.GameLatestVersion,
-                Basis = gameConfig.GameLatestFilePath,
-                GamePath = gamePath,
-                IsRepair = repair,
-                PatchUrlGroup = settings.PatchUrlGroup,
-                StartedAt = DateTimeOffset.Now.ToString("O")
-            }, activeToken);
-
-            progress(CreateProgress(
+            var preparation = await PrepareDownloadPlanAsync(
+                settings,
+                gameConfig,
                 operationKind,
-                repair ? GameOperationStage.RepairCheck : GameOperationStage.UpdateCheck,
-                0));
-
-            var cdnConfig = snapshot.Remote.CdnConfig
-                ?? await apiClient.GetCdnConfigAsync(
-                    settings.PatchUrlGroup,
-                    settings.ProxyMode,
-                    activeToken).ConfigureAwait(false);
-            if (string.IsNullOrWhiteSpace(cdnConfig.PrimaryCdn) || string.IsNullOrWhiteSpace(cdnConfig.BackUpCdn))
+                value => gamePath = value,
+                activeToken).ConfigureAwait(false);
+            if (preparation.Failure is not null)
             {
-                checkpointStore.Clear();
-                return Failed(localizer.T(LocalizationKeys.CdnConfigIncomplete), GameOperationErrorCode.CdnConfiguration);
+                return preparation.Failure;
             }
 
-            var downloadPlan = repair
-                ? await diffCalculator.BuildRepairPlanAsync(
-                    gamePath,
-                    gameConfig,
-                    settings.PatchUrlGroup,
-                    settings.ProxyMode,
-                    progress,
-                    activeToken).ConfigureAwait(false)
-                : await diffCalculator.BuildInstallOrUpdatePlanAsync(
-                    gamePath,
-                    localGame,
-                    gameConfig,
-                    settings.PatchUrlGroup,
-                    settings.ProxyMode,
-                    progress,
-                    activeToken).ConfigureAwait(false);
-
-            if (downloadPlan.NeedDownload.Count == 0 && downloadPlan.NeedDelete.Count == 0)
+            if (preparation.CompletedResult is not null)
             {
-                await diagnostics.DebugAsync(
-                    "GameDownload",
-                    "Manifest diff: 0 files changed (already current)", CancellationToken.None).ConfigureAwait(false);
-                await CommitInstallationStateAsync(
-                    gamePath,
-                    gameConfig,
-                    downloadPlan.ManifestFiles,
-                    activeToken).ConfigureAwait(false);
-                checkpointStore.Clear();
-                return new GameOperationResult
-                {
-                    Success = true,
-                    Message = repair
-                        ? localizer.T(LocalizationKeys.RepairNoChanges)
-                        : localizer.T(LocalizationKeys.GameAlreadyCurrent)
-                };
+                return preparation.CompletedResult;
             }
 
-            await diagnostics.DebugAsync(
-                "GameDownload",
-                $"Manifest diff: {downloadPlan.NeedDownload.Count} to download, {downloadPlan.NeedDelete.Count} to delete", CancellationToken.None).ConfigureAwait(false);
-
-            var currentDownloadList = downloadPlan.NeedDownload;
-            var affectedCount = currentDownloadList.Count + downloadPlan.NeedDelete.Count;
-            var plannedDownloadBytes = currentDownloadList.Sum(item => item.SizeBytes);
-            var isFreshInstall = snapshot.RuntimeState == LauncherRuntimeState.NotInstalled;
-            var requiredBytes = DiskSpaceService.ResolveRequiredBytes(
-                isFreshInstall,
-                plannedDownloadBytes,
-                gameConfig.DecompressionSize);
-            var diskCheck = diskSpaceService.Check(gamePath, requiredBytes);
-            progress(new GameOperationProgress
-            {
-                OperationKind = operationKind,
-                Stage = GameOperationStage.DiskCheck,
-                RequiredDiskBytes = diskCheck.RequiredBytes,
-                AvailableDiskBytes = diskCheck.AvailableBytes,
-                IsRunning = true,
-                CanStop = true
-            });
-            if (!diskCheck.HasEnoughSpace)
-            {
-                await diagnostics.MessageAsync(
-                    "GameDownload",
-                    $"path: {gamePath}{Environment.NewLine}required: {FileSizeFormatter.Format(diskCheck.RequiredBytes)}{Environment.NewLine}available: {(diskCheck.AvailableBytes.HasValue ? FileSizeFormatter.Format(diskCheck.AvailableBytes.Value) : "--")}",
-                    activeToken);
-                checkpointStore.Clear();
-                return Failed(
-                    localizer.F(
-                        LocalizationKeys.DiskSpaceInsufficientDetail,
-                        FileSizeFormatter.Format(diskCheck.RequiredBytes),
-                        diskCheck.AvailableBytes.HasValue ? FileSizeFormatter.Format(diskCheck.AvailableBytes.Value) : "--"),
-                    GameOperationErrorCode.InsufficientDiskSpace,
-                    affectedCount);
-            }
-
-            // 下载前探测目录可写性：权限不足时立即失败并给出明确指引，
-            // 避免大流量下载完成后才在落盘阶段报 UnauthorizedAccessException。
-            if (!TryProbeWriteAccess(gamePath))
-            {
-                await diagnostics.MessageAsync(
-                    "GameDownload",
-                    $"Write probe failed: {gamePath}",
-                    activeToken);
-                checkpointStore.Clear();
-                return Failed(
-                    localizer.F(LocalizationKeys.FileAccessDenied, gamePath),
-                    GameOperationErrorCode.System,
-                    affectedCount);
-            }
-
-            // 跨验证轮次累积的已验证哈希：安装阶段据此跳过对已验证文件的
-            // 重复整读哈希（失败重试时此前每轮都会重哈希全部文件）。
-            var verifiedHashes = new Dictionary<string, string>(StringComparer.Ordinal);
-            for (var retry = 0; retry <= MaxInstallVerificationRetry; retry++)
-            {
-                await diagnostics.DebugAsync(
-                    "GameDownload",
-                    $"Install verification retry {retry + 1}/{MaxInstallVerificationRetry}, {currentDownloadList.Count} files", CancellationToken.None).ConfigureAwait(false);
-                activeToken.ThrowIfCancellationRequested();
-                var roundVerified = await downloadExecutor.DownloadFilesAsync(
-                    gamePath,
-                    cdnConfig,
-                    downloadPlan.Source,
-                    currentDownloadList,
-                    settings.ProxyMode,
-                    speedLimitBytesPerSec,
-                    operationKind,
-                    progress,
-                    activeToken).ConfigureAwait(false);
-                foreach (var entry in roundVerified)
-                {
-                    verifiedHashes[entry.Key] = entry.Value;
-                }
-
-                DownloadExecutor.RemoveFiles(gamePath, downloadPlan.NeedDelete, null);
-
-                progress(CreateProgress(operationKind, GameOperationStage.FileCheck, 0));
-                var failedFiles = await downloadExecutor.InstallDownloadedFilesAsync(
-                    gamePath,
-                    downloadPlan.ManifestFiles,
-                    currentDownloadList,
-                    verifiedHashes,
-                    value => progress(CreateProgress(operationKind, GameOperationStage.FileCheck, value)),
-                    activeToken).ConfigureAwait(false);
-
-                if (failedFiles.Count == 0)
-                {
-                    await CommitInstallationStateAsync(
-                        gamePath,
-                        gameConfig,
-                        downloadPlan.ManifestFiles,
-                        activeToken).ConfigureAwait(false);
-                    checkpointStore.Clear();
-                    progress(CreateProgress(
-                        operationKind,
-                        repair ? GameOperationStage.RepairCompleted : GameOperationStage.DownloadCompleted,
-                        100));
-                    await diagnostics.MessageAsync(
-                        repair ? "GameRepair" : "GameDownload",
-                        $"path: {gamePath}{Environment.NewLine}version: {gameConfig.GameLatestVersion}",
-                        activeToken);
-                    return new GameOperationResult
-                    {
-                        Success = true,
-                        Message = repair
-                            ? localizer.T(LocalizationKeys.RepairCompleted)
-                            : localizer.T(LocalizationKeys.InstallUpdateCompleted),
-                        AffectedFileCount = affectedCount
-                    };
-                }
-
-                if (retry < MaxInstallVerificationRetry)
-                {
-                    progress(new GameOperationProgress
-                    {
-                        OperationKind = operationKind,
-                        Stage = GameOperationStage.VerificationRetry,
-                        FailedFileCount = failedFiles.Count,
-                        RetryAttempt = retry + 1,
-                        RetryLimit = MaxInstallVerificationRetry,
-                        IsRunning = true,
-                        CanStop = true
-                    });
-                }
-
-                currentDownloadList = failedFiles.Select(file => new ManifestFile
-                {
-                    Path = file.Path,
-                    Size = file.Size,
-                    Hash = file.Hash
-                }).ToList();
-            }
-
-            progress(new GameOperationProgress
-            {
-                OperationKind = operationKind,
-                Stage = GameOperationStage.VerificationFailed,
-                FailedFileCount = currentDownloadList.Count,
-                IsRunning = true,
-                CanStop = true
-            });
-            checkpointStore.Clear();
-            return Failed(
-                localizer.F(LocalizationKeys.VerificationFailed, currentDownloadList.Count),
-                GameOperationErrorCode.Network,
-                affectedCount,
-                currentDownloadList.Count);
+            return await RunDownloadVerifyLoopAsync(
+                preparation,
+                settings.ProxyMode,
+                operationKind,
+                activeToken).ConfigureAwait(false);
         }
         catch (OperationCanceledException) when (activeToken.IsCancellationRequested)
         {
@@ -392,6 +178,307 @@ internal sealed class DownloadSession : IDisposable
             checkpointStore.Clear();
             return Failed(localizer.F(LocalizationKeys.UnexpectedError, exception.Message), GameOperationErrorCode.System);
         }
+    }
+
+
+    /// <summary>下载计划准备阶段的产物；Failure/CompletedResult 任一非 null 即终止。</summary>
+    private sealed record DownloadPlanPreparation(
+        string? GamePath,
+        DownloadPlan? Plan,
+        CdnConfigResponse? CdnConfig,
+        int SpeedLimitBytesPerSec,
+        GameOperationResult? Failure,
+        GameOperationResult? CompletedResult)
+    {
+        public static DownloadPlanPreparation Stop(GameOperationResult result) =>
+            new(null, null, null, 0, result, null);
+    }
+
+    /// <summary>
+    /// 下载前准备：解析安装路径、读取本地安装状态、写入 checkpoint、解析 CDN、
+    /// 构建 diff 计划，并依次通过「磁盘空间」「目录可写」两道闸口。
+    /// </summary>
+    private async Task<DownloadPlanPreparation> PrepareDownloadPlanAsync(
+        LauncherSettings settings,
+        GameConfigResponse gameConfig,
+        GameOperationKind operationKind,
+        Action<string> reportGamePath,
+        CancellationToken activeToken)
+    {
+        if (string.IsNullOrWhiteSpace(gameConfig.GameLatestVersion)
+            || string.IsNullOrWhiteSpace(gameConfig.GameLatestFilePath)
+            || string.IsNullOrWhiteSpace(gameConfig.GameStartExeName))
+        {
+            return DownloadPlanPreparation.Stop(Failed(
+                localizer.T(LocalizationKeys.DownloadRemoteConfigIncomplete),
+                GameOperationErrorCode.RemoteConfiguration));
+        }
+
+        var speedLimitBytesPerSec = DownloadSpeedLimits.ToBytesPerSecond(settings.DownloadSpeedLimit);
+        if (string.IsNullOrWhiteSpace(settings.GamePath))
+        {
+            return DownloadPlanPreparation.Stop(Failed(
+                localizer.T(LocalizationKeys.GameInstallPathNotConfigured),
+                GameOperationErrorCode.PathMissing));
+        }
+
+        var gamePath = installationPath.NormalizeGamePath(settings.GamePath);
+        reportGamePath(gamePath);
+        EnsureGamePath(gamePath);
+        Directory.CreateDirectory(gamePath);
+
+        var localGame = await localInstallationStateStore.ReadAsync(gamePath, activeToken).ConfigureAwait(false);
+        if (localGame.GameConfig?.Name is { Length: > 0 }
+            && await gameProcessTracker.IsGameRunningAsync($"{localGame.GameConfig.Name}.exe", activeToken))
+        {
+            checkpointStore.Clear();
+            return DownloadPlanPreparation.Stop(Failed(
+                localizer.T(LocalizationKeys.GameExecutableRunning),
+                GameOperationErrorCode.GameRunning));
+        }
+
+        await checkpointStore.SaveAsync(new DownloadTaskState
+        {
+            Version = gameConfig.GameLatestVersion,
+            Basis = gameConfig.GameLatestFilePath,
+            GamePath = gamePath,
+            IsRepair = repair,
+            PatchUrlGroup = settings.PatchUrlGroup,
+            StartedAt = DateTimeOffset.Now.ToString("O")
+        }, activeToken);
+
+        progress(CreateProgress(
+            operationKind,
+            repair ? GameOperationStage.RepairCheck : GameOperationStage.UpdateCheck,
+            0));
+
+        var cdnConfig = snapshot.Remote.CdnConfig
+            ?? await apiClient.GetCdnConfigAsync(
+                settings.PatchUrlGroup,
+                settings.ProxyMode,
+                activeToken).ConfigureAwait(false);
+        if (string.IsNullOrWhiteSpace(cdnConfig.PrimaryCdn) || string.IsNullOrWhiteSpace(cdnConfig.BackUpCdn))
+        {
+            checkpointStore.Clear();
+            return DownloadPlanPreparation.Stop(Failed(
+                localizer.T(LocalizationKeys.CdnConfigIncomplete),
+                GameOperationErrorCode.CdnConfiguration));
+        }
+
+        var downloadPlan = repair
+            ? await diffCalculator.BuildRepairPlanAsync(
+                gamePath,
+                gameConfig,
+                settings.PatchUrlGroup,
+                settings.ProxyMode,
+                progress,
+                activeToken).ConfigureAwait(false)
+            : await diffCalculator.BuildInstallOrUpdatePlanAsync(
+                gamePath,
+                localGame,
+                gameConfig,
+                settings.PatchUrlGroup,
+                settings.ProxyMode,
+                progress,
+                activeToken).ConfigureAwait(false);
+
+        if (downloadPlan.NeedDownload.Count == 0 && downloadPlan.NeedDelete.Count == 0)
+        {
+            await diagnostics.DebugAsync(
+                "GameDownload",
+                "Manifest diff: 0 files changed (already current)", CancellationToken.None).ConfigureAwait(false);
+            await CommitInstallationStateAsync(
+                gamePath,
+                gameConfig,
+                downloadPlan.ManifestFiles,
+                activeToken).ConfigureAwait(false);
+            checkpointStore.Clear();
+            return new DownloadPlanPreparation(
+                gamePath,
+                downloadPlan,
+                cdnConfig,
+                speedLimitBytesPerSec,
+                Failure: null,
+                CompletedResult: new GameOperationResult
+                {
+                    Success = true,
+                    Message = repair
+                        ? localizer.T(LocalizationKeys.RepairNoChanges)
+                        : localizer.T(LocalizationKeys.GameAlreadyCurrent)
+                });
+        }
+
+        await diagnostics.DebugAsync(
+            "GameDownload",
+            $"Manifest diff: {downloadPlan.NeedDownload.Count} to download, {downloadPlan.NeedDelete.Count} to delete", CancellationToken.None).ConfigureAwait(false);
+
+        var affectedCount = downloadPlan.NeedDownload.Count + downloadPlan.NeedDelete.Count;
+        var plannedDownloadBytes = downloadPlan.NeedDownload.Sum(item => item.SizeBytes);
+        var isFreshInstall = snapshot.RuntimeState == LauncherRuntimeState.NotInstalled;
+        var requiredBytes = DiskSpaceService.ResolveRequiredBytes(
+            isFreshInstall,
+            plannedDownloadBytes,
+            gameConfig.DecompressionSize);
+        var diskCheck = diskSpaceService.Check(gamePath, requiredBytes);
+        progress(new GameOperationProgress
+        {
+            OperationKind = operationKind,
+            Stage = GameOperationStage.DiskCheck,
+            RequiredDiskBytes = diskCheck.RequiredBytes,
+            AvailableDiskBytes = diskCheck.AvailableBytes,
+            IsRunning = true,
+            CanStop = true
+        });
+        if (!diskCheck.HasEnoughSpace)
+        {
+            await diagnostics.MessageAsync(
+                "GameDownload",
+                $"path: {gamePath}{Environment.NewLine}required: {FileSizeFormatter.Format(diskCheck.RequiredBytes)}{Environment.NewLine}available: {(diskCheck.AvailableBytes.HasValue ? FileSizeFormatter.Format(diskCheck.AvailableBytes.Value) : "--")}",
+                activeToken);
+            checkpointStore.Clear();
+            return DownloadPlanPreparation.Stop(Failed(
+                localizer.F(
+                    LocalizationKeys.DiskSpaceInsufficientDetail,
+                    FileSizeFormatter.Format(diskCheck.RequiredBytes),
+                    diskCheck.AvailableBytes.HasValue ? FileSizeFormatter.Format(diskCheck.AvailableBytes.Value) : "--"),
+                GameOperationErrorCode.InsufficientDiskSpace,
+                affectedCount));
+        }
+
+        // 下载前探测目录可写性：权限不足时立即失败并给出明确指引，
+        // 避免大流量下载完成后才在落盘阶段报 UnauthorizedAccessException。
+        if (!TryProbeWriteAccess(gamePath))
+        {
+            await diagnostics.MessageAsync(
+                "GameDownload",
+                $"Write probe failed: {gamePath}",
+                activeToken);
+            checkpointStore.Clear();
+            return DownloadPlanPreparation.Stop(Failed(
+                localizer.F(LocalizationKeys.FileAccessDenied, gamePath),
+                GameOperationErrorCode.System,
+                affectedCount));
+        }
+
+        return new DownloadPlanPreparation(
+            gamePath,
+            downloadPlan,
+            cdnConfig,
+            speedLimitBytesPerSec,
+            Failure: null,
+            CompletedResult: null);
+    }
+
+    /// <summary>执行「下载 → 安装 → 校验」重试循环，直至全部通过或验证预算耗尽。</summary>
+    private async Task<GameOperationResult> RunDownloadVerifyLoopAsync(
+        DownloadPlanPreparation preparation,
+        string proxyMode,
+        GameOperationKind operationKind,
+        CancellationToken activeToken)
+    {
+        var gamePath = preparation.GamePath!;
+        var downloadPlan = preparation.Plan!;
+        var cdnConfig = preparation.CdnConfig!;
+        var currentDownloadList = downloadPlan.NeedDownload;
+        var affectedCount = currentDownloadList.Count + downloadPlan.NeedDelete.Count;
+        // 跨验证轮次累积的已验证哈希：安装阶段据此跳过对已验证文件的
+        // 重复整读哈希（失败重试时此前每轮都会重哈希全部文件）。
+        var verifiedHashes = new Dictionary<string, string>(StringComparer.Ordinal);
+        for (var retry = 0; retry <= MaxInstallVerificationRetry; retry++)
+        {
+            await diagnostics.DebugAsync(
+                "GameDownload",
+                $"Install verification retry {retry + 1}/{MaxInstallVerificationRetry}, {currentDownloadList.Count} files", CancellationToken.None).ConfigureAwait(false);
+            activeToken.ThrowIfCancellationRequested();
+            var roundVerified = await downloadExecutor.DownloadFilesAsync(
+                gamePath,
+                cdnConfig,
+                downloadPlan.Source,
+                currentDownloadList,
+                proxyMode,
+                preparation.SpeedLimitBytesPerSec,
+                operationKind,
+                progress,
+                activeToken).ConfigureAwait(false);
+            foreach (var entry in roundVerified)
+            {
+                verifiedHashes[entry.Key] = entry.Value;
+            }
+
+            DownloadExecutor.RemoveFiles(gamePath, downloadPlan.NeedDelete, null);
+
+            progress(CreateProgress(operationKind, GameOperationStage.FileCheck, 0));
+            var failedFiles = await downloadExecutor.InstallDownloadedFilesAsync(
+                gamePath,
+                downloadPlan.ManifestFiles,
+                currentDownloadList,
+                verifiedHashes,
+                value => progress(CreateProgress(operationKind, GameOperationStage.FileCheck, value)),
+                activeToken).ConfigureAwait(false);
+
+            if (failedFiles.Count == 0)
+            {
+                await CommitInstallationStateAsync(
+                    gamePath,
+                    snapshot.Remote.GameConfig
+                        ?? throw new InvalidOperationException("Game config was resolved during planning."),
+                    downloadPlan.ManifestFiles,
+                    activeToken).ConfigureAwait(false);
+                checkpointStore.Clear();
+                progress(CreateProgress(
+                    operationKind,
+                    repair ? GameOperationStage.RepairCompleted : GameOperationStage.DownloadCompleted,
+                    100));
+                await diagnostics.MessageAsync(
+                    repair ? "GameRepair" : "GameDownload",
+                    $"path: {gamePath}{Environment.NewLine}version: {snapshot.Remote.GameConfig?.GameLatestVersion}",
+                    activeToken);
+                return new GameOperationResult
+                {
+                    Success = true,
+                    Message = repair
+                        ? localizer.T(LocalizationKeys.RepairCompleted)
+                        : localizer.T(LocalizationKeys.InstallUpdateCompleted),
+                    AffectedFileCount = affectedCount
+                };
+            }
+
+            if (retry < MaxInstallVerificationRetry)
+            {
+                progress(new GameOperationProgress
+                {
+                    OperationKind = operationKind,
+                    Stage = GameOperationStage.VerificationRetry,
+                    FailedFileCount = failedFiles.Count,
+                    RetryAttempt = retry + 1,
+                    RetryLimit = MaxInstallVerificationRetry,
+                    IsRunning = true,
+                    CanStop = true
+                });
+            }
+
+            currentDownloadList = failedFiles.Select(file => new ManifestFile
+            {
+                Path = file.Path,
+                Size = file.Size,
+                Hash = file.Hash
+            }).ToList();
+        }
+
+        progress(new GameOperationProgress
+        {
+            OperationKind = operationKind,
+            Stage = GameOperationStage.VerificationFailed,
+            FailedFileCount = currentDownloadList.Count,
+            IsRunning = true,
+            CanStop = true
+        });
+        checkpointStore.Clear();
+        return Failed(
+            localizer.F(LocalizationKeys.VerificationFailed, currentDownloadList.Count),
+            GameOperationErrorCode.Network,
+            affectedCount,
+            currentDownloadList.Count);
     }
 
     /// <summary>Probes that the game directory accepts file creation (write permission).</summary>
