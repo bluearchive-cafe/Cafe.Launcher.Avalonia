@@ -97,6 +97,8 @@ public sealed class RemoteManifestService
         }
         catch (Exception ex)
         {
+            // 豁免：manifest 拉取失败按上游语义 fail-open（返回 null 继续），
+            // 上层已有独立的错误上报通道。
             System.Diagnostics.Debug.WriteLine(
                 $"RemoteManifest: fetch failed: {ex.Message}");
             return null;

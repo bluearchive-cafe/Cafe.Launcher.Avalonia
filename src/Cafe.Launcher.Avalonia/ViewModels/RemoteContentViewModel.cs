@@ -14,6 +14,7 @@ using Cafe.Launcher.Avalonia.Models;
 using Cafe.Launcher.Avalonia.Services;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
+using Cafe.Launcher.Avalonia.Services.Diagnostics;
 
 namespace Cafe.Launcher.Avalonia.ViewModels;
 
@@ -23,6 +24,7 @@ public partial class RemoteContentViewModel : ViewModelBase, IDisposable
     private const int MaxConcurrentBannerImageLoads = 4;
     private readonly LocalizationService localizer;
     private readonly ImageCacheService imageCacheService;
+    private readonly LocalDiagnostics diagnostics;
     private BannerCarouselTransition bannerTransition = new(MotionTokens.NormalDuration);
     private DispatcherTimer? carouselTimer;
     private CancellationTokenSource? carouselDelayCts;
@@ -101,10 +103,14 @@ public partial class RemoteContentViewModel : ViewModelBase, IDisposable
 
     internal bool IsCarouselTimerRunning => carouselTimer?.IsEnabled == true;
 
-    public RemoteContentViewModel(LocalizationService localizer, ImageCacheService imageCacheService)
+    public RemoteContentViewModel(
+        LocalizationService localizer,
+        ImageCacheService imageCacheService,
+        LocalDiagnostics diagnostics)
     {
         this.localizer = localizer;
         this.imageCacheService = imageCacheService;
+        this.diagnostics = diagnostics;
         carouselTransition = bannerTransition;
     }
 
@@ -576,8 +582,10 @@ public partial class RemoteContentViewModel : ViewModelBase, IDisposable
         }
         catch (Exception ex)
         {
-            System.Diagnostics.Debug.WriteLine(
-                $"RemoteContent: banner image load failed for '{item.ImageUrl}': {ex.Message}");
+            await diagnostics.WarningAsync(
+                "RemoteContent",
+                $"banner image load failed for '{item.ImageUrl}': {ex.Message}",
+                CancellationToken.None);
             await Dispatcher.UIThread.InvokeAsync(item.MarkImageLoadFailed);
         }
     }

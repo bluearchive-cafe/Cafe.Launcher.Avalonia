@@ -257,6 +257,8 @@ public partial class SettingsAppearanceViewModel : ViewModelBase, IDisposable
         {
             // 覆盖图片读取、后台提取、UI 调度与结果应用的完整边界，保证所有
             // fire-and-forget 调用都不会泄漏未观察异常。
+            // 豁免：此 catch 是 fire-and-forget 取色任务的最终边界，类内未注入
+            // 诊断实例；LogSync 的 Debug 回退保证不泄漏未观察异常。
             LocalDiagnostics.LogSync(
                 LogEntrySeverity.Warn,
                 "ThemeColor",

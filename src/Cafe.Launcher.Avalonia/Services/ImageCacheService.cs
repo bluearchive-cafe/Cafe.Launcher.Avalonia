@@ -9,6 +9,7 @@ using System.Threading.Tasks;
 using Cafe.Launcher.Avalonia.Constants;
 using Cafe.Launcher.Avalonia.Helpers;
 using Cafe.Launcher.Avalonia.Models;
+using Cafe.Launcher.Avalonia.Services.Diagnostics;
 
 namespace Cafe.Launcher.Avalonia.Services;
 
@@ -63,7 +64,7 @@ public sealed class ImageCacheService : IDisposable
         catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
         {
             // Cache directory is non-critical — log and continue without caching
-            System.Diagnostics.Debug.WriteLine($"ImageCacheService: failed to create cache directory: {ex.Message}");
+            LocalDiagnostics.LogSync(LogEntrySeverity.Warn, "ImageCache", $"failed to create cache directory: {ex.Message}");
         }
     }
 
@@ -193,6 +194,7 @@ public sealed class ImageCacheService : IDisposable
             catch (Exception exception) when (exception is IOException or UnauthorizedAccessException)
             {
                 // A cache write is optional: callers can still render the downloaded image.
+                // 豁免：缓存写入是可选优化，失败时调用方仍可直接渲染下载内容。
                 System.Diagnostics.Debug.WriteLine(
                     $"ImageCacheService: failed to cache remote image: {exception.Message}");
             }

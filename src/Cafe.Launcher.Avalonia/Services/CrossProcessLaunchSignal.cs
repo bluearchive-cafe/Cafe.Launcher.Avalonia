@@ -6,6 +6,7 @@ using System.Security.Cryptography;
 using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
+using Cafe.Launcher.Avalonia.Services.Diagnostics;
 
 namespace Cafe.Launcher.Avalonia.Services;
 
@@ -98,7 +99,7 @@ internal sealed class CrossProcessLaunchSignal : IDisposable
         catch (Exception ex)
         {
             // 绑定失败不应影响启动器主流程（仅失去 --launch-game 转发能力）。
-            Debug.WriteLine($"CrossProcessLaunchSignal bind failed: {ex.Message}");
+            LocalDiagnostics.LogSync(LogEntrySeverity.Warn, "CrossProcess", $"bind failed: {ex.Message}");
         }
     }
 
@@ -146,7 +147,7 @@ internal sealed class CrossProcessLaunchSignal : IDisposable
             Thread.Sleep(PollIntervalMilliseconds);
         }
 
-        Debug.WriteLine($"CrossProcessLaunchSignal: could not bind Unix socket '{socketPath}' in time; --launch-game forwarding is unavailable for this process.");
+        LocalDiagnostics.LogSync(LogEntrySeverity.Warn, "CrossProcess", $"could not bind Unix socket '{socketPath}' in time; --launch-game forwarding is unavailable for this process.");
     }
 
     /// <summary>

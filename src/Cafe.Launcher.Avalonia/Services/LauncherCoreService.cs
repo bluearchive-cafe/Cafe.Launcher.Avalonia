@@ -9,6 +9,10 @@ namespace Cafe.Launcher.Avalonia.Services;
 
 public interface ILauncherCoreService
 {
+    /// <summary>
+    /// 聚合启动器状态：读取本地设置、安装状态并请求远程 API，产出驱动壳层刷新的
+    /// 单一快照。网络失败不抛出——快照内以降级状态表达（详见实现）。
+    /// </summary>
     Task<LauncherStatusSnapshot> LoadAsync(CancellationToken cancellationToken = default);
 }
 

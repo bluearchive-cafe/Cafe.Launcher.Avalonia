@@ -4,6 +4,7 @@ using Avalonia.Controls;
 using Avalonia.Controls.ApplicationLifetimes;
 using Avalonia.Threading;
 using Cafe.Launcher.Avalonia.Constants;
+using Cafe.Launcher.Avalonia.Services.Diagnostics;
 
 namespace Cafe.Launcher.Avalonia.Services;
 
@@ -63,8 +64,7 @@ public sealed class SystemTrayService : IDisposable
         }
         catch (Exception ex)
         {
-            System.Diagnostics.Debug.WriteLine(
-                $"SystemTrayService initialization failed: {ex.Message}");
+            LocalDiagnostics.LogSync(LogEntrySeverity.Warn, "SystemTray", $"initialization failed: {ex.Message}");
             Dispose();
             return false;
         }

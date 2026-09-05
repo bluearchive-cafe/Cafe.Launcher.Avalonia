@@ -452,6 +452,8 @@ public partial class SettingsViewModel : ViewModelBase, IDisposable, IModalConte
         {
             // Status is informational; launch diagnostics remain the authoritative
             // runtime failure report, so a refresh failure only degrades this row.
+            // 豁免：状态行是纯信息性展示，运行时失败另有权威上报通道；
+            // 此处降级不注入诊断，避免为低价值路径扩构造面（见审计 7.2）。
             Debug.WriteLine($"Settings: game runtime status refresh failed: {exception.Message}");
         }
     }
@@ -607,6 +609,7 @@ public partial class SettingsViewModel : ViewModelBase, IDisposable, IModalConte
         }
         catch (Exception ex)
         {
+            // 豁免：日志级别应用是 best-effort，绝不能反噬设置流程。
             System.Diagnostics.Debug.WriteLine(
                 $"Settings: failed to apply log level: {ex.Message}");
             // Best-effort — log level application must never disrupt settings flow.
