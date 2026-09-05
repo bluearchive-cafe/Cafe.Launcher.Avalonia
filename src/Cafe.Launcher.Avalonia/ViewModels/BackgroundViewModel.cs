@@ -263,12 +263,37 @@ public partial class BackgroundViewModel : ViewModelBase, IDisposable
                     ? null
                     : $"{BackgroundSources.Remote}|{bgImg}|{crc64}";
             case BackgroundSources.Custom:
-                // 文件夹来源每次刷新随机选图是有意行为，不参与跳过。
-                return File.Exists(settings.CustomBackgroundPath)
-                    ? $"{BackgroundSources.Custom}|{settings.CustomBackgroundPath}"
+                // 文件夹来源每次刷新随机选图是有意行为，不参与跳过；文件来源以
+                // 路径 + 内容指纹（长度 + 最后写入时间）为标识——用户在原路径
+                // 覆盖图片文件时路径不变，仅凭路径会误命中跳过守卫、停留旧图。
+                return TryGetCustomFileFingerprint(settings.CustomBackgroundPath, out var fingerprint)
+                    ? $"{BackgroundSources.Custom}|{settings.CustomBackgroundPath}|{fingerprint}"
                     : null;
             default:
                 return BackgroundSources.Bundled;
+        }
+    }
+
+    /// <summary>仅对存在的「文件」来源给出内容指纹；目录或不可读时返回 false（不参与跳过）。</summary>
+    private static bool TryGetCustomFileFingerprint(string? path, out string fingerprint)
+    {
+        fingerprint = string.Empty;
+        if (string.IsNullOrWhiteSpace(path) || !File.Exists(path))
+        {
+            return false;
+        }
+
+        try
+        {
+            var info = new FileInfo(path);
+            fingerprint = $"{info.Length}|{info.LastWriteTimeUtc.Ticks}";
+            return true;
+        }
+        catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
+        {
+            // File.Exists 与读取属性之间存在被占用/收回权限的窗口；读不到指纹
+            // 就当来源不稳定，走完整重载管线。
+            return false;
         }
     }
 
