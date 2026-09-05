@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.Globalization;
 using System.IO;
 using System.Linq;
 using System.Net.Http;
@@ -287,6 +288,42 @@ internal sealed class DownloadSession : IDisposable
             await diagnostics.DebugAsync(
                 "GameDownload",
                 "Manifest diff: 0 files changed (already current)", CancellationToken.None).ConfigureAwait(false);
+            var alreadyCurrentResult = new GameOperationResult
+            {
+                Success = true,
+                Message = repair
+                    ? localizer.T(LocalizationKeys.RepairNoChanges)
+                    : localizer.T(LocalizationKeys.GameAlreadyCurrent)
+            };
+
+            // 现有安装状态与将要提交的内容完全一致时，提交是纯粹的重写；
+            // 跳过它让 Program Files 等只读位置下的“仅检查更新”安静通过。
+            if (LocalInstallationStateMatchesCommit(localGame, gameConfig, downloadPlan.ManifestFiles))
+            {
+                checkpointStore.Clear();
+                return new DownloadPlanPreparation(
+                    gamePath,
+                    downloadPlan,
+                    cdnConfig,
+                    speedLimitBytesPerSec,
+                    Failure: null,
+                    CompletedResult: alreadyCurrentResult);
+            }
+
+            // 确需提交时探测目录可写性，与下载路径的闸口保持一致，
+            // 给出本地化的权限指引而非裸 I/O 异常。
+            if (!DirectoryWriteProbe.CanWrite(gamePath))
+            {
+                await diagnostics.MessageAsync(
+                    "GameDownload",
+                    $"Write probe failed: {gamePath}",
+                    activeToken);
+                checkpointStore.Clear();
+                return DownloadPlanPreparation.Stop(Failed(
+                    localizer.F(LocalizationKeys.FileAccessDenied, gamePath),
+                    GameOperationErrorCode.System));
+            }
+
             await CommitInstallationStateAsync(
                 gamePath,
                 gameConfig,
@@ -299,13 +336,7 @@ internal sealed class DownloadSession : IDisposable
                 cdnConfig,
                 speedLimitBytesPerSec,
                 Failure: null,
-                CompletedResult: new GameOperationResult
-                {
-                    Success = true,
-                    Message = repair
-                        ? localizer.T(LocalizationKeys.RepairNoChanges)
-                        : localizer.T(LocalizationKeys.GameAlreadyCurrent)
-                });
+                CompletedResult: alreadyCurrentResult);
         }
 
         await diagnostics.DebugAsync(
@@ -347,7 +378,7 @@ internal sealed class DownloadSession : IDisposable
 
         // 下载前探测目录可写性：权限不足时立即失败并给出明确指引，
         // 避免大流量下载完成后才在落盘阶段报 UnauthorizedAccessException。
-        if (!TryProbeWriteAccess(gamePath))
+        if (!DirectoryWriteProbe.CanWrite(gamePath))
         {
             await diagnostics.MessageAsync(
                 "GameDownload",
@@ -481,26 +512,6 @@ internal sealed class DownloadSession : IDisposable
             currentDownloadList.Count);
     }
 
-    /// <summary>Probes that the game directory accepts file creation (write permission).</summary>
-    private static bool TryProbeWriteAccess(string gamePath)
-    {
-        try
-        {
-            using var probe = new FileStream(
-                Path.Combine(gamePath, ".launcher-write-probe.tmp"),
-                FileMode.Create,
-                FileAccess.Write,
-                FileShare.None,
-                bufferSize: 1,
-                FileOptions.DeleteOnClose);
-            return true;
-        }
-        catch (Exception exception) when (exception is IOException or UnauthorizedAccessException)
-        {
-            return false;
-        }
-    }
-
     /// <summary>Pauses the session until <see cref="Resume"/> releases the pause gate.</summary>
     public void Pause()
     {
@@ -619,5 +630,69 @@ internal sealed class DownloadSession : IDisposable
         {
             throw new InvalidOperationException($"Game directory name must be {GamePaths.GameFolderName}.");
         }
+    }
+
+    /// <summary>
+    /// 判断现有本地安装状态是否已与将要提交的内容完全一致（版本、manifest basis、
+    /// 启动配置与全部文件清单）。一致时提交是纯粹的重写，可安全跳过。
+    /// </summary>
+    internal static bool LocalInstallationStateMatchesCommit(
+        LocalInstallationState localGame,
+        GameConfigResponse gameConfig,
+        IReadOnlyList<ManifestFile> files)
+    {
+        if (localGame.Kind != LocalInstallationStateKind.Valid
+            || localGame.Manifest is null
+            || localGame.GameConfig is null)
+        {
+            return false;
+        }
+
+        var manifest = localGame.Manifest;
+        var config = localGame.GameConfig;
+        var latestVersion = gameConfig.GameLatestVersion ?? "";
+        if (!string.Equals(manifest.Name, GamePaths.GameTag, StringComparison.Ordinal)
+            || !string.Equals(manifest.Version, latestVersion, StringComparison.Ordinal)
+            || !string.Equals(manifest.Basis, gameConfig.GameLatestFilePath ?? "", StringComparison.Ordinal)
+            || !string.Equals(config.Tag, GamePaths.GameTag, StringComparison.Ordinal)
+            || !string.Equals(config.Version, latestVersion, StringComparison.Ordinal)
+            || !string.Equals(config.Name, gameConfig.GameStartExeName ?? "", StringComparison.Ordinal))
+        {
+            return false;
+        }
+
+        if (!config.Params.SequenceEqual(gameConfig.GameStartParams ?? [], StringComparer.Ordinal))
+        {
+            return false;
+        }
+
+        if (manifest.Files.Count != files.Count)
+        {
+            return false;
+        }
+
+        var existingByPath = new Dictionary<string, ManifestFile>(manifest.Files.Count, StringComparer.OrdinalIgnoreCase);
+        foreach (var existing in manifest.Files)
+        {
+            if (!existingByPath.TryAdd(existing.Path, existing))
+            {
+                return false;
+            }
+        }
+
+        foreach (var file in files)
+        {
+            if (!existingByPath.TryGetValue(file.Path, out var existing)
+                || !string.Equals(existing.Hash, file.Hash, StringComparison.Ordinal)
+                || !string.Equals(
+                    existing.Size,
+                    file.SizeBytes.ToString(CultureInfo.InvariantCulture),
+                    StringComparison.Ordinal))
+            {
+                return false;
+            }
+        }
+
+        return true;
     }
 }
