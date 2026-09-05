@@ -10,6 +10,7 @@ using Cafe.Launcher.Avalonia.Services.GameRuntime;
 
 namespace Cafe.Launcher.Avalonia.Tests;
 
+[Collection(nameof(LocalizationServiceTestIsolation))]
 public sealed class InstallationOperationStateTests : IDisposable
 {
     private readonly string tempDir = Path.Combine(Path.GetTempPath(), Guid.NewGuid().ToString("N"));

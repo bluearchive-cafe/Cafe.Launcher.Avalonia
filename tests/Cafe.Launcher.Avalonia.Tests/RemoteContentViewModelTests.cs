@@ -5,6 +5,7 @@ using Cafe.Launcher.Avalonia.ViewModels;
 
 namespace Cafe.Launcher.Avalonia.Tests;
 
+[Collection(nameof(LocalizationServiceTestIsolation))]
 public sealed class RemoteContentViewModelTests
 {
     static RemoteContentViewModelTests()

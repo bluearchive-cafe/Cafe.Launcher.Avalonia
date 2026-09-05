@@ -1,7 +1,9 @@
 using System.Runtime.InteropServices;
 using Avalonia;
 using Avalonia.Controls;
+using Avalonia.Media;
 using Avalonia.Media.Imaging;
+using Avalonia.Platform;
 using Avalonia.Threading;
 
 namespace Cafe.Launcher.Avalonia.HeadlessTests;
@@ -27,10 +29,17 @@ internal static class GoldenScreenshot
     /// <summary>
     /// Renders <paramref name="window"/> and compares the frame to the committed
     /// baseline <paramref name="name"/>.png; with CAFE_GOLDEN_UPDATE=1 the frame
-    /// (re)writes the baseline instead of comparing.
+    /// (re)writes the baseline instead of comparing. The canonical update path is
+    /// <c>.\test.ps1 -UpdateGolden</c>.
     /// </summary>
     public static void Compare(Window window, string name)
     {
+        // Baselines are generated on Windows (Segoe UI + Windows Skia raster);
+        // font fallback on other platforms always exceeds the mismatch budget.
+        Assert.SkipUnless(
+            OperatingSystem.IsWindows(),
+            "Golden baselines are generated on Windows; non-Windows rendering always mismatches.");
+
         Dispatcher.UIThread.RunJobs();
         var bitmap = Render(window);
         var baselineDirectory = Path.Combine(FindRepositoryRoot(), BaselineRelativeDir);
@@ -43,7 +52,7 @@ internal static class GoldenScreenshot
             {
                 Assert.Fail(
                     $"Golden baseline '{name}' is missing at {baselinePath}. " +
-                    "Regenerate intentionally with $env:CAFE_GOLDEN_UPDATE=1 and commit the PNG.");
+                    "Regenerate intentionally with .\\test.ps1 -UpdateGolden and commit the PNG.");
             }
 
             Directory.CreateDirectory(baselineDirectory);
@@ -109,10 +118,83 @@ internal static class GoldenScreenshot
         }
 
         var ratio = mismatched / (double)(size.Width * size.Height);
-        Assert.True(
-            ratio <= MaxMismatchRatio,
-            $"Golden '{name}' deviates {ratio:P2} of pixels (allowed {MaxMismatchRatio:P0}). " +
-            "Intentional visual change? Regenerate with $env:CAFE_GOLDEN_UPDATE=1.");
+        if (ratio > MaxMismatchRatio)
+        {
+            var artifactDirectory = WriteFailureArtifacts(
+                actual, actualPixels, baselinePixels, size, name);
+            Assert.Fail(
+                $"Golden '{name}' deviates {ratio:P2} of pixels (allowed {MaxMismatchRatio:P0}). " +
+                $"Actual and diff images saved to {artifactDirectory}. " +
+                "Intentional visual change? Regenerate with .\\test.ps1 -UpdateGolden.");
+        }
+    }
+
+    /// <summary>
+    /// Persists the failing frame and a red-on-white diff mask under
+    /// TestResults/Golden so the failing regions can be inspected without
+    /// re-running the capture.
+    /// </summary>
+    private static string WriteFailureArtifacts(
+        RenderTargetBitmap actual,
+        byte[] actualPixels,
+        byte[] baselinePixels,
+        PixelSize size,
+        string name)
+    {
+        var artifactDirectory = Path.Combine(FindRepositoryRoot(), "TestResults", "Golden");
+        Directory.CreateDirectory(artifactDirectory);
+
+        var actualPath = Path.Combine(artifactDirectory, name + "-actual.png");
+        using (var stream = File.Create(actualPath))
+        {
+            actual.Save(stream, new PngBitmapEncoderOptions());
+        }
+
+        var diffPath = Path.Combine(artifactDirectory, name + "-diff.png");
+        var rowBytes = size.Width * 4;
+        var diffPixels = new byte[rowBytes * size.Height];
+        for (var pixel = 0; pixel < size.Width * size.Height; pixel++)
+        {
+            var sourceOffset = pixel * 4;
+            var targetOffset = pixel * 4;
+            var differs =
+                Math.Abs(actualPixels[sourceOffset] - baselinePixels[sourceOffset]) > ChannelTolerance
+                || Math.Abs(actualPixels[sourceOffset + 1] - baselinePixels[sourceOffset + 1]) > ChannelTolerance
+                || Math.Abs(actualPixels[sourceOffset + 2] - baselinePixels[sourceOffset + 2]) > ChannelTolerance;
+            if (!differs)
+            {
+                continue;
+            }
+
+            // BGRA：失配像素涂红（其余保持透明），掩膜只标出偏差区域。
+            diffPixels[targetOffset] = 255;
+            diffPixels[targetOffset + 1] = 0;
+            diffPixels[targetOffset + 2] = 0;
+            diffPixels[targetOffset + 3] = 255;
+        }
+
+        using var diff = new WriteableBitmap(
+            size,
+            new Vector(96, 96),
+            PixelFormat.Bgra8888,
+            AlphaFormat.Premul);
+        using (var frame = diff.Lock())
+        {
+            // Marshal.Copy 没有 IntPtr→IntPtr 重载，逐行经中间缓冲拷入帧内存。
+            var rowBuffer = new byte[rowBytes];
+            for (var row = 0; row < size.Height; row++)
+            {
+                Array.Copy(diffPixels, row * rowBytes, rowBuffer, 0, rowBytes);
+                Marshal.Copy(rowBuffer, 0, frame.Address + (row * frame.RowBytes), rowBytes);
+            }
+        }
+
+        using (var stream = File.Create(diffPath))
+        {
+            diff.Save(stream, new PngBitmapEncoderOptions());
+        }
+
+        return artifactDirectory;
     }
 
     private static void CopyPixels(Bitmap bitmap, PixelSize size, int stride, byte[] target)

@@ -9,22 +9,10 @@ public sealed class MotionTokensTests
     [Fact]
     public void Defaults_ExposeSharedDurationsForMotionConsumers()
     {
-        var tokenType = typeof(AnimationTimings).Assembly.GetType(
-            "Cafe.Launcher.Avalonia.Helpers.MotionTokens");
-
-        Assert.NotNull(tokenType);
-        Assert.Equal(
-            TimeSpan.FromMilliseconds(83),
-            tokenType.GetField("FasterDuration")?.GetValue(null));
-        Assert.Equal(
-            TimeSpan.FromMilliseconds(167),
-            tokenType.GetField("FastDuration")?.GetValue(null));
-        Assert.Equal(
-            TimeSpan.FromMilliseconds(250),
-            tokenType.GetField("NormalDuration")?.GetValue(null));
-        Assert.Equal(
-            TimeSpan.FromMilliseconds(333),
-            tokenType.GetField("SpatialDuration")?.GetValue(null));
+        Assert.Equal(TimeSpan.FromMilliseconds(83), MotionTokens.FasterDuration);
+        Assert.Equal(TimeSpan.FromMilliseconds(167), MotionTokens.FastDuration);
+        Assert.Equal(TimeSpan.FromMilliseconds(250), MotionTokens.NormalDuration);
+        Assert.Equal(TimeSpan.FromMilliseconds(333), MotionTokens.SpatialDuration);
     }
 
     [Fact]
@@ -63,23 +51,6 @@ public sealed class MotionTokensTests
         }
     }
 
-    private static string ProjectFile(string relativePath)
-    {
-        var directory = new DirectoryInfo(AppContext.BaseDirectory);
-        while (directory is not null
-               && !File.Exists(Path.Combine(
-                   directory.FullName,
-                   "src",
-                   "Cafe.Launcher.Avalonia",
-                   "Cafe.Launcher.Avalonia.csproj")))
-        {
-            directory = directory.Parent;
-        }
-
-        return Path.Combine(
-            directory?.FullName ?? throw new InvalidOperationException("Project root was not found."),
-            "src",
-            "Cafe.Launcher.Avalonia",
-            relativePath);
-    }
+    private static string ProjectFile(string relativePath) =>
+        Path.Combine(TestLocalizationHelper.FindProjectRoot(), relativePath);
 }

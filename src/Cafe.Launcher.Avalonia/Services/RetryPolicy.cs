@@ -25,14 +25,20 @@ internal static class RetryPolicy
     /// If null, defaults to <c>ex is HttpRequestException or TaskCanceledException</c>.
     /// </param>
     /// <param name="cancellationToken">Cancellation token that always throws immediately.</param>
+    /// <param name="delayAsync">
+    /// 测试接缝：注入退避等待的实现，单元测试用它避免真实时间等待；
+    /// 为 null 时使用 <see cref="Task.Delay(TimeSpan, CancellationToken)"/>。
+    /// </param>
     public static async Task<T> ExecuteWithRetryAsync<T>(
         Func<CancellationToken, Task<T>> action,
         int maxAttempts,
         Func<int, TimeSpan> backoff,
         CancellationToken cancellationToken,
-        Func<Exception, bool>? onRetryableError = null)
+        Func<Exception, bool>? onRetryableError = null,
+        Func<TimeSpan, CancellationToken, Task>? delayAsync = null)
     {
         var isRetryable = onRetryableError ?? (ex => ex is HttpRequestException or TaskCanceledException);
+        Func<TimeSpan, CancellationToken, Task> waitForBackoff = delayAsync ?? Task.Delay;
         Exception? lastException = null;
 
         for (var attempt = 0; attempt < maxAttempts; attempt++)
@@ -51,7 +57,7 @@ internal static class RetryPolicy
                 lastException = ex;
                 if (attempt < maxAttempts - 1)
                 {
-                    await Task.Delay(backoff(attempt), cancellationToken).ConfigureAwait(false);
+                    await waitForBackoff(backoff(attempt), cancellationToken).ConfigureAwait(false);
                 }
             }
         }

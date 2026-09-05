@@ -7,6 +7,7 @@ using Cafe.Launcher.Avalonia.Services.Auth;
 
 namespace Cafe.Launcher.Avalonia.Tests;
 
+[Collection(nameof(LocalizationServiceTestIsolation))]
 public sealed class ManifestValidationServiceTests : IDisposable
 {
     private readonly string tempDir = Path.Combine(Path.GetTempPath(), Guid.NewGuid().ToString("N"));

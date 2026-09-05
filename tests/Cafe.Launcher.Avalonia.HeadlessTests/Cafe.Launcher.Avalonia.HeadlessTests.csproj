@@ -39,6 +39,9 @@
 
   <ItemGroup>
     <Compile Include="..\TestUserDataIsolation.cs" Link="TestUserDataIsolation.cs" />
+    <Compile Include="..\TestAnimationSetup.cs" Link="TestAnimationSetup.cs" />
+    <Compile Include="..\TestDoubles\StubFileDownloadService.cs" Link="TestDoubles\StubFileDownloadService.cs" />
+    <Compile Include="..\TestDoubles\StubGameOperationExecutor.cs" Link="TestDoubles\StubGameOperationExecutor.cs" />
   </ItemGroup>
 
   <ItemGroup>

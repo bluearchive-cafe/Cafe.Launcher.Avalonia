@@ -30,7 +30,7 @@ Add every UI string to the neutral `Resources/LauncherStrings.resx` file and its
 
 ## Testing Guidelines
 
-Tests use xUnit v3; UI tests use `Avalonia.Headless.XUnit`. Name tests `Method_State_ExpectedResult`. Add focused regression tests for behavior changes and run `UiStyleContractTests` after XAML/style edits. Run `.\scripts\Test-LocalizationContract.ps1` after modifying any `Resources/LauncherStrings*.resx`; run `.\dev.ps1 ui` after XAML or style changes. Before merging or releasing, still run `.\verify.ps1`. `coverage.ps1` enforces the 50% minimum for line and branch coverage and rejects regressions below the repository baseline.
+Tests use xUnit v3; UI tests use `Avalonia.Headless.XUnit`. Name tests `Method_State_ExpectedResult`; behavior tests use the full three-segment form, while source/guard contract tests (asserting files, resources, or member structure rather than behavior) may use the two-segment `Subject_Expectation` form. Add focused regression tests for behavior changes and run `UiStyleContractTests` after XAML/style edits. Run `.\scripts\Test-LocalizationContract.ps1` after modifying any `Resources/LauncherStrings*.resx`; run `.\dev.ps1 ui` after XAML or style changes. Before merging or releasing, still run `.\verify.ps1`. `coverage.ps1` enforces the 50% minimum for line and branch coverage and rejects regressions below the repository baseline.
 
 ## Release Notes
 
