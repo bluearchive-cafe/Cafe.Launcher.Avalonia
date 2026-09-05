@@ -1,13 +1,13 @@
 # Repository Map
 
-- 审计日期：2026-09-04
-- HEAD：8657fa6 `test(headless): 无头测试上下文退出时清理临时目录`
+- 审计日期：2026-09-04（全维度复审时更新）
+- HEAD：4ed11c3 `docs(audit): 记录 P0-P3 整改状态与验收结果`
 
 ## Language / Framework
 
 - 语言：C#（.NET 10，`net10.0`），XAML（Avalonia 12.1.1）
 - 框架：Avalonia UI + CommunityToolkit.Mvvm（MVVM）
-- 规模：src 约 200 个 .cs 文件（不含 Designer）/ 约 28.6k 行；tests 约 120 个 .cs 文件 / 约 34.1k 行，1015 个 `[Fact]/[Theory]`
+- 规模：src 201 个 .cs 文件（不含 Designer）/ 约 29.8k 行 + 25 个 .axaml；tests 157 个 .cs 文件 / 约 37.2k 行，1082 个 `[Fact]/[Theory]`
 
 ## Architecture
 
