@@ -3,8 +3,10 @@ $env:DOTNET_CLI_TELEMETRY_OPTOUT = '1'
 $env:AVALONIA_TELEMETRY_OPTOUT = '1'
 
 # 纯文本扫描、无 dotnet 依赖，放在最前 fail-fast。
+# 成功路径为自然落空、不设 $LASTEXITCODE：全新会话中它仍是 $null，
+# $null -ne 0 恒为真会把整个 verify 短路成静默成功，故用 $? 判定。
 & "$PSScriptRoot\scripts\Test-LocalizationContract.ps1"
-if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+if (-not $?) { exit $LASTEXITCODE }
 
 & "$PSScriptRoot\build.ps1"
 if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
