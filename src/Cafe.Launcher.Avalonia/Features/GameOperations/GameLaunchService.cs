@@ -61,7 +61,7 @@ public sealed class GameLaunchService
             {
                 GameLaunchTargetStatus.ExecutableNameInvalid => localizer.T(LocalizationKeys.GameExecutableNameInvalid),
                 GameLaunchTargetStatus.ExecutableMissing => localizer.F(
-                    "gameExecutableMissing", targetResolution.ExpectedExecutablePath),
+                    LocalizationKeys.GameExecutableMissing, targetResolution.ExpectedExecutablePath),
                 _ => localizer.T(LocalizationKeys.GameExecutableNameEmpty)
             });
         }

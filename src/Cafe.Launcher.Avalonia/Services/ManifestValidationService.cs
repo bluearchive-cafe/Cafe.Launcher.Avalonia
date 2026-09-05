@@ -105,7 +105,7 @@ public sealed class ManifestValidationService
             Message = damagedCount == 0
                 ? localizer.T(LocalizationKeys.ManifestValidationPassed)
                 : localizer.F(
-                    "manifestValidationFailed",
+                    LocalizationKeys.ManifestValidationFailed,
                     fileCounts.MissingFileCount,
                     fileCounts.SizeMismatchFileCount)
         };
