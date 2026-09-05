@@ -1,4 +1,4 @@
-namespace Cafe.Launcher.Avalonia.Features.Shell;
+namespace Cafe.Launcher.Avalonia.ViewModels;
 
 /// <summary>Identifies every modal surface hosted by the main window.</summary>
 public enum ModalKind

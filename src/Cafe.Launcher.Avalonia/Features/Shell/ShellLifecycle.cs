@@ -216,7 +216,7 @@ public sealed class ShellLifecycle : IShellRuntime
             ApplyMotionSettings(settingsForLanguage);
             ApplyLanguage(settingsForLanguage.Language);
             settings.Appearance.Load(settingsForLanguage);
-            SettingsAppearanceViewModel.ApplyTheme(settingsForLanguage.ThemeMode);
+            settings.Appearance.ApplyTheme(settingsForLanguage.ThemeMode);
             settings.Appearance.ApplyThemeColor(
                 settingsForLanguage.ThemeColorMode,
                 SettingsAppearanceViewModel.ParseColorOrDefault(settingsForLanguage.CustomThemeColor));
@@ -377,7 +377,7 @@ public sealed class ShellLifecycle : IShellRuntime
         string? propertyName,
         CancellationToken cancellationToken)
     {
-        SettingsAppearanceViewModel.ApplyTheme(previewSettings.ThemeMode);
+        settings.Appearance.ApplyTheme(previewSettings.ThemeMode);
         settings.Appearance.ApplyThemeColor(
             previewSettings.ThemeColorMode,
             SettingsAppearanceViewModel.ParseColorOrDefault(previewSettings.CustomThemeColor));
@@ -397,7 +397,7 @@ public sealed class ShellLifecycle : IShellRuntime
     private Task ApplyLanguageAndThemeAsync(LauncherSettings launcherSettings)
     {
         ApplyLanguage(launcherSettings.Language);
-        SettingsAppearanceViewModel.ApplyTheme(launcherSettings.ThemeMode);
+        settings.Appearance.ApplyTheme(launcherSettings.ThemeMode);
         settings.Appearance.ApplyThemeColor(
             launcherSettings.ThemeColorMode,
             SettingsAppearanceViewModel.ParseColorOrDefault(launcherSettings.CustomThemeColor));
@@ -637,7 +637,7 @@ public sealed class ShellLifecycle : IShellRuntime
     {
         ApplySettingsSnapshot(snapshot.Settings);
         ApplyLanguage(snapshot.Settings.Language);
-        SettingsAppearanceViewModel.ApplyTheme(snapshot.Settings.ThemeMode);
+        settings.Appearance.ApplyTheme(snapshot.Settings.ThemeMode);
         await background.UpdateBackgroundImageAsync(
             snapshot.Settings,
             snapshot,

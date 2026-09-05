@@ -3,7 +3,7 @@ using System.Collections.ObjectModel;
 using System.Linq;
 using CommunityToolkit.Mvvm.ComponentModel;
 
-namespace Cafe.Launcher.Avalonia.Features.Shell;
+namespace Cafe.Launcher.Avalonia.ViewModels;
 
 /// <summary>Maintains open modal entries in their actual opening order.</summary>
 public sealed partial class ModalHostViewModel : ObservableObject

@@ -1,4 +1,4 @@
-using Cafe.Launcher.Avalonia.Features.Shell;
+using Cafe.Launcher.Avalonia.ViewModels;
 
 namespace Cafe.Launcher.Avalonia.Tests;
 

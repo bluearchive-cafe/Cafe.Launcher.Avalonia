@@ -566,7 +566,7 @@ public partial class SettingsAppearanceViewModel : ViewModelBase, IDisposable
         return ParseThemeColorPaletteColor(ThemeColorPaletteItems[selectedIndex].ColorHex);
     }
 
-    public static void ApplyTheme(string themeMode)
+    public void ApplyTheme(string themeMode)
     {
         var themeVariant = themeMode switch
         {
