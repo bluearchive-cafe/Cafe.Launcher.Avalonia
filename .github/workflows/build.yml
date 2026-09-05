@@ -24,6 +24,11 @@ jobs:
       DOTNET_CLI_TELEMETRY_OPTOUT: 1
       DOTNET_NOLOGO: 1
       AVALONIA_TELEMETRY_OPTOUT: 1
+      # 供应链闭环：SDK 不会从 CI 环境自动推断这两个属性（dotnet/sdk#23795），
+      # 必须显式设置。RestoreLockedMode 使 restore 与提交的 packages.lock.json
+      # 不一致时直接失败（NU1004），锁定完整传递依赖闭包。
+      ContinuousIntegrationBuild: 'true'
+      RestoreLockedMode: 'true'
 
     steps:
       - name: Checkout
@@ -55,7 +60,14 @@ jobs:
             TestResults/Coverage/**/coverage.cobertura.xml
 
       - name: Restore (win-x64)
+        env:
+          # NuGet lock 文件只能固定一个 RID 上下文（每个 -r restore 会重写
+          # runtimeIdentifier 字段），因此提交的 lock 固定的是无 RID 的
+          # net10.0 依赖图；RID 专属发布还原无法使用 locked mode，显式豁免。
+          RestoreLockedMode: 'false'
         run: dotnet restore $env:Project_Path -r win-x64
 
       - name: Publish (Release, win-x64)
+        env:
+          RestoreLockedMode: 'false'
         run: dotnet publish $env:Project_Path -c Release -r win-x64 -o publish --no-restore

@@ -27,6 +27,10 @@ jobs:
       DOTNET_CLI_TELEMETRY_OPTOUT: 1
       DOTNET_NOLOGO: 1
       AVALONIA_TELEMETRY_OPTOUT: 1
+      # 供应链闭环：SDK 不会从 CI 环境自动推断这两个属性（dotnet/sdk#23795），
+      # 必须显式设置；RID 专属发布还原步骤显式豁免 RestoreLockedMode。
+      ContinuousIntegrationBuild: 'true'
+      RestoreLockedMode: 'true'
 
     steps:
       - name: Checkout
@@ -59,6 +63,11 @@ jobs:
           chmod +x appimagetool-x86_64.AppImage
 
       - name: Build distribution packages
+        env:
+          # NuGet lock 文件只能固定一个 RID 上下文（每个 -r restore 会重写
+          # runtimeIdentifier 字段），因此提交的 lock 固定的是无 RID 的
+          # net10.0 依赖图；三个 RID 的发布还原无法使用 locked mode，显式豁免。
+          RestoreLockedMode: 'false'
         run: |
           $buildArguments = @{
               Rids = 'win-x64', 'osx-arm64', 'linux-x64'
@@ -172,6 +181,9 @@ jobs:
       DOTNET_CLI_TELEMETRY_OPTOUT: 1
       DOTNET_NOLOGO: 1
       AVALONIA_TELEMETRY_OPTOUT: 1
+      # 供应链闭环：与 build job 相同的锁定还原与确定性构建。
+      ContinuousIntegrationBuild: 'true'
+      RestoreLockedMode: 'true'
 
     steps:
       - name: Checkout
