@@ -22,6 +22,8 @@ Shell ruling (2026-09 audit): `Features/Shell` is the window shell layer above t
 - `.\scripts\New-AppIconAssets.ps1` — regenerate the committed macOS `.icns` and Linux `.png` icon assets after changing `Assets/app-icon-source.jpg`; run on Windows and commit the outputs.
 - `dotnet test .\tests\Cafe.Launcher.Avalonia.Tests\Cafe.Launcher.Avalonia.Tests.csproj --filter "FullyQualifiedName~VersionComparerTests"` — run one test class.
 
+When changing package versions (including accepting a Dependabot PR), run `dotnet restore` locally and commit the regenerated `packages.lock.json` files together with the version change. CI restores in locked mode, so a PR that updates `Directory.Packages.props` without regenerating the lock files fails with NU1004 — that failure means the locks need regenerating, not that the enforcement is broken. Local `-r`-specific restores (e.g. `verify.ps1`, `Build-Distribution.ps1`) rewrite the RID section of the lock files; restore them with `git restore` before committing.
+
 ## Coding Style & Naming Conventions
 
 Follow `.editorconfig`: C# uses UTF-8, CRLF, four-space indentation, file-scoped namespaces, braces, and explicit types unless the type is apparent. Other repository text files use LF. Nullable reference types, compiled bindings, code-style enforcement, and warnings-as-errors are enabled. Use PascalCase for types and public members, camelCase for locals and parameters, and the existing `IService`/`Service` pairing for abstractions. Keep XAML values on the design tokens defined in `App.axaml`; do not introduce raw colors or spacing values in views.

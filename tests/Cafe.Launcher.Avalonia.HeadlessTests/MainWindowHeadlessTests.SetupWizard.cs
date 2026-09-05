@@ -303,62 +303,116 @@ public sealed partial class MainWindowHeadlessTests
 
         foreach (var stepIndex in new[] { 2, 0, 4 })
         {
-            context.ViewModel.Dialogs.SetupWizard.Step = stepIndex;
+            await AssertEntranceIsAnimatedAsync(context.ViewModel.Dialogs.SetupWizard, steps, stepIndex);
+            var visibleStep = Assert.Single(steps, control => control.IsVisible);
+            Assert.Equal(stepIndex, steps.IndexOf(visibleStep));
+            Assert.Equal(1d, visibleStep.Opacity);
+        }
+    }
+
+    /// <summary>
+    /// 断言目标面板的入场经历真实过渡而非瞬变。中间帧用「属性变更推送」观察：动画逐帧写入
+    /// Opacity / X 时同步触发 PropertyChanged，不存在轮询采样窗口——慢机上轮询一旦被调度停顿
+    /// 盖过入场窗口（前载曲线下约 100ms），会从「未入场」直接观察到「已落定」而漏采全部中间帧
+    /// （CI 曾实际发生）。帧泵极端停顿导致一帧都未落入窗口时靠重试区分：偶发重试通过即环境
+    /// 调度抖动，连续多次失败才判定为入场瞬变回归。
+    /// </summary>
+    private static async Task AssertEntranceIsAnimatedAsync(
+        SetupWizardViewModel wizard,
+        List<StackPanel> steps,
+        int stepIndex)
+    {
+        const int MaxAttempts = 3;
+        var attempts = new List<string>();
+
+        for (var attempt = 1; attempt <= MaxAttempts; attempt++)
+        {
+            // 重试时目标面板已落定可见，先换到锚点步令其退场，否则 from==to 走瞬时换面，
+            // 观察不到入场；锚点间隔两步，重试覆盖的仍是一次带方向变化的完整入场。
+            if (steps.FindIndex(panel => panel.IsVisible) == stepIndex)
+            {
+                var anchor = (stepIndex + 2) % steps.Count;
+                wizard.Step = anchor;
+                await WaitUntilStepSettledAsync(steps, anchor, $"步骤 {stepIndex} 重试前的锚点步 {anchor}");
+            }
 
             var sawFade = false;
             var sawSlide = false;
-            var settled = false;
-            // 入场动画由真实帧时钟驱动：给出硬性预算，调度异常时快速失败而非挂死测试进程。
-            var settleDeadline = DateTime.UtcNow.AddSeconds(5);
 
-            void SampleIntermediateFrame()
+            void ObserveAnimatedValue(object? sender, AvaloniaPropertyChangedEventArgs e)
             {
-                // 精确判定：动画完成后的所有权结算会精确置 Opacity=1、X=0，
-                // 容差判定会在最后一帧插值期间误报已定格。同时采样中间帧，
-                // 保证淡入与方向滑入确实经历过渡而不是瞬变。
-                if (steps[stepIndex].IsVisible && steps[stepIndex].Opacity is > 0.05 and < 0.95)
+                // 精确判定：入场为前载曲线，起势帧与落定结算精确写 0 / ±14 / 1，
+                // 开区间只计入真实插值中间帧，排除两端的确定态。
+                if (e.Property == Visual.OpacityProperty
+                    && e.NewValue is double opacity
+                    && opacity is > 0.05 and < 0.95)
                 {
                     sawFade = true;
                 }
 
-                if (steps[stepIndex].RenderTransform is TranslateTransform movingTransform
-                    && Math.Abs(movingTransform.X) is > 0.5 and < 13.5)
+                if (e.Property == TranslateTransform.XProperty
+                    && e.NewValue is double x
+                    && Math.Abs(x) is > 0.5 and < 13.5)
                 {
                     sawSlide = true;
                 }
             }
 
-            // 高负载环境（如 coverage 插桩）下首轮采样可能晚于动画结束而漏掉
-            // 全部中间帧：先同步采样一次再进入轮询，并把轮询间隔压到 1ms。
-            Dispatcher.UIThread.RunJobs();
-            SampleIntermediateFrame();
-
-            while (!settled)
+            var target = steps[stepIndex];
+            // X 的动画写入发生在 RenderTransform 实例上而非面板上，两个对象都要订阅。
+            var targetTransform = Assert.IsType<TranslateTransform>(target.RenderTransform);
+            target.PropertyChanged += ObserveAnimatedValue;
+            targetTransform.PropertyChanged += ObserveAnimatedValue;
+            try
             {
-                if (DateTime.UtcNow >= settleDeadline)
-                {
-                    Assert.Fail($"步骤 {stepIndex} 的入场动画未在 5 秒预算内落定。");
-                }
-
-                settled = await Dispatcher.UIThread.InvokeAsync(() =>
-                {
-                    SampleIntermediateFrame();
-
-                    return steps[stepIndex].IsVisible
-                        && steps[stepIndex].Opacity == 1d
-                        && steps[stepIndex].RenderTransform is TranslateTransform settledTransform
-                        && settledTransform.X == 0d;
-                });
-                await Dispatcher.UIThread.InvokeAsync(() => { });
-                await Task.Delay(1);
+                wizard.Step = stepIndex;
+                await WaitUntilStepSettledAsync(steps, stepIndex, $"步骤 {stepIndex}（第 {attempt} 次尝试）");
+            }
+            finally
+            {
+                target.PropertyChanged -= ObserveAnimatedValue;
+                targetTransform.PropertyChanged -= ObserveAnimatedValue;
             }
 
-            Dispatcher.UIThread.RunJobs();
-            Assert.True(sawFade, "未观察到淡入中间帧，入场透明度疑似瞬变。");
-            Assert.True(sawSlide, "未观察到方向滑入中间帧，位移疑似瞬变。");
-            var visibleStep = Assert.Single(steps, control => control.IsVisible);
-            Assert.Equal(stepIndex, steps.IndexOf(visibleStep));
-            Assert.Equal(1d, visibleStep.Opacity);
+            if (sawFade && sawSlide)
+            {
+                return;
+            }
+
+            attempts.Add($"第 {attempt} 次尝试 fade={sawFade} slide={sawSlide}");
+        }
+
+        Assert.Fail(
+            $"步骤 {stepIndex} 连续 {MaxAttempts} 次未观察到入场中间帧（{string.Join("；", attempts)}）。" +
+            "多次重试仍复现疑似入场瞬变回归，而非环境调度抖动。");
+    }
+
+    /// <summary>入场序列（退场对半 + 起势帧 + 入场对半 + 收尾缓冲）由真实帧时钟驱动，给硬性预算防挂死。</summary>
+    private static async Task WaitUntilStepSettledAsync(List<StackPanel> steps, int stepIndex, string phase)
+    {
+        var settleDeadline = DateTime.UtcNow.AddSeconds(5);
+        while (true)
+        {
+            if (DateTime.UtcNow >= settleDeadline)
+            {
+                Assert.Fail($"{phase} 的入场动画未在 5 秒预算内落定。");
+            }
+
+            var settled = await Dispatcher.UIThread.InvokeAsync(() =>
+            {
+                var panel = steps[stepIndex];
+                return panel.IsVisible
+                    && panel.Opacity == 1d
+                    && panel.RenderTransform is TranslateTransform settledTransform
+                    && settledTransform.X == 0d;
+            });
+            if (settled)
+            {
+                return;
+            }
+
+            await Dispatcher.UIThread.InvokeAsync(() => { });
+            await Task.Delay(1);
         }
     }
 

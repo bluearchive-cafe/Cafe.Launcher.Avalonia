@@ -46,12 +46,15 @@ public partial class MainWindow : Window
     private readonly WindowMetricsService? windowMetrics;
 
     /// <summary>
-    /// <paramref name="filePickerService"/> 与 <paramref name="windowMetrics"/> 可空以兼容
-    /// 无头测试的默认构造；生产入口（App.axaml.cs）注入并在本构造器中挂接本窗口。
+    /// 无参公共构造：Avalonia 运行时 XAML 加载器可达性要求（AVLN3001，缺失即构建错误），
+    /// 无头测试也经此获得无服务实例。生产入口（App.axaml.cs）一律使用注入构造。
     /// </summary>
-    public MainWindow(
-        WindowFilePickerService? filePickerService = null,
-        WindowMetricsService? windowMetrics = null)
+    public MainWindow() : this(null, null)
+    {
+    }
+
+    /// <summary>生产入口注入文件选取与窗口度量服务，并在本构造器中挂接本窗口。</summary>
+    public MainWindow(WindowFilePickerService? filePickerService, WindowMetricsService? windowMetrics)
     {
         InitializeComponent();
         this.filePickerService = filePickerService;
