@@ -42,9 +42,9 @@ jobs:
           dotnet-version: 10.0.x
           cache: true
           cache-dependency-path: |
-            '**/*.csproj'
-            '**/packages.lock.json'
-            'Directory.Packages.props'
+            **/*.csproj
+            **/packages.lock.json
+            Directory.Packages.props
 
       - name: Test
         run: .\test.ps1 -Configuration Debug
