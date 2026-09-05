@@ -1,0 +1,14 @@
+interface:
+  display_name: repository audit
+  short_description: Use when assessing repository-wide engineering health, preparing
+    a release or refactor, investigating systemic risks across modules or CI, or re-checking
+    a codebase after a previous audit.
+  icon_small: assets/icon.svg
+  icon_large: assets/icon.svg
+policy:
+  products:
+  - chatgpt
+  - codex
+  - api
+  - atlas
+  allow_implicit_invocation: true

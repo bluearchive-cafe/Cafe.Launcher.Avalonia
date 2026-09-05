@@ -1,0 +1,18 @@
+{
+  "schema_version": 1,
+  "findings": {
+    "AUD-EXAMPLE-001": {
+      "title": "Example finding",
+      "category": "example",
+      "severity": "medium",
+      "confidence": 85,
+      "status": "open",
+      "disposition": "Fix",
+      "recommendation_validation": "Strongly Supported",
+      "first_seen_commit": null,
+      "last_verified_commit": null,
+      "resolved_commit": null,
+      "guard": null
+    }
+  }
+}
