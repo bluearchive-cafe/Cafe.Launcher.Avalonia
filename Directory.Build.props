@@ -4,7 +4,9 @@
     - packages.lock.json 随源码提交，锁定完整依赖闭包（含传递依赖）。
       lock 文件只能固定一个 RID 上下文，因此提交的 lock 固定无 RID 的
       net10.0 依赖图；RID 专属发布还原无法使用 locked mode（在 CI 工作流中
-      对应步骤显式豁免 RestoreLockedMode）。
+      对应步骤显式豁免 RestoreLockedMode）。注意：本地执行带 -r 的构建或
+      发布（如 verify.ps1、Build-Distribution.ps1）会把 RID 段写回 lock
+      文件，提交前应先还原该文件（git checkout --）。
     - locked mode 不会自动启用：SDK 不会从 CI 环境推断任何属性
       （dotnet/sdk#23795）。CI 在 workflow 的 job env 中显式设置
       ContinuousIntegrationBuild=true 与 RestoreLockedMode=true，
