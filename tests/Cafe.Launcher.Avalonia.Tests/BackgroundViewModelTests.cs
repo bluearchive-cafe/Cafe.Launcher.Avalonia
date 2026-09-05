@@ -311,6 +311,80 @@ public sealed class BackgroundViewModelTests : IDisposable
     }
 
     [Fact]
+    public async Task UpdateBackgroundImageAsync_WhenCustomFileChangesAtSamePath_DoesNotSkipReload()
+    {
+        var path = Path.Combine(tempDir, "custom-reswap.png");
+        await File.WriteAllBytesAsync(path, PngBytes);
+        using var cache = CreateCache(new ImageHandler(PngBytes));
+        using var viewModel = new BackgroundViewModel(
+            cache,
+            new LocalDiagnostics(),
+            _ => { },
+            (path, _) => new TestImage(),
+            () => new TestImage());
+
+        await viewModel.UpdateBackgroundImageAsync(
+            new LauncherSettings
+            {
+                BackgroundSource = BackgroundSources.Custom,
+                CustomBackgroundPath = path
+            },
+            null,
+            CancellationToken.None);
+        var firstSwap = (TestImage)viewModel.BackgroundImageSource!;
+
+        // 用户在原路径覆盖图片文件：路径不变但内容指纹（长度/写入时间）变化，
+        // 来源 key 必须失效——否则跳过守卫会让壁纸停留旧图。
+        await File.WriteAllBytesAsync(path, [..PngBytes, 0x0A]);
+        await viewModel.UpdateBackgroundImageAsync(
+            new LauncherSettings
+            {
+                BackgroundSource = BackgroundSources.Custom,
+                CustomBackgroundPath = path
+            },
+            null,
+            CancellationToken.None);
+
+        Assert.NotSame(firstSwap, viewModel.BackgroundImageSource);
+    }
+
+    [Fact]
+    public async Task UpdateBackgroundImageAsync_WhenCustomFileUnchanged_SkipsReload()
+    {
+        var path = Path.Combine(tempDir, "custom-skip.png");
+        await File.WriteAllBytesAsync(path, PngBytes);
+        using var cache = CreateCache(new ImageHandler(PngBytes));
+        using var viewModel = new BackgroundViewModel(
+            cache,
+            new LocalDiagnostics(),
+            _ => { },
+            (path, _) => new TestImage(),
+            () => new TestImage());
+
+        await viewModel.UpdateBackgroundImageAsync(
+            new LauncherSettings
+            {
+                BackgroundSource = BackgroundSources.Custom,
+                CustomBackgroundPath = path
+            },
+            null,
+            CancellationToken.None);
+        var firstSwap = (TestImage)viewModel.BackgroundImageSource!;
+
+        await viewModel.UpdateBackgroundImageAsync(
+            new LauncherSettings
+            {
+                BackgroundSource = BackgroundSources.Custom,
+                CustomBackgroundPath = path
+            },
+            null,
+            CancellationToken.None);
+
+        // 同一路径同一文件再次刷新：跳过契约对自定义文件来源同样成立。
+        Assert.Same(firstSwap, viewModel.BackgroundImageSource);
+    }
+
+    [Fact]
     public void ApplyBackgroundPresentation_WhenUniform_UsesConfiguredFillColor()
     {
         using var cache = CreateCache(new ImageHandler(PngBytes));

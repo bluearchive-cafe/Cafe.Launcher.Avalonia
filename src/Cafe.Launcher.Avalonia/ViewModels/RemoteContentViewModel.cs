@@ -1,10 +1,8 @@
 using System;
 using System.Collections.ObjectModel;
-using System.IO;
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
-using Avalonia.Media.Imaging;
 using Avalonia.Animation;
 using Avalonia.Animation.Easings;
 using Avalonia.Threading;
@@ -546,9 +544,10 @@ public partial class RemoteContentViewModel : ViewModelBase, IDisposable
                     return;
                 }
 
-                // 全尺寸解码放线程池：横幅每轮刷新全部重建，UI 线程解码会造成
-                // 可感知卡顿（位图显示用 UniformToFill 全宽，不在解码端降采样）。
-                var banner = await Task.Run(() => new Bitmap(new MemoryStream(bytes)));
+                // 解码放线程池：横幅每轮刷新全部重建，UI 线程解码会造成可感知
+                // 卡顿。常规图不降采样（UniformToFill 全宽显示），仅钳制超大图的
+                // 驻留尺寸（见 BannerImageDecoder）。
+                var banner = await Task.Run(() => BannerImageDecoder.Decode(bytes));
                 if (cancellationToken.IsCancellationRequested)
                 {
                     banner.Dispose();
