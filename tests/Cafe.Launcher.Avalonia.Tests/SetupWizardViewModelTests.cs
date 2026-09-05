@@ -1,4 +1,5 @@
 using System.ComponentModel;
+using Cafe.Launcher.Avalonia.Constants;
 using Cafe.Launcher.Avalonia.Features.SetupWizard;
 using Cafe.Launcher.Avalonia.Models;
 using Cafe.Launcher.Avalonia.Services;
@@ -175,6 +176,26 @@ public sealed class SetupWizardViewModelTests
         vm.NextCommand.Execute(null);
         await WaitForGamePathStatusAsync(vm, SetupWizardGamePathStatus.AvailableForInstallation);
         Assert.True(vm.CanGoNext);
+    }
+
+    [Fact]
+    public async Task CanGoNext_Step1WithNotWritablePath_ReturnsFalse()
+    {
+        var root = Path.Combine(Path.GetTempPath(), Guid.NewGuid().ToString("N"));
+        Directory.CreateDirectory(root);
+        var blocker = Path.Combine(root, "blocker");
+        File.WriteAllText(blocker, "not a directory");
+        var vm = new SetupWizardViewModel(
+            new LocalizationService(),
+            new GameInstallationPath(),
+            new LocalInstallationStateStore(),
+            new LocalDiagnostics(), new StubFilePickerService());
+        vm.GamePath = Path.Combine(blocker, GamePaths.RootFolderName, GamePaths.GameFolderName);
+        vm.NextCommand.Execute(null);
+        await WaitForGamePathStatusAsync(vm, SetupWizardGamePathStatus.NotWritable);
+        Assert.True(vm.IsGamePathNotWritable);
+        Assert.False(vm.IsGamePathReady);
+        Assert.False(vm.CanGoNext);
     }
 
     [Fact]

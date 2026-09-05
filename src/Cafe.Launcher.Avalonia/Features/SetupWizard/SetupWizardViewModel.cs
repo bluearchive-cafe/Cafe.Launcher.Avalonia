@@ -141,6 +141,7 @@ public partial class SetupWizardViewModel : ViewModelBase, IModalContentViewMode
     [NotifyPropertyChangedFor(nameof(IsGamePathValidInstallation))]
     [NotifyPropertyChangedFor(nameof(IsGamePathCorruptedInstallation))]
     [NotifyPropertyChangedFor(nameof(IsGamePathInaccessible))]
+    [NotifyPropertyChangedFor(nameof(IsGamePathNotWritable))]
     [NotifyPropertyChangedFor(nameof(CanGoNext))]
     private SetupWizardGamePathStatus gamePathStatus;
 
@@ -151,6 +152,7 @@ public partial class SetupWizardViewModel : ViewModelBase, IModalContentViewMode
         SetupWizardGamePathStatus.ValidInstallation => localizer.T(LocalizationKeys.SetupWizardGamePathInstalled),
         SetupWizardGamePathStatus.CorruptedInstallation => localizer.T(LocalizationKeys.SetupWizardGamePathCorrupted),
         SetupWizardGamePathStatus.Inaccessible => localizer.T(LocalizationKeys.SetupWizardGamePathInaccessible),
+        SetupWizardGamePathStatus.NotWritable => localizer.T(LocalizationKeys.SetupWizardGamePathNotWritable),
         _ => string.Empty
     };
 
@@ -174,6 +176,8 @@ public partial class SetupWizardViewModel : ViewModelBase, IModalContentViewMode
         GamePathStatus == SetupWizardGamePathStatus.CorruptedInstallation;
 
     public bool IsGamePathInaccessible => GamePathStatus == SetupWizardGamePathStatus.Inaccessible;
+
+    public bool IsGamePathNotWritable => GamePathStatus == SetupWizardGamePathStatus.NotWritable;
 
     [ObservableProperty]
     [NotifyPropertyChangedFor(nameof(IsProxyAuto))]
@@ -339,6 +343,17 @@ public partial class SetupWizardViewModel : ViewModelBase, IModalContentViewMode
                 LocalInstallationStateKind.IoFailure => SetupWizardGamePathStatus.Inaccessible,
                 _ => SetupWizardGamePathStatus.Inaccessible
             };
+
+            // 全新安装要创建目录链、修复损坏安装要重写状态文件——两者都需要写权限。
+            // 在选择阶段就探测（Program Files 等受保护位置此处即被拦下），已有效的
+            // 安装只读即可运行，不做探测以免误伤非提权会话。
+            if ((status is SetupWizardGamePathStatus.AvailableForInstallation
+                    or SetupWizardGamePathStatus.CorruptedInstallation)
+                && !DirectoryWriteProbe.CanCreate(normalizedPath))
+            {
+                status = SetupWizardGamePathStatus.NotWritable;
+            }
+
             SetGamePathStatusIfCurrent(status, version, cancellationTokenSource);
         }
         catch (OperationCanceledException) when (cancellationTokenSource.IsCancellationRequested)

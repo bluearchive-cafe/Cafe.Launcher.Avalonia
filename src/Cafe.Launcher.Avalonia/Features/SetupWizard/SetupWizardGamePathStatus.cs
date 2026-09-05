@@ -9,4 +9,5 @@ public enum SetupWizardGamePathStatus
     ValidInstallation,
     CorruptedInstallation,
     Inaccessible,
+    NotWritable,
 }

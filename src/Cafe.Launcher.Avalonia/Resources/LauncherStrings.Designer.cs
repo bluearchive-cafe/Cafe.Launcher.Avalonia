@@ -908,6 +908,8 @@ internal static class LauncherStrings
 
     internal static string SetupWizardGamePathInstalled => GetRequiredString("setupWizardGamePathInstalled");
 
+    internal static string SetupWizardGamePathNotWritable => GetRequiredString("setupWizardGamePathNotWritable");
+
     internal static string SetupWizardGamePathStatusDescription => GetRequiredString("setupWizardGamePathStatusDescription");
 
     internal static string SetupWizardGamePathStatusTitle => GetRequiredString("setupWizardGamePathStatusTitle");

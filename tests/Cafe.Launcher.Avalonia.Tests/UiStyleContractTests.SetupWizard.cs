@@ -397,6 +397,9 @@ public sealed partial class UiStyleContractTests
         Assert.Equal(
             "{Binding Dialogs.SetupWizard.IsGamePathInaccessible}",
             status.Attribute("Classes.inaccessible")?.Value);
+        Assert.Equal(
+            "{Binding Dialogs.SetupWizard.IsGamePathNotWritable}",
+            status.Attribute("Classes.notwritable")?.Value);
         Assert.Equal("CharacterEllipsis", status.Attribute("TextTrimming")?.Value);
         Assert.Equal("1", status.Attribute("MaxLines")?.Value);
 
@@ -413,8 +416,12 @@ public sealed partial class UiStyleContractTests
         Assert.Equal(
             "{StaticResource Launcher.Color.Danger}",
             GetStyleSetters(styles, "TextBlock.wizard-game-path-status.inaccessible")["Foreground"]);
+        Assert.Equal(
+            "{StaticResource Launcher.Color.Danger}",
+            GetStyleSetters(styles, "TextBlock.wizard-game-path-status.notwritable")["Foreground"]);
 
-        // 状态图标与文本共用语义色：检测中 Sync、就绪 CheckCircle、损坏/不可访问 Alert。
+        // 状态图标与文本共用语义色：检测中 Sync、就绪 CheckCircle、损坏/不可访问 Alert、
+        // 不可写入 Lock。
         var icons = statusRow
             .Elements()
             .Where(element => element.Name.LocalName == "MaterialIcon")
@@ -456,6 +463,16 @@ public sealed partial class UiStyleContractTests
                 Assert.Equal("Alert", icon.Attribute("Kind")?.Value);
                 Assert.Equal(
                     "{Binding Dialogs.SetupWizard.IsGamePathInaccessible}",
+                    icon.Attribute("IsVisible")?.Value);
+                Assert.Equal(
+                    "{StaticResource Launcher.Color.Danger}",
+                    icon.Attribute("Foreground")?.Value);
+            },
+            icon =>
+            {
+                Assert.Equal("Lock", icon.Attribute("Kind")?.Value);
+                Assert.Equal(
+                    "{Binding Dialogs.SetupWizard.IsGamePathNotWritable}",
                     icon.Attribute("IsVisible")?.Value);
                 Assert.Equal(
                     "{StaticResource Launcher.Color.Danger}",

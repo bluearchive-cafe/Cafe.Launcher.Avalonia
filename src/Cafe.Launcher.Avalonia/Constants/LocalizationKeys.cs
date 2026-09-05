@@ -1339,6 +1339,9 @@ public static class LocalizationKeys
     /// <summary>Resource key for <c>setupWizardGamePathInstalled</c>.</summary>
     public const string SetupWizardGamePathInstalled = "setupWizardGamePathInstalled";
 
+    /// <summary>Resource key for <c>setupWizardGamePathNotWritable</c>.</summary>
+    public const string SetupWizardGamePathNotWritable = "setupWizardGamePathNotWritable";
+
     /// <summary>Resource key for <c>setupWizardGamePathStatusDescription</c>.</summary>
     public const string SetupWizardGamePathStatusDescription = "setupWizardGamePathStatusDescription";
 

@@ -152,6 +152,11 @@
                                                            Height="{StaticResource Launcher.Icon.Sm}"
                                                            Foreground="{StaticResource Launcher.Color.Danger}"
                                                            IsVisible="{Binding Dialogs.SetupWizard.IsGamePathInaccessible}"/>
+                                <materialIcons:MaterialIcon Kind="Lock"
+                                                           Width="{StaticResource Launcher.Icon.Sm}"
+                                                           Height="{StaticResource Launcher.Icon.Sm}"
+                                                           Foreground="{StaticResource Launcher.Color.Danger}"
+                                                           IsVisible="{Binding Dialogs.SetupWizard.IsGamePathNotWritable}"/>
                                 <TextBlock Text="{Binding Dialogs.SetupWizard.GamePathStatusText}"
                                            AutomationProperties.Name="{Binding Dialogs.SetupWizard.GamePathStatusText}"
                                            Classes="caption wizard-game-path-status"
@@ -159,6 +164,7 @@
                                            Classes.ready="{Binding Dialogs.SetupWizard.IsGamePathReady}"
                                            Classes.corrupted="{Binding Dialogs.SetupWizard.IsGamePathCorruptedInstallation}"
                                            Classes.inaccessible="{Binding Dialogs.SetupWizard.IsGamePathInaccessible}"
+                                           Classes.notwritable="{Binding Dialogs.SetupWizard.IsGamePathNotWritable}"
                                            VerticalAlignment="Center"
                                            TextTrimming="CharacterEllipsis"
                                            MaxLines="1"/>
