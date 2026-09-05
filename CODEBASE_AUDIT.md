@@ -1,5 +1,17 @@
 # 仓库审计报告（全维度复审）
 
+## 发布就绪结论（2026-09-05 Release 审计，HEAD 27a62f2）
+
+完整报告：`.repository-audit/history/2026-09-05-release-audit.md`。范围 `v1.1.0-beta.5..27a62f2`（57 提交）。
+
+**结论：尚不适合打 tag 发布；原 3 项阻塞中 AUD-REL-003 已当日整改（待提交 + 推送后 CI 确认），剩余 2 项资产/文档类小改动，完成后即可发布 v1.1.0-beta.6。**
+
+1. **AUD-REL-001（High，待办）**：beta.6 发布横幅未提交——release.yml 硬门禁会在 tag 推送时失败。
+2. **AUD-REL-003（High，已整改）**：CI 红灯的向导动画无头测试已加固——中间帧改属性推送观察（无采样窗口，X 需订阅 TranslateTransform 实例）+ 3 次重试区分环境抖动与瞬变回归；单测 5/5、全量 164/164、coverage 插桩 164/164 通过。**推送后须确认 main CI 绿灯再打 tag**。
+3. **AUD-REL-002（Medium，待办）**：CHANGELOG_RELEASE.md 缺发布说明准备（9676005）之后的用户可见变更（下载验证 CRC64 性能、日志加载失败可见化、壁纸同路径换内容修复、横幅解码钳制）。
+
+门禁实证：verify.ps1 全部组件本机前台逐步执行通过（本地化守卫 / Debug 构建 / 单元 1429 + Headless 164/164 / 覆盖率行 85.83% 分支 92.41% 高于棘轮 / win-x64 restore / Release 构建 / resx 合约 18/18）；CI 同 HEAD 上除该动画测试外全绿。版本一致性防呆（tag ⇔ VersionPrefix 精确匹配）、打包脚本自 beta.5 零漂移、发布供应链（SHA 固定 / verify-asset / 最小权限 / prerelease 自动判定）全部核验通过。既有 open 台账无发布阻塞项。AVLN3001 警告为 beta.5 前既有，非本周期引入（同日已修复并加 `MSBuildWarningsAsErrors` 守卫，见 AUD-BLD-002）。台账对账：AUD-UI-001 → `ff59fd9`、AUD-UI-002 → `6e54a9a` 已核销为 resolved。
+
 ## 当前状态速览（2026-09-05 Delta 复审，HEAD 259e217 → 整改后）
 
 完整报告：`.repository-audit/history/2026-09-05-delta-audit.md`。范围 `4ed11c3..259e217`（19 提交，即下方基线报告 P0–P3 整改的全部落地代码）。

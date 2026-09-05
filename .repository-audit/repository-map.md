@@ -1,7 +1,8 @@
 # Repository Map
 
-- 审计日期：2026-09-05（delta 复审 + 当日整改后更新）
-- HEAD：4395b9c `chore(deps): 注明依赖升级需同步再生 lock 文件并关闭原型项目 lock 生成`
+- 审计日期：2026-09-05（release 就绪性审计更新）
+- HEAD：27a62f2 `docs(audit): 记录 2026-09-05 delta 复审结论与当日整改`
+- 最新发布：v1.1.0-beta.5（2026-09-03）；下一发布 v1.1.0-beta.6（CHANGELOG 与 csproj 已备，见 CODEBASE_AUDIT.md 置顶发布就绪结论）
 
 ## Language / Framework
 
