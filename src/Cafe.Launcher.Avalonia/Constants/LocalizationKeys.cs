@@ -874,6 +874,9 @@ public static class LocalizationKeys
     /// <summary>Resource key for <c>logLoadEarlier</c>.</summary>
     public const string LogLoadEarlier = "logLoadEarlier";
 
+    /// <summary>Resource key for <c>logLoadFailed</c>.</summary>
+    public const string LogLoadFailed = "logLoadFailed";
+
     /// <summary>Resource key for <c>logNoMatchingEntries</c>.</summary>
     public const string LogNoMatchingEntries = "logNoMatchingEntries";
 

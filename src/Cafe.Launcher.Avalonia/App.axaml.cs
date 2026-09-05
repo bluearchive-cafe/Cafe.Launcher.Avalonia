@@ -11,6 +11,7 @@ using Cafe.Launcher.Avalonia.Composition;
 using Cafe.Launcher.Avalonia.Constants;
 using Cafe.Launcher.Avalonia.Features.GameOperations;
 using Cafe.Launcher.Avalonia.Services;
+using Cafe.Launcher.Avalonia.Services.Diagnostics;
 using Cafe.Launcher.Avalonia.ViewModels;
 using Cafe.Launcher.Avalonia.Views;
 
@@ -265,7 +266,14 @@ public partial class App : Application
         }
         catch (Exception exception)
         {
-            Debug.WriteLine($"Launcher shutdown persistence failed: {exception}");
+            // 关窗持久化失败发生在每次正常退出路径上：必须写入本地日志，
+            // 否则用户报告「窗口位置记不住」时无任何诊断线索（Debug 输出在
+            // Release 构建不可见）。此刻 serviceProvider 尚未 Dispose，
+            // LocalDiagnostics.ErrorAsync 自身全量吞异常，不会反向影响退出流程。
+            await serviceProvider.GetRequiredService<LocalDiagnostics>().ErrorAsync(
+                "Shutdown persistence failed.",
+                exception,
+                CancellationToken.None);
         }
     }
 

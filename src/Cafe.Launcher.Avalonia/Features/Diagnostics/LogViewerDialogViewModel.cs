@@ -108,8 +108,12 @@ public sealed partial class LogViewerDialogViewModel : ViewModelBase, IModalCont
         }
         catch (Exception ex)
         {
-            System.Diagnostics.Debug.WriteLine(
-                $"LogViewer: failed to read log entries synchronously: {ex.Message}");
+            // 同步路径无法 await 诊断管道，走静态 LogSync 保证失败进入本地日志
+            // 而非只在调试器可见；用户可见反馈由异步的 OpenAsync 路径负责。
+            LocalDiagnostics.LogSync(
+                LogEntrySeverity.Error,
+                "LogViewer",
+                $"failed to read log entries synchronously: {ex.Message}");
             allEntries = [];
         }
 
@@ -166,8 +170,19 @@ public sealed partial class LogViewerDialogViewModel : ViewModelBase, IModalCont
         }
         catch (Exception ex)
         {
-            System.Diagnostics.Debug.WriteLine(
-                $"LogViewer: failed to load log entries: {ex.Message}");
+            // 日志读取失败正是用户最需要日志的时刻：空列表必须伴随显式的
+            // 错误提示与本地日志记录，避免「加载失败」被误读成「没有日志」。
+            toastService?.ShowError(ErrorHandlingService.FormatToastMessage(
+                localizer?.T(LocalizationKeys.LogLoadFailed) ?? "Failed to load log entries",
+                ex));
+            if (diagnostics is not null)
+            {
+                await diagnostics.ErrorAsync(
+                    "LogViewer load failed.",
+                    ex,
+                    CancellationToken.None);
+            }
+
             allEntries = [];
         }
 
@@ -197,8 +212,16 @@ public sealed partial class LogViewerDialogViewModel : ViewModelBase, IModalCont
         catch (Exception ex)
         {
             loadedPageCount--;
-            System.Diagnostics.Debug.WriteLine(
-                $"LogViewer: failed to load earlier entries: {ex.Message}");
+            toastService?.ShowError(ErrorHandlingService.FormatToastMessage(
+                localizer?.T(LocalizationKeys.LogLoadFailed) ?? "Failed to load log entries",
+                ex));
+            if (diagnostics is not null)
+            {
+                await diagnostics.ErrorAsync(
+                    "LogViewer load earlier failed.",
+                    ex,
+                    CancellationToken.None);
+            }
         }
     }
 

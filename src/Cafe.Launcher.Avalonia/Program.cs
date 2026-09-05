@@ -197,29 +197,6 @@ sealed class Program
         }
     }
 
-    /// <summary>
-    /// Raises the pre-existing Windows-only show-window signal — superseded by
-    /// <see cref="Services.CrossProcessLaunchBridge"/> which owns the whole
-    /// single-instance handshake.
-    /// </summary>
-    private static void SignalShowInstance()
-    {
-        if (!OperatingSystem.IsWindows())
-        {
-            return;
-        }
-
-        try
-        {
-            using var signal = EventWaitHandle.OpenExisting(SignalName);
-            signal.Set();
-        }
-        catch
-        {
-            // First instance may not have created the signal yet — ignore
-        }
-    }
-
     // Avalonia configuration, don't remove; also used by visual designer.
     public static AppBuilder BuildAvaloniaApp()
         => AppBuilder.Configure<App>()

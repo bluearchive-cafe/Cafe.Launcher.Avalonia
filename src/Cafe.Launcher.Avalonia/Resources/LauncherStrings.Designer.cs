@@ -598,6 +598,8 @@ internal static class LauncherStrings
 
     internal static string LogLoadEarlier => GetRequiredString("logLoadEarlier");
 
+    internal static string LogLoadFailed => GetRequiredString("logLoadFailed");
+
     internal static string LogNoMatchingEntries => GetRequiredString("logNoMatchingEntries");
 
     internal static string LogSearchPlaceholder => GetRequiredString("logSearchPlaceholder");
