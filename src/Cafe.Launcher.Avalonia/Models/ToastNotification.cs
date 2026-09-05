@@ -3,7 +3,7 @@ using System.Threading;
 using System.Threading.Tasks;
 using CommunityToolkit.Mvvm.ComponentModel;
 
-namespace Cafe.Launcher.Avalonia.Services;
+namespace Cafe.Launcher.Avalonia.Models;
 
 /// <summary>Describes an asynchronous action presented by a toast notification.</summary>
 /// <param name="Label">Localized label displayed for the action.</param>

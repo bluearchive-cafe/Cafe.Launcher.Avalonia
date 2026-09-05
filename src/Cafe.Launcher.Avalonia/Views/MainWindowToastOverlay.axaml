@@ -2,6 +2,7 @@
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
              xmlns:vm="using:Cafe.Launcher.Avalonia.ViewModels"
              xmlns:services="using:Cafe.Launcher.Avalonia.Services"
+            xmlns:models="using:Cafe.Launcher.Avalonia.Models"
              xmlns:converters="using:Cafe.Launcher.Avalonia.Converters"
              xmlns:constants="using:Cafe.Launcher.Avalonia.Constants"
              xmlns:controls="using:Cafe.Launcher.Avalonia.Controls"
@@ -23,7 +24,7 @@
                 </ItemsPanelTemplate>
             </ItemsControl.ItemsPanel>
             <ItemsControl.ItemTemplate>
-                <DataTemplate x:DataType="services:ToastNotification">
+                <DataTemplate x:DataType="models:ToastNotification">
                     <Border Classes="toast-card"
                             Classes.motion-enabled="{Binding #ToastOverlayRoot.((vm:MainWindowViewModel)DataContext).IsMotionEnabled}"
                             Classes.motion-exit="{Binding IsExiting}"

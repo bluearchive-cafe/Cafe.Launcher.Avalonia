@@ -1,3 +1,4 @@
+using Cafe.Launcher.Avalonia.Models;
 using Cafe.Launcher.Avalonia.Services;
 
 namespace Cafe.Launcher.Avalonia.Tests;

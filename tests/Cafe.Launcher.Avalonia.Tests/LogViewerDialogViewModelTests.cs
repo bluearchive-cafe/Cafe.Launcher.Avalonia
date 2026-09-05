@@ -2,6 +2,7 @@ using Cafe.Launcher.Avalonia.Features.Diagnostics;
 using Cafe.Launcher.Avalonia.Services;
 using Cafe.Launcher.Avalonia.Services.Diagnostics;
 using Cafe.Launcher.Avalonia.ViewModels;
+using Cafe.Launcher.Avalonia.Models;
 
 namespace Cafe.Launcher.Avalonia.Tests;
 

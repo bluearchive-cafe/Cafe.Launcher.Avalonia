@@ -4,6 +4,7 @@ using Avalonia.Headless.XUnit;
 using Avalonia.Threading;
 using Avalonia.VisualTree;
 using Cafe.Launcher.Avalonia.Services;
+using Cafe.Launcher.Avalonia.Models;
 using Microsoft.Extensions.DependencyInjection;
 
 namespace Cafe.Launcher.Avalonia.HeadlessTests;

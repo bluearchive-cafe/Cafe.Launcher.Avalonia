@@ -326,7 +326,7 @@ public sealed class ShellLifecycle : IShellRuntime
             settings.Editor.Current.PatchUrlGroup = PatchUrlGroups.Cafe;
 
             await HandleSettingsSavedAsync();
-            await resourcePanel.OpenPanelDirectly();
+            await resourcePanel.OpenPanelDirectlyAsync();
         }
         catch (Exception exception)
         {

@@ -74,4 +74,23 @@ public static class TestLocalizationHelper
 
         throw new DirectoryNotFoundException("src/Cafe.Launcher.Avalonia/Cafe.Launcher.Avalonia.csproj was not found.");
     }
+
+    /// <summary>
+    /// Walks up to the repository root (the directory containing the solution
+    /// file) — for tests reading repo-level files such as workflows and
+    /// release scripts that do not live under the project directory.
+    /// </summary>
+    public static string FindRepositoryRoot()
+    {
+        var directory = new DirectoryInfo(AppContext.BaseDirectory);
+        while (directory is not null)
+        {
+            if (File.Exists(Path.Combine(directory.FullName, "Cafe.Launcher.Avalonia.slnx")))
+                return directory.FullName;
+
+            directory = directory.Parent;
+        }
+
+        throw new DirectoryNotFoundException("Cafe.Launcher.Avalonia.slnx was not found.");
+    }
 }

@@ -146,11 +146,11 @@ public partial class ResourcePanelViewModel : ViewModelBase, IDisposable, IModal
             return;
         }
 
-        await OpenPanelDirectly();
+        await OpenPanelDirectlyAsync();
     }
 
     /// <summary>Open the panel directly without Cafe-source check. Called by parent after switching source.</summary>
-    public async Task OpenPanelDirectly()
+    public async Task OpenPanelDirectlyAsync()
     {
         IsResourcePanelVisible = true;
         await LoadResourcePanelAsync(lifetimeCts.Token);

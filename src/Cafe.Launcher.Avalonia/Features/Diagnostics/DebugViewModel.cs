@@ -192,7 +192,7 @@ public sealed partial class DebugViewModel : ViewModelBase, IModalContentViewMod
     // ── Log writes ───────────────────────────────────────────────────────
 
     [RelayCommand]
-    private async Task WriteTestLog(string severity)
+    private async Task WriteTestLogAsync(string severity)
     {
         var sev = severity switch
         {
