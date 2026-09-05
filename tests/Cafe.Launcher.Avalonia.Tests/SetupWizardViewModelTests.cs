@@ -178,15 +178,15 @@ public sealed class SetupWizardViewModelTests
     }
 
     [Fact]
-    public void LastStep_ShowsSummaryDisplayNames()
+    public async Task LastStep_ShowsSummaryDisplayNames()
     {
         var vm = CreateViewModel();
         vm.Language = LauncherLanguages.Japanese;
         vm.PatchUrlGroup = PatchUrlGroups.Cafe;
         vm.ProxyMode = ProxyModes.System;
         vm.GamePath = @"D:\Test\Path";
-        while (!vm.IsLastStep)
-            vm.NextCommand.Execute(null);
+        await WaitForGamePathStatusAsync(vm, SetupWizardGamePathStatus.AvailableForInstallation);
+        AdvanceToLastStep(vm);
         Assert.NotNull(vm.LanguageDisplayName);
         Assert.NotNull(vm.DownloadSourceDisplayName);
         Assert.NotNull(vm.ProxyDisplayName);
@@ -506,6 +506,18 @@ public sealed class SetupWizardViewModelTests
         {
             viewModel.PropertyChanged -= handler;
         }
+    }
+
+    private static void AdvanceToLastStep(SetupWizardViewModel viewModel)
+    {
+        // 步数上限护栏：未来若新增步骤门控引入异步依赖，这里快速失败
+        // 而非热自旋挂死测试进程（参见 P0 整改中 Headless 同类修复）。
+        for (var guard = 0; !viewModel.IsLastStep && guard < 10; guard++)
+        {
+            viewModel.NextCommand.Execute(null);
+        }
+
+        Assert.True(viewModel.IsLastStep, "向导未在上限步数内推进到末步。");
     }
 
     private static LocalInstallationStateCommit CreateCommit() => new(

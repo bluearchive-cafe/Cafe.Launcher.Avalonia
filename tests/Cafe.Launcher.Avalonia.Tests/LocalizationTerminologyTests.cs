@@ -149,7 +149,7 @@ public sealed class LocalizationTerminologyTests
     }
 
     [Fact]
-    public void SetupWizard_AutomaticLanguageSummary_UsesLocalizedLocaleKey()
+    public async Task SetupWizard_AutomaticLanguageSummary_UsesLocalizedLocaleKey()
     {
         var localizer = new LocalizationService();
         localizer.SetLanguage(LauncherLanguages.SimplifiedChinese);
@@ -163,11 +163,26 @@ public sealed class LocalizationTerminologyTests
         };
 
         viewModel.GamePath = @"D:\Test\Path";
-        while (!viewModel.IsLastStep)
+        // Step 1 的 CanGoNext 由后台 fire-and-forget 路径校验门控：先以有界
+        // 轮询等校验落定，再用步数上限推进，消除热自旋竞态（调度异常时快速
+        // 失败而非挂死测试进程）。
+        var statusDeadline = DateTime.UtcNow.AddSeconds(5);
+        while (viewModel.GamePathStatus != SetupWizardGamePathStatus.AvailableForInstallation)
+        {
+            if (DateTime.UtcNow >= statusDeadline)
+            {
+                Assert.Fail("路径校验未在 5 秒预算内完成。");
+            }
+
+            await Task.Delay(10);
+        }
+
+        for (var guard = 0; !viewModel.IsLastStep && guard < 10; guard++)
         {
             viewModel.NextCommand.Execute(null);
         }
 
+        Assert.True(viewModel.IsLastStep, "向导未在上限步数内推进到末步。");
         Assert.Equal(localizer.T("languageAuto"), viewModel.LanguageDisplayName);
         Assert.DoesNotContain("Auto", viewModel.LanguageDisplayName, StringComparison.Ordinal);
     }
