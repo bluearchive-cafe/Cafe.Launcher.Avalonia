@@ -43,7 +43,10 @@ jobs:
         with:
           dotnet-version: 10.0.x
           cache: true
-          cache-dependency-path: '**/*.csproj'
+          cache-dependency-path: |
+            '**/*.csproj'
+            '**/packages.lock.json'
+            'Directory.Packages.props'
 
       - name: Install Linux packaging and smoke-test dependencies
         shell: bash

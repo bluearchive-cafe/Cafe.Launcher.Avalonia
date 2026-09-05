@@ -1,5 +1,7 @@
 <Project Sdk="Microsoft.NET.Sdk">
   <PropertyGroup>
+    <!-- 原型项目偏离仓库中央包版本管理，显式关闭 CPM（版本在此文件内自持） -->
+    <ManagePackageVersionsCentrally>false</ManagePackageVersionsCentrally>
     <OutputType>WinExe</OutputType>
     <TargetFramework>net10.0</TargetFramework>
     <Nullable>enable</Nullable>
