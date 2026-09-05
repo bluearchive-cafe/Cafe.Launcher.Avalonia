@@ -10,6 +10,27 @@
 
 上次测试专项审计（2026-09-04）的 P0–P3 建议已全部整改。本次复审**逐项核实整改声称属实**（有界轮询、共享 TestDoubles、巨石文件拆分、ShellRefreshCoordinator/RetryPolicy/ResourcePanel 补测、golden 流程等），无一虚报，详见第 6 节。两个已上报待产品决策的静默失败项（向导完成持久化、重置确认）维持原状；本次又发现两个同类新位置（见 7.3 / 7.4）。
 
+## 整改状态（2026-09-05 更新）
+
+本报告 P0–P3 建议已按阶段实施并分阶段提交，各阶段验收为全量单元（1425 过/2 跳）+ Headless（161 过）+ `verify.ps1`（Debug 构建、双项目覆盖率棘轮、Release 构建冒烟）通过：
+
+| 阶段 | 提交 | 内容 |
+|---|---|---|
+| 审计文档 | `7fa31ce` | 本报告 + 历史归档 + 仓库地图更新 |
+| P0 | `e1b0929`/`a3e4903`/`8b4cf5b`/`4107b48`/`b76cc9d`/`1a7b63a`/`2ffd4a6` | Headless 中间帧采样先于异步等待（coverage 高负载 flake）；CI 显式接线 `ContinuousIntegrationBuild` + `RestoreLockedMode`（RID 步骤豁免并注明 lock 只能固定单 RID 上下文）；17 处 Actions 固定 commit SHA + `ref_name` 改 env 传参；Dependabot 接入 nuget；裸 key 10 处替换 + 合约守卫；日志查看器/关窗持久化静默失败补日志与 toast（新 key `logLoadFailed` ×4 语言）；单元测试 2 处裸自旋改有界等待；删除死代码 `SignalShowInstance` |
+| P1 | `e9819ce`/`85d2266` | 安装验证期重复 CRC64 消除（DownloadAsync 返回已验证哈希、跨轮次累积复用；未动文件仍哈希——经核验其为唯一内容级自愈机制，审计原判断在此点已修正）；Crc64Service slicing-by-8 + 规范校验值/独立参考向量测试；内置壁纸解码移出 UI 线程 + 来源未变跳过整条重载管线（含回落/随机文件夹两个行为保护）；横幅解码移出 UI 线程 |
+| P2 | `5be9610`/`338f798`/`9421dfd` | modal 契约迁根 ViewModels/ 消除 5 条 Feature 反向依赖；`ApplyTheme` 静态改实例；AGENTS.md 拍板 Shell 壳层地位；RunAsync 拆为准备/验证循环两阶段；Debug.WriteLine 18 处收敛（豁免项均注明理由）；核心服务 XML doc |
+| P3 | `6530145`/`6d32c28` | Async 后缀 ×2；Toast 契约迁 Models；FindProjectRoot 5 份收敛（区分项目根/仓库根）；CI 缓存键覆盖 lock+props；原型 CPM 显式化；MEDI/Test.Sdk patch 升级 |
+
+与报告建议的偏差（有意决策）：
+- **5.2「三平台 RID lock 合并提交」不可行**：NuGet lock 文件只能固定一个 RID 上下文（每个 `-r` restore 重写 `runtimeIdentifier` 字段，多 `-r` 报 NETSDK1083，经本地实验证实）。已改为「无 RID lock + CI 全程 locked mode + RID 步骤显式豁免」。
+- **4.1「未动文件跳过安装期哈希」不采纳**：经核验启动检查只比对缺失/大小，安装期全清单哈希是唯一内容级损坏自愈机制；仅消除可证明冗余（本会话已验证 + 跨轮次复用）。
+- **Avalonia 12.1.1 → 12.1.2 暂缓**：golden 基线与渲染版本耦合，应与 `test.ps1 -UpdateGolden` 基线再生成同 PR 进行。
+- **P2.10 中 `IModalPresenter` 查表与 `RemoteContentViewModel` 拆分暂缓**：涉及轮播计时器/Escape 语义等行为面重构，收益为纯可维护性，留给后续独立 PR（`RunAsync` 拆分与 modal 契约迁移已落地）。
+- **THIRD-PARTY-NOTICES 两行许可证**（5.6）：需逐包核对许可证文本，留待独立 PR。
+
+验证基线：单元 1425 过/2 跳 + Headless 161 过；覆盖率（CI 同款 env）行 85.79% / 分支 92.60%，均高于棘轮基线；`verify.ps1` 全量通过。
+
 ## 摘要
 
 - 分析规模：src 201 个 .cs（约 29.8k 行）+ 25 个 .axaml；tests 157 个 .cs（约 37.2k 行，1082 个 Fact/Theory）；scripts 10 个、installer、2 个 CI workflow。
