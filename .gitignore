@@ -67,7 +67,6 @@ _ReSharper.*/
 Thumbs.db
 
 .claude/
-.agents/
 .superpowers/
 .worktrees/
 .zcode/
