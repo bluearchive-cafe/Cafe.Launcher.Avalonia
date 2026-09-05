@@ -36,6 +36,10 @@ jobs:
         with:
           fetch-depth: 1
 
+      # 纯文本扫描（resx 四语言 key 对齐 + C# 禁裸 key），无 dotnet 依赖。
+      - name: Localization contract
+        run: .\scripts\Test-LocalizationContract.ps1
+
       - name: Setup .NET
         uses: actions/setup-dotnet@a98b56852c35b8e3190ac28c8c2271da59106c68 # v6
         with:
