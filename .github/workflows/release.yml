@@ -248,6 +248,12 @@ jobs:
           Write-Host "Using Inno Setup $installedVersion"
 
       - name: Test
+        env:
+          # Release 配置在 csproj 中声明 SelfContained=true，dotnet test -c Release
+          # 的还原会按当前平台 RID（windows-latest 上为 win-x64）解析依赖图，与
+          # 提交的无 RID 段 lock 无法在 locked mode 下匹配（NU1004）。与 build job
+          # 对 RID 还原的显式豁免同理，测试还原也豁免 locked mode。
+          RestoreLockedMode: 'false'
         run: .\test.ps1 -Configuration Release
 
       - name: Download win-x64 publish output
