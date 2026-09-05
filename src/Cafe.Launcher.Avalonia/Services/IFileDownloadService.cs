@@ -13,7 +13,13 @@ public interface IFileDownloadService
     /// <param name="request">Immutable file identity, source, size, and hash values.</param>
     /// <param name="control">Shared transport and cooperative pause/progress controls.</param>
     /// <param name="cancellationToken">Propagates cancellation.</param>
-    Task DownloadAsync(
+    /// <returns>
+    /// The CRC64 verified against <c>request.ExpectedHash</c> when this call
+    /// transferred and verified the file itself, or <c>null</c> when the temp
+    /// file was already complete on entry (resumed session) — callers must
+    /// still verify <c>null</c> results at install time.
+    /// </returns>
+    Task<string?> DownloadAsync(
         FileDownloadRequest request,
         FileDownloadOperationControl control,
         CancellationToken cancellationToken);

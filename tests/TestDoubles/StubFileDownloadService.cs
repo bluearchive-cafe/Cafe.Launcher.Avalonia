@@ -36,7 +36,7 @@ internal sealed class StubFileDownloadService : IFileDownloadService
     }
 
     /// <inheritdoc />
-    public async Task DownloadAsync(
+    public async Task<string?> DownloadAsync(
         FileDownloadRequest request,
         FileDownloadOperationControl control,
         CancellationToken cancellationToken)
@@ -50,5 +50,8 @@ internal sealed class StubFileDownloadService : IFileDownloadService
         {
             await downloadAsync(request, control, cancellationToken);
         }
+
+        // 默认 null：安装阶段仍会对下载产物做哈希校验，与既有测试语义一致。
+        return null;
     }
 }

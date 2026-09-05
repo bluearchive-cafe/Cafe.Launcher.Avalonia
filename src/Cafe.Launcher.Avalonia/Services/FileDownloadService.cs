@@ -38,7 +38,7 @@ public sealed class FileDownloadService : IFileDownloadService
         this.urlValidator = urlValidator;
     }
 
-    public async Task DownloadAsync(
+    public async Task<string?> DownloadAsync(
         FileDownloadRequest request,
         FileDownloadOperationControl control,
         CancellationToken cancellationToken)
@@ -73,7 +73,8 @@ public sealed class FileDownloadService : IFileDownloadService
                 var existingLength = fi.Exists ? fi.Length : 0;
                 if (existingLength == expectedSize && expectedSize > 0)
                 {
-                    return;
+                    // 上次会话已下满但未验证：调用方必须在安装阶段自行校验。
+                    return null;
                 }
 
                 if (existingLength > expectedSize && expectedSize > 0)
@@ -137,7 +138,7 @@ public sealed class FileDownloadService : IFileDownloadService
                     crc64 = await crc64Service.ComputeFileAsync(targetTempPath, null, cancellationToken).ConfigureAwait(false);
                 }
 
-                if (crc64 == expectedHash) return;
+                if (crc64 == expectedHash) return crc64;
 
                 var downloadedLength = new FileInfo(targetTempPath).Length;
                 File.Delete(targetTempPath);

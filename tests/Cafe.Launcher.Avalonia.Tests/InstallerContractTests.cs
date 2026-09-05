@@ -535,7 +535,9 @@ public sealed class InstallerContractTests
         Assert.Contains("$installedVersion -notmatch '^7\\.'", installerJob, StringComparison.Ordinal);
         Assert.DoesNotContain("choco install innosetup", workflow, StringComparison.OrdinalIgnoreCase);
         Assert.Contains("$tagArguments = @{}", installerJob, StringComparison.Ordinal);
-        Assert.Contains("$tagArguments.Tag = '${{ github.ref_name }}'", installerJob, StringComparison.Ordinal);
+        // tag 名经 step env 传入而非文本插值，消除 run 脚本注入面。
+        Assert.Contains("Release_Tag: ${{ github.ref_name }}", installerJob, StringComparison.Ordinal);
+        Assert.Contains("$tagArguments.Tag = $env:Release_Tag", installerJob, StringComparison.Ordinal);
         Assert.DoesNotContain("@('-Tag', '${{ github.ref_name }}')", installerJob, StringComparison.Ordinal);
         Assert.DoesNotContain("makensis", workflow, StringComparison.OrdinalIgnoreCase);
         Assert.DoesNotContain("apt-get", installerJob, StringComparison.OrdinalIgnoreCase);
@@ -561,7 +563,7 @@ public sealed class InstallerContractTests
             Assert.Equal(2, CountOccurrences(workflow, artifactName));
         }
 
-        const string releaseBannerName = "cafe-launcher-${{ github.ref_name }}-release-banner.png";
+        const string releaseBannerName = "cafe-launcher-$env:Release_Tag-release-banner.png";
         Assert.Contains(
             $"$bannerPath = \"docs/assets/release-banners/{releaseBannerName}\"",
             workflow,

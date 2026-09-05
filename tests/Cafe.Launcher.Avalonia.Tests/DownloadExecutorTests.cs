@@ -36,6 +36,7 @@ public sealed class DownloadExecutorTests : IDisposable
             tempDir,
             [manifestFile],
             [manifestFile],
+            new Dictionary<string, string>(),
             _ => { },
             CancellationToken.None);
 
@@ -61,10 +62,40 @@ public sealed class DownloadExecutorTests : IDisposable
             tempDir,
             [manifestFile],
             [manifestFile],
+            new Dictionary<string, string>(),
             _ => { },
             CancellationToken.None);
 
         _ = Assert.Single(failed);
+        Assert.False(File.Exists(tempPath));
+    }
+
+    [Fact]
+    public async Task InstallDownloadedFilesAsync_WhenHashPreVerified_SkipsRecheckAndInstalls()
+    {
+        // 契约：verifiedHashes 已有与 manifest 匹配的条目时跳过重读校验
+        // （下载阶段已验证）；写入方必须保证条目真实性——即便落盘内容
+        // 与哈希不一致也不再拦截。
+        var targetPath = Path.Combine(tempDir, "verified.bin");
+        var tempPath = DownloadExecutor.GetTempName(targetPath);
+        await File.WriteAllBytesAsync(tempPath, [1, 2, 3]);
+        var manifestFile = new ManifestFile
+        {
+            Path = "verified.bin",
+            Size = "3",
+            Hash = "trusted-hash"
+        };
+
+        var failed = await CreateExecutor().InstallDownloadedFilesAsync(
+            tempDir,
+            [manifestFile],
+            [manifestFile],
+            new Dictionary<string, string> { ["verified.bin"] = "trusted-hash" },
+            _ => { },
+            CancellationToken.None);
+
+        Assert.Empty(failed);
+        Assert.Equal(new byte[] { 1, 2, 3 }, await File.ReadAllBytesAsync(targetPath));
         Assert.False(File.Exists(tempPath));
     }
 
