@@ -92,6 +92,129 @@ public sealed class DownloadSessionTests
     /// Builds a session over real lightweight services. Lifecycle tests never call
     /// RunAsync, so the network-backed collaborators are only constructed, not used.
     /// </summary>
+
+    [Fact]
+    public void LocalInstallationStateMatchesCommit_FullyMatchingState_ReturnsTrue()
+    {
+        var (state, gameConfig, files) = CreateMatchingStateFixture();
+
+        Assert.True(DownloadSession.LocalInstallationStateMatchesCommit(state, gameConfig, files));
+    }
+
+    [Fact]
+    public void LocalInstallationStateMatchesCommit_NotValidState_ReturnsFalse()
+    {
+        var (state, gameConfig, files) =
+            CreateMatchingStateFixture(LocalInstallationStateKind.Corrupted);
+
+        Assert.False(DownloadSession.LocalInstallationStateMatchesCommit(state, gameConfig, files));
+    }
+
+    [Fact]
+    public void LocalInstallationStateMatchesCommit_VersionDiffers_ReturnsFalse()
+    {
+        var (state, gameConfig, files) = CreateMatchingStateFixture();
+        gameConfig.GameLatestVersion = "1.73.0";
+
+        Assert.False(DownloadSession.LocalInstallationStateMatchesCommit(state, gameConfig, files));
+    }
+
+    [Fact]
+    public void LocalInstallationStateMatchesCommit_BasisDiffers_ReturnsFalse()
+    {
+        var (state, gameConfig, files) = CreateMatchingStateFixture();
+        gameConfig.GameLatestFilePath = "basis-2";
+
+        Assert.False(DownloadSession.LocalInstallationStateMatchesCommit(state, gameConfig, files));
+    }
+
+    [Fact]
+    public void LocalInstallationStateMatchesCommit_ExeNameDiffers_ReturnsFalse()
+    {
+        var (state, gameConfig, files) = CreateMatchingStateFixture();
+        gameConfig.GameStartExeName = "Other.exe";
+
+        Assert.False(DownloadSession.LocalInstallationStateMatchesCommit(state, gameConfig, files));
+    }
+
+    [Fact]
+    public void LocalInstallationStateMatchesCommit_LaunchParamsDiffer_ReturnsFalse()
+    {
+        var (state, gameConfig, files) = CreateMatchingStateFixture();
+        gameConfig.GameStartParams = ["-op", "lite"];
+
+        Assert.False(DownloadSession.LocalInstallationStateMatchesCommit(state, gameConfig, files));
+    }
+
+    [Fact]
+    public void LocalInstallationStateMatchesCommit_FileCountDiffers_ReturnsFalse()
+    {
+        var (state, gameConfig, files) = CreateMatchingStateFixture();
+        files.RemoveAt(files.Count - 1);
+
+        Assert.False(DownloadSession.LocalInstallationStateMatchesCommit(state, gameConfig, files));
+    }
+
+    [Fact]
+    public void LocalInstallationStateMatchesCommit_FileHashDiffers_ReturnsFalse()
+    {
+        var (state, gameConfig, files) = CreateMatchingStateFixture();
+        state.Manifest!.Files[0].Hash = "999";
+
+        Assert.False(DownloadSession.LocalInstallationStateMatchesCommit(state, gameConfig, files));
+    }
+
+    [Fact]
+    public void LocalInstallationStateMatchesCommit_FileSizeDiffers_ReturnsFalse()
+    {
+        var (state, gameConfig, files) = CreateMatchingStateFixture();
+        state.Manifest!.Files[0].Size = "11";
+
+        Assert.False(DownloadSession.LocalInstallationStateMatchesCommit(state, gameConfig, files));
+    }
+
+    private static (LocalInstallationState State, GameConfigResponse GameConfig, List<ManifestFile> Files)
+        CreateMatchingStateFixture(
+            LocalInstallationStateKind kind = LocalInstallationStateKind.Valid)
+    {
+        // 提交侧与本地状态侧使用独立的列表实例，避免用例原地修改时互相污染。
+        var files = new List<ManifestFile>
+        {
+            new() { Path = "bin/game.exe", Hash = "123", Size = "10" },
+            new() { Path = "data/pak.zip", Hash = "456", Size = "20" },
+        };
+        var state = new LocalInstallationState
+        {
+            Kind = kind,
+            GameConfig = new GameLauncherConfig
+            {
+                Tag = GamePaths.GameTag,
+                Name = "BlueArchiveOnline_JP",
+                Params = ["-op", "full"],
+                Version = "1.72.0",
+            },
+            Manifest = new LocalManifest
+            {
+                Name = GamePaths.GameTag,
+                Version = "1.72.0",
+                Basis = "basis-1",
+                Files =
+                [
+                    new() { Path = "bin/game.exe", Hash = "123", Size = "10" },
+                    new() { Path = "data/pak.zip", Hash = "456", Size = "20" },
+                ],
+            },
+        };
+        var gameConfig = new GameConfigResponse
+        {
+            GameLatestVersion = "1.72.0",
+            GameLatestFilePath = "basis-1",
+            GameStartExeName = "BlueArchiveOnline_JP",
+            GameStartParams = ["-op", "full"],
+        };
+        return (state, gameConfig, files);
+    }
+
     private static DownloadSession CreateSession()
     {
         var diagnostics = new LocalDiagnostics();

@@ -560,10 +560,16 @@ public sealed partial class MainWindowHeadlessTests
         context.ViewModel.Dialogs.ShowSetupWizard();
         Dispatcher.UIThread.RunJobs();
 
-        // Navigate to step 1 (GamePath) and set a path
+        // Navigate to step 1 (GamePath) and set a path. 使用保证可写的临时目录：
+        // 写探测会把不可写位置判为不可安装，硬编码系统盘路径会随环境翻转结果。
+        var gamePath = Path.Combine(
+            Path.GetTempPath(),
+            Guid.NewGuid().ToString("N"),
+            "YostarGames",
+            "BlueArchive_JP");
         context.ViewModel.Dialogs.SetupWizard.NextCommand.Execute(null);
         Dispatcher.UIThread.RunJobs();
-        context.ViewModel.Dialogs.SetupWizard.GamePath = @"C:\Games\YostarGames\BlueArchive_JP";
+        context.ViewModel.Dialogs.SetupWizard.GamePath = gamePath;
         context.ViewModel.Dialogs.SetupWizard.NextCommand.Execute(null);
         Dispatcher.UIThread.RunJobs();
         context.ViewModel.Dialogs.SetupWizard.NextCommand.Execute(null);

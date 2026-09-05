@@ -100,4 +100,7 @@
     <Style Selector="TextBlock.wizard-game-path-status.inaccessible">
         <Setter Property="Foreground" Value="{StaticResource Launcher.Color.Danger}"/>
     </Style>
+    <Style Selector="TextBlock.wizard-game-path-status.notwritable">
+        <Setter Property="Foreground" Value="{StaticResource Launcher.Color.Danger}"/>
+    </Style>
 </Styles>
