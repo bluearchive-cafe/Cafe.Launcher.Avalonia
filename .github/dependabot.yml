@@ -4,3 +4,13 @@ updates:
     directory: /
     schedule:
       interval: weekly
+  - package-ecosystem: nuget
+    directory: /
+    schedule:
+      interval: weekly
+    groups:
+      # minor/patch 合并单 PR 降低噪音；major（如 xunit.v3 4.x）单独成 PR 便于评估。
+      nuget-minor-and-patch:
+        update-types:
+          - minor
+          - patch
