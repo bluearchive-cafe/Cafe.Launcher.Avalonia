@@ -1,0 +1,18 @@
+project:
+  type: unknown
+  languages: []
+  frameworks: []
+  platforms: []
+  distribution_model: unknown
+
+risk_weights:
+  architecture: medium
+  maintainability: medium
+  security: medium
+  dependencies: medium
+  testing: medium
+  performance: medium
+
+critical_workflows: []
+trust_boundaries: []
+high_cost_failures: []

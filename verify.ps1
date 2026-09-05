@@ -2,6 +2,10 @@ $ErrorActionPreference = 'Stop'
 $env:DOTNET_CLI_TELEMETRY_OPTOUT = '1'
 $env:AVALONIA_TELEMETRY_OPTOUT = '1'
 
+# 纯文本扫描、无 dotnet 依赖，放在最前 fail-fast。
+& "$PSScriptRoot\Test-LocalizationContract.ps1"
+if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+
 & "$PSScriptRoot\build.ps1"
 if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
 
