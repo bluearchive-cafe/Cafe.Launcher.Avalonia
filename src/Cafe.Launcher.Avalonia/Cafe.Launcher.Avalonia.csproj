@@ -19,6 +19,8 @@
     <AnalysisMode>Minimum</AnalysisMode>
     <EnforceCodeStyleInBuild>true</EnforceCodeStyleInBuild>
     <TreatWarningsAsErrors>true</TreatWarningsAsErrors>
+    <!-- AVLN 码由 Avalonia XAML 编译器任务发出，TreatWarningsAsErrors（csc 范围）覆盖不到。 -->
+    <MSBuildWarningsAsErrors>AVLN3001</MSBuildWarningsAsErrors>
     <ApplicationManifest>app.manifest</ApplicationManifest>
     <ApplicationIcon>Assets\app-icon.ico</ApplicationIcon>
     <AvaloniaUseCompiledBindingsByDefault>true</AvaloniaUseCompiledBindingsByDefault>
