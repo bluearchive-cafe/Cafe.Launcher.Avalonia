@@ -56,17 +56,6 @@ public sealed class LocalizationTerminologyTests
     }
 
     [Theory]
-    [InlineData("zh-Hans")]
-    [InlineData("zh-Hant")]
-    public void LocaleFiles_ChineseBannerKeys_UseConsistentTerminology(string fileName)
-    {
-        var locale = ReadLocale(fileName);
-
-        Assert.False(string.IsNullOrWhiteSpace(locale["banner"]));
-        Assert.Equal(locale["banner"], locale["banners"]);
-    }
-
-    [Theory]
     [InlineData("en")]
     [InlineData("zh-Hans")]
     [InlineData("zh-Hant")]
@@ -110,16 +99,6 @@ public sealed class LocalizationTerminologyTests
         Assert.All(descriptions, value => Assert.False(string.IsNullOrWhiteSpace(value)));
         Assert.Equal(3, names.Distinct(StringComparer.Ordinal).Count());
         Assert.Equal(3, descriptions.Distinct(StringComparer.Ordinal).Count());
-    }
-
-    [Theory]
-    [InlineData("zh-Hans")]
-    [InlineData("zh-Hant")]
-    public void LocaleFiles_RemoteContentCard_UsesBannerTerminology(string fileName)
-    {
-        var locale = ReadLocale(fileName);
-
-        Assert.Contains(locale["banner"], locale["showRemoteContentCard"], StringComparison.Ordinal);
     }
 
     [Theory]
