@@ -376,6 +376,9 @@ public static class LocalizationKeys
     /// <summary>Resource key for <c>designMatrixTextButton</c>.</summary>
     public const string DesignMatrixTextButton = "designMatrixTextButton";
 
+    /// <summary>Resource key for <c>designMatrixTonalButton</c>.</summary>
+    public const string DesignMatrixTonalButton = "designMatrixTonalButton";
+
     /// <summary>Resource key for <c>designStateDisabled</c>.</summary>
     public const string DesignStateDisabled = "designStateDisabled";
 

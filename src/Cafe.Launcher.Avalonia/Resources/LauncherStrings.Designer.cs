@@ -266,6 +266,8 @@ internal static class LauncherStrings
 
     internal static string DesignMatrixTextButton => GetRequiredString("designMatrixTextButton");
 
+    internal static string DesignMatrixTonalButton => GetRequiredString("designMatrixTonalButton");
+
     internal static string DesignStateDisabled => GetRequiredString("designStateDisabled");
 
     internal static string DesignStateFocus => GetRequiredString("designStateFocus");

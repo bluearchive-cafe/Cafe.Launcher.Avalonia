@@ -131,7 +131,7 @@
 - 按钮 M3 映射：`primary-action`→filled；`tonal-action`→filled tonal；`flat-action`→outlined；`text-action`→text button；`text-link`→带下划线的链接型动作（不等同于 text button）；`danger-action`→error-filled。共享模板 `LauncherBorderButtonTemplate` 保留。向导动作层级固定为：跳过 `text-action`、上一步 `flat-action`、中间步骤下一步 `tonal-action`、最终完成 `primary-action`。
 - 新组件（Select、Chip、分页、滑块等）以 **ControlTheme + 新命名** 落地，token 走 `Launcher.Component.*`。
 - **状态矩阵**（画廊展示 + 走查清单共用）：normal / hover / pressed / disabled / focus-visible / invalid × 各组件；状态层按 `StateLayer.*` 不透明度。
-- **P2 组件执行决策**（详见 ADR）：四型规格 = ADR-004（值不动、语言统一）；批次 A→B→C = ADR-008；画廊矩阵范围 3×6 = ADR-007；状态层基础刻度为 Hover 8%、Focus/Pressed 12%，组件按各自内容色和状态 token 映射；`Selected` 24% 只保留给既有强调视觉。
+- **P2 组件执行决策**（详见 ADR）：按钮型别规格 = ADR-004（值不动、语言统一；2026-09-06 起为五型，+filled tonal）；批次 A→B→C = ADR-008；画廊矩阵范围 3×6 = ADR-007；状态层基础刻度为 Hover 8%、Focus/Pressed 12%，组件按各自内容色和状态 token 映射；`Selected` 24% 只保留给既有强调视觉。
 - 例外：诊断面板与日志查看器列表控件维持 Fluent 基础模板，仅 token 兼容；允许不改变信息架构或列表模板的局部选择语义、状态层、对比度与无障碍修复（Q3/Q21、ADR-008 修订）。
 
 ## 5. 表面与布局（Q12/Q18）
@@ -183,7 +183,7 @@
 ## 9. 设计画廊（Q11）
 
 - 位置：Debug 构建 `IsDebugFeaturesEnabled` 可见（与现有调试面板同门），`Views/` 新增 `DesignGalleryOverlay.axaml`。
-- **M4 状态（已实现）**：`Views/DesignGalleryOverlay.axaml` + `ViewModels/DesignGalleryViewModel.cs`（Debug 面板「打开设计画廊」按钮进入，`dialog-overlay` 层，ZIndex 200，关闭同调试面板）；数据源 = 运行时枚举 `/Application.Resources` 根字典和 Light/Dark `ThemeDictionaries` 中全部 `Launcher.*` 键 + `DesignTokenGrouping` 按 §3.2 十二家族分组（键段解析，零漂移；无法归类的键进「Other」），显示当前主题变体值（`TryGetResource` 当前变体）；色板 swatch + 键名 + 值文本；本地化标题/分组名（4 语言，`designGroup*` 键族）；`UiStyleContractTests` 已将画廊纳入 ViewFiles 规则扫描。**P2 扩展（已实现）**：组件状态矩阵 = 四型按钮（filled/outlined/text/error-filled）/ 卡片（Toast 卡）/ 设置行 × 6 态（normal/hover/pressed/disabled/focus-visible/invalid；invalid 仅设置行/输入类，按钮与卡片以空占位表达——ADR-007），状态列/行标签 4 语言（`designMatrix*`/`designState*` 键族）；矩阵同时是走查清单实物载体（见 `docs/design/design-walkthrough-checklist.md`）。底栏双原型对比区随 Q18 重新裁决再定。
+- **M4 状态（已实现）**：`Views/DesignGalleryOverlay.axaml` + `ViewModels/DesignGalleryViewModel.cs`（Debug 面板「打开设计画廊」按钮进入，`dialog-overlay` 层，ZIndex 200，关闭同调试面板）；数据源 = 运行时枚举 `/Application.Resources` 根字典和 Light/Dark `ThemeDictionaries` 中全部 `Launcher.*` 键 + `DesignTokenGrouping` 按 §3.2 十二家族分组（键段解析，零漂移；无法归类的键进「Other」），显示当前主题变体值（`TryGetResource` 当前变体）；色板 swatch + 键名 + 值文本；本地化标题/分组名（4 语言，`designGroup*` 键族）；`UiStyleContractTests` 已将画廊纳入 ViewFiles 规则扫描。**P2 扩展（已实现）**：组件状态矩阵 = 五型按钮（filled/filled tonal/outlined/text/error-filled）/ 卡片（Toast 卡）/ 设置行 × 6 态（normal/hover/pressed/disabled/focus-visible/invalid；invalid 仅设置行/输入类，按钮与卡片以空占位表达——ADR-007），状态列/行标签 4 语言（`designMatrix*`/`designState*` 键族）；矩阵同时是走查清单实物载体（见 `docs/design/design-walkthrough-checklist.md`）。底栏双原型对比区随 Q18 重新裁决再定。
 - 内容：P1 = token 总表（按 §3.2 家族分组：色板 swatch、字阶、间距/圆角/动效表）；P2 = 组件状态矩阵（3 组件 × 6 态，ADR-007）与底栏双原型对比区（Q18 仲裁）；组件状态矩阵同时是走查清单的实物载体。
 - 画廊文案走本地化契约（resx 4 语言）。
 

@@ -464,7 +464,7 @@ public sealed partial class UiStyleContractTests
     }
 
     [Fact]
-    public void DesignGallery_ProvidesFourButtonTypesCardAndSettingsRowAcrossSixStates()
+    public void DesignGallery_ProvidesFiveButtonTypesCardAndSettingsRowAcrossSixStates()
     {
         var document = XDocument.Load(ProjectFile("Views/DesignGalleryOverlay.axaml"));
         var dialogContent = document
@@ -476,14 +476,17 @@ public sealed partial class UiStyleContractTests
 
         Assert.Equal("Auto,*,*,*,*,*,*", matrix.Attribute("ColumnDefinitions")?.Value);
         Assert.Equal(
-            "Auto,Auto,Auto,Auto,Auto,Auto,Auto",
+            "Auto,Auto,Auto,Auto,Auto,Auto,Auto,Auto",
             matrix.Attribute("RowDefinitions")?.Value);
         Assert.Equal(7, matrix.Descendants().Count(element => HasClass(element, "design-state-header")));
-        Assert.Equal(20, matrix.Descendants().Count(element => HasClass(element, "gallery-button")));
+        Assert.Equal(25, matrix.Descendants().Count(element => HasClass(element, "gallery-button")));
         Assert.Equal(6, matrix.Descendants().Count(element => HasClass(element, "gallery-select")));
         Assert.Equal(5, matrix.Descendants().Count(element => HasClass(element, "gallery-card")));
 
-        // ADR-007: the matrix shows the four button types, a card (Toast) and a settings row.
+        // ADR-007: the matrix shows the five button types (incl. filled tonal, ADR-004 修订),
+        // a card (Toast) and a settings row.
+        Assert.Equal(5, matrix.Descendants().Count(element =>
+            HasClass(element, "gallery-button") && HasClass(element, "tonal")));
         Assert.Equal(5, matrix.Descendants().Count(element =>
             HasClass(element, "gallery-button") && HasClass(element, "outlined")));
         Assert.Equal(5, matrix.Descendants().Count(element =>
@@ -491,14 +494,15 @@ public sealed partial class UiStyleContractTests
         Assert.Equal(5, matrix.Descendants().Count(element =>
             HasClass(element, "gallery-button") && HasClass(element, "error")));
         Assert.Equal(5, matrix.Descendants().Count(element =>
-            HasClass(element, "gallery-button") && !HasClass(element, "outlined")
+            HasClass(element, "gallery-button") && !HasClass(element, "tonal")
+            && !HasClass(element, "outlined")
             && !HasClass(element, "text") && !HasClass(element, "error")));
         Assert.Equal(5, matrix.Descendants().Count(element =>
             HasClass(element, "gallery-card") && HasClass(element, "toast")));
 
         // Invalid state applies only to the settings row / input classes (ADR-007);
         // buttons and cards render an explicit unused placeholder instead.
-        Assert.Equal(5, matrix.Descendants().Count(element => HasClass(element, "gallery-invalid-unused")));
+        Assert.Equal(6, matrix.Descendants().Count(element => HasClass(element, "gallery-invalid-unused")));
         Assert.DoesNotContain(matrix.Descendants(), element =>
             HasClass(element, "gallery-button") && HasClass(element, "state-invalid"));
         Assert.DoesNotContain(matrix.Descendants(), element =>
@@ -510,7 +514,7 @@ public sealed partial class UiStyleContractTests
             .Where(element =>
                 element.Name.LocalName == "Button" && HasClass(element, "state-disabled"))
             .ToArray();
-        Assert.Equal(4, disabledButtons.Length);
+        Assert.Equal(5, disabledButtons.Length);
         Assert.All(disabledButtons, button =>
             Assert.Equal("False", button.Attribute("IsEnabled")?.Value));
         var disabledSelect = matrix.Descendants().Single(element =>

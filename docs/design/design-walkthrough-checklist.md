@@ -6,7 +6,7 @@
 
 ## 1. 组件状态矩阵（spec §4）
 
-矩阵实物 = Debug 构建「设计画廊 → 组件状态矩阵」（3×6 以上：四型按钮 / 卡片含 Toast 卡 / 设置行 × normal / hover / pressed / disabled / focus-visible / invalid）。
+矩阵实物 = Debug 构建「设计画廊 → 组件状态矩阵」（3×6 以上：五型按钮 / 卡片含 Toast 卡 / 设置行 × normal / hover / pressed / disabled / focus-visible / invalid）。
 走查时打开画廊逐格与生产样式对照：
 
 | 组件 | normal | hover | pressed | disabled | focus-visible | invalid |
