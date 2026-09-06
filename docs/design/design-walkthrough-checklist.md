@@ -12,16 +12,17 @@
 | 组件 | normal | hover | pressed | disabled | focus-visible | invalid |
 |---|---|---|---|---|---|---|
 | Filled 按钮（`primary-action`） | ✓ | ✓ | ✓ | ✓ | ✓ | 不适用（留空） |
+| Filled tonal 按钮（`tonal-action`） | ✓ | ✓ | ✓ | ✓ | ✓ | 不适用（留空） |
 | Outlined 按钮（`flat-action`） | ✓ | ✓ | ✓ | ✓ | ✓ | 不适用（留空） |
 | Text 按钮（`text-link`） | ✓ | ✓ | ✓ | ✓ | ✓ | 不适用（留空） |
 | Error-filled 按钮（`danger-action`） | ✓ | ✓ | ✓ | ✓ | ✓ | 不适用（留空） |
 | 卡片 / Toast 卡 | ✓ | ✓ | ✓ | ✓ | ✓ | 不适用（留空） |
 | 设置行（Select 输入） | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ |
 
-- 状态层不透明度产品值：hover 8% / focus 12% / pressed 16% / disabled 内容 38%（`Launcher.StateLayer.*`；pressed 16% 为产品值，M3 官方 12%——记录性偏差，见 ADR-004 落地记录）。
+- 状态层不透明度刻度：hover 8% / focus 12% / pressed 12% / disabled 内容 38%（`Launcher.StateLayer.*`；pressed 已随审计-0906 由 16% 勘误为 12%，与 M3 官方一致，见 ADR-004 修订）。
 - 状态反馈以「预混色状态变体」实现（`Primary.Hover/.Pressed`、`SecondaryContainer.Hover/.Pressed` 等），未采用叠加状态层机制（ADR-004 落地记录）。
 - 向导组件（ADR-017）随审计-0828 对齐本矩阵：`wizard-action.primary-action` 补齐 filled 禁用态（预混配方），`wizard-option` 键盘聚焦铺 token 焦点环。
-- 焦点环（`FocusRing`，运行时 accent 派生）逐表面复核：明/暗主题 + 壁纸模式目测 ≥3:1 可辨识（含 banner 箭头、chrome 态区域）；本项不进静态对比度契约。
+- 焦点环（`FocusRing`，运行时 scheme 的不透明 `Primary`）逐表面复核：明/暗主题 + 壁纸模式目测 ≥3:1 可辨识（含 banner 箭头、chrome 态区域）；本项不进静态对比度契约。
 
 ## 2. 无障碍豁免区（spec §8，逐项人工复核）
 
@@ -49,10 +50,10 @@
 - 控件统一 Field 形态（`Field.Background`/`Field.Border`/`Radius.Md`/2px 聚焦环）；Field.Border 双档 ≥3:1（Light `#788EA7` / Dark `#5E7494`）。
 - 底部操作带（取消 / 保存）语义与焦点默认落在安全操作。
 
-### 3.3 对话框族（ADR-014）
-- 确认/通知/更新/错误四类统一解剖：头部（icon + 标题 + ✕）→ 可滚动内容 → `dialog-footer` hairline 操作带（取消左、确认右；危险确认用 `danger-action`）。
-- 无特殊强调的确认对话框默认焦点落在安全操作（`ConfirmDialog.SafeActionButton` 打开时聚焦）。
-- 明示关闭路径完整：✕ 按钮 + 取消/次要操作按钮；不依赖手势或仅有遮罩交互的路径。
+### 3.3 对话框族（ADR-015，取代 ADR-014「头带 + footer」定式）
+- 唯一载体 = `Controls.DialogSurface`：确认/通知/更新/错误等对话走 `Form=Basic`（无头带/发丝线，可选裸图标承载语调，动作即出口）；资源面板等带头带表面走 `Form=Panel`（56px 头带 + 32 圆形徽章 + 可选副标题 + ✕ + 发丝底带含左辅助槽）；警示卡（`dialog-alert`）为两形态共用的内容级插槽。
+- 确认框 = Basic 标准门面（`ConfirmDialog`）：安全钮（outlined）在左、主钮填充在右、危险确认切 `danger-action`（error-filled，`IsDangerConfirm`）；无特殊强调时默认焦点落在安全操作（`ConfirmDialog.SafeActionButton` 打开时聚焦）。
+- 明示关闭路径完整：✕ 仅 Panel 头带标配（绑定 CloseCommand + 本地化 AutomationName/ToolTip）；Basic 动作即出口；ESC 由 ShellLifecycle 统一路由；遮罩点击关闭明确不支持，不依赖手势关闭路径。
 
 ### 3.4 Toast（ADR-014）
 - 无自动消失进度条；仅操作执行中显示 indeterminate 进度条（底部边缘，厚度 token）。
