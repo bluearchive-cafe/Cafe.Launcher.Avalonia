@@ -174,7 +174,6 @@ public sealed partial class UiStyleContractTests
                  {
                      "Grid.motion-overlay",
                      "Border.motion-surface",
-                     "Grid.motion-surface-content",
                      ":is(UserControl).motion-content",
                      "StackPanel.motion-content",
                      "Border.motion-bottom",

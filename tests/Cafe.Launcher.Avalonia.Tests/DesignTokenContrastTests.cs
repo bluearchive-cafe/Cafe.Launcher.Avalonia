@@ -99,7 +99,6 @@ public sealed class DesignTokenContrastTests
     private static readonly string[] ExemptedKeys =
     [
         "Launcher.Text.OnChrome",
-        "Launcher.Text.OnChrome.Muted",
         "Launcher.Text.OnDark",
         "Launcher.Color.Chrome.Hover",
         "Launcher.Color.Chrome.Pressed",

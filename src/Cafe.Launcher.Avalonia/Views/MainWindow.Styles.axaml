@@ -40,11 +40,6 @@
         <Setter Property="FontSize" Value="{StaticResource Launcher.Typography.FontSize.Body.Md}"/>
         <Setter Property="Foreground" Value="{DynamicResource Launcher.Text.Primary}"/>
     </Style>
-    <Style Selector="TextBlock.heading">
-        <Setter Property="FontSize" Value="{StaticResource Launcher.Typography.FontSize.Display}"/>
-        <Setter Property="Foreground" Value="{DynamicResource Launcher.Text.Primary}"/>
-        <Setter Property="FontWeight" Value="{StaticResource Launcher.Typography.FontWeight.Strong}"/>
-    </Style>
     <Style Selector="TextBlock.body">
         <Setter Property="FontSize" Value="{StaticResource Launcher.Typography.FontSize.Body.Md}"/>
         <Setter Property="Foreground" Value="{DynamicResource Launcher.Text.Body}"/>
@@ -55,18 +50,10 @@
         <Setter Property="Foreground" Value="{DynamicResource Launcher.Text.Primary}"/>
         <Setter Property="FontWeight" Value="{StaticResource Launcher.Typography.FontWeight.Strong}"/>
     </Style>
-    <Style Selector="TextBlock.kicker">
-        <Setter Property="FontSize" Value="{StaticResource Launcher.Typography.FontSize.Label.Sm}"/>
-        <Setter Property="Foreground" Value="{DynamicResource Launcher.Color.Primary}"/>
-    </Style>
     <Style Selector="TextBlock.titlebar-brand">
         <Setter Property="Foreground" Value="{StaticResource Launcher.Text.OnChrome}"/>
         <Setter Property="FontSize" Value="{StaticResource Launcher.Typography.FontSize.Title.Md}"/>
         <Setter Property="FontWeight" Value="{StaticResource Launcher.Typography.FontWeight.Strong}"/>
-    </Style>
-    <Style Selector="TextBlock.titlebar-status">
-        <Setter Property="Foreground" Value="{StaticResource Launcher.Text.OnChrome.Muted}"/>
-        <Setter Property="FontSize" Value="{StaticResource Launcher.Typography.FontSize.Label.Md}"/>
     </Style>
     <Style Selector="TextBlock.progress-title">
         <Setter Property="Foreground" Value="{DynamicResource Launcher.Text.Primary}"/>
@@ -522,9 +509,6 @@
         <Setter Property="BorderBrush" Value="{DynamicResource Launcher.Color.Primary}"/>
         <Setter Property="BorderThickness" Value="{StaticResource Launcher.Border.Thickness.Default}"/>
     </Style>
-    <Style Selector="Button.dialog-close.header-action">
-        <Setter Property="Margin" Value="{StaticResource Launcher.Component.Dialog.HeaderAction.Margin}"/>
-    </Style>
     <Style Selector="Button.launcher-control">
         <Setter Property="Width" Value="{StaticResource Launcher.Component.LauncherControl.Width}"/>
         <Setter Property="MinHeight" Value="{StaticResource Launcher.Control.Height.Launch}"/>
@@ -591,20 +575,10 @@
         <Setter Property="FontWeight" Value="{StaticResource Launcher.Typography.FontWeight.Strong}"/>
         <Setter Property="Foreground" Value="{DynamicResource Launcher.Text.Primary}"/>
     </Style>
-    <Style Selector="TextBlock.operation-status-title.on-dark-title">
-        <Setter Property="Foreground" Value="{StaticResource Launcher.Text.OnChrome}"/>
-    </Style>
     <Style Selector="TextBlock.panel-title">
         <Setter Property="Foreground" Value="{DynamicResource Launcher.Text.Primary}"/>
         <Setter Property="FontSize" Value="{StaticResource Launcher.Typography.FontSize.Body.Md}"/>
         <Setter Property="FontWeight" Value="{StaticResource Launcher.Typography.FontWeight.Strong}"/>
-    </Style>
-    <Style Selector="Border.surface">
-        <Setter Property="Background" Value="{DynamicResource Launcher.Color.Surface}"/>
-        <Setter Property="CornerRadius" Value="{StaticResource Launcher.Radius.Md}"/>
-        <Setter Property="Padding" Value="{StaticResource Launcher.Spacing.Thickness.Lg}"/>
-        <!-- 阴影经 BoxShadowsExtension 消费 token（BoxShadows 无 TypeConverter）。 -->
-        <Setter Property="BoxShadow" Value="{helpers:BoxShadows {StaticResource Launcher.Elevation.Shadow.Md}}"/>
     </Style>
     <Style Selector="Border.remote-surface">
         <Setter Property="HorizontalAlignment" Value="Left"/>
@@ -686,9 +660,6 @@
         <Setter Property="Opacity" Value="1"/>
     </Style>
     <Style Selector="Border.motion-surface">
-        <Setter Property="Opacity" Value="1"/>
-    </Style>
-    <Style Selector="Grid.motion-surface-content">
         <Setter Property="Opacity" Value="1"/>
     </Style>
     <Style Selector=":is(UserControl).motion-content">
@@ -1111,11 +1082,6 @@
         <Setter Property="KeyboardNavigation.TabNavigation" Value="Cycle"/>
         <Setter Property="views:OverlayFocusBehavior.IsEnabled" Value="True"/>
     </Style>
-    <Style Selector="Grid.dialog-header">
-        <Setter Property="Background" Value="{DynamicResource Launcher.Color.Dialog.Header}"/>
-        <Setter Property="Height" Value="{StaticResource Launcher.Component.Dialog.Title.Height}"/>
-        <Setter Property="ClipToBounds" Value="True"/>
-    </Style>
     <Style Selector="StackPanel.dialog-title-row">
         <Setter Property="Orientation" Value="Horizontal"/>
         <Setter Property="Spacing" Value="{StaticResource Launcher.Spacing.Md}"/>
@@ -1124,9 +1090,6 @@
     </Style>
     <Style Selector="ScrollViewer.dialog-scroll">
         <Setter Property="Margin" Value="{StaticResource Launcher.Spacing.Thickness.None}"/>
-    </Style>
-    <Style Selector="Grid.dialog-heading">
-        <Setter Property="ColumnSpacing" Value="{StaticResource Launcher.Spacing.Md}"/>
     </Style>
     <Style Selector="StackPanel.dialog-heading-copy">
         <Setter Property="Spacing" Value="{StaticResource Launcher.Spacing.Xs}"/>
@@ -1143,10 +1106,6 @@
         <Setter Property="CornerRadius" Value="{StaticResource Launcher.Radius.Sm}"/>
         <Setter Property="Padding" Value="{StaticResource Launcher.Spacing.Thickness.Md}"/>
     </Style>
-    <Style Selector="Border.dialog-alert.warning">
-        <Setter Property="Background" Value="{DynamicResource Launcher.Color.Warning.Background}"/>
-        <Setter Property="BorderBrush" Value="{StaticResource Launcher.Color.Warning}"/>
-    </Style>
     <Style Selector="Border.dialog-alert.danger">
         <Setter Property="Background" Value="{DynamicResource Launcher.Color.Danger.Soft}"/>
         <Setter Property="BorderBrush" Value="{StaticResource Launcher.Color.Danger}"/>
@@ -1156,23 +1115,17 @@
         <Setter Property="Spacing" Value="{StaticResource Launcher.Spacing.Xs}"/>
     </Style>
     <!-- 状态表面标题为 12px 小字，消费 OnContainer 级文本色（4.5:1）；
-         图标保留 Info/Warning/Danger 色调（图形 3:1 目标）。 -->
+         图标保留 Info/Danger 色调（图形 3:1 目标）。 -->
     <Style Selector="TextBlock.dialog-alert-title">
         <Setter Property="FontSize" Value="{StaticResource Launcher.Typography.FontSize.Label.Md}"/>
         <Setter Property="FontWeight" Value="{StaticResource Launcher.Typography.FontWeight.Strong}"/>
         <Setter Property="Foreground" Value="{DynamicResource Launcher.Text.Info}"/>
-    </Style>
-    <Style Selector="TextBlock.dialog-alert-title.warning">
-        <Setter Property="Foreground" Value="{DynamicResource Launcher.Text.Warning}"/>
     </Style>
     <Style Selector="TextBlock.dialog-alert-title.danger">
         <Setter Property="Foreground" Value="{DynamicResource Launcher.Text.Danger}"/>
     </Style>
     <Style Selector="materialIcons|MaterialIcon.dialog-alert-icon">
         <Setter Property="Foreground" Value="{StaticResource Launcher.Color.Info}"/>
-    </Style>
-    <Style Selector="materialIcons|MaterialIcon.dialog-alert-icon.warning">
-        <Setter Property="Foreground" Value="{StaticResource Launcher.Color.Warning}"/>
     </Style>
     <Style Selector="materialIcons|MaterialIcon.dialog-alert-icon.danger">
         <Setter Property="Foreground" Value="{StaticResource Launcher.Color.Danger}"/>
@@ -1259,18 +1212,6 @@
         <Setter Property="FontSize" Value="{StaticResource Launcher.Typography.FontSize.Label.Md}"/>
         <Setter Property="Foreground" Value="{DynamicResource Launcher.Text.Secondary}"/>
     </Style>
-    <Style Selector="Border.dialog-icon">
-        <Setter Property="Width" Value="{StaticResource Launcher.Control.Height.Setting}"/>
-        <Setter Property="Height" Value="{StaticResource Launcher.Control.Height.Setting}"/>
-        <Setter Property="CornerRadius" Value="{StaticResource Launcher.Radius.Sm}"/>
-        <Setter Property="Background" Value="{DynamicResource Launcher.Color.Primary.Soft}"/>
-        <Setter Property="BorderBrush" Value="{DynamicResource Launcher.Color.Primary.Border}"/>
-        <Setter Property="BorderThickness" Value="{StaticResource Launcher.Border.Thickness.Default}"/>
-    </Style>
-    <Style Selector="Border.dialog-icon.danger">
-        <Setter Property="Background" Value="{DynamicResource Launcher.Color.Danger.Soft}"/>
-        <Setter Property="BorderBrush" Value="{StaticResource Launcher.Color.Danger}"/>
-    </Style>
     <Style Selector="TextBlock.section-title">
         <Setter Property="FontSize" Value="{StaticResource Launcher.Typography.FontSize.Body.Md}"/>
         <Setter Property="FontWeight" Value="{StaticResource Launcher.Typography.FontWeight.Strong}"/>
@@ -1301,12 +1242,6 @@
     <Style Selector="StackPanel.card-heading">
         <Setter Property="Orientation" Value="Horizontal"/>
         <Setter Property="Spacing" Value="{StaticResource Launcher.Spacing.Sm}"/>
-    </Style>
-    <Style Selector="Border.settings-section">
-        <Setter Property="Background" Value="{DynamicResource Launcher.Color.Card.Background}"/>
-        <Setter Property="BorderThickness" Value="{StaticResource Launcher.Spacing.Thickness.None}"/>
-        <Setter Property="CornerRadius" Value="{StaticResource Launcher.Radius.Md}"/>
-        <Setter Property="Padding" Value="{StaticResource Launcher.Spacing.Thickness.Lg}"/>
     </Style>
     <Style Selector="Grid.settings-row">
         <Setter Property="MinHeight" Value="{StaticResource Launcher.Component.Settings.Row.MinHeight}"/>
@@ -1785,9 +1720,6 @@
     </Style>
     <Style Selector="RadioButton.color-swatch-button:disabled">
         <Setter Property="Opacity" Value="{StaticResource Launcher.StateLayer.Disabled.Content}"/>
-    </Style>
-    <Style Selector="Button.wrap-action">
-        <Setter Property="Margin" Value="{StaticResource Launcher.Component.WrapAction.Margin}"/>
     </Style>
     <!-- Shared utility styles for repeated inline patterns -->
     <Style Selector="ScrollViewer.scroll-pad">

@@ -27,7 +27,6 @@
             <Thickness x:Key="Launcher.Component.Toast.Message.Margin">0,4,0,0</Thickness>
             <Thickness x:Key="Launcher.Component.Toast.Action.RowMargin">0,8,0,0</Thickness>
             <Thickness x:Key="Launcher.Component.Toast.Action.Primary.Margin">0,0,8,0</Thickness>
-            <Thickness x:Key="Launcher.Component.Toast.Action.Progress.Margin">8,0,0,0</Thickness>
             <Thickness x:Key="Launcher.Component.Dialog.Alert.BorderThickness">3,0,0,0</Thickness>
             <Thickness x:Key="Launcher.Component.Tabs.Header.Margin">0,0,0,4</Thickness>
             <Thickness x:Key="Launcher.Component.Tabs.Indicator.Margin">0,4,0,2</Thickness>
@@ -53,7 +52,6 @@
             <Thickness x:Key="Launcher.Component.TitleBar.Actions.Margin">0,0,8,0</Thickness>
             <Thickness x:Key="Launcher.Component.TitleBar.Settings.Margin">0,0,4,0</Thickness>
             <Thickness x:Key="Launcher.Component.Dialog.Title.Margin">16,0,0,0</Thickness>
-            <Thickness x:Key="Launcher.Component.Dialog.HeaderAction.Margin">0,0,16,0</Thickness>
             <Thickness x:Key="Launcher.Component.Dialog.Footer.BorderThickness">0,1,0,0</Thickness>
             <Thickness x:Key="Launcher.Component.Dialog.FooterLeading.Margin">0,0,12,0</Thickness>
             <Thickness x:Key="Launcher.Component.Settings.Group.Margin">0,16,0,0</Thickness>
@@ -129,7 +127,6 @@
             <x:Double x:Key="Launcher.Component.Dialog.Notice.MaxHeight">110</x:Double>
             <x:Double x:Key="Launcher.Component.Dialog.Update.MaxWidth">620</x:Double>
             <x:Double x:Key="Launcher.Component.Dialog.Update.FileList.MaxHeight">240</x:Double>
-            <x:Double x:Key="Launcher.Component.Dialog.Content.MaxHeight">300</x:Double>
             <!-- 对话框家族 v2 表面档案（ADR-015）：组件圆角 20 + 双层阴影，
                  模态表面比页面常驻面板高一档；-padding 家族按形态区分。 -->
             <x:String x:Key="Launcher.Elevation.Shadow.Dialog">0 26 68 0 #4D0F1222, 4 12 14 0 #240F1222</x:String>
@@ -150,7 +147,6 @@
             <x:Double x:Key="Launcher.Component.ResourcePanel.UidSource.MinWidth">140</x:Double>
             <x:Double x:Key="Launcher.Component.SetupWizard.Select.MinWidth">280</x:Double>
             <Thickness x:Key="Launcher.Component.Dialog.Content.BottomMargin">0,0,0,8</Thickness>
-            <x:Double x:Key="Launcher.Component.ResourcePanel.Content.MaxHeight">300</x:Double>
             <x:Double x:Key="Launcher.Layout.DesignGallery.Width">1000</x:Double>
             <x:Double x:Key="Launcher.Layout.DesignGallery.Height">680</x:Double>
             <x:Double x:Key="Launcher.Component.DesignGallery.StateCell.Width">132</x:Double>
@@ -239,7 +235,6 @@
             <SolidColorBrush x:Key="Launcher.Color.Primary.Border" Color="{DynamicResource SystemAccentColor}" Opacity="0.40"/>
             <SolidColorBrush x:Key="Launcher.Color.OnPrimary" Color="#FFFFFFFF"/>
             <SolidColorBrush x:Key="Launcher.Text.OnChrome" Color="#FFFFFFFF"/>
-            <SolidColorBrush x:Key="Launcher.Text.OnChrome.Muted" Color="#CCFFFFFF"/>
             <SolidColorBrush x:Key="Launcher.Text.OnDark" Color="#B3FFFFFF"/>
             <SolidColorBrush x:Key="Launcher.Color.Transparent" Color="#00000000"/>
             <SolidColorBrush x:Key="Launcher.Color.Chrome.Hover" Color="#22FFFFFF"/>

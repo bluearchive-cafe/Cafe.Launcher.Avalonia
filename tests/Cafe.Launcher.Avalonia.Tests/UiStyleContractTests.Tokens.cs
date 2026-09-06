@@ -146,7 +146,6 @@ public sealed partial class UiStyleContractTests
 
         var expectedSelectors = new HashSet<string>(StringComparer.Ordinal)
         {
-            "TextBlock.heading",
             "TextBlock.dialog-title",
             "TextBlock.dialog-alert-title",
             "TextBlock.titlebar-brand",
@@ -184,10 +183,6 @@ public sealed partial class UiStyleContractTests
     public void SemanticComponents_UseBalancedDensityTokens()
     {
         var document = XDocument.Load(ProjectFile("Views/MainWindow.Styles.axaml"));
-
-        var settingsSection = GetStyleSetters(document, "Border.settings-section");
-        Assert.Equal("{StaticResource Launcher.Spacing.Thickness.Lg}", settingsSection["Padding"]);
-        Assert.Equal("{StaticResource Launcher.Radius.Md}", settingsSection["CornerRadius"]);
 
         var contentRow = GetStyleSetters(document, "Border.content-row");
         Assert.Equal("{StaticResource Launcher.Spacing.Thickness.Md}", contentRow["Padding"]);
@@ -292,9 +287,6 @@ public sealed partial class UiStyleContractTests
         Assert.Equal(
             "{StaticResource Launcher.Component.PathField.Padding}",
             pathField["Padding"]);
-        Assert.Equal(
-            "{StaticResource Launcher.Component.Dialog.Title.Height}",
-            GetStyleSetters(document, "Grid.dialog-header")["Height"]);
     }
 
     [Fact]
@@ -737,13 +729,10 @@ public sealed partial class UiStyleContractTests
         var styles = XDocument.Load(ProjectFile("Views/MainWindow.Styles.axaml"));
 
         // 标题为 12px 小字，须消费与状态表面成对的 OnContainer 文本色（4.5:1），
-        // 不得复用供图标/色条使用的 Info/Warning/Danger 色调。
+        // 不得复用供图标/色条使用的 Info/Danger 色调。
         Assert.Equal(
             "{DynamicResource Launcher.Text.Info}",
             GetStyleSetters(styles, "TextBlock.dialog-alert-title")["Foreground"]);
-        Assert.Equal(
-            "{DynamicResource Launcher.Text.Warning}",
-            GetStyleSetters(styles, "TextBlock.dialog-alert-title.warning")["Foreground"]);
         Assert.Equal(
             "{DynamicResource Launcher.Text.Danger}",
             GetStyleSetters(styles, "TextBlock.dialog-alert-title.danger")["Foreground"]);
