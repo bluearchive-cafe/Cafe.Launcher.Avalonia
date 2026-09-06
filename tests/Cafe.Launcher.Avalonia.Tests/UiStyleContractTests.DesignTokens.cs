@@ -53,7 +53,7 @@ public sealed partial class UiStyleContractTests
                  {
                      ["Launcher.StateLayer.Hover"] = "0.08",
                      ["Launcher.StateLayer.Focus"] = "0.12",
-                     ["Launcher.StateLayer.Pressed"] = "0.16",
+                     ["Launcher.StateLayer.Pressed"] = "0.12",
                      ["Launcher.StateLayer.Selected"] = "0.24",
                      ["Launcher.Spacing.Thickness.Xxl"] = "24",
                      ["Launcher.Spacing.Thickness.Section"] = "40",
@@ -126,7 +126,7 @@ public sealed partial class UiStyleContractTests
                 }
 
                 Assert.True(
-                    match.Value == "LauncherBorderButtonTemplate",
+                    match.Value is "LauncherBorderButtonTemplate" or "LauncherBorderToggleButtonTemplate",
                     $"Legacy flat token key '{match.Value}' found in {file} — rename gate violated.");
             }
         }

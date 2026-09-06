@@ -77,11 +77,15 @@
                         </ItemsControl.ItemsPanel>
                         <ItemsControl.ItemTemplate>
                             <DataTemplate x:DataType="models:ThemeColorPaletteItem">
-                                <Button Classes="color-swatch-button"
-                                        AutomationProperties.Name="{Binding ColorHex}"
-                                        ToolTip.Tip="{Binding ColorHex}"
-                                        Command="{Binding #SettingsRoot.((vm:MainWindowViewModel)DataContext).Settings.Appearance.SelectThemeColorPaletteCommand}"
-                                        CommandParameter="{Binding Index}">
+                                <!-- 色板为单选组：RadioButton 承载选中语义；勾选前景与色块刷子
+                                     同源配对（CheckBrush），不依赖全局 OnPrimary。 -->
+                                <RadioButton Classes="color-swatch-button"
+                                             GroupName="ThemeColorPalette"
+                                             IsChecked="{Binding IsSelected, Mode=OneWay}"
+                                             AutomationProperties.Name="{Binding ColorHex}"
+                                             ToolTip.Tip="{Binding ColorHex}"
+                                             Command="{Binding #SettingsRoot.((vm:MainWindowViewModel)DataContext).Settings.Appearance.SelectThemeColorPaletteCommand}"
+                                             CommandParameter="{Binding Index}">
                                     <Border Classes="color-swatch"
                                             Background="{Binding Brush}">
                                         <materialIcons:MaterialIcon Kind="Check"
@@ -89,10 +93,10 @@
                                                                     Height="{StaticResource Launcher.Icon.Sm}"
                                                                     HorizontalAlignment="Center"
                                                                     VerticalAlignment="Center"
-                                                                    Foreground="{DynamicResource Launcher.Color.OnPrimary}"
+                                                                    Foreground="{Binding CheckBrush}"
                                                                     IsVisible="{Binding IsSelected}"/>
                                     </Border>
-                                </Button>
+                                </RadioButton>
                             </DataTemplate>
                         </ItemsControl.ItemTemplate>
                     </ItemsControl>

@@ -44,11 +44,12 @@
                                     <TextBlock Text="{Binding Debug.LogFilePath}" Classes="caption" TextTrimming="CharacterEllipsis"
                                                 MaxWidth="{StaticResource Launcher.Layout.Debug.Log.Path.MaxWidth}" VerticalAlignment="Center"/>
                                 </StackPanel>
-                                <StackPanel Orientation="Horizontal" Spacing="{StaticResource Launcher.Spacing.Sm}">
+                                <Grid ColumnDefinitions="Auto,*" ColumnSpacing="{StaticResource Launcher.Spacing.Sm}">
                                     <TextBlock Text="{Binding Shell.I18n[openDataDirectory]}" Classes="caption" VerticalAlignment="Center"/>
-                                    <TextBlock Text="{Binding Debug.DataDirectoryPath}" Classes="caption" TextTrimming="CharacterEllipsis"
+                                    <TextBlock Grid.Column="1" Text="{Binding Debug.DataDirectoryPath}" Classes="caption" TextTrimming="CharacterEllipsis"
+                                               ToolTip.Tip="{Binding Debug.DataDirectoryPath}"
                                                VerticalAlignment="Center"/>
-                                </StackPanel>
+                                </Grid>
                             </StackPanel>
                         </Border>
 
@@ -59,7 +60,7 @@
 
                                 <StackPanel Orientation="Horizontal" Spacing="{StaticResource Launcher.Spacing.Sm}">
                                     <TextBlock Text="{Binding Shell.I18n[logLevel]}" Classes="caption" VerticalAlignment="Center"/>
-                                    <ComboBox ItemsSource="{Binding Debug.LogLevelOptions}"
+                                    <ComboBox Classes="setting-control" ItemsSource="{Binding Debug.LogLevelOptions}"
                                               SelectedIndex="{Binding Debug.SelectedLogLevelIndex, Mode=TwoWay}"
                                                MinWidth="{StaticResource Launcher.Layout.Debug.Log.Level.MinWidth}" Height="{StaticResource Launcher.Control.Height.Setting}"
                                               VerticalAlignment="Center"

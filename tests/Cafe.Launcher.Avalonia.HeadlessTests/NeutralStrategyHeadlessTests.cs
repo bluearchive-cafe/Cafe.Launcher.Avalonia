@@ -25,7 +25,9 @@ public sealed class NeutralStrategyHeadlessTests
         var application = Application.Current
             ?? throw new InvalidOperationException("Headless application is not initialised.");
         var dialogDefaults = MaterialSchemeGenerator.DialogSurfaceDefaults
-            .Concat(MaterialSchemeGenerator.NeutralContentDefaults).ToArray();
+            .Concat(MaterialSchemeGenerator.NeutralContentDefaults)
+            .Concat(MaterialSchemeGenerator.NeutralSurfaceDefaults)
+            .Concat(MaterialSchemeGenerator.StateLayerDefaults).ToArray();
 
         // Snapshot the in-place brushes this test mutates; headless tests share
         // one Application and run sequentially.

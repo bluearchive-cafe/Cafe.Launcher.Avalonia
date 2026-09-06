@@ -124,7 +124,7 @@
                                     <Grid ColumnDefinitions="Auto,*" ColumnSpacing="{StaticResource Launcher.Spacing.Md}">
                                         <TextBlock Text="{Binding Shell.I18n[resourcePanelUidSource]}" Classes="group-title"
                                                    VerticalAlignment="Center"/>
-                                        <ComboBox Grid.Column="1"
+                                        <ComboBox Grid.Column="1" Classes="setting-control"
                                                   ItemsSource="{Binding ResourcePanel.ResourcePanelUidSourceOptions}"
                                                   SelectedValue="{Binding ResourcePanel.SelectedResourcePanelUidSource, Mode=TwoWay}"
                                                   SelectedValueBinding="{Binding Code}"

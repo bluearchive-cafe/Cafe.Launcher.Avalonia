@@ -507,6 +507,24 @@ public sealed partial class UiStyleContractTests
     }
 
     [Fact]
+    public void AppearanceSwatch_RadioButtonCarriesSelectionSemantics()
+    {
+        var document = XDocument.Load(ProjectFile("Views/SettingsAppearanceSection.axaml"));
+        var swatch = document
+            .Descendants()
+            .Single(element =>
+                element.Name.LocalName == "RadioButton"
+                && HasClass(element, "color-swatch-button"));
+
+        Assert.Equal("ThemeColorPalette", swatch.Attribute("GroupName")?.Value);
+        Assert.Equal("{Binding IsSelected, Mode=OneWay}", swatch.Attribute("IsChecked")?.Value);
+        // 勾选前景与色块刷子同源配对（CheckBrush），不复用全局 OnPrimary。
+        var checkIcon = Assert.Single(swatch.Descendants(), element =>
+            element.Name.LocalName == "MaterialIcon");
+        Assert.Equal("{Binding CheckBrush}", checkIcon.Attribute("Foreground")?.Value);
+    }
+
+    [Fact]
     public void AboutSection_UsesSettingsGroupForTopLevelRhythm()
     {
         var document = XDocument.Load(ProjectFile("Views/SettingsAboutSection.axaml"));

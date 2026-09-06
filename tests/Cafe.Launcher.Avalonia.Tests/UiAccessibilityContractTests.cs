@@ -11,7 +11,7 @@ public sealed class UiAccessibilityContractTests
     {
         var document = XDocument.Load(ProjectFile("Views/MainWindowLogViewerOverlay.axaml"));
         var filterButtons = document
-            .Descendants(Avalonia + "Button")
+            .Descendants(Avalonia + "RadioButton")
             .Where(element => HasClass(element, "log-filter"))
             .ToArray();
 

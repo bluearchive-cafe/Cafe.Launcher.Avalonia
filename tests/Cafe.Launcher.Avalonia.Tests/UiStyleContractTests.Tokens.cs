@@ -363,15 +363,15 @@ public sealed partial class UiStyleContractTests
             GetStyleSetters(remoteStyles, "Button.social-chip:focus-visible")["BorderBrush"]);
 
         var filterTabStyles = XDocument.Load(ProjectFile("Views/Styles/Diagnostics.axaml"));
-        var filterTab = GetStyleSetters(filterTabStyles, "Button.filter-tab");
-        Assert.Equal("{StaticResource LauncherBorderButtonTemplate}", filterTab["Template"]);
+        var filterTab = GetStyleSetters(filterTabStyles, "RadioButton.filter-tab");
+        Assert.Equal("{StaticResource LauncherBorderToggleButtonTemplate}", filterTab["Template"]);
         Assert.Equal("{StaticResource Launcher.Radius.Sm}", filterTab["CornerRadius"]);
         Assert.Equal(
-            "{DynamicResource Launcher.Color.Primary.Pressed}",
-            GetStyleSetters(filterTabStyles, "Button.filter-tab:pressed")["Background"]);
+            "{DynamicResource Launcher.Color.Button.Flat.Pressed}",
+            GetStyleSetters(filterTabStyles, "RadioButton.filter-tab:pressed")["Background"]);
         Assert.Equal(
             "{StaticResource Launcher.StateLayer.Disabled.Content}",
-            GetStyleSetters(filterTabStyles, "Button.filter-tab:disabled")["Opacity"]);
+            GetStyleSetters(filterTabStyles, "RadioButton.filter-tab:disabled")["Opacity"]);
 
         var mainStyles = XDocument.Load(ProjectFile("Views/MainWindow.Styles.axaml"));
         var settingRow = GetStyleSetters(mainStyles, "Grid.settings-row");
@@ -700,8 +700,33 @@ public sealed partial class UiStyleContractTests
     {
         var styles = XDocument.Load(ProjectFile("Views/Styles/Diagnostics.axaml"));
 
-        Assert.Equal("{StaticResource Launcher.Spacing.Thickness.None}", GetStyleSetters(styles, "Button.filter-tab")["BorderThickness"]);
-        Assert.Equal("{DynamicResource Launcher.Color.Primary}", GetStyleSetters(styles, "Button.filter-tab.active")["Background"]);
+        Assert.Equal("{StaticResource Launcher.Spacing.Thickness.None}", GetStyleSetters(styles, "RadioButton.filter-tab")["BorderThickness"]);
+        // 未选中悬停只铺低透明状态层并保留 Text.Primary，不再借用选中态的 Primary 容器色。
+        var hoverTab = GetStyleSetters(styles, "RadioButton.filter-tab:pointerover");
+        Assert.Equal("{DynamicResource Launcher.Color.Button.Flat.Hover}", hoverTab["Background"]);
+        Assert.False(hoverTab.ContainsKey("Foreground"));
+        // 选中态由 :checked 承载真实选择语义并呈现 filled 容器。
+        var checkedTab = GetStyleSetters(styles, "RadioButton.filter-tab:checked");
+        Assert.Equal("{DynamicResource Launcher.Color.Primary}", checkedTab["Background"]);
+        Assert.Equal("{DynamicResource Launcher.Color.OnPrimary}", checkedTab["Foreground"]);
+    }
+
+    [Fact]
+    public void DialogAlertTitles_ConsumeOnContainerTextTokens()
+    {
+        var styles = XDocument.Load(ProjectFile("Views/MainWindow.Styles.axaml"));
+
+        // 标题为 12px 小字，须消费与状态表面成对的 OnContainer 文本色（4.5:1），
+        // 不得复用供图标/色条使用的 Info/Warning/Danger 色调。
+        Assert.Equal(
+            "{DynamicResource Launcher.Text.Info}",
+            GetStyleSetters(styles, "TextBlock.dialog-alert-title")["Foreground"]);
+        Assert.Equal(
+            "{DynamicResource Launcher.Text.Warning}",
+            GetStyleSetters(styles, "TextBlock.dialog-alert-title.warning")["Foreground"]);
+        Assert.Equal(
+            "{DynamicResource Launcher.Text.Danger}",
+            GetStyleSetters(styles, "TextBlock.dialog-alert-title.danger")["Foreground"]);
     }
 
     [Fact]

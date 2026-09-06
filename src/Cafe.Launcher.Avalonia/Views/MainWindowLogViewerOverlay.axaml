@@ -34,41 +34,56 @@
             </controls:DialogSurface.HeaderIcon>
             <controls:DialogSurface.Toolbar>
                 <StackPanel Orientation="Horizontal" Spacing="{StaticResource Launcher.Spacing.Sm}" Classes="log-filter-bar">
-                    <Button Classes="filter-tab log-filter" Classes.active="{Binding LogViewer.IsFilterAllActive}"
-                            Command="{Binding LogViewer.SetFilterAllCommand}"
-                            AutomationProperties.Name="{Binding Shell.I18n[logFilterAll]}">
+                    <!-- 筛选为单选组：RadioButton 承载真实选择语义，IsChecked 单向反映 SeverityFilter。 -->
+                    <RadioButton Classes="filter-tab log-filter"
+                                 GroupName="LogViewerSeverityFilter"
+                                 IsChecked="{Binding LogViewer.IsFilterAllActive, Mode=OneWay}"
+                                 Command="{Binding LogViewer.SetFilterAllCommand}"
+                                 AutomationProperties.Name="{Binding Shell.I18n[logFilterAll]}">
                         <TextBlock Text="{Binding Shell.I18n[logFilterAll]}"/>
-                    </Button>
-                    <Button Classes="filter-tab log-filter" Classes.active="{Binding LogViewer.IsFilterVerboseActive}"
-                            Command="{Binding LogViewer.SetFilterVerboseCommand}"
-                            AutomationProperties.Name="{Binding Shell.I18n[logFilterVerbose]}">
+                    </RadioButton>
+                    <RadioButton Classes="filter-tab log-filter"
+                                 GroupName="LogViewerSeverityFilter"
+                                 IsChecked="{Binding LogViewer.IsFilterVerboseActive, Mode=OneWay}"
+                                 Command="{Binding LogViewer.SetFilterVerboseCommand}"
+                                 AutomationProperties.Name="{Binding Shell.I18n[logFilterVerbose]}">
                         <TextBlock Text="{Binding Shell.I18n[logFilterVerbose]}"/>
-                    </Button>
-                    <Button Classes="filter-tab log-filter" Classes.active="{Binding LogViewer.IsFilterDebugActive}"
-                            Command="{Binding LogViewer.SetFilterDebugCommand}"
-                            AutomationProperties.Name="{Binding Shell.I18n[logFilterDebug]}">
+                    </RadioButton>
+                    <RadioButton Classes="filter-tab log-filter"
+                                 GroupName="LogViewerSeverityFilter"
+                                 IsChecked="{Binding LogViewer.IsFilterDebugActive, Mode=OneWay}"
+                                 Command="{Binding LogViewer.SetFilterDebugCommand}"
+                                 AutomationProperties.Name="{Binding Shell.I18n[logFilterDebug]}">
                         <TextBlock Text="{Binding Shell.I18n[logFilterDebug]}"/>
-                    </Button>
-                    <Button Classes="filter-tab log-filter" Classes.active="{Binding LogViewer.IsFilterInfoActive}"
-                            Command="{Binding LogViewer.SetFilterInfoCommand}"
-                            AutomationProperties.Name="{Binding Shell.I18n[logFilterInfo]}">
+                    </RadioButton>
+                    <RadioButton Classes="filter-tab log-filter"
+                                 GroupName="LogViewerSeverityFilter"
+                                 IsChecked="{Binding LogViewer.IsFilterInfoActive, Mode=OneWay}"
+                                 Command="{Binding LogViewer.SetFilterInfoCommand}"
+                                 AutomationProperties.Name="{Binding Shell.I18n[logFilterInfo]}">
                         <TextBlock Text="{Binding Shell.I18n[logFilterInfo]}"/>
-                    </Button>
-                    <Button Classes="filter-tab log-filter" Classes.active="{Binding LogViewer.IsFilterWarnActive}"
-                            Command="{Binding LogViewer.SetFilterWarnCommand}"
-                            AutomationProperties.Name="{Binding Shell.I18n[logFilterWarn]}">
+                    </RadioButton>
+                    <RadioButton Classes="filter-tab log-filter"
+                                 GroupName="LogViewerSeverityFilter"
+                                 IsChecked="{Binding LogViewer.IsFilterWarnActive, Mode=OneWay}"
+                                 Command="{Binding LogViewer.SetFilterWarnCommand}"
+                                 AutomationProperties.Name="{Binding Shell.I18n[logFilterWarn]}">
                         <TextBlock Text="{Binding Shell.I18n[logFilterWarn]}"/>
-                    </Button>
-                    <Button Classes="filter-tab log-filter" Classes.active="{Binding LogViewer.IsFilterErrorActive}"
-                            Command="{Binding LogViewer.SetFilterErrorCommand}"
-                            AutomationProperties.Name="{Binding Shell.I18n[logFilterError]}">
+                    </RadioButton>
+                    <RadioButton Classes="filter-tab log-filter"
+                                 GroupName="LogViewerSeverityFilter"
+                                 IsChecked="{Binding LogViewer.IsFilterErrorActive, Mode=OneWay}"
+                                 Command="{Binding LogViewer.SetFilterErrorCommand}"
+                                 AutomationProperties.Name="{Binding Shell.I18n[logFilterError]}">
                         <TextBlock Text="{Binding Shell.I18n[logFilterError]}"/>
-                    </Button>
-                    <Button Classes="filter-tab log-filter" Classes.active="{Binding LogViewer.IsFilterFatalActive}"
-                            Command="{Binding LogViewer.SetFilterFatalCommand}"
-                            AutomationProperties.Name="{Binding Shell.I18n[logFilterFatal]}">
+                    </RadioButton>
+                    <RadioButton Classes="filter-tab log-filter"
+                                 GroupName="LogViewerSeverityFilter"
+                                 IsChecked="{Binding LogViewer.IsFilterFatalActive, Mode=OneWay}"
+                                 Command="{Binding LogViewer.SetFilterFatalCommand}"
+                                 AutomationProperties.Name="{Binding Shell.I18n[logFilterFatal]}">
                         <TextBlock Text="{Binding Shell.I18n[logFilterFatal]}"/>
-                    </Button>
+                    </RadioButton>
                     <TextBox Text="{Binding LogViewer.FilterText, Mode=TwoWay}" PlaceholderText="{Binding Shell.I18n[logSearchPlaceholder]}"
                              Classes="uid-input log-search"
                              MinWidth="{StaticResource Launcher.Component.LogViewer.Search.MinWidth}"

@@ -17,6 +17,20 @@
                                   VerticalContentAlignment="{TemplateBinding VerticalContentAlignment}"/>
             </Border>
         </ControlTemplate>
+        <!-- ToggleButton 兄弟模板：与 BorderButtonTemplate 同几何，供 RadioButton 承载
+             真实选择语义（ADR-014 同款用法）而不改观感。 -->
+        <ControlTemplate x:Key="LauncherBorderToggleButtonTemplate" TargetType="ToggleButton">
+            <Border Background="{TemplateBinding Background}"
+                    BorderBrush="{TemplateBinding BorderBrush}"
+                    BorderThickness="{TemplateBinding BorderThickness}"
+                    CornerRadius="{TemplateBinding CornerRadius}">
+                <ContentPresenter Content="{TemplateBinding Content}"
+                                  ContentTemplate="{TemplateBinding ContentTemplate}"
+                                  Padding="{TemplateBinding Padding}"
+                                  HorizontalContentAlignment="{TemplateBinding HorizontalContentAlignment}"
+                                  VerticalContentAlignment="{TemplateBinding VerticalContentAlignment}"/>
+            </Border>
+        </ControlTemplate>
     </Styles.Resources>
     <Style Selector="TextBlock.caption">
         <Setter Property="FontSize" Value="{StaticResource Launcher.Typography.FontSize.Body.Sm}"/>
@@ -110,6 +124,11 @@
     <Style Selector="ComboBox:focus-visible">
         <Setter Property="BorderBrush" Value="{DynamicResource Launcher.Color.FocusRing}"/>
         <Setter Property="BorderThickness" Value="{StaticResource Launcher.Border.Thickness.Focus}"/>
+    </Style>
+    <!-- M3: ComboBox 弹层对齐对话框表面家族，避免 Fluent 中性灰与种子跟随主题脱节。 -->
+    <Style Selector="ComboBox /template/ Border#PopupBorder">
+        <Setter Property="Background" Value="{DynamicResource Launcher.Color.Dialog.Background}"/>
+        <Setter Property="BorderBrush" Value="{DynamicResource Launcher.Color.OutlineVariant}"/>
     </Style>
     <Style Selector="ComboBox.setting-control">
         <Setter Property="MinWidth" Value="{StaticResource Launcher.Component.Settings.Control.MinWidth}"/>
@@ -1089,16 +1108,18 @@
         <Setter Property="Orientation" Value="Horizontal"/>
         <Setter Property="Spacing" Value="{StaticResource Launcher.Spacing.Xs}"/>
     </Style>
+    <!-- 状态表面标题为 12px 小字，消费 OnContainer 级文本色（4.5:1）；
+         图标保留 Info/Warning/Danger 色调（图形 3:1 目标）。 -->
     <Style Selector="TextBlock.dialog-alert-title">
         <Setter Property="FontSize" Value="{StaticResource Launcher.Typography.FontSize.Label.Md}"/>
         <Setter Property="FontWeight" Value="{StaticResource Launcher.Typography.FontWeight.Strong}"/>
-        <Setter Property="Foreground" Value="{StaticResource Launcher.Color.Info}"/>
+        <Setter Property="Foreground" Value="{DynamicResource Launcher.Text.Info}"/>
     </Style>
     <Style Selector="TextBlock.dialog-alert-title.warning">
-        <Setter Property="Foreground" Value="{StaticResource Launcher.Color.Warning}"/>
+        <Setter Property="Foreground" Value="{DynamicResource Launcher.Text.Warning}"/>
     </Style>
     <Style Selector="TextBlock.dialog-alert-title.danger">
-        <Setter Property="Foreground" Value="{StaticResource Launcher.Color.Danger}"/>
+        <Setter Property="Foreground" Value="{DynamicResource Launcher.Text.Danger}"/>
     </Style>
     <Style Selector="materialIcons|MaterialIcon.dialog-alert-icon">
         <Setter Property="Foreground" Value="{StaticResource Launcher.Color.Info}"/>
@@ -1115,7 +1136,7 @@
     </Style>
     <Style Selector="Border.dialog-card">
         <Setter Property="Background" Value="{DynamicResource Launcher.Color.Card.Background}"/>
-        <Setter Property="BorderBrush" Value="{DynamicResource Launcher.Color.Outline}"/>
+        <Setter Property="BorderBrush" Value="{DynamicResource Launcher.Color.OutlineVariant}"/>
         <Setter Property="BorderThickness" Value="{StaticResource Launcher.Border.Thickness.Default}"/>
         <Setter Property="CornerRadius" Value="{StaticResource Launcher.Radius.Sm}"/>
         <Setter Property="Padding" Value="{StaticResource Launcher.Spacing.Thickness.Lg}"/>
@@ -1566,6 +1587,102 @@
     <Style Selector="ToggleSwitch:checked /template/ Ellipse#SwitchKnobOn">
         <Setter Property="Fill" Value="{DynamicResource Launcher.Color.OnPrimary}"/>
     </Style>
+    <!-- M3 基础控件：RadioButton 按 material-web radio v0_192 组件 token 表映射——
+         未选中环 onSurfaceVariant，hover/press/focus 图标转 onSurface；选中态
+         Primary 全程不变（不随 hover/press 漂移）；禁用 onSurface 38%。
+         几何 2px 环 + 10dp 内点（图标 20 不变）；Fluent 选中盘默认整面填充系统
+         Accent 色，按 M3 环+点形态改为透明。状态层以内嵌 20dp 圆盘近似（Fluent
+         模板无 40dp 状态层部件）：未选中 hover=onSurface 8%、pressed=primary 12%，
+         选中 hover=primary 8%（Button.Flat.Hover）、pressed=onSurface 12%。
+         注意：模板子元素的常态 Setter 必须携带激活器（:checked / :not(:checked)），
+         否则样式优先级低于模板属性，不会命中。 -->
+    <Style Selector="RadioButton">
+        <Setter Property="Foreground" Value="{DynamicResource Launcher.Text.Primary}"/>
+    </Style>
+    <!-- 图标与内容垂直居中：Fluent 模板把 20dp 图标栅格钉在行顶（Height=32、Top），
+         多行内容时图标明显偏高；改为随行居中，与右侧内容块中线对齐（M3 列表行规范）。
+         模板子元素 Setter 须携带激活器方可命中（同上注释）。 -->
+    <Style Selector="RadioButton:not(:checked) /template/ Grid > Grid">
+        <Setter Property="VerticalAlignment" Value="Center"/>
+    </Style>
+    <Style Selector="RadioButton:checked /template/ Grid > Grid">
+        <Setter Property="VerticalAlignment" Value="Center"/>
+    </Style>
+    <Style Selector="RadioButton:not(:checked) /template/ Ellipse#OuterEllipse">
+        <Setter Property="Stroke" Value="{DynamicResource Launcher.Text.Secondary}"/>
+        <Setter Property="StrokeThickness" Value="{StaticResource Launcher.Control.Stroke.Radio}"/>
+    </Style>
+    <Style Selector="RadioButton:checked /template/ Ellipse#CheckOuterEllipse">
+        <Setter Property="Stroke" Value="{DynamicResource Launcher.Color.Primary}"/>
+        <Setter Property="Fill" Value="{StaticResource Launcher.Color.Transparent}"/>
+        <Setter Property="StrokeThickness" Value="{StaticResource Launcher.Control.Stroke.Radio}"/>
+    </Style>
+    <Style Selector="RadioButton:checked /template/ Ellipse#CheckGlyph">
+        <Setter Property="Width" Value="{StaticResource Launcher.Control.Size.Radio.Glyph}"/>
+        <Setter Property="Height" Value="{StaticResource Launcher.Control.Size.Radio.Glyph}"/>
+        <Setter Property="Fill" Value="{DynamicResource Launcher.Color.Primary}"/>
+        <Setter Property="Stroke" Value="{DynamicResource Launcher.Color.Primary}"/>
+    </Style>
+    <Style Selector="RadioButton:pointerover /template/ Ellipse#OuterEllipse">
+        <Setter Property="Stroke" Value="{DynamicResource Launcher.Text.Primary}"/>
+        <Setter Property="Fill" Value="{DynamicResource Launcher.Color.StateLayer.OnSurface.Hover}"/>
+    </Style>
+    <Style Selector="RadioButton:pressed /template/ Ellipse#OuterEllipse">
+        <Setter Property="Stroke" Value="{DynamicResource Launcher.Text.Primary}"/>
+        <Setter Property="Fill" Value="{DynamicResource Launcher.Color.Button.Flat.Pressed}"/>
+    </Style>
+    <Style Selector="RadioButton:pointerover /template/ Ellipse#CheckOuterEllipse">
+        <Setter Property="Stroke" Value="{DynamicResource Launcher.Color.Primary}"/>
+        <Setter Property="Fill" Value="{DynamicResource Launcher.Color.Button.Flat.Hover}"/>
+    </Style>
+    <Style Selector="RadioButton:pressed /template/ Ellipse#CheckOuterEllipse">
+        <Setter Property="Stroke" Value="{DynamicResource Launcher.Color.Primary}"/>
+        <Setter Property="Fill" Value="{DynamicResource Launcher.Color.StateLayer.OnSurface.Pressed}"/>
+    </Style>
+    <Style Selector="RadioButton:focus-visible /template/ Ellipse#OuterEllipse">
+        <Setter Property="Stroke" Value="{DynamicResource Launcher.Text.Primary}"/>
+    </Style>
+    <Style Selector="RadioButton:disabled /template/ Ellipse#OuterEllipse">
+        <Setter Property="Stroke" Value="{DynamicResource Launcher.Text.Primary}"/>
+        <Setter Property="Fill" Value="{StaticResource Launcher.Color.Transparent}"/>
+        <Setter Property="Opacity" Value="{StaticResource Launcher.StateLayer.Disabled.Content}"/>
+    </Style>
+    <Style Selector="RadioButton:disabled /template/ Ellipse#CheckOuterEllipse">
+        <Setter Property="Stroke" Value="{DynamicResource Launcher.Text.Primary}"/>
+        <Setter Property="Fill" Value="{StaticResource Launcher.Color.Transparent}"/>
+        <Setter Property="Opacity" Value="{StaticResource Launcher.StateLayer.Disabled.Content}"/>
+    </Style>
+    <Style Selector="RadioButton:disabled /template/ Ellipse#CheckGlyph">
+        <Setter Property="Fill" Value="{DynamicResource Launcher.Text.Primary}"/>
+        <Setter Property="Stroke" Value="{DynamicResource Launcher.Text.Primary}"/>
+        <Setter Property="Opacity" Value="{StaticResource Launcher.StateLayer.Disabled.Content}"/>
+    </Style>
+    <!-- 禁用标签 onSurface 38%；选择器限定 Fluent 模板的具名 ContentPresenter，
+         不影响 toggle 模板（筛选 chip/色板）自身的禁用前景。 -->
+    <Style Selector="RadioButton:disabled /template/ ContentPresenter#PART_ContentPresenter">
+        <Setter Property="Foreground" Value="{DynamicResource Launcher.Text.Primary}"/>
+        <Setter Property="Opacity" Value="{StaticResource Launcher.StateLayer.Disabled.Content}"/>
+    </Style>
+    <Style Selector="CheckBox:checked /template/ Border#NormalRectangle">
+        <Setter Property="Background" Value="{DynamicResource Launcher.Color.Primary}"/>
+        <Setter Property="BorderBrush" Value="{DynamicResource Launcher.Color.Primary}"/>
+    </Style>
+    <Style Selector="CheckBox:checked /template/ Path#CheckGlyph">
+        <Setter Property="Fill" Value="{DynamicResource Launcher.Color.OnPrimary}"/>
+        <Setter Property="Stroke" Value="{DynamicResource Launcher.Color.OnPrimary}"/>
+    </Style>
+    <Style Selector="CheckBox:indeterminate /template/ Border#NormalRectangle">
+        <Setter Property="Background" Value="{DynamicResource Launcher.Color.Primary}"/>
+        <Setter Property="BorderBrush" Value="{DynamicResource Launcher.Color.Primary}"/>
+    </Style>
+    <Style Selector="CheckBox:checked:pointerover /template/ Border#NormalRectangle">
+        <Setter Property="Background" Value="{DynamicResource Launcher.Color.Primary.Hover}"/>
+        <Setter Property="BorderBrush" Value="{DynamicResource Launcher.Color.Primary.Hover}"/>
+    </Style>
+    <Style Selector="CheckBox:checked:pressed /template/ Border#NormalRectangle">
+        <Setter Property="Background" Value="{DynamicResource Launcher.Color.Primary.Pressed}"/>
+        <Setter Property="BorderBrush" Value="{DynamicResource Launcher.Color.Primary.Pressed}"/>
+    </Style>
     <Style Selector="Border.color-swatch">
         <Setter Property="Width" Value="{StaticResource Launcher.Control.Size.Swatch}"/>
         <Setter Property="Height" Value="{StaticResource Launcher.Control.Size.Swatch}"/>
@@ -1573,7 +1690,10 @@
         <Setter Property="BorderBrush" Value="{DynamicResource Launcher.Color.Card.Border}"/>
         <Setter Property="BorderThickness" Value="{StaticResource Launcher.Border.Thickness.Default}"/>
     </Style>
-    <Style Selector="Button.color-swatch-button">
+    <!-- 色板为 RadioButton，选择器直接以 RadioButton 为目标（Avalonia 类型选择器不匹配
+         派生类型，Button.* 不会命中）；承载选中语义（IsChecked 绑定 IsSelected）。 -->
+    <Style Selector="RadioButton.color-swatch-button">
+        <Setter Property="Template" Value="{StaticResource LauncherBorderToggleButtonTemplate}"/>
         <Setter Property="Background" Value="{StaticResource Launcher.Color.Transparent}"/>
         <Setter Property="BorderBrush" Value="{StaticResource Launcher.Color.Transparent}"/>
         <Setter Property="BorderThickness" Value="{StaticResource Launcher.Border.Thickness.Default}"/>
@@ -1584,13 +1704,17 @@
         <Setter Property="HorizontalContentAlignment" Value="Stretch"/>
         <Setter Property="VerticalContentAlignment" Value="Stretch"/>
     </Style>
-    <Style Selector="Button.color-swatch-button:pointerover">
+    <Style Selector="RadioButton.color-swatch-button:pointerover">
         <Setter Property="BorderBrush" Value="{DynamicResource Launcher.Color.Primary}"/>
     </Style>
-    <Style Selector="Button.color-swatch-button:pressed">
+    <Style Selector="RadioButton.color-swatch-button:pressed">
         <Setter Property="BorderBrush" Value="{DynamicResource Launcher.Color.Primary.Pressed}"/>
     </Style>
-    <Style Selector="Button.color-swatch-button:disabled">
+    <Style Selector="RadioButton.color-swatch-button:focus-visible">
+        <Setter Property="BorderBrush" Value="{DynamicResource Launcher.Color.FocusRing}"/>
+        <Setter Property="BorderThickness" Value="{StaticResource Launcher.Border.Thickness.Focus}"/>
+    </Style>
+    <Style Selector="RadioButton.color-swatch-button:disabled">
         <Setter Property="Opacity" Value="{StaticResource Launcher.StateLayer.Disabled.Content}"/>
     </Style>
     <Style Selector="Button.wrap-action">

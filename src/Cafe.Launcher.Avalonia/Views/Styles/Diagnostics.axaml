@@ -3,8 +3,10 @@
     <Style Selector="StackPanel.log-filter-bar">
         <Setter Property="Margin" Value="{StaticResource Launcher.Component.LogViewer.FilterBar.Margin}"/>
     </Style>
-    <Style Selector="Button.filter-tab">
-        <Setter Property="Template" Value="{StaticResource LauncherBorderButtonTemplate}"/>
+    <!-- 筛选 chip 基础样式直接以 RadioButton 为目标：Avalonia 类型选择器不匹配派生类型，
+         Button.* 选择器不会命中 RadioButton 实例（2026-09 复核回归）。 -->
+    <Style Selector="RadioButton.filter-tab">
+        <Setter Property="Template" Value="{StaticResource LauncherBorderToggleButtonTemplate}"/>
         <Setter Property="Background" Value="{DynamicResource Launcher.Color.Content.Row}"/>
         <Setter Property="BorderThickness" Value="{StaticResource Launcher.Spacing.Thickness.None}"/>
         <Setter Property="Foreground" Value="{DynamicResource Launcher.Text.Primary}"/>
@@ -15,28 +17,37 @@
         <Setter Property="HorizontalContentAlignment" Value="Center"/>
         <Setter Property="VerticalContentAlignment" Value="Center"/>
     </Style>
-    <Style Selector="Button.filter-tab.log-filter">
+    <Style Selector="RadioButton.filter-tab.log-filter">
         <Setter Property="Height" Value="{StaticResource Launcher.Control.Height.Setting}"/>
     </Style>
-    <Style Selector="Button.filter-tab:pointerover">
-        <Setter Property="Background" Value="{DynamicResource Launcher.Color.Primary.Hover}"/>
-        <Setter Property="Foreground" Value="{DynamicResource Launcher.Color.OnPrimary}"/>
+    <!-- 未选中态悬停/按压只铺低透明状态层（8%/12% primary 预合成），保留 Text.Primary
+         前景；选中态由 :checked 呈现 filled 容器（Primary + OnPrimary），与 M3 状态模型一致。 -->
+    <Style Selector="RadioButton.filter-tab:pointerover">
+        <Setter Property="Background" Value="{DynamicResource Launcher.Color.Button.Flat.Hover}"/>
     </Style>
-    <Style Selector="Button.filter-tab:pressed">
-        <Setter Property="Background" Value="{DynamicResource Launcher.Color.Primary.Pressed}"/>
-        <Setter Property="Foreground" Value="{DynamicResource Launcher.Color.OnPrimary}"/>
+    <Style Selector="RadioButton.filter-tab:pressed">
+        <Setter Property="Background" Value="{DynamicResource Launcher.Color.Button.Flat.Pressed}"/>
     </Style>
-    <Style Selector="Button.filter-tab:focus-visible">
+    <Style Selector="RadioButton.filter-tab:focus-visible">
         <Setter Property="BorderBrush" Value="{DynamicResource Launcher.Color.FocusRing}"/>
         <Setter Property="BorderThickness" Value="{StaticResource Launcher.Border.Thickness.Focus}"/>
     </Style>
-    <Style Selector="Button.filter-tab:disabled">
+    <Style Selector="RadioButton.filter-tab:disabled">
         <Setter Property="Background" Value="{DynamicResource Launcher.Color.Content.Row}"/>
         <Setter Property="Foreground" Value="{DynamicResource Launcher.Text.Secondary}"/>
         <Setter Property="Opacity" Value="{StaticResource Launcher.StateLayer.Disabled.Content}"/>
     </Style>
-    <Style Selector="Button.filter-tab.active">
+    <!-- 筛选语义：RadioButton 承载真实选择状态（ADR-014 同款用法），选中外观走 :checked。 -->
+    <Style Selector="RadioButton.filter-tab:checked">
         <Setter Property="Background" Value="{DynamicResource Launcher.Color.Primary}"/>
+        <Setter Property="Foreground" Value="{DynamicResource Launcher.Color.OnPrimary}"/>
+    </Style>
+    <Style Selector="RadioButton.filter-tab:checked:pointerover">
+        <Setter Property="Background" Value="{DynamicResource Launcher.Color.Primary.Hover}"/>
+        <Setter Property="Foreground" Value="{DynamicResource Launcher.Color.OnPrimary}"/>
+    </Style>
+    <Style Selector="RadioButton.filter-tab:checked:pressed">
+        <Setter Property="Background" Value="{DynamicResource Launcher.Color.Primary.Pressed}"/>
         <Setter Property="Foreground" Value="{DynamicResource Launcher.Color.OnPrimary}"/>
     </Style>
     <Style Selector="Border.log-empty-state">

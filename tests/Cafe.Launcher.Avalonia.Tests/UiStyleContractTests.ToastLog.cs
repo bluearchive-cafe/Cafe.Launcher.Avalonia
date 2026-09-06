@@ -160,10 +160,13 @@ public sealed partial class UiStyleContractTests
         var filterButtons = document
             .Descendants()
             .Where(element =>
-                element.Name.LocalName == "Button"
+                element.Name.LocalName == "RadioButton"
                 && HasClass(element, "log-filter"))
             .ToList();
         Assert.Equal(7, filterButtons.Count);
+        // 筛选为单选组：GroupName 聚合同组，IsChecked 单向反映 SeverityFilter。
+        Assert.All(filterButtons, button =>
+            Assert.Equal("LogViewerSeverityFilter", button.Attribute("GroupName")?.Value));
 
         var search = document
             .Descendants()
@@ -177,7 +180,7 @@ public sealed partial class UiStyleContractTests
         var styles = XDocument.Load(ProjectFile("Views/MainWindow.Styles.axaml"));
         Assert.Equal(
             "{StaticResource Launcher.Control.Height.Setting}",
-            GetStyleSetters(styles, "Button.filter-tab.log-filter")["Height"]);
+            GetStyleSetters(styles, "RadioButton.filter-tab.log-filter")["Height"]);
         Assert.Equal(
             "{StaticResource Launcher.Component.LogViewer.FilterBar.Margin}",
             GetStyleSetters(styles, "StackPanel.log-filter-bar")["Margin"]);
