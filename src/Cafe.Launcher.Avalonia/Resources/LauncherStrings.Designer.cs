@@ -24,8 +24,6 @@ internal static class LauncherStrings
         ResourceManager.GetString(key, CultureInfo.CurrentUICulture)
         ?? throw new MissingManifestResourceException($"Resource key '{key}' was not found.");
 
-    internal static string About => GetRequiredString("about");
-
     internal static string AboutCopyrightText => GetRequiredString("aboutCopyrightText");
 
     internal static string AboutDescription => GetRequiredString("aboutDescription");
@@ -40,19 +38,13 @@ internal static class LauncherStrings
 
     internal static string AboutRowBuildConfig => GetRequiredString("aboutRowBuildConfig");
 
-    internal static string AboutRowBuildTime => GetRequiredString("aboutRowBuildTime");
-
     internal static string AboutRowCommit => GetRequiredString("aboutRowCommit");
 
     internal static string AboutRowPlatform => GetRequiredString("aboutRowPlatform");
 
     internal static string AboutRowRuntime => GetRequiredString("aboutRowRuntime");
 
-    internal static string AboutRowVersion => GetRequiredString("aboutRowVersion");
-
     internal static string AboutVersionCaption => GetRequiredString("aboutVersionCaption");
-
-    internal static string ApiFailedNoFileChange => GetRequiredString("apiFailedNoFileChange");
 
     internal static string AppearancePreviewFailed => GetRequiredString("appearancePreviewFailed");
 
@@ -86,13 +78,7 @@ internal static class LauncherStrings
 
     internal static string BannerLoadingFailed => GetRequiredString("bannerLoadingFailed");
 
-    internal static string Banners => GetRequiredString("banners");
-
-    internal static string BuildInfo => GetRequiredString("buildInfo");
-
     internal static string BuildingFileList => GetRequiredString("buildingFileList");
-
-    internal static string Busy => GetRequiredString("busy");
 
     internal static string Cancel => GetRequiredString("cancel");
 
@@ -116,8 +102,6 @@ internal static class LauncherStrings
 
     internal static string ChooseInstallFolder => GetRequiredString("chooseInstallFolder");
 
-    internal static string ChoosePathInstall => GetRequiredString("choosePathInstall");
-
     internal static string ClearBackground => GetRequiredString("clearBackground");
 
     internal static string Close => GetRequiredString("close");
@@ -132,11 +116,7 @@ internal static class LauncherStrings
 
     internal static string ConfirmUninstall => GetRequiredString("confirmUninstall");
 
-    internal static string ConnectingApi => GetRequiredString("connectingApi");
-
     internal static string ContactCustomerSupport => GetRequiredString("contactCustomerSupport");
-
-    internal static string Copyright => GetRequiredString("copyright");
 
     internal static string CustomBackground => GetRequiredString("customBackground");
 
@@ -219,8 +199,6 @@ internal static class LauncherStrings
     internal static string DefaultBackgroundArtwork => GetRequiredString("defaultBackgroundArtwork");
 
     internal static string DefaultBackgroundCopyrightText => GetRequiredString("defaultBackgroundCopyrightText");
-
-    internal static string DeletingManifestFiles => GetRequiredString("deletingManifestFiles");
 
     internal static string DesignGalleryHint => GetRequiredString("designGalleryHint");
 
@@ -343,8 +321,6 @@ internal static class LauncherStrings
     internal static string FileAccessDenied => GetRequiredString("fileAccessDenied");
 
     internal static string FileOperationFailed => GetRequiredString("fileOperationFailed");
-
-    internal static string FolderPickerUnavailable => GetRequiredString("folderPickerUnavailable");
 
     internal static string GameAlreadyCurrent => GetRequiredString("gameAlreadyCurrent");
 
@@ -514,10 +490,6 @@ internal static class LauncherStrings
 
     internal static string LauncherInitFailed => GetRequiredString("launcherInitFailed");
 
-    internal static string LauncherLoadingStatus => GetRequiredString("launcherLoadingStatus");
-
-    internal static string LauncherLoadingTitle => GetRequiredString("launcherLoadingTitle");
-
     internal static string LauncherLoadingValue => GetRequiredString("launcherLoadingValue");
 
     internal static string LauncherStateNotLoaded => GetRequiredString("launcherStateNotLoaded");
@@ -547,8 +519,6 @@ internal static class LauncherStrings
     internal static string LauncherUpdateUpToDate => GetRequiredString("launcherUpdateUpToDate");
 
     internal static string LauncherVersionLabel => GetRequiredString("launcherVersionLabel");
-
-    internal static string LocalGameReadError => GetRequiredString("localGameReadError");
 
     internal static string LocalManifestMetadataMissing => GetRequiredString("localManifestMetadataMissing");
 
@@ -622,15 +592,9 @@ internal static class LauncherStrings
 
     internal static string MotionModeSystem => GetRequiredString("motionModeSystem");
 
-    internal static string Network => GetRequiredString("network");
-
-    internal static string NetworkError => GetRequiredString("networkError");
-
     internal static string NetworkErrorDetail => GetRequiredString("networkErrorDetail");
 
     internal static string NetworkLoading => GetRequiredString("networkLoading");
-
-    internal static string NetworkUnavailableTitle => GetRequiredString("networkUnavailableTitle");
 
     internal static string NetworkWithMessage => GetRequiredString("networkWithMessage");
 
@@ -643,8 +607,6 @@ internal static class LauncherStrings
     internal static string NeutralColorStrategySeedFollowing => GetRequiredString("neutralColorStrategySeedFollowing");
 
     internal static string NeutralColorStrategySeedFollowingHint => GetRequiredString("neutralColorStrategySeedFollowingHint");
-
-    internal static string News => GetRequiredString("news");
 
     internal static string NextBanner => GetRequiredString("nextBanner");
 
@@ -663,8 +625,6 @@ internal static class LauncherStrings
     internal static string OpenDesignGallery => GetRequiredString("openDesignGallery");
 
     internal static string OperationStopped => GetRequiredString("operationStopped");
-
-    internal static string OperationTelemetryLocal => GetRequiredString("operationTelemetryLocal");
 
     internal static string OperationUnavailableForCurrentState => GetRequiredString("operationUnavailableForCurrentState");
 
@@ -694,8 +654,6 @@ internal static class LauncherStrings
 
     internal static string ProxySystem => GetRequiredString("proxySystem");
 
-    internal static string Ready => GetRequiredString("ready");
-
     internal static string ReadyToUninstall => GetRequiredString("readyToUninstall");
 
     internal static string Refresh => GetRequiredString("refresh");
@@ -724,8 +682,6 @@ internal static class LauncherStrings
 
     internal static string RepairConfirm => GetRequiredString("repairConfirm");
 
-    internal static string RepairConfirmDescription => GetRequiredString("repairConfirmDescription");
-
     internal static string RepairFilesNeeded => GetRequiredString("repairFilesNeeded");
 
     internal static string Repairing => GetRequiredString("repairing");
@@ -737,8 +693,6 @@ internal static class LauncherStrings
     internal static string RepairWarning => GetRequiredString("repairWarning");
 
     internal static string ResourcePanel => GetRequiredString("resourcePanel");
-
-    internal static string ResourcePanelCafeOnlyDescription => GetRequiredString("resourcePanelCafeOnlyDescription");
 
     internal static string ResourcePanelCafeOnlyMessage => GetRequiredString("resourcePanelCafeOnlyMessage");
 
@@ -808,8 +762,6 @@ internal static class LauncherStrings
 
     internal static string Retry => GetRequiredString("retry");
 
-    internal static string RunningLaunchCheck => GetRequiredString("runningLaunchCheck");
-
     internal static string Save => GetRequiredString("save");
 
     internal static string SelectInstalledGame => GetRequiredString("selectInstalledGame");
@@ -840,12 +792,6 @@ internal static class LauncherStrings
 
     internal static string SettingsCategoryGeneralDescription => GetRequiredString("settingsCategoryGeneralDescription");
 
-    internal static string SettingsCategoryNotificationsContent => GetRequiredString("settingsCategoryNotificationsContent");
-
-    internal static string SettingsCategoryNotificationsContentDescription => GetRequiredString("settingsCategoryNotificationsContentDescription");
-
-    internal static string SettingsGroupAboutActions => GetRequiredString("settingsGroupAboutActions");
-
     internal static string SettingsGroupAppPreferences => GetRequiredString("settingsGroupAppPreferences");
 
     internal static string SettingsGroupBackground => GetRequiredString("settingsGroupBackground");
@@ -873,8 +819,6 @@ internal static class LauncherStrings
     internal static string SetupWizardDownloadSource => GetRequiredString("setupWizardDownloadSource");
 
     internal static string SetupWizardDownloadSourceCafeDescription => GetRequiredString("setupWizardDownloadSourceCafeDescription");
-
-    internal static string SetupWizardDownloadSourceCafeRecommendationLabel => GetRequiredString("setupWizardDownloadSourceCafeRecommendationLabel");
 
     internal static string SetupWizardDownloadSourceCafeRecommendationReason => GetRequiredString("setupWizardDownloadSourceCafeRecommendationReason");
 
@@ -910,8 +854,6 @@ internal static class LauncherStrings
 
     internal static string SetupWizardGamePathNotWritable => GetRequiredString("setupWizardGamePathNotWritable");
 
-    internal static string SetupWizardGamePathStatusDescription => GetRequiredString("setupWizardGamePathStatusDescription");
-
     internal static string SetupWizardGamePathStatusTitle => GetRequiredString("setupWizardGamePathStatusTitle");
 
     internal static string SetupWizardLanguage => GetRequiredString("setupWizardLanguage");
@@ -938,27 +880,11 @@ internal static class LauncherStrings
 
     internal static string SetupWizardSkip => GetRequiredString("setupWizardSkip");
 
-    internal static string SetupWizardStep0Title => GetRequiredString("setupWizardStep0Title");
-
-    internal static string SetupWizardStep1Title => GetRequiredString("setupWizardStep1Title");
-
-    internal static string SetupWizardStep2Title => GetRequiredString("setupWizardStep2Title");
-
-    internal static string SetupWizardStep3Title => GetRequiredString("setupWizardStep3Title");
-
-    internal static string SetupWizardStep4Title => GetRequiredString("setupWizardStep4Title");
-
     internal static string SetupWizardStepTitle => GetRequiredString("setupWizardStepTitle");
 
     internal static string SetupWizardWelcomeText => GetRequiredString("setupWizardWelcomeText");
 
-    internal static string SetupWizardWelcomeTitle => GetRequiredString("setupWizardWelcomeTitle");
-
     internal static string ShowLauncher => GetRequiredString("showLauncher");
-
-    internal static string ShowRemoteContentCard => GetRequiredString("showRemoteContentCard");
-
-    internal static string SocialMedia => GetRequiredString("socialMedia");
 
     internal static string Speed10MBs => GetRequiredString("speed10MBs");
 
@@ -1086,8 +1012,6 @@ internal static class LauncherStrings
 
     internal static string UninstallCompleted => GetRequiredString("uninstallCompleted");
 
-    internal static string UninstallConfirmDescription => GetRequiredString("uninstallConfirmDescription");
-
     internal static string UninstallConfirmText => GetRequiredString("uninstallConfirmText");
 
     internal static string UninstallFailed => GetRequiredString("uninstallFailed");
@@ -1106,15 +1030,11 @@ internal static class LauncherStrings
 
     internal static string UpdateGame => GetRequiredString("updateGame");
 
-    internal static string UpdateRequired => GetRequiredString("updateRequired");
-
     internal static string VerificationFailed => GetRequiredString("verificationFailed");
 
     internal static string VerificationRetry => GetRequiredString("verificationRetry");
 
     internal static string VerifyingDownloadedFiles => GetRequiredString("verifyingDownloadedFiles");
-
-    internal static string Version => GetRequiredString("version");
 
     internal static string VersionInfo => GetRequiredString("versionInfo");
 

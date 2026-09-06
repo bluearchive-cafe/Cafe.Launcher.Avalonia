@@ -187,9 +187,6 @@ public sealed class LocalizationService
         new LanguageOption { Code = LauncherLanguages.Japanese, DisplayName = "日本語" }
     ];
 
-    public static string ResolveLanguage(string? language) =>
-        LauncherCultureResolver.ResolveEffectiveLanguage(language);
-
     private void ApplyCulture(string effectiveLanguage)
     {
         var culture = LauncherCultureResolver.GetCultureFor(effectiveLanguage);

@@ -142,7 +142,7 @@ public sealed class MaterialSchemeGeneratorTests
             seedFollowingNeutrals: false,
             isDark);
 
-        foreach (var (key, light, dark) in MaterialSchemeGenerator.DialogSurfaceDefaults)
+        foreach (var (key, light, dark) in MaterialSchemeGenerator.DialogSurfaceDefaults.Concat(MaterialSchemeGenerator.NeutralContentDefaults))
         {
             Assert.True(brushes.ContainsKey(key));
             Assert.Equal(
@@ -168,10 +168,10 @@ public sealed class MaterialSchemeGeneratorTests
         Assert.True(brushes.ContainsKey("Launcher.Color.OnPrimaryContainer"));
 
         // Seed-following dyes the visible solid dialog surfaces from the neutral
-        // scheme (Q23): the Dialog.Background override matches the scheme surface.
+        // scheme: Dialog.Background uses the elevated dialog container role.
         Assert.True(brushes.ContainsKey("Launcher.Color.Dialog.Background"));
         Assert.Equal(
-            scheme.Surface.Value,
+            scheme.SurfaceContainerHigh.Value,
             MaterialColorMapper.ToArgbColor(brushes["Launcher.Color.Dialog.Background"].Color).Value);
     }
 
@@ -191,26 +191,18 @@ public sealed class MaterialSchemeGeneratorTests
             isDark);
 
         // The whole dialog family follows the scheme's neutral surface ladder:
-        // Background/Footer sit on Surface, the header and close states step up
-        // the SurfaceContainer tones.
-        Assert.Equal(
-            scheme.Surface.Value,
-            MaterialColorMapper.ToArgbColor(brushes["Launcher.Color.Dialog.Background"].Color).Value);
-        Assert.Equal(
-            scheme.Surface.Value,
-            MaterialColorMapper.ToArgbColor(brushes["Launcher.Color.Dialog.Footer"].Color).Value);
-        Assert.Equal(
-            scheme.SurfaceContainerLow.Value,
-            MaterialColorMapper.ToArgbColor(brushes["Launcher.Color.Dialog.Header"].Color).Value);
+        // Background, footer and header share SurfaceContainerHigh; close states
+        // apply foreground state layers over the container.
         Assert.Equal(
             scheme.SurfaceContainerHigh.Value,
-            MaterialColorMapper.ToArgbColor(brushes["Launcher.Color.Dialog.Close.Hover"].Color).Value);
+            MaterialColorMapper.ToArgbColor(brushes["Launcher.Color.Dialog.Background"].Color).Value);
         Assert.Equal(
-            scheme.SurfaceContainerHighest.Value,
-            MaterialColorMapper.ToArgbColor(brushes["Launcher.Color.Dialog.Close.Pressed"].Color).Value);
-
-        // The ladder produces visibly distinct chrome steps in both themes.
-        Assert.NotEqual(
+            scheme.SurfaceContainerHigh.Value,
+            MaterialColorMapper.ToArgbColor(brushes["Launcher.Color.Dialog.Footer"].Color).Value);
+        Assert.Equal(
+            scheme.SurfaceContainerHigh.Value,
+            MaterialColorMapper.ToArgbColor(brushes["Launcher.Color.Dialog.Header"].Color).Value);
+        Assert.Equal(
             brushes["Launcher.Color.Dialog.Background"].Color,
             brushes["Launcher.Color.Dialog.Header"].Color);
         Assert.NotEqual(
@@ -357,6 +349,42 @@ public sealed class MaterialSchemeGeneratorTests
         var boundary = Color.Parse("#FFB8B8B8");
 
         Assert.Equal(Color.FromRgb(0x12, 0x18, 0x20), ColorUtils.GetReadableOnAccentColor(boundary));
+    }
+
+    [Theory]
+    [InlineData(false)]
+    [InlineData(true)]
+    public void BuildRoleBrushes_SeedFollowingNeutrals_PreserveTextAndFieldContrast(bool isDark)
+    {
+        foreach (var variant in new[]
+                 {
+                     ThemeColorVariants.TonalSpot, ThemeColorVariants.Vibrant,
+                     ThemeColorVariants.Expressive, ThemeColorVariants.Fidelity,
+                     ThemeColorVariants.Content, ThemeColorVariants.Monochrome,
+                     ThemeColorVariants.Neutral, ThemeColorVariants.Rainbow
+                 })
+        {
+            foreach (var hex in new[] { "#2E7DF6", "#FF0000", "#00FF00", "#6750A4", "#000000", "#FFFFFF" })
+            {
+                var scheme = MaterialSchemeGenerator.CreateScheme(Color.Parse(hex), variant, isDark);
+                var brushes = MaterialSchemeGenerator.BuildRoleBrushes(scheme, true, isDark);
+                Assert.Equal(MaterialColorMapper.ToAvaloniaColor(scheme.OnSurface), brushes["Launcher.Text.Primary"].Color);
+                Assert.Equal(MaterialColorMapper.ToAvaloniaColor(scheme.OnSurfaceVariant), brushes["Launcher.Text.Secondary"].Color);
+                foreach (var backgroundKey in new[] { "Launcher.Color.Dialog.Background", "Launcher.Color.Field.Background" })
+                {
+                    foreach (var textKey in new[] { "Launcher.Text.Primary", "Launcher.Text.Secondary", "Launcher.Text.Body" })
+                    {
+                        double ratio = ColorUtils.GetContrastRatio(brushes[textKey].Color, brushes[backgroundKey].Color);
+                        Assert.True(ratio >= 4.5, $"{variant}/{hex}/{isDark}: {textKey} on {backgroundKey} = {ratio:F2}:1");
+                    }
+                }
+
+                double borderRatio = ColorUtils.GetContrastRatio(
+                    brushes["Launcher.Color.Field.Border"].Color,
+                    brushes["Launcher.Color.Field.Background"].Color);
+                Assert.True(borderRatio >= 3, $"{variant}/{hex}/{isDark}: field border = {borderRatio:F2}:1");
+            }
+        }
     }
 
     private static string ToHex(MaterialColorUtilities.Utils.ArgbColor color)
