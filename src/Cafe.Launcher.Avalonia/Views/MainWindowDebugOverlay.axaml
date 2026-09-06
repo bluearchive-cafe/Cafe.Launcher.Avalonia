@@ -193,7 +193,7 @@
                                                    TextWrapping="NoWrap"/>
                                     </ScrollViewer>
                                 </Border>
-                                <Button Classes="flat-action dialog-action" Command="{Binding Debug.ResetSettingsCommand}"
+                                <Button Classes="flat-action danger-action dialog-action" Command="{Binding Debug.ResetSettingsCommand}"
                                         AutomationProperties.Name="{Binding Shell.I18n[debugResetSettingsConfirm]}">
                                     <TextBlock Text="{Binding Shell.I18n[debugResetSettingsConfirm]}" Classes="button-content"/>
                                 </Button>

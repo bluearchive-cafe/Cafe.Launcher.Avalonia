@@ -284,7 +284,7 @@
                                                    Text="{Binding Dialogs.SetupWizard.LanguageDisplayName}"
                                                    Classes="value"
                                                    VerticalAlignment="Center"/>
-                                        <Button Grid.Column="2" Classes="flat-action dialog-action wizard-review-edit"
+                                        <Button Grid.Column="2" Classes="text-action dialog-action wizard-review-edit"
                                                 Command="{Binding Dialogs.SetupWizard.GoToStepCommand}"
                                                 VerticalAlignment="Center"
                                                 AutomationProperties.Name="{Binding Shell.I18n[setupWizardEditStep]}">
@@ -301,7 +301,7 @@
                                                    Text="{Binding Dialogs.SetupWizard.DownloadSourceDisplayName}"
                                                    Classes="value"
                                                    VerticalAlignment="Center"/>
-                                        <Button Grid.Column="2" Classes="flat-action dialog-action wizard-review-edit"
+                                        <Button Grid.Column="2" Classes="text-action dialog-action wizard-review-edit"
                                                 Command="{Binding Dialogs.SetupWizard.GoToStepCommand}"
                                                 VerticalAlignment="Center"
                                                 AutomationProperties.Name="{Binding Shell.I18n[setupWizardEditStep]}">
@@ -319,7 +319,7 @@
                                                    Classes="value"
                                                    TextTrimming="CharacterEllipsis"
                                                    VerticalAlignment="Center"/>
-                                        <Button Grid.Column="2" Classes="flat-action dialog-action wizard-review-edit"
+                                        <Button Grid.Column="2" Classes="text-action dialog-action wizard-review-edit"
                                                 Command="{Binding Dialogs.SetupWizard.GoToStepCommand}"
                                                 VerticalAlignment="Center"
                                                 AutomationProperties.Name="{Binding Shell.I18n[setupWizardEditStep]}">
@@ -336,7 +336,7 @@
                                                    Text="{Binding Dialogs.SetupWizard.ProxyDisplayName}"
                                                    Classes="value"
                                                    VerticalAlignment="Center"/>
-                                        <Button Grid.Column="2" Classes="flat-action dialog-action wizard-review-edit"
+                                        <Button Grid.Column="2" Classes="text-action dialog-action wizard-review-edit"
                                                 Command="{Binding Dialogs.SetupWizard.GoToStepCommand}"
                                                 VerticalAlignment="Center"
                                                 AutomationProperties.Name="{Binding Shell.I18n[setupWizardEditStep]}">
