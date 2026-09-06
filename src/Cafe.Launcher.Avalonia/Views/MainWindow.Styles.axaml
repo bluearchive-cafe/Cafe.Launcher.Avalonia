@@ -1125,12 +1125,6 @@
     <Style Selector="ScrollViewer.dialog-scroll">
         <Setter Property="Margin" Value="{StaticResource Launcher.Spacing.Thickness.None}"/>
     </Style>
-    <Style Selector="Border.dialog-footer">
-        <Setter Property="Background" Value="{DynamicResource Launcher.Color.Dialog.Footer}"/>
-        <Setter Property="BorderBrush" Value="{DynamicResource Launcher.Color.Card.Border}"/>
-        <Setter Property="BorderThickness" Value="{StaticResource Launcher.Component.Dialog.Footer.BorderThickness}"/>
-        <Setter Property="Padding" Value="{StaticResource Launcher.Spacing.Thickness.Md}"/>
-    </Style>
     <Style Selector="Grid.dialog-heading">
         <Setter Property="ColumnSpacing" Value="{StaticResource Launcher.Spacing.Md}"/>
     </Style>
