@@ -332,6 +332,59 @@
         <Setter Property="Foreground" Value="{DynamicResource Launcher.Text.Secondary}"/>
         <Setter Property="BorderBrush" Value="{DynamicResource Launcher.Color.Card.Border}"/>
     </Style>
+    <!-- M3 filled tonal：用于重要但非最终提交的动作，例如向导中的“下一步”。 -->
+    <Style Selector="Button.tonal-action">
+        <Setter Property="Background" Value="{DynamicResource Launcher.Color.SecondaryContainer}"/>
+        <Setter Property="BorderThickness" Value="{StaticResource Launcher.Spacing.Thickness.None}"/>
+        <Setter Property="Foreground" Value="{DynamicResource Launcher.Color.OnSecondaryContainer}"/>
+        <Setter Property="FontWeight" Value="{StaticResource Launcher.Typography.FontWeight.Strong}"/>
+        <Setter Property="Padding" Value="{StaticResource Launcher.Component.Action.Outlined.Padding}"/>
+        <Setter Property="CornerRadius" Value="{StaticResource Launcher.Radius.Sm}"/>
+        <Setter Property="MinHeight" Value="{StaticResource Launcher.Control.Height.Setting}"/>
+        <Setter Property="HorizontalContentAlignment" Value="Center"/>
+        <Setter Property="VerticalContentAlignment" Value="Center"/>
+        <Setter Property="Template" Value="{StaticResource LauncherBorderButtonTemplate}"/>
+    </Style>
+    <Style Selector="Button.tonal-action:pointerover">
+        <Setter Property="Background" Value="{DynamicResource Launcher.Color.SecondaryContainer.Hover}"/>
+        <Setter Property="Foreground" Value="{DynamicResource Launcher.Color.OnSecondaryContainer}"/>
+    </Style>
+    <Style Selector="Button.tonal-action:pressed">
+        <Setter Property="Background" Value="{DynamicResource Launcher.Color.SecondaryContainer.Pressed}"/>
+        <Setter Property="Foreground" Value="{DynamicResource Launcher.Color.OnSecondaryContainer}"/>
+    </Style>
+    <Style Selector="Button.tonal-action:disabled">
+        <Setter Property="Background" Value="{DynamicResource Launcher.Color.Content.Row}"/>
+        <Setter Property="BorderBrush" Value="{DynamicResource Launcher.Color.Card.Border}"/>
+        <Setter Property="BorderThickness" Value="{StaticResource Launcher.Border.Thickness.Default}"/>
+        <Setter Property="Foreground" Value="{DynamicResource Launcher.Text.Secondary}"/>
+    </Style>
+    <!-- M3 text button：用于对话框内最低强调的辅助/退出动作，不带常驻容器或描边。 -->
+    <Style Selector="Button.text-action">
+        <Setter Property="Background" Value="{StaticResource Launcher.Color.Transparent}"/>
+        <Setter Property="BorderThickness" Value="{StaticResource Launcher.Spacing.Thickness.None}"/>
+        <Setter Property="Foreground" Value="{DynamicResource Launcher.Color.Primary}"/>
+        <Setter Property="FontWeight" Value="{StaticResource Launcher.Typography.FontWeight.Strong}"/>
+        <Setter Property="Padding" Value="{StaticResource Launcher.Component.Action.Outlined.Padding}"/>
+        <Setter Property="CornerRadius" Value="{StaticResource Launcher.Radius.Sm}"/>
+        <Setter Property="MinHeight" Value="{StaticResource Launcher.Control.Height.Setting}"/>
+        <Setter Property="HorizontalContentAlignment" Value="Center"/>
+        <Setter Property="VerticalContentAlignment" Value="Center"/>
+        <Setter Property="Template" Value="{StaticResource LauncherBorderButtonTemplate}"/>
+    </Style>
+    <Style Selector="Button.text-action:pointerover">
+        <Setter Property="Background" Value="{DynamicResource Launcher.Color.Button.Flat.Hover}"/>
+        <Setter Property="Foreground" Value="{DynamicResource Launcher.Color.Primary}"/>
+    </Style>
+    <Style Selector="Button.text-action:pressed">
+        <Setter Property="Background" Value="{DynamicResource Launcher.Color.Button.Flat.Pressed}"/>
+        <Setter Property="Foreground" Value="{DynamicResource Launcher.Color.Primary.Pressed}"/>
+    </Style>
+    <Style Selector="Button.text-action:disabled">
+        <Setter Property="Background" Value="{StaticResource Launcher.Color.Transparent}"/>
+        <Setter Property="Foreground" Value="{DynamicResource Launcher.Text.Secondary}"/>
+        <Setter Property="Opacity" Value="{StaticResource Launcher.StateLayer.Disabled.Content}"/>
+    </Style>
     <Style Selector="Button.flat-action.icon-only">
         <Setter Property="Width" Value="{StaticResource Launcher.Control.Height.Setting}"/>
         <Setter Property="Height" Value="{StaticResource Launcher.Control.Height.Setting}"/>

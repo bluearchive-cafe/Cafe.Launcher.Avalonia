@@ -4,32 +4,15 @@
     <Style Selector="Border.wizard-body">
         <Setter Property="Padding" Value="{StaticResource Launcher.Component.Dialog.Panel.Body.Padding}"/>
     </Style>
-    <!-- 实验台向导动作钮（ADR-017，并入内容区）：非主按钮为中性 tonal
-         （Content.Row 底色 + Text.Primary 前景，悬停/按压取对话框表面中性变体），
-         主按钮叠加 primary-action 转为 filled；几何沿用 dialog-action，图标行经 button-content。 -->
+    <!-- 向导动作钮（ADR-017，并入内容区）：语义层级由组合类提供——
+         上一步 flat-action（outlined）、下一步 tonal-action（filled tonal）、
+         完成 primary-action（filled）；本类只统一向导动作几何。 -->
     <Style Selector="Button.wizard-action">
-        <Setter Property="Background" Value="{DynamicResource Launcher.Color.Content.Row}"/>
-        <Setter Property="Foreground" Value="{DynamicResource Launcher.Text.Primary}"/>
-        <Setter Property="BorderThickness" Value="{StaticResource Launcher.Spacing.Thickness.None}"/>
         <Setter Property="FontWeight" Value="{StaticResource Launcher.Typography.FontWeight.Strong}"/>
         <Setter Property="CornerRadius" Value="{StaticResource Launcher.Radius.Xs}"/>
         <Setter Property="HorizontalContentAlignment" Value="Center"/>
         <Setter Property="VerticalContentAlignment" Value="Center"/>
         <Setter Property="Template" Value="{StaticResource LauncherBorderButtonTemplate}"/>
-    </Style>
-    <Style Selector="Button.wizard-action:pointerover">
-        <Setter Property="Background" Value="{DynamicResource Launcher.Color.Dialog.Close.Hover}"/>
-        <Setter Property="Foreground" Value="{DynamicResource Launcher.Text.Primary}"/>
-    </Style>
-    <Style Selector="Button.wizard-action:pressed">
-        <Setter Property="Background" Value="{DynamicResource Launcher.Color.Dialog.Close.Pressed}"/>
-        <Setter Property="Foreground" Value="{DynamicResource Launcher.Text.Primary}"/>
-    </Style>
-    <Style Selector="Button.wizard-action:disabled">
-        <Setter Property="Background" Value="{DynamicResource Launcher.Color.Content.Row}"/>
-        <Setter Property="BorderBrush" Value="{DynamicResource Launcher.Color.Card.Border}"/>
-        <Setter Property="BorderThickness" Value="{StaticResource Launcher.Border.Thickness.Default}"/>
-        <Setter Property="Foreground" Value="{DynamicResource Launcher.Text.Secondary}"/>
     </Style>
     <Style Selector="Button.wizard-action.primary-action">
         <Setter Property="Background" Value="{DynamicResource Launcher.Color.Primary}"/>
@@ -75,6 +58,19 @@
     <Style Selector="RadioButton.wizard-option:pointerover">
         <Setter Property="Background" Value="{DynamicResource Launcher.Color.Content.Row.Hover}"/>
     </Style>
+    <!-- M3 行级状态层：Fluent 模板在 hover/press 会以透明背景 Setter 覆盖
+         TemplateBinding，须显式接管 RootBorder 部件，行悬停底色才能上屏。 -->
+    <Style Selector="RadioButton.wizard-option:pointerover /template/ Border#RootBorder">
+        <Setter Property="Background" Value="{DynamicResource Launcher.Color.Content.Row.Hover}"/>
+    </Style>
+    <!-- 按压态强于悬停：onSurface 的 12% 预合成状态层（M3 pressed 刻度），
+         不得回落到与 hover 相同的行悬停底色。 -->
+    <Style Selector="RadioButton.wizard-option:pressed /template/ Border#RootBorder">
+        <Setter Property="Background" Value="{DynamicResource Launcher.Color.StateLayer.OnSurface.Pressed}"/>
+    </Style>
+    <Style Selector="RadioButton.wizard-option TextBlock">
+        <Setter Property="TextWrapping" Value="Wrap"/>
+    </Style>
     <!-- §8: 选项行经键盘聚焦时铺 token 焦点环（根 Border 承载描边，与导航列表行同配方）。 -->
     <Style Selector="RadioButton.wizard-option:focus-visible">
         <Setter Property="BorderBrush" Value="{DynamicResource Launcher.Color.FocusRing}"/>
@@ -95,12 +91,12 @@
         <Setter Property="Foreground" Value="{DynamicResource Launcher.Color.Success}"/>
     </Style>
     <Style Selector="TextBlock.wizard-game-path-status.corrupted">
-        <Setter Property="Foreground" Value="{StaticResource Launcher.Color.Danger}"/>
+        <Setter Property="Foreground" Value="{DynamicResource Launcher.Color.Error}"/>
     </Style>
     <Style Selector="TextBlock.wizard-game-path-status.inaccessible">
-        <Setter Property="Foreground" Value="{StaticResource Launcher.Color.Danger}"/>
+        <Setter Property="Foreground" Value="{DynamicResource Launcher.Color.Error}"/>
     </Style>
     <Style Selector="TextBlock.wizard-game-path-status.notwritable">
-        <Setter Property="Foreground" Value="{StaticResource Launcher.Color.Danger}"/>
+        <Setter Property="Foreground" Value="{DynamicResource Launcher.Color.Error}"/>
     </Style>
 </Styles>

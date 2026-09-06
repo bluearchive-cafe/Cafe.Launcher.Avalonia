@@ -43,6 +43,12 @@ public sealed class DialogActionButtonContractTests
             dialogActionIndex > FindStyleIndex(styles, "Button.flat-action"),
             "Button.dialog-action must follow Button.flat-action.");
         Assert.True(
+            dialogActionIndex > FindStyleIndex(styles, "Button.tonal-action"),
+            "Button.dialog-action must follow Button.tonal-action.");
+        Assert.True(
+            dialogActionIndex > FindStyleIndex(styles, "Button.text-action"),
+            "Button.dialog-action must follow Button.text-action.");
+        Assert.True(
             dialogActionIndex > FindStyleIndex(styles, "Button.danger-action"),
             "Button.dialog-action must follow Button.danger-action.");
     }
@@ -85,12 +91,13 @@ public sealed class DialogActionButtonContractTests
                     element,
                     "flat-action",
                     "primary-action",
+                    "tonal-action",
+                    "text-action",
                     "danger-action"))
             .ToArray();
 
-        // ADR-017：向导"上一步"改用 wizard-action tonal 族离开本计数；
-        // 向导"下一步/完成"仍为 primary-action + dialog-action，继续受本契约约束。
-        Assert.Equal(28, actionButtons.Length);
+        // ADR-017：向导的 outlined / tonal / filled 与跳过 text 动作均受统一尺寸契约约束。
+        Assert.Equal(29, actionButtons.Length);
         Assert.All(
             actionButtons,
             button =>

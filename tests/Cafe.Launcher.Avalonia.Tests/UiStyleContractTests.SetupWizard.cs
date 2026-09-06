@@ -26,6 +26,21 @@ public sealed partial class UiStyleContractTests
     }
 
     [Fact]
+    public void SetupWizard_OptionRowStateLayer_TargetsTemplateRootBorder()
+    {
+        // Fluent 模板在 hover/press 以透明背景 Setter 覆盖 TemplateBinding，
+        // 行级状态层必须显式接管 RootBorder 部件才能上屏。
+        // 按压态强于悬停（M3：hover 行基线 / pressed 12% onSurface），两者不得共用同一底色。
+        var wizardStyles = XDocument.Load(ProjectFile("Views/Styles/SetupWizard.axaml"));
+
+        var hoverRoot = GetStyleSetters(wizardStyles, "RadioButton.wizard-option:pointerover /template/ Border#RootBorder");
+        Assert.Equal("{DynamicResource Launcher.Color.Content.Row.Hover}", hoverRoot["Background"]);
+
+        var pressedRoot = GetStyleSetters(wizardStyles, "RadioButton.wizard-option:pressed /template/ Border#RootBorder");
+        Assert.Equal("{DynamicResource Launcher.Color.StateLayer.OnSurface.Pressed}", pressedRoot["Background"]);
+    }
+
+    [Fact]
     public void SetupWizardOverlay_IsDedicatedViewIncludedByDialogsOverlay()
     {
         var dialogsOverlay = File.ReadAllText(ProjectFile("Views/MainWindowDialogsOverlay.axaml"));
@@ -93,11 +108,11 @@ public sealed partial class UiStyleContractTests
             button => Assert.True(HasClass(button, "wizard-action")));
         Assert.Contains(actionsRow.Descendants(), element =>
             element.Name.LocalName == "Button"
-            && !HasClass(element, "primary-action")
+            && HasClass(element, "flat-action")
             && element.Attribute("Command")?.Value == "{Binding Dialogs.SetupWizard.PreviousCommand}");
         Assert.Contains(actionsRow.Descendants(), element =>
             element.Name.LocalName == "Button"
-            && HasClass(element, "primary-action")
+            && HasClass(element, "tonal-action")
             && element.Attribute("Command")?.Value == "{Binding Dialogs.SetupWizard.NextCommand}");
         Assert.Contains(actionsRow.Descendants(), element =>
             element.Name.LocalName == "Button"
@@ -411,13 +426,13 @@ public sealed partial class UiStyleContractTests
             "{DynamicResource Launcher.Color.Success}",
             GetStyleSetters(styles, "TextBlock.wizard-game-path-status.ready")["Foreground"]);
         Assert.Equal(
-            "{StaticResource Launcher.Color.Danger}",
+            "{DynamicResource Launcher.Color.Error}",
             GetStyleSetters(styles, "TextBlock.wizard-game-path-status.corrupted")["Foreground"]);
         Assert.Equal(
-            "{StaticResource Launcher.Color.Danger}",
+            "{DynamicResource Launcher.Color.Error}",
             GetStyleSetters(styles, "TextBlock.wizard-game-path-status.inaccessible")["Foreground"]);
         Assert.Equal(
-            "{StaticResource Launcher.Color.Danger}",
+            "{DynamicResource Launcher.Color.Error}",
             GetStyleSetters(styles, "TextBlock.wizard-game-path-status.notwritable")["Foreground"]);
 
         // 状态图标与文本共用语义色：检测中 Sync、就绪 CheckCircle、损坏/不可访问 Alert、
@@ -455,7 +470,7 @@ public sealed partial class UiStyleContractTests
                     "{Binding Dialogs.SetupWizard.IsGamePathCorruptedInstallation}",
                     icon.Attribute("IsVisible")?.Value);
                 Assert.Equal(
-                    "{StaticResource Launcher.Color.Danger}",
+                    "{DynamicResource Launcher.Color.Error}",
                     icon.Attribute("Foreground")?.Value);
             },
             icon =>
@@ -465,7 +480,7 @@ public sealed partial class UiStyleContractTests
                     "{Binding Dialogs.SetupWizard.IsGamePathInaccessible}",
                     icon.Attribute("IsVisible")?.Value);
                 Assert.Equal(
-                    "{StaticResource Launcher.Color.Danger}",
+                    "{DynamicResource Launcher.Color.Error}",
                     icon.Attribute("Foreground")?.Value);
             },
             icon =>
@@ -475,7 +490,7 @@ public sealed partial class UiStyleContractTests
                     "{Binding Dialogs.SetupWizard.IsGamePathNotWritable}",
                     icon.Attribute("IsVisible")?.Value);
                 Assert.Equal(
-                    "{StaticResource Launcher.Color.Danger}",
+                    "{DynamicResource Launcher.Color.Error}",
                     icon.Attribute("Foreground")?.Value);
             });
     }
@@ -555,24 +570,30 @@ public sealed partial class UiStyleContractTests
     [Fact]
     public void SetupWizard_ActionButtons_UseTonalAndFilledStyles()
     {
-        // ADR-017：向导动作钮 = 中性 tonal（Content.Row 底色）+ filled 主按钮（primary-action 叠加）。
-        var styles = XDocument.Load(ProjectFile("Views/Styles/SetupWizard.axaml"));
-        var tonal = GetStyleSetters(styles, "Button.wizard-action");
-        Assert.Equal("{DynamicResource Launcher.Color.Content.Row}", tonal["Background"]);
-        Assert.Equal("{DynamicResource Launcher.Text.Primary}", tonal["Foreground"]);
-        Assert.Equal("{StaticResource Launcher.Radius.Xs}", tonal["CornerRadius"]);
+        // ADR-017：上一步 outlined、下一步 filled tonal、完成 filled；
+        // wizard-action 只统一几何，不再伪造一套中性 tonal 色板。
+        var wizardStyles = XDocument.Load(ProjectFile("Views/Styles/SetupWizard.axaml"));
+        var action = GetStyleSetters(wizardStyles, "Button.wizard-action");
+        Assert.Equal("{StaticResource Launcher.Radius.Xs}", action["CornerRadius"]);
+        Assert.DoesNotContain("Background", action);
+        Assert.DoesNotContain("Foreground", action);
+
+        var styles = XDocument.Load(ProjectFile("Views/MainWindow.Styles.axaml"));
+        var tonal = GetStyleSetters(styles, "Button.tonal-action");
+        Assert.Equal("{DynamicResource Launcher.Color.SecondaryContainer}", tonal["Background"]);
+        Assert.Equal("{DynamicResource Launcher.Color.OnSecondaryContainer}", tonal["Foreground"]);
         Assert.Equal(
-            "{DynamicResource Launcher.Color.Dialog.Close.Hover}",
-            GetStyleSetters(styles, "Button.wizard-action:pointerover")["Background"]);
+            "{DynamicResource Launcher.Color.SecondaryContainer.Hover}",
+            GetStyleSetters(styles, "Button.tonal-action:pointerover")["Background"]);
         Assert.Equal(
-            "{DynamicResource Launcher.Color.Dialog.Close.Pressed}",
-            GetStyleSetters(styles, "Button.wizard-action:pressed")["Background"]);
+            "{DynamicResource Launcher.Color.SecondaryContainer.Pressed}",
+            GetStyleSetters(styles, "Button.tonal-action:pressed")["Background"]);
         Assert.Equal(
             "{DynamicResource Launcher.Color.Primary}",
-            GetStyleSetters(styles, "Button.wizard-action.primary-action")["Background"]);
+            GetStyleSetters(wizardStyles, "Button.wizard-action.primary-action")["Background"]);
         Assert.Equal(
             "{DynamicResource Launcher.Color.Primary.Hover}",
-            GetStyleSetters(styles, "Button.wizard-action.primary-action:pointerover")["Background"]);
+            GetStyleSetters(wizardStyles, "Button.wizard-action.primary-action:pointerover")["Background"]);
     }
 
     [Fact]

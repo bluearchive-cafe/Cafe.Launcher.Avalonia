@@ -157,9 +157,11 @@ public sealed partial class UiStyleContractTests
             "TextBlock.category-title",
             "TextBlock.about-product-name",
             "TextBlock.operation-status-title",
-            "ListBox.settings-navigation > ListBoxItem:selected",
-            "Button.primary-action",
-            "Button.danger-action",
+             "ListBox.settings-navigation > ListBoxItem:selected",
+             "Button.primary-action",
+             "Button.tonal-action",
+             "Button.text-action",
+             "Button.danger-action",
             "Button.confirm-dialog-action",
             "Button.launcher-control.start"
         };
@@ -253,6 +255,8 @@ public sealed partial class UiStyleContractTests
                      "Button.banner-link",
                      "Button.primary-action",
                      "Button.flat-action",
+                     "Button.tonal-action",
+                     "Button.text-action",
                      "Button.danger-action",
                      "Button.dialog-close",
                      "Button.chrome"
@@ -313,6 +317,18 @@ public sealed partial class UiStyleContractTests
         Assert.Equal(
             "{StaticResource Launcher.StateLayer.Disabled.Content}",
             textLinkDisabled["Opacity"]);
+
+        var tonalAction = GetStyleSetters(document, "Button.tonal-action");
+        Assert.Equal("{DynamicResource Launcher.Color.SecondaryContainer}", tonalAction["Background"]);
+        Assert.Equal("{DynamicResource Launcher.Color.OnSecondaryContainer}", tonalAction["Foreground"]);
+        Assert.Equal(
+            "{DynamicResource Launcher.Color.SecondaryContainer.Pressed}",
+            GetStyleSetters(document, "Button.tonal-action:pressed")["Background"]);
+
+        var textAction = GetStyleSetters(document, "Button.text-action");
+        Assert.Equal("{StaticResource Launcher.Color.Transparent}", textAction["Background"]);
+        Assert.Equal("{StaticResource Launcher.Spacing.Thickness.None}", textAction["BorderThickness"]);
+        Assert.Equal("{DynamicResource Launcher.Color.Primary}", textAction["Foreground"]);
 
         var iconButtonDisabled = GetStyleSetters(document, "Button.icon-button:disabled");
         Assert.Equal(

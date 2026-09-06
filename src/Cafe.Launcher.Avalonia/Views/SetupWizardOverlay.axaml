@@ -40,7 +40,7 @@
                         <TextBlock x:Name="StepProgressText" Classes="caption"/>
                     </StackPanel>
                     <Button Grid.Column="1"
-                            Classes="flat-action dialog-action"
+                            Classes="text-action dialog-action"
                             VerticalAlignment="Center"
                             Command="{Binding Dialogs.RequestSetupWizardExitCommand}"
                             ToolTip.Tip="{Binding Shell.I18n[setupWizardSkip]}"
@@ -145,17 +145,17 @@
                                 <materialIcons:MaterialIcon Kind="Alert"
                                                            Width="{StaticResource Launcher.Icon.Sm}"
                                                            Height="{StaticResource Launcher.Icon.Sm}"
-                                                           Foreground="{StaticResource Launcher.Color.Danger}"
+                                                           Foreground="{DynamicResource Launcher.Color.Error}"
                                                            IsVisible="{Binding Dialogs.SetupWizard.IsGamePathCorruptedInstallation}"/>
                                 <materialIcons:MaterialIcon Kind="Alert"
                                                            Width="{StaticResource Launcher.Icon.Sm}"
                                                            Height="{StaticResource Launcher.Icon.Sm}"
-                                                           Foreground="{StaticResource Launcher.Color.Danger}"
+                                                           Foreground="{DynamicResource Launcher.Color.Error}"
                                                            IsVisible="{Binding Dialogs.SetupWizard.IsGamePathInaccessible}"/>
                                 <materialIcons:MaterialIcon Kind="Lock"
                                                            Width="{StaticResource Launcher.Icon.Sm}"
                                                            Height="{StaticResource Launcher.Icon.Sm}"
-                                                           Foreground="{StaticResource Launcher.Color.Danger}"
+                                                           Foreground="{DynamicResource Launcher.Color.Error}"
                                                            IsVisible="{Binding Dialogs.SetupWizard.IsGamePathNotWritable}"/>
                                 <TextBlock Text="{Binding Dialogs.SetupWizard.GamePathStatusText}"
                                            AutomationProperties.Name="{Binding Dialogs.SetupWizard.GamePathStatusText}"
@@ -172,7 +172,7 @@
                             <TextBlock Text="{Binding Shell.I18n[setupWizardGamePathEmpty]}"
                                        Classes="caption"
                                        TextAlignment="Center"
-                                       Foreground="{StaticResource Launcher.Color.Danger}"
+                                       Foreground="{DynamicResource Launcher.Color.Error}"
                                        IsVisible="{Binding Dialogs.SetupWizard.IsGamePathEmpty}"/>
                         </StackPanel>
 
@@ -353,11 +353,11 @@
                     </Grid>
                 </ScrollViewer>
 
-                <!-- Actions row：动作带并入内容区（ADR-017）——上一步 tonal 底色，
-                     下一步/完成 filled 主按钮；图标行经 button-content。 -->
+                <!-- Actions row：动作带并入内容区（ADR-017）——上一步 outlined，
+                     中间步骤下一步 filled tonal，最终完成 filled；图标行经 button-content。 -->
                 <Grid Grid.Row="2" ColumnDefinitions="Auto,*,Auto" ColumnSpacing="{StaticResource Launcher.Spacing.Md}">
                     <Button x:Name="PreviousButton"
-                            Classes="wizard-action dialog-action"
+                            Classes="flat-action wizard-action dialog-action"
                             IsVisible="False"
                             Command="{Binding Dialogs.SetupWizard.PreviousCommand}"
                             AutomationProperties.Name="{Binding Shell.I18n[setupWizardPrevious]}">
@@ -369,7 +369,7 @@
                         </StackPanel>
                     </Button>
                     <Button x:Name="NextButton" Grid.Column="2"
-                            Classes="wizard-action primary-action dialog-action"
+                            Classes="tonal-action wizard-action dialog-action"
                             Command="{Binding Dialogs.SetupWizard.NextCommand}"
                             IsEnabled="{Binding Dialogs.SetupWizard.CanGoNext}"
                             AutomationProperties.Name="{Binding Shell.I18n[setupWizardNext]}">
