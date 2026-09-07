@@ -156,8 +156,12 @@ public sealed class LocalizationService
             return ReportFailure($"Missing test resource key '{key}' for language '{CurrentLanguage}'.");
         }
 
+        // Resolve by CurrentLanguage, not the calling thread's culture: SetLanguage may
+        // run off the UI thread during startup, and thread-culture fallback would then
+        // resolve XAML catalog bindings against the OS culture instead of the selected
+        // language (mixed-language UI, legal text resolving to the wrong locale).
         var result = Resources.LauncherStrings.ResourceManager.GetString(
-            key, CultureInfo.CurrentUICulture);
+            key, LauncherCultureResolver.GetCultureFor(CurrentLanguage));
         return result ?? ReportFailure($"Missing key '{key}' for language '{CurrentLanguage}'.");
     }
 
@@ -167,7 +171,8 @@ public sealed class LocalizationService
         var template = T(key);
         try
         {
-            return string.Format(CultureInfo.CurrentCulture, template, args);
+            return string.Format(
+                LauncherCultureResolver.GetCultureFor(CurrentLanguage), template, args);
         }
         catch (FormatException)
         {
