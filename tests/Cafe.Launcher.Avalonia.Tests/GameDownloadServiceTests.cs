@@ -1,8 +1,11 @@
 using System.Globalization;
 using System.Net;
 using System.Net.Http;
+using System.Security.AccessControl;
+using System.Security.Principal;
 using System.Text;
 using System.Text.Json;
+using Cafe.Launcher.Avalonia.Constants;
 using Cafe.Launcher.Avalonia.Features.GameOperations;
 using Cafe.Launcher.Avalonia.Helpers;
 using Cafe.Launcher.Avalonia.Services;
@@ -497,6 +500,113 @@ public sealed class GameDownloadServiceTests : IDisposable
         Assert.True(result.Success);
         Assert.False(File.Exists(statePath));
         Directory.Delete(tempDir, recursive: true);
+    }
+
+    [Fact]
+    public async Task InstallOrUpdateAsync_WhenAlreadyCurrentAndStateMatchesCommit_SucceedsWithoutRewritingState()
+    {
+        var gamePath = Path.Combine(tempDir, "YostarGames", "BlueArchive_JP");
+        Directory.CreateDirectory(gamePath);
+        var settingsPath = Path.Combine(tempDir, "settings.json");
+        var statePath = Path.Combine(tempDir, "download_state.json");
+        var settingsService = new LauncherSettingsService(settingsPath);
+        await settingsService.SaveAsync(new LauncherSettings { GamePath = gamePath });
+        // 与 CreateSnapshot 的远端配置逐字段对齐（版本/basis/ExeName/Params/空清单），
+        // 使 LocalInstallationStateMatchesCommit 命中「提交是纯重写，可跳过」分支。
+        // 经 CommitAsync 落盘保证 Vc 哈希合法（手写 JSON 会被判 Corrupted）。
+        var committed = await new LocalInstallationStateStore().CommitAsync(
+            gamePath,
+            new LocalInstallationStateCommit(
+                Version: "1.0.0",
+                ManifestBasis: "manifest.json",
+                ExecutableName: "BlueArchive",
+                LaunchParameters: [],
+                Files: []));
+        Assert.Equal(LocalInstallationStateKind.Valid, committed.Kind);
+        // sentinel 字段不属于 LocalManifest：若提交被重写，它会消失。
+        var manifestPath = Path.Combine(gamePath, "manifest.json");
+        await File.WriteAllTextAsync(
+            manifestPath,
+            (await File.ReadAllTextAsync(manifestPath)).Insert(1, "\"sentinel\":\"keep\","));
+        using var apiClient = CreateManifestApiClient();
+        var service = CreateService(apiClient, settingsService, statePath);
+        var snapshot = CreateSnapshot(gamePath);
+
+        var result = await service.InstallOrUpdateAsync(snapshot, _ => { });
+
+        Assert.True(result.Success);
+        Assert.Contains("keep", await File.ReadAllTextAsync(manifestPath));
+        Assert.False(File.Exists(statePath));
+        Directory.Delete(tempDir, recursive: true);
+    }
+
+    [Fact]
+    public async Task InstallOrUpdateAsync_WhenCommitNeededButDirectoryNotWritable_FailsWithLocalizedAccessDenied()
+    {
+        if (!OperatingSystem.IsWindows())
+        {
+            return;
+        }
+
+        var gamePath = Path.Combine(tempDir, "YostarGames", "BlueArchive_JP");
+        Directory.CreateDirectory(gamePath);
+        var settingsPath = Path.Combine(tempDir, "settings.json");
+        var statePath = Path.Combine(tempDir, "download_state.json");
+        File.WriteAllText(statePath, "stale-checkpoint");
+        var settingsService = new LauncherSettingsService(settingsPath);
+        await settingsService.SaveAsync(new LauncherSettings { GamePath = gamePath });
+        // 版本落后使状态不匹配 → 确需提交；清单两侧均为空 → diff==0 走写探测闸口。
+        var committed = await new LocalInstallationStateStore().CommitAsync(
+            gamePath,
+            new LocalInstallationStateCommit(
+                Version: "0.9.0",
+                ManifestBasis: "manifest.json",
+                ExecutableName: "BlueArchive",
+                LaunchParameters: [],
+                Files: []));
+        Assert.Equal(LocalInstallationStateKind.Valid, committed.Kind);
+        using var apiClient = CreateManifestApiClient();
+        var service = CreateService(apiClient, settingsService, statePath);
+        DenyCreateFiles(gamePath);
+        try
+        {
+            var result = await service.InstallOrUpdateAsync(CreateSnapshot(gamePath), _ => { });
+
+            Assert.False(result.Success);
+            Assert.Equal(
+                new LocalizationService().F(LocalizationKeys.FileAccessDenied, gamePath),
+                result.Message);
+            // 写探测失败必须清掉陈旧检查点，避免下轮被错误续传。
+            Assert.False(File.Exists(statePath));
+        }
+        finally
+        {
+            RevokeDenyCreateFiles(gamePath);
+        }
+    }
+
+    [System.Runtime.Versioning.SupportedOSPlatform("windows")]
+    private static void DenyCreateFiles(string directory)
+    {
+        var info = new DirectoryInfo(directory);
+        var security = info.GetAccessControl();
+        security.AddAccessRule(new FileSystemAccessRule(
+            WindowsIdentity.GetCurrent().User!,
+            FileSystemRights.CreateFiles,
+            AccessControlType.Deny));
+        info.SetAccessControl(security);
+    }
+
+    [System.Runtime.Versioning.SupportedOSPlatform("windows")]
+    private static void RevokeDenyCreateFiles(string directory)
+    {
+        var info = new DirectoryInfo(directory);
+        var security = info.GetAccessControl();
+        security.RemoveAccessRule(new FileSystemAccessRule(
+            WindowsIdentity.GetCurrent().User!,
+            FileSystemRights.CreateFiles,
+            AccessControlType.Deny));
+        info.SetAccessControl(security);
     }
 
     [Fact]
