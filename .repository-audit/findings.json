@@ -508,6 +508,19 @@
       "last_verified_commit": "1ce42d1",
       "resolved_commit": "1ce42d1",
       "guard": "运维习惯：Dependabot squash + chore(deps): 前缀"
+    },
+    "AUD-REL-004": {
+      "title": "下一版本发布准备未开始：版本号仍为已发布的 beta.6，CHANGELOG 仍为 beta.6 单节，新横幅未制作；版本命名待决策（发布后 19 提交的正常中间态，非缺陷）",
+      "category": "release/preparation",
+      "severity": "low",
+      "confidence": 100,
+      "status": "resolved",
+      "disposition": "Product Decision",
+      "recommendation_validation": "Verified",
+      "first_seen_commit": "55ca3e7",
+      "last_verified_commit": "55ca3e7",
+      "resolved_commit": "ae76562",
+      "guard": "既有守卫维持：Read-LauncherVersion.ps1 tag 精确匹配、release.yml 横幅硬门禁、CHANGELOG 单节规则；发版素材清单见 history/2026-09-07-release-audit.md"
     }
   }
 }

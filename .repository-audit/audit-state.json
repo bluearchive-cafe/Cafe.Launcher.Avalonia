@@ -1,8 +1,8 @@
 {
   "schema_version": 1,
   "last_full_audit_commit": "1ce42d1",
-  "last_audit_commit": "1ce42d1",
-  "last_audit_mode": "full",
+  "last_audit_commit": "55ca3e7",
+  "last_audit_mode": "release",
   "last_audit_date": "2026-09-07",
-  "repository_map_version": 3
+  "repository_map_version": 4
 }
