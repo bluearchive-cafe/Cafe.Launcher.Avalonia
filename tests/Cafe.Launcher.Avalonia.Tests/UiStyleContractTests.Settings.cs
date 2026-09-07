@@ -30,8 +30,7 @@ public sealed partial class UiStyleContractTests
             [
                 "Settings.Editor.Current.ProxyMode",
                 "Settings.Editor.Current.PatchUrlGroup",
-                "Settings.Editor.Current.DownloadSpeedLimit",
-                "Settings.Editor.Current.UpdateChannel"
+                "Settings.Editor.Current.DownloadSpeedLimit"
             ],
             ["SettingsAppearanceSection"] =
             [
@@ -54,6 +53,7 @@ public sealed partial class UiStyleContractTests
             ],
             ["SettingsAdvancedSection"] =
             [
+                "Settings.Editor.Current.UpdateChannel",
                 "Settings.Editor.Current.LogLevel",
                 "LogViewer.OpenCommand",
                 "LogViewer.ExportCommand",

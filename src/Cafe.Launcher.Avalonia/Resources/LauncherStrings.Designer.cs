@@ -808,6 +808,8 @@ internal static class LauncherStrings
 
     internal static string SettingsGroupThemeColor => GetRequiredString("settingsGroupThemeColor");
 
+    internal static string SettingsGroupUpdates => GetRequiredString("settingsGroupUpdates");
+
     internal static string SettingsSaved => GetRequiredString("settingsSaved");
 
     internal static string SettingsSaveFailed => GetRequiredString("settingsSaveFailed");
