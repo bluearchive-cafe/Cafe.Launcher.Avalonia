@@ -55,6 +55,13 @@ public sealed class PatchUrlGroupService
     {
         response.PrimaryCdn = RewritePackageUrl(response.PrimaryCdn, group);
         response.BackUpCdn = RewritePackageUrl(response.BackUpCdn, group);
+        if (group == PatchUrlGroups.Cafe)
+        {
+            // The Cafe mirror is a single host; the official backup path does not
+            // exist there, so primary and backup share the same URL.
+            response.BackUpCdn = response.PrimaryCdn;
+        }
+
         return response;
     }
 
