@@ -130,14 +130,19 @@ public sealed partial class MainWindowHeadlessTests
         }
         Dispatcher.UIThread.RunJobs();
 
+        // 按样式类定位审阅步骤的四个编辑按钮：真实等待（防抖）期间启动期的
+        // ApplyLanguageAndThemeAsync 可能落地，AutomationProperties.Name 的解析
+        // 依赖线程 Culture（T() 按 CurrentUICulture 回退），await 后的测试延续
+        // 与 UI 线程语言可能瞬时分叉——类选择与文化无关且语义等价（该类仅这
+        // 四个按钮使用），同时仍断言名称已本地化为非空。
         var editButtons = context.Window
             .GetVisualDescendants()
             .OfType<Button>()
-            .Where(control => AutomationProperties.GetName(control)
-                == context.ViewModel.Shell.I18n["setupWizardEditStep"])
+            .Where(control => control.Classes.Contains("wizard-review-edit"))
             .ToArray();
 
         Assert.Equal(4, editButtons.Length);
+        Assert.All(editButtons, button => Assert.False(string.IsNullOrWhiteSpace(AutomationProperties.GetName(button))));
 
         foreach (var (editButton, expectedStep) in editButtons.Zip([0, 2, 1, 3]))
         {
@@ -570,6 +575,10 @@ public sealed partial class MainWindowHeadlessTests
         context.ViewModel.Dialogs.SetupWizard.NextCommand.Execute(null);
         Dispatcher.UIThread.RunJobs();
         context.ViewModel.Dialogs.SetupWizard.GamePath = gamePath;
+        // 击键驱动的路径校验经 300ms 防抖 + 后台写探测：有界等待状态落定再推进。
+        await WaitForGamePathStatusAsync(
+            context.ViewModel.Dialogs.SetupWizard,
+            SetupWizardGamePathStatus.AvailableForInstallation);
         context.ViewModel.Dialogs.SetupWizard.NextCommand.Execute(null);
         Dispatcher.UIThread.RunJobs();
         context.ViewModel.Dialogs.SetupWizard.NextCommand.Execute(null);

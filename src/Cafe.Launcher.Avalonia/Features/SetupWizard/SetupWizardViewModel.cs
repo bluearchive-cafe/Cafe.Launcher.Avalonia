@@ -3,7 +3,6 @@ using System.Collections.Generic;
 using System.Threading;
 using System.Threading.Tasks;
 using Cafe.Launcher.Avalonia.Constants;
-using Cafe.Launcher.Avalonia.Features.SetupWizard;
 using Cafe.Launcher.Avalonia.Helpers;
 using Cafe.Launcher.Avalonia.Models;
 using Cafe.Launcher.Avalonia.Services;
@@ -21,12 +20,17 @@ public partial class SetupWizardViewModel : ViewModelBase, IModalContentViewMode
 {
     private const int StepCount = 5;
 
+    // 路径文本框 TwoWay 绑定下每个字符都会触发刷新；全量状态读取 + 写探测
+    // 对 UNC/慢速介质是真实磁盘 IO，按此窗口防抖合并连续击键。
+    private static readonly TimeSpan GamePathStatusDebounce = TimeSpan.FromMilliseconds(300);
+
     private readonly LocalizationService localizer;
     private readonly GameInstallationPath gameInstallationPath;
     private readonly LocalInstallationStateStore localInstallationStateStore;
     private readonly LocalDiagnostics diagnostics;
     private readonly IFilePickerService filePickerService;
     private bool hasInitializedGamePath;
+    private bool isDisposed;
     private CancellationTokenSource? gamePathStatusCancellationTokenSource;
     private int gamePathStatusVersion;
 
@@ -129,7 +133,8 @@ public partial class SetupWizardViewModel : ViewModelBase, IModalContentViewMode
 
     partial void OnGamePathChanged(string value)
     {
-        RefreshGamePathStatus();
+        // 击键驱动的变更走防抖；进入步骤等程序性刷新仍为立即（见 OnStepChanged）。
+        _ = RefreshGamePathStatusDebouncedAsync();
     }
 
     [ObservableProperty]
@@ -288,13 +293,10 @@ public partial class SetupWizardViewModel : ViewModelBase, IModalContentViewMode
 
     // ── Internal ──────────────────────────────────────────────────
 
-    private void RefreshGamePathStatus()
+    private async Task RefreshGamePathStatusDebouncedAsync()
     {
-        gamePathStatusCancellationTokenSource?.Cancel();
-        gamePathStatusCancellationTokenSource?.Dispose();
-        var cancellationTokenSource = new CancellationTokenSource();
-        gamePathStatusCancellationTokenSource = cancellationTokenSource;
         var version = ++gamePathStatusVersion;
+        CancelPendingGamePathStatusRefresh();
 
         if (string.IsNullOrWhiteSpace(GamePath))
         {
@@ -302,7 +304,57 @@ public partial class SetupWizardViewModel : ViewModelBase, IModalContentViewMode
             return;
         }
 
+        GamePathStatus = SetupWizardGamePathStatus.Checking;
+
+        try
+        {
+            await Task.Delay(GamePathStatusDebounce);
+        }
+        catch (OperationCanceledException)
+        {
+            return;
+        }
+
+        // 防抖窗口内又有击键/刷新，或向导已释放则放弃本轮。
+        if (version != gamePathStatusVersion || isDisposed)
+        {
+            return;
+        }
+
+        RefreshGamePathStatus(version);
+    }
+
+    private void RefreshGamePathStatus()
+    {
+        RefreshGamePathStatus(++gamePathStatusVersion);
+    }
+
+    private void RefreshGamePathStatus(int version)
+    {
+        CancelPendingGamePathStatusRefresh();
+
+        if (string.IsNullOrWhiteSpace(GamePath))
+        {
+            GamePathStatus = SetupWizardGamePathStatus.NotSelected;
+            return;
+        }
+
+        var cancellationTokenSource = new CancellationTokenSource();
+        gamePathStatusCancellationTokenSource = cancellationTokenSource;
         _ = RefreshGamePathStatusAsync(GamePath, version, cancellationTokenSource);
+    }
+
+    private void CancelPendingGamePathStatusRefresh()
+    {
+        var previous = gamePathStatusCancellationTokenSource;
+        gamePathStatusCancellationTokenSource = null;
+        if (previous is not null)
+        {
+            // 在飞的旧代刷新已在任何 await 之前捕获 Token，Cancel+Dispose 不会
+            // 再触碰源本身，可安全立即回收。
+            previous.Cancel();
+            previous.Dispose();
+        }
     }
 
     private async Task RefreshGamePathStatusAsync(
@@ -310,6 +362,9 @@ public partial class SetupWizardViewModel : ViewModelBase, IModalContentViewMode
         int version,
         CancellationTokenSource cancellationTokenSource)
     {
+        // 在任何 await 之前取 Token，避免旧代源被回收后访问 .Token 抛 ObjectDisposedException。
+        var cancellationToken = cancellationTokenSource.Token;
+
         string normalizedPath;
         try
         {
@@ -321,20 +376,20 @@ public partial class SetupWizardViewModel : ViewModelBase, IModalContentViewMode
             SetGamePathStatusIfCurrent(
                 SetupWizardGamePathStatus.Inaccessible,
                 version,
-                cancellationTokenSource);
+                cancellationToken);
             return;
         }
 
         SetGamePathStatusIfCurrent(
             SetupWizardGamePathStatus.Checking,
             version,
-            cancellationTokenSource);
+            cancellationToken);
 
         try
         {
             var state = await localInstallationStateStore.ReadAsync(
                 normalizedPath,
-                cancellationTokenSource.Token);
+                cancellationToken);
             var status = state.Kind switch
             {
                 LocalInstallationStateKind.NotInstalled => SetupWizardGamePathStatus.AvailableForInstallation,
@@ -346,37 +401,42 @@ public partial class SetupWizardViewModel : ViewModelBase, IModalContentViewMode
 
             // 全新安装要创建目录链、修复损坏安装要重写状态文件——两者都需要写权限。
             // 在选择阶段就探测（Program Files 等受保护位置此处即被拦下），已有效的
-            // 安装只读即可运行，不做探测以免误伤非提权会话。
-            if ((status is SetupWizardGamePathStatus.AvailableForInstallation
-                    or SetupWizardGamePathStatus.CorruptedInstallation)
-                && !DirectoryWriteProbe.CanCreate(normalizedPath))
+            // 安装只读即可运行，不做探测以免误伤非提权会话。探测是真实文件创建，
+            // 移出 UI 线程避免慢速介质上阻塞输入。
+            if (status is SetupWizardGamePathStatus.AvailableForInstallation
+                or SetupWizardGamePathStatus.CorruptedInstallation)
             {
-                status = SetupWizardGamePathStatus.NotWritable;
+                var writable = await Task.Run(
+                    () => DirectoryWriteProbe.CanCreate(normalizedPath),
+                    cancellationToken);
+                if (!writable)
+                {
+                    status = SetupWizardGamePathStatus.NotWritable;
+                }
             }
 
-            SetGamePathStatusIfCurrent(status, version, cancellationTokenSource);
+            SetGamePathStatusIfCurrent(status, version, cancellationToken);
         }
-        catch (OperationCanceledException) when (cancellationTokenSource.IsCancellationRequested)
+        catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
         {
         }
         catch (Exception ex)
         {
-            _ = diagnostics.WarningAsync("SetupWizardGamePathRead", ex.Message, cancellationTokenSource.Token);
+            _ = diagnostics.WarningAsync("SetupWizardGamePathRead", ex.Message, cancellationToken);
             SetGamePathStatusIfCurrent(
                 SetupWizardGamePathStatus.Inaccessible,
                 version,
-                cancellationTokenSource);
+                cancellationToken);
         }
     }
 
     private void SetGamePathStatusIfCurrent(
         SetupWizardGamePathStatus status,
         int version,
-        CancellationTokenSource cancellationTokenSource)
+        CancellationToken cancellationToken)
     {
         if (version != gamePathStatusVersion
-            || cancellationTokenSource.IsCancellationRequested
-            || !ReferenceEquals(cancellationTokenSource, gamePathStatusCancellationTokenSource))
+            || cancellationToken.IsCancellationRequested)
         {
             return;
         }
@@ -469,6 +529,7 @@ public partial class SetupWizardViewModel : ViewModelBase, IModalContentViewMode
 
     public void Dispose()
     {
+        isDisposed = true;
         localizer.LanguageChanged -= OnLocalizerLanguageChanged;
         gamePathStatusCancellationTokenSource?.Dispose();
     }

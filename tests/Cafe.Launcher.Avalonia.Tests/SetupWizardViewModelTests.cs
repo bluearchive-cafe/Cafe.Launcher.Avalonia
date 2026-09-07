@@ -207,7 +207,7 @@ public sealed class SetupWizardViewModelTests
         vm.ProxyMode = ProxyModes.System;
         vm.GamePath = @"D:\Test\Path";
         await WaitForGamePathStatusAsync(vm, SetupWizardGamePathStatus.AvailableForInstallation);
-        AdvanceToLastStep(vm);
+        await AdvanceToLastStep(vm);
         Assert.NotNull(vm.LanguageDisplayName);
         Assert.NotNull(vm.DownloadSourceDisplayName);
         Assert.NotNull(vm.ProxyDisplayName);
@@ -279,11 +279,14 @@ public sealed class SetupWizardViewModelTests
     }
 
     [Fact]
-    public void GoToStepCommand_ToCompletedStep_NavigatesBack()
+    public async Task GoToStepCommand_ToCompletedStep_NavigatesBack()
     {
         var vm = CreateViewModel();
         vm.GamePath = Path.Combine(Path.GetTempPath(), Guid.NewGuid().ToString("N"));
+        await WaitForGamePathStatusAsync(vm, SetupWizardGamePathStatus.AvailableForInstallation);
         vm.NextCommand.Execute(null);
+        // 进入 Step 1 会触发一次即时刷新把状态重置为 Checking，等待其重新落定。
+        await WaitForGamePathStatusAsync(vm, SetupWizardGamePathStatus.AvailableForInstallation);
         vm.NextCommand.Execute(null);
         Assert.Equal(2, vm.Step);
 
@@ -529,13 +532,23 @@ public sealed class SetupWizardViewModelTests
         }
     }
 
-    private static void AdvanceToLastStep(SetupWizardViewModel viewModel)
+    private static async Task AdvanceToLastStep(SetupWizardViewModel viewModel)
     {
-        // 步数上限护栏：未来若新增步骤门控引入异步依赖，这里快速失败
-        // 而非热自旋挂死测试进程（参见 P0 整改中 Headless 同类修复）。
-        for (var guard = 0; !viewModel.IsLastStep && guard < 10; guard++)
+        // 路径校验为异步（防抖 + 后台写探测），推进循环在门控未就绪时
+        // 有界等待而非热自旋：5 秒预算内未就绪即快速失败（参见 P0 整改
+        // 中 Headless 同类修复）。
+        var deadline = DateTime.UtcNow.AddSeconds(5);
+        for (var guard = 0; !viewModel.IsLastStep && guard < 100; guard++)
         {
-            viewModel.NextCommand.Execute(null);
+            if (viewModel.CanGoNext)
+            {
+                viewModel.NextCommand.Execute(null);
+            }
+            else
+            {
+                Assert.True(DateTime.UtcNow < deadline, "向导门控未在 5 秒预算内就绪。");
+                await Task.Delay(10);
+            }
         }
 
         Assert.True(viewModel.IsLastStep, "向导未在上限步数内推进到末步。");
