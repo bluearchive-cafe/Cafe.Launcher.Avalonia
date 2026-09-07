@@ -6,12 +6,11 @@ namespace Cafe.Launcher.Avalonia.Helpers;
 /// <summary>
 /// 目录可写性探测：以「创建即删的探针文件」验证对目标位置的真实写权限。
 /// 覆盖两种形态——目录已存在时直接探测；目录不存在时向上定位最近的已存在
-/// 祖先目录探测（在该处创建目录链与后续写入需要同一份写权限）。
+/// 祖先目录探测（在该处创建目录链与后续写入通常需要同一份写权限，属启发式
+/// 而非保证：NTFS ACL 继承可在链上任一层中断，后续写入仍可能被拒）。
 /// </summary>
 public static class DirectoryWriteProbe
 {
-    private const string ProbeFileName = ".launcher-write-probe.tmp";
-
     /// <summary>探测 directory 自身可写；目录不存在或探测失败返回 false。</summary>
     public static bool CanWrite(string directory)
     {
@@ -78,8 +77,10 @@ public static class DirectoryWriteProbe
     {
         try
         {
+            // 探针文件名每次随机：固定名 + FileMode.Create 会跟随并截断预置的
+            // 同名符号链接目标（CWE-59 相邻面），随机名使攻击者无法预先放置。
             using var probe = new FileStream(
-                Path.Combine(directory, ProbeFileName),
+                Path.Combine(directory, Path.GetRandomFileName()),
                 FileMode.Create,
                 FileAccess.Write,
                 FileShare.None,
