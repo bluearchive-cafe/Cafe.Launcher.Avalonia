@@ -1,3 +1,6 @@
+using System.Collections.Generic;
+using System.IO;
+using System.Xml.Linq;
 using Avalonia.Media;
 using Cafe.Launcher.Avalonia.Helpers;
 using Cafe.Launcher.Avalonia.Models;
@@ -149,6 +152,78 @@ public sealed class MaterialSchemeGeneratorTests
                 Color.Parse(isDark ? dark : light),
                 brushes[key].Color);
         }
+    }
+
+    /// <summary>
+    /// 钉住默认表与 App.axaml 声明值的一致性：默认表是 Brand Blue 策略下
+    /// 「恢复声明值」的唯一事实来源，若与 XAML 漂移，上面的恢复断言会退化为
+    /// 用代码常量自证。此处直接解析 App.axaml 的 Light/Dark ThemeDictionaries
+    /// 取真值，改令牌颜色而忘记同步默认表时在此失败。
+    /// </summary>
+    [Fact]
+    public void NeutralDefaults_MatchDeclaredAppXamlThemeValues()
+    {
+        var themeValues = LoadAppXamlThemeSolidBrushes();
+
+        foreach (var (key, light, dark) in MaterialSchemeGenerator.DialogSurfaceDefaults.Concat(MaterialSchemeGenerator.NeutralContentDefaults))
+        {
+            Assert.True(
+                themeValues.TryGetValue(("Light", key), out var declaredLight),
+                $"{key} is not declared in App.axaml Light theme; the defaults table references a token that no longer exists.");
+            Assert.True(
+                themeValues.TryGetValue(("Dark", key), out var declaredDark),
+                $"{key} is not declared in App.axaml Dark theme; the defaults table references a token that no longer exists.");
+            Assert.True(
+                Color.TryParse(declaredLight, out var lightColor) && lightColor == Color.Parse(light),
+                $"{key} light default {light} drifted from App.axaml value {declaredLight}.");
+            Assert.True(
+                Color.TryParse(declaredDark, out var darkColor) && darkColor == Color.Parse(dark),
+                $"{key} dark default {dark} drifted from App.axaml value {declaredDark}.");
+        }
+    }
+
+    private static Dictionary<(string Theme, string Key), string> LoadAppXamlThemeSolidBrushes()
+    {
+        var current = new DirectoryInfo(AppContext.BaseDirectory);
+        while (current is not null
+               && !File.Exists(Path.Combine(current.FullName, "Cafe.Launcher.Avalonia.slnx")))
+        {
+            current = current.Parent;
+        }
+
+        Assert.NotNull(current);
+        var appXamlPath = Path.Combine(
+            current!.FullName, "src", "Cafe.Launcher.Avalonia", "App.axaml");
+
+        var values = new Dictionary<(string, string), string>();
+        var document = XDocument.Load(appXamlPath);
+        foreach (var dictionary in document.Descendants()
+                     .Where(element => element.Name.LocalName == "ResourceDictionary"
+                         && element.Attributes().Any(attribute => attribute.Name.LocalName == "Key")))
+        {
+            var theme = dictionary.Attributes()
+                .Single(attribute => attribute.Name.LocalName == "Key")
+                .Value;
+            if (theme is not ("Light" or "Dark"))
+            {
+                continue;
+            }
+
+            foreach (var brush in dictionary.Elements()
+                         .Where(element => element.Name.LocalName == "SolidColorBrush"))
+            {
+                var key = brush.Attributes()
+                    .SingleOrDefault(attribute => attribute.Name.LocalName == "Key")
+                    ?.Value;
+                var color = brush.Attribute("Color")?.Value;
+                if (key is not null && color is not null)
+                {
+                    values[(theme, key)] = color;
+                }
+            }
+        }
+
+        return values;
     }
 
     [Fact]

@@ -1,14 +1,14 @@
 # Repository Map
 
-- 审计日期：2026-09-05（release 就绪性审计更新）
-- HEAD：27a62f2 `docs(audit): 记录 2026-09-05 delta 复审结论与当日整改`
-- 最新发布：v1.1.0-beta.5（2026-09-03）；下一发布 v1.1.0-beta.6（CHANGELOG 与 csproj 已备，见 CODEBASE_AUDIT.md 置顶发布就绪结论）
+- 审计日期：2026-09-07（full 全量复审 + 当日整改）
+- HEAD：1ce42d1 `docs: AGENTS.md 补 Dependabot PR 合并约定`（2026-09-07 审计整改后）
+- 发布状态：v1.1.0-beta.6 全部就绪（横幅/CHANGELOG/版本一致，main CI 绿灯，无 open 阻塞项）
 
 ## Language / Framework
 
-- 语言：C#（.NET 10，`net10.0`），XAML（Avalonia 12.1.1）
+- 语言：C#（.NET 10，`net10.0`），XAML（Avalonia 12.1.2）
 - 框架：Avalonia UI + CommunityToolkit.Mvvm（MVVM）
-- 规模：src 201 个 .cs 文件（不含 Designer）/ 约 29.8k 行 + 25 个 .axaml；tests 157 个 .cs 文件 / 约 37.2k 行，1082 个 `[Fact]/[Theory]`
+- 规模：src 201 个 .cs 文件（不含 Designer）/ 约 29.8k 行 + 25 个 .axaml；tests 约 1607 个 Fact/Theory（单元 1443 含 2 跳 + Headless 164，2026-09-07 实跑）
 
 ## Architecture
 
@@ -21,8 +21,8 @@
 
 ## Tests
 
-- `tests/Cafe.Launcher.Avalonia.Tests`（xUnit v3 单元测试，920 个 Fact/Theory）
-- `tests/Cafe.Launcher.Avalonia.HeadlessTests`（Avalonia.Headless.XUnit UI 测试，约 142 个 AvaloniaFact/Theory）
+- `tests/Cafe.Launcher.Avalonia.Tests`（xUnit v3 单元测试，1443 个 Fact/Theory）
+- `tests/Cafe.Launcher.Avalonia.HeadlessTests`（Avalonia.Headless.XUnit UI 测试，164 个 AvaloniaFact/Theory）
 - 共享隔离：`tests/TestUserDataIsolation.cs`（ModuleInitializer 重定向用户数据目录，链接进两个项目）
 - 质量门禁：
   - `coverage.ps1`：手写 C# 行/分支覆盖率合并 unit+headless；阈值 50%，棘轮基线行 84.30% / 分支 88.99%，禁止下探

@@ -42,4 +42,4 @@ Treat `CHANGELOG_RELEASE.md` as a single-release document. When preparing notes 
 
 ## Commit & Pull Request Guidelines
 
-Use Conventional Commits, matching history: `feat(setup): ...`, `fix: ...`, `refactor: ...`, `perf: ...`, or `docs: ...`. Keep each commit focused. Pull requests must explain the change and motivation, link related issues, list verification commands, and include screenshots for visible UI changes. Confirm `verify.ps1` succeeds before requesting review.
+Use Conventional Commits, matching history: `feat(setup): ...`, `fix: ...`, `refactor: ...`, `perf: ...`, or `docs: ...`. Keep each commit focused. Pull requests must explain the change and motivation, link related issues, list verification commands, and include screenshots for visible UI changes. Confirm `verify.ps1` succeeds before requesting review. When merging Dependabot PRs, squash with a `chore(deps): ...` prefix instead of merging the bot's non-conventional commit — release notes are grouped by conventional prefix, and a bare "Bump ..." commit risks landing in the wrong changelog bucket.

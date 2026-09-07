@@ -62,8 +62,8 @@
       "disposition": "Fix",
       "recommendation_validation": "Verified",
       "first_seen_commit": "27a62f2",
-      "last_verified_commit": "27a62f2",
-      "resolved_commit": null,
+      "last_verified_commit": "dc0c4ff",
+      "resolved_commit": "975159e",
       "guard": "已修复（工作树待提交）：显式无参公共构造委托注入构造 + 注入构造参数改必选；csproj 增 MSBuildWarningsAsErrors=AVLN3001（实验证实修复前构建失败、修复后 0 警告 0 错误），后续同类 XAML 可达性回归直接构建失败"
     },
     "AUD-REL-001": {
@@ -71,12 +71,12 @@
       "category": "release/packaging",
       "severity": "high",
       "confidence": 100,
-      "status": "open",
+      "status": "resolved",
       "disposition": "Fix",
       "recommendation_validation": "Verified",
       "first_seen_commit": "27a62f2",
-      "last_verified_commit": "27a62f2",
-      "resolved_commit": null,
+      "last_verified_commit": "dc0c4ff",
+      "resolved_commit": "528a665",
       "guard": "release.yml「Verify release banner」步骤本身即 fail-fast 守卫；处置为发版检查单固定项：打 tag 前确认 docs/assets/release-banners/ 已有对应 tag 的横幅"
     },
     "AUD-REL-002": {
@@ -84,12 +84,12 @@
       "category": "release/notes",
       "severity": "medium",
       "confidence": 95,
-      "status": "open",
+      "status": "resolved",
       "disposition": "Fix",
       "recommendation_validation": "Verified",
       "first_seen_commit": "27a62f2",
-      "last_verified_commit": "27a62f2",
-      "resolved_commit": null,
+      "last_verified_commit": "dc0c4ff",
+      "resolved_commit": "528a665",
       "guard": "发版检查单固定项：打 tag 前用 git log <上个tag>..HEAD --oneline 复核 fix/perf/feat 是否全部体现在发布说明"
     },
     "AUD-REL-003": {
@@ -101,9 +101,9 @@
       "disposition": "Fix",
       "recommendation_validation": "Verified",
       "first_seen_commit": "27a62f2",
-      "last_verified_commit": "27a62f2",
-      "resolved_commit": null,
-      "guard": "已修复（工作树待提交）：中间帧改属性变更推送观察（动画逐帧写值同步触发 PropertyChanged，无轮询采样窗口；注意 X 的变更在 TranslateTransform 实例上而非面板上）+ 3 次重试区分环境抖动与瞬变回归（锚点步退场后重入场，重试路径经失败注入实证）；单测 5/5、全量 164/164、coverage 插桩高负载 164/164 通过。CI 绿灯确认留待推送后",
+      "last_verified_commit": "dc0c4ff",
+      "resolved_commit": "bb980b8",
+      "guard": "属性推送观察 + 3 次重试；main CI 在 dc0c4ff 及此前连续 5 次推送全绿（gh run list 实证）",
       "note": "CI 确认前置：推送后 main Build 必须绿，方可打 tag（发版检查单项）"
     },
     "AUD-CI-001": {
@@ -189,12 +189,12 @@
       "category": "license-compliance",
       "severity": "low",
       "confidence": 85,
-      "status": "deferred",
+      "status": "resolved",
       "disposition": "Fix",
       "recommendation_validation": "Strongly Supported",
       "first_seen_commit": "4ed11c3",
-      "last_verified_commit": "259e217",
-      "resolved_commit": null,
+      "last_verified_commit": "a85404f",
+      "resolved_commit": "a85404f",
       "guard": null
     },
     "AUD-DEP-002": {
@@ -404,6 +404,110 @@
       "last_verified_commit": "259e217",
       "resolved_commit": "1a7b63a",
       "guard": null
+    },
+    "AUD-TST-003": {
+      "title": "只读目录更新检查闸口缺端到端行为测试（PreparePlanAsync/diff==0 路径零覆盖）",
+      "category": "testing",
+      "severity": "low",
+      "confidence": 85,
+      "status": "resolved",
+      "disposition": "Fix",
+      "recommendation_validation": "Strongly Supported",
+      "first_seen_commit": "291b77a",
+      "last_verified_commit": "836d10e",
+      "resolved_commit": "836d10e",
+      "guard": "两个端到端行为测试：匹配跳过（sentinel）/ ACL 拒写 → 本地化失败 + 检查点清除"
+    },
+    "AUD-PERF-005": {
+      "title": "向导路径输入无防抖：每击键全量状态读取 + 写探测同步落 UI 线程",
+      "category": "performance",
+      "severity": "low",
+      "confidence": 85,
+      "status": "resolved",
+      "disposition": "Fix",
+      "recommendation_validation": "Strongly Supported",
+      "first_seen_commit": "1b6902b",
+      "last_verified_commit": "1f7a8a2",
+      "resolved_commit": "1f7a8a2",
+      "guard": null
+    },
+    "AUD-DEP-006": {
+      "title": "THIRD-PARTY-NOTICES.md 版本过期（Avalonia 12.1.1/MEDI 10.0.10，f6f4d18 后未再生）",
+      "category": "license-compliance",
+      "severity": "low",
+      "confidence": 95,
+      "status": "resolved",
+      "disposition": "Fix",
+      "recommendation_validation": "Verified",
+      "first_seen_commit": "f6f4d18",
+      "last_verified_commit": "a85404f",
+      "resolved_commit": "a85404f",
+      "guard": "AGENTS.md 依赖升级合并约定 + 再生脚本；后续 Dependabot squash 流程载明"
+    },
+    "AUD-SEC-004": {
+      "title": "固定名探针文件 + FileMode.Create 可被符号链接利用截断（本地特权门槛，加固项）",
+      "category": "security",
+      "severity": "low",
+      "confidence": 70,
+      "status": "resolved",
+      "disposition": "Fix",
+      "recommendation_validation": "Strongly Supported",
+      "first_seen_commit": "291b77a",
+      "last_verified_commit": "97a17a9",
+      "resolved_commit": "97a17a9",
+      "guard": "随机探针文件名使固定名预置符号链接不可行（Path.GetRandomFileName + DeleteOnClose）"
+    },
+    "AUD-PERF-006": {
+      "title": "向导状态刷新竞态：前任 CTS 在飞行中被 Dispose → 虚假 Inaccessible 闪烁",
+      "category": "reliability",
+      "severity": "low",
+      "confidence": 70,
+      "status": "resolved",
+      "disposition": "Fix",
+      "recommendation_validation": "Plausible",
+      "first_seen_commit": "1b6902b",
+      "last_verified_commit": "1f7a8a2",
+      "resolved_commit": "1f7a8a2",
+      "guard": null
+    },
+    "AUD-MTN-005": {
+      "title": "MaterialSchemeGenerator 守卫测试自我循环：hex 默认未钉住 App.axaml 真值",
+      "category": "testing/maintainability",
+      "severity": "low",
+      "confidence": 85,
+      "status": "resolved",
+      "disposition": "Fix",
+      "recommendation_validation": "Strongly Supported",
+      "first_seen_commit": "67e8f88",
+      "last_verified_commit": "901bb3e",
+      "resolved_commit": "901bb3e",
+      "guard": "NeutralDefaults_MatchDeclaredAppXamlThemeValues 解析 App.axaml ThemeDictionaries 钉住默认表"
+    },
+    "AUD-MTN-006": {
+      "title": "DownloadSession 写拒绝失败块两处近似重复（提交称统一实为复制）",
+      "category": "maintainability",
+      "severity": "low",
+      "confidence": 80,
+      "status": "resolved",
+      "disposition": "Refactor",
+      "recommendation_validation": "Strongly Supported",
+      "first_seen_commit": "291b77a",
+      "last_verified_commit": "a9d397c",
+      "resolved_commit": "a9d397c",
+      "guard": null
+    },
+    "AUD-DEP-007": {
+      "title": "Dependabot 合并提交 f6f4d18 无 Conventional 前缀",
+      "category": "convention",
+      "severity": "informational",
+      "confidence": 90,
+      "status": "resolved",
+      "disposition": "Document",
+      "recommendation_validation": "Strongly Supported",
+      "first_seen_commit": "f6f4d18",
+      "last_verified_commit": "1ce42d1",
+      "resolved_commit": "1ce42d1",
+      "guard": "运维习惯：Dependabot squash + chore(deps): 前缀"
     }
   }
 }
