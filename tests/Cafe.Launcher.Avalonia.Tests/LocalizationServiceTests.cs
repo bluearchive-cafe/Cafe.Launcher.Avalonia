@@ -463,6 +463,36 @@ public sealed class LocalizationServiceTests
         Assert.Equal(expectedEstimatedText, service.F("estimatedTimeRemaining", "1 minute"));
     }
 
+    [Fact]
+    public async Task T_WhenLanguageAppliedOffUIThread_ResolvesBySelectedLanguage()
+    {
+        // 生产路径回归：启动序列可能在非 UI 线程调用 SetLanguage。T() 必须按
+        // CurrentLanguage 解析，而不是调用线程的 CurrentUICulture（否则 XAML 目录
+        // 绑定会按系统文化回退，导致界面语言混杂、法务信息等按错误语言显示）。
+        var testResourcesField = typeof(LocalizationService)
+            .GetField("testResources", System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Static)!;
+        var savedTestResources = testResourcesField.GetValue(null);
+        var savedUiCulture = CultureInfo.CurrentUICulture;
+        var savedDefaultUiCulture = CultureInfo.DefaultThreadCurrentUICulture;
+        try
+        {
+            testResourcesField.SetValue(null, null);
+            CultureInfo.CurrentUICulture = new CultureInfo("zh-CN");
+            CultureInfo.DefaultThreadCurrentUICulture = CultureInfo.CurrentUICulture;
+
+            var service = new LocalizationService();
+            await Task.Run(() => service.SetLanguage(LauncherLanguages.Japanese));
+
+            Assert.Equal("設定", service.T("settings"));
+        }
+        finally
+        {
+            CultureInfo.CurrentUICulture = savedUiCulture;
+            CultureInfo.DefaultThreadCurrentUICulture = savedDefaultUiCulture;
+            testResourcesField.SetValue(null, savedTestResources);
+        }
+    }
+
     private static string[] GetFormatPlaceholders(string value)
     {
         return Regex.Matches(value, @"\{\d+(?:[^}]*)\}")

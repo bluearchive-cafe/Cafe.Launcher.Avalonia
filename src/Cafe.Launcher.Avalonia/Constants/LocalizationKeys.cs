@@ -1189,6 +1189,9 @@ public static class LocalizationKeys
     /// <summary>Resource key for <c>settingsGroupThemeColor</c>.</summary>
     public const string SettingsGroupThemeColor = "settingsGroupThemeColor";
 
+    /// <summary>Resource key for <c>settingsGroupUpdates</c>.</summary>
+    public const string SettingsGroupUpdates = "settingsGroupUpdates";
+
     /// <summary>Resource key for <c>settingsSaved</c>.</summary>
     public const string SettingsSaved = "settingsSaved";
 

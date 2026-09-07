@@ -41,7 +41,7 @@ public sealed class PatchUrlGroupServiceTests
     }
 
     [Fact]
-    public void RewriteCdnConfig_WhenCafe_RewritesPrimaryAndBackupCdn()
+    public void RewriteCdnConfig_WhenCafe_RewritesPrimaryAndUsesPrimaryForBackup()
     {
         var service = new PatchUrlGroupService();
         var cdn = new CdnConfigResponse
@@ -53,7 +53,23 @@ public sealed class PatchUrlGroupServiceTests
         var result = service.RewriteCdnConfig(cdn, PatchUrlGroups.Cafe);
 
         Assert.Equal("https://launcher-pkg-ba-jp.bluearchive.cafe", result.PrimaryCdn);
-        Assert.Equal("https://launcher-pkg-ba-jp.bluearchive.cafe/backup", result.BackUpCdn);
+        Assert.Equal(result.PrimaryCdn, result.BackUpCdn);
+    }
+
+    [Fact]
+    public void RewriteCdnConfig_WhenOfficial_KeepsDistinctPrimaryAndBackup()
+    {
+        var service = new PatchUrlGroupService();
+        var cdn = new CdnConfigResponse
+        {
+            PrimaryCdn = "https://launcher-pkg-ba-jp.yo-star.com",
+            BackUpCdn = "https://launcher-pkg-ba-jp.yo-star.com/backup"
+        };
+
+        var result = service.RewriteCdnConfig(cdn, PatchUrlGroups.Official);
+
+        Assert.Equal("https://launcher-pkg-ba-jp.yo-star.com", result.PrimaryCdn);
+        Assert.Equal("https://launcher-pkg-ba-jp.yo-star.com/backup", result.BackUpCdn);
     }
 
     [Fact]

@@ -52,7 +52,7 @@ public sealed class LauncherApiClientTests
     }
 
     [Fact]
-    public void RewriteCdnConfig_WhenCafe_RewritesPackageHosts()
+    public void RewriteCdnConfig_WhenCafe_RewritesPrimaryAndUsesPrimaryForBackup()
     {
         using var client = new LauncherApiClient(new HttpClientHandler(), new AuthorizationHeaderFactory(), new PatchUrlGroupService());
         var response = new CdnConfigResponse
@@ -64,7 +64,7 @@ public sealed class LauncherApiClientTests
         var result = client.RewriteCdnConfig(response, PatchUrlGroups.Cafe);
 
         Assert.Equal("https://launcher-pkg-ba-jp.bluearchive.cafe", result.PrimaryCdn);
-        Assert.Equal("https://launcher-pkg-ba-jp.bluearchive.cafe/backup", result.BackUpCdn);
+        Assert.Equal(result.PrimaryCdn, result.BackUpCdn);
     }
 
     [Fact]

@@ -7,6 +7,17 @@
              x:Name="SettingsRoot"
              x:DataType="vm:MainWindowViewModel">
     <StackPanel>
+        <StackPanel Classes="settings-group">
+            <TextBlock Text="{Binding Shell.I18n[settingsGroupUpdates]}" Classes="group-title"/>
+
+            <controls:SettingSelect ShowTopDivider="False"
+                                    Title="{Binding Shell.I18n[launcherUpdateChannel]}"
+                                    Description="{Binding Shell.I18n[launcherUpdateChannelDescription]}"
+                                    AutomationName="{Binding Shell.I18n[launcherUpdateChannel]}"
+                                    ItemsSource="{Binding Settings.Options.UpdateChannel}"
+                                    SelectedValue="{Binding Settings.Editor.Current.UpdateChannel, Mode=TwoWay}"/>
+        </StackPanel>
+
         <StackPanel Classes="settings-group" IsVisible="{Binding IsPlatformSpecificSettingsVisible}">
             <TextBlock Text="{Binding Shell.I18n[settingsGroupGameRuntime]}" Classes="group-title"/>
 

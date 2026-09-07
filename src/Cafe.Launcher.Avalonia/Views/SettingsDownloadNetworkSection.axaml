@@ -28,12 +28,6 @@
                                     AutomationName="{Binding Shell.I18n[downloadSpeedLimit]}"
                                     ItemsSource="{Binding Settings.Options.DownloadSpeedLimit}"
                                     SelectedValue="{Binding Settings.Editor.Current.DownloadSpeedLimit, Mode=TwoWay}"/>
-
-            <controls:SettingSelect Title="{Binding Shell.I18n[launcherUpdateChannel]}"
-                                    Description="{Binding Shell.I18n[launcherUpdateChannelDescription]}"
-                                    AutomationName="{Binding Shell.I18n[launcherUpdateChannel]}"
-                                    ItemsSource="{Binding Settings.Options.UpdateChannel}"
-                                    SelectedValue="{Binding Settings.Editor.Current.UpdateChannel, Mode=TwoWay}"/>
         </StackPanel>
 
     </StackPanel>

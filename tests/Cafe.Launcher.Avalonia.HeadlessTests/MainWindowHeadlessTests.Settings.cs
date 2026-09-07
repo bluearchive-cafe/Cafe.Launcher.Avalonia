@@ -335,9 +335,12 @@ public sealed partial class MainWindowHeadlessTests
             .Where(row => row.IsEffectivelyVisible)
             .ToArray();
 
-        // 日志级别 / 日志文件操作 / 重置设置三行。
-        Assert.Equal(3, rows.Length);
-        var levelRow = Assert.Single(rows, row => row.GetVisualDescendants().OfType<ComboBox>().Any());
+        // 更新通道 / 日志级别 / 日志文件操作 / 重置设置四行。
+        Assert.Equal(4, rows.Length);
+        var levelRow = Assert.Single(
+            rows,
+            row => row.GetVisualDescendants().OfType<ComboBox>().Any()
+                && row.Title == context.ViewModel.Shell.I18n["logLevel"]);
         var levelControl = levelRow.GetVisualDescendants().OfType<ComboBox>().Single();
         var logRow = Assert.Single(rows, row => row.GetVisualDescendants().OfType<Button>().Count() == 3);
         var logButtons = logRow
@@ -361,7 +364,7 @@ public sealed partial class MainWindowHeadlessTests
         var logPresenterRight = logPresenterTopLeft.Value.X + logPresenter.Bounds.Width;
         Assert.InRange(Math.Abs(levelRight - logPresenterRight), 0, 1);
 
-        var description = rows[1].FindControl<TextBlock>("RowDescription");
+        var description = logRow.FindControl<TextBlock>("RowDescription");
         Assert.NotNull(description);
         var descriptionTopLeft = description!.TranslatePoint(default, context.Window);
         var firstButtonTopLeft = logButtons[0].TranslatePoint(default, context.Window);
