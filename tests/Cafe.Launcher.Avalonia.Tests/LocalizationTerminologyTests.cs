@@ -156,9 +156,17 @@ public sealed class LocalizationTerminologyTests
             await Task.Delay(10);
         }
 
-        for (var guard = 0; !viewModel.IsLastStep && guard < 10; guard++)
+        for (var guard = 0; !viewModel.IsLastStep && guard < 100; guard++)
         {
-            viewModel.NextCommand.Execute(null);
+            if (viewModel.CanGoNext)
+            {
+                viewModel.NextCommand.Execute(null);
+            }
+            else
+            {
+                Assert.True(DateTime.UtcNow < statusDeadline, "向导门控未在 5 秒预算内就绪。");
+                await Task.Delay(10);
+            }
         }
 
         Assert.True(viewModel.IsLastStep, "向导未在上限步数内推进到末步。");
