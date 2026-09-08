@@ -167,7 +167,7 @@
       "disposition": "Refactor",
       "recommendation_validation": "Plausible",
       "first_seen_commit": "4ed11c3",
-      "last_verified_commit": "b1f62fa",
+      "last_verified_commit": "f6d44a7",
       "resolved_commit": null,
       "guard": null
     },
@@ -180,7 +180,7 @@
       "disposition": "Refactor",
       "recommendation_validation": "Plausible",
       "first_seen_commit": "4ed11c3",
-      "last_verified_commit": "b1f62fa",
+      "last_verified_commit": "f6d44a7",
       "resolved_commit": null,
       "guard": null,
       "note": "2026-09-08 复核：IModalPresenter 类型已不存在（grep 零命中），modal 呈现已重构为根 ViewModels/ 的 IModalContentViewModel/ModalEntry/ModalKind/ModalHostViewModel 契约——该半项 superseded。剩余仅 RemoteContentViewModel（714 行）拆分，仍暂缓。"
@@ -207,7 +207,7 @@
       "disposition": "Accept Risk",
       "recommendation_validation": "Needs Architecture Decision",
       "first_seen_commit": "4ed11c3",
-      "last_verified_commit": "b1f62fa",
+      "last_verified_commit": "f6d44a7",
       "resolved_commit": null,
       "guard": "年度重审 + 调用面收窄"
     },
@@ -220,7 +220,7 @@
       "disposition": "No Action",
       "recommendation_validation": "Plausible",
       "first_seen_commit": "4ed11c3",
-      "last_verified_commit": "b1f62fa",
+      "last_verified_commit": "f6d44a7",
       "resolved_commit": null,
       "guard": null
     },
@@ -592,6 +592,34 @@
       "resolved_commit": null,
       "guard": null,
       "note": "f2430b8 把 MaxBufferedJsonBytes 的摘要块插在方法原摘要与方法声明之间，形成连续两个 /// 文档块；C# 将整块文档挂到最近的声明（常量），于是公共 DeserializeJsonAsync 变无文档、常量带两个 summary 元素。仓库未开 GenerateDocumentationFile，编译器不告警，CI 无从拦截。已修复（工作树待提交）：常量摘要随常量、方法摘要随方法，文本不变。"
+    },
+    "AUD-REL-005": {
+      "title": "隔离报告模式对 JSON-null 的 UiCulture 不设防：未捕获 ArgumentNullException 使崩溃报告进程无界面退出",
+      "category": "reliability",
+      "severity": "low",
+      "confidence": 95,
+      "status": "resolved",
+      "disposition": "Fix",
+      "recommendation_validation": "Verified",
+      "first_seen_commit": "f6d44a7",
+      "last_verified_commit": "f6d44a7",
+      "resolved_commit": "d9f2184",
+      "guard": "CrashReportBootstrapTests（9 例：null/空白/非法/合法文化 + 快照缺失/畸形/持久化/null-UiCulture 回归）",
+      "note": "CrashReportApp.axaml.cs:34-48 的 ApplyReportCulture 只捕获 CultureNotFoundException；System.Text.Json 对非空注解不作校验，快照里 \"UiCulture\": null 会被赋给 string 属性，CultureInfo.GetCultureInfo(null) 抛 ArgumentNullException，逃出 OnFrameworkInitializationCompleted 后被 Program.RunCrashReporter 吞掉，进程以 1 退出且不显示任何窗口——违反 ADR-019「任何一次不可恢复崩溃都有界面」。三向实测（Debug 构建 + --crash-report）：null 文化 6 秒内自行退出、无窗口；\"en\" 与 \"xx-INVALID\" 均保持窗口存活；OccurredAt/Id 为 null、缺 required 成员、非法 JSON 均正确落到「快照不可读」报告。合并覆盖率：CrashReporterLauncher.cs 0/22、CrashReportApp.axaml.cs 0/38、CrashReportWindow.axaml.cs 12/50，是特性中唯一零覆盖的链路。 修复（d9f2184）：新增 Services/Diagnostics/CrashReportBootstrap.cs（Resolve/ApplyCulture/CreateUnreadableReport），ApplyCulture 参数改 string? 并加 string.IsNullOrWhiteSpace 早返回（编译期即强制守卫），CrashReportApp 委托该助手；新增 CrashReportBootstrapTests 9 例。两向实测：去掉守卫后 3 例失败（ArgumentNullException: Value cannot be null (Parameter name)），恢复后 9/9 通过。"
+    },
+    "AUD-MTN-010": {
+      "title": "design-system-spec.md §10 仍写「5 个基线」并漏列崩溃窗口基线（实际 6 个）",
+      "category": "maintainability/doc-drift",
+      "severity": "low",
+      "confidence": 95,
+      "status": "resolved",
+      "disposition": "Fix",
+      "recommendation_validation": "Verified",
+      "first_seen_commit": "f6d44a7",
+      "last_verified_commit": "f6d44a7",
+      "resolved_commit": "78c7d67",
+      "guard": "GoldenBaselineContractTests.Baselines_CommittedBaselinesAndGoldenComparisons_MatchOneToOne",
+      "note": "docs/design/design-system-spec.md:194 逐项列举「壳默认/进度面板/设置覆盖层/确认对话框/Toast」共 5 个基线，而 tests/Cafe.Launcher.Avalonia.HeadlessTests/Baselines/ 现为 6 个 PNG（新增 crash-report-window.png）。f6d44a7 增加了第 6 条基线但未同步该句；走查清单 §3.7 已正确记录崩溃窗口基线，故属单点漂移。 修复（78c7d67）：design-system-spec.md §10 改为「6 个基线（…/崩溃窗口）」；另加基线 1:1 契约测试（Baselines/*.png ↔ GoldenScreenshot.Compare 调用），两向实测：放入 orphan-probe.png 即失败、移除后通过。"
     }
   }
 }
