@@ -214,7 +214,8 @@ internal static class GoldenScreenshot
         }
     }
 
-    private static string FindRepositoryRoot()
+    /// <summary>Repository root, found by walking up to the solution file.</summary>
+    internal static string FindRepositoryRoot()
     {
         var current = new DirectoryInfo(AppContext.BaseDirectory);
         while (current is not null

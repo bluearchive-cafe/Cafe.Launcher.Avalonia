@@ -191,7 +191,7 @@
 
 - **每阶段门禁**：`UiStyleContractTests` 全绿（含新契约）+ 新增测试全绿 + 编译零警告 + `scripts/Test-LocalizationContract.ps1`（涉及新字符串时）+ `.\verify.ps1`；PR 附截图（可见 UI 变更）。
 - **契约测试扩展点**：token 存在性/旧键清零、禁裸色值与 `{StaticResource}` 规则、AA 对比度、覆盖层 Z 序（既有）。
-- **headless 黄金截图**：已接线（`UseHeadlessDrawing=false` + `UseSkia()` + `RenderTargetBitmap`），5 个基线（壳默认/进度面板/设置覆盖层/确认对话框/Toast）平铺存储于 `tests/Cafe.Launcher.Avalonia.HeadlessTests/Baselines/`，阈值 diff（每通道容差 8/255、失配 ≤1%）、`CAFE_GOLDEN_UPDATE=1` 重新生成；字体稳定性：基线固定英文/降动效/Segoe UI，CI（windows-latest）字体集合风险已在 README 记录，漂移时优先重生成基线。P3 视需要扩大。
+- **headless 黄金截图**：已接线（`UseHeadlessDrawing=false` + `UseSkia()` + `RenderTargetBitmap`），6 个基线（壳默认/进度面板/设置覆盖层/确认对话框/Toast/崩溃窗口）平铺存储于 `tests/Cafe.Launcher.Avalonia.HeadlessTests/Baselines/`，阈值 diff（每通道容差 8/255、失配 ≤1%）、`CAFE_GOLDEN_UPDATE=1` 重新生成；字体稳定性：基线固定英文/降动效/Segoe UI，CI（windows-latest）字体集合风险已在 README 记录，漂移时优先重生成基线。P3 视需要扩大。
 - **走查清单**：已落地于 [`design-walkthrough-checklist.md`](./design-walkthrough-checklist.md)（状态矩阵 + §8 豁免区逐项 + P3 表面逐项），P3 每表面完成时人工复核；随本规范共同维护。
 
 ## 11. 有意搁置（Don't-do 清单）
