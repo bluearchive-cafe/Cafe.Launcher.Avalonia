@@ -3,6 +3,7 @@ using System.ComponentModel;
 using System.IO;
 using System.Globalization;
 using System.Text.Json;
+using System.Threading;
 using System.Threading.Tasks;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
@@ -24,6 +25,7 @@ public sealed partial class DebugViewModel : ViewModelBase, IModalContentViewMod
     private readonly ToastService toastService;
     private readonly UnifiedLogger unifiedLogger;
     private readonly IErrorHandlingService errorHandling;
+    private readonly IFatalCrashService fatalCrashService;
     private readonly LauncherSettingsService settingsService;
     private readonly IGameOperationActivity operations;
     private readonly IFilePickerService filePickerService;
@@ -78,6 +80,7 @@ public sealed partial class DebugViewModel : ViewModelBase, IModalContentViewMod
         ToastService toastService,
         UnifiedLogger unifiedLogger,
         IErrorHandlingService errorHandling,
+        IFatalCrashService fatalCrashService,
         LauncherSettingsService settingsService,
         IGameOperationActivity operations,
         ShellViewModel shell,
@@ -87,6 +90,7 @@ public sealed partial class DebugViewModel : ViewModelBase, IModalContentViewMod
         this.toastService = toastService;
         this.unifiedLogger = unifiedLogger;
         this.errorHandling = errorHandling;
+        this.fatalCrashService = fatalCrashService;
         this.settingsService = settingsService;
         this.operations = operations;
         this.shell = shell;
@@ -299,6 +303,37 @@ public sealed partial class DebugViewModel : ViewModelBase, IModalContentViewMod
                 ToastMessage = exception.Message
             });
         LastActionResult = shell.I18n[LocalizationKeys.DebugHandledErrorSimulated];
+    }
+
+    // ── Fatal crash ──────────────────────────────────────────────────────
+
+    /// <summary>
+    /// Routes a simulated unrecoverable failure through the real fatal boundary, so the
+    /// crash window, snapshot, and terminal exit code are exercised exactly as in production.
+    /// </summary>
+    [RelayCommand]
+    private void SimulateFatalCrash()
+    {
+        var exception = new InvalidOperationException(Format(
+            shell.I18n[LocalizationKeys.DebugSimulateFatalCrashMessage],
+            DateTimeOffset.Now.ToString("HH:mm:ss", CultureInfo.CurrentCulture)));
+        LastActionResult = shell.I18n[LocalizationKeys.DebugFatalCrashTriggered];
+        fatalCrashService.HandleFatalCrash("DebugPanel: simulated fatal crash", exception);
+    }
+
+    /// <summary>
+    /// Throws on a dedicated thread so the process-boundary handler runs for real:
+    /// snapshot, isolated reporter launch, and abrupt process termination all happen.
+    /// </summary>
+    [RelayCommand]
+    private void SimulateUnhandledCrash()
+    {
+        var exception = new InvalidOperationException(Format(
+            shell.I18n[LocalizationKeys.DebugSimulateUnhandledCrashMessage],
+            DateTimeOffset.Now.ToString("HH:mm:ss", CultureInfo.CurrentCulture)));
+        LastActionResult = shell.I18n[LocalizationKeys.DebugFatalCrashTriggered];
+        var thread = new Thread(() => throw exception);
+        thread.Start();
     }
 
     // ── Game operations ──────────────────────────────────────────────────

@@ -164,7 +164,7 @@ public sealed partial class MainWindowViewModelTests : IDisposable
                     return Task.CompletedTask;
                 },
                 toastDelayAsync);
-        var debugViewModel = new DebugViewModel(toastService, new UnifiedLogger(Path.Combine(tempDir, Guid.NewGuid().ToString("N"))), errorHandling, settingsService, gameOperationsViewModel, shellViewModel, filePickerService);
+        var debugViewModel = new DebugViewModel(toastService, new UnifiedLogger(Path.Combine(tempDir, Guid.NewGuid().ToString("N"))), errorHandling, new StubFatalCrashService(), settingsService, gameOperationsViewModel, shellViewModel, filePickerService);
         var windowChromeViewModel = new WindowChromeViewModel(
             settingsViewModel, remoteContentViewModel, dialogsViewModel, gameOperationsViewModel,
             debugViewModel);
