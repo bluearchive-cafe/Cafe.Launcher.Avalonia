@@ -95,15 +95,22 @@ public sealed class CrashReportWindowHeadlessTests
         }
     }
 
-    private static CrashReport CreateReport() => new()
+    private static CrashReport CreateReport()
     {
-        Id = "CR-TEST",
-        OccurredAt = new DateTimeOffset(2026, 9, 8, 21, 47, 2, TimeSpan.FromHours(8)),
-        Source = "Test",
-        AppVersion = "1.2.3",
-        OperatingSystem = "Test OS",
-        UiCulture = "en",
-        ExceptionType = nameof(InvalidOperationException),
-        TechnicalDetails = "technical details"
-    };
+        // The window renders the time in local time, so a fixed instant would render a
+        // different string (and break the golden) on a runner in another time zone. Anchor
+        // the report to a fixed wall-clock time in the runner's own offset instead.
+        var wallClock = new DateTime(2026, 9, 8, 21, 47, 2, DateTimeKind.Unspecified);
+        return new CrashReport
+        {
+            Id = "CR-TEST",
+            OccurredAt = new DateTimeOffset(wallClock, TimeZoneInfo.Local.GetUtcOffset(wallClock)),
+            Source = "Test",
+            AppVersion = "1.2.3",
+            OperatingSystem = "Test OS",
+            UiCulture = "en",
+            ExceptionType = nameof(InvalidOperationException),
+            TechnicalDetails = "technical details"
+        };
+    }
 }
