@@ -21,6 +21,7 @@ public sealed class StubFatalCrashService : IFatalCrashService
             OccurredAt = DateTimeOffset.Now,
             Source = origin.ToString(),
             AppVersion = "0.0.0",
+            BuildSha = "stub",
             OperatingSystem = "stub",
             UiCulture = "en",
             ExceptionType = exception.GetType().FullName ?? exception.GetType().Name,

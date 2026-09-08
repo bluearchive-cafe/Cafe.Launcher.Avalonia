@@ -118,6 +118,8 @@ internal static class LauncherStrings
 
     internal static string ContactCustomerSupport => GetRequiredString("contactCustomerSupport");
 
+    internal static string CrashWindowBuild => GetRequiredString("crashWindowBuild");
+
     internal static string CrashWindowCaption => GetRequiredString("crashWindowCaption");
 
     internal static string CrashWindowCopied => GetRequiredString("crashWindowCopied");

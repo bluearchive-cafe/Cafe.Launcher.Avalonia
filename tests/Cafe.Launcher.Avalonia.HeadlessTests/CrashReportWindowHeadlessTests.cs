@@ -82,6 +82,7 @@ public sealed class CrashReportWindowHeadlessTests
             Assert.Equal(HorizontalAlignment.Center, exitButton!.HorizontalContentAlignment);
             Assert.Equal(VerticalAlignment.Center, exitButton.VerticalContentAlignment);
             Assert.Equal("CR-TEST", viewModel.ReportId);
+            Assert.Equal("0123456789abcdef0123456789abcdef01234567", viewModel.Build);
             Assert.Equal("technical details", viewModel.TechnicalDetails);
 
             GoldenScreenshot.Compare(window, "crash-report-window");
@@ -107,6 +108,9 @@ public sealed class CrashReportWindowHeadlessTests
             OccurredAt = new DateTimeOffset(wallClock, TimeZoneInfo.Local.GetUtcOffset(wallClock)),
             Source = "Test",
             AppVersion = "1.2.3",
+            // Fixed value: the window renders the snapshot's commit, so a build-derived SHA
+            // would change the golden on every commit and on the CI merge commit.
+            BuildSha = "0123456789abcdef0123456789abcdef01234567",
             OperatingSystem = "Test OS",
             UiCulture = "en",
             ExceptionType = nameof(InvalidOperationException),

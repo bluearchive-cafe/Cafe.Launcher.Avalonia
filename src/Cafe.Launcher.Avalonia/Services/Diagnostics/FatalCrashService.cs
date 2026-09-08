@@ -111,9 +111,13 @@ internal sealed class FatalCrashService : IFatalCrashService
     {
         try
         {
+            // The build identity is logged with the failure so a log handed over on its own
+            // still says which build crashed (session start carries it too, but a log may be
+            // trimmed to the failing entry).
             logger?.LogAsync(
                     LogEntrySeverity.Fatal,
                     origin.ToSourceLabel(),
+                    message: $"Commit: {BuildInfo.CommitSha}",
                     exception: exception,
                     cancellationToken: CancellationToken.None)
                 .GetAwaiter()
@@ -134,6 +138,7 @@ internal sealed class FatalCrashService : IFatalCrashService
             OccurredAt = now,
             Source = origin.ToSourceLabel(),
             AppVersion = BuildInfo.LauncherVersion,
+            BuildSha = BuildInfo.CommitSha,
             OperatingSystem = Environment.OSVersion.ToString(),
             UiCulture = System.Globalization.CultureInfo.CurrentUICulture.Name,
             ExceptionType = exception.GetType().FullName ?? exception.GetType().Name,

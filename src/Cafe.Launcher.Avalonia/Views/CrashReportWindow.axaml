@@ -162,6 +162,10 @@
                             <TextBlock Text="{Binding VersionLabel}" Foreground="{DynamicResource Crash.Color.Text.Muted}" FontSize="12"/>
                             <TextBlock Text="{Binding Version}" Foreground="{DynamicResource Crash.Color.Text.Body}" FontSize="12" FontWeight="SemiBold"/>
                         </StackPanel>
+                        <StackPanel Orientation="Horizontal" Spacing="{StaticResource Crash.Spacing.Xs}">
+                            <TextBlock Text="{Binding BuildLabel}" Foreground="{DynamicResource Crash.Color.Text.Muted}" FontSize="12"/>
+                            <TextBlock Text="{Binding Build}" Foreground="{DynamicResource Crash.Color.Text.Body}" FontSize="12" FontWeight="SemiBold"/>
+                        </StackPanel>
                     </WrapPanel>
                 </Border>
 

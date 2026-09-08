@@ -21,6 +21,7 @@ public partial class CrashReportWindow : Window
             OccurredAt = DateTimeOffset.Now,
             Source = "Preview",
             AppVersion = Constants.BuildInfo.LauncherVersion,
+            BuildSha = Constants.BuildInfo.CommitSha,
             OperatingSystem = Environment.OSVersion.ToString(),
             UiCulture = System.Globalization.CultureInfo.CurrentUICulture.Name,
             ExceptionType = nameof(InvalidOperationException),

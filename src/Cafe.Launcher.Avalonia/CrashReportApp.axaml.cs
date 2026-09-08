@@ -53,6 +53,7 @@ public partial class CrashReportApp : Application
         OccurredAt = DateTimeOffset.Now,
         Source = "CrashReportMode",
         AppVersion = Constants.BuildInfo.LauncherVersion,
+        BuildSha = Constants.BuildInfo.CommitSha,
         OperatingSystem = Environment.OSVersion.ToString(),
         UiCulture = CultureInfo.CurrentUICulture.Name,
         ExceptionType = nameof(InvalidOperationException),

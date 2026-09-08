@@ -13,6 +13,9 @@ public sealed record CrashReport
 
     public required string AppVersion { get; init; }
 
+    /// <summary>Commit the crashing build was produced from; identifies the exact build.</summary>
+    public required string BuildSha { get; init; }
+
     public required string OperatingSystem { get; init; }
 
     public required string UiCulture { get; init; }

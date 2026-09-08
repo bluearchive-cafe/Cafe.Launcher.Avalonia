@@ -59,6 +59,7 @@ public sealed class CrashReportStore
             OccurredAt = now,
             Source = source,
             AppVersion = BuildInfo.LauncherVersion,
+            BuildSha = BuildInfo.CommitSha,
             OperatingSystem = $"{RuntimeInformation.OSDescription} · {RuntimeInformation.OSArchitecture}",
             UiCulture = CultureInfo.CurrentUICulture.Name,
             ExceptionType = exception.GetType().FullName ?? exception.GetType().Name,
@@ -241,6 +242,7 @@ public sealed class CrashReportStore
             .Append("Crash ID: ").AppendLine(id)
             .Append("Time: ").AppendLine(occurredAt.ToString("O", CultureInfo.InvariantCulture))
             .Append("Version: ").AppendLine(BuildInfo.LauncherVersion)
+            .Append("Commit: ").AppendLine(BuildInfo.CommitSha)
             .Append("OS: ").Append(RuntimeInformation.OSDescription).Append(" · ")
             .AppendLine(RuntimeInformation.OSArchitecture.ToString())
             .Append("Source: ").AppendLine(source)

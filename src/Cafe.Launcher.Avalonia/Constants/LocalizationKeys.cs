@@ -154,6 +154,9 @@ public static class LocalizationKeys
     /// <summary>Resource key for <c>contactCustomerSupport</c>.</summary>
     public const string ContactCustomerSupport = "contactCustomerSupport";
 
+    /// <summary>Resource key for <c>crashWindowBuild</c>.</summary>
+    public const string CrashWindowBuild = "crashWindowBuild";
+
     /// <summary>Resource key for <c>crashWindowCaption</c>.</summary>
     public const string CrashWindowCaption = "crashWindowCaption";
 

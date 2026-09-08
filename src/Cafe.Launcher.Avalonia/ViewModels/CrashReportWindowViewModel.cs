@@ -36,6 +36,10 @@ public sealed class CrashReportWindowViewModel
 
     public string Version => report.AppVersion;
 
+    public string BuildLabel => T(LocalizationKeys.CrashWindowBuild);
+
+    public string Build => report.BuildSha;
+
     public string TechnicalDetailsLabel => T(LocalizationKeys.CrashWindowTechnicalDetails);
 
     public string TechnicalDetails => report.TechnicalDetails;

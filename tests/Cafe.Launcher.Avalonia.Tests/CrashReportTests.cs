@@ -24,6 +24,8 @@ public sealed class CrashReportTests : IDisposable
         Assert.NotNull(restored);
         Assert.Equal(report.Id, restored!.Id);
         Assert.Equal("Main", restored.Source);
+        Assert.Equal(Constants.BuildInfo.CommitSha, restored.BuildSha);
+        Assert.Contains($"Commit: {Constants.BuildInfo.CommitSha}", restored.TechnicalDetails, StringComparison.Ordinal);
         Assert.Contains("%USERPROFILE%", restored.TechnicalDetails, StringComparison.Ordinal);
         Assert.DoesNotContain(userProfile, persistedText, StringComparison.OrdinalIgnoreCase);
         Assert.Equal(report.SnapshotPath, restored.SnapshotPath);
