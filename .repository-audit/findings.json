@@ -167,7 +167,7 @@
       "disposition": "Refactor",
       "recommendation_validation": "Plausible",
       "first_seen_commit": "4ed11c3",
-      "last_verified_commit": "259e217",
+      "last_verified_commit": "b1f62fa",
       "resolved_commit": null,
       "guard": null
     },
@@ -180,7 +180,7 @@
       "disposition": "Refactor",
       "recommendation_validation": "Plausible",
       "first_seen_commit": "4ed11c3",
-      "last_verified_commit": "6bd2a8f",
+      "last_verified_commit": "b1f62fa",
       "resolved_commit": null,
       "guard": null,
       "note": "2026-09-08 复核：IModalPresenter 类型已不存在（grep 零命中），modal 呈现已重构为根 ViewModels/ 的 IModalContentViewModel/ModalEntry/ModalKind/ModalHostViewModel 契约——该半项 superseded。剩余仅 RemoteContentViewModel（714 行）拆分，仍暂缓。"
@@ -207,7 +207,7 @@
       "disposition": "Accept Risk",
       "recommendation_validation": "Needs Architecture Decision",
       "first_seen_commit": "4ed11c3",
-      "last_verified_commit": "259e217",
+      "last_verified_commit": "b1f62fa",
       "resolved_commit": null,
       "guard": "年度重审 + 调用面收窄"
     },
@@ -220,7 +220,7 @@
       "disposition": "No Action",
       "recommendation_validation": "Plausible",
       "first_seen_commit": "4ed11c3",
-      "last_verified_commit": "259e217",
+      "last_verified_commit": "b1f62fa",
       "resolved_commit": null,
       "guard": null
     },
@@ -532,8 +532,8 @@
       "disposition": "Add Guard",
       "recommendation_validation": "Verified",
       "first_seen_commit": "6bd2a8f",
-      "last_verified_commit": "6bd2a8f",
-      "resolved_commit": null,
+      "last_verified_commit": "b1f62fa",
+      "resolved_commit": "ce9c98c",
       "guard": "build.yml 顶层已补 permissions: contents: read（与 release.yml 一致）",
       "note": "release.yml 已做最小权限（顶层 contents:read，发布 job 才 contents:write），但 build.yml 无任何 permissions 块，push 到 main 时沿用默认仓库级 token（含写权限）。该 job 只 checkout/build/test/upload-artifact，未实际使用写权限，故未见利用路径——属防御性最小权限加固。已修复（工作树待提交）：顶层级加 permissions: contents: read。"
     },
@@ -546,8 +546,8 @@
       "disposition": "Document",
       "recommendation_validation": "Verified",
       "first_seen_commit": "6bd2a8f",
-      "last_verified_commit": "6bd2a8f",
-      "resolved_commit": null,
+      "last_verified_commit": "b1f62fa",
+      "resolved_commit": "ce9c98c",
       "guard": null,
       "note": "PROJECT_CONVENTIONS.md 为仓库规则 #1，其 §12 工具链表写 Avalonia 12.1.1、Serilog/Sinks/(latest)、Material.Icons.Avalonia (latest)；实际 Directory.Packages.props 为 Avalonia 12.1.2、Serilog 4.4.0、Sinks.Async 2.1.0、Sinks.File 7.0.0、Material.Icons.Avalonia 3.0.2、MEDI 10.0.11。THIRD-PARTY-NOTICES.md 已与 props 一致（12.1.2），仅该约定文档仍陈旧。已修复（工作树待提交）：§12 表钉为 props 实际版本，并加批注「版本以 Directory.Packages.props 为准」。"
     },
@@ -557,13 +557,13 @@
       "severity": "low",
       "confidence": 92,
       "status": "resolved",
-      "disposition": "Document",
-      "recommendation_validation": "Verified",
+      "disposition": "Add Guard",
+      "recommendation_validation": "Experimentally Verified",
       "first_seen_commit": "6bd2a8f",
-      "last_verified_commit": "6bd2a8f",
+      "last_verified_commit": "b1f62fa",
       "resolved_commit": null,
-      "guard": null,
-      "note": "scripts/New-WindowsInstaller.ps1:124 强制 Inno Setup 7.0+（throw + 注释：Inno 6 无法编译 NativeInt PascalScript 类型），release.yml:213-248 从 jrsoftware/issrc GitHub Release 下载固定版并 gh release verify-asset 校验；但 README.md:45 写「6.3 或更高」、AGENTS.md:21 写「requires Inno Setup 6.3+」、CLAUDE.md:70 写「6.3 or newer (7.x recommended)」、CLAUDE.md:76 声称 CI「Inno Setup via Chocolatey」。已修复（工作树待提交）：README/AGENTS/CLAUDE 统一为 7.0+，CLAUDE CI 描述改为 issrc 固定版 + verify-asset。"
+      "guard": "InstallerContractTests.CurrentStateDocs_NeverDeclareAnInnoSetupVersionBelowTheEnforcedMinimum：从脚本提取 [version] 最小版本，文档中任何 Inno Setup 版本声明不得低于它（两向实测：6.3 失败 / 7.0 通过）",
+      "note": "scripts/New-WindowsInstaller.ps1:124 强制 Inno Setup 7.0+（throw + 注释：Inno 6 无法编译 NativeInt PascalScript 类型），release.yml:213-248 从 jrsoftware/issrc GitHub Release 下载固定版并 gh release verify-asset 校验；但 README.md:45 写「6.3 或更高」、AGENTS.md:21 写「requires Inno Setup 6.3+」、CLAUDE.md:70 写「6.3 or newer (7.x recommended)」、CLAUDE.md:76 声称 CI「Inno Setup via Chocolatey」。已修复（工作树待提交）：README/AGENTS/CLAUDE 统一为 7.0+，CLAUDE CI 描述改为 issrc 固定版 + verify-asset。2026-09-08 delta 复审：该修复只覆盖 4/6 处，PROJECT_CONVENTIONS.md:230 与 .repository-audit/repository-map.md:38 仍写 6.3+（§12 恰是同日 AUD-MTN-007 刚修过的同一张表），故重新打开；本轮已补齐这 2 处（工作树待提交）并新增文档版本守卫。"
     },
     "AUD-PERF-007": {
       "title": "RemoteHttpRequestService.DeserializeJsonAsync 响应体无尺寸上限（无界 MemoryStream 缓冲）",
@@ -574,10 +574,24 @@
       "disposition": "Fix",
       "recommendation_validation": "Strongly Supported",
       "first_seen_commit": "6bd2a8f",
-      "last_verified_commit": "6bd2a8f",
-      "resolved_commit": null,
+      "last_verified_commit": "b1f62fa",
+      "resolved_commit": "f2430b8",
       "guard": "LauncherApiClientTests 新增 2 个超限守卫测试（Content-Length 预检 + chunked 流式累计）",
       "note": "RemoteHttpRequestService.cs:92-97 将远程响应体 CopyToAsync 到无界 MemoryStream 后再 JSON 解析，仅 ContentLength 用于错误消息、无任何上限钳制。该函数用于 manifest/API/配置等小元数据（注释即此假设），但若远端（CDN/镜像，用户可切换 patchUrlGroup 或经代理）错误返回超大响应，启动期将缓冲整段（内存耗尽/长时间阻塞）。已修复（工作树待提交）：新增 MaxBufferedJsonBytes=64MiB 上限——Content-Length 预检 + 无长度（chunked）流式累计钳制，超限抛 HttpRequestException 带 url/status/content-type 上下文；内部重载供测试以小上限注入；全量单元 1448 过/2 跳。"
+    },
+    "AUD-MTN-009": {
+      "title": "f2430b8 插入常量摘要块使 DeserializeJsonAsync 丢失 XML 文档（常量带两个 summary，公共方法无文档）",
+      "category": "maintainability",
+      "severity": "low",
+      "confidence": 95,
+      "status": "resolved",
+      "disposition": "Fix",
+      "recommendation_validation": "Verified",
+      "first_seen_commit": "f2430b8",
+      "last_verified_commit": "b1f62fa",
+      "resolved_commit": null,
+      "guard": null,
+      "note": "f2430b8 把 MaxBufferedJsonBytes 的摘要块插在方法原摘要与方法声明之间，形成连续两个 /// 文档块；C# 将整块文档挂到最近的声明（常量），于是公共 DeserializeJsonAsync 变无文档、常量带两个 summary 元素。仓库未开 GenerateDocumentationFile，编译器不告警，CI 无从拦截。已修复（工作树待提交）：常量摘要随常量、方法摘要随方法，文本不变。"
     }
   }
 }
