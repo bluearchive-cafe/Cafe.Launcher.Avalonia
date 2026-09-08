@@ -8,10 +8,9 @@
         Icon="/Assets/app-icon.ico"
         Title="{Binding WindowTitle}"
         Width="700"
-        Height="540"
-        MinWidth="520"
-        MinHeight="460"
-        CanResize="True"
+        SizeToContent="Height"
+        MaxHeight="720"
+        CanResize="False"
         WindowStartupLocation="CenterScreen"
         Background="{DynamicResource Crash.Color.Window.Background}">
     <!-- 豁免：隔离报告模式只用最小 CrashReportApp 启动，主 App 的资源字典可能不可用，
@@ -41,6 +40,8 @@
                     <SolidColorBrush x:Key="Crash.Color.Danger.Hover" Color="#FFA9242D"/>
                     <SolidColorBrush x:Key="Crash.Color.Danger.Pressed" Color="#FF8F1F27"/>
                     <SolidColorBrush x:Key="Crash.Color.OnDanger" Color="#FFFFFFFF"/>
+                    <SolidColorBrush x:Key="Crash.Color.Accent" Color="#FF3D6BC6"/>
+                    <SolidColorBrush x:Key="Crash.Color.Surface.Subtle.Pressed" Color="#FFE3EBF4"/>
                 </ResourceDictionary>
                 <ResourceDictionary x:Key="Dark">
                     <SolidColorBrush x:Key="Crash.Color.Window.Background" Color="#FF161C26"/>
@@ -56,6 +57,8 @@
                     <SolidColorBrush x:Key="Crash.Color.Danger.Hover" Color="#FFE06B73"/>
                     <SolidColorBrush x:Key="Crash.Color.Danger.Pressed" Color="#FFBB414B"/>
                     <SolidColorBrush x:Key="Crash.Color.OnDanger" Color="#FF171012"/>
+                    <SolidColorBrush x:Key="Crash.Color.Accent" Color="#FF8CB4F0"/>
+                    <SolidColorBrush x:Key="Crash.Color.Surface.Subtle.Pressed" Color="#FF27313E"/>
                 </ResourceDictionary>
             </ResourceDictionary.ThemeDictionaries>
         </ResourceDictionary>
@@ -68,6 +71,8 @@
             <Setter Property="Padding" Value="16,8"/>
             <Setter Property="CornerRadius" Value="{StaticResource Crash.Radius.Control}"/>
             <Setter Property="FontWeight" Value="SemiBold"/>
+            <Setter Property="HorizontalContentAlignment" Value="Center"/>
+            <Setter Property="VerticalContentAlignment" Value="Center"/>
         </Style>
         <Style Selector="Button.crash-secondary">
             <Setter Property="Foreground" Value="{DynamicResource Crash.Color.Text.Primary}"/>
@@ -88,6 +93,19 @@
             <Setter Property="Background" Value="{DynamicResource Crash.Color.Danger.Pressed}"/>
             <Setter Property="BorderBrush" Value="{DynamicResource Crash.Color.Danger.Pressed}"/>
         </Style>
+        <!-- 三级（subtle）动作：无边框、透明底、accent 文字，用中性填充表达 hover/pressed。 -->
+        <Style Selector="Button.crash-subtle">
+            <Setter Property="MinWidth" Value="0"/>
+            <Setter Property="Foreground" Value="{DynamicResource Crash.Color.Accent}"/>
+            <Setter Property="Background" Value="Transparent"/>
+            <Setter Property="BorderBrush" Value="Transparent"/>
+        </Style>
+        <Style Selector="Button.crash-subtle:pointerover">
+            <Setter Property="Background" Value="{DynamicResource Crash.Color.Surface.Subtle}"/>
+        </Style>
+        <Style Selector="Button.crash-subtle:pressed">
+            <Setter Property="Background" Value="{DynamicResource Crash.Color.Surface.Subtle.Pressed}"/>
+        </Style>
     </Window.Styles>
 
     <Grid RowDefinitions="*,Auto">
@@ -97,6 +115,7 @@
                     <Border Width="44"
                             Height="44"
                             CornerRadius="22"
+                            VerticalAlignment="Top"
                             Background="{DynamicResource Crash.Color.Surface.Danger}">
                         <materialIcons:MaterialIcon Kind="AlertCircle"
                                                     Width="24"
@@ -117,6 +136,7 @@
                                    TextWrapping="Wrap"/>
                         <TextBlock Text="{Binding Description}"
                                    MaxWidth="560"
+                                   HorizontalAlignment="Left"
                                    Foreground="{DynamicResource Crash.Color.Text.Body}"
                                    FontSize="15"
                                    LineHeight="23"
@@ -127,23 +147,26 @@
                 <Border Padding="14,12"
                         CornerRadius="{StaticResource Crash.Radius.Panel}"
                         Background="{DynamicResource Crash.Color.Surface.Subtle}">
-                    <Grid ColumnDefinitions="*,Auto,Auto" ColumnSpacing="{StaticResource Crash.Spacing.Xxl}">
-                        <StackPanel Spacing="2">
+                    <WrapPanel Orientation="Horizontal"
+                               ItemSpacing="{StaticResource Crash.Spacing.Xl}"
+                               LineSpacing="{StaticResource Crash.Spacing.Sm}">
+                        <StackPanel Orientation="Horizontal" Spacing="{StaticResource Crash.Spacing.Xs}">
                             <TextBlock Text="{Binding ReportIdLabel}" Foreground="{DynamicResource Crash.Color.Text.Muted}" FontSize="12"/>
                             <TextBlock Text="{Binding ReportId}" Foreground="{DynamicResource Crash.Color.Text.Body}" FontSize="12" FontWeight="SemiBold"/>
                         </StackPanel>
-                        <StackPanel Grid.Column="1" Spacing="2">
+                        <StackPanel Orientation="Horizontal" Spacing="{StaticResource Crash.Spacing.Xs}">
                             <TextBlock Text="{Binding TimeLabel}" Foreground="{DynamicResource Crash.Color.Text.Muted}" FontSize="12"/>
                             <TextBlock Text="{Binding Time}" Foreground="{DynamicResource Crash.Color.Text.Body}" FontSize="12" FontWeight="SemiBold"/>
                         </StackPanel>
-                        <StackPanel Grid.Column="2" Spacing="2">
+                        <StackPanel Orientation="Horizontal" Spacing="{StaticResource Crash.Spacing.Xs}">
                             <TextBlock Text="{Binding VersionLabel}" Foreground="{DynamicResource Crash.Color.Text.Muted}" FontSize="12"/>
                             <TextBlock Text="{Binding Version}" Foreground="{DynamicResource Crash.Color.Text.Body}" FontSize="12" FontWeight="SemiBold"/>
                         </StackPanel>
-                    </Grid>
+                    </WrapPanel>
                 </Border>
 
                 <Expander x:Name="TechnicalDetailsExpander"
+                          HorizontalAlignment="Stretch"
                           Header="{Binding TechnicalDetailsLabel}"
                           IsExpanded="False"
                           AutomationProperties.Name="{Binding TechnicalDetailsLabel}">
@@ -153,7 +176,7 @@
                              Padding="12"
                              AcceptsReturn="True"
                              IsReadOnly="True"
-                             TextWrapping="NoWrap"
+                             TextWrapping="Wrap"
                              FontFamily="Consolas, Cascadia Mono"
                              FontSize="12"
                              Text="{Binding TechnicalDetails}"/>
@@ -166,7 +189,7 @@
                 BorderBrush="{DynamicResource Crash.Color.Hairline}"
                 BorderThickness="0,1,0,0">
             <Grid ColumnDefinitions="*,Auto" ColumnSpacing="{StaticResource Crash.Spacing.Sm}">
-                <Button Classes="crash-action crash-secondary"
+                <Button Classes="crash-action crash-subtle"
                         HorizontalAlignment="Left"
                         Content="{Binding OpenLogsText}"
                         Click="OnOpenLogsClick"/>
