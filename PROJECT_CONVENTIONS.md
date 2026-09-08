@@ -213,11 +213,20 @@ AI 辅助开发规范 —— 本文件为所有 AI 编码助手（Claude Code、
 | 工具/库 | 版本 | 用途 |
 |---|---|---|
 | .NET SDK | 10.0.x | Runtime |
-| Avalonia | 12.1.1 | UI Framework |
+| Avalonia / Avalonia.Desktop | 12.1.2 | UI Framework |
+| Avalonia.Themes.Fluent | 12.1.2 | Fluent 主题 |
+| Avalonia.Headless.XUnit | 12.1.2 | Headless UI testing |
 | CommunityToolkit.Mvvm | 8.4.2 | MVVM source generators |
-| Material.Icons.Avalonia | (latest) | Icon library |
-| Serilog + Sinks.Async + Sinks.File | (latest) | Logging pipeline |
-| xUnit v3 | 3.2.2 | Test framework |
-| Avalonia.Headless.XUnit | 12.1.1 | Headless UI testing |
+| Material.Icons.Avalonia | 3.0.2 | Icon library |
+| Microsoft.Extensions.DependencyInjection | 10.0.11 | DI 容器 |
+| Shirasagi0012.MaterialColorUtilities | 0.2.0 | Material 色彩工具 |
+| Serilog | 4.4.0 | Logging pipeline |
+| Serilog.Sinks.Async | 2.1.0 | 异步日志 sink |
+| Serilog.Sinks.File | 7.0.0 | 文件日志 sink |
+| xunit.v3 | 3.2.2 | Test framework |
+| xunit.runner.visualstudio | 3.1.5 | xUnit VS 适配器 |
+| Microsoft.NET.Test.Sdk | 18.9.0 | 测试宿主 |
 | coverlet.msbuild | 10.0.1 | Code coverage |
 | Inno Setup | 6.3+ | Windows installer |
+
+> 版本以 `Directory.Packages.props` 中声明的为准；升级依赖时同步更新本表，并再生 `THIRD-PARTY-NOTICES.md` 与 lock 文件。
