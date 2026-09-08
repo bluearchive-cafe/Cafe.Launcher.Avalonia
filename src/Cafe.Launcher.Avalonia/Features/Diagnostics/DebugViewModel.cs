@@ -318,7 +318,7 @@ public sealed partial class DebugViewModel : ViewModelBase, IModalContentViewMod
             shell.I18n[LocalizationKeys.DebugSimulateFatalCrashMessage],
             DateTimeOffset.Now.ToString("HH:mm:ss", CultureInfo.CurrentCulture)));
         LastActionResult = shell.I18n[LocalizationKeys.DebugFatalCrashTriggered];
-        fatalCrashService.HandleFatalCrash("DebugPanel: simulated fatal crash", exception);
+        fatalCrashService.HandleFatalCrash(CrashOrigin.DebugSimulation, exception);
     }
 
     /// <summary>

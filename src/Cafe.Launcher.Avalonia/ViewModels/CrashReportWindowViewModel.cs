@@ -48,9 +48,8 @@ public sealed class CrashReportWindowViewModel
 
     public string ExitText => T(LocalizationKeys.CrashWindowExit);
 
-    public string SnapshotDirectory => string.IsNullOrWhiteSpace(report.SnapshotPath)
-        ? Services.LauncherUserDataDirectory.Root
-        : System.IO.Path.GetDirectoryName(report.SnapshotPath) ?? Services.LauncherUserDataDirectory.Root;
+    /// <summary>Directory the "open log folder" action reveals: the launcher log lives there.</summary>
+    public string LogDirectory => Services.LauncherUserDataDirectory.Root;
 
     private static string T(string key) =>
         LauncherStrings.ResourceManager.GetString(key, CultureInfo.CurrentUICulture)

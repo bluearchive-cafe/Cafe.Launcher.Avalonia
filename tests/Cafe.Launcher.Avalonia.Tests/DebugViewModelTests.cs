@@ -190,7 +190,7 @@ public sealed class DebugViewModelTests : IDisposable
         context.ViewModel.SimulateFatalCrashCommand.Execute(null);
 
         var request = Assert.Single(context.FatalCrash.Requests);
-        Assert.Equal("DebugPanel: simulated fatal crash", request.Context);
+        Assert.Equal(CrashOrigin.DebugSimulation, request.Origin);
         Assert.IsType<InvalidOperationException>(request.Exception);
         Assert.Equal("Fatal crash simulated.", context.ViewModel.LastActionResult);
     }

@@ -10,8 +10,12 @@ public interface IFatalCrashService
     /// <summary>Raised once when a healthy UI process can show the independent crash window itself.</summary>
     event Action<CrashReport>? FatalCrashRequested;
 
-    /// <summary>Captures an unrecoverable failure and requests the in-process crash window.</summary>
-    void HandleFatalCrash(string context, Exception exception);
+    /// <summary>
+    /// Captures an unrecoverable failure and requests the in-process crash window. This is
+    /// the only tier-1 entry: it requires a live UI, so process-boundary faults (AppDomain,
+    /// dispatcher, entry escape) go through the isolated reporter instead.
+    /// </summary>
+    void HandleFatalCrash(CrashOrigin origin, Exception exception);
 }
 
 /// <summary>Coordinates first-failure capture, deduplication, logging, and reporter presentation.</summary>
@@ -36,9 +40,9 @@ internal sealed class FatalCrashService : IFatalCrashService
     public event Action<CrashReport>? FatalCrashRequested;
 
     /// <inheritdoc />
-    public void HandleFatalCrash(string context, Exception exception)
+    public void HandleFatalCrash(CrashOrigin origin, Exception exception)
     {
-        var (report, isPrimary) = Capture(context, exception);
+        var (report, isPrimary) = Capture(origin, exception);
         if (!isPrimary)
         {
             return;
@@ -62,18 +66,19 @@ internal sealed class FatalCrashService : IFatalCrashService
     }
 
     /// <summary>Captures a process-boundary failure and starts the isolated reporter once.</summary>
-    internal void HandleUnhandledCrash(string source, Exception exception)
+    internal void HandleUnhandledCrash(CrashOrigin origin, Exception exception)
     {
-        var (report, isPrimary) = Capture(source, exception);
+        var (report, isPrimary) = Capture(origin, exception);
         if (isPrimary)
         {
+            // An empty path means no snapshot could be written anywhere; the reporter then
+            // opens in its "snapshot unavailable" mode instead of leaving no surface at all.
             _ = reporterLauncher.TryLaunch(report.SnapshotPath);
         }
     }
 
-    private (CrashReport Report, bool IsPrimary) Capture(string source, Exception exception)
+    private (CrashReport Report, bool IsPrimary) Capture(CrashOrigin origin, Exception exception)
     {
-        ArgumentException.ThrowIfNullOrWhiteSpace(source);
         ArgumentNullException.ThrowIfNull(exception);
 
         CrashReport report;
@@ -81,34 +86,34 @@ internal sealed class FatalCrashService : IFatalCrashService
         {
             if (primaryReport is not null)
             {
-                reportStore.AppendAdditionalFailure(primaryReport, source, exception);
-                LogFatal(source, exception);
+                reportStore.AppendAdditionalFailure(primaryReport, origin, exception);
+                LogFatal(origin, exception);
                 return (primaryReport, false);
             }
 
             try
             {
-                primaryReport = reportStore.Create(source, exception);
+                primaryReport = reportStore.Create(origin, exception);
             }
             catch
             {
-                primaryReport = CreateTransientReport(source, exception);
+                primaryReport = reportStore.TryPersistTransient(CreateTransientReport(origin, exception));
             }
 
             report = primaryReport;
         }
 
-        LogFatal(source, exception);
+        LogFatal(origin, exception);
         return (report, true);
     }
 
-    private void LogFatal(string source, Exception exception)
+    private void LogFatal(CrashOrigin origin, Exception exception)
     {
         try
         {
             logger?.LogAsync(
                     LogEntrySeverity.Fatal,
-                    source,
+                    origin.ToSourceLabel(),
                     exception: exception,
                     cancellationToken: CancellationToken.None)
                 .GetAwaiter()
@@ -120,14 +125,14 @@ internal sealed class FatalCrashService : IFatalCrashService
         }
     }
 
-    private static CrashReport CreateTransientReport(string source, Exception exception)
+    private static CrashReport CreateTransientReport(CrashOrigin origin, Exception exception)
     {
         var now = DateTimeOffset.Now;
         return new CrashReport
         {
             Id = $"CR-{now:yyyyMMdd-HHmmss}-LOCAL",
             OccurredAt = now,
-            Source = CrashReportStore.Sanitize(source),
+            Source = origin.ToSourceLabel(),
             AppVersion = BuildInfo.LauncherVersion,
             OperatingSystem = Environment.OSVersion.ToString(),
             UiCulture = System.Globalization.CultureInfo.CurrentUICulture.Name,

@@ -44,11 +44,11 @@ public sealed class CrashReportStore
     internal string PrimaryDirectory => primaryDirectory;
 
     /// <summary>Creates and synchronously writes a crash snapshot, falling back to the temp directory.</summary>
-    public CrashReport Create(string source, Exception exception)
+    public CrashReport Create(CrashOrigin origin, Exception exception)
     {
-        ArgumentException.ThrowIfNullOrWhiteSpace(source);
         ArgumentNullException.ThrowIfNull(exception);
 
+        var source = origin.ToSourceLabel();
         var now = DateTimeOffset.Now;
         var id = string.Create(
             CultureInfo.InvariantCulture,
@@ -57,7 +57,7 @@ public sealed class CrashReportStore
         {
             Id = id,
             OccurredAt = now,
-            Source = Sanitize(source),
+            Source = source,
             AppVersion = BuildInfo.LauncherVersion,
             OperatingSystem = $"{RuntimeInformation.OSDescription} · {RuntimeInformation.OSArchitecture}",
             UiCulture = CultureInfo.CurrentUICulture.Name,
@@ -82,6 +82,24 @@ public sealed class CrashReportStore
         catch (Exception fallbackFailure) when (fallbackFailure is IOException or UnauthorizedAccessException)
         {
             throw new AggregateException("Crash snapshot could not be persisted.", primaryFailure, fallbackFailure);
+        }
+    }
+
+    /// <summary>
+    /// Persists an in-memory snapshot after <see cref="Create"/> failed, so the isolated
+    /// reporter still receives a readable file. Returns the report unchanged when the
+    /// temp directory is also unwritable; the caller then reports without a snapshot.
+    /// </summary>
+    internal CrashReport TryPersistTransient(CrashReport report)
+    {
+        ArgumentNullException.ThrowIfNull(report);
+        try
+        {
+            return Write(report, fallbackDirectory);
+        }
+        catch (Exception exception) when (exception is IOException or UnauthorizedAccessException)
+        {
+            return report;
         }
     }
 
@@ -111,8 +129,11 @@ public sealed class CrashReportStore
     }
 
     /// <summary>Records a later failure without replacing or multiplying the primary snapshot.</summary>
-    public void AppendAdditionalFailure(CrashReport report, string source, Exception exception)
+    public void AppendAdditionalFailure(CrashReport report, CrashOrigin origin, Exception exception)
     {
+        ArgumentNullException.ThrowIfNull(report);
+        ArgumentNullException.ThrowIfNull(exception);
+
         if (string.IsNullOrWhiteSpace(report.SnapshotPath))
         {
             return;
@@ -125,7 +146,7 @@ public sealed class CrashReportStore
                 .Append("--- ")
                 .Append(DateTimeOffset.Now.ToString("O", CultureInfo.InvariantCulture))
                 .Append(" [")
-                .Append(Sanitize(source))
+                .Append(origin.ToSourceLabel())
                 .AppendLine("] ---")
                 .AppendLine(Sanitize(exception.ToString()))
                 .ToString();
@@ -140,9 +161,20 @@ public sealed class CrashReportStore
     /// <summary>Removes stale snapshots during a later healthy startup, never on the crash path.</summary>
     public void CleanupOldReports(DateTimeOffset? now = null)
     {
+        PruneDirectory(primaryDirectory, now);
+        if (!string.Equals(primaryDirectory, fallbackDirectory, StringComparison.OrdinalIgnoreCase))
+        {
+            // Snapshots written while the primary directory was unwritable live in the
+            // fallback directory and would otherwise never expire.
+            PruneDirectory(fallbackDirectory, now);
+        }
+    }
+
+    private static void PruneDirectory(string directoryPath, DateTimeOffset? now)
+    {
         try
         {
-            var directory = new DirectoryInfo(primaryDirectory);
+            var directory = new DirectoryInfo(directoryPath);
             if (!directory.Exists)
             {
                 return;

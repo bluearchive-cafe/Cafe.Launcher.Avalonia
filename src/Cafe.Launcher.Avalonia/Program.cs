@@ -117,7 +117,7 @@ sealed class Program
                 logger: null,
                 reportStore,
                 new CrashReporterLauncher());
-            emergencyCrashService.HandleUnhandledCrash("DiagnosticsInitialization", exception);
+            emergencyCrashService.HandleUnhandledCrash(CrashOrigin.DiagnosticsInitialization, exception);
             Environment.ExitCode = 1;
             return;
         }
@@ -154,7 +154,7 @@ sealed class Program
                 exception =>
                 {
                     sessionFailureCaptured = true;
-                    fatalCrashService.HandleUnhandledCrash("Main", exception);
+                    fatalCrashService.HandleUnhandledCrash(CrashOrigin.Main, exception);
                 });
 
             Environment.ExitCode = ResolveSessionExitCode();
@@ -163,7 +163,7 @@ sealed class Program
         {
             if (!sessionFailureCaptured)
             {
-                fatalCrashService.HandleUnhandledCrash("Main", exception);
+                fatalCrashService.HandleUnhandledCrash(CrashOrigin.Main, exception);
             }
 
             Environment.ExitCode = 1;
@@ -196,9 +196,19 @@ sealed class Program
     internal static bool TryGetCrashReportPath(string[] args, out string? path)
     {
         path = null;
-        if (args.Length != 2
-            || !string.Equals(args[0], CrashReportArgument, StringComparison.Ordinal)
-            || string.IsNullOrWhiteSpace(args[1]))
+        if (args.Length == 0 || !string.Equals(args[0], CrashReportArgument, StringComparison.Ordinal))
+        {
+            return false;
+        }
+
+        if (args.Length == 1)
+        {
+            // Bare flag: the crashing process could not persist a snapshot anywhere, so the
+            // reporter opens with its "snapshot unavailable" report rather than no surface.
+            return true;
+        }
+
+        if (args.Length != 2 || string.IsNullOrWhiteSpace(args[1]))
         {
             return false;
         }
@@ -291,7 +301,7 @@ sealed class Program
         {
             var exception = e.ExceptionObject as Exception
                             ?? new InvalidOperationException($"Unhandled object: {e.ExceptionObject}");
-            fatalCrashService.HandleUnhandledCrash("AppDomain.UnhandledException", exception);
+            fatalCrashService.HandleUnhandledCrash(CrashOrigin.AppDomainUnhandledException, exception);
         };
 
         TaskScheduler.UnobservedTaskException += (_, e) =>
@@ -316,7 +326,7 @@ sealed class Program
 
         Dispatcher.UIThread.UnhandledException += (_, e) =>
         {
-            fatalCrashService.HandleUnhandledCrash("Dispatcher.UnhandledException", e.Exception);
+            fatalCrashService.HandleUnhandledCrash(CrashOrigin.DispatcherUnhandledException, e.Exception);
             e.Handled = false;
         };
     }

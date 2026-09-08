@@ -17,15 +17,28 @@ public sealed class CrashReportTests : IDisposable
         var userProfile = Environment.GetFolderPath(Environment.SpecialFolder.UserProfile);
         var secretPath = Path.Combine(userProfile, "private", "file.txt");
 
-        var report = store.Create("TestBoundary", new InvalidOperationException(secretPath));
+        var report = store.Create(CrashOrigin.Main, new InvalidOperationException(secretPath));
         var restored = CrashReportStore.TryRead(report.SnapshotPath);
         var persistedText = File.ReadAllText(report.SnapshotPath, Encoding.UTF8);
 
         Assert.NotNull(restored);
         Assert.Equal(report.Id, restored!.Id);
+        Assert.Equal("Main", restored.Source);
         Assert.Contains("%USERPROFILE%", restored.TechnicalDetails, StringComparison.Ordinal);
         Assert.DoesNotContain(userProfile, persistedText, StringComparison.OrdinalIgnoreCase);
         Assert.Equal(report.SnapshotPath, restored.SnapshotPath);
+    }
+
+    [Theory]
+    [InlineData(CrashOrigin.Main, "Main")]
+    [InlineData(CrashOrigin.AppDomainUnhandledException, "AppDomain.UnhandledException")]
+    [InlineData(CrashOrigin.DispatcherUnhandledException, "Dispatcher.UnhandledException")]
+    [InlineData(CrashOrigin.DiagnosticsInitialization, "DiagnosticsInitialization")]
+    [InlineData(CrashOrigin.DebugSimulation, "DebugPanel")]
+    public void CrashOrigin_ToSourceLabel_UsesStableSnapshotLabels(CrashOrigin origin, string expected)
+    {
+        // Snapshots only ever carry these fixed labels, never caller-supplied text.
+        Assert.Equal(expected, origin.ToSourceLabel());
     }
 
     [Fact]
@@ -37,7 +50,7 @@ public sealed class CrashReportTests : IDisposable
         var fallbackPath = Path.Combine(tempDirectory, "fallback");
         var store = new CrashReportStore(blockedPath, fallbackPath);
 
-        var report = store.Create("Fallback", new IOException("primary unavailable"));
+        var report = store.Create(CrashOrigin.DiagnosticsInitialization, new IOException("primary unavailable"));
 
         Assert.StartsWith(fallbackPath, report.SnapshotPath, StringComparison.OrdinalIgnoreCase);
         Assert.True(File.Exists(report.SnapshotPath));
@@ -74,8 +87,8 @@ public sealed class CrashReportTests : IDisposable
         var launcher = new RecordingCrashReporterLauncher();
         var service = new FatalCrashService(logger, store, launcher);
 
-        service.HandleUnhandledCrash("First", new InvalidOperationException("first"));
-        service.HandleUnhandledCrash("Second", new IOException("second"));
+        service.HandleUnhandledCrash(CrashOrigin.Main, new InvalidOperationException("first"));
+        service.HandleUnhandledCrash(CrashOrigin.AppDomainUnhandledException, new IOException("second"));
 
         Assert.Single(launcher.Paths);
         Assert.Single(Directory.EnumerateFiles(reportDirectory, "*.json"));
@@ -94,11 +107,94 @@ public sealed class CrashReportTests : IDisposable
         CrashReport? requestedReport = null;
         service.FatalCrashRequested += report => requestedReport = report;
 
-        service.HandleFatalCrash("ExplicitFatal", new InvalidOperationException("fatal"));
-        service.HandleFatalCrash("DuplicateFatal", new InvalidOperationException("duplicate"));
+        service.HandleFatalCrash(CrashOrigin.DebugSimulation, new InvalidOperationException("fatal"));
+        service.HandleFatalCrash(CrashOrigin.DebugSimulation, new InvalidOperationException("duplicate"));
 
         Assert.NotNull(requestedReport);
         Assert.Empty(launcher.Paths);
+    }
+
+    [Fact]
+    public void HandleUnhandledCrash_WhenUiSubscriberExists_StillLaunchesIsolatedReporter()
+    {
+        // Tier-2 sources (AppDomain, dispatcher, entry escape) must never hand control to
+        // the in-process window, even while a healthy UI is subscribed: the crashing
+        // process is the one being abandoned, so the report has to survive it.
+        Directory.CreateDirectory(tempDirectory);
+        using var logger = new UnifiedLogger(tempDirectory);
+        var store = new CrashReportStore(Path.Combine(tempDirectory, "reports"));
+        var launcher = new RecordingCrashReporterLauncher();
+        var service = new FatalCrashService(logger, store, launcher);
+        service.FatalCrashRequested += _ => throw new InvalidOperationException(
+            "The isolated path must not raise the in-process request.");
+
+        service.HandleUnhandledCrash(CrashOrigin.DispatcherUnhandledException, new InvalidOperationException("boom"));
+
+        Assert.Single(launcher.Paths);
+    }
+
+    [Fact]
+    public void HandleUnhandledCrash_WhenBothDirectoriesAreBlocked_StillLaunchesReporterWithoutSnapshot()
+    {
+        Directory.CreateDirectory(tempDirectory);
+        using var logger = new UnifiedLogger(tempDirectory);
+        var blockedPrimary = Path.Combine(tempDirectory, "primary-file");
+        var blockedFallback = Path.Combine(tempDirectory, "fallback-file");
+        File.WriteAllText(blockedPrimary, "not a directory");
+        File.WriteAllText(blockedFallback, "not a directory");
+        var store = new CrashReportStore(blockedPrimary, blockedFallback);
+        var launcher = new RecordingCrashReporterLauncher();
+        var service = new FatalCrashService(logger, store, launcher);
+
+        service.HandleUnhandledCrash(CrashOrigin.AppDomainUnhandledException, new InvalidOperationException("no disk"));
+
+        // No snapshot could be written anywhere, so the reporter is started bare and
+        // opens its "snapshot unavailable" report instead of showing no surface at all.
+        Assert.Equal([string.Empty], launcher.Paths);
+    }
+
+    [Fact]
+    public void HandleUnhandledCrash_WhenPrimaryDirectoryIsBlocked_LaunchesReporterWithFallbackSnapshot()
+    {
+        Directory.CreateDirectory(tempDirectory);
+        using var logger = new UnifiedLogger(tempDirectory);
+        var blockedPrimary = Path.Combine(tempDirectory, "primary-file");
+        File.WriteAllText(blockedPrimary, "not a directory");
+        var fallback = Path.Combine(tempDirectory, "fallback");
+        var store = new CrashReportStore(blockedPrimary, fallback);
+        var launcher = new RecordingCrashReporterLauncher();
+        var service = new FatalCrashService(logger, store, launcher);
+
+        service.HandleUnhandledCrash(CrashOrigin.Main, new InvalidOperationException("fallback only"));
+
+        var snapshotPath = Assert.Single(launcher.Paths);
+        Assert.StartsWith(fallback, snapshotPath, StringComparison.OrdinalIgnoreCase);
+        Assert.True(File.Exists(snapshotPath));
+    }
+
+    [Fact]
+    public void CleanupOldReports_WhenFallbackDirectoryHoldsStaleReports_PrunesThemToo()
+    {
+        Directory.CreateDirectory(tempDirectory);
+        var primary = Path.Combine(tempDirectory, "primary");
+        var fallback = Path.Combine(tempDirectory, "fallback");
+        Directory.CreateDirectory(primary);
+        Directory.CreateDirectory(fallback);
+        var now = DateTimeOffset.Now;
+        for (var index = 0; index < 12; index++)
+        {
+            var path = Path.Combine(fallback, $"report-{index:D2}.json");
+            File.WriteAllText(path, "{}");
+            File.SetLastWriteTimeUtc(path, now.AddDays(-index).UtcDateTime);
+        }
+
+        var store = new CrashReportStore(primary, fallback);
+        store.CleanupOldReports(now);
+
+        Assert.Equal(
+            CrashReportStore.RetainedReportCount,
+            Directory.EnumerateFiles(fallback, "*.json").Count());
+        Assert.False(File.Exists(Path.Combine(fallback, "report-11.json")));
     }
 
     [Theory]
@@ -114,6 +210,15 @@ public sealed class CrashReportTests : IDisposable
 
         Assert.Equal(expected, result);
         Assert.Equal(expected, resolvedPath is not null);
+    }
+
+    [Fact]
+    public void TryGetCrashReportPath_WithoutSnapshotPath_OpensReporterInUnavailableMode()
+    {
+        var result = Program.TryGetCrashReportPath([Program.CrashReportArgument], out var resolvedPath);
+
+        Assert.True(result);
+        Assert.Null(resolvedPath);
     }
 
     [Fact]

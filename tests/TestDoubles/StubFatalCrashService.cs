@@ -10,16 +10,16 @@ public sealed class StubFatalCrashService : IFatalCrashService
 {
     public event Action<CrashReport>? FatalCrashRequested;
 
-    public List<(string Context, Exception Exception)> Requests { get; } = [];
+    public List<(CrashOrigin Origin, Exception Exception)> Requests { get; } = [];
 
-    public void HandleFatalCrash(string context, Exception exception)
+    public void HandleFatalCrash(CrashOrigin origin, Exception exception)
     {
-        Requests.Add((context, exception));
+        Requests.Add((origin, exception));
         FatalCrashRequested?.Invoke(new CrashReport
         {
             Id = "CR-STUB",
             OccurredAt = DateTimeOffset.Now,
-            Source = context,
+            Source = origin.ToString(),
             AppVersion = "0.0.0",
             OperatingSystem = "stub",
             UiCulture = "en",

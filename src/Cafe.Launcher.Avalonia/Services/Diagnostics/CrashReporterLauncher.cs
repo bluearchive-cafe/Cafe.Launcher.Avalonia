@@ -13,7 +13,7 @@ internal sealed class CrashReporterLauncher : ICrashReporterLauncher
 {
     public bool TryLaunch(string snapshotPath)
     {
-        if (string.IsNullOrWhiteSpace(snapshotPath) || string.IsNullOrWhiteSpace(Environment.ProcessPath))
+        if (string.IsNullOrWhiteSpace(Environment.ProcessPath))
         {
             return false;
         }
@@ -26,7 +26,11 @@ internal sealed class CrashReporterLauncher : ICrashReporterLauncher
                 UseShellExecute = false
             };
             startInfo.ArgumentList.Add(Program.CrashReportArgument);
-            startInfo.ArgumentList.Add(snapshotPath);
+            if (!string.IsNullOrWhiteSpace(snapshotPath))
+            {
+                startInfo.ArgumentList.Add(snapshotPath);
+            }
+
             return Process.Start(startInfo) is not null;
         }
         catch (Exception exception) when (exception is InvalidOperationException

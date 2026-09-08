@@ -67,7 +67,7 @@ public partial class CrashReportWindow : Window
     {
         try
         {
-            _ = ShellFolderOpener.OpenInFileManager(viewModel.SnapshotDirectory);
+            _ = ShellFolderOpener.OpenInFileManager(viewModel.LogDirectory);
         }
         catch
         {
