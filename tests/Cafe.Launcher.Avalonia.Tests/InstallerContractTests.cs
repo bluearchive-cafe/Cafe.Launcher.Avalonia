@@ -1,3 +1,5 @@
+using System.Text.RegularExpressions;
+
 namespace Cafe.Launcher.Avalonia.Tests;
 
 public sealed class InstallerContractTests
@@ -461,6 +463,77 @@ public sealed class InstallerContractTests
         Assert.True(innoSevenLookup >= 0, "The standard Inno Setup 7 locations must be checked.");
         Assert.True(pathLookup > innoSevenLookup, "A preinstalled Inno Setup 6 on PATH must not override Inno Setup 7.");
         Assert.True(innoSixLookup > pathLookup, "Inno Setup 6 remains the final local fallback.");
+    }
+
+    [Fact]
+    public void CurrentStateDocs_NeverDeclareAnInnoSetupVersionBelowTheEnforcedMinimum()
+    {
+        // The script's minimum is the single source of truth; every current-state
+        // document must agree with it. Dated reports under .repository-audit/history/
+        // are snapshots of past audits and are deliberately excluded.
+        var script = ReadProjectFile("scripts/New-WindowsInstaller.ps1");
+        var minimumMatch = Regex.Match(script, @"\[version\]""(?<version>\d+\.\d+)""");
+        Assert.True(minimumMatch.Success, "New-WindowsInstaller.ps1 must declare its minimum Inno Setup version.");
+        var minimum = Version.Parse(minimumMatch.Groups["version"].Value);
+
+        foreach (var doc in new[]
+        {
+            "README.md",
+            "AGENTS.md",
+            "CLAUDE.md",
+            "PROJECT_CONVENTIONS.md",
+        })
+        {
+            foreach (var line in ReadProjectFile(doc).Split('\n'))
+            {
+                foreach (Match match in Regex.Matches(line, @"Inno Setup\s*(?:\|\s*)?(?<version>\d+\.\d+)"))
+                {
+                    var declared = Version.Parse(match.Groups["version"].Value);
+                    Assert.True(
+                        declared >= minimum,
+                        $"{doc} declares Inno Setup {declared}, but scripts/New-WindowsInstaller.ps1 requires {minimum}: {line.Trim()}");
+                }
+            }
+        }
+    }
+
+    [Fact]
+    public void ProjectConventionsToolchainTable_MatchesDeclaredPackageVersions()
+    {
+        // The §12 table duplicates versions whose authority is
+        // Directory.Packages.props; this guard fails when a dependency bump
+        // updates the props without updating the table.
+        var props = ReadProjectFile("Directory.Packages.props");
+        var declared = Regex
+            .Matches(props, @"<PackageVersion Include=""(?<package>[^""]+)"" Version=""(?<version>[^""]+)""")
+            .ToDictionary(m => m.Groups["package"].Value, m => m.Groups["version"].Value, StringComparer.Ordinal);
+
+        var lines = ReadProjectFile("PROJECT_CONVENTIONS.md").Split('\n');
+        var headerIndex = Array.FindIndex(lines, line => line.StartsWith("| 工具/库 | 版本 |", StringComparison.Ordinal));
+        Assert.True(headerIndex >= 0, "PROJECT_CONVENTIONS.md must keep the §12 toolchain table.");
+
+        var checkedRows = 0;
+        for (var index = headerIndex + 2; index < lines.Length && lines[index].StartsWith("| ", StringComparison.Ordinal); index++)
+        {
+            var cells = lines[index].Split('|', StringSplitOptions.TrimEntries);
+            if (cells.Length < 4)
+            {
+                continue;
+            }
+
+            foreach (var package in cells[1].Split(['/', '+'], StringSplitOptions.TrimEntries | StringSplitOptions.RemoveEmptyEntries))
+            {
+                if (!declared.TryGetValue(package, out var expected))
+                {
+                    continue;
+                }
+
+                Assert.Equal(expected, cells[2]);
+                checkedRows++;
+            }
+        }
+
+        Assert.True(checkedRows >= 15, $"The §12 table must keep listing package versions (checked: {checkedRows}).");
     }
 
     [Fact]

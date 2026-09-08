@@ -72,6 +72,15 @@ internal static class RemoteHttpRequestService
             or HttpStatusCode.PermanentRedirect;
 
     /// <summary>
+    /// Upper bound for buffered JSON responses. Manifests and API envelopes are
+    /// small metadata payloads (a manifest with tens of thousands of entries
+    /// stays in the low-megabyte range), so this limit is generous while still
+    /// preventing an errant remote payload — a CDN error page or a large binary
+    /// blob served with a 200 status — from exhausting memory during startup.
+    /// </summary>
+    internal const int MaxBufferedJsonBytes = 64 * 1024 * 1024;
+
+    /// <summary>
     /// Buffers a remote HTTP response body and deserializes it as JSON. When
     /// the body is not valid JSON (a CDN error page, compressed bytes served
     /// with a 200 status and no <c>Content-Encoding</c>, or a binary blob),
@@ -83,15 +92,6 @@ internal static class RemoteHttpRequestService
     /// carries no request context. Manifests and API envelopes are small
     /// metadata payloads, so buffering into memory is safe.
     /// </summary>
-    /// <summary>
-    /// Upper bound for buffered JSON responses. Manifests and API envelopes are
-    /// small metadata payloads (a manifest with tens of thousands of entries
-    /// stays in the low-megabyte range), so this limit is generous while still
-    /// preventing an errant remote payload — a CDN error page or a large binary
-    /// blob served with a 200 status — from exhausting memory during startup.
-    /// </summary>
-    internal const int MaxBufferedJsonBytes = 64 * 1024 * 1024;
-
     public static Task<T?> DeserializeJsonAsync<T>(
         HttpResponseMessage response,
         Uri? requestUri,
