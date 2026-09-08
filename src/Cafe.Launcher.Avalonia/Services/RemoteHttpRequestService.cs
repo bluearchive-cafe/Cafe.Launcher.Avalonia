@@ -83,17 +83,60 @@ internal static class RemoteHttpRequestService
     /// carries no request context. Manifests and API envelopes are small
     /// metadata payloads, so buffering into memory is safe.
     /// </summary>
-    public static async Task<T?> DeserializeJsonAsync<T>(
+    /// <summary>
+    /// Upper bound for buffered JSON responses. Manifests and API envelopes are
+    /// small metadata payloads (a manifest with tens of thousands of entries
+    /// stays in the low-megabyte range), so this limit is generous while still
+    /// preventing an errant remote payload — a CDN error page or a large binary
+    /// blob served with a 200 status — from exhausting memory during startup.
+    /// </summary>
+    internal const int MaxBufferedJsonBytes = 64 * 1024 * 1024;
+
+    public static Task<T?> DeserializeJsonAsync<T>(
         HttpResponseMessage response,
         Uri? requestUri,
         JsonSerializerOptions options,
+        CancellationToken cancellationToken) =>
+        DeserializeJsonAsync<T>(response, requestUri, options, MaxBufferedJsonBytes, cancellationToken);
+
+    internal static async Task<T?> DeserializeJsonAsync<T>(
+        HttpResponseMessage response,
+        Uri? requestUri,
+        JsonSerializerOptions options,
+        int maxBytes,
         CancellationToken cancellationToken)
     {
+        // Reject via the declared length when present; the streaming guard below
+        // still bounds responses without a Content-Length (chunked transfer).
+        if (response.Content.Headers.ContentLength is { } contentLength && contentLength > maxBytes)
+        {
+            throw BuildResponseTooLargeException(requestUri, response, contentLength, contentLength);
+        }
+
         await using var networkStream = await response.Content
             .ReadAsStreamAsync(cancellationToken)
             .ConfigureAwait(false);
         using var buffer = new MemoryStream();
-        await networkStream.CopyToAsync(buffer, cancellationToken).ConfigureAwait(false);
+        var chunk = new byte[64 * 1024];
+        while (true)
+        {
+            var read = await networkStream.ReadAsync(chunk, cancellationToken).ConfigureAwait(false);
+            if (read == 0)
+            {
+                break;
+            }
+
+            if (buffer.Length + read > maxBytes)
+            {
+                throw BuildResponseTooLargeException(
+                    requestUri,
+                    response,
+                    buffer.Length + read,
+                    declaredBytes: null);
+            }
+
+            await buffer.WriteAsync(chunk.AsMemory(0, read), cancellationToken).ConfigureAwait(false);
+        }
         buffer.Position = 0;
 
         try
@@ -106,6 +149,24 @@ internal static class RemoteHttpRequestService
         {
             throw BuildRemoteJsonException(requestUri, response, buffer, ex);
         }
+    }
+
+    private static HttpRequestException BuildResponseTooLargeException(
+        Uri? requestUri,
+        HttpResponseMessage response,
+        long actualBytes,
+        long? declaredBytes)
+    {
+        var invariant = CultureInfo.InvariantCulture;
+        var declared = declaredBytes.HasValue
+            ? declaredBytes.Value.ToString(invariant)
+            : "unknown";
+        return new HttpRequestException(
+            $"Remote response exceeds the {MaxBufferedJsonBytes.ToString(invariant)}-byte limit "
+            + $"(declared: {declared}, buffered: {actualBytes.ToString(invariant)}). "
+            + $"url: {requestUri?.ToString() ?? "(unknown)"} | "
+            + $"status: {((int)response.StatusCode).ToString(invariant)} {response.ReasonPhrase} | "
+            + $"content-type: {response.Content.Headers.ContentType?.ToString() ?? "(none)"}");
     }
 
     private static JsonException BuildRemoteJsonException(
