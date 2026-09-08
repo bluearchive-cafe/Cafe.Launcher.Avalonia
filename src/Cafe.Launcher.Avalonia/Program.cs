@@ -1,5 +1,7 @@
 using Avalonia;
+using Avalonia.Threading;
 using System;
+using System.Diagnostics;
 using System.IO;
 using System.Linq;
 using System.Reflection;
@@ -34,6 +36,9 @@ sealed class Program
     /// </summary>
     internal const string ShowHiddenSettingsArgument = "--show-hidden-settings";
 
+    /// <summary>Internal CLI argument used by the isolated crash-report application.</summary>
+    internal const string CrashReportArgument = "--crash-report";
+
     /// <summary>
     /// True when this process itself was started with <see cref="LaunchGameArgument"/>
     /// and won the single-instance mutex: the app auto-launches the game after its
@@ -66,48 +71,102 @@ sealed class Program
     /// </summary>
     internal static UnifiedLogger? PreDiLogger { get; private set; }
 
+    /// <summary>The process-wide fatal crash coordinator shared with application DI.</summary>
+    internal static FatalCrashService? PreDiFatalCrashService { get; private set; }
+
+    /// <summary>
+    /// Set by <see cref="App"/> when the in-process crash window is shown. The desktop
+    /// lifetime reports its own (zero) exit code for that shutdown, so the terminal
+    /// result is applied by <see cref="ResolveSessionExitCode"/> after it returns.
+    /// </summary>
+    internal static bool FatalCrashExitRequested { get; set; }
+
+    /// <summary>Snapshot opened by <see cref="CrashReportApp"/> in isolated reporter mode.</summary>
+    internal static string? CrashReportPath { get; private set; }
+
     /// <summary>Set by <see cref="App"/> once the DI container is built.</summary>
     internal static ServiceProvider? ServiceProvider { get; set; }
 
     [STAThread]
     public static void Main(string[] args)
     {
+        if (TryGetCrashReportPath(args, out var crashReportPath))
+        {
+            CrashReportPath = crashReportPath;
+            Environment.ExitCode = RunCrashReporter(
+                () => BuildCrashReportApp().StartWithClassicDesktopLifetime(args));
+            return;
+        }
+
         if (TryHandleCommandLine(args, Console.Out))
         {
             return;
         }
 
-        // The single-instance handshake (signal endpoint before mutex probing,
-        // forward-on-lose, bound endpoint handoff) is owned by the launch bridge.
-        using var launchBridge = new CrossProcessLaunchBridge(LaunchGameSignalName, SignalName);
-        if (!launchBridge.TryEnterSingleInstance(MutexName, args))
-        {
-            // A launcher is already running: forwarded --launch-game (when
-            // requested) and exited instead of starting a duplicate process.
-            return;
-        }
-
-        LaunchGameSignal = launchBridge.Signal;
-        LaunchGameRequested = HasLaunchGameArgument(args);
-        ShowHiddenSettings = HasShowHiddenSettingsArgument(args);
-
-        // Create standalone diagnostics before DI is available. This instance
-        // is shared with the DI container so there is a single Serilog pipeline
-        // for the entire process.
-        var crashLogger = new UnifiedLogger();
-        PreDiLogger = crashLogger;
-        FirstLaunch = DetectFirstLaunch();
-        SetupCrashLogging(crashLogger);
+        var reportStore = new CrashReportStore();
+        UnifiedLogger crashLogger;
         try
         {
-            RunSession(
-                crashLogger,
-                () => BuildAvaloniaApp().StartWithClassicDesktopLifetime(args));
+            crashLogger = new UnifiedLogger();
         }
         catch (Exception exception)
         {
-            LogCrash(crashLogger, "Main", exception);
-            throw;
+            // Diagnostics initialization itself failed. The snapshot store still has a
+            // temp-directory fallback and can start the isolated reporter without DI.
+            var emergencyCrashService = new FatalCrashService(
+                logger: null,
+                reportStore,
+                new CrashReporterLauncher());
+            emergencyCrashService.HandleUnhandledCrash(CrashOrigin.DiagnosticsInitialization, exception);
+            Environment.ExitCode = 1;
+            return;
+        }
+
+        PreDiLogger = crashLogger;
+        var fatalCrashService = new FatalCrashService(
+            crashLogger,
+            reportStore,
+            new CrashReporterLauncher());
+        PreDiFatalCrashService = fatalCrashService;
+        SetupCrashHandling(crashLogger, fatalCrashService);
+
+        var sessionFailureCaptured = false;
+        try
+        {
+            reportStore.CleanupOldReports();
+
+            // The isolated reporter bypasses this handshake above. Normal launches still
+            // forward to the first instance instead of starting a duplicate process.
+            using var launchBridge = new CrossProcessLaunchBridge(LaunchGameSignalName, SignalName);
+            if (!launchBridge.TryEnterSingleInstance(MutexName, args))
+            {
+                return;
+            }
+
+            LaunchGameSignal = launchBridge.Signal;
+            LaunchGameRequested = HasLaunchGameArgument(args);
+            ShowHiddenSettings = HasShowHiddenSettingsArgument(args);
+            FirstLaunch = DetectFirstLaunch();
+
+            RunSession(
+                crashLogger,
+                () => BuildAvaloniaApp().StartWithClassicDesktopLifetime(args),
+                exception =>
+                {
+                    sessionFailureCaptured = true;
+                    fatalCrashService.HandleUnhandledCrash(CrashOrigin.Main, exception);
+                });
+
+            Environment.ExitCode = ResolveSessionExitCode();
+        }
+        catch (Exception exception)
+        {
+            if (!sessionFailureCaptured)
+            {
+                fatalCrashService.HandleUnhandledCrash(CrashOrigin.Main, exception);
+            }
+
+            Environment.ExitCode = 1;
         }
     }
 
@@ -134,6 +193,65 @@ sealed class Program
     internal static bool HasShowHiddenSettingsArgument(string[] args) =>
         args.Any(argument => string.Equals(argument, ShowHiddenSettingsArgument, StringComparison.Ordinal));
 
+    internal static bool TryGetCrashReportPath(string[] args, out string? path)
+    {
+        path = null;
+        if (args.Length == 0 || !string.Equals(args[0], CrashReportArgument, StringComparison.Ordinal))
+        {
+            return false;
+        }
+
+        if (args.Length == 1)
+        {
+            // Bare flag: the crashing process could not persist a snapshot anywhere, so the
+            // reporter opens with its "snapshot unavailable" report rather than no surface.
+            return true;
+        }
+
+        if (args.Length != 2 || string.IsNullOrWhiteSpace(args[1]))
+        {
+            return false;
+        }
+
+        try
+        {
+            path = Path.GetFullPath(args[1]);
+            return true;
+        }
+        catch (Exception exception) when (exception is ArgumentException or NotSupportedException)
+        {
+            return false;
+        }
+    }
+
+    /// <summary>
+    /// Runs the isolated reporter and returns the process exit code. The reporter is a
+    /// terminal diagnostic surface, so it must never report success: the desktop lifetime
+    /// resets <see cref="Environment.ExitCode"/> to its own (zero) value when the window
+    /// closes cleanly, which would otherwise turn a fatal launch into a success code.
+    /// </summary>
+    internal static int RunCrashReporter(Func<int> startApplication)
+    {
+        ArgumentNullException.ThrowIfNull(startApplication);
+        try
+        {
+            startApplication();
+        }
+        catch (Exception exception)
+        {
+            Debug.WriteLine($"Crash reporter failed: {exception}");
+        }
+
+        return 1;
+    }
+
+    /// <summary>
+    /// Resolves the process exit code once the desktop lifetime has returned. A fatal
+    /// crash is a terminal diagnostic outcome, so it must never surface as success —
+    /// the lifetime's own exit code is zero for that shutdown.
+    /// </summary>
+    internal static int ResolveSessionExitCode() => FatalCrashExitRequested ? 1 : 0;
+
     private static bool DetectFirstLaunch()
     {
         var settingsPath = Path.Combine(
@@ -142,7 +260,10 @@ sealed class Program
         return !File.Exists(settingsPath);
     }
 
-    internal static void RunSession(UnifiedLogger logger, Action runApplication)
+    internal static void RunSession(
+        UnifiedLogger logger,
+        Action runApplication,
+        Action<Exception>? handleCrash = null)
     {
         logger.WriteSessionStartAsync().GetAwaiter().GetResult();
         try
@@ -152,7 +273,15 @@ sealed class Program
         }
         catch (Exception ex)
         {
-            LogCrash(logger, "Main", ex);
+            if (handleCrash is null)
+            {
+                LogCrash(logger, "Main", ex);
+            }
+            else
+            {
+                handleCrash(ex);
+            }
+
             throw;
         }
         finally
@@ -166,19 +295,39 @@ sealed class Program
         }
     }
 
-    private static void SetupCrashLogging(UnifiedLogger logger)
+    private static void SetupCrashHandling(UnifiedLogger logger, FatalCrashService fatalCrashService)
     {
-        void WriteCrash(string source, Exception? ex) => LogCrash(logger, source, ex);
-
         AppDomain.CurrentDomain.UnhandledException += (_, e) =>
         {
-            WriteCrash("AppDomain.UnhandledException", e.ExceptionObject as Exception);
+            var exception = e.ExceptionObject as Exception
+                            ?? new InvalidOperationException($"Unhandled object: {e.ExceptionObject}");
+            fatalCrashService.HandleUnhandledCrash(CrashOrigin.AppDomainUnhandledException, exception);
         };
 
         TaskScheduler.UnobservedTaskException += (_, e) =>
         {
-            WriteCrash("TaskScheduler.UnobservedTaskException", e.Exception);
+            try
+            {
+                logger.LogAsync(
+                        LogEntrySeverity.Warn,
+                        "TaskScheduler.UnobservedTaskException",
+                        exception: e.Exception,
+                        cancellationToken: CancellationToken.None)
+                    .GetAwaiter()
+                    .GetResult();
+            }
+            catch
+            {
+                // Unobserved task diagnostics are best-effort and are not fatal.
+            }
+
             e.SetObserved();
+        };
+
+        Dispatcher.UIThread.UnhandledException += (_, e) =>
+        {
+            fatalCrashService.HandleUnhandledCrash(CrashOrigin.DispatcherUnhandledException, e.Exception);
+            e.Handled = false;
         };
     }
 
@@ -186,7 +335,7 @@ sealed class Program
     {
         try
         {
-            logger.LogAsync(LogEntrySeverity.Error, source,
+            logger.LogAsync(LogEntrySeverity.Fatal, source,
                 exception: exception,
                 cancellationToken: CancellationToken.None)
                 .GetAwaiter().GetResult();
@@ -200,6 +349,11 @@ sealed class Program
     // Avalonia configuration, don't remove; also used by visual designer.
     public static AppBuilder BuildAvaloniaApp()
         => AppBuilder.Configure<App>()
+            .UsePlatformDetect()
+            .LogToTrace();
+
+    internal static AppBuilder BuildCrashReportApp()
+        => AppBuilder.Configure<CrashReportApp>()
             .UsePlatformDetect()
             .LogToTrace();
 }
