@@ -1,8 +1,8 @@
 # Repository Map
 
-- 审计日期：2026-09-07（release 审计 · beta.6 发布后）
-- HEAD：55ca3e7 `fix(i18n): T()/F() 按所选语言解析资源，修复启动后界面语言混杂`
-- 发布状态：v1.1.0-beta.6 已发布（2026-09-05，六平台资产齐全）；下一版本代码/链路就绪（门禁全绿 + CI 绿灯），待发布资产三件套与版本命名决策（AUD-REL-004）
+- 审计日期：2026-09-08（full 全量审计）
+- HEAD：6bd2a8f `docs(audit): 记录 2026-09-07 release 审计并核销 AUD-REL-004`
+- 发布状态：v1.1.0-beta.7 已发布（2026-09-07 15:02Z，六平台资产齐全，prerelease=true，tag 即 HEAD）；HEAD 后无新提交（beta7..HEAD 为 0）
 
 ## Language / Framework
 
@@ -25,7 +25,7 @@
 - `tests/Cafe.Launcher.Avalonia.HeadlessTests`（Avalonia.Headless.XUnit UI 测试，164 个 AvaloniaFact/Theory）
 - 共享隔离：`tests/TestUserDataIsolation.cs`（ModuleInitializer 重定向用户数据目录，链接进两个项目）
 - 质量门禁：
-  - `coverage.ps1`：手写 C# 行/分支覆盖率合并 unit+headless；阈值 50%，棘轮基线行 84.30% / 分支 88.99%，禁止下探
+  - `coverage.ps1`：手写 C# 行/分支覆盖率合并 unit+headless；阈值 50%，棘轮基线行 84.30% / 分支 88.99%，禁止下探（2026-09-08 实跑 行 86.08% / 分支 92.58%）
   - 两个测试程序集均 `DisableTestParallelization = true`（全局串行，静态状态隔离的基石）
   - 不使用 mocking 框架，全部手写 stub/fake（PROJECT_CONVENTIONS.md 规定）
 - 脚本：`build.ps1` / `test.ps1` / `coverage.ps1` / `verify.ps1` / `dev.ps1 ui`

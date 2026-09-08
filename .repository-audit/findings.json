@@ -172,7 +172,7 @@
       "guard": null
     },
     "AUD-MTN-001": {
-      "title": "IModalPresenter 查表与 RemoteContentViewModel 拆分（基线 7.5 部分）",
+      "title": "RemoteContentViewModel 拆分（原含 IModalPresenter 查表；该半项已被根 ViewModels/ modal 契约取代）",
       "category": "maintainability",
       "severity": "low",
       "confidence": 85,
@@ -180,9 +180,10 @@
       "disposition": "Refactor",
       "recommendation_validation": "Plausible",
       "first_seen_commit": "4ed11c3",
-      "last_verified_commit": "259e217",
+      "last_verified_commit": "6bd2a8f",
       "resolved_commit": null,
-      "guard": null
+      "guard": null,
+      "note": "2026-09-08 复核：IModalPresenter 类型已不存在（grep 零命中），modal 呈现已重构为根 ViewModels/ 的 IModalContentViewModel/ModalEntry/ModalKind/ModalHostViewModel 契约——该半项 superseded。剩余仅 RemoteContentViewModel（714 行）拆分，仍暂缓。"
     },
     "AUD-DEP-001": {
       "title": "THIRD-PARTY-NOTICES 两行占位许可证（Angle.Natives/DiagnosticsSupport，基线 5.6）",
@@ -521,6 +522,34 @@
       "last_verified_commit": "55ca3e7",
       "resolved_commit": "ae76562",
       "guard": "既有守卫维持：Read-LauncherVersion.ps1 tag 精确匹配、release.yml 横幅硬门禁、CHANGELOG 单节规则；发版素材清单见 history/2026-09-07-release-audit.md"
+    },
+    "AUD-CI-005": {
+      "title": "build.yml 缺 permissions 块：push 到 main 的 GITHUB_TOKEN 带默认仓库级权限（最小权限加固缺口）",
+      "category": "ci/supply-chain",
+      "severity": "low",
+      "confidence": 92,
+      "status": "resolved",
+      "disposition": "Add Guard",
+      "recommendation_validation": "Verified",
+      "first_seen_commit": "6bd2a8f",
+      "last_verified_commit": "6bd2a8f",
+      "resolved_commit": null,
+      "guard": "build.yml 顶层已补 permissions: contents: read（与 release.yml 一致）",
+      "note": "release.yml 已做最小权限（顶层 contents:read，发布 job 才 contents:write），但 build.yml 无任何 permissions 块，push 到 main 时沿用默认仓库级 token（含写权限）。该 job 只 checkout/build/test/upload-artifact，未实际使用写权限，故未见利用路径——属防御性最小权限加固。已修复（工作树待提交）：顶层级加 permissions: contents: read。"
+    },
+    "AUD-MTN-007": {
+      "title": "PROJECT_CONVENTIONS.md §12 工具链表版本过期（Avalonia 12.1.1 vs 实际 12.1.2；MEDI/Serilog/Material.Icons 等以 (latest) 占位）",
+      "category": "maintainability/doc-drift",
+      "severity": "low",
+      "confidence": 90,
+      "status": "resolved",
+      "disposition": "Document",
+      "recommendation_validation": "Verified",
+      "first_seen_commit": "6bd2a8f",
+      "last_verified_commit": "6bd2a8f",
+      "resolved_commit": null,
+      "guard": null,
+      "note": "PROJECT_CONVENTIONS.md 为仓库规则 #1，其 §12 工具链表写 Avalonia 12.1.1、Serilog/Sinks/(latest)、Material.Icons.Avalonia (latest)；实际 Directory.Packages.props 为 Avalonia 12.1.2、Serilog 4.4.0、Sinks.Async 2.1.0、Sinks.File 7.0.0、Material.Icons.Avalonia 3.0.2、MEDI 10.0.11。THIRD-PARTY-NOTICES.md 已与 props 一致（12.1.2），仅该约定文档仍陈旧。已修复（工作树待提交）：§12 表钉为 props 实际版本，并加批注「版本以 Directory.Packages.props 为准」。"
     }
   }
 }
