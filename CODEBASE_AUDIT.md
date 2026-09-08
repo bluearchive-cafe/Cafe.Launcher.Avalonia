@@ -8,7 +8,7 @@
 
 ## 当前结论
 
-**无 Critical/High/Medium open 项。** `v1.1.0-beta.7` 已于 2026-09-07 15:02Z 发布（六平台资产齐全、prerelease=true、tag 即 HEAD，发布后 `beta7..HEAD` 为 0 提交）。**本次审计新增的 2 项 Low 发现（AUD-CI-005 最小权限加固缺口、AUD-MTN-007 工具链文档漂移）已于审计当日清理**；4 项有意暂缓/接受项维持。全量门禁本机实跑通过。
+**无 Critical/High/Medium open 项。** `v1.1.0-beta.7` 已于 2026-09-07 15:02Z 发布（六平台资产齐全、prerelease=true、tag 即 HEAD，发布后 `beta7..HEAD` 为 0 提交）。本次审计新增的 4 项 Low 发现（AUD-CI-005、AUD-MTN-007、AUD-MTN-008、AUD-PERF-007）已全部清理；4 项有意暂缓/接受项维持。全量门禁本机实跑通过（单元 1448 过/2 跳）。
 
 ## Open 项（4 项，全部 Low / 有意）
 
@@ -19,7 +19,7 @@
 | AUD-DEP-002 | Low | accepted-risk | Shirasagi0012.MaterialColorUtilities bus factor 1；调用面收窄至 3 个主题类，年度重审 |
 | AUD-TST-001 | Low | deferred / No Action | GameDownloadServiceTests 真实限速 + `Stopwatch` 下限断言（≥800ms），墙钟依赖但非 flaky 失败 |
 
-（AUD-CI-005 / AUD-MTN-007 为本次审计新沉淀，已清理，见下方 Resolved。）
+（AUD-CI-005 / AUD-MTN-007 / AUD-MTN-008 / AUD-PERF-007 为本次审计新沉淀，已清理，见下方 Resolved。）
 
 ## 审计增量核验（1ce42d1..6bd2a8f，8 提交）
 
@@ -55,7 +55,15 @@
 - **组合根纪律**：无 service locator / 静态可变全局 / 隐藏注入通道（DISABLE 检查通过）。
 - **文档漂移**：除 §12 版本表外，AGENTS.md / PROJECT_CONVENTIONS.md 声明与实际实现一致（含 shell 豁免条款、本地化契约、测试纪律）。
 
+### 第二轮深审补充（2026-09-08，网络边界 / 进程启动 / 安装脚本）
+
+- **网络边界**：`RemoteHttpUrlValidator` 拒绝非 HTTP(S)/userinfo/非标端口/localhost/私网 IP 字面量/DNS 解析非公网（SSRF 防护），`RemoteHttpRequestService.SendAsync` 每跳重定向复验 + HTTPS→HTTP 降级拒绝，manifest URL 全链经校验；API 客户端路径为硬编码常量（无远程输入面）。代理模式跳过本地 DNS 解析（已在注释说明理由，合理）。
+- **进程启动**：`UseShellExecute=false` + `ArgumentList`（结构化参数，无 shell 拼接）；启动目标的 exe 名拒绝含 `/`/`\`（防穿越）+ `File.Exists` 确认；PATH 定位固定可执行名、用户显式路径优先。
+- **安装脚本**：`Build-Distribution.ps1` 路径均 `Join-Path`+`-LiteralPath`、RID 白名单、删除仅限构建产物目录、产物存在性终检；`New-WindowsInstaller.ps1` 对 ISCC define 值做引号/CRLF 安全审查；`installer/iss` `PrivilegesRequired=admin`、`[UninstallDelete]` 不越 `{app}`、NSIS 旧版升级桥校验 Uninstall.exe 存在性与文件名。
+- **发现的 2 项**：AGENTS/README/CLAUDE 的 Inno Setup 版本描述与脚本强制 7.0+ / release.yml 实际链（issrc 固定版 + verify-asset）脱节（AUD-MTN-008）；`DeserializeJsonAsync` 响应体无上限（AUD-PERF-007）。
+
 ### 本地化 / 测试 / 性能
+
 
 - **本地化契约**：裸 key（`T("…")`/`F("…")`/`I18n["…"]`）扫描零命中，Test-LocalizationContract 已接入 verify（最前 fail-fast）；设计 token（裸色号/魔数圆角/间距）扫描零命中。
 - **测试**：单元 1446 过 / 2 跳（符号链接门控），Headless 164/164；合并覆盖率 行 86.08% / 分支 92.58%（高于棘轮基线）。无裸自旋无预算循环、无 Task.Delay 后断言 flake、无测试顺序依赖（全局串行 + 用户数据目录重定向）。
@@ -70,22 +78,25 @@
 
 ## Decisions Required
 
-- 无阻塞项。本日新沉淀的 2 项 Low（AUD-CI-005、AUD-MTN-007）已清理。
+- 无阻塞项。本日新沉淀的 4 项 Low（AUD-CI-005、AUD-MTN-007、AUD-MTN-008、AUD-PERF-007）已全部清理。
 
 ## Resolved / Superseded Since Previous Audit
 
 - 无已核销的 High/Critical。AUD-REL-004（发布准备）已于 `ae76562` 核销。AUD-MTN-001 的 IModalPresenter 查表半项被根 modal 契约取代（superseded），仅剩 RemoteContentViewModel 拆分。
-- **本日新沉淀并清理（工作树待提交）**：
-  - AUD-CI-005（build.yml 缺 permissions 块）→ `build.yml` 顶层补 `permissions: contents: read`，与 release.yml 对齐。
-  - AUD-MTN-007（PROJECT_CONVENTIONS §12 版本过期）→ §12 表钉为 `Directory.Packages.props` 实际版本，并加批注。
+- **本日新沉淀并清理**：
+  - AUD-CI-005（build.yml 缺 permissions 块）→ 已修复并提交（`ce9c98c`）：`build.yml` 顶层补 `permissions: contents: read`。
+  - AUD-MTN-007（PROJECT_CONVENTIONS §12 版本过期）→ 已修复并提交（`ce9c98c`）：§12 表钉为 `Directory.Packages.props` 实际版本。
+  - AUD-MTN-008（Inno 版本文档漂移）→ 已修复（工作树待提交）：README/AGENTS/CLAUDE 统一为 7.0+，CLAUDE CI 描述改为 issrc 固定版 + verify-asset。
+  - AUD-PERF-007（响应体无上限）→ 已修复（工作树待提交）：`MaxBufferedJsonBytes=64MiB` 预检 + 流式累计钳制。
 
 ## Automated Guards Added
 
-- 本次未新增守卫；build.yml 的 permissions 块与 release.yml 对齐后，两工作流的最少权限姿势一致。
+- build.yml 的 permissions 块与 release.yml 对齐。`LauncherApiClientTests` 新增 2 个超限守卫测试（Content-Length 预检 + chunked 流式累计），覆盖 AUD-PERF-007 修复面。
+- 维持既有守卫：本地化合约、lock 文件锁定、CI 最小权限、横幅硬门禁等。
 
 ## Recommended Priorities
 
-1. 提交上述修复（build.yml `permissions: contents: read`、PROJECT_CONVENTIONS §12 钉版本）并推送，确认 build.yml push 触发 CI 仍绿。
+1. 提交第二轮修复（DeserializeJsonAsync 上限 + 测试 + 文档 4 处）并推送，确认 build.yml CI 绿灯。
 2. 维持 4 项有意暂缓/接受项（ARCH-003 / MTN-001 / DEP-002 / TST-001）到下一全量或年度审。
 
 ---
