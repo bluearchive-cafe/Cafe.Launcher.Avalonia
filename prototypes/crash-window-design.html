@@ -1,0 +1,624 @@
+<!doctype html>
+<html lang="zh-Hans" data-theme="light">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Cafe Launcher — 崩溃信息窗口原型</title>
+  <!-- 三种崩溃信息窗口视觉方向，通过 ?variant=a|b|c 切换；仅用于设计验证，不是生产实现。 -->
+  <style>
+    :root {
+      color-scheme: light;
+      --desktop: #dbe7f3;
+      --desktop-deep: #9fb8d2;
+      --app-ghost: rgba(244, 248, 253, .76);
+      --window: #f8fbff;
+      --window-solid: #ffffff;
+      --surface: #ffffff;
+      --surface-subtle: #f1f5f9;
+      --surface-danger: #ffedee;
+      --text: #232a31;
+      --body: #3f4954;
+      --muted: #646d79;
+      --outline: #c8d2de;
+      --hairline: #d6e2ee;
+      --danger: #c42b35;
+      --danger-hover: #a9242d;
+      --danger-pressed: #8f1f27;
+      --on-danger: #ffffff;
+      --accent: #3d6bc6;
+      --accent-soft: #dcefff;
+      --focus: #3d6bc6;
+      --shadow-window: 0 32px 80px rgba(22, 35, 52, .30), 0 3px 12px rgba(22, 35, 52, .18);
+      --radius-window: 12px;
+      --radius-control: 4px;
+      --radius-panel: 8px;
+      --motion-fast: 167ms cubic-bezier(.2, .8, .2, 1);
+    }
+
+    html[data-theme="dark"] {
+      color-scheme: dark;
+      --desktop: #111824;
+      --desktop-deep: #26364a;
+      --app-ghost: rgba(25, 32, 42, .80);
+      --window: #161c26;
+      --window-solid: #1a222e;
+      --surface: #202833;
+      --surface-subtle: #1e2834;
+      --surface-danger: #3a1d22;
+      --text: #e8eef6;
+      --body: #c8d2df;
+      --muted: #a8b3c2;
+      --outline: #4a5b73;
+      --hairline: #344150;
+      --danger: #d9535c;
+      --danger-hover: #e06b73;
+      --danger-pressed: #bb414b;
+      --on-danger: #171012;
+      --accent: #8cb4f0;
+      --accent-soft: #19324d;
+      --focus: #8cb4f0;
+      --shadow-window: 0 32px 80px rgba(0, 0, 0, .55), 0 3px 12px rgba(0, 0, 0, .34);
+    }
+
+    * { box-sizing: border-box; }
+
+    html, body { min-width: 320px; min-height: 100%; }
+
+    body {
+      margin: 0;
+      color: var(--text);
+      background: var(--desktop);
+      font: 14px/1.45 "Segoe UI Variable Text", "Segoe UI", system-ui, sans-serif;
+    }
+
+    button, summary { font: inherit; }
+    button { cursor: pointer; }
+    button:focus-visible, summary:focus-visible {
+      outline: 2px solid var(--focus);
+      outline-offset: 2px;
+    }
+
+    .desktop {
+      min-height: 100vh;
+      display: grid;
+      place-items: center;
+      padding: 40px 24px 104px;
+      overflow: hidden;
+      position: relative;
+      background:
+        radial-gradient(circle at 74% 18%, color-mix(in srgb, var(--accent) 22%, transparent), transparent 34%),
+        linear-gradient(145deg, var(--desktop), var(--desktop-deep));
+    }
+
+    .ghost-app {
+      position: absolute;
+      inset: 7% 9%;
+      border: 1px solid color-mix(in srgb, var(--outline) 70%, transparent);
+      border-radius: 14px;
+      background: var(--app-ghost);
+      box-shadow: 0 16px 40px rgba(21, 34, 52, .14);
+      opacity: .56;
+      overflow: hidden;
+      filter: saturate(.65);
+    }
+
+    .ghost-titlebar {
+      height: 48px;
+      border-bottom: 1px solid var(--hairline);
+      background: color-mix(in srgb, var(--window-solid) 74%, transparent);
+    }
+
+    .ghost-layout { display: grid; grid-template-columns: 208px 1fr; height: calc(100% - 48px); }
+    .ghost-nav { border-right: 1px solid var(--hairline); background: color-mix(in srgb, var(--surface-subtle) 75%, transparent); }
+    .ghost-content { padding: 34px; }
+    .ghost-line, .ghost-card { background: color-mix(in srgb, var(--muted) 18%, transparent); border-radius: 5px; }
+    .ghost-line { width: 34%; height: 18px; margin-bottom: 22px; }
+    .ghost-card { width: 100%; height: 152px; }
+
+    .window {
+      position: relative;
+      z-index: 2;
+      width: min(var(--window-width, 720px), calc(100vw - 36px));
+      max-height: calc(100vh - 132px);
+      overflow: auto;
+      border: 1px solid color-mix(in srgb, var(--outline) 82%, transparent);
+      border-radius: var(--radius-window);
+      background: color-mix(in srgb, var(--window) 96%, transparent);
+      box-shadow: var(--shadow-window);
+      backdrop-filter: blur(24px) saturate(1.12);
+      animation: window-in var(--motion-fast) both;
+    }
+
+    @keyframes window-in {
+      from { opacity: 0; transform: translateY(8px) scale(.992); }
+      to { opacity: 1; transform: none; }
+    }
+
+    .titlebar {
+      height: 42px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding-left: 16px;
+      border-bottom: 1px solid color-mix(in srgb, var(--hairline) 76%, transparent);
+      user-select: none;
+    }
+
+    .app-title { display: flex; align-items: center; gap: 9px; font-size: 12px; color: var(--body); }
+    .app-mark {
+      width: 18px;
+      height: 18px;
+      display: grid;
+      place-items: center;
+      border-radius: 5px;
+      color: white;
+      background: linear-gradient(145deg, #4f77c7, #345797);
+      font-size: 10px;
+      font-weight: 700;
+    }
+
+    .caption-close {
+      width: 46px;
+      height: 41px;
+      border: 0;
+      color: var(--body);
+      background: transparent;
+      font-size: 19px;
+      line-height: 1;
+    }
+    .caption-close:hover { color: white; background: #c42b1c; }
+
+    .content { padding: 30px 32px; }
+    .status-icon {
+      flex: 0 0 auto;
+      width: 44px;
+      height: 44px;
+      display: grid;
+      place-items: center;
+      border-radius: 50%;
+      color: var(--danger);
+      background: var(--surface-danger);
+    }
+    .status-icon svg { width: 24px; height: 24px; }
+
+    h1, h2, p { margin-top: 0; }
+    h1 { margin-bottom: 8px; font: 600 22px/1.28 "Segoe UI Variable Display", "Segoe UI", sans-serif; letter-spacing: -.015em; }
+    h2 { margin-bottom: 6px; font: 600 16px/1.35 "Segoe UI Variable Text", "Segoe UI", sans-serif; }
+    p { color: var(--body); }
+    .lead { max-width: 580px; margin-bottom: 0; font-size: 15px; line-height: 1.55; }
+    .eyebrow { margin-bottom: 6px; color: var(--danger); font-size: 12px; font-weight: 600; }
+
+    .meta {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px 20px;
+      margin-top: 22px;
+      padding: 12px 14px;
+      border-radius: var(--radius-panel);
+      color: var(--muted);
+      background: var(--surface-subtle);
+      font-size: 12px;
+    }
+    .meta strong { color: var(--body); font-weight: 600; }
+
+    details {
+      margin-top: 20px;
+      border: 1px solid var(--hairline);
+      border-radius: var(--radius-panel);
+      background: var(--surface);
+    }
+    summary {
+      min-height: 44px;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      padding: 0 14px;
+      color: var(--body);
+      cursor: pointer;
+      list-style: none;
+      font-weight: 600;
+    }
+    summary::-webkit-details-marker { display: none; }
+    summary::before { content: "›"; color: var(--muted); font-size: 20px; transition: transform var(--motion-fast); }
+    details[open] summary::before { transform: rotate(90deg); }
+    .technical {
+      margin: 0 14px 14px;
+      padding: 14px;
+      overflow: auto;
+      border-radius: var(--radius-control);
+      color: var(--body);
+      background: var(--surface-subtle);
+      font: 12px/1.55 Consolas, "Cascadia Mono", monospace;
+      white-space: pre-wrap;
+    }
+
+    .actions {
+      display: flex;
+      align-items: center;
+      justify-content: flex-end;
+      flex-wrap: wrap;
+      gap: 8px;
+      padding: 16px 32px 24px;
+    }
+    .button {
+      min-width: 108px;
+      min-height: 40px;
+      padding: 8px 16px;
+      border: 1px solid var(--outline);
+      border-radius: var(--radius-control);
+      color: var(--text);
+      background: var(--window-solid);
+      font-weight: 600;
+    }
+    .button:hover { background: var(--surface-subtle); }
+    .button.subtle { min-width: 0; border-color: transparent; color: var(--accent); background: transparent; }
+    .button.danger { border-color: var(--danger); color: var(--on-danger); background: var(--danger); }
+    .button.danger:hover { background: var(--danger-hover); }
+    .button.danger:active { background: var(--danger-pressed); }
+
+    /* A — 紧凑、线性阅读，适合最快理解和退出。 */
+    .variant-a { --window-width: 700px; }
+    .variant-a .hero { display: flex; gap: 18px; align-items: flex-start; }
+    .variant-a .actions { border-top: 1px solid var(--hairline); }
+    .variant-a .actions .button.subtle:first-child { margin-right: auto; }
+
+    /* B — 左侧状态锚点 + 右侧诊断工作区。 */
+    .variant-b { --window-width: 840px; }
+    .variant-b .split { display: grid; grid-template-columns: 238px minmax(0, 1fr); min-height: 450px; }
+    .variant-b .rail {
+      display: flex;
+      flex-direction: column;
+      padding: 32px 24px 24px;
+      border-right: 1px solid var(--hairline);
+      background: color-mix(in srgb, var(--surface-danger) 72%, var(--window));
+    }
+    .variant-b .rail .status-icon { margin-bottom: 22px; color: var(--on-danger); background: var(--danger); }
+    .variant-b .rail h1 { font-size: 20px; }
+    .variant-b .rail p { font-size: 13px; }
+    .variant-b .rail-code { margin-top: auto; color: var(--muted); font-size: 12px; }
+    .variant-b .workspace { display: flex; flex-direction: column; min-width: 0; }
+    .variant-b .content { flex: 1; }
+    .variant-b .next-step {
+      display: grid;
+      grid-template-columns: 28px 1fr;
+      gap: 12px;
+      margin-bottom: 18px;
+    }
+    .variant-b .next-step-icon {
+      width: 28px;
+      height: 28px;
+      display: grid;
+      place-items: center;
+      border-radius: 50%;
+      color: var(--accent);
+      background: var(--accent-soft);
+      font-weight: 700;
+    }
+    .variant-b .actions { padding-top: 14px; border-top: 1px solid var(--hairline); }
+
+    /* C — 文档式交接，突出“现在发生了什么 / 下一步做什么”。 */
+    .variant-c { --window-width: 760px; }
+    .variant-c .content { padding-bottom: 22px; }
+    .variant-c .document-head {
+      display: grid;
+      grid-template-columns: 1fr auto;
+      gap: 24px;
+      align-items: start;
+      padding-bottom: 24px;
+      border-bottom: 1px solid var(--hairline);
+    }
+    .variant-c .status-icon { width: 56px; height: 56px; border-radius: var(--radius-panel); }
+    .variant-c .steps { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 16px; margin-top: 24px; }
+    .variant-c .step {
+      min-height: 112px;
+      padding: 16px;
+      border: 1px solid var(--hairline);
+      border-radius: var(--radius-panel);
+      background: var(--surface);
+    }
+    .variant-c .step-label { margin-bottom: 8px; color: var(--muted); font-size: 12px; font-weight: 600; }
+    .variant-c .step p { margin-bottom: 0; font-size: 13px; }
+    .variant-c details { margin-top: 16px; }
+    .variant-c .actions { justify-content: space-between; border-top: 1px solid var(--hairline); }
+    .variant-c .secondary-actions { display: flex; flex-wrap: wrap; gap: 8px; }
+
+    .prototype-toolbar {
+      position: fixed;
+      z-index: 10;
+      left: 50%;
+      bottom: 20px;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      transform: translateX(-50%);
+      padding: 6px;
+      border: 1px solid rgba(255,255,255,.18);
+      border-radius: 999px;
+      color: #f6f8fb;
+      background: rgba(17, 24, 35, .94);
+      box-shadow: 0 12px 32px rgba(0,0,0,.34);
+      backdrop-filter: blur(16px);
+    }
+    .prototype-toolbar button {
+      height: 36px;
+      border: 0;
+      border-radius: 18px;
+      color: inherit;
+      background: transparent;
+    }
+    .prototype-toolbar button:hover { background: rgba(255,255,255,.12); }
+    .variant-arrow { width: 36px; font-size: 18px; }
+    .variant-label { min-width: 214px; padding: 0 14px; text-align: center; font-size: 12px; font-weight: 600; }
+    .theme-toggle { padding: 0 13px; border-left: 1px solid rgba(255,255,255,.14) !important; border-radius: 0 18px 18px 0 !important; }
+
+    .toast {
+      position: fixed;
+      z-index: 12;
+      right: 24px;
+      bottom: 86px;
+      max-width: min(320px, calc(100vw - 48px));
+      padding: 12px 16px;
+      border-radius: 8px;
+      color: #f7f9fc;
+      background: rgba(17, 24, 35, .94);
+      box-shadow: 0 10px 30px rgba(0,0,0,.28);
+      opacity: 0;
+      transform: translateY(8px);
+      pointer-events: none;
+      transition: opacity var(--motion-fast), transform var(--motion-fast);
+    }
+    .toast.visible { opacity: 1; transform: none; }
+
+    @media (max-width: 680px) {
+      .desktop { place-items: start center; padding: 20px 12px 96px; }
+      .window { width: 100%; max-height: none; }
+      .content { padding: 24px 20px; }
+      .actions { padding: 16px 20px 20px; }
+      .variant-b .split { grid-template-columns: 1fr; }
+      .variant-b .rail { min-height: 220px; border-right: 0; border-bottom: 1px solid var(--hairline); }
+      .variant-b .rail-code { margin-top: 18px; }
+      .variant-c .steps { grid-template-columns: 1fr; }
+      .variant-c .document-head { grid-template-columns: 1fr; }
+      .prototype-toolbar { max-width: calc(100vw - 24px); }
+      .variant-label { min-width: 142px; }
+    }
+
+    @media (prefers-reduced-motion: reduce) {
+      *, *::before, *::after { animation-duration: .01ms !important; transition-duration: .01ms !important; }
+    }
+
+    @media (forced-colors: active) {
+      .window, details, .step, .button { border: 1px solid CanvasText; }
+      .status-icon, .next-step-icon { forced-color-adjust: none; }
+    }
+  </style>
+</head>
+<body>
+  <main class="desktop">
+    <div class="ghost-app" aria-hidden="true">
+      <div class="ghost-titlebar"></div>
+      <div class="ghost-layout">
+        <div class="ghost-nav"></div>
+        <div class="ghost-content"><div class="ghost-line"></div><div class="ghost-card"></div></div>
+      </div>
+    </div>
+    <div id="prototype-root"></div>
+  </main>
+
+  <nav class="prototype-toolbar" aria-label="原型方案切换器">
+    <button class="variant-arrow" id="previous-variant" aria-label="上一个方案">←</button>
+    <div class="variant-label" id="variant-label" aria-live="polite"></div>
+    <button class="variant-arrow" id="next-variant" aria-label="下一个方案">→</button>
+    <button class="theme-toggle" id="theme-toggle">切换深色</button>
+  </nav>
+  <div class="toast" id="toast" role="status" aria-live="polite"></div>
+
+  <template id="shared-details">
+    <details>
+      <summary>查看技术细节</summary>
+      <pre class="technical">崩溃编号：CR-20260908-214702-A7F3
+时间：2026-09-08 21:47:02 +08:00
+版本：Cafe Launcher 2.8.0
+系统：Windows 11 24H2 · x64
+
+System.InvalidOperationException: 无法完成启动器状态刷新。
+   at Cafe.Launcher.Avalonia.Features.Shell.ShellStartup...
+   at Cafe.Launcher.Avalonia.App.StartAsync...
+
+路径中的用户目录已替换为 %USERPROFILE%。</pre>
+    </details>
+  </template>
+
+  <script>
+    const variants = [
+      { key: 'a', label: 'A — 冷静摘要' },
+      { key: 'b', label: 'B — 诊断分栏' },
+      { key: 'c', label: 'C — 行动交接' }
+    ];
+
+    const root = document.getElementById('prototype-root');
+    const label = document.getElementById('variant-label');
+    const themeToggle = document.getElementById('theme-toggle');
+    const toast = document.getElementById('toast');
+    let toastTimer;
+
+    const warningIcon = `
+      <div class="status-icon" aria-hidden="true">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round">
+          <path d="M12 8v5"/><path d="M12 17.15v.1"/>
+          <path d="M10.2 3.7 2.65 17a2 2 0 0 0 1.74 3h15.22a2 2 0 0 0 1.74-3L13.8 3.7a2.07 2.07 0 0 0-3.6 0Z"/>
+        </svg>
+      </div>`;
+
+    const titlebar = `
+      <header class="titlebar">
+        <div class="app-title"><span class="app-mark">C</span><span>Cafe Launcher</span></div>
+        <button class="caption-close" data-action="exit" aria-label="退出启动器">×</button>
+      </header>`;
+
+    const meta = `
+      <div class="meta" aria-label="崩溃摘要">
+        <span><strong>编号</strong> CR-20260908-214702-A7F3</span>
+        <span><strong>时间</strong> 21:47</span>
+        <span><strong>版本</strong> 2.8.0</span>
+      </div>`;
+
+    const actions = `
+      <button class="button subtle" data-action="logs">打开日志目录</button>
+      <button class="button" data-action="copy">复制详情</button>
+      <button class="button danger" data-action="exit">退出启动器</button>`;
+
+    function detailsMarkup() {
+      return document.getElementById('shared-details').innerHTML;
+    }
+
+    function variantA() {
+      return `<section class="window variant-a" role="dialog" aria-modal="true" aria-labelledby="title-a">
+        ${titlebar}
+        <div class="content">
+          <div class="hero">
+            ${warningIcon}
+            <div>
+              <div class="eyebrow">启动器已停止运行</div>
+              <h1 id="title-a">Cafe Launcher 遇到了无法恢复的问题</h1>
+              <p class="lead">为保护本地安装状态，启动器需要退出。诊断信息已保存在本机，可复制后发送给维护人员。</p>
+            </div>
+          </div>
+          ${meta}
+          ${detailsMarkup()}
+        </div>
+        <footer class="actions">${actions}</footer>
+      </section>`;
+    }
+
+    function variantB() {
+      return `<section class="window variant-b" role="dialog" aria-modal="true" aria-labelledby="title-b">
+        ${titlebar}
+        <div class="split">
+          <aside class="rail">
+            ${warningIcon}
+            <div class="eyebrow">无法安全继续</div>
+            <h1 id="title-b">启动器必须退出</h1>
+            <p>你的游戏文件不会因此被删除。下次启动时，启动器会重新读取本地状态。</p>
+            <div class="rail-code">崩溃编号<br><strong>CR-20260908-214702-A7F3</strong></div>
+          </aside>
+          <div class="workspace">
+            <div class="content">
+              <h2>诊断信息已保存</h2>
+              <div class="next-step">
+                <div class="next-step-icon">1</div>
+                <p>如果需要报告问题，请先复制技术详情，或直接打开日志所在目录。</p>
+              </div>
+              <div class="next-step">
+                <div class="next-step-icon">2</div>
+                <p>退出后可以重新启动 Cafe Launcher。此窗口不会自动上传任何数据。</p>
+              </div>
+              ${meta}
+              ${detailsMarkup()}
+            </div>
+            <footer class="actions">${actions}</footer>
+          </div>
+        </div>
+      </section>`;
+    }
+
+    function variantC() {
+      return `<section class="window variant-c" role="dialog" aria-modal="true" aria-labelledby="title-c">
+        ${titlebar}
+        <div class="content">
+          <div class="document-head">
+            <div>
+              <div class="eyebrow">崩溃报告已生成</div>
+              <h1 id="title-c">这次运行无法继续</h1>
+              <p class="lead">Cafe Launcher 已停止当前操作，并保存了用于排查问题的诊断信息。</p>
+            </div>
+            ${warningIcon}
+          </div>
+          <div class="steps">
+            <section class="step">
+              <div class="step-label">发生了什么</div>
+              <h2>启动器状态刷新失败</h2>
+              <p>程序无法确认当前状态是否仍然可靠，因此不会尝试继续运行。</p>
+            </section>
+            <section class="step">
+              <div class="step-label">你可以做什么</div>
+              <h2>保留编号并退出</h2>
+              <p>报告问题时附上崩溃编号；如需更多信息，可以复制已脱敏的技术详情。</p>
+            </section>
+          </div>
+          ${meta}
+          ${detailsMarkup()}
+        </div>
+        <footer class="actions">
+          <div class="secondary-actions">
+            <button class="button subtle" data-action="logs">打开日志目录</button>
+            <button class="button" data-action="copy">复制详情</button>
+          </div>
+          <button class="button danger" data-action="exit">退出启动器</button>
+        </footer>
+      </section>`;
+    }
+
+    function currentVariantIndex() {
+      const requested = new URLSearchParams(location.search).get('variant')?.toLowerCase();
+      const index = variants.findIndex(item => item.key === requested);
+      return index < 0 ? 0 : index;
+    }
+
+    function render() {
+      const index = currentVariantIndex();
+      root.innerHTML = [variantA, variantB, variantC][index]();
+      label.textContent = variants[index].label;
+      document.title = `Cafe Launcher — ${variants[index].label}`;
+      root.querySelector('summary')?.focus({ preventScroll: true });
+    }
+
+    function navigateVariant(offset) {
+      const next = (currentVariantIndex() + offset + variants.length) % variants.length;
+      const url = new URL(location.href);
+      url.searchParams.set('variant', variants[next].key);
+      history.replaceState({}, '', url);
+      render();
+    }
+
+    function showToast(message) {
+      clearTimeout(toastTimer);
+      toast.textContent = message;
+      toast.classList.add('visible');
+      toastTimer = setTimeout(() => toast.classList.remove('visible'), 2200);
+    }
+
+    document.getElementById('previous-variant').addEventListener('click', () => navigateVariant(-1));
+    document.getElementById('next-variant').addEventListener('click', () => navigateVariant(1));
+    themeToggle.addEventListener('click', () => {
+      const dark = document.documentElement.dataset.theme === 'dark';
+      document.documentElement.dataset.theme = dark ? 'light' : 'dark';
+      themeToggle.textContent = dark ? '切换深色' : '切换浅色';
+    });
+
+    root.addEventListener('click', async event => {
+      const action = event.target.closest('[data-action]')?.dataset.action;
+      if (!action) return;
+      if (action === 'copy') {
+        try {
+          await navigator.clipboard.writeText(root.querySelector('.technical')?.textContent ?? '');
+          showToast('已复制脱敏后的技术详情');
+        } catch {
+          showToast('原型环境无法访问剪贴板');
+        }
+      }
+      if (action === 'logs') showToast('原型：将打开 CrashReports 与日志目录');
+      if (action === 'exit') showToast('原型：实际实现将以非零退出码结束进程');
+    });
+
+    window.addEventListener('keydown', event => {
+      const tag = document.activeElement?.tagName;
+      if (tag === 'INPUT' || tag === 'TEXTAREA' || document.activeElement?.isContentEditable) return;
+      if (event.key === 'ArrowLeft') navigateVariant(-1);
+      if (event.key === 'ArrowRight') navigateVariant(1);
+    });
+
+    render();
+  </script>
+</body>
+</html>

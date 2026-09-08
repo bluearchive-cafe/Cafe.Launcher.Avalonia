@@ -154,6 +154,42 @@ public static class LocalizationKeys
     /// <summary>Resource key for <c>contactCustomerSupport</c>.</summary>
     public const string ContactCustomerSupport = "contactCustomerSupport";
 
+    /// <summary>Resource key for <c>crashWindowCaption</c>.</summary>
+    public const string CrashWindowCaption = "crashWindowCaption";
+
+    /// <summary>Resource key for <c>crashWindowCopied</c>.</summary>
+    public const string CrashWindowCopied = "crashWindowCopied";
+
+    /// <summary>Resource key for <c>crashWindowCopyDetails</c>.</summary>
+    public const string CrashWindowCopyDetails = "crashWindowCopyDetails";
+
+    /// <summary>Resource key for <c>crashWindowDescription</c>.</summary>
+    public const string CrashWindowDescription = "crashWindowDescription";
+
+    /// <summary>Resource key for <c>crashWindowExit</c>.</summary>
+    public const string CrashWindowExit = "crashWindowExit";
+
+    /// <summary>Resource key for <c>crashWindowOpenLogs</c>.</summary>
+    public const string CrashWindowOpenLogs = "crashWindowOpenLogs";
+
+    /// <summary>Resource key for <c>crashWindowReportId</c>.</summary>
+    public const string CrashWindowReportId = "crashWindowReportId";
+
+    /// <summary>Resource key for <c>crashWindowStatus</c>.</summary>
+    public const string CrashWindowStatus = "crashWindowStatus";
+
+    /// <summary>Resource key for <c>crashWindowTechnicalDetails</c>.</summary>
+    public const string CrashWindowTechnicalDetails = "crashWindowTechnicalDetails";
+
+    /// <summary>Resource key for <c>crashWindowTime</c>.</summary>
+    public const string CrashWindowTime = "crashWindowTime";
+
+    /// <summary>Resource key for <c>crashWindowTitle</c>.</summary>
+    public const string CrashWindowTitle = "crashWindowTitle";
+
+    /// <summary>Resource key for <c>crashWindowVersion</c>.</summary>
+    public const string CrashWindowVersion = "crashWindowVersion";
+
     /// <summary>Resource key for <c>customBackground</c>.</summary>
     public const string CustomBackground = "customBackground";
 
@@ -180,6 +216,9 @@ public static class LocalizationKeys
 
     /// <summary>Resource key for <c>debugExportCancelled</c>.</summary>
     public const string DebugExportCancelled = "debugExportCancelled";
+
+    /// <summary>Resource key for <c>debugFatalCrashTriggered</c>.</summary>
+    public const string DebugFatalCrashTriggered = "debugFatalCrashTriggered";
 
     /// <summary>Resource key for <c>debugGameOperations</c>.</summary>
     public const string DebugGameOperations = "debugGameOperations";
@@ -232,8 +271,20 @@ public static class LocalizationKeys
     /// <summary>Resource key for <c>debugSimulateFailure</c>.</summary>
     public const string DebugSimulateFailure = "debugSimulateFailure";
 
+    /// <summary>Resource key for <c>debugSimulateFatalCrash</c>.</summary>
+    public const string DebugSimulateFatalCrash = "debugSimulateFatalCrash";
+
+    /// <summary>Resource key for <c>debugSimulateFatalCrashMessage</c>.</summary>
+    public const string DebugSimulateFatalCrashMessage = "debugSimulateFatalCrashMessage";
+
     /// <summary>Resource key for <c>debugSimulateSuccess</c>.</summary>
     public const string DebugSimulateSuccess = "debugSimulateSuccess";
+
+    /// <summary>Resource key for <c>debugSimulateUnhandledCrash</c>.</summary>
+    public const string DebugSimulateUnhandledCrash = "debugSimulateUnhandledCrash";
+
+    /// <summary>Resource key for <c>debugSimulateUnhandledCrashMessage</c>.</summary>
+    public const string DebugSimulateUnhandledCrashMessage = "debugSimulateUnhandledCrashMessage";
 
     /// <summary>Resource key for <c>debugStateRefreshTriggered</c>.</summary>
     public const string DebugStateRefreshTriggered = "debugStateRefreshTriggered";
