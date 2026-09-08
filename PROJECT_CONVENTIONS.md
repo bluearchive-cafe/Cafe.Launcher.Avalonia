@@ -227,6 +227,6 @@ AI 辅助开发规范 —— 本文件为所有 AI 编码助手（Claude Code、
 | xunit.runner.visualstudio | 3.1.5 | xUnit VS 适配器 |
 | Microsoft.NET.Test.Sdk | 18.9.0 | 测试宿主 |
 | coverlet.msbuild | 10.0.1 | Code coverage |
-| Inno Setup | 6.3+ | Windows installer |
+| Inno Setup | 7.0+ | Windows installer |
 
 > 版本以 `Directory.Packages.props` 中声明的为准；升级依赖时同步更新本表，并再生 `THIRD-PARTY-NOTICES.md` 与 lock 文件。

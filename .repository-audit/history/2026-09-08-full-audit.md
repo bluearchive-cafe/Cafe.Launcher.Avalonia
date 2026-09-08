@@ -15,6 +15,8 @@
 |---|---|---|---|
 | AUD-CI-005 | Low | `build.yml` 无 `permissions:` 块，push 到 main 时 GITHUB_TOKEN 带默认仓库级（含写）权限；job 只读重构未实际使用写权限 | 已清理：`build.yml` 顶层补 `permissions: contents: read`（与 release.yml 对齐） |
 | AUD-MTN-007 | Low | `PROJECT_CONVENTIONS.md` §12 工具链表版本过期（Avalonia 12.1.1 vs 实际 12.1.2；Serilog/Material.Icons 以 `(latest)` 占位），与 `Directory.Packages.props`/THIRD-PARTY-NOTICES 不一致 | 已清理：§12 表钉为 props 实际版本 + 批注 |
+| AUD-MTN-008 | Low | Inno Setup 版本文档多处漂移：脚本强制 7.0+，README/AGENTS/CLAUDE 写 6.3+；CLAUDE 称 CI 用 Chocolatey，实际为 issrc 固定版 + verify-asset | 已清理：README/AGENTS/CLAUDE 统一为 7.0+，CLAUDE CI 描述改为实际链路 |
+| AUD-PERF-007 | Low | `DeserializeJsonAsync` 响应体无尺寸上限（无界 MemoryStream 缓冲） | 已清理：64MiB 上限（Content-Length 预检 + chunked 流式累计钳制）+ 2 个守卫测试 |
 
 ## 暂缓/接受项现状复核
 

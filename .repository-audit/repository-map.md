@@ -1,14 +1,14 @@
 # Repository Map
 
-- 审计日期：2026-09-08（full 全量审计）
-- HEAD：6bd2a8f `docs(audit): 记录 2026-09-07 release 审计并核销 AUD-REL-004`
-- 发布状态：v1.1.0-beta.7 已发布（2026-09-07 15:02Z，六平台资产齐全，prerelease=true，tag 即 HEAD）；HEAD 后无新提交（beta7..HEAD 为 0）
+- 审计日期：2026-09-08（delta 增量复审）
+- HEAD：b1f62fa `docs(audit): 记录第二轮深审发现清理并更新台账`
+- 发布状态：v1.1.0-beta.7 已发布（2026-09-07 15:02Z，六平台资产齐全，prerelease=true，tag 指向 6bd2a8f）；发布后 4 提交（审计整改 + 台账），无版本变更
 
 ## Language / Framework
 
 - 语言：C#（.NET 10，`net10.0`），XAML（Avalonia 12.1.2）
 - 框架：Avalonia UI + CommunityToolkit.Mvvm（MVVM）
-- 规模：src 201 个 .cs 文件（不含 Designer）/ 约 29.8k 行 + 25 个 .axaml；tests 约 1612 个 Fact/Theory（单元 1448 含 2 跳 + Headless 164，2026-09-07 实跑）
+- 规模：src 202 个 .cs 文件（不含 Designer/obj/bin）/ 约 29.2k 行 + 25 个 .axaml；tests 单元 1450（含 2 跳）+ Headless 164（2026-09-08 delta 实跑）
 
 ## Architecture
 
@@ -21,11 +21,11 @@
 
 ## Tests
 
-- `tests/Cafe.Launcher.Avalonia.Tests`（xUnit v3 单元测试，1448 个 Fact/Theory）
-- `tests/Cafe.Launcher.Avalonia.HeadlessTests`（Avalonia.Headless.XUnit UI 测试，164 个 AvaloniaFact/Theory）
+- `tests/Cafe.Launcher.Avalonia.Tests`（xUnit v3 单元测试，1450 个用例含 2 跳）
+- `tests/Cafe.Launcher.Avalonia.HeadlessTests`（Avalonia.Headless.XUnit UI 测试，164 个用例）
 - 共享隔离：`tests/TestUserDataIsolation.cs`（ModuleInitializer 重定向用户数据目录，链接进两个项目）
 - 质量门禁：
-  - `coverage.ps1`：手写 C# 行/分支覆盖率合并 unit+headless；阈值 50%，棘轮基线行 84.30% / 分支 88.99%，禁止下探（2026-09-08 实跑 行 86.08% / 分支 92.58%）
+  - `coverage.ps1`：手写 C# 行/分支覆盖率合并 unit+headless；阈值 50%，棘轮基线行 84.30% / 分支 88.99%，禁止下探（2026-09-08 delta 实跑 行 86.03%–86.12% / 分支 92.61%，同代码重跑差约 3 行）
   - 两个测试程序集均 `DisableTestParallelization = true`（全局串行，静态状态隔离的基石）
   - 不使用 mocking 框架，全部手写 stub/fake（PROJECT_CONVENTIONS.md 规定）
 - 脚本：`build.ps1` / `test.ps1` / `coverage.ps1` / `verify.ps1` / `dev.ps1 ui`
@@ -35,7 +35,7 @@
 
 - CI：`.github/workflows/build.yml` 仅 `windows-latest`（timeout 40 分钟），运行 `test.ps1` + `coverage.ps1` 后发布多 RID 归档
 - 发布：`scripts/Build-Distribution.ps1`（自包含归档，多 RID）
-- 安装器：`scripts/New-WindowsInstaller.ps1`（Inno Setup 6.3+）
+- 安装器：`scripts/New-WindowsInstaller.ps1`（Inno Setup 7.0+，脚本硬性校验；README/AGENTS/CLAUDE/PROJECT_CONVENTIONS 由 `InstallerContractTests` 守卫）
 - 图标资产：`scripts/New-AppIconAssets.ps1`
 
 ## Repository Rules（规则优先级从高到低）

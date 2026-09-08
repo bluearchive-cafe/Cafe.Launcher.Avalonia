@@ -42,7 +42,7 @@
 
 - .NET SDK `10.0.302`（由 `global.json` 固定）
 - Windows、macOS 或 Linux 桌面环境
-- 构建 Windows 安装程序时需要 Inno Setup 6.3 或更高版本
+- 构建 Windows 安装程序时需要 Inno Setup 7.0 或更高版本
 
 克隆仓库后，在 PowerShell 中运行：
 
