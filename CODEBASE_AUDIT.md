@@ -1,7 +1,7 @@
 # 仓库审计报告（当前状态）
 
 - 审计日期：2026-09-10（复核轮 2026-09-09 起）
-- 审计对象：`d342641` 网络专项后续复核 + 工作树修复（`9a24b97` 三项 + `e9f823a` 性能一项 + `6a686ce` 优化四项，`main`）
+- 审计对象：`d342641` 网络专项后续复核 + 工作树修复（`9a24b97` 三项 + `e9f823a` 性能一项 + `6a686ce` 优化四项 + `d6fee4e` 残留收尾，`main`）
 - 模式：`focused` 网络子系统专项（专项修复 → 复核四项修复 → 复核优化建议逐批落地）；上一审计 `fca9bc0`（release，beta.8）；全量基线 `cffbd4d`
 - 历史报告：`.repository-audit/history/2026-09-09-network-audit.md`（首轮专项来源）、`2026-09-09-release-audit-beta.8.md`、`2026-09-09-full-audit-r2.md`
 
@@ -34,6 +34,10 @@
 10. **启动远端读取整体预算**：`LauncherCoreService.LoadAsync` 六个并发 API 读取挂 30s linked-CTS 预算（原最坏 ~92s 才降级），到点落入既有降级路径返回 `RemoteUnavailable`；预算 ≥ 单次请求超时，慢网首次尝试不被砍；调用方取消语义不变。
 11. **下载进度内存计数**：`RecordFileProgress` 正常路径从每 256KB 块一次磁盘 stat 改为 `Interlocked.Add`；重置路径保留 stat 重采样，`FileDownloadService` 超长临时文件删除分支补发 reset。
 12. **image-cache 过期清扫**：构造时后台清扫 `.cache`/`.remote`/遗留 `.tmp` 中 mtime 超 30 天的条目（原先只影响 `.remote` 命中判定、文件永不过期），被逐出内容需要时重新下载。
+
+残留收尾（`d6fee4e`，2026-09-10，台账 AUD-NET-008）：
+
+13. **自更新两端点统一手动重定向路径**：`FetchProxyReleasesAsync` 从裸 `GetAsync`、`FetchGitHubReleasesAsync` 从不带校验的轻量重载，均改走 `RemoteHttpRequestService.SendAsync`（每跳 URL 复验 + `connectionProxy` 逐 URI 直连判定）——全仓库自此无裸 HttpClient 调用。实现注意：`LauncherApiBaseUrl` 尾斜杠 + 路径头斜杠的字符串拼接会产生双斜杠，改用 `Uri(Uri, string)` 相对解析（既有 `RequestPath` 断言捕获）。
 
 未采纳（维持分析记录）：下载重试退避——与原版 Electron 启动器的逐次立即换源语义是显式设计契约（`FileDownloadService` 注释与既有测试固化）；手动代理模式——feature 级（需 UI、四份 resx 本地化与产品决策），不在修复范畴。
 

@@ -135,6 +135,24 @@ public sealed class LauncherUpdateServiceTests
     }
 
     [Fact]
+    public async Task CheckForUpdateAsync_WhenProxyEndpointRedirects_FollowsRedirectAndParses()
+    {
+        // 守卫（AUD-NET-008）：自更新两端点必须走统一手动重定向路径——池化 handler
+        // 均 AllowAutoRedirect=false，裸 GetAsync 下任何 3xx 都会硬失败。
+        var handler = new RedirectThenReleasesHandler();
+        using var service = new LauncherUpdateService(
+            handler,
+            currentVersionOverride: "1.0.0-beta.7");
+
+        var result = await service.CheckForUpdateAsync(UpdateChannels.Beta, ProxyModes.Direct);
+
+        Assert.True(result.IsSuccessful);
+        Assert.True(result.IsUpdateAvailable);
+        Assert.Equal("1.0.0-beta.8", result.LatestVersion);
+        Assert.Equal(2, handler.CallCount);
+    }
+
+    [Fact]
     public async Task CheckForUpdateAsync_WhenRequiredFieldsAreMissing_ReturnsFailure()
     {
         using var service = new LauncherUpdateService(
@@ -496,6 +514,46 @@ public sealed class LauncherUpdateServiceTests
             return Task.FromResult(new HttpResponseMessage(statusCode)
             {
                 Content = new StringContent(content, Encoding.UTF8, "application/json")
+            });
+        }
+    }
+
+    private sealed class RedirectThenReleasesHandler : HttpMessageHandler
+    {
+        private int _callCount;
+
+        public int CallCount => _callCount;
+
+        protected override Task<HttpResponseMessage> SendAsync(
+            HttpRequestMessage request,
+            CancellationToken cancellationToken)
+        {
+            var count = Interlocked.Increment(ref _callCount);
+            if (count == 1)
+            {
+                return Task.FromResult(new HttpResponseMessage(HttpStatusCode.Found)
+                {
+                    Headers = { Location = new Uri("https://api-cafe-launcher.saibamidori.com/api/launcher/releases") }
+                });
+            }
+
+            return Task.FromResult(new HttpResponseMessage(HttpStatusCode.OK)
+            {
+                Content = new StringContent(
+                    """
+                    [{
+                      "version": "1.0.0-beta.8",
+                      "files": [
+                        {
+                          "name": "Cafe.Launcher.zip",
+                          "url": "https://github.com/bluearchive-cafe/Cafe.Launcher.Avalonia_Release/releases/download/v1.0.0-beta.8/Cafe.Launcher.zip",
+                          "size": 100
+                        }
+                      ]
+                    }]
+                    """,
+                    Encoding.UTF8,
+                    "application/json")
             });
         }
     }

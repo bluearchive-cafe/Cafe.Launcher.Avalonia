@@ -21,15 +21,20 @@ public sealed partial class LauncherUpdateService : IDisposable
 {
     private static readonly JsonSerializerOptions JsonOptions = JsonDefaults.Strict;
     private readonly IHttpClientLeaseSource leaseSource;
+    private readonly RemoteHttpUrlValidator urlValidator;
     private readonly string currentVersion;
     private readonly LocalDiagnostics? diagnostics;
 
-    public LauncherUpdateService(HttpClientFactory httpClientFactory, LocalDiagnostics diagnostics)
+    public LauncherUpdateService(
+        HttpClientFactory httpClientFactory,
+        RemoteHttpUrlValidator urlValidator,
+        LocalDiagnostics diagnostics)
     {
         leaseSource = new ProxyAwareHttpClientLeaseSource(
             httpClientFactory,
             new Uri(ApiConfig.LauncherApiBaseUrl),
             TimeSpan.FromSeconds(15));
+        this.urlValidator = urlValidator;
         currentVersion = BuildInfo.LauncherVersion;
         this.diagnostics = diagnostics;
     }
@@ -43,6 +48,7 @@ public sealed partial class LauncherUpdateService : IDisposable
             handler,
             new Uri(ApiConfig.LauncherApiBaseUrl),
             TimeSpan.FromSeconds(15));
+        urlValidator = RemoteHttpUrlValidator.CreateForTesting();
         currentVersion = currentVersionOverride ?? BuildInfo.LauncherVersion;
         diagnostics = diagnosticsOverride;
     }
@@ -173,16 +179,23 @@ public sealed partial class LauncherUpdateService : IDisposable
         string proxyMode,
         CancellationToken cancellationToken)
     {
+        // LauncherApiBaseUrl ends with '/' and the path starts with '/', so plain
+        // string concatenation would produce a double slash; Uri-relative resolution
+        // replaces the base path instead.
+        var requestUri = new Uri(new Uri(ApiConfig.LauncherApiBaseUrl), ApiConfig.LauncherReleasesPath);
         using var lease = await leaseSource.CreateLeaseAsync(proxyMode, cancellationToken).ConfigureAwait(false);
-        using var response = await lease.Client.GetAsync(
-            ApiConfig.LauncherReleasesPath,
-            HttpCompletionOption.ResponseHeadersRead,
-            cancellationToken).ConfigureAwait(false);
+        using var response = await RemoteHttpRequestService.SendAsync(
+                lease.Client,
+                requestUri,
+                static uri => new HttpRequestMessage(HttpMethod.Get, uri),
+                urlValidator,
+                cancellationToken,
+                connectionProxy: lease.ConnectionProxy).ConfigureAwait(false);
         response.EnsureSuccessStatusCode();
 
         return await RemoteHttpRequestService.DeserializeJsonAsync<List<LauncherReleaseResponse>>(
             response,
-            new Uri(ApiConfig.LauncherApiBaseUrl + ApiConfig.LauncherReleasesPath),
+            requestUri,
             JsonOptions,
             cancellationToken).ConfigureAwait(false);
     }
@@ -191,15 +204,20 @@ public sealed partial class LauncherUpdateService : IDisposable
         string proxyMode,
         CancellationToken cancellationToken)
     {
+        var requestUri = new Uri(ApiConfig.GitHubReleasesApiUrl);
         using var lease = await leaseSource.CreateLeaseAsync(proxyMode, cancellationToken).ConfigureAwait(false);
-        using var request = new HttpRequestMessage(HttpMethod.Get, ApiConfig.GitHubReleasesApiUrl);
-        request.Headers.UserAgent.ParseAdd($"CafeLauncher/{BuildInfo.LauncherVersion}");
         using var response = await RemoteHttpRequestService.SendAsync(
                 lease.Client,
-                request,
-                HttpCompletionOption.ResponseHeadersRead,
-                cancellationToken)
-            .ConfigureAwait(false);
+                requestUri,
+                uri =>
+                {
+                    var request = new HttpRequestMessage(HttpMethod.Get, uri);
+                    request.Headers.UserAgent.ParseAdd($"CafeLauncher/{BuildInfo.LauncherVersion}");
+                    return request;
+                },
+                urlValidator,
+                cancellationToken,
+                connectionProxy: lease.ConnectionProxy).ConfigureAwait(false);
         response.EnsureSuccessStatusCode();
 
         var releases = await RemoteHttpRequestService.DeserializeJsonAsync<List<GitHubRelease>>(

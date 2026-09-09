@@ -934,6 +934,20 @@
       "resolved_commit": "6a686ce",
       "guard": "ImageCacheServiceTests.CleanupExpiredEntries_WhenEntriesExceedLifetime_DeletesExpiredAndKeepsFresh（三类文件过期删除 + 新鲜保留）",
       "note": "修复（本批）：ImageCacheService 构造时后台清扫一次（Task.Run 不塞启动），internal CleanupExpiredEntries(utcNow) 可确定性测试；.cache/.remote/.tmp 超 30 天（CacheEntryLifetime）按 mtime 删除，被逐出内容需要时重新下载；单文件删除失败忽略（可能正被并发读取）。"
+    },
+    "AUD-NET-008": {
+      "title": "自更新两端点未走统一手动重定向路径：代理端点裸 HttpClient.GetAsync、GitHub 兜底用不带校验的轻量 SendAsync 重载——池化 handler 均 AllowAutoRedirect=false，任何 3xx 都会硬失败（代理端点靠 GitHub 兜底间接掩盖）",
+      "category": "network/correctness",
+      "severity": "low",
+      "confidence": 100,
+      "status": "resolved",
+      "disposition": "Fix",
+      "recommendation_validation": "Verified",
+      "first_seen_commit": "f20de8b",
+      "last_verified_commit": "d6fee4e",
+      "resolved_commit": "d6fee4e",
+      "guard": "LauncherUpdateServiceTests.CheckForUpdateAsync_WhenProxyEndpointRedirects_FollowsRedirectAndParses（302 → 跟随 → 解析成功，CallCount=2）",
+      "note": "2026-09-10 架构复核确认的最后一处裸调用残留。修复（本批）：FetchProxyReleasesAsync 与 FetchGitHubReleasesAsync 均改走 RemoteHttpRequestService.SendAsync 手动重定向路径（每跳 URL 复验 + connectionProxy 逐 URI 直连判定），生产构造注入 RemoteHttpUrlValidator（DI 单例），测试构造用 CreateForTesting()；全仓库自此无裸 HttpClient 调用。实现注意：LauncherApiBaseUrl 以 '/' 结尾而路径以 '/' 开头，字符串拼接会产生双斜杠，改用 Uri(Uri, string) 相对解析（既有测试 RequestPath 断言捕获了该问题）。"
     }
   }
 }
