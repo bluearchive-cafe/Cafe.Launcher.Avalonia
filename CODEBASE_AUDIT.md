@@ -1,15 +1,15 @@
 # 仓库审计报告（当前状态）
 
-- 审计日期：2026-09-09
-- 审计对象：`d342641` 网络专项后续复核 + 工作树修复（`9a24b97`，`main`）
-- 模式：`focused` 网络子系统专项（同日两轮：AUD-NET-001/002/003 修复 + 复核新发现四项并全部修复）；上一审计 `fca9bc0`（release，beta.8）；全量基线 `cffbd4d`
+- 审计日期：2026-09-10（复核轮 2026-09-09 起）
+- 审计对象：`d342641` 网络专项后续复核 + 工作树修复（`9a24b97` 三项 + `e9f823a` 性能一项，`main`）
+- 模式：`focused` 网络子系统专项（同日两轮：AUD-NET-001/002/003 修复 + 复核新发现四项并全部修复；次日复核优化建议第一项落地）；上一审计 `fca9bc0`（release，beta.8）；全量基线 `cffbd4d`
 - 历史报告：`.repository-audit/history/2026-09-09-network-audit.md`（首轮专项来源）、`2026-09-09-release-audit-beta.8.md`、`2026-09-09-full-audit-r2.md`
 
 ## 当前结论
 
-**网络子系统专项审计完成，AUD-NET-001/002/003 已修复；同日复核再发现四项（AUD-NET-004…007）并全部修复，均通过守卫测试：0 Critical / 0 High / 0 Medium / 0 新增 open。** 网络架构整体健康（集中连接池与代理租约、每跳重定向复验、有界重试、Range 续传 + CRC64、64 MB JSON 守卫）。
+**网络子系统专项审计完成，AUD-NET-001/002/003 已修复；复核再发现四项（AUD-NET-004…007）并全部修复，复核优化建议第一项亦落地（AUD-PERF-008），均通过守卫测试：0 Critical / 0 High / 0 Medium / 0 新增 open。** 网络架构整体健康（集中连接池与代理租约、每跳重定向复验、有界重试、Range 续传 + CRC64、64 MB JSON 守卫）。
 
-最新修复证据（本机实跑，`9a24b97`）：`verify.ps1` exit 0——全量单元 **1567 通过 / 2 跳过**，Headless **169/169**，手写代码行覆盖 **85.66%**、分支 **92.74%**（均高于基线与上轮），Release 构建 0 警告 0 错误。**台账 AUD-NET-004…007 已标记 resolved（`resolved_commit = 9a24b97`）。**
+最新修复证据（本机实跑，`e9f823a`）：`verify.ps1` exit 0——全量单元 **1557 通过 / 2 跳过**（Windows 本地口径；CI Linux 权威口径 1553 + 本次 4 条新测试，一致），Headless **167/167**，手写代码行覆盖 **85.40%**、分支 **92.46%**（复算口径，均高于仓库基线），Release 构建 0 警告 0 错误。**台账 AUD-NET-004…007（`9a24b97`）与 AUD-PERF-008（`e9f823a`）均已标记 resolved。**
 
 首轮专项修复摘要（`d342641`）：
 
@@ -24,6 +24,10 @@
 6. **AUD-NET-006**：`ResourcePanelApiClient` 改走 `RemoteHttpRequestService.SendAsync` 统一手动重定向路径（每跳 URL 复验）；裸 `GetAsync` 在 `AllowAutoRedirect=false` 的池化 handler 下任何 3xx 都会硬失败并无差别重试。注释 10s/实际 30s 的文档漂移一并修正。
 7. **AUD-NET-007**：API 信封业务码非 200 改抛 `LauncherApiEnvelopeException`（`InvalidOperationException` 子类）并在重试过滤器中排除——服务器明确拒绝不再重试 3 次；协议完整性失败（body/data 为空）维持可重试语义。
 
+性能优化落地（`e9f823a`，2026-09-10，台账 AUD-PERF-008）：
+
+8. **DNS 校验结果短 TTL 缓存**：`RemoteHttpUrlValidator` 按主机缓存最近一次全公网成功解析（默认 30s），万级文件下载的解析调用从「与文件数成正比」收敛为「与主机数成正比」；私网/空/抛错结果永不缓存，SSRF 守卫容忍窗被 TTL 界定，瞬时失败保持可重试。守卫测试以注入时钟钉住 30s 边界（命中复用 / 恰达边界重解析 / 私网与失败不入缓存）。
+
 ## Open 项
 
 | ID | 严重度 | 状态 | 摘要 |
@@ -33,11 +37,11 @@
 | AUD-DEP-002 | Low | accepted-risk | `Shirasagi0012.MaterialColorUtilities` 单维护者风险，已有年度复审与 fork 预案 |
 | AUD-TST-001 | Low | deferred / No Action | 真实限速测试使用 `Stopwatch` 下限断言 |
 
-AUD-NET-001…003（`d342641`）与 AUD-NET-004…007（`9a24b97`）均已修复（守卫测试齐备），见上文修复摘要。
+AUD-NET-001…003（`d342641`）、AUD-NET-004…007（`9a24b97`）与 AUD-PERF-008（`e9f823a`）均已修复（守卫测试齐备），见上文修复摘要。
 
 ## Recommended Priorities
 
-1. 合并/发布前运行 `verify.ps1`（`9a24b97` 上 exit 0：全量单元 + 覆盖率棘轮 + Release 门禁均过）。
+1. 合并/发布前运行 `verify.ps1`（`e9f823a` 上 exit 0：全量单元 + 覆盖率棘轮 + Release 门禁均过）。
 
 ## Release Evidence（v1.1.0-beta.8，来自同日 release 审计）
 
@@ -56,7 +60,9 @@ AUD-NET-001…003（`d342641`）与 AUD-NET-004…007（`9a24b97`）均已修复
 
 `fca9bc0..dd06253`：1 提交（`feat(network): 新增默认启用的 HTTP/2 设置`）。首轮专项已审：工厂 `DefaultRequestVersion=2.0` + `RequestVersionOrLower`、仅影响其后创建的客户端、设置在启动早期应用、`HttpClientFactoryTests`/`LauncherCoreServiceTests`/`LauncherSettingsServiceTests`/`SettingsEditorTests`/`RemoteHttpUrlValidatorTests` 均有覆盖。
 
-`d342641..9a24b97`：1 提交（`fix(network)` 复核四项修复，见上文摘要）。首轮专项后的独立复核（非全量重审）：自源码通读网络面（工厂/代理/校验/重试/下载/API/图片/清单/自更新/资源面板），发现并修复 AUD-NET-004…007；优化面建议（DNS 校验缓存、`ConnectTimeout`/H2 keep-alive ping、启动整体 deadline、手动代理模式等）记录于当轮分析输出，未立案为发现。
+`d342641..9a24b97`：1 提交（`fix(network)` 复核四项修复，见上文摘要）。首轮专项后的独立复核（非全量重审）：自源码通读网络面（工厂/代理/校验/重试/下载/API/图片/清单/自更新/资源面板），发现并修复 AUD-NET-004…007；优化面建议（DNS 校验缓存、`ConnectTimeout`/H2 keep-alive ping、启动整体 deadline、手动代理模式等）记录于当轮分析输出。
+
+`9a24b97..e9f823a`：1 提交（`perf(network)` DNS 校验缓存，即上述优化建议第一项立案落地为 AUD-PERF-008）。其余优化建议仍未立案，维持分析输出记录。
 
 ## Audit Method and Limitations
 

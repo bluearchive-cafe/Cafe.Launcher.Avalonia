@@ -864,6 +864,20 @@
       "resolved_commit": "9a24b97",
       "guard": "GetBaseConfigAsync_WhenEnvelopeCodeIsNot200_FailsFastWithoutRetry（CallCount=1）+ GetBaseConfigAsync_WhenEnvelopeDataIsMissing_RetriesBeforeFailing（协议空数据仍重试，CallCount=3）",
       "note": "修复（9a24b97）：新增 internal sealed class LauncherApiEnvelopeException : InvalidOperationException（保住既有 catch 兼容），envelope.Code != 200 改抛之，GetEnvelopeDataAsync 重试过滤器显式排除；协议完整性失败（body 空/data 空）与 JsonException 维持可重试语义不变。"
+    },
+    "AUD-PERF-008": {
+      "title": "远程 URL 校验器每个请求/重定向跳都真实执行 DNS 解析且无结果缓存：万级文件下载时解析调用与文件数成正比（重试再翻倍），SocketsHttpHandler 建连侧另有第二次解析",
+      "category": "performance/network",
+      "severity": "low",
+      "confidence": 100,
+      "status": "resolved",
+      "disposition": "Fix",
+      "recommendation_validation": "Verified",
+      "first_seen_commit": "f20de8b",
+      "last_verified_commit": "e9f823a",
+      "resolved_commit": "e9f823a",
+      "guard": "ValidateAsync_WhenSameHostValidatedRepeatedlyWithinCacheLifetime_ResolvesOnce + ..._WhenCacheLifetimeExpires_ResolvesHostAgain（固定时钟钉住 30s 边界）+ ..._WhenHostResolvesToPrivateAddress_ResultIsNotCached + ..._WhenResolutionThrows_ResultIsNotCached",
+      "note": "2026-09-10 复核轮优化建议第一项落地（该轮其余建议——ConnectTimeout/H2 keep-alive ping、启动整体 deadline、手动代理模式、进度 stat 精简——未立案）。修复（e9f823a）：RemoteHttpUrlValidator 按主机缓存最近一次全公网成功解析，默认 TTL 30s（DI 单例即会话级，托管于 ConcurrentDictionary，主机集合为个位数 API/CDN 域名故无需淘汰）；私网/空/抛错结果永不缓存——SSRF 守卫对「DNS 记录翻转为私网」的容忍窗被 TTL 界定，瞬时解析失败保持可重试语义。Windows 系统级 DNS 缓存此前已部分掩盖该开销（Linux 无缓存环境为全量真实查询）。"
     }
   }
 }
