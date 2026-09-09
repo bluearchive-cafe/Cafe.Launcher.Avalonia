@@ -18,7 +18,7 @@ internal static class CrashReportBootstrap
     /// report, so the reporter always has a surface to show.
     /// </summary>
     public static CrashReport Resolve(string? snapshotPath) =>
-        CrashReportStore.TryRead(snapshotPath ?? "") ?? CreateUnreadableReport();
+        CrashReportStore.TryRead(snapshotPath) ?? CreateUnreadableReport();
 
     /// <summary>
     /// Applies the UI culture captured with the snapshot. An absent or invalid
@@ -47,7 +47,7 @@ internal static class CrashReportBootstrap
     }
 
     /// <summary>Report shown when no snapshot could be read from disk.</summary>
-    public static CrashReport CreateUnreadableReport() => new()
+    private static CrashReport CreateUnreadableReport() => new()
     {
         Id = "CR-UNAVAILABLE",
         OccurredAt = DateTimeOffset.Now,
