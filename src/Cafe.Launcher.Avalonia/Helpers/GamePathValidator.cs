@@ -48,6 +48,27 @@ public static class GamePathValidator
         return target;
     }
 
+    /// <summary>
+    /// Resolves a relative path that must name a file inside the game root, rejecting entries
+    /// that canonicalize to the root itself (empty path, ".", "sub/.."). Download, install and
+    /// diff callers need a file target: a root-canonicalizing entry would otherwise produce the
+    /// sibling temp file "&lt;gameRoot&gt;.tmp", i.e. a write outside the game directory.
+    /// </summary>
+    public static string GetSafeFilePath(string gameRoot, string relativePath)
+    {
+        var target = GetSafePath(gameRoot, relativePath);
+        // "." and "sub/.." keep a trailing separator through canonicalization; compare
+        // without it so every root-canonicalizing form is rejected.
+        var root = Path.TrimEndingDirectorySeparator(Path.GetFullPath(gameRoot));
+        if (string.Equals(Path.TrimEndingDirectorySeparator(target), root, PathComparison))
+        {
+            throw new InvalidOperationException(
+                $"Path does not name a file inside the game directory: {relativePath}");
+        }
+
+        return target;
+    }
+
     private static void EnsureExistingPathComponentsAreNotReparsePoints(
         string root,
         string target,

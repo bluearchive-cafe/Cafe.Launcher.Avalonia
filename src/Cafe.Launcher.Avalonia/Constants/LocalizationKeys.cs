@@ -610,14 +610,14 @@ public static class LocalizationKeys
     /// <summary>Resource key for <c>gameProcessStarted</c>.</summary>
     public const string GameProcessStarted = "gameProcessStarted";
 
-    /// <summary>Resource key for <c>gameProcessStartFailed</c>.</summary>
-    public const string GameProcessStartFailed = "gameProcessStartFailed";
-
     /// <summary>Resource key for <c>gameRemoteStateUnavailable</c>.</summary>
     public const string GameRemoteStateUnavailable = "gameRemoteStateUnavailable";
 
     /// <summary>Resource key for <c>gameRepairFailed</c>.</summary>
     public const string GameRepairFailed = "gameRepairFailed";
+
+    /// <summary>Resource key for <c>gameRuntimeNoRunnerAvailable</c>.</summary>
+    public const string GameRuntimeNoRunnerAvailable = "gameRuntimeNoRunnerAvailable";
 
     /// <summary>Resource key for <c>gameRuntimePrefixPath</c>.</summary>
     public const string GameRuntimePrefixPath = "gameRuntimePrefixPath";

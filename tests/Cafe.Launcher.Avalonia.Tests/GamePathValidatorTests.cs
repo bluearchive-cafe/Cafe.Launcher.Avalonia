@@ -40,6 +40,32 @@ public sealed class GamePathValidatorTests
         Assert.Equal(Path.GetFullPath(gamePath), result);
     }
 
+    [Theory]
+    [InlineData("")]
+    [InlineData(".")]
+    [InlineData("./")]
+    [InlineData("sub/..")]
+    [InlineData("sub\\..")]
+    public void GetSafeFilePath_WhenPathDoesNotNameFile_ThrowsInvalidOperation(string relativePath)
+    {
+        var gamePath = Path.Combine(Path.GetTempPath(), "GameDir");
+
+        var exception = Assert.Throws<InvalidOperationException>(
+            () => GamePathValidator.GetSafeFilePath(gamePath, relativePath));
+
+        Assert.Contains("does not name a file", exception.Message, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public void GetSafeFilePath_WhenPathNamesFile_ReturnsFullPath()
+    {
+        var gamePath = Path.Combine(Path.GetTempPath(), "GameDir");
+
+        var result = GamePathValidator.GetSafeFilePath(gamePath, "data/file.bin");
+
+        Assert.Equal(Path.GetFullPath(Path.Combine(gamePath, "data", "file.bin")), result);
+    }
+
     [Fact]
     public void GetSafePath_WhenGameRootIsDriveRoot_DoesNotDuplicateSeparator()
     {

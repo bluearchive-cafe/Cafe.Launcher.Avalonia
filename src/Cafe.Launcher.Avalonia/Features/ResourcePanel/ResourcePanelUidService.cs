@@ -6,6 +6,7 @@ using System.Threading;
 using System.Threading.Tasks;
 using Cafe.Launcher.Avalonia.Models;
 using Cafe.Launcher.Avalonia.Services;
+using Cafe.Launcher.Avalonia.Services.Diagnostics;
 
 namespace Cafe.Launcher.Avalonia.Features.ResourcePanel;
 
@@ -136,8 +137,12 @@ public sealed partial class ResourcePanelUidService
             var library = cookieLibraryService.Read(cookieLibraryPath);
             return library.Cookies.FirstOrDefault(IsResourcePanelUidCookie)?.Value ?? "";
         }
-        catch
+        catch (Exception exception)
         {
+            LocalDiagnostics.LogSync(
+                LogEntrySeverity.Warn,
+                "ResourcePanelUid",
+                $"Reading the cookie library failed: {exception.Message}");
             return "";
         }
     }

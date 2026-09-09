@@ -15,6 +15,7 @@ public enum ModalKind
     SetupWizard,
     SetupWizardExitConfirmation,
     UnsavedSettingsConfirmation,
+    SettingsResetConfirmation,
     RepairConfirmation,
     ResourcePanelSourceConfirmation,
     UninstallConfirmation,

@@ -28,7 +28,7 @@ public sealed class MotionVisibilityTests
             Assert.False(pendingExit.IsCompleted);
 
             MotionVisibility.SetIsOpen(overlay, true);
-            await pendingExit;
+            await pendingExit.WaitAsync(TimeSpan.FromSeconds(5));
 
             Assert.True(overlay.IsVisible);
             Assert.Contains("motion-enter", overlay.Classes);
@@ -36,7 +36,7 @@ public sealed class MotionVisibilityTests
 
             AnimationTimings.ExitAnimationDuration = TimeSpan.Zero;
             MotionVisibility.SetIsOpen(overlay, false);
-            await MotionVisibility.WaitForPendingExitAsync(overlay);
+            await MotionVisibility.WaitForPendingExitAsync(overlay).WaitAsync(TimeSpan.FromSeconds(5));
 
             Assert.False(overlay.IsVisible);
             Assert.DoesNotContain("motion-exit", overlay.Classes);
@@ -84,7 +84,7 @@ public sealed class MotionVisibilityTests
 
             MotionVisibility.SetIsOpen(overlay, true);
             queuedExit.Context.RunPostedCallbacks();
-            await queuedExit.PendingExit;
+            await queuedExit.PendingExit.WaitAsync(TimeSpan.FromSeconds(5));
 
             Assert.True(overlay.IsVisible);
             Assert.Contains("motion-enter", overlay.Classes);
@@ -115,7 +115,7 @@ public sealed class MotionVisibilityTests
 
             MotionVisibility.SetIsOpen(overlay, true);
             queuedExit.Context.RunPostedCallbacks();
-            await queuedExit.PendingExit;
+            await queuedExit.PendingExit.WaitAsync(TimeSpan.FromSeconds(5));
 
             Assert.True(overlay.IsVisible);
             Assert.Contains("motion-enter", overlay.Classes);

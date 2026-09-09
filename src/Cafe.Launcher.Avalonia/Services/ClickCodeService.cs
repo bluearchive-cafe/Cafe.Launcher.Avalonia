@@ -3,6 +3,7 @@ using System.IO;
 using System.Text.RegularExpressions;
 using Cafe.Launcher.Avalonia.Constants;
 using Cafe.Launcher.Avalonia.Helpers;
+using Cafe.Launcher.Avalonia.Services.Diagnostics;
 
 namespace Cafe.Launcher.Avalonia.Services;
 
@@ -41,18 +42,18 @@ public sealed class ClickCodeService
                 File.WriteAllText(userDataClickCode, hash);
             }
         }
-        catch
+        catch (Exception exception)
         {
-            // Best effort
+            LogBestEffortFailure("Saving the install attribution code failed", exception);
         }
 
         try
         {
             File.Delete(installerClickCode);
         }
-        catch
+        catch (Exception exception)
         {
-            // Best effort
+            LogBestEffortFailure("Deleting the installer clickCode file failed", exception);
         }
     }
 
@@ -74,9 +75,19 @@ public sealed class ClickCodeService
             Directory.CreateDirectory(gamePath);
             File.WriteAllText(targetPath, File.ReadAllText(sourcePath).Trim());
         }
-        catch
+        catch (Exception exception)
         {
-            // Best effort
+            LogBestEffortFailure("Writing the clickCode to the game directory failed", exception);
         }
     }
+
+    /// <summary>
+    /// Attribution is best effort: a failure must never disturb startup, but it must leave a
+    /// diagnostic trail — the caller's own guard cannot observe these internal failures.
+    /// </summary>
+    private static void LogBestEffortFailure(string message, Exception exception) =>
+        LocalDiagnostics.LogSync(
+            LogEntrySeverity.Warn,
+            "ClickCode",
+            $"{message}: {exception.Message}");
 }
