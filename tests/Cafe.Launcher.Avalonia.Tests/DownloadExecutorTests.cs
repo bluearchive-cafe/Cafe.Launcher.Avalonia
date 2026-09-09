@@ -180,6 +180,36 @@ public sealed class DownloadExecutorTests : IDisposable
         Assert.True(progressCount > 0);
     }
 
+    [Theory]
+    [InlineData("")]
+    [InlineData(".")]
+    [InlineData("sub/..")]
+    public async Task DownloadFilesAsync_WhenEntryCanonicalizesToGameRoot_ThrowsAndWritesNothingOutside(string relativePath)
+    {
+        var gamePath = Path.Combine(tempDir, "YostarGames", "BlueArchive_JP");
+        Directory.CreateDirectory(gamePath);
+        var files = new[] { new ManifestFile { Path = relativePath, Size = "10", Hash = "hash" } };
+
+        await Assert.ThrowsAsync<InvalidOperationException>(() => CreateExecutor().DownloadFilesAsync(
+            gamePath,
+            new CdnConfigResponse
+            {
+                PrimaryCdn = "https://primary.example.invalid",
+                BackUpCdn = "https://backup.example.invalid"
+            },
+            "source",
+            files,
+            ProxyModes.Direct,
+            speedLimitBytesPerSec: 0,
+            GameOperationKind.Download,
+            _ => { },
+            CancellationToken.None));
+
+        // 修复前 GetTempName(root) 会得到 <gamePath>.tmp，写在游戏目录之外。
+        Assert.False(File.Exists(gamePath + ".tmp"));
+        Assert.Empty(Directory.GetFiles(Path.GetDirectoryName(gamePath)!));
+    }
+
     private DownloadExecutor CreateExecutor() =>
         new(
             new StubFileDownloadService(),
