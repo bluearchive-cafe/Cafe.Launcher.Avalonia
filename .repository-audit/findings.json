@@ -769,6 +769,45 @@
       "guard": "建议：注入 LocalDiagnostics 记 Warn，或按仓库既有惯例在 catch 处写「豁免：…」注释",
       "note": "A) Services/ClickCodeService.cs:44-48 与 :66-74 的 catch 全静默（类无 LocalDiagnostics 依赖）；App.axaml.cs:62-70 专门用 try/catch 包裹 SaveClickCode 并写 Warn 日志「ClickCodeService.SaveClickCode failed」，但该方法永不抛异常，该处理分支对内部失败永远不可达。B) Features/ResourcePanel/ResourcePanelUidService.cs:127-143 的 catch 返回空串，调用方 :102-112 把空串当作「无 Cookie UID」静默回落，无法区分「未配置」与「读不出」；仓库对同类场景有明确惯例（LogViewerDialogViewModel.cs:170-176 注释：空列表必须伴随显式错误提示与本地日志）。两处均属 best-effort 降级，影响面小，但与 PROJECT_CONVENTIONS §3.1 及 2026-09-05 收敛后的「豁免须注明理由」惯例不一致。",
       "fix": "修复（77ad317）：ClickCodeService 三处 catch 与 ResourcePanelUidService 读 Cookie 库的 catch 改为记录 Warn（经 LocalDiagnostics.LogSync）。"
+    },
+    "AUD-NET-001": {
+      "title": "流式响应正文读取无时间预算：HttpClient.Timeout 只约束到响应头，CDN/NAT 静默停滞使下载无限挂起且不触发重试（下载/图片/清单同根因）",
+      "category": "network/reliability",
+      "severity": "medium",
+      "confidence": 90,
+      "status": "resolved",
+      "disposition": "Fix",
+      "recommendation_validation": "Verified",
+      "first_seen_commit": "dd06253",
+      "last_verified_commit": "d342641",
+      "resolved_commit": "d342641",
+      "guard": "已修复（工作树）：新增 Services/ResponseBodyReader（默认 60s 空闲读预算），接入 FileDownloadService 下载循环、ImageCacheService 图片循环与 RemoteHttpRequestService. DeserializeJsonAsync 流式复制；停滞转为 HttpRequestException 落入既有换源重试/Range 续传。守卫：DownloadAsync_WhenBodyStallsAfterHeaders_ThrowsHttpRequestExceptionAfterAllRetries + ResponseBodyReaderTests×3"
+    },
+    "AUD-NET-002": {
+      "title": "connectionUsesProxy 按设置枚举而非生效代理计算：Auto/System 退化为直连（无系统代理或被旁路）时跳过 DNS 私网校验，守卫在默认配置下失效",
+      "category": "network/security",
+      "severity": "low",
+      "confidence": 85,
+      "status": "resolved",
+      "disposition": "Fix",
+      "recommendation_validation": "Verified",
+      "first_seen_commit": "dd06253",
+      "last_verified_commit": "d342641",
+      "resolved_commit": "d342641",
+      "guard": "已修复（工作树）：SendAsync 连接标志改为 IWebProxy? connectionProxy，新增 EgressesThroughProxy 逐 URI 判定（IsBypassed/GetProxy 返回原 URI → 直连并保留本地 DNS 校验）；HttpClientLease 暴露 ConnectionProxy，HttpClientFactory 填充，三处调用点改用租约代理。守卫：SendAsync_WhenConnectionProxyBypassesUri_RunsLocalDnsValidation + EgressesThroughProxy×4 + 租约暴露×2"
+    },
+    "AUD-NET-003": {
+      "title": "BuildDownloadUrl 丢弃 CDN 域名的路径/端口/查询（现网 API 为纯主机名，属潜伏陷阱；带端口时被校验器拒绝但会重试 10 次）",
+      "category": "network/correctness",
+      "severity": "low",
+      "confidence": 90,
+      "status": "resolved",
+      "disposition": "Add Guard",
+      "recommendation_validation": "Verified",
+      "first_seen_commit": "dd06253",
+      "last_verified_commit": "d342641",
+      "resolved_commit": "d342641",
+      "guard": "已修复（工作树）：BuildDownloadUrl 保留域名 Authority（含显式端口）与路径前缀。守卫：BuildDownloadUrl_WhenDomainContainsPathPrefix_PreservesPrefix + ..._WhenDomainContainsExplicitPort_PreservesPort"
     }
   }
 }
