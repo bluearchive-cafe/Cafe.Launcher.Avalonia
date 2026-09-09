@@ -22,7 +22,7 @@ namespace Cafe.Launcher.Avalonia.HeadlessTests;
 /// </summary>
 internal static class GoldenScreenshot
 {
-    private const string BaselineRelativeDir = "tests/Cafe.Launcher.Avalonia.HeadlessTests/Baselines";
+    internal const string BaselineRelativeDir = "tests/Cafe.Launcher.Avalonia.HeadlessTests/Baselines";
     private const int ChannelTolerance = 8;
     private const double MaxMismatchRatio = 0.01;
 

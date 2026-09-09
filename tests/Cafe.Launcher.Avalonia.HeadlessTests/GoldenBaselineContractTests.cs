@@ -12,22 +12,26 @@ public sealed class GoldenBaselineContractTests
     [Fact]
     public void Baselines_CommittedBaselinesAndGoldenComparisons_MatchOneToOne()
     {
-        var projectDirectory = Path.Combine(
+        var baselineDirectory = Path.Combine(
             GoldenScreenshot.FindRepositoryRoot(),
-            "tests",
-            "Cafe.Launcher.Avalonia.HeadlessTests");
+            GoldenScreenshot.BaselineRelativeDir);
+        var projectDirectory = Path.GetDirectoryName(baselineDirectory)!;
 
         var baselines = Directory
-            .EnumerateFiles(Path.Combine(projectDirectory, "Baselines"), "*.png")
+            .EnumerateFiles(baselineDirectory, "*.png")
             .Select(file => Path.GetFileNameWithoutExtension(file)!)
             .OrderBy(name => name, StringComparer.Ordinal)
             .ToArray();
 
+        // The guard reads source text, so it only sees comparisons that name the
+        // baseline with a literal; a name passed through a variable or a wrapper
+        // method escapes it and needs this pattern widened.
         var comparisonPattern = new Regex(
             @"GoldenScreenshot\.Compare\(\s*[A-Za-z0-9_.]+\s*,\s*""(?<name>[^""]+)""",
             RegexOptions.CultureInvariant);
         var compared = Directory
             .EnumerateFiles(projectDirectory, "*.cs", SearchOption.AllDirectories)
+            .Where(IsSourceFile)
             .SelectMany(file => comparisonPattern
                 .Matches(File.ReadAllText(file))
                 .Select(match => match.Groups["name"].Value))
@@ -37,4 +41,12 @@ public sealed class GoldenBaselineContractTests
 
         Assert.Equal(baselines, compared);
     }
+
+    private static bool IsSourceFile(string path) =>
+        !path.Contains(
+            $"{Path.DirectorySeparatorChar}bin{Path.DirectorySeparatorChar}",
+            StringComparison.OrdinalIgnoreCase)
+        && !path.Contains(
+            $"{Path.DirectorySeparatorChar}obj{Path.DirectorySeparatorChar}",
+            StringComparison.OrdinalIgnoreCase);
 }
