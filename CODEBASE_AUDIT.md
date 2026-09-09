@@ -14,7 +14,7 @@
 | ID | 严重度 | 状态 | 摘要 |
 |---|---|---|---|
 | AUD-PERF-003 | Medium | open（重开） | 内置壁纸仍在 DI 构造期于 UI 线程同步全尺寸解码；启动期同一 PNG 解码两次 |
-| AUD-XPLAT-001 | Medium | open | macOS 无任何可用 runner，游戏永远无法启动，且只给通用失败提示 |
+| AUD-XPLAT-001 | Medium | open（用户可见面已修） | macOS 无任何可用 runner，游戏无法启动；通用失败文案已改为具体原因（`c1b3d20`） |
 | AUD-ARCH-004 | Low | open | 设置页重置确认未纳入 ModalHost：Escape 关掉下层设置页而非该确认 |
 | AUD-SEC-005 | Low | open | 清单空路径条目使下载临时文件写到游戏目录之外 |
 | AUD-MTN-011 | Low | open | 两处 MUST 不变量无守卫（清单 JSON 键序 / settings 深克隆完整性） |
@@ -35,11 +35,12 @@
 - **现状证据**：`ViewModels/BackgroundViewModel.cs:122` 构造函数体同步调用 `bundledImageLoader()` → `:647-662` `new Bitmap(stream)` 全尺寸解码 `Assets/launcher-background.png`（实测 2560×1388 / 3,396,889 字节）；该单例由 `App.axaml.cs:72` 在 UI 线程、首帧前经 DI 解析（`ServiceConfiguration.cs:123/141/143`）。构造函数从不写 `lastBackgroundSourceKey`（仅 `:185/:221/:245`），故首次刷新的跳过守卫（`:153-160`）必然失配，Bundled 分支再解码一次 → 启动期同一 PNG 解码两次。
 - **修复方向**：构造期不做同步解码（或改后台任务），并播种 `lastBackgroundSourceKey`/`lastDecodeTarget` 让首次刷新复用；守卫建议：断言构造期未调用 `bundledImageLoader` + 「首次刷新不重复解码」行为测试。
 
-### AUD-XPLAT-001 — macOS 无可用 runner：游戏永远无法启动
+### AUD-XPLAT-001 — macOS 无可用 runner：游戏无法启动（用户可见面已修）
 
-- **证据**：`GameRunnerDefinition.cs:33-60`（`Native=IsWindows`、`Umu`/`Wine`= `IsLinux`）→ `GameRuntime.cs:89-92` 跳过不支持者 → `:121-127` `NoRunnerSelected` → `GameLaunchService.cs:146-149` 映射为通用 `GameProcessStartFailed`。`README.md:32` 仅标注「实验性」，全仓库无文档说明 macOS 不支持启动游戏。
-- **影响**：osx-arm64 用户可安装/更新/修复，但点启动必然失败且提示不解释原因。
-- **处置**：Product Decision（补 runner / 下架产物 / 显式声明不支持）。
+- **证据**：`GameRunnerDefinition.cs:33-60`（`Native=IsWindows`、`Umu`/`Wine`= `IsLinux`）→ `GameRuntime.cs:89-92` 跳过不支持者 → `:121-127` `NoRunnerSelected`。`README.md:32` 仅标注「实验性」，全仓库无文档说明 macOS 不支持启动游戏。
+- **影响**：osx-arm64 用户可安装/更新/修复，但点启动必然失败。
+- **已修（`c1b3d20`）**：失败提示不再是通用文案——改用新键 `gameRuntimeNoRunnerAvailable` 携带本地化 runner 名与可用性状态（如「没有可用的运行环境。Windows（原生）：当前平台不支持。」）；候选选择为「已固定 runner 优先 → 第一个缺失/损坏 → 第一个候选」，无候选回落配置名 + 未知；抽出 `GameRuntimeRunnerDisplay` 供设置页状态列表共用。4 个 resx 移除 `gameProcessStartFailed`、新增新键（键数净不变），Designer/LocalizationKeys 已再生；两向实测（对调格式参数 → 3 例失败）。
+- **仍待处置**：Product Decision（补 runner / 下架产物 / 显式声明不支持启动）。
 
 ## 七项 Low（要点）
 
@@ -53,6 +54,7 @@
 
 ## 已修复（本轮审计产物落地）
 
+- **AUD-XPLAT-001 用户可见面**（`c1b3d20`）：启动失败提示由通用文案改为具体原因（本地化 runner 名 + 可用性状态），并抽出共享的 runner 名/状态本地化映射。
 - **AUD-DOC-001**（`16a5129`）：PRIVACY.md 本地数据表补「崩溃报告快照」一行、保留段补 CrashReports 目录与 10 份 / 30 天，最后更新改为 2026-09-09。
 - **AUD-DOC-002**（`16a5129`）：CONTEXT.md ADR 索引补 ADR-017…020 并更新 P3 状态；CLAUDE.md 修正发布流程描述与覆盖层顺序（补向导 500）；PROJECT_CONVENTIONS §12 补 `Avalonia.Controls.ColorPicker` 与 `AvaloniaUI.DiagnosticsSupport`。验证：`InstallerContractTests` 28/28 + 单元全量 1484 过 / 2 跳。
 

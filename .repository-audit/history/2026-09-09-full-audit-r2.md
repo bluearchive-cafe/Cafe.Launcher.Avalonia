@@ -96,6 +96,8 @@ Most important actions：
 
 **Suggested guard**：启动失败分支的平台化消息测试（若选 c）。
 
+**部分修复（`c1b3d20`，用户可见面）**：`GameLaunchService.cs:189-225` 的失败消息改用新键 `gameRuntimeNoRunnerAvailable`，携带本地化 runner 名与可用性状态（候选选择：已固定 runner 优先 → 第一个缺失/损坏 → 第一个候选；无候选回落配置名 + 未知）；抽出 `Services/GameRuntime/GameRuntimeRunnerDisplay` 供设置页状态列表共用；4 个 resx 移除 `gameProcessStartFailed`、新增新键（键数净不变 532）。macOS 用户现在看到「没有可用的运行环境。Windows（原生）：当前平台不支持。」。功能缺口（macOS 无 runner）本身仍待产品决定。测试：更新既有用例 + 新增「全平台不支持」「首选 runner 未知」两例，两向实测（对调格式参数 → 3 例失败，还原 → 全过）；`verify.ps1` exit 0（单元 1486 过/2 跳；Headless 167/167；行 85.26% / 分支 92.23%）。
+
 ## Low Priority Findings
 
 ### AUD-ARCH-004 — 设置页重置确认未纳入 ModalHost
@@ -236,6 +238,7 @@ Most important actions：
 
 - `AUD-REL-005` → `d9f2184`（`CrashReportBootstrap` + 10 例测试）；`AUD-MTN-010` → `78c7d67`（§10 基线清单 + 1:1 契约守卫）——本轮复核为最终形态。
 - `AUD-DOC-001` / `AUD-DOC-002` → `16a5129`（本轮发现、同日修复）：PRIVACY.md 补崩溃快照披露；CONTEXT.md ADR 索引补 017…020 并更新 P3 状态；CLAUDE.md 修正发布流程与覆盖层顺序（补向导 500）；PROJECT_CONVENTIONS §12 补两个已声明包。验证：`InstallerContractTests` 28/28 + 单元全量 1484 过 / 2 跳 / 1486 总计（与审计基线一致）。
+- `AUD-XPLAT-001` **部分修复** → `c1b3d20`（用户可见面：启动失败提示改为具体原因并移除通用文案）；macOS 无 runner 的功能缺口仍为 open（Product Decision）。
 - 维持 4 项有意暂缓/接受项：`AUD-ARCH-003`（deferred）、`AUD-MTN-001`（deferred）、`AUD-DEP-002`（accepted-risk，年度重审）、`AUD-TST-001`（deferred / No Action）。
 - **重开**：`AUD-PERF-003`（上一轮记为 resolved；本轮回到原发现全文核对，构造期一半仍在，见上）。
 
