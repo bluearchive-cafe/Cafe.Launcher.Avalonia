@@ -15,6 +15,35 @@ public sealed class ImageCacheServiceTests : IDisposable
     }
 
     [Fact]
+    public void CleanupExpiredEntries_WhenEntriesExceedLifetime_DeletesExpiredAndKeepsFresh()
+    {
+        // 守卫（缓存清扫）：.cache/.remote/遗留 .tmp 三类文件超过生命周期即删除，
+        // 新鲜文件保留。生产路径在构造时后台清扫一次，测试直接驱动确定性重载。
+        var now = DateTimeOffset.UtcNow;
+        var expiredCache = Path.Combine(tempDir, "expired.cache");
+        var freshCache = Path.Combine(tempDir, "fresh.cache");
+        var expiredRemote = Path.Combine(tempDir, "expired.remote");
+        var staleTemp = Path.Combine(tempDir, "crashed.download.tmp");
+        File.WriteAllText(expiredCache, "x");
+        File.WriteAllText(freshCache, "x");
+        File.WriteAllText(expiredRemote, "x");
+        File.WriteAllText(staleTemp, "x");
+        var expiredTime = (now - ImageCacheService.CacheEntryLifetime - TimeSpan.FromHours(1)).UtcDateTime;
+        File.SetLastWriteTimeUtc(expiredCache, expiredTime);
+        File.SetLastWriteTimeUtc(expiredRemote, expiredTime);
+        File.SetLastWriteTimeUtc(staleTemp, expiredTime);
+        using var source = CreateSource(new ByteArrayContent([]));
+        using var service = CreateService(source);
+
+        service.CleanupExpiredEntries(now);
+
+        Assert.False(File.Exists(expiredCache));
+        Assert.False(File.Exists(expiredRemote));
+        Assert.False(File.Exists(staleTemp));
+        Assert.True(File.Exists(freshCache));
+    }
+
+    [Fact]
     public async Task GetCachedPathAsync_WhenCacheHashMatches_ReturnsCachedPath()
     {
         var bytes = "cached-image"u8.ToArray();

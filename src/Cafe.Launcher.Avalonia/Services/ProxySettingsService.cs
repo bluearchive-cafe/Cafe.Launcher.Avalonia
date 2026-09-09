@@ -119,14 +119,11 @@ public sealed class ProxySettingsService
         CancellationToken cancellationToken = default)
     {
         var proxy = await CreateProxyAsync(proxyMode, cancellationToken).ConfigureAwait(false);
-        return new SocketsHttpHandler
-        {
-            AllowAutoRedirect = false,
-            UseProxy = proxyMode != ProxyModes.Direct,
-            Proxy = proxy,
-            AutomaticDecompression = DecompressionMethods.All,
-            PooledConnectionLifetime = TimeSpan.FromMinutes(15)
-        };
+        var handler = new SocketsHttpHandler();
+        HttpClientFactory.ConfigureConnectionDefaults(handler);
+        handler.UseProxy = proxyMode != ProxyModes.Direct;
+        handler.Proxy = proxy;
+        return handler;
     }
 
     internal static string ResolveProxyUrl(string value)
