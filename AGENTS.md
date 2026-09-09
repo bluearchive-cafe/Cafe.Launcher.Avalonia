@@ -38,7 +38,16 @@ Tests use xUnit v3; UI tests use `Avalonia.Headless.XUnit`. Name tests `Method_S
 
 ## Release Notes
 
-Treat `CHANGELOG_RELEASE.md` as a single-release document. When preparing notes for a new version, replace its contents with only that version's section and remove every older version section. Before completion, verify that `rg -n "^## v" CHANGELOG_RELEASE.md` returns exactly one heading and that it matches the version being released.
+Treat `CHANGELOG_RELEASE.md` as a single-release document. When preparing notes for a new version, replace its contents with only that version's section and remove every older version section. Before completion, verify that `rg -n "^## v" CHANGELOG_RELEASE.md` returns exactly one heading and that it matches the version being released; `ReleaseChangelogContractTests` guards the heading, the notice blocks, and the vocabulary rule below.
+
+Name the version per SemVer relative to the previous tag. A backward-compatible fix or feature inside an existing prerelease series increments the prerelease number (`1.1.0-beta.7` → `1.1.0-beta.8`), not the major/minor/patch. `release.ps1 <version>` owns the csproj bump, commit, tag, and push.
+
+Write the notes for the person installing the launcher, not for a contributor reading the diff:
+
+- Describe only what the user can see. Audit ledgers, test and coverage work, CI changes, refactors, call sites, and internal architecture vocabulary (modal stack, DI construction, `AppDomain`) belong in commit messages and audit records, never in release notes.
+- A feature introduced in this release that is later fixed or reworked before the release ships is described once, in its final form. That defect never reached users, so it does not get its own fix entry.
+- Use the shipped UI wording: check the user-facing string in `Resources/LauncherStrings.zh-Hans.resx` before naming a button, label, or status.
+- Keep the `> [!NOTE]` focus summary and `> [!WARNING]` stability warning blocks. The referenced banner PNG must be committed under `docs/assets/release-banners/` before tagging; `release.yml` fails the tag build when it is missing.
 
 ## Commit & Pull Request Guidelines
 
