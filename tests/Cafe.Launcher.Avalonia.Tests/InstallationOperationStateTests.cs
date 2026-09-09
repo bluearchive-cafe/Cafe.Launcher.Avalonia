@@ -567,6 +567,75 @@ public sealed class InstallationOperationStateTests : IDisposable
     }
 
     [Fact]
+    public async Task ValidateAsync_WhenGameIsRunning_BlocksUninstall()
+    {
+        var tempDir = CreateTempDir();
+        try
+        {
+            var gamePath = Path.Combine(tempDir, "YostarGames", "BlueArchive_JP");
+            Directory.CreateDirectory(gamePath);
+            var localGame = await new LocalInstallationStateStore().CommitAsync(
+                gamePath,
+                new LocalInstallationStateCommit("1.0.0", "manifest.json", "BlueArchive", [], []));
+            Assert.Equal(LocalInstallationStateKind.Valid, localGame.Kind);
+            var localizer = new LocalizationService();
+            var service = new GameUninstallService(
+                new LocalInstallationStateStore(),
+                new LocalDiagnostics(),
+                localizer,
+                new GameInstallationPath(),
+                new RunningGameProcessTracker());
+
+            var result = await service.ValidateAsync(gamePath);
+
+            Assert.False(result.Success);
+            Assert.Equal(localizer.F("gameIsRunning", "BlueArchive.exe"), result.Message);
+            Assert.Equal(GameOperationErrorCode.GameRunning, result.ErrorCode);
+        }
+        finally
+        {
+            DeleteTempDir(tempDir);
+        }
+    }
+
+    [Fact]
+    public async Task ValidateAsync_WhenGamePathIsDriveRoot_BlocksUninstall()
+    {
+        var localizer = new LocalizationService();
+        var service = new GameUninstallService(
+            new LocalInstallationStateStore(),
+            new LocalDiagnostics(),
+            localizer,
+            new GameInstallationPath(), new GameProcessTracker());
+        var driveRoot = Path.GetPathRoot(Path.GetTempPath());
+        Assert.False(string.IsNullOrWhiteSpace(driveRoot));
+
+        var result = await service.ValidateAsync(driveRoot!);
+
+        Assert.False(result.Success);
+        Assert.Equal(localizer.F("gamePathProtected", driveRoot!), result.Message);
+        Assert.Equal(GameOperationErrorCode.Uninstall, result.ErrorCode);
+    }
+
+    [Fact]
+    public async Task ValidateAsync_WhenGamePathDoesNotExist_BlocksUninstall()
+    {
+        var localizer = new LocalizationService();
+        var service = new GameUninstallService(
+            new LocalInstallationStateStore(),
+            new LocalDiagnostics(),
+            localizer,
+            new GameInstallationPath(), new GameProcessTracker());
+        var missingPath = Path.Combine(tempDir, "YostarGames", "BlueArchive_JP");
+
+        var result = await service.ValidateAsync(missingPath);
+
+        Assert.False(result.Success);
+        Assert.Equal(localizer.F("gamePathMissing", missingPath), result.Message);
+        Assert.Equal(GameOperationErrorCode.Uninstall, result.ErrorCode);
+    }
+
+    [Fact]
     public async Task ValidateAsync_WhenGameDirectoryNameIsInvalid_BlocksUninstall()
     {
         var tempDir = CreateTempDir();
@@ -766,6 +835,19 @@ public sealed class InstallationOperationStateTests : IDisposable
         {
             Directory.Delete(path, recursive: true);
         }
+    }
+
+    /// <summary>Reports the game as running so the uninstall guard can be exercised.</summary>
+    private sealed class RunningGameProcessTracker : IGameProcessTracker
+    {
+        public void Register(GameProcess process) => throw new NotSupportedException();
+
+        public bool HasLiveTrackedProcess => true;
+
+        public GameLaunchExitInfo? LastExit => null;
+
+        public Task<bool> IsGameRunningAsync(string exeName, CancellationToken cancellationToken = default) =>
+            Task.FromResult(true);
     }
 
     private sealed class FailingProcessLauncher : IProcessLauncher

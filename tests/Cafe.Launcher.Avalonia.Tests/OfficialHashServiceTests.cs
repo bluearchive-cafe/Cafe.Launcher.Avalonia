@@ -1,3 +1,5 @@
+using System.Linq;
+using System.Text.Json;
 using Cafe.Launcher.Avalonia.Models;
 using Cafe.Launcher.Avalonia.Services;
 
@@ -60,5 +62,45 @@ public sealed class OfficialHashServiceTests
                 Version = config.Version,
                 Vc = "jeQcbtiEIHEKA2k6s2fw5A=="
             }));
+    }
+
+    [Fact]
+    public void ManifestFile_SerializedKeyOrder_MatchesOfficialManifestOrder()
+    {
+        // The official launcher computes vc over Object.values(file) of the parsed object, so
+        // the serialized key order is part of the interop contract (see the ordering note in
+        // Models/LocalGameContracts.cs). Reordering these properties does not break our own
+        // reader — GetManifestFileHash takes explicit fields — it breaks the official launcher
+        // reading a manifest we wrote.
+        var json = JsonSerializer.Serialize(new ManifestFile
+        {
+            Path = "data/a.bin",
+            Hash = "1",
+            Size = "2",
+            Vc = "vc"
+        });
+
+        Assert.Equal(["path", "hash", "size", "vc"], ReadKeyOrder(json));
+    }
+
+    [Fact]
+    public void GameLauncherConfig_SerializedKeyOrder_MatchesOfficialConfigOrder()
+    {
+        var json = JsonSerializer.Serialize(new GameLauncherConfig
+        {
+            Tag = "tag",
+            Name = "name",
+            Params = ["param"],
+            Version = "version",
+            Vc = "vc"
+        });
+
+        Assert.Equal(["tag", "name", "params", "version", "vc"], ReadKeyOrder(json));
+    }
+
+    private static string[] ReadKeyOrder(string json)
+    {
+        using var document = JsonDocument.Parse(json);
+        return document.RootElement.EnumerateObject().Select(property => property.Name).ToArray();
     }
 }
