@@ -623,18 +623,18 @@
       "note": "docs/design/design-system-spec.md:194 逐项列举「壳默认/进度面板/设置覆盖层/确认对话框/Toast」共 5 个基线，而 tests/Cafe.Launcher.Avalonia.HeadlessTests/Baselines/ 现为 6 个 PNG（新增 crash-report-window.png）。f6d44a7 增加了第 6 条基线但未同步该句；走查清单 §3.7 已正确记录崩溃窗口基线，故属单点漂移。 修复（78c7d67）：design-system-spec.md §10 改为「6 个基线（…/崩溃窗口）」；另加基线 1:1 契约测试（Baselines/*.png ↔ GoldenScreenshot.Compare 调用），两向实测：放入 orphan-probe.png 即失败、移除后通过。"
     },
     "AUD-XPLAT-001": {
-      "title": "macOS 无任何可用 runner：已发布 osx-arm64 构建上游戏永远无法启动（通用失败文案已改为具体原因，见 c1b3d20）",
+      "title": "macOS 无任何可用 runner：游戏无法启动——已定为「暂不支持启动游戏且暂无支持计划」并写入文档",
       "category": "cross-platform/product",
       "severity": "medium",
       "confidence": 90,
-      "status": "open",
+      "status": "resolved",
       "disposition": "Product Decision",
-      "recommendation_validation": "Needs Product Decision",
+      "recommendation_validation": "Verified",
       "first_seen_commit": "cffbd4d",
-      "last_verified_commit": "c1b3d20",
-      "resolved_commit": null,
-      "guard": "无（可用性提示已落地，平台支持与否仍待产品决定）",
-      "note": "Services/GameRuntime/GameRunnerDefinition.cs:33-60：Native 的 IsSupportedPlatform=OperatingSystem.IsWindows()，Umu 与 Wine 均为 OperatingSystem.IsLinux()；GameRuntime.cs:89-92 对 !IsSupportedPlatform 的 runner 直接 continue，最终 :121-127 返回 Failure=NoRunnerSelected。后果：macOS（README.md:32 列为实验性、release.yml 产出 osx-arm64.zip）上安装/更新/修复可用，但启动游戏必然失败；README/CHANGELOG 只笼统写「macOS 与 Linux 仍为实验性构建」，未说明 macOS 无兼容层。处置选项：补一个 macOS runner、明确移除 macOS 产物，或在 UI/文档显式声明「macOS 暂不支持启动游戏」。 部分修复（c1b3d20）：用户可见面已不再是通用文案——GameLaunchService.cs:189-225 改用新键 gameRuntimeNoRunnerAvailable，携带本地化的 runner 名与可用性状态（候选选择：已固定 runner 优先 → 第一个缺失/损坏 → 第一个候选；无候选回落配置名 + 未知），并抽出 Services/GameRuntime/GameRuntimeRunnerDisplay 供设置页状态列表共用；4 个 resx 移除 gameProcessStartFailed、新增 gameRuntimeNoRunnerAvailable（键数净不变）。macOS 用户现在看到「没有可用的运行环境。Windows（原生）：当前平台不支持。」——功能缺口本身仍待产品决定。"
+      "last_verified_commit": "79db640",
+      "resolved_commit": "79db640",
+      "guard": "文档表述（README + 文档站）；失败提示由 gameRuntimeNoRunnerAvailable 具体化",
+      "note": "Services/GameRuntime/GameRunnerDefinition.cs:33-60：Native 的 IsSupportedPlatform=OperatingSystem.IsWindows()，Umu 与 Wine 均为 OperatingSystem.IsLinux()；GameRuntime.cs:89-92 对 !IsSupportedPlatform 的 runner 直接 continue，最终 :121-127 返回 Failure=NoRunnerSelected。后果：macOS（README.md:32 列为实验性、release.yml 产出 osx-arm64.zip）上安装/更新/修复可用，但启动游戏必然失败。 修复（c1b3d20 + 79db640 + 文档站 f25d174）：（1）用户可见面——GameLaunchService.cs:189-225 改用新键 gameRuntimeNoRunnerAvailable，携带本地化 runner 名与可用性状态（候选选择：已固定 runner 优先 → 第一个缺失/损坏 → 第一个候选；无候选回落配置名 + 未知），抽出 Services/GameRuntime/GameRuntimeRunnerDisplay 供设置页状态列表共用；4 个 resx 移除 gameProcessStartFailed、新增新键（键数净不变）。（2）产品决定——macOS 明确为「只能安装/更新/修复，暂不支持启动游戏，也暂无支持计划」，写入本仓库 README 平台表与说明段，以及文档站 cafe-docs 的 index/installation/operations/faq/feedback 五处。（3）测试——新增「全平台不支持」「首选 runner 未知」两例，两向实测（对调格式参数 → 3 例失败）。验证：verify.ps1 exit 0（单元 1486 过/2 跳；Headless 167/167；行 85.26% / 分支 92.23%）；cafe-docs npm run docs:build 成功。"
     },
     "AUD-ARCH-004": {
       "title": "设置页「重置设置」确认是唯一未纳入 ModalHost 的模态表面：Escape 关掉下层设置页而非该确认",
