@@ -16,55 +16,35 @@ public sealed class CrashReportBootstrapTests : IDisposable
     [InlineData("   ")]
     public void ApplyCulture_WhenCultureNameIsAbsent_KeepsTheActiveCulture(string? cultureName)
     {
-        var snapshot = CultureSnapshot.Capture();
-        try
-        {
-            var expected = CultureInfo.CurrentUICulture;
+        using var culture = new CultureScope();
+        var expected = CultureInfo.CurrentUICulture;
 
-            CrashReportBootstrap.ApplyCulture(cultureName);
+        CrashReportBootstrap.ApplyCulture(cultureName);
 
-            Assert.Equal(expected, CultureInfo.CurrentUICulture);
-        }
-        finally
-        {
-            snapshot.Restore();
-        }
+        Assert.Equal(expected, CultureInfo.CurrentUICulture);
     }
 
     [Fact]
     public void ApplyCulture_WhenCultureNameIsInvalid_KeepsTheActiveCulture()
     {
-        var snapshot = CultureSnapshot.Capture();
-        try
-        {
-            var expected = CultureInfo.CurrentUICulture;
+        using var culture = new CultureScope();
+        var expected = CultureInfo.CurrentUICulture;
 
-            CrashReportBootstrap.ApplyCulture("xx-INVALID");
+        CrashReportBootstrap.ApplyCulture("xx-INVALID");
 
-            Assert.Equal(expected, CultureInfo.CurrentUICulture);
-        }
-        finally
-        {
-            snapshot.Restore();
-        }
+        Assert.Equal(expected, CultureInfo.CurrentUICulture);
     }
 
     [Fact]
     public void ApplyCulture_WhenCultureNameIsValid_AppliesItToTheCurrentAndDefaultThread()
     {
-        var snapshot = CultureSnapshot.Capture();
-        try
-        {
-            CrashReportBootstrap.ApplyCulture("ja-JP");
+        using var culture = new CultureScope();
 
-            var expected = CultureInfo.GetCultureInfo("ja-JP");
-            Assert.Equal(expected, CultureInfo.CurrentUICulture);
-            Assert.Equal(expected, CultureInfo.DefaultThreadCurrentUICulture);
-        }
-        finally
-        {
-            snapshot.Restore();
-        }
+        CrashReportBootstrap.ApplyCulture("ja-JP");
+
+        var expected = CultureInfo.GetCultureInfo("ja-JP");
+        Assert.Equal(expected, CultureInfo.CurrentUICulture);
+        Assert.Equal(expected, CultureInfo.DefaultThreadCurrentUICulture);
     }
 
     [Fact]
@@ -81,6 +61,27 @@ public sealed class CrashReportBootstrapTests : IDisposable
         Directory.CreateDirectory(tempDirectory);
         var path = Path.Combine(tempDirectory, "garbage.json");
         File.WriteAllText(path, "{not json");
+
+        Assert.Equal("CR-UNAVAILABLE", CrashReportBootstrap.Resolve(path).Id);
+    }
+
+    [Fact]
+    public void Resolve_WhenRequiredMemberIsMissing_ReturnsTheUnreadableReport()
+    {
+        Directory.CreateDirectory(tempDirectory);
+        var path = Path.Combine(tempDirectory, "missing-member.json");
+        File.WriteAllText(path, """
+            {
+              "OccurredAt": "2026-09-08T21:47:02+08:00",
+              "Source": "Main",
+              "AppVersion": "1.2.3",
+              "BuildSha": "0123456789abcdef0123456789abcdef01234567",
+              "OperatingSystem": "Test OS",
+              "UiCulture": "en",
+              "ExceptionType": "System.InvalidOperationException",
+              "TechnicalDetails": "no Id member"
+            }
+            """);
 
         Assert.Equal("CR-UNAVAILABLE", CrashReportBootstrap.Resolve(path).Id);
     }
@@ -124,14 +125,9 @@ public sealed class CrashReportBootstrapTests : IDisposable
             """);
 
         var report = CrashReportBootstrap.Resolve(path);
-        var snapshot = CultureSnapshot.Capture();
-        try
+        using (var culture = new CultureScope())
         {
             CrashReportBootstrap.ApplyCulture(report.UiCulture);
-        }
-        finally
-        {
-            snapshot.Restore();
         }
 
         Assert.Equal("CR-NULL-CULTURE", report.Id);
@@ -145,25 +141,24 @@ public sealed class CrashReportBootstrapTests : IDisposable
         }
     }
 
-    /// <summary>Saves the process-wide cultures so a culture-applying test can restore them.</summary>
-    private readonly record struct CultureSnapshot(
-        CultureInfo Culture,
-        CultureInfo UiCulture,
-        CultureInfo? DefaultCulture,
-        CultureInfo? DefaultUiCulture)
+    /// <summary>
+    /// Restores the four process-wide culture slots a test may overwrite. Unlike the
+    /// production <c>SystemCultureSnapshot</c> (current-thread slots only), this also
+    /// restores the default-thread slots that <c>ApplyCulture</c> writes.
+    /// </summary>
+    private sealed class CultureScope : IDisposable
     {
-        public static CultureSnapshot Capture() => new(
-            CultureInfo.CurrentCulture,
-            CultureInfo.CurrentUICulture,
-            CultureInfo.DefaultThreadCurrentCulture,
-            CultureInfo.DefaultThreadCurrentUICulture);
+        private readonly CultureInfo culture = CultureInfo.CurrentCulture;
+        private readonly CultureInfo uiCulture = CultureInfo.CurrentUICulture;
+        private readonly CultureInfo? defaultCulture = CultureInfo.DefaultThreadCurrentCulture;
+        private readonly CultureInfo? defaultUiCulture = CultureInfo.DefaultThreadCurrentUICulture;
 
-        public void Restore()
+        public void Dispose()
         {
-            CultureInfo.CurrentCulture = Culture;
-            CultureInfo.CurrentUICulture = UiCulture;
-            CultureInfo.DefaultThreadCurrentCulture = DefaultCulture;
-            CultureInfo.DefaultThreadCurrentUICulture = DefaultUiCulture;
+            CultureInfo.CurrentCulture = culture;
+            CultureInfo.CurrentUICulture = uiCulture;
+            CultureInfo.DefaultThreadCurrentCulture = defaultCulture;
+            CultureInfo.DefaultThreadCurrentUICulture = defaultUiCulture;
         }
     }
 }
