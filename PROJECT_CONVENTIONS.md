@@ -214,8 +214,10 @@ AI 辅助开发规范 —— 本文件为所有 AI 编码助手（Claude Code、
 |---|---|---|
 | .NET SDK | 10.0.x | Runtime |
 | Avalonia / Avalonia.Desktop | 12.1.2 | UI Framework |
+| Avalonia.Controls.ColorPicker | 12.1.2 | 自定义主题色取色器 |
 | Avalonia.Themes.Fluent | 12.1.2 | Fluent 主题 |
 | Avalonia.Headless.XUnit | 12.1.2 | Headless UI testing |
+| AvaloniaUI.DiagnosticsSupport | 2.2.3 | 调试期 UI 诊断（Debug 专用，Release 不分发） |
 | CommunityToolkit.Mvvm | 8.4.2 | MVVM source generators |
 | Material.Icons.Avalonia | 3.0.2 | Icon library |
 | Microsoft.Extensions.DependencyInjection | 10.0.11 | DI 容器 |
