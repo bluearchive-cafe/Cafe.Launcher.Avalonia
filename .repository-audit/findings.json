@@ -283,11 +283,11 @@
       "category": "architecture",
       "severity": "high",
       "confidence": 85,
-      "status": "architecture-decision",
+      "status": "resolved",
       "disposition": "Architecture Decision",
       "recommendation_validation": "Verified",
       "first_seen_commit": "4ed11c3",
-      "last_verified_commit": "259e217",
+      "last_verified_commit": "fca9bc0",
       "resolved_commit": "5be9610",
       "guard": "AGENTS.md 壳层裁决条款"
     },
