@@ -75,6 +75,7 @@ internal sealed class DownloadExecutor
             .CreateLeaseAsync(proxyMode, cancellationToken)
             .ConfigureAwait(false);
         var client = lease.Client;
+        var connectionProxy = lease.ConnectionProxy;
         using var semaphore = new SemaphoreSlim(MaxParallelDownloads, MaxParallelDownloads);
         var totalSize = fileList.Sum(item => item.SizeBytes);
         var downloadFiles = fileList.Select(file =>
@@ -214,7 +215,7 @@ internal sealed class DownloadExecutor
                             RecordFileProgress(downloadFile, transferredBytes: 0);
                             return Task.CompletedTask;
                         },
-                        proxyMode != ProxyModes.Direct),
+                        connectionProxy),
                     cancellationToken).ConfigureAwait(false);
                 if (verifiedCrc is not null)
                 {

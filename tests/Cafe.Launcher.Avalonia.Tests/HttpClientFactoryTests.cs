@@ -114,6 +114,29 @@ public sealed class HttpClientFactoryTests
     }
 
     [Fact]
+    public async Task CreateLeaseAsync_WhenDirectMode_LeaseHasNoConnectionProxy()
+    {
+        using var factory = new HttpClientFactory(new ProxySettingsService());
+
+        using var lease = await factory.CreateLeaseAsync(ProxyModes.Direct);
+
+        Assert.Null(lease.ConnectionProxy);
+    }
+
+    [Fact]
+    public async Task CreateLeaseAsync_WhenProxyMode_LeaseExposesConnectionProxy()
+    {
+        // 守卫（AUD-NET-002）：租约必须携带生效的代理对象，供 URL 校验按
+        // URI 解析旁路/直连退化，而不是只拿到代理模式的设置枚举。
+        using var factory = new HttpClientFactory(new ProxySettingsService());
+
+        using var lease = await factory.CreateLeaseAsync(ProxyModes.Auto);
+
+        // WebRequest.GetSystemWebProxy() 永不为 null；是否真经代理由其按 URI 判定。
+        Assert.NotNull(lease.ConnectionProxy);
+    }
+
+    [Fact]
     public async Task CreateLeaseAsync_AfterFactoryIsDisposed_Throws()
     {
         var factory = new HttpClientFactory(new ProxySettingsService());

@@ -27,15 +27,18 @@ public sealed class FileDownloadService : IFileDownloadService
     private readonly Crc64Service crc64Service;
     private readonly LocalDiagnostics diagnostics;
     private readonly RemoteHttpUrlValidator urlValidator;
+    private readonly TimeSpan? idleReadTimeout;
 
     public FileDownloadService(
         Crc64Service crc64Service,
         LocalDiagnostics diagnostics,
-        RemoteHttpUrlValidator urlValidator)
+        RemoteHttpUrlValidator urlValidator,
+        TimeSpan? idleReadTimeout = null)
     {
         this.crc64Service = crc64Service;
         this.diagnostics = diagnostics;
         this.urlValidator = urlValidator;
+        this.idleReadTimeout = idleReadTimeout;
     }
 
     public async Task<string?> DownloadAsync(
@@ -53,7 +56,7 @@ public sealed class FileDownloadService : IFileDownloadService
         var pauseAwaiter = control.WaitWhilePausedAsync;
         var onProgressAsync = control.ReportProgressAsync;
         var onProgressResetAsync = control.ReportProgressResetAsync;
-        var connectionUsesProxy = control.ConnectionUsesProxy;
+        var connectionProxy = control.ConnectionProxy;
         var targetDirectory = Path.GetDirectoryName(targetTempPath);
         if (!string.IsNullOrWhiteSpace(targetDirectory))
         {
@@ -99,7 +102,7 @@ public sealed class FileDownloadService : IFileDownloadService
                     },
                     urlValidator,
                     cancellationToken,
-                    connectionUsesProxy).ConfigureAwait(false);
+                    connectionProxy).ConfigureAwait(false);
                 response.EnsureSuccessStatusCode();
 
                 var fileMode = FileMode.Create;
@@ -128,7 +131,9 @@ public sealed class FileDownloadService : IFileDownloadService
                         await pauseAwaiter().ConfigureAwait(false);
                         cancellationToken.ThrowIfCancellationRequested();
 
-                        var read = await responseStream.ReadAsync(buffer, cancellationToken).ConfigureAwait(false);
+                        var read = await ResponseBodyReader
+                            .ReadAsync(responseStream, buffer, cancellationToken, idleReadTimeout)
+                            .ConfigureAwait(false);
                         if (read == 0) break;
                         await output.WriteAsync(buffer.AsMemory(0, read), cancellationToken).ConfigureAwait(false);
                         await onProgressAsync(read, cancellationToken).ConfigureAwait(false);
@@ -190,7 +195,12 @@ public sealed class FileDownloadService : IFileDownloadService
         throw new HttpRequestException($"Download failed: {filePath}", lastError);
     }
 
-    /// <summary>Build the full download URL from a CDN domain, source path, and file path.</summary>
+    /// <summary>
+    /// Build the full download URL from a CDN domain, source path, and file path.
+    /// The domain's authority (including an explicit port) and path prefix are
+    /// preserved: upstream CDN domains are plain hosts today, but silently dropping
+    /// a path or port would misroute every file request the moment one appears.
+    /// </summary>
     internal static string BuildDownloadUrl(string? domain, string source, string filePath)
     {
         if (string.IsNullOrWhiteSpace(domain))
@@ -204,7 +214,8 @@ public sealed class FileDownloadService : IFileDownloadService
             .Concat(filePath.Split('/', StringSplitOptions.RemoveEmptyEntries))
             .Select(Uri.EscapeDataString)
             .ToList();
-        return $"{uri.Scheme}://{uri.Host}/{string.Join("/", pathItems)}";
+        var prefix = uri.AbsolutePath.TrimEnd('/');
+        return $"{uri.Scheme}://{uri.Authority}{prefix}/{string.Join("/", pathItems)}";
     }
 
     /// <summary>Resolve CDN URL for a retry attempt.</summary>

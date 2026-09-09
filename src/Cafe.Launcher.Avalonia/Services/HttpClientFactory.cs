@@ -107,7 +107,10 @@ public sealed class HttpClientFactory : IDisposable
         if (baseAddress is not null) proxyClient.BaseAddress = baseAddress;
         if (timeout.HasValue) proxyClient.Timeout = timeout.Value;
         ApplyHttpVersion(proxyClient);
-        return new HttpClientLease(proxyClient, ownsClient: true);
+        return new HttpClientLease(proxyClient, ownsClient: true)
+        {
+            ConnectionProxy = handler.UseProxy ? handler.Proxy : null
+        };
     }
 
     private void ApplyHttpVersion(HttpClient client)

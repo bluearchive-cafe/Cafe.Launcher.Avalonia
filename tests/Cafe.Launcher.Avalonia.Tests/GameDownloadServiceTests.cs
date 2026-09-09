@@ -149,6 +149,30 @@ public sealed class GameDownloadServiceTests : IDisposable
     }
 
     [Fact]
+    public void BuildDownloadUrl_WhenDomainContainsPathPrefix_PreservesPrefix()
+    {
+        // 守卫（AUD-NET-003）：CDN 域名一旦带上路径前缀，拼接必须保留它，
+        // 而不是静默把所有文件请求错位到对方根路径。
+        var url = FileDownloadService.BuildDownloadUrl(
+            "https://cdn.example.invalid/v2/assets/",
+            "/source/root",
+            "/data/file.bin");
+
+        Assert.Equal("https://cdn.example.invalid/v2/assets/source/root/data/file.bin", url);
+    }
+
+    [Fact]
+    public void BuildDownloadUrl_WhenDomainContainsExplicitPort_PreservesPort()
+    {
+        var url = FileDownloadService.BuildDownloadUrl(
+            "https://cdn.example.invalid:8443",
+            "/source",
+            "/file.bin");
+
+        Assert.Equal("https://cdn.example.invalid:8443/source/file.bin", url);
+    }
+
+    [Fact]
     public async Task DownloadFileAsync_WhenTemporaryFileAlreadyMatchesExpectedSize_SkipsHttpRequest()
     {
         try
@@ -180,7 +204,7 @@ public sealed class GameDownloadServiceTests : IDisposable
                 client,
                 () => Task.CompletedTask,
                 (_, _) => Task.CompletedTask,
-                false,
+                null,
                 CancellationToken.None);
 
             Assert.Equal(0, handler.RequestCount);
@@ -224,7 +248,7 @@ public sealed class GameDownloadServiceTests : IDisposable
                 client,
                 () => Task.CompletedTask,
                 (_, _) => Task.CompletedTask,
-                false,
+                null,
                 CancellationToken.None);
 
             Assert.False(handler.RangeWasRequested);
@@ -348,7 +372,7 @@ public sealed class GameDownloadServiceTests : IDisposable
             client,
             () => Task.CompletedTask,
             (_, _) => Task.CompletedTask,
-            false,
+            null,
             CancellationToken.None);
 
         Assert.True(handler.RangeWasRequested);
@@ -386,7 +410,7 @@ public sealed class GameDownloadServiceTests : IDisposable
             client,
             () => Task.CompletedTask,
             (_, _) => Task.CompletedTask,
-            false,
+            null,
             CancellationToken.None);
 
         Assert.Equal(2, handler.RequestCount);
@@ -426,7 +450,7 @@ public sealed class GameDownloadServiceTests : IDisposable
                 client,
                 () => Task.CompletedTask,
                 (_, _) => Task.CompletedTask,
-                false,
+                null,
                 CancellationToken.None);
 
             Assert.Equal(2, handler.RequestCount);
@@ -469,7 +493,7 @@ public sealed class GameDownloadServiceTests : IDisposable
                 client,
                 () => Task.CompletedTask,
                 (_, _) => Task.CompletedTask,
-                false,
+                null,
                 CancellationToken.None);
 
             Assert.Equal(4, handler.SecondRequestRangeStart);
@@ -1588,7 +1612,7 @@ public sealed class GameDownloadServiceTests : IDisposable
                     reportProgress?.Invoke(0);
                     return Task.CompletedTask;
                 },
-                false),
+                ConnectionProxy: null),
             CancellationToken.None);
     }
 
