@@ -808,6 +808,62 @@
       "last_verified_commit": "d342641",
       "resolved_commit": "d342641",
       "guard": "已修复（工作树）：BuildDownloadUrl 保留域名 Authority（含显式端口）与路径前缀。守卫：BuildDownloadUrl_WhenDomainContainsPathPrefix_PreservesPrefix + ..._WhenDomainContainsExplicitPort_PreservesPort"
+    },
+    "AUD-NET-004": {
+      "title": "ResolveProxyUrl 产出裸 socks:// 代理方案：SocketsHttpHandler 仅接受 http/https/socks4/4a/5，首个经代理请求即 NotSupportedException；守卫测试把错误输出固化为期望",
+      "category": "network/correctness",
+      "severity": "low",
+      "confidence": 100,
+      "status": "resolved",
+      "disposition": "Fix",
+      "recommendation_validation": "Verified",
+      "first_seen_commit": "ba321ec",
+      "last_verified_commit": "9a24b97",
+      "resolved_commit": "9a24b97",
+      "guard": "ResolveProxyUrl_UsesExactConfiguredProtocol 参数化断言 socks5:// + CreateHttpHandlerAsync_WhenProxyIsSocks_ProducesSchemeAcceptedBySocketsHttpHandler（.invalid 代理主机真连接，断言非 NotSupportedException）",
+      "note": "触发路径：系统代理（ProxyModes.System）注册表 ProxyServer 含 legacy socks=host:port 条目（IE 遗留写法）；Auto 模式走运行时原生 GetSystemWebProxy 不受影响。修复前已在 .NET 10.0.11 独立控制台实证 NotSupportedException（Only the 'http', 'https', 'socks4', 'socks4a' and 'socks5' schemes are allowed for proxies）。修复（9a24b97）：ResolveProxyUrl 输出 socks5://，且规范化下沉到 CreateProxyAsync 的 WebProxy 构造点（provider 侧已 Normalize 之上再加使用点防御）。"
+    },
+    "AUD-NET-005": {
+      "title": "自更新检查仅 HttpRequestException 降级到 GitHub Releases 兜底：代理端点超时抛 TaskCanceledException 不触发兜底，整次检查失败",
+      "category": "network/reliability",
+      "severity": "low",
+      "confidence": 100,
+      "status": "resolved",
+      "disposition": "Fix",
+      "recommendation_validation": "Verified",
+      "first_seen_commit": "f20de8b",
+      "last_verified_commit": "9a24b97",
+      "resolved_commit": "9a24b97",
+      "guard": "CheckForUpdateAsync_WhenProxyTimesOut_UsesGitHubReleases（ProxyFailureGitHubReleaseHandler 参数化注入 TaskCanceledException）",
+      "note": "修复（9a24b97）：FetchReleasesAsync 的 catch 扩为 HttpRequestException 或「非调用方取消的 OperationCanceledException」（即 HttpClient 超时）；用户取消仍直接传播不进兜底。"
+    },
+    "AUD-NET-006": {
+      "title": "ResourcePanelApiClient 用裸 HttpClient.GetAsync：池化 handler 均 AllowAutoRedirect=false，任何 3xx 硬失败（EnsureSuccessStatusCode 抛出）且被重试过滤器无差别重试 2 次，与其他客户端的手动重定向语义不一致；注释 10s 超时与实际 30s 漂移",
+      "category": "network/correctness",
+      "severity": "low",
+      "confidence": 95,
+      "status": "resolved",
+      "disposition": "Fix",
+      "recommendation_validation": "Verified",
+      "first_seen_commit": "f20de8b",
+      "last_verified_commit": "9a24b97",
+      "resolved_commit": "9a24b97",
+      "guard": "GetStatusAsync_WhenRedirected_FollowsRedirectAndParsesResponse（302 → 跟随 → 解析成功，CallCount=2）",
+      "note": "基址 api.bluearchive.cafe 为固定 HTTPS 域名故无 SSRF 面，但上游一加重定向（apex→www、http→https）资源面板整体失效。修复（9a24b97）：改走 RemoteHttpRequestService.SendAsync 统一手动重定向路径（每跳 URL 复验、拒绝降级、5 跳上限），生产构造注入 RemoteHttpUrlValidator（DI 单例），测试构造用 CreateForTesting()；注释改为与实际一致的 30s。"
+    },
+    "AUD-NET-007": {
+      "title": "API 信封业务码非 200 抛 InvalidOperationException 落入可重试过滤器：服务器明确拒绝（维护/限流等业务语义）也被重试 3 次 + 1.5s 退避，无谓放大请求量并拖慢失败反馈",
+      "category": "network/reliability",
+      "severity": "low",
+      "confidence": 90,
+      "status": "resolved",
+      "disposition": "Fix",
+      "recommendation_validation": "Verified",
+      "first_seen_commit": "f20de8b",
+      "last_verified_commit": "9a24b97",
+      "resolved_commit": "9a24b97",
+      "guard": "GetBaseConfigAsync_WhenEnvelopeCodeIsNot200_FailsFastWithoutRetry（CallCount=1）+ GetBaseConfigAsync_WhenEnvelopeDataIsMissing_RetriesBeforeFailing（协议空数据仍重试，CallCount=3）",
+      "note": "修复（9a24b97）：新增 internal sealed class LauncherApiEnvelopeException : InvalidOperationException（保住既有 catch 兼容），envelope.Code != 200 改抛之，GetEnvelopeDataAsync 重试过滤器显式排除；协议完整性失败（body 空/data 空）与 JsonException 维持可重试语义不变。"
     }
   }
 }
