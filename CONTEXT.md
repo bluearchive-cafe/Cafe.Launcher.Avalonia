@@ -165,7 +165,7 @@ _Avoid_: 遮罩点击穿透
 
 - **底栏形态（Q18）**：仲裁结论已撤销，重新开放（ADR-001 标准保留；`prototype/bottom-bar` 素材保留）。
 - **首页（主壳）重设计**：已搁置（2026-08-25 用户放弃本轮设计稿与相关布局决策）；P3 主壳表面照旧包含，但无既定蓝图。
-- **P2 执行 ticket 拆分**：**已执行完毕（2026-08-26）**——A→B→C 批次 + 设置三项 UI（`SettingSelect`）+ Celebi+Score 提取器接入 + 中性色 caption（ADR-010）+ 走查清单（`docs/design/design-walkthrough-checklist.md`）全部落地；P3 目前完成 = 设置页（ADR-013）+ 对话框/Toast/设置向导（ADR-014）。
+- **P2 执行 ticket 拆分**：**已执行完毕（2026-08-26）**——A→B→C 批次 + 设置三项 UI（`SettingSelect`）+ Celebi+Score 提取器接入 + 中性色 caption（ADR-010）+ 走查清单（`docs/design/design-walkthrough-checklist.md`）全部落地；P3 目前完成 = 设置页（ADR-013）+ 对话框/Toast/设置向导（ADR-014/017）+ 关于分区（ADR-018）+ 崩溃窗口（ADR-019/020）。
 - P2 剩余项：底栏双原型对比区随 Q18 重新裁决；画廊矩阵渲染细节随批次微调。
 
 ### ✅ 已定案（Fluent 动效重设计，2026-08-27）
@@ -192,3 +192,7 @@ _Avoid_: 遮罩点击穿透
 | ADR-014 | 对话框/Toast/设置向导 M3 重设计方向（主壳仍搁置） | ✅ 已接受 |
 | ADR-015 | 对话框家族 v2（DialogSurface 统一框架） | ✅ 已接受 |
 | ADR-016 | M3 视觉之上的 Fluent 动效层 | ✅ 已接受 |
+| ADR-017 | 设置向导动效落地与 M3 界面细化 | ✅ 已接受 |
+| ADR-018 | 关于分区重设计方向 | ✅ 已接受 |
+| ADR-019 | 不可恢复崩溃两级兜底 | ✅ 已接受 |
+| ADR-020 | 崩溃窗口独立 Fluent 设计系统 | ✅ 已接受 |

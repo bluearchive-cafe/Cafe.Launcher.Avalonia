@@ -29,10 +29,10 @@
 | 平台 | 支持状态 | 发行包 |
 | --- | --- | --- |
 | Windows x64 | 正式支持 | 安装程序、便携 ZIP |
-| macOS Apple Silicon | 实验性 | `.app` 压缩包 |
+| macOS Apple Silicon | 实验性（暂不支持启动游戏） | `.app` 压缩包 |
 | Linux x64 | 实验性 | `.deb`、AppImage、`tar.gz` |
 
-所有发行包均为自包含应用，无需另外安装 .NET Runtime。macOS 与 Linux 构建尚未完成与 Windows 同等程度的适配和测试，请以具体 Release 说明为准。
+所有发行包均为自包含应用，无需另外安装 .NET Runtime。macOS 与 Linux 构建尚未完成与 Windows 同等程度的适配和测试，请以具体 Release 说明为准。其中 macOS 版本目前只能安装、更新和修复游戏：在 macOS 上启动游戏需要额外的兼容运行层，当前不提供，也暂无支持计划。
 
 面向普通用户的安装、首次设置和故障排查说明统一维护在[文档站](https://docs.bluearchive.cafe/cafe-launcher/)。本仓库 README 主要面向参与开发和审阅源码的贡献者。
 

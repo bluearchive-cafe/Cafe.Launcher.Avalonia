@@ -180,9 +180,6 @@ public sealed class LocalizationService
         }
     }
 
-    public static IReadOnlyList<LanguageOption> GetLanguageOptions() =>
-        GetLanguageOptions(new LocalizationService());
-
     public static IReadOnlyList<LanguageOption> GetLanguageOptions(LocalizationService localizer) =>
     [
         new LanguageOption { Code = LauncherLanguages.Auto, DisplayName = localizer.T(LocalizationKeys.LanguageAuto) },

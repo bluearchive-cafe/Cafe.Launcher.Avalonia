@@ -379,12 +379,12 @@ public sealed class SettingsCategoryTests
         };
 
         var saveTask = scope.ViewModel.SaveSettingsCommand.ExecuteAsync(null);
-        await firstSubscriberInvoked.Task;
+        await firstSubscriberInvoked.Task.WaitAsync(TimeSpan.FromSeconds(5));
 
         Assert.False(saveTask.IsCompleted);
         Assert.False(secondSubscriberInvoked.Task.IsCompleted);
         firstSubscriberRelease.SetResult();
-        await secondSubscriberInvoked.Task;
+        await secondSubscriberInvoked.Task.WaitAsync(TimeSpan.FromSeconds(5));
         await saveTask;
     }
 

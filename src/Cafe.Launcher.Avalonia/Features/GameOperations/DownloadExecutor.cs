@@ -79,7 +79,7 @@ internal sealed class DownloadExecutor
         var totalSize = fileList.Sum(item => item.SizeBytes);
         var downloadFiles = fileList.Select(file =>
         {
-            var targetPath = GetTempName(GamePathValidator.GetSafePath(gamePath, file.Path));
+            var targetPath = GetTempName(GamePathValidator.GetSafeFilePath(gamePath, file.Path));
             return new DownloadFileState(
                 file,
                 targetPath,
@@ -256,8 +256,8 @@ internal sealed class DownloadExecutor
         {
             cancellationToken.ThrowIfCancellationRequested();
             var checkPath = downloadedPathSet.Contains(file.Path)
-                ? GetTempName(GamePathValidator.GetSafePath(gamePath, file.Path))
-                : GamePathValidator.GetSafePath(gamePath, file.Path);
+                ? GetTempName(GamePathValidator.GetSafeFilePath(gamePath, file.Path))
+                : GamePathValidator.GetSafeFilePath(gamePath, file.Path);
 
             if (!File.Exists(checkPath))
             {
@@ -297,7 +297,7 @@ internal sealed class DownloadExecutor
             if (failedPathSet.Contains(file.Path))
                 continue;
 
-            var tempPath = GetTempName(GamePathValidator.GetSafePath(gamePath, file.Path));
+            var tempPath = GetTempName(GamePathValidator.GetSafeFilePath(gamePath, file.Path));
             var targetPath = GetOriginName(tempPath);
             if (File.Exists(tempPath))
             {
@@ -321,7 +321,7 @@ internal sealed class DownloadExecutor
     {
         for (var i = 0; i < files.Count; i++)
         {
-            var filePath = GamePathValidator.GetSafePath(gamePath, files[i].Path);
+            var filePath = GamePathValidator.GetSafeFilePath(gamePath, files[i].Path);
             DeleteExistingFile(filePath);
 
             progress?.Invoke((int)Math.Round((i + 1) * 100d / files.Count));

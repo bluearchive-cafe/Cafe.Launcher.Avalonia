@@ -207,7 +207,7 @@ internal sealed class ManifestDiffCalculator
         for (var i = 0; i < files.Count; i++)
         {
             var file = files[i];
-            var filePath = GamePathValidator.GetSafePath(gamePath, file.Path);
+            var filePath = GamePathValidator.GetSafeFilePath(gamePath, file.Path);
             var fileInfo = new FileInfo(filePath);
             if (!fileInfo.Exists || fileInfo.Length != file.SizeBytes)
             {
@@ -230,7 +230,7 @@ internal sealed class ManifestDiffCalculator
         for (var i = 0; i < files.Count; i++)
         {
             var file = files[i];
-            var filePath = GamePathValidator.GetSafePath(gamePath, file.Path);
+            var filePath = GamePathValidator.GetSafeFilePath(gamePath, file.Path);
             if (!File.Exists(filePath))
             {
                 diff.Add(file);

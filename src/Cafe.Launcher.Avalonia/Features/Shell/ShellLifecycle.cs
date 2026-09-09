@@ -542,6 +542,9 @@ public sealed class ShellLifecycle : IShellRuntime
             case ModalKind.DebugResetConfirmation:
                 dialogs.CancelDebugResetCommand.Execute(null);
                 break;
+            case ModalKind.SettingsResetConfirmation:
+                dialogs.CancelSettingsResetCommand.Execute(null);
+                break;
             case ModalKind.SetupWizardExitConfirmation:
                 dialogs.CancelSetupWizardExitCommand.Execute(null);
                 break;
@@ -837,6 +840,12 @@ public sealed class ShellLifecycle : IShellRuntime
                 SyncModal(
                     ModalKind.DownloadRunningCloseConfirmation,
                     dialogs.IsDownloadRunningCloseConfirmVisible,
+                    dialogs);
+                break;
+            case nameof(DialogsViewModel.IsResetSettingsConfirmationVisible):
+                SyncModal(
+                    ModalKind.SettingsResetConfirmation,
+                    dialogs.IsResetSettingsConfirmationVisible,
                     dialogs);
                 break;
         }

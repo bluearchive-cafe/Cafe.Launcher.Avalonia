@@ -526,7 +526,7 @@ public sealed class ToastHostViewModelTests : IDisposable
         var toast = viewModel.ActiveToasts[0];
 
         var dismissTask = viewModel.DismissToastCommand.ExecuteAsync(toast.Id);
-        await exitDelayStarted.Task;
+        await exitDelayStarted.Task.WaitAsync(TimeSpan.FromSeconds(5));
         viewModel.Dispose();
 
         await dismissTask;
@@ -616,7 +616,7 @@ public sealed class ToastHostViewModelTests : IDisposable
         var toast = viewModel.ActiveToasts[0];
 
         var dismissTask = viewModel.DismissToastCommand.ExecuteAsync(toast.Id);
-        await exitDelayStarted.Task;
+        await exitDelayStarted.Task.WaitAsync(TimeSpan.FromSeconds(5));
         viewModel.Dispose();
         releaseUnrelatedCancellation.TrySetResult();
 

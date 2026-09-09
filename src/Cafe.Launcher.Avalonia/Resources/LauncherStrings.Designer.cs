@@ -422,11 +422,11 @@ internal static class LauncherStrings
 
     internal static string GameProcessStarted => GetRequiredString("gameProcessStarted");
 
-    internal static string GameProcessStartFailed => GetRequiredString("gameProcessStartFailed");
-
     internal static string GameRemoteStateUnavailable => GetRequiredString("gameRemoteStateUnavailable");
 
     internal static string GameRepairFailed => GetRequiredString("gameRepairFailed");
+
+    internal static string GameRuntimeNoRunnerAvailable => GetRequiredString("gameRuntimeNoRunnerAvailable");
 
     internal static string GameRuntimePrefixPath => GetRequiredString("gameRuntimePrefixPath");
 

@@ -119,7 +119,10 @@ public partial class BackgroundViewModel : ViewModelBase, IDisposable
             windowMetrics.PhysicalSizeChanged += OnPhysicalSizeChanged;
         }
 
-        backgroundImageSource = bundledImageLoader();
+        // 构造期不做解码：该单例在 UI 线程、首帧前经 DI 解析，同步解码 2560×1388
+        // 内置壁纸会把整段解码时间压在首帧之前（且随后首次刷新还会再解码一次）。
+        // 初始壁纸由首次 UpdateBackgroundImageAsync 在线程池解码后填入；窗口在此期间
+        // 显示主题底色。
     }
 
     /// <summary>窗口显著变大后的壁纸重解码去抖窗口；测试可调小。</summary>
