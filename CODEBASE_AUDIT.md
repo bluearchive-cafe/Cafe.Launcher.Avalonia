@@ -1,8 +1,8 @@
 # 仓库审计报告（当前状态）
 
 - 审计日期：2026-09-10（复核轮 2026-09-09 起）
-- 审计对象：`d342641` 网络专项后续复核 + 工作树修复（`9a24b97` 三项 + `e9f823a` 性能一项，`main`）
-- 模式：`focused` 网络子系统专项（同日两轮：AUD-NET-001/002/003 修复 + 复核新发现四项并全部修复；次日复核优化建议第一项落地）；上一审计 `fca9bc0`（release，beta.8）；全量基线 `cffbd4d`
+- 审计对象：`d342641` 网络专项后续复核 + 工作树修复（`9a24b97` 三项 + `e9f823a` 性能一项 + `6a686ce` 优化四项，`main`）
+- 模式：`focused` 网络子系统专项（专项修复 → 复核四项修复 → 复核优化建议逐批落地）；上一审计 `fca9bc0`（release，beta.8）；全量基线 `cffbd4d`
 - 历史报告：`.repository-audit/history/2026-09-09-network-audit.md`（首轮专项来源）、`2026-09-09-release-audit-beta.8.md`、`2026-09-09-full-audit-r2.md`
 
 ## 当前结论
@@ -28,6 +28,15 @@
 
 8. **DNS 校验结果短 TTL 缓存**：`RemoteHttpUrlValidator` 按主机缓存最近一次全公网成功解析（默认 30s），万级文件下载的解析调用从「与文件数成正比」收敛为「与主机数成正比」；私网/空/抛错结果永不缓存，SSRF 守卫容忍窗被 TTL 界定，瞬时失败保持可重试。守卫测试以注入时钟钉住 30s 边界（命中复用 / 恰达边界重解析 / 私网与失败不入缓存）。
 
+复核优化批次（`6a686ce`，2026-09-10，台账 AUD-PERF-009 / AUD-REL-007 / AUD-PERF-010 / AUD-MTN-014）：
+
+9. **handler 连接默认值**：抽出 `HttpClientFactory.ConfigureConnectionDefaults` 统一直连与代理两处 handler——`ConnectTimeout=15s`（原运行时默认 100s，应用内最短请求超时为自更新 15s）、HTTP/2 `KeepAlivePingDelay=30s`（死多路复用连接在 ping 间隔+超时内暴露，而非等 60s 停滞预算）。
+10. **启动远端读取整体预算**：`LauncherCoreService.LoadAsync` 六个并发 API 读取挂 30s linked-CTS 预算（原最坏 ~92s 才降级），到点落入既有降级路径返回 `RemoteUnavailable`；预算 ≥ 单次请求超时，慢网首次尝试不被砍；调用方取消语义不变。
+11. **下载进度内存计数**：`RecordFileProgress` 正常路径从每 256KB 块一次磁盘 stat 改为 `Interlocked.Add`；重置路径保留 stat 重采样，`FileDownloadService` 超长临时文件删除分支补发 reset。
+12. **image-cache 过期清扫**：构造时后台清扫 `.cache`/`.remote`/遗留 `.tmp` 中 mtime 超 30 天的条目（原先只影响 `.remote` 命中判定、文件永不过期），被逐出内容需要时重新下载。
+
+未采纳（维持分析记录）：下载重试退避——与原版 Electron 启动器的逐次立即换源语义是显式设计契约（`FileDownloadService` 注释与既有测试固化）；手动代理模式——feature 级（需 UI、四份 resx 本地化与产品决策），不在修复范畴。
+
 ## Open 项
 
 | ID | 严重度 | 状态 | 摘要 |
@@ -37,7 +46,7 @@
 | AUD-DEP-002 | Low | accepted-risk | `Shirasagi0012.MaterialColorUtilities` 单维护者风险，已有年度复审与 fork 预案 |
 | AUD-TST-001 | Low | deferred / No Action | 真实限速测试使用 `Stopwatch` 下限断言 |
 
-AUD-NET-001…003（`d342641`）、AUD-NET-004…007（`9a24b97`）与 AUD-PERF-008（`e9f823a`）均已修复（守卫测试齐备），见上文修复摘要。
+AUD-NET-001…003（`d342641`）、AUD-NET-004…007（`9a24b97`）、AUD-PERF-008（`e9f823a`）与 `6a686ce` 的 AUD-PERF-009 / AUD-REL-007 / AUD-PERF-010 / AUD-MTN-014 均已修复（守卫测试齐备），见上文修复摘要。
 
 ## Recommended Priorities
 
@@ -62,7 +71,9 @@ AUD-NET-001…003（`d342641`）、AUD-NET-004…007（`9a24b97`）与 AUD-PERF-
 
 `d342641..9a24b97`：1 提交（`fix(network)` 复核四项修复，见上文摘要）。首轮专项后的独立复核（非全量重审）：自源码通读网络面（工厂/代理/校验/重试/下载/API/图片/清单/自更新/资源面板），发现并修复 AUD-NET-004…007；优化面建议（DNS 校验缓存、`ConnectTimeout`/H2 keep-alive ping、启动整体 deadline、手动代理模式等）记录于当轮分析输出。
 
-`9a24b97..e9f823a`：1 提交（`perf(network)` DNS 校验缓存，即上述优化建议第一项立案落地为 AUD-PERF-008）。其余优化建议仍未立案，维持分析输出记录。
+`9a24b97..e9f823a`：1 提交（`perf(network)` DNS 校验缓存，即上述优化建议第一项立案落地为 AUD-PERF-008）。
+
+`e9f823a..6a686ce`：1 提交（`perf(network)` 四项优化落地，见上文第 9–12 项）。仅手动代理模式维持分析输出记录（feature 级）。
 
 ## Audit Method and Limitations
 

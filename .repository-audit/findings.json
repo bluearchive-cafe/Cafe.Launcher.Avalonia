@@ -878,6 +878,62 @@
       "resolved_commit": "e9f823a",
       "guard": "ValidateAsync_WhenSameHostValidatedRepeatedlyWithinCacheLifetime_ResolvesOnce + ..._WhenCacheLifetimeExpires_ResolvesHostAgain（固定时钟钉住 30s 边界）+ ..._WhenHostResolvesToPrivateAddress_ResultIsNotCached + ..._WhenResolutionThrows_ResultIsNotCached",
       "note": "2026-09-10 复核轮优化建议第一项落地（该轮其余建议——ConnectTimeout/H2 keep-alive ping、启动整体 deadline、手动代理模式、进度 stat 精简——未立案）。修复（e9f823a）：RemoteHttpUrlValidator 按主机缓存最近一次全公网成功解析，默认 TTL 30s（DI 单例即会话级，托管于 ConcurrentDictionary，主机集合为个位数 API/CDN 域名故无需淘汰）；私网/空/抛错结果永不缓存——SSRF 守卫对「DNS 记录翻转为私网」的容忍窗被 TTL 界定，瞬时解析失败保持可重试语义。Windows 系统级 DNS 缓存此前已部分掩盖该开销（Linux 无缓存环境为全量真实查询）。"
+    },
+    "AUD-PERF-009": {
+      "title": "SocketsHttpHandler 未设 ConnectTimeout（运行时默认 100s，应用内最短请求超时为自更新 15s，连接黑洞先吃满请求预算）且 HTTP/2 KeepAlivePingDelay 默认禁用（默认开启 HTTP/2 后死连接只能等 60s 停滞预算暴露）",
+      "category": "performance/resilience",
+      "severity": "low",
+      "confidence": 95,
+      "status": "resolved",
+      "disposition": "Fix",
+      "recommendation_validation": "Verified",
+      "first_seen_commit": "dd06253",
+      "last_verified_commit": "6a686ce",
+      "resolved_commit": "6a686ce",
+      "guard": "HttpClientFactoryTests.ConfigureConnectionDefaults_WhenAppliedToFreshHandler_SetsSharedConnectionDefaults + ProxySettingsServiceTests.CreateHttpHandlerAsync_WhenModeIsSystem_UsesConfiguredProxy 断言 ConnectTimeout=15s / KeepAlivePingDelay=30s",
+      "note": "修复（本批）：抽出 HttpClientFactory.ConfigureConnectionDefaults 共享配置方法，直连（工厂）与代理（ProxySettingsService.CreateHttpHandlerAsync）两处 handler 统一 ConnectTimeout=15s、KeepAlivePingDelay=30s（ping 仅 HTTP/2 生效；ping 超时维持运行时默认 20s），顺带消除两处既有的重复 handler 配置。"
+    },
+    "AUD-REL-007": {
+      "title": "启动快照六个远端读取无整体预算：每端点 3 次 × 30s 超时 + 1.5s 退避，深度劣化网络下首屏最长 ~92s 才进入降级态",
+      "category": "reliability/startup",
+      "severity": "low",
+      "confidence": 95,
+      "status": "resolved",
+      "disposition": "Fix",
+      "recommendation_validation": "Verified",
+      "first_seen_commit": "f20de8b",
+      "last_verified_commit": "6a686ce",
+      "resolved_commit": "6a686ce",
+      "guard": "LauncherCoreServiceTests.LoadAsync_WhenRemoteReadsStall_DegradesWithinBudgetWithoutCancellation（挂起 handler + 250ms 预算，断言降级态返回且不挂重试）",
+      "note": "修复（本批）：LoadAsync 给六个并发远端读取挂 30s 整体预算（linked CTS CancelAfter，默认值 internal 常量可注入）；预算到点后 OCE 落入 ReadRemoteAsync 既有吞异常降级路径 → 快照 RemoteUnavailable。取舍：预算 ≥ 单次请求超时（30s），保证慢网首次尝试不被砍；调用方取消语义不变。本地状态读取不受预算影响。"
+    },
+    "AUD-PERF-010": {
+      "title": "下载进度回调每个 256KB 块做磁盘 stat（File.Exists + FileInfo.Length）：快盘 10 并发下每秒数千次系统调用",
+      "category": "performance",
+      "severity": "low",
+      "confidence": 100,
+      "status": "resolved",
+      "disposition": "Fix",
+      "recommendation_validation": "Verified",
+      "first_seen_commit": "f20de8b",
+      "last_verified_commit": "6a686ce",
+      "resolved_commit": "6a686ce",
+      "guard": "DownloadExecutorTests.DownloadFilesAsync_WhenProgressIsReportedAndReset_CountsBytesInMemory（续传前置 + 块累加 + 重置回退可见性三重断言）",
+      "note": "修复（本批）：RecordFileProgress 正常路径改为 Interlocked.Add 内存计数（同一文件的下载与回调在单个任务内串行，无竞争）；重置路径（CRC 失败/Content-Range 无效/超长临时文件被丢弃）保留磁盘 stat 重采样。配套：FileDownloadService 超长临时文件删除分支补发 onProgressResetAsync（原先依赖下一块 stat 自愈，内存计数后必须显式重采样）。"
+    },
+    "AUD-MTN-014": {
+      "title": "image-cache 目录无任何清理机制：.remote 的 24h 只影响命中判定不删文件，CRC 键 .cache 与崩溃遗留 .tmp 永不过期，长期用户磁盘缓慢增长",
+      "category": "hygiene/disk",
+      "severity": "low",
+      "confidence": 95,
+      "status": "resolved",
+      "disposition": "Fix",
+      "recommendation_validation": "Verified",
+      "first_seen_commit": "f20de8b",
+      "last_verified_commit": "6a686ce",
+      "resolved_commit": "6a686ce",
+      "guard": "ImageCacheServiceTests.CleanupExpiredEntries_WhenEntriesExceedLifetime_DeletesExpiredAndKeepsFresh（三类文件过期删除 + 新鲜保留）",
+      "note": "修复（本批）：ImageCacheService 构造时后台清扫一次（Task.Run 不塞启动），internal CleanupExpiredEntries(utcNow) 可确定性测试；.cache/.remote/.tmp 超 30 天（CacheEntryLifetime）按 mtime 删除，被逐出内容需要时重新下载；单文件删除失败忽略（可能正被并发读取）。"
     }
   }
 }
