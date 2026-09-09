@@ -5,6 +5,7 @@ using Avalonia.Controls.Presenters;
 using Avalonia.Headless.XUnit;
 using Avalonia.Threading;
 using Avalonia.VisualTree;
+using Cafe.Launcher.Avalonia.Services.Diagnostics;
 
 namespace Cafe.Launcher.Avalonia.HeadlessTests;
 
@@ -35,6 +36,7 @@ public sealed partial class MainWindowHeadlessTests
     [AvaloniaTheory]
     [InlineData("resource-panel")]
     [InlineData("log-viewer")]
+    [InlineData("log-export")]
     [InlineData("confirmation")]
     [InlineData("setup-wizard")]
     public void SecondaryOverlay_AtMinimumWindowSize_KeepsCriticalActionsReachable(string overlay)
@@ -48,6 +50,7 @@ public sealed partial class MainWindowHeadlessTests
         {
             "resource-panel" => ShowResourcePanel(context),
             "log-viewer" => ShowLogViewer(context),
+            "log-export" => ShowLogExport(context),
             "confirmation" => ShowLongConfirmation(context),
             "setup-wizard" => ShowSetupWizard(context),
             _ => throw new ArgumentOutOfRangeException(nameof(overlay))
@@ -60,6 +63,27 @@ public sealed partial class MainWindowHeadlessTests
             Assert.True(action.IsEffectivelyVisible);
             Assert.False(string.IsNullOrWhiteSpace(AutomationProperties.GetName(action)));
             AssertControlInsideWindow(action, context.Window);
+        });
+    }
+
+    [AvaloniaFact]
+    public void LogExport_WithCustomRange_KeepsDatePickersInsideTheDialog()
+    {
+        using var context = CreateContext();
+        context.Window.Width = 1024;
+        context.Window.Height = 640;
+        context.Window.Show();
+        context.ViewModel.LogExport.OpenCommand.Execute(null);
+        context.ViewModel.LogExport.SelectedRangeCode = nameof(LogExportRangePreset.Custom);
+        Dispatcher.UIThread.RunJobs();
+
+        var datePickers = context.Window.GetVisualDescendants().OfType<DatePicker>().ToArray();
+
+        Assert.Equal(2, datePickers.Length);
+        Assert.All(datePickers, picker =>
+        {
+            Assert.True(picker.IsEffectivelyVisible);
+            AssertControlInsideWindow(picker, context.Window);
         });
     }
 
@@ -241,7 +265,18 @@ public sealed partial class MainWindowHeadlessTests
         return context.Window.GetVisualDescendants().OfType<Button>()
             .Where(button =>
                 ReferenceEquals(button.Command, context.ViewModel.LogViewer.CloseCommand)
-                || ReferenceEquals(button.Command, context.ViewModel.LogViewer.ExportCommand))
+                || ReferenceEquals(button.Command, context.ViewModel.LogExport.OpenCommand))
+            .ToArray();
+    }
+
+    private static Button[] ShowLogExport(TestContext context)
+    {
+        context.ViewModel.LogExport.OpenCommand.Execute(null);
+        Dispatcher.UIThread.RunJobs();
+        return context.Window.GetVisualDescendants().OfType<Button>()
+            .Where(button =>
+                ReferenceEquals(button.Command, context.ViewModel.LogExport.CloseCommand)
+                || ReferenceEquals(button.Command, context.ViewModel.LogExport.ExportCommand))
             .ToArray();
     }
 

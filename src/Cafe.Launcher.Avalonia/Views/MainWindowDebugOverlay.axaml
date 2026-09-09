@@ -225,7 +225,7 @@
                                             AutomationProperties.Name="{Binding Shell.I18n[openDesignGallery]}">
                                         <TextBlock Text="{Binding Shell.I18n[openDesignGallery]}" Classes="button-content"/>
                                     </Button>
-                                    <Button Classes="flat-action dialog-action" Command="{Binding Debug.ExportLogsCommand}"
+                                    <Button Classes="flat-action dialog-action" Command="{Binding LogExport.OpenCommand}"
                                             AutomationProperties.Name="{Binding Shell.I18n[exportLogs]}">
                                         <TextBlock Text="{Binding Shell.I18n[exportLogs]}" Classes="button-content"/>
                                     </Button>

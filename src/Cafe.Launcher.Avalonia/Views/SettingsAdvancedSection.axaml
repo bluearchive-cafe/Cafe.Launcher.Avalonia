@@ -86,7 +86,7 @@
                             </StackPanel>
                         </Button>
                         <Button Classes="flat-action"
-                                Command="{Binding LogViewer.ExportCommand}"
+                                Command="{Binding LogExport.OpenCommand}"
                                 AutomationProperties.Name="{Binding Shell.I18n[exportLogs]}">
                             <StackPanel Classes="button-content">
                                 <materialIcons:MaterialIcon Kind="Export"

@@ -41,6 +41,7 @@ public partial class MainWindowViewModel : ViewModelBase, IDisposable
     public SettingsViewModel Settings { get; }
     public ResourcePanelViewModel ResourcePanel { get; }
     public LogViewerDialogViewModel LogViewer { get; }
+    public LogExportDialogViewModel LogExport { get; }
     public DebugViewModel Debug { get; }
     public ModalHostViewModel ModalHost { get; }
 
@@ -73,6 +74,7 @@ public partial class MainWindowViewModel : ViewModelBase, IDisposable
         Settings = family.Settings;
         ResourcePanel = family.ResourcePanel;
         LogViewer = family.LogViewer;
+        LogExport = family.LogExport;
         Debug = family.Debug;
         ModalHost = family.ModalHost;
 

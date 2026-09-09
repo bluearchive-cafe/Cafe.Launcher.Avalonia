@@ -63,4 +63,13 @@
     <Style Selector="ListBox.log-entry-list > ListBoxItem:selected /template/ ContentPresenter#PART_ContentPresenter">
         <Setter Property="Background" Value="{StaticResource Launcher.Color.Transparent}"/>
     </Style>
+    <!-- 导出对话框的自定义范围：日期选择器与设置控件同宽同高。 -->
+    <Style Selector="DatePicker.setting-control">
+        <Setter Property="MinWidth" Value="{StaticResource Launcher.Component.Settings.Control.MinWidth}"/>
+        <Setter Property="MinHeight" Value="{StaticResource Launcher.Control.Height.Field}"/>
+        <Setter Property="VerticalAlignment" Value="Center"/>
+    </Style>
+    <Style Selector="Border.log-export-warning">
+        <Setter Property="Margin" Value="{StaticResource Launcher.Spacing.Thickness.Md}"/>
+    </Style>
 </Styles>
