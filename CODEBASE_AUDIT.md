@@ -7,7 +7,7 @@
 
 ## 当前结论
 
-**无 Critical/High/Medium open 项，本轮 2 项 Low 已修复。** 上轮 2 项 Low（AUD-MTN-008 / AUD-MTN-009）随 `3dee04a` 核销；本轮新增 2 项 Low（AUD-REL-005 / AUD-MTN-010）已在本轮修复（`d9f2184` / `78c7d67`）并各带一条守卫；维持 4 项有意暂缓/接受项。全量门禁本机实跑通过（Debug 0 警告 0 错误；单元 1483 过/2 跳；Headless 167/167；合并覆盖率 行 85.24% / 分支 92.13%）。
+**无 Critical/High/Medium open 项，本轮 2 项 Low 已修复。** 上轮 2 项 Low（AUD-MTN-008 / AUD-MTN-009）随 `3dee04a` 核销；本轮新增 2 项 Low（AUD-REL-005 / AUD-MTN-010）已在本轮修复（`d9f2184` / `78c7d67`）并各带一条守卫；维持 4 项有意暂缓/接受项。全量门禁本机实跑通过（Debug 0 警告 0 错误；单元 1484 过/2 跳；Headless 167/167；合并覆盖率 行 85.09% / 分支 92.08%）。
 
 ## Open 项（4 项，全部有意暂缓/接受）
 
@@ -23,10 +23,10 @@
 ### AUD-REL-005 — 隔离报告模式对 JSON-null 的 UiCulture 不设防
 
 - **缺陷**：`System.Text.Json` 默认不校验非空注解，快照里 `"UiCulture": null` 会抛未捕获的 `ArgumentNullException`（`ApplyReportCulture` 只捕获 `CultureNotFoundException`），`RunCrashReporter` 吞掉后进程 exit 1 且不显示任何窗口，违反 ADR-019「任何一次不可恢复崩溃都有界面」。
-- **修复**：新增 `Services/Diagnostics/CrashReportBootstrap.cs`（`Resolve` / `ApplyCulture` / `CreateUnreadableReport`，不依赖 Avalonia 与 DI）；`ApplyCulture` 形参改 `string?` 并加 `string.IsNullOrWhiteSpace` 早返回（空值守卫因此成为编译期强制），`CrashReportApp` 改为委托该助手——不可测的启动胶水从 38 行降到 13 行。
-- **守卫**：`CrashReportBootstrapTests` 9 例（null/空白/非法/合法文化、快照缺失/畸形/持久化、null-UiCulture 回归）。
-- **两向实测**：去掉守卫后 3 例失败（`ArgumentNullException: Value cannot be null. (Parameter 'name')`），恢复后 9/9 通过。
-- **覆盖**：`CrashReportBootstrap.cs` 28/28 = 100%；合并覆盖率随之回升（85.02% → 85.24% 行、92.04% → 92.13% 分支）。
+- **修复**：新增 `Services/Diagnostics/CrashReportBootstrap.cs`（`Resolve` / `ApplyCulture`，不依赖 Avalonia 与 DI；`CreateUnreadableReport` 为其私有实现细节）；`ApplyCulture` 形参改 `string?` 并加 `string.IsNullOrWhiteSpace` 早返回（编译器随即以 CS8604 阻止把可能为 null 的值传给 `GetCultureInfo`），`CrashReportApp` 改为委托该助手——不可测的启动胶水从 38 行降到 13 行。
+- **守卫**：`CrashReportBootstrapTests` 10 例（null/空白/非法/合法文化、快照缺失/畸形/缺 required 成员/持久化、null-UiCulture 回归）。
+- **两向实测**：把早返回替换为 null 包容运算符（直接删除无法编译：CS8604）→ 3 例失败（`ArgumentNullException: Value cannot be null. (Parameter 'name')`），恢复后 10/10 通过。
+- **覆盖**：`CrashReportBootstrap.cs` 28/28 = 100%（行与分支均满）；合并覆盖率 85.09% 行（13676/16073）/ 92.08% 分支（2186/2374），高于棘轮 84.30% / 88.99%（2026-09-09 复核实跑；单次运行有约 0.1pp 抖动）。
 
 ### AUD-MTN-010 — design-system-spec.md §10 基线数量与清单过期
 
@@ -70,7 +70,7 @@
 
 ## Verified Strengths
 
-- `verify.ps1` 本机实跑通过（exit 0）：本地化合约通过；Debug 0 警告 0 错误；单元 1483 过 / 2 跳；Headless 167/167；合并覆盖率 行 85.24%（13701/16073）/ 分支 92.13%（2188/2375），高于棘轮 84.30% / 88.99%；Release win-x64 0 警告 0 错误；Release 下 Resx 契约 18/18。
+- `verify.ps1` 本机实跑通过（exit 0）：本地化合约通过；Debug 0 警告 0 错误；单元 1484 过 / 2 跳；Headless 167/167；合并覆盖率 行 85.09%（13676/16073）/ 分支 92.08%（2186/2374），高于棘轮 84.30% / 88.99%；Release win-x64 0 警告 0 错误；Release 下 Resx 契约 18/18。
 - 崩溃特性的设计记录完整且与实现一致：ADR-019/020 + CONTEXT.md 词条 + 走查清单 §3.7 + 原型保留。
 - 本轮 2 条新守卫均两向实测（引入缺陷即失败、修复后通过），同类漂移不再依赖人工复查。
 
@@ -85,7 +85,7 @@
 
 ## Recommended Priorities
 
-1. 提交本轮修复（`CrashReportBootstrap` + 9 例测试、§10 一行、基线契约测试、审计产物）并推送，确认 CI 绿灯。
+1. 提交本轮修复（`CrashReportBootstrap` + 10 例测试、§10 一行、基线契约测试、审计产物）并推送，确认 CI 绿灯。
 2. 维持 4 项有意暂缓/接受项至下一轮或年度审。
 
 ---

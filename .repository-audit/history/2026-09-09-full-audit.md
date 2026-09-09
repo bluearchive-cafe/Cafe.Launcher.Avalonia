@@ -10,7 +10,7 @@
 
 ## Executive Summary
 
-**无 Critical / High / Medium open 项。** 增量 `b1f62fa..f6d44a7`（3 提交）以上一轮整改收尾 + 新增崩溃诊断特性为主；上一轮 2 项 Low（AUD-MTN-008 / AUD-MTN-009）已随 `3dee04a` 核销，本轮新增 2 项 Low（AUD-REL-005 / AUD-MTN-010，均于同日修复并各带守卫）。全量门禁 `verify.ps1` 本机实跑通过（Debug 0 警告 0 错误；单元 1483 过/2 跳；Headless 167/167；合并覆盖率 行 85.24% / 分支 92.13%）。
+**无 Critical / High / Medium open 项。** 增量 `b1f62fa..f6d44a7`（3 提交）以上一轮整改收尾 + 新增崩溃诊断特性为主；上一轮 2 项 Low（AUD-MTN-008 / AUD-MTN-009）已随 `3dee04a` 核销，本轮新增 2 项 Low（AUD-REL-005 / AUD-MTN-010，均于同日修复并各带守卫）。全量门禁 `verify.ps1` 本机实跑通过（Debug 0 警告 0 错误；单元 1484 过/2 跳；Headless 167/167；合并覆盖率 行 85.09% / 分支 92.08%）。
 
 Open 项（6 项：2 项本轮新增 Low（同日已修复）+ 4 项维持暂缓/接受）：
 
@@ -67,7 +67,8 @@ Most important actions：
 | `"UiCulture": null` | 进程 6 秒内自行退出（exit 1），**无任何窗口** |
 | `"UiCulture": "en"` | 窗口保持存活（对照组，证伪「参数/文件形态本身不work」） |
 | `"UiCulture": "xx-INVALID"` | 窗口保持存活（`CultureNotFoundException` 被捕获，隔离出 null 与非法值的差别） |
-| `OccurredAt: null` / `Id: null` / 缺 required 成员 / 非法 JSON | 均落到「快照不可读」报告并显示窗口（设计的兜底面有效） |
+| `OccurredAt: null`（值类型）/ 缺 required 成员 / 非法 JSON | 均落到「快照不可读」报告并显示窗口（设计的兜底面有效） |
+| `Id: null` | 反序列化成功、窗口照常显示，仅报告编号为空——JSON-null 的字符串成员不触发兜底（2026-09-09 复核实测补记） |
 
 根因：`System.Text.Json` 默认不校验非空注解，`"UiCulture": null` 被赋给 `string` 属性；`CultureInfo.GetCultureInfo(null)` 抛 `ArgumentNullException`，`ApplyReportCulture` 只捕获 `CultureNotFoundException`，异常逃出 `OnFrameworkInitializationCompleted` 后被 `RunCrashReporter` 吞掉。
 
@@ -103,7 +104,7 @@ Most important actions：
 - Category: reliability
 - Severity: Low
 - Confidence: 95
-- Status: open
+- Status: 已修复（`d9f2184`）
 - Disposition: Fix
 
 **Evidence**：`src/Cafe.Launcher.Avalonia/CrashReportApp.axaml.cs:34-48`；三向实测表见上（复现 = 证据层级 1）；`CrashReportStore.TryRead` 捕获 `JsonException`，因此字段值为 null 时反序列化成功、不落「快照不可读」分支。
@@ -121,7 +122,7 @@ Most important actions：
 - Category: maintainability/doc-drift
 - Severity: Low
 - Confidence: 95
-- Status: open
+- Status: 已修复（`78c7d67`）
 - Disposition: Fix
 
 **Evidence**：`docs/design/design-system-spec.md:194` 写「5 个基线（壳默认/进度面板/设置覆盖层/确认对话框/Toast）」；`tests/Cafe.Launcher.Avalonia.HeadlessTests/Baselines/` 现有 6 个 PNG（含 `crash-report-window.png`）。`design-walkthrough-checklist.md` §3.7 已正确记录崩溃窗口基线，属单点漂移。
@@ -138,10 +139,10 @@ Most important actions：
 
 | ID | 修复 | 守卫 | 两向实测 |
 |---|---|---|---|
-| AUD-REL-005 | 新增 `Services/Diagnostics/CrashReportBootstrap.cs`（`Resolve`/`ApplyCulture`/`CreateUnreadableReport`，无 Avalonia/DI 依赖）；`ApplyCulture` 形参 `string?` + `string.IsNullOrWhiteSpace` 早返回（守卫成为编译期强制）；`CrashReportApp` 改为委托，不可测启动胶水 38 → 13 行 | `CrashReportBootstrapTests` 9 例（null/空白/非法/合法文化、快照缺失/畸形/持久化、null-UiCulture 回归） | 去掉守卫 → 3 例失败（`ArgumentNullException: Value cannot be null. (Parameter 'name')`）；恢复 → 9/9 通过 |
+| AUD-REL-005 | 新增 `Services/Diagnostics/CrashReportBootstrap.cs`（`Resolve`/`ApplyCulture`，无 Avalonia/DI 依赖；`CreateUnreadableReport` 为其私有实现细节）；`ApplyCulture` 形参 `string?` + `string.IsNullOrWhiteSpace` 早返回（编译器随即以 CS8604 阻止把可能为 null 的值传给 `GetCultureInfo`）；`CrashReportApp` 改为委托，不可测启动胶水 38 → 13 行 | `CrashReportBootstrapTests` 10 例（null/空白/非法/合法文化、快照缺失/畸形/缺 required 成员/持久化、null-UiCulture 回归；缺 required 成员例为复核补入） | 把早返回替换为 null 包容运算符（直接删除无法编译：CS8604）→ 3 例失败（`ArgumentNullException: Value cannot be null. (Parameter 'name')`）；恢复 → 10/10 通过 |
 | AUD-MTN-010 | `design-system-spec.md:194` 改为「6 个基线（…/崩溃窗口）」 | `GoldenBaselineContractTests.Baselines_CommittedBaselinesAndGoldenComparisons_MatchOneToOne` | 放入 `orphan-probe.png` → 失败；移除 → 通过 |
 
-修复后门禁：`verify.ps1` exit 0（Debug 0 警告 0 错误；单元 1483 过/2 跳；Headless 167/167；行 85.24% / 分支 92.13%；Release win-x64 0 警告 0 错误；Resx 18/18）。`CrashReportBootstrap.cs` 覆盖 28/28 = 100%。
+修复后门禁（2026-09-09 复核实跑）：`verify.ps1` exit 0（Debug 0 警告 0 错误；单元 1484 过/2 跳；Headless 167/167；行 85.09% / 分支 92.08%；Release win-x64 0 警告 0 错误；Resx 18/18）。`CrashReportBootstrap.cs` 覆盖 28/28 = 100%（行与分支均满）。
 
 ## Architecture
 
@@ -178,7 +179,7 @@ Most important actions：
 
 ## Automated Guards Added
 
-本轮未新增守卫；AUD-REL-005 的建议守卫（报告启动助手 4 例）待落地。维持既有守卫：本地化合约脚本（verify 首步 fail-fast）、`ResxResourceContractTests` 键数契约、lock 锁定模式、CI 最小权限 + SHA 固定、Inno 版本与 §12 工具链两条新契约、黄金截图阈值 diff。
+本轮新增 2 条守卫：`CrashReportBootstrapTests`（报告启动助手 10 例，覆盖 AUD-REL-005 建议的 null 文化 / 非法文化 / 缺 required 成员 / 非法 JSON 四类）与 `GoldenBaselineContractTests`（`Baselines/*.png` ↔ `GoldenScreenshot.Compare` 调用 1:1）。维持既有守卫：本地化合约脚本（verify 首步 fail-fast）、`ResxResourceContractTests` 键数契约、lock 锁定模式、CI 最小权限 + SHA 固定、Inno 版本与 §12 工具链两条新契约、黄金截图阈值 diff。
 
 ## Verified Strengths
 
@@ -189,9 +190,8 @@ Most important actions：
 
 ## Recommended Priorities
 
-1. 修 `AUD-REL-005`（null 守卫 + 抽助手 + 4 例测试），把隔离报告启动链从 0% 覆盖拉起。
-2. 修 `AUD-MTN-010`（一行文案）。
-3. 维持 4 项有意暂缓/接受项至下一轮或年度审。
+1. 维持 4 项有意暂缓/接受项至下一轮或年度审（`AUD-ARCH-003` / `AUD-MTN-001` / `AUD-DEP-002` / `AUD-TST-001`）。
+2. `CrashReportApp.axaml.cs` 修复后缩至 13 行、仍 0 覆盖；如后续再动隔离报告启动链，可一并补测。
 
 ## Audit Method and Limitations
 
