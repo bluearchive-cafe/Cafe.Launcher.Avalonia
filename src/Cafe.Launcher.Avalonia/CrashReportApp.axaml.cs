@@ -1,5 +1,3 @@
-using System;
-using System.Globalization;
 using Avalonia;
 using Avalonia.Controls.ApplicationLifetimes;
 using Avalonia.Markup.Xaml;
@@ -20,9 +18,8 @@ public partial class CrashReportApp : Application
     {
         if (ApplicationLifetime is IClassicDesktopStyleApplicationLifetime desktop)
         {
-            var report = CrashReportStore.TryRead(Program.CrashReportPath ?? "")
-                         ?? CreateUnreadableReport();
-            ApplyReportCulture(report.UiCulture);
+            var report = CrashReportBootstrap.Resolve(Program.CrashReportPath);
+            CrashReportBootstrap.ApplyCulture(report.UiCulture);
 
             var crashWindow = new CrashReportWindow(report);
             desktop.MainWindow = crashWindow;
@@ -30,33 +27,4 @@ public partial class CrashReportApp : Application
 
         base.OnFrameworkInitializationCompleted();
     }
-
-    private static void ApplyReportCulture(string cultureName)
-    {
-        try
-        {
-            var culture = CultureInfo.GetCultureInfo(cultureName);
-            CultureInfo.DefaultThreadCurrentCulture = culture;
-            CultureInfo.DefaultThreadCurrentUICulture = culture;
-            CultureInfo.CurrentCulture = culture;
-            CultureInfo.CurrentUICulture = culture;
-        }
-        catch (CultureNotFoundException)
-        {
-            // The neutral English resources remain available when the captured culture is invalid.
-        }
-    }
-
-    private static CrashReport CreateUnreadableReport() => new()
-    {
-        Id = "CR-UNAVAILABLE",
-        OccurredAt = DateTimeOffset.Now,
-        Source = "CrashReportMode",
-        AppVersion = Constants.BuildInfo.LauncherVersion,
-        BuildSha = Constants.BuildInfo.CommitSha,
-        OperatingSystem = Environment.OSVersion.ToString(),
-        UiCulture = CultureInfo.CurrentUICulture.Name,
-        ExceptionType = nameof(InvalidOperationException),
-        TechnicalDetails = "The crash snapshot could not be read. Open the log directory for any diagnostics that were saved."
-    };
 }

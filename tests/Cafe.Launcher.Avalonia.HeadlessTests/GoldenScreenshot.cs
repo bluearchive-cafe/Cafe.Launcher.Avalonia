@@ -22,7 +22,7 @@ namespace Cafe.Launcher.Avalonia.HeadlessTests;
 /// </summary>
 internal static class GoldenScreenshot
 {
-    private const string BaselineRelativeDir = "tests/Cafe.Launcher.Avalonia.HeadlessTests/Baselines";
+    internal const string BaselineRelativeDir = "tests/Cafe.Launcher.Avalonia.HeadlessTests/Baselines";
     private const int ChannelTolerance = 8;
     private const double MaxMismatchRatio = 0.01;
 
@@ -214,7 +214,8 @@ internal static class GoldenScreenshot
         }
     }
 
-    private static string FindRepositoryRoot()
+    /// <summary>Repository root, found by walking up to the solution file.</summary>
+    internal static string FindRepositoryRoot()
     {
         var current = new DirectoryInfo(AppContext.BaseDirectory);
         while (current is not null

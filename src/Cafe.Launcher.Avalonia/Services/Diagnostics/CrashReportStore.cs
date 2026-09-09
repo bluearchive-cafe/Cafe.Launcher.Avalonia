@@ -105,7 +105,7 @@ public sealed class CrashReportStore
     }
 
     /// <summary>Reads a snapshot created by <see cref="Create"/> without depending on application DI.</summary>
-    public static CrashReport? TryRead(string path)
+    public static CrashReport? TryRead(string? path)
     {
         if (string.IsNullOrWhiteSpace(path))
         {
