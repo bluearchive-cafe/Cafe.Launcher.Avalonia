@@ -113,7 +113,7 @@ public sealed partial class MainWindowViewModelTests : IDisposable
         var dialogsViewModel = new DialogsViewModel(localizationService, noticeStateService, new SetupWizardViewModel(localizationService, new GameInstallationPath(), new LocalInstallationStateStore(), new LocalDiagnostics(), filePickerService));
         using var settingsLogger = new UnifiedLogger(Path.Combine(tempDir, Guid.NewGuid().ToString("N")));
         var settingsViewModel = new SettingsViewModel(
-            settingsService, localizationService, toastService,
+            settingsService, httpClientFactory, localizationService, toastService,
             launcherUpdateSvc, dialogsViewModel,
             settingsLogger,
             new GameInstallationPath(),

@@ -102,6 +102,37 @@ public sealed class LauncherApiClientTests
     }
 
     [Fact]
+    public async Task GetBaseConfigAsync_WhenEnvelopeCodeIsNot200_FailsFastWithoutRetry()
+    {
+        using var handler = new EnvelopeCodeHandler(503, "service under maintenance");
+        using var client = new LauncherApiClient(
+            handler,
+            new AuthorizationHeaderFactory(),
+            new PatchUrlGroupService());
+
+        var ex = await Assert.ThrowsAsync<LauncherApiEnvelopeException>(
+            () => client.GetBaseConfigAsync(ProxyModes.Direct));
+
+        Assert.Equal(1, handler.CallCount);
+        Assert.Contains("service under maintenance", ex.Message);
+    }
+
+    [Fact]
+    public async Task GetBaseConfigAsync_WhenEnvelopeDataIsMissing_RetriesBeforeFailing()
+    {
+        using var handler = new EnvelopeCodeHandler(200, message: null, includeData: false);
+        using var client = new LauncherApiClient(
+            handler,
+            new AuthorizationHeaderFactory(),
+            new PatchUrlGroupService());
+
+        await Assert.ThrowsAsync<InvalidOperationException>(
+            () => client.GetBaseConfigAsync(ProxyModes.Direct));
+
+        Assert.Equal(3, handler.CallCount);
+    }
+
+    [Fact]
     public async Task GetRemoteManifestAsync_WhenFirstAttemptsReturnNonJson_RetriesAndSucceedsOnThirdAttempt()
     {
         var badBytes = new byte[] { 0x8B, 0x0B, 0x00, 0x01 };
@@ -169,6 +200,32 @@ public sealed class LauncherApiClientTests
             {
                 Content = new StringContent(json, Encoding.UTF8, "application/json")
             });
+    }
+
+    /// <summary>Serves a fixed envelope payload; used to pin envelope retry semantics.</summary>
+    private sealed class EnvelopeCodeHandler(int code, string? message, bool includeData = true) : HttpMessageHandler
+    {
+        private int _callCount;
+
+        public int CallCount => _callCount;
+
+        protected override Task<HttpResponseMessage> SendAsync(
+            HttpRequestMessage request,
+            CancellationToken cancellationToken)
+        {
+            Interlocked.Increment(ref _callCount);
+            var data = includeData ? """{"launcher_background_img":null}""" : "null";
+            var content = message is null
+                ? $$"""{"code":{{code}},"data":{{data}}}"""
+                : $$"""{"code":{{code}},"data":{{data}},"message":{{JsonSerializer.Serialize(message)}}}""";
+            return Task.FromResult(new HttpResponseMessage(HttpStatusCode.OK)
+            {
+                Content = new StringContent(
+                    content,
+                    Encoding.UTF8,
+                    "application/json")
+            });
+        }
     }
 
     private sealed class BinaryResponseHandler(byte[] bytes, string mediaType) : HttpMessageHandler

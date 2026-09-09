@@ -159,8 +159,12 @@ public sealed partial class LauncherUpdateService : IDisposable
         {
             return await FetchProxyReleasesAsync(proxyMode, cancellationToken).ConfigureAwait(false);
         }
-        catch (HttpRequestException)
+        catch (Exception exception) when (exception is HttpRequestException
+            || (exception is OperationCanceledException && !cancellationToken.IsCancellationRequested))
         {
+            // A slow proxy endpoint surfaces as TaskCanceledException (HttpClient timeout)
+            // rather than HttpRequestException; that is precisely when the GitHub fallback
+            // matters most, so both degrade to it. Caller cancellation still propagates.
             return await FetchGitHubReleasesAsync(proxyMode, cancellationToken).ConfigureAwait(false);
         }
     }
@@ -190,10 +194,12 @@ public sealed partial class LauncherUpdateService : IDisposable
         using var lease = await leaseSource.CreateLeaseAsync(proxyMode, cancellationToken).ConfigureAwait(false);
         using var request = new HttpRequestMessage(HttpMethod.Get, ApiConfig.GitHubReleasesApiUrl);
         request.Headers.UserAgent.ParseAdd($"CafeLauncher/{BuildInfo.LauncherVersion}");
-        using var response = await lease.Client.SendAsync(
-            request,
-            HttpCompletionOption.ResponseHeadersRead,
-            cancellationToken).ConfigureAwait(false);
+        using var response = await RemoteHttpRequestService.SendAsync(
+                lease.Client,
+                request,
+                HttpCompletionOption.ResponseHeadersRead,
+                cancellationToken)
+            .ConfigureAwait(false);
         response.EnsureSuccessStatusCode();
 
         var releases = await RemoteHttpRequestService.DeserializeJsonAsync<List<GitHubRelease>>(

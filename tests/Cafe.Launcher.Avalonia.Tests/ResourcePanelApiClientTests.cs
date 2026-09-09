@@ -91,6 +91,19 @@ public sealed class ResourcePanelApiClientTests
     }
 
     [Fact]
+    public async Task GetStatusAsync_WhenRedirected_FollowsRedirectAndParsesResponse()
+    {
+        var handler = new RedirectThenJsonHandler(
+            """{"text":{"official":{"version":"1.0.0"},"localized":{"version":"1.0.0"}},"voice":{"official":{"version":"2.0.0"},"localized":{"version":"2.0.0"}},"media":{"official":{"version":"3.0.0"},"localized":{"version":"3.0.0"}}}""");
+        using var client = new ResourcePanelApiClient(handler);
+
+        var status = await client.GetStatusAsync(ProxyModes.Direct);
+
+        Assert.Equal("1.0.0", status.Text.Official.Version);
+        Assert.Equal(2, handler.CallCount);
+    }
+
+    [Fact]
     public async Task GetStatusAsync_WhenFirstAttemptThrows_RetriesAndSucceeds()
     {
         var handler = new FlakyHandler(
@@ -150,6 +163,32 @@ public sealed class ResourcePanelApiClientTests
         protected override Task<HttpResponseMessage> SendAsync(HttpRequestMessage request, CancellationToken cancellationToken)
         {
             return Task.FromResult(new HttpResponseMessage(HttpStatusCode.NotFound));
+        }
+    }
+
+    private sealed class RedirectThenJsonHandler(string json) : HttpMessageHandler
+    {
+        private int _callCount;
+
+        public int CallCount => _callCount;
+
+        protected override Task<HttpResponseMessage> SendAsync(
+            HttpRequestMessage request,
+            CancellationToken cancellationToken)
+        {
+            var count = Interlocked.Increment(ref _callCount);
+            if (count == 1)
+            {
+                return Task.FromResult(new HttpResponseMessage(HttpStatusCode.Found)
+                {
+                    Headers = { Location = new Uri("https://api.bluearchive.cafe/status/list") }
+                });
+            }
+
+            return Task.FromResult(new HttpResponseMessage(HttpStatusCode.OK)
+            {
+                Content = new StringContent(json, Encoding.UTF8, "application/json")
+            });
         }
     }
 

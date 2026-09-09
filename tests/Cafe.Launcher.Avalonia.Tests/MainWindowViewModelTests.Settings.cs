@@ -1,3 +1,4 @@
+using System.Net;
 using Avalonia.Media;
 using Cafe.Launcher.Avalonia.Features.Settings;
 using Cafe.Launcher.Avalonia.Features.SetupWizard;
@@ -12,6 +13,20 @@ namespace Cafe.Launcher.Avalonia.Tests;
 
 public partial class MainWindowViewModelTests
 {
+    [Fact]
+    public async Task SaveSettingsAsync_WhenHttp2IsEnabled_ConfiguresFutureClients()
+    {
+        using var viewModel = await CreateViewModelAsync(new CountingCoreService(CreateSnapshot()));
+        viewModel.Settings.Editor.ApplySnapshot(new LauncherSettings { EnableHttp2 = false });
+        viewModel.Settings.Editor.Current.EnableHttp2 = true;
+
+        await SaveSettingsAsync(viewModel);
+
+        using var client = httpClientFactory.CreateClient(TimeSpan.FromSeconds(1));
+        Assert.Equal(HttpVersion.Version20, client.DefaultRequestVersion);
+        Assert.Equal(HttpVersionPolicy.RequestVersionOrLower, client.DefaultVersionPolicy);
+    }
+
     [Fact]
     public async Task SaveSettingsAsync_WhenRemoteContentVisibilityChanges_AppliesBeforeRefreshCompletes()
     {
@@ -357,6 +372,7 @@ public partial class MainWindowViewModelTests
         using var testLogger = new UnifiedLogger(tempDir);
         using var settings = new SettingsViewModel(
             settingsService,
+            null!,
             localizer,
             toastService,
             new LauncherUpdateService(new LauncherUpdateHandler()),

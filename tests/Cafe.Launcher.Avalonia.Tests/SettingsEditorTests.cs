@@ -53,6 +53,22 @@ public sealed class SettingsEditorTests
     }
 
     [Fact]
+    public void EnableHttp2Change_MarksDirtyAndDiscardRestoresSnapshot()
+    {
+        var editor = new SettingsEditor();
+        editor.ApplySnapshot(new LauncherSettings { EnableHttp2 = false });
+
+        editor.Current.EnableHttp2 = true;
+
+        Assert.True(editor.IsDirty);
+
+        editor.Discard();
+
+        Assert.False(editor.IsDirty);
+        Assert.False(editor.Current.EnableHttp2);
+    }
+
+    [Fact]
     public void ApplySnapshot_LoadsAllFields()
     {
         var editor = new SettingsEditor();

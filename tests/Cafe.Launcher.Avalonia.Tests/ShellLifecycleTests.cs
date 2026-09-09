@@ -352,6 +352,7 @@ public sealed class ShellLifecycleTests : IDisposable
         using var settingsLogger = new UnifiedLogger(Path.Combine(tempDir, Guid.NewGuid().ToString("N")));
         var settings = new SettingsViewModel(
             settingsService,
+            httpClientFactory,
             localizer,
             toastService,
             launcherUpdateService,

@@ -137,6 +137,7 @@ public sealed class GameRuntimeSettingsUiTests
         IGameRuntime gameRuntime) =>
         new(
             null!,
+            null!,
             localizer,
             null!,
             null!,

@@ -43,7 +43,10 @@ public sealed class ProxySettingsService
             return Task.FromResult<IWebProxy?>(WebRequest.GetSystemWebProxy());
         }
 
-        return Task.FromResult<IWebProxy?>(new WebProxy(settings.ProxyUrl)
+        // Normalize at the point of use: the registry provider already applies
+        // ResolveProxyUrl, but any future provider that forgets it would otherwise
+        // resurface the "socks://" NotSupportedException at first request.
+        return Task.FromResult<IWebProxy?>(new WebProxy(ResolveProxyUrl(settings.ProxyUrl))
         {
             BypassProxyOnLocal = settings.NoProxy.Any(IsLocalBypassToken),
             BypassList = BuildBypassRegexList(settings.NoProxy)
@@ -129,10 +132,18 @@ public sealed class ProxySettingsService
     internal static string ResolveProxyUrl(string value)
     {
         if (value.StartsWith("http://", StringComparison.OrdinalIgnoreCase)
-            || value.StartsWith("https://", StringComparison.OrdinalIgnoreCase)
-            || value.StartsWith("socks://", StringComparison.OrdinalIgnoreCase))
+            || value.StartsWith("https://", StringComparison.OrdinalIgnoreCase))
         {
             return value;
+        }
+
+        // SocketsHttpHandler only accepts versioned SOCKS schemes (socks4/socks4a/socks5);
+        // a proxy addressed as bare "socks://" throws NotSupportedException on the first
+        // proxied request, so both the bare scheme and the legacy IE "socks=host:port"
+        // registry entry normalize to "socks5://".
+        if (value.StartsWith("socks://", StringComparison.OrdinalIgnoreCase))
+        {
+            return $"socks5://{value["socks://".Length..]}";
         }
 
         if (value.Contains('=', StringComparison.Ordinal))
@@ -150,7 +161,7 @@ public sealed class ProxySettingsService
 
             if (pairs.TryGetValue("socks", out var socks))
             {
-                return $"socks://{socks}";
+                return $"socks5://{socks}";
             }
 
             if (pairs.TryGetValue("https", out var https))

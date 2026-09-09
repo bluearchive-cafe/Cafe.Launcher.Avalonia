@@ -69,11 +69,33 @@ public sealed class ProxySettingsServiceTests
     [InlineData("proxy.example.invalid:8080", "http://proxy.example.invalid:8080")]
     [InlineData("https://proxy.example.invalid:8443", "https://proxy.example.invalid:8443")]
     [InlineData("http=web.example.invalid:80;https=secure.example.invalid:443", "http://web.example.invalid:80")]
-    [InlineData("socks=socks.example.invalid:1080;https=secure.example.invalid:443", "socks://socks.example.invalid:1080")]
+    [InlineData("socks=socks.example.invalid:1080;https=secure.example.invalid:443", "socks5://socks.example.invalid:1080")]
+    [InlineData("socks://socks.example.invalid:1080", "socks5://socks.example.invalid:1080")]
     [InlineData("https=secure.example.invalid:443", "http://secure.example.invalid:443")]
     public void ResolveProxyUrl_UsesExactConfiguredProtocol(string value, string expected)
     {
         Assert.Equal(expected, ProxySettingsService.ResolveProxyUrl(value));
+    }
+
+    [Fact]
+    public async Task CreateHttpHandlerAsync_WhenProxyIsSocks_ProducesSchemeAcceptedBySocketsHttpHandler()
+    {
+        var service = new ProxySettingsService(() => new SystemProxySettings(
+            "socks://socks.example.invalid:1080",
+            []));
+
+        using var handler = await service.CreateHttpHandlerAsync(ProxyModes.System);
+        using var client = new HttpClient(handler) { Timeout = TimeSpan.FromSeconds(5) };
+
+        // SocketsHttpHandler rejects unversioned "socks://" with NotSupportedException at
+        // request time; the normalized "socks5://" must instead attempt a real connection
+        // (failing here with a socket/HTTP error because the .invalid proxy host cannot
+        // resolve, which is the accepted outcome for this offline guard).
+        var ex = await Record.ExceptionAsync(
+            () => client.GetAsync("https://target.example.invalid/"));
+
+        Assert.NotNull(ex);
+        Assert.False(ex is NotSupportedException, $"Unexpected NotSupportedException: {ex.Message}");
     }
 
     [Fact]

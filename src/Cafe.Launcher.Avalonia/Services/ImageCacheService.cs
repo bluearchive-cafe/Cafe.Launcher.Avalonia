@@ -234,7 +234,7 @@ public sealed class ImageCacheService : IDisposable
             },
             urlValidator,
             ct,
-            connectionUsesProxy: proxyMode != ProxyModes.Direct).ConfigureAwait(false);
+            connectionProxy: lease.ConnectionProxy).ConfigureAwait(false);
         response.EnsureSuccessStatusCode();
         if (response.Content.Headers.ContentLength is > MaxImageBytes)
         {
@@ -246,7 +246,9 @@ public sealed class ImageCacheService : IDisposable
         var buffer = new byte[64 * 1024];
         while (true)
         {
-            var read = await input.ReadAsync(buffer, ct).ConfigureAwait(false);
+            var read = await ResponseBodyReader
+                .ReadAsync(input, buffer, ct)
+                .ConfigureAwait(false);
             if (read == 0)
             {
                 break;

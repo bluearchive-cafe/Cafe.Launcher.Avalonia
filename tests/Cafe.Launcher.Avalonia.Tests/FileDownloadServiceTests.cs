@@ -79,7 +79,7 @@ public sealed class FileDownloadServiceTests : IDisposable
             client,
             () => Task.CompletedTask,
             (_, _) => Task.CompletedTask,
-            false,
+            null,
             CancellationToken.None));
 
         // 异常信息必须保留 HTTP 状态码以便诊断。
@@ -122,7 +122,7 @@ public sealed class FileDownloadServiceTests : IDisposable
                 firstChunkReported.TrySetResult();
                 return Task.CompletedTask;
             },
-            false,
+            null,
             cancellationSource.Token);
 
         // 门控：等第一个分块写盘并上报进度、读取循环挂在下一个 ReadAsync 上后再取消。
@@ -135,6 +135,38 @@ public sealed class FileDownloadServiceTests : IDisposable
         // 取消路径不做清理：部分文件按续传语义原样保留。
         Assert.True(File.Exists(targetPath));
         Assert.Equal(expectedBytes[..deliveredBytes], await File.ReadAllBytesAsync(targetPath));
+    }
+
+    [Fact]
+    public async Task DownloadAsync_WhenBodyStallsAfterHeaders_ThrowsHttpRequestExceptionAfterAllRetries()
+    {
+        // 守卫（AUD-NET-001）：ResponseHeadersRead 之下 HttpClient.Timeout 只约束到响应头，
+        // 正文零字节停滞必须由空闲读预算转成可重试的 HttpRequestException，
+        // 而不是让下载会话在无异常、无进度的情况下无限挂起。
+        Directory.CreateDirectory(tempDir);
+        var targetPath = Path.Combine(tempDir, "file.bin.tmp");
+        var expectedBytes = Encoding.UTF8.GetBytes("complete-content");
+        var handler = new GatedStreamHandler(expectedBytes, deliveredBytes: 0);
+        using var client = new HttpClient(handler);
+        var downloader = CreateService(TimeSpan.FromMilliseconds(200));
+
+        var exception = await Assert.ThrowsAsync<HttpRequestException>(() => downloader.DownloadAsync(
+            targetPath,
+            CreateCdnConfig(),
+            "source",
+            expectedBytes.Length,
+            "0",
+            "file.bin",
+            client,
+            () => Task.CompletedTask,
+            (_, _) => Task.CompletedTask,
+            null,
+            CancellationToken.None));
+
+        Assert.Contains("stalled", exception.Message, StringComparison.Ordinal);
+        Assert.Equal(FileDownloadService.RetryDomainOrder.Length, handler.RequestCount);
+        // 停滞属网络类失败：已下载字节按续传语义保留。
+        Assert.True(File.Exists(targetPath));
     }
 
     [Fact]
@@ -162,7 +194,7 @@ public sealed class FileDownloadServiceTests : IDisposable
             client,
             () => Task.CompletedTask,
             (_, _) => Task.CompletedTask,
-            false,
+            null,
             CancellationToken.None));
 
         Assert.Contains("CRC64 mismatch after all retries", exception.Message, StringComparison.Ordinal);
@@ -196,7 +228,7 @@ public sealed class FileDownloadServiceTests : IDisposable
             client,
             () => Task.CompletedTask,
             (_, _) => Task.CompletedTask,
-            false,
+            null,
             CancellationToken.None);
 
         Assert.Equal(1, handler.RequestCount);
@@ -229,7 +261,7 @@ public sealed class FileDownloadServiceTests : IDisposable
             client,
             () => Task.CompletedTask,
             (_, _) => Task.CompletedTask,
-            false,
+            null,
             CancellationToken.None);
 
         Assert.Equal(expectedHash, verifiedCrc);
@@ -261,17 +293,18 @@ public sealed class FileDownloadServiceTests : IDisposable
             client,
             () => Task.CompletedTask,
             (_, _) => Task.CompletedTask,
-            false,
+            null,
             CancellationToken.None);
 
         Assert.Null(verifiedCrc);
         Assert.Equal(0, handler.RequestCount);
     }
 
-    private static FileDownloadService CreateService() => new(
+    private static FileDownloadService CreateService(TimeSpan? idleReadTimeout = null) => new(
         new Crc64Service(),
         new LocalDiagnostics(),
-        RemoteHttpUrlValidator.CreateForTesting());
+        RemoteHttpUrlValidator.CreateForTesting(),
+        idleReadTimeout);
 
     private static CdnConfigResponse CreateCdnConfig() => new()
     {
@@ -299,10 +332,13 @@ public sealed class FileDownloadServiceTests : IDisposable
     /// <summary>以 200 OK 返回一个先交付部分字节、随后挂起直到取消的流。</summary>
     private sealed class GatedStreamHandler(byte[] content, int deliveredBytes) : HttpMessageHandler
     {
+        public int RequestCount { get; private set; }
+
         protected override Task<HttpResponseMessage> SendAsync(
             HttpRequestMessage request,
             CancellationToken cancellationToken)
         {
+            RequestCount++;
             return Task.FromResult(new HttpResponseMessage(HttpStatusCode.OK)
             {
                 Content = new StreamContent(new GatedReadStream(content, deliveredBytes))

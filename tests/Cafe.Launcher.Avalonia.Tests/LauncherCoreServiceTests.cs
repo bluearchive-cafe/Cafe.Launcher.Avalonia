@@ -103,6 +103,31 @@ public sealed class LauncherCoreServiceTests : IDisposable
         Assert.Equal(expectedPath, snapshot.LocalGame.GamePath);
     }
 
+    [Fact]
+    public async Task LoadAsync_WhenHttp2IsEnabled_ConfiguresFactoryFromPersistedSetting()
+    {
+        var settingsService = new LauncherSettingsService(Path.Combine(tempDir, "settings.json"));
+        await settingsService.SaveAsync(new LauncherSettings { EnableHttp2 = true });
+        using var factory = new HttpClientFactory(new ProxySettingsService());
+        using var apiClient = new LauncherApiClient(
+            new LauncherStateHandler("/api/launcher/never"),
+            new AuthorizationHeaderFactory(),
+            new PatchUrlGroupService());
+        var service = new LauncherCoreService(
+            apiClient,
+            new LocalInstallationStateStore(),
+            new GameInstallationPath(),
+            settingsService,
+            factory,
+            new LocalDiagnostics());
+
+        await service.LoadAsync();
+
+        using var client = factory.CreateClient(TimeSpan.FromSeconds(1));
+        Assert.Equal(HttpVersion.Version20, client.DefaultRequestVersion);
+        Assert.Equal(HttpVersionPolicy.RequestVersionOrLower, client.DefaultVersionPolicy);
+    }
+
     private async Task<LauncherCoreService> CreateServiceAsync(
         HttpMessageHandler handler,
         bool useEmptySettingsDocument = false)
@@ -140,6 +165,7 @@ public sealed class LauncherCoreServiceTests : IDisposable
             store,
             new GameInstallationPath(),
             settingsService,
+            new HttpClientFactory(new ProxySettingsService()),
             new LocalDiagnostics());
     }
 

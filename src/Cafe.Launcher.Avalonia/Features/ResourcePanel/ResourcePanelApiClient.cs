@@ -18,19 +18,27 @@ public sealed class ResourcePanelApiClient : IDisposable
 
     /// <summary>
     /// Network resilience parameters mirrored from the dashboard's
-    /// <c>fetchWithRetry</c>: 10s timeout (enforced by the lease), 2 retries,
+    /// <c>fetchWithRetry</c>: 30s lease timeout, 2 retries,
     /// 800ms × attempt linear backoff. Retries fire only on thrown network
     /// errors (timeout/socket), not on HTTP non-2xx — matching the dashboard
     /// which only retries <c>catch</c> blocks, leaving HTTP status handling
-    /// to the caller.
+    /// to the caller. Redirects follow the shared manual-redirect path
+    /// (<see cref="RemoteHttpRequestService.SendAsync(HttpClient, Uri, Func{Uri, HttpRequestMessage}, RemoteHttpUrlValidator, CancellationToken, IWebProxy?)"/>)
+    /// with per-hop URL revalidation, like every other remote client — the
+    /// pooled handlers have <c>AllowAutoRedirect=false</c>, so a bare
+    /// <c>HttpClient.GetAsync</c> would hard-fail on any 3xx.
     /// </summary>
     private const int MaxRetries = 2;
     private const int RetryDelayMs = 800;
 
     private readonly IHttpClientLeaseSource leaseSource;
+    private readonly RemoteHttpUrlValidator urlValidator;
 
-    public ResourcePanelApiClient(HttpClientFactory httpClientFactory)
+    public ResourcePanelApiClient(
+        HttpClientFactory httpClientFactory,
+        RemoteHttpUrlValidator urlValidator)
     {
+        this.urlValidator = urlValidator;
         leaseSource = new ProxyAwareHttpClientLeaseSource(
             httpClientFactory,
             new Uri(ApiBaseUrl),
@@ -43,6 +51,7 @@ public sealed class ResourcePanelApiClient : IDisposable
             handler,
             new Uri(ApiBaseUrl),
             TimeSpan.FromSeconds(30));
+        urlValidator = RemoteHttpUrlValidator.CreateForTesting();
     }
 
     public Task<ResourcePanelStatusResponse> GetStatusAsync(
@@ -63,7 +72,7 @@ public sealed class ResourcePanelApiClient : IDisposable
         var path = $"/config/get?uid={Uri.EscapeDataString(uid)}";
         using var lease = await leaseSource.CreateLeaseAsync(proxyMode, cancellationToken).ConfigureAwait(false);
         using var response = await SendWithRetryAsync(
-            lease.Client, path, cancellationToken).ConfigureAwait(false);
+            lease.Client, path, lease.ConnectionProxy, cancellationToken).ConfigureAwait(false);
         if (response.StatusCode == HttpStatusCode.NotFound)
         {
             return new ResourcePanelConfigResponse();
@@ -89,7 +98,7 @@ public sealed class ResourcePanelApiClient : IDisposable
             + $"&media={Uri.EscapeDataString(media)}";
         using var lease = await leaseSource.CreateLeaseAsync(proxyMode, cancellationToken).ConfigureAwait(false);
         using var response = await SendWithRetryAsync(
-            lease.Client, path, cancellationToken).ConfigureAwait(false);
+            lease.Client, path, lease.ConnectionProxy, cancellationToken).ConfigureAwait(false);
         response.EnsureSuccessStatusCode();
     }
 
@@ -101,7 +110,7 @@ public sealed class ResourcePanelApiClient : IDisposable
     {
         using var lease = await leaseSource.CreateLeaseAsync(proxyMode, cancellationToken).ConfigureAwait(false);
         using var response = await SendWithRetryAsync(
-            lease.Client, path, cancellationToken).ConfigureAwait(false);
+            lease.Client, path, lease.ConnectionProxy, cancellationToken).ConfigureAwait(false);
         response.EnsureSuccessStatusCode();
         return await RemoteHttpRequestService.DeserializeJsonAsync<T>(
             response, new Uri(ApiBaseUrl + path), jsonOptions, cancellationToken).ConfigureAwait(false) ?? new T();
@@ -112,13 +121,21 @@ public sealed class ResourcePanelApiClient : IDisposable
     /// errors only (not HTTP non-2xx), mirroring the dashboard's
     /// <c>fetchWithRetry</c>. Cancellation always propagates immediately.
     /// </summary>
-    private static async Task<HttpResponseMessage> SendWithRetryAsync(
+    private async Task<HttpResponseMessage> SendWithRetryAsync(
         HttpClient client,
         string path,
+        IWebProxy? connectionProxy,
         CancellationToken cancellationToken)
     {
+        var requestUri = new Uri(ApiBaseUrl + path);
         return await RetryPolicy.ExecuteWithRetryAsync(
-            async ct => await client.GetAsync(path, ct).ConfigureAwait(false),
+            async ct => await RemoteHttpRequestService.SendAsync(
+                client,
+                requestUri,
+                static uri => new HttpRequestMessage(HttpMethod.Get, uri),
+                urlValidator,
+                ct,
+                connectionProxy).ConfigureAwait(false),
             MaxRetries + 1,
             i => TimeSpan.FromMilliseconds(RetryDelayMs * (i + 1)),
             cancellationToken,

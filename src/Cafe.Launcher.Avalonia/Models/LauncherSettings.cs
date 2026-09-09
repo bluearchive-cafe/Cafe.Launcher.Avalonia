@@ -22,6 +22,7 @@ public sealed class LauncherSettings : ObservableObject
     private List<string> themeColorPalette = [];
     private int selectedThemeColorPaletteIndex;
     private string downloadSpeedLimit = DownloadSpeedLimits.Unlimited;
+    private bool enableHttp2 = true;
     private bool enableStartupUpdateCheck = true;
     private bool showRemoteContentCard = true;
     private bool rememberWindowPositionAndSize;
@@ -91,6 +92,9 @@ public sealed class LauncherSettings : ObservableObject
 
     [JsonPropertyName("downloadSpeedLimit")]
     public string DownloadSpeedLimit { get => downloadSpeedLimit; set => SetProperty(ref downloadSpeedLimit, value); }
+
+    [JsonPropertyName("enableHttp2")]
+    public bool EnableHttp2 { get => enableHttp2; set => SetProperty(ref enableHttp2, value); }
 
     [JsonPropertyName("enableStartupUpdateCheck")]
     public bool EnableStartupUpdateCheck { get => enableStartupUpdateCheck; set => SetProperty(ref enableStartupUpdateCheck, value); }
@@ -179,6 +183,7 @@ public sealed class LauncherSettings : ObservableObject
         ThemeColorPalette = [.. other.ThemeColorPalette];
         SelectedThemeColorPaletteIndex = other.SelectedThemeColorPaletteIndex;
         DownloadSpeedLimit = other.DownloadSpeedLimit;
+        EnableHttp2 = other.EnableHttp2;
         EnableStartupUpdateCheck = other.EnableStartupUpdateCheck;
         ShowRemoteContentCard = other.ShowRemoteContentCard;
         RememberWindowPositionAndSize = other.RememberWindowPositionAndSize;

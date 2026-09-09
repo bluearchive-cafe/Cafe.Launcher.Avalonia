@@ -120,6 +120,21 @@ public sealed class LauncherUpdateServiceTests
     }
 
     [Fact]
+    public async Task CheckForUpdateAsync_WhenProxyTimesOut_UsesGitHubReleases()
+    {
+        using var service = new LauncherUpdateService(
+            new ProxyFailureGitHubReleaseHandler(new TaskCanceledException("simulated proxy timeout")),
+            currentVersionOverride: "1.0.0-beta.7");
+
+        var result = await service.CheckForUpdateAsync(UpdateChannels.Beta, ProxyModes.Direct);
+
+        Assert.True(result.IsSuccessful);
+        Assert.True(result.IsUpdateAvailable);
+        Assert.Equal("1.0.0-beta.8", result.LatestVersion);
+        Assert.Single(result.Files);
+    }
+
+    [Fact]
     public async Task CheckForUpdateAsync_WhenRequiredFieldsAreMissing_ReturnsFailure()
     {
         using var service = new LauncherUpdateService(
@@ -485,7 +500,7 @@ public sealed class LauncherUpdateServiceTests
         }
     }
 
-    private sealed class ProxyFailureGitHubReleaseHandler : HttpMessageHandler
+    private sealed class ProxyFailureGitHubReleaseHandler(Exception? proxyFailure = null) : HttpMessageHandler
     {
         protected override Task<HttpResponseMessage> SendAsync(
             HttpRequestMessage request,
@@ -493,7 +508,7 @@ public sealed class LauncherUpdateServiceTests
         {
             if (request.RequestUri?.Host == "api-cafe-launcher.saibamidori.com")
             {
-                throw new HttpRequestException("proxy unavailable");
+                throw proxyFailure ?? new HttpRequestException("proxy unavailable");
             }
 
             return Task.FromResult(new HttpResponseMessage(HttpStatusCode.OK)

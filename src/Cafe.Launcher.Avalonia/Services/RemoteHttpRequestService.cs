@@ -19,18 +19,21 @@ internal static class RemoteHttpRequestService
         Func<Uri, HttpRequestMessage> createRequest,
         RemoteHttpUrlValidator urlValidator,
         CancellationToken cancellationToken,
-        bool connectionUsesProxy = false)
+        IWebProxy? connectionProxy = null)
     {
         var currentUri = initialUri;
         for (var redirectCount = 0; ; redirectCount++)
         {
             currentUri = await urlValidator
-                .ValidateAsync(currentUri, connectionUsesProxy, cancellationToken)
+                .ValidateAsync(currentUri, EgressesThroughProxy(connectionProxy, currentUri), cancellationToken)
                 .ConfigureAwait(false);
 
             using var request = createRequest(currentUri);
-            var response = await client
-                .SendAsync(request, HttpCompletionOption.ResponseHeadersRead, cancellationToken)
+            var response = await SendAsync(
+                    client,
+                    request,
+                    HttpCompletionOption.ResponseHeadersRead,
+                    cancellationToken)
                 .ConfigureAwait(false);
 
             if (!IsRedirect(response.StatusCode))
@@ -64,12 +67,54 @@ internal static class RemoteHttpRequestService
         }
     }
 
+    /// <summary>
+    /// Sends a manually-created request using the client's configured HTTP version preference.
+    /// <see cref="HttpClient.DefaultRequestVersion"/> is not automatically copied to an
+    /// independently-created <see cref="HttpRequestMessage"/>.
+    /// </summary>
+    public static Task<HttpResponseMessage> SendAsync(
+        HttpClient client,
+        HttpRequestMessage request,
+        CancellationToken cancellationToken) =>
+        SendAsync(client, request, HttpCompletionOption.ResponseContentRead, cancellationToken);
+
+    /// <inheritdoc cref="SendAsync(HttpClient, HttpRequestMessage, CancellationToken)"/>
+    public static Task<HttpResponseMessage> SendAsync(
+        HttpClient client,
+        HttpRequestMessage request,
+        HttpCompletionOption completionOption,
+        CancellationToken cancellationToken)
+    {
+        request.Version = client.DefaultRequestVersion;
+        request.VersionPolicy = client.DefaultVersionPolicy;
+        return client.SendAsync(request, completionOption, cancellationToken);
+    }
+
     private static bool IsRedirect(HttpStatusCode statusCode) =>
         statusCode is HttpStatusCode.Moved
             or HttpStatusCode.Redirect
             or HttpStatusCode.RedirectMethod
             or HttpStatusCode.TemporaryRedirect
             or HttpStatusCode.PermanentRedirect;
+
+    /// <summary>
+    /// Decides whether a request to <paramref name="uri"/> actually egresses through
+    /// <paramref name="proxy"/>. A proxy-mode lease degrades to a direct connection when
+    /// the system proxy bypasses the target (<see cref="IWebProxy.IsBypassed"/>) or
+    /// reports the target itself as the route (<see cref="IWebProxy.GetProxy"/> returning
+    /// the input URI); in that state the connection dials locally, so the URL validator's
+    /// local DNS resolution must stay active. The decision is therefore made per URI from
+    /// the effective proxy instead of from the proxy settings enum alone.
+    /// </summary>
+    internal static bool EgressesThroughProxy(IWebProxy? proxy, Uri uri)
+    {
+        if (proxy is null || proxy.IsBypassed(uri))
+        {
+            return false;
+        }
+
+        return proxy.GetProxy(uri) is { } via && !via.Equals(uri);
+    }
 
     /// <summary>
     /// Upper bound for buffered JSON responses. Manifests and API envelopes are
@@ -104,7 +149,8 @@ internal static class RemoteHttpRequestService
         Uri? requestUri,
         JsonSerializerOptions options,
         int maxBytes,
-        CancellationToken cancellationToken)
+        CancellationToken cancellationToken,
+        TimeSpan? idleReadTimeout = null)
     {
         // Reject via the declared length when present; the streaming guard below
         // still bounds responses without a Content-Length (chunked transfer).
@@ -120,7 +166,9 @@ internal static class RemoteHttpRequestService
         var chunk = new byte[64 * 1024];
         while (true)
         {
-            var read = await networkStream.ReadAsync(chunk, cancellationToken).ConfigureAwait(false);
+            var read = await ResponseBodyReader
+                .ReadAsync(networkStream, chunk, cancellationToken, idleReadTimeout)
+                .ConfigureAwait(false);
             if (read == 0)
             {
                 break;

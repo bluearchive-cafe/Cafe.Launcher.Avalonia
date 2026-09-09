@@ -162,6 +162,7 @@ public sealed class SettingsOptionsDiskSpaceTests
         var shell = new ShellViewModel(localizer);
         using var settings = new SettingsViewModel(
             null!,
+            null!,
             localizer,
             null!,
             null!,

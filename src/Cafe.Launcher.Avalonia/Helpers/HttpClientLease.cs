@@ -1,4 +1,5 @@
 using System;
+using System.Net;
 using System.Net.Http;
 
 namespace Cafe.Launcher.Avalonia.Helpers;
@@ -42,6 +43,13 @@ public sealed class HttpClientLease : IDisposable
     }
 
     public HttpClient Client { get; }
+
+    /// <summary>
+    /// The proxy that carries connections made through this lease, or null when the
+    /// lease dials directly. Per-URI bypass decisions are resolved from this proxy
+    /// when validating remote URLs (see <c>RemoteHttpRequestService.EgressesThroughProxy</c>).
+    /// </summary>
+    public IWebProxy? ConnectionProxy { get; init; }
 
     public void Dispose()
     {

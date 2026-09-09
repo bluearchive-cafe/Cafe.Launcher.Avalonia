@@ -17,6 +17,18 @@
                                     ItemsSource="{Binding Settings.Options.ProxyMode}"
                                     SelectedValue="{Binding Settings.Editor.Current.ProxyMode, Mode=TwoWay}"/>
 
+            <controls:SettingRow Title="{Binding Shell.I18n[enableHttp2]}"
+                                 Description="{Binding Shell.I18n[enableHttp2Description]}">
+                <controls:SettingRow.Action>
+                    <ToggleSwitch Classes="setting-toggle"
+                                  AutomationProperties.Name="{Binding Shell.I18n[enableHttp2]}"
+                                  IsChecked="{Binding Settings.Editor.Current.EnableHttp2, Mode=TwoWay}"
+                                  OnContent="{Binding Shell.I18n[toggleOn]}"
+                                  OffContent="{Binding Shell.I18n[toggleOff]}"
+                                  VerticalAlignment="Center"/>
+                </controls:SettingRow.Action>
+            </controls:SettingRow>
+
             <controls:SettingSelect Title="{Binding Shell.I18n[downloadSource]}"
                                     Description="{Binding Shell.I18n[downloadSourceDescription]}"
                                     AutomationName="{Binding Shell.I18n[downloadSource]}"

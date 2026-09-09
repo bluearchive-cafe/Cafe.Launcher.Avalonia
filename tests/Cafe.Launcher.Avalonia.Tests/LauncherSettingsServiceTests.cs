@@ -31,6 +31,25 @@ public sealed class LauncherSettingsServiceTests : IDisposable
     }
 
     [Fact]
+    public void LauncherSettings_DefaultHttp2IsEnabled()
+    {
+        Assert.True(new LauncherSettings().EnableHttp2);
+    }
+
+    [Fact]
+    public async Task Http2_RoundTripsAndOldJsonDefaultsToEnabled()
+    {
+        var service = new LauncherSettingsService(settingsPath);
+        await service.SaveAsync(new LauncherSettings { EnableHttp2 = false });
+
+        Assert.False((await service.ReadAsync()).EnableHttp2);
+
+        await File.WriteAllTextAsync(settingsPath, """{"language":"ja"}""");
+
+        Assert.True((await service.ReadAsync()).EnableHttp2);
+    }
+
+    [Fact]
     public void LauncherSettings_DynamicColorFields_DefaultToSpecValues()
     {
         var settings = new LauncherSettings();
@@ -137,6 +156,7 @@ public sealed class LauncherSettingsServiceTests : IDisposable
         Assert.Empty(settings.ThemeColorPalette);
         Assert.Equal(0, settings.SelectedThemeColorPaletteIndex);
         Assert.Equal(DownloadSpeedLimits.Unlimited, settings.DownloadSpeedLimit);
+        Assert.True(settings.EnableHttp2);
         Assert.True(settings.EnableStartupUpdateCheck);
         Assert.True(settings.ShowRemoteContentCard);
         Assert.False(settings.RememberWindowPositionAndSize);
@@ -350,6 +370,7 @@ public sealed class LauncherSettingsServiceTests : IDisposable
             "themeColorPalette",
             "selectedThemeColorPaletteIndex",
             "downloadSpeedLimit",
+            "enableHttp2",
             "enableStartupUpdateCheck",
             "showRemoteContentCard",
             "rememberWindowPositionAndSize",
