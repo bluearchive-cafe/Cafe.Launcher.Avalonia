@@ -49,6 +49,26 @@ public sealed class InstallationOperationStateTests : IDisposable
             probeVersion: (_, _, _, _) =>
                 Task.FromResult(RuntimeProbeResult.Success("1.4.4", 0, "", "")));
 
+    /// <summary>A runner the current platform cannot host, i.e. the macOS shape.</summary>
+    private static GameRunnerDefinition UnsupportedNativeDefinition() =>
+        new(
+            "native",
+            IsSupportedPlatform: false,
+            RequiredPlatformName: "Windows",
+            DisplayName: "Native execution",
+            ExecutableName: null,
+            VersionArgument: "",
+            EnvironmentStyle: GameRuntimeEnvironmentStyle.Native);
+
+    private static IGameRuntime CreateUnsupportedPlatformRuntime() =>
+        new GameRuntime(
+            [UnsupportedNativeDefinition()],
+            new DefaultProcessLauncher(),
+            new GameProcessTracker(),
+            locateExecutable: (_, _) => null,
+            probeVersion: (_, _, _, _) =>
+                Task.FromResult(RuntimeProbeResult.Success("9.0", 0, "", "")));
+
     static InstallationOperationStateTests()
     {
         TestLocalizationHelper.Initialize();
@@ -287,8 +307,94 @@ public sealed class InstallationOperationStateTests : IDisposable
         });
 
         Assert.False(result.Success);
-        Assert.Equal(localizer.T("gameProcessStartFailed"), result.Message);
+        Assert.Equal(
+            localizer.F(
+                "gameRuntimeNoRunnerAvailable",
+                localizer.T("gameRuntimeRunnerUmu"),
+                localizer.T("gameRuntimeStatusNotFound")),
+            result.Message);
         Assert.Contains("umu-run was not found on PATH.", result.DiagnosticMessage, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public async Task StartAsync_WhenNoRunnerSupportsPlatform_NamesTheUnsupportedRunnerInMessage()
+    {
+        var gamePath = Path.Combine(tempDir, "YostarGames", "BlueArchive_JP");
+        Directory.CreateDirectory(gamePath);
+        await File.WriteAllTextAsync(Path.Combine(gamePath, "BlueArchive.exe"), "");
+        using var apiClient = new LauncherApiClient(
+            new HttpClientHandler(),
+            new AuthorizationHeaderFactory(),
+            new PatchUrlGroupService());
+        var localizer = new LocalizationService();
+        var service = new GameLaunchService(
+            new ManifestValidationService(apiClient, new RemoteManifestService(apiClient), localizer),
+            new ClickCodeService(),
+            CreateUnsupportedPlatformRuntime(),
+            localizer);
+
+        var result = await service.StartAsync(new LauncherStatusSnapshot
+        {
+            RuntimeState = LauncherRuntimeState.Ready,
+            LocalGame = new LocalInstallationState
+            {
+                Kind = LocalInstallationStateKind.Valid,
+                GamePath = gamePath,
+                GameConfig = new GameLauncherConfig { Name = "BlueArchive", Version = "1.0.0" }
+            },
+            Settings = new LauncherSettings { LaunchCheckMode = LaunchCheckModes.None }
+        });
+
+        Assert.False(result.Success);
+        Assert.Equal(
+            localizer.F(
+                "gameRuntimeNoRunnerAvailable",
+                localizer.T("gameRuntimeRunnerNative"),
+                localizer.T("gameRuntimeStatusUnsupported")),
+            result.Message);
+        Assert.Contains("Native execution requires Windows.", result.DiagnosticMessage, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public async Task StartAsync_WhenPreferredRunnerIsUnknown_NamesTheConfiguredRunnerAsUnknown()
+    {
+        var gamePath = Path.Combine(tempDir, "YostarGames", "BlueArchive_JP");
+        Directory.CreateDirectory(gamePath);
+        await File.WriteAllTextAsync(Path.Combine(gamePath, "BlueArchive.exe"), "");
+        using var apiClient = new LauncherApiClient(
+            new HttpClientHandler(),
+            new AuthorizationHeaderFactory(),
+            new PatchUrlGroupService());
+        var localizer = new LocalizationService();
+        var service = new GameLaunchService(
+            new ManifestValidationService(apiClient, new RemoteManifestService(apiClient), localizer),
+            new ClickCodeService(),
+            CreateUnavailableRunnerRuntime(),
+            localizer);
+
+        var result = await service.StartAsync(new LauncherStatusSnapshot
+        {
+            RuntimeState = LauncherRuntimeState.Ready,
+            LocalGame = new LocalInstallationState
+            {
+                Kind = LocalInstallationStateKind.Valid,
+                GamePath = gamePath,
+                GameConfig = new GameLauncherConfig { Name = "BlueArchive", Version = "1.0.0" }
+            },
+            Settings = new LauncherSettings
+            {
+                LaunchCheckMode = LaunchCheckModes.None,
+                GameRuntime = new GameRuntimeSettings { Runner = "mystery-runner" }
+            }
+        });
+
+        Assert.False(result.Success);
+        Assert.Equal(
+            localizer.F(
+                "gameRuntimeNoRunnerAvailable",
+                "mystery-runner",
+                localizer.T("unknown")),
+            result.Message);
     }
 
     [Fact]
