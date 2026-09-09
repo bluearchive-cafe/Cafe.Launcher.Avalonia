@@ -7,7 +7,7 @@
 
 ## 当前结论
 
-**0 Critical / 0 High；2 Medium + 9 Low open，另有 4 项有意暂缓/接受。** 与上一轮的差异源于审计方式：上一轮以增量为主，本轮按 full 模式自源码重读，因此重新打开了一个只修了一半的旧发现（`AUD-PERF-003`），并浮出一批增量视角看不到的项。全量门禁本机实跑通过（`verify.ps1` exit 0：Debug 0 警告 0 错误；单元 1484 过/2 跳；Headless 167/167；合并覆盖率 行 85.25% / 分支 92.12%；Release win-x64 0 警告 0 错误；Resx 18/18）。CI 实证：HEAD push run `34322709781` success，CI 单元 1486 过 / 0 跳。
+**0 Critical / 0 High；2 Medium + 7 Low open，另有 4 项有意暂缓/接受。** 与上一轮的差异源于审计方式：上一轮以增量为主，本轮按 full 模式自源码重读，因此重新打开了一个只修了一半的旧发现（`AUD-PERF-003`），并浮出一批增量视角看不到的项。其中 2 项文档类 Low（`AUD-DOC-001` / `AUD-DOC-002`）已随 `16a5129` 修复。全量门禁本机实跑通过（`verify.ps1` exit 0：Debug 0 警告 0 错误；单元 1484 过/2 跳；Headless 167/167；合并覆盖率 行 85.25% / 分支 92.12%；Release win-x64 0 警告 0 错误；Resx 18/18）。CI 实证：HEAD push run `34322709781` success，CI 单元 1486 过 / 0 跳。
 
 ## Open 项
 
@@ -19,8 +19,6 @@
 | AUD-SEC-005 | Low | open | 清单空路径条目使下载临时文件写到游戏目录之外 |
 | AUD-MTN-011 | Low | open | 两处 MUST 不变量无守卫（清单 JSON 键序 / settings 深克隆完整性） |
 | AUD-MTN-013 | Low | open | 死公共 API `GetLanguageOptions()` 无参重载会重定向全局日志到临时目录 |
-| AUD-DOC-001 | Low | open | PRIVACY.md 未覆盖崩溃快照（写入路径与保留策略未声明） |
-| AUD-DOC-002 | Low | open | 文档漂移三处：CONTEXT ADR 索引缺 4 条 / CLAUDE 打包与 Z 序失实 / §12 表漏 2 包 |
 | AUD-TST-004 | Low | open | 卸载安全闸口（游戏运行中、驱动器根）无聚焦测试 |
 | AUD-TST-005 | Low | open | 约 15 处测试等待无超时；csproj 抑制 xUnit1051 的理由不实 |
 | AUD-REL-006 | Low | open | 两处 best-effort catch 无日志，一处使调用方 Warn 兜底成死代码 |
@@ -43,17 +41,20 @@
 - **影响**：osx-arm64 用户可安装/更新/修复，但点启动必然失败且提示不解释原因。
 - **处置**：Product Decision（补 runner / 下架产物 / 显式声明不支持）。
 
-## 九项 Low（要点）
+## 七项 Low（要点）
 
 - **AUD-ARCH-004**：`DialogsViewModel.IsResetSettingsConfirmationVisible` 未进 `OnDialogsPropertyChanged`（`ShellLifecycle.cs:790-843`）、`ModalKind` 无成员，但渲染在对话框层（`MainWindowDialogsOverlay.axaml:493-499`）——17 个模态表面仅此一处未注册，Escape 误关下层设置页。
 - **AUD-SEC-005**：`GamePathValidator` 允许 `target==root` → `DownloadExecutor.cs:82` 取临时名得 `<游戏目录>.tmp` → `FileDownloadService.cs:57-61/:124` 在游戏目录之外落盘；远端清单空 `path` 条目即可触发（越界写 + 操作失败）。
 - **AUD-MTN-011**：`LocalGameContracts.cs:35-39` 的清单键序 MUST 与 `LauncherSettings.cs:158-203` 的克隆 MUST 均无机械守卫（各有 3 行测试可封）。
 - **AUD-MTN-013**：`LocalizationService.cs:183-184` 死重载会经 `new LocalDiagnostics()` 把进程级静态日志目标改到临时目录。
-- **AUD-DOC-001**：崩溃快照（`CrashReports/`，10 份 / 30 天）未进 PRIVACY.md 的本地数据表与保留段。
-- **AUD-DOC-002**：CONTEXT.md ADR 索引缺 ADR-017…020；CLAUDE.md 打包脚本与 Z 序（缺 500）失实；PROJECT_CONVENTIONS §12 漏 `Avalonia.Controls.ColorPicker` 与 `AvaloniaUI.DiagnosticsSupport`。
 - **AUD-TST-004**：卸载「游戏运行中拒绝」「驱动器根保护」无测试；`IsSystemProtectPath` 的不存在路径分支在 `ValidateAsync` 中不可达。
 - **AUD-TST-005**：`ToastHostViewModelTests`/`SettingsCategoryTests`/`MotionVisibilityTests` 共约 15 处 `await tcs.Task` 无超时，回归会挂住 CI；csproj 的抑制理由「等待已全部有界」不实。
 - **AUD-REL-006**：`ClickCodeService` 两处静默 catch（使 `App.axaml.cs:62-70` 的 Warn 兜底成死代码）；`ResourcePanelUidService` 读 Cookie 失败静默回落空串。
+
+## 已修复（本轮审计产物落地）
+
+- **AUD-DOC-001**（`16a5129`）：PRIVACY.md 本地数据表补「崩溃报告快照」一行、保留段补 CrashReports 目录与 10 份 / 30 天，最后更新改为 2026-09-09。
+- **AUD-DOC-002**（`16a5129`）：CONTEXT.md ADR 索引补 ADR-017…020 并更新 P3 状态；CLAUDE.md 修正发布流程描述与覆盖层顺序（补向导 500）；PROJECT_CONVENTIONS §12 补 `Avalonia.Controls.ColorPicker` 与 `AvaloniaUI.DiagnosticsSupport`。验证：`InstallerContractTests` 28/28 + 单元全量 1484 过 / 2 跳。
 
 ## Advisory（择机处理，未单列 ID）
 
@@ -75,18 +76,19 @@
 ## Resolved Since Previous Audit
 
 - `AUD-REL-005` → `d9f2184`；`AUD-MTN-010` → `78c7d67`（均复核为最终形态）。
+- `AUD-DOC-001` / `AUD-DOC-002` → `16a5129`（本轮发现、同日修复并复核：`InstallerContractTests` 28/28 + 单元全量 1484 过 / 2 跳）。
 - **重开**：`AUD-PERF-003`。
 
 ## Decisions Required
 
 1. `AUD-XPLAT-001`：macOS 去向——需产品决定。
-2. 其余 10 项均为可直接执行的 Fix / Add Guard，无阻塞决策。
+2. 其余 9 项均为可直接执行的 Fix / Add Guard，无阻塞决策。
 
 ## Recommended Priorities
 
 1. `AUD-PERF-003` → `AUD-SEC-005` → `AUD-ARCH-004`（用户可感 / 越界写 / 模态误路由）。
 2. `AUD-MTN-011` + `AUD-TST-004` + `AUD-TST-005` 三条守卫（各 1–3 行），把漂移与回归转为机械保护。
-3. `AUD-DOC-001` / `AUD-DOC-002` / `AUD-MTN-013` / `AUD-REL-006` 收尾。
+3. `AUD-MTN-013` / `AUD-REL-006` 收尾。
 4. `AUD-XPLAT-001` 决策后补对应守卫。
 
 ---

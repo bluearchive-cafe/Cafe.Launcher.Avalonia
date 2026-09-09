@@ -697,28 +697,28 @@
       "category": "documentation/privacy",
       "severity": "low",
       "confidence": 90,
-      "status": "open",
+      "status": "resolved",
       "disposition": "Fix",
       "recommendation_validation": "Verified",
       "first_seen_commit": "cffbd4d",
-      "last_verified_commit": "cffbd4d",
-      "resolved_commit": null,
+      "last_verified_commit": "16a5129",
+      "resolved_commit": "16a5129",
       "guard": "无（PRIVACY.md 无任何契约测试；可接受）",
-      "note": "f6d44a7 引入崩溃快照：Services/Diagnostics/CrashReportStore.cs:18-20/:31-36 写入 %LOCALAPPDATA%\\Cafe Launcher\\CrashReports（主目录不可写则降级临时目录），:47-87 内容含崩溃 ID/时间/版本/构建 SHA/OS/UI 文化/异常类型与完整异常 ToString（:214-223 仅把用户目录替换为 %USERPROFILE%），:163-212 保留最近 10 份且最长 30 天（与日志的 5MB×4 轮转策略不同）。PRIVACY.md:20-29 的「本地处理的信息」表与 :33 的保留段落只描述诊断日志与导出 ZIP，全文无「崩溃」「CrashReports」字样（grep 零命中），「最后更新」仍为 2026-08-29。ADR-019 内部记录完整（含 10 份/30 天），但用户可见的隐私政策缺这一条。建议：表中加一行并补保留说明；无遥测事实不变，仅披露完整性。"
+      "note": "f6d44a7 引入崩溃快照：Services/Diagnostics/CrashReportStore.cs:18-20/:31-36 写入 %LOCALAPPDATA%\\Cafe Launcher\\CrashReports（主目录不可写则降级临时目录），:47-87 内容含崩溃 ID/时间/版本/构建 SHA/OS/UI 文化/异常类型与完整异常 ToString（:214-223 仅把用户目录替换为 %USERPROFILE%），:163-212 保留最近 10 份且最长 30 天（与日志的 5MB×4 轮转策略不同）。PRIVACY.md:20-29 的「本地处理的信息」表与 :33 的保留段落只描述诊断日志与导出 ZIP，全文无「崩溃」「CrashReports」字样（grep 零命中），「最后更新」仍为 2026-08-29。ADR-019 内部记录完整（含 10 份/30 天），但用户可见的隐私政策缺这一条。建议：表中加一行并补保留说明；无遥测事实不变，仅披露完整性。 修复（16a5129）：本地数据表补「崩溃报告快照」一行（异常类型与详细信息、应用版本、构建 SHA、操作系统与界面语言，用户目录已替换为 %USERPROFILE%）；保留段补写 CrashReports 目录、10 份 / 30 天与临时目录降级；「最后更新」改为 2026 年 9 月 9 日。"
     },
     "AUD-DOC-002": {
       "title": "文档索引/表格漂移三处：CONTEXT.md ADR 索引缺 4 条、CLAUDE.md 打包与 Z 序两处失实、PROJECT_CONVENTIONS §12 漏 2 个已声明包",
       "category": "maintainability/doc-drift",
       "severity": "low",
       "confidence": 90,
-      "status": "open",
+      "status": "resolved",
       "disposition": "Fix",
       "recommendation_validation": "Verified",
       "first_seen_commit": "cffbd4d",
-      "last_verified_commit": "cffbd4d",
-      "resolved_commit": null,
-      "guard": "建议：InstallerContractTests 已有的文档版本守卫可扩展为「ADR 索引覆盖 docs/design/adr 全部文件」与「§12 表覆盖 Directory.Packages.props 全部 PackageVersion」两条断言",
-      "note": "A) CONTEXT.md:176-195 的 ADR 索引止于 ADR-016，而 docs/design/adr/ 存在 ADR-017（设置向导动效）、ADR-018（关于分区）、ADR-019（崩溃两级兜底）、ADR-020（崩溃窗口独立设计系统），后两条被 design-system-spec.md:141/143 引用；:168 的 P3 完成状态亦未含关于分区与崩溃窗口。B) CLAUDE.md:76 写「then builds both distribution formats with scripts/Build-Distribution.ps1」，该脚本无 ISCC/安装器步骤（AGENTS.md:20-21 明确安装器是独立脚本，release.yml:265-275 由独立 job 调 New-WindowsInstaller.ps1）；CLAUDE.md:93 的覆盖层顺序写「base → settings(100) → dialogs(200) → toast(1000)」，漏掉向导 500（design-system-spec.md:138 与 CONTEXT.md:139 均为 100/200/500/1000，MainWindow.Styles.axaml 实值亦为 500）。C) PROJECT_CONVENTIONS.md:211-231 的 §12 工具链表未列 Directory.Packages.props:16 的 Avalonia.Controls.ColorPicker 12.1.2 与 :19 的 AvaloniaUI.DiagnosticsSupport 2.2.3（THIRD-PARTY-NOTICES.md:13/:24 已列）；既有守卫 InstallerContractTests.cs:500-537 只校验已存在的行，新增包不会被迫登记。"
+      "last_verified_commit": "16a5129",
+      "resolved_commit": "16a5129",
+      "guard": "既有：InstallerContractTests 的 §12 版本一致性 + Inno 最低版本两条守卫；可选扩展：ADR 索引覆盖 docs/design/adr 全部文件、§12 表覆盖 Directory.Packages.props 全部 PackageVersion",
+      "note": "A) CONTEXT.md:176-195 的 ADR 索引止于 ADR-016，而 docs/design/adr/ 存在 ADR-017（设置向导动效）、ADR-018（关于分区）、ADR-019（崩溃两级兜底）、ADR-020（崩溃窗口独立设计系统），后两条被 design-system-spec.md:141/143 引用；:168 的 P3 完成状态亦未含关于分区与崩溃窗口。B) CLAUDE.md:76 写「then builds both distribution formats with scripts/Build-Distribution.ps1」，该脚本无 ISCC/安装器步骤（AGENTS.md:20-21 明确安装器是独立脚本，release.yml:265-275 由独立 job 调 New-WindowsInstaller.ps1）；CLAUDE.md:93 的覆盖层顺序写「base → settings(100) → dialogs(200) → toast(1000)」，漏掉向导 500（design-system-spec.md:138 与 CONTEXT.md:139 均为 100/200/500/1000，MainWindow.Styles.axaml 实值亦为 500）。C) PROJECT_CONVENTIONS.md:211-231 的 §12 工具链表未列 Directory.Packages.props:16 的 Avalonia.Controls.ColorPicker 12.1.2 与 :19 的 AvaloniaUI.DiagnosticsSupport 2.2.3（THIRD-PARTY-NOTICES.md:13/:24 已列）；既有守卫 InstallerContractTests.cs:500-537 只校验已存在的行，新增包不会被迫登记。 修复（16a5129）：CONTEXT.md 索引补 ADR-017…020 四行、P3 状态补 014/017/018/019/020；CLAUDE.md 发布流程改为「Build-Distribution.ps1 出跨平台归档 + 独立 job 下载并校验 Inno 后用 New-WindowsInstaller.ps1 出安装器」、覆盖层顺序补向导 500；§12 表补两行。验证：InstallerContractTests 28/28 + 单元全量 1484 过 / 2 跳。"
     },
     "AUD-TST-004": {
       "title": "卸载安全闸口无聚焦测试：游戏运行中拒绝卸载、驱动器根/受保护路径判定未验证",

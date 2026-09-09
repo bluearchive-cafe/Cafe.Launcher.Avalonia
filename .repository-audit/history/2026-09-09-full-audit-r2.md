@@ -11,7 +11,7 @@
 
 ## Executive Summary
 
-**0 Critical / 0 High；2 Medium + 9 Low open。** 本轮与上一轮结论的差异不是新代码引入的缺陷，而是审计方式差异：上一轮以增量为主（`b1f62fa..f6d44a7`），本轮按 full 模式自源码重读，于是（a）重新打开了一个只修了一半的旧发现，（b）浮出一批增量视角看不到的项。其中 `AUD-PERF-003` 是**回归性复核发现**：原发现明确写「DI 构造期 + 每次刷新」两半，修复只覆盖了刷新路径。
+**0 Critical / 0 High；2 Medium + 9 Low open。** 本轮与上一轮结论的差异不是新代码引入的缺陷，而是审计方式差异：上一轮以增量为主（`b1f62fa..f6d44a7`），本轮按 full 模式自源码重读，于是（a）重新打开了一个只修了一半的旧发现，（b）浮出一批增量视角看不到的项。其中 `AUD-PERF-003` 是**回归性复核发现**：原发现明确写「DI 构造期 + 每次刷新」两半，修复只覆盖了刷新路径。**本报告产出后同日修复 2 项文档类 Low（`AUD-DOC-001` / `AUD-DOC-002` → `16a5129`），故当前 open 为 2 Medium + 7 Low。**
 
 门禁本机实跑全绿（`verify.ps1` exit 0）：本地化合约通过；Debug 0 警告 0 错误；单元 1484 过 / 2 跳（CI 1486 过 / 0 跳，含 2 例符号链接守卫）；Headless 167/167；合并手写覆盖率 行 85.25%（13703/16073）/ 分支 92.12%（2187/2374），高于棘轮 84.30% / 88.99%；Release win-x64 0 警告 0 错误；Release 下 Resx 契约 18/18。CI 实证：HEAD `cffbd4d` push run `34322709781` success。
 
@@ -162,6 +162,8 @@ Most important actions：
 
 **Recommendation validation**：Verified。
 
+**修复（`16a5129`）**：本地数据表补「崩溃报告快照」一行（异常类型与详细信息、应用版本、构建 SHA、操作系统与界面语言，用户目录已替换为 `%USERPROFILE%`）；保留段补写 `CrashReports` 目录、10 份 / 30 天与临时目录降级；「最后更新」改为 2026 年 9 月 9 日。
+
 ### AUD-DOC-002 — 文档索引/表格漂移三处
 
 - Category: maintainability / doc-drift ｜ Severity: Low ｜ Confidence: 90 ｜ Disposition: Fix
@@ -173,6 +175,8 @@ Most important actions：
 **Recommendation**：三处一并更正；可选把守卫扩展为「ADR 索引覆盖 adr 目录」「§12 表覆盖 props 全部 PackageVersion」。
 
 **Recommendation validation**：Verified。
+
+**修复（`16a5129`）**：CONTEXT.md 索引补 ADR-017…020 四行、P3 完成状态补 014/017/018/019/020；CLAUDE.md 发布流程改为「`Build-Distribution.ps1` 出跨平台归档 + 独立 job 下载并校验 Inno 后用 `New-WindowsInstaller.ps1` 出安装器」、覆盖层顺序补向导 500；§12 表补两行。验证：`InstallerContractTests` 28/28（含 §12 版本一致性与 Inno 最低版本两条文档守卫）+ 单元全量 1484 过 / 2 跳。
 
 ### AUD-TST-004 — 卸载安全闸口无聚焦测试
 
@@ -231,6 +235,7 @@ Most important actions：
 ## Resolved / Superseded Since Previous Audit
 
 - `AUD-REL-005` → `d9f2184`（`CrashReportBootstrap` + 10 例测试）；`AUD-MTN-010` → `78c7d67`（§10 基线清单 + 1:1 契约守卫）——本轮复核为最终形态。
+- `AUD-DOC-001` / `AUD-DOC-002` → `16a5129`（本轮发现、同日修复）：PRIVACY.md 补崩溃快照披露；CONTEXT.md ADR 索引补 017…020 并更新 P3 状态；CLAUDE.md 修正发布流程与覆盖层顺序（补向导 500）；PROJECT_CONVENTIONS §12 补两个已声明包。验证：`InstallerContractTests` 28/28 + 单元全量 1484 过 / 2 跳 / 1486 总计（与审计基线一致）。
 - 维持 4 项有意暂缓/接受项：`AUD-ARCH-003`（deferred）、`AUD-MTN-001`（deferred）、`AUD-DEP-002`（accepted-risk，年度重审）、`AUD-TST-001`（deferred / No Action）。
 - **重开**：`AUD-PERF-003`（上一轮记为 resolved；本轮回到原发现全文核对，构造期一半仍在，见上）。
 
