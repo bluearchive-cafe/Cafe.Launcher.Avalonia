@@ -241,6 +241,20 @@ Most important actions：
 - `AUD-REL-005` → `d9f2184`（`CrashReportBootstrap` + 10 例测试）；`AUD-MTN-010` → `78c7d67`（§10 基线清单 + 1:1 契约守卫）——本轮复核为最终形态。
 - `AUD-DOC-001` / `AUD-DOC-002` → `16a5129`（本轮发现、同日修复）：PRIVACY.md 补崩溃快照披露；CONTEXT.md ADR 索引补 017…020 并更新 P3 状态；CLAUDE.md 修正发布流程与覆盖层顺序（补向导 500）；PROJECT_CONVENTIONS §12 补两个已声明包。验证：`InstallerContractTests` 28/28 + 单元全量 1484 过 / 2 跳 / 1486 总计（与审计基线一致）。
 - `AUD-XPLAT-001` → `c1b3d20`（提示具体化）+ `79db640` 与文档站 `f25d174`（产品决定与文档：macOS 暂不支持启动游戏且暂无支持计划）。
+- **本轮 8 项（1 Medium + 7 Low）同日全部修复**：
+
+| ID | 修复 | 提交 |
+|---|---|---|
+| AUD-PERF-003 | 构造期解码移除，初始壁纸由首次刷新在线程池解码；跳过键随首次刷新播种；黄金截图测试显式驱动首次刷新 | `ff71eef` |
+| AUD-SEC-005 | `GetSafeFilePath` 拒绝归一到游戏根的条目，下载/安装/差异 7 处调用点改用 | `60f14fe` |
+| AUD-ARCH-004 | 重置确认纳入 `ModalKind` + 同步 + Escape 分支；Escape 测试改枚举全部 ModalKind | `d1a4421` |
+| AUD-MTN-011 | 清单/配置键序断言 + settings 克隆完整性反射测试 | `f8d6329` |
+| AUD-TST-004 | 卸载三道闸口用例（运行中/驱动器根/路径不存在） | `f8d6329` |
+| AUD-TST-005 | 8 处门控等待加 `WaitAsync(5s)`；csproj 抑制理由改为与事实相符 | `f8d6329` |
+| AUD-MTN-013 | 删除 `GetLanguageOptions()` 无参重载 | `77ad317` |
+| AUD-REL-006 | `ClickCodeService` / `ResourcePanelUidService` 的静默 catch 改记 Warn | `77ad317` |
+
+修复后门禁：`verify.ps1` exit 0（Debug/Release 0 警告 0 错误；单元 1521 过 / 2 跳 / 1523 总计；Headless 167/167；合并覆盖率 行 85.16% / 分支 92.16%，高于棘轮 84.30% / 88.99%；Release Resx 18/18）。
 - 维持 4 项有意暂缓/接受项：`AUD-ARCH-003`（deferred）、`AUD-MTN-001`（deferred）、`AUD-DEP-002`（accepted-risk，年度重审）、`AUD-TST-001`（deferred / No Action）。
 - **重开**：`AUD-PERF-003`（上一轮记为 resolved；本轮回到原发现全文核对，构造期一半仍在，见上）。
 

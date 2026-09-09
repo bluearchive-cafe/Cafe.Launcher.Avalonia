@@ -7,44 +7,40 @@
 
 ## 当前结论
 
-**0 Critical / 0 High；1 Medium + 7 Low open，另有 4 项有意暂缓/接受。** 与上一轮的差异源于审计方式：上一轮以增量为主，本轮按 full 模式自源码重读，因此重新打开了一个只修了一半的旧发现（`AUD-PERF-003`），并浮出一批增量视角看不到的项。其中 2 项文档类 Low（`AUD-DOC-001` / `AUD-DOC-002`）已随 `16a5129` 修复；`AUD-XPLAT-001` 已随 `c1b3d20`（提示具体化）与 `79db640` + 文档站 `f25d174`（产品决定与文档）关闭。全量门禁本机实跑通过（`verify.ps1` exit 0：Debug 0 警告 0 错误；单元 1486 过/2 跳；Headless 167/167；合并覆盖率 行 85.26% / 分支 92.23%；Release win-x64 0 警告 0 错误；Resx 18/18）。CI 实证：`cffbd4d` push run `34322709781` success，CI 单元 1486 过 / 0 跳（本机跳过的 2 例符号链接守卫在 runner 上真执行）。
+**0 Critical / 0 High；本轮 1 Medium + 7 Low 已全部修复（2026-09-09 同日落地），无 open 项**，另有 4 项有意暂缓/接受。与上一轮的差异源于审计方式：上一轮以增量为主，本轮按 full 模式自源码重读，因此重新打开了一个只修了一半的旧发现（`AUD-PERF-003`），并浮出一批增量视角看不到的项。修复后全量门禁本机实跑通过（`verify.ps1` exit 0：Debug 0 警告 0 错误；单元 1521 过/2 跳；Headless 167/167；合并覆盖率 行 85.16% / 分支 92.16%；Release win-x64 0 警告 0 错误；Resx 18/18）。CI 实证：`cffbd4d` push run `34322709781` success，CI 单元 1486 过 / 0 跳（本机跳过的 2 例符号链接守卫在 runner 上真执行）。
 
-## Open 项
+## Open 项（无）
+
+本轮 8 项（1 Medium + 7 Low）全部修复并带守卫，见「本轮修复」。以下 4 项为有意暂缓/接受：
 
 | ID | 严重度 | 状态 | 摘要 |
 |---|---|---|---|
-| AUD-PERF-003 | Medium | open（重开） | 内置壁纸仍在 DI 构造期于 UI 线程同步全尺寸解码；启动期同一 PNG 解码两次 |
-| AUD-ARCH-004 | Low | open | 设置页重置确认未纳入 ModalHost：Escape 关掉下层设置页而非该确认 |
-| AUD-SEC-005 | Low | open | 清单空路径条目使下载临时文件写到游戏目录之外 |
-| AUD-MTN-011 | Low | open | 两处 MUST 不变量无守卫（清单 JSON 键序 / settings 深克隆完整性） |
-| AUD-MTN-013 | Low | open | 死公共 API `GetLanguageOptions()` 无参重载会重定向全局日志到临时目录 |
-| AUD-TST-004 | Low | open | 卸载安全闸口（游戏运行中、驱动器根）无聚焦测试 |
-| AUD-TST-005 | Low | open | 约 15 处测试等待无超时；csproj 抑制 xUnit1051 的理由不实 |
-| AUD-REL-006 | Low | open | 两处 best-effort catch 无日志，一处使调用方 Warn 兜底成死代码 |
 | AUD-ARCH-003 | Low | deferred | RemoteContentViewModel 直接持有 DispatcherTimer |
 | AUD-MTN-001 | Low | deferred | RemoteContentViewModel（714 行）拆分 |
 | AUD-DEP-002 | Low | accepted-risk | Shirasagi0012.MaterialColorUtilities bus factor 1；年度重审 |
 | AUD-TST-001 | Low | deferred / No Action | GameDownloadServiceTests 真实限速 + `Stopwatch` 下限断言 |
 
-## 一项 Medium
+## 本轮修复（8 项，同日落地）
 
 ### AUD-PERF-003 — 内置壁纸仍在 DI 构造期于 UI 线程同步解码（重开）
 
 - **原发现**：`history/2026-09-04-full-audit.md §4.3` 标题即写「DI 构造期 **+ 每次刷新**」；`85d2266` 只改了 `UpdateBackgroundImageAsync` 的 Bundled 分支（改 `Task.Run`），构造函数那一半原样保留。上一轮（增量视角）记为 resolved，未回到原发现全文核对另一半。
 - **现状证据**：`ViewModels/BackgroundViewModel.cs:122` 构造函数体同步调用 `bundledImageLoader()` → `:647-662` `new Bitmap(stream)` 全尺寸解码 `Assets/launcher-background.png`（实测 2560×1388 / 3,396,889 字节）；该单例由 `App.axaml.cs:72` 在 UI 线程、首帧前经 DI 解析（`ServiceConfiguration.cs:123/141/143`）。构造函数从不写 `lastBackgroundSourceKey`（仅 `:185/:221/:245`），故首次刷新的跳过守卫（`:153-160`）必然失配，Bundled 分支再解码一次 → 启动期同一 PNG 解码两次。
-- **修复方向**：构造期不做同步解码（或改后台任务），并播种 `lastBackgroundSourceKey`/`lastDecodeTarget` 让首次刷新复用；守卫建议：断言构造期未调用 `bundledImageLoader` + 「首次刷新不重复解码」行为测试。
+- **修复（`ff71eef`）**：构造函数不再解码；初始壁纸由首次 `UpdateBackgroundImageAsync` 在线程池解码后填入（窗口显示主题底色兜底），来源跳过键随首次刷新播种，启动期同一 PNG 只解码一次。黄金截图测试改为显式驱动首次刷新（基线未变，仍在容差内）。新增用例：构造期零解码 + 首次刷新恰好一次 + 同源再刷新不再解码；两向实测（注释掉黄金测试的背景加载 → `shell-default` 失败）。
 
-## 七项 Low（要点）
+### 其余 7 项
 
-- **AUD-ARCH-004**：`DialogsViewModel.IsResetSettingsConfirmationVisible` 未进 `OnDialogsPropertyChanged`（`ShellLifecycle.cs:790-843`）、`ModalKind` 无成员，但渲染在对话框层（`MainWindowDialogsOverlay.axaml:493-499`）——17 个模态表面仅此一处未注册，Escape 误关下层设置页。
-- **AUD-SEC-005**：`GamePathValidator` 允许 `target==root` → `DownloadExecutor.cs:82` 取临时名得 `<游戏目录>.tmp` → `FileDownloadService.cs:57-61/:124` 在游戏目录之外落盘；远端清单空 `path` 条目即可触发（越界写 + 操作失败）。
-- **AUD-MTN-011**：`LocalGameContracts.cs:35-39` 的清单键序 MUST 与 `LauncherSettings.cs:158-203` 的克隆 MUST 均无机械守卫（各有 3 行测试可封）。
-- **AUD-MTN-013**：`LocalizationService.cs:183-184` 死重载会经 `new LocalDiagnostics()` 把进程级静态日志目标改到临时目录。
-- **AUD-TST-004**：卸载「游戏运行中拒绝」「驱动器根保护」无测试；`IsSystemProtectPath` 的不存在路径分支在 `ValidateAsync` 中不可达。
-- **AUD-TST-005**：`ToastHostViewModelTests`/`SettingsCategoryTests`/`MotionVisibilityTests` 共约 15 处 `await tcs.Task` 无超时，回归会挂住 CI；csproj 的抑制理由「等待已全部有界」不实。
-- **AUD-REL-006**：`ClickCodeService` 两处静默 catch（使 `App.axaml.cs:62-70` 的 Warn 兜底成死代码）；`ResourcePanelUidService` 读 Cookie 失败静默回落空串。
+| ID | 修复 | 提交 | 守卫/验证 |
+|---|---|---|---|
+| AUD-SEC-005 | `GamePathValidator.GetSafeFilePath` 拒绝归一到游戏根的条目；下载/安装/差异共 7 处调用点改用之 | `60f14fe` | GamePathValidatorTests 5 例 + DownloadExecutorTests 参数化 3 例（无残留文件） |
+| AUD-ARCH-004 | 重置确认纳入 `ModalKind` + 同步分支 + Escape 分支 | `d1a4421` | Escape 测试改为枚举 `Enum.GetValues<ModalKind>()`；两向实测 |
+| AUD-MTN-011 | 清单/配置序列化键序断言 + `LauncherSettings` 克隆完整性反射测试 | `f8d6329` | 两向实测：移动 `Vc` → 键序失败；删复制构造一行 → 克隆失败 |
+| AUD-TST-004 | 卸载三道闸口用例（运行中/驱动器根/路径不存在）+ tracker 替身 | `f8d6329` | 3 例新增，全部执行通过 |
+| AUD-TST-005 | 8 处门控等待加 `WaitAsync(5s)`；csproj 抑制理由改为与事实相符 | `f8d6329` | 全量套件回归通过 |
+| AUD-MTN-013 | 删除 `GetLanguageOptions()` 无参重载（无调用点且会改全局日志目标） | `77ad317` | 编译期即验证无调用点 |
+| AUD-REL-006 | `ClickCodeService` 三处 catch 与 `ResourcePanelUidService` 读 Cookie 的 catch 改记 Warn | `77ad317` | 全量套件回归通过 |
 
-## 已修复（本轮审计产物落地）
+## 更早已修复（本轮审计产物落地）
 
 - **AUD-XPLAT-001**（`c1b3d20` + `79db640` + 文档站 `f25d174`）：启动失败提示由通用文案改为具体原因（本地化 runner 名 + 可用性状态），并抽出共享的 runner 名/状态本地化映射；产品面明确为「macOS 只能安装/更新/修复，暂不支持启动游戏，也暂无支持计划」，写入 README 与文档站五处。
 - **AUD-DOC-001**（`16a5129`）：PRIVACY.md 本地数据表补「崩溃报告快照」一行、保留段补 CrashReports 目录与 10 份 / 30 天，最后更新改为 2026-09-09。
@@ -72,19 +68,18 @@
 - `AUD-REL-005` → `d9f2184`；`AUD-MTN-010` → `78c7d67`（均复核为最终形态）。
 - `AUD-DOC-001` / `AUD-DOC-002` → `16a5129`（本轮发现、同日修复并复核：`InstallerContractTests` 28/28 + 单元全量 1484 过 / 2 跳）。
 - `AUD-XPLAT-001` → `c1b3d20`（提示具体化）+ `79db640` 与文档站 `f25d174`（产品决定：macOS 暂不支持启动游戏且暂无支持计划，写入 README 与文档站）。
-- **重开**：`AUD-PERF-003`。
+- `AUD-PERF-003` → `ff71eef`；`AUD-SEC-005` → `60f14fe`；`AUD-ARCH-004` → `d1a4421`；`AUD-MTN-011` / `AUD-TST-004` / `AUD-TST-005` → `f8d6329`；`AUD-MTN-013` / `AUD-REL-006` → `77ad317`。
+- **重开并再次关闭**：`AUD-PERF-003`（上一轮记为 resolved，本轮回到原发现全文核对后重开，随 `ff71eef` 关闭）。
 
 ## Decisions Required
 
-1. 无阻塞决策——`AUD-XPLAT-001` 的产品决定已落地（macOS 暂不支持启动游戏）。
-2. 其余 8 项（1 Medium + 7 Low）均为可直接执行的 Fix / Add Guard。
+无阻塞决策。`AUD-XPLAT-001` 的产品决定已落地（macOS 暂不支持启动游戏且暂无支持计划）。
 
 ## Recommended Priorities
 
-1. `AUD-PERF-003` → `AUD-SEC-005` → `AUD-ARCH-004`（用户可感 / 越界写 / 模态误路由）。
-2. `AUD-MTN-011` + `AUD-TST-004` + `AUD-TST-005` 三条守卫（各 1–3 行），把漂移与回归转为机械保护。
-3. `AUD-MTN-013` / `AUD-REL-006` 收尾。
-4. `AUD-XPLAT-001` 决策后补对应守卫。
+1. 本轮 8 项已全部落地；把分支推送并开 PR，让 `build.yml` 在 CI 上复核这批修复。
+2. 维持 4 项有意暂缓/接受项至下一轮或年度审。
+3. 若后续新增模态表面、清单字段或设置项，本轮新增的三条守卫会分别兜住：Escape 枚举测试、键序断言、克隆完整性反射测试。
 
 ---
 
