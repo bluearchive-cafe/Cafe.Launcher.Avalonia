@@ -466,6 +466,12 @@ public static class LocalizationKeys
     /// <summary>Resource key for <c>downloadSpeedLimitDescription</c>.</summary>
     public const string DownloadSpeedLimitDescription = "downloadSpeedLimitDescription";
 
+    /// <summary>Resource key for <c>enableHttp2</c>.</summary>
+    public const string EnableHttp2 = "enableHttp2";
+
+    /// <summary>Resource key for <c>enableHttp2Description</c>.</summary>
+    public const string EnableHttp2Description = "enableHttp2Description";
+
     /// <summary>Resource key for <c>enableStartupUpdateCheck</c>.</summary>
     public const string EnableStartupUpdateCheck = "enableStartupUpdateCheck";
 

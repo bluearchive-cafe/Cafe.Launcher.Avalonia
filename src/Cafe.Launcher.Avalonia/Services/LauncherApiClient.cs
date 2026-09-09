@@ -245,7 +245,9 @@ public sealed class LauncherApiClient : IDisposable
                     "Authorization",
                     authorizationHeaderFactory.Create("", ApiConfig.YostarAuthorizationVersion));
 
-                using var response = await lease.Client.SendAsync(request, ct).ConfigureAwait(false);
+                using var response = await RemoteHttpRequestService
+                    .SendAsync(lease.Client, request, ct)
+                    .ConfigureAwait(false);
                 response.EnsureSuccessStatusCode();
                 await LocalDiagnostics.LogAsync(
                     LogEntrySeverity.Debug,

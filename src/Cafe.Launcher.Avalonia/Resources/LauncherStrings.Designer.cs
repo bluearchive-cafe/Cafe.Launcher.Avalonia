@@ -326,6 +326,10 @@ internal static class LauncherStrings
 
     internal static string DownloadSpeedLimitDescription => GetRequiredString("downloadSpeedLimitDescription");
 
+    internal static string EnableHttp2 => GetRequiredString("enableHttp2");
+
+    internal static string EnableHttp2Description => GetRequiredString("enableHttp2Description");
+
     internal static string EnableStartupUpdateCheck => GetRequiredString("enableStartupUpdateCheck");
 
     internal static string EnableStartupUpdateCheckDescription => GetRequiredString("enableStartupUpdateCheckDescription");

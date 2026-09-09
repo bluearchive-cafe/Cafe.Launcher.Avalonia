@@ -207,6 +207,27 @@ public sealed class RemoteHttpUrlValidatorTests
     }
 
     [Fact]
+    public async Task SendAsync_WhenClientPrefersHttp2_AppliesPreferenceToManualRequest()
+    {
+        var handler = new OkHandler();
+        using var client = new HttpClient(handler)
+        {
+            DefaultRequestVersion = HttpVersion.Version20,
+            DefaultVersionPolicy = HttpVersionPolicy.RequestVersionOrLower
+        };
+
+        using var response = await RemoteHttpRequestService.SendAsync(
+            client,
+            new Uri("https://example.test/start"),
+            static uri => new HttpRequestMessage(HttpMethod.Get, uri),
+            RemoteHttpUrlValidator.CreateForTesting(),
+            CancellationToken.None);
+
+        Assert.Equal(HttpVersion.Version20, handler.RequestVersion);
+        Assert.Equal(HttpVersionPolicy.RequestVersionOrLower, handler.RequestVersionPolicy);
+    }
+
+    [Fact]
     public async Task SendAsync_WhenRedirectIsRelative_FollowsRedirect()
     {
         var handler = new RelativeRedirectHandler();
@@ -296,12 +317,16 @@ public sealed class RemoteHttpUrlValidatorTests
     private sealed class OkHandler : HttpMessageHandler
     {
         public int RequestCount { get; private set; }
+        public Version? RequestVersion { get; private set; }
+        public HttpVersionPolicy? RequestVersionPolicy { get; private set; }
 
         protected override Task<HttpResponseMessage> SendAsync(
             HttpRequestMessage request,
             CancellationToken cancellationToken)
         {
             RequestCount++;
+            RequestVersion = request.Version;
+            RequestVersionPolicy = request.VersionPolicy;
             return Task.FromResult(new HttpResponseMessage(HttpStatusCode.OK));
         }
     }

@@ -29,8 +29,11 @@ internal static class RemoteHttpRequestService
                 .ConfigureAwait(false);
 
             using var request = createRequest(currentUri);
-            var response = await client
-                .SendAsync(request, HttpCompletionOption.ResponseHeadersRead, cancellationToken)
+            var response = await SendAsync(
+                    client,
+                    request,
+                    HttpCompletionOption.ResponseHeadersRead,
+                    cancellationToken)
                 .ConfigureAwait(false);
 
             if (!IsRedirect(response.StatusCode))
@@ -62,6 +65,29 @@ internal static class RemoteHttpRequestService
 
             currentUri = nextUri;
         }
+    }
+
+    /// <summary>
+    /// Sends a manually-created request using the client's configured HTTP version preference.
+    /// <see cref="HttpClient.DefaultRequestVersion"/> is not automatically copied to an
+    /// independently-created <see cref="HttpRequestMessage"/>.
+    /// </summary>
+    public static Task<HttpResponseMessage> SendAsync(
+        HttpClient client,
+        HttpRequestMessage request,
+        CancellationToken cancellationToken) =>
+        SendAsync(client, request, HttpCompletionOption.ResponseContentRead, cancellationToken);
+
+    /// <inheritdoc cref="SendAsync(HttpClient, HttpRequestMessage, CancellationToken)"/>
+    public static Task<HttpResponseMessage> SendAsync(
+        HttpClient client,
+        HttpRequestMessage request,
+        HttpCompletionOption completionOption,
+        CancellationToken cancellationToken)
+    {
+        request.Version = client.DefaultRequestVersion;
+        request.VersionPolicy = client.DefaultVersionPolicy;
+        return client.SendAsync(request, completionOption, cancellationToken);
     }
 
     private static bool IsRedirect(HttpStatusCode statusCode) =>

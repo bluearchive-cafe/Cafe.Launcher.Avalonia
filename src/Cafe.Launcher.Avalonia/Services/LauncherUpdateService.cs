@@ -190,10 +190,12 @@ public sealed partial class LauncherUpdateService : IDisposable
         using var lease = await leaseSource.CreateLeaseAsync(proxyMode, cancellationToken).ConfigureAwait(false);
         using var request = new HttpRequestMessage(HttpMethod.Get, ApiConfig.GitHubReleasesApiUrl);
         request.Headers.UserAgent.ParseAdd($"CafeLauncher/{BuildInfo.LauncherVersion}");
-        using var response = await lease.Client.SendAsync(
-            request,
-            HttpCompletionOption.ResponseHeadersRead,
-            cancellationToken).ConfigureAwait(false);
+        using var response = await RemoteHttpRequestService.SendAsync(
+                lease.Client,
+                request,
+                HttpCompletionOption.ResponseHeadersRead,
+                cancellationToken)
+            .ConfigureAwait(false);
         response.EnsureSuccessStatusCode();
 
         var releases = await RemoteHttpRequestService.DeserializeJsonAsync<List<GitHubRelease>>(

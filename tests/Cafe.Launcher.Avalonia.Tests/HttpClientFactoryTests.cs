@@ -1,3 +1,4 @@
+using System.Net;
 using Cafe.Launcher.Avalonia.Models;
 using Cafe.Launcher.Avalonia.Services;
 
@@ -5,6 +6,36 @@ namespace Cafe.Launcher.Avalonia.Tests;
 
 public sealed class HttpClientFactoryTests
 {
+    [Fact]
+    public async Task CreatedClients_WhenHttp2IsDisabled_UseHttp11WithFallback()
+    {
+        using var factory = new HttpClientFactory(new ProxySettingsService());
+        factory.ConfigureHttp2(false);
+
+        using var client = factory.CreateClient(TimeSpan.FromSeconds(1));
+        using var directLease = await factory.CreateLeaseAsync(ProxyModes.Direct);
+        using var proxyLease = await factory.CreateLeaseAsync(ProxyModes.Auto);
+
+        AssertHttpVersion(client, HttpVersion.Version11);
+        AssertHttpVersion(directLease.Client, HttpVersion.Version11);
+        AssertHttpVersion(proxyLease.Client, HttpVersion.Version11);
+    }
+
+    [Fact]
+    public async Task CreatedClients_WhenHttp2IsEnabled_UseHttp2WithFallback()
+    {
+        using var factory = new HttpClientFactory(new ProxySettingsService());
+        factory.ConfigureHttp2(true);
+
+        using var client = factory.CreateClient(TimeSpan.FromSeconds(1));
+        using var directLease = await factory.CreateLeaseAsync(ProxyModes.Direct);
+        using var proxyLease = await factory.CreateLeaseAsync(ProxyModes.Auto);
+
+        AssertHttpVersion(client, HttpVersion.Version20);
+        AssertHttpVersion(directLease.Client, HttpVersion.Version20);
+        AssertHttpVersion(proxyLease.Client, HttpVersion.Version20);
+    }
+
     [Fact]
     public async Task FixedHttpClientLeaseSource_UsesInjectedHandler()
     {
@@ -146,6 +177,12 @@ public sealed class HttpClientFactoryTests
 
     private static HttpClientFactory CreateFactory(Func<SystemProxySettings?> provider) =>
         new(new ProxySettingsService(provider));
+
+    private static void AssertHttpVersion(HttpClient client, Version expectedVersion)
+    {
+        Assert.Equal(expectedVersion, client.DefaultRequestVersion);
+        Assert.Equal(HttpVersionPolicy.RequestVersionOrLower, client.DefaultVersionPolicy);
+    }
 
     private sealed class RecordingHandler : HttpMessageHandler
     {

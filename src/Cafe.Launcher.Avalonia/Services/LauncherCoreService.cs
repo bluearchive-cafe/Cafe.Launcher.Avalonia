@@ -22,6 +22,7 @@ public sealed class LauncherCoreService : ILauncherCoreService
     private readonly LocalInstallationStateStore localInstallationStateStore;
     private readonly GameInstallationPath installationPath;
     private readonly LauncherSettingsService settingsService;
+    private readonly HttpClientFactory httpClientFactory;
     private readonly LocalDiagnostics diagnostics;
 
     public LauncherCoreService(
@@ -29,18 +30,21 @@ public sealed class LauncherCoreService : ILauncherCoreService
         LocalInstallationStateStore localInstallationStateStore,
         GameInstallationPath installationPath,
         LauncherSettingsService settingsService,
+        HttpClientFactory httpClientFactory,
         LocalDiagnostics diagnostics)
     {
         this.apiClient = apiClient;
         this.localInstallationStateStore = localInstallationStateStore;
         this.installationPath = installationPath;
         this.settingsService = settingsService;
+        this.httpClientFactory = httpClientFactory;
         this.diagnostics = diagnostics;
     }
 
     public async Task<LauncherStatusSnapshot> LoadAsync(CancellationToken cancellationToken = default)
     {
         var settings = await settingsService.ReadAsync(cancellationToken).ConfigureAwait(false);
+        httpClientFactory.ConfigureHttp2(settings.EnableHttp2);
         await diagnostics.DebugAsync("LauncherCore", "LoadAsync started", CancellationToken.None).ConfigureAwait(false);
         var gameConfigTask = ReadRemoteAsync(
             "game-config",

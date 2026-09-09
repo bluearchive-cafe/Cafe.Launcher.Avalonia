@@ -23,6 +23,7 @@ public sealed class HttpClientFactory : IDisposable
     private readonly ProxySettingsService proxySettingsService;
     private readonly Dictionary<string, CachedProxyHandler> proxyHandlers = new(StringComparer.Ordinal);
     private readonly object proxyHandlerLock = new();
+    private bool enableHttp2 = true;
     private bool disposed;
 
     public HttpClientFactory(ProxySettingsService proxySettingsService)
@@ -38,17 +39,29 @@ public sealed class HttpClientFactory : IDisposable
     }
 
     /// <summary>
+    /// Configures the preferred HTTP version for clients created after this call.
+    /// HTTP/2 remains optional and falls back to HTTP/1.1 when unavailable.
+    /// </summary>
+    public void ConfigureHttp2(bool enabled)
+    {
+        ThrowIfDisposed();
+        Volatile.Write(ref enableHttp2, enabled);
+    }
+
+    /// <summary>
     /// Creates an HttpClient with a BaseAddress and timeout (direct connection, no proxy).
     /// The returned client shares the pooled handler and must be disposed by the caller.
     /// </summary>
     public HttpClient CreateClient(string baseAddress, TimeSpan timeout)
     {
         ThrowIfDisposed();
-        return new HttpClient(defaultHandler, disposeHandler: false)
+        var client = new HttpClient(defaultHandler, disposeHandler: false)
         {
             BaseAddress = new Uri(baseAddress),
             Timeout = timeout
         };
+        ApplyHttpVersion(client);
+        return client;
     }
 
     /// <summary>
@@ -58,10 +71,12 @@ public sealed class HttpClientFactory : IDisposable
     public HttpClient CreateClient(TimeSpan timeout)
     {
         ThrowIfDisposed();
-        return new HttpClient(defaultHandler, disposeHandler: false)
+        var client = new HttpClient(defaultHandler, disposeHandler: false)
         {
             Timeout = timeout
         };
+        ApplyHttpVersion(client);
+        return client;
     }
 
     /// <summary>
@@ -83,6 +98,7 @@ public sealed class HttpClientFactory : IDisposable
             var client = new HttpClient(defaultHandler, disposeHandler: false);
             if (baseAddress is not null) client.BaseAddress = baseAddress;
             if (timeout.HasValue) client.Timeout = timeout.Value;
+            ApplyHttpVersion(client);
             return new HttpClientLease(client, ownsClient: true);
         }
 
@@ -90,7 +106,16 @@ public sealed class HttpClientFactory : IDisposable
         var proxyClient = new HttpClient(handler, disposeHandler: false);
         if (baseAddress is not null) proxyClient.BaseAddress = baseAddress;
         if (timeout.HasValue) proxyClient.Timeout = timeout.Value;
+        ApplyHttpVersion(proxyClient);
         return new HttpClientLease(proxyClient, ownsClient: true);
+    }
+
+    private void ApplyHttpVersion(HttpClient client)
+    {
+        client.DefaultRequestVersion = Volatile.Read(ref enableHttp2)
+            ? HttpVersion.Version20
+            : HttpVersion.Version11;
+        client.DefaultVersionPolicy = HttpVersionPolicy.RequestVersionOrLower;
     }
 
     private async Task<SocketsHttpHandler> GetOrAddProxyHandlerAsync(
