@@ -44,7 +44,9 @@ public partial class App : Application
             // Build DI container, reusing the pre-DI UnifiedLogger so there is
             // a single Serilog pipeline for the entire process.
             var serviceCollection = new ServiceCollection();
-            serviceCollection.AddLauncherServices(existingLogger: Program.PreDiLogger);
+            serviceCollection.AddLauncherServices(
+                existingLogger: Program.PreDiLogger,
+                existingFatalCrashService: Program.PreDiFatalCrashService);
             serviceProvider = serviceCollection.BuildServiceProvider();
             Program.ServiceProvider = serviceProvider;
 
@@ -75,9 +77,53 @@ public partial class App : Application
                 DataContext = viewModel,
             };
             var shutdownDeferred = false;
+            var fatalShutdown = false;
+            CrashReportWindow? crashReportWindow = null;
+
+            void HandleFatalCrashRequested(CrashReport report)
+            {
+                void ShowCrashWindow()
+                {
+                    if (crashReportWindow is not null)
+                    {
+                        return;
+                    }
+
+                    fatalShutdown = true;
+                    Program.FatalCrashExitRequested = true;
+                    shutdownCts.Cancel();
+                    showWindowListener?.Dispose();
+                    launchGameListener?.Dispose();
+                    trayService?.Dispose();
+                    mainWindow.Hide();
+
+                    crashReportWindow = new CrashReportWindow(report);
+                    crashReportWindow.Closed += (_, _) => desktop.Shutdown(1);
+                    desktop.MainWindow = crashReportWindow;
+                    crashReportWindow.Show();
+                    crashReportWindow.Activate();
+                }
+
+                if (Dispatcher.UIThread.CheckAccess())
+                {
+                    ShowCrashWindow();
+                }
+                else
+                {
+                    Dispatcher.UIThread.Post(ShowCrashWindow, DispatcherPriority.Send);
+                }
+            }
+
+            var fatalCrashService = serviceProvider.GetRequiredService<IFatalCrashService>();
+            fatalCrashService.FatalCrashRequested += HandleFatalCrashRequested;
 
             async void HandleShutdownRequested(object? _, ShutdownRequestedEventArgs eventArgs)
             {
+                if (fatalShutdown)
+                {
+                    return;
+                }
+
                 if (shutdownDeferred)
                 {
                     eventArgs.Cancel = true;
@@ -133,9 +179,20 @@ public partial class App : Application
             }
 
             // Clean up on app exit. The service provider is disposed by Program.RunSession.
+            // Avalonia can raise Exit more than once for a single shutdown: the fatal crash
+            // path calls the forced Shutdown(1), and the lifetime then replays its own
+            // window-close shutdown. Cleanup disposes the CTS, so it must run exactly once.
+            var exited = false;
             desktop.Exit += (_, _) =>
             {
+                if (exited)
+                {
+                    return;
+                }
+
+                exited = true;
                 desktop.ShutdownRequested -= HandleShutdownRequested;
+                fatalCrashService.FatalCrashRequested -= HandleFatalCrashRequested;
                 showWindowListener?.Dispose();
                 launchGameListener?.Dispose();
                 shutdownCts.Cancel();

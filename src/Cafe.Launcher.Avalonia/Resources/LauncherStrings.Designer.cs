@@ -118,6 +118,32 @@ internal static class LauncherStrings
 
     internal static string ContactCustomerSupport => GetRequiredString("contactCustomerSupport");
 
+    internal static string CrashWindowBuild => GetRequiredString("crashWindowBuild");
+
+    internal static string CrashWindowCaption => GetRequiredString("crashWindowCaption");
+
+    internal static string CrashWindowCopied => GetRequiredString("crashWindowCopied");
+
+    internal static string CrashWindowCopyDetails => GetRequiredString("crashWindowCopyDetails");
+
+    internal static string CrashWindowDescription => GetRequiredString("crashWindowDescription");
+
+    internal static string CrashWindowExit => GetRequiredString("crashWindowExit");
+
+    internal static string CrashWindowOpenLogs => GetRequiredString("crashWindowOpenLogs");
+
+    internal static string CrashWindowReportId => GetRequiredString("crashWindowReportId");
+
+    internal static string CrashWindowStatus => GetRequiredString("crashWindowStatus");
+
+    internal static string CrashWindowTechnicalDetails => GetRequiredString("crashWindowTechnicalDetails");
+
+    internal static string CrashWindowTime => GetRequiredString("crashWindowTime");
+
+    internal static string CrashWindowTitle => GetRequiredString("crashWindowTitle");
+
+    internal static string CrashWindowVersion => GetRequiredString("crashWindowVersion");
+
     internal static string CustomBackground => GetRequiredString("customBackground");
 
     internal static string CustomBackgroundDescription => GetRequiredString("customBackgroundDescription");
@@ -135,6 +161,8 @@ internal static class LauncherStrings
     internal static string DebugCriticalErrorTriggered => GetRequiredString("debugCriticalErrorTriggered");
 
     internal static string DebugExportCancelled => GetRequiredString("debugExportCancelled");
+
+    internal static string DebugFatalCrashTriggered => GetRequiredString("debugFatalCrashTriggered");
 
     internal static string DebugGameOperations => GetRequiredString("debugGameOperations");
 
@@ -170,7 +198,15 @@ internal static class LauncherStrings
 
     internal static string DebugSimulateFailure => GetRequiredString("debugSimulateFailure");
 
+    internal static string DebugSimulateFatalCrash => GetRequiredString("debugSimulateFatalCrash");
+
+    internal static string DebugSimulateFatalCrashMessage => GetRequiredString("debugSimulateFatalCrashMessage");
+
     internal static string DebugSimulateSuccess => GetRequiredString("debugSimulateSuccess");
+
+    internal static string DebugSimulateUnhandledCrash => GetRequiredString("debugSimulateUnhandledCrash");
+
+    internal static string DebugSimulateUnhandledCrashMessage => GetRequiredString("debugSimulateUnhandledCrashMessage");
 
     internal static string DebugStateRefreshTriggered => GetRequiredString("debugStateRefreshTriggered");
 

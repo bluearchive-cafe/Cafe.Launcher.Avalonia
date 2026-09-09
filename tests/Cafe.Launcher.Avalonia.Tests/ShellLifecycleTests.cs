@@ -388,6 +388,7 @@ public sealed class ShellLifecycleTests : IDisposable
             toastService,
             new UnifiedLogger(Path.Combine(tempDir, Guid.NewGuid().ToString("N"))),
             errorHandling,
+            new StubFatalCrashService(),
             settingsService,
             operations,
             shell,

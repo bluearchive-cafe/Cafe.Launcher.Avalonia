@@ -1,0 +1,12 @@
+<Application xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:materialIcons="clr-namespace:Material.Icons.Avalonia;assembly=Material.Icons.Avalonia"
+             x:Class="Cafe.Launcher.Avalonia.CrashReportApp"
+             RequestedThemeVariant="Default">
+    <Application.Styles>
+        <FluentTheme/>
+        <!-- The crash window uses MaterialIcon; the isolated reporter must register
+             the same control theme the main App does or the icon renders blank. -->
+        <materialIcons:MaterialIconStyles />
+    </Application.Styles>
+</Application>
