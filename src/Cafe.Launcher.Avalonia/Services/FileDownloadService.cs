@@ -84,6 +84,7 @@ public sealed class FileDownloadService : IFileDownloadService
                 {
                     File.Delete(targetTempPath);
                     existingLength = 0;
+                    await onProgressResetAsync(cancellationToken).ConfigureAwait(false);
                 }
 
                 var initialUri = new Uri(downloadUrl);

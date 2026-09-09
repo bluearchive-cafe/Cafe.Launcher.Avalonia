@@ -90,6 +90,26 @@ public sealed class LauncherCoreServiceTests : IDisposable
     }
 
     [Fact]
+    public async Task LoadAsync_WhenRemoteReadsStall_DegradesWithinBudgetWithoutCancellation()
+    {
+        // 守卫（启动预算）：六个远端读取各自有 3×30s 超时 + 退避（叠加最坏 ~92s
+        // 才降级）。整体预算到点后快照必须以降级态返回，而不是继续挂在重试里；
+        // 调用方 token 全程未取消。
+        var service = await CreateServiceAsync(
+            new CancellationHandler(),
+            remoteStateBudget: TimeSpan.FromMilliseconds(250));
+        var stopwatch = System.Diagnostics.Stopwatch.StartNew();
+
+        var snapshot = await service.LoadAsync();
+
+        stopwatch.Stop();
+        Assert.Equal(LauncherRuntimeState.RemoteUnavailable, snapshot.RuntimeState);
+        Assert.Null(snapshot.Remote.GameConfig);
+        Assert.True(snapshot.Remote.BaseConfig is null);
+        Assert.True(stopwatch.Elapsed < TimeSpan.FromSeconds(10));
+    }
+
+    [Fact]
     public async Task LoadAsync_WhenSettingsDocumentHasNoGamePath_ReturnsEffectiveDefaultGamePath()
     {
         var service = await CreateServiceAsync(
@@ -130,7 +150,8 @@ public sealed class LauncherCoreServiceTests : IDisposable
 
     private async Task<LauncherCoreService> CreateServiceAsync(
         HttpMessageHandler handler,
-        bool useEmptySettingsDocument = false)
+        bool useEmptySettingsDocument = false,
+        TimeSpan? remoteStateBudget = null)
     {
         var store = new LocalInstallationStateStore();
         var settingsPath = Path.Combine(tempDir, "settings.json");
@@ -166,7 +187,8 @@ public sealed class LauncherCoreServiceTests : IDisposable
             new GameInstallationPath(),
             settingsService,
             new HttpClientFactory(new ProxySettingsService()),
-            new LocalDiagnostics());
+            new LocalDiagnostics(),
+            remoteStateBudget ?? LauncherCoreService.DefaultRemoteStateBudget);
     }
 
     private static GameConfigResponse CreateGameConfig()

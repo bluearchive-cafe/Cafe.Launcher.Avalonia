@@ -7,6 +7,24 @@ namespace Cafe.Launcher.Avalonia.Tests;
 public sealed class HttpClientFactoryTests
 {
     [Fact]
+    public void ConfigureConnectionDefaults_WhenAppliedToFreshHandler_SetsSharedConnectionDefaults()
+    {
+        using var handler = new SocketsHttpHandler();
+
+        HttpClientFactory.ConfigureConnectionDefaults(handler);
+
+        Assert.False(handler.AllowAutoRedirect);
+        Assert.Equal(DecompressionMethods.All, handler.AutomaticDecompression);
+        Assert.Equal(TimeSpan.FromMinutes(15), handler.PooledConnectionLifetime);
+        // 运行时默认 ConnectTimeout 为 100s：应用内最短请求超时是自更新的 15s，
+        // 连接黑洞会先吃满整个请求预算才轮到有界重试。
+        Assert.Equal(TimeSpan.FromSeconds(15), handler.ConnectTimeout);
+        // HTTP/2 空闲连接 PING（对 HTTP/1.1 无效）：死连接在 ping 间隔 + 超时内
+        // 暴露，而不是等下一次读触发 60s 停滞预算。
+        Assert.Equal(TimeSpan.FromSeconds(30), handler.KeepAlivePingDelay);
+    }
+
+    [Fact]
     public async Task CreatedClients_WhenHttp2IsDisabled_UseHttp11WithFallback()
     {
         using var factory = new HttpClientFactory(new ProxySettingsService());

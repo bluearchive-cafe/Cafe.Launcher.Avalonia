@@ -29,13 +29,33 @@ public sealed class HttpClientFactory : IDisposable
     public HttpClientFactory(ProxySettingsService proxySettingsService)
     {
         this.proxySettingsService = proxySettingsService;
-        defaultHandler = new SocketsHttpHandler
-        {
-            AllowAutoRedirect = false,
-            UseProxy = false,
-            AutomaticDecompression = DecompressionMethods.All,
-            PooledConnectionLifetime = TimeSpan.FromMinutes(15)
-        };
+        defaultHandler = new SocketsHttpHandler();
+        ConfigureConnectionDefaults(defaultHandler);
+        defaultHandler.UseProxy = false;
+    }
+
+    /// <summary>
+    /// Shared connection-level defaults for every pooled handler the launcher
+    /// creates (direct and proxy alike). The handler must be freshly constructed;
+    /// callers layer their proxy-specific settings afterwards.
+    /// </summary>
+    /// <remarks>
+    /// <para><c>ConnectTimeout</c> replaces the 100s runtime default: the shortest
+    /// request timeout in the app is the 15s update check, so an unresponsive dial
+    /// would otherwise consume the entire request budget before the bounded retries
+    /// even begin.</para>
+    /// <para><c>KeepAlivePingDelay</c> enables HTTP/2 PING on idle connections
+    /// (no effect on HTTP/1.1). With HTTP/2 enabled by default, a dead multiplexed
+    /// connection now surfaces within roughly ping delay + ping timeout instead of
+    /// waiting for the 60s body-stall budget on the next read.</para>
+    /// </remarks>
+    internal static void ConfigureConnectionDefaults(SocketsHttpHandler handler)
+    {
+        handler.AllowAutoRedirect = false;
+        handler.AutomaticDecompression = DecompressionMethods.All;
+        handler.PooledConnectionLifetime = TimeSpan.FromMinutes(15);
+        handler.ConnectTimeout = TimeSpan.FromSeconds(15);
+        handler.KeepAlivePingDelay = TimeSpan.FromSeconds(30);
     }
 
     /// <summary>

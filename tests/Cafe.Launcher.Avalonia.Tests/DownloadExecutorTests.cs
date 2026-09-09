@@ -1,4 +1,5 @@
 using Cafe.Launcher.Avalonia.Features.GameOperations;
+using Cafe.Launcher.Avalonia.Helpers;
 using Cafe.Launcher.Avalonia.Models;
 using Cafe.Launcher.Avalonia.Services;
 using Cafe.Launcher.Avalonia.Services.Diagnostics;
@@ -178,6 +179,54 @@ public sealed class DownloadExecutorTests : IDisposable
         Assert.True(maximumConcurrency > 1);
         Assert.True(maximumConcurrency <= 10);
         Assert.True(progressCount > 0);
+    }
+
+    [Fact]
+    public async Task DownloadFilesAsync_WhenProgressIsReportedAndReset_CountsBytesInMemory()
+    {
+        // 守卫（进度内存计数）：正常块按上报字节累加，不再逐块磁盘 stat；
+        // 重置路径从磁盘重采样权威长度。前置临时文件 8 字节（续传语义），
+        // 块 4 → 内存 12；重置 → 磁盘权威 8；块 8 → 16 = 全量完成。
+        var gamePath = Path.Combine(tempDir, "YostarGames", "BlueArchive_JP");
+        Directory.CreateDirectory(gamePath);
+        var targetPath = GamePathValidator.GetSafeFilePath(gamePath, "progress.bin");
+        await File.WriteAllBytesAsync(DownloadExecutor.GetTempName(targetPath), new byte[8]);
+        var files = new[] { new ManifestFile { Path = "progress.bin", Size = "16", Hash = "hash" } };
+        var transferService = new StubFileDownloadService(async (request, operationControl, cancellationToken) =>
+        {
+            await operationControl.ReportProgressAsync(4, cancellationToken);
+            await operationControl.ReportProgressResetAsync(cancellationToken);
+            await operationControl.ReportProgressAsync(8, cancellationToken);
+        });
+        using var leaseSource = new FixedHttpClientLeaseSource(new HttpClientHandler(), null, null);
+        var progressSnapshots = new List<GameOperationProgress>();
+        var executor = new DownloadExecutor(
+            transferService,
+            new Crc64Service(),
+            leaseSource,
+            new LocalDiagnostics(),
+            () => Task.CompletedTask,
+            () => false);
+
+        await executor.DownloadFilesAsync(
+            gamePath,
+            new CdnConfigResponse
+            {
+                PrimaryCdn = "https://primary.example.invalid",
+                BackUpCdn = "https://backup.example.invalid"
+            },
+            "source",
+            files,
+            ProxyModes.Direct,
+            speedLimitBytesPerSec: 0,
+            GameOperationKind.Download,
+            progressSnapshots.Add,
+            CancellationToken.None);
+
+        Assert.Equal(16, progressSnapshots[^1].DownloadedSize);
+        Assert.Equal(16, progressSnapshots[^1].TotalSize);
+        // 重置回退必须可见：回退快照携带磁盘权威值 8（丢弃了内存计数的 12）。
+        Assert.Contains(progressSnapshots, snapshot => snapshot.DownloadedSize == 8);
     }
 
     [Theory]

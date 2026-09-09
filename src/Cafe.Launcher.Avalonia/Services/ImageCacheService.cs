@@ -22,6 +22,16 @@ public sealed class ImageCacheService : IDisposable
     private const int MaxImageBytes = 25 * 1024 * 1024;
     private static readonly TimeSpan RemoteImageCacheLifetime = TimeSpan.FromHours(24);
     private static readonly TimeSpan RequestTimeout = TimeSpan.FromSeconds(30);
+
+    /// <summary>
+    /// Entries older than this are swept once at startup. CRC-keyed .cache files and
+    /// URL-keyed .remote files have no other eviction — the 24h freshness window only
+    /// controls .remote reuse, not the file itself — so the sweep bounds disk growth
+    /// for long-lived installs; anything evicted is simply re-downloaded when needed.
+    /// Leftover .tmp files from crashed downloads age out the same way.
+    /// </summary>
+    internal static readonly TimeSpan CacheEntryLifetime = TimeSpan.FromDays(30);
+
     private readonly string cacheDir;
     private readonly IHttpClientLeaseSource httpClientLeaseSource;
     private readonly Crc64Service crc64Service;
@@ -66,6 +76,8 @@ public sealed class ImageCacheService : IDisposable
             // Cache directory is non-critical — log and continue without caching
             LocalDiagnostics.LogSync(LogEntrySeverity.Warn, "ImageCache", $"failed to create cache directory: {ex.Message}");
         }
+
+        _ = Task.Run(CleanupExpiredEntries);
     }
 
     /// <summary>
@@ -280,6 +292,42 @@ public sealed class ImageCacheService : IDisposable
         }
         catch (Exception exception) when (exception is IOException or UnauthorizedAccessException)
         {
+        }
+    }
+
+    private void CleanupExpiredEntries() => CleanupExpiredEntries(DateTimeOffset.UtcNow);
+
+    /// <summary>
+    /// Deletes cache entries whose last write precedes <see cref="CacheEntryLifetime"/>
+    /// relative to <paramref name="utcNow"/>. Individual failures are ignored — a file
+    /// concurrently in use simply survives until the next sweep.
+    /// </summary>
+    internal void CleanupExpiredEntries(DateTimeOffset utcNow)
+    {
+        var expiryThreshold = utcNow - CacheEntryLifetime;
+        try
+        {
+            foreach (var pattern in new[] { "*.cache", "*.remote", "*.tmp" })
+            {
+                foreach (var file in Directory.EnumerateFiles(cacheDir, pattern))
+                {
+                    try
+                    {
+                        if (File.GetLastWriteTimeUtc(file) < expiryThreshold)
+                        {
+                            File.Delete(file);
+                        }
+                    }
+                    catch (Exception exception) when (exception is IOException or UnauthorizedAccessException)
+                    {
+                        // 单个文件失败不阻塞其余清理（可能正被并发读取）。
+                    }
+                }
+            }
+        }
+        catch (Exception exception) when (exception is IOException or UnauthorizedAccessException)
+        {
+            LocalDiagnostics.LogSync(LogEntrySeverity.Warn, "ImageCache", $"cache sweep failed: {exception.Message}");
         }
     }
 

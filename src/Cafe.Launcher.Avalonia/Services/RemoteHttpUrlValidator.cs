@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Concurrent;
 using System.Linq;
 using System.Net;
 using System.Threading;
@@ -8,7 +9,20 @@ namespace Cafe.Launcher.Avalonia.Services;
 
 public sealed class RemoteHttpUrlValidator
 {
+    /// <summary>
+    /// How long a successful all-public DNS resolution may be reused across
+    /// requests. Deliberately short: it bounds the window in which a host whose
+    /// DNS record flips to a private address would still be dialed. Blocked,
+    /// private, empty, or failed resolutions are never cached and re-resolve on
+    /// every request.
+    /// </summary>
+    internal static readonly TimeSpan DefaultCacheLifetime = TimeSpan.FromSeconds(30);
+
     private readonly Func<string, CancellationToken, Task<IPAddress[]>> resolveHostAsync;
+    private readonly TimeSpan cacheLifetime;
+    private readonly Func<DateTimeOffset> utcNow;
+    private readonly ConcurrentDictionary<string, CacheEntry> resolutionCache =
+        new(StringComparer.Ordinal);
 
     public RemoteHttpUrlValidator()
         : this(static (host, cancellationToken) =>
@@ -17,10 +31,16 @@ public sealed class RemoteHttpUrlValidator
     }
 
     internal RemoteHttpUrlValidator(
-        Func<string, CancellationToken, Task<IPAddress[]>> resolveHostAsync)
+        Func<string, CancellationToken, Task<IPAddress[]>> resolveHostAsync,
+        TimeSpan? cacheLifetime = null,
+        Func<DateTimeOffset>? utcNow = null)
     {
         this.resolveHostAsync = resolveHostAsync;
+        this.cacheLifetime = cacheLifetime ?? DefaultCacheLifetime;
+        this.utcNow = utcNow ?? GetUtcNow;
     }
+
+    private static DateTimeOffset GetUtcNow() => DateTimeOffset.UtcNow;
 
     public Task<Uri> ValidateAsync(
         string url,
@@ -86,7 +106,7 @@ public sealed class RemoteHttpUrlValidator
             return uri;
         }
 
-        var addresses = await resolveHostAsync(uri.IdnHost, cancellationToken).ConfigureAwait(false);
+        var addresses = await ResolveHostCachedAsync(uri.IdnHost, cancellationToken).ConfigureAwait(false);
         if (addresses.Length == 0 || addresses.Any(address => !IsPublicAddress(address)))
         {
             var blocked = addresses.Where(a => !IsPublicAddress(a)).ToArray();
@@ -99,6 +119,37 @@ public sealed class RemoteHttpUrlValidator
 
         return uri;
     }
+
+    /// <summary>
+    /// Resolves <paramref name="host"/> through the underlying resolver, reusing a
+    /// recent successful result when one is still within the cache lifetime. The
+    /// launcher validates the same handful of CDN/API hosts on every request and
+    /// every redirect hop — a fresh install issues thousands of file downloads, so
+    /// an uncached lookup per attempt dominated resolver traffic. Only fully
+    /// public resolutions enter the cache: a private/blocked/empty result (and a
+    /// thrown resolution error) must re-resolve next time so the SSRF guard never
+    /// tolerates a record that turned private and transient DNS failures stay
+    /// retryable.
+    /// </summary>
+    private async Task<IPAddress[]> ResolveHostCachedAsync(
+        string host,
+        CancellationToken cancellationToken)
+    {
+        if (resolutionCache.TryGetValue(host, out var entry) && utcNow() < entry.ExpiresAt)
+        {
+            return entry.Addresses;
+        }
+
+        var addresses = await resolveHostAsync(host, cancellationToken).ConfigureAwait(false);
+        if (addresses.Length > 0 && addresses.All(IsPublicAddress))
+        {
+            resolutionCache[host] = new CacheEntry(addresses, utcNow() + cacheLifetime);
+        }
+
+        return addresses;
+    }
+
+    private readonly record struct CacheEntry(IPAddress[] Addresses, DateTimeOffset ExpiresAt);
 
     internal static RemoteHttpUrlValidator CreateForTesting() =>
         new(static (_, _) => Task.FromResult<IPAddress[]>([IPAddress.Parse("93.184.216.34")]));

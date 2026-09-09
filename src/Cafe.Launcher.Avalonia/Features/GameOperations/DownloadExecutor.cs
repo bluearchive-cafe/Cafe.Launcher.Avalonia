@@ -163,12 +163,29 @@ internal sealed class DownloadExecutor
         void RecordFileProgress(DownloadFileState downloadFile, long transferredBytes)
         {
             var paused = isPaused();
-            var downloadedSize = GetExistingDownloadedSize(
-                downloadFile.TargetPath,
-                downloadFile.File.SizeBytes);
-            var previousSize = Interlocked.Exchange(
-                ref downloadFile.ReportedSize,
-                downloadedSize);
+            long downloadedSize;
+            long previousSize;
+            if (transferredBytes > 0)
+            {
+                // 追加模式下按上报字节推进内存计数：此前每个 256KB 块都做一次
+                // 磁盘 stat（File.Exists + Length），快盘 10 并发下是每秒数千次
+                // 系统调用。同一文件的下载与回调在单个任务内串行，计数无竞争。
+                previousSize = Interlocked.Add(ref downloadFile.ReportedSize, transferredBytes)
+                    - transferredBytes;
+                downloadedSize = previousSize + transferredBytes;
+            }
+            else
+            {
+                // 重置路径（CRC 失败、Content-Range 无效、超长临时文件被丢弃）：
+                // 从磁盘重采样权威长度。
+                downloadedSize = GetExistingDownloadedSize(
+                    downloadFile.TargetPath,
+                    downloadFile.File.SizeBytes);
+                previousSize = Interlocked.Exchange(
+                    ref downloadFile.ReportedSize,
+                    downloadedSize);
+            }
+
             if (progressAccumulator.TryRecord(
                     transferredBytes,
                     downloadedSize - previousSize,

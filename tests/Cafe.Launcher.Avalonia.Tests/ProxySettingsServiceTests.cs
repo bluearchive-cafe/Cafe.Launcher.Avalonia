@@ -145,5 +145,9 @@ public sealed class ProxySettingsServiceTests
         Assert.True(handler.UseProxy);
         Assert.IsType<WebProxy>(handler.Proxy);
         Assert.False(handler.AllowAutoRedirect);
+        // 代理路径 handler 必须携带与直连 handler 相同的连接默认值
+        // （见 HttpClientFactory.ConfigureConnectionDefaults）。
+        Assert.Equal(TimeSpan.FromSeconds(15), handler.ConnectTimeout);
+        Assert.Equal(TimeSpan.FromSeconds(30), handler.KeepAlivePingDelay);
     }
 }

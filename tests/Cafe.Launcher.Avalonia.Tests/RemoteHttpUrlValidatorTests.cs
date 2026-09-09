@@ -124,6 +124,90 @@ public sealed class RemoteHttpUrlValidatorTests
     }
 
     [Fact]
+    public async Task ValidateAsync_WhenSameHostValidatedRepeatedlyWithinCacheLifetime_ResolvesOnce()
+    {
+        var resolvedHosts = new List<string>();
+        var validator = new RemoteHttpUrlValidator((host, _) =>
+        {
+            resolvedHosts.Add(host);
+            return Task.FromResult(new[] { IPAddress.Parse("93.184.216.34") });
+        });
+
+        for (var request = 0; request < 3; request++)
+        {
+            await validator.ValidateAsync("https://example.test/file");
+        }
+
+        Assert.Equal(["example.test"], resolvedHosts);
+    }
+
+    [Fact]
+    public async Task ValidateAsync_WhenCacheLifetimeExpires_ResolvesHostAgain()
+    {
+        // 守卫（DNS 缓存）：30s 生命周期内复用解析结果；到达边界后必须重新解析，
+        // 保证「DNS 记录翻转为私网地址」最迟在下一个生命周期被发现。
+        var resolvedHosts = new List<string>();
+        var now = new DateTimeOffset(2026, 9, 10, 0, 0, 0, TimeSpan.Zero);
+        var validator = new RemoteHttpUrlValidator(
+            (host, _) =>
+            {
+                resolvedHosts.Add(host);
+                return Task.FromResult(new[] { IPAddress.Parse("93.184.216.34") });
+            },
+            cacheLifetime: RemoteHttpUrlValidator.DefaultCacheLifetime,
+            utcNow: () => now);
+
+        await validator.ValidateAsync("https://example.test/file");
+        now += RemoteHttpUrlValidator.DefaultCacheLifetime - TimeSpan.FromSeconds(1);
+        await validator.ValidateAsync("https://example.test/file");
+        Assert.Single(resolvedHosts);
+
+        now += TimeSpan.FromSeconds(1);
+        await validator.ValidateAsync("https://example.test/file");
+
+        Assert.Equal(2, resolvedHosts.Count);
+        Assert.All(resolvedHosts, host => Assert.Equal("example.test", host));
+    }
+
+    [Fact]
+    public async Task ValidateAsync_WhenHostResolvesToPrivateAddress_ResultIsNotCached()
+    {
+        var responses = new Queue<IPAddress[]>();
+        responses.Enqueue([IPAddress.Parse("192.168.1.1")]);
+        responses.Enqueue([IPAddress.Parse("93.184.216.34")]);
+        var validator = new RemoteHttpUrlValidator(
+            (_, _) => Task.FromResult(responses.Dequeue()));
+
+        await Assert.ThrowsAsync<InvalidOperationException>(
+            () => validator.ValidateAsync("https://example.test/file"));
+        var uri = await validator.ValidateAsync("https://example.test/file");
+
+        // 队列被清空 = 私网结果未入缓存，第二次校验真实地重新解析了主机。
+        Assert.Empty(responses);
+        Assert.Equal("example.test", uri.Host);
+    }
+
+    [Fact]
+    public async Task ValidateAsync_WhenResolutionThrows_ResultIsNotCached()
+    {
+        var callCount = 0;
+        var validator = new RemoteHttpUrlValidator((_, _) =>
+        {
+            callCount++;
+            return callCount == 1
+                ? throw new InvalidOperationException("transient resolver failure")
+                : Task.FromResult(new[] { IPAddress.Parse("93.184.216.34") });
+        });
+
+        await Assert.ThrowsAsync<InvalidOperationException>(
+            () => validator.ValidateAsync("https://example.test/file"));
+        var uri = await validator.ValidateAsync("https://example.test/file");
+
+        Assert.Equal(2, callCount);
+        Assert.Equal("example.test", uri.Host);
+    }
+
+    [Fact]
     public async Task ValidateAsync_WhenConnectionUsesProxy_BypassesLocalDnsResolution()
     {
         // Local DNS for the target host is blocked/poisoned (would resolve to a private
