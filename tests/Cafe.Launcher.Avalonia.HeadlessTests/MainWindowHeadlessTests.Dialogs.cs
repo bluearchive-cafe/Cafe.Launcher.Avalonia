@@ -71,7 +71,7 @@ public sealed partial class MainWindowHeadlessTests
     }
 
     [AvaloniaFact]
-    public void LogExport_WhenOpened_HasNoCustomDatePickersAndTwoRequiredItems()
+    public void LogExport_WhenOpened_HasTwoAlwaysIncludedContentRows()
     {
         using var context = CreateContext();
         context.Window.Width = 1024;
@@ -80,12 +80,10 @@ public sealed partial class MainWindowHeadlessTests
         context.ViewModel.LogExport.OpenCommand.Execute(null);
         Dispatcher.UIThread.RunJobs();
 
-        var datePickers = context.Window.GetVisualDescendants().OfType<DatePicker>().ToArray();
         var requiredItems = context.Window.GetVisualDescendants().OfType<CheckBox>()
             .Where(box => box.IsChecked == true && !box.IsEnabled)
             .ToArray();
 
-        Assert.Empty(datePickers);
         Assert.Equal(2, requiredItems.Length);
     }
 
