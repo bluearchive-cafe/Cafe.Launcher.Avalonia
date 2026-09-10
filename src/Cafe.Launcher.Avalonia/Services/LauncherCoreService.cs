@@ -18,12 +18,23 @@ public interface ILauncherCoreService
 
 public sealed class LauncherCoreService : ILauncherCoreService
 {
+    /// <summary>
+    /// Overall deadline for the six concurrent remote reads that form the startup
+    /// snapshot. Each API call alone retries 3 attempts at a 30s timeout plus backoff
+    /// (worst case ~92s before degrading); this budget caps the whole startup
+    /// fan-out so a degraded network surfaces the launcher's offline state quickly,
+    /// while any attempt that completes within the budget still lands. Local state
+    /// reads are unaffected.
+    /// </summary>
+    internal static readonly TimeSpan DefaultRemoteStateBudget = TimeSpan.FromSeconds(30);
+
     private readonly LauncherApiClient apiClient;
     private readonly LocalInstallationStateStore localInstallationStateStore;
     private readonly GameInstallationPath installationPath;
     private readonly LauncherSettingsService settingsService;
     private readonly HttpClientFactory httpClientFactory;
     private readonly LocalDiagnostics diagnostics;
+    private readonly TimeSpan remoteStateBudget;
 
     public LauncherCoreService(
         LauncherApiClient apiClient,
@@ -32,6 +43,25 @@ public sealed class LauncherCoreService : ILauncherCoreService
         LauncherSettingsService settingsService,
         HttpClientFactory httpClientFactory,
         LocalDiagnostics diagnostics)
+        : this(
+            apiClient,
+            localInstallationStateStore,
+            installationPath,
+            settingsService,
+            httpClientFactory,
+            diagnostics,
+            DefaultRemoteStateBudget)
+    {
+    }
+
+    internal LauncherCoreService(
+        LauncherApiClient apiClient,
+        LocalInstallationStateStore localInstallationStateStore,
+        GameInstallationPath installationPath,
+        LauncherSettingsService settingsService,
+        HttpClientFactory httpClientFactory,
+        LocalDiagnostics diagnostics,
+        TimeSpan remoteStateBudget)
     {
         this.apiClient = apiClient;
         this.localInstallationStateStore = localInstallationStateStore;
@@ -39,39 +69,42 @@ public sealed class LauncherCoreService : ILauncherCoreService
         this.settingsService = settingsService;
         this.httpClientFactory = httpClientFactory;
         this.diagnostics = diagnostics;
+        this.remoteStateBudget = remoteStateBudget;
     }
 
     public async Task<LauncherStatusSnapshot> LoadAsync(CancellationToken cancellationToken = default)
     {
         var settings = await settingsService.ReadAsync(cancellationToken).ConfigureAwait(false);
         httpClientFactory.ConfigureHttp2(settings.EnableHttp2);
+        using var remoteBudget = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
+        remoteBudget.CancelAfter(remoteStateBudget);
         await diagnostics.DebugAsync("LauncherCore", "LoadAsync started", CancellationToken.None).ConfigureAwait(false);
         var gameConfigTask = ReadRemoteAsync(
             "game-config",
-            () => apiClient.GetGameConfigAsync(settings.ProxyMode, cancellationToken),
+            () => apiClient.GetGameConfigAsync(settings.ProxyMode, remoteBudget.Token),
             cancellationToken);
         var baseConfigTask = ReadRemoteAsync(
             "base-config",
-            () => apiClient.GetBaseConfigAsync(settings.ProxyMode, cancellationToken),
+            () => apiClient.GetBaseConfigAsync(settings.ProxyMode, remoteBudget.Token),
             cancellationToken);
         var cdnConfigTask = ReadRemoteAsync(
             "cdn-config",
             () => apiClient.GetCdnConfigAsync(
                 settings.PatchUrlGroup,
                 settings.ProxyMode,
-                cancellationToken),
+                remoteBudget.Token),
             cancellationToken);
         var operationsResourceTask = ReadRemoteAsync(
             "operations-resource",
-            () => apiClient.GetOperationsResourceAsync(settings.ProxyMode, cancellationToken),
+            () => apiClient.GetOperationsResourceAsync(settings.ProxyMode, remoteBudget.Token),
             cancellationToken);
         var socialMediaResourceTask = ReadRemoteAsync(
             "social-media-resource",
-            () => apiClient.GetSocialMediaResourceAsync(settings.ProxyMode, cancellationToken),
+            () => apiClient.GetSocialMediaResourceAsync(settings.ProxyMode, remoteBudget.Token),
             cancellationToken);
         var installationConfigTask = ReadRemoteAsync(
             "installation-config",
-            () => apiClient.GetInstallationConfigAsync(settings.ProxyMode, cancellationToken),
+            () => apiClient.GetInstallationConfigAsync(settings.ProxyMode, remoteBudget.Token),
             cancellationToken);
         if (string.IsNullOrWhiteSpace(settings.GamePath))
         {

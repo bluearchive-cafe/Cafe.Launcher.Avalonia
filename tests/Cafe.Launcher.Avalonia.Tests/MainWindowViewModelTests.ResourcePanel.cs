@@ -107,7 +107,7 @@ public partial class MainWindowViewModelTests
             $"http://127.0.0.1:{proxyEndpoint.Port}",
             []));
         using var clientFactory = new HttpClientFactory(proxySettings);
-        using var apiClient = new ResourcePanelApiClient(clientFactory);
+        using var apiClient = new ResourcePanelApiClient(clientFactory, new RemoteHttpUrlValidator());
         var settingsService = new LauncherSettingsService(
             Path.Combine(tempDir, Guid.NewGuid().ToString("N"), "settings.json"));
         await settingsService.SaveAsync(new LauncherSettings { ResourcePanelUid = "UIDTESTA" });
