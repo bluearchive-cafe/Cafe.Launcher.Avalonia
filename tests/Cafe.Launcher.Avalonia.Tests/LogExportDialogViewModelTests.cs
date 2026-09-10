@@ -24,6 +24,10 @@ public sealed class LogExportDialogViewModelTests : IDisposable
         Directory.CreateDirectory(tempDir);
         var logDirectory = Path.Combine(tempDir, "logs");
         Directory.CreateDirectory(logDirectory);
+        // Created before the logger opens it: the async sink decides on its own when to touch the
+        // file, and the export refuses to run without it, so leaving that to the sink would race
+        // the export whenever the machine is busy.
+        File.WriteAllText(Path.Combine(logDirectory, "unified.log"), "");
         logger = new UnifiedLogger(logDirectory);
     }
 
