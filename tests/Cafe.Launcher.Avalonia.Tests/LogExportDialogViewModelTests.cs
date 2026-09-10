@@ -235,6 +235,60 @@ public sealed class LogExportDialogViewModelTests : IDisposable
         Assert.False(string.IsNullOrWhiteSpace(option.DisplayName));
     }
 
+    [Fact]
+    public async Task SelectedRange_WhenTheRangeHoldsNoEntry_ShowsTheEmptyRangeWarning()
+    {
+        WriteLog("2026-09-01T10:00:00.0000000+08:00 [INF] [Test] Old entry\n");
+        var viewModel = CreateViewModel();
+        viewModel.OpenCommand.Execute(null);
+
+        viewModel.SelectedRangeCode = nameof(LogExportRangePreset.LastHour);
+        await viewModel.PendingRangeProbeTask;
+
+        Assert.True(viewModel.IsEmptyRangeWarningVisible);
+        // Advisory only: a package with crash reports or user data may still be worth exporting.
+        Assert.True(viewModel.ExportCommand.CanExecute(null));
+    }
+
+    [Fact]
+    public async Task SelectedRange_WhenTheRangeHoldsEntries_HidesTheEmptyRangeWarning()
+    {
+        var now = DateTimeOffset.Now;
+        WriteLog($"{now.AddMinutes(-5):O} [INF] [Test] Recent entry\n");
+        var viewModel = CreateViewModel();
+        viewModel.OpenCommand.Execute(null);
+
+        viewModel.SelectedRangeCode = nameof(LogExportRangePreset.LastHour);
+        await viewModel.PendingRangeProbeTask;
+
+        Assert.False(viewModel.IsEmptyRangeWarningVisible);
+    }
+
+    [Fact]
+    public async Task OpenCommand_AfterAnEmptyRangeHint_ResetsTheWarning()
+    {
+        WriteLog("2026-09-01T10:00:00.0000000+08:00 [INF] [Test] Old entry\n");
+        var viewModel = CreateViewModel();
+        viewModel.OpenCommand.Execute(null);
+        viewModel.SelectedRangeCode = nameof(LogExportRangePreset.LastHour);
+        await viewModel.PendingRangeProbeTask;
+        Assert.True(viewModel.IsEmptyRangeWarningVisible);
+
+        viewModel.OpenCommand.Execute(null);
+
+        Assert.False(viewModel.IsEmptyRangeWarningVisible);
+    }
+
+    /// <summary>
+    /// Replaces the log with deterministic content: the sink is released first, so the file the
+    /// export and the range probe read is exactly this text.
+    /// </summary>
+    private void WriteLog(string content)
+    {
+        logger.Dispose();
+        File.WriteAllText(logger.LogFilePath, content);
+    }
+
     private LogExportDialogViewModel CreateViewModel(
         ToastService? toastService = null,
         string? exportDirectory = null,

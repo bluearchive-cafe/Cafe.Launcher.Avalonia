@@ -868,6 +868,9 @@ public static class LocalizationKeys
     /// <summary>Resource key for <c>logExportRangeDescription</c>.</summary>
     public const string LogExportRangeDescription = "logExportRangeDescription";
 
+    /// <summary>Resource key for <c>logExportRangeEmpty</c>.</summary>
+    public const string LogExportRangeEmpty = "logExportRangeEmpty";
+
     /// <summary>Resource key for <c>logExportRangeGroup</c>.</summary>
     public const string LogExportRangeGroup = "logExportRangeGroup";
 

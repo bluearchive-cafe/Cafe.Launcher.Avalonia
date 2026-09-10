@@ -594,6 +594,8 @@ internal static class LauncherStrings
 
     internal static string LogExportRangeDescription => GetRequiredString("logExportRangeDescription");
 
+    internal static string LogExportRangeEmpty => GetRequiredString("logExportRangeEmpty");
+
     internal static string LogExportRangeGroup => GetRequiredString("logExportRangeGroup");
 
     internal static string LogExportRangeInvalid => GetRequiredString("logExportRangeInvalid");

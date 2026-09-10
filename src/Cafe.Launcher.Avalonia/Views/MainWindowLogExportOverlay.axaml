@@ -67,6 +67,22 @@
                         </controls:SettingRow>
                     </StackPanel>
 
+                    <!-- 范围提示紧随范围组：它说的是所选范围里有没有日志，而不是内容清单。 -->
+                    <Border Classes="dialog-card log-export-warning"
+                            IsVisible="{Binding LogExport.IsEmptyRangeWarningVisible}">
+                        <StackPanel Orientation="Horizontal" Spacing="{StaticResource Launcher.Spacing.Sm}">
+                            <materialIcons:MaterialIcon Kind="AlertOutline"
+                                                        Width="{StaticResource Launcher.Icon.Sm}"
+                                                        Height="{StaticResource Launcher.Icon.Sm}"
+                                                        Foreground="{DynamicResource Launcher.Color.Warning}"
+                                                        VerticalAlignment="Center"/>
+                            <TextBlock Text="{Binding Shell.I18n[logExportRangeEmpty]}"
+                                       Classes="caption"
+                                       TextWrapping="Wrap"
+                                       VerticalAlignment="Center"/>
+                        </StackPanel>
+                    </Border>
+
                     <StackPanel Classes="settings-group">
                         <TextBlock Text="{Binding Shell.I18n[logExportContentGroup]}" Classes="group-title"/>
 

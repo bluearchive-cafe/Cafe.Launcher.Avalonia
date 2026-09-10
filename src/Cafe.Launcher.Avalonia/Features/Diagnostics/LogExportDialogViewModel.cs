@@ -24,12 +24,19 @@ public sealed partial class LogExportDialogViewModel : ViewModelBase, IModalCont
 
     private static readonly string CustomRangeCode = LogExportRangePreset.Custom.ToString();
 
+    private static readonly TimeSpan RangeProbeDebounceDelay = TimeSpan.FromMilliseconds(200);
+
     private readonly LogExportService exportService;
     private readonly IFilePickerService filePickerService;
     private readonly ToastService toastService;
     private readonly LocalizationService localizer;
     private readonly LocalDiagnostics diagnostics;
     private readonly Action<string> openDirectory;
+    private CancellationTokenSource? rangeProbeCancellationTokenSource;
+    private bool isEmptyRangeWarningVisible;
+
+    /// <summary>Gets the active debounced range probe, for deterministic coordination.</summary>
+    internal Task PendingRangeProbeTask { get; private set; } = Task.CompletedTask;
 
     [ObservableProperty]
     private bool isVisible;
@@ -114,6 +121,16 @@ public sealed partial class LogExportDialogViewModel : ViewModelBase, IModalCont
     /// <summary>Gets whether user data is selected, which carries local paths and the player UID.</summary>
     public bool IsUserDataWarningVisible => IncludeUserData;
 
+    /// <summary>
+    /// Gets whether the chosen range holds no log entry, which would leave the package carrying an
+    /// empty log file. Advisory only: crash reports and user data may still be worth exporting.
+    /// </summary>
+    public bool IsEmptyRangeWarningVisible
+    {
+        get => isEmptyRangeWarningVisible;
+        private set => SetProperty(ref isEmptyRangeWarningVisible, value);
+    }
+
     /// <summary>Gets whether the export can run: a custom range needs at least one bound in a valid order.</summary>
     public bool CanExport =>
         !IsRangeInvalid
@@ -147,11 +164,57 @@ public sealed partial class LogExportDialogViewModel : ViewModelBase, IModalCont
         CustomToDate = null;
         IncludeCrashReports = false;
         IncludeUserData = false;
+        // Cleared up front rather than after the probe: the default range keeps every entry, so
+        // reopening never shows the hint, and a stale one cannot survive the round trip.
+        IsEmptyRangeWarningVisible = false;
         IsVisible = true;
     }
 
     [RelayCommand]
     private void Close() => IsVisible = false;
+
+    partial void OnSelectedRangeCodeChanged(string value) => QueueRangeProbe();
+
+    partial void OnCustomFromDateChanged(DateTimeOffset? value) => QueueRangeProbe();
+
+    partial void OnCustomToDateChanged(DateTimeOffset? value) => QueueRangeProbe();
+
+    /// <summary>
+    /// Re-checks whether the chosen range holds any log entry. The previous probe is cancelled so
+    /// only the latest selection decides, and the short delay keeps a dragged date picker from
+    /// reading the log files on every intermediate value.
+    /// </summary>
+    private void QueueRangeProbe()
+    {
+        rangeProbeCancellationTokenSource?.Cancel();
+        rangeProbeCancellationTokenSource?.Dispose();
+        rangeProbeCancellationTokenSource = new CancellationTokenSource();
+        PendingRangeProbeTask = ProbeRangeAsync(rangeProbeCancellationTokenSource.Token);
+    }
+
+    private async Task ProbeRangeAsync(CancellationToken cancellationToken)
+    {
+        try
+        {
+            await Task.Delay(RangeProbeDebounceDelay, cancellationToken);
+            var hasEntries = await exportService.HasLogEntriesAsync(
+                BuildOptions(),
+                cancellationToken);
+            IsEmptyRangeWarningVisible = !hasEntries;
+        }
+        catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
+        {
+        }
+        catch (Exception exception)
+        {
+            // The hint is advisory: a failed probe hides it and leaves the export alone.
+            IsEmptyRangeWarningVisible = false;
+            await diagnostics.WarningAsync(
+                LogTitle,
+                $"Probing the export range failed: {exception.Message}",
+                CancellationToken.None);
+        }
+    }
 
     [RelayCommand(CanExecute = nameof(CanExport))]
     private async Task ExportAsync()

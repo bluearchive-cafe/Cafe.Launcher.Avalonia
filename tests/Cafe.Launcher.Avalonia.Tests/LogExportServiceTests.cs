@@ -322,6 +322,68 @@ public sealed class LogExportServiceTests : IDisposable
         Assert.Contains("user-data/settings.json", entries);
     }
 
+    [Fact]
+    public async Task HasLogEntriesAsync_WithEntriesInsideTheWindow_ReturnsTrue()
+    {
+        var logger = WriteDeterministicLog(
+            "probe-inside-source",
+            "2026-09-01T10:00:00.0000000+08:00 [INF] [Test] Old entry\n" +
+            "2026-09-09T10:00:00.0000000+08:00 [INF] [Test] Recent entry\n");
+        var service = new LogExportService(new LocalDiagnostics(logger));
+
+        var hasEntries = await service.HasLogEntriesAsync(new LogExportOptions
+        {
+            Range = LogExportRangePreset.Custom,
+            CustomFrom = new DateTimeOffset(2026, 9, 8, 0, 0, 0, TimeSpan.FromHours(8)),
+            CustomTo = new DateTimeOffset(2026, 9, 9, 0, 0, 0, TimeSpan.FromHours(8))
+        });
+
+        Assert.True(hasEntries);
+    }
+
+    [Fact]
+    public async Task HasLogEntriesAsync_WithEntriesOutsideTheWindow_ReturnsFalse()
+    {
+        var logger = WriteDeterministicLog(
+            "probe-outside-source",
+            "2026-09-01T10:00:00.0000000+08:00 [INF] [Test] Old entry\n");
+        var service = new LogExportService(new LocalDiagnostics(logger));
+
+        var hasEntries = await service.HasLogEntriesAsync(new LogExportOptions
+        {
+            Range = LogExportRangePreset.Custom,
+            CustomFrom = new DateTimeOffset(2026, 9, 8, 0, 0, 0, TimeSpan.FromHours(8)),
+            CustomTo = new DateTimeOffset(2026, 9, 9, 0, 0, 0, TimeSpan.FromHours(8))
+        });
+
+        Assert.False(hasEntries);
+    }
+
+    [Fact]
+    public async Task HasLogEntriesAsync_WithoutARange_ReportsEntriesWithoutReadingTheLog()
+    {
+        // Only old entries, so a window would say "nothing": an unbounded range keeps whatever the
+        // files hold and must not be reported as empty.
+        var logger = WriteDeterministicLog(
+            "probe-unbounded-source",
+            "2026-09-01T10:00:00.0000000+08:00 [INF] [Test] Old entry\n");
+        var service = new LogExportService(new LocalDiagnostics(logger));
+
+        Assert.True(await service.HasLogEntriesAsync(LogExportOptions.Default));
+    }
+
+    [Fact]
+    public async Task HasLogEntriesAsync_WhenTheLogFileIsMissing_ReturnsFalse()
+    {
+        using var logger = new UnifiedLogger(Path.Combine(tempDir, "probe-missing-source"));
+        var service = new LogExportService(new LocalDiagnostics(logger));
+
+        var hasEntries = await service.HasLogEntriesAsync(
+            new LogExportOptions { Range = LogExportRangePreset.LastHour });
+
+        Assert.False(hasEntries);
+    }
+
     private UnifiedLogger WriteDeterministicLog(string directoryName, string content)
     {
         var logDirectory = Path.Combine(tempDir, directoryName);

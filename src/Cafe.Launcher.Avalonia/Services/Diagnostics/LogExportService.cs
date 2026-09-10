@@ -101,22 +101,66 @@ public sealed class LogExportService
         return zipPath;
     }
 
-    private ExportManifest CreateZip(string zipPath, LogExportOptions options)
+    /// <summary>
+    /// Gets whether the log files hold at least one entry inside the window
+    /// <paramref name="options"/> resolves to. The dialog asks this before anything is written, so a
+    /// range that would leave the package without a single log entry is called out while the user
+    /// can still widen it. An unbounded window reports <see langword="true"/> without reading
+    /// anything: a window that excludes nothing cannot exclude every entry.
+    /// </summary>
+    public async Task<bool> HasLogEntriesAsync(
+        LogExportOptions options,
+        CancellationToken ct = default)
+    {
+        ArgumentNullException.ThrowIfNull(options);
+        var window = options.ResolveWindow(DateTimeOffset.Now);
+        if (window.IsUnbounded)
+            return true;
+
+        return await Task.Run(
+            () => LogFiles().Any(log => ContainsAnyEntry(log.FilePath, window)),
+            ct).ConfigureAwait(false);
+    }
+
+    private static bool ContainsAnyEntry(string filePath, ExportWindow window)
+    {
+        if (!File.Exists(filePath))
+            return false;
+
+        try
+        {
+            return ReadLinesInWindow(filePath, window).Any();
+        }
+        catch (Exception exception) when (exception is IOException or UnauthorizedAccessException)
+        {
+            // Unreadable means "nothing to show" as far as the hint is concerned; the export
+            // itself is where the failure gets reported.
+            return false;
+        }
+    }
+
+    /// <summary>The current log file followed by the rotated files the export considers.</summary>
+    private IEnumerable<(string FilePath, string EntryName, bool Required)> LogFiles()
     {
         var logFilePath = diagnostics.LogFilePath;
-        var logDir = Path.GetDirectoryName(logFilePath)!;
+        yield return (logFilePath, "unified.log", true);
+
+        var logDirectory = Path.GetDirectoryName(logFilePath)!;
+        for (var i = 1; i <= MaxRetainedLogFiles; i++)
+        {
+            var entryName = $"unified_{i:D3}.log";
+            yield return (Path.Combine(logDirectory, entryName), entryName, false);
+        }
+    }
+
+    private ExportManifest CreateZip(string zipPath, LogExportOptions options)
+    {
         var manifest = new ExportManifest(options.ResolveWindow(DateTimeOffset.Now));
 
         using var zip = ZipFile.Open(zipPath, ZipArchiveMode.Create);
 
-        // Current log file, then the rotated files (Serilog naming: unified_001.log, …).
-        AddLogFile(zip, logFilePath, "unified.log", required: true, manifest);
-        for (var i = 1; i <= MaxRetainedLogFiles; i++)
-        {
-            var rotatedPath = Path.Combine(logDir, $"unified_{i:D3}.log");
-            if (File.Exists(rotatedPath))
-                AddLogFile(zip, rotatedPath, $"unified_{i:D3}.log", required: false, manifest);
-        }
+        foreach (var log in LogFiles())
+            AddLogFile(zip, log.FilePath, log.EntryName, log.Required, manifest);
 
         if (options.IncludeCrashReports)
             AddCrashReports(zip, CrashReportDirectories(), manifest);
@@ -150,7 +194,7 @@ public sealed class LogExportService
             }
             else
             {
-                var keptLines = ReadEntriesInWindow(filePath, manifest);
+                var keptLines = ReadLinesInWindow(filePath, manifest.Window).ToList();
                 // The dialog promises the log file is always part of the export, so the current
                 // log is written even when the window holds nothing: an empty file tells the
                 // reader the range was empty, while a missing one reads as "this package has no
@@ -173,25 +217,27 @@ public sealed class LogExportService
         }
     }
 
-    /// <summary>Loads the lines of every entry inside the window, keeping continuation lines with their entry.</summary>
-    private static List<string> ReadEntriesInWindow(string filePath, ExportManifest manifest)
+    /// <summary>
+    /// Enumerates the lines of every entry inside the window, keeping continuation lines with their
+    /// entry. Shared by the export filter and the dialog's range probe so the two cannot disagree
+    /// about what a window holds.
+    /// </summary>
+    private static IEnumerable<string> ReadLinesInWindow(string filePath, ExportWindow window)
     {
-        var keptLines = new List<string>();
-        using (var source = OpenSharedRead(filePath))
-        using (var reader = new StreamReader(source, Encoding.UTF8, detectEncodingFromByteOrderMarks: true))
+        using var source = OpenSharedRead(filePath);
+        using var reader = new StreamReader(source, Encoding.UTF8, detectEncodingFromByteOrderMarks: true);
+        var lines = new List<string>();
+        while (reader.ReadLine() is { } line)
+            lines.Add(line);
+
+        foreach (var record in LogEntryReader.Read(lines))
         {
-            var lines = new List<string>();
-            while (reader.ReadLine() is { } line)
-                lines.Add(line);
+            if (!window.Contains(record.Timestamp))
+                continue;
 
-            foreach (var record in LogEntryReader.Read(lines))
-            {
-                if (manifest.Window.Contains(record.Timestamp))
-                    keptLines.AddRange(record.Lines);
-            }
+            foreach (var line in record.Lines)
+                yield return line;
         }
-
-        return keptLines;
     }
 
     /// <summary>Writes the lines as one entry; an empty sequence still produces an entry, so the file is present.</summary>
