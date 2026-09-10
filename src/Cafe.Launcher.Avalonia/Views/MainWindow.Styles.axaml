@@ -1584,6 +1584,24 @@
         <Setter Property="Background" Value="{DynamicResource Launcher.Color.Primary.Pressed}"/>
         <Setter Property="BorderBrush" Value="{DynamicResource Launcher.Color.Primary.Pressed}"/>
     </Style>
+    <!--
+      勾号必须跟着填充一起改：Fluent 的 CheckBoxCheckGlyphForeground* 是配它自己的强调色填充的，
+      而这里的填充换成了主题色 Primary（暗色下是 tone 80 的浅色），白勾压浅底等于看不见。
+      OnPrimary 是运行时按 Primary 亮度算出的可读前景，与 ToggleSwitch 的 SwitchKnobOn 同一做法。
+      每个 :checked 变体都要写：伪类更多的那条规则（如 :checked:pointerover）会盖过单伪类规则。
+    -->
+    <Style Selector="CheckBox.setting-checkbox:checked /template/ Path#CheckGlyph">
+        <Setter Property="Fill" Value="{DynamicResource Launcher.Color.OnPrimary}"/>
+    </Style>
+    <Style Selector="CheckBox.setting-checkbox:checked:pointerover /template/ Path#CheckGlyph">
+        <Setter Property="Fill" Value="{DynamicResource Launcher.Color.OnPrimary}"/>
+    </Style>
+    <Style Selector="CheckBox.setting-checkbox:checked:pressed /template/ Path#CheckGlyph">
+        <Setter Property="Fill" Value="{DynamicResource Launcher.Color.OnPrimary}"/>
+    </Style>
+    <Style Selector="CheckBox.setting-checkbox:checked:disabled /template/ Path#CheckGlyph">
+        <Setter Property="Fill" Value="{DynamicResource Launcher.Color.OnPrimary}"/>
+    </Style>
     <!-- :checked 声明在 Fluent 的 :disabled 之后，会盖掉主题的禁用画刷，故显式降不透明度。 -->
     <Style Selector="CheckBox.setting-checkbox:disabled">
         <Setter Property="Opacity" Value="{StaticResource Launcher.StateLayer.Disabled.Content}"/>
