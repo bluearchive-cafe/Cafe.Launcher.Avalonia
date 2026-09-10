@@ -74,36 +74,30 @@
                                              Title="{Binding Shell.I18n[logExportIncludeLogs]}"
                                              Description="{Binding Shell.I18n[logExportIncludeLogsDescription]}">
                             <controls:SettingRow.Action>
-                                <ToggleSwitch Classes="setting-toggle"
-                                              IsChecked="True"
-                                              IsEnabled="False"
-                                              OnContent="{Binding Shell.I18n[toggleOn]}"
-                                              OffContent="{Binding Shell.I18n[toggleOff]}"
-                                              VerticalAlignment="Center"/>
+                                <CheckBox Classes="setting-checkbox"
+                                          IsChecked="True"
+                                          IsEnabled="False"
+                                          VerticalAlignment="Center"/>
                             </controls:SettingRow.Action>
                         </controls:SettingRow>
 
                         <controls:SettingRow Title="{Binding Shell.I18n[logExportIncludeCrashReports]}"
                                              Description="{Binding Shell.I18n[logExportIncludeCrashReportsDescription]}">
                             <controls:SettingRow.Action>
-                                <ToggleSwitch Classes="setting-toggle"
-                                              AutomationProperties.Name="{Binding Shell.I18n[logExportIncludeCrashReports]}"
-                                              IsChecked="{Binding LogExport.IncludeCrashReports, Mode=TwoWay}"
-                                              OnContent="{Binding Shell.I18n[toggleOn]}"
-                                              OffContent="{Binding Shell.I18n[toggleOff]}"
-                                              VerticalAlignment="Center"/>
+                                <CheckBox Classes="setting-checkbox"
+                                          AutomationProperties.Name="{Binding Shell.I18n[logExportIncludeCrashReports]}"
+                                          IsChecked="{Binding LogExport.IncludeCrashReports, Mode=TwoWay}"
+                                          VerticalAlignment="Center"/>
                             </controls:SettingRow.Action>
                         </controls:SettingRow>
 
                         <controls:SettingRow Title="{Binding Shell.I18n[logExportIncludeUserData]}"
                                              Description="{Binding Shell.I18n[logExportIncludeUserDataDescription]}">
                             <controls:SettingRow.Action>
-                                <ToggleSwitch Classes="setting-toggle"
-                                              AutomationProperties.Name="{Binding Shell.I18n[logExportIncludeUserData]}"
-                                              IsChecked="{Binding LogExport.IncludeUserData, Mode=TwoWay}"
-                                              OnContent="{Binding Shell.I18n[toggleOn]}"
-                                              OffContent="{Binding Shell.I18n[toggleOff]}"
-                                              VerticalAlignment="Center"/>
+                                <CheckBox Classes="setting-checkbox"
+                                          AutomationProperties.Name="{Binding Shell.I18n[logExportIncludeUserData]}"
+                                          IsChecked="{Binding LogExport.IncludeUserData, Mode=TwoWay}"
+                                          VerticalAlignment="Center"/>
                             </controls:SettingRow.Action>
                         </controls:SettingRow>
                     </StackPanel>

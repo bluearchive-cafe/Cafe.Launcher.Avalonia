@@ -1566,6 +1566,28 @@
     <Style Selector="ToggleSwitch:checked /template/ Ellipse#SwitchKnobOn">
         <Setter Property="Fill" Value="{DynamicResource Launcher.Color.OnPrimary}"/>
     </Style>
+    <Style Selector="CheckBox.setting-checkbox">
+        <Setter Property="MinHeight" Value="{StaticResource Launcher.Control.Height.Setting}"/>
+    </Style>
+    <Style Selector="CheckBox.setting-checkbox /template/ Border#NormalRectangle">
+        <Setter Property="BorderBrush" Value="{DynamicResource Launcher.Color.Outline}"/>
+    </Style>
+    <Style Selector="CheckBox.setting-checkbox:checked /template/ Border#NormalRectangle">
+        <Setter Property="Background" Value="{DynamicResource Launcher.Color.Primary}"/>
+        <Setter Property="BorderBrush" Value="{DynamicResource Launcher.Color.Primary}"/>
+    </Style>
+    <Style Selector="CheckBox.setting-checkbox:checked:pointerover /template/ Border#NormalRectangle">
+        <Setter Property="Background" Value="{DynamicResource Launcher.Color.Primary.Hover}"/>
+        <Setter Property="BorderBrush" Value="{DynamicResource Launcher.Color.Primary.Hover}"/>
+    </Style>
+    <Style Selector="CheckBox.setting-checkbox:checked:pressed /template/ Border#NormalRectangle">
+        <Setter Property="Background" Value="{DynamicResource Launcher.Color.Primary.Pressed}"/>
+        <Setter Property="BorderBrush" Value="{DynamicResource Launcher.Color.Primary.Pressed}"/>
+    </Style>
+    <!-- :checked 声明在 Fluent 的 :disabled 之后，会盖掉主题的禁用画刷，故显式降不透明度。 -->
+    <Style Selector="CheckBox.setting-checkbox:disabled">
+        <Setter Property="Opacity" Value="{StaticResource Launcher.StateLayer.Disabled.Content}"/>
+    </Style>
     <Style Selector="Border.color-swatch">
         <Setter Property="Width" Value="{StaticResource Launcher.Control.Size.Swatch}"/>
         <Setter Property="Height" Value="{StaticResource Launcher.Control.Size.Swatch}"/>
