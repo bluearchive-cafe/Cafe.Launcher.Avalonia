@@ -32,11 +32,10 @@ public sealed class LogExportDialogViewModelTests : IDisposable
     }
 
     [Fact]
-    public void OpenCommand_ResetsOptionsToDefaults()
+    public void OpenCommand_WhenOptionsWereChanged_ResetsOptionsToDefaults()
     {
         var viewModel = CreateViewModel();
-        viewModel.SelectedRangeCode = nameof(LogExportRangePreset.Custom);
-        viewModel.CustomFromDate = new DateTimeOffset(2026, 9, 1, 0, 0, 0, TimeSpan.Zero);
+        viewModel.SelectedRangeCode = nameof(LogExportRangePreset.Last7Days);
         viewModel.IncludeCrashReports = true;
         viewModel.IncludeUserData = true;
 
@@ -44,44 +43,12 @@ public sealed class LogExportDialogViewModelTests : IDisposable
 
         Assert.True(viewModel.IsVisible);
         Assert.Equal(nameof(LogExportRangePreset.All), viewModel.SelectedRangeCode);
-        Assert.Null(viewModel.CustomFromDate);
-        Assert.Null(viewModel.CustomToDate);
+        Assert.DoesNotContain(
+            viewModel.RangeOptions,
+            option => option.Code.Equals("Custom", StringComparison.Ordinal));
         Assert.False(viewModel.IncludeCrashReports);
         Assert.False(viewModel.IncludeUserData);
         Assert.False(viewModel.IsUserDataWarningVisible);
-    }
-
-    [Fact]
-    public void IsCustomRangeVisible_IsOnlyTrueForCustomPreset()
-    {
-        var viewModel = CreateViewModel();
-
-        viewModel.SelectedRangeCode = nameof(LogExportRangePreset.Last7Days);
-        Assert.False(viewModel.IsCustomRangeVisible);
-
-        viewModel.SelectedRangeCode = nameof(LogExportRangePreset.Custom);
-        Assert.True(viewModel.IsCustomRangeVisible);
-    }
-
-    [Fact]
-    public void ExportCommand_WhenCustomRangeHasNoBound_IsDisabled()
-    {
-        var viewModel = CreateViewModel();
-        viewModel.SelectedRangeCode = nameof(LogExportRangePreset.Custom);
-
-        Assert.False(viewModel.ExportCommand.CanExecute(null));
-    }
-
-    [Fact]
-    public void ExportCommand_WhenCustomRangeIsReversed_IsDisabledAndFlagsTheHint()
-    {
-        var viewModel = CreateViewModel();
-        viewModel.SelectedRangeCode = nameof(LogExportRangePreset.Custom);
-        viewModel.CustomFromDate = new DateTimeOffset(2026, 9, 9, 0, 0, 0, TimeSpan.Zero);
-        viewModel.CustomToDate = new DateTimeOffset(2026, 9, 1, 0, 0, 0, TimeSpan.Zero);
-
-        Assert.True(viewModel.IsRangeInvalid);
-        Assert.False(viewModel.ExportCommand.CanExecute(null));
     }
 
     [Fact]
@@ -97,6 +64,30 @@ public sealed class LogExportDialogViewModelTests : IDisposable
 
         Assert.True(viewModel.IsVisible);
         Assert.Null(toast);
+    }
+
+    [Fact]
+    public async Task CloseCommand_WhenExportIsWaitingForDestination_CancelsWithoutSuccess()
+    {
+        var pickerResult = new TaskCompletionSource<string?>(TaskCreationOptions.RunContinuationsAsynchronously);
+        ToastNotification? toast = null;
+        var toastService = new ToastService();
+        toastService.ToastRaised += notification => toast = notification;
+        var viewModel = CreateViewModel(
+            toastService: toastService,
+            folderPicker: (_, _) => pickerResult.Task);
+        viewModel.OpenCommand.Execute(null);
+
+        var exportTask = viewModel.ExportCommand.ExecuteAsync(null);
+        Assert.True(viewModel.IsExporting);
+        viewModel.CloseCommand.Execute(null);
+        pickerResult.SetResult(Path.Combine(tempDir, "cancelled-selected"));
+        await exportTask;
+
+        Assert.False(viewModel.IsVisible);
+        Assert.False(viewModel.IsExporting);
+        Assert.Null(toast);
+        Assert.False(Directory.Exists(Path.Combine(tempDir, "cancelled-selected")));
     }
 
     [Fact]
@@ -122,32 +113,6 @@ public sealed class LogExportDialogViewModelTests : IDisposable
         Assert.Equal(ToastSeverity.Success, toast.Severity);
         Assert.Equal(exportDirectory, openedDirectory);
         Assert.Single(Directory.GetFiles(exportDirectory, "*.zip"));
-    }
-
-    [Fact]
-    public async Task ExportCommand_WithCustomRange_WritesOnlyEntriesInsideTheWindow()
-    {
-        const string content =
-            "2026-09-01T10:00:00.0000000+08:00 [INF] [Test] Old entry\n" +
-            "2026-09-09T10:00:00.0000000+08:00 [INF] [Test] Recent entry\n";
-        logger.Dispose(); // release the sink so the log can be replaced with deterministic content
-        File.WriteAllText(logger.LogFilePath, content);
-        var exportDirectory = Path.Combine(tempDir, "range-selected");
-        var viewModel = CreateViewModel(exportDirectory: exportDirectory);
-        viewModel.OpenCommand.Execute(null);
-        viewModel.SelectedRangeCode = nameof(LogExportRangePreset.Custom);
-        viewModel.CustomFromDate = new DateTimeOffset(2026, 9, 8, 0, 0, 0, TimeSpan.FromHours(8));
-        viewModel.CustomToDate = new DateTimeOffset(2026, 9, 9, 0, 0, 0, TimeSpan.FromHours(8));
-
-        await viewModel.ExportCommand.ExecuteAsync(null);
-
-        var zipPath = Assert.Single(Directory.GetFiles(exportDirectory, "*.zip"));
-        using var zip = ZipFile.OpenRead(zipPath);
-        var entry = zip.Entries.Single(item => item.FullName == "unified.log");
-        using var reader = new StreamReader(entry.Open(), Encoding.UTF8);
-        var exported = reader.ReadToEnd();
-        Assert.Contains("Recent entry", exported, StringComparison.Ordinal);
-        Assert.DoesNotContain("Old entry", exported, StringComparison.Ordinal);
     }
 
     [Fact]
@@ -224,7 +189,7 @@ public sealed class LogExportDialogViewModelTests : IDisposable
     }
 
     [Fact]
-    public void ApplyLanguage_RefreshesRangeOptionDisplayNames()
+    public void ApplyLanguage_WhenDisplayNamesAreStale_RefreshesRangeOptionDisplayNames()
     {
         var viewModel = CreateViewModel();
         var option = viewModel.RangeOptions.Single(item => item.Code == nameof(LogExportRangePreset.Last24Hours));
@@ -275,8 +240,21 @@ public sealed class LogExportDialogViewModelTests : IDisposable
         Assert.True(viewModel.IsEmptyRangeWarningVisible);
 
         viewModel.OpenCommand.Execute(null);
+        await viewModel.PendingRangeProbeTask;
 
         Assert.False(viewModel.IsEmptyRangeWarningVisible);
+    }
+
+    [Fact]
+    public async Task OpenCommand_WhenTheLogIsEmpty_ShowsTheEmptyRangeWarningForAllEntries()
+    {
+        WriteLog("");
+        var viewModel = CreateViewModel();
+
+        viewModel.OpenCommand.Execute(null);
+        await viewModel.PendingRangeProbeTask;
+
+        Assert.True(viewModel.IsEmptyRangeWarningVisible);
     }
 
     /// <summary>
@@ -292,12 +270,13 @@ public sealed class LogExportDialogViewModelTests : IDisposable
     private LogExportDialogViewModel CreateViewModel(
         ToastService? toastService = null,
         string? exportDirectory = null,
-        Action<string>? openDirectory = null) =>
+        Action<string>? openDirectory = null,
+        Func<string, string?, Task<string?>>? folderPicker = null) =>
         new(
             new LogExportService(new LocalDiagnostics(logger)),
             new StubFilePickerService
             {
-                FolderPicker = (_, _) => Task.FromResult(exportDirectory)
+                FolderPicker = folderPicker ?? ((_, _) => Task.FromResult(exportDirectory))
             },
             toastService ?? new ToastService(),
             new LocalizationService(),

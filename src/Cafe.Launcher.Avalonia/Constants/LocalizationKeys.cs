@@ -826,12 +826,6 @@ public static class LocalizationKeys
     /// <summary>Resource key for <c>logExportContentGroup</c>.</summary>
     public const string LogExportContentGroup = "logExportContentGroup";
 
-    /// <summary>Resource key for <c>logExportCustomFrom</c>.</summary>
-    public const string LogExportCustomFrom = "logExportCustomFrom";
-
-    /// <summary>Resource key for <c>logExportCustomTo</c>.</summary>
-    public const string LogExportCustomTo = "logExportCustomTo";
-
     /// <summary>Resource key for <c>logExportFailed</c>.</summary>
     public const string LogExportFailed = "logExportFailed";
 
@@ -850,6 +844,12 @@ public static class LocalizationKeys
     /// <summary>Resource key for <c>logExportIncludeLogsDescription</c>.</summary>
     public const string LogExportIncludeLogsDescription = "logExportIncludeLogsDescription";
 
+    /// <summary>Resource key for <c>logExportIncludeSystemInfo</c>.</summary>
+    public const string LogExportIncludeSystemInfo = "logExportIncludeSystemInfo";
+
+    /// <summary>Resource key for <c>logExportIncludeSystemInfoDescription</c>.</summary>
+    public const string LogExportIncludeSystemInfoDescription = "logExportIncludeSystemInfoDescription";
+
     /// <summary>Resource key for <c>logExportIncludeUserData</c>.</summary>
     public const string LogExportIncludeUserData = "logExportIncludeUserData";
 
@@ -862,9 +862,6 @@ public static class LocalizationKeys
     /// <summary>Resource key for <c>logExportRangeAll</c>.</summary>
     public const string LogExportRangeAll = "logExportRangeAll";
 
-    /// <summary>Resource key for <c>logExportRangeCustom</c>.</summary>
-    public const string LogExportRangeCustom = "logExportRangeCustom";
-
     /// <summary>Resource key for <c>logExportRangeDescription</c>.</summary>
     public const string LogExportRangeDescription = "logExportRangeDescription";
 
@@ -873,9 +870,6 @@ public static class LocalizationKeys
 
     /// <summary>Resource key for <c>logExportRangeGroup</c>.</summary>
     public const string LogExportRangeGroup = "logExportRangeGroup";
-
-    /// <summary>Resource key for <c>logExportRangeInvalid</c>.</summary>
-    public const string LogExportRangeInvalid = "logExportRangeInvalid";
 
     /// <summary>Resource key for <c>logExportRangeLast24Hours</c>.</summary>
     public const string LogExportRangeLast24Hours = "logExportRangeLast24Hours";

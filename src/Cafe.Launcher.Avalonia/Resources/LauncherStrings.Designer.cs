@@ -566,10 +566,6 @@ internal static class LauncherStrings
 
     internal static string LogExportContentGroup => GetRequiredString("logExportContentGroup");
 
-    internal static string LogExportCustomFrom => GetRequiredString("logExportCustomFrom");
-
-    internal static string LogExportCustomTo => GetRequiredString("logExportCustomTo");
-
     internal static string LogExportFailed => GetRequiredString("logExportFailed");
 
     internal static string LogExportFolderPickerTitle => GetRequiredString("logExportFolderPickerTitle");
@@ -582,6 +578,10 @@ internal static class LauncherStrings
 
     internal static string LogExportIncludeLogsDescription => GetRequiredString("logExportIncludeLogsDescription");
 
+    internal static string LogExportIncludeSystemInfo => GetRequiredString("logExportIncludeSystemInfo");
+
+    internal static string LogExportIncludeSystemInfoDescription => GetRequiredString("logExportIncludeSystemInfoDescription");
+
     internal static string LogExportIncludeUserData => GetRequiredString("logExportIncludeUserData");
 
     internal static string LogExportIncludeUserDataDescription => GetRequiredString("logExportIncludeUserDataDescription");
@@ -590,15 +590,11 @@ internal static class LauncherStrings
 
     internal static string LogExportRangeAll => GetRequiredString("logExportRangeAll");
 
-    internal static string LogExportRangeCustom => GetRequiredString("logExportRangeCustom");
-
     internal static string LogExportRangeDescription => GetRequiredString("logExportRangeDescription");
 
     internal static string LogExportRangeEmpty => GetRequiredString("logExportRangeEmpty");
 
     internal static string LogExportRangeGroup => GetRequiredString("logExportRangeGroup");
-
-    internal static string LogExportRangeInvalid => GetRequiredString("logExportRangeInvalid");
 
     internal static string LogExportRangeLast24Hours => GetRequiredString("logExportRangeLast24Hours");
 

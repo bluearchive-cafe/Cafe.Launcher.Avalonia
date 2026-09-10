@@ -28,7 +28,7 @@
                 <TranslateTransform/>
             </controls:DialogSurface.RenderTransform>
             <controls:DialogSurface.HeaderIcon>
-                <materialIcons:MaterialIcon Kind="ExportVariant" Width="{StaticResource Launcher.Icon.Md}" Height="{StaticResource Launcher.Icon.Md}"/>
+                <materialIcons:MaterialIcon Kind="ExitToApp" Width="{StaticResource Launcher.Icon.Md}" Height="{StaticResource Launcher.Icon.Md}"/>
             </controls:DialogSurface.HeaderIcon>
             <controls:DialogSurface.Content>
                 <StackPanel>
@@ -39,48 +39,27 @@
                                                 Title="{Binding Shell.I18n[logExportRange]}"
                                                 Description="{Binding Shell.I18n[logExportRangeDescription]}"
                                                 AutomationName="{Binding Shell.I18n[logExportRange]}"
-                                                Hint="{Binding Shell.I18n[logExportRangeInvalid]}"
-                                                IsHintVisible="{Binding LogExport.IsRangeInvalid}"
                                                 ItemsSource="{Binding LogExport.RangeOptions}"
                                                 SelectedValue="{Binding LogExport.SelectedRangeCode, Mode=TwoWay}"/>
-
-                        <controls:SettingRow Title="{Binding Shell.I18n[logExportCustomFrom]}"
-                                             IsVisible="{Binding LogExport.IsCustomRangeVisible}">
-                            <controls:SettingRow.Action>
-                                <DatePicker Classes="setting-control"
-                                            Width="{StaticResource Launcher.Component.Settings.Control.MinWidth}"
-                                            SelectedDate="{Binding LogExport.CustomFromDate, Mode=TwoWay}"
-                                            AutomationProperties.Name="{Binding Shell.I18n[logExportCustomFrom]}"
-                                            VerticalAlignment="Center"/>
-                            </controls:SettingRow.Action>
-                        </controls:SettingRow>
-
-                        <controls:SettingRow Title="{Binding Shell.I18n[logExportCustomTo]}"
-                                             IsVisible="{Binding LogExport.IsCustomRangeVisible}">
-                            <controls:SettingRow.Action>
-                                <DatePicker Classes="setting-control"
-                                            Width="{StaticResource Launcher.Component.Settings.Control.MinWidth}"
-                                            SelectedDate="{Binding LogExport.CustomToDate, Mode=TwoWay}"
-                                            AutomationProperties.Name="{Binding Shell.I18n[logExportCustomTo]}"
-                                            VerticalAlignment="Center"/>
-                            </controls:SettingRow.Action>
-                        </controls:SettingRow>
                     </StackPanel>
 
                     <!-- 范围提示紧随范围组：它说的是所选范围里有没有日志，而不是内容清单。 -->
                     <Border Classes="dialog-card log-export-warning"
                             IsVisible="{Binding LogExport.IsEmptyRangeWarningVisible}">
-                        <StackPanel Orientation="Horizontal" Spacing="{StaticResource Launcher.Spacing.Sm}">
+                        <Grid ColumnDefinitions="Auto,*"
+                              ColumnSpacing="{StaticResource Launcher.Spacing.Sm}">
                             <materialIcons:MaterialIcon Kind="AlertOutline"
+                                                        Grid.Column="0"
                                                         Width="{StaticResource Launcher.Icon.Sm}"
                                                         Height="{StaticResource Launcher.Icon.Sm}"
                                                         Foreground="{DynamicResource Launcher.Color.Warning}"
                                                         VerticalAlignment="Center"/>
                             <TextBlock Text="{Binding Shell.I18n[logExportRangeEmpty]}"
+                                       Grid.Column="1"
                                        Classes="caption"
                                        TextWrapping="Wrap"
                                        VerticalAlignment="Center"/>
-                        </StackPanel>
+                        </Grid>
                     </Border>
 
                     <StackPanel Classes="settings-group">
@@ -92,6 +71,17 @@
                             <controls:SettingRow.Action>
                                 <CheckBox Classes="setting-checkbox"
                                           AutomationProperties.Name="{Binding Shell.I18n[logExportIncludeLogs]}"
+                                          IsChecked="True"
+                                          IsEnabled="False"
+                                          VerticalAlignment="Center"/>
+                            </controls:SettingRow.Action>
+                        </controls:SettingRow>
+
+                        <controls:SettingRow Title="{Binding Shell.I18n[logExportIncludeSystemInfo]}"
+                                             Description="{Binding Shell.I18n[logExportIncludeSystemInfoDescription]}">
+                            <controls:SettingRow.Action>
+                                <CheckBox Classes="setting-checkbox"
+                                          AutomationProperties.Name="{Binding Shell.I18n[logExportIncludeSystemInfo]}"
                                           IsChecked="True"
                                           IsEnabled="False"
                                           VerticalAlignment="Center"/>
@@ -121,17 +111,20 @@
 
                     <Border Classes="dialog-card log-export-warning"
                             IsVisible="{Binding LogExport.IsUserDataWarningVisible}">
-                        <StackPanel Orientation="Horizontal" Spacing="{StaticResource Launcher.Spacing.Sm}">
+                        <Grid ColumnDefinitions="Auto,*"
+                              ColumnSpacing="{StaticResource Launcher.Spacing.Sm}">
                             <materialIcons:MaterialIcon Kind="AlertOutline"
+                                                        Grid.Column="0"
                                                         Width="{StaticResource Launcher.Icon.Sm}"
                                                         Height="{StaticResource Launcher.Icon.Sm}"
                                                         Foreground="{DynamicResource Launcher.Color.Warning}"
                                                         VerticalAlignment="Center"/>
                             <TextBlock Text="{Binding Shell.I18n[logExportUserDataWarning]}"
+                                       Grid.Column="1"
                                        Classes="caption"
                                        TextWrapping="Wrap"
                                        VerticalAlignment="Center"/>
-                        </StackPanel>
+                        </Grid>
                     </Border>
                 </StackPanel>
             </controls:DialogSurface.Content>
@@ -149,7 +142,7 @@
                             Command="{Binding LogExport.ExportCommand}"
                             AutomationProperties.Name="{Binding Shell.I18n[logExportConfirm]}">
                         <StackPanel Classes="button-content">
-                            <materialIcons:MaterialIcon Kind="Export" Width="{StaticResource Launcher.Icon.Sm}" Height="{StaticResource Launcher.Icon.Sm}"/>
+                            <materialIcons:MaterialIcon Kind="ExitToApp" Width="{StaticResource Launcher.Icon.Sm}" Height="{StaticResource Launcher.Icon.Sm}"/>
                             <TextBlock Text="{Binding Shell.I18n[logExportConfirm]}"/>
                         </StackPanel>
                     </Button>

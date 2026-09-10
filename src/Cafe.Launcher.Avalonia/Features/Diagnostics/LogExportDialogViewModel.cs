@@ -22,8 +22,6 @@ public sealed partial class LogExportDialogViewModel : ViewModelBase, IModalCont
     /// <summary>Log title of the diagnostics this view model writes.</summary>
     private const string LogTitle = "LogExport";
 
-    private static readonly string CustomRangeCode = LogExportRangePreset.Custom.ToString();
-
     private static readonly TimeSpan RangeProbeDebounceDelay = TimeSpan.FromMilliseconds(200);
 
     private readonly LogExportService exportService;
@@ -33,6 +31,8 @@ public sealed partial class LogExportDialogViewModel : ViewModelBase, IModalCont
     private readonly LocalDiagnostics diagnostics;
     private readonly Action<string> openDirectory;
     private CancellationTokenSource? rangeProbeCancellationTokenSource;
+    private CancellationTokenSource? exportCancellationTokenSource;
+    private int rangeProbeGeneration;
     private bool isEmptyRangeWarningVisible;
 
     /// <summary>Gets the active debounced range probe, for deterministic coordination.</summary>
@@ -42,20 +42,12 @@ public sealed partial class LogExportDialogViewModel : ViewModelBase, IModalCont
     private bool isVisible;
 
     [ObservableProperty]
-    [NotifyPropertyChangedFor(nameof(IsCustomRangeVisible))]
-    [NotifyPropertyChangedFor(nameof(IsRangeInvalid))]
-    [NotifyCanExecuteChangedFor(nameof(ExportCommand))]
     private string selectedRangeCode = LogExportRangePreset.All.ToString();
 
     [ObservableProperty]
-    [NotifyPropertyChangedFor(nameof(IsRangeInvalid))]
+    [NotifyPropertyChangedFor(nameof(CanExport))]
     [NotifyCanExecuteChangedFor(nameof(ExportCommand))]
-    private DateTimeOffset? customFromDate;
-
-    [ObservableProperty]
-    [NotifyPropertyChangedFor(nameof(IsRangeInvalid))]
-    [NotifyCanExecuteChangedFor(nameof(ExportCommand))]
-    private DateTimeOffset? customToDate;
+    private bool isExporting;
 
     [ObservableProperty]
     private bool includeCrashReports;
@@ -101,8 +93,7 @@ public sealed partial class LogExportDialogViewModel : ViewModelBase, IModalCont
             new() { Code = LogExportRangePreset.LastHour.ToString() },
             new() { Code = LogExportRangePreset.Last24Hours.ToString() },
             new() { Code = LogExportRangePreset.Last7Days.ToString() },
-            new() { Code = LogExportRangePreset.Last30Days.ToString() },
-            new() { Code = CustomRangeCode }
+            new() { Code = LogExportRangePreset.Last30Days.ToString() }
         ];
         RefreshDisplayNames();
     }
@@ -110,15 +101,10 @@ public sealed partial class LogExportDialogViewModel : ViewModelBase, IModalCont
     /// <summary>Gets the time-range choices, in the order the dialog presents them.</summary>
     public ObservableCollection<SettingOption> RangeOptions { get; }
 
-    /// <summary>Gets whether the custom date pickers are shown.</summary>
-    public bool IsCustomRangeVisible => SelectedRangeCode == CustomRangeCode;
-
-    /// <summary>Gets whether the custom range has its bounds the wrong way round.</summary>
-    public bool IsRangeInvalid =>
-        IsCustomRangeVisible
-        && !LogExportOptions.IsRangeValid(LogExportRangePreset.Custom, CustomFromDate, CustomToDate);
-
-    /// <summary>Gets whether user data is selected, which carries local paths and the player UID.</summary>
+    /// <summary>
+    /// Gets whether user data is selected, which carries local paths, the player UID, and the
+    /// install attribution code.
+    /// </summary>
     public bool IsUserDataWarningVisible => IncludeUserData;
 
     /// <summary>
@@ -131,10 +117,8 @@ public sealed partial class LogExportDialogViewModel : ViewModelBase, IModalCont
         private set => SetProperty(ref isEmptyRangeWarningVisible, value);
     }
 
-    /// <summary>Gets whether the export can run: a custom range needs at least one bound in a valid order.</summary>
-    public bool CanExport =>
-        !IsRangeInvalid
-        && (!IsCustomRangeVisible || CustomFromDate is not null || CustomToDate is not null);
+    /// <summary>Gets whether a new export can start.</summary>
+    public bool CanExport => !IsExporting;
 
     /// <summary>Refreshes option display names after the active UI language changes.</summary>
     public void ApplyLanguage() => RefreshDisplayNames();
@@ -149,7 +133,6 @@ public sealed partial class LogExportDialogViewModel : ViewModelBase, IModalCont
                 nameof(LogExportRangePreset.Last24Hours) => localizer.T(LocalizationKeys.LogExportRangeLast24Hours),
                 nameof(LogExportRangePreset.Last7Days) => localizer.T(LocalizationKeys.LogExportRangeLast7Days),
                 nameof(LogExportRangePreset.Last30Days) => localizer.T(LocalizationKeys.LogExportRangeLast30Days),
-                nameof(LogExportRangePreset.Custom) => localizer.T(LocalizationKeys.LogExportRangeCustom),
                 _ => localizer.T(LocalizationKeys.LogExportRangeAll)
             };
         }
@@ -159,25 +142,29 @@ public sealed partial class LogExportDialogViewModel : ViewModelBase, IModalCont
     [RelayCommand]
     private void Open()
     {
+        CancelRangeProbe();
         SelectedRangeCode = LogExportRangePreset.All.ToString();
-        CustomFromDate = null;
-        CustomToDate = null;
         IncludeCrashReports = false;
         IncludeUserData = false;
-        // Cleared up front rather than after the probe: the default range keeps every entry, so
-        // reopening never shows the hint, and a stale one cannot survive the round trip.
         IsEmptyRangeWarningVisible = false;
         IsVisible = true;
+        QueueRangeProbe();
     }
 
     [RelayCommand]
-    private void Close() => IsVisible = false;
+    private void Close()
+    {
+        if (IsExporting)
+        {
+            exportCancellationTokenSource?.Cancel();
+            return;
+        }
+
+        CancelRangeProbe();
+        IsVisible = false;
+    }
 
     partial void OnSelectedRangeCodeChanged(string value) => QueueRangeProbe();
-
-    partial void OnCustomFromDateChanged(DateTimeOffset? value) => QueueRangeProbe();
-
-    partial void OnCustomToDateChanged(DateTimeOffset? value) => QueueRangeProbe();
 
     /// <summary>
     /// Re-checks whether the chosen range holds any log entry. The previous probe is cancelled so
@@ -186,13 +173,21 @@ public sealed partial class LogExportDialogViewModel : ViewModelBase, IModalCont
     /// </summary>
     private void QueueRangeProbe()
     {
-        rangeProbeCancellationTokenSource?.Cancel();
-        rangeProbeCancellationTokenSource?.Dispose();
+        CancelRangeProbe();
         rangeProbeCancellationTokenSource = new CancellationTokenSource();
-        PendingRangeProbeTask = ProbeRangeAsync(rangeProbeCancellationTokenSource.Token);
+        var generation = rangeProbeGeneration;
+        PendingRangeProbeTask = ProbeRangeAsync(generation, rangeProbeCancellationTokenSource.Token);
     }
 
-    private async Task ProbeRangeAsync(CancellationToken cancellationToken)
+    private void CancelRangeProbe()
+    {
+        rangeProbeGeneration++;
+        rangeProbeCancellationTokenSource?.Cancel();
+        rangeProbeCancellationTokenSource?.Dispose();
+        rangeProbeCancellationTokenSource = null;
+    }
+
+    private async Task ProbeRangeAsync(int generation, CancellationToken cancellationToken)
     {
         try
         {
@@ -200,7 +195,10 @@ public sealed partial class LogExportDialogViewModel : ViewModelBase, IModalCont
             var hasEntries = await exportService.HasLogEntriesAsync(
                 BuildOptions(),
                 cancellationToken);
-            IsEmptyRangeWarningVisible = !hasEntries;
+            if (generation == rangeProbeGeneration && !cancellationToken.IsCancellationRequested)
+            {
+                IsEmptyRangeWarningVisible = !hasEntries;
+            }
         }
         catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
         {
@@ -220,6 +218,11 @@ public sealed partial class LogExportDialogViewModel : ViewModelBase, IModalCont
     private async Task ExportAsync()
     {
         var options = BuildOptions();
+        CancelRangeProbe();
+        exportCancellationTokenSource?.Dispose();
+        exportCancellationTokenSource = new CancellationTokenSource();
+        var cancellationToken = exportCancellationTokenSource.Token;
+        IsExporting = true;
         // Kept outside the try so the failure diagnostic can name the folder it was writing to.
         string? destination = null;
         try
@@ -233,9 +236,15 @@ public sealed partial class LogExportDialogViewModel : ViewModelBase, IModalCont
                 return;
             }
 
-            var zipPath = await exportService.ExportAsync(destination, options);
+            cancellationToken.ThrowIfCancellationRequested();
+            var zipPath = await exportService.ExportAsync(destination, options, cancellationToken);
             IsVisible = false;
             toastService.ShowSuccess(localizer.F(LocalizationKeys.LogExportSucceeded, zipPath));
+        }
+        catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
+        {
+            IsVisible = false;
+            return;
         }
         catch (Exception exception)
         {
@@ -248,6 +257,12 @@ public sealed partial class LogExportDialogViewModel : ViewModelBase, IModalCont
                 exception,
                 CancellationToken.None);
             return;
+        }
+        finally
+        {
+            IsExporting = false;
+            exportCancellationTokenSource.Dispose();
+            exportCancellationTokenSource = null;
         }
 
         await TryOpenDestinationAsync(destination);
@@ -281,8 +296,6 @@ public sealed partial class LogExportDialogViewModel : ViewModelBase, IModalCont
         return new LogExportOptions
         {
             Range = range,
-            CustomFrom = CustomFromDate,
-            CustomTo = CustomToDate,
             IncludeCrashReports = IncludeCrashReports,
             IncludeUserData = IncludeUserData
         };

@@ -1584,6 +1584,10 @@
         <Setter Property="Background" Value="{DynamicResource Launcher.Color.Primary.Pressed}"/>
         <Setter Property="BorderBrush" Value="{DynamicResource Launcher.Color.Primary.Pressed}"/>
     </Style>
+    <Style Selector="CheckBox.setting-checkbox:checked:disabled /template/ Border#NormalRectangle">
+        <Setter Property="Background" Value="{DynamicResource Launcher.Color.Primary}"/>
+        <Setter Property="BorderBrush" Value="{DynamicResource Launcher.Color.Primary}"/>
+    </Style>
     <!--
       勾号必须跟着填充一起改：Fluent 的 CheckBoxCheckGlyphForeground* 是配它自己的强调色填充的，
       而这里的填充换成了主题色 Primary（暗色下是 tone 80 的浅色），白勾压浅底等于看不见。

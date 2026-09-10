@@ -55,9 +55,29 @@ public sealed class LogExportServiceTests : IDisposable
     {
         using var logger = new UnifiedLogger(Path.Combine(tempDir, "missing-source"));
         var service = new LogExportService(new LocalDiagnostics(logger));
+        var destination = Path.Combine(tempDir, "selected");
 
         await Assert.ThrowsAsync<FileNotFoundException>(
-            () => service.ExportAsync(Path.Combine(tempDir, "selected"), LogExportOptions.Default));
+            () => service.ExportAsync(destination, LogExportOptions.Default));
+
+        Assert.Empty(Directory.GetFiles(destination));
+    }
+
+    [Fact]
+    public async Task ExportAsync_WhenCancellationIsRequested_LeavesNoArchive()
+    {
+        var logger = WriteDeterministicLog(
+            "cancelled-source",
+            $"{DateTimeOffset.Now:O} [INF] [Test] Entry\n");
+        var service = new LogExportService(new LocalDiagnostics(logger));
+        var destination = Path.Combine(tempDir, "cancelled-selected");
+        using var cancellation = new CancellationTokenSource();
+        cancellation.Cancel();
+
+        await Assert.ThrowsAnyAsync<OperationCanceledException>(() =>
+            service.ExportAsync(destination, LogExportOptions.Default, cancellation.Token));
+
+        Assert.Empty(Directory.GetFiles(destination));
     }
 
     [Fact]
@@ -73,26 +93,23 @@ public sealed class LogExportServiceTests : IDisposable
     }
 
     [Fact]
-    public async Task ExportAsync_WithCustomRange_KeepsOnlyEntriesInsideTheWindow()
+    public async Task ExportAsync_WithPresetRange_KeepsOnlyEntriesInsideTheWindow()
     {
-        const string content =
-            "2026-09-01T10:00:00.0000000+08:00 [INF] [Test] Old entry\n" +
-            "2026-09-01T10:00:01.0000000+08:00 [ERR] [Test] Old failure\n" +
+        var now = DateTimeOffset.Now;
+        var content =
+            $"{now.AddHours(-2):O} [INF] [Test] Old entry\n" +
+            $"{now.AddHours(-2).AddSeconds(1):O} [ERR] [Test] Old failure\n" +
             "old stack line\n" +
-            "2026-09-09T10:00:00.0000000+08:00 [INF] [Test] Recent entry\n" +
+            $"{now.AddMinutes(-5):O} [INF] [Test] Recent entry\n" +
             "recent detail line\n" +
-            "2026-09-09T10:00:01.0000000+08:00 [WRN] [Test] Recent warning\n";
+            $"{now.AddMinutes(-4):O} [WRN] [Test] Recent warning\n" +
+            $"{now.AddHours(1):O} [INF] [Test] Future entry\n";
         var logger = WriteDeterministicLog("range-source", content);
         var service = new LogExportService(new LocalDiagnostics(logger));
 
         var zipPath = await service.ExportAsync(
             Path.Combine(tempDir, "range-selected"),
-            new LogExportOptions
-            {
-                Range = LogExportRangePreset.Custom,
-                CustomFrom = new DateTimeOffset(2026, 9, 8, 0, 0, 0, TimeSpan.FromHours(8)),
-                CustomTo = new DateTimeOffset(2026, 9, 9, 0, 0, 0, TimeSpan.FromHours(8))
-            });
+            new LogExportOptions { Range = LogExportRangePreset.LastHour });
 
         var filtered = ReadEntry(zipPath, "unified.log");
         Assert.Contains("Recent entry", filtered, StringComparison.Ordinal);
@@ -100,6 +117,7 @@ public sealed class LogExportServiceTests : IDisposable
         Assert.Contains("Recent warning", filtered, StringComparison.Ordinal);
         Assert.DoesNotContain("Old entry", filtered, StringComparison.Ordinal);
         Assert.DoesNotContain("old stack line", filtered, StringComparison.Ordinal);
+        Assert.DoesNotContain("Future entry", filtered, StringComparison.Ordinal);
     }
 
     [Fact]
@@ -124,20 +142,16 @@ public sealed class LogExportServiceTests : IDisposable
     [Fact]
     public async Task ExportAsync_WithRotatedLogOutsideTheWindow_OmitsThatFile()
     {
-        const string inWindow = "2026-09-09T10:00:00.0000000+08:00 [INF] [Test] Recent entry\n";
-        const string outOfWindow = "2026-09-01T10:00:00.0000000+08:00 [INF] [Test] Old entry\n";
+        var now = DateTimeOffset.Now;
+        var inWindow = $"{now.AddMinutes(-5):O} [INF] [Test] Recent entry\n";
+        var outOfWindow = $"{now.AddHours(-2):O} [INF] [Test] Old entry\n";
         var logger = WriteDeterministicLog("rotated-source", inWindow);
         File.WriteAllText(Path.Combine(tempDir, "rotated-source", "unified_001.log"), outOfWindow);
         var service = new LogExportService(new LocalDiagnostics(logger));
 
         var zipPath = await service.ExportAsync(
             Path.Combine(tempDir, "rotated-selected"),
-            new LogExportOptions
-            {
-                Range = LogExportRangePreset.Custom,
-                CustomFrom = new DateTimeOffset(2026, 9, 8, 0, 0, 0, TimeSpan.FromHours(8)),
-                CustomTo = new DateTimeOffset(2026, 9, 9, 0, 0, 0, TimeSpan.FromHours(8))
-            });
+            new LogExportOptions { Range = LogExportRangePreset.LastHour });
 
         using var zip = ZipFile.OpenRead(zipPath);
         Assert.Contains(zip.Entries, entry => entry.FullName == "unified.log");
@@ -145,22 +159,6 @@ public sealed class LogExportServiceTests : IDisposable
         // contribute nothing (and has nothing to say about the window) stays out.
         Assert.DoesNotContain(zip.Entries, entry => entry.FullName == "unified_001.log");
         Assert.Contains("Recent entry", ReadEntry(zipPath, "unified.log"), StringComparison.Ordinal);
-    }
-
-    [Fact]
-    public async Task ExportAsync_WhenCustomRangeIsReversed_Throws()
-    {
-        var logger = WriteDeterministicLog("reversed-source", "2026-09-09T10:00:00.0000000+08:00 [INF] [Test] Entry\n");
-        var service = new LogExportService(new LocalDiagnostics(logger));
-
-        await Assert.ThrowsAsync<ArgumentException>(() => service.ExportAsync(
-            Path.Combine(tempDir, "reversed-selected"),
-            new LogExportOptions
-            {
-                Range = LogExportRangePreset.Custom,
-                CustomFrom = new DateTimeOffset(2026, 9, 9, 0, 0, 0, TimeSpan.Zero),
-                CustomTo = new DateTimeOffset(2026, 9, 1, 0, 0, 0, TimeSpan.Zero)
-            }));
     }
 
     [Fact]
@@ -177,20 +175,18 @@ public sealed class LogExportServiceTests : IDisposable
         File.WriteAllText(recentAdditional, "secondary failure");
         // The window is resolved against the wall clock, so every artifact needs an explicit
         // timestamp: one left at its creation time drifts out of range as the calendar moves.
-        var recentStamp = new DateTime(2026, 9, 9, 12, 0, 0, DateTimeKind.Utc);
+        var recentStamp = DateTime.UtcNow.AddHours(-1);
         File.SetLastWriteTimeUtc(recentReport, recentStamp);
         File.SetLastWriteTimeUtc(recentAdditional, recentStamp);
-        File.SetLastWriteTimeUtc(oldReport, new DateTime(2026, 9, 1, 12, 0, 0, DateTimeKind.Utc));
-        var logger = WriteDeterministicLog("crash-source", "2026-09-09T10:00:00.0000000+08:00 [INF] [Test] Entry\n");
+        File.SetLastWriteTimeUtc(oldReport, DateTime.UtcNow.AddDays(-2));
+        var logger = WriteDeterministicLog("crash-source", $"{DateTimeOffset.Now.AddMinutes(-5):O} [INF] [Test] Entry\n");
         var service = new LogExportService(new LocalDiagnostics(logger), dataRoot);
 
         var zipPath = await service.ExportAsync(
             Path.Combine(tempDir, "crash-selected"),
             new LogExportOptions
             {
-                Range = LogExportRangePreset.Custom,
-                CustomFrom = new DateTimeOffset(2026, 9, 8, 0, 0, 0, TimeSpan.FromHours(8)),
-                CustomTo = new DateTimeOffset(2026, 9, 9, 0, 0, 0, TimeSpan.FromHours(8)),
+                Range = LogExportRangePreset.Last24Hours,
                 IncludeCrashReports = true
             });
 
@@ -325,18 +321,15 @@ public sealed class LogExportServiceTests : IDisposable
     [Fact]
     public async Task HasLogEntriesAsync_WithEntriesInsideTheWindow_ReturnsTrue()
     {
+        var now = DateTimeOffset.Now;
         var logger = WriteDeterministicLog(
             "probe-inside-source",
-            "2026-09-01T10:00:00.0000000+08:00 [INF] [Test] Old entry\n" +
-            "2026-09-09T10:00:00.0000000+08:00 [INF] [Test] Recent entry\n");
+            $"{now.AddHours(-2):O} [INF] [Test] Old entry\n" +
+            $"{now.AddMinutes(-5):O} [INF] [Test] Recent entry\n");
         var service = new LogExportService(new LocalDiagnostics(logger));
 
-        var hasEntries = await service.HasLogEntriesAsync(new LogExportOptions
-        {
-            Range = LogExportRangePreset.Custom,
-            CustomFrom = new DateTimeOffset(2026, 9, 8, 0, 0, 0, TimeSpan.FromHours(8)),
-            CustomTo = new DateTimeOffset(2026, 9, 9, 0, 0, 0, TimeSpan.FromHours(8))
-        });
+        var hasEntries = await service.HasLogEntriesAsync(
+            new LogExportOptions { Range = LogExportRangePreset.LastHour });
 
         Assert.True(hasEntries);
     }
@@ -346,21 +339,17 @@ public sealed class LogExportServiceTests : IDisposable
     {
         var logger = WriteDeterministicLog(
             "probe-outside-source",
-            "2026-09-01T10:00:00.0000000+08:00 [INF] [Test] Old entry\n");
+            $"{DateTimeOffset.Now.AddHours(-2):O} [INF] [Test] Old entry\n");
         var service = new LogExportService(new LocalDiagnostics(logger));
 
-        var hasEntries = await service.HasLogEntriesAsync(new LogExportOptions
-        {
-            Range = LogExportRangePreset.Custom,
-            CustomFrom = new DateTimeOffset(2026, 9, 8, 0, 0, 0, TimeSpan.FromHours(8)),
-            CustomTo = new DateTimeOffset(2026, 9, 9, 0, 0, 0, TimeSpan.FromHours(8))
-        });
+        var hasEntries = await service.HasLogEntriesAsync(
+            new LogExportOptions { Range = LogExportRangePreset.LastHour });
 
         Assert.False(hasEntries);
     }
 
     [Fact]
-    public async Task HasLogEntriesAsync_WithoutARange_ReportsEntriesWithoutReadingTheLog()
+    public async Task HasLogEntriesAsync_WithoutARange_WhenTheLogHasEntries_ReturnsTrue()
     {
         // Only old entries, so a window would say "nothing": an unbounded range keeps whatever the
         // files hold and must not be reported as empty.
@@ -370,6 +359,15 @@ public sealed class LogExportServiceTests : IDisposable
         var service = new LogExportService(new LocalDiagnostics(logger));
 
         Assert.True(await service.HasLogEntriesAsync(LogExportOptions.Default));
+    }
+
+    [Fact]
+    public async Task HasLogEntriesAsync_WithoutARange_WhenTheLogIsEmpty_ReturnsFalse()
+    {
+        var logger = WriteDeterministicLog("probe-empty-source", "");
+        var service = new LogExportService(new LocalDiagnostics(logger));
+
+        Assert.False(await service.HasLogEntriesAsync(LogExportOptions.Default));
     }
 
     [Fact]

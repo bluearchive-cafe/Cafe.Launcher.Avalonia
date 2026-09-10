@@ -71,24 +71,47 @@ public sealed partial class MainWindowHeadlessTests
     }
 
     [AvaloniaFact]
-    public void LogExport_WithCustomRange_KeepsDatePickersInsideTheDialog()
+    public void LogExport_WhenOpened_HasNoCustomDatePickersAndTwoRequiredItems()
     {
         using var context = CreateContext();
         context.Window.Width = 1024;
         context.Window.Height = 640;
         context.Window.Show();
         context.ViewModel.LogExport.OpenCommand.Execute(null);
-        context.ViewModel.LogExport.SelectedRangeCode = nameof(LogExportRangePreset.Custom);
         Dispatcher.UIThread.RunJobs();
 
         var datePickers = context.Window.GetVisualDescendants().OfType<DatePicker>().ToArray();
+        var requiredItems = context.Window.GetVisualDescendants().OfType<CheckBox>()
+            .Where(box => box.IsChecked == true && !box.IsEnabled)
+            .ToArray();
 
-        Assert.Equal(2, datePickers.Length);
-        Assert.All(datePickers, picker =>
-        {
-            Assert.True(picker.IsEffectivelyVisible);
-            AssertControlInsideWindow(picker, context.Window);
-        });
+        Assert.Empty(datePickers);
+        Assert.Equal(2, requiredItems.Length);
+    }
+
+    [AvaloniaFact]
+    public void LogExport_WhenUserDataWarningIsLong_WrapsInsideWarningCard()
+    {
+        using var context = CreateContext();
+        context.Window.Width = 1024;
+        context.Window.Height = 640;
+        context.Window.Show();
+        ShowLogExport(context);
+        context.ViewModel.LogExport.IncludeUserData = true;
+        Dispatcher.UIThread.RunJobs();
+
+        var warning = context.Window.GetVisualDescendants().OfType<Border>()
+            .Single(border =>
+                border.Classes.Contains("log-export-warning")
+                && border.IsEffectivelyVisible
+                && border.GetVisualDescendants().OfType<TextBlock>()
+                    .Any(text => text.Text?.Contains("install attribution code", StringComparison.Ordinal) == true));
+        var warningText = warning.GetVisualDescendants().OfType<TextBlock>().Single();
+        var textTopLeft = warningText.TranslatePoint(default, warning);
+
+        Assert.NotNull(textTopLeft);
+        Assert.True(warningText.Bounds.Height > warningText.FontSize * 1.5);
+        Assert.True(textTopLeft.Value.X + warningText.Bounds.Width <= warning.Bounds.Width);
     }
 
     [AvaloniaFact]

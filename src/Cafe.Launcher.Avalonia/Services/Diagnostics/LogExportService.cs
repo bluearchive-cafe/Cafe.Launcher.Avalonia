@@ -61,18 +61,22 @@ public sealed class LogExportService
         CancellationToken ct = default)
     {
         ArgumentNullException.ThrowIfNull(options);
-        if (!options.IsCustomRangeValid)
-        {
-            throw new ArgumentException(
-                "The export range start must not be later than its end.",
-                nameof(options));
-        }
-
         ArgumentException.ThrowIfNullOrWhiteSpace(destinationDirectory);
         Directory.CreateDirectory(destinationDirectory);
         var zipPath = CreateAvailableZipPath(destinationDirectory);
-
-        var manifest = await Task.Run(() => CreateZip(zipPath, options), ct).ConfigureAwait(false);
+        var partialPath = $"{zipPath}.{Guid.NewGuid():N}.partial";
+        ExportManifest manifest;
+        try
+        {
+            manifest = await Task.Run(() => CreateZip(partialPath, options, ct), ct).ConfigureAwait(false);
+            ct.ThrowIfCancellationRequested();
+            File.Move(partialPath, zipPath);
+        }
+        catch
+        {
+            TryDeletePartialArchive(partialPath);
+            throw;
+        }
 
         // Reported once the archive is closed: the manifest lists what was skipped so whoever
         // opens the ZIP can see the omission, and the log keeps the reason behind it.
@@ -85,6 +89,19 @@ public sealed class LogExportService
         }
 
         return zipPath;
+    }
+
+    private static void TryDeletePartialArchive(string partialPath)
+    {
+        try
+        {
+            File.Delete(partialPath);
+        }
+        catch (Exception exception) when (exception is IOException or UnauthorizedAccessException)
+        {
+            // Preserve the original export failure. The partial suffix makes any cleanup failure
+            // distinguishable from a completed diagnostic archive.
+        }
     }
 
     private static string CreateAvailableZipPath(string destinationDirectory)
@@ -105,8 +122,8 @@ public sealed class LogExportService
     /// Gets whether the log files hold at least one entry inside the window
     /// <paramref name="options"/> resolves to. The dialog asks this before anything is written, so a
     /// range that would leave the package without a single log entry is called out while the user
-    /// can still widen it. An unbounded window reports <see langword="true"/> without reading
-    /// anything: a window that excludes nothing cannot exclude every entry.
+    /// can still widen it. The unbounded window is also inspected so an empty or missing log is
+    /// reported accurately for the default selection.
     /// </summary>
     public async Task<bool> HasLogEntriesAsync(
         LogExportOptions options,
@@ -114,22 +131,22 @@ public sealed class LogExportService
     {
         ArgumentNullException.ThrowIfNull(options);
         var window = options.ResolveWindow(DateTimeOffset.Now);
-        if (window.IsUnbounded)
-            return true;
-
         return await Task.Run(
-            () => LogFiles().Any(log => ContainsAnyEntry(log.FilePath, window)),
+            () => LogFiles().Any(log => ContainsAnyEntry(log.FilePath, window, ct)),
             ct).ConfigureAwait(false);
     }
 
-    private static bool ContainsAnyEntry(string filePath, ExportWindow window)
+    private static bool ContainsAnyEntry(
+        string filePath,
+        ExportWindow window,
+        CancellationToken cancellationToken)
     {
         if (!File.Exists(filePath))
             return false;
 
         try
         {
-            return ReadLinesInWindow(filePath, window).Any();
+            return ReadLinesInWindow(filePath, window, cancellationToken).Any();
         }
         catch (Exception exception) when (exception is IOException or UnauthorizedAccessException)
         {
@@ -153,21 +170,28 @@ public sealed class LogExportService
         }
     }
 
-    private ExportManifest CreateZip(string zipPath, LogExportOptions options)
+    private ExportManifest CreateZip(
+        string zipPath,
+        LogExportOptions options,
+        CancellationToken cancellationToken)
     {
         var manifest = new ExportManifest(options.ResolveWindow(DateTimeOffset.Now));
 
         using var zip = ZipFile.Open(zipPath, ZipArchiveMode.Create);
 
         foreach (var log in LogFiles())
-            AddLogFile(zip, log.FilePath, log.EntryName, log.Required, manifest);
+        {
+            cancellationToken.ThrowIfCancellationRequested();
+            AddLogFile(zip, log.FilePath, log.EntryName, log.Required, manifest, cancellationToken);
+        }
 
         if (options.IncludeCrashReports)
-            AddCrashReports(zip, CrashReportDirectories(), manifest);
+            AddCrashReports(zip, CrashReportDirectories(), manifest, cancellationToken);
 
         if (options.IncludeUserData)
-            AddUserData(zip, manifest);
+            AddUserData(zip, manifest, cancellationToken);
 
+        cancellationToken.ThrowIfCancellationRequested();
         AddSystemInfo(zip, options, manifest);
         return manifest;
     }
@@ -177,7 +201,8 @@ public sealed class LogExportService
         string filePath,
         string entryName,
         bool required,
-        ExportManifest manifest)
+        ExportManifest manifest,
+        CancellationToken cancellationToken)
     {
         if (!File.Exists(filePath))
         {
@@ -190,11 +215,11 @@ public sealed class LogExportService
         {
             if (manifest.Window.IsUnbounded)
             {
-                CopyFileToZip(zip, filePath, entryName);
+                CopyFileToZip(zip, filePath, entryName, cancellationToken);
             }
             else
             {
-                var keptLines = ReadLinesInWindow(filePath, manifest.Window).ToList();
+                var keptLines = ReadLinesInWindow(filePath, manifest.Window, cancellationToken).ToList();
                 // The dialog promises the log file is always part of the export, so the current
                 // log is written even when the window holds nothing: an empty file tells the
                 // reader the range was empty, while a missing one reads as "this package has no
@@ -202,10 +227,14 @@ public sealed class LogExportService
                 if (keptLines.Count == 0 && !required)
                     return;
 
-                WriteLinesToZip(zip, entryName, keptLines);
+                WriteLinesToZip(zip, entryName, keptLines, cancellationToken);
             }
 
             manifest.Entries.Add(entryName);
+        }
+        catch (OperationCanceledException)
+        {
+            throw;
         }
         catch (Exception exception)
         {
@@ -222,16 +251,23 @@ public sealed class LogExportService
     /// entry. Shared by the export filter and the dialog's range probe so the two cannot disagree
     /// about what a window holds.
     /// </summary>
-    private static IEnumerable<string> ReadLinesInWindow(string filePath, ExportWindow window)
+    private static IEnumerable<string> ReadLinesInWindow(
+        string filePath,
+        ExportWindow window,
+        CancellationToken cancellationToken)
     {
         using var source = OpenSharedRead(filePath);
         using var reader = new StreamReader(source, Encoding.UTF8, detectEncodingFromByteOrderMarks: true);
         var lines = new List<string>();
         while (reader.ReadLine() is { } line)
+        {
+            cancellationToken.ThrowIfCancellationRequested();
             lines.Add(line);
+        }
 
         foreach (var record in LogEntryReader.Read(lines))
         {
+            cancellationToken.ThrowIfCancellationRequested();
             if (!window.Contains(record.Timestamp))
                 continue;
 
@@ -241,19 +277,27 @@ public sealed class LogExportService
     }
 
     /// <summary>Writes the lines as one entry; an empty sequence still produces an entry, so the file is present.</summary>
-    private static void WriteLinesToZip(ZipArchive zip, string entryName, IEnumerable<string> lines)
+    private static void WriteLinesToZip(
+        ZipArchive zip,
+        string entryName,
+        IEnumerable<string> lines,
+        CancellationToken cancellationToken)
     {
         var entry = zip.CreateEntry(entryName, CompressionLevel.Optimal);
         using var destination = entry.Open();
         using var writer = new StreamWriter(destination, Utf8NoBom);
         foreach (var line in lines)
+        {
+            cancellationToken.ThrowIfCancellationRequested();
             writer.WriteLine(line);
+        }
     }
 
     private static void AddCrashReports(
         ZipArchive zip,
         IEnumerable<string> crashReportDirectories,
-        ExportManifest manifest)
+        ExportManifest manifest,
+        CancellationToken cancellationToken)
     {
         foreach (var directory in crashReportDirectories)
         {
@@ -262,10 +306,16 @@ public sealed class LogExportService
 
             foreach (var file in Directory.EnumerateFiles(directory).OrderBy(path => path, StringComparer.Ordinal))
             {
+                cancellationToken.ThrowIfCancellationRequested();
                 if (!manifest.Window.ContainsFileWrittenAt(File.GetLastWriteTimeUtc(file)))
                     continue;
 
-                TryCopyOptionalFileToZip(zip, file, $"crash-reports/{Path.GetFileName(file)}", manifest);
+                TryCopyOptionalFileToZip(
+                    zip,
+                    file,
+                    $"crash-reports/{Path.GetFileName(file)}",
+                    manifest,
+                    cancellationToken);
             }
         }
     }
@@ -286,7 +336,10 @@ public sealed class LogExportService
     /// Bundles the current user-data snapshot. Unlike logs and crash reports these files are
     /// state rather than a time series, so the export range does not filter them.
     /// </summary>
-    private void AddUserData(ZipArchive zip, ExportManifest manifest)
+    private void AddUserData(
+        ZipArchive zip,
+        ExportManifest manifest,
+        CancellationToken cancellationToken)
     {
         foreach (var fileName in UserDataFileNames)
         {
@@ -294,7 +347,8 @@ public sealed class LogExportService
                 zip,
                 Path.Combine(userDataRoot, fileName),
                 $"user-data/{fileName}",
-                manifest);
+                manifest,
+                cancellationToken);
         }
     }
 
@@ -341,15 +395,20 @@ public sealed class LogExportService
         ZipArchive zip,
         string filePath,
         string entryName,
-        ExportManifest manifest)
+        ExportManifest manifest,
+        CancellationToken cancellationToken)
     {
         if (!File.Exists(filePath))
             return;
 
         try
         {
-            CopyFileToZip(zip, filePath, entryName);
+            CopyFileToZip(zip, filePath, entryName, cancellationToken);
             manifest.Entries.Add(entryName);
+        }
+        catch (OperationCanceledException)
+        {
+            throw;
         }
         catch (Exception exception)
         {
@@ -358,7 +417,11 @@ public sealed class LogExportService
         }
     }
 
-    private static void CopyFileToZip(ZipArchive zip, string filePath, string entryName)
+    private static void CopyFileToZip(
+        ZipArchive zip,
+        string filePath,
+        string entryName,
+        CancellationToken cancellationToken)
     {
         // The source is opened before the entry is created: CreateEntry registers the entry in
         // the archive right away, so a failed open would otherwise leave an empty file behind
@@ -366,7 +429,13 @@ public sealed class LogExportService
         using var source = OpenSharedRead(filePath);
         var entry = zip.CreateEntry(entryName, CompressionLevel.Optimal);
         using var destination = entry.Open();
-        source.CopyTo(destination);
+        var buffer = new byte[81920];
+        int read;
+        while ((read = source.Read(buffer, 0, buffer.Length)) != 0)
+        {
+            cancellationToken.ThrowIfCancellationRequested();
+            destination.Write(buffer, 0, read);
+        }
     }
 
     private static FileStream OpenSharedRead(string filePath) => new(

@@ -115,6 +115,28 @@ public sealed class DialogActionButtonContractTests
             });
     }
 
+    [Fact]
+    public void LogExportDialog_UsesExitToAppIcons()
+    {
+        var document = XDocument.Load(ProjectFile("Views/MainWindowLogExportOverlay.axaml"));
+        var headerIcon = document
+            .Descendants()
+            .Single(element =>
+                element.Name.LocalName == "MaterialIcon"
+                && element.Attribute("Width")?.Value == "{StaticResource Launcher.Icon.Md}");
+        var exportButton = document
+            .Descendants()
+            .Single(element =>
+                element.Name.LocalName == "Button"
+                && element.Attribute("Command")?.Value == "{Binding LogExport.ExportCommand}");
+        var buttonIcon = exportButton
+            .Descendants()
+            .Single(element => element.Name.LocalName == "MaterialIcon");
+
+        Assert.Equal("ExitToApp", headerIcon.Attribute("Kind")?.Value);
+        Assert.Equal("ExitToApp", buttonIcon.Attribute("Kind")?.Value);
+    }
+
     private static bool HasAnyClass(XElement element, params string[] classes) =>
         classes.Any(className => HasClass(element, className));
 
