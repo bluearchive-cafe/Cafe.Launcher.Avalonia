@@ -282,36 +282,35 @@ public sealed partial class LogViewerDialogViewModel : ViewModelBase, IModalCont
         var entries = new List<LogEntryDisplay>();
         foreach (var record in LogEntryReader.Read(lines))
         {
+            var (severity, severityLabel) = MapSeverity(record.SeverityCode);
             entries.Add(new LogEntryDisplay
             {
                 TimestampText = record.TimestampText,
-                SeverityLabel = record.SeverityCode switch
-                {
-                    "VRB" => "VERBOSE",
-                    "DBG" => "DEBUG",
-                    "INF" => "INFO",
-                    "WRN" => "WARN",
-                    "ERR" => "ERROR",
-                    "FTL" => "FATAL",
-                    _ => record.SeverityCode
-                },
+                SeverityLabel = severityLabel,
                 Title = record.Title,
                 Details = record.Lines.Count > 1
                     ? string.Join("\n", record.Lines.Skip(1))
                     : "",
-                Severity = record.SeverityCode switch
-                {
-                    "VRB" => LogEntrySeverity.Verbose,
-                    "DBG" => LogEntrySeverity.Debug,
-                    "INF" => LogEntrySeverity.Info,
-                    "WRN" => LogEntrySeverity.Warn,
-                    "ERR" => LogEntrySeverity.Error,
-                    "FTL" => LogEntrySeverity.Fatal,
-                    _ => LogEntrySeverity.Info
-                }
+                Severity = severity
             });
         }
 
         return entries;
     }
+
+    /// <summary>
+    /// Maps a Serilog level code to the severity the filter runs on and the label the list shows.
+    /// An unrecognised code stays visible as written and filters as informational.
+    /// </summary>
+    private static (LogEntrySeverity Severity, string Label) MapSeverity(string severityCode) =>
+        severityCode switch
+        {
+            "VRB" => (LogEntrySeverity.Verbose, "VERBOSE"),
+            "DBG" => (LogEntrySeverity.Debug, "DEBUG"),
+            "INF" => (LogEntrySeverity.Info, "INFO"),
+            "WRN" => (LogEntrySeverity.Warn, "WARN"),
+            "ERR" => (LogEntrySeverity.Error, "ERROR"),
+            "FTL" => (LogEntrySeverity.Fatal, "FATAL"),
+            _ => (LogEntrySeverity.Info, severityCode)
+        };
 }
