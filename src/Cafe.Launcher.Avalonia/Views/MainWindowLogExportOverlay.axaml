@@ -75,6 +75,7 @@
                                              Description="{Binding Shell.I18n[logExportIncludeLogsDescription]}">
                             <controls:SettingRow.Action>
                                 <CheckBox Classes="setting-checkbox"
+                                          AutomationProperties.Name="{Binding Shell.I18n[logExportIncludeLogs]}"
                                           IsChecked="True"
                                           IsEnabled="False"
                                           VerticalAlignment="Center"/>
