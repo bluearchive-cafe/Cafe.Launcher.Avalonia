@@ -182,7 +182,7 @@ public sealed class LogExportDialogViewModelTests : IDisposable
         string? exportDirectory = null,
         Action<string>? openDirectory = null) =>
         new(
-            new LogExportService(logger),
+            new LogExportService(new LocalDiagnostics(logger)),
             new StubFilePickerService
             {
                 FolderPicker = (_, _) => Task.FromResult(exportDirectory)

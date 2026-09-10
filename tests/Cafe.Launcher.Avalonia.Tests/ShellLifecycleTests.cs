@@ -397,7 +397,7 @@ public sealed class ShellLifecycleTests : IDisposable
         using var testLogger = new UnifiedLogger(tempDir);
         var logViewer = new LogViewerDialogViewModel(testLogger, null, null, null, null);
         var logExport = new LogExportDialogViewModel(
-            new LogExportService(testLogger),
+            new LogExportService(new LocalDiagnostics(testLogger)),
             filePickerService,
             toastService,
             localizer,

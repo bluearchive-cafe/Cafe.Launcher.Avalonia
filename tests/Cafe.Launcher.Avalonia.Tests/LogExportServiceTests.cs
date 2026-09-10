@@ -25,7 +25,7 @@ public sealed class LogExportServiceTests : IDisposable
         using var logger = new UnifiedLogger(logDirectory);
         await logger.LogAsync(LogEntrySeverity.Info, "Test log");
         logger.Dispose(); // flush async sink to disk before reading
-        var service = new LogExportService(logger);
+        var service = new LogExportService(new LocalDiagnostics(logger));
 
         var zipPath = await service.ExportAsync(exportDirectory, LogExportOptions.Default);
 
@@ -54,7 +54,7 @@ public sealed class LogExportServiceTests : IDisposable
     public async Task ExportAsync_WhenCurrentLogIsMissing_Throws()
     {
         using var logger = new UnifiedLogger(Path.Combine(tempDir, "missing-source"));
-        var service = new LogExportService(logger);
+        var service = new LogExportService(new LocalDiagnostics(logger));
 
         await Assert.ThrowsAsync<FileNotFoundException>(
             () => service.ExportAsync(Path.Combine(tempDir, "selected"), LogExportOptions.Default));
@@ -65,7 +65,7 @@ public sealed class LogExportServiceTests : IDisposable
     {
         const string content = "2026-09-01T10:00:00.0000000+08:00 [INF] [Test] Old entry\n";
         var logger = WriteDeterministicLog("verbatim-source", content);
-        var service = new LogExportService(logger);
+        var service = new LogExportService(new LocalDiagnostics(logger));
 
         var zipPath = await service.ExportAsync(Path.Combine(tempDir, "verbatim-selected"), LogExportOptions.Default);
 
@@ -83,7 +83,7 @@ public sealed class LogExportServiceTests : IDisposable
             "recent detail line\n" +
             "2026-09-09T10:00:01.0000000+08:00 [WRN] [Test] Recent warning\n";
         var logger = WriteDeterministicLog("range-source", content);
-        var service = new LogExportService(logger);
+        var service = new LogExportService(new LocalDiagnostics(logger));
 
         var zipPath = await service.ExportAsync(
             Path.Combine(tempDir, "range-selected"),
@@ -107,7 +107,7 @@ public sealed class LogExportServiceTests : IDisposable
     {
         const string content = "2026-09-01T10:00:00.0000000+08:00 [INF] [Test] Old entry\n";
         var logger = WriteDeterministicLog("empty-range-source", content);
-        var service = new LogExportService(logger);
+        var service = new LogExportService(new LocalDiagnostics(logger));
 
         var zipPath = await service.ExportAsync(
             Path.Combine(tempDir, "empty-range-selected"),
@@ -122,7 +122,7 @@ public sealed class LogExportServiceTests : IDisposable
     public async Task ExportAsync_WhenCustomRangeIsReversed_Throws()
     {
         var logger = WriteDeterministicLog("reversed-source", "2026-09-09T10:00:00.0000000+08:00 [INF] [Test] Entry\n");
-        var service = new LogExportService(logger);
+        var service = new LogExportService(new LocalDiagnostics(logger));
 
         await Assert.ThrowsAsync<ArgumentException>(() => service.ExportAsync(
             Path.Combine(tempDir, "reversed-selected"),
@@ -153,7 +153,7 @@ public sealed class LogExportServiceTests : IDisposable
         File.SetLastWriteTimeUtc(recentAdditional, recentStamp);
         File.SetLastWriteTimeUtc(oldReport, new DateTime(2026, 9, 1, 12, 0, 0, DateTimeKind.Utc));
         var logger = WriteDeterministicLog("crash-source", "2026-09-09T10:00:00.0000000+08:00 [INF] [Test] Entry\n");
-        var service = new LogExportService(logger, dataRoot);
+        var service = new LogExportService(new LocalDiagnostics(logger), dataRoot);
 
         var zipPath = await service.ExportAsync(
             Path.Combine(tempDir, "crash-selected"),
@@ -178,11 +178,18 @@ public sealed class LogExportServiceTests : IDisposable
         Directory.CreateDirectory(dataRoot);
         File.WriteAllText(Path.Combine(dataRoot, "settings.json"), "{\"logLevel\":\"information\"}");
         File.WriteAllText(Path.Combine(dataRoot, "clickCode"), "abc123");
-        var imageCacheDirectory = Path.Combine(dataRoot, "image-cache");
-        Directory.CreateDirectory(imageCacheDirectory);
-        File.WriteAllText(Path.Combine(imageCacheDirectory, "cached.cache"), "binary");
+        // Caches, the compatibility probe, and the export folder itself stay out: bundling a
+        // previous archive would nest one ZIP inside the next.
+        string[] excludedDirectories = ["image-cache", "compatibility", "log-exports"];
+        foreach (var excluded in excludedDirectories)
+        {
+            var directory = Path.Combine(dataRoot, excluded);
+            Directory.CreateDirectory(directory);
+            File.WriteAllText(Path.Combine(directory, "payload.bin"), "binary");
+        }
+
         var logger = WriteDeterministicLog("user-data-source", "2026-09-09T10:00:00.0000000+08:00 [INF] [Test] Entry\n");
-        var service = new LogExportService(logger, dataRoot);
+        var service = new LogExportService(new LocalDiagnostics(logger), dataRoot);
 
         var zipPath = await service.ExportAsync(
             Path.Combine(tempDir, "user-data-selected"),
@@ -191,9 +198,69 @@ public sealed class LogExportServiceTests : IDisposable
         using var zip = ZipFile.OpenRead(zipPath);
         Assert.Contains(zip.Entries, entry => entry.FullName == "user-data/settings.json");
         Assert.Contains(zip.Entries, entry => entry.FullName == "user-data/clickCode");
-        Assert.DoesNotContain(
-            zip.Entries,
-            entry => entry.FullName.StartsWith("user-data/image-cache", StringComparison.Ordinal));
+        foreach (var excluded in excludedDirectories)
+        {
+            Assert.DoesNotContain(
+                zip.Entries,
+                entry => entry.FullName.StartsWith($"user-data/{excluded}", StringComparison.Ordinal));
+        }
+    }
+
+    [Fact]
+    public async Task ExportAsync_WhenARequestedCrashReportCannotBeRead_RecordsItAsSkipped()
+    {
+        var dataRoot = Path.Combine(tempDir, "skipped-data");
+        var crashDirectory = Path.Combine(dataRoot, CrashReportStore.ReportDirectoryName);
+        Directory.CreateDirectory(crashDirectory);
+        const string lockedName = "CR-20260909-120000-ABCD.json";
+        const string readableName = "CR-20260909-130000-ABCD.json";
+        var lockedReport = Path.Combine(crashDirectory, lockedName);
+        File.WriteAllText(lockedReport, "{}");
+        File.WriteAllText(Path.Combine(crashDirectory, readableName), "{}");
+        // Writing the unified log before the logger opens it keeps a live logger: the sink
+        // appends, so the warnings the export raises land in the file it just exported.
+        var logDirectory = Path.Combine(tempDir, "skipped-source");
+        Directory.CreateDirectory(logDirectory);
+        var logPath = Path.Combine(logDirectory, "unified.log");
+        File.WriteAllText(logPath, "2026-09-09T10:00:00.0000000+08:00 [INF] [Test] Entry\n");
+        using var logger = new UnifiedLogger(logDirectory);
+        var service = new LogExportService(new LocalDiagnostics(logger), dataRoot);
+
+        string zipPath;
+        using (File.Open(lockedReport, FileMode.Open, FileAccess.Read, FileShare.None))
+        {
+            zipPath = await service.ExportAsync(
+                Path.Combine(tempDir, "skipped-selected"),
+                new LogExportOptions { IncludeCrashReports = true });
+        }
+
+        using (var zip = ZipFile.OpenRead(zipPath))
+        {
+            Assert.DoesNotContain(
+                zip.Entries,
+                entry => entry.FullName.EndsWith(lockedName, StringComparison.Ordinal));
+            Assert.Contains(
+                zip.Entries,
+                entry => entry.FullName.EndsWith(readableName, StringComparison.Ordinal));
+
+            var systemInfo = zip.Entries.Single(item => item.FullName == "system-info.json");
+            using var reader = new StreamReader(systemInfo.Open(), Encoding.UTF8);
+            using var document = JsonDocument.Parse(reader.ReadToEnd());
+            var skipped = document.RootElement
+                .GetProperty("export")
+                .GetProperty("skipped")
+                .EnumerateArray()
+                .ToArray();
+            var entry = Assert.Single(
+                skipped,
+                item => item.GetProperty("entry").GetString() == $"crash-reports/{lockedName}");
+            Assert.Equal("IOException", entry.GetProperty("reason").GetString());
+        }
+
+        logger.Dispose(); // flush the async sink before reading the diagnostics
+        var diagnostics = File.ReadAllText(logPath);
+        Assert.Contains("[LogExport]", diagnostics, StringComparison.Ordinal);
+        Assert.Contains($"Skipped crash-reports/{lockedName}", diagnostics, StringComparison.Ordinal);
     }
 
     [Fact]
@@ -203,7 +270,7 @@ public sealed class LogExportServiceTests : IDisposable
         Directory.CreateDirectory(dataRoot);
         File.WriteAllText(Path.Combine(dataRoot, "settings.json"), "{}");
         var logger = WriteDeterministicLog("metadata-source", "2026-09-09T10:00:00.0000000+08:00 [INF] [Test] Entry\n");
-        var service = new LogExportService(logger, dataRoot);
+        var service = new LogExportService(new LocalDiagnostics(logger), dataRoot);
 
         var zipPath = await service.ExportAsync(
             Path.Combine(tempDir, "metadata-selected"),

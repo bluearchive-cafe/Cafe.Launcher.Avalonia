@@ -189,7 +189,7 @@ public sealed partial class MainWindowViewModelTests : IDisposable
                 resourcePanelViewModel,
                 new LogViewerDialogViewModel(testLogger, null, null, null, null),
                 new LogExportDialogViewModel(
-                    new LogExportService(testLogger),
+                    new LogExportService(new LocalDiagnostics(testLogger)),
                     filePickerService,
                     toastService,
                     localizationService,
