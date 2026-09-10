@@ -141,14 +141,17 @@ public sealed class LogExportServiceTests : IDisposable
         var crashDirectory = Path.Combine(dataRoot, CrashReportStore.ReportDirectoryName);
         Directory.CreateDirectory(crashDirectory);
         var recentReport = Path.Combine(crashDirectory, "CR-20260909-120000-ABCD.json");
+        var recentAdditional = Path.ChangeExtension(recentReport, ".additional.log");
         var oldReport = Path.Combine(crashDirectory, "CR-20260901-120000-ABCD.json");
         File.WriteAllText(recentReport, "{}");
         File.WriteAllText(oldReport, "{}");
-        File.SetLastWriteTimeUtc(recentReport, new DateTime(2026, 9, 9, 12, 0, 0, DateTimeKind.Utc));
+        File.WriteAllText(recentAdditional, "secondary failure");
+        // The window is resolved against the wall clock, so every artifact needs an explicit
+        // timestamp: one left at its creation time drifts out of range as the calendar moves.
+        var recentStamp = new DateTime(2026, 9, 9, 12, 0, 0, DateTimeKind.Utc);
+        File.SetLastWriteTimeUtc(recentReport, recentStamp);
+        File.SetLastWriteTimeUtc(recentAdditional, recentStamp);
         File.SetLastWriteTimeUtc(oldReport, new DateTime(2026, 9, 1, 12, 0, 0, DateTimeKind.Utc));
-        File.WriteAllText(
-            Path.ChangeExtension(recentReport, ".additional.log"),
-            "secondary failure");
         var logger = WriteDeterministicLog("crash-source", "2026-09-09T10:00:00.0000000+08:00 [INF] [Test] Entry\n");
         var service = new LogExportService(logger, dataRoot);
 
