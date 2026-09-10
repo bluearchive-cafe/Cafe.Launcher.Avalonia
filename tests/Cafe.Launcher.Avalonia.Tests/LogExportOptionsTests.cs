@@ -48,8 +48,8 @@ public sealed class LogExportOptionsTests
 
         // Picking a day means the whole day: start at the first day's midnight, end exclusive
         // at the midnight after the last one, regardless of the time the picker reported.
-        Assert.Equal(new DateTimeOffset(2026, 9, 8, 0, 0, 0, TimeSpan.FromHours(8)), window.From);
-        Assert.Equal(new DateTimeOffset(2026, 9, 10, 0, 0, 0, TimeSpan.FromHours(8)), window.To);
+        Assert.Equal(LocalMidnight(2026, 9, 8), window.From);
+        Assert.Equal(LocalMidnight(2026, 9, 10), window.To);
     }
 
     [Fact]
@@ -66,14 +66,14 @@ public sealed class LogExportOptionsTests
             CustomTo = new DateTimeOffset(2026, 9, 9, 7, 0, 0, TimeSpan.FromHours(8))
         }.ResolveWindow(Now);
 
-        Assert.Equal(new DateTimeOffset(2026, 9, 8, 0, 0, 0, TimeSpan.FromHours(8)), fromOnly.From);
+        Assert.Equal(LocalMidnight(2026, 9, 8), fromOnly.From);
         Assert.Null(fromOnly.To);
         Assert.Null(toOnly.From);
-        Assert.Equal(new DateTimeOffset(2026, 9, 10, 0, 0, 0, TimeSpan.FromHours(8)), toOnly.To);
+        Assert.Equal(LocalMidnight(2026, 9, 10), toOnly.To);
     }
 
     [Fact]
-    public void Contains_IsInclusiveOnFromAndExclusiveOnTo()
+    public void Contains_WithBothBounds_IsInclusiveOnFromAndExclusiveOnTo()
     {
         var window = new ExportWindow(Now, Now.AddHours(1));
 
@@ -84,7 +84,7 @@ public sealed class LogExportOptionsTests
     }
 
     [Fact]
-    public void Contains_KeepsEntriesWithoutAParsableTimestamp()
+    public void Contains_WithoutAParsableTimestamp_KeepsTheEntry()
     {
         var window = new ExportWindow(Now, Now.AddHours(1));
 
@@ -92,7 +92,7 @@ public sealed class LogExportOptionsTests
     }
 
     [Fact]
-    public void ContainsFileWrittenAt_ComparesTheFileWriteTimeAgainstTheWindow()
+    public void ContainsFileWrittenAt_ForWriteTimesAroundTheWindow_AppliesTheHalfOpenBoundary()
     {
         var window = new ExportWindow(
             new DateTimeOffset(2026, 9, 9, 16, 0, 0, TimeSpan.Zero),
@@ -104,20 +104,28 @@ public sealed class LogExportOptionsTests
     }
 
     [Fact]
-    public void IsRangeValid_OnlyChecksOrderOnceBothBoundsAreSet()
+    public void IsRangeValid_WithBothBoundsSet_RequiresStartNotLaterThanEnd()
     {
         var earlier = new DateTimeOffset(2026, 9, 1, 0, 0, 0, TimeSpan.Zero);
         var later = new DateTimeOffset(2026, 9, 9, 0, 0, 0, TimeSpan.Zero);
 
         Assert.True(LogExportOptions.IsRangeValid(LogExportRangePreset.Custom, earlier, later));
-        Assert.True(LogExportOptions.IsRangeValid(LogExportRangePreset.Custom, earlier, null));
-        Assert.True(LogExportOptions.IsRangeValid(LogExportRangePreset.Custom, null, later));
-        Assert.True(LogExportOptions.IsRangeValid(LogExportRangePreset.Custom, null, null));
         Assert.False(LogExportOptions.IsRangeValid(LogExportRangePreset.Custom, later, earlier));
     }
 
     [Fact]
-    public void IsRangeValid_IgnoresReversedBoundsOutsideTheCustomRange()
+    public void IsRangeValid_WithOneBoundMissing_AcceptsTheRange()
+    {
+        var bound = new DateTimeOffset(2026, 9, 1, 0, 0, 0, TimeSpan.Zero);
+
+        // Either side may stay open, and a custom range with no bounds at all means "everything".
+        Assert.True(LogExportOptions.IsRangeValid(LogExportRangePreset.Custom, bound, null));
+        Assert.True(LogExportOptions.IsRangeValid(LogExportRangePreset.Custom, null, bound));
+        Assert.True(LogExportOptions.IsRangeValid(LogExportRangePreset.Custom, null, null));
+    }
+
+    [Fact]
+    public void IsRangeValid_OutsideTheCustomRange_IgnoresReversedBounds()
     {
         var earlier = new DateTimeOffset(2026, 9, 1, 0, 0, 0, TimeSpan.Zero);
         var later = new DateTimeOffset(2026, 9, 9, 0, 0, 0, TimeSpan.Zero);
@@ -133,7 +141,7 @@ public sealed class LogExportOptionsTests
     }
 
     [Fact]
-    public void IsRangeValid_AcceptsSameDayBoundsInAnyOrder()
+    public void IsRangeValid_WithSameDayBoundsInAnyOrder_AcceptsTheRange()
     {
         // Both pickers hand over a day, so a single-day range is the common case: the two
         // timestamps can sit in either order while the days are still in order.
@@ -142,4 +150,13 @@ public sealed class LogExportOptionsTests
             new DateTimeOffset(2026, 9, 9, 23, 0, 0, TimeSpan.FromHours(8)),
             new DateTimeOffset(2026, 9, 9, 1, 0, 0, TimeSpan.FromHours(8))));
     }
+
+    /// <summary>
+    /// Midnight of the given day as the export builds it. A custom bound is a date, and a
+    /// <see cref="DateTime"/> with an unspecified kind converts through the machine's zone, so
+    /// the expectation follows that same conversion instead of pinning an offset that would only
+    /// hold in one time zone.
+    /// </summary>
+    private static DateTimeOffset LocalMidnight(int year, int month, int day) =>
+        new(new DateTime(year, month, day));
 }
