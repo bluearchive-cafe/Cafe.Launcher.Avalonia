@@ -19,6 +19,9 @@ namespace Cafe.Launcher.Avalonia.Features.Diagnostics;
 /// </summary>
 public sealed partial class LogExportDialogViewModel : ViewModelBase, IModalContentViewModel
 {
+    /// <summary>Log title of the diagnostics this view model writes.</summary>
+    private const string LogTitle = "LogExport";
+
     private static readonly string CustomRangeCode = LogExportRangePreset.Custom.ToString();
 
     private readonly LogExportService exportService;
@@ -97,6 +100,7 @@ public sealed partial class LogExportDialogViewModel : ViewModelBase, IModalCont
         RefreshDisplayNames();
     }
 
+    /// <summary>Gets the time-range choices, in the order the dialog presents them.</summary>
     public ObservableCollection<SettingOption> RangeOptions { get; }
 
     /// <summary>Gets whether the custom date pickers are shown.</summary>
@@ -105,9 +109,7 @@ public sealed partial class LogExportDialogViewModel : ViewModelBase, IModalCont
     /// <summary>Gets whether the custom range has its bounds the wrong way round.</summary>
     public bool IsRangeInvalid =>
         IsCustomRangeVisible
-        && CustomFromDate is not null
-        && CustomToDate is not null
-        && CustomFromDate.Value.Date > CustomToDate.Value.Date;
+        && !LogExportOptions.IsRangeValid(LogExportRangePreset.Custom, CustomFromDate, CustomToDate);
 
     /// <summary>Gets whether user data is selected, which carries local paths and the player UID.</summary>
     public bool IsUserDataWarningVisible => IncludeUserData;
@@ -118,11 +120,7 @@ public sealed partial class LogExportDialogViewModel : ViewModelBase, IModalCont
         && (!IsCustomRangeVisible || CustomFromDate is not null || CustomToDate is not null);
 
     /// <summary>Refreshes option display names after the active UI language changes.</summary>
-    public void ApplyLanguage()
-    {
-        RefreshDisplayNames();
-        OnPropertyChanged(nameof(IsRangeInvalid));
-    }
+    public void ApplyLanguage() => RefreshDisplayNames();
 
     private void RefreshDisplayNames()
     {
@@ -158,32 +156,23 @@ public sealed partial class LogExportDialogViewModel : ViewModelBase, IModalCont
     [RelayCommand(CanExecute = nameof(CanExport))]
     private async Task ExportAsync()
     {
+        var options = BuildOptions();
+        // Kept outside the try so the failure diagnostic can name the folder it was writing to.
+        string? destination = null;
         try
         {
-            var options = BuildOptions();
             Directory.CreateDirectory(LogExportService.DefaultExportDirectory);
-            var selectedDirectory = await filePickerService.PickFolderAsync(
+            destination = await filePickerService.PickFolderAsync(
                 localizer.T(LocalizationKeys.LogExportFolderPickerTitle),
                 LogExportService.DefaultExportDirectory);
-            if (string.IsNullOrWhiteSpace(selectedDirectory))
+            if (string.IsNullOrWhiteSpace(destination))
             {
                 return;
             }
 
-            var zipPath = await exportService.ExportAsync(selectedDirectory, options);
+            var zipPath = await exportService.ExportAsync(destination, options);
             IsVisible = false;
             toastService.ShowSuccess(localizer.F(LocalizationKeys.LogExportSucceeded, zipPath));
-            try
-            {
-                openDirectory(selectedDirectory);
-            }
-            catch (Exception exception)
-            {
-                await diagnostics.ErrorAsync(
-                    "Log export directory open failed.",
-                    exception,
-                    CancellationToken.None);
-            }
         }
         catch (Exception exception)
         {
@@ -191,7 +180,31 @@ public sealed partial class LogExportDialogViewModel : ViewModelBase, IModalCont
                 localizer.T(LocalizationKeys.LogExportFailed),
                 exception));
             await diagnostics.ErrorAsync(
-                "Log export failed.",
+                LogTitle,
+                $"Exporting to {destination ?? "an unpicked folder"} failed.",
+                exception,
+                CancellationToken.None);
+            return;
+        }
+
+        await TryOpenDestinationAsync(destination);
+    }
+
+    /// <summary>
+    /// Reveals the folder holding the new archive. A shell failure must not report a finished
+    /// export as failed, so it is logged and otherwise ignored.
+    /// </summary>
+    private async Task TryOpenDestinationAsync(string destination)
+    {
+        try
+        {
+            openDirectory(destination);
+        }
+        catch (Exception exception)
+        {
+            await diagnostics.ErrorAsync(
+                LogTitle,
+                $"Opening the export folder {destination} failed.",
                 exception,
                 CancellationToken.None);
         }

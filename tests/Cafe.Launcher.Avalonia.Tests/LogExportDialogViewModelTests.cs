@@ -147,6 +147,58 @@ public sealed class LogExportDialogViewModelTests : IDisposable
     }
 
     [Fact]
+    public async Task ExportCommand_WithPresetRange_CropsEntriesToThatWindow()
+    {
+        var now = DateTimeOffset.Now;
+        // Stamped relative to the wall clock: a fixed "recent" stamp would drift out of the
+        // window as the calendar moves.
+        var content =
+            $"{now.AddDays(-40):O} [INF] [Test] Old entry\n" +
+            $"{now.AddMinutes(-5):O} [INF] [Test] Recent entry\n";
+        logger.Dispose(); // release the sink so the log can be replaced with deterministic content
+        File.WriteAllText(logger.LogFilePath, content);
+        var exportDirectory = Path.Combine(tempDir, "preset-selected");
+        var viewModel = CreateViewModel(exportDirectory: exportDirectory);
+        viewModel.OpenCommand.Execute(null);
+        viewModel.SelectedRangeCode = nameof(LogExportRangePreset.LastHour);
+
+        await viewModel.ExportCommand.ExecuteAsync(null);
+
+        var zipPath = Assert.Single(Directory.GetFiles(exportDirectory, "*.zip"));
+        using var zip = ZipFile.OpenRead(zipPath);
+        var entry = zip.Entries.Single(item => item.FullName == "unified.log");
+        using var reader = new StreamReader(entry.Open(), Encoding.UTF8);
+        var exported = reader.ReadToEnd();
+        Assert.Contains("Recent entry", exported, StringComparison.Ordinal);
+        Assert.DoesNotContain("Old entry", exported, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public async Task ExportCommand_WhenOpeningTheFolderFails_StillReportsSuccess()
+    {
+        await logger.LogAsync(LogEntrySeverity.Info, "Launcher started");
+        ToastNotification? toast = null;
+        var toastService = new ToastService();
+        toastService.ToastRaised += notification => toast = notification;
+        var viewModel = CreateViewModel(
+            toastService: toastService,
+            exportDirectory: Path.Combine(tempDir, "open-failure-selected"),
+            openDirectory: _ => throw new IOException("The shell refused to open the folder."));
+        viewModel.OpenCommand.Execute(null);
+
+        await viewModel.ExportCommand.ExecuteAsync(null);
+
+        // The archive exists, so a failed reveal must not turn the finished export into an error.
+        Assert.False(viewModel.IsVisible);
+        Assert.NotNull(toast);
+        Assert.Equal(ToastSeverity.Success, toast.Severity);
+        logger.Dispose(); // release Serilog file handle before reading
+        var diagnostics = File.ReadAllText(logger.LogFilePath);
+        Assert.Contains("[LogExport]", diagnostics, StringComparison.Ordinal);
+        Assert.Contains("Opening the export folder", diagnostics, StringComparison.Ordinal);
+    }
+
+    [Fact]
     public async Task ExportCommand_WhenExportFails_ShowsErrorAndWritesDiagnostic()
     {
         ToastNotification? toast = null;
@@ -162,7 +214,9 @@ public sealed class LogExportDialogViewModelTests : IDisposable
         Assert.Equal(ToastSeverity.Error, toast.Severity);
         Assert.Contains("ArgumentException", toast.Message, StringComparison.Ordinal);
         logger.Dispose(); // release Serilog file handle before reading
-        Assert.Contains("Log export failed.", File.ReadAllText(logger.LogFilePath), StringComparison.Ordinal);
+        var diagnostics = File.ReadAllText(logger.LogFilePath);
+        Assert.Contains("[LogExport]", diagnostics, StringComparison.Ordinal);
+        Assert.Contains("Exporting to", diagnostics, StringComparison.Ordinal);
     }
 
     [Fact]
