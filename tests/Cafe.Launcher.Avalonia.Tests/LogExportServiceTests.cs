@@ -103,7 +103,7 @@ public sealed class LogExportServiceTests : IDisposable
     }
 
     [Fact]
-    public async Task ExportAsync_WithRangeMatchingNothing_OmitsTheLogEntry()
+    public async Task ExportAsync_WithRangeMatchingNothing_KeepsTheLogEntry()
     {
         const string content = "2026-09-01T10:00:00.0000000+08:00 [INF] [Test] Old entry\n";
         var logger = WriteDeterministicLog("empty-range-source", content);
@@ -113,9 +113,38 @@ public sealed class LogExportServiceTests : IDisposable
             Path.Combine(tempDir, "empty-range-selected"),
             new LogExportOptions { Range = LogExportRangePreset.LastHour });
 
+        // The dialog promises the log file is always part of the export, so an empty range still
+        // yields an entry: a package without logs would be useless for the diagnosis it exists for.
         using var zip = ZipFile.OpenRead(zipPath);
-        Assert.DoesNotContain(zip.Entries, entry => entry.FullName == "unified.log");
+        Assert.Contains(zip.Entries, entry => entry.FullName == "unified.log");
         Assert.Contains(zip.Entries, entry => entry.FullName == "system-info.json");
+        Assert.Equal("", ReadEntry(zipPath, "unified.log"));
+    }
+
+    [Fact]
+    public async Task ExportAsync_WithRotatedLogOutsideTheWindow_OmitsThatFile()
+    {
+        const string inWindow = "2026-09-09T10:00:00.0000000+08:00 [INF] [Test] Recent entry\n";
+        const string outOfWindow = "2026-09-01T10:00:00.0000000+08:00 [INF] [Test] Old entry\n";
+        var logger = WriteDeterministicLog("rotated-source", inWindow);
+        File.WriteAllText(Path.Combine(tempDir, "rotated-source", "unified_001.log"), outOfWindow);
+        var service = new LogExportService(new LocalDiagnostics(logger));
+
+        var zipPath = await service.ExportAsync(
+            Path.Combine(tempDir, "rotated-selected"),
+            new LogExportOptions
+            {
+                Range = LogExportRangePreset.Custom,
+                CustomFrom = new DateTimeOffset(2026, 9, 8, 0, 0, 0, TimeSpan.FromHours(8)),
+                CustomTo = new DateTimeOffset(2026, 9, 9, 0, 0, 0, TimeSpan.FromHours(8))
+            });
+
+        using var zip = ZipFile.OpenRead(zipPath);
+        Assert.Contains(zip.Entries, entry => entry.FullName == "unified.log");
+        // Only the current log carries the "always included" promise; a rotated file that would
+        // contribute nothing (and has nothing to say about the window) stays out.
+        Assert.DoesNotContain(zip.Entries, entry => entry.FullName == "unified_001.log");
+        Assert.Contains("Recent entry", ReadEntry(zipPath, "unified.log"), StringComparison.Ordinal);
     }
 
     [Fact]

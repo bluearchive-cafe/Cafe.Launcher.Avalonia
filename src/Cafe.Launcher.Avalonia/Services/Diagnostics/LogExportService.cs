@@ -148,10 +148,17 @@ public sealed class LogExportService
             {
                 CopyFileToZip(zip, filePath, entryName);
             }
-            else if (!AddFilteredLogToZip(zip, filePath, entryName, manifest))
+            else
             {
-                // Nothing in range: the export stays truthful by omitting the file.
-                return;
+                var keptLines = ReadEntriesInWindow(filePath, manifest);
+                // The dialog promises the log file is always part of the export, so the current
+                // log is written even when the window holds nothing: an empty file tells the
+                // reader the range was empty, while a missing one reads as "this package has no
+                // logs at all". Rotated files stay out when they contribute nothing.
+                if (keptLines.Count == 0 && !required)
+                    return;
+
+                WriteLinesToZip(zip, entryName, keptLines);
             }
 
             manifest.Entries.Add(entryName);
@@ -166,12 +173,8 @@ public sealed class LogExportService
         }
     }
 
-    /// <summary>Writes only the entries inside the window, keeping continuation lines with their entry.</summary>
-    private static bool AddFilteredLogToZip(
-        ZipArchive zip,
-        string filePath,
-        string entryName,
-        ExportManifest manifest)
+    /// <summary>Loads the lines of every entry inside the window, keeping continuation lines with their entry.</summary>
+    private static List<string> ReadEntriesInWindow(string filePath, ExportManifest manifest)
     {
         var keptLines = new List<string>();
         using (var source = OpenSharedRead(filePath))
@@ -188,16 +191,17 @@ public sealed class LogExportService
             }
         }
 
-        if (keptLines.Count == 0)
-            return false;
+        return keptLines;
+    }
 
+    /// <summary>Writes the lines as one entry; an empty sequence still produces an entry, so the file is present.</summary>
+    private static void WriteLinesToZip(ZipArchive zip, string entryName, IEnumerable<string> lines)
+    {
         var entry = zip.CreateEntry(entryName, CompressionLevel.Optimal);
         using var destination = entry.Open();
         using var writer = new StreamWriter(destination, Utf8NoBom);
-        foreach (var line in keptLines)
+        foreach (var line in lines)
             writer.WriteLine(line);
-
-        return true;
     }
 
     private static void AddCrashReports(
