@@ -58,17 +58,6 @@ public partial class App : Application
             _ = serviceProvider.GetRequiredService<Services.Diagnostics.LocalDiagnostics>()
                 .DebugAsync("Application", "Application started, DI container built", CancellationToken.None);
 
-            // Track install attribution (non-critical, best-effort)
-            try
-            {
-                var clickCodeService = serviceProvider.GetRequiredService<ClickCodeService>();
-                clickCodeService.SaveClickCode();
-            }
-            catch (Exception ex)
-            {
-                LocalDiagnostics.LogSync(LogEntrySeverity.Warn, "App", $"ClickCodeService.SaveClickCode failed: {ex.Message}");
-            }
-
             var viewModel = serviceProvider.GetRequiredService<MainWindowViewModel>();
             var mainWindow = new MainWindow(
                 serviceProvider.GetRequiredService<WindowFilePickerService>(),
@@ -256,7 +245,7 @@ public partial class App : Application
             {
                 // --launch-game first-instance flow: the initial state refresh has
                 // finished, so the launch runs through the same command the UI
-                // button uses (validation, clickCode, runner selection, toasts).
+                // button uses (validation, runner selection, toasts).
                 // First-launch installs are deliberately excluded: the setup wizard
                 // owns that session and the game cannot be installed yet, so an
                 // auto-launch would only fire a "not installed" toast over the wizard.

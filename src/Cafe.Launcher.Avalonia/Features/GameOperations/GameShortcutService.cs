@@ -142,7 +142,7 @@ public sealed class GameShortcutService : IGameShortcutService
     /// <summary>
     /// Linux desktop entry. Unlike the Windows .lnk (which points straight at the
     /// game executable), the entry always goes through the launcher with
-    /// --launch-game so manifest validation, update checks, clickCode, runner
+    /// --launch-game so manifest validation, update checks, runner
     /// selection, and diagnostics all apply (cross-platform runtime design §13/§14).
     /// </summary>
     internal GameShortcutResult CreateLinuxDesktopEntry(
@@ -194,7 +194,7 @@ public sealed class GameShortcutService : IGameShortcutService
     /// <summary>
     /// Renders the desktop-entry file content for one launch point. The entry goes
     /// through the launcher with --launch-game (never the game executable directly)
-    /// so manifest validation, update checks, clickCode, runner selection, and
+    /// so manifest validation, update checks, runner selection, and
     /// diagnostics all apply, per the cross-platform runtime design §13/§14.
     /// Exposed for tests: asserts the documented entry shape byte-for-byte.
     /// </summary>

@@ -155,7 +155,7 @@ public partial class MainWindow : Window
     {
         UnconfigureViewModel();
         configuredViewModel = viewModel;
-        viewModel.Operations.MinimizeRequested += MinimizeWindow;
+        viewModel.Operations.MinimizeRequested += MinimizeToTray;
         viewModel.WindowChrome.MinimizeRequested += MinimizeWindow;
         viewModel.WindowChrome.CloseRequested += PerformClose;
         viewModel.WindowChrome.RestoreRequested += ShowWindow;
@@ -435,7 +435,7 @@ public partial class MainWindow : Window
         }
 
         viewModel.Background.PreviousWallpaperFadingOut -= FadeOutPreviousWallpaper;
-        viewModel.Operations.MinimizeRequested -= MinimizeWindow;
+        viewModel.Operations.MinimizeRequested -= MinimizeToTray;
         viewModel.WindowChrome.MinimizeRequested -= MinimizeWindow;
         viewModel.WindowChrome.CloseRequested -= PerformClose;
         viewModel.WindowChrome.RestoreRequested -= ShowWindow;
@@ -467,6 +467,24 @@ public partial class MainWindow : Window
     }
 
     private void MinimizeWindow() => WindowState = WindowState.Minimized;
+
+    /// <summary>
+    /// Game-launch minimize path. The launch toast reports "minimized to tray", so hide the
+    /// window whenever a tray icon exists; without one a hidden window could not be restored,
+    /// so fall back to taskbar minimize (same rule as <see cref="PerformClose"/>).
+    /// The title-bar minimize button keeps <see cref="MinimizeWindow"/> — it asks for a
+    /// taskbar minimize, not a tray hide.
+    /// </summary>
+    private void MinimizeToTray()
+    {
+        if (systemTray is not null)
+        {
+            systemTray.HideWindow();
+            return;
+        }
+
+        WindowState = WindowState.Minimized;
+    }
 
     public void SetSystemTray(SystemTrayService trayService)
     {

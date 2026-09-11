@@ -99,8 +99,7 @@ public sealed partial class LogExportDialogViewModel : ViewModelBase, IModalCont
     public ObservableCollection<SettingOption> RangeOptions { get; }
 
     /// <summary>
-    /// Gets whether user data is selected, which carries local paths, the player UID, and the
-    /// install attribution code.
+    /// Gets whether user data is selected, which carries local paths and the player UID.
     /// </summary>
     public bool IsUserDataWarningVisible => IncludeUserData;
 

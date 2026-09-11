@@ -7,6 +7,7 @@ using Avalonia.Media;
 using Avalonia.Styling;
 using Avalonia.Threading;
 using Avalonia.VisualTree;
+using Cafe.Launcher.Avalonia.Constants;
 using Cafe.Launcher.Avalonia.Helpers;
 using Cafe.Launcher.Avalonia.Models;
 using Cafe.Launcher.Avalonia.Services.Diagnostics;
@@ -98,13 +99,21 @@ public sealed partial class MainWindowHeadlessTests
         context.ViewModel.LogExport.IncludeUserData = true;
         Dispatcher.UIThread.RunJobs();
 
+        // Anchor on the resource the card actually renders: matching the copy by hand meant a
+        // reworded or retranslated warning silently detached this locator from its element.
+        var expectedWarning = context.ViewModel.Shell.I18n[LocalizationKeys.LogExportUserDataWarning];
         var warning = context.Window.GetVisualDescendants().OfType<Border>()
             .Single(border =>
                 border.Classes.Contains("log-export-warning")
                 && border.IsEffectivelyVisible
                 && border.GetVisualDescendants().OfType<TextBlock>()
-                    .Any(text => text.Text?.Contains("install attribution code", StringComparison.Ordinal) == true));
+                    .Any(text => string.Equals(text.Text, expectedWarning, StringComparison.Ordinal)));
         var warningText = warning.GetVisualDescendants().OfType<TextBlock>().Single();
+        // Whether the shipped translation happens to be long is a copy fact, not a layout one.
+        // Supply the long warning here so this stays a wrapping test: asserting on the shipped
+        // string made it fail whenever the copy was shortened or translated more tersely.
+        warningText.Text = string.Concat(Enumerable.Repeat("Wrap this deliberately long warning line. ", 5));
+        Dispatcher.UIThread.RunJobs();
         var textTopLeft = warningText.TranslatePoint(default, warning);
 
         Assert.NotNull(textTopLeft);

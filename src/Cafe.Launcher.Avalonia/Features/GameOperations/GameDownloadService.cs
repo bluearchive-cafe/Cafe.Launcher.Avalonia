@@ -145,9 +145,12 @@ public sealed class GameDownloadService : IDisposable
         {
             session.Stop();
             IsRunningChanged?.Invoke();
+            // Only a live session is a user stop: shutdown calls Stop() with no active
+            // session, and logging there produced phantom "stopped by user" entries on
+            // every clean exit. The injected logger keeps the line off the process-wide
+            // static sink.
+            diagnostics.DebugAsync("GameDownload", "Download stopped by user").GetAwaiter().GetResult();
         }
-
-        LocalDiagnostics.LogSync(LogEntrySeverity.Debug, "GameDownload", "Download stopped by user");
     }
 
     public async Task<GameOperationResult?> ResumePersistedAsync(

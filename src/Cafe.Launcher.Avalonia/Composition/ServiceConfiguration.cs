@@ -27,7 +27,6 @@ public static class ServiceConfiguration
         services.AddSingleton<DiskSpaceService>();
         services.AddSingleton<SystemCultureSnapshot>();
         services.AddSingleton<LocalizationService>();
-        services.AddSingleton<ClickCodeService>();
         services.AddSingleton<ToastService>();
         services.AddSingleton<BestHttpCookieLibraryService>();
 

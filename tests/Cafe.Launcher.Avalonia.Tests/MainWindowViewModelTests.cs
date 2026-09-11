@@ -78,7 +78,6 @@ public sealed partial class MainWindowViewModelTests : IDisposable
             new GameProcessTracker());
         var gameLaunchService = new GameLaunchService(
             manifestValidationService,
-            new ClickCodeService(),
             gameRuntime,
             localizationService);
         var gameDownloadService = new GameDownloadService(

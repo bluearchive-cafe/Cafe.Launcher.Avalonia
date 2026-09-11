@@ -12,18 +12,15 @@ namespace Cafe.Launcher.Avalonia.Features.GameOperations;
 public sealed class GameLaunchService
 {
     private readonly ManifestValidationService manifestValidationService;
-    private readonly ClickCodeService clickCodeService;
     private readonly IGameRuntime gameRuntime;
     private readonly LocalizationService localizer;
 
     public GameLaunchService(
         ManifestValidationService manifestValidationService,
-        ClickCodeService clickCodeService,
         IGameRuntime gameRuntime,
         LocalizationService localizer)
     {
         this.manifestValidationService = manifestValidationService;
-        this.clickCodeService = clickCodeService;
         this.gameRuntime = gameRuntime;
         this.localizer = localizer;
     }
@@ -85,9 +82,6 @@ public sealed class GameLaunchService
                 Validation = validation
             };
         }
-
-        // Write clickCode attribution to game directory before launch
-        clickCodeService.WriteClickCodeToGamePath(target.WorkingDirectory);
 
         var runtimeConfiguration = GameRuntimeConfiguration.FromSettings(snapshot.Settings.GameRuntime);
 
