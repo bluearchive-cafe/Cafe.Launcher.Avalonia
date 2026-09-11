@@ -191,6 +191,51 @@ public sealed class LauncherApiClientTests
         Assert.Contains("buffered: 4096", ex.Message);
     }
 
+    [Fact]
+    public async Task DeserializeJsonAsync_WhenBodyIsNotJson_ReportsTheUrlWithoutItsQuery()
+    {
+        // 守卫（AUD-SEC-007）：诊断消息里的 URL 必须去掉查询串。资源面板把玩家 UID 放在查询
+        // 参数上且不发送任何鉴权头，而这条消息会写进恒被导出的 unified.log。
+        using var response = new HttpResponseMessage(HttpStatusCode.OK)
+        {
+            Content = new StringContent("<html>captive portal</html>", Encoding.UTF8, "application/json")
+        };
+
+        var ex = await Assert.ThrowsAsync<JsonException>(() =>
+            RemoteHttpRequestService.DeserializeJsonAsync<LauncherApiEnvelope<BaseConfigResponse>>(
+                response,
+                new Uri("https://example.test/config/get?uid=UID-SECRET-VALUE"),
+                JsonDefaults.Strict,
+                maxBytes: 1024 * 1024,
+                CancellationToken.None));
+
+        Assert.Contains("https://example.test/config/get", ex.Message, StringComparison.Ordinal);
+        Assert.DoesNotContain("UID-SECRET-VALUE", ex.Message, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public async Task DeserializeJsonAsync_WhenBodyExceedsLimit_ReportsTheUrlWithoutItsQuery()
+    {
+        using var response = new HttpResponseMessage(HttpStatusCode.OK)
+        {
+            Content = new StreamContent(new RepeatingStream(4096))
+            {
+                Headers = { ContentType = new MediaTypeHeaderValue("application/json") }
+            }
+        };
+
+        var ex = await Assert.ThrowsAsync<HttpRequestException>(() =>
+            RemoteHttpRequestService.DeserializeJsonAsync<LauncherApiEnvelope<BaseConfigResponse>>(
+                response,
+                new Uri("https://example.test/config/get?uid=UID-SECRET-VALUE"),
+                JsonDefaults.Strict,
+                maxBytes: 1024,
+                CancellationToken.None));
+
+        Assert.Contains("https://example.test/config/get", ex.Message, StringComparison.Ordinal);
+        Assert.DoesNotContain("UID-SECRET-VALUE", ex.Message, StringComparison.Ordinal);
+    }
+
     private sealed class JsonResponseHandler(string json) : HttpMessageHandler
     {
         protected override Task<HttpResponseMessage> SendAsync(

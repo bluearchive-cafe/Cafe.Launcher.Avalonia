@@ -199,6 +199,15 @@ internal static class RemoteHttpRequestService
         }
     }
 
+    /// <summary>
+    /// Renders a request URI for a diagnostic message without its query string. Query values can
+    /// carry credentials the endpoint accepts on their own — the resource panel's <c>uid</c> is one —
+    /// and diagnostics are written to the log that the export feature always bundles, so the
+    /// redaction happens here rather than at each call site.
+    /// </summary>
+    private static string DescribeUri(Uri? requestUri) =>
+        requestUri?.GetLeftPart(UriPartial.Path) ?? "(unknown)";
+
     private static HttpRequestException BuildResponseTooLargeException(
         Uri? requestUri,
         HttpResponseMessage response,
@@ -212,7 +221,7 @@ internal static class RemoteHttpRequestService
         return new HttpRequestException(
             $"Remote response exceeds the {MaxBufferedJsonBytes.ToString(invariant)}-byte limit "
             + $"(declared: {declared}, buffered: {actualBytes.ToString(invariant)}). "
-            + $"url: {requestUri?.ToString() ?? "(unknown)"} | "
+            + $"url: {DescribeUri(requestUri)} | "
             + $"status: {((int)response.StatusCode).ToString(invariant)} {response.ReasonPhrase} | "
             + $"content-type: {response.Content.Headers.ContentType?.ToString() ?? "(none)"}");
     }
@@ -235,7 +244,7 @@ internal static class RemoteHttpRequestService
 
         var message =
             $"Remote response is not valid JSON ({inner.Message}). "
-            + $"url: {requestUri?.ToString() ?? "(unknown)"} | "
+            + $"url: {DescribeUri(requestUri)} | "
             + $"status: {((int)response.StatusCode).ToString(invariant)} {response.ReasonPhrase} | "
             + $"content-type: {contentType} | "
             + $"content-length: {(contentLength.HasValue ? contentLength.Value.ToString(invariant) : "unknown")} | "
