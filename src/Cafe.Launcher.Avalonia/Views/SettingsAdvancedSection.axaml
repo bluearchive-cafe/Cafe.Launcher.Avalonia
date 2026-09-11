@@ -89,7 +89,7 @@
                                 Command="{Binding LogExport.OpenCommand}"
                                 AutomationProperties.Name="{Binding Shell.I18n[exportLogs]}">
                             <StackPanel Classes="button-content">
-                                <materialIcons:MaterialIcon Kind="Export"
+                                <materialIcons:MaterialIcon Kind="ExitToApp"
                                                             Width="{StaticResource Launcher.Icon.Sm}"
                                                             Height="{StaticResource Launcher.Icon.Sm}"/>
                                 <TextBlock Text="{Binding Shell.I18n[exportLogs]}"/>

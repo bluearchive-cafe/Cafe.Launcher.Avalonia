@@ -94,6 +94,9 @@ public sealed class InstallationOperationStateTests : IDisposable
 
         Assert.False(result.Success);
         Assert.Equal(localizer.T("gameCorruptedInstallationState"), result.Message);
+        // State failures leave every damage counter at zero, which is what keeps the
+        // launch journey from offering a repair prompt for a state problem.
+        Assert.False(result.Validation.HasDamagedFiles);
     }
 
     [Fact]

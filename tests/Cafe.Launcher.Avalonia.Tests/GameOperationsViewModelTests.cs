@@ -174,6 +174,38 @@ public sealed class GameOperationsViewModelTests
     }
 
     [Fact]
+    public async Task StartGameCommand_WhenLaunchVerificationFindsDamagedFiles_OffersRepairThatRunsOnConfirm()
+    {
+        var context = CreateContext();
+        context.Backend.LaunchResult = new GameLaunchResult
+        {
+            Success = false,
+            Message = "damaged",
+            Validation = new ManifestValidationResult
+            {
+                Success = false,
+                DamagedFileCount = 1,
+                MissingFileCount = 1,
+                Message = "damaged"
+            }
+        };
+        context.Backend.RepairResult = new GameOperationResult { Success = true, Message = "repaired" };
+        context.ViewModel.ApplySnapshot(ReadySnapshot());
+
+        await context.ViewModel.StartGameCommand.ExecuteAsync(null);
+
+        Assert.True(context.Dialogs.IsRepairConfirmVisible);
+        Assert.Equal(
+            context.Localizer.T("launchDamageRepairPrompt"),
+            context.Dialogs.RepairConfirmText);
+
+        await context.Dialogs.ConfirmRepairCommand.ExecuteAsync(null);
+
+        Assert.Equal(1, context.Backend.RepairCallCount);
+        Assert.False(context.Dialogs.IsRepairConfirmVisible);
+    }
+
+    [Fact]
     public async Task InstallOrUpdateCommand_WhenInstallationStateIsCorrupted_ShowsRepairDialog()
     {
         var context = CreateContext();

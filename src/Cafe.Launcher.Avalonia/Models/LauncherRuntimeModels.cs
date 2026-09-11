@@ -68,6 +68,14 @@ public sealed class ManifestValidationResult
 
     public int SizeMismatchFileCount { get; set; }
 
+    /// <summary>
+    /// Whether this result reports file-integrity damage rather than a state, path,
+    /// or configuration failure. Only the manifest file scan produces a non-zero
+    /// count; every other failure reports <see cref="Success"/> false with all
+    /// counts left at zero.
+    /// </summary>
+    public bool HasDamagedFiles => DamagedFileCount > 0;
+
     public string Message { get; set; } = "";
 }
 
