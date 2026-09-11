@@ -31,6 +31,7 @@ public sealed partial class UiStyleContractTests
         "Views/SettingsAboutSection.axaml",
         "Views/MainWindowDialogsOverlay.axaml",
         "Views/MainWindowLogViewerOverlay.axaml",
+        "Views/MainWindowLogExportOverlay.axaml",
         "Views/MainWindowToastOverlay.axaml",
         "Views/SetupWizardOverlay.axaml"
     ];

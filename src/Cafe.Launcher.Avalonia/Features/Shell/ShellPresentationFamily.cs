@@ -23,5 +23,6 @@ public sealed record ShellPresentationFamily(
     SettingsViewModel Settings,
     ResourcePanelViewModel ResourcePanel,
     LogViewerDialogViewModel LogViewer,
+    LogExportDialogViewModel LogExport,
     DebugViewModel Debug,
     ModalHostViewModel ModalHost);

@@ -27,9 +27,21 @@ public sealed class CrashReportTests : IDisposable
         Assert.Equal(Constants.BuildInfo.CommitSha, restored.BuildSha);
         Assert.Contains($"Commit: {Constants.BuildInfo.CommitSha}", restored.TechnicalDetails, StringComparison.Ordinal);
         Assert.Contains("%USERPROFILE%", restored.TechnicalDetails, StringComparison.Ordinal);
+        Assert.DoesNotContain(userProfile, restored.TechnicalDetails, StringComparison.OrdinalIgnoreCase);
+        // Both spellings are asserted: System.Text.Json escapes backslashes, so checking only for
+        // the raw path passes even while it sits in the file as "C:\\Users\\<name>".
         Assert.DoesNotContain(userProfile, persistedText, StringComparison.OrdinalIgnoreCase);
+        Assert.DoesNotContain(JsonEscaped(userProfile), persistedText, StringComparison.OrdinalIgnoreCase);
+        // The snapshot path is runtime-only. Persisting it would hand every reader of an exported
+        // archive the user's directory — and with it the OS account name — from a document that
+        // PRIVACY.md advertises as having its user directory replaced by %USERPROFILE%.
+        Assert.DoesNotContain(nameof(CrashReport.SnapshotPath), persistedText, StringComparison.Ordinal);
         Assert.Equal(report.SnapshotPath, restored.SnapshotPath);
     }
+
+    /// <summary>How a path is spelled inside a JSON document, with backslashes doubled.</summary>
+    private static string JsonEscaped(string value) =>
+        value.Replace("\\", "\\\\", StringComparison.Ordinal);
 
     [Theory]
     [InlineData(CrashOrigin.Main, "Main")]

@@ -160,8 +160,6 @@ internal static class LauncherStrings
 
     internal static string DebugCriticalErrorTriggered => GetRequiredString("debugCriticalErrorTriggered");
 
-    internal static string DebugExportCancelled => GetRequiredString("debugExportCancelled");
-
     internal static string DebugFatalCrashTriggered => GetRequiredString("debugFatalCrashTriggered");
 
     internal static string DebugGameOperations => GetRequiredString("debugGameOperations");
@@ -173,8 +171,6 @@ internal static class LauncherStrings
     internal static string DebugIdle => GetRequiredString("debugIdle");
 
     internal static string DebugLogEntryWritten => GetRequiredString("debugLogEntryWritten");
-
-    internal static string DebugLogExportUnavailable => GetRequiredString("debugLogExportUnavailable");
 
     internal static string DebugLogLevelSet => GetRequiredString("debugLogLevelSet");
 
@@ -566,11 +562,53 @@ internal static class LauncherStrings
 
     internal static string LocalManifestUnreadable => GetRequiredString("localManifestUnreadable");
 
+    internal static string LogExportConfirm => GetRequiredString("logExportConfirm");
+
+    internal static string LogExportContentGroup => GetRequiredString("logExportContentGroup");
+
     internal static string LogExportFailed => GetRequiredString("logExportFailed");
 
     internal static string LogExportFolderPickerTitle => GetRequiredString("logExportFolderPickerTitle");
 
+    internal static string LogExportIncludeCrashReports => GetRequiredString("logExportIncludeCrashReports");
+
+    internal static string LogExportIncludeCrashReportsDescription => GetRequiredString("logExportIncludeCrashReportsDescription");
+
+    internal static string LogExportIncludeLogs => GetRequiredString("logExportIncludeLogs");
+
+    internal static string LogExportIncludeLogsDescription => GetRequiredString("logExportIncludeLogsDescription");
+
+    internal static string LogExportIncludeSystemInfo => GetRequiredString("logExportIncludeSystemInfo");
+
+    internal static string LogExportIncludeSystemInfoDescription => GetRequiredString("logExportIncludeSystemInfoDescription");
+
+    internal static string LogExportIncludeUserData => GetRequiredString("logExportIncludeUserData");
+
+    internal static string LogExportIncludeUserDataDescription => GetRequiredString("logExportIncludeUserDataDescription");
+
+    internal static string LogExportRange => GetRequiredString("logExportRange");
+
+    internal static string LogExportRangeAll => GetRequiredString("logExportRangeAll");
+
+    internal static string LogExportRangeDescription => GetRequiredString("logExportRangeDescription");
+
+    internal static string LogExportRangeEmpty => GetRequiredString("logExportRangeEmpty");
+
+    internal static string LogExportRangeGroup => GetRequiredString("logExportRangeGroup");
+
+    internal static string LogExportRangeLast24Hours => GetRequiredString("logExportRangeLast24Hours");
+
+    internal static string LogExportRangeLast30Days => GetRequiredString("logExportRangeLast30Days");
+
+    internal static string LogExportRangeLast7Days => GetRequiredString("logExportRangeLast7Days");
+
+    internal static string LogExportRangeLastHour => GetRequiredString("logExportRangeLastHour");
+
     internal static string LogExportSucceeded => GetRequiredString("logExportSucceeded");
+
+    internal static string LogExportTitle => GetRequiredString("logExportTitle");
+
+    internal static string LogExportUserDataWarning => GetRequiredString("logExportUserDataWarning");
 
     internal static string LogFiles => GetRequiredString("logFiles");
 

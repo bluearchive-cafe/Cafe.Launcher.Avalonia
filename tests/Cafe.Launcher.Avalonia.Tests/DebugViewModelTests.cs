@@ -240,8 +240,7 @@ public sealed class DebugViewModelTests : IDisposable
             fatalCrash,
             new LauncherSettingsService(tempDir),
             operations,
-            shell,
-            new StubFilePickerService());
+            shell);
         return new TestContext(viewModel, operations, backend, logger, toastService, localizer, fatalCrash);
     }
 

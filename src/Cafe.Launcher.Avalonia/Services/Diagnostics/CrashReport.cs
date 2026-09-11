@@ -1,4 +1,5 @@
 using System;
+using System.Text.Json.Serialization;
 
 namespace Cafe.Launcher.Avalonia.Services.Diagnostics;
 
@@ -24,6 +25,12 @@ public sealed record CrashReport
 
     public required string TechnicalDetails { get; init; }
 
-    /// <summary>Absolute path of the persisted snapshot; populated after serialization.</summary>
+    /// <summary>
+    /// Absolute path of the persisted snapshot. Runtime-only: every reader receives the path from
+    /// its caller (the reporter gets it as a command-line argument, <see cref="CrashReportStore.TryRead"/>
+    /// re-derives it from its argument), so serializing it would only add the user's directory —
+    /// and with it the OS account name — to a document that is meant to be share-safe.
+    /// </summary>
+    [JsonIgnore]
     public string SnapshotPath { get; init; } = "";
 }

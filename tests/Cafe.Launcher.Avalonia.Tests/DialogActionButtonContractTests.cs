@@ -73,6 +73,7 @@ public sealed class DialogActionButtonContractTests
         {
             XDocument.Load(ProjectFile("Views/MainWindowDialogsOverlay.axaml")),
             XDocument.Load(ProjectFile("Views/MainWindowLogViewerOverlay.axaml")),
+            XDocument.Load(ProjectFile("Views/MainWindowLogExportOverlay.axaml")),
             XDocument.Load(ProjectFile("Views/MainWindowSettingsOverlay.axaml")),
             XDocument.Load(ProjectFile("Views/SetupWizardOverlay.axaml")),
             XDocument.Load(ProjectFile("Controls/ConfirmDialog.axaml")),
@@ -90,7 +91,7 @@ public sealed class DialogActionButtonContractTests
 
         // ADR-017：向导"上一步"改用 wizard-action tonal 族离开本计数；
         // 向导"下一步/完成"仍为 primary-action + dialog-action，继续受本契约约束。
-        Assert.Equal(28, actionButtons.Length);
+        Assert.Equal(30, actionButtons.Length);
         Assert.All(
             actionButtons,
             button =>
@@ -112,6 +113,28 @@ public sealed class DialogActionButtonContractTests
                             icon.Attribute("Height")?.Value);
                     });
             });
+    }
+
+    [Fact]
+    public void LogExportDialog_UsesExitToAppIcons()
+    {
+        var document = XDocument.Load(ProjectFile("Views/MainWindowLogExportOverlay.axaml"));
+        var headerIcon = document
+            .Descendants()
+            .Single(element =>
+                element.Name.LocalName == "MaterialIcon"
+                && element.Attribute("Width")?.Value == "{StaticResource Launcher.Icon.Md}");
+        var exportButton = document
+            .Descendants()
+            .Single(element =>
+                element.Name.LocalName == "Button"
+                && element.Attribute("Command")?.Value == "{Binding LogExport.ExportCommand}");
+        var buttonIcon = exportButton
+            .Descendants()
+            .Single(element => element.Name.LocalName == "MaterialIcon");
+
+        Assert.Equal("ExitToApp", headerIcon.Attribute("Kind")?.Value);
+        Assert.Equal("ExitToApp", buttonIcon.Attribute("Kind")?.Value);
     }
 
     private static bool HasAnyClass(XElement element, params string[] classes) =>

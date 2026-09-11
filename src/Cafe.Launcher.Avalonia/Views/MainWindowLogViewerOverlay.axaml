@@ -119,7 +119,7 @@
                 </Grid>
             </controls:DialogSurface.Content>
             <controls:DialogSurface.FooterLeading>
-                <Button Classes="flat-action dialog-action" Command="{Binding LogViewer.ExportCommand}"
+                <Button Classes="flat-action dialog-action" Command="{Binding LogExport.OpenCommand}"
                         AutomationProperties.Name="{Binding Shell.I18n[exportLogs]}">
                     <StackPanel Classes="button-content">
                         <materialIcons:MaterialIcon Kind="Export" Width="{StaticResource Launcher.Icon.Sm}" Height="{StaticResource Launcher.Icon.Sm}"/>

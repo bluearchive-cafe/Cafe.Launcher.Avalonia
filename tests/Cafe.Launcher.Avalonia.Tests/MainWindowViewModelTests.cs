@@ -164,7 +164,7 @@ public sealed partial class MainWindowViewModelTests : IDisposable
                     return Task.CompletedTask;
                 },
                 toastDelayAsync);
-        var debugViewModel = new DebugViewModel(toastService, new UnifiedLogger(Path.Combine(tempDir, Guid.NewGuid().ToString("N"))), errorHandling, new StubFatalCrashService(), settingsService, gameOperationsViewModel, shellViewModel, filePickerService);
+        var debugViewModel = new DebugViewModel(toastService, new UnifiedLogger(Path.Combine(tempDir, Guid.NewGuid().ToString("N"))), errorHandling, new StubFatalCrashService(), settingsService, gameOperationsViewModel, shellViewModel);
         var windowChromeViewModel = new WindowChromeViewModel(
             settingsViewModel, remoteContentViewModel, dialogsViewModel, gameOperationsViewModel,
             debugViewModel);
@@ -187,7 +187,13 @@ public sealed partial class MainWindowViewModelTests : IDisposable
                 windowChromeViewModel,
                 settingsViewModel,
                 resourcePanelViewModel,
-                new LogViewerDialogViewModel(testLogger, null, null, null, null, null, filePickerService),
+                new LogViewerDialogViewModel(testLogger, null, null, null, null),
+                new LogExportDialogViewModel(
+                    new LogExportService(new LocalDiagnostics(testLogger)),
+                    filePickerService,
+                    toastService,
+                    localizationService,
+                    diagnostics),
                 debugViewModel,
                 new ModalHostViewModel()),
             errorHandling,

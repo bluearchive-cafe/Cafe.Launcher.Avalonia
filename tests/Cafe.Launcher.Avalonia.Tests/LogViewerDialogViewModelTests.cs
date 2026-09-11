@@ -1,8 +1,5 @@
 using Cafe.Launcher.Avalonia.Features.Diagnostics;
-using Cafe.Launcher.Avalonia.Services;
 using Cafe.Launcher.Avalonia.Services.Diagnostics;
-using Cafe.Launcher.Avalonia.ViewModels;
-using Cafe.Launcher.Avalonia.Models;
 
 namespace Cafe.Launcher.Avalonia.Tests;
 
@@ -63,9 +60,7 @@ public sealed class LogViewerDialogViewModelTests : IDisposable
             null,
             null,
             null,
-            null,
-            _ => entriesLoaded.Task,
-            new StubFilePickerService());
+            _ => entriesLoaded.Task);
 
         var openTask = viewModel.OpenCommand.ExecuteAsync(null);
         Assert.True(viewModel.IsVisible);
@@ -221,35 +216,8 @@ public sealed class LogViewerDialogViewModelTests : IDisposable
         Assert.True(viewModel.IsFilterAllActive);
     }
 
-    [Fact]
-    public async Task ExportCommand_WhenExportFails_ShowsErrorAndWritesDiagnostic()
-    {
-        var toastService = new ToastService();
-        ToastNotification? toast = null;
-        toastService.ToastRaised += notification => toast = notification;
-        var diagnostics = new LocalDiagnostics(logger);
-        var viewModel = new LogViewerDialogViewModel(
-            logger,
-            new LogExportService(logger),
-            toastService,
-            new LocalizationService(),
-            diagnostics,
-            filePickerService: new StubFilePickerService
-            {
-                FolderPicker = (_, _) => Task.FromResult<string?>("\0")
-            });
-
-        await viewModel.ExportCommand.ExecuteAsync(null);
-
-        Assert.NotNull(toast);
-        Assert.Equal(ToastSeverity.Error, toast.Severity);
-        Assert.Contains("ArgumentException", toast.Message, StringComparison.Ordinal);
-        logger.Dispose(); // release Serilog file handle before reading
-        Assert.Contains("Log export failed.", File.ReadAllText(logger.LogFilePath), StringComparison.Ordinal);
-    }
-
     private LogViewerDialogViewModel CreateViewModel() =>
-        new(logger, null, null, null, null, null, new StubFilePickerService());
+        new(logger, null, null, null, null);
 
     public void Dispose()
     {

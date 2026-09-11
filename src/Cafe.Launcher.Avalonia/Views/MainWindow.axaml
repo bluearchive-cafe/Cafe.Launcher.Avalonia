@@ -593,6 +593,7 @@
         <views:MainWindowDebugOverlay/>
         <views:DesignGalleryOverlay/>
         <views:MainWindowLogViewerOverlay/>
+        <views:MainWindowLogExportOverlay/>
         <views:MainWindowDialogsOverlay/>
         <views:MainWindowToastOverlay/>
     </Grid>

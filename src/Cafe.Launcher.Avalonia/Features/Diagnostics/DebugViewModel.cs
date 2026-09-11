@@ -1,6 +1,5 @@
 using System;
 using System.ComponentModel;
-using System.IO;
 using System.Globalization;
 using System.Text.Json;
 using System.Threading;
@@ -28,9 +27,7 @@ public sealed partial class DebugViewModel : ViewModelBase, IModalContentViewMod
     private readonly IFatalCrashService fatalCrashService;
     private readonly LauncherSettingsService settingsService;
     private readonly IGameOperationActivity operations;
-    private readonly IFilePickerService filePickerService;
     private readonly ShellViewModel shell;
-    private readonly LogExportService? logExportService;
     private bool disposed;
 
     [ObservableProperty]
@@ -83,9 +80,7 @@ public sealed partial class DebugViewModel : ViewModelBase, IModalContentViewMod
         IFatalCrashService fatalCrashService,
         LauncherSettingsService settingsService,
         IGameOperationActivity operations,
-        ShellViewModel shell,
-        IFilePickerService filePickerService,
-        LogExportService? logExportService = null)
+        ShellViewModel shell)
     {
         this.toastService = toastService;
         this.unifiedLogger = unifiedLogger;
@@ -94,8 +89,6 @@ public sealed partial class DebugViewModel : ViewModelBase, IModalContentViewMod
         this.settingsService = settingsService;
         this.operations = operations;
         this.shell = shell;
-        this.filePickerService = filePickerService;
-        this.logExportService = logExportService;
 
         operations.ActivityPropertyChanged += OnOperationsPropertyChanged;
     }
@@ -440,43 +433,6 @@ public sealed partial class DebugViewModel : ViewModelBase, IModalContentViewMod
     }
 
     // ── File operations ──────────────────────────────────────────────────
-
-    [RelayCommand]
-    private async Task ExportLogsAsync()
-    {
-        if (logExportService is null)
-        {
-            LastActionResult = shell.I18n[LocalizationKeys.DebugLogExportUnavailable];
-            return;
-        }
-
-        Directory.CreateDirectory(LauncherUserDataDirectory.Root);
-        var dir = await filePickerService.PickFolderAsync(
-            shell.I18n[LocalizationKeys.LogExportFolderPickerTitle],
-            LauncherUserDataDirectory.Root);
-        if (string.IsNullOrWhiteSpace(dir))
-        {
-            LastActionResult = shell.I18n[LocalizationKeys.DebugExportCancelled];
-            return;
-        }
-
-        try
-        {
-            var zipPath = await logExportService.ExportAsync(dir);
-            LastActionResult = Format(shell.I18n[LocalizationKeys.LogExportSucceeded], zipPath);
-
-            // Open the containing folder
-            var folder = Path.GetDirectoryName(zipPath);
-            if (folder is not null)
-            {
-                ShellFolderOpener.OpenInFileManager(folder);
-            }
-        }
-        catch (Exception ex)
-        {
-            LastActionResult = Format(shell.I18n[LocalizationKeys.LogExportFailed], ex.Message);
-        }
-    }
 
     [RelayCommand]
     private void OpenDataDirectory()

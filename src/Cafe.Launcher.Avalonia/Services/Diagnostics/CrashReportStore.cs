@@ -28,10 +28,19 @@ public sealed class CrashReportStore
     private readonly string primaryDirectory;
     private readonly string fallbackDirectory;
 
+    /// <summary>User-data location of the crash snapshots.</summary>
+    internal static string DefaultPrimaryDirectory => Path.Combine(
+        LauncherUserDataDirectory.Root,
+        ReportDirectoryName);
+
+    /// <summary>Temp location the store falls back to when the user-data root is unwritable.</summary>
+    internal static string DefaultFallbackDirectory => Path.Combine(
+        Path.GetTempPath(),
+        "Cafe.Launcher",
+        ReportDirectoryName);
+
     public CrashReportStore()
-        : this(
-            Path.Combine(LauncherUserDataDirectory.Root, ReportDirectoryName),
-            Path.Combine(Path.GetTempPath(), "Cafe.Launcher", ReportDirectoryName))
+        : this(DefaultPrimaryDirectory, DefaultFallbackDirectory)
     {
     }
 

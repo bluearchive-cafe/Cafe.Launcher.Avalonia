@@ -30,4 +30,6 @@ public static class GamePaths
     public const string GameConfigFileName = "game-launcher-config.json";
     public const string LauncherSettingsFileName = "settings.json";
     public const string DownloadStateFileName = "download_state.json";
+    public const string NoticeStateFileName = "shown_notices.json";
+    public const string ClickCodeFileName = "clickCode";
 }

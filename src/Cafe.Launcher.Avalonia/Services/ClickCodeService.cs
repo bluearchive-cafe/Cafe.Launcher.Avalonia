@@ -14,8 +14,6 @@ namespace Cafe.Launcher.Avalonia.Services;
 /// </summary>
 public sealed class ClickCodeService
 {
-    private const string ClickCodeFileName = "clickCode";
-
     private static string UserDataDir => LauncherUserDataDirectory.Root;
 
     /// <summary>
@@ -26,7 +24,7 @@ public sealed class ClickCodeService
     public void SaveClickCode()
     {
         var exeDir = Path.GetDirectoryName(AppContext.BaseDirectory) ?? "";
-        var installerClickCode = Path.Combine(exeDir, ClickCodeFileName);
+        var installerClickCode = Path.Combine(exeDir, GamePaths.ClickCodeFileName);
         if (!File.Exists(installerClickCode))
             return;
 
@@ -37,7 +35,7 @@ public sealed class ClickCodeService
             if (match.Success)
             {
                 var hash = match.Groups[1].Value;
-                var userDataClickCode = Path.Combine(UserDataDir, ClickCodeFileName);
+                var userDataClickCode = Path.Combine(UserDataDir, GamePaths.ClickCodeFileName);
                 Directory.CreateDirectory(UserDataDir);
                 File.WriteAllText(userDataClickCode, hash);
             }
@@ -62,7 +60,7 @@ public sealed class ClickCodeService
     /// </summary>
     public void WriteClickCodeToGamePath(string gamePath)
     {
-        var sourcePath = Path.Combine(UserDataDir, ClickCodeFileName);
+        var sourcePath = Path.Combine(UserDataDir, GamePaths.ClickCodeFileName);
         if (!File.Exists(sourcePath))
             return;
 
@@ -71,7 +69,7 @@ public sealed class ClickCodeService
             // Defense-in-depth: validate that the target stays within the game directory
             var targetPath = GamePathValidator.GetSafePath(
                 Path.GetFullPath(gamePath),
-                ClickCodeFileName);
+                GamePaths.ClickCodeFileName);
             Directory.CreateDirectory(gamePath);
             File.WriteAllText(targetPath, File.ReadAllText(sourcePath).Trim());
         }
