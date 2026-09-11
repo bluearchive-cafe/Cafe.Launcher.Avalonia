@@ -1,7 +1,7 @@
 # Repository Map
 
-- 审计日期：2026-09-11（full 全量重审 + 同日按优先度修复）
-- HEAD：`66e103a` `refactor(diagnostics): 收敛日志导出标签、ErrorAsync 重载、模态命名与探测读取路径`（本轮修复尚在工作树，未提交）
+- 审计日期：2026-09-11（full 全量重审 + 同日按优先度修复 + 分支核查复核）
+- HEAD：`66e103a`（`main`）；本轮审计与修复位于分支 `fix/repository-audit-2026-09-11`（PR #13）
 - 发布状态：最新已发布 tag 为 `v1.1.0-beta.8`（tag 指向 `307edc3`，banner 已提交）；tag 之后 `main` 已累积 13 提交，含两项用户可见特性（HTTP/2 设置、日志导出时间范围与可选内容），下一版本尚未开始准备
 - 上次全量审计基线：`cffbd4d`
 
@@ -18,7 +18,7 @@
 - Feature：`Features/Shell`、`GameOperations`、`Settings`、`SetupWizard`、`Diagnostics`、`ResourcePanel`
 - 共享层：`Services/`（含 `Diagnostics/`、`GameRuntime/`、`Auth/`）、`Helpers/`、`Models/`、`Constants/`、`Controls/`、`Converters/`、根 `ViewModels/`
 - 组合根：`Composition/ServiceConfiguration.cs`
-- 单元测试：`tests/Cafe.Launcher.Avalonia.Tests/`（本机 1607 过 / 2 跳 / 0 失败）
+- 单元测试：`tests/Cafe.Launcher.Avalonia.Tests/`（本机 1608 过 / 2 跳 / 0 失败）
 - Headless UI：`tests/Cafe.Launcher.Avalonia.HeadlessTests/`（本机 173/173，含 7 份黄金基线）
 - 原型（不参与发布）：`prototypes/FluentMotionLab`（显式关闭 lock 文件）
 - CI：`.github/workflows/build.yml`（windows-latest）

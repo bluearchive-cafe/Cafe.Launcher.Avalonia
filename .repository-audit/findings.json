@@ -1228,6 +1228,34 @@
       "resolved_commit": null,
       "guard": null,
       "note": "build.yml:3-7 仅 push/PR 到 main 触发，两个 workflow 均无 schedule：闲置 HEAD 上出现的新公告要等下次推送才被检出，可加每周 schedule 关闭。另 .github/dependabot.yml 覆盖 github-actions 与根 nuget（CPM 正确形态），但不覆盖 prototypes/FluentMotionLab——该原型有意退出 CPM 与 lock 生成并在文件内固定 Avalonia 12.1.1，属有意为之而非疏漏。"
+    },
+    "AUD-MTN-019": {
+      "title": "5 个 scripts/*.ps1 以 CRLF 提交（违反已文档化的 LF 规则），且 .editorconfig 的行尾策略在 git 侧无强制",
+      "category": "maintainability",
+      "severity": "low",
+      "confidence": 95,
+      "status": "resolved",
+      "disposition": "Fix",
+      "recommendation_validation": "Verified",
+      "first_seen_commit": "66e103a",
+      "last_verified_commit": "66e103a",
+      "resolved_commit": null,
+      "guard": "LineEndingPolicyContractTests.GitAttributes_EnforcesTheLineEndingsEditorConfigDeclares（断言 .editorconfig 声明的每个 end_of_line 都被 .gitattributes 以相同 eol 强制；缺规则时报出具体扩展名）；另 .gitattributes 的 *.ps1 text eol=lf 由 git 自身在 checkout/add 时执行",
+      "note": "已修复（工作树（未提交））：Build-Distribution.ps1、Generate-LauncherStringsDesigner.ps1、New-AppIconAssets.ps1、Read-LauncherVersion.ps1、Rename-LauncherTokens.ps1 五个脚本由 CRLF 规范为 LF。策略本身早已文档化（AGENTS.md:29「Other repository text files use LF」、CLAUDE.md:13、.editorconfig 的 end_of_line = lf），漂移出在「策略只写在 .editorconfig 里」——那是编辑器配置，git 不读；core.autocrlf=true 下检出/入库都会重新引入 CRLF，因此任何一次用 CRLF 编辑器保存都会把整文件 diff 带进来。副产品：这 5 个文件各含一处损坏的行尾 \\r\\r\\n（重复转换的残留，仓库中仅此 5 处），孤独的 \\r 属控制字符，一并清除。修复含三步：转换文件、在 .gitattributes 为 .editorconfig 声明的各扩展名补 eol 规则（*.cs=crlf，axaml/csproj/props/targets/yml/yaml/json/md/ps1=lf）、加契约测试防止两份配置再次脱钩。"
+    },
+    "AUD-CI-007": {
+      "title": "PROJECT_CONVENTIONS §9 只写「main 受保护」，未说明保护范围：实际无 PR / 状态检查 / 评审要求",
+      "category": "ci/supply-chain",
+      "severity": "low",
+      "confidence": 90,
+      "status": "resolved",
+      "disposition": "Document",
+      "recommendation_validation": "Verified",
+      "first_seen_commit": "66e103a",
+      "last_verified_commit": "66e103a",
+      "resolved_commit": null,
+      "guard": null,
+      "note": "已修复（工作树（未提交），仅文档）：GitHub ruleset `Protect main branch`（id 22316019，enforcement active，target ~DEFAULT_BRANCH，仓库仅此一条 ruleset）实际只含 deletion 与 non_fast_forward 两条规则——禁止删除 main、禁止强推/非快进更新。**未**要求 PR、**未**要求状态检查、**未**要求评审人，因此直接向 main 推送快进提交在机制上允许，CI 红灯同样能合入。原文档措辞让读者以为存在 PR 门禁（AGENTS.md 亦写「Confirm verify.ps1 succeeds before requesting review」而未说明那是约定）。已把 §9 改写为「实际规则表 + 约定 vs 强制」两段，并在 AGENTS.md 的 Commit & PR 段落注明这些要求是约定而非门禁、附 §9 指引。仓库允许 merge/squash/rebase 三种合并方式，auto-merge 与合并后自动删分支均关闭。"
     }
   }
 }

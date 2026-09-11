@@ -10,7 +10,7 @@ The root `Cafe.Launcher.Avalonia.slnx` contains the application and both test pr
 
 - Requires the .NET 10 SDK. The application is a `net10.0` Avalonia Windows GUI (`WinExe`); Release builds are self-contained for `win-x64`.
 - Builds enforce nullable references, code style, and warnings as errors. A successful build has zero warnings.
-- C# uses 4-space indentation and CRLF; markup, JSON, Markdown, and PowerShell use LF. File-scoped namespaces are preferred. There is no separate lint or formatting command—the build analyzers are the enforcement point.
+- C# uses 4-space indentation and CRLF; markup, JSON, Markdown, and PowerShell use LF. File-scoped namespaces are preferred. There is no separate lint or formatting command—the build analyzers are the enforcement point, and `LineEndingPolicyContractTests` keeps `.editorconfig` and `.gitattributes` declaring the same endings.
 - Do not add remote telemetry. Diagnostics remain local and production code logs through `LocalDiagnostics`, except for the pre-DI bootstrap path in `Program.cs` and the logging implementation itself.
 
 ## Build, run, and test
