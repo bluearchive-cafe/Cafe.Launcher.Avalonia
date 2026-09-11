@@ -169,9 +169,22 @@ AI 辅助开发规范 —— 本文件为所有 AI 编码助手（Claude Code、
 
 ## 9. 分支与 PR 流程
 
-- `main` 分支受保护，应在功能分支上开发。
-- 合并前必须：`dotnet build` 零警告 → `dotnet test` 全部通过（至少受影响的测试 + 合约测试）→ plan mode 下的设计批准（如适用范围 > 2 个文件）。
-- 合并后手动推送（不自动 rebase squash）。
+- `main` 的**实际**保护规则（GitHub ruleset `Protect main branch`，2026-09-11 核对）：
+
+  | 规则 | 状态 |
+  |---|---|
+  | 禁止删除 `main` | ✅ 强制（`deletion`） |
+  | 禁止强制推送 / 非快进更新 | ✅ 强制（`non_fast_forward`） |
+  | 必须走 PR 才能合入 | ❌ 未强制 |
+  | 必须状态检查通过（CI 绿灯） | ❌ 未强制 |
+  | 必须评审人批准 | ❌ 未强制 |
+
+  即：向 `main` 推送快进提交在机制上是允许的，CI 红灯同样能合进 `main`。仓库允许 merge commit / squash / rebase 三种合并方式，关闭了 auto-merge 与「合并后自动删分支」。若要把 CI 变成真正的合并门禁，在 ruleset 上添加 `required_status_checks` 指向 build 的检查名即可。
+
+- 因此以下三条是**团队约定**，靠自觉遵守而非机制强制：
+  - 在功能分支上开发并走 PR。
+  - 合并前：`dotnet build` 零警告 → `dotnet test` 全部通过（至少受影响的测试 + 合约测试）→ plan mode 下的设计批准（如适用范围 > 2 个文件）。
+  - 合并后手动推送（不自动 rebase squash）。
 
 ---
 
