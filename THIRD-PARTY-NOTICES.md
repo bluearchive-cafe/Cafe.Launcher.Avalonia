@@ -5,10 +5,19 @@ Regenerate with `scripts/New-ThirdPartyNotices.ps1` after changing dependencies.
 
 Cafe Launcher itself is licensed under the MIT License; see `LICENSE`.
 
+## Self-contained .NET runtime
+
+Release archives are self-contained: besides the packages below they redistribute the .NET
+runtime and apphost bundled with the publishing SDK — `Microsoft.NETCore.App 10.0.11` on the machine that generated this file.
+Both are MIT-licensed (https://github.com/dotnet/runtime/blob/main/LICENSE.TXT) and are not
+resolved as NuGet packages, so they cannot appear in the table below: the table lists exactly
+what `dotnet restore` resolves, and the RID-specific publish closure is outside its scope.
+The archives carry this file and `LICENSE` next to the binaries.
+
 | Package | Version | License | Source |
 | --- | --- | --- | --- |
 | Avalonia | 12.1.2 | MIT ([text](https://licenses.nuget.org/MIT)) | https://avaloniaui.net/?utm_source=nuget&utm_medium=referral&utm_content=project_homepage_link |
-| Avalonia.Angle.Windows.Natives | 2.1.27548.20260419 | BSD-style ANGLE license, file-based in package ([text](https://chromium.googlesource.com/angle/angle/+/refs/heads/main/LICENSE)) | https://avaloniaui.net/ |
+| Avalonia.Angle.Windows.Natives | 2.1.27548.20260419 | LICENSE ([text](https://aka.ms/deprecateLicenseUrl)) | https://avaloniaui.net/ |
 | Avalonia.BuildServices | 11.3.2 | MIT ([text](https://licenses.nuget.org/MIT)) | https://avaloniaui.net/ |
 | Avalonia.Controls.ColorPicker | 12.1.2 | MIT ([text](https://licenses.nuget.org/MIT)) | https://avaloniaui.net/?utm_source=nuget&utm_medium=referral&utm_content=project_homepage_link |
 | Avalonia.Desktop | 12.1.2 | MIT ([text](https://licenses.nuget.org/MIT)) | https://avaloniaui.net/?utm_source=nuget&utm_medium=referral&utm_content=project_homepage_link |
@@ -21,7 +30,7 @@ Cafe Launcher itself is licensed under the MIT License; see `LICENSE`.
 | Avalonia.Themes.Fluent | 12.1.2 | MIT ([text](https://licenses.nuget.org/MIT)) | https://avaloniaui.net/?utm_source=nuget&utm_medium=referral&utm_content=project_homepage_link |
 | Avalonia.Win32 | 12.1.2 | MIT ([text](https://licenses.nuget.org/MIT)) | https://avaloniaui.net/?utm_source=nuget&utm_medium=referral&utm_content=project_homepage_link |
 | Avalonia.X11 | 12.1.2 | MIT ([text](https://licenses.nuget.org/MIT)) | https://avaloniaui.net/?utm_source=nuget&utm_medium=referral&utm_content=project_homepage_link |
-| AvaloniaUI.DiagnosticsSupport | 2.2.3 | No license metadata declared in package; consumed debug-only via `PrivateAssets` and not distributed in release builds | https://avaloniaui.net/ |
+| AvaloniaUI.DiagnosticsSupport | 2.2.3 | see package | https://avaloniaui.net/ |
 | CommunityToolkit.Mvvm | 8.4.2 | MIT ([text](https://licenses.nuget.org/MIT)) | https://github.com/CommunityToolkit/dotnet |
 | HarfBuzzSharp | 8.3.1.3 | MIT ([text](https://licenses.nuget.org/MIT)) | https://go.microsoft.com/fwlink/?linkid=868515 |
 | HarfBuzzSharp.NativeAssets.Linux | 8.3.1.3 | MIT ([text](https://licenses.nuget.org/MIT)) | https://go.microsoft.com/fwlink/?linkid=868515 |

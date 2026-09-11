@@ -52,6 +52,25 @@ foreach ($property in $assets.libraries.PSObject.Properties) {
     }
 }
 
+# The archives are self-contained, so the disclosure must name the runtime they redistribute
+# even though it never appears in project.assets.json. --list-runtimes reports every runtime
+# installed beside the SDK, so the newest one is taken rather than the first line.
+$runtimeVersion = $null
+foreach ($runtimeLine in (& dotnet --list-runtimes)) {
+    if ($runtimeLine -match '^Microsoft\.NETCore\.App\s+(\S+)') {
+        $candidate = $Matches[1]
+        if (-not $runtimeVersion -or [version]$candidate -gt [version]$runtimeVersion) {
+            $runtimeVersion = $candidate
+        }
+    }
+}
+$runtimeDescription = if ($runtimeVersion) {
+    "``Microsoft.NETCore.App $runtimeVersion`` on the machine that generated this file"
+}
+else {
+    "the ``Microsoft.NETCore.App`` runtime bundled with the pinned SDK"
+}
+
 $entries = @()
 foreach ($name in ($libraries.Keys | Sort-Object -CaseSensitive:$false)) {
     $package = $libraries[$name]
@@ -90,6 +109,15 @@ $lines = @(
     "Regenerate with ``scripts/New-ThirdPartyNotices.ps1`` after changing dependencies.",
     "",
     "Cafe Launcher itself is licensed under the MIT License; see ``LICENSE``.",
+    "",
+    "## Self-contained .NET runtime",
+    "",
+    "Release archives are self-contained: besides the packages below they redistribute the .NET",
+    "runtime and apphost bundled with the publishing SDK — $runtimeDescription.",
+    "Both are MIT-licensed (https://github.com/dotnet/runtime/blob/main/LICENSE.TXT) and are not",
+    "resolved as NuGet packages, so they cannot appear in the table below: the table lists exactly",
+    "what ``dotnet restore`` resolves, and the RID-specific publish closure is outside its scope.",
+    "The archives carry this file and ``LICENSE`` next to the binaries.",
     "",
     "| Package | Version | License | Source |",
     "| --- | --- | --- | --- |"
