@@ -508,6 +508,39 @@ public sealed class LauncherSettingsServiceTests : IDisposable
         Assert.Equal(GameRuntimeRunners.Native, reloaded.GameRuntime.Runner);
     }
 
+    [Fact]
+    public async Task ReadAsync_WhenSettingsFileIsMalformed_FallsBackToDefaults()
+    {
+        // Recover rather than throw: ReadAsync runs inside the startup try block, so a file the
+        // user (or a crash) left truncated must not be able to abort initialization. The other
+        // three file-backed stores each carry the same guard for their corrupt-input path.
+        Directory.CreateDirectory(tempDir);
+        await File.WriteAllTextAsync(settingsPath, "{");
+        var service = new LauncherSettingsService(settingsPath);
+
+        var reloaded = await service.ReadAsync();
+
+        Assert.Equal(new LauncherSettings().Language, reloaded.Language);
+        Assert.Equal(new LauncherSettings().ProxyMode, reloaded.ProxyMode);
+    }
+
+    [Fact]
+    public async Task ReadAsync_WhenSettingsFileCannotBeOpened_FallsBackToDefaults()
+    {
+        Directory.CreateDirectory(tempDir);
+        await File.WriteAllTextAsync(settingsPath, """{"language":"ja"}""");
+        await using var locked = new FileStream(
+            settingsPath,
+            FileMode.Open,
+            FileAccess.ReadWrite,
+            FileShare.None);
+        var service = new LauncherSettingsService(settingsPath);
+
+        var reloaded = await service.ReadAsync();
+
+        Assert.Equal(new LauncherSettings().Language, reloaded.Language);
+    }
+
     public void Dispose()
     {
         if (Directory.Exists(tempDir))
