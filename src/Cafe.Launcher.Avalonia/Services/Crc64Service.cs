@@ -1,4 +1,5 @@
 using System;
+using System.Buffers;
 using System.Buffers.Binary;
 using System.IO;
 using System.Globalization;
@@ -25,20 +26,31 @@ public sealed class Crc64Service
         CancellationToken cancellationToken = default)
     {
         ulong crc = XorOut;
-        var buffer = new byte[1024 * 1024];
+        // Rented rather than allocated: this method runs once per file across the whole manifest, so
+        // a fresh 1 MiB array per call would put every install and repair into the large object heap
+        // tens of thousands of times. The pool also keeps the buffer safe under the concurrent
+        // verification the download path performs.
+        var buffer = ArrayPool<byte>.Shared.Rent(1024 * 1024);
         long readTotal = 0;
 
-        await using var stream = new FileStream(filePath, FileMode.Open, FileAccess.Read, FileShare.ReadWrite);
-        while (true)
+        try
         {
-            var read = await stream.ReadAsync(buffer, cancellationToken).ConfigureAwait(false);
-            if (read == 0) break;
+            await using var stream = new FileStream(filePath, FileMode.Open, FileAccess.Read, FileShare.ReadWrite);
+            while (true)
+            {
+                var read = await stream.ReadAsync(buffer, cancellationToken).ConfigureAwait(false);
+                if (read == 0) break;
 
-            crc = Update(crc, buffer.AsSpan(0, read));
-            readTotal += read;
+                crc = Update(crc, buffer.AsSpan(0, read));
+                readTotal += read;
 
-            if (stream.Length > 0)
-                progress?.Invoke((int)Math.Round(readTotal * 100d / stream.Length));
+                if (stream.Length > 0)
+                    progress?.Invoke((int)Math.Round(readTotal * 100d / stream.Length));
+            }
+        }
+        finally
+        {
+            ArrayPool<byte>.Shared.Return(buffer);
         }
 
         progress?.Invoke(100);
