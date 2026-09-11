@@ -760,6 +760,9 @@ public static class LocalizationKeys
     /// <summary>Resource key for <c>launchCheckWithMessage</c>.</summary>
     public const string LaunchCheckWithMessage = "launchCheckWithMessage";
 
+    /// <summary>Resource key for <c>launchDamageRepairPrompt</c>.</summary>
+    public const string LaunchDamageRepairPrompt = "launchDamageRepairPrompt";
+
     /// <summary>Resource key for <c>launcherCoreRefreshFailed</c>.</summary>
     public const string LauncherCoreRefreshFailed = "launcherCoreRefreshFailed";
 

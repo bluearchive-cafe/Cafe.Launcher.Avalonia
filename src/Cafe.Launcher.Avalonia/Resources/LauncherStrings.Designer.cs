@@ -522,6 +522,8 @@ internal static class LauncherStrings
 
     internal static string LaunchCheckWithMessage => GetRequiredString("launchCheckWithMessage");
 
+    internal static string LaunchDamageRepairPrompt => GetRequiredString("launchDamageRepairPrompt");
+
     internal static string LauncherCoreRefreshFailed => GetRequiredString("launcherCoreRefreshFailed");
 
     internal static string LauncherInitFailed => GetRequiredString("launcherInitFailed");

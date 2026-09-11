@@ -55,6 +55,7 @@ public sealed class ManifestValidationServiceTests : IDisposable
 
         Assert.True(result.Success);
         Assert.Equal(0, result.DamagedFileCount);
+        Assert.False(result.HasDamagedFiles);
     }
 
     [Fact]
@@ -77,6 +78,7 @@ public sealed class ManifestValidationServiceTests : IDisposable
         Assert.Equal(2, result.DamagedFileCount);
         Assert.Equal(1, result.MissingFileCount);
         Assert.Equal(1, result.SizeMismatchFileCount);
+        Assert.True(result.HasDamagedFiles);
     }
 
     [Fact]
@@ -170,6 +172,7 @@ public sealed class ManifestValidationServiceTests : IDisposable
             ProxyModes.Direct);
 
         Assert.True(result.Success);
+        Assert.False(result.HasDamagedFiles);
     }
 
     [Fact]
