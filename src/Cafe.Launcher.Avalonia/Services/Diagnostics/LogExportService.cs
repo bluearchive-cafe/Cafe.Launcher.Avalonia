@@ -19,8 +19,11 @@ namespace Cafe.Launcher.Avalonia.Services.Diagnostics;
 /// </summary>
 public sealed class LogExportService
 {
-    /// <summary>Log title of every diagnostic this service writes.</summary>
-    private const string LogTitle = "LogExport";
+    /// <summary>
+    /// Log title of every diagnostic the log export feature writes, shared with the export
+    /// dialog so both halves of the feature tag their entries identically.
+    /// </summary>
+    internal const string LogTitle = "LogExport";
 
     private const int MaxRetainedLogFiles = 3;
 
@@ -248,8 +251,9 @@ public sealed class LogExportService
 
     /// <summary>
     /// Enumerates the lines of every entry inside the window, keeping continuation lines with their
-    /// entry. Shared by the export filter and the dialog's range probe so the two cannot disagree
-    /// about what a window holds.
+    /// entry. The file is streamed rather than buffered, so callers that stop early (the dialog's
+    /// range probe asks for the first hit only) never read past the answer. Shared by the export
+    /// filter and the probe so the two cannot disagree about what a window holds.
     /// </summary>
     private static IEnumerable<string> ReadLinesInWindow(
         string filePath,
@@ -258,14 +262,8 @@ public sealed class LogExportService
     {
         using var source = OpenSharedRead(filePath);
         using var reader = new StreamReader(source, Encoding.UTF8, detectEncodingFromByteOrderMarks: true);
-        var lines = new List<string>();
-        while (reader.ReadLine() is { } line)
-        {
-            cancellationToken.ThrowIfCancellationRequested();
-            lines.Add(line);
-        }
 
-        foreach (var record in LogEntryReader.Read(lines))
+        foreach (var record in LogEntryReader.Read(ReadLines(reader, cancellationToken)))
         {
             cancellationToken.ThrowIfCancellationRequested();
             if (!window.Contains(record.Timestamp))
@@ -273,6 +271,17 @@ public sealed class LogExportService
 
             foreach (var line in record.Lines)
                 yield return line;
+        }
+    }
+
+    private static IEnumerable<string> ReadLines(
+        StreamReader reader,
+        CancellationToken cancellationToken)
+    {
+        while (reader.ReadLine() is { } line)
+        {
+            cancellationToken.ThrowIfCancellationRequested();
+            yield return line;
         }
     }
 

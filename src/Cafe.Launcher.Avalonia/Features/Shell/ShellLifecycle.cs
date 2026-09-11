@@ -537,7 +537,7 @@ public sealed class ShellLifecycle : IShellRuntime
             case ModalKind.LogViewer:
                 logViewer.CloseCommand.Execute(null);
                 break;
-            case ModalKind.LogExportOptions:
+            case ModalKind.LogExport:
                 logExport.CloseCommand.Execute(null);
                 break;
             case ModalKind.Debug:
@@ -783,7 +783,7 @@ public sealed class ShellLifecycle : IShellRuntime
     {
         if (e.PropertyName == nameof(LogExportDialogViewModel.IsVisible))
         {
-            SyncModal(ModalKind.LogExportOptions, logExport.IsVisible, logExport);
+            SyncModal(ModalKind.LogExport, logExport.IsVisible, logExport);
         }
     }
 

@@ -43,18 +43,8 @@ public sealed class LocalDiagnostics
 
     internal string LogFilePath => logger.LogFilePath;
 
-    public async Task ErrorAsync(string title, Exception exception, CancellationToken cancellationToken = default)
-    {
-        try
-        {
-            await logger.LogAsync(LogEntrySeverity.Error, title, exception: exception,
-                cancellationToken: cancellationToken).ConfigureAwait(false);
-        }
-        catch
-        {
-            // Best-effort — diagnostic logging must never crash the app.
-        }
-    }
+    public Task ErrorAsync(string title, Exception exception, CancellationToken cancellationToken = default)
+        => ErrorAsync(title, message: null, exception, cancellationToken);
 
     /// <summary>
     /// Error carrying a caller-supplied context message alongside the exception, so callers that
@@ -63,7 +53,7 @@ public sealed class LocalDiagnostics
     /// </summary>
     public async Task ErrorAsync(
         string title,
-        string message,
+        string? message,
         Exception exception,
         CancellationToken cancellationToken = default)
     {

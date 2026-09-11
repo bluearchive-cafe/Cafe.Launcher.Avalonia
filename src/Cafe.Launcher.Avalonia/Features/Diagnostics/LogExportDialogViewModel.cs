@@ -19,9 +19,6 @@ namespace Cafe.Launcher.Avalonia.Features.Diagnostics;
 /// </summary>
 public sealed partial class LogExportDialogViewModel : ViewModelBase, IModalContentViewModel
 {
-    /// <summary>Log title of the diagnostics this view model writes.</summary>
-    private const string LogTitle = "LogExport";
-
     private static readonly TimeSpan RangeProbeDebounceDelay = TimeSpan.FromMilliseconds(200);
 
     private readonly LogExportService exportService;
@@ -208,7 +205,7 @@ public sealed partial class LogExportDialogViewModel : ViewModelBase, IModalCont
             // The hint is advisory: a failed probe hides it and leaves the export alone.
             IsEmptyRangeWarningVisible = false;
             await diagnostics.WarningAsync(
-                LogTitle,
+                LogExportService.LogTitle,
                 $"Probing the export range failed: {exception.Message}",
                 CancellationToken.None);
         }
@@ -252,7 +249,7 @@ public sealed partial class LogExportDialogViewModel : ViewModelBase, IModalCont
                 localizer.T(LocalizationKeys.LogExportFailed),
                 exception));
             await diagnostics.ErrorAsync(
-                LogTitle,
+                LogExportService.LogTitle,
                 $"Exporting to {destination ?? "an unpicked folder"} failed.",
                 exception,
                 CancellationToken.None);
@@ -281,7 +278,7 @@ public sealed partial class LogExportDialogViewModel : ViewModelBase, IModalCont
         catch (Exception exception)
         {
             await diagnostics.ErrorAsync(
-                LogTitle,
+                LogExportService.LogTitle,
                 $"Opening the export folder {destination} failed.",
                 exception,
                 CancellationToken.None);

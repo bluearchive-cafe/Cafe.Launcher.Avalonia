@@ -32,7 +32,7 @@ public sealed partial class ModalHostViewModel : ObservableObject
     public bool IsLogViewerInteractive => Top?.Kind == ModalKind.LogViewer;
 
     /// <summary>Gets whether the log export dialog is the active interaction layer.</summary>
-    public bool IsLogExportInteractive => Top?.Kind == ModalKind.LogExportOptions;
+    public bool IsLogExportInteractive => Top?.Kind == ModalKind.LogExport;
 
     /// <summary>Gets whether the debug panel is the active interaction layer.</summary>
     public bool IsDebugInteractive => Top?.Kind == ModalKind.Debug;
@@ -48,7 +48,7 @@ public sealed partial class ModalHostViewModel : ObservableObject
         && Top.Kind is not ModalKind.Settings
         && Top.Kind is not ModalKind.ResourcePanel
         && Top.Kind is not ModalKind.LogViewer
-        && Top.Kind is not ModalKind.LogExportOptions
+        && Top.Kind is not ModalKind.LogExport
         && Top.Kind is not ModalKind.Debug
         && Top.Kind is not ModalKind.DesignGallery
         && Top.Kind is not ModalKind.SetupWizard;

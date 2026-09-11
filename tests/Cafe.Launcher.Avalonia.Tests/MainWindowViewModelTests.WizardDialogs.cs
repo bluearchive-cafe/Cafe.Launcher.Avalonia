@@ -93,7 +93,7 @@ public partial class MainWindowViewModelTests
             case ModalKind.LogViewer:
                 viewModel.LogViewer.OpenCommand.Execute(null);
                 break;
-            case ModalKind.LogExportOptions:
+            case ModalKind.LogExport:
                 viewModel.LogExport.OpenCommand.Execute(null);
                 break;
             case ModalKind.Debug:
