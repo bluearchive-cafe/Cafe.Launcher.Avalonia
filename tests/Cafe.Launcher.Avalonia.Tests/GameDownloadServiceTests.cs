@@ -88,6 +88,62 @@ public sealed class GameDownloadServiceTests : IDisposable
     }
 
     [Fact]
+    public async Task Stop_WhenNoOperationIsRunning_DoesNotLogDownloadStopped()
+    {
+        // Shutdown calls Stop() twice (lifecycle prepare + dispose) with no active session.
+        // Only a real session counts as a user stop, so the log must stay clean.
+        using var apiClient = new LauncherApiClient(new HttpClientHandler(), new AuthorizationHeaderFactory(), new PatchUrlGroupService());
+        using var logger = new UnifiedLogger(Path.Combine(tempDir, "logs"));
+        var diagnostics = new LocalDiagnostics(logger);
+        using var service = CreateService(
+            apiClient,
+            new LauncherSettingsService(Path.Combine(tempDir, "settings.json")),
+            Path.Combine(tempDir, "download_state.json"),
+            diagnostics: diagnostics);
+
+        service.Stop();
+        service.Stop();
+        // Sentinel proves the sink is live, so the negative assertion cannot pass vacuously.
+        await diagnostics.DebugAsync("StopLogSentinel", "sentinel");
+        logger.Dispose();
+        var logText = await File.ReadAllTextAsync(logger.LogFilePath);
+
+        Assert.Contains("sentinel", logText, StringComparison.Ordinal);
+        Assert.DoesNotContain("Download stopped by user", logText, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public async Task Stop_WhenOperationIsRunning_LogsDownloadStopped()
+    {
+        var gamePath = Path.Combine(tempDir, "YostarGames", "BlueArchive_JP");
+        var settingsService = new LauncherSettingsService(Path.Combine(tempDir, "settings.json"));
+        await settingsService.SaveAsync(new LauncherSettings { GamePath = gamePath });
+        var fileBytes = Encoding.UTF8.GetBytes("stopped-content");
+        var manifestFile = await CreateManifestFileAsync(tempDir, "data/file.bin", fileBytes);
+        using var apiClient = CreateManifestApiClient(manifestFile);
+        var downloader = new ControlledFileDownloadService(fileBytes);
+        using var logger = new UnifiedLogger(Path.Combine(tempDir, "logs"));
+        using var service = CreateService(
+            apiClient,
+            settingsService,
+            Path.Combine(tempDir, "download_state.json"),
+            downloader,
+            diagnostics: new LocalDiagnostics(logger));
+        var snapshot = CreateSnapshot(gamePath);
+        snapshot.RuntimeState = LauncherRuntimeState.NotInstalled;
+
+        var operation = service.InstallOrUpdateAsync(snapshot, _ => { });
+        await downloader.DownloadStarted.Task.WaitAsync(TimeSpan.FromSeconds(2));
+
+        service.Stop();
+        await operation.WaitAsync(TimeSpan.FromSeconds(2));
+        logger.Dispose();
+        var logText = await File.ReadAllTextAsync(logger.LogFilePath);
+
+        Assert.Contains("Download stopped by user", logText, StringComparison.Ordinal);
+    }
+
+    [Fact]
     public void RetryDomainOrder_ReturnsExpectedSequence()
     {
         Assert.Equal([1, 1, 1, 1, 0, 0, 0, 1, 1, 1], FileDownloadService.RetryDomainOrder);
