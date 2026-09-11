@@ -1,84 +1,94 @@
 # 仓库审计报告（当前状态）
 
-- 审计日期：2026-09-10（复核轮 2026-09-09 起）
-- 审计对象：`d342641` 网络专项后续复核 + 工作树修复（`9a24b97` 三项 + `e9f823a` 性能一项 + `6a686ce` 优化四项 + `d6fee4e` 残留收尾，`main`）
-- 模式：`focused` 网络子系统专项（专项修复 → 复核四项修复 → 复核优化建议逐批落地）；上一审计 `fca9bc0`（release，beta.8）；全量基线 `cffbd4d`
-- 历史报告：`.repository-audit/history/2026-09-09-network-audit.md`（首轮专项来源）、`2026-09-09-release-audit-beta.8.md`、`2026-09-09-full-audit-r2.md`
+- 审计日期：2026-09-11（full 全量重审 + 同日按优先度修复）
+- 审计对象：`66e103a`（`main`）+ 本轮修复工作树（未提交）
+- 模式：**full 全量重审**（架构、安全、依赖与发布、测试、性能、可维护性六个域）
+- 上次全量基线：`cffbd4d`（2026-09-09，全量 r2）
+- 风险画像：desktop launcher / updater（下载完整性、文件系统安全、发布供应链、更新恢复 = critical）
+- 历史报告：`.repository-audit/history/2026-09-10-network-review-audit.md`（上一份当前态报告，本轮归档）
 
 ## 当前结论
 
-**网络子系统专项审计完成，AUD-NET-001/002/003 已修复；复核再发现四项（AUD-NET-004…007）并全部修复，复核优化建议第一项亦落地（AUD-PERF-008），均通过守卫测试：0 Critical / 0 High / 0 Medium / 0 新增 open。** 网络架构整体健康（集中连接池与代理租约、每跳重定向复验、有界重试、Range 续传 + CRC64、64 MB JSON 守卫）。
+**仓库整体健康：0 Critical / 0 High。** 本轮全量重审新增 1 项 Medium、13 项 Low、4 项 Informational；其中 **11 项已修复并经 `verify.ps1` 全量验证**，其余为信息项、需决策项，或有意保留（理由见下表）。此前 66 项 resolved 发现未发现回归。
 
-最新修复证据（本机实跑，`e9f823a`）：`verify.ps1` exit 0——全量单元 **1557 通过 / 2 跳过**（Windows 本地口径；CI Linux 权威口径 1553 + 本次 4 条新测试，一致），Headless **167/167**，手写代码行覆盖 **85.40%**、分支 **92.46%**（复算口径，均高于仓库基线），Release 构建 0 警告 0 错误。**台账 AUD-NET-004…007（`9a24b97`）与 AUD-PERF-008（`e9f823a`）均已标记 resolved。**
-
-首轮专项修复摘要（`d342641`）：
-
-1. **AUD-NET-001**：新增 `Services/ResponseBodyReader`（默认 60s 空闲读预算），接入 `FileDownloadService` 下载循环、`ImageCacheService` 图片读取与 `RemoteHttpRequestService.DeserializeJsonAsync` 流式复制；停滞转为 `HttpRequestException`，自然落入既有换源重试 + Range 续传。
-2. **AUD-NET-002**：`RemoteHttpRequestService.SendAsync` 连接标志改为 `IWebProxy? connectionProxy`，逐 URI 判定生效代理（`EgressesThroughProxy`：`IsBypassed` 或 `GetProxy` 返回原 URI → 直连并保留本地 DNS 私网校验）；`HttpClientLease` 暴露 `ConnectionProxy`，由 `HttpClientFactory` 填充，下载/图片/清单三处调用点改用租约代理而非设置枚举。
-3. **AUD-NET-003**：`BuildDownloadUrl` 保留 CDN 域名的 Authority（含显式端口）与路径前缀，不再静默剥离。
-
-复核修复摘要（`9a24b97`）：
-
-4. **AUD-NET-004**：`ResolveProxyUrl` 与 `CreateProxyAsync` 构造点将 legacy `socks=` 注册表条目及裸 `socks://` 统一规范化为 `socks5://`——`SocketsHttpHandler` 仅接受 http/https/socks4/4a/5，裸方案首个经代理请求即抛 `NotSupportedException`（.NET 10.0.11 运行时实证）；原守卫测试同步纠正，并新增真连接守卫。
-5. **AUD-NET-005**：自更新检查的代理端点超时（非调用方取消的 `TaskCanceledException`）与 HTTP 失败同样降级到 GitHub Releases 兜底；用户取消仍直接传播。
-6. **AUD-NET-006**：`ResourcePanelApiClient` 改走 `RemoteHttpRequestService.SendAsync` 统一手动重定向路径（每跳 URL 复验）；裸 `GetAsync` 在 `AllowAutoRedirect=false` 的池化 handler 下任何 3xx 都会硬失败并无差别重试。注释 10s/实际 30s 的文档漂移一并修正。
-7. **AUD-NET-007**：API 信封业务码非 200 改抛 `LauncherApiEnvelopeException`（`InvalidOperationException` 子类）并在重试过滤器中排除——服务器明确拒绝不再重试 3 次；协议完整性失败（body/data 为空）维持可重试语义。
-
-性能优化落地（`e9f823a`，2026-09-10，台账 AUD-PERF-008）：
-
-8. **DNS 校验结果短 TTL 缓存**：`RemoteHttpUrlValidator` 按主机缓存最近一次全公网成功解析（默认 30s），万级文件下载的解析调用从「与文件数成正比」收敛为「与主机数成正比」；私网/空/抛错结果永不缓存，SSRF 守卫容忍窗被 TTL 界定，瞬时失败保持可重试。守卫测试以注入时钟钉住 30s 边界（命中复用 / 恰达边界重解析 / 私网与失败不入缓存）。
-
-复核优化批次（`6a686ce`，2026-09-10，台账 AUD-PERF-009 / AUD-REL-007 / AUD-PERF-010 / AUD-MTN-014）：
-
-9. **handler 连接默认值**：抽出 `HttpClientFactory.ConfigureConnectionDefaults` 统一直连与代理两处 handler——`ConnectTimeout=15s`（原运行时默认 100s，应用内最短请求超时为自更新 15s）、HTTP/2 `KeepAlivePingDelay=30s`（死多路复用连接在 ping 间隔+超时内暴露，而非等 60s 停滞预算）。
-10. **启动远端读取整体预算**：`LauncherCoreService.LoadAsync` 六个并发 API 读取挂 30s linked-CTS 预算（原最坏 ~92s 才降级），到点落入既有降级路径返回 `RemoteUnavailable`；预算 ≥ 单次请求超时，慢网首次尝试不被砍；调用方取消语义不变。
-11. **下载进度内存计数**：`RecordFileProgress` 正常路径从每 256KB 块一次磁盘 stat 改为 `Interlocked.Add`；重置路径保留 stat 重采样，`FileDownloadService` 超长临时文件删除分支补发 reset。
-12. **image-cache 过期清扫**：构造时后台清扫 `.cache`/`.remote`/遗留 `.tmp` 中 mtime 超 30 天的条目（原先只影响 `.remote` 命中判定、文件永不过期），被逐出内容需要时重新下载。
-
-残留收尾（`d6fee4e`，2026-09-10，台账 AUD-NET-008）：
-
-13. **自更新两端点统一手动重定向路径**：`FetchProxyReleasesAsync` 从裸 `GetAsync`、`FetchGitHubReleasesAsync` 从不带校验的轻量重载，均改走 `RemoteHttpRequestService.SendAsync`（每跳 URL 复验 + `connectionProxy` 逐 URI 直连判定）——全仓库自此无裸 HttpClient 调用。实现注意：`LauncherApiBaseUrl` 尾斜杠 + 路径头斜杠的字符串拼接会产生双斜杠，改用 `Uri(Uri, string)` 相对解析（既有 `RequestPath` 断言捕获）。
-
-未采纳（维持分析记录）：下载重试退避——与原版 Electron 启动器的逐次立即换源语义是显式设计契约（`FileDownloadService` 注释与既有测试固化）；手动代理模式——feature 级（需 UI、四份 resx 本地化与产品决策），不在修复范畴。
-
-## Open 项
-
-| ID | 严重度 | 状态 | 摘要 |
-|---|---|---|---|
-| AUD-ARCH-003 | Low | deferred | `RemoteContentViewModel` 直接持有 `DispatcherTimer` |
-| AUD-MTN-001 | Low | deferred | `RemoteContentViewModel` 拆分 |
-| AUD-DEP-002 | Low | accepted-risk | `Shirasagi0012.MaterialColorUtilities` 单维护者风险，已有年度复审与 fork 预案 |
-| AUD-TST-001 | Low | deferred / No Action | 真实限速测试使用 `Stopwatch` 下限断言 |
-
-AUD-NET-001…003（`d342641`）、AUD-NET-004…007（`9a24b97`）、AUD-PERF-008（`e9f823a`）与 `6a686ce` 的 AUD-PERF-009 / AUD-REL-007 / AUD-PERF-010 / AUD-MTN-014 均已修复（守卫测试齐备），见上文修复摘要。
-
-## Recommended Priorities
-
-1. 合并/发布前运行 `verify.ps1`（`e9f823a` 上 exit 0：全量单元 + 覆盖率棘轮 + Release 门禁均过）。
-
-## Release Evidence（v1.1.0-beta.8，来自同日 release 审计）
+最终验证证据（本机实跑 `verify.ps1`，工作树，**exit 0**）：
 
 | 检查 | 结果 |
 |---|---|
-| `verify.ps1` | exit 0；Debug/Release 0 警告、0 错误 |
-| 单元测试 | 1524 通过、2 跳过、0 失败 |
-| Headless 测试 | 167/167 通过 |
-| 覆盖率棘轮 | 手写 C# 行 85.14%，分支 92.16%，均高于基线 |
-| HEAD CI | run `34351085205` success |
-| Windows 便携包 / 安装器 | 便携 zip 与 Inno Setup 7.1.0 安装器均按目标 tag 构建成功 |
-| 依赖漏洞 | `dotnet list package --vulnerable --include-transitive`：无已知漏洞包 |
-| Actions 供应链 | 17/17 `uses:` 固定 40 位 SHA；权限最小化维持 |
+| `scripts/Test-LocalizationContract.ps1` | 通过（verify 首道门禁，失败即短路） |
+| Debug 构建 | **0 警告 / 0 错误** |
+| 单元测试 | **1607 通过 / 2 跳过 / 0 失败**（1609；本轮 +12 条守卫） |
+| Headless UI 测试 | **173 / 173 通过**（含 7 份黄金基线） |
+| 手写代码覆盖率 | 行 **86.00%**（14375/16716）、分支 **92.93%**（2261/2433） |
+| 覆盖率棘轮 | 通过，余量 **+0.15pp 行 / +0.23pp 分支**（基线已收紧至 85.85% / 92.70%） |
+| Release 构建（win-x64） | **0 警告 / 0 错误** |
+| Release 资源合约测试 | 18 通过 |
 
-## Changes Since Previous Audit
+## 本轮修复（11 项，均带守卫）
 
-`fca9bc0..dd06253`：1 提交（`feat(network): 新增默认启用的 HTTP/2 设置`）。首轮专项已审：工厂 `DefaultRequestVersion=2.0` + `RequestVersionOrLower`、仅影响其后创建的客户端、设置在启动早期应用、`HttpClientFactoryTests`/`LauncherCoreServiceTests`/`LauncherSettingsServiceTests`/`SettingsEditorTests`/`RemoteHttpUrlValidatorTests` 均有覆盖。
+按报告优先度落地，每项都有对应的回归/契约守卫，全部包含在 `verify.ps1` 的 1607 条单元测试中。
 
-`d342641..9a24b97`：1 提交（`fix(network)` 复核四项修复，见上文摘要）。首轮专项后的独立复核（非全量重审）：自源码通读网络面（工厂/代理/校验/重试/下载/API/图片/清单/自更新/资源面板），发现并修复 AUD-NET-004…007；优化面建议（DNS 校验缓存、`ConnectTimeout`/H2 keep-alive ping、启动整体 deadline、手动代理模式等）记录于当轮分析输出。
+| ID | 严重度 | 修复内容 | 守卫 |
+|---|---|---|---|
+| AUD-SEC-006 | Low | 崩溃快照 `SnapshotPath` 改为仅运行时字段（`[JsonIgnore]`），落盘文档不再含任何路径，PRIVACY.md 的脱敏声明成立 | `CrashReportTests` 现同时断言原始与 JSON 转义两种拼写、并断言字段缺席；已用「临时移除 `[JsonIgnore]`」实验确认守卫会失败（修复前该断言恒真：STJ 把 `\` 转义为 `\\`） |
+| AUD-PERF-011 | Medium | 修复会话不再对健康文件整读两遍：规划阶段算出的 CRC 连同大小/最后写入时间见证交给安装阶段复用 | `CheckHashAsync_WhenFilesMatchManifest_PlansTheirHashesForTheInstallPass` + 执行器两条正反断言（同一布局，仅见证不同：命中则跳过、失效则重读并失败） |
+| AUD-TST-006 | Low | 补 `settings.json` 损坏/不可读的恢复守卫（此前该 catch 体零命中） | `ReadAsync_WhenSettingsFileIsMalformed/…CannotBeOpened_FallsBackToDefaults` |
+| AUD-TST-009 | Low | CI 上传 `TestResults/Golden/*.png`，黄金截图失败的 actual/diff 产物可取回 | — |
+| AUD-MTN-015 | Low | 18 处散文 `[LogTitle]` 规范为模块标签（LogViewer/GameUninstall/FileDownload/LauncherUpdate/Background/Toast/Settings），描述移入 message | `DiagnosticsLogTitleContractTests` 源码扫描契约 + 一条防止扫描模式漂移后静默通过的自检 |
+| AUD-TST-007 | Low | 覆盖率基线 0.8430/0.8899 → 0.8585/0.9270，并在每次运行打印实测与基线差值 | `coverage.ps1` 的 `Baseline slack` 输出 |
+| AUD-CI-006 | Low | 三处 `dotnet-version: 10.0.x` 固定为 `10.0.302`（已核对 .NET 10 发布元数据确认存在）；修正 README 的「由 global.json 固定」失实表述 | — |
+| AUD-DEP-008 | Low | notices 新增「Self-contained .NET runtime」小节（运行时版本由 `dotnet --list-runtimes` 取最高版本，实测 10.0.11 与发布产物一致）；`Build-Distribution.ps1` 把 `LICENSE` 与 notices 复制进每个 RID 发布目录，五条打包路径均从该目录取件 | `ThirdPartyNoticesContractTests` 三条（notices 声明、生成器仍输出该节、打包脚本仍复制） |
+| AUD-SEC-007 | Low | 诊断消息中的 URL 去掉查询串（资源面板 UID 即在此，而该消息写入恒被导出的 `unified.log`） | `DeserializeJsonAsync` 两条守卫覆盖解析失败与超限两个触发路径 |
+| AUD-TST-008 | Low | `DialogsViewModelTests` 三处门控等待加 `WaitAsync(GateTimeout)`，回归时失败而非挂住 runner | 同项 |
+| AUD-PERF-013 | Low | `Crc64Service.ComputeFileAsync` 的 1 MiB 缓冲改为 `ArrayPool` 租用（原每次调用一次 LOH 分配） | 既有 CRC-64/XZ 规范向量（纯分配改动，未改算法） |
 
-`9a24b97..e9f823a`：1 提交（`perf(network)` DNS 校验缓存，即上述优化建议第一项立案落地为 AUD-PERF-008）。
+## 仍开放项
 
-`e9f823a..6a686ce`：1 提交（`perf(network)` 四项优化落地，见上文第 9–12 项）。仅手动代理模式维持分析输出记录（feature 级）。
+| ID | 严重度 | 状态 | 摘要与不修的理由 |
+|---|---|---|---|
+| AUD-ARCH-005 | Low | open / **需要决策** | `ModalHostViewModel.IsDialogLayerInteractive` 有属性、有测试、无绑定：对话框层没有交互闸口。当前无用户可见缺陷（隔离由主叠层禁用 + 先关后开 + 等 ZIndex 次序隐式承担，本轮未能构造可达失败叠栈）。是绑定为闸口，还是删除并在模态 ADR 中记录隔离策略，属架构决策 |
+| AUD-DEP-009 | Informational | **product-decision** | 发行产物无代码签名、无随附 `SHA256SUMS`。发布摘要清单成本极低（beta.8 发布审计曾手工算出），代码签名需证书决策 |
+| AUD-MTN-017 | Low | open | 新增主叠层模态仍需约 14 个未守卫编辑点，其中 `ShellLifecycle` 语言刷新清单漏改静默失败。需要一次结构性收敛，非本轮范围 |
+| AUD-PERF-012 | Informational | open | 校验/安装/卸载阶段每文件一次 UI 线程 `Post` 无合并。机制已核，**队列深度后果未测量**，故按 advisory 保留 |
+| AUD-ARCH-006 | Informational | open | `ModalEntry.Content` 只被写入、从不被读取，模态契约文档高估现实 |
+| AUD-ARCH-007 | Informational | open | `LocalDiagnostics.syncLogger` 静态可变（26 处调用点用静态重载）。生产端仅一个实例，当前零影响 |
+| AUD-MTN-018 | Informational | open | `BannerImageDecoder` 复制了 `BackgroundImageDecoder` 的钳制算法 |
+| AUD-SEC-008 | Informational | open | 两处可预测 `*.tmp` 写路径未纳入随机名硬化；利用需先具备游戏目录写权限，无权限提升 |
+| AUD-DEP-010 | Informational | open | 漏洞门禁为推送触发（无 `schedule`）；Dependabot 不覆盖 `prototypes/`（该原型有意退出 CPM） |
+| AUD-ARCH-003 / AUD-MTN-001 / AUD-TST-001 | Low | deferred | 与上轮一致：`RemoteContentViewModel` 直接持 `DispatcherTimer`（`:27`/`:330`，714 行）与其拆分、以及限速测试的 `Stopwatch` 下限断言。本轮复验该文件未变，deferred 状态仍成立 |
+| AUD-DEP-002 | Low | accepted-risk | `Shirasagi0012.MaterialColorUtilities` 单维护者风险，已有年度复审与 fork 预案 |
 
-## Audit Method and Limitations
+## 变更集（`cffbd4d..66e103a`，18 提交 / 59 生产文件 / 47 测试文件）
 
-网络专项按源码通读全部网络面文件，框架语义（`HttpClient.Timeout` 与 `ResponseHeadersRead` 边界、`IWebProxy.IsBypassed` 直连语义、`SocketsHttpHandler.Dispose` 与在途请求）按 .NET 文档与 dotnet/runtime 核对；用应用自身授权算法实时查询官方 CDN 接口验证数据形态；网络回归集实跑。未复现真实连接停滞（AUD-NET-001 基于源码 + 框架语义，置信 90）。复核轮：AUD-NET-004 的 NotSupportedException 已在 .NET 10.0.11 独立控制台实证（与产品目标框架一致）；socks 修复以 .invalid 代理主机真连接守卫固化。未审网络面之外的领域（沿用同日全量 r2 与 release 审计结论）。
+本轮修复之前，变更集内新增功能面仅两处，均已逐行审读：
+
+1. **日志导出时间范围与可选内容**（`281e9bc`、`66e103a`）：`Services/Diagnostics/{LogExportOptions,ExportWindow,LogEntryReader}.cs` 与 425 行重写的 `LogExportService`。设计面健康——读路径流式化（`ReadLinesInWindow` 惰性喂给 `LogEntryReader`，范围探测 `Any()` 首条命中即短路）、`.partial` 临时文件 + `File.Move` 原子落盘、`unified.log` 恒入档而轮转文件无命中即跳过、失败项记 `skipped` 而非静默丢失、取消与重入语义完整。
+2. **网络修复与优化批次**（`d342641`…`d6fee4e`）：统一手动重定向、逐 URI 代理判定、DNS 短 TTL 缓存、`ConnectTimeout`/HTTP-2 keep-alive、启动 30s 整体预算、下载进度内存计数、image-cache 清扫。
+
+## 验证与健康面
+
+- **未发现任何 resolved 发现回归**；本轮抽查的近期守卫测试均随 `verify.ps1` 全绿。
+- **网络面**：重定向逐跳复验且显式拒绝 HTTPS→HTTP 降级（`RemoteHttpRequestService.cs:24-67`），全仓库无裸 `HttpClient` 调用；DNS 短 TTL 缓存只在全公网解析成功时命中，私网/空/抛错永不缓存；启动 30s 预算与调用方取消语义正确分离。
+- **更新通道不可达代码执行**：启动器只校验下载 URL 前缀并交给浏览器白名单（`LauncherUpdateService.cs:295-303` → `ShellLifecycle.cs:356` → `ExternalLinkService.cs:17-50`）。
+- **游戏文件写入被根目录约束**：`GamePathValidator.cs:24-112`（含根目录规范化、逐段重解析点拒绝）被下载、安装、差异、卸载四条路径共用。
+- **架构边界无回归**：`Features/Shell` 仍是唯一引用其他 Feature 的 Feature（AGENTS.md 明文豁免），模态契约位于根 `ViewModels/`，24 个接口 singleton 注册、无服务定位器、无 transient/singleton 捕获。
+- **本地化契约机械成立**：四份 resx 各 553 键，零缺键/零多余/零空值，生成物与中性 resx 完全同步。
+- **无仓库抽象旁路**：除 `HttpClientLeaseSource` 外无裸 `HttpClient` 构造，除 `WindowFilePickerService` 外无 `StorageProvider` 使用，`Process.Start` 仅出现在四个受控启动器内。
+- **无已提交密钥**；全树扫描无 `ghp_`/`github_pat_`/`AKIA`/私钥/代理凭据。
+- **CI 供应链**：两个 workflow 顶层 `permissions: contents: read`，仅发布 job 提权；5 个第三方 action 全部 40 位 SHA 固定；Inno Setup 7.1.0 额外经 `gh release verify-asset`；AppImage 工具链硬编码 SHA-256 校验。
+- **锁文件强制执行**（非装饰）：`build.yml` 设 `RestoreLockedMode=true`，两处 RID 还原以行内注释显式豁免；三份 lock 的每个条目均为 `resolved` + `contentHash`。
+
+## 推荐优先级（剩余项）
+
+1. **AUD-ARCH-005 / AUD-DEP-009 / AUD-SEC-006 遗留措辞**：三项都需要你裁定（绑定还是删除对话框层闸口；是否发布摘要清单/引入签名）。前三者之外的修复本轮已完成。
+2. **AUD-TST-007 的基线维护**：下次全量 verify 后按注释把基线与实测值一起前移。
+3. **AUD-MTN-017**：模态接线收敛为一张表（kind → 内容 VM → 叠层 + 交互属性），可同时消掉语言刷新清单的静默失败。
+4. 其余 Informational 按域择机处理。
+
+## 审计方法与局限
+
+- **模式**：`full` 全量重审。六个域各自独立通读，随后逐条复核候选证据（源码、调用方、守卫测试、配置/CI、仓库规则），再分别验证建议本身的可行性；修复阶段按报告优先度实施，每项配回归/契约守卫。
+- **实跑命令**：`pwsh -File ./verify.ps1`（工作树，exit 0）——含本地化契约脚本、Debug 构建、`coverage.ps1`（棘轮）、win-x64 RID 还原、Release 构建、Release 资源合约测试。测试与覆盖率数字取自本轮产出的 `TestResults/Coverage/{unit,headless}/*.trx` 与 `coverage.cobertura.xml`；覆盖率零命中断言由直接解析 cobertura 得出。RID 还原改写的 `packages.lock.json` 已 `git restore` 还原。
+- **实验验证**：AUD-SEC-006 的守卫通过「临时移除 `[JsonIgnore]` → 用例失败 → 恢复」确认其不再恒真；AUD-DEP-008 的运行时版本与本机 `dotnet --list-runtimes`、与既有发布产物 `runtimeconfig.json` 双向核对；AUD-CI-006 的 SDK 版本经 .NET 10 发布元数据确认存在。
+- **未执行**：真实网络限速/停滞复现；黄金基线重生成；发行打包（`Build-Distribution.ps1` / Inno Setup）与安装器实测；未在 Linux/macOS 上执行任何测试。
+- **局限**：AUD-PERF-011 的收益幅度、AUD-PERF-012 的调度队列后果、AUD-PERF-013 的分配收益均**未测量**（AUD-PERF-013 为纯分配改动，正确性由既有 CRC 向量守卫）；AUD-SEC-007 的触发条件（面板端点返回非 JSON 或超大响应体）未复现，仅核实完整路径并加守卫。AUD-ARCH-005 未能构造可达失败叠栈，故按「契约假象 + 脆弱性」而非当前缺陷定级。本轮未做逐行全量阅读。
