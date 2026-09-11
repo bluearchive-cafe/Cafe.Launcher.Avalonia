@@ -1,7 +1,7 @@
 # Repository Map
 
 - 审计日期：2026-09-11（full 全量重审 + 同日按优先度修复 + 分支核查复核）
-- HEAD：`66e103a`（`main`）；本轮审计与修复位于分支 `fix/repository-audit-2026-09-11`（PR #13）
+- HEAD：`43c17ce`（`main`）；本轮审计与修复已由 PR #13 变基合并（rebase merge）落库，13 个提交各自独立在 main 上
 - 发布状态：最新已发布 tag 为 `v1.1.0-beta.8`（tag 指向 `307edc3`，banner 已提交）；tag 之后 `main` 已累积 13 提交，含两项用户可见特性（HTTP/2 设置、日志导出时间范围与可选内容），下一版本尚未开始准备
 - 上次全量审计基线：`cffbd4d`
 
@@ -64,6 +64,6 @@
 ## Previous Audit State
 
 - Last full audit commit：`cffbd4d`（2026-09-09）
-- Last audit commit：`66e103a`（本轮 full）
+- Last audit commit：`43c17ce`（本轮 full；审计基线 `66e103a`，其后 13 项修复经 PR #13 变基合并落库）
 - Open Critical / High / Medium：0 / 0 / 0
 - 非阻塞：3 deferred + 1 accepted-risk（AUD-ARCH-003、AUD-MTN-001、AUD-TST-001、AUD-DEP-002）+ 本轮 6 项待处理（AUD-ARCH-005、AUD-MTN-017、AUD-PERF-012、AUD-ARCH-006/007、AUD-SEC-008、AUD-DEP-010）+ 1 项产品决策（AUD-DEP-009）
