@@ -1,7 +1,7 @@
 # 仓库审计报告（当前状态）
 
-- 审计日期：2026-09-11（full 全量重审 + 同日按优先度修复）
-- 审计对象：`66e103a`（`main`）+ 本轮修复工作树（未提交）
+- 审计日期：2026-09-11（full 全量重审 + 同日按优先度修复 + 分支核查复核）
+- 审计对象：`66e103a`（`main`）+ 分支 `fix/repository-audit-2026-09-11`（PR #13）
 - 模式：**full 全量重审**（架构、安全、依赖与发布、测试、性能、可维护性六个域）
 - 上次全量基线：`cffbd4d`（2026-09-09，全量 r2）
 - 风险画像：desktop launcher / updater（下载完整性、文件系统安全、发布供应链、更新恢复 = critical）
@@ -9,22 +9,23 @@
 
 ## 当前结论
 
-**仓库整体健康：0 Critical / 0 High。** 本轮全量重审新增 1 项 Medium、13 项 Low、4 项 Informational；其中 **11 项已修复并经 `verify.ps1` 全量验证**，其余为信息项、需决策项，或有意保留（理由见下表）。此前 66 项 resolved 发现未发现回归。
+**仓库整体健康：0 Critical / 0 High。** 本轮全量重审新增 1 项 Medium、13 项 Low、4 项 Informational；分支核查阶段又发现 2 项 Low 漂移（行尾策略、`main` 保护规则文档）。其中 **13 项已修复并经 `verify.ps1` 全量验证**，其余为信息项、需决策项，或有意保留（理由见下表）。此前 66 项 resolved 发现未发现回归。
 
-最终验证证据（本机实跑 `verify.ps1`，工作树，**exit 0**）：
+最终验证证据（本机实跑 `verify.ps1`，分支 HEAD，**exit 0**）：
 
 | 检查 | 结果 |
 |---|---|
 | `scripts/Test-LocalizationContract.ps1` | 通过（verify 首道门禁，失败即短路） |
 | Debug 构建 | **0 警告 / 0 错误** |
-| 单元测试 | **1607 通过 / 2 跳过 / 0 失败**（1609；本轮 +12 条守卫） |
+| 单元测试 | **1608 通过 / 2 跳过 / 0 失败**（1610；本轮 +13 条守卫） |
 | Headless UI 测试 | **173 / 173 通过**（含 7 份黄金基线） |
-| 手写代码覆盖率 | 行 **86.00%**（14375/16716）、分支 **92.93%**（2261/2433） |
-| 覆盖率棘轮 | 通过，余量 **+0.15pp 行 / +0.23pp 分支**（基线已收紧至 85.85% / 92.70%） |
+| 手写代码覆盖率 | 行 **85.98%**（14372/16716）、分支 **92.93%**（2261/2433） |
+| 覆盖率棘轮 | 通过，余量 **+0.13pp 行 / +0.23pp 分支**（基线已收紧至 85.85% / 92.70%） |
 | Release 构建（win-x64） | **0 警告 / 0 错误** |
 | Release 资源合约测试 | 18 通过 |
+| CI（PR #13，run 34573490112） | **success**，6m49s |
 
-## 本轮修复（11 项，均带守卫）
+## 本轮修复（13 项，均带守卫）
 
 按报告优先度落地，每项都有对应的回归/契约守卫，全部包含在 `verify.ps1` 的 1607 条单元测试中。
 
@@ -41,6 +42,8 @@
 | AUD-SEC-007 | Low | 诊断消息中的 URL 去掉查询串（资源面板 UID 即在此，而该消息写入恒被导出的 `unified.log`） | `DeserializeJsonAsync` 两条守卫覆盖解析失败与超限两个触发路径 |
 | AUD-TST-008 | Low | `DialogsViewModelTests` 三处门控等待加 `WaitAsync(GateTimeout)`，回归时失败而非挂住 runner | 同项 |
 | AUD-PERF-013 | Low | `Crc64Service.ComputeFileAsync` 的 1 MiB 缓冲改为 `ArrayPool` 租用（原每次调用一次 LOH 分配） | 既有 CRC-64/XZ 规范向量（纯分配改动，未改算法） |
+| AUD-MTN-019 | Low | 5 个 `scripts/*.ps1` 以 CRLF 提交（违反 AGENTS.md/CLAUDE.md/`.editorconfig` 的 LF 规则），其中一个整行含损坏的 `\r\r\n`；根因是策略只写在 `.editorconfig`（编辑器配置，git 不读）→ 规范为 LF，并在 `.gitattributes` 为各扩展名补 `eol` 规则，使 git 在 checkout/add 时真正强制 | `LineEndingPolicyContractTests` 断言 `.editorconfig` 声明的每个 `end_of_line` 都被 `.gitattributes` 以相同 eol 强制（缺规则时报出扩展名）；已实测移除 `*.ps1` 规则即失败 |
+| AUD-CI-007 | Low | `PROJECT_CONVENTIONS` §9 只写「`main` 受保护」，未说明保护范围——实测 ruleset 仅 `deletion` + `non_fast_forward`，**无** PR / 状态检查 / 评审要求，即 CI 红灯同样能合入 → 改写为「实际规则表 + 约定 vs 强制」两段，并在 AGENTS.md 注明这些要求是约定而非门禁 | — |
 
 ## 仍开放项
 
@@ -88,7 +91,8 @@
 ## 审计方法与局限
 
 - **模式**：`full` 全量重审。六个域各自独立通读，随后逐条复核候选证据（源码、调用方、守卫测试、配置/CI、仓库规则），再分别验证建议本身的可行性；修复阶段按报告优先度实施，每项配回归/契约守卫。
-- **实跑命令**：`pwsh -File ./verify.ps1`（工作树，exit 0）——含本地化契约脚本、Debug 构建、`coverage.ps1`（棘轮）、win-x64 RID 还原、Release 构建、Release 资源合约测试。测试与覆盖率数字取自本轮产出的 `TestResults/Coverage/{unit,headless}/*.trx` 与 `coverage.cobertura.xml`；覆盖率零命中断言由直接解析 cobertura 得出。RID 还原改写的 `packages.lock.json` 已 `git restore` 还原。
+- **实跑命令**：`pwsh -File ./verify.ps1`（分支 HEAD，exit 0）——含本地化契约脚本、Debug 构建、`coverage.ps1`（棘轮）、win-x64 RID 还原、Release 构建、Release 资源合约测试。测试与覆盖率数字取自本轮产出的 `TestResults/Coverage/{unit,headless}/*.trx` 与 `coverage.cobertura.xml`；覆盖率零命中断言由直接解析 cobertura 得出。RID 还原改写的 `packages.lock.json` 已 `git restore` 还原。
+- **分支核查轮**（本轮末尾追加）：逐项核对分支内容与合并面——`git merge-base --is-ancestor` 确认 `main` 是分支祖先（纯快进，冲突面为零）、`git merge-tree --write-tree` 无冲突、35 个改动文件全部为预期文件（无 lock/`TestResults/`/`artifacts/`/`obj`）、`git diff --stat` 与 `--ignore-cr-at-eol` 数字一致（无行尾噪声）。核查中发现并修掉两处问题：我自己的脚本在改写 `scripts/Build-Distribution.ps1` 时误加了一个 UTF-8 BOM（与 `.editorconfig` 的 `.ps1` 无 BOM 要求冲突，且该类文件在索引中无 BOM），已用全量 BOM 比对确认仅此一处、以 `--fixup` 折回引入它的提交；以及上述 AUD-MTN-019 的行尾漂移。
 - **实验验证**：AUD-SEC-006 的守卫通过「临时移除 `[JsonIgnore]` → 用例失败 → 恢复」确认其不再恒真；AUD-DEP-008 的运行时版本与本机 `dotnet --list-runtimes`、与既有发布产物 `runtimeconfig.json` 双向核对；AUD-CI-006 的 SDK 版本经 .NET 10 发布元数据确认存在。
 - **未执行**：真实网络限速/停滞复现；黄金基线重生成；发行打包（`Build-Distribution.ps1` / Inno Setup）与安装器实测；未在 Linux/macOS 上执行任何测试。
 - **局限**：AUD-PERF-011 的收益幅度、AUD-PERF-012 的调度队列后果、AUD-PERF-013 的分配收益均**未测量**（AUD-PERF-013 为纯分配改动，正确性由既有 CRC 向量守卫）；AUD-SEC-007 的触发条件（面板端点返回非 JSON 或超大响应体）未复现，仅核实完整路径并加守卫。AUD-ARCH-005 未能构造可达失败叠栈，故按「契约假象 + 脆弱性」而非当前缺陷定级。本轮未做逐行全量阅读。
