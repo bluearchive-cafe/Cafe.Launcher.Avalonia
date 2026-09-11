@@ -41,7 +41,10 @@ jobs:
       - name: Setup .NET
         uses: actions/setup-dotnet@a98b56852c35b8e3190ac28c8c2271da59106c68 # v6
         with:
-          dotnet-version: 10.0.x
+          # Pinned to the SDK named by global.json. `10.0.x` resolved to whatever the runner
+          # carried that day, which decides the Microsoft.NETCore.App version published inside
+          # every self-contained artifact without leaving a trace in the repository.
+          dotnet-version: 10.0.302
           cache: true
           cache-dependency-path: |
             **/*.csproj
@@ -203,7 +206,10 @@ jobs:
       - name: Setup .NET
         uses: actions/setup-dotnet@a98b56852c35b8e3190ac28c8c2271da59106c68 # v6
         with:
-          dotnet-version: 10.0.x
+          # Pinned to the SDK named by global.json. `10.0.x` resolved to whatever the runner
+          # carried that day, which decides the Microsoft.NETCore.App version published inside
+          # every self-contained artifact without leaving a trace in the repository.
+          dotnet-version: 10.0.302
           cache: true
           cache-dependency-path: |
             **/*.csproj

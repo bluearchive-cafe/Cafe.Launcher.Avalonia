@@ -46,7 +46,10 @@ jobs:
       - name: Setup .NET
         uses: actions/setup-dotnet@a98b56852c35b8e3190ac28c8c2271da59106c68 # v6
         with:
-          dotnet-version: 10.0.x
+          # Pinned to the SDK named by global.json. `10.0.x` resolved to whatever the runner
+          # carried that day, which decides the Microsoft.NETCore.App version published inside
+          # every self-contained artifact without leaving a trace in the repository.
+          dotnet-version: 10.0.302
           cache: true
           cache-dependency-path: |
             **/*.csproj
@@ -68,6 +71,10 @@ jobs:
           path: |
             TestResults/**/*.trx
             TestResults/Coverage/**/coverage.cobertura.xml
+            # Golden-screenshot failures write <name>-actual.png / <name>-diff.png here. They are
+            # the only diff evidence for the one test class whose baselines are environment
+            # sensitive, so a CI-only mismatch must not have to be reproduced locally to triage.
+            TestResults/Golden/*.png
 
       - name: Restore (win-x64)
         env:

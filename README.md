@@ -40,7 +40,7 @@
 
 ### 环境要求
 
-- .NET SDK `10.0.302`（由 `global.json` 固定）
+- .NET SDK `10.0.302` 或更高的同主次版本（`global.json` 允许向更高功能带滚动；CI 与发行包固定使用 `10.0.302`）
 - Windows、macOS 或 Linux 桌面环境
 - 构建 Windows 安装程序时需要 Inno Setup 7.0 或更高版本
 
