@@ -58,7 +58,12 @@ public sealed partial class UiStyleContractTests
             ["Views/MainWindowLogViewerOverlay.axaml"] = new(StringComparer.Ordinal)
             {
                 ["{Binding LogViewer.CloseCommand}"] = "{Binding Shell.I18n[close]}",
-                ["{Binding LogViewer.ExportCommand}"] = "{Binding Shell.I18n[exportLogs]}"
+                ["{Binding LogExport.OpenCommand}"] = "{Binding Shell.I18n[exportLogs]}"
+            },
+            ["Views/MainWindowLogExportOverlay.axaml"] = new(StringComparer.Ordinal)
+            {
+                ["{Binding LogExport.CloseCommand}"] = "{Binding Shell.I18n[cancel]}",
+                ["{Binding LogExport.ExportCommand}"] = "{Binding Shell.I18n[logExportConfirm]}"
             },
             ["Views/MainWindowToastOverlay.axaml"] = new(StringComparer.Ordinal)
             {

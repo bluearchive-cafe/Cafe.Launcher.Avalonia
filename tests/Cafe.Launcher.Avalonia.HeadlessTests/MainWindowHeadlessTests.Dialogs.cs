@@ -3,8 +3,13 @@ using Avalonia.Automation;
 using Avalonia.Controls;
 using Avalonia.Controls.Presenters;
 using Avalonia.Headless.XUnit;
+using Avalonia.Media;
+using Avalonia.Styling;
 using Avalonia.Threading;
 using Avalonia.VisualTree;
+using Cafe.Launcher.Avalonia.Helpers;
+using Cafe.Launcher.Avalonia.Models;
+using Cafe.Launcher.Avalonia.Services.Diagnostics;
 
 namespace Cafe.Launcher.Avalonia.HeadlessTests;
 
@@ -35,6 +40,7 @@ public sealed partial class MainWindowHeadlessTests
     [AvaloniaTheory]
     [InlineData("resource-panel")]
     [InlineData("log-viewer")]
+    [InlineData("log-export")]
     [InlineData("confirmation")]
     [InlineData("setup-wizard")]
     public void SecondaryOverlay_AtMinimumWindowSize_KeepsCriticalActionsReachable(string overlay)
@@ -48,6 +54,7 @@ public sealed partial class MainWindowHeadlessTests
         {
             "resource-panel" => ShowResourcePanel(context),
             "log-viewer" => ShowLogViewer(context),
+            "log-export" => ShowLogExport(context),
             "confirmation" => ShowLongConfirmation(context),
             "setup-wizard" => ShowSetupWizard(context),
             _ => throw new ArgumentOutOfRangeException(nameof(overlay))
@@ -61,6 +68,48 @@ public sealed partial class MainWindowHeadlessTests
             Assert.False(string.IsNullOrWhiteSpace(AutomationProperties.GetName(action)));
             AssertControlInsideWindow(action, context.Window);
         });
+    }
+
+    [AvaloniaFact]
+    public void LogExport_WhenOpened_HasTwoAlwaysIncludedContentRows()
+    {
+        using var context = CreateContext();
+        context.Window.Width = 1024;
+        context.Window.Height = 640;
+        context.Window.Show();
+        context.ViewModel.LogExport.OpenCommand.Execute(null);
+        Dispatcher.UIThread.RunJobs();
+
+        var requiredItems = context.Window.GetVisualDescendants().OfType<CheckBox>()
+            .Where(box => box.IsChecked == true && !box.IsEnabled)
+            .ToArray();
+
+        Assert.Equal(2, requiredItems.Length);
+    }
+
+    [AvaloniaFact]
+    public void LogExport_WhenUserDataWarningIsLong_WrapsInsideWarningCard()
+    {
+        using var context = CreateContext();
+        context.Window.Width = 1024;
+        context.Window.Height = 640;
+        context.Window.Show();
+        ShowLogExport(context);
+        context.ViewModel.LogExport.IncludeUserData = true;
+        Dispatcher.UIThread.RunJobs();
+
+        var warning = context.Window.GetVisualDescendants().OfType<Border>()
+            .Single(border =>
+                border.Classes.Contains("log-export-warning")
+                && border.IsEffectivelyVisible
+                && border.GetVisualDescendants().OfType<TextBlock>()
+                    .Any(text => text.Text?.Contains("install attribution code", StringComparison.Ordinal) == true));
+        var warningText = warning.GetVisualDescendants().OfType<TextBlock>().Single();
+        var textTopLeft = warningText.TranslatePoint(default, warning);
+
+        Assert.NotNull(textTopLeft);
+        Assert.True(warningText.Bounds.Height > warningText.FontSize * 1.5);
+        Assert.True(textTopLeft.Value.X + warningText.Bounds.Width <= warning.Bounds.Width);
     }
 
     [AvaloniaFact]
@@ -241,8 +290,59 @@ public sealed partial class MainWindowHeadlessTests
         return context.Window.GetVisualDescendants().OfType<Button>()
             .Where(button =>
                 ReferenceEquals(button.Command, context.ViewModel.LogViewer.CloseCommand)
-                || ReferenceEquals(button.Command, context.ViewModel.LogViewer.ExportCommand))
+                || ReferenceEquals(button.Command, context.ViewModel.LogExport.OpenCommand))
             .ToArray();
+    }
+
+    private static Button[] ShowLogExport(TestContext context)
+    {
+        context.ViewModel.LogExport.OpenCommand.Execute(null);
+        Dispatcher.UIThread.RunJobs();
+        return context.Window.GetVisualDescendants().OfType<Button>()
+            .Where(button =>
+                ReferenceEquals(button.Command, context.ViewModel.LogExport.CloseCommand)
+                || ReferenceEquals(button.Command, context.ViewModel.LogExport.ExportCommand))
+            .ToArray();
+    }
+
+    /// <summary>
+    /// A checked content row draws its glyph on the accent fill, and that fill is retinted per
+    /// theme (M3 tone 40 in light, tone 80 in dark). Fluent ships a white glyph, which disappears
+    /// on the pale dark-theme fill, so the pairing is asserted on the rendered controls rather
+    /// than on the style source: the user sees contrast, not selectors.
+    /// </summary>
+    [AvaloniaTheory]
+    [InlineData(false)]
+    [InlineData(true)]
+    public async Task LogExport_WhenAContentRowIsChecked_KeepsItsGlyphReadable(bool isDark)
+    {
+        using var context = CreateContext();
+        // Applied through the settings view model: that is the path which also replays the M3
+        // colour scheme with the tones belonging to the theme. Switching the variant alone would
+        // leave the light-tone fill in place and hide the very problem this guard exists for.
+        context.ViewModel.Settings.Appearance.ApplyTheme(isDark ? ThemeModes.Dark : ThemeModes.Light);
+        Dispatcher.UIThread.RunJobs();
+
+        await ShowGoldenWindowAsync(context);
+        ShowLogExport(context);
+        context.ViewModel.LogExport.IncludeCrashReports = true;
+        Dispatcher.UIThread.RunJobs();
+
+        var checkedBox = context.Window.GetVisualDescendants().OfType<CheckBox>()
+            .Single(box => box.IsChecked == true && box.IsEnabled);
+        var glyph = checkedBox.GetVisualDescendants().OfType<global::Avalonia.Controls.Shapes.Path>()
+            .Single(path => path.Name == "CheckGlyph");
+        var normalRectangle = checkedBox.GetVisualDescendants().OfType<Border>()
+            .Single(border => border.Name == "NormalRectangle");
+
+        var glyphColor = ((ISolidColorBrush)glyph.Fill!).Color;
+        var fillColor = ((ISolidColorBrush)normalRectangle.Background!).Color;
+        var ratio = ColorUtils.GetContrastRatio(glyphColor, fillColor);
+
+        Assert.True(
+            ratio >= 3.0,
+            $"[{(isDark ? "Dark" : "Light")}] the checked glyph ({glyphColor}) contrasts {ratio:F2}:1 "
+            + $"with its fill ({fillColor}); expected at least 3:1.");
     }
 
     private static Button[] ShowLongConfirmation(TestContext context)

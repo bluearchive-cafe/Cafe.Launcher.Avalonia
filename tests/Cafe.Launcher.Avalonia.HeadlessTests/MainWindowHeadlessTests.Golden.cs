@@ -55,6 +55,20 @@ public sealed partial class MainWindowHeadlessTests
         GoldenScreenshot.Compare(context.Window, "toast");
     }
 
+    [AvaloniaFact]
+    public async Task Golden_LogExportDialog_MatchesBaseline()
+    {
+        using var context = CreateContext();
+        await ShowGoldenWindowAsync(context);
+        // The shell's own ApplyLanguage refreshes the settings and resource-panel option
+        // names only; feature dialogs are refreshed by ShellLifecycle during real startup.
+        context.ViewModel.LogExport.ApplyLanguage();
+        context.ViewModel.LogExport.OpenCommand.Execute(null);
+        await context.ViewModel.LogExport.PendingRangeProbeTask;
+        Dispatcher.UIThread.RunJobs();
+        GoldenScreenshot.Compare(context.Window, "log-export");
+    }
+
     /// <summary>
     /// Shows the golden window and loads the initial wallpaper the way the app does.
     /// The bundled image is no longer decoded in the view-model constructor (that ran

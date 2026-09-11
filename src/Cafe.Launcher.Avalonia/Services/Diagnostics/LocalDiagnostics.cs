@@ -56,6 +56,28 @@ public sealed class LocalDiagnostics
         }
     }
 
+    /// <summary>
+    /// Error carrying a caller-supplied context message alongside the exception, so callers that
+    /// need to name the failed step keep <paramref name="title"/> free for the module tag the
+    /// log conventions require.
+    /// </summary>
+    public async Task ErrorAsync(
+        string title,
+        string message,
+        Exception exception,
+        CancellationToken cancellationToken = default)
+    {
+        try
+        {
+            await logger.LogAsync(LogEntrySeverity.Error, title, message: message, exception: exception,
+                cancellationToken: cancellationToken).ConfigureAwait(false);
+        }
+        catch
+        {
+            // Best-effort — diagnostic logging must never crash the app.
+        }
+    }
+
     public async Task MessageAsync(string title, string message, CancellationToken cancellationToken = default)
     {
         try

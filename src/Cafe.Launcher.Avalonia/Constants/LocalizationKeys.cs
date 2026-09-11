@@ -217,9 +217,6 @@ public static class LocalizationKeys
     /// <summary>Resource key for <c>debugCriticalErrorTriggered</c>.</summary>
     public const string DebugCriticalErrorTriggered = "debugCriticalErrorTriggered";
 
-    /// <summary>Resource key for <c>debugExportCancelled</c>.</summary>
-    public const string DebugExportCancelled = "debugExportCancelled";
-
     /// <summary>Resource key for <c>debugFatalCrashTriggered</c>.</summary>
     public const string DebugFatalCrashTriggered = "debugFatalCrashTriggered";
 
@@ -237,9 +234,6 @@ public static class LocalizationKeys
 
     /// <summary>Resource key for <c>debugLogEntryWritten</c>.</summary>
     public const string DebugLogEntryWritten = "debugLogEntryWritten";
-
-    /// <summary>Resource key for <c>debugLogExportUnavailable</c>.</summary>
-    public const string DebugLogExportUnavailable = "debugLogExportUnavailable";
 
     /// <summary>Resource key for <c>debugLogLevelSet</c>.</summary>
     public const string DebugLogLevelSet = "debugLogLevelSet";
@@ -826,14 +820,77 @@ public static class LocalizationKeys
     /// <summary>Resource key for <c>localManifestUnreadable</c>.</summary>
     public const string LocalManifestUnreadable = "localManifestUnreadable";
 
+    /// <summary>Resource key for <c>logExportConfirm</c>.</summary>
+    public const string LogExportConfirm = "logExportConfirm";
+
+    /// <summary>Resource key for <c>logExportContentGroup</c>.</summary>
+    public const string LogExportContentGroup = "logExportContentGroup";
+
     /// <summary>Resource key for <c>logExportFailed</c>.</summary>
     public const string LogExportFailed = "logExportFailed";
 
     /// <summary>Resource key for <c>logExportFolderPickerTitle</c>.</summary>
     public const string LogExportFolderPickerTitle = "logExportFolderPickerTitle";
 
+    /// <summary>Resource key for <c>logExportIncludeCrashReports</c>.</summary>
+    public const string LogExportIncludeCrashReports = "logExportIncludeCrashReports";
+
+    /// <summary>Resource key for <c>logExportIncludeCrashReportsDescription</c>.</summary>
+    public const string LogExportIncludeCrashReportsDescription = "logExportIncludeCrashReportsDescription";
+
+    /// <summary>Resource key for <c>logExportIncludeLogs</c>.</summary>
+    public const string LogExportIncludeLogs = "logExportIncludeLogs";
+
+    /// <summary>Resource key for <c>logExportIncludeLogsDescription</c>.</summary>
+    public const string LogExportIncludeLogsDescription = "logExportIncludeLogsDescription";
+
+    /// <summary>Resource key for <c>logExportIncludeSystemInfo</c>.</summary>
+    public const string LogExportIncludeSystemInfo = "logExportIncludeSystemInfo";
+
+    /// <summary>Resource key for <c>logExportIncludeSystemInfoDescription</c>.</summary>
+    public const string LogExportIncludeSystemInfoDescription = "logExportIncludeSystemInfoDescription";
+
+    /// <summary>Resource key for <c>logExportIncludeUserData</c>.</summary>
+    public const string LogExportIncludeUserData = "logExportIncludeUserData";
+
+    /// <summary>Resource key for <c>logExportIncludeUserDataDescription</c>.</summary>
+    public const string LogExportIncludeUserDataDescription = "logExportIncludeUserDataDescription";
+
+    /// <summary>Resource key for <c>logExportRange</c>.</summary>
+    public const string LogExportRange = "logExportRange";
+
+    /// <summary>Resource key for <c>logExportRangeAll</c>.</summary>
+    public const string LogExportRangeAll = "logExportRangeAll";
+
+    /// <summary>Resource key for <c>logExportRangeDescription</c>.</summary>
+    public const string LogExportRangeDescription = "logExportRangeDescription";
+
+    /// <summary>Resource key for <c>logExportRangeEmpty</c>.</summary>
+    public const string LogExportRangeEmpty = "logExportRangeEmpty";
+
+    /// <summary>Resource key for <c>logExportRangeGroup</c>.</summary>
+    public const string LogExportRangeGroup = "logExportRangeGroup";
+
+    /// <summary>Resource key for <c>logExportRangeLast24Hours</c>.</summary>
+    public const string LogExportRangeLast24Hours = "logExportRangeLast24Hours";
+
+    /// <summary>Resource key for <c>logExportRangeLast30Days</c>.</summary>
+    public const string LogExportRangeLast30Days = "logExportRangeLast30Days";
+
+    /// <summary>Resource key for <c>logExportRangeLast7Days</c>.</summary>
+    public const string LogExportRangeLast7Days = "logExportRangeLast7Days";
+
+    /// <summary>Resource key for <c>logExportRangeLastHour</c>.</summary>
+    public const string LogExportRangeLastHour = "logExportRangeLastHour";
+
     /// <summary>Resource key for <c>logExportSucceeded</c>.</summary>
     public const string LogExportSucceeded = "logExportSucceeded";
+
+    /// <summary>Resource key for <c>logExportTitle</c>.</summary>
+    public const string LogExportTitle = "logExportTitle";
+
+    /// <summary>Resource key for <c>logExportUserDataWarning</c>.</summary>
+    public const string LogExportUserDataWarning = "logExportUserDataWarning";
 
     /// <summary>Resource key for <c>logFiles</c>.</summary>
     public const string LogFiles = "logFiles";

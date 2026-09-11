@@ -4,7 +4,6 @@ using System.Collections.ObjectModel;
 using System.IO;
 using System.Linq;
 using System.Text;
-using System.Text.RegularExpressions;
 using System.Threading;
 using System.Threading.Tasks;
 using CommunityToolkit.Mvvm.ComponentModel;
@@ -21,12 +20,10 @@ public sealed partial class LogViewerDialogViewModel : ViewModelBase, IModalCont
     private const int PageSize = 500;
     private static readonly TimeSpan FilterDebounceDelay = TimeSpan.FromMilliseconds(200);
     private readonly UnifiedLogger logger;
-    private readonly LogExportService? exportService;
     private readonly ToastService? toastService;
     private readonly LocalizationService? localizer;
     private readonly LocalDiagnostics? diagnostics;
     private readonly Func<CancellationToken, Task<IReadOnlyList<LogEntryDisplay>>> entryLoader;
-    private readonly IFilePickerService filePickerService;
     private IReadOnlyList<LogEntryDisplay> allEntries = [];
     private CancellationTokenSource? filterCancellationTokenSource;
     private int loadedPageCount = 1;
@@ -71,30 +68,24 @@ public sealed partial class LogViewerDialogViewModel : ViewModelBase, IModalCont
 
     public LogViewerDialogViewModel(
         UnifiedLogger logger,
-        LogExportService exportService,
         ToastService toastService,
         LocalizationService localizer,
-        LocalDiagnostics diagnostics,
-        IFilePickerService filePickerService)
-        : this(logger, exportService, toastService, localizer, diagnostics, null, filePickerService)
+        LocalDiagnostics diagnostics)
+        : this(logger, toastService, localizer, diagnostics, null)
     {
     }
 
     internal LogViewerDialogViewModel(
         UnifiedLogger logger,
-        LogExportService? exportService,
         ToastService? toastService,
         LocalizationService? localizer,
         LocalDiagnostics? diagnostics,
-        Func<CancellationToken, Task<IReadOnlyList<LogEntryDisplay>>>? entryLoader,
-        IFilePickerService filePickerService)
+        Func<CancellationToken, Task<IReadOnlyList<LogEntryDisplay>>>? entryLoader)
     {
         this.logger = logger;
-        this.exportService = exportService;
         this.toastService = toastService;
         this.localizer = localizer;
         this.diagnostics = diagnostics;
-        this.filePickerService = filePickerService;
         this.entryLoader = entryLoader ?? LoadEntriesAsync;
     }
 
@@ -225,55 +216,6 @@ public sealed partial class LogViewerDialogViewModel : ViewModelBase, IModalCont
     }
 
     [RelayCommand]
-    private async Task ExportAsync()
-    {
-        if (exportService is null)
-            return;
-
-        try
-        {
-            Directory.CreateDirectory(LogExportService.DefaultExportDirectory);
-            var selectedDirectory = await filePickerService.PickFolderAsync(
-                localizer?.T(LocalizationKeys.LogExportFolderPickerTitle) ?? "",
-                LogExportService.DefaultExportDirectory);
-            if (string.IsNullOrWhiteSpace(selectedDirectory))
-                return;
-
-            var zipPath = await exportService.ExportAsync(selectedDirectory);
-            toastService?.ShowSuccess(
-                localizer?.F(LocalizationKeys.LogExportSucceeded, zipPath)
-                ?? $"Logs exported to {zipPath}");
-            try
-            {
-                ShellFolderOpener.OpenInFileManager(selectedDirectory);
-            }
-            catch (Exception exception)
-            {
-                if (diagnostics is not null)
-                {
-                    await diagnostics.ErrorAsync(
-                        "Log export directory open failed.",
-                        exception,
-                        CancellationToken.None);
-                }
-            }
-        }
-        catch (Exception exception)
-        {
-            toastService?.ShowError(ErrorHandlingService.FormatToastMessage(
-                localizer?.T(LocalizationKeys.LogExportFailed) ?? "Log export failed",
-                exception));
-            if (diagnostics is not null)
-            {
-                await diagnostics.ErrorAsync(
-                    "Log export failed.",
-                    exception,
-                    CancellationToken.None);
-            }
-        }
-    }
-
-    [RelayCommand]
     private void SetFilterAll() => SeverityFilter = null;
     [RelayCommand]
     private void SetFilterVerbose() => SeverityFilter = LogEntrySeverity.Verbose;
@@ -335,64 +277,40 @@ public sealed partial class LogViewerDialogViewModel : ViewModelBase, IModalCont
         return new StreamReader(stream, Encoding.UTF8, detectEncodingFromByteOrderMarks: true);
     }
 
-    private static readonly Regex EntryLineRegex = new(
-        @"^(\d{4}-\d{2}-\d{2}T[\d:.+-]+) \[(ERR|WRN|INF|VRB|DBG|FTL)\] (.+)",
-        RegexOptions.CultureInvariant);
-
     private static IReadOnlyList<LogEntryDisplay> ParseEntries(IEnumerable<string> lines)
     {
         var entries = new List<LogEntryDisplay>();
-        LogEntryDisplay? current = null;
-
-        foreach (var line in lines)
+        foreach (var record in LogEntryReader.Read(lines))
         {
-            var match = EntryLineRegex.Match(line);
-            if (match.Success)
+            var (severity, severityLabel) = MapSeverity(record.SeverityCode);
+            entries.Add(new LogEntryDisplay
             {
-                // Commit previous entry
-                if (current is not null)
-                    entries.Add(current);
-
-                var severityLabel = match.Groups[2].Value;
-                var title = match.Groups[3].Value;
-
-                current = new LogEntryDisplay
-                {
-                    TimestampText = match.Groups[1].Value,
-                    SeverityLabel = severityLabel switch
-                    {
-                        "VRB" => "VERBOSE",
-                        "DBG" => "DEBUG",
-                        "INF" => "INFO",
-                        "WRN" => "WARN",
-                        "ERR" => "ERROR",
-                        "FTL" => "FATAL",
-                        _ => severityLabel
-                    },
-                    Title = title,
-                    Details = "",
-                    Severity = severityLabel switch
-                    {
-                        "VRB" => LogEntrySeverity.Verbose,
-                        "DBG" => LogEntrySeverity.Debug,
-                        "INF" => LogEntrySeverity.Info,
-                        "WRN" => LogEntrySeverity.Warn,
-                        "ERR" => LogEntrySeverity.Error,
-                        "FTL" => LogEntrySeverity.Fatal,
-                        _ => LogEntrySeverity.Info
-                    }
-                };
-            }
-            else if (current is not null)
-            {
-                // Continuation line (message body or exception stack trace)
-                current.Details += (current.Details.Length > 0 ? "\n" : "") + line;
-            }
+                TimestampText = record.TimestampText,
+                SeverityLabel = severityLabel,
+                Title = record.Title,
+                Details = record.Lines.Count > 1
+                    ? string.Join("\n", record.Lines.Skip(1))
+                    : "",
+                Severity = severity
+            });
         }
-
-        if (current is not null)
-            entries.Add(current);
 
         return entries;
     }
+
+    /// <summary>
+    /// Maps a Serilog level code to the severity the filter runs on and the label the list shows.
+    /// An unrecognised code stays visible as written and filters as informational.
+    /// </summary>
+    private static (LogEntrySeverity Severity, string Label) MapSeverity(string severityCode) =>
+        severityCode switch
+        {
+            "VRB" => (LogEntrySeverity.Verbose, "VERBOSE"),
+            "DBG" => (LogEntrySeverity.Debug, "DEBUG"),
+            "INF" => (LogEntrySeverity.Info, "INFO"),
+            "WRN" => (LogEntrySeverity.Warn, "WARN"),
+            "ERR" => (LogEntrySeverity.Error, "ERROR"),
+            "FTL" => (LogEntrySeverity.Fatal, "FATAL"),
+            _ => (LogEntrySeverity.Info, severityCode)
+        };
 }

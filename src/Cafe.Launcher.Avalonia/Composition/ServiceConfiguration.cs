@@ -39,6 +39,7 @@ public static class ServiceConfiguration
             services.AddSingleton<UnifiedLogger>();
         services.AddSingleton<LogExportService>();
         services.AddSingleton<LogViewerDialogViewModel>();
+        services.AddSingleton<LogExportDialogViewModel>();
         services.AddSingleton<LocalDiagnostics>();
         services.AddSingleton<CrashReportStore>();
         services.AddSingleton<ICrashReporterLauncher, CrashReporterLauncher>();
