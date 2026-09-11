@@ -9,7 +9,7 @@ param(
     [string]$RepositoryRoot = (Split-Path $PSScriptRoot -Parent)
 )
 
-$ErrorActionPreference = 'Stop'
+$ErrorActionPreference = 'Stop'
 
 # Emit and decode console output as UTF-8 so Chinese text (commit messages,
 # resx values, tool output) survives the system's active code page.
