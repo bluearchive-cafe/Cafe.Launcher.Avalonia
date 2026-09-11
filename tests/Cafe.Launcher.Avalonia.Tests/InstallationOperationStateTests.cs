@@ -84,7 +84,6 @@ public sealed class InstallationOperationStateTests : IDisposable
         var localizer = new LocalizationService();
         var service = new GameLaunchService(
             new ManifestValidationService(apiClient, new RemoteManifestService(apiClient), localizer),
-            new ClickCodeService(),
             CreateGameRuntime(),
             localizer);
 
@@ -107,7 +106,6 @@ public sealed class InstallationOperationStateTests : IDisposable
         var localizer = new LocalizationService();
         var service = new GameLaunchService(
             new ManifestValidationService(apiClient, new RemoteManifestService(apiClient), localizer),
-            new ClickCodeService(),
             CreateGameRuntime(),
             localizer);
 
@@ -130,7 +128,6 @@ public sealed class InstallationOperationStateTests : IDisposable
         var localizer = new LocalizationService();
         var service = new GameLaunchService(
             new ManifestValidationService(apiClient, new RemoteManifestService(apiClient), localizer),
-            new ClickCodeService(),
             CreateGameRuntime(),
             localizer);
 
@@ -153,7 +150,6 @@ public sealed class InstallationOperationStateTests : IDisposable
         var localizer = new LocalizationService();
         var service = new GameLaunchService(
             new ManifestValidationService(apiClient, new RemoteManifestService(apiClient), localizer),
-            new ClickCodeService(),
             CreateGameRuntime(),
             localizer);
 
@@ -176,7 +172,6 @@ public sealed class InstallationOperationStateTests : IDisposable
         var localizer = new LocalizationService();
         var service = new GameLaunchService(
             new ManifestValidationService(apiClient, new RemoteManifestService(apiClient), localizer),
-            new ClickCodeService(),
             CreateGameRuntime(),
             localizer);
 
@@ -214,7 +209,6 @@ public sealed class InstallationOperationStateTests : IDisposable
             var localizer = new LocalizationService();
             var service = new GameLaunchService(
                 new ManifestValidationService(apiClient, new RemoteManifestService(apiClient), localizer),
-                new ClickCodeService(),
                 CreateGameRuntime(),
                 localizer);
 
@@ -258,7 +252,6 @@ public sealed class InstallationOperationStateTests : IDisposable
             var localizer = new LocalizationService();
             var service = new GameLaunchService(
                 new ManifestValidationService(apiClient, new RemoteManifestService(apiClient), localizer),
-                new ClickCodeService(),
                 CreateGameRuntime(),
                 localizer);
 
@@ -290,7 +283,6 @@ public sealed class InstallationOperationStateTests : IDisposable
         var localizer = new LocalizationService();
         var service = new GameLaunchService(
             new ManifestValidationService(apiClient, new RemoteManifestService(apiClient), localizer),
-            new ClickCodeService(),
             CreateUnavailableRunnerRuntime(),
             localizer);
 
@@ -329,7 +321,6 @@ public sealed class InstallationOperationStateTests : IDisposable
         var localizer = new LocalizationService();
         var service = new GameLaunchService(
             new ManifestValidationService(apiClient, new RemoteManifestService(apiClient), localizer),
-            new ClickCodeService(),
             CreateUnsupportedPlatformRuntime(),
             localizer);
 
@@ -368,7 +359,6 @@ public sealed class InstallationOperationStateTests : IDisposable
         var localizer = new LocalizationService();
         var service = new GameLaunchService(
             new ManifestValidationService(apiClient, new RemoteManifestService(apiClient), localizer),
-            new ClickCodeService(),
             CreateUnavailableRunnerRuntime(),
             localizer);
 
@@ -411,7 +401,6 @@ public sealed class InstallationOperationStateTests : IDisposable
         var localizer = new LocalizationService();
         var service = new GameLaunchService(
             new ManifestValidationService(apiClient, new RemoteManifestService(apiClient), localizer),
-            new ClickCodeService(),
             CreateFailingRunnerRuntime(),
             localizer);
 
@@ -449,7 +438,6 @@ public sealed class InstallationOperationStateTests : IDisposable
         var localizer = new LocalizationService();
         var service = new GameLaunchService(
             new ManifestValidationService(apiClient, new RemoteManifestService(apiClient), localizer),
-            new ClickCodeService(),
             CreateFailingRunnerRuntime(),
             localizer);
 
@@ -506,7 +494,6 @@ public sealed class InstallationOperationStateTests : IDisposable
         var localizer = new LocalizationService();
         var service = new GameLaunchService(
             new ManifestValidationService(apiClient, new RemoteManifestService(apiClient), localizer),
-            new ClickCodeService(),
             CreateGameRuntime(),
             localizer);
         var snapshot = new LauncherStatusSnapshot

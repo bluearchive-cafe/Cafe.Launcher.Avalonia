@@ -202,7 +202,8 @@ public sealed class LogExportServiceTests : IDisposable
         var dataRoot = Path.Combine(tempDir, "user-data-root");
         Directory.CreateDirectory(dataRoot);
         File.WriteAllText(Path.Combine(dataRoot, "settings.json"), "{\"logLevel\":\"information\"}");
-        File.WriteAllText(Path.Combine(dataRoot, "clickCode"), "abc123");
+        File.WriteAllText(Path.Combine(dataRoot, "download_state.json"), "{}");
+        File.WriteAllText(Path.Combine(dataRoot, "shown_notices.json"), "[]");
         // Caches, the compatibility probe, and the export folder itself stay out: bundling a
         // previous archive would nest one ZIP inside the next.
         string[] excludedDirectories = ["image-cache", "compatibility", "log-exports"];
@@ -222,7 +223,8 @@ public sealed class LogExportServiceTests : IDisposable
 
         using var zip = ZipFile.OpenRead(zipPath);
         Assert.Contains(zip.Entries, entry => entry.FullName == "user-data/settings.json");
-        Assert.Contains(zip.Entries, entry => entry.FullName == "user-data/clickCode");
+        Assert.Contains(zip.Entries, entry => entry.FullName == "user-data/download_state.json");
+        Assert.Contains(zip.Entries, entry => entry.FullName == "user-data/shown_notices.json");
         foreach (var excluded in excludedDirectories)
         {
             Assert.DoesNotContain(

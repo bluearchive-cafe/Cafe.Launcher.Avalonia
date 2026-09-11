@@ -32,8 +32,7 @@ public sealed class LogExportService
     [
         GamePaths.LauncherSettingsFileName,
         GamePaths.DownloadStateFileName,
-        GamePaths.NoticeStateFileName,
-        GamePaths.ClickCodeFileName
+        GamePaths.NoticeStateFileName
     ];
 
     private readonly LocalDiagnostics diagnostics;
