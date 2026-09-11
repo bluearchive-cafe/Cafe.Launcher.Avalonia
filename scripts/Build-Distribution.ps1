@@ -91,6 +91,13 @@ if (-not $SkipPublish) {
         $publishDir = Join-Path $PublishRoot $rid
         [void][System.IO.Directory]::CreateDirectory($publishDir)
         Invoke-Checked "dotnet" @("publish", $ProjectPath, "-c", "Release", "-r", $rid, "-o", $publishDir) "dotnet publish failed for RID '$rid'."
+
+        # The archives redistribute the .NET runtime and the NuGet dependencies, so the license
+        # disclosure has to travel with the binaries rather than only living in the repository:
+        # every packaging step below (zip, .app, tar.gz, deb, AppImage) copies this directory.
+        foreach ($noticeFile in @("LICENSE", "THIRD-PARTY-NOTICES.md")) {
+            Copy-Item -LiteralPath (Join-Path $RootDir $noticeFile) -Destination (Join-Path $publishDir $noticeFile) -Force
+        }
     }
 }
 

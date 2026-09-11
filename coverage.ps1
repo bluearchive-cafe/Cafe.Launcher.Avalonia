@@ -5,10 +5,12 @@ $env:AVALONIA_TELEMETRY_OPTOUT = '1'
 # 会因 "file is being used by another process" 偶发失败并静默降级为无覆盖数据。
 $env:MSBUILDDISABLENODEREUSE = '1'
 $threshold = 0.50
-# ADR-016 游戏操作表面连续转换（435 系列）：净增独立形变管线，实测手写行覆盖地板 84.35%–84.41%
-# （三次全量 verify；分支覆盖升至 91.01%）。行基线随之棘轮至 0.8430，禁止继续下探。
-$lineBaseline = 0.8430
-$branchBaseline = 0.8899
+# 棘轮基线 = 最近一次全量 verify 实测值再留约 0.1–0.25pp 余量，不是「历史地板」。
+# 2026-09-11 全量重审实测：手写行 85.96%、分支 92.93%。此前长期停在 0.8430/0.8899
+# （注释记的 91.01% 分支从未写进闸口），使约 1.6pp 行、3.8pp 分支的静默回退可以落在
+# 闸口之下——改基线时请与本次实测值一起更新，并保持余量在同一量级。
+$lineBaseline = 0.8585
+$branchBaseline = 0.9270
 $resultsRoot = Join-Path $PSScriptRoot 'TestResults\Coverage'
 
 $repositoryRoot = [IO.Path]::GetFullPath($PSScriptRoot)
@@ -189,6 +191,9 @@ $branchRatio = $coveredBranchCount / $validBranchCount
 
 Write-Output ("Handwritten C# line coverage: {0:N2}% ({1}/{2})" -f ($lineRatio * 100), $coveredLineCount, $validLineCount)
 Write-Output ("Handwritten C# branch coverage: {0:N2}% ({1}/{2})" -f ($branchRatio * 100), $coveredBranchCount, $validBranchCount)
+# Printed every run so a baseline that has drifted below the measured floor is visible in the CI
+# log instead of only surfacing when a later change quietly spends the slack.
+Write-Output ("Baseline slack: lines {0:+0.00;-0.00;0.00}pp, branches {1:+0.00;-0.00;0.00}pp" -f (($lineRatio - $lineBaseline) * 100), (($branchRatio - $branchBaseline) * 100))
 Write-Output ("Unit report: {0}" -f $reportPaths.Unit)
 Write-Output ("Headless report: {0}" -f $reportPaths.Headless)
 
