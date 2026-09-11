@@ -111,7 +111,8 @@ public sealed partial class LauncherUpdateService : IDisposable
                 if (diagnostics is not null)
                 {
                     await diagnostics.MessageAsync(
-                        "Launcher update check failed — invalid release file data",
+                        "LauncherUpdate",
+                        $"Launcher update check failed — invalid release file data{Environment.NewLine}" +
                         $"version: {targetRelease.Version}{Environment.NewLine}{validationError}",
                         CancellationToken.None).ConfigureAwait(false);
                 }
@@ -132,6 +133,7 @@ public sealed partial class LauncherUpdateService : IDisposable
         {
             if (diagnostics is not null)
                 await diagnostics.ErrorAsync(
+                    "LauncherUpdate",
                     "Launcher update check failed — HTTP request error",
                     ex,
                     CancellationToken.None).ConfigureAwait(false);
@@ -141,6 +143,7 @@ public sealed partial class LauncherUpdateService : IDisposable
         {
             if (diagnostics is not null)
                 await diagnostics.ErrorAsync(
+                    "LauncherUpdate",
                     "Launcher update check failed — JSON deserialization error",
                     ex,
                     CancellationToken.None).ConfigureAwait(false);
@@ -150,6 +153,7 @@ public sealed partial class LauncherUpdateService : IDisposable
         {
             if (diagnostics is not null)
                 await diagnostics.ErrorAsync(
+                    "LauncherUpdate",
                     "Launcher update check failed — request timeout",
                     ex,
                     CancellationToken.None).ConfigureAwait(false);
