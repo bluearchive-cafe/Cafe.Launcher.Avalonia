@@ -1,5 +1,6 @@
 using Cafe.Launcher.Avalonia.Features.GameOperations;
 using Cafe.Launcher.Avalonia.Models;
+using Cafe.Launcher.Avalonia.Services;
 
 namespace Cafe.Launcher.Avalonia.Tests;
 
@@ -140,6 +141,36 @@ public sealed class ManifestDiffCalculatorTests : IDisposable
         // 空清单：不访问磁盘、不触发进度回调，直接返回空差异。
         Assert.Empty(result);
         Assert.Equal(0, progressCalls);
+    }
+
+    [Fact]
+    public async Task CheckHashAsync_WhenFilesMatchManifest_PlansTheirHashesForTheInstallPass()
+    {
+        // 守卫（AUD-PERF-011）：修复差异算出的哈希必须交回调用方，安装阶段才能凭
+        // 见证跳过对同一批健康文件的第二次整读。只有通过校验的文件进入计划，
+        // 见证须在当下成立。
+        Directory.CreateDirectory(tempDir);
+        var healthyPath = Path.Combine(tempDir, "healthy.bin");
+        await System.IO.File.WriteAllBytesAsync(healthyPath, [1, 2, 3]);
+        var healthyHash = await new Crc64Service().ComputeFileAsync(healthyPath);
+        await System.IO.File.WriteAllBytesAsync(Path.Combine(tempDir, "stale.bin"), [7, 7, 7]);
+
+        var (diff, planned) = await ManifestDiffCalculator.CheckHashAsync(
+            new Crc64Service(),
+            [
+                CreateManifestFile("healthy.bin", healthyHash, 3),
+                CreateManifestFile("stale.bin", "not-the-real-hash", 3),
+                CreateManifestFile("missing.bin", "whatever", 1)
+            ],
+            tempDir,
+            progress: null,
+            CancellationToken.None);
+
+        Assert.Equal(["missing.bin", "stale.bin"], diff.Select(file => file.Path).Order());
+        var entry = Assert.Single(planned);
+        Assert.Equal("healthy.bin", entry.Key);
+        Assert.Equal(healthyHash, entry.Value.Hash);
+        Assert.True(entry.Value.Matches(healthyPath));
     }
 
     public void Dispose()

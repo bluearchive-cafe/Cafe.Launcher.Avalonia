@@ -117,8 +117,8 @@ public sealed class GameUninstallService
             }
 
             await diagnostics.MessageAsync(
-                "Game uninstall completed.",
-                $"path: {gamePath}{Environment.NewLine}files: {files.Count}",
+                "GameUninstall",
+                $"Game uninstall completed.{Environment.NewLine}path: {gamePath}{Environment.NewLine}files: {files.Count}",
                 cancellationToken).ConfigureAwait(false);
 
             return new GameOperationResult
@@ -130,7 +130,11 @@ public sealed class GameUninstallService
         }
         catch (Exception exception) when (exception is IOException or UnauthorizedAccessException)
         {
-            await diagnostics.ErrorAsync("Game uninstall failed.", exception, CancellationToken.None).ConfigureAwait(false);
+            await diagnostics.ErrorAsync(
+                "GameUninstall",
+                "Uninstalling the game failed.",
+                exception,
+                CancellationToken.None).ConfigureAwait(false);
             return new GameOperationResult
             {
                 Success = false,

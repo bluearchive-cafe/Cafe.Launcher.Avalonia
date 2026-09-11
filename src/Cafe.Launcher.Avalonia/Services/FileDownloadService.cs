@@ -151,7 +151,8 @@ public sealed class FileDownloadService : IFileDownloadService
                 await onProgressResetAsync(cancellationToken).ConfigureAwait(false);
 
                 await diagnostics.MessageAsync(
-                    "CRC64 mismatch after download",
+                    "FileDownload",
+                    $"CRC64 mismatch after download{Environment.NewLine}" +
                     $"file: {filePath}{Environment.NewLine}" +
                     $"expected: {expectedHash}{Environment.NewLine}" +
                     $"actual:   {crc64}{Environment.NewLine}" +

@@ -212,7 +212,11 @@ public partial class ToastHostViewModel : ViewModelBase, IDisposable
         }
         catch (Exception exception)
         {
-            await diagnostics.ErrorAsync("Toast action failed.", exception, CancellationToken.None);
+            await diagnostics.ErrorAsync(
+                "Toast",
+                "Running the toast action failed.",
+                exception,
+                CancellationToken.None);
             await ApplyActionFailureAsync(
                 toast,
                 localizer.T(LocalizationKeys.ToastActionFailedMessage),

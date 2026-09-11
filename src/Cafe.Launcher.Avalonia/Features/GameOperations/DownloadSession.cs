@@ -453,6 +453,7 @@ internal sealed class DownloadSession : IDisposable
                 downloadPlan.ManifestFiles,
                 currentDownloadList,
                 verifiedHashes,
+                downloadPlan.PlannedHashes,
                 value => progress(CreateProgress(operationKind, GameOperationStage.FileCheck, value)),
                 activeToken).ConfigureAwait(false);
 

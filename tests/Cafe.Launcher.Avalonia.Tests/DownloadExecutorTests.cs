@@ -38,6 +38,7 @@ public sealed class DownloadExecutorTests : IDisposable
             [manifestFile],
             [manifestFile],
             new Dictionary<string, string>(),
+            new Dictionary<string, PlannedFileHash>(),
             _ => { },
             CancellationToken.None);
 
@@ -64,6 +65,7 @@ public sealed class DownloadExecutorTests : IDisposable
             [manifestFile],
             [manifestFile],
             new Dictionary<string, string>(),
+            new Dictionary<string, PlannedFileHash>(),
             _ => { },
             CancellationToken.None);
 
@@ -92,12 +94,65 @@ public sealed class DownloadExecutorTests : IDisposable
             [manifestFile],
             [manifestFile],
             new Dictionary<string, string> { ["verified.bin"] = "trusted-hash" },
+            new Dictionary<string, PlannedFileHash>(),
             _ => { },
             CancellationToken.None);
 
         Assert.Empty(failed);
         Assert.Equal(new byte[] { 1, 2, 3 }, await File.ReadAllBytesAsync(targetPath));
         Assert.False(File.Exists(tempPath));
+    }
+
+    [Fact]
+    public async Task InstallDownloadedFilesAsync_WhenPlanningHashedUntouchedFile_SkipsRecheck()
+    {
+        // 契约（AUD-PERF-011）：规划阶段（修复差异）已整读过的、本会话未写入的文件，
+        // 安装阶段凭「哈希 + 大小/最后写入时间见证」跳过第二次整读。落入文件的
+        // 内容与 manifest 哈希故意不一致：只有跳过重读才会被接受。
+        var targetPath = Path.Combine(tempDir, "planned.bin");
+        await File.WriteAllBytesAsync(targetPath, [9, 9, 9]);
+        var planned = new Dictionary<string, PlannedFileHash>(StringComparer.Ordinal)
+        {
+            ["planned.bin"] = PlannedFileHash.Capture(targetPath, "planned-hash")
+        };
+        var manifestFile = new ManifestFile { Path = "planned.bin", Size = "3", Hash = "planned-hash" };
+
+        var failed = await CreateExecutor().InstallDownloadedFilesAsync(
+            tempDir,
+            [manifestFile],
+            [],
+            new Dictionary<string, string>(),
+            planned,
+            _ => { },
+            CancellationToken.None);
+
+        Assert.Empty(failed);
+    }
+
+    [Fact]
+    public async Task InstallDownloadedFilesAsync_WhenPlannedFileChangedAfterPlanning_RechecksAndFails()
+    {
+        // 与上一条完全相同的布局，只把最后写入时间推离见证值（内容与长度不动，
+        // 因此只有时间戳能区分）。见证失效即必须重读——内容自愈语义不被削弱。
+        var targetPath = Path.Combine(tempDir, "planned-stale.bin");
+        await File.WriteAllBytesAsync(targetPath, [9, 9, 9]);
+        var planned = new Dictionary<string, PlannedFileHash>(StringComparer.Ordinal)
+        {
+            ["planned-stale.bin"] = PlannedFileHash.Capture(targetPath, "planned-hash")
+        };
+        File.SetLastWriteTimeUtc(targetPath, planned["planned-stale.bin"].LastWriteUtc.AddMinutes(-1));
+        var manifestFile = new ManifestFile { Path = "planned-stale.bin", Size = "3", Hash = "planned-hash" };
+
+        var failed = await CreateExecutor().InstallDownloadedFilesAsync(
+            tempDir,
+            [manifestFile],
+            [],
+            new Dictionary<string, string>(),
+            planned,
+            _ => { },
+            CancellationToken.None);
+
+        _ = Assert.Single(failed);
     }
 
     [Fact]

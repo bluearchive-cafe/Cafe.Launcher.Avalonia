@@ -84,7 +84,11 @@ public sealed class LauncherSettingsService : IDisposable
         {
             if (diagnostics is not null)
             {
-                await diagnostics.ErrorAsync("Settings read failed", exception, CancellationToken.None).ConfigureAwait(false);
+                await diagnostics.ErrorAsync(
+                    "Settings",
+                    "Reading settings.json failed; defaults were applied.",
+                    exception,
+                    CancellationToken.None).ConfigureAwait(false);
             }
 
             return CreateDefaultSettings();

@@ -254,15 +254,18 @@ internal sealed class DownloadExecutor
     /// .tmp files, installs the passed files, and returns the failed files so
     /// the caller can retry them. Files present in <paramref name="verifiedHashes"/>
     /// with a matching manifest hash skip the re-read (they were verified during
-    /// download or in an earlier install round). Untouched installed files are
-    /// still hashed: this is the only content-corruption self-heal for files an
-    /// update does not rewrite — the launch check only compares size/existence.
+    /// download or in an earlier install round), and files present in
+    /// <paramref name="plannedHashes"/> whose witness still matches skip it too (they
+    /// were hashed by this session's planning pass). Untouched installed files are
+    /// otherwise still hashed: this is the only content-corruption self-heal for files
+    /// an update does not rewrite — the launch check only compares size/existence.
     /// </summary>
     internal async Task<IReadOnlyList<ManifestFile>> InstallDownloadedFilesAsync(
         string gamePath,
         IReadOnlyList<ManifestFile> manifestFiles,
         IReadOnlyList<ManifestFile> downloadedFiles,
         IReadOnlyDictionary<string, string> verifiedHashes,
+        IReadOnlyDictionary<string, PlannedFileHash> plannedHashes,
         Action<int> progress,
         CancellationToken cancellationToken)
     {
@@ -273,7 +276,8 @@ internal sealed class DownloadExecutor
         foreach (var file in manifestFiles)
         {
             cancellationToken.ThrowIfCancellationRequested();
-            var checkPath = downloadedPathSet.Contains(file.Path)
+            var isDownloaded = downloadedPathSet.Contains(file.Path);
+            var checkPath = isDownloaded
                 ? GetTempName(GamePathValidator.GetSafeFilePath(gamePath, file.Path))
                 : GamePathValidator.GetSafeFilePath(gamePath, file.Path);
 
@@ -281,8 +285,7 @@ internal sealed class DownloadExecutor
             {
                 failedFiles.Add(new ManifestFile { Path = file.Path, Size = file.Size, Hash = file.Hash });
             }
-            else if (!(verifiedHashes.TryGetValue(file.Path, out var verifiedHash)
-                && verifiedHash == file.Hash))
+            else if (!IsAlreadyVerified(file, checkPath, isDownloaded, verifiedHashes, plannedHashes))
             {
                 var crc64 = await crc64Service.ComputeFileAsync(checkPath, null, cancellationToken).ConfigureAwait(false);
                 if (crc64 != file.Hash)
@@ -330,6 +333,32 @@ internal sealed class DownloadExecutor
         }
 
         return failedFiles;
+    }
+
+    /// <summary>
+    /// Gets whether this session has already proven <paramref name="file"/>'s content, so the
+    /// full read can be skipped. A downloaded file is proven by the hash taken right after its
+    /// transfer; a file the session did not write is proven by the planning pass, but only while
+    /// it still matches the witness captured then — anything that changed since is read again, so
+    /// the content check keeps its teeth.
+    /// </summary>
+    private static bool IsAlreadyVerified(
+        ManifestFile file,
+        string checkPath,
+        bool isDownloaded,
+        IReadOnlyDictionary<string, string> verifiedHashes,
+        IReadOnlyDictionary<string, PlannedFileHash> plannedHashes)
+    {
+        if (verifiedHashes.TryGetValue(file.Path, out var verifiedHash)
+            && verifiedHash == file.Hash)
+        {
+            return true;
+        }
+
+        return !isDownloaded
+            && plannedHashes.TryGetValue(file.Path, out var planned)
+            && planned.Hash == file.Hash
+            && planned.Matches(checkPath);
     }
 
     /// <summary>

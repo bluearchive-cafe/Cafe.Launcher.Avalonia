@@ -168,7 +168,8 @@ public sealed partial class LogViewerDialogViewModel : ViewModelBase, IModalCont
             if (diagnostics is not null)
             {
                 await diagnostics.ErrorAsync(
-                    "LogViewer load failed.",
+                    "LogViewer",
+                    "Loading the log entries failed.",
                     ex,
                     CancellationToken.None);
             }
@@ -208,7 +209,8 @@ public sealed partial class LogViewerDialogViewModel : ViewModelBase, IModalCont
             if (diagnostics is not null)
             {
                 await diagnostics.ErrorAsync(
-                    "LogViewer load earlier failed.",
+                    "LogViewer",
+                    "Loading the earlier log entries failed.",
                     ex,
                     CancellationToken.None);
             }

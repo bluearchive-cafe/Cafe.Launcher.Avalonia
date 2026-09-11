@@ -197,8 +197,8 @@ public partial class BackgroundViewModel : ViewModelBase, IDisposable
                     catch (Exception ex)
                     {
                         _ = diagnostics.MessageAsync(
-                            "Remote background image download failed",
-                            $"url: {bgImg}\ncrc64: {crc64}\nexception: {ex.Message}",
+                            "Background",
+                            $"Remote background image download failed\nurl: {bgImg}\ncrc64: {crc64}\nexception: {ex.Message}",
                             CancellationToken.None);
                     }
                 }
@@ -372,8 +372,8 @@ public partial class BackgroundViewModel : ViewModelBase, IDisposable
         catch (Exception ex)
         {
             await diagnostics.MessageAsync(
-                "Background image resize reload failed",
-                $"path: {decodedPath}\nexception: {ex.Message}",
+                "Background",
+                $"Background image resize reload failed\npath: {decodedPath}\nexception: {ex.Message}",
                 CancellationToken.None);
             return;
         }
@@ -440,8 +440,8 @@ public partial class BackgroundViewModel : ViewModelBase, IDisposable
             catch (Exception ex)
             {
                 await diagnostics.MessageAsync(
-                    "Custom background image load failed",
-                    $"path: {path}\nexception: {ex.Message}",
+                    "Background",
+                    $"Custom background image load failed\npath: {path}\nexception: {ex.Message}",
                     CancellationToken.None);
                 return default;
             }
@@ -458,8 +458,8 @@ public partial class BackgroundViewModel : ViewModelBase, IDisposable
             catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
             {
                 await diagnostics.MessageAsync(
-                    "Custom background folder scan failed",
-                    $"path: {path}\nexception: {ex.Message}",
+                    "Background",
+                    $"Custom background folder scan failed\npath: {path}\nexception: {ex.Message}",
                     CancellationToken.None);
                 return default;
             }
@@ -467,8 +467,8 @@ public partial class BackgroundViewModel : ViewModelBase, IDisposable
             if (imagePath is null)
             {
                 await diagnostics.MessageAsync(
-                    "Custom background folder contains no supported images",
-                    $"path: {path}",
+                    "Background",
+                    $"Custom background folder contains no supported images\npath: {path}",
                     CancellationToken.None);
                 return default;
             }
@@ -496,16 +496,16 @@ public partial class BackgroundViewModel : ViewModelBase, IDisposable
             catch (Exception ex)
             {
                 await diagnostics.MessageAsync(
-                    "Custom background folder image load failed",
-                    $"folder: {path}\npath: {imagePath}\nexception: {ex.Message}",
+                    "Background",
+                    $"Custom background folder image load failed\nfolder: {path}\npath: {imagePath}\nexception: {ex.Message}",
                     CancellationToken.None);
                 return default;
             }
         }
 
         await diagnostics.MessageAsync(
-            "Custom background path does not exist",
-            $"path: {path}",
+            "Background",
+            $"Custom background path does not exist\npath: {path}",
             CancellationToken.None);
         return default;
     }
