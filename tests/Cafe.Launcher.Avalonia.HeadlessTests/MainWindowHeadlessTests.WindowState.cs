@@ -6,6 +6,7 @@ using Avalonia.Headless.XUnit;
 using Avalonia.Input;
 using Avalonia.Threading;
 using Avalonia.VisualTree;
+using Cafe.Launcher.Avalonia.Features.GameOperations;
 using Cafe.Launcher.Avalonia.Models;
 using Cafe.Launcher.Avalonia.Services;
 using Cafe.Launcher.Avalonia.Views;
@@ -391,6 +392,59 @@ public sealed partial class MainWindowHeadlessTests
 
         Assert.False(context.Window.IsVisible);
         Assert.NotEqual(WindowState.Minimized, context.Window.WindowState);
+    }
+
+    [AvaloniaFact]
+    public void MainWindow_LaunchMinimize_WhenTrayIsConfigured_HidesWindow()
+    {
+        // The game-launch toast reports "minimized to tray", so this path must hide the
+        // window rather than leaving it on the taskbar.
+        using var context = CreateContext();
+        using var trayService = new SystemTrayService(
+            context.Window,
+            new LocalizationService(),
+            new TestTrayPlatform());
+        context.Window.SetSystemTray(trayService);
+        context.Window.Show();
+
+        ((IGameOperationJourneyHost)context.ViewModel.Operations).RequestMinimize();
+        Dispatcher.UIThread.RunJobs();
+
+        Assert.False(context.Window.IsVisible);
+        Assert.NotEqual(WindowState.Minimized, context.Window.WindowState);
+    }
+
+    [AvaloniaFact]
+    public void MainWindow_LaunchMinimize_WithoutTray_FallsBackToTaskbarMinimize()
+    {
+        // A hidden window with no tray icon cannot be restored, so the fallback must stay.
+        using var context = CreateContext();
+        context.Window.Show();
+
+        ((IGameOperationJourneyHost)context.ViewModel.Operations).RequestMinimize();
+        Dispatcher.UIThread.RunJobs();
+
+        Assert.Equal(WindowState.Minimized, context.Window.WindowState);
+    }
+
+    [AvaloniaFact]
+    public void MainWindow_TitleBarMinimize_WhenTrayIsConfigured_StaysOnTaskbar()
+    {
+        // The launch path hides to tray, but the title-bar minimize button still asks for a
+        // taskbar minimize — guard against the two paths being collapsed into one handler.
+        using var context = CreateContext();
+        using var trayService = new SystemTrayService(
+            context.Window,
+            new LocalizationService(),
+            new TestTrayPlatform());
+        context.Window.SetSystemTray(trayService);
+        context.Window.Show();
+
+        context.ViewModel.WindowChrome.MinimizeCommand.Execute(null);
+        Dispatcher.UIThread.RunJobs();
+
+        Assert.True(context.Window.IsVisible);
+        Assert.Equal(WindowState.Minimized, context.Window.WindowState);
     }
 
     [AvaloniaFact]
