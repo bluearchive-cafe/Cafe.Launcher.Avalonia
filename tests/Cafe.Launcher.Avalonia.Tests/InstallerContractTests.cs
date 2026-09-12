@@ -661,6 +661,20 @@ public sealed class InstallerContractTests
         Assert.Contains("body_path: changelog-distribution.md", workflow, StringComparison.Ordinal);
     }
 
+    [Fact]
+    public void ReleaseWorkflow_PublishesChecksumManifestForEveryDistributionPackage()
+    {
+        var workflow = ReadProjectFile(".github/workflows/release.yml");
+
+        // 摘要清单必须与产物一起发布到两个发布目标，用户才能校验下载内容是否被篡改或截断。
+        Assert.Equal(2, CountOccurrences(workflow, "artifacts/distribution/SHA256SUMS"));
+        Assert.Contains("sha256sum \"${packages[@]}\" > SHA256SUMS", workflow, StringComparison.Ordinal);
+
+        // 产物集合变化时宁可让发布失败，也不要发出不完整或掺入意外文件的清单。
+        Assert.Contains("Expected 6 distribution packages, found", workflow, StringComparison.Ordinal);
+        Assert.Contains("if [[ ${#packages[@]} -ne 6 ]]; then", workflow, StringComparison.Ordinal);
+    }
+
     private static bool ContainsCjk(string text)
     {
         foreach (var character in text)
