@@ -111,6 +111,11 @@
         <Setter Property="BorderBrush" Value="{DynamicResource Launcher.Color.FocusRing}"/>
         <Setter Property="BorderThickness" Value="{StaticResource Launcher.Border.Thickness.Focus}"/>
     </Style>
+    <!-- M3: ComboBox 弹层对齐对话框表面家族，避免 Fluent 中性灰与种子跟随主题脱节。 -->
+    <Style Selector="ComboBox /template/ Border#PopupBorder">
+        <Setter Property="Background" Value="{DynamicResource Launcher.Color.Dialog.Background}"/>
+        <Setter Property="BorderBrush" Value="{DynamicResource Launcher.Color.OutlineVariant}"/>
+    </Style>
     <Style Selector="ComboBox.setting-control">
         <Setter Property="MinWidth" Value="{StaticResource Launcher.Component.Settings.Control.MinWidth}"/>
         <Setter Property="Background" Value="{DynamicResource Launcher.Color.Field.Background}"/>
@@ -1089,16 +1094,18 @@
         <Setter Property="Orientation" Value="Horizontal"/>
         <Setter Property="Spacing" Value="{StaticResource Launcher.Spacing.Xs}"/>
     </Style>
+    <!-- 状态表面标题为 12px 小字，消费 OnContainer 级文本色（4.5:1）；
+         图标保留 Info/Danger 色调（图形 3:1 目标）。 -->
     <Style Selector="TextBlock.dialog-alert-title">
         <Setter Property="FontSize" Value="{StaticResource Launcher.Typography.FontSize.Label.Md}"/>
         <Setter Property="FontWeight" Value="{StaticResource Launcher.Typography.FontWeight.Strong}"/>
-        <Setter Property="Foreground" Value="{StaticResource Launcher.Color.Info}"/>
+        <Setter Property="Foreground" Value="{DynamicResource Launcher.Text.Info}"/>
     </Style>
     <Style Selector="TextBlock.dialog-alert-title.warning">
         <Setter Property="Foreground" Value="{StaticResource Launcher.Color.Warning}"/>
     </Style>
     <Style Selector="TextBlock.dialog-alert-title.danger">
-        <Setter Property="Foreground" Value="{StaticResource Launcher.Color.Danger}"/>
+        <Setter Property="Foreground" Value="{DynamicResource Launcher.Text.Danger}"/>
     </Style>
     <Style Selector="materialIcons|MaterialIcon.dialog-alert-icon">
         <Setter Property="Foreground" Value="{StaticResource Launcher.Color.Info}"/>
@@ -1115,7 +1122,7 @@
     </Style>
     <Style Selector="Border.dialog-card">
         <Setter Property="Background" Value="{DynamicResource Launcher.Color.Card.Background}"/>
-        <Setter Property="BorderBrush" Value="{DynamicResource Launcher.Color.Outline}"/>
+        <Setter Property="BorderBrush" Value="{DynamicResource Launcher.Color.OutlineVariant}"/>
         <Setter Property="BorderThickness" Value="{StaticResource Launcher.Border.Thickness.Default}"/>
         <Setter Property="CornerRadius" Value="{StaticResource Launcher.Radius.Sm}"/>
         <Setter Property="Padding" Value="{StaticResource Launcher.Spacing.Thickness.Lg}"/>
@@ -1565,6 +1572,30 @@
     </Style>
     <Style Selector="ToggleSwitch:checked /template/ Ellipse#SwitchKnobOn">
         <Setter Property="Fill" Value="{DynamicResource Launcher.Color.OnPrimary}"/>
+    </Style>
+    <!-- 未套 `setting-checkbox` 的按条多选（资源面板启用行）沿用 Fluent 基础模板：
+         Fluent 选中填色是写死的强调蓝、勾号为其配套白色，二者都不随动态配色变化；
+         换成主题色填充后须把填充与前景成对跟进 Primary/OnPrimary
+         （spec §4 设置行与表单行控件语义）。 -->
+    <Style Selector="CheckBox:checked /template/ Border#NormalRectangle">
+        <Setter Property="Background" Value="{DynamicResource Launcher.Color.Primary}"/>
+        <Setter Property="BorderBrush" Value="{DynamicResource Launcher.Color.Primary}"/>
+    </Style>
+    <Style Selector="CheckBox:checked /template/ Path#CheckGlyph">
+        <Setter Property="Fill" Value="{DynamicResource Launcher.Color.OnPrimary}"/>
+        <Setter Property="Stroke" Value="{DynamicResource Launcher.Color.OnPrimary}"/>
+    </Style>
+    <Style Selector="CheckBox:indeterminate /template/ Border#NormalRectangle">
+        <Setter Property="Background" Value="{DynamicResource Launcher.Color.Primary}"/>
+        <Setter Property="BorderBrush" Value="{DynamicResource Launcher.Color.Primary}"/>
+    </Style>
+    <Style Selector="CheckBox:checked:pointerover /template/ Border#NormalRectangle">
+        <Setter Property="Background" Value="{DynamicResource Launcher.Color.Primary.Hover}"/>
+        <Setter Property="BorderBrush" Value="{DynamicResource Launcher.Color.Primary.Hover}"/>
+    </Style>
+    <Style Selector="CheckBox:checked:pressed /template/ Border#NormalRectangle">
+        <Setter Property="Background" Value="{DynamicResource Launcher.Color.Primary.Pressed}"/>
+        <Setter Property="BorderBrush" Value="{DynamicResource Launcher.Color.Primary.Pressed}"/>
     </Style>
     <Style Selector="CheckBox.setting-checkbox">
         <Setter Property="MinHeight" Value="{StaticResource Launcher.Control.Height.Setting}"/>

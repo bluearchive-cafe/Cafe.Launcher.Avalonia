@@ -281,6 +281,39 @@ public partial class MainWindowViewModelTests
     }
 
     [Fact]
+    public void Load_WhenWallpaperPaletteHasSeeds_CheckBrushPairsWithGeneratedPrimary()
+    {
+        var editor = new SettingsEditor();
+        var settings = new LauncherSettings
+        {
+            ThemeColorMode = ThemeColorModes.Wallpaper,
+            ThemeMode = ThemeModes.Light,
+            ThemeColorVariant = ThemeColorVariants.Expressive,
+            ThemeColorPalette = ["#FFC3A58E"],
+            SelectedThemeColorPaletteIndex = 0
+        };
+        editor.ApplySnapshot(settings);
+        using var appearance = new SettingsAppearanceViewModel(editor);
+
+        appearance.Load(settings);
+
+        var item = Assert.Single(appearance.ThemeColorPaletteItems);
+        // 勾选前景取同一 DynamicScheme 的 OnPrimary，与色块刷子（Primary）成对，
+        // 保证任意种子下勾选可读；全局 OnPrimary 只对当前主题 Primary 有效。
+        var scheme = MaterialSchemeGenerator.CreateScheme(
+            Color.FromRgb(0xC3, 0xA5, 0x8E),
+            ThemeColorVariants.Expressive,
+            isDark: false);
+        var expectedCheck = MaterialColorMapper.ToAvaloniaColor(scheme.OnPrimary);
+        var check = Assert.IsType<SolidColorBrush>(item.CheckBrush);
+        var brush = Assert.IsType<SolidColorBrush>(item.Brush);
+        Assert.Equal(expectedCheck, check.Color);
+        Assert.True(
+            ColorUtils.GetContrastRatio(check.Color, brush.Color) >= 4.5,
+            $"Swatch check contrast is {ColorUtils.GetContrastRatio(check.Color, brush.Color):F2}:1.");
+    }
+
+    [Fact]
     public void NeutralStrategy_TogglingSeedFollowing_ReflectsHintVisibility() // ADR-010
     {
         var editor = new SettingsEditor();

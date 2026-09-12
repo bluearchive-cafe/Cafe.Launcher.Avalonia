@@ -8,7 +8,6 @@ using MaterialColorUtilities.DynamicColors;
 using MaterialColorUtilities.HCT;
 using MaterialColorUtilities.Scheme;
 using MaterialColorUtilities.Utils;
-using CafeColorUtils = Cafe.Launcher.Avalonia.Helpers.ColorUtils;
 
 namespace Cafe.Launcher.Avalonia.Services;
 
@@ -20,6 +19,8 @@ namespace Cafe.Launcher.Avalonia.Services;
 /// </summary>
 internal static class MaterialSchemeGenerator
 {
+    internal const double HoverStateOpacity = 0.08;
+    internal const double PressedStateOpacity = 0.12;
     /// <summary>
     /// Creates an M3 <see cref="DynamicScheme"/> for a seed colour, variant and
     /// brightness. The variant maps onto the eight Q24-approved variants and
@@ -56,8 +57,11 @@ internal static class MaterialSchemeGenerator
     /// are always written for every strategy, so toggling seed-following can
     /// never leave stale in-place brush overrides behind (ADR-010): Brand Blue
     /// resets the family to the declared App.axaml defaults
-    /// (<see cref="DialogSurfaceDefaults"/>), seed-following dyes it from the
-    /// scheme's neutral surface ladder.
+    /// (<see cref="DialogSurfaceDefaults"/>, <see cref="NeutralContentDefaults"/>
+    /// and <see cref="NeutralSurfaceDefaults"/>), seed-following dyes it from the
+    /// scheme's neutral surface ladder. The full M3 container ladder is published
+    /// as <c>Launcher.Color.SurfaceContainer[.Lowest/.Low/.High/.Highest]</c> for
+    /// both strategies.
     /// </summary>
     public static IReadOnlyDictionary<string, SolidColorBrush> BuildRoleBrushes(
         DynamicScheme scheme,
@@ -66,26 +70,32 @@ internal static class MaterialSchemeGenerator
     {
         var result = new Dictionary<string, SolidColorBrush>(StringComparer.Ordinal);
         var primary = MaterialColorMapper.ToAvaloniaColor(scheme.Primary);
+        var onPrimary = MaterialColorMapper.ToAvaloniaColor(scheme.OnPrimary);
 
         // Pre-existing override subset (previously ApplyAccentBrushes).
         result["Launcher.Color.Primary"] = new SolidColorBrush(primary);
-        result["Launcher.Color.Primary.Hover"] = new SolidColorBrush(CafeColorUtils.AdjustColor(primary, 1.15));
-        result["Launcher.Color.Primary.Pressed"] = new SolidColorBrush(CafeColorUtils.AdjustColor(primary, 0.85));
+        result["Launcher.Color.Primary.Hover"] = new SolidColorBrush(Blend(primary, onPrimary, HoverStateOpacity));
+        result["Launcher.Color.Primary.Pressed"] = new SolidColorBrush(Blend(primary, onPrimary, PressedStateOpacity));
         result["Launcher.Color.Primary.Soft"] = new SolidColorBrush(Color.FromArgb(0x24, primary.R, primary.G, primary.B));
         result["Launcher.Color.Primary.Border"] = new SolidColorBrush(Color.FromArgb(0x80, primary.R, primary.G, primary.B));
-        result["Launcher.Color.OnPrimary"] = new SolidColorBrush(CafeColorUtils.GetReadableOnAccentColor(primary));
-        result["Launcher.Color.FocusRing"] = new SolidColorBrush(Color.FromArgb(0x99, primary.R, primary.G, primary.B));
+        result["Launcher.Color.OnPrimary"] = new SolidColorBrush(onPrimary);
+        // Focus indicators use the opaque M3 primary role. Primary's tone is
+        // selected against the scheme's neutral surfaces; reducing its alpha
+        // can erase that contrast after compositing.
+        result["Launcher.Color.FocusRing"] = new SolidColorBrush(primary);
         // The active banner indicator is a fixed over-image chrome color, not a
         // dynamic accent role. Keep it white across theme and seed changes.
         result["Launcher.Color.Carousel.Dot.Active"] = new SolidColorBrush(Colors.White);
-        result["Launcher.Color.Button.Flat.Hover"] = new SolidColorBrush(Color.FromArgb(0x14, primary.R, primary.G, primary.B));
-        result["Launcher.Color.Button.Flat.Pressed"] = new SolidColorBrush(Color.FromArgb(0x30, primary.R, primary.G, primary.B));
+        result["Launcher.Color.Button.Flat.Hover"] = new SolidColorBrush(
+            Color.FromArgb(ToAlphaByte(HoverStateOpacity), primary.R, primary.G, primary.B));
+        result["Launcher.Color.Button.Flat.Pressed"] = new SolidColorBrush(
+            Color.FromArgb(ToAlphaByte(PressedStateOpacity), primary.R, primary.G, primary.B));
 
         var error = MaterialColorMapper.ToAvaloniaColor(scheme.Error);
         var onError = MaterialColorMapper.ToAvaloniaColor(scheme.OnError);
         result["Launcher.Color.Error"] = new SolidColorBrush(error);
-        result["Launcher.Color.Error.Hover"] = new SolidColorBrush(Blend(error, onError, 0.08));
-        result["Launcher.Color.Error.Pressed"] = new SolidColorBrush(Blend(error, onError, 0.16));
+        result["Launcher.Color.Error.Hover"] = new SolidColorBrush(Blend(error, onError, HoverStateOpacity));
+        result["Launcher.Color.Error.Pressed"] = new SolidColorBrush(Blend(error, onError, PressedStateOpacity));
         result["Launcher.Color.OnError"] = new SolidColorBrush(onError);
 
         // M3 scheme roles.
@@ -95,8 +105,8 @@ internal static class MaterialSchemeGenerator
         result["Launcher.Color.OnSecondary"] = MaterialColorMapper.ToBrush(scheme.OnSecondary);
         result["Launcher.Color.SecondaryContainer"] = new SolidColorBrush(secondaryContainer);
         result["Launcher.Color.OnSecondaryContainer"] = new SolidColorBrush(onSecondaryContainer);
-        result["Launcher.Color.SecondaryContainer.Hover"] = new SolidColorBrush(Blend(secondaryContainer, onSecondaryContainer, 0.08));
-        result["Launcher.Color.SecondaryContainer.Pressed"] = new SolidColorBrush(Blend(secondaryContainer, onSecondaryContainer, 0.16));
+        result["Launcher.Color.SecondaryContainer.Hover"] = new SolidColorBrush(Blend(secondaryContainer, onSecondaryContainer, HoverStateOpacity));
+        result["Launcher.Color.SecondaryContainer.Pressed"] = new SolidColorBrush(Blend(secondaryContainer, onSecondaryContainer, PressedStateOpacity));
         result["Launcher.Color.Tertiary"] = MaterialColorMapper.ToBrush(scheme.Tertiary);
         result["Launcher.Color.OnTertiary"] = MaterialColorMapper.ToBrush(scheme.OnTertiary);
         result["Launcher.Color.TertiaryContainer"] = MaterialColorMapper.ToBrush(scheme.TertiaryContainer);
@@ -113,6 +123,12 @@ internal static class MaterialSchemeGenerator
         result["Launcher.Color.Surface"] = MaterialColorMapper.ToBrush(neutralScheme.Surface);
         result["Launcher.Color.OnSurface"] = MaterialColorMapper.ToBrush(neutralScheme.OnSurface);
         result["Launcher.Color.Outline"] = MaterialColorMapper.ToBrush(neutralScheme.Outline);
+        result["Launcher.Color.OutlineVariant"] = MaterialColorMapper.ToBrush(neutralScheme.OutlineVariant);
+        result["Launcher.Color.SurfaceContainer.Lowest"] = MaterialColorMapper.ToBrush(neutralScheme.SurfaceContainerLowest);
+        result["Launcher.Color.SurfaceContainer.Low"] = MaterialColorMapper.ToBrush(neutralScheme.SurfaceContainerLow);
+        result["Launcher.Color.SurfaceContainer"] = MaterialColorMapper.ToBrush(neutralScheme.SurfaceContainer);
+        result["Launcher.Color.SurfaceContainer.High"] = MaterialColorMapper.ToBrush(neutralScheme.SurfaceContainerHigh);
+        result["Launcher.Color.SurfaceContainer.Highest"] = MaterialColorMapper.ToBrush(neutralScheme.SurfaceContainerHighest);
 
         // M3 dialogs share SurfaceContainerHigh across body, header and footer.
         // Close states layer OnSurface over this base. Reset all neutral overrides
@@ -124,13 +140,39 @@ internal static class MaterialSchemeGenerator
             result["Launcher.Color.Dialog.Background"] = new SolidColorBrush(container);
             result["Launcher.Color.Dialog.Footer"] = new SolidColorBrush(container);
             result["Launcher.Color.Dialog.Header"] = new SolidColorBrush(container);
-            result["Launcher.Color.Dialog.Close.Hover"] = new SolidColorBrush(Blend(container, onSurface, 0.08));
-            result["Launcher.Color.Dialog.Close.Pressed"] = new SolidColorBrush(Blend(container, onSurface, 0.12));
+            result["Launcher.Color.Dialog.Close.Hover"] = new SolidColorBrush(Blend(container, onSurface, HoverStateOpacity));
+            result["Launcher.Color.Dialog.Close.Pressed"] = new SolidColorBrush(Blend(container, onSurface, PressedStateOpacity));
             result["Launcher.Text.Primary"] = MaterialColorMapper.ToBrush(neutralScheme.OnSurface);
             result["Launcher.Text.Secondary"] = MaterialColorMapper.ToBrush(neutralScheme.OnSurfaceVariant);
             result["Launcher.Text.Body"] = MaterialColorMapper.ToBrush(neutralScheme.OnSurfaceVariant);
             result["Launcher.Color.Field.Background"] = MaterialColorMapper.ToBrush(neutralScheme.SurfaceContainerHighest);
             result["Launcher.Color.Field.Border"] = MaterialColorMapper.ToBrush(neutralScheme.Outline);
+
+            // Content surfaces join the same ladder: cards are elevated
+            // containers (brighter than the dialog in dark, Low in light), rows
+            // the mid step, soft boundaries the variant outline. Semi-transparent
+            // wallpaper-overlaid panels stay brand chrome and are not mapped.
+            var outlineVariant = MaterialColorMapper.ToAvaloniaColor(neutralScheme.OutlineVariant);
+            result["Launcher.Color.Card.Background"] = new SolidColorBrush(isDark
+                ? MaterialColorMapper.ToAvaloniaColor(neutralScheme.SurfaceContainerHighest)
+                : MaterialColorMapper.ToAvaloniaColor(neutralScheme.SurfaceContainerLow));
+            result["Launcher.Color.Card.Border"] = new SolidColorBrush(outlineVariant);
+            result["Launcher.Color.Content.Row"] = MaterialColorMapper.ToBrush(neutralScheme.SurfaceContainer);
+            result["Launcher.Color.Button.Border"] = new SolidColorBrush(outlineVariant);
+            result["Launcher.Color.SiteButton.Background"] = new SolidColorBrush(isDark
+                ? MaterialColorMapper.ToAvaloniaColor(neutralScheme.SurfaceContainer)
+                : MaterialColorMapper.ToAvaloniaColor(neutralScheme.Surface));
+            result["Launcher.Color.SiteButton.Border"] = new SolidColorBrush(outlineVariant);
+            result["Launcher.Color.Toast.Background"] = new SolidColorBrush(isDark
+                ? MaterialColorMapper.ToAvaloniaColor(neutralScheme.SurfaceContainerHigh)
+                : MaterialColorMapper.ToAvaloniaColor(neutralScheme.Surface));
+
+            // M3 状态层预合成盘（hover 8% / pressed 12% 的 onSurface），供 radio
+            // 等选择控件的图标底盘消费；不透明度与 Launcher.StateLayer.* 一致。
+            result["Launcher.Color.StateLayer.OnSurface.Hover"] = new SolidColorBrush(
+                Color.FromArgb(ToAlphaByte(HoverStateOpacity), onSurface.R, onSurface.G, onSurface.B));
+            result["Launcher.Color.StateLayer.OnSurface.Pressed"] = new SolidColorBrush(
+                Color.FromArgb(ToAlphaByte(PressedStateOpacity), onSurface.R, onSurface.G, onSurface.B));
         }
         else
         {
@@ -143,10 +185,45 @@ internal static class MaterialSchemeGenerator
             {
                 result[key] = new SolidColorBrush(Color.Parse(isDark ? dark : light));
             }
+
+            foreach (var (key, light, dark) in NeutralSurfaceDefaults)
+            {
+                result[key] = new SolidColorBrush(Color.Parse(isDark ? dark : light));
+            }
+
+            foreach (var (key, light, dark) in StateLayerDefaults)
+            {
+                result[key] = new SolidColorBrush(Color.Parse(isDark ? dark : light));
+            }
         }
 
         return result;
     }
+
+    internal static readonly (string Key, string Light, string Dark)[] NeutralSurfaceDefaults =
+    [
+        ("Launcher.Color.Card.Background", "#FFFAFCFF", "#FF202733"),
+        ("Launcher.Color.Card.Border", "#FFD6E2EE", "#FF344150"),
+        ("Launcher.Color.Content.Row", "#FFF1F5F9", "#FF202833"),
+        ("Launcher.Color.Button.Border", "#FFC8D2DE", "#FF4A5B73"),
+        ("Launcher.Color.SiteButton.Background", "#FFFFFFFF", "#FF192232"),
+        ("Launcher.Color.SiteButton.Border", "#FFD5E3F3", "#FF3D5B80"),
+        ("Launcher.Color.Toast.Background", "#FFFFFFFF", "#FF1C2533"),
+    ];
+
+    /// <summary>
+    /// Declared App.axaml on-surface state-layer defaults as (key, light, dark)
+    /// rows: pre-composed M3 state layers (hover 8% / pressed 12% of onSurface)
+    /// consumed by the radio glyph disc. Alpha bytes are the quantised ratios
+    /// produced by <c>ToAlphaByte</c> (8% → 0x14, 12% → 0x1F). The Brand Blue
+    /// strategy resets these to neutral chrome, and UiStyleContractTests asserts
+    /// the XAML declarations against this table so the two cannot drift apart.
+    /// </summary>
+    internal static readonly (string Key, string Light, string Dark)[] StateLayerDefaults =
+    [
+        ("Launcher.Color.StateLayer.OnSurface.Hover", "#14000000", "#14FFFFFF"),
+        ("Launcher.Color.StateLayer.OnSurface.Pressed", "#1F000000", "#1FFFFFFF"),
+    ];
 
     /// <summary>
     /// Declared App.axaml dialog-surface defaults as (key, light, dark) rows.
@@ -177,4 +254,12 @@ internal static class MaterialSchemeGenerator
             (byte)Math.Round(background.R + ((foreground.R - background.R) * opacity)),
             (byte)Math.Round(background.G + ((foreground.G - background.G) * opacity)),
             (byte)Math.Round(background.B + ((foreground.B - background.B) * opacity)));
+
+    /// <summary>
+    /// 预合成状态层需要 byte alpha，而令牌持有的是精确比例
+    /// （<see cref="HoverStateOpacity"/> 0.08 / <see cref="PressedStateOpacity"/> 0.12）。
+    /// 量化统一收敛到这里（8% → 0x14、12% → 0x1F），调用点不再各写一份十六进制字面量，
+    /// 刻度调整时也不会漏改。
+    /// </summary>
+    private static byte ToAlphaByte(double opacity) => (byte)Math.Round(opacity * 255);
 }

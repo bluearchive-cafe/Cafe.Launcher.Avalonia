@@ -452,11 +452,13 @@ public partial class SettingsAppearanceViewModel : ViewModelBase, IDisposable
             for (var i = 0; i < normalizedColors.Length; i++)
             {
                 var color = ParseColorOrDefault(normalizedColors[i]);
+                var (primary, onPrimary) = GetGeneratedPrimaryPair(color, IsDarkTheme(editor.Current.ThemeMode));
                 ThemeColorPaletteItems.Add(new ThemeColorPaletteItem
                 {
                     Index = i,
                     ColorHex = normalizedColors[i],
-                    Brush = new SolidColorBrush(GetGeneratedPrimaryColor(color))
+                    Brush = new SolidColorBrush(primary),
+                    CheckBrush = new SolidColorBrush(onPrimary)
                 });
             }
 
@@ -488,10 +490,11 @@ public partial class SettingsAppearanceViewModel : ViewModelBase, IDisposable
             var seed = ParseThemeColorPaletteColor(item.ColorHex);
             if (seed is { } color)
             {
-                item.Brush = new SolidColorBrush(
-                    isDark is { } value
-                        ? GetGeneratedPrimaryColor(color, value)
-                        : GetGeneratedPrimaryColor(color));
+                var (primary, onPrimary) = isDark is { } value
+                    ? GetGeneratedPrimaryPair(color, value)
+                    : GetGeneratedPrimaryPair(color, IsDarkTheme(editor.Current.ThemeMode));
+                item.Brush = new SolidColorBrush(primary);
+                item.CheckBrush = new SolidColorBrush(onPrimary);
             }
         }
     }
@@ -511,11 +514,22 @@ public partial class SettingsAppearanceViewModel : ViewModelBase, IDisposable
 
     private Color GetGeneratedPrimaryColor(Color seed, bool isDark)
     {
+        return GetGeneratedPrimaryPair(seed, isDark).Primary;
+    }
+
+    /// <summary>
+    /// 生成色块的 Primary/OnPrimary 配对：两者必须来自同一 DynamicScheme
+    /// （同种子、同变体、同明暗），勾选标记才能在任意种子的色块上保持对比度。
+    /// </summary>
+    private (Color Primary, Color OnPrimary) GetGeneratedPrimaryPair(Color seed, bool isDark)
+    {
         var scheme = MaterialSchemeGenerator.CreateScheme(
             seed,
             editor.Current.ThemeColorVariant,
             isDark);
-        return MaterialColorMapper.ToAvaloniaColor(scheme.Primary);
+        return (
+            MaterialColorMapper.ToAvaloniaColor(scheme.Primary),
+            MaterialColorMapper.ToAvaloniaColor(scheme.OnPrimary));
     }
 
     private void OnPlatformColorValuesChanged(object? sender, PlatformColorValues values)

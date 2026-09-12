@@ -160,9 +160,10 @@
     <Setter Property="Background" Value="{DynamicResource Launcher.Color.Info.Background}"/>
     <Setter Property="Foreground" Value="{StaticResource Launcher.Color.Info}"/>
   </Style>
+  <!-- 徽章承载图标：暗色下 Warning 色调不足 3:1，前景改用与状态表面成对的文本色。 -->
   <Style Selector="controls|DialogSurface:warning /template/ ContentPresenter#PART_BadgePresenter">
     <Setter Property="Background" Value="{DynamicResource Launcher.Color.Warning.Background}"/>
-    <Setter Property="Foreground" Value="{StaticResource Launcher.Color.Warning}"/>
+    <Setter Property="Foreground" Value="{DynamicResource Launcher.Text.Warning}"/>
   </Style>
   <Style Selector="controls|DialogSurface:danger /template/ ContentPresenter#PART_BadgePresenter">
     <Setter Property="Background" Value="{DynamicResource Launcher.Color.Danger.Soft}"/>
