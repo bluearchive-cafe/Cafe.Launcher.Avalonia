@@ -2,14 +2,23 @@
 
 面向 Blue Archive 日服的第三方桌面启动器。使用 .NET 10 与 Avalonia 构建，提供游戏安装、更新、修复、启动和本地诊断，并兼容官方启动器使用的游戏目录与清单。
 
-[![Build](https://github.com/bluearchive-cafe/Cafe.Launcher.Avalonia/actions/workflows/build.yml/badge.svg)](https://github.com/bluearchive-cafe/Cafe.Launcher.Avalonia/actions/workflows/build.yml)
-[![Release](https://img.shields.io/github/v/release/bluearchive-cafe/Cafe.Launcher.Avalonia_Release?include_prereleases&label=release)](https://github.com/bluearchive-cafe/Cafe.Launcher.Avalonia_Release/releases)
-[![License](https://img.shields.io/github/license/bluearchive-cafe/Cafe.Launcher.Avalonia)](./LICENSE)
+[![Stars](https://img.shields.io/github/stars/bluearchive-cafe/Cafe.Launcher.Avalonia?style=flat-square&label=Stars)](https://github.com/bluearchive-cafe/Cafe.Launcher.Avalonia)
+[![正式版 Release](https://img.shields.io/github/v/release/bluearchive-cafe/Cafe.Launcher.Avalonia_Release?style=flat-square&color=%233fb950&label=%E6%AD%A3%E5%BC%8F%E7%89%88)](https://github.com/bluearchive-cafe/Cafe.Launcher.Avalonia_Release/releases/latest)
+[![测试版 Release](https://img.shields.io/github/v/release/bluearchive-cafe/Cafe.Launcher.Avalonia_Release?include_prereleases&style=flat-square&label=%E6%B5%8B%E8%AF%95%E7%89%88)](https://github.com/bluearchive-cafe/Cafe.Launcher.Avalonia_Release/releases)
+[![下载量](https://img.shields.io/github/downloads/bluearchive-cafe/Cafe.Launcher.Avalonia_Release/total?style=flat-square&label=%E4%B8%8B%E8%BD%BD%E9%87%8F&logo=github)](https://github.com/bluearchive-cafe/Cafe.Launcher.Avalonia_Release/releases/latest)<br/>
+[![Build](https://img.shields.io/github/actions/workflow/status/bluearchive-cafe/Cafe.Launcher.Avalonia/build.yml?style=flat-square&label=Build)](https://github.com/bluearchive-cafe/Cafe.Launcher.Avalonia/actions/workflows/build.yml)
+![.NET 版本](https://img.shields.io/badge/.NET-10-512bd4?style=flat-square)
+![GitHub Repo size](https://img.shields.io/github/repo-size/bluearchive-cafe/Cafe.Launcher.Avalonia?style=flat-square&color=3cb371)
+[![GitHub Repo Languages](https://img.shields.io/github/languages/top/bluearchive-cafe/Cafe.Launcher.Avalonia?style=flat-square)](https://github.com/bluearchive-cafe/Cafe.Launcher.Avalonia/search?l=c%23)
+[![License](https://img.shields.io/github/license/bluearchive-cafe/Cafe.Launcher.Avalonia?style=flat-square)](./LICENSE)
+[![Platform](https://img.shields.io/badge/platform-Windows%20%7C%20macOS%20%7C%20Linux-2E7DF6?style=flat-square)](#平台与发行包)
 
 [下载](https://github.com/bluearchive-cafe/Cafe.Launcher.Avalonia_Release/releases) · [使用文档](https://docs.bluearchive.cafe/cafe-launcher/) · [问题反馈](https://github.com/bluearchive-cafe/Cafe.Launcher.Avalonia/issues) · [官网](https://bluearchive.cafe/)
 
 > [!IMPORTANT]
 > Cafe Launcher 是社区维护的第三方项目，与 Nexon、Nexon Games、Yostar 及 Blue Archive 官方无隶属或合作关系。使用前请阅读[隐私政策](./PRIVACY.md)。
+
+![Cafe Launcher 主视觉](./docs/assets/key-visual.webp)
 
 ## 能做什么
 
