@@ -47,7 +47,7 @@ Write the notes for the person installing the launcher, not for a contributor re
 - Describe only what the user can see. Audit ledgers, test and coverage work, CI changes, refactors, call sites, and internal architecture vocabulary (modal stack, DI construction, `AppDomain`) belong in commit messages and audit records, never in release notes.
 - A feature introduced in this release that is later fixed or reworked before the release ships is described once, in its final form. That defect never reached users, so it does not get its own fix entry.
 - Use the shipped UI wording: check the user-facing string in `Resources/LauncherStrings.zh-Hans.resx` before naming a button, label, or status.
-- Keep the `> [!NOTE]` focus summary and `> [!WARNING]` stability warning blocks. The referenced banner PNG must be committed under `docs/assets/release-banners/` before tagging; `release.yml` fails the tag build when it is missing.
+- Keep the `> [!NOTE]` focus summary and `> [!WARNING]` stability warning blocks. The referenced banner PNG must be committed under `docs/assets/release-banners/` before tagging; `release.yml` fails the tag build when it is missing. Generate it with the spec-driven `promotional-image` pipeline documented in [docs/promo/release-banner-guide.md](docs/promo/release-banner-guide.md) — copy `docs/promo/specs/release-banner.template.json` per release and commit the spec alongside the banner, so the design stays reproducible rather than living in a one-off script.
 
 ## Commit & Pull Request Guidelines
 

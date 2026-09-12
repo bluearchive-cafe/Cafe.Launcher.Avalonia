@@ -94,6 +94,11 @@ public sealed class GameDownloadServiceTests : IDisposable
         // Only a real session counts as a user stop, so the log must stay clean.
         using var apiClient = new LauncherApiClient(new HttpClientHandler(), new AuthorizationHeaderFactory(), new PatchUrlGroupService());
         using var logger = new UnifiedLogger(Path.Combine(tempDir, "logs"));
+        // Debug builds default the switch to Verbose but Release defaults it to
+        // Information, while the stop line and the sentinel below are both
+        // Debug-severity: without lowering it here the sink drops every entry and the
+        // log file is never created in a Release run.
+        logger.SetMinimumLevel(Serilog.Events.LogEventLevel.Verbose);
         var diagnostics = new LocalDiagnostics(logger);
         using var service = CreateService(
             apiClient,
@@ -123,6 +128,9 @@ public sealed class GameDownloadServiceTests : IDisposable
         using var apiClient = CreateManifestApiClient(manifestFile);
         var downloader = new ControlledFileDownloadService(fileBytes);
         using var logger = new UnifiedLogger(Path.Combine(tempDir, "logs"));
+        // The stop line is Debug-severity and Release defaults the switch to Information,
+        // so without lowering it here the entry never reaches the sink.
+        logger.SetMinimumLevel(Serilog.Events.LogEventLevel.Verbose);
         using var service = CreateService(
             apiClient,
             settingsService,
