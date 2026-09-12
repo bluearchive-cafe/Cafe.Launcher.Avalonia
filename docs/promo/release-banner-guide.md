@@ -135,7 +135,7 @@ python "$SKILL\scripts\inspect_campaign.py" docs\promo\specs\v1.1.0-beta.9.spec.
   所以 v2 的 spec 不可能触发它；真出现了说明 spec 被改回了 v1。
 - 结尾那行**顺带重放上一次渲染的记录**，不是本次检查的结论。它的前缀是 `previous layout report:`：
   首次渲染前打印 `previous layout report: not rendered yet — it will be written to <manifest 路径>`，
-  之后改印上次的计数（本模板实测 `passed=None policy=advisory errors=0 warnings=0 allowed_findings=3
+  之后改印上次的计数（本模板实测 `passed=None policy=advisory errors=0 warnings=0 allowed_findings=5
   unchecked=3 images=4`；`passed` 恒为 `None`，因为该键只有 v1 的 manifest 才有）。
   本次的真实结论要看第 6 步。
 - 这一步**不做版式校验**：它看不到构图，所以永远不会报溢出、出血或碰撞（脚本 docstring 亦如此声明）。
@@ -181,7 +181,7 @@ python "$SKILL\scripts\optimize_export.py" artifacts\release-banner\v1.1.0-beta.
 
 `verify_export.py` 把交付文件绑定到渲染时记录的哈希，所以**手工重新编码（压缩、缩放、改格式）
 会静默让校验失效**。这个脚本是唯一许可的再编码入口：用更好的压缩策略重编码，逐像素比对确认
-无损后才替换，并把 manifest 里的哈希重绑。本模板实测可省约 13.6%（约 660 KB → 570 KB），
+无损后才替换，并把 manifest 里的哈希重绑。实测可省约 13%（约 690 KB → 600 KB，见「实测基线」），
 值得跑；`--dry-run` 只报收益不动文件。
 
 ### 6. 校验交付物
@@ -341,7 +341,8 @@ linear-gradient(145deg, var(--background-top), var(--background-bottom))
 background.`——本模板不该出现这条 notice。
 
 `#promo` 自带 `overflow:hidden`，出血的图形会被裁切而不会报错——这是有意的，不是缺陷。
-本模板的几何点缀（两个圆）已经改用 scene 里的 `shape` 节点，不再用 `::before` / `::after`：
+本模板的几何点缀（两个柔光圆、两个细描边圆环、一张浅色卡片）都改用 scene 里的 `shape` 节点，
+不再用 `::before` / `::after`：
 伪元素对版式校验不可见，而 scene 节点可以被检查（见「出血与碰撞」）。
 
 ## 排版
@@ -495,9 +496,14 @@ v2 把海报表达成一棵递归的节点树，只有 `text` / `image` / `shape
 
 本模板的结构（`scene.children`）：
 
-1. `glow-disc`、`base-disc` — 两个装饰圆，`shape: circle`，各带 `intent.allow_bleed`。
-2. `icon-flash`、`icon-shield`、`icon-crash`、`icon-macos` — 四个图标素材，绝对定位 + 旋转。
-3. `copy-zone` — 文案区，`layout: stack`，`x:150 y:0 width:1080 height:1125` + `justify:"center"`，
+1. `glow-disc`、`base-disc` — 两个柔光圆，`shape: circle`，各带 `intent.allow_bleed`，提供大面积底色。
+2. `ring-top-right`、`ring-bottom-left` — 两个细描边圆环，分别与上面两个柔光圆同心：只给 `border`
+   不给 `background`，因此只有一圈描边；同样各带 `intent.allow_bleed`。
+3. `surface-card` — 承载诊断图标的浅色卡片，`shape: rect` + `radius: 56` + `rotation: -14`，
+   `background` 取 `$primary 5%`、`border` 取 `$primary 14%`，与 `icon-log` 同心同角度。
+4. `icon-repair`、`icon-network`、`icon-log`、`icon-shield` — 四个图标素材，绝对定位 + 旋转；
+   只有 `icon-shield` 出血。
+5. `copy-zone` — 文案区，`layout: stack`，`x:150 y:0 width:1080 height:1125` + `justify:"center"`，
    对应旧版 `.header` 的 flex 垂直居中；块内元素增长时它会自动重新居中。
 
 `copy-zone` 内部是一层 `copy`（`layout: stack`，`gap: 10.4167` = 10 × scale）+ 五个子块：
@@ -519,8 +525,8 @@ v2 把海报表达成一棵递归的节点树，只有 `text` / `image` / `shape
 
 ### 出血与碰撞
 
-- 两个装饰圆与右下角出血的笔记本图标都声明了 `intent.allow_bleed: true`，它们的越界
-  因此记入 `allowed_findings` 而不是 `warnings`。
+- 两处柔光圆、两处细描边圆环与右下角出血的盾牌图标都声明了 `intent.allow_bleed: true`，它们的
+  越界因此记入 `allowed_findings` 而不是 `warnings`（实测五处，见「实测基线」）。
 - **本模板不给装饰图标声明 `no_overlap_group`**：这几个图标互相叠压是设计意图，声明了反而
   产生两条假的 collision 警告。`no_overlap_group` 是留给「绝不能重叠」的内容的。
 
@@ -529,12 +535,15 @@ v2 把海报表达成一棵递归的节点树，只有 `text` / `image` / `shape
 `docs/promo/assets/icons/` 下的四个 PNG 是从 Material Icons 官方仓库光栅化来的，已入库，
 正常情况下无需重新生成：
 
-| 文件 | 图标 | 对应更新内容 | 上色 |
+| 文件 | 图标 | 用途 | 上色 |
 | --- | --- | --- | --- |
-| `icon-crash.png` | `action/bug_report` | 崩溃诊断 | `#2E7DF6` |
-| `icon-flash.png` | `action/rocket_launch` | 启动提速 | `#2E7DF6` |
-| `icon-macos.png` | `hardware/laptop_mac` | 平台支持（macOS） | `#2E7DF6` |
-| `icon-shield.png` | `action/verified_user` | 安全与可靠性 | `#7A5AF8` |
+| `icon-repair.png` | `action/build` | 启动校验一键修复 | `#2E7DF6` |
+| `icon-log.png` | `action/history` | 诊断导出的时间范围 | `#2E7DF6` |
+| `icon-network.png` | `notification/network_check` | 网络与代理更稳 | `#2E7DF6` |
+| `icon-shield.png` | `action/verified_user` | 安全与隐私 | `#7A5AF8` |
+
+这组图标是**装饰**，不承载事实：一套四个按当版更新的主题挑，换主题时按下面的命令重新生成
+并把新文件入库，同时更新本表。
 
 两点必须知道：
 
@@ -542,10 +551,10 @@ v2 把海报表达成一棵递归的节点树，只有 `text` / `image` / `shape
    源地址遵循 `<分类>/<名称>/materialicons/24px.svg`，但分类不能靠猜——`image/wallpaper`
    实测返回 404，每个图标都要看 HTTP 状态。光栅化用无头 Chrome 输出带透明通道的 512×512，
    `--default-background-color=00000000` 是透明背景的关键，缺了会得到白底方块。
-2. **当前入库的四个文件是「已上色 + 已烘入透明度」的成品**：入库时这四个 PNG 都是纯黑
-   alpha 蒙版（光栅化那一步没把 `fill` 带进来，字形本身是对的）；现已按上表着色，并把设计要求
-   的透明度（`0.13` / `0.12` / `0.10` / `0.09`，对应 flash / shield / crash / macos）乘进 alpha
-   通道。两步都只改 RGB 与 alpha，字形几何完全不变。
+2. **当前入库的四个文件是「已上色 + 已烘入透明度」的成品**：光栅化那一步得到的是纯黑 alpha 蒙版
+   （`fill` 没被带进来，字形本身是对的）；随后按上表着色，并把设计要求的透明度
+   （`0.13` / `0.11` / `0.10` / `0.12`，对应 repair / log / network / shield）乘进 alpha 通道。
+   两步都只改 RGB 与 alpha，字形几何完全不变。
 
 之所以把透明度烘进素材而不是在节点上写 `opacity: 0.13`，有两个具体理由（不是说 `opacity` 不能用，
 它对形状是好用的，见「样式值的类型」）：
@@ -561,10 +570,10 @@ v2 把海报表达成一棵递归的节点树，只有 `text` / `image` / `shape
 
 ```python
 from PIL import Image
-im = Image.open("icon-flash.png").convert("RGBA")
+im = Image.open("icon-repair.png").convert("RGBA")
 alpha = im.getchannel("A").point(lambda v: round(v * 0.13))   # 设计要求的透明度
 im = Image.merge("RGBA", (*[Image.new("L", im.size, c) for c in (0x2E, 0x7D, 0xF6)], alpha))
-im.save("icon-flash.png", format="PNG", optimize=True)
+im.save("icon-repair.png", format="PNG", optimize=True)
 ```
 
 改完随手验一下「上色 + 烘透明度」是否真的生效（尺寸 512×512，RGB 三通道应全等于上表颜色，
@@ -582,13 +591,13 @@ for path in sorted(Path("docs/promo/assets/icons").glob("*.png")):
 
 | 文件 | 尺寸 / 模式 | alpha 范围 | 对应透明度 |
 | --- | --- | --- | --- |
-| `icon-crash.png` | 512×512 / RGBA | `(0, 26)` | 0.10 |
-| `icon-flash.png` | 512×512 / RGBA | `(0, 33)` | 0.13 |
-| `icon-macos.png` | 512×512 / RGBA | `(0, 23)` | 0.09 |
+| `icon-repair.png` | 512×512 / RGBA | `(0, 33)` | 0.13 |
+| `icon-log.png` | 512×512 / RGBA | `(0, 28)` | 0.11 |
+| `icon-network.png` | 512×512 / RGBA | `(0, 26)` | 0.10 |
 | `icon-shield.png` | 512×512 / RGBA | `(0, 31)` | 0.12 |
 
-alpha 上界是**故意压得很低**的：图标只是背景点缀，最大值 23–33 意味着最不透明的像素也只有约
-9%–13% 不透明度。这正是设计意图，不要为了「看得更清楚」把它调亮。
+alpha 上界是**故意压得很低**的：图标只是背景点缀，最大值 26–33 意味着最不透明的像素也只有约
+10%–13% 不透明度。这正是设计意图，不要为了「看得更清楚」把它调亮。
 
 图标是 `origin_class: "decorative"`，`immutable` 因此为 `false`：旋转、透明度这类改动不触发
 完整性硬失败（`authentic` 素材则相反，任何 `transform` / `opacity` / `filter` 都会在 advisory
@@ -608,7 +617,7 @@ alpha 上界是**故意压得很低**的：图标只是背景点缀，最大值 
 - `errors`：图片加载失败、`authentic` 素材被改动——**任何档位都硬失败**；`release` 档位下
   字体不可用也归入这一类（skill 的 `SKILL.md` 把 release-font failures 与前两项并列为 errors）。
 - `warnings`：文字溢出、未声明的越界、声明了不重叠却发生碰撞。
-- `allowed_findings`：节点 `intent` 明确允许的行为（本模板就是那三处出血）。
+- `allowed_findings`：节点 `intent` 明确允许的行为（本模板就是那五处出血）。
 - `unchecked`：自动化证明不了的视觉事实——渐变/图片上的对比度、字形级回退、视觉层次与平衡。
 
 `manifest.validation.layout` 里 `passed` **只在 v1 里出现**，且它只是「能写出 manifest 就说明
@@ -622,8 +631,9 @@ alpha 上界是**故意压得很低**的：图标只是背景点缀，最大值 
 ### 实测基线（本仓库模板，2000×1125）
 
 以下数值是 2026-09 在本机（Windows 10、Python 3.14.6、Playwright 1.62.0 + Chromium 1234）
-实跑模板 spec 的记录，用来判断「这次跑出来是否正常」。计数与百分比是稳定的；
-**绝对字节数与哈希只对「同一份 spec + 同一环境」有意义**，tag 文案变长变短都会让它们变。
+实跑**由本模板复制出的发布 spec**（`v1.1.0-beta.9`）的记录，用来判断「这次跑出来是否正常」。
+计数、百分比与出血矩形是稳定的（只由场景几何决定）；**绝对字节数与哈希只对「同一份 spec +
+同一环境」有意义**，tag 文案变长变短都会让它们变。
 
 | 项 | 值 |
 | --- | --- |
@@ -635,24 +645,26 @@ alpha 上界是**故意压得很低**的：图标只是背景点缀，最大值 
 | `font_availability` | 四项全 `true` |
 | `text_overflow` / `canvas_overflow` / `collisions` | 0 / 0 / 0 |
 | `images` | `4/4 healthy` |
-| `allowed_findings` | 3 |
+| `allowed_findings` | 5 |
 | `unchecked` | 3（对比度、字形级回退、层次与平衡——恒为此三项） |
-| 无损压缩收益 | 13.6%（659939 → 570462 字节，逐像素一致） |
+| 无损压缩收益 | 12.9%（688114 → 599249 字节，逐像素一致） |
 
-三条 `allowed_findings` 的具体节点（都由 `intent.allow_bleed: true` 释放）：
+五条 `allowed_findings` 的具体节点（都由 `intent.allow_bleed: true` 释放）：
 
 | 节点 | 越界矩形 |
 | --- | --- |
 | `glow-disc` | `[1280, -320, 2180, 580]` |
 | `base-disc` | `[-330, 755, 510, 1595]` |
-| `icon-macos` | `[1773.7, 661.7, 2158.3, 1046.3]` |
+| `ring-top-right` | `[1390, -210, 2070, 470]` |
+| `ring-bottom-left` | `[-210, 875, 390, 1475]` |
+| `icon-shield` | `[1789.7, 673.7, 2174.3, 1058.3]` |
 
 `verify_export.py` 在本模板上**不会**打印「N actionable layout finding(s) were reported but NOT
 enforced」那一行：该计数只累加 `errors` + `warnings` + 不健康的图片，**故意排除 `allowed_findings`**
 （`describe_layout_report()` 里那句 `if key != "allowed_findings"` 就是为此写的），本模板这三项全是 0，
 合计为 0，提示行因此不出现。反过来说——**看到那行提示说明有真问题要复核**，它不是预期噪音。
 
-它会打印 `allowed finding: 3` 并在下列出三处出血，随后打印三条 `unchecked`：那三项是渲染器
+它会打印 `allowed finding: 5` 并在下列出五处出血，随后打印三条 `unchecked`：那三项是渲染器
 **恒定**列出的、自动化无法证明的视觉事实，不是本次的问题信号。
 
 ## 常见陷阱
@@ -691,7 +703,7 @@ enforced」那一行：该计数只累加 `errors` + `warnings` + 不健康的�
   同样是干净的。**唯一的例外是字体闸门**：它以 `RuntimeError` traceback 的形式抛出（见第 4 步）。
 - **相对路径全部以「spec 文件所在目录」为基准**，不是当前工作目录。所以脚本可以从仓库任意目录调用，
   但**spec 文件本身不能随便挪**：把模板复制到 `%TEMP%` 再跑，`../assets/icons/…` 会解析到
-  `%TEMP%` 的上一级并报 `asset 'icon-flash' source does not exist`。每版 spec 必须留在
+  `%TEMP%` 的上一级并报 `asset 'icon-repair' source does not exist`。每版 spec 必须留在
   `docs/promo/specs/` 下。
 - **渲染器没有 `--scale` 之类的参数**，唯一的开关是 `--verify-determinism`；画布相关的旋钮只能通过
   spec 的 `canvas` 段调整，而且 `device_scale_factor` 被 schema 钉死为 1。
