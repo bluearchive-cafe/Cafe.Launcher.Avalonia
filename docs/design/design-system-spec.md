@@ -27,7 +27,7 @@
 | Q10 | 验收 = 契约测试扩展 + 文档走查清单 + headless 黄金截图（基建从零接，P1 小集） | §10 |
 | Q11 | Dev 模式"设计画廊"页：token 表 + 组件状态矩阵 + 原型对比区（支撑 Q18 仲裁） | §9 |
 | Q12 | 表现级布局重构允许；单窗口 + 覆盖层架构、Z 序（100/200/500/1000）、功能分区不变 | §5 |
-| Q13 | 动态色 = **accent + container 双色阶**；表面中性（随主题模式）；**on-color 按亮度计算** | §3.4 |
+| Q13 | 动态色 = M3 `DynamicScheme` 的 accent/container/surface/outline/error 语义角色；表面中性随策略与主题模式；**on-color 使用同一 scheme 的配对角色** | §3.4 |
 | Q14 | 系统字体 + M3 字阶角色映射；字体栈优先系统可用的 Noto Sans | §3.5 |
 | Q15 | **class + ControlTheme 混合**：既有 class 选择器一律不动；新组件走 ControlTheme + 新命名 | §4 |
 | Q16/Q20 | **点分层命名** + **一次性全量重命名**（脚本+映射表，不留别名层） | §3.1 |
@@ -40,6 +40,7 @@
 | Q24 | 新增设置项（外观组「主题颜色」）：**取色算法**（octree 保留 / M3 Celebi+Score 默认 / Wu·Wsmeans 可选）+ **配色变体**（8 变体，默认 TonalSpot）+ **中性色策略** | §7 |
 | 审计-0828 | 2026-08-28 设计系统一致性核查修复：向导 filled 型补 `:disabled` 组合、carousel 箭头 hover/pressed 改 chrome 态层、`wizard-option` 补 token 焦点环、DialogSurface 表面名 = 标题（无标题外壳显式给名 + Toast 宿主 live region）、对比度契约 +12 对并显式豁免 FocusRing/SecondaryContainer 族、时长双源同步测试、清理死 token（`Easing.Linear`/`IconButton.Compact/.Dot`，RowPanel 面板迁入 App.axaml） | 状态矩阵闭环；静态契约与运行时 M3 配对的分工显式化 |
 | ADR-018 | 2026-08-30 关于分区重设计（变体 A：身份 Hero + 分组行）：Hero（图标/产品名/副标题/版本+构建时间双徽章）→ 常规操作（检查更新唯一 compact filled + 3 outlined）→ 版本信息 key-value 行（7 项，等宽值，hairline）→ 法律信息不变；已落地并同步契约测试 | 设置浮层内身份表面获得与 ADR-013/014 一致的 M3 语言；原型 `prototypes/about-page/index.html` |
+| 审计-0906 | 2026-09-06 M3 规范复核：对话框统一 `SurfaceContainerHigh`；中性色种子跟随扩展至内容表面；`OnPrimary` 改用 scheme 配对角色；hover/pressed 状态层校正为 8%/12%；FocusRing 改为不透明 Primary | 以 M3 系统/组件角色替换旧的经验性色值派生；诊断/日志表面仍维持仅 token 兼容（Q3/Q21） |
 | ADR-020 | 2026-09-08 崩溃窗口采用**独立 Fluent 设计系统**：自带 `Crash.*` 令牌（就近定义在窗口 `Window.Resources`）、不引用 `Launcher.*`、不随动态色漂移；`FluentTheme` + `MaterialIconStyles` 由最小 `CrashReportApp` 注册 | §1 原则 3 显式豁免、§4/§5；视觉由黄金截图守护 |
 
 ## 3. Token 体系
@@ -65,7 +66,7 @@
 | `Launcher.Layout.*` | 视口级布局常量（banner 高 220、news 视口 184、调试窗 720×540、日志窗 720×592 等） | `Layout.Banner.Height` |
 | `Launcher.Motion.*` | 时长/缓动/偏移（见 §3.7） | `Motion.Duration.Normal` |
 | `Launcher.Elevation.*` | **新增**：阴影 0–3 档（颜色/偏移/模糊 token 化） | `Elevation.Shadow.Md`、`Elevation.Level.Card` |
-| `Launcher.StateLayer.*` | **新增**：状态层不透明度 8%/12%/16%/24% | `StateLayer.Hover` |
+| `Launcher.StateLayer.*` | 状态层基础刻度：Hover 8%、Focus 12%、Pressed 12%；`Selected` 24% 为兼容既有强调视觉保留，不作为通用 M3 选中态配方 | `StateLayer.Hover`、`StateLayer.Pressed` |
 | `Launcher.Border.*` | 边框厚度刻度（Default 1 / Focus 2，2026-08-26 补录） | `Border.Thickness.Default` |
 | `Launcher.Component.*` | 组件专属覆盖（Toast 宽度、对话框标题高度等） | `Component.Toast.Width` |
 
@@ -88,9 +89,11 @@
                                                                           （tone 档位固定，仅色相随种子→对比度仍安全）
 ```
 
-- **角色集**：primary/secondary/tertiary + 各自 `On*`/`*Container`/`On*Container`（`PrimaryContainer`/`OnPrimaryContainer` 于 2026-08-26 补齐，占位+运行时覆盖）；surface 族（Surface/SurfaceVariant/Container 档）、outline 族、error 族（映射现有 Danger/DangerSoft/危险图标底）；业务色 Success/Warning/Info（Toast 等，不参与动态色）。**落地范围声明**：`SurfaceVariant`/`OutlineVariant` 由业务 token 承担（hairline 用 `Color.Card.Border`，ADR-013 M3 修正 2）；可见实心表面 = 对话框覆盖层的**对话框表面族** `Dialog.Background/Header/Footer/Close.Hover/Close.Pressed`（品牌蓝调时五键恒复位为声明默认值，种子跟随时整套随 scheme 中性表面梯度染色——Background/Footer=`Surface`，Header=`SurfaceContainerLow`，Close.Hover/Pressed=`SurfaceContainerHigh/Highest`；2026-08-28 由仅 `Dialog.Background` 扩展为全族并防残留——Q13/Q23 两决策合流）；`Surface/OnSurface/Outline` 保留为语义角色（`Outline` 由 `dialog-card` hairline 消费；`Surface/OnSurface` 为未来表面预留）。
-- **on-color 按亮度计算**（P1 必修）：`Launcher.OnAccent` 不再硬编码白；按背景色相对亮度选黑/白（浅种子时用深 on-color），写入 `ColorUtils` 并测试锁定。
-- **实现**：`ApplyAccentBrushes`（`Features/Settings/SettingsAppearanceViewModel.cs`）演进为 `ApplyScheme`（输入 seed/variant/theme/neutralStrategy → 覆盖 brush 组）；`ThemeColorExtractionService`（Octree）与新算法共存；`ColorUtils`（`Helpers/ColorUtils.cs`）承载归一化与 on-color 计算。非壁纸模式（系统/自定义/默认色）产出与现状一致或改善。
+- **项目纳入的角色集**：primary/secondary/tertiary + 各自 `On*`/`*Container`/`On*Container`；surface 族（`Surface`/`OnSurface` + `SurfaceContainerLowest/Low/Default/High/Highest` 阶梯）、outline/outlineVariant 族、error/onError 族；业务色 Success/Warning/Info（Toast 等）不参与动态色。上述纳入范围的 M3 角色由运行时 scheme 写入；业务 token 再映射到这些角色，不以组件库默认色代替项目语义层。尚未存在消费面的 inverse/fixed、SurfaceBright/Dim、ErrorContainer 等角色不为凑齐目录而发布，新增消费面时再按同一语义层扩展。
+- **中性色策略映射**：品牌蓝调策略使用默认品牌种子生成固定的 surface/outline 角色，并把对话框、文本、字段、内容表面和状态层显式复位到 `App.axaml` 的 Light/Dark 默认值，避免切换策略后残留覆盖。种子跟随策略按当前 seed 的 neutral/neutralVariant 角色覆盖：对话框 Background/Header/Footer 统一为 `SurfaceContainerHigh`；关闭按钮状态为 `OnSurface` 在该容器上的 8%/12% 状态层；文本 Primary=`OnSurface`、Secondary/Body=`OnSurfaceVariant`；Field=`SurfaceContainerHighest` + `Outline`；Card=Light `SurfaceContainerLow` / Dark `SurfaceContainerHighest`；Content.Row=`SurfaceContainer`；SiteButton=Light `Surface` / Dark `SurfaceContainer`；Toast=Light `Surface` / Dark `SurfaceContainerHigh`；软边界统一映射 `OutlineVariant`。半透明、直接覆盖壁纸的 Panel/Chrome 不进入该映射。
+- **on-color 使用 scheme 配对角色**：`Primary`/`OnPrimary`、`Error`/`OnError`、各 Container/OnContainer 必须来自同一个 `DynamicScheme`（同 seed、variant、明暗与 contrast level），不得再独立按亮度二选一黑/白。`ColorUtils` 仅保留归一化、对比度计算等通用职责；色板勾选标记同样使用其色块对应 scheme 的 `OnPrimary`。
+- **状态层与焦点**：组件状态按对应内容色叠加，而不是通过任意明暗缩放容器色。当前基线 Hover=8%、Focus=12%、Pressed=12%。`FocusRing` 使用不透明的当前 scheme `Primary`，以免透明合成后跌破 3:1。
+- **实现**：`ApplyAccentBrushes`（`Features/Settings/SettingsAppearanceViewModel.cs`）演进为 `ApplyScheme`（输入 seed/variant/theme/neutralStrategy → 覆盖 brush 组）；`ThemeColorExtractionService`（Octree）与新算法共存；`ColorUtils`（`Helpers/ColorUtils.cs`）承载归一化与对比度计算。非壁纸模式（系统/自定义/默认色）产出与现状一致或改善。
 - **M3 落地记录（已实现并测试锁定）**：`ApplyScheme` 已替换 `ApplyAccentBrushes`；转换层 = `Helpers/MaterialColorMapper.cs`（ArgbColor↔Avalonia Color/Brush），scheme 生成 = `Services/MaterialSchemeGenerator.cs`（8 变体 × Spec2021 × Platform.Phone；`BuildRoleBrushes` 保留既有 accent 族覆盖子集并新增 Secondary/Tertiary/容器角色键）。**行为变更**：① `Launcher.Color.Info` 不再跟随 accent（业务色固定，spec §3.4）；② accent 由"归一化种子"变为"scheme Primary（tone 40/80）"——非壁纸模式亦经统一管线，存在 M0 记录的小幅色相/彩度随动（±1 tone，ΔE≈15）；③ 主题模式切换时经 `ApplyTheme` 按实际明暗重放 scheme（`ActualThemeVariant`），System 模式随系统变体；④ 新角色键（Secondary/Tertiary/容器/Surface/Outline）在 App.axaml 中以占位值声明、运行时覆盖（§3.3）。
 - **HCT 管线**：`Shirasagi0012.MaterialColorUtilities`（NuGet 直用）；ArgbColor↔Avalonia `Color` 映射封装；±1 tone 漂移以包内上游单测 + 参考值断言为护栏。
 
@@ -127,10 +130,10 @@
 - **对话框家族 v2（[ADR-015](adr/ADR-015-对话框家族v2统一框架.md)；DialogSurface 框架）**：唯一载体 = `Controls.DialogSurface` TemplatedControl，视觉契约集中于 `Views/Styles/DialogSurface.axaml`。两合法形态 `Form=Basic|Panel`（`:panel` 伪类切换解剖：Basic 无头带/发丝线、可选裸图标、动作即出口；Panel 56px 头带 + 32 圆形徽章 + 可选副标题 + ✕ + 发丝底带含左辅助槽）；`Status=None|Info|Warning|Danger` 伪类仅重染徽章语调。表面档案为组件级 token（`Launcher.Component.Dialog.CornerRadius`=20、`Launcher.Elevation.Shadow.Dialog` 双层阴影经 `Helpers.BoxShadowsExtension` 消费、Badge 尺寸与两套 padding 家族），模态表面比页面高一档，ADR-002/005 不动。关闭矩阵 / 动效通道 / 自适应尺寸律详见 ADR。
 - 既有 class 选择器**一律保留**：`Button.primary-action`/`flat-action`/`danger-action`/`text-link`/`icon-link`/`icon-button`、`Border.*card`、`ListBox.settings-navigation` 等（headless 测试与视图依赖此兼容面）。
 - 按钮四型 M3 映射：`primary-action`→filled；`flat-action`→outlined（语境需要时可 tonal）；`text-link`→text；`danger-action`→error-filled。共享模板 `LauncherBorderButtonTemplate` 保留。
-- 设置行与表单行的控件语义：**即时生效**用 `ToggleSwitch.setting-toggle`；**确认/提交时才生效**（表单填写）或按条目独立多选用 `CheckBox`，对话框内以 `setting-checkbox` 限定作用域（描边 `Launcher.Color.Outline`、选中态 `Launcher.Color.Primary`——Fluent 默认选中色是写死的 `#FF0078D7`，不随动态配色变化，必须覆盖；禁用态显式降 `StateLayer.Disabled.Content` 不透明度，因为 `:checked` 声明在 Fluent 的 `:disabled` 之后会盖掉主题禁用画刷）。**填充与前景必须成对改**：勾号（`Path#CheckGlyph`）与开关旋钮（`Ellipse#SwitchKnobOn`）都要显式设成 `Launcher.Color.OnPrimary`，因为 Fluent 自带的勾号/旋钮前景是配它自己的强调色填充的白色——换成主题色填充后，暗色主题的 Primary 是 tone 80 浅色，白勾压浅底只有 1.7:1，等于看不见（`:checked` 的每个变体 `:pointerover` / `:pressed` / `:disabled` 都要写，伪类更多的规则会盖过单伪类规则）。先例：日志导出对话框「包含内容」四行（日志和系统信息始终包含，崩溃报告和用户数据在导出时才生效；四行均带本地化 automation name，随 `Baselines/log-export.png` 黄金基线守卫，并有 `MainWindowHeadlessTests.Dialogs` 的渲染对比度断言 ≥3:1 守卫）、设置页各开关（即时生效）；资源面板的启用行同为按条目多选，但它沿用 Fluent 基础模板、未套该 class，故不受上述描边/选中色规则约束。
+- 设置行与表单行的控件语义：**即时生效**用 `ToggleSwitch.setting-toggle`；**确认/提交时才生效**（表单填写）或按条目独立多选用 `CheckBox`，对话框内以 `setting-checkbox` 限定作用域（描边 `Launcher.Color.Outline`、选中态 `Launcher.Color.Primary`——Fluent 默认选中色是写死的 `#FF0078D7`，不随动态配色变化，必须覆盖；禁用态显式降 `StateLayer.Disabled.Content` 不透明度，因为 `:checked` 声明在 Fluent 的 `:disabled` 之后会盖掉主题禁用画刷）。**填充与前景必须成对改**：勾号（`Path#CheckGlyph`）与开关旋钮（`Ellipse#SwitchKnobOn`）都要显式设成 `Launcher.Color.OnPrimary`，因为 Fluent 自带的勾号/旋钮前景是配它自己的强调色填充的白色——换成主题色填充后，暗色主题的 Primary 是 tone 80 浅色，白勾压浅底只有 1.7:1，等于看不见（`:checked` 的每个变体 `:pointerover` / `:pressed` / `:disabled` 都要写，伪类更多的规则会盖过单伪类规则）。先例：日志导出对话框「包含内容」四行（日志和系统信息始终包含，崩溃报告和用户数据在导出时才生效；四行均带本地化 automation name，随 `Baselines/log-export.png` 黄金基线守卫，并有 `MainWindowHeadlessTests.Dialogs` 的渲染对比度断言 ≥3:1 守卫）、设置页各开关（即时生效）；资源面板的启用行同为按条目多选，但它未套该 class，故不受上述描边（`Color.Outline`）与最小高度约束——其选中填色与勾号前景由全局 `CheckBox:checked` 规则统一跟进 `Primary`/`OnPrimary`（headless 测试 `ResourcePanel_CheckedRowCheckBox_UsesLauncherPrimary` 守卫），不再落回 Fluent 写死的 `#FF0078D7`。
 - 新组件（Select、Chip、分页、滑块等）以 **ControlTheme + 新命名** 落地，token 走 `Launcher.Component.*`。
 - **状态矩阵**（画廊展示 + 走查清单共用）：normal / hover / pressed / disabled / focus-visible / invalid × 各组件；状态层按 `StateLayer.*` 不透明度。
-- **P2 组件执行决策**（详见 ADR）：四型规格 = ADR-004（值不动、语言统一）；批次 A→B→C = ADR-008；画廊矩阵范围 3×6 = ADR-007；状态层 Opacity 8/12/16/24% 见 `Launcher.StateLayer.*`。
+- **P2 组件执行决策**（详见 ADR）：四型规格 = ADR-004（值不动、语言统一）；批次 A→B→C = ADR-008；画廊矩阵范围 3×6 = ADR-007；状态层基础刻度为 Hover 8%、Focus/Pressed 12%，组件按各自内容色和状态 token 映射；`Selected` 24% 只保留给既有强调视觉。
 - 例外：诊断面板与日志查看器列表控件维持 Fluent 基础模板，仅 token 兼容（Q3/Q21 例外声明）。
 - 例外：崩溃窗口（`Views/CrashReportWindow.axaml`）使用独立 Fluent 设计系统与自带 `Crash.*` 令牌，不复用 `Launcher.*`（[ADR-020](adr/ADR-020-崩溃窗口独立Fluent设计系统.md)）。
 
@@ -178,7 +181,7 @@
 
   `Danger.Pressed` 保留 `#C9353A`（白标签 5.18；其填充态消费由标签对覆盖，不做表面图标对）。全部为同色相单阶加深/提亮，未改视觉意图；UI ≥3:1 额外覆盖 Danger×Card/Dialog 与 Toast 严重性四色。
 - **豁免区（显式声明 + 测试用例列出）**：自绘标题栏文字、标题栏按钮（chrome 态）、右侧社交列、底栏渐变/scrim 上的 `on-dark` 文字——豁免前提是叠加 scrim（现有 `LauncherTitleBarGradient` + 新增 `Color.Overlay.Scrim*` token，最小 scrim 语义：保证该区文字与当前壁纸任意色对比度可读，豁免在走查清单中逐项复核）。
-- 键盘：全表面 Tab 序、可见焦点环（`Button:focus-visible` 等既有规则随重命名迁移）、覆盖层焦点陷阱（`OverlayFocusBehavior` 保留）。`wizard-option`（ADR-017）与设置导航/更新文件列表同样接入 token 焦点环（审计-0828 补全）；**焦点环对比度不进静态契约**——`FocusRing` 为运行时 accent 派生（@60% 不透明度），由走查清单逐表面人工复核。
+- 键盘：全表面 Tab 序、可见焦点环（`Button:focus-visible` 等既有规则随重命名迁移）、覆盖层焦点陷阱（`OverlayFocusBehavior` 保留）。`wizard-option`（ADR-017）与设置导航/更新文件列表同样接入 token 焦点环（审计-0828 补全）；`FocusRing` 为运行时 scheme 的不透明 `Primary`，由 `MaterialSchemeGeneratorTests` 对对话框、卡片、内容行、字段、站点按钮与 Toast 表面自动校验 ≥3:1，走查清单继续覆盖真实渲染、边缘与高对比模式。
 - 动效：`IsMotionEnabled` 保留；文本缩放支持**有意搁置**（固定控件高度体系改造为 min-height 自适应，放入未来评估，不承诺）。
 
 ## 9. 设计画廊（Q11）
