@@ -11,30 +11,10 @@ using Cafe.Launcher.Avalonia.Models;
 
 namespace Cafe.Launcher.Avalonia.HeadlessTests;
 
-// M3 color-role contract in the rendered tree. Two families are pinned here: the
-// checked-state fill/foreground pair of controls that keep the Fluent base
-// template (Fluent hardcodes #FF0078D7, which does not follow the dynamic
-// scheme), and the error text drawn on a dialog surface, which must stay
-// readable in both themes and under both neutral strategies.
+// M3 color-role contract in the rendered tree: the error text drawn on a dialog
+// surface must stay readable in both themes and under both neutral strategies.
 public sealed partial class MainWindowHeadlessTests
 {
-    [AvaloniaFact]
-    public void ResourcePanel_CheckedRowCheckBox_UsesLauncherPrimary()
-    {
-        using var context = CreateContext();
-        context.Window.Show();
-        ShowResourcePanel(context);
-        Dispatcher.UIThread.RunJobs();
-        var checkBox = context.Window.GetVisualDescendants().OfType<CheckBox>()
-            .First(control => control.IsEffectivelyVisible);
-        checkBox.IsChecked = true;
-        Dispatcher.UIThread.RunJobs();
-        var rectangle = Assert.IsType<Border>(checkBox.GetVisualDescendants()
-            .First(control => control is Border && control.Name == "NormalRectangle"));
-        var expected = Assert.IsType<SolidColorBrush>(Application.Current!.FindResource("Launcher.Color.Primary"));
-        Assert.Equal(expected.Color, Assert.IsType<SolidColorBrush>(rectangle.Background).Color);
-    }
-
     [AvaloniaTheory]
     [InlineData(false, false)]
     [InlineData(false, true)]

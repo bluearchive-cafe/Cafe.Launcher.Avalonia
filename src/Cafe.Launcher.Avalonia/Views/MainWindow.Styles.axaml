@@ -1573,30 +1573,6 @@
     <Style Selector="ToggleSwitch:checked /template/ Ellipse#SwitchKnobOn">
         <Setter Property="Fill" Value="{DynamicResource Launcher.Color.OnPrimary}"/>
     </Style>
-    <!-- 未套 `setting-checkbox` 的按条多选（资源面板启用行）沿用 Fluent 基础模板：
-         Fluent 选中填色是写死的强调蓝、勾号为其配套白色，二者都不随动态配色变化；
-         换成主题色填充后须把填充与前景成对跟进 Primary/OnPrimary
-         （spec §4 设置行与表单行控件语义）。 -->
-    <Style Selector="CheckBox:checked /template/ Border#NormalRectangle">
-        <Setter Property="Background" Value="{DynamicResource Launcher.Color.Primary}"/>
-        <Setter Property="BorderBrush" Value="{DynamicResource Launcher.Color.Primary}"/>
-    </Style>
-    <Style Selector="CheckBox:checked /template/ Path#CheckGlyph">
-        <Setter Property="Fill" Value="{DynamicResource Launcher.Color.OnPrimary}"/>
-        <Setter Property="Stroke" Value="{DynamicResource Launcher.Color.OnPrimary}"/>
-    </Style>
-    <Style Selector="CheckBox:indeterminate /template/ Border#NormalRectangle">
-        <Setter Property="Background" Value="{DynamicResource Launcher.Color.Primary}"/>
-        <Setter Property="BorderBrush" Value="{DynamicResource Launcher.Color.Primary}"/>
-    </Style>
-    <Style Selector="CheckBox:checked:pointerover /template/ Border#NormalRectangle">
-        <Setter Property="Background" Value="{DynamicResource Launcher.Color.Primary.Hover}"/>
-        <Setter Property="BorderBrush" Value="{DynamicResource Launcher.Color.Primary.Hover}"/>
-    </Style>
-    <Style Selector="CheckBox:checked:pressed /template/ Border#NormalRectangle">
-        <Setter Property="Background" Value="{DynamicResource Launcher.Color.Primary.Pressed}"/>
-        <Setter Property="BorderBrush" Value="{DynamicResource Launcher.Color.Primary.Pressed}"/>
-    </Style>
     <Style Selector="CheckBox.setting-checkbox">
         <Setter Property="MinHeight" Value="{StaticResource Launcher.Control.Height.Setting}"/>
     </Style>
