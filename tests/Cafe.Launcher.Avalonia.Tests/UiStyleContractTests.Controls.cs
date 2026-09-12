@@ -113,4 +113,34 @@ public sealed partial class UiStyleContractTests
             Assert.Equal("Center", GetStyleSetters(styles, selector)["VerticalAlignment"]);
         }
     }
+
+    [Fact]
+    public void BaseControls_ToggleSiblingTemplate_StaysIdenticalToSharedButtonTemplate()
+    {
+        // RadioButton 承载真实选择语义时复用与 Button 同几何的兄弟模板。两者的等式此前只
+        // 写在注释里、没有任何守卫；一旦漂移，同一个 class 在 Button 与 RadioButton 上会长得
+        // 不一样，所以把「除 TargetType 外逐元素、逐属性一致」钉成契约。
+        var styles = XDocument.Load(ProjectFile("Views/MainWindow.Styles.axaml"));
+
+        Assert.Equal(
+            TemplateShape(FindControlTemplate(styles, "LauncherBorderButtonTemplate")),
+            TemplateShape(FindControlTemplate(styles, "LauncherBorderToggleButtonTemplate")));
+    }
+
+    private static XElement FindControlTemplate(XDocument document, string key) =>
+        document.Descendants()
+            .Single(element =>
+                element.Name.LocalName == "ControlTemplate"
+                && element.Attribute(XName.Get("Key", "http://schemas.microsoft.com/winfx/2006/xaml"))?.Value == key);
+
+    private static string[] TemplateShape(XElement template) =>
+        template.Descendants()
+            .Select(element => element.Name.LocalName
+                + "|"
+                + string.Join(
+                    ",",
+                    element.Attributes()
+                        .Select(attribute => $"{attribute.Name.LocalName}={attribute.Value}")
+                        .OrderBy(text => text, StringComparer.Ordinal)))
+            .ToArray();
 }
