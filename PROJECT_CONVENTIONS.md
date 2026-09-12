@@ -233,14 +233,14 @@ AI 辅助开发规范 —— 本文件为所有 AI 编码助手（Claude Code、
 | AvaloniaUI.DiagnosticsSupport | 2.2.3 | 调试期 UI 诊断（Debug 专用，Release 不分发） |
 | CommunityToolkit.Mvvm | 8.4.2 | MVVM source generators |
 | Material.Icons.Avalonia | 3.0.2 | Icon library |
-| Microsoft.Extensions.DependencyInjection | 10.0.11 | DI 容器 |
+| Microsoft.Extensions.DependencyInjection | 10.0.12 | DI 容器 |
 | Shirasagi0012.MaterialColorUtilities | 0.2.0 | Material 色彩工具 |
 | Serilog | 4.4.0 | Logging pipeline |
 | Serilog.Sinks.Async | 2.1.0 | 异步日志 sink |
 | Serilog.Sinks.File | 7.0.0 | 文件日志 sink |
 | xunit.v3 | 3.2.2 | Test framework |
 | xunit.runner.visualstudio | 3.1.5 | xUnit VS 适配器 |
-| Microsoft.NET.Test.Sdk | 18.9.0 | 测试宿主 |
+| Microsoft.NET.Test.Sdk | 18.10.0 | 测试宿主 |
 | coverlet.msbuild | 10.0.1 | Code coverage |
 | Inno Setup | 7.0+ | Windows installer |
 
