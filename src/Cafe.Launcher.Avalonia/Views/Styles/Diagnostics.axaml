@@ -74,4 +74,7 @@
     <Style Selector="ListBox.log-entry-list > ListBoxItem:selected /template/ ContentPresenter#PART_ContentPresenter">
         <Setter Property="Background" Value="{StaticResource Launcher.Color.Transparent}"/>
     </Style>
+    <Style Selector="Border.log-export-warning">
+        <Setter Property="Margin" Value="{StaticResource Launcher.Spacing.Thickness.Md}"/>
+    </Style>
 </Styles>

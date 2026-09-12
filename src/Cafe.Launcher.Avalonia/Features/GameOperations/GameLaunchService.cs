@@ -12,18 +12,15 @@ namespace Cafe.Launcher.Avalonia.Features.GameOperations;
 public sealed class GameLaunchService
 {
     private readonly ManifestValidationService manifestValidationService;
-    private readonly ClickCodeService clickCodeService;
     private readonly IGameRuntime gameRuntime;
     private readonly LocalizationService localizer;
 
     public GameLaunchService(
         ManifestValidationService manifestValidationService,
-        ClickCodeService clickCodeService,
         IGameRuntime gameRuntime,
         LocalizationService localizer)
     {
         this.manifestValidationService = manifestValidationService;
-        this.clickCodeService = clickCodeService;
         this.gameRuntime = gameRuntime;
         this.localizer = localizer;
     }
@@ -86,9 +83,6 @@ public sealed class GameLaunchService
             };
         }
 
-        // Write clickCode attribution to game directory before launch
-        clickCodeService.WriteClickCodeToGamePath(target.WorkingDirectory);
-
         var runtimeConfiguration = GameRuntimeConfiguration.FromSettings(snapshot.Settings.GameRuntime);
 
         // A stable runtime id decouples compatibility state (prefix layout, UMU
@@ -144,7 +138,7 @@ public sealed class GameLaunchService
             }
 
             return Failed(
-                localizer.T(LocalizationKeys.GameProcessStartFailed),
+                BuildRunnerSelectionMessage(launchResult, runtimeConfiguration.PreferredRunnerId),
                 BuildRunnerSelectionFailure(launchResult, runtimeConfiguration.PreferredRunnerId));
         }
 
@@ -187,6 +181,42 @@ public sealed class GameLaunchService
             $"{localizer.T(LocalizationKeys.Executable)}: {request.ExecutablePath}{Environment.NewLine}" +
             $"{localizer.T(LocalizationKeys.Path)}: {request.WorkingDirectory}{Environment.NewLine}" +
             launchResult.Diagnostic.Describe();
+    }
+
+    /// <summary>
+    /// User-facing reason for a launch that never reached a runner. Reports the candidate
+    /// that explains the failure — the configured runner when one is pinned, otherwise the
+    /// first missing/broken runner (actionable), else the first candidate (typically an
+    /// unsupported platform) — instead of a generic "did not start" message.
+    /// </summary>
+    private string BuildRunnerSelectionMessage(
+        GameRuntimeLaunchResult launchResult,
+        string? preferredRunnerId)
+    {
+        var candidate = SelectExplainingCandidate(launchResult, preferredRunnerId);
+        var runnerName = GameRuntimeRunnerDisplay.RunnerName(
+            localizer,
+            candidate?.RunnerId ?? preferredRunnerId);
+        var status = candidate is null
+            ? localizer.T(LocalizationKeys.Unknown)
+            : GameRuntimeRunnerDisplay.Status(localizer, candidate.Availability.Status);
+        return localizer.F(LocalizationKeys.GameRuntimeNoRunnerAvailable, runnerName, status);
+    }
+
+    private static GameRuntimeStatusEntry? SelectExplainingCandidate(
+        GameRuntimeLaunchResult launchResult,
+        string? preferredRunnerId)
+    {
+        if (!string.IsNullOrWhiteSpace(preferredRunnerId))
+        {
+            return launchResult.Candidates.FirstOrDefault(candidate =>
+                string.Equals(candidate.RunnerId, preferredRunnerId, StringComparison.OrdinalIgnoreCase));
+        }
+
+        return launchResult.Candidates.FirstOrDefault(candidate =>
+                   candidate.Availability.Status is GameRunnerAvailabilityStatus.NotFound
+                       or GameRunnerAvailabilityStatus.Broken)
+               ?? launchResult.Candidates.FirstOrDefault();
     }
 
     private string BuildRunnerSelectionFailure(

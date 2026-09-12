@@ -2,14 +2,23 @@
 
 面向 Blue Archive 日服的第三方桌面启动器。使用 .NET 10 与 Avalonia 构建，提供游戏安装、更新、修复、启动和本地诊断，并兼容官方启动器使用的游戏目录与清单。
 
-[![Build](https://github.com/bluearchive-cafe/Cafe.Launcher.Avalonia/actions/workflows/build.yml/badge.svg)](https://github.com/bluearchive-cafe/Cafe.Launcher.Avalonia/actions/workflows/build.yml)
-[![Release](https://img.shields.io/github/v/release/bluearchive-cafe/Cafe.Launcher.Avalonia_Release?include_prereleases&label=release)](https://github.com/bluearchive-cafe/Cafe.Launcher.Avalonia_Release/releases)
-[![License](https://img.shields.io/github/license/bluearchive-cafe/Cafe.Launcher.Avalonia)](./LICENSE)
+[![Stars](https://img.shields.io/github/stars/bluearchive-cafe/Cafe.Launcher.Avalonia?style=flat-square&label=Stars)](https://github.com/bluearchive-cafe/Cafe.Launcher.Avalonia)
+[![正式版 Release](https://img.shields.io/github/v/release/bluearchive-cafe/Cafe.Launcher.Avalonia_Release?style=flat-square&color=%233fb950&label=%E6%AD%A3%E5%BC%8F%E7%89%88)](https://github.com/bluearchive-cafe/Cafe.Launcher.Avalonia_Release/releases/latest)
+[![测试版 Release](https://img.shields.io/github/v/release/bluearchive-cafe/Cafe.Launcher.Avalonia_Release?include_prereleases&style=flat-square&label=%E6%B5%8B%E8%AF%95%E7%89%88)](https://github.com/bluearchive-cafe/Cafe.Launcher.Avalonia_Release/releases)
+[![下载量](https://img.shields.io/github/downloads/bluearchive-cafe/Cafe.Launcher.Avalonia_Release/total?style=flat-square&label=%E4%B8%8B%E8%BD%BD%E9%87%8F&logo=github)](https://github.com/bluearchive-cafe/Cafe.Launcher.Avalonia_Release/releases/latest)<br/>
+[![Build](https://img.shields.io/github/actions/workflow/status/bluearchive-cafe/Cafe.Launcher.Avalonia/build.yml?style=flat-square&label=Build)](https://github.com/bluearchive-cafe/Cafe.Launcher.Avalonia/actions/workflows/build.yml)
+![.NET 版本](https://img.shields.io/badge/.NET-10-512bd4?style=flat-square)
+![GitHub Repo size](https://img.shields.io/github/repo-size/bluearchive-cafe/Cafe.Launcher.Avalonia?style=flat-square&color=3cb371)
+[![GitHub Repo Languages](https://img.shields.io/github/languages/top/bluearchive-cafe/Cafe.Launcher.Avalonia?style=flat-square)](https://github.com/bluearchive-cafe/Cafe.Launcher.Avalonia/search?l=c%23)
+[![License](https://img.shields.io/github/license/bluearchive-cafe/Cafe.Launcher.Avalonia?style=flat-square)](./LICENSE)
+[![Platform](https://img.shields.io/badge/platform-Windows%20%7C%20macOS%20%7C%20Linux-2E7DF6?style=flat-square)](#平台与发行包)
 
 [下载](https://github.com/bluearchive-cafe/Cafe.Launcher.Avalonia_Release/releases) · [使用文档](https://docs.bluearchive.cafe/cafe-launcher/) · [问题反馈](https://github.com/bluearchive-cafe/Cafe.Launcher.Avalonia/issues) · [官网](https://bluearchive.cafe/)
 
 > [!IMPORTANT]
 > Cafe Launcher 是社区维护的第三方项目，与 Nexon、Nexon Games、Yostar 及 Blue Archive 官方无隶属或合作关系。使用前请阅读[隐私政策](./PRIVACY.md)。
+
+![Cafe Launcher 主视觉](./docs/assets/key-visual.webp)
 
 ## 能做什么
 
@@ -20,7 +29,7 @@
 - 使用系统、浅色或深色主题，自定义背景、主题色和动态效果
 - 使用 English、简体中文、繁體中文和日本語界面
 - 查看公告与运营内容，并通过 UID 使用 Cafe 资源面板
-- 检查稳定版或测试版更新，导出日志和系统信息用于故障排查
+- 检查稳定版或测试版更新，导出诊断信息用于故障排查：可选时间范围（全部 / 最近 1 小时 / 最近 24 小时 / 最近 7 天 / 最近 30 天），始终包含系统信息，并可按需附带崩溃报告与用户数据
 
 下载任务状态和应用设置保存在本地。启动器不会修改游戏进程，也不会向游戏注入代码。
 
@@ -29,10 +38,10 @@
 | 平台 | 支持状态 | 发行包 |
 | --- | --- | --- |
 | Windows x64 | 正式支持 | 安装程序、便携 ZIP |
-| macOS Apple Silicon | 实验性 | `.app` 压缩包 |
+| macOS Apple Silicon | 实验性（暂不支持启动游戏） | `.app` 压缩包 |
 | Linux x64 | 实验性 | `.deb`、AppImage、`tar.gz` |
 
-所有发行包均为自包含应用，无需另外安装 .NET Runtime。macOS 与 Linux 构建尚未完成与 Windows 同等程度的适配和测试，请以具体 Release 说明为准。
+所有发行包均为自包含应用，无需另外安装 .NET Runtime。macOS 与 Linux 构建尚未完成与 Windows 同等程度的适配和测试，请以具体 Release 说明为准。其中 macOS 版本目前只能安装、更新和修复游戏：在 macOS 上启动游戏需要额外的兼容运行层，当前不提供，也暂无支持计划。
 
 面向普通用户的安装、首次设置和故障排查说明统一维护在[文档站](https://docs.bluearchive.cafe/cafe-launcher/)。本仓库 README 主要面向参与开发和审阅源码的贡献者。
 
@@ -40,9 +49,9 @@
 
 ### 环境要求
 
-- .NET SDK `10.0.302`（由 `global.json` 固定）
+- .NET SDK `10.0.302` 或更高的同主次版本（`global.json` 允许向更高功能带滚动；CI 与发行包固定使用 `10.0.302`）
 - Windows、macOS 或 Linux 桌面环境
-- 构建 Windows 安装程序时需要 Inno Setup 6.3 或更高版本
+- 构建 Windows 安装程序时需要 Inno Setup 7.0 或更高版本
 
 克隆仓库后，在 PowerShell 中运行：
 

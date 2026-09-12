@@ -1,2 +1,17 @@
+# Line endings. .editorconfig declares the policy for editors; these rules make git agree, so a
+# file written by a differently configured tool cannot land as CRLF in the repository. Before these
+# rules existed, five scripts/*.ps1 files were committed with CRLF and every later edit to them
+# showed up as a whole-file diff.
+*.cs text eol=crlf
+*.axaml text eol=lf
+*.csproj text eol=lf
+*.props text eol=lf
+*.targets text eol=lf
+*.yml text eol=lf
+*.yaml text eol=lf
+*.json text eol=lf
+*.md text eol=lf
+*.ps1 text eol=lf
+
 installer/linux/AppRun text eol=lf
 installer/linux/debian/* text eol=lf

@@ -149,6 +149,20 @@
                                         <TextBlock Text="{Binding Shell.I18n[debugSimulateError]}" Classes="button-content"/>
                                     </Button>
                                 </StackPanel>
+
+                                <!-- 不可恢复崩溃：走生产 FatalCrash 入口，窗口关闭后进程以非零码退出。 -->
+                                <StackPanel Orientation="Horizontal" Spacing="{StaticResource Launcher.Spacing.Sm}">
+                                    <Button Classes="flat-action dialog-action danger-action"
+                                            Command="{Binding Debug.SimulateFatalCrashCommand}"
+                                            AutomationProperties.Name="{Binding Shell.I18n[debugSimulateFatalCrash]}">
+                                        <TextBlock Text="{Binding Shell.I18n[debugSimulateFatalCrash]}" Classes="button-content"/>
+                                    </Button>
+                                    <Button Classes="flat-action dialog-action danger-action"
+                                            Command="{Binding Debug.SimulateUnhandledCrashCommand}"
+                                            AutomationProperties.Name="{Binding Shell.I18n[debugSimulateUnhandledCrash]}">
+                                        <TextBlock Text="{Binding Shell.I18n[debugSimulateUnhandledCrash]}" Classes="button-content"/>
+                                    </Button>
+                                </StackPanel>
                             </StackPanel>
                         </Border>
 
@@ -212,7 +226,7 @@
                                             AutomationProperties.Name="{Binding Shell.I18n[openDesignGallery]}">
                                         <TextBlock Text="{Binding Shell.I18n[openDesignGallery]}" Classes="button-content"/>
                                     </Button>
-                                    <Button Classes="flat-action dialog-action" Command="{Binding Debug.ExportLogsCommand}"
+                                    <Button Classes="flat-action dialog-action" Command="{Binding LogExport.OpenCommand}"
                                             AutomationProperties.Name="{Binding Shell.I18n[exportLogs]}">
                                         <TextBlock Text="{Binding Shell.I18n[exportLogs]}" Classes="button-content"/>
                                     </Button>

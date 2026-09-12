@@ -352,6 +352,7 @@ public sealed class ShellLifecycleTests : IDisposable
         using var settingsLogger = new UnifiedLogger(Path.Combine(tempDir, Guid.NewGuid().ToString("N")));
         var settings = new SettingsViewModel(
             settingsService,
+            httpClientFactory,
             localizer,
             toastService,
             launcherUpdateService,
@@ -388,13 +389,19 @@ public sealed class ShellLifecycleTests : IDisposable
             toastService,
             new UnifiedLogger(Path.Combine(tempDir, Guid.NewGuid().ToString("N"))),
             errorHandling,
+            new StubFatalCrashService(),
             settingsService,
             operations,
-            shell,
-            filePickerService);
+            shell);
         var windowChrome = new WindowChromeViewModel(settings, remoteContent, dialogs, operations, debug);
         using var testLogger = new UnifiedLogger(tempDir);
-        var logViewer = new LogViewerDialogViewModel(testLogger, null, null, null, null, null, filePickerService);
+        var logViewer = new LogViewerDialogViewModel(testLogger, null, null, null, null);
+        var logExport = new LogExportDialogViewModel(
+            new LogExportService(new LocalDiagnostics(testLogger)),
+            filePickerService,
+            toastService,
+            localizer,
+            diagnostics);
         var family = new ShellPresentationFamily(
             shell,
             background,
@@ -406,6 +413,7 @@ public sealed class ShellLifecycleTests : IDisposable
             settings,
             resourcePanel,
             logViewer,
+            logExport,
             debug,
             new ModalHostViewModel());
         var lifecycle = new ShellLifecycle(

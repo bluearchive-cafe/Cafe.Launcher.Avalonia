@@ -50,6 +50,7 @@ public sealed class ShellLifecycle : IShellRuntime
     private readonly SettingsViewModel settings;
     private readonly ResourcePanelViewModel resourcePanel;
     private readonly LogViewerDialogViewModel logViewer;
+    private readonly LogExportDialogViewModel logExport;
     private readonly DebugViewModel debug;
     private readonly Func<Bitmap?> getBackgroundBitmap;
     private readonly Func<LauncherSettings, string?, CancellationToken, Task> previewAppearanceAsync;
@@ -129,6 +130,7 @@ public sealed class ShellLifecycle : IShellRuntime
         settings = family.Settings;
         resourcePanel = family.ResourcePanel;
         logViewer = family.LogViewer;
+        logExport = family.LogExport;
         debug = family.Debug;
         this.ownsPresentationCollaborators = ownsPresentationCollaborators;
         ModalHost = family.ModalHost;
@@ -441,6 +443,7 @@ public sealed class ShellLifecycle : IShellRuntime
         settings.Editor.CurrentPropertyChanged += OnSettingPropertyChanged;
         resourcePanel.PropertyChanged += OnResourcePanelPropertyChanged;
         logViewer.PropertyChanged += OnLogViewerPropertyChanged;
+        logExport.PropertyChanged += OnLogExportPropertyChanged;
         debug.PropertyChanged += OnDebugPropertyChanged;
         dialogs.Gallery.PropertyChanged += OnGalleryPropertyChanged;
         dialogs.PropertyChanged += OnDialogsPropertyChanged;
@@ -471,6 +474,7 @@ public sealed class ShellLifecycle : IShellRuntime
         settings.Editor.CurrentPropertyChanged -= OnSettingPropertyChanged;
         resourcePanel.PropertyChanged -= OnResourcePanelPropertyChanged;
         logViewer.PropertyChanged -= OnLogViewerPropertyChanged;
+        logExport.PropertyChanged -= OnLogExportPropertyChanged;
         debug.PropertyChanged -= OnDebugPropertyChanged;
         dialogs.Gallery.PropertyChanged -= OnGalleryPropertyChanged;
         dialogs.PropertyChanged -= OnDialogsPropertyChanged;
@@ -533,6 +537,9 @@ public sealed class ShellLifecycle : IShellRuntime
             case ModalKind.LogViewer:
                 logViewer.CloseCommand.Execute(null);
                 break;
+            case ModalKind.LogExport:
+                logExport.CloseCommand.Execute(null);
+                break;
             case ModalKind.Debug:
                 debug.CloseCommand.Execute(null);
                 break;
@@ -541,6 +548,9 @@ public sealed class ShellLifecycle : IShellRuntime
                 break;
             case ModalKind.DebugResetConfirmation:
                 dialogs.CancelDebugResetCommand.Execute(null);
+                break;
+            case ModalKind.SettingsResetConfirmation:
+                dialogs.CancelSettingsResetCommand.Execute(null);
                 break;
             case ModalKind.SetupWizardExitConfirmation:
                 dialogs.CancelSetupWizardExitCommand.Execute(null);
@@ -687,6 +697,7 @@ public sealed class ShellLifecycle : IShellRuntime
         dialogs.ApplyLanguage();
         operations.ApplyLanguage();
         debug.ApplyLanguage();
+        logExport.ApplyLanguage();
     }
 
     private void OnLocalizationFailure(object? sender, LocalizationFailureEventArgs eventArgs)
@@ -768,6 +779,14 @@ public sealed class ShellLifecycle : IShellRuntime
         }
     }
 
+    private void OnLogExportPropertyChanged(object? sender, PropertyChangedEventArgs e)
+    {
+        if (e.PropertyName == nameof(LogExportDialogViewModel.IsVisible))
+        {
+            SyncModal(ModalKind.LogExport, logExport.IsVisible, logExport);
+        }
+    }
+
     private void OnDebugPropertyChanged(object? sender, PropertyChangedEventArgs e)
     {
         if (e.PropertyName == nameof(DebugViewModel.IsVisible))
@@ -837,6 +856,12 @@ public sealed class ShellLifecycle : IShellRuntime
                 SyncModal(
                     ModalKind.DownloadRunningCloseConfirmation,
                     dialogs.IsDownloadRunningCloseConfirmVisible,
+                    dialogs);
+                break;
+            case nameof(DialogsViewModel.IsResetSettingsConfirmationVisible):
+                SyncModal(
+                    ModalKind.SettingsResetConfirmation,
+                    dialogs.IsResetSettingsConfirmationVisible,
                     dialogs);
                 break;
         }

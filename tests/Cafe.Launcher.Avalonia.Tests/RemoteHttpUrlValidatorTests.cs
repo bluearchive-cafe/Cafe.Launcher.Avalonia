@@ -124,6 +124,90 @@ public sealed class RemoteHttpUrlValidatorTests
     }
 
     [Fact]
+    public async Task ValidateAsync_WhenSameHostValidatedRepeatedlyWithinCacheLifetime_ResolvesOnce()
+    {
+        var resolvedHosts = new List<string>();
+        var validator = new RemoteHttpUrlValidator((host, _) =>
+        {
+            resolvedHosts.Add(host);
+            return Task.FromResult(new[] { IPAddress.Parse("93.184.216.34") });
+        });
+
+        for (var request = 0; request < 3; request++)
+        {
+            await validator.ValidateAsync("https://example.test/file");
+        }
+
+        Assert.Equal(["example.test"], resolvedHosts);
+    }
+
+    [Fact]
+    public async Task ValidateAsync_WhenCacheLifetimeExpires_ResolvesHostAgain()
+    {
+        // 守卫（DNS 缓存）：30s 生命周期内复用解析结果；到达边界后必须重新解析，
+        // 保证「DNS 记录翻转为私网地址」最迟在下一个生命周期被发现。
+        var resolvedHosts = new List<string>();
+        var now = new DateTimeOffset(2026, 9, 10, 0, 0, 0, TimeSpan.Zero);
+        var validator = new RemoteHttpUrlValidator(
+            (host, _) =>
+            {
+                resolvedHosts.Add(host);
+                return Task.FromResult(new[] { IPAddress.Parse("93.184.216.34") });
+            },
+            cacheLifetime: RemoteHttpUrlValidator.DefaultCacheLifetime,
+            utcNow: () => now);
+
+        await validator.ValidateAsync("https://example.test/file");
+        now += RemoteHttpUrlValidator.DefaultCacheLifetime - TimeSpan.FromSeconds(1);
+        await validator.ValidateAsync("https://example.test/file");
+        Assert.Single(resolvedHosts);
+
+        now += TimeSpan.FromSeconds(1);
+        await validator.ValidateAsync("https://example.test/file");
+
+        Assert.Equal(2, resolvedHosts.Count);
+        Assert.All(resolvedHosts, host => Assert.Equal("example.test", host));
+    }
+
+    [Fact]
+    public async Task ValidateAsync_WhenHostResolvesToPrivateAddress_ResultIsNotCached()
+    {
+        var responses = new Queue<IPAddress[]>();
+        responses.Enqueue([IPAddress.Parse("192.168.1.1")]);
+        responses.Enqueue([IPAddress.Parse("93.184.216.34")]);
+        var validator = new RemoteHttpUrlValidator(
+            (_, _) => Task.FromResult(responses.Dequeue()));
+
+        await Assert.ThrowsAsync<InvalidOperationException>(
+            () => validator.ValidateAsync("https://example.test/file"));
+        var uri = await validator.ValidateAsync("https://example.test/file");
+
+        // 队列被清空 = 私网结果未入缓存，第二次校验真实地重新解析了主机。
+        Assert.Empty(responses);
+        Assert.Equal("example.test", uri.Host);
+    }
+
+    [Fact]
+    public async Task ValidateAsync_WhenResolutionThrows_ResultIsNotCached()
+    {
+        var callCount = 0;
+        var validator = new RemoteHttpUrlValidator((_, _) =>
+        {
+            callCount++;
+            return callCount == 1
+                ? throw new InvalidOperationException("transient resolver failure")
+                : Task.FromResult(new[] { IPAddress.Parse("93.184.216.34") });
+        });
+
+        await Assert.ThrowsAsync<InvalidOperationException>(
+            () => validator.ValidateAsync("https://example.test/file"));
+        var uri = await validator.ValidateAsync("https://example.test/file");
+
+        Assert.Equal(2, callCount);
+        Assert.Equal("example.test", uri.Host);
+    }
+
+    [Fact]
     public async Task ValidateAsync_WhenConnectionUsesProxy_BypassesLocalDnsResolution()
     {
         // Local DNS for the target host is blocked/poisoned (would resolve to a private
@@ -172,7 +256,7 @@ public sealed class RemoteHttpUrlValidatorTests
     }
 
     [Fact]
-    public async Task SendAsync_WhenConnectionUsesProxy_SkipsLocalDnsResolution()
+    public async Task SendAsync_WhenConnectionRoutesThroughProxy_SkipsLocalDnsResolution()
     {
         using var client = new HttpClient(new OkHandler());
         var validator = new RemoteHttpUrlValidator(
@@ -184,9 +268,74 @@ public sealed class RemoteHttpUrlValidatorTests
             static uri => new HttpRequestMessage(HttpMethod.Get, uri),
             validator,
             CancellationToken.None,
-            connectionUsesProxy: true);
+            connectionProxy: new RoutingProxyStub());
 
         Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+    }
+
+    [Fact]
+    public async Task SendAsync_WhenConnectionProxyBypassesUri_RunsLocalDnsValidation()
+    {
+        // 守卫（AUD-NET-002）：代理模式在目标被旁路（或 GetProxy 返回原 URI）时
+        // 实际是本机直连，必须保留 URL 校验器的本地 DNS 私网解析，而不是按
+        // 设置枚举一刀切跳过。
+        using var client = new HttpClient(new OkHandler());
+        var resolvedHosts = new List<string>();
+        var validator = new RemoteHttpUrlValidator((host, _) =>
+        {
+            resolvedHosts.Add(host);
+            return Task.FromResult(new[] { IPAddress.Parse("93.184.216.34") });
+        });
+
+        using var response = await RemoteHttpRequestService.SendAsync(
+            client,
+            new Uri("https://example.test/start"),
+            static uri => new HttpRequestMessage(HttpMethod.Get, uri),
+            validator,
+            CancellationToken.None,
+            connectionProxy: new BypassingProxyStub());
+
+        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+        Assert.Equal(["example.test"], resolvedHosts);
+    }
+
+    [Theory]
+    [InlineData(true)]
+    [InlineData(false)]
+    public void EgressesThroughProxy_WhenProxyBypassesOrRoutesToSameUri_UsesDirectConnection(
+        bool bypassed)
+    {
+        var proxy = new StubProxy(
+            IsBypassed: bypassed,
+            Via: new Uri("https://example.test/start"));
+
+        var egressesThroughProxy = RemoteHttpRequestService.EgressesThroughProxy(
+            proxy,
+            new Uri("https://example.test/start"));
+
+        Assert.False(egressesThroughProxy);
+    }
+
+    [Fact]
+    public void EgressesThroughProxy_WhenProxyRoutesViaDifferentUri_EgressesThroughProxy()
+    {
+        var proxy = new StubProxy(
+            IsBypassed: false,
+            Via: new Uri("http://proxy.example.invalid:8080"));
+
+        var egressesThroughProxy = RemoteHttpRequestService.EgressesThroughProxy(
+            proxy,
+            new Uri("https://example.test/start"));
+
+        Assert.True(egressesThroughProxy);
+    }
+
+    [Fact]
+    public void EgressesThroughProxy_WhenProxyIsNull_UsesDirectConnection()
+    {
+        Assert.False(RemoteHttpRequestService.EgressesThroughProxy(
+            null,
+            new Uri("https://example.test/start")));
     }
 
     [Fact]
@@ -204,6 +353,27 @@ public sealed class RemoteHttpUrlValidatorTests
 
         Assert.Equal(HttpStatusCode.OK, response.StatusCode);
         Assert.Equal(1, handler.RequestCount);
+    }
+
+    [Fact]
+    public async Task SendAsync_WhenClientPrefersHttp2_AppliesPreferenceToManualRequest()
+    {
+        var handler = new OkHandler();
+        using var client = new HttpClient(handler)
+        {
+            DefaultRequestVersion = HttpVersion.Version20,
+            DefaultVersionPolicy = HttpVersionPolicy.RequestVersionOrLower
+        };
+
+        using var response = await RemoteHttpRequestService.SendAsync(
+            client,
+            new Uri("https://example.test/start"),
+            static uri => new HttpRequestMessage(HttpMethod.Get, uri),
+            RemoteHttpUrlValidator.CreateForTesting(),
+            CancellationToken.None);
+
+        Assert.Equal(HttpVersion.Version20, handler.RequestVersion);
+        Assert.Equal(HttpVersionPolicy.RequestVersionOrLower, handler.RequestVersionPolicy);
     }
 
     [Fact]
@@ -293,15 +463,48 @@ public sealed class RemoteHttpUrlValidatorTests
             handler.RequestUris);
     }
 
+    /// <summary>模拟配置了系统代理且目标未被旁路：所有请求经代理 URI 出网。</summary>
+    private sealed class RoutingProxyStub : IWebProxy
+    {
+        public ICredentials? Credentials { get; set; }
+
+        public Uri? GetProxy(Uri destination) => new("http://proxy.example.invalid:8080");
+
+        public bool IsBypassed(Uri host) => false;
+    }
+
+    /// <summary>模拟无系统代理或目标被旁路：GetProxy 返回原 URI 且 IsBypassed 为真。</summary>
+    private sealed class BypassingProxyStub : IWebProxy
+    {
+        public ICredentials? Credentials { get; set; }
+
+        public Uri? GetProxy(Uri destination) => destination;
+
+        public bool IsBypassed(Uri host) => true;
+    }
+
+    private sealed record StubProxy(bool IsBypassed, Uri Via) : IWebProxy
+    {
+        public ICredentials? Credentials { get; set; }
+
+        Uri? IWebProxy.GetProxy(Uri destination) => Via;
+
+        bool IWebProxy.IsBypassed(Uri host) => IsBypassed;
+    }
+
     private sealed class OkHandler : HttpMessageHandler
     {
         public int RequestCount { get; private set; }
+        public Version? RequestVersion { get; private set; }
+        public HttpVersionPolicy? RequestVersionPolicy { get; private set; }
 
         protected override Task<HttpResponseMessage> SendAsync(
             HttpRequestMessage request,
             CancellationToken cancellationToken)
         {
             RequestCount++;
+            RequestVersion = request.Version;
+            RequestVersionPolicy = request.VersionPolicy;
             return Task.FromResult(new HttpResponseMessage(HttpStatusCode.OK));
         }
     }

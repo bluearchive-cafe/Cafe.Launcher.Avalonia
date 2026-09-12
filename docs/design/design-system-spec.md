@@ -10,7 +10,7 @@
 
 1. **壁纸优先**：主壳身份 = 动态壁纸画布 + 悬浮信息层（M3 表面语义）。任何改动不得牺牲壁纸表现力，壁纸区域文字以最小 scrim 保证可读（见 §8 豁免区）。
 2. **M3 语义、Fluent 底座**：Material Design 3 是规范与语义模型（tokens、色阶、形状字阶动效）；Avalonia FluentTheme 是实现底座；**不引入 Material.Avalonia**（其为 M2 世代，无 HCT/动态色，主题系统已 Obsolete）。
-3. **全 token 化**：视图 XAML 只允许引用 `Launcher.*` token；原始色值、裸间距/圆角只允许出现在 `App.axaml` 定义处（`UiStyleContractTests` 锁定）。
+3. **全 token 化**：视图 XAML 只允许引用 `Launcher.*` token；原始色值、裸间距/圆角只允许出现在 `App.axaml` 定义处（`UiStyleContractTests` 锁定）。**唯一豁免（[ADR-020](adr/ADR-020-崩溃窗口独立Fluent设计系统.md)）**：崩溃窗口 `Views/CrashReportWindow.axaml` 使用自带的 `Crash.*` 令牌，原始值就近定义在自身 `Window.Resources`——隔离报告进程（`CrashReportApp`）没有 `App.axaml`。
 4. **离线自包含**：动态色在本地生成（壁纸取色、M3 scheme 计算均无网络/遥测）。
 5. **契约优先、分阶段演进**：AA 对比度、token 存在性、覆盖层 Z 序由测试锁定；视觉变化按 P1（token 体系）→ P2（组件）→ P3（表面）落地，每阶段可独立验收回退。
 
@@ -41,6 +41,7 @@
 | 审计-0828 | 2026-08-28 设计系统一致性核查修复：向导 filled 型补 `:disabled` 组合、carousel 箭头 hover/pressed 改 chrome 态层、`wizard-option` 补 token 焦点环、DialogSurface 表面名 = 标题（无标题外壳显式给名 + Toast 宿主 live region）、对比度契约 +12 对并显式豁免 FocusRing/SecondaryContainer 族、时长双源同步测试、清理死 token（`Easing.Linear`/`IconButton.Compact/.Dot`，RowPanel 面板迁入 App.axaml） | 状态矩阵闭环；静态契约与运行时 M3 配对的分工显式化 |
 | ADR-018 | 2026-08-30 关于分区重设计（变体 A：身份 Hero + 分组行）：Hero（图标/产品名/副标题/版本+构建时间双徽章）→ 常规操作（检查更新唯一 compact filled + 3 outlined）→ 版本信息 key-value 行（7 项，等宽值，hairline）→ 法律信息不变；已落地并同步契约测试 | 设置浮层内身份表面获得与 ADR-013/014 一致的 M3 语言；原型 `prototypes/about-page/index.html` |
 | 审计-0906 | 2026-09-06 M3 规范复核：对话框统一 `SurfaceContainerHigh`；中性色种子跟随扩展至内容表面；`OnPrimary` 改用 scheme 配对角色；hover/pressed 状态层校正为 8%/12%；FocusRing 改为不透明 Primary；日志严重性筛选改用真实单选语义；补齐 `tonal-action`/`text-action` 并按「跳过 text → 上一步 outlined → 下一步 filled tonal → 完成 filled」修正向导动作层级 | 以 M3 系统/组件角色替换旧的经验性色值派生；按钮变体按动作重要性而非位置映射；诊断表面仍不做信息架构或整体布局重设计 |
+| ADR-020 | 2026-09-08 崩溃窗口采用**独立 Fluent 设计系统**：自带 `Crash.*` 令牌（就近定义在窗口 `Window.Resources`）、不引用 `Launcher.*`、不随动态色漂移；`FluentTheme` + `MaterialIconStyles` 由最小 `CrashReportApp` 注册 | §1 原则 3 显式豁免、§4/§5；视觉由黄金截图守护 |
 
 ## 3. Token 体系
 
@@ -129,10 +130,12 @@
 - **对话框家族 v2（[ADR-015](adr/ADR-015-对话框家族v2统一框架.md)；DialogSurface 框架）**：唯一载体 = `Controls.DialogSurface` TemplatedControl，视觉契约集中于 `Views/Styles/DialogSurface.axaml`。两合法形态 `Form=Basic|Panel`（`:panel` 伪类切换解剖：Basic 无头带/发丝线、可选裸图标、动作即出口；Panel 56px 头带 + 32 圆形徽章 + 可选副标题 + ✕ + 发丝底带含左辅助槽）；`Status=None|Info|Warning|Danger` 伪类仅重染徽章语调。表面档案为组件级 token（`Launcher.Component.Dialog.CornerRadius`=20、`Launcher.Elevation.Shadow.Dialog` 双层阴影经 `Helpers.BoxShadowsExtension` 消费、Badge 尺寸与两套 padding 家族），模态表面比页面高一档，ADR-002/005 不动。关闭矩阵 / 动效通道 / 自适应尺寸律详见 ADR。
 - 既有 class 选择器**一律保留**：`Button.primary-action`/`flat-action`/`danger-action`/`text-link`/`icon-link`/`icon-button`、`Border.*card`、`ListBox.settings-navigation` 等（headless 测试与视图依赖此兼容面）。
 - 按钮 M3 映射：`primary-action`→filled；`tonal-action`→filled tonal；`flat-action`→outlined；`text-action`→text button；`text-link`→带下划线的链接型动作（不等同于 text button）；`danger-action`→error-filled。共享模板 `LauncherBorderButtonTemplate` 保留。向导动作层级固定为：跳过 `text-action`、上一步 `flat-action`、中间步骤下一步 `tonal-action`、最终完成 `primary-action`。
+- 设置行与表单行的控件语义：**即时生效**用 `ToggleSwitch.setting-toggle`；**确认/提交时才生效**（表单填写）或按条目独立多选用 `CheckBox`，对话框内以 `setting-checkbox` 限定作用域（描边 `Launcher.Color.Outline`、选中态 `Launcher.Color.Primary`——Fluent 默认选中色是写死的 `#FF0078D7`，不随动态配色变化，必须覆盖；禁用态显式降 `StateLayer.Disabled.Content` 不透明度，因为 `:checked` 声明在 Fluent 的 `:disabled` 之后会盖掉主题禁用画刷）。**填充与前景必须成对改**：勾号（`Path#CheckGlyph`）与开关旋钮（`Ellipse#SwitchKnobOn`）都要显式设成 `Launcher.Color.OnPrimary`，因为 Fluent 自带的勾号/旋钮前景是配它自己的强调色填充的白色——换成主题色填充后，暗色主题的 Primary 是 tone 80 浅色，白勾压浅底只有 1.7:1，等于看不见（`:checked` 的每个变体 `:pointerover` / `:pressed` / `:disabled` 都要写，伪类更多的规则会盖过单伪类规则）。先例：日志导出对话框「包含内容」四行（日志和系统信息始终包含，崩溃报告和用户数据在导出时才生效；四行均带本地化 automation name，随 `Baselines/log-export.png` 黄金基线守卫，并有 `MainWindowHeadlessTests.Dialogs` 的渲染对比度断言 ≥3:1 守卫）、设置页各开关（即时生效）；资源面板的启用行同为按条目多选，但它沿用 Fluent 基础模板、未套该 class，故不受上述描边/选中色规则约束。
 - 新组件（Select、Chip、分页、滑块等）以 **ControlTheme + 新命名** 落地，token 走 `Launcher.Component.*`。
 - **状态矩阵**（画廊展示 + 走查清单共用）：normal / hover / pressed / disabled / focus-visible / invalid × 各组件；状态层按 `StateLayer.*` 不透明度。
 - **P2 组件执行决策**（详见 ADR）：按钮型别规格 = ADR-004（值不动、语言统一；2026-09-06 起为五型，+filled tonal）；批次 A→B→C = ADR-008；画廊矩阵范围 3×6 = ADR-007；状态层基础刻度为 Hover 8%、Focus/Pressed 12%，组件按各自内容色和状态 token 映射；`Selected` 24% 只保留给既有强调视觉。
 - 例外：诊断面板与日志查看器列表控件维持 Fluent 基础模板，仅 token 兼容；允许不改变信息架构或列表模板的局部选择语义、状态层、对比度与无障碍修复（Q3/Q21、ADR-008 修订）。
+- 例外：崩溃窗口（`Views/CrashReportWindow.axaml`）使用独立 Fluent 设计系统与自带 `Crash.*` 令牌，不复用 `Launcher.*`（[ADR-020](adr/ADR-020-崩溃窗口独立Fluent设计系统.md)）。
 
 ## 5. 表面与布局（Q12/Q18）
 
@@ -141,6 +144,7 @@
 - **设置页重设计蓝图（P3 表面执行；** [ADR-013](adr/ADR-013-设置页重设计方向.md) **+ M3 审核定稿）**：标题栏拆分（「设置」并入导航列顶部 header；关闭 ✕ 并入内容区标题行右端）；导航列 = SecondaryContainer 激活填充 + leading icon（Material Symbols）+ 标签，无指示条；内容区 = 变体 B 纯列表 + 组间空档 + 行间 inset hairline（以 `Color.Card.Border` 为分隔色，不新增 token）；覆盖层 `Radius.Lg`(16) + `Elevation.Shadow.Lg` + `Dialog.Background`（Q13 表面中性；种子跟随时由 scheme neutral 覆盖，见 §3.4）；控件统一 `Field` 形态。**修正清单（随 P2/P3 落地）**：`Field.Border` 双档对比度（浅 `#788EA7`/深 `#5E7494`，≥3:1）、hairline inset 规则、抽屉 leading icons。
 - **其余表面蓝图（P3 执行；[ADR-014](adr/ADR-014-其余表面M3重设计方向.md)）**：~~对话框族（确认/通知/更新/错误）= 统一 `dialog` 表面 + 头部（icon+标题+关闭）+ 可滚动内容 + `dialog-footer` hairline 操作带~~（对话框族部分已被 [ADR-015](adr/ADR-015-对话框家族v2统一框架.md) 取代）；Toast = 删除自动消失进度条，仅保留操作执行中的 indeterminate 进度条，关闭命中区提升到 36px；~~设置向导 = 复用设置导航语言（`settings-navigation-pane` + header + SecondaryContainer 激活态）且底部动作带统一为 `dialog-footer`~~（已由 [ADR-017](adr/ADR-017-设置向导动效落地与M3界面细化.md) 重设计：模态面板内落地实验台居中单列解剖——进度行（向导标题 + 步骤进度 + text 跳过）→ `wizard-step` 单列内容（`wizard-option` 选项行、`wizard-status-row` 图标+文本状态行、复核 hairline 列表、完成态标题 Success 色）→ 动作带并入内容区（上一步 outlined、下一步 filled tonal、完成 filled；`DialogSurface.Footer` 不再使用，空动作带由 `RefreshChrome` 折叠）；侧栏导航移除；步骤切换 = 后置代码顺序换页（先淡出后方向滑入），换面时滚动复位）。资源面板/日志/调试与主壳首页/**底栏形态**保持本节既有状态。
 - **底栏形态**：**Q18 仲裁结论已撤销（2026-08-25，用户决定放弃首页布局相关决策）——形态重新开放**。前期结论（M3 贴边：对比度恒定 ≥7:1、三态一致；浮动胶囊：浅壁纸 ≈4.8:1 边缘 + 安装态高度需验证）保留为决策素材，`prototype/bottom-bar` 分支保留；重新裁决时按 ADR-001 标准重走（走查/原型流程不变）。
+- **崩溃窗口（[ADR-019](adr/ADR-019-不可恢复崩溃两级兜底.md) / [ADR-020](adr/ADR-020-崩溃窗口独立Fluent设计系统.md)）**：独立于主壳的终端表面，**不参与主窗口 MD3 令牌体系**——中性冷灰蓝表面（不随动态色）+ 4/8 圆角 + 12/15/20 字阶 + 危险红/链接蓝双语义色；700 固定宽、高度随内容、不可缩放；默认折叠技术详情，动作带仅「打开日志目录 / 复制详情 / 退出启动器」。同进程（tier-1）与隔离报告进程（tier-2）共用同一窗口实现。
 
 ## 6. 主题与壁纸
 
@@ -191,7 +195,7 @@
 
 - **每阶段门禁**：`UiStyleContractTests` 全绿（含新契约）+ 新增测试全绿 + 编译零警告 + `scripts/Test-LocalizationContract.ps1`（涉及新字符串时）+ `.\verify.ps1`；PR 附截图（可见 UI 变更）。
 - **契约测试扩展点**：token 存在性/旧键清零、禁裸色值与 `{StaticResource}` 规则、AA 对比度、覆盖层 Z 序（既有）。
-- **headless 黄金截图**：已接线（`UseHeadlessDrawing=false` + `UseSkia()` + `RenderTargetBitmap`），5 个基线（壳默认/进度面板/设置覆盖层/确认对话框/Toast）平铺存储于 `tests/Cafe.Launcher.Avalonia.HeadlessTests/Baselines/`，阈值 diff（每通道容差 8/255、失配 ≤1%）、`CAFE_GOLDEN_UPDATE=1` 重新生成；字体稳定性：基线固定英文/降动效/Segoe UI，CI（windows-latest）字体集合风险已在 README 记录，漂移时优先重生成基线。P3 视需要扩大。
+- **headless 黄金截图**：已接线（`UseHeadlessDrawing=false` + `UseSkia()` + `RenderTargetBitmap`），7 个基线（壳默认/进度面板/设置覆盖层/确认对话框/Toast/崩溃窗口/日志导出对话框）平铺存储于 `tests/Cafe.Launcher.Avalonia.HeadlessTests/Baselines/`，阈值 diff（每通道容差 8/255、失配 ≤1%）、`CAFE_GOLDEN_UPDATE=1` 重新生成；字体稳定性：基线固定英文/降动效/Segoe UI，CI（windows-latest）字体集合风险已在 README 记录，漂移时优先重生成基线。P3 视需要扩大。
 - **走查清单**：已落地于 [`design-walkthrough-checklist.md`](./design-walkthrough-checklist.md)（状态矩阵 + §8 豁免区逐项 + P3 表面逐项），P3 每表面完成时人工复核；随本规范共同维护。
 
 ## 11. 有意搁置（Don't-do 清单）

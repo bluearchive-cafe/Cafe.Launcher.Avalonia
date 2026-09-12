@@ -88,7 +88,20 @@ namespace Cafe.Launcher.Avalonia.Features.GameOperations;
             }
             else
             {
-                toastService.ShowWarning(launchResult.Message);
+                // Launch verification found damaged files: offer repair directly, matching the
+                // official launcher's damage prompt, instead of a toast the user has to act on by
+                // finding the repair command themselves. The repair is the full CRC-64 pass rather
+                // than the official's manifest-diff shortcut, because this check only compares
+                // sizes — a same-size but corrupt file needs hashing to be caught.
+                if (launchResult.Validation.HasDamagedFiles)
+                {
+                    host.ShowRepairConfirmation(localizer.T(LocalizationKeys.LaunchDamageRepairPrompt));
+                }
+                else
+                {
+                    toastService.ShowWarning(launchResult.Message);
+                }
+
                 await diagnostics.WarningAsync("GameLaunch", launchDiagnostic);
                 if (launchResult.DiagnosticException is not null)
                 {

@@ -156,8 +156,12 @@ public sealed class LocalizationService
             return ReportFailure($"Missing test resource key '{key}' for language '{CurrentLanguage}'.");
         }
 
+        // Resolve by CurrentLanguage, not the calling thread's culture: SetLanguage may
+        // run off the UI thread during startup, and thread-culture fallback would then
+        // resolve XAML catalog bindings against the OS culture instead of the selected
+        // language (mixed-language UI, legal text resolving to the wrong locale).
         var result = Resources.LauncherStrings.ResourceManager.GetString(
-            key, CultureInfo.CurrentUICulture);
+            key, LauncherCultureResolver.GetCultureFor(CurrentLanguage));
         return result ?? ReportFailure($"Missing key '{key}' for language '{CurrentLanguage}'.");
     }
 
@@ -167,16 +171,14 @@ public sealed class LocalizationService
         var template = T(key);
         try
         {
-            return string.Format(CultureInfo.CurrentCulture, template, args);
+            return string.Format(
+                LauncherCultureResolver.GetCultureFor(CurrentLanguage), template, args);
         }
         catch (FormatException)
         {
             return ReportFailure($"Format exception for key '{key}'.");
         }
     }
-
-    public static IReadOnlyList<LanguageOption> GetLanguageOptions() =>
-        GetLanguageOptions(new LocalizationService());
 
     public static IReadOnlyList<LanguageOption> GetLanguageOptions(LocalizationService localizer) =>
     [
@@ -186,9 +188,6 @@ public sealed class LocalizationService
         new LanguageOption { Code = LauncherLanguages.TraditionalChinese, DisplayName = "繁體中文" },
         new LanguageOption { Code = LauncherLanguages.Japanese, DisplayName = "日本語" }
     ];
-
-    public static string ResolveLanguage(string? language) =>
-        LauncherCultureResolver.ResolveEffectiveLanguage(language);
 
     private void ApplyCulture(string effectiveLanguage)
     {

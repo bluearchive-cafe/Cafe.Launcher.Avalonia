@@ -78,7 +78,6 @@ public sealed partial class MainWindowViewModelTests : IDisposable
             new GameProcessTracker());
         var gameLaunchService = new GameLaunchService(
             manifestValidationService,
-            new ClickCodeService(),
             gameRuntime,
             localizationService);
         var gameDownloadService = new GameDownloadService(
@@ -113,7 +112,7 @@ public sealed partial class MainWindowViewModelTests : IDisposable
         var dialogsViewModel = new DialogsViewModel(localizationService, noticeStateService, new SetupWizardViewModel(localizationService, new GameInstallationPath(), new LocalInstallationStateStore(), new LocalDiagnostics(), filePickerService));
         using var settingsLogger = new UnifiedLogger(Path.Combine(tempDir, Guid.NewGuid().ToString("N")));
         var settingsViewModel = new SettingsViewModel(
-            settingsService, localizationService, toastService,
+            settingsService, httpClientFactory, localizationService, toastService,
             launcherUpdateSvc, dialogsViewModel,
             settingsLogger,
             new GameInstallationPath(),
@@ -164,7 +163,7 @@ public sealed partial class MainWindowViewModelTests : IDisposable
                     return Task.CompletedTask;
                 },
                 toastDelayAsync);
-        var debugViewModel = new DebugViewModel(toastService, new UnifiedLogger(Path.Combine(tempDir, Guid.NewGuid().ToString("N"))), errorHandling, settingsService, gameOperationsViewModel, shellViewModel, filePickerService);
+        var debugViewModel = new DebugViewModel(toastService, new UnifiedLogger(Path.Combine(tempDir, Guid.NewGuid().ToString("N"))), errorHandling, new StubFatalCrashService(), settingsService, gameOperationsViewModel, shellViewModel);
         var windowChromeViewModel = new WindowChromeViewModel(
             settingsViewModel, remoteContentViewModel, dialogsViewModel, gameOperationsViewModel,
             debugViewModel);
@@ -187,7 +186,13 @@ public sealed partial class MainWindowViewModelTests : IDisposable
                 windowChromeViewModel,
                 settingsViewModel,
                 resourcePanelViewModel,
-                new LogViewerDialogViewModel(testLogger, null, null, null, null, null, filePickerService),
+                new LogViewerDialogViewModel(testLogger, null, null, null, null),
+                new LogExportDialogViewModel(
+                    new LogExportService(new LocalDiagnostics(testLogger)),
+                    filePickerService,
+                    toastService,
+                    localizationService,
+                    diagnostics),
                 debugViewModel,
                 new ModalHostViewModel()),
             errorHandling,

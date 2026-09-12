@@ -105,7 +105,8 @@ internal sealed class ManifestDiffCalculator
             proxyMode,
             cancellationToken).ConfigureAwait(false);
 
-        var hashDiff = await CheckHashAsync(
+        var (hashDiff, plannedHashes) = await CheckHashAsync(
+            crc64Service,
             latestManifest.File,
             gamePath,
             value => progress(DownloadSession.CreateProgress(GameOperationKind.Repair, GameOperationStage.RepairCheck, value)),
@@ -116,7 +117,10 @@ internal sealed class ManifestDiffCalculator
         var actual = new DownloadPlan
         {
             NeedDownload = hashDiff,
-            NeedDelete = needDelete
+            NeedDelete = needDelete,
+            // Hand the hashes this pass just computed to the install phase: it would otherwise read
+            // every file the repair is not rewriting a second time, seconds later, in this session.
+            PlannedHashes = plannedHashes
         };
 
         actual.Source = latestManifest.Source ?? "";
@@ -207,7 +211,7 @@ internal sealed class ManifestDiffCalculator
         for (var i = 0; i < files.Count; i++)
         {
             var file = files[i];
-            var filePath = GamePathValidator.GetSafePath(gamePath, file.Path);
+            var filePath = GamePathValidator.GetSafeFilePath(gamePath, file.Path);
             var fileInfo = new FileInfo(filePath);
             if (!fileInfo.Exists || fileInfo.Length != file.SizeBytes)
             {
@@ -220,17 +224,24 @@ internal sealed class ManifestDiffCalculator
         return diff;
     }
 
-    private async Task<List<ManifestFile>> CheckHashAsync(
+    /// <summary>
+    /// Hash-based diff: returns the files whose content does not match the manifest, plus the hashes
+    /// of the files that did match, witnessed by size and last-write time, so a caller that later
+    /// re-checks the same untouched files can reuse the result instead of reading them again.
+    /// </summary>
+    internal static async Task<(List<ManifestFile> Diff, Dictionary<string, PlannedFileHash> Planned)> CheckHashAsync(
+        Crc64Service crc64Service,
         IReadOnlyList<ManifestFile> files,
         string gamePath,
         Action<int>? progress,
         CancellationToken cancellationToken)
     {
         var diff = new List<ManifestFile>();
+        var planned = new Dictionary<string, PlannedFileHash>(StringComparer.Ordinal);
         for (var i = 0; i < files.Count; i++)
         {
             var file = files[i];
-            var filePath = GamePathValidator.GetSafePath(gamePath, file.Path);
+            var filePath = GamePathValidator.GetSafeFilePath(gamePath, file.Path);
             if (!File.Exists(filePath))
             {
                 diff.Add(file);
@@ -242,10 +253,14 @@ internal sealed class ManifestDiffCalculator
             {
                 diff.Add(file);
             }
+            else
+            {
+                planned[file.Path] = PlannedFileHash.Capture(filePath, crc64);
+            }
 
             progress?.Invoke((int)Math.Round((i + 1) * 100d / files.Count));
         }
 
-        return diff;
+        return (diff, planned);
     }
 }

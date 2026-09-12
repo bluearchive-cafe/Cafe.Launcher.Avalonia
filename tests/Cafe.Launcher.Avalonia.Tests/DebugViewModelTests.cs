@@ -182,6 +182,19 @@ public sealed class DebugViewModelTests : IDisposable
         Assert.Equal(["first-start", "first-end", "second"], sequence);
     }
 
+    [Fact]
+    public void SimulateFatalCrash_WhenInvoked_RoutesThroughFatalCrashBoundary()
+    {
+        using var context = CreateContext();
+
+        context.ViewModel.SimulateFatalCrashCommand.Execute(null);
+
+        var request = Assert.Single(context.FatalCrash.Requests);
+        Assert.Equal(CrashOrigin.DebugSimulation, request.Origin);
+        Assert.IsType<InvalidOperationException>(request.Exception);
+        Assert.Equal("Fatal crash simulated.", context.ViewModel.LastActionResult);
+    }
+
     public void Dispose()
     {
         if (Directory.Exists(tempDir))
@@ -219,15 +232,16 @@ public sealed class DebugViewModelTests : IDisposable
             errorHandling,
             _ => Task.CompletedTask);
         var logger = new UnifiedLogger(Path.Combine(tempDir, "logs"));
+        var fatalCrash = new StubFatalCrashService();
         var viewModel = new DebugViewModel(
             toastService,
             logger,
             errorHandling,
+            fatalCrash,
             new LauncherSettingsService(tempDir),
             operations,
-            shell,
-            new StubFilePickerService());
-        return new TestContext(viewModel, operations, backend, logger, toastService, localizer);
+            shell);
+        return new TestContext(viewModel, operations, backend, logger, toastService, localizer, fatalCrash);
     }
 
     private sealed record TestContext(
@@ -236,7 +250,8 @@ public sealed class DebugViewModelTests : IDisposable
         StubGameOperationExecutor Backend,
         UnifiedLogger Logger,
         ToastService ToastService,
-        LocalizationService Localizer) : IDisposable
+        LocalizationService Localizer,
+        StubFatalCrashService FatalCrash) : IDisposable
     {
         public void Dispose()
         {

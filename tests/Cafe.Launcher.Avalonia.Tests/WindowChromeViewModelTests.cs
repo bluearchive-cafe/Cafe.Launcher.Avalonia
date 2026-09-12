@@ -275,10 +275,10 @@ Assert.True(context.Backend.LastStopClearPersistedState);
             provider.GetRequiredService<ToastService>(),
             logger,
             provider.GetRequiredService<IErrorHandlingService>(),
+            new StubFatalCrashService(),
             provider.GetRequiredService<LauncherSettingsService>(),
             operations,
-            provider.GetRequiredService<ShellViewModel>(),
-            new StubFilePickerService());
+            provider.GetRequiredService<ShellViewModel>());
         var viewModel = new WindowChromeViewModel(
             settings,
             remoteContent,

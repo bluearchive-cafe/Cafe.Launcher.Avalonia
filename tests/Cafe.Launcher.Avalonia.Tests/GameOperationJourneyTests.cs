@@ -1,3 +1,4 @@
+using Cafe.Launcher.Avalonia.Constants;
 using Cafe.Launcher.Avalonia.Features.GameOperations;
 using Cafe.Launcher.Avalonia.Models;
 using Cafe.Launcher.Avalonia.Services;
@@ -59,6 +60,63 @@ public sealed class GameOperationJourneyTests
 
         Assert.Single(context.ErrorHandling.Handled);
         Assert.False(context.Host.IsBusy);
+    }
+
+    [Fact]
+    public async Task StartGameAsync_WhenLaunchVerificationFindsDamagedFiles_ShowsRepairConfirmation()
+    {
+        var context = CreateContext();
+        context.Executor.LaunchResult = new GameLaunchResult
+        {
+            Success = false,
+            Message = "manifest damaged",
+            Validation = new ManifestValidationResult
+            {
+                Success = false,
+                DamagedFileCount = 2,
+                MissingFileCount = 1,
+                SizeMismatchFileCount = 1,
+                Message = "manifest damaged"
+            }
+        };
+        var notifications = context.SubscribeToasts();
+
+        await context.Journey.StartGameAsync(CreateSnapshot());
+
+        // The damage prompt must use its own copy, not the settings-flow repair warning:
+        // the dialog appears straight after a failed start, so it has to say why.
+        Assert.Equal(
+            context.Localizer.T(LocalizationKeys.LaunchDamageRepairPrompt),
+            context.Host.RepairConfirmationShown);
+        Assert.DoesNotContain(notifications, toast => toast.Severity == ToastSeverity.Warning);
+        Assert.False(context.Host.MinimizeRequested);
+        Assert.False(context.Host.IsBusy);
+    }
+
+    [Fact]
+    public async Task StartGameAsync_WhenLaunchFailsWithoutDamagedFiles_ShowsWarningToast()
+    {
+        // GameLaunchService.Failed() shapes state and path failures as Success = false with
+        // every counter left at zero. Those must stay a toast and never open the repair
+        // prompt, so this guards the damage discriminator against future drift.
+        var context = CreateContext();
+        context.Executor.LaunchResult = new GameLaunchResult
+        {
+            Success = false,
+            Message = "update available",
+            Validation = new ManifestValidationResult
+            {
+                Success = false,
+                Message = "update available"
+            }
+        };
+        var notifications = context.SubscribeToasts();
+
+        await context.Journey.StartGameAsync(CreateSnapshot());
+
+        Assert.Null(context.Host.RepairConfirmationShown);
+        Assert.Contains(notifications, toast =>
+            toast.Severity == ToastSeverity.Warning && toast.Message == "update available");
     }
 
     [Fact]
@@ -224,16 +282,17 @@ public sealed class GameOperationJourneyTests
         var host = new RecordingJourneyHost();
         var errorHandling = new RecordingErrorHandlingService();
         var toastService = new ToastService();
+        var localizer = new LocalizationService();
         var journey = new GameOperationJourney(
             executor,
             new TestGameShortcutService(),
-            new LocalizationService(),
+            localizer,
             toastService,
             new LocalDiagnostics(),
             errorHandling,
             _ => Task.CompletedTask,
             host);
-        return new JourneyTestContext(journey, executor, host, errorHandling, toastService);
+        return new JourneyTestContext(journey, executor, host, errorHandling, toastService, localizer);
     }
 
     private sealed record JourneyTestContext(
@@ -241,7 +300,8 @@ public sealed class GameOperationJourneyTests
         StubGameOperationExecutor Executor,
         RecordingJourneyHost Host,
         RecordingErrorHandlingService ErrorHandling,
-        ToastService ToastService)
+        ToastService ToastService,
+        LocalizationService Localizer)
     {
         public List<ToastNotification> SubscribeToasts()
         {

@@ -1,8 +1,8 @@
 using System;
 using System.ComponentModel;
-using System.IO;
 using System.Globalization;
 using System.Text.Json;
+using System.Threading;
 using System.Threading.Tasks;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
@@ -24,11 +24,10 @@ public sealed partial class DebugViewModel : ViewModelBase, IModalContentViewMod
     private readonly ToastService toastService;
     private readonly UnifiedLogger unifiedLogger;
     private readonly IErrorHandlingService errorHandling;
+    private readonly IFatalCrashService fatalCrashService;
     private readonly LauncherSettingsService settingsService;
     private readonly IGameOperationActivity operations;
-    private readonly IFilePickerService filePickerService;
     private readonly ShellViewModel shell;
-    private readonly LogExportService? logExportService;
     private bool disposed;
 
     [ObservableProperty]
@@ -78,20 +77,18 @@ public sealed partial class DebugViewModel : ViewModelBase, IModalContentViewMod
         ToastService toastService,
         UnifiedLogger unifiedLogger,
         IErrorHandlingService errorHandling,
+        IFatalCrashService fatalCrashService,
         LauncherSettingsService settingsService,
         IGameOperationActivity operations,
-        ShellViewModel shell,
-        IFilePickerService filePickerService,
-        LogExportService? logExportService = null)
+        ShellViewModel shell)
     {
         this.toastService = toastService;
         this.unifiedLogger = unifiedLogger;
         this.errorHandling = errorHandling;
+        this.fatalCrashService = fatalCrashService;
         this.settingsService = settingsService;
         this.operations = operations;
         this.shell = shell;
-        this.filePickerService = filePickerService;
-        this.logExportService = logExportService;
 
         operations.ActivityPropertyChanged += OnOperationsPropertyChanged;
     }
@@ -301,6 +298,37 @@ public sealed partial class DebugViewModel : ViewModelBase, IModalContentViewMod
         LastActionResult = shell.I18n[LocalizationKeys.DebugHandledErrorSimulated];
     }
 
+    // ── Fatal crash ──────────────────────────────────────────────────────
+
+    /// <summary>
+    /// Routes a simulated unrecoverable failure through the real fatal boundary, so the
+    /// crash window, snapshot, and terminal exit code are exercised exactly as in production.
+    /// </summary>
+    [RelayCommand]
+    private void SimulateFatalCrash()
+    {
+        var exception = new InvalidOperationException(Format(
+            shell.I18n[LocalizationKeys.DebugSimulateFatalCrashMessage],
+            DateTimeOffset.Now.ToString("HH:mm:ss", CultureInfo.CurrentCulture)));
+        LastActionResult = shell.I18n[LocalizationKeys.DebugFatalCrashTriggered];
+        fatalCrashService.HandleFatalCrash(CrashOrigin.DebugSimulation, exception);
+    }
+
+    /// <summary>
+    /// Throws on a dedicated thread so the process-boundary handler runs for real:
+    /// snapshot, isolated reporter launch, and abrupt process termination all happen.
+    /// </summary>
+    [RelayCommand]
+    private void SimulateUnhandledCrash()
+    {
+        var exception = new InvalidOperationException(Format(
+            shell.I18n[LocalizationKeys.DebugSimulateUnhandledCrashMessage],
+            DateTimeOffset.Now.ToString("HH:mm:ss", CultureInfo.CurrentCulture)));
+        LastActionResult = shell.I18n[LocalizationKeys.DebugFatalCrashTriggered];
+        var thread = new Thread(() => throw exception);
+        thread.Start();
+    }
+
     // ── Game operations ──────────────────────────────────────────────────
 
     private void OnOperationsPropertyChanged(object? sender, PropertyChangedEventArgs e)
@@ -405,43 +433,6 @@ public sealed partial class DebugViewModel : ViewModelBase, IModalContentViewMod
     }
 
     // ── File operations ──────────────────────────────────────────────────
-
-    [RelayCommand]
-    private async Task ExportLogsAsync()
-    {
-        if (logExportService is null)
-        {
-            LastActionResult = shell.I18n[LocalizationKeys.DebugLogExportUnavailable];
-            return;
-        }
-
-        Directory.CreateDirectory(LauncherUserDataDirectory.Root);
-        var dir = await filePickerService.PickFolderAsync(
-            shell.I18n[LocalizationKeys.LogExportFolderPickerTitle],
-            LauncherUserDataDirectory.Root);
-        if (string.IsNullOrWhiteSpace(dir))
-        {
-            LastActionResult = shell.I18n[LocalizationKeys.DebugExportCancelled];
-            return;
-        }
-
-        try
-        {
-            var zipPath = await logExportService.ExportAsync(dir);
-            LastActionResult = Format(shell.I18n[LocalizationKeys.LogExportSucceeded], zipPath);
-
-            // Open the containing folder
-            var folder = Path.GetDirectoryName(zipPath);
-            if (folder is not null)
-            {
-                ShellFolderOpener.OpenInFileManager(folder);
-            }
-        }
-        catch (Exception ex)
-        {
-            LastActionResult = Format(shell.I18n[LocalizationKeys.LogExportFailed], ex.Message);
-        }
-    }
 
     [RelayCommand]
     private void OpenDataDirectory()

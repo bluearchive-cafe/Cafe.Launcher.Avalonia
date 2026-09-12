@@ -31,6 +31,9 @@ public sealed partial class ModalHostViewModel : ObservableObject
     /// <summary>Gets whether the log viewer is the active interaction layer.</summary>
     public bool IsLogViewerInteractive => Top?.Kind == ModalKind.LogViewer;
 
+    /// <summary>Gets whether the log export dialog is the active interaction layer.</summary>
+    public bool IsLogExportInteractive => Top?.Kind == ModalKind.LogExport;
+
     /// <summary>Gets whether the debug panel is the active interaction layer.</summary>
     public bool IsDebugInteractive => Top?.Kind == ModalKind.Debug;
 
@@ -39,15 +42,6 @@ public sealed partial class ModalHostViewModel : ObservableObject
 
     /// <summary>Gets whether the setup wizard is the active interaction layer.</summary>
     public bool IsSetupWizardInteractive => Top?.Kind == ModalKind.SetupWizard;
-
-    /// <summary>Gets whether a dialog above the primary overlays is interactive.</summary>
-    public bool IsDialogLayerInteractive => Top is not null
-        && Top.Kind is not ModalKind.Settings
-        && Top.Kind is not ModalKind.ResourcePanel
-        && Top.Kind is not ModalKind.LogViewer
-        && Top.Kind is not ModalKind.Debug
-        && Top.Kind is not ModalKind.DesignGallery
-        && Top.Kind is not ModalKind.SetupWizard;
 
     /// <summary>Opens a modal or moves an already open modal kind to the top.</summary>
     public void Open(ModalKind kind, IModalContentViewModel content)
@@ -79,9 +73,9 @@ public sealed partial class ModalHostViewModel : ObservableObject
         OnPropertyChanged(nameof(IsSettingsInteractive));
         OnPropertyChanged(nameof(IsResourcePanelInteractive));
         OnPropertyChanged(nameof(IsLogViewerInteractive));
+        OnPropertyChanged(nameof(IsLogExportInteractive));
         OnPropertyChanged(nameof(IsDebugInteractive));
         OnPropertyChanged(nameof(IsDesignGalleryInteractive));
         OnPropertyChanged(nameof(IsSetupWizardInteractive));
-        OnPropertyChanged(nameof(IsDialogLayerInteractive));
     }
 }

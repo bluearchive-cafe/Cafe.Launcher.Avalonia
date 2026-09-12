@@ -1,4 +1,5 @@
 using System;
+using System.Net;
 using System.Net.Http;
 using System.Threading;
 using System.Threading.Tasks;
@@ -25,7 +26,7 @@ internal static class FileDownloadServiceTestExtensions
         HttpClient httpClient,
         Func<Task> pauseAwaiter,
         Func<long, CancellationToken, Task> onProgressAsync,
-        bool connectionUsesProxy,
+        IWebProxy? connectionProxy,
         CancellationToken cancellationToken) =>
         service.DownloadAsync(
             new FileDownloadRequest(
@@ -40,6 +41,6 @@ internal static class FileDownloadServiceTestExtensions
                 pauseAwaiter,
                 onProgressAsync,
                 ct => onProgressAsync(0, ct),
-                connectionUsesProxy),
+                connectionProxy),
             cancellationToken);
 }

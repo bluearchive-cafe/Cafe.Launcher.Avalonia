@@ -19,18 +19,21 @@ internal static class RemoteHttpRequestService
         Func<Uri, HttpRequestMessage> createRequest,
         RemoteHttpUrlValidator urlValidator,
         CancellationToken cancellationToken,
-        bool connectionUsesProxy = false)
+        IWebProxy? connectionProxy = null)
     {
         var currentUri = initialUri;
         for (var redirectCount = 0; ; redirectCount++)
         {
             currentUri = await urlValidator
-                .ValidateAsync(currentUri, connectionUsesProxy, cancellationToken)
+                .ValidateAsync(currentUri, EgressesThroughProxy(connectionProxy, currentUri), cancellationToken)
                 .ConfigureAwait(false);
 
             using var request = createRequest(currentUri);
-            var response = await client
-                .SendAsync(request, HttpCompletionOption.ResponseHeadersRead, cancellationToken)
+            var response = await SendAsync(
+                    client,
+                    request,
+                    HttpCompletionOption.ResponseHeadersRead,
+                    cancellationToken)
                 .ConfigureAwait(false);
 
             if (!IsRedirect(response.StatusCode))
@@ -64,12 +67,63 @@ internal static class RemoteHttpRequestService
         }
     }
 
+    /// <summary>
+    /// Sends a manually-created request using the client's configured HTTP version preference.
+    /// <see cref="HttpClient.DefaultRequestVersion"/> is not automatically copied to an
+    /// independently-created <see cref="HttpRequestMessage"/>.
+    /// </summary>
+    public static Task<HttpResponseMessage> SendAsync(
+        HttpClient client,
+        HttpRequestMessage request,
+        CancellationToken cancellationToken) =>
+        SendAsync(client, request, HttpCompletionOption.ResponseContentRead, cancellationToken);
+
+    /// <inheritdoc cref="SendAsync(HttpClient, HttpRequestMessage, CancellationToken)"/>
+    public static Task<HttpResponseMessage> SendAsync(
+        HttpClient client,
+        HttpRequestMessage request,
+        HttpCompletionOption completionOption,
+        CancellationToken cancellationToken)
+    {
+        request.Version = client.DefaultRequestVersion;
+        request.VersionPolicy = client.DefaultVersionPolicy;
+        return client.SendAsync(request, completionOption, cancellationToken);
+    }
+
     private static bool IsRedirect(HttpStatusCode statusCode) =>
         statusCode is HttpStatusCode.Moved
             or HttpStatusCode.Redirect
             or HttpStatusCode.RedirectMethod
             or HttpStatusCode.TemporaryRedirect
             or HttpStatusCode.PermanentRedirect;
+
+    /// <summary>
+    /// Decides whether a request to <paramref name="uri"/> actually egresses through
+    /// <paramref name="proxy"/>. A proxy-mode lease degrades to a direct connection when
+    /// the system proxy bypasses the target (<see cref="IWebProxy.IsBypassed"/>) or
+    /// reports the target itself as the route (<see cref="IWebProxy.GetProxy"/> returning
+    /// the input URI); in that state the connection dials locally, so the URL validator's
+    /// local DNS resolution must stay active. The decision is therefore made per URI from
+    /// the effective proxy instead of from the proxy settings enum alone.
+    /// </summary>
+    internal static bool EgressesThroughProxy(IWebProxy? proxy, Uri uri)
+    {
+        if (proxy is null || proxy.IsBypassed(uri))
+        {
+            return false;
+        }
+
+        return proxy.GetProxy(uri) is { } via && !via.Equals(uri);
+    }
+
+    /// <summary>
+    /// Upper bound for buffered JSON responses. Manifests and API envelopes are
+    /// small metadata payloads (a manifest with tens of thousands of entries
+    /// stays in the low-megabyte range), so this limit is generous while still
+    /// preventing an errant remote payload — a CDN error page or a large binary
+    /// blob served with a 200 status — from exhausting memory during startup.
+    /// </summary>
+    internal const int MaxBufferedJsonBytes = 64 * 1024 * 1024;
 
     /// <summary>
     /// Buffers a remote HTTP response body and deserializes it as JSON. When
@@ -83,17 +137,54 @@ internal static class RemoteHttpRequestService
     /// carries no request context. Manifests and API envelopes are small
     /// metadata payloads, so buffering into memory is safe.
     /// </summary>
-    public static async Task<T?> DeserializeJsonAsync<T>(
+    public static Task<T?> DeserializeJsonAsync<T>(
         HttpResponseMessage response,
         Uri? requestUri,
         JsonSerializerOptions options,
-        CancellationToken cancellationToken)
+        CancellationToken cancellationToken) =>
+        DeserializeJsonAsync<T>(response, requestUri, options, MaxBufferedJsonBytes, cancellationToken);
+
+    internal static async Task<T?> DeserializeJsonAsync<T>(
+        HttpResponseMessage response,
+        Uri? requestUri,
+        JsonSerializerOptions options,
+        int maxBytes,
+        CancellationToken cancellationToken,
+        TimeSpan? idleReadTimeout = null)
     {
+        // Reject via the declared length when present; the streaming guard below
+        // still bounds responses without a Content-Length (chunked transfer).
+        if (response.Content.Headers.ContentLength is { } contentLength && contentLength > maxBytes)
+        {
+            throw BuildResponseTooLargeException(requestUri, response, contentLength, contentLength);
+        }
+
         await using var networkStream = await response.Content
             .ReadAsStreamAsync(cancellationToken)
             .ConfigureAwait(false);
         using var buffer = new MemoryStream();
-        await networkStream.CopyToAsync(buffer, cancellationToken).ConfigureAwait(false);
+        var chunk = new byte[64 * 1024];
+        while (true)
+        {
+            var read = await ResponseBodyReader
+                .ReadAsync(networkStream, chunk, cancellationToken, idleReadTimeout)
+                .ConfigureAwait(false);
+            if (read == 0)
+            {
+                break;
+            }
+
+            if (buffer.Length + read > maxBytes)
+            {
+                throw BuildResponseTooLargeException(
+                    requestUri,
+                    response,
+                    buffer.Length + read,
+                    declaredBytes: null);
+            }
+
+            await buffer.WriteAsync(chunk.AsMemory(0, read), cancellationToken).ConfigureAwait(false);
+        }
         buffer.Position = 0;
 
         try
@@ -106,6 +197,33 @@ internal static class RemoteHttpRequestService
         {
             throw BuildRemoteJsonException(requestUri, response, buffer, ex);
         }
+    }
+
+    /// <summary>
+    /// Renders a request URI for a diagnostic message without its query string. Query values can
+    /// carry credentials the endpoint accepts on their own — the resource panel's <c>uid</c> is one —
+    /// and diagnostics are written to the log that the export feature always bundles, so the
+    /// redaction happens here rather than at each call site.
+    /// </summary>
+    private static string DescribeUri(Uri? requestUri) =>
+        requestUri?.GetLeftPart(UriPartial.Path) ?? "(unknown)";
+
+    private static HttpRequestException BuildResponseTooLargeException(
+        Uri? requestUri,
+        HttpResponseMessage response,
+        long actualBytes,
+        long? declaredBytes)
+    {
+        var invariant = CultureInfo.InvariantCulture;
+        var declared = declaredBytes.HasValue
+            ? declaredBytes.Value.ToString(invariant)
+            : "unknown";
+        return new HttpRequestException(
+            $"Remote response exceeds the {MaxBufferedJsonBytes.ToString(invariant)}-byte limit "
+            + $"(declared: {declared}, buffered: {actualBytes.ToString(invariant)}). "
+            + $"url: {DescribeUri(requestUri)} | "
+            + $"status: {((int)response.StatusCode).ToString(invariant)} {response.ReasonPhrase} | "
+            + $"content-type: {response.Content.Headers.ContentType?.ToString() ?? "(none)"}");
     }
 
     private static JsonException BuildRemoteJsonException(
@@ -126,7 +244,7 @@ internal static class RemoteHttpRequestService
 
         var message =
             $"Remote response is not valid JSON ({inner.Message}). "
-            + $"url: {requestUri?.ToString() ?? "(unknown)"} | "
+            + $"url: {DescribeUri(requestUri)} | "
             + $"status: {((int)response.StatusCode).ToString(invariant)} {response.ReasonPhrase} | "
             + $"content-type: {contentType} | "
             + $"content-length: {(contentLength.HasValue ? contentLength.Value.ToString(invariant) : "unknown")} | "

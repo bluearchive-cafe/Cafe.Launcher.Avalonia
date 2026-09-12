@@ -314,14 +314,7 @@ internal sealed class DownloadSession : IDisposable
             // 给出本地化的权限指引而非裸 I/O 异常。
             if (!DirectoryWriteProbe.CanWrite(gamePath))
             {
-                await diagnostics.MessageAsync(
-                    "GameDownload",
-                    $"Write probe failed: {gamePath}",
-                    activeToken);
-                checkpointStore.Clear();
-                return DownloadPlanPreparation.Stop(Failed(
-                    localizer.F(LocalizationKeys.FileAccessDenied, gamePath),
-                    GameOperationErrorCode.System));
+                return await StopForWriteDeniedAsync(gamePath, affectedCount: null, activeToken).ConfigureAwait(false);
             }
 
             await CommitInstallationStateAsync(
@@ -380,15 +373,7 @@ internal sealed class DownloadSession : IDisposable
         // 避免大流量下载完成后才在落盘阶段报 UnauthorizedAccessException。
         if (!DirectoryWriteProbe.CanWrite(gamePath))
         {
-            await diagnostics.MessageAsync(
-                "GameDownload",
-                $"Write probe failed: {gamePath}",
-                activeToken);
-            checkpointStore.Clear();
-            return DownloadPlanPreparation.Stop(Failed(
-                localizer.F(LocalizationKeys.FileAccessDenied, gamePath),
-                GameOperationErrorCode.System,
-                affectedCount));
+            return await StopForWriteDeniedAsync(gamePath, affectedCount, activeToken).ConfigureAwait(false);
         }
 
         return new DownloadPlanPreparation(
@@ -398,6 +383,30 @@ internal sealed class DownloadSession : IDisposable
             speedLimitBytesPerSec,
             Failure: null,
             CompletedResult: null);
+    }
+
+    /// <summary>
+    /// 写探测失败时的统一收尾：记日志、清检查点、以本地化 FileAccessDenied 停止。
+    /// 零差异提交路径与下载路径共用，避免两处闸口漂移。
+    /// </summary>
+    private async Task<DownloadPlanPreparation> StopForWriteDeniedAsync(
+        string gamePath,
+        int? affectedCount,
+        CancellationToken activeToken)
+    {
+        await diagnostics.MessageAsync(
+            "GameDownload",
+            $"Write probe failed: {gamePath}",
+            activeToken).ConfigureAwait(false);
+        checkpointStore.Clear();
+        return DownloadPlanPreparation.Stop(affectedCount.HasValue
+            ? Failed(
+                localizer.F(LocalizationKeys.FileAccessDenied, gamePath),
+                GameOperationErrorCode.System,
+                affectedCount.Value)
+            : Failed(
+                localizer.F(LocalizationKeys.FileAccessDenied, gamePath),
+                GameOperationErrorCode.System));
     }
 
     /// <summary>执行「下载 → 安装 → 校验」重试循环，直至全部通过或验证预算耗尽。</summary>
@@ -444,6 +453,7 @@ internal sealed class DownloadSession : IDisposable
                 downloadPlan.ManifestFiles,
                 currentDownloadList,
                 verifiedHashes,
+                downloadPlan.PlannedHashes,
                 value => progress(CreateProgress(operationKind, GameOperationStage.FileCheck, value)),
                 activeToken).ConfigureAwait(false);
 

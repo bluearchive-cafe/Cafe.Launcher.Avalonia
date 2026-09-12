@@ -30,8 +30,7 @@ public sealed partial class UiStyleContractTests
             [
                 "Settings.Editor.Current.ProxyMode",
                 "Settings.Editor.Current.PatchUrlGroup",
-                "Settings.Editor.Current.DownloadSpeedLimit",
-                "Settings.Editor.Current.UpdateChannel"
+                "Settings.Editor.Current.DownloadSpeedLimit"
             ],
             ["SettingsAppearanceSection"] =
             [
@@ -54,9 +53,10 @@ public sealed partial class UiStyleContractTests
             ],
             ["SettingsAdvancedSection"] =
             [
+                "Settings.Editor.Current.UpdateChannel",
                 "Settings.Editor.Current.LogLevel",
                 "LogViewer.OpenCommand",
-                "LogViewer.ExportCommand",
+                "LogExport.OpenCommand",
                 "WindowChrome.OpenDataDirectoryCommand"
             ],
             ["SettingsAboutSection"] =
@@ -1119,7 +1119,7 @@ public sealed partial class UiStyleContractTests
         Assert.Equal(
             [
                 "{Binding LogViewer.OpenCommand}",
-                "{Binding LogViewer.ExportCommand}",
+                "{Binding LogExport.OpenCommand}",
                 "{Binding WindowChrome.OpenDataDirectoryCommand}"
             ],
             commands);
@@ -1165,11 +1165,11 @@ public sealed partial class UiStyleContractTests
         AssertOrdered(
             advancedText,
             "LogViewer.OpenCommand",
-            "LogViewer.ExportCommand",
+            "LogExport.OpenCommand",
             "WindowChrome.OpenDataDirectoryCommand");
 
         Assert.DoesNotContain("LogViewer.OpenCommand", aboutText, StringComparison.Ordinal);
-        Assert.DoesNotContain("LogViewer.ExportCommand", aboutText, StringComparison.Ordinal);
+        Assert.DoesNotContain("LogExport.OpenCommand", aboutText, StringComparison.Ordinal);
         Assert.DoesNotContain("WindowChrome.OpenDataDirectoryCommand", aboutText, StringComparison.Ordinal);
         Assert.Contains("Shell.I18n[settingsGroupDiagnostics]", advancedText, StringComparison.Ordinal);
 

@@ -144,6 +144,8 @@
             <x:Double x:Key="Launcher.Layout.LogViewer.Height">592</x:Double>
             <x:Double x:Key="Launcher.Component.LogViewer.Search.MinWidth">160</x:Double>
             <x:Double x:Key="Launcher.Component.LogViewer.EntryDetails.MaxHeight">120</x:Double>
+            <x:Double x:Key="Launcher.Layout.LogExport.Width">560</x:Double>
+            <x:Double x:Key="Launcher.Layout.LogExport.MaxHeight">640</x:Double>
             <x:Double x:Key="Launcher.Component.ResourcePanel.UidSource.MinWidth">140</x:Double>
             <x:Double x:Key="Launcher.Component.SetupWizard.Select.MinWidth">280</x:Double>
             <Thickness x:Key="Launcher.Component.Dialog.Content.BottomMargin">0,0,0,8</Thickness>

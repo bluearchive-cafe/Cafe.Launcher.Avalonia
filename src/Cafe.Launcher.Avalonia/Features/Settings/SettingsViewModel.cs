@@ -21,6 +21,7 @@ namespace Cafe.Launcher.Avalonia.Features.Settings;
 public partial class SettingsViewModel : ViewModelBase, IDisposable, IModalContentViewModel
 {
     private readonly LauncherSettingsService settingsService;
+    private readonly HttpClientFactory httpClientFactory;
     private readonly LocalizationService localizer;
     private readonly ToastService toastService;
     private readonly LauncherUpdateService launcherUpdateService;
@@ -62,6 +63,7 @@ public partial class SettingsViewModel : ViewModelBase, IDisposable, IModalConte
 
     public SettingsViewModel(
         LauncherSettingsService settingsService,
+        HttpClientFactory httpClientFactory,
         LocalizationService localizer,
         ToastService toastService,
         LauncherUpdateService launcherUpdateService,
@@ -75,6 +77,7 @@ public partial class SettingsViewModel : ViewModelBase, IDisposable, IModalConte
         IFilePickerService filePickerService)
     {
         this.settingsService = settingsService;
+        this.httpClientFactory = httpClientFactory;
         this.localizer = localizer;
         this.toastService = toastService;
         this.launcherUpdateService = launcherUpdateService;
@@ -296,6 +299,7 @@ public partial class SettingsViewModel : ViewModelBase, IDisposable, IModalConte
 
             var settings = editor.GetSnapshot();
             await settingsService.SaveAsync(settings);
+            httpClientFactory.ConfigureHttp2(settings.EnableHttp2);
             ApplyLogLevel(settings.LogLevel);
 
             if (ApplyLanguageAndTheme is not null)
@@ -469,20 +473,8 @@ public partial class SettingsViewModel : ViewModelBase, IDisposable, IModalConte
 
     private string FormatGameRuntimeStatusEntry(GameRuntimeStatusEntry entry)
     {
-        var name = entry.RunnerId switch
-        {
-            GameRuntimeRunners.Umu => localizer.T(LocalizationKeys.GameRuntimeRunnerUmu),
-            GameRuntimeRunners.Wine => localizer.T(LocalizationKeys.GameRuntimeRunnerWine),
-            GameRuntimeRunners.Native => localizer.T(LocalizationKeys.GameRuntimeRunnerNative),
-            _ => entry.RunnerId
-        };
-        var status = entry.Availability.Status switch
-        {
-            GameRunnerAvailabilityStatus.Available => localizer.T(LocalizationKeys.GameRuntimeStatusAvailable),
-            GameRunnerAvailabilityStatus.NotFound => localizer.T(LocalizationKeys.GameRuntimeStatusNotFound),
-            GameRunnerAvailabilityStatus.Broken => localizer.T(LocalizationKeys.GameRuntimeStatusBroken),
-            _ => localizer.T(LocalizationKeys.GameRuntimeStatusUnsupported)
-        };
+        var name = GameRuntimeRunnerDisplay.RunnerName(localizer, entry.RunnerId);
+        var status = GameRuntimeRunnerDisplay.Status(localizer, entry.Availability.Status);
 
         var path = entry.Availability.ExecutablePath;
         if (string.IsNullOrWhiteSpace(path))

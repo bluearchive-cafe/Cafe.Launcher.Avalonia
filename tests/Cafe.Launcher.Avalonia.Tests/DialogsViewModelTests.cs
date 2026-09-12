@@ -9,6 +9,9 @@ namespace Cafe.Launcher.Avalonia.Tests;
 [Collection(nameof(LocalizationServiceTestIsolation))]
 public sealed class DialogsViewModelTests
 {
+    /// <summary>Upper bound for a wait on an event the test itself gates, so a broken command fails instead of hanging.</summary>
+    private static readonly TimeSpan GateTimeout = TimeSpan.FromSeconds(5);
+
     static DialogsViewModelTests()
     {
         TestLocalizationHelper.Initialize();
@@ -157,13 +160,16 @@ public sealed class DialogsViewModelTests
         viewModel.ShowRepairConfirm("repair");
 
         var confirmTask = viewModel.ConfirmRepairCommand.ExecuteAsync(null);
-        await firstSubscriberInvoked.Task;
+        // The gate flags are raised only by the command under test, so an unbounded await would hang
+        // the runner instead of failing — the project-wide xUnit1051 suppression is justified by
+        // every gate wait carrying a bound like this one.
+        await firstSubscriberInvoked.Task.WaitAsync(GateTimeout);
 
         Assert.False(confirmTask.IsCompleted);
         Assert.False(secondSubscriberInvoked.Task.IsCompleted);
         firstSubscriberRelease.SetResult();
-        await secondSubscriberInvoked.Task;
-        await confirmTask;
+        await secondSubscriberInvoked.Task.WaitAsync(GateTimeout);
+        await confirmTask.WaitAsync(GateTimeout);
     }
 
     [Fact]

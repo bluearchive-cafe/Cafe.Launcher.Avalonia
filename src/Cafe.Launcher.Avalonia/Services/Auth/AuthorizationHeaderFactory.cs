@@ -15,12 +15,28 @@ namespace Cafe.Launcher.Avalonia.Services.Auth;
 /// </summary>
 public sealed class AuthorizationHeaderFactory
 {
+    private readonly TimeProvider timeProvider;
+
+    /// <summary>Creates the factory against the system clock (production path).</summary>
+    public AuthorizationHeaderFactory() : this(TimeProvider.System)
+    {
+    }
+
+    /// <summary>
+    /// Creates the factory against an explicit clock. The `time` field is signed, so a
+    /// fixed clock is what makes the signature reproducible in tests.
+    /// </summary>
+    public AuthorizationHeaderFactory(TimeProvider timeProvider)
+    {
+        this.timeProvider = timeProvider;
+    }
+
     public string Create(string data, string version)
     {
         var head = new AuthorizationHead
         {
             GameTag = GamePaths.GameTag,
-            Time = DateTimeOffset.UtcNow.ToUnixTimeSeconds(),
+            Time = timeProvider.GetUtcNow().ToUnixTimeSeconds(),
             Version = version
         };
 

@@ -75,11 +75,12 @@ internal sealed class DownloadExecutor
             .CreateLeaseAsync(proxyMode, cancellationToken)
             .ConfigureAwait(false);
         var client = lease.Client;
+        var connectionProxy = lease.ConnectionProxy;
         using var semaphore = new SemaphoreSlim(MaxParallelDownloads, MaxParallelDownloads);
         var totalSize = fileList.Sum(item => item.SizeBytes);
         var downloadFiles = fileList.Select(file =>
         {
-            var targetPath = GetTempName(GamePathValidator.GetSafePath(gamePath, file.Path));
+            var targetPath = GetTempName(GamePathValidator.GetSafeFilePath(gamePath, file.Path));
             return new DownloadFileState(
                 file,
                 targetPath,
@@ -162,12 +163,29 @@ internal sealed class DownloadExecutor
         void RecordFileProgress(DownloadFileState downloadFile, long transferredBytes)
         {
             var paused = isPaused();
-            var downloadedSize = GetExistingDownloadedSize(
-                downloadFile.TargetPath,
-                downloadFile.File.SizeBytes);
-            var previousSize = Interlocked.Exchange(
-                ref downloadFile.ReportedSize,
-                downloadedSize);
+            long downloadedSize;
+            long previousSize;
+            if (transferredBytes > 0)
+            {
+                // 追加模式下按上报字节推进内存计数：此前每个 256KB 块都做一次
+                // 磁盘 stat（File.Exists + Length），快盘 10 并发下是每秒数千次
+                // 系统调用。同一文件的下载与回调在单个任务内串行，计数无竞争。
+                previousSize = Interlocked.Add(ref downloadFile.ReportedSize, transferredBytes)
+                    - transferredBytes;
+                downloadedSize = previousSize + transferredBytes;
+            }
+            else
+            {
+                // 重置路径（CRC 失败、Content-Range 无效、超长临时文件被丢弃）：
+                // 从磁盘重采样权威长度。
+                downloadedSize = GetExistingDownloadedSize(
+                    downloadFile.TargetPath,
+                    downloadFile.File.SizeBytes);
+                previousSize = Interlocked.Exchange(
+                    ref downloadFile.ReportedSize,
+                    downloadedSize);
+            }
+
             if (progressAccumulator.TryRecord(
                     transferredBytes,
                     downloadedSize - previousSize,
@@ -214,7 +232,7 @@ internal sealed class DownloadExecutor
                             RecordFileProgress(downloadFile, transferredBytes: 0);
                             return Task.CompletedTask;
                         },
-                        proxyMode != ProxyModes.Direct),
+                        connectionProxy),
                     cancellationToken).ConfigureAwait(false);
                 if (verifiedCrc is not null)
                 {
@@ -236,15 +254,18 @@ internal sealed class DownloadExecutor
     /// .tmp files, installs the passed files, and returns the failed files so
     /// the caller can retry them. Files present in <paramref name="verifiedHashes"/>
     /// with a matching manifest hash skip the re-read (they were verified during
-    /// download or in an earlier install round). Untouched installed files are
-    /// still hashed: this is the only content-corruption self-heal for files an
-    /// update does not rewrite — the launch check only compares size/existence.
+    /// download or in an earlier install round), and files present in
+    /// <paramref name="plannedHashes"/> whose witness still matches skip it too (they
+    /// were hashed by this session's planning pass). Untouched installed files are
+    /// otherwise still hashed: this is the only content-corruption self-heal for files
+    /// an update does not rewrite — the launch check only compares size/existence.
     /// </summary>
     internal async Task<IReadOnlyList<ManifestFile>> InstallDownloadedFilesAsync(
         string gamePath,
         IReadOnlyList<ManifestFile> manifestFiles,
         IReadOnlyList<ManifestFile> downloadedFiles,
         IReadOnlyDictionary<string, string> verifiedHashes,
+        IReadOnlyDictionary<string, PlannedFileHash> plannedHashes,
         Action<int> progress,
         CancellationToken cancellationToken)
     {
@@ -255,16 +276,16 @@ internal sealed class DownloadExecutor
         foreach (var file in manifestFiles)
         {
             cancellationToken.ThrowIfCancellationRequested();
-            var checkPath = downloadedPathSet.Contains(file.Path)
-                ? GetTempName(GamePathValidator.GetSafePath(gamePath, file.Path))
-                : GamePathValidator.GetSafePath(gamePath, file.Path);
+            var isDownloaded = downloadedPathSet.Contains(file.Path);
+            var checkPath = isDownloaded
+                ? GetTempName(GamePathValidator.GetSafeFilePath(gamePath, file.Path))
+                : GamePathValidator.GetSafeFilePath(gamePath, file.Path);
 
             if (!File.Exists(checkPath))
             {
                 failedFiles.Add(new ManifestFile { Path = file.Path, Size = file.Size, Hash = file.Hash });
             }
-            else if (!(verifiedHashes.TryGetValue(file.Path, out var verifiedHash)
-                && verifiedHash == file.Hash))
+            else if (!IsAlreadyVerified(file, checkPath, isDownloaded, verifiedHashes, plannedHashes))
             {
                 var crc64 = await crc64Service.ComputeFileAsync(checkPath, null, cancellationToken).ConfigureAwait(false);
                 if (crc64 != file.Hash)
@@ -297,7 +318,7 @@ internal sealed class DownloadExecutor
             if (failedPathSet.Contains(file.Path))
                 continue;
 
-            var tempPath = GetTempName(GamePathValidator.GetSafePath(gamePath, file.Path));
+            var tempPath = GetTempName(GamePathValidator.GetSafeFilePath(gamePath, file.Path));
             var targetPath = GetOriginName(tempPath);
             if (File.Exists(tempPath))
             {
@@ -315,13 +336,39 @@ internal sealed class DownloadExecutor
     }
 
     /// <summary>
+    /// Gets whether this session has already proven <paramref name="file"/>'s content, so the
+    /// full read can be skipped. A downloaded file is proven by the hash taken right after its
+    /// transfer; a file the session did not write is proven by the planning pass, but only while
+    /// it still matches the witness captured then — anything that changed since is read again, so
+    /// the content check keeps its teeth.
+    /// </summary>
+    private static bool IsAlreadyVerified(
+        ManifestFile file,
+        string checkPath,
+        bool isDownloaded,
+        IReadOnlyDictionary<string, string> verifiedHashes,
+        IReadOnlyDictionary<string, PlannedFileHash> plannedHashes)
+    {
+        if (verifiedHashes.TryGetValue(file.Path, out var verifiedHash)
+            && verifiedHash == file.Hash)
+        {
+            return true;
+        }
+
+        return !isDownloaded
+            && plannedHashes.TryGetValue(file.Path, out var planned)
+            && planned.Hash == file.Hash
+            && planned.Matches(checkPath);
+    }
+
+    /// <summary>
     /// Deletes files that are no longer part of the manifest.
     /// </summary>
     internal static void RemoveFiles(string gamePath, IReadOnlyList<ManifestFile> files, Action<int>? progress)
     {
         for (var i = 0; i < files.Count; i++)
         {
-            var filePath = GamePathValidator.GetSafePath(gamePath, files[i].Path);
+            var filePath = GamePathValidator.GetSafeFilePath(gamePath, files[i].Path);
             DeleteExistingFile(filePath);
 
             progress?.Invoke((int)Math.Round((i + 1) * 100d / files.Count));

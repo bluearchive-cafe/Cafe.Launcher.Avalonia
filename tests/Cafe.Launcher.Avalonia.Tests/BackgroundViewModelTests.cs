@@ -51,6 +51,45 @@ public sealed class BackgroundViewModelTests : IDisposable
     }
 
     [Fact]
+    public async Task Constructor_DoesNotDecodeBundledImage_AndFirstRefreshDecodesExactlyOnce()
+    {
+        var bundledLoadCount = 0;
+        using var cache = CreateCache(new ImageHandler(PngBytes));
+        using var viewModel = new BackgroundViewModel(
+            cache,
+            new LocalDiagnostics(),
+            _ => { },
+            (_, _) => new TestImage(),
+            () =>
+            {
+                Interlocked.Increment(ref bundledLoadCount);
+                return new TestImage();
+            });
+
+        // 构造期不得解码：该单例在 UI 线程、首帧前经 DI 解析，同步解码 2560×1388
+        // 内置壁纸会把整段解码时间压在首帧之前。
+        Assert.Equal(0, bundledLoadCount);
+        Assert.Null(viewModel.BackgroundImageSource);
+
+        await viewModel.UpdateBackgroundImageAsync(
+            new LauncherSettings { BackgroundSource = BackgroundSources.Bundled },
+            snapshot: null,
+            CancellationToken.None);
+
+        Assert.Equal(1, bundledLoadCount);
+        Assert.IsType<TestImage>(viewModel.BackgroundImageSource);
+
+        // 同源再次刷新走来源未变跳过守卫，不重复解码（构造期解码 + 首次刷新解码
+        // 的重复在修复前是常态）。
+        await viewModel.UpdateBackgroundImageAsync(
+            new LauncherSettings { BackgroundSource = BackgroundSources.Bundled },
+            snapshot: null,
+            CancellationToken.None);
+
+        Assert.Equal(1, bundledLoadCount);
+    }
+
+    [Fact]
     public async Task UpdateBackgroundImageAsync_WhenRemoteImageFails_FallsBackToBundledImage()
     {
         using var cache = CreateCache(new StatusHandler(HttpStatusCode.BadGateway));

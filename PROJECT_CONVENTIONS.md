@@ -169,9 +169,22 @@ AI 辅助开发规范 —— 本文件为所有 AI 编码助手（Claude Code、
 
 ## 9. 分支与 PR 流程
 
-- `main` 分支受保护，应在功能分支上开发。
-- 合并前必须：`dotnet build` 零警告 → `dotnet test` 全部通过（至少受影响的测试 + 合约测试）→ plan mode 下的设计批准（如适用范围 > 2 个文件）。
-- 合并后手动推送（不自动 rebase squash）。
+- `main` 的**实际**保护规则（GitHub ruleset `Protect main branch`，2026-09-11 核对）：
+
+  | 规则 | 状态 |
+  |---|---|
+  | 禁止删除 `main` | ✅ 强制（`deletion`） |
+  | 禁止强制推送 / 非快进更新 | ✅ 强制（`non_fast_forward`） |
+  | 必须走 PR 才能合入 | ❌ 未强制 |
+  | 必须状态检查通过（CI 绿灯） | ❌ 未强制 |
+  | 必须评审人批准 | ❌ 未强制 |
+
+  即：向 `main` 推送快进提交在机制上是允许的，CI 红灯同样能合进 `main`。仓库允许 merge commit / squash / rebase 三种合并方式，关闭了 auto-merge 与「合并后自动删分支」。若要把 CI 变成真正的合并门禁，在 ruleset 上添加 `required_status_checks` 指向 build 的检查名即可。
+
+- 因此以下三条是**团队约定**，靠自觉遵守而非机制强制：
+  - 在功能分支上开发并走 PR。
+  - 合并前：`dotnet build` 零警告 → `dotnet test` 全部通过（至少受影响的测试 + 合约测试）→ plan mode 下的设计批准（如适用范围 > 2 个文件）。
+  - 合并后手动推送（不自动 rebase squash）。
 
 ---
 
@@ -213,11 +226,22 @@ AI 辅助开发规范 —— 本文件为所有 AI 编码助手（Claude Code、
 | 工具/库 | 版本 | 用途 |
 |---|---|---|
 | .NET SDK | 10.0.x | Runtime |
-| Avalonia | 12.1.1 | UI Framework |
+| Avalonia / Avalonia.Desktop | 12.1.2 | UI Framework |
+| Avalonia.Controls.ColorPicker | 12.1.2 | 自定义主题色取色器 |
+| Avalonia.Themes.Fluent | 12.1.2 | Fluent 主题 |
+| Avalonia.Headless.XUnit | 12.1.2 | Headless UI testing |
+| AvaloniaUI.DiagnosticsSupport | 2.2.3 | 调试期 UI 诊断（Debug 专用，Release 不分发） |
 | CommunityToolkit.Mvvm | 8.4.2 | MVVM source generators |
-| Material.Icons.Avalonia | (latest) | Icon library |
-| Serilog + Sinks.Async + Sinks.File | (latest) | Logging pipeline |
-| xUnit v3 | 3.2.2 | Test framework |
-| Avalonia.Headless.XUnit | 12.1.1 | Headless UI testing |
+| Material.Icons.Avalonia | 3.0.2 | Icon library |
+| Microsoft.Extensions.DependencyInjection | 10.0.11 | DI 容器 |
+| Shirasagi0012.MaterialColorUtilities | 0.2.0 | Material 色彩工具 |
+| Serilog | 4.4.0 | Logging pipeline |
+| Serilog.Sinks.Async | 2.1.0 | 异步日志 sink |
+| Serilog.Sinks.File | 7.0.0 | 文件日志 sink |
+| xunit.v3 | 3.2.2 | Test framework |
+| xunit.runner.visualstudio | 3.1.5 | xUnit VS 适配器 |
+| Microsoft.NET.Test.Sdk | 18.9.0 | 测试宿主 |
 | coverlet.msbuild | 10.0.1 | Code coverage |
-| Inno Setup | 6.3+ | Windows installer |
+| Inno Setup | 7.0+ | Windows installer |
+
+> 版本以 `Directory.Packages.props` 中声明的为准；升级依赖时同步更新本表，并再生 `THIRD-PARTY-NOTICES.md` 与 lock 文件。

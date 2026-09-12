@@ -144,6 +144,7 @@ public sealed class SettingsEditor : ISettingsEditor
             && string.Equals(left.CustomThemeColor, right.CustomThemeColor, StringComparison.Ordinal)
             && left.SelectedThemeColorPaletteIndex == right.SelectedThemeColorPaletteIndex
             && string.Equals(left.DownloadSpeedLimit, right.DownloadSpeedLimit, StringComparison.Ordinal)
+            && left.EnableHttp2 == right.EnableHttp2
             && left.EnableStartupUpdateCheck == right.EnableStartupUpdateCheck
             && left.ShowRemoteContentCard == right.ShowRemoteContentCard
             && left.RememberWindowPositionAndSize == right.RememberWindowPositionAndSize

@@ -5,22 +5,31 @@ Regenerate with `scripts/New-ThirdPartyNotices.ps1` after changing dependencies.
 
 Cafe Launcher itself is licensed under the MIT License; see `LICENSE`.
 
+## Self-contained .NET runtime
+
+Release archives are self-contained: besides the packages below they redistribute the .NET
+runtime and apphost bundled with the publishing SDK — `Microsoft.NETCore.App 10.0.11` on the machine that generated this file.
+Both are MIT-licensed (https://github.com/dotnet/runtime/blob/main/LICENSE.TXT) and are not
+resolved as NuGet packages, so they cannot appear in the table below: the table lists exactly
+what `dotnet restore` resolves, and the RID-specific publish closure is outside its scope.
+The archives carry this file and `LICENSE` next to the binaries.
+
 | Package | Version | License | Source |
 | --- | --- | --- | --- |
-| Avalonia | 12.1.1 | MIT ([text](https://licenses.nuget.org/MIT)) | https://avaloniaui.net/?utm_source=nuget&utm_medium=referral&utm_content=project_homepage_link |
+| Avalonia | 12.1.2 | MIT ([text](https://licenses.nuget.org/MIT)) | https://avaloniaui.net/?utm_source=nuget&utm_medium=referral&utm_content=project_homepage_link |
 | Avalonia.Angle.Windows.Natives | 2.1.27548.20260419 | LICENSE ([text](https://aka.ms/deprecateLicenseUrl)) | https://avaloniaui.net/ |
 | Avalonia.BuildServices | 11.3.2 | MIT ([text](https://licenses.nuget.org/MIT)) | https://avaloniaui.net/ |
-| Avalonia.Controls.ColorPicker | 12.1.1 | MIT ([text](https://licenses.nuget.org/MIT)) | https://avaloniaui.net/?utm_source=nuget&utm_medium=referral&utm_content=project_homepage_link |
-| Avalonia.Desktop | 12.1.1 | MIT ([text](https://licenses.nuget.org/MIT)) | https://avaloniaui.net/?utm_source=nuget&utm_medium=referral&utm_content=project_homepage_link |
-| Avalonia.FreeDesktop | 12.1.1 | MIT ([text](https://licenses.nuget.org/MIT)) | https://avaloniaui.net/?utm_source=nuget&utm_medium=referral&utm_content=project_homepage_link |
-| Avalonia.FreeDesktop.AtSpi | 12.1.1 | MIT ([text](https://licenses.nuget.org/MIT)) | https://avaloniaui.net/?utm_source=nuget&utm_medium=referral&utm_content=project_homepage_link |
-| Avalonia.HarfBuzz | 12.1.1 | MIT ([text](https://licenses.nuget.org/MIT)) | https://avaloniaui.net/?utm_source=nuget&utm_medium=referral&utm_content=project_homepage_link |
-| Avalonia.Native | 12.1.1 | MIT ([text](https://licenses.nuget.org/MIT)) | https://avaloniaui.net/?utm_source=nuget&utm_medium=referral&utm_content=project_homepage_link |
-| Avalonia.Remote.Protocol | 12.1.1 | MIT ([text](https://licenses.nuget.org/MIT)) | https://avaloniaui.net/?utm_source=nuget&utm_medium=referral&utm_content=project_homepage_link |
-| Avalonia.Skia | 12.1.1 | MIT ([text](https://licenses.nuget.org/MIT)) | https://avaloniaui.net/?utm_source=nuget&utm_medium=referral&utm_content=project_homepage_link |
-| Avalonia.Themes.Fluent | 12.1.1 | MIT ([text](https://licenses.nuget.org/MIT)) | https://avaloniaui.net/?utm_source=nuget&utm_medium=referral&utm_content=project_homepage_link |
-| Avalonia.Win32 | 12.1.1 | MIT ([text](https://licenses.nuget.org/MIT)) | https://avaloniaui.net/?utm_source=nuget&utm_medium=referral&utm_content=project_homepage_link |
-| Avalonia.X11 | 12.1.1 | MIT ([text](https://licenses.nuget.org/MIT)) | https://avaloniaui.net/?utm_source=nuget&utm_medium=referral&utm_content=project_homepage_link |
+| Avalonia.Controls.ColorPicker | 12.1.2 | MIT ([text](https://licenses.nuget.org/MIT)) | https://avaloniaui.net/?utm_source=nuget&utm_medium=referral&utm_content=project_homepage_link |
+| Avalonia.Desktop | 12.1.2 | MIT ([text](https://licenses.nuget.org/MIT)) | https://avaloniaui.net/?utm_source=nuget&utm_medium=referral&utm_content=project_homepage_link |
+| Avalonia.FreeDesktop | 12.1.2 | MIT ([text](https://licenses.nuget.org/MIT)) | https://avaloniaui.net/?utm_source=nuget&utm_medium=referral&utm_content=project_homepage_link |
+| Avalonia.FreeDesktop.AtSpi | 12.1.2 | MIT ([text](https://licenses.nuget.org/MIT)) | https://avaloniaui.net/?utm_source=nuget&utm_medium=referral&utm_content=project_homepage_link |
+| Avalonia.HarfBuzz | 12.1.2 | MIT ([text](https://licenses.nuget.org/MIT)) | https://avaloniaui.net/?utm_source=nuget&utm_medium=referral&utm_content=project_homepage_link |
+| Avalonia.Native | 12.1.2 | MIT ([text](https://licenses.nuget.org/MIT)) | https://avaloniaui.net/?utm_source=nuget&utm_medium=referral&utm_content=project_homepage_link |
+| Avalonia.Remote.Protocol | 12.1.2 | MIT ([text](https://licenses.nuget.org/MIT)) | https://avaloniaui.net/?utm_source=nuget&utm_medium=referral&utm_content=project_homepage_link |
+| Avalonia.Skia | 12.1.2 | MIT ([text](https://licenses.nuget.org/MIT)) | https://avaloniaui.net/?utm_source=nuget&utm_medium=referral&utm_content=project_homepage_link |
+| Avalonia.Themes.Fluent | 12.1.2 | MIT ([text](https://licenses.nuget.org/MIT)) | https://avaloniaui.net/?utm_source=nuget&utm_medium=referral&utm_content=project_homepage_link |
+| Avalonia.Win32 | 12.1.2 | MIT ([text](https://licenses.nuget.org/MIT)) | https://avaloniaui.net/?utm_source=nuget&utm_medium=referral&utm_content=project_homepage_link |
+| Avalonia.X11 | 12.1.2 | MIT ([text](https://licenses.nuget.org/MIT)) | https://avaloniaui.net/?utm_source=nuget&utm_medium=referral&utm_content=project_homepage_link |
 | AvaloniaUI.DiagnosticsSupport | 2.2.3 | see package | https://avaloniaui.net/ |
 | CommunityToolkit.Mvvm | 8.4.2 | MIT ([text](https://licenses.nuget.org/MIT)) | https://github.com/CommunityToolkit/dotnet |
 | HarfBuzzSharp | 8.3.1.3 | MIT ([text](https://licenses.nuget.org/MIT)) | https://go.microsoft.com/fwlink/?linkid=868515 |
@@ -31,8 +40,8 @@ Cafe Launcher itself is licensed under the MIT License; see `LICENSE`.
 | Material.Icons | 3.0.2 | MIT ([text](https://licenses.nuget.org/MIT)) | https://github.com/SKProCH/Material.Icons/ |
 | Material.Icons.Avalonia | 3.0.2 | MIT ([text](https://licenses.nuget.org/MIT)) | https://github.com/AvaloniaUtils/Material.Icons.Avalonia/ |
 | MicroCom.Runtime | 0.11.6 | MIT ([text](https://licenses.nuget.org/MIT)) | - |
-| Microsoft.Extensions.DependencyInjection | 10.0.10 | MIT ([text](https://licenses.nuget.org/MIT)) | https://dot.net/ |
-| Microsoft.Extensions.DependencyInjection.Abstractions | 10.0.10 | MIT ([text](https://licenses.nuget.org/MIT)) | https://dot.net/ |
+| Microsoft.Extensions.DependencyInjection | 10.0.11 | MIT ([text](https://licenses.nuget.org/MIT)) | https://dot.net/ |
+| Microsoft.Extensions.DependencyInjection.Abstractions | 10.0.11 | MIT ([text](https://licenses.nuget.org/MIT)) | https://dot.net/ |
 | Microsoft.Extensions.Logging.Abstractions | 8.0.0 | MIT ([text](https://licenses.nuget.org/MIT)) | https://dot.net/ |
 | Microsoft.IO.RecyclableMemoryStream | 3.0.1 | MIT ([text](https://licenses.nuget.org/MIT)) | https://github.com/Microsoft/Microsoft.IO.RecyclableMemoryStream |
 | Serilog | 4.4.0 | Apache-2.0 ([text](https://licenses.nuget.org/Apache-2.0)) | https://serilog.net/ |

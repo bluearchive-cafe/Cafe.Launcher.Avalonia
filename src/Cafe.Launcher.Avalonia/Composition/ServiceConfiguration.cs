@@ -17,7 +17,8 @@ public static class ServiceConfiguration
 {
     public static IServiceCollection AddLauncherServices(
         this IServiceCollection services,
-        UnifiedLogger? existingLogger = null)
+        UnifiedLogger? existingLogger = null,
+        IFatalCrashService? existingFatalCrashService = null)
     {
         // ── Leaf services (parameterless constructors, no deps) ──────────
         services.AddSingleton<GameInstallationPath>();
@@ -26,7 +27,6 @@ public static class ServiceConfiguration
         services.AddSingleton<DiskSpaceService>();
         services.AddSingleton<SystemCultureSnapshot>();
         services.AddSingleton<LocalizationService>();
-        services.AddSingleton<ClickCodeService>();
         services.AddSingleton<ToastService>();
         services.AddSingleton<BestHttpCookieLibraryService>();
 
@@ -38,7 +38,18 @@ public static class ServiceConfiguration
             services.AddSingleton<UnifiedLogger>();
         services.AddSingleton<LogExportService>();
         services.AddSingleton<LogViewerDialogViewModel>();
+        services.AddSingleton<LogExportDialogViewModel>();
         services.AddSingleton<LocalDiagnostics>();
+        services.AddSingleton<CrashReportStore>();
+        services.AddSingleton<ICrashReporterLauncher, CrashReporterLauncher>();
+        if (existingFatalCrashService is not null)
+        {
+            services.AddSingleton(existingFatalCrashService);
+        }
+        else
+        {
+            services.AddSingleton<IFatalCrashService, FatalCrashService>();
+        }
         services.AddSingleton<SetupWizardViewModel>();
         services.AddSingleton<AuthorizationHeaderFactory>();
         services.AddSingleton<RemoteHttpUrlValidator>();

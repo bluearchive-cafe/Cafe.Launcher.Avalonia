@@ -13,9 +13,6 @@ namespace Cafe.Launcher.Avalonia.Constants;
 /// </summary>
 public static class LocalizationKeys
 {
-    /// <summary>Resource key for <c>about</c>.</summary>
-    public const string About = "about";
-
     /// <summary>Resource key for <c>aboutCopyrightText</c>.</summary>
     public const string AboutCopyrightText = "aboutCopyrightText";
 
@@ -37,9 +34,6 @@ public static class LocalizationKeys
     /// <summary>Resource key for <c>aboutRowBuildConfig</c>.</summary>
     public const string AboutRowBuildConfig = "aboutRowBuildConfig";
 
-    /// <summary>Resource key for <c>aboutRowBuildTime</c>.</summary>
-    public const string AboutRowBuildTime = "aboutRowBuildTime";
-
     /// <summary>Resource key for <c>aboutRowCommit</c>.</summary>
     public const string AboutRowCommit = "aboutRowCommit";
 
@@ -48,9 +42,6 @@ public static class LocalizationKeys
 
     /// <summary>Resource key for <c>aboutRowRuntime</c>.</summary>
     public const string AboutRowRuntime = "aboutRowRuntime";
-
-    /// <summary>Resource key for <c>aboutRowVersion</c>.</summary>
-    public const string AboutRowVersion = "aboutRowVersion";
 
     /// <summary>Resource key for <c>aboutVersionCaption</c>.</summary>
     public const string AboutVersionCaption = "aboutVersionCaption";
@@ -102,12 +93,6 @@ public static class LocalizationKeys
 
     /// <summary>Resource key for <c>bannerLoadingFailed</c>.</summary>
     public const string BannerLoadingFailed = "bannerLoadingFailed";
-
-    /// <summary>Resource key for <c>banners</c>.</summary>
-    public const string Banners = "banners";
-
-    /// <summary>Resource key for <c>buildInfo</c>.</summary>
-    public const string BuildInfo = "buildInfo";
 
     /// <summary>Resource key for <c>buildingFileList</c>.</summary>
     public const string BuildingFileList = "buildingFileList";
@@ -169,6 +154,45 @@ public static class LocalizationKeys
     /// <summary>Resource key for <c>contactCustomerSupport</c>.</summary>
     public const string ContactCustomerSupport = "contactCustomerSupport";
 
+    /// <summary>Resource key for <c>crashWindowBuild</c>.</summary>
+    public const string CrashWindowBuild = "crashWindowBuild";
+
+    /// <summary>Resource key for <c>crashWindowCaption</c>.</summary>
+    public const string CrashWindowCaption = "crashWindowCaption";
+
+    /// <summary>Resource key for <c>crashWindowCopied</c>.</summary>
+    public const string CrashWindowCopied = "crashWindowCopied";
+
+    /// <summary>Resource key for <c>crashWindowCopyDetails</c>.</summary>
+    public const string CrashWindowCopyDetails = "crashWindowCopyDetails";
+
+    /// <summary>Resource key for <c>crashWindowDescription</c>.</summary>
+    public const string CrashWindowDescription = "crashWindowDescription";
+
+    /// <summary>Resource key for <c>crashWindowExit</c>.</summary>
+    public const string CrashWindowExit = "crashWindowExit";
+
+    /// <summary>Resource key for <c>crashWindowOpenLogs</c>.</summary>
+    public const string CrashWindowOpenLogs = "crashWindowOpenLogs";
+
+    /// <summary>Resource key for <c>crashWindowReportId</c>.</summary>
+    public const string CrashWindowReportId = "crashWindowReportId";
+
+    /// <summary>Resource key for <c>crashWindowStatus</c>.</summary>
+    public const string CrashWindowStatus = "crashWindowStatus";
+
+    /// <summary>Resource key for <c>crashWindowTechnicalDetails</c>.</summary>
+    public const string CrashWindowTechnicalDetails = "crashWindowTechnicalDetails";
+
+    /// <summary>Resource key for <c>crashWindowTime</c>.</summary>
+    public const string CrashWindowTime = "crashWindowTime";
+
+    /// <summary>Resource key for <c>crashWindowTitle</c>.</summary>
+    public const string CrashWindowTitle = "crashWindowTitle";
+
+    /// <summary>Resource key for <c>crashWindowVersion</c>.</summary>
+    public const string CrashWindowVersion = "crashWindowVersion";
+
     /// <summary>Resource key for <c>customBackground</c>.</summary>
     public const string CustomBackground = "customBackground";
 
@@ -193,8 +217,8 @@ public static class LocalizationKeys
     /// <summary>Resource key for <c>debugCriticalErrorTriggered</c>.</summary>
     public const string DebugCriticalErrorTriggered = "debugCriticalErrorTriggered";
 
-    /// <summary>Resource key for <c>debugExportCancelled</c>.</summary>
-    public const string DebugExportCancelled = "debugExportCancelled";
+    /// <summary>Resource key for <c>debugFatalCrashTriggered</c>.</summary>
+    public const string DebugFatalCrashTriggered = "debugFatalCrashTriggered";
 
     /// <summary>Resource key for <c>debugGameOperations</c>.</summary>
     public const string DebugGameOperations = "debugGameOperations";
@@ -210,9 +234,6 @@ public static class LocalizationKeys
 
     /// <summary>Resource key for <c>debugLogEntryWritten</c>.</summary>
     public const string DebugLogEntryWritten = "debugLogEntryWritten";
-
-    /// <summary>Resource key for <c>debugLogExportUnavailable</c>.</summary>
-    public const string DebugLogExportUnavailable = "debugLogExportUnavailable";
 
     /// <summary>Resource key for <c>debugLogLevelSet</c>.</summary>
     public const string DebugLogLevelSet = "debugLogLevelSet";
@@ -247,8 +268,20 @@ public static class LocalizationKeys
     /// <summary>Resource key for <c>debugSimulateFailure</c>.</summary>
     public const string DebugSimulateFailure = "debugSimulateFailure";
 
+    /// <summary>Resource key for <c>debugSimulateFatalCrash</c>.</summary>
+    public const string DebugSimulateFatalCrash = "debugSimulateFatalCrash";
+
+    /// <summary>Resource key for <c>debugSimulateFatalCrashMessage</c>.</summary>
+    public const string DebugSimulateFatalCrashMessage = "debugSimulateFatalCrashMessage";
+
     /// <summary>Resource key for <c>debugSimulateSuccess</c>.</summary>
     public const string DebugSimulateSuccess = "debugSimulateSuccess";
+
+    /// <summary>Resource key for <c>debugSimulateUnhandledCrash</c>.</summary>
+    public const string DebugSimulateUnhandledCrash = "debugSimulateUnhandledCrash";
+
+    /// <summary>Resource key for <c>debugSimulateUnhandledCrashMessage</c>.</summary>
+    public const string DebugSimulateUnhandledCrashMessage = "debugSimulateUnhandledCrashMessage";
 
     /// <summary>Resource key for <c>debugStateRefreshTriggered</c>.</summary>
     public const string DebugStateRefreshTriggered = "debugStateRefreshTriggered";
@@ -430,6 +463,12 @@ public static class LocalizationKeys
     /// <summary>Resource key for <c>downloadSpeedLimitDescription</c>.</summary>
     public const string DownloadSpeedLimitDescription = "downloadSpeedLimitDescription";
 
+    /// <summary>Resource key for <c>enableHttp2</c>.</summary>
+    public const string EnableHttp2 = "enableHttp2";
+
+    /// <summary>Resource key for <c>enableHttp2Description</c>.</summary>
+    public const string EnableHttp2Description = "enableHttp2Description";
+
     /// <summary>Resource key for <c>enableStartupUpdateCheck</c>.</summary>
     public const string EnableStartupUpdateCheck = "enableStartupUpdateCheck";
 
@@ -477,9 +516,6 @@ public static class LocalizationKeys
 
     /// <summary>Resource key for <c>fileOperationFailed</c>.</summary>
     public const string FileOperationFailed = "fileOperationFailed";
-
-    /// <summary>Resource key for <c>folderPickerUnavailable</c>.</summary>
-    public const string FolderPickerUnavailable = "folderPickerUnavailable";
 
     /// <summary>Resource key for <c>gameAlreadyCurrent</c>.</summary>
     public const string GameAlreadyCurrent = "gameAlreadyCurrent";
@@ -577,14 +613,14 @@ public static class LocalizationKeys
     /// <summary>Resource key for <c>gameProcessStarted</c>.</summary>
     public const string GameProcessStarted = "gameProcessStarted";
 
-    /// <summary>Resource key for <c>gameProcessStartFailed</c>.</summary>
-    public const string GameProcessStartFailed = "gameProcessStartFailed";
-
     /// <summary>Resource key for <c>gameRemoteStateUnavailable</c>.</summary>
     public const string GameRemoteStateUnavailable = "gameRemoteStateUnavailable";
 
     /// <summary>Resource key for <c>gameRepairFailed</c>.</summary>
     public const string GameRepairFailed = "gameRepairFailed";
+
+    /// <summary>Resource key for <c>gameRuntimeNoRunnerAvailable</c>.</summary>
+    public const string GameRuntimeNoRunnerAvailable = "gameRuntimeNoRunnerAvailable";
 
     /// <summary>Resource key for <c>gameRuntimePrefixPath</c>.</summary>
     public const string GameRuntimePrefixPath = "gameRuntimePrefixPath";
@@ -727,17 +763,14 @@ public static class LocalizationKeys
     /// <summary>Resource key for <c>launchCheckWithMessage</c>.</summary>
     public const string LaunchCheckWithMessage = "launchCheckWithMessage";
 
+    /// <summary>Resource key for <c>launchDamageRepairPrompt</c>.</summary>
+    public const string LaunchDamageRepairPrompt = "launchDamageRepairPrompt";
+
     /// <summary>Resource key for <c>launcherCoreRefreshFailed</c>.</summary>
     public const string LauncherCoreRefreshFailed = "launcherCoreRefreshFailed";
 
     /// <summary>Resource key for <c>launcherInitFailed</c>.</summary>
     public const string LauncherInitFailed = "launcherInitFailed";
-
-    /// <summary>Resource key for <c>launcherLoadingStatus</c>.</summary>
-    public const string LauncherLoadingStatus = "launcherLoadingStatus";
-
-    /// <summary>Resource key for <c>launcherLoadingTitle</c>.</summary>
-    public const string LauncherLoadingTitle = "launcherLoadingTitle";
 
     /// <summary>Resource key for <c>launcherLoadingValue</c>.</summary>
     public const string LauncherLoadingValue = "launcherLoadingValue";
@@ -793,14 +826,77 @@ public static class LocalizationKeys
     /// <summary>Resource key for <c>localManifestUnreadable</c>.</summary>
     public const string LocalManifestUnreadable = "localManifestUnreadable";
 
+    /// <summary>Resource key for <c>logExportConfirm</c>.</summary>
+    public const string LogExportConfirm = "logExportConfirm";
+
+    /// <summary>Resource key for <c>logExportContentGroup</c>.</summary>
+    public const string LogExportContentGroup = "logExportContentGroup";
+
     /// <summary>Resource key for <c>logExportFailed</c>.</summary>
     public const string LogExportFailed = "logExportFailed";
 
     /// <summary>Resource key for <c>logExportFolderPickerTitle</c>.</summary>
     public const string LogExportFolderPickerTitle = "logExportFolderPickerTitle";
 
+    /// <summary>Resource key for <c>logExportIncludeCrashReports</c>.</summary>
+    public const string LogExportIncludeCrashReports = "logExportIncludeCrashReports";
+
+    /// <summary>Resource key for <c>logExportIncludeCrashReportsDescription</c>.</summary>
+    public const string LogExportIncludeCrashReportsDescription = "logExportIncludeCrashReportsDescription";
+
+    /// <summary>Resource key for <c>logExportIncludeLogs</c>.</summary>
+    public const string LogExportIncludeLogs = "logExportIncludeLogs";
+
+    /// <summary>Resource key for <c>logExportIncludeLogsDescription</c>.</summary>
+    public const string LogExportIncludeLogsDescription = "logExportIncludeLogsDescription";
+
+    /// <summary>Resource key for <c>logExportIncludeSystemInfo</c>.</summary>
+    public const string LogExportIncludeSystemInfo = "logExportIncludeSystemInfo";
+
+    /// <summary>Resource key for <c>logExportIncludeSystemInfoDescription</c>.</summary>
+    public const string LogExportIncludeSystemInfoDescription = "logExportIncludeSystemInfoDescription";
+
+    /// <summary>Resource key for <c>logExportIncludeUserData</c>.</summary>
+    public const string LogExportIncludeUserData = "logExportIncludeUserData";
+
+    /// <summary>Resource key for <c>logExportIncludeUserDataDescription</c>.</summary>
+    public const string LogExportIncludeUserDataDescription = "logExportIncludeUserDataDescription";
+
+    /// <summary>Resource key for <c>logExportRange</c>.</summary>
+    public const string LogExportRange = "logExportRange";
+
+    /// <summary>Resource key for <c>logExportRangeAll</c>.</summary>
+    public const string LogExportRangeAll = "logExportRangeAll";
+
+    /// <summary>Resource key for <c>logExportRangeDescription</c>.</summary>
+    public const string LogExportRangeDescription = "logExportRangeDescription";
+
+    /// <summary>Resource key for <c>logExportRangeEmpty</c>.</summary>
+    public const string LogExportRangeEmpty = "logExportRangeEmpty";
+
+    /// <summary>Resource key for <c>logExportRangeGroup</c>.</summary>
+    public const string LogExportRangeGroup = "logExportRangeGroup";
+
+    /// <summary>Resource key for <c>logExportRangeLast24Hours</c>.</summary>
+    public const string LogExportRangeLast24Hours = "logExportRangeLast24Hours";
+
+    /// <summary>Resource key for <c>logExportRangeLast30Days</c>.</summary>
+    public const string LogExportRangeLast30Days = "logExportRangeLast30Days";
+
+    /// <summary>Resource key for <c>logExportRangeLast7Days</c>.</summary>
+    public const string LogExportRangeLast7Days = "logExportRangeLast7Days";
+
+    /// <summary>Resource key for <c>logExportRangeLastHour</c>.</summary>
+    public const string LogExportRangeLastHour = "logExportRangeLastHour";
+
     /// <summary>Resource key for <c>logExportSucceeded</c>.</summary>
     public const string LogExportSucceeded = "logExportSucceeded";
+
+    /// <summary>Resource key for <c>logExportTitle</c>.</summary>
+    public const string LogExportTitle = "logExportTitle";
+
+    /// <summary>Resource key for <c>logExportUserDataWarning</c>.</summary>
+    public const string LogExportUserDataWarning = "logExportUserDataWarning";
 
     /// <summary>Resource key for <c>logFiles</c>.</summary>
     public const string LogFiles = "logFiles";
@@ -892,12 +988,6 @@ public static class LocalizationKeys
     /// <summary>Resource key for <c>motionModeSystem</c>.</summary>
     public const string MotionModeSystem = "motionModeSystem";
 
-    /// <summary>Resource key for <c>network</c>.</summary>
-    public const string Network = "network";
-
-    /// <summary>Resource key for <c>networkError</c>.</summary>
-    public const string NetworkError = "networkError";
-
     /// <summary>Resource key for <c>networkErrorDetail</c>.</summary>
     public const string NetworkErrorDetail = "networkErrorDetail";
 
@@ -921,9 +1011,6 @@ public static class LocalizationKeys
 
     /// <summary>Resource key for <c>neutralColorStrategySeedFollowingHint</c>.</summary>
     public const string NeutralColorStrategySeedFollowingHint = "neutralColorStrategySeedFollowingHint";
-
-    /// <summary>Resource key for <c>news</c>.</summary>
-    public const string News = "news";
 
     /// <summary>Resource key for <c>nextBanner</c>.</summary>
     public const string NextBanner = "nextBanner";
@@ -994,9 +1081,6 @@ public static class LocalizationKeys
     /// <summary>Resource key for <c>proxySystem</c>.</summary>
     public const string ProxySystem = "proxySystem";
 
-    /// <summary>Resource key for <c>ready</c>.</summary>
-    public const string Ready = "ready";
-
     /// <summary>Resource key for <c>readyToUninstall</c>.</summary>
     public const string ReadyToUninstall = "readyToUninstall";
 
@@ -1038,9 +1122,6 @@ public static class LocalizationKeys
 
     /// <summary>Resource key for <c>repairConfirm</c>.</summary>
     public const string RepairConfirm = "repairConfirm";
-
-    /// <summary>Resource key for <c>repairConfirmDescription</c>.</summary>
-    public const string RepairConfirmDescription = "repairConfirmDescription";
 
     /// <summary>Resource key for <c>repairFilesNeeded</c>.</summary>
     public const string RepairFilesNeeded = "repairFilesNeeded";
@@ -1231,6 +1312,9 @@ public static class LocalizationKeys
     /// <summary>Resource key for <c>settingsGroupThemeColor</c>.</summary>
     public const string SettingsGroupThemeColor = "settingsGroupThemeColor";
 
+    /// <summary>Resource key for <c>settingsGroupUpdates</c>.</summary>
+    public const string SettingsGroupUpdates = "settingsGroupUpdates";
+
     /// <summary>Resource key for <c>settingsSaved</c>.</summary>
     public const string SettingsSaved = "settingsSaved";
 
@@ -1347,12 +1431,6 @@ public static class LocalizationKeys
 
     /// <summary>Resource key for <c>showLauncher</c>.</summary>
     public const string ShowLauncher = "showLauncher";
-
-    /// <summary>Resource key for <c>showRemoteContentCard</c>.</summary>
-    public const string ShowRemoteContentCard = "showRemoteContentCard";
-
-    /// <summary>Resource key for <c>socialMedia</c>.</summary>
-    public const string SocialMedia = "socialMedia";
 
     /// <summary>Resource key for <c>speed10MBs</c>.</summary>
     public const string Speed10MBs = "speed10MBs";
@@ -1578,9 +1656,6 @@ public static class LocalizationKeys
 
     /// <summary>Resource key for <c>verifyingDownloadedFiles</c>.</summary>
     public const string VerifyingDownloadedFiles = "verifyingDownloadedFiles";
-
-    /// <summary>Resource key for <c>version</c>.</summary>
-    public const string Version = "version";
 
     /// <summary>Resource key for <c>versionInfo</c>.</summary>
     public const string VersionInfo = "versionInfo";

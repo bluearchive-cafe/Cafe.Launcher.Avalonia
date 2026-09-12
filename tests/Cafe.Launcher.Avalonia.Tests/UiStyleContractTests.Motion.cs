@@ -198,6 +198,7 @@ public sealed partial class UiStyleContractTests
         {
             "Views/MainWindowSettingsOverlay.axaml",
             "Views/MainWindowLogViewerOverlay.axaml",
+            "Views/MainWindowLogExportOverlay.axaml",
             "Views/MainWindowDebugOverlay.axaml",
             "Views/MainWindowDialogsOverlay.axaml",
             "Views/SetupWizardOverlay.axaml"
@@ -215,7 +216,7 @@ public sealed partial class UiStyleContractTests
                     .Select(element => (element, controlsNamespace)));
         }
 
-        Assert.Equal(8, overlays.Count);
+        Assert.Equal(9, overlays.Count);
         Assert.All(overlays, overlay =>
         {
             var element = overlay.Element;

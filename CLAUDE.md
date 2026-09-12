@@ -10,7 +10,7 @@ The root `Cafe.Launcher.Avalonia.slnx` contains the application and both test pr
 
 - Requires the .NET 10 SDK. The application is a `net10.0` Avalonia Windows GUI (`WinExe`); Release builds are self-contained for `win-x64`.
 - Builds enforce nullable references, code style, and warnings as errors. A successful build has zero warnings.
-- C# uses 4-space indentation and CRLF; markup, JSON, Markdown, and PowerShell use LF. File-scoped namespaces are preferred. There is no separate lint or formatting command—the build analyzers are the enforcement point.
+- C# uses 4-space indentation and CRLF; markup, JSON, Markdown, and PowerShell use LF. File-scoped namespaces are preferred. There is no separate lint or formatting command—the build analyzers are the enforcement point, and `LineEndingPolicyContractTests` keeps `.editorconfig` and `.gitattributes` declaring the same endings.
 - Do not add remote telemetry. Diagnostics remain local and production code logs through `LocalDiagnostics`, except for the pre-DI bootstrap path in `Program.cs` and the logging implementation itself.
 
 ## Build, run, and test
@@ -67,13 +67,13 @@ Tests use xUnit v3 and `coverlet.msbuild`; do not introduce a mocking framework.
 
 Test project internals are exposed through `Properties/AssemblyInfo.cs`. Keep tests near the class under test and name them `Method_State_ExpectedResult`. New services should cover: success path, typical failure path (exception/validation failure), and boundary conditions (null input, empty collection).
 
-To build the distributable ZIP and Inno Setup installer, install Inno Setup 6.3 or newer (7.x recommended) and make `ISCC.exe` available on `PATH` or in the default install location (`C:\Program Files\Inno Setup 7`), then run:
+To build the distributable ZIP and Inno Setup installer, install Inno Setup 7.0 or newer and make `ISCC.exe` available on `PATH` or in the default install location (`C:\Program Files\Inno Setup 7`), then run:
 
 ```powershell
 .\scripts\Build-Distribution.ps1
 ```
 
-GitHub Actions uses .NET `10.0.x`. The build workflow runs on `windows-latest`: `test.ps1` executes both test projects, `coverage.ps1` enforces the merged coverage baseline, then Debug and Release `win-x64` builds and a Release publish run. The tag-triggered release workflow runs on `windows-latest` (Inno Setup via Chocolatey) and builds both distribution formats with `scripts/Build-Distribution.ps1`. `release.ps1` creates commits, tags, and pushes, so run it only when explicitly asked to perform a release.
+GitHub Actions uses .NET `10.0.x`. The build workflow runs on `windows-latest`: `test.ps1` executes both test projects, `coverage.ps1` enforces the merged coverage baseline, then Debug and Release `win-x64` builds and a Release publish run. The tag-triggered release workflow builds the cross-platform archives with `scripts/Build-Distribution.ps1` (Windows zip, macOS bundle, Linux tar.gz/deb/AppImage) and, in a separate job, downloads a pinned Inno Setup 7 release from `jrsoftware/issrc`, verifies its GitHub release attestation (`gh release verify-asset`), and builds the Windows installer with `scripts/New-WindowsInstaller.ps1`. `release.ps1` creates commits, tags, and pushes, so run it only when explicitly asked to perform a release. Release-notes rules (single-release file, SemVer naming, user-facing vocabulary) live in [AGENTS.md](AGENTS.md) under "Release Notes" and are guarded by `ReleaseChangelogContractTests`.
 
 ## Application architecture
 
@@ -90,7 +90,7 @@ GitHub Actions uses .NET `10.0.x`. The build workflow runs on `windows-latest`: 
 - Avalonia uses compiled, explicit bindings; there is no reflection-based view locator. `ViewModelBase` extends CommunityToolkit.Mvvm's `ObservableObject`.
 - `MainWindowViewModel` is the shell that composes focused view models for shell state, background, remote content, dialogs, game operations, toast host, window chrome, settings, resource panel, log viewer, and first-launch setup. Child view models call parent capabilities through injected delegates and expose events for parent-owned coordination.
 - `Views/MainWindow.axaml` retains the window shell. Styles, settings, dialog/log-viewer, and toast layers are separate `.axaml` files. State-driven settings navigation selects categories inside the one window rather than using a navigation framework.
-- XAML values must use the `Launcher*` resources in `App.axaml`; raw colors, `Transparent`, raw icon sizes, and raw 4/6/8 corner radii are disallowed in view XAML. Overlay order is base content → settings (100) → dialogs (200) → toast (1000).
+- XAML values must use the `Launcher*` resources in `App.axaml`; raw colors, `Transparent`, raw icon sizes, and raw 4/6/8 corner radii are disallowed in view XAML. Overlay order is base content → settings (100) → dialogs (200) → setup wizard (500) → toast (1000).
 
 ### Core runtime and game operations
 

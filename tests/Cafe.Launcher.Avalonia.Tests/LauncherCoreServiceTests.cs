@@ -90,6 +90,26 @@ public sealed class LauncherCoreServiceTests : IDisposable
     }
 
     [Fact]
+    public async Task LoadAsync_WhenRemoteReadsStall_DegradesWithinBudgetWithoutCancellation()
+    {
+        // 守卫（启动预算）：六个远端读取各自有 3×30s 超时 + 退避（叠加最坏 ~92s
+        // 才降级）。整体预算到点后快照必须以降级态返回，而不是继续挂在重试里；
+        // 调用方 token 全程未取消。
+        var service = await CreateServiceAsync(
+            new CancellationHandler(),
+            remoteStateBudget: TimeSpan.FromMilliseconds(250));
+        var stopwatch = System.Diagnostics.Stopwatch.StartNew();
+
+        var snapshot = await service.LoadAsync();
+
+        stopwatch.Stop();
+        Assert.Equal(LauncherRuntimeState.RemoteUnavailable, snapshot.RuntimeState);
+        Assert.Null(snapshot.Remote.GameConfig);
+        Assert.True(snapshot.Remote.BaseConfig is null);
+        Assert.True(stopwatch.Elapsed < TimeSpan.FromSeconds(10));
+    }
+
+    [Fact]
     public async Task LoadAsync_WhenSettingsDocumentHasNoGamePath_ReturnsEffectiveDefaultGamePath()
     {
         var service = await CreateServiceAsync(
@@ -103,9 +123,35 @@ public sealed class LauncherCoreServiceTests : IDisposable
         Assert.Equal(expectedPath, snapshot.LocalGame.GamePath);
     }
 
+    [Fact]
+    public async Task LoadAsync_WhenHttp2IsEnabled_ConfiguresFactoryFromPersistedSetting()
+    {
+        var settingsService = new LauncherSettingsService(Path.Combine(tempDir, "settings.json"));
+        await settingsService.SaveAsync(new LauncherSettings { EnableHttp2 = true });
+        using var factory = new HttpClientFactory(new ProxySettingsService());
+        using var apiClient = new LauncherApiClient(
+            new LauncherStateHandler("/api/launcher/never"),
+            new AuthorizationHeaderFactory(),
+            new PatchUrlGroupService());
+        var service = new LauncherCoreService(
+            apiClient,
+            new LocalInstallationStateStore(),
+            new GameInstallationPath(),
+            settingsService,
+            factory,
+            new LocalDiagnostics());
+
+        await service.LoadAsync();
+
+        using var client = factory.CreateClient(TimeSpan.FromSeconds(1));
+        Assert.Equal(HttpVersion.Version20, client.DefaultRequestVersion);
+        Assert.Equal(HttpVersionPolicy.RequestVersionOrLower, client.DefaultVersionPolicy);
+    }
+
     private async Task<LauncherCoreService> CreateServiceAsync(
         HttpMessageHandler handler,
-        bool useEmptySettingsDocument = false)
+        bool useEmptySettingsDocument = false,
+        TimeSpan? remoteStateBudget = null)
     {
         var store = new LocalInstallationStateStore();
         var settingsPath = Path.Combine(tempDir, "settings.json");
@@ -140,7 +186,9 @@ public sealed class LauncherCoreServiceTests : IDisposable
             store,
             new GameInstallationPath(),
             settingsService,
-            new LocalDiagnostics());
+            new HttpClientFactory(new ProxySettingsService()),
+            new LocalDiagnostics(),
+            remoteStateBudget ?? LauncherCoreService.DefaultRemoteStateBudget);
     }
 
     private static GameConfigResponse CreateGameConfig()

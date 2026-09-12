@@ -218,7 +218,7 @@ public sealed class LauncherApiClient : IDisposable
                     static uri => new HttpRequestMessage(HttpMethod.Get, uri),
                     urlValidator,
                     ct,
-                    connectionUsesProxy: proxyMode != ProxyModes.Direct).ConfigureAwait(false);
+                    connectionProxy: lease.ConnectionProxy).ConfigureAwait(false);
                 response.EnsureSuccessStatusCode();
                 var manifest = await RemoteHttpRequestService.DeserializeJsonAsync<RemoteManifest>(
                     response, requestUri, jsonOptions, ct).ConfigureAwait(false);
@@ -245,7 +245,9 @@ public sealed class LauncherApiClient : IDisposable
                     "Authorization",
                     authorizationHeaderFactory.Create("", ApiConfig.YostarAuthorizationVersion));
 
-                using var response = await lease.Client.SendAsync(request, ct).ConfigureAwait(false);
+                using var response = await RemoteHttpRequestService
+                    .SendAsync(lease.Client, request, ct)
+                    .ConfigureAwait(false);
                 response.EnsureSuccessStatusCode();
                 await LocalDiagnostics.LogAsync(
                     LogEntrySeverity.Debug,
@@ -262,7 +264,7 @@ public sealed class LauncherApiClient : IDisposable
                 if (envelope.Code != 200)
                 {
                     var message = envelope.Message ?? envelope.Msg ?? $"API response code: {envelope.Code}";
-                    throw new InvalidOperationException(message);
+                    throw new LauncherApiEnvelopeException(message);
                 }
 
                 if (envelope.Data is null)
@@ -276,7 +278,8 @@ public sealed class LauncherApiClient : IDisposable
             i => ManifestFetchBackoff[i],
             cancellationToken,
             ex => IsRetryableRequestFailure(ex)
-                || ex is JsonException or InvalidOperationException);
+                || ex is JsonException
+                || (ex is InvalidOperationException and not LauncherApiEnvelopeException));
     }
 
     private static bool IsRetryableRequestFailure(Exception exception)
@@ -300,5 +303,20 @@ public sealed class LauncherApiClient : IDisposable
     {
         leaseSource.Dispose();
         GC.SuppressFinalize(this);
+    }
+}
+
+/// <summary>
+/// The API envelope answered with a non-200 business code (e.g. a server-side
+/// rejection such as maintenance or a rate limit). The server responded, so the
+/// failure is authoritative rather than transient — <see cref="RetryPolicy"/>
+/// callers deliberately do not retry it. Derives from
+/// <see cref="InvalidOperationException"/> so existing catch sites that treat
+/// envelope failures as protocol errors keep working unchanged.
+/// </summary>
+internal sealed class LauncherApiEnvelopeException : InvalidOperationException
+{
+    public LauncherApiEnvelopeException(string message) : base(message)
+    {
     }
 }

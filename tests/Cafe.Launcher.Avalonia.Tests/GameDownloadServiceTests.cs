@@ -1,8 +1,11 @@
 using System.Globalization;
 using System.Net;
 using System.Net.Http;
+using System.Security.AccessControl;
+using System.Security.Principal;
 using System.Text;
 using System.Text.Json;
+using Cafe.Launcher.Avalonia.Constants;
 using Cafe.Launcher.Avalonia.Features.GameOperations;
 using Cafe.Launcher.Avalonia.Helpers;
 using Cafe.Launcher.Avalonia.Services;
@@ -85,6 +88,70 @@ public sealed class GameDownloadServiceTests : IDisposable
     }
 
     [Fact]
+    public async Task Stop_WhenNoOperationIsRunning_DoesNotLogDownloadStopped()
+    {
+        // Shutdown calls Stop() twice (lifecycle prepare + dispose) with no active session.
+        // Only a real session counts as a user stop, so the log must stay clean.
+        using var apiClient = new LauncherApiClient(new HttpClientHandler(), new AuthorizationHeaderFactory(), new PatchUrlGroupService());
+        using var logger = new UnifiedLogger(Path.Combine(tempDir, "logs"));
+        // Debug builds default the switch to Verbose but Release defaults it to
+        // Information, while the stop line and the sentinel below are both
+        // Debug-severity: without lowering it here the sink drops every entry and the
+        // log file is never created in a Release run.
+        logger.SetMinimumLevel(Serilog.Events.LogEventLevel.Verbose);
+        var diagnostics = new LocalDiagnostics(logger);
+        using var service = CreateService(
+            apiClient,
+            new LauncherSettingsService(Path.Combine(tempDir, "settings.json")),
+            Path.Combine(tempDir, "download_state.json"),
+            diagnostics: diagnostics);
+
+        service.Stop();
+        service.Stop();
+        // Sentinel proves the sink is live, so the negative assertion cannot pass vacuously.
+        await diagnostics.DebugAsync("StopLogSentinel", "sentinel");
+        logger.Dispose();
+        var logText = await File.ReadAllTextAsync(logger.LogFilePath);
+
+        Assert.Contains("sentinel", logText, StringComparison.Ordinal);
+        Assert.DoesNotContain("Download stopped by user", logText, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public async Task Stop_WhenOperationIsRunning_LogsDownloadStopped()
+    {
+        var gamePath = Path.Combine(tempDir, "YostarGames", "BlueArchive_JP");
+        var settingsService = new LauncherSettingsService(Path.Combine(tempDir, "settings.json"));
+        await settingsService.SaveAsync(new LauncherSettings { GamePath = gamePath });
+        var fileBytes = Encoding.UTF8.GetBytes("stopped-content");
+        var manifestFile = await CreateManifestFileAsync(tempDir, "data/file.bin", fileBytes);
+        using var apiClient = CreateManifestApiClient(manifestFile);
+        var downloader = new ControlledFileDownloadService(fileBytes);
+        using var logger = new UnifiedLogger(Path.Combine(tempDir, "logs"));
+        // The stop line is Debug-severity and Release defaults the switch to Information,
+        // so without lowering it here the entry never reaches the sink.
+        logger.SetMinimumLevel(Serilog.Events.LogEventLevel.Verbose);
+        using var service = CreateService(
+            apiClient,
+            settingsService,
+            Path.Combine(tempDir, "download_state.json"),
+            downloader,
+            diagnostics: new LocalDiagnostics(logger));
+        var snapshot = CreateSnapshot(gamePath);
+        snapshot.RuntimeState = LauncherRuntimeState.NotInstalled;
+
+        var operation = service.InstallOrUpdateAsync(snapshot, _ => { });
+        await downloader.DownloadStarted.Task.WaitAsync(TimeSpan.FromSeconds(2));
+
+        service.Stop();
+        await operation.WaitAsync(TimeSpan.FromSeconds(2));
+        logger.Dispose();
+        var logText = await File.ReadAllTextAsync(logger.LogFilePath);
+
+        Assert.Contains("Download stopped by user", logText, StringComparison.Ordinal);
+    }
+
+    [Fact]
     public void RetryDomainOrder_ReturnsExpectedSequence()
     {
         Assert.Equal([1, 1, 1, 1, 0, 0, 0, 1, 1, 1], FileDownloadService.RetryDomainOrder);
@@ -146,6 +213,30 @@ public sealed class GameDownloadServiceTests : IDisposable
     }
 
     [Fact]
+    public void BuildDownloadUrl_WhenDomainContainsPathPrefix_PreservesPrefix()
+    {
+        // 守卫（AUD-NET-003）：CDN 域名一旦带上路径前缀，拼接必须保留它，
+        // 而不是静默把所有文件请求错位到对方根路径。
+        var url = FileDownloadService.BuildDownloadUrl(
+            "https://cdn.example.invalid/v2/assets/",
+            "/source/root",
+            "/data/file.bin");
+
+        Assert.Equal("https://cdn.example.invalid/v2/assets/source/root/data/file.bin", url);
+    }
+
+    [Fact]
+    public void BuildDownloadUrl_WhenDomainContainsExplicitPort_PreservesPort()
+    {
+        var url = FileDownloadService.BuildDownloadUrl(
+            "https://cdn.example.invalid:8443",
+            "/source",
+            "/file.bin");
+
+        Assert.Equal("https://cdn.example.invalid:8443/source/file.bin", url);
+    }
+
+    [Fact]
     public async Task DownloadFileAsync_WhenTemporaryFileAlreadyMatchesExpectedSize_SkipsHttpRequest()
     {
         try
@@ -177,7 +268,7 @@ public sealed class GameDownloadServiceTests : IDisposable
                 client,
                 () => Task.CompletedTask,
                 (_, _) => Task.CompletedTask,
-                false,
+                null,
                 CancellationToken.None);
 
             Assert.Equal(0, handler.RequestCount);
@@ -221,7 +312,7 @@ public sealed class GameDownloadServiceTests : IDisposable
                 client,
                 () => Task.CompletedTask,
                 (_, _) => Task.CompletedTask,
-                false,
+                null,
                 CancellationToken.None);
 
             Assert.False(handler.RangeWasRequested);
@@ -345,7 +436,7 @@ public sealed class GameDownloadServiceTests : IDisposable
             client,
             () => Task.CompletedTask,
             (_, _) => Task.CompletedTask,
-            false,
+            null,
             CancellationToken.None);
 
         Assert.True(handler.RangeWasRequested);
@@ -383,7 +474,7 @@ public sealed class GameDownloadServiceTests : IDisposable
             client,
             () => Task.CompletedTask,
             (_, _) => Task.CompletedTask,
-            false,
+            null,
             CancellationToken.None);
 
         Assert.Equal(2, handler.RequestCount);
@@ -423,7 +514,7 @@ public sealed class GameDownloadServiceTests : IDisposable
                 client,
                 () => Task.CompletedTask,
                 (_, _) => Task.CompletedTask,
-                false,
+                null,
                 CancellationToken.None);
 
             Assert.Equal(2, handler.RequestCount);
@@ -466,7 +557,7 @@ public sealed class GameDownloadServiceTests : IDisposable
                 client,
                 () => Task.CompletedTask,
                 (_, _) => Task.CompletedTask,
-                false,
+                null,
                 CancellationToken.None);
 
             Assert.Equal(4, handler.SecondRequestRangeStart);
@@ -497,6 +588,113 @@ public sealed class GameDownloadServiceTests : IDisposable
         Assert.True(result.Success);
         Assert.False(File.Exists(statePath));
         Directory.Delete(tempDir, recursive: true);
+    }
+
+    [Fact]
+    public async Task InstallOrUpdateAsync_WhenAlreadyCurrentAndStateMatchesCommit_SucceedsWithoutRewritingState()
+    {
+        var gamePath = Path.Combine(tempDir, "YostarGames", "BlueArchive_JP");
+        Directory.CreateDirectory(gamePath);
+        var settingsPath = Path.Combine(tempDir, "settings.json");
+        var statePath = Path.Combine(tempDir, "download_state.json");
+        var settingsService = new LauncherSettingsService(settingsPath);
+        await settingsService.SaveAsync(new LauncherSettings { GamePath = gamePath });
+        // 与 CreateSnapshot 的远端配置逐字段对齐（版本/basis/ExeName/Params/空清单），
+        // 使 LocalInstallationStateMatchesCommit 命中「提交是纯重写，可跳过」分支。
+        // 经 CommitAsync 落盘保证 Vc 哈希合法（手写 JSON 会被判 Corrupted）。
+        var committed = await new LocalInstallationStateStore().CommitAsync(
+            gamePath,
+            new LocalInstallationStateCommit(
+                Version: "1.0.0",
+                ManifestBasis: "manifest.json",
+                ExecutableName: "BlueArchive",
+                LaunchParameters: [],
+                Files: []));
+        Assert.Equal(LocalInstallationStateKind.Valid, committed.Kind);
+        // sentinel 字段不属于 LocalManifest：若提交被重写，它会消失。
+        var manifestPath = Path.Combine(gamePath, "manifest.json");
+        await File.WriteAllTextAsync(
+            manifestPath,
+            (await File.ReadAllTextAsync(manifestPath)).Insert(1, "\"sentinel\":\"keep\","));
+        using var apiClient = CreateManifestApiClient();
+        var service = CreateService(apiClient, settingsService, statePath);
+        var snapshot = CreateSnapshot(gamePath);
+
+        var result = await service.InstallOrUpdateAsync(snapshot, _ => { });
+
+        Assert.True(result.Success);
+        Assert.Contains("keep", await File.ReadAllTextAsync(manifestPath));
+        Assert.False(File.Exists(statePath));
+        Directory.Delete(tempDir, recursive: true);
+    }
+
+    [Fact]
+    public async Task InstallOrUpdateAsync_WhenCommitNeededButDirectoryNotWritable_FailsWithLocalizedAccessDenied()
+    {
+        if (!OperatingSystem.IsWindows())
+        {
+            return;
+        }
+
+        var gamePath = Path.Combine(tempDir, "YostarGames", "BlueArchive_JP");
+        Directory.CreateDirectory(gamePath);
+        var settingsPath = Path.Combine(tempDir, "settings.json");
+        var statePath = Path.Combine(tempDir, "download_state.json");
+        File.WriteAllText(statePath, "stale-checkpoint");
+        var settingsService = new LauncherSettingsService(settingsPath);
+        await settingsService.SaveAsync(new LauncherSettings { GamePath = gamePath });
+        // 版本落后使状态不匹配 → 确需提交；清单两侧均为空 → diff==0 走写探测闸口。
+        var committed = await new LocalInstallationStateStore().CommitAsync(
+            gamePath,
+            new LocalInstallationStateCommit(
+                Version: "0.9.0",
+                ManifestBasis: "manifest.json",
+                ExecutableName: "BlueArchive",
+                LaunchParameters: [],
+                Files: []));
+        Assert.Equal(LocalInstallationStateKind.Valid, committed.Kind);
+        using var apiClient = CreateManifestApiClient();
+        var service = CreateService(apiClient, settingsService, statePath);
+        DenyCreateFiles(gamePath);
+        try
+        {
+            var result = await service.InstallOrUpdateAsync(CreateSnapshot(gamePath), _ => { });
+
+            Assert.False(result.Success);
+            Assert.Equal(
+                new LocalizationService().F(LocalizationKeys.FileAccessDenied, gamePath),
+                result.Message);
+            // 写探测失败必须清掉陈旧检查点，避免下轮被错误续传。
+            Assert.False(File.Exists(statePath));
+        }
+        finally
+        {
+            RevokeDenyCreateFiles(gamePath);
+        }
+    }
+
+    [System.Runtime.Versioning.SupportedOSPlatform("windows")]
+    private static void DenyCreateFiles(string directory)
+    {
+        var info = new DirectoryInfo(directory);
+        var security = info.GetAccessControl();
+        security.AddAccessRule(new FileSystemAccessRule(
+            WindowsIdentity.GetCurrent().User!,
+            FileSystemRights.CreateFiles,
+            AccessControlType.Deny));
+        info.SetAccessControl(security);
+    }
+
+    [System.Runtime.Versioning.SupportedOSPlatform("windows")]
+    private static void RevokeDenyCreateFiles(string directory)
+    {
+        var info = new DirectoryInfo(directory);
+        var security = info.GetAccessControl();
+        security.RemoveAccessRule(new FileSystemAccessRule(
+            WindowsIdentity.GetCurrent().User!,
+            FileSystemRights.CreateFiles,
+            AccessControlType.Deny));
+        info.SetAccessControl(security);
     }
 
     [Fact]
@@ -1478,7 +1676,7 @@ public sealed class GameDownloadServiceTests : IDisposable
                     reportProgress?.Invoke(0);
                     return Task.CompletedTask;
                 },
-                false),
+                ConnectionProxy: null),
             CancellationToken.None);
     }
 

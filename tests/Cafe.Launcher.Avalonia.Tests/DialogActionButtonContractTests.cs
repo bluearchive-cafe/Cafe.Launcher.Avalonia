@@ -79,6 +79,7 @@ public sealed class DialogActionButtonContractTests
         {
             XDocument.Load(ProjectFile("Views/MainWindowDialogsOverlay.axaml")),
             XDocument.Load(ProjectFile("Views/MainWindowLogViewerOverlay.axaml")),
+            XDocument.Load(ProjectFile("Views/MainWindowLogExportOverlay.axaml")),
             XDocument.Load(ProjectFile("Views/MainWindowSettingsOverlay.axaml")),
             XDocument.Load(ProjectFile("Views/SetupWizardOverlay.axaml")),
             XDocument.Load(ProjectFile("Controls/ConfirmDialog.axaml")),
@@ -96,8 +97,10 @@ public sealed class DialogActionButtonContractTests
                     "danger-action"))
             .ToArray();
 
-        // ADR-017：向导的 outlined / tonal / filled 与跳过 text 动作均受统一尺寸契约约束。
-        Assert.Equal(29, actionButtons.Length);
+        // ADR-017：向导动作按动作重要性重分级后全部带 dialog-action——跳过 text-action、
+        // 上一步 flat-action（原文的 wizard-action 无变体类，不进入本计数）、
+        // 下一步 tonal-action、完成 primary-action，故四者一并受统一尺寸契约约束。
+        Assert.Equal(31, actionButtons.Length);
         Assert.All(
             actionButtons,
             button =>
@@ -119,6 +122,28 @@ public sealed class DialogActionButtonContractTests
                             icon.Attribute("Height")?.Value);
                     });
             });
+    }
+
+    [Fact]
+    public void LogExportDialog_UsesExitToAppIcons()
+    {
+        var document = XDocument.Load(ProjectFile("Views/MainWindowLogExportOverlay.axaml"));
+        var headerIcon = document
+            .Descendants()
+            .Single(element =>
+                element.Name.LocalName == "MaterialIcon"
+                && element.Attribute("Width")?.Value == "{StaticResource Launcher.Icon.Md}");
+        var exportButton = document
+            .Descendants()
+            .Single(element =>
+                element.Name.LocalName == "Button"
+                && element.Attribute("Command")?.Value == "{Binding LogExport.ExportCommand}");
+        var buttonIcon = exportButton
+            .Descendants()
+            .Single(element => element.Name.LocalName == "MaterialIcon");
+
+        Assert.Equal("ExitToApp", headerIcon.Attribute("Kind")?.Value);
+        Assert.Equal("ExitToApp", buttonIcon.Attribute("Kind")?.Value);
     }
 
     private static bool HasAnyClass(XElement element, params string[] classes) =>
