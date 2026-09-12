@@ -57,7 +57,7 @@ public sealed class ModalHostViewModelTests
     }
 
     [Fact]
-    public void InteractionState_WhenNestedModalOpens_OnlyTopLayerIsInteractive()
+    public void InteractionState_WhenNestedDialogOpens_MarksUnderlyingLayersNonInteractive()
     {
         var host = new ModalHostViewModel();
         var content = new TestModalContent();
@@ -65,9 +65,11 @@ public sealed class ModalHostViewModelTests
         host.Open(ModalKind.ResourcePanel, content);
         host.Open(ModalKind.ResourcePanelSourceConfirmation, content);
 
+        // 对话框类没有对应的 Is*Interactive 属性：它自身的输入拦截由全屏遮罩承担，
+        // ModalHost 只需保证下层主叠层全部让出交互权（见 AGENTS.md 的模态隔离条款）。
         Assert.False(host.IsBaseLayerInteractive);
         Assert.False(host.IsResourcePanelInteractive);
-        Assert.True(host.IsDialogLayerInteractive);
+        Assert.Equal(ModalKind.ResourcePanelSourceConfirmation, host.Top?.Kind);
     }
 
     [Fact]
@@ -81,7 +83,6 @@ public sealed class ModalHostViewModelTests
         host.Close(ModalKind.UnsavedSettingsConfirmation);
 
         Assert.True(host.IsSettingsInteractive);
-        Assert.False(host.IsDialogLayerInteractive);
         Assert.False(host.IsBaseLayerInteractive);
     }
 
@@ -95,7 +96,6 @@ public sealed class ModalHostViewModelTests
         Assert.False(host.IsResourcePanelInteractive);
         Assert.False(host.IsLogViewerInteractive);
         Assert.False(host.IsSetupWizardInteractive);
-        Assert.False(host.IsDialogLayerInteractive);
     }
 
     [Fact]
@@ -109,7 +109,6 @@ public sealed class ModalHostViewModelTests
         host.Open(ModalKind.Settings, content);
 
         Assert.True(host.IsSettingsInteractive);
-        Assert.False(host.IsDialogLayerInteractive);
     }
 
     private sealed class TestModalContent : IModalContentViewModel;
