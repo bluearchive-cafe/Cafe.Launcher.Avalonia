@@ -2,8 +2,8 @@ using System.Xml.Linq;
 
 namespace Cafe.Launcher.Avalonia.Tests;
 
-// M3 base-control contract (Material 3 audit P2 #7): every production ComboBox
-// opts into the launcher select form so no plain Fluent square-corner select
+// M3 base-control contract (Material 3 audit P2 #7): every ComboBox opts into one
+// of the two launcher select forms so no plain Fluent square-corner select
 // remains. The checked-state RadioButton/CheckBox glyph theming is pinned by
 // headless rendering tests (MainWindowHeadlessTests.MaterialDesign).
 public sealed partial class UiStyleContractTests
@@ -26,17 +26,19 @@ public sealed partial class UiStyleContractTests
     public void BaseControls_ProductionComboBoxes_OptIntoLauncherSelectForm()
     {
         var files = Directory.GetFiles(ProjectFile("Views"), "*.axaml", SearchOption.AllDirectories)
-            .Concat(Directory.GetFiles(ProjectFile("Controls"), "*.axaml", SearchOption.AllDirectories))
-            .Where(path => Path.GetFileName(path) != "DesignGalleryOverlay.axaml");
+            .Concat(Directory.GetFiles(ProjectFile("Controls"), "*.axaml", SearchOption.AllDirectories));
 
         foreach (var file in files)
         {
             var document = XDocument.Load(file);
             foreach (var comboBox in document.Descendants().Where(element => element.Name.LocalName == "ComboBox"))
             {
-                var classes = (string?)comboBox.Attribute("Classes") ?? string.Empty;
+                // Two sanctioned forms: the settings/form select (`setting-control`) and the
+                // gallery's variant showcase select (`gallery-select`). The gallery file is
+                // scanned on purpose — it is the only place gallery-select appears, so
+                // exempting it here would make that allowance unreachable.
                 Assert.True(
-                    classes.Contains("setting-control") || classes.Contains("gallery-select"),
+                    HasClass(comboBox, "setting-control") || HasClass(comboBox, "gallery-select"),
                     $"{file}: ComboBox must opt into setting-control or gallery-select form.");
             }
         }

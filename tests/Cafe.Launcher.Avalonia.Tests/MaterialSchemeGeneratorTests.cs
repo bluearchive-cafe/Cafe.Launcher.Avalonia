@@ -508,22 +508,37 @@ public sealed class MaterialSchemeGeneratorTests
     [Fact]
     public void OnPrimaryColor_UsesSchemeRolePair()
     {
-        var darkScheme = MaterialSchemeGenerator.CreateScheme(
+        var lightScheme = MaterialSchemeGenerator.CreateScheme(
             DefaultSeed,
             ThemeColorVariants.TonalSpot,
             isDark: false);
-        var lightScheme = MaterialSchemeGenerator.CreateScheme(
+        var darkScheme = MaterialSchemeGenerator.CreateScheme(
             DefaultSeed,
             ThemeColorVariants.TonalSpot,
             isDark: true);
 
-        var lightBrushes = MaterialSchemeGenerator.BuildRoleBrushes(darkScheme, seedFollowingNeutrals: false);
-        var darkBrushes = MaterialSchemeGenerator.BuildRoleBrushes(lightScheme, seedFollowingNeutrals: false);
+        var lightBrushes = MaterialSchemeGenerator.BuildRoleBrushes(lightScheme, seedFollowingNeutrals: false);
+        var darkBrushes = MaterialSchemeGenerator.BuildRoleBrushes(darkScheme, seedFollowingNeutrals: false);
+
+        // The property that matters is readability, not which source supplied the
+        // value: onPrimary must stay legible on primary in both brightnesses.
+        foreach (var brushes in new[] { lightBrushes, darkBrushes })
+        {
+            var ratio = ColorUtils.GetContrastRatio(
+                brushes["Launcher.Color.OnPrimary"].Color,
+                brushes["Launcher.Color.Primary"].Color);
+            Assert.True(
+                ratio >= 4.5,
+                $"OnPrimary must stay readable on Primary; contrast is {ratio:F2}:1.");
+        }
 
         // Light scheme primary is dark (tone 40) -> readable on-colour is white.
         Assert.Equal(Colors.White, lightBrushes["Launcher.Color.OnPrimary"].Color);
-        // The dark scheme supplies the matching onPrimary tonal role.
-        Assert.Equal(MaterialColorMapper.ToAvaloniaColor(lightScheme.OnPrimary), darkBrushes["Launcher.Color.OnPrimary"].Color);
+        // Dark scheme primary is light (tone 80) -> the on-colour is the scheme's
+        // paired tonal role, not an independent black/white pick.
+        Assert.Equal(
+            MaterialColorMapper.ToAvaloniaColor(darkScheme.OnPrimary),
+            darkBrushes["Launcher.Color.OnPrimary"].Color);
     }
 
     [Fact]

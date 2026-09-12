@@ -86,8 +86,10 @@ internal static class MaterialSchemeGenerator
         // The active banner indicator is a fixed over-image chrome color, not a
         // dynamic accent role. Keep it white across theme and seed changes.
         result["Launcher.Color.Carousel.Dot.Active"] = new SolidColorBrush(Colors.White);
-        result["Launcher.Color.Button.Flat.Hover"] = new SolidColorBrush(Color.FromArgb(0x14, primary.R, primary.G, primary.B));
-        result["Launcher.Color.Button.Flat.Pressed"] = new SolidColorBrush(Color.FromArgb(0x1F, primary.R, primary.G, primary.B));
+        result["Launcher.Color.Button.Flat.Hover"] = new SolidColorBrush(
+            Color.FromArgb(ToAlphaByte(HoverStateOpacity), primary.R, primary.G, primary.B));
+        result["Launcher.Color.Button.Flat.Pressed"] = new SolidColorBrush(
+            Color.FromArgb(ToAlphaByte(PressedStateOpacity), primary.R, primary.G, primary.B));
 
         var error = MaterialColorMapper.ToAvaloniaColor(scheme.Error);
         var onError = MaterialColorMapper.ToAvaloniaColor(scheme.OnError);
@@ -168,9 +170,9 @@ internal static class MaterialSchemeGenerator
             // M3 状态层预合成盘（hover 8% / pressed 12% 的 onSurface），供 radio
             // 等选择控件的图标底盘消费；不透明度与 Launcher.StateLayer.* 一致。
             result["Launcher.Color.StateLayer.OnSurface.Hover"] = new SolidColorBrush(
-                Color.FromArgb(0x14, onSurface.R, onSurface.G, onSurface.B));
+                Color.FromArgb(ToAlphaByte(HoverStateOpacity), onSurface.R, onSurface.G, onSurface.B));
             result["Launcher.Color.StateLayer.OnSurface.Pressed"] = new SolidColorBrush(
-                Color.FromArgb(0x1F, onSurface.R, onSurface.G, onSurface.B));
+                Color.FromArgb(ToAlphaByte(PressedStateOpacity), onSurface.R, onSurface.G, onSurface.B));
         }
         else
         {
@@ -212,9 +214,10 @@ internal static class MaterialSchemeGenerator
     /// <summary>
     /// Declared App.axaml on-surface state-layer defaults as (key, light, dark)
     /// rows: pre-composed M3 state layers (hover 8% / pressed 12% of onSurface)
-    /// consumed by the radio glyph disc. The Brand Blue strategy resets these to
-    /// neutral chrome, and UiStyleContractTests asserts the XAML declarations
-    /// against this table so the two cannot drift apart.
+    /// consumed by the radio glyph disc. Alpha bytes are the quantised ratios
+    /// produced by <c>ToAlphaByte</c> (8% → 0x14, 12% → 0x1F). The Brand Blue
+    /// strategy resets these to neutral chrome, and UiStyleContractTests asserts
+    /// the XAML declarations against this table so the two cannot drift apart.
     /// </summary>
     internal static readonly (string Key, string Light, string Dark)[] StateLayerDefaults =
     [
@@ -251,4 +254,12 @@ internal static class MaterialSchemeGenerator
             (byte)Math.Round(background.R + ((foreground.R - background.R) * opacity)),
             (byte)Math.Round(background.G + ((foreground.G - background.G) * opacity)),
             (byte)Math.Round(background.B + ((foreground.B - background.B) * opacity)));
+
+    /// <summary>
+    /// 预合成状态层需要 byte alpha，而令牌持有的是精确比例
+    /// （<see cref="HoverStateOpacity"/> 0.08 / <see cref="PressedStateOpacity"/> 0.12）。
+    /// 量化统一收敛到这里（8% → 0x14、12% → 0x1F），调用点不再各写一份十六进制字面量，
+    /// 刻度调整时也不会漏改。
+    /// </summary>
+    private static byte ToAlphaByte(double opacity) => (byte)Math.Round(opacity * 255);
 }

@@ -156,11 +156,11 @@ public sealed partial class UiStyleContractTests
             "TextBlock.category-title",
             "TextBlock.about-product-name",
             "TextBlock.operation-status-title",
-             "ListBox.settings-navigation > ListBoxItem:selected",
-             "Button.primary-action",
-             "Button.tonal-action",
-             "Button.text-action",
-             "Button.danger-action",
+            "ListBox.settings-navigation > ListBoxItem:selected",
+            "Button.primary-action",
+            "Button.tonal-action",
+            "Button.text-action",
+            "Button.danger-action",
             "Button.confirm-dialog-action",
             "Button.launcher-control.start"
         };
