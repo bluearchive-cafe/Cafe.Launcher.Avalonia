@@ -14,7 +14,7 @@
 | Filled 按钮（`primary-action`） | ✓ | ✓ | ✓ | ✓ | ✓ | 不适用（留空） |
 | Filled tonal 按钮（`tonal-action`） | ✓ | ✓ | ✓ | ✓ | ✓ | 不适用（留空） |
 | Outlined 按钮（`flat-action`） | ✓ | ✓ | ✓ | ✓ | ✓ | 不适用（留空） |
-| Text 按钮（`text-link`） | ✓ | ✓ | ✓ | ✓ | ✓ | 不适用（留空） |
+| Text 按钮（`text-action`；`text-link` 为带下划线的链接型动作，属兼容面、不在此五型内） | ✓ | ✓ | ✓ | ✓ | ✓ | 不适用（留空） |
 | Error-filled 按钮（`danger-action`） | ✓ | ✓ | ✓ | ✓ | ✓ | 不适用（留空） |
 | 卡片 / Toast 卡 | ✓ | ✓ | ✓ | ✓ | ✓ | 不适用（留空） |
 | 设置行（Select 输入） | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ |
