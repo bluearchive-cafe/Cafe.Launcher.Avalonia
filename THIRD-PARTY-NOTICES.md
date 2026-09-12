@@ -40,8 +40,8 @@ The archives carry this file and `LICENSE` next to the binaries.
 | Material.Icons | 3.0.2 | MIT ([text](https://licenses.nuget.org/MIT)) | https://github.com/SKProCH/Material.Icons/ |
 | Material.Icons.Avalonia | 3.0.2 | MIT ([text](https://licenses.nuget.org/MIT)) | https://github.com/AvaloniaUtils/Material.Icons.Avalonia/ |
 | MicroCom.Runtime | 0.11.6 | MIT ([text](https://licenses.nuget.org/MIT)) | - |
-| Microsoft.Extensions.DependencyInjection | 10.0.11 | MIT ([text](https://licenses.nuget.org/MIT)) | https://dot.net/ |
-| Microsoft.Extensions.DependencyInjection.Abstractions | 10.0.11 | MIT ([text](https://licenses.nuget.org/MIT)) | https://dot.net/ |
+| Microsoft.Extensions.DependencyInjection | 10.0.12 | MIT ([text](https://licenses.nuget.org/MIT)) | https://dot.net/ |
+| Microsoft.Extensions.DependencyInjection.Abstractions | 10.0.12 | MIT ([text](https://licenses.nuget.org/MIT)) | https://dot.net/ |
 | Microsoft.Extensions.Logging.Abstractions | 8.0.0 | MIT ([text](https://licenses.nuget.org/MIT)) | https://dot.net/ |
 | Microsoft.IO.RecyclableMemoryStream | 3.0.1 | MIT ([text](https://licenses.nuget.org/MIT)) | https://github.com/Microsoft/Microsoft.IO.RecyclableMemoryStream |
 | Serilog | 4.4.0 | Apache-2.0 ([text](https://licenses.nuget.org/Apache-2.0)) | https://serilog.net/ |
