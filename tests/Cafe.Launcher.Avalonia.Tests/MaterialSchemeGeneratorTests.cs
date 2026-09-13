@@ -335,6 +335,12 @@ public sealed class MaterialSchemeGeneratorTests
             brushes["Launcher.Color.Carousel.Dot.Active"].Color);
         Assert.True(brushes.ContainsKey("Launcher.Color.Button.Flat.Hover"));
         Assert.True(brushes.ContainsKey("Launcher.Color.Button.Flat.Pressed"));
+        // Social chips sit on the wallpaper: their state layers must be
+        // pre-composited onto the opaque Content.Row base, never translucent.
+        Assert.True(brushes.ContainsKey("Launcher.Color.SocialChip.Hover"));
+        Assert.True(brushes.ContainsKey("Launcher.Color.SocialChip.Pressed"));
+        Assert.Equal((byte)0xFF, brushes["Launcher.Color.SocialChip.Hover"].Color.A);
+        Assert.Equal((byte)0xFF, brushes["Launcher.Color.SocialChip.Pressed"].Color.A);
         // Info.Background is a fixed business surface (spec §3.4): the generator
         // no longer tints it with the accent, so no key is produced.
         Assert.False(brushes.ContainsKey("Launcher.Color.Info.Background"));

@@ -351,9 +351,13 @@ public sealed partial class UiStyleContractTests
     {
         var remoteStyles = XDocument.Load(ProjectFile("Views/Styles/RemoteContent.axaml"));
 
+        var socialHover = GetStyleSetters(remoteStyles, "Button.social-chip:pointerover");
+        Assert.Equal(
+            "{DynamicResource Launcher.Color.SocialChip.Hover}",
+            socialHover["Background"]);
         var socialPressed = GetStyleSetters(remoteStyles, "Button.social-chip:pressed");
         Assert.Equal(
-            "{DynamicResource Launcher.Color.Button.Flat.Pressed}",
+            "{DynamicResource Launcher.Color.SocialChip.Pressed}",
             socialPressed["Background"]);
         Assert.Equal(
             "{DynamicResource Launcher.Color.Primary.Pressed}",
