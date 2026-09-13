@@ -23,8 +23,9 @@ public partial class RemoteContentViewModel : ViewModelBase, IDisposable
     private readonly LocalizationService localizer;
     private readonly ImageCacheService imageCacheService;
     private readonly LocalDiagnostics diagnostics;
+    private readonly Func<TimeSpan, CancellationToken, Task> delayAsync;
+    private readonly ICarouselTimer carouselTimer;
     private BannerCarouselTransition bannerTransition = new(MotionTokens.NormalDuration);
-    private DispatcherTimer? carouselTimer;
     private CancellationTokenSource? carouselDelayCts;
     private CancellationTokenSource? bannerPreloadCts;
     private bool showRemoteContentCard = true;
@@ -98,16 +99,33 @@ public partial class RemoteContentViewModel : ViewModelBase, IDisposable
 
     public Action<string?>? OpenExternalUrlRequested { get; set; }
 
-    internal bool IsCarouselTimerRunning => carouselTimer?.IsEnabled == true;
+    internal bool IsCarouselTimerRunning => carouselTimer.IsRunning;
 
     public RemoteContentViewModel(
         LocalizationService localizer,
         ImageCacheService imageCacheService,
         LocalDiagnostics diagnostics)
+        : this(
+            localizer,
+            imageCacheService,
+            diagnostics,
+            static (delay, cancellationToken) => Task.Delay(delay, cancellationToken),
+            new DispatcherCarouselTimer())
+    {
+    }
+
+    internal RemoteContentViewModel(
+        LocalizationService localizer,
+        ImageCacheService imageCacheService,
+        LocalDiagnostics diagnostics,
+        Func<TimeSpan, CancellationToken, Task> delayAsync,
+        ICarouselTimer carouselTimer)
     {
         this.localizer = localizer;
         this.imageCacheService = imageCacheService;
         this.diagnostics = diagnostics;
+        this.delayAsync = delayAsync;
+        this.carouselTimer = carouselTimer;
         carouselTransition = bannerTransition;
     }
 
@@ -293,13 +311,7 @@ public partial class RemoteContentViewModel : ViewModelBase, IDisposable
 
     public void StopCarouselTimer()
     {
-        if (carouselTimer is null)
-        {
-            return;
-        }
-
         carouselTimer.Stop();
-        carouselTimer = null;
     }
 
     private void CancelCarouselDelay()
@@ -325,12 +337,7 @@ public partial class RemoteContentViewModel : ViewModelBase, IDisposable
             return;
         }
 
-        carouselTimer = new DispatcherTimer
-        {
-            Interval = TimeSpan.FromMilliseconds(BannerIntervalMs)
-        };
-        carouselTimer.Tick += (_, _) => TryAdvanceCarousel();
-        carouselTimer.Start();
+        carouselTimer.Start(TimeSpan.FromMilliseconds(BannerIntervalMs), () => TryAdvanceCarousel());
     }
 
     internal bool TryAdvanceCarousel()
@@ -594,7 +601,7 @@ public partial class RemoteContentViewModel : ViewModelBase, IDisposable
         var token = carouselDelayCts.Token;
         try
         {
-            await Task.Delay(ManualNavResumeDelayMs, token);
+            await delayAsync(TimeSpan.FromMilliseconds(ManualNavResumeDelayMs), token);
             if (!IsCarouselPaused && BannerIsLooping && BannerItems.Count > 1)
             {
                 StartCarouselTimer();

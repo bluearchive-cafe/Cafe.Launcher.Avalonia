@@ -680,6 +680,91 @@ public sealed class RemoteContentViewModelTests
             RemoteContentViewModel.FormatUnixMilliseconds(long.MaxValue, "News"));
     }
 
+    [Fact]
+    public void CarouselTimerTick_AdvancesToNextBanner()
+    {
+        using var context = CreateSeamedContext();
+        context.ViewModel.Apply(CreateBannerState(2, loop: true), new LauncherSettings(), CancellationToken.None);
+
+        Assert.True(context.Timer.IsRunning);
+        context.Timer.Fire();
+
+        Assert.Equal(1, context.ViewModel.CarouselSelectedIndex);
+    }
+
+    [Fact]
+    public void CarouselTimerTick_AfterManualStop_DoesNotAdvance()
+    {
+        using var context = CreateSeamedContext();
+        context.ViewModel.Apply(CreateBannerState(2, loop: true), new LauncherSettings(), CancellationToken.None);
+        context.ViewModel.StopCarouselTimer();
+
+        context.Timer.Fire();
+
+        Assert.Equal(0, context.ViewModel.CarouselSelectedIndex);
+    }
+
+    [Fact]
+    public async Task ManualNavigation_AfterResumeDelay_RestartsCarouselTimer()
+    {
+        using var context = CreateSeamedContext();
+        context.ViewModel.Apply(CreateBannerState(2, loop: true), new LauncherSettings(), CancellationToken.None);
+
+        context.ViewModel.SelectNextBannerCommand.Execute(null);
+        Assert.False(context.Timer.IsRunning);
+
+        context.Delay.Gates[0].TrySetResult();
+        await WaitUntil(() => context.Timer.IsRunning);
+
+        Assert.Equal(1, context.ViewModel.CarouselSelectedIndex);
+    }
+
+    [Fact]
+    public async Task ManualNavigation_WhenPausedWithinResumeWindow_CancelsResume()
+    {
+        using var context = CreateSeamedContext();
+        context.ViewModel.Apply(CreateBannerState(2, loop: true), new LauncherSettings(), CancellationToken.None);
+
+        context.ViewModel.SelectNextBannerCommand.Execute(null);
+        context.ViewModel.SetBannerPointerOver(true);
+
+        await WaitUntil(() => context.Delay.CancelledCount >= 1);
+        context.Delay.Gates[0].TrySetResult();
+
+        Assert.True(context.ViewModel.IsCarouselPaused);
+        Assert.False(context.Timer.IsRunning);
+    }
+
+    [Fact]
+    public async Task ManualNavigation_SecondNavigation_SupersedesFirstResumeDelay()
+    {
+        using var context = CreateSeamedContext();
+        context.ViewModel.Apply(CreateBannerState(2, loop: true), new LauncherSettings(), CancellationToken.None);
+
+        context.ViewModel.SelectNextBannerCommand.Execute(null);
+        context.ViewModel.SelectPreviousBannerCommand.Execute(null);
+        Assert.False(context.Timer.IsRunning);
+
+        // 第一次导航的恢复窗口被第二次导航取消，而非到时恢复。
+        await WaitUntil(() => context.Delay.CancelledCount >= 1);
+        context.Delay.Gates[0].TrySetResult();
+        await Task.Delay(20);
+        Assert.False(context.Timer.IsRunning);
+
+        context.Delay.Gates[1].TrySetResult();
+        await WaitUntil(() => context.Timer.IsRunning);
+    }
+
+    private static async Task WaitUntil(Func<bool> condition)
+    {
+        for (var attempt = 0; attempt < 200 && !condition(); attempt++)
+        {
+            await Task.Delay(10);
+        }
+
+        Assert.True(condition());
+    }
+
     private static LauncherRemoteState CreateBannerState(int count, bool loop) =>
         new()
         {
@@ -716,5 +801,85 @@ public sealed class RemoteContentViewModelTests
             ViewModel.Dispose();
             Cache.Dispose();
         }
+    }
+
+    private sealed record SeamedContext(
+        RemoteContentViewModel ViewModel,
+        ManualCarouselTimer Timer,
+        GateDelay Delay,
+        ImageCacheService Cache) : IDisposable
+    {
+        public void Dispose()
+        {
+            ViewModel.Dispose();
+            Cache.Dispose();
+        }
+    }
+
+    private static SeamedContext CreateSeamedContext()
+    {
+        var cache = new ImageCacheService(new StubRemoteHttpTransport(), new Crc64Service());
+        var timer = new ManualCarouselTimer();
+        var delay = new GateDelay();
+        return new SeamedContext(
+            new RemoteContentViewModel(
+                new LocalizationService(),
+                cache,
+                new LocalDiagnostics(),
+                delay.Wait,
+                timer),
+            timer,
+            delay,
+            cache);
+    }
+
+    /// <summary>手动触发 tick 的计时器替身：Stop 之后触发必须无效，与 DispatcherTimer 语义一致。</summary>
+    private sealed class ManualCarouselTimer : ICarouselTimer
+    {
+        private Action? onTick;
+
+        public bool IsRunning { get; private set; }
+
+        public void Start(TimeSpan interval, Action onTick)
+        {
+            this.onTick = onTick;
+            IsRunning = true;
+        }
+
+        public void Stop() => IsRunning = false;
+
+        public void Fire()
+        {
+            if (IsRunning)
+            {
+                onTick?.Invoke();
+            }
+        }
+    }
+
+    /// <summary>每次调用生成独立闸门的延迟替身：Release 放行，取消令牌使等待以 OCE 结束。</summary>
+    private sealed class GateDelay
+    {
+        private readonly List<TaskCompletionSource> gates = [];
+
+        public IReadOnlyList<TaskCompletionSource> Gates => gates;
+
+        public int CancelledCount { get; private set; }
+
+        public Func<TimeSpan, CancellationToken, Task> Wait => (_, cancellationToken) =>
+        {
+            var gate = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
+            gates.Add(gate);
+            if (cancellationToken.CanBeCanceled)
+            {
+                cancellationToken.Register(() =>
+                {
+                    CancelledCount++;
+                    gate.TrySetCanceled(cancellationToken);
+                });
+            }
+
+            return gate.Task;
+        };
     }
 }
