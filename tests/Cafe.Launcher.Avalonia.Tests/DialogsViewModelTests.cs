@@ -92,7 +92,7 @@ public sealed class DialogsViewModelTests
     }
 
     [Fact]
-    public async Task ConfirmationCommands_RaiseConfiguredEventsAndCloseDialogs()
+    public async Task ConfirmationCommands_RaiseConfirmedAndCloseDialogs()
     {
         var viewModel = CreateViewModel();
         var repair = false;
@@ -100,45 +100,57 @@ public sealed class DialogsViewModelTests
         var stop = false;
         var switchSource = false;
         var closeAfterStop = false;
-        viewModel.ConfirmRepairRequested += () =>
+        viewModel.RepairConfirm.Confirmed += () =>
         {
             repair = true;
             return Task.CompletedTask;
         };
-        viewModel.ConfirmUninstallRequested += () =>
+        viewModel.UninstallConfirm.Confirmed += () =>
         {
             uninstall = true;
             return Task.CompletedTask;
         };
-        viewModel.ConfirmStopRequested += () => stop = true;
-        viewModel.ConfirmResourcePanelSourceSwitchRequested += () => switchSource = true;
-        viewModel.CloseAfterStoppingDownloadRequested += () => closeAfterStop = true;
+        viewModel.StopConfirm.Confirmed += () =>
+        {
+            stop = true;
+            return Task.CompletedTask;
+        };
+        viewModel.ResourcePanelSourceConfirm.Confirmed += () =>
+        {
+            switchSource = true;
+            return Task.CompletedTask;
+        };
+        viewModel.DownloadRunningCloseConfirm.Confirmed += () =>
+        {
+            closeAfterStop = true;
+            return Task.CompletedTask;
+        };
 
-        viewModel.ShowRepairConfirm("repair");
-        await viewModel.ConfirmRepairCommand.ExecuteAsync(null);
-        viewModel.ShowUninstallConfirm("uninstall");
-        await viewModel.ConfirmUninstallCommand.ExecuteAsync(null);
+        viewModel.RepairConfirm.Show("repair");
+        await viewModel.RepairConfirm.ConfirmCommand.ExecuteAsync(null);
+        viewModel.UninstallConfirm.Show("uninstall");
+        await viewModel.UninstallConfirm.ConfirmCommand.ExecuteAsync(null);
         viewModel.ShowStopConfirm();
-        viewModel.ConfirmStopCommand.Execute(null);
-        viewModel.ShowResourcePanelSourceConfirm("switch");
-        viewModel.ConfirmResourcePanelSourceSwitchCommand.Execute(null);
+        await viewModel.StopConfirm.ConfirmCommand.ExecuteAsync(null);
+        viewModel.ResourcePanelSourceConfirm.Show("switch");
+        await viewModel.ResourcePanelSourceConfirm.ConfirmCommand.ExecuteAsync(null);
         viewModel.ShowDownloadRunningCloseConfirm();
-        viewModel.ConfirmCloseWhileDownloadingCommand.Execute(null);
+        await viewModel.DownloadRunningCloseConfirm.ConfirmCommand.ExecuteAsync(null);
 
         Assert.True(repair);
         Assert.True(uninstall);
         Assert.True(stop);
         Assert.True(switchSource);
         Assert.True(closeAfterStop);
-        Assert.False(viewModel.IsRepairConfirmVisible);
-        Assert.False(viewModel.IsUninstallConfirmVisible);
-        Assert.False(viewModel.IsStopConfirmVisible);
-        Assert.False(viewModel.IsResourcePanelSourceConfirmVisible);
-        Assert.False(viewModel.IsDownloadRunningCloseConfirmVisible);
+        Assert.False(viewModel.RepairConfirm.IsVisible);
+        Assert.False(viewModel.UninstallConfirm.IsVisible);
+        Assert.False(viewModel.StopConfirm.IsVisible);
+        Assert.False(viewModel.ResourcePanelSourceConfirm.IsVisible);
+        Assert.False(viewModel.DownloadRunningCloseConfirm.IsVisible);
     }
 
     [Fact]
-    public async Task ConfirmRepairCommand_WithMultipleAsyncSubscribers_AwaitsEverySubscriber()
+    public async Task RepairConfirm_WithMultipleAsyncSubscribers_AwaitsEverySubscriber()
     {
         var viewModel = CreateViewModel();
         var firstSubscriberInvoked = new TaskCompletionSource(
@@ -147,19 +159,19 @@ public sealed class DialogsViewModelTests
             TaskCreationOptions.RunContinuationsAsynchronously);
         var secondSubscriberInvoked = new TaskCompletionSource(
             TaskCreationOptions.RunContinuationsAsynchronously);
-        viewModel.ConfirmRepairRequested += async () =>
+        viewModel.RepairConfirm.Confirmed += async () =>
         {
             firstSubscriberInvoked.SetResult();
             await firstSubscriberRelease.Task;
         };
-        viewModel.ConfirmRepairRequested += () =>
+        viewModel.RepairConfirm.Confirmed += () =>
         {
             secondSubscriberInvoked.SetResult();
             return Task.CompletedTask;
         };
-        viewModel.ShowRepairConfirm("repair");
+        viewModel.RepairConfirm.Show("repair");
 
-        var confirmTask = viewModel.ConfirmRepairCommand.ExecuteAsync(null);
+        var confirmTask = viewModel.RepairConfirm.ConfirmCommand.ExecuteAsync(null);
         // The gate flags are raised only by the command under test, so an unbounded await would hang
         // the runner instead of failing — the project-wide xUnit1051 suppression is justified by
         // every gate wait carrying a bound like this one.
@@ -173,26 +185,33 @@ public sealed class DialogsViewModelTests
     }
 
     [Fact]
-    public void CancelCommands_CloseEveryConfirmationDialog()
+    public async Task CancelCommands_CloseEveryConfirmationDialog()
     {
         var viewModel = CreateViewModel();
-        viewModel.ShowRepairConfirm("repair");
-        viewModel.ShowUninstallConfirm("uninstall");
+        var requested = false;
+        viewModel.RepairConfirm.Confirmed += () =>
+        {
+            requested = true;
+            return Task.CompletedTask;
+        };
+        viewModel.RepairConfirm.Show("repair");
+        viewModel.UninstallConfirm.Show("uninstall");
         viewModel.ShowStopConfirm();
-        viewModel.ShowResourcePanelSourceConfirm("source");
+        viewModel.ResourcePanelSourceConfirm.Show("source");
         viewModel.ShowDownloadRunningCloseConfirm();
 
-        viewModel.CancelRepairCommand.Execute(null);
-        viewModel.CancelUninstallCommand.Execute(null);
-        viewModel.CancelStopCommand.Execute(null);
-        viewModel.CancelResourcePanelSourceSwitchCommand.Execute(null);
-        viewModel.CancelCloseWhileDownloadingCommand.Execute(null);
+        viewModel.RepairConfirm.CancelCommand.Execute(null);
+        viewModel.UninstallConfirm.CancelCommand.Execute(null);
+        viewModel.StopConfirm.CancelCommand.Execute(null);
+        viewModel.ResourcePanelSourceConfirm.CancelCommand.Execute(null);
+        viewModel.DownloadRunningCloseConfirm.CancelCommand.Execute(null);
 
-        Assert.False(viewModel.IsRepairConfirmVisible);
-        Assert.False(viewModel.IsUninstallConfirmVisible);
-        Assert.False(viewModel.IsStopConfirmVisible);
-        Assert.False(viewModel.IsResourcePanelSourceConfirmVisible);
-        Assert.False(viewModel.IsDownloadRunningCloseConfirmVisible);
+        Assert.False(requested);
+        Assert.False(viewModel.RepairConfirm.IsVisible);
+        Assert.False(viewModel.UninstallConfirm.IsVisible);
+        Assert.False(viewModel.StopConfirm.IsVisible);
+        Assert.False(viewModel.ResourcePanelSourceConfirm.IsVisible);
+        Assert.False(viewModel.DownloadRunningCloseConfirm.IsVisible);
     }
 
     [Fact]
@@ -261,55 +280,61 @@ public sealed class DialogsViewModelTests
 
         viewModel.ApplyLanguage();
 
-        Assert.NotEmpty(viewModel.StopConfirmText);
-        Assert.Equal(viewModel.StopConfirmText, viewModel.DownloadRunningCloseConfirmText);
+        Assert.NotEmpty(viewModel.StopConfirm.Message);
+        Assert.Equal(viewModel.StopConfirm.Message, viewModel.DownloadRunningCloseConfirm.Message);
         Assert.Contains("1.2.0", viewModel.UpdateAvailableText, StringComparison.Ordinal);
     }
 
     [Fact]
-    public void ShowSettingsResetConfirmation_ShowsSharedResetDialog()
+    public void ShowStopConfirm_LocalizesSharedStopMessage()
     {
         var viewModel = CreateViewModel();
 
-        viewModel.ShowSettingsResetConfirmation();
+        viewModel.ShowStopConfirm();
+        viewModel.ShowDownloadRunningCloseConfirm();
 
-        Assert.True(viewModel.IsResetSettingsConfirmationVisible);
+        Assert.True(viewModel.StopConfirm.IsVisible);
+        Assert.True(viewModel.DownloadRunningCloseConfirm.IsVisible);
+        Assert.NotEmpty(viewModel.StopConfirm.Message);
+        Assert.Equal(viewModel.StopConfirm.Message, viewModel.DownloadRunningCloseConfirm.Message);
     }
 
     [Fact]
-    public void CancelSettingsReset_ClosesConfirmationWithoutRequest()
+    public void SettingsResetConfirm_ShowAndCancel_ToggleVisibilityWithoutRequest()
     {
         var viewModel = CreateViewModel();
         var requested = false;
-        viewModel.ConfirmSettingsResetRequested += () =>
+        viewModel.SettingsResetConfirm.Confirmed += () =>
         {
             requested = true;
             return Task.CompletedTask;
         };
-        viewModel.ShowSettingsResetConfirmation();
 
-        viewModel.CancelSettingsResetCommand.Execute(null);
+        viewModel.SettingsResetConfirm.Show();
+        Assert.True(viewModel.SettingsResetConfirm.IsVisible);
 
-        Assert.False(viewModel.IsResetSettingsConfirmationVisible);
+        viewModel.SettingsResetConfirm.CancelCommand.Execute(null);
+
+        Assert.False(viewModel.SettingsResetConfirm.IsVisible);
         Assert.False(requested);
     }
 
     [Fact]
-    public async Task ConfirmSettingsReset_WhenConfirmed_RaisesRequestOnceAndCloses()
+    public async Task SettingsResetConfirm_WhenConfirmed_RaisesRequestOnceAndCloses()
     {
         var viewModel = CreateViewModel();
         var requestCount = 0;
-        viewModel.ConfirmSettingsResetRequested += () =>
+        viewModel.SettingsResetConfirm.Confirmed += () =>
         {
             requestCount++;
             return Task.CompletedTask;
         };
-        viewModel.ShowSettingsResetConfirmation();
+        viewModel.SettingsResetConfirm.Show();
 
-        await viewModel.ConfirmSettingsResetCommand.ExecuteAsync(null);
+        await viewModel.SettingsResetConfirm.ConfirmCommand.ExecuteAsync(null);
 
         Assert.Equal(1, requestCount);
-        Assert.False(viewModel.IsResetSettingsConfirmationVisible);
+        Assert.False(viewModel.SettingsResetConfirm.IsVisible);
     }
 
     private static DialogsViewModel CreateViewModel()

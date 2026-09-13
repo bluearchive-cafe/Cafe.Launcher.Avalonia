@@ -84,8 +84,8 @@ public partial class MainWindowViewModelTests
         viewModel.Settings.Editor.Current.PatchUrlGroup = PatchUrlGroups.Cafe;
         await SaveSettingsAsync(viewModel);
 
-        Assert.True(viewModel.Dialogs.IsRepairConfirmVisible);
-        Assert.False(string.IsNullOrWhiteSpace(viewModel.Dialogs.RepairConfirmText));
+        Assert.True(viewModel.Dialogs.RepairConfirm.IsVisible);
+        Assert.False(string.IsNullOrWhiteSpace(viewModel.Dialogs.RepairConfirm.Message));
     }
 
     [Fact]
@@ -119,8 +119,8 @@ public partial class MainWindowViewModelTests
         viewModel.Settings.Editor.Current.PatchUrlGroup = PatchUrlGroups.Cafe;
         await SaveSettingsAsync(viewModel);
 
-        Assert.True(viewModel.Dialogs.IsRepairConfirmVisible);
-        Assert.False(string.IsNullOrWhiteSpace(viewModel.Dialogs.RepairConfirmText));
+        Assert.True(viewModel.Dialogs.RepairConfirm.IsVisible);
+        Assert.False(string.IsNullOrWhiteSpace(viewModel.Dialogs.RepairConfirm.Message));
     }
 
     [Fact]
@@ -147,7 +147,7 @@ public partial class MainWindowViewModelTests
 
         Assert.Equal(1, coreService.LoadCount);
         Assert.Equal(PatchUrlGroups.Cafe, snapshot.Settings.PatchUrlGroup);
-        Assert.False(viewModel.Dialogs.IsRepairConfirmVisible);
+        Assert.False(viewModel.Dialogs.RepairConfirm.IsVisible);
     }
 
     [Fact]

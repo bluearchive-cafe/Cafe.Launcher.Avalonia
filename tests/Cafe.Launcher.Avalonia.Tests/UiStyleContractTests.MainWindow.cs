@@ -206,7 +206,7 @@ public sealed partial class UiStyleContractTests
             .Descendants()
             .Single(element =>
                 element.Name.LocalName == "ConfirmDialog"
-                && element.Attribute("IsOpen")?.Value == "{Binding Dialogs.IsResetSettingsConfirmationVisible}");
+                && element.Attribute("IsOpen")?.Value == "{Binding Dialogs.SettingsResetConfirm.IsVisible}");
         Assert.Equal(
             "{Binding Shell.I18n[debugResetSettingsTitle]}",
             dialog.Attribute("Title")?.Value);
@@ -214,10 +214,10 @@ public sealed partial class UiStyleContractTests
             "{Binding Shell.I18n[debugResetSettingsConfirm]}",
             dialog.Attribute("ConfirmText")?.Value);
         Assert.Equal(
-            "{Binding Dialogs.ConfirmSettingsResetCommand}",
+            "{Binding Dialogs.SettingsResetConfirm.ConfirmCommand}",
             dialog.Attribute("ConfirmCommand")?.Value);
         Assert.Equal(
-            "{Binding Dialogs.CancelSettingsResetCommand}",
+            "{Binding Dialogs.SettingsResetConfirm.CancelCommand}",
             dialog.Attribute("CancelCommand")?.Value);
     }
 
@@ -437,9 +437,13 @@ public sealed partial class UiStyleContractTests
     {
         var source = File.ReadAllText(ProjectFile("ViewModels/DialogsViewModel.cs"));
 
-        Assert.Contains("public bool IsDebugResetConfirmationVisible", source, StringComparison.Ordinal);
-        Assert.Contains("public IRelayCommand CancelDebugResetCommand", source, StringComparison.Ordinal);
-        Assert.Contains("public IAsyncRelayCommand ConfirmDebugResetCommand", source, StringComparison.Ordinal);
+        Assert.Contains("public ConfirmationDialogViewModel DebugResetConfirm { get; }", source, StringComparison.Ordinal);
+
+        // 确认机制（可见性/文案/命令/顺序调用错误策略）由共享模块单点实现，
+        // 家族成员不再各自手写命令与事件。
+        var module = File.ReadAllText(ProjectFile("ViewModels/ConfirmationDialogViewModel.cs"));
+        Assert.Contains("public IRelayCommand CancelCommand", module, StringComparison.Ordinal);
+        Assert.Contains("public IAsyncRelayCommand ConfirmCommand", module, StringComparison.Ordinal);
     }
 
     [Fact]

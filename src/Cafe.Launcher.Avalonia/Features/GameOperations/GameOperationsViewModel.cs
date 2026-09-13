@@ -126,9 +126,9 @@ public partial class GameOperationsViewModel : ViewModelBase, IGameOperationJour
             delayAsync ?? Task.Delay,
             this);
         journey.IsRunningChanged += OnInstallationIsRunningChanged;
-        dialogs.ConfirmRepairRequested += RepairAsync;
-        dialogs.ConfirmUninstallRequested += ConfirmUninstallAsync;
-        dialogs.ConfirmStopRequested += PerformStop;
+        dialogs.RepairConfirm.Confirmed += RepairAsync;
+        dialogs.UninstallConfirm.Confirmed += ConfirmUninstallAsync;
+        dialogs.StopConfirm.Confirmed += PerformStop;
     }
 
     public void ApplyLanguage()
@@ -192,7 +192,7 @@ public partial class GameOperationsViewModel : ViewModelBase, IGameOperationJour
         shell.SetLaunchCheckResult(message);
 
     void IGameOperationJourneyHost.ShowRepairConfirmation(string message) =>
-        dialogs.ShowRepairConfirm(message);
+        dialogs.RepairConfirm.Show(message);
 
     Task<bool> IGameOperationJourneyHost.RefreshAsync(GameOperationsRefreshMode mode)
     {
@@ -268,7 +268,7 @@ public partial class GameOperationsViewModel : ViewModelBase, IGameOperationJour
             return;
         }
 
-        dialogs.ShowRepairConfirm(localizer.T(LocalizationKeys.RepairWarning));
+        dialogs.RepairConfirm.Show(localizer.T(LocalizationKeys.RepairWarning));
     }
 
     public async Task RepairAsync()
@@ -289,9 +289,10 @@ public partial class GameOperationsViewModel : ViewModelBase, IGameOperationJour
         journey.PerformStop();
     }
 
-    public void PerformStop()
+    public Task PerformStop()
     {
         journey.PerformStop();
+        return Task.CompletedTask;
     }
 
     [RelayCommand]
@@ -342,7 +343,7 @@ public partial class GameOperationsViewModel : ViewModelBase, IGameOperationJour
             return;
         }
 
-        dialogs.ShowUninstallConfirm(localizer.F(
+        dialogs.UninstallConfirm.Show(localizer.F(
             LocalizationKeys.UninstallConfirmText,
             currentSnapshot.LocalGame.GamePath,
             Math.Max(0, validation.AffectedFileCount - 2)));
@@ -505,9 +506,9 @@ public partial class GameOperationsViewModel : ViewModelBase, IGameOperationJour
 
         disposed = true;
         journey.IsRunningChanged -= OnInstallationIsRunningChanged;
-        dialogs.ConfirmRepairRequested -= RepairAsync;
-        dialogs.ConfirmUninstallRequested -= ConfirmUninstallAsync;
-        dialogs.ConfirmStopRequested -= PerformStop;
+        dialogs.RepairConfirm.Confirmed -= RepairAsync;
+        dialogs.UninstallConfirm.Confirmed -= ConfirmUninstallAsync;
+        dialogs.StopConfirm.Confirmed -= PerformStop;
     }
 
 }

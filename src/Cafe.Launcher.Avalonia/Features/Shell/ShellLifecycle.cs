@@ -303,7 +303,7 @@ public sealed class ShellLifecycle : IShellRuntime
         if (runtimeState is LauncherRuntimeState.Ready or LauncherRuntimeState.UpdateAvailable
             && !string.Equals(previousPatchUrlGroup, savedSettings.PatchUrlGroup, StringComparison.Ordinal))
         {
-            dialogs.ShowRepairConfirm(localizer.T(LocalizationKeys.DownloadSourceChangedRepairPrompt));
+            dialogs.RepairConfirm.Show(localizer.T(LocalizationKeys.DownloadSourceChangedRepairPrompt));
         }
     }
 
@@ -314,7 +314,7 @@ public sealed class ShellLifecycle : IShellRuntime
     /// <summary>Shows confirmation before switching the resource-panel source.</summary>
     public void ShowResourcePanelSourceConfirmDialog()
     {
-        dialogs.ShowResourcePanelSourceConfirm(localizer.T(LocalizationKeys.ResourcePanelCafeOnlyMessage));
+        dialogs.ResourcePanelSourceConfirm.Show(localizer.T(LocalizationKeys.ResourcePanelCafeOnlyMessage));
     }
 
     /// <summary>Switches the confirmed resource-panel source and opens its panel.</summary>
@@ -351,7 +351,7 @@ public sealed class ShellLifecycle : IShellRuntime
         toastService.ShowSuccess(localizer.T(LocalizationKeys.DebugSettingsReset));
     }
 
-    private void OnResourcePanelSourceSwitchConfirmed() => _ = SwitchSourceThenOpenPanelAsync();
+    private Task OnResourcePanelSourceSwitchConfirmed() => SwitchSourceThenOpenPanelAsync();
 
     private static void OnUpdateAvailableConfirmed(string downloadUrl) => ExternalLinkService.Open(downloadUrl);
 
@@ -418,21 +418,21 @@ public sealed class ShellLifecycle : IShellRuntime
         settings.SettingsSaved += HandleSettingsSavedAsync;
 
         resourcePanel.ResourcePanelSourceConfirmRequested += ShowResourcePanelSourceConfirmDialog;
-        dialogs.ConfirmResourcePanelSourceSwitchRequested += OnResourcePanelSourceSwitchConfirmed;
+        dialogs.ResourcePanelSourceConfirm.Confirmed += OnResourcePanelSourceSwitchConfirmed;
 
         operations.RefreshRequested += HandleOperationsRefreshRequestedAsync;
         operations.OpenLogViewerRequested += OpenLogViewerAsync;
 
-        dialogs.CloseAfterStoppingDownloadRequested += windowChrome.CloseAfterStoppingDownload;
+        dialogs.DownloadRunningCloseConfirm.Confirmed += windowChrome.CloseAfterStoppingDownload;
         dialogs.CloseRequested += windowChrome.RequestClose;
         dialogs.ConfirmUpdateAvailableRequested += OnUpdateAvailableConfirmed;
         dialogs.ErrorViewLogRequested += OpenLogViewer;
 
         debug.RefreshRequested += HandleDebugRefreshRequestedAsync;
         debug.ResetSettingsRequested += ResetSettingsToDefaultsAsync;
-        debug.ResetSettingsConfirmationRequested += dialogs.ShowDebugResetConfirmation;
-        dialogs.ConfirmDebugResetRequested += debug.ConfirmResetSettingsAsync;
-        dialogs.ConfirmSettingsResetRequested += ResetSettingsFromSettingsPageAsync;
+        debug.ResetSettingsConfirmationRequested += dialogs.DebugResetConfirm.Show;
+        dialogs.DebugResetConfirm.Confirmed += debug.ConfirmResetSettingsAsync;
+        dialogs.SettingsResetConfirm.Confirmed += ResetSettingsFromSettingsPageAsync;
 
         remoteContent.OpenExternalUrlRequested = openExternalUrl;
 
@@ -447,6 +447,14 @@ public sealed class ShellLifecycle : IShellRuntime
         debug.PropertyChanged += OnDebugPropertyChanged;
         dialogs.Gallery.PropertyChanged += OnGalleryPropertyChanged;
         dialogs.PropertyChanged += OnDialogsPropertyChanged;
+        dialogs.StopConfirm.PropertyChanged += OnConfirmationVisibilityChanged;
+        dialogs.DownloadRunningCloseConfirm.PropertyChanged += OnConfirmationVisibilityChanged;
+        dialogs.UninstallConfirm.PropertyChanged += OnConfirmationVisibilityChanged;
+        dialogs.RepairConfirm.PropertyChanged += OnConfirmationVisibilityChanged;
+        dialogs.ResourcePanelSourceConfirm.PropertyChanged += OnConfirmationVisibilityChanged;
+        dialogs.DebugResetConfirm.PropertyChanged += OnConfirmationVisibilityChanged;
+        dialogs.SettingsResetConfirm.PropertyChanged += OnConfirmationVisibilityChanged;
+        dialogs.SetupWizardExitConfirm.PropertyChanged += OnConfirmationVisibilityChanged;
     }
 
     /// <summary>Removes cross-feature event subscriptions established by <see cref="Wire"/>.</summary>
@@ -459,16 +467,16 @@ public sealed class ShellLifecycle : IShellRuntime
         operations.RefreshRequested -= HandleOperationsRefreshRequestedAsync;
         operations.OpenLogViewerRequested -= OpenLogViewerAsync;
         resourcePanel.ResourcePanelSourceConfirmRequested -= ShowResourcePanelSourceConfirmDialog;
-        dialogs.ConfirmResourcePanelSourceSwitchRequested -= OnResourcePanelSourceSwitchConfirmed;
-        dialogs.CloseAfterStoppingDownloadRequested -= windowChrome.CloseAfterStoppingDownload;
+        dialogs.ResourcePanelSourceConfirm.Confirmed -= OnResourcePanelSourceSwitchConfirmed;
+        dialogs.DownloadRunningCloseConfirm.Confirmed -= windowChrome.CloseAfterStoppingDownload;
         dialogs.CloseRequested -= windowChrome.RequestClose;
         dialogs.ConfirmUpdateAvailableRequested -= OnUpdateAvailableConfirmed;
         dialogs.ErrorViewLogRequested -= OpenLogViewer;
         debug.RefreshRequested -= HandleDebugRefreshRequestedAsync;
         debug.ResetSettingsRequested -= ResetSettingsToDefaultsAsync;
-        debug.ResetSettingsConfirmationRequested -= dialogs.ShowDebugResetConfirmation;
-        dialogs.ConfirmDebugResetRequested -= debug.ConfirmResetSettingsAsync;
-        dialogs.ConfirmSettingsResetRequested -= ResetSettingsFromSettingsPageAsync;
+        debug.ResetSettingsConfirmationRequested -= dialogs.DebugResetConfirm.Show;
+        dialogs.DebugResetConfirm.Confirmed -= debug.ConfirmResetSettingsAsync;
+        dialogs.SettingsResetConfirm.Confirmed -= ResetSettingsFromSettingsPageAsync;
         windowChrome.PropertyChanged -= OnWindowChromePropertyChanged;
         settings.PropertyChanged -= OnSettingsPropertyChanged;
         settings.Editor.CurrentPropertyChanged -= OnSettingPropertyChanged;
@@ -478,6 +486,14 @@ public sealed class ShellLifecycle : IShellRuntime
         debug.PropertyChanged -= OnDebugPropertyChanged;
         dialogs.Gallery.PropertyChanged -= OnGalleryPropertyChanged;
         dialogs.PropertyChanged -= OnDialogsPropertyChanged;
+        dialogs.StopConfirm.PropertyChanged -= OnConfirmationVisibilityChanged;
+        dialogs.DownloadRunningCloseConfirm.PropertyChanged -= OnConfirmationVisibilityChanged;
+        dialogs.UninstallConfirm.PropertyChanged -= OnConfirmationVisibilityChanged;
+        dialogs.RepairConfirm.PropertyChanged -= OnConfirmationVisibilityChanged;
+        dialogs.ResourcePanelSourceConfirm.PropertyChanged -= OnConfirmationVisibilityChanged;
+        dialogs.DebugResetConfirm.PropertyChanged -= OnConfirmationVisibilityChanged;
+        dialogs.SettingsResetConfirm.PropertyChanged -= OnConfirmationVisibilityChanged;
+        dialogs.SetupWizardExitConfirm.PropertyChanged -= OnConfirmationVisibilityChanged;
 
         if (settings.Appearance.GetBackgroundBitmap == getBackgroundBitmap)
         {
@@ -508,22 +524,22 @@ public sealed class ShellLifecycle : IShellRuntime
         switch (ModalHost.Top?.Kind)
         {
             case ModalKind.DownloadRunningCloseConfirmation:
-                dialogs.CancelCloseWhileDownloadingCommand.Execute(null);
+                dialogs.DownloadRunningCloseConfirm.CancelCommand.Execute(null);
                 break;
             case ModalKind.StopConfirmation:
-                dialogs.CancelStopCommand.Execute(null);
+                dialogs.StopConfirm.CancelCommand.Execute(null);
                 break;
             case ModalKind.UnsavedSettingsConfirmation:
                 windowChrome.KeepEditingSettingsCommand.Execute(null);
                 break;
             case ModalKind.RepairConfirmation:
-                dialogs.CancelRepairCommand.Execute(null);
+                dialogs.RepairConfirm.CancelCommand.Execute(null);
                 break;
             case ModalKind.ResourcePanelSourceConfirmation:
-                dialogs.CancelResourcePanelSourceSwitchCommand.Execute(null);
+                dialogs.ResourcePanelSourceConfirm.CancelCommand.Execute(null);
                 break;
             case ModalKind.UninstallConfirmation:
-                dialogs.CancelUninstallCommand.Execute(null);
+                dialogs.UninstallConfirm.CancelCommand.Execute(null);
                 break;
             case ModalKind.Notice:
                 dialogs.DismissNoticeCommand.Execute(null);
@@ -547,19 +563,19 @@ public sealed class ShellLifecycle : IShellRuntime
                 dialogs.Gallery.CloseCommand.Execute(null);
                 break;
             case ModalKind.DebugResetConfirmation:
-                dialogs.CancelDebugResetCommand.Execute(null);
+                dialogs.DebugResetConfirm.CancelCommand.Execute(null);
                 break;
             case ModalKind.SettingsResetConfirmation:
-                dialogs.CancelSettingsResetCommand.Execute(null);
+                dialogs.SettingsResetConfirm.CancelCommand.Execute(null);
                 break;
             case ModalKind.SetupWizardExitConfirmation:
-                dialogs.CancelSetupWizardExitCommand.Execute(null);
+                dialogs.SetupWizardExitConfirm.CancelCommand.Execute(null);
                 break;
             case ModalKind.Settings:
                 windowChrome.ShowSettingsCommand.Execute(null);
                 break;
             case ModalKind.SetupWizard:
-                dialogs.RequestSetupWizardExitCommand.Execute(null);
+                dialogs.SetupWizardExitConfirm.ShowCommand.Execute(null);
                 break;
             case ModalKind.ResourcePanel:
                 resourcePanel.CloseResourcePanelCommand.Execute(null);
@@ -805,6 +821,69 @@ public sealed class ShellLifecycle : IShellRuntime
         }
     }
 
+    /// <summary>
+    /// 确认对话框家族的可见性同步：实例的 IsVisible 变化映射回各自的 ModalKind
+    /// 后进模态栈。对话框内容仍由 <see cref="DialogsViewModel"/> 呈现，模态栈只
+    /// 需要知道当前顶层是哪一类确认。
+    /// </summary>
+    private void OnConfirmationVisibilityChanged(object? sender, PropertyChangedEventArgs e)
+    {
+        if (e.PropertyName != nameof(ConfirmationDialogViewModel.IsVisible)
+            || sender is not ConfirmationDialogViewModel confirmation)
+        {
+            return;
+        }
+
+        var (kind, content) = MapConfirmationModal(confirmation);
+        SyncModal(kind, confirmation.IsVisible, content);
+    }
+
+    private (ModalKind Kind, IModalContentViewModel Content) MapConfirmationModal(
+        ConfirmationDialogViewModel confirmation)
+    {
+        if (ReferenceEquals(confirmation, dialogs.StopConfirm))
+        {
+            return (ModalKind.StopConfirmation, dialogs);
+        }
+
+        if (ReferenceEquals(confirmation, dialogs.DownloadRunningCloseConfirm))
+        {
+            return (ModalKind.DownloadRunningCloseConfirmation, dialogs);
+        }
+
+        if (ReferenceEquals(confirmation, dialogs.UninstallConfirm))
+        {
+            return (ModalKind.UninstallConfirmation, dialogs);
+        }
+
+        if (ReferenceEquals(confirmation, dialogs.RepairConfirm))
+        {
+            return (ModalKind.RepairConfirmation, dialogs);
+        }
+
+        if (ReferenceEquals(confirmation, dialogs.ResourcePanelSourceConfirm))
+        {
+            return (ModalKind.ResourcePanelSourceConfirmation, dialogs);
+        }
+
+        if (ReferenceEquals(confirmation, dialogs.DebugResetConfirm))
+        {
+            return (ModalKind.DebugResetConfirmation, dialogs);
+        }
+
+        if (ReferenceEquals(confirmation, dialogs.SettingsResetConfirm))
+        {
+            return (ModalKind.SettingsResetConfirmation, dialogs);
+        }
+
+        if (ReferenceEquals(confirmation, dialogs.SetupWizardExitConfirm))
+        {
+            return (ModalKind.SetupWizardExitConfirmation, dialogs);
+        }
+
+        throw new InvalidOperationException($"Unregistered confirmation dialog: {confirmation.LogSource}.");
+    }
+
     private void OnDialogsPropertyChanged(object? sender, PropertyChangedEventArgs e)
     {
         switch (e.PropertyName)
@@ -818,50 +897,8 @@ public sealed class ShellLifecycle : IShellRuntime
             case nameof(DialogsViewModel.IsErrorDialogVisible):
                 SyncModal(ModalKind.Error, dialogs.IsErrorDialogVisible, dialogs);
                 break;
-            case nameof(DialogsViewModel.IsDebugResetConfirmationVisible):
-                SyncModal(
-                    ModalKind.DebugResetConfirmation,
-                    dialogs.IsDebugResetConfirmationVisible,
-                    dialogs);
-                break;
             case nameof(DialogsViewModel.IsSetupWizardVisible):
                 SyncModal(ModalKind.SetupWizard, dialogs.IsSetupWizardVisible, dialogs.SetupWizard);
-                break;
-            case nameof(DialogsViewModel.IsSetupWizardExitConfirmVisible):
-                SyncModal(
-                    ModalKind.SetupWizardExitConfirmation,
-                    dialogs.IsSetupWizardExitConfirmVisible,
-                    dialogs);
-                break;
-            case nameof(DialogsViewModel.IsRepairConfirmVisible):
-                SyncModal(ModalKind.RepairConfirmation, dialogs.IsRepairConfirmVisible, dialogs);
-                break;
-            case nameof(DialogsViewModel.IsResourcePanelSourceConfirmVisible):
-                SyncModal(
-                    ModalKind.ResourcePanelSourceConfirmation,
-                    dialogs.IsResourcePanelSourceConfirmVisible,
-                    dialogs);
-                break;
-            case nameof(DialogsViewModel.IsUninstallConfirmVisible):
-                SyncModal(
-                    ModalKind.UninstallConfirmation,
-                    dialogs.IsUninstallConfirmVisible,
-                    dialogs);
-                break;
-            case nameof(DialogsViewModel.IsStopConfirmVisible):
-                SyncModal(ModalKind.StopConfirmation, dialogs.IsStopConfirmVisible, dialogs);
-                break;
-            case nameof(DialogsViewModel.IsDownloadRunningCloseConfirmVisible):
-                SyncModal(
-                    ModalKind.DownloadRunningCloseConfirmation,
-                    dialogs.IsDownloadRunningCloseConfirmVisible,
-                    dialogs);
-                break;
-            case nameof(DialogsViewModel.IsResetSettingsConfirmationVisible):
-                SyncModal(
-                    ModalKind.SettingsResetConfirmation,
-                    dialogs.IsResetSettingsConfirmationVisible,
-                    dialogs);
                 break;
         }
     }

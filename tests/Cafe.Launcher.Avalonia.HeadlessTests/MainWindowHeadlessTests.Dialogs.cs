@@ -126,7 +126,7 @@ public sealed partial class MainWindowHeadlessTests
     {
         using var context = CreateContext();
         context.Window.Show();
-        context.ViewModel.Dialogs.ShowResourcePanelSourceConfirm("switch source");
+        context.ViewModel.Dialogs.ResourcePanelSourceConfirm.Show("switch source");
         Dispatcher.UIThread.RunJobs();
         var settingsButton = context.Window
             .GetVisualDescendants()
@@ -151,7 +151,7 @@ public sealed partial class MainWindowHeadlessTests
                 button.IsEffectivelyVisible
                 && ReferenceEquals(
                     button.Command,
-                    context.ViewModel.Dialogs.CancelResourcePanelSourceSwitchCommand));
+                    context.ViewModel.Dialogs.ResourcePanelSourceConfirm.CancelCommand));
 
         Assert.False(settingsButton.IsEffectivelyEnabled);
         Assert.False(startButton.IsEffectivelyEnabled);
@@ -169,7 +169,7 @@ public sealed partial class MainWindowHeadlessTests
         using var context = CreateContext();
         context.Window.Show();
         context.ViewModel.WindowChrome.IsSettingsVisible = true;
-        context.ViewModel.Dialogs.ShowRepairConfirm("repair confirmation");
+        context.ViewModel.Dialogs.RepairConfirm.Show("repair confirmation");
         Dispatcher.UIThread.RunJobs();
         var settingsCancelButton = context.Window
             .GetVisualDescendants()
@@ -193,7 +193,7 @@ public sealed partial class MainWindowHeadlessTests
     {
         using var context = CreateContext();
         context.Window.Show();
-        context.ViewModel.Dialogs.ShowRepairConfirm("repair confirmation");
+        context.ViewModel.Dialogs.RepairConfirm.Show("repair confirmation");
         Dispatcher.UIThread.RunJobs();
 
         Assert.Contains(
@@ -210,7 +210,7 @@ public sealed partial class MainWindowHeadlessTests
     {
         using var context = CreateContext();
         context.Window.Show();
-        context.ViewModel.Dialogs.ShowRepairConfirm(
+        context.ViewModel.Dialogs.RepairConfirm.Show(
             "下载源已切换。Cafe 下载源与官方下载源使用不同的文件清单，因此必须根据当前下载源修复已安装的游戏，才能得到可靠的启动校验结果。现在开始修复吗？");
         Dispatcher.UIThread.RunJobs();
 
@@ -356,14 +356,14 @@ public sealed partial class MainWindowHeadlessTests
 
     private static Button[] ShowLongConfirmation(TestContext context)
     {
-        context.ViewModel.Dialogs.ShowRepairConfirm(string.Concat(Enumerable.Repeat(
+        context.ViewModel.Dialogs.RepairConfirm.Show(string.Concat(Enumerable.Repeat(
             "下载源已切换，修复前需要重新确认本地文件状态。",
             30)));
         Dispatcher.UIThread.RunJobs();
         return context.Window.GetVisualDescendants().OfType<Button>()
             .Where(button =>
-                (ReferenceEquals(button.Command, context.ViewModel.Dialogs.CancelRepairCommand)
-                    || ReferenceEquals(button.Command, context.ViewModel.Dialogs.ConfirmRepairCommand))
+                (ReferenceEquals(button.Command, context.ViewModel.Dialogs.RepairConfirm.CancelCommand)
+                    || ReferenceEquals(button.Command, context.ViewModel.Dialogs.RepairConfirm.ConfirmCommand))
                 && button.IsEffectivelyVisible)
             .ToArray();
     }
@@ -374,7 +374,7 @@ public sealed partial class MainWindowHeadlessTests
         Dispatcher.UIThread.RunJobs();
         return context.Window.GetVisualDescendants().OfType<Button>()
             .Where(button =>
-                ReferenceEquals(button.Command, context.ViewModel.Dialogs.RequestSetupWizardExitCommand)
+                ReferenceEquals(button.Command, context.ViewModel.Dialogs.SetupWizardExitConfirm.ShowCommand)
                 || ReferenceEquals(button.Command, context.ViewModel.Dialogs.SetupWizard.NextCommand))
             .ToArray();
     }

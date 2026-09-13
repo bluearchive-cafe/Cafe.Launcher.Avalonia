@@ -136,7 +136,7 @@ public sealed class WindowChromeViewModelTests : IDisposable
 
         context.ViewModel.CloseCommand.Execute(null);
 
-        Assert.True(context.Dialogs.IsDownloadRunningCloseConfirmVisible);
+        Assert.True(context.Dialogs.DownloadRunningCloseConfirm.IsVisible);
         Assert.False(closed);
     }
 

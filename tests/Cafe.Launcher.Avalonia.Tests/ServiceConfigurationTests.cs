@@ -50,8 +50,8 @@ public sealed class ServiceConfigurationTests : IDisposable
 
         await viewModel.Operations.RequestRepairCommand.ExecuteAsync(null);
 
-        Assert.True(viewModel.Dialogs.IsRepairConfirmVisible);
-        Assert.False(string.IsNullOrWhiteSpace(viewModel.Dialogs.RepairConfirmText));
+        Assert.True(viewModel.Dialogs.RepairConfirm.IsVisible);
+        Assert.False(string.IsNullOrWhiteSpace(viewModel.Dialogs.RepairConfirm.Message));
     }
 
     [Fact]
@@ -73,15 +73,15 @@ public sealed class ServiceConfigurationTests : IDisposable
             }
         });
         viewModel.Shell.IsBusy = false;
-        viewModel.Dialogs.ShowRepairConfirm("repair");
+        viewModel.Dialogs.RepairConfirm.Show("repair");
 
         Assert.NotNull(viewModel.ModalHost.Top);
         Assert.Equal(ModalKind.RepairConfirmation, viewModel.ModalHost.Top!.Kind);
         Assert.True(viewModel.ModalHost.HasEntries);
 
-        await viewModel.Dialogs.ConfirmRepairCommand.ExecuteAsync(null);
+        await viewModel.Dialogs.RepairConfirm.ConfirmCommand.ExecuteAsync(null);
 
-        Assert.False(viewModel.Dialogs.IsRepairConfirmVisible);
+        Assert.False(viewModel.Dialogs.RepairConfirm.IsVisible);
         Assert.Null(viewModel.ModalHost.Top);
     }
 

@@ -21,7 +21,7 @@ public partial class MainWindowViewModelTests
         Assert.Equal(viewModel.Shell.I18n["repair"], viewModel.Operations.InstallButtonText);
         Assert.True(viewModel.Operations.IsInstallPanelVisible);
         Assert.False(viewModel.Operations.IsControlPanelVisible);
-        Assert.True(viewModel.Dialogs.IsRepairConfirmVisible);
+        Assert.True(viewModel.Dialogs.RepairConfirm.IsVisible);
     }
 
     [Fact]
@@ -43,7 +43,7 @@ public partial class MainWindowViewModelTests
         await viewModel.InitializeAsync();
         await viewModel.Operations.InstallOrUpdateCommand.ExecuteAsync(null);
 
-        await viewModel.Dialogs.ConfirmRepairCommand.ExecuteAsync(null);
+        await viewModel.Dialogs.RepairConfirm.ConfirmCommand.ExecuteAsync(null);
 
         Assert.Equal(1, backend.RepairCallCount);
     }
@@ -64,7 +64,7 @@ public partial class MainWindowViewModelTests
         await viewModel.InitializeAsync();
         await viewModel.Operations.RequestUninstallCommand.ExecuteAsync(null);
 
-        await viewModel.Dialogs.ConfirmUninstallCommand.ExecuteAsync(null);
+        await viewModel.Dialogs.UninstallConfirm.ConfirmCommand.ExecuteAsync(null);
 
         Assert.Equal(1, backend.UninstallCallCount);
     }
@@ -78,7 +78,7 @@ public partial class MainWindowViewModelTests
             gameOperationsBackend: backend);
         viewModel.Dialogs.ShowStopConfirm();
 
-        viewModel.Dialogs.ConfirmStopCommand.Execute(null);
+        viewModel.Dialogs.StopConfirm.ConfirmCommand.Execute(null);
 
         Assert.Equal(1, backend.StopCallCount);
     }

@@ -72,7 +72,7 @@ public sealed partial class UiStyleContractTests
             },
             ["Views/SetupWizardOverlay.axaml"] = new(StringComparer.Ordinal)
             {
-                ["{Binding Dialogs.RequestSetupWizardExitCommand}"] = "{Binding Shell.I18n[setupWizardSkip]}",
+                ["{Binding Dialogs.SetupWizardExitConfirm.ShowCommand}"] = "{Binding Shell.I18n[setupWizardSkip]}",
                 ["{Binding Dialogs.SetupWizard.BrowseGamePathCommand}"] = "{Binding Shell.I18n[setupWizardBrowse]}",
                 ["{Binding Dialogs.SetupWizard.PreviousCommand}"] = "{Binding Shell.I18n[setupWizardPrevious]}",
                 ["{Binding Dialogs.SetupWizard.NextCommand}"] = "{Binding Shell.I18n[setupWizardNext]}",

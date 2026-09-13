@@ -24,123 +24,26 @@ public partial class DialogsViewModel : ViewModelBase, IModalContentViewModel
     private readonly Func<Action, Task> invokeOnUiAsync;
     private bool closeOnNoticeDismiss;
 
-    [ObservableProperty]
-    private bool isStopConfirmVisible;
+    /// <summary>
+    /// 确认对话框家族：可见性、文案与「隐藏 → 顺序调用订阅者 → 记录失败」的
+    /// 确认契约由 <see cref="ConfirmationDialogViewModel"/> 单点实现，这里只
+    /// 聚合实例；新增一个确认对话框 = 一个字段加一段 AXAML。
+    /// </summary>
+    public ConfirmationDialogViewModel StopConfirm { get; }
 
-    [ObservableProperty]
-    private string stopConfirmText = "";
+    public ConfirmationDialogViewModel DownloadRunningCloseConfirm { get; }
 
-    [ObservableProperty]
-    private bool isDownloadRunningCloseConfirmVisible;
+    public ConfirmationDialogViewModel UninstallConfirm { get; }
 
-    [ObservableProperty]
-    private string downloadRunningCloseConfirmText = "";
+    public ConfirmationDialogViewModel RepairConfirm { get; }
 
-    [ObservableProperty]
-    private bool isUninstallConfirmVisible;
+    public ConfirmationDialogViewModel ResourcePanelSourceConfirm { get; }
 
-    [ObservableProperty]
-    private string uninstallConfirmText = "";
+    public ConfirmationDialogViewModel DebugResetConfirm { get; }
 
-    [ObservableProperty]
-    private bool isRepairConfirmVisible;
+    public ConfirmationDialogViewModel SettingsResetConfirm { get; }
 
-    [ObservableProperty]
-    private string repairConfirmText = "";
-
-    [ObservableProperty]
-    private bool isResourcePanelSourceConfirmVisible;
-
-    [ObservableProperty]
-    private string resourcePanelSourceConfirmText = "";
-
-    private bool isDebugResetConfirmationVisible;
-
-    public bool IsDebugResetConfirmationVisible
-    {
-        get => isDebugResetConfirmationVisible;
-        set => SetProperty(ref isDebugResetConfirmationVisible, value);
-    }
-
-    public IRelayCommand CancelDebugResetCommand { get; }
-
-    public IAsyncRelayCommand ConfirmDebugResetCommand { get; }
-
-    public event Func<Task>? ConfirmDebugResetRequested;
-
-    public void ShowDebugResetConfirmation()
-    {
-        IsDebugResetConfirmationVisible = true;
-    }
-
-    private void CancelDebugReset()
-    {
-        IsDebugResetConfirmationVisible = false;
-    }
-
-    private async Task ConfirmDebugResetAsync()
-    {
-        try
-        {
-            await AsyncEvent.InvokeSequentiallyAsync(ConfirmDebugResetRequested);
-        }
-        catch (Exception ex)
-        {
-            await LocalDiagnostics.LogAsync(
-                LogEntrySeverity.Error,
-                "DebugResetFailed",
-                $"Failed to reset settings: {ex.Message}");
-        }
-        finally
-        {
-            IsDebugResetConfirmationVisible = false;
-        }
-    }
-
-    private bool isResetSettingsConfirmationVisible;
-
-    public bool IsResetSettingsConfirmationVisible
-    {
-        get => isResetSettingsConfirmationVisible;
-        set => SetProperty(ref isResetSettingsConfirmationVisible, value);
-    }
-
-    public IRelayCommand CancelSettingsResetCommand { get; }
-
-    public IAsyncRelayCommand ConfirmSettingsResetCommand { get; }
-
-    /// <summary>Raised after the user confirms a settings-page reset of all launcher settings.</summary>
-    public event Func<Task>? ConfirmSettingsResetRequested;
-
-    /// <summary>Presents the launcher-settings reset confirmation from the settings page.</summary>
-    public void ShowSettingsResetConfirmation()
-    {
-        IsResetSettingsConfirmationVisible = true;
-    }
-
-    private void CancelSettingsReset()
-    {
-        IsResetSettingsConfirmationVisible = false;
-    }
-
-    private async Task ConfirmSettingsResetAsync()
-    {
-        try
-        {
-            await AsyncEvent.InvokeSequentiallyAsync(ConfirmSettingsResetRequested);
-        }
-        catch (Exception ex)
-        {
-            await LocalDiagnostics.LogAsync(
-                LogEntrySeverity.Error,
-                "SettingsResetFailed",
-                $"Failed to reset settings: {ex.Message}");
-        }
-        finally
-        {
-            IsResetSettingsConfirmationVisible = false;
-        }
-    }
+    public ConfirmationDialogViewModel SetupWizardExitConfirm { get; }
 
     // ── Setup wizard ─────────────────────────────────────────────────────
 
@@ -152,9 +55,6 @@ public partial class DialogsViewModel : ViewModelBase, IModalContentViewModel
     [ObservableProperty]
     private bool isSetupWizardVisible;
 
-    [ObservableProperty]
-    private bool isSetupWizardExitConfirmVisible;
-
     public IReadOnlyList<LanguageOption> LanguageOptions { get; }
 
     public void ShowSetupWizard()
@@ -162,25 +62,6 @@ public partial class DialogsViewModel : ViewModelBase, IModalContentViewModel
         // UI 线程上不能阻塞等待日志写入；LogAsync 自吞异常，丢弃 Task 是安全的。
         _ = LocalDiagnostics.LogAsync(LogEntrySeverity.Info, "SetupWizardShow", "Setup wizard visibility requested.");
         IsSetupWizardVisible = true;
-    }
-
-    [RelayCommand]
-    private void RequestSetupWizardExit()
-    {
-        IsSetupWizardExitConfirmVisible = true;
-    }
-
-    [RelayCommand]
-    private void CancelSetupWizardExit()
-    {
-        IsSetupWizardExitConfirmVisible = false;
-    }
-
-    [RelayCommand]
-    private async Task ConfirmSetupWizardExitAsync()
-    {
-        IsSetupWizardExitConfirmVisible = false;
-        await SetupWizard.SkipCommand.ExecuteAsync(null);
     }
 
     // ── Critical error ────────────────────────────────────────────────────
@@ -256,16 +137,6 @@ public partial class DialogsViewModel : ViewModelBase, IModalContentViewModel
 
     public bool HasSelectedUpdateFile => SelectedUpdateFile is not null;
 
-    public event Func<Task>? ConfirmRepairRequested;
-
-    public event Action? ConfirmResourcePanelSourceSwitchRequested;
-
-    public event Func<Task>? ConfirmUninstallRequested;
-
-    public event Action? ConfirmStopRequested;
-
-    public event Action? CloseAfterStoppingDownloadRequested;
-
     public event Action? CloseRequested;
 
     public event Action<string>? ConfirmUpdateAvailableRequested;
@@ -291,23 +162,28 @@ public partial class DialogsViewModel : ViewModelBase, IModalContentViewModel
         LanguageOptions = LocalizationService.GetLanguageOptions(localizer);
         SetupWizard = setupWizard;
         Gallery = new DesignGalleryViewModel(key => localizer.T(key));
-        CancelDebugResetCommand = new RelayCommand(CancelDebugReset);
-        ConfirmDebugResetCommand = new AsyncRelayCommand(ConfirmDebugResetAsync);
-        CancelSettingsResetCommand = new RelayCommand(CancelSettingsReset);
-        ConfirmSettingsResetCommand = new AsyncRelayCommand(ConfirmSettingsResetAsync);
+        StopConfirm = new ConfirmationDialogViewModel("StopConfirmFailed");
+        DownloadRunningCloseConfirm = new ConfirmationDialogViewModel("CloseWhileDownloadingFailed");
+        UninstallConfirm = new ConfirmationDialogViewModel("UninstallConfirmFailed");
+        RepairConfirm = new ConfirmationDialogViewModel("RepairConfirmFailed");
+        ResourcePanelSourceConfirm = new ConfirmationDialogViewModel("ResourceSourceSwitchFailed");
+        DebugResetConfirm = new ConfirmationDialogViewModel("DebugResetFailed");
+        SettingsResetConfirm = new ConfirmationDialogViewModel("SettingsResetFailed");
+        SetupWizardExitConfirm = new ConfirmationDialogViewModel("SetupWizardExitFailed");
+        SetupWizardExitConfirm.Confirmed += () => SetupWizard.SkipCommand.ExecuteAsync(null);
     }
 
     public void ApplyLanguage()
     {
         LanguageOptions.First(option => option.Code == LauncherLanguages.Auto).DisplayName = localizer.T(LocalizationKeys.LanguageAuto);
-        if (IsStopConfirmVisible)
+        if (StopConfirm.IsVisible)
         {
-            StopConfirmText = localizer.T(LocalizationKeys.StopDownloadMessage);
+            StopConfirm.Message = localizer.T(LocalizationKeys.StopDownloadMessage);
         }
 
-        if (IsDownloadRunningCloseConfirmVisible)
+        if (DownloadRunningCloseConfirm.IsVisible)
         {
-            DownloadRunningCloseConfirmText = localizer.T(LocalizationKeys.StopDownloadMessage);
+            DownloadRunningCloseConfirm.Message = localizer.T(LocalizationKeys.StopDownloadMessage);
         }
 
         if (IsUpdateAvailableVisible)
@@ -316,99 +192,16 @@ public partial class DialogsViewModel : ViewModelBase, IModalContentViewModel
         }
     }
 
-    public void ShowRepairConfirm(string text)
-    {
-        RepairConfirmText = text;
-        IsRepairConfirmVisible = true;
-    }
-
-    public void ShowUninstallConfirm(string text)
-    {
-        UninstallConfirmText = text;
-        IsUninstallConfirmVisible = true;
-    }
-
+    /// <summary>Presents the stop-download confirmation with the localized stop message.</summary>
     public void ShowStopConfirm()
     {
-        StopConfirmText = localizer.T(LocalizationKeys.StopDownloadMessage);
-        IsStopConfirmVisible = true;
+        StopConfirm.Show(localizer.T(LocalizationKeys.StopDownloadMessage));
     }
 
+    /// <summary>Presents the close-while-downloading confirmation with the localized stop message.</summary>
     public void ShowDownloadRunningCloseConfirm()
     {
-        DownloadRunningCloseConfirmText = localizer.T(LocalizationKeys.StopDownloadMessage);
-        IsDownloadRunningCloseConfirmVisible = true;
-    }
-
-    [RelayCommand]
-    private void CancelRepair()
-    {
-        IsRepairConfirmVisible = false;
-    }
-
-    [RelayCommand]
-    private async Task ConfirmRepairAsync()
-    {
-        IsRepairConfirmVisible = false;
-        await AsyncEvent.InvokeSequentiallyAsync(ConfirmRepairRequested);
-    }
-
-    public void ShowResourcePanelSourceConfirm(string text)
-    {
-        ResourcePanelSourceConfirmText = text;
-        IsResourcePanelSourceConfirmVisible = true;
-    }
-
-    [RelayCommand]
-    private void CancelResourcePanelSourceSwitch()
-    {
-        IsResourcePanelSourceConfirmVisible = false;
-    }
-
-    [RelayCommand]
-    private void ConfirmResourcePanelSourceSwitch()
-    {
-        IsResourcePanelSourceConfirmVisible = false;
-        ConfirmResourcePanelSourceSwitchRequested?.Invoke();
-    }
-
-    [RelayCommand]
-    private void CancelUninstall()
-    {
-        IsUninstallConfirmVisible = false;
-    }
-
-    [RelayCommand]
-    private async Task ConfirmUninstallAsync()
-    {
-        IsUninstallConfirmVisible = false;
-        await AsyncEvent.InvokeSequentiallyAsync(ConfirmUninstallRequested);
-    }
-
-    [RelayCommand]
-    private void ConfirmStop()
-    {
-        IsStopConfirmVisible = false;
-        ConfirmStopRequested?.Invoke();
-    }
-
-    [RelayCommand]
-    private void CancelStop()
-    {
-        IsStopConfirmVisible = false;
-    }
-
-    [RelayCommand]
-    private void ConfirmCloseWhileDownloading()
-    {
-        IsDownloadRunningCloseConfirmVisible = false;
-        CloseAfterStoppingDownloadRequested?.Invoke();
-    }
-
-    [RelayCommand]
-    private void CancelCloseWhileDownloading()
-    {
-        IsDownloadRunningCloseConfirmVisible = false;
+        DownloadRunningCloseConfirm.Show(localizer.T(LocalizationKeys.StopDownloadMessage));
     }
 
     public void ShowUpdateAvailable(string version, IReadOnlyList<ReleaseFile> files)
