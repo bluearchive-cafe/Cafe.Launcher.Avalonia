@@ -26,7 +26,7 @@
 - 并发下载、断点续传、暂停与恢复、速度限制和 CRC64 完整性校验
 - 在官方 CDN 与 Cafe CDN 之间切换，并在下载失败时尝试备用地址
 - 使用本地清单、远程清单或跳过检查三种启动验证模式
-- 使用系统、浅色或深色主题，自定义背景、主题色和动态效果
+- 使用系统、浅色或深色主题，自定义背景、主题色和动效
 - 使用 English、简体中文、繁體中文和日本語界面
 - 查看公告与运营内容，并通过 UID 使用 Cafe 资源面板
 - 检查稳定版或测试版更新，导出诊断信息用于故障排查：可选时间范围（全部 / 最近 1 小时 / 最近 24 小时 / 最近 7 天 / 最近 30 天），始终包含系统信息，并可按需附带崩溃报告与用户数据
@@ -41,9 +41,9 @@
 | macOS Apple Silicon | 实验性（暂不支持启动游戏） | `.app` 压缩包 |
 | Linux x64 | 实验性 | `.deb`、AppImage、`tar.gz` |
 
-所有发行包均为自包含应用，无需另外安装 .NET Runtime。macOS 与 Linux 构建尚未完成与 Windows 同等程度的适配和测试，请以具体 Release 说明为准。其中 macOS 版本目前只能安装、更新和修复游戏：在 macOS 上启动游戏需要额外的兼容运行层，当前不提供，也暂无支持计划。
+所有发行包均为自包含应用，无需另外安装 .NET Runtime。macOS 与 Linux 构建尚未完成与 Windows 同等程度的适配和测试，请以具体 Release 说明为准。其中 macOS 版本目前只能安装、更新和修复游戏：在 macOS 上启动游戏需要额外的兼容运行层，当前不提供，也暂无支持计划。Linux 上可通过 Wine / UMU / Proton 运行环境启动游戏（实验性，反作弊兼容性未验证）。
 
-面向普通用户的安装、首次设置和故障排查说明统一维护在[文档站](https://docs.bluearchive.cafe/cafe-launcher/)。本仓库 README 主要面向参与开发和审阅源码的贡献者。
+面向普通用户的安装、首次设置和故障排查说明统一维护在[文档站](https://docs.bluearchive.cafe/cafe-launcher/)。本 README 主要面向参与开发和审阅源码的贡献者。
 
 ## 本地开发
 
@@ -83,11 +83,17 @@ dotnet test .\tests\Cafe.Launcher.Avalonia.Tests\Cafe.Launcher.Avalonia.Tests.cs
 
 ```text
 src/Cafe.Launcher.Avalonia/
-├── Composition/     # 依赖注入组合根
-├── Features/        # Shell、游戏操作、设置、向导、诊断和资源面板
+├── Composition/     # 依赖注入组合根（全部单例注册）
+├── Features/        # 垂直功能切片
+│   ├── Shell/           # 窗口壳层：聚合并编排各功能 ViewModel
+│   ├── GameOperations/  # 安装、更新、修复、卸载与下载旅程
+│   ├── Settings/        # 设置页
+│   ├── SetupWizard/     # 首次设置向导
+│   ├── Diagnostics/     # 调试面板、日志查看与导出
+│   └── ResourcePanel/   # Cafe 资源面板
 ├── Services/        # 网络、下载、清单、设置、本地化、日志等基础服务
 ├── Models/          # 设置、API、清单和运行状态模型
-├── ViewModels/      # 主窗口及共享界面投影
+├── ViewModels/      # 主窗口级 ViewModel 与模态契约
 ├── Views/           # Avalonia 视图、覆盖层与样式
 ├── Resources/       # 多语言 .resx 资源
 └── Assets/          # 图标、字体、音频与图片
@@ -97,13 +103,11 @@ tests/
 └── Cafe.Launcher.Avalonia.HeadlessTests/  # Avalonia Headless UI 与黄金截图测试
 ```
 
-应用以 `ServiceConfiguration.AddLauncherServices()` 为组合根。`LauncherCoreService` 汇总远端配置和本地安装状态；游戏安装、更新、修复与卸载由独立操作旅程编排；`MainWindowViewModel` 负责组合各功能 ViewModel，而不是直接承载底层业务流程。
-
-更完整的目录约定、代码风格和验证要求见 [AGENTS.md](./AGENTS.md) 与 [PROJECT_CONVENTIONS.md](./PROJECT_CONVENTIONS.md)。
+应用以 `Composition/ServiceConfiguration.AddLauncherServices()` 为组合根，全部服务注册为单例、经构造函数注入。`LauncherCoreService` 汇总远端配置和本地安装状态；游戏安装、更新、修复与卸载由 `Features/GameOperations` 的操作旅程编排；`MainWindowViewModel` 负责组合各功能 ViewModel，而不是直接承载底层业务流程。目录与工作流约定、架构裁定（功能边界、模态隔离）见 [AGENTS.md](./AGENTS.md)；编码规范详见 [PROJECT_CONVENTIONS.md](./PROJECT_CONVENTIONS.md)；领域术语见 [CONTEXT.md](./CONTEXT.md) 与 [UBIQUITOUS_LANGUAGE.md](./UBIQUITOUS_LANGUAGE.md)。
 
 ## 本地数据
 
-Windows 默认将设置和诊断数据写入 `%LOCALAPPDATA%\Cafe Launcher\`，包括 `settings.json`、`download_state.json`、`unified.log` 和日志导出文件。游戏目录中的 `manifest.json` 与 `game-launcher-config.json` 用于记录游戏安装状态，并与官方启动器保持兼容。
+Windows 默认将设置和诊断数据写入 `%LOCALAPPDATA%\Cafe Launcher\`，包括 `settings.json`、`download_state.json`、`unified.log` 和日志导出文件。游戏目录（规范化为 `YostarGames\BlueArchive_JP`）中的 `manifest.json` 与 `game-launcher-config.json` 用于记录游戏安装状态，并与官方启动器保持兼容。
 
 卸载启动器不会默认删除游戏文件。详细的数据保留规则见[卸载与数据](https://docs.bluearchive.cafe/cafe-launcher/uninstall)。
 
@@ -115,7 +119,7 @@ Windows 默认将设置和诊断数据写入 `%LOCALAPPDATA%\Cafe Launcher\`，�
 .\scripts\New-WindowsInstaller.ps1
 ```
 
-分发产物写入 `artifacts/distribution/`。正式发布由 `.github/workflows/release.yml` 处理，并同步到独立的 [Release 仓库](https://github.com/bluearchive-cafe/Cafe.Launcher.Avalonia_Release)。
+分发产物写入 `artifacts/distribution/`，并随发布附带 `SHA256SUMS` 校验清单。正式发布由 `.github/workflows/release.yml` 处理，并同步到独立的 [Release 仓库](https://github.com/bluearchive-cafe/Cafe.Launcher.Avalonia_Release)。
 
 ## 参与贡献
 

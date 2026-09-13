@@ -1,6 +1,6 @@
 # M0 Spike 结论 — MaterialColorUtilities 包可行性 + 新旧公式对照
 
-> 状态：**GO** · 日期：2026-08-25 · 环境：.NET SDK 10.0.400 / `net10.0` / Avalonia 12.1.1
+> 状态：**GO**（spike 已完成，时点记录；结论已落地为核心依赖 Shirasagi0012.MaterialColorUtilities）· 日期：2026-08-25 · 环境：.NET SDK 10.0.400 / `net10.0` / Avalonia 12.1.1
 > 输入：[P1 实施计划](p1-implementation-plan.md) M0 · 对应决策：Q17（NuGet 直引 + 文档化 vendor 回退）
 > 临时工程（均不入库，位于 `%TEMP%\m0-spike\`）：`spike-new`（Shirasagi core 0.2.0）、`spike-old`（albi005 0.3.0）、`spike-avalonia`（集成包 × Avalonia 12.1.1）。可在 `%TEMP%\m0-spike\` 下用 `dotnet run --project <dir>` 复现。
 

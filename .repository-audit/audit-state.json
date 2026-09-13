@@ -1,8 +1,16 @@
 {
   "schema_version": 1,
-  "last_full_audit_commit": "490c2e5",
-  "last_audit_commit": "490c2e5",
+  "last_full_audit_commit": "5f56f8e",
+  "last_audit_commit": "5f56f8e",
   "last_audit_mode": "full",
-  "last_audit_date": "2026-09-12",
-  "repository_map_version": 13
+  "last_audit_date": "2026-09-13",
+  "repository_map_version": 14,
+  "note": "全量重审：按用户指令忽略既有报告与台账，从零建立。旧台账（101 项）归档于 history/2026-09-12-findings-ledger.json。",
+  "open_counts": {
+    "critical": 0,
+    "high": 0,
+    "medium": 6,
+    "low": 10,
+    "informational": 1
+  }
 }

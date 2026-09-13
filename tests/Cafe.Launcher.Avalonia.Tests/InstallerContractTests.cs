@@ -480,7 +480,6 @@ public sealed class InstallerContractTests
         {
             "README.md",
             "AGENTS.md",
-            "CLAUDE.md",
             "PROJECT_CONVENTIONS.md",
         })
         {
