@@ -156,11 +156,14 @@ public sealed class GameDownloadService : IDisposable
             // Only a live session counts as a stop: lifecycle shutdown calls Stop() with no
             // active session, and logging there produced phantom "stopped" entries on every
             // clean exit. The injected logger keeps the line off the process-wide static sink.
-            diagnostics.DebugAsync(
+            // 显式弃等而非阻塞等待：Stop() 在 UI 点击路径上，sync-over-async 会在
+            // Serilog async sink 背压时卡住 UI 线程；DebugAsync 内部吞掉全部异常，
+            // 弃等的 Task 不会产生未观察异常。
+            _ = diagnostics.DebugAsync(
                 "GameDownload",
                 reason == DownloadStopReason.UserRequested
                     ? "Download stopped by user"
-                    : "Download stopped for application exit").GetAwaiter().GetResult();
+                    : "Download stopped for application exit");
         }
     }
 

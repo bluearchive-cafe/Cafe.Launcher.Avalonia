@@ -517,14 +517,18 @@ internal sealed class DownloadSession : IDisposable
             pauseTcs ??= new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
         }
 
-        LocalDiagnostics.LogSync(LogEntrySeverity.Debug, "GameDownload", "Download paused");
+        // 显式弃等而非 LogSync：本方法在 UI 点击路径上，LogSync 的 sync-over-async
+        // 会在 Serilog async sink 背压时卡住 UI 线程；DebugAsync 内部吞掉全部异常，
+        // 弃等的 Task 不会产生未观察异常。
+        _ = diagnostics.DebugAsync("GameDownload", "Download paused");
     }
 
     /// <summary>Releases a paused session so subsequent download work can continue.</summary>
     public void Resume()
     {
         ResetPauseState();
-        LocalDiagnostics.LogSync(LogEntrySeverity.Debug, "GameDownload", "Download resumed");
+        // 同 Pause()：UI 点击路径上显式弃等，不退回阻塞的 LogSync。
+        _ = diagnostics.DebugAsync("GameDownload", "Download resumed");
     }
 
     private Task GetPauseTaskSnapshot()

@@ -76,7 +76,7 @@ AI 辅助开发规范 —— 本文件为所有 AI 编码助手（Claude Code、
 - 将 `LocalDiagnostics diagnostics` 通过构造函数注入，存储为 `private readonly` 字段。
 - `title` 参数是日志行的 `[LogTitle]` 标签：用简短的 PascalCase 标识调用方模块（如 `"GameDownload"`, `"LauncherCore"`, `"ApiClient"`）。该标签受 `DiagnosticsLogTitleContractTests` 源码契约守护。
 - `message`（可选）放上下文细节：文件路径、耗时毫秒、计数值、状态码。不记密钥/盐/Authorization 头。
-- 同步上下文用 `LocalDiagnostics.LogSync(severity, title, message)`（如 `Stop()`、`Pause()` 等 void 方法）。
+- 非热路径的同步上下文用 `LocalDiagnostics.LogSync(severity, title, message)`。**例外——UI 点击路径**（如 `GameDownloadService.Stop()`、`DownloadSession.Pause()/Resume()`）：LogSync 的 sync-over-async 会在 Serilog async sink 背压时阻塞 UI 线程，这类方法改用显式弃等 `_ = diagnostics.DebugAsync(...)` 并注释意图（`DebugAsync` 内部吞掉全部异常，弃等的 Task 不会产生未观察异常）。
 - 异步上下文用 `await diagnostics.DebugAsync(title, message, CancellationToken.None)`。不传播调用方的 cancellationToken（日志不应被取消）。
 
 ### 3.3 不要做

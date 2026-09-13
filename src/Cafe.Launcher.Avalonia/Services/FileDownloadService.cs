@@ -1,4 +1,5 @@
 using System;
+using System.Buffers;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
@@ -139,10 +140,15 @@ public sealed class FileDownloadService : IFileDownloadService
                 }
 
                 string crc64;
+                // Rented rather than allocated: the buffer sits inside the retry loop, so a fresh
+                // 256 KiB array per attempt (>85 KiB LOH threshold) would put every download into
+                // the large object heap up to RetryDomainOrder.Length times per file — same LOH
+                // concern Crc64Service already solves with the shared pool.
+                var buffer = ArrayPool<byte>.Shared.Rent(1024 * 256);
+                try
                 {
                     await using var responseStream = await response.Content.ReadAsStreamAsync(cancellationToken).ConfigureAwait(false);
                     await using var output = new FileStream(targetTempPath, fileMode, FileAccess.Write, FileShare.Read);
-                    var buffer = new byte[1024 * 256];
                     while (true)
                     {
                         await pauseAwaiter().ConfigureAwait(false);
@@ -158,6 +164,10 @@ public sealed class FileDownloadService : IFileDownloadService
 
                     await output.FlushAsync(cancellationToken).ConfigureAwait(false);
                     crc64 = await crc64Service.ComputeFileAsync(targetTempPath, null, cancellationToken).ConfigureAwait(false);
+                }
+                finally
+                {
+                    ArrayPool<byte>.Shared.Return(buffer);
                 }
 
                 if (crc64 == expectedHash) return DownloadOutcome.Transferred(crc64);

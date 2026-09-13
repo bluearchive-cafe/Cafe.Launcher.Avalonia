@@ -92,7 +92,10 @@ public sealed class CrossProcessPollingListenerTests
 
         listener.Dispose();
 
-        Thread.Sleep(80);
+        // 观察窗必须大于 1× 生产轮询间隔（250ms）：注入缝的假等待只睡 5ms，因此
+        // 紧旋式泄漏几毫秒就能暴露；但一个「忽略取消、仍按生产节奏自延时 250ms
+        // 运行」的回归只有超过一个完整轮询间隔的窗口才能被抓到。
+        Thread.Sleep(400);
         Assert.True(Volatile.Read(ref waitCallCount) <= countAfterDispose + 1,
             "polling loop kept running after disposal");
         Assert.True(listener.IsCancellationRequested);
