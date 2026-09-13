@@ -269,7 +269,7 @@ namespace Cafe.Launcher.Avalonia.Features.GameOperations;
     /// <summary>Runs a confirmed uninstall and refreshes launcher state afterward.</summary>
     public async Task ConfirmUninstallAsync(LauncherStatusSnapshot snapshot)
     {
-        if (snapshot.RuntimeState != LauncherRuntimeState.Ready)
+        if (!GameOperationPolicy.Allows(GameOperationPolicy.Operation.Uninstall, snapshot.RuntimeState))
         {
             return;
         }

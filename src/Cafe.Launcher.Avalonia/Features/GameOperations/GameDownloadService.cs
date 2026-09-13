@@ -111,10 +111,7 @@ public sealed class GameDownloadService : IDisposable
         Action<GameOperationProgress> progress,
         CancellationToken cancellationToken = default)
     {
-        if (snapshot.RuntimeState is not (
-            LauncherRuntimeState.NotInstalled or
-            LauncherRuntimeState.BelowLowestVersion or
-            LauncherRuntimeState.UpdateAvailable))
+        if (!GameOperationPolicy.Allows(GameOperationPolicy.Operation.InstallOrUpdate, snapshot.RuntimeState))
         {
             return DownloadSession.Failed(localizer.T(LocalizationKeys.OperationUnavailableForCurrentState), GameOperationErrorCode.InvalidState);
         }
@@ -127,9 +124,7 @@ public sealed class GameDownloadService : IDisposable
         Action<GameOperationProgress> progress,
         CancellationToken cancellationToken = default)
     {
-        if (snapshot.RuntimeState is not (
-            LauncherRuntimeState.Corrupted or
-            LauncherRuntimeState.Ready))
+        if (!GameOperationPolicy.Allows(GameOperationPolicy.Operation.Repair, snapshot.RuntimeState))
         {
             return DownloadSession.Failed(localizer.T(LocalizationKeys.OperationUnavailableForCurrentState), GameOperationErrorCode.InvalidState);
         }

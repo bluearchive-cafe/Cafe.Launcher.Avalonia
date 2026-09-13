@@ -58,7 +58,7 @@ public sealed class GameUninstallService
         Action<GameOperationProgress> progress,
         CancellationToken cancellationToken = default)
     {
-        if (snapshot.RuntimeState != LauncherRuntimeState.Ready)
+        if (!GameOperationPolicy.Allows(GameOperationPolicy.Operation.Uninstall, snapshot.RuntimeState))
         {
             return DownloadSession.Failed(localizer.T(LocalizationKeys.OperationUnavailableForCurrentState), GameOperationErrorCode.InvalidState);
         }

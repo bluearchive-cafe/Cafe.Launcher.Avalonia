@@ -39,7 +39,7 @@ public sealed class GameLaunchService
             return Failed(localizer.T(LocalizationKeys.GameBelowLowestVersion));
         }
 
-        if (snapshot.RuntimeState != LauncherRuntimeState.Ready)
+        if (!GameOperationPolicy.Allows(GameOperationPolicy.Operation.Launch, snapshot.RuntimeState))
         {
             return Failed(snapshot.RuntimeState switch
             {
