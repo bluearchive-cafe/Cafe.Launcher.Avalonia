@@ -72,6 +72,7 @@ public sealed class DialogActionButtonContractTests
         var documents = new[]
         {
             XDocument.Load(ProjectFile("Views/MainWindowDialogsOverlay.axaml")),
+            XDocument.Load(ProjectFile("Views/ResourcePanelOverlay.axaml")),
             XDocument.Load(ProjectFile("Views/MainWindowLogViewerOverlay.axaml")),
             XDocument.Load(ProjectFile("Views/MainWindowLogExportOverlay.axaml")),
             XDocument.Load(ProjectFile("Views/MainWindowSettingsOverlay.axaml")),

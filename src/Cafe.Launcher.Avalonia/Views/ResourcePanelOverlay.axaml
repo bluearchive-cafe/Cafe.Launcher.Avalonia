@@ -1,0 +1,207 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:vm="using:Cafe.Launcher.Avalonia.ViewModels"
+             xmlns:models="using:Cafe.Launcher.Avalonia.Models"
+             xmlns:converters="using:Cafe.Launcher.Avalonia.Converters"
+             xmlns:materialIcons="clr-namespace:Material.Icons.Avalonia;assembly=Material.Icons.Avalonia"
+             xmlns:controls="using:Cafe.Launcher.Avalonia.Controls"
+             x:Class="Cafe.Launcher.Avalonia.Views.ResourcePanelOverlay"
+             x:Name="ResourcePanelRoot"
+             x:DataType="vm:MainWindowViewModel">
+    <!-- Chinese localization settings（资源面板覆盖层：模态交互门 + 表面档案由 MainWindowDialogsOverlay 同层编排） -->
+    <Grid Classes="dialog-overlay motion-overlay"
+          IsEnabled="{Binding ModalHost.IsResourcePanelInteractive}"
+          Classes.motion-enabled="{Binding IsMotionEnabled}"
+          controls:MotionVisibility.IsOpen="{Binding ResourcePanel.IsResourcePanelVisible}"
+          controls:MotionVisibility.IsMotionEnabled="{Binding IsMotionEnabled}">
+        <!-- Panel 形态：尺寸自适应（token 封顶）而非固定宽高（ADR-015 尺寸律）。 -->
+        <controls:DialogSurface
+            Form="Panel"
+            Classes="motion-surface"
+            HorizontalAlignment="Stretch"
+            VerticalAlignment="Center"
+            Margin="{StaticResource Launcher.Spacing.Thickness.Xxl}"
+            MaxWidth="{StaticResource Launcher.Layout.ResourcePanel.Width}"
+            MaxHeight="{StaticResource Launcher.Layout.ResourcePanel.Height}"
+            Title="{Binding Shell.I18n[resourcePanel]}"
+            Subtitle="{Binding Shell.I18n[resourcePanelDescription]}"
+            CloseCommand="{Binding ResourcePanel.CloseResourcePanelCommand}"
+            CloseAutomationName="{Binding Shell.I18n[close]}"
+            CloseToolTip="{Binding Shell.I18n[close]}">
+            <controls:DialogSurface.RenderTransform>
+                <TranslateTransform/>
+            </controls:DialogSurface.RenderTransform>
+            <controls:DialogSurface.HeaderIcon>
+                <materialIcons:MaterialIcon Kind="Web" Width="{StaticResource Launcher.Icon.Md}" Height="{StaticResource Launcher.Icon.Md}"/>
+            </controls:DialogSurface.HeaderIcon>
+            <controls:DialogSurface.Content>
+                <StackPanel Spacing="{StaticResource Launcher.Spacing.Md}">
+                    <Border Classes="info-strip resource-panel-status"
+                            Classes.danger="{Binding ResourcePanel.IsResourcePanelMessageError}"
+                            IsVisible="{Binding ResourcePanel.ResourcePanelMessage, Converter={x:Static StringConverters.IsNotNullOrEmpty}}">
+                        <TextBlock Text="{Binding ResourcePanel.ResourcePanelMessage}" Classes="body"/>
+                    </Border>
+
+                    <!-- UID input card: shown when UID missing -->
+                    <Border Classes="dialog-card"
+                            IsVisible="{Binding ResourcePanel.IsResourcePanelUidMissing}">
+                        <Grid RowDefinitions="Auto,Auto" ColumnDefinitions="*,Auto" ColumnSpacing="{StaticResource Launcher.Spacing.Md}" RowSpacing="{StaticResource Launcher.Spacing.Sm}">
+                            <TextBlock Grid.ColumnSpan="2" Text="{Binding Shell.I18n[resourcePanelManualUid]}" Classes="group-title"/>
+                            <TextBox Grid.Row="1"
+                                     Classes="uid-input"
+                                     Text="{Binding ResourcePanel.ManualResourcePanelUid, Mode=TwoWay}"
+                                     PlaceholderText="{Binding Shell.I18n[resourcePanelUid]}"
+                                     AutomationProperties.Name="{Binding Shell.I18n[resourcePanelUid]}"
+                                     IsEnabled="{Binding ResourcePanel.IsResourcePanelBusy, Converter={x:Static BoolConverters.Not}}"/>
+                            <Button Grid.Row="1" Grid.Column="1" Classes="primary-action dialog-action"
+                                    Command="{Binding ResourcePanel.SaveManualResourcePanelUidCommand}"
+                                    AutomationProperties.Name="{Binding Shell.I18n[resourcePanelSaveUid]}"
+                                    IsEnabled="{Binding ResourcePanel.IsResourcePanelBusy, Converter={x:Static BoolConverters.Not}}">
+                                <StackPanel Classes="button-content">
+                                    <materialIcons:MaterialIcon Kind="ContentSave" Width="{StaticResource Launcher.Icon.Sm}" Height="{StaticResource Launcher.Icon.Sm}"/>
+                                    <TextBlock Text="{Binding Shell.I18n[resourcePanelSaveUid]}"/>
+                                </StackPanel>
+                            </Button>
+                        </Grid>
+                    </Border>
+
+                    <!-- UID edit card: shown when user clicked Change on existing UID -->
+                    <Border Classes="dialog-card"
+                            IsVisible="{Binding ResourcePanel.IsResourcePanelUidEditing}">
+                        <Grid RowDefinitions="Auto,Auto" ColumnDefinitions="*,Auto,Auto" ColumnSpacing="{StaticResource Launcher.Spacing.Md}" RowSpacing="{StaticResource Launcher.Spacing.Sm}">
+                            <TextBlock Grid.ColumnSpan="3" Text="{Binding Shell.I18n[resourcePanelEditUid]}" Classes="group-title"/>
+                            <TextBox Grid.Row="1"
+                                     Classes="uid-input"
+                                     Text="{Binding ResourcePanel.ManualResourcePanelUid, Mode=TwoWay}"
+                                     PlaceholderText="{Binding Shell.I18n[resourcePanelUid]}"
+                                     AutomationProperties.Name="{Binding Shell.I18n[resourcePanelUid]}"
+                                     IsEnabled="{Binding ResourcePanel.IsResourcePanelBusy, Converter={x:Static BoolConverters.Not}}"/>
+                            <Button Grid.Row="1" Grid.Column="1" Classes="flat-action dialog-action"
+                                    Command="{Binding ResourcePanel.CancelEditResourcePanelUidCommand}"
+                                    AutomationProperties.Name="{Binding Shell.I18n[cancel]}"
+                                    IsEnabled="{Binding ResourcePanel.IsResourcePanelBusy, Converter={x:Static BoolConverters.Not}}">
+                                <StackPanel Classes="button-content">
+                                    <materialIcons:MaterialIcon Kind="CloseCircle" Width="{StaticResource Launcher.Icon.Sm}" Height="{StaticResource Launcher.Icon.Sm}"/>
+                                    <TextBlock Text="{Binding Shell.I18n[cancel]}"/>
+                                </StackPanel>
+                            </Button>
+                            <Button Grid.Row="1" Grid.Column="2" Classes="primary-action dialog-action"
+                                    Command="{Binding ResourcePanel.SaveManualResourcePanelUidCommand}"
+                                    AutomationProperties.Name="{Binding Shell.I18n[resourcePanelSaveUid]}"
+                                    IsEnabled="{Binding ResourcePanel.IsResourcePanelBusy, Converter={x:Static BoolConverters.Not}}">
+                                <StackPanel Classes="button-content">
+                                    <materialIcons:MaterialIcon Kind="ContentSave" Width="{StaticResource Launcher.Icon.Sm}" Height="{StaticResource Launcher.Icon.Sm}"/>
+                                    <TextBlock Text="{Binding Shell.I18n[resourcePanelSaveUid]}"/>
+                                </StackPanel>
+                            </Button>
+                        </Grid>
+                    </Border>
+
+                    <!-- UID display card: shown when UID is present and not editing -->
+                    <Border Classes="dialog-card"
+                            IsVisible="{Binding ResourcePanel.IsResourcePanelUidPresent}">
+                        <StackPanel Spacing="{StaticResource Launcher.Spacing.Md}">
+                            <Grid ColumnDefinitions="*,Auto" ColumnSpacing="{StaticResource Launcher.Spacing.Md}">
+                                <StackPanel Spacing="{StaticResource Launcher.Spacing.Sm}" VerticalAlignment="Center">
+                                    <TextBlock Text="{Binding Shell.I18n[resourcePanelUid]}" Classes="caption"/>
+                                    <TextBlock Text="{Binding ResourcePanel.ResourcePanelUidText}" Classes="body"/>
+                                </StackPanel>
+                                <Button Grid.Column="1" Classes="flat-action dialog-action"
+                                        Command="{Binding ResourcePanel.BeginEditResourcePanelUidCommand}"
+                                        AutomationProperties.Name="{Binding Shell.I18n[resourcePanelChangeUid]}"
+                                        IsEnabled="{Binding ResourcePanel.IsResourcePanelBusy, Converter={x:Static BoolConverters.Not}}">
+                                    <StackPanel Classes="button-content">
+                                        <materialIcons:MaterialIcon Kind="Pencil" Width="{StaticResource Launcher.Icon.Sm}" Height="{StaticResource Launcher.Icon.Sm}"/>
+                                        <TextBlock Text="{Binding Shell.I18n[resourcePanelChangeUid]}"/>
+                                    </StackPanel>
+                                </Button>
+                            </Grid>
+                            <Grid ColumnDefinitions="Auto,*" ColumnSpacing="{StaticResource Launcher.Spacing.Md}">
+                                <TextBlock Text="{Binding Shell.I18n[resourcePanelUidSource]}" Classes="group-title"
+                                           VerticalAlignment="Center"/>
+                                <ComboBox Grid.Column="1"
+                                          ItemsSource="{Binding ResourcePanel.ResourcePanelUidSourceOptions}"
+                                          SelectedValue="{Binding ResourcePanel.SelectedResourcePanelUidSource, Mode=TwoWay}"
+                                          SelectedValueBinding="{Binding Code}"
+                                          IsEnabled="{Binding ResourcePanel.IsResourcePanelBusy, Converter={x:Static BoolConverters.Not}}"
+                                          HorizontalAlignment="Left"
+                                          MinWidth="{StaticResource Launcher.Component.ResourcePanel.UidSource.MinWidth}"
+                                          AutomationProperties.Name="{Binding Shell.I18n[resourcePanelUidSource]}">
+                                    <ComboBox.ItemTemplate>
+                                        <DataTemplate x:DataType="models:SettingOption">
+                                            <TextBlock Text="{Binding DisplayName}"/>
+                                        </DataTemplate>
+                                    </ComboBox.ItemTemplate>
+                                </ComboBox>
+                            </Grid>
+                        </StackPanel>
+                    </Border>
+
+                    <ItemsControl ItemsSource="{Binding ResourcePanel.ResourcePanelItems}">
+                        <ItemsControl.ItemTemplate>
+                            <DataTemplate x:DataType="models:ResourcePanelItem">
+                                <Border Classes="dialog-card" Margin="{StaticResource Launcher.Component.Dialog.Content.BottomMargin}">
+                                    <Grid ColumnDefinitions="*,Auto" RowDefinitions="Auto,Auto,Auto" RowSpacing="{StaticResource Launcher.Spacing.Sm}" ColumnSpacing="{StaticResource Launcher.Spacing.Lg}">
+                                        <StackPanel Spacing="{StaticResource Launcher.Spacing.Xs}">
+                                            <TextBlock Text="{Binding DisplayName}" Classes="section-title"/>
+                                            <StackPanel Orientation="Horizontal" Spacing="{StaticResource Launcher.Spacing.Xs}">
+                                                <TextBlock Text="{Binding StatusText}" Classes="caption" VerticalAlignment="Center"/>
+                                                <materialIcons:MaterialIcon Kind="{Binding StatusIconKind}"
+                                                                            Width="{StaticResource Launcher.Icon.Sm}"
+                                                                            Height="{StaticResource Launcher.Icon.Sm}"
+                                                                            Foreground="{Binding Status, Converter={x:Static converters:ResourcePanelStatusToBrushConverter.Instance}}"
+                                                                            VerticalAlignment="Center"/>
+                                            </StackPanel>
+                                        </StackPanel>
+                                        <CheckBox Grid.Column="1"
+                                                  IsChecked="{Binding IsEnabled, Mode=TwoWay}"
+                                                  IsEnabled="{Binding IsOperable}"
+                                                  AutomationProperties.Name="{Binding DisplayName}"
+                                                  VerticalAlignment="Center"/>
+                                        <!-- 版本一致时折叠为单行结论，避免两列相同哈希的重复噪音。 -->
+                                        <StackPanel Grid.Row="1" Grid.ColumnSpan="2"
+                                                    Orientation="Horizontal"
+                                                    Spacing="{StaticResource Launcher.Spacing.Sm}"
+                                                    IsVisible="{Binding IsVersionAligned}">
+                                            <TextBlock Text="{Binding #ResourcePanelRoot.((vm:MainWindowViewModel)DataContext).Shell.I18n[resourcePanelVersionAligned]}" Classes="caption"/>
+                                            <TextBlock Text="{Binding OfficialVersion}" Classes="value"/>
+                                        </StackPanel>
+                                        <Grid Grid.Row="1" Grid.ColumnSpan="2" ColumnDefinitions="Auto,*,Auto,*" ColumnSpacing="{StaticResource Launcher.Spacing.Sm}"
+                                              IsVisible="{Binding !IsVersionAligned}">
+                                            <TextBlock Text="{Binding #ResourcePanelRoot.((vm:MainWindowViewModel)DataContext).Shell.I18n[resourcePanelOfficialVersion]}" Classes="caption"/>
+                                            <TextBlock Grid.Column="1" Text="{Binding OfficialVersion}" Classes="value"/>
+                                            <TextBlock Grid.Column="2" Text="{Binding #ResourcePanelRoot.((vm:MainWindowViewModel)DataContext).Shell.I18n[resourcePanelLocalizedVersion]}" Classes="caption"/>
+                                            <TextBlock Grid.Column="3" Text="{Binding LocalizedVersion}" Classes="value"/>
+                                        </Grid>
+                                    </Grid>
+                                </Border>
+                            </DataTemplate>
+                        </ItemsControl.ItemTemplate>
+                    </ItemsControl>
+                </StackPanel>
+            </controls:DialogSurface.Content>
+            <controls:DialogSurface.FooterLeading>
+                <Button Classes="flat-action dialog-action" Command="{Binding ResourcePanel.RefreshResourcePanelCommand}"
+                        AutomationProperties.Name="{Binding Shell.I18n[resourcePanelRefresh]}"
+                        IsEnabled="{Binding ResourcePanel.IsResourcePanelBusy, Converter={x:Static BoolConverters.Not}}">
+                    <StackPanel Classes="button-content">
+                        <materialIcons:MaterialIcon Kind="Refresh" Width="{StaticResource Launcher.Icon.Sm}" Height="{StaticResource Launcher.Icon.Sm}"/>
+                        <TextBlock Text="{Binding Shell.I18n[resourcePanelRefresh]}"/>
+                    </StackPanel>
+                </Button>
+            </controls:DialogSurface.FooterLeading>
+            <controls:DialogSurface.Footer>
+                <StackPanel Classes="confirm-actions">
+                    <Button Classes="primary-action dialog-action" Command="{Binding ResourcePanel.SaveResourcePanelCommand}"
+                            AutomationProperties.Name="{Binding Shell.I18n[resourcePanelSave]}"
+                            IsEnabled="{Binding ResourcePanel.IsResourcePanelSaveEnabled}">
+                        <StackPanel Classes="button-content">
+                            <materialIcons:MaterialIcon Kind="ContentSave" Width="{StaticResource Launcher.Icon.Sm}" Height="{StaticResource Launcher.Icon.Sm}"/>
+                            <TextBlock Text="{Binding Shell.I18n[resourcePanelSave]}"/>
+                        </StackPanel>
+                    </Button>
+                </StackPanel>
+            </controls:DialogSurface.Footer>
+        </controls:DialogSurface>
+    </Grid>
+</UserControl>

@@ -290,6 +290,7 @@ public partial class ResourcePanelViewModel : ViewModelBase, IDisposable, IModal
                 lifetimeCts.Token);
             SetResourcePanelMessage(localizer.T(LocalizationKeys.ResourcePanelSaved));
             CaptureSavedResourceBaseline();
+            RefreshSaveEnabled();
             toastService.ShowSuccess(localizer.T(LocalizationKeys.ResourcePanelSaved));
         }
         catch (OperationCanceledException) when (lifetimeCts.IsCancellationRequested)

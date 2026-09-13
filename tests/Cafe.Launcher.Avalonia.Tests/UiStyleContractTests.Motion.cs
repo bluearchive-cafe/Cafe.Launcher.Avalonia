@@ -202,6 +202,7 @@ public sealed partial class UiStyleContractTests
             "Views/MainWindowLogExportOverlay.axaml",
             "Views/MainWindowDebugOverlay.axaml",
             "Views/MainWindowDialogsOverlay.axaml",
+            "Views/ResourcePanelOverlay.axaml",
             "Views/SetupWizardOverlay.axaml"
         };
         var overlays = new List<(XElement Element, XNamespace ControlsNamespace)>();

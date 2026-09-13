@@ -223,6 +223,8 @@ public sealed class ResourcePanelViewModelTests
         Assert.NotNull(toast);
         Assert.Equal(ToastSeverity.Success, toast!.Severity);
         Assert.False(context.ViewModel.IsResourcePanelBusy);
+        // 保存成功即采集新基线并重算：按钮立刻回到"无改动"的禁用态，无需刷新。
+        Assert.False(context.ViewModel.IsResourcePanelSaveEnabled);
     }
 
     [Fact]

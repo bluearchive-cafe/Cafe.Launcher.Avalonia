@@ -31,6 +31,7 @@ public sealed partial class UiStyleContractTests
         foreach (var relativePath in new[]
                  {
                      "Views/MainWindowDialogsOverlay.axaml",
+                     "Views/ResourcePanelOverlay.axaml",
                      "Views/MainWindowLogViewerOverlay.axaml",
                      "Views/SetupWizardOverlay.axaml"
                  })
@@ -46,7 +47,7 @@ public sealed partial class UiStyleContractTests
     {
         Dictionary<string, Dictionary<string, string>> expectedActions = new(StringComparer.Ordinal)
         {
-            ["Views/MainWindowDialogsOverlay.axaml"] = new(StringComparer.Ordinal)
+            ["Views/ResourcePanelOverlay.axaml"] = new(StringComparer.Ordinal)
             {
                 // 头带 ✕ 迁入模板后经 CloseAutomationName 传递，不再出现在文件中。
                 ["{Binding ResourcePanel.SaveManualResourcePanelUidCommand}"] = "{Binding Shell.I18n[resourcePanelSaveUid]}",
@@ -106,7 +107,7 @@ public sealed partial class UiStyleContractTests
     [Fact]
     public void ResourcePanel_InputsAndResourceSwitchesExposeMeaningfulAutomationNames()
     {
-        var document = XDocument.Load(ProjectFile("Views/MainWindowDialogsOverlay.axaml"));
+        var document = XDocument.Load(ProjectFile("Views/ResourcePanelOverlay.axaml"));
         var resourcePanel = FindMotionOverlay(
             document,
             "{Binding ResourcePanel.IsResourcePanelVisible}");
@@ -244,12 +245,13 @@ public sealed partial class UiStyleContractTests
     public void DialogsOverlay_DialogsUseHairlineFooterForActions()
     {
         // ADR-015：发丝动作带内化为 DialogSurface Panel 模板；视图文件只承载
-        // 四个表面实例（三 Panel + 一 Basic 公告），辅助动作进左槽。
+        // 表面实例（主 overlay 三 Panel + 一 Basic 公告，资源面板独立文件一个 Panel），
+        // 辅助动作进左槽。
         var text = File.ReadAllText(ProjectFile("Views/MainWindowDialogsOverlay.axaml"));
 
-        Assert.Equal(3, Regex.Count(text, @"Form=""Panel""", RegexOptions.CultureInvariant));
+        Assert.Equal(2, Regex.Count(text, @"Form=""Panel""", RegexOptions.CultureInvariant));
         Assert.Equal(1, Regex.Count(text, @"Form=""Basic""", RegexOptions.CultureInvariant));
-        Assert.Equal(4, Regex.Count(text, @"Classes=""motion-surface""", RegexOptions.CultureInvariant));
+        Assert.Equal(3, Regex.Count(text, @"Classes=""motion-surface""", RegexOptions.CultureInvariant));
 
         // 发丝底带不再由调用方摆放：文件里不允许残留 legacy footer 标记。
         Assert.DoesNotContain("dialog-footer", text, StringComparison.Ordinal);
@@ -263,10 +265,16 @@ public sealed partial class UiStyleContractTests
             }
         }
 
-        Assert.Equal(3, panels);
+        Assert.Equal(2, panels);
         Assert.Matches(
             """(?s)<controls:DialogSurface\b[^>]*Form="Panel"[^>]*>.*?<controls:DialogSurface\.FooterLeading>.*?</controls:DialogSurface\.FooterLeading>.*?</controls:DialogSurface>""",
             text);
+
+        // 资源面板覆盖层拆分后仍是一个 Panel 表面（与 SetupWizard 拆分模式同构）。
+        var resourcePanelText = File.ReadAllText(ProjectFile("Views/ResourcePanelOverlay.axaml"));
+        Assert.Equal(1, Regex.Count(resourcePanelText, @"Form=""Panel""", RegexOptions.CultureInvariant));
+        Assert.Equal(1, Regex.Count(resourcePanelText, @"Classes=""motion-surface""", RegexOptions.CultureInvariant));
+        Assert.DoesNotContain("dialog-footer", resourcePanelText, StringComparison.Ordinal);
     }
 
     [Fact]
@@ -324,7 +332,7 @@ public sealed partial class UiStyleContractTests
     public void LocalizationManagement_UsesFixedDialogDimensions()
     {
         // ADR-015 尺寸律：自适应优先，固定宽高退场；token 仅作 Max 上限背书。
-        var document = XDocument.Load(ProjectFile("Views/MainWindowDialogsOverlay.axaml"));
+        var document = XDocument.Load(ProjectFile("Views/ResourcePanelOverlay.axaml"));
         var dialog = FindMotionOverlay(
                 document,
                 "{Binding ResourcePanel.IsResourcePanelVisible}")
@@ -450,7 +458,7 @@ public sealed partial class UiStyleContractTests
     public void ResourcePanel_ChangeUidAction_RemainsVisibleForAutoSource()
     {
         // 修改 UID 入口常驻：自动获取来源下也必须可见，避免"先切来源才能改 UID"的隐藏操作链。
-        var document = XDocument.Load(ProjectFile("Views/MainWindowDialogsOverlay.axaml"));
+        var document = XDocument.Load(ProjectFile("Views/ResourcePanelOverlay.axaml"));
         var changeUidButton = document
             .Descendants()
             .Single(element =>
@@ -463,7 +471,7 @@ public sealed partial class UiStyleContractTests
     [Fact]
     public void ResourcePanel_StatusStripHasVisibleSurfaceAndBorder()
     {
-        var dialogs = XDocument.Load(ProjectFile("Views/MainWindowDialogsOverlay.axaml"));
+        var dialogs = XDocument.Load(ProjectFile("Views/ResourcePanelOverlay.axaml"));
         var statusStrip = dialogs
             .Descendants()
             .Single(element =>

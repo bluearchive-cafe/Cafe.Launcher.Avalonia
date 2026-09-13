@@ -12,6 +12,7 @@ public sealed partial class UiStyleContractTests
     {
         var mainWindow = XDocument.Load(ProjectFile("Views/MainWindow.axaml"));
         var dialogs = XDocument.Load(ProjectFile("Views/MainWindowDialogsOverlay.axaml"));
+        var resourcePanelOverlay = XDocument.Load(ProjectFile("Views/ResourcePanelOverlay.axaml"));
         var settingsOverlay = XDocument.Load(ProjectFile("Views/MainWindowSettingsOverlay.axaml"));
 
         var detectButton = mainWindow
@@ -32,7 +33,7 @@ public sealed partial class UiStyleContractTests
         Assert.Equal(
             "ClipboardText",
             resourcePanelButton.Descendants().Single(element => element.Name.LocalName == "MaterialIcon").Attribute("Kind")?.Value);
-        var resourcePanelHeadingIcon = dialogs
+        var resourcePanelHeadingIcon = resourcePanelOverlay
             .Descendants()
             .First(element => element.Name.LocalName == "MaterialIcon");
         Assert.Equal("Web", resourcePanelHeadingIcon.Attribute("Kind")?.Value);
