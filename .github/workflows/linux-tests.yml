@@ -1,0 +1,58 @@
+name: Linux Tests
+
+# 产品以实验性形态分发 Linux/macOS 包，但单元测试此前只在 windows-latest 上
+# 执行，平台分支（路径分隔符、.desktop 快捷方式、runner 归一化）在任何机器上
+# 都不运行。本工作流为单元套件提供一个非阻塞的 Linux 执行点：手动触发或每周
+# 定时运行，不阻塞 PR；Headless/golden 套件按设计仍保持 Windows-only。
+on:
+  workflow_dispatch:
+  schedule:
+    - cron: "0 3 * * 1"
+
+permissions:
+  contents: read
+
+jobs:
+  unit-tests:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 30
+
+    env:
+      DOTNET_CLI_TELEMETRY_OPTOUT: 1
+      DOTNET_NOLOGO: 1
+      AVALONIA_TELEMETRY_OPTOUT: 1
+      ContinuousIntegrationBuild: 'true'
+      RestoreLockedMode: 'true'
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+        with:
+          fetch-depth: 1
+
+      - name: Setup .NET
+        uses: actions/setup-dotnet@a98b56852c35b8e3190ac28c8c2271da59106c68 # v6
+        with:
+          # Pinned to the SDK named by global.json, same as the Windows build job.
+          dotnet-version: 10.0.302
+          cache: true
+          cache-dependency-path: |
+            **/*.csproj
+            **/packages.lock.json
+            Directory.Packages.props
+
+      # 提交的 packages.lock.json 固定的是无 RID 的 net10.0 依赖图，locked mode
+      # 还原在 Linux 上同样成立；本 job 只跑单元套件（无 Avalonia 渲染依赖），
+      # 不做 RID 专属发布还原。
+      - name: Unit tests
+        run: >
+          dotnet test tests/Cafe.Launcher.Avalonia.Tests/Cafe.Launcher.Avalonia.Tests.csproj
+          -c Debug --logger "trx" --results-directory TestResults
+
+      - name: Upload test results
+        if: always()
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7
+        with:
+          name: linux-unit-test-results
+          retention-days: 14
+          path: TestResults/**/*.trx
