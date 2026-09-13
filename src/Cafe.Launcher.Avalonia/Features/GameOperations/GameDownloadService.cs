@@ -22,7 +22,7 @@ public sealed class GameDownloadService : IDisposable
     private readonly IFileDownloadService fileDownloadService;
     private readonly LocalInstallationStateStore localInstallationStateStore;
     private readonly LauncherSettingsService settingsService;
-    private readonly HttpClientFactory httpClientFactory;
+    private readonly IDownloadTransportSource transportSource;
     private readonly Crc64Service crc64Service;
     private readonly DiskSpaceService diskSpaceService;
     private readonly LocalDiagnostics diagnostics;
@@ -35,6 +35,9 @@ public sealed class GameDownloadService : IDisposable
     private readonly DownloadSessionContext sessionContext;
     private bool disposed;
 
+    /// <summary>One proxy-aware lease serves a whole download batch; its timeout bounds slow resumptions, not single files.</summary>
+    private static readonly TimeSpan DownloadLeaseTimeout = TimeSpan.FromMinutes(10);
+
     public GameDownloadService(
         LauncherApiClient apiClient,
         RemoteManifestService remoteManifestService,
@@ -42,6 +45,7 @@ public sealed class GameDownloadService : IDisposable
         LocalInstallationStateStore localInstallationStateStore,
         LauncherSettingsService settingsService,
         HttpClientFactory httpClientFactory,
+        RemoteHttpUrlValidator urlValidator,
         Crc64Service crc64Service,
         DiskSpaceService diskSpaceService,
         LocalDiagnostics diagnostics,
@@ -54,7 +58,10 @@ public sealed class GameDownloadService : IDisposable
         this.fileDownloadService = fileDownloadService;
         this.localInstallationStateStore = localInstallationStateStore;
         this.settingsService = settingsService;
-        this.httpClientFactory = httpClientFactory;
+        this.transportSource = new LeaseBackedDownloadTransportSource(
+            httpClientFactory,
+            urlValidator,
+            DownloadLeaseTimeout);
         this.crc64Service = crc64Service;
         this.diskSpaceService = diskSpaceService;
         this.diagnostics = diagnostics;
@@ -72,6 +79,7 @@ public sealed class GameDownloadService : IDisposable
         LocalInstallationStateStore localInstallationStateStore,
         LauncherSettingsService settingsService,
         HttpClientFactory httpClientFactory,
+        RemoteHttpUrlValidator urlValidator,
         Crc64Service crc64Service,
         DiskSpaceService diskSpaceService,
         LocalDiagnostics diagnostics,
@@ -86,6 +94,7 @@ public sealed class GameDownloadService : IDisposable
             localInstallationStateStore,
             settingsService,
             httpClientFactory,
+            urlValidator,
             crc64Service,
             diskSpaceService,
             diagnostics,
@@ -227,10 +236,7 @@ public sealed class GameDownloadService : IDisposable
             apiClient,
             remoteManifestService,
             fileDownloadService,
-            new ProxyAwareHttpClientLeaseSource(
-                httpClientFactory,
-                baseAddress: null,
-                timeout: TimeSpan.FromMinutes(10)),
+            transportSource,
             crc64Service,
             localInstallationStateStore,
             settingsService,

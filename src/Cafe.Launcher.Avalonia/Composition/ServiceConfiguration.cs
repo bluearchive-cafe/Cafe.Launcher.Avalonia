@@ -115,6 +115,7 @@ public static class ServiceConfiguration
             sp.GetRequiredService<LocalInstallationStateStore>(),
             sp.GetRequiredService<LauncherSettingsService>(),
             sp.GetRequiredService<HttpClientFactory>(),
+            sp.GetRequiredService<RemoteHttpUrlValidator>(),
             sp.GetRequiredService<Crc64Service>(),
             sp.GetRequiredService<DiskSpaceService>(),
             sp.GetRequiredService<LocalDiagnostics>(),

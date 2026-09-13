@@ -4,16 +4,17 @@ namespace Cafe.Launcher.Avalonia.Testing;
 
 /// <summary>
 /// <see cref="IFileDownloadService"/> 的共享测试替身，由两个测试工程通过 csproj Link
-/// 共用（与 TestUserDataIsolation.cs 同一机制）。默认空操作；通过构造委托注入下载行为，
-/// 并按调用顺序记录每次请求参数。需要并发计数、分块写盘等更特殊行为的测试可在委托里
-/// 用闭包自行实现，确实无法无损表达时再保留文件内的专用 fake。
+/// 共用（与 TestUserDataIsolation.cs 同一机制）。默认空操作且以 AlreadyComplete 收尾；
+/// 通过构造委托注入下载副作用，用 <see cref="OutcomeFactory"/> 自定义结果，
+/// 用 <see cref="ExistingSize"/> 模拟磁盘上的续传字节。需要并发计数、分块写盘等更
+/// 特殊行为的测试可在委托里用闭包自行实现，确实无法无损表达时再保留文件内的专用 fake。
 /// </summary>
 internal sealed class StubFileDownloadService : IFileDownloadService
 {
     private readonly object gate = new();
     private readonly Func<FileDownloadRequest, FileDownloadOperationControl, CancellationToken, Task>? downloadAsync;
 
-    /// <summary>传入委托即自定义下载行为；不传则为空操作（只记录调用）。</summary>
+    /// <summary>传入委托即自定义下载副作用（写盘、限速、取消等）；不传则为空操作（只记录调用）。</summary>
     public StubFileDownloadService(
         Func<FileDownloadRequest, FileDownloadOperationControl, CancellationToken, Task>? downloadAsync = null)
     {
@@ -35,8 +36,18 @@ internal sealed class StubFileDownloadService : IFileDownloadService
         }
     }
 
+    /// <summary>按请求自定义下载结果；不设置则默认 AlreadyComplete（安装阶段仍会哈希校验，与既有测试语义一致）。</summary>
+    public Func<FileDownloadRequest, DownloadOutcome>? OutcomeFactory { get; set; }
+
+    /// <summary>模拟临时文件已存在的可续传字节（批级进度播种用）；不设置则恒为 0。</summary>
+    public Func<string, long, long>? ExistingSize { get; set; }
+
     /// <inheritdoc />
-    public async Task<string?> DownloadAsync(
+    public long GetExistingDownloadedSize(string targetTempPath, long expectedSize) =>
+        ExistingSize?.Invoke(targetTempPath, expectedSize) ?? 0;
+
+    /// <inheritdoc />
+    public async Task<DownloadOutcome> DownloadAsync(
         FileDownloadRequest request,
         FileDownloadOperationControl control,
         CancellationToken cancellationToken)
@@ -51,7 +62,6 @@ internal sealed class StubFileDownloadService : IFileDownloadService
             await downloadAsync(request, control, cancellationToken);
         }
 
-        // 默认 null：安装阶段仍会对下载产物做哈希校验，与既有测试语义一致。
-        return null;
+        return OutcomeFactory?.Invoke(request) ?? DownloadOutcome.AlreadyComplete();
     }
 }

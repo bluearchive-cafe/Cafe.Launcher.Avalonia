@@ -96,7 +96,7 @@ internal sealed class DownloadSession : IDisposable
         downloadExecutor = new DownloadExecutor(
             context.FileDownloadService,
             context.Crc64Service,
-            context.LeaseSource,
+            context.TransportSource,
             context.Diagnostics,
             GetPauseTaskSnapshot,
             () => IsPaused);

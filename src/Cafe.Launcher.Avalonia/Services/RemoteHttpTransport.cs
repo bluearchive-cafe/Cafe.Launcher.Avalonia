@@ -154,19 +154,19 @@ public sealed class RemoteHttpTransport : IRemoteHttpTransport
     }
 
     /// <summary>
-    /// Injectable constructor — accepts an <see cref="IHttpClientLeaseSource"/> and a
-    /// fixed proxy mode for testability. The lease source ignores per-call timeouts
-    /// (its clients carry their own); the backoff wait and idle-read budget are
-    /// injectable so tests never sleep real time.
+    /// Injectable constructor — accepts a lease factory and a fixed proxy mode
+    /// for testability; tests hand back pre-configured clients (optionally with
+    /// a connection proxy) instead of dialing real sockets. The backoff wait
+    /// and idle-read budget are injectable so tests never sleep real time.
     /// </summary>
     internal RemoteHttpTransport(
-        IHttpClientLeaseSource leaseSource,
+        Func<string, TimeSpan?, CancellationToken, Task<HttpClientLease>> createLeaseAsync,
         RemoteHttpUrlValidator urlValidator,
         string fixedProxyMode,
         Func<TimeSpan, CancellationToken, Task>? delayAsync = null,
         TimeSpan? idleReadTimeout = null)
         : this(
-            (proxyMode, _, cancellationToken) => leaseSource.CreateLeaseAsync(proxyMode, cancellationToken),
+            createLeaseAsync,
             urlValidator,
             () => fixedProxyMode,
             delayAsync,

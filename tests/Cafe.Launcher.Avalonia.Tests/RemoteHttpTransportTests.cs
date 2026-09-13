@@ -247,7 +247,7 @@ public sealed class RemoteHttpTransportTests
     {
         var leaseSource = new StubLeaseSource(new OkHandler());
         var transport = new RemoteHttpTransport(
-            leaseSource,
+            leaseSource.CreateLeaseFactory(),
             RemoteHttpUrlValidator.CreateForTesting(),
             ProxyModes.Auto);
 
@@ -264,7 +264,7 @@ public sealed class RemoteHttpTransportTests
     {
         var leaseSource = new StubLeaseSource(new OkHandler());
         var transport = new RemoteHttpTransport(
-            leaseSource,
+            leaseSource.CreateLeaseFactory(),
             RemoteHttpUrlValidator.CreateForTesting(),
             ProxyModes.Auto);
 
@@ -346,7 +346,7 @@ public sealed class RemoteHttpTransportTests
             ScriptedHandler.Fail(new HttpRequestException("connection lost")),
             ScriptedHandler.Ok("""{"Name":"hello"}""")));
         var transport = new RemoteHttpTransport(
-            leaseSource,
+            leaseSource.CreateLeaseFactory(),
             RemoteHttpUrlValidator.CreateForTesting(),
             ProxyModes.Direct,
             delayAsync: (delay, _) =>
@@ -638,7 +638,7 @@ public sealed class RemoteHttpTransportTests
         TimeSpan? idleReadTimeout = null,
         Action<HttpClient>? configureClient = null) =>
         new(
-            new StubLeaseSource(handler, connectionProxy, configureClient),
+            new StubLeaseSource(handler, connectionProxy, configureClient).CreateLeaseFactory(),
             validator ?? RemoteHttpUrlValidator.CreateForTesting(),
             ProxyModes.Direct,
             delayAsync,
@@ -646,28 +646,32 @@ public sealed class RemoteHttpTransportTests
 
     private sealed record SamplePayload(string Name);
 
-    /// <summary>按调用方请求模式记账的租约源：连接代理可选，客户端可再配置。</summary>
+    /// <summary>按调用方请求模式记账的租约工厂：连接代理可选，客户端可再配置。</summary>
     private sealed class StubLeaseSource(
         HttpMessageHandler handler,
         IWebProxy? connectionProxy = null,
-        Action<HttpClient>? configureClient = null) : IHttpClientLeaseSource
+        Action<HttpClient>? configureClient = null)
     {
         private readonly HttpClient client = CreateClient(handler, configureClient);
+        private readonly IWebProxy? connectionProxy = connectionProxy;
 
         public List<string> RequestedProxyModes { get; } = [];
 
         public int LeaseCount { get; private set; }
 
-        public Task<HttpClientLease> CreateLeaseAsync(
-            string proxyMode,
-            CancellationToken cancellationToken = default)
+        public Func<string, TimeSpan?, CancellationToken, Task<HttpClientLease>> CreateLeaseFactory()
         {
-            RequestedProxyModes.Add(proxyMode);
-            LeaseCount++;
-            return Task.FromResult(new HttpClientLease(client) { ConnectionProxy = connectionProxy });
+            var source = this;
+            return (proxyMode, _, _) =>
+            {
+                source.RequestedProxyModes.Add(proxyMode);
+                source.LeaseCount++;
+                return Task.FromResult(new HttpClientLease(source.client)
+                {
+                    ConnectionProxy = source.connectionProxy
+                });
+            };
         }
-
-        public void Dispose() => client.Dispose();
 
         private static HttpClient CreateClient(HttpMessageHandler handler, Action<HttpClient>? configureClient)
         {

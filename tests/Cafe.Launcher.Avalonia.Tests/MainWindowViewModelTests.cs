@@ -67,8 +67,7 @@ public sealed partial class MainWindowViewModelTests : IDisposable
         var diagnosticsVal = new LocalDiagnostics();
         var fileDownloadService = new FileDownloadService(
             new Crc64Service(),
-            diagnosticsVal,
-            RemoteHttpUrlValidator.CreateForTesting());
+            diagnosticsVal);
         var manifestValidationService = new ManifestValidationService(apiClient, remoteManifestService, localizationService);
         var gameRuntime = new GameRuntime(
             [GameRunnerDefinition.Native],
@@ -85,6 +84,7 @@ public sealed partial class MainWindowViewModelTests : IDisposable
             localInstallationStateStore,
             settingsService,
             new HttpClientFactory(new ProxySettingsService()),
+            RemoteHttpUrlValidator.CreateForTesting(),
             new Crc64Service(),
             new DiskSpaceService(),
             diagnostics,

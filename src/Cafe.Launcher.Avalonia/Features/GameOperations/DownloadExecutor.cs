@@ -23,7 +23,7 @@ internal sealed class DownloadExecutor
 
     private readonly IFileDownloadService fileDownloadService;
     private readonly Crc64Service crc64Service;
-    private readonly IHttpClientLeaseSource leaseSource;
+    private readonly IDownloadTransportSource transportSource;
     private readonly LocalDiagnostics diagnostics;
     private readonly Func<Task> getPauseTask;
     private readonly Func<bool> isPaused;
@@ -31,14 +31,14 @@ internal sealed class DownloadExecutor
     internal DownloadExecutor(
         IFileDownloadService fileDownloadService,
         Crc64Service crc64Service,
-        IHttpClientLeaseSource leaseSource,
+        IDownloadTransportSource transportSource,
         LocalDiagnostics diagnostics,
         Func<Task> getPauseTask,
         Func<bool> isPaused)
     {
         this.fileDownloadService = fileDownloadService;
         this.crc64Service = crc64Service;
-        this.leaseSource = leaseSource;
+        this.transportSource = transportSource;
         this.diagnostics = diagnostics;
         this.getPauseTask = getPauseTask;
         this.isPaused = isPaused;
@@ -71,11 +71,9 @@ internal sealed class DownloadExecutor
         // 重复整读哈希（此前每个文件在下载后与安装前各被完整读盘哈希一次）。
         var verifiedHashes = new ConcurrentDictionary<string, string>(StringComparer.Ordinal);
 
-        using var lease = await leaseSource
-            .CreateLeaseAsync(proxyMode, cancellationToken)
+        using var transport = await transportSource
+            .CreateAsync(proxyMode, cancellationToken)
             .ConfigureAwait(false);
-        var client = lease.Client;
-        var connectionProxy = lease.ConnectionProxy;
         using var semaphore = new SemaphoreSlim(MaxParallelDownloads, MaxParallelDownloads);
         var totalSize = fileList.Sum(item => item.SizeBytes);
         var downloadFiles = fileList.Select(file =>
@@ -84,7 +82,7 @@ internal sealed class DownloadExecutor
             return new DownloadFileState(
                 file,
                 targetPath,
-                GetExistingDownloadedSize(targetPath, file.SizeBytes));
+                fileDownloadService.GetExistingDownloadedSize(targetPath, file.SizeBytes));
         }).ToArray();
         var initialDownloadedSize = downloadFiles.Sum(item => item.ReportedSize);
         await diagnostics.DebugAsync(
@@ -177,8 +175,8 @@ internal sealed class DownloadExecutor
             else
             {
                 // 重置路径（CRC 失败、Content-Range 无效、超长临时文件被丢弃）：
-                // 从磁盘重采样权威长度。
-                downloadedSize = GetExistingDownloadedSize(
+                // 从磁盘重采样权威长度（.tmp 长度语义的唯一实现在下载服务中）。
+                downloadedSize = fileDownloadService.GetExistingDownloadedSize(
                     downloadFile.TargetPath,
                     downloadFile.File.SizeBytes);
                 previousSize = Interlocked.Exchange(
@@ -203,7 +201,7 @@ internal sealed class DownloadExecutor
             await semaphore.WaitAsync(cancellationToken).ConfigureAwait(false);
             try
             {
-                var verifiedCrc = await fileDownloadService.DownloadAsync(
+                var outcome = await fileDownloadService.DownloadAsync(
                     new FileDownloadRequest(
                         downloadFile.TargetPath,
                         cdnConfig,
@@ -212,7 +210,7 @@ internal sealed class DownloadExecutor
                         downloadFile.File.Hash,
                         downloadFile.File.Path),
                     new FileDownloadOperationControl(
-                        client,
+                        transport,
                         WaitWhilePausedAsync,
                         async (bytes, ct) =>
                         {
@@ -231,12 +229,11 @@ internal sealed class DownloadExecutor
                         {
                             RecordFileProgress(downloadFile, transferredBytes: 0);
                             return Task.CompletedTask;
-                        },
-                        connectionProxy),
+                        }),
                     cancellationToken).ConfigureAwait(false);
-                if (verifiedCrc is not null)
+                if (outcome.Kind == DownloadOutcomeKind.Transferred)
                 {
-                    verifiedHashes[downloadFile.File.Path] = verifiedCrc;
+                    verifiedHashes[downloadFile.File.Path] = outcome.Crc64!;
                 }
             }
             finally
@@ -394,17 +391,6 @@ internal sealed class DownloadExecutor
         }
 
         info.Delete();
-    }
-
-    private static long GetExistingDownloadedSize(string path, long expectedSize)
-    {
-        if (expectedSize <= 0 || !File.Exists(path))
-        {
-            return 0;
-        }
-
-        var length = new FileInfo(path).Length;
-        return length <= expectedSize ? length : 0;
     }
 
     private sealed class DownloadFileState(
