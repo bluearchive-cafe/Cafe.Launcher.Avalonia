@@ -1,16 +1,20 @@
 {
   "schema_version": 1,
   "last_full_audit_commit": "5f56f8e",
-  "last_audit_commit": "5f56f8e",
-  "last_audit_mode": "full",
+  "last_audit_commit": "8449d37",
+  "last_audit_mode": "delta",
   "last_audit_date": "2026-09-13",
   "repository_map_version": 14,
-  "note": "全量重审：按用户指令忽略既有报告与台账，从零建立。旧台账（101 项）归档于 history/2026-09-12-findings-ledger.json。",
+  "note": "2026-09-13 delta 复核（5f56f8e..8449d37，19 个提交，多为架构评审候选 01-11 落地）：AUD-ARCH-001 与 AUD-TEST-001 随重构解决；AUD-TEST-003 证据修正并收窄；其余 12 项逐项重验仍成立。全量重审基线为 5f56f8e，旧台账（101 项）归档于 history/2026-09-12-findings-ledger.json。",
   "open_counts": {
     "critical": 0,
     "high": 0,
-    "medium": 6,
+    "medium": 4,
     "low": 10,
     "informational": 1
-  }
+  },
+  "resolved_in_delta": [
+    "AUD-ARCH-001",
+    "AUD-TEST-001"
+  ]
 }

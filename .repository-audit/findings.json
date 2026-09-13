@@ -10,7 +10,7 @@
       "disposition": "Architecture Decision",
       "recommendation_validation": "Strongly Supported",
       "first_seen_commit": "5f56f8e",
-      "last_verified_commit": "5f56f8e",
+      "last_verified_commit": "8449d37",
       "resolved_commit": null,
       "guard": "采纳后为校验跳过计数添加 Verbose 日志字段，后续审计可量化摊销效果"
     },
@@ -19,13 +19,14 @@
       "category": "architecture/maintainability",
       "severity": "medium",
       "confidence": 95,
-      "status": "open",
+      "status": "resolved",
       "disposition": "Refactor",
       "recommendation_validation": "Verified",
       "first_seen_commit": "5f56f8e",
-      "last_verified_commit": "5f56f8e",
-      "resolved_commit": null,
-      "guard": "Shell 层行数/职责预算源码契约测试（参照 InstallerContractTests 先例）"
+      "last_verified_commit": "8449d37",
+      "resolved_commit": "77547fa",
+      "guard": "Shell 层行数/职责预算源码契约测试（参照 InstallerContractTests 先例）",
+      "resolution_note": "delta 复核（8449d37）：两个建议块均已落地——提交 77547fa 将模态注册同步与 Escape 路由收敛为声明式 ModalRegistrar（95 行，ModalRegistration 记录吞并 watcher/Escape switch/mapping 三块），配套 ModalRegistrarTests（135 行）。ShellLifecycle 881→775 行，TryHandleEscape 缩为 2 行委托。残留：Wire/Unwire、刷新/设置应用仍在 ShellLifecycle（775 行），建议的行数预算契约测试未添加（降为 advisory）。"
     },
     "AUD-ARCH-002": {
       "title": "MainWindow.axaml.cs 内嵌 ~250 行动效引擎，全仓库最高变更热点（21 commits/180d）",
@@ -36,7 +37,7 @@
       "disposition": "Refactor",
       "recommendation_validation": "Plausible",
       "first_seen_commit": "5f56f8e",
-      "last_verified_commit": "5f56f8e",
+      "last_verified_commit": "8449d37",
       "resolved_commit": null,
       "guard": "与 AUD-ARCH-001 同一源码契约测试覆盖"
     },
@@ -45,13 +46,14 @@
       "category": "testing/test-architecture",
       "severity": "medium",
       "confidence": 95,
-      "status": "open",
+      "status": "resolved",
       "disposition": "Refactor",
       "recommendation_validation": "Strongly Supported",
       "first_seen_commit": "5f56f8e",
-      "last_verified_commit": "5f56f8e",
-      "resolved_commit": null,
-      "guard": "tests/TestDoubles/ 共享 StubHttpHandler（Compile-Link 机制现成），一次投入消除整类替身漂移"
+      "last_verified_commit": "8449d37",
+      "resolved_commit": "fae538a",
+      "guard": "tests/TestDoubles/ 共享 StubHttpHandler（Compile-Link 机制现成），一次投入消除整类替身漂移",
+      "resolution_note": "delta 复核（8449d37）：RemoteHttpTransport 深模块（88ebd46..fae538a）接管全部远程调用后，HttpMessageHandler 桩从 53 处/17 文件降至 9 处/1 文件——全部位于 RemoteHttpTransportTests.cs 内（传输层自身的重定向/停滞行为测试，handler 级控制正当）；各远程调用方改用 tests/TestDoubles/StubRemoteHttpTransport（可脚本化、记录 RequestedUris）。散桩漂移问题整类消除。"
     },
     "AUD-CI-001": {
       "title": "CI 从不在非 Windows 平台执行测试；约 6 个平台分支在任何机器上都不运行",
@@ -62,7 +64,7 @@
       "disposition": "Add Guard",
       "recommendation_validation": "Strongly Supported",
       "first_seen_commit": "5f56f8e",
-      "last_verified_commit": "5f56f8e",
+      "last_verified_commit": "8449d37",
       "resolved_commit": null,
       "guard": "为单元测试套件增加可选 Linux job（workflow_dispatch + schedule，不阻塞 PR）"
     },
@@ -75,7 +77,7 @@
       "disposition": "Fix",
       "recommendation_validation": "Verified",
       "first_seen_commit": "5f56f8e",
-      "last_verified_commit": "5f56f8e",
+      "last_verified_commit": "8449d37",
       "resolved_commit": null,
       "guard": null
     },
@@ -88,7 +90,7 @@
       "disposition": "Fix",
       "recommendation_validation": "Verified",
       "first_seen_commit": "5f56f8e",
-      "last_verified_commit": "5f56f8e",
+      "last_verified_commit": "8449d37",
       "resolved_commit": null,
       "guard": null
     },
@@ -101,7 +103,7 @@
       "disposition": "Fix",
       "recommendation_validation": "Verified",
       "first_seen_commit": "5f56f8e",
-      "last_verified_commit": "5f56f8e",
+      "last_verified_commit": "8449d37",
       "resolved_commit": null,
       "guard": null
     },
@@ -114,7 +116,7 @@
       "disposition": "Refactor",
       "recommendation_validation": "Plausible",
       "first_seen_commit": "5f56f8e",
-      "last_verified_commit": "5f56f8e",
+      "last_verified_commit": "8449d37",
       "resolved_commit": null,
       "guard": null
     },
@@ -127,7 +129,7 @@
       "disposition": "Accept Risk",
       "recommendation_validation": "Needs External Verification",
       "first_seen_commit": "5f56f8e",
-      "last_verified_commit": "5f56f8e",
+      "last_verified_commit": "8449d37",
       "resolved_commit": null,
       "guard": null
     },
@@ -140,7 +142,7 @@
       "disposition": "Accept Risk",
       "recommendation_validation": "Needs Product Decision",
       "first_seen_commit": "5f56f8e",
-      "last_verified_commit": "5f56f8e",
+      "last_verified_commit": "8449d37",
       "resolved_commit": null,
       "guard": null
     },
@@ -153,9 +155,10 @@
       "disposition": "Fix",
       "recommendation_validation": "Verified",
       "first_seen_commit": "5f56f8e",
-      "last_verified_commit": "5f56f8e",
+      "last_verified_commit": "8449d37",
       "resolved_commit": null,
-      "guard": "统一 Assert.Skip* 使跳过在 trx 可见（与 AUD-CI-001 组合）"
+      "guard": "统一 Assert.Skip* 使跳过在 trx 可见（与 AUD-CI-001 组合）",
+      "delta_note": "delta 复核（8449d37）修正证据：CrossProcessLaunchSignalTests.cs 三处与 GameShortcutServiceTests.cs:586 在基线时已是可见跳过（SkipUnless / WindowsFactAttribute.Skip），原报告对该四处证据系误读，现予更正（早退行为 CA1416 分析器守卫，位于 SkipUnless 之后，无害）。仍然成立的部分：GameDownloadServiceTests.cs:694-697 裸 early return（该文件基线后有 807 行改动，此模式保留）与 GameShortcutServiceTests.cs:297,318 非 Windows 退化返回助手。"
     },
     "AUD-TEST-004": {
       "title": "魔数睡眠编码生产常量（700ms）；否定观察窗 50-80ms 短于 250ms 生产轮询间隔",
@@ -166,7 +169,7 @@
       "disposition": "Fix",
       "recommendation_validation": "Strongly Supported",
       "first_seen_commit": "5f56f8e",
-      "last_verified_commit": "5f56f8e",
+      "last_verified_commit": "8449d37",
       "resolved_commit": null,
       "guard": null
     },
@@ -179,7 +182,7 @@
       "disposition": "Refactor",
       "recommendation_validation": "Verified",
       "first_seen_commit": "5f56f8e",
-      "last_verified_commit": "5f56f8e",
+      "last_verified_commit": "8449d37",
       "resolved_commit": null,
       "guard": null
     },
@@ -192,7 +195,7 @@
       "disposition": "Document",
       "recommendation_validation": "Verified",
       "first_seen_commit": "5f56f8e",
-      "last_verified_commit": "5f56f8e",
+      "last_verified_commit": "8449d37",
       "resolved_commit": null,
       "guard": null
     },
@@ -205,7 +208,7 @@
       "disposition": "Investigate",
       "recommendation_validation": "Needs Architecture Decision",
       "first_seen_commit": "5f56f8e",
-      "last_verified_commit": "5f56f8e",
+      "last_verified_commit": "8449d37",
       "resolved_commit": null,
       "guard": null
     },
@@ -218,7 +221,7 @@
       "disposition": "Architecture Decision",
       "recommendation_validation": "Needs Architecture Decision",
       "first_seen_commit": "5f56f8e",
-      "last_verified_commit": "5f56f8e",
+      "last_verified_commit": "8449d37",
       "resolved_commit": null,
       "guard": null
     }
